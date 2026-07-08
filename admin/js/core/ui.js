@@ -1,0 +1,187 @@
+/* Admin UI helpers — modal, loading, validation (no business logic) */
+var AdminUI = (function () {
+  var modalRoot = null;
+  var modalBackdrop = null;
+  var modalDialog = null;
+  var modalOnClose = null;
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function ensureModalRoot() {
+    if (modalRoot) return;
+    modalRoot = document.createElement('div');
+    modalRoot.className = 'admin-modal-root';
+    modalRoot.innerHTML =
+      '<div class="admin-modal-backdrop" data-modal-close></div>' +
+      '<div class="admin-modal" role="dialog" aria-modal="true">' +
+        '<div class="admin-modal-header">' +
+          '<h2 class="admin-modal-title"></h2>' +
+          '<button type="button" class="admin-modal-close" aria-label="Cerrar">&times;</button>' +
+        '</div>' +
+        '<div class="admin-modal-body"></div>' +
+        '<div class="admin-modal-footer"></div>' +
+      '</div>';
+    document.body.appendChild(modalRoot);
+    modalBackdrop = modalRoot.querySelector('.admin-modal-backdrop');
+    modalDialog = modalRoot.querySelector('.admin-modal');
+
+    modalRoot.querySelector('.admin-modal-close').addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && modalRoot.classList.contains('is-open')) closeModal();
+    });
+  }
+
+  function openModal(options) {
+    ensureModalRoot();
+    modalOnClose = options && options.onClose ? options.onClose : null;
+
+    modalRoot.querySelector('.admin-modal-title').textContent = options.title || '';
+    modalRoot.querySelector('.admin-modal-body').innerHTML = options.bodyHtml || '';
+    modalRoot.querySelector('.admin-modal-footer').innerHTML = options.footerHtml || '';
+
+    modalRoot.classList.add('is-open');
+    document.body.classList.add('admin-modal-open');
+
+    if (options.onMount) options.onMount(modalRoot);
+  }
+
+  function closeModal() {
+    if (!modalRoot) return;
+    modalRoot.classList.remove('is-open');
+    document.body.classList.remove('admin-modal-open');
+    if (modalOnClose) {
+      var cb = modalOnClose;
+      modalOnClose = null;
+      cb();
+    }
+  }
+
+  function confirm(options) {
+    return new Promise(function (resolve) {
+      openModal({
+        title: options.title || 'Confirmar',
+        bodyHtml: '<p class="admin-modal-copy">' + escapeHtml(options.message || '') + '</p>',
+        footerHtml:
+          '<button type="button" class="btn-ghost" data-modal-action="cancel">' +
+            escapeHtml(options.cancelLabel || 'Cancelar') +
+          '</button>' +
+          '<button type="button" class="btn-danger" data-modal-action="confirm">' +
+            escapeHtml(options.confirmLabel || 'Confirmar') +
+          '</button>',
+        onMount: function (root) {
+          root.querySelector('[data-modal-action="cancel"]').addEventListener('click', function () {
+            closeModal();
+            resolve(false);
+          });
+          root.querySelector('[data-modal-action="confirm"]').addEventListener('click', function () {
+            closeModal();
+            resolve(true);
+          });
+        },
+        onClose: function () {
+          resolve(false);
+        }
+      });
+    });
+  }
+
+  function setButtonLoading(button, loading, loadingText) {
+    if (!button) return;
+    if (loading) {
+      if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+      button.disabled = true;
+      button.classList.add('loading');
+      button.textContent = loadingText || 'Guardando...';
+    } else {
+      button.disabled = false;
+      button.classList.remove('loading');
+      button.textContent = button.dataset.defaultText || button.textContent;
+    }
+  }
+
+  function isValidEmail(value) {
+    if (!value) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function isValidSlug(value) {
+    return /^[a-z0-9-]+$/.test(value || '');
+  }
+
+  function isValidUrl(value) {
+    if (!value) return true;
+    try {
+      var url = /^https?:\/\//i.test(value) ? value : 'https://' + value;
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function isValidHexColor(value) {
+    if (!value) return true;
+    return /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/.test(String(value).trim());
+  }
+
+  function normalizeHexColor(value, fallback) {
+    var trimmed = String(value == null ? '' : value).trim();
+    if (!trimmed) return fallback || null;
+    if (/^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})$/.test(trimmed)) return trimmed;
+    return null;
+  }
+
+  function normalizeOptionalText(value) {
+    var trimmed = String(value == null ? '' : value).trim();
+    return trimmed || null;
+  }
+
+  function normalizeUrl(value) {
+    var trimmed = normalizeOptionalText(value);
+    if (!trimmed) return null;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : 'https://' + trimmed;
+  }
+
+  function renderLoadingBlock(message) {
+    return (
+      '<div class="admin-loading-block">' +
+        '<div class="admin-spinner" aria-hidden="true"></div>' +
+        '<p>' + escapeHtml(message || 'Cargando...') + '</p>' +
+      '</div>'
+    );
+  }
+
+  function renderEmptyState(title, copy) {
+    return (
+      '<div class="admin-empty-state">' +
+        '<div class="admin-empty-title">' + escapeHtml(title) + '</div>' +
+        '<div class="admin-empty-copy">' + escapeHtml(copy) + '</div>' +
+      '</div>'
+    );
+  }
+
+  return {
+    escapeHtml: escapeHtml,
+    openModal: openModal,
+    closeModal: closeModal,
+    confirm: confirm,
+    setButtonLoading: setButtonLoading,
+    isValidEmail: isValidEmail,
+    isValidSlug: isValidSlug,
+    isValidUrl: isValidUrl,
+    isValidHexColor: isValidHexColor,
+    normalizeHexColor: normalizeHexColor,
+    normalizeOptionalText: normalizeOptionalText,
+    normalizeUrl: normalizeUrl,
+    renderLoadingBlock: renderLoadingBlock,
+    renderEmptyState: renderEmptyState
+  };
+})();

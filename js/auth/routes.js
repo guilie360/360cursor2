@@ -1,0 +1,47 @@
+/* Role-based routing — prepared for future dashboards */
+var AuthRouter = (function () {
+  var DESTINATIONS = {
+    staff: '/admin/dashboard.html',
+    visitante: '/auth/cuenta.html',
+    asesor: '/auth/cuenta.html',
+    cliente: '/auth/cuenta.html',
+    propietario: '/auth/cuenta.html'
+  };
+
+  var PROTECTED_VISITOR_PATHS = [
+    '/auth/cuenta.html'
+  ];
+
+  function getAccountType(profile) {
+    if (!profile) return null;
+    return profile.accountType || profile.tipo_cuenta || null;
+  }
+
+  function destinationFor(profile) {
+    var type = getAccountType(profile);
+    if (!type) return AuthRedirects.ingresar();
+    var path = DESTINATIONS[type] || AuthRedirects.cuenta();
+    if (type === 'visitante') {
+      return AuthRedirects.withProyecto(path);
+    }
+    return path;
+  }
+
+  function isProtectedVisitorPath(pathname) {
+    return PROTECTED_VISITOR_PATHS.some(function (entry) {
+      return pathname.endsWith(entry);
+    });
+  }
+
+  function registerDestination(accountType, path) {
+    DESTINATIONS[accountType] = path;
+  }
+
+  return {
+    destinationFor: destinationFor,
+    registerDestination: registerDestination,
+    getAccountType: getAccountType,
+    isProtectedVisitorPath: isProtectedVisitorPath,
+    PROTECTED_VISITOR_PATHS: PROTECTED_VISITOR_PATHS
+  };
+})();

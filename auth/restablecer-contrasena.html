@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>360 PREVENTA | Nueva contraseña</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script>ThemeSystem.init();</script>
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-logo">360 PREVENTA</div>
+    <div class="login-subtitle">Restablecer contraseña</div>
+    <p class="auth-copy">Elige una contraseña segura para tu cuenta de visitante.</p>
+
+    <div id="loadingBlock" class="admin-loading-block">
+      <div class="admin-spinner" aria-hidden="true"></div>
+      <p>Validando enlace...</p>
+    </div>
+
+    <form id="resetForm" style="display:none;" novalidate>
+      <div class="field">
+        <label for="password">Nueva contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required minlength="8">
+        <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">Mostrar</button>
+      </div>
+
+      <div class="field">
+        <label for="passwordConfirm">Confirmar contraseña</label>
+        <input id="passwordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" placeholder="Repite tu contraseña" required minlength="8">
+        <button type="button" class="toggle-password" id="togglePasswordConfirm" aria-label="Mostrar confirmación de contraseña">Mostrar</button>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="submitBtnText">Guardar contraseña</span>
+      </button>
+    </form>
+
+    <div id="successBlock" class="auth-success-block" style="display:none;">
+      <div class="auth-success-icon" aria-hidden="true">✓</div>
+      <h2 class="auth-success-title">Contraseña actualizada</h2>
+      <p class="auth-success-copy">Tu contraseña fue restablecida correctamente. Ya puedes iniciar sesión.</p>
+    </div>
+
+    <div class="form-message" id="formMessage" role="alert"></div>
+
+    <div class="auth-links" id="loginLinks" style="display:none;">
+      <a href="ingresar.html" class="btn-primary btn-inline" id="loginLink">Iniciar sesión</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="js/auth-page.js"></script>
+  <script src="js/restablecer-contrasena.js"></script>
+</body>
+</html>

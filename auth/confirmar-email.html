@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>360 PREVENTA | Confirmar correo</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script>ThemeSystem.init();</script>
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-logo">360 PREVENTA</div>
+    <div class="login-subtitle">Confirmación de correo</div>
+
+    <div id="statusBlock">
+      <div class="admin-loading-block" id="loadingBlock">
+        <div class="admin-spinner" aria-hidden="true"></div>
+        <p>Confirmando tu cuenta...</p>
+      </div>
+    </div>
+
+    <div id="successBlock" class="auth-success-block" style="display:none;">
+      <div class="auth-success-icon" aria-hidden="true">✓</div>
+      <h2 class="auth-success-title">¡Correo confirmado!</h2>
+      <p class="auth-success-copy">Tu cuenta de visitante está activa. Ya puedes iniciar sesión.</p>
+      <p class="auth-success-meta" id="successLoginHint"></p>
+    </div>
+
+    <div class="form-message" id="formMessage" role="alert"></div>
+
+    <div class="auth-links" id="actionLinks" style="display:none;">
+      <a href="ingresar.html" class="btn-primary btn-inline" id="loginLink">Iniciar sesión</a>
+    </div>
+    <div class="auth-links">
+      <a href="../index.html" id="homeLink">Volver al proyecto</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/roles-permissions.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="js/auth-page.js"></script>
+  <script src="js/confirmar-email.js"></script>
+</body>
+</html>

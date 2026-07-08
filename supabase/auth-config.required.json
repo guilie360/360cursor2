@@ -1,0 +1,23 @@
+{
+  "project_ref": "emefdwzdfnqgjohbtvvn",
+  "configuration_method": "supabase_dashboard_manual",
+  "site_url_local": "http://localhost:8765",
+  "redirect_urls_local": [
+    "http://localhost:8765/auth/confirmar-email.html",
+    "http://localhost:8765/auth/restablecer-contrasena.html",
+    "http://localhost:8765/auth/ingresar.html",
+    "http://localhost:8765/auth/registro.html",
+    "http://localhost:8765/auth/cuenta.html",
+    "http://localhost:8765/index.html",
+    "http://localhost:8765/index.html?*"
+  ],
+  "email_templates": {
+    "confirmation": "supabase/email-templates/confirmacion.html",
+    "recovery": "supabase/email-templates/recuperacion.html"
+  },
+  "dashboard_paths": {
+    "url_configuration": "Authentication → URL Configuration",
+    "email_templates": "Authentication → Email Templates",
+    "providers": "Authentication → Providers → Email"
+  }
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>360 PREVENTA | Recuperar contraseña</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script>ThemeSystem.init();</script>
+</head>
+<body class="login-page">
+
+  <div class="login-card">
+    <div class="login-logo">360 PREVENTA</div>
+    <div class="login-subtitle">Recuperar contraseña</div>
+    <p class="auth-copy">Te enviaremos un enlace seguro para restablecer tu contraseña. Puedes usar tu correo o tu usuario.</p>
+
+    <form id="recoverForm" novalidate>
+      <div class="field">
+        <label for="loginInput">Correo o usuario</label>
+        <input id="loginInput" name="loginInput" type="text" autocomplete="username" placeholder="correo@ejemplo.com o usuario" required>
+      </div>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="submitBtnText">Enviar enlace</span>
+      </button>
+    </form>
+
+    <div class="form-message" id="formMessage" role="alert"></div>
+
+    <div class="auth-links">
+      <a href="ingresar.html" id="loginLink">Volver a iniciar sesión</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="js/auth-page.js"></script>
+  <script src="js/recuperar-contrasena.js"></script>
+</body>
+</html>

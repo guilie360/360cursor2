@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>360 PREVENTA | Iniciar sesión</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script>ThemeSystem.init();</script>
+</head>
+<body class="login-page">
+
+  <span class="modal-close" id="loginModalClose">&times;</span>
+
+  <div class="login-card">
+    <div class="login-logo">360 PREVENTA</div>
+    <div class="login-subtitle">Iniciar sesión</div>
+    <p class="auth-copy">Ingresa con tu correo o tu usuario de visitante.</p>
+
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label for="loginInput">Correo o usuario</label>
+        <input id="loginInput" name="loginInput" type="text" autocomplete="username" placeholder="correo@ejemplo.com o usuario" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+        <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">Mostrar</button>
+      </div>
+
+      <label class="remember-row">
+        <input id="rememberMe" type="checkbox" checked>
+        <span>Recordarme en este dispositivo</span>
+      </label>
+
+      <button type="submit" class="btn-primary" id="loginBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="loginBtnText">Iniciar sesión</span>
+      </button>
+    </form>
+
+    <div class="auth-divider" aria-hidden="true"><span>o</span></div>
+
+    <a class="btn-secondary auth-register-cta" id="registerCta" href="registro.html">Crear cuenta</a>
+
+    <div class="form-message" id="formMessage" role="alert"></div>
+
+    <div class="auth-links" id="resendWrap" style="display:none;">
+      <button type="button" class="btn-ghost btn-compact" id="resendBtn">Reenviar correo de confirmación</button>
+    </div>
+
+    <div class="auth-links">
+      <a href="recuperar-contrasena.html" id="forgotLink">¿Olvidaste tu contraseña?</a>
+    </div>
+    <div class="auth-links">
+      <a href="../index.html" id="homeLink">Volver al proyecto</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/routes.js"></script>
+  <script src="../js/auth/roles-permissions.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="js/auth-page.js"></script>
+  <script src="js/ingresar.js"></script>
+</body>
+</html>

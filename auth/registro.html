@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>360 PREVENTA | Crear cuenta</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script>ThemeSystem.init();</script>
+</head>
+<body class="login-page">
+
+  <span class="modal-close" id="registroModalClose">&times;</span>
+
+  <div class="login-card login-card-wide">
+    <div class="login-logo">360 PREVENTA</div>
+    <div class="login-subtitle">Crear cuenta de visitante</div>
+    <p class="auth-copy">Regístrate para guardar favoritos, recibir información y acceder a tu perfil en el showroom.</p>
+
+    <form id="registroForm" novalidate>
+      <div class="field-row">
+        <div class="field">
+          <label for="nombres">Nombre</label>
+          <input id="nombres" name="nombres" type="text" autocomplete="given-name" placeholder="Tu nombre" required maxlength="60">
+        </div>
+        <div class="field">
+          <label for="apellidos">Apellido</label>
+          <input id="apellidos" name="apellidos" type="text" autocomplete="family-name" placeholder="Tu apellido" required maxlength="60">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Correo electrónico</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required>
+      </div>
+
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required minlength="8">
+        <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña">Mostrar</button>
+      </div>
+
+      <p class="auth-legal-footnote">
+        Al continuar aceptas los
+        <a href="#" id="termsLink" target="_blank" rel="noopener">Términos y Condiciones</a>
+        y la
+        <a href="#" id="privacyLink" target="_blank" rel="noopener">Política de Privacidad</a>.
+      </p>
+
+      <button type="submit" class="btn-primary" id="submitBtn">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="submitBtnText">Continuar</span>
+      </button>
+    </form>
+
+    <div id="successBlock" class="auth-success-block" style="display:none;">
+      <div class="auth-success-icon" aria-hidden="true">✓</div>
+      <h2 class="auth-success-title">Cuenta creada</h2>
+      <p class="auth-success-copy" id="successCopy"></p>
+      <p class="auth-success-meta" id="successLoginHint"></p>
+    </div>
+
+    <div class="form-message" id="formMessage" role="alert"></div>
+
+    <div class="auth-links" id="resendWrap" style="display:none;">
+      <button type="button" class="btn-ghost btn-compact" id="resendBtn">Reenviar correo de confirmación</button>
+    </div>
+
+    <div class="auth-links">
+      <span>¿Ya tienes cuenta?</span>
+      <a href="ingresar.html" id="loginLink" class="auth-link-strong">Iniciar sesión</a>
+    </div>
+    <div class="auth-links">
+      <a href="../index.html" id="homeLink">Volver al proyecto</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/routes.js"></script>
+  <script src="../js/auth/roles-permissions.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/api/registro.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="js/auth-page.js"></script>
+  <script src="js/registro.js"></script>
+</body>
+</html>

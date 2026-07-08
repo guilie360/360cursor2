@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BOXIES AI</title>
+  <link rel="stylesheet" href="css/admin-auth.css">
+  <link rel="stylesheet" href="css/ai-project-builder.css">
+  <style>
+    .platform-builder-shell {
+      min-height: 100vh;
+      padding: 0;
+    }
+    .platform-builder-topbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="dashboard-shell platform-builder-shell">
+
+  <div class="platform-builder-topbar">
+    <div class="user-chip" id="builderUserChip"></div>
+  </div>
+
+  <main id="builderRoot"></main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/shared/constants.js"></script>
+  <script src="../js/shared/formatters.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/roles-permissions.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/api/visitor-provisioning.js"></script>
+  <script src="../js/auth/api/favoritos.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/oauth.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="../js/visitor-session.js"></script>
+  <script src="../js/auth/bootstrap.js"></script>
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/theme-ai/theme-color-math.js"></script>
+  <script src="../js/theme-ai/theme-brand-analyzer.js"></script>
+  <script src="../js/theme-ai/theme-ai-generator.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/notifications.js"></script>
+  <script src="js/builder/core/session.js"></script>
+  <script src="js/builder/core/wizard.js"></script>
+  <script src="js/builder/icons.js"></script>
+  <script src="js/builder/dock.js"></script>
+  <script src="js/builder/progress-rail.js"></script>
+  <script src="js/builder/engines/project-types.js"></script>
+  <script src="js/builder/engines/branding-engine.js"></script>
+  <script src="js/builder/engines/media-engine.js"></script>
+  <script src="js/builder/engines/gallery-engine.js"></script>
+  <script src="js/builder/engines/panorama-engine.js"></script>
+  <script src="js/builder/engines/document-engine.js"></script>
+  <script src="js/builder/engines/theme-engine.js"></script>
+  <script src="js/builder/engines/hero-sync-engine.js"></script>
+  <script src="js/builder/engines/ai-assistant-engine.js"></script>
+  <script src="js/builder/engines/hotspot-engine.js"></script>
+  <script src="js/builder/engines/validation-engine.js"></script>
+  <script src="js/builder/engines/publishing-engine.js"></script>
+  <script src="js/views/ai-project-builder.js"></script>
+  <script src="js/platform-builder/bridge.js"></script>
+  <script src="js/platform-builder/bootstrap.js"></script>
+  <script>
+    (function () {
+      function refreshChip() {
+        var el = document.getElementById('builderUserChip');
+        if (!el || typeof VisitorSession === 'undefined') return;
+        var p = VisitorSession.getProfile();
+        if (!p) return;
+        el.innerHTML = 'Admin · <strong>' + (p.nombre_visible || p.nombre || 'Usuario') + '</strong>';
+      }
+      if (typeof AuthBootstrap !== 'undefined') {
+        AuthBootstrap.whenReady().then(refreshChip);
+      }
+    })();
+  </script>
+</body>
+</html>

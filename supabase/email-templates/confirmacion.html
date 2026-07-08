@@ -1,0 +1,19 @@
+<div style="background:#000000;margin:0;padding:32px 16px;font-family:Inter,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;background:#111111;border:1px solid #333333;border-radius:20px;padding:32px;color:#ffffff;">
+    <div style="font-size:28px;font-weight:800;letter-spacing:0.08em;text-align:center;margin-bottom:8px;">360 PREVENTA</div>
+    <div style="text-align:center;color:#8e8e93;font-size:14px;margin-bottom:28px;">Confirma tu cuenta de visitante</div>
+    <p style="color:#d9d9d9;font-size:15px;line-height:1.6;margin:0 0 20px;">
+      Hola{{ if .Data.nombre }} {{ .Data.nombre }}{{ end }},<br><br>
+      Gracias por registrarte en 360 PREVENTA. Para activar tu cuenta y acceder al showroom, confirma tu correo electrónico.
+    </p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#111111;border:1px solid #7a1f1f;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:14px;font-weight:700;font-size:15px;">
+        Confirmar mi correo
+      </a>
+    </div>
+    <p style="color:#8e8e93;font-size:13px;line-height:1.6;margin:0;">
+      Si no creaste esta cuenta, puedes ignorar este mensaje.<br>
+      Este enlace expira por seguridad.
+    </p>
+  </div>
+</div>

@@ -1,0 +1,68 @@
+/* =========================================================
+   VARIABLES DE TEMA — todo el look de la plataforma se
+   controla desde aquí. Ajustes > Temas modifica estos
+   valores en tiempo real vía JavaScript.
+   ========================================================= */
+:root {
+  /* Base — pantalla de carga neutra; ThemeSystem aplica el tema oficial después */
+  --bg-main: #000000;
+  --text-primary: #ffffff;
+  --accent: #8f1d1d;
+  /* Derivadas — se recalculan solas a partir de las de arriba */
+  --bg-popup: color-mix(in srgb, var(--bg-main) 93%, transparent);
+  --bg-card: color-mix(in srgb, var(--text-primary) 4.5%, transparent);
+  --border: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  --hover: color-mix(in srgb, var(--text-primary) 9%, transparent);
+  --track-bg: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --btn-surface: var(--bg-card);
+  --scrollbar-thumb: var(--border);
+  --scrollbar-track: var(--bg-main);
+  /* Placeholders de imagen (galerías, planos, renders) — se atenúan al tono del tema */
+  --placeholder-bg: color-mix(in srgb, var(--text-primary) 10%, var(--bg-main));
+  --placeholder-border: color-mix(in srgb, var(--text-primary) 30%, transparent);
+  /* Hero — follows active global theme */
+  --hero-bg: #000000;
+  --hero-text: #ffffff;
+  /* Backdrops de popups/modales — el velo detrás de la caja sí debe
+     adoptar el tono del tema activo (negro en Classic, claro en Minimal, etc.) */
+  --backdrop-55: color-mix(in srgb, var(--bg-main) 55%, transparent);
+  --backdrop-75: color-mix(in srgb, var(--bg-main) 75%, transparent);
+  --backdrop-90: color-mix(in srgb, var(--bg-main) 90%, transparent);
+  --backdrop-94: color-mix(in srgb, var(--bg-main) 94%, transparent);
+  --modal-backdrop: var(--backdrop-94);
+  --modal-backdrop-blur: 0px;
+  /* Glass material tokens */
+  --glass-panel: color-mix(in srgb, var(--bg-main) 28%, transparent);
+  --glass-surface: color-mix(in srgb, var(--text-primary) 4.5%, transparent);
+  --glass-border: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --glass-border-lit: color-mix(in srgb, var(--text-primary) 18%, transparent);
+  --glass-shadow: 0 10px 36px rgba(0, 0, 0, 0.2);
+  --btn-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  --modal-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --glass-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --bg-glass-surface: var(--glass-surface);
+  --bg-glass-blur: 16px;
+  --menu-glass-blur: var(--glass-blur);
+  --glass-blur: 22px;
+  --panel-glass-surface: var(--glass-surface);
+  --panel-modal-blur: 20px;
+  --btn-glass-surface: var(--btn-surface);
+  --btn-glass-hover: var(--hover);
+  --btn-glass-blur: 8px;
+  --btn-border: var(--glass-border);
+  --hero-btn-bg: var(--btn-surface);
+  --hero-btn-bg-hover: var(--hover);
+  --hero-btn-blur: 4px;
+  --hero-btn-border: var(--glass-border);
+  /* Contraste inteligente — sobrescritos por ThemeSystem.applyVars */
+  --text-secondary: #ffffff;
+  --text-muted: #ffffff;
+  --text-secondary-opacity: 0.78;
+  --text-muted-opacity: 0.52;
+  --icon-color: #ffffff;
+  --label-opacity: 0.55;
+}
+
+html:not(.theme-ready) body {
+  visibility: hidden;
+}
