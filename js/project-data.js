@@ -75,6 +75,123 @@ function applyHeroModule(project) {
   }
 }
 
+function getProjectConfig(project) {
+  var config = project && project.proyecto_config;
+  if (Array.isArray(config)) config = config[0];
+  return config || {};
+}
+
+var blackPlaceholderVideoPromise = null;
+
+function resolveBlackPlaceholderVideoUrl() {
+  if (window.__blackPlaceholderVideoUrl) {
+    return Promise.resolve(window.__blackPlaceholderVideoUrl);
+  }
+  if (blackPlaceholderVideoPromise) return blackPlaceholderVideoPromise;
+
+  blackPlaceholderVideoPromise = new Promise(function (resolve) {
+    if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement === 'undefined' ||
+        !HTMLCanvasElement.prototype.captureStream) {
+      resolve('');
+      return;
+    }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) {
+      resolve('');
+      return;
+    }
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    var stream = canvas.captureStream(24);
+    var mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : (MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '');
+    if (!mimeType) {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      resolve('');
+      return;
+    }
+
+    var recorder = new MediaRecorder(stream, { mimeType: mimeType });
+    var chunks = [];
+    recorder.ondataavailable = function (event) {
+      if (event.data && event.data.size) chunks.push(event.data);
+    };
+    recorder.onstop = function () {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      if (!chunks.length) {
+        resolve('');
+        return;
+      }
+      var blob = new Blob(chunks, { type: mimeType });
+      window.__blackPlaceholderVideoUrl = URL.createObjectURL(blob);
+      resolve(window.__blackPlaceholderVideoUrl);
+    };
+    recorder.onerror = function () {
+      stream.getTracks().forEach(function (track) { track.stop(); });
+      resolve('');
+    };
+    recorder.start(200);
+    setTimeout(function () {
+      if (recorder.state !== 'inactive') recorder.stop();
+    }, 4000);
+  });
+
+  return blackPlaceholderVideoPromise;
+}
+
+function guessVideoMimeType(url) {
+  var lower = String(url || '').split('?')[0].toLowerCase();
+  if (lower.slice(-5) === '.webm') return 'video/webm';
+  if (lower.slice(-4) === '.ogg') return 'video/ogg';
+  return 'video/mp4';
+}
+
+function setProjectVideoSource(player, sourceEl, url, mimeType) {
+  if (!player || !sourceEl || !url) return;
+  sourceEl.src = url;
+  sourceEl.type = mimeType || guessVideoMimeType(url);
+  player.load();
+}
+
+function applyProjectVideoModule(project) {
+  var config = getProjectConfig(project);
+  var player = document.getElementById('projectVideoPlayer');
+  var sourceEl = document.getElementById('projectVideoSource');
+  if (!player || !sourceEl) return;
+
+  if (config.video_hero_url) {
+    setProjectVideoSource(player, sourceEl, config.video_hero_url, guessVideoMimeType(config.video_hero_url));
+    return;
+  }
+
+  resolveBlackPlaceholderVideoUrl().then(function (blobUrl) {
+    if (blobUrl) setProjectVideoSource(player, sourceEl, blobUrl, 'video/webm');
+  });
+}
+
+function bindProjectVideoModal() {
+  var modal = document.getElementById('videoModal');
+  var player = document.getElementById('projectVideoPlayer');
+  if (!modal || !player || bindProjectVideoModal.bound) return;
+  bindProjectVideoModal.bound = true;
+
+  if (typeof MutationObserver !== 'undefined') {
+    var observer = new MutationObserver(function () {
+      if (!modal.classList.contains('active')) {
+        player.pause();
+        try { player.currentTime = 0; } catch (e) { /* ignore */ }
+      }
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+  }
+}
+
 function buildConfig(project) {
   var constructora = project.constructoras || {};
   var config = project.proyecto_config || {};
@@ -266,8 +383,13 @@ function buildUnitsData(project) {
 function applyProjectData(project) {
   PROJECT_DATA = project;
   CONFIG = buildConfig(project);
+  if (typeof ProjectPresetThemes !== 'undefined' && ProjectPresetThemes.invalidateCache) {
+    ProjectPresetThemes.invalidateCache();
+  }
 
   applyHeroModule(project);
+  applyProjectVideoModule(project);
+  bindProjectVideoModal();
   applyProjectInfoModule(project);
   applyConstructorModule(project);
   applyAmenitiesModule(project);
@@ -288,8 +410,17 @@ function applyProjectData(project) {
         typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
         ProjectThemeAuthority.shouldApplyProjectDefault()) {
       ProjectThemeAuthority.applyDefaultForCurrentVisitor();
-    } else if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
-      ThemeSystem.reapply();
+    } else {
+      window.setTimeout(function () {
+        if (typeof StyleEngineCompatibility !== 'undefined' &&
+            StyleEngineCompatibility.isStyleEngineLive()) {
+          if (typeof StyleEngineRuntime !== 'undefined') StyleEngineRuntime.reinforcePublished();
+          return;
+        }
+        if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
+          ThemeSystem.reapply();
+        }
+      }, 0);
     }
 }
 

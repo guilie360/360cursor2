@@ -243,20 +243,23 @@ var ThemeSystem = (function () {
 
   var CUSTOM_THEME_KEY = 'custom';
   var DEFAULT_CUSTOM_THEME = {
-    bg: '#111111',
+    bg: '#161616',
     menuColor: '#1a1a1a',
-    surface: '#1d1d1d',
+    surface: '#2a2a2a',
     accent: '#8f1d1d',
+    maskColor: '#000000',
+    maskGlass: 'soft',
+    maskBlur: 'medium',
     textMode: 'light',
     bgTextMode: 'light',
     visualDepth: 'medium',
     bgGlass: 'soft',
-    panelGlass: 'solid',
-    buttonGlass: 'solid',
+    panelGlass: 'soft',
+    buttonGlass: 'soft',
     borderGlass: 'solid',
     shadowGlass: 'soft',
-    heroSurface: '#1d1d1d',
-    heroButtonGlass: 'solid',
+    heroSurface: '#8f1d1d',
+    heroButtonGlass: 'soft',
     heroBorderGlass: 'solid'
   };
 
@@ -282,9 +285,15 @@ var ThemeSystem = (function () {
   };
 
   var BACKDROP_MASK_PRESETS = {
-    solid: { v94: 94, v90: 90, v75: 75, v55: 55, blur: 0 },
-    soft: { v94: 70, v90: 58, v75: 46, v55: 34, blur: 8 },
-    glass: { v94: 48, v90: 38, v75: 30, v55: 22, blur: 14 }
+    solid: { v94: 94, v90: 90, v75: 75, v55: 55 },
+    soft: { v94: 70, v90: 58, v75: 46, v55: 34 },
+    glass: { v94: 48, v90: 38, v75: 30, v55: 22 }
+  };
+
+  var MASK_BLUR_PRESETS = {
+    low: 6,
+    medium: 16,
+    high: 32
   };
 
   var BUTTON_GLASS_PRESETS = {
@@ -487,6 +496,23 @@ var ThemeSystem = (function () {
     return 'medium';
   }
 
+  function normalizeMaskBlur(value) {
+    if (value === 'low' || value === 'high') return value;
+    return 'medium';
+  }
+
+  function deriveMaskBlurFromGlass(glass) {
+    glass = normalizePanelGlass(glass);
+    if (glass === 'glass') return 'high';
+    if (glass === 'soft') return 'medium';
+    return 'low';
+  }
+
+  function resolveMaskBlurPx(blurLevel) {
+    blurLevel = normalizeMaskBlur(blurLevel);
+    return MASK_BLUR_PRESETS[blurLevel] || MASK_BLUR_PRESETS.medium;
+  }
+
   function normalizePanelGlass(value) {
     if (value === 'solid' || value === 'soft' || value === 'glass') return value;
     return 'solid';
@@ -561,6 +587,42 @@ var ThemeSystem = (function () {
       return normalizePanelGlass(getCustomThemeConfig().panelGlass);
     }
     return 'soft';
+  }
+
+  function getActiveMaskBlur() {
+    if (customPreviewConfig && customPreviewConfig.maskBlur) {
+      return normalizeMaskBlur(customPreviewConfig.maskBlur);
+    }
+    if (state.themeKey === CUSTOM_THEME_KEY && state.customTheme && state.customTheme.maskBlur) {
+      return normalizeMaskBlur(state.customTheme.maskBlur);
+    }
+    if (state.themeKey === CUSTOM_THEME_KEY) {
+      var cfg = getCustomThemeConfig();
+      if (cfg.maskBlur) return normalizeMaskBlur(cfg.maskBlur);
+      return deriveMaskBlurFromGlass(cfg.maskGlass || cfg.bgGlass || 'soft');
+    }
+    return 'medium';
+  }
+
+  function getActiveMaskGlass() {
+    if (customPreviewConfig && customPreviewConfig.maskGlass) {
+      return normalizePanelGlass(customPreviewConfig.maskGlass);
+    }
+    if (state.themeKey === CUSTOM_THEME_KEY && state.customTheme && state.customTheme.maskGlass) {
+      return normalizePanelGlass(state.customTheme.maskGlass);
+    }
+    if (state.themeKey === CUSTOM_THEME_KEY) {
+      var cfg = getCustomThemeConfig();
+      return normalizePanelGlass(cfg.maskGlass || cfg.bgGlass || 'soft');
+    }
+    return 'soft';
+  }
+
+  function resolveMaskColor(t) {
+    var raw = customPreviewConfig || (state.themeKey === CUSTOM_THEME_KEY ? state.customTheme : null);
+    if (raw && raw.maskColor) return normalizeHex(raw.maskColor);
+    if (raw && raw.bg) return normalizeHex(raw.bg);
+    return normalizeHex(t.bg);
   }
 
   function getActiveBgGlass() {
@@ -757,12 +819,12 @@ var ThemeSystem = (function () {
     var raw = customPreviewConfig || (state.themeKey === CUSTOM_THEME_KEY ? state.customTheme : null);
     if (!raw) {
       return {
-        heroSurface: t.surface,
+        heroSurface: t.accent || t.surface,
         bg: t.bg
       };
     }
     return {
-      heroSurface: normalizeHex(raw.heroSurface || raw.surface),
+      heroSurface: normalizeHex(raw.heroSurface || raw.accent || raw.surface),
       bg: normalizeHex(raw.bg)
     };
   }
@@ -846,15 +908,22 @@ var ThemeSystem = (function () {
     return level;
   }
 
-  function applyBackdropMask(root, level, bgColor) {
+  function applyBackdropMask(root, level, bgColor, blurLevel) {
     level = normalizePanelGlass(level);
+    blurLevel = normalizeMaskBlur(blurLevel || deriveMaskBlurFromGlass(level));
     var mask = BACKDROP_MASK_PRESETS[level] || BACKDROP_MASK_PRESETS.soft;
-    root.setProperty('--modal-backdrop', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
-    root.setProperty('--backdrop-94', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
+    var backdrop = 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)';
+    root.setProperty('--modal-backdrop', backdrop);
+    root.setProperty('--overlay-mask', backdrop);
+    root.setProperty('--backdrop-94', backdrop);
     root.setProperty('--backdrop-90', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v90 + '%, transparent)');
     root.setProperty('--backdrop-75', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v75 + '%, transparent)');
     root.setProperty('--backdrop-55', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v55 + '%, transparent)');
-    root.setProperty('--modal-backdrop-blur', mask.blur + 'px');
+    root.setProperty('--modal-backdrop-blur', resolveMaskBlurPx(blurLevel) + 'px');
+    if (document.body) {
+      document.body.setAttribute('data-mask-glass', level);
+      document.body.setAttribute('data-mask-blur', blurLevel);
+    }
   }
 
   function resolveBgGlassSurfaces(level, bgColor) {
@@ -987,16 +1056,15 @@ var ThemeSystem = (function () {
     if (t.isCustom) {
       var panelGlassLevel = getActivePanelGlass();
       var bgGlassLevel = getActiveBgGlass();
-      var fondoColor = t.bg || t.menuColor || t.panel;
       applyMenuPanelGlass(root, panelGlassLevel, t);
-      applyBackdropMask(root, bgGlassLevel, fondoColor);
+      applyBackdropMask(root, getActiveMaskGlass(), resolveMaskColor(t), getActiveMaskBlur());
       applyBgGlass(root, bgGlassLevel, t);
       applyContainerText(root, getActiveBgTextMode());
       root.setProperty('--scrollbar-track', t.scrollbarTrack || t.bg);
     } else {
       var presetPanelGlass = getActivePanelGlass();
       applyPanelGlass(root, presetPanelGlass, t);
-      applyBackdropMask(root, presetPanelGlass, t.panel || t.bg);
+      applyBackdropMask(root, 'soft', normalizeHex(t.bg), 'medium');
       root.setProperty('--scrollbar-track', t.scrollbarTrack || t.bg);
     }
     applyShadowGlass(root, getActiveShadowGlass());
@@ -1050,23 +1118,7 @@ var ThemeSystem = (function () {
   function apply(themeKey, persist, customThemeData) {
     themeKey = resolveThemeKey(themeKey);
     if (themeKey === CUSTOM_THEME_KEY && customThemeData) {
-      state.customTheme = {
-        bg: normalizeHex(customThemeData.bg),
-        menuColor: normalizeHex(customThemeData.menuColor || customThemeData.panelColor || customThemeData.bg),
-        surface: normalizeHex(customThemeData.surface),
-        accent: normalizeHex(customThemeData.accent),
-      textMode: customThemeData.textMode === 'dark' ? 'dark' : 'light',
-      bgTextMode: customThemeData.bgTextMode === 'dark' ? 'dark' : 'light',
-      visualDepth: normalizeVisualDepth(customThemeData.visualDepth),
-        bgGlass: normalizePanelGlass(customThemeData.bgGlass || customThemeData.panelGlass),
-        panelGlass: normalizePanelGlass(customThemeData.panelGlass),
-        buttonGlass: normalizePanelGlass(customThemeData.buttonGlass),
-        borderGlass: normalizePanelGlass(customThemeData.borderGlass),
-        shadowGlass: normalizeShadowGlass(customThemeData.shadowGlass),
-        heroSurface: normalizeHex(customThemeData.heroSurface || customThemeData.surface),
-        heroButtonGlass: normalizePanelGlass(customThemeData.heroButtonGlass || customThemeData.buttonGlass),
-        heroBorderGlass: normalizePanelGlass(customThemeData.heroBorderGlass || customThemeData.borderGlass)
-      };
+      state.customTheme = normalizeCustomConfig(customThemeData);
     }
     customPreviewConfig = null;
     state.themeKey = themeKey;
@@ -1085,23 +1137,7 @@ var ThemeSystem = (function () {
   }
 
   function previewCustomTheme(config) {
-    customPreviewConfig = {
-      bg: normalizeHex(config.bg),
-      menuColor: normalizeHex(config.menuColor || config.panelColor || config.bg),
-      surface: normalizeHex(config.surface),
-      accent: normalizeHex(config.accent),
-      textMode: config.textMode === 'dark' ? 'dark' : 'light',
-      bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
-      visualDepth: normalizeVisualDepth(config.visualDepth),
-      bgGlass: normalizePanelGlass(config.bgGlass || config.panelGlass),
-      panelGlass: normalizePanelGlass(config.panelGlass),
-      buttonGlass: normalizePanelGlass(config.buttonGlass),
-      borderGlass: normalizePanelGlass(config.borderGlass),
-      shadowGlass: normalizeShadowGlass(config.shadowGlass),
-      heroSurface: normalizeHex(config.heroSurface || config.surface),
-      heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
-    };
+    customPreviewConfig = normalizeCustomConfig(config);
     applyVars(CUSTOM_THEME_KEY);
     applyVisualDepth(customPreviewConfig.visualDepth);
     document.body.dataset.theme = CUSTOM_THEME_KEY;
@@ -1129,24 +1165,8 @@ var ThemeSystem = (function () {
   }
 
   function saveCustomTheme(config) {
-    var normalized = {
-      bg: normalizeHex(config.bg),
-      menuColor: normalizeHex(config.menuColor || config.panelColor || config.bg),
-      surface: normalizeHex(config.surface),
-      accent: normalizeHex(config.accent),
-      textMode: config.textMode === 'dark' ? 'dark' : 'light',
-      bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
-      visualDepth: normalizeVisualDepth(config.visualDepth),
-      bgGlass: normalizePanelGlass(config.bgGlass || config.panelGlass),
-      panelGlass: normalizePanelGlass(config.panelGlass),
-      buttonGlass: normalizePanelGlass(config.buttonGlass),
-      borderGlass: normalizePanelGlass(config.borderGlass),
-      shadowGlass: normalizeShadowGlass(config.shadowGlass),
-      heroSurface: normalizeHex(config.heroSurface || config.surface),
-      heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
-    };
-    var built = buildCustomTheme(normalized);
+    var normalized = normalizeCustomConfig(config);
+    buildCustomTheme(normalized);
     editorRevertKey = null;
     state.customTheme = normalized;
     apply(CUSTOM_THEME_KEY, true, normalized);
@@ -1170,6 +1190,9 @@ var ThemeSystem = (function () {
       menuColor: normalizeHex(raw.menuColor || raw.panelColor || raw.bg || raw.background),
       surface: normalizeHex(raw.surface),
       accent: normalizeHex(raw.accent),
+      maskColor: normalizeHex(raw.maskColor || raw.bg),
+      maskGlass: normalizePanelGlass(raw.maskGlass || raw.bgGlass || 'soft'),
+      maskBlur: normalizeMaskBlur(raw.maskBlur || deriveMaskBlurFromGlass(raw.maskGlass || raw.bgGlass || 'soft')),
       textMode: raw.textMode === 'dark' ? 'dark' : 'light',
       bgTextMode: raw.bgTextMode === 'dark' ? 'dark' : 'light',
       visualDepth: normalizeVisualDepth(raw.visualDepth),
@@ -1178,7 +1201,7 @@ var ThemeSystem = (function () {
       buttonGlass: normalizePanelGlass(raw.buttonGlass),
       borderGlass: normalizePanelGlass(raw.borderGlass),
       shadowGlass: normalizeShadowGlass(raw.shadowGlass),
-      heroSurface: normalizeHex(raw.heroSurface || raw.surface),
+      heroSurface: normalizeHex(raw.heroSurface || raw.accent || raw.surface),
       heroButtonGlass: normalizePanelGlass(raw.heroButtonGlass || raw.buttonGlass),
       heroBorderGlass: normalizePanelGlass(raw.heroBorderGlass || raw.borderGlass)
     };
@@ -1203,6 +1226,9 @@ var ThemeSystem = (function () {
       bg: normalizeHex(preset.bg),
       surface: normalizeHex(preset.surface || preset.button || preset.bg),
       accent: normalizeHex(preset.accent),
+      maskColor: normalizeHex(preset.bg),
+      maskGlass: 'soft',
+      maskBlur: 'medium',
       textMode: isLight ? 'dark' : 'light',
       visualDepth: 'medium',
       panelGlass: 'soft',
@@ -1392,6 +1418,7 @@ var ThemeSystem = (function () {
     applyVisualDepth: applyVisualDepth,
     applyPanelGlass: applyPanelGlass,
     normalizeVisualDepth: normalizeVisualDepth,
+    normalizeMaskBlur: normalizeMaskBlur,
     normalizePanelGlass: normalizePanelGlass,
     normalizeShadowGlass: normalizeShadowGlass,
     getCurrentKey: getCurrentKey,

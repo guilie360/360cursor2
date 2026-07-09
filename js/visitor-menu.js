@@ -20,6 +20,35 @@ var VisitorMenu = (function () {
       PlatformRoles.isAdmin(VisitorSession.getProfile());
   }
 
+  var ICON_STYLE_ENGINE =
+    '<svg class="menu-profile-action-icon" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path fill="currentColor" d="M12 2l1.8 5.5H19l-4.6 3.3 1.8 5.5L12 13l-4.2 3.3 1.8-5.5L5 7.5h5.2L12 2zm-7 13.5h2.2v6.5H5v-6.5zm5.4 0h2.2v6.5h-2.2v-6.5zm5.4 0H16v6.5h-2.2v-6.5z"/>' +
+    '</svg>';
+
+  function styleEngineButtonHtml() {
+    if (!isAdminProfile()) return '';
+    return (
+      '<button type="button" class="menu-profile-action menu-style-engine-btn">' +
+        ICON_STYLE_ENGINE + '<span>Style Engine</span>' +
+      '</button>'
+    );
+  }
+
+  function activeThemeIndicatorHtml() {
+    if (!isAdminProfile()) return '';
+    if (typeof StyleEngine === 'undefined' || typeof StyleEngine.getActiveThemeLabel !== 'function') return '';
+    var label = StyleEngine.getActiveThemeLabel();
+    var isSe = label === 'Style Engine';
+    return (
+      '<div class="menu-active-theme-indicator">' +
+        '<span class="menu-active-theme-label">Tema activo</span>' +
+        '<span class="menu-active-theme-value' + (isSe ? ' is-style-engine' : ' is-legacy') + '">' +
+          '<span class="menu-active-theme-dot">○</span> ' + escapeHtml(label) +
+        '</span>' +
+      '</div>'
+    );
+  }
+
   function primaryStripActionHtml() {
     if (isAdminProfile()) {
       return (
@@ -57,23 +86,27 @@ var VisitorMenu = (function () {
     }
 
     return (
-      '<div class="menu-profile-strip">' +
-        '<div class="menu-profile-strip-left">' +
-          VisitorPersonalization.renderAvatarHtml('menu-profile-avatar-sm') +
-          '<div class="menu-profile-strip-meta">' +
-            '<div class="menu-profile-name">' + escapeHtml(VisitorPersonalization.getDisplayName()) + '</div>' +
-            '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
-            verificationHint +
+      '<div class="menu-profile-card">' +
+        '<div class="menu-profile-strip">' +
+          '<div class="menu-profile-strip-left">' +
+            VisitorPersonalization.renderAvatarHtml('menu-profile-avatar-sm menu-profile-avatar-status') +
+            '<div class="menu-profile-strip-meta">' +
+              '<div class="menu-profile-name">' + escapeHtml(VisitorPersonalization.getDisplayName()) + '</div>' +
+          '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
+          activeThemeIndicatorHtml() +
+          verificationHint +
+            '</div>' +
           '</div>' +
-        '</div>' +
-        '<div class="menu-profile-strip-actions">' +
-          primaryStripActionHtml() +
-          '<button type="button" class="menu-profile-action menu-personalize-btn">' +
-            ICON_SETTINGS + '<span>Personalizar</span>' +
-          '</button>' +
-          '<button type="button" class="menu-profile-action menu-logout-btn">' +
-            ICON_LOGOUT + '<span>Salir</span>' +
-          '</button>' +
+          '<div class="menu-profile-strip-actions">' +
+            primaryStripActionHtml() +
+            '<button type="button" class="menu-profile-action menu-personalize-btn">' +
+              ICON_SETTINGS + '<span>Personalizar</span>' +
+            '</button>' +
+            styleEngineButtonHtml() +
+            '<button type="button" class="menu-profile-action menu-logout-btn">' +
+              ICON_LOGOUT + '<span>Salir</span>' +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>'
     );
@@ -141,6 +174,13 @@ var VisitorMenu = (function () {
           return;
         }
         if (typeof showMenuLevel === 'function') showMenuLevel('personalizar');
+      };
+    });
+    document.querySelectorAll('.menu-style-engine-btn').forEach(function (btn) {
+      btn.onclick = function () {
+        if (typeof StyleEngine !== 'undefined' && typeof StyleEngine.open === 'function') {
+          StyleEngine.open();
+        }
       };
     });
     document.querySelectorAll('.menu-logout-btn').forEach(function (btn) {
@@ -233,6 +273,12 @@ var VisitorMenu = (function () {
     window.refreshVisitorMenuProfile = refreshProfile;
     window.onVisitorSessionChanged = function () {
       refreshProfile();
+      if (typeof VisitorPersonalizePanel !== 'undefined' &&
+          typeof VisitorPersonalizePanel.isOnPersonalizarPanel === 'function' &&
+          VisitorPersonalizePanel.isOnPersonalizarPanel() &&
+          typeof VisitorPersonalizePanel.render === 'function') {
+        VisitorPersonalizePanel.render();
+      }
     };
     window.onVisitorPersonalizationChanged = function () {
       refreshProfile();

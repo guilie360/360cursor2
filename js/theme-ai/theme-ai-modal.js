@@ -127,12 +127,12 @@ var ThemeAIModal = (function () {
     if (restoreFromSession(state.fingerprint)) return;
 
     setStep(STEPS.analyzing);
-    setStatusText('Extrayendo colores del logo...');
+    setStatusText('Analizando identidad visual del logo...');
 
     ThemeAISource.analyze(ThemeAISource.SOURCE_TYPES.image, file).then(function (profile) {
       state.brandProfile = profile;
       setStep(STEPS.generating);
-      setStatusText('Construyendo propuestas con la paleta extraída...');
+      setStatusText('Construyendo sistema cromático y propuestas de diseño...');
       return ThemeAIGenerator.generate(profile);
     }).then(function (proposals) {
       state.proposals = proposals;

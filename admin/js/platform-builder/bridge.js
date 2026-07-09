@@ -200,12 +200,32 @@ var PlatformBuilderBridge = (function () {
         if (payload.project_default_theme) {
           data.project_default_theme = payload.project_default_theme;
         }
-        var result = await getClient()
+        var updated = await getClient()
           .from('proyecto_config')
-          .upsert(data, { onConflict: 'proyecto_id' })
+          .update(data)
+          .eq('proyecto_id', proyectoId)
           .select(CONFIG_SELECT)
-          .single();
-        return unwrap(result, 'Error guardando hero');
+          .maybeSingle();
+        if (updated.error) throw new Error(updated.error.message || 'Error guardando hero');
+        if (updated.data) return updated.data;
+        var inserted = await getClient()
+          .from('proyecto_config')
+          .insert(data)
+          .select(CONFIG_SELECT)
+          .maybeSingle();
+        if (inserted.error) {
+          if (/duplicate|unique/i.test(inserted.error.message || '')) {
+            var retry = await getClient()
+              .from('proyecto_config')
+              .update(data)
+              .eq('proyecto_id', proyectoId)
+              .select(CONFIG_SELECT)
+              .maybeSingle();
+            return unwrap(retry, 'Error guardando hero');
+          }
+          throw new Error(inserted.error.message || 'Error guardando hero');
+        }
+        return unwrap(inserted, 'Error guardando hero');
       }
     };
   }

@@ -1,6 +1,6 @@
 /* Caché temporal de propuestas de tema IA (misma sesión de navegador) */
 var ThemeAISession = (function () {
-  var STORAGE_KEY = 'guilie_theme_ai_session_v2';
+  var STORAGE_KEY = 'guilie_theme_ai_session_v3';
 
   function readRaw() {
     try {

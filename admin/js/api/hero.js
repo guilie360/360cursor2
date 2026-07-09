@@ -13,7 +13,7 @@ var HeroApi = (function () {
   }
 
   function sanitizePayload(payload) {
-    return {
+    var data = {
       texto_hero: AdminUI.normalizeOptionalText(payload.texto_hero),
       logo_url: AdminUI.normalizeOptionalText(payload.logo_url),
       video_hero_url: AdminUI.normalizeOptionalText(payload.video_hero_url),
@@ -21,6 +21,65 @@ var HeroApi = (function () {
       color_fondo: AdminUI.normalizeHexColor(payload.color_fondo, '#0A0A0A'),
       color_accento: AdminUI.normalizeHexColor(payload.color_accento, '#FF3B30')
     };
+    if (payload.project_default_theme != null) {
+      data.project_default_theme = payload.project_default_theme;
+    }
+    if (payload.titulo_hero != null) {
+      data.titulo_hero = AdminUI.normalizeOptionalText(payload.titulo_hero);
+    }
+    if (payload.boton_hero_1 != null) {
+      data.boton_hero_1 = AdminUI.normalizeOptionalText(payload.boton_hero_1);
+    }
+    if (payload.boton_hero_2 != null) {
+      data.boton_hero_2 = AdminUI.normalizeOptionalText(payload.boton_hero_2);
+    }
+    if (payload.hero_text_color != null) {
+      data.hero_text_color = payload.hero_text_color === 'dark' ? 'dark' : 'light';
+    }
+    if (payload.hero_button_text_color != null) {
+      data.hero_button_text_color = payload.hero_button_text_color === 'dark' ? 'dark' : 'light';
+    }
+    return data;
+  }
+
+  async function saveConfigRow(proyectoId, data) {
+    var client = AdminApi.getClient();
+
+    var updated = await client
+      .from('proyecto_config')
+      .update(data)
+      .eq('proyecto_id', proyectoId)
+      .select(CONFIG_SELECT)
+      .maybeSingle();
+
+    if (updated.error) {
+      throw new Error(updated.error.message || 'Error guardando hero');
+    }
+    if (updated.data) return updated.data;
+
+    var inserted = await client
+      .from('proyecto_config')
+      .insert(data)
+      .select(CONFIG_SELECT)
+      .maybeSingle();
+
+    if (inserted.error) {
+      if (/duplicate|unique/i.test(inserted.error.message || '')) {
+        var retry = await client
+          .from('proyecto_config')
+          .update(data)
+          .eq('proyecto_id', proyectoId)
+          .select(CONFIG_SELECT)
+          .maybeSingle();
+        if (retry.error) throw new Error(retry.error.message || 'Error guardando hero');
+        if (retry.data) return retry.data;
+      } else {
+        throw new Error(inserted.error.message || 'Error guardando hero');
+      }
+    }
+    if (inserted.data) return inserted.data;
+
+    throw new Error('No se pudo guardar la configuración del hero. Verifica permisos o vuelve a intentar.');
   }
 
   async function getForProject(proyectoId) {
@@ -68,13 +127,7 @@ var HeroApi = (function () {
     var data = sanitizePayload(payload);
     data.proyecto_id = proyectoId;
 
-    var result = await AdminApi.getClient()
-      .from('proyecto_config')
-      .upsert(data, { onConflict: 'proyecto_id' })
-      .select(CONFIG_SELECT)
-      .single();
-
-    return AdminApi.unwrap(result, 'Error guardando hero');
+    return saveConfigRow(proyectoId, data);
   }
 
   return {

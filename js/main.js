@@ -143,55 +143,46 @@ var TOUR360 = {
   apto1: {
     name: 'Apto 1',
     area: 72,
-    color: '#3a4654',
     link360: 'https://app.lapentor.com/sphere/la-gauche'
   },
   apto2: {
     name: 'Apto 2',
     area: 85,
-    color: '#4a4038',
     link360: 'https://app.lapentor.com/sphere/makapiacceso-plazoleta'
   },
   apto3: {
     name: 'Apto 3',
     area: 68,
-    color: '#3a4540',
     link360: 'https://app.lapentor.com/sphere/la-gauche'
   },
   parqueadero: {
     name: 'Parqueadero',
     area: 12,
-    color: '#2f3338',
     link360: 'https://app.lapentor.com/sphere/makapiacceso-plazoleta'
   },
   lobby: {
     name: 'Lobby',
     area: 180,
-    color: '#454040',
     link360: 'https://app.lapentor.com/sphere/la-gauche'
   },
   zonaSocial: {
     name: 'Zona social',
     area: 240,
-    color: '#3d3a48',
     link360: 'https://app.lapentor.com/sphere/makapiacceso-plazoleta'
   },
   terraza: {
     name: 'Terraza',
     area: 95,
-    color: '#404838',
     link360: 'https://app.lapentor.com/sphere/la-gauche'
   },
   amenidades: {
     name: 'Amenidades',
     area: 320,
-    color: '#384048',
     link360: 'https://app.lapentor.com/sphere/makapiacceso-plazoleta'
   },
   modelo: {
     name: 'Modelo amoblado',
     area: 78,
-    color: '#483840',
     link360: 'https://app.lapentor.com/sphere/la-gauche'
   }
 };
@@ -305,39 +296,71 @@ var unitsComparePanel = document.getElementById('unitsComparePanel');
 var favoritesEmptyEl = document.getElementById('favoritesEmpty');
 var currentUnitsTab = 'all';
 var unitsViewMode = 'browse';
+var comparePickMode = false;
+var COMPARE_MAX_UNITS = 2;
+var COMPARE_STORAGE_KEY = 'boxies_compare_unit_keys';
 
-var UNITS_COMPARE_METRICS = [
-  { key: 'unitType', label: 'Tipo de vivienda' },
-  { key: 'rooms', label: 'Habitaciones' },
-  {
-    key: 'areaPerRoom',
-    label: 'm² por habitación',
-    compute: function (u) {
-      if (!u.rooms) return '—';
-      return (Math.round((u.area / u.rooms) * 10) / 10) + ' m²';
-    }
-  },
-  { key: 'baths', label: 'Baños' },
-  { key: 'privateBaths', label: 'Baños privados' },
-  { key: 'parking', label: 'Parqueaderos' },
-  { key: 'floor', label: 'Piso' },
-  { key: 'tower', label: 'Torre' },
-  {
-    key: 'area',
-    label: 'Área total',
-    compute: function (u) { return u.area ? u.area + ' m²' : '—'; }
-  },
-  {
-    key: 'price',
-    label: 'Precio',
-    compute: function (u) { return u.price ? formatCOP(u.price) : '—'; }
-  },
-  {
-    key: 'adminFee',
-    label: 'Administración',
-    compute: function (u) { return u.adminFee ? formatCOP(u.adminFee) : '—'; }
+function getCompareUnitKeys() {
+  try {
+    var raw = sessionStorage.getItem(COMPARE_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw).filter(function (key) { return !!UNITS[key]; }).slice(0, COMPARE_MAX_UNITS);
+  } catch (e) {
+    return [];
   }
-];
+}
+
+function setCompareUnitKeys(keys) {
+  keys = (keys || []).filter(function (key) { return !!UNITS[key]; }).slice(0, COMPARE_MAX_UNITS);
+  sessionStorage.setItem(COMPARE_STORAGE_KEY, JSON.stringify(keys));
+  return keys;
+}
+
+function initCompareUnitKeysFromFavorites() {
+  var favs = getFavorites().filter(function (key) { return !!UNITS[key]; });
+  return setCompareUnitKeys(favs.slice(0, COMPARE_MAX_UNITS));
+}
+
+function tryAddCompareUnit(key) {
+  if (!UNITS[key]) return false;
+  var keys = getCompareUnitKeys();
+  if (keys.indexOf(key) !== -1) return true;
+  if (keys.length >= COMPARE_MAX_UNITS) {
+    showCompareLimitNotice();
+    return false;
+  }
+  keys.push(key);
+  setCompareUnitKeys(keys);
+  return true;
+}
+
+function removeCompareUnit(key) {
+  var keys = getCompareUnitKeys().filter(function (k) { return k !== key; });
+  setCompareUnitKeys(keys);
+  return keys;
+}
+
+function showCompareLimitNotice() {
+  var host = unitsComparePanel || document.getElementById('unitsPopup');
+  if (!host) return;
+  var existing = host.querySelector('.uc-limit-overlay');
+  if (existing) {
+    existing.hidden = false;
+    return;
+  }
+  var overlay = document.createElement('div');
+  overlay.className = 'uc-limit-overlay';
+  overlay.innerHTML =
+    '<div class="uc-limit-card" role="dialog" aria-labelledby="ucLimitTitle">' +
+      '<h3 class="uc-limit-title" id="ucLimitTitle">Comparación enfocada</h3>' +
+      '<p class="uc-limit-text">El comparador admite hasta dos viviendas para ofrecer una comparación clara y fácil de analizar. Si deseas comparar otra opción, primero elimina una de las actuales o guárdala en Favoritos.</p>' +
+      '<button type="button" class="uc-limit-btn" data-uc-action="limit-ok">Entendido</button>' +
+    '</div>';
+  host.appendChild(overlay);
+  overlay.querySelector('[data-uc-action="limit-ok"]').onclick = function () {
+    overlay.hidden = true;
+  };
+}
 
 function escapeUnitsHtml(value) {
   return String(value == null ? '' : value)
@@ -347,11 +370,563 @@ function escapeUnitsHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
+var UNITS_COMPARE_CATEGORIES = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: 'home',
+    metrics: [
+      { key: 'unitType', label: 'Tipo de vivienda', icon: 'type', compare: false }
+    ]
+  },
+  {
+    id: 'ubicacion',
+    label: 'Ubicación',
+    icon: 'tower',
+    metrics: [
+      { key: 'tower', label: 'Torre', icon: 'tower', compare: false },
+      { key: 'floor', label: 'Piso', icon: 'floor', compare: false }
+    ]
+  },
+  {
+    id: 'espacios',
+    label: 'Espacios',
+    icon: 'bed',
+    metrics: [
+      { key: 'rooms', label: 'Habitaciones', icon: 'bed', compare: true, highlight: true },
+      { key: 'baths', label: 'Baños', icon: 'bath', compare: true },
+      { key: 'privateBaths', label: 'Baños privados', icon: 'bath', compare: true },
+      { key: 'parking', label: 'Parqueaderos', icon: 'park', compare: true }
+    ]
+  },
+  {
+    id: 'areas',
+    label: 'Áreas',
+    icon: 'area',
+    metrics: [
+      { key: 'area', label: 'Área privada', icon: 'area', compare: true, format: 'area', highlight: true },
+      {
+        key: 'areaPerRoom',
+        label: 'm² por habitación',
+        icon: 'area',
+        compare: true,
+        compute: function (u) {
+          if (!u.rooms) return '—';
+          return (Math.round((u.area / u.rooms) * 10) / 10) + ' m²';
+        },
+        raw: function (u) {
+          if (!u.rooms) return NaN;
+          return u.area / u.rooms;
+        }
+      }
+    ]
+  },
+  {
+    id: 'valores',
+    label: 'Valores',
+    icon: 'cost',
+    metrics: [
+      { key: 'price', label: 'Precio', icon: 'cost', compare: true, format: 'price', highlight: true },
+      { key: 'adminFee', label: 'Administración', icon: 'cost', compare: true, format: 'admin' }
+    ]
+  },
+  {
+    id: 'acabados',
+    label: 'Acabados',
+    icon: 'type',
+    metrics: [
+      {
+        key: 'finishes',
+        label: 'Acabados',
+        icon: 'type',
+        compare: false,
+        compute: function () { return 'Consultar sala de ventas'; }
+      }
+    ]
+  },
+  {
+    id: 'especiales',
+    label: 'Características especiales',
+    icon: 'home',
+    metrics: [
+      { key: 'availability', label: 'Disponibilidad', icon: 'type', compare: false }
+    ]
+  }
+];
+
+var UC_SVG = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg>',
+  bed: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5V20h18v-9.5"/><path d="M7 20v-5h10v5"/><path d="M12 4v6"/></svg>',
+  area: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 9h16M9 4v16"/></svg>',
+  cost: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 10.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>',
+  bath: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M6 12V7a2 2 0 0 1 2-2h1"/><path d="M18 12V8"/></svg>',
+  park: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M7 19v2M17 19v2"/></svg>',
+  tower: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V5l6-3 6 3v16"/><path d="M10 21v-4h4v4"/></svg>',
+  floor: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  type: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>',
+  cube: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>'
+};
+
+function ucIcon(name) {
+  return UC_SVG[name] || UC_SVG.type;
+}
+
+function formatCOPShort(amount) {
+  var num = Number(amount);
+  if (!num || Number.isNaN(num)) return '—';
+  if (num >= 1000000000) return '$' + (Math.round(num / 100000000) / 10) + ' MM';
+  if (num >= 1000000) return '$' + Math.round(num / 1000000) + ' M';
+  if (num >= 1000) return '$' + Math.round(num / 1000) + ' K';
+  return formatCOP(num);
+}
+
+function formatCompareDifferenceLabel(units, metric) {
+  if (units.length !== 2) return '';
+  var a = units[0];
+  var b = units[1];
+
+  if (!metric.compare) {
+    var valA = getUnitCompareMetricValue(a, metric);
+    var valB = getUnitCompareMetricValue(b, metric);
+    if (valA === valB) {
+      if (metric.key === 'tower') return 'Misma torre';
+      if (metric.key === 'floor') return 'Mismo piso';
+      if (metric.key === 'unitType') return 'Mismo tipo';
+      return 'Igual';
+    }
+    if (metric.key === 'unitType') return 'Tipos distintos';
+    if (metric.key === 'tower') return 'Torres distintas';
+    if (metric.key === 'floor') {
+      var floorA = Number(a.floor);
+      var floorB = Number(b.floor);
+      if (!Number.isNaN(floorA) && !Number.isNaN(floorB)) {
+        var floorGap = Math.abs(floorB - floorA);
+        return floorGap + (floorGap === 1 ? ' piso de diferencia' : ' pisos de diferencia');
+      }
+      return 'Pisos distintos';
+    }
+    return 'Distinto';
+  }
+
+  var rawA = getUnitCompareMetricRaw(a, metric);
+  var rawB = getUnitCompareMetricRaw(b, metric);
+  if (Number.isNaN(rawA) || Number.isNaN(rawB)) return '—';
+  if (rawA === rawB) {
+    if (metric.format === 'area') return 'Misma área';
+    if (metric.key === 'rooms' || metric.key === 'baths' || metric.key === 'privateBaths' || metric.key === 'parking') {
+      return 'Misma cantidad';
+    }
+    if (metric.format === 'price') return 'Mismo precio';
+    if (metric.format === 'admin') return 'Mismo valor';
+    return 'Igual';
+  }
+
+  var diff = Math.abs(rawB - rawA);
+
+  if (metric.format === 'area') {
+    return Math.round(diff) + ' m² adicionales';
+  }
+  if (metric.key === 'rooms') {
+    if (diff === 1) return 'Una habitación de diferencia';
+    return Math.round(diff) + ' habitaciones de diferencia';
+  }
+  if (metric.key === 'baths' || metric.key === 'privateBaths') {
+    if (diff === 1) return 'Un baño adicional';
+    return Math.round(diff) + ' baños de diferencia';
+  }
+  if (metric.key === 'parking') {
+    if (diff === 1) return 'Un espacio adicional';
+    return Math.round(diff) + ' espacios de diferencia';
+  }
+  if (metric.format === 'price' || metric.format === 'admin') {
+    if (rawB > rawA) return 'Incremento de ' + formatCOPShort(diff).replace(/^\$/, '');
+    return 'Reducción de ' + formatCOPShort(diff).replace(/^\$/, '');
+  }
+  if (metric.key === 'areaPerRoom') {
+    return (Math.round(diff * 10) / 10) + ' m² de diferencia';
+  }
+  return 'Diferencia de ' + (Math.round(diff * 10) / 10);
+}
+
+function getUnitShortLabel(unit) {
+  var tag = String(unit.tag || '').trim();
+  if (tag) return tag;
+  var name = String(unit.name || '').trim();
+  if (name.length > 18) return name.slice(0, 16) + '…';
+  return name || '—';
+}
+
 function getUnitCompareMetricValue(unit, metric) {
   if (metric.compute) return metric.compute(unit);
+  if (metric.format === 'area') return unit.area ? unit.area + ' m²' : '—';
+  if (metric.format === 'price') return unit.price ? formatCOP(unit.price) : '—';
+  if (metric.format === 'admin') return unit.adminFee ? formatCOP(unit.adminFee) : '—';
   var value = unit[metric.key];
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
+}
+
+function getUnitCompareMetricRaw(unit, metric) {
+  if (metric.raw) return metric.raw(unit);
+  if (metric.format === 'area') return Number(unit.area) || NaN;
+  if (metric.format === 'price') return Number(unit.price) || NaN;
+  if (metric.format === 'admin') return Number(unit.adminFee) || NaN;
+  var value = unit[metric.key];
+  if (value === null || value === undefined || value === '') return NaN;
+  var num = Number(value);
+  return Number.isNaN(num) ? NaN : num;
+}
+
+function renderCompareMatrixHead(units) {
+  return (
+    '<div class="uc-matrix-head uc-matrix-head--dual">' +
+      '<span class="uc-matrix-head-label">Característica</span>' +
+      '<span class="uc-matrix-head-unit">' + escapeUnitsHtml(getUnitShortLabel(units[0])) + '</span>' +
+      '<span class="uc-matrix-head-diff">Diferencia</span>' +
+      '<span class="uc-matrix-head-unit">' + escapeUnitsHtml(getUnitShortLabel(units[1])) + '</span>' +
+    '</div>'
+  );
+}
+
+function renderCompareMatrixRow(metric, units) {
+  var values = units.map(function (u) { return getUnitCompareMetricValue(u, metric); });
+  var rowClass = 'uc-matrix-row uc-matrix-row--dual' + (metric.highlight ? ' uc-matrix-row--key' : '');
+  var diffLabel = formatCompareDifferenceLabel(units, metric);
+
+  return (
+    '<div class="' + rowClass + '">' +
+      '<div class="uc-matrix-metric">' +
+        '<span class="uc-matrix-metric-icon" aria-hidden="true">' + ucIcon(metric.icon || 'type') + '</span>' +
+        '<span class="uc-matrix-metric-label">' + escapeUnitsHtml(metric.label) + '</span>' +
+      '</div>' +
+      '<div class="uc-matrix-cells uc-matrix-cells--dual">' +
+        '<div class="uc-matrix-cell" data-unit-label="' + escapeUnitsHtml(getUnitShortLabel(units[0])) + '">' +
+          '<span class="uc-matrix-value">' + escapeUnitsHtml(values[0]) + '</span>' +
+        '</div>' +
+        '<div class="uc-matrix-cell uc-matrix-cell--diff">' +
+          '<span class="uc-matrix-diff-label">' + escapeUnitsHtml(diffLabel) + '</span>' +
+        '</div>' +
+        '<div class="uc-matrix-cell" data-unit-label="' + escapeUnitsHtml(getUnitShortLabel(units[1])) + '">' +
+          '<span class="uc-matrix-value">' + escapeUnitsHtml(values[1]) + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function renderCompareMobileRow(metric, units) {
+  var values = units.map(function (u) { return getUnitCompareMetricValue(u, metric); });
+  var diffLabel = formatCompareDifferenceLabel(units, metric);
+  return (
+    '<article class="uc-mobile-row' + (metric.highlight ? ' uc-mobile-row--key' : '') + '">' +
+      '<h5 class="uc-mobile-row-label">' + escapeUnitsHtml(metric.label) + '</h5>' +
+      '<div class="uc-mobile-row-compare">' +
+        '<div class="uc-mobile-side">' +
+          '<span class="uc-mobile-side-tag">' + escapeUnitsHtml(getUnitShortLabel(units[0])) + '</span>' +
+          '<span class="uc-mobile-side-value">' + escapeUnitsHtml(values[0]) + '</span>' +
+        '</div>' +
+        '<span class="uc-mobile-vs" aria-hidden="true">vs</span>' +
+        '<div class="uc-mobile-side">' +
+          '<span class="uc-mobile-side-tag">' + escapeUnitsHtml(getUnitShortLabel(units[1])) + '</span>' +
+          '<span class="uc-mobile-side-value">' + escapeUnitsHtml(values[1]) + '</span>' +
+        '</div>' +
+      '</div>' +
+      (diffLabel && diffLabel !== '—' && diffLabel !== 'Igual'
+        ? '<p class="uc-mobile-row-diff">' + escapeUnitsHtml(diffLabel) + '</p>'
+        : '') +
+    '</article>'
+  );
+}
+
+function renderCompareCategory(cat, catIndex, units) {
+  var rowsHtml = cat.metrics.map(function (metric) {
+    return renderCompareMatrixRow(metric, units);
+  }).join('');
+  var mobileHtml = cat.metrics.map(function (metric) {
+    return renderCompareMobileRow(metric, units);
+  }).join('');
+  return (
+    '<section class="uc-category is-open" data-uc-category="' + escapeUnitsHtml(cat.id) + '" style="--uc-cat-stagger:' + catIndex + '">' +
+      '<button type="button" class="uc-category-toggle" data-uc-toggle-category aria-expanded="true">' +
+        '<span class="uc-category-icon" aria-hidden="true">' + ucIcon(cat.icon) + '</span>' +
+        '<span class="uc-category-label">' + escapeUnitsHtml(cat.label) + '</span>' +
+        '<span class="uc-category-chevron" aria-hidden="true"></span>' +
+      '</button>' +
+      '<div class="uc-category-body">' +
+        '<div class="uc-category-inner">' +
+          '<div class="uc-matrix-rows uc-matrix-rows--desktop">' + rowsHtml + '</div>' +
+          '<div class="uc-mobile-stack">' + mobileHtml + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</section>'
+  );
+}
+function renderCompareHeroCard(key, unit, index) {
+  var imageStyle = unit.cardImageUrl
+    ? ' style="background-image:url(' + escapeUnitsHtml(unit.cardImageUrl) + ')"'
+    : '';
+  var favActive = isFavorite(key);
+  return (
+    '<article class="uc-hero-card" data-unit-key="' + escapeUnitsHtml(key) + '" style="--uc-stagger:' + (index || 0) + '">' +
+      '<div class="uc-hero-media"' + imageStyle + '>' +
+        '<div class="uc-hero-media-actions">' +
+          '<button type="button" class="uc-hero-icon-btn uc-hero-fav' + (favActive ? ' is-active' : '') + '" data-action="fav" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + (favActive ? '❤' : '♡') + '</button>' +
+          '<button type="button" class="uc-hero-icon-btn" data-action="remove" aria-label="Quitar de la comparación">' + ucIcon('trash') + '</button>' +
+        '</div>' +
+        (unit.cardImageUrl ? '' : '<span class="uc-hero-media-fallback">' + escapeUnitsHtml(unit.cardLabel || unit.name) + '</span>') +
+      '</div>' +
+      '<div class="uc-hero-body">' +
+        '<span class="uc-hero-tag">' + escapeUnitsHtml(unit.tag || '—') + '</span>' +
+        '<h3 class="uc-hero-name">' + escapeUnitsHtml(unit.name || '—') + '</h3>' +
+        '<p class="uc-hero-price">' + escapeUnitsHtml(unit.price ? formatCOP(unit.price) : '—') + '</p>' +
+        '<div class="uc-hero-quick">' +
+          '<span class="uc-hero-quick-item">' + ucIcon('area') + escapeUnitsHtml(unit.area + ' m²') + '</span>' +
+          '<span class="uc-hero-quick-item">' + ucIcon('bed') + escapeUnitsHtml(String(unit.rooms)) + ' hab.</span>' +
+          '<span class="uc-hero-quick-item">' + ucIcon('bath') + escapeUnitsHtml(String(unit.baths)) + ' baños</span>' +
+          (unit.parking ? '<span class="uc-hero-quick-item">' + ucIcon('park') + escapeUnitsHtml(String(unit.parking)) + ' parq.</span>' : '') +
+        '</div>' +
+        '<div class="uc-hero-actions">' +
+          '<button type="button" class="uc-hero-btn" data-action="plans">Ver planos</button>' +
+          '<button type="button" class="uc-hero-btn uc-hero-btn--cta" data-action="tour360">' + ucIcon('cube') + ' Ver 360°</button>' +
+        '</div>' +
+      '</div>' +
+    '</article>'
+  );
+}
+
+function joinNaturalList(items) {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return items[0] + ' y ' + items[1];
+  return items.slice(0, -1).join(', ') + ' y ' + items[items.length - 1];
+}
+
+function buildCompareNarrativeSummary(units) {
+  if (units.length !== 2) return '';
+  var a = units[0];
+  var b = units[1];
+  var sentences = [];
+
+  function shortName(u) {
+    return u.name || u.tag || 'esta vivienda';
+  }
+
+  if (a.tower && b.tower && String(a.tower) === String(b.tower)) {
+    sentences.push('Las dos viviendas pertenecen a la Torre ' + a.tower + '.');
+  }
+
+  if (a.rooms === b.rooms && a.rooms) {
+    sentences.push('Ambas cuentan con ' + a.rooms + ' habitación' + (a.rooms === 1 ? '' : 'es') + '.');
+  }
+
+  if (b.area > a.area) {
+    sentences.push('El ' + shortName(b) + ' ofrece ' + Math.round(b.area - a.area) + ' m² adicionales.');
+  } else if (a.area > b.area) {
+    sentences.push('El ' + shortName(a) + ' ofrece ' + Math.round(a.area - b.area) + ' m² adicionales.');
+  }
+
+  if (b.privateBaths > a.privateBaths) {
+    var pb = b.privateBaths - a.privateBaths;
+    sentences.push('El ' + shortName(b) + ' incluye ' + (pb === 1 ? 'un baño privado adicional' : pb + ' baños privados adicionales') + '.');
+  } else if (a.privateBaths > b.privateBaths) {
+    var pbA = a.privateBaths - b.privateBaths;
+    sentences.push('El ' + shortName(a) + ' incluye ' + (pbA === 1 ? 'un baño privado adicional' : pbA + ' baños privados adicionales') + '.');
+  } else if (b.baths > a.baths) {
+    var bd = b.baths - a.baths;
+    sentences.push('El ' + shortName(b) + ' incluye ' + (bd === 1 ? 'un baño adicional' : bd + ' baños adicionales') + '.');
+  } else if (a.baths > b.baths) {
+    var bdA = a.baths - b.baths;
+    sentences.push('El ' + shortName(a) + ' incluye ' + (bdA === 1 ? 'un baño adicional' : bdA + ' baños adicionales') + '.');
+  }
+
+  if (b.parking > a.parking) {
+    var pk = b.parking - a.parking;
+    sentences.push('El ' + shortName(b) + ' cuenta con ' + (pk === 1 ? 'un parqueadero adicional' : pk + ' parqueaderos adicionales') + '.');
+  } else if (a.parking > b.parking) {
+    var pkA = a.parking - b.parking;
+    sentences.push('El ' + shortName(a) + ' cuenta con ' + (pkA === 1 ? 'un parqueadero adicional' : pkA + ' parqueaderos adicionales') + '.');
+  }
+
+  if (a.price !== b.price) {
+    sentences.push('La diferencia económica entre ambas opciones es de ' + formatCOPShort(Math.abs(a.price - b.price)) + '.');
+  }
+
+  return sentences.slice(0, 5).join(' ');
+}
+
+function buildCompareInsights(favKeys, units) {
+  var narrative = buildCompareNarrativeSummary(units);
+  return { narrative: narrative };
+}
+
+function renderCompareInsightsPanel(favKeys, units) {
+  var result = buildCompareInsights(favKeys, units);
+  if (!result.narrative) return '';
+  return (
+    '<aside class="uc-insights uc-insights--narrative">' +
+      '<h4 class="uc-insights-title">Resumen</h4>' +
+      '<p class="uc-insights-narrative">' + escapeUnitsHtml(result.narrative) + '</p>' +
+    '</aside>'
+  );
+}
+
+function downloadComparePdf(favKeys, units) {
+  if (typeof UnitsComparePdf === 'undefined') {
+    if (typeof showToast === 'function') showToast('No se pudo cargar el módulo de PDF');
+    return;
+  }
+  var narrative = buildCompareNarrativeSummary(units);
+  var tableRows = UnitsComparePdf.buildTableRows(
+    UNITS_COMPARE_CATEGORIES,
+    units,
+    getUnitCompareMetricValue,
+    formatCompareDifferenceLabel
+  );
+  UnitsComparePdf.download({
+    units: units.map(function (u, i) {
+      return {
+        tag: u.tag || getUnitShortLabel(u),
+        name: u.name || '—',
+        price: u.price ? formatCOP(u.price) : '—',
+        area: u.area ? u.area + ' m²' : '—',
+        rooms: String(u.rooms || '—'),
+        baths: String(u.baths || '—')
+      };
+    }),
+    summary: narrative,
+    tableRows: tableRows
+  });
+}
+
+function bindComparePanelEvents(favKeys, units) {
+  if (!unitsComparePanel) return;
+
+  var backBtn = unitsComparePanel.querySelector('[data-uc-action="back"]');
+  if (backBtn) {
+    backBtn.onclick = function () { exitUnitsCompareMode(); };
+  }
+
+  var addBtn = unitsComparePanel.querySelector('[data-uc-action="add"]');
+  if (addBtn) {
+    addBtn.onclick = function () { startComparePick(); };
+  }
+
+  var pdfBtn = unitsComparePanel.querySelector('[data-uc-action="pdf"]');
+  if (pdfBtn) {
+    pdfBtn.onclick = function () { downloadComparePdf(favKeys, units); };
+  }
+
+  unitsComparePanel.querySelectorAll('[data-uc-toggle-category]').forEach(function (btn) {
+    btn.onclick = function () {
+      var section = btn.closest('.uc-category');
+      if (!section) return;
+      var isOpen = section.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    };
+  });
+
+  unitsComparePanel.querySelectorAll('.uc-hero-card').forEach(function (card) {
+    var key = card.getAttribute('data-unit-key');
+    var unit = UNITS[key];
+    if (!unit) return;
+
+    var favBtn = card.querySelector('[data-action="fav"]');
+    if (favBtn) {
+      favBtn.onclick = function (e) {
+        e.stopPropagation();
+        toggleFavorite(key, favBtn);
+      };
+    }
+
+    var removeBtn = card.querySelector('[data-action="remove"]');
+    if (removeBtn) {
+      removeBtn.onclick = function (e) {
+        e.stopPropagation();
+        var keys = removeCompareUnit(key);
+        if (keys.length < COMPARE_MAX_UNITS) {
+          if (typeof showToast === 'function') {
+            showToast('Selecciona otra vivienda para completar la comparación');
+          }
+          startComparePick();
+        } else {
+          renderUnitsCompare(keys);
+        }
+      };
+    }
+
+    var plansBtn = card.querySelector('[data-action="plans"]');
+    if (plansBtn) {
+      plansBtn.onclick = function (e) {
+        e.stopPropagation();
+        goTo('plans', key);
+      };
+    }
+
+    var tourBtn = card.querySelector('[data-action="tour360"]');
+    if (tourBtn) {
+      tourBtn.onclick = function (e) {
+        e.stopPropagation();
+        goTo('sphere', unit.link360 || '');
+      };
+    }
+  });
+}
+
+function updateComparePickUi() {
+  var popup = document.getElementById('unitsPopup');
+  if (!popup) return;
+  popup.classList.toggle('is-compare-pick-mode', comparePickMode);
+  var stage = popup.querySelector('.units-viviendas-stage');
+  if (!stage) return;
+  var banner = stage.querySelector('.uc-pick-banner');
+  if (comparePickMode) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.className = 'uc-pick-banner';
+      banner.textContent = 'Selecciona la vivienda que deseas incluir en la comparación';
+      stage.insertBefore(banner, stage.firstChild);
+    }
+  } else if (banner) {
+    banner.remove();
+  }
+}
+
+function startComparePick() {
+  comparePickMode = true;
+  setUnitsViewMode('browse');
+  if (unitsComparePanel) unitsComparePanel.hidden = true;
+  if (unitsGrid) unitsGrid.style.display = '';
+  updateComparePickUi();
+  activateUnitsTab('all');
+}
+
+function handleCompareUnitPick(key) {
+  if (!UNITS[key]) return;
+  var keys = getCompareUnitKeys();
+  if (keys.indexOf(key) !== -1) {
+    comparePickMode = false;
+    updateComparePickUi();
+    setUnitsViewMode('compare');
+    renderUnitsCompare(keys);
+    return;
+  }
+  if (keys.length >= COMPARE_MAX_UNITS) {
+    keys[1] = key;
+  } else {
+    keys.push(key);
+  }
+  keys = setCompareUnitKeys(keys);
+  comparePickMode = false;
+  updateComparePickUi();
+  if (keys.length < COMPARE_MAX_UNITS) {
+    if (typeof showToast === 'function') showToast('Selecciona otra vivienda para completar la comparación');
+    comparePickMode = true;
+    updateComparePickUi();
+    return;
+  }
+  setUnitsViewMode('compare');
+  renderUnitsCompare(keys);
 }
 
 function setUnitsViewMode(mode) {
@@ -364,18 +939,20 @@ function setUnitsViewMode(mode) {
   if (compareBtn) compareBtn.classList.toggle('active', unitsViewMode === 'compare');
   if (footTitle) {
     footTitle.textContent = unitsViewMode === 'compare'
-      ? 'Comparador de favoritos'
+      ? 'Comparar viviendas'
       : 'Selecciona tu vivienda';
   }
   if (footSubtitle) {
     footSubtitle.textContent = unitsViewMode === 'compare'
-      ? 'Revisa las diferencias entre tus viviendas guardadas.'
+      ? 'Compara dos opciones con claridad y descarga tu análisis en PDF.'
       : 'Explora planos, precios y calcula tu cuota.';
   }
 }
 
 function exitUnitsCompareMode() {
-  if (unitsViewMode !== 'compare') return;
+  if (unitsViewMode !== 'compare' && !comparePickMode) return;
+  comparePickMode = false;
+  updateComparePickUi();
   setUnitsViewMode('browse');
   renderUnitsGrid(currentUnitsTab);
 }
@@ -390,75 +967,68 @@ function openUnitsCompare() {
     if (typeof VisitorAuthModal !== 'undefined') VisitorAuthModal.open('gate');
     return;
   }
-  var favKeys = getFavorites().filter(function (key) { return !!UNITS[key]; });
-  if (favKeys.length < 2) {
-    showToast('Agrega al menos 2 favoritos para comparar');
-    activateUnitsTab('fav');
-    return;
+  var compareKeys = getCompareUnitKeys();
+  if (compareKeys.length < COMPARE_MAX_UNITS) {
+    var favs = getFavorites().filter(function (key) { return !!UNITS[key]; });
+    if (favs.length < COMPARE_MAX_UNITS) {
+      showToast('Agrega al menos 2 favoritos para comparar');
+      activateUnitsTab('fav');
+      return;
+    }
+    compareKeys = initCompareUnitKeysFromFavorites();
   }
   setUnitsViewMode('compare');
-  renderUnitsCompare(favKeys);
+  renderUnitsCompare(compareKeys);
 }
 
 function renderUnitsCompare(favKeys) {
   if (!unitsComparePanel || !unitsGrid) return;
-  favKeys = favKeys || getFavorites().filter(function (key) { return !!UNITS[key]; });
-  if (favKeys.length < 2) {
+  favKeys = setCompareUnitKeys((favKeys || getCompareUnitKeys()).slice(0, COMPARE_MAX_UNITS));
+  if (favKeys.length < COMPARE_MAX_UNITS) {
     exitUnitsCompareMode();
     return;
   }
 
   var units = favKeys.map(function (key) { return UNITS[key]; });
-  var miniCardsHtml = units.map(function (u) {
-    return (
-      '<article class="units-compare-mini-card">' +
-        '<p class="units-compare-mini-tag">' + escapeUnitsHtml(u.tag || '—') + '</p>' +
-        '<p class="units-compare-mini-name">' + escapeUnitsHtml(u.name || '—') + '</p>' +
-        '<p class="units-compare-mini-price">' + escapeUnitsHtml(u.price ? formatCOP(u.price) : '—') + '</p>' +
-        '<p class="units-compare-mini-specs">' + escapeUnitsHtml(u.area + ' m² · ' + u.rooms + ' hab · ' + u.baths + ' ba') + '</p>' +
-      '</article>'
-    );
+
+  var heroesHtml = favKeys.map(function (key, i) {
+    return renderCompareHeroCard(key, UNITS[key], i);
   }).join('');
 
-  var tableHead = '<tr><th scope="col">Característica</th>' +
-    units.map(function (u) {
-      return '<th scope="col">' + escapeUnitsHtml(u.tag || u.name || '—') + '</th>';
-    }).join('') + '</tr>';
-
-  var tableBody = UNITS_COMPARE_METRICS.map(function (metric) {
-    var values = units.map(function (u) { return getUnitCompareMetricValue(u, metric); });
-    var hasDiff = values.some(function (value) { return value !== values[0]; });
-    return (
-      '<tr class="' + (hasDiff ? 'is-diff-row' : '') + '">' +
-        '<th scope="row">' + escapeUnitsHtml(metric.label) + '</th>' +
-        values.map(function (value) {
-          return '<td class="' + (hasDiff ? 'is-diff' : '') + '">' + escapeUnitsHtml(value) + '</td>';
-        }).join('') +
-      '</tr>'
-    );
+  var categoriesHtml = UNITS_COMPARE_CATEGORIES.map(function (cat, catIndex) {
+    return renderCompareCategory(cat, catIndex, units);
   }).join('');
+
+  var insightsHtml = renderCompareInsightsPanel(favKeys, units);
 
   unitsComparePanel.innerHTML =
-    '<div class="units-compare-mini-grid">' +
-      '<div class="units-compare-mini-spacer" aria-hidden="true"></div>' +
-      miniCardsHtml +
-    '</div>' +
-    '<div class="units-compare-box">' +
-      '<table class="units-compare-table">' +
-        '<colgroup>' +
-          '<col class="units-compare-col-label">' +
-          '<col class="units-compare-col-data">' +
-          '<col class="units-compare-col-data">' +
-          '<col class="units-compare-col-data">' +
-        '</colgroup>' +
-        '<thead>' + tableHead + '</thead>' +
-        '<tbody>' + tableBody + '</tbody>' +
-      '</table>' +
+    '<div class="uc-shell">' +
+      '<header class="uc-header">' +
+        '<div class="uc-header-start">' +
+          '<button type="button" class="uc-header-back" data-uc-action="back" aria-label="Volver a viviendas">' +
+            '<span class="uc-header-back-icon" aria-hidden="true">←</span>' +
+          '</button>' +
+          '<h2 class="uc-header-title">Comparar viviendas</h2>' +
+        '</div>' +
+        '<div class="uc-header-actions">' +
+          '<button type="button" class="uc-header-add" data-uc-action="add">+ Agregar vivienda</button>' +
+          '<button type="button" class="uc-header-pdf" data-uc-action="pdf">Descargar PDF</button>' +
+        '</div>' +
+      '</header>' +
+      '<div class="uc-heroes">' + heroesHtml + '</div>' +
+      '<div class="uc-specs">' +
+        '<div class="uc-matrix">' +
+          renderCompareMatrixHead(units) +
+          categoriesHtml +
+        '</div>' +
+      '</div>' +
+      insightsHtml +
     '</div>';
 
   unitsGrid.style.display = 'none';
   favoritesEmptyEl.style.display = 'none';
   unitsComparePanel.hidden = false;
+  bindComparePanelEvents(favKeys, units);
 }
 
 function buildUnitCard(key) {
@@ -468,39 +1038,47 @@ function buildUnitCard(key) {
   card.className = 'unit-card';
   card.setAttribute('data-unit', key);
   var badgeHtml = u.availability ? '<div class="availability-badge">' + u.availability + '</div>' : '';
-  var imageStyle = u.cardImageUrl ? ' style="background-image:url(' + u.cardImageUrl + ');background-size:cover;background-position:center;"' : '';
   var favActive = isFavorite(key);
+  var imageInner = u.cardImageUrl
+    ? '<div class="unit-card-image-media" style="background-image:url(' + escapeUnitsHtml(u.cardImageUrl) + ')"></div>'
+    : '';
   card.innerHTML =
-    '<div class="unit-card-image"' + imageStyle + '>' + badgeHtml +
+    '<div class="unit-card-image">' +
+      imageInner +
+      '<div class="unit-card-image-scrim" aria-hidden="true"></div>' +
       '<div class="unit-card-icons">' +
-        '<button class="icon-btn fav-btn' + (favActive ? ' active' : '') + '" type="button" data-fav="' + key + '" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + (favActive ? '❤' : '♡') + '</button>' +
-        '<button class="icon-btn share-btn" type="button" data-share="' + key + '" aria-label="Compartir vivienda"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg></button>' +
+        '<button class="icon-btn fav-btn unit-card-icon-btn' + (favActive ? ' active' : '') + '" type="button" data-fav="' + key + '" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + (favActive ? '❤' : '♡') + '</button>' +
+        '<button class="icon-btn share-btn unit-card-icon-btn" type="button" data-share="' + key + '" aria-label="Compartir vivienda"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg></button>' +
       '</div>' +
-      (u.cardImageUrl ? '' : '<span>' + u.cardLabel + '</span>') + '</div>' +
+      badgeHtml +
+      (u.cardImageUrl ? '' : '<span class="unit-card-image-fallback">' + u.cardLabel + '</span>') +
+    '</div>' +
     '<div class="unit-typo-info">' +
       '<div class="unit-typo-tag">' + u.tag + '</div>' +
       '<div class="unit-typo-title">' + u.name + '</div>' +
-      '<div class="unit-typo-specs">' +
-        '<span>' + u.area + ' m²</span>' +
-        '<span>' + u.rooms + ' habitaciones</span>' +
-        '<span>' + u.baths + ' baños</span>' +
+      '<div class="unit-typo-price-block">' +
+        '<div class="unit-typo-price-label">Precio</div>' +
+        '<div class="unit-typo-price-value">' + formatCOP(u.price) + '</div>' +
       '</div>' +
-      '<div class="unit-typo-divider"></div>' +
-      '<div class="unit-typo-price-label">Precio</div>' +
-      '<div class="unit-typo-price-value">' + formatCOP(u.price) + '</div>' +
+      '<div class="unit-typo-specs unit-card-specs">' +
+        '<span class="unit-card-spec-item">' + ucIcon('area') + escapeUnitsHtml(String(u.area)) + ' m²</span>' +
+        '<span class="unit-card-spec-item">' + ucIcon('bed') + escapeUnitsHtml(String(u.rooms)) + ' hab.</span>' +
+        '<span class="unit-card-spec-item">' + ucIcon('bath') + escapeUnitsHtml(String(u.baths)) + ' baños</span>' +
+        (u.parking ? '<span class="unit-card-spec-item">' + ucIcon('park') + escapeUnitsHtml(String(u.parking)) + ' parq.</span>' : '') +
+      '</div>' +
       '<div class="unit-typo-btn-stack">' +
         '<div class="unit-typo-btn-row">' +
-          '<button class="unit-typo-btn emphasis" type="button" data-action="calc">Calcular cuota</button>' +
+          '<button class="unit-typo-btn unit-typo-btn--calc" type="button" data-action="calc">Calcular cuota</button>' +
         '</div>' +
         '<div class="unit-typo-btn-row">' +
           '<button class="unit-typo-btn" type="button" data-action="plans">Ver planos</button>' +
-          '<button class="unit-typo-btn" type="button" data-action="tour360">Ver 360°</button>' +
+          '<button class="unit-typo-btn unit-typo-btn--cta" type="button" data-action="tour360">' + ucIcon('cube') + ' Ver 360°</button>' +
         '</div>' +
       '</div>' +
     '</div>';
   card.querySelector('[data-action="tour360"]').addEventListener('click', function(e){
     e.stopPropagation();
-    if (u.link360) goTo('sphere', u.link360);
+    goTo('sphere', u.link360 || '');
   });
   card.querySelector('[data-action="plans"]').addEventListener('click', function(e){
     e.stopPropagation(); goTo('plans', key);
@@ -514,6 +1092,11 @@ function buildUnitCard(key) {
   });
   card.querySelector('[data-share]').addEventListener('click', function(e){
     e.stopPropagation(); shareUnit(key);
+  });
+  card.addEventListener('click', function (e) {
+    if (!comparePickMode) return;
+    if (e.target.closest('button')) return;
+    handleCompareUnitPick(key);
   });
   return card;
 }
@@ -610,9 +1193,7 @@ function renderTour360Grid() {
 
     var media = document.createElement('div');
     media.className = 'tour360-card-media';
-    if (t.color) {
-      media.style.backgroundColor = t.color;
-    } else if (t.imageUrl) {
+    if (t.imageUrl) {
       var img = document.createElement('img');
       img.src = t.imageUrl;
       img.alt = t.name || '';
@@ -669,6 +1250,62 @@ var downloadsList = document.getElementById('downloadsList');
    NAVEGACIÓN: pila de pantallas
    ========================================================= */
 var navStack = [];
+
+var MENU_ACTIVE_PARENT = {
+  'menu-proyecto': 'menuConoce',
+  'descripcion': 'menuConoce',
+  'video': 'menuConoce',
+  'renders': 'menuConoce',
+  'amenidades': 'menuConoce',
+  'estado': 'menuConoce',
+  'constructora': 'menuConoce',
+  'descargas': 'menuConoce',
+  'menu-contacto': 'menuContacto',
+  'tour360': 'menuTour360',
+  'tipologias': 'menuViviendas',
+  'calculator': 'menuViviendas',
+  'plans': 'menuViviendas',
+  'sphere': 'menuViviendas',
+  'location': 'menuUbicacion'
+};
+
+var MENU_ACTIVE_ITEM = {
+  'menu-proyecto': 'menuConoce',
+  'menu-contacto': 'menuContacto',
+  'descripcion': 'menuDescripcion',
+  'video': 'menuVideo',
+  'renders': 'menuRenders',
+  'amenidades': 'menuAmenidades',
+  'estado': 'menuEstado',
+  'constructora': 'menuConstructora',
+  'descargas': 'menuDescargas',
+  'tour360': 'menuTour360',
+  'tipologias': 'menuViviendas',
+  'calculator': 'menuViviendas',
+  'plans': 'menuViviendas',
+  'sphere': 'menuViviendas',
+  'location': 'menuUbicacion'
+};
+
+function syncMenuActiveStates() {
+  var top = navStack.length ? navStack[navStack.length - 1] : null;
+  var parentId = top ? MENU_ACTIVE_PARENT[top] : null;
+  var itemId = top ? MENU_ACTIVE_ITEM[top] : null;
+
+  document.querySelectorAll('#mainMenu .menu-item, #mainMenu .contact-link').forEach(function (el) {
+    el.classList.remove('is-active');
+  });
+
+  if (parentId) {
+    var parentEl = document.getElementById(parentId);
+    if (parentEl) parentEl.classList.add('is-active');
+  }
+  if (itemId && itemId !== parentId) {
+    var itemEl = document.getElementById(itemId);
+    if (itemEl) itemEl.classList.add('is-active');
+  }
+}
+
 var sphereLoaderFallbackTimer = null;
 var sphereLoaderMinTimer = null;
 var NAV_SESSION_KEY = 'guilie_nav_session_v1';
@@ -698,6 +1335,11 @@ var TAB_RETURN_COOLDOWN_MS = 700;
 var NAV_USER_GESTURE_MS = 2000;
 var NAV_BUILD = 'nav19';
 var menuOpenTokenUntil = 0;
+
+function isNavResumeGateFeatureEnabled() {
+  if (typeof NAV_RESUME_GATE_ENABLED === 'boolean') return NAV_RESUME_GATE_ENABLED;
+  return true;
+}
 var menuWatchdogSuppress = false;
 
 function grantMenuOpenToken(ms) {
@@ -804,9 +1446,13 @@ function startNavResumeWatchdog() {
   showNavResumeGate();
 }
 
-function shouldOfferNavResumeGate() {
+function shouldRestoreNavAfterTabReturn() {
   return isNavResumeLocked() ||
     (navResumePending && (frozenSnapshotWarrantsResumeGate() || !!preservedOverlayId));
+}
+
+function shouldOfferNavResumeGate() {
+  return isNavResumeGateFeatureEnabled() && shouldRestoreNavAfterTabReturn();
 }
 
 function hideViewForResumeGate() {
@@ -817,6 +1463,10 @@ function hideViewForResumeGate() {
 }
 
 function showNavResumeGate() {
+  if (!isNavResumeGateFeatureEnabled()) {
+    clearNavResumeAwaiting();
+    return false;
+  }
   hideViewForResumeGate();
   navResumeGateActive = true;
   if (typeof PauseScreen !== 'undefined') {
@@ -1442,22 +2092,31 @@ function onTabVisible() {
   window.__lastTabReturnAt = now;
   revokeMenuOpenToken();
 
-  if (shouldOfferNavResumeGate()) {
-    showNavResumeGate();
+  if (shouldRestoreNavAfterTabReturn()) {
+    if (isNavResumeGateFeatureEnabled()) {
+      showNavResumeGate();
+    } else {
+      confirmNavResume();
+    }
     return;
   }
 
   clearNavResumeAwaiting();
   releaseNavFreeze();
   if (isThemeCustomizationActive() || hasPendingThemeEditorSession()) return;
+  if (!isHeroIdle()) {
+    if (restoreNavSession()) return;
+    if (liveNavSnapshot) syncDomToLiveSnapshot();
+    return;
+  }
   forceHeroIdleUi();
   requestAnimationFrame(function () {
     if (isThemeCustomizationActive() || hasPendingThemeEditorSession() || navResumePending || isNavResumeLocked()) return;
-    forceHeroIdleUi();
+    if (isHeroIdle()) forceHeroIdleUi();
   });
   setTimeout(function () {
     if (isThemeCustomizationActive() || hasPendingThemeEditorSession() || navResumePending || isNavResumeLocked()) return;
-    forceHeroIdleUi();
+    if (isHeroIdle()) forceHeroIdleUi();
   }, 150);
 }
 
@@ -1581,6 +2240,7 @@ function showMainMenuPanel() {
   document.body.classList.add('main-menu-open');
   document.body.classList.remove('global-close-docked');
   syncNavigationCloseState();
+  syncMenuActiveStates();
   requestAnimationFrame(function () {
     requestAnimationFrame(function () {
       if (isMainMenuOpen()) {
@@ -1647,6 +2307,7 @@ function showMenuLevel(level) {
     primary.style.display = 'flex';
     if (menuNavBack) menuNavBack.hidden = true;
   }
+  syncMenuActiveStates();
 }
 window.showMenuLevel = showMenuLevel;
 
@@ -1684,13 +2345,19 @@ var SCREEN_HOOKS = {
       playSound('tour360Enter');
       var frame  = document.getElementById('sphereFrame');
       var loader = document.getElementById('sphereLoader');
+      var hasLink = !!(l && String(l).trim());
       var MIN_LOADER_MS = 3000;
       var startTime = Date.now();
 
-      /* Resetear estado */
       loader.classList.remove('hidden');
       clearTimeout(sphereLoaderFallbackTimer);
       clearTimeout(sphereLoaderMinTimer);
+
+      if (!hasLink) {
+        frame.onload = null;
+        frame.src = '';
+        return;
+      }
 
       var revealed = false;
       function hideLoader() {
@@ -1814,6 +2481,7 @@ function goTo(screenId, payload) {
     syncNavigationCloseState();
     captureLiveNavSnapshot();
     saveNavSession();
+    syncMenuActiveStates();
     return;
   }
 
@@ -1835,6 +2503,7 @@ function goTo(screenId, payload) {
   syncActiveTheme();
   captureLiveNavSnapshot();
   saveNavSession();
+  syncMenuActiveStates();
 }
 
 function goBack() {
@@ -1881,6 +2550,7 @@ function goBack() {
     showMenuLevel(resolveMenuLevel(previous));
     syncNavigationCloseState();
     syncActiveTheme();
+    syncMenuActiveStates();
     return;
   }
 
@@ -1909,10 +2579,18 @@ function goBack() {
   }
   captureLiveNavSnapshot();
   saveNavSession();
+  syncMenuActiveStates();
 }
 
 function syncActiveTheme() {
   if (isThemeCustomizationActive()) return;
+  if (typeof StyleEngineCompatibility !== 'undefined' &&
+      StyleEngineCompatibility.isStyleEngineLive()) {
+    if (typeof StyleEngineRuntime !== 'undefined') {
+      StyleEngineRuntime.reinforcePublished();
+    }
+    return;
+  }
   if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
     ThemeSystem.reapply();
   }
@@ -2311,10 +2989,18 @@ window.initProjectUI = function () {
 
 window.onVisitorFavoritesChanged = function () {
   updateFavoritesTabCount();
+  var compareKeys = getCompareUnitKeys().filter(function (key) { return !!UNITS[key]; });
+  if (compareKeys.length < COMPARE_MAX_UNITS) {
+    var favs = getFavorites().filter(function (key) { return !!UNITS[key]; });
+    if (favs.length >= COMPARE_MAX_UNITS) {
+      compareKeys = setCompareUnitKeys(favs.slice(0, COMPARE_MAX_UNITS));
+    }
+  } else {
+    setCompareUnitKeys(compareKeys);
+  }
   if (unitsViewMode === 'compare') {
-    var favKeys = getFavorites().filter(function (key) { return !!UNITS[key]; });
-    if (favKeys.length < 2) exitUnitsCompareMode();
-    else renderUnitsCompare(favKeys);
+    if (compareKeys.length < COMPARE_MAX_UNITS) exitUnitsCompareMode();
+    else renderUnitsCompare(compareKeys);
   } else if (currentUnitsTab === 'fav') {
     renderUnitsGrid('fav');
   }

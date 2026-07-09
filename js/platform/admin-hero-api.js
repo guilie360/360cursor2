@@ -136,25 +136,56 @@ var AdminHeroApi = (function () {
     var data = sanitizePayload(payload);
     data.proyecto_id = proyectoId;
 
-    var result = await getClient()
+    var client = getClient();
+    var updated = await client
       .from('proyecto_config')
-      .upsert(data, { onConflict: 'proyecto_id' })
+      .update(data)
+      .eq('proyecto_id', proyectoId)
       .select(CONFIG_SELECT)
-      .single();
+      .maybeSingle();
 
-    if (result.error) {
-      throw new Error(result.error.message || 'No se pudo guardar la configuración.');
+    if (updated.error) {
+      throw new Error(updated.error.message || 'No se pudo guardar la configuración.');
+    }
+
+    var saved = updated.data;
+    if (!saved) {
+      var inserted = await client
+        .from('proyecto_config')
+        .insert(data)
+        .select(CONFIG_SELECT)
+        .maybeSingle();
+      if (inserted.error) {
+        if (/duplicate|unique/i.test(inserted.error.message || '')) {
+          var retry = await client
+            .from('proyecto_config')
+            .update(data)
+            .eq('proyecto_id', proyectoId)
+            .select(CONFIG_SELECT)
+            .maybeSingle();
+          if (retry.error) throw new Error(retry.error.message || 'No se pudo guardar la configuración.');
+          saved = retry.data;
+        } else {
+          throw new Error(inserted.error.message || 'No se pudo guardar la configuración.');
+        }
+      } else {
+        saved = inserted.data;
+      }
+    }
+
+    if (!saved) {
+      throw new Error('No se pudo guardar la configuración del hero. Verifica permisos de administrador.');
     }
 
     if (window.PROJECT_DATA && window.PROJECT_DATA.id === proyectoId) {
       var cfg = window.PROJECT_DATA.proyecto_config;
       if (Array.isArray(cfg)) {
         if (!cfg[0]) cfg[0] = {};
-        Object.assign(cfg[0], result.data);
+        Object.assign(cfg[0], saved);
       } else if (cfg) {
-        Object.assign(cfg, result.data);
+        Object.assign(cfg, saved);
       } else {
-        window.PROJECT_DATA.proyecto_config = result.data;
+        window.PROJECT_DATA.proyecto_config = saved;
       }
       if (typeof applyHeroModule === 'function') {
         applyHeroModule(window.PROJECT_DATA);
@@ -164,7 +195,7 @@ var AdminHeroApi = (function () {
       }
     }
 
-    return result.data;
+    return saved;
   }
 
   return {

@@ -60,6 +60,7 @@ html:not(.theme-ready) body {
 <script src="js/theme-early-bootstrap.js"></script>
 <link rel="stylesheet" href="css/variables.css?v=4">
 <link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/style-engine.css">
 </head>
 <body>
 
@@ -77,7 +78,7 @@ html:not(.theme-ready) body {
       <div class="project-cover-name" id="projectCoverName"></div>
       <div class="project-cover-tagline" id="projectCoverTagline"></div>
       <div class="project-cover-buttons">
-        <button class="project-cover-btn primary" id="tour360OpenBtn" type="button">Ver 360°</button>
+        <button class="project-cover-btn" id="tour360OpenBtn" type="button">Ver 360°</button>
         <button class="project-cover-btn with-icon" id="mainMenuOpenBtn" type="button"><span class="menu-btn-icon">☰</span>Explorar</button>
       </div>
     </div>
@@ -122,6 +123,9 @@ html:not(.theme-ready) body {
             </button>
             <div class="menu-nav-save-col" id="menuNavSaveCol" hidden>
               <p class="menu-nav-save-message" id="menuNavSaveThemeMessage" hidden></p>
+              <button type="button" class="menu-nav-preset-delete" id="menuNavDeleteOfficialPreset" hidden aria-label="Eliminar tema oficial" title="Eliminar tema oficial">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              </button>
               <button type="button" class="menu-nav-save" id="menuNavSaveTheme">
                 <span class="menu-nav-back-label">guardar tema</span>
               </button>
@@ -253,6 +257,11 @@ html:not(.theme-ready) body {
           </div>
 
           <div class="main-menu-profile-slot" id="mainMenuProfileSlot"></div>
+
+          <footer class="main-menu-footer" aria-label="Plataforma">
+            <span class="main-menu-brand">BOXIES</span>
+            <span class="main-menu-version">v 2.5.0</span>
+          </footer>
         </div>
       </div>
       <div class="main-menu-glass-vignette" aria-hidden="true"></div>
@@ -316,9 +325,9 @@ html:not(.theme-ready) body {
   </div>
 
   <!-- MODAL CALCULADORA DE CUOTA (MEJORADA) -->
-  <div class="content-modal" id="calculatorModal">
+  <div class="content-modal units-unit-overlay" id="calculatorModal">
     <span class="modal-close" id="calculatorModalClose">&times;</span>
-    <div class="content-modal-box calc-modal-box">
+    <div class="content-modal-box calc-modal-box units-premium-modal">
       <div class="content-modal-title" id="calcModalTitle">Calculadora de cuota</div>
       <div class="calc-row">
         <div class="calc-label">Valor del inmueble</div>
@@ -406,15 +415,15 @@ html:not(.theme-ready) body {
   </div>
 
   <!-- MODAL PDF: planos + ficha técnica + precio -->
-  <div class="pdf-modal" id="pdfModal">
+  <div class="pdf-modal units-unit-overlay" id="pdfModal">
     <span class="modal-close" id="pdfClose">&times;</span>
-    <div class="pdf-modal-box">
+    <div class="pdf-modal-box units-premium-modal units-plans-modal">
       <div class="gallery-scroll" id="galleryScroll"></div>
     </div>
   </div>
 
   <!-- MODAL 360 FULLSCREEN -->
-  <div class="sphere-modal" id="sphereModal">
+  <div class="sphere-modal units-sphere-overlay" id="sphereModal">
     <span class="modal-close" id="sphereClose">&times;</span>
     <iframe id="sphereFrame" src="" allow="fullscreen; gyroscope; accelerometer" allowfullscreen></iframe>
 
@@ -426,12 +435,22 @@ html:not(.theme-ready) body {
   </div>
 
   <!-- MODAL VIDEO DEL PROYECTO -->
-  <div class="content-modal" id="videoModal">
+  <div class="content-modal video-modal" id="videoModal">
     <span class="modal-close" id="videoModalClose">&times;</span>
-    <div class="content-modal-box">
+    <div class="content-modal-box video-modal-box">
       <div class="content-modal-title">Video del proyecto</div>
-      <div class="placeholder-box">
-        <span>VIDEO DEL PROYECTO<br>Aquí va: &lt;video&gt; o iframe de YouTube/Vimeo, 16:9</span>
+      <div class="video-modal-player-wrap">
+        <video
+          id="projectVideoPlayer"
+          class="project-video-player"
+          controls
+          playsinline
+          preload="metadata"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%23000000'/%3E%3C/svg%3E"
+        >
+          <source id="projectVideoSource" type="video/webm">
+          Tu navegador no soporta la reproducción de video.
+        </video>
       </div>
     </div>
   </div>
@@ -604,7 +623,7 @@ html:not(.theme-ready) body {
       <div class="popup-box-scroll theme-ai-scroll">
         <h2 class="theme-ai-title">Generar tema con IA</h2>
         <p class="theme-ai-intro">
-          Sube un logo o una imagen representativa de la empresa para generar automáticamente propuestas visuales para la plataforma.
+          Sube el logo de la marca. El motor de identidad visual analizará familias cromáticas, jerarquía y personalidad para generar un sistema de interfaz coherente — sin inventar colores.
         </p>
         <p class="theme-ai-error personalize-hint is-error" id="themeAiErrorText" hidden></p>
 
@@ -645,6 +664,54 @@ html:not(.theme-ready) body {
     </div>
   </div>
 
+  <div class="content-modal project-theme-confirm-modal" id="officialPresetDeleteModal">
+    <div class="content-modal-box project-theme-confirm-box">
+      <h2 class="project-theme-confirm-title">Eliminar tema oficial</h2>
+      <p class="project-theme-confirm-copy" id="officialPresetDeleteCopy">
+        Este tema dejará de aparecer en la lista para todos los visitantes. Deben quedar al menos 3 temas oficiales.
+      </p>
+      <div class="project-theme-confirm-actions">
+        <button type="button" class="outline-btn auth-secondary-btn" id="officialPresetDeleteCancelBtn">Cancelar</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="officialPresetDeleteConfirmBtn">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE ENGINE — laboratorio experimental (aislado del Theme Editor) -->
+  <div class="content-modal style-engine-modal" id="styleEngineModal" aria-hidden="true">
+    <div class="content-modal-box style-engine-modal-box">
+      <header class="style-engine-modal-head">
+        <div class="style-engine-modal-title-wrap">
+          <span class="style-engine-modal-kicker">Design System · v3.0</span>
+          <h2 class="style-engine-modal-title">Style Engine</h2>
+          <p class="style-engine-modal-subtitle">Editar, guardar borrador, previsualizar y publicar — sin ambigüedad.</p>
+        </div>
+        <div id="styleEngineStateHost" class="se-state-host"></div>
+        <button type="button" class="style-engine-close-btn" id="styleEngineCloseBtn" aria-label="Cerrar">&times;</button>
+      </header>
+
+      <div id="styleEngineInfoHost" class="se-info-host"></div>
+
+      <div class="style-engine-mode-bar">
+        <div class="se-mode-group" id="styleEngineModeHost" role="radiogroup" aria-label="Modo Style Engine"></div>
+      </div>
+
+      <div id="styleEngineToolbarHost" class="style-engine-toolbar-host"></div>
+
+      <div class="style-engine-modal-body">
+        <div class="style-engine-editor-col" id="styleEngineEditorHost"></div>
+        <div class="style-engine-preview-col" id="styleEnginePreviewHost"></div>
+      </div>
+
+      <footer class="style-engine-modal-foot style-engine-modal-foot--v21">
+        <button type="button" class="style-engine-foot-btn" id="styleEngineDiscardBtn">Descartar cambios</button>
+        <button type="button" class="style-engine-foot-btn" id="styleEngineSaveDraftBtn">Guardar borrador</button>
+        <button type="button" class="style-engine-foot-btn style-engine-foot-btn--primary" id="styleEnginePublishBtn">Aplicar al proyecto</button>
+        <button type="button" class="style-engine-foot-btn style-engine-foot-btn--legacy" id="styleEngineLegacyBtn">Usar Theme Legacy</button>
+      </footer>
+    </div>
+  </div>
+
   <!-- TOAST DE FEEDBACK (compartir, favoritos, etc.) -->
   <div class="app-toast" id="appToast"></div>
 
@@ -652,7 +719,9 @@ html:not(.theme-ready) body {
   <script src="js/theme-system.js"></script>
   <script>ThemeSystem.init({ deferApply: true });</script>
   <script src="js/theme-ai/theme-color-math.js"></script>
+  <script src="js/theme-ai/theme-brand-intelligence.js"></script>
   <script src="js/theme-ai/theme-brand-analyzer.js"></script>
+  <script src="js/theme-ai/theme-role-mapper.js"></script>
   <script src="js/theme-ai/theme-ai-source.js"></script>
   <script src="js/theme-ai/theme-ai-session.js"></script>
   <script src="js/theme-ai/theme-ai-generator.js"></script>
@@ -679,7 +748,9 @@ html:not(.theme-ready) body {
   <script src="js/visitor-session.js"></script>
   <script src="js/visitor-personalization.js"></script>
   <script src="js/auth/api/project-theme.js"></script>
+  <script src="js/auth/api/project-preset-themes.js"></script>
   <script src="js/platform/project-theme-authority.js"></script>
+  <script src="js/platform/project-preset-themes.js"></script>
   <script src="js/platform/admin-hero-api.js"></script>
   <script src="js/pause-screen/pause-screen-messages.js"></script>
   <script src="js/pause-screen/pause-screen-config.js"></script>
@@ -687,13 +758,33 @@ html:not(.theme-ready) body {
   <script src="js/visitor-personalize-panel.js?v=nav19"></script>
   <script src="js/visitor-auth-modal.js"></script>
   <script src="js/visitor-email-verification.js"></script>
-  <script src="js/visitor-menu.js?v=nav20"></script>
-  <script src="js/global-close.js?v=nav20"></script>
+  <script src="js/visitor-menu.js?v=nav23"></script>
+  <script src="js/style-engine/style-engine-tokens.js"></script>
+  <script src="js/style-engine/style-engine-history.js"></script>
+  <script src="js/style-engine/style-engine-bridge.js"></script>
+  <script src="js/style-engine/style-engine-registry.js"></script>
+  <script src="js/style-engine/style-engine-legacy-adapter.js"></script>
+  <script src="js/style-engine/style-engine-presets.js"></script>
+  <script src="js/style-engine/style-engine-export.js"></script>
+  <script src="js/style-engine/style-engine-store.js"></script>
+  <script src="js/style-engine/style-engine-lifecycle.js"></script>
+  <script src="js/style-engine/style-engine-compatibility.js"></script>
+  <script src="js/style-engine/style-engine-visual-system.js"></script>
+  <script src="js/style-engine/style-engine-audit.js"></script>
+  <script src="js/style-engine/style-engine-runtime.js"></script>
+  <script src="js/style-engine/style-engine-color-picker.js"></script>
+  <script src="js/style-engine/style-engine-ai-assistant.js"></script>
+  <script src="js/style-engine/style-engine-preview.js"></script>
+  <script src="js/style-engine/style-engine-coverage.js"></script>
+  <script src="js/style-engine/style-engine-panel.js"></script>
+  <script src="js/style-engine/style-engine-modal.js"></script>
+  <script src="js/global-close.js?v=nav24"></script>
   <script>
   /* Chrome alt-tab guard — runs before main.js, closes unauthorized menu */
   (function () {
     function closeUnauthorizedMenu() {
       if (window.__navResumeGateOpen) return;
+      if (window.__menuOpenAllowedUntil && Date.now() < window.__menuOpenAllowedUntil) return;
       var menu = document.getElementById('mainMenu');
       if (menu && menu.classList.contains('active')) {
         menu.classList.remove('active');
@@ -728,13 +819,15 @@ html:not(.theme-ready) body {
     }, true);
   })();
   </script>
-  <script src="js/main.js?v=nav19"></script>
+  <script src="js/units-compare-pdf.js"></script>
+  <script src="js/main.js?v=nav22"></script>
   <script src="js/project-data.js"></script>
   <script src="js/auth/bootstrap.js"></script>
   <script>
     VisitorAuthModal.init();
     VisitorEmailVerification.init();
     VisitorMenu.init();
+    if (typeof StyleEngine !== 'undefined') StyleEngine.init();
     GlobalClose.init();
     AuthBootstrap.init();
     setTimeout(function () {

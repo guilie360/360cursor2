@@ -80,9 +80,12 @@
         buttonGlass: normalizePanelGlass(config.buttonGlass),
         borderGlass: normalizePanelGlass(config.borderGlass),
         shadowGlass: normalizeShadowGlass(config.shadowGlass),
-        heroSurface: normalizeHex(config.heroSurface || config.surface, config.surface),
+        heroSurface: normalizeHex(config.heroSurface || config.accent || config.surface, config.surface),
         heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-        heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
+        heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
+        maskColor: normalizeHex(config.maskColor || preset.bg, preset.bg),
+        maskGlass: normalizePanelGlass(config.maskGlass || config.bgGlass || 'soft'),
+        maskBlur: normalizeMaskBlur(config.maskBlur || deriveMaskBlurFromGlass(config.maskGlass || config.bgGlass || 'soft'))
       };
     }
 
@@ -106,9 +109,12 @@
       buttonGlass: normalizePanelGlass(config.buttonGlass),
       borderGlass: normalizePanelGlass(config.borderGlass),
       shadowGlass: normalizeShadowGlass(config.shadowGlass),
-      heroSurface: normalizeHex(config.heroSurface || config.surface, surface),
+      heroSurface: normalizeHex(config.heroSurface || config.accent || config.surface, surface),
       heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
-      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass)
+      heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
+      maskColor: normalizeHex(config.maskColor || config.bg, bg),
+      maskGlass: normalizePanelGlass(config.maskGlass || config.bgGlass || 'soft'),
+      maskBlur: normalizeMaskBlur(config.maskBlur || deriveMaskBlurFromGlass(config.maskGlass || config.bgGlass || 'soft'))
     };
   }
 
@@ -172,6 +178,29 @@
     root.setProperty('--hero-btn-border', borderValue);
   }
 
+  function mixBorderGlassEarly(level, border) {
+    level = normalizePanelGlass(level);
+    if (level === 'soft') {
+      return 'color-mix(in srgb, ' + border + ' 52%, transparent)';
+    }
+    if (level === 'glass') {
+      return 'color-mix(in srgb, ' + border + ' 28%, transparent)';
+    }
+    return border;
+  }
+
+  function relativeLuminanceEarly(hex) {
+    function channel(v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+    function read(hexValue, index) {
+      return parseInt(hexValue.slice(1 + index * 2, 3 + index * 2), 16);
+    }
+    hex = normalizeHex(hex, '#000000');
+    return 0.2126 * channel(read(hex, 0)) + 0.7152 * channel(read(hex, 1)) + 0.0722 * channel(read(hex, 2));
+  }
+
   function applyMenuBorderGlass(root, level, border, text) {
     level = normalizePanelGlass(level);
     var borderValue = border;
@@ -227,20 +256,50 @@
   }
 
   var BACKDROP_MASK_PRESETS = {
-    solid: { v94: 94, v90: 90, v75: 75, v55: 55, blur: 0 },
-    soft: { v94: 70, v90: 58, v75: 46, v55: 34, blur: 8 },
-    glass: { v94: 48, v90: 38, v75: 30, v55: 22, blur: 14 }
+    solid: { v94: 94, v90: 90, v75: 75, v55: 55 },
+    soft: { v94: 70, v90: 58, v75: 46, v55: 34 },
+    glass: { v94: 48, v90: 38, v75: 30, v55: 22 }
   };
 
-  function applyBackdropMaskEarly(root, level, bgColor) {
+  var MASK_BLUR_PRESETS = {
+    low: 6,
+    medium: 16,
+    high: 32
+  };
+
+  function normalizeMaskBlur(value) {
+    if (value === 'low' || value === 'high') return value;
+    return 'medium';
+  }
+
+  function deriveMaskBlurFromGlass(glass) {
+    glass = normalizePanelGlass(glass);
+    if (glass === 'glass') return 'high';
+    if (glass === 'soft') return 'medium';
+    return 'low';
+  }
+
+  function resolveMaskBlurPx(blurLevel) {
+    blurLevel = normalizeMaskBlur(blurLevel);
+    return MASK_BLUR_PRESETS[blurLevel] || MASK_BLUR_PRESETS.medium;
+  }
+
+  function applyBackdropMaskEarly(root, level, bgColor, blurLevel) {
     level = normalizePanelGlass(level);
+    blurLevel = normalizeMaskBlur(blurLevel || deriveMaskBlurFromGlass(level));
     var mask = BACKDROP_MASK_PRESETS[level] || BACKDROP_MASK_PRESETS.soft;
-    root.setProperty('--modal-backdrop', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
-    root.setProperty('--backdrop-94', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)');
+    var backdrop = 'color-mix(in srgb, ' + bgColor + ' ' + mask.v94 + '%, transparent)';
+    root.setProperty('--modal-backdrop', backdrop);
+    root.setProperty('--overlay-mask', backdrop);
+    root.setProperty('--backdrop-94', backdrop);
     root.setProperty('--backdrop-90', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v90 + '%, transparent)');
     root.setProperty('--backdrop-75', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v75 + '%, transparent)');
     root.setProperty('--backdrop-55', 'color-mix(in srgb, ' + bgColor + ' ' + mask.v55 + '%, transparent)');
-    root.setProperty('--modal-backdrop-blur', mask.blur + 'px');
+    root.setProperty('--modal-backdrop-blur', resolveMaskBlurPx(blurLevel) + 'px');
+    if (document.body) {
+      document.body.setAttribute('data-mask-glass', level);
+      document.body.setAttribute('data-mask-blur', blurLevel);
+    }
   }
 
   function applyMenuPanelGlassEarly(root, level, panelColor) {
@@ -322,6 +381,10 @@
     var panelGlassLevel = theme.panelGlass || (theme.themeKey === 'custom' ? 'solid' : 'soft');
     var bgGlassLevel = theme.bgGlass || theme.panelGlass || (theme.themeKey === 'custom' ? 'soft' : 'soft');
 
+    var maskColor = normalizeHex(theme.maskColor || theme.bg, theme.bg);
+    var maskGlassLevel = theme.maskGlass || theme.bgGlass || 'soft';
+    var maskBlurLevel = theme.maskBlur || deriveMaskBlurFromGlass(maskGlassLevel);
+
     var pageBg = isCustom
       ? normalizeHex(theme.menuColor || theme.panelColor || panel, theme.bg)
       : theme.bg;
@@ -345,7 +408,7 @@
     root.setProperty('--placeholder-border', border);
     if (isCustom) {
       applyMenuPanelGlassEarly(root, panelGlassLevel, panel);
-      applyBackdropMaskEarly(root, panelGlassLevel, panel);
+      applyBackdropMaskEarly(root, maskGlassLevel, maskColor, maskBlurLevel);
       applyBgGlassEarly(root, bgGlassLevel, theme.bg, true);
       applyContainerTextEarly(root, theme.bgTextMode);
     } else {
@@ -355,7 +418,7 @@
         panel,
         theme.surface
       );
-      applyBackdropMaskEarly(root, panelGlassLevel, panel);
+      applyBackdropMaskEarly(root, maskGlassLevel, maskColor, maskBlurLevel);
     }
     applyShadowGlass(root, theme.shadowGlass || 'soft');
     applyButtonGlass(root, theme.buttonGlass || 'solid', button, hover);
@@ -391,22 +454,9 @@
     stored.projectId = proyectoId || stored.projectId || null;
     stored.themeKey = theme.themeKey || 'custom';
     if (theme.themeKey === 'custom') {
-      stored.customTheme = {
-        bg: theme.bg,
-        menuColor: normalizeHex(theme.menuColor || theme.panelColor || theme.bg, theme.bg),
-        surface: theme.surface,
-        accent: theme.accent,
-        textMode: theme.textMode,
-        visualDepth: theme.visualDepth || 'medium',
-        panelGlass: normalizePanelGlass(theme.panelGlass),
-        bgGlass: normalizePanelGlass(theme.bgGlass || theme.panelGlass),
-        buttonGlass: normalizePanelGlass(theme.buttonGlass),
-        borderGlass: normalizePanelGlass(theme.borderGlass),
-        shadowGlass: normalizeShadowGlass(theme.shadowGlass),
-        heroSurface: normalizeHex(theme.heroSurface || theme.surface, theme.surface),
-        heroButtonGlass: normalizePanelGlass(theme.heroButtonGlass || theme.buttonGlass),
-        heroBorderGlass: normalizePanelGlass(theme.heroBorderGlass || theme.borderGlass)
-      };
+      stored.customTheme = expandThemeConfig(theme);
+      delete stored.customTheme.themeKey;
+      delete stored.customTheme.text;
     } else {
       stored.customTheme = null;
     }
@@ -491,23 +541,7 @@
       var stored = readJSON(STORAGE_KEY, {});
       if (stored.customTheme) {
         applyExpandedTheme(
-          expandThemeConfig({
-            themeKey: stored.themeKey || 'custom',
-            bg: stored.customTheme.bg,
-            menuColor: stored.customTheme.menuColor,
-            surface: stored.customTheme.surface,
-            accent: stored.customTheme.accent,
-            textMode: stored.customTheme.textMode,
-            visualDepth: stored.customTheme.visualDepth,
-            panelGlass: stored.customTheme.panelGlass,
-            bgGlass: stored.customTheme.bgGlass,
-            buttonGlass: stored.customTheme.buttonGlass,
-            borderGlass: stored.customTheme.borderGlass,
-            shadowGlass: stored.customTheme.shadowGlass,
-            heroSurface: stored.customTheme.heroSurface,
-            heroButtonGlass: stored.customTheme.heroButtonGlass,
-            heroBorderGlass: stored.customTheme.heroBorderGlass
-          })
+          expandThemeConfig(Object.assign({ themeKey: stored.themeKey || 'custom' }, stored.customTheme))
         );
       }
       document.documentElement.classList.add('theme-ready');

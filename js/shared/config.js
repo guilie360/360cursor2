@@ -3,21 +3,29 @@ var SUPABASE_URL = 'https://emefdwzdfnqgjohbtvvn.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
 var DEFAULT_PROJECT_SLUG = 'proyecto-demo';
 var SHOWROOM_DEV_URL = 'http://localhost:8765/index.html?proyecto=' + DEFAULT_PROJECT_SLUG;
+
+/* Pantalla de pausa al volver a la pestaña (navResumeGate / PauseScreen).
+   false = desactivada temporalmente. Cambiar a true para reactivarla. */
+var NAV_RESUME_GATE_ENABLED = false;
+
 var PROJECT_DEFAULT_THEME_FALLBACK = {
   themeKey: 'custom',
-  bg: '#111111',
+  bg: '#161616',
   menuColor: '#1a1a1a',
-  surface: '#840808',
+  surface: '#2a2a2a',
   accent: '#8f1d1d',
+  maskColor: '#000000',
+  maskGlass: 'soft',
+  maskBlur: 'medium',
   textMode: 'light',
   visualDepth: 'high',
-  bgGlass: 'solid',
-  panelGlass: 'solid',
-  buttonGlass: 'solid',
+  bgGlass: 'soft',
+  panelGlass: 'soft',
+  buttonGlass: 'soft',
   borderGlass: 'solid',
   shadowGlass: 'soft',
-  heroSurface: '#840808',
-  heroButtonGlass: 'solid',
+  heroSurface: '#8f1d1d',
+  heroButtonGlass: 'soft',
   heroBorderGlass: 'solid'
 };
 

@@ -31,6 +31,15 @@ var GlobalClose = (function () {
       ThemeAIModal.isOpen();
   }
 
+  function isStyleEngineModalOpen() {
+    return (typeof StyleEngine !== 'undefined' &&
+      typeof StyleEngine.isOpen === 'function' &&
+      StyleEngine.isOpen()) ||
+      (typeof StyleEngineColorPicker !== 'undefined' &&
+      typeof StyleEngineColorPicker.isOpen === 'function' &&
+      StyleEngineColorPicker.isOpen());
+  }
+
   function isMainMenuOpen() {
     if (typeof window.isMainMenuOpen === 'function') return window.isMainMenuOpen();
     var menu = document.getElementById('mainMenu');
@@ -44,6 +53,7 @@ var GlobalClose = (function () {
       isVerificationModalOpen() ||
       isProjectThemeConfirmOpen() ||
       isThemeAiModalOpen() ||
+      isStyleEngineModalOpen() ||
       (typeof lightboxOpen !== 'undefined' && lightboxOpen);
   }
 
@@ -170,8 +180,28 @@ var GlobalClose = (function () {
       update();
       return;
     }
+    var presetDeleteModal = document.getElementById('officialPresetDeleteModal');
+    if (presetDeleteModal && presetDeleteModal.classList.contains('active')) {
+      if (typeof VisitorPersonalizePanel !== 'undefined' &&
+          typeof VisitorPersonalizePanel.closeOfficialPresetDeleteConfirm === 'function') {
+        VisitorPersonalizePanel.closeOfficialPresetDeleteConfirm();
+      } else {
+        presetDeleteModal.classList.remove('active');
+      }
+      update();
+      return;
+    }
     if (isThemeAiModalOpen()) {
       ThemeAIModal.close();
+      update();
+      return;
+    }
+    if (isStyleEngineModalOpen()) {
+      if (typeof StyleEngineColorPicker !== 'undefined' && StyleEngineColorPicker.isOpen()) {
+        StyleEngineColorPicker.close(false);
+      } else if (typeof StyleEngine !== 'undefined') {
+        StyleEngine.requestClose();
+      }
       update();
       return;
     }

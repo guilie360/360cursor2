@@ -23,6 +23,11 @@ var ProjectThemeAuthority = (function () {
   }
 
   function shouldApplyProjectDefault() {
+    if (typeof StyleEngineCompatibility !== 'undefined' &&
+        StyleEngineCompatibility.isStyleEngineLive()) {
+      return false;
+    }
+
     if (typeof ThemeSystem !== 'undefined' &&
         typeof ThemeSystem.isExplicitUserChoice === 'function' &&
         ThemeSystem.isExplicitUserChoice()) {
@@ -45,22 +50,7 @@ var ProjectThemeAuthority = (function () {
     var key = theme.themeKey || customKey;
 
     if (key === customKey) {
-      ThemeSystem.apply(customKey, false, {
-        bg: theme.bg,
-        menuColor: theme.menuColor || theme.panelColor || theme.bg,
-        surface: theme.surface,
-        accent: theme.accent,
-        textMode: theme.textMode,
-        visualDepth: theme.visualDepth,
-        bgGlass: theme.bgGlass || theme.panelGlass,
-        panelGlass: theme.panelGlass,
-        buttonGlass: theme.buttonGlass,
-        borderGlass: theme.borderGlass,
-        shadowGlass: theme.shadowGlass,
-        heroSurface: theme.heroSurface,
-        heroButtonGlass: theme.heroButtonGlass,
-        heroBorderGlass: theme.heroBorderGlass
-      });
+      ThemeSystem.apply(customKey, false, ThemeSystem.normalizeCustomConfig(theme));
     } else if (ThemeSystem.THEMES[key]) {
       ThemeSystem.apply(key, false);
     }
