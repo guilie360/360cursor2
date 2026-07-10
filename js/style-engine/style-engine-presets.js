@@ -126,12 +126,77 @@ var StyleEnginePresets = (function () {
     savePersonal(list);
   }
 
+  /** Guarda o actualiza un estilo con nombre (biblioteca Styles). */
+  function saveNamedStyle(name, rules, options) {
+    options = options || {};
+    var list = loadPersonal();
+    var trimmed = String(name || '').trim();
+    if (!trimmed) trimmed = 'Estilo ' + new Date().toLocaleString('es-CO');
+
+    var existing = null;
+    if (options.id) {
+      existing = list.find(function (p) { return p.id === options.id; }) || null;
+    }
+    if (!existing && options.replaceByName !== false) {
+      existing = list.find(function (p) {
+        return String(p.name).toLowerCase() === trimmed.toLowerCase();
+      }) || null;
+    }
+
+    var normalized = StyleEngineTokens.normalizeRules(rules);
+    var now = new Date().toISOString();
+    var personalizarDraft = options.personalizarDraft
+      ? Object.assign({}, options.personalizarDraft)
+      : null;
+
+    if (existing) {
+      existing.name = trimmed;
+      existing.rules = normalized;
+      existing.updatedAt = now;
+      existing.source = options.source || existing.source || 'manual';
+      if (options.publishMeta) existing.publishMeta = options.publishMeta;
+      if (personalizarDraft) existing.personalizarDraft = personalizarDraft;
+      savePersonal(list);
+      return existing;
+    }
+
+    var item = {
+      id: 'style-' + Date.now(),
+      name: trimmed,
+      rules: normalized,
+      source: options.source || 'manual',
+      createdAt: now,
+      updatedAt: now,
+      publishMeta: options.publishMeta || null,
+      personalizarDraft: personalizarDraft
+    };
+    list.unshift(item);
+    savePersonal(list);
+    return item;
+  }
+
+  function getSavedStyles() {
+    return loadPersonal().slice().sort(function (a, b) {
+      return String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''));
+    });
+  }
+
+  /** Estilos guardados desde Personalizar 2.0 (tienen draft V1). */
+  function getPersonalizarStyles() {
+    return getSavedStyles().filter(function (s) {
+      return s && s.personalizarDraft && typeof s.personalizarDraft === 'object';
+    });
+  }
+
   return {
     getOfficial: getOfficial,
     getInspiration: getInspiration,
     getPersonal: getPersonal,
+    getSavedStyles: getSavedStyles,
+    getPersonalizarStyles: getPersonalizarStyles,
     findById: findById,
     savePersonalPreset: savePersonalPreset,
+    saveNamedStyle: saveNamedStyle,
     duplicatePersonal: duplicatePersonal,
     renamePersonal: renamePersonal,
     deletePersonal: deletePersonal

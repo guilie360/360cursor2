@@ -31,6 +31,12 @@ var GlobalClose = (function () {
       ThemeAIModal.isOpen();
   }
 
+  function isVisualAuditOpen() {
+    return (typeof VisualAuditRunner !== 'undefined' && VisualAuditRunner.isRunning()) ||
+      !!(document.getElementById('visualAuditUiRoot') &&
+        document.getElementById('visualAuditUiRoot').classList.contains('is-open'));
+  }
+
   function isStyleEngineModalOpen() {
     return (typeof StyleEngine !== 'undefined' &&
       typeof StyleEngine.isOpen === 'function' &&
@@ -46,13 +52,21 @@ var GlobalClose = (function () {
     return !!(menu && menu.classList.contains('active'));
   }
 
+  function isWebEffectsConfirmOpen() {
+    return typeof WebEffects !== 'undefined' &&
+      typeof WebEffects.isConfirmOpen === 'function' &&
+      WebEffects.isConfirmOpen();
+  }
+
   function isOverlayOpen() {
     return (typeof navStack !== 'undefined' && navStack.length > 0) ||
       isMainMenuOpen() ||
       isAuthModalOpen() ||
       isVerificationModalOpen() ||
       isProjectThemeConfirmOpen() ||
+      isWebEffectsConfirmOpen() ||
       isThemeAiModalOpen() ||
+      isVisualAuditOpen() ||
       isStyleEngineModalOpen() ||
       (typeof lightboxOpen !== 'undefined' && lightboxOpen);
   }
@@ -78,7 +92,9 @@ var GlobalClose = (function () {
     }
     if (!btn.dataset.bound) {
       btn.dataset.bound = '1';
-      btn.addEventListener('click', handleClose);
+      btn.addEventListener('click', function () {
+        handleClose({ explicitUserClose: true });
+      });
     }
 
     fullscreenBtn = fullscreenBtn || document.getElementById('globalFullscreenBtn');
@@ -116,7 +132,9 @@ var GlobalClose = (function () {
     }
     if (!recoveryBtn.dataset.bound) {
       recoveryBtn.dataset.bound = '1';
-      recoveryBtn.addEventListener('click', handleClose);
+      recoveryBtn.addEventListener('click', function () {
+        handleClose({ explicitUserClose: true });
+      });
     }
     return recoveryBtn;
   }
@@ -147,28 +165,58 @@ var GlobalClose = (function () {
     ensureGlobalCloseButton();
     ensureRecoveryCloseButton();
 
-    var show = isOverlayOpen();
-    btn.hidden = !show;
-    fullscreenBtn.hidden = !show;
-    btn.classList.toggle('is-visible', show);
-    fullscreenBtn.classList.toggle('is-visible', show);
-    if (stack) stack.classList.toggle('is-visible', show);
-    document.body.classList.toggle('has-global-close', show);
+    var showClose = isOverlayOpen();
+    var showFullscreen = true;
+    var showStack = showClose || showFullscreen;
 
+    btn.hidden = !showClose;
+    fullscreenBtn.hidden = !showFullscreen;
+    btn.classList.toggle('is-visible', showClose);
+    fullscreenBtn.classList.toggle('is-visible', showFullscreen);
+    if (stack) {
+      stack.classList.toggle('is-visible', showStack);
+      stack.classList.toggle('is-hero-only', showFullscreen && !showClose);
+    }
+    document.body.classList.toggle('has-global-close', showClose);
+
+    updateFullscreenState();
     var menuOpen = isMainMenuOpen();
-    var globalCloseVisible = !!(btn && show && !btn.hidden && btn.classList.contains('is-visible'));
+    var globalCloseVisible = !!(btn && showClose && !btn.hidden && btn.classList.contains('is-visible'));
     if (recoveryBtn) {
       var needsRecovery = menuOpen && !globalCloseVisible;
       recoveryBtn.hidden = !needsRecovery;
       recoveryBtn.classList.toggle('is-visible', needsRecovery);
     }
-
-    updateFullscreenState();
   }
 
   function handleClose(options) {
     options = options || {};
     var fromEscape = !!options.fromEscape;
+    var explicitUserClose = !!options.explicitUserClose;
+
+    function isStyleV3Locked() {
+      return typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked();
+    }
+
+    function authorizeStyleV3Close() {
+      if (typeof window.authorizeStyleV3MenuClose === 'function') {
+        window.authorizeStyleV3MenuClose();
+      }
+    }
+
+    function blockStyleV3MenuClose() {
+      if (!isStyleV3Locked()) return false;
+      if (!explicitUserClose) {
+        update();
+        return true;
+      }
+      authorizeStyleV3Close();
+      if (typeof window.closeMainMenuIfOpen === 'function') {
+        window.closeMainMenuIfOpen();
+      }
+      update();
+      return true;
+    }
     if (isProjectThemeConfirmOpen()) {
       if (typeof VisitorPersonalizePanel !== 'undefined' &&
           typeof VisitorPersonalizePanel.closeProjectThemeConfirm === 'function') {
@@ -177,6 +225,11 @@ var GlobalClose = (function () {
         var themeModal = document.getElementById('projectThemeConfirmModal');
         if (themeModal) themeModal.classList.remove('active');
       }
+      update();
+      return;
+    }
+    if (isWebEffectsConfirmOpen()) {
+      WebEffects.closeConfirmModal();
       update();
       return;
     }
@@ -193,6 +246,15 @@ var GlobalClose = (function () {
     }
     if (isThemeAiModalOpen()) {
       ThemeAIModal.close();
+      update();
+      return;
+    }
+    if (isVisualAuditOpen()) {
+      if (typeof VisualAuditRunner !== 'undefined' && VisualAuditRunner.isRunning()) {
+        VisualAuditRunner.cancel();
+      } else if (typeof VisualAuditUI !== 'undefined' && VisualAuditUI.clear) {
+        VisualAuditUI.clear();
+      }
       update();
       return;
     }
@@ -231,6 +293,18 @@ var GlobalClose = (function () {
       return;
     }
     if (document.body.classList.contains('global-close-docked') && isMainMenuOpen()) {
+      if (isStyleV3Locked()) {
+        if (!explicitUserClose) {
+          update();
+          return;
+        }
+        authorizeStyleV3Close();
+        if (typeof window.closeMainMenuIfOpen === 'function') {
+          window.closeMainMenuIfOpen();
+        }
+        update();
+        return;
+      }
       if (typeof VisitorPersonalizePanel !== 'undefined' &&
           typeof VisitorPersonalizePanel.isOnPersonalizarPanel === 'function' &&
           VisitorPersonalizePanel.isOnPersonalizarPanel()) {
@@ -271,6 +345,7 @@ var GlobalClose = (function () {
       return;
     }
     if (typeof navStack !== 'undefined' && navStack.length > 0 && typeof goBack === 'function') {
+      if (blockStyleV3MenuClose()) return;
       if (typeof window.authorizeGoBackForce === 'function') {
         window.authorizeGoBackForce();
       } else if (typeof window.authorizeGoBack === 'function') {
@@ -281,6 +356,7 @@ var GlobalClose = (function () {
       return;
     }
     if (isMainMenuOpen() && typeof window.closeMainMenuIfOpen === 'function') {
+      if (blockStyleV3MenuClose()) return;
       if (fromEscape &&
           typeof VisitorPersonalizePanel !== 'undefined' &&
           typeof VisitorPersonalizePanel.isEditorSessionLocked === 'function' &&

@@ -267,7 +267,7 @@ var VisitorPersonalizePanel = (function () {
           '</div>' +
           (options.maskBlur
             ? '<div class="custom-theme-row custom-theme-row--tight">' +
-                '<span class="custom-theme-row-label">Desenfoque</span>' +
+                '<span class="custom-theme-row-label">Blur</span>' +
                 '<div class="custom-theme-text-toggle custom-theme-mask-blur-toggle">' +
                   renderMaskBlurButtons() +
                 '</div>' +
@@ -1903,7 +1903,7 @@ var VisitorPersonalizePanel = (function () {
                 '<div class="custom-theme-section custom-theme-section--plain">' +
                   '<div class="custom-theme-section-body">' +
                 '<div class="custom-theme-row">' +
-                  '<span class="custom-theme-row-label">Profundidad visual</span>' +
+                  '<span class="custom-theme-row-label">Viñeta</span>' +
                   '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
                     '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-theme-visual-action="depth-low">Baja</button>' +
                     '<button type="button" class="custom-theme-depth-btn selected" data-depth-mode="medium" data-theme-visual-action="depth-medium">Media</button>' +

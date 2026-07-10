@@ -13,14 +13,49 @@ var StyleEngineLifecycle = (function () {
     }
   }
 
-  function publishToProject() {
+  function publishToProject(options) {
+    options = options || {};
     var rules = StyleEngineStore.getDraftRules();
     var meta = StyleEngineStore.publishDraft(rules);
     StyleEngineStore.setActiveTheme(ACTIVE.STYLE_ENGINE);
     StyleEngineStore.setEngineMode(StyleEngineStore.MODES.LIVE);
+
+    /* Aplicar NO guarda en biblioteca salvo que se pida explícitamente */
+    if (options.saveNamed) {
+      var styleName = options.styleName;
+      if (!styleName) {
+        var current = StyleEngineStore.getActiveStyleMeta();
+        styleName = current.name || ('Estilo ' + meta.versionLabel);
+      }
+      if (options.promptName && typeof window.prompt === 'function') {
+        var asked = window.prompt('Nombre para guardar este estilo', styleName);
+        if (asked && asked.trim()) styleName = asked.trim();
+      }
+      if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.saveNamedStyle) {
+        var currentMeta = StyleEngineStore.getActiveStyleMeta();
+        var saved = StyleEnginePresets.saveNamedStyle(styleName, rules, {
+          id: options.replaceActive ? (currentMeta.id || null) : null,
+          source: 'published',
+          publishMeta: meta
+        });
+        StyleEngineStore.setActiveStyleMeta(saved.id, saved.name);
+        StyleEngineRuntime.reinforcePublished();
+        notifyActiveThemeChanged();
+        return { meta: meta, style: saved };
+      }
+    }
+
     StyleEngineRuntime.reinforcePublished();
     notifyActiveThemeChanged();
-    return meta;
+    return { meta: meta, style: null };
+  }
+
+  function applySavedStyle(styleId) {
+    var style = StyleEnginePresets.findById(styleId);
+    if (!style) return null;
+    StyleEngineStore.setDraftRules(style.rules, { replace: true });
+    StyleEngineStore.setActiveStyleMeta(style.id, style.name);
+    return publishToProject({ saveNamed: false });
   }
 
   function saveDraftOnly() {
@@ -57,6 +92,7 @@ var StyleEngineLifecycle = (function () {
     var active = StyleEngineStore.getActiveTheme();
     var mode = StyleEngineStore.getEngineMode();
     var pub = StyleEngineStore.getPublishMeta();
+    var styleMeta = StyleEngineStore.getActiveStyleMeta();
     return {
       activeTheme: active,
       activeThemeLabel: active === ACTIVE.STYLE_ENGINE ? 'Style Engine' : 'Theme Legacy',
@@ -66,6 +102,8 @@ var StyleEngineLifecycle = (function () {
       lastPublished: pub,
       lastPublishedLabel: pub.publishedAt ? formatPublishDate(pub.publishedAt) : 'Sin publicar',
       versionLabel: pub.versionLabel || '—',
+      activeStyleName: styleMeta.name || '—',
+      activeStyleId: styleMeta.id || null,
       hasPendingChanges: StyleEngineStore.hasUnsavedDraftChanges() || StyleEngineStore.hasUnpublishedChanges(),
       draftSavedAt: StyleEngineStore.getDraftSavedAt()
     };
@@ -86,6 +124,7 @@ var StyleEngineLifecycle = (function () {
   return {
     ACTIVE: ACTIVE,
     publishToProject: publishToProject,
+    applySavedStyle: applySavedStyle,
     saveDraftOnly: saveDraftOnly,
     discardSessionChanges: discardSessionChanges,
     restoreLegacyTheme: restoreLegacyTheme,

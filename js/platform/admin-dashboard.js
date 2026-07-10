@@ -10,7 +10,7 @@ var AdminDashboard = (function () {
     pendingImageFile: null
   };
 
-  var DEFAULT_BTN_1 = 'Ver 360°';
+  var DEFAULT_BTN_1 = 'Iniciar';
   var DEFAULT_BTN_2 = 'Explorar';
 
   function canAccess(profile) {

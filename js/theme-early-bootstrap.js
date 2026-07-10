@@ -81,6 +81,7 @@
         borderGlass: normalizePanelGlass(config.borderGlass),
         shadowGlass: normalizeShadowGlass(config.shadowGlass),
         heroSurface: normalizeHex(config.heroSurface || config.accent || config.surface, config.surface),
+        heroHoverColor: config.heroHoverColor || '',
         heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
         heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
         maskColor: normalizeHex(config.maskColor || preset.bg, preset.bg),
@@ -100,6 +101,7 @@
       menuColor: normalizeHex(config.menuColor || config.panelColor || mixHex(bg, textMode === 'dark' ? '#000000' : '#ffffff', 14), bg),
       surface: surface,
       accent: accent,
+      hoverColor: config.hoverColor || config.hover || '',
       text: text,
       textMode: textMode,
       bgTextMode: config.bgTextMode === 'dark' ? 'dark' : 'light',
@@ -108,8 +110,15 @@
       bgGlass: normalizePanelGlass(config.bgGlass || config.panelGlass),
       buttonGlass: normalizePanelGlass(config.buttonGlass),
       borderGlass: normalizePanelGlass(config.borderGlass),
+      buttonBorderColor: config.buttonBorderColor || '',
+      buttonBorderWidth: config.buttonBorderWidth || 'medium',
+      buttonHoverBorderColor: config.buttonHoverBorderColor || '',
+      buttonHoverBorderWidth: config.buttonHoverBorderWidth || config.buttonBorderWidth || 'medium',
+      buttonHoverTextColor: config.buttonHoverTextColor || '',
+      buttonHoverGlass: normalizePanelGlass(config.buttonHoverGlass || 'solid'),
       shadowGlass: normalizeShadowGlass(config.shadowGlass),
-      heroSurface: normalizeHex(config.heroSurface || config.accent || config.surface, surface),
+      heroSurface: normalizeHex(config.heroSurface || config.surface || config.accent, surface),
+      heroHoverColor: config.heroHoverColor || config.hoverColor || '',
       heroButtonGlass: normalizePanelGlass(config.heroButtonGlass || config.buttonGlass),
       heroBorderGlass: normalizePanelGlass(config.heroBorderGlass || config.borderGlass),
       maskColor: normalizeHex(config.maskColor || config.bg, bg),
@@ -118,64 +127,102 @@
     };
   }
 
-  function applyButtonGlass(root, level, button, hover) {
+  function applyButtonGlass(root, level, button, hover, hasExplicitHover, hoverTextColor, textFallback, hoverGlass) {
     level = normalizePanelGlass(level);
     var uiPreset = {
       solid: { surfaceOpacity: 100, blur: 0 },
       soft: { surfaceOpacity: 46, blur: 14 },
       glass: { surfaceOpacity: 12, blur: 20 }
     }[level] || { surfaceOpacity: 100, blur: 0 };
+    hoverGlass = normalizePanelGlass(hoverGlass || 'solid');
+    var hoverPreset = {
+      solid: { surfaceOpacity: 100, blur: 0 },
+      soft: { surfaceOpacity: 62, blur: 14 },
+      glass: { surfaceOpacity: 38, blur: 20 }
+    }[hoverGlass] || { surfaceOpacity: 100, blur: 0 };
     var btnBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
       ? button
       : 'color-mix(in srgb, ' + button + ' ' + uiPreset.surfaceOpacity + '%, transparent)';
     root.setProperty('--btn-glass-surface', btnBg);
     root.setProperty('--btn-glass-blur', uiPreset.blur + 'px');
-    var btnHover = hover || button;
-    if (level === 'glass') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 14, 42) + '%, transparent)';
-    } else if (level === 'soft') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 22, 78) + '%, transparent)';
+    root.setProperty('--btn-hover-blur', hoverPreset.blur + 'px');
+    var hoverBase = hover || button;
+    var btnHover = hoverBase;
+    if (hoverGlass === 'glass') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 38%, transparent)';
+    } else if (hoverGlass === 'soft') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 62%, transparent)';
     }
     root.setProperty('--btn-glass-hover', btnHover);
+    root.setProperty('--hover', hover || button);
+    var hoverText = String(hoverTextColor || '').trim()
+      ? normalizeHex(hoverTextColor, textFallback || '#ffffff')
+      : (textFallback || '#ffffff');
+    root.setProperty('--btn-text-hover', hoverText);
     if (document.body) {
       document.body.setAttribute('data-button-glass', level);
+      document.body.setAttribute('data-button-hover-glass', hoverGlass);
     }
   }
 
-  function applyHeroButtonGlass(root, level, heroColor, accent, hover, textMode) {
+  function applyHeroButtonGlass(root, level, heroColor, accent, hover, textMode, heroHoverColor) {
+    /* Unificado: mismos tokens que botones generales */
     level = normalizePanelGlass(level);
-    var heroPreset = {
-      solid: { surfaceOpacity: 100, accentOpacity: 100, blur: 4 },
-      soft: { surfaceOpacity: 42, accentOpacity: 28, blur: 12 },
-      glass: { surfaceOpacity: 18, accentOpacity: 14, blur: 16 }
-    }[level] || { surfaceOpacity: 100, accentOpacity: 100, blur: 4 };
-    heroColor = heroColor || accent;
-    textMode = textMode === 'dark' ? 'dark' : 'light';
-    var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var heroHover = mixHex(heroColor, hoverTint, 14);
-    var heroBg = heroColor;
-    if (level === 'glass') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 8, 36) + '%, transparent)';
+    var uiPreset = {
+      solid: { surfaceOpacity: 100, blur: 0 },
+      soft: { surfaceOpacity: 46, blur: 14 },
+      glass: { surfaceOpacity: 12, blur: 20 }
+    }[level] || { surfaceOpacity: 100, blur: 0 };
+    var button = heroColor || accent;
+    var hasExplicitHover = !!(String(heroHoverColor || hover || '').trim() && heroHoverColor);
+    var hoverBase = hasExplicitHover ? normalizeHex(heroHoverColor, button) : (hover || button);
+    var heroBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
+      ? button
+      : 'color-mix(in srgb, ' + button + ' ' + uiPreset.surfaceOpacity + '%, transparent)';
+    var heroHover = hoverBase;
+    if (hasExplicitHover) {
+      if (level === 'glass') heroHover = 'color-mix(in srgb, ' + hoverBase + ' 72%, transparent)';
+      else if (level === 'soft') heroHover = 'color-mix(in srgb, ' + hoverBase + ' 88%, transparent)';
+    } else if (level === 'glass') {
+      heroHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 14, 42) + '%, transparent)';
     } else if (level === 'soft') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 14, 72) + '%, transparent)';
+      heroHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 22, 78) + '%, transparent)';
     }
     root.setProperty('--hero-btn-bg', heroBg);
     root.setProperty('--hero-btn-bg-hover', heroHover);
-    root.setProperty('--hero-btn-blur', heroPreset.blur + 'px');
+    root.setProperty('--hero-btn-blur', uiPreset.blur + 'px');
   }
 
-  function applyHeroBorderGlass(root, level, bg, heroColor) {
+  function applyHeroBorderGlass(root, level, bg, heroColor, borderColor, borderWidth, hoverBorderColor, hoverBorderWidth) {
+    var color = borderColor || mixHex(bg, heroColor, 58);
+    var widthPx = borderWidth === 'low' ? '1px' : borderWidth === 'high' ? '3px' : '2px';
+    var hoverColor = hoverBorderColor || color;
+    var hoverWidthPx = hoverBorderWidth === 'low' ? '0.7px' : hoverBorderWidth === 'high' ? '2.1px' : '1.4px';
+    root.setProperty('--hero-btn-border', color);
+    root.setProperty('--btn-border', color);
+    root.setProperty('--btn-border-width', widthPx);
+    root.setProperty('--hero-btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-width-hover', hoverWidthPx);
+  }
+
+  function applyButtonBorderGlass(root, level, buttonBorder, borderColor, borderWidth, hoverBorderColor, hoverBorderWidth) {
     level = normalizePanelGlass(level);
-    var border = mixHex(bg, heroColor, 58);
-    var borderValue = border;
-    if (level === 'soft') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 52%, transparent)';
-    } else if (level === 'glass') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 28%, transparent)';
+    var color = borderColor || buttonBorder;
+    var widthPx = borderWidth === 'low' ? '1px' : borderWidth === 'high' ? '3px' : '2px';
+    if (!borderColor && level === 'soft') {
+      color = 'color-mix(in srgb, ' + buttonBorder + ' 52%, transparent)';
+    } else if (!borderColor && level === 'glass') {
+      color = 'color-mix(in srgb, ' + buttonBorder + ' 28%, transparent)';
     }
-    root.setProperty('--hero-btn-border', borderValue);
+    var hoverColor = hoverBorderColor || color;
+    var hoverWidthPx = hoverBorderWidth === 'low' ? '0.7px' : hoverBorderWidth === 'high' ? '2.1px' : '1.4px';
+    root.setProperty('--btn-border', color);
+    root.setProperty('--hero-btn-border', color);
+    root.setProperty('--btn-border-width', widthPx);
+    root.setProperty('--btn-border-hover', hoverColor);
+    root.setProperty('--hero-btn-border-hover', hoverColor);
+    root.setProperty('--btn-border-width-hover', hoverWidthPx);
   }
 
   function mixBorderGlassEarly(level, border) {
@@ -212,20 +259,6 @@
     root.setProperty('--border', borderValue);
     root.setProperty('--glass-border', borderValue);
     root.setProperty('--glass-border-lit', 'color-mix(in srgb, ' + borderValue + ' 68%, ' + text + ')');
-  }
-
-  function applyButtonBorderGlass(root, level, border) {
-    level = normalizePanelGlass(level);
-    var borderValue = border;
-    if (level === 'soft') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 52%, transparent)';
-    } else if (level === 'glass') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 28%, transparent)';
-    }
-    root.setProperty('--btn-border', borderValue);
-    if (document.body) {
-      document.body.setAttribute('data-button-border-glass', level);
-    }
   }
 
   function applyBorderGlass(root, level, border, text) {
@@ -373,7 +406,10 @@
       : mixHex(theme.bg, theme.surface, 32);
     var button = theme.surface;
     var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var hover = mixHex(button, hoverTint, 14);
+    var hasExplicitHover = !!(String(theme.hoverColor || theme.hover || '').trim());
+    var hover = hasExplicitHover
+      ? normalizeHex(theme.hoverColor || theme.hover, button)
+      : mixHex(button, hoverTint, 14);
     var border = isCustom
       ? mixHex(theme.bg, panelTint, 24)
       : mixHex(theme.bg, theme.surface, 58);
@@ -421,25 +457,49 @@
       applyBackdropMaskEarly(root, maskGlassLevel, maskColor, maskBlurLevel);
     }
     applyShadowGlass(root, theme.shadowGlass || 'soft');
-    applyButtonGlass(root, theme.buttonGlass || 'solid', button, hover);
+    applyButtonGlass(
+      root,
+      theme.buttonGlass || 'solid',
+      button,
+      hover,
+      hasExplicitHover,
+      theme.buttonHoverTextColor,
+      theme.text,
+      theme.buttonHoverGlass
+    );
     applyMenuBorderGlass(root, panelGlassLevel, border, theme.text);
     var buttonBorder = isCustom
       ? mixHex(button, theme.text, textMode === 'light' ? 22 : 18)
       : border;
-    applyButtonBorderGlass(root, theme.borderGlass || 'solid', buttonBorder);
+    var explicitBorder = theme.buttonBorderColor || '';
+    var explicitHoverBorder = theme.buttonHoverBorderColor || '';
+    applyButtonBorderGlass(
+      root,
+      theme.borderGlass || 'solid',
+      buttonBorder,
+      explicitBorder,
+      theme.buttonBorderWidth || 'medium',
+      explicitHoverBorder,
+      theme.buttonHoverBorderWidth || theme.buttonBorderWidth || 'medium'
+    );
     applyHeroButtonGlass(
       root,
-      theme.heroButtonGlass || theme.buttonGlass || 'solid',
-      theme.heroSurface || theme.surface,
+      theme.buttonGlass || 'solid',
+      button,
       theme.accent,
       hover,
-      textMode
+      textMode,
+      theme.hoverColor || theme.heroHoverColor
     );
     applyHeroBorderGlass(
       root,
-      theme.heroBorderGlass || theme.borderGlass || 'solid',
+      theme.borderGlass || 'solid',
       theme.bg,
-      theme.heroSurface || theme.surface
+      button,
+      explicitBorder || buttonBorder,
+      theme.buttonBorderWidth || 'medium',
+      explicitHoverBorder || explicitBorder || buttonBorder,
+      theme.buttonHoverBorderWidth || theme.buttonBorderWidth || 'medium'
     );
 
     document.documentElement.dataset.earlyTheme = theme.themeKey;

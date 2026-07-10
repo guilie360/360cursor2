@@ -46,6 +46,15 @@ var StyleEngineRuntime = (function () {
     document.documentElement.setAttribute(ATTR_THEME, theme);
   }
 
+  function applyPersonalizarMaterialsIfAny() {
+    if (typeof StyleEngineStore === 'undefined' || typeof StyleEnginePersonalizarMapper === 'undefined') {
+      return;
+    }
+    var draft = StyleEngineStore.getPersonalizarDraft && StyleEngineStore.getPersonalizarDraft();
+    if (!draft) return;
+    StyleEnginePersonalizarMapper.applyMaterials(draft);
+  }
+
   function activatePublished() {
     var rules = StyleEngineStore.getPublishedRules();
     clearApplied();
@@ -56,6 +65,8 @@ var StyleEngineRuntime = (function () {
     document.body.classList.add('style-engine-live-active', 'visual-system-live');
     applySeTokens(rules);
     applyLegacyBridge(rules);
+    /* Personalizar 2.0: materiales V1 encima del bridge para herencia completa */
+    applyPersonalizarMaterialsIfAny();
   }
 
   function reinforcePublished() {
@@ -72,6 +83,10 @@ var StyleEngineRuntime = (function () {
     document.documentElement.removeAttribute(ATTR_ACTIVE);
     document.documentElement.removeAttribute(ATTR_MODE);
     document.documentElement.removeAttribute(ATTR_VS);
+    if (typeof StyleEnginePersonalizarMapper !== 'undefined' &&
+        StyleEnginePersonalizarMapper.clearMaterialsFlag) {
+      StyleEnginePersonalizarMapper.clearMaterialsFlag();
+    }
     if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
       ThemeSystem.reapply();
     }

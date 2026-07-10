@@ -247,6 +247,7 @@ var ThemeSystem = (function () {
     menuColor: '#1a1a1a',
     surface: '#2a2a2a',
     accent: '#8f1d1d',
+    hoverColor: '',
     maskColor: '#000000',
     maskGlass: 'soft',
     maskBlur: 'medium',
@@ -257,10 +258,18 @@ var ThemeSystem = (function () {
     panelGlass: 'soft',
     buttonGlass: 'soft',
     borderGlass: 'solid',
+    buttonBorderColor: '',
+    buttonBorderWidth: 'medium',
+    buttonHoverBorderColor: '',
+    buttonHoverBorderWidth: 'medium',
+    buttonHoverTextColor: '',
+    buttonHoverGlass: 'solid',
     shadowGlass: 'soft',
     heroSurface: '#8f1d1d',
+    heroHoverColor: '',
     heroButtonGlass: 'soft',
-    heroBorderGlass: 'solid'
+    heroBorderGlass: 'solid',
+    heroLayout: 'centered'
   };
 
   var PANEL_GLASS_PRESETS = {
@@ -445,7 +454,10 @@ var ThemeSystem = (function () {
     var panel = menuColor;
     var button = surface;
     var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var hover = mixHex(button, hoverTint, 14);
+    var hasExplicitHover = !!(String(config.hoverColor || config.hover || '').trim());
+    var hover = hasExplicitHover
+      ? normalizeHex(config.hoverColor || config.hover)
+      : mixHex(button, hoverTint, 14);
     var border = deriveBorderFromBg(bg, textMode);
 
     if (contrastRatio(bg, text) < 4.5) {
@@ -501,6 +513,26 @@ var ThemeSystem = (function () {
     return 'medium';
   }
 
+  function normalizeBorderWidth(value) {
+    if (value === 'low' || value === 'high') return value;
+    return 'medium';
+  }
+
+  function resolveButtonBorderWidthPx(level) {
+    level = normalizeBorderWidth(level);
+    if (level === 'low') return 1;
+    if (level === 'high') return 3;
+    return 2;
+  }
+
+  /** Espesor de borde en hover: ~30% más fino que el estado normal. */
+  function resolveButtonHoverBorderWidthPx(level) {
+    level = normalizeBorderWidth(level);
+    if (level === 'low') return 0.7;
+    if (level === 'high') return 2.1;
+    return 1.4;
+  }
+
   function deriveMaskBlurFromGlass(glass) {
     glass = normalizePanelGlass(glass);
     if (glass === 'glass') return 'high';
@@ -538,16 +570,8 @@ var ThemeSystem = (function () {
   }
 
   function getActiveHeroButtonGlass() {
-    if (customPreviewConfig && customPreviewConfig.heroButtonGlass) {
-      return normalizePanelGlass(customPreviewConfig.heroButtonGlass);
-    }
-    if (state.themeKey === CUSTOM_THEME_KEY && state.customTheme && state.customTheme.heroButtonGlass) {
-      return normalizePanelGlass(state.customTheme.heroButtonGlass);
-    }
-    if (state.themeKey === CUSTOM_THEME_KEY) {
-      return normalizePanelGlass(getCustomThemeConfig().heroButtonGlass);
-    }
-    return 'solid';
+    /* Misma fuente que botones generales */
+    return getActiveButtonGlass();
   }
 
   function getActiveHeroBorderGlass() {
@@ -749,6 +773,15 @@ var ThemeSystem = (function () {
     level = normalizePanelGlass(level);
     var uiPreset = BUTTON_GLASS_PRESETS[level] || BUTTON_GLASS_PRESETS.solid;
     var button = t.button || t.surface || t.bg;
+    var cfg = customPreviewConfig || (t.isCustom ? getCustomThemeConfig() : null);
+    var hasExplicitHover = !!(cfg && (cfg.hoverColor || cfg.hover));
+    var hoverBase = hasExplicitHover
+      ? normalizeHex(cfg.hoverColor || cfg.hover)
+      : (t.hover || button);
+    var hoverGlass = normalizePanelGlass(
+      (cfg && cfg.buttonHoverGlass) || level || 'solid'
+    );
+    var hoverPreset = BUTTON_GLASS_PRESETS[hoverGlass] || BUTTON_GLASS_PRESETS.solid;
 
     var btnBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
       ? button
@@ -756,61 +789,87 @@ var ThemeSystem = (function () {
 
     root.setProperty('--btn-glass-surface', btnBg);
     root.setProperty('--btn-glass-blur', uiPreset.blur + 'px');
-    var hoverBase = t.hover || button;
+    root.setProperty('--btn-hover-blur', hoverPreset.blur + 'px');
+
     var btnHover = hoverBase;
-    if (level === 'glass') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 14, 42) + '%, transparent)';
-    } else if (level === 'soft') {
-      btnHover = 'color-mix(in srgb, ' + button + ' ' + Math.min(uiPreset.surfaceOpacity + 22, 78) + '%, transparent)';
+    if (hoverGlass === 'glass') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 38%, transparent)';
+    } else if (hoverGlass === 'soft') {
+      btnHover = 'color-mix(in srgb, ' + hoverBase + ' 62%, transparent)';
     }
     root.setProperty('--btn-glass-hover', btnHover);
+    root.setProperty('--hover', hoverBase);
+    var hoverText = '';
+    if (cfg && String(cfg.buttonHoverTextColor || '').trim()) {
+      hoverText = normalizeHex(cfg.buttonHoverTextColor);
+    } else {
+      hoverText = t.text || '#ffffff';
+    }
+    root.setProperty('--btn-text-hover', hoverText);
     if (document.body) {
       document.body.setAttribute('data-button-glass', level);
+      document.body.setAttribute('data-button-hover-glass', hoverGlass);
     }
     return level;
   }
 
   function applyHeroButtonGlass(root, level, cfg, t) {
-    level = normalizePanelGlass(level);
-    var heroPreset = HERO_BUTTON_GLASS_PRESETS[level] || HERO_BUTTON_GLASS_PRESETS.solid;
-    var heroColor = normalizeHex(cfg.heroSurface) || t.surface || t.button || t.bg;
-    var textMode = t.textMode === 'dark' ? 'dark' : 'light';
-    var hoverTint = textMode === 'dark' ? '#000000' : '#ffffff';
-    var heroHover = mixHex(heroColor, hoverTint, 14);
+    /* Unificado con botones generales: mismos color, hover y efecto */
+    level = normalizePanelGlass(level || getActiveButtonGlass());
+    var uiPreset = BUTTON_GLASS_PRESETS[level] || BUTTON_GLASS_PRESETS.solid;
+    var button = t.button || t.surface || t.bg;
+    var cfgAll = customPreviewConfig || (t.isCustom ? getCustomThemeConfig() : null) || cfg || {};
+    var hasExplicitHover = !!(cfgAll.hoverColor || cfgAll.hover);
+    var hoverBase = hasExplicitHover
+      ? normalizeHex(cfgAll.hoverColor || cfgAll.hover)
+      : (t.hover || button);
+    var hoverGlass = normalizePanelGlass(cfgAll.buttonHoverGlass || level || 'solid');
+    var hoverPreset = BUTTON_GLASS_PRESETS[hoverGlass] || BUTTON_GLASS_PRESETS.solid;
 
-    var heroBg = heroColor;
-    if (level === 'glass') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 8, 36) + '%, transparent)';
-    } else if (level === 'soft') {
-      heroBg = 'color-mix(in srgb, ' + heroColor + ' ' + heroPreset.surfaceOpacity + '%, transparent)';
-      heroHover = 'color-mix(in srgb, ' + heroColor + ' ' + Math.min(heroPreset.surfaceOpacity + 14, 72) + '%, transparent)';
+    var heroBg = level === 'solid' || uiPreset.surfaceOpacity >= 100
+      ? button
+      : 'color-mix(in srgb, ' + button + ' ' + uiPreset.surfaceOpacity + '%, transparent)';
+    var heroHover = hoverBase;
+    if (hoverGlass === 'glass') {
+      heroHover = 'color-mix(in srgb, ' + hoverBase + ' 38%, transparent)';
+    } else if (hoverGlass === 'soft') {
+      heroHover = 'color-mix(in srgb, ' + hoverBase + ' 62%, transparent)';
     }
 
     root.setProperty('--hero-btn-bg', heroBg);
     root.setProperty('--hero-btn-bg-hover', heroHover);
-    root.setProperty('--hero-btn-blur', heroPreset.blur + 'px');
+    root.setProperty('--hero-btn-blur', uiPreset.blur + 'px');
+    root.setProperty('--btn-hover-blur', hoverPreset.blur + 'px');
     if (document.body) {
       document.body.setAttribute('data-hero-button-glass', level);
+      document.body.setAttribute('data-button-hover-glass', hoverGlass);
     }
     return level;
   }
 
   function applyHeroBorderGlass(root, level, cfg, t) {
-    level = normalizePanelGlass(level);
-    var heroColor = normalizeHex(cfg.heroSurface) || t.surface || t.button || t.bg;
-    var menuTone = t.menuColor || t.panel || t.surface || t.button || t.bg;
-    var border = mixHex(menuTone, heroColor, 58);
-    var borderValue = border;
-    if (level === 'soft') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 52%, transparent)';
-    } else if (level === 'glass') {
-      borderValue = 'color-mix(in srgb, ' + border + ' 28%, transparent)';
+    var cfgAll = customPreviewConfig || (t.isCustom ? getCustomThemeConfig() : null) || cfg || {};
+    var widthLevel = normalizeBorderWidth(cfgAll.buttonBorderWidth || 'medium');
+    var hoverWidthLevel = normalizeBorderWidth(cfgAll.buttonHoverBorderWidth || cfgAll.buttonBorderWidth || 'medium');
+    var borderColor = '';
+    if (String(cfgAll.buttonBorderColor || '').trim()) {
+      borderColor = normalizeHex(cfgAll.buttonBorderColor);
+    } else {
+      borderColor = deriveButtonBorderColor(t);
     }
-
-    root.setProperty('--hero-btn-border', borderValue);
+    var hoverBorderColor = '';
+    if (String(cfgAll.buttonHoverBorderColor || '').trim()) {
+      hoverBorderColor = normalizeHex(cfgAll.buttonHoverBorderColor);
+    } else {
+      hoverBorderColor = borderColor;
+    }
+    root.setProperty('--hero-btn-border', borderColor);
+    root.setProperty('--btn-border-width', resolveButtonBorderWidthPx(widthLevel) + 'px');
+    root.setProperty('--hero-btn-border-hover', hoverBorderColor);
+    root.setProperty('--btn-border-hover', hoverBorderColor);
+    root.setProperty('--btn-border-width-hover', resolveButtonHoverBorderWidthPx(hoverWidthLevel) + 'px');
     if (document.body) {
-      document.body.setAttribute('data-hero-border-glass', level);
+      document.body.setAttribute('data-hero-border-glass', normalizePanelGlass(level || 'solid'));
     }
     return level;
   }
@@ -820,11 +879,13 @@ var ThemeSystem = (function () {
     if (!raw) {
       return {
         heroSurface: t.accent || t.surface,
+        heroHoverColor: '',
         bg: t.bg
       };
     }
     return {
       heroSurface: normalizeHex(raw.heroSurface || raw.accent || raw.surface),
+      heroHoverColor: raw.heroHoverColor ? normalizeHex(raw.heroHoverColor) : '',
       bg: normalizeHex(raw.bg)
     };
   }
@@ -875,12 +936,34 @@ var ThemeSystem = (function () {
   }
 
   function applyButtonBorderGlass(root, level, t) {
-    level = normalizePanelGlass(level);
-    var borderValue = mixBorderGlass(level, deriveButtonBorderColor(t));
+    var cfg = customPreviewConfig || (t.isCustom ? getCustomThemeConfig() : null) || {};
+    var widthLevel = normalizeBorderWidth(cfg.buttonBorderWidth || 'medium');
+    var hoverWidthLevel = normalizeBorderWidth(cfg.buttonHoverBorderWidth || cfg.buttonBorderWidth || 'medium');
+    var borderColor = '';
+    if (String(cfg.buttonBorderColor || '').trim()) {
+      borderColor = normalizeHex(cfg.buttonBorderColor);
+    } else {
+      borderColor = mixBorderGlass(normalizePanelGlass(level), deriveButtonBorderColor(t));
+    }
+    var hoverBorderColor = '';
+    if (String(cfg.buttonHoverBorderColor || '').trim()) {
+      hoverBorderColor = normalizeHex(cfg.buttonHoverBorderColor);
+    } else {
+      hoverBorderColor = borderColor;
+    }
+    var widthPx = resolveButtonBorderWidthPx(widthLevel) + 'px';
+    var hoverWidthPx = resolveButtonHoverBorderWidthPx(hoverWidthLevel) + 'px';
 
-    root.setProperty('--btn-border', borderValue);
+    root.setProperty('--btn-border', borderColor);
+    root.setProperty('--hero-btn-border', borderColor);
+    root.setProperty('--btn-border-width', widthPx);
+    root.setProperty('--btn-border-hover', hoverBorderColor);
+    root.setProperty('--btn-border-width-hover', hoverWidthPx);
+    root.setProperty('--hero-btn-border-hover', hoverBorderColor);
     if (document.body) {
-      document.body.setAttribute('data-button-border-glass', level);
+      document.body.setAttribute('data-button-border-glass', normalizePanelGlass(level));
+      document.body.setAttribute('data-button-border-width', widthLevel);
+      document.body.setAttribute('data-button-hover-border-width', hoverWidthLevel);
     }
     return level;
   }
@@ -1094,6 +1177,7 @@ var ThemeSystem = (function () {
 
     applyMaterial(root, t);
     applyContrastVars(root, themeKey, t);
+    applyHeroLayout(getActiveHeroLayout());
 
     document.body.classList.toggle('theme-light', isLightTheme(themeKey));
     document.body.dataset.theme = themeKey;
@@ -1140,6 +1224,7 @@ var ThemeSystem = (function () {
     customPreviewConfig = normalizeCustomConfig(config);
     applyVars(CUSTOM_THEME_KEY);
     applyVisualDepth(customPreviewConfig.visualDepth);
+    applyHeroLayout(customPreviewConfig.heroLayout);
     document.body.dataset.theme = CUSTOM_THEME_KEY;
     document.body.classList.toggle('theme-light', isCustomLightTheme(CUSTOM_THEME_KEY, getTheme(CUSTOM_THEME_KEY)));
     if (typeof window.onThemeChanged === 'function') {
@@ -1177,34 +1262,72 @@ var ThemeSystem = (function () {
     return state.themeKey === CUSTOM_THEME_KEY;
   }
 
-  function getDefaultCustomTheme() {
-    return Object.assign({}, DEFAULT_CUSTOM_THEME);
+  function normalizeHeroLayout(value) {
+    return value === 'bottom-bar' ? 'bottom-bar' : 'centered';
   }
+
+  function applyHeroLayout(layout) {
+    var cover = document.getElementById('projectCover');
+    if (!cover) return;
+    cover.setAttribute('data-hero-layout', normalizeHeroLayout(layout));
+  }
+
+  function getActiveHeroLayout() {
+    if (customPreviewConfig && customPreviewConfig.heroLayout) {
+      return normalizeHeroLayout(customPreviewConfig.heroLayout);
+    }
+    if (state.themeKey === CUSTOM_THEME_KEY && state.customTheme && state.customTheme.heroLayout) {
+      return normalizeHeroLayout(state.customTheme.heroLayout);
+    }
+    return 'centered';
+  }
+
 
   function normalizeCustomConfig(raw) {
     if (!raw || typeof raw !== 'object') {
       return Object.assign({}, DEFAULT_CUSTOM_THEME);
     }
+    var surface = normalizeHex(raw.surface);
+    var textMode = raw.textMode === 'dark' ? 'dark' : 'light';
+    var hoverRaw = raw.hoverColor || raw.hover || '';
+    var heroHoverRaw = raw.heroHoverColor || '';
+    var buttonBorderRaw = raw.buttonBorderColor || '';
+    var buttonHoverBorderRaw = raw.buttonHoverBorderColor || '';
+    var buttonHoverTextRaw = raw.buttonHoverTextColor || '';
     return {
       bg: normalizeHex(raw.bg || raw.background),
       menuColor: normalizeHex(raw.menuColor || raw.panelColor || raw.bg || raw.background),
-      surface: normalizeHex(raw.surface),
+      surface: surface,
       accent: normalizeHex(raw.accent),
+      hoverColor: hoverRaw ? normalizeHex(hoverRaw) : '',
       maskColor: normalizeHex(raw.maskColor || raw.bg),
       maskGlass: normalizePanelGlass(raw.maskGlass || raw.bgGlass || 'soft'),
       maskBlur: normalizeMaskBlur(raw.maskBlur || deriveMaskBlurFromGlass(raw.maskGlass || raw.bgGlass || 'soft')),
-      textMode: raw.textMode === 'dark' ? 'dark' : 'light',
+      textMode: textMode,
       bgTextMode: raw.bgTextMode === 'dark' ? 'dark' : 'light',
       visualDepth: normalizeVisualDepth(raw.visualDepth),
       bgGlass: normalizePanelGlass(raw.bgGlass || raw.panelGlass),
       panelGlass: normalizePanelGlass(raw.panelGlass),
       buttonGlass: normalizePanelGlass(raw.buttonGlass),
       borderGlass: normalizePanelGlass(raw.borderGlass),
+      buttonBorderColor: buttonBorderRaw ? normalizeHex(buttonBorderRaw) : '',
+      buttonBorderWidth: normalizeBorderWidth(raw.buttonBorderWidth),
+      buttonHoverBorderColor: buttonHoverBorderRaw ? normalizeHex(buttonHoverBorderRaw) : '',
+      buttonHoverBorderWidth: normalizeBorderWidth(raw.buttonHoverBorderWidth || raw.buttonBorderWidth),
+      buttonHoverTextColor: buttonHoverTextRaw ? normalizeHex(buttonHoverTextRaw) : '',
+      buttonHoverGlass: normalizePanelGlass(raw.buttonHoverGlass || 'solid'),
       shadowGlass: normalizeShadowGlass(raw.shadowGlass),
-      heroSurface: normalizeHex(raw.heroSurface || raw.accent || raw.surface),
-      heroButtonGlass: normalizePanelGlass(raw.heroButtonGlass || raw.buttonGlass),
-      heroBorderGlass: normalizePanelGlass(raw.heroBorderGlass || raw.borderGlass)
+      /* Unificado: CTA hereda color/efecto de botones generales */
+      heroSurface: normalizeHex(surface || raw.heroSurface || raw.accent),
+      heroHoverColor: hoverRaw ? normalizeHex(hoverRaw) : (heroHoverRaw ? normalizeHex(heroHoverRaw) : ''),
+      heroButtonGlass: normalizePanelGlass(raw.buttonGlass || raw.heroButtonGlass),
+      heroBorderGlass: normalizePanelGlass(raw.borderGlass || raw.heroBorderGlass),
+      heroLayout: normalizeHeroLayout(raw.heroLayout)
     };
+  }
+
+  function getDefaultCustomTheme() {
+    return Object.assign({}, DEFAULT_CUSTOM_THEME);
   }
 
   function getThemeDisplayName(themeKey) {
@@ -1226,6 +1349,7 @@ var ThemeSystem = (function () {
       bg: normalizeHex(preset.bg),
       surface: normalizeHex(preset.surface || preset.button || preset.bg),
       accent: normalizeHex(preset.accent),
+      hoverColor: '',
       maskColor: normalizeHex(preset.bg),
       maskGlass: 'soft',
       maskBlur: 'medium',
@@ -1235,10 +1359,18 @@ var ThemeSystem = (function () {
       bgGlass: 'soft',
       buttonGlass: 'solid',
       borderGlass: 'solid',
+      buttonBorderColor: '',
+      buttonBorderWidth: 'medium',
+      buttonHoverBorderColor: '',
+      buttonHoverBorderWidth: 'medium',
+      buttonHoverTextColor: '',
+      buttonHoverGlass: 'solid',
       shadowGlass: 'soft',
       heroSurface: normalizeHex(preset.surface || preset.button || preset.bg),
+      heroHoverColor: '',
       heroButtonGlass: 'solid',
-      heroBorderGlass: 'solid'
+      heroBorderGlass: 'solid',
+      heroLayout: 'centered'
     };
   }
 
@@ -1281,6 +1413,7 @@ var ThemeSystem = (function () {
     if (customPreviewConfig) {
       applyVars(CUSTOM_THEME_KEY);
       applyVisualDepth(getActiveVisualDepth());
+      applyHeroLayout(getActiveHeroLayout());
       document.body.dataset.theme = CUSTOM_THEME_KEY;
       document.body.classList.toggle('theme-light', isCustomLightTheme(CUSTOM_THEME_KEY, getTheme(CUSTOM_THEME_KEY)));
       return CUSTOM_THEME_KEY;
@@ -1437,6 +1570,8 @@ var ThemeSystem = (function () {
     getThemeDisplayName: getThemeDisplayName,
     getCustomThemeConfig: getCustomThemeConfig,
     buildCustomTheme: buildCustomTheme,
+    applyHeroLayout: applyHeroLayout,
+    getActiveHeroLayout: getActiveHeroLayout,
     markUserChosen: markUserChosen,
     isUserChosenTheme: isUserChosenTheme,
     setProjectDefaultApplied: setProjectDefaultApplied

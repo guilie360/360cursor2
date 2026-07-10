@@ -45,15 +45,14 @@ var StyleEnginePanel = (function () {
         return '<button type="button" class="se-preset-chip" data-se-preset="' + escapeHtml(p.id) + '" data-se-preset-group="' + escapeHtml(group) + '">' + escapeHtml(p.name) + '</button>';
       }).join('');
     }
+
     return (
       '<section class="se-section se-section--presets">' +
-        '<details class="se-category" open><summary class="se-category-summary"><span class="se-category-label">Presets</span></summary>' +
+        '<details class="se-category"><summary class="se-category-summary"><span class="se-category-label">Presets</span></summary>' +
           '<div class="se-category-body">' +
+            '<p class="se-section-copy">Tus estilos guardados están debajo del Preview. Aquí solo hay presets de referencia.</p>' +
             '<div class="se-preset-group"><div class="se-preset-label">Oficiales</div><div class="se-preset-row">' + chips(StyleEnginePresets.getOfficial(), 'official') + '</div></div>' +
             '<div class="se-preset-group"><div class="se-preset-label">Inspiración</div><div class="se-preset-row">' + chips(StyleEnginePresets.getInspiration(), 'inspiration') + '</div></div>' +
-            '<div class="se-preset-group"><div class="se-preset-label">Personales</div><div class="se-preset-row" id="styleEnginePersonalPresets">' + chips(StyleEnginePresets.getPersonal(), 'personal') + '</div>' +
-              '<button type="button" class="se-section-btn" id="styleEngineSavePersonalPreset">Guardar estilo actual</button>' +
-            '</div>' +
           '</div>' +
         '</details>' +
       '</section>'
@@ -194,6 +193,10 @@ var StyleEnginePanel = (function () {
       bindTabs(editorHost);
       refreshPreview();
     }
+
+    if (typeof StyleEngineModal !== 'undefined' && StyleEngineModal.renderSavedStylesPanel) {
+      StyleEngineModal.renderSavedStylesPanel();
+    }
   }
 
   function bindTabs(root) {
@@ -300,19 +303,13 @@ var StyleEnginePanel = (function () {
       btn.onclick = function () {
         var preset = StyleEnginePresets.findById(btn.getAttribute('data-se-preset'));
         if (!preset) return;
-        StyleEngineStore.setDraftRules(preset.rules);
+        StyleEngineStore.setDraftRules(preset.rules, { replace: true });
         render();
+        if (typeof StyleEngineModal !== 'undefined' && StyleEngineModal.renderSavedStylesPanel) {
+          StyleEngineModal.renderSavedStylesPanel();
+        }
       };
     });
-    var saveBtn = root.querySelector('#styleEngineSavePersonalPreset');
-    if (saveBtn) {
-      saveBtn.onclick = function () {
-        var name = window.prompt('Nombre del preset personal', 'Mi estilo');
-        if (!name || !name.trim()) return;
-        StyleEnginePresets.savePersonalPreset(name.trim(), StyleEngineStore.getDraftRules(), 'manual');
-        render();
-      };
-    }
   }
 
   function bindHistory(root) {

@@ -37,6 +37,7 @@ var StyleEngineModal = (function () {
           '<div class="se-info-item"><span>Modo</span><strong>' + escapeHtml(status.engineModeLabel) + '</strong></div>' +
           '<div class="se-info-item"><span>Última publicación</span><strong>' + escapeHtml(status.lastPublishedLabel) + '</strong></div>' +
           '<div class="se-info-item"><span>Versión</span><strong>' + escapeHtml(status.versionLabel) + '</strong></div>' +
+          '<div class="se-info-item"><span>Estilo</span><strong>' + escapeHtml(status.activeStyleName || '—') + '</strong></div>' +
           '<div class="se-info-item"><span>Cambios pendientes</span><strong>' + (status.hasPendingChanges ? 'Sí' : 'No') + '</strong></div>' +
           '<div class="se-info-item"><span>Borrador</span><strong>' + (status.draftSavedAt ? 'Guardado' : 'Sin guardar') + '</strong></div>' +
         '</div>' +
@@ -79,6 +80,9 @@ var StyleEngineModal = (function () {
   }
 
   function toolbarHtml() {
+    var auditBtn = StyleEngineCompatibility.isAdminViewer()
+      ? '<button type="button" class="se-toolbar-btn se-toolbar-btn--audit" id="styleEngineVisualAuditBtn">Capturar pantallas</button>'
+      : '';
     return (
       '<div class="style-engine-toolbar">' +
         '<div id="styleEngineChangesHost">' + changesIndicatorHtml() + '</div>' +
@@ -87,6 +91,7 @@ var StyleEngineModal = (function () {
           '<button type="button" class="se-toolbar-btn" id="styleEngineImportBtn">Import Theme</button>' +
           '<input type="file" id="styleEngineImportFile" accept="application/json,.json" hidden>' +
           '<button type="button" class="se-toolbar-btn" id="styleEngineResetBtn">Restaurar tokens</button>' +
+          auditBtn +
         '</div>' +
       '</div>'
     );
@@ -101,6 +106,94 @@ var StyleEngineModal = (function () {
     if (changesHost) changesHost.innerHTML = changesIndicatorHtml();
     var modeHost = document.getElementById('styleEngineModeHost');
     if (modeHost) modeHost.innerHTML = modeControlHtml();
+    syncPowerSwitch();
+  }
+
+  function syncPowerSwitch() {
+    var power = document.getElementById('styleEnginePowerSwitch');
+    var label = document.getElementById('styleEnginePowerLabel');
+    var isOn = StyleEngineStore.getActiveTheme() === StyleEngineStore.ACTIVE.STYLE_ENGINE &&
+      StyleEngineStore.getEngineMode() === StyleEngineStore.MODES.LIVE;
+    if (power) power.checked = isOn;
+    if (label) label.textContent = isOn ? 'ON' : 'OFF';
+  }
+
+  function renderSavedStylesPanel() {
+    var host = document.getElementById('styleEngineSavedStylesHost');
+    if (!host) return;
+    var saved = StyleEnginePresets.getSavedStyles ? StyleEnginePresets.getSavedStyles() : StyleEnginePresets.getPersonal();
+    var activeMeta = StyleEngineStore.getActiveStyleMeta ? StyleEngineStore.getActiveStyleMeta() : { id: null };
+
+    var rows = saved.length
+      ? saved.map(function (s) {
+          var isActive = activeMeta.id && activeMeta.id === s.id;
+          return (
+            '<div class="se-saved-style-card' + (isActive ? ' is-active' : '') + '" data-style-id="' + escapeHtml(s.id) + '">' +
+              '<div class="se-saved-style-info">' +
+                '<div class="se-saved-style-name">' + escapeHtml(s.name) + '</div>' +
+                '<div class="se-saved-style-meta">' + escapeHtml(isActive ? 'Activo' : 'Guardado') + '</div>' +
+              '</div>' +
+              '<div class="se-saved-style-actions">' +
+                '<button type="button" class="se-saved-style-btn" data-se-style-apply="' + escapeHtml(s.id) + '">Aplicar</button>' +
+                '<button type="button" class="se-saved-style-btn" data-se-style-edit="' + escapeHtml(s.id) + '">Editar</button>' +
+                '<button type="button" class="se-saved-style-btn se-saved-style-btn--danger" data-se-style-delete="' + escapeHtml(s.id) + '">Borrar</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('')
+      : '<p class="se-saved-styles-empty">Aún no hay estilos guardados. Usa «Guardar estilo» para crear el primero.</p>';
+
+    host.innerHTML =
+      '<section class="se-saved-styles">' +
+        '<div class="se-saved-styles-head">' +
+          '<h3 class="se-saved-styles-title">Estilos guardados</h3>' +
+          '<span class="se-saved-styles-count">' + saved.length + '</span>' +
+        '</div>' +
+        '<div class="se-saved-styles-list">' + rows + '</div>' +
+      '</section>';
+
+    host.querySelectorAll('[data-se-style-apply]').forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute('data-se-style-apply');
+        var result = StyleEngineLifecycle.applySavedStyle(id);
+        if (!result) return;
+        StyleEnginePanel.render();
+        renderChrome();
+        renderSavedStylesPanel();
+        if (typeof showToast === 'function') {
+          var style = StyleEnginePresets.findById(id);
+          showToast('Estilo aplicado: ' + (style ? style.name : ''));
+        }
+      };
+    });
+
+    host.querySelectorAll('[data-se-style-edit]').forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute('data-se-style-edit');
+        var style = StyleEnginePresets.findById(id);
+        if (!style) return;
+        StyleEngineStore.setDraftRules(style.rules, { replace: true });
+        StyleEngineStore.setActiveStyleMeta(style.id, style.name);
+        StyleEnginePanel.render();
+        renderChrome();
+        renderSavedStylesPanel();
+        if (typeof showToast === 'function') showToast('Editando: ' + style.name);
+      };
+    });
+
+    host.querySelectorAll('[data-se-style-delete]').forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute('data-se-style-delete');
+        var style = StyleEnginePresets.findById(id);
+        if (!window.confirm('¿Borrar el estilo «' + (style ? style.name : '') + '»?')) return;
+        StyleEnginePresets.deletePersonal(id);
+        var active = StyleEngineStore.getActiveStyleMeta();
+        if (active.id === id) StyleEngineStore.setActiveStyleMeta(null, null);
+        renderSavedStylesPanel();
+        StyleEnginePanel.render();
+        renderChrome();
+      };
+    });
   }
 
   function bindModalEvents() {
@@ -113,17 +206,20 @@ var StyleEngineModal = (function () {
     });
 
     document.getElementById('styleEngineCloseBtn').addEventListener('click', requestClose);
-    document.getElementById('styleEngineDiscardBtn').addEventListener('click', discardChanges);
-    document.getElementById('styleEngineSaveDraftBtn').addEventListener('click', saveDraft);
+    document.getElementById('styleEngineResetDefaultsBtn').addEventListener('click', resetToDefaults);
+    document.getElementById('styleEngineSaveStyleBtn').addEventListener('click', saveNamedStyle);
     document.getElementById('styleEnginePublishBtn').addEventListener('click', publishProject);
-    document.getElementById('styleEngineLegacyBtn').addEventListener('click', useLegacy);
+
+    var power = document.getElementById('styleEnginePowerSwitch');
+    if (power) {
+      power.addEventListener('change', function () {
+        toggleStyleEnginePower(power.checked);
+      });
+    }
 
     modal.addEventListener('change', function (e) {
       if (e.target && e.target.name === 'styleEngineMode') {
         StyleEngineStore.setDraftMode(e.target.value);
-        if (e.target.value === StyleEngineStore.MODES.OFF) {
-          /* solo modo de edición; legacy real se activa con botón dedicado */
-        }
         StyleEnginePanel.refreshPreview();
         renderChrome();
       }
@@ -132,6 +228,7 @@ var StyleEngineModal = (function () {
     StyleEngineStore.subscribe(function () {
       if (!openState) return;
       renderChrome();
+      renderSavedStylesPanel();
     });
 
     if (typeof StyleEngineHistory !== 'undefined') {
@@ -174,11 +271,41 @@ var StyleEngineModal = (function () {
       StyleEnginePanel.render();
       renderChrome();
     });
+
+    bindVisualAuditButton();
+  }
+
+  function bindVisualAuditButton() {
+    var auditBtn = document.getElementById('styleEngineVisualAuditBtn');
+    if (!auditBtn || auditBtn.dataset.bound) return;
+    auditBtn.dataset.bound = '1';
+    auditBtn.addEventListener('click', function () {
+      if (!StyleEngineCompatibility.isAdminViewer()) {
+        if (typeof showToast === 'function') showToast('Solo administradores');
+        return;
+      }
+      if (typeof VisualAudit !== 'undefined') VisualAudit.open();
+    });
   }
 
   function ensureToolbar() {
     var bar = document.getElementById('styleEngineToolbarHost');
-    if (bar && !bar.innerHTML) bar.innerHTML = toolbarHtml();
+    if (!bar) return;
+    if (!bar.innerHTML) {
+      bar.innerHTML = toolbarHtml();
+      return;
+    }
+    if (StyleEngineCompatibility.isAdminViewer() && !document.getElementById('styleEngineVisualAuditBtn')) {
+      var actions = bar.querySelector('.style-engine-toolbar-actions');
+      if (actions) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'se-toolbar-btn se-toolbar-btn--audit';
+        btn.id = 'styleEngineVisualAuditBtn';
+        btn.textContent = 'Capturar pantallas';
+        actions.appendChild(btn);
+      }
+    }
   }
 
   function open() {
@@ -190,6 +317,7 @@ var StyleEngineModal = (function () {
     if (typeof StyleEngineHistory !== 'undefined') StyleEngineHistory.clear();
     ensureToolbar();
     bindToolbarEvents();
+    bindVisualAuditButton();
     bindModalEvents();
 
     modal.classList.add('active');
@@ -197,6 +325,7 @@ var StyleEngineModal = (function () {
     openState = true;
 
     renderChrome();
+    renderSavedStylesPanel();
     StyleEnginePanel.render();
 
     if (typeof playSound === 'function') playSound('popupOpen');
@@ -247,64 +376,57 @@ var StyleEngineModal = (function () {
     }
   }
 
-  function discardChanges() {
-    if (!StyleEngineStore.hasUnsavedDraftChanges()) {
-      if (typeof showToast === 'function') showToast('No hay cambios temporales que descartar');
-      return;
-    }
-    if (!window.confirm('¿Descartar los cambios temporales y restaurar el último borrador guardado?')) return;
-    StyleEngineLifecycle.discardSessionChanges();
+  function resetToDefaults() {
+    if (!window.confirm('¿Reiniciar al estilo predeterminado? Se perderán los cambios actuales del editor.')) return;
+    StyleEngineStore.restoreDefaults();
+    StyleEngineStore.setActiveStyleMeta(null, null);
+    if (typeof StyleEngineHistory !== 'undefined') StyleEngineHistory.clear();
     StyleEnginePanel.render();
     renderChrome();
-    if (typeof showToast === 'function') showToast('Cambios descartados');
+    renderSavedStylesPanel();
+    if (typeof showToast === 'function') showToast('Estilo reiniciado a valores predeterminados');
   }
 
-  function saveDraft() {
-    if (StyleEngineStore.shouldOfferAiPresetSave()) {
-      StyleEngineAI.maybeOfferSavePreset();
-      StyleEngineStore.markAiPresetOffered();
-    }
+  function saveNamedStyle() {
+    var current = StyleEngineStore.getActiveStyleMeta();
+    var name = window.prompt('Nombre del estilo', current.name || 'Mi estilo');
+    if (!name || !name.trim()) return;
+    if (!window.confirm('¿Guardar el estilo «' + name.trim() + '»?')) return;
+
     StyleEngineLifecycle.saveDraftOnly();
+    var saved = StyleEnginePresets.saveNamedStyle(name.trim(), StyleEngineStore.getDraftRules(), {
+      id: null,
+      source: 'manual'
+    });
+    StyleEngineStore.setActiveStyleMeta(saved.id, saved.name);
+    StyleEnginePanel.render();
     renderChrome();
-    if (typeof showToast === 'function') showToast('Borrador guardado. El proyecto no ha cambiado.');
+    renderSavedStylesPanel();
+    if (typeof showToast === 'function') showToast('Estilo guardado: ' + saved.name);
   }
 
   function publishProject() {
-    var audit = typeof StyleEngineAudit !== 'undefined' ? StyleEngineAudit.run() : null;
-    if (audit && audit.legacyComponents.length) {
-      var proceed = window.confirm(
-        'Auditoría VisualSystem\n\n' +
-        'Cobertura: ' + audit.coverage.percent + '%\n' +
-        audit.legacyComponents.length + ' componente(s) LEGACY aún no migrados.\n\n' +
-        audit.legacyComponents.slice(0, 8).map(function (c) { return '• ' + c.name; }).join('\n') +
-        (audit.legacyComponents.length > 8 ? '\n… y más' : '') +
-        '\n\n¿Publicar de todas formas? El VisualSystem alimentará todas las variables globales en tiempo real.'
-      );
-      if (!proceed) return;
-    } else if (!window.confirm(
-      '¿Aplicar Style Engine al proyecto?\n\n' +
-      'Esto publicará el borrador y activará el VisualSystem en toda la aplicación showroom.'
-    )) return;
-
-    if (StyleEngineStore.shouldOfferAiPresetSave()) {
-      StyleEngineAI.maybeOfferSavePreset();
-      StyleEngineStore.markAiPresetOffered();
-    }
-
-    var meta = StyleEngineLifecycle.publishToProject();
+    /* Solo aplica — no pregunta nombre ni guarda en biblioteca */
+    var result = StyleEngineLifecycle.publishToProject({ saveNamed: false });
+    var meta = result && result.meta ? result.meta : result;
     StyleEnginePanel.render();
     renderChrome();
-
+    renderSavedStylesPanel();
     if (typeof showToast === 'function') {
-      showToast('✓ Style Engine publicado correctamente (' + meta.versionLabel + '). Este proyecto utiliza el nuevo sistema visual.');
+      showToast('✓ Estilo aplicado al proyecto' + (meta && meta.versionLabel ? ' (' + meta.versionLabel + ')' : ''));
     }
   }
 
-  function useLegacy() {
-    if (!window.confirm('¿Usar Theme Legacy? El Style Engine se desactivará pero el borrador se conservará.')) return;
-    StyleEngineLifecycle.restoreLegacyTheme();
+  function toggleStyleEnginePower(on) {
+    if (on) {
+      StyleEngineLifecycle.publishToProject({ saveNamed: false });
+      if (typeof showToast === 'function') showToast('Style Engine ON');
+    } else {
+      StyleEngineLifecycle.restoreLegacyTheme();
+      if (typeof showToast === 'function') showToast('Theme Legacy V1 activo');
+    }
     renderChrome();
-    if (typeof showToast === 'function') showToast('Theme Legacy activo. Puedes volver a publicar Style Engine cuando quieras.');
+    renderSavedStylesPanel();
   }
 
   function init() {
@@ -317,6 +439,7 @@ var StyleEngineModal = (function () {
     close: close,
     requestClose: requestClose,
     renderChrome: renderChrome,
+    renderSavedStylesPanel: renderSavedStylesPanel,
     isOpen: isOpen
   };
 })();
@@ -330,8 +453,21 @@ var StyleEngine = (function () {
   }
 
   function getActiveThemeLabel() {
-    return StyleEngineStore.getActiveTheme() === StyleEngineStore.ACTIVE.STYLE_ENGINE
-      ? 'Style Engine' : 'Theme Legacy';
+    if (StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE) {
+      if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.getThemeDisplayName === 'function') {
+        return ThemeSystem.getThemeDisplayName(ThemeSystem.getCurrentKey());
+      }
+      return 'Theme Legacy';
+    }
+    var meta = StyleEngineStore.getActiveStyleMeta ? StyleEngineStore.getActiveStyleMeta() : null;
+    if (meta && meta.name && String(meta.name).trim()) {
+      return String(meta.name).trim();
+    }
+    if (meta && meta.id && typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.findById) {
+      var style = StyleEnginePresets.findById(meta.id);
+      if (style && style.name) return style.name;
+    }
+    return 'Sin nombre';
   }
 
   return {
@@ -339,7 +475,7 @@ var StyleEngine = (function () {
     open: function () { StyleEngineModal.open(); },
     close: function (opts) { StyleEngineModal.close(opts); },
     requestClose: function () { StyleEngineModal.requestClose(); },
-    isOpen: function () { StyleEngineModal.isOpen(); },
+    isOpen: function () { return StyleEngineModal.isOpen(); },
     getActiveThemeLabel: getActiveThemeLabel
   };
 })();

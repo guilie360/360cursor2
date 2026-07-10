@@ -31,6 +31,9 @@ var StyleEngineCompatibility = (function () {
 
     var originalReapply = ThemeSystem.reapply.bind(ThemeSystem);
     var originalApply = ThemeSystem.apply.bind(ThemeSystem);
+    var originalPreview = ThemeSystem.previewCustomTheme
+      ? ThemeSystem.previewCustomTheme.bind(ThemeSystem)
+      : null;
 
     ThemeSystem.reapply = function () {
       if (isStyleEngineLive()) {
@@ -42,11 +45,19 @@ var StyleEngineCompatibility = (function () {
 
     ThemeSystem.apply = function (themeKey, persist, customThemeData) {
       if (isStyleEngineLive()) {
+        /* Personalizar 2.0 puede empujar materiales vía preview; apply legacy se ignora */
         StyleEngineRuntime.reinforcePublished();
         return themeKey;
       }
       return originalApply(themeKey, persist, customThemeData);
     };
+
+    /* previewCustomTheme se permite en LIVE: Personalizar 2.0 lo usa para materiales V1 */
+    if (originalPreview) {
+      ThemeSystem.previewCustomTheme = function (config) {
+        return originalPreview(config);
+      };
+    }
 
     ThemeSystem.__seGuardInstalled = true;
   }

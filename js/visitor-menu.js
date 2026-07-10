@@ -20,29 +20,20 @@ var VisitorMenu = (function () {
       PlatformRoles.isAdmin(VisitorSession.getProfile());
   }
 
-  var ICON_STYLE_ENGINE =
-    '<svg class="menu-profile-action-icon" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path fill="currentColor" d="M12 2l1.8 5.5H19l-4.6 3.3 1.8 5.5L12 13l-4.2 3.3 1.8-5.5L5 7.5h5.2L12 2zm-7 13.5h2.2v6.5H5v-6.5zm5.4 0h2.2v6.5h-2.2v-6.5zm5.4 0H16v6.5h-2.2v-6.5z"/>' +
-    '</svg>';
-
-  function styleEngineButtonHtml() {
-    if (!isAdminProfile()) return '';
-    return (
-      '<button type="button" class="menu-profile-action menu-style-engine-btn">' +
-        ICON_STYLE_ENGINE + '<span>Style Engine</span>' +
-      '</button>'
-    );
-  }
+  var STYLE_V3_LABEL = 'Style V.3';
 
   function activeThemeIndicatorHtml() {
     if (!isAdminProfile()) return '';
     if (typeof StyleEngine === 'undefined' || typeof StyleEngine.getActiveThemeLabel !== 'function') return '';
     var label = StyleEngine.getActiveThemeLabel();
-    var isSe = label === 'Style Engine';
+    var isStyleV3 = typeof StyleEngineStore !== 'undefined' &&
+      StyleEngineStore.getActiveTheme &&
+      StyleEngineStore.ACTIVE &&
+      StyleEngineStore.getActiveTheme() === StyleEngineStore.ACTIVE.STYLE_ENGINE;
     return (
       '<div class="menu-active-theme-indicator">' +
         '<span class="menu-active-theme-label">Tema activo</span>' +
-        '<span class="menu-active-theme-value' + (isSe ? ' is-style-engine' : ' is-legacy') + '">' +
+        '<span class="menu-active-theme-value' + (isStyleV3 ? ' is-style-engine' : ' is-legacy') + '">' +
           '<span class="menu-active-theme-dot">○</span> ' + escapeHtml(label) +
         '</span>' +
       '</div>'
@@ -99,10 +90,9 @@ var VisitorMenu = (function () {
           '</div>' +
           '<div class="menu-profile-strip-actions">' +
             primaryStripActionHtml() +
-            '<button type="button" class="menu-profile-action menu-personalize-btn">' +
-              ICON_SETTINGS + '<span>Personalizar</span>' +
+            '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
+              ICON_SETTINGS + '<span>' + STYLE_V3_LABEL + '</span>' +
             '</button>' +
-            styleEngineButtonHtml() +
             '<button type="button" class="menu-profile-action menu-logout-btn">' +
               ICON_LOGOUT + '<span>Salir</span>' +
             '</button>' +
@@ -167,20 +157,13 @@ var VisitorMenu = (function () {
         }
       };
     });
-    document.querySelectorAll('.menu-personalize-btn').forEach(function (btn) {
+    document.querySelectorAll('.menu-personalize-v2-btn').forEach(function (btn) {
       btn.onclick = function () {
         if (typeof goTo === 'function') {
-          goTo('menu-personalizar');
+          goTo('menu-personalizar-v2');
           return;
         }
-        if (typeof showMenuLevel === 'function') showMenuLevel('personalizar');
-      };
-    });
-    document.querySelectorAll('.menu-style-engine-btn').forEach(function (btn) {
-      btn.onclick = function () {
-        if (typeof StyleEngine !== 'undefined' && typeof StyleEngine.open === 'function') {
-          StyleEngine.open();
-        }
+        if (typeof showMenuLevel === 'function') showMenuLevel('personalizar-v2');
       };
     });
     document.querySelectorAll('.menu-logout-btn').forEach(function (btn) {
@@ -199,6 +182,7 @@ var VisitorMenu = (function () {
   function refreshProfile() {
     var slot = document.getElementById('mainMenuProfileSlot');
     var menu = document.getElementById('mainMenu');
+    var styleV3Open = typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked();
 
     if (!VisitorSession.isAuthenticated()) {
       if (typeof VisitorPersonalizePanel !== 'undefined' &&
@@ -206,13 +190,19 @@ var VisitorMenu = (function () {
           VisitorPersonalizePanel.isEditorSessionLocked()) {
         return;
       }
+      if (styleV3Open) {
+        if (menu) menu.classList.add('has-visitor-profile');
+        if (slot) slot.innerHTML = profileStripHtml();
+        bindProfileActions();
+        return;
+      }
       if (slot) slot.innerHTML = '';
       if (menu && menu.classList.contains('active') && typeof showMenuLevel === 'function') {
-        var personalizar = document.getElementById('mainMenuListPersonalizar');
-        if (personalizar && personalizar.style.display !== 'none') {
+        var personalizarV2 = document.getElementById('mainMenuListPersonalizarV2');
+        if (personalizarV2 && personalizarV2.style.display !== 'none') {
           if (typeof goBack === 'function' &&
               typeof navStack !== 'undefined' &&
-              navStack[navStack.length - 1] === 'menu-personalizar') {
+              navStack[navStack.length - 1] === 'menu-personalizar-v2') {
             goBack();
           } else {
             showMenuLevel('primary');

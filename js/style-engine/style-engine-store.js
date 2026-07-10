@@ -25,6 +25,9 @@ var StyleEngineStore = (function () {
         versionLabel: '—',
         publishedAt: null
       },
+      activeStyleId: null,
+      activeStyleName: null,
+      personalizarDraft: null,
       legacyThemeEnabled: true,
       styleEngineEnabled: false,
       updatedAt: null
@@ -44,6 +47,9 @@ var StyleEngineStore = (function () {
     if (!state.publishMeta.versionLabel && state.publishMeta.version) {
       state.publishMeta.versionLabel = 'v' + state.publishMeta.version;
     }
+    state.activeStyleId = parsed.activeStyleId || null;
+    state.activeStyleName = parsed.activeStyleName || null;
+    state.personalizarDraft = parsed.personalizarDraft || null;
     state.updatedAt = parsed.updatedAt || null;
     syncFlagsFromActive(state);
     return state;
@@ -213,6 +219,32 @@ var StyleEngineStore = (function () {
     return loadPersisted().draftSavedAt;
   }
 
+  function setActiveStyleMeta(id, name) {
+    var state = loadPersisted();
+    state.activeStyleId = id || null;
+    state.activeStyleName = name || null;
+    savePersisted();
+  }
+
+  function getActiveStyleMeta() {
+    var state = loadPersisted();
+    return {
+      id: state.activeStyleId || null,
+      name: state.activeStyleName || null
+    };
+  }
+
+  function setPersonalizarDraft(draft) {
+    var state = loadPersisted();
+    state.personalizarDraft = draft && typeof draft === 'object' ? Object.assign({}, draft) : null;
+    savePersisted();
+  }
+
+  function getPersonalizarDraft() {
+    var state = loadPersisted();
+    return state.personalizarDraft ? Object.assign({}, state.personalizarDraft) : null;
+  }
+
   function restoreDefaults() {
     draftRules = StyleEngineTokens.getDefaultRules();
     notify();
@@ -316,6 +348,10 @@ var StyleEngineStore = (function () {
     publishDraft: publishDraft,
     getPublishMeta: getPublishMeta,
     getDraftSavedAt: getDraftSavedAt,
+    setActiveStyleMeta: setActiveStyleMeta,
+    getActiveStyleMeta: getActiveStyleMeta,
+    setPersonalizarDraft: setPersonalizarDraft,
+    getPersonalizarDraft: getPersonalizarDraft,
     commitDraft: commitDraft,
     discardDraft: discardDraft,
     restoreDefaults: restoreDefaults,
