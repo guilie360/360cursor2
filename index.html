@@ -69,7 +69,7 @@ html:not(.theme-ready) body {
 })();
 </script>
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=global-effects1">
+<link rel="stylesheet" href="css/components.css?v=compare-empty-pos1">
 <link rel="stylesheet" href="css/style-engine.css">
 </head>
 <body class="notranslate" translate="no">
@@ -316,11 +316,19 @@ html:not(.theme-ready) body {
     </div>
   </div>
 
-  <div class="content-modal" id="amenidadesModal">
+  <div class="content-modal amenities-modal" id="amenidadesModal">
     <span class="modal-close" id="amenidadesModalClose">&times;</span>
-    <div class="content-modal-box">
-      <div class="content-modal-title">Amenidades</div>
-      <ul class="amenities-list" id="amenitiesList"></ul>
+    <div class="content-modal-box amenities-modal-box">
+      <div class="amenities-carousel-stage" id="amenitiesCarouselStage">
+        <div class="amenities-carousel-sticky">
+          <div class="amenities-carousel-viewport" id="amenitiesCarouselViewport">
+            <div class="amenities-carousel-track" id="amenitiesCarouselTrack" aria-live="polite"></div>
+          </div>
+          <div class="amenities-carousel-hint" id="amenitiesCarouselHint" aria-hidden="true">
+            <span class="amenities-carousel-hint-label">Desliza para explorar</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -355,11 +363,13 @@ html:not(.theme-ready) body {
   </div>
 
   <!-- MODAL DESCARGAS -->
-  <div class="content-modal" id="descargasModal">
+  <div class="content-modal downloads-modal" id="descargasModal">
     <span class="modal-close" id="descargasModalClose">&times;</span>
-    <div class="content-modal-box">
-      <div class="content-modal-title">Descargas</div>
-      <div class="downloads-list" id="downloadsList"></div>
+    <div class="content-modal-box downloads-modal-box">
+      <div class="downloads-stage" id="downloadsStage">
+        <span class="downloads-intro-pct" id="downloadsIntroPct" aria-live="polite">0%</span>
+        <div class="downloads-list" id="downloadsList"></div>
+      </div>
     </div>
   </div>
 
@@ -430,6 +440,16 @@ html:not(.theme-ready) body {
         <p class="favorites-empty-text">Aún no has agregado viviendas a favoritos.</p>
         <button class="outline-btn" type="button" id="favoritesEmptyBtn">Explorar viviendas</button>
       </div>
+      <div class="compare-empty favorites-empty" id="compareEmpty" style="display:none;" hidden>
+        <div class="compare-empty-icon favorites-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="5" width="6" height="14" rx="1.5"/>
+            <rect x="14" y="5" width="6" height="14" rx="1.5"/>
+          </svg>
+        </div>
+        <p class="compare-empty-text favorites-empty-text">Agrega 2 viviendas a favoritos para compararlas.</p>
+        <button class="outline-btn" type="button" id="compareEmptyBtn">Explorar viviendas</button>
+      </div>
     </div>
     <div class="units-viviendas-foot">
       <div class="units-viviendas-foot-copy">
@@ -474,7 +494,7 @@ html:not(.theme-ready) body {
   </div>
 
   <!-- MODAL VIDEO DEL PROYECTO -->
-  <div class="content-modal video-modal" id="videoModal">
+  <div class="content-modal video-modal splash-intro-modal" id="videoModal">
     <span class="modal-close" id="videoModalClose">&times;</span>
     <div class="content-modal-box video-modal-box">
       <div class="video-modal-loader" id="videoModalLoader" hidden aria-hidden="true">
@@ -565,16 +585,39 @@ html:not(.theme-ready) body {
     <div class="lightbox-counter" id="lightboxCounter"></div>
   </div>
 
-  <!-- MODAL UBICACIÓN -->
-  <div class="content-modal" id="locationModal">
+  <!-- MODAL UBICACIÓN (misma estructura / animación que video) -->
+  <div class="content-modal location-modal video-modal splash-intro-modal" id="locationModal">
     <span class="modal-close" id="locationModalClose">&times;</span>
-    <div class="content-modal-box">
-      <div class="content-modal-title">Ubicación</div>
-      <div class="placeholder-box" id="locationPlaceholder">
-        <span>MAPA DEL PROYECTO</span>
+    <div class="content-modal-box video-modal-box location-modal-box">
+      <div class="video-modal-loader" id="locationModalLoader" hidden aria-hidden="true">
+        <div class="video-splash" id="locationModalSplash" aria-hidden="true">
+          <div class="video-splash-mark location-splash-mark">
+            <div class="video-splash-play location-splash-play">
+              <svg class="location-splash-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 21s7-6.5 7-11.5A7 7 0 1 0 5 9.5C5 14.5 12 21 12 21z"/>
+                <circle cx="12" cy="9.5" r="2.5" fill="#000"/>
+              </svg>
+            </div>
+          </div>
+          <div class="video-splash-track" aria-hidden="true">
+            <div class="video-splash-bar" id="locationModalSplashBar"></div>
+            <div class="video-splash-head location-splash-head" id="locationModalSplashHead">
+              <svg class="location-splash-head-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4.2 12.4v-1.7c0-.6.5-1.1 1.1-1.1h1.3l1.5-3.1c.2-.4.6-.7 1.1-.7h5.6c.5 0 .9.3 1.1.7l1.5 3.1h1.3c.6 0 1.1.5 1.1 1.1v1.7h-1.2a2.1 2.1 0 1 0-4.2 0H9.4a2.1 2.1 0 1 0-4.2 0H4.2zm12.8 0a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0zM8.2 12.4a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="content-modal-action">
-        <a class="outline-btn" id="directionsBtn" href="#" target="_blank" rel="noopener">Cómo llegar</a>
+      <div class="video-modal-card location-modal-card" id="locationModalCard">
+        <div class="location-modal-body" id="locationModalBody">
+          <div class="location-map-box">
+            <div class="location-map" id="locationPlaceholder" aria-label="Mapa de Valledupar"></div>
+          </div>
+          <div class="location-modal-action">
+            <a class="outline-btn" id="directionsBtn" href="#" target="_blank" rel="noopener">Cómo llegar</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -944,7 +987,10 @@ html:not(.theme-ready) body {
   })();
   </script>
   <script src="js/units-compare-pdf.js"></script>
-  <script src="js/main.js?v=nav22"></script>
+  <script src="js/location-map.js"></script>
+  <script src="js/downloads-intro.js"></script>
+  <script src="js/amenities-carousel.js?v=amenities7"></script>
+  <script src="js/main.js?v=nav26"></script>
   <script src="js/project-data.js"></script>
   <script src="js/auth/bootstrap.js"></script>
   <script>

@@ -515,9 +515,14 @@ function applyProjectInfoModule(project) {
 
   var locationBox = document.getElementById('locationPlaceholder');
   if (locationBox) {
-    if (project.latitud != null && project.longitud != null) {
-      locationBox.innerHTML = '<iframe title="Mapa del proyecto" src="https://maps.google.com/maps?q=' +
-        project.latitud + ',' + project.longitud + '&z=15&output=embed" width="100%" height="100%" style="border:0;" loading="lazy"></iframe>';
+    if (typeof LocationMap !== 'undefined' && typeof LocationMap.render === 'function') {
+      LocationMap.render(locationBox, {
+        lat: project.latitud,
+        lng: project.longitud,
+        label: project.nombre || project.direccion || project.ciudad || 'Valledupar'
+      });
+    } else if (project.latitud != null && project.longitud != null) {
+      locationBox.innerHTML = '<span>' + (project.direccion || project.ciudad || 'Valledupar') + '</span>';
     } else if (project.direccion || project.ciudad) {
       locationBox.innerHTML = '<span>' + (project.direccion || project.ciudad) + '</span>';
     } else {
@@ -543,18 +548,18 @@ function applyConstructorModule(project) {
 }
 
 function applyAmenitiesModule(project) {
-  var list = document.getElementById('amenitiesList');
-  if (!list) return;
-  list.innerHTML = '';
-
-  var items = project.proyecto_amenidades || [];
-  items.forEach(function (row) {
+  var items = (project.proyecto_amenidades || []).map(function (row) {
     var amenidad = row.amenidades || {};
-    var li = document.createElement('li');
-    li.textContent = amenidad.nombre || '';
-    if (row.descripcion) li.title = row.descripcion;
-    list.appendChild(li);
+    return {
+      name: amenidad.nombre || '',
+      imageUrl: row.imagen_url || '',
+      description: row.descripcion || ''
+    };
   });
+
+  if (typeof AmenitiesCarousel !== 'undefined' && typeof AmenitiesCarousel.setItems === 'function') {
+    AmenitiesCarousel.setItems(items);
+  }
 }
 
 function buildProgressData(project) {
