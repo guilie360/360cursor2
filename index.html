@@ -908,7 +908,7 @@ if (typeof BootDebug !== 'undefined') {
     }
     var note = document.createElement('div');
     note.id = 'bisctMinimalOk';
-    note.textContent = 'BISCT + ThemeSystem ON — Auth/Style/Visitor/Platform/UI OFF';
+    note.textContent = 'BISCT + ThemeSystem + Auth ON — Platform/Visitor/Style/UI OFF';
     note.style.cssText = 'position:fixed;left:12px;right:12px;top:12px;z-index:2147483646;padding:14px;background:#0a3;color:#fff;font:14px/1.4 system-ui,sans-serif;border-radius:10px;text-align:center';
     (document.body || document.documentElement).appendChild(note);
   })();
@@ -937,7 +937,7 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/shared/constants.js"></script>
   <script src="js/shared/formatters.js"></script>
 
-  <!-- BLOQUE Auth (OFF)
+  <!-- BLOQUE Auth (ON) -->
   <script src="js/supabase-client.js?v=boot1"></script>
   <script src="js/auth/client.js"></script>
   <script src="js/auth/redirects.js"></script>
@@ -959,7 +959,26 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/auth/api/project-theme.js"></script>
   <script src="js/auth/api/project-preset-themes.js"></script>
   <script src="js/auth/bootstrap.js"></script>
-  -->
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: AuthBootstrap.init');
+  try {
+    if (typeof AuthBootstrap !== 'undefined' && AuthBootstrap.init) {
+      var __authP = AuthBootstrap.init();
+      if (__authP && typeof __authP.then === 'function') {
+        __authP.then(
+          function () { if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: AuthBootstrap.init done'); },
+          function (err) { if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: AuthBootstrap.init rejected', err); }
+        );
+      } else if (typeof BootDebug !== 'undefined') {
+        BootDebug.log('BISCT: AuthBootstrap.init done (sync)');
+      }
+    } else if (typeof BootDebug !== 'undefined') {
+      BootDebug.error('BISCT: AuthBootstrap undefined');
+    }
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: AuthBootstrap.init', e);
+  }
+  </script>
 
   <!-- BLOQUE Platform (OFF)
   <script src="js/platform/project-theme-authority.js?v=hall4"></script>
