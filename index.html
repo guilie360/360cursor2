@@ -103,9 +103,7 @@ if (typeof BootDebug !== 'undefined') {
 
   <!-- ================= PORTADA DEL PROYECTO ================= -->
   <section class="project-cover" id="projectCover" data-hero-text-color="light" data-hero-button-text-color="light" data-hero-layout="centered">
-    <video class="project-cover-video" id="coverVideo" autoplay muted loop playsinline preload="auto" style="display:none">
-      <source id="coverVideoSource" src="" type="video/mp4">
-    </video>
+    <!-- TEMP freeze bisect: no hero <video> at boot -->
     <img class="project-cover-video" id="coverImage" alt="" style="display:none">
     <div class="project-cover-overlay"></div>
     <div class="project-cover-content">
@@ -1027,7 +1025,7 @@ if (typeof BootDebug !== 'undefined') {
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
   </script>
-  <script src="js/project-data.js?v=cpu1" onload="if(window.BootDebug)BootDebug.log('script tag: project-data.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: project-data.js FAILED to load')"></script>
+  <script src="js/project-data.js?v=nohero1" onload="if(window.BootDebug)BootDebug.log('script tag: project-data.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: project-data.js FAILED to load')"></script>
   <script src="js/auth/bootstrap.js" onload="if(window.BootDebug)BootDebug.log('script tag: auth/bootstrap.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: auth/bootstrap.js FAILED to load')"></script>
   <script>
   (function () {

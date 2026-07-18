@@ -97,19 +97,19 @@ function applyHeroModule(project) {
   var sourceEl = document.getElementById('coverVideoSource');
   var imageEl = document.getElementById('coverImage');
 
-  if (config.video_hero_url && videoEl && sourceEl) {
-    sourceEl.src = config.video_hero_url;
-    videoEl.style.display = '';
-    videoEl.load();
-    videoEl.muted = true;
-    videoEl.play().catch(function () {});
-    if (imageEl) imageEl.style.display = 'none';
-  } else {
-    if (videoEl) videoEl.style.display = 'none';
-    if (config.imagen_hero_url && imageEl) {
+  /* TEMP freeze bisect: hero multimedia off at boot — static image or solid bg only. */
+  if (videoEl) {
+    videoEl.style.display = 'none';
+  }
+  if (sourceEl) {
+    sourceEl.removeAttribute('src');
+  }
+  if (imageEl) {
+    if (config.imagen_hero_url) {
       imageEl.src = config.imagen_hero_url;
       imageEl.style.display = '';
-    } else if (imageEl) {
+    } else {
+      imageEl.removeAttribute('src');
       imageEl.style.display = 'none';
     }
   }
