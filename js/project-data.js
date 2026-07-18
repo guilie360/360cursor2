@@ -855,10 +855,22 @@ function loadProjectData() {
     showProjectLoadError(new Error('fetchPublishedProject no definido (supabase-client.js)'));
     return Promise.resolve(null);
   }
-  return fetchPublishedProject()
+  var run;
+  try {
+    run = fetchPublishedProject();
+  } catch (syncErr) {
+    showProjectLoadError(syncErr);
+    return Promise.resolve(null);
+  }
+  return Promise.resolve(run)
     .then(function (project) {
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData start');
-      applyProjectData(project);
+      try {
+        applyProjectData(project);
+      } catch (applyErr) {
+        showProjectLoadError(applyErr);
+        throw applyErr;
+      }
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData done / render inicial');
       return project;
     })
@@ -867,4 +879,11 @@ function loadProjectData() {
     });
 }
 
-loadProjectData();
+if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — calling loadProjectData()');
+try {
+  loadProjectData();
+} catch (e) {
+  if (typeof BootDebug !== 'undefined') BootDebug.error('loadProjectData() sync throw', e);
+  else console.error(e);
+}
+if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — loadProjectData() scheduled');

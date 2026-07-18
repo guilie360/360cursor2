@@ -1019,26 +1019,119 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/downloads-intro.js"></script>
   <script src="js/amenities-carousel.js?v=amenities7"></script>
   <script src="js/menu-config.js?v=menu6"></script>
-  <script src="js/main.js?v=viv2"></script>
-  <script src="js/project-data.js?v=boot1"></script>
-  <script src="js/auth/bootstrap.js"></script>
   <script>
-    VisitorAuthModal.init();
-    VisitorEmailVerification.init();
-    VisitorMenu.init();
-    if (typeof StyleEngine !== 'undefined') StyleEngine.init();
-    GlobalClose.init();
-    AuthBootstrap.init();
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
+  </script>
+  <script src="js/main.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: main.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: main.js FAILED to load')"></script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
+  </script>
+  <script src="js/project-data.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: project-data.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: project-data.js FAILED to load')"></script>
+  <script src="js/auth/bootstrap.js" onload="if(window.BootDebug)BootDebug.log('script tag: auth/bootstrap.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: auth/bootstrap.js FAILED to load')"></script>
+  <script>
+  (function () {
+    function bootLog(msg, detail) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log(msg, detail);
+      else console.log('[BOOT]', msg, detail || '');
+    }
+    function bootErr(msg, err) {
+      if (typeof BootDebug !== 'undefined') BootDebug.error(msg, err);
+      else console.error('[BOOT]', msg, err);
+    }
+    function safeInit(label, fn) {
+      bootLog(label + ' — start');
+      try {
+        if (typeof fn !== 'function') {
+          bootErr(label + ' — no disponible (undefined/not a function)');
+          return null;
+        }
+        var result = fn();
+        if (result && typeof result.then === 'function') {
+          result.then(
+            function () { bootLog(label + ' — done (async)'); },
+            function (err) { bootErr(label + ' — rejected', err); }
+          );
+        } else {
+          bootLog(label + ' — done');
+        }
+        return result;
+      } catch (e) {
+        bootErr(label + ' — threw', e);
+        return null;
+      }
+    }
+
+    bootLog('final inits — start', {
+      VisitorAuthModal: typeof VisitorAuthModal,
+      VisitorEmailVerification: typeof VisitorEmailVerification,
+      VisitorMenu: typeof VisitorMenu,
+      StyleEngine: typeof StyleEngine,
+      GlobalClose: typeof GlobalClose,
+      AuthBootstrap: typeof AuthBootstrap,
+      __NAV_BUILD__: typeof window.__NAV_BUILD__ !== 'undefined' ? window.__NAV_BUILD__ : null,
+      __BUILD_STAMP__: typeof window.__BUILD_STAMP__ !== 'undefined' ? window.__BUILD_STAMP__ : null
+    });
+
+    safeInit('VisitorAuthModal.init', function () {
+      if (typeof VisitorAuthModal === 'undefined' || !VisitorAuthModal.init) {
+        throw new Error('VisitorAuthModal.init undefined');
+      }
+      return VisitorAuthModal.init();
+    });
+
+    safeInit('VisitorEmailVerification.init', function () {
+      if (typeof VisitorEmailVerification === 'undefined' || !VisitorEmailVerification.init) {
+        throw new Error('VisitorEmailVerification.init undefined');
+      }
+      return VisitorEmailVerification.init();
+    });
+
+    safeInit('VisitorMenu.init', function () {
+      if (typeof VisitorMenu === 'undefined' || !VisitorMenu.init) {
+        throw new Error('VisitorMenu.init undefined');
+      }
+      return VisitorMenu.init();
+    });
+
+    safeInit('StyleEngine.init', function () {
+      if (typeof StyleEngine === 'undefined') {
+        bootLog('StyleEngine.init — skip (StyleEngine undefined)');
+        return;
+      }
+      if (!StyleEngine.init) throw new Error('StyleEngine.init undefined');
+      return StyleEngine.init();
+    });
+
+    safeInit('GlobalClose.init', function () {
+      if (typeof GlobalClose === 'undefined' || !GlobalClose.init) {
+        throw new Error('GlobalClose.init undefined');
+      }
+      return GlobalClose.init();
+    });
+
+    safeInit('AuthBootstrap.init', function () {
+      if (typeof AuthBootstrap === 'undefined' || !AuthBootstrap.init) {
+        throw new Error('AuthBootstrap.init undefined');
+      }
+      return AuthBootstrap.init();
+    });
+
+    bootLog('final inits — all scheduled');
+
     setTimeout(function () {
-      if (window.__BUILD_STAMP__ === 'nav19' && window.__NAV_BUILD__ !== 'nav19') {
-        try {
+      try {
+        if (window.__BUILD_STAMP__ === 'nav19' && window.__NAV_BUILD__ !== 'nav19') {
           if (!sessionStorage.getItem('nav19_reload')) {
             sessionStorage.setItem('nav19_reload', '1');
+            bootLog('reload por stamp mismatch nav19');
             location.reload();
           }
-        } catch (e) {}
+        }
+      } catch (e) {
+        bootErr('stamp reload check', e);
       }
     }, 800);
+  })();
   </script>
 
 </body>

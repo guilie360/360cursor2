@@ -2,6 +2,7 @@
    PROJECT DATA — populated from Supabase via project-data.js
    CONFIG, TYPOLOGIES, UNITS, DOWNLOADS, PROJECT_STAGES
    ========================================================= */
+if (typeof BootDebug !== 'undefined') BootDebug.log('main.js evaluating — start');
 var CONFIG = {};
 var TYPOLOGIES = [];
 var UNITS = {};
@@ -3929,14 +3930,21 @@ function initDeepLink() {
 }
 
 window.initProjectUI = function () {
-  applyConfig();
-  renderUnitsGrid('all');
-  updateFavoritesTabCount();
-  renderDownloadsList();
-  buildProgressList();
-  initDeepLink();
-  if (typeof VisitorMenu !== 'undefined') {
-    VisitorMenu.refreshProfile();
+  if (typeof BootDebug !== 'undefined') BootDebug.log('initProjectUI start');
+  try {
+    applyConfig();
+    renderUnitsGrid('all');
+    updateFavoritesTabCount();
+    renderDownloadsList();
+    buildProgressList();
+    initDeepLink();
+    if (typeof VisitorMenu !== 'undefined') {
+      VisitorMenu.refreshProfile();
+    }
+    if (typeof BootDebug !== 'undefined') BootDebug.log('initProjectUI done');
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('initProjectUI', e);
+    else console.error(e);
   }
 };
 
@@ -3956,3 +3964,5 @@ window.onVisitorFavoritesChanged = function () {
     el.textContent = active ? '❤' : '♡';
   });
 };
+
+if (typeof BootDebug !== 'undefined') BootDebug.log('main.js evaluating — done');
