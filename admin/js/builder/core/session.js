@@ -9,9 +9,33 @@ var BuilderSession = (function () {
       currentStep: 0,
       projectType: null,
       projectStructure: null,
-      branding: { logo: null, reference: null, brandManual: null, themeProposal: null, palette: null, themeProposals: [], selectedProposal: null, status: null },
+      branding: {
+        logo: null,
+        reference: null,
+        brandManual: null,
+        themeProposal: null,
+        palette: null,
+        themeProposals: [],
+        selectedProposal: null,
+        status: null,
+        showHeroLogo: true,
+        logoStyle: 'flat'
+      },
       heroVideo: null,
       heroImage: null,
+      heroContent: {
+        nombre: '',
+        eslogan: '',
+        botonIzquierdo: 'Explorar',
+        botonDerecho: 'Iniciar',
+        whatsappLink: '',
+        whatsappMessage: '',
+        shareUrl: '',
+        showWhatsapp: true,
+        showShare: true
+      },
+      menuConfig: null,
+      viviendas: [],
       gallery: [],
       panoramas: [],
       plans: [],
@@ -23,6 +47,7 @@ var BuilderSession = (function () {
       validation: null,
       published: false,
       publishResult: null,
+      sectionChecks: {},
       messages: []
     };
   }

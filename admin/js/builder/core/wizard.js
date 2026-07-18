@@ -2,8 +2,10 @@
 var BuilderWizard = (function () {
   var STEPS = [
     { id: 'project-type', label: 'Tipo de proyecto', shortLabel: 'Tipo', icon: 'layout-grid', assistant: '¿Qué tipo de proyecto deseas crear? Selecciona una opción y prepararé la estructura base automáticamente.' },
-    { id: 'branding', label: 'Identidad corporativa', shortLabel: 'Branding', icon: 'palette', assistant: 'Sube el logo y materiales de marca. Extraeré colores y generaré el tema visual completo.' },
+    { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
     { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'video', assistant: 'Sube un video o imagen de fondo para la portada del showroom.' },
+    { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'layout-grid', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
+    { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'home', assistant: 'Crea y edita las tarjetas de viviendas del showroom: código, precio, áreas y disponibilidad.' },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Arrastra tus renders e imágenes. Las clasificaré, ordenaré y agruparé por categoría.' },
     { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Sube los panoramas 360°. Identificaré cada espacio y crearé la estructura del recorrido.' },
     { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'layers', assistant: 'Sube planos en PDF, JPG, PNG o DWG. Detectaré tipologías, áreas y niveles.' },
@@ -38,6 +40,10 @@ var BuilderWizard = (function () {
       case 'branding':
         return !!(state.branding && (state.branding.logo || state.branding.reference));
       case 'video-hero':
+        return true;
+      case 'menu':
+        return true;
+      case 'viviendas':
         return true;
       case 'gallery':
         return true;

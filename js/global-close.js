@@ -283,6 +283,14 @@ var GlobalClose = (function () {
       return;
     }
     if (isAuthModalOpen()) {
+      /* Login/registro: no Escape ni cierre implícito; solo X explícita. */
+      var authLocked = typeof VisitorAuthModal !== 'undefined' &&
+        typeof VisitorAuthModal.isSessionLocked === 'function' &&
+        VisitorAuthModal.isSessionLocked();
+      if (authLocked && !explicitUserClose) {
+        update();
+        return;
+      }
       VisitorAuthModal.close();
       update();
       return;

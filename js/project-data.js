@@ -17,8 +17,27 @@ function applyHeroTextColors(config) {
   cover.setAttribute('data-hero-button-text-color', normalizeHeroTextColor(config.hero_button_text_color));
 }
 
+function applyHeroFloatVisibility(config) {
+  config = config || {};
+  var showWa = config.show_whatsapp_float !== false;
+  var showShare = config.show_share_float !== false;
+  var waFloat = document.getElementById('whatsappFloat');
+  var shareFloat = document.getElementById('shareProjectFloatBtn');
+  if (waFloat) {
+    waFloat.hidden = !showWa;
+    waFloat.classList.toggle('is-float-hidden', !showWa);
+    waFloat.setAttribute('aria-hidden', showWa ? 'false' : 'true');
+  }
+  if (shareFloat) {
+    shareFloat.hidden = !showShare;
+    shareFloat.classList.toggle('is-float-hidden', !showShare);
+    shareFloat.setAttribute('aria-hidden', showShare ? 'false' : 'true');
+  }
+}
+
 function applyHeroModule(project) {
   var config = project.proyecto_config || {};
+  if (Array.isArray(config)) config = config[0] || {};
   var constructora = project.constructoras || {};
 
   var nameEl = document.getElementById('projectCoverName');
@@ -26,16 +45,14 @@ function applyHeroModule(project) {
 
   var taglineEl = document.getElementById('projectCoverTagline');
   if (taglineEl) {
-    taglineEl.textContent = formatHeroSubtitle(project.ciudad, project.estado, config.texto_hero);
+    taglineEl.textContent = config.texto_hero ||
+      formatHeroSubtitle(project.ciudad, project.estado, null) ||
+      '';
   }
 
   var btnStart = document.getElementById('heroStartBtn');
   if (btnStart) {
-    var startLabel = config.boton_hero_1 || '';
-    if (!startLabel || /ver\s*360/i.test(startLabel) || /p\s*r\s*o\s*x\s*i\s*m\s*a\s*m\s*e\s*n\s*t\s*e/i.test(startLabel)) {
-      startLabel = 'Iniciar';
-    }
-    btnStart.textContent = startLabel;
+    btnStart.textContent = config.boton_hero_1 || 'Iniciar';
   }
 
   var btnExplore = document.getElementById('mainMenuOpenBtn');
@@ -45,16 +62,33 @@ function applyHeroModule(project) {
   }
 
   applyHeroTextColors(config);
+  applyHeroFloatVisibility(config);
 
   var logoEl = document.getElementById('projectCoverLogo');
-  var logoUrl = config.logo_url || constructora.logo_url || null;
+  var logoUrl = config.logo_url || null;
+  /* Solo logo del proyecto en hero; no caer al logo de constructora si está oculto. */
+  if (!logoUrl && config.show_hero_logo !== false) {
+    logoUrl = constructora.logo_url || null;
+  }
+  var showLogo = config.show_hero_logo === true || (config.show_hero_logo == null && !!config.logo_url);
+  if (config.show_hero_logo === false) showLogo = false;
+  if (!logoUrl) showLogo = false;
+  var logoStyle = config.logo_style === 'avatar' ? 'avatar' : 'flat';
   if (logoEl) {
-    if (logoUrl) {
+    if (showLogo) {
       logoEl.src = logoUrl;
       logoEl.alt = project.nombre || 'Logo';
-      logoEl.style.display = 'block';
+      logoEl.hidden = false;
+      logoEl.removeAttribute('hidden');
+      logoEl.classList.remove('is-hidden');
+      logoEl.classList.toggle('is-avatar', logoStyle === 'avatar');
+      logoEl.style.removeProperty('display');
     } else {
       logoEl.removeAttribute('src');
+      logoEl.hidden = true;
+      logoEl.setAttribute('hidden', '');
+      logoEl.classList.add('is-hidden');
+      logoEl.classList.remove('is-avatar');
       logoEl.style.display = 'none';
     }
   }
@@ -180,6 +214,29 @@ function syncProjectVideoPoster(player, config) {
   if (poster) {
     player.setAttribute('poster', poster);
     player.dataset.videoPosterBackup = poster;
+  }
+}
+
+function applyMenuModule(project) {
+  if (typeof MenuConfig === 'undefined' || !MenuConfig.applyToDom) return;
+  var config = project.proyecto_config || {};
+  if (Array.isArray(config)) config = config[0] || {};
+  var constructora = project.constructoras || {};
+  var menu = config.menu_config;
+  if (!menu) {
+    menu = MenuConfig.defaults();
+    menu.projectName = config.titulo_hero || project.nombre || '';
+    menu.description = constructora.nombre || '';
+  } else {
+    menu = MenuConfig.normalize(menu);
+    if (!menu.projectName) menu.projectName = config.titulo_hero || project.nombre || '';
+    if (!menu.description) menu.description = constructora.nombre || '';
+  }
+  MenuConfig.applyToDom(menu, {
+    fallbackDescription: constructora.nombre || ''
+  });
+  if (typeof window.bindMenuItemNavigation === 'function') {
+    window.bindMenuItemNavigation();
   }
 }
 
@@ -474,19 +531,34 @@ function bindProjectVideoModal() {
 function buildConfig(project) {
   var constructora = project.constructoras || {};
   var config = project.proyecto_config || {};
-  var phone = project.whatsapp || constructora.telefono || '';
+  if (Array.isArray(config)) config = config[0] || {};
+
+  var floatLink = (config.whatsapp_float_link || '').trim();
+  var phone = floatLink || project.whatsapp || constructora.telefono || '';
   var phoneHref = phone.replace(/\s+/g, '');
+  var whatsappHref = '';
+  if (/^https?:\/\//i.test(phoneHref) || /^wa\.me\//i.test(phoneHref)) {
+    whatsappHref = /^https?:\/\//i.test(phoneHref) ? phoneHref : ('https://' + phoneHref);
+    phoneHref = '';
+  }
+
   var mapsUrl = buildMapsUrl(project.latitud, project.longitud, project.direccion || project.ciudad);
   var constructoraWebUrl = ensureHttpUrl(constructora.sitio_web || project.sitio_web || '');
   var email = project.email || constructora.email || '';
   var instagramUrl = ensureHttpUrl(project.instagram_url || '');
+  var defaultWaMsg = 'Hola, quiero más información sobre ' + (project.nombre || 'el proyecto') + '.';
+  var shareUrl = (config.share_float_url || '').trim();
 
   return {
     projectName: project.nombre || '',
     constructoraName: constructora.nombre || '',
     tagline: formatHeroSubtitle(project.ciudad, project.estado, config.texto_hero),
     whatsappPhone: phoneHref,
-    whatsappDefaultMessage: 'Hola, quiero más información sobre ' + (project.nombre || 'el proyecto') + '.',
+    whatsappHref: whatsappHref,
+    whatsappDefaultMessage: (config.whatsapp_float_message || '').trim() || defaultWaMsg,
+    showWhatsappFloat: config.show_whatsapp_float !== false,
+    showShareFloat: config.show_share_float !== false,
+    shareUrl: shareUrl,
     phoneDisplay: phone || '',
     phoneHref: phoneHref,
     instagramUser: project.instagram_url ? formatDisplayUrl(project.instagram_url) : '',
@@ -655,10 +727,16 @@ function buildUnitsData(project) {
       adminFee: Number(v.administracion) || 0,
       availability: VIVIENDA_ESTADO_LABELS[v.estado] || '',
       link360: tour360 ? tour360.url : '',
+      planosModo: v.planos_modo === 'file' ? 'file' : 'proximamente',
+      tour360Modo: v.tour360_modo === 'link' ? 'link' : 'proximamente',
       cardLabel: imagen ? (imagen.nombre || v.nombre) : v.nombre,
       cardImageUrl: imagen ? (imagen.miniatura_url || imagen.url) : '',
       plans: planos.map(function (p) {
-        return { label: p.nombre || 'Plano', url: p.url || '' };
+        return {
+          label: p.nombre || 'Plano',
+          url: p.url || '',
+          extension: p.extension || ''
+        };
       })
     };
   });
@@ -672,6 +750,7 @@ function applyProjectData(project) {
   }
 
   applyHeroModule(project);
+  applyMenuModule(project);
   applyProjectVideoModule(project);
   bindProjectVideoModal();
   applyProjectInfoModule(project);
@@ -690,10 +769,28 @@ function applyProjectData(project) {
     PauseScreen.init(project);
   }
 
-    if (typeof ProjectThemeAuthority !== 'undefined' &&
-        typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
-        ProjectThemeAuthority.shouldApplyProjectDefault()) {
-      ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+    if (typeof ProjectThemeAuthority !== 'undefined') {
+      if (typeof ProjectThemeAuthority.forceApplyOfficialTheme === 'function') {
+        /* HTTP y file:// deben verse igual: HALL oficial siempre al cargar el proyecto
+           (salvo elección personal explícita distinta de HALL). */
+        var skipForce = typeof ThemeSystem !== 'undefined' &&
+          ThemeSystem.isExplicitUserChoice &&
+          ThemeSystem.isExplicitUserChoice();
+        var activeMeta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
+          ? StyleEngineStore.getActiveStyleMeta()
+          : null;
+        var activeIsHall = activeMeta &&
+          String(activeMeta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
+        if (!skipForce || activeIsHall) {
+          ProjectThemeAuthority.forceApplyOfficialTheme();
+        } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
+            ProjectThemeAuthority.shouldApplyProjectDefault()) {
+          ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+        }
+      } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
+          ProjectThemeAuthority.shouldApplyProjectDefault()) {
+        ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+      }
     } else {
       window.setTimeout(function () {
         if (typeof StyleEngineCompatibility !== 'undefined' &&

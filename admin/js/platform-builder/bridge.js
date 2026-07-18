@@ -184,22 +184,56 @@ var PlatformBuilderBridge = (function () {
 
   function createHeroApi() {
     var CONFIG_SELECT =
-      'proyecto_id, texto_hero, logo_url, video_hero_url, imagen_hero_url, color_fondo, color_accento, updated_at';
+      'proyecto_id, titulo_hero, texto_hero, boton_hero_1, boton_hero_2, ' +
+      'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
+      'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento, updated_at';
 
     return {
       upsert: async function (proyectoId, payload) {
+        var projectName = AdminUI.normalizeOptionalText(
+          payload.nombre_proyecto != null ? payload.nombre_proyecto : payload.titulo_hero
+        );
+
         var data = {
           proyecto_id: proyectoId,
+          titulo_hero: projectName || AdminUI.normalizeOptionalText(payload.titulo_hero),
           texto_hero: AdminUI.normalizeOptionalText(payload.texto_hero),
-          logo_url: AdminUI.normalizeOptionalText(payload.logo_url),
+          boton_hero_1: AdminUI.normalizeOptionalText(payload.boton_hero_1) || 'Iniciar',
+          boton_hero_2: AdminUI.normalizeOptionalText(payload.boton_hero_2) || 'Explorar',
+          whatsapp_float_link: AdminUI.normalizeOptionalText(payload.whatsapp_float_link),
+          whatsapp_float_message: AdminUI.normalizeOptionalText(payload.whatsapp_float_message),
+          share_float_url: AdminUI.normalizeOptionalText(payload.share_float_url),
+          show_whatsapp_float: payload.show_whatsapp_float !== false,
+          show_share_float: payload.show_share_float !== false,
+          show_hero_logo: payload.show_hero_logo !== false,
+          logo_style: payload.logo_style === 'avatar' ? 'avatar' : 'flat',
+          logo_url: payload.logo_url === null
+            ? null
+            : AdminUI.normalizeOptionalText(payload.logo_url),
           video_hero_url: AdminUI.normalizeOptionalText(payload.video_hero_url),
           imagen_hero_url: AdminUI.normalizeOptionalText(payload.imagen_hero_url),
           color_fondo: AdminUI.normalizeHexColor(payload.color_fondo, '#0A0A0A'),
           color_accento: AdminUI.normalizeHexColor(payload.color_accento, '#FF3B30')
         };
+        if (payload.show_hero_logo === false) {
+          data.show_hero_logo = false;
+        }
         if (payload.project_default_theme) {
           data.project_default_theme = payload.project_default_theme;
         }
+
+        if (projectName) {
+          var nameResult = await getClient()
+            .from('proyectos')
+            .update({ nombre: projectName })
+            .eq('id', proyectoId)
+            .select('id, nombre')
+            .maybeSingle();
+          if (nameResult.error) {
+            throw new Error(nameResult.error.message || 'Error actualizando el nombre del proyecto');
+          }
+        }
+
         var updated = await getClient()
           .from('proyecto_config')
           .update(data)

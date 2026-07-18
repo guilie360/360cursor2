@@ -102,8 +102,60 @@ var BrandingEngine = (function () {
     };
   }
 
+  function detectLogoStyle(file) {
+    return new Promise(function (resolve) {
+      if (!file) return resolve('avatar');
+      var type = String(file.type || '').toLowerCase();
+      var name = String(file.name || '').toLowerCase();
+
+      if (type.indexOf('jpeg') >= 0 || type.indexOf('jpg') >= 0 || /\.jpe?g$/i.test(name)) {
+        return resolve('avatar');
+      }
+      if (type.indexOf('svg') >= 0 || /\.svg$/i.test(name)) {
+        return resolve('flat');
+      }
+      if (type.indexOf('png') < 0 && !/\.png$/i.test(name) && type.indexOf('webp') < 0) {
+        return resolve('avatar');
+      }
+
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var style = 'flat';
+        try {
+          var canvas = document.createElement('canvas');
+          var w = Math.min(img.naturalWidth || img.width || 64, 96);
+          var h = Math.min(img.naturalHeight || img.height || 64, 96);
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          var data = ctx.getImageData(0, 0, w, h).data;
+          var hasTransparency = false;
+          for (var i = 3; i < data.length; i += 16) {
+            if (data[i] < 250) {
+              hasTransparency = true;
+              break;
+            }
+          }
+          style = hasTransparency ? 'flat' : 'avatar';
+        } catch (e) {
+          style = 'flat';
+        }
+        URL.revokeObjectURL(url);
+        resolve(style);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve('avatar');
+      };
+      img.src = url;
+    });
+  }
+
   return {
     analyzeBranding: analyzeBranding,
-    paletteToHeroColors: paletteToHeroColors
+    paletteToHeroColors: paletteToHeroColors,
+    detectLogoStyle: detectLogoStyle
   };
 })();

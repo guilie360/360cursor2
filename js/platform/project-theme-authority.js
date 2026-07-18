@@ -14,47 +14,126 @@ var ProjectThemeAuthority = (function () {
     return ProjectThemeApi.getFromProject(window.PROJECT_DATA);
   }
 
-  function visitorHasPersonalThemePrefs() {
-    if (typeof VisitorPersonalization === 'undefined') return false;
-    if (typeof VisitorPersonalization.hasSavedPersonalPrefs === 'function') {
-      return VisitorPersonalization.hasSavedPersonalPrefs();
+  function getOfficialDraft() {
+    var theme = getProjectDefaultTheme();
+    if (theme) {
+      if (typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig) {
+        return ThemeSystem.normalizeCustomConfig(theme);
+      }
+      return theme;
     }
-    return VisitorPersonalization.hasPersonalTheme();
+    if (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined') {
+      if (typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig) {
+        return ThemeSystem.normalizeCustomConfig(PROJECT_DEFAULT_THEME_FALLBACK);
+      }
+      return Object.assign({}, PROJECT_DEFAULT_THEME_FALLBACK);
+    }
+    return null;
+  }
+
+  function getOfficialStyleName() {
+    return typeof PROJECT_DEFAULT_STYLE_NAME !== 'undefined' ? PROJECT_DEFAULT_STYLE_NAME : 'HALL';
+  }
+
+  function getOfficialStyleId() {
+    return typeof PROJECT_DEFAULT_STYLE_ID !== 'undefined' ? PROJECT_DEFAULT_STYLE_ID : 'project-default-hall';
   }
 
   function shouldApplyProjectDefault() {
-    if (typeof StyleEngineCompatibility !== 'undefined' &&
-        StyleEngineCompatibility.isStyleEngineLive()) {
-      return false;
-    }
-
+    /* Solo la elección explícita del usuario bloquea el oficial.
+       Style Engine LIVE y prefs heredadas no deben impedir HALL. */
     if (typeof ThemeSystem !== 'undefined' &&
         typeof ThemeSystem.isExplicitUserChoice === 'function' &&
         ThemeSystem.isExplicitUserChoice()) {
+      var stored = typeof ThemeSystem.getStoredSettings === 'function'
+        ? ThemeSystem.getStoredSettings()
+        : null;
+      var custom = stored && stored.customTheme ? stored.customTheme : {};
+      var bg = String(custom.bg || '').toLowerCase();
+      var accent = String(custom.accent || '').toLowerCase();
+      /* Migración: override personal del cyan accidental → volver a HALL */
+      if (bg === '#0d2541' || accent === '#02fbff') {
+        if (ThemeSystem.setProjectDefaultApplied) {
+          ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
+        }
+        return !!(getProjectDefaultTheme() || typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined');
+      }
       return false;
     }
 
-    if (visitorHasPersonalThemePrefs()) {
+    return !!(getProjectDefaultTheme() || typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined');
+  }
+
+  function publishOfficialToStyleEngine(draft) {
+    if (!draft) return false;
+    if (typeof StyleEngineStore === 'undefined' ||
+        typeof StyleEnginePersonalizarMapper === 'undefined' ||
+        typeof StyleEngineLifecycle === 'undefined') {
       return false;
     }
 
-    return !!getProjectDefaultTheme();
+    var rules = StyleEnginePersonalizarMapper.draftToRules(
+      draft,
+      typeof StyleEngineStore.getDraftRules === 'function' ? StyleEngineStore.getDraftRules() : null
+    );
+    StyleEngineStore.setDraftRules(rules, { replace: true });
+    if (typeof StyleEngineStore.setPersonalizarDraft === 'function') {
+      StyleEngineStore.setPersonalizarDraft(draft);
+    }
+    if (typeof StyleEngineStore.setActiveStyleMeta === 'function') {
+      StyleEngineStore.setActiveStyleMeta(getOfficialStyleId(), getOfficialStyleName());
+    }
+    StyleEngineLifecycle.publishToProject({ saveNamed: false });
+    StyleEnginePersonalizarMapper.applyMaterials(draft);
+    return true;
   }
 
   function applyDefaultForCurrentVisitor() {
     if (!shouldApplyProjectDefault()) return false;
-    var theme = getProjectDefaultTheme();
-    if (!theme) return false;
+    var draft = getOfficialDraft();
+    if (!draft) return false;
+
+    if (publishOfficialToStyleEngine(draft)) {
+      if (typeof ThemeSystem !== 'undefined' && ThemeSystem.setProjectDefaultApplied) {
+        ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
+      }
+      return true;
+    }
 
     var customKey = ThemeSystem.CUSTOM_THEME_KEY;
-    var key = theme.themeKey || customKey;
+    var key = draft.themeKey || customKey;
 
     if (key === customKey) {
-      ThemeSystem.apply(customKey, false, ThemeSystem.normalizeCustomConfig(theme));
+      ThemeSystem.apply(customKey, false, ThemeSystem.normalizeCustomConfig(draft));
     } else if (ThemeSystem.THEMES[key]) {
       ThemeSystem.apply(key, false);
     }
 
+    if (typeof ThemeSystem.applyHeroLayout === 'function') {
+      ThemeSystem.applyHeroLayout(draft.heroLayout);
+    }
+
+    ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
+    return true;
+  }
+
+  /** Aplica el oficial aunque el usuario haya experimentado (p. ej. Reiniciar → HALL). */
+  function forceApplyOfficialTheme() {
+    var draft = getOfficialDraft();
+    if (!draft) return false;
+
+    if (publishOfficialToStyleEngine(draft)) {
+      if (typeof ThemeSystem !== 'undefined' && ThemeSystem.setProjectDefaultApplied) {
+        ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
+      }
+      return true;
+    }
+
+    if (typeof ThemeSystem === 'undefined') return false;
+    ThemeSystem.apply(ThemeSystem.CUSTOM_THEME_KEY, false, ThemeSystem.normalizeCustomConfig(draft));
+    if (typeof ThemeSystem.applyHeroLayout === 'function') {
+      ThemeSystem.applyHeroLayout(draft.heroLayout);
+    }
     ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
     return true;
   }
@@ -68,7 +147,9 @@ var ProjectThemeAuthority = (function () {
     if (!canSetOfficialTheme()) {
       throw new Error('Solo los administradores pueden aplicar el tema oficial del proyecto.');
     }
-    return ProjectThemeApi.setDefaultTheme(proyectoId, themeConfig);
+    var payload = await ProjectThemeApi.setDefaultTheme(proyectoId, themeConfig);
+    forceApplyOfficialTheme();
+    return payload;
   }
 
   return {
@@ -76,8 +157,12 @@ var ProjectThemeAuthority = (function () {
     canSetOfficialTheme: canSetOfficialTheme,
     getCurrentProyectoId: getCurrentProyectoId,
     getProjectDefaultTheme: getProjectDefaultTheme,
+    getOfficialDraft: getOfficialDraft,
+    getOfficialStyleName: getOfficialStyleName,
+    getOfficialStyleId: getOfficialStyleId,
     shouldApplyProjectDefault: shouldApplyProjectDefault,
     applyDefaultForCurrentVisitor: applyDefaultForCurrentVisitor,
+    forceApplyOfficialTheme: forceApplyOfficialTheme,
     reapplyIfNeeded: reapplyIfNeeded,
     setOfficialThemeForProject: setOfficialThemeForProject
   };

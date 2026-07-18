@@ -108,9 +108,6 @@ body,
 }
 
 /* Portada — posición 2: barra inferior [Explorar] · título · [Iniciar] */
-.project-cover[data-hero-layout="bottom-bar"] .project-cover-logo {
-  display:none !important;
-}
 .project-cover[data-hero-layout="bottom-bar"] .project-cover-content {
   padding:0 clamp(16px, 4vw, 48px) clamp(22px, 3.5vh, 36px);
 }
@@ -162,12 +159,34 @@ body,
   white-space:nowrap;
 }
 .project-cover-logo {
-  display:block !important;
-  margin:0 auto 18px !important;
-  width:90px !important;
-  max-width:90px !important;
-  height:auto !important;
+  display:block;
+  margin:0 auto 18px;
+  width:90px;
+  max-width:90px;
+  height:auto;
   opacity:0.96;
+  object-fit:contain;
+}
+.project-cover-logo.is-avatar {
+  width:76px !important;
+  max-width:76px !important;
+  height:76px !important;
+  border-radius:50% !important;
+  object-fit:cover !important;
+  box-shadow:0 4px 18px rgba(0,0,0,0.35);
+  background:rgba(255,255,255,0.06);
+}
+.project-cover-logo.is-hidden,
+.project-cover-logo[hidden] {
+  display:none !important;
+  visibility:hidden !important;
+}
+.project-cover[data-hero-layout="bottom-bar"] .project-cover-logo {
+  margin-bottom:14px;
+}
+.project-cover[data-hero-layout="bottom-bar"] .project-cover-logo.is-hidden,
+.project-cover[data-hero-layout="bottom-bar"] .project-cover-logo[hidden] {
+  display:none !important;
 }
 .project-cover-name {
   color:var(--hero-text);
@@ -1200,6 +1219,12 @@ a.menu-item.auth-menu-item {
   cursor:pointer;
   text-decoration:none;
   transition:transform 0.3s ease;
+}
+.whatsapp-float.is-float-hidden,
+.share-float.is-float-hidden,
+.whatsapp-float[hidden],
+.share-float[hidden] {
+  display:none !important;
 }
 .whatsapp-float:hover { transform:scale(1.1); }
 .whatsapp-float svg {
@@ -2825,15 +2850,15 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   text-align:left;
 }
 .units-viviendas-popup .unit-typo-tag {
-  font-size:0.58rem;
+  font-size:0.68rem;
   font-weight:600;
-  letter-spacing:0.12em;
+  letter-spacing:0.1em;
   text-transform:uppercase;
   margin-bottom:6px;
   color:var(--unit-card-text-soft);
 }
 .units-viviendas-popup .unit-typo-title {
-  font-size:clamp(0.78rem, 1.35vw, 0.92rem);
+  font-size:clamp(0.88rem, 1.5vw, 1.02rem);
   font-weight:600;
   letter-spacing:0.05em;
   text-transform:uppercase;
@@ -2846,15 +2871,15 @@ body[data-shadow-glass="solid"] .uc-hero-card {
 }
 .units-viviendas-popup .unit-typo-price-label {
   margin-bottom:4px;
-  font-size:0.56rem;
+  font-size:0.66rem;
   font-weight:600;
-  letter-spacing:0.12em;
+  letter-spacing:0.1em;
   text-transform:uppercase;
   color:var(--unit-card-text-muted);
   opacity:1;
 }
 .units-viviendas-popup .unit-typo-price-value {
-  font-size:clamp(1.08rem, 1.95vw, 1.34rem);
+  font-size:clamp(1.16rem, 2.05vw, 1.42rem);
   font-weight:700;
   letter-spacing:-0.02em;
   line-height:1.15;
@@ -2864,24 +2889,24 @@ body[data-shadow-glass="solid"] .uc-hero-card {
 .units-viviendas-popup .unit-card-specs {
   display:flex;
   flex-wrap:wrap;
-  gap:8px 12px;
+  gap:8px 14px;
   justify-content:flex-start;
   margin-bottom:16px;
 }
 .units-viviendas-popup .unit-card-spec-item {
   display:inline-flex;
   align-items:center;
-  gap:5px;
+  gap:6px;
   color:var(--unit-card-text-soft);
-  font-size:0.58rem;
+  font-size:0.72rem;
   font-weight:500;
   letter-spacing:0.02em;
 }
 .units-viviendas-popup .unit-card-spec-item svg {
-  width:11px;
-  height:11px;
+  width:13px;
+  height:13px;
   stroke:currentColor;
-  opacity:0.62;
+  opacity:0.7;
   flex-shrink:0;
 }
 .units-viviendas-popup .unit-typo-btn-stack {
@@ -2895,13 +2920,13 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:5px;
+  gap:6px;
   padding:11px 10px;
   min-height:42px;
   border-radius:10px;
-  font-size:0.58rem;
+  font-size:0.68rem;
   font-weight:600;
-  letter-spacing:0.08em;
+  letter-spacing:0.07em;
   text-transform:uppercase;
   border:1px solid color-mix(in srgb, var(--unit-card-text) 12%, transparent);
   background:color-mix(in srgb, var(--unit-card-text) 5%, transparent);
@@ -2912,8 +2937,8 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   transition:background 0.22s ease, border-color 0.22s ease, transform 0.22s ease;
 }
 .units-viviendas-popup .unit-typo-btn svg {
-  width:11px;
-  height:11px;
+  width:13px;
+  height:13px;
   stroke:currentColor;
   flex-shrink:0;
 }
@@ -3207,8 +3232,22 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   border-bottom:none;
   border-right:1px solid color-mix(in srgb, var(--uum-text) 7%, transparent);
   background:color-mix(in srgb, var(--uum-text) 2%, var(--placeholder-bg));
-  padding:0 6%;
+  padding:0;
+  overflow:hidden;
+  position:relative;
 }
+#pdfModal .units-plans-modal .plan-slide--media {
+  padding:0;
+}
+#pdfModal .units-plans-modal .plan-slide-media {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  border:0;
+  background:#0a0a0a;
+}
+#pdfModal .units-plans-modal .plan-slide-link,
 #pdfModal .units-plans-modal .plan-slide span,
 #pdfModal .units-plans-modal .plan-slide a {
   color:var(--uum-text-soft);
@@ -3221,9 +3260,11 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   flex:0 0 min(300px, 34vw);
   width:min(300px, 34vw);
   min-width:260px;
+  order:-1;
   aspect-ratio:unset;
   align-self:stretch;
-  border-left:1px solid color-mix(in srgb, var(--uum-text) 7%, transparent);
+  border-left:none;
+  border-right:1px solid color-mix(in srgb, var(--uum-text) 7%, transparent);
   background:color-mix(in srgb, var(--uum-text) 2%, transparent);
   padding:clamp(24px, 4vmin, 40px) clamp(20px, 3vmin, 32px);
 }
@@ -5527,7 +5568,8 @@ body[data-bg-glass="solid"] .amenities-modal-box::before {
     width:100%;
     justify-content:center;
   }
-  .project-cover-logo { width:64px !important; max-width:64px !important; margin-bottom:14px !important; }
+  .project-cover-logo { width:64px; max-width:64px; margin-bottom:14px; }
+  .project-cover-logo.is-avatar { width:56px; max-width:56px; height:56px; }
   .project-cover-name { font-size:1.2rem; letter-spacing:0.16em; }
   .project-cover-tagline { margin-bottom:22px; letter-spacing:0.2em; }
   .project-cover-buttons .project-cover-btn { padding:12px 24px; font-size:0.68rem; }

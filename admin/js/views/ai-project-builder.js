@@ -28,13 +28,50 @@ var AiProjectBuilderView = (function () {
     }
     var saveBtn = rootEl.querySelector('#builderSaveBtn');
     if (saveBtn) saveBtn.disabled = !!processing;
-    var validateBtn = rootEl.querySelector('#builderValidateBtn');
-    if (validateBtn) validateBtn.disabled = !!processing;
-    var resetBtn = rootEl.querySelector('#builderResetBtn');
-    if (resetBtn) resetBtn.disabled = !!processing;
   }
 
   /* ── Step renderers ── */
+
+  function stepTitleHtml(title) {
+    var step = BuilderWizard.getStep(state.currentStep);
+    var stepId = step ? step.id : '';
+    var checked = false;
+    if (stepId && typeof BuilderProgressRail !== 'undefined') {
+      var items = BuilderProgressRail.buildItems(state);
+      var stepIndex = BuilderWizard.getStepIndex(stepId);
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].stepIndex === stepIndex) {
+          checked = !!items[i].done;
+          break;
+        }
+      }
+    } else if (state.sectionChecks && Object.prototype.hasOwnProperty.call(state.sectionChecks, stepId)) {
+      checked = !!state.sectionChecks[stepId];
+    }
+    return '<div class="builder-step-title-row">' +
+      '<label class="builder-section-check" title="Marcar o desmarcar sección en la lista">' +
+        '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="' +
+          AdminUI.escapeHtml(stepId) + '"' + (checked ? ' checked' : '') + '>' +
+        '<span class="builder-section-check-box" aria-hidden="true"></span>' +
+      '</label>' +
+      '<h2 class="builder-step-title">' + AdminUI.escapeHtml(title) + '</h2>' +
+    '</div>';
+  }
+
+  function bindSectionDoneCheck() {
+    var el = rootEl && rootEl.querySelector('#builderSectionDoneCheck');
+    if (!el) return;
+    el.addEventListener('change', function () {
+      var stepId = el.getAttribute('data-section-id');
+      if (!stepId) return;
+      if (!state.sectionChecks) state.sectionChecks = {};
+      /* true/false explícito: desmarcar gana sobre el “listo” automático */
+      state.sectionChecks[stepId] = !!el.checked;
+      saveState();
+      renderProgressRail();
+      updateNavButtons();
+    });
+  }
 
   function renderProjectType() {
     var types = ProjectTypesEngine.getTypes();
@@ -43,7 +80,7 @@ var AiProjectBuilderView = (function () {
       : 'Seleccionar tipo de proyecto';
     var openCls = projectTypePickerOpen ? ' is-open' : '';
     return '<div class="builder-step-content builder-step-content--types">' +
-      '<h2 class="builder-step-title">¿Qué tipo de proyecto deseas crear?</h2>' +
+      stepTitleHtml('¿Qué tipo de proyecto deseas crear?') +
       '<p class="builder-step-desc">Elige el tipo de vivienda o proyecto.</p>' +
       '<div class="builder-type-picker' + openCls + '" id="builderTypePicker">' +
         '<button type="button" class="builder-type-picker-toggle" id="builderTypePickerToggle"' +
@@ -68,25 +105,54 @@ var AiProjectBuilderView = (function () {
 
   function renderBranding() {
     var b = state.branding || {};
-    var proposals = b.themeProposals || [];
+    var showLogo = b.showHeroLogo !== false;
+    var logoStyle = b.logoStyle === 'avatar' ? 'avatar' : 'flat';
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Identidad corporativa</h2>' +
-      '<p class="builder-step-desc">Sube logo e imagen de referencia. Extraeré colores y generaré el tema visual.</p>' +
-      '<div class="builder-upload-grid">' +
+      stepTitleHtml('Logo') +
+      '<p class="builder-step-desc">Sube el logo del proyecto. Aparece en el hero, justo arriba del título.</p>' +
+      '<div class="builder-upload-grid builder-upload-grid-single">' +
         uploadZone('logo', 'Logo', 'image/*,.svg', b.logo) +
-        uploadZone('reference', 'Imagen de referencia', 'image/*', b.reference) +
-        uploadZone('brandManual', 'Manual de marca (opcional)', '.pdf,image/*', b.brandManual) +
       '</div>' +
-      (b.status === 'analyzing' ? '<div class="builder-processing">Analizando identidad visual...</div>' : '') +
-      (proposals.length ? renderThemeProposals(proposals, b.selectedProposal) : '') +
+      '<div class="builder-confirm-form" style="margin-top:16px">' +
+        '<label class="builder-check-row">' +
+          '<input type="checkbox" id="brandShowHeroLogo"' + (showLogo ? ' checked' : '') + '>' +
+          '<span>Mostrar logo en el hero</span>' +
+        '</label>' +
+        '<div class="builder-confirm-title" style="margin-top:8px">Formato en el hero</div>' +
+        '<label class="builder-check-row">' +
+          '<input type="radio" name="brandLogoStyle" value="flat" id="brandLogoStyleFlat"' +
+            (logoStyle === 'flat' ? ' checked' : '') + '>' +
+          '<span>Mantener formato</span>' +
+        '</label>' +
+        '<label class="builder-check-row">' +
+          '<input type="radio" name="brandLogoStyle" value="avatar" id="brandLogoStyleAvatar"' +
+            (logoStyle === 'avatar' ? ' checked' : '') + '>' +
+          '<span>Convertir a circular</span>' +
+        '</label>' +
+        '<p class="builder-menu-hint">' +
+          (logoStyle === 'avatar'
+            ? 'Se mostrará como foto de perfil circular (recorta bordes).'
+            : 'Se mostrará con su forma original (recomendado para PNG/SVG sin fondo).') +
+        '</p>' +
+      '</div>' +
       '</div>';
   }
 
   function renderVideoHero() {
     var v = state.heroVideo;
     var img = state.heroImage;
+    var hero = state.heroContent || {};
+    var nombre = hero.nombre || (state.projectInfo && state.projectInfo.nombre) || '';
+    var eslogan = hero.eslogan || '';
+    var btnLeft = hero.botonIzquierdo || 'Explorar';
+    var btnRight = hero.botonDerecho || 'Iniciar';
+    var waLink = hero.whatsappLink || '';
+    var waMsg = hero.whatsappMessage || '';
+    var shareUrl = hero.shareUrl || '';
+    var showWa = hero.showWhatsapp !== false;
+    var showShare = hero.showShare !== false;
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Hero</h2>' +
+      stepTitleHtml('Hero') +
       '<p class="builder-step-desc">Elige video o imagen de fondo para la portada del showroom. Solo se usa uno a la vez.</p>' +
       '<div class="builder-hero-grid">' +
         '<div class="builder-hero-option' + (v && v.previewUrl ? ' is-active' : '') + '">' +
@@ -96,7 +162,7 @@ var AiProjectBuilderView = (function () {
           '<div class="builder-dropzone builder-dropzone-large" id="videoDropzone">' +
             (v && v.previewUrl
               ? '<video src="' + AdminUI.escapeHtml(v.previewUrl) + '" controls muted class="builder-video-preview"></video>' +
-                '<div class="builder-file-meta">Duración: ' + AdminUI.escapeHtml(v.durationLabel) + ' · ' + formatBytes(v.size) + '</div>'
+                '<div class="builder-file-meta">Duración: ' + AdminUI.escapeHtml(v.durationLabel || '-') + ' · ' + formatBytes(v.size) + '</div>'
               : '<div class="builder-dropzone-inner"><span>Arrastra MP4, MOV o WebM</span><span class="builder-dropzone-hint">Máx. 200 MB</span></div>') +
           '</div>' +
           '<input type="file" id="videoInput" accept="' + MediaEngine.ACCEPT + '" hidden>' +
@@ -114,7 +180,343 @@ var AiProjectBuilderView = (function () {
           '</div>' +
           '<input type="file" id="heroImageInput" accept="' + MediaEngine.IMAGE_ACCEPT + '" hidden>' +
         '</div>' +
-      '</div></div>';
+      '</div>' +
+      '<div class="builder-confirm-form" id="heroContentForm">' +
+        '<div class="builder-confirm-title">Textos de la portada</div>' +
+        '<div class="builder-field">' +
+          '<label for="heroNombreInput">Nombre del proyecto</label>' +
+          '<input type="text" id="heroNombreInput" maxlength="120" placeholder="PROYECTO DEMO" value="' +
+            AdminUI.escapeHtml(nombre) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="heroEsloganInput">Eslogan</label>' +
+          '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Proyecto Demo" value="' +
+            AdminUI.escapeHtml(eslogan) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="heroBtnLeftInput">Texto botón izquierdo</label>' +
+          '<input type="text" id="heroBtnLeftInput" maxlength="40" placeholder="Explorar" value="' +
+            AdminUI.escapeHtml(btnLeft) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="heroBtnRightInput">Texto botón derecho</label>' +
+          '<input type="text" id="heroBtnRightInput" maxlength="40" placeholder="Iniciar" value="' +
+            AdminUI.escapeHtml(btnRight) + '">' +
+        '</div>' +
+        '<div class="builder-confirm-title">WhatsApp y compartir</div>' +
+        '<label class="builder-check-row">' +
+          '<input type="checkbox" id="heroShowWhatsappInput"' + (showWa ? ' checked' : '') + '>' +
+          '<span>Mostrar icono de WhatsApp</span>' +
+        '</label>' +
+        '<div class="builder-field">' +
+          '<label for="heroWhatsappLinkInput">Link / número de WhatsApp</label>' +
+          '<input type="text" id="heroWhatsappLinkInput" maxlength="180" ' +
+            'placeholder="573001112233 o https://wa.me/573001112233" value="' +
+            AdminUI.escapeHtml(waLink) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="heroWhatsappMsgInput">Mensaje inicial de WhatsApp</label>' +
+          '<input type="text" id="heroWhatsappMsgInput" maxlength="280" ' +
+            'placeholder="Hola, quiero más información..." value="' +
+            AdminUI.escapeHtml(waMsg) + '">' +
+        '</div>' +
+        '<label class="builder-check-row">' +
+          '<input type="checkbox" id="heroShowShareInput"' + (showShare ? ' checked' : '') + '>' +
+          '<span>Mostrar icono de compartir</span>' +
+        '</label>' +
+        '<div class="builder-field">' +
+          '<label for="heroShareUrlInput">Link al compartir</label>' +
+          '<input type="url" id="heroShareUrlInput" maxlength="400" ' +
+            'placeholder="Vacío = URL actual del showroom" value="' +
+            AdminUI.escapeHtml(shareUrl) + '">' +
+        '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function renderMenu() {
+    MenuSyncEngine.ensureMenuState(state);
+    var menu = state.menuConfig;
+    var projectName = menu.projectName || (state.projectInfo && state.projectInfo.nombre) || '';
+    var description = menu.description || '';
+
+    function buildOptions(list, selected) {
+      return list.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
+          AdminUI.escapeHtml(o.label) + '</option>';
+      }).join('');
+    }
+
+    var expandedIdx = typeof state.menuExpandedIdx === 'number' ? state.menuExpandedIdx : -1;
+
+    var itemsHtml = (menu.items || []).map(function (item, idx) {
+      var isSub = item.action === 'submenu';
+      var isSoon = item.action === 'proximamente';
+      var isOpen = expandedIdx === idx;
+      var actionSummary = isSoon ? 'Próximamente' : (isSub ? 'Submenú' : 'Sección');
+      var targetOpts = isSoon
+        ? buildOptions([{ value: 'proximamente', label: 'Próximamente' }], 'proximamente')
+        : (isSub
+          ? buildOptions(MenuConfig.SUBMENU_OPTIONS, item.target || 'menu-proyecto')
+          : buildOptions(MenuConfig.SECTION_OPTIONS, item.target || 'proximamente'));
+      var childrenHtml = '';
+      if (isSub && item.target === 'menu-proyecto') {
+        childrenHtml =
+          '<div class="builder-menu-children">' +
+            '<div class="builder-menu-children-title">Ítems del submenú</div>' +
+            (item.children || []).map(function (child, cidx) {
+              return '<div class="builder-menu-child-row" data-menu-child-idx="' + cidx + '">' +
+                '<label class="builder-check-row builder-check-inline">' +
+                  '<input type="checkbox" data-menu-child-enabled' + (child.enabled !== false ? ' checked' : '') + '>' +
+                '</label>' +
+                '<input type="text" data-menu-child-label maxlength="60" value="' + AdminUI.escapeHtml(child.label) + '">' +
+                '<select data-menu-child-target>' + buildOptions(MenuConfig.SECTION_OPTIONS, child.target || child.id) + '</select>' +
+                '<button type="button" class="builder-menu-icon-btn" data-menu-child-remove title="Quitar">×</button>' +
+              '</div>';
+            }).join('') +
+            '<button type="button" class="builder-header-action-btn" data-menu-child-add>+ Ítem submenú</button>' +
+          '</div>';
+      } else if (isSub && item.target === 'menu-contacto') {
+        childrenHtml =
+          '<p class="builder-menu-hint">Contacto usa enlaces del proyecto (tel, web, WhatsApp…). Se editan en Info / Hero.</p>';
+      } else if (isSub && item.target === 'proximamente') {
+        childrenHtml =
+          '<p class="builder-menu-hint">Al hacer clic llevará a Próximamente (misma acción que Iniciar en el Hero).</p>';
+      }
+
+      return '<div class="builder-menu-item' + (isOpen ? ' is-open' : '') + '" data-menu-idx="' + idx + '">' +
+        '<button type="button" class="builder-menu-item-summary" data-menu-toggle aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
+          '<span class="builder-menu-item-chevron" aria-hidden="true"></span>' +
+          '<span class="builder-menu-item-summary-text">' +
+            '<span class="builder-menu-item-name">' + AdminUI.escapeHtml(item.label || 'Botón') + '</span>' +
+            '<span class="builder-menu-item-meta">' + actionSummary +
+              (item.enabled === false ? ' · oculto' : '') +
+            '</span>' +
+          '</span>' +
+        '</button>' +
+        '<div class="builder-menu-item-body"' + (isOpen ? '' : ' hidden') + '>' +
+          '<div class="builder-menu-item-top">' +
+            '<label class="builder-check-row builder-check-inline">' +
+              '<input type="checkbox" data-menu-enabled' + (item.enabled !== false ? ' checked' : '') + '>' +
+              '<span>Visible</span>' +
+            '</label>' +
+            '<button type="button" class="builder-menu-icon-btn" data-menu-remove title="Quitar botón">×</button>' +
+          '</div>' +
+          '<div class="builder-field">' +
+            '<label>Nombre del botón</label>' +
+            '<input type="text" data-menu-label maxlength="60" value="' + AdminUI.escapeHtml(item.label) + '">' +
+          '</div>' +
+          '<div class="builder-menu-row-2">' +
+            '<div class="builder-field">' +
+              '<label>Al hacer clic</label>' +
+              '<select data-menu-action>' +
+                '<option value="section"' + (!isSub && !isSoon ? ' selected' : '') + '>Abrir sección</option>' +
+                '<option value="submenu"' + (isSub ? ' selected' : '') + '>Abrir submenú</option>' +
+                '<option value="proximamente"' + (isSoon ? ' selected' : '') + '>Próximamente</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>' + (isSoon ? 'Destino' : (isSub ? 'Cuál submenú' : 'Cuál sección')) + '</label>' +
+              '<select data-menu-target>' + targetOpts + '</select>' +
+            '</div>' +
+          '</div>' +
+          childrenHtml +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="builder-step-content">' +
+      stepTitleHtml('Menú') +
+      '<p class="builder-step-desc">Cabecera y botones del menú del showroom. Cada botón puede abrir una sección o un submenú.</p>' +
+      '<div class="builder-confirm-form">' +
+        '<div class="builder-confirm-title">Cabecera del menú</div>' +
+        '<div class="builder-field">' +
+          '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
+          '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="menuDescriptionInput">Descripción (línea bajo el nombre)</label>' +
+          '<input type="text" id="menuDescriptionInput" maxlength="160" placeholder="Constructora Demo S.A.S." value="' +
+            AdminUI.escapeHtml(description) + '">' +
+        '</div>' +
+      '</div>' +
+      '<div class="builder-confirm-form builder-menu-list-wrap">' +
+        '<div class="builder-confirm-title">Botones del menú</div>' +
+        '<p class="builder-menu-hint">No hace falta crear “Submenú 1 / Submenú 2” en el sidebar: eliges por botón si abre sección o submenú.</p>' +
+        itemsHtml +
+        '<button type="button" class="builder-header-action-btn is-primary" id="menuAddBtn">+ Agregar botón</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderViviendas() {
+    ViviendasSyncEngine.ensureState(state);
+    var items = state.viviendas || [];
+    var expandedIdx = typeof state.viviendaExpandedIdx === 'number' ? state.viviendaExpandedIdx : -1;
+
+    function estadoOptions(selected) {
+      return ViviendasSyncEngine.ESTADOS.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
+          AdminUI.escapeHtml(o.label) + '</option>';
+      }).join('');
+    }
+
+    function planosModoOptions(selected) {
+      return ViviendasSyncEngine.PLANOS_MODOS.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
+          AdminUI.escapeHtml(o.label) + '</option>';
+      }).join('');
+    }
+
+    function tourModoOptions(selected) {
+      return ViviendasSyncEngine.TOUR360_MODOS.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
+          AdminUI.escapeHtml(o.label) + '</option>';
+      }).join('');
+    }
+
+    var itemsHtml = items.map(function (item, idx) {
+      var isOpen = expandedIdx === idx;
+      var meta = (item.codigo ? item.codigo + ' · ' : '') +
+        ViviendasSyncEngine.formatPrice(item.precio) +
+        (item.estado === 'reservado' ? ' · Reservado' : '') +
+        (item.estado === 'vendido' ? ' · Vendido' : '') +
+        (item.publicado === false ? ' · oculto' : '');
+
+      var planName = item.planFileName ||
+        (item.plans && item.plans[0] && (item.plans[0].label || 'Plano cargado')) ||
+        '';
+      var planosFileBlock = item.planosModo === 'file'
+        ? '<div class="builder-field builder-vivienda-media-extra">' +
+            '<label>Archivo de plano (PDF o imagen)</label>' +
+            '<div class="builder-vivienda-file-row">' +
+              '<input type="file" data-vivienda-plan-file accept=".pdf,image/*,.png,.jpg,.jpeg,.webp" hidden>' +
+              '<button type="button" class="builder-header-action-btn" data-vivienda-plan-pick>Elegir archivo</button>' +
+              '<span class="builder-vivienda-file-name">' +
+                AdminUI.escapeHtml(planName || 'Sin archivo') +
+              '</span>' +
+            '</div>' +
+          '</div>'
+        : '<p class="builder-menu-hint">Al hacer clic en Ver Planos se mostrará Próximamente.</p>';
+
+      var tourLinkBlock = item.tour360Modo === 'link'
+        ? '<div class="builder-field builder-vivienda-media-extra">' +
+            '<label>Link del recorrido 360°</label>' +
+            '<input type="url" data-vivienda-link360 maxlength="500" placeholder="https://..." value="' +
+              AdminUI.escapeHtml(item.link360 || '') + '">' +
+          '</div>'
+        : '<p class="builder-menu-hint">Al hacer clic en Ver 360° se mostrará Próximamente.</p>';
+
+      return '<div class="builder-menu-item' + (isOpen ? ' is-open' : '') + '" data-vivienda-idx="' + idx + '">' +
+        '<button type="button" class="builder-menu-item-summary" data-vivienda-toggle aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
+          '<span class="builder-menu-item-chevron" aria-hidden="true"></span>' +
+          '<span class="builder-menu-item-summary-text">' +
+            '<span class="builder-menu-item-name">' + AdminUI.escapeHtml(item.nombre || 'Vivienda') + '</span>' +
+            '<span class="builder-menu-item-meta">' + AdminUI.escapeHtml(meta) + '</span>' +
+          '</span>' +
+        '</button>' +
+        '<div class="builder-menu-item-body"' + (isOpen ? '' : ' hidden') + '>' +
+          '<div class="builder-menu-item-top">' +
+            '<label class="builder-check-row builder-check-inline">' +
+              '<input type="checkbox" data-vivienda-publicado' + (item.publicado !== false ? ' checked' : '') + '>' +
+              '<span>Visible en showroom</span>' +
+            '</label>' +
+            '<button type="button" class="builder-menu-icon-btn" data-vivienda-remove title="Quitar tarjeta">×</button>' +
+          '</div>' +
+          '<div class="builder-menu-row-2">' +
+            '<div class="builder-field">' +
+              '<label>Código / unidad</label>' +
+              '<input type="text" data-vivienda-codigo maxlength="40" placeholder="T1-101" value="' +
+                AdminUI.escapeHtml(item.codigo || '') + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Nombre</label>' +
+              '<input type="text" data-vivienda-nombre maxlength="120" value="' +
+                AdminUI.escapeHtml(item.nombre || '') + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-menu-row-2">' +
+            '<div class="builder-field">' +
+              '<label>Tipo</label>' +
+              '<input type="text" data-vivienda-tipo maxlength="60" placeholder="Apartamento" value="' +
+                AdminUI.escapeHtml(item.tipo || '') + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Estado</label>' +
+              '<select data-vivienda-estado>' + estadoOptions(item.estado || 'disponible') + '</select>' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-menu-row-2">' +
+            '<div class="builder-field">' +
+              '<label>Precio (COP)</label>' +
+              '<input type="number" data-vivienda-precio min="0" step="1000" value="' +
+                AdminUI.escapeHtml(String(item.precio || 0)) + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Área (m²)</label>' +
+              '<input type="number" data-vivienda-area min="0" step="0.1" value="' +
+                AdminUI.escapeHtml(String(item.area_m2 || 0)) + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-vivienda-specs">' +
+            '<div class="builder-field">' +
+              '<label>Habitaciones</label>' +
+              '<input type="number" data-vivienda-habitaciones min="0" step="1" value="' +
+                AdminUI.escapeHtml(String(item.habitaciones || 0)) + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Baños</label>' +
+              '<input type="number" data-vivienda-banos min="0" step="1" value="' +
+                AdminUI.escapeHtml(String(item.banos || 0)) + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Parqueaderos</label>' +
+              '<input type="number" data-vivienda-parqueaderos min="0" step="1" value="' +
+                AdminUI.escapeHtml(String(item.parqueaderos || 0)) + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-menu-row-2">' +
+            '<div class="builder-field">' +
+              '<label>Torre</label>' +
+              '<input type="text" data-vivienda-torre maxlength="40" placeholder="Torre 1" value="' +
+                AdminUI.escapeHtml(item.torre || '') + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label>Piso</label>' +
+              '<input type="number" data-vivienda-piso step="1" value="' +
+                AdminUI.escapeHtml(item.piso != null && item.piso !== '' ? String(item.piso) : '') + '">' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-vivienda-media">' +
+            '<div class="builder-confirm-title">Ver Planos</div>' +
+            '<div class="builder-field">' +
+              '<label>Al hacer clic</label>' +
+              '<select data-vivienda-planos-modo>' + planosModoOptions(item.planosModo || 'proximamente') + '</select>' +
+            '</div>' +
+            planosFileBlock +
+          '</div>' +
+          '<div class="builder-vivienda-media">' +
+            '<div class="builder-confirm-title">Ver 360°</div>' +
+            '<div class="builder-field">' +
+              '<label>Al hacer clic</label>' +
+              '<select data-vivienda-tour360-modo>' + tourModoOptions(item.tour360Modo || 'proximamente') + '</select>' +
+            '</div>' +
+            tourLinkBlock +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="builder-step-content">' +
+      stepTitleHtml('Viviendas') +
+      '<p class="builder-step-desc">Tarjetas del menú Viviendas en el showroom. Crea cada una a mano: código, precio, áreas y estado.</p>' +
+      '<div class="builder-confirm-form builder-menu-list-wrap">' +
+        '<div class="builder-confirm-title">Tarjetas</div>' +
+        '<p class="builder-menu-hint">Las tarjetas aparecen en “Selecciona tu vivienda”. Guarda para sincronizarlas con el proyecto.</p>' +
+        (itemsHtml || '<p class="builder-menu-hint">Aún no hay viviendas. Agrega la primera tarjeta.</p>') +
+        '<button type="button" class="builder-header-action-btn is-primary" id="viviendaAddBtn">+ Agregar vivienda</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function renderGallery() {
@@ -125,7 +527,7 @@ var AiProjectBuilderView = (function () {
       groups[item.category].push(item);
     });
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Galería</h2>' +
+      stepTitleHtml('Galería') +
       '<p class="builder-step-desc">Arrastra imágenes. Las clasificaré, ordenaré y eliminaré duplicados.</p>' +
       '<div class="builder-dropzone" id="galleryDropzone">' +
         '<div class="builder-dropzone-inner"><span>Arrastra múltiples imágenes</span></div>' +
@@ -148,7 +550,7 @@ var AiProjectBuilderView = (function () {
   function renderPanoramas() {
     var items = state.panoramas || [];
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Recorridos 360°</h2>' +
+      stepTitleHtml('Recorridos 360°') +
       '<p class="builder-step-desc">Sube panoramas. Identificaré cada espacio automáticamente.</p>' +
       '<div class="builder-dropzone" id="panoramaDropzone">' +
         '<div class="builder-dropzone-inner"><span class="builder-dropzone-icon">🔮</span><span>Arrastra panoramas 360°</span></div>' +
@@ -174,7 +576,7 @@ var AiProjectBuilderView = (function () {
 
   function renderDocumentStep(context, title, desc, items) {
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">' + title + '</h2>' +
+      stepTitleHtml(title) +
       '<p class="builder-step-desc">' + desc + '</p>' +
       '<div class="builder-dropzone" id="' + context + 'Dropzone">' +
         '<div class="builder-dropzone-inner"><span class="builder-dropzone-icon">📄</span><span>Arrastra documentos</span></div>' +
@@ -196,7 +598,7 @@ var AiProjectBuilderView = (function () {
   function renderInfo() {
     var info = state.projectInfo || {};
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Información del proyecto</h2>' +
+      stepTitleHtml('Información del proyecto') +
       '<p class="builder-step-desc">Pega texto comercial o sube un PDF. Extraeré la información automáticamente.</p>' +
       '<textarea class="builder-textarea" id="infoTextInput" placeholder="Pega aquí la información comercial del proyecto...">' + AdminUI.escapeHtml(info._rawText || '') + '</textarea>' +
       '<div class="builder-info-actions">' +
@@ -233,13 +635,13 @@ var AiProjectBuilderView = (function () {
     var ai = state.aiContent || {};
     if (!ai.heroText) {
       return '<div class="builder-step-content">' +
-        '<h2 class="builder-step-title">Asistente IA</h2>' +
+        stepTitleHtml('Asistente IA') +
         '<p class="builder-step-desc">Generaré textos comerciales, FAQs y contenido para el chatbot.</p>' +
         '<button type="button" class="btn-primary builder-generate-btn" id="generateAiBtn">Generar contenido con IA</button>' +
         '</div>';
     }
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Contenido generado</h2>' +
+      stepTitleHtml('Contenido generado') +
       '<div class="builder-ai-section"><label>Texto del Hero</label><p>' + AdminUI.escapeHtml(ai.heroText) + '</p></div>' +
       '<div class="builder-ai-section"><label>Descripción comercial</label><p>' + AdminUI.escapeHtml(ai.descripcionComercial) + '</p></div>' +
       '<div class="builder-ai-section"><label>Beneficios</label><ul>' + ai.beneficios.map(function (b) { return '<li>' + AdminUI.escapeHtml(b) + '</li>'; }).join('') + '</ul></div>' +
@@ -255,13 +657,13 @@ var AiProjectBuilderView = (function () {
     var suggestions = state.hotspotSuggestions || [];
     if (!suggestions.length) {
       return '<div class="builder-step-content">' +
-        '<h2 class="builder-step-title">Hotspots</h2>' +
+        stepTitleHtml('Hotspots') +
         '<p class="builder-step-desc">Analizaré renders maestros y propondré hotspots.</p>' +
         '<button type="button" class="btn-primary" id="analyzeHotspotsBtn">Analizar y proponer hotspots</button>' +
         '</div>';
     }
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Sugerencias de hotspots</h2>' +
+      stepTitleHtml('Sugerencias de hotspots') +
       '<p class="builder-step-desc">Selecciona cuáles aceptar. Podrás editarlos después en el Editor Visual.</p>' +
       '<div class="builder-hotspot-list">' +
         suggestions.map(function (hs) {
@@ -278,7 +680,7 @@ var AiProjectBuilderView = (function () {
     var v = state.validation || ValidationEngine.validate(state);
     state.validation = v;
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Validación pre-publicación</h2>' +
+      stepTitleHtml('Validación pre-publicación') +
       '<div class="builder-validation-score">Completitud: ' + v.score + '%</div>' +
       '<div class="builder-checklist">' +
         v.checks.map(function (c) {
@@ -302,7 +704,7 @@ var AiProjectBuilderView = (function () {
         '<button type="button" class="btn-ghost" id="newBuilderBtn">Crear otro proyecto</button></div>';
     }
     return '<div class="builder-step-content">' +
-      '<h2 class="builder-step-title">Publicar proyecto</h2>' +
+      stepTitleHtml('Publicar proyecto') +
       '<p class="builder-step-desc">Al publicar, crearé automáticamente toda la estructura BOXIES.</p>' +
       '<div class="builder-publish-summary">' +
         summaryRow('Tipo', ProjectTypesEngine.getTypeLabel(state.projectType)) +
@@ -321,10 +723,16 @@ var AiProjectBuilderView = (function () {
   }
 
   function uploadZone(id, label, accept, current) {
+    var hasPreview = !!(current && current.previewUrl);
     return '<div class="builder-upload-card">' +
-      '<div class="builder-upload-label">' + AdminUI.escapeHtml(label) + '</div>' +
+      '<div class="builder-upload-label">' +
+        '<span>' + AdminUI.escapeHtml(label) + '</span>' +
+        (hasPreview
+          ? '<button type="button" class="builder-upload-remove" data-upload-remove="' + id + '" title="Eliminar" aria-label="Eliminar logo">×</button>'
+          : '') +
+      '</div>' +
       '<label class="builder-upload-zone" data-upload="' + id + '">' +
-        (current && current.previewUrl
+        (hasPreview
           ? '<img src="' + AdminUI.escapeHtml(current.previewUrl) + '" class="builder-upload-preview" alt="">'
           : '<span class="builder-upload-placeholder">+ Subir</span>') +
         '<input type="file" data-file="' + id + '" accept="' + accept + '" hidden></label></div>';
@@ -365,6 +773,8 @@ var AiProjectBuilderView = (function () {
       case 'project-type': html = renderProjectType(); break;
       case 'branding': html = renderBranding(); break;
       case 'video-hero': html = renderVideoHero(); break;
+      case 'menu': html = renderMenu(); break;
+      case 'viviendas': html = renderViviendas(); break;
       case 'gallery': html = renderGallery(); break;
       case 'panoramas': html = renderPanoramas(); break;
       case 'plans': html = renderPlans(); break;
@@ -377,6 +787,7 @@ var AiProjectBuilderView = (function () {
     }
     panel.innerHTML = html;
     bindStepEvents(step.id);
+    bindSectionDoneCheck();
   }
 
   function renderShell() {
@@ -393,9 +804,7 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-header-title">BOXIES AI</span>' +
           '<div class="builder-header-actions">' +
             '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-            '<button type="button" class="builder-header-action-btn" id="builderValidateBtn">Validar</button>' +
             '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">Publicar</button>' +
-            '<button type="button" class="builder-header-action-btn is-muted" id="builderResetBtn">Reiniciar</button>' +
           '</div>' +
         '</header>' +
         '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Progreso del proyecto"></aside>' +
@@ -455,18 +864,83 @@ var AiProjectBuilderView = (function () {
     }
 
     if (stepId === 'branding') {
-      rootEl.querySelectorAll('[data-file]').forEach(function (input) {
+      rootEl.querySelectorAll('[data-file="logo"]').forEach(function (input) {
         input.addEventListener('change', function () {
           if (!input.files || !input.files[0]) return;
-          handleBrandingUpload(input.getAttribute('data-file'), input.files[0]);
+          handleBrandingUpload('logo', input.files[0]);
         });
       });
-      rootEl.querySelectorAll('[data-proposal]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var id = btn.getAttribute('data-proposal');
-          state.branding.selectedProposal = (state.branding.themeProposals || []).find(function (p) { return p.id === id; });
+      var removeLogoBtn = rootEl.querySelector('[data-upload-remove="logo"]');
+      if (removeLogoBtn) {
+        removeLogoBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!state.branding) state.branding = {};
+          if (state.branding.logo && state.branding.logo.previewUrl &&
+              String(state.branding.logo.previewUrl).indexOf('blob:') === 0) {
+            try { URL.revokeObjectURL(state.branding.logo.previewUrl); } catch (err) {}
+          }
+          state.branding.logo = null;
+          state.branding.logoCleared = true;
+          state.branding.status = null;
           saveState();
           renderStepContent();
+          updateNavButtons();
+          HeroSyncEngine.sync(state)
+            .then(function (result) {
+              if (result) AdminNotify.success('Logo eliminado del hero.');
+            })
+            .catch(function (err) {
+              AdminNotify.error(err.message || 'Error eliminando el logo');
+            });
+        });
+      }
+      var showLogoEl = rootEl.querySelector('#brandShowHeroLogo');
+      if (showLogoEl) {
+        showLogoEl.addEventListener('change', function () {
+          if (!state.branding) state.branding = {};
+          state.branding.showHeroLogo = !!showLogoEl.checked;
+          saveState();
+          HeroSyncEngine.sync(state)
+            .then(function (result) {
+              if (result) {
+                AdminNotify.success(
+                  state.branding.showHeroLogo
+                    ? 'Logo visible en el hero.'
+                    : 'Logo oculto en el hero.'
+                );
+              }
+            })
+            .catch(function (err) {
+              AdminNotify.error(err.message || 'Error guardando el logo');
+            });
+        });
+      }
+      rootEl.querySelectorAll('input[name="brandLogoStyle"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          if (!radio.checked) return;
+          if (!state.branding) state.branding = {};
+          state.branding.logoStyle = radio.value === 'avatar' ? 'avatar' : 'flat';
+          if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
+          saveState();
+          /* No re-render antes del sync: evita perder el valor elegido. */
+          var hint = rootEl.querySelector('.builder-confirm-form .builder-menu-hint');
+          if (hint) {
+            hint.textContent = state.branding.logoStyle === 'avatar'
+              ? 'Se mostrará como foto de perfil circular (recorta bordes).'
+              : 'Se mostrará con su forma original (recomendado para PNG/SVG sin fondo).';
+          }
+          HeroSyncEngine.sync(state)
+            .then(function (result) {
+              if (result) AdminNotify.success(
+                state.branding.logoStyle === 'avatar'
+                  ? 'Logo circular aplicado en el hero.'
+                  : 'Formato original aplicado en el hero.'
+              );
+            })
+            .catch(function (err) {
+              AdminNotify.error(err.message || 'Error guardando el logo');
+            });
         });
       });
     }
@@ -474,7 +948,10 @@ var AiProjectBuilderView = (function () {
     if (stepId === 'video-hero') {
       bindDropzone('videoDropzone', 'videoInput', handleVideoUpload);
       bindDropzone('heroImageDropzone', 'heroImageInput', handleHeroImageUpload);
+      bindHeroContentFields();
     }
+    if (stepId === 'menu') bindMenuFields();
+    if (stepId === 'viviendas') bindViviendasFields();
     if (stepId === 'gallery') bindDropzone('galleryDropzone', 'galleryInput', handleGalleryUpload, true);
     if (stepId === 'panoramas') bindDropzone('panoramaDropzone', 'panoramaInput', handlePanoramaUpload, true);
     if (stepId === 'plans') bindDropzone('plansDropzone', 'plansInput', function (files) { handleDocUpload(files, 'plans'); }, true);
@@ -520,6 +997,456 @@ var AiProjectBuilderView = (function () {
     updateNavButtons();
   }
 
+  function bindHeroContentFields() {
+    if (!state.heroContent) {
+      state.heroContent = {
+        nombre: '',
+        eslogan: '',
+        botonIzquierdo: 'Explorar',
+        botonDerecho: 'Iniciar',
+        whatsappLink: '',
+        whatsappMessage: '',
+        shareUrl: '',
+        showWhatsapp: true,
+        showShare: true
+      };
+    }
+
+    function readField(id, fallback) {
+      var el = rootEl.querySelector('#' + id);
+      if (!el) return fallback;
+      return el.value;
+    }
+
+    function readChecked(id, fallback) {
+      var el = rootEl.querySelector('#' + id);
+      if (!el) return fallback;
+      return !!el.checked;
+    }
+
+    function persistHeroContent() {
+      state.heroContent.nombre = readField('heroNombreInput', state.heroContent.nombre || '');
+      state.heroContent.eslogan = readField('heroEsloganInput', state.heroContent.eslogan || '');
+      state.heroContent.botonIzquierdo = readField('heroBtnLeftInput', state.heroContent.botonIzquierdo || 'Explorar') || 'Explorar';
+      state.heroContent.botonDerecho = readField('heroBtnRightInput', state.heroContent.botonDerecho || 'Iniciar') || 'Iniciar';
+      state.heroContent.whatsappLink = readField('heroWhatsappLinkInput', state.heroContent.whatsappLink || '');
+      state.heroContent.whatsappMessage = readField('heroWhatsappMsgInput', state.heroContent.whatsappMessage || '');
+      state.heroContent.shareUrl = readField('heroShareUrlInput', state.heroContent.shareUrl || '');
+      state.heroContent.showWhatsapp = readChecked('heroShowWhatsappInput', state.heroContent.showWhatsapp !== false);
+      state.heroContent.showShare = readChecked('heroShowShareInput', state.heroContent.showShare !== false);
+      if (state.heroContent.nombre) {
+        state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+          nombre: state.heroContent.nombre
+        });
+      }
+      saveState();
+    }
+
+    [
+      'heroNombreInput',
+      'heroEsloganInput',
+      'heroBtnLeftInput',
+      'heroBtnRightInput',
+      'heroWhatsappLinkInput',
+      'heroWhatsappMsgInput',
+      'heroShareUrlInput',
+      'heroShowWhatsappInput',
+      'heroShowShareInput'
+    ].forEach(function (id) {
+      var el = rootEl.querySelector('#' + id);
+      if (!el) return;
+      el.addEventListener('input', persistHeroContent);
+      el.addEventListener('change', persistHeroContent);
+    });
+  }
+
+  function bindMenuFields() {
+    MenuSyncEngine.ensureMenuState(state);
+
+    function persistFromDom(rerender) {
+      var menu = MenuSyncEngine.ensureMenuState(state);
+      var nameEl = rootEl.querySelector('#menuProjectNameInput');
+      var descEl = rootEl.querySelector('#menuDescriptionInput');
+      if (nameEl) menu.projectName = nameEl.value;
+      if (descEl) menu.description = descEl.value;
+
+      var nextItems = [];
+      rootEl.querySelectorAll('.builder-menu-item[data-menu-idx]').forEach(function (row) {
+        var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+        var prev = menu.items[idx] || MenuConfig.normalizeItem({});
+        var actionEl = row.querySelector('[data-menu-action]');
+        var targetEl = row.querySelector('[data-menu-target]');
+        var labelEl = row.querySelector('[data-menu-label]');
+        var enabledEl = row.querySelector('[data-menu-enabled]');
+        var action = actionEl ? actionEl.value : prev.action;
+        var target = targetEl ? targetEl.value : prev.target;
+        var children = prev.children || [];
+
+        if (action === 'proximamente') {
+          target = 'proximamente';
+          children = [];
+        } else if (action === 'submenu' && target === 'menu-proyecto') {
+          children = [];
+          row.querySelectorAll('.builder-menu-child-row').forEach(function (crow) {
+            var cidx = parseInt(crow.getAttribute('data-menu-child-idx'), 10);
+            var prevChild = (prev.children || [])[cidx] || {};
+            var clabel = crow.querySelector('[data-menu-child-label]');
+            var ctarget = crow.querySelector('[data-menu-child-target]');
+            var cenabled = crow.querySelector('[data-menu-child-enabled]');
+            children.push({
+              id: prevChild.id || MenuConfig.uid('child'),
+              label: clabel ? clabel.value : (prevChild.label || 'Ítem'),
+              enabled: cenabled ? !!cenabled.checked : true,
+              target: ctarget ? ctarget.value : (prevChild.target || 'descripcion')
+            });
+          });
+          if (!children.length) children = MenuConfig.defaultChildren();
+        } else {
+          children = [];
+          if (action === 'submenu' && (!target || target === 'tour360' || target === 'tipologias' || target === 'location')) {
+            target = target === 'proximamente' ? 'proximamente' : 'menu-proyecto';
+          }
+          if (action === 'section' && (target === 'menu-proyecto' || target === 'menu-contacto')) {
+            target = 'proximamente';
+          }
+        }
+
+        nextItems.push(MenuConfig.normalizeItem({
+          id: prev.id,
+          label: labelEl ? labelEl.value : prev.label,
+          enabled: enabledEl ? !!enabledEl.checked : true,
+          action: action,
+          target: target,
+          children: children
+        }));
+      });
+
+      menu.items = nextItems;
+      state.menuConfig = menu;
+      if (menu.projectName) {
+        state.projectInfo = Object.assign({}, state.projectInfo || {}, { nombre: menu.projectName });
+      }
+      saveState();
+      if (rerender) {
+        renderStepContent();
+        updateNavButtons();
+      }
+    }
+
+    function syncMenuNow(okMessage) {
+      saveState();
+      return MenuSyncEngine.sync(state)
+        .then(function (result) {
+          if (result) {
+            saveState();
+            if (okMessage) AdminNotify.success(okMessage);
+          }
+          return result;
+        })
+        .catch(function (err) {
+          AdminNotify.error(err.message || 'Error sincronizando el menú');
+        });
+    }
+
+    ['#menuProjectNameInput', '#menuDescriptionInput'].forEach(function (sel) {
+      var el = rootEl.querySelector(sel);
+      if (!el) return;
+      el.addEventListener('input', function () { persistFromDom(false); });
+      el.addEventListener('change', function () { persistFromDom(false); });
+    });
+
+    rootEl.querySelectorAll('.builder-menu-item').forEach(function (row) {
+      var toggle = row.querySelector('[data-menu-toggle]');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          state.menuExpandedIdx = state.menuExpandedIdx === idx ? -1 : idx;
+          saveState();
+          renderStepContent();
+        });
+      }
+
+      row.querySelectorAll('.builder-menu-item-body input, .builder-menu-item-body select').forEach(function (el) {
+        var needsRerender = el.hasAttribute('data-menu-action') || el.hasAttribute('data-menu-target');
+        el.addEventListener('change', function () {
+          if (needsRerender) {
+            state.menuExpandedIdx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          }
+          persistFromDom(needsRerender);
+          if (!needsRerender && el.hasAttribute('data-menu-label')) {
+            var nameEl = row.querySelector('.builder-menu-item-name');
+            if (nameEl) nameEl.textContent = el.value || 'Botón';
+          }
+        });
+        if (el.tagName === 'INPUT' && el.type === 'text') {
+          el.addEventListener('input', function () {
+            persistFromDom(false);
+            if (el.hasAttribute('data-menu-label')) {
+              var nameEl = row.querySelector('.builder-menu-item-name');
+              if (nameEl) nameEl.textContent = el.value || 'Botón';
+            }
+          });
+        }
+      });
+
+      var removeBtn = row.querySelector('[data-menu-remove]');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          persistFromDom(false);
+          if (!state.menuConfig.items[idx]) return;
+          state.menuConfig.items.splice(idx, 1);
+          state.menuExpandedIdx = -1;
+          saveState();
+          renderStepContent();
+          updateNavButtons();
+          syncMenuNow('Botón eliminado del showroom.');
+        });
+      }
+
+      var addChild = row.querySelector('[data-menu-child-add]');
+      if (addChild) {
+        addChild.addEventListener('click', function () {
+          persistFromDom(false);
+          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          state.menuExpandedIdx = idx;
+          var item = state.menuConfig.items[idx];
+          if (!item.children) item.children = [];
+          item.children.push({
+            id: MenuConfig.uid('child'),
+            label: 'Nuevo ítem',
+            enabled: true,
+            target: 'proximamente'
+          });
+          saveState();
+          renderStepContent();
+          syncMenuNow('Ítem agregado al submenú.');
+        });
+      }
+
+      row.querySelectorAll('[data-menu-child-remove]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var crow = btn.closest('[data-menu-child-idx]');
+          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          var cidx = crow ? parseInt(crow.getAttribute('data-menu-child-idx'), 10) : -1;
+          /* Mutar estado directo: no re-leer el DOM (evita reinsertar el ítem borrado). */
+          MenuSyncEngine.ensureMenuState(state);
+          state.menuExpandedIdx = idx;
+          if (cidx >= 0 && state.menuConfig.items[idx] && state.menuConfig.items[idx].children) {
+            state.menuConfig.items[idx].children.splice(cidx, 1);
+          }
+          saveState();
+          renderStepContent();
+          syncMenuNow('Ítem eliminado del showroom.');
+        });
+      });
+    });
+
+    var addBtn = rootEl.querySelector('#menuAddBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        persistFromDom(false);
+        state.menuConfig.items.push(MenuConfig.normalizeItem({
+          id: MenuConfig.uid('menu'),
+          label: 'Nuevo botón',
+          enabled: true,
+          action: 'proximamente',
+          target: 'proximamente',
+          children: []
+        }));
+        state.menuExpandedIdx = state.menuConfig.items.length - 1;
+        saveState();
+        renderStepContent();
+        updateNavButtons();
+        syncMenuNow('Botón agregado al menú.');
+      });
+    }
+  }
+
+  function bindViviendasFields() {
+    ViviendasSyncEngine.ensureState(state);
+
+    function persistFromDom(rerender) {
+      var next = [];
+      rootEl.querySelectorAll('.builder-menu-item[data-vivienda-idx]').forEach(function (row) {
+        var idx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+        var prev = (state.viviendas || [])[idx] || ViviendasSyncEngine.emptyItem();
+        function val(sel) {
+          var el = row.querySelector(sel);
+          return el ? el.value : '';
+        }
+        function checked(sel, fallback) {
+          var el = row.querySelector(sel);
+          return el ? !!el.checked : fallback;
+        }
+        next.push(ViviendasSyncEngine.normalizeItem({
+          id: prev.id,
+          localId: prev.localId,
+          codigo: val('[data-vivienda-codigo]'),
+          nombre: val('[data-vivienda-nombre]'),
+          tipo: val('[data-vivienda-tipo]'),
+          torre: val('[data-vivienda-torre]'),
+          piso: val('[data-vivienda-piso]'),
+          area_m2: val('[data-vivienda-area]'),
+          habitaciones: val('[data-vivienda-habitaciones]'),
+          banos: val('[data-vivienda-banos]'),
+          parqueaderos: val('[data-vivienda-parqueaderos]'),
+          precio: val('[data-vivienda-precio]'),
+          administracion: prev.administracion,
+          estado: val('[data-vivienda-estado]') || 'disponible',
+          publicado: checked('[data-vivienda-publicado]', true),
+          planosModo: val('[data-vivienda-planos-modo]') || prev.planosModo || 'proximamente',
+          plans: prev.plans || [],
+          planFileName: prev.planFileName || '',
+          tour360Modo: val('[data-vivienda-tour360-modo]') || prev.tour360Modo || 'proximamente',
+          link360: val('[data-vivienda-link360]') || prev.link360 || ''
+        }));
+      });
+      state.viviendas = next;
+      saveState();
+      if (rerender) {
+        renderStepContent();
+        updateNavButtons();
+      }
+    }
+
+    function syncNow(okMessage) {
+      saveState();
+      return ViviendasSyncEngine.sync(state, { requireProject: true })
+        .then(function (result) {
+          if (result) {
+            saveState();
+            AdminNotify.success(okMessage || ('Viviendas sincronizadas · ' + result.count));
+            renderStepContent();
+            updateNavButtons();
+          } else {
+            AdminNotify.error('No se pudo sincronizar. Abre BOXIES AI desde el showroom del proyecto.');
+          }
+        })
+        .catch(function (err) {
+          AdminNotify.error(err.message || 'Error sincronizando viviendas');
+        });
+    }
+
+    rootEl.querySelectorAll('.builder-menu-item[data-vivienda-idx]').forEach(function (row) {
+      var toggle = row.querySelector('[data-vivienda-toggle]');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          var idx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+          state.viviendaExpandedIdx = state.viviendaExpandedIdx === idx ? -1 : idx;
+          saveState();
+          renderStepContent();
+        });
+      }
+
+      row.querySelectorAll('.builder-menu-item-body input, .builder-menu-item-body select').forEach(function (el) {
+        if (el.type === 'file') return;
+        el.addEventListener('change', function () {
+          var needsRerender = el.hasAttribute('data-vivienda-planos-modo') ||
+            el.hasAttribute('data-vivienda-tour360-modo');
+          if (needsRerender) {
+            state.viviendaExpandedIdx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+          }
+          persistFromDom(needsRerender);
+          if (!needsRerender && (el.hasAttribute('data-vivienda-nombre') || el.hasAttribute('data-vivienda-codigo') ||
+              el.hasAttribute('data-vivienda-precio') || el.hasAttribute('data-vivienda-estado'))) {
+            var nameEl = row.querySelector('.builder-menu-item-name');
+            var metaEl = row.querySelector('.builder-menu-item-meta');
+            var idx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+            var item = state.viviendas[idx];
+            if (nameEl && item) nameEl.textContent = item.nombre || 'Vivienda';
+            if (metaEl && item) {
+              metaEl.textContent = (item.codigo ? item.codigo + ' · ' : '') +
+                ViviendasSyncEngine.formatPrice(item.precio) +
+                (item.estado === 'reservado' ? ' · Reservado' : '') +
+                (item.estado === 'vendido' ? ' · Vendido' : '') +
+                (item.publicado === false ? ' · oculto' : '');
+            }
+          }
+          updateNavButtons();
+        });
+        if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number' || el.type === 'url')) {
+          el.addEventListener('input', function () {
+            persistFromDom(false);
+            if (el.hasAttribute('data-vivienda-nombre')) {
+              var nameEl = row.querySelector('.builder-menu-item-name');
+              if (nameEl) nameEl.textContent = el.value || 'Vivienda';
+            }
+          });
+        }
+      });
+
+      var pickBtn = row.querySelector('[data-vivienda-plan-pick]');
+      var fileInput = row.querySelector('[data-vivienda-plan-file]');
+      if (pickBtn && fileInput) {
+        pickBtn.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function () {
+          var file = fileInput.files && fileInput.files[0];
+          if (!file) return;
+          persistFromDom(false);
+          var idx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+          var item = state.viviendas[idx];
+          if (!item) return;
+          ViviendasSyncEngine.setPendingPlanFile(item.localId, file);
+          item.planFileName = file.name;
+          item.planosModo = 'file';
+          state.viviendas[idx] = ViviendasSyncEngine.normalizeItem(item);
+          state.viviendaExpandedIdx = idx;
+          saveState();
+          renderStepContent();
+          updateNavButtons();
+        });
+      }
+
+      var removeBtn = row.querySelector('[data-vivienda-remove]');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+          var idx = parseInt(row.getAttribute('data-vivienda-idx'), 10);
+          persistFromDom(false);
+          if (!state.viviendas[idx]) return;
+          if (!confirm('¿Eliminar esta vivienda del showroom?')) return;
+          var removed = state.viviendas[idx];
+          if (removed && removed.localId) {
+            ViviendasSyncEngine.setPendingPlanFile(removed.localId, null);
+          }
+          state.viviendas.splice(idx, 1);
+          state.viviendaExpandedIdx = -1;
+          saveState();
+          renderStepContent();
+          updateNavButtons();
+          syncNow('Vivienda eliminada del showroom.');
+        });
+      }
+    });
+
+    var addBtn = rootEl.querySelector('#viviendaAddBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        persistFromDom(false);
+        state.viviendas.push(ViviendasSyncEngine.emptyItem());
+        state.viviendaExpandedIdx = state.viviendas.length - 1;
+        saveState();
+        addBtn.disabled = true;
+        ViviendasSyncEngine.sync(state, { requireProject: true })
+          .then(function (result) {
+            if (!result) {
+              throw new Error('Abre BOXIES AI desde el showroom (?proyecto=...) para guardar viviendas.');
+            }
+            saveState();
+            AdminNotify.success('Vivienda guardada · ' + result.count + ' en el showroom. Recarga la web.');
+          })
+          .catch(function (err) {
+            console.error('[Viviendas] sync', err);
+            AdminNotify.error(err.message || 'Error guardando vivienda');
+          })
+          .finally(function () {
+            renderStepContent();
+            updateNavButtons();
+          });
+      });
+    }
+  }
+
   function bindDropzone(zoneId, inputId, handler, multiple) {
     var zone = rootEl.querySelector('#' + zoneId);
     var input = rootEl.querySelector('#' + inputId);
@@ -539,23 +1466,33 @@ var AiProjectBuilderView = (function () {
   }
 
   async function handleBrandingUpload(field, file) {
+    if (field !== 'logo') return;
     if (!state.branding) state.branding = {};
-    state.branding[field] = { file: file, name: file.name, previewUrl: URL.createObjectURL(file) };
-    state.branding.status = 'analyzing';
+    var logoStyle = 'avatar';
+    try {
+      logoStyle = await BrandingEngine.detectLogoStyle(file);
+    } catch (e) {
+      logoStyle = 'avatar';
+    }
+    state.branding.logo = {
+      file: file,
+      name: file.name,
+      previewUrl: URL.createObjectURL(file),
+      logoStyle: logoStyle
+    };
+    state.branding.logoStyle = logoStyle;
+    state.branding.logoCleared = false;
+    if (state.branding.showHeroLogo == null) state.branding.showHeroLogo = true;
+    state.branding.status = 'ready';
+    state.branding.themeProposals = [];
+    state.branding.selectedProposal = null;
     saveState();
     renderStepContent();
-    try {
-      var result = await BrandingEngine.analyzeBranding(
-        state.branding.logo ? state.branding.logo.file : null,
-        state.branding.reference ? state.branding.reference.file : null,
-        state.branding.brandManual ? state.branding.brandManual.file : null
-      );
-      state.branding = Object.assign(state.branding, result);
-      saveState();
-    } catch (err) {
-      AdminNotify.error(err.message || 'Error analizando identidad visual');
-    }
-    renderStepContent();
+    AdminNotify.success(
+      logoStyle === 'avatar'
+        ? 'Logo listo. Sugerido: circular (puedes cambiarlo abajo).'
+        : 'Logo listo. Sugerido: formato original (puedes cambiarlo abajo).'
+    );
   }
 
   async function handleVideoUpload(file) {
@@ -654,15 +1591,101 @@ var AiProjectBuilderView = (function () {
     if (processing) return;
     processing = true;
     updateHeaderActions();
+
+    /* Si el formulario Hero está montado, leer checkboxes aunque no sea el paso actual. */
+    var showWaElAlways = rootEl && rootEl.querySelector('#heroShowWhatsappInput');
+    var showShareElAlways = rootEl && rootEl.querySelector('#heroShowShareInput');
+    if (showWaElAlways || showShareElAlways) {
+      if (!state.heroContent) state.heroContent = {};
+      if (showWaElAlways) state.heroContent.showWhatsapp = !!showWaElAlways.checked;
+      if (showShareElAlways) state.heroContent.showShare = !!showShareElAlways.checked;
+    }
+
+    var brandShowEl = rootEl && rootEl.querySelector('#brandShowHeroLogo');
+    if (brandShowEl) {
+      if (!state.branding) state.branding = {};
+      state.branding.showHeroLogo = !!brandShowEl.checked;
+    }
+    var brandStyleEl = rootEl && rootEl.querySelector('input[name="brandLogoStyle"]:checked');
+    if (brandStyleEl) {
+      if (!state.branding) state.branding = {};
+      state.branding.logoStyle = brandStyleEl.value === 'avatar' ? 'avatar' : 'flat';
+      if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
+    }
+
+    if (state.currentStep === BuilderWizard.getStepIndex('video-hero')) {
+      var nombreEl = rootEl && rootEl.querySelector('#heroNombreInput');
+      var esloganEl = rootEl && rootEl.querySelector('#heroEsloganInput');
+      var leftEl = rootEl && rootEl.querySelector('#heroBtnLeftInput');
+      var rightEl = rootEl && rootEl.querySelector('#heroBtnRightInput');
+      var waLinkEl = rootEl && rootEl.querySelector('#heroWhatsappLinkInput');
+      var waMsgEl = rootEl && rootEl.querySelector('#heroWhatsappMsgInput');
+      var shareEl = rootEl && rootEl.querySelector('#heroShareUrlInput');
+      var showWaEl = rootEl && rootEl.querySelector('#heroShowWhatsappInput');
+      var showShareEl = rootEl && rootEl.querySelector('#heroShowShareInput');
+      state.heroContent = Object.assign({
+        nombre: '',
+        eslogan: '',
+        botonIzquierdo: 'Explorar',
+        botonDerecho: 'Iniciar',
+        whatsappLink: '',
+        whatsappMessage: '',
+        shareUrl: '',
+        showWhatsapp: true,
+        showShare: true
+      }, state.heroContent || {}, {
+        nombre: nombreEl ? nombreEl.value : (state.heroContent && state.heroContent.nombre) || '',
+        eslogan: esloganEl ? esloganEl.value : (state.heroContent && state.heroContent.eslogan) || '',
+        botonIzquierdo: (leftEl ? leftEl.value : '') || 'Explorar',
+        botonDerecho: (rightEl ? rightEl.value : '') || 'Iniciar',
+        whatsappLink: waLinkEl ? waLinkEl.value : (state.heroContent && state.heroContent.whatsappLink) || '',
+        whatsappMessage: waMsgEl ? waMsgEl.value : (state.heroContent && state.heroContent.whatsappMessage) || '',
+        shareUrl: shareEl ? shareEl.value : (state.heroContent && state.heroContent.shareUrl) || '',
+        showWhatsapp: showWaEl ? !!showWaEl.checked : state.heroContent.showWhatsapp !== false,
+        showShare: showShareEl ? !!showShareEl.checked : state.heroContent.showShare !== false
+      });
+      if (state.heroContent.nombre) {
+        state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+          nombre: state.heroContent.nombre
+        });
+      }
+    }
+
+    if (state.currentStep === BuilderWizard.getStepIndex('menu') && rootEl) {
+      var mName = rootEl.querySelector('#menuProjectNameInput');
+      var mDesc = rootEl.querySelector('#menuDescriptionInput');
+      MenuSyncEngine.ensureMenuState(state);
+      if (mName) state.menuConfig.projectName = mName.value;
+      if (mDesc) state.menuConfig.description = mDesc.value;
+      /* Forzar lectura de filas vía change path: re-dispatch no; se persiste en bind.
+         Aquí solo cabecera; items ya van en state por bindMenuFields. */
+    }
+
     saveState();
 
-    HeroSyncEngine.sync(state)
-      .then(function (result) {
-        if (result) {
+    var syncHero = HeroSyncEngine.sync(state);
+    var syncMenu = typeof MenuSyncEngine !== 'undefined'
+      ? MenuSyncEngine.sync(state)
+      : Promise.resolve(null);
+    var syncViviendas = typeof ViviendasSyncEngine !== 'undefined'
+      ? ViviendasSyncEngine.sync(state)
+      : Promise.resolve(null);
+
+    Promise.all([syncHero, syncMenu, syncViviendas])
+      .then(function (results) {
+        var heroResult = results[0];
+        var menuResult = results[1];
+        var vivResult = results[2];
+        if (heroResult || menuResult || vivResult) {
           saveState();
-          AdminNotify.success('Guardado. El hero del showroom está actualizado.');
+          var parts = [];
+          if (heroResult) parts.push('hero');
+          if (menuResult) parts.push('menú');
+          if (vivResult) parts.push('viviendas');
+          AdminNotify.success('Guardado. Actualizado: ' + parts.join(', ') + '.');
+          updateNavButtons();
         } else if (MediaEngine.hasHeroMedia(state)) {
-          AdminNotify.error('Abre Administrar desde el showroom del proyecto para sincronizar el hero.');
+          AdminNotify.error('Abre Administrar desde el showroom del proyecto para sincronizar.');
         } else {
           AdminNotify.success('Progreso guardado en esta sesión.');
         }
@@ -674,17 +1697,6 @@ var AiProjectBuilderView = (function () {
         processing = false;
         updateHeaderActions();
       });
-  }
-
-  function handleValidate() {
-    state.validation = ValidationEngine.validate(state);
-    saveState();
-    goToStep(BuilderWizard.getStepIndex('validation'));
-    if (state.validation.ready) {
-      AdminNotify.success('Proyecto listo para publicar · ' + state.validation.score + '%');
-    } else {
-      AdminNotify.error('Completa los pendientes antes de publicar.');
-    }
   }
 
   async function handlePublish() {
@@ -736,13 +1748,8 @@ var AiProjectBuilderView = (function () {
     var saveBtn = rootEl.querySelector('#builderSaveBtn');
     if (saveBtn) saveBtn.addEventListener('click', handleSave);
 
-    var validateBtn = rootEl.querySelector('#builderValidateBtn');
-    if (validateBtn) validateBtn.addEventListener('click', handleValidate);
-
     var publishBtn = rootEl.querySelector('#builderPublishBtn');
     if (publishBtn) publishBtn.addEventListener('click', handlePublish);
-
-    rootEl.querySelector('#builderResetBtn').addEventListener('click', handleReset);
 
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
@@ -752,13 +1759,6 @@ var AiProjectBuilderView = (function () {
           : '../index.html';
       });
     }
-
-    rootEl.querySelector('#builderDockTabs').addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-step]');
-      if (!btn || btn.disabled) return;
-      var idx = parseInt(btn.getAttribute('data-step'), 10);
-      if (idx >= 0 && idx < BuilderWizard.STEPS.length) goToStep(idx);
-    });
 
     var rail = rootEl.querySelector('#builderProgressRail');
     if (rail) {
@@ -805,15 +1805,17 @@ var AiProjectBuilderView = (function () {
 
     try {
       await HeroSyncEngine.bindFromUrl(state);
+      if (typeof MenuSyncEngine !== 'undefined') {
+        await MenuSyncEngine.bindFromUrl(state);
+      }
+      if (typeof ViviendasSyncEngine !== 'undefined') {
+        await ViviendasSyncEngine.bindFromUrl(state);
+      }
       saveState();
     } catch (err) {
       console.warn('[Builder] bind project', err);
     }
 
-    rootEl.querySelector('#builderDockTabs').innerHTML = BuilderDock.renderTabs(
-      BuilderWizard.getSteps(),
-      state.currentStep
-    );
     bindGlobalEvents();
     renderAll();
   }

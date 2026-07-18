@@ -1,7 +1,9 @@
 /* Admin API — Hero (proyecto_config hero fields + project context) */
 var HeroApi = (function () {
   var CONFIG_SELECT =
-    'proyecto_id, texto_hero, logo_url, video_hero_url, imagen_hero_url, color_fondo, color_accento, updated_at';
+    'proyecto_id, titulo_hero, texto_hero, boton_hero_1, boton_hero_2, ' +
+    'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
+    'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento, updated_at';
 
   var PROJECT_SELECT =
     'id, nombre, ciudad, estado, slug, constructora_id, proyecto_config(' + CONFIG_SELECT + ')';
@@ -14,7 +16,10 @@ var HeroApi = (function () {
 
   function sanitizePayload(payload) {
     var data = {
+      titulo_hero: AdminUI.normalizeOptionalText(payload.titulo_hero),
       texto_hero: AdminUI.normalizeOptionalText(payload.texto_hero),
+      boton_hero_1: AdminUI.normalizeOptionalText(payload.boton_hero_1),
+      boton_hero_2: AdminUI.normalizeOptionalText(payload.boton_hero_2),
       logo_url: AdminUI.normalizeOptionalText(payload.logo_url),
       video_hero_url: AdminUI.normalizeOptionalText(payload.video_hero_url),
       imagen_hero_url: AdminUI.normalizeOptionalText(payload.imagen_hero_url),
@@ -24,14 +29,26 @@ var HeroApi = (function () {
     if (payload.project_default_theme != null) {
       data.project_default_theme = payload.project_default_theme;
     }
-    if (payload.titulo_hero != null) {
-      data.titulo_hero = AdminUI.normalizeOptionalText(payload.titulo_hero);
+    if (payload.whatsapp_float_link !== undefined) {
+      data.whatsapp_float_link = AdminUI.normalizeOptionalText(payload.whatsapp_float_link);
     }
-    if (payload.boton_hero_1 != null) {
-      data.boton_hero_1 = AdminUI.normalizeOptionalText(payload.boton_hero_1);
+    if (payload.whatsapp_float_message !== undefined) {
+      data.whatsapp_float_message = AdminUI.normalizeOptionalText(payload.whatsapp_float_message);
     }
-    if (payload.boton_hero_2 != null) {
-      data.boton_hero_2 = AdminUI.normalizeOptionalText(payload.boton_hero_2);
+    if (payload.share_float_url !== undefined) {
+      data.share_float_url = AdminUI.normalizeOptionalText(payload.share_float_url);
+    }
+    if (payload.show_whatsapp_float !== undefined) {
+      data.show_whatsapp_float = payload.show_whatsapp_float !== false;
+    }
+    if (payload.show_share_float !== undefined) {
+      data.show_share_float = payload.show_share_float !== false;
+    }
+    if (payload.show_hero_logo !== undefined) {
+      data.show_hero_logo = payload.show_hero_logo !== false;
+    }
+    if (payload.logo_style !== undefined) {
+      data.logo_style = payload.logo_style === 'avatar' ? 'avatar' : 'flat';
     }
     if (payload.hero_text_color != null) {
       data.hero_text_color = payload.hero_text_color === 'dark' ? 'dark' : 'light';
@@ -82,6 +99,23 @@ var HeroApi = (function () {
     throw new Error('No se pudo guardar la configuración del hero. Verifica permisos o vuelve a intentar.');
   }
 
+  async function updateProjectName(proyectoId, nombre) {
+    var name = AdminUI.normalizeOptionalText(nombre);
+    if (!name) return null;
+
+    var result = await AdminApi.getClient()
+      .from('proyectos')
+      .update({ nombre: name })
+      .eq('id', proyectoId)
+      .select('id, nombre')
+      .maybeSingle();
+
+    if (result.error) {
+      throw new Error(result.error.message || 'Error actualizando el nombre del proyecto');
+    }
+    return result.data;
+  }
+
   async function getForProject(proyectoId) {
     if (!proyectoId) {
       throw new Error('Selecciona un proyecto en el header.');
@@ -109,7 +143,10 @@ var HeroApi = (function () {
       },
       config: normalizeConfig(project.proyecto_config) || {
         proyecto_id: project.id,
+        titulo_hero: null,
         texto_hero: null,
+        boton_hero_1: null,
+        boton_hero_2: null,
         logo_url: null,
         video_hero_url: null,
         imagen_hero_url: null,
@@ -127,7 +164,14 @@ var HeroApi = (function () {
     var data = sanitizePayload(payload);
     data.proyecto_id = proyectoId;
 
-    return saveConfigRow(proyectoId, data);
+    if (payload.nombre_proyecto != null || payload.titulo_hero != null) {
+      var projectName = payload.nombre_proyecto != null ? payload.nombre_proyecto : payload.titulo_hero;
+      await updateProjectName(proyectoId, projectName);
+      data.titulo_hero = AdminUI.normalizeOptionalText(projectName);
+    }
+
+    var saved = await saveConfigRow(proyectoId, data);
+    return saved;
   }
 
   return {

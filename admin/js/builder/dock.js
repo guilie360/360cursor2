@@ -1,34 +1,10 @@
-/* Fixed bottom dock — step navigation only */
+/* Fixed bottom dock — fullscreen control only */
 var BuilderDock = (function () {
   var DOCK_HEIGHT = 56;
 
-  function renderTabs(steps, currentStep) {
-    return steps.map(function (step, idx) {
-      var cls = 'builder-dock-tab';
-      if (idx === currentStep) cls += ' is-active';
-      return '<button type="button" class="' + cls + '" data-step="' + idx + '"' +
-        ' aria-label="' + escapeAttr(step.label) + '" aria-current="' + (idx === currentStep ? 'step' : 'false') + '">' +
-        '<span class="builder-dock-tab-indicator" aria-hidden="true"></span>' +
-        '<span class="builder-dock-tab-icon" aria-hidden="true">' + BuilderIcons.render(step.icon) + '</span>' +
-        '<span class="builder-dock-tab-label">' + escapeHtml(step.shortLabel || step.label) + '</span>' +
-        '<span class="builder-dock-tooltip" role="tooltip">' + escapeHtml(step.label) + '</span>' +
-      '</button>';
-    }).join('');
-  }
-
-  function escapeHtml(v) {
-    return String(v == null ? '' : v)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function escapeAttr(v) {
-    return escapeHtml(v);
-  }
-
   function html() {
-    return '<footer class="builder-dock" id="builderDock" role="toolbar" aria-label="Navegación del proyecto">' +
+    return '<footer class="builder-dock" id="builderDock" role="toolbar" aria-label="Controles del builder">' +
       '<div class="builder-dock-inner">' +
-        '<div class="builder-dock-tabs" id="builderDockTabs"></div>' +
         '<div class="builder-dock-tools">' +
           '<button type="button" class="builder-dock-ctrl" id="builderFullscreenBtn" aria-label="Pantalla completa" data-fullscreen="enter">' +
             BuilderIcons.render('maximize') +
@@ -38,11 +14,7 @@ var BuilderDock = (function () {
     '</footer>';
   }
 
-  function updateTabs(rootEl, steps, currentStep) {
-    var tabs = rootEl.querySelector('#builderDockTabs');
-    if (!tabs) return;
-    tabs.innerHTML = renderTabs(steps, currentStep);
-  }
+  function updateTabs() {}
 
   function bindFullscreen(rootEl) {
     var btn = rootEl.querySelector('#builderFullscreenBtn');
@@ -85,7 +57,6 @@ var BuilderDock = (function () {
     updateTabs: updateTabs,
     bindFullscreen: bindFullscreen,
     applyBodyPadding: applyBodyPadding,
-    clearBodyPadding: clearBodyPadding,
-    renderTabs: renderTabs
+    clearBodyPadding: clearBodyPadding
   };
 })();

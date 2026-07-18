@@ -47,10 +47,44 @@ var StyleEngineRuntime = (function () {
   }
 
   function applyPersonalizarMaterialsIfAny() {
-    if (typeof StyleEngineStore === 'undefined' || typeof StyleEnginePersonalizarMapper === 'undefined') {
-      return;
+    if (typeof StyleEnginePersonalizarMapper === 'undefined') return;
+
+    var draft = null;
+    if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getPersonalizarDraft) {
+      draft = StyleEngineStore.getPersonalizarDraft();
     }
-    var draft = StyleEngineStore.getPersonalizarDraft && StyleEngineStore.getPersonalizarDraft();
+
+    var official = null;
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getOfficialDraft === 'function') {
+      official = ProjectThemeAuthority.getOfficialDraft();
+    }
+    if (!official && typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined') {
+      official = typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig
+        ? ThemeSystem.normalizeCustomConfig(PROJECT_DEFAULT_THEME_FALLBACK)
+        : PROJECT_DEFAULT_THEME_FALLBACK;
+    }
+
+    var meta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
+      ? StyleEngineStore.getActiveStyleMeta()
+      : null;
+    var isHall = meta && String(meta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
+
+    /* Si el tema activo es HALL, siempre usar el draft oficial completo */
+    if (isHall && official) {
+      draft = official;
+      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.setPersonalizarDraft) {
+        StyleEngineStore.setPersonalizarDraft(draft);
+      }
+    }
+
+    if (!draft && official) {
+      draft = official;
+      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.setPersonalizarDraft) {
+        StyleEngineStore.setPersonalizarDraft(draft);
+      }
+    }
+
     if (!draft) return;
     StyleEnginePersonalizarMapper.applyMaterials(draft);
   }

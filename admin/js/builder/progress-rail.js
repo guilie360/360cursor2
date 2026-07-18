@@ -3,7 +3,14 @@ var BuilderProgressRail = (function () {
   function shortName(name) {
     if (!name) return null;
     var base = String(name).replace(/\.[^.]+$/, '');
-    return base.length > 28 ? base.slice(0, 26) + '…' : base;
+    return base.length > 36 ? base.slice(0, 34) + '…' : base;
+  }
+
+  function isDone(state, stepId, autoDone) {
+    if (state.sectionChecks && Object.prototype.hasOwnProperty.call(state.sectionChecks, stepId)) {
+      return !!state.sectionChecks[stepId];
+    }
+    return !!autoDone;
   }
 
   function buildItems(state) {
@@ -18,79 +25,90 @@ var BuilderProgressRail = (function () {
       {
         label: 'Tipo',
         value: state.projectType ? ProjectTypesEngine.getTypeLabel(state.projectType) : null,
-        done: !!state.projectType,
+        done: isDone(state, 'project-type', !!state.projectType),
         stepIndex: BuilderWizard.getStepIndex('project-type')
       },
       {
         label: 'Logo',
         value: b.logo ? shortName(b.logo.name) : null,
-        done: !!(b.logo && (b.logo.file || b.logo.name)),
-        stepIndex: BuilderWizard.getStepIndex('branding')
-      },
-      {
-        label: 'Tema',
-        value: b.selectedProposal ? b.selectedProposal.name : null,
-        done: !!b.selectedProposal,
+        done: isDone(state, 'branding', !!(b.logo && (b.logo.file || b.logo.name || b.logo.uploadedUrl))),
         stepIndex: BuilderWizard.getStepIndex('branding')
       },
       {
         label: 'Hero',
         value: MediaEngine.heroMediaLabel(state),
-        done: MediaEngine.hasHeroMedia(state),
+        done: isDone(state, 'video-hero', MediaEngine.hasHeroMedia(state)),
         stepIndex: BuilderWizard.getStepIndex('video-hero')
+      },
+      {
+        label: 'Menú',
+        value: (function () {
+          var m = state.menuConfig;
+          if (!m || !Array.isArray(m.items) || !m.items.length) return null;
+          var n = m.items.filter(function (i) { return i.enabled !== false; }).length;
+          return n + ' botones';
+        })(),
+        done: isDone(state, 'menu', !!(state.menuConfig && Array.isArray(state.menuConfig.items) && state.menuConfig.items.length)),
+        stepIndex: BuilderWizard.getStepIndex('menu')
+      },
+      {
+        label: 'Viviendas',
+        value: (state.viviendas || []).length ? (state.viviendas.length + ' tarjetas') : null,
+        done: isDone(state, 'viviendas', (state.viviendas || []).length > 0),
+        stepIndex: BuilderWizard.getStepIndex('viviendas')
       },
       {
         label: 'Galería',
         value: (state.gallery || []).length ? (state.gallery.length + ' imágenes') : null,
-        done: (state.gallery || []).length > 0,
+        done: isDone(state, 'gallery', (state.gallery || []).length > 0),
         stepIndex: BuilderWizard.getStepIndex('gallery')
       },
       {
         label: '360°',
         value: panoCount ? (panoCount + ' espacios') : null,
-        done: panoCount > 0,
+        done: isDone(state, 'panoramas', panoCount > 0),
         stepIndex: BuilderWizard.getStepIndex('panoramas')
       },
       {
         label: 'Planos',
         value: (state.plans || []).length ? (state.plans.length + ' archivos') : null,
-        done: (state.plans || []).length > 0,
+        done: isDone(state, 'plans', (state.plans || []).length > 0),
         stepIndex: BuilderWizard.getStepIndex('plans')
       },
       {
         label: 'Docs',
         value: (state.downloads || []).length ? (state.downloads.length + ' docs') : null,
-        done: (state.downloads || []).length > 0,
+        done: isDone(state, 'downloads', (state.downloads || []).length > 0),
         stepIndex: BuilderWizard.getStepIndex('downloads')
       },
       {
         label: 'Info',
         value: info.nombre || null,
-        done: !!info.nombre,
+        done: isDone(state, 'info', !!info.nombre),
         stepIndex: BuilderWizard.getStepIndex('info')
       },
       {
         label: 'IA',
         value: ai.heroText ? 'Listo' : null,
-        done: !!(ai && ai.heroText),
+        done: isDone(state, 'ai-content', !!(ai && ai.heroText)),
         stepIndex: BuilderWizard.getStepIndex('ai-content')
       },
       {
         label: 'Hotspots',
         value: acceptedHotspots ? (acceptedHotspots + ' aceptados') : null,
-        done: acceptedHotspots > 0,
+        done: isDone(state, 'hotspots', acceptedHotspots > 0),
         stepIndex: BuilderWizard.getStepIndex('hotspots')
       },
       {
         label: 'Validación',
         value: validation.ready ? validation.score + '%' : null,
-        done: !!validation.ready,
+        done: isDone(state, 'validation', !!validation.ready),
         stepIndex: BuilderWizard.getStepIndex('validation')
       },
       {
         label: 'Publicado',
         value: state.published && state.publishResult ? state.publishResult.project.nombre : null,
-        done: !!state.published,
+        done: isDone(state, 'publish', !!state.published),
         stepIndex: BuilderWizard.getStepIndex('publish')
       }
     ];
@@ -124,13 +142,14 @@ var BuilderProgressRail = (function () {
 
   function applyLayoutVars() {
     document.documentElement.style.setProperty('--builder-header-height', '44px');
-    document.documentElement.style.setProperty('--builder-rail-width', '112px');
+    document.documentElement.style.setProperty('--builder-rail-width', '176px');
   }
 
   return {
     buildItems: buildItems,
     renderHtml: renderHtml,
     update: update,
-    applyLayoutVars: applyLayoutVars
+    applyLayoutVars: applyLayoutVars,
+    isDone: isDone
   };
 })();

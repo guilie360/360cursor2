@@ -2,32 +2,50 @@
 var SUPABASE_URL = 'https://emefdwzdfnqgjohbtvvn.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
 var DEFAULT_PROJECT_SLUG = 'proyecto-demo';
-var SHOWROOM_DEV_URL = 'http://localhost:8765/index.html?proyecto=' + DEFAULT_PROJECT_SLUG;
+var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/index.html?proyecto=' + DEFAULT_PROJECT_SLUG;
 
 /* Pantalla de pausa al volver a la pestaña (navResumeGate / PauseScreen).
    false = desactivada temporalmente. Cambiar a true para reactivarla. */
 var NAV_RESUME_GATE_ENABLED = false;
 
+/*
+ * HALL — estilo oficial (como se ve en file:// con el look correcto).
+ * Máscara/Superficies/Menú: Cristal · Botones: Sólido negro
+ * Hover: Cristal · Sombras: Alta · Viñeta: Media · Texto: Claro
+ * Portada: Posición 2 (EXPLORAR | título | INICIAR)
+ */
 var PROJECT_DEFAULT_THEME_FALLBACK = {
   themeKey: 'custom',
-  bg: '#161616',
-  menuColor: '#1a1a1a',
-  surface: '#2a2a2a',
-  accent: '#8f1d1d',
+  bg: '#000000',
+  menuColor: '#000000',
+  surface: '#000000',
+  accent: '#000000',
+  hoverColor: '#2a2a2a',
   maskColor: '#000000',
-  maskGlass: 'soft',
+  maskGlass: 'glass',
   maskBlur: 'medium',
   textMode: 'light',
-  visualDepth: 'high',
-  bgGlass: 'soft',
-  panelGlass: 'soft',
-  buttonGlass: 'soft',
+  bgTextMode: 'light',
+  visualDepth: 'medium',
+  bgGlass: 'glass',
+  panelGlass: 'glass',
+  buttonGlass: 'solid',
   borderGlass: 'solid',
-  shadowGlass: 'soft',
-  heroSurface: '#8f1d1d',
-  heroButtonGlass: 'soft',
-  heroBorderGlass: 'solid'
+  buttonBorderColor: '#000000',
+  buttonBorderWidth: 'medium',
+  buttonHoverBorderColor: '#000000',
+  buttonHoverBorderWidth: 'low',
+  buttonHoverTextColor: '#ffffff',
+  buttonHoverGlass: 'glass',
+  shadowGlass: 'solid',
+  heroSurface: '#000000',
+  heroHoverColor: '#2a2a2a',
+  heroButtonGlass: 'solid',
+  heroBorderGlass: 'solid',
+  heroLayout: 'bottom-bar'
 };
+var PROJECT_DEFAULT_STYLE_NAME = 'HALL';
+var PROJECT_DEFAULT_STYLE_ID = 'project-default-hall';
 
 /* Configuración del extractor de temas (sin LLM para colores) */
 var THEME_AI_CONFIG = {

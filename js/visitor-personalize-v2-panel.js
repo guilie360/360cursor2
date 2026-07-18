@@ -3,7 +3,12 @@ var VisitorPersonalizeV2Panel = (function () {
   var STYLE_V3_LABEL = 'Style V.3';
   var STORAGE_DRAFT_KEY = 'boxies_personalizar_v2_draft';
   var PROJECT_DEFAULT_STYLE_KEY = 'boxies_project_default_style_id';
-  var BASE_STYLE_NAME = 'HALL';
+  var BASE_STYLE_NAME = typeof PROJECT_DEFAULT_STYLE_NAME !== 'undefined'
+    ? PROJECT_DEFAULT_STYLE_NAME
+    : 'HALL';
+  var PROJECT_HALL_STYLE_ID = typeof PROJECT_DEFAULT_STYLE_ID !== 'undefined'
+    ? PROJECT_DEFAULT_STYLE_ID
+    : 'project-default-hall';
   var MAX_SAVED_STYLES = 5;
   var draft = null;
   var editingStyleId = null;
@@ -64,6 +69,11 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function getProjectBaseDraft() {
     if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getOfficialDraft === 'function') {
+      var official = ProjectThemeAuthority.getOfficialDraft();
+      if (official) return normalize(official);
+    }
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
         typeof ProjectThemeAuthority.getProjectDefaultTheme === 'function') {
       var theme = ProjectThemeAuthority.getProjectDefaultTheme();
       if (theme) return normalize(theme);
@@ -74,40 +84,22 @@ var VisitorPersonalizeV2Panel = (function () {
     return null;
   }
 
+  function buildProjectHallStyle() {
+    var projectDraft = getProjectBaseDraft() || normalize(defaultDraft());
+    return {
+      id: PROJECT_HALL_STYLE_ID,
+      name: BASE_STYLE_NAME,
+      personalizarDraft: projectDraft,
+      isProjectLocked: true,
+      source: 'project-default'
+    };
+  }
+
   function findBaseStyle() {
-    var target = normalizeStyleNameKey(BASE_STYLE_NAME);
-    var styles = [];
-    var i;
-
-    if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.getPersonalizarStyles) {
-      styles = StyleEnginePresets.getPersonalizarStyles();
-      for (i = 0; i < styles.length; i++) {
-        if (normalizeStyleNameKey(styles[i].name) === target) return styles[i];
-      }
-    }
-
-    if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.getSavedStyles) {
-      styles = StyleEnginePresets.getSavedStyles();
-      for (i = 0; i < styles.length; i++) {
-        if (normalizeStyleNameKey(styles[i].name) === target) return styles[i];
-      }
-    }
-
-    var projectDraft = getProjectBaseDraft();
-    if (projectDraft) {
-      return {
-        id: getProjectDefaultStyleId() || null,
-        name: BASE_STYLE_NAME,
-        personalizarDraft: projectDraft
-      };
-    }
-
-    return null;
+    return buildProjectHallStyle();
   }
 
   function getBaseDraft() {
-    var base = findBaseStyle();
-    if (base && base.personalizarDraft) return normalize(base.personalizarDraft);
     var projectDraft = getProjectBaseDraft();
     if (projectDraft) return normalize(projectDraft);
     return normalize(defaultDraft());
@@ -119,14 +111,48 @@ var VisitorPersonalizeV2Panel = (function () {
     editingStyleId = null;
     var displayName = (base && base.name) ? base.name : BASE_STYLE_NAME;
     setStyleNameInput(displayName);
+    persistDraftLocal(draft);
     onDraftChange();
     syncUiFromDraft();
+
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.forceApplyOfficialTheme === 'function' &&
+        ProjectThemeAuthority.forceApplyOfficialTheme()) {
+      setMessage('Estilo «' + displayName + '» restaurado y aplicado a toda la web.', false);
+      if (typeof window.refreshVisitorMenuProfile === 'function') {
+        window.refreshVisitorMenuProfile();
+      }
+      if (typeof playSound === 'function') playSound('buttonTap');
+      return;
+    }
+
+    if (publishDraftLive({ id: PROJECT_HALL_STYLE_ID, name: displayName })) {
+      if (typeof ThemeSystem !== 'undefined' && ThemeSystem.setProjectDefaultApplied) {
+        ThemeSystem.setProjectDefaultApplied(
+          typeof ProjectThemeAuthority !== 'undefined'
+            ? ProjectThemeAuthority.getCurrentProyectoId()
+            : null
+        );
+      }
+      setMessage('Estilo «' + displayName + '» restaurado y aplicado a toda la web.', false);
+      return;
+    }
+
     setMessage('Estilo base «' + displayName + '» restaurado (aún no aplicado).', false);
   }
 
   function getPersonalizarStyles() {
-    if (typeof StyleEnginePresets === 'undefined' || !StyleEnginePresets.getPersonalizarStyles) return [];
-    return StyleEnginePresets.getPersonalizarStyles();
+    var hall = buildProjectHallStyle();
+    var personal = [];
+    if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.getPersonalizarStyles) {
+      personal = StyleEnginePresets.getPersonalizarStyles().filter(function (style) {
+        if (!style) return false;
+        if (style.id === PROJECT_HALL_STYLE_ID) return false;
+        if (normalizeStyleNameKey(style.name) === normalizeStyleNameKey(BASE_STYLE_NAME)) return false;
+        return true;
+      });
+    }
+    return [hall].concat(personal);
   }
 
   function countPersonalizarStyles() {
@@ -134,7 +160,7 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function suggestNewStylePlaceholder() {
-    return 'Mi estilo ' + (countPersonalizarStyles() + 1);
+    return 'Mi estilo ' + Math.max(1, countPersonalizarStyles());
   }
 
   function clearPanelSession() {
@@ -180,72 +206,50 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function getProjectDefaultStyleId() {
-    var proyectoId = typeof ProjectThemeAuthority !== 'undefined'
-      ? ProjectThemeAuthority.getCurrentProyectoId()
-      : null;
-    if (!proyectoId) return null;
-    var map = readProjectDefaultStyleMap();
-    if (map[proyectoId]) return map[proyectoId];
-    return inferProjectDefaultStyleId();
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getOfficialStyleId === 'function') {
+      return ProjectThemeAuthority.getOfficialStyleId();
+    }
+    return PROJECT_HALL_STYLE_ID;
   }
 
   function inferProjectDefaultStyleId() {
-    if (typeof ProjectThemeAuthority === 'undefined' ||
-        typeof StyleEnginePresets === 'undefined' ||
-        !StyleEnginePresets.getPersonalizarStyles) {
-      return null;
-    }
-    var projectTheme = ProjectThemeAuthority.getProjectDefaultTheme();
-    if (!projectTheme) return null;
-    var target = '';
-    try {
-      target = JSON.stringify(normalize(projectTheme));
-    } catch (e) {
-      return null;
-    }
-    var styles = StyleEnginePresets.getPersonalizarStyles();
-    for (var i = 0; i < styles.length; i++) {
-      var styleDraft = normalize(styles[i].personalizarDraft || {});
-      try {
-        if (JSON.stringify(styleDraft) === target) {
-          setProjectDefaultStyleId(ProjectThemeAuthority.getCurrentProyectoId(), styles[i].id);
-          return styles[i].id;
-        }
-      } catch (e) {}
-    }
-    return null;
+    return getProjectDefaultStyleId();
   }
 
   function defaultDraft() {
+    if (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined') {
+      return normalize(PROJECT_DEFAULT_THEME_FALLBACK);
+    }
     if (typeof ThemeSystem !== 'undefined' && ThemeSystem.getDefaultCustomTheme) {
       return ThemeSystem.getDefaultCustomTheme();
     }
     return {
-      bg: '#161616',
-      menuColor: '#1a1a1a',
-      surface: '#2a2a2a',
-      accent: '#8f1d1d',
-      hoverColor: '',
+      bg: '#000000',
+      menuColor: '#000000',
+      surface: '#000000',
+      accent: '#000000',
+      hoverColor: '#2a2a2a',
       maskColor: '#000000',
-      maskGlass: 'soft',
+      maskGlass: 'glass',
       maskBlur: 'medium',
       textMode: 'light',
       bgTextMode: 'light',
       visualDepth: 'medium',
-      bgGlass: 'soft',
-      panelGlass: 'soft',
-      buttonGlass: 'soft',
+      bgGlass: 'glass',
+      panelGlass: 'glass',
+      buttonGlass: 'solid',
       borderGlass: 'solid',
-      buttonBorderColor: '',
+      buttonBorderColor: '#2a2a2a',
       buttonBorderWidth: 'medium',
-      buttonHoverBorderColor: '',
-      buttonHoverBorderWidth: 'medium',
-      buttonHoverTextColor: '',
-      buttonHoverGlass: 'solid',
-      shadowGlass: 'soft',
-      heroSurface: '#8f1d1d',
-      heroHoverColor: '',
-      heroButtonGlass: 'soft',
+      buttonHoverBorderColor: '#000000',
+      buttonHoverBorderWidth: 'low',
+      buttonHoverTextColor: '#ffffff',
+      buttonHoverGlass: 'glass',
+      shadowGlass: 'solid',
+      heroSurface: '#000000',
+      heroHoverColor: '#2a2a2a',
+      heroButtonGlass: 'solid',
       heroBorderGlass: 'solid',
       heroLayout: 'centered'
     };
@@ -262,6 +266,14 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function loadStoredDraft() {
+    var meta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
+      ? StyleEngineStore.getActiveStyleMeta()
+      : null;
+    var activeIsHall = meta && normalizeStyleNameKey(meta.name) === normalizeStyleNameKey(BASE_STYLE_NAME);
+    if (activeIsHall) {
+      var hallDraft = getBaseDraft();
+      if (hallDraft) return hallDraft;
+    }
     try {
       if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getPersonalizarDraft) {
         var fromStore = StyleEngineStore.getPersonalizarDraft();
@@ -270,6 +282,8 @@ var VisitorPersonalizeV2Panel = (function () {
       var raw = localStorage.getItem(STORAGE_DRAFT_KEY);
       if (raw) return normalize(JSON.parse(raw));
     } catch (e) {}
+    var projectDraft = getProjectBaseDraft();
+    if (projectDraft) return projectDraft;
     if (typeof ThemeSystem !== 'undefined' && ThemeSystem.exportCustomConfigFromKey) {
       return normalize(ThemeSystem.exportCustomConfigFromKey(ThemeSystem.getCurrentKey()));
     }
@@ -611,6 +625,23 @@ var VisitorPersonalizeV2Panel = (function () {
     }
     StyleEngineLifecycle.publishToProject({ saveNamed: false });
     StyleEnginePersonalizarMapper.applyMaterials(draft);
+
+    var isOfficial = meta && (
+      meta.id === PROJECT_HALL_STYLE_ID ||
+      normalizeStyleNameKey(meta.name) === normalizeStyleNameKey(BASE_STYLE_NAME)
+    );
+    if (typeof ThemeSystem !== 'undefined') {
+      if (isOfficial && ThemeSystem.setProjectDefaultApplied) {
+        ThemeSystem.setProjectDefaultApplied(
+          typeof ProjectThemeAuthority !== 'undefined'
+            ? ProjectThemeAuthority.getCurrentProyectoId()
+            : null
+        );
+      } else if (ThemeSystem.markUserChosen) {
+        ThemeSystem.markUserChosen();
+      }
+    }
+
     if (typeof window.refreshVisitorMenuProfile === 'function') {
       window.refreshVisitorMenuProfile();
     }
@@ -650,6 +681,34 @@ var VisitorPersonalizeV2Panel = (function () {
       return;
     }
 
+    var editingHall = editingStyleId === PROJECT_HALL_STYLE_ID;
+    if (editingHall && canApplyAsProjectDefault()) {
+      var proyectoId = ProjectThemeAuthority.getCurrentProyectoId();
+      if (!proyectoId) {
+        setMessage('No se encontró el proyecto activo.', true);
+        return;
+      }
+      ProjectThemeAuthority.setOfficialThemeForProject(proyectoId, draft)
+        .then(function () {
+          setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
+          editingStyleId = PROJECT_HALL_STYLE_ID;
+          setStyleNameInput(BASE_STYLE_NAME);
+          renderMisEstilosList();
+          setMessage('Estilo «' + BASE_STYLE_NAME + '» (predeterminado del proyecto) actualizado.', false);
+          setMisEstilosMessage('', false);
+          if (typeof playSound === 'function') playSound('buttonTap');
+        })
+        .catch(function (err) {
+          setMessage(err.message || 'No se pudo actualizar el estilo del proyecto.', true);
+        });
+      return;
+    }
+
+    if (editingHall) {
+      editingStyleId = null;
+      setStyleNameInput('');
+    }
+
     var isUpdate = !!editingStyleId;
     if (!isUpdate && countPersonalizarStyles() >= MAX_SAVED_STYLES) {
       setMessage('Máximo ' + MAX_SAVED_STYLES + ' estilos guardados. Elimina uno para crear otro.', true);
@@ -667,6 +726,10 @@ var VisitorPersonalizeV2Panel = (function () {
         return;
       }
       name = String(name).trim();
+    }
+
+    if (normalizeStyleNameKey(name) === normalizeStyleNameKey(BASE_STYLE_NAME)) {
+      name = uniqueStyleName('Mi estilo');
     }
 
     /* Guardar estilo siempre crea uno nuevo, salvo que estés en modo Editar */
@@ -752,10 +815,11 @@ var VisitorPersonalizeV2Panel = (function () {
     }
 
     var showProject = canApplyAsProjectDefault();
-    var projectDefaultStyleId = showProject ? getProjectDefaultStyleId() : null;
+    var projectDefaultStyleId = getProjectDefaultStyleId();
     list.innerHTML = '<div class="mis-temas-list">' + styles.map(function (style) {
       var isProjectDefault = !!(projectDefaultStyleId && style.id === projectDefaultStyleId);
       var isEditing = editingStyleId === style.id;
+      var deleteLabel = style.isProjectLocked ? 'Estilo del proyecto (protegido)' : 'Eliminar';
       return (
         '<div class="mis-tema-item' + (isEditing ? ' is-editing' : '') + '" data-saved-style-id="' + escapeHtml(style.id) + '">' +
           renderStyleSwatch(style) +
@@ -770,8 +834,10 @@ var VisitorPersonalizeV2Panel = (function () {
                 isProjectDefault ? 'Predeterminado del proyecto' : 'Aplicar como predeterminado del proyecto',
                 isProjectDefault ? 'is-project-default' : ''
               )
-              : '<span class="mis-tema-icon-slot" aria-hidden="true"></span>') +
-            renderActionIcon('delete', ICON_DELETE, 'Eliminar') +
+              : (isProjectDefault
+                ? renderActionIcon('apply-project', ICON_STAR, 'Predeterminado del proyecto', 'is-project-default')
+                : '<span class="mis-tema-icon-slot" aria-hidden="true"></span>')) +
+            renderActionIcon('delete', ICON_DELETE, deleteLabel, style.isProjectLocked ? 'is-locked' : '') +
           '</div>' +
         '</div>'
       );
@@ -779,11 +845,23 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function findStyleById(id) {
-    if (typeof StyleEnginePresets === 'undefined') return null;
-    return StyleEnginePresets.findById(id);
+    if (!id) return null;
+    if (id === PROJECT_HALL_STYLE_ID) return buildProjectHallStyle();
+    var styles = getPersonalizarStyles();
+    for (var i = 0; i < styles.length; i++) {
+      if (styles[i].id === id) return styles[i];
+    }
+    if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.findById) {
+      return StyleEnginePresets.findById(id);
+    }
+    return null;
   }
 
   function applySavedStyle(style) {
+    if (style && (style.id === PROJECT_HALL_STYLE_ID || style.isProjectLocked ||
+        normalizeStyleNameKey(style.name) === normalizeStyleNameKey(BASE_STYLE_NAME))) {
+      style = buildProjectHallStyle();
+    }
     if (!style || !style.personalizarDraft) {
       setMisEstilosMessage('Este estilo no tiene configuración válida.', true);
       return;
@@ -803,6 +881,10 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function editSavedStyle(style) {
+    if (style && (style.id === PROJECT_HALL_STYLE_ID || style.isProjectLocked ||
+        normalizeStyleNameKey(style.name) === normalizeStyleNameKey(BASE_STYLE_NAME))) {
+      style = buildProjectHallStyle();
+    }
     if (!style || !style.personalizarDraft) {
       setMisEstilosMessage('Este estilo no tiene configuración válida.', true);
       return;
@@ -821,6 +903,11 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function deleteSavedStyle(style) {
     if (!style) return;
+    if (style.isProjectLocked || style.id === PROJECT_HALL_STYLE_ID ||
+        normalizeStyleNameKey(style.name) === normalizeStyleNameKey(BASE_STYLE_NAME)) {
+      setMisEstilosMessage('El estilo «' + BASE_STYLE_NAME + '» es el predeterminado del proyecto y no se puede eliminar.', true);
+      return;
+    }
     if (!window.confirm('¿Eliminar el estilo «' + style.name + '»?')) {
       if (typeof window.grantMenuOpenToken === 'function') window.grantMenuOpenToken(3600000);
       return;
@@ -834,16 +921,6 @@ var VisitorPersonalizeV2Panel = (function () {
       if (active && active.id === style.id) {
         StyleEngineStore.setActiveStyleMeta(null, null);
       }
-    }
-    var proyectoId = typeof ProjectThemeAuthority !== 'undefined'
-      ? ProjectThemeAuthority.getCurrentProyectoId()
-      : null;
-    if (proyectoId && getProjectDefaultStyleId() === style.id) {
-      try {
-        var map = readProjectDefaultStyleMap();
-        delete map[proyectoId];
-        localStorage.setItem(PROJECT_DEFAULT_STYLE_KEY, JSON.stringify(map));
-      } catch (e) {}
     }
     renderMisEstilosList();
     setMisEstilosMessage('Estilo eliminado.', false);
@@ -883,13 +960,11 @@ var VisitorPersonalizeV2Panel = (function () {
       return;
     }
     try {
-      await ProjectThemeAuthority.setOfficialThemeForProject(
-        proyectoId,
-        style.personalizarDraft || style.configuracion
-      );
-      setProjectDefaultStyleId(proyectoId, style.id);
+      var themeDraft = normalize(style.personalizarDraft || style.configuracion || {});
+      await ProjectThemeAuthority.setOfficialThemeForProject(proyectoId, themeDraft);
+      setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
       renderMisEstilosList();
-      setMisEstilosMessage('Estilo predeterminado del proyecto actualizado.', false);
+      setMisEstilosMessage('Estilo «' + BASE_STYLE_NAME + '» actualizado como predeterminado del proyecto.', false);
       closeProjectDefaultConfirm();
       if (typeof playSound === 'function') playSound('buttonTap');
     } catch (err) {
@@ -1003,7 +1078,9 @@ var VisitorPersonalizeV2Panel = (function () {
         if (estiloAction === 'apply') applySavedStyle(style);
         else if (estiloAction === 'edit') editSavedStyle(style);
         else if (estiloAction === 'delete') deleteSavedStyle(style);
-        else if (estiloAction === 'apply-project') openProjectDefaultConfirm(style);
+    else if (estiloAction === 'apply-project') {
+          if (canApplyAsProjectDefault()) openProjectDefaultConfirm(style);
+        }
         return;
       }
 

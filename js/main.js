@@ -31,9 +31,34 @@ function applyConfig() {
 
   WHATSAPP_BASE = CONFIG.whatsappPhone
     ? 'https://api.whatsapp.com/send?phone=' + CONFIG.whatsappPhone + '&text='
-    : '#';
-  document.getElementById('whatsappFloat').href = WHATSAPP_BASE + encodeURIComponent(CONFIG.whatsappDefaultMessage || '');
-  document.getElementById('contactWhatsapp').href = WHATSAPP_BASE + encodeURIComponent(CONFIG.whatsappDefaultMessage || '');
+    : '';
+
+  var waFloat = document.getElementById('whatsappFloat');
+  var contactWa = document.getElementById('contactWhatsapp');
+  var shareFloat = document.getElementById('shareProjectFloatBtn');
+
+  if (CONFIG.whatsappHref) {
+    if (waFloat) waFloat.href = CONFIG.whatsappHref;
+    if (contactWa) contactWa.href = CONFIG.whatsappHref;
+  } else if (WHATSAPP_BASE) {
+    var waFull = WHATSAPP_BASE + encodeURIComponent(CONFIG.whatsappDefaultMessage || '');
+    if (waFloat) waFloat.href = waFull;
+    if (contactWa) contactWa.href = waFull;
+  } else {
+    if (waFloat) waFloat.href = '#';
+    if (contactWa) contactWa.href = '#';
+  }
+
+  if (waFloat) {
+    waFloat.hidden = CONFIG.showWhatsappFloat === false;
+    waFloat.classList.toggle('is-float-hidden', CONFIG.showWhatsappFloat === false);
+    waFloat.setAttribute('aria-hidden', CONFIG.showWhatsappFloat === false ? 'true' : 'false');
+  }
+  if (shareFloat) {
+    shareFloat.hidden = CONFIG.showShareFloat === false;
+    shareFloat.classList.toggle('is-float-hidden', CONFIG.showShareFloat === false);
+    shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
+  }
 }
 
 function lockBodyScroll()   { document.body.style.overflow = 'hidden'; }
@@ -418,7 +443,21 @@ function shareContent(shareData, fallbackText, successMsg) {
   }
 }
 function shareProject() {
-  var url = window.location.href.split('?')[0].split('#')[0];
+  var url = (CONFIG.shareUrl || '').trim() ||
+    window.location.href.split('?')[0].split('#')[0];
+  if (CONFIG.shareUrl) {
+    try {
+      url = new URL(CONFIG.shareUrl, window.location.href).href;
+    } catch (e) {
+      url = CONFIG.shareUrl;
+    }
+  } else {
+    url = window.location.href.split('?')[0].split('#')[0];
+    try {
+      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
+      if (proyecto) url += '?proyecto=' + encodeURIComponent(proyecto);
+    } catch (e2) {}
+  }
   shareContent(
     { title: CONFIG.projectName, text: CONFIG.tagline, url: url },
     CONFIG.projectName + ' — ' + CONFIG.tagline + ' ' + url,
@@ -1025,7 +1064,9 @@ function bindComparePanelEvents(favKeys, units) {
     if (plansBtn) {
       plansBtn.onclick = function (e) {
         e.stopPropagation();
-        goTo('plans', key);
+        var hasPlans = unit.planosModo === 'file' && unit.plans && unit.plans.some(function (p) { return p && p.url; });
+        if (hasPlans) goTo('plans', key);
+        else goTo('sphere');
       };
     }
 
@@ -1033,7 +1074,8 @@ function bindComparePanelEvents(favKeys, units) {
     if (tourBtn) {
       tourBtn.onclick = function (e) {
         e.stopPropagation();
-        goTo('sphere', unit.link360 || '');
+        var hasTour = unit.tour360Modo === 'link' && !!(unit.link360 && String(unit.link360).trim());
+        goTo('sphere', hasTour ? unit.link360 : '');
       };
     }
   });
@@ -1291,10 +1333,14 @@ function buildUnitCard(key) {
     '</div>';
   card.querySelector('[data-action="tour360"]').addEventListener('click', function(e){
     e.stopPropagation();
-    goTo('sphere', u.link360 || '');
+    var hasTour = u.tour360Modo === 'link' && !!(u.link360 && String(u.link360).trim());
+    goTo('sphere', hasTour ? u.link360 : '');
   });
   card.querySelector('[data-action="plans"]').addEventListener('click', function(e){
-    e.stopPropagation(); goTo('plans', key);
+    e.stopPropagation();
+    var hasPlans = u.planosModo === 'file' && u.plans && u.plans.some(function (p) { return p && p.url; });
+    if (hasPlans) goTo('plans', key);
+    else goTo('sphere');
   });
   card.querySelector('[data-action="calc"]').addEventListener('click', function(e){
     e.stopPropagation(); goTo('calculator', key);
@@ -3400,19 +3446,119 @@ if (menuNavBackEl) {
 ].forEach(bindModalBackdropClose);
 
 /* ================= ITEMS DEL MENÚ PRINCIPAL ================= */
-document.getElementById('menuConoce').addEventListener('click', function(){ goTo('menu-proyecto'); });
-document.getElementById('menuTour360').addEventListener('click', function(){ goTo('tour360'); });
-document.getElementById('menuViviendas').addEventListener('click', function(){ goTo('tipologias'); });
-document.getElementById('menuUbicacion').addEventListener('click', function(){ goTo('location'); });
-document.getElementById('menuContacto').addEventListener('click', function(){ goTo('menu-contacto'); });
+function bindMenuItemNavigation() {
+  function resolveTarget(target) {
+    if (typeof MenuConfig !== 'undefined' && MenuConfig.resolveTarget) {
+      return MenuConfig.resolveTarget(target);
+    }
+    return target === 'proximamente' ? 'sphere' : target;
+  }
 
-document.getElementById('menuDescripcion').addEventListener('click', function(){ goTo('descripcion'); });
-document.getElementById('menuVideo').addEventListener('click', function(){ goTo('video'); });
-document.getElementById('menuRenders').addEventListener('click', function(){ goTo('renders'); });
-document.getElementById('menuAmenidades').addEventListener('click', function(){ goTo('amenidades'); });
-document.getElementById('menuEstado').addEventListener('click', function(){ goTo('estado'); });
-document.getElementById('menuConstructora').addEventListener('click', function(){ goTo('constructora'); });
-document.getElementById('menuDescargas').addEventListener('click', function(){ goTo('descargas'); });
+  function onPrimaryClick(ev) {
+    var el = ev.currentTarget;
+    if (!el || el.hidden || el.classList.contains('is-menu-hidden')) return;
+    var action = el.getAttribute('data-menu-action') || 'section';
+    var target = resolveTarget(el.getAttribute('data-menu-target') || '');
+    if (action === 'proximamente') {
+      goTo('sphere');
+      return;
+    }
+    if (action === 'submenu') {
+      goTo(target || 'menu-proyecto');
+      return;
+    }
+    if (target) goTo(target);
+  }
+
+  function wirePrimary(el) {
+    if (!el || el.__menuNavBound) return;
+    el.__menuNavBound = true;
+    el.addEventListener('click', onPrimaryClick);
+  }
+
+  ['menuConoce', 'menuTour360', 'menuViviendas', 'menuUbicacion', 'menuContacto'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (!el.getAttribute('data-menu-action')) {
+      var defaults = {
+        menuConoce: { action: 'submenu', target: 'menu-proyecto' },
+        menuTour360: { action: 'section', target: 'tour360' },
+        menuViviendas: { action: 'section', target: 'tipologias' },
+        menuUbicacion: { action: 'section', target: 'location' },
+        menuContacto: { action: 'submenu', target: 'menu-contacto' }
+      };
+      var d = defaults[id];
+      if (d) {
+        el.setAttribute('data-menu-action', d.action);
+        el.setAttribute('data-menu-target', d.target);
+      }
+    }
+    wirePrimary(el);
+  });
+
+  var primary = document.getElementById('mainMenuListPrimary');
+  if (primary && !primary.__menuCustomObserver) {
+    primary.__menuCustomObserver = true;
+    primary.addEventListener('click', function (ev) {
+      var custom = ev.target && ev.target.closest
+        ? ev.target.closest('[data-menu-custom="1"]')
+        : null;
+      if (!custom) return;
+      onPrimaryClick({ currentTarget: custom });
+    });
+  }
+
+  function onChildClick(ev) {
+    var el = ev.currentTarget;
+    if (!el || el.hidden || el.classList.contains('is-menu-hidden')) return;
+    var raw = el.getAttribute('data-menu-target') || el.id.replace(/^menu/, '').toLowerCase();
+    var map = {
+      menuDescripcion: 'descripcion',
+      menuVideo: 'video',
+      menuRenders: 'renders',
+      menuAmenidades: 'amenidades',
+      menuEstado: 'estado',
+      menuConstructora: 'constructora',
+      menuDescargas: 'descargas'
+    };
+    var target = resolveTarget(raw || map[el.id] || 'descripcion');
+    goTo(target);
+  }
+
+  ['menuDescripcion', 'menuVideo', 'menuRenders', 'menuAmenidades', 'menuEstado', 'menuConstructora', 'menuDescargas'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el || el.__menuNavBound) return;
+    el.__menuNavBound = true;
+    if (!el.getAttribute('data-menu-target')) {
+      var fallback = {
+        menuDescripcion: 'descripcion',
+        menuVideo: 'video',
+        menuRenders: 'renders',
+        menuAmenidades: 'amenidades',
+        menuEstado: 'estado',
+        menuConstructora: 'constructora',
+        menuDescargas: 'descargas'
+      };
+      el.setAttribute('data-menu-target', fallback[id]);
+    }
+    el.addEventListener('click', onChildClick);
+  });
+
+  var proyectoList = document.getElementById('mainMenuListProyecto');
+  if (proyectoList && !proyectoList.__menuChildCustomBound) {
+    proyectoList.__menuChildCustomBound = true;
+    proyectoList.addEventListener('click', function (ev) {
+      var custom = ev.target && ev.target.closest
+        ? ev.target.closest('[data-menu-child-custom="1"]')
+        : null;
+      if (!custom) return;
+      onChildClick({ currentTarget: custom });
+    });
+  }
+}
+
+bindMenuItemNavigation();
+window.bindMenuItemNavigation = bindMenuItemNavigation;
 
 /* ================= CALCULADORA DE CUOTA (MEJORADA) ================= */
 var currentCalcUnit = null;
@@ -3542,17 +3688,7 @@ function setupPlans(key) {
   if (!u) return;
   var scrollBox = document.getElementById('galleryScroll');
   scrollBox.innerHTML = '';
-  u.plans.forEach(function(plan){
-    var slide = document.createElement('div');
-    slide.className = 'plan-slide';
-    var label = typeof plan === 'string' ? plan : plan.label;
-    if (plan && plan.url) {
-      slide.innerHTML = '<a href="' + plan.url + '" target="_blank" rel="noopener"><span>' + label + '</span></a>';
-    } else {
-      slide.innerHTML = '<span>' + label + '</span>';
-    }
-    scrollBox.appendChild(slide);
-  });
+
   var priceSlide = document.createElement('div');
   priceSlide.className = 'plan-price-slide';
   var waMsg = encodeURIComponent('Me interesa el ' + u.name + ' del proyecto. Quisiera más información.');
@@ -3561,7 +3697,43 @@ function setupPlans(key) {
     '<div class="plan-price-value">' + formatCOP(u.price) + '</div>' +
     '<a class="outline-btn" href="' + WHATSAPP_BASE + waMsg + '" target="_blank" rel="noopener">Solicitar propuesta</a>';
   scrollBox.appendChild(priceSlide);
+
+  function isImagePlan(plan) {
+    var ext = String((plan && plan.extension) || '').toLowerCase();
+    var url = String((plan && plan.url) || '').toLowerCase();
+    if (/^(png|jpe?g|webp|gif|bmp|svg)$/.test(ext)) return true;
+    return /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url);
+  }
+
+  function isPdfPlan(plan) {
+    var ext = String((plan && plan.extension) || '').toLowerCase();
+    var url = String((plan && plan.url) || '').toLowerCase();
+    if (ext === 'pdf') return true;
+    return /\.pdf(\?|$)/i.test(url);
+  }
+
+  (u.plans || []).forEach(function (plan) {
+    if (!plan || !plan.url) return;
+    var slide = document.createElement('div');
+    slide.className = 'plan-slide plan-slide--media';
+    var label = typeof plan === 'string' ? plan : (plan.label || 'Plano');
+    if (isImagePlan(plan)) {
+      slide.innerHTML =
+        '<img class="plan-slide-media" src="' + escapeUnitsHtml(plan.url) + '" alt="' + escapeUnitsHtml(label) + '">';
+    } else if (isPdfPlan(plan)) {
+      slide.innerHTML =
+        '<iframe class="plan-slide-media" src="' + escapeUnitsHtml(plan.url) +
+        '#toolbar=0&navpanes=0" title="' + escapeUnitsHtml(label) + '"></iframe>';
+    } else {
+      slide.innerHTML =
+        '<a class="plan-slide-link" href="' + escapeUnitsHtml(plan.url) +
+        '" target="_blank" rel="noopener"><span>' + escapeUnitsHtml(label) + '</span></a>';
+    }
+    scrollBox.appendChild(slide);
+  });
+
   scrollBox.scrollTop = 0;
+  scrollBox.scrollLeft = 0;
 }
 document.getElementById('pdfModal').addEventListener('touchmove', function(e){
   if (!e.target.closest('#galleryScroll')) e.preventDefault();

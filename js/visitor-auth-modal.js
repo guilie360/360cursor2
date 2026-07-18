@@ -14,6 +14,21 @@ var VisitorAuthModal = (function () {
     return !!(view && view.classList.contains('is-active'));
   }
 
+  function isLoginViewActive() {
+    var view = $('authViewLogin');
+    return !!(view && view.classList.contains('is-active'));
+  }
+
+  function isOpen() {
+    if (!modal) modal = $('authExperienceModal');
+    return !!(modal && modal.classList.contains('active'));
+  }
+
+  /** Bloquea cierre accidental (backdrop / Escape) al cargar datos en login o registro. */
+  function isSessionLocked() {
+    return isOpen() && (isLoginViewActive() || isRegisterViewActive());
+  }
+
   function setMessage(text, type) {
     var el = $('authModalMessage');
     if (!el) return;
@@ -54,6 +69,7 @@ var VisitorAuthModal = (function () {
     });
     if (modal) {
       modal.classList.toggle('is-register-locked', view === 'register');
+      modal.classList.toggle('is-auth-session-locked', view === 'login' || view === 'register');
     }
     setMessage('');
     $('authResendWrap').style.display = 'none';
@@ -89,6 +105,7 @@ var VisitorAuthModal = (function () {
     if (!modal) return;
     modal.classList.remove('active');
     modal.classList.remove('is-register-locked');
+    modal.classList.remove('is-auth-session-locked');
     unlockBodyScroll();
     showView('gate');
     resetRegisterForm();
@@ -286,7 +303,8 @@ var VisitorAuthModal = (function () {
 
     $('authExperienceModal').addEventListener('click', function (e) {
       if (e.target.id !== 'authExperienceModal') return;
-      if (isRegisterViewActive()) return;
+      /* Clic fuera: no cerrar en login/registro (evitar perder datos). */
+      if (isSessionLocked()) return;
       close();
     });
   }
@@ -301,6 +319,9 @@ var VisitorAuthModal = (function () {
     close: close,
     transitionTo: transitionTo,
     handleGoogleAuth: handleGoogleAuth,
-    isRegisterViewActive: isRegisterViewActive
+    isRegisterViewActive: isRegisterViewActive,
+    isLoginViewActive: isLoginViewActive,
+    isOpen: isOpen,
+    isSessionLocked: isSessionLocked
   };
 })();

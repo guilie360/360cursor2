@@ -42,7 +42,7 @@ function fetchPublishedProject() {
     'proyecto_amenidades(descripcion,imagen_url,amenidades(nombre,icono,categoria))',
     'proyecto_avances(etapa,porcentaje,estado,orden,fecha_entrega,updated_at)',
     'tipologias(id,nombre,habitaciones,banos,area_m2,precio,imagen_url,video_url,orden)',
-    'viviendas(id,nombre,codigo,tipo,torre,piso,area_m2,habitaciones,banos,parqueaderos,precio,administracion,descripcion,estado,publicado,archivos(id,nombre,url,tipo,miniatura_url,orden))',
+    'viviendas(id,nombre,codigo,tipo,torre,piso,area_m2,habitaciones,banos,parqueaderos,precio,administracion,descripcion,estado,publicado,planos_modo,tour360_modo,archivos(id,nombre,url,tipo,miniatura_url,orden,extension))',
     'archivos(id,nombre,extension,url,tipo,orden,vivienda_id)'
   ].join(',');
 

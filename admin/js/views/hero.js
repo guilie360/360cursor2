@@ -8,14 +8,10 @@ var HeroView = (function () {
     dirty: false
   };
 
+  var DEFAULT_BTN_LEFT = 'Explorar';
+  var DEFAULT_BTN_RIGHT = 'Iniciar';
+
   var MEDIA_RULES = {
-    logo: {
-      field: 'logo_url',
-      folder: 'hero/logo',
-      accept: 'image/png,image/jpeg,image/webp,image/svg+xml',
-      maxBytes: 2 * 1024 * 1024,
-      label: 'Logo'
-    },
     video: {
       field: 'video_hero_url',
       folder: 'hero/video',
@@ -40,24 +36,34 @@ var HeroView = (function () {
     var form = rootEl.querySelector('#heroForm');
     if (!form) return null;
     return {
+      nombre_proyecto: form.nombre_proyecto.value,
+      titulo_hero: form.nombre_proyecto.value,
       texto_hero: form.texto_hero.value,
-      color_fondo: form.color_fondo.value,
-      color_accento: form.color_accento.value,
+      boton_hero_2: form.boton_hero_2.value,
+      boton_hero_1: form.boton_hero_1.value,
       logo_url: state.config.logo_url || null,
       video_hero_url: state.config.video_hero_url || null,
-      imagen_hero_url: state.config.imagen_hero_url || null
+      imagen_hero_url: state.config.imagen_hero_url || null,
+      color_fondo: state.config.color_fondo || '#0A0A0A',
+      color_accento: state.config.color_accento || '#FF3B30'
     };
   }
 
   function validatePayload(payload) {
+    if (!payload.nombre_proyecto || !String(payload.nombre_proyecto).trim()) {
+      return 'El nombre del proyecto es obligatorio.';
+    }
+    if (payload.nombre_proyecto && payload.nombre_proyecto.length > 120) {
+      return 'El nombre del proyecto no puede superar 120 caracteres.';
+    }
     if (payload.texto_hero && payload.texto_hero.length > 220) {
-      return 'El texto del hero no puede superar 220 caracteres.';
+      return 'El eslogan no puede superar 220 caracteres.';
     }
-    if (!AdminUI.isValidHexColor(payload.color_fondo)) {
-      return 'El color de fondo debe ser un hexadecimal válido (#RRGGBB).';
+    if (payload.boton_hero_2 && payload.boton_hero_2.length > 40) {
+      return 'El texto del botón izquierdo no puede superar 40 caracteres.';
     }
-    if (!AdminUI.isValidHexColor(payload.color_accento)) {
-      return 'El color de acento debe ser un hexadecimal válido (#RRGGBB).';
+    if (payload.boton_hero_1 && payload.boton_hero_1.length > 40) {
+      return 'El texto del botón derecho no puede superar 40 caracteres.';
     }
     return '';
   }
@@ -72,6 +78,13 @@ var HeroView = (function () {
   function getPreviewTagline(values) {
     if (!state.project) return '';
     return formatHeroSubtitle(state.project.ciudad, state.project.estado, values.texto_hero);
+  }
+
+  function getDisplayName(values) {
+    return (values && values.nombre_proyecto && String(values.nombre_proyecto).trim()) ||
+      (state.config && state.config.titulo_hero) ||
+      (state.project && state.project.nombre) ||
+      '';
   }
 
   function updatePreview() {
@@ -93,9 +106,13 @@ var HeroView = (function () {
     var videoEl = preview.querySelector('.hero-preview-video');
     var videoSource = preview.querySelector('.hero-preview-video source');
     var imageEl = preview.querySelector('.hero-preview-image');
+    var btnLeft = preview.querySelector('.hero-preview-btn-left');
+    var btnRight = preview.querySelector('.hero-preview-btn-right');
 
-    if (nameEl) nameEl.textContent = state.project.nombre || '';
+    if (nameEl) nameEl.textContent = getDisplayName(values);
     if (taglineEl) taglineEl.textContent = getPreviewTagline(values);
+    if (btnLeft) btnLeft.textContent = values.boton_hero_2 || DEFAULT_BTN_LEFT;
+    if (btnRight) btnRight.textContent = values.boton_hero_1 || DEFAULT_BTN_RIGHT;
 
     if (logoEl) {
       if (values.logo_url) {
@@ -166,47 +183,51 @@ var HeroView = (function () {
     var publicUrl = project.slug
       ? window.location.origin + '/?proyecto=' + encodeURIComponent(project.slug)
       : '';
+    var projectName = config.titulo_hero || project.nombre || '';
+    var btnLeft = config.boton_hero_2 || DEFAULT_BTN_LEFT;
+    var btnRight = config.boton_hero_1 || DEFAULT_BTN_RIGHT;
 
     return (
       '<div class="section-header">' +
         '<h1>Hero</h1>' +
-        '<p>Configura la portada del proyecto <strong>' + AdminUI.escapeHtml(project.nombre) + '</strong>. ' +
-        'Nombre y ciudad se editan en Proyectos.</p>' +
+        '<p>Configura la portada del proyecto <strong>' + AdminUI.escapeHtml(project.nombre) + '</strong>.</p>' +
         (publicUrl
           ? '<p class="admin-help"><a class="admin-link" href="' + AdminUI.escapeHtml(publicUrl) + '" target="_blank" rel="noopener">Ver showroom público</a></p>'
           : '') +
       '</div>' +
       '<div class="hero-editor-layout">' +
         '<form id="heroForm" class="panel-card hero-form" novalidate>' +
-          '<div class="panel-card-title">Contenido</div>' +
+          '<div class="panel-card-title">Fondo</div>' +
+          renderMediaField('video', config) +
+          renderMediaField('image', config) +
+          '<div class="admin-help hero-media-note">Sube un video o una imagen. Solo uno se usa como fondo del Hero (el video tiene prioridad).</div>' +
+          '<div class="panel-card-title hero-media-title">Contenido</div>' +
           '<div class="admin-field admin-field-full">' +
-            '<label for="heroTexto">Texto del hero</label>' +
-            '<input class="admin-input" id="heroTexto" name="texto_hero" maxlength="220" ' +
-              'placeholder="Si está vacío, se usa ciudad + estado del proyecto" ' +
+            '<label for="heroNombre">Nombre del proyecto</label>' +
+            '<input class="admin-input" id="heroNombre" name="nombre_proyecto" maxlength="120" ' +
+              'placeholder="PROYECTO DEMO" ' +
+              'value="' + AdminUI.escapeHtml(projectName) + '" required>' +
+          '</div>' +
+          '<div class="admin-field admin-field-full">' +
+            '<label for="heroEslogan">Eslogan</label>' +
+            '<input class="admin-input" id="heroEslogan" name="texto_hero" maxlength="220" ' +
+              'placeholder="Proyecto Demo" ' +
               'value="' + AdminUI.escapeHtml(config.texto_hero || '') + '">' +
-            '<div class="admin-help">Máximo 220 caracteres. Sobrescribe el subtítulo automático.</div>' +
           '</div>' +
           '<div class="admin-form-grid">' +
             '<div class="admin-field">' +
-              '<label for="heroColorFondo">Color de fondo</label>' +
-              '<div class="hero-color-input">' +
-                '<input type="color" id="heroColorFondoPicker" value="' + AdminUI.escapeHtml(config.color_fondo || '#0A0A0A') + '">' +
-                '<input class="admin-input" id="heroColorFondo" name="color_fondo" value="' + AdminUI.escapeHtml(config.color_fondo || '#0A0A0A') + '">' +
-              '</div>' +
+              '<label for="heroBtnLeft">Texto botón izquierdo</label>' +
+              '<input class="admin-input" id="heroBtnLeft" name="boton_hero_2" maxlength="40" ' +
+                'placeholder="' + DEFAULT_BTN_LEFT + '" ' +
+                'value="' + AdminUI.escapeHtml(btnLeft) + '">' +
             '</div>' +
             '<div class="admin-field">' +
-              '<label for="heroColorAccent">Color de acento</label>' +
-              '<div class="hero-color-input">' +
-                '<input type="color" id="heroColorAccentPicker" value="' + AdminUI.escapeHtml(config.color_accento || '#FF3B30') + '">' +
-                '<input class="admin-input" id="heroColorAccent" name="color_accento" value="' + AdminUI.escapeHtml(config.color_accento || '#FF3B30') + '">' +
-              '</div>' +
+              '<label for="heroBtnRight">Texto botón derecho</label>' +
+              '<input class="admin-input" id="heroBtnRight" name="boton_hero_1" maxlength="40" ' +
+                'placeholder="' + DEFAULT_BTN_RIGHT + '" ' +
+                'value="' + AdminUI.escapeHtml(btnRight) + '">' +
             '</div>' +
           '</div>' +
-          '<div class="panel-card-title hero-media-title">Medios</div>' +
-          renderMediaField('logo', config) +
-          renderMediaField('video', config) +
-          renderMediaField('image', config) +
-          '<div class="admin-help hero-media-note">El video tiene prioridad sobre la imagen en el showroom.</div>' +
           '<div class="hero-form-actions">' +
             '<button type="submit" class="btn-primary btn-compact" id="heroSaveBtn">Guardar cambios</button>' +
           '</div>' +
@@ -223,8 +244,8 @@ var HeroView = (function () {
               '<div class="hero-preview-name"></div>' +
               '<div class="hero-preview-tagline"></div>' +
               '<div class="hero-preview-buttons">' +
-                '<span class="hero-preview-btn primary">Ver 360°</span>' +
-                '<span class="hero-preview-btn">Menú</span>' +
+                '<span class="hero-preview-btn hero-preview-btn-left">' + AdminUI.escapeHtml(btnLeft) + '</span>' +
+                '<span class="hero-preview-btn primary hero-preview-btn-right">' + AdminUI.escapeHtml(btnRight) + '</span>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -258,6 +279,40 @@ var HeroView = (function () {
     }
   }
 
+  function refreshMediaFieldChrome(key) {
+    var field = rootEl.querySelector('.hero-media-field[data-media="' + key + '"]');
+    if (!field || !state.config) return;
+    var rule = MEDIA_RULES[key];
+    var url = state.config[rule.field];
+    var head = field.querySelector('.hero-media-head');
+    var uploadLabel = field.querySelector('.hero-upload-btn');
+    if (head) {
+      var removeBtn = head.querySelector('[data-action="remove-media"]');
+      if (url && !removeBtn) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-ghost btn-compact';
+        btn.setAttribute('data-action', 'remove-media');
+        btn.setAttribute('data-media', key);
+        btn.textContent = 'Eliminar';
+        btn.addEventListener('click', function () {
+          handleRemoveMedia(key);
+        });
+        head.appendChild(btn);
+      } else if (!url && removeBtn) {
+        removeBtn.remove();
+      }
+    }
+    if (uploadLabel) {
+      var input = uploadLabel.querySelector('input[data-upload]');
+      uploadLabel.childNodes.forEach(function (node) {
+        if (node.nodeType === 3) node.textContent = '';
+      });
+      uploadLabel.appendChild(document.createTextNode(url ? 'Reemplazar' : 'Subir'));
+      if (input && !uploadLabel.contains(input)) uploadLabel.insertBefore(input, uploadLabel.firstChild);
+    }
+  }
+
   function validateFile(key, file) {
     var rule = MEDIA_RULES[key];
     if (!file) return 'Archivo no válido.';
@@ -269,6 +324,18 @@ var HeroView = (function () {
       return 'Tipo de archivo no permitido para ' + rule.label.toLowerCase() + '.';
     }
     return '';
+  }
+
+  async function clearOppositeMedia(key) {
+    var oppositeKey = key === 'video' ? 'image' : 'video';
+    var oppositeRule = MEDIA_RULES[oppositeKey];
+    var previousUrl = state.config[oppositeRule.field];
+    if (!previousUrl) return null;
+
+    state.config[oppositeRule.field] = null;
+    updateMediaPreview(oppositeKey, null);
+    refreshMediaFieldChrome(oppositeKey);
+    return previousUrl;
   }
 
   async function handleUpload(key, file) {
@@ -283,6 +350,7 @@ var HeroView = (function () {
 
     try {
       var previousUrl = state.config[rule.field];
+      var oppositeUrl = await clearOppositeMedia(key);
       var uploaded = await StorageApi.upload(
         state.project.constructora_id,
         state.project.id,
@@ -292,18 +360,24 @@ var HeroView = (function () {
 
       state.config[rule.field] = uploaded.publicUrl;
       updateMediaPreview(key, uploaded.publicUrl);
+      refreshMediaFieldChrome(key);
 
       var payload = getFormValues();
       payload[rule.field] = uploaded.publicUrl;
+      if (key === 'video') payload.imagen_hero_url = null;
+      if (key === 'image') payload.video_hero_url = null;
       await HeroApi.upsert(state.project.id, payload);
 
       setMediaStatus(key, 'Archivo guardado.', 'success');
       state.dirty = false;
       updatePreview();
 
-      if (previousUrl && previousUrl !== uploaded.publicUrl) {
+      var cleanupUrls = [];
+      if (previousUrl && previousUrl !== uploaded.publicUrl) cleanupUrls.push(previousUrl);
+      if (oppositeUrl) cleanupUrls.push(oppositeUrl);
+      for (var i = 0; i < cleanupUrls.length; i++) {
         try {
-          await StorageApi.removeByUrl(previousUrl);
+          await StorageApi.removeByUrl(cleanupUrls[i]);
         } catch (deleteErr) {
           console.warn('[HeroView] cleanup:', deleteErr.message);
         }
@@ -336,6 +410,7 @@ var HeroView = (function () {
       await HeroApi.upsert(state.project.id, payload);
       await StorageApi.removeByUrl(currentUrl);
       updateMediaPreview(key, null);
+      refreshMediaFieldChrome(key);
       updatePreview();
       AdminNotify.success(rule.label + ' eliminado.');
       await loadHero();
@@ -354,12 +429,16 @@ var HeroView = (function () {
       return;
     }
 
+    if (!payload.boton_hero_2) payload.boton_hero_2 = DEFAULT_BTN_LEFT;
+    if (!payload.boton_hero_1) payload.boton_hero_1 = DEFAULT_BTN_RIGHT;
+
     setFormMessage('');
     AdminUI.setButtonLoading(saveBtn, true, 'Guardando...');
 
     try {
       var saved = await HeroApi.upsert(state.project.id, payload);
       state.config = Object.assign({}, state.config, saved);
+      state.project.nombre = payload.nombre_proyecto.trim();
       state.dirty = false;
 
       AdminNotify.success('Hero guardado correctamente.');
@@ -383,8 +462,6 @@ var HeroView = (function () {
       }
     });
 
-    bindColorPickers();
-
     rootEl.querySelectorAll('[data-upload]').forEach(function (input) {
       input.addEventListener('change', function () {
         var file = input.files && input.files[0];
@@ -397,34 +474,6 @@ var HeroView = (function () {
     rootEl.querySelectorAll('[data-action="remove-media"]').forEach(function (button) {
       button.addEventListener('click', function () {
         handleRemoveMedia(button.getAttribute('data-media'));
-      });
-    });
-  }
-
-  function bindColorPickers() {
-    var pairs = [
-      ['heroColorFondoPicker', 'heroColorFondo'],
-      ['heroColorAccentPicker', 'heroColorAccent']
-    ];
-
-    pairs.forEach(function (pair) {
-      var picker = rootEl.querySelector('#' + pair[0]);
-      var text = rootEl.querySelector('#' + pair[1]);
-      if (!picker || !text) return;
-
-      picker.addEventListener('input', function () {
-        text.value = picker.value;
-        state.dirty = true;
-        updatePreview();
-      });
-
-      text.addEventListener('input', function () {
-        if (AdminUI.isValidHexColor(text.value)) {
-          picker.value = text.value.length === 4
-            ? '#' + text.value[1] + text.value[1] + text.value[2] + text.value[2] + text.value[3] + text.value[3]
-            : text.value;
-        }
-        updatePreview();
       });
     });
   }
