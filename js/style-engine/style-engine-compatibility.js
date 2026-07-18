@@ -37,7 +37,7 @@ var StyleEngineCompatibility = (function () {
 
     ThemeSystem.reapply = function () {
       if (isStyleEngineLive()) {
-        StyleEngineRuntime.reinforcePublished();
+        /* Ya está LIVE: no reaplicar todo el motor en cada reapply (congela clics). */
         return StyleEngineStore.getEngineMode();
       }
       return originalReapply();
@@ -45,8 +45,8 @@ var StyleEngineCompatibility = (function () {
 
     ThemeSystem.apply = function (themeKey, persist, customThemeData) {
       if (isStyleEngineLive()) {
-        /* Personalizar 2.0 puede empujar materiales vía preview; apply legacy se ignora */
-        StyleEngineRuntime.reinforcePublished();
+        /* Personalizar 2.0 empuja materiales vía preview; apply legacy no debe
+           disparar reinforcePublished (era un bucle caro de ~3–5s). */
         return themeKey;
       }
       return originalApply(themeKey, persist, customThemeData);

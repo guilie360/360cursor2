@@ -46,7 +46,10 @@ var StyleEngineRuntime = (function () {
     document.documentElement.setAttribute(ATTR_THEME, theme);
   }
 
+  var applyingMaterials = false;
+
   function applyPersonalizarMaterialsIfAny() {
+    if (applyingMaterials) return;
     if (typeof StyleEnginePersonalizarMapper === 'undefined') return;
 
     var draft = null;
@@ -70,43 +73,51 @@ var StyleEngineRuntime = (function () {
       : null;
     var isHall = meta && String(meta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
 
-    /* Si el tema activo es HALL, siempre usar el draft oficial completo */
-    if (isHall && official) {
+    if ((isHall && official) || (!draft && official)) {
       draft = official;
-      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.setPersonalizarDraft) {
-        StyleEngineStore.setPersonalizarDraft(draft);
-      }
-    }
-
-    if (!draft && official) {
-      draft = official;
-      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.setPersonalizarDraft) {
-        StyleEngineStore.setPersonalizarDraft(draft);
-      }
     }
 
     if (!draft) return;
-    StyleEnginePersonalizarMapper.applyMaterials(draft);
+
+    applyingMaterials = true;
+    try {
+      StyleEnginePersonalizarMapper.applyMaterials(draft);
+    } finally {
+      applyingMaterials = false;
+    }
   }
 
+  var activating = false;
+
   function activatePublished() {
-    var rules = StyleEngineStore.getPublishedRules();
-    clearApplied();
-    setActiveThemeAttr(StyleEngineStore.ACTIVE.STYLE_ENGINE);
-    document.documentElement.setAttribute(ATTR_VS, 'style-engine');
-    document.documentElement.setAttribute(ATTR_ACTIVE, 'true');
-    document.documentElement.setAttribute(ATTR_MODE, StyleEngineStore.MODES.LIVE);
-    document.body.classList.add('style-engine-live-active', 'visual-system-live');
-    applySeTokens(rules);
-    applyLegacyBridge(rules);
-    /* Personalizar 2.0: materiales V1 encima del bridge para herencia completa */
-    applyPersonalizarMaterialsIfAny();
+    if (activating) return;
+    if (typeof StyleEngineStore === 'undefined') return;
+    activating = true;
+    try {
+      var rules = StyleEngineStore.getPublishedRules();
+      clearApplied();
+      setActiveThemeAttr(StyleEngineStore.ACTIVE.STYLE_ENGINE);
+      document.documentElement.setAttribute(ATTR_VS, 'style-engine');
+      document.documentElement.setAttribute(ATTR_ACTIVE, 'true');
+      document.documentElement.setAttribute(ATTR_MODE, StyleEngineStore.MODES.LIVE);
+      document.body.classList.add('style-engine-live-active', 'visual-system-live');
+      applySeTokens(rules);
+      applyLegacyBridge(rules);
+      applyPersonalizarMaterialsIfAny();
+    } finally {
+      activating = false;
+    }
   }
+
+  var reinforceScheduled = false;
 
   function reinforcePublished() {
     if (!StyleEngineCompatibility.isStyleEngineLive()) return;
     activatePublished();
+    if (reinforceScheduled) return;
+    reinforceScheduled = true;
     window.requestAnimationFrame(function () {
+      reinforceScheduled = false;
       if (StyleEngineCompatibility.isStyleEngineLive()) activatePublished();
     });
   }

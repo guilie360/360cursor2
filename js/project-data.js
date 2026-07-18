@@ -771,8 +771,6 @@ function applyProjectData(project) {
 
     if (typeof ProjectThemeAuthority !== 'undefined') {
       if (typeof ProjectThemeAuthority.forceApplyOfficialTheme === 'function') {
-        /* HTTP y file:// deben verse igual: HALL oficial siempre al cargar el proyecto
-           (salvo elección personal explícita distinta de HALL). */
         var skipForce = typeof ThemeSystem !== 'undefined' &&
           ThemeSystem.isExplicitUserChoice &&
           ThemeSystem.isExplicitUserChoice();
@@ -781,7 +779,16 @@ function applyProjectData(project) {
           : null;
         var activeIsHall = activeMeta &&
           String(activeMeta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
-        if (!skipForce || activeIsHall) {
+        var seLive = typeof StyleEngineCompatibility !== 'undefined' &&
+          StyleEngineCompatibility.isStyleEngineLive &&
+          StyleEngineCompatibility.isStyleEngineLive();
+
+        /* Si HALL ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
+        if (activeIsHall && seLive && !skipForce) {
+          if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
+            StyleEngineRuntime.reinforcePublished();
+          }
+        } else if (!skipForce || activeIsHall) {
           ProjectThemeAuthority.forceApplyOfficialTheme();
         } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
             ProjectThemeAuthority.shouldApplyProjectDefault()) {

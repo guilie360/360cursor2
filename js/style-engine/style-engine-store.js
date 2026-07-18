@@ -219,10 +219,23 @@ var StyleEngineStore = (function () {
     return loadPersisted().draftSavedAt;
   }
 
+  function setPersonalizarDraft(draft) {
+    var state = loadPersisted();
+    var next = draft && typeof draft === 'object' ? Object.assign({}, draft) : null;
+    try {
+      if (JSON.stringify(state.personalizarDraft) === JSON.stringify(next)) return;
+    } catch (e) {}
+    state.personalizarDraft = next;
+    savePersisted();
+  }
+
   function setActiveStyleMeta(id, name) {
     var state = loadPersisted();
-    state.activeStyleId = id || null;
-    state.activeStyleName = name || null;
+    var nextId = id || null;
+    var nextName = name || null;
+    if (state.activeStyleId === nextId && state.activeStyleName === nextName) return;
+    state.activeStyleId = nextId;
+    state.activeStyleName = nextName;
     savePersisted();
   }
 
@@ -232,12 +245,6 @@ var StyleEngineStore = (function () {
       id: state.activeStyleId || null,
       name: state.activeStyleName || null
     };
-  }
-
-  function setPersonalizarDraft(draft) {
-    var state = loadPersisted();
-    state.personalizarDraft = draft && typeof draft === 'object' ? Object.assign({}, draft) : null;
-    savePersisted();
   }
 
   function getPersonalizarDraft() {
