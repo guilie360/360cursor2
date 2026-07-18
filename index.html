@@ -908,15 +908,23 @@ if (typeof BootDebug !== 'undefined') {
     }
     var note = document.createElement('div');
     note.id = 'bisctMinimalOk';
-    note.textContent = 'BISCT MINIMAL OK — sin congelar (main/project-data/auth/style/visitor/ui OFF)';
+    note.textContent = 'BISCT + ThemeSystem ON — Auth/Style/Visitor/Platform/UI OFF';
     note.style.cssText = 'position:fixed;left:12px;right:12px;top:12px;z-index:2147483646;padding:14px;background:#0a3;color:#fff;font:14px/1.4 system-ui,sans-serif;border-radius:10px;text-align:center';
     (document.body || document.documentElement).appendChild(note);
   })();
   </script>
 
-  <!-- BLOQUE ThemeSystem (OFF)
+  <!-- BLOQUE ThemeSystem (ON) -->
   <script src="js/theme-system.js?v=hall4"></script>
-  <script>ThemeSystem.init({ deferApply: true });</script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: ThemeSystem.init');
+  try {
+    ThemeSystem.init({ deferApply: true });
+    if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: ThemeSystem.init done');
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: ThemeSystem.init', e);
+  }
+  </script>
   <script src="js/theme-ai/theme-color-math.js"></script>
   <script src="js/theme-ai/theme-brand-intelligence.js"></script>
   <script src="js/theme-ai/theme-brand-analyzer.js"></script>
@@ -928,7 +936,6 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/theme-ai/theme-ai-modal.js"></script>
   <script src="js/shared/constants.js"></script>
   <script src="js/shared/formatters.js"></script>
-  -->
 
   <!-- BLOQUE Auth (OFF)
   <script src="js/supabase-client.js?v=boot1"></script>
