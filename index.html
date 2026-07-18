@@ -896,34 +896,12 @@ if (typeof BootDebug !== 'undefined') {
   <!-- TOAST DE FEEDBACK (compartir, favoritos, etc.) -->
   <div class="app-toast" id="appToast"></div>
 
-  <!-- ========== BISCT FREEZE: mínimo + bloques comentados ========== -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-  (function () {
-    if (typeof BootDebug !== 'undefined') {
-      BootDebug.log('BISCT MINIMAL: solo boot-debug + config + theme-early + supabase CDN');
-      BootDebug.markThemeReady('bisct-minimal');
-    } else {
-      document.documentElement.classList.add('theme-ready');
-    }
-    var note = document.createElement('div');
-    note.id = 'bisctMinimalOk';
-    note.textContent = 'BISCT + ThemeSystem + Auth ON — Platform/Visitor/Style/UI OFF';
-    note.style.cssText = 'position:fixed;left:12px;right:12px;top:12px;z-index:2147483646;padding:14px;background:#0a3;color:#fff;font:14px/1.4 system-ui,sans-serif;border-radius:10px;text-align:center';
-    (document.body || document.documentElement).appendChild(note);
-  })();
-  </script>
-
-  <!-- BLOQUE ThemeSystem (ON) -->
   <script src="js/theme-system.js?v=hall4"></script>
   <script>
-  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: ThemeSystem.init');
-  try {
-    ThemeSystem.init({ deferApply: true });
-    if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: ThemeSystem.init done');
-  } catch (e) {
-    if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: ThemeSystem.init', e);
-  }
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init start');
+  ThemeSystem.init({ deferApply: true });
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init done');
   </script>
   <script src="js/theme-ai/theme-color-math.js"></script>
   <script src="js/theme-ai/theme-brand-intelligence.js"></script>
@@ -936,8 +914,6 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/theme-ai/theme-ai-modal.js"></script>
   <script src="js/shared/constants.js"></script>
   <script src="js/shared/formatters.js"></script>
-
-  <!-- BLOQUE Auth (ON) -->
   <script src="js/supabase-client.js?v=boot1"></script>
   <script src="js/auth/client.js"></script>
   <script src="js/auth/redirects.js"></script>
@@ -958,47 +934,16 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/visitor-personalization.js"></script>
   <script src="js/auth/api/project-theme.js"></script>
   <script src="js/auth/api/project-preset-themes.js"></script>
-  <script src="js/auth/bootstrap.js"></script>
-  <script>
-  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: AuthBootstrap.init');
-  try {
-    if (typeof AuthBootstrap !== 'undefined' && AuthBootstrap.init) {
-      var __authP = AuthBootstrap.init();
-      if (__authP && typeof __authP.then === 'function') {
-        __authP.then(
-          function () { if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: AuthBootstrap.init done'); },
-          function (err) { if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: AuthBootstrap.init rejected', err); }
-        );
-      } else if (typeof BootDebug !== 'undefined') {
-        BootDebug.log('BISCT: AuthBootstrap.init done (sync)');
-      }
-    } else if (typeof BootDebug !== 'undefined') {
-      BootDebug.error('BISCT: AuthBootstrap undefined');
-    }
-  } catch (e) {
-    if (typeof BootDebug !== 'undefined') BootDebug.error('BISCT: AuthBootstrap.init', e);
-  }
-  </script>
-
-  <!-- BLOQUE Platform (OFF)
   <script src="js/platform/project-theme-authority.js?v=hall4"></script>
   <script src="js/platform/project-preset-themes.js"></script>
   <script src="js/platform/admin-hero-api.js"></script>
   <script src="js/pause-screen/pause-screen-messages.js"></script>
   <script src="js/pause-screen/pause-screen-config.js"></script>
   <script src="js/pause-screen/pause-screen.js"></script>
-  -->
-
-  <!-- BLOQUE Visitor (OFF)
   <script src="js/visitor-personalize-panel.js?v=nav19"></script>
   <script src="js/visitor-auth-modal.js?v=auth-lock1"></script>
   <script src="js/visitor-email-verification.js"></script>
   <script src="js/visitor-menu.js?v=nav24"></script>
-  <script src="js/visitor-personalize-v2-panel.js?v=hall4"></script>
-  <script src="js/global-close.js?v=auth-lock1"></script>
-  -->
-
-  <!-- BLOQUE StyleEngine (OFF)
   <script src="js/style-engine/style-engine-tokens.js"></script>
   <script src="js/style-engine/style-engine-history.js"></script>
   <script src="js/style-engine/style-engine-bridge.js"></script>
@@ -1014,6 +959,7 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/style-engine/style-engine-audit.js"></script>
   <script src="js/style-engine/style-engine-runtime.js?v=hall5"></script>
   <script src="js/style-engine/style-engine-color-picker.js"></script>
+  <script src="js/visitor-personalize-v2-panel.js?v=hall4"></script>
   <script src="js/style-engine/style-engine-ai-assistant.js"></script>
   <script src="js/style-engine/style-engine-preview.js"></script>
   <script src="js/style-engine/style-engine-coverage.js"></script>
@@ -1025,18 +971,168 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/style-engine/visual-audit/visual-audit-ui.js"></script>
   <script src="js/style-engine/style-engine-panel.js"></script>
   <script src="js/style-engine/style-engine-modal.js"></script>
-  -->
-
-  <!-- BLOQUE UI (OFF)
   <script src="js/web-effects.js"></script>
+  <script src="js/global-close.js?v=auth-lock1"></script>
+  <script>
+  /* Chrome alt-tab guard — runs before main.js, closes unauthorized menu */
+  (function () {
+    function closeUnauthorizedMenu() {
+      if (window.__navResumeGateOpen) return;
+      if (window.__menuOpenAllowedUntil && Date.now() < window.__menuOpenAllowedUntil) return;
+      if (typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked()) return;
+      var menu = document.getElementById('mainMenu');
+      if (menu && menu.classList.contains('active')) {
+        menu.classList.remove('active');
+        var backdrop = document.getElementById('mainMenuBackdrop');
+        if (backdrop) backdrop.classList.remove('active');
+        document.body.classList.remove('main-menu-open', 'global-close-docked');
+      }
+      if (typeof window.syncMenuClosedFromGuard === 'function') {
+        window.syncMenuClosedFromGuard();
+      }
+    }
+    function onTabReturn() {
+      window.__lastTabReturnAt = Date.now();
+      window.__menuOpenAllowedUntil = 0;
+      if (typeof window.revokeMenuOpenToken === 'function') {
+        window.revokeMenuOpenToken();
+      }
+      closeUnauthorizedMenu();
+      setTimeout(closeUnauthorizedMenu, 50);
+      setTimeout(closeUnauthorizedMenu, 200);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') onTabReturn();
+    }, true);
+    window.addEventListener('focus', onTabReturn);
+    window.addEventListener('pageshow', onTabReturn);
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.isTrusted || !e.target || !e.target.closest) return;
+      if (e.target.closest('#mainMenuOpenBtn, #mainMenu, #mainMenuBackdrop')) {
+        window.__menuOpenAllowedUntil = Date.now() + 3000;
+      }
+    }, true);
+  })();
+  </script>
   <script src="js/units-compare-pdf.js"></script>
   <script src="js/location-map.js"></script>
   <script src="js/downloads-intro.js"></script>
   <script src="js/amenities-carousel.js?v=amenities7"></script>
   <script src="js/menu-config.js?v=menu6"></script>
-  <script src="js/main.js?v=boot2"></script>
-  <script src="js/project-data.js?v=boot2"></script>
-  -->
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
+  </script>
+  <script src="js/main.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: main.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: main.js FAILED to load')"></script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
+  </script>
+  <script src="js/project-data.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: project-data.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: project-data.js FAILED to load')"></script>
+  <script src="js/auth/bootstrap.js" onload="if(window.BootDebug)BootDebug.log('script tag: auth/bootstrap.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: auth/bootstrap.js FAILED to load')"></script>
+  <script>
+  (function () {
+    function bootLog(msg, detail) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log(msg, detail);
+      else console.log('[BOOT]', msg, detail || '');
+    }
+    function bootErr(msg, err) {
+      if (typeof BootDebug !== 'undefined') BootDebug.error(msg, err);
+      else console.error('[BOOT]', msg, err);
+    }
+    function safeInit(label, fn) {
+      bootLog(label + ' — start');
+      try {
+        if (typeof fn !== 'function') {
+          bootErr(label + ' — no disponible (undefined/not a function)');
+          return null;
+        }
+        var result = fn();
+        if (result && typeof result.then === 'function') {
+          result.then(
+            function () { bootLog(label + ' — done (async)'); },
+            function (err) { bootErr(label + ' — rejected', err); }
+          );
+        } else {
+          bootLog(label + ' — done');
+        }
+        return result;
+      } catch (e) {
+        bootErr(label + ' — threw', e);
+        return null;
+      }
+    }
+
+    bootLog('final inits — start', {
+      VisitorAuthModal: typeof VisitorAuthModal,
+      VisitorEmailVerification: typeof VisitorEmailVerification,
+      VisitorMenu: typeof VisitorMenu,
+      StyleEngine: typeof StyleEngine,
+      GlobalClose: typeof GlobalClose,
+      AuthBootstrap: typeof AuthBootstrap,
+      __NAV_BUILD__: typeof window.__NAV_BUILD__ !== 'undefined' ? window.__NAV_BUILD__ : null,
+      __BUILD_STAMP__: typeof window.__BUILD_STAMP__ !== 'undefined' ? window.__BUILD_STAMP__ : null
+    });
+
+    safeInit('VisitorAuthModal.init', function () {
+      if (typeof VisitorAuthModal === 'undefined' || !VisitorAuthModal.init) {
+        throw new Error('VisitorAuthModal.init undefined');
+      }
+      return VisitorAuthModal.init();
+    });
+
+    safeInit('VisitorEmailVerification.init', function () {
+      if (typeof VisitorEmailVerification === 'undefined' || !VisitorEmailVerification.init) {
+        throw new Error('VisitorEmailVerification.init undefined');
+      }
+      return VisitorEmailVerification.init();
+    });
+
+    safeInit('VisitorMenu.init', function () {
+      if (typeof VisitorMenu === 'undefined' || !VisitorMenu.init) {
+        throw new Error('VisitorMenu.init undefined');
+      }
+      return VisitorMenu.init();
+    });
+
+    safeInit('StyleEngine.init', function () {
+      if (typeof StyleEngine === 'undefined') {
+        bootLog('StyleEngine.init — skip (StyleEngine undefined)');
+        return;
+      }
+      if (!StyleEngine.init) throw new Error('StyleEngine.init undefined');
+      return StyleEngine.init();
+    });
+
+    safeInit('GlobalClose.init', function () {
+      if (typeof GlobalClose === 'undefined' || !GlobalClose.init) {
+        throw new Error('GlobalClose.init undefined');
+      }
+      return GlobalClose.init();
+    });
+
+    safeInit('AuthBootstrap.init', function () {
+      if (typeof AuthBootstrap === 'undefined' || !AuthBootstrap.init) {
+        throw new Error('AuthBootstrap.init undefined');
+      }
+      return AuthBootstrap.init();
+    });
+
+    bootLog('final inits — all scheduled');
+
+    setTimeout(function () {
+      try {
+        if (window.__BUILD_STAMP__ === 'nav19' && window.__NAV_BUILD__ !== 'nav19') {
+          if (!sessionStorage.getItem('nav19_reload')) {
+            sessionStorage.setItem('nav19_reload', '1');
+            bootLog('reload por stamp mismatch nav19');
+            location.reload();
+          }
+        }
+      } catch (e) {
+        bootErr('stamp reload check', e);
+      }
+    }, 800);
+  })();
+  </script>
 
 </body>
 </html>
