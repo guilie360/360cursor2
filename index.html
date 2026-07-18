@@ -1024,9 +1024,11 @@ if (typeof BootDebug !== 'undefined') {
   <script src="js/main.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: main.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: main.js FAILED to load')"></script>
   -->
   <script>
-  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: main.js COMENTADO — cargando project-data.js');
+  if (typeof BootDebug !== 'undefined') BootDebug.log('BISCT: main.js COMENTADO; project-data.js COMENTADO');
   </script>
+  <!-- BISCT FREEZE paso 2: project-data.js COMENTADO
   <script src="js/project-data.js?v=boot2" onload="if(window.BootDebug)BootDebug.log('script tag: project-data.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: project-data.js FAILED to load')"></script>
+  -->
   <script src="js/auth/bootstrap.js" onload="if(window.BootDebug)BootDebug.log('script tag: auth/bootstrap.js onload OK')" onerror="if(window.BootDebug)BootDebug.error('script tag: auth/bootstrap.js FAILED to load')"></script>
   <script>
   (function () {
