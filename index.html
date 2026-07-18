@@ -51,8 +51,7 @@ html:not(.theme-ready) body {
 }
 </style>
 <script src="js/boot-debug.js?v=boot1"></script>
-<script src="js/boot-loop-watch.js?v=loop1"></script>
-<script src="js/boot-periodic-profiler.js?v=per2"></script>
+<script src="js/boot-cpu-profile.js?v=cpu1"></script>
 <script>
 (function () {
   try {
@@ -1115,7 +1114,16 @@ if (typeof BootDebug !== 'undefined') {
       if (typeof AuthBootstrap === 'undefined' || !AuthBootstrap.init) {
         throw new Error('AuthBootstrap.init undefined');
       }
-      return AuthBootstrap.init();
+      var authResult = AuthBootstrap.init();
+      function pauseAfterAuth() {
+        if (typeof BootCpuProfile !== 'undefined') BootCpuProfile.pause('after-AuthBootstrap');
+      }
+      if (authResult && typeof authResult.then === 'function') {
+        authResult.then(pauseAfterAuth, pauseAfterAuth);
+      } else {
+        pauseAfterAuth();
+      }
+      return authResult;
     });
 
     bootLog('final inits — all scheduled');

@@ -872,6 +872,8 @@ function loadProjectData() {
         throw applyErr;
       }
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData done / render inicial');
+      /* CPU profile: pausa aquí con ?cpuprofile=1 — antes del bloqueo post-boot. */
+      if (typeof BootCpuProfile !== 'undefined') BootCpuProfile.pause('after-applyProjectData');
       return project;
     })
     .catch(function (err) {
