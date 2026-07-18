@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>360•</title>
-<script>window.__BUILD_STAMP__='nav19';</script>
+<script>
+window.__BUILD_STAMP__ = 'boot1';
+console.log('[BOOT 0.00s] index.html primera línea', location.href);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="google" content="notranslate">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -42,23 +45,44 @@ html {
   --hero-bg: #000000;
   --hero-text: #ffffff;
 }
+/* Body visible tras theme-ready; failsafe JS evita congelar en negro */
 html:not(.theme-ready) body {
   visibility: hidden;
 }
 </style>
+<script src="js/boot-debug.js?v=boot1"></script>
 <script>
 (function () {
   try {
     var params = new URLSearchParams(window.location.search);
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log('URL search', location.search || '(vacío)');
+      BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
+    }
     if (!params.get('proyecto')) {
       params.set('proyecto', 'proyecto-demo');
       history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+      if (typeof BootDebug !== 'undefined') {
+        BootDebug.log('proyecto inyectado', 'proyecto-demo');
+      }
     }
-  } catch (e) {}
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('param proyecto', e);
+    else console.error(e);
+  }
 })();
 </script>
-<script src="js/shared/config.js?v=hall4"></script>
-<script src="js/theme-early-bootstrap.js?v=hall4"></script>
+<script src="js/shared/config.js?v=boot1"></script>
+<script>
+if (typeof BootDebug !== 'undefined') {
+  BootDebug.log('config.js', {
+    hasUrl: typeof SUPABASE_URL !== 'undefined',
+    hasKey: typeof SUPABASE_ANON_KEY !== 'undefined',
+    slug: typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null
+  });
+}
+</script>
+<script src="js/theme-early-bootstrap.js?v=boot1"></script>
 <script>
 (function () {
   try {
@@ -874,7 +898,11 @@ html:not(.theme-ready) body {
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/theme-system.js?v=hall4"></script>
-  <script>ThemeSystem.init({ deferApply: true });</script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init start');
+  ThemeSystem.init({ deferApply: true });
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init done');
+  </script>
   <script src="js/theme-ai/theme-color-math.js"></script>
   <script src="js/theme-ai/theme-brand-intelligence.js"></script>
   <script src="js/theme-ai/theme-brand-analyzer.js"></script>
@@ -886,7 +914,7 @@ html:not(.theme-ready) body {
   <script src="js/theme-ai/theme-ai-modal.js"></script>
   <script src="js/shared/constants.js"></script>
   <script src="js/shared/formatters.js"></script>
-  <script src="js/supabase-client.js?v=viv2"></script>
+  <script src="js/supabase-client.js?v=boot1"></script>
   <script src="js/auth/client.js"></script>
   <script src="js/auth/redirects.js"></script>
   <script src="js/auth/storage-prefs.js"></script>
@@ -992,7 +1020,7 @@ html:not(.theme-ready) body {
   <script src="js/amenities-carousel.js?v=amenities7"></script>
   <script src="js/menu-config.js?v=menu6"></script>
   <script src="js/main.js?v=viv2"></script>
-  <script src="js/project-data.js?v=hall5"></script>
+  <script src="js/project-data.js?v=boot1"></script>
   <script src="js/auth/bootstrap.js"></script>
   <script>
     VisitorAuthModal.init();

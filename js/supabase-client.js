@@ -9,20 +9,34 @@ function getProjectSlugFromUrl() {
 }
 
 function supabaseFetch(path) {
-  return fetch(SUPABASE_URL + path, {
+  if (typeof BootDebug !== 'undefined') {
+    BootDebug.log('supabaseFetch', path.slice(0, 120) + (path.length > 120 ? '…' : ''));
+  }
+  if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+    return Promise.reject(new Error('SUPABASE_URL / SUPABASE_ANON_KEY no definidos'));
+  }
+
+  var req = fetch(SUPABASE_URL + path, {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
       Accept: 'application/json'
     }
   }).then(function (response) {
+    if (typeof BootDebug !== 'undefined') BootDebug.log('supabaseFetch status', response.status);
     if (!response.ok) throw new Error('Supabase request failed: ' + response.status);
     return response.json();
   });
+
+  if (typeof BootDebug !== 'undefined' && BootDebug.withTimeout) {
+    return BootDebug.withTimeout(req, 15000, 'supabaseFetch');
+  }
+  return req;
 }
 
 function fetchPublishedProject() {
   var slug = getProjectSlugFromUrl();
+  if (typeof BootDebug !== 'undefined') BootDebug.log('fetchPublishedProject slug', slug);
   var select = [
     'id',
     'nombre',
@@ -55,6 +69,9 @@ function fetchPublishedProject() {
 
   return supabaseFetch(path).then(function (rows) {
     if (!rows || !rows.length) throw new Error('No hay proyectos publicados');
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log('proyecto cargado', { id: rows[0].id, slug: rows[0].slug, nombre: rows[0].nombre });
+    }
     return rows[0];
   });
 }

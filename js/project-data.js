@@ -785,13 +785,20 @@ function applyProjectData(project) {
 
         /* Si HALL ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
         if (activeIsHall && seLive && !skipForce) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('theme: reinforcePublished');
           if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
             StyleEngineRuntime.reinforcePublished();
           }
         } else if (!skipForce || activeIsHall) {
-          ProjectThemeAuthority.forceApplyOfficialTheme();
+          if (typeof BootDebug !== 'undefined') BootDebug.log('theme: forceApplyOfficialTheme');
+          try {
+            ProjectThemeAuthority.forceApplyOfficialTheme();
+          } catch (themeErr) {
+            if (typeof BootDebug !== 'undefined') BootDebug.error('forceApplyOfficialTheme', themeErr);
+          }
         } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
             ProjectThemeAuthority.shouldApplyProjectDefault()) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('theme: applyDefaultForCurrentVisitor');
           ProjectThemeAuthority.applyDefaultForCurrentVisitor();
         }
       } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
@@ -812,11 +819,51 @@ function applyProjectData(project) {
     }
 }
 
+function showProjectLoadError(err) {
+  var msg = (err && err.message) ? err.message : String(err || 'Error desconocido');
+  if (typeof BootDebug !== 'undefined') BootDebug.error('ProjectData', msg);
+  else console.error('[ProjectData]', msg);
+
+  var host = document.getElementById('projectCover') || document.body;
+  if (!host) return;
+  var box = document.getElementById('projectLoadError');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'projectLoadError';
+    box.style.cssText = [
+      'position:absolute',
+      'left:16px',
+      'right:16px',
+      'top:20%',
+      'z-index:50',
+      'padding:16px 18px',
+      'border-radius:12px',
+      'background:rgba(80,0,0,0.92)',
+      'color:#fff',
+      'font:14px/1.45 system-ui,sans-serif',
+      'text-align:center'
+    ].join(';');
+    host.appendChild(box);
+  }
+  box.textContent = 'No se pudo cargar el proyecto: ' + msg +
+    ' Revisa la consola ([BOOT]) y que el slug ?proyecto= exista y esté publicado.';
+}
+
 function loadProjectData() {
+  if (typeof BootDebug !== 'undefined') BootDebug.log('loadProjectData start');
+  if (typeof fetchPublishedProject !== 'function') {
+    showProjectLoadError(new Error('fetchPublishedProject no definido (supabase-client.js)'));
+    return Promise.resolve(null);
+  }
   return fetchPublishedProject()
-    .then(applyProjectData)
+    .then(function (project) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData start');
+      applyProjectData(project);
+      if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData done / render inicial');
+      return project;
+    })
     .catch(function (err) {
-      console.error('[ProjectData]', err.message || err);
+      showProjectLoadError(err);
     });
 }
 

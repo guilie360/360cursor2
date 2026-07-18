@@ -570,17 +570,19 @@
 
   function fetchProjectDefaultTheme() {
     if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+      if (typeof BootDebug !== 'undefined') BootDebug.error('fetch theme: falta SUPABASE_URL/KEY');
       return Promise.resolve(null);
     }
 
     var slug = getProjectSlug();
+    if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme slug', slug);
     var select = encodeURIComponent('id,proyecto_config(project_default_theme)');
     var path =
       '/rest/v1/proyectos?select=' + select +
       '&publicado=eq.true&slug=eq.' + encodeURIComponent(slug) +
       '&limit=1';
 
-    return fetch(SUPABASE_URL + path, {
+    var req = fetch(SUPABASE_URL + path, {
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
@@ -588,19 +590,32 @@
       }
     })
       .then(function (response) {
+        if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme status', response.status);
         if (!response.ok) throw new Error('Theme fetch failed: ' + response.status);
         return response.json();
       })
       .then(function (rows) {
-        if (!rows || !rows[0]) return null;
+        if (!rows || !rows[0]) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin filas');
+          return null;
+        }
         var config = rows[0].proyecto_config;
         if (Array.isArray(config)) config = config[0];
-        if (!config || !config.project_default_theme) return null;
+        if (!config || !config.project_default_theme) {
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin project_default_theme');
+          return null;
+        }
+        if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: OK');
         return {
           proyectoId: rows[0].id,
           theme: expandThemeConfig(config.project_default_theme)
         };
       });
+
+    if (typeof BootDebug !== 'undefined' && BootDebug.withTimeout) {
+      return BootDebug.withTimeout(req, 10000, 'fetchProjectDefaultTheme');
+    }
+    return req;
   }
 
   function applyLoadingShell() {
@@ -613,60 +628,88 @@
     document.documentElement.style.background = '#000000';
   }
 
+  function markReady(reason) {
+    document.documentElement.classList.add('theme-ready');
+    if (typeof BootDebug !== 'undefined') BootDebug.markThemeReady(reason);
+  }
+
   function bootstrapProjectTheme() {
-    normalizeProjectUrl();
-    applyLoadingShell();
+    if (typeof BootDebug !== 'undefined') BootDebug.log('bootstrapProjectTheme start');
+    try {
+      normalizeProjectUrl();
+      applyLoadingShell();
 
-    var offlineFallback =
-      typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
-        ? expandThemeConfig(PROJECT_DEFAULT_THEME_FALLBACK)
-        : null;
+      var offlineFallback =
+        typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
+          ? expandThemeConfig(PROJECT_DEFAULT_THEME_FALLBACK)
+          : null;
 
-    /* Primera pintura inmediata con HALL (igual que file://) — no esperar red */
-    if (!shouldSkipProjectDefault() && offlineFallback) {
-      applyExpandedTheme(offlineFallback);
-    }
-
-    if (shouldSkipProjectDefault()) {
-      var stored = readJSON(STORAGE_KEY, {});
-      if (stored.customTheme) {
-        applyExpandedTheme(
-          expandThemeConfig(Object.assign({ themeKey: stored.themeKey || 'custom' }, stored.customTheme))
-        );
-      }
-      document.documentElement.classList.add('theme-ready');
-      return;
-    }
-
-    function finishWithTheme(theme, proyectoId) {
-      if (theme) {
-        applyExpandedTheme(theme);
-        persistProjectDefault(theme, proyectoId);
-      }
-      document.documentElement.classList.add('theme-ready');
-    }
-
-    if (location.protocol === 'file:') {
-      finishWithTheme(offlineFallback, null);
-      return;
-    }
-
-    fetchProjectDefaultTheme()
-      .then(function (result) {
-        if (result && result.theme) {
-          finishWithTheme(result.theme, result.proyectoId);
-          return;
+      /* Primera pintura inmediata — no esperar red */
+      if (!shouldSkipProjectDefault() && offlineFallback) {
+        try {
+          applyExpandedTheme(offlineFallback);
+          if (typeof BootDebug !== 'undefined') BootDebug.log('fallback HALL aplicado (inmediato)');
+        } catch (paintErr) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('fallback HALL paint', paintErr);
+          markReady('fallback-paint-error');
         }
-        finishWithTheme(offlineFallback, null);
-      })
-      .catch(function (err) {
-        console.warn('[ThemeEarly]', err);
-        finishWithTheme(offlineFallback, null);
-      });
+      }
 
-    window.setTimeout(function () {
-      document.documentElement.classList.add('theme-ready');
-    }, 3000);
+      if (shouldSkipProjectDefault()) {
+        var stored = readJSON(STORAGE_KEY, {});
+        if (stored.customTheme) {
+          try {
+            applyExpandedTheme(
+              expandThemeConfig(Object.assign({ themeKey: stored.themeKey || 'custom' }, stored.customTheme))
+            );
+          } catch (e) {
+            if (typeof BootDebug !== 'undefined') BootDebug.error('userChosen theme paint', e);
+          }
+        }
+        markReady('userChosen-skip');
+        return;
+      }
+
+      function finishWithTheme(theme, proyectoId) {
+        try {
+          if (theme) {
+            applyExpandedTheme(theme);
+            persistProjectDefault(theme, proyectoId);
+          }
+        } catch (e) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('finishWithTheme paint', e);
+        }
+        markReady('finishWithTheme');
+      }
+
+      if (location.protocol === 'file:') {
+        finishWithTheme(offlineFallback, null);
+        return;
+      }
+
+      fetchProjectDefaultTheme()
+        .then(function (result) {
+          if (result && result.theme) {
+            finishWithTheme(result.theme, result.proyectoId);
+            return;
+          }
+          finishWithTheme(offlineFallback, null);
+        })
+        .catch(function (err) {
+          if (typeof BootDebug !== 'undefined') BootDebug.error('fetch theme', err);
+          else console.warn('[ThemeEarly]', err);
+          finishWithTheme(offlineFallback, null);
+        });
+
+      window.setTimeout(function () {
+        if (!document.documentElement.classList.contains('theme-ready')) {
+          markReady('timeout-800ms');
+        }
+      }, 800);
+    } catch (fatal) {
+      if (typeof BootDebug !== 'undefined') BootDebug.error('bootstrapProjectTheme fatal', fatal);
+      markReady('bootstrap-fatal');
+    }
   }
 
   window.__applyProjectThemeEarly = function (rawConfig, proyectoId) {
