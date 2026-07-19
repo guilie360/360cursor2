@@ -1509,6 +1509,7 @@ var ThemeSystem = (function () {
   }
 
   function init(options) {
+    console.log('[BOOT] ThemeSystem.init START');
     options = options || {};
     var stored = readJSON(STORAGE_KEY, { themeKey: DEFAULT_KEY });
     state.themeKey = resolveThemeKey(stored.themeKey);
@@ -1526,6 +1527,7 @@ var ThemeSystem = (function () {
 
     applyVisualDepth(getActiveVisualDepth());
     bindThemePersistence();
+    console.log('[BOOT] ThemeSystem.init END');
   }
 
   function bindThemePersistence() {

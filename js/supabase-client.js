@@ -10,10 +10,13 @@ function getProjectSlugFromUrl() {
 }
 
 function supabaseFetch(path) {
+  console.log('[BOOT] supabaseFetch START');
   if (typeof BootDebug !== 'undefined') {
     BootDebug.log('supabaseFetch', path.slice(0, 120) + (path.length > 120 ? '…' : ''));
   }
   if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+    console.log('[BOOT] supabaseFetch ERROR');
+    console.log('[BOOT] supabaseFetch END');
     return Promise.reject(new Error('SUPABASE_URL / SUPABASE_ANON_KEY no definidos'));
   }
 
@@ -36,12 +39,19 @@ function supabaseFetch(path) {
   return fetch(SUPABASE_URL + path, fetchOpts)
     .then(function (response) {
       clearTimeout(timer);
+      console.log('[BOOT] supabaseFetch RESPONSE');
       if (typeof BootDebug !== 'undefined') BootDebug.log('supabaseFetch status', response.status);
       if (!response.ok) throw new Error('Supabase request failed: ' + response.status);
       return response.json();
     })
+    .then(function (data) {
+      console.log('[BOOT] supabaseFetch END');
+      return data;
+    })
     .catch(function (err) {
       clearTimeout(timer);
+      console.log('[BOOT] supabaseFetch ERROR');
+      console.log('[BOOT] supabaseFetch END');
       if (timedOut || (err && err.name === 'AbortError')) {
         throw new Error('Supabase request timeout');
       }

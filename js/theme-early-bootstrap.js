@@ -634,6 +634,7 @@
   }
 
   function bootstrapProjectTheme() {
+    console.log('[BOOT] bootstrapProjectTheme START');
     if (typeof BootDebug !== 'undefined') BootDebug.log('bootstrapProjectTheme start');
     try {
       normalizeProjectUrl();
@@ -667,6 +668,7 @@
           }
         }
         markReady('userChosen-skip');
+        console.log('[BOOT] bootstrapProjectTheme END');
         return;
       }
 
@@ -684,6 +686,7 @@
 
       if (location.protocol === 'file:') {
         finishWithTheme(offlineFallback, null);
+        console.log('[BOOT] bootstrapProjectTheme END');
         return;
       }
 
@@ -710,6 +713,7 @@
       if (typeof BootDebug !== 'undefined') BootDebug.error('bootstrapProjectTheme fatal', fatal);
       markReady('bootstrap-fatal');
     }
+    console.log('[BOOT] bootstrapProjectTheme END');
   }
 
   window.__applyProjectThemeEarly = function (rawConfig, proyectoId) {

@@ -72,6 +72,7 @@ function applyHeroFloatVisibility(config) {
 }
 
 function applyHeroModule(project) {
+  console.log('[BOOT] applyHeroModule START');
   var config = project.proyecto_config || {};
   if (Array.isArray(config)) config = config[0] || {};
   var constructora = project.constructoras || {};
@@ -149,6 +150,7 @@ function applyHeroModule(project) {
       imageEl.style.display = 'none';
     }
   }
+  console.log('[BOOT] applyHeroModule END');
 }
 
 function getProjectConfig(project) {
@@ -779,6 +781,7 @@ function buildUnitsData(project) {
 }
 
 function applyProjectData(project) {
+  console.log('[BOOT] applyProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: applyProjectData');}catch(_bd){}
   try {
 
@@ -886,6 +889,7 @@ function applyProjectData(project) {
   window.__pdTrace('applyProjectData — done');
 
   } finally {
+  console.log('[BOOT] applyProjectData END');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/project-data.js :: applyProjectData');}catch(_bd){}
   }
 }
@@ -925,6 +929,7 @@ function showProjectLoadError(err) {
 }
 
 function loadProjectData() {
+  console.log('[BOOT] loadProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: loadProjectData');}catch(_bd){}
   try {
 
@@ -933,6 +938,7 @@ function loadProjectData() {
   if (typeof fetchPublishedProject !== 'function') {
     window.__pdTrace('loadProjectData early return', 'fetchPublishedProject no definido');
     showProjectLoadError(new Error('fetchPublishedProject no definido (supabase-client.js)'));
+    console.log('[BOOT] loadProjectData END');
     return Promise.resolve(null);
   }
   var run;
@@ -944,6 +950,7 @@ function loadProjectData() {
     window.__pdTraceError('loadProjectData sync throw', syncErr);
     showProjectLoadError(syncErr);
     window.__pdTrace('loadProjectData early return', 'tras syncErr');
+    console.log('[BOOT] loadProjectData END');
     return Promise.resolve(null);
   }
   return Promise.resolve(run)
@@ -961,11 +968,13 @@ function loadProjectData() {
       /* CPU profile: pausa aquí con ?cpuprofile=1 — antes del bloqueo post-boot. */
       if (typeof BootCpuProfile !== 'undefined') BootCpuProfile.pause('after-applyProjectData');
       window.__pdTrace('loadProjectData — done');
+      console.log('[BOOT] loadProjectData END');
       return project;
     })
     .catch(function (err) {
       window.__pdTraceError('loadProjectData promise catch', err);
       showProjectLoadError(err);
+      console.log('[BOOT] loadProjectData END');
     });
 
   } finally {
