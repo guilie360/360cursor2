@@ -72,6 +72,18 @@ var AuthRedirects = (function () {
     return url.href;
   }
 
+  function adminDashboard() {
+    var url = new URL('admin/dashboard.html', window.location.href);
+    try {
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
+      if (proyecto) url.searchParams.set('proyecto', proyecto);
+    } catch (e) {}
+    return url.href;
+  }
+
   function requiredAllowlist() {
     return [
       origin() + '/auth/confirmar-email.html',
@@ -95,6 +107,7 @@ var AuthRedirects = (function () {
     privacidad: privacidad,
     publicHome: publicHome,
     adminBuilder: adminBuilder,
+    adminDashboard: adminDashboard,
     oauthCallback: oauthCallback,
     requiredAllowlist: requiredAllowlist,
     withQueryParam: withQueryParam

@@ -43,6 +43,14 @@ var AdminAuth = (function () {
     clearState();
   }
 
+  function dashboardHref() {
+    try {
+      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
+      if (proyecto) return 'dashboard.html?proyecto=' + encodeURIComponent(proyecto);
+    } catch (e) {}
+    return 'dashboard.html';
+  }
+
   async function requireAuth() {
     await getSession();
     if (!session) {
@@ -64,7 +72,7 @@ var AdminAuth = (function () {
     if (!session) return false;
     try {
       await loadProfile();
-      window.location.replace('dashboard.html');
+      window.location.replace(dashboardHref());
       return true;
     } catch (err) {
       await logout();

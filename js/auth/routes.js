@@ -22,7 +22,7 @@ var AuthRouter = (function () {
     var type = getAccountType(profile);
     if (!type) return AuthRedirects.ingresar();
     var path = DESTINATIONS[type] || AuthRedirects.cuenta();
-    if (type === 'visitante') {
+    if (type === 'visitante' || type === 'staff') {
       return AuthRedirects.withProyecto(path);
     }
     return path;

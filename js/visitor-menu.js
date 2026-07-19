@@ -112,16 +112,22 @@ var VisitorMenu = (function () {
   }
 
   function adminBuilderHref() {
+    if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminDashboard === 'function') {
+      return AuthRedirects.adminDashboard();
+    }
     if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
       return AuthRedirects.adminBuilder();
     }
     try {
-      var url = new URL('admin/ai-project-builder.html', window.location.href);
-      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
+      var url = new URL('admin/dashboard.html', window.location.href);
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
       if (proyecto) url.searchParams.set('proyecto', proyecto);
       return url.href;
     } catch (e) {
-      return 'admin/ai-project-builder.html';
+      return 'admin/dashboard.html';
     }
   }
 
