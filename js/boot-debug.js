@@ -8,7 +8,17 @@ var BootDebug = (function () {
     return ((Date.now() - startedAt) / 1000).toFixed(2) + 's';
   }
 
+  /* Overlay off by default. Opt-in only: ?debug=1 */
+  function isOverlayEnabled() {
+    try {
+      var params = new URLSearchParams(location.search || '');
+      return params.get('debug') === '1';
+    } catch (e1) {}
+    return false;
+  }
+
   function ensureBanner() {
+    if (!isOverlayEnabled()) return null;
     if (banner || !document.body) return banner;
     banner = document.createElement('div');
     banner.id = 'bootDebugBanner';
@@ -35,6 +45,7 @@ var BootDebug = (function () {
   }
 
   function renderBanner(force) {
+    if (!isOverlayEnabled()) return;
     var el = ensureBanner();
     if (!el) return;
     var hasError = steps.some(function (s) { return s.level === 'error'; });
@@ -108,11 +119,11 @@ var BootDebug = (function () {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       log('DOMContentLoaded');
-      ensureBanner();
+      if (isOverlayEnabled()) ensureBanner();
     });
   } else {
     log('DOM already ' + document.readyState);
-    setTimeout(ensureBanner, 0);
+    if (isOverlayEnabled()) setTimeout(ensureBanner, 0);
   }
 
   window.addEventListener('error', function (ev) {
@@ -135,6 +146,7 @@ var BootDebug = (function () {
     error: error,
     markThemeReady: markThemeReady,
     withTimeout: withTimeout,
-    getSteps: getSteps
+    getSteps: getSteps,
+    isOverlayEnabled: isOverlayEnabled
   };
 })();

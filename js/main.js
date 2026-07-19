@@ -7,6 +7,7 @@ try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/main.js'
   function paintBootBanner() {
     try {
       if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
+      if (typeof BootDebug.isOverlayEnabled === 'function' && !BootDebug.isOverlayEnabled()) return;
       var el = document.getElementById('bootDebugBanner');
       if (!el && document.body) {
         el = document.createElement('div');

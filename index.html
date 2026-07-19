@@ -940,6 +940,7 @@ if (typeof BootDebug !== 'undefined') {
     function paint() {
       try {
         if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
+        if (typeof BootDebug.isOverlayEnabled === 'function' && !BootDebug.isOverlayEnabled()) return;
         var el = document.getElementById('bootDebugBanner');
         if (!el && document.body) {
           el = document.createElement('div');
