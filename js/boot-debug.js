@@ -1,3 +1,4 @@
+console.log("BOOT VERSION 3e8f7cc");
 /* Boot diagnostics — temporal (producción Hostinger). Quitar cuando estabilice. */
 var BootDebug = (function () {
   var steps = [];
