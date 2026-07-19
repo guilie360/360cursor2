@@ -812,29 +812,82 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
 
   <!-- TOAST DE FEEDBACK (compartir, favoritos, etc.) -->
   <div class="app-toast" id="appToast"></div>
-  <!-- BISECT L0: CSS + ThemeSystem.init only -->
-  <div id="bisectMarker" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;padding:8px 10px;background:#111;color:#0f0;font:12px monospace;">BISECT L0 - ThemeSystem only</div>
+  <!-- BISECT L1: L0 + first half of previously disabled scripts (42/83) -->
+  <div id="bisectMarker" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;padding:8px 10px;background:#111;color:#0f0;font:12px monospace;">BISECT L1</div>
   <script>
-  window.__BISECT_STEP__ = 'L0-theme-only';
-  window.__BUILD_STAMP__ = 'bisect-L0';
-  console.log('[BISECT]', window.__BISECT_STEP__);
+  window.__BISECT_STEP__ = 'L1-first-half';
+  window.__BUILD_STAMP__ = 'bisect-L1';
   </script>
-  <script src="js/theme-system.js?v=bisectL0"></script>
+<script src="js/boot-debug.js?v=boot1"></script>
+<script src="js/boot-cpu-profile.js?v=cpu1"></script>
   <script>
   (function () {
     try {
-      if (typeof ThemeSystem === 'undefined') throw new Error('ThemeSystem undefined');
-      ThemeSystem.init({ deferApply: true });
-      var m = document.getElementById('bisectMarker');
-      if (m) m.textContent = 'BISECT L0 - ThemeSystem.init DONE';
-      console.log('[BISECT] ThemeSystem.init done');
-    } catch (e) {
-      console.error('[BISECT] ThemeSystem.init failed', e);
-      var m2 = document.getElementById('bisectMarker');
-      if (m2) { m2.style.color = '#f66'; m2.textContent = 'BISECT L0 FAIL: ' + e; }
-      throw e;
-    }
+      var params = new URLSearchParams(window.location.search);
+      if (!params.get('proyecto')) {
+        params.set('proyecto', 'proyecto-demo');
+        history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+      }
+    } catch (e) {}
   })();
   </script>
+<script src="js/shared/config.js?v=boot1"></script>
+<script src="js/theme-early-bootstrap.js?v=boot1"></script>
+  <script>
+  (function () {
+    try {
+      if (localStorage.getItem('boxies_web_effects_enabled') === 'false') {
+        document.documentElement.classList.add('web-effects-off');
+      }
+    } catch (e) {}
+  })();
+  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/theme-system.js?v=bisectL1"></script>
+  <script>
+  (function () {
+    if (typeof ThemeSystem === 'undefined') throw new Error('ThemeSystem undefined');
+    ThemeSystem.init({ deferApply: true });
+    var m = document.getElementById('bisectMarker');
+    if (m) m.textContent = 'BISECT L1 - first half ON';
+  })();
+  </script>
+<script src="js/theme-ai/theme-color-math.js"></script>
+<script src="js/theme-ai/theme-brand-intelligence.js"></script>
+<script src="js/theme-ai/theme-brand-analyzer.js"></script>
+<script src="js/theme-ai/theme-role-mapper.js"></script>
+<script src="js/theme-ai/theme-ai-source.js"></script>
+<script src="js/theme-ai/theme-ai-session.js"></script>
+<script src="js/theme-ai/theme-ai-generator.js"></script>
+<script src="js/theme-ai/theme-ai-preview.js"></script>
+<script src="js/theme-ai/theme-ai-modal.js"></script>
+<script src="js/shared/constants.js"></script>
+<script src="js/shared/formatters.js"></script>
+<script src="js/supabase-client.js?v=boot1"></script>
+<script src="js/auth/client.js"></script>
+<script src="js/auth/redirects.js"></script>
+<script src="js/auth/storage-prefs.js"></script>
+<script src="js/auth/errors.js"></script>
+<script src="js/auth/routes.js"></script>
+<script src="js/auth/roles-permissions.js"></script>
+<script src="js/auth/api/login.js"></script>
+<script src="js/auth/api/profiles.js"></script>
+<script src="js/auth/api/user-themes.js"></script>
+<script src="js/auth/api/visitantes.js"></script>
+<script src="js/auth/api/registro.js"></script>
+<script src="js/auth/api/oauth.js"></script>
+<script src="js/auth/api/visitor-provisioning.js"></script>
+<script src="js/auth/api/favoritos.js"></script>
+<script src="js/auth/visitor-auth.js"></script>
+<script src="js/visitor-session.js"></script>
+<script src="js/visitor-personalization.js"></script>
+<script src="js/auth/api/project-theme.js"></script>
+<script src="js/auth/api/project-preset-themes.js"></script>
+<script src="js/platform/project-theme-authority.js?v=freeze1"></script>
+<script src="js/platform/project-preset-themes.js"></script>
+<script src="js/platform/admin-hero-api.js"></script>
+<script src="js/pause-screen/pause-screen-messages.js"></script>
+<script src="js/pause-screen/pause-screen-config.js"></script>
+<script src="js/pause-screen/pause-screen.js"></script>
 </body>
 </html>
