@@ -896,14 +896,19 @@ if (typeof BootDebug !== 'undefined') {
       paint();
     }
     try {
+      console.log('A');
       log('INLINE Theme START');
       log('ANTES typeof ThemeSystem check');
+      console.log('B');
       if (typeof ThemeSystem === 'undefined') {
         log('INLINE Theme ERROR: ThemeSystem undefined');
         throw new Error('ThemeSystem undefined');
       }
+      console.log('C');
       log('ANTES ThemeSystem.init');
+      console.log('D');
       var __themeInitResult = ThemeSystem.init({ deferApply: true });
+      console.log('E');
       log('DESPUES ThemeSystem.init (retorno sync)');
       if (__themeInitResult && typeof __themeInitResult.then === 'function') {
         log('ThemeSystem.init devolvio Promise — esperando resolve/reject');
