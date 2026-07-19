@@ -120,8 +120,6 @@ var ProjectThemeAuthority = (function () {
 
   /** Aplica el oficial aunque el usuario haya experimentado (p. ej. Reiniciar → HALL). */
   function forceApplyOfficialTheme() {
-    /* TEMP freeze bisect: keep early HALL bootstrap only */
-    return false;
     var draft = getOfficialDraft();
     if (!draft) return false;
 

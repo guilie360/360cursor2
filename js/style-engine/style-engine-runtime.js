@@ -91,8 +91,6 @@ var StyleEngineRuntime = (function () {
   var activating = false;
 
   function activatePublished() {
-    /* TEMP freeze bisect: keep early HALL bootstrap only */
-    return;
     if (activating) return;
     if (typeof StyleEngineStore === 'undefined') return;
     activating = true;
@@ -115,8 +113,6 @@ var StyleEngineRuntime = (function () {
   var reinforceScheduled = false;
 
   function reinforcePublished() {
-    /* TEMP freeze bisect: keep early HALL bootstrap only */
-    return;
     if (!StyleEngineCompatibility.isStyleEngineLive()) return;
     activatePublished();
     if (reinforceScheduled) return;

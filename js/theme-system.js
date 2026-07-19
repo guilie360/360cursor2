@@ -1221,8 +1221,6 @@ var ThemeSystem = (function () {
   }
 
   function previewCustomTheme(config) {
-    /* TEMP freeze bisect: keep early HALL bootstrap only */
-    return;
     customPreviewConfig = normalizeCustomConfig(config);
     applyVars(CUSTOM_THEME_KEY);
     applyVisualDepth(customPreviewConfig.visualDepth);
