@@ -3,6 +3,54 @@
    Loads all modules from Supabase and hydrates the UI
    ========================================================= */
 
+(function () {
+  function paintBootBanner() {
+    try {
+      if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
+      var el = document.getElementById('bootDebugBanner');
+      if (!el && document.body) {
+        el = document.createElement('div');
+        el.id = 'bootDebugBanner';
+        el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;max-height:45vh;overflow:auto;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;';
+        document.body.appendChild(el);
+      }
+      if (!el) return;
+      el.style.display = 'block';
+      el.textContent = BootDebug.getSteps().map(function (s) {
+        return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
+      }).join('\n');
+    } catch (e) {}
+  }
+  window.__pdTrace = function (stage, detail) {
+    var msg = 'PD · ' + stage + (detail !== undefined && detail !== '' ? (' · ' + detail) : '');
+    try { console.log('[PD]', stage, detail !== undefined ? detail : ''); } catch (e) {}
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log(msg);
+      paintBootBanner();
+    }
+  };
+  window.__pdTraceError = function (stage, err) {
+    var detail = err && (err.stack || err.message) ? (err.stack || err.message) : String(err);
+    var msg = 'PD · FAIL · ' + stage + ' · ' + detail;
+    try { console.error('[PD]', stage, err); } catch (e) {}
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.error(msg, err);
+      paintBootBanner();
+    }
+  };
+  window.__pdTraceBlock = function (name, fn) {
+    window.__pdTrace(name + ' — start');
+    try {
+      var result = fn();
+      window.__pdTrace(name + ' — done');
+      return result;
+    } catch (err) {
+      window.__pdTraceError(name, err);
+      throw err;
+    }
+  };
+})();
+
 var PROJECT_DATA = null;
 
 function normalizeHeroTextColor(value) {
@@ -743,30 +791,37 @@ function buildUnitsData(project) {
 }
 
 function applyProjectData(project) {
+  window.__pdTrace('applyProjectData — start', project && (project.slug || project.nombre || project.id));
   PROJECT_DATA = project;
+  window.__pdTrace('applyProjectData · buildConfig');
   CONFIG = buildConfig(project);
   if (typeof ProjectPresetThemes !== 'undefined' && ProjectPresetThemes.invalidateCache) {
+    window.__pdTrace('applyProjectData · invalidateCache');
     ProjectPresetThemes.invalidateCache();
   }
 
-  applyHeroModule(project);
-  applyMenuModule(project);
-  applyProjectVideoModule(project);
-  bindProjectVideoModal();
-  applyProjectInfoModule(project);
-  applyConstructorModule(project);
-  applyAmenitiesModule(project);
-  buildProgressData(project);
-  buildDownloadsData(project);
-  buildTypologiesData(project);
-  buildUnitsData(project);
+  window.__pdTraceBlock('applyHeroModule', function () { applyHeroModule(project); });
+  window.__pdTraceBlock('applyMenuModule', function () { applyMenuModule(project); });
+  window.__pdTraceBlock('applyProjectVideoModule', function () { applyProjectVideoModule(project); });
+  window.__pdTraceBlock('bindProjectVideoModal', function () { bindProjectVideoModal(); });
+  window.__pdTraceBlock('applyProjectInfoModule', function () { applyProjectInfoModule(project); });
+  window.__pdTraceBlock('applyConstructorModule', function () { applyConstructorModule(project); });
+  window.__pdTraceBlock('applyAmenitiesModule', function () { applyAmenitiesModule(project); });
+  window.__pdTraceBlock('buildProgressData', function () { buildProgressData(project); });
+  window.__pdTraceBlock('buildDownloadsData', function () { buildDownloadsData(project); });
+  window.__pdTraceBlock('buildTypologiesData', function () { buildTypologiesData(project); });
+  window.__pdTraceBlock('buildUnitsData', function () { buildUnitsData(project); });
 
   if (typeof window.initProjectUI === 'function') {
-    window.initProjectUI();
+    window.__pdTraceBlock('initProjectUI', function () { window.initProjectUI(); });
+  } else {
+    window.__pdTrace('initProjectUI — skip', 'función ausente');
   }
 
   if (typeof PauseScreen !== 'undefined') {
-    PauseScreen.init(project);
+    window.__pdTraceBlock('PauseScreen.init', function () { PauseScreen.init(project); });
+  } else {
+    window.__pdTrace('PauseScreen.init — skip');
   }
 
     if (typeof ProjectThemeAuthority !== 'undefined') {
@@ -786,46 +841,71 @@ function applyProjectData(project) {
         /* Si HALL ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
         if (activeIsHall && seLive && !skipForce) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: reinforcePublished');
+          window.__pdTrace('theme branch · reinforcePublished');
           if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
-            StyleEngineRuntime.reinforcePublished();
+            window.__pdTraceBlock('StyleEngineRuntime.reinforcePublished', function () {
+              StyleEngineRuntime.reinforcePublished();
+            });
           }
         } else if (!skipForce || activeIsHall) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: forceApplyOfficialTheme');
+          window.__pdTrace('theme branch · forceApplyOfficialTheme');
           try {
-            ProjectThemeAuthority.forceApplyOfficialTheme();
+            window.__pdTraceBlock('ProjectThemeAuthority.forceApplyOfficialTheme', function () {
+              ProjectThemeAuthority.forceApplyOfficialTheme();
+            });
           } catch (themeErr) {
+            window.__pdTraceError('forceApplyOfficialTheme', themeErr);
             if (typeof BootDebug !== 'undefined') BootDebug.error('forceApplyOfficialTheme', themeErr);
           }
         } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
             ProjectThemeAuthority.shouldApplyProjectDefault()) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: applyDefaultForCurrentVisitor');
-          ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+          window.__pdTrace('theme branch · applyDefaultForCurrentVisitor');
+          window.__pdTraceBlock('ProjectThemeAuthority.applyDefaultForCurrentVisitor', function () {
+            ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+          });
+        } else {
+          window.__pdTrace('theme branch · none');
         }
       } else if (typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
           ProjectThemeAuthority.shouldApplyProjectDefault()) {
-        ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+        window.__pdTrace('theme branch · applyDefault (no forceApply)');
+        window.__pdTraceBlock('ProjectThemeAuthority.applyDefaultForCurrentVisitor', function () {
+          ProjectThemeAuthority.applyDefaultForCurrentVisitor();
+        });
+      } else {
+        window.__pdTrace('theme branch · ProjectThemeAuthority sin apply');
       }
     } else {
+      window.__pdTrace('theme branch · deferred setTimeout (no ProjectThemeAuthority)');
       window.setTimeout(function () {
         if (typeof StyleEngineCompatibility !== 'undefined' &&
             StyleEngineCompatibility.isStyleEngineLive()) {
           if (typeof StyleEngineRuntime !== 'undefined') StyleEngineRuntime.reinforcePublished();
+          window.__pdTrace('deferred theme · reinforcePublished then return');
           return;
         }
         if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
           ThemeSystem.reapply();
+          window.__pdTrace('deferred theme · ThemeSystem.reapply');
         }
       }, 0);
     }
+  window.__pdTrace('applyProjectData — done');
 }
 
 function showProjectLoadError(err) {
   var msg = (err && err.message) ? err.message : String(err || 'Error desconocido');
+  window.__pdTraceError('showProjectLoadError', err);
   if (typeof BootDebug !== 'undefined') BootDebug.error('ProjectData', msg);
   else console.error('[ProjectData]', msg);
 
   var host = document.getElementById('projectCover') || document.body;
-  if (!host) return;
+  if (!host) {
+    window.__pdTrace('showProjectLoadError early return', 'sin host DOM');
+    return;
+  }
   var box = document.getElementById('projectLoadError');
   if (!box) {
     box = document.createElement('div');
@@ -850,42 +930,55 @@ function showProjectLoadError(err) {
 }
 
 function loadProjectData() {
+  window.__pdTrace('loadProjectData — start');
   if (typeof BootDebug !== 'undefined') BootDebug.log('loadProjectData start');
   if (typeof fetchPublishedProject !== 'function') {
+    window.__pdTrace('loadProjectData early return', 'fetchPublishedProject no definido');
     showProjectLoadError(new Error('fetchPublishedProject no definido (supabase-client.js)'));
     return Promise.resolve(null);
   }
   var run;
   try {
+    window.__pdTrace('loadProjectData · antes del fetch');
     run = fetchPublishedProject();
+    window.__pdTrace('loadProjectData · fetch invocado (promise pendiente)');
   } catch (syncErr) {
+    window.__pdTraceError('loadProjectData sync throw', syncErr);
     showProjectLoadError(syncErr);
+    window.__pdTrace('loadProjectData early return', 'tras syncErr');
     return Promise.resolve(null);
   }
   return Promise.resolve(run)
     .then(function (project) {
+      window.__pdTrace('loadProjectData · después del fetch', project && (project.slug || project.nombre || project.id));
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData start');
       try {
         applyProjectData(project);
       } catch (applyErr) {
+        window.__pdTraceError('applyProjectData throw', applyErr);
         showProjectLoadError(applyErr);
         throw applyErr;
       }
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData done / render inicial');
       /* CPU profile: pausa aquí con ?cpuprofile=1 — antes del bloqueo post-boot. */
       if (typeof BootCpuProfile !== 'undefined') BootCpuProfile.pause('after-applyProjectData');
+      window.__pdTrace('loadProjectData — done');
       return project;
     })
     .catch(function (err) {
+      window.__pdTraceError('loadProjectData promise catch', err);
       showProjectLoadError(err);
     });
 }
 
 if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — calling loadProjectData()');
+window.__pdTrace('project-data.js evaluating — calling loadProjectData()');
 try {
   loadProjectData();
 } catch (e) {
+  window.__pdTraceError('loadProjectData() sync throw', e);
   if (typeof BootDebug !== 'undefined') BootDebug.error('loadProjectData() sync throw', e);
   else console.error(e);
 }
 if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — loadProjectData() scheduled');
+window.__pdTrace('project-data.js evaluating — loadProjectData() scheduled');
