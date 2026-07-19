@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es" translate="no" class="notranslate" data-build="nav16">
+<html lang="es" translate="no" class="notranslate theme-ready" data-build="nav16">
 <head>
 <meta charset="UTF-8">
 <title>360•</title>
 <script>
-window.__BUILD_STAMP__ = 'boot1';
+window.__BUILD_STAMP__ = 'boot2';
 console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -33,66 +33,6 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <!-- Android / Chrome -->
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
-<!-- Pantalla de carga neutra (negro) — el tema oficial llega desde Supabase -->
-<style id="project-theme-critical">
-html {
-  background: #000000;
-}
-:root {
-  --bg-main: #000000;
-  --text-primary: #ffffff;
-  --accent: #8f1d1d;
-  --hero-bg: #000000;
-  --hero-text: #ffffff;
-}
-/* Body visible tras theme-ready; failsafe JS evita congelar en negro */
-html:not(.theme-ready) body {
-  visibility: hidden;
-}
-</style>
-<script src="js/boot-debug.js?v=boot1"></script>
-<script src="js/boot-cpu-profile.js?v=cpu1"></script>
-<script>
-(function () {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    if (typeof BootDebug !== 'undefined') {
-      BootDebug.log('URL search', location.search || '(vacío)');
-      BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
-    }
-    if (!params.get('proyecto')) {
-      params.set('proyecto', 'proyecto-demo');
-      history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
-      if (typeof BootDebug !== 'undefined') {
-        BootDebug.log('proyecto inyectado', 'proyecto-demo');
-      }
-    }
-  } catch (e) {
-    if (typeof BootDebug !== 'undefined') BootDebug.error('param proyecto', e);
-    else console.error(e);
-  }
-})();
-</script>
-<script src="js/shared/config.js?v=boot1"></script>
-<script>
-if (typeof BootDebug !== 'undefined') {
-  BootDebug.log('config.js', {
-    hasUrl: typeof SUPABASE_URL !== 'undefined',
-    hasKey: typeof SUPABASE_ANON_KEY !== 'undefined',
-    slug: typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null
-  });
-}
-</script>
-<script src="js/theme-early-bootstrap.js?v=boot1"></script>
-<script>
-(function () {
-  try {
-    if (localStorage.getItem('boxies_web_effects_enabled') === 'false') {
-      document.documentElement.classList.add('web-effects-off');
-    }
-  } catch (e) {}
-})();
-</script>
 <link rel="stylesheet" href="css/variables.css?v=4">
 <link rel="stylesheet" href="css/components.css?v=cardtype1">
 <link rel="stylesheet" href="css/style-engine.css">
