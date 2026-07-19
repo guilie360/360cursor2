@@ -814,9 +814,6 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
   <div class="app-toast" id="appToast"></div>
 
   
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/boot-debug.js?v=boot1');</script>
-<script src="js/boot-debug.js?v=boot1"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/boot-debug.js?v=boot1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/boot-cpu-profile.js?v=cpu1');</script>
 <script src="js/boot-cpu-profile.js?v=cpu1"></script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/boot-cpu-profile.js?v=cpu1');</script>
@@ -874,22 +871,8 @@ if (typeof BootDebug !== 'undefined') {
   <script>
   (function () {
     function paint() {
-      try {
-        if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
-        if (typeof BootDebug.isOverlayEnabled === 'function' && !BootDebug.isOverlayEnabled()) return;
-        var el = document.getElementById('bootDebugBanner');
-        if (!el && document.body) {
-          el = document.createElement('div');
-          el.id = 'bootDebugBanner';
-          el.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;bottom:8px;z-index:2147483647;overflow:visible;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;';
-          document.body.appendChild(el);
-        }
-        if (!el) return;
-        el.style.display = 'block';
-        el.textContent = BootDebug.getSteps().map(function (s) {
-          return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
-        }).join('\n');
-      } catch (e) {}
+      /* BootDebug overlay desactivado — no insertar #bootDebugBanner */
+      return;
     }
     function log(msg) {
       if (typeof BootDebug !== 'undefined') BootDebug.log(msg);

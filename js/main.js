@@ -5,22 +5,8 @@ try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/main.js'
    ========================================================= */
 (function () {
   function paintBootBanner() {
-    try {
-      if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
-      if (typeof BootDebug.isOverlayEnabled === 'function' && !BootDebug.isOverlayEnabled()) return;
-      var el = document.getElementById('bootDebugBanner');
-      if (!el && document.body) {
-        el = document.createElement('div');
-        el.id = 'bootDebugBanner';
-          el.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;bottom:8px;z-index:2147483647;overflow:visible;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;';
-        document.body.appendChild(el);
-      }
-      if (!el) return;
-      el.style.display = 'block';
-      el.textContent = BootDebug.getSteps().map(function (s) {
-        return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
-      }).join('\n');
-    } catch (e) {}
+    /* BootDebug overlay desactivado — no insertar #bootDebugBanner */
+    return;
   }
   window.__mainTrace = function (stage, detail) {
     var msg = 'MAIN · ' + stage + (detail !== undefined && detail !== '' ? (' · ' + detail) : '');

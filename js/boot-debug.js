@@ -19,42 +19,12 @@ var BootDebug = (function () {
   }
 
   function ensureBanner() {
-    if (!isOverlayEnabled()) return null;
-    if (banner || !document.body) return banner;
-    banner = document.createElement('div');
-    banner.id = 'bootDebugBanner';
-    banner.setAttribute('aria-live', 'polite');
-    banner.style.cssText = [
-      'position:fixed',
-      'left:8px',
-      'right:8px',
-      'top:8px',
-      'bottom:8px',
-      'z-index:2147483647',
-      'overflow:visible',
-      'padding:10px 12px',
-      'border-radius:10px',
-      'background:rgba(20,0,0,0.92)',
-      'color:#fff',
-      'font:12px/1.4 ui-monospace,Consolas,monospace',
-      'white-space:pre-wrap',
-      'pointer-events:none',
-      'display:none'
-    ].join(';');
-    document.body.appendChild(banner);
-    return banner;
+    /* Overlay desactivado en producción — no crear #bootDebugBanner */
+    return null;
   }
 
   function renderBanner(force) {
-    if (!isOverlayEnabled()) return;
-    var el = ensureBanner();
-    if (!el) return;
-    var hasError = steps.some(function (s) { return s.level === 'error'; });
-    if (!force && !hasError) return;
-    el.style.display = 'block';
-    el.textContent = steps.map(function (s) {
-      return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
-    }).join('\n');
+    return;
   }
 
   function log(msg, detail) {
@@ -120,11 +90,9 @@ var BootDebug = (function () {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       log('DOMContentLoaded');
-      if (isOverlayEnabled()) ensureBanner();
     });
   } else {
     log('DOM already ' + document.readyState);
-    if (isOverlayEnabled()) setTimeout(ensureBanner, 0);
   }
 
   window.addEventListener('error', function (ev) {
