@@ -10,36 +10,44 @@ var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
  * "/" and "/index.html" → null (no project; future platform landing).
  */
 function getProjectSlugFromUrl() {
+  var slug = null;
   try {
     var params = new URLSearchParams(window.location.search || '');
     var fromQuery = params.get('proyecto');
-    if (fromQuery) return fromQuery;
-
-    var path = window.location.pathname || '/';
-    path = path.replace(/\/+$/, '') || '/';
-    if (path === '/' || /^\/index\.html$/i.test(path)) return null;
-
-    var segments = path.split('/').filter(Boolean);
-    if (!segments.length) return null;
-
-    var first = segments[0];
-    var reserved = {
-      admin: 1,
-      auth: 1,
-      css: 1,
-      js: 1,
-      supabase: 1,
-      assets: 1,
-      images: 1,
-      'wp-content': 1
-    };
-    if (reserved[first]) return null;
-    if (/\.[a-z0-9]+$/i.test(first)) return null;
-
-    return first;
+    if (fromQuery) {
+      slug = fromQuery;
+    } else {
+      var path = window.location.pathname || '/';
+      path = path.replace(/\/+$/, '') || '/';
+      if (path !== '/' && !/^\/index\.html$/i.test(path)) {
+        var segments = path.split('/').filter(Boolean);
+        if (segments.length) {
+          var first = segments[0];
+          var reserved = {
+            admin: 1,
+            auth: 1,
+            css: 1,
+            js: 1,
+            supabase: 1,
+            assets: 1,
+            images: 1,
+            'wp-content': 1
+          };
+          if (!reserved[first] && !/\.[a-z0-9]+$/i.test(first)) {
+            slug = first;
+          }
+        }
+      }
+    }
   } catch (e) {
-    return null;
+    slug = null;
   }
+  console.log('[SLUG]', {
+    pathname: location.pathname,
+    search: location.search,
+    slug: slug
+  });
+  return slug;
 }
 
 /* Pantalla de pausa al volver a la pestaña (navResumeGate / PauseScreen).
