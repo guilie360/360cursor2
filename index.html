@@ -1189,6 +1189,47 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
 <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/global-close.js?v=auth-lock1');</script>
 <script src="js/global-close.js?v=auth-lock1"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
+<script>
+  /* Chrome alt-tab guard Ôö£├ÂÔö£├ºÔö£├é runs before main.js, closes unauthorized menu */
+  (function () {
+    function closeUnauthorizedMenu() {
+      if (window.__navResumeGateOpen) return;
+      if (window.__menuOpenAllowedUntil && Date.now() < window.__menuOpenAllowedUntil) return;
+      if (typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked()) return;
+      var menu = document.getElementById('mainMenu');
+      if (menu && menu.classList.contains('active')) {
+        menu.classList.remove('active');
+        var backdrop = document.getElementById('mainMenuBackdrop');
+        if (backdrop) backdrop.classList.remove('active');
+        document.body.classList.remove('main-menu-open', 'global-close-docked');
+      }
+      if (typeof window.syncMenuClosedFromGuard === 'function') {
+        window.syncMenuClosedFromGuard();
+      }
+    }
+    function onTabReturn() {
+      window.__lastTabReturnAt = Date.now();
+      window.__menuOpenAllowedUntil = 0;
+      if (typeof window.revokeMenuOpenToken === 'function') {
+        window.revokeMenuOpenToken();
+      }
+      closeUnauthorizedMenu();
+      setTimeout(closeUnauthorizedMenu, 50);
+      setTimeout(closeUnauthorizedMenu, 200);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') onTabReturn();
+    }, true);
+    window.addEventListener('focus', onTabReturn);
+    window.addEventListener('pageshow', onTabReturn);
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.isTrusted || !e.target || !e.target.closest) return;
+      if (e.target.closest('#mainMenuOpenBtn, #mainMenu, #mainMenuBackdrop')) {
+        window.__menuOpenAllowedUntil = Date.now() + 3000;
+      }
+    }, true);
+  })();
+  </script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/units-compare-pdf.js');</script>
 <script src="js/units-compare-pdf.js"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/units-compare-pdf.js');</script>
