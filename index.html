@@ -872,9 +872,56 @@ if (typeof BootDebug !== 'undefined') {
 <script src="js/theme-system.js?v=freeze1"></script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-system.js?v=freeze1');</script>
   <script>
-  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init start');
-  ThemeSystem.init({ deferApply: true });
-  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init done');
+  (function () {
+    function paint() {
+      try {
+        if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
+        var el = document.getElementById('bootDebugBanner');
+        if (!el && document.body) {
+          el = document.createElement('div');
+          el.id = 'bootDebugBanner';
+          el.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;bottom:8px;z-index:2147483647;overflow:visible;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;';
+          document.body.appendChild(el);
+        }
+        if (!el) return;
+        el.style.display = 'block';
+        el.textContent = BootDebug.getSteps().map(function (s) {
+          return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
+        }).join('\n');
+      } catch (e) {}
+    }
+    function log(msg) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log(msg);
+      else try { console.log(msg); } catch (e) {}
+      paint();
+    }
+    try {
+      log('INLINE Theme START');
+      log('ANTES typeof ThemeSystem check');
+      if (typeof ThemeSystem === 'undefined') {
+        log('INLINE Theme ERROR: ThemeSystem undefined');
+        throw new Error('ThemeSystem undefined');
+      }
+      log('ANTES ThemeSystem.init');
+      var __themeInitResult = ThemeSystem.init({ deferApply: true });
+      log('DESPUES ThemeSystem.init (retorno sync)');
+      if (__themeInitResult && typeof __themeInitResult.then === 'function') {
+        log('ThemeSystem.init devolvio Promise — esperando resolve/reject');
+        __themeInitResult.then(
+          function (v) { log('ThemeSystem.init Promise RESOLVED'); },
+          function (err) {
+            log('ThemeSystem.init Promise REJECTED: ' + ((err && err.stack) || err));
+          }
+        );
+      } else {
+        log('ThemeSystem.init no devolvio Promise');
+      }
+      log('INLINE Theme END');
+    } catch (e) {
+      log('INLINE Theme ERROR: ' + ((e && e.stack) || e));
+      throw e;
+    }
+  })();
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-color-math.js');</script>
 <script src="js/theme-ai/theme-color-math.js"></script>
