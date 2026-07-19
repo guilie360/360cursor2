@@ -3,6 +3,9 @@
   RewriteEngine On
   RewriteBase /
 
+  # TEMPORARY: no platform landing yet — / → /demo (remove when landing exists)
+  RewriteRule ^$ /demo [R=302,L]
+
   # Serve real files and directories as-is
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
