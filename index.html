@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>360•</title>
 <script>
-window.__BUILD_STAMP__ = 'boot2';
+window.__BUILD_STAMP__ = 'path1';
 console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -841,42 +841,21 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/boot-cpu-profile.js?v=cpu1');</script>
 <script src="js/boot-cpu-profile.js?v=cpu1"></script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/boot-cpu-profile.js?v=cpu1');</script>
-  <script>
-(function () {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    if (typeof BootDebug !== 'undefined') {
-      BootDebug.log('URL search', location.search || '(vacío)');
-      BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
-    }
-    if (!params.get('proyecto')) {
-      params.set('proyecto', 'proyecto-demo');
-      history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
-      if (typeof BootDebug !== 'undefined') {
-        BootDebug.log('proyecto inyectado', 'proyecto-demo');
-      }
-    }
-  } catch (e) {
-    if (typeof BootDebug !== 'undefined') BootDebug.error('param proyecto', e);
-    else console.error(e);
-  }
-})();
-</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/config.js?v=boot1');</script>
-<script src="js/shared/config.js?v=boot1"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/config.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/config.js?v=boot2');</script>
+<script src="js/shared/config.js?v=boot2"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/config.js?v=boot2');</script>
   <script>
 if (typeof BootDebug !== 'undefined') {
   BootDebug.log('config.js', {
     hasUrl: typeof SUPABASE_URL !== 'undefined',
     hasKey: typeof SUPABASE_ANON_KEY !== 'undefined',
-    slug: typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null
+    slug: typeof getProjectSlugFromUrl === 'function' ? getProjectSlugFromUrl() : null
   });
 }
 </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-early-bootstrap.js?v=boot1');</script>
-<script src="js/theme-early-bootstrap.js?v=boot1"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-early-bootstrap.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-early-bootstrap.js?v=boot2');</script>
+<script src="js/theme-early-bootstrap.js?v=boot2"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-early-bootstrap.js?v=boot2');</script>
   <script>
 (function () {
   try {

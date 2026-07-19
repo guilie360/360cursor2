@@ -549,23 +549,12 @@
   }
 
   function getProjectSlug() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      var slug = params.get('proyecto');
-      if (slug) return slug;
-    } catch (e) {}
-    return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : 'proyecto-demo';
+    if (typeof getProjectSlugFromUrl === 'function') return getProjectSlugFromUrl();
+    return null;
   }
 
   function normalizeProjectUrl() {
-    try {
-      var params = new URLSearchParams(window.location.search);
-      if (!params.get('proyecto') && typeof DEFAULT_PROJECT_SLUG !== 'undefined') {
-        params.set('proyecto', DEFAULT_PROJECT_SLUG);
-        var next = window.location.pathname + '?' + params.toString() + window.location.hash;
-        window.history.replaceState(null, '', next);
-      }
-    } catch (e) {}
+    /* Pretty paths (/demo) keep the browser URL; do not inject ?proyecto= */
   }
 
   function fetchProjectDefaultTheme() {
@@ -575,6 +564,10 @@
     }
 
     var slug = getProjectSlug();
+    if (!slug) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme: sin slug');
+      return Promise.resolve(null);
+    }
     if (typeof BootDebug !== 'undefined') BootDebug.log('fetch theme slug', slug);
     var select = encodeURIComponent('id,proyecto_config(project_default_theme)');
     var path =

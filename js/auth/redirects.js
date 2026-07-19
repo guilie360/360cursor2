@@ -7,8 +7,10 @@ var AuthRedirects = (function () {
 
   function withProyecto(path) {
     try {
-      var params = new URLSearchParams(window.location.search);
-      var proyecto = params.get('proyecto');
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
       if (!proyecto) return path;
       var join = path.indexOf('?') === -1 ? '?' : '&';
       return path + join + 'proyecto=' + encodeURIComponent(proyecto);
@@ -61,7 +63,10 @@ var AuthRedirects = (function () {
   function adminBuilder() {
     var url = new URL('admin/ai-project-builder.html', window.location.href);
     try {
-      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
       if (proyecto) url.searchParams.set('proyecto', proyecto);
     } catch (e) {}
     return url.href;

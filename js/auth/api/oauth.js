@@ -8,12 +8,15 @@ var OAuthApi = (function () {
 
   function saveReturnState() {
     try {
-      var params = new URLSearchParams(window.location.search);
+      var proyecto =
+        typeof getProjectSlugFromUrl === 'function'
+          ? getProjectSlugFromUrl()
+          : new URLSearchParams(window.location.search).get('proyecto');
       sessionStorage.setItem(RETURN_STATE_KEY, JSON.stringify({
         scrollY: window.scrollY || 0,
         navStack: typeof navStack !== 'undefined' ? navStack.slice() : [],
         hadNavStack: typeof navStack !== 'undefined' && navStack.length > 0,
-        proyecto: params.get('proyecto') || (typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null)
+        proyecto: proyecto || null
       }));
     } catch (e) {}
   }

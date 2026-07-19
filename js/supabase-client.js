@@ -1,13 +1,6 @@
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/supabase-client.js');}catch(_e){}
 /* Public site — read-only Supabase REST client (no auth session) */
-function getProjectSlugFromUrl() {
-  try {
-    var params = new URLSearchParams(window.location.search);
-    return params.get('proyecto') || (typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null);
-  } catch (e) {
-    return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null;
-  }
-}
+/* getProjectSlugFromUrl: defined in js/shared/config.js */
 
 function supabaseFetch(path) {
   console.log('[BOOT] supabaseFetch START');
@@ -60,8 +53,11 @@ function supabaseFetch(path) {
 }
 
 function fetchPublishedProject() {
-  var slug = getProjectSlugFromUrl();
+  var slug = typeof getProjectSlugFromUrl === 'function' ? getProjectSlugFromUrl() : null;
   if (typeof BootDebug !== 'undefined') BootDebug.log('fetchPublishedProject slug', slug);
+  if (!slug) {
+    return Promise.reject(new Error('Sin proyecto en la URL'));
+  }
   var select = [
     'id',
     'nombre',
@@ -85,12 +81,8 @@ function fetchPublishedProject() {
     'archivos(id,nombre,extension,url,tipo,orden,vivienda_id)'
   ].join(',');
 
-  var path = '/rest/v1/proyectos?select=' + encodeURIComponent(select) + '&publicado=eq.true';
-  if (slug) {
-    path += '&slug=eq.' + encodeURIComponent(slug);
-  } else {
-    path += '&order=created_at.asc&limit=1';
-  }
+  var path = '/rest/v1/proyectos?select=' + encodeURIComponent(select) +
+    '&publicado=eq.true&slug=eq.' + encodeURIComponent(slug);
 
   return supabaseFetch(path).then(function (rows) {
     if (!rows || !rows.length) throw new Error('No hay proyectos publicados');
