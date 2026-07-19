@@ -1,15 +1,815 @@
-<!doctype html>
-<html class="theme-ready">
+<!DOCTYPE html>
+<html lang="es" translate="no" class="notranslate theme-ready" data-build="nav16">
 <head>
-  <meta charset="utf-8">
-  <title>TEST</title>
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/style-engine.css">
+<meta charset="UTF-8">
+<title>360•</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/style-engine.css">
 </head>
-<body style="background:#111;color:#fff;font:20px sans-serif;padding:40px">
-  SI VES ESTE TEXTO, HOSTINGER ESTÁ SIRVIENDO ESTE INDEX.
-  <!-- L1–L6: todo excepto main.js, project-data.js, auth/bootstrap.js -->
+<body class="notranslate" translate="no">
+
+
+  <div class="vignette-overlay"></div>
+
+  <!-- ================= PORTADA DEL PROYECTO ================= -->
+  <section class="project-cover" id="projectCover" data-hero-text-color="light" data-hero-button-text-color="light" data-hero-layout="centered">
+    <video class="project-cover-video" id="coverVideo" autoplay muted loop playsinline preload="auto" style="display:none">
+      <source id="coverVideoSource" src="" type="video/mp4">
+    </video>
+    <img class="project-cover-video" id="coverImage" alt="" style="display:none">
+    <div class="project-cover-overlay"></div>
+    <div class="project-cover-content">
+      <img class="project-cover-logo" id="projectCoverLogo" src="" alt="" style="display:none">
+      <div class="project-cover-hero-row">
+        <div class="project-cover-hero-copy">
+          <div class="project-cover-name" id="projectCoverName"></div>
+          <div class="project-cover-tagline" id="projectCoverTagline"></div>
+        </div>
+        <div class="project-cover-buttons">
+          <div class="project-cover-slot project-cover-slot--start">
+            <button class="project-cover-btn with-icon" id="mainMenuOpenBtn" type="button"><span class="menu-btn-icon">Ôÿ░</span></button>
+          </div>
+          <div class="project-cover-slot project-cover-slot--end">
+            <button class="project-cover-btn" id="heroStartBtn" type="button"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOT├ôN FLOTANTE WHATSAPP -->
+  <a class="whatsapp-float" id="whatsappFloat" href="#" target="_blank" rel="noopener" aria-label="Chatear por WhatsApp">
+    <svg viewBox="0 0 24 24" fill="#fff">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.3-.347.45-.52.146-.174.194-.298.293-.497.099-.198.05-.371-.05-.52-.099-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>
+    </svg>
+  </a>
+
+  <!-- BOT├ôN FLOTANTE COMPARTIR PROYECTO -->
+  <button class="share-float" id="shareProjectFloatBtn" type="button" aria-label="Compartir proyecto">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg>
+  </button>
+
+  <!-- Herramientas men├║ (animaciones + sonido web) -->
+  <div class="global-menu-tools" id="globalMenuTools">
+    <button type="button" class="global-effects-btn" id="globalEffectsBtn" aria-label="Desactivar animaciones" aria-pressed="false" title="Desactivar animaciones">
+      <svg class="global-effects-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 21l9-9"/>
+        <path fill="currentColor" d="M14.8 3.2l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z"/>
+        <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M16.5 8.5l3 3"/>
+      </svg>
+    </button>
+    <button type="button" class="global-sound-btn is-unmuted" id="globalSoundBtn" aria-label="Silenciar sonidos de la web" aria-pressed="false" title="Silenciar sonidos">
+      <span class="video-ctrl-icon-stack global-sound-icon-stack" aria-hidden="true">
+        <svg class="video-ctrl-icon video-ctrl-icon--vol" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.3-3.9v7.8A4.5 4.5 0 0 0 16.5 12zM14.2 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9.1 9.1 0 0 0 0-17.6z"/></svg>
+        <svg class="video-ctrl-icon video-ctrl-icon--mute" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 12c0-.8-.2-1.5-.6-2.1v4.2c.4-.6.6-1.3.6-2.1zM3 10v4h4l5 5V5L7 10H3zm13.1.2L4.1 2.2 2.7 3.6l18.4 18.4 1.4-1.4-4.9-4.9.1-.1V12z"/></svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- ACCIONES GLOBALES (cerrar + pantalla completa) -->
+  <div class="global-action-stack" id="globalActionStack">
+    <button type="button" class="global-close-btn" id="globalCloseBtn" aria-label="Cerrar" hidden>&times;</button>
+    <button type="button" class="global-fullscreen-btn" id="globalFullscreenBtn" aria-label="Pantalla completa" aria-pressed="false" hidden>
+      <span class="global-fullscreen-icon" aria-hidden="true">ÔøÂ</span>
+    </button>
+  </div>
+
+  <!-- ================= MEN├Ü PRINCIPAL ================= -->
+  <div class="main-menu-backdrop" id="mainMenuBackdrop"></div>
+  <nav class="main-menu" id="mainMenu">
+    <div class="main-menu-shell">
+      <div class="main-menu-header">
+        <button type="button" class="main-menu-recovery-close" id="mainMenuRecoveryClose" aria-label="Cerrar men├║" hidden>&times;</button>
+        <div class="main-menu-project" id="mainMenuProject"></div>
+        <div class="main-menu-constructora" id="mainMenuConstructora"></div>
+      </div>
+
+      <div class="main-menu-body">
+        <div class="main-menu-nav-col">
+          <div class="menu-nav-toolbar" id="menuNavToolbar">
+            <button type="button" class="menu-nav-back" id="menuNavBack" hidden>
+              <span class="menu-nav-back-icon" aria-hidden="true">ÔåÂ</span>
+              <span class="menu-nav-back-label">volver</span>
+            </button>
+            <div class="menu-nav-v2-col" id="menuNavV2Col" hidden>
+              <div class="personalize-v2-actions" id="menuNavV2Actions" role="group" aria-label="Acciones del estilo"></div>
+            </div>
+            <div class="menu-nav-save-col" id="menuNavSaveCol" hidden>
+              <p class="menu-nav-save-message" id="menuNavSaveThemeMessage" hidden></p>
+              <button type="button" class="menu-nav-preset-delete" id="menuNavDeleteOfficialPreset" hidden aria-label="Eliminar tema oficial" title="Eliminar tema oficial">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              </button>
+              <button type="button" class="menu-nav-save" id="menuNavSaveTheme">
+                <span class="menu-nav-back-label">guardar tema</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="main-menu-content">
+          <!-- NIVEL 1: MEN├Ü PRINCIPAL -->
+          <div class="main-menu-list" id="mainMenuListPrimary">
+      <div class="menu-item" id="menuConoce">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6l8-3 8 3v15"/><path d="M9 21v-6h6v6"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1"/></svg>
+        <span class="menu-item-label">Conoce el proyecto</span>
+      </div>
+      <div class="menu-item" id="menuTour360">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>
+        <span class="menu-item-label">Experiencia 360┬░</span>
+      </div>
+      <div class="menu-item" id="menuViviendas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span class="menu-item-label">Viviendas</span>
+      </div>
+      <div class="menu-item" id="menuUbicacion">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.2"/></svg>
+        <span class="menu-item-label">Ubicaci├│n</span>
+      </div>
+      <div class="menu-item" id="menuContacto">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92V20a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.6 19a19.5 19.5 0 0 1-4.85-4.85 19.79 19.79 0 0 1-3-8.22A2 2 0 0 1 5.68 4h3.09a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L9.91 11.09a16 16 0 0 0 4.85 4.85l1.45-1.45a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+        <span class="menu-item-label">Contacto</span>
+      </div>
+          </div>
+
+          <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizar" style="display:none;"></div>
+          <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizarV2" style="display:none;"></div>
+
+          <!-- NIVEL 2: SUBMEN├Ü "CONOCE EL PROYECTO" -->
+          <div class="main-menu-list" id="mainMenuListProyecto" style="display:none;">
+      <div class="menu-item" id="menuDescripcion">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h4"/></svg>
+        <span class="menu-item-label">Descripci├│n</span>
+      </div>
+      <div class="menu-item" id="menuVideo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M10 9l5 3-5 3V9Z"/></svg>
+        <span class="menu-item-label">Video</span>
+      </div>
+      <div class="menu-item" id="menuRenders">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="8" cy="8" r="1.5"/></svg>
+        <span class="menu-item-label">Galer├¡a</span>
+      </div>
+      <div class="menu-item" id="menuAmenidades">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        <span class="menu-item-label">Amenidades</span>
+      </div>
+      <div class="menu-item" id="menuEstado">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <span class="menu-item-label">Estado del proyecto</span>
+      </div>
+      <div class="menu-item" id="menuConstructora">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M10 21v-5h4v5"/></svg>
+        <span class="menu-item-label">Constructora</span>
+      </div>
+      <div class="menu-item" id="menuDescargas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
+        <span class="menu-item-label">Descargas</span>
+      </div>
+    </div>
+
+    <!-- NIVEL 2: SUBMEN├Ü "CONTACTO" -->
+    <div class="main-menu-list" id="mainMenuListContacto" style="display:none;">
+      <a class="contact-link" id="contactInstagram" href="https://www.instagram.com/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">Instagram</span>
+          <span class="contact-link-sub" id="contactInstagramSub"></span>
+        </div>
+      </a>
+      <a class="contact-link" id="contactTel" href="#">
+        <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92V20a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.6 19a19.5 19.5 0 0 1-4.85-4.85 19.79 19.79 0 0 1-3-8.22A2 2 0 0 1 5.68 4h3.09a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L9.91 11.09a16 16 0 0 0 4.85 4.85l1.45-1.45a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">Tel├®fonos</span>
+          <span class="contact-link-sub" id="contactTelSub"></span>
+        </div>
+      </a>
+      <a class="contact-link" id="contactDireccion" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/>
+          <circle cx="12" cy="9.5" r="2.2"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">Sala de ventas</span>
+          <span class="contact-link-sub" id="contactDireccionSub"></span>
+        </div>
+      </a>
+      <a class="contact-link" id="contactWeb" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M2 12h20"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">Web constructora</span>
+          <span class="contact-link-sub" id="contactWebSub"></span>
+        </div>
+      </a>
+      <a class="contact-link" id="contactEmail" href="#">
+        <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">Email</span>
+          <span class="contact-link-sub" id="contactEmailSub"></span>
+        </div>
+      </a>
+      <a class="contact-link" id="contactWhatsapp" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" stroke="none" fill="#fff" opacity="0.65">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.3-.347.45-.52.146-.174.194-.298.293-.497.099-.198.05-.371-.05-.52-.099-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>
+        </svg>
+        <div class="contact-link-text">
+          <span class="contact-link-label">WhatsApp</span>
+          <span class="contact-link-sub">Enviar un mensaje</span>
+        </div>
+      </a>
+    </div>
+          </div>
+
+          <div class="main-menu-profile-slot" id="mainMenuProfileSlot"></div>
+
+          <footer class="main-menu-footer" aria-label="Plataforma">
+            <span class="main-menu-brand">BOXIES</span>
+            <span class="main-menu-version">v 2.5.0</span>
+          </footer>
+        </div>
+      </div>
+      <div class="main-menu-glass-vignette" aria-hidden="true"></div>
+    </div>
+  </nav>
+
+  <!-- MODALES DEL SUBMEN├Ü "CONOCE EL PROYECTO" -->
+  <div class="content-modal" id="descripcionModal">
+    <span class="modal-close" id="descripcionModalClose">&times;</span>
+    <div class="content-modal-box">
+      <div class="content-modal-title">Descripci├│n</div>
+      <p class="info-text" id="descripcionText"></p>
+    </div>
+  </div>
+
+  <div class="content-modal amenities-modal" id="amenidadesModal">
+    <span class="modal-close" id="amenidadesModalClose">&times;</span>
+    <div class="content-modal-box amenities-modal-box">
+      <div class="amenities-carousel-stage" id="amenitiesCarouselStage">
+        <div class="amenities-carousel-sticky">
+          <div class="amenities-carousel-viewport" id="amenitiesCarouselViewport">
+            <div class="amenities-carousel-track" id="amenitiesCarouselTrack" aria-live="polite"></div>
+          </div>
+          <div class="amenities-carousel-hint" id="amenitiesCarouselHint" aria-hidden="true">
+            <span class="amenities-carousel-hint-label">Desliza para explorar</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ESTADO DEL PROYECTO ÔÇö BARRAS DE PROGRESO ================= -->
+  <div class="content-modal" id="estadoModal">
+    <span class="modal-close" id="estadoModalClose">&times;</span>
+    <div class="content-modal-box">
+      <div class="content-modal-title">Estado del proyecto</div>
+
+      <div class="progress-overall">
+        <div class="progress-overall-header">
+          <span class="progress-overall-label">Avance general</span>
+          <span class="progress-overall-pct" id="progressOverallPct">0%</span>
+        </div>
+        <div class="progress-overall-track">
+          <div class="progress-overall-fill" id="progressOverallFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="progress-list" id="progressList"></div>
+
+      <p class="progress-updated-note" id="progressUpdatedNote"></p>
+    </div>
+  </div>
+
+  <div class="content-modal" id="constructoraModal">
+    <span class="modal-close" id="constructoraModalClose">&times;</span>
+    <div class="content-modal-box">
+      <div class="content-modal-title">Constructora</div>
+      <p class="info-text" id="constructoraText"></p>
+    </div>
+  </div>
+
+  <!-- MODAL DESCARGAS -->
+  <div class="content-modal downloads-modal" id="descargasModal">
+    <span class="modal-close" id="descargasModalClose">&times;</span>
+    <div class="content-modal-box downloads-modal-box">
+      <div class="downloads-stage" id="downloadsStage">
+        <span class="downloads-intro-pct" id="downloadsIntroPct" aria-live="polite">0%</span>
+        <div class="downloads-list" id="downloadsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CALCULADORA DE CUOTA (MEJORADA) -->
+  <div class="content-modal units-unit-overlay" id="calculatorModal">
+    <span class="modal-close" id="calculatorModalClose">&times;</span>
+    <div class="content-modal-box calc-modal-box units-premium-modal">
+      <div class="content-modal-title" id="calcModalTitle">Calculadora de cuota</div>
+      <div class="calc-row">
+        <div class="calc-label">Valor del inmueble</div>
+        <div class="calc-value" id="calcPropertyValue">$0</div>
+      </div>
+      <div class="calc-selects">
+        <div class="select-wrap">
+          <label>Cuota inicial</label>
+          <select id="calcDownPct">
+            <option value="10">10%</option>
+            <option value="20" selected>20%</option>
+            <option value="30">30%</option>
+            <option value="40">40%</option>
+            <option value="50">50%</option>
+          </select>
+        </div>
+        <div class="select-wrap">
+          <label>Plazo</label>
+          <select id="calcYears">
+            <option value="5">5 a├▒os</option>
+            <option value="10">10 a├▒os</option>
+            <option value="15">15 a├▒os</option>
+            <option value="20" selected>20 a├▒os</option>
+            <option value="25">25 a├▒os</option>
+            <option value="30">30 a├▒os</option>
+          </select>
+        </div>
+        <div class="select-wrap">
+          <label>Tasa anual</label>
+          <select id="calcRate">
+            <option value="9">9%</option>
+            <option value="10">10%</option>
+            <option value="10.5">10.5%</option>
+            <option value="11">11%</option>
+            <option value="11.5" selected>11.5%</option>
+            <option value="12">12%</option>
+            <option value="13">13%</option>
+          </select>
+          <span class="select-note">E.A.</span>
+        </div>
+      </div>
+      <div class="calc-divider"></div>
+      <div class="calc-results">
+        <div class="calc-result-row"><span>Cuota inicial</span><strong id="calcDownValue">$0</strong></div>
+        <div class="calc-result-row"><span>Cr├®dito</span><strong id="calcCreditValue">$0</strong></div>
+        <div class="calc-result-row highlight"><span>Cuota estimada</span><strong id="calcMonthlyValue">$0/mes</strong></div>
+        <div class="calc-result-row income"><span>Ingreso recomendado</span><strong id="calcIncomeValue">$0/mes</strong></div>
+      </div>
+      <p class="calc-income-note">Basado en que la cuota no supere el 30% del ingreso familiar</p>
+      <a class="calc-cta" id="calcWhatsappCta" href="#" target="_blank" rel="noopener">Solicitar propuesta</a>
+    </div>
+  </div>
+
+  <!-- POPUP: SELECCI├ôN DE UNIDADES -->
+  <div class="units-popup units-viviendas-popup" id="unitsPopup">
+    <div class="units-viviendas-stage">
+      <div class="units-grid units-viviendas-grid" id="unitsGrid"></div>
+      <div class="units-compare-panel" id="unitsComparePanel" hidden></div>
+      <div class="favorites-empty" id="favoritesEmpty" style="display:none;">
+        <div class="favorites-empty-icon">ÔÖí</div>
+        <p class="favorites-empty-text">A├║n no has agregado viviendas a favoritos.</p>
+        <button class="outline-btn" type="button" id="favoritesEmptyBtn">Explorar viviendas</button>
+      </div>
+      <div class="compare-empty favorites-empty" id="compareEmpty" style="display:none;" hidden>
+        <div class="compare-empty-icon favorites-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="5" width="6" height="14" rx="1.5"/>
+            <rect x="14" y="5" width="6" height="14" rx="1.5"/>
+          </svg>
+        </div>
+        <p class="compare-empty-text favorites-empty-text">Agrega 2 viviendas a favoritos para compararlas.</p>
+        <button class="outline-btn" type="button" id="compareEmptyBtn">Explorar viviendas</button>
+      </div>
+    </div>
+    <div class="units-viviendas-foot">
+      <div class="units-viviendas-foot-copy">
+        <p class="units-viviendas-title" id="unitsViviendasFootTitle">Selecciona tu vivienda</p>
+        <span class="units-viviendas-subtitle" id="unitsViviendasFootSubtitle">Explora planos, precios y calcula tu cuota.</span>
+      </div>
+      <div class="units-viviendas-foot-actions">
+        <div class="units-tabs" id="unitsTabs">
+          <button class="units-tab active" type="button" id="unitsTabAll">Todas las viviendas</button>
+          <button class="units-tab" type="button" id="unitsTabFav">Favoritos (0)</button>
+        </div>
+        <button class="units-compare-btn" type="button" id="unitsCompareBtn">Comparar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP: ZONAS CON RECORRIDO 360┬░ -->
+  <div class="units-popup tour360-popup" id="tour360Popup">
+    <div class="tour360-stage">
+      <div class="tour360-grid" id="tour360Grid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL PDF: planos + ficha t├®cnica + precio -->
+  <div class="pdf-modal units-unit-overlay" id="pdfModal">
+    <span class="modal-close" id="pdfClose">&times;</span>
+    <div class="pdf-modal-box units-premium-modal units-plans-modal">
+      <div class="gallery-scroll" id="galleryScroll"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 360 FULLSCREEN -->
+  <div class="sphere-modal units-sphere-overlay" id="sphereModal">
+    <span class="modal-close" id="sphereClose">&times;</span>
+    <iframe id="sphereFrame" src="" allow="fullscreen; gyroscope; accelerometer" allowfullscreen></iframe>
+
+    <!-- Spinner real: desaparece cuando el iframe carga -->
+    <div class="sphere-loader" id="sphereLoader">
+      <div class="sphere-spinner"></div>
+      <span class="sphere-loader-hint">P R O X I M A M E N T E</span>
+    </div>
+  </div>
+
+  <!-- MODAL VIDEO DEL PROYECTO -->
+  <div class="content-modal video-modal splash-intro-modal" id="videoModal">
+    <span class="modal-close" id="videoModalClose">&times;</span>
+    <div class="content-modal-box video-modal-box">
+      <div class="video-modal-loader" id="videoModalLoader" hidden aria-hidden="true">
+        <div class="video-splash" id="videoModalSplash" aria-hidden="true">
+          <div class="video-splash-mark">
+            <div class="video-splash-play">
+              <svg class="video-splash-play-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M8.2 5.4v13.2L19 12 8.2 5.4z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="video-splash-track" aria-hidden="true">
+            <div class="video-splash-bar" id="videoModalSplashBar"></div>
+            <div class="video-splash-head" id="videoModalSplashHead"></div>
+          </div>
+        </div>
+      </div>
+      <div class="video-modal-card" id="videoModalCard">
+        <div class="video-modal-player-wrap" id="projectVideoPlayerWrap">
+          <video
+            id="projectVideoPlayer"
+            class="project-video-player"
+            playsinline
+            preload="metadata"
+            poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%23000000'/%3E%3C/svg%3E"
+          >
+            <source id="projectVideoSource" type="video/webm">
+            Tu navegador no soporta la reproducci├│n de video.
+          </video>
+          <div class="video-player-controls" id="projectVideoControls" hidden>
+            <button type="button" class="video-ctrl-btn is-paused" id="projectVideoPlayBtn" aria-label="Reproducir" title="Reproducir">
+              <span class="video-ctrl-icon-stack" aria-hidden="true">
+                <svg class="video-ctrl-icon video-ctrl-icon--play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                <svg class="video-ctrl-icon video-ctrl-icon--pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+              </span>
+            </button>
+            <div class="video-ctrl-volume-wrap">
+              <button type="button" class="video-ctrl-btn is-unmuted" id="projectVideoMuteBtn" aria-label="Silenciar" title="Volumen">
+                <span class="video-ctrl-icon-stack" aria-hidden="true">
+                  <svg class="video-ctrl-icon video-ctrl-icon--vol" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.3-3.9v7.8A4.5 4.5 0 0 0 16.5 12zM14.2 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9.1 9.1 0 0 0 0-17.6z"/></svg>
+                  <svg class="video-ctrl-icon video-ctrl-icon--mute" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 12c0-.8-.2-1.5-.6-2.1v4.2c.4-.6.6-1.3.6-2.1zM3 10v4h4l5 5V5L7 10H3zm13.1.2L4.1 2.2 2.7 3.6l18.4 18.4 1.4-1.4-4.9-4.9.1-.1V12z"/></svg>
+                </span>
+              </button>
+              <input type="range" class="video-ctrl-volume" id="projectVideoVolume" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+            </div>
+            <div class="video-ctrl-spacer"></div>
+            <button type="button" class="video-ctrl-btn" id="projectVideoLoopBtn" aria-label="Repetir video" title="Repetir" aria-pressed="false">
+              <svg class="video-ctrl-icon video-ctrl-icon--loop" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 8a7 7 0 0 1 12.5-2"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19 16a7 7 0 0 1-12.5 2"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 8V4H1"/>
+                <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M19 16v4h4"/>
+              </svg>
+            </button>
+            <div class="video-ctrl-quality-wrap">
+              <button type="button" class="video-ctrl-btn video-ctrl-quality-btn" id="projectVideoQualityBtn" aria-label="Calidad" title="Calidad" aria-expanded="false">
+                <svg class="video-ctrl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></svg>
+              </button>
+              <div class="video-ctrl-quality-menu" id="projectVideoQualityMenu" hidden role="menu">
+                <button type="button" class="video-ctrl-quality-option" role="menuitem" data-quality="720">720</button>
+                <button type="button" class="video-ctrl-quality-option" role="menuitem" data-quality="1080">1080</button>
+                <button type="button" class="video-ctrl-quality-option" role="menuitem" data-quality="2k">2K</button>
+                <button type="button" class="video-ctrl-quality-option" role="menuitem" data-quality="4k">4K</button>
+              </div>
+            </div>
+            <button type="button" class="video-ctrl-btn" id="projectVideoFsBtn" aria-label="Pantalla completa" title="Pantalla completa">
+              <svg class="video-ctrl-icon video-ctrl-icon--fs" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP: GALER├ìA (mismo layout que Ver 360) -->
+  <div class="units-popup tour360-popup" id="rendersModal">
+    <div class="tour360-stage">
+      <div class="tour360-grid" id="rendersGrid"></div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX DE RENDERS (swipe) -->
+  <div class="lightbox" id="rendersLightbox">
+    <span class="modal-close" id="lightboxClose">&times;</span>
+    <span class="lightbox-arrow prev" id="lightboxPrev">&#8249;</span>
+    <span class="lightbox-arrow next" id="lightboxNext">&#8250;</span>
+    <div class="lightbox-track" id="lightboxTrack"></div>
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+  </div>
+
+  <!-- MODAL UBICACI├ôN (misma estructura / animaci├│n que video) -->
+  <div class="content-modal location-modal video-modal splash-intro-modal" id="locationModal">
+    <span class="modal-close" id="locationModalClose">&times;</span>
+    <div class="content-modal-box video-modal-box location-modal-box">
+      <div class="video-modal-loader" id="locationModalLoader" hidden aria-hidden="true">
+        <div class="video-splash" id="locationModalSplash" aria-hidden="true">
+          <div class="video-splash-mark location-splash-mark">
+            <div class="video-splash-play location-splash-play">
+              <svg class="location-splash-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 21s7-6.5 7-11.5A7 7 0 1 0 5 9.5C5 14.5 12 21 12 21z"/>
+                <circle cx="12" cy="9.5" r="2.5" fill="#000"/>
+              </svg>
+            </div>
+          </div>
+          <div class="video-splash-track" aria-hidden="true">
+            <div class="video-splash-bar" id="locationModalSplashBar"></div>
+            <div class="video-splash-head location-splash-head" id="locationModalSplashHead">
+              <svg class="location-splash-head-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4.2 12.4v-1.7c0-.6.5-1.1 1.1-1.1h1.3l1.5-3.1c.2-.4.6-.7 1.1-.7h5.6c.5 0 .9.3 1.1.7l1.5 3.1h1.3c.6 0 1.1.5 1.1 1.1v1.7h-1.2a2.1 2.1 0 1 0-4.2 0H9.4a2.1 2.1 0 1 0-4.2 0H4.2zm12.8 0a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0zM8.2 12.4a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="video-modal-card location-modal-card" id="locationModalCard">
+        <div class="location-modal-body" id="locationModalBody">
+          <div class="location-map-box">
+            <div class="location-map" id="locationPlaceholder" aria-label="Mapa de Valledupar"></div>
+          </div>
+          <div class="location-modal-action">
+            <a class="outline-btn" id="directionsBtn" href="#" target="_blank" rel="noopener">C├│mo llegar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de pausa ÔÇö overlay sobre el ├║ltimo frame -->
+  <div class="pause-screen" id="navResumeGate" hidden>
+    <div class="pause-screen__veil" aria-hidden="true"></div>
+    <div class="pause-screen__panel" role="dialog" aria-modal="true" aria-labelledby="pauseScreenTitle">
+      <div class="pause-screen__emblem" id="pauseScreenEmblem">
+        <div class="pause-screen__glow" aria-hidden="true"></div>
+        <img class="pause-screen__logo" id="pauseScreenLogo" alt="" hidden>
+        <div class="pause-screen__avatar" id="pauseScreenAvatar" hidden></div>
+        <div class="pause-screen__building" id="pauseScreenBuilding" hidden></div>
+      </div>
+      <div class="pause-screen__copy">
+        <p class="pause-screen__title" id="pauseScreenTitle">SESI├ôN EN PAUSA</p>
+        <h2 class="pause-screen__name" id="pauseScreenName" hidden></h2>
+        <p class="pause-screen__message" id="pauseScreenMessage"></p>
+      </div>
+      <div class="pause-screen__actions project-cover-buttons">
+        <button type="button" class="project-cover-btn pause-screen__btn" id="navResumeGateBtn">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EXPERIENCIA / AUTENTICACI├ôN -->
+  <div class="content-modal auth-experience-modal" id="authExperienceModal">
+    <div class="content-modal-box auth-experience-box">
+      <div class="auth-experience-views">
+
+        <div class="auth-experience-view is-active" id="authViewGate">
+          <h2 class="auth-gate-title">Desbloquea la experiencia completa</h2>
+          <ul class="auth-gate-benefits">
+            <li>Conoce el proyecto</li>
+            <li>Viviendas disponibles y precios</li>
+            <li>Planos y documentos</li>
+            <li>Favoritos y comparador</li>
+            <li>Novedades y notificaciones</li>
+            <li>Experiencia personalizada</li>
+          </ul>
+          <div class="auth-gate-actions">
+            <button type="button" class="outline-btn auth-action-btn" id="authGateLoginBtn">Iniciar sesi├│n</button>
+            <button type="button" class="outline-btn auth-action-btn" id="authGateRegisterBtn">Crear cuenta</button>
+          </div>
+        </div>
+
+        <div class="auth-experience-view" id="authViewLogin">
+          <h2 class="auth-gate-title">Bienvenido nuevamente</h2>
+          <p class="auth-view-lead">Contin├║a donde lo dejaste.</p>
+          <div class="auth-oauth-row">
+            <button type="button" class="outline-btn auth-oauth-btn" id="authLoginGoogleBtn">Google</button>
+          </div>
+          <div class="auth-oauth-divider" aria-hidden="true">o contin├║a con tu correo</div>
+          <div class="auth-view-actions">
+            <form id="authLoginForm" class="auth-modal-form" novalidate>
+              <label class="auth-field">
+                <span>Correo o usuario</span>
+                <input id="authLoginInput" type="text" autocomplete="username" placeholder="correo@ejemplo.com o usuario" required>
+              </label>
+              <label class="auth-field">
+                <span>Contrase├▒a</span>
+                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="ÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇóÔÇó" required>
+                <button type="button" class="auth-toggle-password" id="authToggleLoginPassword">Mostrar</button>
+              </label>
+              <label class="auth-remember-row">
+                <input id="authRememberMe" type="checkbox" checked>
+                <span>Recordarme en este dispositivo</span>
+              </label>
+              <button type="submit" class="outline-btn auth-action-btn" id="authLoginBtn">Iniciar sesi├│n</button>
+            </form>
+            <button type="button" class="outline-btn auth-action-btn" id="authLoginRegisterBtn">Crear cuenta</button>
+          </div>
+        </div>
+
+        <div class="auth-experience-view" id="authViewRegister">
+          <h2 class="auth-gate-title">Crea tu cuenta</h2>
+          <div class="auth-oauth-row">
+            <button type="button" class="outline-btn auth-oauth-btn" id="authRegisterGoogleBtn">Google</button>
+          </div>
+          <div class="auth-oauth-divider" aria-hidden="true">o contin├║a con tu correo</div>
+          <form id="authRegisterForm" class="auth-modal-form" novalidate>
+            <div class="auth-field-row">
+              <label class="auth-field">
+                <span>Nombre</span>
+                <input id="authNombres" type="text" autocomplete="given-name" required maxlength="60">
+              </label>
+              <label class="auth-field">
+                <span>Apellido</span>
+                <input id="authApellidos" type="text" autocomplete="family-name" required maxlength="60">
+              </label>
+            </div>
+            <label class="auth-field">
+              <span>Correo electr├│nico</span>
+              <input id="authEmail" type="email" autocomplete="email" required>
+            </label>
+            <label class="auth-field">
+              <span>Contrase├▒a</span>
+              <input id="authPassword" type="password" autocomplete="new-password" minlength="8" required>
+              <button type="button" class="auth-toggle-password" id="authTogglePassword">Mostrar</button>
+            </label>
+            <p class="auth-legal-footnote">
+              Al continuar aceptas los
+              <a href="#" id="authTerminosLink" target="_blank" rel="noopener">T├®rminos y Condiciones</a>
+              y la
+              <a href="#" id="authPrivacidadLink" target="_blank" rel="noopener">Pol├¡tica de Privacidad</a>.
+            </p>
+            <button type="submit" class="outline-btn auth-action-btn" id="authRegisterBtn">Crear cuenta</button>
+            <button type="button" class="outline-btn auth-action-btn" id="authRegisterCancelBtn">Cancelar</button>
+          </form>
+        </div>
+
+      </div>
+      <div class="auth-modal-message" id="authModalMessage" role="alert"></div>
+      <div class="auth-resend-wrap" id="authResendWrap" style="display:none;">
+        <button type="button" class="outline-btn auth-secondary-btn" id="authResendBtn">Reenviar correo de confirmaci├│n</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL VERIFICACI├ôN DE CORREO -->
+  <div class="content-modal email-verification-modal" id="emailVerificationModal">
+    <div class="content-modal-box email-verification-box">
+      <h2 class="email-verification-title">Verifica tu correo electr├│nico</h2>
+      <p class="email-verification-copy">
+        Para proteger tu informaci├│n y sincronizar tu cuenta entre dispositivos, primero necesitamos verificar tu correo electr├│nico.
+      </p>
+      <div class="email-verification-actions">
+        <button type="button" class="outline-btn auth-gate-action-btn" id="emailVerificationResendBtn">Enviar nuevamente</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="emailVerificationConfirmBtn">Ya lo verifiqu├®</button>
+        <button type="button" class="outline-btn auth-secondary-btn" id="emailVerificationLaterBtn">M├ís tarde</button>
+      </div>
+      <p class="email-verification-message" id="emailVerificationMessage" role="status"></p>
+    </div>
+  </div>
+
+  <!-- MODAL GENERAR TEMA CON IA -->
+  <div class="content-modal theme-ai-modal" id="themeAiModal" aria-hidden="true">
+    <div class="content-modal-box theme-ai-modal-box">
+      <button type="button" class="theme-ai-close-btn" id="themeAiCloseBtn" aria-label="Cerrar">&times;</button>
+      <div class="popup-box-scroll theme-ai-scroll">
+        <h2 class="theme-ai-title">Generar tema con IA</h2>
+        <p class="theme-ai-intro">
+          Sube el logo de la marca. El motor de identidad visual analizar├í familias crom├íticas, jerarqu├¡a y personalidad para generar un sistema de interfaz coherente ÔÇö sin inventar colores.
+        </p>
+        <p class="theme-ai-error personalize-hint is-error" id="themeAiErrorText" hidden></p>
+
+        <div class="theme-ai-step" id="themeAiUploadStep">
+          <button type="button" class="outline-btn theme-ai-upload-btn" id="themeAiUploadBtn">Subir imagen</button>
+          <p class="theme-ai-formats-hint personalize-hint">PNG, JPG, JPEG o SVG</p>
+          <input type="file" id="themeAiFileInput" accept="image/png,image/jpeg,image/jpg,image/svg+xml,.png,.jpg,.jpeg,.svg" hidden>
+        </div>
+
+        <div class="theme-ai-step theme-ai-status-step" id="themeAiStatusStep" hidden>
+          <div class="theme-ai-spinner" aria-hidden="true"></div>
+          <p class="theme-ai-status-text" id="themeAiStatusText">Analizando identidad visual...</p>
+        </div>
+
+        <div class="theme-ai-step" id="themeAiResultsStep" hidden>
+          <div class="theme-ai-results-header">
+            <p class="theme-ai-source-label">Imagen: <span id="themeAiFileName"></span></p>
+            <button type="button" class="outline-btn theme-ai-change-btn" id="themeAiChangeImageBtn">Cambiar imagen</button>
+          </div>
+          <div id="themeAiResultsHost"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONFIRMAR TEMA OFICIAL DEL PROYECTO -->
+  <div class="content-modal project-theme-confirm-modal" id="projectThemeConfirmModal">
+    <div class="content-modal-box project-theme-confirm-box">
+      <h2 class="project-theme-confirm-title">Aplicar tema al proyecto</h2>
+      <p class="project-theme-confirm-copy">
+        Este tema ser├í el estilo visual predeterminado para todos los nuevos visitantes de este proyecto.
+        Cada usuario podr├í seguir cambiando el tema ├║nicamente para su propia experiencia.
+      </p>
+      <div class="project-theme-confirm-actions">
+        <button type="button" class="outline-btn auth-secondary-btn" id="projectThemeConfirmCancelBtn">Cancelar</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="projectThemeConfirmApplyBtn">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-modal project-theme-confirm-modal" id="officialPresetDeleteModal">
+    <div class="content-modal-box project-theme-confirm-box">
+      <h2 class="project-theme-confirm-title">Eliminar tema oficial</h2>
+      <p class="project-theme-confirm-copy" id="officialPresetDeleteCopy">
+        Este tema dejar├í de aparecer en la lista para todos los visitantes. Deben quedar al menos 3 temas oficiales.
+      </p>
+      <div class="project-theme-confirm-actions">
+        <button type="button" class="outline-btn auth-secondary-btn" id="officialPresetDeleteCancelBtn">Cancelar</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="officialPresetDeleteConfirmBtn">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-modal project-theme-confirm-modal" id="webEffectsConfirmModal">
+    <div class="content-modal-box project-theme-confirm-box">
+      <p class="project-theme-confirm-copy web-effects-confirm-copy">┬┐Deseas deshabilitar las animaciones?</p>
+      <div class="project-theme-confirm-actions">
+        <button type="button" class="outline-btn auth-gate-action-btn" id="webEffectsConfirmYes">S├¡</button>
+        <button type="button" class="outline-btn auth-secondary-btn" id="webEffectsConfirmNo">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STYLE ENGINE ÔÇö laboratorio experimental (aislado del Theme Editor) -->
+  <div class="content-modal style-engine-modal" id="styleEngineModal" aria-hidden="true">
+    <div class="content-modal-box style-engine-modal-box">
+      <header class="style-engine-modal-head">
+        <div class="style-engine-modal-title-wrap">
+          <span class="style-engine-modal-kicker">Design System ┬À v3.0</span>
+          <h2 class="style-engine-modal-title">Style Engine</h2>
+          <p class="style-engine-modal-subtitle">Editar, guardar borrador, previsualizar y publicar ÔÇö sin ambig├╝edad.</p>
+        </div>
+        <div id="styleEngineStateHost" class="se-state-host"></div>
+        <button type="button" class="style-engine-close-btn" id="styleEngineCloseBtn" aria-label="Cerrar">&times;</button>
+      </header>
+
+      <div id="styleEngineInfoHost" class="se-info-host"></div>
+
+      <div class="style-engine-mode-bar">
+        <div class="se-mode-group" id="styleEngineModeHost" role="radiogroup" aria-label="Modo Style Engine"></div>
+      </div>
+
+      <div id="styleEngineToolbarHost" class="style-engine-toolbar-host"></div>
+
+      <div class="style-engine-modal-body">
+        <div class="style-engine-editor-col" id="styleEngineEditorHost"></div>
+        <div class="style-engine-preview-col">
+          <div id="styleEnginePreviewHost"></div>
+          <div id="styleEngineSavedStylesHost" class="se-saved-styles-host"></div>
+        </div>
+      </div>
+
+      <footer class="style-engine-modal-foot style-engine-modal-foot--v21">
+        <button type="button" class="style-engine-foot-btn" id="styleEngineResetDefaultsBtn">Reiniciar</button>
+        <button type="button" class="style-engine-foot-btn" id="styleEngineSaveStyleBtn">Guardar estilo</button>
+        <button type="button" class="style-engine-foot-btn style-engine-foot-btn--primary" id="styleEnginePublishBtn">Aplicar al proyecto</button>
+        <label class="se-engine-switch" title="ON = Style Engine ┬À OFF = Theme Legacy V1">
+          <span class="se-engine-switch-label">Style Engine</span>
+          <input type="checkbox" id="styleEnginePowerSwitch" class="se-engine-switch-input">
+          <span class="se-engine-switch-track" aria-hidden="true">
+            <span class="se-engine-switch-knob"></span>
+          </span>
+          <span class="se-engine-switch-state" id="styleEnginePowerLabel">OFF</span>
+        </label>
+      </footer>
+    </div>
+  </div>
+
+  <!-- TOAST DE FEEDBACK (compartir, favoritos, etc.) -->
+  <div class="app-toast" id="appToast"></div>
+
+  
   <script src="js/boot-debug.js?v=boot1"></script>
   <script src="js/boot-cpu-profile.js?v=cpu1"></script>
   <script src="js/shared/config.js?v=boot1"></script>
