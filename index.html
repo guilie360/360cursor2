@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>360•</title>
+<script>
+window.__BUILD_STAMP__ = 'boot1';
+console.log('[BOOT 0.00s] index.html primera l├¡nea', location.href);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/components.css">
@@ -812,10 +816,54 @@
   
   <script src="js/boot-debug.js?v=boot1"></script>
   <script src="js/boot-cpu-profile.js?v=cpu1"></script>
+  <script>
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log('URL search', location.search || '(vac├¡o)');
+      BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
+    }
+    if (!params.get('proyecto')) {
+      params.set('proyecto', 'proyecto-demo');
+      history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+      if (typeof BootDebug !== 'undefined') {
+        BootDebug.log('proyecto inyectado', 'proyecto-demo');
+      }
+    }
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('param proyecto', e);
+    else console.error(e);
+  }
+})();
+</script>
   <script src="js/shared/config.js?v=boot1"></script>
+  <script>
+if (typeof BootDebug !== 'undefined') {
+  BootDebug.log('config.js', {
+    hasUrl: typeof SUPABASE_URL !== 'undefined',
+    hasKey: typeof SUPABASE_ANON_KEY !== 'undefined',
+    slug: typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null
+  });
+}
+</script>
   <script src="js/theme-early-bootstrap.js?v=boot1"></script>
+  <script>
+(function () {
+  try {
+    if (localStorage.getItem('boxies_web_effects_enabled') === 'false') {
+      document.documentElement.classList.add('web-effects-off');
+    }
+  } catch (e) {}
+})();
+</script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/theme-system.js?v=freeze1"></script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init start');
+  ThemeSystem.init({ deferApply: true });
+  if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init done');
+  </script>
   <script src="js/theme-ai/theme-color-math.js"></script>
   <script src="js/theme-ai/theme-brand-intelligence.js"></script>
   <script src="js/theme-ai/theme-brand-analyzer.js"></script>
@@ -886,13 +934,174 @@
   <script src="js/style-engine/style-engine-modal.js"></script>
   <script src="js/web-effects.js"></script>
   <script src="js/global-close.js?v=auth-lock1"></script>
+  <script>
+  /* Chrome alt-tab guard ÔÇö runs before main.js, closes unauthorized menu */
+  (function () {
+    function closeUnauthorizedMenu() {
+      if (window.__navResumeGateOpen) return;
+      if (window.__menuOpenAllowedUntil && Date.now() < window.__menuOpenAllowedUntil) return;
+      if (typeof window.isStyleV3MenuLocked === 'function' && window.isStyleV3MenuLocked()) return;
+      var menu = document.getElementById('mainMenu');
+      if (menu && menu.classList.contains('active')) {
+        menu.classList.remove('active');
+        var backdrop = document.getElementById('mainMenuBackdrop');
+        if (backdrop) backdrop.classList.remove('active');
+        document.body.classList.remove('main-menu-open', 'global-close-docked');
+      }
+      if (typeof window.syncMenuClosedFromGuard === 'function') {
+        window.syncMenuClosedFromGuard();
+      }
+    }
+    function onTabReturn() {
+      window.__lastTabReturnAt = Date.now();
+      window.__menuOpenAllowedUntil = 0;
+      if (typeof window.revokeMenuOpenToken === 'function') {
+        window.revokeMenuOpenToken();
+      }
+      closeUnauthorizedMenu();
+      setTimeout(closeUnauthorizedMenu, 50);
+      setTimeout(closeUnauthorizedMenu, 200);
+    }
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') onTabReturn();
+    }, true);
+    window.addEventListener('focus', onTabReturn);
+    window.addEventListener('pageshow', onTabReturn);
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.isTrusted || !e.target || !e.target.closest) return;
+      if (e.target.closest('#mainMenuOpenBtn, #mainMenu, #mainMenuBackdrop')) {
+        window.__menuOpenAllowedUntil = Date.now() + 3000;
+      }
+    }, true);
+  })();
+  </script>
   <script src="js/units-compare-pdf.js"></script>
   <script src="js/location-map.js"></script>
   <script src="js/downloads-intro.js"></script>
   <script src="js/amenities-carousel.js?v=amenities7"></script>
   <script src="js/menu-config.js?v=menu6"></script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
+  </script>
   <script src="js/main.js?v=maintrace1"></script>
+  <script>
+  if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
+  </script>
   <script src="js/project-data.js?v=nohero1"></script>
   <script src="js/auth/bootstrap.js"></script>
+  <script>
+  (function () {
+    function bootLog(msg, detail) {
+      if (typeof BootDebug !== 'undefined') BootDebug.log(msg, detail);
+      else console.log('[BOOT]', msg, detail || '');
+    }
+    function bootErr(msg, err) {
+      if (typeof BootDebug !== 'undefined') BootDebug.error(msg, err);
+      else console.error('[BOOT]', msg, err);
+    }
+    function safeInit(label, fn) {
+      bootLog(label + ' ÔÇö start');
+      try {
+        if (typeof fn !== 'function') {
+          bootErr(label + ' ÔÇö no disponible (undefined/not a function)');
+          return null;
+        }
+        var result = fn();
+        if (result && typeof result.then === 'function') {
+          result.then(
+            function () { bootLog(label + ' ÔÇö done (async)'); },
+            function (err) { bootErr(label + ' ÔÇö rejected', err); }
+          );
+        } else {
+          bootLog(label + ' ÔÇö done');
+        }
+        return result;
+      } catch (e) {
+        bootErr(label + ' ÔÇö threw', e);
+        return null;
+      }
+    }
+
+    bootLog('final inits ÔÇö start', {
+      VisitorAuthModal: typeof VisitorAuthModal,
+      VisitorEmailVerification: typeof VisitorEmailVerification,
+      VisitorMenu: typeof VisitorMenu,
+      StyleEngine: typeof StyleEngine,
+      GlobalClose: typeof GlobalClose,
+      AuthBootstrap: typeof AuthBootstrap,
+      __NAV_BUILD__: typeof window.__NAV_BUILD__ !== 'undefined' ? window.__NAV_BUILD__ : null,
+      __BUILD_STAMP__: typeof window.__BUILD_STAMP__ !== 'undefined' ? window.__BUILD_STAMP__ : null
+    });
+
+    safeInit('VisitorAuthModal.init', function () {
+      if (typeof VisitorAuthModal === 'undefined' || !VisitorAuthModal.init) {
+        throw new Error('VisitorAuthModal.init undefined');
+      }
+      return VisitorAuthModal.init();
+    });
+
+    safeInit('VisitorEmailVerification.init', function () {
+      if (typeof VisitorEmailVerification === 'undefined' || !VisitorEmailVerification.init) {
+        throw new Error('VisitorEmailVerification.init undefined');
+      }
+      return VisitorEmailVerification.init();
+    });
+
+    safeInit('VisitorMenu.init', function () {
+      if (typeof VisitorMenu === 'undefined' || !VisitorMenu.init) {
+        throw new Error('VisitorMenu.init undefined');
+      }
+      return VisitorMenu.init();
+    });
+
+    safeInit('StyleEngine.init', function () {
+      if (typeof StyleEngine === 'undefined') {
+        bootLog('StyleEngine.init ÔÇö skip (StyleEngine undefined)');
+        return;
+      }
+      if (!StyleEngine.init) throw new Error('StyleEngine.init undefined');
+      return StyleEngine.init();
+    });
+
+    safeInit('GlobalClose.init', function () {
+      if (typeof GlobalClose === 'undefined' || !GlobalClose.init) {
+        throw new Error('GlobalClose.init undefined');
+      }
+      return GlobalClose.init();
+    });
+
+    safeInit('AuthBootstrap.init', function () {
+      if (typeof AuthBootstrap === 'undefined' || !AuthBootstrap.init) {
+        throw new Error('AuthBootstrap.init undefined');
+      }
+      var authResult = AuthBootstrap.init();
+      function pauseAfterAuth() {
+        if (typeof BootCpuProfile !== 'undefined') BootCpuProfile.pause('after-AuthBootstrap');
+      }
+      if (authResult && typeof authResult.then === 'function') {
+        authResult.then(pauseAfterAuth, pauseAfterAuth);
+      } else {
+        pauseAfterAuth();
+      }
+      return authResult;
+    });
+
+    bootLog('final inits ÔÇö all scheduled');
+
+    setTimeout(function () {
+      try {
+        if (window.__BUILD_STAMP__ === 'nav19' && window.__NAV_BUILD__ !== 'nav19') {
+          if (!sessionStorage.getItem('nav19_reload')) {
+            sessionStorage.setItem('nav19_reload', '1');
+            bootLog('reload por stamp mismatch nav19');
+            location.reload();
+          }
+        }
+      } catch (e) {
+        bootErr('stamp reload check', e);
+      }
+    }, 800);
+  })();
+  </script>
 </body>
 </html>
