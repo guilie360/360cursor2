@@ -814,55 +814,12 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
   <div class="app-toast" id="appToast"></div>
 
   
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/boot-debug.js?v=boot1') : console.log('BOOT -> cargando js/boot-debug.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/boot-debug.js?v=boot1');</script>
 <script src="js/boot-debug.js?v=boot1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/boot-debug.js?v=boot1 cargado') : console.log('BOOT -> js/boot-debug.js?v=boot1 cargado');</script>
-  <script>
-  (function () {
-    function paint() {
-      try {
-        if (typeof BootDebug === "undefined" || !BootDebug.getSteps) return;
-        var el = document.getElementById("bootDebugBanner");
-        if (!el && document.body) {
-          el = document.createElement("div");
-          el.id = "bootDebugBanner";
-          el.style.cssText = "position:fixed;left:8px;right:8px;top:8px;bottom:8px;z-index:2147483647;overflow:visible;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;";
-          document.body.appendChild(el);
-        }
-        if (!el) return;
-        el.style.display = "block";
-        el.textContent = BootDebug.getSteps().map(function (s) {
-          return "[" + s.t + "] " + (s.level === "error" ? "ERROR " : "") + s.msg;
-        }).join("\n");
-      } catch (e) {}
-    }
-    window.__bootMark = function (msg) {
-      try { console.log(msg); } catch (e) {}
-      if (typeof BootDebug !== "undefined") {
-        BootDebug.log(msg);
-        paint();
-      }
-    };
-    window.addEventListener("error", function (ev) {
-      var detail = (ev && ev.message) ? ev.message : String(ev);
-      if (ev && ev.filename) detail += " @" + ev.filename + ":" + ev.lineno;
-      if (typeof BootDebug !== "undefined") BootDebug.error("window.error", detail);
-      if (window.__bootMark) window.__bootMark("BOOT -> window.error " + detail);
-      paint();
-    });
-    window.addEventListener("unhandledrejection", function (ev) {
-      var reason = ev && ev.reason;
-      var detail = reason && reason.stack ? reason.stack : String(reason);
-      if (typeof BootDebug !== "undefined") BootDebug.error("unhandledrejection", detail);
-      if (window.__bootMark) window.__bootMark("BOOT -> unhandledrejection " + detail);
-      paint();
-    });
-    window.__bootMark("BOOT -> script load tracers + error listeners ON");
-  })();
-  </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/boot-cpu-profile.js?v=cpu1') : console.log('BOOT -> cargando js/boot-cpu-profile.js?v=cpu1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/boot-debug.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/boot-cpu-profile.js?v=cpu1');</script>
 <script src="js/boot-cpu-profile.js?v=cpu1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/boot-cpu-profile.js?v=cpu1 cargado') : console.log('BOOT -> js/boot-cpu-profile.js?v=cpu1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/boot-cpu-profile.js?v=cpu1');</script>
   <script>
 (function () {
   try {
@@ -884,9 +841,9 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
   }
 })();
 </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/shared/config.js?v=boot1') : console.log('BOOT -> cargando js/shared/config.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/config.js?v=boot1');</script>
 <script src="js/shared/config.js?v=boot1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/shared/config.js?v=boot1 cargado') : console.log('BOOT -> js/shared/config.js?v=boot1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/config.js?v=boot1');</script>
   <script>
 if (typeof BootDebug !== 'undefined') {
   BootDebug.log('config.js', {
@@ -896,9 +853,9 @@ if (typeof BootDebug !== 'undefined') {
   });
 }
 </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-early-bootstrap.js?v=boot1') : console.log('BOOT -> cargando js/theme-early-bootstrap.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-early-bootstrap.js?v=boot1');</script>
 <script src="js/theme-early-bootstrap.js?v=boot1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-early-bootstrap.js?v=boot1 cargado') : console.log('BOOT -> js/theme-early-bootstrap.js?v=boot1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-early-bootstrap.js?v=boot1');</script>
   <script>
 (function () {
   try {
@@ -908,227 +865,227 @@ if (typeof BootDebug !== 'undefined') {
   } catch (e) {}
 })();
 </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2') : console.log('BOOT -> cargando https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 cargado') : console.log('BOOT -> https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-system.js?v=freeze1') : console.log('BOOT -> cargando js/theme-system.js?v=freeze1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-system.js?v=freeze1');</script>
 <script src="js/theme-system.js?v=freeze1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-system.js?v=freeze1 cargado') : console.log('BOOT -> js/theme-system.js?v=freeze1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-system.js?v=freeze1');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init start');
   ThemeSystem.init({ deferApply: true });
   if (typeof BootDebug !== 'undefined') BootDebug.log('ThemeSystem.init done');
   </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-color-math.js') : console.log('BOOT -> cargando js/theme-ai/theme-color-math.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-color-math.js');</script>
 <script src="js/theme-ai/theme-color-math.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-color-math.js cargado') : console.log('BOOT -> js/theme-ai/theme-color-math.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-brand-intelligence.js') : console.log('BOOT -> cargando js/theme-ai/theme-brand-intelligence.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-color-math.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-brand-intelligence.js');</script>
 <script src="js/theme-ai/theme-brand-intelligence.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-brand-intelligence.js cargado') : console.log('BOOT -> js/theme-ai/theme-brand-intelligence.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-brand-analyzer.js') : console.log('BOOT -> cargando js/theme-ai/theme-brand-analyzer.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-brand-intelligence.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-brand-analyzer.js');</script>
 <script src="js/theme-ai/theme-brand-analyzer.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-brand-analyzer.js cargado') : console.log('BOOT -> js/theme-ai/theme-brand-analyzer.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-role-mapper.js') : console.log('BOOT -> cargando js/theme-ai/theme-role-mapper.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-brand-analyzer.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-role-mapper.js');</script>
 <script src="js/theme-ai/theme-role-mapper.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-role-mapper.js cargado') : console.log('BOOT -> js/theme-ai/theme-role-mapper.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-ai-source.js') : console.log('BOOT -> cargando js/theme-ai/theme-ai-source.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-role-mapper.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-source.js');</script>
 <script src="js/theme-ai/theme-ai-source.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-ai-source.js cargado') : console.log('BOOT -> js/theme-ai/theme-ai-source.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-ai-session.js') : console.log('BOOT -> cargando js/theme-ai/theme-ai-session.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-source.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-session.js');</script>
 <script src="js/theme-ai/theme-ai-session.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-ai-session.js cargado') : console.log('BOOT -> js/theme-ai/theme-ai-session.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-ai-generator.js') : console.log('BOOT -> cargando js/theme-ai/theme-ai-generator.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-session.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-generator.js');</script>
 <script src="js/theme-ai/theme-ai-generator.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-ai-generator.js cargado') : console.log('BOOT -> js/theme-ai/theme-ai-generator.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-ai-preview.js') : console.log('BOOT -> cargando js/theme-ai/theme-ai-preview.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-generator.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-preview.js');</script>
 <script src="js/theme-ai/theme-ai-preview.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-ai-preview.js cargado') : console.log('BOOT -> js/theme-ai/theme-ai-preview.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/theme-ai/theme-ai-modal.js') : console.log('BOOT -> cargando js/theme-ai/theme-ai-modal.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-preview.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-modal.js');</script>
 <script src="js/theme-ai/theme-ai-modal.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/theme-ai/theme-ai-modal.js cargado') : console.log('BOOT -> js/theme-ai/theme-ai-modal.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/shared/constants.js') : console.log('BOOT -> cargando js/shared/constants.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-modal.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/constants.js');</script>
 <script src="js/shared/constants.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/shared/constants.js cargado') : console.log('BOOT -> js/shared/constants.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/shared/formatters.js') : console.log('BOOT -> cargando js/shared/formatters.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/constants.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/formatters.js');</script>
 <script src="js/shared/formatters.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/shared/formatters.js cargado') : console.log('BOOT -> js/shared/formatters.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/supabase-client.js?v=boot1') : console.log('BOOT -> cargando js/supabase-client.js?v=boot1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/formatters.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/supabase-client.js?v=boot1');</script>
 <script src="js/supabase-client.js?v=boot1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/supabase-client.js?v=boot1 cargado') : console.log('BOOT -> js/supabase-client.js?v=boot1 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/client.js') : console.log('BOOT -> cargando js/auth/client.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/supabase-client.js?v=boot1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/client.js');</script>
 <script src="js/auth/client.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/client.js cargado') : console.log('BOOT -> js/auth/client.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/redirects.js') : console.log('BOOT -> cargando js/auth/redirects.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/client.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/redirects.js');</script>
 <script src="js/auth/redirects.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/redirects.js cargado') : console.log('BOOT -> js/auth/redirects.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/storage-prefs.js') : console.log('BOOT -> cargando js/auth/storage-prefs.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/redirects.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/storage-prefs.js');</script>
 <script src="js/auth/storage-prefs.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/storage-prefs.js cargado') : console.log('BOOT -> js/auth/storage-prefs.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/errors.js') : console.log('BOOT -> cargando js/auth/errors.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/storage-prefs.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/errors.js');</script>
 <script src="js/auth/errors.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/errors.js cargado') : console.log('BOOT -> js/auth/errors.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/routes.js') : console.log('BOOT -> cargando js/auth/routes.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/errors.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/routes.js');</script>
 <script src="js/auth/routes.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/routes.js cargado') : console.log('BOOT -> js/auth/routes.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/roles-permissions.js') : console.log('BOOT -> cargando js/auth/roles-permissions.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/routes.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/roles-permissions.js');</script>
 <script src="js/auth/roles-permissions.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/roles-permissions.js cargado') : console.log('BOOT -> js/auth/roles-permissions.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/login.js') : console.log('BOOT -> cargando js/auth/api/login.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/roles-permissions.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/login.js');</script>
 <script src="js/auth/api/login.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/login.js cargado') : console.log('BOOT -> js/auth/api/login.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/profiles.js') : console.log('BOOT -> cargando js/auth/api/profiles.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/login.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/profiles.js');</script>
 <script src="js/auth/api/profiles.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/profiles.js cargado') : console.log('BOOT -> js/auth/api/profiles.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/user-themes.js') : console.log('BOOT -> cargando js/auth/api/user-themes.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/profiles.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/user-themes.js');</script>
 <script src="js/auth/api/user-themes.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/user-themes.js cargado') : console.log('BOOT -> js/auth/api/user-themes.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/visitantes.js') : console.log('BOOT -> cargando js/auth/api/visitantes.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/user-themes.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/visitantes.js');</script>
 <script src="js/auth/api/visitantes.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/visitantes.js cargado') : console.log('BOOT -> js/auth/api/visitantes.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/registro.js') : console.log('BOOT -> cargando js/auth/api/registro.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/visitantes.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/registro.js');</script>
 <script src="js/auth/api/registro.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/registro.js cargado') : console.log('BOOT -> js/auth/api/registro.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/oauth.js') : console.log('BOOT -> cargando js/auth/api/oauth.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/registro.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/oauth.js');</script>
 <script src="js/auth/api/oauth.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/oauth.js cargado') : console.log('BOOT -> js/auth/api/oauth.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/visitor-provisioning.js') : console.log('BOOT -> cargando js/auth/api/visitor-provisioning.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/oauth.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/visitor-provisioning.js');</script>
 <script src="js/auth/api/visitor-provisioning.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/visitor-provisioning.js cargado') : console.log('BOOT -> js/auth/api/visitor-provisioning.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/favoritos.js') : console.log('BOOT -> cargando js/auth/api/favoritos.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/visitor-provisioning.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/favoritos.js');</script>
 <script src="js/auth/api/favoritos.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/favoritos.js cargado') : console.log('BOOT -> js/auth/api/favoritos.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/visitor-auth.js') : console.log('BOOT -> cargando js/auth/visitor-auth.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/favoritos.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/visitor-auth.js');</script>
 <script src="js/auth/visitor-auth.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/visitor-auth.js cargado') : console.log('BOOT -> js/auth/visitor-auth.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-session.js') : console.log('BOOT -> cargando js/visitor-session.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/visitor-auth.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-session.js');</script>
 <script src="js/visitor-session.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-session.js cargado') : console.log('BOOT -> js/visitor-session.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-personalization.js') : console.log('BOOT -> cargando js/visitor-personalization.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-session.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalization.js');</script>
 <script src="js/visitor-personalization.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-personalization.js cargado') : console.log('BOOT -> js/visitor-personalization.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/project-theme.js') : console.log('BOOT -> cargando js/auth/api/project-theme.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalization.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/project-theme.js');</script>
 <script src="js/auth/api/project-theme.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/project-theme.js cargado') : console.log('BOOT -> js/auth/api/project-theme.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/api/project-preset-themes.js') : console.log('BOOT -> cargando js/auth/api/project-preset-themes.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/project-theme.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/project-preset-themes.js');</script>
 <script src="js/auth/api/project-preset-themes.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/api/project-preset-themes.js cargado') : console.log('BOOT -> js/auth/api/project-preset-themes.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/platform/project-theme-authority.js?v=freeze1') : console.log('BOOT -> cargando js/platform/project-theme-authority.js?v=freeze1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/project-preset-themes.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/project-theme-authority.js?v=freeze1');</script>
 <script src="js/platform/project-theme-authority.js?v=freeze1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/platform/project-theme-authority.js?v=freeze1 cargado') : console.log('BOOT -> js/platform/project-theme-authority.js?v=freeze1 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/platform/project-preset-themes.js') : console.log('BOOT -> cargando js/platform/project-preset-themes.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/project-theme-authority.js?v=freeze1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/project-preset-themes.js');</script>
 <script src="js/platform/project-preset-themes.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/platform/project-preset-themes.js cargado') : console.log('BOOT -> js/platform/project-preset-themes.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/platform/admin-hero-api.js') : console.log('BOOT -> cargando js/platform/admin-hero-api.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/project-preset-themes.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/admin-hero-api.js');</script>
 <script src="js/platform/admin-hero-api.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/platform/admin-hero-api.js cargado') : console.log('BOOT -> js/platform/admin-hero-api.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/pause-screen/pause-screen-messages.js') : console.log('BOOT -> cargando js/pause-screen/pause-screen-messages.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/admin-hero-api.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen-messages.js');</script>
 <script src="js/pause-screen/pause-screen-messages.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/pause-screen/pause-screen-messages.js cargado') : console.log('BOOT -> js/pause-screen/pause-screen-messages.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/pause-screen/pause-screen-config.js') : console.log('BOOT -> cargando js/pause-screen/pause-screen-config.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen-messages.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen-config.js');</script>
 <script src="js/pause-screen/pause-screen-config.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/pause-screen/pause-screen-config.js cargado') : console.log('BOOT -> js/pause-screen/pause-screen-config.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/pause-screen/pause-screen.js') : console.log('BOOT -> cargando js/pause-screen/pause-screen.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen-config.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen.js');</script>
 <script src="js/pause-screen/pause-screen.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/pause-screen/pause-screen.js cargado') : console.log('BOOT -> js/pause-screen/pause-screen.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-personalize-panel.js?v=nav19') : console.log('BOOT -> cargando js/visitor-personalize-panel.js?v=nav19');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalize-panel.js?v=nav19');</script>
 <script src="js/visitor-personalize-panel.js?v=nav19"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-personalize-panel.js?v=nav19 cargado') : console.log('BOOT -> js/visitor-personalize-panel.js?v=nav19 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-auth-modal.js?v=auth-lock1') : console.log('BOOT -> cargando js/visitor-auth-modal.js?v=auth-lock1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalize-panel.js?v=nav19');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-auth-modal.js?v=auth-lock1');</script>
 <script src="js/visitor-auth-modal.js?v=auth-lock1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-auth-modal.js?v=auth-lock1 cargado') : console.log('BOOT -> js/visitor-auth-modal.js?v=auth-lock1 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-email-verification.js') : console.log('BOOT -> cargando js/visitor-email-verification.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-auth-modal.js?v=auth-lock1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-email-verification.js');</script>
 <script src="js/visitor-email-verification.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-email-verification.js cargado') : console.log('BOOT -> js/visitor-email-verification.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-menu.js?v=nav24') : console.log('BOOT -> cargando js/visitor-menu.js?v=nav24');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-email-verification.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-menu.js?v=nav24');</script>
 <script src="js/visitor-menu.js?v=nav24"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-menu.js?v=nav24 cargado') : console.log('BOOT -> js/visitor-menu.js?v=nav24 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-tokens.js') : console.log('BOOT -> cargando js/style-engine/style-engine-tokens.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-menu.js?v=nav24');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-tokens.js');</script>
 <script src="js/style-engine/style-engine-tokens.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-tokens.js cargado') : console.log('BOOT -> js/style-engine/style-engine-tokens.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-history.js') : console.log('BOOT -> cargando js/style-engine/style-engine-history.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-tokens.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-history.js');</script>
 <script src="js/style-engine/style-engine-history.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-history.js cargado') : console.log('BOOT -> js/style-engine/style-engine-history.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-bridge.js') : console.log('BOOT -> cargando js/style-engine/style-engine-bridge.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-history.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-bridge.js');</script>
 <script src="js/style-engine/style-engine-bridge.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-bridge.js cargado') : console.log('BOOT -> js/style-engine/style-engine-bridge.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-registry.js') : console.log('BOOT -> cargando js/style-engine/style-engine-registry.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-bridge.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-registry.js');</script>
 <script src="js/style-engine/style-engine-registry.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-registry.js cargado') : console.log('BOOT -> js/style-engine/style-engine-registry.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-legacy-adapter.js') : console.log('BOOT -> cargando js/style-engine/style-engine-legacy-adapter.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-registry.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-legacy-adapter.js');</script>
 <script src="js/style-engine/style-engine-legacy-adapter.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-legacy-adapter.js cargado') : console.log('BOOT -> js/style-engine/style-engine-legacy-adapter.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-personalizar-mapper.js') : console.log('BOOT -> cargando js/style-engine/style-engine-personalizar-mapper.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-legacy-adapter.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-personalizar-mapper.js');</script>
 <script src="js/style-engine/style-engine-personalizar-mapper.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-personalizar-mapper.js cargado') : console.log('BOOT -> js/style-engine/style-engine-personalizar-mapper.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-presets.js') : console.log('BOOT -> cargando js/style-engine/style-engine-presets.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-personalizar-mapper.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-presets.js');</script>
 <script src="js/style-engine/style-engine-presets.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-presets.js cargado') : console.log('BOOT -> js/style-engine/style-engine-presets.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-export.js') : console.log('BOOT -> cargando js/style-engine/style-engine-export.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-presets.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-export.js');</script>
 <script src="js/style-engine/style-engine-export.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-export.js cargado') : console.log('BOOT -> js/style-engine/style-engine-export.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-store.js?v=hall5') : console.log('BOOT -> cargando js/style-engine/style-engine-store.js?v=hall5');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-export.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-store.js?v=hall5');</script>
 <script src="js/style-engine/style-engine-store.js?v=hall5"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-store.js?v=hall5 cargado') : console.log('BOOT -> js/style-engine/style-engine-store.js?v=hall5 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-lifecycle.js') : console.log('BOOT -> cargando js/style-engine/style-engine-lifecycle.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-store.js?v=hall5');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-lifecycle.js');</script>
 <script src="js/style-engine/style-engine-lifecycle.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-lifecycle.js cargado') : console.log('BOOT -> js/style-engine/style-engine-lifecycle.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-compatibility.js?v=hall5') : console.log('BOOT -> cargando js/style-engine/style-engine-compatibility.js?v=hall5');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-lifecycle.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-compatibility.js?v=hall5');</script>
 <script src="js/style-engine/style-engine-compatibility.js?v=hall5"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-compatibility.js?v=hall5 cargado') : console.log('BOOT -> js/style-engine/style-engine-compatibility.js?v=hall5 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-visual-system.js') : console.log('BOOT -> cargando js/style-engine/style-engine-visual-system.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-compatibility.js?v=hall5');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-visual-system.js');</script>
 <script src="js/style-engine/style-engine-visual-system.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-visual-system.js cargado') : console.log('BOOT -> js/style-engine/style-engine-visual-system.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-audit.js') : console.log('BOOT -> cargando js/style-engine/style-engine-audit.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-visual-system.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-audit.js');</script>
 <script src="js/style-engine/style-engine-audit.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-audit.js cargado') : console.log('BOOT -> js/style-engine/style-engine-audit.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-runtime.js?v=freeze1') : console.log('BOOT -> cargando js/style-engine/style-engine-runtime.js?v=freeze1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-audit.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-runtime.js?v=freeze1');</script>
 <script src="js/style-engine/style-engine-runtime.js?v=freeze1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-runtime.js?v=freeze1 cargado') : console.log('BOOT -> js/style-engine/style-engine-runtime.js?v=freeze1 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-color-picker.js') : console.log('BOOT -> cargando js/style-engine/style-engine-color-picker.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-runtime.js?v=freeze1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-color-picker.js');</script>
 <script src="js/style-engine/style-engine-color-picker.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-color-picker.js cargado') : console.log('BOOT -> js/style-engine/style-engine-color-picker.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/visitor-personalize-v2-panel.js?v=hall4') : console.log('BOOT -> cargando js/visitor-personalize-v2-panel.js?v=hall4');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-color-picker.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalize-v2-panel.js?v=hall4');</script>
 <script src="js/visitor-personalize-v2-panel.js?v=hall4"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/visitor-personalize-v2-panel.js?v=hall4 cargado') : console.log('BOOT -> js/visitor-personalize-v2-panel.js?v=hall4 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-ai-assistant.js') : console.log('BOOT -> cargando js/style-engine/style-engine-ai-assistant.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalize-v2-panel.js?v=hall4');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-ai-assistant.js');</script>
 <script src="js/style-engine/style-engine-ai-assistant.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-ai-assistant.js cargado') : console.log('BOOT -> js/style-engine/style-engine-ai-assistant.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-preview.js') : console.log('BOOT -> cargando js/style-engine/style-engine-preview.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-ai-assistant.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-preview.js');</script>
 <script src="js/style-engine/style-engine-preview.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-preview.js cargado') : console.log('BOOT -> js/style-engine/style-engine-preview.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-coverage.js') : console.log('BOOT -> cargando js/style-engine/style-engine-coverage.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-preview.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-coverage.js');</script>
 <script src="js/style-engine/style-engine-coverage.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-coverage.js cargado') : console.log('BOOT -> js/style-engine/style-engine-coverage.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-catalog.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-catalog.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-coverage.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-catalog.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-catalog.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-catalog.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-catalog.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-capture.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-capture.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-catalog.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-capture.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-capture.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-capture.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-capture.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-storage.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-storage.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-capture.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-storage.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-storage.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-storage.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-storage.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-nav.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-nav.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-storage.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-nav.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-nav.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-nav.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-nav.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-runner.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-runner.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-nav.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-runner.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-runner.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-runner.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-runner.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/visual-audit/visual-audit-ui.js') : console.log('BOOT -> cargando js/style-engine/visual-audit/visual-audit-ui.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-runner.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-ui.js');</script>
 <script src="js/style-engine/visual-audit/visual-audit-ui.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/visual-audit/visual-audit-ui.js cargado') : console.log('BOOT -> js/style-engine/visual-audit/visual-audit-ui.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-panel.js') : console.log('BOOT -> cargando js/style-engine/style-engine-panel.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-ui.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-panel.js');</script>
 <script src="js/style-engine/style-engine-panel.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-panel.js cargado') : console.log('BOOT -> js/style-engine/style-engine-panel.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/style-engine/style-engine-modal.js') : console.log('BOOT -> cargando js/style-engine/style-engine-modal.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-panel.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-modal.js');</script>
 <script src="js/style-engine/style-engine-modal.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/style-engine/style-engine-modal.js cargado') : console.log('BOOT -> js/style-engine/style-engine-modal.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/web-effects.js') : console.log('BOOT -> cargando js/web-effects.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-modal.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/web-effects.js');</script>
 <script src="js/web-effects.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/web-effects.js cargado') : console.log('BOOT -> js/web-effects.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/global-close.js?v=auth-lock1') : console.log('BOOT -> cargando js/global-close.js?v=auth-lock1');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/web-effects.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/global-close.js?v=auth-lock1');</script>
 <script src="js/global-close.js?v=auth-lock1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/global-close.js?v=auth-lock1 cargado') : console.log('BOOT -> js/global-close.js?v=auth-lock1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
   <script>
   /* Chrome alt-tab guard ├ö├ç├Â runs before main.js, closes unauthorized menu */
   (function () {
@@ -1170,36 +1127,36 @@ if (typeof BootDebug !== 'undefined') {
     }, true);
   })();
   </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/units-compare-pdf.js') : console.log('BOOT -> cargando js/units-compare-pdf.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/units-compare-pdf.js');</script>
 <script src="js/units-compare-pdf.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/units-compare-pdf.js cargado') : console.log('BOOT -> js/units-compare-pdf.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/location-map.js') : console.log('BOOT -> cargando js/location-map.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/units-compare-pdf.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/location-map.js');</script>
 <script src="js/location-map.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/location-map.js cargado') : console.log('BOOT -> js/location-map.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/downloads-intro.js') : console.log('BOOT -> cargando js/downloads-intro.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/location-map.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/downloads-intro.js');</script>
 <script src="js/downloads-intro.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/downloads-intro.js cargado') : console.log('BOOT -> js/downloads-intro.js cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/amenities-carousel.js?v=amenities7') : console.log('BOOT -> cargando js/amenities-carousel.js?v=amenities7');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/downloads-intro.js');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/amenities-carousel.js?v=amenities7');</script>
 <script src="js/amenities-carousel.js?v=amenities7"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/amenities-carousel.js?v=amenities7 cargado') : console.log('BOOT -> js/amenities-carousel.js?v=amenities7 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/menu-config.js?v=menu6') : console.log('BOOT -> cargando js/menu-config.js?v=menu6');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/amenities-carousel.js?v=amenities7');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/menu-config.js?v=menu6');</script>
 <script src="js/menu-config.js?v=menu6"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/menu-config.js?v=menu6 cargado') : console.log('BOOT -> js/menu-config.js?v=menu6 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/menu-config.js?v=menu6');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
   </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/main.js?v=maintrace1') : console.log('BOOT -> cargando js/main.js?v=maintrace1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script src="js/main.js?v=maintrace1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/main.js?v=maintrace1 cargado') : console.log('BOOT -> js/main.js?v=maintrace1 cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
   </script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/project-data.js?v=nohero1') : console.log('BOOT -> cargando js/project-data.js?v=nohero1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=nohero1');</script>
 <script src="js/project-data.js?v=nohero1"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/project-data.js?v=nohero1 cargado') : console.log('BOOT -> js/project-data.js?v=nohero1 cargado');</script>
-    <script>window.__bootMark ? window.__bootMark('BOOT -> cargando js/auth/bootstrap.js') : console.log('BOOT -> cargando js/auth/bootstrap.js');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=nohero1');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>
 <script src="js/auth/bootstrap.js"></script>
-  <script>window.__bootMark ? window.__bootMark('BOOT -> js/auth/bootstrap.js cargado') : console.log('BOOT -> js/auth/bootstrap.js cargado');</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/bootstrap.js');</script>
   <script>
   (function () {
     function bootLog(msg, detail) {
