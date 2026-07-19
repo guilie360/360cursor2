@@ -17,22 +17,36 @@ function supabaseFetch(path) {
     return Promise.reject(new Error('SUPABASE_URL / SUPABASE_ANON_KEY no definidos'));
   }
 
-  var req = fetch(SUPABASE_URL + path, {
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timedOut = false;
+  var timer = setTimeout(function () {
+    timedOut = true;
+    if (controller) controller.abort();
+  }, 15000);
+
+  var fetchOpts = {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
       Accept: 'application/json'
     }
-  }).then(function (response) {
-    if (typeof BootDebug !== 'undefined') BootDebug.log('supabaseFetch status', response.status);
-    if (!response.ok) throw new Error('Supabase request failed: ' + response.status);
-    return response.json();
-  });
+  };
+  if (controller) fetchOpts.signal = controller.signal;
 
-  if (typeof BootDebug !== 'undefined' && BootDebug.withTimeout) {
-    return BootDebug.withTimeout(req, 15000, 'supabaseFetch');
-  }
-  return req;
+  return fetch(SUPABASE_URL + path, fetchOpts)
+    .then(function (response) {
+      clearTimeout(timer);
+      if (typeof BootDebug !== 'undefined') BootDebug.log('supabaseFetch status', response.status);
+      if (!response.ok) throw new Error('Supabase request failed: ' + response.status);
+      return response.json();
+    })
+    .catch(function (err) {
+      clearTimeout(timer);
+      if (timedOut || (err && err.name === 'AbortError')) {
+        throw new Error('Supabase request timeout');
+      }
+      throw err;
+    });
 }
 
 function fetchPublishedProject() {
