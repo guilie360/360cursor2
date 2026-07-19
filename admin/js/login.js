@@ -16,10 +16,10 @@
 
   if (visitorRegisterLink) {
     try {
-      var proyecto = new URLSearchParams(window.location.search).get('proyecto') || 'proyecto-demo';
+      var proyecto = new URLSearchParams(window.location.search).get('proyecto') || 'demo';
       visitorRegisterLink.href = '../auth/registro.html?proyecto=' + encodeURIComponent(proyecto);
     } catch (e) {
-      visitorRegisterLink.href = '../auth/registro.html?proyecto=proyecto-demo';
+      visitorRegisterLink.href = '../auth/registro.html?proyecto=demo';
     }
   }
 
