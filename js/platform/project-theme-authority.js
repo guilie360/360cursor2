@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/project-theme-authority.js');}catch(_e){}
 /* Official project theme — separate from personal user themes */
 var ProjectThemeAuthority = (function () {
   var FEATURE_ENABLED = true;
@@ -169,3 +170,5 @@ var ProjectThemeAuthority = (function () {
     setOfficialThemeForProject: setOfficialThemeForProject
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/project-theme-authority.js');}catch(_e){}

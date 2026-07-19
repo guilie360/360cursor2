@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-coverage.js');}catch(_e){}
 /* Style Engine — Coverage panel */
 var StyleEngineCoverage = (function () {
   function escapeHtml(v) {
@@ -102,3 +103,5 @@ var StyleEngineCoverage = (function () {
 
   return { mount: mount };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-coverage.js');}catch(_e){}

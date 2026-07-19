@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-visual-system.js');}catch(_e){}
 /* Style Engine — VisualSystem: única fuente de verdad visual */
 var VisualSystem = (function () {
   var listeners = [];
@@ -264,3 +265,5 @@ var VisualSystem = (function () {
 
 // Alias público
 var DesignSystem = VisualSystem;
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-visual-system.js');}catch(_e){}

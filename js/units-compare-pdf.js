@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/units-compare-pdf.js');}catch(_e){}
 /* Exportación PDF — comparador de viviendas (brochure premium) */
 (function () {
   'use strict';
@@ -165,3 +166,5 @@
     buildTableRows: buildTableRows
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/units-compare-pdf.js');}catch(_e){}

@@ -971,14 +971,18 @@ if (typeof BootDebug !== 'undefined') {
       console.log('C');
       log('ANTES ThemeSystem.init');
       console.log('D');
+      try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER index.html :: ThemeSystem.init');}catch(_bd){}
       var __themeInitResult = ThemeSystem.init({ deferApply: true });
+      try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT index.html :: ThemeSystem.init (sync return)');}catch(_bd){}
       console.log('E');
       log('DESPUES ThemeSystem.init (retorno sync)');
       if (__themeInitResult && typeof __themeInitResult.then === 'function') {
+        try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN index.html :: ThemeSystem.init Promise');}catch(_bd){}
         log('ThemeSystem.init devolvio Promise — esperando resolve/reject');
         __themeInitResult.then(
-          function (v) { log('ThemeSystem.init Promise RESOLVED'); },
+          function (v) { try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END index.html :: ThemeSystem.init Promise RESOLVED');}catch(_bd){} log('ThemeSystem.init Promise RESOLVED'); },
           function (err) {
+            try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END index.html :: ThemeSystem.init Promise REJECTED');}catch(_bd){}
             log('ThemeSystem.init Promise REJECTED: ' + ((err && err.stack) || err));
           }
         );
@@ -993,214 +997,354 @@ if (typeof BootDebug !== 'undefined') {
   })();
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-color-math.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-color-math.js");</script>
 <script src="js/theme-ai/theme-color-math.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-color-math.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-color-math.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-brand-intelligence.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-brand-intelligence.js");</script>
 <script src="js/theme-ai/theme-brand-intelligence.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-brand-intelligence.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-brand-intelligence.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-brand-analyzer.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-brand-analyzer.js");</script>
 <script src="js/theme-ai/theme-brand-analyzer.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-brand-analyzer.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-brand-analyzer.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-role-mapper.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-role-mapper.js");</script>
 <script src="js/theme-ai/theme-role-mapper.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-role-mapper.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-role-mapper.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-source.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-ai-source.js");</script>
 <script src="js/theme-ai/theme-ai-source.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-ai-source.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-source.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-session.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-ai-session.js");</script>
 <script src="js/theme-ai/theme-ai-session.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-ai-session.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-session.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-generator.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-ai-generator.js");</script>
 <script src="js/theme-ai/theme-ai-generator.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-ai-generator.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-generator.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-preview.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-ai-preview.js");</script>
 <script src="js/theme-ai/theme-ai-preview.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-ai-preview.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-preview.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/theme-ai/theme-ai-modal.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/theme-ai/theme-ai-modal.js");</script>
 <script src="js/theme-ai/theme-ai-modal.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/theme-ai/theme-ai-modal.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/theme-ai/theme-ai-modal.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/constants.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/shared/constants.js");</script>
 <script src="js/shared/constants.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/shared/constants.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/constants.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/shared/formatters.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/shared/formatters.js");</script>
 <script src="js/shared/formatters.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/shared/formatters.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/formatters.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/supabase-client.js?v=boot1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/supabase-client.js?v=boot1");</script>
 <script src="js/supabase-client.js?v=boot1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/supabase-client.js?v=boot1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/supabase-client.js?v=boot1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/client.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/client.js");</script>
 <script src="js/auth/client.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/client.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/client.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/redirects.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/redirects.js");</script>
 <script src="js/auth/redirects.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/redirects.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/redirects.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/storage-prefs.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/storage-prefs.js");</script>
 <script src="js/auth/storage-prefs.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/storage-prefs.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/storage-prefs.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/errors.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/errors.js");</script>
 <script src="js/auth/errors.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/errors.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/errors.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/routes.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/routes.js");</script>
 <script src="js/auth/routes.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/routes.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/routes.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/roles-permissions.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/roles-permissions.js");</script>
 <script src="js/auth/roles-permissions.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/roles-permissions.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/roles-permissions.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/login.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/login.js");</script>
 <script src="js/auth/api/login.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/login.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/login.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/profiles.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/profiles.js");</script>
 <script src="js/auth/api/profiles.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/profiles.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/profiles.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/user-themes.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/user-themes.js");</script>
 <script src="js/auth/api/user-themes.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/user-themes.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/user-themes.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/visitantes.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/visitantes.js");</script>
 <script src="js/auth/api/visitantes.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/visitantes.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/visitantes.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/registro.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/registro.js");</script>
 <script src="js/auth/api/registro.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/registro.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/registro.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/oauth.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/oauth.js");</script>
 <script src="js/auth/api/oauth.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/oauth.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/oauth.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/visitor-provisioning.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/visitor-provisioning.js");</script>
 <script src="js/auth/api/visitor-provisioning.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/visitor-provisioning.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/visitor-provisioning.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/favoritos.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/favoritos.js");</script>
 <script src="js/auth/api/favoritos.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/favoritos.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/favoritos.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/visitor-auth.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/visitor-auth.js");</script>
 <script src="js/auth/visitor-auth.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/visitor-auth.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/visitor-auth.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-session.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-session.js");</script>
 <script src="js/visitor-session.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-session.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-session.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalization.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-personalization.js");</script>
 <script src="js/visitor-personalization.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-personalization.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalization.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/project-theme.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/project-theme.js");</script>
 <script src="js/auth/api/project-theme.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/project-theme.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/project-theme.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/api/project-preset-themes.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/api/project-preset-themes.js");</script>
 <script src="js/auth/api/project-preset-themes.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/api/project-preset-themes.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/api/project-preset-themes.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/project-theme-authority.js?v=freeze1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/platform/project-theme-authority.js?v=freeze1");</script>
 <script src="js/platform/project-theme-authority.js?v=freeze1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/platform/project-theme-authority.js?v=freeze1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/project-theme-authority.js?v=freeze1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/project-preset-themes.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/platform/project-preset-themes.js");</script>
 <script src="js/platform/project-preset-themes.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/platform/project-preset-themes.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/project-preset-themes.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/admin-hero-api.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/platform/admin-hero-api.js");</script>
 <script src="js/platform/admin-hero-api.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/platform/admin-hero-api.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/admin-hero-api.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen-messages.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/pause-screen/pause-screen-messages.js");</script>
 <script src="js/pause-screen/pause-screen-messages.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/pause-screen/pause-screen-messages.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen-messages.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen-config.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/pause-screen/pause-screen-config.js");</script>
 <script src="js/pause-screen/pause-screen-config.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/pause-screen/pause-screen-config.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen-config.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/pause-screen/pause-screen.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/pause-screen/pause-screen.js");</script>
 <script src="js/pause-screen/pause-screen.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/pause-screen/pause-screen.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/pause-screen/pause-screen.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalize-panel.js?v=nav19');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-personalize-panel.js?v=nav19");</script>
 <script src="js/visitor-personalize-panel.js?v=nav19"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-personalize-panel.js?v=nav19");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalize-panel.js?v=nav19');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-auth-modal.js?v=auth-lock1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-auth-modal.js?v=auth-lock1");</script>
 <script src="js/visitor-auth-modal.js?v=auth-lock1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-auth-modal.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-auth-modal.js?v=auth-lock1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-email-verification.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-email-verification.js");</script>
 <script src="js/visitor-email-verification.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-email-verification.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-email-verification.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-menu.js?v=nav24');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-menu.js?v=nav24");</script>
 <script src="js/visitor-menu.js?v=nav24"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-menu.js?v=nav24");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-menu.js?v=nav24');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-tokens.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-tokens.js");</script>
 <script src="js/style-engine/style-engine-tokens.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-tokens.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-tokens.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-history.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-history.js");</script>
 <script src="js/style-engine/style-engine-history.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-history.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-history.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-bridge.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-bridge.js");</script>
 <script src="js/style-engine/style-engine-bridge.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-bridge.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-bridge.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-registry.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-registry.js");</script>
 <script src="js/style-engine/style-engine-registry.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-registry.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-registry.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-legacy-adapter.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-legacy-adapter.js");</script>
 <script src="js/style-engine/style-engine-legacy-adapter.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-legacy-adapter.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-legacy-adapter.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-personalizar-mapper.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-personalizar-mapper.js");</script>
 <script src="js/style-engine/style-engine-personalizar-mapper.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-personalizar-mapper.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-personalizar-mapper.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-presets.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-presets.js");</script>
 <script src="js/style-engine/style-engine-presets.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-presets.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-presets.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-export.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-export.js");</script>
 <script src="js/style-engine/style-engine-export.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-export.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-export.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-store.js?v=hall5');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-store.js?v=hall5");</script>
 <script src="js/style-engine/style-engine-store.js?v=hall5"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-store.js?v=hall5");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-store.js?v=hall5');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-lifecycle.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-lifecycle.js");</script>
 <script src="js/style-engine/style-engine-lifecycle.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-lifecycle.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-lifecycle.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-compatibility.js?v=hall5');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-compatibility.js?v=hall5");</script>
 <script src="js/style-engine/style-engine-compatibility.js?v=hall5"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-compatibility.js?v=hall5");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-compatibility.js?v=hall5');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-visual-system.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-visual-system.js");</script>
 <script src="js/style-engine/style-engine-visual-system.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-visual-system.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-visual-system.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-audit.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-audit.js");</script>
 <script src="js/style-engine/style-engine-audit.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-audit.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-audit.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-runtime.js?v=freeze1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-runtime.js?v=freeze1");</script>
 <script src="js/style-engine/style-engine-runtime.js?v=freeze1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-runtime.js?v=freeze1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-runtime.js?v=freeze1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-color-picker.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-color-picker.js");</script>
 <script src="js/style-engine/style-engine-color-picker.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-color-picker.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-color-picker.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/visitor-personalize-v2-panel.js?v=hall4');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/visitor-personalize-v2-panel.js?v=hall4");</script>
 <script src="js/visitor-personalize-v2-panel.js?v=hall4"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/visitor-personalize-v2-panel.js?v=hall4");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/visitor-personalize-v2-panel.js?v=hall4');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-ai-assistant.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-ai-assistant.js");</script>
 <script src="js/style-engine/style-engine-ai-assistant.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-ai-assistant.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-ai-assistant.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-preview.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-preview.js");</script>
 <script src="js/style-engine/style-engine-preview.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-preview.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-preview.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-coverage.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-coverage.js");</script>
 <script src="js/style-engine/style-engine-coverage.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-coverage.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-coverage.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-catalog.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-catalog.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-catalog.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-catalog.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-catalog.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-capture.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-capture.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-capture.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-capture.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-capture.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-storage.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-storage.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-storage.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-storage.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-storage.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-nav.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-nav.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-nav.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-nav.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-nav.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-runner.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-runner.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-runner.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-runner.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-runner.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/visual-audit/visual-audit-ui.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/visual-audit/visual-audit-ui.js");</script>
 <script src="js/style-engine/visual-audit/visual-audit-ui.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/visual-audit/visual-audit-ui.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/visual-audit/visual-audit-ui.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-panel.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-panel.js");</script>
 <script src="js/style-engine/style-engine-panel.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-panel.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-panel.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-modal.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-modal.js");</script>
 <script src="js/style-engine/style-engine-modal.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-modal.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-modal.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/web-effects.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/web-effects.js");</script>
 <script src="js/web-effects.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/web-effects.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/web-effects.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/global-close.js?v=auth-lock1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/global-close.js?v=auth-lock1");</script>
 <script src="js/global-close.js?v=auth-lock1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/global-close.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
   <script>
   /* Chrome alt-tab guard ├ö├ç├Â runs before main.js, closes unauthorized menu */
@@ -1244,34 +1388,50 @@ if (typeof BootDebug !== 'undefined') {
   })();
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/units-compare-pdf.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/units-compare-pdf.js");</script>
 <script src="js/units-compare-pdf.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/units-compare-pdf.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/units-compare-pdf.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/location-map.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/location-map.js");</script>
 <script src="js/location-map.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/location-map.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/location-map.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/downloads-intro.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/downloads-intro.js");</script>
 <script src="js/downloads-intro.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/downloads-intro.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/downloads-intro.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/amenities-carousel.js?v=amenities7');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/amenities-carousel.js?v=amenities7");</script>
 <script src="js/amenities-carousel.js?v=amenities7"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/amenities-carousel.js?v=amenities7");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/amenities-carousel.js?v=amenities7');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/menu-config.js?v=menu6');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/menu-config.js?v=menu6");</script>
 <script src="js/menu-config.js?v=menu6"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/menu-config.js?v=menu6");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/menu-config.js?v=menu6');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
 <script src="js/main.js?v=maintrace1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=nohero1');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=nohero1");</script>
 <script src="js/project-data.js?v=nohero1"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=nohero1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=nohero1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/auth/bootstrap.js");</script>
 <script src="js/auth/bootstrap.js"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/auth/bootstrap.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/auth/bootstrap.js');</script>
   <script>
   (function () {
@@ -1284,6 +1444,9 @@ if (typeof BootDebug !== 'undefined') {
       else console.error('[BOOT]', msg, err);
     }
     function safeInit(label, fn) {
+      try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER index.html :: safeInit:' + label);}catch(_bd){}
+      try {
+
       bootLog(label + ' ├ö├ç├Â start');
       try {
         if (typeof fn !== 'function') {
@@ -1303,6 +1466,10 @@ if (typeof BootDebug !== 'undefined') {
       } catch (e) {
         bootErr(label + ' ├ö├ç├Â threw', e);
         return null;
+      }
+    
+      } finally {
+        try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT index.html :: safeInit:' + label);}catch(_bd){}
       }
     }
 

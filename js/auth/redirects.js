@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/redirects.js');}catch(_e){}
 /* Auth redirect URLs — must be allowlisted in Supabase Auth settings */
 var AuthRedirects = (function () {
   function origin() {
@@ -94,3 +95,5 @@ var AuthRedirects = (function () {
     withQueryParam: withQueryParam
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/redirects.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-export.js');}catch(_e){}
 /* Style Engine — Export / Import de temas JSON */
 var StyleEngineExport = (function () {
   function buildThemePackage(name, rules, meta) {
@@ -59,3 +60,5 @@ var StyleEngineExport = (function () {
     importFromFile: importFromFile
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-export.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/shared/formatters.js');}catch(_e){}
 /* Shared formatters — no DOM, no Supabase clients */
 function formatHeroSubtitle(ciudad, estado, textoHero) {
   if (textoHero) return textoHero;
@@ -64,3 +65,5 @@ function generateSlug(text) {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
 }
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/shared/formatters.js');}catch(_e){}

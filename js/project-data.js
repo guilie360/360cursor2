@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/project-data.js');}catch(_e){}
 /* =========================================================
    PROJECT DATA — Dashboard is the single source of truth
    Loads all modules from Supabase and hydrates the UI
@@ -791,6 +792,9 @@ function buildUnitsData(project) {
 }
 
 function applyProjectData(project) {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: applyProjectData');}catch(_bd){}
+  try {
+
   window.__pdTrace('applyProjectData — start', project && (project.slug || project.nombre || project.id));
   PROJECT_DATA = project;
   window.__pdTrace('applyProjectData · buildConfig');
@@ -893,6 +897,10 @@ function applyProjectData(project) {
       }, 0);
     }
   window.__pdTrace('applyProjectData — done');
+
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/project-data.js :: applyProjectData');}catch(_bd){}
+  }
 }
 
 function showProjectLoadError(err) {
@@ -930,6 +938,9 @@ function showProjectLoadError(err) {
 }
 
 function loadProjectData() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: loadProjectData');}catch(_bd){}
+  try {
+
   window.__pdTrace('loadProjectData — start');
   if (typeof BootDebug !== 'undefined') BootDebug.log('loadProjectData start');
   if (typeof fetchPublishedProject !== 'function') {
@@ -969,6 +980,10 @@ function loadProjectData() {
       window.__pdTraceError('loadProjectData promise catch', err);
       showProjectLoadError(err);
     });
+
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/project-data.js :: loadProjectData');}catch(_bd){}
+  }
 }
 
 if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — calling loadProjectData()');
@@ -982,3 +997,5 @@ try {
 }
 if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — loadProjectData() scheduled');
 window.__pdTrace('project-data.js evaluating — loadProjectData() scheduled');
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/project-data.js');}catch(_e){}

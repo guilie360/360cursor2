@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-brand-analyzer.js');}catch(_e){}
 /* Extracción densa del logo + Brand Intelligence Engine */
 var ThemeBrandAnalyzer = (function () {
   var C = ThemeColorMath;
@@ -232,3 +233,5 @@ var ThemeBrandAnalyzer = (function () {
     buildFingerprint: buildFingerprint
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-brand-analyzer.js');}catch(_e){}

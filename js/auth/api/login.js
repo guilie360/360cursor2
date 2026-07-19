@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/login.js');}catch(_e){}
 /* Resolve email or login alias to Supabase Auth email */
 var LoginApi = (function () {
   function looksLikeEmail(value) {
@@ -34,3 +35,5 @@ var LoginApi = (function () {
     resolveLoginEmail: resolveLoginEmail
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/login.js');}catch(_e){}

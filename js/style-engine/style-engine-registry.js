@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-registry.js');}catch(_e){}
 /* Style Engine — Component Registry (inventario + estado de migración) */
 var StyleEngineRegistry = (function () {
   var STATUS = {
@@ -153,3 +154,5 @@ var StyleEngineRegistry = (function () {
 })();
 
 var ComponentRegistry = StyleEngineRegistry;
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-registry.js');}catch(_e){}

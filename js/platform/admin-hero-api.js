@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/admin-hero-api.js');}catch(_e){}
 /* Platform admin API — hero config read/write from showroom */
 var AdminHeroApi = (function () {
   var BUCKET = 'proyectos-media';
@@ -206,3 +207,5 @@ var AdminHeroApi = (function () {
     saveHeroConfig: saveHeroConfig
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/admin-hero-api.js');}catch(_e){}

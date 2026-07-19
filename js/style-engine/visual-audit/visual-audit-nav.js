@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-nav.js');}catch(_e){}
 /* Visual Audit — Helpers de navegación del showroom */
 var VisualAuditNav = (function () {
   function sleep(ms) {
@@ -273,3 +274,5 @@ var VisualAuditNav = (function () {
     authorizeNav: authorizeNav
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-nav.js');}catch(_e){}

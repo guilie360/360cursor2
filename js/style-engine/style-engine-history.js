@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-history.js');}catch(_e){}
 /* Style Engine — Historial, Undo / Redo (solo sesión del modal) */
 var StyleEngineHistory = (function () {
   var undoStack = [];
@@ -95,3 +96,5 @@ var StyleEngineHistory = (function () {
     wrapSetDraftRule: wrapSetDraftRule
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-history.js');}catch(_e){}

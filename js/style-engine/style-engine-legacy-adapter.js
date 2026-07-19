@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-legacy-adapter.js');}catch(_e){}
 /* Style Engine — Legacy Adapter: Theme Legacy → Visual System → CSS vars */
 var StyleEngineLegacyAdapter = (function () {
   function r(rules, key, fallback) {
@@ -159,3 +160,5 @@ var StyleEngineLegacyAdapter = (function () {
     mix: mix
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-legacy-adapter.js');}catch(_e){}

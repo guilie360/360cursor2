@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-menu.js');}catch(_e){}
 /* Menu profile strip + authenticated explorar */
 var VisitorMenu = (function () {
   var ICON_PROFILE =
@@ -260,6 +261,9 @@ var VisitorMenu = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-menu.js :: init');}catch(_bd){}
+  try {
+
     window.refreshVisitorMenuProfile = refreshProfile;
     window.onVisitorSessionChanged = function () {
       refreshProfile();
@@ -278,7 +282,11 @@ var VisitorMenu = (function () {
     if (explorarBtn) {
       explorarBtn.addEventListener('click', handleExplorar);
     }
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-menu.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -288,3 +296,5 @@ var VisitorMenu = (function () {
     adminBuilderHref: adminBuilderHref
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-menu.js');}catch(_e){}

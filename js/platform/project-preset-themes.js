@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/project-preset-themes.js');}catch(_e){}
 /* Temas preset oficiales — catálogo bloqueado, editable solo por admin */
 var ProjectPresetThemes = (function () {
   var MIN_PRESETS = 3;
@@ -210,3 +211,5 @@ var ProjectPresetThemes = (function () {
     seedFromBuiltin: seedFromBuiltin
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/project-preset-themes.js');}catch(_e){}

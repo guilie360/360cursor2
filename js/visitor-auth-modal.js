@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-auth-modal.js');}catch(_e){}
 /* Single auth experience modal — gate, login, register */
 var VisitorAuthModal = (function () {
   var modal = null;
@@ -310,8 +311,15 @@ var VisitorAuthModal = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-auth-modal.js :: init');}catch(_bd){}
+  try {
+
     bindEvents();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-auth-modal.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -325,3 +333,5 @@ var VisitorAuthModal = (function () {
     isSessionLocked: isSessionLocked
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-auth-modal.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}
 /* Vista previa de identidad de marca y propuestas de tema IA */
 var ThemeAIPreview = (function () {
   var C = ThemeColorMath;
@@ -202,3 +203,5 @@ var ThemeAIPreview = (function () {
     renderProposalCard: renderProposalCard
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}

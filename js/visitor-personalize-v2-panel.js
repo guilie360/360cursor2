@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalize-v2-panel.js');}catch(_e){}
 /* Style V.3 — herencia global vía Style Engine */
 var VisitorPersonalizeV2Panel = (function () {
   var STYLE_V3_LABEL = 'Style V.3';
@@ -1352,3 +1353,5 @@ var VisitorPersonalizeV2Panel = (function () {
     getDraft: function () { return draft ? Object.assign({}, draft) : null; }
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalize-v2-panel.js');}catch(_e){}

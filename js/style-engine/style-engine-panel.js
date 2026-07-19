@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-panel.js');}catch(_e){}
 /* Style Engine — Panel v2 (AI, presets, historial, tokens, color picker) */
 var StyleEnginePanel = (function () {
   var hostId = 'styleEngineEditorHost';
@@ -349,3 +350,5 @@ var StyleEnginePanel = (function () {
     refreshPreview: refreshPreview
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-panel.js');}catch(_e){}

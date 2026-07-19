@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-ui.js');}catch(_e){}
 /* Visual Audit — UI: captura real de pantallas (como se ven) */
 var VisualAuditUI = (function () {
   var ROOT_ID = 'visualAuditUiRoot';
@@ -211,3 +212,5 @@ var VisualAudit = (function () {
     isAdminOnly: true
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-ui.js');}catch(_e){}

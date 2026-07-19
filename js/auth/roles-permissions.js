@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/roles-permissions.js');}catch(_e){}
 /* Platform roles and permissions — showroom architecture */
 var PlatformRoles = (function () {
   var ROLES = {
@@ -149,3 +150,5 @@ var PlatformVisibility = (function () {
     RULES: RULES
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/roles-permissions.js');}catch(_e){}

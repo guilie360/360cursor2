@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-store.js');}catch(_e){}
 /* Style Engine — Store v2.1: borrador vs publicado vs tema activo */
 var StyleEngineStore = (function () {
   var STORAGE_KEY = 'boxies_style_engine_v21';
@@ -90,9 +91,16 @@ var StyleEngineStore = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-store.js :: init');}catch(_bd){}
+  try {
+
     loadPersisted();
     reloadDraftFromStorage();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-store.js :: init');}catch(_bd){}
   }
+}
 
   function reloadDraftFromStorage() {
     var state = loadPersisted();
@@ -379,3 +387,5 @@ var StyleEngineStore = (function () {
     markAiPresetOffered: markAiPresetOffered
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-store.js');}catch(_e){}

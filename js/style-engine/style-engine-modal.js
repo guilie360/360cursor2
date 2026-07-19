@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-modal.js');}catch(_e){}
 /* Style Engine — Modal v2.1: publicación y activación */
 var StyleEngineModal = (function () {
   var MODAL_ID = 'styleEngineModal';
@@ -430,8 +431,15 @@ var StyleEngineModal = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
+  try {
+
     bindModalEvents();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -446,11 +454,18 @@ var StyleEngineModal = (function () {
 
 var StyleEngine = (function () {
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
+  try {
+
     StyleEngineStore.init();
     StyleEngineRuntime.init();
     if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
     StyleEngineModal.init();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   }
+}
 
   function getActiveThemeLabel() {
     if (StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE) {
@@ -479,3 +494,5 @@ var StyleEngine = (function () {
     getActiveThemeLabel: getActiveThemeLabel
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-modal.js');}catch(_e){}

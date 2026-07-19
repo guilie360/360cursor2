@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-lifecycle.js');}catch(_e){}
 /* Style Engine — Ciclo de vida: borrador, publicación, activación */
 var StyleEngineLifecycle = (function () {
   var ACTIVE = { LEGACY: 'legacy', STYLE_ENGINE: 'style-engine' };
@@ -134,3 +135,5 @@ var StyleEngineLifecycle = (function () {
     notifyActiveThemeChanged: notifyActiveThemeChanged
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-lifecycle.js');}catch(_e){}

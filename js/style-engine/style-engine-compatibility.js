@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-compatibility.js');}catch(_e){}
 /* Style Engine — Compatibilidad v2.1 */
 var StyleEngineCompatibility = (function () {
   function isAdminViewer() {
@@ -90,3 +91,5 @@ var StyleEngineCompatibility = (function () {
     registerMigratedScreen: registerMigratedScreen
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-compatibility.js');}catch(_e){}

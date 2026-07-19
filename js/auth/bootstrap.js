@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/bootstrap.js');}catch(_e){}
 /* Single auth bootstrap — OAuth callback, session restore, auth listener */
 var AuthBootstrap = (function () {
   var listenerBound = false;
@@ -19,11 +20,24 @@ var AuthBootstrap = (function () {
   }
 
   async function initNormalSession() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: initNormalSession');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN js/auth/bootstrap.js :: initNormalSession');}catch(_bd){}
+  try {
+
     PlatformAuth.createClient({ remember: AuthStoragePrefs.getRememberMe() });
     return VisitorSession.refresh();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END js/auth/bootstrap.js :: initNormalSession');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: initNormalSession');}catch(_bd){}
   }
+}
 
   async function enterAfterAuth(auth) {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: enterAfterAuth');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN js/auth/bootstrap.js :: enterAfterAuth');}catch(_bd){}
+  try {
+
     await VisitorSession.syncFromAuth(auth);
     if (typeof VisitorAuthModal !== 'undefined') VisitorAuthModal.close();
     if (typeof OAuthApi !== 'undefined' && typeof OAuthApi.restoreUiState === 'function') {
@@ -37,9 +51,18 @@ var AuthBootstrap = (function () {
       window.refreshVisitorMenuProfile();
     }
     return auth;
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END js/auth/bootstrap.js :: enterAfterAuth');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: enterAfterAuth');}catch(_bd){}
   }
+}
 
   async function completeOAuthReturn() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: completeOAuthReturn');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN js/auth/bootstrap.js :: completeOAuthReturn');}catch(_bd){}
+  try {
+
     bootstrappingOAuth = true;
     try {
       var auth = await VisitorAuth.completeOAuthCallback();
@@ -53,7 +76,12 @@ var AuthBootstrap = (function () {
     } finally {
       bootstrappingOAuth = false;
     }
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END js/auth/bootstrap.js :: completeOAuthReturn');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: completeOAuthReturn');}catch(_bd){}
   }
+}
 
   function bindAuthStateChange() {
     if (listenerBound) return;
@@ -91,6 +119,9 @@ var AuthBootstrap = (function () {
   }
 
   function finishStartup() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: finishStartup');}catch(_bd){}
+  try {
+
     if (typeof ProjectThemeAuthority !== 'undefined') {
       ProjectThemeAuthority.reapplyIfNeeded();
     }
@@ -102,9 +133,17 @@ var AuthBootstrap = (function () {
         VisitorEmailVerification.open({ reason: 'dashboard' });
       }
     } catch (e) {}
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: finishStartup');}catch(_bd){}
   }
+}
 
   async function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: init');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN js/auth/bootstrap.js :: init');}catch(_bd){}
+  try {
+
     readyResolved = false;
     readyPromise = new Promise(function (resolve) {
       readyResolve = resolve;
@@ -157,10 +196,17 @@ var AuthBootstrap = (function () {
     } finally {
       markReady();
     }
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END js/auth/bootstrap.js :: init');}catch(_bd){}
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
     whenReady: whenReady
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/bootstrap.js');}catch(_e){}

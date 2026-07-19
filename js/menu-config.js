@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/menu-config.js');}catch(_e){}
 /* Shared showroom menu config — defaults + normalize */
 var MenuConfig = (function () {
   var SECTION_OPTIONS = [
@@ -281,3 +282,5 @@ var MenuConfig = (function () {
     applyToDom: applyToDom
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/menu-config.js');}catch(_e){}

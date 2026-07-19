@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/visitantes.js');}catch(_e){}
 /* Visitor profile API */
 var VisitantesApi = (function () {
   var SELECT =
@@ -155,3 +156,5 @@ var VisitantesApi = (function () {
     formatPresupuesto: formatPresupuesto
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/visitantes.js');}catch(_e){}

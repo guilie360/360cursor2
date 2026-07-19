@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-session.js');}catch(_e){}
 /* Caché temporal de propuestas de tema IA (misma sesión de navegador) */
 var ThemeAISession = (function () {
   var STORAGE_KEY = 'guilie_theme_ai_session_v3';
@@ -56,3 +57,5 @@ var ThemeAISession = (function () {
     hasValid: hasValid
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-session.js');}catch(_e){}

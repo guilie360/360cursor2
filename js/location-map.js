@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/location-map.js');}catch(_e){}
 /* =========================================================
    UBICACIÓN — Google Maps embebido (navegable en el modal)
    ========================================================= */
@@ -70,3 +71,5 @@ var LocationMap = (function () {
     VALLEDUPAR: VALLEDUPAR
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/location-map.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/web-effects.js');}catch(_e){}
 /* Toggle de animaciones / efectos visuales (no afecta sonido ni audio de video). */
 var WebEffects = (function () {
   var STORAGE_KEY = 'boxies_web_effects_enabled';
@@ -127,11 +128,18 @@ var WebEffects = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/web-effects.js :: init');}catch(_bd){}
+  try {
+
     enabled = readEnabled();
     applyDom();
     bindUi();
     updateButtonState();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/web-effects.js :: init');}catch(_bd){}
   }
+}
 
   init();
 
@@ -146,3 +154,5 @@ var WebEffects = (function () {
     isConfirmOpen: isConfirmOpen
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/web-effects.js');}catch(_e){}

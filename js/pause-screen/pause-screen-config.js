@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/pause-screen/pause-screen-config.js');}catch(_e){}
 /* Configuración normalizada de la pantalla de pausa */
 var PauseScreenConfig = (function () {
   var DEFAULTS = {
@@ -107,3 +108,5 @@ var PauseScreenConfig = (function () {
     toPayload: toPayload
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/pause-screen/pause-screen-config.js');}catch(_e){}

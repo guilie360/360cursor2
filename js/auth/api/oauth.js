@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/oauth.js');}catch(_e){}
 /* OAuth sign-in — Google via Supabase Auth (official SDK flow) */
 var OAuthApi = (function () {
   var RETURN_STATE_KEY = 'guilie_oauth_return';
@@ -116,3 +117,5 @@ var OAuthApi = (function () {
     restoreReturnState: restoreUiState
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/oauth.js');}catch(_e){}

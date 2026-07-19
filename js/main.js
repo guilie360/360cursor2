@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/main.js');}catch(_e){}
 /* =========================================================
    PROJECT DATA — populated from Supabase via project-data.js
    CONFIG, TYPOLOGIES, UNITS, DOWNLOADS, PROJECT_STAGES
@@ -64,6 +65,9 @@ var PROJECT_LAST_UPDATE = '';
 var WHATSAPP_BASE = '';
 
 function applyConfig() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/main.js :: applyConfig');}catch(_bd){}
+  try {
+
   if (!CONFIG.projectName) {
     window.__mainTrace('applyConfig early return', 'sin projectName');
     return;
@@ -115,6 +119,10 @@ function applyConfig() {
     shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
   }
   window.__mainTrace('applyConfig — done');
+
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/main.js :: applyConfig');}catch(_bd){}
+  }
 }
 
 function lockBodyScroll()   { document.body.style.overflow = 'hidden'; }
@@ -4007,6 +4015,9 @@ function initDeepLink() {
 }
 
 window.initProjectUI = function () {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/main.js :: initProjectUI');}catch(_bd){}
+  try {
+
   window.__mainTrace('initProjectUI / initUI — start (load/applyProjectData deben haber corrido en project-data.js)');
   if (typeof BootDebug !== 'undefined') BootDebug.log('initProjectUI start');
   try {
@@ -4035,6 +4046,10 @@ window.initProjectUI = function () {
     if (typeof BootDebug !== 'undefined') BootDebug.error('initProjectUI', e);
     else console.error(e);
   }
+
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/main.js :: initProjectUI');}catch(_bd){}
+  }
 };
 
 window.onVisitorFavoritesChanged = function () {
@@ -4057,3 +4072,5 @@ window.onVisitorFavoritesChanged = function () {
 if (typeof BootDebug !== 'undefined') BootDebug.log('main.js evaluating — done');
 window.__mainTrace('main.js evaluating — done (sin project-data/auth bootstrap en este build)');
 window.__mainTrace('nota', 'loadProjectData/applyProjectData/showHome viven en project-data.js — aún no cargado');
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/main.js');}catch(_e){}

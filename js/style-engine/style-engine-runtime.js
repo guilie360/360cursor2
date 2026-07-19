@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-runtime.js');}catch(_e){}
 /* Style Engine — Runtime v3: VisualSystem → toda la plataforma en LIVE */
 var StyleEngineRuntime = (function () {
   var appliedSeKeys = [];
@@ -156,6 +157,9 @@ var StyleEngineRuntime = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
+  try {
+
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }
@@ -163,7 +167,11 @@ var StyleEngineRuntime = (function () {
       if (StyleEngineModal && StyleEngineModal.isOpen && StyleEngineModal.isOpen()) return;
       sync();
     });
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -174,3 +182,5 @@ var StyleEngineRuntime = (function () {
     activateLegacy: activateLegacy
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-runtime.js');}catch(_e){}

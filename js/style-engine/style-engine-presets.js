@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-presets.js');}catch(_e){}
 /* Style Engine — Biblioteca de presets (oficiales, inspiración, personales) */
 var StyleEnginePresets = (function () {
   var PERSONAL_KEY = 'boxies_style_engine_personal_presets_v2';
@@ -202,3 +203,5 @@ var StyleEnginePresets = (function () {
     deletePersonal: deletePersonal
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-presets.js');}catch(_e){}

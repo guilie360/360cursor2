@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-color-math.js');}catch(_e){}
 /* Utilidades cromáticas: solo variaciones de luminosidad (hue fijo) */
 var ThemeColorMath = (function () {
   function normalizeHex(hex) {
@@ -270,3 +271,5 @@ var ThemeColorMath = (function () {
     semanticHueKind: semanticHueKind
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-color-math.js');}catch(_e){}

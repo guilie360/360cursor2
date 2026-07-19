@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalize-panel.js');}catch(_e){}
 /* Personalizar panel — inside left navigation */
 var VisitorPersonalizePanel = (function () {
   var panelEl = null;
@@ -2043,3 +2044,5 @@ var VisitorPersonalizePanel = (function () {
     clearEditorSessionState: clearEditorSessionState
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalize-panel.js');}catch(_e){}

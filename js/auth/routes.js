@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/routes.js');}catch(_e){}
 /* Role-based routing — prepared for future dashboards */
 var AuthRouter = (function () {
   var DESTINATIONS = {
@@ -45,3 +46,5 @@ var AuthRouter = (function () {
     PROTECTED_VISITOR_PATHS: PROTECTED_VISITOR_PATHS
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/routes.js');}catch(_e){}

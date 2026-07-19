@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-storage.js');}catch(_e){}
 /* Visual Audit — Guardar PNG en carpeta plana (o ZIP) */
 var VisualAuditStorage = (function () {
   var mode = null;
@@ -196,3 +197,5 @@ var VisualAuditStorage = (function () {
     sanitizeSlug: sanitizeSlug
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-storage.js');}catch(_e){}

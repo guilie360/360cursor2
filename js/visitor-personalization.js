@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalization.js');}catch(_e){}
 /* Visitor identity & appearance prefs — local + Supabase display name */
 var VisitorPersonalization = (function () {
   var LEGACY_COLORS = {
@@ -509,3 +510,5 @@ window.onThemeChanged = function () {
     }
   }
 };
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalization.js');}catch(_e){}

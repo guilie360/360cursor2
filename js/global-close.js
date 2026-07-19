@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/global-close.js');}catch(_e){}
 /* Botón global de cerrar + pantalla completa */
 var GlobalClose = (function () {
   var stack = null;
@@ -380,6 +381,9 @@ var GlobalClose = (function () {
   }
 
   function init() {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/global-close.js :: init');}catch(_bd){}
+  try {
+
     ensureGlobalCloseButton();
     ensureRecoveryCloseButton();
     document.addEventListener('fullscreenchange', updateFullscreenState);
@@ -406,7 +410,11 @@ var GlobalClose = (function () {
     }
 
     update();
+  
+  } finally {
+  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/global-close.js :: init');}catch(_bd){}
   }
+}
 
   return {
     init: init,
@@ -416,3 +424,5 @@ var GlobalClose = (function () {
     isDesktopWithKeyboard: isDesktopWithKeyboard
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/global-close.js');}catch(_e){}

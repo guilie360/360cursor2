@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-ai-assistant.js');}catch(_e){}
 /* Style Engine — AI Style Assistant (aislado del Theme Editor) */
 var StyleEngineAI = (function () {
   var lastAnalysis = null;
@@ -262,3 +263,5 @@ var StyleEngineAI = (function () {
     maybeOfferSavePreset: maybeOfferSavePreset
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-ai-assistant.js');}catch(_e){}

@@ -1,3 +1,4 @@
+try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/project-theme.js');}catch(_e){}
 /* Official project default theme API */
 var ProjectThemeApi = (function () {
   function getClient() {
@@ -69,3 +70,5 @@ var ProjectThemeApi = (function () {
     normalizeConfig: normalizeConfig
   };
 })();
+
+try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/project-theme.js');}catch(_e){}
