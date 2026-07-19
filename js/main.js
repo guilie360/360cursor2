@@ -2,7 +2,57 @@
    PROJECT DATA — populated from Supabase via project-data.js
    CONFIG, TYPOLOGIES, UNITS, DOWNLOADS, PROJECT_STAGES
    ========================================================= */
+(function () {
+  function paintBootBanner() {
+    try {
+      if (typeof BootDebug === 'undefined' || !BootDebug.getSteps) return;
+      var el = document.getElementById('bootDebugBanner');
+      if (!el && document.body) {
+        el = document.createElement('div');
+        el.id = 'bootDebugBanner';
+        el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;max-height:45vh;overflow:auto;padding:10px 12px;border-radius:10px;background:rgba(20,0,0,0.92);color:#fff;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;pointer-events:none;';
+        document.body.appendChild(el);
+      }
+      if (!el) return;
+      el.style.display = 'block';
+      el.textContent = BootDebug.getSteps().map(function (s) {
+        return '[' + s.t + '] ' + (s.level === 'error' ? 'ERROR ' : '') + s.msg;
+      }).join('\n');
+    } catch (e) {}
+  }
+  window.__mainTrace = function (stage, detail) {
+    var msg = 'MAIN · ' + stage + (detail !== undefined && detail !== '' ? (' · ' + detail) : '');
+    try { console.log('[MAIN]', stage, detail !== undefined ? detail : ''); } catch (e) {}
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log(msg);
+      paintBootBanner();
+    }
+  };
+  window.__mainTraceError = function (stage, err) {
+    var detail = err && err.message ? err.message : String(err);
+    var msg = 'MAIN · FAIL · ' + stage + ' · ' + detail;
+    try { console.error('[MAIN]', stage, err); } catch (e) {}
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.error(msg, err);
+      paintBootBanner();
+    }
+  };
+  window.__mainTraceSafe = function (stage, fn) {
+    window.__mainTrace(stage + ' — start');
+    try {
+      var result = fn();
+      window.__mainTrace(stage + ' — done');
+      return result;
+    } catch (err) {
+      window.__mainTraceError(stage, err);
+      throw err;
+    }
+  };
+})();
+
 if (typeof BootDebug !== 'undefined') BootDebug.log('main.js evaluating — start');
+window.__mainTrace('inicio de main.js', 'readyState=' + document.readyState + ' theme-ready=' + document.documentElement.classList.contains('theme-ready'));
+window.__mainTrace('DOM listo?', document.body ? 'body OK' : 'body AUSENTE');
 var CONFIG = {};
 var TYPOLOGIES = [];
 var UNITS = {};
@@ -14,7 +64,11 @@ var PROJECT_LAST_UPDATE = '';
 var WHATSAPP_BASE = '';
 
 function applyConfig() {
-  if (!CONFIG.projectName) return;
+  if (!CONFIG.projectName) {
+    window.__mainTrace('applyConfig early return', 'sin projectName');
+    return;
+  }
+  window.__mainTrace('applyConfig — start');
   document.getElementById('mainMenuProject').textContent = CONFIG.projectName;
   var constructoraEl = document.getElementById('mainMenuConstructora');
   if (constructoraEl) constructoraEl.textContent = CONFIG.constructoraName || '';
@@ -60,6 +114,7 @@ function applyConfig() {
     shareFloat.classList.toggle('is-float-hidden', CONFIG.showShareFloat === false);
     shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
   }
+  window.__mainTrace('applyConfig — done');
 }
 
 function lockBodyScroll()   { document.body.style.overflow = 'hidden'; }
@@ -300,6 +355,7 @@ function bindButtonHoverSounds() {
 }
 
 bindButtonHoverSounds();
+window.__mainTrace('bindButtonHoverSounds');
 
 function playSound(eventName) {
   if (!soundsEnabled) return;
@@ -319,6 +375,7 @@ function playSound(eventName) {
 
 /* ================= VIDEO DE FONDO ================= */
 var coverVideo = document.getElementById('coverVideo');
+window.__mainTrace('coverVideo', coverVideo ? 'encontrado' : 'null');
 if (coverVideo) {
   coverVideo.addEventListener('canplay', function() {
     coverVideo.play().catch(function(){});
@@ -482,7 +539,9 @@ function shareUnit(key) {
 }
 
 /* ---- Botón flotante de compartir proyecto ---- */
-document.getElementById('shareProjectFloatBtn').addEventListener('click', function(){ shareProject(); });
+window.__mainTraceSafe('bind shareProjectFloatBtn', function () {
+  document.getElementById('shareProjectFloatBtn').addEventListener('click', function(){ shareProject(); });
+});
 
 /* ================= RENDER DE TARJETAS DE UNIDADES ================= */
 var unitsGrid = document.getElementById('unitsGrid');
@@ -1717,6 +1776,7 @@ function activateUnitsTab(tab) {
 unitsTabAllBtn.addEventListener('click', function(){ activateUnitsTab('all'); });
 unitsTabFavBtn.addEventListener('click', function(){ activateUnitsTab('fav'); });
 document.getElementById('favoritesEmptyBtn').addEventListener('click', function(){ activateUnitsTab('all'); });
+window.__mainTrace('bind favoritesEmptyBtn');
 var compareEmptyBtn = document.getElementById('compareEmptyBtn');
 if (compareEmptyBtn) {
   compareEmptyBtn.addEventListener('click', function () {
@@ -3352,8 +3412,9 @@ window.isNavResumeGateActive = isNavResumeGateActive;
 window.isNavResumeLocked = isNavResumeLocked;
 window.isHeroIdle = isHeroIdle;
 window.__NAV_BUILD__ = NAV_BUILD;
-bootNavStateGuard();
-bindNavSessionPersistence();
+window.__mainTraceSafe('bootNavStateGuard', function () { bootNavStateGuard(); });
+window.__mainTraceSafe('bindNavSessionPersistence', function () { bindNavSessionPersistence(); });
+/* initNavigation-ish: nav session + watchdogs bound above */
 
 function bindModalBackdropClose(modalId) {
   var el = document.getElementById(modalId);
@@ -3406,16 +3467,20 @@ function ensurePopupBoxScrollWrappers() {
     box.appendChild(scroll);
   });
 }
-ensurePopupBoxScrollWrappers();
+window.__mainTraceSafe('ensurePopupBoxScrollWrappers', function () { ensurePopupBoxScrollWrappers(); });
 
 /* ================= ENTRADA DESDE LA PORTADA ================= */
-document.getElementById('heroStartBtn').addEventListener('click', function(){ goTo('sphere'); });
+window.__mainTraceSafe('bind heroStartBtn', function () {
+  document.getElementById('heroStartBtn').addEventListener('click', function(){ goTo('sphere'); });
+});
 
 /* ================= CIERRES — botón global; backdrops siguen activos ================= */
-document.getElementById('mainMenuBackdrop').addEventListener('click', function () {
-  if (isPersonalizarPanelActive()) return;
-  if (isStyleV3MenuLocked()) return;
-  guardedGoBack();
+window.__mainTraceSafe('bind mainMenuBackdrop', function () {
+  document.getElementById('mainMenuBackdrop').addEventListener('click', function () {
+    if (isPersonalizarPanelActive()) return;
+    if (isStyleV3MenuLocked()) return;
+    guardedGoBack();
+  });
 });
 var menuNavBackEl = document.getElementById('menuNavBack');
 if (menuNavBackEl) {
@@ -3445,6 +3510,7 @@ if (menuNavBackEl) {
   'constructoraModal',
   'descargasModal'
 ].forEach(bindModalBackdropClose);
+window.__mainTrace('bindModalBackdropClose — all modals');
 
 /* ================= ITEMS DEL MENÚ PRINCIPAL ================= */
 function bindMenuItemNavigation() {
@@ -3559,6 +3625,7 @@ function bindMenuItemNavigation() {
 }
 
 bindMenuItemNavigation();
+window.__mainTrace('bindMenuItemNavigation / initUI menu');
 window.bindMenuItemNavigation = bindMenuItemNavigation;
 
 /* ================= CALCULADORA DE CUOTA (MEJORADA) ================= */
@@ -3606,9 +3673,11 @@ function setupCalculator(key) {
   computeCalculator();
 }
 
-document.getElementById('calcDownPct').addEventListener('change', computeCalculator);
-document.getElementById('calcYears').addEventListener('change', computeCalculator);
-document.getElementById('calcRate').addEventListener('change', computeCalculator);
+window.__mainTraceSafe('bind calculator inputs', function () {
+  document.getElementById('calcDownPct').addEventListener('change', computeCalculator);
+  document.getElementById('calcYears').addEventListener('change', computeCalculator);
+  document.getElementById('calcRate').addEventListener('change', computeCalculator);
+});
 
 /* ================= ESTADO DEL PROYECTO — BARRAS DE PROGRESO ================= */
 
@@ -3871,32 +3940,34 @@ function lightboxNext() {
 function lightboxPrev() {
   if (lightboxIndex > 0) { lightboxIndex--; updateLightboxPosition(true); }
 }
-document.getElementById('lightboxNext').addEventListener('click', lightboxNext);
-document.getElementById('lightboxPrev').addEventListener('click', lightboxPrev);
+window.__mainTraceSafe('bind lightbox controls', function () {
+  document.getElementById('lightboxNext').addEventListener('click', lightboxNext);
+  document.getElementById('lightboxPrev').addEventListener('click', lightboxPrev);
 
-/* ---- swipe táctil ---- */
-var touchStartX = 0, touchDeltaX = 0, touchActive = false;
-var lightboxEl = document.getElementById('rendersLightbox');
-lightboxEl.addEventListener('touchstart', function(e){
-  touchActive = true;
-  touchStartX = e.touches[0].clientX;
-  touchDeltaX = 0;
-  lightboxTrack.style.transition = 'none';
-}, { passive: true });
-lightboxEl.addEventListener('touchmove', function(e){
-  if (!touchActive) return;
-  touchDeltaX = e.touches[0].clientX - touchStartX;
-  var basePct = -(lightboxIndex * 100);
-  var dragPct = (touchDeltaX / window.innerWidth) * 100;
-  lightboxTrack.style.transform = 'translateX(' + (basePct + dragPct) + '%)';
-}, { passive: true });
-lightboxEl.addEventListener('touchend', function(){
-  if (!touchActive) return;
-  touchActive = false;
-  var threshold = window.innerWidth * 0.18;
-  if      (touchDeltaX < -threshold) lightboxNext();
-  else if (touchDeltaX >  threshold) lightboxPrev();
-  else updateLightboxPosition(true);
+  /* ---- swipe táctil ---- */
+  var touchStartX = 0, touchDeltaX = 0, touchActive = false;
+  var lightboxEl = document.getElementById('rendersLightbox');
+  lightboxEl.addEventListener('touchstart', function(e){
+    touchActive = true;
+    touchStartX = e.touches[0].clientX;
+    touchDeltaX = 0;
+    lightboxTrack.style.transition = 'none';
+  }, { passive: true });
+  lightboxEl.addEventListener('touchmove', function(e){
+    if (!touchActive) return;
+    touchDeltaX = e.touches[0].clientX - touchStartX;
+    var basePct = -(lightboxIndex * 100);
+    var dragPct = (touchDeltaX / window.innerWidth) * 100;
+    lightboxTrack.style.transform = 'translateX(' + (basePct + dragPct) + '%)';
+  }, { passive: true });
+  lightboxEl.addEventListener('touchend', function(){
+    if (!touchActive) return;
+    touchActive = false;
+    var threshold = window.innerWidth * 0.18;
+    if      (touchDeltaX < -threshold) lightboxNext();
+    else if (touchDeltaX >  threshold) lightboxPrev();
+    else updateLightboxPosition(true);
+  });
 });
 
 /* =========================================================
@@ -3919,30 +3990,48 @@ function highlightSharedUnit(key) {
    conservando la posición visual de su tarjeta.
    ========================================================= */
 function initDeepLink() {
+  window.__mainTrace('initDeepLink — start');
   try {
     var params = new URLSearchParams(window.location.search);
     var unitKey = params.get('vivienda');
     if (unitKey && UNITS[unitKey]) {
       goTo('tipologias');
       setTimeout(function () { highlightSharedUnit(unitKey); }, 260);
+      window.__mainTrace('initDeepLink — opened unit', unitKey);
+    } else {
+      window.__mainTrace('initDeepLink — early return', unitKey ? 'unit missing' : 'sin vivienda');
     }
-  } catch (e) {}
+  } catch (e) {
+    window.__mainTraceError('initDeepLink', e);
+  }
 }
 
 window.initProjectUI = function () {
+  window.__mainTrace('initProjectUI / initUI — start (load/applyProjectData deben haber corrido en project-data.js)');
   if (typeof BootDebug !== 'undefined') BootDebug.log('initProjectUI start');
   try {
+    window.__mainTrace('initProjectUI · applyConfig');
     applyConfig();
+    window.__mainTrace('initProjectUI · renderUnitsGrid');
     renderUnitsGrid('all');
+    window.__mainTrace('initProjectUI · updateFavoritesTabCount');
     updateFavoritesTabCount();
+    window.__mainTrace('initProjectUI · renderDownloadsList');
     renderDownloadsList();
+    window.__mainTrace('initProjectUI · buildProgressList');
     buildProgressList();
+    window.__mainTrace('initProjectUI · initDeepLink');
     initDeepLink();
     if (typeof VisitorMenu !== 'undefined') {
+      window.__mainTrace('initProjectUI · VisitorMenu.refreshProfile');
       VisitorMenu.refreshProfile();
+    } else {
+      window.__mainTrace('initProjectUI · VisitorMenu ausente');
     }
+    window.__mainTrace('initProjectUI / initUI — done');
     if (typeof BootDebug !== 'undefined') BootDebug.log('initProjectUI done');
   } catch (e) {
+    window.__mainTraceError('initProjectUI', e);
     if (typeof BootDebug !== 'undefined') BootDebug.error('initProjectUI', e);
     else console.error(e);
   }
@@ -3966,3 +4055,5 @@ window.onVisitorFavoritesChanged = function () {
 };
 
 if (typeof BootDebug !== 'undefined') BootDebug.log('main.js evaluating — done');
+window.__mainTrace('main.js evaluating — done (sin project-data/auth bootstrap en este build)');
+window.__mainTrace('nota', 'loadProjectData/applyProjectData/showHome viven en project-data.js — aún no cargado');
