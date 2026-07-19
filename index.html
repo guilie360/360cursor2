@@ -812,11 +812,11 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
 
   <!-- TOAST DE FEEDBACK (compartir, favoritos, etc.) -->
   <div class="app-toast" id="appToast"></div>
-  <!-- BISECT L1: L0 + first half of previously disabled scripts (42/83) -->
-  <div id="bisectMarker" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;padding:8px 10px;background:#111;color:#0f0;font:12px monospace;">BISECT L1</div>
+  <!-- BISECT L2: L1 + second half of previously disabled scripts (41/83) -->
+  <div id="bisectMarker" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;padding:8px 10px;background:#111;color:#0f0;font:12px monospace;">BISECT L2</div>
   <script>
-  window.__BISECT_STEP__ = 'L1-first-half';
-  window.__BUILD_STAMP__ = 'bisect-L1';
+  window.__BISECT_STEP__ = 'L2-second-half';
+  window.__BUILD_STAMP__ = 'bisect-L2';
   </script>
 <script src="js/boot-debug.js?v=boot1"></script>
 <script src="js/boot-cpu-profile.js?v=cpu1"></script>
@@ -849,7 +849,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     if (typeof ThemeSystem === 'undefined') throw new Error('ThemeSystem undefined');
     ThemeSystem.init({ deferApply: true });
     var m = document.getElementById('bisectMarker');
-    if (m) m.textContent = 'BISECT L1 - first half ON';
+    if (m) m.textContent = 'BISECT L2 - second half ON';
   })();
   </script>
 <script src="js/theme-ai/theme-color-math.js"></script>
@@ -889,5 +889,48 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
 <script src="js/pause-screen/pause-screen-messages.js"></script>
 <script src="js/pause-screen/pause-screen-config.js"></script>
 <script src="js/pause-screen/pause-screen.js"></script>
+
+  <!-- BISECT L2: remaining half -->
+<script src="js/visitor-personalize-panel.js?v=nav19"></script>
+<script src="js/visitor-auth-modal.js?v=auth-lock1"></script>
+<script src="js/visitor-email-verification.js"></script>
+<script src="js/visitor-menu.js?v=nav24"></script>
+<script src="js/style-engine/style-engine-tokens.js"></script>
+<script src="js/style-engine/style-engine-history.js"></script>
+<script src="js/style-engine/style-engine-bridge.js"></script>
+<script src="js/style-engine/style-engine-registry.js"></script>
+<script src="js/style-engine/style-engine-legacy-adapter.js"></script>
+<script src="js/style-engine/style-engine-personalizar-mapper.js"></script>
+<script src="js/style-engine/style-engine-presets.js"></script>
+<script src="js/style-engine/style-engine-export.js"></script>
+<script src="js/style-engine/style-engine-store.js?v=hall5"></script>
+<script src="js/style-engine/style-engine-lifecycle.js"></script>
+<script src="js/style-engine/style-engine-compatibility.js?v=hall5"></script>
+<script src="js/style-engine/style-engine-visual-system.js"></script>
+<script src="js/style-engine/style-engine-audit.js"></script>
+<script src="js/style-engine/style-engine-runtime.js?v=freeze1"></script>
+<script src="js/style-engine/style-engine-color-picker.js"></script>
+<script src="js/visitor-personalize-v2-panel.js?v=hall4"></script>
+<script src="js/style-engine/style-engine-ai-assistant.js"></script>
+<script src="js/style-engine/style-engine-preview.js"></script>
+<script src="js/style-engine/style-engine-coverage.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-catalog.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-capture.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-storage.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-nav.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-runner.js"></script>
+<script src="js/style-engine/visual-audit/visual-audit-ui.js"></script>
+<script src="js/style-engine/style-engine-panel.js"></script>
+<script src="js/style-engine/style-engine-modal.js"></script>
+<script src="js/web-effects.js"></script>
+<script src="js/global-close.js?v=auth-lock1"></script>
+<script src="js/units-compare-pdf.js"></script>
+<script src="js/location-map.js"></script>
+<script src="js/downloads-intro.js"></script>
+<script src="js/amenities-carousel.js?v=amenities7"></script>
+<script src="js/menu-config.js?v=menu6"></script>
+<script src="js/main.js?v=maintrace1"></script>
+<script src="js/project-data.js?v=nohero1"></script>
+<script src="js/auth/bootstrap.js"></script>
 </body>
 </html>
