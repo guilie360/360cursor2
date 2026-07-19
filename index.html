@@ -1,19 +1,103 @@
 <!DOCTYPE html>
-<html lang="es" translate="no" class="notranslate theme-ready" data-build="nav16">
+<html lang="es" translate="no" class="notranslate" data-build="nav16">
 <head>
 <meta charset="UTF-8">
-<title>360ÔÇó</title>
+<title>360•</title>
 <script>
 window.__BUILD_STAMP__ = 'boot1';
-console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
+console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/components.css">
+<meta name="google" content="notranslate">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta property="og:title" content="Showroom 360 — Guilie">
+<meta property="og:description" content="Recorridos virtuales 360°, renders y visualización arquitectónica para proyectos en preventa.">
+<meta property="og:image" content="https://360preventa.com/wp-content/uploads/2026/06/1200x630.png">
+<meta property="og:url" content="https://360preventa.com/demo">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://360preventa.com/wp-content/uploads/2026/06/1200x630.png">
+
+<!-- ================= ACCESO DIRECTO / "APP" EN PANTALLA DE INICIO ================= -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#000000">
+
+<!-- iOS: nombre bajo el ícono, modo pantalla completa, ícono -->
+<meta name="apple-mobile-web-app-title" content="360•">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
+
+<!-- Android / Chrome -->
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
+<!-- Pantalla de carga neutra (negro) — el tema oficial llega desde Supabase -->
+<style id="project-theme-critical">
+html {
+  background: #000000;
+}
+:root {
+  --bg-main: #000000;
+  --text-primary: #ffffff;
+  --accent: #8f1d1d;
+  --hero-bg: #000000;
+  --hero-text: #ffffff;
+}
+/* Body visible tras theme-ready; failsafe JS evita congelar en negro */
+html:not(.theme-ready) body {
+  visibility: hidden;
+}
+</style>
+<script src="js/boot-debug.js?v=boot1"></script>
+<script src="js/boot-cpu-profile.js?v=cpu1"></script>
+<script>
+(function () {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log('URL search', location.search || '(vacío)');
+      BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
+    }
+    if (!params.get('proyecto')) {
+      params.set('proyecto', 'proyecto-demo');
+      history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+      if (typeof BootDebug !== 'undefined') {
+        BootDebug.log('proyecto inyectado', 'proyecto-demo');
+      }
+    }
+  } catch (e) {
+    if (typeof BootDebug !== 'undefined') BootDebug.error('param proyecto', e);
+    else console.error(e);
+  }
+})();
+</script>
+<script src="js/shared/config.js?v=boot1"></script>
+<script>
+if (typeof BootDebug !== 'undefined') {
+  BootDebug.log('config.js', {
+    hasUrl: typeof SUPABASE_URL !== 'undefined',
+    hasKey: typeof SUPABASE_ANON_KEY !== 'undefined',
+    slug: typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null
+  });
+}
+</script>
+<script src="js/theme-early-bootstrap.js?v=boot1"></script>
+<script>
+(function () {
+  try {
+    if (localStorage.getItem('boxies_web_effects_enabled') === 'false') {
+      document.documentElement.classList.add('web-effects-off');
+    }
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="css/variables.css?v=4">
+<link rel="stylesheet" href="css/components.css?v=cardtype1">
 <link rel="stylesheet" href="css/style-engine.css">
 </head>
 <body class="notranslate" translate="no">
-
 
   <div class="vignette-overlay"></div>
 
@@ -43,19 +127,19 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </section>
 
-  <!-- BOTÔö£├┤N FLOTANTE WHATSAPP -->
+  <!-- BOTÓN FLOTANTE WHATSAPP -->
   <a class="whatsapp-float" id="whatsappFloat" href="#" target="_blank" rel="noopener" aria-label="Chatear por WhatsApp">
     <svg viewBox="0 0 24 24" fill="#fff">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.3-.347.45-.52.146-.174.194-.298.293-.497.099-.198.05-.371-.05-.52-.099-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>
     </svg>
   </a>
 
-  <!-- BOTÔö£├┤N FLOTANTE COMPARTIR PROYECTO -->
+  <!-- BOTÓN FLOTANTE COMPARTIR PROYECTO -->
   <button class="share-float" id="shareProjectFloatBtn" type="button" aria-label="Compartir proyecto">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg>
   </button>
 
-  <!-- Herramientas menÔö£Ôòæ (animaciones + sonido web) -->
+  <!-- Herramientas menú (animaciones + sonido web) -->
   <div class="global-menu-tools" id="globalMenuTools">
     <button type="button" class="global-effects-btn" id="globalEffectsBtn" aria-label="Desactivar animaciones" aria-pressed="false" title="Desactivar animaciones">
       <svg class="global-effects-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -76,16 +160,16 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
   <div class="global-action-stack" id="globalActionStack">
     <button type="button" class="global-close-btn" id="globalCloseBtn" aria-label="Cerrar" hidden>&times;</button>
     <button type="button" class="global-fullscreen-btn" id="globalFullscreenBtn" aria-label="Pantalla completa" aria-pressed="false" hidden>
-      <span class="global-fullscreen-icon" aria-hidden="true">├ö├©├é</span>
+      <span class="global-fullscreen-icon" aria-hidden="true">⛶</span>
     </button>
   </div>
 
-  <!-- ================= MENÔö£├£ PRINCIPAL ================= -->
+  <!-- ================= MENÚ PRINCIPAL ================= -->
   <div class="main-menu-backdrop" id="mainMenuBackdrop"></div>
   <nav class="main-menu" id="mainMenu">
     <div class="main-menu-shell">
       <div class="main-menu-header">
-        <button type="button" class="main-menu-recovery-close" id="mainMenuRecoveryClose" aria-label="Cerrar menÔö£Ôòæ" hidden>&times;</button>
+        <button type="button" class="main-menu-recovery-close" id="mainMenuRecoveryClose" aria-label="Cerrar menú" hidden>&times;</button>
         <div class="main-menu-project" id="mainMenuProject"></div>
         <div class="main-menu-constructora" id="mainMenuConstructora"></div>
       </div>
@@ -94,7 +178,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
         <div class="main-menu-nav-col">
           <div class="menu-nav-toolbar" id="menuNavToolbar">
             <button type="button" class="menu-nav-back" id="menuNavBack" hidden>
-              <span class="menu-nav-back-icon" aria-hidden="true">├ö├Ñ├é</span>
+              <span class="menu-nav-back-icon" aria-hidden="true">↶</span>
               <span class="menu-nav-back-label">volver</span>
             </button>
             <div class="menu-nav-v2-col" id="menuNavV2Col" hidden>
@@ -112,7 +196,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
           </div>
 
           <div class="main-menu-content">
-          <!-- NIVEL 1: MENÔö£├£ PRINCIPAL -->
+          <!-- NIVEL 1: MENÚ PRINCIPAL -->
           <div class="main-menu-list" id="mainMenuListPrimary">
       <div class="menu-item" id="menuConoce">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V6l8-3 8 3v15"/><path d="M9 21v-6h6v6"/><path d="M9 10h1M14 10h1M9 14h1M14 14h1"/></svg>
@@ -120,7 +204,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       </div>
       <div class="menu-item" id="menuTour360">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg>
-        <span class="menu-item-label">Experiencia 360Ôö¼Ôûæ</span>
+        <span class="menu-item-label">Experiencia 360°</span>
       </div>
       <div class="menu-item" id="menuViviendas">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -128,7 +212,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       </div>
       <div class="menu-item" id="menuUbicacion">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.2"/></svg>
-        <span class="menu-item-label">UbicaciÔö£Ôöén</span>
+        <span class="menu-item-label">Ubicación</span>
       </div>
       <div class="menu-item" id="menuContacto">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92V20a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.6 19a19.5 19.5 0 0 1-4.85-4.85 19.79 19.79 0 0 1-3-8.22A2 2 0 0 1 5.68 4h3.09a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L9.91 11.09a16 16 0 0 0 4.85 4.85l1.45-1.45a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
@@ -139,11 +223,11 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
           <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizar" style="display:none;"></div>
           <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizarV2" style="display:none;"></div>
 
-          <!-- NIVEL 2: SUBMENÔö£├£ "CONOCE EL PROYECTO" -->
+          <!-- NIVEL 2: SUBMENÚ "CONOCE EL PROYECTO" -->
           <div class="main-menu-list" id="mainMenuListProyecto" style="display:none;">
       <div class="menu-item" id="menuDescripcion">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h4"/></svg>
-        <span class="menu-item-label">DescripciÔö£Ôöén</span>
+        <span class="menu-item-label">Descripción</span>
       </div>
       <div class="menu-item" id="menuVideo">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M10 9l5 3-5 3V9Z"/></svg>
@@ -151,7 +235,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       </div>
       <div class="menu-item" id="menuRenders">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="8" cy="8" r="1.5"/></svg>
-        <span class="menu-item-label">GalerÔö£┬ía</span>
+        <span class="menu-item-label">Galería</span>
       </div>
       <div class="menu-item" id="menuAmenidades">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
@@ -171,7 +255,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       </div>
     </div>
 
-    <!-- NIVEL 2: SUBMENÔö£├£ "CONTACTO" -->
+    <!-- NIVEL 2: SUBMENÚ "CONTACTO" -->
     <div class="main-menu-list" id="mainMenuListContacto" style="display:none;">
       <a class="contact-link" id="contactInstagram" href="https://www.instagram.com/" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -189,7 +273,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
           <path d="M22 16.92V20a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.6 19a19.5 19.5 0 0 1-4.85-4.85 19.79 19.79 0 0 1-3-8.22A2 2 0 0 1 5.68 4h3.09a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L9.91 11.09a16 16 0 0 0 4.85 4.85l1.45-1.45a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>
         </svg>
         <div class="contact-link-text">
-          <span class="contact-link-label">TelÔö£┬«fonos</span>
+          <span class="contact-link-label">Teléfonos</span>
           <span class="contact-link-sub" id="contactTelSub"></span>
         </div>
       </a>
@@ -248,11 +332,11 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </nav>
 
-  <!-- MODALES DEL SUBMENÔö£├£ "CONOCE EL PROYECTO" -->
+  <!-- MODALES DEL SUBMENÚ "CONOCE EL PROYECTO" -->
   <div class="content-modal" id="descripcionModal">
     <span class="modal-close" id="descripcionModalClose">&times;</span>
     <div class="content-modal-box">
-      <div class="content-modal-title">DescripciÔö£Ôöén</div>
+      <div class="content-modal-title">Descripción</div>
       <p class="info-text" id="descripcionText"></p>
     </div>
   </div>
@@ -273,7 +357,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </div>
 
-  <!-- ================= ESTADO DEL PROYECTO ├ö├ç├Â BARRAS DE PROGRESO ================= -->
+  <!-- ================= ESTADO DEL PROYECTO — BARRAS DE PROGRESO ================= -->
   <div class="content-modal" id="estadoModal">
     <span class="modal-close" id="estadoModalClose">&times;</span>
     <div class="content-modal-box">
@@ -337,12 +421,12 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
         <div class="select-wrap">
           <label>Plazo</label>
           <select id="calcYears">
-            <option value="5">5 aÔö£ÔûÆos</option>
-            <option value="10">10 aÔö£ÔûÆos</option>
-            <option value="15">15 aÔö£ÔûÆos</option>
-            <option value="20" selected>20 aÔö£ÔûÆos</option>
-            <option value="25">25 aÔö£ÔûÆos</option>
-            <option value="30">30 aÔö£ÔûÆos</option>
+            <option value="5">5 años</option>
+            <option value="10">10 años</option>
+            <option value="15">15 años</option>
+            <option value="20" selected>20 años</option>
+            <option value="25">25 años</option>
+            <option value="30">30 años</option>
           </select>
         </div>
         <div class="select-wrap">
@@ -362,7 +446,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       <div class="calc-divider"></div>
       <div class="calc-results">
         <div class="calc-result-row"><span>Cuota inicial</span><strong id="calcDownValue">$0</strong></div>
-        <div class="calc-result-row"><span>CrÔö£┬«dito</span><strong id="calcCreditValue">$0</strong></div>
+        <div class="calc-result-row"><span>Crédito</span><strong id="calcCreditValue">$0</strong></div>
         <div class="calc-result-row highlight"><span>Cuota estimada</span><strong id="calcMonthlyValue">$0/mes</strong></div>
         <div class="calc-result-row income"><span>Ingreso recomendado</span><strong id="calcIncomeValue">$0/mes</strong></div>
       </div>
@@ -371,14 +455,14 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </div>
 
-  <!-- POPUP: SELECCIÔö£├┤N DE UNIDADES -->
+  <!-- POPUP: SELECCIÓN DE UNIDADES -->
   <div class="units-popup units-viviendas-popup" id="unitsPopup">
     <div class="units-viviendas-stage">
       <div class="units-grid units-viviendas-grid" id="unitsGrid"></div>
       <div class="units-compare-panel" id="unitsComparePanel" hidden></div>
       <div class="favorites-empty" id="favoritesEmpty" style="display:none;">
-        <div class="favorites-empty-icon">├ö├û├¡</div>
-        <p class="favorites-empty-text">AÔö£Ôòæn no has agregado viviendas a favoritos.</p>
+        <div class="favorites-empty-icon">♡</div>
+        <p class="favorites-empty-text">Aún no has agregado viviendas a favoritos.</p>
         <button class="outline-btn" type="button" id="favoritesEmptyBtn">Explorar viviendas</button>
       </div>
       <div class="compare-empty favorites-empty" id="compareEmpty" style="display:none;" hidden>
@@ -407,14 +491,14 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </div>
 
-  <!-- POPUP: ZONAS CON RECORRIDO 360Ôö¼Ôûæ -->
+  <!-- POPUP: ZONAS CON RECORRIDO 360° -->
   <div class="units-popup tour360-popup" id="tour360Popup">
     <div class="tour360-stage">
       <div class="tour360-grid" id="tour360Grid"></div>
     </div>
   </div>
 
-  <!-- MODAL PDF: planos + ficha tÔö£┬«cnica + precio -->
+  <!-- MODAL PDF: planos + ficha técnica + precio -->
   <div class="pdf-modal units-unit-overlay" id="pdfModal">
     <span class="modal-close" id="pdfClose">&times;</span>
     <div class="pdf-modal-box units-premium-modal units-plans-modal">
@@ -463,7 +547,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
             poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%23000000'/%3E%3C/svg%3E"
           >
             <source id="projectVideoSource" type="video/webm">
-            Tu navegador no soporta la reproducciÔö£Ôöén de video.
+            Tu navegador no soporta la reproducción de video.
           </video>
           <div class="video-player-controls" id="projectVideoControls" hidden>
             <button type="button" class="video-ctrl-btn is-paused" id="projectVideoPlayBtn" aria-label="Reproducir" title="Reproducir">
@@ -510,7 +594,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </div>
 
-  <!-- POPUP: GALERÔö£├¼A (mismo layout que Ver 360) -->
+  <!-- POPUP: GALERÍA (mismo layout que Ver 360) -->
   <div class="units-popup tour360-popup" id="rendersModal">
     <div class="tour360-stage">
       <div class="tour360-grid" id="rendersGrid"></div>
@@ -526,7 +610,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     <div class="lightbox-counter" id="lightboxCounter"></div>
   </div>
 
-  <!-- MODAL UBICACIÔö£├┤N (misma estructura / animaciÔö£Ôöén que video) -->
+  <!-- MODAL UBICACIÓN (misma estructura / animación que video) -->
   <div class="content-modal location-modal video-modal splash-intro-modal" id="locationModal">
     <span class="modal-close" id="locationModalClose">&times;</span>
     <div class="content-modal-box video-modal-box location-modal-box">
@@ -556,14 +640,14 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
             <div class="location-map" id="locationPlaceholder" aria-label="Mapa de Valledupar"></div>
           </div>
           <div class="location-modal-action">
-            <a class="outline-btn" id="directionsBtn" href="#" target="_blank" rel="noopener">CÔö£Ôöémo llegar</a>
+            <a class="outline-btn" id="directionsBtn" href="#" target="_blank" rel="noopener">Cómo llegar</a>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Pantalla de pausa ├ö├ç├Â overlay sobre el Ôö£Ôòæltimo frame -->
+  <!-- Pantalla de pausa — overlay sobre el último frame -->
   <div class="pause-screen" id="navResumeGate" hidden>
     <div class="pause-screen__veil" aria-hidden="true"></div>
     <div class="pause-screen__panel" role="dialog" aria-modal="true" aria-labelledby="pauseScreenTitle">
@@ -574,7 +658,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
         <div class="pause-screen__building" id="pauseScreenBuilding" hidden></div>
       </div>
       <div class="pause-screen__copy">
-        <p class="pause-screen__title" id="pauseScreenTitle">SESIÔö£├┤N EN PAUSA</p>
+        <p class="pause-screen__title" id="pauseScreenTitle">SESIÓN EN PAUSA</p>
         <h2 class="pause-screen__name" id="pauseScreenName" hidden></h2>
         <p class="pause-screen__message" id="pauseScreenMessage"></p>
       </div>
@@ -584,7 +668,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     </div>
   </div>
 
-  <!-- MODAL EXPERIENCIA / AUTENTICACIÔö£├┤N -->
+  <!-- MODAL EXPERIENCIA / AUTENTICACIÓN -->
   <div class="content-modal auth-experience-modal" id="authExperienceModal">
     <div class="content-modal-box auth-experience-box">
       <div class="auth-experience-views">
@@ -600,18 +684,18 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
             <li>Experiencia personalizada</li>
           </ul>
           <div class="auth-gate-actions">
-            <button type="button" class="outline-btn auth-action-btn" id="authGateLoginBtn">Iniciar sesiÔö£Ôöén</button>
+            <button type="button" class="outline-btn auth-action-btn" id="authGateLoginBtn">Iniciar sesión</button>
             <button type="button" class="outline-btn auth-action-btn" id="authGateRegisterBtn">Crear cuenta</button>
           </div>
         </div>
 
         <div class="auth-experience-view" id="authViewLogin">
           <h2 class="auth-gate-title">Bienvenido nuevamente</h2>
-          <p class="auth-view-lead">ContinÔö£Ôòæa donde lo dejaste.</p>
+          <p class="auth-view-lead">Continúa donde lo dejaste.</p>
           <div class="auth-oauth-row">
             <button type="button" class="outline-btn auth-oauth-btn" id="authLoginGoogleBtn">Google</button>
           </div>
-          <div class="auth-oauth-divider" aria-hidden="true">o continÔö£Ôòæa con tu correo</div>
+          <div class="auth-oauth-divider" aria-hidden="true">o continúa con tu correo</div>
           <div class="auth-view-actions">
             <form id="authLoginForm" class="auth-modal-form" novalidate>
               <label class="auth-field">
@@ -619,15 +703,15 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
                 <input id="authLoginInput" type="text" autocomplete="username" placeholder="correo@ejemplo.com o usuario" required>
               </label>
               <label class="auth-field">
-                <span>ContraseÔö£ÔûÆa</span>
-                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="├ö├ç├│├ö├ç├│├ö├ç├│├ö├ç├│├ö├ç├│├ö├ç├│├ö├ç├│├ö├ç├│" required>
+                <span>Contraseña</span>
+                <input id="authLoginPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
                 <button type="button" class="auth-toggle-password" id="authToggleLoginPassword">Mostrar</button>
               </label>
               <label class="auth-remember-row">
                 <input id="authRememberMe" type="checkbox" checked>
                 <span>Recordarme en este dispositivo</span>
               </label>
-              <button type="submit" class="outline-btn auth-action-btn" id="authLoginBtn">Iniciar sesiÔö£Ôöén</button>
+              <button type="submit" class="outline-btn auth-action-btn" id="authLoginBtn">Iniciar sesión</button>
             </form>
             <button type="button" class="outline-btn auth-action-btn" id="authLoginRegisterBtn">Crear cuenta</button>
           </div>
@@ -638,7 +722,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
           <div class="auth-oauth-row">
             <button type="button" class="outline-btn auth-oauth-btn" id="authRegisterGoogleBtn">Google</button>
           </div>
-          <div class="auth-oauth-divider" aria-hidden="true">o continÔö£Ôòæa con tu correo</div>
+          <div class="auth-oauth-divider" aria-hidden="true">o continúa con tu correo</div>
           <form id="authRegisterForm" class="auth-modal-form" novalidate>
             <div class="auth-field-row">
               <label class="auth-field">
@@ -651,19 +735,19 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
               </label>
             </div>
             <label class="auth-field">
-              <span>Correo electrÔö£Ôöénico</span>
+              <span>Correo electrónico</span>
               <input id="authEmail" type="email" autocomplete="email" required>
             </label>
             <label class="auth-field">
-              <span>ContraseÔö£ÔûÆa</span>
+              <span>Contraseña</span>
               <input id="authPassword" type="password" autocomplete="new-password" minlength="8" required>
               <button type="button" class="auth-toggle-password" id="authTogglePassword">Mostrar</button>
             </label>
             <p class="auth-legal-footnote">
               Al continuar aceptas los
-              <a href="#" id="authTerminosLink" target="_blank" rel="noopener">TÔö£┬«rminos y Condiciones</a>
+              <a href="#" id="authTerminosLink" target="_blank" rel="noopener">Términos y Condiciones</a>
               y la
-              <a href="#" id="authPrivacidadLink" target="_blank" rel="noopener">PolÔö£┬ítica de Privacidad</a>.
+              <a href="#" id="authPrivacidadLink" target="_blank" rel="noopener">Política de Privacidad</a>.
             </p>
             <button type="submit" class="outline-btn auth-action-btn" id="authRegisterBtn">Crear cuenta</button>
             <button type="button" class="outline-btn auth-action-btn" id="authRegisterCancelBtn">Cancelar</button>
@@ -673,22 +757,22 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       </div>
       <div class="auth-modal-message" id="authModalMessage" role="alert"></div>
       <div class="auth-resend-wrap" id="authResendWrap" style="display:none;">
-        <button type="button" class="outline-btn auth-secondary-btn" id="authResendBtn">Reenviar correo de confirmaciÔö£Ôöén</button>
+        <button type="button" class="outline-btn auth-secondary-btn" id="authResendBtn">Reenviar correo de confirmación</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL VERIFICACIÔö£├┤N DE CORREO -->
+  <!-- MODAL VERIFICACIÓN DE CORREO -->
   <div class="content-modal email-verification-modal" id="emailVerificationModal">
     <div class="content-modal-box email-verification-box">
-      <h2 class="email-verification-title">Verifica tu correo electrÔö£Ôöénico</h2>
+      <h2 class="email-verification-title">Verifica tu correo electrónico</h2>
       <p class="email-verification-copy">
-        Para proteger tu informaciÔö£Ôöén y sincronizar tu cuenta entre dispositivos, primero necesitamos verificar tu correo electrÔö£Ôöénico.
+        Para proteger tu información y sincronizar tu cuenta entre dispositivos, primero necesitamos verificar tu correo electrónico.
       </p>
       <div class="email-verification-actions">
         <button type="button" class="outline-btn auth-gate-action-btn" id="emailVerificationResendBtn">Enviar nuevamente</button>
-        <button type="button" class="outline-btn auth-gate-action-btn" id="emailVerificationConfirmBtn">Ya lo verifiquÔö£┬«</button>
-        <button type="button" class="outline-btn auth-secondary-btn" id="emailVerificationLaterBtn">MÔö£├¡s tarde</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="emailVerificationConfirmBtn">Ya lo verifiqué</button>
+        <button type="button" class="outline-btn auth-secondary-btn" id="emailVerificationLaterBtn">Más tarde</button>
       </div>
       <p class="email-verification-message" id="emailVerificationMessage" role="status"></p>
     </div>
@@ -701,7 +785,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
       <div class="popup-box-scroll theme-ai-scroll">
         <h2 class="theme-ai-title">Generar tema con IA</h2>
         <p class="theme-ai-intro">
-          Sube el logo de la marca. El motor de identidad visual analizarÔö£├¡ familias cromÔö£├¡ticas, jerarquÔö£┬ía y personalidad para generar un sistema de interfaz coherente ├ö├ç├Â sin inventar colores.
+          Sube el logo de la marca. El motor de identidad visual analizará familias cromáticas, jerarquía y personalidad para generar un sistema de interfaz coherente — sin inventar colores.
         </p>
         <p class="theme-ai-error personalize-hint is-error" id="themeAiErrorText" hidden></p>
 
@@ -732,8 +816,8 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     <div class="content-modal-box project-theme-confirm-box">
       <h2 class="project-theme-confirm-title">Aplicar tema al proyecto</h2>
       <p class="project-theme-confirm-copy">
-        Este tema serÔö£├¡ el estilo visual predeterminado para todos los nuevos visitantes de este proyecto.
-        Cada usuario podrÔö£├¡ seguir cambiando el tema Ôö£Ôòænicamente para su propia experiencia.
+        Este tema será el estilo visual predeterminado para todos los nuevos visitantes de este proyecto.
+        Cada usuario podrá seguir cambiando el tema únicamente para su propia experiencia.
       </p>
       <div class="project-theme-confirm-actions">
         <button type="button" class="outline-btn auth-secondary-btn" id="projectThemeConfirmCancelBtn">Cancelar</button>
@@ -746,7 +830,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
     <div class="content-modal-box project-theme-confirm-box">
       <h2 class="project-theme-confirm-title">Eliminar tema oficial</h2>
       <p class="project-theme-confirm-copy" id="officialPresetDeleteCopy">
-        Este tema dejarÔö£├¡ de aparecer en la lista para todos los visitantes. Deben quedar al menos 3 temas oficiales.
+        Este tema dejará de aparecer en la lista para todos los visitantes. Deben quedar al menos 3 temas oficiales.
       </p>
       <div class="project-theme-confirm-actions">
         <button type="button" class="outline-btn auth-secondary-btn" id="officialPresetDeleteCancelBtn">Cancelar</button>
@@ -757,22 +841,22 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
 
   <div class="content-modal project-theme-confirm-modal" id="webEffectsConfirmModal">
     <div class="content-modal-box project-theme-confirm-box">
-      <p class="project-theme-confirm-copy web-effects-confirm-copy">Ôö¼ÔöÉDeseas deshabilitar las animaciones?</p>
+      <p class="project-theme-confirm-copy web-effects-confirm-copy">¿Deseas deshabilitar las animaciones?</p>
       <div class="project-theme-confirm-actions">
-        <button type="button" class="outline-btn auth-gate-action-btn" id="webEffectsConfirmYes">SÔö£┬í</button>
+        <button type="button" class="outline-btn auth-gate-action-btn" id="webEffectsConfirmYes">Sí</button>
         <button type="button" class="outline-btn auth-secondary-btn" id="webEffectsConfirmNo">No</button>
       </div>
     </div>
   </div>
 
-  <!-- STYLE ENGINE ├ö├ç├Â laboratorio experimental (aislado del Theme Editor) -->
+  <!-- STYLE ENGINE — laboratorio experimental (aislado del Theme Editor) -->
   <div class="content-modal style-engine-modal" id="styleEngineModal" aria-hidden="true">
     <div class="content-modal-box style-engine-modal-box">
       <header class="style-engine-modal-head">
         <div class="style-engine-modal-title-wrap">
-          <span class="style-engine-modal-kicker">Design System Ôö¼├Ç v3.0</span>
+          <span class="style-engine-modal-kicker">Design System · v3.0</span>
           <h2 class="style-engine-modal-title">Style Engine</h2>
-          <p class="style-engine-modal-subtitle">Editar, guardar borrador, previsualizar y publicar ├ö├ç├Â sin ambigÔö£ÔòØedad.</p>
+          <p class="style-engine-modal-subtitle">Editar, guardar borrador, previsualizar y publicar — sin ambigüedad.</p>
         </div>
         <div id="styleEngineStateHost" class="se-state-host"></div>
         <button type="button" class="style-engine-close-btn" id="styleEngineCloseBtn" aria-label="Cerrar">&times;</button>
@@ -798,7 +882,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
         <button type="button" class="style-engine-foot-btn" id="styleEngineResetDefaultsBtn">Reiniciar</button>
         <button type="button" class="style-engine-foot-btn" id="styleEngineSaveStyleBtn">Guardar estilo</button>
         <button type="button" class="style-engine-foot-btn style-engine-foot-btn--primary" id="styleEnginePublishBtn">Aplicar al proyecto</button>
-        <label class="se-engine-switch" title="ON = Style Engine Ôö¼├Ç OFF = Theme Legacy V1">
+        <label class="se-engine-switch" title="ON = Style Engine · OFF = Theme Legacy V1">
           <span class="se-engine-switch-label">Style Engine</span>
           <input type="checkbox" id="styleEnginePowerSwitch" class="se-engine-switch-input">
           <span class="se-engine-switch-track" aria-hidden="true">
@@ -822,7 +906,7 @@ console.log('[BOOT 0.00s] index.html primera lÔö£┬ínea', location.href);
   try {
     var params = new URLSearchParams(window.location.search);
     if (typeof BootDebug !== 'undefined') {
-      BootDebug.log('URL search', location.search || '(vacÔö£┬ío)');
+      BootDebug.log('URL search', location.search || '(vacío)');
       BootDebug.log('param proyecto', params.get('proyecto') || '(ausente)');
     }
     if (!params.get('proyecto')) {
@@ -1267,7 +1351,7 @@ if (typeof BootDebug !== 'undefined') {
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/global-close.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
   <script>
-  /* Chrome alt-tab guard ├ö├ç├Â runs before main.js, closes unauthorized menu */
+  /* Chrome alt-tab guard — runs before main.js, closes unauthorized menu */
   (function () {
     function closeUnauthorizedMenu() {
       if (window.__navResumeGateOpen) return;
@@ -1367,24 +1451,24 @@ if (typeof BootDebug !== 'undefined') {
       try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER index.html :: safeInit:' + label);}catch(_bd){}
       try {
 
-      bootLog(label + ' ├ö├ç├Â start');
+      bootLog(label + ' — start');
       try {
         if (typeof fn !== 'function') {
-          bootErr(label + ' ├ö├ç├Â no disponible (undefined/not a function)');
+          bootErr(label + ' — no disponible (undefined/not a function)');
           return null;
         }
         var result = fn();
         if (result && typeof result.then === 'function') {
           result.then(
-            function () { bootLog(label + ' ├ö├ç├Â done (async)'); },
-            function (err) { bootErr(label + ' ├ö├ç├Â rejected', err); }
+            function () { bootLog(label + ' — done (async)'); },
+            function (err) { bootErr(label + ' — rejected', err); }
           );
         } else {
-          bootLog(label + ' ├ö├ç├Â done');
+          bootLog(label + ' — done');
         }
         return result;
       } catch (e) {
-        bootErr(label + ' ├ö├ç├Â threw', e);
+        bootErr(label + ' — threw', e);
         return null;
       }
     
@@ -1393,7 +1477,7 @@ if (typeof BootDebug !== 'undefined') {
       }
     }
 
-    bootLog('final inits ├ö├ç├Â start', {
+    bootLog('final inits — start', {
       VisitorAuthModal: typeof VisitorAuthModal,
       VisitorEmailVerification: typeof VisitorEmailVerification,
       VisitorMenu: typeof VisitorMenu,
@@ -1427,7 +1511,7 @@ if (typeof BootDebug !== 'undefined') {
 
     safeInit('StyleEngine.init', function () {
       if (typeof StyleEngine === 'undefined') {
-        bootLog('StyleEngine.init ├ö├ç├Â skip (StyleEngine undefined)');
+        bootLog('StyleEngine.init — skip (StyleEngine undefined)');
         return;
       }
       if (!StyleEngine.init) throw new Error('StyleEngine.init undefined');
@@ -1457,7 +1541,7 @@ if (typeof BootDebug !== 'undefined') {
       return authResult;
     });
 
-    bootLog('final inits ├ö├ç├Â all scheduled');
+    bootLog('final inits — all scheduled');
 
     setTimeout(function () {
       try {
