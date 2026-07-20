@@ -7,6 +7,9 @@ var HeroSyncEngine = (function () {
       'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento)';
 
   function getSlugFromUrl() {
+    if (typeof getProjectSlugFromUrl === 'function') {
+      return getProjectSlugFromUrl();
+    }
     try {
       return new URLSearchParams(window.location.search).get('proyecto');
     } catch (e) {
@@ -268,20 +271,19 @@ var HeroSyncEngine = (function () {
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
     var hero = state.heroContent || {};
-    var themeConfig = ThemeEngine.toProyectoConfig(state.branding || {});
+    /* HALL stays fixed: do not write color_fondo / color_accento / project_default_theme on Guardar */
+    var logoUrl = null;
 
     if (state.branding && state.branding.logoCleared) {
-      themeConfig.logo_url = null;
+      logoUrl = null;
     } else if (state.branding && state.branding.logo && state.branding.logo.file) {
-      themeConfig.logo_url = await uploadFile(constructoraId, project.id, 'hero/logo', state.branding.logo.file);
-      state.branding.logo.uploadedUrl = themeConfig.logo_url;
+      logoUrl = await uploadFile(constructoraId, project.id, 'hero/logo', state.branding.logo.file);
+      state.branding.logo.uploadedUrl = logoUrl;
       state.branding.logoCleared = false;
     } else if (state.branding && state.branding.logo && state.branding.logo.uploadedUrl) {
-      themeConfig.logo_url = state.branding.logo.uploadedUrl;
+      logoUrl = state.branding.logo.uploadedUrl;
     } else if (existingConfig.logo_url) {
-      themeConfig.logo_url = existingConfig.logo_url;
-    } else {
-      themeConfig.logo_url = null;
+      logoUrl = existingConfig.logo_url;
     }
 
     var projectName = (hero.nombre || info.nombre || project.nombre || '').trim();
@@ -291,7 +293,7 @@ var HeroSyncEngine = (function () {
     var branding = state.branding || {};
     var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
 
-    var heroPayload = Object.assign({}, themeConfig, {
+    var heroPayload = {
       nombre_proyecto: projectName || project.nombre,
       titulo_hero: projectName || project.nombre,
       texto_hero: eslogan || null,
@@ -306,9 +308,10 @@ var HeroSyncEngine = (function () {
         ? !!branding.showHeroLogo
         : true,
       logo_style: logoStyle,
+      logo_url: logoUrl,
       video_hero_url: media.video_hero_url,
       imagen_hero_url: media.imagen_hero_url
-    });
+    };
 
     await HeroApi.upsert(project.id, heroPayload);
 
