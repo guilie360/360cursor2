@@ -265,16 +265,16 @@ var PlatformBuilderBridge = (function () {
   }
 
   function showroomUrl(slug) {
-    var url = new URL('../index.html', window.location.href);
-    if (slug) {
-      url.searchParams.set('proyecto', slug);
-      return url.href;
+    var resolved = slug || null;
+    if (!resolved) {
+      try {
+        resolved = new URLSearchParams(window.location.search).get('proyecto');
+      } catch (e) {}
     }
-    try {
-      var p = new URLSearchParams(window.location.search).get('proyecto');
-      if (p) url.searchParams.set('proyecto', p);
-    } catch (e) {}
-    return url.href;
+    if (resolved) {
+      return new URL('/' + encodeURIComponent(resolved), window.location.origin).href;
+    }
+    return new URL('/', window.location.origin).href;
   }
 
   return {
