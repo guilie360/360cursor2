@@ -1,4 +1,7 @@
-# Pretty project URLs → same index.html (URL stays /demo, /proyecto1, …)
+# Pretty project URLs → root index.html only (never nested folder indexes)
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -6,26 +9,28 @@
   # TEMPORARY: no platform landing yet — / → /demo (remove when landing exists)
   RewriteRule ^$ /demo [R=302,L]
 
-  # Canonicalize /demo/ → /demo (safe with absolute /js /css assets)
-  RewriteCond %{REQUEST_URI} !^/(admin|auth|css|js|supabase|assets|images)/
+  # /demo/, /demo2/, /demo3/ (and any project slug/) → same URL without trailing slash
+  # Must run before any directory pass-through so nested folders cannot win.
+  RewriteCond %{REQUEST_URI} !^/(admin|auth|css|js|supabase|assets|images|sounds|fonts|videos)/
   RewriteRule ^([A-Za-z0-9_-]+)/$ /$1 [R=301,L]
 
-  # Serve real files and directories as-is
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
+  # Real FILES only (never directories): avoids /demo serving a nested demo/index.html
+  RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # App folders that are not project slugs
-  RewriteRule ^(admin|auth|css|js|supabase|assets|images)(/|$) - [L]
+  # App / asset folders that are not project slugs
+  RewriteRule ^(admin|auth|css|js|supabase|assets|images|sounds|fonts|videos)(/|$) - [L]
 
-  # /demo, /proyecto1, … → index.html (internal rewrite, browser URL unchanged)
-  RewriteRule ^([A-Za-z0-9_-]+)/?$ index.html [L]
+  # /demo, /demo2, /demo3, … → root index.html (internal rewrite; URL unchanged)
+  RewriteRule ^([A-Za-z0-9_-]+)/?$ /index.html [L]
 </IfModule>
 
-# HTML always revalidated; versioned JS/CSS can be cached long (busted by BUILD_VERSION)
+# HTML always revalidated — never serve a stale index from cache or a nested copy
 <IfModule mod_headers.c>
   <FilesMatch "\.(html)$">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
   </FilesMatch>
   <FilesMatch "\.(js|css)$">
     Header set Cache-Control "public, max-age=31536000, immutable"

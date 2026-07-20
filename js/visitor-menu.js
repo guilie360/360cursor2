@@ -116,7 +116,7 @@ var VisitorMenu = (function () {
       return AuthRedirects.adminBuilder();
     }
     try {
-      var url = new URL('admin/ai-project-builder.html', window.location.href);
+      var url = new URL('/admin/ai-project-builder.html', window.location.origin);
       var proyecto =
         typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
@@ -124,7 +124,7 @@ var VisitorMenu = (function () {
       if (proyecto) url.searchParams.set('proyecto', proyecto);
       return url.href;
     } catch (e) {
-      return 'admin/ai-project-builder.html';
+      return '/admin/ai-project-builder.html';
     }
   }
 

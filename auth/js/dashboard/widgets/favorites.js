@@ -4,7 +4,7 @@ VisitorDashboard.register({
   render: function (ctx) {
     var favorites = ctx.favorites || [];
     var projects = ctx.projects || [];
-    var exploreHref = ctx.exploreHref || '../index.html';
+    var exploreHref = ctx.exploreHref || '/demo';
     var el = VisitorDashboard.createWidgetEl('favorites');
 
     function unitRow(row) {

@@ -51,7 +51,7 @@ var AuthPage = (function () {
       if (typeof AuthRedirects !== 'undefined') {
         window.location.href = AuthRedirects.publicHome();
       } else {
-        window.location.href = '../index.html';
+        window.location.href = '/demo';
       }
     });
   }

@@ -215,12 +215,12 @@ renderSoundsToggle();
 /* Sistema de sonidos: archivos opcionales + whoosh sintético (Web Audio)
    para menú / popups cuando no hay MP3. */
 var SOUND_FILES = {
-  // buttonTap:   new Audio('sounds/tap.mp3'),
-  // menuOpen:    new Audio('sounds/menu-open.mp3'),
-  // menuClose:   new Audio('sounds/menu-close.mp3'),
-  // popupOpen:   new Audio('sounds/popup-open.mp3'),
-  // popupClose:  new Audio('sounds/popup-close.mp3'),
-  // tour360Enter: new Audio('sounds/tour360.mp3')
+  // buttonTap:   new Audio('/sounds/tap.mp3'),
+  // menuOpen:    new Audio('/sounds/menu-open.mp3'),
+  // menuClose:   new Audio('/sounds/menu-close.mp3'),
+  // popupOpen:   new Audio('/sounds/popup-open.mp3'),
+  // popupClose:  new Audio('/sounds/popup-close.mp3'),
+  // tour360Enter: new Audio('/sounds/tour360.mp3')
 };
 
 var _soundAudioCtx = null;

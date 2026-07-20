@@ -42,9 +42,9 @@
 
     var profile = await resolveAdminProfile();
     if (!profile || !PlatformRoles.isAdmin(profile)) {
-      var home = '../index.html';
+      var home = '/demo';
       try {
-        home = new URL('../index.html', window.location.href).href;
+        home = new URL('/demo', window.location.origin).href;
         var proyecto = new URLSearchParams(window.location.search).get('proyecto');
         if (proyecto) {
           var homeUrl = new URL(home);

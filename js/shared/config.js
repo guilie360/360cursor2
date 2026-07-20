@@ -14,7 +14,7 @@ var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
  * Bump both together when shipping asset changes.
  */
 var BUILD_VERSION =
-  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720b';
+  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720c';
 if (typeof window !== 'undefined') {
   window.BUILD_VERSION = BUILD_VERSION;
   if (!window.__BUILD_VERSION__) window.__BUILD_VERSION__ = BUILD_VERSION;

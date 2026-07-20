@@ -61,7 +61,7 @@ var AuthRedirects = (function () {
   }
 
   function adminBuilder() {
-    var url = new URL('admin/ai-project-builder.html', window.location.href);
+    var url = new URL('/admin/ai-project-builder.html', window.location.origin);
     try {
       var proyecto =
         typeof getProjectSlugFromUrl === 'function'
@@ -73,7 +73,7 @@ var AuthRedirects = (function () {
   }
 
   function adminDashboard() {
-    var url = new URL('admin/dashboard.html', window.location.href);
+    var url = new URL('/admin/dashboard.html', window.location.origin);
     try {
       var proyecto =
         typeof getProjectSlugFromUrl === 'function'

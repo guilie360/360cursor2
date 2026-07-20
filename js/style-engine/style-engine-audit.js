@@ -7,8 +7,8 @@ var StyleEngineAudit = (function () {
   ];
 
   var SCAN_FILES = [
-    { path: 'css/components.css', label: 'Componentes showroom' },
-    { path: 'css/variables.css', label: 'Variables base' },
+    { path: '/css/components.css', label: 'Componentes showroom' },
+    { path: '/css/variables.css', label: 'Variables base' },
     { path: 'admin/css/admin-auth.css', label: 'Admin + Auth' },
     { path: 'admin/css/ai-project-builder.css', label: 'AI Project Builder' }
   ];
