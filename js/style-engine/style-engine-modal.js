@@ -454,35 +454,28 @@ var StyleEngineModal = (function () {
 
 var StyleEngine = (function () {
   function init() {
-  try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
-  try {
+    if (typeof window.__SE_INIT_COUNT === 'undefined') window.__SE_INIT_COUNT = 0;
+    console.log('[SE] ENTER');
+    console.log('[SE] #', ++window.__SE_INIT_COUNT);
 
-    window.__SE_INIT_COUNT = (window.__SE_INIT_COUNT || 0) + 1;
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('StyleEngine.init #' + window.__SE_INIT_COUNT);}catch(_bd){}
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('START init');}catch(_bd){}
-
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineStore.init()');}catch(_bd){}
+    console.log('[SE] BEFORE Store');
     StyleEngineStore.init();
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineStore.init()');}catch(_bd){}
+    console.log('[SE] AFTER Store');
 
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineRuntime.init()');}catch(_bd){}
+    console.log('[SE] BEFORE Runtime');
     StyleEngineRuntime.init();
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineRuntime.init()');}catch(_bd){}
+    console.log('[SE] AFTER Runtime');
 
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineLifecycle.initOnBoot()');}catch(_bd){}
+    console.log('[SE] BEFORE Lifecycle');
     if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineLifecycle.initOnBoot()');}catch(_bd){}
+    console.log('[SE] AFTER Lifecycle');
 
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineModal.init()');}catch(_bd){}
+    console.log('[SE] BEFORE Modal');
     StyleEngineModal.init();
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineModal.init()');}catch(_bd){}
+    console.log('[SE] AFTER Modal');
 
-    try{if(typeof BootDebug!=='undefined')BootDebug.log('END init');}catch(_bd){}
-  
-  } finally {
-  try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
+    console.log('[SE] EXIT');
   }
-}
 
   function getActiveThemeLabel() {
     if (StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE) {
