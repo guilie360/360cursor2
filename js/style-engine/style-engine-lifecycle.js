@@ -2,6 +2,7 @@ try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-en
 /* Style Engine — Ciclo de vida: borrador, publicación, activación */
 var StyleEngineLifecycle = (function () {
   var ACTIVE = { LEGACY: 'legacy', STYLE_ENGINE: 'style-engine' };
+  var bootActivateLegacyDone = false;
 
   function formatPublishDate(iso) {
     if (!iso) return '—';
@@ -117,9 +118,13 @@ var StyleEngineLifecycle = (function () {
     if (StyleEngineStore.getActiveTheme() === ACTIVE.STYLE_ENGINE &&
         StyleEngineStore.getEngineMode() === StyleEngineStore.MODES.LIVE) {
       StyleEngineRuntime.reinforcePublished();
-    } else {
-      StyleEngineRuntime.activateLegacy();
+      return;
     }
+    /* Shell legacy once at boot — DOM only. Official theme is applied later by
+       project-data / ThemeSystem without re-entering activateLegacy from sync. */
+    if (bootActivateLegacyDone) return;
+    bootActivateLegacyDone = true;
+    StyleEngineRuntime.activateLegacy({ skipThemeReapply: true });
   }
 
   return {

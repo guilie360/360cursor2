@@ -1410,6 +1410,11 @@ var ThemeSystem = (function () {
   }
 
   function reapply() {
+    if (typeof StyleEngineRuntime !== 'undefined' &&
+        typeof StyleEngineRuntime.isSyncing === 'function' &&
+        StyleEngineRuntime.isSyncing()) {
+      return state.themeKey;
+    }
     if (customPreviewConfig) {
       applyVars(CUSTOM_THEME_KEY);
       applyVisualDepth(getActiveVisualDepth());

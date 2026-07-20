@@ -12,6 +12,43 @@ var StyleEngineStore = (function () {
   var aiPalette = null;
   var listeners = [];
   var aiModifiedSinceApply = false;
+  var lastSyncFingerprint = null;
+  var lastNotifiedSyncFingerprint = null;
+
+  function stableStringify(value) {
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
+  }
+
+  /** Fingerprint of state that StyleEngineRuntime.sync cares about. */
+  function computeSyncFingerprint(state) {
+    state = state || loadPersisted();
+    return stableStringify({
+      activeTheme: state.activeTheme,
+      engineMode: state.engineMode,
+      publishedRules: state.publishedRules,
+      personalizarDraft: state.personalizarDraft,
+      activeStyleId: state.activeStyleId,
+      activeStyleName: state.activeStyleName
+    });
+  }
+
+  function getSyncFingerprint() {
+    return computeSyncFingerprint(loadPersisted());
+  }
+
+  function rulesEqual(a, b) {
+    a = a || {};
+    b = b || {};
+    var keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return false;
+    return keys.every(function (key) {
+      return String(a[key]) === String(b[key]);
+    });
+  }
 
   function defaultState() {
     return {
@@ -76,18 +113,36 @@ var StyleEngineStore = (function () {
     state.legacyThemeEnabled = !isLiveSe;
   }
 
-  function savePersisted() {
+  /**
+   * Persist + notify.
+   * options.silent — write storage, no listeners.
+   * options.forceNotify — notify even if sync fingerprint unchanged.
+   * Notify only when sync-relevant published/active state actually changed
+   * since the last notify (draft-only callers use notifyDraftChanged).
+   */
+  function savePersisted(options) {
+    options = options || {};
     var state = loadPersisted();
     state.updatedAt = new Date().toISOString();
     syncFlagsFromActive(state);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) { /* quota */ }
+    var afterFp = computeSyncFingerprint(state);
+    lastSyncFingerprint = afterFp;
+    if (options.silent) return;
+    if (!options.forceNotify && afterFp === lastNotifiedSyncFingerprint) return;
+    lastNotifiedSyncFingerprint = afterFp;
     notify();
   }
 
   function notify() {
     listeners.forEach(function (fn) { try { fn(); } catch (e) {} });
+  }
+
+  /** Draft / UI changes that must not drive Runtime.sync via false “published” deltas. */
+  function notifyDraftChanged() {
+    listeners.forEach(function (fn) { try { fn({ draftOnly: true }); } catch (e) {} });
   }
 
   function init() {
@@ -107,7 +162,7 @@ var StyleEngineStore = (function () {
     draftRules = Object.assign({}, state.savedDraftRules);
     draftMode = MODES.PREVIEW;
     aiModifiedSinceApply = false;
-    notify();
+    notifyDraftChanged();
   }
 
   function resetDraft() {
@@ -137,13 +192,15 @@ var StyleEngineStore = (function () {
 
   function setDraftMode(mode) {
     if (mode !== MODES.OFF && mode !== MODES.PREVIEW && mode !== MODES.LIVE) return;
+    if (draftMode === mode) return;
     draftMode = mode;
-    notify();
+    notifyDraftChanged();
   }
 
   function setEngineMode(mode) {
     if (mode !== MODES.OFF && mode !== MODES.PREVIEW && mode !== MODES.LIVE) return;
     var state = loadPersisted();
+    if (state.engineMode === mode) return;
     state.engineMode = mode;
     syncFlagsFromActive(state);
     savePersisted();
@@ -151,7 +208,9 @@ var StyleEngineStore = (function () {
 
   function setActiveTheme(theme) {
     var state = loadPersisted();
-    state.activeTheme = theme === ACTIVE.STYLE_ENGINE ? ACTIVE.STYLE_ENGINE : ACTIVE.LEGACY;
+    var next = theme === ACTIVE.STYLE_ENGINE ? ACTIVE.STYLE_ENGINE : ACTIVE.LEGACY;
+    if (state.activeTheme === next) return;
+    state.activeTheme = next;
     syncFlagsFromActive(state);
     savePersisted();
   }
@@ -168,7 +227,7 @@ var StyleEngineStore = (function () {
     }
     if (options.source === 'ai') aiModifiedSinceApply = false;
     else if (aiPalette) aiModifiedSinceApply = true;
-    notify();
+    notifyDraftChanged();
   }
 
   function setDraftRules(rules, options) {
@@ -180,8 +239,9 @@ var StyleEngineStore = (function () {
       });
       return;
     }
+    if (draftRules && rulesEqual(draftRules, normalized)) return;
     draftRules = normalized;
-    notify();
+    notifyDraftChanged();
   }
 
   function applyRulesPatch(patch, options) {
@@ -190,21 +250,26 @@ var StyleEngineStore = (function () {
       setDraftRule(key, patch[key], { history: true, source: options.source });
     });
     if (options.source === 'ai') aiModifiedSinceApply = false;
-    notify();
   }
 
   function saveDraftToStorage() {
     var state = loadPersisted();
     state.savedDraftRules = StyleEngineTokens.normalizeRules(draftRules || state.savedDraftRules);
     state.draftSavedAt = new Date().toISOString();
-    savePersisted();
+    savePersisted({ silent: true });
     draftRules = Object.assign({}, state.savedDraftRules);
-    notify();
+    notifyDraftChanged();
   }
 
   function publishDraft(rules) {
     var state = loadPersisted();
     var normalized = StyleEngineTokens.normalizeRules(rules || draftRules || state.savedDraftRules);
+    if (rulesEqual(state.publishedRules, normalized) &&
+        state.activeTheme === ACTIVE.STYLE_ENGINE &&
+        state.engineMode === MODES.LIVE) {
+      draftRules = Object.assign({}, normalized);
+      return state.publishMeta;
+    }
     var nextVersion = (state.publishMeta.version || 0) + 1;
     state.publishedRules = normalized;
     state.savedDraftRules = Object.assign({}, normalized);
@@ -262,7 +327,7 @@ var StyleEngineStore = (function () {
 
   function restoreDefaults() {
     draftRules = StyleEngineTokens.getDefaultRules();
-    notify();
+    notifyDraftChanged();
   }
 
   function isLegacyThemeEnabled() { return loadPersisted().legacyThemeEnabled; }
@@ -328,7 +393,7 @@ var StyleEngineStore = (function () {
     };
   }
 
-  function setAiPalette(palette) { aiPalette = palette || null; notify(); }
+  function setAiPalette(palette) { aiPalette = palette || null; notifyDraftChanged(); }
   function getAiPalette() { return aiPalette; }
   function shouldOfferAiPresetSave() { return !!aiPalette && aiModifiedSinceApply; }
   function markAiPresetOffered() { aiModifiedSinceApply = false; }
@@ -373,6 +438,7 @@ var StyleEngineStore = (function () {
     isLegacyThemeEnabled: isLegacyThemeEnabled,
     isStyleEngineEnabled: isStyleEngineEnabled,
     subscribe: subscribe,
+    getSyncFingerprint: getSyncFingerprint,
     hasUnsavedDraftChanges: hasUnsavedDraftChanges,
     hasUnpublishedChanges: hasUnpublishedChanges,
     hasDraftChanges: hasDraftChanges,

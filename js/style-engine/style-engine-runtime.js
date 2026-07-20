@@ -8,6 +8,11 @@ var StyleEngineRuntime = (function () {
   var ATTR_THEME = 'data-active-theme';
   var ATTR_VS = 'data-visual-system';
 
+  /* Sync owns store→DOM. Never calls ThemeSystem.reapply (breaks notify→sync→reapply). */
+  var syncing = false;
+  var lastSyncedFingerprint = null;
+  var subscribed = false;
+
   function clearApplied() {
     var root = document.documentElement;
     appliedSeKeys.forEach(function (key) {
@@ -123,7 +128,8 @@ var StyleEngineRuntime = (function () {
     });
   }
 
-  function activateLegacy() {
+  /** Store→DOM only. Never ThemeSystem.reapply — that path must not run inside sync. */
+  function applyLegacyDom() {
     clearApplied();
     setActiveThemeAttr(StyleEngineStore.ACTIVE.LEGACY);
     document.documentElement.removeAttribute(ATTR_ACTIVE);
@@ -133,23 +139,65 @@ var StyleEngineRuntime = (function () {
         StyleEnginePersonalizarMapper.clearMaterialsFlag) {
       StyleEnginePersonalizarMapper.clearMaterialsFlag();
     }
+  }
+
+  /**
+   * Intentional legacy activation (boot / restore).
+   * options.skipThemeReapply: DOM only (required from sync and from boot shell).
+   */
+  function activateLegacy(options) {
+    options = options || {};
+    applyLegacyDom();
+    if (options.skipThemeReapply || syncing) return;
     if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
       ThemeSystem.reapply();
     }
   }
 
+  function isSyncing() {
+    return syncing;
+  }
+
   function sync(options) {
     options = options || {};
-    if (StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE) {
-      if (!options.keepLegacy) activateLegacy();
+    if (syncing) return;
+    if (typeof StyleEngineStore === 'undefined') return;
+
+    var fingerprint = typeof StyleEngineStore.getSyncFingerprint === 'function'
+      ? StyleEngineStore.getSyncFingerprint()
+      : null;
+    if (fingerprint != null && fingerprint === lastSyncedFingerprint && !options.force) {
       return;
     }
-    if (StyleEngineStore.getEngineMode() !== StyleEngineStore.MODES.LIVE) {
-      clearApplied();
-      setActiveThemeAttr(StyleEngineStore.ACTIVE.STYLE_ENGINE);
+
+    syncing = true;
+    try {
+      if (StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE) {
+        if (!options.keepLegacy) applyLegacyDom();
+        lastSyncedFingerprint = fingerprint;
+        return;
+      }
+      if (StyleEngineStore.getEngineMode() !== StyleEngineStore.MODES.LIVE) {
+        clearApplied();
+        setActiveThemeAttr(StyleEngineStore.ACTIVE.STYLE_ENGINE);
+        lastSyncedFingerprint = fingerprint;
+        return;
+      }
+      activatePublished();
+      lastSyncedFingerprint = fingerprint;
+    } finally {
+      syncing = false;
+    }
+  }
+
+  function onStoreNotify(event) {
+    if (syncing) return;
+    if (event && event.draftOnly) return;
+    if (typeof StyleEngineModal !== 'undefined' &&
+        StyleEngineModal.isOpen && StyleEngineModal.isOpen()) {
       return;
     }
-    activatePublished();
+    sync();
   }
 
   function init() {
@@ -159,10 +207,10 @@ var StyleEngineRuntime = (function () {
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }
-    StyleEngineStore.subscribe(function () {
-      if (StyleEngineModal && StyleEngineModal.isOpen && StyleEngineModal.isOpen()) return;
-      sync();
-    });
+    if (!subscribed) {
+      subscribed = true;
+      StyleEngineStore.subscribe(onStoreNotify);
+    }
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
@@ -172,6 +220,7 @@ var StyleEngineRuntime = (function () {
   return {
     init: init,
     sync: sync,
+    isSyncing: isSyncing,
     clearApplied: clearApplied,
     activatePublished: activatePublished,
     reinforcePublished: reinforcePublished,

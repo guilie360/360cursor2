@@ -65,6 +65,49 @@ var ProjectThemeAuthority = (function () {
     return !!(getProjectDefaultTheme() || typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined');
   }
 
+  function draftsEqual(a, b) {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function rulesEqual(a, b) {
+    a = a || {};
+    b = b || {};
+    var keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return false;
+    return keys.every(function (key) {
+      return String(a[key]) === String(b[key]);
+    });
+  }
+
+  /** True when store already holds this official theme as LIVE published. */
+  function isOfficialAlreadyPublished(rules, draft, styleId, styleName) {
+    if (typeof StyleEngineCompatibility === 'undefined' ||
+        !StyleEngineCompatibility.isStyleEngineLive()) {
+      return false;
+    }
+    var meta = StyleEngineStore.getActiveStyleMeta
+      ? StyleEngineStore.getActiveStyleMeta()
+      : { id: null, name: null };
+    if ((meta.id || null) !== (styleId || null)) return false;
+    if (String(meta.name || '') !== String(styleName || '')) return false;
+    if (!rulesEqual(StyleEngineStore.getPublishedRules(), rules)) return false;
+    if (typeof StyleEngineStore.getPersonalizarDraft === 'function' &&
+        !draftsEqual(StyleEngineStore.getPersonalizarDraft(), draft)) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Idempotent: if official theme already matches published LIVE state,
+   * exit without store writes or notify.
+   */
   function publishOfficialToStyleEngine(draft) {
     if (!draft) return false;
     if (typeof StyleEngineStore === 'undefined' ||
@@ -73,16 +116,23 @@ var ProjectThemeAuthority = (function () {
       return false;
     }
 
+    var styleId = getOfficialStyleId();
+    var styleName = getOfficialStyleName();
     var rules = StyleEnginePersonalizarMapper.draftToRules(
       draft,
       typeof StyleEngineStore.getDraftRules === 'function' ? StyleEngineStore.getDraftRules() : null
     );
+
+    if (isOfficialAlreadyPublished(rules, draft, styleId, styleName)) {
+      return true;
+    }
+
     StyleEngineStore.setDraftRules(rules, { replace: true });
     if (typeof StyleEngineStore.setPersonalizarDraft === 'function') {
       StyleEngineStore.setPersonalizarDraft(draft);
     }
     if (typeof StyleEngineStore.setActiveStyleMeta === 'function') {
-      StyleEngineStore.setActiveStyleMeta(getOfficialStyleId(), getOfficialStyleName());
+      StyleEngineStore.setActiveStyleMeta(styleId, styleName);
     }
     StyleEngineLifecycle.publishToProject({ saveNamed: false });
     StyleEnginePersonalizarMapper.applyMaterials(draft);
@@ -145,6 +195,14 @@ var ProjectThemeAuthority = (function () {
   }
 
   async function setOfficialThemeForProject(proyectoId, themeConfig) {
+    if (typeof PROJECT_DEFAULT_THEME_WRITE_LOCKED !== 'undefined'
+        ? PROJECT_DEFAULT_THEME_WRITE_LOCKED
+        : window.PROJECT_DEFAULT_THEME_WRITE_LOCKED !== false) {
+      throw new Error(
+        'El estilo HALL del proyecto está bloqueado y no se puede cambiar. ' +
+        'Solo se modifica si lo pides de forma explícita.'
+      );
+    }
     if (!canSetOfficialTheme()) {
       throw new Error('Solo los administradores pueden aplicar el tema oficial del proyecto.');
     }

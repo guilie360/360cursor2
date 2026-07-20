@@ -37,6 +37,13 @@ var StyleEngineCompatibility = (function () {
       : null;
 
     ThemeSystem.reapply = function () {
+      if (typeof StyleEngineRuntime !== 'undefined' &&
+          typeof StyleEngineRuntime.isSyncing === 'function' &&
+          StyleEngineRuntime.isSyncing()) {
+        return typeof ThemeSystem.getCurrentKey === 'function'
+          ? ThemeSystem.getCurrentKey()
+          : null;
+      }
       if (isStyleEngineLive()) {
         /* Ya está LIVE: no reaplicar todo el motor en cada reapply (congela clics). */
         return StyleEngineStore.getEngineMode();
