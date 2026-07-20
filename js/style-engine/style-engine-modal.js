@@ -457,7 +457,7 @@ var StyleEngine = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   try {
 
-    StyleEngineStore.init();
+    /* StyleEngineStore.init(); — diagnostic: disabled */
     StyleEngineRuntime.init();
     if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
     StyleEngineModal.init();
