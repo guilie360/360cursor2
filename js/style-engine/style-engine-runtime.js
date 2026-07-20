@@ -128,18 +128,124 @@ var StyleEngineRuntime = (function () {
   }
 
   function activateLegacy() {
-    clearApplied();
-    setActiveThemeAttr(StyleEngineStore.ACTIVE.LEGACY);
+    console.log('[ACTIVATE-LEGACY] 1 ENTER activateLegacy', Date.now());
+
+    /* --- clearApplied() inlined with step logs (same operations) --- */
+    console.log('[ACTIVATE-LEGACY] 2 BEFORE clearApplied body');
+    console.log('[ACTIVATE-LEGACY] 3 BEFORE document.documentElement');
+    var root = document.documentElement;
+    console.log('[ACTIVATE-LEGACY] 4 AFTER document.documentElement', !!root, root && root.nodeName);
+
+    console.log('[ACTIVATE-LEGACY] 5 BEFORE appliedSeKeys.forEach', 'count=', appliedSeKeys.length, 'keys=', appliedSeKeys.slice());
+    appliedSeKeys.forEach(function (key, idx) {
+      console.log('[ACTIVATE-LEGACY] 5a LOOP SE start', idx, key);
+      console.log('[ACTIVATE-LEGACY] 5b BEFORE StyleEngineTokens.cssVarName', key);
+      var seCssName = StyleEngineTokens.cssVarName(key);
+      console.log('[ACTIVATE-LEGACY] 5c AFTER StyleEngineTokens.cssVarName', seCssName);
+      console.log('[ACTIVATE-LEGACY] 5d BEFORE root.style.removeProperty', seCssName);
+      root.style.removeProperty(seCssName);
+      console.log('[ACTIVATE-LEGACY] 5e AFTER root.style.removeProperty', seCssName);
+    });
+    console.log('[ACTIVATE-LEGACY] 6 AFTER appliedSeKeys.forEach');
+
+    console.log('[ACTIVATE-LEGACY] 7 BEFORE appliedSeKeys = []');
+    appliedSeKeys = [];
+    console.log('[ACTIVATE-LEGACY] 8 AFTER appliedSeKeys = []', appliedSeKeys.length);
+
+    console.log('[ACTIVATE-LEGACY] 9 BEFORE appliedLegacyKeys.forEach', 'count=', appliedLegacyKeys.length, 'keys=', appliedLegacyKeys.slice());
+    appliedLegacyKeys.forEach(function (cssName, idx) {
+      console.log('[ACTIVATE-LEGACY] 9a LOOP LEGACY start', idx, cssName);
+      console.log('[ACTIVATE-LEGACY] 9b BEFORE root.style.removeProperty', cssName);
+      root.style.removeProperty(cssName);
+      console.log('[ACTIVATE-LEGACY] 9c AFTER root.style.removeProperty', cssName);
+    });
+    console.log('[ACTIVATE-LEGACY] 10 AFTER appliedLegacyKeys.forEach');
+
+    console.log('[ACTIVATE-LEGACY] 11 BEFORE appliedLegacyKeys = []');
+    appliedLegacyKeys = [];
+    console.log('[ACTIVATE-LEGACY] 12 AFTER appliedLegacyKeys = []', appliedLegacyKeys.length);
+
+    console.log('[ACTIVATE-LEGACY] 13 BEFORE root.removeAttribute(ATTR_MODE)', ATTR_MODE);
+    root.removeAttribute(ATTR_MODE);
+    console.log('[ACTIVATE-LEGACY] 14 AFTER root.removeAttribute(ATTR_MODE)');
+
+    console.log('[ACTIVATE-LEGACY] 15 BEFORE root.removeAttribute(ATTR_ACTIVE)', ATTR_ACTIVE);
+    root.removeAttribute(ATTR_ACTIVE);
+    console.log('[ACTIVATE-LEGACY] 16 AFTER root.removeAttribute(ATTR_ACTIVE)');
+
+    console.log('[ACTIVATE-LEGACY] 17 BEFORE root.removeAttribute(ATTR_VS)', ATTR_VS);
+    root.removeAttribute(ATTR_VS);
+    console.log('[ACTIVATE-LEGACY] 18 AFTER root.removeAttribute(ATTR_VS)');
+
+    console.log('[ACTIVATE-LEGACY] 19 BEFORE document.body');
+    var body = document.body;
+    console.log('[ACTIVATE-LEGACY] 20 AFTER document.body', !!body);
+
+    console.log('[ACTIVATE-LEGACY] 21 BEFORE body.classList.remove(...)');
+    body.classList.remove('style-engine-preview-active', 'style-engine-live-active', 'visual-system-live');
+    console.log('[ACTIVATE-LEGACY] 22 AFTER body.classList.remove(...)');
+    console.log('[ACTIVATE-LEGACY] 23 AFTER clearApplied body');
+
+    /* --- setActiveThemeAttr(StyleEngineStore.ACTIVE.LEGACY) --- */
+    console.log('[ACTIVATE-LEGACY] 24 BEFORE StyleEngineStore.ACTIVE.LEGACY read');
+    var legacyTheme = StyleEngineStore.ACTIVE.LEGACY;
+    console.log('[ACTIVATE-LEGACY] 25 AFTER StyleEngineStore.ACTIVE.LEGACY', legacyTheme);
+
+    console.log('[ACTIVATE-LEGACY] 26 BEFORE setActiveThemeAttr / document.documentElement.setAttribute', ATTR_THEME, legacyTheme);
+    document.documentElement.setAttribute(ATTR_THEME, legacyTheme);
+    console.log('[ACTIVATE-LEGACY] 27 AFTER setActiveThemeAttr / setAttribute');
+
+    console.log('[ACTIVATE-LEGACY] 28 BEFORE document.documentElement.removeAttribute(ATTR_ACTIVE)', ATTR_ACTIVE);
     document.documentElement.removeAttribute(ATTR_ACTIVE);
+    console.log('[ACTIVATE-LEGACY] 29 AFTER removeAttribute(ATTR_ACTIVE)');
+
+    console.log('[ACTIVATE-LEGACY] 30 BEFORE document.documentElement.removeAttribute(ATTR_MODE)', ATTR_MODE);
     document.documentElement.removeAttribute(ATTR_MODE);
+    console.log('[ACTIVATE-LEGACY] 31 AFTER removeAttribute(ATTR_MODE)');
+
+    console.log('[ACTIVATE-LEGACY] 32 BEFORE document.documentElement.removeAttribute(ATTR_VS)', ATTR_VS);
     document.documentElement.removeAttribute(ATTR_VS);
-    if (typeof StyleEnginePersonalizarMapper !== 'undefined' &&
-        StyleEnginePersonalizarMapper.clearMaterialsFlag) {
-      StyleEnginePersonalizarMapper.clearMaterialsFlag();
+    console.log('[ACTIVATE-LEGACY] 33 AFTER removeAttribute(ATTR_VS)');
+
+    console.log('[ACTIVATE-LEGACY] 34 BEFORE typeof StyleEnginePersonalizarMapper check');
+    var hasMapper = typeof StyleEnginePersonalizarMapper !== 'undefined';
+    console.log('[ACTIVATE-LEGACY] 35 AFTER typeof StyleEnginePersonalizarMapper', hasMapper);
+
+    if (hasMapper) {
+      console.log('[ACTIVATE-LEGACY] 36 BEFORE StyleEnginePersonalizarMapper.clearMaterialsFlag check');
+      var hasClearFlag = !!StyleEnginePersonalizarMapper.clearMaterialsFlag;
+      console.log('[ACTIVATE-LEGACY] 37 AFTER clearMaterialsFlag check', hasClearFlag);
+      if (hasClearFlag) {
+        console.log('[ACTIVATE-LEGACY] 38 BEFORE StyleEnginePersonalizarMapper.clearMaterialsFlag()');
+        StyleEnginePersonalizarMapper.clearMaterialsFlag();
+        console.log('[ACTIVATE-LEGACY] 39 AFTER StyleEnginePersonalizarMapper.clearMaterialsFlag()');
+      } else {
+        console.log('[ACTIVATE-LEGACY] 38 SKIP clearMaterialsFlag (missing)');
+      }
+    } else {
+      console.log('[ACTIVATE-LEGACY] 36 SKIP PersonalizarMapper (undefined)');
     }
-    if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
-      ThemeSystem.reapply();
+
+    console.log('[ACTIVATE-LEGACY] 40 BEFORE typeof ThemeSystem check');
+    var hasThemeSystem = typeof ThemeSystem !== 'undefined';
+    console.log('[ACTIVATE-LEGACY] 41 AFTER typeof ThemeSystem', hasThemeSystem);
+
+    if (hasThemeSystem) {
+      console.log('[ACTIVATE-LEGACY] 42 BEFORE typeof ThemeSystem.reapply check');
+      var hasReapply = typeof ThemeSystem.reapply === 'function';
+      console.log('[ACTIVATE-LEGACY] 43 AFTER typeof ThemeSystem.reapply', hasReapply);
+      if (hasReapply) {
+        console.log('[ACTIVATE-LEGACY] 44 BEFORE ThemeSystem.reapply()');
+        ThemeSystem.reapply();
+        console.log('[ACTIVATE-LEGACY] 45 AFTER ThemeSystem.reapply()');
+      } else {
+        console.log('[ACTIVATE-LEGACY] 44 SKIP ThemeSystem.reapply (not a function)');
+      }
+    } else {
+      console.log('[ACTIVATE-LEGACY] 42 SKIP ThemeSystem (undefined)');
     }
+
+    console.log('[ACTIVATE-LEGACY] 46 EXIT activateLegacy', Date.now());
   }
 
   function sync(options) {
