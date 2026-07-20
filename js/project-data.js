@@ -1,4 +1,9 @@
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/project-data.js');}catch(_e){}
+try {
+  console.log('[BOOT 4] project-data start');
+} catch (error) {
+  console.error('[BOOT ERROR]', error);
+}
 /* =========================================================
    PROJECT DATA — Dashboard is the single source of truth
    Loads all modules from Supabase and hydrates the UI
@@ -944,9 +949,11 @@ function loadProjectData() {
   var run;
   try {
     window.__pdTrace('loadProjectData · antes del fetch');
+    console.log('[BOOT 5] fetching project');
     run = fetchPublishedProject();
     window.__pdTrace('loadProjectData · fetch invocado (promise pendiente)');
   } catch (syncErr) {
+    console.error('[BOOT ERROR]', syncErr);
     window.__pdTraceError('loadProjectData sync throw', syncErr);
     showProjectLoadError(syncErr);
     window.__pdTrace('loadProjectData early return', 'tras syncErr');
@@ -956,10 +963,13 @@ function loadProjectData() {
   return Promise.resolve(run)
     .then(function (project) {
       window.__pdTrace('loadProjectData · después del fetch', project && (project.slug || project.nombre || project.id));
+      console.log('[BOOT 6] project loaded', project && project.slug);
       if (typeof BootDebug !== 'undefined') BootDebug.log('applyProjectData start');
       try {
         applyProjectData(project);
+        console.log('[BOOT 7] project applied');
       } catch (applyErr) {
+        console.error('[BOOT ERROR]', applyErr);
         window.__pdTraceError('applyProjectData throw', applyErr);
         showProjectLoadError(applyErr);
         throw applyErr;
@@ -972,6 +982,7 @@ function loadProjectData() {
       return project;
     })
     .catch(function (err) {
+      console.error('[BOOT ERROR]', err);
       window.__pdTraceError('loadProjectData promise catch', err);
       showProjectLoadError(err);
       console.log('[BOOT] loadProjectData END');
@@ -987,6 +998,7 @@ window.__pdTrace('project-data.js evaluating — calling loadProjectData()');
 try {
   loadProjectData();
 } catch (e) {
+  console.error('[BOOT ERROR]', e);
   window.__pdTraceError('loadProjectData() sync throw', e);
   if (typeof BootDebug !== 'undefined') BootDebug.error('loadProjectData() sync throw', e);
   else console.error(e);

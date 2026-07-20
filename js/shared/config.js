@@ -1,4 +1,9 @@
 /* Shared Supabase project configuration (public read + admin auth) */
+try {
+  console.log('[BOOT 3] config loaded');
+} catch (error) {
+  console.error('[BOOT ERROR]', error);
+}
 var SUPABASE_URL = 'https://emefdwzdfnqgjohbtvvn.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
 var DEFAULT_PROJECT_SLUG = 'demo';
@@ -9,7 +14,7 @@ var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
  * Bump both together when shipping asset changes.
  */
 var BUILD_VERSION =
-  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720a';
+  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720b';
 if (typeof window !== 'undefined') {
   window.BUILD_VERSION = BUILD_VERSION;
   if (!window.__BUILD_VERSION__) window.__BUILD_VERSION__ = BUILD_VERSION;

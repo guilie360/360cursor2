@@ -1,5 +1,11 @@
 /* Early project theme — runs in <head> before paint to avoid Classic/red flash */
 (function () {
+  try {
+    console.log('[BOOT 2] theme bootstrap');
+  } catch (error) {
+    console.error('[BOOT ERROR]', error);
+  }
+
   var STORAGE_KEY = 'guilie_theme_settings';
 
   var PRESETS = {
@@ -703,6 +709,7 @@
         }
       }, 800);
     } catch (fatal) {
+      console.error('[BOOT ERROR]', fatal);
       if (typeof BootDebug !== 'undefined') BootDebug.error('bootstrapProjectTheme fatal', fatal);
       markReady('bootstrap-fatal');
     }

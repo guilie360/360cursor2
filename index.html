@@ -1,12 +1,19 @@
 <!DOCTYPE html>
-<html lang="es" translate="no" class="notranslate theme-ready" data-build="20260720a">
+<html lang="es" translate="no" class="notranslate theme-ready" data-build="20260720b">
 <head>
 <meta charset="UTF-8">
 <title>360•</title>
 <script>
-window.__BUILD_VERSION__ = '20260720a';
+window.__BUILD_VERSION__ = '20260720b';
 window.__BUILD_STAMP__ = window.__BUILD_VERSION__;
+console.log('[BOOT 1] index loaded');
 console.log('[BOOT 0.00s] index.html primera línea', location.href);
+window.addEventListener('error', function (event) {
+  console.error('[BOOT ERROR]', event.error || event.message || event);
+});
+window.addEventListener('unhandledrejection', function (event) {
+  console.error('[BOOT ERROR]', event.reason || event);
+});
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="google" content="notranslate">
@@ -34,9 +41,9 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <!-- Android / Chrome -->
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
-<link rel="stylesheet" href="/css/variables.css?v=20260720a">
-<link rel="stylesheet" href="/css/components.css?v=20260720a">
-<link rel="stylesheet" href="/css/style-engine.css?v=20260720a">
+<link rel="stylesheet" href="/css/variables.css?v=20260720b">
+<link rel="stylesheet" href="/css/components.css?v=20260720b">
+<link rel="stylesheet" href="/css/style-engine.css?v=20260720b">
 </head>
 <body class="notranslate" translate="no">
 
@@ -839,12 +846,12 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
   <div class="app-toast" id="appToast"></div>
 
   
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/boot-cpu-profile.js?v=20260720a');</script>
-<script src="/js/boot-cpu-profile.js?v=20260720a"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/boot-cpu-profile.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/config.js?v=20260720a');</script>
-<script src="/js/shared/config.js?v=20260720a"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/config.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/boot-cpu-profile.js?v=20260720b');</script>
+<script src="/js/boot-cpu-profile.js?v=20260720b"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/boot-cpu-profile.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/config.js?v=20260720b');</script>
+<script src="/js/shared/config.js?v=20260720b"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/config.js?v=20260720b');</script>
   <script>
 if (typeof BootDebug !== 'undefined') {
   BootDebug.log('config.js', {
@@ -854,9 +861,9 @@ if (typeof BootDebug !== 'undefined') {
   });
 }
 </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-early-bootstrap.js?v=20260720a');</script>
-<script src="/js/theme-early-bootstrap.js?v=20260720a"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-early-bootstrap.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-early-bootstrap.js?v=20260720b');</script>
+<script src="/js/theme-early-bootstrap.js?v=20260720b"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-early-bootstrap.js?v=20260720b');</script>
   <script>
 (function () {
   try {
@@ -869,9 +876,9 @@ if (typeof BootDebug !== 'undefined') {
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-system.js?v=20260720a');</script>
-<script src="/js/theme-system.js?v=20260720a"></script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-system.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-system.js?v=20260720b');</script>
+<script src="/js/theme-system.js?v=20260720b"></script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-system.js?v=20260720b');</script>
   <script>
   (function () {
     function paint() {
@@ -920,356 +927,356 @@ if (typeof BootDebug !== 'undefined') {
     }
   })();
   </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-color-math.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-color-math.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-color-math.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-color-math.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-color-math.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-brand-intelligence.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-brand-intelligence.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-brand-intelligence.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-brand-intelligence.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-brand-intelligence.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-brand-analyzer.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-brand-analyzer.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-brand-analyzer.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-brand-analyzer.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-brand-analyzer.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-role-mapper.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-role-mapper.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-role-mapper.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-role-mapper.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-role-mapper.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-source.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-source.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-ai-source.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-source.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-source.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-session.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-session.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-ai-session.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-session.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-session.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-generator.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-generator.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-ai-generator.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-generator.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-generator.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-preview.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-preview.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-ai-preview.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-preview.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-preview.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-modal.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-modal.js?v=20260720a");</script>
-<script src="/js/theme-ai/theme-ai-modal.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-modal.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-modal.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/constants.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/shared/constants.js?v=20260720a");</script>
-<script src="/js/shared/constants.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/shared/constants.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/constants.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/formatters.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/shared/formatters.js?v=20260720a");</script>
-<script src="/js/shared/formatters.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/shared/formatters.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/formatters.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/supabase-client.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/supabase-client.js?v=20260720a");</script>
-<script src="/js/supabase-client.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/supabase-client.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/supabase-client.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/client.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/client.js?v=20260720a");</script>
-<script src="/js/auth/client.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/client.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/client.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/redirects.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/redirects.js?v=20260720a");</script>
-<script src="/js/auth/redirects.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/redirects.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/redirects.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/storage-prefs.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/storage-prefs.js?v=20260720a");</script>
-<script src="/js/auth/storage-prefs.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/storage-prefs.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/storage-prefs.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/errors.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/errors.js?v=20260720a");</script>
-<script src="/js/auth/errors.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/errors.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/errors.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/routes.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/routes.js?v=20260720a");</script>
-<script src="/js/auth/routes.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/routes.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/routes.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/roles-permissions.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/roles-permissions.js?v=20260720a");</script>
-<script src="/js/auth/roles-permissions.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/roles-permissions.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/roles-permissions.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/login.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/login.js?v=20260720a");</script>
-<script src="/js/auth/api/login.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/login.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/login.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/profiles.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/profiles.js?v=20260720a");</script>
-<script src="/js/auth/api/profiles.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/profiles.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/profiles.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/user-themes.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/user-themes.js?v=20260720a");</script>
-<script src="/js/auth/api/user-themes.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/user-themes.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/user-themes.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/visitantes.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/visitantes.js?v=20260720a");</script>
-<script src="/js/auth/api/visitantes.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/visitantes.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/visitantes.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/registro.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/registro.js?v=20260720a");</script>
-<script src="/js/auth/api/registro.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/registro.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/registro.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/oauth.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/oauth.js?v=20260720a");</script>
-<script src="/js/auth/api/oauth.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/oauth.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/oauth.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/visitor-provisioning.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/visitor-provisioning.js?v=20260720a");</script>
-<script src="/js/auth/api/visitor-provisioning.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/visitor-provisioning.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/visitor-provisioning.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/favoritos.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/favoritos.js?v=20260720a");</script>
-<script src="/js/auth/api/favoritos.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/favoritos.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/favoritos.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/visitor-auth.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/visitor-auth.js?v=20260720a");</script>
-<script src="/js/auth/visitor-auth.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/visitor-auth.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/visitor-auth.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-session.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-session.js?v=20260720a");</script>
-<script src="/js/visitor-session.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-session.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-session.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalization.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalization.js?v=20260720a");</script>
-<script src="/js/visitor-personalization.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalization.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalization.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/project-theme.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/project-theme.js?v=20260720a");</script>
-<script src="/js/auth/api/project-theme.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/project-theme.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/project-theme.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/project-preset-themes.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/project-preset-themes.js?v=20260720a");</script>
-<script src="/js/auth/api/project-preset-themes.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/project-preset-themes.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/project-preset-themes.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/project-theme-authority.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/project-theme-authority.js?v=20260720a");</script>
-<script src="/js/platform/project-theme-authority.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/project-theme-authority.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/project-theme-authority.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/project-preset-themes.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/project-preset-themes.js?v=20260720a");</script>
-<script src="/js/platform/project-preset-themes.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/project-preset-themes.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/project-preset-themes.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/admin-hero-api.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/admin-hero-api.js?v=20260720a");</script>
-<script src="/js/platform/admin-hero-api.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/admin-hero-api.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/admin-hero-api.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen-messages.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen-messages.js?v=20260720a");</script>
-<script src="/js/pause-screen/pause-screen-messages.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen-messages.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen-messages.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen-config.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen-config.js?v=20260720a");</script>
-<script src="/js/pause-screen/pause-screen-config.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen-config.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen-config.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen.js?v=20260720a");</script>
-<script src="/js/pause-screen/pause-screen.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalize-panel.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalize-panel.js?v=20260720a");</script>
-<script src="/js/visitor-personalize-panel.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalize-panel.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalize-panel.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-auth-modal.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-auth-modal.js?v=20260720a");</script>
-<script src="/js/visitor-auth-modal.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-auth-modal.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-auth-modal.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-email-verification.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-email-verification.js?v=20260720a");</script>
-<script src="/js/visitor-email-verification.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-email-verification.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-email-verification.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-menu.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-menu.js?v=20260720a");</script>
-<script src="/js/visitor-menu.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-menu.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-menu.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-tokens.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-tokens.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-tokens.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-tokens.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-tokens.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-history.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-history.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-history.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-history.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-history.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-bridge.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-bridge.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-bridge.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-bridge.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-bridge.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-registry.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-registry.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-registry.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-registry.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-registry.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-legacy-adapter.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-legacy-adapter.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-legacy-adapter.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-legacy-adapter.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-legacy-adapter.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-personalizar-mapper.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-personalizar-mapper.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-personalizar-mapper.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-personalizar-mapper.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-personalizar-mapper.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-presets.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-presets.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-presets.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-presets.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-presets.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-export.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-export.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-export.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-export.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-export.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-store.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-store.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-store.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-store.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-store.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-lifecycle.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-lifecycle.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-lifecycle.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-lifecycle.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-lifecycle.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-compatibility.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-compatibility.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-compatibility.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-compatibility.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-compatibility.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-visual-system.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-visual-system.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-visual-system.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-visual-system.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-visual-system.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-audit.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-audit.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-audit.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-audit.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-audit.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-runtime.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-runtime.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-runtime.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-runtime.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-runtime.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-color-picker.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-color-picker.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-color-picker.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-color-picker.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-color-picker.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalize-v2-panel.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalize-v2-panel.js?v=20260720a");</script>
-<script src="/js/visitor-personalize-v2-panel.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalize-v2-panel.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalize-v2-panel.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-ai-assistant.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-ai-assistant.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-ai-assistant.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-ai-assistant.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-ai-assistant.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-preview.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-preview.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-preview.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-preview.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-preview.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-coverage.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-coverage.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-coverage.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-coverage.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-coverage.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-capture.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-storage.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-nav.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-runner.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720a");</script>
-<script src="/js/style-engine/visual-audit/visual-audit-ui.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-panel.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-panel.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-panel.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-panel.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-panel.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-modal.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-modal.js?v=20260720a");</script>
-<script src="/js/style-engine/style-engine-modal.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-modal.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-modal.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/web-effects.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/web-effects.js?v=20260720a");</script>
-<script src="/js/web-effects.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/web-effects.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/web-effects.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/global-close.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/global-close.js?v=20260720a");</script>
-<script src="/js/global-close.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/global-close.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/global-close.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-color-math.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-color-math.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-color-math.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-color-math.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-color-math.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-brand-intelligence.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-brand-intelligence.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-brand-intelligence.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-brand-intelligence.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-brand-intelligence.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-brand-analyzer.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-brand-analyzer.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-brand-analyzer.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-brand-analyzer.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-brand-analyzer.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-role-mapper.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-role-mapper.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-role-mapper.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-role-mapper.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-role-mapper.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-source.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-source.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-ai-source.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-source.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-source.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-session.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-session.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-ai-session.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-session.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-session.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-generator.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-generator.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-ai-generator.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-generator.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-generator.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-preview.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-preview.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-ai-preview.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-preview.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-preview.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/theme-ai/theme-ai-modal.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/theme-ai/theme-ai-modal.js?v=20260720b");</script>
+<script src="/js/theme-ai/theme-ai-modal.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/theme-ai/theme-ai-modal.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/theme-ai/theme-ai-modal.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/constants.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/shared/constants.js?v=20260720b");</script>
+<script src="/js/shared/constants.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/shared/constants.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/constants.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/shared/formatters.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/shared/formatters.js?v=20260720b");</script>
+<script src="/js/shared/formatters.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/shared/formatters.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/shared/formatters.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/supabase-client.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/supabase-client.js?v=20260720b");</script>
+<script src="/js/supabase-client.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/supabase-client.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/supabase-client.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/client.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/client.js?v=20260720b");</script>
+<script src="/js/auth/client.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/client.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/client.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/redirects.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/redirects.js?v=20260720b");</script>
+<script src="/js/auth/redirects.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/redirects.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/redirects.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/storage-prefs.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/storage-prefs.js?v=20260720b");</script>
+<script src="/js/auth/storage-prefs.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/storage-prefs.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/storage-prefs.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/errors.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/errors.js?v=20260720b");</script>
+<script src="/js/auth/errors.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/errors.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/errors.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/routes.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/routes.js?v=20260720b");</script>
+<script src="/js/auth/routes.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/routes.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/routes.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/roles-permissions.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/roles-permissions.js?v=20260720b");</script>
+<script src="/js/auth/roles-permissions.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/roles-permissions.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/roles-permissions.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/login.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/login.js?v=20260720b");</script>
+<script src="/js/auth/api/login.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/login.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/login.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/profiles.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/profiles.js?v=20260720b");</script>
+<script src="/js/auth/api/profiles.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/profiles.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/profiles.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/user-themes.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/user-themes.js?v=20260720b");</script>
+<script src="/js/auth/api/user-themes.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/user-themes.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/user-themes.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/visitantes.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/visitantes.js?v=20260720b");</script>
+<script src="/js/auth/api/visitantes.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/visitantes.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/visitantes.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/registro.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/registro.js?v=20260720b");</script>
+<script src="/js/auth/api/registro.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/registro.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/registro.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/oauth.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/oauth.js?v=20260720b");</script>
+<script src="/js/auth/api/oauth.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/oauth.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/oauth.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/visitor-provisioning.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/visitor-provisioning.js?v=20260720b");</script>
+<script src="/js/auth/api/visitor-provisioning.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/visitor-provisioning.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/visitor-provisioning.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/favoritos.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/favoritos.js?v=20260720b");</script>
+<script src="/js/auth/api/favoritos.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/favoritos.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/favoritos.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/visitor-auth.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/visitor-auth.js?v=20260720b");</script>
+<script src="/js/auth/visitor-auth.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/visitor-auth.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/visitor-auth.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-session.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-session.js?v=20260720b");</script>
+<script src="/js/visitor-session.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-session.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-session.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalization.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalization.js?v=20260720b");</script>
+<script src="/js/visitor-personalization.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalization.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalization.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/project-theme.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/project-theme.js?v=20260720b");</script>
+<script src="/js/auth/api/project-theme.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/project-theme.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/project-theme.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/api/project-preset-themes.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/api/project-preset-themes.js?v=20260720b");</script>
+<script src="/js/auth/api/project-preset-themes.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/api/project-preset-themes.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/api/project-preset-themes.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/project-theme-authority.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/project-theme-authority.js?v=20260720b");</script>
+<script src="/js/platform/project-theme-authority.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/project-theme-authority.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/project-theme-authority.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/project-preset-themes.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/project-preset-themes.js?v=20260720b");</script>
+<script src="/js/platform/project-preset-themes.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/project-preset-themes.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/project-preset-themes.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/platform/admin-hero-api.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/platform/admin-hero-api.js?v=20260720b");</script>
+<script src="/js/platform/admin-hero-api.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/platform/admin-hero-api.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/platform/admin-hero-api.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen-messages.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen-messages.js?v=20260720b");</script>
+<script src="/js/pause-screen/pause-screen-messages.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen-messages.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen-messages.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen-config.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen-config.js?v=20260720b");</script>
+<script src="/js/pause-screen/pause-screen-config.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen-config.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen-config.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/pause-screen/pause-screen.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/pause-screen/pause-screen.js?v=20260720b");</script>
+<script src="/js/pause-screen/pause-screen.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/pause-screen/pause-screen.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/pause-screen/pause-screen.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalize-panel.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalize-panel.js?v=20260720b");</script>
+<script src="/js/visitor-personalize-panel.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalize-panel.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalize-panel.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-auth-modal.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-auth-modal.js?v=20260720b");</script>
+<script src="/js/visitor-auth-modal.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-auth-modal.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-auth-modal.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-email-verification.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-email-verification.js?v=20260720b");</script>
+<script src="/js/visitor-email-verification.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-email-verification.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-email-verification.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-menu.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-menu.js?v=20260720b");</script>
+<script src="/js/visitor-menu.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-menu.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-menu.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-tokens.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-tokens.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-tokens.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-tokens.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-tokens.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-history.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-history.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-history.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-history.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-history.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-bridge.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-bridge.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-bridge.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-bridge.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-bridge.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-registry.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-registry.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-registry.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-registry.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-registry.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-legacy-adapter.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-legacy-adapter.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-legacy-adapter.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-legacy-adapter.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-legacy-adapter.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-personalizar-mapper.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-personalizar-mapper.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-personalizar-mapper.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-personalizar-mapper.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-personalizar-mapper.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-presets.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-presets.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-presets.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-presets.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-presets.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-export.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-export.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-export.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-export.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-export.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-store.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-store.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-store.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-store.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-store.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-lifecycle.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-lifecycle.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-lifecycle.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-lifecycle.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-lifecycle.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-compatibility.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-compatibility.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-compatibility.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-compatibility.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-compatibility.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-visual-system.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-visual-system.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-visual-system.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-visual-system.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-visual-system.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-audit.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-audit.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-audit.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-audit.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-audit.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-runtime.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-runtime.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-runtime.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-runtime.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-runtime.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-color-picker.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-color-picker.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-color-picker.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-color-picker.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-color-picker.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/visitor-personalize-v2-panel.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/visitor-personalize-v2-panel.js?v=20260720b");</script>
+<script src="/js/visitor-personalize-v2-panel.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/visitor-personalize-v2-panel.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/visitor-personalize-v2-panel.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-ai-assistant.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-ai-assistant.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-ai-assistant.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-ai-assistant.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-ai-assistant.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-preview.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-preview.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-preview.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-preview.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-preview.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-coverage.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-coverage.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-coverage.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-coverage.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-coverage.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-catalog.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-capture.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-capture.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-storage.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-storage.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-nav.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-nav.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-runner.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-runner.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720b");</script>
+<script src="/js/style-engine/visual-audit/visual-audit-ui.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/visual-audit/visual-audit-ui.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-panel.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-panel.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-panel.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-panel.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-panel.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/style-engine/style-engine-modal.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/style-engine/style-engine-modal.js?v=20260720b");</script>
+<script src="/js/style-engine/style-engine-modal.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/style-engine/style-engine-modal.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/style-engine/style-engine-modal.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/web-effects.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/web-effects.js?v=20260720b");</script>
+<script src="/js/web-effects.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/web-effects.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/web-effects.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/global-close.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/global-close.js?v=20260720b");</script>
+<script src="/js/global-close.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/global-close.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/global-close.js?v=20260720b');</script>
   <script>
   /* Chrome alt-tab guard — runs before main.js, closes unauthorized menu */
   (function () {
@@ -1311,52 +1318,52 @@ if (typeof BootDebug !== 'undefined') {
     }, true);
   })();
   </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/units-compare-pdf.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/units-compare-pdf.js?v=20260720a");</script>
-<script src="/js/units-compare-pdf.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/units-compare-pdf.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/units-compare-pdf.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/location-map.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/location-map.js?v=20260720a");</script>
-<script src="/js/location-map.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/location-map.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/location-map.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/downloads-intro.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/downloads-intro.js?v=20260720a");</script>
-<script src="/js/downloads-intro.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/downloads-intro.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/downloads-intro.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/amenities-carousel.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/amenities-carousel.js?v=20260720a");</script>
-<script src="/js/amenities-carousel.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/amenities-carousel.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/amenities-carousel.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/menu-config.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/menu-config.js?v=20260720a");</script>
-<script src="/js/menu-config.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/menu-config.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/menu-config.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/units-compare-pdf.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/units-compare-pdf.js?v=20260720b");</script>
+<script src="/js/units-compare-pdf.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/units-compare-pdf.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/units-compare-pdf.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/location-map.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/location-map.js?v=20260720b");</script>
+<script src="/js/location-map.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/location-map.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/location-map.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/downloads-intro.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/downloads-intro.js?v=20260720b");</script>
+<script src="/js/downloads-intro.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/downloads-intro.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/downloads-intro.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/amenities-carousel.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/amenities-carousel.js?v=20260720b");</script>
+<script src="/js/amenities-carousel.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/amenities-carousel.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/amenities-carousel.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/menu-config.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/menu-config.js?v=20260720b");</script>
+<script src="/js/menu-config.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/menu-config.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/menu-config.js?v=20260720b');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando main.js');
   </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/main.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/main.js?v=20260720a");</script>
-<script src="/js/main.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/main.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/main.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/main.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/main.js?v=20260720b");</script>
+<script src="/js/main.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/main.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/main.js?v=20260720b');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
   </script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/project-data.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/project-data.js?v=20260720a");</script>
-<script src="/js/project-data.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/project-data.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/project-data.js?v=20260720a');</script>
-    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/bootstrap.js?v=20260720a');</script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/bootstrap.js?v=20260720a");</script>
-<script src="/js/auth/bootstrap.js?v=20260720a"></script>
-<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/bootstrap.js?v=20260720a");</script>
-  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/bootstrap.js?v=20260720a');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/project-data.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/project-data.js?v=20260720b");</script>
+<script src="/js/project-data.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/project-data.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/project-data.js?v=20260720b');</script>
+    <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: /js/auth/bootstrap.js?v=20260720b');</script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN /js/auth/bootstrap.js?v=20260720b");</script>
+<script src="/js/auth/bootstrap.js?v=20260720b"></script>
+<script>typeof BootDebug !== 'undefined' && BootDebug.log("END /js/auth/bootstrap.js?v=20260720b");</script>
+  <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: /js/auth/bootstrap.js?v=20260720b');</script>
   <script>
   (function () {
     function bootLog(msg, detail) {
