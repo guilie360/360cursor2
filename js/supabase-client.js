@@ -85,6 +85,12 @@ function fetchPublishedProject() {
     '&publicado=eq.true&slug=eq.' + encodeURIComponent(slug);
 
   return supabaseFetch(path).then(function (rows) {
+    console.log('[FETCH PROJECT]', {
+      slug: slug,
+      rows: rows,
+      length: Array.isArray(rows) ? rows.length : null,
+      type: typeof rows
+    });
     if (!rows || !rows.length) throw new Error('No hay proyectos publicados');
     if (typeof BootDebug !== 'undefined') {
       BootDebug.log('proyecto cargado', { id: rows[0].id, slug: rows[0].slug, nombre: rows[0].nombre });
