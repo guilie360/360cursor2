@@ -1754,10 +1754,21 @@ var AiProjectBuilderView = (function () {
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
       backInline.addEventListener('click', function () {
+        var urlSlug = null;
+        try {
+          urlSlug = new URLSearchParams(window.location.search || '').get('proyecto');
+        } catch (e) {}
+        var publishResultSlug = state && state.publishResult ? state.publishResult.slug : null;
+        var projectInfoSlug = state && state.projectInfo ? state.projectInfo.slug : null;
+        var draftProjectId = state ? state.draftProjectId : null;
+        var activeProjectId = typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+          ? AdminState.getActiveProjectId()
+          : null;
+
         var slug = null;
         try {
           slug = new URLSearchParams(window.location.search || '').get('proyecto');
-        } catch (e) {}
+        } catch (e2) {}
         /* Prefer the project bound for this editor session (same id), never a stale default */
         if (!slug && state && state.draftProjectId && state.publishResult &&
             state.publishResult.proyectoId === state.draftProjectId && state.publishResult.slug) {
@@ -1766,9 +1777,20 @@ var AiProjectBuilderView = (function () {
         if (!slug && state && state.draftProjectId && state.projectInfo && state.projectInfo.slug) {
           slug = state.projectInfo.slug;
         }
-        window.location.href = typeof PlatformBuilderBridge !== 'undefined'
+        var finalUrl = typeof PlatformBuilderBridge !== 'undefined'
           ? PlatformBuilderBridge.showroomUrl(slug)
           : (slug ? '/' + encodeURIComponent(slug) : '/');
+
+        console.log('[SHOWROOM BUTTON]', {
+          urlSlug: urlSlug,
+          publishResultSlug: publishResultSlug,
+          projectInfoSlug: projectInfoSlug,
+          draftProjectId: draftProjectId,
+          activeProjectId: activeProjectId,
+          finalUrl: finalUrl
+        });
+
+        window.location.href = finalUrl;
       });
     }
 
