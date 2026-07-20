@@ -111,17 +111,57 @@ var StyleEngineLifecycle = (function () {
   }
 
   function initOnBoot() {
+    console.log('[LIFECYCLE-BOOT] 1 ENTER initOnBoot', Date.now());
+
+    console.log('[LIFECYCLE-BOOT] 2 BEFORE __CASCADE_N++');
     window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[LIFECYCLE-BOOT] 3 AFTER __CASCADE_N++', window.__CASCADE_N);
+
+    console.log('[LIFECYCLE-BOOT] 4 BEFORE CASCADE log');
     console.log('[CASCADE]', 'StyleEngineLifecycle.initOnBoot', Date.now(), window.__CASCADE_N);
+    console.log('[LIFECYCLE-BOOT] 5 AFTER CASCADE log');
+
+    console.log('[LIFECYCLE-BOOT] 6 BEFORE typeof StyleEngineCompatibility check');
     if (typeof StyleEngineCompatibility !== 'undefined') {
+      console.log('[LIFECYCLE-BOOT] 7 StyleEngineCompatibility DEFINED');
+      console.log('[LIFECYCLE-BOOT] 8 BEFORE StyleEngineCompatibility.installThemeGuard()');
       StyleEngineCompatibility.installThemeGuard();
-    }
-    if (StyleEngineStore.getActiveTheme() === ACTIVE.STYLE_ENGINE &&
-        StyleEngineStore.getEngineMode() === StyleEngineStore.MODES.LIVE) {
-      StyleEngineRuntime.reinforcePublished();
+      console.log('[LIFECYCLE-BOOT] 9 AFTER StyleEngineCompatibility.installThemeGuard()');
     } else {
-      StyleEngineRuntime.activateLegacy();
+      console.log('[LIFECYCLE-BOOT] 7 StyleEngineCompatibility UNDEFINED — skip installThemeGuard');
     }
+
+    console.log('[LIFECYCLE-BOOT] 10 BEFORE StyleEngineStore.getActiveTheme()');
+    var _bootActiveTheme = StyleEngineStore.getActiveTheme();
+    console.log('[LIFECYCLE-BOOT] 11 AFTER StyleEngineStore.getActiveTheme()', _bootActiveTheme);
+
+    console.log('[LIFECYCLE-BOOT] 12 BEFORE theme === STYLE_ENGINE check', ACTIVE.STYLE_ENGINE);
+    if (_bootActiveTheme === ACTIVE.STYLE_ENGINE) {
+      console.log('[LIFECYCLE-BOOT] 13 theme IS STYLE_ENGINE — will check engineMode (short-circuit preserved)');
+      console.log('[LIFECYCLE-BOOT] 14 BEFORE StyleEngineStore.getEngineMode()');
+      var _bootEngineMode = StyleEngineStore.getEngineMode();
+      console.log('[LIFECYCLE-BOOT] 15 AFTER StyleEngineStore.getEngineMode()', _bootEngineMode);
+      console.log('[LIFECYCLE-BOOT] 16 BEFORE mode === LIVE check', StyleEngineStore.MODES.LIVE);
+      if (_bootEngineMode === StyleEngineStore.MODES.LIVE) {
+        console.log('[LIFECYCLE-BOOT] 17 BRANCH reinforcePublished (LIVE)');
+        console.log('[LIFECYCLE-BOOT] 18 BEFORE StyleEngineRuntime.reinforcePublished()');
+        StyleEngineRuntime.reinforcePublished();
+        console.log('[LIFECYCLE-BOOT] 19 AFTER StyleEngineRuntime.reinforcePublished()');
+      } else {
+        console.log('[LIFECYCLE-BOOT] 17 BRANCH activateLegacy (theme SE but mode not LIVE)', _bootEngineMode);
+        console.log('[LIFECYCLE-BOOT] 18 BEFORE StyleEngineRuntime.activateLegacy()');
+        StyleEngineRuntime.activateLegacy();
+        console.log('[LIFECYCLE-BOOT] 19 AFTER StyleEngineRuntime.activateLegacy()');
+      }
+    } else {
+      console.log('[LIFECYCLE-BOOT] 13 theme NOT STYLE_ENGINE — skip getEngineMode (short-circuit)');
+      console.log('[LIFECYCLE-BOOT] 17 BRANCH activateLegacy (not STYLE_ENGINE)', _bootActiveTheme);
+      console.log('[LIFECYCLE-BOOT] 18 BEFORE StyleEngineRuntime.activateLegacy()');
+      StyleEngineRuntime.activateLegacy();
+      console.log('[LIFECYCLE-BOOT] 19 AFTER StyleEngineRuntime.activateLegacy()');
+    }
+
+    console.log('[LIFECYCLE-BOOT] 20 EXIT initOnBoot', Date.now());
   }
 
   return {
