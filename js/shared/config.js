@@ -5,6 +5,17 @@ var DEFAULT_PROJECT_SLUG = 'demo';
 var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
 
 /**
+ * Single showroom cache-bust token. Must match window.__BUILD_VERSION__ in index.html.
+ * Bump both together when shipping asset changes.
+ */
+var BUILD_VERSION =
+  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720a';
+if (typeof window !== 'undefined') {
+  window.BUILD_VERSION = BUILD_VERSION;
+  if (!window.__BUILD_VERSION__) window.__BUILD_VERSION__ = BUILD_VERSION;
+}
+
+/**
  * Resolve project slug from the URL only.
  * Priority: ?proyecto=… → first pathname segment (/demo → "demo").
  * "/" and "/index.html" → null (no project; future platform landing).
