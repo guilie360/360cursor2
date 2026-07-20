@@ -458,8 +458,8 @@ var StyleEngine = (function () {
   try {
 
     StyleEngineStore.init();
-    /* StyleEngineRuntime.init(); — diagnostic: disabled */
-    if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
+    StyleEngineRuntime.init();
+    /* if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot(); — diagnostic: disabled */
     StyleEngineModal.init();
   
   } finally {
