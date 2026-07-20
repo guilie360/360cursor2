@@ -1440,6 +1440,7 @@ if (typeof BootDebug !== 'undefined') {
     });
 
     safeInit('StyleEngine.init', function () {
+      return;
       if (typeof StyleEngine === 'undefined') {
         bootLog('StyleEngine.init — skip (StyleEngine undefined)');
         return;

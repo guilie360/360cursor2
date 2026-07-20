@@ -929,7 +929,6 @@ function showProjectLoadError(err) {
 }
 
 function loadProjectData() {
-  return;
   console.log('[BOOT] loadProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: loadProjectData');}catch(_bd){}
   try {
