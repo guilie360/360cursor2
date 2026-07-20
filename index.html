@@ -47,7 +47,7 @@ background:#ff0000;
 color:#fff;
 padding:6px 10px;
 font:14px monospace;">
-DEVELOP TEST 002
+DEVELOP TEST 003
 </div>
 
   <div class="vignette-overlay"></div>
@@ -1268,6 +1268,12 @@ if (typeof BootDebug !== 'undefined') {
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/style-engine/style-engine-modal.js');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/style-engine/style-engine-modal.js");</script>
 <script src="js/style-engine/style-engine-modal.js"></script>
+<script>
+console.log(
+  '[CHECK]',
+  document.currentScript?.previousElementSibling?.src
+);
+</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/style-engine/style-engine-modal.js");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/style-engine/style-engine-modal.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/web-effects.js');</script>
