@@ -459,8 +459,8 @@ var StyleEngine = (function () {
 
     StyleEngineStore.init();
     StyleEngineRuntime.init();
-    /* if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot(); — diagnostic: disabled */
-    StyleEngineModal.init();
+    if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
+    /* StyleEngineModal.init(); — diagnostic: disabled */
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
