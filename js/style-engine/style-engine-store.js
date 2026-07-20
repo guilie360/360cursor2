@@ -95,15 +95,26 @@ var StyleEngineStore = (function () {
   }
 
   function loadPersisted() {
-    if (persisted) return persisted;
+    console.log("SE15 enter loadPersisted");
+    if (persisted) {
+      console.log("SE16 loadPersisted cache hit");
+      return persisted;
+    }
     try {
+      console.log("SE17 before localStorage.getItem");
       var raw = localStorage.getItem(STORAGE_KEY) ||
         localStorage.getItem('boxies_style_engine_v2') ||
         localStorage.getItem('boxies_style_engine_v1');
+      console.log("SE18 after localStorage.getItem");
+      console.log("SE19 before migrateParsed/defaultState");
       persisted = raw ? migrateParsed(JSON.parse(raw)) : defaultState();
+      console.log("SE20 after migrateParsed/defaultState");
+      console.log("SE21 exit loadPersisted ok");
       return persisted;
     } catch (e) {
+      console.log("SE22 loadPersisted catch → defaultState");
       persisted = defaultState();
+      console.log("SE23 exit loadPersisted catch");
       return persisted;
     }
   }
@@ -153,8 +164,14 @@ var StyleEngineStore = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-store.js :: init');}catch(_bd){}
   try {
 
+    console.log("SE11");
+    console.log("SE12 before loadPersisted");
     loadPersisted();
+    console.log("SE13 after loadPersisted");
+    console.log("SE14 before reloadDraftFromStorage");
     reloadDraftFromStorage();
+    console.log("SE24 after reloadDraftFromStorage");
+    console.log("SE25");
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-store.js :: init');}catch(_bd){}
@@ -165,11 +182,15 @@ var StyleEngineStore = (function () {
   }}
 
   function reloadDraftFromStorage() {
+    console.log("SE14a enter reloadDraftFromStorage");
     var state = loadPersisted();
+    console.log("SE14b reloadDraftFromStorage after loadPersisted");
     draftRules = Object.assign({}, state.savedDraftRules);
     draftMode = MODES.PREVIEW;
     aiModifiedSinceApply = false;
+    console.log("SE14c before notifyDraftChanged");
     notifyDraftChanged();
+    console.log("SE14d exit reloadDraftFromStorage");
   }
 
   function resetDraft() {

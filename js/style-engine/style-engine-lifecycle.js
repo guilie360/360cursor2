@@ -122,19 +122,31 @@ var StyleEngineLifecycle = (function () {
   console.log("ENTER initOnBoot");
   try {
 
+    console.log("SE32");
+    console.log("SE33 before installThemeGuard (initOnBoot)");
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }
+    console.log("SE34 after installThemeGuard (initOnBoot)");
+    console.log("SE35 before getActiveTheme/getEngineMode");
     if (StyleEngineStore.getActiveTheme() === ACTIVE.STYLE_ENGINE &&
         StyleEngineStore.getEngineMode() === StyleEngineStore.MODES.LIVE) {
+      console.log("SE36 LIVE path before reinforcePublished");
       StyleEngineRuntime.reinforcePublished();
+      console.log("SE37 LIVE path after reinforcePublished");
       return;
     }
     /* Shell legacy once at boot — DOM only. Official theme is applied later by
        project-data / ThemeSystem without re-entering activateLegacy from sync. */
-    if (bootActivateLegacyDone) return;
+    console.log("SE36b legacy path");
+    if (bootActivateLegacyDone) {
+      console.log("SE37b activateLegacy already done");
+      return;
+    }
     bootActivateLegacyDone = true;
+    console.log("SE37c before activateLegacy");
     StyleEngineRuntime.activateLegacy({ skipThemeReapply: true });
+    console.log("SE37d after activateLegacy");
   
   } finally {
     console.log("EXIT initOnBoot");

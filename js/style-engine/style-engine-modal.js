@@ -438,7 +438,9 @@ var StyleEngineModal = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   try {
 
+    console.log("SE51 before StyleEngineModal.bindModalEvents");
     bindModalEvents();
+    console.log("SE52 after StyleEngineModal.bindModalEvents");
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
@@ -467,10 +469,20 @@ var StyleEngine = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   try {
 
+    console.log("SE1");
+    console.log("SE2 before StyleEngineStore.init");
     StyleEngineStore.init();
+    console.log("SE3 after StyleEngineStore.init");
+    console.log("SE4 before StyleEngineRuntime.init");
     StyleEngineRuntime.init();
+    console.log("SE5 after StyleEngineRuntime.init");
+    console.log("SE6 before initOnBoot");
     if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
+    console.log("SE7 after initOnBoot");
+    console.log("SE8 before StyleEngineModal.init");
     StyleEngineModal.init();
+    console.log("SE9 after StyleEngineModal.init");
+    console.log("SE10");
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}

@@ -32,14 +32,21 @@ var StyleEngineCompatibility = (function () {
   console.log("ENTER installThemeGuard");
   try {
 
-    if (typeof ThemeSystem === 'undefined' || ThemeSystem.__seGuardInstalled) return;
+    console.log("SE26a enter installThemeGuard");
+    if (typeof ThemeSystem === 'undefined' || ThemeSystem.__seGuardInstalled) {
+      console.log("SE26b installThemeGuard early return");
+      return;
+    }
 
+    console.log("SE26c before bind originalReapply/apply/preview");
     var originalReapply = ThemeSystem.reapply.bind(ThemeSystem);
     var originalApply = ThemeSystem.apply.bind(ThemeSystem);
     var originalPreview = ThemeSystem.previewCustomTheme
       ? ThemeSystem.previewCustomTheme.bind(ThemeSystem)
       : null;
+    console.log("SE26d after bind originals");
 
+    console.log("SE26e before wrap ThemeSystem.reapply");
     ThemeSystem.reapply = function () {
       if (typeof StyleEngineRuntime !== 'undefined' &&
           typeof StyleEngineRuntime.isSyncing === 'function' &&
@@ -54,7 +61,9 @@ var StyleEngineCompatibility = (function () {
       }
       return originalReapply();
     };
+    console.log("SE26f after wrap ThemeSystem.reapply");
 
+    console.log("SE26g before wrap ThemeSystem.apply");
     ThemeSystem.apply = function (themeKey, persist, customThemeData) {
       if (isStyleEngineLive()) {
         /* Personalizar 2.0 empuja materiales vía preview; apply legacy no debe
@@ -63,15 +72,19 @@ var StyleEngineCompatibility = (function () {
       }
       return originalApply(themeKey, persist, customThemeData);
     };
+    console.log("SE26h after wrap ThemeSystem.apply");
 
     /* previewCustomTheme se permite en LIVE: Personalizar 2.0 lo usa para materiales V1 */
     if (originalPreview) {
+      console.log("SE26i before wrap previewCustomTheme");
       ThemeSystem.previewCustomTheme = function (config) {
         return originalPreview(config);
       };
+      console.log("SE26j after wrap previewCustomTheme");
     }
 
     ThemeSystem.__seGuardInstalled = true;
+    console.log("SE26k exit installThemeGuard");
   
   } finally {
     console.log("EXIT installThemeGuard");

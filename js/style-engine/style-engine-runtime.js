@@ -100,23 +100,41 @@ var StyleEngineRuntime = (function () {
   console.log("ENTER activatePublished");
   try {
 
-    if (activating) return;
-    if (typeof StyleEngineStore === 'undefined') return;
+    console.log("SE44 enter activatePublished");
+    if (activating) {
+      console.log("SE45 activatePublished early: activating");
+      return;
+    }
+    if (typeof StyleEngineStore === 'undefined') {
+      console.log("SE46 activatePublished early: no store");
+      return;
+    }
     activating = true;
     try {
+      console.log("SE47 before getPublishedRules");
       var rules = StyleEngineStore.getPublishedRules();
+      console.log("SE48 after getPublishedRules");
+      console.log("SE49 before clearApplied");
       clearApplied();
+      console.log("SE50 after clearApplied");
       setActiveThemeAttr(StyleEngineStore.ACTIVE.STYLE_ENGINE);
       document.documentElement.setAttribute(ATTR_VS, 'style-engine');
       document.documentElement.setAttribute(ATTR_ACTIVE, 'true');
       document.documentElement.setAttribute(ATTR_MODE, StyleEngineStore.MODES.LIVE);
       document.body.classList.add('style-engine-live-active', 'visual-system-live');
+      console.log("SE50a before applySeTokens");
       applySeTokens(rules);
+      console.log("SE50b after applySeTokens");
+      console.log("SE50c before applyLegacyBridge");
       applyLegacyBridge(rules);
+      console.log("SE50d after applyLegacyBridge");
+      console.log("SE50e before applyPersonalizarMaterialsIfAny");
       applyPersonalizarMaterialsIfAny();
+      console.log("SE50f after applyPersonalizarMaterialsIfAny");
     } finally {
       activating = false;
     }
+    console.log("SE50g exit activatePublished");
   
   } finally {
     console.log("EXIT activatePublished");
@@ -128,14 +146,27 @@ var StyleEngineRuntime = (function () {
   console.log("ENTER reinforcePublished");
   try {
 
-    if (!StyleEngineCompatibility.isStyleEngineLive()) return;
+    console.log("SE41 enter reinforcePublished");
+    if (!StyleEngineCompatibility.isStyleEngineLive()) {
+      console.log("SE42 reinforcePublished early: not LIVE");
+      return;
+    }
+    console.log("SE43 before activatePublished (reinforce)");
     activatePublished();
-    if (reinforceScheduled) return;
+    console.log("SE43a after activatePublished (reinforce)");
+    if (reinforceScheduled) {
+      console.log("SE43b reinforce already scheduled");
+      return;
+    }
     reinforceScheduled = true;
+    console.log("SE43c before requestAnimationFrame reinforce");
     window.requestAnimationFrame(function () {
+      console.log("SE43d rAF reinforce callback");
       reinforceScheduled = false;
       if (StyleEngineCompatibility.isStyleEngineLive()) activatePublished();
+      console.log("SE43e rAF reinforce done");
     });
+    console.log("SE43f exit reinforcePublished");
   
   } finally {
     console.log("EXIT reinforcePublished");
@@ -143,15 +174,20 @@ var StyleEngineRuntime = (function () {
 
   /** Store→DOM only. Never ThemeSystem.reapply — that path must not run inside sync. */
   function applyLegacyDom() {
+    console.log("SE38a enter applyLegacyDom");
     clearApplied();
+    console.log("SE38b after clearApplied");
     setActiveThemeAttr(StyleEngineStore.ACTIVE.LEGACY);
     document.documentElement.removeAttribute(ATTR_ACTIVE);
     document.documentElement.removeAttribute(ATTR_MODE);
     document.documentElement.removeAttribute(ATTR_VS);
     if (typeof StyleEnginePersonalizarMapper !== 'undefined' &&
         StyleEnginePersonalizarMapper.clearMaterialsFlag) {
+      console.log("SE38c before clearMaterialsFlag");
       StyleEnginePersonalizarMapper.clearMaterialsFlag();
+      console.log("SE38d after clearMaterialsFlag");
     }
+    console.log("SE38e exit applyLegacyDom");
   }
 
   /**
@@ -162,12 +198,21 @@ var StyleEngineRuntime = (function () {
   console.log("ENTER activateLegacy");
   try {
 
+    console.log("SE38 enter activateLegacy");
     options = options || {};
+    console.log("SE39 before applyLegacyDom");
     applyLegacyDom();
-    if (options.skipThemeReapply || syncing) return;
-    if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
-      ThemeSystem.reapply();
+    console.log("SE40 after applyLegacyDom");
+    if (options.skipThemeReapply || syncing) {
+      console.log("SE40a activateLegacy skip ThemeSystem.reapply");
+      return;
     }
+    if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
+      console.log("SE40b before ThemeSystem.reapply");
+      ThemeSystem.reapply();
+      console.log("SE40c after ThemeSystem.reapply");
+    }
+    console.log("SE40d exit activateLegacy");
   
   } finally {
     console.log("EXIT activateLegacy");
@@ -232,13 +277,19 @@ var StyleEngineRuntime = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
   try {
 
+    console.log("SE26");
+    console.log("SE27 before installThemeGuard");
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }
+    console.log("SE28 after installThemeGuard");
+    console.log("SE29 before subscribe");
     if (!subscribed) {
       subscribed = true;
       StyleEngineStore.subscribe(onStoreNotify);
     }
+    console.log("SE30 after subscribe");
+    console.log("SE31");
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
