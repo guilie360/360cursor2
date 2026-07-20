@@ -781,6 +781,8 @@ function buildUnitsData(project) {
 }
 
 function applyProjectData(project) {
+  window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+  console.log('[CASCADE]', 'applyProjectData', Date.now(), window.__CASCADE_N);
   console.log('[BOOT] applyProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: applyProjectData');}catch(_bd){}
   try {

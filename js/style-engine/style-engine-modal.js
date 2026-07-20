@@ -452,8 +452,12 @@ var StyleEngineModal = (function () {
   };
 })();
 
+console.log('[STYLE-MODAL] FILE LOADED');
+console.log('[STYLE-MODAL] URL', (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || 'classic-script');
+console.log('[STYLE-MODAL] TIMESTAMP', Date.now());
 var StyleEngine = (function () {
   function init() {
+    console.log('[STYLE-MODAL] INIT ENTER');
     if (typeof window.__SE_INIT_COUNT === 'undefined') window.__SE_INIT_COUNT = 0;
     console.log('[SE] ENTER');
     console.log('[SE] #', ++window.__SE_INIT_COUNT);

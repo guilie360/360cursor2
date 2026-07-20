@@ -66,6 +66,8 @@ var ProjectThemeAuthority = (function () {
   }
 
   function publishOfficialToStyleEngine(draft) {
+    window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[CASCADE]', 'ProjectThemeAuthority.publishOfficialToStyleEngine', Date.now(), window.__CASCADE_N);
     if (!draft) return false;
     if (typeof StyleEngineStore === 'undefined' ||
         typeof StyleEnginePersonalizarMapper === 'undefined' ||
@@ -120,6 +122,8 @@ var ProjectThemeAuthority = (function () {
 
   /** Aplica el oficial aunque el usuario haya experimentado (p. ej. Reiniciar → HALL). */
   function forceApplyOfficialTheme() {
+    window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[CASCADE]', 'ProjectThemeAuthority.forceApplyOfficialTheme', Date.now(), window.__CASCADE_N);
     var draft = getOfficialDraft();
     if (!draft) return false;
 

@@ -111,6 +111,8 @@ var StyleEngineLifecycle = (function () {
   }
 
   function initOnBoot() {
+    window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[CASCADE]', 'StyleEngineLifecycle.initOnBoot', Date.now(), window.__CASCADE_N);
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }

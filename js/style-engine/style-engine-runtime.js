@@ -91,6 +91,8 @@ var StyleEngineRuntime = (function () {
   var activating = false;
 
   function activatePublished() {
+    window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[CASCADE]', 'StyleEngineRuntime.activatePublished', Date.now(), window.__CASCADE_N);
     if (activating) return;
     if (typeof StyleEngineStore === 'undefined') return;
     activating = true;
@@ -113,6 +115,8 @@ var StyleEngineRuntime = (function () {
   var reinforceScheduled = false;
 
   function reinforcePublished() {
+    window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
+    console.log('[CASCADE]', 'StyleEngineRuntime.reinforcePublished', Date.now(), window.__CASCADE_N);
     if (!StyleEngineCompatibility.isStyleEngineLive()) return;
     activatePublished();
     if (reinforceScheduled) return;
