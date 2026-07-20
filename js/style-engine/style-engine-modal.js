@@ -457,10 +457,27 @@ var StyleEngine = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
   try {
 
+    window.__SE_INIT_COUNT = (window.__SE_INIT_COUNT || 0) + 1;
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('StyleEngine.init #' + window.__SE_INIT_COUNT);}catch(_bd){}
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('START init');}catch(_bd){}
+
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineStore.init()');}catch(_bd){}
     StyleEngineStore.init();
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineStore.init()');}catch(_bd){}
+
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineRuntime.init()');}catch(_bd){}
     StyleEngineRuntime.init();
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineRuntime.init()');}catch(_bd){}
+
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineLifecycle.initOnBoot()');}catch(_bd){}
     if (typeof StyleEngineLifecycle !== 'undefined') StyleEngineLifecycle.initOnBoot();
-    /* StyleEngineModal.init(); — diagnostic: disabled */
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineLifecycle.initOnBoot()');}catch(_bd){}
+
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('ANTES StyleEngineModal.init()');}catch(_bd){}
+    StyleEngineModal.init();
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('DESPUÉS StyleEngineModal.init()');}catch(_bd){}
+
+    try{if(typeof BootDebug!=='undefined')BootDebug.log('END init');}catch(_bd){}
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-modal.js :: init');}catch(_bd){}
