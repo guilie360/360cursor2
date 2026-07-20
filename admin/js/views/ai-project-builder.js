@@ -1754,9 +1754,21 @@ var AiProjectBuilderView = (function () {
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
       backInline.addEventListener('click', function () {
+        var slug = null;
+        try {
+          slug = new URLSearchParams(window.location.search || '').get('proyecto');
+        } catch (e) {}
+        /* Prefer the project bound for this editor session (same id), never a stale default */
+        if (!slug && state && state.draftProjectId && state.publishResult &&
+            state.publishResult.proyectoId === state.draftProjectId && state.publishResult.slug) {
+          slug = state.publishResult.slug;
+        }
+        if (!slug && state && state.draftProjectId && state.projectInfo && state.projectInfo.slug) {
+          slug = state.projectInfo.slug;
+        }
         window.location.href = typeof PlatformBuilderBridge !== 'undefined'
-          ? PlatformBuilderBridge.showroomUrl()
-          : '../index.html';
+          ? PlatformBuilderBridge.showroomUrl(slug)
+          : (slug ? '/' + encodeURIComponent(slug) : '/');
       });
     }
 

@@ -72,6 +72,7 @@ var HeroSyncEngine = (function () {
     if (!info.nombre) {
       state.projectInfo = Object.assign({}, info, {
         nombre: project.nombre,
+        slug: project.slug,
         ciudad: project.ciudad || info.ciudad,
         direccion: project.direccion || info.direccion,
         whatsapp: project.whatsapp || info.whatsapp,
@@ -79,6 +80,8 @@ var HeroSyncEngine = (function () {
         sitio_web: project.sitio_web || info.sitio_web,
         estado: project.estado || info.estado
       });
+    } else if (!info.slug && project.slug) {
+      state.projectInfo = Object.assign({}, info, { slug: project.slug });
     }
 
     if (project.publicado) {
@@ -89,8 +92,13 @@ var HeroSyncEngine = (function () {
         project: project,
         url: typeof PlatformBuilderBridge !== 'undefined'
           ? PlatformBuilderBridge.showroomUrl(project.slug)
-          : '../index.html?proyecto=' + encodeURIComponent(project.slug)
+          : '/' + encodeURIComponent(project.slug)
       };
+    } else {
+      state.publishResult = Object.assign({}, state.publishResult || {}, {
+        proyectoId: project.id,
+        slug: project.slug
+      });
     }
 
     var cfg = normalizeConfig(project.proyecto_config);
