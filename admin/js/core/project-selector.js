@@ -43,6 +43,22 @@ var ProjectSelector = (function () {
     } catch (e) {}
   }
 
+  function syncBuilderDraftProject(projectId, slug) {
+    if (!projectId) return;
+    try {
+      var key = 'boxies_ai_builder_session';
+      var raw = sessionStorage.getItem(key);
+      var parsed = raw ? JSON.parse(raw) : {};
+      if (!parsed || typeof parsed !== 'object') parsed = {};
+      parsed.draftProjectId = projectId;
+      parsed.publishResult = Object.assign({}, parsed.publishResult || {}, {
+        proyectoId: projectId,
+        slug: slug || (parsed.publishResult && parsed.publishResult.slug) || null
+      });
+      sessionStorage.setItem(key, JSON.stringify(parsed));
+    } catch (e) {}
+  }
+
   function resolveActiveProjectId() {
     /* Showroom → dashboard: ?proyecto=slug wins when present */
     var fromQuery = findProjectBySlug(getSlugFromQuery());
@@ -67,8 +83,11 @@ var ProjectSelector = (function () {
     AdminState.setActiveProjectId(activeId);
 
     var activeProject = findProjectById(activeId);
-    if (activeProject && getSlugFromQuery() !== activeProject.slug) {
-      syncUrlSlug(activeProject.slug);
+    if (activeProject) {
+      syncBuilderDraftProject(activeProject.id, activeProject.slug);
+      if (getSlugFromQuery() !== activeProject.slug) {
+        syncUrlSlug(activeProject.slug);
+      }
     }
 
     var html = '<label class="project-selector-label">Proyecto</label>' +
@@ -88,6 +107,7 @@ var ProjectSelector = (function () {
       var selected = findProjectById(dropdown.value);
       AdminState.setActiveProjectId(dropdown.value);
       syncUrlSlug(selected ? selected.slug : null);
+      if (selected) syncBuilderDraftProject(selected.id, selected.slug);
       dispatchChange(dropdown.value);
     });
   }

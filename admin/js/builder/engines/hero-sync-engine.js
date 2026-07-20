@@ -328,8 +328,23 @@ var HeroSyncEngine = (function () {
   }
 
   async function bindFromUrl(state) {
-    var project = await resolveProject(state);
-    if (project) bindStateFromProject(state, project);
+    var slug = getSlugFromUrl();
+    var project = null;
+
+    /* URL slug always wins over a stale builder session draft */
+    if (slug) {
+      project = await fetchProjectBySlug(slug);
+    }
+    if (!project) {
+      project = await resolveProject(state);
+    }
+    if (project) {
+      bindStateFromProject(state, project);
+      state.draftProjectId = project.id;
+      if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
+        AdminState.setActiveProjectId(project.id);
+      }
+    }
     return project;
   }
 

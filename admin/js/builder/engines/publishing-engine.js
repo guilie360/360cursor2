@@ -41,19 +41,41 @@ var PublishingEngine = (function () {
     if (!constructoraId) throw new Error('No se pudo determinar la constructora.');
 
     var linkedProject = await HeroSyncEngine.resolveProject(state);
-    if (linkedProject && !state.draftProjectId) {
+
+    /* Existing showroom project (demo / demo2 / demo3): always UPDATE, never INSERT */
+    if (linkedProject) {
       var heroDraft = state.heroContent ? Object.assign({}, state.heroContent) : null;
       HeroSyncEngine.bindStateFromProject(state, linkedProject);
+      state.draftProjectId = linkedProject.id;
       if (heroDraft) {
         state.heroContent = Object.assign({}, state.heroContent || {}, heroDraft);
       }
+    }
+
+    if (!state.draftProjectId && typeof AdminState !== 'undefined' && AdminState.getActiveProjectId) {
+      state.draftProjectId = AdminState.getActiveProjectId() || null;
     }
 
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
     var slug = linkedProject && linkedProject.slug
       ? linkedProject.slug
-      : slugFromName(info.nombre || 'nuevo-proyecto');
+      : (typeof HeroSyncEngine.getSlugFromUrl === 'function' && HeroSyncEngine.getSlugFromUrl()) ||
+        slugFromName(info.nombre || 'nuevo-proyecto');
+
+    /* Last guard: if slug already exists in DB, force update on that row */
+    if (!state.draftProjectId && slug && typeof AdminApi !== 'undefined') {
+      var existing = await AdminApi.getClient()
+        .from('proyectos')
+        .select('id, slug, nombre')
+        .eq('slug', slug)
+        .maybeSingle();
+      if (existing.error) throw new Error(existing.error.message || 'Error buscando proyecto');
+      if (existing.data && existing.data.id) {
+        state.draftProjectId = existing.data.id;
+        if (!linkedProject) linkedProject = existing.data;
+      }
+    }
 
     var projectPayload = {
       nombre: info.nombre || linkedProject && linkedProject.nombre || 'Nuevo Proyecto',
