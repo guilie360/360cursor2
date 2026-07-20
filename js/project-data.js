@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/project-data.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/project-data.js');}catch(_e){}
 try {
   console.log('[BOOT 4] project-data start');
@@ -786,6 +787,9 @@ function buildUnitsData(project) {
 }
 
 function applyProjectData(project) {
+  console.log("ENTER applyProjectData");
+  try {
+
   console.log('[BOOT] applyProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: applyProjectData');}catch(_bd){}
   try {
@@ -897,7 +901,10 @@ function applyProjectData(project) {
   console.log('[BOOT] applyProjectData END');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/project-data.js :: applyProjectData');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT applyProjectData");
+  }}
 
 function showProjectLoadError(err) {
   var msg = (err && err.message) ? err.message : String(err || 'Error desconocido');
@@ -934,6 +941,9 @@ function showProjectLoadError(err) {
 }
 
 function loadProjectData() {
+  console.log("ENTER loadProjectData");
+  try {
+
   console.log('[BOOT] loadProjectData START');
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/project-data.js :: loadProjectData');}catch(_bd){}
   try {
@@ -991,12 +1001,15 @@ function loadProjectData() {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/project-data.js :: loadProjectData');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT loadProjectData");
+  }}
 
 if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating — calling loadProjectData()');
 window.__pdTrace('project-data.js evaluating — calling loadProjectData()');
 try {
-  loadProjectData();
+  (function(){ console.log("ENTER loadProjectData (call)"); try { loadProjectData(); } finally { console.log("EXIT loadProjectData (call)"); } })();
 } catch (e) {
   console.error('[BOOT ERROR]', e);
   window.__pdTraceError('loadProjectData() sync throw', e);
@@ -1007,3 +1020,5 @@ if (typeof BootDebug !== 'undefined') BootDebug.log('project-data.js evaluating 
 window.__pdTrace('project-data.js evaluating — loadProjectData() scheduled');
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/project-data.js');}catch(_e){}
+
+console.log("BOOT EXIT js/project-data.js");

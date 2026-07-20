@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/bootstrap.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/bootstrap.js');}catch(_e){}
 /* Single auth bootstrap — OAuth callback, session restore, auth listener */
 var AuthBootstrap = (function () {
@@ -140,6 +141,9 @@ var AuthBootstrap = (function () {
 }
 
   async function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/auth/bootstrap.js :: init');}catch(_bd){}
   try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT BEGIN js/auth/bootstrap.js :: init');}catch(_bd){}
   try {
@@ -201,7 +205,10 @@ var AuthBootstrap = (function () {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('AWAIT END js/auth/bootstrap.js :: init');}catch(_bd){}
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/auth/bootstrap.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -210,3 +217,5 @@ var AuthBootstrap = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/bootstrap.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/bootstrap.js");

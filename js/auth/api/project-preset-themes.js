@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/project-preset-themes.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/project-preset-themes.js');}catch(_e){}
 /* API — catálogo de temas preset oficiales del proyecto */
 var ProjectPresetThemesApi = (function () {
@@ -55,3 +56,5 @@ var ProjectPresetThemesApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/project-preset-themes.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/project-preset-themes.js");

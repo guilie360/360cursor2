@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/visitor-session.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-session.js');}catch(_e){}
 /* Visitor session on public showroom — no redirects */
 var VisitorSession = (function () {
@@ -215,3 +216,5 @@ var VisitorSession = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-session.js');}catch(_e){}
+
+console.log("BOOT EXIT js/visitor-session.js");

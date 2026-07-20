@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-lifecycle.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-lifecycle.js');}catch(_e){}
 /* Style Engine — Ciclo de vida: borrador, publicación, activación */
 var StyleEngineLifecycle = (function () {
@@ -16,6 +17,9 @@ var StyleEngineLifecycle = (function () {
   }
 
   function publishToProject(options) {
+  console.log("ENTER publishToProject");
+  try {
+
     options = options || {};
     var rules = StyleEngineStore.getDraftRules();
     var meta = StyleEngineStore.publishDraft(rules);
@@ -50,7 +54,10 @@ var StyleEngineLifecycle = (function () {
     StyleEngineRuntime.reinforcePublished();
     notifyActiveThemeChanged();
     return { meta: meta, style: null };
-  }
+  
+  } finally {
+    console.log("EXIT publishToProject");
+  }}
 
   function applySavedStyle(styleId) {
     var style = StyleEnginePresets.findById(styleId);
@@ -112,6 +119,9 @@ var StyleEngineLifecycle = (function () {
   }
 
   function initOnBoot() {
+  console.log("ENTER initOnBoot");
+  try {
+
     if (typeof StyleEngineCompatibility !== 'undefined') {
       StyleEngineCompatibility.installThemeGuard();
     }
@@ -125,7 +135,10 @@ var StyleEngineLifecycle = (function () {
     if (bootActivateLegacyDone) return;
     bootActivateLegacyDone = true;
     StyleEngineRuntime.activateLegacy({ skipThemeReapply: true });
-  }
+  
+  } finally {
+    console.log("EXIT initOnBoot");
+  }}
 
   return {
     ACTIVE: ACTIVE,
@@ -142,3 +155,5 @@ var StyleEngineLifecycle = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-lifecycle.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-lifecycle.js");

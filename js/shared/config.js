@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/shared/config.js");
 /* Shared Supabase project configuration (public read + admin auth) */
 try {
   console.log('[BOOT 3] config loaded');
@@ -14,7 +15,7 @@ var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
  * Bump both together when shipping asset changes.
  */
 var BUILD_VERSION =
-  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720c';
+  (typeof window !== 'undefined' && window.__BUILD_VERSION__) || '20260720d';
 if (typeof window !== 'undefined') {
   window.BUILD_VERSION = BUILD_VERSION;
   if (!window.__BUILD_VERSION__) window.__BUILD_VERSION__ = BUILD_VERSION;
@@ -115,3 +116,5 @@ var THEME_AI_CONFIG = {
   endpoint: null
 };
 window.THEME_AI_CONFIG = THEME_AI_CONFIG;
+
+console.log("BOOT EXIT js/shared/config.js");

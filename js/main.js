@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/main.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/main.js');}catch(_e){}
 /* =========================================================
    PROJECT DATA — populated from Supabase via project-data.js
@@ -52,6 +53,9 @@ var PROJECT_LAST_UPDATE = '';
 var WHATSAPP_BASE = '';
 
 function applyConfig() {
+  console.log("ENTER applyConfig");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/main.js :: applyConfig');}catch(_bd){}
   try {
 
@@ -110,7 +114,10 @@ function applyConfig() {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/main.js :: applyConfig');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT applyConfig");
+  }}
 
 function lockBodyScroll()   { document.body.style.overflow = 'hidden'; }
 function unlockBodyScroll() { document.body.style.overflow = ''; }
@@ -187,7 +194,7 @@ var globalSoundBtn = document.getElementById('globalSoundBtn');
 function toggleAppSounds() {
   soundsEnabled = !soundsEnabled;
   writeJSON(SOUND_STORAGE_KEY, soundsEnabled);
-  renderSoundsToggle();
+  (function(){ console.log("ENTER renderSoundsToggle (call)"); try { renderSoundsToggle(); } finally { console.log("EXIT renderSoundsToggle (call)"); } })();
 }
 
 function renderSoundsToggle() {
@@ -210,7 +217,7 @@ if (soundsToggleEl) {
 if (globalSoundBtn) {
   globalSoundBtn.addEventListener('click', toggleAppSounds);
 }
-renderSoundsToggle();
+(function(){ console.log("ENTER renderSoundsToggle (call)"); try { renderSoundsToggle(); } finally { console.log("EXIT renderSoundsToggle (call)"); } })();
 
 /* Sistema de sonidos: archivos opcionales + whoosh sintético (Web Audio)
    para menú / popups cuando no hay MP3. */
@@ -349,7 +356,7 @@ function bindButtonHoverSounds() {
   }, true);
 }
 
-bindButtonHoverSounds();
+(function(){ console.log("ENTER bindButtonHoverSounds (call)"); try { bindButtonHoverSounds(); } finally { console.log("EXIT bindButtonHoverSounds (call)"); } })();
 window.__mainTrace('bindButtonHoverSounds');
 
 function playSound(eventName) {
@@ -1788,6 +1795,9 @@ if (unitsCompareBtn) {
 
 /* ================= RENDER DE TARJETAS DE ZONAS 360° ================= */
 function renderTour360Grid() {
+  console.log("ENTER renderTour360Grid");
+  try {
+
   var tour360Grid = document.getElementById('tour360Grid');
   if (!tour360Grid) return;
   tour360Grid.innerHTML = '';
@@ -1852,8 +1862,11 @@ function renderTour360Grid() {
 
     tour360Grid.appendChild(card);
   });
-}
-renderTour360Grid();
+
+  } finally {
+    console.log("EXIT renderTour360Grid");
+  }}
+(function(){ console.log("ENTER renderTour360Grid (call)"); try { renderTour360Grid(); } finally { console.log("EXIT renderTour360Grid (call)"); } })();
 
 /* ================= RENDER DE LISTA DE DESCARGAS ================= */
 var downloadsList = document.getElementById('downloadsList');
@@ -2757,11 +2770,17 @@ function reconcileChromeBfcacheReturn() {
 }
 
 function bootNavStateGuard() {
+  console.log("ENTER bootNavStateGuard");
+  try {
+
   requestAnimationFrame(function () {
     if (isNavResumeLocked() || navResumePending || isThemeCustomizationActive() || hasPendingThemeEditorSession()) return;
     if (isHeroIdle() && isMainMenuOpen()) forceHeroIdleUi();
   });
-}
+
+  } finally {
+    console.log("EXIT bootNavStateGuard");
+  }}
 
 function restoreNavSession() {
   if (restoreNavSession.running) return false;
@@ -2801,6 +2820,9 @@ function scheduleTabReturnCheck() {
 }
 
 function bindNavSessionPersistence() {
+  console.log("ENTER bindNavSessionPersistence");
+  try {
+
   if (bindNavSessionPersistence.bound) return;
   bindNavSessionPersistence.bound = true;
 
@@ -2821,7 +2843,10 @@ function bindNavSessionPersistence() {
   bindNavResumeGate();
   bindMenuOpenWatchdog();
   bindMenuOpenTokenGestures();
-}
+
+  } finally {
+    console.log("EXIT bindNavSessionPersistence");
+  }}
 
 function syncNavigationCloseState() {
   if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
@@ -3446,6 +3471,9 @@ function bindModalBackdropClose(modalId) {
 }
 
 function ensurePopupBoxScrollWrappers() {
+  console.log("ENTER ensurePopupBoxScrollWrappers");
+  try {
+
   /* Si el video ya quedó envuelto por una versión anterior, deshacerlo */
   var videoBox = document.querySelector('#videoModal .video-modal-box');
   if (videoBox && videoBox.firstElementChild && videoBox.firstElementChild.classList.contains('popup-box-scroll')) {
@@ -3461,7 +3489,10 @@ function ensurePopupBoxScrollWrappers() {
     while (box.firstChild) scroll.appendChild(box.firstChild);
     box.appendChild(scroll);
   });
-}
+
+  } finally {
+    console.log("EXIT ensurePopupBoxScrollWrappers");
+  }}
 window.__mainTraceSafe('ensurePopupBoxScrollWrappers', function () { ensurePopupBoxScrollWrappers(); });
 
 /* ================= ENTRADA DESDE LA PORTADA ================= */
@@ -3509,6 +3540,9 @@ window.__mainTrace('bindModalBackdropClose — all modals');
 
 /* ================= ITEMS DEL MENÚ PRINCIPAL ================= */
 function bindMenuItemNavigation() {
+  console.log("ENTER bindMenuItemNavigation");
+  try {
+
   function resolveTarget(target) {
     if (typeof MenuConfig !== 'undefined' && MenuConfig.resolveTarget) {
       return MenuConfig.resolveTarget(target);
@@ -3617,9 +3651,12 @@ function bindMenuItemNavigation() {
       onChildClick({ currentTarget: custom });
     });
   }
-}
 
-bindMenuItemNavigation();
+  } finally {
+    console.log("EXIT bindMenuItemNavigation");
+  }}
+
+(function(){ console.log("ENTER bindMenuItemNavigation (call)"); try { bindMenuItemNavigation(); } finally { console.log("EXIT bindMenuItemNavigation (call)"); } })();
 window.__mainTrace('bindMenuItemNavigation / initUI menu');
 window.bindMenuItemNavigation = bindMenuItemNavigation;
 
@@ -3827,6 +3864,9 @@ function getGalleryCount() {
 }
 
 function renderGaleriaGrid() {
+  console.log("ENTER renderGaleriaGrid");
+  try {
+
   var rendersGrid = document.getElementById('rendersGrid');
   if (!rendersGrid) return;
   rendersGrid.innerHTML = '';
@@ -3902,8 +3942,11 @@ function renderGaleriaGrid() {
   });
 
   playGaleriaCardsEntrance();
-}
-renderGaleriaGrid();
+
+  } finally {
+    console.log("EXIT renderGaleriaGrid");
+  }}
+(function(){ console.log("ENTER renderGaleriaGrid (call)"); try { renderGaleriaGrid(); } finally { console.log("EXIT renderGaleriaGrid (call)"); } })();
 
 /* ================= LIGHTBOX DE RENDERS (swipe) ================= */
 function updateLightboxPosition(animate) {
@@ -4061,3 +4104,5 @@ window.__mainTrace('main.js evaluating — done (sin project-data/auth bootstrap
 window.__mainTrace('nota', 'loadProjectData/applyProjectData/showHome viven en project-data.js — aún no cargado');
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/main.js');}catch(_e){}
+
+console.log("BOOT EXIT js/main.js");

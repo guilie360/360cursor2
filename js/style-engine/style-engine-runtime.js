@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-runtime.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-runtime.js');}catch(_e){}
 /* Style Engine — Runtime v3: VisualSystem → toda la plataforma en LIVE */
 var StyleEngineRuntime = (function () {
@@ -96,6 +97,9 @@ var StyleEngineRuntime = (function () {
   var activating = false;
 
   function activatePublished() {
+  console.log("ENTER activatePublished");
+  try {
+
     if (activating) return;
     if (typeof StyleEngineStore === 'undefined') return;
     activating = true;
@@ -113,11 +117,17 @@ var StyleEngineRuntime = (function () {
     } finally {
       activating = false;
     }
-  }
+  
+  } finally {
+    console.log("EXIT activatePublished");
+  }}
 
   var reinforceScheduled = false;
 
   function reinforcePublished() {
+  console.log("ENTER reinforcePublished");
+  try {
+
     if (!StyleEngineCompatibility.isStyleEngineLive()) return;
     activatePublished();
     if (reinforceScheduled) return;
@@ -126,7 +136,10 @@ var StyleEngineRuntime = (function () {
       reinforceScheduled = false;
       if (StyleEngineCompatibility.isStyleEngineLive()) activatePublished();
     });
-  }
+  
+  } finally {
+    console.log("EXIT reinforcePublished");
+  }}
 
   /** Store→DOM only. Never ThemeSystem.reapply — that path must not run inside sync. */
   function applyLegacyDom() {
@@ -146,19 +159,28 @@ var StyleEngineRuntime = (function () {
    * options.skipThemeReapply: DOM only (required from sync and from boot shell).
    */
   function activateLegacy(options) {
+  console.log("ENTER activateLegacy");
+  try {
+
     options = options || {};
     applyLegacyDom();
     if (options.skipThemeReapply || syncing) return;
     if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
       ThemeSystem.reapply();
     }
-  }
+  
+  } finally {
+    console.log("EXIT activateLegacy");
+  }}
 
   function isSyncing() {
     return syncing;
   }
 
   function sync(options) {
+  console.log("ENTER sync");
+  try {
+
     options = options || {};
     if (syncing) return;
     if (typeof StyleEngineStore === 'undefined') return;
@@ -188,7 +210,10 @@ var StyleEngineRuntime = (function () {
     } finally {
       syncing = false;
     }
-  }
+  
+  } finally {
+    console.log("EXIT sync");
+  }}
 
   function onStoreNotify(event) {
     if (syncing) return;
@@ -201,6 +226,9 @@ var StyleEngineRuntime = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
   try {
 
@@ -215,7 +243,10 @@ var StyleEngineRuntime = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-runtime.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -229,3 +260,5 @@ var StyleEngineRuntime = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-runtime.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-runtime.js");

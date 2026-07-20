@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/login.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/login.js');}catch(_e){}
 /* Resolve email or login alias to Supabase Auth email */
 var LoginApi = (function () {
@@ -37,3 +38,5 @@ var LoginApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/login.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/login.js");

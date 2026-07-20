@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/visitor-auth.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/visitor-auth.js');}catch(_e){}
 /* Visitor authentication orchestration */
 var VisitorAuth = (function () {
@@ -301,3 +302,5 @@ var VisitorAuth = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/visitor-auth.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/visitor-auth.js");

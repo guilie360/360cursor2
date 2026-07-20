@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/visitor-personalization.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalization.js');}catch(_e){}
 /* Visitor identity & appearance prefs — local + Supabase display name */
 var VisitorPersonalization = (function () {
@@ -512,3 +513,5 @@ window.onThemeChanged = function () {
 };
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalization.js');}catch(_e){}
+
+console.log("BOOT EXIT js/visitor-personalization.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/shared/formatters.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/shared/formatters.js');}catch(_e){}
 /* Shared formatters — no DOM, no Supabase clients */
 function formatHeroSubtitle(ciudad, estado, textoHero) {
@@ -67,3 +68,5 @@ function generateSlug(text) {
 }
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/shared/formatters.js');}catch(_e){}
+
+console.log("BOOT EXIT js/shared/formatters.js");

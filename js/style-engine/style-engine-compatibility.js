@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-compatibility.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-compatibility.js');}catch(_e){}
 /* Style Engine — Compatibilidad v2.1 */
 var StyleEngineCompatibility = (function () {
@@ -28,6 +29,9 @@ var StyleEngineCompatibility = (function () {
   }
 
   function installThemeGuard() {
+  console.log("ENTER installThemeGuard");
+  try {
+
     if (typeof ThemeSystem === 'undefined' || ThemeSystem.__seGuardInstalled) return;
 
     var originalReapply = ThemeSystem.reapply.bind(ThemeSystem);
@@ -68,7 +72,10 @@ var StyleEngineCompatibility = (function () {
     }
 
     ThemeSystem.__seGuardInstalled = true;
-  }
+  
+  } finally {
+    console.log("EXIT installThemeGuard");
+  }}
 
   function legacyThemeEnabled() {
     return StyleEngineStore.getActiveTheme() !== StyleEngineStore.ACTIVE.STYLE_ENGINE ||
@@ -100,3 +107,5 @@ var StyleEngineCompatibility = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-compatibility.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-compatibility.js");

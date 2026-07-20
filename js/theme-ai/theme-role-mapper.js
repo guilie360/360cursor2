@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-role-mapper.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-role-mapper.js');}catch(_e){}
 /* Mapeo de roles cromáticos → ThemeSystem */
 var ThemeRoleMapper = (function () {
@@ -103,3 +104,5 @@ var ThemeRoleMapper = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-role-mapper.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-role-mapper.js");

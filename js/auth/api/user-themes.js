@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/user-themes.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/user-themes.js');}catch(_e){}
 /* Saved user themes API — Mis temas */
 var UserThemesApi = (function () {
@@ -127,3 +128,5 @@ var UserThemesApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/user-themes.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/user-themes.js");

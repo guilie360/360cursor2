@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-ai-generator.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-generator.js');}catch(_e){}
 /* Generación de temas: misma identidad cromática, distintas aplicaciones de diseño */
 var ThemeAIGenerator = (function () {
@@ -144,3 +145,5 @@ var ThemeAIGenerator = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-generator.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-ai-generator.js");

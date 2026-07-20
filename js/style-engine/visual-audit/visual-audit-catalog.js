@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/visual-audit/visual-audit-catalog.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-catalog.js');}catch(_e){}
 /* Visual Audit — Catálogo completo de pantallas a fotografiar */
 var VisualAuditCatalog = (function () {
@@ -216,3 +217,5 @@ var VisualAuditCatalog = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-catalog.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/visual-audit/visual-audit-catalog.js");

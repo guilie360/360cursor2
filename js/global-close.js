@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/global-close.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/global-close.js');}catch(_e){}
 /* Botón global de cerrar + pantalla completa */
 var GlobalClose = (function () {
@@ -381,6 +382,9 @@ var GlobalClose = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/global-close.js :: init');}catch(_bd){}
   try {
 
@@ -414,7 +418,10 @@ var GlobalClose = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/global-close.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -426,3 +433,5 @@ var GlobalClose = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/global-close.js');}catch(_e){}
+
+console.log("BOOT EXIT js/global-close.js");

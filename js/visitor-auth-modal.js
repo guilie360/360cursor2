@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/visitor-auth-modal.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-auth-modal.js');}catch(_e){}
 /* Single auth experience modal — gate, login, register */
 var VisitorAuthModal = (function () {
@@ -311,6 +312,9 @@ var VisitorAuthModal = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-auth-modal.js :: init');}catch(_bd){}
   try {
 
@@ -319,7 +323,10 @@ var VisitorAuthModal = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-auth-modal.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -335,3 +342,5 @@ var VisitorAuthModal = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-auth-modal.js');}catch(_e){}
+
+console.log("BOOT EXIT js/visitor-auth-modal.js");

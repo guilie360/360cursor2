@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/routes.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/routes.js');}catch(_e){}
 /* Role-based routing — prepared for future dashboards */
 var AuthRouter = (function () {
@@ -48,3 +49,5 @@ var AuthRouter = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/routes.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/routes.js");

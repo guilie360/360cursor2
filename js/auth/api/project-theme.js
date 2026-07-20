@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/project-theme.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/project-theme.js');}catch(_e){}
 /* Official project default theme API */
 var ProjectThemeApi = (function () {
@@ -21,9 +22,22 @@ var ProjectThemeApi = (function () {
     return normalizeConfig(config.project_default_theme);
   }
 
+  function isWriteLocked() {
+    if (typeof PROJECT_DEFAULT_THEME_WRITE_LOCKED !== 'undefined') {
+      return !!PROJECT_DEFAULT_THEME_WRITE_LOCKED;
+    }
+    return window.PROJECT_DEFAULT_THEME_WRITE_LOCKED !== false;
+  }
+
   async function setDefaultTheme(proyectoId, themeConfig) {
     if (!proyectoId) {
       throw new Error('No se encontró el proyecto activo.');
+    }
+    if (isWriteLocked()) {
+      throw new Error(
+        'El estilo HALL del proyecto está bloqueado y no se puede cambiar. ' +
+        'Solo se modifica si lo pides de forma explícita.'
+      );
     }
     var payload = normalizeConfig(themeConfig);
     if (!payload) {
@@ -72,3 +86,5 @@ var ProjectThemeApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/project-theme.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/project-theme.js");

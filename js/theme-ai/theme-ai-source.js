@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-ai-source.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-source.js');}catch(_e){}
 /* Adaptadores de fuentes de inspiración para generación de temas (extensible) */
 var ThemeAISource = (function () {
@@ -33,3 +34,5 @@ var ThemeAISource = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-source.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-ai-source.js");

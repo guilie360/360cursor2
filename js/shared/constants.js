@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/shared/constants.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/shared/constants.js');}catch(_e){}
 /* Shared domain constants — used by public renderer and admin panel */
 var ESTADO_LABELS = {
@@ -38,3 +39,5 @@ var ARCHIVO_TIPOS = {
 };
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/shared/constants.js');}catch(_e){}
+
+console.log("BOOT EXIT js/shared/constants.js");

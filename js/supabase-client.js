@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/supabase-client.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/supabase-client.js');}catch(_e){}
 /* Public site — read-only Supabase REST client (no auth session) */
 /* getProjectSlugFromUrl: defined in js/shared/config.js */
@@ -100,3 +101,5 @@ function fetchPublishedProject() {
 }
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/supabase-client.js');}catch(_e){}
+
+console.log("BOOT EXIT js/supabase-client.js");

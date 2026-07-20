@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-preview.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-preview.js');}catch(_e){}
 /* Style Engine — Preview Dashboard + escenarios */
 var StyleEnginePreview = (function () {
@@ -171,3 +172,5 @@ var StyleEnginePreview = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-preview.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-preview.js");

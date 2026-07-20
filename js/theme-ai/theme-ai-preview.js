@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-ai-preview.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}
 /* Vista previa de identidad de marca y propuestas de tema IA */
 var ThemeAIPreview = (function () {
@@ -205,3 +206,5 @@ var ThemeAIPreview = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-preview.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-ai-preview.js");

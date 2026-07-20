@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-early-bootstrap.js");
 /* Early project theme — runs in <head> before paint to avoid Classic/red flash */
 (function () {
   try {
@@ -633,6 +634,9 @@
   }
 
   function bootstrapProjectTheme() {
+  console.log("ENTER bootstrapProjectTheme");
+  try {
+
     console.log('[BOOT] bootstrapProjectTheme START');
     if (typeof BootDebug !== 'undefined') BootDebug.log('bootstrapProjectTheme start');
     try {
@@ -714,7 +718,10 @@
       markReady('bootstrap-fatal');
     }
     console.log('[BOOT] bootstrapProjectTheme END');
-  }
+  
+  } finally {
+    console.log("EXIT bootstrapProjectTheme");
+  }}
 
   window.__applyProjectThemeEarly = function (rawConfig, proyectoId) {
     var theme = expandThemeConfig(rawConfig);
@@ -722,5 +729,7 @@
     persistProjectDefault(theme, proyectoId);
   };
 
-  bootstrapProjectTheme();
+  (function(){ console.log("ENTER bootstrapProjectTheme (call)"); try { bootstrapProjectTheme(); } finally { console.log("EXIT bootstrapProjectTheme (call)"); } })();
 })();
+
+console.log("BOOT EXIT js/theme-early-bootstrap.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/visual-audit/visual-audit-capture.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-capture.js');}catch(_e){}
 /* Visual Audit — Captura real de lo que se ve (Screen Capture API) */
 var VisualAuditCapture = (function () {
@@ -203,3 +204,5 @@ var VisualAuditCapture = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-capture.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/visual-audit/visual-audit-capture.js");

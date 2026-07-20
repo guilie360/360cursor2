@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/downloads-intro.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/downloads-intro.js');}catch(_e){}
 /* =========================================================
    DESCARGAS — carga central + lista flex centrada
@@ -277,3 +278,5 @@ var DownloadsIntro = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/downloads-intro.js');}catch(_e){}
+
+console.log("BOOT EXIT js/downloads-intro.js");

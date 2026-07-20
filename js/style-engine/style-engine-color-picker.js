@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-color-picker.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-color-picker.js');}catch(_e){}
 /* Style Engine — Color Picker profesional (popup independiente) */
 var StyleEngineColorPicker = (function () {
@@ -211,3 +212,5 @@ var StyleEngineColorPicker = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-color-picker.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-color-picker.js");

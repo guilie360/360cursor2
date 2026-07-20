@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/visitor-provisioning.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/visitor-provisioning.js');}catch(_e){}
 /* Idempotent visitor + profile provisioning after OAuth or session restore */
 var VisitorProvisioningApi = (function () {
@@ -130,3 +131,5 @@ var VisitorProvisioningApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/visitor-provisioning.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/visitor-provisioning.js");

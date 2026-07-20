@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/errors.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/errors.js');}catch(_e){}
 /* Spanish auth error messages */
 var AuthErrors = (function () {
@@ -67,3 +68,5 @@ var AuthErrors = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/errors.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/errors.js");

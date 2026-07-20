@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/amenities-carousel.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/amenities-carousel.js');}catch(_e){}
 /* =========================================================
    AMENITIES — carrusel 3D premium + intro animada
@@ -558,9 +559,17 @@ var AmenitiesCarousel = (function () {
 })();
 
 document.addEventListener('DOMContentLoaded', function () {
+  console.log("ENTER DOMContentLoaded");
+  try {
+
   if (typeof AmenitiesCarousel.setItems === 'function') {
     AmenitiesCarousel.setItems([]);
   }
-});
+
+  } finally {
+    console.log("EXIT DOMContentLoaded");
+  }});
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/amenities-carousel.js');}catch(_e){}
+
+console.log("BOOT EXIT js/amenities-carousel.js");

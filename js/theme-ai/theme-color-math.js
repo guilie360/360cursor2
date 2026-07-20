@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-color-math.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-color-math.js');}catch(_e){}
 /* Utilidades cromáticas: solo variaciones de luminosidad (hue fijo) */
 var ThemeColorMath = (function () {
@@ -273,3 +274,5 @@ var ThemeColorMath = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-color-math.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-color-math.js");

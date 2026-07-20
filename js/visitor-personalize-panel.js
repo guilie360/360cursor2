@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/visitor-personalize-panel.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-personalize-panel.js');}catch(_e){}
 /* Personalizar panel — inside left navigation */
 var VisitorPersonalizePanel = (function () {
@@ -2046,3 +2047,5 @@ var VisitorPersonalizePanel = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-personalize-panel.js');}catch(_e){}
+
+console.log("BOOT EXIT js/visitor-personalize-panel.js");

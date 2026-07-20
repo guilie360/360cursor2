@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/boot-cpu-profile.js");
 /* CPU profile gate — sin logs. Activa con ?cpuprofile=1
    Flujo: DevTools abierto → Sources pausará en debugger → Performance → Record → Resume. */
 var BootCpuProfile = (function () {
@@ -35,3 +36,5 @@ var BootCpuProfile = (function () {
     pause: pause
   };
 })();
+
+console.log("BOOT EXIT js/boot-cpu-profile.js");

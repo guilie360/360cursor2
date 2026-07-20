@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/platform/project-preset-themes.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/project-preset-themes.js');}catch(_e){}
 /* Temas preset oficiales — catálogo bloqueado, editable solo por admin */
 var ProjectPresetThemes = (function () {
@@ -213,3 +214,5 @@ var ProjectPresetThemes = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/project-preset-themes.js');}catch(_e){}
+
+console.log("BOOT EXIT js/platform/project-preset-themes.js");

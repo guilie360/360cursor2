@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/platform/admin-hero-api.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/admin-hero-api.js');}catch(_e){}
 /* Platform admin API — hero config read/write from showroom */
 var AdminHeroApi = (function () {
@@ -209,3 +210,5 @@ var AdminHeroApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/admin-hero-api.js');}catch(_e){}
+
+console.log("BOOT EXIT js/platform/admin-hero-api.js");

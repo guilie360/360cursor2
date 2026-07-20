@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/roles-permissions.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/roles-permissions.js');}catch(_e){}
 /* Platform roles and permissions — showroom architecture */
 var PlatformRoles = (function () {
@@ -152,3 +153,5 @@ var PlatformVisibility = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/roles-permissions.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/roles-permissions.js");

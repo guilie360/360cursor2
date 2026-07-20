@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-system.js");
 /* Global theme system — affects entire platform via CSS variables */
 var ThemeSystem = (function () {
   var STORAGE_KEY = 'guilie_theme_settings';
@@ -1512,6 +1513,9 @@ var ThemeSystem = (function () {
   }
 
   function init(options) {
+  console.log("ENTER init");
+  try {
+
     console.log('[BOOT] ThemeSystem.init START');
     options = options || {};
     var stored = readJSON(STORAGE_KEY, { themeKey: DEFAULT_KEY });
@@ -1531,7 +1535,10 @@ var ThemeSystem = (function () {
     applyVisualDepth(getActiveVisualDepth());
     bindThemePersistence();
     console.log('[BOOT] ThemeSystem.init END');
-  }
+  
+  } finally {
+    console.log("EXIT init");
+  }}
 
   function bindThemePersistence() {
     window.addEventListener('pageshow', function (event) {
@@ -1584,3 +1591,5 @@ var ThemeSystem = (function () {
     setProjectDefaultApplied: setProjectDefaultApplied
   };
 })();
+
+console.log("BOOT EXIT js/theme-system.js");

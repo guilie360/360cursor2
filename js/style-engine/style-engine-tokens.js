@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-tokens.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-tokens.js');}catch(_e){}
 /* Style Engine — Design Tokens (v2, aislado del Theme Editor) */
 var StyleEngineTokens = (function () {
@@ -276,3 +277,5 @@ var StyleEngineTokens = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-tokens.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-tokens.js");

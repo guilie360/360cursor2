@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/menu-config.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/menu-config.js');}catch(_e){}
 /* Shared showroom menu config — defaults + normalize */
 var MenuConfig = (function () {
@@ -284,3 +285,5 @@ var MenuConfig = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/menu-config.js');}catch(_e){}
+
+console.log("BOOT EXIT js/menu-config.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/visitor-menu.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/visitor-menu.js');}catch(_e){}
 /* Menu profile strip + authenticated explorar */
 var VisitorMenu = (function () {
@@ -264,6 +265,9 @@ var VisitorMenu = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/visitor-menu.js :: init');}catch(_bd){}
   try {
 
@@ -289,7 +293,10 @@ var VisitorMenu = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/visitor-menu.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -301,3 +308,5 @@ var VisitorMenu = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/visitor-menu.js');}catch(_e){}
+
+console.log("BOOT EXIT js/visitor-menu.js");

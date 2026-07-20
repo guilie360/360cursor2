@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/oauth.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/oauth.js');}catch(_e){}
 /* OAuth sign-in — Google via Supabase Auth (official SDK flow) */
 var OAuthApi = (function () {
@@ -122,3 +123,5 @@ var OAuthApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/oauth.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/oauth.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/pause-screen/pause-screen.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/pause-screen/pause-screen.js');}catch(_e){}
 /* Pantalla de pausa premium — overlay inmersivo sobre el último frame */
 var PauseScreen = (function () {
@@ -393,6 +394,9 @@ var PauseScreen = (function () {
   }
 
   function init(project) {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/pause-screen/pause-screen.js :: init');}catch(_bd){}
   try {
 
@@ -402,7 +406,10 @@ var PauseScreen = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/pause-screen/pause-screen.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -419,3 +426,5 @@ var PauseScreen = (function () {
 window.PauseScreen = PauseScreen;
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/pause-screen/pause-screen.js');}catch(_e){}
+
+console.log("BOOT EXIT js/pause-screen/pause-screen.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-ai-modal.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-modal.js');}catch(_e){}
 /* Modal y orquestación del flujo "Generar tema con IA" */
 var ThemeAIModal = (function () {
@@ -299,6 +300,9 @@ var ThemeAIModal = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/theme-ai/theme-ai-modal.js :: init');}catch(_bd){}
   try {
 
@@ -307,7 +311,10 @@ var ThemeAIModal = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/theme-ai/theme-ai-modal.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   return {
     init: init,
@@ -318,3 +325,5 @@ var ThemeAIModal = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-modal.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-ai-modal.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/visual-audit/visual-audit-storage.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-storage.js');}catch(_e){}
 /* Visual Audit — Guardar PNG en carpeta plana (o ZIP) */
 var VisualAuditStorage = (function () {
@@ -199,3 +200,5 @@ var VisualAuditStorage = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-storage.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/visual-audit/visual-audit-storage.js");

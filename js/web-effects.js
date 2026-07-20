@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/web-effects.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/web-effects.js');}catch(_e){}
 /* Toggle de animaciones / efectos visuales (no afecta sonido ni audio de video). */
 var WebEffects = (function () {
@@ -128,6 +129,9 @@ var WebEffects = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/web-effects.js :: init');}catch(_bd){}
   try {
 
@@ -139,7 +143,10 @@ var WebEffects = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/web-effects.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   init();
 
@@ -156,3 +163,5 @@ var WebEffects = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/web-effects.js');}catch(_e){}
+
+console.log("BOOT EXIT js/web-effects.js");

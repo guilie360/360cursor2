@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/storage-prefs.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/storage-prefs.js');}catch(_e){}
 /* Auth UI preferences — Remember me + saved email */
 var AuthStoragePrefs = (function () {
@@ -70,3 +71,5 @@ var AuthStoragePrefs = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/storage-prefs.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/storage-prefs.js");

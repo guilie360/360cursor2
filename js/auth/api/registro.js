@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/registro.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/registro.js');}catch(_e){}
 /* Visitor registration API */
 var RegistroApi = (function () {
@@ -118,3 +119,5 @@ var RegistroApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/registro.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/registro.js");

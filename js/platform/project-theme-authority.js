@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/platform/project-theme-authority.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/project-theme-authority.js');}catch(_e){}
 /* Official project theme — separate from personal user themes */
 var ProjectThemeAuthority = (function () {
@@ -109,6 +110,9 @@ var ProjectThemeAuthority = (function () {
    * exit without store writes or notify.
    */
   function publishOfficialToStyleEngine(draft) {
+  console.log("ENTER publishOfficialToStyleEngine");
+  try {
+
     if (!draft) return false;
     if (typeof StyleEngineStore === 'undefined' ||
         typeof StyleEnginePersonalizarMapper === 'undefined' ||
@@ -137,9 +141,15 @@ var ProjectThemeAuthority = (function () {
     StyleEngineLifecycle.publishToProject({ saveNamed: false });
     StyleEnginePersonalizarMapper.applyMaterials(draft);
     return true;
-  }
+  
+  } finally {
+    console.log("EXIT publishOfficialToStyleEngine");
+  }}
 
   function applyDefaultForCurrentVisitor() {
+  console.log("ENTER applyDefaultForCurrentVisitor");
+  try {
+
     if (!shouldApplyProjectDefault()) return false;
     var draft = getOfficialDraft();
     if (!draft) return false;
@@ -166,10 +176,16 @@ var ProjectThemeAuthority = (function () {
 
     ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
     return true;
-  }
+  
+  } finally {
+    console.log("EXIT applyDefaultForCurrentVisitor");
+  }}
 
   /** Aplica el oficial aunque el usuario haya experimentado (p. ej. Reiniciar → HALL). */
   function forceApplyOfficialTheme() {
+  console.log("ENTER forceApplyOfficialTheme");
+  try {
+
     var draft = getOfficialDraft();
     if (!draft) return false;
 
@@ -187,7 +203,10 @@ var ProjectThemeAuthority = (function () {
     }
     ThemeSystem.setProjectDefaultApplied(getCurrentProyectoId());
     return true;
-  }
+  
+  } finally {
+    console.log("EXIT forceApplyOfficialTheme");
+  }}
 
   function reapplyIfNeeded() {
     if (!window.PROJECT_DATA) return false;
@@ -228,3 +247,5 @@ var ProjectThemeAuthority = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/platform/project-theme-authority.js');}catch(_e){}
+
+console.log("BOOT EXIT js/platform/project-theme-authority.js");

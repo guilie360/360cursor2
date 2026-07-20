@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/visitantes.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/visitantes.js');}catch(_e){}
 /* Visitor profile API */
 var VisitantesApi = (function () {
@@ -158,3 +159,5 @@ var VisitantesApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/visitantes.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/visitantes.js");

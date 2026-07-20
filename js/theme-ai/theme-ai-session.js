@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-ai-session.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-ai-session.js');}catch(_e){}
 /* Caché temporal de propuestas de tema IA (misma sesión de navegador) */
 var ThemeAISession = (function () {
@@ -59,3 +60,5 @@ var ThemeAISession = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-ai-session.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-ai-session.js");

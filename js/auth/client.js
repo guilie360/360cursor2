@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/client.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/client.js');}catch(_e){}
 /* Shared Supabase Auth client — supports Remember me via storage selection */
 var PlatformAuth = (function () {
@@ -51,3 +52,5 @@ var PlatformAuth = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/client.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/client.js");

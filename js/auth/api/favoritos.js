@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/auth/api/favoritos.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/api/favoritos.js');}catch(_e){}
 /* Visitor favorites API — uses existing favoritos table */
 var FavoritosApi = (function () {
@@ -81,3 +82,5 @@ var FavoritosApi = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/auth/api/favoritos.js');}catch(_e){}
+
+console.log("BOOT EXIT js/auth/api/favoritos.js");

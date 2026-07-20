@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/theme-ai/theme-brand-intelligence.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/theme-ai/theme-brand-intelligence.js');}catch(_e){}
 /* Brand Intelligence Engine — análisis de identidad visual y sistema cromático */
 var ThemeBrandIntelligence = (function () {
@@ -406,3 +407,5 @@ var ThemeBrandIntelligence = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/theme-ai/theme-brand-intelligence.js');}catch(_e){}
+
+console.log("BOOT EXIT js/theme-ai/theme-brand-intelligence.js");

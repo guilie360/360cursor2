@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-store.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-store.js');}catch(_e){}
 /* Style Engine — Store v2.1: borrador vs publicado vs tema activo */
 var StyleEngineStore = (function () {
@@ -146,6 +147,9 @@ var StyleEngineStore = (function () {
   }
 
   function init() {
+  console.log("ENTER init");
+  try {
+
   try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER js/style-engine/style-engine-store.js :: init');}catch(_bd){}
   try {
 
@@ -155,7 +159,10 @@ var StyleEngineStore = (function () {
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/style-engine/style-engine-store.js :: init');}catch(_bd){}
   }
-}
+
+  } finally {
+    console.log("EXIT init");
+  }}
 
   function reloadDraftFromStorage() {
     var state = loadPersisted();
@@ -455,3 +462,5 @@ var StyleEngineStore = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-store.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-store.js");

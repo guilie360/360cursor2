@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-personalizar-mapper.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-personalizar-mapper.js');}catch(_e){}
 /* Style Engine — Personalizar 2.0: draft V1 → tokens SE + materiales ThemeSystem */
 var StyleEnginePersonalizarMapper = (function () {
@@ -159,3 +160,5 @@ var StyleEnginePersonalizarMapper = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-personalizar-mapper.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-personalizar-mapper.js");

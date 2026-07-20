@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/style-engine-bridge.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/style-engine-bridge.js');}catch(_e){}
 /* Style Engine — Bridge de solo lectura hacia Theme Legacy (sin modificarlo) */
 var StyleEngineBridge = (function () {
@@ -65,3 +66,5 @@ var StyleEngineBridge = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/style-engine-bridge.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/style-engine-bridge.js");

@@ -1,3 +1,4 @@
+console.log("BOOT ENTER js/style-engine/visual-audit/visual-audit-runner.js");
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/style-engine/visual-audit/visual-audit-runner.js');}catch(_e){}
 /* Visual Audit — Runner: recorrer pantallas y guardar PNG reales */
 var VisualAuditRunner = (function () {
@@ -170,3 +171,5 @@ var VisualAuditRunner = (function () {
 })();
 
 try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT file-eval js/style-engine/visual-audit/visual-audit-runner.js');}catch(_e){}
+
+console.log("BOOT EXIT js/style-engine/visual-audit/visual-audit-runner.js");
