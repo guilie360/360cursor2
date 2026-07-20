@@ -1445,6 +1445,12 @@ if (typeof BootDebug !== 'undefined') {
         return;
       }
       if (!StyleEngine.init) throw new Error('StyleEngine.init undefined');
+      console.log('[SAFE] typeof StyleEngine =', typeof StyleEngine);
+      console.log('[SAFE] StyleEngine =', StyleEngine);
+      console.log('[SAFE] typeof StyleEngine.init =', typeof StyleEngine.init);
+      console.log('[SAFE] StyleEngine.init ===', StyleEngine.init);
+      console.log('[SAFE] StyleEngine own keys =', Object.keys(StyleEngine));
+      console.log('[SAFE] descriptor =', Object.getOwnPropertyDescriptor(StyleEngine, 'init'));
       return StyleEngine.init();
     });
 
