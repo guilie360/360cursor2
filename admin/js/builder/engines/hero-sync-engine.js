@@ -6,17 +6,6 @@ var HeroSyncEngine = (function () {
       'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
       'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento)';
 
-  function getSlugFromUrl() {
-    if (typeof getProjectSlugFromUrl === 'function') {
-      return getProjectSlugFromUrl();
-    }
-    try {
-      return new URLSearchParams(window.location.search).get('proyecto');
-    } catch (e) {
-      return null;
-    }
-  }
-
   function normalizeConfig(raw) {
     if (!raw) return null;
     if (Array.isArray(raw)) return raw[0] || null;
@@ -27,17 +16,6 @@ var HeroSyncEngine = (function () {
     if (!file) return null;
     var result = await StorageApi.upload(constructoraId, proyectoId, folder, file);
     return result.publicUrl;
-  }
-
-  async function fetchProjectBySlug(slug) {
-    if (!slug) return null;
-    var result = await AdminApi.getClient()
-      .from('proyectos')
-      .select(PROJECT_SELECT)
-      .eq('slug', slug)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
-    return result.data || null;
   }
 
   async function fetchProjectById(id) {
@@ -51,31 +29,23 @@ var HeroSyncEngine = (function () {
     return result.data || null;
   }
 
-  async function resolveProject(state) {
-    var slug = getSlugFromUrl();
-    if (slug) {
-      var bySlug = await fetchProjectBySlug(slug);
-      if (bySlug) return bySlug;
+  function requireActive(state, options) {
+    options = options || {};
+    var active = typeof ActiveProject !== 'undefined' ? ActiveProject.get(state) : null;
+    if (active) return active;
+    if (options.requireProject) {
+      throw new Error('Abre el builder desde el showroom del proyecto para sincronizar el hero.');
     }
-
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-
-    if (id) return fetchProjectById(id);
     return null;
   }
 
   function bindStateFromProject(state, project) {
     if (!project) return state;
 
-    state.draftProjectId = project.id;
     var info = state.projectInfo || {};
-
     if (!info.nombre) {
       state.projectInfo = Object.assign({}, info, {
         nombre: project.nombre,
-        slug: project.slug,
         ciudad: project.ciudad || info.ciudad,
         direccion: project.direccion || info.direccion,
         whatsapp: project.whatsapp || info.whatsapp,
@@ -83,26 +53,9 @@ var HeroSyncEngine = (function () {
         sitio_web: project.sitio_web || info.sitio_web,
         estado: project.estado || info.estado
       });
-    } else if (!info.slug && project.slug) {
-      state.projectInfo = Object.assign({}, info, { slug: project.slug });
     }
 
-    if (project.publicado) {
-      state.published = true;
-      state.publishResult = {
-        proyectoId: project.id,
-        slug: project.slug,
-        project: project,
-        url: typeof PlatformBuilderBridge !== 'undefined'
-          ? PlatformBuilderBridge.showroomUrl(project.slug)
-          : '/' + encodeURIComponent(project.slug)
-      };
-    } else {
-      state.publishResult = Object.assign({}, state.publishResult || {}, {
-        proyectoId: project.id,
-        slug: project.slug
-      });
-    }
+    if (project.publicado) state.published = true;
 
     var cfg = normalizeConfig(project.proyecto_config);
     if (!cfg) return state;
@@ -173,27 +126,18 @@ var HeroSyncEngine = (function () {
     }
 
     if (!state.branding) state.branding = {};
-    if (state.branding.logoCleared) {
-      state.branding.logo = null;
-    } else if (cfg.logo_url && !(state.branding.logo && state.branding.logo.file)) {
-      state.branding.logo = {
-        previewUrl: cfg.logo_url,
-        uploadedUrl: cfg.logo_url,
-        name: 'Logo del proyecto',
-        status: 'remote',
-        logoStyle: cfg.logo_style === 'avatar' ? 'avatar' : 'flat'
-      };
+    if (cfg.logo_url && (!state.branding.logo || state.branding.logo.status === 'remote')) {
+      if (!state.branding.logoCleared) {
+        state.branding.logo = {
+          previewUrl: cfg.logo_url,
+          uploadedUrl: cfg.logo_url,
+          name: 'Logo',
+          status: 'remote'
+        };
+      }
     }
-    if (cfg.show_hero_logo != null) {
-      state.branding.showHeroLogo = cfg.show_hero_logo !== false;
-    } else if (state.branding.showHeroLogo == null) {
-      state.branding.showHeroLogo = true;
-    }
-    if (cfg.logo_style) {
-      state.branding.logoStyle = cfg.logo_style === 'avatar' ? 'avatar' : 'flat';
-    } else if (!state.branding.logoStyle) {
-      state.branding.logoStyle = 'flat';
-    }
+    if (cfg.show_hero_logo != null) state.branding.showHeroLogo = cfg.show_hero_logo !== false;
+    if (cfg.logo_style) state.branding.logoStyle = cfg.logo_style === 'avatar' ? 'avatar' : 'flat';
 
     return state;
   }
@@ -206,16 +150,14 @@ var HeroSyncEngine = (function () {
     if (state.heroVideo && state.heroVideo.file) {
       videoUrl = await uploadFile(constructoraId, proyectoId, 'hero/video', state.heroVideo.file);
       state.heroVideo.uploadedUrl = videoUrl;
-      state.heroVideo.status = 'synced';
-      if (state.heroVideo.thumbnailBlob) {
-        var thumbFile = new File([state.heroVideo.thumbnailBlob], 'hero-thumb.jpg', { type: 'image/jpeg' });
-        imageUrl = await uploadFile(constructoraId, proyectoId, 'hero/image', thumbFile);
-      }
+      state.heroVideo.status = 'uploaded';
+      imageUrl = null;
+      state.heroImage = null;
     } else if (state.heroImage && state.heroImage.file) {
       imageUrl = await uploadFile(constructoraId, proyectoId, 'hero/image', state.heroImage.file);
-      videoUrl = null;
       state.heroImage.uploadedUrl = imageUrl;
-      state.heroImage.status = 'synced';
+      state.heroImage.status = 'uploaded';
+      videoUrl = null;
       state.heroVideo = null;
     } else if (state.heroVideo && state.heroVideo.uploadedUrl) {
       videoUrl = state.heroVideo.uploadedUrl;
@@ -232,15 +174,17 @@ var HeroSyncEngine = (function () {
 
   async function sync(state, options) {
     options = options || {};
-    var project = await resolveProject(state);
+    var active = requireActive(state, options);
+    if (!active) return null;
+
+    var project = await fetchProjectById(active.id);
     if (!project) {
       if (options.requireProject) {
-        throw new Error('Abre el builder desde el showroom del proyecto para sincronizar el hero.');
+        throw new Error('No se encontró el proyecto activo \'' + active.slug + '\'.');
       }
       return null;
     }
 
-    /* Conservar edits del formulario Hero y Logo: bindStateFromProject no debe pisarlos. */
     var heroDraft = state.heroContent ? Object.assign({}, state.heroContent) : null;
     var brandingDraft = state.branding ? Object.assign({}, state.branding) : null;
     if (brandingDraft && brandingDraft.logo) {
@@ -261,23 +205,22 @@ var HeroSyncEngine = (function () {
       });
     }
 
-    var constructoraId = project.constructora_id ||
+    var constructoraId = active.constructora_id || project.constructora_id ||
       (typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
     if (!constructoraId) throw new Error('No se pudo determinar la constructora.');
 
     var existingConfig = normalizeConfig(project.proyecto_config) || {};
-    var media = await syncHeroMedia(state, constructoraId, project.id, existingConfig);
+    var media = await syncHeroMedia(state, constructoraId, active.id, existingConfig);
 
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
     var hero = state.heroContent || {};
-    /* HALL stays fixed: do not write color_fondo / color_accento / project_default_theme on Guardar */
     var logoUrl = null;
 
     if (state.branding && state.branding.logoCleared) {
       logoUrl = null;
     } else if (state.branding && state.branding.logo && state.branding.logo.file) {
-      logoUrl = await uploadFile(constructoraId, project.id, 'hero/logo', state.branding.logo.file);
+      logoUrl = await uploadFile(constructoraId, active.id, 'hero/logo', state.branding.logo.file);
       state.branding.logo.uploadedUrl = logoUrl;
       state.branding.logoCleared = false;
     } else if (state.branding && state.branding.logo && state.branding.logo.uploadedUrl) {
@@ -313,55 +256,34 @@ var HeroSyncEngine = (function () {
       imagen_hero_url: media.imagen_hero_url
     };
 
-    await HeroApi.upsert(project.id, heroPayload);
+    await HeroApi.upsert(active.id, heroPayload);
 
     var waLink = (hero.whatsappLink || '').trim();
     if (waLink && !/^https?:\/\//i.test(waLink) && !/^wa\.me\//i.test(waLink)) {
       await AdminApi.getClient()
         .from('proyectos')
         .update({ whatsapp: waLink.replace(/\s+/g, '') })
-        .eq('id', project.id);
+        .eq('id', active.id);
     }
-
-    if (typeof AdminState !== 'undefined') {
-      AdminState.setActiveProjectId(project.id);
-    }
-
-    state.draftProjectId = project.id;
 
     return {
-      projectId: project.id,
-      slug: project.slug,
+      projectId: active.id,
+      slug: active.slug,
       showroomUrl: typeof PlatformBuilderBridge !== 'undefined'
-        ? PlatformBuilderBridge.showroomUrl(project.slug)
-        : '../index.html?proyecto=' + encodeURIComponent(project.slug)
+        ? PlatformBuilderBridge.showroomUrl(active.slug)
+        : '/' + encodeURIComponent(active.slug)
     };
   }
 
   async function bindFromUrl(state) {
-    var slug = getSlugFromUrl();
-    var project = null;
-
-    /* URL slug always wins over a stale builder session draft */
-    if (slug) {
-      project = await fetchProjectBySlug(slug);
-    }
-    if (!project) {
-      project = await resolveProject(state);
-    }
-    if (project) {
-      bindStateFromProject(state, project);
-      state.draftProjectId = project.id;
-      if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
-        AdminState.setActiveProjectId(project.id);
-      }
-    }
+    var active = requireActive(state, {});
+    if (!active) return null;
+    var project = await fetchProjectById(active.id);
+    if (project) bindStateFromProject(state, project);
     return project;
   }
 
   return {
-    getSlugFromUrl: getSlugFromUrl,
-    resolveProject: resolveProject,
     bindFromUrl: bindFromUrl,
     bindStateFromProject: bindStateFromProject,
     syncHeroMedia: syncHeroMedia,

@@ -107,7 +107,9 @@ var BuilderProgressRail = (function () {
       },
       {
         label: 'Publicado',
-        value: state.published && state.publishResult ? state.publishResult.project.nombre : null,
+        value: state.published && state.activeProject
+          ? (state.activeProject.nombre || state.activeProject.slug)
+          : null,
         done: isDone(state, 'publish', !!state.published),
         stepIndex: BuilderWizard.getStepIndex('publish')
       }

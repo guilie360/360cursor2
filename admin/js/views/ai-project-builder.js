@@ -695,12 +695,13 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderPublish() {
-    if (state.published && state.publishResult) {
-      var r = state.publishResult;
+    var active = state.activeProject;
+    if (state.published && active) {
+      var url = ActiveProject.showroomHref(state);
       return '<div class="builder-step-content builder-publish-success">' +
         '<h2>Proyecto publicado</h2>' +
-        '<p>' + AdminUI.escapeHtml(r.project.nombre) + ' está listo.</p>' +
-        '<a href="' + AdminUI.escapeHtml(r.url) + '" class="btn-primary" target="_blank">Ver showroom</a>' +
+        '<p>' + AdminUI.escapeHtml(active.nombre || active.slug) + ' está listo.</p>' +
+        '<a href="' + AdminUI.escapeHtml(url) + '" class="btn-primary" target="_blank">Ver showroom</a>' +
         '<button type="button" class="btn-ghost" id="newBuilderBtn">Crear otro proyecto</button></div>';
     }
     return '<div class="builder-step-content">' +
@@ -708,7 +709,7 @@ var AiProjectBuilderView = (function () {
       '<p class="builder-step-desc">Al publicar, crearé automáticamente toda la estructura BOXIES.</p>' +
       '<div class="builder-publish-summary">' +
         summaryRow('Tipo', ProjectTypesEngine.getTypeLabel(state.projectType)) +
-        summaryRow('Nombre', (state.projectInfo || {}).nombre || '—') +
+        summaryRow('Proyecto', (active && (active.nombre || active.slug)) || (state.projectInfo || {}).nombre || '—') +
         summaryRow('Imágenes', (state.gallery || []).length) +
         summaryRow('360°', (state.panoramas || []).filter(function (p) { return p.file; }).length) +
         summaryRow('Planos', (state.plans || []).length) +
@@ -1684,8 +1685,10 @@ var AiProjectBuilderView = (function () {
           if (vivResult) parts.push('viviendas');
           AdminNotify.success('Guardado. Actualizado: ' + parts.join(', ') + '.');
           updateNavButtons();
+        } else if (!ActiveProject.get(state)) {
+          AdminNotify.error('No hay proyecto activo. Abre BOXIES AI desde el showroom (/demo, /demo2, /demo3).');
         } else if (MediaEngine.hasHeroMedia(state)) {
-          AdminNotify.error('Abre Administrar desde el showroom del proyecto para sincronizar.');
+          AdminNotify.error('No se pudo sincronizar el hero del proyecto activo.');
         } else {
           AdminNotify.success('Progreso guardado en esta sesión.');
         }
@@ -1707,8 +1710,6 @@ var AiProjectBuilderView = (function () {
     try {
       var result = await PublishingEngine.publish(state);
       state.published = true;
-      state.publishResult = result;
-      state.draftProjectId = result.proyectoId || result.draftProjectId;
       saveState();
       AdminNotify.success('Proyecto publicado. Recarga el showroom para ver el hero.');
       if (typeof ProjectSelector !== 'undefined') await ProjectSelector.init();
@@ -1754,43 +1755,11 @@ var AiProjectBuilderView = (function () {
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
       backInline.addEventListener('click', function () {
-        var urlSlug = null;
         try {
-          urlSlug = new URLSearchParams(window.location.search || '').get('proyecto');
-        } catch (e) {}
-        var publishResultSlug = state && state.publishResult ? state.publishResult.slug : null;
-        var projectInfoSlug = state && state.projectInfo ? state.projectInfo.slug : null;
-        var draftProjectId = state ? state.draftProjectId : null;
-        var activeProjectId = typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
-          ? AdminState.getActiveProjectId()
-          : null;
-
-        var slug = null;
-        try {
-          slug = new URLSearchParams(window.location.search || '').get('proyecto');
-        } catch (e2) {}
-        /* Prefer the project bound for this editor session (same id), never a stale default */
-        if (!slug && state && state.draftProjectId && state.publishResult &&
-            state.publishResult.proyectoId === state.draftProjectId && state.publishResult.slug) {
-          slug = state.publishResult.slug;
+          window.location.href = ActiveProject.showroomHref(state);
+        } catch (err) {
+          AdminNotify.error(err.message || 'No hay proyecto activo para volver al showroom.');
         }
-        if (!slug && state && state.draftProjectId && state.projectInfo && state.projectInfo.slug) {
-          slug = state.projectInfo.slug;
-        }
-        var finalUrl = typeof PlatformBuilderBridge !== 'undefined'
-          ? PlatformBuilderBridge.showroomUrl(slug)
-          : (slug ? '/' + encodeURIComponent(slug) : '/');
-
-        console.log('[SHOWROOM BUTTON]', {
-          urlSlug: urlSlug,
-          publishResultSlug: publishResultSlug,
-          projectInfoSlug: projectInfoSlug,
-          draftProjectId: draftProjectId,
-          activeProjectId: activeProjectId,
-          finalUrl: finalUrl
-        });
-
-        window.location.href = finalUrl;
       });
     }
 
@@ -1838,16 +1807,22 @@ var AiProjectBuilderView = (function () {
     rootEl.querySelector('#builderApp').hidden = false;
 
     try {
-      await HeroSyncEngine.bindFromUrl(state);
-      if (typeof MenuSyncEngine !== 'undefined') {
-        await MenuSyncEngine.bindFromUrl(state);
-      }
-      if (typeof ViviendasSyncEngine !== 'undefined') {
-        await ViviendasSyncEngine.bindFromUrl(state);
+      await ActiveProject.bind(state);
+      if (!ActiveProject.get(state)) {
+        AdminNotify.error('No hay proyecto activo. Abre BOXIES AI desde el showroom (/demo, /demo2, /demo3).');
+      } else {
+        await HeroSyncEngine.bindFromUrl(state);
+        if (typeof MenuSyncEngine !== 'undefined') {
+          await MenuSyncEngine.bindFromUrl(state);
+        }
+        if (typeof ViviendasSyncEngine !== 'undefined') {
+          await ViviendasSyncEngine.bindFromUrl(state);
+        }
       }
       saveState();
     } catch (err) {
       console.warn('[Builder] bind project', err);
+      AdminNotify.error(err.message || 'No se pudo resolver el proyecto activo.');
     }
 
     bindGlobalEvents();

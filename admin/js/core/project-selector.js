@@ -44,19 +44,8 @@ var ProjectSelector = (function () {
   }
 
   function syncBuilderDraftProject(projectId, slug) {
-    if (!projectId) return;
-    try {
-      var key = 'boxies_ai_builder_session';
-      var raw = sessionStorage.getItem(key);
-      var parsed = raw ? JSON.parse(raw) : {};
-      if (!parsed || typeof parsed !== 'object') parsed = {};
-      parsed.draftProjectId = projectId;
-      parsed.publishResult = Object.assign({}, parsed.publishResult || {}, {
-        proyectoId: projectId,
-        slug: slug || (parsed.publishResult && parsed.publishResult.slug) || null
-      });
-      sessionStorage.setItem(key, JSON.stringify(parsed));
-    } catch (e) {}
+    /* Project identity lives only in Builder state.activeProject (resolved from URL).
+       Do not write draftProjectId / publishResult into BuilderSession. */
   }
 
   function resolveActiveProjectId() {

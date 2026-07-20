@@ -25,14 +25,6 @@ var ViviendasSyncEngine = (function () {
   /* File objects survive outside sessionStorage */
   var pendingPlanFiles = {};
 
-  function getSlugFromUrl() {
-    try {
-      var slug = new URLSearchParams(window.location.search).get('proyecto');
-      if (slug) return slug;
-    } catch (e) {}
-    return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null;
-  }
-
   function uid() {
     return 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
@@ -225,17 +217,6 @@ var ViviendasSyncEngine = (function () {
     return rowFromDb(Object.assign({}, row, { archivos: [] }));
   }
 
-  async function fetchProjectBySlug(slug) {
-    if (!slug) return null;
-    var result = await AdminApi.getClient()
-      .from('proyectos')
-      .select(PROJECT_SELECT)
-      .eq('slug', slug)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
-    return result.data || null;
-  }
-
   async function fetchProjectById(id) {
     if (!id) return null;
     var result = await AdminApi.getClient()
@@ -248,16 +229,9 @@ var ViviendasSyncEngine = (function () {
   }
 
   async function resolveProject(state) {
-    var slug = getSlugFromUrl();
-    if (slug) {
-      var bySlug = await fetchProjectBySlug(slug);
-      if (bySlug) return bySlug;
-    }
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-    if (id) return fetchProjectById(id);
-    return null;
+    var active = typeof ActiveProject !== 'undefined' ? ActiveProject.get(state) : null;
+    if (!active) return null;
+    return fetchProjectById(active.id);
   }
 
   async function fetchViviendas(proyectoId) {
@@ -290,13 +264,17 @@ var ViviendasSyncEngine = (function () {
   }
 
   async function bindFromUrl(state) {
-    var project = await resolveProject(state);
+    var active = typeof ActiveProject !== 'undefined' ? ActiveProject.get(state) : null;
+    if (!active) {
+      ensureState(state);
+      return null;
+    }
+    var project = await fetchProjectById(active.id);
     if (!project) {
       ensureState(state);
       return null;
     }
-    state.draftProjectId = project.id;
-    var items = await fetchViviendas(project.id);
+    var items = await fetchViviendas(active.id);
     bindStateFromProject(state, items, { preferDraft: false });
     return project;
   }
@@ -378,18 +356,25 @@ var ViviendasSyncEngine = (function () {
     if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
       throw new Error('Sesión admin no lista. Recarga BOXIES AI e inicia sesión de nuevo.');
     }
-    var project = await resolveProject(state);
-    if (!project) {
+    var active = typeof ActiveProject !== 'undefined' ? ActiveProject.get(state) : null;
+    if (!active) {
       if (options.requireProject) {
         throw new Error('Abre el builder desde el showroom del proyecto para sincronizar viviendas.');
       }
       return null;
     }
 
-    state.draftProjectId = project.id;
+    var project = await fetchProjectById(active.id);
+    if (!project) {
+      if (options.requireProject) {
+        throw new Error('No se encontró el proyecto activo \'' + active.slug + '\'.');
+      }
+      return null;
+    }
+
     var items = ensureState(state);
     var client = AdminApi.getClient();
-    var constructoraId = project.constructora_id ||
+    var constructoraId = active.constructora_id || project.constructora_id ||
       (typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
 
     var existingRes = await client

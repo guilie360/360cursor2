@@ -1,11 +1,11 @@
-/* Builder session — persists wizard state across steps */
+/* Builder session — persists wizard *edit* state only (never project identity) */
 var BuilderSession = (function () {
   var STORAGE_KEY = 'boxies_ai_builder_session';
   var fileStore = {};
 
   function emptyState() {
     return {
-      draftProjectId: null,
+      activeProject: null,
       currentStep: 0,
       projectType: null,
       projectStructure: null,
@@ -46,7 +46,6 @@ var BuilderSession = (function () {
       acceptedHotspots: [],
       validation: null,
       published: false,
-      publishResult: null,
       sectionChecks: {},
       messages: []
     };
@@ -60,6 +59,19 @@ var BuilderSession = (function () {
     return fileStore[key] || null;
   }
 
+  function stripIdentity(data) {
+    if (!data || typeof data !== 'object') return data;
+    delete data.activeProject;
+    delete data.draftProjectId;
+    delete data.publishResult;
+    if (data.projectInfo && typeof data.projectInfo === 'object') {
+      delete data.projectInfo.slug;
+      delete data.projectInfo.id;
+      delete data.projectInfo.constructora_id;
+    }
+    return data;
+  }
+
   function stripFiles(state) {
     var copy = JSON.parse(JSON.stringify(state, function (key, val) {
       if (key === 'file' || key === 'thumbnailBlob') return undefined;
@@ -68,14 +80,16 @@ var BuilderSession = (function () {
       }
       return val;
     }));
-    return copy;
+    return stripIdentity(copy);
   }
 
   function load() {
     try {
       var raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return emptyState();
-      return Object.assign(emptyState(), JSON.parse(raw));
+      var parsed = JSON.parse(raw);
+      stripIdentity(parsed);
+      return Object.assign(emptyState(), parsed, { activeProject: null });
     } catch (e) {
       return emptyState();
     }

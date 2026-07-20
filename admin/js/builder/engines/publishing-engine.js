@@ -1,77 +1,5 @@
-/* Publishing Engine — updates an existing showroom project (never creates) */
+/* Publishing Engine — updates the active showroom project (never creates, never re-resolves) */
 var PublishingEngine = (function () {
-  var RESERVED_PATH = {
-    admin: 1,
-    auth: 1,
-    css: 1,
-    js: 1,
-    supabase: 1,
-    assets: 1,
-    images: 1,
-    'wp-content': 1
-  };
-
-  var PROJECT_LOOKUP =
-    'id, nombre, slug, descripcion, ciudad, direccion, whatsapp, email, sitio_web, ' +
-    'estado, publicado, constructora_id, ' +
-    'proyecto_config(titulo_hero, texto_hero, boton_hero_1, boton_hero_2, ' +
-      'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
-      'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url)';
-
-  function slugFromPathname() {
-    try {
-      var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
-      if (path === '/' || /^\/index\.html$/i.test(path)) return null;
-      var segments = path.split('/').filter(Boolean);
-      if (!segments.length) return null;
-      var first = segments[0];
-      if (RESERVED_PATH[first] || /\.[a-z0-9]+$/i.test(first)) return null;
-      return first;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function slugFromQuery() {
-    try {
-      return new URLSearchParams(window.location.search || '').get('proyecto');
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /**
-   * Showroom slug for the active builder session.
-   * Priority: pathname → ?proyecto= → project already linked in state.
-   * Never invents a slug from the display name.
-   */
-  function resolveShowroomSlug(state) {
-    var fromPath = slugFromPathname();
-    if (fromPath) return fromPath;
-
-    var fromQuery = slugFromQuery();
-    if (fromQuery) return fromQuery;
-
-    if (state && state.publishResult && state.publishResult.slug) {
-      return String(state.publishResult.slug).trim() || null;
-    }
-    if (state && state.projectInfo && state.projectInfo.slug) {
-      return String(state.projectInfo.slug).trim() || null;
-    }
-    return null;
-  }
-
-  async function fetchExistingProjectBySlug(slug) {
-    if (!slug) return null;
-    var result = await AdminApi.getClient()
-      .from('proyectos')
-      .select(PROJECT_LOOKUP)
-      .eq('slug', slug)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error buscando proyecto');
-    return result.data || null;
-  }
-
   async function uploadFile(constructoraId, proyectoId, folder, file) {
     if (!file) return null;
     var result = await StorageApi.upload(constructoraId, proyectoId, folder, file);
@@ -97,23 +25,24 @@ var PublishingEngine = (function () {
     }
   }
 
+  async function loadConfig(proyectoId) {
+    var result = await AdminApi.getClient()
+      .from('proyecto_config')
+      .select(
+        'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, ' +
+        'titulo_hero, texto_hero, boton_hero_1, boton_hero_2'
+      )
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (result.error) throw new Error(result.error.message || 'Error cargando configuración');
+    return result.data || {};
+  }
+
   async function publish(state) {
-    var slug = resolveShowroomSlug(state);
-    if (!slug) {
-      throw new Error(
-        'No se pudo resolver el proyecto. Abre Administrar desde el showroom (/demo, /demo2, /demo3).'
-      );
-    }
-
-    var linkedProject = await fetchExistingProjectBySlug(slug);
-    if (!linkedProject || !linkedProject.id) {
-      throw new Error('No se pudo resolver el proyecto \'' + slug + '\'.');
-    }
-
-    var proyectoId = linkedProject.id;
-    var projectSlug = linkedProject.slug || slug;
-    var constructoraId =
-      linkedProject.constructora_id ||
+    var active = ActiveProject.require(state);
+    var proyectoId = active.id;
+    var projectSlug = active.slug;
+    var constructoraId = active.constructora_id ||
       (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
         ? AdminState.getConstructoraId()
         : null);
@@ -122,41 +51,27 @@ var PublishingEngine = (function () {
       throw new Error('No se pudo determinar la constructora del proyecto \'' + projectSlug + '\'.');
     }
 
-    /* Bind session to the existing showroom row — never create */
-    var heroDraft = state.heroContent ? Object.assign({}, state.heroContent) : null;
-    if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.bindStateFromProject) {
-      HeroSyncEngine.bindStateFromProject(state, linkedProject);
-    }
-    state.draftProjectId = proyectoId;
-    if (heroDraft) {
-      state.heroContent = Object.assign({}, state.heroContent || {}, heroDraft);
-    }
-    if (!state.projectInfo) state.projectInfo = {};
-    state.projectInfo.slug = projectSlug;
-
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
 
     var projectPayload = {
-      nombre: info.nombre || linkedProject.nombre || 'Proyecto',
+      nombre: info.nombre || active.nombre || 'Proyecto',
       slug: projectSlug,
-      descripcion: ai.descripcionComercial || info.descripcion || linkedProject.descripcion || '',
-      ciudad: info.ciudad || linkedProject.ciudad || '',
-      direccion: info.direccion || linkedProject.direccion || '',
-      whatsapp: info.whatsapp || linkedProject.whatsapp || '',
-      email: info.email || linkedProject.email || '',
-      sitio_web: info.sitio_web || linkedProject.sitio_web || '',
-      estado: info.estado || linkedProject.estado || 'preventa',
+      descripcion: ai.descripcionComercial || info.descripcion || '',
+      ciudad: info.ciudad || '',
+      direccion: info.direccion || '',
+      whatsapp: info.whatsapp || '',
+      email: info.email || '',
+      sitio_web: info.sitio_web || '',
+      estado: info.estado || 'preventa',
       publicado: true
     };
 
     var project = await ProyectosApi.update(proyectoId, projectPayload);
+    if (project && project.nombre) active.nombre = project.nombre;
+    state.published = true;
 
-    /* HALL stays fixed: do not overwrite project_default_theme or hero colors on Publicar */
-    var existingConfig = Array.isArray(linkedProject.proyecto_config)
-      ? linkedProject.proyecto_config[0]
-      : linkedProject.proyecto_config;
-    existingConfig = existingConfig || {};
+    var existingConfig = await loadConfig(proyectoId);
 
     var branding = state.branding || {};
     var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
@@ -266,25 +181,17 @@ var PublishingEngine = (function () {
     var amenidades = ai.chatbotInfo && ai.chatbotInfo.amenities ? ai.chatbotInfo.amenities : [];
     await insertAmenidades(proyectoId, amenidades);
 
-    if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
-      AdminState.setActiveProjectId(proyectoId);
-    }
-
-    var showroomUrl = typeof PlatformBuilderBridge !== 'undefined'
-      ? PlatformBuilderBridge.showroomUrl(projectSlug)
-      : '/' + encodeURIComponent(projectSlug);
+    var showroomUrl = ActiveProject.showroomHref(state);
 
     return {
       project: project,
       proyectoId: proyectoId,
-      draftProjectId: proyectoId,
-      slug: project.slug || projectSlug,
+      slug: projectSlug,
       url: showroomUrl
     };
   }
 
   return {
-    resolveShowroomSlug: resolveShowroomSlug,
     publish: publish
   };
 })();

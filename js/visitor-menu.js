@@ -112,14 +112,11 @@ var VisitorMenu = (function () {
   }
 
   function adminBuilderHref() {
-    if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminDashboard === 'function') {
-      return AuthRedirects.adminDashboard();
-    }
     if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
       return AuthRedirects.adminBuilder();
     }
     try {
-      var url = new URL('admin/dashboard.html', window.location.href);
+      var url = new URL('admin/ai-project-builder.html', window.location.href);
       var proyecto =
         typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
@@ -127,7 +124,7 @@ var VisitorMenu = (function () {
       if (proyecto) url.searchParams.set('proyecto', proyecto);
       return url.href;
     } catch (e) {
-      return 'admin/dashboard.html';
+      return 'admin/ai-project-builder.html';
     }
   }
 

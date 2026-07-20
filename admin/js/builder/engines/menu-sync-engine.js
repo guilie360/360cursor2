@@ -5,29 +5,10 @@ var MenuSyncEngine = (function () {
     'constructoras(nombre), ' +
     'proyecto_config(menu_config, titulo_hero)';
 
-  function getSlugFromUrl() {
-    try {
-      return new URLSearchParams(window.location.search).get('proyecto');
-    } catch (e) {
-      return null;
-    }
-  }
-
   function normalizeConfig(raw) {
     if (!raw) return null;
     if (Array.isArray(raw)) return raw[0] || null;
     return raw;
-  }
-
-  async function fetchProjectBySlug(slug) {
-    if (!slug) return null;
-    var result = await AdminApi.getClient()
-      .from('proyectos')
-      .select(PROJECT_SELECT)
-      .eq('slug', slug)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
-    return result.data || null;
   }
 
   async function fetchProjectById(id) {
@@ -41,16 +22,13 @@ var MenuSyncEngine = (function () {
     return result.data || null;
   }
 
-  async function resolveProject(state) {
-    var slug = getSlugFromUrl();
-    if (slug) {
-      var bySlug = await fetchProjectBySlug(slug);
-      if (bySlug) return bySlug;
+  function requireActive(state, options) {
+    options = options || {};
+    var active = typeof ActiveProject !== 'undefined' ? ActiveProject.get(state) : null;
+    if (active) return active;
+    if (options.requireProject) {
+      throw new Error('Abre el builder desde el showroom del proyecto para sincronizar el menú.');
     }
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-    if (id) return fetchProjectById(id);
     return null;
   }
 
@@ -66,7 +44,6 @@ var MenuSyncEngine = (function () {
   function bindStateFromProject(state, project, options) {
     options = options || {};
     if (!project) return state;
-    state.draftProjectId = project.id;
     var cfg = normalizeConfig(project.proyecto_config) || {};
     var menu = MenuConfig.normalize(cfg.menu_config);
     var constructora = project.constructoras || {};
@@ -78,7 +55,6 @@ var MenuSyncEngine = (function () {
       menu.description = constructora.nombre || '';
     }
 
-    /* Al abrir el builder, la DB manda. El draft de sesión solo se usa en sync explícito. */
     if (options.preferDraft && state.menuConfig && Array.isArray(state.menuConfig.items) && state.menuConfig.items.length) {
       var draft = MenuConfig.normalize(state.menuConfig);
       state.menuConfig = Object.assign({}, menu, {
@@ -95,15 +71,9 @@ var MenuSyncEngine = (function () {
 
   async function sync(state, options) {
     options = options || {};
-    var project = await resolveProject(state);
-    if (!project) {
-      if (options.requireProject) {
-        throw new Error('Abre el builder desde el showroom del proyecto para sincronizar el menú.');
-      }
-      return null;
-    }
+    var active = requireActive(state, options);
+    if (!active) return null;
 
-    state.draftProjectId = project.id;
     var menu = MenuConfig.normalize(state.menuConfig || MenuConfig.defaults());
     state.menuConfig = menu;
 
@@ -112,7 +82,7 @@ var MenuSyncEngine = (function () {
     var updated = await client
       .from('proyecto_config')
       .update({ menu_config: menu })
-      .eq('proyecto_id', project.id)
+      .eq('proyecto_id', active.id)
       .select('proyecto_id, menu_config')
       .maybeSingle();
 
@@ -121,7 +91,7 @@ var MenuSyncEngine = (function () {
     if (!updated.data) {
       var inserted = await client
         .from('proyecto_config')
-        .insert({ proyecto_id: project.id, menu_config: menu })
+        .insert({ proyecto_id: active.id, menu_config: menu })
         .select('proyecto_id, menu_config')
         .maybeSingle();
       if (inserted.error) throw new Error(inserted.error.message || 'Error guardando menú');
@@ -131,29 +101,34 @@ var MenuSyncEngine = (function () {
       await client
         .from('proyectos')
         .update({ nombre: menu.projectName.trim() })
-        .eq('id', project.id);
+        .eq('id', active.id);
       state.projectInfo = Object.assign({}, state.projectInfo || {}, { nombre: menu.projectName });
+      if (state.activeProject) state.activeProject.nombre = menu.projectName.trim();
     }
 
     return {
-      projectId: project.id,
-      slug: project.slug,
+      projectId: active.id,
+      slug: active.slug,
       menuConfig: menu
     };
   }
 
   async function bindFromUrl(state) {
-    var project = await resolveProject(state);
+    var active = requireActive(state, {});
+    if (!active) {
+      ensureMenuState(state);
+      return null;
+    }
+    var project = await fetchProjectById(active.id);
     if (project) bindStateFromProject(state, project, { preferDraft: false });
     else ensureMenuState(state);
     return project;
   }
 
   return {
-    resolveProject: resolveProject,
-    bindStateFromProject: bindStateFromProject,
-    bindFromUrl: bindFromUrl,
     ensureMenuState: ensureMenuState,
+    bindFromUrl: bindFromUrl,
+    bindStateFromProject: bindStateFromProject,
     sync: sync
   };
 })();
