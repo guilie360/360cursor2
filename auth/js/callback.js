@@ -1,3 +1,4 @@
+/* OAuth callback — exchange PKCE code, then return to saved path (showroom or /admin2) */
 (function () {
   var RETURN_STATE_KEY = 'guilie_oauth_return';
   var statusEl = document.getElementById('status');
@@ -66,17 +67,17 @@
 
   async function run() {
     var returnPath = readReturnPath();
-    if (!returnPath) {
-      setStatus(
-        'No se encontró el showroom de origen. Vuelve a iniciar sesión desde el proyecto.',
-        true
-      );
-      return;
-    }
 
     try {
+      /* Always exchange first — never abandon the OAuth code. */
       await exchangeSession();
-      /* Immediate hop back — never fall through to "/" (htaccess → default showroom). */
+
+      if (!returnPath) {
+        /* Last-resort platform surface (never "/" — htaccess remaps to a showroom). */
+        returnPath = '/admin2';
+        console.warn('[OAuth callback] missing returnPath — falling back to /admin2');
+      }
+
       window.location.replace((window.location.origin || '') + returnPath);
     } catch (err) {
       console.error('[OAuth callback]', err);

@@ -40,6 +40,17 @@ var OAuthApi = (function () {
     try { localStorage.setItem(RETURN_STATE_KEY, raw); } catch (e) {}
   }
 
+  function saveReturnPath(path) {
+    if (!isSafeReturnPath(path)) return false;
+    writeReturnState({
+      scrollY: 0,
+      navStack: [],
+      hadNavStack: false,
+      returnPath: path
+    });
+    return true;
+  }
+
   function readReturnStateRaw() {
     try {
       var fromSession = sessionStorage.getItem(RETURN_STATE_KEY);
@@ -194,6 +205,8 @@ var OAuthApi = (function () {
     signInWithGoogle: handleGoogleAuth,
     startProviderSignIn: handleGoogleAuth,
     saveReturnState: saveReturnState,
+    saveReturnPath: saveReturnPath,
+    clearReturnState: clearReturnState,
     restoreUiState: restoreUiState,
     restoreReturnState: restoreUiState,
     hasReturnState: hasReturnState,

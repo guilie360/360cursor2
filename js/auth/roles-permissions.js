@@ -21,9 +21,12 @@ var PlatformRoles = (function () {
   }
 
   function getRole(profile) {
+    if (!profile) return ROLES.USUARIO;
     var platform = getPlatformProfile(profile);
-    if (!platform) return ROLES.USUARIO;
-    return platform.rol || ROLES.USUARIO;
+    if (platform && platform.rol) return platform.rol;
+    /* Top-level rol is set by VisitantesApi.enrichProfile — keep as fallback */
+    if (profile.rol) return profile.rol;
+    return ROLES.USUARIO;
   }
 
   function getRoleLabel(profile) {
