@@ -132,10 +132,10 @@
       try {
         var proyecto = new URLSearchParams(window.location.search).get('proyecto');
         window.location.replace(
-          proyecto ? 'dashboard.html?proyecto=' + encodeURIComponent(proyecto) : 'index.html'
+          proyecto ? 'dashboard.html?proyecto=' + encodeURIComponent(proyecto) : 'dashboard.html'
         );
       } catch (e2) {
-        window.location.replace('index.html');
+        window.location.replace('dashboard.html');
       }
     } catch (err) {
       setMessage(err.message || 'No se pudo iniciar sesión.', 'error');

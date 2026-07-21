@@ -15,7 +15,7 @@
   RewriteRule ^ - [L]
 
   # App folders that are not project slugs
-  RewriteRule ^(admin|auth|css|js|supabase|assets|images)(/|$) - [L]
+  RewriteRule ^(admin|admin2|auth|css|js|supabase|assets|images)(/|$) - [L]
 
   # /demo, /proyecto1, … → index.html (internal rewrite, browser URL unchanged)
   RewriteRule ^([A-Za-z0-9_-]+)/?$ index.html [L]

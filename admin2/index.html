@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BOXIES | Administración</title>
+  <link rel="stylesheet" href="css/boxies-admin.css">
+</head>
+<body class="bx-admin2">
+
+  <!-- Login (new BOXIES UI — not legacy /admin/login.html) -->
+  <div id="bxLoginView" class="bx-login-shell" hidden>
+    <div class="bx-login-card">
+      <div class="bx-login-brand">BOXIES</div>
+      <p class="bx-login-sub">Centro de administración de la plataforma</p>
+
+      <form id="bxLoginForm" novalidate>
+        <div class="bx-field">
+          <label for="bxEmail">Correo electrónico</label>
+          <input id="bxEmail" type="email" autocomplete="email" placeholder="tu@empresa.com" required>
+        </div>
+        <div class="bx-field">
+          <label for="bxPassword">Contraseña</label>
+          <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="bx-btn bx-btn-primary" id="bxLoginSubmit">
+          <span id="bxLoginSubmitText">Entrar</span>
+        </button>
+      </form>
+
+      <div class="bx-divider"><span>o</span></div>
+
+      <button type="button" class="bx-btn bx-btn-secondary" id="bxGoogleBtn">Continuar con Google</button>
+
+      <div class="bx-form-message" id="bxLoginMessage" role="alert"></div>
+    </div>
+  </div>
+
+  <!-- 403 -->
+  <div id="bxForbiddenView" class="bx-forbidden-shell" hidden>
+    <div class="bx-card bx-forbidden-card">
+      <h1>403 — Acceso denegado</h1>
+      <p>No tienes permisos de administrador para acceder al Dashboard Global de BOXIES.</p>
+      <div class="bx-forbidden-actions">
+        <button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxForbiddenLogout">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="bxAppView" class="bx-app" hidden>
+    <aside class="bx-sidebar">
+      <div class="bx-sidebar-brand">BOXIES</div>
+      <nav class="bx-nav" id="bxNav" aria-label="Navegación">
+        <button type="button" class="bx-nav-item is-active" data-bx-section="dashboard">Dashboard</button>
+        <button type="button" class="bx-nav-item" data-bx-section="projects">Proyectos</button>
+        <button type="button" class="bx-nav-item" data-bx-section="users">Usuarios</button>
+        <button type="button" class="bx-nav-item" data-bx-section="templates">Plantillas</button>
+        <button type="button" class="bx-nav-item" data-bx-section="media">Media</button>
+        <button type="button" class="bx-nav-item" data-bx-section="settings">Configuración</button>
+      </nav>
+      <div class="bx-sidebar-foot">
+        <div class="bx-user-chip" id="bxUserChip"></div>
+        <button type="button" class="bx-btn bx-btn-ghost" id="bxLogoutBtn">Cerrar sesión</button>
+      </div>
+    </aside>
+    <main class="bx-main" id="bxMain"></main>
+  </div>
+
+  <div class="bx-modal" id="bxComingSoonModal" aria-hidden="true">
+    <div class="bx-modal-box">
+      <h2>Función en desarrollo</h2>
+      <p>La creación automática de proyectos será implementada en la siguiente fase.</p>
+      <div class="bx-modal-actions">
+        <button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxComingSoonClose">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared auth/data logic from /admin (no UI reuse) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../admin/js/core/supabase-client.js"></script>
+  <script src="../admin/js/api/base.js"></script>
+  <script src="../admin/js/api/profile.js"></script>
+  <script src="../admin/js/api/proyectos.js"></script>
+  <script src="../admin/js/core/state.js"></script>
+  <script src="../admin/js/core/auth.js"></script>
+  <script src="../admin/js/core/bootstrap.js"></script>
+  <script src="js/auth-gate.js"></script>
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/projects.js"></script>
+  <script src="js/views/users.js"></script>
+  <script src="js/views/templates.js"></script>
+  <script src="js/views/media.js"></script>
+  <script src="js/views/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
