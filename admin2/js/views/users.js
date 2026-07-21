@@ -1,13 +1,13 @@
 var BoxiesAdmin2Users = (function () {
   async function render(host) {
     host.innerHTML =
-      '<div class="hall-section-header">' +
+      '<div class="section-header">' +
         '<h1>Usuarios</h1>' +
         '<p>Cuentas y roles de la plataforma.</p>' +
       '</div>' +
-      '<div class="hall-panel hall-empty">' +
-        '<h2>Próximamente</h2>' +
-        '<p>La gestión de usuarios se implementará en una fase posterior.</p>' +
+      '<div class="panel-card placeholder-card">' +
+        '<div class="placeholder-title">Próximamente</div>' +
+        '<p class="placeholder-copy">La gestión de usuarios se implementará más adelante. El CMS de cada proyecto sigue siendo el Builder.</p>' +
       '</div>';
   }
   return { render: render };

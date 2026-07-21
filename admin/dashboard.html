@@ -4,9 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>360 PREVENTA | Dashboard</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
   <link rel="stylesheet" href="css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
 </head>
-<body class="dashboard-shell">
+<body class="dashboard-shell hall-app">
 
   <header class="dashboard-header">
     <div class="dashboard-logo">360 PREVENTA</div>
@@ -26,7 +39,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
-  <script src="../js/platform/hall-design-system.js"></script>
   <script src="../js/shared/constants.js"></script>
   <script src="../js/shared/formatters.js"></script>
   <script src="js/core/supabase-client.js"></script>

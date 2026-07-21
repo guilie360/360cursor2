@@ -1,0 +1,7 @@
+/*
+ * HALL Design System — entry
+ * Pipeline: variables.css → components.css → hall/hall.css → ThemeSystem → HallDesignSystem.paint()
+ * Do not invent parallel tokens or component skins outside this tree.
+ */
+@import url("./hall-primitives.css");
+@import url("./hall-layouts.css");

@@ -9,53 +9,56 @@ alwaysApply: true
 
 **HALL es el Design System oficial de toda la plataforma BOXIES.**
 
-No es solo un tema de proyecto. Define la identidad visual de login, dashboards, modales, builders, formularios, tablas y cualquier herramienta futura.
+No es un tema, skin ni plantilla. Define la identidad visual de login, dashboards, modales, builders, formularios, tablas y cualquier módulo futuro.
 
-## Pipeline obligatorio (sin variantes)
+## Pipeline obligatorio (sin excepciones)
 
 ```
-HallDesignSystem.paint()
-  → css/variables.css
+css/variables.css
   → css/components.css
-  → ThemeSystem (tokens --bg-* / --glass-* / --btn-*)
-  → render con clases HALL (.outline-btn, .auth-*, .content-modal*, .glass-surface)
+  → css/hall/hall.css
+  → ThemeSystem
+  → HallDesignSystem.paint()
+  → render
 ```
 
-## Fuente de verdad
+Opcional (solo dominio CMS): `admin/css/admin-auth.css` (bridge `--admin-*` → HALL) + `admin/css/admin-widgets.css` (widgets de CMS, no botones/inputs/cards).
 
-1. **ADN:** `js/shared/config.js` → `PROJECT_DEFAULT_THEME_FALLBACK`, `PROJECT_DEFAULT_STYLE_NAME = 'HALL'`
-2. **Tokens:** `css/variables.css` + `ThemeSystem`
-3. **Componentes:** `css/components.css`
-4. **Boot:** `js/platform/hall-design-system.js` → `HallDesignSystem.paint()`
+## Árbol oficial
 
-## Mapa de rutas (estabilización)
+```
+css/
+  variables.css          # tokens --bg-* --glass-* --btn-* --text-*
+  components.css         # showroom/modales compartidos
+  hall/
+    hall.css             # entry (@import primitives + layouts)
+    hall-primitives.css  # HallButton/Input/Card/Table/Badge (legacy selectors en las MISMAS reglas)
+    hall-layouts.css     # HallLayout/Sidebar/Header/Login/Dashboard
+js/platform/
+  hall-design-system.js  # HallDesignSystem.paint() + seed de proyectos
+```
 
-| Ruta | Auth | Design System |
-|------|------|----------------|
-| `/`, `/demo1`, `/demo2`, `/demo3` | PlatformAuth / VisitorAuth | HALL (`variables` + `components` + ThemeSystem) |
-| **Administrar** (menú showroom) | Misma sesión showroom | → `admin/ai-project-builder.html?proyecto=` + HALL pipeline |
-| `/admin2` | Misma sesión (`profiles.rol` admin) | HALL + `admin2/css/shell.css` (solo layout) |
-| `/admin`, `/admin/dashboard.html` | **Legado** constructora (`AdminAuth`) | Deuda: `admin-auth.css` — no usar desde Administrar |
-| `/admin/login.html` | Legado constructora | No es el login del showroom ni de `/admin2` |
+## Clases canónicas
 
-### Regla Administrar
-
-- Enlace: `AuthRedirects.adminBuilder()` → `ai-project-builder.html`
-- **Nunca** `/admin2`, **nunca** `dashboard.html` (AdminAuth)
-- Antes de `AuthBootstrap.init`, limpiar OAuth `returnPath` hostil (evita bounce a `/demo1`)
+Usar `.hall-*` en código nuevo. Selectores legacy (`.btn-primary`, `.outline-btn`, `.field`, `.panel-card`, `.dashboard-sidebar`, `.login-card`, `.admin-table`, …) apuntan a las **mismas** reglas en `hall-primitives` / `hall-layouts`. No redefinir cuerpos en otros CSS.
 
 ## Prohibido
 
-- CSS que copie HALL (`--bx-*`, temas admin/dashboard paralelos)
-- Redefinir `.outline-btn` / inputs / cards fuera de `components.css`
-- Identidades por módulo
-- Avanzar features nuevas mientras haya regresiones de consistencia
+- Inventar `--bx-*`, `--admin-*` como sistema (solo alias bridge), `--builder-*` de color, hardcodes de botón
+- Redefinir `.btn-primary` / inputs / cards / sidebar fuera de `css/hall/`
+- Logins o dashboards con CSS propio de identidad
+- CSS nuevo al crear Analytics, CRM, Marketplace, etc. — solo componentes HALL
 
-## Layout-only CSS
+## Layout-only permitido
 
-Solo posicionar/dimensionar y consumir `var(--bg-*)`, `var(--glass-*)`, etc. Nunca inventar colores/radios de botones.
+`admin/css/ai-project-builder.css`, `admin2/css/shell.css`, `css/style-engine.css` (laboratorio showroom): posicionar/dimensionar; consumir `var(--bg-*)` / `var(--glass-*)` / `var(--btn-*)`. Nunca inventar familia de botones.
 
-## Deuda conocida (no ampliar)
+## Mapa de rutas
 
-- `admin/css/admin-auth.css` + `ai-project-builder.css` aún aportan chrome de builder; deben migrar a clases HALL sin duplicar botones.
-- No añadir más reglas a esos forks; al tocar UI del builder, preferir `.outline-btn` / tokens HALL.
+| Ruta | Design System |
+|------|----------------|
+| `/`, `/demo*` | HALL + style-engine (layout laboratorio; tokens HALL) |
+| `/admin2` | HALL pipeline + shell layout-only |
+| `ai-project-builder` | HALL + builder layout-only |
+| `/auth/*` | HALL pipeline |
+| `/admin/login`, `/admin/dashboard` | HALL pipeline (legado auth; no tocar auth) |

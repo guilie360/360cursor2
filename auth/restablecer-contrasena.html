@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>360 PREVENTA | Nueva contraseña</title>
   <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
   <link rel="stylesheet" href="../admin/css/admin-auth.css">
   <script src="../js/theme-system.js"></script>
-  <script>ThemeSystem.init();</script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else ThemeSystem.init();
+      document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
 </head>
-<body class="login-page">
+<body class="login-page hall-login">
 
   <div class="login-card">
     <div class="login-logo">360 PREVENTA</div>

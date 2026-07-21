@@ -4,7 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>360 PREVENTA | Admin</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
   <link rel="stylesheet" href="css/admin-auth.css">
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else if (typeof ThemeSystem !== 'undefined') ThemeSystem.init();
+      document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
   <style>
     .admin-entry-shell {
       min-height: 100vh;
@@ -16,9 +30,9 @@
     }
     .admin-entry-card {
       width: min(460px, 100%);
-      background: var(--admin-panel);
-      border: 1px solid var(--admin-border);
-      border-radius: var(--admin-radius-lg);
+      background: var(--glass-panel, var(--bg-popup));
+      border: 1px solid var(--glass-border, var(--border));
+      border-radius: 18px;
       padding: 36px;
       text-align: center;
     }
@@ -28,7 +42,7 @@
       margin-bottom: 10px;
     }
     .admin-entry-card p {
-      color: var(--admin-muted);
+      color: var(--text-secondary);
       font-size: 15px;
       line-height: 1.5;
       margin-bottom: 28px;
@@ -38,24 +52,25 @@
       gap: 12px;
     }
     .admin-entry-actions a {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-decoration: none;
-      padding: 16px 18px;
-      border-radius: var(--admin-radius-md);
+      min-height: 48px;
+      padding: 13px 28px;
+      border-radius: var(--menu-card-radius, 14px);
+      border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+      background: var(--btn-glass-surface, var(--btn-surface));
+      color: var(--text-primary);
+      font-size: 0.72rem;
       font-weight: 600;
-    }
-    .admin-entry-actions .primary {
-      background: var(--admin-accent);
-      color: #fff;
-    }
-    .admin-entry-actions .secondary {
-      border: 1px solid var(--admin-border2);
-      color: var(--admin-text);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
     }
     .admin-entry-note {
       margin-top: 22px;
       font-size: 13px;
-      color: var(--admin-muted);
+      color: var(--text-secondary);
       line-height: 1.45;
     }
   </style>

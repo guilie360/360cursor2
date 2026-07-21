@@ -1,4 +1,4 @@
-/* BOXIES Global Admin — app shell (HALL Design System) */
+/* BOXIES Global Dashboard — launcher shell (same chrome as Builder / admin-auth) */
 (function () {
   var SECTIONS = {
     dashboard: BoxiesAdmin2Dashboard,
@@ -28,21 +28,21 @@
         : (profile.rol || 'admin');
     chip.innerHTML =
       '<strong>' + escapeHtml(profile.nombre || profile.email || 'Admin') + '</strong>' +
-      '<span>' + escapeHtml(roleLabel) + '</span>';
+      ' · ' + escapeHtml(roleLabel);
   }
 
   function setActiveNav(sectionId) {
     document.querySelectorAll('#bxNav [data-bx-section]').forEach(function (btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-bx-section') === sectionId);
+      btn.classList.toggle('active', btn.getAttribute('data-bx-section') === sectionId);
     });
   }
 
   async function showSection(sectionId) {
-    var id = SECTIONS[sectionId] ? sectionId : 'dashboard';
+    var id = SECTIONS[sectionId] ? sectionId : 'projects';
     setActiveNav(id);
     var host = document.getElementById('bxMain');
     if (!host) return;
-    host.innerHTML = '<div class="hall-panel"><p class="auth-view-lead">Cargando…</p></div>';
+    host.innerHTML = '<div class="panel-card"><p class="placeholder-copy">Cargando…</p></div>';
     await SECTIONS[id].render(host);
   }
 
@@ -69,16 +69,15 @@
   }
 
   async function onAppReady(profile) {
+    document.body.classList.add('dashboard-shell');
     bindShell();
     renderUserChip(profile);
-    await showSection('dashboard');
+    /* Projects is the launcher home — open Builder from here */
+    await showSection('projects');
   }
 
   async function boot() {
-    var result = await BoxiesAdmin2Auth.init(onAppReady);
-    if (result && result.state === 'app') {
-      /* onAppReady already called from init */
-    }
+    await BoxiesAdmin2Auth.init(onAppReady);
   }
 
   if (document.readyState === 'loading') {

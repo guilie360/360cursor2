@@ -19,15 +19,18 @@ var BoxiesAdmin2Dashboard = (function () {
 
   async function render(host) {
     host.innerHTML =
-      '<div class="hall-section-header">' +
-        '<h1>Dashboard</h1>' +
-        '<p>Centro de control de la plataforma BOXIES.</p>' +
+      '<div class="section-header">' +
+        '<h1>Dashboard Global</h1>' +
+        '<p>Pantalla inicial de BOXIES. Desde aquí abres el Builder de cada proyecto.</p>' +
       '</div>' +
-      '<div class="hall-stat-grid" id="bxStatGrid">' +
-        '<div class="hall-panel"><div class="hall-stat-value">…</div><div class="hall-stat-label">Total proyectos</div></div>' +
-        '<div class="hall-panel"><div class="hall-stat-value">—</div><div class="hall-stat-label">Usuarios</div></div>' +
-        '<div class="hall-panel"><div class="hall-stat-value">—</div><div class="hall-stat-label">Actividad reciente</div></div>' +
-        '<div class="hall-panel"><div class="hall-stat-value">OK</div><div class="hall-stat-label">Estado plataforma</div></div>' +
+      '<div class="panel-card" id="bxDashSummary">' +
+        '<div class="panel-card-title">Resumen</div>' +
+        '<ul class="profile-list">' +
+          '<li><span>Proyectos</span><strong id="bxDashTotal">…</strong></li>' +
+          '<li><span>Última modificación</span><strong id="bxDashLatest">…</strong></li>' +
+          '<li><span>CMS</span><strong>ai-project-builder</strong></li>' +
+        '</ul>' +
+        '<p class="phase-note">Usa <strong>Proyectos → Administrar</strong> para abrir el editor oficial del showroom.</p>' +
       '</div>';
 
     try {
@@ -39,22 +42,14 @@ var BoxiesAdmin2Dashboard = (function () {
           latest = p.updated_at;
         }
       });
-      var cards = host.querySelectorAll('.hall-panel');
-      if (cards[0]) cards[0].querySelector('.hall-stat-value').textContent = String(total);
-      if (cards[1]) cards[1].querySelector('.hall-stat-value').textContent = 'Próx.';
-      if (cards[2]) {
-        var el = cards[2].querySelector('.hall-stat-value');
-        el.textContent = formatDate(latest);
-        el.style.fontSize = latest ? '1rem' : '1.85rem';
-      }
-      if (cards[3]) {
-        cards[3].querySelector('.hall-stat-value').textContent = 'Operativo';
-        cards[3].querySelector('.hall-stat-value').style.fontSize = '1.25rem';
-      }
+      var totalEl = document.getElementById('bxDashTotal');
+      var latestEl = document.getElementById('bxDashLatest');
+      if (totalEl) totalEl.textContent = String(total);
+      if (latestEl) latestEl.textContent = formatDate(latest);
     } catch (err) {
       host.insertAdjacentHTML(
         'beforeend',
-        '<p class="auth-modal-message is-error">' + escapeHtml(err.message || 'Error cargando métricas') + '</p>'
+        '<p class="admin-form-message error">' + escapeHtml(err.message || 'Error') + '</p>'
       );
     }
   }

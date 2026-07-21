@@ -17,81 +17,57 @@ var BoxiesAdmin2Projects = (function () {
     } catch (e) { return '—'; }
   }
 
-  function badge(project) {
+  function statusBadge(project) {
     if (project.publicado) {
-      return '<span class="hall-badge is-live">Publicado</span>';
+      return '<span class="admin-badge badge-success">Publicado</span>';
     }
-    return '<span class="hall-badge is-draft">' + escapeHtml(project.estado || 'borrador') + '</span>';
+    var estado = project.estado || 'borrador';
+    return '<span class="admin-badge badge-muted">' + escapeHtml(estado) + '</span>';
   }
 
-  function openModal() {
-    var modal = document.getElementById('bxComingSoonModal');
-    if (!modal) return;
-    modal.classList.add('active');
-    modal.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeModal() {
-    var modal = document.getElementById('bxComingSoonModal');
-    if (!modal) return;
-    modal.classList.remove('active');
-    modal.setAttribute('aria-hidden', 'true');
-  }
-
-  function bindModal() {
-    var modal = document.getElementById('bxComingSoonModal');
-    var closeBtn = document.getElementById('bxComingSoonClose');
-    if (closeBtn && !closeBtn.dataset.bound) {
-      closeBtn.dataset.bound = '1';
-      closeBtn.addEventListener('click', closeModal);
-    }
-    if (modal && !modal.dataset.bound) {
-      modal.dataset.bound = '1';
-      modal.addEventListener('click', function (e) {
-        if (e.target === modal) closeModal();
-      });
-    }
+  function builderHref(slug) {
+    return '../admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug || '');
   }
 
   function row(project) {
     var slug = project.slug || '';
     var name = project.nombre || slug || 'Sin nombre';
-    var editHref = '../admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug);
+    var openHref = builderHref(slug);
     return (
       '<tr>' +
-        '<td><span class="hall-project-name">' + escapeHtml(name) + '</span>' +
-          '<span class="hall-project-slug">' + escapeHtml(slug) + '</span></td>' +
-        '<td>' + badge(project) + '</td>' +
-        '<td><code>/' + escapeHtml(slug) + '</code></td>' +
+        '<td>' +
+          '<strong>' + escapeHtml(name) + '</strong>' +
+        '</td>' +
+        '<td><code>' + escapeHtml(slug) + '</code></td>' +
+        '<td>' + statusBadge(project) + '</td>' +
         '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
-        '<td><a class="outline-btn hall-inline-link" href="' + escapeHtml(editHref) + '">Editar</a></td>' +
+        '<td class="table-actions">' +
+          '<a class="btn-primary btn-compact" href="' + escapeHtml(openHref) + '">Administrar</a>' +
+        '</td>' +
       '</tr>'
     );
   }
 
   async function render(host) {
-    bindModal();
     host.innerHTML =
-      '<div class="hall-toolbar">' +
-        '<div class="hall-section-header" style="margin:0">' +
-          '<h1>Proyectos</h1>' +
-          '<p>Showrooms administrados en BOXIES.</p>' +
-        '</div>' +
-        '<button type="button" class="outline-btn auth-action-btn" id="bxNewProjectBtn">+ Nuevo Proyecto</button>' +
+      '<div class="section-header">' +
+        '<h1>Proyectos</h1>' +
+        '<p>Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
       '</div>' +
-      '<div class="hall-panel hall-panel-flush">' +
-        '<div class="hall-table-wrap">' +
-          '<table class="hall-table">' +
+      '<div class="panel-card panel-card-flush">' +
+        '<div class="admin-table-wrap">' +
+          '<table class="admin-table">' +
             '<thead><tr>' +
-              '<th>Proyecto</th><th>Estado</th><th>URL pública</th><th>Última modificación</th><th>Acciones</th>' +
+              '<th>Nombre</th>' +
+              '<th>Slug</th>' +
+              '<th>Estado</th>' +
+              '<th>Última modificación</th>' +
+              '<th></th>' +
             '</tr></thead>' +
             '<tbody id="bxProjectsBody"><tr><td colspan="5">Cargando…</td></tr></tbody>' +
           '</table>' +
         '</div>' +
       '</div>';
-
-    var newBtn = document.getElementById('bxNewProjectBtn');
-    if (newBtn) newBtn.addEventListener('click', openModal);
 
     var tbody = document.getElementById('bxProjectsBody');
     try {

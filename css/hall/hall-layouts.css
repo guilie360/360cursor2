@@ -1,0 +1,266 @@
+/*
+ * HALL layouts — single shell for platform dashboards.
+ * Structure only; paint comes from hall-primitives + ThemeSystem tokens.
+ */
+
+.hall-app,
+.dashboard-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.hall-header,
+.dashboard-header {
+  height: 74px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: var(--glass-panel, var(--bg-popup));
+  border-bottom: 1px solid var(--glass-border, var(--border));
+  backdrop-filter: blur(var(--glass-blur, 22px)) saturate(108%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 22px)) saturate(108%);
+}
+
+.hall-brand,
+.dashboard-logo,
+.login-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.hall-header-actions,
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hall-user,
+.user-chip {
+  font-size: 14px;
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.78);
+}
+
+.hall-user strong,
+.user-chip strong {
+  color: var(--text-primary);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.hall-body,
+.dashboard-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.hall-sidebar,
+.dashboard-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--glass-border, var(--border));
+  background: var(--glass-panel, var(--bg-popup));
+  overflow-y: auto;
+}
+
+.hall-nav,
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px 24px;
+  gap: 4px;
+  flex: 1;
+}
+
+.hall-nav-label,
+.nav-group-label {
+  margin: 18px 12px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity, 0.52);
+}
+
+.hall-nav-item,
+.nav-item {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.78);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.hall-nav-item:hover,
+.nav-item:hover {
+  background: var(--hover);
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.hall-nav-item.is-active,
+.hall-nav-item.active,
+.nav-item.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.hall-main,
+.dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 28px 48px;
+  background: var(--bg-main);
+}
+
+.hall-section,
+.section-header {
+  margin-bottom: 24px;
+}
+
+.hall-section h1,
+.section-header h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.hall-login,
+.login-page,
+.hall-login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  background: var(--bg-main);
+}
+
+.hall-login-card,
+.login-card {
+  width: min(430px, 100%);
+}
+
+.hall-login-card .hall-brand,
+.login-card .login-logo {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.hall-login-sub,
+.login-subtitle {
+  text-align: center;
+  font-size: 15px;
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.78);
+  margin-bottom: 32px;
+}
+
+.hall-divider,
+.auth-divider,
+.auth-oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.hall-divider::before,
+.hall-divider::after,
+.auth-divider::before,
+.auth-divider::after,
+.auth-oauth-divider::before,
+.auth-oauth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border, var(--border));
+}
+
+.placeholder-card .placeholder-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.phase-note {
+  margin-top: 24px;
+  padding: 14px 16px;
+  border: 1px dashed var(--glass-border, var(--border));
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.78);
+}
+
+.profile-list {
+  list-style: none;
+  border-top: 1px solid var(--glass-border, var(--border));
+  margin: 0;
+  padding: 0;
+}
+
+.profile-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--glass-border, var(--border));
+  font-size: 14px;
+}
+
+.profile-list span {
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity, 0.78);
+}
+
+@media (max-width: 800px) {
+  .hall-body,
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .hall-sidebar,
+  .dashboard-sidebar {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--glass-border, var(--border));
+  }
+
+  .hall-nav,
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .hall-nav-item,
+  .nav-item {
+    width: auto;
+  }
+}

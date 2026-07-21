@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="theme-ready">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>BOXIES | Administración</title>
-  <!-- HALL Design System (tokens + components) — no parallel theme -->
+  <title>BOXIES | Dashboard Global</title>
+  <!-- Official HALL pipeline -->
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
   <link rel="stylesheet" href="css/shell.css">
 </head>
-<body class="bx-admin2">
+<body class="dashboard-shell hall-app bx-admin2">
 
-  <!-- Login — same auth-experience language as showroom HALL -->
+  <!-- Login — showroom HALL auth-experience -->
   <div id="bxLoginView" class="hall-login-page" hidden>
     <div class="content-modal-box auth-experience-box">
       <div class="hall-login-brand">BOXIES</div>
-      <h2 class="auth-gate-title">Administración</h2>
+      <h2 class="auth-gate-title">Dashboard Global</h2>
       <p class="auth-view-lead">Entra con la misma cuenta de administrador del showroom.</p>
 
       <div class="auth-oauth-row">
@@ -46,40 +48,37 @@
     </div>
   </div>
 
-  <div id="bxForbiddenView" class="hall-forbidden-page" hidden>
-    <div class="hall-panel">
-      <h1>Acceso denegado</h1>
-      <p>Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES. El acceso requiere el mismo rol <code>admin</code> que el panel de un proyecto.</p>
-      <div class="hall-forbidden-actions">
-        <button type="button" class="outline-btn auth-action-btn" id="bxForbiddenLogout">Cerrar sesión</button>
-      </div>
+  <div id="bxForbiddenView" class="hall-login-page" hidden>
+    <div class="panel-card" style="width:min(460px,100%);text-align:center">
+      <h1 class="panel-card-title">Acceso denegado</h1>
+      <p class="placeholder-copy">Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES.</p>
+      <button type="button" class="btn-primary btn-compact" id="bxForbiddenLogout">Cerrar sesión</button>
     </div>
   </div>
 
-  <div id="bxAppView" class="hall-app" hidden>
-    <aside class="hall-sidebar">
-      <div class="hall-sidebar-brand">BOXIES</div>
-      <nav class="hall-nav" id="bxNav" aria-label="Navegación">
-        <button type="button" class="hall-nav-item is-active" data-bx-section="dashboard">Dashboard</button>
-        <button type="button" class="hall-nav-item" data-bx-section="projects">Proyectos</button>
-        <button type="button" class="hall-nav-item" data-bx-section="users">Usuarios</button>
-        <button type="button" class="hall-nav-item" data-bx-section="templates">Plantillas</button>
-        <button type="button" class="hall-nav-item" data-bx-section="media">Media</button>
-        <button type="button" class="hall-nav-item" data-bx-section="settings">Configuración</button>
-      </nav>
-      <div class="hall-sidebar-foot">
-        <div class="hall-user-chip" id="bxUserChip"></div>
-        <button type="button" class="outline-btn auth-action-btn" id="bxLogoutBtn">Cerrar sesión</button>
+  <!-- App — same shell language as Builder / admin-auth dashboard -->
+  <div id="bxAppView" hidden>
+    <header class="dashboard-header">
+      <div class="dashboard-logo">BOXIES</div>
+      <div class="dashboard-header-actions">
+        <div class="user-chip" id="bxUserChip"></div>
+        <button type="button" class="btn-ghost" id="bxLogoutBtn">Cerrar sesión</button>
       </div>
-    </aside>
-    <main class="hall-main" id="bxMain"></main>
-  </div>
-
-  <div class="content-modal" id="bxComingSoonModal" aria-hidden="true">
-    <div class="content-modal-box">
-      <h2 class="content-modal-title">Función en desarrollo</h2>
-      <p class="info-text">La creación automática de proyectos será implementada en la siguiente fase.</p>
-      <button type="button" class="outline-btn auth-action-btn" id="bxComingSoonClose">Entendido</button>
+    </header>
+    <div class="dashboard-layout">
+      <aside class="dashboard-sidebar">
+        <nav class="sidebar-nav" id="bxNav" aria-label="Navegación">
+          <div class="nav-group-label">Plataforma</div>
+          <button type="button" class="nav-item" data-bx-section="dashboard">Dashboard Global</button>
+          <button type="button" class="nav-item active" data-bx-section="projects">Proyectos</button>
+          <div class="nav-group-label">Próximamente</div>
+          <button type="button" class="nav-item" data-bx-section="users">Usuarios</button>
+          <button type="button" class="nav-item" data-bx-section="templates">Plantillas</button>
+          <button type="button" class="nav-item" data-bx-section="media">Media</button>
+          <button type="button" class="nav-item" data-bx-section="settings">Configuración</button>
+        </nav>
+      </aside>
+      <main class="dashboard-content" id="bxMain"></main>
     </div>
   </div>
 
@@ -89,9 +88,12 @@
   <script src="../js/theme-system.js"></script>
   <script src="../js/platform/hall-design-system.js"></script>
   <script>
-    /* Paint HALL before first paint (html.theme-ready unlocks body) */
-    if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
-    else document.documentElement.classList.add('theme-ready');
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
   </script>
   <script src="../js/auth/client.js"></script>
   <script src="../js/auth/storage-prefs.js"></script>
@@ -108,12 +110,12 @@
   <script src="../js/visitor-session.js"></script>
   <script src="js/api/projects.js"></script>
   <script src="js/auth-gate.js?v=auth-unify-001"></script>
-  <script src="js/views/dashboard.js"></script>
-  <script src="js/views/projects.js"></script>
-  <script src="js/views/users.js"></script>
-  <script src="js/views/templates.js"></script>
-  <script src="js/views/media.js"></script>
-  <script src="js/views/settings.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/views/dashboard.js?v=global-001"></script>
+  <script src="js/views/projects.js?v=global-001"></script>
+  <script src="js/views/users.js?v=global-001"></script>
+  <script src="js/views/templates.js?v=global-001"></script>
+  <script src="js/views/media.js?v=global-001"></script>
+  <script src="js/views/settings.js?v=global-001"></script>
+  <script src="js/app.js?v=global-001"></script>
 </body>
 </html>
