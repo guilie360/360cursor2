@@ -2,78 +2,72 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>360 PREVENTA | Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BOXIES | Dashboard Global</title>
   <link rel="stylesheet" href="css/admin-auth.css">
-  <style>
-    .admin-entry-shell {
-      min-height: 100vh;
-      min-height: 100svh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .admin-entry-card {
-      width: min(460px, 100%);
-      background: var(--admin-panel);
-      border: 1px solid var(--admin-border);
-      border-radius: var(--admin-radius-lg);
-      padding: 36px;
-      text-align: center;
-    }
-    .admin-entry-card h1 {
-      font-size: 30px;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
-    }
-    .admin-entry-card p {
-      color: var(--admin-muted);
-      font-size: 15px;
-      line-height: 1.5;
-      margin-bottom: 28px;
-    }
-    .admin-entry-actions {
-      display: grid;
-      gap: 12px;
-    }
-    .admin-entry-actions a {
-      display: block;
-      text-decoration: none;
-      padding: 16px 18px;
-      border-radius: var(--admin-radius-md);
-      font-weight: 600;
-    }
-    .admin-entry-actions .primary {
-      background: var(--admin-accent);
-      color: #fff;
-    }
-    .admin-entry-actions .secondary {
-      border: 1px solid var(--admin-border2);
-      color: var(--admin-text);
-    }
-    .admin-entry-note {
-      margin-top: 22px;
-      font-size: 13px;
-      color: var(--admin-muted);
-      line-height: 1.45;
-    }
-  </style>
+  <link rel="stylesheet" href="css/global-admin.css">
 </head>
-<body class="login-page">
-  <div class="admin-entry-shell">
-    <div class="admin-entry-card">
-      <h1>360 PREVENTA</h1>
-      <p>Elige qué quieres abrir. El panel administrativo y el showroom público son aplicaciones distintas.</p>
-      <div class="admin-entry-actions">
-        <a class="primary" href="login.html">Panel administrativo</a>
-        <a class="secondary" href="../demo">Showroom del proyecto</a>
+<body class="dashboard-shell global-admin-shell">
+
+  <div id="globalAdminGate" class="global-admin-gate" hidden>
+    <div class="panel-card global-admin-forbidden">
+      <h1>403 — Acceso denegado</h1>
+      <p>No tienes permisos de administrador para acceder al Dashboard Global de BOXIES.</p>
+      <div class="global-admin-forbidden-actions">
+        <a class="btn-primary btn-compact" href="login.html">Volver al inicio de sesión</a>
+        <button type="button" class="btn-ghost btn-compact" id="globalForbiddenLogoutBtn">Cerrar sesión</button>
       </div>
-      <p class="admin-entry-note">
-        El tema oficial del proyecto solo se aplica en el showroom (<code>index.html</code> de la carpeta raíz),
-        no en el panel admin.
-      </p>
     </div>
   </div>
+
+  <div id="globalAdminApp" class="global-admin-app" hidden>
+    <div class="dashboard-layout global-admin-layout">
+      <aside class="dashboard-sidebar global-admin-sidebar">
+        <div class="global-admin-brand">BOXIES</div>
+        <nav class="sidebar-nav" id="globalSidebarNav" aria-label="Navegación global">
+          <button type="button" class="nav-item active" data-global-section="dashboard">Dashboard</button>
+          <button type="button" class="nav-item" data-global-section="projects">Proyectos</button>
+          <button type="button" class="nav-item" data-global-section="users">Usuarios</button>
+          <button type="button" class="nav-item" data-global-section="templates">Plantillas</button>
+          <button type="button" class="nav-item" data-global-section="settings">Configuración</button>
+        </nav>
+        <div class="global-admin-sidebar-foot">
+          <div class="user-chip" id="globalUserChip"></div>
+          <button type="button" class="btn-ghost global-logout-btn" id="globalLogoutBtn">Cerrar sesión</button>
+        </div>
+      </aside>
+      <main class="dashboard-content" id="globalAdminContent"></main>
+    </div>
+  </div>
+
+  <div class="content-modal global-admin-modal" id="globalComingSoonModal" aria-hidden="true">
+    <div class="content-modal-box global-admin-modal-box">
+      <h2 class="global-admin-modal-title">Función en desarrollo</h2>
+      <p class="global-admin-modal-copy">
+        La creación automática de proyectos será implementada en la siguiente fase.
+      </p>
+      <div class="global-admin-modal-actions">
+        <button type="button" class="btn-primary btn-compact" id="globalComingSoonCloseBtn">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="js/core/supabase-client.js"></script>
+  <script src="js/api/base.js"></script>
+  <script src="js/api/profile.js"></script>
+  <script src="js/api/proyectos.js"></script>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/auth.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/bootstrap.js"></script>
+  <script src="js/global/auth-gate.js"></script>
+  <script src="js/global/views/dashboard.js"></script>
+  <script src="js/global/views/projects.js"></script>
+  <script src="js/global/views/users.js"></script>
+  <script src="js/global/views/templates.js"></script>
+  <script src="js/global/views/settings.js"></script>
+  <script src="js/global/app.js"></script>
 </body>
 </html>

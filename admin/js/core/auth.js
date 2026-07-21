@@ -48,7 +48,8 @@ var AdminAuth = (function () {
       var proyecto = new URLSearchParams(window.location.search).get('proyecto');
       if (proyecto) return 'dashboard.html?proyecto=' + encodeURIComponent(proyecto);
     } catch (e) {}
-    return 'dashboard.html';
+    /* Default: Global Admin shell */
+    return 'index.html';
   }
 
   async function requireAuth() {
