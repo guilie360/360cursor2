@@ -1,61 +1,88 @@
 (function () {
-  var formMessage = document.getElementById('formMessage');
-  var loadingBlock = document.getElementById('loadingBlock');
-  var actionLinks = document.getElementById('actionLinks');
-  var loginLink = document.getElementById('loginLink');
+  var RETURN_STATE_KEY = 'guilie_oauth_return';
+  var statusEl = document.getElementById('status');
 
-  if (loginLink) loginLink.href = AuthRedirects.ingresar();
+  function setStatus(text, isError) {
+    if (!statusEl) return;
+    statusEl.textContent = text || '';
+    statusEl.className = isError ? 'err' : 'msg';
+  }
 
-  function fail(message) {
-    if (loadingBlock) loadingBlock.style.display = 'none';
-    if (actionLinks) actionLinks.style.display = 'block';
-    if (typeof AuthPage !== 'undefined' && AuthPage.setMessage) {
-      AuthPage.setMessage(formMessage, message, 'error');
-    } else if (formMessage) {
-      formMessage.textContent = message;
+  function isSafeReturnPath(path) {
+    if (!path || typeof path !== 'string') return false;
+    if (path.charAt(0) !== '/') return false;
+    if (path.indexOf('//') === 0) return false;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return false;
+    if (path === '/') return false;
+    if (/^\/index\.html$/i.test(path)) return false;
+    if (path.indexOf('/auth/') === 0) return false;
+    return true;
+  }
+
+  function readReturnPath() {
+    var raw = null;
+    try { raw = sessionStorage.getItem(RETURN_STATE_KEY); } catch (e) {}
+    if (!raw) {
+      try { raw = localStorage.getItem(RETURN_STATE_KEY); } catch (e2) {}
+    }
+    if (!raw) return null;
+    try {
+      var state = JSON.parse(raw);
+      if (state && isSafeReturnPath(state.returnPath)) return state.returnPath;
+      if (state && state.proyecto) {
+        var legacy = '/' + String(state.proyecto).replace(/^\/+/, '');
+        if (isSafeReturnPath(legacy)) return legacy;
+      }
+    } catch (e3) {}
+    return null;
+  }
+
+  async function exchangeSession() {
+    AuthStoragePrefs.setRememberMe(true);
+    PlatformAuth.resetClient();
+    var client = PlatformAuth.createClient({ remember: true });
+
+    var search = new URLSearchParams(window.location.search || '');
+    var hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    var code = search.get('code') || hash.get('code');
+    var error = search.get('error') || hash.get('error');
+
+    if (error) {
+      throw new Error(search.get('error_description') || hash.get('error_description') || error);
+    }
+
+    if (code) {
+      var exchanged = await client.auth.exchangeCodeForSession(code);
+      if (exchanged.error) throw exchanged.error;
+      return;
+    }
+
+    var sessionResult = await client.auth.getSession();
+    if (sessionResult.error) throw sessionResult.error;
+    if (!sessionResult.data || !sessionResult.data.session) {
+      throw new Error('No fue posible completar el inicio de sesión con Google.');
     }
   }
 
-  function redirectToReturn() {
-    var path =
-      typeof OAuthApi !== 'undefined' && typeof OAuthApi.peekReturnPath === 'function'
-        ? OAuthApi.peekReturnPath()
-        : '/';
-    window.location.replace((window.location.origin || '') + path);
-  }
-
   async function run() {
+    var returnPath = readReturnPath();
+    if (!returnPath) {
+      setStatus(
+        'No se encontró el showroom de origen. Vuelve a iniciar sesión desde el proyecto.',
+        true
+      );
+      return;
+    }
+
     try {
-      AuthStoragePrefs.setRememberMe(true);
-      PlatformAuth.resetClient();
-      PlatformAuth.createClient({ remember: true });
-
-      var params = VisitorAuth.readUrlAuthParams();
-
-      if (params.error === 'access_denied' || params.error) {
-        VisitorAuth.cleanOAuthUrl();
-        redirectToReturn();
-        return;
-      }
-
-      var auth = null;
-      if (params.code) {
-        auth = await VisitorAuth.completeOAuthCallback();
-      }
-      if (!auth || !auth.session) {
-        auth = await VisitorAuth.recoverOAuthSession();
-      }
-      if (!auth || !auth.session) {
-        throw new Error('No fue posible completar el inicio de sesión con Google.');
-      }
-
-      redirectToReturn();
+      await exchangeSession();
+      /* Immediate hop back — never fall through to "/" (htaccess → default showroom). */
+      window.location.replace((window.location.origin || '') + returnPath);
     } catch (err) {
       console.error('[OAuth callback]', err);
-      fail(
-        typeof AuthErrors !== 'undefined' && AuthErrors.translate
-          ? AuthErrors.translate(err)
-          : (err && err.message) || 'Error de autenticación.'
+      setStatus(
+        (err && err.message) || 'No fue posible completar el inicio de sesión.',
+        true
       );
     }
   }

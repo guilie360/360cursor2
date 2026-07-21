@@ -15,44 +15,68 @@ var OAuthApi = (function () {
     if (path.charAt(0) !== '/') return false;
     if (path.indexOf('//') === 0) return false;
     if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return false;
-    if (path.indexOf('/auth/callback') === 0) return false;
+    if (path === '/') return false;
+    if (/^\/index\.html$/i.test(path)) return false;
+    if (path.indexOf('/auth/') === 0) return false;
     return true;
   }
 
   function currentReturnPath() {
-    var path = window.location.pathname || '/';
+    var path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
     if (path === '/' || /^\/index\.html$/i.test(path)) {
       var slug =
         typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
           : new URLSearchParams(window.location.search).get('proyecto');
-      if (slug) return '/' + encodeURIComponent(slug);
+      if (slug) return '/' + String(slug).replace(/^\/+/, '');
+      return null;
     }
     return path;
   }
 
+  function writeReturnState(state) {
+    var raw = JSON.stringify(state);
+    try { sessionStorage.setItem(RETURN_STATE_KEY, raw); } catch (e) {}
+    try { localStorage.setItem(RETURN_STATE_KEY, raw); } catch (e) {}
+  }
+
+  function readReturnStateRaw() {
+    try {
+      var fromSession = sessionStorage.getItem(RETURN_STATE_KEY);
+      if (fromSession) return fromSession;
+    } catch (e) {}
+    try {
+      return localStorage.getItem(RETURN_STATE_KEY);
+    } catch (e2) {
+      return null;
+    }
+  }
+
+  function clearReturnState() {
+    try { sessionStorage.removeItem(RETURN_STATE_KEY); } catch (e) {}
+    try { localStorage.removeItem(RETURN_STATE_KEY); } catch (e2) {}
+  }
+
   function saveReturnState() {
     try {
-      sessionStorage.setItem(RETURN_STATE_KEY, JSON.stringify({
+      var returnPath = currentReturnPath();
+      if (!isSafeReturnPath(returnPath)) return;
+      writeReturnState({
         scrollY: window.scrollY || 0,
         navStack: typeof navStack !== 'undefined' ? navStack.slice() : [],
         hadNavStack: typeof navStack !== 'undefined' && navStack.length > 0,
-        returnPath: currentReturnPath()
-      }));
+        returnPath: returnPath
+      });
     } catch (e) {}
   }
 
   function hasReturnState() {
-    try {
-      return !!sessionStorage.getItem(RETURN_STATE_KEY);
-    } catch (e) {
-      return false;
-    }
+    return !!readReturnStateRaw();
   }
 
   function peekReturnPath() {
     try {
-      var raw = sessionStorage.getItem(RETURN_STATE_KEY);
+      var raw = readReturnStateRaw();
       var state = raw ? JSON.parse(raw) : null;
       if (state && isSafeReturnPath(state.returnPath)) return state.returnPath;
       if (state && state.proyecto) {
@@ -60,7 +84,7 @@ var OAuthApi = (function () {
         if (isSafeReturnPath(legacy)) return legacy;
       }
     } catch (e) {}
-    return '/';
+    return null;
   }
 
   function restoreNavStack(screens) {
@@ -80,8 +104,8 @@ var OAuthApi = (function () {
       options.enterProject = false;
     }
     try {
-      var raw = sessionStorage.getItem(RETURN_STATE_KEY);
-      sessionStorage.removeItem(RETURN_STATE_KEY);
+      var raw = readReturnStateRaw();
+      clearReturnState();
       var state = raw ? JSON.parse(raw) : null;
 
       if (state) {
@@ -165,6 +189,7 @@ var OAuthApi = (function () {
 
   return {
     PROVIDERS: PROVIDERS,
+    RETURN_STATE_KEY: RETURN_STATE_KEY,
     handleGoogleAuth: handleGoogleAuth,
     signInWithGoogle: handleGoogleAuth,
     startProviderSignIn: handleGoogleAuth,
@@ -172,7 +197,8 @@ var OAuthApi = (function () {
     restoreUiState: restoreUiState,
     restoreReturnState: restoreUiState,
     hasReturnState: hasReturnState,
-    peekReturnPath: peekReturnPath
+    peekReturnPath: peekReturnPath,
+    isSafeReturnPath: isSafeReturnPath
   };
 })();
 
