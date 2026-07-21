@@ -91,9 +91,13 @@ var VisitorMenu = (function () {
           '</div>' +
           '<div class="menu-profile-strip-actions">' +
             primaryStripActionHtml() +
-            '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
-              ICON_SETTINGS + '<span>' + STYLE_V3_LABEL + '</span>' +
-            '</button>' +
+            (isAdminProfile()
+              ? (
+                '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
+                  ICON_SETTINGS + '<span>' + STYLE_V3_LABEL + '</span>' +
+                '</button>'
+              )
+              : '') +
             '<button type="button" class="menu-profile-action menu-logout-btn">' +
               ICON_LOGOUT + '<span>Salir</span>' +
             '</button>' +
@@ -166,6 +170,7 @@ var VisitorMenu = (function () {
     });
     document.querySelectorAll('.menu-personalize-v2-btn').forEach(function (btn) {
       btn.onclick = function () {
+        if (!isAdminProfile()) return;
         if (typeof goTo === 'function') {
           goTo('menu-personalizar-v2');
           return;

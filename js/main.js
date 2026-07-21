@@ -3167,6 +3167,15 @@ function showScreen(id) {
     return;
   }
   if (id === 'menu-personalizar-v2') {
+    var canStyle =
+      typeof PlatformRoles !== 'undefined' &&
+      typeof VisitorSession !== 'undefined' &&
+      PlatformRoles.isAdmin(VisitorSession.getProfile());
+    if (!canStyle) {
+      showMainMenuPanel();
+      showMenuLevel('primary');
+      return;
+    }
     showMainMenuPanel();
     ensureMenuPrimaryBeforePersonalizar();
     showMenuLevel('personalizar-v2');
