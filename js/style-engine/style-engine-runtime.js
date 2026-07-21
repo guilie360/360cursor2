@@ -89,6 +89,7 @@ var StyleEngineRuntime = (function () {
   }
 
   var activating = false;
+  var activatingLegacy = false;
 
   function activatePublished() {
     window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
@@ -128,6 +129,9 @@ var StyleEngineRuntime = (function () {
   }
 
   function activateLegacy() {
+    if (activatingLegacy) return;
+    activatingLegacy = true;
+    try {
     console.log('[ACTIVATE-LEGACY] 1 ENTER activateLegacy', Date.now());
 
     /* --- clearApplied() inlined with step logs (same operations) --- */
@@ -246,6 +250,9 @@ var StyleEngineRuntime = (function () {
     }
 
     console.log('[ACTIVATE-LEGACY] 46 EXIT activateLegacy', Date.now());
+    } finally {
+      activatingLegacy = false;
+    }
   }
 
   function sync(options) {

@@ -1418,13 +1418,6 @@ var ThemeSystem = (function () {
       document.body.classList.toggle('theme-light', isCustomLightTheme(CUSTOM_THEME_KEY, getTheme(CUSTOM_THEME_KEY)));
       return CUSTOM_THEME_KEY;
     }
-    if (typeof ProjectThemeAuthority !== 'undefined' &&
-        typeof ProjectThemeAuthority.shouldApplyProjectDefault === 'function' &&
-        ProjectThemeAuthority.shouldApplyProjectDefault() &&
-        typeof ProjectThemeAuthority.applyDefaultForCurrentVisitor === 'function' &&
-        ProjectThemeAuthority.applyDefaultForCurrentVisitor()) {
-      return state.themeKey;
-    }
     if (state.themeKey === CUSTOM_THEME_KEY && state.customTheme) {
       apply(state.themeKey, false, state.customTheme);
     } else {
