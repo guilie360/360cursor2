@@ -781,10 +781,10 @@ function buildUnitsData(project) {
 }
 
 /**
- * LIVE "HALL" is a shared style name — confirm it matches this project's official theme
- * before reinforcing cached Style Engine state.
+ * Confirm LIVE Style Engine draft matches this project's official theme
+ * (project_default_theme) before reinforcing cached state. Never use style names.
  */
-function hallThemeIdentityFingerprint(theme) {
+function themeIdentityFingerprint(theme) {
   if (!theme || typeof theme !== 'object') return '';
   var keys = [
     'bg', 'accent', 'surface', 'menuColor', 'hoverColor', 'maskColor',
@@ -801,7 +801,7 @@ function hallThemeIdentityFingerprint(theme) {
   return parts.join('|');
 }
 
-function isLiveHallForCurrentProject() {
+function isLiveOfficialThemeForCurrentProject() {
   var official = null;
   if (typeof ProjectThemeAuthority !== 'undefined' &&
       typeof ProjectThemeAuthority.getOfficialDraft === 'function') {
@@ -825,8 +825,8 @@ function isLiveHallForCurrentProject() {
     liveDraft = ThemeSystem.normalizeCustomConfig(liveDraft);
   }
 
-  var liveFp = hallThemeIdentityFingerprint(liveDraft);
-  var officialFp = hallThemeIdentityFingerprint(official);
+  var liveFp = themeIdentityFingerprint(liveDraft);
+  var officialFp = themeIdentityFingerprint(official);
   return !!(liveFp && officialFp && liveFp === officialFp);
 }
 
@@ -875,19 +875,14 @@ function applyProjectData(project) {
         var skipForce = typeof ThemeSystem !== 'undefined' &&
           ThemeSystem.isExplicitUserChoice &&
           ThemeSystem.isExplicitUserChoice();
-        var activeMeta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
-          ? StyleEngineStore.getActiveStyleMeta()
-          : null;
-        var activeIsHall = activeMeta &&
-          String(activeMeta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
         var seLive = typeof StyleEngineCompatibility !== 'undefined' &&
           StyleEngineCompatibility.isStyleEngineLive &&
           StyleEngineCompatibility.isStyleEngineLive();
-        /* Name "HALL" is shared across projects — only reinforce if LIVE matches this project's official theme. */
-        var hallBelongsToCurrentProject = activeIsHall && seLive && isLiveHallForCurrentProject();
+        /* Reinforce only when LIVE draft matches this project's official theme. */
+        var officialLive =
+          seLive && isLiveOfficialThemeForCurrentProject();
 
-        /* Si HALL del proyecto actual ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
-        if (hallBelongsToCurrentProject && !skipForce) {
+        if (officialLive && !skipForce) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: reinforcePublished');
           window.__pdTrace('theme branch · reinforcePublished');
           if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
@@ -895,7 +890,7 @@ function applyProjectData(project) {
               StyleEngineRuntime.reinforcePublished();
             });
           }
-        } else if (!skipForce || activeIsHall) {
+        } else if (!skipForce) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: forceApplyOfficialTheme');
           window.__pdTrace('theme branch · forceApplyOfficialTheme');
           try {
@@ -928,11 +923,26 @@ function applyProjectData(project) {
     } else {
       window.__pdTrace('theme branch · deferred setTimeout (no ProjectThemeAuthority)');
       window.setTimeout(function () {
-        if (typeof StyleEngineCompatibility !== 'undefined' &&
-            StyleEngineCompatibility.isStyleEngineLive()) {
-          if (typeof StyleEngineRuntime !== 'undefined') StyleEngineRuntime.reinforcePublished();
-          window.__pdTrace('deferred theme · reinforcePublished then return');
-          return;
+        if (typeof ProjectThemeAuthority !== 'undefined' &&
+            typeof ProjectThemeAuthority.forceApplyOfficialTheme === 'function') {
+          var skipDeferred = typeof ThemeSystem !== 'undefined' &&
+            ThemeSystem.isExplicitUserChoice &&
+            ThemeSystem.isExplicitUserChoice();
+          if (!skipDeferred) {
+            if (typeof StyleEngineCompatibility !== 'undefined' &&
+                StyleEngineCompatibility.isStyleEngineLive &&
+                StyleEngineCompatibility.isStyleEngineLive() &&
+                isLiveOfficialThemeForCurrentProject() &&
+                typeof StyleEngineRuntime !== 'undefined' &&
+                StyleEngineRuntime.reinforcePublished) {
+              StyleEngineRuntime.reinforcePublished();
+              window.__pdTrace('deferred theme · reinforcePublished');
+            } else {
+              ProjectThemeAuthority.forceApplyOfficialTheme();
+              window.__pdTrace('deferred theme · forceApplyOfficialTheme');
+            }
+            return;
+          }
         }
         if (typeof ThemeSystem !== 'undefined' && typeof ThemeSystem.reapply === 'function') {
           ThemeSystem.reapply();

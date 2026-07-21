@@ -49,6 +49,36 @@ var StyleEngineRuntime = (function () {
 
   var applyingMaterials = false;
 
+  function themeIdentityFingerprint(theme) {
+    if (!theme || typeof theme !== 'object') return '';
+    var keys = [
+      'bg', 'accent', 'surface', 'menuColor', 'hoverColor', 'maskColor',
+      'textMode', 'bgTextMode', 'visualDepth', 'panelGlass', 'bgGlass', 'buttonGlass',
+      'borderGlass', 'shadowGlass', 'heroSurface', 'heroHoverColor', 'heroLayout',
+      'buttonBorderColor', 'buttonHoverBorderColor', 'themeKey'
+    ];
+    var parts = [];
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (theme[key] == null || theme[key] === '') continue;
+      parts.push(key + '=' + String(theme[key]).trim().toLowerCase());
+    }
+    return parts.join('|');
+  }
+
+  function draftsMatchOfficial(draft, official) {
+    if (!draft || !official) return false;
+    var a = draft;
+    var b = official;
+    if (typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig) {
+      a = ThemeSystem.normalizeCustomConfig(draft);
+      b = ThemeSystem.normalizeCustomConfig(official);
+    }
+    var fpA = themeIdentityFingerprint(a);
+    var fpB = themeIdentityFingerprint(b);
+    return !!(fpA && fpB && fpA === fpB);
+  }
+
   function applyPersonalizarMaterialsIfAny() {
     if (applyingMaterials) return;
     if (typeof StyleEnginePersonalizarMapper === 'undefined') return;
@@ -69,12 +99,8 @@ var StyleEngineRuntime = (function () {
         : PROJECT_DEFAULT_THEME_FALLBACK;
     }
 
-    var meta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
-      ? StyleEngineStore.getActiveStyleMeta()
-      : null;
-    var isHall = meta && String(meta.name || '').replace(/\s+/g, '').toUpperCase() === 'HALL';
-
-    if ((isHall && official) || (!draft && official)) {
+    /* Prefer official when missing draft or LIVE draft is the project's official theme. */
+    if ((!draft && official) || (draft && official && draftsMatchOfficial(draft, official))) {
       draft = official;
     }
 
