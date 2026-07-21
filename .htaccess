@@ -3,8 +3,11 @@
   RewriteEngine On
   RewriteBase /
 
-  # TEMPORARY: no platform landing yet — / → /demo (remove when landing exists)
-  RewriteRule ^$ /demo [R=302,L]
+  # TEMPORARY: no platform landing yet — / → /demo1 (remove when landing exists)
+  RewriteRule ^$ /demo1 [R=302,L]
+
+  # Legacy slug alias after rename demo → demo1
+  RewriteRule ^demo/?$ /demo1 [R=302,L]
 
   # Serve real files and directories as-is
   RewriteCond %{REQUEST_FILENAME} -f [OR]

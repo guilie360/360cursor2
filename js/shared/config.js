@@ -1,8 +1,8 @@
 /* Shared Supabase project configuration (public read + admin auth) */
 var SUPABASE_URL = 'https://emefdwzdfnqgjohbtvvn.supabase.co';
 var SUPABASE_ANON_KEY = 'sb_publishable_GmJNU3DZQqPgNBi6QVa5bA_2h--bgKz';
-var DEFAULT_PROJECT_SLUG = 'demo';
-var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo';
+var DEFAULT_PROJECT_SLUG = 'demo1';
+var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo1';
 
 /**
  * Resolve project slug from the URL only.
