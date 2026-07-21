@@ -78,9 +78,15 @@ var ProyectosApi = (function () {
   }
 
   async function createDefaultConfig(proyectoId) {
+    var seed =
+      typeof HallDesignSystem !== 'undefined' && typeof HallDesignSystem.seedProjectConfigPayload === 'function'
+        ? HallDesignSystem.seedProjectConfigPayload()
+        : (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
+          ? { project_default_theme: PROJECT_DEFAULT_THEME_FALLBACK }
+          : {});
     var result = await AdminApi.getClient()
       .from('proyecto_config')
-      .insert({ proyecto_id: proyectoId });
+      .insert(Object.assign({ proyecto_id: proyectoId }, seed));
     if (result.error) {
       throw mapDbError(result.error, 'Error creando configuración del proyecto');
     }

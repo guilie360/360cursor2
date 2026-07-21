@@ -19,22 +19,22 @@ var BoxiesAdmin2Projects = (function () {
 
   function badge(project) {
     if (project.publicado) {
-      return '<span class="bx-badge is-live">Publicado</span>';
+      return '<span class="hall-badge is-live">Publicado</span>';
     }
-    return '<span class="bx-badge is-draft">' + escapeHtml(project.estado || 'borrador') + '</span>';
+    return '<span class="hall-badge is-draft">' + escapeHtml(project.estado || 'borrador') + '</span>';
   }
 
   function openModal() {
     var modal = document.getElementById('bxComingSoonModal');
     if (!modal) return;
-    modal.classList.add('is-open');
+    modal.classList.add('active');
     modal.setAttribute('aria-hidden', 'false');
   }
 
   function closeModal() {
     var modal = document.getElementById('bxComingSoonModal');
     if (!modal) return;
-    modal.classList.remove('is-open');
+    modal.classList.remove('active');
     modal.setAttribute('aria-hidden', 'true');
   }
 
@@ -59,12 +59,12 @@ var BoxiesAdmin2Projects = (function () {
     var editHref = '../admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug);
     return (
       '<tr>' +
-        '<td><span class="bx-project-name">' + escapeHtml(name) + '</span>' +
-          '<span class="bx-project-slug">' + escapeHtml(slug) + '</span></td>' +
+        '<td><span class="hall-project-name">' + escapeHtml(name) + '</span>' +
+          '<span class="hall-project-slug">' + escapeHtml(slug) + '</span></td>' +
         '<td>' + badge(project) + '</td>' +
         '<td><code>/' + escapeHtml(slug) + '</code></td>' +
         '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
-        '<td><a class="bx-btn bx-btn-ghost bx-btn-compact" href="' + escapeHtml(editHref) + '">Editar</a></td>' +
+        '<td><a class="outline-btn hall-inline-link" href="' + escapeHtml(editHref) + '">Editar</a></td>' +
       '</tr>'
     );
   }
@@ -72,16 +72,16 @@ var BoxiesAdmin2Projects = (function () {
   async function render(host) {
     bindModal();
     host.innerHTML =
-      '<div class="bx-toolbar">' +
-        '<div class="bx-section-header" style="margin:0">' +
+      '<div class="hall-toolbar">' +
+        '<div class="hall-section-header" style="margin:0">' +
           '<h1>Proyectos</h1>' +
           '<p>Showrooms administrados en BOXIES.</p>' +
         '</div>' +
-        '<button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxNewProjectBtn">+ Nuevo Proyecto</button>' +
+        '<button type="button" class="outline-btn auth-action-btn hall-btn-compact" id="bxNewProjectBtn">+ Nuevo Proyecto</button>' +
       '</div>' +
-      '<div class="bx-card bx-card-flush">' +
-        '<div class="bx-table-wrap">' +
-          '<table class="bx-table">' +
+      '<div class="hall-panel hall-panel-flush">' +
+        '<div class="hall-table-wrap">' +
+          '<table class="hall-table">' +
             '<thead><tr>' +
               '<th>Proyecto</th><th>Estado</th><th>URL pública</th><th>Última modificación</th><th>Acciones</th>' +
             '</tr></thead>' +

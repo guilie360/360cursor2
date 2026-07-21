@@ -8,7 +8,7 @@ var BoxiesAdmin2Auth = (function () {
     var el = $('bxLoginMessage');
     if (!el) return;
     el.textContent = text || '';
-    el.className = 'bx-form-message' + (type ? ' ' + type : '');
+    el.className = 'auth-modal-message' + (type === 'error' ? ' is-error' : '');
   }
 
   function showView(name) {
@@ -163,7 +163,6 @@ var BoxiesAdmin2Auth = (function () {
           return;
         }
         submitBtn.disabled = true;
-        form.classList.add('is-loading');
         if (submitText) submitText.textContent = 'Entrando…';
         setMessage('');
         try {
@@ -177,7 +176,6 @@ var BoxiesAdmin2Auth = (function () {
           }
           setMessage(msg, 'error');
           submitBtn.disabled = false;
-          form.classList.remove('is-loading');
           if (submitText) submitText.textContent = 'Iniciar sesión';
         }
       });
@@ -217,6 +215,12 @@ var BoxiesAdmin2Auth = (function () {
   }
 
   async function init(onReadyApp) {
+    if (typeof HallDesignSystem !== 'undefined') {
+      HallDesignSystem.paint({ persist: false });
+    } else {
+      document.documentElement.classList.add('theme-ready');
+    }
+
     bindLoginForm(onReadyApp);
 
     if (typeof VisitorAuth !== 'undefined' && typeof VisitorAuth.onAuthStateChange === 'function') {
@@ -252,10 +256,8 @@ var BoxiesAdmin2Auth = (function () {
     } catch (e) {}
     showView('login');
     setMessage('');
-    var form = $('bxLoginForm');
     var submitBtn = $('bxLoginSubmit');
     var submitText = $('bxLoginSubmitText');
-    if (form) form.classList.remove('is-loading');
     if (submitBtn) submitBtn.disabled = false;
     if (submitText) submitText.textContent = 'Iniciar sesión';
   }

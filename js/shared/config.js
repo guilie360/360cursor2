@@ -55,7 +55,10 @@ function getProjectSlugFromUrl() {
 var NAV_RESUME_GATE_ENABLED = false;
 
 /*
- * HALL — estilo oficial (como se ve en file:// con el look correcto).
+ * HALL — Design System oficial de BOXIES (no solo un tema de proyecto).
+ * Toda superficie de plataforma (showroom, login, Global Admin, builder, tools)
+ * debe nacer y verse con este ADN. Ver .cursor/rules/hall-design-system.mdc
+ *
  * Máscara/Superficies/Menú: Cristal · Botones: Sólido negro
  * Hover: Cristal · Sombras: Alta · Viñeta: Media · Texto: Claro
  * Portada: Posición 2 (EXPLORAR | título | INICIAR)

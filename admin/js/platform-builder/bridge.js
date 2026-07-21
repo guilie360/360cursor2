@@ -124,7 +124,15 @@ var PlatformBuilderBridge = (function () {
     }
 
     async function createDefaultConfig(proyectoId) {
-      var result = await getClient().from('proyecto_config').insert({ proyecto_id: proyectoId });
+      var seed =
+        typeof HallDesignSystem !== 'undefined' && typeof HallDesignSystem.seedProjectConfigPayload === 'function'
+          ? HallDesignSystem.seedProjectConfigPayload()
+          : (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
+            ? { project_default_theme: PROJECT_DEFAULT_THEME_FALLBACK }
+            : {});
+      var result = await getClient()
+        .from('proyecto_config')
+        .insert(Object.assign({ proyecto_id: proyectoId }, seed));
       if (result.error) throw new Error(result.error.message || 'Error creando configuración');
     }
 

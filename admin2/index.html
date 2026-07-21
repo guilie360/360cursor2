@@ -4,91 +4,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BOXIES | Administración</title>
-  <link rel="stylesheet" href="css/boxies-admin.css">
+  <!-- HALL Design System (tokens + components) — no parallel theme -->
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="css/shell.css">
 </head>
 <body class="bx-admin2">
 
-  <!-- Login — mismo lenguaje visual HALL / panel de administración de proyectos -->
-  <div id="bxLoginView" class="bx-login-shell" hidden>
-    <div class="bx-login-card">
-      <div class="bx-login-brand">BOXIES</div>
-      <p class="bx-login-sub">Administración de la plataforma</p>
+  <!-- Login — same auth-experience language as showroom HALL -->
+  <div id="bxLoginView" class="hall-login-page" hidden>
+    <div class="content-modal-box auth-experience-box">
+      <div class="hall-login-brand">BOXIES</div>
+      <h2 class="auth-gate-title">Administración</h2>
+      <p class="auth-view-lead">Entra con la misma cuenta de administrador del showroom.</p>
 
-      <form id="bxLoginForm" novalidate>
-        <div class="bx-field">
-          <label for="bxEmail">Correo electrónico</label>
+      <div class="auth-oauth-row">
+        <button type="button" class="outline-btn auth-oauth-btn" id="bxGoogleBtn">Google</button>
+      </div>
+      <div class="auth-oauth-divider" aria-hidden="true">o continúa con tu correo</div>
+
+      <form id="bxLoginForm" class="auth-modal-form" novalidate>
+        <label class="auth-field">
+          <span>Correo electrónico</span>
           <input id="bxEmail" type="email" autocomplete="email" placeholder="correo@empresa.com" required>
-        </div>
-        <div class="bx-field">
-          <label for="bxPassword">Contraseña</label>
-          <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
-          <button type="button" class="bx-toggle-password" id="bxTogglePassword" aria-label="Mostrar contraseña">Mostrar</button>
-        </div>
-
-        <label class="bx-remember-row">
-          <input id="bxRemember" type="checkbox" checked>
-          <span>Recordar mi correo</span>
         </label>
-
-        <button type="submit" class="bx-btn bx-btn-primary" id="bxLoginSubmit">
-          <span class="bx-spinner" aria-hidden="true"></span>
+        <label class="auth-field">
+          <span>Contraseña</span>
+          <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="button" class="auth-toggle-password" id="bxTogglePassword">Mostrar</button>
+        </label>
+        <label class="auth-remember-row">
+          <input id="bxRemember" type="checkbox" checked>
+          <span>Recordarme en este dispositivo</span>
+        </label>
+        <button type="submit" class="outline-btn auth-action-btn" id="bxLoginSubmit">
           <span id="bxLoginSubmitText">Iniciar sesión</span>
         </button>
       </form>
 
-      <div class="bx-divider"><span>o</span></div>
-
-      <button type="button" class="bx-btn bx-btn-secondary" id="bxGoogleBtn">Continuar con Google</button>
-
-      <div class="bx-form-message" id="bxLoginMessage" role="alert"></div>
+      <div class="auth-modal-message" id="bxLoginMessage" role="alert"></div>
     </div>
   </div>
 
-  <!-- 403 -->
-  <div id="bxForbiddenView" class="bx-forbidden-shell" hidden>
-    <div class="bx-card bx-forbidden-card">
+  <div id="bxForbiddenView" class="hall-forbidden-page" hidden>
+    <div class="hall-panel">
       <h1>Acceso denegado</h1>
-      <p>Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES. El acceso al Dashboard Global requiere el mismo rol <code>admin</code> que el panel de un proyecto.</p>
-      <div class="bx-forbidden-actions">
-        <button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxForbiddenLogout">Cerrar sesión</button>
+      <p>Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES. El acceso requiere el mismo rol <code>admin</code> que el panel de un proyecto.</p>
+      <div class="hall-forbidden-actions">
+        <button type="button" class="outline-btn auth-action-btn hall-btn-compact" id="bxForbiddenLogout">Cerrar sesión</button>
       </div>
     </div>
   </div>
 
-  <!-- App -->
-  <div id="bxAppView" class="bx-app" hidden>
-    <aside class="bx-sidebar">
-      <div class="bx-sidebar-brand">BOXIES</div>
-      <nav class="bx-nav" id="bxNav" aria-label="Navegación">
-        <button type="button" class="bx-nav-item is-active" data-bx-section="dashboard">Dashboard</button>
-        <button type="button" class="bx-nav-item" data-bx-section="projects">Proyectos</button>
-        <button type="button" class="bx-nav-item" data-bx-section="users">Usuarios</button>
-        <button type="button" class="bx-nav-item" data-bx-section="templates">Plantillas</button>
-        <button type="button" class="bx-nav-item" data-bx-section="media">Media</button>
-        <button type="button" class="bx-nav-item" data-bx-section="settings">Configuración</button>
+  <div id="bxAppView" class="hall-app" hidden>
+    <aside class="hall-sidebar">
+      <div class="hall-sidebar-brand">BOXIES</div>
+      <nav class="hall-nav" id="bxNav" aria-label="Navegación">
+        <button type="button" class="hall-nav-item is-active" data-bx-section="dashboard">Dashboard</button>
+        <button type="button" class="hall-nav-item" data-bx-section="projects">Proyectos</button>
+        <button type="button" class="hall-nav-item" data-bx-section="users">Usuarios</button>
+        <button type="button" class="hall-nav-item" data-bx-section="templates">Plantillas</button>
+        <button type="button" class="hall-nav-item" data-bx-section="media">Media</button>
+        <button type="button" class="hall-nav-item" data-bx-section="settings">Configuración</button>
       </nav>
-      <div class="bx-sidebar-foot">
-        <div class="bx-user-chip" id="bxUserChip"></div>
-        <button type="button" class="bx-btn bx-btn-ghost" id="bxLogoutBtn">Cerrar sesión</button>
+      <div class="hall-sidebar-foot">
+        <div class="hall-user-chip" id="bxUserChip"></div>
+        <button type="button" class="outline-btn auth-action-btn hall-btn-compact" id="bxLogoutBtn">Cerrar sesión</button>
       </div>
     </aside>
-    <main class="bx-main" id="bxMain"></main>
+    <main class="hall-main" id="bxMain"></main>
   </div>
 
-  <div class="bx-modal" id="bxComingSoonModal" aria-hidden="true">
-    <div class="bx-modal-box">
-      <h2>Función en desarrollo</h2>
-      <p>La creación automática de proyectos será implementada en la siguiente fase.</p>
-      <div class="bx-modal-actions">
-        <button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxComingSoonClose">Entendido</button>
-      </div>
+  <div class="content-modal" id="bxComingSoonModal" aria-hidden="true">
+    <div class="content-modal-box">
+      <h2 class="content-modal-title">Función en desarrollo</h2>
+      <p class="info-text">La creación automática de proyectos será implementada en la siguiente fase.</p>
+      <button type="button" class="outline-btn auth-action-btn hall-btn-compact" id="bxComingSoonClose">Entendido</button>
     </div>
   </div>
 
-  <!-- Same auth stack as showrooms / platform builder (not constructora AdminAuth) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
   <script src="../js/shared/constants.js"></script>
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    /* Paint HALL before first paint (html.theme-ready unlocks body) */
+    if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+    else document.documentElement.classList.add('theme-ready');
+  </script>
   <script src="../js/auth/client.js"></script>
   <script src="../js/auth/storage-prefs.js"></script>
   <script src="../js/auth/redirects.js"></script>

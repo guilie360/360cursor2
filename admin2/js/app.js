@@ -1,4 +1,4 @@
-/* BOXIES Global Admin V2 — app shell */
+/* BOXIES Global Admin — app shell (HALL Design System) */
 (function () {
   var SECTIONS = {
     dashboard: BoxiesAdmin2Dashboard,
@@ -42,7 +42,7 @@
     setActiveNav(id);
     var host = document.getElementById('bxMain');
     if (!host) return;
-    host.innerHTML = '<div class="bx-card"><p style="color:var(--bx-muted)">Cargando…</p></div>';
+    host.innerHTML = '<div class="hall-panel"><p class="auth-view-lead">Cargando…</p></div>';
     await SECTIONS[id].render(host);
   }
 

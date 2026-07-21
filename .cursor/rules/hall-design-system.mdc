@@ -1,0 +1,60 @@
+---
+description: HALL is the official BOXIES Design System — no parallel visual identities
+alwaysApply: true
+---
+
+# HALL — Design System oficial de BOXIES
+
+## Decisión permanente
+
+**HALL es el Design System oficial de toda la plataforma BOXIES.**
+
+No es solo un tema de proyecto. Define la identidad visual de login, dashboards, modales, builders, formularios, tablas y cualquier herramienta futura.
+
+## Fuente de verdad
+
+1. **Config / ADN:** `js/shared/config.js` → `PROJECT_DEFAULT_THEME_FALLBACK`, `PROJECT_DEFAULT_STYLE_NAME = 'HALL'`
+2. **Tokens en vivo:** `css/variables.css` + `ThemeSystem` → `--bg-*`, `--glass-*`, `--text-*`, `--btn-*`
+3. **Componentes:** `css/components.css` (`.glass-surface`, `.outline-btn`, `.content-modal*`, `.auth-experience*`, etc.)
+4. **Aplicación platform-wide:** `js/platform/hall-design-system.js` → `HallDesignSystem.paint()`
+
+## Obligatorio
+
+- Toda vista/módulo nuevo **nace con HALL** (pintar tokens + reutilizar clases existentes).
+- Antes de diseñar: preguntar si el componente ya existe en HALL / `components.css`.
+- Proyectos nuevos: persistir `project_default_theme` = HALL al crear (`createDefaultConfig`).
+- Login / Dashboard Global / Builder / herramientas internas: mismo ADN visual.
+
+## Prohibido
+
+- Crear CSS que **copie o aproxime** HALL (`--bx-*`, `--admin-theme-*`, “tema dashboard”, etc.).
+- Inventar identidad visual por módulo (Login A, Dashboard B, Panel C).
+- Duplicar botones, inputs, cards, modales o badges “parecidos”.
+- Estilos layout con colores hardcodeados que no salgan de tokens HALL.
+
+## Layout-only CSS
+
+Si una pantalla necesita estructura (sidebar, grid), el CSS **solo** puede:
+
+- Posicionar / dimensionar
+- Consumir `var(--bg-*)`, `var(--glass-*)`, `var(--text-*)`, `var(--border)`, etc.
+
+Nunca redefinir la identidad.
+
+## Ejemplo
+
+```html
+<!-- ✅ Reutilizar -->
+<button class="outline-btn auth-action-btn">Iniciar sesión</button>
+<div class="content-modal-box auth-experience-box">…</div>
+
+<!-- ❌ Inventar -->
+<button class="bx-btn-primary">Entrar</button>
+```
+
+```js
+// ✅ Al montar una herramienta de plataforma
+HallDesignSystem.paint({ persist: false });
+
+// ❌ Nuevo archivo CSS con paleta propia
+```
