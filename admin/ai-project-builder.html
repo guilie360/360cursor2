@@ -1,15 +1,20 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="theme-ready">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BOXIES AI</title>
-  <!-- HALL Design System pipeline, then builder layout chrome -->
+  <!-- theme-ready on <html> prevents variables.css from hiding body (blank screen) -->
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="css/admin-auth.css">
   <link rel="stylesheet" href="css/ai-project-builder.css?v=viv2">
   <style>
+    /* Builder must never stay invisible if theme-ready races */
+    html.theme-ready body.platform-builder-shell,
+    body.platform-builder-shell {
+      visibility: visible !important;
+    }
     .platform-builder-shell {
       min-height: 100vh;
       padding: 0;
@@ -25,7 +30,15 @@
     <div class="user-chip" id="builderUserChip"></div>
   </div>
 
-  <main id="builderRoot"></main>
+  <main id="builderRoot">
+    <p style="padding:24px;color:rgba(255,255,255,0.5);font-family:system-ui,sans-serif;font-size:14px">
+      Cargando builder…
+    </p>
+  </main>
+
+  <script>
+    console.log('[builder] 1 HTML cargado');
+  </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
@@ -34,8 +47,17 @@
   <script src="../js/theme-system.js"></script>
   <script src="../js/platform/hall-design-system.js"></script>
   <script>
-    if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
-    else document.documentElement.classList.add('theme-ready');
+    (function () {
+      try {
+        document.documentElement.classList.add('theme-ready');
+        if (typeof HallDesignSystem !== 'undefined') {
+          HallDesignSystem.paint({ persist: false });
+        }
+      } catch (e) {
+        console.warn('[builder] early paint', e);
+        document.documentElement.classList.add('theme-ready');
+      }
+    })();
   </script>
   <script src="../js/auth/client.js"></script>
   <script src="../js/auth/storage-prefs.js"></script>
@@ -50,7 +72,6 @@
   <script src="../js/auth/api/oauth.js?v=auth-unify-001"></script>
   <script src="../js/auth/visitor-auth.js"></script>
   <script src="../js/visitor-session.js"></script>
-  <script src="../js/auth/bootstrap.js"></script>
   <script src="../js/theme-ai/theme-color-math.js"></script>
   <script src="../js/theme-ai/theme-brand-intelligence.js"></script>
   <script src="../js/theme-ai/theme-brand-analyzer.js"></script>
@@ -78,22 +99,8 @@
   <script src="js/builder/engines/hotspot-engine.js"></script>
   <script src="js/builder/engines/validation-engine.js"></script>
   <script src="js/builder/engines/publishing-engine.js?v=upd1"></script>
-  <script src="js/views/ai-project-builder.js?v=showlog1"></script>
+  <script src="js/views/ai-project-builder.js?v=stab-002"></script>
   <script src="js/platform-builder/bridge.js?v=path1"></script>
-  <script src="js/platform-builder/bootstrap.js?v=stab-001"></script>
-  <script>
-    (function () {
-      function refreshChip() {
-        var el = document.getElementById('builderUserChip');
-        if (!el || typeof VisitorSession === 'undefined') return;
-        var p = VisitorSession.getProfile();
-        if (!p) return;
-        el.innerHTML = 'Admin · <strong>' + (p.nombre_visible || p.nombre || 'Usuario') + '</strong>';
-      }
-      if (typeof AuthBootstrap !== 'undefined') {
-        AuthBootstrap.whenReady().then(refreshChip);
-      }
-    })();
-  </script>
+  <script src="js/platform-builder/bootstrap.js?v=stab-002"></script>
 </body>
 </html>

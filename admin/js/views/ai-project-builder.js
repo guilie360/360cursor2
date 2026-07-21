@@ -1815,7 +1815,12 @@ var AiProjectBuilderView = (function () {
   function canAccessBuilder() {
     if (typeof PlatformRoles !== 'undefined' && typeof VisitorSession !== 'undefined') {
       var profile = VisitorSession.getProfile();
-      if (profile) return PlatformRoles.isAdmin(profile);
+      if (profile) {
+        if (typeof PlatformRoles.isPlatformAdmin === 'function') {
+          return PlatformRoles.isPlatformAdmin(profile);
+        }
+        return PlatformRoles.isAdmin(profile);
+      }
     }
     if (typeof AdminState !== 'undefined' && typeof AdminState.isAdmin === 'function') {
       return AdminState.isAdmin();
