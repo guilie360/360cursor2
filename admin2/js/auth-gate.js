@@ -37,6 +37,7 @@ var BoxiesAdmin2Auth = (function () {
     document.body.classList.toggle('platform-builder-shell', builderOn);
     document.body.classList.toggle('builder-has-dock', builderOn);
     document.documentElement.classList.toggle('builder-has-dock', builderOn);
+    document.body.classList.toggle('login-page', name === 'login' || name === 'forbidden');
   }
 
   function admin2ReturnPath() {

@@ -1,4 +1,4 @@
-/* BOXIES Global Dashboard — Builder chrome (demo3 parity) */
+/* BOXIES Global Dashboard — uses official BoxiesAppShell (Builder template) */
 (function () {
   var SECTIONS = {
     dashboard: BoxiesAdmin2Dashboard,
@@ -8,6 +8,8 @@
     media: BoxiesAdmin2Media,
     settings: BoxiesAdmin2Settings
   };
+
+  var shellMounted = false;
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -19,6 +21,53 @@
     document.body.classList.toggle('platform-builder-shell', !!on);
     document.body.classList.toggle('builder-has-dock', !!on);
     document.documentElement.classList.toggle('builder-has-dock', !!on);
+  }
+
+  function railHtml() {
+    function item(section, label, current) {
+      return (
+        '<button type="button" class="builder-rail-item' + (current ? ' is-current' : '') + '" data-bx-section="' + section + '">' +
+          '<span class="builder-rail-row">' +
+            '<span class="builder-rail-mark" aria-hidden="true"></span>' +
+            escapeHtml(label) +
+          '</span>' +
+        '</button>'
+      );
+    }
+    return (
+      '<nav class="bx-rail-nav" id="bxNav" aria-label="Navegación">' +
+        '<div class="bx-rail-group">Plataforma</div>' +
+        item('dashboard', 'Dashboard Global', false) +
+        item('projects', 'Proyectos', true) +
+        '<div class="bx-rail-group">Próximamente</div>' +
+        item('users', 'Usuarios', false) +
+        item('templates', 'Plantillas', false) +
+        item('media', 'Media', false) +
+        item('settings', 'Configuración', false) +
+      '</nav>'
+    );
+  }
+
+  function mountShell() {
+    if (shellMounted) return;
+    var host = document.getElementById('bxAppView');
+    if (!host || typeof BoxiesAppShell === 'undefined') {
+      console.error('[admin2] BoxiesAppShell missing');
+      return;
+    }
+    host.innerHTML = BoxiesAppShell.html({
+      appId: 'bxBuilderApp',
+      title: 'BOXIES',
+      leftHtml: '<div class="user-chip bx-admin-user" id="bxUserChip"></div>',
+      actionsHtml: '<button type="button" class="builder-header-action-btn" id="bxLogoutBtn">Cerrar sesión</button>',
+      railId: 'bxNavRail',
+      railHtml: railHtml(),
+      includeDock: true
+    });
+    var app = document.getElementById('bxBuilderApp');
+    if (app) app.hidden = false;
+    shellMounted = true;
+    bindShell();
   }
 
   function renderUserChip(profile) {
@@ -40,16 +89,19 @@
   function setActiveNav(sectionId) {
     document.querySelectorAll('#bxNav [data-bx-section]').forEach(function (btn) {
       btn.classList.toggle('is-current', btn.getAttribute('data-bx-section') === sectionId);
-      btn.classList.toggle('active', btn.getAttribute('data-bx-section') === sectionId);
     });
+  }
+
+  function contentHost() {
+    return document.getElementById('builderStepPanel');
   }
 
   async function showSection(sectionId) {
     var id = SECTIONS[sectionId] ? sectionId : 'projects';
     setActiveNav(id);
-    var host = document.getElementById('bxMain');
+    var host = contentHost();
     if (!host) return;
-    host.innerHTML = '<p class="builder-step-desc">Cargando…</p>';
+    host.innerHTML = '<div class="builder-step-content"><p class="builder-step-desc">Cargando…</p></div>';
     await SECTIONS[id].render(host);
   }
 
@@ -77,9 +129,8 @@
   }
 
   async function onAppReady(profile) {
-    document.body.classList.add('dashboard-shell');
+    mountShell();
     setBuilderChrome(true);
-    bindShell();
     renderUserChip(profile);
     await showSection('projects');
   }

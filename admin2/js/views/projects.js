@@ -50,11 +50,11 @@ var BoxiesAdmin2Projects = (function () {
 
   async function render(host) {
     host.innerHTML =
-      '<div class="builder-step-title-row">' +
-        '<h1 class="builder-step-title">Proyectos</h1>' +
-      '</div>' +
-      '<p class="builder-step-desc">Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
-      '<div class="bx-admin-panel">' +
+      '<div class="builder-step-content">' +
+        '<div class="builder-step-title-row">' +
+          '<h1 class="builder-step-title">Proyectos</h1>' +
+        '</div>' +
+        '<p class="builder-step-desc">Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table">' +
             '<thead><tr>' +

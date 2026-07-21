@@ -1,4 +1,7 @@
-/* admin2 — Builder chrome parity (demo3 / ai-project-builder base). */
+/* admin2 — login helpers + module rail content only.
+ * Shell geometry/typography/chrome = admin/css/ai-project-builder.css (official).
+ * Do NOT override header, workspace, dock, step panel padding, or title scale here.
+ */
 
 [hidden] { display: none !important; }
 
@@ -8,7 +11,7 @@
   margin: 0;
 }
 
-/* Rail groups — same quiet caps as builder metadata */
+/* Module navigation content inside official builder-progress-sidebar */
 .bx-rail-nav {
   display: flex;
   flex-direction: column;
@@ -33,12 +36,14 @@
 }
 
 .bx-admin2 .builder-rail-mark {
+  display: inline-block;
   width: 14px;
   height: 14px;
   border: 1.5px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 2px;
+  box-sizing: border-box;
 }
 
 .bx-admin2 .builder-rail-item.is-current .builder-rail-mark {
@@ -60,53 +65,8 @@
   font-weight: 550;
 }
 
-/* Step panel fills workspace like builder */
-.bx-admin2 .bx-admin-step-panel {
-  max-height: none;
-  min-height: calc(100vh - var(--builder-header-height) - var(--builder-dock-height) - var(--builder-dock-safe));
-  padding: 28px 32px 40px;
-}
-
-.bx-admin2 .bx-admin-step {
-  max-width: 920px;
-  width: 100%;
-}
-
-.bx-admin2 .builder-step-title {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  margin: 0 0 6px;
-  color: rgba(255, 255, 255, 0.95);
-}
-
-.bx-admin2 .builder-step-desc {
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 13px;
-  margin: 0 0 22px;
-  line-height: 1.55;
-  max-width: 36rem;
-}
-
-.bx-admin2 .bx-admin-panel {
-  margin-top: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  overflow: hidden;
-}
-
-.bx-admin2 .bx-admin-panel .admin-table-wrap {
-  padding: 4px 0 8px;
-}
-
-.bx-admin2 .admin-table th,
-.bx-admin2 .admin-table td {
-  padding: 16px 20px;
-}
-
-.bx-admin2 .admin-table a.btn-primary,
-.bx-admin2 .admin-table a.builder-header-action-btn {
+/* Content-only: table action links reuse builder header pill size */
+.bx-admin2 #builderStepPanel .admin-table a.builder-header-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -114,12 +74,4 @@
   box-sizing: border-box;
   width: auto;
   min-width: 7.25rem;
-  min-height: 34px;
-  padding: 0 14px;
-  font-size: 0.625rem;
-}
-
-/* Hide empty dock tools chrome noise; keep bar for parity with builder footer */
-.bx-admin2 .builder-dock-tools:empty {
-  min-height: 0;
 }

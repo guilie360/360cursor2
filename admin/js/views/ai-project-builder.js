@@ -791,30 +791,53 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderShell() {
+    var dockHtml =
+      typeof BuilderDock !== 'undefined' && typeof BuilderDock.html === 'function'
+        ? BuilderDock.html()
+        : '';
+    var leftHtml =
+      '<button type="button" class="builder-header-btn builder-header-back" id="builderBackInlineBtn" aria-label="Volver al showroom">' +
+        BuilderIcons.render('arrow-left') + '<span>Showroom</span></button>';
+    var actionsHtml =
+      '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
+      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">Publicar</button>';
+
+    var shellHtml =
+      typeof BoxiesAppShell !== 'undefined'
+        ? BoxiesAppShell.html({
+            appId: 'builderApp',
+            title: 'BOXIES AI',
+            leftHtml: leftHtml,
+            actionsHtml: actionsHtml,
+            railId: 'builderProgressRail',
+            railHtml: '',
+            dockHtml: dockHtml
+          })
+        : (
+          '<div class="builder-app" id="builderApp" hidden>' +
+            '<header class="builder-header-fixed">' +
+              '<div class="builder-header-left">' + leftHtml + '</div>' +
+              '<span class="builder-header-title">BOXIES AI</span>' +
+              '<div class="builder-header-actions">' + actionsHtml + '</div>' +
+            '</header>' +
+            '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Progreso del proyecto"></aside>' +
+            '<div class="builder-workspace">' +
+              '<section class="builder-main-panel">' +
+                '<div id="builderStepPanel"></div>' +
+              '</section>' +
+            '</div>' +
+          '</div>' +
+          dockHtml
+        );
+
     rootEl.innerHTML =
       '<div class="builder-access-denied" id="builderAccessDenied" hidden>' +
         '<h2>Acceso restringido</h2>' +
         '<p>BOXIES AI solo está disponible para administradores.</p></div>' +
-      '<div class="builder-app" id="builderApp" hidden>' +
-        '<header class="builder-header-fixed">' +
-          '<div class="builder-header-left">' +
-            '<button type="button" class="builder-header-btn builder-header-back" id="builderBackInlineBtn" aria-label="Volver al showroom">' +
-              BuilderIcons.render('arrow-left') + '<span>Showroom</span></button>' +
-          '</div>' +
-          '<span class="builder-header-title">BOXIES AI</span>' +
-          '<div class="builder-header-actions">' +
-            '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-            '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">Publicar</button>' +
-          '</div>' +
-        '</header>' +
-        '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Progreso del proyecto"></aside>' +
-        '<div class="builder-workspace">' +
-          '<section class="builder-main-panel">' +
-            '<div id="builderStepPanel"></div>' +
-          '</section>' +
-        '</div>' +
-      '</div>' +
-      BuilderDock.html();
+      shellHtml;
+
+    var app = rootEl.querySelector('#builderApp');
+    if (app) app.hidden = true;
   }
 
   /* ── Event handlers ── */

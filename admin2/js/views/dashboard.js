@@ -19,18 +19,17 @@ var BoxiesAdmin2Dashboard = (function () {
 
   async function render(host) {
     host.innerHTML =
-      '<div class="builder-step-title-row">' +
-        '<h1 class="builder-step-title">Dashboard Global</h1>' +
-      '</div>' +
-      '<p class="builder-step-desc">Pantalla inicial de BOXIES. Desde aquí abres el Builder de cada proyecto.</p>' +
-      '<div class="bx-admin-panel" id="bxDashSummary" style="padding:8px 4px 16px">' +
-        '<div class="panel-card-title">Resumen</div>' +
-        '<ul class="profile-list" style="margin:0 20px">' +
+      '<div class="builder-step-content">' +
+        '<div class="builder-step-title-row">' +
+          '<h1 class="builder-step-title">Dashboard Global</h1>' +
+        '</div>' +
+        '<p class="builder-step-desc">Pantalla inicial de BOXIES. Desde aquí abres el Builder de cada proyecto.</p>' +
+        '<ul class="profile-list" id="bxDashSummary">' +
           '<li><span>Proyectos</span><strong id="bxDashTotal">…</strong></li>' +
           '<li><span>Última modificación</span><strong id="bxDashLatest">…</strong></li>' +
           '<li><span>CMS</span><strong>ai-project-builder</strong></li>' +
         '</ul>' +
-        '<p class="phase-note" style="margin:16px 20px 8px">Usa <strong>Proyectos → Administrar</strong> para abrir el editor oficial del showroom.</p>' +
+        '<p class="builder-step-desc" style="margin-top:18px">Usa <strong>Proyectos → Administrar</strong> para abrir el editor oficial del showroom.</p>' +
       '</div>';
 
     try {
