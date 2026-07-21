@@ -1,0 +1,53 @@
+/*
+ * HALL chrome lock — Style Engine V3 platform identity.
+ * On platform surfaces, buttons/inputs/cards follow SE chrome,
+ * not showroom accent fills (--btn-surface from ThemeSystem).
+ */
+
+body.dashboard-shell,
+body.login-page,
+body.hall-login,
+body.hall-app,
+body.platform-builder-shell,
+body.visitor-dashboard,
+.bx-admin2 {
+  /* Composition scale — Style Engine V3 */
+  --hall-radius-card: 22px;
+  --hall-radius-control: 12px;
+  --hall-radius-nav: 10px;
+  --hall-radius-pill: 999px;
+  --hall-pad-card: 36px;
+  --hall-pad-section: 40px 36px 56px;
+  --hall-gap-section: 28px;
+  --hall-gap-row: 14px;
+  --hall-header-h: 52px;
+  --hall-sidebar-w: 200px;
+  --hall-title-size: 1.75rem;
+  --hall-lead-size: 0.95rem;
+  --hall-label-size: 0.7rem;
+  --hall-btn-min-h: 46px;
+  --hall-btn-compact-h: 40px;
+  --hall-input-h: 48px;
+  --hall-tracking-ui: 0.12em;
+  --hall-tracking-action: 0.14em;
+
+  /* Surfaces — layered dark, thin borders, soft glass */
+  --hall-bg: var(--bg-main, #050505);
+  --hall-surface: color-mix(in srgb, var(--text-primary, #fff) 4%, #0a0a0a);
+  --hall-surface-raised: color-mix(in srgb, var(--text-primary, #fff) 6.5%, #101010);
+  --hall-border: color-mix(in srgb, var(--text-primary, #fff) 10%, transparent);
+  --hall-border-strong: color-mix(in srgb, var(--text-primary, #fff) 18%, transparent);
+  --hall-text: var(--text-primary, #ffffff);
+  --hall-text-muted: color-mix(in srgb, var(--text-primary, #fff) 55%, transparent);
+  --hall-text-faint: color-mix(in srgb, var(--text-primary, #fff) 38%, transparent);
+
+  /* Button chrome — SE: outline glass, NOT accent fill */
+  --hall-btn-bg: color-mix(in srgb, var(--text-primary, #fff) 3.5%, transparent);
+  --hall-btn-border: color-mix(in srgb, var(--text-primary, #fff) 14%, transparent);
+  --hall-btn-hover-bg: color-mix(in srgb, var(--text-primary, #fff) 7%, transparent);
+  --hall-btn-hover-border: color-mix(in srgb, var(--text-primary, #fff) 22%, transparent);
+  --hall-btn-solid-bg: rgba(255, 255, 255, 0.92);
+  --hall-btn-solid-text: rgba(8, 8, 8, 0.92);
+  --hall-inset: inset 0 1px 0 color-mix(in srgb, var(--text-primary, #fff) 7%, transparent);
+  --hall-shadow-card: 0 20px 56px rgba(0, 0, 0, 0.35);
+}

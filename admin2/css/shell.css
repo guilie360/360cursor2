@@ -1,4 +1,4 @@
-/* admin2 — layout helpers only. Visual identity = css/hall + admin-auth bridge. */
+/* admin2 — layout helpers only. Identity = css/hall (Style Engine V3). */
 
 [hidden] { display: none !important; }
 
@@ -8,29 +8,8 @@
   margin: 0;
 }
 
-.hall-login-brand {
-  text-align: center;
-  font-size: 1.65rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
 .hall-login-page .auth-gate-title {
-  margin-bottom: 28px;
-}
-
-.hall-login-page .auth-modal-message {
-  min-height: 20px;
-  margin-top: 14px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.hall-login-page .auth-modal-message.is-error {
-  color: #ff8a8a;
+  margin-bottom: 8px;
 }
 
 .dashboard-sidebar .sidebar-nav {
@@ -43,4 +22,6 @@
   justify-content: center;
   text-decoration: none;
   box-sizing: border-box;
+  width: auto;
+  min-width: 7.5rem;
 }

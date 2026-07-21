@@ -1,12 +1,12 @@
-/* ── BOXIES AI Project Builder — premium dock layout ── */
+/* ── BOXIES AI Project Builder — layout only; identity = Style Engine V3 / css/hall ── */
 :root {
-  --builder-header-height: 44px;
-  --builder-rail-width: 176px;
+  --builder-header-height: var(--hall-header-h, 52px);
+  --builder-rail-width: var(--hall-sidebar-w, 200px);
   --builder-dock-height: 56px;
   --builder-dock-safe: env(safe-area-inset-bottom, 0px);
   --builder-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  --builder-dock-bg: rgba(6, 6, 6, 0.92);
-  --builder-dock-border: rgba(255, 255, 255, 0.06);
+  --builder-dock-bg: color-mix(in srgb, #060606 92%, transparent);
+  --builder-dock-border: var(--hall-border, rgba(255, 255, 255, 0.06));
 }
 
 html.builder-has-dock,
@@ -95,10 +95,10 @@ body.builder-has-dock.platform-builder-shell {
   gap: 12px;
   height: var(--builder-header-height);
   padding: 0 14px;
-  background: rgba(6, 6, 6, 0.94);
+  background: color-mix(in srgb, #060606 94%, transparent);
   backdrop-filter: blur(20px) saturate(130%);
   -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--hall-border, rgba(255, 255, 255, 0.06));
 }
 
 .builder-header-left {
@@ -151,13 +151,15 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-header-action-btn {
-  padding: 6px 11px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  padding: 8px 14px;
+  border: 1px solid var(--hall-btn-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--hall-radius-pill, 999px);
+  background: var(--hall-btn-bg, rgba(255, 255, 255, 0.03));
+  color: var(--hall-text, rgba(255, 255, 255, 0.86));
+  font-size: 0.65rem;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -165,15 +167,15 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-header-action-btn:hover:not(:disabled) {
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--hall-text, #fff);
+  background: var(--hall-btn-hover-bg, rgba(255, 255, 255, 0.07));
+  border-color: var(--hall-btn-hover-border, rgba(255, 255, 255, 0.22));
 }
 
 .builder-header-action-btn.is-primary {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(255, 255, 255, 0.92);
-  color: rgba(8, 8, 8, 0.92);
+  background: var(--hall-btn-solid-bg, rgba(255, 255, 255, 0.92));
+  border-color: var(--hall-btn-solid-bg, rgba(255, 255, 255, 0.92));
+  color: var(--hall-btn-solid-text, rgba(8, 8, 8, 0.92));
 }
 
 .builder-header-action-btn.is-primary:hover:not(:disabled) {
@@ -207,11 +209,11 @@ body.builder-has-dock.platform-builder-shell {
   bottom: 0;
   z-index: 9999;
   width: var(--builder-rail-width);
-  padding: 10px 10px 14px;
+  padding: 14px 10px 24px;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(4, 4, 4, 0.5);
+  border-right: 1px solid color-mix(in srgb, var(--text-primary, #fff) 4%, transparent);
+  background: color-mix(in srgb, #040404 55%, transparent);
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
@@ -219,10 +221,10 @@ body.builder-has-dock.platform-builder-shell {
 .builder-rail-item {
   display: block;
   width: 100%;
-  margin: 0 0 5px;
-  padding: 8px 10px;
+  margin: 0 0 3px;
+  padding: 10px 12px;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--hall-radius-nav, 10px);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -230,7 +232,7 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-rail-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--text-primary, #fff) 4%, transparent);
 }
 
 .builder-rail-row {
@@ -274,11 +276,12 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-rail-item.is-current {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--text-primary, #fff) 7%, transparent);
 }
 
 .builder-rail-item.is-current .builder-rail-row {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--hall-text, rgba(255, 255, 255, 0.92));
+  font-weight: 600;
 }
 
 .builder-workspace {

@@ -1,5 +1,5 @@
 ---
-description: HALL is the official BOXIES Design System — no parallel visual identities
+description: HALL is the official BOXIES Design System — Style Engine V3 is the living contract
 alwaysApply: true
 ---
 
@@ -7,58 +7,34 @@ alwaysApply: true
 
 ## Decisión permanente
 
-**HALL es el Design System oficial de toda la plataforma BOXIES.**
+**HALL es el Design System oficial.** El **Style Engine V3** es su documentación viva.
 
-No es un tema, skin ni plantilla. Define la identidad visual de login, dashboards, modales, builders, formularios, tablas y cualquier módulo futuro.
+No es un tema. No es un skin. Toda superficie de plataforma debe sentirse como el chrome del Style Engine / BOXIES AI builder.
 
-## Pipeline obligatorio (sin excepciones)
-
-```
-css/variables.css
-  → css/components.css
-  → css/hall/hall.css
-  → ThemeSystem
-  → HallDesignSystem.paint()
-  → render
-```
-
-Opcional (solo dominio CMS): `admin/css/admin-auth.css` (bridge `--admin-*` → HALL) + `admin/css/admin-widgets.css` (widgets de CMS, no botones/inputs/cards).
-
-## Árbol oficial
+## Pipeline
 
 ```
-css/
-  variables.css          # tokens --bg-* --glass-* --btn-* --text-*
-  components.css         # showroom/modales compartidos
-  hall/
-    hall.css             # entry (@import primitives + layouts)
-    hall-primitives.css  # HallButton/Input/Card/Table/Badge (legacy selectors en las MISMAS reglas)
-    hall-layouts.css     # HallLayout/Sidebar/Header/Login/Dashboard
-js/platform/
-  hall-design-system.js  # HallDesignSystem.paint() + seed de proyectos
+variables.css → components.css → css/hall/hall.css → ThemeSystem → HallDesignSystem.paint() → render
 ```
 
-## Clases canónicas
+Árbol: `hall-chrome.css` (escala + lock) → `hall-primitives.css` → `hall-layouts.css`.
 
-Usar `.hall-*` en código nuevo. Selectores legacy (`.btn-primary`, `.outline-btn`, `.field`, `.panel-card`, `.dashboard-sidebar`, `.login-card`, `.admin-table`, …) apuntan a las **mismas** reglas en `hall-primitives` / `hall-layouts`. No redefinir cuerpos en otros CSS.
+## Contrato visual (Style Engine V3)
+
+- Fondo near-black; superficies layered con borde fino (~10% blanco)
+- Botones plataforma: outline glass / pill — **nunca** relleno de acento del showroom
+- CTA sólido: blanco (`hall-btn--solid` / `.is-primary` builder)
+- Cards ~22px radius, padding ~36px
+- Header fino (~52px), sidebar ~200px, nav active soft rounded
+- Tipografía: títulos blancos; leads muted; labels uppercase tracking
+- Densidad baja: aire entre bloques
 
 ## Prohibido
 
-- Inventar `--bx-*`, `--admin-*` como sistema (solo alias bridge), `--builder-*` de color, hardcodes de botón
-- Redefinir `.btn-primary` / inputs / cards / sidebar fuera de `css/hall/`
-- Logins o dashboards con CSS propio de identidad
-- CSS nuevo al crear Analytics, CRM, Marketplace, etc. — solo componentes HALL
+- Inventar layouts/botones/cards por módulo
+- Dejar que `--btn-surface` del tema pinte de rojo/accent el chrome de admin/admin2/auth/builder
+- CSS de identidad fuera de `css/hall/`
 
-## Layout-only permitido
+## Showroom
 
-`admin/css/ai-project-builder.css`, `admin2/css/shell.css`, `css/style-engine.css` (laboratorio showroom): posicionar/dimensionar; consumir `var(--bg-*)` / `var(--glass-*)` / `var(--btn-*)`. Nunca inventar familia de botones.
-
-## Mapa de rutas
-
-| Ruta | Design System |
-|------|----------------|
-| `/`, `/demo*` | HALL + style-engine (layout laboratorio; tokens HALL) |
-| `/admin2` | HALL pipeline + shell layout-only |
-| `ai-project-builder` | HALL + builder layout-only |
-| `/auth/*` | HALL pipeline |
-| `/admin/login`, `/admin/dashboard` | HALL pipeline (legado auth; no tocar auth) |
+El visitante sigue ThemeSystem (botones del proyecto). El **editor** Style Engine y todas las herramientas BOXIES usan el chrome HALL bloqueado.

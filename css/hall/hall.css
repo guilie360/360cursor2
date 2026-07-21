@@ -1,7 +1,8 @@
 /*
- * HALL Design System — entry
- * Pipeline: variables.css → components.css → hall/hall.css → ThemeSystem → HallDesignSystem.paint()
- * Do not invent parallel tokens or component skins outside this tree.
+ * HALL Design System — Style Engine V3 visual contract
+ * Living reference: Style Engine editor + BOXIES AI builder chrome.
  */
+
+@import url("./hall-chrome.css");
 @import url("./hall-primitives.css");
 @import url("./hall-layouts.css");

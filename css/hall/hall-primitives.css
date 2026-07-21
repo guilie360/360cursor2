@@ -1,332 +1,513 @@
 /*
- * HALL primitives — ONE implementation per control.
- * Official class names: .hall-*
- * Legacy selectors listed on the SAME rules (no duplicated bodies).
- * Tokens: only --bg-* / --glass-* / --btn-* / --text-* from variables.css + ThemeSystem.
+ * HALL primitives — Style Engine V3 language.
+ * One family: outline glass + white solid primary.
+ * Legacy selectors share the SAME rule bodies.
  */
 
-/* ——— Typography ——— */
+/* ——— Type ——— */
 .hall-title,
 .section-header h1,
 .dashboard-card h1,
-.auth-gate-title {
-  color: var(--text-primary);
+.auth-gate-title,
+.hall-login-brand,
+.login-logo,
+.dashboard-logo {
+  color: var(--hall-text, var(--text-primary));
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--hall-tracking-ui, 0.08em);
+}
+
+.section-header h1 {
+  font-size: var(--hall-title-size, 1.75rem);
+  font-weight: 700;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.auth-gate-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0 0 10px;
 }
 
 .hall-lead,
 .section-header p,
 .placeholder-copy,
 .auth-view-lead,
-.auth-copy {
-  color: var(--text-secondary);
-  opacity: var(--text-secondary-opacity, 0.78);
+.auth-copy,
+.login-subtitle {
+  color: var(--hall-text-muted, var(--text-secondary));
   line-height: 1.55;
+  font-size: var(--hall-lead-size, 0.95rem);
+  font-weight: 400;
 }
 
-/* ——— Buttons (single family) ——— */
-.hall-btn,
-.hall-btn--primary,
-.outline-btn,
-.btn-primary,
-.btn-secondary,
-.btn-ghost,
-.btn-compact,
-.btn-inline,
-.auth-action-btn,
-.auth-oauth-btn {
+.auth-view-lead,
+.auth-copy,
+.login-subtitle {
+  text-align: center;
+  margin: 0 0 28px;
+  font-size: 0.88rem;
+}
+
+/* ——— Buttons (SE outline family) ——— */
+body.dashboard-shell .hall-btn,
+body.dashboard-shell .hall-btn--primary,
+body.dashboard-shell .outline-btn,
+body.dashboard-shell .btn-primary,
+body.dashboard-shell .btn-secondary,
+body.dashboard-shell .btn-ghost,
+body.dashboard-shell .btn-compact,
+body.dashboard-shell .btn-inline,
+body.dashboard-shell .auth-action-btn,
+body.dashboard-shell .auth-oauth-btn,
+body.login-page .hall-btn,
+body.login-page .outline-btn,
+body.login-page .btn-primary,
+body.login-page .btn-secondary,
+body.login-page .btn-ghost,
+body.login-page .btn-compact,
+body.login-page .auth-action-btn,
+body.login-page .auth-oauth-btn,
+body.hall-login .hall-btn,
+body.hall-login .outline-btn,
+body.hall-login .btn-primary,
+body.hall-login .btn-secondary,
+body.hall-login .auth-action-btn,
+body.hall-login .auth-oauth-btn,
+body.hall-app .hall-btn,
+body.hall-app .outline-btn,
+body.hall-app .btn-primary,
+body.hall-app .btn-secondary,
+body.hall-app .btn-ghost,
+body.hall-app .btn-compact,
+body.hall-app .auth-action-btn,
+body.hall-app .auth-oauth-btn,
+body.platform-builder-shell .hall-btn,
+body.platform-builder-shell .outline-btn,
+body.platform-builder-shell .btn-primary,
+body.platform-builder-shell .btn-secondary,
+body.platform-builder-shell .btn-ghost,
+body.platform-builder-shell .btn-compact,
+body.visitor-dashboard .hall-btn,
+body.visitor-dashboard .outline-btn,
+body.visitor-dashboard .btn-primary,
+body.visitor-dashboard .btn-ghost,
+body.visitor-dashboard .btn-compact,
+.bx-admin2 .hall-btn,
+.bx-admin2 .outline-btn,
+.bx-admin2 .btn-primary,
+.bx-admin2 .btn-secondary,
+.bx-admin2 .btn-ghost,
+.bx-admin2 .btn-compact,
+.bx-admin2 .auth-action-btn,
+.bx-admin2 .auth-oauth-btn,
+body.dashboard-shell[data-button-glass] .outline-btn,
+body.dashboard-shell[data-button-glass] .auth-experience-box .outline-btn,
+body.login-page[data-button-glass] .outline-btn,
+body.hall-app[data-button-glass] .outline-btn,
+body.hall-app[data-button-glass] .auth-experience-box .outline-btn,
+.bx-admin2[data-button-glass] .outline-btn,
+.bx-admin2[data-button-glass] .auth-experience-box .outline-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   box-sizing: border-box;
   margin: 0;
-  min-height: 48px;
-  padding: 13px 28px;
-  border-radius: var(--menu-card-radius, 14px);
-  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
-  background: var(--btn-glass-surface, var(--btn-surface));
-  color: var(--text-primary);
-  font-size: 0.72rem;
+  min-height: var(--hall-btn-min-h, 46px);
+  padding: 12px 26px;
+  border-radius: var(--hall-radius-pill, 999px);
+  border: 1px solid var(--hall-btn-border);
+  background: var(--hall-btn-bg);
+  color: var(--hall-text);
+  font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--hall-tracking-action, 0.14em);
   text-transform: uppercase;
   text-decoration: none;
   line-height: 1.2;
   cursor: pointer;
-  backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-  -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-  box-shadow:
-    var(--btn-shadow, 0 6px 20px rgba(0, 0, 0, 0.28)),
-    var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent));
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  box-shadow: var(--hall-inset);
   transition:
-    background 0.3s ease,
-    color 0.3s ease,
-    border-color 0.3s ease,
-    border-width 0.3s ease,
-    box-shadow 0.3s ease,
-    transform 0.25s ease,
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.2s ease,
     opacity 0.2s ease;
 }
 
-.hall-btn:hover,
-.hall-btn--primary:hover,
-.outline-btn:hover,
-.btn-primary:hover:not(:disabled),
-.btn-secondary:hover:not(:disabled),
-.btn-ghost:hover:not(:disabled),
-.auth-action-btn:hover,
-.auth-oauth-btn:hover {
-  background: var(--btn-glass-hover, var(--hover));
-  color: var(--btn-text-hover, var(--text-primary));
-  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-  border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+body.dashboard-shell .hall-btn:hover,
+body.dashboard-shell .outline-btn:hover,
+body.dashboard-shell .btn-primary:hover:not(:disabled),
+body.dashboard-shell .btn-secondary:hover:not(:disabled),
+body.dashboard-shell .btn-ghost:hover:not(:disabled),
+body.dashboard-shell .auth-action-btn:hover,
+body.dashboard-shell .auth-oauth-btn:hover,
+body.login-page .hall-btn:hover,
+body.login-page .outline-btn:hover,
+body.login-page .btn-primary:hover:not(:disabled),
+body.login-page .auth-action-btn:hover,
+body.login-page .auth-oauth-btn:hover,
+body.hall-app .hall-btn:hover,
+body.hall-app .outline-btn:hover,
+body.hall-app .btn-primary:hover:not(:disabled),
+body.hall-app .btn-ghost:hover:not(:disabled),
+body.hall-app .auth-action-btn:hover,
+body.hall-app .auth-oauth-btn:hover,
+body.platform-builder-shell .btn-primary:hover:not(:disabled),
+body.platform-builder-shell .btn-ghost:hover:not(:disabled),
+.bx-admin2 .outline-btn:hover,
+.bx-admin2 .btn-primary:hover:not(:disabled),
+.bx-admin2 .btn-ghost:hover:not(:disabled),
+.bx-admin2 .auth-action-btn:hover,
+.bx-admin2 .auth-oauth-btn:hover,
+body.dashboard-shell[data-button-glass] .outline-btn:hover,
+body.hall-app[data-button-glass] .outline-btn:hover,
+.bx-admin2[data-button-glass] .outline-btn:hover {
+  background: var(--hall-btn-hover-bg);
+  border-color: var(--hall-btn-hover-border);
+  color: var(--hall-text);
   transform: translateY(-1px);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
 }
 
-.hall-btn:disabled,
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-ghost:disabled {
-  opacity: 0.45;
+body.dashboard-shell .btn-primary:disabled,
+body.dashboard-shell .btn-ghost:disabled,
+body.hall-app .btn-primary:disabled,
+.bx-admin2 .btn-primary:disabled {
+  opacity: 0.4;
   cursor: default;
   transform: none;
 }
 
-.hall-btn--block,
-.btn-primary,
-.auth-action-btn,
-.auth-oauth-btn {
+body.dashboard-shell .btn-primary,
+body.dashboard-shell .auth-action-btn,
+body.dashboard-shell .auth-oauth-btn,
+body.login-page .btn-primary,
+body.login-page .auth-action-btn,
+body.login-page .auth-oauth-btn,
+body.hall-login .btn-primary,
+body.hall-login .auth-action-btn,
+body.hall-app .btn-primary,
+body.hall-app .auth-action-btn,
+body.hall-app .auth-oauth-btn,
+.bx-admin2 .btn-primary,
+.bx-admin2 .auth-action-btn,
+.bx-admin2 .auth-oauth-btn {
   width: 100%;
 }
 
-.hall-btn--compact,
-.btn-compact,
-.btn-inline {
+/* Compact — table / header actions (still pill, auto width) */
+body.dashboard-shell .btn-compact,
+body.dashboard-shell .btn-inline,
+body.dashboard-shell .btn-ghost,
+body.hall-app .btn-compact,
+body.hall-app .btn-inline,
+body.hall-app .btn-ghost,
+body.platform-builder-shell .btn-compact,
+body.platform-builder-shell .btn-ghost,
+.bx-admin2 .btn-compact,
+.bx-admin2 .btn-ghost,
+body.visitor-dashboard .btn-ghost {
   width: auto;
-  min-height: 42px;
+  min-height: var(--hall-btn-compact-h, 40px);
   padding: 0 18px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
 }
 
-.hall-btn--ghost,
-.btn-ghost {
+body.dashboard-shell .btn-ghost,
+body.hall-app .btn-ghost,
+.bx-admin2 .btn-ghost,
+body.visitor-dashboard .btn-ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Solid primary — Style Engine “Republicar” language */
+body.dashboard-shell .hall-btn--solid,
+body.hall-app .hall-btn--solid,
+body.platform-builder-shell .hall-btn--solid,
+body.platform-builder-shell .builder-header-action-btn.is-primary,
+.bx-admin2 .hall-btn--solid {
+  background: var(--hall-btn-solid-bg);
+  border-color: var(--hall-btn-solid-bg);
+  color: var(--hall-btn-solid-text);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+body.dashboard-shell .hall-btn--solid:hover,
+body.hall-app .hall-btn--solid:hover,
+body.platform-builder-shell .builder-header-action-btn.is-primary:hover:not(:disabled),
+.bx-admin2 .hall-btn--solid:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #080808;
+}
+
+body.dashboard-shell .btn-danger,
+body.hall-app .btn-danger,
+.bx-admin2 .btn-danger {
   width: auto;
-  min-height: 42px;
+  min-height: var(--hall-btn-compact-h, 40px);
   padding: 0 18px;
+  border-color: color-mix(in srgb, #ff8a8a 40%, transparent);
+  color: #ff8a8a;
   background: transparent;
 }
 
-.hall-btn--danger,
-.btn-danger {
-  width: auto;
-  min-height: 42px;
-  padding: 0 18px;
-  border-color: color-mix(in srgb, #ff8a8a 55%, var(--glass-border, var(--border)));
-  color: #ff8a8a;
-}
-
-.hall-btn--danger:hover,
-.btn-danger:hover {
-  background: color-mix(in srgb, #ff8a8a 14%, transparent);
-  border-color: #ff8a8a;
-  color: #ff8a8a;
-}
-
 /* ——— Inputs ——— */
-.hall-field,
-.auth-field,
-.field {
+body.dashboard-shell .hall-field,
+body.dashboard-shell .auth-field,
+body.dashboard-shell .field,
+body.login-page .hall-field,
+body.login-page .auth-field,
+body.login-page .field,
+body.hall-app .hall-field,
+body.hall-app .auth-field,
+body.hall-app .field,
+.bx-admin2 .hall-field,
+.bx-admin2 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   position: relative;
   margin-bottom: 0;
 }
 
-.hall-field > span,
-.hall-field > label,
-.auth-field > span,
-.field > label {
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+body.login-page .field,
+body.hall-login .field {
+  margin-bottom: 18px;
+}
+
+body.dashboard-shell .hall-field > span,
+body.dashboard-shell .hall-field > label,
+body.dashboard-shell .auth-field > span,
+body.dashboard-shell .field > label,
+body.login-page .auth-field > span,
+body.login-page .field > label,
+body.hall-app .auth-field > span,
+body.hall-app .field > label,
+.bx-admin2 .auth-field > span {
+  font-size: var(--hall-label-size, 0.7rem);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  opacity: 0.55;
-  color: var(--text-primary);
+  color: var(--hall-text-faint);
   font-weight: 600;
 }
 
-.hall-input,
-.hall-field input,
-.auth-field input,
-.field input,
-.admin-input,
-.admin-textarea {
+body.dashboard-shell .hall-input,
+body.dashboard-shell .hall-field input,
+body.dashboard-shell .auth-field input,
+body.dashboard-shell .field input,
+body.dashboard-shell .admin-input,
+body.dashboard-shell .admin-textarea,
+body.login-page .hall-field input,
+body.login-page .auth-field input,
+body.login-page .field input,
+body.hall-app .auth-field input,
+body.hall-app .field input,
+body.hall-app .admin-input,
+.bx-admin2 .auth-field input,
+body.platform-builder-shell .admin-input,
+body.platform-builder-shell select.hall-input,
+body.platform-builder-shell .builder-field select,
+body.platform-builder-shell .builder-field input {
   width: 100%;
-  height: 46px;
-  padding: 0 14px;
+  height: var(--hall-input-h, 48px);
+  padding: 0 16px;
   box-sizing: border-box;
-  border: 1px solid var(--glass-border, var(--border));
-  border-radius: 12px;
-  background: var(--glass-surface, var(--bg-card));
-  color: var(--text-primary);
+  border: 1px solid var(--hall-border);
+  border-radius: var(--hall-radius-control, 12px);
+  background: var(--hall-surface);
+  color: var(--hall-text);
   font-size: 0.92rem;
   outline: none;
-  backdrop-filter: blur(calc(var(--bg-glass-blur, 16px) * 0.65)) saturate(125%);
-  -webkit-backdrop-filter: blur(calc(var(--bg-glass-blur, 16px) * 0.65)) saturate(125%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.admin-textarea,
-.hall-textarea {
+body.dashboard-shell .admin-textarea,
+body.hall-app .admin-textarea,
+body.platform-builder-shell .admin-textarea {
   height: auto;
   min-height: 96px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   resize: vertical;
 }
 
-.hall-input:focus,
-.hall-field input:focus,
-.auth-field input:focus,
-.field input:focus,
-.admin-input:focus,
-.admin-textarea:focus {
-  border-color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+body.dashboard-shell .hall-input:focus,
+body.dashboard-shell .auth-field input:focus,
+body.dashboard-shell .field input:focus,
+body.dashboard-shell .admin-input:focus,
+body.login-page .auth-field input:focus,
+body.login-page .field input:focus,
+body.hall-app .auth-field input:focus,
+.bx-admin2 .auth-field input:focus {
+  border-color: var(--hall-border-strong);
+  background: var(--hall-surface-raised);
 }
 
-.hall-check,
-.auth-remember-row,
-.remember-row,
-.admin-checkbox-row {
+body.dashboard-shell .auth-remember-row,
+body.dashboard-shell .remember-row,
+body.login-page .remember-row,
+body.hall-app .auth-remember-row,
+.bx-admin2 .auth-remember-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin: 6px 0 20px;
   font-size: 0.88rem;
-  color: var(--text-primary);
+  color: var(--hall-text-muted);
   cursor: pointer;
   user-select: none;
 }
 
-.hall-check input,
-.auth-remember-row input,
-.remember-row input,
-.admin-checkbox-row input {
+body.dashboard-shell .auth-remember-row input,
+body.login-page .remember-row input,
+.bx-admin2 .auth-remember-row input {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent, var(--text-primary));
+  accent-color: var(--hall-text);
 }
 
-/* ——— Cards / panels ——— */
-.hall-card,
-.hall-panel,
-.panel-card,
-.dashboard-card,
-.login-card,
-.content-modal-box.auth-experience-box,
-.glass-surface {
-  background: var(--glass-panel, var(--bg-popup));
-  border: 1px solid var(--glass-border, var(--border));
-  border-radius: 18px;
-  box-shadow:
-    var(--modal-shadow, 0 24px 70px rgba(0, 0, 0, 0.55)),
-    var(--glass-inset-shadow, inset 0 1px 0 var(--glass-border-lit, transparent));
-  backdrop-filter: blur(var(--glass-blur, 22px)) saturate(108%);
-  -webkit-backdrop-filter: blur(var(--glass-blur, 22px)) saturate(108%);
-  color: var(--text-primary);
+/* ——— Cards ——— */
+body.dashboard-shell .hall-card,
+body.dashboard-shell .hall-panel,
+body.dashboard-shell .panel-card,
+body.dashboard-shell .dashboard-card,
+body.dashboard-shell .login-card,
+body.dashboard-shell .content-modal-box.auth-experience-box,
+body.login-page .login-card,
+body.login-page .hall-card,
+body.hall-app .panel-card,
+body.hall-app .login-card,
+body.hall-app .content-modal-box.auth-experience-box,
+.bx-admin2 .panel-card,
+.bx-admin2 .content-modal-box.auth-experience-box,
+body.visitor-dashboard .panel-card {
+  background: var(--hall-surface-raised);
+  border: 1px solid var(--hall-border);
+  border-radius: var(--hall-radius-card, 22px);
+  box-shadow: var(--hall-shadow-card), var(--hall-inset);
+  backdrop-filter: blur(22px) saturate(110%);
+  -webkit-backdrop-filter: blur(22px) saturate(110%);
+  color: var(--hall-text);
 }
 
-.hall-card,
-.hall-panel,
-.panel-card,
-.dashboard-card,
-.login-card {
-  padding: 28px;
+body.dashboard-shell .hall-card,
+body.dashboard-shell .panel-card,
+body.dashboard-shell .dashboard-card,
+body.dashboard-shell .login-card,
+body.login-page .login-card,
+body.hall-app .panel-card,
+body.hall-app .login-card,
+body.hall-app .content-modal-box.auth-experience-box,
+.bx-admin2 .panel-card,
+.bx-admin2 .content-modal-box.auth-experience-box {
+  padding: var(--hall-pad-card, 36px);
 }
 
-.hall-card--flush,
-.panel-card-flush {
+body.dashboard-shell .panel-card-flush,
+body.hall-app .panel-card-flush,
+.bx-admin2 .panel-card-flush {
   padding: 0;
   overflow: hidden;
 }
 
-.hall-card-title,
-.panel-card-title {
-  font-size: 16px;
+body.dashboard-shell .panel-card-title,
+body.hall-app .panel-card-title {
+  font-size: 0.95rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
   margin-bottom: 16px;
-  color: var(--text-primary);
+  color: var(--hall-text);
 }
 
 /* ——— Badges ——— */
-.hall-badge,
-.admin-badge {
+body.dashboard-shell .admin-badge,
+body.hall-app .admin-badge,
+.bx-admin2 .admin-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: var(--hall-radius-pill, 999px);
+  font-size: 0.65rem;
   font-weight: 700;
-  border: 1px solid var(--glass-border, var(--border));
-  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--hall-border);
+  color: var(--hall-text-muted);
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
-.hall-badge--success,
-.badge-success {
-  color: #7ed957;
-  border-color: color-mix(in srgb, #7ed957 35%, transparent);
+body.dashboard-shell .badge-success,
+body.hall-app .badge-success,
+.bx-admin2 .badge-success {
+  color: #9ad67a;
+  border-color: color-mix(in srgb, #7ed957 28%, transparent);
   background: color-mix(in srgb, #7ed957 10%, transparent);
 }
 
-.hall-badge--muted,
-.badge-muted {
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+body.dashboard-shell .badge-muted,
+.bx-admin2 .badge-muted {
+  color: var(--hall-text-faint);
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
 }
 
 /* ——— Tables ——— */
-.hall-table-wrap,
-.admin-table-wrap {
-  overflow-x: auto;
-}
-
-.hall-table,
-.admin-table {
+body.dashboard-shell .admin-table,
+body.hall-app .admin-table,
+.bx-admin2 .admin-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
-  color: var(--text-primary);
+  font-size: 0.9rem;
+  color: var(--hall-text);
 }
 
-.hall-table th,
-.hall-table td,
-.admin-table th,
-.admin-table td {
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--glass-border, var(--border));
+body.dashboard-shell .admin-table th,
+body.dashboard-shell .admin-table td,
+body.hall-app .admin-table th,
+body.hall-app .admin-table td,
+.bx-admin2 .admin-table th,
+.bx-admin2 .admin-table td {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--hall-border);
   text-align: left;
   vertical-align: middle;
 }
 
-.hall-table th,
-.admin-table th {
-  font-size: 12px;
+body.dashboard-shell .admin-table th,
+body.hall-app .admin-table th,
+.bx-admin2 .admin-table th {
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  opacity: var(--text-muted-opacity, 0.52);
-  background: var(--bg-card);
+  letter-spacing: 0.1em;
+  color: var(--hall-text-faint);
+  background: transparent;
   font-weight: 700;
 }
 
-.hall-table tbody tr:hover,
-.admin-table tbody tr:hover {
-  background: var(--hover);
+body.dashboard-shell .admin-table tbody tr:hover,
+.bx-admin2 .admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--text-primary) 3%, transparent);
 }
 
-.hall-table code,
-.admin-table code {
-  font-size: 12px;
-  color: var(--text-secondary);
+body.dashboard-shell .admin-table code,
+.bx-admin2 .admin-table code {
+  font-size: 0.78rem;
+  color: var(--hall-text-muted);
 }
 
 .table-actions {
@@ -334,33 +515,39 @@
   white-space: nowrap;
 }
 
-/* ——— Modal shell (platform) ——— */
-.hall-modal,
-.admin-modal,
-.content-modal {
-  /* content-modal visibility rules live in components.css — do not fork */
-}
-
 /* ——— Messages ——— */
-.hall-message,
-.form-message,
-.admin-form-message,
-.auth-modal-message {
+body.dashboard-shell .form-message,
+body.dashboard-shell .auth-modal-message,
+body.login-page .form-message,
+body.hall-app .auth-modal-message,
+.bx-admin2 .auth-modal-message {
   min-height: 20px;
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 14px;
+  font-size: 0.85rem;
   line-height: 1.4;
+  text-align: center;
+  color: var(--hall-text-muted);
 }
 
-.hall-message--error,
-.form-message.error,
-.admin-form-message.error,
-.auth-modal-message.is-error {
+body.dashboard-shell .form-message.error,
+body.login-page .form-message.error,
+.bx-admin2 .auth-modal-message.is-error {
   color: #ff8a8a;
 }
 
-.hall-message--success,
-.form-message.success,
-.admin-form-message.success {
-  color: #7ed957;
+body.dashboard-shell .form-message.success,
+body.login-page .form-message.success {
+  color: #9ad67a;
+}
+
+/* Brand mark on login */
+.hall-login-brand,
+body.login-page .login-logo {
+  text-align: center;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  color: var(--hall-text);
 }

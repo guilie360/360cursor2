@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>360 PREVENTA | Admin</title>
+  <title>BOXIES | Acceso</title>
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
@@ -19,75 +19,18 @@
       document.documentElement.classList.add('theme-ready');
     }
   </script>
-  <style>
-    .admin-entry-shell {
-      min-height: 100vh;
-      min-height: 100svh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .admin-entry-card {
-      width: min(460px, 100%);
-      background: var(--glass-panel, var(--bg-popup));
-      border: 1px solid var(--glass-border, var(--border));
-      border-radius: 18px;
-      padding: 36px;
-      text-align: center;
-    }
-    .admin-entry-card h1 {
-      font-size: 30px;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
-    }
-    .admin-entry-card p {
-      color: var(--text-secondary);
-      font-size: 15px;
-      line-height: 1.5;
-      margin-bottom: 28px;
-    }
-    .admin-entry-actions {
-      display: grid;
-      gap: 12px;
-    }
-    .admin-entry-actions a {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      min-height: 48px;
-      padding: 13px 28px;
-      border-radius: var(--menu-card-radius, 14px);
-      border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
-      background: var(--btn-glass-surface, var(--btn-surface));
-      color: var(--text-primary);
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-    }
-    .admin-entry-note {
-      margin-top: 22px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.45;
-    }
-  </style>
 </head>
-<body class="login-page">
-  <div class="admin-entry-shell">
-    <div class="admin-entry-card">
-      <h1>360 PREVENTA</h1>
-      <p>Elige qué quieres abrir. El panel administrativo y el showroom público son aplicaciones distintas.</p>
-      <div class="admin-entry-actions">
-        <a class="primary" href="login.html">Panel administrativo</a>
-        <a class="secondary" href="../demo1">Showroom del proyecto</a>
+<body class="login-page hall-login">
+  <div class="hall-login-page" style="width:100%">
+    <div class="login-card hall-card">
+      <div class="hall-login-brand">BOXIES</div>
+      <h2 class="auth-gate-title">Plataforma</h2>
+      <p class="auth-view-lead">Elige a dónde quieres entrar. Misma identidad visual en toda BOXIES.</p>
+      <div class="auth-oauth-row">
+        <a class="outline-btn auth-action-btn" href="login.html">Panel administrativo</a>
+        <a class="outline-btn auth-action-btn" href="../admin2/">Dashboard Global</a>
+        <a class="outline-btn auth-action-btn" href="../demo1">Showroom</a>
       </div>
-      <p class="admin-entry-note">
-        El tema oficial del proyecto solo se aplica en el showroom (<code>index.html</code> de la carpeta raíz),
-        no en el panel admin.
-      </p>
     </div>
   </div>
 </body>
