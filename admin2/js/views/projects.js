@@ -42,7 +42,7 @@ var BoxiesAdmin2Projects = (function () {
         '<td>' + statusBadge(project) + '</td>' +
         '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
         '<td class="table-actions">' +
-          '<a class="btn-primary btn-compact" href="' + escapeHtml(openHref) + '">Administrar</a>' +
+          '<a class="builder-header-action-btn" href="' + escapeHtml(openHref) + '">Administrar</a>' +
         '</td>' +
       '</tr>'
     );
@@ -50,11 +50,11 @@ var BoxiesAdmin2Projects = (function () {
 
   async function render(host) {
     host.innerHTML =
-      '<div class="section-header">' +
-        '<h1>Proyectos</h1>' +
-        '<p>Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
+      '<div class="builder-step-title-row">' +
+        '<h1 class="builder-step-title">Proyectos</h1>' +
       '</div>' +
-      '<div class="panel-card panel-card-flush">' +
+      '<p class="builder-step-desc">Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
+      '<div class="bx-admin-panel">' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table">' +
             '<thead><tr>' +

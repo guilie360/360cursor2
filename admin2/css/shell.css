@@ -1,4 +1,4 @@
-/* admin2 — layout helpers only. Premium identity lives in css/hall. */
+/* admin2 — Builder chrome parity (demo3 / ai-project-builder base). */
 
 [hidden] { display: none !important; }
 
@@ -8,11 +8,105 @@
   margin: 0;
 }
 
-.dashboard-sidebar .sidebar-nav {
-  flex: 1;
+/* Rail groups — same quiet caps as builder metadata */
+.bx-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.admin-table a.btn-primary {
+.bx-rail-group {
+  margin: 18px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.bx-rail-group:first-child {
+  margin-top: 4px;
+}
+
+.bx-admin2 .builder-rail-item {
+  text-align: left;
+}
+
+.bx-admin2 .builder-rail-mark {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.bx-admin2 .builder-rail-item.is-current .builder-rail-mark {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bx-admin-user {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.bx-admin-user strong {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 550;
+}
+
+/* Step panel fills workspace like builder */
+.bx-admin2 .bx-admin-step-panel {
+  max-height: none;
+  min-height: calc(100vh - var(--builder-header-height) - var(--builder-dock-height) - var(--builder-dock-safe));
+  padding: 28px 32px 40px;
+}
+
+.bx-admin2 .bx-admin-step {
+  max-width: 920px;
+  width: 100%;
+}
+
+.bx-admin2 .builder-step-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.bx-admin2 .builder-step-desc {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 13px;
+  margin: 0 0 22px;
+  line-height: 1.55;
+  max-width: 36rem;
+}
+
+.bx-admin2 .bx-admin-panel {
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.bx-admin2 .bx-admin-panel .admin-table-wrap {
+  padding: 4px 0 8px;
+}
+
+.bx-admin2 .admin-table th,
+.bx-admin2 .admin-table td {
+  padding: 16px 20px;
+}
+
+.bx-admin2 .admin-table a.btn-primary,
+.bx-admin2 .admin-table a.builder-header-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -20,4 +114,12 @@
   box-sizing: border-box;
   width: auto;
   min-width: 7.25rem;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 0.625rem;
+}
+
+/* Hide empty dock tools chrome noise; keep bar for parity with builder footer */
+.bx-admin2 .builder-dock-tools:empty {
+  min-height: 0;
 }

@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BOXIES | Dashboard Global</title>
-  <!-- Official HALL pipeline -->
+  <!-- Official HALL pipeline + Builder chrome (demo3 base) -->
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
   <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <link rel="stylesheet" href="../admin/css/ai-project-builder.css">
   <link rel="stylesheet" href="css/shell.css">
 </head>
 <body class="dashboard-shell hall-app bx-admin2">
@@ -56,30 +57,58 @@
     </div>
   </div>
 
-  <!-- App — same shell language as Builder / admin-auth dashboard -->
-  <div id="bxAppView" hidden>
-    <header class="dashboard-header">
-      <div class="dashboard-logo">BOXIES</div>
-      <div class="dashboard-header-actions">
-        <div class="user-chip" id="bxUserChip"></div>
-        <button type="button" class="btn-ghost" id="bxLogoutBtn">Cerrar sesión</button>
+  <!-- App — same chrome language as ai-project-builder (demo3) -->
+  <div id="bxAppView" class="builder-app" hidden>
+    <header class="builder-header-fixed">
+      <div class="builder-header-left">
+        <div class="user-chip bx-admin-user" id="bxUserChip"></div>
+      </div>
+      <div class="builder-header-title">BOXIES</div>
+      <div class="builder-header-actions">
+        <button type="button" class="builder-header-action-btn" id="bxLogoutBtn">Cerrar sesión</button>
       </div>
     </header>
-    <div class="dashboard-layout">
-      <aside class="dashboard-sidebar">
-        <nav class="sidebar-nav" id="bxNav" aria-label="Navegación">
-          <div class="nav-group-label">Plataforma</div>
-          <button type="button" class="nav-item" data-bx-section="dashboard">Dashboard Global</button>
-          <button type="button" class="nav-item active" data-bx-section="projects">Proyectos</button>
-          <div class="nav-group-label">Próximamente</div>
-          <button type="button" class="nav-item" data-bx-section="users">Usuarios</button>
-          <button type="button" class="nav-item" data-bx-section="templates">Plantillas</button>
-          <button type="button" class="nav-item" data-bx-section="media">Media</button>
-          <button type="button" class="nav-item" data-bx-section="settings">Configuración</button>
-        </nav>
-      </aside>
-      <main class="dashboard-content" id="bxMain"></main>
+
+    <aside class="builder-progress-sidebar" aria-label="Navegación">
+      <nav class="bx-rail-nav" id="bxNav">
+        <div class="bx-rail-group">Plataforma</div>
+        <button type="button" class="builder-rail-item" data-bx-section="dashboard">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Dashboard Global</span>
+        </button>
+        <button type="button" class="builder-rail-item is-current" data-bx-section="projects">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Proyectos</span>
+        </button>
+        <div class="bx-rail-group">Próximamente</div>
+        <button type="button" class="builder-rail-item" data-bx-section="users">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Usuarios</span>
+        </button>
+        <button type="button" class="builder-rail-item" data-bx-section="templates">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Plantillas</span>
+        </button>
+        <button type="button" class="builder-rail-item" data-bx-section="media">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Media</span>
+        </button>
+        <button type="button" class="builder-rail-item" data-bx-section="settings">
+          <span class="builder-rail-row"><span class="builder-rail-mark" aria-hidden="true"></span>Configuración</span>
+        </button>
+      </nav>
+    </aside>
+
+    <div class="builder-workspace">
+      <div class="builder-layout-single">
+        <div class="builder-main-panel">
+          <div id="builderStepPanel" class="bx-admin-step-panel">
+            <main id="bxMain" class="builder-step-content bx-admin-step"></main>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <footer class="builder-dock" aria-hidden="true">
+      <div class="builder-dock-inner">
+        <div class="builder-dock-tools"></div>
+      </div>
+    </footer>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -109,13 +138,13 @@
   <script src="../js/auth/visitor-auth.js"></script>
   <script src="../js/visitor-session.js"></script>
   <script src="js/api/projects.js"></script>
-  <script src="js/auth-gate.js?v=auth-unify-001"></script>
-  <script src="js/views/dashboard.js?v=global-001"></script>
-  <script src="js/views/projects.js?v=global-001"></script>
-  <script src="js/views/users.js?v=global-001"></script>
-  <script src="js/views/templates.js?v=global-001"></script>
-  <script src="js/views/media.js?v=global-001"></script>
-  <script src="js/views/settings.js?v=global-001"></script>
-  <script src="js/app.js?v=global-001"></script>
+  <script src="js/auth-gate.js?v=builder-chrome-001"></script>
+  <script src="js/views/dashboard.js?v=builder-chrome-001"></script>
+  <script src="js/views/projects.js?v=builder-chrome-001"></script>
+  <script src="js/views/users.js?v=builder-chrome-001"></script>
+  <script src="js/views/templates.js?v=builder-chrome-001"></script>
+  <script src="js/views/media.js?v=builder-chrome-001"></script>
+  <script src="js/views/settings.js?v=builder-chrome-001"></script>
+  <script src="js/app.js?v=builder-chrome-001"></script>
 </body>
 </html>

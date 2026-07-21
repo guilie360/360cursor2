@@ -1,4 +1,4 @@
-/* BOXIES Global Dashboard — launcher shell (same chrome as Builder / admin-auth) */
+/* BOXIES Global Dashboard — Builder chrome (demo3 parity) */
 (function () {
   var SECTIONS = {
     dashboard: BoxiesAdmin2Dashboard,
@@ -13,6 +13,12 @@
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function setBuilderChrome(on) {
+    document.body.classList.toggle('platform-builder-shell', !!on);
+    document.body.classList.toggle('builder-has-dock', !!on);
+    document.documentElement.classList.toggle('builder-has-dock', !!on);
   }
 
   function renderUserChip(profile) {
@@ -33,6 +39,7 @@
 
   function setActiveNav(sectionId) {
     document.querySelectorAll('#bxNav [data-bx-section]').forEach(function (btn) {
+      btn.classList.toggle('is-current', btn.getAttribute('data-bx-section') === sectionId);
       btn.classList.toggle('active', btn.getAttribute('data-bx-section') === sectionId);
     });
   }
@@ -42,7 +49,7 @@
     setActiveNav(id);
     var host = document.getElementById('bxMain');
     if (!host) return;
-    host.innerHTML = '<div class="panel-card"><p class="placeholder-copy">Cargando…</p></div>';
+    host.innerHTML = '<p class="builder-step-desc">Cargando…</p>';
     await SECTIONS[id].render(host);
   }
 
@@ -62,6 +69,7 @@
       logoutBtn.dataset.bound = '1';
       logoutBtn.addEventListener('click', async function () {
         logoutBtn.disabled = true;
+        setBuilderChrome(false);
         await BoxiesAdmin2Auth.logout();
         logoutBtn.disabled = false;
       });
@@ -70,9 +78,9 @@
 
   async function onAppReady(profile) {
     document.body.classList.add('dashboard-shell');
+    setBuilderChrome(true);
     bindShell();
     renderUserChip(profile);
-    /* Projects is the launcher home — open Builder from here */
     await showSection('projects');
   }
 

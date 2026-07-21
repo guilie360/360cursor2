@@ -33,6 +33,10 @@ var BoxiesAdmin2Auth = (function () {
     if (login) login.hidden = name !== 'login';
     if (forbidden) forbidden.hidden = name !== 'forbidden';
     if (app) app.hidden = name !== 'app';
+    var builderOn = name === 'app';
+    document.body.classList.toggle('platform-builder-shell', builderOn);
+    document.body.classList.toggle('builder-has-dock', builderOn);
+    document.documentElement.classList.toggle('builder-has-dock', builderOn);
   }
 
   function admin2ReturnPath() {
