@@ -11,50 +11,51 @@ alwaysApply: true
 
 No es solo un tema de proyecto. Define la identidad visual de login, dashboards, modales, builders, formularios, tablas y cualquier herramienta futura.
 
+## Pipeline obligatorio (sin variantes)
+
+```
+HallDesignSystem.paint()
+  → css/variables.css
+  → css/components.css
+  → ThemeSystem (tokens --bg-* / --glass-* / --btn-*)
+  → render con clases HALL (.outline-btn, .auth-*, .content-modal*, .glass-surface)
+```
+
 ## Fuente de verdad
 
-1. **Config / ADN:** `js/shared/config.js` → `PROJECT_DEFAULT_THEME_FALLBACK`, `PROJECT_DEFAULT_STYLE_NAME = 'HALL'`
-2. **Tokens en vivo:** `css/variables.css` + `ThemeSystem` → `--bg-*`, `--glass-*`, `--text-*`, `--btn-*`
-3. **Componentes:** `css/components.css` (`.glass-surface`, `.outline-btn`, `.content-modal*`, `.auth-experience*`, etc.)
-4. **Aplicación platform-wide:** `js/platform/hall-design-system.js` → `HallDesignSystem.paint()`
+1. **ADN:** `js/shared/config.js` → `PROJECT_DEFAULT_THEME_FALLBACK`, `PROJECT_DEFAULT_STYLE_NAME = 'HALL'`
+2. **Tokens:** `css/variables.css` + `ThemeSystem`
+3. **Componentes:** `css/components.css`
+4. **Boot:** `js/platform/hall-design-system.js` → `HallDesignSystem.paint()`
 
-## Obligatorio
+## Mapa de rutas (estabilización)
 
-- Toda vista/módulo nuevo **nace con HALL** (pintar tokens + reutilizar clases existentes).
-- Antes de diseñar: preguntar si el componente ya existe en HALL / `components.css`.
-- Proyectos nuevos: persistir `project_default_theme` = HALL al crear (`createDefaultConfig`).
-- Login / Dashboard Global / Builder / herramientas internas: mismo ADN visual.
+| Ruta | Auth | Design System |
+|------|------|----------------|
+| `/`, `/demo1`, `/demo2`, `/demo3` | PlatformAuth / VisitorAuth | HALL (`variables` + `components` + ThemeSystem) |
+| **Administrar** (menú showroom) | Misma sesión showroom | → `admin/ai-project-builder.html?proyecto=` + HALL pipeline |
+| `/admin2` | Misma sesión (`profiles.rol` admin) | HALL + `admin2/css/shell.css` (solo layout) |
+| `/admin`, `/admin/dashboard.html` | **Legado** constructora (`AdminAuth`) | Deuda: `admin-auth.css` — no usar desde Administrar |
+| `/admin/login.html` | Legado constructora | No es el login del showroom ni de `/admin2` |
+
+### Regla Administrar
+
+- Enlace: `AuthRedirects.adminBuilder()` → `ai-project-builder.html`
+- **Nunca** `/admin2`, **nunca** `dashboard.html` (AdminAuth)
+- Antes de `AuthBootstrap.init`, limpiar OAuth `returnPath` hostil (evita bounce a `/demo1`)
 
 ## Prohibido
 
-- Crear CSS que **copie o aproxime** HALL (`--bx-*`, `--admin-theme-*`, “tema dashboard”, etc.).
-- Inventar identidad visual por módulo (Login A, Dashboard B, Panel C).
-- Duplicar botones, inputs, cards, modales o badges “parecidos”.
-- Estilos layout con colores hardcodeados que no salgan de tokens HALL.
+- CSS que copie HALL (`--bx-*`, temas admin/dashboard paralelos)
+- Redefinir `.outline-btn` / inputs / cards fuera de `components.css`
+- Identidades por módulo
+- Avanzar features nuevas mientras haya regresiones de consistencia
 
 ## Layout-only CSS
 
-Si una pantalla necesita estructura (sidebar, grid), el CSS **solo** puede:
+Solo posicionar/dimensionar y consumir `var(--bg-*)`, `var(--glass-*)`, etc. Nunca inventar colores/radios de botones.
 
-- Posicionar / dimensionar
-- Consumir `var(--bg-*)`, `var(--glass-*)`, `var(--text-*)`, `var(--border)`, etc.
+## Deuda conocida (no ampliar)
 
-Nunca redefinir la identidad.
-
-## Ejemplo
-
-```html
-<!-- ✅ Reutilizar -->
-<button class="outline-btn auth-action-btn">Iniciar sesión</button>
-<div class="content-modal-box auth-experience-box">…</div>
-
-<!-- ❌ Inventar -->
-<button class="bx-btn-primary">Entrar</button>
-```
-
-```js
-// ✅ Al montar una herramienta de plataforma
-HallDesignSystem.paint({ persist: false });
-
-// ❌ Nuevo archivo CSS con paleta propia
-```
+- `admin/css/admin-auth.css` + `ai-project-builder.css` aún aportan chrome de builder; deben migrar a clases HALL sin duplicar botones.
+- No añadir más reglas a esos forks; al tocar UI del builder, preferir `.outline-btn` / tokens HALL.

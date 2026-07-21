@@ -1,5 +1,25 @@
-/* Platform admin builder page bootstrap — profiles.rol = admin only */
+/* Platform admin builder — same session as showroom (PlatformAuth / profiles.rol) */
 (function () {
+  /**
+   * AuthBootstrap.restoreUiState redirects to OAuth returnPath (e.g. /demo1).
+   * That bounces Administrar back to the showroom. Clear hostile return state first.
+   */
+  function clearHostileOAuthReturnState() {
+    if (typeof OAuthApi === 'undefined') return;
+    try {
+      var peek = typeof OAuthApi.peekReturnPath === 'function' ? OAuthApi.peekReturnPath() : null;
+      if (!peek) return;
+      var path = String(peek);
+      if (/\/admin(\/|$)/i.test(path) || /ai-project-builder/i.test(path) || /\/admin2/i.test(path)) {
+        return;
+      }
+      console.warn('[Builder] clearing OAuth returnPath that would leave builder:', path);
+      if (typeof OAuthApi.clearReturnState === 'function') OAuthApi.clearReturnState();
+    } catch (e) {
+      console.warn('[Builder] clearHostileOAuthReturnState', e);
+    }
+  }
+
   async function resolveAdminProfile() {
     if (typeof VisitorSession !== 'undefined') {
       await VisitorSession.refresh();
@@ -35,6 +55,19 @@
     }
   }
 
+  function returnToShowroom() {
+    var home = '../index.html';
+    try {
+      home = new URL('../index.html', window.location.href).href;
+      var proyecto = new URLSearchParams(window.location.search).get('proyecto');
+      if (proyecto) {
+        /* Prefer pretty slug URL when available */
+        home = new URL('../' + encodeURIComponent(proyecto), window.location.href).href;
+      }
+    } catch (e) {}
+    window.location.replace(home);
+  }
+
   async function requirePlatformAdmin() {
     if (typeof AuthBootstrap !== 'undefined' && typeof AuthBootstrap.whenReady === 'function') {
       await AuthBootstrap.whenReady();
@@ -42,24 +75,11 @@
 
     var profile = await resolveAdminProfile();
     if (!profile || !PlatformRoles.isPlatformAdmin(profile)) {
-      var home = '../index.html';
-      try {
-        home = new URL('../index.html', window.location.href).href;
-        var proyecto = new URLSearchParams(window.location.search).get('proyecto');
-        if (proyecto) {
-          var homeUrl = new URL(home);
-          homeUrl.searchParams.set('proyecto', proyecto);
-          home = homeUrl.href;
-        }
-      } catch (e) {}
-      window.location.replace(home);
+      console.warn('[Builder] access denied — not platform admin; returning to showroom');
+      returnToShowroom();
       return null;
     }
     return profile;
-  }
-
-  function bindBackButton() {
-    /* Back navigation lives in builder topbar (#builderBackInlineBtn) */
   }
 
   async function start() {
@@ -72,17 +92,37 @@
       console.error('[Builder]', err);
     }
 
-    bindBackButton();
-
     var root = document.getElementById('builderRoot');
     if (root && typeof AiProjectBuilderView !== 'undefined') {
       await AiProjectBuilderView.render(root);
     }
   }
 
-  if (typeof AuthBootstrap !== 'undefined' && typeof AuthBootstrap.init === 'function') {
-    AuthBootstrap.init().then(start);
+  async function boot() {
+    clearHostileOAuthReturnState();
+
+    if (typeof HallDesignSystem !== 'undefined') {
+      HallDesignSystem.paint({ persist: false });
+    }
+
+    if (typeof AuthBootstrap !== 'undefined' && typeof AuthBootstrap.init === 'function') {
+      await AuthBootstrap.init();
+    } else if (typeof VisitorSession !== 'undefined') {
+      await VisitorSession.refresh();
+    }
+
+    await start();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      boot().catch(function (err) {
+        console.error('[Builder] boot', err);
+      });
+    });
   } else {
-    start();
+    boot().catch(function (err) {
+      console.error('[Builder] boot', err);
+    });
   }
 })();

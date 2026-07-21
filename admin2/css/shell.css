@@ -336,18 +336,10 @@ body.hall-design-system.bx-admin2 {
   justify-content: center;
 }
 
-.hall-btn-compact {
-  width: auto !important;
-  min-height: 40px !important;
-  padding: 10px 14px !important;
-  font-size: 0.68rem !important;
-}
-
+/* Layout-only link: size/identity come from .outline-btn (HALL) */
 .hall-inline-link.outline-btn {
   display: inline-flex;
   width: auto;
-  min-height: 40px;
-  padding: 10px 14px;
   text-decoration: none;
 }
 

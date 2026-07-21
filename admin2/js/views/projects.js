@@ -77,7 +77,7 @@ var BoxiesAdmin2Projects = (function () {
           '<h1>Proyectos</h1>' +
           '<p>Showrooms administrados en BOXIES.</p>' +
         '</div>' +
-        '<button type="button" class="outline-btn auth-action-btn hall-btn-compact" id="bxNewProjectBtn">+ Nuevo Proyecto</button>' +
+        '<button type="button" class="outline-btn auth-action-btn" id="bxNewProjectBtn">+ Nuevo Proyecto</button>' +
       '</div>' +
       '<div class="hall-panel hall-panel-flush">' +
         '<div class="hall-table-wrap">' +
