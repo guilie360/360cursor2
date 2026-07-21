@@ -780,6 +780,56 @@ function buildUnitsData(project) {
   });
 }
 
+/**
+ * LIVE "HALL" is a shared style name — confirm it matches this project's official theme
+ * before reinforcing cached Style Engine state.
+ */
+function hallThemeIdentityFingerprint(theme) {
+  if (!theme || typeof theme !== 'object') return '';
+  var keys = [
+    'bg', 'accent', 'surface', 'menuColor', 'hoverColor', 'maskColor',
+    'textMode', 'bgTextMode', 'visualDepth', 'panelGlass', 'bgGlass', 'buttonGlass',
+    'borderGlass', 'shadowGlass', 'heroSurface', 'heroHoverColor', 'heroLayout',
+    'buttonBorderColor', 'buttonHoverBorderColor', 'themeKey'
+  ];
+  var parts = [];
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (theme[key] == null || theme[key] === '') continue;
+    parts.push(key + '=' + String(theme[key]).trim().toLowerCase());
+  }
+  return parts.join('|');
+}
+
+function isLiveHallForCurrentProject() {
+  var official = null;
+  if (typeof ProjectThemeAuthority !== 'undefined' &&
+      typeof ProjectThemeAuthority.getOfficialDraft === 'function') {
+    official = ProjectThemeAuthority.getOfficialDraft();
+  } else if (typeof ProjectThemeApi !== 'undefined' &&
+      typeof ProjectThemeApi.getFromProject === 'function') {
+    official = ProjectThemeApi.getFromProject(window.PROJECT_DATA);
+  }
+  if (!official) return false;
+
+  if (typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig) {
+    official = ThemeSystem.normalizeCustomConfig(official);
+  }
+
+  var liveDraft = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getPersonalizarDraft
+    ? StyleEngineStore.getPersonalizarDraft()
+    : null;
+  if (!liveDraft) return false;
+
+  if (typeof ThemeSystem !== 'undefined' && ThemeSystem.normalizeCustomConfig) {
+    liveDraft = ThemeSystem.normalizeCustomConfig(liveDraft);
+  }
+
+  var liveFp = hallThemeIdentityFingerprint(liveDraft);
+  var officialFp = hallThemeIdentityFingerprint(official);
+  return !!(liveFp && officialFp && liveFp === officialFp);
+}
+
 function applyProjectData(project) {
   window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
   console.log('[CASCADE]', 'applyProjectData', Date.now(), window.__CASCADE_N);
@@ -833,9 +883,11 @@ function applyProjectData(project) {
         var seLive = typeof StyleEngineCompatibility !== 'undefined' &&
           StyleEngineCompatibility.isStyleEngineLive &&
           StyleEngineCompatibility.isStyleEngineLive();
+        /* Name "HALL" is shared across projects — only reinforce if LIVE matches this project's official theme. */
+        var hallBelongsToCurrentProject = activeIsHall && seLive && isLiveHallForCurrentProject();
 
-        /* Si HALL ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
-        if (activeIsHall && seLive && !skipForce) {
+        /* Si HALL del proyecto actual ya está LIVE, solo reforzar materiales (sin re-publicar el store). */
+        if (hallBelongsToCurrentProject && !skipForce) {
           if (typeof BootDebug !== 'undefined') BootDebug.log('theme: reinforcePublished');
           window.__pdTrace('theme branch · reinforcePublished');
           if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
