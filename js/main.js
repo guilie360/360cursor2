@@ -2007,7 +2007,7 @@ function bindMenuOpenTokenGestures() {
     if (!e.isTrusted) return;
     var target = e.target;
     if (!target || !target.closest) return;
-    if (target.closest('#mainMenuOpenBtn, #mainMenu, #mainMenuBackdrop, .main-menu-backdrop, #customThemeColorPopover, [id^="menu"], #mainMenuListPersonalizarV2, #menuNavV2Col, #menuNavV2Actions, .personalize-v2-scroll, .mis-temas-list, .personalize-v2-icon-btn')) {
+    if (target.closest('#mainMenuOpenBtn, #mainMenu, #mainMenuBackdrop, .main-menu-backdrop, #customThemeColorPopover, [id^="menu"], #mainMenuListPersonalizarV2, #menuNavV2Col, #menuNavV2Actions, .personalize-v2-scroll, .mis-temas-list, .personalize-v2-icon-btn, #projectThemeConfirmModal')) {
       grantMenuOpenToken(3000);
       lastNavUserGestureAt = Date.now();
     }

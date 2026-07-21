@@ -219,7 +219,12 @@ var GlobalClose = (function () {
       return true;
     }
     if (isProjectThemeConfirmOpen()) {
-      if (typeof VisitorPersonalizePanel !== 'undefined' &&
+      if (typeof VisitorPersonalizeV2Panel !== 'undefined' &&
+          typeof VisitorPersonalizeV2Panel.hasPendingProjectConfirm === 'function' &&
+          VisitorPersonalizeV2Panel.hasPendingProjectConfirm() &&
+          typeof VisitorPersonalizeV2Panel.closeProjectDefaultConfirm === 'function') {
+        VisitorPersonalizeV2Panel.closeProjectDefaultConfirm();
+      } else if (typeof VisitorPersonalizePanel !== 'undefined' &&
           typeof VisitorPersonalizePanel.closeProjectThemeConfirm === 'function') {
         VisitorPersonalizePanel.closeProjectThemeConfirm();
       } else {

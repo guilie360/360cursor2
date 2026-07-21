@@ -1578,6 +1578,14 @@ var VisitorPersonalizePanel = (function () {
     }
     if (applyBtn) {
       applyBtn.addEventListener('click', function () {
+        if (typeof VisitorPersonalizeV2Panel !== 'undefined' &&
+            typeof VisitorPersonalizeV2Panel.hasPendingProjectConfirm === 'function' &&
+            VisitorPersonalizeV2Panel.hasPendingProjectConfirm()) {
+          if (typeof VisitorPersonalizeV2Panel.confirmApplyAsProjectDefault === 'function') {
+            VisitorPersonalizeV2Panel.confirmApplyAsProjectDefault();
+          }
+          return;
+        }
         confirmApplyThemeToProject();
       });
     }

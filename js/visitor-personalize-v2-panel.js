@@ -14,6 +14,7 @@ var VisitorPersonalizeV2Panel = (function () {
   var draft = null;
   var editingStyleId = null;
   var pendingProjectStyle = null;
+  var pendingProjectThemeDraft = null;
 
   var COLOR_FIELD_BY_ACTION = {
     'pick-mask': 'maskColor',
@@ -940,9 +941,35 @@ var VisitorPersonalizeV2Panel = (function () {
     if (typeof window.grantMenuOpenToken === 'function') window.grantMenuOpenToken(3600000);
   }
 
+  function setConfirmModalError(message) {
+    var copy = document.querySelector('#projectThemeConfirmModal .project-theme-confirm-copy');
+    if (!copy) return;
+    if (!copy.dataset.defaultCopy) copy.dataset.defaultCopy = copy.textContent || '';
+    copy.textContent = message || copy.dataset.defaultCopy;
+    copy.style.color = message ? '#ff8a8a' : '';
+  }
+
+  function resetConfirmModalCopy() {
+    var copy = document.querySelector('#projectThemeConfirmModal .project-theme-confirm-copy');
+    if (!copy || !copy.dataset.defaultCopy) return;
+    copy.textContent = copy.dataset.defaultCopy;
+    copy.style.color = '';
+  }
+
   function openProjectDefaultConfirm(style) {
     if (!canApplyAsProjectDefault()) return;
+    if (!style) {
+      setMisEstilosMessage('No se pudo seleccionar el estilo.', true);
+      return;
+    }
+    var themeDraft = normalize(style.personalizarDraft || style.configuracion || {});
+    if (!themeDraft) {
+      setMisEstilosMessage('Este estilo no tiene configuración válida.', true);
+      return;
+    }
     pendingProjectStyle = style;
+    pendingProjectThemeDraft = themeDraft;
+    resetConfirmModalCopy();
     var modal = document.getElementById('projectThemeConfirmModal');
     if (!modal) {
       confirmApplyAsProjectDefault();
@@ -954,30 +981,63 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function closeProjectDefaultConfirm() {
     pendingProjectStyle = null;
+    pendingProjectThemeDraft = null;
+    resetConfirmModalCopy();
+    var applyBtn = document.getElementById('projectThemeConfirmApplyBtn');
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.textContent = applyBtn.dataset.defaultLabel || 'Aplicar';
+    }
     var modal = document.getElementById('projectThemeConfirmModal');
     if (modal) modal.classList.remove('active');
     if (typeof GlobalClose !== 'undefined') GlobalClose.update();
   }
 
+  function hasPendingProjectConfirm() {
+    return !!(pendingProjectStyle && pendingProjectThemeDraft);
+  }
+
   async function confirmApplyAsProjectDefault() {
-    if (!pendingProjectStyle) return;
-    var style = pendingProjectStyle;
-    var proyectoId = ProjectThemeAuthority.getCurrentProyectoId();
-    if (!proyectoId) {
-      setMisEstilosMessage('No se encontró el proyecto activo.', true);
-      closeProjectDefaultConfirm();
+    if (!pendingProjectStyle || !pendingProjectThemeDraft) {
+      setConfirmModalError('No hay un estilo seleccionado para aplicar.');
+      console.warn('[Style V.3] Aplicar: sin pendingProjectStyle');
       return;
     }
+    var style = pendingProjectStyle;
+    var themeDraft = pendingProjectThemeDraft;
+    var proyectoId = ProjectThemeAuthority.getCurrentProyectoId();
+    if (!proyectoId) {
+      setConfirmModalError('No se encontró el proyecto activo.');
+      setMisEstilosMessage('No se encontró el proyecto activo.', true);
+      return;
+    }
+
+    var applyBtn = document.getElementById('projectThemeConfirmApplyBtn');
+    if (applyBtn) {
+      if (!applyBtn.dataset.defaultLabel) applyBtn.dataset.defaultLabel = applyBtn.textContent || 'Aplicar';
+      applyBtn.disabled = true;
+      applyBtn.textContent = 'Aplicando…';
+    }
+
     try {
-      var themeDraft = normalize(style.personalizarDraft || style.configuracion || {});
       await ProjectThemeAuthority.setOfficialThemeForProject(proyectoId, themeDraft);
       setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
       renderMisEstilosList();
-      setMisEstilosMessage('Estilo «' + BASE_STYLE_NAME + '» actualizado como predeterminado del proyecto.', false);
+      setMisEstilosMessage(
+        'Estilo «' + (style.name || BASE_STYLE_NAME) + '» actualizado como predeterminado del proyecto.',
+        false
+      );
       closeProjectDefaultConfirm();
       if (typeof playSound === 'function') playSound('buttonTap');
     } catch (err) {
-      setMisEstilosMessage(err.message || 'No se pudo aplicar al proyecto.', true);
+      console.error('[Style V.3] apply project default', err);
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.textContent = applyBtn.dataset.defaultLabel || 'Aplicar';
+      }
+      var msg = (err && err.message) || 'No se pudo aplicar al proyecto.';
+      setConfirmModalError(msg);
+      setMisEstilosMessage(msg, true);
     }
   }
 
@@ -990,17 +1050,24 @@ var VisitorPersonalizeV2Panel = (function () {
     var cancelBtn = document.getElementById('projectThemeConfirmCancelBtn');
 
     if (applyBtn) {
-      applyBtn.addEventListener('click', function () {
-        if (pendingProjectStyle) confirmApplyAsProjectDefault();
-      });
+      /* Capture phase so V2 owns the shared modal click before legacy no-op handler. */
+      applyBtn.addEventListener('click', function (e) {
+        if (!hasPendingProjectConfirm()) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        confirmApplyAsProjectDefault();
+      }, true);
     }
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', function () {
-        if (pendingProjectStyle) closeProjectDefaultConfirm();
-      });
+      cancelBtn.addEventListener('click', function (e) {
+        if (!hasPendingProjectConfirm()) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        closeProjectDefaultConfirm();
+      }, true);
     }
     modal.addEventListener('click', function (e) {
-      if (e.target.id === 'projectThemeConfirmModal' && pendingProjectStyle) {
+      if (e.target.id === 'projectThemeConfirmModal' && hasPendingProjectConfirm()) {
         closeProjectDefaultConfirm();
       }
     });
@@ -1206,6 +1273,7 @@ var VisitorPersonalizeV2Panel = (function () {
       syncUiFromDraft();
       renderMisEstilosList();
       previewLive();
+      bindProjectConfirmForV2();
       return;
     }
 
@@ -1358,7 +1426,10 @@ var VisitorPersonalizeV2Panel = (function () {
     render: render,
     isOnPanel: isOnPanel,
     onLeave: onLeave,
-    getDraft: function () { return draft ? Object.assign({}, draft) : null; }
+    getDraft: function () { return draft ? Object.assign({}, draft) : null; },
+    hasPendingProjectConfirm: hasPendingProjectConfirm,
+    confirmApplyAsProjectDefault: confirmApplyAsProjectDefault,
+    closeProjectDefaultConfirm: closeProjectDefaultConfirm
   };
 })();
 
