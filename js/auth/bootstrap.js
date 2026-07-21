@@ -192,6 +192,22 @@ var AuthBootstrap = (function () {
 
       bindAuthStateChange();
       await initNormalSession();
+      /* After /auth/callback.html → showroom redirect, restore UI from saved return state. */
+      if (typeof OAuthApi !== 'undefined' &&
+          typeof OAuthApi.hasReturnState === 'function' &&
+          OAuthApi.hasReturnState()) {
+        if (typeof VisitorAuthModal !== 'undefined') VisitorAuthModal.close();
+        if (typeof OAuthApi.restoreUiState === 'function') {
+          OAuthApi.restoreUiState({ enterProject: true });
+        }
+        if (typeof GlobalClose !== 'undefined') GlobalClose.update();
+        if (typeof showToast === 'function' && typeof VisitorSession !== 'undefined') {
+          showToast('Bienvenido, ' + VisitorSession.displayName());
+        }
+        if (typeof window.refreshVisitorMenuProfile === 'function') {
+          window.refreshVisitorMenuProfile();
+        }
+      }
       finishStartup();
     } finally {
       markReady();

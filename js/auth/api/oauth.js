@@ -6,19 +6,61 @@ var OAuthApi = (function () {
     GOOGLE: 'google'
   };
 
-  function saveReturnState() {
-    try {
-      var proyecto =
+  function originSafe() {
+    return window.location.origin || '';
+  }
+
+  function isSafeReturnPath(path) {
+    if (!path || typeof path !== 'string') return false;
+    if (path.charAt(0) !== '/') return false;
+    if (path.indexOf('//') === 0) return false;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return false;
+    if (path.indexOf('/auth/callback') === 0) return false;
+    return true;
+  }
+
+  function currentReturnPath() {
+    var path = window.location.pathname || '/';
+    if (path === '/' || /^\/index\.html$/i.test(path)) {
+      var slug =
         typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
           : new URLSearchParams(window.location.search).get('proyecto');
+      if (slug) return '/' + encodeURIComponent(slug);
+    }
+    return path;
+  }
+
+  function saveReturnState() {
+    try {
       sessionStorage.setItem(RETURN_STATE_KEY, JSON.stringify({
         scrollY: window.scrollY || 0,
         navStack: typeof navStack !== 'undefined' ? navStack.slice() : [],
         hadNavStack: typeof navStack !== 'undefined' && navStack.length > 0,
-        proyecto: proyecto || null
+        returnPath: currentReturnPath()
       }));
     } catch (e) {}
+  }
+
+  function hasReturnState() {
+    try {
+      return !!sessionStorage.getItem(RETURN_STATE_KEY);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function peekReturnPath() {
+    try {
+      var raw = sessionStorage.getItem(RETURN_STATE_KEY);
+      var state = raw ? JSON.parse(raw) : null;
+      if (state && isSafeReturnPath(state.returnPath)) return state.returnPath;
+      if (state && state.proyecto) {
+        var legacy = '/' + String(state.proyecto).replace(/^\/+/, '');
+        if (isSafeReturnPath(legacy)) return legacy;
+      }
+    } catch (e) {}
+    return '/';
   }
 
   function restoreNavStack(screens) {
@@ -42,11 +84,22 @@ var OAuthApi = (function () {
       sessionStorage.removeItem(RETURN_STATE_KEY);
       var state = raw ? JSON.parse(raw) : null;
 
-      if (state && state.proyecto) {
-        var params = new URLSearchParams(window.location.search);
-        if (!params.get('proyecto')) {
-          params.set('proyecto', state.proyecto);
-          history.replaceState(null, '', window.location.pathname + '?' + params.toString() + window.location.hash);
+      if (state) {
+        var targetPath = null;
+        if (isSafeReturnPath(state.returnPath)) {
+          targetPath = state.returnPath;
+        } else if (state.proyecto) {
+          var legacyPath = '/' + String(state.proyecto).replace(/^\/+/, '');
+          if (isSafeReturnPath(legacyPath)) targetPath = legacyPath;
+        }
+
+        if (targetPath) {
+          var currentPath = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
+          var normalizedTarget = targetPath.replace(/\/+$/, '') || '/';
+          if (currentPath !== normalizedTarget) {
+            window.location.replace(originSafe() + targetPath);
+            return;
+          }
         }
       }
 
@@ -117,7 +170,9 @@ var OAuthApi = (function () {
     startProviderSignIn: handleGoogleAuth,
     saveReturnState: saveReturnState,
     restoreUiState: restoreUiState,
-    restoreReturnState: restoreUiState
+    restoreReturnState: restoreUiState,
+    hasReturnState: hasReturnState,
+    peekReturnPath: peekReturnPath
   };
 })();
 

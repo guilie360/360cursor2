@@ -49,7 +49,8 @@ var AuthRedirects = (function () {
   }
 
   function oauthCallback() {
-    return origin() + '/index.html';
+    /* Single allowlisted callback for all showrooms (SaaS-safe). */
+    return origin() + '/auth/callback.html';
   }
 
   function terminos() {
@@ -86,6 +87,7 @@ var AuthRedirects = (function () {
 
   function requiredAllowlist() {
     return [
+      origin() + '/auth/callback.html',
       origin() + '/auth/confirmar-email.html',
       origin() + '/auth/restablecer-contrasena.html',
       origin() + '/auth/ingresar.html',
