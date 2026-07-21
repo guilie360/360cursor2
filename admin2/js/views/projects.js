@@ -56,7 +56,7 @@ var BoxiesAdmin2Projects = (function () {
   function row(project) {
     var slug = project.slug || '';
     var name = project.nombre || slug || 'Sin nombre';
-    var editHref = '../admin/dashboard.html?proyecto=' + encodeURIComponent(slug);
+    var editHref = '../admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug);
     return (
       '<tr>' +
         '<td><span class="bx-project-name">' + escapeHtml(name) + '</span>' +
@@ -95,7 +95,7 @@ var BoxiesAdmin2Projects = (function () {
 
     var tbody = document.getElementById('bxProjectsBody');
     try {
-      var projects = await ProyectosApi.list();
+      var projects = await BoxiesAdmin2ProjectsApi.list();
       if (!projects || !projects.length) {
         tbody.innerHTML = '<tr><td colspan="5">No hay proyectos registrados.</td></tr>';
         return;

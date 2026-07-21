@@ -31,7 +31,7 @@ var BoxiesAdmin2Dashboard = (function () {
       '</div>';
 
     try {
-      var projects = await ProyectosApi.list();
+      var projects = await BoxiesAdmin2ProjectsApi.list();
       var total = projects ? projects.length : 0;
       var latest = null;
       (projects || []).forEach(function (p) {

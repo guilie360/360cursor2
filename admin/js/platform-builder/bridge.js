@@ -69,7 +69,7 @@ var PlatformBuilderBridge = (function () {
       getConstructoraId: function () { return constructoraId; },
       isAdmin: function () {
         return typeof PlatformRoles !== 'undefined' &&
-          PlatformRoles.isAdmin(profile || (typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null));
+          PlatformRoles.isPlatformAdmin(profile || (typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null));
       },
       setActiveProjectId: function (id) {
         try {

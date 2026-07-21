@@ -22,9 +22,13 @@
       chip.innerHTML = '';
       return;
     }
+    var roleLabel =
+      typeof PlatformRoles !== 'undefined'
+        ? PlatformRoles.getRoleLabel(profile)
+        : (profile.rol || 'admin');
     chip.innerHTML =
       '<strong>' + escapeHtml(profile.nombre || profile.email || 'Admin') + '</strong>' +
-      '<span>' + escapeHtml(profile.rol || 'admin') + '</span>';
+      '<span>' + escapeHtml(roleLabel) + '</span>';
   }
 
   function setActiveNav(sectionId) {

@@ -4,13 +4,15 @@ var PlatformRoles = (function () {
   var ROLES = {
     USUARIO: 'usuario',
     ASESOR: 'asesor',
-    ADMIN: 'admin'
+    ADMIN: 'admin',
+    SUPER_ADMIN: 'super_admin'
   };
 
   var ROLE_LABELS = {
     usuario: 'Usuario',
     asesor: 'Asesor',
-    admin: 'Administrador'
+    admin: 'Administrador',
+    super_admin: 'Super administrador'
   };
 
   function getPlatformProfile(profile) {
@@ -40,8 +42,14 @@ var PlatformRoles = (function () {
     return getRole(profile) === ROLES.ADMIN;
   }
 
+  /* Global Dashboard + project admin surfaces: platform profiles.rol */
+  function isPlatformAdmin(profile) {
+    var role = getRole(profile);
+    return role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN;
+  }
+
   function isStaff(profile) {
-    return isAsesor(profile) || isAdmin(profile);
+    return isAsesor(profile) || isPlatformAdmin(profile);
   }
 
   return {
@@ -52,6 +60,7 @@ var PlatformRoles = (function () {
     isUsuario: isUsuario,
     isAsesor: isAsesor,
     isAdmin: isAdmin,
+    isPlatformAdmin: isPlatformAdmin,
     isStaff: isStaff
   };
 })();
@@ -85,7 +94,7 @@ var PlatformPermissions = (function () {
 
   function has(profile, key) {
     if (!key) return false;
-    if (PlatformRoles.isAdmin(profile)) return true;
+    if (PlatformRoles.isPlatformAdmin(profile)) return true;
     return !!getPermissions(profile)[key];
   }
 
@@ -110,7 +119,7 @@ var PlatformPermissions = (function () {
 var PlatformVisibility = (function () {
   var RULES = {
     'dashboard.admin': function (profile) {
-      return PlatformRoles.isAdmin(profile);
+      return PlatformRoles.isPlatformAdmin(profile);
     },
     'project.edit': function (profile) {
       return PlatformPermissions.has(profile, PlatformPermissions.KEYS.EDITAR_PROYECTO);
@@ -128,7 +137,7 @@ var PlatformVisibility = (function () {
       return PlatformPermissions.has(profile, PlatformPermissions.KEYS.GESTIONAR_USUARIOS);
     },
     'project.officialTheme': function (profile) {
-      return PlatformRoles.isAdmin(profile);
+      return PlatformRoles.isPlatformAdmin(profile);
     }
   };
 

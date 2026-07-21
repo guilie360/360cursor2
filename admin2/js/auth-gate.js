@@ -1,7 +1,5 @@
-/* BOXIES admin2 — auth gate (reuses AdminAuth / AdminSupabase / AdminState) */
+/* BOXIES admin2 — auth gate (PlatformAuth / profiles.rol, same as showrooms) */
 var BoxiesAdmin2Auth = (function () {
-  var REMEMBER_KEY = 'boxies_admin2_email';
-
   function $(id) {
     return document.getElementById(id);
   }
@@ -22,53 +20,121 @@ var BoxiesAdmin2Auth = (function () {
     if (app) app.hidden = name !== 'app';
   }
 
-  function callbackUrl() {
-    return window.location.origin + '/admin2/';
+  function displayName(profile, user) {
+    if (!profile && !user) return 'Admin';
+    if (profile) {
+      if (profile.nombre_visible) return profile.nombre_visible;
+      if (profile.nombre) return profile.nombre;
+      if (profile.nombres) return profile.nombres;
+      if (profile.platformProfile && profile.platformProfile.nombre_visible) {
+        return profile.platformProfile.nombre_visible;
+      }
+    }
+    return (user && user.email) || 'Admin';
+  }
+
+  function normalizeProfile(profile, user) {
+    if (!profile) return null;
+    var platform = profile.platformProfile || profile;
+    var rol = platform.rol || profile.rol || 'usuario';
+    return {
+      id: platform.id || profile.id || (user && user.id),
+      email: (user && user.email) || profile.email || '',
+      nombre: displayName(profile, user),
+      rol: rol,
+      platformProfile: platform,
+      raw: profile
+    };
+  }
+
+  async function resolvePlatformAdminProfile() {
+    if (typeof VisitorSession !== 'undefined' && typeof VisitorSession.refresh === 'function') {
+      await VisitorSession.refresh();
+    }
+
+    var profile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
+    var user = typeof VisitorAuth !== 'undefined' ? VisitorAuth.getUser() : null;
+
+    if (profile && PlatformRoles.isPlatformAdmin(profile)) {
+      return normalizeProfile(profile, user);
+    }
+
+    if (!user || !user.id || typeof ProfilesApi === 'undefined') {
+      return profile ? normalizeProfile(profile, user) : null;
+    }
+
+    try {
+      var platformProfile = await ProfilesApi.fetchById(user.id);
+      if (!platformProfile || !PlatformRoles.isPlatformAdmin(platformProfile)) {
+        return profile ? normalizeProfile(profile, user) : null;
+      }
+
+      if (profile) {
+        profile.platformProfile = platformProfile;
+        profile.rol = platformProfile.rol;
+        profile.permisos = platformProfile.permisos;
+        return normalizeProfile(profile, user);
+      }
+
+      if (typeof VisitantesApi !== 'undefined') {
+        return normalizeProfile(
+          VisitantesApi.buildAuthProfile(user, null, platformProfile),
+          user
+        );
+      }
+
+      return normalizeProfile(platformProfile, user);
+    } catch (err) {
+      console.warn('[admin2] resolvePlatformAdminProfile', err);
+      return profile ? normalizeProfile(profile, user) : null;
+    }
   }
 
   async function completeSession() {
-    await AdminAuth.getSession();
-    var session = AdminAuth.getSessionSnapshot();
-    if (!session) return { state: 'login' };
-
-    try {
-      await AdminAuth.loadProfile();
-    } catch (err) {
-      try { await AdminAuth.logout(); } catch (e) {}
-      return { state: 'login', error: err.message || 'Acceso denegado' };
+    if (typeof AuthBootstrap !== 'undefined' && typeof AuthBootstrap.init === 'function') {
+      await AuthBootstrap.init();
+      if (typeof AuthBootstrap.whenReady === 'function') {
+        await AuthBootstrap.whenReady();
+      }
+    } else if (typeof VisitorSession !== 'undefined') {
+      await VisitorSession.refresh();
     }
 
-    if (!AdminState.isAdmin()) {
-      return { state: 'forbidden' };
+    var user = typeof VisitorAuth !== 'undefined' ? VisitorAuth.getUser() : null;
+    if (!user) {
+      return { state: 'login' };
     }
 
-    return { state: 'app', profile: AdminState.getProfile() };
+    var profile = await resolvePlatformAdminProfile();
+    if (!profile || !PlatformRoles.isPlatformAdmin(profile)) {
+      return { state: 'forbidden', profile: profile };
+    }
+
+    return { state: 'app', profile: profile };
   }
 
-  async function loginWithPassword(email, password) {
-    await AdminAuth.login(email, password);
-    if (!AdminState.isAdmin()) {
-      await AdminAuth.logout();
+  async function loginWithPassword(email, password, remember) {
+    var auth = await VisitorAuth.login(email, password, remember !== false);
+    if (typeof VisitorSession !== 'undefined') {
+      await VisitorSession.syncFromAuth(auth);
+    }
+
+    var profile = await resolvePlatformAdminProfile();
+    if (!profile || !PlatformRoles.isPlatformAdmin(profile)) {
+      await VisitorAuth.logout();
+      if (typeof VisitorSession !== 'undefined') {
+        await VisitorSession.afterLogout();
+      }
       throw new Error('No tienes permisos de administrador para BOXIES.');
     }
+    return profile;
   }
 
   async function loginWithGoogle() {
-    AdminBootstrap.initSdk();
-    var result = await AdminSupabase.getClient().auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: callbackUrl(),
-        queryParams: {
-          prompt: 'select_account',
-          access_type: 'online'
-        }
-      }
-    });
-    if (result.error) throw result.error;
-    if (result.data && result.data.url) {
-      window.location.assign(result.data.url);
+    if (typeof OAuthApi === 'undefined' || typeof OAuthApi.handleGoogleAuth !== 'function') {
+      throw new Error('OAuth no está disponible.');
     }
+    await OAuthApi.handleGoogleAuth();
   }
 
   function bindLoginForm(onReadyApp) {
@@ -76,11 +142,12 @@ var BoxiesAdmin2Auth = (function () {
     var googleBtn = $('bxGoogleBtn');
     var emailInput = $('bxEmail');
     var passwordInput = $('bxPassword');
+    var rememberInput = $('bxRemember');
     var submitBtn = $('bxLoginSubmit');
     var submitText = $('bxLoginSubmitText');
 
     try {
-      var saved = localStorage.getItem(REMEMBER_KEY);
+      var saved = typeof AuthStoragePrefs !== 'undefined' ? AuthStoragePrefs.getSavedLogin() : null;
       if (saved && emailInput) emailInput.value = saved;
     } catch (e) {}
 
@@ -90,22 +157,28 @@ var BoxiesAdmin2Auth = (function () {
         e.preventDefault();
         var email = (emailInput && emailInput.value || '').trim();
         var password = passwordInput ? passwordInput.value : '';
+        var remember = !rememberInput || rememberInput.checked;
         if (!email || !password) {
           setMessage('Ingresa correo y contraseña.', 'error');
           return;
         }
         submitBtn.disabled = true;
+        form.classList.add('is-loading');
         if (submitText) submitText.textContent = 'Entrando…';
         setMessage('');
         try {
-          await loginWithPassword(email, password);
-          try { localStorage.setItem(REMEMBER_KEY, email); } catch (e2) {}
+          var profile = await loginWithPassword(email, password, remember);
           showView('app');
-          if (onReadyApp) await onReadyApp(AdminState.getProfile());
+          if (onReadyApp) await onReadyApp(profile);
         } catch (err) {
-          setMessage(err.message || 'No se pudo iniciar sesión.', 'error');
+          var msg = err && err.message ? err.message : 'No se pudo iniciar sesión.';
+          if (typeof AuthErrors !== 'undefined' && typeof AuthErrors.loginFailureMessage === 'function') {
+            msg = AuthErrors.loginFailureMessage(err) || msg;
+          }
+          setMessage(msg, 'error');
           submitBtn.disabled = false;
-          if (submitText) submitText.textContent = 'Entrar';
+          form.classList.remove('is-loading');
+          if (submitText) submitText.textContent = 'Iniciar sesión';
         }
       });
     }
@@ -124,26 +197,35 @@ var BoxiesAdmin2Auth = (function () {
       });
     }
 
+    var togglePassword = $('bxTogglePassword');
+    if (togglePassword && passwordInput && !togglePassword.dataset.bound) {
+      togglePassword.dataset.bound = '1';
+      togglePassword.addEventListener('click', function () {
+        var show = passwordInput.type === 'password';
+        passwordInput.type = show ? 'text' : 'password';
+        togglePassword.textContent = show ? 'Ocultar' : 'Mostrar';
+      });
+    }
+
     var forbiddenLogout = $('bxForbiddenLogout');
     if (forbiddenLogout && !forbiddenLogout.dataset.bound) {
       forbiddenLogout.dataset.bound = '1';
       forbiddenLogout.addEventListener('click', async function () {
-        try { await AdminAuth.logout(); } catch (e) {}
-        showView('login');
-        setMessage('');
+        await logout();
       });
     }
   }
 
   async function init(onReadyApp) {
-    AdminBootstrap.initSdk();
     bindLoginForm(onReadyApp);
 
-    AdminAuth.onAuthStateChange(function (event) {
-      if (event === 'SIGNED_OUT') {
-        showView('login');
-      }
-    });
+    if (typeof VisitorAuth !== 'undefined' && typeof VisitorAuth.onAuthStateChange === 'function') {
+      VisitorAuth.onAuthStateChange(function (event) {
+        if (event === 'SIGNED_OUT') {
+          showView('login');
+        }
+      });
+    }
 
     var result = await completeSession();
     if (result.state === 'login') {
@@ -161,13 +243,21 @@ var BoxiesAdmin2Auth = (function () {
   }
 
   async function logout() {
-    try { await AdminAuth.logout(); } catch (e) {}
+    try {
+      if (typeof VisitorSession !== 'undefined' && typeof VisitorSession.logout === 'function') {
+        await VisitorSession.logout();
+      } else if (typeof VisitorAuth !== 'undefined') {
+        await VisitorAuth.logout();
+      }
+    } catch (e) {}
     showView('login');
     setMessage('');
+    var form = $('bxLoginForm');
     var submitBtn = $('bxLoginSubmit');
     var submitText = $('bxLoginSubmitText');
+    if (form) form.classList.remove('is-loading');
     if (submitBtn) submitBtn.disabled = false;
-    if (submitText) submitText.textContent = 'Entrar';
+    if (submitText) submitText.textContent = 'Iniciar sesión';
   }
 
   return {

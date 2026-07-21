@@ -8,23 +8,31 @@
 </head>
 <body class="bx-admin2">
 
-  <!-- Login (new BOXIES UI — not legacy /admin/login.html) -->
+  <!-- Login — mismo lenguaje visual HALL / panel de administración de proyectos -->
   <div id="bxLoginView" class="bx-login-shell" hidden>
     <div class="bx-login-card">
       <div class="bx-login-brand">BOXIES</div>
-      <p class="bx-login-sub">Centro de administración de la plataforma</p>
+      <p class="bx-login-sub">Administración de la plataforma</p>
 
       <form id="bxLoginForm" novalidate>
         <div class="bx-field">
           <label for="bxEmail">Correo electrónico</label>
-          <input id="bxEmail" type="email" autocomplete="email" placeholder="tu@empresa.com" required>
+          <input id="bxEmail" type="email" autocomplete="email" placeholder="correo@empresa.com" required>
         </div>
         <div class="bx-field">
           <label for="bxPassword">Contraseña</label>
           <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="button" class="bx-toggle-password" id="bxTogglePassword" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
+
+        <label class="bx-remember-row">
+          <input id="bxRemember" type="checkbox" checked>
+          <span>Recordar mi correo</span>
+        </label>
+
         <button type="submit" class="bx-btn bx-btn-primary" id="bxLoginSubmit">
-          <span id="bxLoginSubmitText">Entrar</span>
+          <span class="bx-spinner" aria-hidden="true"></span>
+          <span id="bxLoginSubmitText">Iniciar sesión</span>
         </button>
       </form>
 
@@ -39,8 +47,8 @@
   <!-- 403 -->
   <div id="bxForbiddenView" class="bx-forbidden-shell" hidden>
     <div class="bx-card bx-forbidden-card">
-      <h1>403 — Acceso denegado</h1>
-      <p>No tienes permisos de administrador para acceder al Dashboard Global de BOXIES.</p>
+      <h1>Acceso denegado</h1>
+      <p>Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES. El acceso al Dashboard Global requiere el mismo rol <code>admin</code> que el panel de un proyecto.</p>
       <div class="bx-forbidden-actions">
         <button type="button" class="bx-btn bx-btn-primary bx-btn-compact" id="bxForbiddenLogout">Cerrar sesión</button>
       </div>
@@ -77,16 +85,25 @@
     </div>
   </div>
 
-  <!-- Shared auth/data logic from /admin (no UI reuse) -->
+  <!-- Same auth stack as showrooms / platform builder (not constructora AdminAuth) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
-  <script src="../admin/js/core/supabase-client.js"></script>
-  <script src="../admin/js/api/base.js"></script>
-  <script src="../admin/js/api/profile.js"></script>
-  <script src="../admin/js/api/proyectos.js"></script>
-  <script src="../admin/js/core/state.js"></script>
-  <script src="../admin/js/core/auth.js"></script>
-  <script src="../admin/js/core/bootstrap.js"></script>
+  <script src="../js/shared/constants.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/roles-permissions.js"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/api/visitor-provisioning.js"></script>
+  <script src="../js/auth/api/favoritos.js"></script>
+  <script src="../js/auth/api/oauth.js"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="../js/visitor-session.js"></script>
+  <script src="../js/auth/bootstrap.js"></script>
+  <script src="js/api/projects.js"></script>
   <script src="js/auth-gate.js"></script>
   <script src="js/views/dashboard.js"></script>
   <script src="js/views/projects.js"></script>

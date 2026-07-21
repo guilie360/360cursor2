@@ -1,22 +1,22 @@
-/* BOXIES Global Admin V2 — visual system (independent from legacy /admin login) */
+/* BOXIES Global Admin — visual language aligned with HALL / project admin (admin-auth.css) */
 :root {
-  --bx-bg: #050505;
+  --bx-bg: #000000;
   --bx-bg-elevated: #0c0c0c;
   --bx-panel: #111111;
   --bx-panel-2: #161616;
-  --bx-border: #242424;
+  --bx-border: #252525;
   --bx-border-strong: #333333;
-  --bx-text: #f5f5f5;
+  --bx-text: #ffffff;
   --bx-muted: #8e8e93;
-  --bx-accent: #8f1d1d;
-  --bx-accent-hover: #a82424;
+  --bx-accent: #7a1f1f;
+  --bx-accent-hover: #921f1f;
   --bx-success: #7ed957;
   --bx-warning: #e0c070;
   --bx-error: #ff8a8a;
-  --bx-radius-lg: 20px;
-  --bx-radius-md: 14px;
-  --bx-radius-sm: 10px;
-  --bx-font: "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  --bx-radius-lg: 26px;
+  --bx-radius-md: 18px;
+  --bx-radius-sm: 12px;
+  --bx-font: Inter, "Helvetica Neue", Arial, sans-serif;
   --bx-sidebar-w: 260px;
 }
 
@@ -36,102 +36,172 @@ body.bx-admin2 {
 
 [hidden] { display: none !important; }
 
-/* ——— Login ——— */
+/* ——— Login (HALL / project admin language) ——— */
 .bx-login-shell {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 28px 20px;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(143, 29, 29, 0.22), transparent 55%),
-    var(--bx-bg);
+  padding: 24px;
+  background: var(--bx-bg);
 }
 
 .bx-login-card {
-  width: min(420px, 100%);
+  width: min(430px, 100%);
   background: var(--bx-panel);
   border: 1px solid var(--bx-border);
   border-radius: var(--bx-radius-lg);
-  padding: 40px 36px 32px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  padding: 42px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .bx-login-brand {
   text-align: center;
-  font-size: 34px;
+  font-size: 38px;
   font-weight: 800;
-  letter-spacing: 0.16em;
-  margin-bottom: 8px;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
 }
 
 .bx-login-sub {
   text-align: center;
   color: var(--bx-muted);
-  font-size: 14px;
-  margin-bottom: 32px;
+  font-size: 15px;
+  margin-bottom: 38px;
   line-height: 1.5;
 }
 
-.bx-field { margin-bottom: 18px; }
+.bx-field {
+  margin-bottom: 22px;
+  position: relative;
+}
 
 .bx-field label {
   display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: 10px;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--bx-muted);
+  color: var(--bx-text);
 }
 
 .bx-field input {
   width: 100%;
-  height: 52px;
-  padding: 0 16px;
-  background: var(--bx-bg-elevated);
+  height: 58px;
+  padding: 0 20px;
+  background: var(--bx-panel);
   border: 1px solid var(--bx-border-strong);
   border-radius: var(--bx-radius-md);
   color: var(--bx-text);
-  font-size: 15px;
+  font-size: 16px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.28s;
 }
 
 .bx-field input:focus {
   border-color: var(--bx-accent);
 }
 
+.bx-field input::placeholder {
+  color: #666666;
+}
+
+.bx-field input:-webkit-autofill,
+.bx-field input:-webkit-autofill:hover,
+.bx-field input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bx-panel) inset;
+  -webkit-text-fill-color: var(--bx-text);
+  caret-color: var(--bx-text);
+}
+
+.bx-toggle-password {
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+  border: 0;
+  background: transparent;
+  color: var(--bx-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bx-toggle-password:hover {
+  color: var(--bx-text);
+}
+
+.bx-remember-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--bx-text);
+}
+
+.bx-remember-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--bx-accent);
+}
+
 .bx-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  height: 52px;
+  gap: 12px;
+  height: 58px;
   padding: 0 18px;
   border-radius: var(--bx-radius-md);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
   text-decoration: none;
-  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, opacity 0.2s;
 }
 
 .bx-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.85;
   cursor: default;
 }
 
 .bx-btn-primary {
   width: 100%;
-  background: var(--bx-accent);
-  color: #fff;
-  border-color: var(--bx-accent);
+  background: var(--bx-panel);
+  color: var(--bx-text);
+  border-color: var(--bx-border-strong);
 }
 
 .bx-btn-primary:hover:not(:disabled) {
-  background: var(--bx-accent-hover);
-  border-color: var(--bx-accent-hover);
+  background: var(--bx-accent);
+  border-color: var(--bx-accent);
+}
+
+#bxLoginForm.is-loading .bx-btn-primary {
+  background: var(--bx-accent);
+  border-color: var(--bx-accent);
+  pointer-events: none;
+}
+
+.bx-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: none;
+  animation: bx-spin 0.7s linear infinite;
+}
+
+#bxLoginForm.is-loading .bx-spinner {
+  display: inline-block;
+}
+
+@keyframes bx-spin {
+  to { transform: rotate(360deg); }
 }
 
 .bx-btn-secondary {
@@ -142,7 +212,8 @@ body.bx-admin2 {
 }
 
 .bx-btn-secondary:hover:not(:disabled) {
-  background: var(--bx-panel-2);
+  border-color: var(--bx-accent);
+  background: #1a1a1a;
 }
 
 .bx-btn-ghost {

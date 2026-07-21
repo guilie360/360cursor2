@@ -6,7 +6,7 @@
     }
 
     var profile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
-    if (profile && PlatformRoles.isAdmin(profile)) {
+    if (profile && PlatformRoles.isPlatformAdmin(profile)) {
       return profile;
     }
 
@@ -17,7 +17,7 @@
 
     try {
       var platformProfile = await ProfilesApi.fetchById(user.id);
-      if (!platformProfile || platformProfile.rol !== PlatformRoles.ROLES.ADMIN) {
+      if (!platformProfile || !PlatformRoles.isPlatformAdmin(platformProfile)) {
         return profile;
       }
 
@@ -41,7 +41,7 @@
     }
 
     var profile = await resolveAdminProfile();
-    if (!profile || !PlatformRoles.isAdmin(profile)) {
+    if (!profile || !PlatformRoles.isPlatformAdmin(profile)) {
       var home = '../index.html';
       try {
         home = new URL('../index.html', window.location.href).href;
