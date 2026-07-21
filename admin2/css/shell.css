@@ -1,15 +1,11 @@
-/* admin2 — layout helpers only. Identity = css/hall (Style Engine V3). */
+/* admin2 — layout helpers only. Premium identity lives in css/hall. */
 
 [hidden] { display: none !important; }
 
 .hall-login-page .auth-experience-box {
-  width: min(420px, calc(100vw - 48px));
-  max-width: 420px;
+  width: min(400px, calc(100vw - 48px));
+  max-width: 400px;
   margin: 0;
-}
-
-.hall-login-page .auth-gate-title {
-  margin-bottom: 8px;
 }
 
 .dashboard-sidebar .sidebar-nav {
@@ -23,5 +19,5 @@
   text-decoration: none;
   box-sizing: border-box;
   width: auto;
-  min-width: 7.5rem;
+  min-width: 7.25rem;
 }

@@ -4,9 +4,9 @@
   --builder-rail-width: var(--hall-sidebar-w, 200px);
   --builder-dock-height: 56px;
   --builder-dock-safe: env(safe-area-inset-bottom, 0px);
-  --builder-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  --builder-dock-bg: color-mix(in srgb, #060606 92%, transparent);
-  --builder-dock-border: var(--hall-border, rgba(255, 255, 255, 0.06));
+  --builder-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  --builder-dock-bg: rgba(5, 5, 5, 0.82);
+  --builder-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
 }
 
 html.builder-has-dock,
@@ -32,7 +32,7 @@ body.builder-has-dock.platform-builder-shell {
   backdrop-filter: blur(24px) saturate(130%);
   -webkit-backdrop-filter: blur(24px) saturate(130%);
   border-top: 1px solid var(--builder-dock-border);
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: none;
 }
 
 .builder-dock-inner {
@@ -68,9 +68,8 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-dock-ctrl:not(:disabled):hover {
-  color: rgba(255, 255, 255, 0.92);
-  background: rgba(255, 255, 255, 0.05);
-  transform: scale(1.04);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .builder-dock-ctrl:disabled {
@@ -95,10 +94,10 @@ body.builder-has-dock.platform-builder-shell {
   gap: 12px;
   height: var(--builder-header-height);
   padding: 0 14px;
-  background: color-mix(in srgb, #060606 94%, transparent);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  border-bottom: 1px solid var(--hall-border, rgba(255, 255, 255, 0.06));
+  background: rgba(5, 5, 5, 0.72);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
 }
 
 .builder-header-left {
@@ -134,10 +133,11 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-header-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.75rem;
+  font-weight: 550;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
   text-align: center;
   white-space: nowrap;
 }
@@ -212,10 +212,10 @@ body.builder-has-dock.platform-builder-shell {
   padding: 14px 10px 24px;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid color-mix(in srgb, var(--text-primary, #fff) 4%, transparent);
-  background: color-mix(in srgb, #040404 55%, transparent);
+  border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  background: transparent;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
 .builder-rail-item {
@@ -276,12 +276,13 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-rail-item.is-current {
-  background: color-mix(in srgb, var(--text-primary, #fff) 7%, transparent);
+  background: var(--hall-surface-raised, rgba(255, 255, 255, 0.045));
+  box-shadow: var(--hall-inset, inset 0 1px 0 rgba(255, 255, 255, 0.045));
 }
 
 .builder-rail-item.is-current .builder-rail-row {
-  color: var(--hall-text, rgba(255, 255, 255, 0.92));
-  font-weight: 600;
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
+  font-weight: 550;
 }
 
 .builder-workspace {
