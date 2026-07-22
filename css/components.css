@@ -2239,59 +2239,109 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
   .main-menu-footer {
     display:none !important;
   }
+  /*
+   * V3.8.3 — Descargas: sin recorte vertical artificial.
+   * Overlay fijo a viewport; único scroll = .downloads-stage.
+   * La X Global no limita la altura; solo padding al final del listado.
+   */
   #descargasModal.downloads-modal.content-modal,
   .downloads-modal.content-modal {
-    padding:0;
-    min-height:100dvh;
-    height:100dvh;
-    overflow:hidden;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    padding: 0 !important;
+    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    overflow: hidden;
   }
+  #descargasModal .downloads-modal-box,
   .downloads-modal-box {
-    min-height:100dvh;
-    height:100%;
-    max-height:100dvh;
-    overflow:hidden;
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    transform: none !important;
+    border-radius: 0;
   }
-  /*
-   * Descargas: el listado debe recorrerse completo.
-   * Padding inferior = banda de la X Global + respiro; sin viñeta que tape el final.
-   */
-  .downloads-stage {
-    min-height:100%;
-    height:100%;
-    max-height:100%;
-    align-items:stretch;
-    justify-content:flex-start;
-    padding-top:max(16px, env(safe-area-inset-top));
-    padding-left:16px;
-    padding-right:16px;
-    padding-bottom:calc(
-      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 32px
+  /* Si quedó un wrapper legacy, no debe limitar ni scrollear */
+  #descargasModal .popup-box-scroll,
+  .downloads-modal-box > .popup-box-scroll {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  #descargasModal .downloads-stage,
+  .downloads-modal .downloads-stage {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: calc(
+      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 28px
     );
-    overflow-x:hidden;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    contain: none;
+    clip-path: none;
+    mask: none;
+    -webkit-mask: none;
   }
-  .downloads-stage::after {
-    /* Sin franja inferior oscura que oculte el último documento */
-    box-shadow:inset 0 0 70px color-mix(in srgb, var(--bg-main) var(--depth-menu-inset, 14)%, transparent);
+  #descargasModal .downloads-stage::after,
+  .downloads-modal .downloads-stage::after {
+    display: none !important;
   }
-  .downloads-list {
-    width:100%;
-    max-width:none;
-    flex:0 0 auto;
-    padding-bottom:12px;
-    margin-bottom:0;
+  #descargasModal .downloads-list,
+  .downloads-modal .downloads-list {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    max-width: none;
+    height: auto !important;
+    min-height: 0;
+    max-height: none !important;
+    flex: 0 0 auto;
+    overflow: visible !important;
+    padding-bottom: 8px;
+  }
+  #descargasModal .download-item,
+  #descargasModal .download-item--animate {
+    flex-shrink: 0;
   }
   .downloads-intro-pct {
-    bottom:calc(var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 10px);
-  }
-  body.has-global-close #descargasModal .downloads-stage,
-  body.has-global-close .downloads-modal .downloads-stage {
-    padding-bottom:calc(
-      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 32px
-    );
+    bottom: calc(var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 10px);
   }
 
   /*
@@ -6675,10 +6725,44 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
   }
   .units-popup:not(.tour360-popup):not(.units-viviendas-popup),
   .pdf-modal,
-  .content-modal:not(.auth-experience-modal) {
+  .content-modal:not(.auth-experience-modal):not(.downloads-modal) {
     align-items:flex-start;
     padding-top:44px;
     padding-bottom:70px;
+  }
+  #descargasModal.downloads-modal.content-modal,
+  .downloads-modal.content-modal {
+    align-items:stretch !important;
+    justify-content:stretch !important;
+    padding:0 !important;
+  }
+  #descargasModal .downloads-modal-box,
+  .downloads-modal-box {
+    max-height:none !important;
+    height:100% !important;
+    min-height:0 !important;
+  }
+  #descargasModal .popup-box-scroll,
+  .downloads-modal-box > .popup-box-scroll {
+    max-height:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+  #descargasModal .downloads-stage,
+  .downloads-modal .downloads-stage {
+    max-height:none !important;
+    min-height:0 !important;
+    height:auto !important;
+    flex:1 1 auto;
+    overflow-y:auto !important;
+  }
+  #descargasModal .downloads-list,
+  .downloads-modal .downloads-list {
+    max-height:none !important;
+    height:auto !important;
+    overflow:visible !important;
   }
   .units-popup.tour360-popup,
   .units-popup.units-viviendas-popup {
@@ -6694,7 +6778,7 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
     padding:var(--units-inset);
   }
   .units-popup-box .popup-box-scroll { padding:30px 18px 24px; max-height:calc(100svh - 114px); }
-  .content-modal-box:not(.auth-experience-box) .popup-box-scroll { padding:26px 18px; max-height:calc(100svh - 114px); }
+  .content-modal-box:not(.auth-experience-box):not(.downloads-modal-box) .popup-box-scroll { padding:26px 18px; max-height:calc(100svh - 114px); }
   .units-grid:not(.units-viviendas-grid) { grid-template-columns:1fr; max-width:320px; gap:18px; }
   .pdf-modal-box { width:92vw; aspect-ratio:9/16; height:auto; max-height:calc(100svh - 114px); }
   .modal-close { display:none !important; }

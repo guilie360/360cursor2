@@ -4087,7 +4087,17 @@ function ensurePopupBoxScrollWrappers() {
     wrapped.remove();
   }
 
-  document.querySelectorAll('.units-popup-box, .content-modal-box:not(.auth-experience-box):not(.video-modal-box)').forEach(function (box) {
+  /* Descargas: el scroll vive en .downloads-stage; nunca envolver en popup-box-scroll */
+  var downloadsBox = document.querySelector('#descargasModal .downloads-modal-box');
+  if (downloadsBox && downloadsBox.firstElementChild && downloadsBox.firstElementChild.classList.contains('popup-box-scroll')) {
+    var dlWrap = downloadsBox.firstElementChild;
+    while (dlWrap.firstChild) downloadsBox.appendChild(dlWrap.firstChild);
+    dlWrap.remove();
+  }
+
+  document.querySelectorAll(
+    '.units-popup-box, .content-modal-box:not(.auth-experience-box):not(.video-modal-box):not(.downloads-modal-box)'
+  ).forEach(function (box) {
     if (box.firstElementChild && box.firstElementChild.classList.contains('popup-box-scroll')) return;
     var scroll = document.createElement('div');
     scroll.className = 'popup-box-scroll';
