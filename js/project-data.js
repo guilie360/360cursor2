@@ -83,12 +83,49 @@ function resolveProjectBackButton(config) {
   var rawShow = config.show_back_button;
   if (rawShow === undefined) rawShow = config.showBackButton;
   var show = rawShow === true || rawShow === 'true' || rawShow === 1;
-  var url = String(config.back_button_url || config.backButtonUrl || '').trim();
-  var label = String(config.back_button_label || config.backButtonLabel || 'Proyectos').trim() || 'Proyectos';
+  var url = normalizeProjectBackUrl(config.back_button_url || config.backButtonUrl || '');
+  var label = String(config.back_button_label || config.backButtonLabel || 'Demos').trim() || 'Demos';
+  if (/^proyectos$/i.test(label)) label = 'Demos';
   if (!show || !url) {
     return { show: false, url: '', label: label };
   }
   return { show: true, url: url, label: label };
+}
+
+/**
+ * Landing root → /#demos so return lands on the demos section, not the hero.
+ * Custom constructor URLs (any host/path/hash) pass through unchanged.
+ */
+function normalizeProjectBackUrl(raw) {
+  var url = String(raw == null ? '' : raw).trim();
+  if (!url) return '';
+
+  if (url === '/' || url === '/index.html' || url === '/#') {
+    return '/#demos';
+  }
+
+  try {
+    var base = (typeof window !== 'undefined' && window.location && window.location.origin)
+      ? window.location.origin
+      : 'https://360preventa.com';
+    var parsed = new URL(url, base);
+    var path = (parsed.pathname || '/').replace(/\/+$/, '') || '/';
+    var isLandingRoot = path === '/' || /^\/index\.html$/i.test(path);
+    if (isLandingRoot && (!parsed.hash || parsed.hash === '#' || parsed.hash === '#proyectos')) {
+      parsed.hash = 'demos';
+      if (parsed.origin === base) {
+        return '/#demos';
+      }
+      return parsed.origin + '/#demos';
+    }
+    if (parsed.hash === '#proyectos') {
+      parsed.hash = 'demos';
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+    return url;
+  } catch (e) {
+    return url;
+  }
 }
 
 function applyProjectBackButton(config) {

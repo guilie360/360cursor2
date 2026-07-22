@@ -97,7 +97,7 @@ main,
 }
 
 /* Experiences / servicio may exceed one viewport on small screens */
-.lp-scene#proyectos,
+.lp-scene#demos,
 .lp-scene#servicio {
   height: auto;
   max-height: none;
@@ -106,7 +106,7 @@ main,
   overflow: visible;
 }
 
-.lp-scene#proyectos {
+.lp-scene#demos {
   scroll-snap-stop: normal;
 }
 
@@ -158,7 +158,7 @@ main,
     radial-gradient(ellipse 40% 35% at 78% 70%, rgba(255, 255, 255, 0.018), transparent 70%);
 }
 
-.lp-scene[data-lp-light="proyectos"]::before {
+.lp-scene[data-lp-light="demos"]::before {
   background:
     radial-gradient(ellipse 70% 40% at 50% 28%, rgba(255, 255, 255, 0.032), transparent 70%),
     radial-gradient(ellipse 50% 40% at 50% 85%, rgba(255, 255, 255, 0.02), transparent 72%);
@@ -395,7 +395,7 @@ html.lp-nav-lock .lp-scene {
     overflow: visible;
   }
 
-  .lp-scene#proyectos,
+  .lp-scene#demos,
   .lp-scene#servicio,
   .lp-scene.lp-footer {
     min-height: 0;

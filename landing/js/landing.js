@@ -1,5 +1,12 @@
 /* 360Preventa landing — narrative presentation + overlays */
 (function () {
+  try {
+    var earlyHash = String(window.location.hash || '').replace(/^#/, '').toLowerCase();
+    if (earlyHash === 'demos' || earlyHash === 'proyectos' || earlyHash === 'experiencias') {
+      document.documentElement.classList.add('lp-nav-lock');
+    }
+  } catch (e) { /* ignore */ }
+
   var FALLBACK_PROJECTS = [
     {
       slug: 'demo1',
@@ -66,6 +73,48 @@
         html.classList.remove('lp-nav-lock');
       }, mobile ? 100 : 1100);
     }, mobile ? 80 : 40);
+  }
+
+  function normalizeLandingHash(hash) {
+    hash = String(hash || '').replace(/^#/, '').toLowerCase();
+    if (hash === 'proyectos' || hash === 'experiencias') return 'demos';
+    return hash;
+  }
+
+  function getHashSection() {
+    var hash = normalizeLandingHash(window.location.hash);
+    if (hash !== 'demos') return null;
+    return document.getElementById('demos');
+  }
+
+  /** Deep-link /#demos from showrooms — wait for layout, avoid snap bounce. */
+  function scrollToHashSection() {
+    var target = getHashSection();
+    if (!target) return false;
+    navigateToSection(target);
+    return true;
+  }
+
+  function initHashLanding() {
+    var target = getHashSection();
+    if (!target) return;
+
+    document.documentElement.classList.add('lp-nav-lock');
+
+    var attempts = 0;
+    function tryScroll() {
+      attempts += 1;
+      navigateToSection(target);
+      if (attempts < 3) {
+        window.setTimeout(tryScroll, attempts === 1 ? 280 : 650);
+      }
+    }
+
+    window.setTimeout(tryScroll, 60);
+
+    window.addEventListener('hashchange', function () {
+      scrollToHashSection();
+    });
   }
 
   /* ——— Menu ——— */
@@ -196,7 +245,7 @@
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
           entry.target.classList.add('is-in');
-          if (entry.target.id === 'proyectos') {
+          if (entry.target.id === 'demos') {
             entry.target.querySelectorAll('.lp-project.lp-reveal').forEach(function (card) {
               card.classList.add('is-in');
             });
@@ -220,7 +269,7 @@
       el.style.setProperty('--lp-stagger', String(220 + Math.min(i, 5) * 100) + 'ms');
     });
 
-    var scene = document.getElementById('proyectos');
+    var scene = document.getElementById('demos');
     if (scene && scene.classList.contains('is-in')) {
       requestAnimationFrame(function () {
         cards.forEach(function (el) {
@@ -281,10 +330,13 @@
     if (!host) return;
     if (!list || !list.length) {
       host.innerHTML = '<p class="lp-projects__empty">No hay proyectos publicados.</p>';
-      return;
+    } else {
+      host.innerHTML = list.map(projectCard).join('');
+      observeNewProjects();
     }
-    host.innerHTML = list.map(projectCard).join('');
-    observeNewProjects();
+    if (getHashSection()) {
+      window.setTimeout(scrollToHashSection, 100);
+    }
   }
 
   function normalizeRows(rows) {
@@ -357,6 +409,7 @@
     });
 
     initReveal();
+    initHashLanding();
     loadProjects();
   }
 
