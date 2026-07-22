@@ -1209,39 +1209,16 @@ a.menu-item.auth-menu-item {
   }
 }
 
-/* ================= BOTÓN FLOTANTE WHATSAPP ================= */
+/* ================= BOTÓN FLOTANTE WHATSAPP (reemplazado por ProductAssistant) ================= */
 .whatsapp-float {
-  position:fixed;
-  bottom:24px;
-  right:24px;
-  padding:8px;
-  z-index:900;
-  cursor:pointer;
-  text-decoration:none;
-  transition:transform 0.3s ease;
-}
-.whatsapp-float.is-float-hidden,
-.share-float.is-float-hidden,
-.whatsapp-float[hidden],
-.share-float[hidden] {
-  display:none !important;
-}
-.whatsapp-float:hover { transform:scale(1.1); }
-.whatsapp-float svg {
-  width:25px; height:25px;
-  filter:drop-shadow(0 2px 8px rgba(0,0,0,0.7));
-}
-@media (max-width: 600px) {
-  .whatsapp-float { bottom:18px; right:18px; }
-  .whatsapp-float svg { width:21px; height:21px; }
+  display: none !important;
 }
 
 /* ================= BOTÓN FLOTANTE COMPARTIR PROYECTO ================= */
-/* Mismo lenguaje visual que .whatsapp-float: sin fondo, sin borde,
-   mismo tamaño y mismo peso visual — solo el símbolo, en blanco. */
+/* Encima del FAB del asistente (mismo lenguaje: solo el símbolo). */
 .share-float {
   position:fixed;
-  bottom:77px;
+  bottom:92px;
   right:24px;
   padding:8px;
   z-index:900;
@@ -1251,6 +1228,10 @@ a.menu-item.auth-menu-item {
   text-decoration:none;
   transition:transform 0.3s ease;
 }
+.share-float.is-float-hidden,
+.share-float[hidden] {
+  display:none !important;
+}
 .share-float:hover { transform:scale(1.1); }
 .share-float svg {
   width:25px; height:25px;
@@ -1259,7 +1240,7 @@ a.menu-item.auth-menu-item {
   filter:drop-shadow(0 2px 8px rgba(0,0,0,0.7));
 }
 @media (max-width: 600px) {
-  .share-float { bottom:65px; right:18px; }
+  .share-float { bottom:84px; right:18px; }
   .share-float svg { width:21px; height:21px; }
 }
 
@@ -1489,6 +1470,10 @@ html.web-effects-off {
 }
 
 @media (max-width: 600px) {
+  .global-fullscreen-btn,
+  .global-fullscreen-btn.is-visible {
+    display: none !important;
+  }
   .global-action-stack {
     top:auto;
     left:50%;
@@ -5560,12 +5545,16 @@ body[data-bg-glass="solid"] .amenities-modal-box::before {
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--start,
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--end {
     grid-column:1;
-    justify-self:stretch;
+    justify-self:center;
+    width:100%;
+    display:flex;
+    justify-content:center;
   }
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--start { grid-row:2; }
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--end { grid-row:3; }
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-btn {
-    width:100%;
+    width:75%;
+    max-width:75%;
     justify-content:center;
   }
   .project-cover-logo { width:64px; max-width:64px; margin-bottom:14px; }

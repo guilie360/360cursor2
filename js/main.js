@@ -83,27 +83,39 @@ function applyConfig() {
   var contactWa = document.getElementById('contactWhatsapp');
   var shareFloat = document.getElementById('shareProjectFloatBtn');
 
+  var advisorHref = '';
   if (CONFIG.whatsappHref) {
-    if (waFloat) waFloat.href = CONFIG.whatsappHref;
+    advisorHref = CONFIG.whatsappHref;
     if (contactWa) contactWa.href = CONFIG.whatsappHref;
   } else if (WHATSAPP_BASE) {
-    var waFull = WHATSAPP_BASE + encodeURIComponent(CONFIG.whatsappDefaultMessage || '');
-    if (waFloat) waFloat.href = waFull;
-    if (contactWa) contactWa.href = waFull;
+    advisorHref = WHATSAPP_BASE + encodeURIComponent(CONFIG.whatsappDefaultMessage || '');
+    if (contactWa) contactWa.href = advisorHref;
   } else {
-    if (waFloat) waFloat.href = '#';
     if (contactWa) contactWa.href = '#';
   }
 
+  /* WhatsApp float replaced by ProductAssistant */
   if (waFloat) {
-    waFloat.hidden = CONFIG.showWhatsappFloat === false;
-    waFloat.classList.toggle('is-float-hidden', CONFIG.showWhatsappFloat === false);
-    waFloat.setAttribute('aria-hidden', CONFIG.showWhatsappFloat === false ? 'true' : 'false');
+    waFloat.hidden = true;
+    waFloat.classList.add('is-float-hidden');
+    waFloat.setAttribute('aria-hidden', 'true');
   }
   if (shareFloat) {
     shareFloat.hidden = CONFIG.showShareFloat === false;
     shareFloat.classList.toggle('is-float-hidden', CONFIG.showShareFloat === false);
     shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
+  }
+
+  if (typeof ProductAssistant !== 'undefined') {
+    var existingAssist = ProductAssistant.getInstance();
+    if (existingAssist && typeof existingAssist.setAdvisorHref === 'function' && advisorHref) {
+      existingAssist.setAdvisorHref(advisorHref);
+    } else if (!existingAssist) {
+      ProductAssistant.mount({
+        context: 'project',
+        advisorHref: advisorHref || undefined
+      });
+    }
   }
   window.__mainTrace('applyConfig — done');
 

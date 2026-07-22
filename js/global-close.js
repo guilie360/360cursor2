@@ -167,7 +167,7 @@ var GlobalClose = (function () {
     ensureRecoveryCloseButton();
 
     var showClose = isOverlayOpen();
-    var showFullscreen = true;
+    var showFullscreen = DESKTOP_MEDIA.matches;
     var showStack = showClose || showFullscreen;
 
     btn.hidden = !showClose;

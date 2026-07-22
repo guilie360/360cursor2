@@ -1,0 +1,317 @@
+/* Product Assistant — shared by landing + project showrooms */
+:root {
+  --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pa-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --pa-line: rgba(255, 255, 255, 0.06);
+  --pa-fg: rgba(255, 255, 255, 0.88);
+  --pa-muted: rgba(255, 255, 255, 0.42);
+  --pa-faint: rgba(255, 255, 255, 0.22);
+}
+
+.pa-fab {
+  position: fixed;
+  right: max(1.15rem, env(safe-area-inset-right));
+  bottom: max(1.15rem, env(safe-area-inset-bottom));
+  z-index: 950;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: #080808;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 28px rgba(0, 0, 0, 0.4);
+  transition:
+    border-color 0.35s var(--pa-ease),
+    transform 0.35s var(--pa-ease),
+    box-shadow 0.35s var(--pa-ease),
+    filter 0.35s var(--pa-ease);
+}
+
+.pa-fab:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 18px rgba(255, 255, 255, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pa-fab.is-active {
+  border-color: rgba(255, 255, 255, 0.32);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
+}
+
+.pa-fab__mark {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 4px 4px 4px 1px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.pa-root {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.28s var(--pa-ease-out);
+  font-family: inherit;
+}
+
+.pa-root.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pa-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.pa-panel {
+  position: absolute;
+  right: max(1.15rem, env(safe-area-inset-right));
+  bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4.5rem));
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 1.5rem));
+  height: min(560px, calc(100dvh - 6.5rem));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(10, 10, 10, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  transform: scale(0.96) translateY(8px);
+  transform-origin: bottom right;
+  transition: transform 0.32s var(--pa-ease-out);
+  color: var(--pa-fg);
+}
+
+.pa-root.is-open .pa-panel {
+  transform: scale(1) translateY(0);
+}
+
+.pa-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--pa-line);
+}
+
+.pa-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pa-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pa-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pa-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pa-messages {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1rem;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.pa-bubble {
+  max-width: 92%;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 300;
+  line-height: 1.55;
+}
+
+.pa-bubble p {
+  margin: 0 0 0.45rem;
+}
+
+.pa-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.pa-bubble--bot {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--pa-line);
+}
+
+.pa-bubble--user {
+  align-self: flex-end;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--pa-fg);
+}
+
+.pa-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.pa-chip {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.pa-chip:hover {
+  color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pa-handoff {
+  flex-shrink: 0;
+  padding: 0.95rem 1.1rem 1rem;
+  border-top: 1px solid var(--pa-line);
+  text-align: center;
+}
+
+.pa-handoff__copy {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--pa-faint);
+}
+
+.pa-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.pa-wa:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pa-wa__icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.pa-wa:hover .pa-wa__icon {
+  opacity: 1;
+}
+
+.pa-compose {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--pa-line);
+  background: rgba(8, 8, 8, 0.9);
+}
+
+.pa-compose input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pa-fg);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 300;
+  outline: none;
+}
+
+.pa-compose input::placeholder {
+  color: var(--pa-faint);
+}
+
+.pa-send {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--pa-line);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.25s ease, border-color 0.25s ease;
+}
+
+.pa-send:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.pa-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

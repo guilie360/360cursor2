@@ -55,14 +55,14 @@ function applyHeroTextColors(config) {
 
 function applyHeroFloatVisibility(config) {
   config = config || {};
-  var showWa = config.show_whatsapp_float !== false;
   var showShare = config.show_share_float !== false;
   var waFloat = document.getElementById('whatsappFloat');
   var shareFloat = document.getElementById('shareProjectFloatBtn');
+  /* WhatsApp float replaced by ProductAssistant — always hidden */
   if (waFloat) {
-    waFloat.hidden = !showWa;
-    waFloat.classList.toggle('is-float-hidden', !showWa);
-    waFloat.setAttribute('aria-hidden', showWa ? 'false' : 'true');
+    waFloat.hidden = true;
+    waFloat.classList.add('is-float-hidden');
+    waFloat.setAttribute('aria-hidden', 'true');
   }
   if (shareFloat) {
     shareFloat.hidden = !showShare;

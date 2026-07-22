@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Login — 360Preventa</title>
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" type="image/png" href="/assets/brand/360preventa-mark.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#050505; --fg:rgba(255,255,255,.88); --muted:rgba(255,255,255,.42); --line:rgba(255,255,255,.08); }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: Outfit, sans-serif; background: var(--bg); color: var(--fg);
+      -webkit-font-smoothing: antialiased; padding: 2rem 1.25rem; text-align: center;
+    }
+    .box { max-width: 22rem; }
+    .mark { width: 64px; height: auto; margin: 0 auto 1.75rem; display: block; }
+    h1 { margin: 0 0 .75rem; font-size: 1.15rem; font-weight: 400; letter-spacing: -.02em; }
+    p { margin: 0 0 1.75rem; font-size: .9rem; font-weight: 300; line-height: 1.55; color: var(--muted); }
+    .actions { display: flex; flex-direction: column; gap: .65rem; }
+    a {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: .7rem 1.1rem; border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+      color: rgba(255,255,255,.78); text-decoration: none; font-size: .72rem; font-weight: 500;
+      letter-spacing: .1em; text-transform: uppercase; transition: border-color .25s, color .25s, background .25s;
+    }
+    a:hover { color: #fff; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.04); }
+    a.ghost { border-color: transparent; color: var(--muted); letter-spacing: .06em; text-transform: none; font-weight: 300; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <img class="mark" src="/assets/brand/360preventa-mark.png" alt="360Preventa" width="64" height="73">
+    <h1>Acceso constructoras</h1>
+    <p>Próximamente podrás administrar proyectos, suscripción y pagos desde aquí. Mientras tanto usa el panel de plataforma.</p>
+    <div class="actions">
+      <a href="/boxies">Entrar a BOXIES</a>
+      <a class="ghost" href="/">Volver al inicio</a>
+    </div>
+  </div>
+</body>
+</html>

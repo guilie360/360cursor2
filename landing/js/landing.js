@@ -24,17 +24,6 @@
     }
   ];
 
-  var SUGGEST_REPLIES = {
-    '¿Qué es 360Preventa?':
-      '360Preventa es una plataforma para crear, administrar y publicar experiencias inmobiliarias web listas para compartir.',
-    '¿Cómo funciona?':
-      'Configuras el proyecto, organizas el contenido y lo publicas como una experiencia navegable. Todo desde un solo lugar.',
-    '¿Qué incluye un Showroom Digital 360?':
-      'Una experiencia web de preventa con recorridos inmersivos, contenido administrable y publicación lista para compartir.',
-    'Solicitar una demostración.':
-      'Perfecto. Déjanos tu consulta aquí o escribe “demostración”. Pronto te orientaremos sobre una demo personalizada.'
-  };
-
   function $(id) {
     return document.getElementById(id);
   }
@@ -80,7 +69,7 @@
   }
 
   /* ——— Menu ——— */
-  function initMenu(onPrices) {
+  function initMenu(onPrices, onContact) {
     var btn = $('lpMenuBtn');
     var panel = $('lpMenuPanel');
     var backdrop = $('lpMenuBackdrop');
@@ -133,6 +122,14 @@
       });
     }
 
+    var contactBtn = $('lpContactOpen');
+    if (contactBtn) {
+      contactBtn.addEventListener('click', function () {
+        setOpen(false);
+        if (onContact) onContact();
+      });
+    }
+
     return {
       close: function () {
         setOpen(false);
@@ -180,96 +177,6 @@
       open: function () { setOpen(true); },
       close: function () { setOpen(false); },
       isOpen: function () { return modal.classList.contains('is-open'); }
-    };
-  }
-
-  /* ——— Floating assistant ——— */
-  function initAssist() {
-    var fab = $('lpFab');
-    var panel = $('lpAssistPanel');
-    var form = $('lpChatForm');
-    var input = $('lpChatInput');
-    var suggestions = $('lpChatSuggestions');
-    if (!fab || !panel) return { close: function () {}, isOpen: function () { return false; } };
-
-    function setOpen(open) {
-      fab.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (open) {
-        panel.hidden = false;
-        panel.setAttribute('aria-hidden', 'false');
-        requestAnimationFrame(function () {
-          panel.classList.add('is-open');
-          fab.classList.add('is-active');
-        });
-        if (input) window.setTimeout(function () { input.focus(); }, 200);
-      } else {
-        panel.classList.remove('is-open');
-        fab.classList.remove('is-active');
-        window.setTimeout(function () {
-          if (!panel.classList.contains('is-open')) {
-            panel.hidden = true;
-            panel.setAttribute('aria-hidden', 'true');
-          }
-        }, 280);
-      }
-    }
-
-    fab.addEventListener('click', function () {
-      setOpen(fab.getAttribute('aria-expanded') !== 'true');
-    });
-
-    panel.querySelectorAll('[data-lp-assist-close]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        setOpen(false);
-      });
-    });
-
-    function appendBubble(text, who) {
-      var box = $('lpChatMessages');
-      if (!box) return;
-      var sug = $('lpChatSuggestions');
-      var div = document.createElement('div');
-      div.className = 'lp-chat__bubble lp-chat__bubble--' + (who === 'user' ? 'user' : 'bot');
-      div.innerHTML = '<p>' + escapeHtml(text) + '</p>';
-      if (sug) box.insertBefore(div, sug);
-      else box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
-
-    function sendUserMessage(text) {
-      text = String(text || '').trim();
-      if (!text) return;
-      appendBubble(text, 'user');
-      var reply =
-        SUGGEST_REPLIES[text] ||
-        'Gracias. Pronto podré responder con más detalle. Mientras tanto, explora las experiencias publicadas.';
-      window.setTimeout(function () {
-        appendBubble(reply, 'bot');
-      }, 480);
-    }
-
-    if (form && input) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var text = (input.value || '').trim();
-        if (!text) return;
-        input.value = '';
-        sendUserMessage(text);
-      });
-    }
-
-    if (suggestions) {
-      suggestions.addEventListener('click', function (e) {
-        var chip = e.target.closest('[data-lp-suggest]');
-        if (!chip) return;
-        sendUserMessage(chip.textContent || '');
-      });
-    }
-
-    return {
-      open: function () { setOpen(true); },
-      close: function () { setOpen(false); },
-      isOpen: function () { return panel.classList.contains('is-open'); }
     };
   }
 
@@ -422,10 +329,19 @@
     if (year) year.textContent = String(new Date().getFullYear());
 
     var prices = initPricesModal();
-    var assist = initAssist();
-    var menu = initMenu(function () {
-      prices.open();
-    });
+    var assist =
+      typeof ProductAssistant !== 'undefined'
+        ? ProductAssistant.mount({ context: 'platform' })
+        : { open: function () {}, close: function () {}, isOpen: function () { return false; } };
+
+    var menu = initMenu(
+      function () {
+        prices.open();
+      },
+      function () {
+        assist.open();
+      }
+    );
 
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
@@ -437,7 +353,7 @@
         assist.close();
         return;
       }
-      if (menu.isOpen()) menu.close();
+      if (menu.isOpen && menu.isOpen()) menu.close();
     });
 
     initReveal();
