@@ -461,6 +461,18 @@ function getFavorites() {
 function isFavorite(key) {
   return getFavorites().indexOf(key) !== -1;
 }
+function favHeartSvg() {
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.2-4.35-9.6-8.55C.9 8.7 2.25 5.4 5.55 4.65c1.8-.4 3.6.3 4.65 1.8C11.25 4.95 13.05 4.25 14.85 4.65c3.3.75 4.65 4.05 3.15 6.8C19.2 15.65 12 20 12 20z"/></svg>';
+}
+
+function syncFavButtonEl(el, isFav) {
+  if (!el) return;
+  el.classList.toggle('active', !!isFav);
+  el.classList.toggle('is-active', !!isFav);
+  el.innerHTML = favHeartSvg();
+  el.setAttribute('aria-label', isFav ? 'Quitar de favoritos' : 'Agregar a favoritos');
+}
+
 async function toggleFavorite(key, btnEl) {
   if (!VisitorSession.isAuthenticated()) {
     showToast('Inicia sesión para guardar favoritos');
@@ -478,11 +490,9 @@ async function toggleFavorite(key, btnEl) {
 
   vibrate(10);
   document.querySelectorAll('.fav-btn[data-fav="' + key + '"]').forEach(function (el) {
-    el.classList.toggle('active', nowFav);
-    el.textContent = nowFav ? '❤' : '♡';
-    el.setAttribute('aria-label', nowFav ? 'Quitar de favoritos' : 'Agregar a favoritos');
+    syncFavButtonEl(el, nowFav);
     el.classList.add('pulse');
-    setTimeout(function () { el.classList.remove('pulse'); }, 220);
+    setTimeout(function () { el.classList.remove('pulse'); }, 280);
   });
   updateFavoritesTabCount();
   if (currentUnitsTab === 'fav') renderUnitsGrid('fav');
@@ -491,7 +501,10 @@ async function toggleFavorite(key, btnEl) {
 }
 function updateFavoritesTabCount() {
   var favTabBtn = document.getElementById('unitsTabFav');
-  if (favTabBtn) favTabBtn.textContent = 'Favoritos (' + getFavorites().length + ')';
+  if (!favTabBtn) return;
+  var n = getFavorites().length;
+  var mobile = window.matchMedia('(max-width: 600px)').matches;
+  favTabBtn.textContent = mobile ? (n ? 'Favoritos · ' + n : 'Favoritos') : ('Favoritos (' + n + ')');
 }
 
 /* =========================================================
@@ -968,7 +981,7 @@ function renderCompareHeroCard(key, unit, index) {
     '<article class="uc-hero-card" data-unit-key="' + escapeUnitsHtml(key) + '" style="--uc-stagger:' + (index || 0) + '">' +
       '<div class="uc-hero-media"' + imageStyle + '>' +
         '<div class="uc-hero-media-actions">' +
-          '<button type="button" class="uc-hero-icon-btn uc-hero-fav' + (favActive ? ' is-active' : '') + '" data-action="fav" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + (favActive ? '❤' : '♡') + '</button>' +
+          '<button type="button" class="icon-btn fav-btn uc-hero-icon-btn uc-hero-fav' + (favActive ? ' active is-active' : '') + '" data-action="fav" data-fav="' + escapeUnitsHtml(key) + '" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + favHeartSvg() + '</button>' +
           '<button type="button" class="uc-hero-icon-btn" data-action="remove" aria-label="Quitar de la comparación">' + ucIcon('trash') + '</button>' +
         '</div>' +
         (unit.cardImageUrl ? '' : '<span class="uc-hero-media-fallback">' + escapeUnitsHtml(unit.cardLabel || unit.name) + '</span>') +
@@ -1237,10 +1250,24 @@ function setUnitsViewMode(mode) {
   unitsViewMode = mode === 'compare' ? 'compare' : 'browse';
   var popup = document.getElementById('unitsPopup');
   var compareBtn = document.getElementById('unitsCompareBtn');
+  var tabAll = document.getElementById('unitsTabAll');
+  var tabFav = document.getElementById('unitsTabFav');
   var footTitle = document.getElementById('unitsViviendasFootTitle');
   var footSubtitle = document.getElementById('unitsViviendasFootSubtitle');
   if (popup) popup.classList.toggle('is-compare-mode', unitsViewMode === 'compare');
   if (compareBtn) compareBtn.classList.toggle('active', unitsViewMode === 'compare');
+  if (unitsViewMode === 'compare') {
+    if (tabAll) {
+      tabAll.classList.remove('active');
+      tabAll.setAttribute('aria-selected', 'false');
+    }
+    if (tabFav) {
+      tabFav.classList.remove('active');
+      tabFav.setAttribute('aria-selected', 'false');
+    }
+  } else if (compareBtn) {
+    compareBtn.classList.remove('active');
+  }
   if (footTitle) {
     footTitle.textContent = unitsViewMode === 'compare'
       ? 'Comparar viviendas'
@@ -1259,6 +1286,12 @@ function exitUnitsCompareMode() {
   updateComparePickUi();
   hideCompareEmpty();
   setUnitsViewMode('browse');
+  if (unitsTabAllBtn && unitsTabFavBtn) {
+    unitsTabAllBtn.classList.toggle('active', currentUnitsTab === 'all');
+    unitsTabAllBtn.setAttribute('aria-selected', currentUnitsTab === 'all' ? 'true' : 'false');
+    unitsTabFavBtn.classList.toggle('active', currentUnitsTab === 'fav');
+    unitsTabFavBtn.setAttribute('aria-selected', currentUnitsTab === 'fav' ? 'true' : 'false');
+  }
   renderUnitsGrid(currentUnitsTab);
 }
 
@@ -1309,6 +1342,12 @@ function resolveCompareKeys() {
 function openUnitsCompare() {
   if (unitsViewMode === 'compare') {
     exitUnitsCompareMode();
+    if (unitsTabAllBtn && unitsTabFavBtn) {
+      unitsTabAllBtn.classList.toggle('active', currentUnitsTab === 'all');
+      unitsTabAllBtn.setAttribute('aria-selected', currentUnitsTab === 'all' ? 'true' : 'false');
+      unitsTabFavBtn.classList.toggle('active', currentUnitsTab === 'fav');
+      unitsTabFavBtn.setAttribute('aria-selected', currentUnitsTab === 'fav' ? 'true' : 'false');
+    }
     return;
   }
   if (typeof VisitorSession !== 'undefined' && !VisitorSession.isAuthenticated()) {
@@ -1362,6 +1401,10 @@ function renderUnitsCompare(favKeys) {
           '<button type="button" class="uc-header-pdf" data-uc-action="pdf">Descargar PDF</button>' +
         '</div>' +
       '</header>' +
+      '<div class="uc-mobile-names" aria-label="Viviendas en comparación">' +
+        '<p class="uc-mobile-name">' + escapeUnitsHtml(units[0].name || getUnitShortLabel(units[0])) + '</p>' +
+        '<p class="uc-mobile-name">' + escapeUnitsHtml(units[1].name || getUnitShortLabel(units[1])) + '</p>' +
+      '</div>' +
       '<div class="uc-heroes">' + heroesHtml + '</div>' +
       '<div class="uc-specs">' +
         '<div class="uc-matrix">' +
@@ -1394,7 +1437,7 @@ function buildUnitCard(key) {
       imageInner +
       '<div class="unit-card-image-scrim" aria-hidden="true"></div>' +
       '<div class="unit-card-icons">' +
-        '<button class="icon-btn fav-btn unit-card-icon-btn' + (favActive ? ' active' : '') + '" type="button" data-fav="' + key + '" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + (favActive ? '❤' : '♡') + '</button>' +
+        '<button class="icon-btn fav-btn unit-card-icon-btn' + (favActive ? ' active' : '') + '" type="button" data-fav="' + key + '" aria-label="' + (favActive ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' + favHeartSvg() + '</button>' +
         '<button class="icon-btn share-btn unit-card-icon-btn" type="button" data-share="' + key + '" aria-label="Compartir vivienda"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg></button>' +
       '</div>' +
       badgeHtml +
@@ -1897,25 +1940,49 @@ function renderDownloadsList() {
   });
 }
 
-/* ---- Pestañas Todas / Favoritos ---- */
+/* ---- Pestañas Viviendas / Favoritos / Comparar ---- */
 var unitsTabAllBtn = document.getElementById('unitsTabAll');
 var unitsTabFavBtn = document.getElementById('unitsTabFav');
+var unitsCompareBtn = document.getElementById('unitsCompareBtn');
+
+function syncUnitsChromeLabels() {
+  var mobile = window.matchMedia('(max-width: 600px)').matches;
+  if (unitsTabAllBtn) {
+    unitsTabAllBtn.textContent = mobile ? 'Viviendas' : 'Todas las viviendas';
+  }
+  updateFavoritesTabCount();
+  if (unitsCompareBtn && !unitsCompareBtn.classList.contains('active')) {
+    unitsCompareBtn.textContent = 'Comparar';
+  }
+}
+
 function activateUnitsTab(tab) {
-  if (unitsViewMode === 'compare') setUnitsViewMode('browse');
-  unitsTabAllBtn.classList.toggle('active', tab === 'all');
-  unitsTabFavBtn.classList.toggle('active', tab === 'fav');
-  renderUnitsGrid(tab);
+  if (unitsViewMode === 'compare' || comparePickMode) {
+    comparePickMode = false;
+    updateComparePickUi();
+    hideCompareEmpty();
+    setUnitsViewMode('browse');
+  }
+  currentUnitsTab = tab === 'fav' ? 'fav' : 'all';
+  if (unitsTabAllBtn) {
+    unitsTabAllBtn.classList.toggle('active', currentUnitsTab === 'all');
+    unitsTabAllBtn.setAttribute('aria-selected', currentUnitsTab === 'all' ? 'true' : 'false');
+  }
+  if (unitsTabFavBtn) {
+    unitsTabFavBtn.classList.toggle('active', currentUnitsTab === 'fav');
+    unitsTabFavBtn.setAttribute('aria-selected', currentUnitsTab === 'fav' ? 'true' : 'false');
+  }
+  if (unitsCompareBtn) unitsCompareBtn.classList.remove('active');
+  renderUnitsGrid(currentUnitsTab);
   vibrate(6);
 }
-unitsTabAllBtn.addEventListener('click', function(){ activateUnitsTab('all'); });
-unitsTabFavBtn.addEventListener('click', function(){ activateUnitsTab('fav'); });
-document.getElementById('favoritesEmptyBtn').addEventListener('click', function(){ activateUnitsTab('all'); });
-var unitsMobileBackBtn = document.getElementById('unitsMobileBackBtn');
-if (unitsMobileBackBtn) {
-  unitsMobileBackBtn.addEventListener('click', function () {
-    if (typeof goBack === 'function') goBack();
-  });
+if (unitsTabAllBtn) {
+  unitsTabAllBtn.addEventListener('click', function () { activateUnitsTab('all'); });
 }
+if (unitsTabFavBtn) {
+  unitsTabFavBtn.addEventListener('click', function () { activateUnitsTab('fav'); });
+}
+document.getElementById('favoritesEmptyBtn').addEventListener('click', function(){ activateUnitsTab('all'); });
 window.__mainTrace('bind favoritesEmptyBtn');
 var compareEmptyBtn = document.getElementById('compareEmptyBtn');
 if (compareEmptyBtn) {
@@ -1924,12 +1991,13 @@ if (compareEmptyBtn) {
     activateUnitsTab('all');
   });
 }
-var unitsCompareBtn = document.getElementById('unitsCompareBtn');
 if (unitsCompareBtn) {
   unitsCompareBtn.addEventListener('click', function () {
     openUnitsCompare();
   });
 }
+window.addEventListener('resize', syncUnitsChromeLabels);
+syncUnitsChromeLabels();
 
 /* ================= RENDER DE TARJETAS DE ZONAS 360° ================= */
 function renderTour360Grid() {
@@ -3150,6 +3218,10 @@ var OVERLAY_SCREENS = { calculator: true };
 var SCREEN_HOOKS = {
   tipologias: {
     onEnter: function () {
+      if (typeof syncUnitsChromeLabels === 'function') syncUnitsChromeLabels();
+      if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+        GlobalClose.update();
+      }
       if (typeof playUnitCardsEntrance === 'function') {
         requestAnimationFrame(function () {
           playUnitCardsEntrance();
@@ -3223,7 +3295,15 @@ var SCREEN_HOOKS = {
     }
   },
   calculator: {
-    onEnter: function(k){ setupCalculator(k); }
+    onEnter: function (k) {
+      setupCalculator(k);
+      if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+        GlobalClose.update();
+        requestAnimationFrame(function () {
+          GlobalClose.update();
+        });
+      }
+    }
   },
   plans: {
     onEnter: function(k){ setupPlans(k); },
@@ -3822,6 +3902,9 @@ function setupCalculator(key) {
   document.getElementById('calcYears').value   = '20';
   document.getElementById('calcRate').value    = CONFIG.calcRate || '11.5';
   computeCalculator();
+  if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+    GlobalClose.update();
+  }
 }
 
 window.__mainTraceSafe('bind calculator inputs', function () {
@@ -4205,10 +4288,7 @@ window.onVisitorFavoritesChanged = function () {
     renderUnitsGrid('fav');
   }
   document.querySelectorAll('.fav-btn[data-fav]').forEach(function (el) {
-    var key = el.getAttribute('data-fav');
-    var active = isFavorite(key);
-    el.classList.toggle('active', active);
-    el.textContent = active ? '❤' : '♡';
+    syncFavButtonEl(el, isFavorite(el.getAttribute('data-fav')));
   });
 };
 

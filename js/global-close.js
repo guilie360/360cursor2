@@ -177,6 +177,7 @@ var GlobalClose = (function () {
     if (stack) {
       stack.classList.toggle('is-visible', showStack);
       stack.classList.toggle('is-hero-only', showFullscreen && !showClose);
+      pinStackToVisualViewport(showClose && !DESKTOP_MEDIA.matches && showStack);
     }
     document.body.classList.toggle('has-global-close', showClose);
 
@@ -188,6 +189,24 @@ var GlobalClose = (function () {
       recoveryBtn.hidden = !needsRecovery;
       recoveryBtn.classList.toggle('is-visible', needsRecovery);
     }
+  }
+
+  function pinStackToVisualViewport(enable) {
+    if (!stack) return;
+    if (!enable || !window.visualViewport || isMainMenuOpen()) {
+      stack.style.bottom = '';
+      stack.style.left = '';
+      stack.style.transform = '';
+      stack.style.top = '';
+      return;
+    }
+    var vv = window.visualViewport;
+    var offsetBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    var safe = 18;
+    stack.style.top = 'auto';
+    stack.style.left = '50%';
+    stack.style.transform = 'translateX(-50%)';
+    stack.style.bottom = Math.max(safe, offsetBottom + safe) + 'px';
   }
 
   function handleClose(options) {
@@ -403,6 +422,11 @@ var GlobalClose = (function () {
 
     window.addEventListener('resize', update);
     document.addEventListener('visibilitychange', update);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', update);
+      window.visualViewport.addEventListener('scroll', update);
+    }
 
     var menu = document.getElementById('mainMenu');
     if (menu && typeof MutationObserver !== 'undefined') {

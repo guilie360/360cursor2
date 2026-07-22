@@ -2009,9 +2009,6 @@ html.web-effects-off {
   padding-top:8px;
   border-top:1px solid var(--border);
 }
-.units-viviendas-back {
-  display:none;
-}
 .units-viviendas-foot-copy {
   display:flex;
   flex-direction:column;
@@ -2296,9 +2293,20 @@ html.web-effects-off {
   cursor:pointer;
   transition:transform 0.2s ease, color 0.2s ease;
 }
-.uc-hero-icon-btn svg { width:12px; height:12px; stroke:currentColor; }
+.uc-hero-icon-btn svg { width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:1.6; }
 .uc-hero-icon-btn:hover { transform:scale(1.06); }
-.uc-hero-icon-btn.is-active { color:var(--uc-text); font-weight:700; }
+.uc-hero-icon-btn.is-active,
+.uc-hero-icon-btn.fav-btn.active {
+  color:#fff;
+  border-color:rgba(255, 255, 255, 0.35);
+  background:rgba(255, 255, 255, 0.08);
+  box-shadow:0 0 12px rgba(255, 255, 255, 0.16);
+}
+.uc-hero-icon-btn.fav-btn.active svg,
+.uc-hero-icon-btn.is-active svg {
+  fill:rgba(255, 255, 255, 0.92);
+  stroke:rgba(255, 255, 255, 0.92);
+}
 
 .uc-hero-tag {
   color:var(--uc-text-soft);
@@ -2779,7 +2787,7 @@ html.web-effects-off {
   color:var(--uc-text);
 }
 
-.units-viviendas-popup.is-compare-mode .units-tabs { opacity:0.5; }
+.units-viviendas-popup.is-compare-mode .units-tabs { opacity:1; }
 .units-viviendas-popup.is-compare-mode .units-viviendas-foot-copy { opacity:0.85; }
 .units-viviendas-popup.is-compare-mode .units-viviendas-stage {
   background:var(--uc-depth-bg, transparent);
@@ -2937,10 +2945,34 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   border-color:color-mix(in srgb, var(--unit-card-text) 24%, transparent);
   background:color-mix(in srgb, var(--bg-main, #000) 55%, transparent);
 }
+.units-viviendas-popup .unit-card-icon-btn.fav-btn {
+  color:#fff;
+}
+.units-viviendas-popup .unit-card-icon-btn.fav-btn svg {
+  width:15px;
+  height:15px;
+  stroke:currentColor;
+  stroke-width:1.6;
+  fill:none;
+}
 .units-viviendas-popup .unit-card-icon-btn.fav-btn.active {
-  color:var(--unit-card-text);
-  font-weight:700;
-  border-color:color-mix(in srgb, var(--unit-card-text) 22%, transparent);
+  color:#fff;
+  font-weight:400;
+  border-color:rgba(255, 255, 255, 0.35);
+  background:rgba(255, 255, 255, 0.08);
+  box-shadow:0 0 14px rgba(255, 255, 255, 0.18);
+}
+.units-viviendas-popup .unit-card-icon-btn.fav-btn.active svg {
+  fill:rgba(255, 255, 255, 0.92);
+  stroke:rgba(255, 255, 255, 0.92);
+}
+.units-viviendas-popup .unit-card-icon-btn.fav-btn.pulse {
+  animation:favHeartPulse 0.28s ease;
+}
+@keyframes favHeartPulse {
+  0% { transform:scale(1); }
+  45% { transform:scale(1.18); }
+  100% { transform:scale(1); }
 }
 .units-viviendas-popup .availability-badge {
   position:absolute;
@@ -3145,18 +3177,14 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   }
 }
 
-/* Viviendas — header fijo móvil (sin footer ni X global) */
+/* Viviendas — header móvil: Viviendas | Favoritos | Comparar + X global */
 @media (max-width: 600px) {
-  body:has(#unitsPopup.active) .global-action-stack {
-    display:none !important;
-  }
-
   .units-popup.units-viviendas-popup {
     --units-inset:max(12px, env(safe-area-inset-left));
     padding:
       max(10px, env(safe-area-inset-top))
       max(12px, env(safe-area-inset-right))
-      max(12px, env(safe-area-inset-bottom))
+      max(72px, calc(env(safe-area-inset-bottom) + 56px))
       max(12px, env(safe-area-inset-left));
   }
 
@@ -3167,10 +3195,11 @@ body[data-shadow-glass="solid"] .uc-hero-card {
     z-index:5;
     flex-wrap:nowrap;
     align-items:center;
-    gap:8px;
+    justify-content:stretch;
+    gap:0;
     min-height:48px;
     margin:0 0 10px;
-    padding:8px 2px 10px;
+    padding:6px 0 10px;
     border-top:none;
     border-bottom:1px solid var(--border);
     background:color-mix(in srgb, var(--bg-main, #050505) 88%, transparent);
@@ -3178,63 +3207,41 @@ body[data-shadow-glass="solid"] .uc-hero-card {
     -webkit-backdrop-filter:blur(14px);
   }
 
-  .units-viviendas-back {
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-    flex:0 0 auto;
-    padding:8px 10px;
-    border:1px solid rgba(255, 255, 255, 0.12);
-    border-radius:999px;
-    background:rgba(8, 8, 8, 0.55);
-    color:rgba(255, 255, 255, 0.78);
-    font-family:inherit;
-    font-size:0.68rem;
-    font-weight:500;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    cursor:pointer;
-  }
-  .units-viviendas-back__icon {
-    font-size:0.95rem;
-    line-height:1;
-  }
-
   .units-viviendas-foot-copy {
-    flex:1 1 auto;
-    min-width:0;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-  }
-  .units-viviendas-title {
-    font-size:0.72rem;
-    letter-spacing:0.08em;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    max-width:100%;
-  }
-  .units-viviendas-subtitle {
     display:none;
   }
 
   .units-viviendas-foot-actions {
-    width:auto;
-    flex:0 0 auto;
-    justify-content:flex-end;
+    width:100%;
+    flex:1 1 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
     gap:6px;
   }
   .units-viviendas-popup .units-tabs {
+    flex:1 1 auto;
+    display:flex;
+    justify-content:space-between;
     gap:6px;
-  }
-  .units-viviendas-popup #unitsTabAll {
-    display:none !important;
+    width:auto;
+    max-width:none;
+    margin:0;
   }
   .units-viviendas-popup .units-tab,
   .units-viviendas-popup .units-compare-btn {
-    padding:8px 10px;
-    font-size:0.6rem;
+    flex:1 1 0;
+    min-width:0;
+    padding:10px 8px;
+    font-size:0.62rem;
+    letter-spacing:0.06em;
+    text-align:center;
+    justify-content:center;
+    pointer-events:auto;
+    opacity:1;
+  }
+  .units-viviendas-popup .units-compare-btn {
+    margin:0;
   }
 
   .units-viviendas-stage {
@@ -3245,6 +3252,83 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   .units-viviendas-popup .units-grid {
     max-width:100%;
   }
+
+  /* Comparar móvil: solo nombres + tabla vertical */
+  .units-viviendas-popup.is-compare-mode .uc-header,
+  .units-viviendas-popup.is-compare-mode .uc-heroes,
+  .units-viviendas-popup.is-compare-mode .uc-insights,
+  .units-viviendas-popup.is-compare-mode .uc-matrix-head,
+  .units-viviendas-popup.is-compare-mode .uc-matrix-rows--desktop {
+    display:none !important;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-names {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin:0 0 14px;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-name {
+    margin:0;
+    padding:12px 10px;
+    border:1px solid rgba(255, 255, 255, 0.1);
+    border-radius:12px;
+    background:rgba(255, 255, 255, 0.03);
+    font-size:0.72rem;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    text-align:center;
+    color:rgba(255, 255, 255, 0.88);
+    line-height:1.35;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-stack {
+    display:block !important;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-row {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:12px 4px;
+    margin:0;
+    border:none;
+    border-radius:0;
+    border-bottom:1px solid rgba(255, 255, 255, 0.08);
+    background:transparent;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-row-label {
+    margin:0;
+    font-size:0.62rem;
+    letter-spacing:0.12em;
+    opacity:0.55;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-row-compare {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-vs,
+  .units-viviendas-popup.is-compare-mode .uc-mobile-side-tag,
+  .units-viviendas-popup.is-compare-mode .uc-mobile-row-diff {
+    display:none !important;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-side {
+    text-align:center;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-mobile-side-value {
+    font-size:0.92rem;
+    font-weight:500;
+    color:rgba(255, 255, 255, 0.88);
+  }
+  .units-viviendas-popup.is-compare-mode .uc-category-toggle {
+    padding:10px 0;
+  }
+  .units-viviendas-popup.is-compare-mode .uc-shell {
+    padding:0;
+  }
+}
+
+.uc-mobile-names {
+  display:none;
 }
 
 /* ================= UNIDADES — MODALES PREMIUM (calc, planos, 360°) ================= */
@@ -3566,6 +3650,16 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   font-weight:500;
   letter-spacing:0.1em;
   line-height:1.65;
+}
+
+@media (max-width: 600px) {
+  .global-action-stack.is-visible {
+    z-index:1400;
+  }
+  #calculatorModal.units-unit-overlay.active,
+  #calculatorModal.content-modal.active {
+    padding-bottom:max(72px, calc(env(safe-area-inset-bottom) + 56px));
+  }
 }
 
 @media (max-width: 720px) {
@@ -6696,17 +6790,34 @@ body.theme-light .mis-tema-icon-btn {
   fill:none;
   display:block;
 }
-/* El glifo de corazón (favoritos) necesita un tamaño de fuente mayor
-   para igualar el peso visual del ícono SVG de compartir. */
+/* El glifo de corazón (favoritos) — stroke blanco premium, sin rojo */
 .icon-btn.fav-btn {
-  font-size:1.45rem;
+  font-size:1rem;
+  color:#fff;
+}
+.icon-btn.fav-btn svg {
+  width:15px;
+  height:15px;
+  stroke:currentColor;
+  stroke-width:1.6;
+  fill:none;
+  display:block;
 }
 .icon-btn:hover {
   background:color-mix(in srgb, var(--bg-main) 80%, transparent);
   border-color:color-mix(in srgb, var(--text-primary) 45%, transparent);
 }
-.icon-btn.fav-btn.active { color:var(--accent); border-color:var(--accent); }
-.icon-btn.pulse { transform:scale(1.28); }
+.icon-btn.fav-btn.active {
+  color:#fff;
+  border-color:rgba(255, 255, 255, 0.35);
+  background:rgba(255, 255, 255, 0.08);
+  box-shadow:0 0 14px rgba(255, 255, 255, 0.16);
+}
+.icon-btn.fav-btn.active svg {
+  fill:rgba(255, 255, 255, 0.92);
+  stroke:rgba(255, 255, 255, 0.92);
+}
+.icon-btn.pulse { transform:scale(1.18); }
 
 /* =========================================================
    PESTAÑAS DEL MÓDULO VIVIENDAS — Todas / Favoritos

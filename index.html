@@ -34,7 +34,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=mobile-v1">
+<link rel="stylesheet" href="css/components.css?v=mobile-v2">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=2">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
@@ -426,18 +426,14 @@ DEVELOP TEST 007
   <!-- POPUP: SELECCIÓN DE UNIDADES -->
   <div class="units-popup units-viviendas-popup" id="unitsPopup">
     <div class="units-viviendas-foot" id="unitsViviendasChrome">
-      <button type="button" class="units-viviendas-back" id="unitsMobileBackBtn" aria-label="Volver">
-        <span class="units-viviendas-back__icon" aria-hidden="true">←</span>
-        <span class="units-viviendas-back__label">Volver</span>
-      </button>
       <div class="units-viviendas-foot-copy">
         <p class="units-viviendas-title" id="unitsViviendasFootTitle">Selecciona tu vivienda</p>
         <span class="units-viviendas-subtitle" id="unitsViviendasFootSubtitle">Explora planos, precios y calcula tu cuota.</span>
       </div>
       <div class="units-viviendas-foot-actions">
-        <div class="units-tabs" id="unitsTabs">
-          <button class="units-tab active" type="button" id="unitsTabAll">Todas las viviendas</button>
-          <button class="units-tab" type="button" id="unitsTabFav">Favoritos (0)</button>
+        <div class="units-tabs" id="unitsTabs" role="tablist" aria-label="Viviendas">
+          <button class="units-tab active" type="button" id="unitsTabAll" role="tab" aria-selected="true">Viviendas</button>
+          <button class="units-tab" type="button" id="unitsTabFav" role="tab" aria-selected="false">Favoritos</button>
         </div>
         <button class="units-compare-btn" type="button" id="unitsCompareBtn">Comparar</button>
       </div>
@@ -1311,7 +1307,7 @@ console.log(
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/web-effects.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/global-close.js?v=auth-lock1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/global-close.js?v=auth-lock1");</script>
-<script src="js/global-close.js?v=prod-assist-001"></script>
+<script src="js/global-close.js?v=mobile-v2"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/global-close.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
   <script>
@@ -1385,7 +1381,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=mobile-v1"></script>
+<script src="js/main.js?v=mobile-v2"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
