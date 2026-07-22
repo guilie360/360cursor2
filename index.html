@@ -5,6 +5,15 @@
 <title>360•</title>
 <script>
 window.__BUILD_STAMP__ = 'develop-test-002';
+/* Bandera interna: banner de desarrollo solo si DEV_MODE=true, ?dev=1 o localStorage DEV_MODE=1 */
+window.DEV_MODE = window.DEV_MODE === true ||
+  (typeof location !== 'undefined' && /(?:^|[?&])dev=1(?:&|$)/.test(location.search || '')) ||
+  (function () {
+    try { return localStorage.getItem('DEV_MODE') === '1'; } catch (_e) { return false; }
+  })();
+if (window.DEV_MODE && document.documentElement) {
+  document.documentElement.classList.add('dev-mode');
+}
 console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -57,23 +66,23 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=mobile-v3-7">
-<link rel="stylesheet" href="css/platform/product-assistant.css?v=mobile-v3-7">
+<link rel="stylesheet" href="css/components.css?v=mobile-v3-8">
+<link rel="stylesheet" href="css/platform/product-assistant.css?v=mobile-v3-8">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
 </head>
 <body class="notranslate" translate="no">
-<div id="deploy-marker" style="
-position:fixed;
-top:0;
-left:0;
-z-index:999999;
-background:#ff0000;
-color:#fff;
-padding:6px 10px;
-font:14px monospace;">
-DEVELOP TEST 007
-</div>
+<script>
+(function () {
+  if (!window.DEV_MODE) return;
+  var el = document.createElement('div');
+  el.id = 'deploy-marker';
+  el.setAttribute('aria-hidden', 'true');
+  el.textContent = 'DEVELOP TEST 007';
+  el.style.cssText = 'position:fixed;top:0;left:0;z-index:999999;background:#ff0000;color:#fff;padding:6px 10px;font:14px monospace;';
+  document.body.insertBefore(el, document.body.firstChild);
+})();
+</script>
 
   <div class="vignette-overlay"></div>
 
@@ -112,7 +121,7 @@ DEVELOP TEST 007
     </div>
   </section>
 
-  <!-- Botón Demos (desktop / tablet) -->
+  <!-- Botón volver (desktop: con etiqueta; móvil V3.8: solo ←) -->
   <a class="project-back-btn" id="projectBackBtn" href="#" hidden aria-hidden="true">
     <svg class="project-back-btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     <span class="project-back-btn__label" id="projectBackBtnLabel">Demos</span>
@@ -1416,7 +1425,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=mobile-v3-7"></script>
+<script src="js/project-data.js?v=mobile-v3-8"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>

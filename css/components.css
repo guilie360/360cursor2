@@ -1578,14 +1578,30 @@ body:has(#deploy-marker) .project-back-btn {
 }
 @media (max-width: 600px) {
   :root {
-    --mobile-landing-fab-size:52px;
-    --mobile-landing-fab-x:max(1.15rem, env(safe-area-inset-right));
-    --mobile-landing-fab-y:max(1.15rem, env(safe-area-inset-bottom));
+    /* Retícula única de chrome (misma columna L/R para Volver·Menú / Compartir·Asistente) */
+    --mobile-chrome-x: 1.15rem;
+    --mobile-chrome-left: max(var(--mobile-chrome-x), env(safe-area-inset-left));
+    --mobile-chrome-right: max(var(--mobile-chrome-x), env(safe-area-inset-right));
+    --mobile-chrome-top: max(14px, env(safe-area-inset-top));
+    --mobile-chrome-bottom: max(1.15rem, env(safe-area-inset-bottom));
+    --mobile-landing-fab-size: 52px;
+    --mobile-back-size: 40px;
+    --mobile-hero-fab-clearance: calc(
+      var(--mobile-landing-fab-size) + var(--mobile-chrome-bottom) + 1.35rem
+    );
+  }
+
+  /* Banner de desarrollo: nunca en móvil salvo DEV_MODE */
+  #deploy-marker {
+    display: none !important;
+  }
+  html.dev-mode #deploy-marker {
+    display: block !important;
   }
 
   /*
-   * V3.7 — Volver a Demos (solo móvil): Hall glass, esquina superior izquierda.
-   * Desktop conserva .project-back-btn sin cambios.
+   * V3.8 — Volver (sistema, Nivel 3): solo ←, Hall glass, más discreto.
+   * Misma columna izquierda que Menú; misma fila superior que Compartir.
    */
   #projectBackBtnMobile {
     display: none !important;
@@ -1593,11 +1609,18 @@ body:has(#deploy-marker) .project-back-btn {
   .project-back-btn:not([hidden]) {
     display: inline-flex !important;
     align-items: center;
-    gap: 0.4rem;
-    top: max(14px, env(safe-area-inset-top));
-    left: max(12px, env(safe-area-inset-left));
+    justify-content: center;
+    gap: 0;
+    top: var(--mobile-chrome-top);
+    left: var(--mobile-chrome-left);
+    right: auto;
     z-index: 940;
-    padding: 0.5rem 0.85rem 0.5rem 0.7rem;
+    width: var(--mobile-back-size);
+    height: var(--mobile-back-size);
+    min-width: var(--mobile-back-size);
+    min-height: var(--mobile-back-size);
+    padding: 0;
+    box-sizing: border-box;
     background: var(--btn-glass-surface, var(--btn-surface));
     border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
     border-radius: var(--menu-card-radius, 14px);
@@ -1607,23 +1630,31 @@ body:has(#deploy-marker) .project-back-btn {
       var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
       var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
     color: var(--text-primary);
-    font-size: 0.72rem;
+    font-size: 0;
     font-weight: 500;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
     text-transform: none;
-    opacity: 0.92;
+    opacity: 0.48;
+    transition:
+      background 0.3s ease,
+      color 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.25s ease,
+      opacity 0.25s ease;
   }
   body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
     border-radius: 999px;
   }
-  .project-back-btn:not([hidden]) .project-back-btn__icon {
-    display: none;
+  .project-back-btn:not([hidden]) .project-back-btn__icon,
+  .project-back-btn:not([hidden]) .project-back-btn__label {
+    display: none !important;
   }
   .project-back-btn:not([hidden])::before {
     content: '←';
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     line-height: 1;
-    opacity: 0.9;
+    opacity: 0.92;
   }
   .project-back-btn:not([hidden]):hover,
   .project-back-btn:not([hidden]):focus-visible,
@@ -1634,14 +1665,14 @@ body:has(#deploy-marker) .project-back-btn {
     border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
     border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
     transform: translateY(-1px);
-    opacity: 1;
+    opacity: 0.72;
     box-shadow:
       0 12px 28px rgba(0, 0, 0, 0.36),
       var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
   }
   .project-back-btn:not([hidden]):active {
     transform: translateY(0);
-    opacity: 0.88;
+    opacity: 0.55;
   }
 
   /*
@@ -1695,8 +1726,8 @@ body:has(#deploy-marker) .project-back-btn {
   .pa-fab {
     position:fixed;
     left:auto;
-    right:max(1.15rem, env(safe-area-inset-right));
-    bottom:max(1.15rem, env(safe-area-inset-bottom));
+    right:var(--mobile-chrome-right);
+    bottom:var(--mobile-chrome-bottom);
     top:auto;
   }
 
@@ -1711,9 +1742,9 @@ body:has(#deploy-marker) .project-back-btn {
   .project-cover-buttons #mainMenuOpenBtn,
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--start #mainMenuOpenBtn {
     position:fixed;
-    left:max(1.15rem, env(safe-area-inset-left));
+    left:var(--mobile-chrome-left);
     right:auto;
-    bottom:max(1.15rem, env(safe-area-inset-bottom));
+    bottom:var(--mobile-chrome-bottom);
     top:auto;
     gap:0;
     font-size:0;
@@ -1771,16 +1802,24 @@ body:has(#deploy-marker) .project-back-btn {
     display:none !important;
   }
 
-  /* Compartir: superior derecha (banner rojo queda a la izquierda) */
+  /*
+   * Compartir (Nivel 2): misma fila que ←, misma columna derecha que Asistente.
+   * Hit area alineada a la retícula; icono ligero.
+   */
   .share-float:not(.is-float-hidden):not([hidden]) {
-    display: block;
-    top: max(12px, env(safe-area-inset-top));
-    right: max(14px, env(safe-area-inset-right));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: var(--mobile-chrome-top);
+    right: var(--mobile-chrome-right);
     bottom: auto;
     left: auto;
+    width: var(--mobile-back-size);
+    height: var(--mobile-back-size);
+    padding: 0;
     z-index: 930;
+    opacity: 0.78;
   }
-  /* Solo el SVG: ~20–25% más pequeño, mismo hit area */
   .share-float svg {
     width: 18px;
     height: 18px;
@@ -1788,6 +1827,30 @@ body:has(#deploy-marker) .project-back-btn {
   .hero-secondary-actions:not([hidden]):not(.is-assist-only) {
     display: flex;
     justify-content: flex-start;
+  }
+
+  /*
+   * Hero Nivel 1: elevar título / subtítulo / Iniciar ~1 línea
+   * para respirar por encima de Menú · Asistente.
+   */
+  .project-cover-content {
+    padding-left: var(--mobile-chrome-left);
+    padding-right: var(--mobile-chrome-right);
+    padding-bottom: var(--mobile-hero-fab-clearance);
+  }
+  .project-cover[data-hero-layout="bottom-bar"] .project-cover-content {
+    padding-left: var(--mobile-chrome-left);
+    padding-right: var(--mobile-chrome-right);
+    padding-bottom: var(--mobile-hero-fab-clearance);
+  }
+  .project-cover-tagline {
+    margin-bottom: 1.35rem;
+  }
+  .project-cover[data-hero-layout="bottom-bar"] .project-cover-hero-copy {
+    margin-bottom: 0.35rem;
+  }
+  .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--end {
+    margin-top: 0.15rem;
   }
 
   /* Slot del menú: el botón ya es fixed; no reservar hueco en el hero */
@@ -6451,7 +6514,17 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 600px) {
-  .project-cover-content { padding:0 6% clamp(22px, 3.5vh, 36px); }
+  .project-cover-content {
+    padding-top: 0;
+    padding-left: var(--mobile-chrome-left, 1.15rem);
+    padding-right: var(--mobile-chrome-right, 1.15rem);
+    padding-bottom: var(--mobile-hero-fab-clearance, calc(52px + 1.15rem + 1.35rem));
+  }
+  .project-cover[data-hero-layout="bottom-bar"] .project-cover-content {
+    padding-left: var(--mobile-chrome-left, 1.15rem);
+    padding-right: var(--mobile-chrome-right, 1.15rem);
+    padding-bottom: var(--mobile-hero-fab-clearance, calc(52px + 1.15rem + 1.35rem));
+  }
   .project-cover[data-hero-layout="bottom-bar"] .project-cover-hero-row {
     grid-template-columns:1fr;
     grid-template-rows:auto auto auto;
@@ -6497,9 +6570,15 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
   .project-cover-logo { width:64px; max-width:64px; margin-bottom:14px; }
   .project-cover-logo.is-avatar { width:56px; max-width:56px; height:56px; }
   .project-cover-name { font-size:1.2rem; letter-spacing:0.16em; }
-  .project-cover-tagline { margin-bottom:22px; letter-spacing:0.2em; }
+  .project-cover-tagline { margin-bottom:1.35rem; letter-spacing:0.2em; }
   .project-cover-buttons .project-cover-btn { padding:12px 24px; font-size:0.68rem; }
   .project-cover-btn { padding:14px 28px; font-size:0.78rem; }
+  /* Iniciar (Nivel 1) por encima de chrome de navegación */
+  .project-cover-buttons #heroStartBtn,
+  .project-cover[data-hero-layout="bottom-bar"] .project-cover-slot--end .project-cover-btn {
+    position:relative;
+    z-index:2;
+  }
   .units-popup:not(.tour360-popup):not(.units-viviendas-popup),
   .pdf-modal,
   .content-modal:not(.auth-experience-modal) {

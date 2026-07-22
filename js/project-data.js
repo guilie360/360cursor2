@@ -155,7 +155,8 @@ function applyProjectBackButton(config) {
     el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
     el.setAttribute('href', resolved.url);
-    el.setAttribute('aria-label', resolved.label);
+    /* Móvil: control de sistema (solo ←); desktop conserva etiqueta */
+    el.setAttribute('aria-label', isMobile ? 'Volver' : resolved.label);
   }
 
   applyLink(desktop);
