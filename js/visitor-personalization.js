@@ -122,12 +122,13 @@ var VisitorPersonalization = (function () {
 
   function renderAvatarHtml(sizeClass) {
     var prefs = getPrefs();
-    var cls = 'menu-profile-avatar' + (sizeClass ? ' ' + sizeClass : '');
+    var size = String(sizeClass || '').replace(/\bmenu-profile-avatar-status\b/g, '').replace(/\s+/g, ' ').trim();
     if (prefs.avatarColorMode === 'image' && prefs.avatarImageUrl) {
-      return '<div class="' + cls + ' menu-profile-avatar-image" aria-hidden="true">' +
-        '<img src="' + escapeAttr(prefs.avatarImageUrl) + '" alt="">' +
-      '</div>';
+      /* Foto directa: sin contenedor, fondo ni decoración */
+      var photoCls = ('menu-profile-avatar menu-profile-avatar-photo ' + size).replace(/\s+/g, ' ').trim();
+      return '<img class="' + photoCls + '" src="' + escapeAttr(prefs.avatarImageUrl) + '" alt="" aria-hidden="true" draggable="false">';
     }
+    var cls = 'menu-profile-avatar' + (sizeClass ? ' ' + sizeClass : '');
     var color = getAvatarColor();
     return '<div class="' + cls + '" style="--avatar-color:' + color + '" aria-hidden="true"></div>';
   }

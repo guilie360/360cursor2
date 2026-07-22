@@ -251,6 +251,28 @@ body,
   font-weight:600;
   color:var(--text-primary);
 }
+/* Desktop: ← Demos + Asistente = mismo componente Hall que Iniciar */
+@media (min-width: 601px) {
+  .project-back-btn:not([hidden]),
+  .pa-fab {
+    background:var(--btn-glass-surface, var(--btn-surface));
+    border:var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+    border-radius:var(--menu-card-radius, 14px);
+    backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    -webkit-backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    color:var(--text-primary);
+    font-weight:600;
+    transition:background 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.25s ease;
+    filter:none;
+  }
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]),
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-fab {
+    border-radius:999px;
+  }
+}
 .pause-screen__actions .project-cover-btn.pause-screen__btn {
   background:var(--btn-glass-surface, var(--btn-surface));
   border:var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
@@ -277,6 +299,27 @@ body,
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.36),
     var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+}
+@media (min-width: 601px) {
+  .project-back-btn:not([hidden]):hover,
+  .project-back-btn:not([hidden]):focus-visible,
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active {
+    background:var(--btn-glass-hover, var(--hover));
+    color:var(--btn-text-hover, var(--text-primary));
+    border-color:var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width:var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform:translateY(-1px);
+    filter:none;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
+  .project-back-btn:not([hidden]):active,
+  .pa-fab:active {
+    transform:translateY(0);
+  }
 }
 .pause-screen__actions .project-cover-btn.pause-screen__btn:hover {
   background:var(--btn-glass-hover, var(--hover));
@@ -492,6 +535,24 @@ body.main-menu-open:has(#mainMenu.is-personalizar) #mainMenuBackdrop {
   display:block;
 }
 
+/* Desktop: perfil más bajo; BOXIES / versión ocultos */
+@media (min-width: 601px) {
+  .main-menu-brand,
+  .main-menu-version {
+    display: none !important;
+  }
+  .main-menu-footer {
+    display: none !important;
+  }
+  .main-menu-profile-slot {
+    padding-top: 10px;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  .main-menu.has-visitor-profile .main-menu-profile-slot {
+    margin-top: auto;
+  }
+}
+
 .main-menu-footer {
   flex:0 0 auto;
   display:flex;
@@ -591,6 +652,15 @@ body[data-button-glass="glass"] .units-viviendas-popup .unit-typo-btn:not([data-
   backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(125%);
   -webkit-backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(125%);
 }
+@media (min-width: 601px) {
+  body[data-button-glass="soft"] .project-back-btn:not([hidden]),
+  body[data-button-glass="glass"] .project-back-btn:not([hidden]),
+  body[data-button-glass="soft"] .pa-fab,
+  body[data-button-glass="glass"] .pa-fab {
+    backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(125%);
+    -webkit-backdrop-filter:blur(var(--btn-glass-blur, 8px)) saturate(125%);
+  }
+}
 
 /* Botones — efecto sólido / suave / cristal */
 .outline-btn,
@@ -660,6 +730,15 @@ body[data-button-hover-glass="glass"] .tour360-card-enter:hover,
 body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   backdrop-filter:blur(var(--btn-hover-blur, 14px)) saturate(130%);
   -webkit-backdrop-filter:blur(var(--btn-hover-blur, 14px)) saturate(130%);
+}
+@media (min-width: 601px) {
+  body[data-button-hover-glass="soft"] .project-back-btn:not([hidden]):hover,
+  body[data-button-hover-glass="soft"] .pa-fab:hover,
+  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover,
+  body[data-button-hover-glass="glass"] .pa-fab:hover {
+    backdrop-filter:blur(var(--btn-hover-blur, 14px)) saturate(130%);
+    -webkit-backdrop-filter:blur(var(--btn-hover-blur, 14px)) saturate(130%);
+  }
 }
 
 /* Franja de perfil — integrada al sistema */
@@ -764,10 +843,40 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   border-radius: 50%;
   display: block;
 }
-.menu-profile-avatar-image::after {
+.menu-profile-avatar-image::before,
+.menu-profile-avatar-image::after,
+.menu-profile-avatar.menu-profile-avatar-image::before,
+.menu-profile-avatar.menu-profile-avatar-image::after {
   display: none !important;
   content: none !important;
   background: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Foto de perfil: <img> directo, solo máscara circular */
+img.menu-profile-avatar.menu-profile-avatar-photo,
+img.menu-profile-avatar-photo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  flex-shrink: 0;
+  padding: 0 !important;
+  margin: 0;
+  border: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  outline: none;
+}
+img.menu-profile-avatar-photo.menu-profile-avatar-sm,
+img.menu-profile-avatar.menu-profile-avatar-sm {
+  width: 34px;
+  height: 34px;
 }
 
 .menu-profile-name {
@@ -1501,108 +1610,12 @@ body:has(#deploy-marker) .project-back-btn {
 .project-back-btn[hidden] {
   display: none !important;
 }
-.project-back-btn:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(12, 12, 12, 0.94);
-  transform: translateY(-1px);
-}
 .project-back-btn__icon {
   flex-shrink: 0;
   opacity: 0.85;
 }
 .project-back-btn:hover .project-back-btn__icon {
   opacity: 1;
-}
-
-/* Desktop — Hall unificado: ← Demos + Asistente (misma familia que Iniciar) */
-@media (min-width: 601px) {
-  .project-back-btn:not([hidden]),
-  body[data-button-glass] .project-back-btn:not([hidden]) {
-    background: var(--btn-glass-surface, var(--btn-surface));
-    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
-    border-radius: var(--menu-card-radius, 14px);
-    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    box-shadow:
-      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
-    color: var(--text-primary);
-    transition:
-      background 0.3s ease,
-      color 0.3s ease,
-      border-color 0.3s ease,
-      border-width 0.3s ease,
-      box-shadow 0.3s ease,
-      transform 0.25s ease;
-  }
-  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
-    border-radius: 999px;
-  }
-  .project-back-btn:not([hidden]):hover,
-  .project-back-btn:not([hidden]):focus-visible,
-  body[data-button-hover-glass="soft"] .project-back-btn:not([hidden]):hover,
-  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover {
-    background: var(--btn-glass-hover, var(--hover));
-    color: var(--btn-text-hover, var(--text-primary));
-    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-    transform: translateY(-1px);
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.36),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
-  }
-  .project-back-btn:not([hidden]):active {
-    transform: translateY(0);
-  }
-
-  .pa-fab,
-  body[data-button-glass="soft"] .pa-fab,
-  body[data-button-glass="glass"] .pa-fab,
-  body[data-button-glass="solid"] .pa-fab {
-    background: var(--btn-glass-surface, var(--btn-surface));
-    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
-    border-radius: var(--menu-card-radius, 14px);
-    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    box-shadow:
-      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
-    color: var(--text-primary);
-    filter: none;
-    transition:
-      background 0.3s ease,
-      color 0.3s ease,
-      border-color 0.3s ease,
-      border-width 0.3s ease,
-      box-shadow 0.3s ease,
-      transform 0.25s ease;
-  }
-  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-fab {
-    border-radius: 999px;
-  }
-  .pa-fab:hover,
-  .pa-fab:focus-visible,
-  .pa-fab.is-active,
-  body[data-button-hover-glass="soft"] .pa-fab:hover,
-  body[data-button-hover-glass="glass"] .pa-fab:hover {
-    background: var(--btn-glass-hover, var(--hover));
-    color: var(--btn-text-hover, var(--text-primary));
-    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-    transform: translateY(-1px);
-    filter: none;
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.36),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
-  }
-  .pa-fab:active {
-    transform: translateY(0);
-  }
-  .pa-fab__mark {
-    border-color: color-mix(in srgb, var(--text-primary) 55%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 4%, transparent);
-  }
 }
 
 /* ================= ACCIONES SECUNDARIAS HERO (móvil) ================= */
@@ -8927,9 +8940,13 @@ body.theme-light .mis-tema-icon-btn {
 }
 
 .avatar-color-row-preview .menu-profile-avatar,
-.personalize-avatar-preview {
+.personalize-avatar-preview,
+img.menu-profile-avatar.personalize-avatar-preview,
+img.menu-profile-avatar-photo.personalize-avatar-preview {
   width:48px;
   height:48px;
+  border-radius:50%;
+  object-fit:cover;
 }
 
 .avatar-color-modes-stack {
