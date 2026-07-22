@@ -23,6 +23,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-snap-type: y proximity;
 }
 
 body {
@@ -55,10 +56,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% 18%, rgba(255, 255, 255, 0.04), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(255, 255, 255, 0.018), transparent 65%),
-    var(--lp-bg);
+  background: var(--lp-bg);
 }
 
 main,
@@ -67,6 +65,78 @@ main,
 .lp-footer {
   position: relative;
   z-index: 1;
+}
+
+.lp-story {
+  position: relative;
+  z-index: 1;
+}
+
+/* ——— Narrative scenes (scroll snap + chapter height) ——— */
+.lp-scene {
+  position: relative;
+  isolation: isolate;
+  scroll-snap-align: center;
+  scroll-snap-stop: normal;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.lp-scene::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 70% 50% at 50% 20%,
+    rgba(255, 255, 255, 0.035),
+    transparent 70%
+  );
+}
+
+.lp-scene > * {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-scene[data-lp-light="hero"]::before {
+  background:
+    radial-gradient(ellipse 65% 48% at 50% 18%, rgba(255, 255, 255, 0.055), transparent 68%),
+    radial-gradient(ellipse 40% 30% at 50% 70%, rgba(255, 255, 255, 0.015), transparent 70%);
+}
+
+.lp-scene[data-lp-light="servicio"]::before {
+  background:
+    radial-gradient(ellipse 55% 45% at 22% 40%, rgba(255, 255, 255, 0.04), transparent 65%),
+    radial-gradient(ellipse 40% 35% at 78% 70%, rgba(255, 255, 255, 0.018), transparent 70%);
+}
+
+.lp-scene[data-lp-light="precios"]::before {
+  background:
+    radial-gradient(ellipse 50% 42% at 78% 35%, rgba(255, 255, 255, 0.038), transparent 66%),
+    radial-gradient(ellipse 45% 35% at 30% 75%, rgba(255, 255, 255, 0.016), transparent 70%);
+}
+
+.lp-scene[data-lp-light="proyectos"]::before {
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 28%, rgba(255, 255, 255, 0.032), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 85%, rgba(255, 255, 255, 0.02), transparent 72%);
+}
+
+.lp-scene[data-lp-light="contacto"]::before {
+  background:
+    radial-gradient(ellipse 55% 50% at 50% 55%, rgba(255, 255, 255, 0.036), transparent 68%),
+    radial-gradient(ellipse 35% 28% at 18% 20%, rgba(255, 255, 255, 0.014), transparent 70%);
+}
+
+.lp-scene[data-lp-light="footer"]::before {
+  background: radial-gradient(ellipse 50% 40% at 50% 80%, rgba(255, 255, 255, 0.02), transparent 70%);
 }
 
 /* ——— Top menu button ——— */
@@ -205,12 +275,6 @@ main,
 /* ——— Hero ——— */
 .lp-hero {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  min-height: 100dvh;
   padding: 6rem 1.5rem 4rem;
   text-align: center;
 }
@@ -239,32 +303,33 @@ main,
   background: transparent !important;
   border: none;
   box-shadow: none;
-  animation: lp-live 1s ease-in-out infinite;
-  will-change: transform, filter;
-  transform-origin: center center;
+  transform: none;
+  animation: lp-glow-breathe 3.5s ease-in-out infinite;
+  will-change: filter;
 }
 
-@keyframes lp-live {
+@keyframes lp-glow-breathe {
   0%, 100% {
-    transform: scale(1);
     filter:
       drop-shadow(0 0 0 rgba(255, 255, 255, 0))
-      drop-shadow(0 0 12px rgba(255, 255, 255, 0.05));
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.04));
   }
   50% {
-    transform: scale(1.1);
     filter:
-      drop-shadow(0 0 1px rgba(255, 255, 255, 0.28))
-      drop-shadow(0 0 26px rgba(255, 255, 255, 0.16));
+      drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.22))
+      drop-shadow(0 0 22px rgba(255, 255, 255, 0.12));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lp-hero__logo {
     animation: none;
-    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.08));
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.07));
   }
-  html { scroll-behavior: auto; }
+  html {
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+  }
 }
 
 .lp-hero__headline {
@@ -304,24 +369,13 @@ main,
 
 /* ——— Sections as chapters ——— */
 .lp-section {
-  padding: var(--lp-space) 1.5rem;
+  padding: clamp(5rem, 12vh, 9rem) 1.5rem;
 }
 
 .lp-chapter {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 92vh;
-  min-height: 92dvh;
-  padding-top: clamp(5rem, 14vh, 10rem);
-  padding-bottom: clamp(5rem, 14vh, 10rem);
-  box-sizing: border-box;
-}
-
-.lp-chapter + .lp-chapter {
-  /* Extra air between chapters — narrative pause */
-  margin-top: clamp(2rem, 8vh, 6rem);
+  /* height/snap come from .lp-scene */
+  padding-top: clamp(6rem, 16vh, 11rem);
+  padding-bottom: clamp(6rem, 16vh, 11rem);
 }
 
 .lp-section__inner {
@@ -768,9 +822,9 @@ main,
 
 /* ——— Footer ——— */
 .lp-footer {
-  padding: clamp(4rem, 12vh, 8rem) 1.5rem 2.75rem;
+  min-height: auto;
+  padding: clamp(5rem, 14vh, 9rem) 1.5rem 3rem;
   border-top: 1px solid var(--lp-line);
-  margin-top: clamp(2rem, 6vh, 4rem);
 }
 
 .lp-footer__inner {
@@ -799,40 +853,52 @@ main,
   letter-spacing: 0.04em;
 }
 
-/* ——— Reveal on scroll (chapter entrances) ——— */
-.lp-reveal {
+/* ——— Reveal: staged scene entrance ——— */
+.lp-scene [data-lp-stage] {
   opacity: 0;
-  transform: translateY(18px) scale(0.98);
-  filter: blur(6px);
+  transform: translateY(40px) scale(0.987);
+  filter: blur(8px);
   transition:
-    opacity 0.85s var(--lp-ease-out),
-    transform 0.85s var(--lp-ease-out),
-    filter 0.85s var(--lp-ease-out);
+    opacity 0.8s var(--lp-ease-out),
+    transform 0.8s var(--lp-ease-out),
+    filter 0.8s var(--lp-ease-out);
   will-change: opacity, transform, filter;
 }
 
-.lp-reveal.is-in {
+.lp-scene.is-in [data-lp-stage="1"] { transition-delay: 0ms; }
+.lp-scene.is-in [data-lp-stage="2"] { transition-delay: 100ms; }
+.lp-scene.is-in [data-lp-stage="3"] { transition-delay: 200ms; }
+.lp-scene.is-in [data-lp-stage="4"] { transition-delay: 300ms; }
+.lp-scene.is-in [data-lp-stage="5"] { transition-delay: 400ms; }
+
+.lp-scene.is-in [data-lp-stage] {
   opacity: 1;
   transform: translateY(0) scale(1);
   filter: blur(0);
 }
 
-.lp-chapter > .lp-section__inner.lp-reveal,
-.lp-hero__inner.lp-reveal {
-  transition-duration: 0.9s;
-}
-
+/* Project cards stagger inside stage 3 once scene is live */
 .lp-project.lp-reveal {
-  transition-duration: 0.8s;
+  opacity: 0;
+  transform: translateY(40px) scale(0.987);
+  filter: blur(8px);
+  transition:
+    opacity 0.75s var(--lp-ease-out),
+    transform 0.75s var(--lp-ease-out),
+    filter 0.75s var(--lp-ease-out);
   transition-delay: var(--lp-stagger, 0ms);
+  will-change: opacity, transform, filter;
 }
 
-.lp-footer.lp-reveal {
-  transition-duration: 0.75s;
+.lp-project.lp-reveal.is-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-reveal {
+  .lp-scene [data-lp-stage],
+  .lp-project.lp-reveal {
     opacity: 1;
     transform: none;
     filter: none;

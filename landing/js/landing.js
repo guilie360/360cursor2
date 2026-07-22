@@ -106,15 +106,12 @@
     });
   }
 
-  /* ——— Reveal: one chapter at a time ——— */
+  /* ——— Reveal: narrative scenes + staged internals ——— */
   function initReveal() {
-    var chapters = document.querySelectorAll('.lp-hero__inner, .lp-chapter > .lp-section__inner, .lp-footer');
-    chapters.forEach(function (el) {
-      el.classList.add('lp-reveal');
-    });
+    var scenes = document.querySelectorAll('.lp-scene');
 
     if (!('IntersectionObserver' in window)) {
-      chapters.forEach(function (el) {
+      scenes.forEach(function (el) {
         el.classList.add('is-in');
       });
       return;
@@ -125,17 +122,21 @@
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
           entry.target.classList.add('is-in');
+          if (entry.target.id === 'proyectos') {
+            entry.target.querySelectorAll('.lp-project.lp-reveal').forEach(function (card) {
+              card.classList.add('is-in');
+            });
+          }
           io.unobserve(entry.target);
         });
       },
       {
-        /* Trigger when chapter is meaningfully in view — not all at once on load */
-        rootMargin: '0px 0px -18% 0px',
-        threshold: 0.18
+        rootMargin: '0px 0px -12% 0px',
+        threshold: 0.28
       }
     );
 
-    chapters.forEach(function (el) {
+    scenes.forEach(function (el) {
       io.observe(el);
     });
   }
@@ -145,14 +146,27 @@
     if (!cards.length) return;
     cards.forEach(function (el, i) {
       el.classList.add('lp-reveal');
-      el.style.setProperty('--lp-stagger', String(Math.min(i, 4) * 90) + 'ms');
+      /* After scene title/subtitle, cards follow ~100ms apart */
+      el.style.setProperty('--lp-stagger', String(220 + Math.min(i, 5) * 100) + 'ms');
     });
+
+    var scene = document.getElementById('proyectos');
+    if (scene && scene.classList.contains('is-in')) {
+      requestAnimationFrame(function () {
+        cards.forEach(function (el) {
+          el.classList.add('is-in');
+        });
+      });
+      return;
+    }
+
     if (!('IntersectionObserver' in window)) {
       cards.forEach(function (el) {
         el.classList.add('is-in');
       });
       return;
     }
+
     var io = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
@@ -161,7 +175,7 @@
           io.unobserve(entry.target);
         });
       },
-      { rootMargin: '0px 0px -10% 0px', threshold: 0.15 }
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.12 }
     );
     cards.forEach(function (el) {
       io.observe(el);
