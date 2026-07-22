@@ -103,18 +103,21 @@ function applyProjectBackButton(config) {
     if (!el) return;
     if (!resolved.show) {
       el.hidden = true;
+      el.setAttribute('hidden', '');
       el.setAttribute('aria-hidden', 'true');
       el.removeAttribute('href');
       return;
     }
     el.hidden = false;
+    el.removeAttribute('hidden');
     el.setAttribute('aria-hidden', 'false');
-    el.href = resolved.url;
+    el.setAttribute('href', resolved.url);
     el.setAttribute('aria-label', resolved.label);
   }
 
   applyLink(desktop);
   applyLink(mobile);
+  syncHeroSecondaryVisibility();
 }
 
 function syncHeroSecondaryVisibility() {

@@ -1239,6 +1239,10 @@ a.menu-item.auth-menu-item {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
 }
+/* Evitar solape con el banner de desarrollo */
+body:has(#deploy-marker) .project-back-btn {
+  top: max(52px, calc(env(safe-area-inset-top) + 44px));
+}
 .project-back-btn[hidden] {
   display: none !important;
 }
@@ -1260,11 +1264,13 @@ a.menu-item.auth-menu-item {
 .hero-secondary-actions {
   display: none;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 0;
   width: 100%;
+  box-sizing: border-box;
   margin-top: 14px;
+  padding: 0;
 }
 .hero-secondary-actions[hidden] {
   display: none !important;
@@ -1273,19 +1279,20 @@ a.menu-item.auth-menu-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--menu-card-radius, 14px);
-  background: rgba(8, 8, 8, 0.88);
-  color: rgba(255, 255, 255, 0.72);
+  background: rgba(8, 8, 8, 0.55);
+  color: rgba(255, 255, 255, 0.68);
   text-decoration: none;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+  flex: 0 0 auto;
 }
 .hero-secondary-btn[hidden] {
   display: none !important;
@@ -1293,18 +1300,20 @@ a.menu-item.auth-menu-item {
 .hero-secondary-btn:hover,
 .hero-secondary-btn:focus-visible {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(12, 12, 12, 0.94);
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(12, 12, 12, 0.72);
   transform: translateY(-1px);
 }
 .hero-secondary-btn svg {
   display: block;
+  width: 15px;
+  height: 15px;
 }
 .hero-secondary-btn__mark {
   display: block;
-  width: 12px;
-  height: 12px;
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  width: 10px;
+  height: 10px;
+  border: 1.25px solid rgba(255, 255, 255, 0.5);
   border-radius: 3px 3px 3px 1px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -1346,6 +1355,7 @@ a.menu-item.auth-menu-item {
   }
   .hero-secondary-actions:not([hidden]) {
     display: flex;
+    justify-content: space-between;
   }
 }
 
