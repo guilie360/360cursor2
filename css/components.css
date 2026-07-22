@@ -1360,6 +1360,11 @@ body:has(#deploy-marker) .project-back-btn {
     left: auto;
     z-index: 930;
   }
+  /* Solo el SVG: ~20–25% más pequeño, mismo hit area */
+  .share-float svg {
+    width: 18px;
+    height: 18px;
+  }
   .hero-secondary-actions:not([hidden]) {
     display: flex;
     justify-content: space-between;

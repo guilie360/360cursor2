@@ -277,13 +277,16 @@
   background: transparent;
   color: var(--pa-fg);
   font-family: inherit;
-  font-size: 0.88rem;
+  /* ≥16px evita zoom automático de Safari iOS al enfocar */
+  font-size: 16px;
   font-weight: 300;
   outline: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 .pa-compose input::placeholder {
   color: var(--pa-faint);
+  font-size: 16px;
 }
 
 .pa-send {
@@ -314,4 +317,42 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ——— Móvil: popup estable con teclado + safe-area ——— */
+@media (max-width: 600px) {
+  .pa-panel {
+    left: max(0.75rem, env(safe-area-inset-left));
+    right: max(0.75rem, env(safe-area-inset-right));
+    width: auto;
+    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    height: auto;
+    max-height: calc(
+      100dvh - max(0.75rem, env(safe-area-inset-top)) - max(0.75rem, env(safe-area-inset-bottom))
+    );
+    max-height: calc(
+      100svh - max(0.75rem, env(safe-area-inset-top)) - max(0.75rem, env(safe-area-inset-bottom))
+    );
+    transform-origin: bottom center;
+  }
+
+  .pa-root.is-keyboard .pa-panel {
+    top: calc(var(--pa-vv-offset, 0px) + 0.5rem);
+    bottom: auto;
+    height: calc(var(--pa-vv-height, 100dvh) - 1rem);
+    max-height: calc(var(--pa-vv-height, 100dvh) - 1rem);
+    transform: none;
+  }
+
+  .pa-root.is-keyboard.is-open .pa-panel {
+    transform: none;
+  }
+
+  .pa-compose {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .pa-root.is-keyboard .pa-compose {
+    padding-bottom: 0.75rem;
+  }
 }
