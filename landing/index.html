@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>BOXIES — 360Preventa</title>
+  <title>360Preventa</title>
   <meta name="description" content="La nueva forma de presentar proyectos inmobiliarios. Crea, administra y publica experiencias inmobiliarias desde un solo lugar.">
   <meta name="theme-color" content="#050505">
-  <meta property="og:title" content="BOXIES">
+  <meta property="og:title" content="360Preventa">
   <meta property="og:description" content="La nueva forma de presentar proyectos inmobiliarios.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://360preventa.com/">
-  <link rel="icon" type="image/png" href="/assets/brand/boxies-mark.png">
+  <link rel="icon" type="image/png" href="/assets/brand/360preventa-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing/css/landing.css?v=1">
+  <link rel="stylesheet" href="/landing/css/landing.css?v=2">
 </head>
 <body>
   <div class="lp-ambient" aria-hidden="true"></div>
@@ -36,15 +36,17 @@
   <div class="lp-menu__backdrop" id="lpMenuBackdrop" hidden></div>
 
   <main>
-    <section class="lp-hero" id="inicio" aria-label="BOXIES">
+    <section class="lp-hero" id="inicio" aria-label="360Preventa">
       <div class="lp-hero__inner">
-        <img
-          class="lp-hero__logo"
-          src="/assets/brand/boxies-mark.png"
-          width="120"
-          height="120"
-          alt="BOXIES"
-        >
+        <div class="lp-hero__mark">
+          <img
+            class="lp-hero__logo"
+            src="/assets/brand/360preventa-mark.png"
+            width="168"
+            height="192"
+            alt="360Preventa"
+          >
+        </div>
         <h1 class="lp-hero__headline">La nueva forma de presentar proyectos inmobiliarios.</h1>
         <p class="lp-hero__lede">Una plataforma para crear, administrar y publicar experiencias inmobiliarias desde un solo lugar.</p>
       </div>
@@ -55,13 +57,45 @@
       <div class="lp-section__inner">
         <p class="lp-kicker">Servicio</p>
         <p class="lp-statement">
-          BOXIES permite administrar proyectos inmobiliarios y publicarlos como experiencias web listas para compartir.
+          360Preventa permite administrar proyectos inmobiliarios y publicarlos como experiencias web listas para compartir.
         </p>
-        <ul class="lp-concepts">
-          <li>Experiencias Web</li>
-          <li>Tours 360</li>
-          <li>Administración</li>
-          <li>Publicación</li>
+        <ul class="lp-features">
+          <li class="lp-feature">
+            <span class="lp-feature__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 18v2"/></svg>
+            </span>
+            <div class="lp-feature__copy">
+              <h3 class="lp-feature__title">Experiencias Web</h3>
+              <p class="lp-feature__desc">Publica un proyecto listo para compartir.</p>
+            </div>
+          </li>
+          <li class="lp-feature">
+            <span class="lp-feature__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18"/><path d="M12 3a14 14 0 0 0 0 18"/></svg>
+            </span>
+            <div class="lp-feature__copy">
+              <h3 class="lp-feature__title">Tours 360</h3>
+              <p class="lp-feature__desc">Recorridos inmersivos desde cualquier dispositivo.</p>
+            </div>
+          </li>
+          <li class="lp-feature">
+            <span class="lp-feature__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>
+            </span>
+            <div class="lp-feature__copy">
+              <h3 class="lp-feature__title">Administración</h3>
+              <p class="lp-feature__desc">Gestiona el contenido desde un solo lugar.</p>
+            </div>
+          </li>
+          <li class="lp-feature">
+            <span class="lp-feature__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 19h14"/></svg>
+            </span>
+            <div class="lp-feature__copy">
+              <h3 class="lp-feature__title">Publicación</h3>
+              <p class="lp-feature__desc">Actualiza y publica cambios sin depender del desarrollador.</p>
+            </div>
+          </li>
         </ul>
       </div>
     </section>
@@ -108,8 +142,14 @@
           <div class="lp-chat__messages" id="lpChatMessages">
             <div class="lp-chat__bubble lp-chat__bubble--bot">
               <p>Hola.</p>
-              <p>Soy el asistente de BOXIES.</p>
-              <p>Puedo ayudarte a conocer la plataforma y resolver tus dudas.</p>
+              <p>Soy el asistente de 360Preventa.</p>
+              <p>Puedo ayudarte a conocer la plataforma, resolver dudas y orientarte sobre nuestros servicios.</p>
+            </div>
+            <div class="lp-chat__suggestions" id="lpChatSuggestions" role="group" aria-label="Sugerencias">
+              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Qué es 360Preventa?</button>
+              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Cómo funciona?</button>
+              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Puedo administrar varios proyectos?</button>
+              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Cómo solicito una demostración?</button>
             </div>
           </div>
           <form class="lp-chat__compose" id="lpChatForm" autocomplete="off">
@@ -125,15 +165,13 @@
 
   <footer class="lp-footer">
     <div class="lp-footer__inner">
-      <span class="lp-footer__brand">BOXIES</span>
-      <span class="lp-footer__sep" aria-hidden="true">·</span>
-      <span>360Preventa</span>
+      <span class="lp-footer__brand">360Preventa</span>
       <span class="lp-footer__copy">© <span id="lpYear"></span></span>
     </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/shared/config.js"></script>
-  <script src="/landing/js/landing.js?v=1"></script>
+  <script src="/landing/js/landing.js?v=2"></script>
 </body>
 </html>
