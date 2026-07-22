@@ -850,7 +850,12 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
 
   .menu-profile-card {
     margin:0;
-    padding:0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left));
+    /* Reserva clara entre "Cerrar sesión" y la X universal (abajo derecha) */
+    padding:
+      0
+      calc(var(--mobile-close-size, 44px) + var(--mobile-close-gap, 28px) + max(12px, env(safe-area-inset-right)))
+      env(safe-area-inset-bottom)
+      max(10px, env(safe-area-inset-left));
     min-height:calc(var(--menu-profile-foot-h) + env(safe-area-inset-bottom));
     height:calc(var(--menu-profile-foot-h) + env(safe-area-inset-bottom));
     border:none;
@@ -902,52 +907,30 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
     flex-wrap:nowrap;
     justify-content:flex-end;
     align-items:center;
-    gap:8px;
+    gap:14px;
     padding-top:0;
   }
   .menu-profile-action {
     font-size:0.56rem;
-    letter-spacing:0.04em;
+    letter-spacing:0.03em;
     padding:8px 4px;
     min-height:36px;
     opacity:0.72;
+    white-space:nowrap;
   }
   .menu-profile-action-icon {
     width:12px;
     height:12px;
   }
+  /* X del footer: oculta — la X universal vive siempre abajo derecha */
   .menu-profile-close,
   .menu-profile-close[hidden] {
-    display:inline-flex !important;
-    align-items:center;
-    justify-content:center;
-    flex:0 0 auto;
-    width:44px;
-    height:44px;
-    margin:0;
-    padding:0;
-    border:0;
-    border-radius:0;
-    background:transparent;
-    color:var(--text-primary, #fff);
-    font-size:1.85rem;
-    font-weight:600;
-    line-height:1;
-    cursor:pointer;
-    opacity:0.88;
-  }
-  .menu-profile-close:hover,
-  .menu-profile-close:focus-visible {
-    opacity:1;
+    display:none !important;
   }
 
   /* Sin Sonido / Efectos en móvil */
   .global-menu-tools,
   body.main-menu-open .global-menu-tools {
-    display:none !important;
-  }
-  /* X global oculta cuando el footer de perfil la incluye */
-  body.main-menu-open:has(#mainMenu.has-visitor-profile) .global-action-stack.is-visible:not(.is-hero-only) {
     display:none !important;
   }
 }
@@ -981,25 +964,6 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   /* Scrollbar más evidente mientras haya overflow */
   #mainMenuListProyecto.has-scroll-overflow::-webkit-scrollbar-thumb {
     background:color-mix(in srgb, var(--text-primary) 48%, transparent);
-  }
-  /* Degradado inferior mientras queda contenido por ver */
-  #mainMenuListProyecto.has-scroll-more::after {
-    content:'';
-    position:sticky;
-    bottom:0;
-    left:0;
-    right:0;
-    display:block;
-    height:72px;
-    margin-top:-72px;
-    pointer-events:none;
-    background:linear-gradient(
-      to top,
-      color-mix(in srgb, var(--bg-main, #050505) 94%, transparent) 0%,
-      color-mix(in srgb, var(--bg-main, #050505) 55%, transparent) 45%,
-      transparent 100%
-    );
-    z-index:3;
   }
   .menu-scroll-hint {
     display:none;
@@ -1828,32 +1792,46 @@ html.web-effects-off {
 }
 
 @media (max-width: 600px) {
+  :root {
+    --mobile-close-size:44px;
+    --mobile-close-gap:28px;
+    --mobile-close-right:max(12px, env(safe-area-inset-right));
+    --mobile-close-bottom:max(18px, env(safe-area-inset-bottom));
+  }
   .global-fullscreen-btn,
   .global-fullscreen-btn.is-visible {
     display: none !important;
   }
+  /* X universal: siempre esquina inferior derecha (sin barra ni fondo) */
   .global-action-stack {
     top:auto;
-    left:50%;
-    right:auto;
-    bottom:max(18px, env(safe-area-inset-bottom));
-    transform:translateX(-50%);
+    left:auto;
+    right:var(--mobile-close-right);
+    bottom:var(--mobile-close-bottom);
+    transform:none;
     flex-direction:column-reverse;
   }
   /* En hero: fullscreen arriba a la derecha (misma posición que desktop) */
   .global-action-stack.is-hero-only {
     top:max(18px, env(safe-area-inset-top));
-    right:max(12px, env(safe-area-inset-right));
+    right:var(--mobile-close-right);
     left:auto;
     bottom:auto;
     transform:none;
     flex-direction:column;
   }
+  body.main-menu-open .global-action-stack.is-visible {
+    left:auto !important;
+    right:var(--mobile-close-right) !important;
+    bottom:var(--mobile-close-bottom) !important;
+    top:auto !important;
+    transform:none !important;
+  }
   body.main-menu-open .global-action-stack.is-visible:not(.is-hero-only) {
     top:auto !important;
     left:auto !important;
-    right:max(12px, env(safe-area-inset-right));
-    bottom:max(18px, env(safe-area-inset-bottom));
+    right:var(--mobile-close-right) !important;
+    bottom:var(--mobile-close-bottom) !important;
     transform:none !important;
   }
   .global-menu-tools,
@@ -1889,11 +1867,15 @@ html.web-effects-off {
   }
   .global-close-btn,
   .global-fullscreen-btn {
-    width:48px;
-    height:48px;
+    width:var(--mobile-close-size);
+    height:var(--mobile-close-size);
+    background:transparent;
+    box-shadow:none;
   }
   .global-close-btn {
-    font-size:2rem;
+    font-size:1.85rem;
+    font-weight:600;
+    opacity:0.88;
   }
   .global-fullscreen-btn {
     font-size:1.15rem;
@@ -3460,11 +3442,6 @@ body[data-shadow-glass="solid"] .uc-hero-card {
     padding-bottom:32px;
   }
 
-  /* X global oculta: la X vive en el footer de viviendas */
-  body:has(#unitsPopup.active) .global-action-stack.is-visible:not(.is-hero-only) {
-    display:none !important;
-  }
-
   .units-viviendas-foot {
     order:2;
     position:fixed;
@@ -3479,7 +3456,12 @@ body[data-shadow-glass="solid"] .uc-hero-card {
     min-height:calc(var(--viviendas-foot-h) + env(safe-area-inset-bottom));
     height:calc(var(--viviendas-foot-h) + env(safe-area-inset-bottom));
     margin:0;
-    padding:0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left));
+    /* Reserva zona de la X universal (abajo derecha) */
+    padding:
+      0
+      calc(var(--mobile-close-size, 44px) + var(--mobile-close-gap, 28px) + max(12px, env(safe-area-inset-right)))
+      env(safe-area-inset-bottom)
+      max(10px, env(safe-area-inset-left));
     border:none;
     border-top:1px solid rgba(255, 255, 255, 0.1);
     border-radius:0;
@@ -3527,29 +3509,10 @@ body[data-shadow-glass="solid"] .uc-hero-card {
     margin:0;
     flex:1 1 0;
   }
+  /* X del footer viviendas: oculta — la X universal vive siempre abajo derecha */
   .units-viviendas-close,
   .units-viviendas-close[hidden] {
-    display:inline-flex !important;
-    align-items:center;
-    justify-content:center;
-    flex:0 0 auto;
-    width:44px;
-    height:44px;
-    margin:0 0 0 4px;
-    padding:0;
-    border:0;
-    border-radius:0;
-    background:transparent;
-    color:var(--text-primary, #fff);
-    font-size:1.85rem;
-    font-weight:600;
-    line-height:1;
-    cursor:pointer;
-    opacity:0.88;
-  }
-  .units-viviendas-close:hover,
-  .units-viviendas-close:focus-visible {
-    opacity:1;
+    display:none !important;
   }
 
   .units-viviendas-stage {

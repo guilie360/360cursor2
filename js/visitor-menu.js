@@ -45,7 +45,7 @@ var VisitorMenu = (function () {
     if (isAdminProfile()) {
       return (
         '<button type="button" class="menu-profile-action menu-profile-link-btn menu-profile-link-mobile" hidden>' +
-          ICON_PROFILE + '<span>Perfil</span>' +
+          ICON_PROFILE + '<span>Mi perfil</span>' +
         '</button>' +
         '<a href="' + escapeHtml(adminBuilderHref()) + '" class="menu-profile-action menu-admin-btn">' +
           ICON_ADMIN + '<span>Administrar</span>' +
@@ -54,7 +54,7 @@ var VisitorMenu = (function () {
     }
     return (
       '<button type="button" class="menu-profile-action menu-profile-link-btn">' +
-        ICON_PROFILE + '<span>Perfil</span>' +
+        ICON_PROFILE + '<span>Mi perfil</span>' +
       '</button>'
     );
   }
@@ -102,7 +102,7 @@ var VisitorMenu = (function () {
               )
               : '') +
             '<button type="button" class="menu-profile-action menu-logout-btn">' +
-              ICON_LOGOUT + '<span>Salir</span>' +
+              ICON_LOGOUT + '<span>Cerrar sesión</span>' +
             '</button>' +
             '<button type="button" class="menu-profile-close" id="menuProfileCloseBtn" aria-label="Cerrar menú" hidden>&times;</button>' +
           '</div>' +

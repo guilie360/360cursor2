@@ -196,6 +196,7 @@ var GlobalClose = (function () {
     if (!enable || !window.visualViewport || isMainMenuOpen()) {
       stack.style.bottom = '';
       stack.style.left = '';
+      stack.style.right = '';
       stack.style.transform = '';
       stack.style.top = '';
       return;
@@ -203,9 +204,13 @@ var GlobalClose = (function () {
     var vv = window.visualViewport;
     var offsetBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
     var safe = 18;
+    var rightSafe = 12;
     stack.style.top = 'auto';
-    stack.style.left = '50%';
-    stack.style.transform = 'translateX(-50%)';
+    stack.style.left = 'auto';
+    stack.style.right = Math.max(rightSafe, (window.visualViewport && typeof vv.offsetLeft === 'number'
+      ? Math.max(0, window.innerWidth - (vv.width + vv.offsetLeft))
+      : 0) + rightSafe) + 'px';
+    stack.style.transform = 'none';
     stack.style.bottom = Math.max(safe, offsetBottom + safe) + 'px';
   }
 
