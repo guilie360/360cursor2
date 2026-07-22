@@ -1,0 +1,131 @@
+/* BOXIES host — login helpers + content-slot page styles (not chrome). */
+
+[hidden] { display: none !important; }
+
+.boxies-host .hall-login-page .auth-experience-box {
+  width: min(400px, calc(100vw - 48px));
+  max-width: 400px;
+  margin: 0;
+}
+
+.boxies-host .hall-login-brand {
+  letter-spacing: 0.18em;
+}
+
+#boxiesContent .boxies-page {
+  max-width: min(920px, 100%);
+}
+
+#boxiesContent .boxies-page__title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+#boxiesContent .boxies-page__desc {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 13px;
+  margin: 0 0 22px;
+  line-height: 1.55;
+}
+
+#boxiesContent .admin-table-wrap {
+  padding: 0 8px 8px;
+}
+
+#boxiesContent .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--hall-text, rgba(255, 255, 255, 0.86));
+}
+
+#boxiesContent .admin-table th,
+#boxiesContent .admin-table td {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  text-align: left;
+  vertical-align: middle;
+}
+
+#boxiesContent .admin-table thead th {
+  padding-top: 12px;
+  padding-bottom: 14px;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: transparent;
+  font-weight: 550;
+}
+
+#boxiesContent .admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#boxiesContent .admin-table tbody tr {
+  transition: background 0.18s var(--hall-ease, ease);
+}
+
+#boxiesContent .admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+#boxiesContent .admin-table td:first-child {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+#boxiesContent .admin-table code {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: none;
+}
+
+#boxiesContent .table-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+#boxiesContent .admin-table a.boxies-action-btn {
+  min-width: 7.25rem;
+}
+
+#boxiesContent .admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#boxiesContent .badge-success {
+  color: rgba(140, 230, 180, 0.95);
+  background: rgba(80, 180, 120, 0.12);
+}
+
+#boxiesContent .badge-muted {
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.42));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#boxiesContent .boxies-placeholder {
+  max-width: 420px;
+  padding: 8px 0;
+}
+
+#boxiesContent .boxies-placeholder__kicker {
+  margin: 0 0 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.34);
+}

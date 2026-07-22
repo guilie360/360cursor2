@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es" class="theme-ready">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BOXIES</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/hall/hall.css">
+  <link rel="stylesheet" href="../admin/css/admin-auth.css">
+  <link rel="stylesheet" href="../css/boxies/shell.css?v=slice-001">
+  <link rel="stylesheet" href="../css/boxies/content.css?v=slice-001">
+</head>
+<body class="boxies-host">
+
+  <!-- Login (outside Shell) -->
+  <div id="bxLoginView" class="hall-login-page" hidden>
+    <div class="content-modal-box auth-experience-box">
+      <div class="hall-login-brand">BOXIES</div>
+      <h2 class="auth-gate-title">Bienvenido</h2>
+      <p class="auth-view-lead">Entra con tu cuenta de administrador de plataforma.</p>
+
+      <div class="auth-oauth-row">
+        <button type="button" class="outline-btn auth-oauth-btn" id="bxGoogleBtn">Google</button>
+      </div>
+      <div class="auth-oauth-divider" aria-hidden="true">o continúa con tu correo</div>
+
+      <form id="bxLoginForm" class="auth-modal-form" novalidate>
+        <label class="auth-field">
+          <span>Correo electrónico</span>
+          <input id="bxEmail" type="email" autocomplete="email" placeholder="correo@empresa.com" required>
+        </label>
+        <label class="auth-field">
+          <span>Contraseña</span>
+          <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          <button type="button" class="auth-toggle-password" id="bxTogglePassword">Mostrar</button>
+        </label>
+        <label class="auth-remember-row">
+          <input id="bxRemember" type="checkbox" checked>
+          <span>Recordarme en este dispositivo</span>
+        </label>
+        <button type="submit" class="outline-btn auth-action-btn" id="bxLoginSubmit">
+          <span id="bxLoginSubmitText">Iniciar sesión</span>
+        </button>
+      </form>
+
+      <div class="auth-modal-message" id="bxLoginMessage" role="alert"></div>
+    </div>
+  </div>
+
+  <div id="bxForbiddenView" class="hall-login-page" hidden>
+    <div class="panel-card" style="width:min(460px,100%);text-align:center">
+      <h1 class="panel-card-title">Acceso denegado</h1>
+      <p class="placeholder-copy">Tu cuenta está autenticada, pero no tiene rol de administrador en BOXIES.</p>
+      <button type="button" class="boxies-action-btn" id="bxForbiddenLogout">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- Shell mounts here once; pages only fill #boxiesContent -->
+  <div id="bxAppView" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/shared/constants.js"></script>
+  <script src="../js/theme-system.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/errors.js"></script>
+  <script src="../js/auth/roles-permissions.js?v=auth-unify-001"></script>
+  <script src="../js/auth/api/login.js"></script>
+  <script src="../js/auth/api/profiles.js"></script>
+  <script src="../js/auth/api/visitantes.js"></script>
+  <script src="../js/auth/api/visitor-provisioning.js"></script>
+  <script src="../js/auth/api/favoritos.js"></script>
+  <script src="../js/auth/api/oauth.js?v=auth-unify-001"></script>
+  <script src="../js/auth/visitor-auth.js"></script>
+  <script src="../js/visitor-session.js"></script>
+
+  <!-- Existing projects API (read-only reuse; file not modified) -->
+  <script src="../admin2/js/api/projects.js"></script>
+
+  <!-- BOXIES Core -->
+  <script src="../admin/js/boxies/shell.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/pages.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/router.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/auth-bridge.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/pages/projects-page.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/pages/builder-page.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/app.js?v=slice-001"></script>
+</body>
+</html>
