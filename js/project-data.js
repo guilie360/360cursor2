@@ -58,7 +58,6 @@ function applyHeroFloatVisibility(config) {
   var showShare = config.show_share_float !== false;
   var waFloat = document.getElementById('whatsappFloat');
   var shareFloat = document.getElementById('shareProjectFloatBtn');
-  var shareMobile = document.getElementById('projectShareBtnMobile');
   /* WhatsApp float replaced by ProductAssistant — always hidden */
   if (waFloat) {
     waFloat.hidden = true;
@@ -69,10 +68,6 @@ function applyHeroFloatVisibility(config) {
     shareFloat.hidden = !showShare;
     shareFloat.classList.toggle('is-float-hidden', !showShare);
     shareFloat.setAttribute('aria-hidden', showShare ? 'false' : 'true');
-  }
-  if (shareMobile) {
-    shareMobile.hidden = !showShare;
-    shareMobile.setAttribute('aria-hidden', showShare ? 'false' : 'true');
   }
   applyProjectBackButton(config);
   syncHeroSecondaryVisibility();
@@ -160,16 +155,14 @@ function applyProjectBackButton(config) {
 function syncHeroSecondaryVisibility() {
   var row = document.getElementById('heroSecondaryActions');
   if (!row) return;
-  var kids = row.querySelectorAll('.hero-secondary-btn');
-  var any = false;
-  for (var i = 0; i < kids.length; i++) {
-    if (!kids[i].hidden) {
-      any = true;
-      break;
-    }
-  }
+  var back = document.getElementById('projectBackBtnMobile');
+  var assist = document.getElementById('projectAssistBtnMobile');
+  var backOn = !!(back && !back.hidden);
+  var assistOn = !!(assist && !assist.hidden);
+  var any = backOn || assistOn;
   row.hidden = !any;
   row.setAttribute('aria-hidden', any ? 'false' : 'true');
+  row.classList.toggle('is-assist-only', !backOn && assistOn);
 }
 
 function applyHeroModule(project) {

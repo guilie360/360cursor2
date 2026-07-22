@@ -106,12 +106,6 @@ function applyConfig() {
     shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
   }
 
-  var shareMobile = document.getElementById('projectShareBtnMobile');
-  if (shareMobile) {
-    shareMobile.hidden = CONFIG.showShareFloat === false;
-    shareMobile.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
-  }
-
   if (typeof applyProjectBackButton === 'function') {
     applyProjectBackButton({
       show_back_button: CONFIG.showBackButton,
@@ -567,10 +561,6 @@ window.__mainTraceSafe('bind shareProjectFloatBtn', function () {
   var shareBtn = document.getElementById('shareProjectFloatBtn');
   if (shareBtn) {
     shareBtn.addEventListener('click', function () { shareProject(); });
-  }
-  var shareMobile = document.getElementById('projectShareBtnMobile');
-  if (shareMobile) {
-    shareMobile.addEventListener('click', function () { shareProject(); });
   }
   var assistMobile = document.getElementById('projectAssistBtnMobile');
   if (assistMobile) {

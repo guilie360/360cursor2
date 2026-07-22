@@ -1348,14 +1348,24 @@ body:has(#deploy-marker) .project-back-btn {
   .project-back-btn {
     display: none !important;
   }
-  .share-float,
-  .share-float.is-float-hidden,
   .pa-fab {
     display: none !important;
+  }
+  /* Compartir: superior derecha (banner rojo queda a la izquierda) */
+  .share-float:not(.is-float-hidden):not([hidden]) {
+    display: block;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(14px, env(safe-area-inset-right));
+    bottom: auto;
+    left: auto;
+    z-index: 930;
   }
   .hero-secondary-actions:not([hidden]) {
     display: flex;
     justify-content: space-between;
+  }
+  .hero-secondary-actions.is-assist-only:not([hidden]) {
+    justify-content: flex-end;
   }
 }
 
