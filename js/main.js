@@ -168,9 +168,13 @@ function showToast(message, duration) {
   toastEl.textContent = message;
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
+  var holdMs = duration;
+  if (holdMs == null) {
+    holdMs = /^Bienvenido/i.test(String(message || '')) ? 2500 : 1000;
+  }
   toastTimer = setTimeout(function () {
     toastEl.classList.remove('show');
-  }, duration || 1000);
+  }, holdMs);
 }
 
 

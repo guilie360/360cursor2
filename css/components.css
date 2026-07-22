@@ -1604,8 +1604,12 @@ html.web-effects-off {
 }
 @media (max-width: 600px) {
   .global-menu-tools {
-    bottom:18px;
+    bottom:auto;
+    top:max(18px, env(safe-area-inset-top));
     left:calc(min(400px, 85vw) + 12px);
+  }
+  body.main-menu-open .global-menu-tools {
+    display:flex;
   }
   .global-effects-icon,
   .global-sound-btn .global-sound-icon-stack,
@@ -1768,11 +1772,46 @@ html.web-effects-off {
     flex-direction:column;
   }
   body.main-menu-open .global-action-stack.is-visible:not(.is-hero-only) {
+    top:auto !important;
+    left:auto !important;
+    right:max(12px, env(safe-area-inset-right));
+    bottom:max(18px, env(safe-area-inset-bottom));
+    transform:none !important;
+  }
+  body.main-menu-open .global-menu-tools {
     top:max(18px, env(safe-area-inset-top));
-    left:calc(min(400px, 85vw) + 12px);
-    right:auto;
     bottom:auto;
-    transform:none;
+    left:calc(min(400px, 85vw) + 10px);
+  }
+  .main-menu-footer {
+    display:none !important;
+  }
+  .main-menu-profile-slot {
+    padding-bottom:max(12px, env(safe-area-inset-bottom));
+  }
+  #descargasModal.downloads-modal.content-modal,
+  .downloads-modal.content-modal {
+    padding:0;
+    min-height:100dvh;
+    height:100dvh;
+  }
+  .downloads-modal-box {
+    min-height:100dvh;
+    height:100%;
+  }
+  .downloads-stage {
+    min-height:100%;
+    height:100%;
+    align-items:stretch;
+    justify-content:flex-start;
+    padding:
+      max(16px, env(safe-area-inset-top))
+      16px
+      max(28px, calc(env(safe-area-inset-bottom) + 56px));
+  }
+  .downloads-list {
+    width:100%;
+    max-width:none;
   }
   .global-close-btn,
   .global-fullscreen-btn {
@@ -3336,6 +3375,15 @@ body[data-shadow-glass="solid"] .uc-hero-card {
       max(12px, env(safe-area-inset-right))
       calc(var(--viviendas-foot-h) + env(safe-area-inset-bottom) + 8px)
       max(12px, env(safe-area-inset-left));
+  }
+
+  /* Espacio extra de scroll: la última tarjeta debe quedar por encima del footer */
+  .units-viviendas-stage {
+    padding-bottom:calc(var(--viviendas-foot-h) + env(safe-area-inset-bottom) + 48px);
+  }
+  .units-viviendas-popup .units-grid,
+  .units-viviendas-popup .units-compare-panel {
+    padding-bottom:32px;
   }
 
   /* X global oculta: la X vive en el footer de viviendas */
