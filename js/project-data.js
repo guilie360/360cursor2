@@ -157,6 +157,18 @@ function syncHeroSecondaryVisibility() {
   if (!row) return;
   var back = document.getElementById('projectBackBtnMobile');
   var assist = document.getElementById('projectAssistBtnMobile');
+  /* En móvil el asistente vive en el FAB inferior derecho; no duplicar en el hero */
+  var isMobile = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 600px)').matches;
+  if (assist) {
+    if (isMobile) {
+      assist.hidden = true;
+      assist.setAttribute('aria-hidden', 'true');
+    } else if (assist.getAttribute('data-assist-forced-hidden') !== '1') {
+      assist.hidden = false;
+      assist.setAttribute('aria-hidden', 'false');
+    }
+  }
   var backOn = !!(back && !back.hidden);
   var assistOn = !!(assist && !assist.hidden);
   var any = backOn || assistOn;
@@ -189,7 +201,8 @@ function applyHeroModule(project) {
   var btnExplore = document.getElementById('mainMenuOpenBtn');
   if (btnExplore) {
     var exploreLabel = config.boton_hero_2 || 'Explorar';
-    btnExplore.innerHTML = '<span class="menu-btn-icon">☰</span>' + exploreLabel;
+    btnExplore.innerHTML = '<span class="menu-btn-icon" aria-hidden="true">☰</span>' + exploreLabel;
+    btnExplore.setAttribute('aria-label', exploreLabel);
   }
 
   applyHeroTextColors(config);
