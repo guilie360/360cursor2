@@ -819,19 +819,54 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   opacity:1;
 }
 
-/* Perfil menú — compacto en móvil (una sola línea) */
+/* Perfil menú — footer nativo móvil (mismo lenguaje que Viviendas) */
 @media (max-width: 600px) {
-  .main-menu-profile-slot {
-    padding:10px calc(16px + var(--menu-gutter)) 6px calc(16px + var(--menu-gutter));
+  .main-menu {
+    --menu-profile-foot-h:62px;
   }
+  .main-menu.has-visitor-profile .main-menu-body {
+    padding-bottom:calc(var(--menu-profile-foot-h) + env(safe-area-inset-bottom));
+  }
+  .main-menu.has-visitor-profile .main-menu-list:not(.menu-personalize-panel) {
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+  body.has-global-close .main-menu.has-visitor-profile .main-menu-list:not(.menu-personalize-panel) {
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .main-menu-profile-slot {
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:6;
+    display:none;
+    padding:0;
+    margin:0;
+  }
+  .main-menu.has-visitor-profile .main-menu-profile-slot {
+    display:block;
+  }
+
   .menu-profile-card {
-    padding:8px 10px;
-    border-radius:12px;
+    margin:0;
+    padding:0 max(10px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px, env(safe-area-inset-left));
+    min-height:calc(var(--menu-profile-foot-h) + env(safe-area-inset-bottom));
+    height:calc(var(--menu-profile-foot-h) + env(safe-area-inset-bottom));
+    border:none;
+    border-top:1px solid rgba(255, 255, 255, 0.1);
+    border-radius:0;
+    background:color-mix(in srgb, var(--bg-main, #050505) 94%, transparent);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:none;
   }
   .menu-profile-strip {
     flex-direction:row;
     align-items:center;
-    gap:10px;
+    gap:8px;
+    min-height:var(--menu-profile-foot-h);
+    height:var(--menu-profile-foot-h);
   }
   .menu-profile-strip-left {
     flex:1 1 auto;
@@ -840,14 +875,22 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   }
   .menu-profile-strip-meta {
     gap:0;
+    min-width:0;
   }
   .menu-profile-name {
-    font-size:0.78rem;
+    font-size:0.72rem;
+    font-weight:600;
   }
   .menu-profile-type,
   .menu-active-theme-indicator,
-  .menu-profile-verification-hint {
-    display:none;
+  .menu-profile-verification-hint,
+  .menu-profile-action.menu-personalize-v2-btn,
+  .menu-profile-action.menu-admin-btn {
+    display:none !important;
+  }
+  .menu-profile-link-mobile,
+  .menu-profile-link-mobile[hidden] {
+    display:inline-flex !important;
   }
   .menu-profile-avatar-sm {
     width:28px;
@@ -858,23 +901,62 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
     flex:0 0 auto;
     flex-wrap:nowrap;
     justify-content:flex-end;
-    gap:10px;
+    align-items:center;
+    gap:8px;
     padding-top:0;
   }
   .menu-profile-action {
     font-size:0.56rem;
     letter-spacing:0.04em;
-    padding:6px 0;
-    min-height:32px;
-    opacity:0.7;
+    padding:8px 4px;
+    min-height:36px;
+    opacity:0.72;
   }
   .menu-profile-action-icon {
     width:12px;
     height:12px;
   }
-  .menu-profile-action.menu-personalize-v2-btn span {
-    display:none;
+  .menu-profile-close,
+  .menu-profile-close[hidden] {
+    display:inline-flex !important;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+    width:44px;
+    height:44px;
+    margin:0;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:var(--text-primary, #fff);
+    font-size:1.85rem;
+    font-weight:600;
+    line-height:1;
+    cursor:pointer;
+    opacity:0.88;
   }
+  .menu-profile-close:hover,
+  .menu-profile-close:focus-visible {
+    opacity:1;
+  }
+
+  /* Sin Sonido / Efectos en móvil */
+  .global-menu-tools,
+  body.main-menu-open .global-menu-tools {
+    display:none !important;
+  }
+  /* X global oculta cuando el footer de perfil la incluye */
+  body.main-menu-open:has(#mainMenu.has-visitor-profile) .global-action-stack.is-visible:not(.is-hero-only) {
+    display:none !important;
+  }
+}
+
+.menu-profile-close {
+  display:none;
+}
+.menu-profile-link-mobile {
+  display:none;
 }
 
 /* Menú Conoce — descubrimiento de scroll (solo móvil) */
@@ -1603,13 +1685,9 @@ html.web-effects-off {
   scroll-behavior:auto !important;
 }
 @media (max-width: 600px) {
-  .global-menu-tools {
-    bottom:auto;
-    top:max(18px, env(safe-area-inset-top));
-    left:calc(min(400px, 85vw) + 12px);
-  }
+  .global-menu-tools,
   body.main-menu-open .global-menu-tools {
-    display:flex;
+    display:none !important;
   }
   .global-effects-icon,
   .global-sound-btn .global-sound-icon-stack,
@@ -1778,16 +1856,12 @@ html.web-effects-off {
     bottom:max(18px, env(safe-area-inset-bottom));
     transform:none !important;
   }
+  .global-menu-tools,
   body.main-menu-open .global-menu-tools {
-    top:max(18px, env(safe-area-inset-top));
-    bottom:auto;
-    left:calc(min(400px, 85vw) + 10px);
+    display:none !important;
   }
   .main-menu-footer {
     display:none !important;
-  }
-  .main-menu-profile-slot {
-    padding-bottom:max(12px, env(safe-area-inset-bottom));
   }
   #descargasModal.downloads-modal.content-modal,
   .downloads-modal.content-modal {

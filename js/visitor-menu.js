@@ -44,6 +44,9 @@ var VisitorMenu = (function () {
   function primaryStripActionHtml() {
     if (isAdminProfile()) {
       return (
+        '<button type="button" class="menu-profile-action menu-profile-link-btn menu-profile-link-mobile" hidden>' +
+          ICON_PROFILE + '<span>Perfil</span>' +
+        '</button>' +
         '<a href="' + escapeHtml(adminBuilderHref()) + '" class="menu-profile-action menu-admin-btn">' +
           ICON_ADMIN + '<span>Administrar</span>' +
         '</a>'
@@ -84,9 +87,9 @@ var VisitorMenu = (function () {
             VisitorPersonalization.renderAvatarHtml('menu-profile-avatar-sm menu-profile-avatar-status') +
             '<div class="menu-profile-strip-meta">' +
               '<div class="menu-profile-name">' + escapeHtml(VisitorPersonalization.getDisplayName()) + '</div>' +
-          '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
-          activeThemeIndicatorHtml() +
-          verificationHint +
+              '<div class="menu-profile-type">' + escapeHtml(profileTypeLabel()) + '</div>' +
+              activeThemeIndicatorHtml() +
+              verificationHint +
             '</div>' +
           '</div>' +
           '<div class="menu-profile-strip-actions">' +
@@ -101,6 +104,7 @@ var VisitorMenu = (function () {
             '<button type="button" class="menu-profile-action menu-logout-btn">' +
               ICON_LOGOUT + '<span>Salir</span>' +
             '</button>' +
+            '<button type="button" class="menu-profile-close" id="menuProfileCloseBtn" aria-label="Cerrar menú" hidden>&times;</button>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -186,6 +190,19 @@ var VisitorMenu = (function () {
           btn.disabled = false;
         }
         if (typeof playSound === 'function') playSound('buttonTap');
+      };
+    });
+    document.querySelectorAll('.menu-profile-close').forEach(function (btn) {
+      btn.onclick = function (e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.handleClose === 'function') {
+          GlobalClose.handleClose({ explicitUserClose: true });
+        } else if (typeof closeMainMenuIfOpen === 'function') {
+          closeMainMenuIfOpen();
+        }
       };
     });
   }
