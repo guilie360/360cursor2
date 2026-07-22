@@ -106,17 +106,15 @@
     });
   }
 
-  /* ——— Reveal ——— */
+  /* ——— Reveal: one chapter at a time ——— */
   function initReveal() {
-    var nodes = document.querySelectorAll(
-      '.lp-section__inner, .lp-pricing, .lp-features, .lp-chat, .lp-advisor, .lp-project'
-    );
-    nodes.forEach(function (el) {
+    var chapters = document.querySelectorAll('.lp-hero__inner, .lp-chapter > .lp-section__inner, .lp-footer');
+    chapters.forEach(function (el) {
       el.classList.add('lp-reveal');
     });
 
     if (!('IntersectionObserver' in window)) {
-      nodes.forEach(function (el) {
+      chapters.forEach(function (el) {
         el.classList.add('is-in');
       });
       return;
@@ -125,16 +123,19 @@
     var io = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-in');
-            io.unobserve(entry.target);
-          }
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-in');
+          io.unobserve(entry.target);
         });
       },
-      { rootMargin: '0px 0px -8% 0px', threshold: 0.12 }
+      {
+        /* Trigger when chapter is meaningfully in view — not all at once on load */
+        rootMargin: '0px 0px -18% 0px',
+        threshold: 0.18
+      }
     );
 
-    nodes.forEach(function (el) {
+    chapters.forEach(function (el) {
       io.observe(el);
     });
   }
@@ -142,8 +143,9 @@
   function observeNewProjects() {
     var cards = document.querySelectorAll('.lp-project:not(.lp-reveal)');
     if (!cards.length) return;
-    cards.forEach(function (el) {
+    cards.forEach(function (el, i) {
       el.classList.add('lp-reveal');
+      el.style.setProperty('--lp-stagger', String(Math.min(i, 4) * 90) + 'ms');
     });
     if (!('IntersectionObserver' in window)) {
       cards.forEach(function (el) {
@@ -154,13 +156,12 @@
     var io = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-in');
-            io.unobserve(entry.target);
-          }
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-in');
+          io.unobserve(entry.target);
         });
       },
-      { threshold: 0.12 }
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.15 }
     );
     cards.forEach(function (el) {
       io.observe(el);

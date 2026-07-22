@@ -9,7 +9,8 @@
   --lp-line: rgba(255, 255, 255, 0.06);
   --lp-font: "Outfit", "Segoe UI", sans-serif;
   --lp-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --lp-space: clamp(4.5rem, 13vh, 9rem);
+  --lp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --lp-space: clamp(6rem, 18vh, 12rem);
   --lp-max: 42rem;
   --lp-max-wide: 72rem;
 }
@@ -238,8 +239,9 @@ main,
   background: transparent !important;
   border: none;
   box-shadow: none;
-  animation: lp-live 7.2s ease-in-out infinite;
+  animation: lp-live 1s ease-in-out infinite;
   will-change: transform, filter;
+  transform-origin: center center;
 }
 
 @keyframes lp-live {
@@ -247,20 +249,20 @@ main,
     transform: scale(1);
     filter:
       drop-shadow(0 0 0 rgba(255, 255, 255, 0))
-      drop-shadow(0 0 18px rgba(255, 255, 255, 0.06));
+      drop-shadow(0 0 12px rgba(255, 255, 255, 0.05));
   }
   50% {
-    transform: scale(1.03);
+    transform: scale(1.1);
     filter:
-      drop-shadow(0 0 1px rgba(255, 255, 255, 0.35))
-      drop-shadow(0 0 28px rgba(255, 255, 255, 0.14));
+      drop-shadow(0 0 1px rgba(255, 255, 255, 0.28))
+      drop-shadow(0 0 26px rgba(255, 255, 255, 0.16));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lp-hero__logo {
     animation: none;
-    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.08));
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.08));
   }
   html { scroll-behavior: auto; }
 }
@@ -280,7 +282,7 @@ main,
   font-weight: 300;
   line-height: 1.65;
   color: var(--lp-fg-muted);
-  max-width: 22rem;
+  max-width: 26rem;
 }
 
 .lp-hero__scroll {
@@ -300,15 +302,33 @@ main,
   50% { opacity: 0.55; transform: translateX(-50%) scaleY(1); }
 }
 
-/* ——— Sections ——— */
+/* ——— Sections as chapters ——— */
 .lp-section {
   padding: var(--lp-space) 1.5rem;
+}
+
+.lp-chapter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 92vh;
+  min-height: 92dvh;
+  padding-top: clamp(5rem, 14vh, 10rem);
+  padding-bottom: clamp(5rem, 14vh, 10rem);
+  box-sizing: border-box;
+}
+
+.lp-chapter + .lp-chapter {
+  /* Extra air between chapters — narrative pause */
+  margin-top: clamp(2rem, 8vh, 6rem);
 }
 
 .lp-section__inner {
   max-width: var(--lp-max);
   margin: 0 auto;
   text-align: center;
+  width: 100%;
 }
 
 .lp-section__inner--wide {
@@ -748,8 +768,9 @@ main,
 
 /* ——— Footer ——— */
 .lp-footer {
-  padding: 3.5rem 1.5rem 2.5rem;
+  padding: clamp(4rem, 12vh, 8rem) 1.5rem 2.75rem;
   border-top: 1px solid var(--lp-line);
+  margin-top: clamp(2rem, 6vh, 4rem);
 }
 
 .lp-footer__inner {
@@ -778,21 +799,36 @@ main,
   letter-spacing: 0.04em;
 }
 
-/* ——— Reveal on scroll ——— */
+/* ——— Reveal on scroll (chapter entrances) ——— */
 .lp-reveal {
   opacity: 0;
-  transform: translateY(14px);
-  filter: blur(4px);
+  transform: translateY(18px) scale(0.98);
+  filter: blur(6px);
   transition:
-    opacity 0.7s var(--lp-ease),
-    transform 0.7s var(--lp-ease),
-    filter 0.7s var(--lp-ease);
+    opacity 0.85s var(--lp-ease-out),
+    transform 0.85s var(--lp-ease-out),
+    filter 0.85s var(--lp-ease-out);
+  will-change: opacity, transform, filter;
 }
 
 .lp-reveal.is-in {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   filter: blur(0);
+}
+
+.lp-chapter > .lp-section__inner.lp-reveal,
+.lp-hero__inner.lp-reveal {
+  transition-duration: 0.9s;
+}
+
+.lp-project.lp-reveal {
+  transition-duration: 0.8s;
+  transition-delay: var(--lp-stagger, 0ms);
+}
+
+.lp-footer.lp-reveal {
+  transition-duration: 0.75s;
 }
 
 @media (prefers-reduced-motion: reduce) {
