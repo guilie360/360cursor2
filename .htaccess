@@ -3,8 +3,8 @@
   RewriteEngine On
   RewriteBase /
 
-  # TEMPORARY: no platform landing yet — / → /demo1 (remove when landing exists)
-  RewriteRule ^$ /demo1 [R=302,L]
+  # Official BOXIES product landing at /
+  RewriteRule ^$ landing/index.html [L]
 
   # Legacy slug alias after rename demo → demo1
   RewriteRule ^demo/?$ /demo1 [R=302,L]
@@ -15,7 +15,7 @@
   RewriteRule ^ - [L]
 
   # App folders that are not project slugs
-  RewriteRule ^(admin|admin2|auth|boxies|css|js|supabase|assets|images)(/|$) - [L]
+  RewriteRule ^(admin|admin2|auth|boxies|landing|css|js|supabase|assets|images)(/|$) - [L]
 
   # /demo, /proyecto1, … → index.html (internal rewrite, browser URL unchanged)
   RewriteRule ^([A-Za-z0-9_-]+)/?$ index.html [L]

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BOXIES — 360Preventa</title>
+  <meta name="description" content="La nueva forma de presentar proyectos inmobiliarios. Crea, administra y publica experiencias inmobiliarias desde un solo lugar.">
+  <meta name="theme-color" content="#050505">
+  <meta property="og:title" content="BOXIES">
+  <meta property="og:description" content="La nueva forma de presentar proyectos inmobiliarios.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://360preventa.com/">
+  <link rel="icon" type="image/png" href="/assets/brand/boxies-mark.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/landing/css/landing.css?v=1">
+</head>
+<body>
+  <div class="lp-ambient" aria-hidden="true"></div>
+
+  <header class="lp-top">
+    <button type="button" class="lp-menu-btn" id="lpMenuBtn" aria-label="Abrir menú" aria-expanded="false" aria-controls="lpMenuPanel">
+      <span class="lp-menu-btn__lines" aria-hidden="true"></span>
+    </button>
+  </header>
+
+  <div class="lp-menu" id="lpMenuPanel" hidden>
+    <nav class="lp-menu__panel" aria-label="Secciones">
+      <a href="#servicio" data-lp-nav>Servicio</a>
+      <a href="#precios" data-lp-nav>Precios</a>
+      <a href="#proyectos" data-lp-nav>Proyectos</a>
+      <a href="#contacto" data-lp-nav>Contacto</a>
+    </nav>
+  </div>
+  <div class="lp-menu__backdrop" id="lpMenuBackdrop" hidden></div>
+
+  <main>
+    <section class="lp-hero" id="inicio" aria-label="BOXIES">
+      <div class="lp-hero__inner">
+        <img
+          class="lp-hero__logo"
+          src="/assets/brand/boxies-mark.png"
+          width="120"
+          height="120"
+          alt="BOXIES"
+        >
+        <h1 class="lp-hero__headline">La nueva forma de presentar proyectos inmobiliarios.</h1>
+        <p class="lp-hero__lede">Una plataforma para crear, administrar y publicar experiencias inmobiliarias desde un solo lugar.</p>
+      </div>
+      <div class="lp-hero__scroll" aria-hidden="true"></div>
+    </section>
+
+    <section class="lp-section" id="servicio">
+      <div class="lp-section__inner">
+        <p class="lp-kicker">Servicio</p>
+        <p class="lp-statement">
+          BOXIES permite administrar proyectos inmobiliarios y publicarlos como experiencias web listas para compartir.
+        </p>
+        <ul class="lp-concepts">
+          <li>Experiencias Web</li>
+          <li>Tours 360</li>
+          <li>Administración</li>
+          <li>Publicación</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="lp-section" id="precios">
+      <div class="lp-section__inner">
+        <p class="lp-kicker">Precios</p>
+        <h2 class="lp-section__title">Planes</h2>
+        <div class="lp-pricing">
+          <article class="lp-plan">
+            <h3 class="lp-plan__name">Starter</h3>
+            <p class="lp-plan__price">—</p>
+            <p class="lp-plan__note">Placeholder</p>
+          </article>
+          <article class="lp-plan lp-plan--featured">
+            <h3 class="lp-plan__name">Professional</h3>
+            <p class="lp-plan__price">—</p>
+            <p class="lp-plan__note">Placeholder</p>
+          </article>
+          <article class="lp-plan">
+            <h3 class="lp-plan__name">Enterprise</h3>
+            <p class="lp-plan__price">—</p>
+            <p class="lp-plan__note">Placeholder</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section" id="proyectos">
+      <div class="lp-section__inner lp-section__inner--wide">
+        <p class="lp-kicker">Proyectos</p>
+        <h2 class="lp-section__title">Experiencias publicadas</h2>
+        <div class="lp-projects" id="lpProjects" aria-live="polite">
+          <p class="lp-projects__loading">Cargando…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-section" id="contacto">
+      <div class="lp-section__inner">
+        <p class="lp-kicker">Contacto</p>
+        <h2 class="lp-section__title">Asistente</h2>
+        <div class="lp-chat" id="lpChat">
+          <div class="lp-chat__messages" id="lpChatMessages">
+            <div class="lp-chat__bubble lp-chat__bubble--bot">
+              <p>Hola.</p>
+              <p>Soy el asistente de BOXIES.</p>
+              <p>Puedo ayudarte a conocer la plataforma y resolver tus dudas.</p>
+            </div>
+          </div>
+          <form class="lp-chat__compose" id="lpChatForm" autocomplete="off">
+            <label class="visually-hidden" for="lpChatInput">Mensaje</label>
+            <input id="lpChatInput" type="text" placeholder="Escribe un mensaje…" maxlength="400">
+            <button type="submit" class="lp-chat__send" aria-label="Enviar">↑</button>
+          </form>
+        </div>
+        <button type="button" class="lp-advisor" id="lpAdvisorBtn">Hablar con un asesor</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lp-footer">
+    <div class="lp-footer__inner">
+      <span class="lp-footer__brand">BOXIES</span>
+      <span class="lp-footer__sep" aria-hidden="true">·</span>
+      <span>360Preventa</span>
+      <span class="lp-footer__copy">© <span id="lpYear"></span></span>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/shared/config.js"></script>
+  <script src="/landing/js/landing.js?v=1"></script>
+</body>
+</html>

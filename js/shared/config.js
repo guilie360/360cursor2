@@ -7,7 +7,7 @@ var SHOWROOM_DEV_URL = 'http://127.0.0.1:8765/demo1';
 /**
  * Resolve project slug from the URL only.
  * Priority: ?proyecto=… → first pathname segment (/demo → "demo").
- * "/" and "/index.html" → null (no project; future platform landing).
+ * "/" and "/index.html" → null (no project; platform landing at /).
  */
 function getProjectSlugFromUrl() {
   var slug = null;
@@ -25,7 +25,10 @@ function getProjectSlugFromUrl() {
           var first = segments[0];
           var reserved = {
             admin: 1,
+            admin2: 1,
             auth: 1,
+            boxies: 1,
+            landing: 1,
             css: 1,
             js: 1,
             supabase: 1,
