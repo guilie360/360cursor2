@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing/css/landing.css?v=6">
+  <link rel="stylesheet" href="/landing/css/landing.css?v=7">
 </head>
 <body>
   <div class="lp-ambient" aria-hidden="true"></div>
@@ -179,6 +179,20 @@
           </div>
         </div>
       </div>
+      <div class="lp-assist__handoff">
+        <p class="lp-assist__handoff-copy">¿No encontraste lo que buscabas?</p>
+        <a
+          class="lp-assist__wa"
+          href="https://wa.me/570000000000?text=Hola%2C%20me%20interesan%20los%20servicios%20de%20360Preventa."
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg class="lp-assist__wa-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor">
+            <path d="M12.04 2C6.58 2 2.15 6.35 2.15 11.72c0 1.99.58 3.85 1.59 5.44L2 22l5.05-1.62a10.1 10.1 0 0 0 4.99 1.24h.01c5.46 0 9.89-4.35 9.89-9.72C21.94 6.35 17.5 2 12.04 2zm5.76 13.99c-.24.67-1.39 1.23-1.93 1.31-.5.07-1.13.1-1.82-.11-.42-.13-.96-.31-1.66-.61-2.92-1.26-4.82-4.2-4.97-4.39-.14-.19-1.2-1.6-1.2-3.05s.76-2.16 1.03-2.46c.27-.3.59-.37.79-.37h.57c.18 0 .43-.07.67.51.24.6.82 2.07.89 2.22.07.15.12.32.02.52-.09.19-.14.32-.28.49-.14.17-.3.38-.42.51-.14.15-.28.31-.12.61.16.3.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.23 1.36.3.14.47.12.64-.07.18-.19.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.71.81 2 .95.3.15.5.22.57.34.08.13.08.74-.16 1.41z"/>
+          </svg>
+          <span>Hablar por WhatsApp</span>
+        </a>
+      </div>
       <form class="lp-chat__compose lp-assist__compose" id="lpChatForm" autocomplete="off">
         <label class="visually-hidden" for="lpChatInput">Mensaje</label>
         <input id="lpChatInput" type="text" placeholder="Escribe un mensaje…" maxlength="400">
@@ -189,6 +203,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/shared/config.js"></script>
-  <script src="/landing/js/landing.js?v=6"></script>
+  <script src="/landing/js/landing.js?v=7"></script>
 </body>
 </html>

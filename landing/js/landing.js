@@ -55,6 +55,30 @@
     return 'Experiencia inmobiliaria lista para explorar.';
   }
 
+  function isMobileNav() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  /**
+   * Menu navigation must not fight scroll-snap.
+   * Temporarily disable snap, scroll to target, then restore (desktop only).
+   */
+  function navigateToSection(target) {
+    if (!target) return;
+    var html = document.documentElement;
+    var mobile = isMobileNav();
+    var block = mobile ? 'start' : 'center';
+
+    html.classList.add('lp-nav-lock');
+
+    window.setTimeout(function () {
+      target.scrollIntoView({ behavior: 'smooth', block: block });
+      window.setTimeout(function () {
+        html.classList.remove('lp-nav-lock');
+      }, mobile ? 100 : 1100);
+    }, mobile ? 80 : 40);
+  }
+
   /* ——— Menu ——— */
   function initMenu(onPrices) {
     var btn = $('lpMenuBtn');
@@ -97,7 +121,7 @@
         if (!target) return;
         e.preventDefault();
         setOpen(false);
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        navigateToSection(target);
       });
     });
 

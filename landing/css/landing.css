@@ -370,6 +370,43 @@ main,
   }
 }
 
+/* Desktop narrative lock during menu jumps — prevents snap fighting scrollIntoView */
+html.lp-nav-lock {
+  scroll-snap-type: none !important;
+}
+
+html.lp-nav-lock .lp-scene {
+  scroll-snap-align: none;
+  scroll-snap-stop: normal;
+}
+
+/* Mobile: natural page scroll — no snap interference with menu navigation */
+@media (max-width: 900px) {
+  html {
+    scroll-snap-type: none;
+  }
+
+  .lp-scene {
+    scroll-snap-align: none;
+    scroll-snap-stop: normal;
+    height: auto;
+    max-height: none;
+    min-height: min(100dvh, 100vh);
+    overflow: visible;
+  }
+
+  .lp-scene#proyectos,
+  .lp-scene#servicio,
+  .lp-scene.lp-footer {
+    min-height: 0;
+  }
+
+  .lp-chapter {
+    padding-top: clamp(4.5rem, 10vh, 7rem);
+    padding-bottom: clamp(4.5rem, 10vh, 7rem);
+  }
+}
+
 .lp-hero__headline {
   margin: 0 0 0.85rem;
   font-size: clamp(1.55rem, 4.2vw, 2.15rem);
@@ -1103,6 +1140,58 @@ body.lp-modal-open {
 .lp-assist__compose {
   border-top: 1px solid var(--lp-line);
   background: rgba(8, 8, 8, 0.9);
+}
+
+.lp-assist__handoff {
+  flex-shrink: 0;
+  padding: 0.95rem 1.1rem 1rem;
+  border-top: 1px solid var(--lp-line);
+  text-align: center;
+}
+
+.lp-assist__handoff-copy {
+  margin: 0 0 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--lp-fg-faint);
+}
+
+.lp-assist__wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition:
+    color 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease;
+}
+
+.lp-assist__wa:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lp-assist__wa-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.lp-assist__wa:hover .lp-assist__wa-icon {
+  opacity: 1;
 }
 
 .lp-chat {
