@@ -1597,6 +1597,7 @@ function playSplashModalIntro(config) {
 }
 
 function resetVideoModalIntro() {
+  hideVideoOrientGate();
   resetSplashModalIntro('videoModal', {
     loaderId: 'videoModalLoader',
     cardId: 'videoModalCard',
@@ -1718,6 +1719,12 @@ function playVideoModalIntro() {
   if (player && player.dataset && player.dataset.videoPosterBackup && !player.getAttribute('poster')) {
     player.setAttribute('poster', player.dataset.videoPosterBackup);
   }
+
+  if (window.matchMedia('(max-width: 600px)').matches) {
+    playMobileVideoOrientationGate(player);
+    return;
+  }
+
   playSplashModalIntro({
     modalId: 'videoModal',
     loaderId: 'videoModalLoader',
@@ -1729,6 +1736,101 @@ function playVideoModalIntro() {
       prepareVideoFirstFrame(player, done);
     }
   });
+}
+
+var videoOrientGateTimer = null;
+
+function hideVideoOrientGate() {
+  var modal = document.getElementById('videoModal');
+  var gate = document.getElementById('videoOrientGate');
+  if (modal) modal.classList.remove('is-orient-gate');
+  if (gate) {
+    gate.hidden = true;
+    gate.setAttribute('aria-hidden', 'true');
+  }
+  if (videoOrientGateTimer) {
+    clearTimeout(videoOrientGateTimer);
+    videoOrientGateTimer = null;
+  }
+}
+
+function tryLockLandscape() {
+  try {
+    if (screen.orientation && typeof screen.orientation.lock === 'function') {
+      var p = screen.orientation.lock('landscape');
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function tryVideoFullscreen(player) {
+  var wrap = document.getElementById('projectVideoPlayerWrap') || player;
+  if (!wrap) return Promise.resolve(false);
+  var req =
+    wrap.requestFullscreen ||
+    wrap.webkitRequestFullscreen ||
+    wrap.webkitEnterFullscreen ||
+    (player && player.webkitEnterFullscreen);
+  if (!req) return Promise.resolve(false);
+  try {
+    var result = req.call(wrap);
+    if (result && typeof result.then === 'function') {
+      return result.then(function () { return true; }).catch(function () { return false; });
+    }
+    return Promise.resolve(true);
+  } catch (e) {
+    return Promise.resolve(false);
+  }
+}
+
+function playMobileVideoOrientationGate(player) {
+  var modal = document.getElementById('videoModal');
+  var gate = document.getElementById('videoOrientGate');
+  var card = document.getElementById('videoModalCard');
+  if (!modal) return;
+
+  hideVideoOrientGate();
+  clearSplashModalTimers('videoModal');
+  modal.classList.remove('is-video-loading', 'is-video-morphing', 'is-video-ready');
+  if (card) card.style.removeProperty('animation');
+
+  if (gate) {
+    gate.hidden = false;
+    gate.setAttribute('aria-hidden', 'false');
+  }
+  modal.classList.add('is-orient-gate');
+
+  /* Precargar durante la transición */
+  if (player) {
+    try { player.preload = 'auto'; } catch (e) {}
+    try { player.load(); } catch (e2) {}
+    prepareVideoFirstFrame(player);
+  }
+
+  var waitMs = isMotionReduced() ? 900 : 5000;
+
+  function finishGate() {
+    if (!modal.classList.contains('active')) return;
+    hideVideoOrientGate();
+    modal.classList.add('is-video-ready');
+
+    function startPlayback() {
+      if (!player || !modal.classList.contains('active')) return;
+      tryLockLandscape();
+      var playPromise = player.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function () {});
+      }
+      var controls = document.getElementById('projectVideoControls');
+      if (controls) controls.hidden = false;
+    }
+
+    tryVideoFullscreen(player).then(function () {
+      startPlayback();
+    });
+  }
+
+  videoOrientGateTimer = setTimeout(finishGate, waitMs);
 }
 
 function playLocationModalIntro() {
@@ -1808,6 +1910,12 @@ function activateUnitsTab(tab) {
 unitsTabAllBtn.addEventListener('click', function(){ activateUnitsTab('all'); });
 unitsTabFavBtn.addEventListener('click', function(){ activateUnitsTab('fav'); });
 document.getElementById('favoritesEmptyBtn').addEventListener('click', function(){ activateUnitsTab('all'); });
+var unitsMobileBackBtn = document.getElementById('unitsMobileBackBtn');
+if (unitsMobileBackBtn) {
+  unitsMobileBackBtn.addEventListener('click', function () {
+    if (typeof goBack === 'function') goBack();
+  });
+}
 window.__mainTrace('bind favoritesEmptyBtn');
 var compareEmptyBtn = document.getElementById('compareEmptyBtn');
 if (compareEmptyBtn) {
@@ -3619,7 +3727,7 @@ function bindMenuItemNavigation() {
   function onChildClick(ev) {
     var el = ev.currentTarget;
     if (!el || el.hidden || el.classList.contains('is-menu-hidden')) return;
-    var raw = el.getAttribute('data-menu-target') || el.id.replace(/^menu/, '').toLowerCase();
+    /* IDs canónicos ganan sobre data-menu-target (evita Descripción → Video por config errónea) */
     var map = {
       menuDescripcion: 'descripcion',
       menuVideo: 'video',
@@ -3629,7 +3737,10 @@ function bindMenuItemNavigation() {
       menuConstructora: 'constructora',
       menuDescargas: 'descargas'
     };
-    var target = resolveTarget(raw || map[el.id] || 'descripcion');
+    var raw = map[el.id] || el.getAttribute('data-menu-target') || '';
+    var target = resolveTarget(raw || 'descripcion');
+    if (el.id === 'menuDescripcion') target = 'descripcion';
+    if (el.id === 'menuVideo') target = 'video';
     goTo(target);
   }
 
@@ -3637,18 +3748,17 @@ function bindMenuItemNavigation() {
     var el = document.getElementById(id);
     if (!el || el.__menuNavBound) return;
     el.__menuNavBound = true;
-    if (!el.getAttribute('data-menu-target')) {
-      var fallback = {
-        menuDescripcion: 'descripcion',
-        menuVideo: 'video',
-        menuRenders: 'renders',
-        menuAmenidades: 'amenidades',
-        menuEstado: 'estado',
-        menuConstructora: 'constructora',
-        menuDescargas: 'descargas'
-      };
-      el.setAttribute('data-menu-target', fallback[id]);
-    }
+    var fallback = {
+      menuDescripcion: 'descripcion',
+      menuVideo: 'video',
+      menuRenders: 'renders',
+      menuAmenidades: 'amenidades',
+      menuEstado: 'estado',
+      menuConstructora: 'constructora',
+      menuDescargas: 'descargas'
+    };
+    /* Siempre anclar targets canónicos (no depender de menu_config corrupto) */
+    el.setAttribute('data-menu-target', fallback[id]);
     el.addEventListener('click', onChildClick);
   });
 

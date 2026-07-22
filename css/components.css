@@ -1929,6 +1929,18 @@ html.web-effects-off {
   }
 }
 
+/* Galería / 360 — una columna en móvil (imágenes a ancho completo) */
+@media (max-width: 600px) {
+  .tour360-grid {
+    grid-template-columns:1fr;
+    max-width:100%;
+  }
+  .tour360-card {
+    max-height:none;
+    aspect-ratio:4 / 5;
+  }
+}
+
 /* ================= POPUP VIVIENDAS — grid premium ================= */
 .units-popup.units-viviendas-popup {
   --units-inset:clamp(14px, 2.2vmin, 18px);
@@ -1952,6 +1964,7 @@ html.web-effects-off {
   flex:1 1 auto;
   min-height:0;
   width:100%;
+  order:1;
   overflow-y:auto;
   overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
@@ -1986,6 +1999,7 @@ html.web-effects-off {
 }
 .units-viviendas-foot {
   flex:0 0 auto;
+  order:2;
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
@@ -1994,6 +2008,9 @@ html.web-effects-off {
   margin-top:var(--units-inset);
   padding-top:8px;
   border-top:1px solid var(--border);
+}
+.units-viviendas-back {
+  display:none;
 }
 .units-viviendas-foot-copy {
   display:flex;
@@ -3128,6 +3145,108 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   }
 }
 
+/* Viviendas — header fijo móvil (sin footer ni X global) */
+@media (max-width: 600px) {
+  body:has(#unitsPopup.active) .global-action-stack {
+    display:none !important;
+  }
+
+  .units-popup.units-viviendas-popup {
+    --units-inset:max(12px, env(safe-area-inset-left));
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  .units-viviendas-foot {
+    order:0;
+    position:sticky;
+    top:0;
+    z-index:5;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:8px;
+    min-height:48px;
+    margin:0 0 10px;
+    padding:8px 2px 10px;
+    border-top:none;
+    border-bottom:1px solid var(--border);
+    background:color-mix(in srgb, var(--bg-main, #050505) 88%, transparent);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+
+  .units-viviendas-back {
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    flex:0 0 auto;
+    padding:8px 10px;
+    border:1px solid rgba(255, 255, 255, 0.12);
+    border-radius:999px;
+    background:rgba(8, 8, 8, 0.55);
+    color:rgba(255, 255, 255, 0.78);
+    font-family:inherit;
+    font-size:0.68rem;
+    font-weight:500;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .units-viviendas-back__icon {
+    font-size:0.95rem;
+    line-height:1;
+  }
+
+  .units-viviendas-foot-copy {
+    flex:1 1 auto;
+    min-width:0;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .units-viviendas-title {
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+  }
+  .units-viviendas-subtitle {
+    display:none;
+  }
+
+  .units-viviendas-foot-actions {
+    width:auto;
+    flex:0 0 auto;
+    justify-content:flex-end;
+    gap:6px;
+  }
+  .units-viviendas-popup .units-tabs {
+    gap:6px;
+  }
+  .units-viviendas-popup #unitsTabAll {
+    display:none !important;
+  }
+  .units-viviendas-popup .units-tab,
+  .units-viviendas-popup .units-compare-btn {
+    padding:8px 10px;
+    font-size:0.6rem;
+  }
+
+  .units-viviendas-stage {
+    order:1;
+    flex:1 1 auto;
+  }
+
+  .units-viviendas-popup .units-grid {
+    max-width:100%;
+  }
+}
+
 /* ================= UNIDADES — MODALES PREMIUM (calc, planos, 360°) ================= */
 .units-premium-modal,
 .units-sphere-overlay .sphere-loader {
@@ -3883,6 +4002,78 @@ body[data-shadow-glass="solid"] .uc-hero-card {
 }
 .splash-intro-modal .video-modal-loader[hidden] {
   display:none !important;
+}
+
+/* —— Video móvil: pantalla de orientación —— */
+.video-orient-gate {
+  display:none;
+}
+@media (max-width: 600px) {
+  .video-orient-gate {
+    position:absolute;
+    inset:0;
+    z-index:12;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1.1rem;
+    padding:1.5rem 1.25rem;
+    text-align:center;
+    background:rgba(5, 5, 5, 0.96);
+  }
+  .video-orient-gate:not([hidden]) {
+    display:flex;
+  }
+  #videoModal.is-orient-gate .video-modal-card {
+    opacity:0;
+    pointer-events:none;
+  }
+  #videoModal.is-orient-gate .video-modal-loader {
+    display:none !important;
+  }
+  .video-orient-gate__phone {
+    width:72px;
+    height:72px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .video-orient-gate__device {
+    display:block;
+    width:28px;
+    height:48px;
+    border:2px solid rgba(255, 255, 255, 0.55);
+    border-radius:6px;
+    box-shadow:inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    animation:videoOrientRotate 1.8s ease-in-out infinite;
+  }
+  .video-orient-gate__title {
+    margin:0;
+    font-size:1rem;
+    font-weight:500;
+    letter-spacing:-0.02em;
+    color:rgba(255, 255, 255, 0.88);
+  }
+  .video-orient-gate__copy {
+    margin:0;
+    max-width:16rem;
+    font-size:0.88rem;
+    font-weight:300;
+    line-height:1.5;
+    color:rgba(255, 255, 255, 0.5);
+  }
+  @keyframes videoOrientRotate {
+    0%, 15% { transform:rotate(0deg); }
+    40%, 60% { transform:rotate(90deg); }
+    85%, 100% { transform:rotate(0deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .video-orient-gate__device {
+      animation:none;
+      transform:rotate(90deg);
+    }
+  }
 }
 
 /* Solo icono negro + barra (sin caja de video detras) */

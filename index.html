@@ -34,7 +34,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=hero-nav-004">
+<link rel="stylesheet" href="css/components.css?v=mobile-v1">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=2">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
@@ -425,6 +425,23 @@ DEVELOP TEST 007
 
   <!-- POPUP: SELECCIÓN DE UNIDADES -->
   <div class="units-popup units-viviendas-popup" id="unitsPopup">
+    <div class="units-viviendas-foot" id="unitsViviendasChrome">
+      <button type="button" class="units-viviendas-back" id="unitsMobileBackBtn" aria-label="Volver">
+        <span class="units-viviendas-back__icon" aria-hidden="true">←</span>
+        <span class="units-viviendas-back__label">Volver</span>
+      </button>
+      <div class="units-viviendas-foot-copy">
+        <p class="units-viviendas-title" id="unitsViviendasFootTitle">Selecciona tu vivienda</p>
+        <span class="units-viviendas-subtitle" id="unitsViviendasFootSubtitle">Explora planos, precios y calcula tu cuota.</span>
+      </div>
+      <div class="units-viviendas-foot-actions">
+        <div class="units-tabs" id="unitsTabs">
+          <button class="units-tab active" type="button" id="unitsTabAll">Todas las viviendas</button>
+          <button class="units-tab" type="button" id="unitsTabFav">Favoritos (0)</button>
+        </div>
+        <button class="units-compare-btn" type="button" id="unitsCompareBtn">Comparar</button>
+      </div>
+    </div>
     <div class="units-viviendas-stage">
       <div class="units-grid units-viviendas-grid" id="unitsGrid"></div>
       <div class="units-compare-panel" id="unitsComparePanel" hidden></div>
@@ -442,19 +459,6 @@ DEVELOP TEST 007
         </div>
         <p class="compare-empty-text favorites-empty-text">Agrega 2 viviendas a favoritos para compararlas.</p>
         <button class="outline-btn" type="button" id="compareEmptyBtn">Explorar viviendas</button>
-      </div>
-    </div>
-    <div class="units-viviendas-foot">
-      <div class="units-viviendas-foot-copy">
-        <p class="units-viviendas-title" id="unitsViviendasFootTitle">Selecciona tu vivienda</p>
-        <span class="units-viviendas-subtitle" id="unitsViviendasFootSubtitle">Explora planos, precios y calcula tu cuota.</span>
-      </div>
-      <div class="units-viviendas-foot-actions">
-        <div class="units-tabs" id="unitsTabs">
-          <button class="units-tab active" type="button" id="unitsTabAll">Todas las viviendas</button>
-          <button class="units-tab" type="button" id="unitsTabFav">Favoritos (0)</button>
-        </div>
-        <button class="units-compare-btn" type="button" id="unitsCompareBtn">Comparar</button>
       </div>
     </div>
   </div>
@@ -490,6 +494,13 @@ DEVELOP TEST 007
   <div class="content-modal video-modal splash-intro-modal" id="videoModal">
     <span class="modal-close" id="videoModalClose">&times;</span>
     <div class="content-modal-box video-modal-box">
+      <div class="video-orient-gate" id="videoOrientGate" hidden aria-hidden="true">
+        <div class="video-orient-gate__phone" aria-hidden="true">
+          <span class="video-orient-gate__device"></span>
+        </div>
+        <p class="video-orient-gate__title">Para una mejor experiencia</p>
+        <p class="video-orient-gate__copy">Gira tu dispositivo para disfrutar el video en formato horizontal.</p>
+      </div>
       <div class="video-modal-loader" id="videoModalLoader" hidden aria-hidden="true">
         <div class="video-splash" id="videoModalSplash" aria-hidden="true">
           <div class="video-splash-mark">
@@ -1366,7 +1377,7 @@ console.log(
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/amenities-carousel.js?v=amenities7');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/menu-config.js?v=menu6');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/menu-config.js?v=menu6");</script>
-<script src="js/menu-config.js?v=menu6"></script>
+<script src="js/menu-config.js?v=mobile-v1"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/menu-config.js?v=menu6");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/menu-config.js?v=menu6');</script>
   <script>
@@ -1374,7 +1385,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=hero-nav-003"></script>
+<script src="js/main.js?v=mobile-v1"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>

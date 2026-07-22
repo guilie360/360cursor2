@@ -256,7 +256,19 @@ var MenuConfig = (function () {
           }
 
           childEl.setAttribute('data-menu-id', child.id);
-          childEl.setAttribute('data-menu-target', child.target || child.id || 'descripcion');
+          var canonicalTargets = {
+            descripcion: 'descripcion',
+            video: 'video',
+            renders: 'renders',
+            amenidades: 'amenidades',
+            estado: 'estado',
+            constructora: 'constructora',
+            descargas: 'descargas'
+          };
+          childEl.setAttribute(
+            'data-menu-target',
+            canonicalTargets[child.id] || child.target || child.id || 'descripcion'
+          );
           setLabel(childEl, child.label);
           setVisible(childEl, child.enabled !== false);
           proyectoList.appendChild(childEl);
