@@ -24,6 +24,8 @@
 html {
   scroll-behavior: smooth;
   scroll-snap-type: y proximity;
+  /* Helps proximity resolve more decisively toward scene centers */
+  scroll-padding-block: 0;
 }
 
 body {
@@ -77,14 +79,47 @@ main,
   position: relative;
   isolation: isolate;
   scroll-snap-align: center;
-  scroll-snap-stop: normal;
+  /* Prefer stopping on each chapter without skipping past in one gesture */
+  scroll-snap-stop: always;
+  /* Exact viewport height = stronger, more predictable proximity snap */
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Experiences / servicio may exceed one viewport on small screens */
+.lp-scene#proyectos,
+.lp-scene#servicio {
+  height: auto;
+  max-height: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.lp-scene#proyectos {
+  scroll-snap-stop: normal;
+}
+
+.lp-scene#servicio {
+  scroll-snap-stop: always;
+}
+
+.lp-scene.lp-footer {
+  height: auto;
+  max-height: none;
+  min-height: auto;
+  overflow: visible;
+  scroll-snap-stop: normal;
 }
 
 .lp-scene::before {
@@ -385,9 +420,9 @@ main,
 }
 
 .lp-chapter {
-  /* height/snap come from .lp-scene */
-  padding-top: clamp(6rem, 16vh, 11rem);
-  padding-bottom: clamp(6rem, 16vh, 11rem);
+  /* Snap scenes are exactly one viewport; keep padding inside that height */
+  padding-top: clamp(4rem, 12vh, 8rem);
+  padding-bottom: clamp(4rem, 12vh, 8rem);
 }
 
 .lp-section__inner {
@@ -428,20 +463,9 @@ main,
   color: rgba(255, 255, 255, 0.72);
 }
 
-/* Keynote slide — single centered statement */
-.lp-manifesto {
-  max-width: 34rem;
-  padding: 0 0.5rem;
-}
-
-.lp-manifesto__text {
-  margin: 0;
-  font-size: clamp(1.2rem, 3.2vw, 1.65rem);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
-  text-wrap: balance;
+/* Same typographic system as Servicio statement — no extra hierarchy */
+.lp-statement--solo {
+  margin-bottom: 0;
 }
 
 /* Service feature blocks — airy, not heavy cards */
