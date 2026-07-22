@@ -1,6 +1,6 @@
 /**
- * BOXIES ProjectsPage — reuses admin2 projects API + list UI pattern.
- * Renders ONLY into #boxiesContent. Does not create chrome.
+ * BOXIES ProjectsPage — list only fills #boxiesContent.
+ * "Administrar" → BoxiesRouter.navigate('builder', { project }) — same Shell.
  */
 var BoxiesProjectsPage = (function () {
   function escapeHtml(v) {
@@ -29,15 +29,9 @@ var BoxiesProjectsPage = (function () {
     return '<span class="admin-badge badge-muted">' + escapeHtml(estado) + '</span>';
   }
 
-  /* Builder not migrated yet — open legacy editor host */
-  function builderHref(slug) {
-    return '/admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug || '');
-  }
-
   function row(project) {
     var slug = project.slug || '';
     var name = project.nombre || slug || 'Sin nombre';
-    var openHref = builderHref(slug);
     return (
       '<tr>' +
         '<td><strong>' + escapeHtml(name) + '</strong></td>' +
@@ -45,17 +39,30 @@ var BoxiesProjectsPage = (function () {
         '<td>' + statusBadge(project) + '</td>' +
         '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
         '<td class="table-actions">' +
-          '<a class="boxies-action-btn" href="' + escapeHtml(openHref) + '">Administrar</a>' +
+          '<button type="button" class="boxies-action-btn" data-boxies-open-builder="' +
+            escapeHtml(slug) +
+          '">Administrar</button>' +
         '</td>' +
       '</tr>'
     );
+  }
+
+  function bindOpenBuilder(host) {
+    host.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-boxies-open-builder]');
+      if (!btn) return;
+      e.preventDefault();
+      var slug = btn.getAttribute('data-boxies-open-builder');
+      if (!slug) return;
+      BoxiesRouter.navigate('builder', { project: slug });
+    });
   }
 
   async function mount(host) {
     host.innerHTML =
       '<div class="boxies-page">' +
         '<h1 class="boxies-page__title">Proyectos</h1>' +
-        '<p class="boxies-page__desc">Showrooms de la plataforma. El editor sigue en el Builder (migración a BuilderPage pendiente).</p>' +
+        '<p class="boxies-page__desc">Abre el Builder dentro de BOXIES. El Shell no se recarga.</p>' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table">' +
             '<thead><tr>' +
@@ -69,6 +76,8 @@ var BoxiesProjectsPage = (function () {
           '</table>' +
         '</div>' +
       '</div>';
+
+    bindOpenBuilder(host);
 
     var tbody = document.getElementById('boxiesProjectsBody');
     try {

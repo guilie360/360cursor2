@@ -1,5 +1,5 @@
 /**
- * BOXIES App — vertical slice v0.1 host boot.
+ * BOXIES App — vertical slice v0.2 host boot.
  * Architecture: Auth Gate → Shell (once) → Router → Page in #boxiesContent
  */
 var BoxiesApp = (function () {

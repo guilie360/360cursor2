@@ -57,11 +57,12 @@ body.boxies-has-dock.boxies-shell {
 .boxies-header__title {
   font-size: 0.75rem;
   font-weight: 550;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.42em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.78);
   text-align: center;
   white-space: nowrap;
+  margin-right: -0.42em; /* optical center with trailing letter-spacing */
 }
 
 .boxies-header__actions {
@@ -232,6 +233,21 @@ a.boxies-action-btn {
   min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
   padding: 24px clamp(20px, 3vw, 40px) 28px;
   overflow-y: auto;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+#boxiesContent.is-leave {
+  opacity: 0;
+}
+
+#boxiesContent.is-enter {
+  opacity: 0;
+}
+
+#boxiesContent.is-builder-embed {
+  padding: 0;
+  overflow: hidden;
 }
 
 .boxies-dock {
@@ -263,6 +279,34 @@ a.boxies-action-btn {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+}
+
+.boxies-dock__ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition),
+    transform var(--boxies-transition),
+    opacity var(--boxies-transition);
+}
+
+.boxies-dock__ctrl:not(:disabled):hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boxies-dock__ctrl:disabled {
+  cursor: default;
 }
 
 .boxies-user {

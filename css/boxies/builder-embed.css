@@ -1,0 +1,56 @@
+/* Embed AiProjectBuilderView inside #boxiesContent — Shell keeps header/sidebar/dock. */
+
+#boxiesContent.boxies-builder-embed,
+#boxiesContent.is-builder-embed {
+  position: relative;
+}
+
+#boxiesContent .boxies-builder-embed,
+.boxies-builder-embed {
+  position: relative;
+  min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
+}
+
+/* Nested chrome removed in JS; CSS is a safety net */
+.boxies-builder-embed .builder-header-fixed,
+.boxies-builder-embed .builder-dock,
+#boxiesContent .builder-header-fixed,
+#boxiesContent > .builder-dock {
+  display: none !important;
+}
+
+.boxies-builder-embed .builder-app,
+#boxiesContent .builder-app {
+  position: relative;
+  min-height: 0;
+}
+
+.boxies-builder-embed .builder-progress-sidebar,
+#boxiesContent .builder-progress-sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+  width: var(--builder-rail-width, 200px);
+  height: auto;
+}
+
+.boxies-builder-embed .builder-workspace,
+#boxiesContent .builder-workspace {
+  margin-top: 0;
+  margin-left: var(--builder-rail-width, 200px);
+  min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
+}
+
+.boxies-builder-embed .builder-workspace .builder-main-panel,
+#boxiesContent .builder-workspace .builder-main-panel {
+  min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
+}
+
+.boxies-builder-embed #builderStepPanel,
+#boxiesContent #builderStepPanel {
+  min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
+  max-height: none;
+  padding: 24px clamp(20px, 3vw, 40px) 28px;
+}

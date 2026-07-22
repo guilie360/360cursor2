@@ -8,8 +8,10 @@
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
   <link rel="stylesheet" href="../admin/css/admin-auth.css">
-  <link rel="stylesheet" href="../css/boxies/shell.css?v=slice-001">
-  <link rel="stylesheet" href="../css/boxies/content.css?v=slice-001">
+  <link rel="stylesheet" href="../admin/css/ai-project-builder.css?v=slice-002">
+  <link rel="stylesheet" href="../css/boxies/shell.css?v=slice-002">
+  <link rel="stylesheet" href="../css/boxies/content.css?v=slice-002">
+  <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=slice-002">
 </head>
 <body class="boxies-host">
 
@@ -62,6 +64,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
   <script src="../js/shared/constants.js"></script>
+  <script src="../js/shared/formatters.js"></script>
   <script src="../js/theme-system.js"></script>
   <script src="../js/platform/hall-design-system.js"></script>
   <script>
@@ -86,16 +89,50 @@
   <script src="../js/auth/visitor-auth.js"></script>
   <script src="../js/visitor-session.js"></script>
 
-  <!-- Existing projects API (read-only reuse; file not modified) -->
+  <!-- Theme AI (Builder engines) -->
+  <script src="../js/theme-ai/theme-color-math.js"></script>
+  <script src="../js/theme-ai/theme-brand-intelligence.js"></script>
+  <script src="../js/theme-ai/theme-brand-analyzer.js"></script>
+  <script src="../js/theme-ai/theme-role-mapper.js"></script>
+  <script src="../js/theme-ai/theme-ai-generator.js"></script>
+
+  <!-- Builder stack (read-only reuse — not bootstrap) -->
+  <script src="../admin/js/core/ui.js"></script>
+  <script src="../admin/js/core/notifications.js"></script>
+  <script src="../admin/js/builder/core/session.js?v=viv1"></script>
+  <script src="../admin/js/builder/core/wizard.js?v=viv1"></script>
+  <script src="../admin/js/builder/icons.js?v=viv1"></script>
+  <script src="../admin/js/builder/dock.js?v=fsdock1"></script>
+  <script src="../admin/js/builder/progress-rail.js?v=viv1"></script>
+  <script src="../admin/js/builder/engines/project-types.js"></script>
+  <script src="../admin/js/builder/engines/branding-engine.js?v=logo1"></script>
+  <script src="../admin/js/builder/engines/media-engine.js"></script>
+  <script src="../admin/js/builder/engines/gallery-engine.js"></script>
+  <script src="../admin/js/builder/engines/panorama-engine.js"></script>
+  <script src="../admin/js/builder/engines/document-engine.js"></script>
+  <script src="../admin/js/builder/engines/theme-engine.js"></script>
+  <script src="../admin/js/builder/engines/hero-sync-engine.js?v=show1"></script>
+  <script src="../js/menu-config.js?v=menu6"></script>
+  <script src="../admin/js/builder/engines/menu-sync-engine.js?v=menu6"></script>
+  <script src="../admin/js/builder/engines/viviendas-sync-engine.js?v=viv5"></script>
+  <script src="../admin/js/builder/engines/ai-assistant-engine.js"></script>
+  <script src="../admin/js/builder/engines/hotspot-engine.js"></script>
+  <script src="../admin/js/builder/engines/validation-engine.js"></script>
+  <script src="../admin/js/builder/engines/publishing-engine.js?v=upd1"></script>
+  <script src="../admin/js/platform/boxies-app-shell.js?v=shell-001"></script>
+  <script src="../admin/js/views/ai-project-builder.js?v=shell-001"></script>
+  <script src="../admin/js/platform-builder/bridge.js?v=path1"></script>
+
+  <!-- Existing projects API (read-only reuse) -->
   <script src="../admin2/js/api/projects.js"></script>
 
   <!-- BOXIES Core -->
-  <script src="../admin/js/boxies/shell.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/pages.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/router.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/auth-bridge.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/pages/projects-page.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/pages/builder-page.js?v=slice-001"></script>
-  <script src="../admin/js/boxies/app.js?v=slice-001"></script>
+  <script src="../admin/js/boxies/shell.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/pages.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/router.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/auth-bridge.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/pages/projects-page.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/pages/builder-page.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/app.js?v=slice-002"></script>
 </body>
 </html>

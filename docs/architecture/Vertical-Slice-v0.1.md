@@ -36,3 +36,16 @@ Fuera de alcance: Supabase, OAuth core, RLS, HALL redesign, admin2, Builder actu
 ## Criterio de éxito
 
 Deploy → `https://360preventa.com/boxies` muestra un único Shell con ProjectsPage en `#boxiesContent`, login con la sesión de plataforma existente, sin regresiones en rutas previas.
+
+---
+
+## Vertical Slice v0.2 (addendum)
+
+| Cambio | Notas |
+|---|---|
+| Dock + Fullscreen | Shell dock oficial; reutiliza `BuilderDock.bindFullscreen` + `#builderFullscreenBtn` |
+| Header marca | `B O X I E S` (letter-spacing) |
+| Projects → Builder | `Router.navigate('builder', { project })` — sin salir de `/boxies` |
+| BuilderPage | Adaptador: `AiProjectBuilderView.render(#boxiesContent)`; chrome anidado se elimina; Guardar/Publicar se promueven al header BOXIES |
+| Limitación técnica | El editor aún genera shell propio vía `BoxiesAppShell.html`; el adaptador lo desmonta tras render. No se reescribieron engines. |
+| URL | `/boxies?page=builder&project=<slug>&proyecto=<slug>` (`proyecto` para engines) |
