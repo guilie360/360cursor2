@@ -43,10 +43,8 @@ var VisitorMenu = (function () {
 
   function primaryStripActionHtml() {
     if (isAdminProfile()) {
+      /* Admin: Administrar (sin Mi perfil). Style V.3 se añade aparte. */
       return (
-        '<button type="button" class="menu-profile-action menu-profile-link-btn menu-profile-link-mobile" hidden>' +
-          ICON_PROFILE + '<span>Mi perfil</span>' +
-        '</button>' +
         '<a href="' + escapeHtml(adminBuilderHref()) + '" class="menu-profile-action menu-admin-btn">' +
           ICON_ADMIN + '<span>Administrar</span>' +
         '</a>'
@@ -97,7 +95,9 @@ var VisitorMenu = (function () {
             (isAdminProfile()
               ? (
                 '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
-                  ICON_SETTINGS + '<span>' + STYLE_V3_LABEL + '</span>' +
+                  ICON_SETTINGS +
+                  '<span class="menu-action-label-desk">' + STYLE_V3_LABEL + '</span>' +
+                  '<span class="menu-action-label-mobile">Style Engine V3</span>' +
                 '</button>'
               )
               : '') +

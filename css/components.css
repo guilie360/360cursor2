@@ -905,14 +905,23 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
   }
   .menu-profile-type,
   .menu-active-theme-indicator,
-  .menu-profile-verification-hint,
-  .menu-profile-action.menu-personalize-v2-btn,
-  .menu-profile-action.menu-admin-btn {
+  .menu-profile-verification-hint {
     display:none !important;
   }
-  .menu-profile-link-mobile,
-  .menu-profile-link-mobile[hidden] {
+  /* Admin móvil: mismas herramientas que desktop (Administrar · Style Engine V3 · Cerrar sesión) */
+  .menu-profile-action.menu-personalize-v2-btn,
+  .menu-profile-action.menu-admin-btn {
     display:inline-flex !important;
+  }
+  .menu-action-label-desk {
+    display:none !important;
+  }
+  .menu-action-label-mobile {
+    display:inline !important;
+  }
+  /* Visitante: Mi perfil; admin no tiene este control */
+  .menu-profile-link-mobile {
+    display:none !important;
   }
   .menu-profile-avatar-sm {
     width:28px;
@@ -957,6 +966,12 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
 }
 .menu-profile-link-mobile {
   display:none;
+}
+.menu-action-label-mobile {
+  display:none;
+}
+.menu-action-label-desk {
+  display:inline;
 }
 
 /* Menú Conoce — descubrimiento de scroll (solo móvil) */
