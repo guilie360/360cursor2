@@ -7,7 +7,30 @@
 window.__BUILD_STAMP__ = 'develop-test-002';
 console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<script>
+/* Bloquear zoom del documento (móvil); viewers 360/lightbox usan controles propios */
+(function () {
+  try {
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function (e) { e.preventDefault(); }, { passive: false });
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        var t = e.target;
+        if (t && t.closest && t.closest('.tour360-card, #sphereModal, #tour360Popup, .lightbox, [data-allow-zoom], .pannellum-container, .pnlm-container')) {
+          lastTouchEnd = now;
+          return;
+        }
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+  } catch (_z) {}
+})();
+</script>
 <meta name="google" content="notranslate">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -34,8 +57,8 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=mobile-v3-6b">
-<link rel="stylesheet" href="css/platform/product-assistant.css?v=mobile-v3-6b">
+<link rel="stylesheet" href="css/components.css?v=mobile-v3-7">
+<link rel="stylesheet" href="css/platform/product-assistant.css?v=mobile-v3-7">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
 </head>
@@ -1308,7 +1331,7 @@ console.log(
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/web-effects.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/global-close.js?v=auth-lock1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/global-close.js?v=auth-lock1");</script>
-<script src="js/global-close.js?v=mobile-v3-5c"></script>
+<script src="js/global-close.js?v=mobile-v3-7"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/global-close.js?v=auth-lock1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/global-close.js?v=auth-lock1');</script>
   <script>
@@ -1386,14 +1409,14 @@ console.log(
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
-<script src="js/platform/product-assistant.js?v=2"></script>
+<script src="js/platform/product-assistant.js?v=mobile-v3-7"></script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/platform/product-assistant.js');</script>
   <script>
   if (typeof BootDebug !== 'undefined') BootDebug.log('script tag: cargando project-data.js');
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=mobile-v3-6"></script>
+<script src="js/project-data.js?v=mobile-v3-7"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>

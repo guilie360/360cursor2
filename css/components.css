@@ -1085,7 +1085,7 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
     top:auto;
     bottom:0;
     transform:none;
-    z-index:1600;
+    z-index:1700;
   }
 }
 
@@ -1583,9 +1583,65 @@ body:has(#deploy-marker) .project-back-btn {
     --mobile-landing-fab-y:max(1.15rem, env(safe-area-inset-bottom));
   }
 
-  /* Desktop-only chrome hidden on phone */
-  .project-back-btn {
+  /*
+   * V3.7 — Volver a Demos (solo móvil): Hall glass, esquina superior izquierda.
+   * Desktop conserva .project-back-btn sin cambios.
+   */
+  #projectBackBtnMobile {
     display: none !important;
+  }
+  .project-back-btn:not([hidden]) {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.4rem;
+    top: max(14px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 940;
+    padding: 0.5rem 0.85rem 0.5rem 0.7rem;
+    background: var(--btn-glass-surface, var(--btn-surface));
+    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+    border-radius: var(--menu-card-radius, 14px);
+    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: none;
+    opacity: 0.92;
+  }
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
+    border-radius: 999px;
+  }
+  .project-back-btn:not([hidden]) .project-back-btn__icon {
+    display: none;
+  }
+  .project-back-btn:not([hidden])::before {
+    content: '←';
+    font-size: 0.95rem;
+    line-height: 1;
+    opacity: 0.9;
+  }
+  .project-back-btn:not([hidden]):hover,
+  .project-back-btn:not([hidden]):focus-visible,
+  body[data-button-hover-glass="soft"] .project-back-btn:not([hidden]):hover,
+  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--text-primary));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform: translateY(-1px);
+    opacity: 1;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
+  .project-back-btn:not([hidden]):active {
+    transform: translateY(0);
+    opacity: 0.88;
   }
 
   /*
@@ -1642,6 +1698,13 @@ body:has(#deploy-marker) .project-back-btn {
     right:max(1.15rem, env(safe-area-inset-right));
     bottom:max(1.15rem, env(safe-area-inset-bottom));
     top:auto;
+  }
+
+  /* Con asistente abierto, la esquina derecha es del Global Close */
+  body.pa-open .pa-fab {
+    opacity:0 !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
   }
 
   #mainMenuOpenBtn.project-cover-btn,
@@ -1938,15 +2001,69 @@ html.web-effects-off {
 }
 .global-close-btn.is-visible,
 .global-fullscreen-btn.is-visible { display:flex; }
-.global-close-btn:hover,
+
+/*
+ * X global = control de sistema (no navegación Hall).
+ * Sin fondo, sin soft/sólido, sin herencia de botones / hover Hall.
+ * Solo opacidad + leve escala al tap. Color de glifo fijo (nunca oscuro).
+ */
+#globalCloseBtn.global-close-btn,
+#globalCloseBtn.global-close-btn.is-visible,
+#globalCloseBtn.global-close-btn:hover,
+#globalCloseBtn.global-close-btn:focus,
+#globalCloseBtn.global-close-btn:focus-visible,
+#globalCloseBtn.global-close-btn:active,
+#globalCloseBtn.global-close-btn:visited,
+body[data-button-glass] #globalCloseBtn.global-close-btn,
+body[data-button-glass] #globalCloseBtn.global-close-btn:hover,
+body[data-button-glass] #globalCloseBtn.global-close-btn:active,
+body[data-button-hover-glass] #globalCloseBtn.global-close-btn:hover,
+body[data-button-hover-glass="soft"] #globalCloseBtn.global-close-btn:hover,
+body[data-button-hover-glass="glass"] #globalCloseBtn.global-close-btn:hover,
+body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  background:transparent !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  filter:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  outline:none !important;
+  -webkit-tap-highlight-color:transparent !important;
+  color:#fff !important;
+  fill:#fff !important;
+  mix-blend-mode:normal !important;
+}
+#globalCloseBtn.global-close-btn {
+  font-size:2.2rem;
+  font-weight:700;
+  opacity:0.88;
+  transition:opacity 0.2s ease, transform 0.15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  #globalCloseBtn.global-close-btn:hover,
+  #globalCloseBtn.global-close-btn:focus-visible {
+    opacity:1;
+    color:#fff !important;
+    background:transparent !important;
+    transform:none;
+  }
+}
+#globalCloseBtn.global-close-btn:active {
+  opacity:0.72;
+  color:#fff !important;
+  background:transparent !important;
+  transform:scale(0.92);
+}
+
 .global-fullscreen-btn:hover {
   opacity:1;
   color:var(--accent);
   background:transparent;
-}
-.global-close-btn {
-  font-size:2.2rem;
-  font-weight:700;
 }
 .global-fullscreen-btn {
   font-size:1.2rem;
@@ -1988,7 +2105,7 @@ html.web-effects-off {
    * Sin offsets calc/translate para “compensar”.
    */
   .global-action-stack {
-    z-index:1600;
+    z-index:1700;
     top:auto;
     left:auto;
     right:var(--mobile-close-right);
@@ -2003,6 +2120,8 @@ html.web-effects-off {
     justify-content:center;
     gap:0;
     transition:none;
+    background:transparent !important;
+    pointer-events:none;
   }
   /* En hero: fullscreen arriba a la derecha (misma posición que desktop) */
   .global-action-stack.is-hero-only {
@@ -2025,7 +2144,7 @@ html.web-effects-off {
     height:calc(var(--mobile-shell-foot-h) + env(safe-area-inset-bottom));
     padding:0 0 env(safe-area-inset-bottom);
     transform:none;
-    z-index:1600;
+    z-index:1700;
   }
   .global-menu-tools,
   body.main-menu-open .global-menu-tools {
@@ -2064,25 +2183,76 @@ html.web-effects-off {
     height:var(--mobile-close-size);
     min-width:var(--mobile-close-size);
     min-height:var(--mobile-close-size);
-    background:transparent;
-    box-shadow:none;
+    background:transparent !important;
+    box-shadow:none !important;
     flex-shrink:0;
   }
-  .global-close-btn,
-  .global-close-btn.is-visible {
+  /*
+   * Slot por encima del footer soft (z 1205) y del PA (960).
+   * Sin fondo: el footer no debe “pintar” un hover negro bajo la X.
+   */
+  #globalCloseBtn.global-close-btn,
+  #globalCloseBtn.global-close-btn.is-visible {
     display:flex !important;
     align-items:center;
     justify-content:center;
+    pointer-events:auto;
     font-size:1.85rem;
     font-weight:600;
     line-height:1;
-    opacity:0.88;
+    opacity:0.92;
+    color:#fff !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    -webkit-tap-highlight-color:transparent;
+    text-shadow:0 1px 2px rgba(0, 0, 0, 0.35);
   }
-  .global-close-btn:not(.is-visible) {
+  @media (hover: hover) and (pointer: fine) {
+    #globalCloseBtn.global-close-btn:hover,
+    #globalCloseBtn.global-close-btn:focus-visible {
+      opacity:1;
+      color:#fff !important;
+      background:transparent !important;
+      transform:none;
+    }
+  }
+  #globalCloseBtn.global-close-btn:active {
+    opacity:0.75;
+    color:#fff !important;
+    transform:scale(0.92);
+    background:transparent !important;
+  }
+  #globalCloseBtn.global-close-btn:not(.is-visible) {
     display:flex !important;
     opacity:0;
     pointer-events:none;
     visibility:hidden;
+  }
+
+  /* Zoom del documento bloqueado; viewers internos conservan pinch propio */
+  html {
+    touch-action:pan-x pan-y;
+    -ms-touch-action:pan-x pan-y;
+  }
+  body {
+    touch-action:pan-x pan-y;
+    -ms-content-zooming:none;
+  }
+  .tour360-card,
+  .tour360-card iframe,
+  #sphereModal,
+  #sphereModal iframe,
+  #tour360Popup,
+  #tour360Popup iframe,
+  .lightbox,
+  .lightbox img,
+  .project-video-player,
+  [data-allow-zoom],
+  .pannellum-container,
+  .pnlm-container {
+    touch-action:auto;
   }
   .global-fullscreen-btn {
     font-size:1.15rem;

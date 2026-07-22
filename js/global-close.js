@@ -77,6 +77,19 @@ var GlobalClose = (function () {
     return false;
   }
 
+  /** Asistente Virtual abierto (móvil cierra con Global Close) */
+  function isProductAssistantOpen() {
+    try {
+      if (typeof ProductAssistant !== 'undefined' &&
+          typeof ProductAssistant.getInstance === 'function') {
+        var inst = ProductAssistant.getInstance();
+        if (inst && typeof inst.isOpen === 'function' && inst.isOpen()) return true;
+      }
+    } catch (_e) {}
+    var root = document.querySelector('.pa-root.is-open');
+    return !!(root && !root.hidden);
+  }
+
   /** Única fuente de verdad: ¿hay algo que el Shell deba poder cerrar? */
   function isCloseableSessionActive() {
     return (typeof navStack !== 'undefined' && navStack.length > 0) ||
@@ -89,6 +102,7 @@ var GlobalClose = (function () {
       isThemeAiModalOpen() ||
       isVisualAuditOpen() ||
       isStyleEngineModalOpen() ||
+      isProductAssistantOpen() ||
       (typeof lightboxOpen !== 'undefined' && lightboxOpen);
   }
 
@@ -390,6 +404,23 @@ var GlobalClose = (function () {
       update();
       return;
     }
+    if (isProductAssistantOpen()) {
+      try {
+        if (typeof ProductAssistant !== 'undefined' &&
+            typeof ProductAssistant.getInstance === 'function') {
+          var pa = ProductAssistant.getInstance();
+          if (pa && typeof pa.close === 'function') pa.close();
+        } else {
+          var paRoot = document.querySelector('.pa-root.is-open');
+          if (paRoot) {
+            paRoot.classList.remove('is-open');
+            paRoot.hidden = true;
+          }
+        }
+      } catch (_pa) {}
+      update();
+      return;
+    }
     if (isAuthModalOpen()) {
       if (typeof VisitorAuthModal !== 'undefined' && typeof VisitorAuthModal.close === 'function') {
         VisitorAuthModal.close();
@@ -490,6 +521,21 @@ var GlobalClose = (function () {
         var el = document.getElementById(id);
         if (el) overlayObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
       });
+      var paWatch = new MutationObserver(function () { update(); });
+      function observePaRoot() {
+        var paRoot = document.querySelector('.pa-root');
+        if (paRoot) {
+          paWatch.observe(paRoot, { attributes: true, attributeFilter: ['class', 'hidden'] });
+          return true;
+        }
+        return false;
+      }
+      if (!observePaRoot()) {
+        var bodyWatch = new MutationObserver(function () {
+          if (observePaRoot()) bodyWatch.disconnect();
+        });
+        bodyWatch.observe(document.body, { childList: true, subtree: true });
+      }
     }
 
     update();

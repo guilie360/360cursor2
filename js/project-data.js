@@ -129,6 +129,17 @@ function applyProjectBackButton(config) {
   var mobile = document.getElementById('projectBackBtnMobile');
   var labelEl = document.getElementById('projectBackBtnLabel');
 
+  /* Mobile V3.7: siempre ofrecer ← Demos hacia la landing */
+  var isMobile = typeof window.matchMedia === 'function' &&
+    window.matchMedia('(max-width: 600px)').matches;
+  if (isMobile) {
+    resolved = {
+      show: true,
+      url: resolved.url || '/#demos',
+      label: resolved.label || 'Demos'
+    };
+  }
+
   if (labelEl) labelEl.textContent = resolved.label;
 
   function applyLink(el) {
@@ -148,7 +159,14 @@ function applyProjectBackButton(config) {
   }
 
   applyLink(desktop);
-  applyLink(mobile);
+  /* Hero secondary back queda oculto en móvil (CSS); no duplicar estado */
+  if (isMobile && mobile) {
+    mobile.hidden = true;
+    mobile.setAttribute('hidden', '');
+    mobile.setAttribute('aria-hidden', 'true');
+  } else {
+    applyLink(mobile);
+  }
   syncHeroSecondaryVisibility();
 }
 

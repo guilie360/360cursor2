@@ -319,21 +319,165 @@
   border: 0;
 }
 
-/* ——— Móvil: popup estable con teclado + safe-area ——— */
+/* ——— Móvil V3.7: Hall Design System + cierre vía Global Close ——— */
 @media (max-width: 600px) {
+  .pa-root {
+    --pa-line: color-mix(in srgb, var(--text-primary, #fff) 10%, transparent);
+    --pa-fg: var(--text-primary, rgba(255, 255, 255, 0.92));
+    --pa-muted: color-mix(in srgb, var(--text-primary, #fff) 55%, transparent);
+    --pa-faint: color-mix(in srgb, var(--text-primary, #fff) 32%, transparent);
+    z-index: 960;
+  }
+
+  .pa-backdrop {
+    background: color-mix(in srgb, var(--bg-main, #050505) 45%, transparent);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
   .pa-panel {
     left: max(0.75rem, env(safe-area-inset-left));
     right: max(0.75rem, env(safe-area-inset-right));
     width: auto;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
+    bottom: calc(
+      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 0.55rem
+    );
     height: auto;
     max-height: calc(
-      100dvh - max(0.75rem, env(safe-area-inset-top)) - max(0.75rem, env(safe-area-inset-bottom))
+      100dvh - max(0.75rem, env(safe-area-inset-top)) -
+      var(--mobile-shell-foot-h, 62px) - env(safe-area-inset-bottom) - 1.1rem
     );
     max-height: calc(
-      100svh - max(0.75rem, env(safe-area-inset-top)) - max(0.75rem, env(safe-area-inset-bottom))
+      100svh - max(0.75rem, env(safe-area-inset-top)) -
+      var(--mobile-shell-foot-h, 62px) - env(safe-area-inset-bottom) - 1.1rem
     );
     transform-origin: bottom center;
+    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border, rgba(255, 255, 255, 0.14)));
+    border-radius: var(--menu-card-radius, 14px);
+    background: var(--btn-glass-surface, var(--btn-surface, rgba(10, 10, 10, 0.94)));
+    backdrop-filter: blur(var(--btn-glass-blur, 16px)) saturate(130%);
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 16px)) saturate(130%);
+    box-shadow:
+      var(--btn-shadow, 0 16px 40px rgba(0, 0, 0, 0.42)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    color: var(--pa-fg);
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-panel {
+    border-radius: 18px;
+  }
+
+  .pa-head {
+    border-bottom: 1px solid var(--pa-line);
+    padding: 0.9rem 1rem 0.8rem;
+  }
+
+  .pa-title {
+    color: var(--pa-fg);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 550;
+  }
+
+  /* Cierre = Global Close (esquina inferior derecha); sin X en encabezado */
+  .pa-close {
+    display: none !important;
+  }
+
+  .pa-bubble--bot {
+    background: color-mix(in srgb, var(--btn-glass-surface, rgba(255, 255, 255, 0.04)) 88%, transparent);
+    border: 1px solid var(--pa-line);
+    border-radius: var(--menu-card-radius, 14px);
+    color: var(--pa-muted);
+  }
+
+  .pa-bubble--user {
+    background: var(--btn-glass-hover, color-mix(in srgb, var(--text-primary) 10%, transparent));
+    border: 1px solid var(--pa-line);
+    border-radius: var(--menu-card-radius, 14px);
+    color: var(--pa-fg);
+  }
+
+  .pa-chip {
+    border: var(--btn-border-width, 1px) solid var(--btn-border, var(--pa-line));
+    border-radius: 999px;
+    background: transparent;
+    color: var(--pa-muted);
+    backdrop-filter: blur(var(--btn-glass-blur, 8px));
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px));
+  }
+
+  .pa-chip:hover,
+  .pa-chip:active {
+    background: var(--btn-glass-hover, var(--hover, rgba(255, 255, 255, 0.06)));
+    color: var(--btn-text-hover, var(--pa-fg));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--pa-line)));
+  }
+
+  .pa-handoff {
+    border-top: 1px solid var(--pa-line);
+  }
+
+  .pa-handoff__copy {
+    color: var(--pa-faint);
+  }
+
+  .pa-wa {
+    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border, rgba(255, 255, 255, 0.14)));
+    border-radius: var(--menu-card-radius, 14px);
+    background: var(--btn-glass-surface, transparent);
+    color: var(--pa-fg);
+    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    box-shadow: var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent));
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-wa {
+    border-radius: 999px;
+  }
+
+  .pa-wa:hover,
+  .pa-wa:active {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--pa-fg));
+    border-color: var(--btn-border-hover, var(--btn-border));
+  }
+
+  .pa-compose {
+    border-top: 1px solid var(--pa-line);
+    background: color-mix(in srgb, var(--btn-glass-surface, rgba(8, 8, 8, 0.9)) 92%, transparent);
+    padding: 0.75rem 0.85rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .pa-compose input {
+    border: 1px solid var(--pa-line);
+    border-radius: calc(var(--menu-card-radius, 14px) - 4px);
+    background: color-mix(in srgb, var(--bg-main, #050505) 35%, transparent);
+    color: var(--pa-fg);
+  }
+
+  .pa-compose input:focus {
+    border-color: var(--btn-border-hover, var(--btn-border, rgba(255, 255, 255, 0.28)));
+  }
+
+  .pa-send {
+    border: var(--btn-border-width, 1px) solid var(--btn-border, var(--pa-line));
+    border-radius: var(--menu-card-radius, 14px);
+    background: var(--btn-glass-surface, transparent);
+    color: var(--pa-muted);
+  }
+
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-send {
+    border-radius: 999px;
+  }
+
+  .pa-send:hover,
+  .pa-send:active {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--pa-fg));
+    border-color: var(--btn-border-hover, var(--btn-border));
   }
 
   .pa-root.is-keyboard .pa-panel {
@@ -346,10 +490,6 @@
 
   .pa-root.is-keyboard.is-open .pa-panel {
     transform: none;
-  }
-
-  .pa-compose {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 
   .pa-root.is-keyboard .pa-compose {

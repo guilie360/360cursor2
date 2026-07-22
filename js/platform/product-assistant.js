@@ -459,10 +459,14 @@ var ProductAssistant = (function () {
       if (open) {
         root.hidden = false;
         root.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('pa-open');
         requestAnimationFrame(function () {
           root.classList.add('is-open');
           fab.classList.add('is-active');
           syncVisualViewport();
+          if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+            GlobalClose.update();
+          }
         });
         /* En móvil no autofocus: evita teclado inmediato; el usuario toca el input. */
         if (input && !isPhone()) {
@@ -474,11 +478,18 @@ var ProductAssistant = (function () {
         root.classList.remove('is-open');
         root.classList.remove('is-keyboard');
         fab.classList.remove('is-active');
+        document.body.classList.remove('pa-open');
         if (input) input.blur();
+        if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+          GlobalClose.update();
+        }
         window.setTimeout(function () {
           if (!root.classList.contains('is-open')) {
             root.hidden = true;
             root.setAttribute('aria-hidden', 'true');
+          }
+          if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+            GlobalClose.update();
           }
         }, 280);
       }
