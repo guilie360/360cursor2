@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>360Preventa</title>
-  <meta name="description" content="Showroom Digital 360 para preventa inmobiliaria. Experiencias modernas, inmersivas y fáciles de compartir.">
+  <meta name="description" content="Showroom Digital 360° para preventa inmobiliaria.">
   <meta name="theme-color" content="#050505">
   <meta property="og:title" content="360Preventa">
-  <meta property="og:description" content="Showroom Digital 360 para preventa inmobiliaria.">
+  <meta property="og:description" content="Showroom Digital 360° para preventa inmobiliaria.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://360preventa.com/">
   <link rel="icon" type="image/png" href="/assets/brand/360preventa-mark.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/landing/css/landing.css?v=4">
+  <link rel="stylesheet" href="/landing/css/landing.css?v=5">
 </head>
 <body>
   <div class="lp-ambient" aria-hidden="true"></div>
@@ -28,12 +28,38 @@
   <div class="lp-menu" id="lpMenuPanel" hidden>
     <nav class="lp-menu__panel" aria-label="Secciones">
       <a href="#servicio" data-lp-nav>Servicio</a>
-      <a href="#precios" data-lp-nav>Precios</a>
-      <a href="#proyectos" data-lp-nav>Proyectos</a>
-      <a href="#contacto" data-lp-nav>Contacto</a>
+      <button type="button" class="lp-menu__action" id="lpPricesOpen" data-lp-prices>Precios</button>
+      <a href="#proyectos" data-lp-nav>Experiencias</a>
     </nav>
   </div>
   <div class="lp-menu__backdrop" id="lpMenuBackdrop" hidden></div>
+
+  <!-- Precios modal (not in scroll narrative) -->
+  <div class="lp-modal" id="lpPricesModal" hidden aria-hidden="true">
+    <div class="lp-modal__backdrop" data-lp-prices-close></div>
+    <div class="lp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="lpPricesTitle">
+      <button type="button" class="lp-modal__close" data-lp-prices-close aria-label="Cerrar">×</button>
+      <p class="lp-kicker" id="lpPricesTitle">Precios</p>
+      <h2 class="lp-modal__title">Planes</h2>
+      <div class="lp-pricing">
+        <article class="lp-plan">
+          <h3 class="lp-plan__name">Starter</h3>
+          <p class="lp-plan__price">—</p>
+          <p class="lp-plan__note">Placeholder</p>
+        </article>
+        <article class="lp-plan lp-plan--featured">
+          <h3 class="lp-plan__name">Professional</h3>
+          <p class="lp-plan__price">—</p>
+          <p class="lp-plan__note">Placeholder</p>
+        </article>
+        <article class="lp-plan">
+          <h3 class="lp-plan__name">Enterprise</h3>
+          <p class="lp-plan__price">—</p>
+          <p class="lp-plan__note">Placeholder</p>
+        </article>
+      </div>
+    </div>
+  </div>
 
   <main class="lp-story">
     <section class="lp-hero lp-scene" id="inicio" data-lp-light="hero" aria-label="360Preventa">
@@ -47,10 +73,18 @@
             alt="360Preventa"
           >
         </div>
-        <h1 class="lp-hero__headline" data-lp-stage="2">Showroom Digital 360<br>para preventa inmobiliaria.</h1>
-        <p class="lp-hero__lede" data-lp-stage="3">Diseñado para constructoras que buscan una experiencia de preventa moderna, inmersiva y fácil de compartir.</p>
+        <h1 class="lp-hero__headline" data-lp-stage="2">Showroom Digital 360°</h1>
+        <p class="lp-hero__sub" data-lp-stage="3">para preventa inmobiliaria.</p>
       </div>
       <div class="lp-hero__scroll" aria-hidden="true"></div>
+    </section>
+
+    <section class="lp-section lp-chapter lp-scene" id="mensaje" data-lp-light="mensaje">
+      <div class="lp-section__inner lp-scene__content lp-manifesto">
+        <p class="lp-manifesto__text" data-lp-stage="1">
+          Plataforma diseñada para constructoras que buscan una experiencia de preventa moderna, inmersiva y fácil de compartir.
+        </p>
+      </div>
     </section>
 
     <section class="lp-section lp-chapter lp-scene" id="servicio" data-lp-light="servicio">
@@ -100,65 +134,13 @@
       </div>
     </section>
 
-    <section class="lp-section lp-chapter lp-scene" id="precios" data-lp-light="precios">
-      <div class="lp-section__inner lp-scene__content">
-        <p class="lp-kicker" data-lp-stage="1">Precios</p>
-        <h2 class="lp-section__title" data-lp-stage="2">Planes</h2>
-        <div class="lp-pricing" data-lp-stage="3">
-          <article class="lp-plan">
-            <h3 class="lp-plan__name">Starter</h3>
-            <p class="lp-plan__price">—</p>
-            <p class="lp-plan__note">Placeholder</p>
-          </article>
-          <article class="lp-plan lp-plan--featured">
-            <h3 class="lp-plan__name">Professional</h3>
-            <p class="lp-plan__price">—</p>
-            <p class="lp-plan__note">Placeholder</p>
-          </article>
-          <article class="lp-plan">
-            <h3 class="lp-plan__name">Enterprise</h3>
-            <p class="lp-plan__price">—</p>
-            <p class="lp-plan__note">Placeholder</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
     <section class="lp-section lp-chapter lp-scene" id="proyectos" data-lp-light="proyectos">
       <div class="lp-section__inner lp-section__inner--wide lp-scene__content">
-        <p class="lp-kicker" data-lp-stage="1">Proyectos</p>
-        <h2 class="lp-section__title" data-lp-stage="2">Experiencias publicadas</h2>
+        <p class="lp-kicker" data-lp-stage="1">Experiencias</p>
+        <h2 class="lp-section__title" data-lp-stage="2">Publicadas</h2>
         <div class="lp-projects" id="lpProjects" data-lp-stage="3" aria-live="polite">
           <p class="lp-projects__loading">Cargando…</p>
         </div>
-      </div>
-    </section>
-
-    <section class="lp-section lp-chapter lp-scene" id="contacto" data-lp-light="contacto">
-      <div class="lp-section__inner lp-scene__content">
-        <p class="lp-kicker" data-lp-stage="1">Contacto</p>
-        <h2 class="lp-section__title" data-lp-stage="2">Asistente</h2>
-        <div class="lp-chat" id="lpChat" data-lp-stage="3">
-          <div class="lp-chat__messages" id="lpChatMessages">
-            <div class="lp-chat__bubble lp-chat__bubble--bot">
-              <p>Hola.</p>
-              <p>Soy el asistente de 360Preventa.</p>
-              <p>Puedo ayudarte a conocer la plataforma, resolver dudas y orientarte sobre nuestros servicios.</p>
-            </div>
-            <div class="lp-chat__suggestions" id="lpChatSuggestions" role="group" aria-label="Sugerencias">
-              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Qué es 360Preventa?</button>
-              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Cómo funciona?</button>
-              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Puedo administrar varios proyectos?</button>
-              <button type="button" class="lp-chat__chip" data-lp-suggest>¿Cómo solicito una demostración?</button>
-            </div>
-          </div>
-          <form class="lp-chat__compose" id="lpChatForm" autocomplete="off">
-            <label class="visually-hidden" for="lpChatInput">Mensaje</label>
-            <input id="lpChatInput" type="text" placeholder="Escribe un mensaje…" maxlength="400">
-            <button type="submit" class="lp-chat__send" aria-label="Enviar">↑</button>
-          </form>
-        </div>
-        <button type="button" class="lp-advisor" id="lpAdvisorBtn" data-lp-stage="4">Hablar con un asesor</button>
       </div>
     </section>
 
@@ -170,8 +152,43 @@
     </footer>
   </main>
 
+  <!-- Floating assistant -->
+  <button type="button" class="lp-fab" id="lpFab" aria-label="Abrir asistente 360Preventa" aria-expanded="false" aria-controls="lpAssistPanel">
+    <span class="lp-fab__mark" aria-hidden="true"></span>
+  </button>
+
+  <div class="lp-assist" id="lpAssistPanel" hidden aria-hidden="true">
+    <div class="lp-assist__backdrop" data-lp-assist-close></div>
+    <div class="lp-assist__panel" role="dialog" aria-modal="true" aria-labelledby="lpAssistTitle">
+      <header class="lp-assist__head">
+        <h2 class="lp-assist__title" id="lpAssistTitle">Asistente 360Preventa</h2>
+        <button type="button" class="lp-assist__close" data-lp-assist-close aria-label="Cerrar">×</button>
+      </header>
+      <div class="lp-assist__body">
+        <div class="lp-chat__messages" id="lpChatMessages">
+          <div class="lp-chat__bubble lp-chat__bubble--bot">
+            <p>Hola.</p>
+            <p>Soy el asistente de 360Preventa.</p>
+            <p>Puedo ayudarte a conocer la plataforma, resolver dudas y orientarte sobre nuestros servicios.</p>
+          </div>
+          <div class="lp-chat__suggestions" id="lpChatSuggestions" role="group" aria-label="Sugerencias">
+            <button type="button" class="lp-chat__chip" data-lp-suggest>¿Qué es 360Preventa?</button>
+            <button type="button" class="lp-chat__chip" data-lp-suggest>¿Cómo funciona?</button>
+            <button type="button" class="lp-chat__chip" data-lp-suggest>¿Qué incluye un Showroom Digital 360?</button>
+            <button type="button" class="lp-chat__chip" data-lp-suggest>Solicitar una demostración.</button>
+          </div>
+        </div>
+      </div>
+      <form class="lp-chat__compose lp-assist__compose" id="lpChatForm" autocomplete="off">
+        <label class="visually-hidden" for="lpChatInput">Mensaje</label>
+        <input id="lpChatInput" type="text" placeholder="Escribe un mensaje…" maxlength="400">
+        <button type="submit" class="lp-chat__send" aria-label="Enviar">↑</button>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/shared/config.js"></script>
-  <script src="/landing/js/landing.js?v=4"></script>
+  <script src="/landing/js/landing.js?v=5"></script>
 </body>
 </html>

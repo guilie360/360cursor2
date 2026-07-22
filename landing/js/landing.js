@@ -1,4 +1,4 @@
-/* 360Preventa landing — menu, scroll, projects, chat UI (no backend) */
+/* 360Preventa landing — narrative presentation + overlays */
 (function () {
   var FALLBACK_PROJECTS = [
     {
@@ -29,10 +29,10 @@
       '360Preventa es una plataforma para crear, administrar y publicar experiencias inmobiliarias web listas para compartir.',
     '¿Cómo funciona?':
       'Configuras el proyecto, organizas el contenido y lo publicas como una experiencia navegable. Todo desde un solo lugar.',
-    '¿Puedo administrar varios proyectos?':
-      'Sí. La plataforma está pensada para gestionar múltiples proyectos desde un mismo entorno de administración.',
-    '¿Cómo solicito una demostración?':
-      'Puedes usar “Hablar con un asesor” o dejar tu consulta aquí. Pronto te orientaremos sobre una demo personalizada.'
+    '¿Qué incluye un Showroom Digital 360?':
+      'Una experiencia web de preventa con recorridos inmersivos, contenido administrable y publicación lista para compartir.',
+    'Solicitar una demostración.':
+      'Perfecto. Déjanos tu consulta aquí o escribe “demostración”. Pronto te orientaremos sobre una demo personalizada.'
   };
 
   function $(id) {
@@ -56,11 +56,11 @@
   }
 
   /* ——— Menu ——— */
-  function initMenu() {
+  function initMenu(onPrices) {
     var btn = $('lpMenuBtn');
     var panel = $('lpMenuPanel');
     var backdrop = $('lpMenuBackdrop');
-    if (!btn || !panel || !backdrop) return;
+    if (!btn || !panel || !backdrop) return { close: function () {} };
 
     function setOpen(open) {
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -89,10 +89,6 @@
       setOpen(false);
     });
 
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') setOpen(false);
-    });
-
     panel.querySelectorAll('[data-lp-nav]').forEach(function (link) {
       link.addEventListener('click', function (e) {
         var href = link.getAttribute('href') || '';
@@ -101,12 +97,159 @@
         if (!target) return;
         e.preventDefault();
         setOpen(false);
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     });
+
+    var pricesBtn = $('lpPricesOpen');
+    if (pricesBtn) {
+      pricesBtn.addEventListener('click', function () {
+        setOpen(false);
+        if (onPrices) onPrices();
+      });
+    }
+
+    return {
+      close: function () {
+        setOpen(false);
+      },
+      isOpen: function () {
+        return btn.getAttribute('aria-expanded') === 'true';
+      }
+    };
   }
 
-  /* ——— Reveal: narrative scenes + staged internals ——— */
+  /* ——— Prices modal ——— */
+  function initPricesModal() {
+    var modal = $('lpPricesModal');
+    if (!modal) {
+      return { open: function () {}, close: function () {}, isOpen: function () { return false; } };
+    }
+
+    function setOpen(open) {
+      if (open) {
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('lp-modal-open');
+        requestAnimationFrame(function () {
+          modal.classList.add('is-open');
+        });
+      } else {
+        modal.classList.remove('is-open');
+        document.body.classList.remove('lp-modal-open');
+        window.setTimeout(function () {
+          if (!modal.classList.contains('is-open')) {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+          }
+        }, 280);
+      }
+    }
+
+    modal.querySelectorAll('[data-lp-prices-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        setOpen(false);
+      });
+    });
+
+    return {
+      open: function () { setOpen(true); },
+      close: function () { setOpen(false); },
+      isOpen: function () { return modal.classList.contains('is-open'); }
+    };
+  }
+
+  /* ——— Floating assistant ——— */
+  function initAssist() {
+    var fab = $('lpFab');
+    var panel = $('lpAssistPanel');
+    var form = $('lpChatForm');
+    var input = $('lpChatInput');
+    var suggestions = $('lpChatSuggestions');
+    if (!fab || !panel) return { close: function () {}, isOpen: function () { return false; } };
+
+    function setOpen(open) {
+      fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        panel.hidden = false;
+        panel.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(function () {
+          panel.classList.add('is-open');
+          fab.classList.add('is-active');
+        });
+        if (input) window.setTimeout(function () { input.focus(); }, 200);
+      } else {
+        panel.classList.remove('is-open');
+        fab.classList.remove('is-active');
+        window.setTimeout(function () {
+          if (!panel.classList.contains('is-open')) {
+            panel.hidden = true;
+            panel.setAttribute('aria-hidden', 'true');
+          }
+        }, 280);
+      }
+    }
+
+    fab.addEventListener('click', function () {
+      setOpen(fab.getAttribute('aria-expanded') !== 'true');
+    });
+
+    panel.querySelectorAll('[data-lp-assist-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        setOpen(false);
+      });
+    });
+
+    function appendBubble(text, who) {
+      var box = $('lpChatMessages');
+      if (!box) return;
+      var sug = $('lpChatSuggestions');
+      var div = document.createElement('div');
+      div.className = 'lp-chat__bubble lp-chat__bubble--' + (who === 'user' ? 'user' : 'bot');
+      div.innerHTML = '<p>' + escapeHtml(text) + '</p>';
+      if (sug) box.insertBefore(div, sug);
+      else box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendUserMessage(text) {
+      text = String(text || '').trim();
+      if (!text) return;
+      appendBubble(text, 'user');
+      var reply =
+        SUGGEST_REPLIES[text] ||
+        'Gracias. Pronto podré responder con más detalle. Mientras tanto, explora las experiencias publicadas.';
+      window.setTimeout(function () {
+        appendBubble(reply, 'bot');
+      }, 480);
+    }
+
+    if (form && input) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var text = (input.value || '').trim();
+        if (!text) return;
+        input.value = '';
+        sendUserMessage(text);
+      });
+    }
+
+    if (suggestions) {
+      suggestions.addEventListener('click', function (e) {
+        var chip = e.target.closest('[data-lp-suggest]');
+        if (!chip) return;
+        sendUserMessage(chip.textContent || '');
+      });
+    }
+
+    return {
+      open: function () { setOpen(true); },
+      close: function () { setOpen(false); },
+      isOpen: function () { return panel.classList.contains('is-open'); }
+    };
+  }
+
+  /* ——— Reveal ——— */
   function initReveal() {
     var scenes = document.querySelectorAll('.lp-scene');
 
@@ -130,10 +273,7 @@
           io.unobserve(entry.target);
         });
       },
-      {
-        rootMargin: '0px 0px -12% 0px',
-        threshold: 0.28
-      }
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.28 }
     );
 
     scenes.forEach(function (el) {
@@ -146,7 +286,6 @@
     if (!cards.length) return;
     cards.forEach(function (el, i) {
       el.classList.add('lp-reveal');
-      /* After scene title/subtitle, cards follow ~100ms apart */
       el.style.setProperty('--lp-stagger', String(220 + Math.min(i, 5) * 100) + 'ms');
     });
 
@@ -182,7 +321,6 @@
     });
   }
 
-  /* ——— Projects ——— */
   function projectCard(p) {
     var slug = p.slug || '';
     var name = p.nombre || slug || 'Proyecto';
@@ -255,75 +393,30 @@
     }
   }
 
-  /* ——— Chat (UI only) ——— */
-  function appendBubble(text, who) {
-    var box = $('lpChatMessages');
-    if (!box) return;
-    var suggestions = $('lpChatSuggestions');
-    var div = document.createElement('div');
-    div.className = 'lp-chat__bubble lp-chat__bubble--' + (who === 'user' ? 'user' : 'bot');
-    div.innerHTML = '<p>' + escapeHtml(text) + '</p>';
-    if (suggestions) box.insertBefore(div, suggestions);
-    else box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function sendUserMessage(text) {
-    text = String(text || '').trim();
-    if (!text) return;
-    appendBubble(text, 'user');
-    var reply =
-      SUGGEST_REPLIES[text] ||
-      'Gracias. Pronto podré responder con más detalle. Mientras tanto, explora los proyectos o habla con un asesor.';
-    window.setTimeout(function () {
-      appendBubble(reply, 'bot');
-    }, 480);
-  }
-
-  function initChat() {
-    var form = $('lpChatForm');
-    var input = $('lpChatInput');
-    var advisor = $('lpAdvisorBtn');
-    var suggestions = $('lpChatSuggestions');
-
-    if (form && input) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var text = (input.value || '').trim();
-        if (!text) return;
-        input.value = '';
-        sendUserMessage(text);
-      });
-    }
-
-    if (suggestions) {
-      suggestions.addEventListener('click', function (e) {
-        var chip = e.target.closest('[data-lp-suggest]');
-        if (!chip) return;
-        sendUserMessage(chip.textContent || '');
-      });
-    }
-
-    if (advisor) {
-      advisor.addEventListener('click', function () {
-        if (advisor.classList.contains('is-noted')) return;
-        advisor.classList.add('is-noted');
-        advisor.textContent = 'Próximamente';
-        appendBubble('Un asesor de 360Preventa se pondrá en contacto contigo pronto. (Placeholder)', 'bot');
-      });
-    }
-  }
-
-  function initFooterYear() {
-    var el = $('lpYear');
-    if (el) el.textContent = String(new Date().getFullYear());
-  }
-
   function boot() {
-    initFooterYear();
-    initMenu();
+    var year = $('lpYear');
+    if (year) year.textContent = String(new Date().getFullYear());
+
+    var prices = initPricesModal();
+    var assist = initAssist();
+    var menu = initMenu(function () {
+      prices.open();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (prices.isOpen()) {
+        prices.close();
+        return;
+      }
+      if (assist.isOpen()) {
+        assist.close();
+        return;
+      }
+      if (menu.isOpen()) menu.close();
+    });
+
     initReveal();
-    initChat();
     loadProjects();
   }
 
