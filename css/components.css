@@ -1600,13 +1600,16 @@ body:has(#deploy-marker) .project-back-btn {
   }
 
   /*
-   * V3.8 — Volver (sistema, Nivel 3): solo ←, Hall glass, más discreto.
-   * Misma columna izquierda que Menú; misma fila superior que Compartir.
+   * V3.8.1 — Controles superiores del sistema (solo iconos, como Compartir).
+   * Sin Hall / glass / fondo. Misma familia visual que .share-float.
    */
   #projectBackBtnMobile {
     display: none !important;
   }
-  .project-back-btn:not([hidden]) {
+  .project-back-btn:not([hidden]),
+  body[data-button-glass] .project-back-btn:not([hidden]),
+  body[data-button-hover-glass] .project-back-btn:not([hidden]),
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
@@ -1621,58 +1624,100 @@ body:has(#deploy-marker) .project-back-btn {
     min-height: var(--mobile-back-size);
     padding: 0;
     box-sizing: border-box;
-    background: var(--btn-glass-surface, var(--btn-surface));
-    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
-    border-radius: var(--menu-card-radius, 14px);
-    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    box-shadow:
-      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
-    color: var(--text-primary);
+    background: none !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    color: #fff;
     font-size: 0;
-    font-weight: 500;
+    font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
-    opacity: 0.48;
-    transition:
-      background 0.3s ease,
-      color 0.3s ease,
-      border-color 0.3s ease,
-      box-shadow 0.3s ease,
-      transform 0.25s ease,
-      opacity 0.25s ease;
+    opacity: 0.78;
+    filter: none;
+    transform: none;
+    transition: transform 0.3s ease, opacity 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
   }
-  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
-    border-radius: 999px;
+  .project-back-btn:not([hidden])::before {
+    content: none !important;
+    display: none !important;
   }
-  .project-back-btn:not([hidden]) .project-back-btn__icon,
   .project-back-btn:not([hidden]) .project-back-btn__label {
     display: none !important;
   }
-  .project-back-btn:not([hidden])::before {
-    content: '←';
-    font-size: 1.05rem;
-    line-height: 1;
-    opacity: 0.92;
+  .project-back-btn:not([hidden]) .project-back-btn__icon {
+    display: block !important;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    opacity: 1;
+    stroke: #fff;
+    stroke-width: 1.6;
+    fill: none;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));
   }
   .project-back-btn:not([hidden]):hover,
   .project-back-btn:not([hidden]):focus-visible,
   body[data-button-hover-glass="soft"] .project-back-btn:not([hidden]):hover,
-  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover {
-    background: var(--btn-glass-hover, var(--hover));
-    color: var(--btn-text-hover, var(--text-primary));
-    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-    transform: translateY(-1px);
-    opacity: 0.72;
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.36),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover,
+  body[data-button-glass] .project-back-btn:not([hidden]):hover {
+    background: none !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    color: #fff;
+    opacity: 1;
+    transform: scale(1.1);
+    filter: none;
   }
   .project-back-btn:not([hidden]):active {
-    transform: translateY(0);
-    opacity: 0.55;
+    background: none !important;
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+
+  /* Compartir — misma familia de icono de sistema que ← */
+  .share-float:not(.is-float-hidden):not([hidden]) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: var(--mobile-chrome-top);
+    right: var(--mobile-chrome-right);
+    bottom: auto;
+    left: auto;
+    width: var(--mobile-back-size);
+    height: var(--mobile-back-size);
+    padding: 0;
+    z-index: 930;
+    opacity: 0.78;
+    background: none;
+    border: none;
+    box-shadow: none;
+    transition: transform 0.3s ease, opacity 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .share-float svg {
+    width: 18px;
+    height: 18px;
+    stroke: #fff;
+    fill: none;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));
+  }
+  .share-float:hover,
+  .share-float:focus-visible {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  .share-float:active {
+    transform: scale(1.05);
+    opacity: 0.9;
   }
 
   /*
@@ -1800,29 +1845,6 @@ body:has(#deploy-marker) .project-back-btn {
   }
   .hero-secondary-actions.is-assist-only:not([hidden]) {
     display:none !important;
-  }
-
-  /*
-   * Compartir (Nivel 2): misma fila que ←, misma columna derecha que Asistente.
-   * Hit area alineada a la retícula; icono ligero.
-   */
-  .share-float:not(.is-float-hidden):not([hidden]) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    top: var(--mobile-chrome-top);
-    right: var(--mobile-chrome-right);
-    bottom: auto;
-    left: auto;
-    width: var(--mobile-back-size);
-    height: var(--mobile-back-size);
-    padding: 0;
-    z-index: 930;
-    opacity: 0.78;
-  }
-  .share-float svg {
-    width: 18px;
-    height: 18px;
   }
   .hero-secondary-actions:not([hidden]):not(.is-assist-only) {
     display: flex;
