@@ -1,10 +1,13 @@
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/global-close.js');}catch(_e){}
-/* Botón global de cerrar + pantalla completa */
+/* Shell global: única X de cierre + pantalla completa (desktop).
+   Los módulos NO controlan la X; solo informan estado vía nav/DOM. GlobalClose decide. */
 var GlobalClose = (function () {
   var stack = null;
   var btn = null;
   var fullscreenBtn = null;
   var recoveryBtn = null;
+  var hideCloseTimer = null;
+  var HIDE_CLOSE_MS = 120;
   var DESKTOP_MEDIA = window.matchMedia('(min-width: 601px)');
 
   function isDesktopWithKeyboard() {
@@ -59,8 +62,25 @@ var GlobalClose = (function () {
       WebEffects.isConfirmOpen();
   }
 
-  function isOverlayOpen() {
+  function isDomCloseableSurfaceOpen() {
+    var ids = [
+      'unitsPopup', 'tour360Popup', 'pdfModal', 'videoModal', 'rendersModal',
+      'locationModal', 'calculatorModal', 'descripcionModal', 'amenidadesModal',
+      'estadoModal', 'constructoraModal', 'descargasModal', 'sphereModal',
+      'authExperienceModal', 'emailVerificationModal', 'projectThemeConfirmModal'
+    ];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (el && el.classList.contains('active')) return true;
+    }
+    if (typeof lightboxOpen !== 'undefined' && lightboxOpen) return true;
+    return false;
+  }
+
+  /** Única fuente de verdad: ¿hay algo que el Shell deba poder cerrar? */
+  function isCloseableSessionActive() {
     return (typeof navStack !== 'undefined' && navStack.length > 0) ||
+      isDomCloseableSurfaceOpen() ||
       isMainMenuOpen() ||
       isAuthModalOpen() ||
       isVerificationModalOpen() ||
@@ -72,12 +92,20 @@ var GlobalClose = (function () {
       (typeof lightboxOpen !== 'undefined' && lightboxOpen);
   }
 
+  function isOverlayOpen() {
+    return isCloseableSessionActive();
+  }
+
   function ensureGlobalCloseButton() {
     stack = stack || document.getElementById('globalActionStack');
     if (!stack) {
       stack = document.createElement('div');
       stack.id = 'globalActionStack';
       stack.className = 'global-action-stack';
+      document.body.appendChild(stack);
+    }
+    /* La X vive en el Shell (body); si algo la movió, devolverla */
+    if (stack.parentNode !== document.body) {
       document.body.appendChild(stack);
     }
 
@@ -90,7 +118,12 @@ var GlobalClose = (function () {
       btn.setAttribute('aria-label', 'Cerrar');
       btn.innerHTML = '&times;';
       stack.insertBefore(btn, stack.firstChild);
+    } else if (btn.parentNode !== stack) {
+      stack.insertBefore(btn, stack.firstChild);
     }
+    /* Nunca usar atributo hidden: el UA aplica display:none !important */
+    btn.removeAttribute('hidden');
+
     if (!btn.dataset.bound) {
       btn.dataset.bound = '1';
       btn.addEventListener('click', function () {
@@ -108,7 +141,11 @@ var GlobalClose = (function () {
       fullscreenBtn.setAttribute('aria-pressed', 'false');
       fullscreenBtn.innerHTML = '<span class="global-fullscreen-icon" aria-hidden="true">⛶</span>';
       stack.appendChild(fullscreenBtn);
+    } else if (fullscreenBtn.parentNode !== stack) {
+      stack.appendChild(fullscreenBtn);
     }
+    fullscreenBtn.removeAttribute('hidden');
+
     if (!fullscreenBtn.dataset.bound) {
       fullscreenBtn.dataset.bound = '1';
       fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -162,28 +199,70 @@ var GlobalClose = (function () {
     }
   }
 
-  function update() {
+  function clearKeyboardPin() {
+    if (!stack) return;
+    stack.style.bottom = '';
+    stack.style.left = '';
+    stack.style.right = '';
+    stack.style.top = '';
+    stack.style.transform = '';
+  }
+
+  function pinStackToVisualViewport(enable) {
+    if (!stack) return;
+    if (!enable || !window.visualViewport || isMainMenuOpen()) {
+      clearKeyboardPin();
+      return;
+    }
+    var vv = window.visualViewport;
+    var offsetBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    var offsetRight = Math.max(0, window.innerWidth - (vv.width + vv.offsetLeft));
+    /* Solo teclado/viewport reducido — no compensar alineación óptica */
+    if (offsetBottom > 2 || offsetRight > 2) {
+      stack.style.top = 'auto';
+      stack.style.left = 'auto';
+      stack.style.transform = 'none';
+      stack.style.right = (offsetRight + 12) + 'px';
+      stack.style.bottom = offsetBottom + 'px';
+    } else {
+      clearKeyboardPin();
+    }
+  }
+
+  /**
+   * Único controlador de visibilidad de la X.
+   * No muta z-index ni pointer-events; no desmonta el nodo.
+   */
+  function applyShellCloseState(showClose, showFullscreen) {
     ensureGlobalCloseButton();
     ensureRecoveryCloseButton();
 
-    var showClose = isOverlayOpen();
-    var showFullscreen = DESKTOP_MEDIA.matches;
     var showStack = showClose || showFullscreen;
+    document.body.classList.toggle('has-global-close', showClose);
 
-    btn.hidden = !showClose;
-    fullscreenBtn.hidden = !showFullscreen;
-    btn.classList.toggle('is-visible', showClose);
-    fullscreenBtn.classList.toggle('is-visible', showFullscreen);
     if (stack) {
       stack.classList.toggle('is-visible', showStack);
       stack.classList.toggle('is-hero-only', showFullscreen && !showClose);
-      pinStackToVisualViewport(showClose && !DESKTOP_MEDIA.matches && showStack);
     }
-    document.body.classList.toggle('has-global-close', showClose);
 
+    if (btn) {
+      btn.removeAttribute('hidden');
+      btn.classList.toggle('is-visible', showClose);
+      btn.setAttribute('aria-hidden', showClose ? 'false' : 'true');
+      btn.tabIndex = showClose ? 0 : -1;
+    }
+
+    if (fullscreenBtn) {
+      fullscreenBtn.removeAttribute('hidden');
+      fullscreenBtn.classList.toggle('is-visible', showFullscreen);
+      fullscreenBtn.setAttribute('aria-hidden', showFullscreen ? 'false' : 'true');
+    }
+
+    pinStackToVisualViewport(showClose && !DESKTOP_MEDIA.matches && showStack);
     updateFullscreenState();
+
     var menuOpen = isMainMenuOpen();
-    var globalCloseVisible = !!(btn && showClose && !btn.hidden && btn.classList.contains('is-visible'));
+    var globalCloseVisible = !!(showClose && btn && btn.classList.contains('is-visible'));
     if (recoveryBtn) {
       var needsRecovery = menuOpen && !globalCloseVisible;
       recoveryBtn.hidden = !needsRecovery;
@@ -191,27 +270,38 @@ var GlobalClose = (function () {
     }
   }
 
-  function pinStackToVisualViewport(enable) {
-    if (!stack) return;
-    if (!enable || !window.visualViewport || isMainMenuOpen()) {
-      stack.style.bottom = '';
-      stack.style.left = '';
-      stack.style.right = '';
-      stack.style.transform = '';
-      stack.style.top = '';
+  function update() {
+    ensureGlobalCloseButton();
+
+    var showClose = isCloseableSessionActive();
+    var showFullscreen = DESKTOP_MEDIA.matches;
+
+    if (showClose) {
+      if (hideCloseTimer) {
+        clearTimeout(hideCloseTimer);
+        hideCloseTimer = null;
+      }
+      applyShellCloseState(true, showFullscreen);
       return;
     }
-    var vv = window.visualViewport;
-    var offsetBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
-    var safe = 18;
-    var rightSafe = 12;
-    stack.style.top = 'auto';
-    stack.style.left = 'auto';
-    stack.style.right = Math.max(rightSafe, (window.visualViewport && typeof vv.offsetLeft === 'number'
-      ? Math.max(0, window.innerWidth - (vv.width + vv.offsetLeft))
-      : 0) + rightSafe) + 'px';
-    stack.style.transform = 'none';
-    stack.style.bottom = Math.max(safe, offsetBottom + safe) + 'px';
+
+    /* Debounce al ocultar: evita parpadeos en push/pop / re-render */
+    var currentlyVisible = !!(btn && btn.classList.contains('is-visible'));
+    if (currentlyVisible) {
+      if (!hideCloseTimer) {
+        hideCloseTimer = setTimeout(function () {
+          hideCloseTimer = null;
+          if (!isCloseableSessionActive()) {
+            applyShellCloseState(false, DESKTOP_MEDIA.matches);
+          }
+        }, HIDE_CLOSE_MS);
+      }
+      pinStackToVisualViewport(false);
+      updateFullscreenState();
+      return;
+    }
+
+    applyShellCloseState(false, showFullscreen);
   }
 
   function handleClose(options) {
@@ -289,39 +379,29 @@ var GlobalClose = (function () {
       return;
     }
     if (isStyleEngineModalOpen()) {
-      if (typeof StyleEngineColorPicker !== 'undefined' && StyleEngineColorPicker.isOpen()) {
-        StyleEngineColorPicker.close(false);
-      } else if (typeof StyleEngine !== 'undefined') {
-        StyleEngine.requestClose();
+      if (typeof StyleEngineColorPicker !== 'undefined' &&
+          typeof StyleEngineColorPicker.isOpen === 'function' &&
+          StyleEngineColorPicker.isOpen() &&
+          typeof StyleEngineColorPicker.close === 'function') {
+        StyleEngineColorPicker.close();
+      } else if (typeof StyleEngine !== 'undefined' && typeof StyleEngine.close === 'function') {
+        StyleEngine.close();
       }
-      update();
-      return;
-    }
-    if (typeof VisitorPersonalizePanel !== 'undefined' &&
-        typeof VisitorPersonalizePanel.isEditorSessionLocked === 'function' &&
-        VisitorPersonalizePanel.isEditorSessionLocked() &&
-        fromEscape) {
-      if (typeof VisitorPersonalizePanel.handlePersonalizeEscape === 'function' &&
-          VisitorPersonalizePanel.handlePersonalizeEscape()) {
-        update();
-        return;
-      }
-    }
-    if (isVerificationModalOpen()) {
-      VisitorEmailVerification.close();
       update();
       return;
     }
     if (isAuthModalOpen()) {
-      /* Login/registro: no Escape ni cierre implícito; solo X explícita. */
-      var authLocked = typeof VisitorAuthModal !== 'undefined' &&
-        typeof VisitorAuthModal.isSessionLocked === 'function' &&
-        VisitorAuthModal.isSessionLocked();
-      if (authLocked && !explicitUserClose) {
-        update();
-        return;
+      if (typeof VisitorAuthModal !== 'undefined' && typeof VisitorAuthModal.close === 'function') {
+        VisitorAuthModal.close();
       }
-      VisitorAuthModal.close();
+      update();
+      return;
+    }
+    if (isVerificationModalOpen()) {
+      if (typeof VisitorEmailVerification !== 'undefined' &&
+          typeof VisitorEmailVerification.closeModal === 'function') {
+        VisitorEmailVerification.closeModal();
+      }
       update();
       return;
     }
@@ -330,55 +410,9 @@ var GlobalClose = (function () {
       update();
       return;
     }
-    if (document.body.classList.contains('global-close-docked') && isMainMenuOpen()) {
-      if (isStyleV3Locked()) {
-        if (!explicitUserClose) {
-          update();
-          return;
-        }
-        authorizeStyleV3Close();
-        if (typeof window.closeMainMenuIfOpen === 'function') {
-          window.closeMainMenuIfOpen();
-        }
-        update();
-        return;
-      }
-      if (typeof VisitorPersonalizePanel !== 'undefined' &&
-          typeof VisitorPersonalizePanel.isOnPersonalizarPanel === 'function' &&
-          VisitorPersonalizePanel.isOnPersonalizarPanel()) {
-        if (fromEscape) {
-          if (typeof VisitorPersonalizePanel.handlePersonalizeEscape === 'function') {
-            VisitorPersonalizePanel.handlePersonalizeEscape();
-          }
-          update();
-          return;
-        }
-        if (typeof VisitorPersonalizePanel.dismissThemeEditorLayer === 'function') {
-          VisitorPersonalizePanel.dismissThemeEditorLayer();
-        }
-        if (typeof window.closeMainMenuIfOpen === 'function') {
-          window.closeMainMenuIfOpen();
-        }
-        update();
-        return;
-      }
-      if (fromEscape &&
-          typeof VisitorPersonalizePanel !== 'undefined' &&
-          typeof VisitorPersonalizePanel.dismissThemeEditorLayer === 'function' &&
-          VisitorPersonalizePanel.dismissThemeEditorLayer()) {
-        update();
-        return;
-      }
-      if (typeof window.closeMainMenuIfOpen === 'function') {
-        window.closeMainMenuIfOpen();
-      }
-      update();
-      return;
-    }
-    if (fromEscape &&
-        typeof VisitorPersonalizePanel !== 'undefined' &&
-        typeof VisitorPersonalizePanel.handlePersonalizeEscape === 'function' &&
-        VisitorPersonalizePanel.handlePersonalizeEscape()) {
+    if (typeof VisitorPersonalizePanel !== 'undefined' &&
+        typeof VisitorPersonalizePanel.dismissThemeEditorLayer === 'function' &&
+        VisitorPersonalizePanel.dismissThemeEditorLayer()) {
       update();
       return;
     }
@@ -427,6 +461,11 @@ var GlobalClose = (function () {
 
     window.addEventListener('resize', update);
     document.addEventListener('visibilitychange', update);
+    if (typeof DESKTOP_MEDIA.addEventListener === 'function') {
+      DESKTOP_MEDIA.addEventListener('change', update);
+    } else if (typeof DESKTOP_MEDIA.addListener === 'function') {
+      DESKTOP_MEDIA.addListener(update);
+    }
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', update);
@@ -435,16 +474,26 @@ var GlobalClose = (function () {
 
     var menu = document.getElementById('mainMenu');
     if (menu && typeof MutationObserver !== 'undefined') {
-      var observer = new MutationObserver(function () {
-        if (isMainMenuOpen() || document.body.classList.contains('has-global-close')) {
-          update();
-        }
-      });
+      var observer = new MutationObserver(function () { update(); });
       observer.observe(menu, { attributes: true, attributeFilter: ['class'] });
     }
 
+    if (typeof MutationObserver !== 'undefined') {
+      var overlayIds = [
+        'unitsPopup', 'calculatorModal', 'pdfModal', 'tour360Popup', 'sphereModal',
+        'videoModal', 'rendersModal', 'amenidadesModal', 'descargasModal',
+        'locationModal', 'descripcionModal', 'estadoModal', 'constructoraModal',
+        'authExperienceModal', 'emailVerificationModal'
+      ];
+      var overlayObserver = new MutationObserver(function () { update(); });
+      overlayIds.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) overlayObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+      });
+    }
+
     update();
-  
+
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/global-close.js :: init');}catch(_bd){}
   }
@@ -455,7 +504,8 @@ var GlobalClose = (function () {
     update: update,
     handleClose: handleClose,
     toggleFullscreen: toggleFullscreen,
-    isDesktopWithKeyboard: isDesktopWithKeyboard
+    isDesktopWithKeyboard: isDesktopWithKeyboard,
+    isCloseableSessionActive: isCloseableSessionActive
   };
 })();
 

@@ -1282,6 +1282,9 @@ function setUnitsViewMode(mode) {
       ? 'Compara dos opciones con claridad y descarga tu análisis en PDF.'
       : 'Explora planos, precios y calcula tu cuota.';
   }
+  if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+    GlobalClose.update();
+  }
 }
 
 function exitUnitsCompareMode() {
@@ -3686,8 +3689,20 @@ var SCREEN_HOOKS = {
     }
   },
   plans: {
-    onEnter: function(k){ setupPlans(k); },
-    onExit:  function(){ document.getElementById('galleryScroll').innerHTML = ''; }
+    onEnter: function(k){
+      setupPlans(k);
+      if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+        GlobalClose.update();
+        requestAnimationFrame(function () { GlobalClose.update(); });
+      }
+    },
+    onExit: function () {
+      var gallery = document.getElementById('galleryScroll');
+      if (gallery) gallery.innerHTML = '';
+      if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+        GlobalClose.update();
+      }
+    }
   },
   estado: {
     onEnter: function(){ animateProgressBars(); }
@@ -4093,7 +4108,11 @@ window.__mainTraceSafe('bind mainMenuBackdrop', function () {
 });
 var menuNavBackEl = document.getElementById('menuNavBack');
 if (menuNavBackEl) {
-  menuNavBackEl.addEventListener('click', function () {
+  menuNavBackEl.addEventListener('click', function (e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isStyleV3MenuLocked()) return;
     if (typeof VisitorPersonalizePanel !== 'undefined' &&
         typeof VisitorPersonalizePanel.dismissThemeEditorLayer === 'function' &&
@@ -4101,7 +4120,8 @@ if (menuNavBackEl) {
       syncNavigationCloseState();
       return;
     }
-    authorizeGoBack();
+    /* Gestura explícita: no debe quedar bloqueada por return-guard / tab-blur */
+    authorizeGoBackForce();
     goBack();
   });
 }
