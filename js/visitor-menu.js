@@ -43,10 +43,12 @@ var VisitorMenu = (function () {
 
   function primaryStripActionHtml() {
     if (isAdminProfile()) {
-      /* Admin: Administrar (sin Mi perfil). Style V.3 se añade aparte. */
+      /* Admin: Administrar (desktop) / Admin (móvil). Style V.3 se añade aparte. */
       return (
         '<a href="' + escapeHtml(adminBuilderHref()) + '" class="menu-profile-action menu-admin-btn">' +
-          ICON_ADMIN + '<span>Administrar</span>' +
+          ICON_ADMIN +
+          '<span class="menu-action-label-desk">Administrar</span>' +
+          '<span class="menu-action-label-mobile">Admin</span>' +
         '</a>'
       );
     }
@@ -97,12 +99,18 @@ var VisitorMenu = (function () {
                 '<button type="button" class="menu-profile-action menu-personalize-v2-btn">' +
                   ICON_SETTINGS +
                   '<span class="menu-action-label-desk">' + STYLE_V3_LABEL + '</span>' +
-                  '<span class="menu-action-label-mobile">Style Engine V3</span>' +
+                  '<span class="menu-action-label-mobile">Style</span>' +
                 '</button>'
               )
               : '') +
             '<button type="button" class="menu-profile-action menu-logout-btn">' +
-              ICON_LOGOUT + '<span>Cerrar sesión</span>' +
+              ICON_LOGOUT +
+              (isAdminProfile()
+                ? (
+                  '<span class="menu-action-label-desk">Cerrar sesión</span>' +
+                  '<span class="menu-action-label-mobile">Salir</span>'
+                )
+                : '<span>Cerrar sesión</span>') +
             '</button>' +
             '<button type="button" class="menu-profile-close" id="menuProfileCloseBtn" aria-label="Cerrar menú" hidden>&times;</button>' +
           '</div>' +

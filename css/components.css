@@ -749,18 +749,25 @@ body[data-button-hover-glass="glass"] .auth-experience-box .outline-btn:hover {
 }
 
 .menu-profile-avatar-image {
-  background:var(--glass-surface);
-  overflow:hidden;
+  background: transparent !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+.menu-profile-avatar.menu-profile-avatar-image {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 .menu-profile-avatar-image img {
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  border-radius:50%;
-  display:block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 .menu-profile-avatar-image::after {
-  background:radial-gradient(ellipse at center, transparent 62%, color-mix(in srgb, black 14%, transparent) 100%);
+  display: none !important;
+  content: none !important;
+  background: none !important;
 }
 
 .menu-profile-name {
@@ -1506,6 +1513,96 @@ body:has(#deploy-marker) .project-back-btn {
 }
 .project-back-btn:hover .project-back-btn__icon {
   opacity: 1;
+}
+
+/* Desktop — Hall unificado: ← Demos + Asistente (misma familia que Iniciar) */
+@media (min-width: 601px) {
+  .project-back-btn:not([hidden]),
+  body[data-button-glass] .project-back-btn:not([hidden]) {
+    background: var(--btn-glass-surface, var(--btn-surface));
+    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+    border-radius: var(--menu-card-radius, 14px);
+    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    color: var(--text-primary);
+    transition:
+      background 0.3s ease,
+      color 0.3s ease,
+      border-color 0.3s ease,
+      border-width 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.25s ease;
+  }
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .project-back-btn:not([hidden]) {
+    border-radius: 999px;
+  }
+  .project-back-btn:not([hidden]):hover,
+  .project-back-btn:not([hidden]):focus-visible,
+  body[data-button-hover-glass="soft"] .project-back-btn:not([hidden]):hover,
+  body[data-button-hover-glass="glass"] .project-back-btn:not([hidden]):hover {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--text-primary));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform: translateY(-1px);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
+  .project-back-btn:not([hidden]):active {
+    transform: translateY(0);
+  }
+
+  .pa-fab,
+  body[data-button-glass="soft"] .pa-fab,
+  body[data-button-glass="glass"] .pa-fab,
+  body[data-button-glass="solid"] .pa-fab {
+    background: var(--btn-glass-surface, var(--btn-surface));
+    border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+    border-radius: var(--menu-card-radius, 14px);
+    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    color: var(--text-primary);
+    filter: none;
+    transition:
+      background 0.3s ease,
+      color 0.3s ease,
+      border-color 0.3s ease,
+      border-width 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.25s ease;
+  }
+  body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-fab {
+    border-radius: 999px;
+  }
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active,
+  body[data-button-hover-glass="soft"] .pa-fab:hover,
+  body[data-button-hover-glass="glass"] .pa-fab:hover {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--text-primary));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform: translateY(-1px);
+    filter: none;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
+  .pa-fab:active {
+    transform: translateY(0);
+  }
+  .pa-fab__mark {
+    border-color: color-mix(in srgb, var(--text-primary) 55%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 4%, transparent);
+  }
 }
 
 /* ================= ACCIONES SECUNDARIAS HERO (móvil) ================= */
@@ -2320,8 +2417,8 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
     align-items: center;
     justify-content: flex-start;
     padding-top: max(16px, env(safe-area-inset-top));
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 24px;
+    padding-right: 24px;
     padding-bottom: calc(
       var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 28px
     );
@@ -2343,8 +2440,9 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
   .downloads-modal .downloads-list {
     position: relative;
     z-index: 3;
-    width: min(420px, 100%);
-    max-width: calc(100% - 8px);
+    /* Composición equilibrada: mismo margen L/R, eje centrado */
+    width: min(420px, calc(100% - 48px));
+    max-width: min(420px, calc(100vw - 48px));
     height: auto !important;
     min-height: 0;
     max-height: none !important;
@@ -2358,11 +2456,72 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
     padding-bottom: 8px;
     margin-left: auto;
     margin-right: auto;
+    box-sizing: border-box;
+  }
+  #descargasModal .downloads-list[hidden],
+  .downloads-modal .downloads-list[hidden] {
+    display: none !important;
   }
   #descargasModal .download-item,
   #descargasModal .download-item--animate {
     flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
+
+  /*
+   * V3.8.5 — Loader independiente (fuera del listado), centrado en viewport.
+   * Estado 1: solo loader. Estado 2: solo listado.
+   */
+  .downloads-loader {
+    display: none !important;
+  }
+  .downloads-stage.is-charging {
+    overflow: hidden !important;
+    justify-content: center;
+    align-items: center;
+  }
+  .downloads-stage.is-charging .downloads-list,
+  .downloads-stage.is-charging .downloads-list[hidden] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  .downloads-stage.is-charging .downloads-loader {
+    display: flex !important;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+  .downloads-stage.is-charging .downloads-loader .download-item--loader {
+    width: min(420px, calc(100vw - 48px));
+    max-width: min(420px, calc(100vw - 48px));
+    margin: 0;
+    cursor: default;
+    pointer-events: none;
+  }
+  .downloads-stage.is-charging .downloads-intro-pct {
+    position: fixed;
+    left: 50%;
+    top: calc(50% + 44px);
+    bottom: auto;
+    transform: translate(-50%, 0);
+    z-index: 26;
+  }
+  .downloads-stage:not(.is-charging) .downloads-loader,
+  .downloads-loader[hidden] {
+    display: none !important;
+  }
+  .downloads-stage.is-ready .downloads-list,
+  .downloads-stage.is-spreading .downloads-list {
+    display: flex !important;
+  }
+
   .downloads-intro-pct {
     bottom: calc(var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 10px);
   }
@@ -5964,6 +6123,10 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
   overflow:visible;
   pointer-events:auto;
 }
+/* Loader host: solo móvil lo activa en is-charging; desktop siempre oculto */
+.downloads-loader {
+  display:none !important;
+}
 .downloads-stage.is-charging .downloads-list {
   gap:0;
 }
@@ -6787,8 +6950,8 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
     max-height:none !important;
     height:auto !important;
     overflow:visible !important;
-    width:min(420px, 100%);
-    max-width:calc(100% - 8px);
+    width:min(420px, calc(100% - 48px));
+    max-width:min(420px, calc(100vw - 48px));
     align-self:center;
     margin-left:auto;
     margin-right:auto;

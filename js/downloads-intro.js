@@ -1,6 +1,7 @@
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/downloads-intro.js');}catch(_e){}
 /* =========================================================
    DESCARGAS — carga central + lista flex centrada
+   Móvil V3.8.5: loader independiente centrado (fuera del listado)
    ========================================================= */
 
 var DownloadsIntro = (function () {
@@ -10,13 +11,31 @@ var DownloadsIntro = (function () {
   var stageEl = null;
   var pctEl = null;
   var listEl = null;
+  var loaderEl = null;
   var animFrame = 0;
   var timers = [];
+
+  function isMobileViewport() {
+    try {
+      return window.matchMedia('(max-width: 600px)').matches;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function ensureElements() {
     stageEl = document.getElementById('downloadsStage');
     pctEl = document.getElementById('downloadsIntroPct');
     listEl = document.getElementById('downloadsList');
+    loaderEl = document.getElementById('downloadsLoader');
+    if (!loaderEl && stageEl) {
+      loaderEl = document.createElement('div');
+      loaderEl.id = 'downloadsLoader';
+      loaderEl.className = 'downloads-loader';
+      loaderEl.setAttribute('hidden', '');
+      loaderEl.setAttribute('aria-hidden', 'true');
+      stageEl.insertBefore(loaderEl, stageEl.firstChild);
+    }
   }
 
   function getItems() {
@@ -99,6 +118,20 @@ var DownloadsIntro = (function () {
     );
   }
 
+  function buildLoaderInner() {
+    return (
+      '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8Z"/>' +
+        '<path d="M14 3v5h5"/>' +
+      '</svg>' +
+      '<div class="download-item-text">' +
+        '<span class="download-item-label download-item-label--prep">Preparando descargas</span>' +
+        '<span class="download-item-sub download-item-sub--prep">Cargando</span>' +
+      '</div>' +
+      '<span class="download-item-arrow" aria-hidden="true">&#8595;</span>'
+    );
+  }
+
   function bindDownloadClick(item) {
     item.href = '#';
     item.setAttribute('role', 'button');
@@ -120,11 +153,40 @@ var DownloadsIntro = (function () {
     return item;
   }
 
+  function hideLoader() {
+    if (!loaderEl) return;
+    loaderEl.innerHTML = '';
+    loaderEl.setAttribute('hidden', '');
+    loaderEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function showLoader(energyHost) {
+    if (!loaderEl) return null;
+    loaderEl.innerHTML = '';
+    var card = document.createElement('div');
+    card.className = 'download-item download-item--loader is-anchor';
+    card.setAttribute('role', 'status');
+    card.setAttribute('aria-live', 'polite');
+    card.setAttribute('aria-busy', 'true');
+    card.innerHTML = buildLoaderInner();
+    var energy = document.createElement('span');
+    energy.className = 'download-item-energy';
+    energy.setAttribute('aria-hidden', 'true');
+    card.insertBefore(energy, card.firstChild);
+    loaderEl.appendChild(card);
+    loaderEl.removeAttribute('hidden');
+    loaderEl.setAttribute('aria-hidden', 'false');
+    if (energyHost) energyHost.el = energy;
+    return energy;
+  }
+
   function renderListPlain() {
     stopAnim();
     ensureElements();
+    hideLoader();
     if (!listEl) return;
     listEl.innerHTML = '';
+    listEl.removeAttribute('hidden');
     getItems().forEach(function (doc, index) {
       var item = buildDownloadItem(doc, index);
       item.classList.remove('download-item--animate');
@@ -142,6 +204,8 @@ var DownloadsIntro = (function () {
     ensureElements();
     if (stageEl && stageEl.classList.contains('is-ready') &&
         listEl && listEl.querySelectorAll('.download-item').length) {
+      hideLoader();
+      if (listEl) listEl.removeAttribute('hidden');
       if (pctEl) pctEl.classList.add('is-hidden');
       return;
     }
@@ -160,6 +224,7 @@ var DownloadsIntro = (function () {
   function buildStack(count, center) {
     if (!listEl) return null;
     listEl.innerHTML = '';
+    listEl.removeAttribute('hidden');
     var items = getItems();
     var energyEl = null;
 
@@ -217,6 +282,34 @@ var DownloadsIntro = (function () {
     }, SPREAD_MS));
   }
 
+  /** Móvil: oculta loader y revela el listado completo (entrada escalonada). */
+  function revealListMobile() {
+    hideLoader();
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    listEl.removeAttribute('hidden');
+
+    var items = getItems();
+    items.forEach(function (doc, index) {
+      var card = buildDownloadItem(doc, index);
+      card.style.setProperty('--dl-delay', Math.min(index * 48, 480) + 'ms');
+      card.classList.add('is-entering');
+      listEl.appendChild(card);
+    });
+
+    setStageState('is-spreading');
+    if (pctEl) pctEl.classList.add('is-hidden');
+
+    timers.push(setTimeout(function () {
+      if (!listEl) return;
+      listEl.querySelectorAll('.download-item--animate').forEach(function (node) {
+        node.classList.remove('is-entering');
+        node.style.removeProperty('--dl-delay');
+      });
+      setStageState('is-ready');
+    }, SPREAD_MS));
+  }
+
   function resetIntro() {
     stopAnim();
     ensureElements();
@@ -224,21 +317,18 @@ var DownloadsIntro = (function () {
       pctEl.textContent = '0%';
       pctEl.classList.remove('is-hidden');
     }
-    if (listEl) listEl.innerHTML = '';
+    hideLoader();
+    if (listEl) {
+      listEl.innerHTML = '';
+      listEl.removeAttribute('hidden');
+    }
     setStageState();
   }
 
-  function playIntro() {
-    resetIntro();
-    ensureElements();
-
-    if (shouldReduceMotion()) {
-      renderListPlain();
-      return;
-    }
-
+  function playIntroDesktop() {
     var count = getItems().length;
     var center = getCenterIndex(count);
+    hideLoader();
     var energyEl = buildStack(count, center);
     setStageState('is-charging');
 
@@ -260,6 +350,53 @@ var DownloadsIntro = (function () {
     }
 
     animFrame = requestAnimationFrame(tick);
+  }
+
+  function playIntroMobile() {
+    if (listEl) {
+      listEl.innerHTML = '';
+      listEl.setAttribute('hidden', '');
+    }
+    var energyEl = showLoader();
+    setStageState('is-charging');
+
+    var start = performance.now();
+
+    function tick(now) {
+      var t = Math.min((now - start) / CHARGE_MS, 1);
+      var pct = Math.round(easeOutCubic(t) * 100);
+
+      if (energyEl) energyEl.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = pct + '%';
+
+      if (t < 1) {
+        animFrame = requestAnimationFrame(tick);
+      } else {
+        animFrame = 0;
+        if (energyEl) energyEl.classList.add('is-draining');
+        timers.push(setTimeout(function () {
+          revealListMobile();
+        }, 280));
+      }
+    }
+
+    animFrame = requestAnimationFrame(tick);
+  }
+
+  function playIntro() {
+    resetIntro();
+    ensureElements();
+
+    if (shouldReduceMotion()) {
+      renderListPlain();
+      return;
+    }
+
+    if (isMobileViewport()) {
+      playIntroMobile();
+    } else {
+      playIntroDesktop();
+    }
   }
 
   function onEnter() {
