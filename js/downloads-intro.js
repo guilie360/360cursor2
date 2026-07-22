@@ -33,6 +33,9 @@ var DownloadsIntro = (function () {
   }
 
   function shouldReduceMotion() {
+    try {
+      if (window.matchMedia && window.matchMedia('(max-width: 600px)').matches) return false;
+    } catch (e) {}
     if (typeof isMotionReduced === 'function') return isMotionReduced();
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }

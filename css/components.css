@@ -1652,8 +1652,9 @@ body:has(#deploy-marker) .project-back-btn {
   }
   .project-back-btn:not([hidden]) .project-back-btn__icon {
     display: block !important;
-    width: 18px;
-    height: 18px;
+    /* +25% vs Compartir (18px) → 22.5px */
+    width: 22.5px;
+    height: 22.5px;
     flex-shrink: 0;
     opacity: 1;
     stroke: #fff;
@@ -2243,24 +2244,95 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
     padding:0;
     min-height:100dvh;
     height:100dvh;
+    overflow:hidden;
   }
   .downloads-modal-box {
     min-height:100dvh;
     height:100%;
+    max-height:100dvh;
+    overflow:hidden;
   }
+  /*
+   * Descargas: el listado debe recorrerse completo.
+   * Padding inferior = banda de la X Global + respiro; sin viñeta que tape el final.
+   */
   .downloads-stage {
     min-height:100%;
     height:100%;
+    max-height:100%;
     align-items:stretch;
     justify-content:flex-start;
-    padding:
-      max(16px, env(safe-area-inset-top))
-      16px
-      max(28px, calc(env(safe-area-inset-bottom) + 56px));
+    padding-top:max(16px, env(safe-area-inset-top));
+    padding-left:16px;
+    padding-right:16px;
+    padding-bottom:calc(
+      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 32px
+    );
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  .downloads-stage::after {
+    /* Sin franja inferior oscura que oculte el último documento */
+    box-shadow:inset 0 0 70px color-mix(in srgb, var(--bg-main) var(--depth-menu-inset, 14)%, transparent);
   }
   .downloads-list {
     width:100%;
     max-width:none;
+    flex:0 0 auto;
+    padding-bottom:12px;
+    margin-bottom:0;
+  }
+  .downloads-intro-pct {
+    bottom:calc(var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 10px);
+  }
+  body.has-global-close #descargasModal .downloads-stage,
+  body.has-global-close .downloads-modal .downloads-stage {
+    padding-bottom:calc(
+      var(--mobile-shell-foot-h, 62px) + env(safe-area-inset-bottom) + 32px
+    );
+  }
+
+  /*
+   * V3.8.2 — Animaciones siempre activas en móvil (paridad con desktop).
+   * Respaldo CSS si quedara web-effects-off o prefers-reduced-motion.
+   */
+  html.web-effects-off *:not(video):not(audio):not(source),
+  html.web-effects-off *:not(video):not(audio):not(source)::before,
+  html.web-effects-off *:not(video):not(audio):not(source)::after {
+    animation: revert !important;
+    transition: revert !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .download-item--animate,
+    .download-item-energy,
+    .downloads-intro-pct {
+      transition: opacity 0.4s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease !important;
+    }
+    .download-item--animate.is-entering {
+      animation: downloadsCardIn 0.52s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+    }
+    .unit-card--enter {
+      animation-name: unitCardAppleEnter !important;
+      animation-duration: 0.55s !important;
+      animation-fill-mode: both !important;
+    }
+    .tour360-card--enter {
+      animation-duration: 0.55s !important;
+      animation-fill-mode: both !important;
+    }
+    .pa-root,
+    .pa-panel,
+    .pa-fab,
+    .project-cover-btn,
+    .outline-btn,
+    .menu-item,
+    .global-close-btn,
+    .share-float,
+    .project-back-btn {
+      transition-duration: 0.3s !important;
+    }
   }
   .global-close-btn,
   .global-fullscreen-btn {
@@ -9228,5 +9300,37 @@ body.nav-resume-active .global-action-stack {
 }
 .pause-screen[data-hero-button-text-color="dark"] .pause-screen__actions .project-cover-btn {
   color: #111111;
+}
+
+/* =========================================================
+   MOBILE V3.8.2 — motion always on (gana al cascade de reduce)
+   ========================================================= */
+@media (max-width: 600px) {
+  @media (prefers-reduced-motion: reduce) {
+    .download-item--animate,
+    .download-item-energy,
+    .downloads-intro-pct {
+      transition: opacity 0.4s ease, width 0.12s linear, visibility 0.4s ease !important;
+    }
+    .download-item--animate.is-entering {
+      animation: downloadsCardIn 0.52s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+    }
+    .uc-hero-card,
+    .uc-category,
+    .uc-header,
+    .uc-specs,
+    .uc-insights,
+    .unit-card--enter,
+    .tour360-card--enter {
+      animation-duration: 0.55s !important;
+      animation-fill-mode: both !important;
+    }
+  }
+  html.web-effects-off *:not(video):not(audio):not(source),
+  html.web-effects-off *:not(video):not(audio):not(source)::before,
+  html.web-effects-off *:not(video):not(audio):not(source)::after {
+    animation: revert !important;
+    transition: revert !important;
+  }
 }
 

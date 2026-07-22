@@ -198,6 +198,10 @@ var soundsEnabled = readJSON(SOUND_STORAGE_KEY, true);
 document.body.classList.remove('animations-reduced');
 
 function isMotionReduced() {
+  try {
+    /* Móvil V3.8.2: animaciones siempre activas */
+    if (window.matchMedia('(max-width: 600px)').matches) return false;
+  } catch (e) {}
   if (typeof WebEffects !== 'undefined' && typeof WebEffects.shouldReduceMotion === 'function') {
     return WebEffects.shouldReduceMotion();
   }

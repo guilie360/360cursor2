@@ -20,6 +20,14 @@ var WebEffects = (function () {
     } catch (e) {}
   }
 
+  function isMobileViewport() {
+    try {
+      return window.matchMedia('(max-width: 600px)').matches;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function applyDom() {
     document.documentElement.classList.toggle('web-effects-off', !enabled);
     document.body.classList.toggle('web-effects-off', !enabled);
@@ -30,6 +38,8 @@ var WebEffects = (function () {
   }
 
   function shouldReduceMotion() {
+    /* Móvil V3.8.2: animaciones siempre activas (paridad visual con desktop) */
+    if (isMobileViewport()) return false;
     if (!enabled) return true;
     try {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -52,6 +62,8 @@ var WebEffects = (function () {
   }
 
   function setEnabled(next) {
+    /* Móvil: animaciones no se pueden desactivar */
+    if (isMobileViewport()) next = true;
     enabled = !!next;
     writeEnabled(enabled);
     applyDom();
@@ -132,9 +144,23 @@ var WebEffects = (function () {
   try {
 
     enabled = readEnabled();
+    /* En móvil las animaciones permanecen siempre activas */
+    if (isMobileViewport()) {
+      enabled = true;
+    }
     applyDom();
     bindUi();
     updateButtonState();
+    if (typeof window.matchMedia === 'function') {
+      var mq = window.matchMedia('(max-width: 600px)');
+      var onViewport = function () {
+        if (isMobileViewport() && !enabled) {
+          setEnabled(true);
+        }
+      };
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onViewport);
+      else if (typeof mq.addListener === 'function') mq.addListener(onViewport);
+    }
   
   } finally {
   try{if(typeof BootDebug!=='undefined')BootDebug.log('EXIT js/web-effects.js :: init');}catch(_bd){}
