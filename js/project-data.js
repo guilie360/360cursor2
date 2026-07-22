@@ -58,6 +58,7 @@ function applyHeroFloatVisibility(config) {
   var showShare = config.show_share_float !== false;
   var waFloat = document.getElementById('whatsappFloat');
   var shareFloat = document.getElementById('shareProjectFloatBtn');
+  var shareMobile = document.getElementById('projectShareBtnMobile');
   /* WhatsApp float replaced by ProductAssistant — always hidden */
   if (waFloat) {
     waFloat.hidden = true;
@@ -69,6 +70,66 @@ function applyHeroFloatVisibility(config) {
     shareFloat.classList.toggle('is-float-hidden', !showShare);
     shareFloat.setAttribute('aria-hidden', showShare ? 'false' : 'true');
   }
+  if (shareMobile) {
+    shareMobile.hidden = !showShare;
+    shareMobile.setAttribute('aria-hidden', showShare ? 'false' : 'true');
+  }
+  applyProjectBackButton(config);
+  syncHeroSecondaryVisibility();
+}
+
+function resolveProjectBackButton(config) {
+  config = config || {};
+  var rawShow = config.show_back_button;
+  if (rawShow === undefined) rawShow = config.showBackButton;
+  var show = rawShow === true || rawShow === 'true' || rawShow === 1;
+  var url = String(config.back_button_url || config.backButtonUrl || '').trim();
+  var label = String(config.back_button_label || config.backButtonLabel || 'Proyectos').trim() || 'Proyectos';
+  if (!show || !url) {
+    return { show: false, url: '', label: label };
+  }
+  return { show: true, url: url, label: label };
+}
+
+function applyProjectBackButton(config) {
+  var resolved = resolveProjectBackButton(config);
+  var desktop = document.getElementById('projectBackBtn');
+  var mobile = document.getElementById('projectBackBtnMobile');
+  var labelEl = document.getElementById('projectBackBtnLabel');
+
+  if (labelEl) labelEl.textContent = resolved.label;
+
+  function applyLink(el) {
+    if (!el) return;
+    if (!resolved.show) {
+      el.hidden = true;
+      el.setAttribute('aria-hidden', 'true');
+      el.removeAttribute('href');
+      return;
+    }
+    el.hidden = false;
+    el.setAttribute('aria-hidden', 'false');
+    el.href = resolved.url;
+    el.setAttribute('aria-label', resolved.label);
+  }
+
+  applyLink(desktop);
+  applyLink(mobile);
+}
+
+function syncHeroSecondaryVisibility() {
+  var row = document.getElementById('heroSecondaryActions');
+  if (!row) return;
+  var kids = row.querySelectorAll('.hero-secondary-btn');
+  var any = false;
+  for (var i = 0; i < kids.length; i++) {
+    if (!kids[i].hidden) {
+      any = true;
+      break;
+    }
+  }
+  row.hidden = !any;
+  row.setAttribute('aria-hidden', any ? 'false' : 'true');
 }
 
 function applyHeroModule(project) {
@@ -586,6 +647,7 @@ function buildConfig(project) {
   var instagramUrl = ensureHttpUrl(project.instagram_url || '');
   var defaultWaMsg = 'Hola, quiero más información sobre ' + (project.nombre || 'el proyecto') + '.';
   var shareUrl = (config.share_float_url || '').trim();
+  var backResolved = resolveProjectBackButton(config);
 
   return {
     projectName: project.nombre || '',
@@ -597,6 +659,9 @@ function buildConfig(project) {
     showWhatsappFloat: config.show_whatsapp_float !== false,
     showShareFloat: config.show_share_float !== false,
     shareUrl: shareUrl,
+    showBackButton: backResolved.show,
+    backButtonLabel: backResolved.label,
+    backButtonUrl: backResolved.url,
     phoneDisplay: phone || '',
     phoneHref: phoneHref,
     instagramUser: project.instagram_url ? formatDisplayUrl(project.instagram_url) : '',

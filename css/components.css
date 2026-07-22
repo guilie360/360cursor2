@@ -1214,6 +1214,101 @@ a.menu-item.auth-menu-item {
   display: none !important;
 }
 
+/* ================= BOTÓN PROYECTOS (desktop / tablet) ================= */
+.project-back-btn {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 920;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.95rem 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--menu-card-radius, 14px);
+  background: rgba(8, 8, 8, 0.88);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+.project-back-btn[hidden] {
+  display: none !important;
+}
+.project-back-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(12, 12, 12, 0.94);
+  transform: translateY(-1px);
+}
+.project-back-btn__icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.project-back-btn:hover .project-back-btn__icon {
+  opacity: 1;
+}
+
+/* ================= ACCIONES SECUNDARIAS HERO (móvil) ================= */
+.hero-secondary-actions {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+}
+.hero-secondary-actions[hidden] {
+  display: none !important;
+}
+.hero-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--menu-card-radius, 14px);
+  background: rgba(8, 8, 8, 0.88);
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+.hero-secondary-btn[hidden] {
+  display: none !important;
+}
+.hero-secondary-btn:hover,
+.hero-secondary-btn:focus-visible {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(12, 12, 12, 0.94);
+  transform: translateY(-1px);
+}
+.hero-secondary-btn svg {
+  display: block;
+}
+.hero-secondary-btn__mark {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 3px 3px 3px 1px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
 /* ================= BOTÓN FLOTANTE COMPARTIR PROYECTO ================= */
 /* Encima del FAB del asistente (mismo lenguaje: solo el símbolo). */
 .share-float {
@@ -1240,8 +1335,18 @@ a.menu-item.auth-menu-item {
   filter:drop-shadow(0 2px 8px rgba(0,0,0,0.7));
 }
 @media (max-width: 600px) {
-  .share-float { bottom:84px; right:18px; }
-  .share-float svg { width:21px; height:21px; }
+  /* Desktop-only chrome hidden on phone */
+  .project-back-btn {
+    display: none !important;
+  }
+  .share-float,
+  .share-float.is-float-hidden,
+  .pa-fab {
+    display: none !important;
+  }
+  .hero-secondary-actions:not([hidden]) {
+    display: flex;
+  }
 }
 
 /* ================= HERRAMIENTAS MENÚ (animaciones + sonido, solo con menú abierto) ================= */

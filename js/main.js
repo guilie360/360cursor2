@@ -106,6 +106,23 @@ function applyConfig() {
     shareFloat.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
   }
 
+  var shareMobile = document.getElementById('projectShareBtnMobile');
+  if (shareMobile) {
+    shareMobile.hidden = CONFIG.showShareFloat === false;
+    shareMobile.setAttribute('aria-hidden', CONFIG.showShareFloat === false ? 'true' : 'false');
+  }
+
+  if (typeof applyProjectBackButton === 'function') {
+    applyProjectBackButton({
+      show_back_button: CONFIG.showBackButton,
+      back_button_label: CONFIG.backButtonLabel,
+      back_button_url: CONFIG.backButtonUrl
+    });
+  }
+  if (typeof syncHeroSecondaryVisibility === 'function') {
+    syncHeroSecondaryVisibility();
+  }
+
   if (typeof ProductAssistant !== 'undefined') {
     var existingAssist = ProductAssistant.getInstance();
     if (existingAssist && typeof existingAssist.setAdvisorHref === 'function' && advisorHref) {
@@ -547,7 +564,25 @@ function shareUnit(key) {
 
 /* ---- Botón flotante de compartir proyecto ---- */
 window.__mainTraceSafe('bind shareProjectFloatBtn', function () {
-  document.getElementById('shareProjectFloatBtn').addEventListener('click', function(){ shareProject(); });
+  var shareBtn = document.getElementById('shareProjectFloatBtn');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', function () { shareProject(); });
+  }
+  var shareMobile = document.getElementById('projectShareBtnMobile');
+  if (shareMobile) {
+    shareMobile.addEventListener('click', function () { shareProject(); });
+  }
+  var assistMobile = document.getElementById('projectAssistBtnMobile');
+  if (assistMobile) {
+    assistMobile.addEventListener('click', function () {
+      if (typeof ProductAssistant !== 'undefined' && ProductAssistant.getInstance()) {
+        ProductAssistant.getInstance().open();
+      }
+    });
+  }
+  if (typeof syncHeroSecondaryVisibility === 'function') {
+    syncHeroSecondaryVisibility();
+  }
 });
 
 /* ================= RENDER DE TARJETAS DE UNIDADES ================= */

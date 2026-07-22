@@ -34,7 +34,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=prod-assist-001">
+<link rel="stylesheet" href="css/components.css?v=hero-nav-001">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=1">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
@@ -77,8 +77,26 @@ DEVELOP TEST 006
           </div>
         </div>
       </div>
+      <!-- Acciones secundarias (solo móvil): Proyectos · Compartir · Asistente -->
+      <div class="hero-secondary-actions" id="heroSecondaryActions" hidden>
+        <a class="hero-secondary-btn" id="projectBackBtnMobile" href="#" hidden aria-hidden="true" aria-label="Proyectos">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </a>
+        <button type="button" class="hero-secondary-btn" id="projectShareBtnMobile" aria-label="Compartir proyecto">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg>
+        </button>
+        <button type="button" class="hero-secondary-btn" id="projectAssistBtnMobile" aria-label="Abrir asistente">
+          <span class="hero-secondary-btn__mark" aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
   </section>
+
+  <!-- Botón Proyectos (desktop / tablet) -->
+  <a class="project-back-btn" id="projectBackBtn" href="#" hidden aria-hidden="true">
+    <svg class="project-back-btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <span class="project-back-btn__label" id="projectBackBtnLabel">Proyectos</span>
+  </a>
 
   <!-- WhatsApp float removed from UI — ProductAssistant mounts via JS -->
   <a class="whatsapp-float is-float-hidden" id="whatsappFloat" href="#" target="_blank" rel="noopener" aria-label="Chatear por WhatsApp" hidden aria-hidden="true">
@@ -1359,7 +1377,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=prod-assist-001"></script>
+<script src="js/main.js?v=hero-nav-001"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
@@ -1370,7 +1388,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=prod-assist-001"></script>
+<script src="js/project-data.js?v=hero-nav-001"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>
