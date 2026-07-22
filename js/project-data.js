@@ -524,11 +524,41 @@ function bindProjectVideoModal() {
   function toggleFullscreen() {
     var target = wrap || player;
     if (!target) return;
-    if (document.fullscreenElement === target || document.webkitFullscreenElement === target) {
+
+    /* Salir si ya está en fullscreen (API estándar o WebKit video). */
+    try {
+      if (player && player.webkitDisplayingFullscreen && typeof player.webkitExitFullscreen === 'function') {
+        player.webkitExitFullscreen();
+        return;
+      }
+    } catch (e0) { /* ignore */ }
+    if (document.fullscreenElement === target || document.webkitFullscreenElement === target ||
+        document.fullscreenElement === player || document.webkitFullscreenElement === player) {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       return;
     }
+
+    /* iPhone Safari: priorizar fullscreen nativo del <video>. */
+    if (player && typeof player.webkitEnterFullscreen === 'function') {
+      try {
+        player.webkitEnterFullscreen();
+        return;
+      } catch (e1) { /* fall through */ }
+    }
+
+    if (typeof window.tryProjectVideoFullscreen === 'function') {
+      window.tryProjectVideoFullscreen(player).then(function (ok) {
+        if (ok) {
+          var modal = document.getElementById('videoModal');
+          if (modal) modal.classList.remove('is-mobile-video-fs-fallback');
+          var hint = document.getElementById('videoFsFallbackHint');
+          if (hint) hint.hidden = true;
+        }
+      });
+      return;
+    }
+
     if (target.requestFullscreen) target.requestFullscreen();
     else if (target.webkitRequestFullscreen) target.webkitRequestFullscreen();
   }

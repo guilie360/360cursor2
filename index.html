@@ -34,7 +34,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=mobile-v2">
+<link rel="stylesheet" href="css/components.css?v=video-ios-v1">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=2">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
@@ -497,6 +497,9 @@ DEVELOP TEST 007
         <p class="video-orient-gate__title">Para una mejor experiencia</p>
         <p class="video-orient-gate__copy">Gira tu dispositivo para disfrutar el video en formato horizontal.</p>
       </div>
+      <p class="video-fs-fallback-hint" id="videoFsFallbackHint" hidden>
+        Toca el botón de pantalla completa para disfrutar una mejor experiencia.
+      </p>
       <div class="video-modal-loader" id="videoModalLoader" hidden aria-hidden="true">
         <div class="video-splash" id="videoModalSplash" aria-hidden="true">
           <div class="video-splash-mark">
@@ -518,6 +521,7 @@ DEVELOP TEST 007
             id="projectVideoPlayer"
             class="project-video-player"
             playsinline
+            webkit-playsinline
             preload="metadata"
             poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%23000000'/%3E%3C/svg%3E"
           >
@@ -1381,7 +1385,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=mobile-v2"></script>
+<script src="js/main.js?v=video-ios-v1"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
@@ -1392,7 +1396,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=hero-nav-004"></script>
+<script src="js/project-data.js?v=video-ios-v1"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>
