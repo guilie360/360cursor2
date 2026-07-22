@@ -791,7 +791,8 @@ function applyAmenitiesModule(project) {
     return {
       name: amenidad.nombre || '',
       imageUrl: row.imagen_url || '',
-      description: row.descripcion || ''
+      description: row.descripcion || '',
+      icon: amenidad.icono || ''
     };
   });
 

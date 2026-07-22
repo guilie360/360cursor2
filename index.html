@@ -34,7 +34,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=video-ios-v1">
+<link rel="stylesheet" href="css/components.css?v=mobile-v3">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=2">
 <link rel="stylesheet" href="css/hall/hall.css">
 <link rel="stylesheet" href="css/style-engine.css">
@@ -221,6 +221,9 @@ DEVELOP TEST 007
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>
         <span class="menu-item-label">Descargas</span>
       </div>
+      <div class="menu-scroll-hint" id="menuProyectoScrollHint" hidden aria-hidden="true">
+        <span class="menu-scroll-hint__label">Desliza para ver más</span>
+      </div>
     </div>
 
     <!-- NIVEL 2: SUBMENÚ "CONTACTO" -->
@@ -309,19 +312,9 @@ DEVELOP TEST 007
     </div>
   </div>
 
-  <div class="content-modal amenities-modal" id="amenidadesModal">
-    <span class="modal-close" id="amenidadesModalClose">&times;</span>
-    <div class="content-modal-box amenities-modal-box">
-      <div class="amenities-carousel-stage" id="amenitiesCarouselStage">
-        <div class="amenities-carousel-sticky">
-          <div class="amenities-carousel-viewport" id="amenitiesCarouselViewport">
-            <div class="amenities-carousel-track" id="amenitiesCarouselTrack" aria-live="polite"></div>
-          </div>
-          <div class="amenities-carousel-hint" id="amenitiesCarouselHint" aria-hidden="true">
-            <span class="amenities-carousel-hint-label">Desliza para explorar</span>
-          </div>
-        </div>
-      </div>
+  <div class="units-popup tour360-popup amenities-popup" id="amenidadesModal">
+    <div class="tour360-stage">
+      <div class="tour360-grid" id="amenitiesGrid" aria-label="Amenidades"></div>
     </div>
   </div>
 
@@ -1372,7 +1365,7 @@ console.log(
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/downloads-intro.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/amenities-carousel.js?v=amenities7');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/amenities-carousel.js?v=amenities7");</script>
-<script src="js/amenities-carousel.js?v=amenities7"></script>
+<script src="js/amenities-carousel.js?v=mobile-v3"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/amenities-carousel.js?v=amenities7");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/amenities-carousel.js?v=amenities7');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/menu-config.js?v=menu6');</script>
@@ -1385,7 +1378,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=video-ios-v1"></script>
+<script src="js/main.js?v=mobile-v3"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
@@ -1396,7 +1389,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=video-ios-v1"></script>
+<script src="js/project-data.js?v=mobile-v3"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>

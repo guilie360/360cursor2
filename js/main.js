@@ -3407,6 +3407,9 @@ function showMenuLevel(level) {
   if (level === 'proyecto') {
     proyecto.style.display = 'flex';
     if (menuNavBack) menuNavBack.hidden = false;
+    requestAnimationFrame(function () {
+      setupProyectoScrollDiscovery(proyecto);
+    });
   } else if (level === 'contacto') {
     contacto.style.display = 'flex';
     if (menuNavBack) menuNavBack.hidden = false;
@@ -3441,6 +3444,50 @@ function showMenuLevel(level) {
   syncMenuActiveStates();
 }
 window.showMenuLevel = showMenuLevel;
+
+var PROYECTO_SCROLL_HINT_KEY = 'menuProyectoScrollHintSeen';
+var proyectoScrollHintBound = false;
+
+function dismissProyectoScrollHint(listEl) {
+  if (!listEl) return;
+  listEl.classList.remove('has-scroll-hint');
+  var hint = document.getElementById('menuProyectoScrollHint');
+  if (hint) {
+    hint.hidden = true;
+    hint.setAttribute('aria-hidden', 'true');
+  }
+  try { sessionStorage.setItem(PROYECTO_SCROLL_HINT_KEY, '1'); } catch (e) { /* ignore */ }
+}
+
+function setupProyectoScrollDiscovery(listEl) {
+  if (!listEl) return;
+  var hint = document.getElementById('menuProyectoScrollHint');
+  var canScroll = listEl.scrollHeight > listEl.clientHeight + 8;
+  listEl.classList.toggle('has-scroll-overflow', canScroll);
+
+  var seen = false;
+  try { seen = sessionStorage.getItem(PROYECTO_SCROLL_HINT_KEY) === '1'; } catch (e) { /* ignore */ }
+
+  if (!canScroll || seen) {
+    listEl.classList.remove('has-scroll-hint');
+    if (hint) {
+      hint.hidden = true;
+      hint.setAttribute('aria-hidden', 'true');
+    }
+  } else {
+    listEl.classList.add('has-scroll-hint');
+    if (hint) {
+      hint.hidden = false;
+      hint.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  if (proyectoScrollHintBound) return;
+  proyectoScrollHintBound = true;
+  listEl.addEventListener('scroll', function () {
+    if (listEl.scrollTop > 6) dismissProyectoScrollHint(listEl);
+  }, { passive: true });
+}
 
 var SCREEN_ELEMENTS = {
   descripcion:  'descripcionModal',
