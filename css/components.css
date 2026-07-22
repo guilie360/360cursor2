@@ -2256,8 +2256,8 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
   }
   /*
    * V3.8.3 — Descargas: sin recorte vertical artificial.
+   * V3.8.4 — Restaurar eje horizontal centrado (sin tocar el scroll).
    * Overlay fijo a viewport; único scroll = .downloads-stage.
-   * La X Global no limita la altura; solo padding al final del listado.
    */
   #descargasModal.downloads-modal.content-modal,
   .downloads-modal.content-modal {
@@ -2316,7 +2316,8 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
     max-height: none !important;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    /* Centrado horizontal original; scroll vertical intacto */
+    align-items: center;
     justify-content: flex-start;
     padding-top: max(16px, env(safe-area-inset-top));
     padding-left: 16px;
@@ -2342,14 +2343,21 @@ body[data-button-hover-glass="solid"] #globalCloseBtn.global-close-btn:hover {
   .downloads-modal .downloads-list {
     position: relative;
     z-index: 3;
-    width: 100%;
-    max-width: none;
+    width: min(420px, 100%);
+    max-width: calc(100% - 8px);
     height: auto !important;
     min-height: 0;
     max-height: none !important;
     flex: 0 0 auto;
+    align-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
     overflow: visible !important;
     padding-bottom: 8px;
+    margin-left: auto;
+    margin-right: auto;
   }
   #descargasModal .download-item,
   #descargasModal .download-item--animate {
@@ -6772,12 +6780,18 @@ body[data-shadow-glass="solid"] .splash-intro-modal .video-modal-card {
     height:auto !important;
     flex:1 1 auto;
     overflow-y:auto !important;
+    align-items:center;
   }
   #descargasModal .downloads-list,
   .downloads-modal .downloads-list {
     max-height:none !important;
     height:auto !important;
     overflow:visible !important;
+    width:min(420px, 100%);
+    max-width:calc(100% - 8px);
+    align-self:center;
+    margin-left:auto;
+    margin-right:auto;
   }
   .units-popup.tour360-popup,
   .units-popup.units-viviendas-popup {
