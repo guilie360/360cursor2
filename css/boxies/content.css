@@ -302,13 +302,35 @@
 
 #boxiesContent .boxies-hall__logo {
   display: block;
-  width: clamp(180px, 22vw, 240px);
+  width: clamp(100px, 12vw, 140px);
   height: auto;
   margin: 0;
   border: 0;
-  background: none;
+  background: transparent;
   box-shadow: none;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
+  transform-origin: center center;
+  will-change: transform, filter;
+  animation: boxies-hall-breathe 8.5s ease-in-out infinite;
+}
+
+@keyframes boxies-hall-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
+  }
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.16));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #boxiesContent .boxies-hall__logo {
+    animation: none;
+    will-change: auto;
+  }
 }
