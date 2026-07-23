@@ -45,6 +45,12 @@
   color: rgba(255, 255, 255, 0.42);
 }
 
+.boxies-login__brand-mark {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+  letter-spacing: 0.02em;
+}
+
 .boxies-host .boxies-login .auth-oauth-row {
   margin: 0;
 }
