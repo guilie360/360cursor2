@@ -17,10 +17,7 @@ var AiProjectBuilderView = (function () {
         var slug = null;
         slug = new URLSearchParams(window.location.search || '').get('project')
           || new URLSearchParams(window.location.search || '').get('proyecto');
-        var name = (state.projectInfo && state.projectInfo.nombre)
-          || (state.heroContent && state.heroContent.nombre)
-          || (state.menuConfig && state.menuConfig.projectName)
-          || '';
+        var name = (state.projectInfo && state.projectInfo.nombre) || '';
         if (slug || name) {
           BoxiesShell.setProjectContext({ name: name || slug, slug: slug || '' });
         }
@@ -1969,11 +1966,9 @@ var AiProjectBuilderView = (function () {
     goToStep: goToStep,
     goToStepById: goToStepById,
     getProjectLabel: function () {
-      if (!state) return '';
-      return (state.projectInfo && state.projectInfo.nombre)
-        || (state.heroContent && state.heroContent.nombre)
-        || (state.menuConfig && state.menuConfig.projectName)
-        || '';
+      /* Single source: proyectos.nombre hydrated into projectInfo.nombre */
+      if (!state || !state.projectInfo) return '';
+      return state.projectInfo.nombre || '';
     }
   };
 })();

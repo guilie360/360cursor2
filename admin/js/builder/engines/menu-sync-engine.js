@@ -72,7 +72,7 @@ var MenuSyncEngine = (function () {
     var constructora = project.constructoras || {};
 
     if (!menu.projectName) {
-      menu.projectName = cfg.titulo_hero || project.nombre || '';
+      menu.projectName = project.nombre || cfg.titulo_hero || '';
     }
     if (!menu.description) {
       menu.description = constructora.nombre || '';

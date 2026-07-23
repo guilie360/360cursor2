@@ -63,22 +63,29 @@ var HeroSyncEngine = (function () {
     return null;
   }
 
-  function bindStateFromProject(state, project) {
+  function bindStateFromProject(state, project, options) {
     if (!project) return state;
+    options = options || {};
+
+    /* Canonical project name lives in proyectos.nombre only.
+       forceCanonical: open/switch project — refresh identity from DB (ignore stale session).
+       Default (sync mid-edit): fill gaps only so in-progress form edits are kept. */
+    var switching = !!(state.draftProjectId && state.draftProjectId !== project.id);
+    var forceCanonical = options.forceCanonical === true || switching;
 
     state.draftProjectId = project.id;
     var info = state.projectInfo || {};
 
-    if (!info.nombre) {
+    if (forceCanonical || !info.nombre) {
       state.projectInfo = Object.assign({}, info, {
         nombre: project.nombre,
         slug: project.slug,
-        ciudad: project.ciudad || info.ciudad,
-        direccion: project.direccion || info.direccion,
-        whatsapp: project.whatsapp || info.whatsapp,
-        email: project.email || info.email,
-        sitio_web: project.sitio_web || info.sitio_web,
-        estado: project.estado || info.estado
+        ciudad: forceCanonical ? (project.ciudad || info.ciudad) : (info.ciudad || project.ciudad),
+        direccion: forceCanonical ? (project.direccion || info.direccion) : (info.direccion || project.direccion),
+        whatsapp: forceCanonical ? (project.whatsapp || info.whatsapp) : (info.whatsapp || project.whatsapp),
+        email: forceCanonical ? (project.email || info.email) : (info.email || project.email),
+        sitio_web: forceCanonical ? (project.sitio_web || info.sitio_web) : (info.sitio_web || project.sitio_web),
+        estado: forceCanonical ? (project.estado || info.estado) : (info.estado || project.estado)
       });
     } else if (!info.slug && project.slug) {
       state.projectInfo = Object.assign({}, info, { slug: project.slug });
@@ -116,8 +123,10 @@ var HeroSyncEngine = (function () {
       showShare: true
     }, state.heroContent || {});
 
-    if (!state.heroContent.nombre) {
-      state.heroContent.nombre = cfg.titulo_hero || project.nombre || '';
+    if (!state.heroContent.nombre || forceCanonical) {
+      state.heroContent.nombre = forceCanonical
+        ? (project.nombre || '')
+        : (cfg.titulo_hero || project.nombre || '');
     }
     if (!state.heroContent.eslogan && cfg.texto_hero) {
       state.heroContent.eslogan = cfg.texto_hero;
@@ -347,7 +356,8 @@ var HeroSyncEngine = (function () {
       project = await resolveProject(state);
     }
     if (project) {
-      bindStateFromProject(state, project);
+      /* Always refresh identity from DB when opening via URL / active project */
+      bindStateFromProject(state, project, { forceCanonical: true });
       state.draftProjectId = project.id;
       if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(project.id);

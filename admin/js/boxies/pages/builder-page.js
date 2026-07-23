@@ -143,8 +143,6 @@ var BoxiesBuilderPage = (function () {
       } else if (typeof BuilderSession !== 'undefined') {
         var s = BuilderSession.load();
         name = (s && s.projectInfo && s.projectInfo.nombre) || '';
-        if (!name && s && s.heroContent && s.heroContent.nombre) name = s.heroContent.nombre;
-        if (!name && s && s.menuConfig && s.menuConfig.projectName) name = s.menuConfig.projectName;
       }
     } catch (e) {}
     BoxiesShell.setProjectContext({

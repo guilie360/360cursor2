@@ -10,7 +10,7 @@
   var FALLBACK_PROJECTS = [
     {
       slug: 'demo1',
-      nombre: 'Proyecto Demo',
+      nombre: 'Proyecto Demo 1',
       descripcion: 'Experiencia inmobiliaria interactiva lista para compartir.',
       imagen_hero_url:
         'https://emefdwzdfnqgjohbtvvn.supabase.co/storage/v1/object/public/proyectos-media/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/hero/image/hero/image-1783567174957.jpg'
