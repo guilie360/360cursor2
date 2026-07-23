@@ -56,6 +56,9 @@ var BoxiesBuilderPage = (function () {
   }
 
   function showPickProject(host) {
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
+      BoxiesShell.clearProjectContext();
+    }
     host.innerHTML =
       '<div class="boxies-page boxies-placeholder">' +
         '<p class="boxies-placeholder__kicker">Builder</p>' +
@@ -121,10 +124,34 @@ var BoxiesBuilderPage = (function () {
 
       var nestedApp = host.querySelector('#builderApp');
       if (nestedApp) nestedApp.hidden = false;
+
+      syncProjectDock(slug);
+      if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
+        BuilderProgressRail.applyCollapsedFromPrefs();
+      }
     } catch (err) {
       console.error('[boxies:builder-page]', err);
       showError(host, err);
     }
+  }
+
+  function syncProjectDock(slug) {
+    if (typeof BoxiesShell === 'undefined' || typeof BoxiesShell.setProjectContext !== 'function') return;
+    var name = '';
+    try {
+      if (typeof AiProjectBuilderView !== 'undefined' && AiProjectBuilderView.getProjectLabel) {
+        name = AiProjectBuilderView.getProjectLabel() || '';
+      } else if (typeof BuilderSession !== 'undefined') {
+        var s = BuilderSession.load();
+        name = (s && s.projectInfo && s.projectInfo.nombre) || '';
+        if (!name && s && s.heroContent && s.heroContent.nombre) name = s.heroContent.nombre;
+        if (!name && s && s.menuConfig && s.menuConfig.projectName) name = s.menuConfig.projectName;
+      }
+    } catch (e) {}
+    BoxiesShell.setProjectContext({
+      name: name || slug,
+      slug: slug
+    });
   }
 
   function unmount() {
@@ -135,6 +162,9 @@ var BoxiesBuilderPage = (function () {
       }
     } catch (e) {
       console.warn('[boxies:builder-page] onLeave', e);
+    }
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
+      BoxiesShell.clearProjectContext();
     }
     if (activeHost) {
       activeHost.classList.remove('boxies-builder-embed');

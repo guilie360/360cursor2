@@ -9,6 +9,7 @@ var BoxiesShell = (function () {
   var onLogout = null;
   var fullscreenBound = false;
   var defaultActionsHtml = '';
+  var projectCtx = { name: '', slug: '' };
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -16,6 +17,13 @@ var BoxiesShell = (function () {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function iconHtml(name) {
+    if (typeof BuilderIcons !== 'undefined' && typeof BuilderIcons.render === 'function') {
+      return BuilderIcons.render(name);
+    }
+    return '○';
   }
 
   function setChromeClasses(on) {
@@ -28,17 +36,31 @@ var BoxiesShell = (function () {
     return '<span class="boxies-header__title" id="boxiesHeaderTitle" aria-label="BOXIES">B O X I E S</span>';
   }
 
+  function applyNavCollapsed(collapsed) {
+    document.body.classList.toggle('boxies-nav-collapsed', !!collapsed);
+    document.documentElement.classList.toggle('boxies-nav-collapsed', !!collapsed);
+    var btn = document.getElementById('boxiesNavCollapseBtn');
+    if (btn) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.setAttribute('aria-label', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
+      btn.title = collapsed ? 'Expandir' : 'Colapsar';
+      btn.innerHTML = iconHtml(collapsed ? 'chevron-right' : 'chevron-left');
+    }
+  }
+
   function dockHtml() {
-    var icon =
-      typeof BuilderIcons !== 'undefined' && typeof BuilderIcons.render === 'function'
-        ? BuilderIcons.render('maximize')
-        : '⛶';
+    var fsIcon = iconHtml('maximize');
     return (
       '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Controles de la aplicación">' +
         '<div class="boxies-dock__inner">' +
+          '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
+            '<span class="boxies-dock__project-name" id="boxiesDockProjectName"></span>' +
+            '<button type="button" class="boxies-dock__preview" id="boxiesPreviewBtn">Previsualizar</button>' +
+          '</div>' +
+          '<div class="boxies-dock__spacer"></div>' +
           '<div class="boxies-dock__tools">' +
             '<button type="button" class="boxies-dock__ctrl" id="builderFullscreenBtn" aria-label="Pantalla completa" data-fullscreen="enter">' +
-              icon +
+              fsIcon +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -47,28 +69,28 @@ var BoxiesShell = (function () {
   }
 
   function defaultNavHtml(activeId) {
-    function item(id, label, opts) {
-      opts = opts || {};
-      var disabled = !!opts.disabled;
-      var hint = opts.hint ? '<span class="boxies-nav-item__hint">' + escapeHtml(opts.hint) + '</span>' : '';
+    function item(id, label, icon) {
       return (
         '<button type="button" class="boxies-nav-item' + (activeId === id ? ' is-current' : '') + '"' +
           ' data-boxies-page="' + escapeHtml(id) + '"' +
-          (disabled ? ' disabled' : '') +
+          ' title="' + escapeHtml(label) + '"' +
+          ' aria-label="' + escapeHtml(label) + '"' +
         '>' +
           '<span class="boxies-nav-item__row">' +
-            '<span class="boxies-nav-item__mark" aria-hidden="true"></span>' +
-            escapeHtml(label) +
+            '<span class="boxies-nav-item__icon" aria-hidden="true">' + iconHtml(icon) + '</span>' +
+            '<span class="boxies-nav-item__label">' + escapeHtml(label) + '</span>' +
           '</span>' +
-          hint +
         '</button>'
       );
     }
     return (
       '<nav class="boxies-nav" id="boxiesNav" aria-label="Navegación">' +
+        '<button type="button" class="boxies-nav-collapse" id="boxiesNavCollapseBtn" aria-expanded="true" aria-label="Colapsar navegación" title="Colapsar">' +
+          iconHtml('chevron-left') +
+        '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
-        item('projects', 'Proyectos') +
-        item('builder', 'Builder') +
+        item('projects', 'Proyectos', 'layout-grid') +
+        item('builder', 'Builder', 'layers') +
       '</nav>'
     );
   }
@@ -109,7 +131,6 @@ var BoxiesShell = (function () {
       fullscreenBound = true;
       return;
     }
-    /* Fallback if BuilderDock not loaded yet — same API as dock.js */
     var btn = dock.querySelector('#builderFullscreenBtn');
     if (!btn || btn.dataset.bound) return;
     btn.dataset.bound = '1';
@@ -117,9 +138,7 @@ var BoxiesShell = (function () {
       var isFs = !!document.fullscreenElement;
       btn.setAttribute('data-fullscreen', isFs ? 'exit' : 'enter');
       btn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
-      if (typeof BuilderIcons !== 'undefined') {
-        btn.innerHTML = BuilderIcons.render(isFs ? 'minimize' : 'maximize');
-      }
+      btn.innerHTML = iconHtml(isFs ? 'minimize' : 'maximize');
     }
     btn.addEventListener('click', function () {
       if (!document.fullscreenElement) {
@@ -133,11 +152,34 @@ var BoxiesShell = (function () {
     fullscreenBound = true;
   }
 
+  function resolvePreviewUrl(slug) {
+    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl) {
+      return PlatformBuilderBridge.showroomUrl(slug);
+    }
+    if (slug) {
+      try {
+        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+      } catch (e) {}
+    }
+    return window.location.origin + '/';
+  }
+
   function bind() {
     var nav = document.getElementById('boxiesNav');
     if (nav && !nav.dataset.bound) {
       nav.dataset.bound = '1';
       nav.addEventListener('click', function (e) {
+        var collapseBtn = e.target.closest('#boxiesNavCollapseBtn');
+        if (collapseBtn) {
+          var next = !(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
+            ? BoxiesPrefs.getNavCollapsed()
+            : document.body.classList.contains('boxies-nav-collapsed'));
+          if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setNavCollapsed) {
+            BoxiesPrefs.setNavCollapsed(next);
+          }
+          applyNavCollapsed(next);
+          return;
+        }
         var btn = e.target.closest('[data-boxies-page]');
         if (!btn || btn.disabled) return;
         var id = btn.getAttribute('data-boxies-page');
@@ -158,6 +200,22 @@ var BoxiesShell = (function () {
       });
     }
 
+    var previewBtn = document.getElementById('boxiesPreviewBtn');
+    if (previewBtn && !previewBtn.dataset.bound) {
+      previewBtn.dataset.bound = '1';
+      previewBtn.addEventListener('click', function () {
+        var slug = projectCtx.slug;
+        if (!slug) {
+          try {
+            slug = new URLSearchParams(window.location.search || '').get('project')
+              || new URLSearchParams(window.location.search || '').get('proyecto');
+          } catch (e) {}
+        }
+        if (!slug) return;
+        window.open(resolvePreviewUrl(slug), '_blank', 'noopener,noreferrer');
+      });
+    }
+
     bindFullscreen();
   }
 
@@ -172,16 +230,26 @@ var BoxiesShell = (function () {
     setChromeClasses(true);
     mounted = true;
     bind();
+    var navCollapsed = typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
+      ? BoxiesPrefs.getNavCollapsed()
+      : false;
+    applyNavCollapsed(navCollapsed);
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
+      BuilderProgressRail.applyCollapsedFromPrefs();
+    }
     return getContentEl();
   }
 
   function unmount() {
     clearPageActions();
+    clearProjectContext();
     if (rootEl) {
       rootEl.innerHTML = '';
       rootEl.hidden = true;
     }
     setChromeClasses(false);
+    document.body.classList.remove('boxies-nav-collapsed', 'boxies-rail-collapsed');
+    document.documentElement.classList.remove('boxies-nav-collapsed', 'boxies-rail-collapsed');
     mounted = false;
     rootEl = null;
     onNav = null;
@@ -197,7 +265,6 @@ var BoxiesShell = (function () {
     return document.getElementById('boxiesDock');
   }
 
-  /** Update active nav mark only — never rebuild sidebar DOM. */
   function setActiveNav(pageId) {
     var nav = document.getElementById('boxiesNav');
     if (!nav) return;
@@ -223,9 +290,36 @@ var BoxiesShell = (function () {
   }
 
   /**
-   * Page-owned header extras (actions only). Never rebuilds the header shell.
-   * Logout always remains last.
+   * Project strip in dock (Builder). Name is always dynamic from the open project.
    */
+  function setProjectContext(ctx) {
+    ctx = ctx || {};
+    projectCtx = {
+      name: (ctx.name || ctx.nombre || '').trim(),
+      slug: (ctx.slug || ctx.project || ctx.proyecto || '').trim()
+    };
+    var wrap = document.getElementById('boxiesDockProject');
+    var nameEl = document.getElementById('boxiesDockProjectName');
+    var previewBtn = document.getElementById('boxiesPreviewBtn');
+    if (!wrap || !nameEl) return;
+
+    if (!projectCtx.slug && !projectCtx.name) {
+      wrap.hidden = true;
+      nameEl.textContent = '';
+      if (previewBtn) previewBtn.disabled = true;
+      return;
+    }
+
+    var label = projectCtx.name || projectCtx.slug;
+    nameEl.textContent = label;
+    wrap.hidden = false;
+    if (previewBtn) previewBtn.disabled = !projectCtx.slug;
+  }
+
+  function clearProjectContext() {
+    setProjectContext({});
+  }
+
   function applyManifest(manifest) {
     manifest = manifest || {};
     var actions = document.getElementById('boxiesHeaderActions');
@@ -262,9 +356,12 @@ var BoxiesShell = (function () {
     getDockEl: getDockEl,
     setActiveNav: setActiveNav,
     setUser: setUser,
+    setProjectContext: setProjectContext,
+    clearProjectContext: clearProjectContext,
     applyManifest: applyManifest,
     clearPageActions: clearPageActions,
     isMounted: isMounted,
-    setChromeClasses: setChromeClasses
+    setChromeClasses: setChromeClasses,
+    applyNavCollapsed: applyNavCollapsed
   };
 })();

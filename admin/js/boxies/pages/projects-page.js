@@ -59,6 +59,9 @@ var BoxiesProjectsPage = (function () {
   }
 
   async function mount(host) {
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
+      BoxiesShell.clearProjectContext();
+    }
     host.innerHTML =
       '<div class="boxies-page">' +
         '<h1 class="boxies-page__title">Proyectos</h1>' +

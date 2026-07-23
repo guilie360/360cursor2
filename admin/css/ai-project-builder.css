@@ -285,6 +285,85 @@ body.builder-has-dock.platform-builder-shell {
   font-weight: 550;
 }
 
+.builder-rail-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 34px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.builder-rail-collapse:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.builder-rail-collapse svg {
+  width: 16px;
+  height: 16px;
+}
+
+.builder-rail-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.builder-rail-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.builder-rail-label {
+  min-width: 0;
+}
+
+.builder-progress-sidebar {
+  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.builder-workspace {
+  transition: margin-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Collapsed builder rail — icons only */
+body.boxies-rail-collapsed .builder-rail-mark,
+body.boxies-rail-collapsed .builder-rail-label,
+body.boxies-rail-collapsed .builder-rail-value {
+  display: none !important;
+}
+
+body.boxies-rail-collapsed .builder-rail-icon {
+  display: inline-flex;
+}
+
+body.boxies-rail-collapsed .builder-rail-item {
+  padding: 10px 0;
+}
+
+body.boxies-rail-collapsed .builder-rail-row {
+  justify-content: center;
+  gap: 0;
+}
+
+body.boxies-rail-collapsed .builder-progress-sidebar {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
 .builder-workspace {
   margin-top: var(--builder-header-height);
   margin-left: var(--builder-rail-width);

@@ -155,19 +155,66 @@ var BuilderProgressRail = (function () {
     ];
   }
 
+  function stepIcon(stepIndex) {
+    var step = typeof BuilderWizard !== 'undefined' ? BuilderWizard.getStep(stepIndex) : null;
+    var name = step && step.icon ? step.icon : 'circle-check';
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(name);
+    }
+    return '○';
+  }
+
+  function isRailCollapsed() {
+    if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed) {
+      return !!BoxiesPrefs.getRailCollapsed();
+    }
+    return document.body.classList.contains('boxies-rail-collapsed');
+  }
+
+  function applyRailCollapsed(collapsed) {
+    document.body.classList.toggle('boxies-rail-collapsed', !!collapsed);
+    document.documentElement.classList.toggle('boxies-rail-collapsed', !!collapsed);
+    var width = collapsed ? '52px' : '176px';
+    document.documentElement.style.setProperty('--builder-rail-width', width);
+  }
+
+  function applyCollapsedFromPrefs() {
+    applyRailCollapsed(isRailCollapsed());
+  }
+
   function renderHtml(state) {
     var items = buildItems(state);
     var current = state.currentStep;
-    return items.map(function (item) {
+    var collapsed = isRailCollapsed();
+    var toggleIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
+      ? BuilderIcons.render(collapsed ? 'chevron-right' : 'chevron-left')
+      : (collapsed ? '›' : '‹');
+    var html =
+      '<button type="button" class="builder-rail-collapse" id="builderRailCollapseBtn"' +
+        ' title="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
+        ' aria-label="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
+        ' aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
+        toggleIcon +
+      '</button>';
+
+    html += items.map(function (item) {
       var cls = 'builder-rail-item' + (item.done ? ' is-done' : '');
       if (item.stepIndex === current) cls += ' is-current';
       var mark = item.done ? '✓' : '○';
-      return '<button type="button" class="' + cls + '" data-rail-step="' + item.stepIndex + '">' +
-        '<span class="builder-rail-row"><span class="builder-rail-mark">' + mark + '</span>' +
-        escapeHtml(item.label) + '</span>' +
-        (item.value ? '<span class="builder-rail-value">' + escapeHtml(item.value) + '</span>' : '') +
+      return '<button type="button" class="' + cls + '" data-rail-step="' + item.stepIndex + '"' +
+        ' title="' + escapeHtml(item.label) + '"' +
+        ' aria-label="' + escapeHtml(item.label) + '">' +
+        '<span class="builder-rail-row">' +
+          '<span class="builder-rail-icon" aria-hidden="true">' + stepIcon(item.stepIndex) + '</span>' +
+          '<span class="builder-rail-mark" aria-hidden="true">' + mark + '</span>' +
+          '<span class="builder-rail-label">' + escapeHtml(item.label) + '</span>' +
+        '</span>' +
+        (item.value && !collapsed
+          ? '<span class="builder-rail-value">' + escapeHtml(item.value) + '</span>'
+          : '') +
       '</button>';
     }).join('');
+    return html;
   }
 
   function escapeHtml(v) {
@@ -175,15 +222,38 @@ var BuilderProgressRail = (function () {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  var _lastRoot = null;
+  var _lastState = null;
+
   function update(rootEl, state) {
-    var rail = rootEl.querySelector('#builderProgressRail');
+    var rail = rootEl && rootEl.querySelector
+      ? rootEl.querySelector('#builderProgressRail')
+      : document.getElementById('builderProgressRail');
     if (!rail) return;
+    _lastRoot = rootEl;
+    _lastState = state;
+    applyCollapsedFromPrefs();
     rail.innerHTML = renderHtml(state);
+    if (!rail.dataset.collapseBound) {
+      rail.dataset.collapseBound = '1';
+      rail.addEventListener('click', function (e) {
+        var btn = e.target.closest('#builderRailCollapseBtn');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var next = !isRailCollapsed();
+        if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setRailCollapsed) {
+          BoxiesPrefs.setRailCollapsed(next);
+        }
+        applyRailCollapsed(next);
+        if (_lastRoot && _lastState) update(_lastRoot, _lastState);
+      });
+    }
   }
 
   function applyLayoutVars() {
     document.documentElement.style.setProperty('--builder-header-height', '44px');
-    document.documentElement.style.setProperty('--builder-rail-width', '176px');
+    applyCollapsedFromPrefs();
   }
 
   return {
@@ -191,6 +261,8 @@ var BuilderProgressRail = (function () {
     renderHtml: renderHtml,
     update: update,
     applyLayoutVars: applyLayoutVars,
+    applyCollapsedFromPrefs: applyCollapsedFromPrefs,
+    applyRailCollapsed: applyRailCollapsed,
     isDone: isDone
   };
 })();

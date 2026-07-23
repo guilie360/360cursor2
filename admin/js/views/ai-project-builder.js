@@ -12,6 +12,20 @@ var AiProjectBuilderView = (function () {
   function renderProgressRail() {
     if (!rootEl) return;
     BuilderProgressRail.update(rootEl, state);
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
+      try {
+        var slug = null;
+        slug = new URLSearchParams(window.location.search || '').get('project')
+          || new URLSearchParams(window.location.search || '').get('proyecto');
+        var name = (state.projectInfo && state.projectInfo.nombre)
+          || (state.heroContent && state.heroContent.nombre)
+          || (state.menuConfig && state.menuConfig.projectName)
+          || '';
+        if (slug || name) {
+          BoxiesShell.setProjectContext({ name: name || slug, slug: slug || '' });
+        }
+      } catch (e) {}
+    }
   }
 
   function renderDock() {
@@ -817,7 +831,7 @@ var AiProjectBuilderView = (function () {
       typeof BoxiesAppShell !== 'undefined'
         ? BoxiesAppShell.html({
             appId: 'builderApp',
-            title: 'BOXIES AI',
+            title: 'BOXIES',
             leftHtml: leftHtml,
             actionsHtml: actionsHtml,
             railId: 'builderProgressRail',
@@ -828,7 +842,7 @@ var AiProjectBuilderView = (function () {
           '<div class="builder-app" id="builderApp" hidden>' +
             '<header class="builder-header-fixed">' +
               '<div class="builder-header-left">' + leftHtml + '</div>' +
-              '<span class="builder-header-title">BOXIES AI</span>' +
+              '<span class="builder-header-title">BOXIES</span>' +
               '<div class="builder-header-actions">' + actionsHtml + '</div>' +
             '</header>' +
             '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Progreso del proyecto"></aside>' +
@@ -844,7 +858,7 @@ var AiProjectBuilderView = (function () {
     rootEl.innerHTML =
       '<div class="builder-access-denied" id="builderAccessDenied" hidden>' +
         '<h2>Acceso restringido</h2>' +
-        '<p>BOXIES AI solo está disponible para administradores.</p></div>' +
+        '<p>BOXIES solo está disponible para administradores.</p></div>' +
       shellHtml;
 
     var app = rootEl.querySelector('#builderApp');
@@ -1947,6 +1961,13 @@ var AiProjectBuilderView = (function () {
     render: render,
     onLeave: onLeave,
     goToStep: goToStep,
-    goToStepById: goToStepById
+    goToStepById: goToStepById,
+    getProjectLabel: function () {
+      if (!state) return '';
+      return (state.projectInfo && state.projectInfo.nombre)
+        || (state.heroContent && state.heroContent.nombre)
+        || (state.menuConfig && state.menuConfig.projectName)
+        || '';
+    }
   };
 })();
