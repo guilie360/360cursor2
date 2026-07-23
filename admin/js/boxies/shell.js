@@ -49,18 +49,16 @@ var BoxiesShell = (function () {
   }
 
   function dockHtml() {
-    var fsIcon = iconHtml('maximize');
     return (
-      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Controles de la aplicación">' +
+      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones del proyecto">' +
         '<div class="boxies-dock__inner">' +
           '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
-            '<span class="boxies-dock__project-name" id="boxiesDockProjectName"></span>' +
-            '<button type="button" class="boxies-btn-secondary boxies-dock__preview" id="boxiesPreviewBtn">Previsualizar</button>' +
+            '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
           '</div>' +
           '<div class="boxies-dock__spacer"></div>' +
-          '<div class="boxies-dock__tools">' +
-            '<button type="button" class="boxies-dock__ctrl" id="builderFullscreenBtn" aria-label="Pantalla completa" data-fullscreen="enter">' +
-              fsIcon +
+          '<div class="boxies-dock__actions" id="boxiesDockActions" hidden>' +
+            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon boxies-dock__preview" id="boxiesPreviewBtn" aria-label="Visualizar" title="Visualizar" disabled>' +
+              iconHtml('eye') +
             '</button>' +
           '</div>' +
         '</div>' +
@@ -109,7 +107,11 @@ var BoxiesShell = (function () {
             '</div>' +
           '</div>' +
           brandTitleHtml() +
-          '<div class="boxies-header__actions" id="boxiesHeaderActions"></div>' +
+          '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
+            '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" title="Pantalla completa" data-fullscreen="enter">' +
+              iconHtml('maximize') +
+            '</button>' +
+          '</div>' +
         '</header>' +
         '<aside class="boxies-sidebar" id="boxiesSidebar" aria-label="Navegación">' +
           defaultNavHtml('projects') +
@@ -126,20 +128,21 @@ var BoxiesShell = (function () {
 
   function bindFullscreen() {
     if (fullscreenBound) return;
-    var dock = document.getElementById('boxiesDock');
-    if (!dock) return;
+    var root = document.getElementById('boxiesAppRoot') || document.getElementById('boxiesHeaderActions');
+    if (!root) return;
     if (typeof BuilderDock !== 'undefined' && typeof BuilderDock.bindFullscreen === 'function') {
-      BuilderDock.bindFullscreen(dock);
+      BuilderDock.bindFullscreen(root);
       fullscreenBound = true;
       return;
     }
-    var btn = dock.querySelector('#builderFullscreenBtn');
+    var btn = root.querySelector('#builderFullscreenBtn');
     if (!btn || btn.dataset.bound) return;
     btn.dataset.bound = '1';
     function syncIcon() {
       var isFs = !!document.fullscreenElement;
       btn.setAttribute('data-fullscreen', isFs ? 'exit' : 'enter');
       btn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
+      btn.title = isFs ? 'Salir de pantalla completa' : 'Pantalla completa';
       btn.innerHTML = iconHtml(isFs ? 'minimize' : 'maximize');
     }
     btn.addEventListener('click', function () {
@@ -306,12 +309,14 @@ var BoxiesShell = (function () {
     };
     var wrap = document.getElementById('boxiesDockProject');
     var nameEl = document.getElementById('boxiesDockProjectName');
+    var actions = document.getElementById('boxiesDockActions');
     var previewBtn = document.getElementById('boxiesPreviewBtn');
     if (!wrap || !nameEl) return;
 
     if (!projectCtx.slug && !projectCtx.name) {
       wrap.hidden = true;
       nameEl.textContent = '';
+      if (actions) actions.hidden = true;
       if (previewBtn) previewBtn.disabled = true;
       return;
     }
@@ -319,6 +324,7 @@ var BoxiesShell = (function () {
     var label = projectCtx.name || projectCtx.slug;
     nameEl.textContent = label;
     wrap.hidden = false;
+    if (actions) actions.hidden = false;
     if (previewBtn) previewBtn.disabled = !projectCtx.slug;
   }
 
@@ -328,7 +334,7 @@ var BoxiesShell = (function () {
 
   function applyManifest(manifest) {
     manifest = manifest || {};
-    var actions = document.getElementById('boxiesHeaderActions');
+    var actions = document.getElementById('boxiesDockActions');
     if (!actions) return;
 
     actions.querySelectorAll('[data-boxies-page-action]').forEach(function (el) {
@@ -336,12 +342,18 @@ var BoxiesShell = (function () {
     });
 
     if (manifest.actionsHtml) {
+      var previewBtn = document.getElementById('boxiesPreviewBtn');
       var wrap = document.createElement('div');
       wrap.innerHTML = manifest.actionsHtml;
       while (wrap.firstChild) {
         var node = wrap.firstChild;
-        if (node.nodeType === 1) node.setAttribute('data-boxies-page-action', '1');
-        actions.appendChild(node);
+        if (node.nodeType === 1) {
+          node.setAttribute('data-boxies-page-action', '1');
+          if (previewBtn) actions.insertBefore(node, previewBtn);
+          else actions.appendChild(node);
+        } else {
+          wrap.removeChild(node);
+        }
       }
     }
   }

@@ -119,7 +119,34 @@ body.boxies-has-dock.boxies-shell {
   min-width: 0;
 }
 
-/* Secondary actions — single system (Guardar / Republicar / Previsualizar) */
+.boxies-header__fs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition),
+    background var(--boxies-transition);
+}
+
+.boxies-header__fs:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.boxies-header__fs:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+/* Secondary actions — Guardar / Republicar / Visualizar */
 .boxies-btn-secondary {
   flex-shrink: 0;
   box-sizing: border-box;
@@ -163,10 +190,22 @@ body.boxies-has-dock.boxies-shell {
   outline-offset: 2px;
 }
 
-/* Kill Builder primary/white when promoted into Shell header */
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary,
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-primary,
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-muted {
+.boxies-btn-secondary--icon {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+}
+
+.boxies-btn-secondary--icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Kill Builder primary/white when promoted into Shell dock */
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary,
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-primary,
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-muted {
   min-width: 108px;
   height: 32px;
   padding: 0 14px;
@@ -181,9 +220,9 @@ body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-
   line-height: 1;
 }
 
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary:hover:not(:disabled),
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-primary:hover:not(:disabled),
-body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-muted:hover:not(:disabled) {
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary:hover:not(:disabled),
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-primary:hover:not(:disabled),
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-muted:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.24);
   color: rgba(255, 255, 255, 0.95);
@@ -470,39 +509,50 @@ body.boxies-nav-collapsed .boxies-sidebar {
   max-width: 100%;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 12px;
-  padding: 0 12px;
+  padding: 0 14px;
 }
 
 .boxies-dock__project {
   display: flex;
   align-items: center;
-  gap: 12px;
   min-width: 0;
-  max-width: min(520px, 58vw);
-  margin-right: auto;
+  max-width: min(420px, 48vw);
+  flex-shrink: 1;
 }
 
 .boxies-dock__project[hidden] {
   display: none !important;
 }
 
+/* Same hierarchy as header user name (.boxies-user strong) */
 .boxies-dock__project-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 550;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: normal;
+  text-transform: none;
 }
-
-/* Previsualizar uses .boxies-btn-secondary — no duplicate skin */
 
 .boxies-dock__spacer {
   flex: 1;
   min-width: 8px;
+}
+
+.boxies-dock__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.boxies-dock__actions[hidden] {
+  display: none !important;
 }
 
 .boxies-dock__tools {

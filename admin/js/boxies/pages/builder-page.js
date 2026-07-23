@@ -2,7 +2,7 @@
  * BOXIES BuilderPage — adapter around AiProjectBuilderView.
  * Does NOT rewrite engines/CMS. Mounts editor into #boxiesContent only.
  * Nested Builder chrome (header/dock) is visually suppressed; Boxies Shell owns chrome.
- * Save/Publish buttons are promoted into the Boxies header actions (same DOM nodes / handlers).
+ * Save/Publish buttons are promoted into the Boxies dock actions (same DOM nodes / handlers).
  */
 var BoxiesBuilderPage = (function () {
   var activeHost = null;
@@ -29,17 +29,19 @@ var BoxiesBuilderPage = (function () {
     } catch (e) {}
   }
 
-  function promoteHeaderActions(host) {
-    var boxiesActions = document.getElementById('boxiesHeaderActions');
+  function promoteDockActions(host) {
+    var dockActions = document.getElementById('boxiesDockActions');
+    var previewBtn = document.getElementById('boxiesPreviewBtn');
     var nested = host.querySelector('.builder-header-actions');
-    if (!boxiesActions || !nested) return;
+    if (!dockActions || !nested) return;
 
     promotedNodes = [];
     Array.prototype.slice.call(nested.children).forEach(function (btn) {
       btn.setAttribute('data-boxies-page-action', '1');
       btn.classList.add('boxies-btn-secondary');
       btn.classList.remove('is-primary', 'boxies-action-btn');
-      boxiesActions.appendChild(btn);
+      if (previewBtn) dockActions.insertBefore(btn, previewBtn);
+      else dockActions.appendChild(btn);
       promotedNodes.push(btn);
     });
   }
@@ -114,8 +116,8 @@ var BoxiesBuilderPage = (function () {
 
       await AiProjectBuilderView.render(host);
 
-      /* Promote Save/Publish into Boxies header, then strip nested chrome (Shell owns it). */
-      promoteHeaderActions(host);
+      /* Promote Save/Publish into Boxies dock, then strip nested chrome (Shell owns it). */
+      promoteDockActions(host);
       var nestedHeader = host.querySelector('.builder-header-fixed');
       if (nestedHeader) nestedHeader.remove();
       var nestedDock = host.querySelector('.builder-dock, #builderDock');
