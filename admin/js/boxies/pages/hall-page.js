@@ -3,6 +3,8 @@
  * Clears workspace content only; Shell chrome stays mounted.
  */
 var BoxiesHallPage = (function () {
+  var LOGO_SRC = '../assets/brand/boxies-mark.png';
+
   async function mount(host) {
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
@@ -11,10 +13,8 @@ var BoxiesHallPage = (function () {
       BoxiesShell.clearPageActions();
     }
     host.innerHTML =
-      '<div class="boxies-hall" role="status" aria-label="Hall de trabajo">' +
-        '<div class="boxies-hall__brand" aria-hidden="true">B O X I E S</div>' +
-        '<h1 class="boxies-hall__title">Hall de trabajo</h1>' +
-        '<p class="boxies-hall__hint">Selecciona un módulo desde la barra lateral.</p>' +
+      '<div class="boxies-hall" role="img" aria-label="BOXIES">' +
+        '<img class="boxies-hall__logo" src="' + LOGO_SRC + '" alt="BOXIES" width="220" decoding="async">' +
       '</div>';
   }
 
