@@ -55,7 +55,7 @@ var BoxiesShell = (function () {
         '<div class="boxies-dock__inner">' +
           '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
             '<span class="boxies-dock__project-name" id="boxiesDockProjectName"></span>' +
-            '<button type="button" class="boxies-dock__preview" id="boxiesPreviewBtn">Previsualizar</button>' +
+            '<button type="button" class="boxies-btn-secondary boxies-dock__preview" id="boxiesPreviewBtn">Previsualizar</button>' +
           '</div>' +
           '<div class="boxies-dock__spacer"></div>' +
           '<div class="boxies-dock__tools">' +
@@ -245,6 +245,10 @@ var BoxiesShell = (function () {
   function unmount() {
     clearPageActions();
     clearProjectContext();
+    /* Leaving BOXIES entirely — release workspace fullscreen */
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(function () {});
+    }
     if (rootEl) {
       rootEl.innerHTML = '';
       rootEl.hidden = true;

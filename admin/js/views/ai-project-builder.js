@@ -1951,7 +1951,13 @@ var AiProjectBuilderView = (function () {
   function onLeave() {
     saveState();
     BuilderDock.clearBodyPadding();
-    if (document.fullscreenElement) {
+    /* Keep BOXIES workspace fullscreen across Proyectos ↔ Builder.
+       Only exit fullscreen when leaving the BOXIES shell entirely. */
+    var inBoxiesShell = document.body.classList.contains('boxies-shell')
+      || (typeof BoxiesShell !== 'undefined'
+        && typeof BoxiesShell.isMounted === 'function'
+        && BoxiesShell.isMounted());
+    if (!inBoxiesShell && document.fullscreenElement) {
       document.exitFullscreen().catch(function () {});
     }
     rootEl = null;

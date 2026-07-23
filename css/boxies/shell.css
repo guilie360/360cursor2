@@ -119,22 +119,74 @@ body.boxies-has-dock.boxies-shell {
   min-width: 0;
 }
 
-/* Guardar / Republicar — misma caja visual */
-.boxies-header__actions .boxies-action-btn,
-.boxies-header__actions .builder-header-action-btn {
+/* Secondary actions — single system (Guardar / Republicar / Previsualizar) */
+.boxies-btn-secondary {
+  flex-shrink: 0;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 108px;
   height: 32px;
-  padding: 0 16px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 650;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--boxies-transition),
+    border-color var(--boxies-transition),
+    color var(--boxies-transition),
+    opacity var(--boxies-transition);
+}
+
+.boxies-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.boxies-btn-secondary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.boxies-btn-secondary:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+/* Kill Builder primary/white when promoted into Shell header */
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary,
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-primary,
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-muted {
+  min-width: 108px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary:hover:not(:disabled),
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-primary:hover:not(:disabled),
+body.boxies-shell .boxies-header__actions .builder-header-action-btn.boxies-btn-secondary.is-muted:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .boxies-action-btn {
@@ -385,15 +437,12 @@ body.boxies-nav-collapsed .boxies-sidebar {
   padding: 24px clamp(20px, 3vw, 40px) 28px;
   overflow-y: auto;
   opacity: 1;
-  transition: opacity 180ms ease;
 }
 
-#boxiesContent.is-leave {
-  opacity: 0;
-}
-
+/* Instant page swaps — no fade flash that feels like a remount */
+#boxiesContent.is-leave,
 #boxiesContent.is-enter {
-  opacity: 0;
+  opacity: 1;
 }
 
 #boxiesContent.is-builder-embed {
@@ -449,33 +498,7 @@ body.boxies-nav-collapsed .boxies-sidebar {
   color: rgba(255, 255, 255, 0.82);
 }
 
-.boxies-dock__preview {
-  flex-shrink: 0;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.62rem;
-  font-weight: 650;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background var(--boxies-transition),
-    border-color var(--boxies-transition),
-    color var(--boxies-transition);
-}
-
-.boxies-dock__preview:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.24);
-}
-
-.boxies-dock__preview:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
+/* Previsualizar uses .boxies-btn-secondary — no duplicate skin */
 
 .boxies-dock__spacer {
   flex: 1;

@@ -7,10 +7,15 @@ var BoxiesRouter = (function () {
   var currentId = null;
   var currentProject = null;
   var started = false;
-  var TRANSITION_MS = 180;
+  /* Instant content swaps — Shell chrome stays; avoids fullscreen/layout flicker */
+  var TRANSITION_MS = 0;
 
   function wait(ms) {
     return new Promise(function (resolve) {
+      if (!ms) {
+        resolve();
+        return;
+      }
       setTimeout(resolve, ms);
     });
   }

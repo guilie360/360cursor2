@@ -37,7 +37,8 @@ var BoxiesBuilderPage = (function () {
     promotedNodes = [];
     Array.prototype.slice.call(nested.children).forEach(function (btn) {
       btn.setAttribute('data-boxies-page-action', '1');
-      btn.classList.add('boxies-action-btn');
+      btn.classList.add('boxies-btn-secondary');
+      btn.classList.remove('is-primary', 'boxies-action-btn');
       boxiesActions.appendChild(btn);
       promotedNodes.push(btn);
     });
