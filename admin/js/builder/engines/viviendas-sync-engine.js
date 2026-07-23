@@ -26,11 +26,21 @@ var ViviendasSyncEngine = (function () {
   var pendingPlanFiles = {};
 
   function getSlugFromUrl() {
+    if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getSlugFromUrl) {
+      return HeroSyncEngine.getSlugFromUrl();
+    }
     try {
       var slug = new URLSearchParams(window.location.search).get('proyecto');
       if (slug) return slug;
     } catch (e) {}
     return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null;
+  }
+
+  function getProjectIdFromUrl() {
+    if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl) {
+      return HeroSyncEngine.getProjectIdFromUrl();
+    }
+    return null;
   }
 
   function uid() {
@@ -248,15 +258,19 @@ var ViviendasSyncEngine = (function () {
   }
 
   async function resolveProject(state) {
+    var id = getProjectIdFromUrl() ||
+      (state && state.draftProjectId) ||
+      (state && state.publishResult && state.publishResult.proyectoId) ||
+      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
+    if (id) {
+      var byId = await fetchProjectById(id);
+      if (byId) return byId;
+    }
     var slug = getSlugFromUrl();
     if (slug) {
       var bySlug = await fetchProjectBySlug(slug);
       if (bySlug) return bySlug;
     }
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-    if (id) return fetchProjectById(id);
     return null;
   }
 

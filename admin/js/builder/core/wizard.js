@@ -1,6 +1,7 @@
 /* Builder wizard — step orchestration (incluye Interactivo) */
 var BuilderWizard = (function () {
   var STEPS = [
+    { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
     { id: 'project-type', label: 'Tipo de proyecto', shortLabel: 'Tipo', icon: 'shapes', assistant: '¿Qué tipo de proyecto deseas crear? Selecciona una opción y prepararé la estructura base automáticamente.' },
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
     { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Sube un video o imagen de fondo para la portada del showroom.' },
@@ -36,6 +37,8 @@ var BuilderWizard = (function () {
 
   function canAdvance(stepIndex, state) {
     switch (STEPS[stepIndex].id) {
+      case 'config':
+        return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
       case 'project-type':
         return !!state.projectType;
       case 'branding':

@@ -14,16 +14,35 @@ var PlatformBuilderBridge = (function () {
     return result.data;
   }
 
-  async function resolveConstructoraId() {
+    async function resolveConstructoraId() {
     var sessionProfile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
     if (sessionProfile && sessionProfile.constructora_id) {
       return sessionProfile.constructora_id;
     }
 
+    var projectId = null;
     var slug = null;
     try {
-      slug = new URLSearchParams(window.location.search).get('proyecto');
+      var params = new URLSearchParams(window.location.search);
+      projectId = params.get('projectId') || params.get('proyectoId');
+      slug = params.get('proyecto') || params.get('project');
+      if (projectId && !/^[0-9a-f-]{36}$/i.test(projectId)) projectId = null;
+      if (slug && /^[0-9a-f-]{36}$/i.test(slug)) {
+        projectId = projectId || slug;
+        slug = null;
+      }
     } catch (e) {}
+
+    if (projectId) {
+      var byId = await getClient()
+        .from('proyectos')
+        .select('constructora_id')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (byId.data && byId.data.constructora_id) {
+        return byId.data.constructora_id;
+      }
+    }
 
     if (slug) {
       var bySlug = await getClient()
@@ -156,6 +175,38 @@ var PlatformBuilderBridge = (function () {
         var data = sanitizePayload(payload, false);
         var result = await getClient().from('proyectos').update(data).eq('id', id).select(PROJECT_SELECT).single();
         return unwrap(result, 'Error actualizando proyecto');
+      },
+      updateIdentity: async function (id, payload) {
+        if (!id) throw new Error('Falta el ID del showroom.');
+        var nombre = payload && payload.nombre != null
+          ? String(payload.nombre).trim()
+          : '';
+        var slug = payload && payload.slug != null
+          ? String(payload.slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
+          : '';
+        if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
+        if (!slug) throw new Error('El slug es obligatorio.');
+        var result = await getClient()
+          .from('proyectos')
+          .update({ nombre: nombre, slug: slug })
+          .eq('id', id)
+          .select(PROJECT_SELECT)
+          .single();
+        if (result.error) {
+          var message = result.error.message || 'Error actualizando identidad';
+          if (/proyectos_slug_unico_por_constructora/i.test(message)) {
+            throw new Error('Ya existe un showroom con ese slug en tu constructora.');
+          }
+          if (/proyectos_slug_formato/i.test(message)) {
+            throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
+          }
+          throw new Error(message);
+        }
+        return result.data;
+      },
+      getById: async function (id) {
+        var result = await getClient().from('proyectos').select(PROJECT_SELECT).eq('id', id).maybeSingle();
+        return unwrap(result, 'Error cargando showroom');
       }
     };
   }

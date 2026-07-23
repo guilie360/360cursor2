@@ -6,11 +6,21 @@ var MenuSyncEngine = (function () {
     'proyecto_config(menu_config, titulo_hero)';
 
   function getSlugFromUrl() {
+    if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getSlugFromUrl) {
+      return HeroSyncEngine.getSlugFromUrl();
+    }
     try {
       return new URLSearchParams(window.location.search).get('proyecto');
     } catch (e) {
       return null;
     }
+  }
+
+  function getProjectIdFromUrl() {
+    if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl) {
+      return HeroSyncEngine.getProjectIdFromUrl();
+    }
+    return null;
   }
 
   function normalizeConfig(raw) {
@@ -42,15 +52,19 @@ var MenuSyncEngine = (function () {
   }
 
   async function resolveProject(state) {
+    var id = getProjectIdFromUrl() ||
+      (state && state.draftProjectId) ||
+      (state && state.publishResult && state.publishResult.proyectoId) ||
+      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
+    if (id) {
+      var byId = await fetchProjectById(id);
+      if (byId) return byId;
+    }
     var slug = getSlugFromUrl();
     if (slug) {
       var bySlug = await fetchProjectBySlug(slug);
       if (bySlug) return bySlug;
     }
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-    if (id) return fetchProjectById(id);
     return null;
   }
 

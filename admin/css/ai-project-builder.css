@@ -1100,6 +1100,53 @@ body.boxies-rail-collapsed .builder-progress-sidebar {
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
+  box-sizing: border-box;
+}
+
+.builder-field input:focus {
+  border-color: color-mix(in srgb, var(--text-primary) 45%, transparent);
+  outline: none;
+}
+
+.builder-config-identity {
+  max-width: 420px;
+  margin-top: 8px;
+}
+
+.builder-config-identity__title {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  font-weight: 550;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.builder-config-identity__hint {
+  margin: 4px 0 18px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.builder-config-identity__hint code {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+}
+
+.builder-config-identity__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.builder-config-identity__status {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-config-identity input[readonly] {
+  opacity: 0.72;
+  cursor: default;
 }
 
 .builder-check-row {

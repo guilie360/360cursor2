@@ -9,7 +9,7 @@ var BoxiesShell = (function () {
   var onLogout = null;
   var fullscreenBound = false;
   var defaultActionsHtml = '';
-  var projectCtx = { name: '', slug: '' };
+  var projectCtx = { id: '', name: '', slug: '' };
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -305,6 +305,7 @@ var BoxiesShell = (function () {
   function setProjectContext(ctx) {
     ctx = ctx || {};
     projectCtx = {
+      id: (ctx.id || ctx.projectId || '').trim(),
       name: (ctx.name || ctx.nombre || '').trim(),
       slug: (ctx.slug || ctx.project || ctx.proyecto || '').trim()
     };
@@ -314,7 +315,7 @@ var BoxiesShell = (function () {
     var previewBtn = document.getElementById('boxiesPreviewBtn');
     if (!wrap || !nameEl) return;
 
-    if (!projectCtx.slug && !projectCtx.name) {
+    if (!projectCtx.slug && !projectCtx.name && !projectCtx.id) {
       wrap.hidden = true;
       nameEl.textContent = '';
       if (actions) actions.hidden = true;
@@ -322,7 +323,7 @@ var BoxiesShell = (function () {
       return;
     }
 
-    var label = projectCtx.name || projectCtx.slug;
+    var label = projectCtx.name || projectCtx.slug || 'Showroom';
     nameEl.textContent = label;
     wrap.hidden = false;
     if (actions) actions.hidden = false;

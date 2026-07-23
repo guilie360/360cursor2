@@ -6,9 +6,33 @@ var HeroSyncEngine = (function () {
       'show_whatsapp_float, show_share_float, whatsapp_float_link, whatsapp_float_message, share_float_url, ' +
       'logo_url, show_hero_logo, logo_style, video_hero_url, imagen_hero_url, color_fondo, color_accento)';
 
+  function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+
   function getSlugFromUrl() {
     try {
-      return new URLSearchParams(window.location.search).get('proyecto');
+      var params = new URLSearchParams(window.location.search);
+      var slug = params.get('proyecto');
+      if (slug && !isUuid(slug)) return slug;
+      var project = params.get('project');
+      if (project && !isUuid(project)) return project;
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getProjectIdFromUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var id = params.get('projectId') || params.get('proyectoId');
+      if (id && isUuid(id)) return id;
+      var project = params.get('project');
+      if (project && isUuid(project)) return project;
+      var proyecto = params.get('proyecto');
+      if (proyecto && isUuid(proyecto)) return proyecto;
+      return null;
     } catch (e) {
       return null;
     }
@@ -49,17 +73,22 @@ var HeroSyncEngine = (function () {
   }
 
   async function resolveProject(state) {
+    /* Permanent identity first — slug is editable vanity only */
+    var id = getProjectIdFromUrl() ||
+      (state && state.draftProjectId) ||
+      (state && state.publishResult && state.publishResult.proyectoId) ||
+      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
+
+    if (id) {
+      var byId = await fetchProjectById(id);
+      if (byId) return byId;
+    }
+
     var slug = getSlugFromUrl();
     if (slug) {
       var bySlug = await fetchProjectBySlug(slug);
       if (bySlug) return bySlug;
     }
-
-    var id = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' ? AdminState.getActiveProjectId() : null);
-
-    if (id) return fetchProjectById(id);
     return null;
   }
 
@@ -345,12 +374,16 @@ var HeroSyncEngine = (function () {
   }
 
   async function bindFromUrl(state) {
-    var slug = getSlugFromUrl();
     var project = null;
 
-    /* URL slug always wins over a stale builder session draft */
-    if (slug) {
-      project = await fetchProjectBySlug(slug);
+    /* URL projectId always wins; slug is fallback for legacy links */
+    var id = getProjectIdFromUrl();
+    if (id) {
+      project = await fetchProjectById(id);
+    }
+    if (!project) {
+      var slug = getSlugFromUrl();
+      if (slug) project = await fetchProjectBySlug(slug);
     }
     if (!project) {
       project = await resolveProject(state);
@@ -368,6 +401,8 @@ var HeroSyncEngine = (function () {
 
   return {
     getSlugFromUrl: getSlugFromUrl,
+    getProjectIdFromUrl: getProjectIdFromUrl,
+    isUuid: isUuid,
     resolveProject: resolveProject,
     bindFromUrl: bindFromUrl,
     bindStateFromProject: bindStateFromProject,

@@ -129,6 +129,28 @@ var ProyectosApi = (function () {
     return result.data;
   }
 
+  /** Patch only identity fields — never nulls the rest of the row. */
+  async function updateIdentity(id, payload) {
+    if (!id) throw new Error('Falta el ID del showroom.');
+    var nombre = AdminUI.normalizeOptionalText(payload && payload.nombre);
+    var slug = AdminUI.normalizeOptionalText(payload && payload.slug);
+    if (slug) {
+      slug = String(slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
+    if (!slug) throw new Error('El slug es obligatorio.');
+
+    var result = await AdminApi.getClient()
+      .from('proyectos')
+      .update({ nombre: nombre, slug: slug })
+      .eq('id', id)
+      .select(PROJECT_SELECT)
+      .single();
+
+    if (result.error) throw mapDbError(result.error, 'Error actualizando identidad del showroom');
+    return result.data;
+  }
+
   async function remove(id) {
     var result = await AdminApi.getClient()
       .from('proyectos')
@@ -145,6 +167,7 @@ var ProyectosApi = (function () {
     getById: getById,
     create: create,
     update: update,
+    updateIdentity: updateIdentity,
     remove: remove
   };
 })();

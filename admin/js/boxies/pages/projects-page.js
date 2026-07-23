@@ -1,9 +1,10 @@
 /**
  * BOXIES ShowroomsPage — list only fills #boxiesContent.
- * "Administrar" → BoxiesRouter.navigate('builder', { project }) — same Shell.
- * Data model remains proyectos; visible term is Showroom.
+ * Open builder by permanent projectId (UUID); slug is vanity for display/URL.
  */
 var BoxiesProjectsPage = (function () {
+  var identityListener = null;
+
   function escapeHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -31,16 +32,19 @@ var BoxiesProjectsPage = (function () {
   }
 
   function row(showroom) {
+    var id = showroom.id || '';
     var slug = showroom.slug || '';
     var name = showroom.nombre || slug || 'Sin nombre';
     return (
-      '<tr>' +
-        '<td><strong>' + escapeHtml(name) + '</strong></td>' +
-        '<td><code>' + escapeHtml(slug) + '</code></td>' +
+      '<tr data-showroom-id="' + escapeHtml(id) + '">' +
+        '<td><strong class="boxies-showroom-name">' + escapeHtml(name) + '</strong></td>' +
+        '<td><code class="boxies-showroom-slug">' + escapeHtml(slug) + '</code></td>' +
         '<td>' + statusBadge(showroom) + '</td>' +
         '<td>' + escapeHtml(formatDate(showroom.updated_at)) + '</td>' +
         '<td class="table-actions">' +
-          '<button type="button" class="boxies-action-btn" data-boxies-open-builder="' +
+          '<button type="button" class="boxies-action-btn" data-boxies-open-builder-id="' +
+            escapeHtml(id) +
+          '" data-boxies-open-builder="' +
             escapeHtml(slug) +
           '">Administrar</button>' +
         '</td>' +
@@ -50,13 +54,31 @@ var BoxiesProjectsPage = (function () {
 
   function bindOpenBuilder(host) {
     host.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-boxies-open-builder]');
+      var btn = e.target.closest('[data-boxies-open-builder-id], [data-boxies-open-builder]');
       if (!btn) return;
       e.preventDefault();
+      var projectId = btn.getAttribute('data-boxies-open-builder-id');
       var slug = btn.getAttribute('data-boxies-open-builder');
-      if (!slug) return;
-      BoxiesRouter.navigate('builder', { project: slug });
+      if (!projectId && !slug) return;
+      BoxiesRouter.navigate('builder', {
+        projectId: projectId || null,
+        project: slug || null
+      });
     });
+  }
+
+  function patchShowroomRow(detail) {
+    if (!detail || !detail.id) return;
+    var rowEl = document.querySelector(
+      '#boxiesProjectsBody tr[data-showroom-id="' + detail.id + '"]'
+    );
+    if (!rowEl) return;
+    var nameEl = rowEl.querySelector('.boxies-showroom-name');
+    var slugEl = rowEl.querySelector('.boxies-showroom-slug');
+    if (nameEl && detail.nombre) nameEl.textContent = detail.nombre;
+    if (slugEl && detail.slug) slugEl.textContent = detail.slug;
+    var btn = rowEl.querySelector('[data-boxies-open-builder]');
+    if (btn && detail.slug) btn.setAttribute('data-boxies-open-builder', detail.slug);
   }
 
   async function mount(host) {
@@ -82,6 +104,10 @@ var BoxiesProjectsPage = (function () {
       '</div>';
 
     bindOpenBuilder(host);
+    identityListener = function (ev) {
+      patchShowroomRow(ev && ev.detail);
+    };
+    window.addEventListener('boxies:showroom-identity-changed', identityListener);
 
     var tbody = document.getElementById('boxiesProjectsBody');
     try {
@@ -104,7 +130,12 @@ var BoxiesProjectsPage = (function () {
     }
   }
 
-  function unmount() {}
+  function unmount() {
+    if (identityListener) {
+      window.removeEventListener('boxies:showroom-identity-changed', identityListener);
+      identityListener = null;
+    }
+  }
 
   return { id: 'projects', title: 'Showrooms', mount: mount, unmount: unmount };
 })();

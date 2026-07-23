@@ -15,11 +15,21 @@ var AiProjectBuilderView = (function () {
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
       try {
         var slug = null;
-        slug = new URLSearchParams(window.location.search || '').get('project')
-          || new URLSearchParams(window.location.search || '').get('proyecto');
+        var projectId = null;
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          projectId = params.get('projectId') || params.get('proyectoId');
+          slug = params.get('project') || params.get('proyecto');
+        } catch (e1) {}
         var name = (state.projectInfo && state.projectInfo.nombre) || '';
-        if (slug || name) {
-          BoxiesShell.setProjectContext({ name: name || slug, slug: slug || '' });
+        slug = (state.projectInfo && state.projectInfo.slug) || slug || '';
+        projectId = state.draftProjectId || projectId || '';
+        if (slug || name || projectId) {
+          BoxiesShell.setProjectContext({
+            id: projectId || '',
+            name: name || slug,
+            slug: slug || ''
+          });
         }
       } catch (e) {}
     }
@@ -82,6 +92,49 @@ var AiProjectBuilderView = (function () {
       renderProgressRail();
       updateNavButtons();
     });
+  }
+
+  var SHOWROOM_PUBLIC_HOST = '360preventa.com';
+
+  function normalizeShowroomSlug(raw) {
+    return String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function renderConfig() {
+    var info = state.projectInfo || {};
+    var nombre = info.nombre || '';
+    var slug = info.slug || '';
+    var subdomain = (slug || 'slug') + '.' + SHOWROOM_PUBLIC_HOST;
+    return '<div class="builder-step-content">' +
+      stepTitleHtml('Configuración') +
+      '<p class="builder-step-desc">Identidad del Showroom. El ID interno no cambia; nombre y slug son editables.</p>' +
+      '<div class="builder-config-identity">' +
+        '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
+        '<div class="builder-field">' +
+          '<label for="showroomNameInput">Nombre del Showroom</label>' +
+          '<input type="text" id="showroomNameInput" maxlength="120" value="' + AdminUI.escapeHtml(nombre) + '" placeholder="Valhalla">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="showroomSlugInput">Slug</label>' +
+          '<input type="text" id="showroomSlugInput" maxlength="80" value="' + AdminUI.escapeHtml(slug) + '" placeholder="valhalla" autocomplete="off" spellcheck="false">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="showroomSubdomainInput">Subdominio</label>' +
+          '<input type="text" id="showroomSubdomainInput" value="' + AdminUI.escapeHtml(subdomain) + '" readonly>' +
+        '</div>' +
+        '<p class="builder-config-identity__hint">La URL pública será <code>/' +
+          AdminUI.escapeHtml(slug || 'slug') +
+        '</code>. Si cambias el slug, el enlace anterior dejará de funcionar.</p>' +
+        '<div class="builder-config-identity__actions">' +
+          '<button type="button" class="builder-header-action-btn" id="showroomIdentitySaveBtn">Guardar cambios</button>' +
+          '<span class="builder-config-identity__status" id="showroomIdentityStatus" aria-live="polite"></span>' +
+        '</div>' +
+      '</div></div>';
   }
 
   function renderProjectType() {
@@ -791,6 +844,7 @@ var AiProjectBuilderView = (function () {
 
     var html = '';
     switch (step.id) {
+      case 'config': html = renderConfig(); break;
       case 'project-type': html = renderProjectType(); break;
       case 'branding': html = renderBranding(); break;
       case 'video-hero': html = renderVideoHero(); break;
@@ -865,6 +919,35 @@ var AiProjectBuilderView = (function () {
   /* ── Event handlers ── */
 
   function bindStepEvents(stepId) {
+    if (stepId === 'config') {
+      var nameInput = rootEl.querySelector('#showroomNameInput');
+      var slugInput = rootEl.querySelector('#showroomSlugInput');
+      var subdomainInput = rootEl.querySelector('#showroomSubdomainInput');
+      var saveBtn = rootEl.querySelector('#showroomIdentitySaveBtn');
+      var statusEl = rootEl.querySelector('#showroomIdentityStatus');
+
+      function syncSubdomainPreview() {
+        var nextSlug = normalizeShowroomSlug(slugInput ? slugInput.value : '');
+        if (subdomainInput) {
+          subdomainInput.value = (nextSlug || 'slug') + '.' + SHOWROOM_PUBLIC_HOST;
+        }
+      }
+
+      if (slugInput) {
+        slugInput.addEventListener('input', syncSubdomainPreview);
+        slugInput.addEventListener('blur', function () {
+          slugInput.value = normalizeShowroomSlug(slugInput.value);
+          syncSubdomainPreview();
+        });
+      }
+
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+          handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl);
+        });
+      }
+    }
+
     if (stepId === 'project-type') {
       var picker = rootEl.querySelector('#builderTypePicker');
       var toggle = rootEl.querySelector('#builderTypePickerToggle');
@@ -1779,6 +1862,93 @@ var AiProjectBuilderView = (function () {
     renderAll();
   }
 
+  async function handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl) {
+    var projectId = state.draftProjectId ||
+      (state.publishResult && state.publishResult.proyectoId) ||
+      (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+        ? AdminState.getActiveProjectId()
+        : null);
+    if (!projectId) {
+      if (statusEl) statusEl.textContent = 'Abre un showroom existente para guardar la identidad.';
+      AdminNotify.error('No hay un showroom vinculado (falta ID).');
+      return;
+    }
+    if (typeof ProyectosApi === 'undefined' || typeof ProyectosApi.updateIdentity !== 'function') {
+      AdminNotify.error('API de identidad no disponible.');
+      return;
+    }
+
+    var nombre = nameInput ? String(nameInput.value || '').trim() : '';
+    var slug = normalizeShowroomSlug(slugInput ? slugInput.value : '');
+    if (!nombre || !slug) {
+      if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
+      return;
+    }
+
+    if (saveBtn) saveBtn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Guardando…';
+    try {
+      var updated = await ProyectosApi.updateIdentity(projectId, {
+        nombre: nombre,
+        slug: slug
+      });
+
+      state.draftProjectId = updated.id;
+      state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+        nombre: updated.nombre,
+        slug: updated.slug
+      });
+      if (!state.heroContent) state.heroContent = {};
+      state.heroContent.nombre = updated.nombre;
+      state.publishResult = Object.assign({}, state.publishResult || {}, {
+        proyectoId: updated.id,
+        slug: updated.slug,
+        project: updated,
+        url: typeof PlatformBuilderBridge !== 'undefined'
+          ? PlatformBuilderBridge.showroomUrl(updated.slug)
+          : '/' + encodeURIComponent(updated.slug)
+      });
+      if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
+        AdminState.setActiveProjectId(updated.id);
+      }
+      saveState();
+
+      if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.syncProjectIdentity) {
+        BoxiesRouter.syncProjectIdentity({
+          projectId: updated.id,
+          slug: updated.slug
+        });
+      }
+      if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
+        BoxiesShell.setProjectContext({
+          id: updated.id,
+          name: updated.nombre,
+          slug: updated.slug
+        });
+      }
+
+      try {
+        window.dispatchEvent(new CustomEvent('boxies:showroom-identity-changed', {
+          detail: {
+            id: updated.id,
+            nombre: updated.nombre,
+            slug: updated.slug
+          }
+        }));
+      } catch (evErr) {}
+
+      if (statusEl) statusEl.textContent = 'Guardado.';
+      AdminNotify.success('Identidad del Showroom actualizada.');
+      renderStepContent();
+      updateNavButtons();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err.message || 'Error al guardar.';
+      AdminNotify.error(err.message || 'Error al guardar identidad');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
   function syncStepUrl(stepId) {
     try {
       var url = new URL(window.location.href);
@@ -1969,6 +2139,18 @@ var AiProjectBuilderView = (function () {
       /* Single source: proyectos.nombre hydrated into projectInfo.nombre */
       if (!state || !state.projectInfo) return '';
       return state.projectInfo.nombre || '';
+    },
+    getProjectIdentity: function () {
+      if (!state) return { id: '', nombre: '', slug: '' };
+      return {
+        id: state.draftProjectId ||
+          (state.publishResult && state.publishResult.proyectoId) ||
+          '',
+        nombre: (state.projectInfo && state.projectInfo.nombre) || '',
+        slug: (state.projectInfo && state.projectInfo.slug) ||
+          (state.publishResult && state.publishResult.slug) ||
+          ''
+      };
     }
   };
 })();

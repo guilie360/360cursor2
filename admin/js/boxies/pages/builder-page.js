@@ -1,8 +1,6 @@
 /**
  * BOXIES BuilderPage — adapter around AiProjectBuilderView.
- * Does NOT rewrite engines/CMS. Mounts editor into #boxiesContent only.
- * Nested Builder chrome (header/dock) is visually suppressed; Boxies Shell owns chrome.
- * Save/Publish buttons are promoted into the Boxies dock actions (same DOM nodes / handlers).
+ * Opens by permanent projectId (UUID); slug kept in URL for public preview + legacy fallback.
  */
 var BoxiesBuilderPage = (function () {
   var activeHost = null;
@@ -14,15 +12,18 @@ var BoxiesBuilderPage = (function () {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function ensureProyectoInUrl(slug) {
-    if (!slug) return;
+  function ensureIdentityInUrl(projectId, slug) {
     try {
       var url = new URL(window.location.href);
       url.searchParams.set('page', 'builder');
-      url.searchParams.set('project', slug);
-      url.searchParams.set('proyecto', slug);
+      if (projectId) url.searchParams.set('projectId', projectId);
+      else url.searchParams.delete('projectId');
+      if (slug) {
+        url.searchParams.set('project', slug);
+        url.searchParams.set('proyecto', slug);
+      }
       window.history.replaceState(
-        { page: 'builder', project: slug },
+        { page: 'builder', projectId: projectId || null, project: slug || null },
         '',
         url.pathname + url.search + url.hash
       );
@@ -93,9 +94,10 @@ var BoxiesBuilderPage = (function () {
   async function mount(host, ctx) {
     activeHost = host;
     ctx = ctx || {};
-    var slug = (ctx.project || ctx.proyecto || '').trim();
+    var projectId = (ctx.projectId || '').trim();
+    var slug = (ctx.project || ctx.proyecto || ctx.slug || '').trim();
 
-    if (!slug) {
+    if (!projectId && !slug) {
       showPickProject(host);
       return;
     }
@@ -105,7 +107,7 @@ var BoxiesBuilderPage = (function () {
       return;
     }
 
-    ensureProyectoInUrl(slug);
+    ensureIdentityInUrl(projectId, slug);
     host.classList.add('boxies-builder-embed');
     host.innerHTML = '<p class="boxies-page__desc" style="padding:8px 0">Cargando builder…</p>';
 
@@ -114,9 +116,13 @@ var BoxiesBuilderPage = (function () {
         await PlatformBuilderBridge.init();
       }
 
+      /* Prefer permanent ID in session before engines resolve */
+      if (projectId && typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
+        AdminState.setActiveProjectId(projectId);
+      }
+
       await AiProjectBuilderView.render(host);
 
-      /* Promote Save/Publish into Boxies dock, then strip nested chrome (Shell owns it). */
       promoteDockActions(host);
       var nestedHeader = host.querySelector('.builder-header-fixed');
       if (nestedHeader) nestedHeader.remove();
@@ -126,7 +132,7 @@ var BoxiesBuilderPage = (function () {
       var nestedApp = host.querySelector('#builderApp');
       if (nestedApp) nestedApp.hidden = false;
 
-      syncProjectDock(slug);
+      syncProjectDock(projectId, slug);
       if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
         BuilderProgressRail.applyCollapsedFromPrefs();
       }
@@ -136,21 +142,40 @@ var BoxiesBuilderPage = (function () {
     }
   }
 
-  function syncProjectDock(slug) {
+  function syncProjectDock(projectId, slug) {
     if (typeof BoxiesShell === 'undefined' || typeof BoxiesShell.setProjectContext !== 'function') return;
     var name = '';
+    var resolvedId = projectId || '';
+    var resolvedSlug = slug || '';
     try {
-      if (typeof AiProjectBuilderView !== 'undefined' && AiProjectBuilderView.getProjectLabel) {
-        name = AiProjectBuilderView.getProjectLabel() || '';
+      if (typeof AiProjectBuilderView !== 'undefined') {
+        if (AiProjectBuilderView.getProjectLabel) {
+          name = AiProjectBuilderView.getProjectLabel() || '';
+        }
+        if (AiProjectBuilderView.getProjectIdentity) {
+          var identity = AiProjectBuilderView.getProjectIdentity() || {};
+          if (identity.id) resolvedId = identity.id;
+          if (identity.slug) resolvedSlug = identity.slug;
+          if (identity.nombre) name = identity.nombre;
+        }
       } else if (typeof BuilderSession !== 'undefined') {
         var s = BuilderSession.load();
         name = (s && s.projectInfo && s.projectInfo.nombre) || '';
+        resolvedSlug = resolvedSlug || (s && s.projectInfo && s.projectInfo.slug) || '';
+        resolvedId = resolvedId || (s && s.draftProjectId) || '';
       }
     } catch (e) {}
     BoxiesShell.setProjectContext({
-      name: name || slug,
-      slug: slug
+      id: resolvedId,
+      name: name || resolvedSlug,
+      slug: resolvedSlug
     });
+    if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.syncProjectIdentity) {
+      BoxiesRouter.syncProjectIdentity({
+        projectId: resolvedId,
+        slug: resolvedSlug
+      });
+    }
   }
 
   function unmount() {

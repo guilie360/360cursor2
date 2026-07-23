@@ -46,6 +46,12 @@ var BuilderProgressRail = (function () {
 
     return [
       {
+        label: 'Config',
+        value: info.nombre || info.slug || null,
+        done: isDone(state, 'config', !!(info.nombre && info.slug)),
+        stepIndex: BuilderWizard.getStepIndex('config')
+      },
+      {
         label: 'Tipo',
         value: state.projectType ? typeLabel() : null,
         done: isDone(state, 'project-type', !!state.projectType),

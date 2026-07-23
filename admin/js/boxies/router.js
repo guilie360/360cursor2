@@ -1,14 +1,15 @@
 /**
  * BOXIES Router (minimal) — activates one registered page inside #boxiesContent.
- * URL: /boxies?page=<id>&project=<slug>&proyecto=<slug>
+ * Builder identity: projectId (UUID) is canonical; proyecto/project slug is vanity for public URL + legacy engines.
  * History API only — never reloads the app or remounts the Shell.
  */
 var BoxiesRouter = (function () {
   var currentId = null;
-  var currentProject = null;
+  var currentProjectId = null;
+  var currentProjectSlug = null;
   var started = false;
-  /* Instant content swaps — Shell chrome stays; avoids fullscreen/layout flicker */
   var TRANSITION_MS = 0;
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function wait(ms) {
     return new Promise(function (resolve) {
@@ -20,39 +21,60 @@ var BoxiesRouter = (function () {
     });
   }
 
+  function isUuid(value) {
+    return UUID_RE.test(String(value || ''));
+  }
+
   function parseState() {
     try {
       var params = new URLSearchParams(window.location.search || '');
       var page = (params.get('page') || '').trim() || 'hall';
+      var projectId = (params.get('projectId') || params.get('proyectoId') || '').trim() || null;
       var project = (params.get('project') || params.get('proyecto') || '').trim() || null;
-      return { page: page, project: project };
+      if (!projectId && project && isUuid(project)) {
+        projectId = project;
+        project = null;
+      }
+      if (project && isUuid(project)) project = null;
+      return { page: page, projectId: projectId, project: project };
     } catch (e) {
-      return { page: 'hall', project: null };
+      return { page: 'hall', projectId: null, project: null };
     }
   }
 
-  function writeUrl(pageId, project) {
+  function writeUrl(pageId, opts) {
+    opts = opts || {};
+    var projectId = opts.projectId || null;
+    var slug = opts.project || opts.slug || opts.proyecto || null;
     try {
       var url = new URL(window.location.href);
       if (!pageId || pageId === 'hall') {
         url.searchParams.delete('page');
         url.searchParams.delete('project');
         url.searchParams.delete('proyecto');
+        url.searchParams.delete('projectId');
+        url.searchParams.delete('proyectoId');
         url.searchParams.delete('step');
       } else {
         url.searchParams.set('page', pageId);
-        if (project) {
-          url.searchParams.set('project', project);
-          /* Engines still read ?proyecto= — keep in sync without leaving /boxies */
-          url.searchParams.set('proyecto', project);
+        if (projectId) {
+          url.searchParams.set('projectId', projectId);
         } else {
+          url.searchParams.delete('projectId');
+          url.searchParams.delete('proyectoId');
+        }
+        if (slug) {
+          /* Keep proyecto=slug for public/preview + legacy engine fallback */
+          url.searchParams.set('project', slug);
+          url.searchParams.set('proyecto', slug);
+        } else if (!projectId) {
           url.searchParams.delete('project');
           url.searchParams.delete('proyecto');
           url.searchParams.delete('step');
         }
       }
       window.history.replaceState(
-        { page: pageId, project: project || null },
+        { page: pageId, projectId: projectId, project: slug },
         '',
         url.pathname + url.search + url.hash
       );
@@ -70,7 +92,6 @@ var BoxiesRouter = (function () {
     if (!slot) return;
     slot.classList.remove('is-leave');
     slot.classList.add('is-enter');
-    /* force reflow then clear enter for settle */
     void slot.offsetWidth;
     await wait(16);
     slot.classList.remove('is-enter');
@@ -79,17 +100,27 @@ var BoxiesRouter = (function () {
   async function activate(pageId, opts) {
     opts = opts || {};
     var id = pageId || 'hall';
-    var project = opts.project != null ? opts.project : (opts.proyecto || null);
-    if (id !== 'builder') project = null;
-    if (id === 'builder' && !project) {
+    var projectId = opts.projectId || null;
+    var project = opts.project != null ? opts.project : (opts.proyecto || opts.slug || null);
+    if (id !== 'builder') {
+      projectId = null;
+      project = null;
+    }
+    if (id === 'builder' && !projectId && !project) {
       var fromUrl = parseState();
+      projectId = fromUrl.projectId;
       project = fromUrl.project;
+    }
+    if (project && isUuid(project) && !projectId) {
+      projectId = project;
+      project = null;
     }
 
     var page = BoxiesPages.get(id);
     if (!page) {
       page = BoxiesPages.get('hall');
       id = 'hall';
+      projectId = null;
       project = null;
     }
     if (!page) {
@@ -118,13 +149,19 @@ var BoxiesRouter = (function () {
     }
 
     slot.innerHTML = '';
-    slot.classList.toggle('is-builder-embed', id === 'builder' && !!project);
+    slot.classList.toggle('is-builder-embed', id === 'builder' && !!(projectId || project));
     BoxiesShell.setActiveNav(id);
-    if (!opts.silentUrl) writeUrl(id, project);
+    if (!opts.silentUrl) writeUrl(id, { projectId: projectId, project: project });
     currentId = id;
-    currentProject = project;
+    currentProjectId = projectId;
+    currentProjectSlug = project;
 
-    await page.mount(slot, { project: project, proyecto: project });
+    await page.mount(slot, {
+      projectId: projectId,
+      project: project,
+      proyecto: project,
+      slug: project
+    });
     await transitionIn(slot);
   }
 
@@ -133,10 +170,18 @@ var BoxiesRouter = (function () {
     started = true;
     window.addEventListener('popstate', function () {
       var state = parseState();
-      activate(state.page, { project: state.project, silentUrl: true });
+      activate(state.page, {
+        projectId: state.projectId,
+        project: state.project,
+        silentUrl: true
+      });
     });
     var state = parseState();
-    return activate(state.page, { project: state.project, silentUrl: true });
+    return activate(state.page, {
+      projectId: state.projectId,
+      project: state.project,
+      silentUrl: true
+    });
   }
 
   function navigate(pageId, opts) {
@@ -147,17 +192,38 @@ var BoxiesRouter = (function () {
     return currentId;
   }
 
-  function currentProjectSlug() {
-    return currentProject;
+  function currentProjectSlugFn() {
+    return currentProjectSlug;
+  }
+
+  function currentProjectIdFn() {
+    return currentProjectId;
+  }
+
+  /** Keep URL + router memory in sync after identity rename (no remount). */
+  function syncProjectIdentity(identity) {
+    identity = identity || {};
+    if (identity.projectId || identity.id) {
+      currentProjectId = identity.projectId || identity.id;
+    }
+    if (identity.slug || identity.project) {
+      currentProjectSlug = identity.slug || identity.project;
+    }
+    if (currentId === 'builder') {
+      writeUrl('builder', {
+        projectId: currentProjectId,
+        project: currentProjectSlug
+      });
+    }
   }
 
   return {
     start: start,
     navigate: navigate,
-    activate: activate,
-    parseState: parseState,
     current: current,
-    currentProjectSlug: currentProjectSlug,
+    currentProjectSlug: currentProjectSlugFn,
+    currentProjectId: currentProjectIdFn,
+    syncProjectIdentity: syncProjectIdentity,
     TRANSITION_MS: TRANSITION_MS
   };
 })();
