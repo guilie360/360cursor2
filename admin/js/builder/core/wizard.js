@@ -8,6 +8,7 @@ var BuilderWizard = (function () {
     { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'home', assistant: 'Crea y edita las tarjetas de viviendas del showroom: código, precio, áreas y disponibilidad.' },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Arrastra tus renders e imágenes. Las clasificaré, ordenaré y agruparé por categoría.' },
     { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Sube los panoramas 360°. Identificaré cada espacio y crearé la estructura del recorrido.' },
+    { id: 'interactivo', label: 'Interactivo', shortLabel: 'Interactivo', icon: 'layers', assistant: 'Laboratorio experimental: dibuja zonas poligonales sobre plantas navegables. Aún no se publica a Supabase.' },
     { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'layers', assistant: 'Sube planos en PDF, JPG, PNG o DWG. Detectaré tipologías, áreas y niveles.' },
     { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Sube brochures, fichas técnicas y documentos. Los reconoceré y organizaré automáticamente.' },
     { id: 'info', label: 'Información', shortLabel: 'Info', icon: 'file-text', assistant: 'Pega el texto comercial o sube un PDF. Extraeré toda la información del proyecto.' },
@@ -48,6 +49,8 @@ var BuilderWizard = (function () {
       case 'gallery':
         return true;
       case 'panoramas':
+        return true;
+      case 'interactivo':
         return true;
       case 'plans':
         return true;

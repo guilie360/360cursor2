@@ -10,6 +10,7 @@ var MenuConfig = (function () {
     { value: 'video', label: 'Video' },
     { value: 'renders', label: 'Galería' },
     { value: 'amenidades', label: 'Amenidades' },
+    { value: 'areas', label: 'Áreas' },
     { value: 'estado', label: 'Estado del proyecto' },
     { value: 'constructora', label: 'Constructora' },
     { value: 'descargas', label: 'Descargas' }
@@ -34,6 +35,7 @@ var MenuConfig = (function () {
     video: 'menuVideo',
     renders: 'menuRenders',
     amenidades: 'menuAmenidades',
+    areas: 'menuAreas',
     estado: 'menuEstado',
     constructora: 'menuConstructora',
     descargas: 'menuDescargas'
@@ -49,6 +51,7 @@ var MenuConfig = (function () {
       { id: 'video', label: 'Video', enabled: true, target: 'video' },
       { id: 'renders', label: 'Galería', enabled: true, target: 'renders' },
       { id: 'amenidades', label: 'Amenidades', enabled: true, target: 'amenidades' },
+      { id: 'areas', label: 'Áreas', enabled: true, target: 'areas' },
       { id: 'estado', label: 'Estado del proyecto', enabled: true, target: 'estado' },
       { id: 'constructora', label: 'Constructora', enabled: true, target: 'constructora' },
       { id: 'descargas', label: 'Descargas', enabled: true, target: 'descargas' }
@@ -261,6 +264,7 @@ var MenuConfig = (function () {
             video: 'video',
             renders: 'renders',
             amenidades: 'amenidades',
+            areas: 'areas',
             estado: 'estado',
             constructora: 'constructora',
             descargas: 'descargas'

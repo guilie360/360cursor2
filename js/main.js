@@ -2351,6 +2351,7 @@ var MENU_ACTIVE_PARENT = {
   'video': 'menuConoce',
   'renders': 'menuConoce',
   'amenidades': 'menuConoce',
+  'areas': 'menuConoce',
   'estado': 'menuConoce',
   'constructora': 'menuConoce',
   'descargas': 'menuConoce',
@@ -2370,6 +2371,7 @@ var MENU_ACTIVE_ITEM = {
   'video': 'menuVideo',
   'renders': 'menuRenders',
   'amenidades': 'menuAmenidades',
+  'areas': 'menuAreas',
   'estado': 'menuEstado',
   'constructora': 'menuConstructora',
   'descargas': 'menuDescargas',
@@ -3581,6 +3583,7 @@ function setupProyectoScrollDiscovery(listEl) {
 var SCREEN_ELEMENTS = {
   descripcion:  'descripcionModal',
   amenidades:   'amenidadesModal',
+  areas:        'areasModal',
   estado:       'estadoModal',
   constructora: 'constructoraModal',
   descargas:    'descargasModal',
@@ -3666,6 +3669,32 @@ var SCREEN_HOOKS = {
     onExit: function () {
       if (typeof AmenitiesCarousel !== 'undefined' && typeof AmenitiesCarousel.onExit === 'function') {
         AmenitiesCarousel.onExit();
+      }
+    }
+  },
+  areas: {
+    onEnter: function () {
+      var root = document.getElementById('areasInteractiveRoot');
+      if (!root || typeof InteractiveAreasCanvas === 'undefined' || typeof InteractiveAreasCore === 'undefined') return;
+      if (root.__iaViewer && typeof root.__iaViewer.destroy === 'function') {
+        try { root.__iaViewer.destroy(); } catch (_e) {}
+        root.__iaViewer = null;
+      }
+      root.__iaViewer = InteractiveAreasCanvas.create(root, {
+        mode: 'viewer',
+        state: InteractiveAreasCore.createLabState()
+      });
+      requestAnimationFrame(function () {
+        if (root.__iaViewer && typeof root.__iaViewer.resize === 'function') {
+          root.__iaViewer.resize();
+        }
+      });
+    },
+    onExit: function () {
+      var root = document.getElementById('areasInteractiveRoot');
+      if (root && root.__iaViewer && typeof root.__iaViewer.destroy === 'function') {
+        try { root.__iaViewer.destroy(); } catch (_e) {}
+        root.__iaViewer = null;
       }
     }
   },
@@ -4149,6 +4178,7 @@ if (menuNavBackEl) {
   'calculatorModal',
   'descripcionModal',
   'amenidadesModal',
+  'areasModal',
   'estadoModal',
   'constructoraModal',
   'descargasModal'
@@ -4227,6 +4257,7 @@ function bindMenuItemNavigation() {
       menuVideo: 'video',
       menuRenders: 'renders',
       menuAmenidades: 'amenidades',
+      menuAreas: 'areas',
       menuEstado: 'estado',
       menuConstructora: 'constructora',
       menuDescargas: 'descargas'
@@ -4238,7 +4269,7 @@ function bindMenuItemNavigation() {
     goTo(target);
   }
 
-  ['menuDescripcion', 'menuVideo', 'menuRenders', 'menuAmenidades', 'menuEstado', 'menuConstructora', 'menuDescargas'].forEach(function (id) {
+  ['menuDescripcion', 'menuVideo', 'menuRenders', 'menuAmenidades', 'menuAreas', 'menuEstado', 'menuConstructora', 'menuDescargas'].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el || el.__menuNavBound) return;
     el.__menuNavBound = true;
@@ -4247,6 +4278,7 @@ function bindMenuItemNavigation() {
       menuVideo: 'video',
       menuRenders: 'renders',
       menuAmenidades: 'amenidades',
+      menuAreas: 'areas',
       menuEstado: 'estado',
       menuConstructora: 'constructora',
       menuDescargas: 'descargas'

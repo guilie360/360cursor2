@@ -676,6 +676,15 @@ var AiProjectBuilderView = (function () {
       '</div></div>';
   }
 
+  function renderInteractivo() {
+    return '<div class="builder-step-content">' +
+      stepTitleHtml('Interactivo') +
+      '<p class="builder-step-desc ia-intro">Editor experimental para construir áreas interactivas de proyectos. ' +
+        'El objetivo es crear plantas navegables mediante regiones poligonales.</p>' +
+      '<div class="ia-builder-wrap" id="interactiveAreasMount"></div>' +
+      '</div>';
+  }
+
   function renderValidation() {
     var v = state.validation || ValidationEngine.validate(state);
     state.validation = v;
@@ -777,6 +786,7 @@ var AiProjectBuilderView = (function () {
       case 'viviendas': html = renderViviendas(); break;
       case 'gallery': html = renderGallery(); break;
       case 'panoramas': html = renderPanoramas(); break;
+      case 'interactivo': html = renderInteractivo(); break;
       case 'plans': html = renderPlans(); break;
       case 'downloads': html = renderDownloads(); break;
       case 'info': html = renderInfo(); break;
@@ -996,6 +1006,24 @@ var AiProjectBuilderView = (function () {
       if (genBtn) genBtn.addEventListener('click', handleGenerateAi);
       var regenBtn = rootEl.querySelector('#regenerateAiBtn');
       if (regenBtn) regenBtn.addEventListener('click', handleGenerateAi);
+    }
+
+    if (stepId === 'interactivo') {
+      var mount = rootEl.querySelector('#interactiveAreasMount');
+      if (mount && typeof InteractiveAreasEngine !== 'undefined') {
+        InteractiveAreasEngine.mount(mount, state, {
+          mode: 'editor',
+          onChange: function () {
+            saveState();
+            renderProgressRail();
+          }
+        });
+        requestAnimationFrame(function () {
+          InteractiveAreasEngine.resize();
+        });
+      }
+    } else if (typeof InteractiveAreasEngine !== 'undefined') {
+      InteractiveAreasEngine.unmount();
     }
 
     if (stepId === 'hotspots') {

@@ -38,6 +38,7 @@ var BuilderSession = (function () {
       viviendas: [],
       gallery: [],
       panoramas: [],
+      interactiveLab: null,
       plans: [],
       downloads: [],
       projectInfo: {},

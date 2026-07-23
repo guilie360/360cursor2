@@ -66,6 +66,7 @@ var GlobalClose = (function () {
     var ids = [
       'unitsPopup', 'tour360Popup', 'pdfModal', 'videoModal', 'rendersModal',
       'locationModal', 'calculatorModal', 'descripcionModal', 'amenidadesModal',
+      'areasModal',
       'estadoModal', 'constructoraModal', 'descargasModal', 'sphereModal',
       'authExperienceModal', 'emailVerificationModal', 'projectThemeConfirmModal'
     ];
@@ -512,7 +513,7 @@ var GlobalClose = (function () {
     if (typeof MutationObserver !== 'undefined') {
       var overlayIds = [
         'unitsPopup', 'calculatorModal', 'pdfModal', 'tour360Popup', 'sphereModal',
-        'videoModal', 'rendersModal', 'amenidadesModal', 'descargasModal',
+        'videoModal', 'rendersModal', 'amenidadesModal', 'areasModal', 'descargasModal',
         'locationModal', 'descripcionModal', 'estadoModal', 'constructoraModal',
         'authExperienceModal', 'emailVerificationModal'
       ];

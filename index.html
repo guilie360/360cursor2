@@ -69,6 +69,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <link rel="stylesheet" href="css/components.css?v=mobile-v3-8-7">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=mobile-v3-8-7">
 <link rel="stylesheet" href="css/hall/hall.css">
+<link rel="stylesheet" href="css/interactive-areas.css?v=ia1">
 <link rel="stylesheet" href="css/style-engine.css">
 </head>
 <body class="notranslate" translate="no">
@@ -241,6 +242,10 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
         <span class="menu-item-label">Amenidades</span>
       </div>
+      <div class="menu-item" id="menuAreas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7v7H4z"/><path d="M13 4h7v7h-7z"/><path d="M4 13h7v7H4z"/><path d="M13 13h7v7h-7z"/></svg>
+        <span class="menu-item-label">Áreas</span>
+      </div>
       <div class="menu-item" id="menuEstado">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
         <span class="menu-item-label">Estado del proyecto</span>
@@ -350,6 +355,12 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
   <div class="units-popup tour360-popup amenities-popup" id="amenidadesModal">
     <div class="tour360-stage">
       <div class="tour360-grid" id="amenitiesGrid" aria-label="Amenidades"></div>
+    </div>
+  </div>
+
+  <div class="units-popup tour360-popup areas-popup" id="areasModal">
+    <div class="tour360-stage areas-stage">
+      <div class="ia-root" id="areasInteractiveRoot" aria-label="Áreas interactivas"></div>
     </div>
   </div>
 
@@ -1405,6 +1416,8 @@ console.log(
 <script src="js/amenities-carousel.js?v=mobile-v3"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/amenities-carousel.js?v=amenities7");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/amenities-carousel.js?v=amenities7');</script>
+<script src="js/interactive-areas/interactive-areas-core.js?v=ia1"></script>
+<script src="js/interactive-areas/interactive-areas-canvas.js?v=ia1"></script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/menu-config.js?v=menu6');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/menu-config.js?v=menu6");</script>
 <script src="js/menu-config.js?v=mobile-v1"></script>

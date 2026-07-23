@@ -70,6 +70,24 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('panoramas')
       },
       {
+        label: 'Interactivo',
+        value: (function () {
+          var lab = state.interactiveLab;
+          if (!lab || !lab.tree) return null;
+          var zones = 0;
+          function walk(nodes) {
+            (nodes || []).forEach(function (n) {
+              zones += (n.zones || []).length;
+              if (n.children) walk(n.children);
+            });
+          }
+          walk(lab.tree);
+          return zones ? (zones + ' zonas') : 'Lab';
+        })(),
+        done: isDone(state, 'interactivo', !!(state.interactiveLab && state.interactiveLab.tree && state.interactiveLab.tree.length)),
+        stepIndex: BuilderWizard.getStepIndex('interactivo')
+      },
+      {
         label: 'Planos',
         value: (state.plans || []).length ? (state.plans.length + ' archivos') : null,
         done: isDone(state, 'plans', (state.plans || []).length > 0),
