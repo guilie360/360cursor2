@@ -151,7 +151,13 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-header-action-btn {
-  padding: 8px 14px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  height: 32px;
+  padding: 0 16px;
   border: 1px solid var(--hall-btn-border, rgba(255, 255, 255, 0.14));
   border-radius: var(--hall-radius-pill, 999px);
   background: var(--hall-btn-bg, rgba(255, 255, 255, 0.03));
@@ -209,26 +215,36 @@ body.builder-has-dock.platform-builder-shell {
   bottom: 0;
   z-index: 9999;
   width: var(--builder-rail-width);
-  padding: 14px 10px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--boxies-icon-gap, 4px);
+  padding: var(--boxies-chrome-pad-top, 12px) var(--boxies-chrome-pad-x, 8px) 16px;
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   background: transparent;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  box-sizing: border-box;
+  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .builder-rail-item {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
   width: 100%;
-  margin: 0 0 3px;
-  padding: 10px 12px;
+  min-height: var(--boxies-icon-cell, 36px);
+  margin: 0;
+  padding: 8px 10px;
   border: none;
   border-radius: var(--hall-radius-nav, 10px);
   background: transparent;
   text-align: left;
   cursor: pointer;
   transition: background var(--builder-transition);
+  box-sizing: border-box;
 }
 
 .builder-rail-item:hover {
@@ -237,10 +253,11 @@ body.builder-has-dock.platform-builder-shell {
 
 .builder-rail-row {
   display: flex;
-  align-items: flex-start;
-  gap: 7px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.2;
   color: rgba(255, 255, 255, 0.42);
 }
 
@@ -252,8 +269,9 @@ body.builder-has-dock.platform-builder-shell {
   flex-shrink: 0;
   width: 14px;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1;
   color: rgba(255, 255, 255, 0.28);
+  text-align: center;
 }
 
 .builder-rail-item.is-done .builder-rail-mark {
@@ -262,7 +280,7 @@ body.builder-has-dock.platform-builder-shell {
 
 .builder-rail-value {
   display: block;
-  margin: 2px 0 0 21px;
+  margin: 2px 0 0 24px;
   font-size: 11px;
   line-height: 1.3;
   color: rgba(255, 255, 255, 0.34);
@@ -290,14 +308,15 @@ body.builder-has-dock.platform-builder-shell {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 34px;
-  margin: 0 0 8px;
+  height: var(--boxies-icon-cell, 36px);
+  margin: 0 0 var(--boxies-icon-gap, 4px);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
+  box-sizing: border-box;
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -308,38 +327,36 @@ body.builder-has-dock.platform-builder-shell {
 }
 
 .builder-rail-collapse svg {
-  width: 16px;
-  height: 16px;
+  width: var(--boxies-icon-size, 18px);
+  height: var(--boxies-icon-size, 18px);
+  display: block;
 }
 
 .builder-rail-icon {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--boxies-icon-size, 18px);
+  height: var(--boxies-icon-size, 18px);
   flex-shrink: 0;
   color: inherit;
 }
 
 .builder-rail-icon svg {
-  width: 18px;
-  height: 18px;
+  width: var(--boxies-icon-size, 18px);
+  height: var(--boxies-icon-size, 18px);
+  display: block;
 }
 
 .builder-rail-label {
   min-width: 0;
 }
 
-.builder-progress-sidebar {
-  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
 .builder-workspace {
   transition: margin-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Collapsed builder rail — icons only */
+/* Collapsed builder rail — same icon grid as platform nav */
 body.boxies-rail-collapsed .builder-rail-mark,
 body.boxies-rail-collapsed .builder-rail-label,
 body.boxies-rail-collapsed .builder-rail-value {
@@ -351,17 +368,31 @@ body.boxies-rail-collapsed .builder-rail-icon {
 }
 
 body.boxies-rail-collapsed .builder-rail-item {
-  padding: 10px 0;
+  flex-direction: row;
+  align-items: center;
+  width: var(--boxies-icon-cell, 36px);
+  height: var(--boxies-icon-cell, 36px);
+  min-height: var(--boxies-icon-cell, 36px);
+  padding: 0;
+  margin: 0 auto;
+  justify-content: center;
 }
 
 body.boxies-rail-collapsed .builder-rail-row {
   justify-content: center;
   gap: 0;
+  width: auto;
+}
+
+body.boxies-rail-collapsed .builder-rail-collapse {
+  width: var(--boxies-icon-cell, 36px);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 body.boxies-rail-collapsed .builder-progress-sidebar {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: calc((52px - var(--boxies-icon-cell, 36px)) / 2);
+  padding-right: calc((52px - var(--boxies-icon-cell, 36px)) / 2);
 }
 
 .builder-workspace {

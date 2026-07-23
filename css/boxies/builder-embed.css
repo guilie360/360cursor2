@@ -35,6 +35,12 @@
   width: var(--builder-rail-width, 200px);
   height: auto;
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Align with platform sidebar chrome grid */
+  padding-top: var(--boxies-chrome-pad-top, 12px);
+}
+
+.boxies-header__actions {
+  gap: 6px;
 }
 
 .boxies-builder-embed .builder-workspace,

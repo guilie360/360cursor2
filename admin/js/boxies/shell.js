@@ -89,25 +89,27 @@ var BoxiesShell = (function () {
           iconHtml('chevron-left') +
         '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
-        item('projects', 'Proyectos', 'layout-grid') +
-        item('builder', 'Builder', 'layers') +
+        item('projects', 'Proyectos', 'folder') +
+        item('builder', 'Builder', 'panel') +
       '</nav>'
     );
   }
 
   function shellHtml() {
-    defaultActionsHtml =
-      '<button type="button" class="boxies-action-btn" id="boxiesLogoutBtn">Cerrar sesión</button>';
+    defaultActionsHtml = '';
     return (
       '<div class="boxies-app" id="boxiesAppRoot">' +
         '<header class="boxies-header">' +
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
-            '<div class="boxies-user" id="boxiesUserChip"></div>' +
+            '<div class="boxies-user-wrap">' +
+              '<div class="boxies-user" id="boxiesUserChip"></div>' +
+              '<button type="button" class="boxies-logout-icon" id="boxiesLogoutBtn" aria-label="Cerrar sesión" title="Cerrar sesión">' +
+                iconHtml('log-out') +
+              '</button>' +
+            '</div>' +
           '</div>' +
           brandTitleHtml() +
-          '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
-            defaultActionsHtml +
-          '</div>' +
+          '<div class="boxies-header__actions" id="boxiesHeaderActions"></div>' +
         '</header>' +
         '<aside class="boxies-sidebar" id="boxiesSidebar" aria-label="Navegación">' +
           defaultNavHtml('projects') +
@@ -323,8 +325,7 @@ var BoxiesShell = (function () {
   function applyManifest(manifest) {
     manifest = manifest || {};
     var actions = document.getElementById('boxiesHeaderActions');
-    var logout = document.getElementById('boxiesLogoutBtn');
-    if (!actions || !logout) return;
+    if (!actions) return;
 
     actions.querySelectorAll('[data-boxies-page-action]').forEach(function (el) {
       el.remove();
@@ -336,7 +337,7 @@ var BoxiesShell = (function () {
       while (wrap.firstChild) {
         var node = wrap.firstChild;
         if (node.nodeType === 1) node.setAttribute('data-boxies-page-action', '1');
-        actions.insertBefore(node, logout);
+        actions.appendChild(node);
       }
     }
   }

@@ -31,16 +31,14 @@ var BoxiesBuilderPage = (function () {
 
   function promoteHeaderActions(host) {
     var boxiesActions = document.getElementById('boxiesHeaderActions');
-    var logout = document.getElementById('boxiesLogoutBtn');
     var nested = host.querySelector('.builder-header-actions');
-    if (!boxiesActions || !logout || !nested) return;
+    if (!boxiesActions || !nested) return;
 
     promotedNodes = [];
     Array.prototype.slice.call(nested.children).forEach(function (btn) {
       btn.setAttribute('data-boxies-page-action', '1');
-      /* Keep builder button classes for existing CSS; add shell spacing */
       btn.classList.add('boxies-action-btn');
-      boxiesActions.insertBefore(btn, logout);
+      boxiesActions.appendChild(btn);
       promotedNodes.push(btn);
     });
   }
