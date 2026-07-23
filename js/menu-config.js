@@ -111,6 +111,25 @@ var MenuConfig = (function () {
     };
   }
 
+  function ensureAreasChild(children) {
+    var list = Array.isArray(children) ? children.slice() : [];
+    var has = list.some(function (c) {
+      return c && (c.id === 'areas' || c.target === 'areas');
+    });
+    if (has) return list;
+    var item = { id: 'areas', label: 'Áreas', enabled: true, target: 'areas' };
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].id === 'amenidades') {
+        idx = i;
+        break;
+      }
+    }
+    if (idx >= 0) list.splice(idx + 1, 0, item);
+    else list.push(item);
+    return list;
+  }
+
   function normalizeItem(raw) {
     var item = raw || {};
     var action = 'section';
@@ -132,6 +151,9 @@ var MenuConfig = (function () {
     } else if (!target) {
       target = action === 'submenu' ? 'menu-proyecto' : 'proximamente';
     }
+    if (action === 'submenu' && target === 'menu-proyecto') {
+      children = ensureAreasChild(children.length ? children : defaultChildren());
+    }
     return {
       id: item.id || uid('menu'),
       label: (item.label || 'Botón').trim() || 'Botón',
@@ -139,7 +161,7 @@ var MenuConfig = (function () {
       action: action,
       target: target,
       children: action === 'submenu' && target === 'menu-proyecto'
-        ? (children.length ? children : defaultChildren())
+        ? children
         : children
     };
   }

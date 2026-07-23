@@ -3674,27 +3674,24 @@ var SCREEN_HOOKS = {
   },
   areas: {
     onEnter: function () {
-      var root = document.getElementById('areasInteractiveRoot');
-      if (!root || typeof InteractiveAreasCanvas === 'undefined' || typeof InteractiveAreasCore === 'undefined') return;
-      if (root.__iaViewer && typeof root.__iaViewer.destroy === 'function') {
-        try { root.__iaViewer.destroy(); } catch (_e) {}
-        root.__iaViewer = null;
+      if (typeof AreasShowroomPage !== 'undefined' && typeof AreasShowroomPage.onEnter === 'function') {
+        AreasShowroomPage.onEnter();
+        return;
       }
-      root.__iaViewer = InteractiveAreasCanvas.create(root, {
-        mode: 'viewer',
-        state: InteractiveAreasCore.createLabState()
-      });
-      requestAnimationFrame(function () {
-        if (root.__iaViewer && typeof root.__iaViewer.resize === 'function') {
-          root.__iaViewer.resize();
-        }
-      });
+      var root = document.getElementById('areasInteractiveRoot');
+      if (!root) return;
+      root.innerHTML =
+        '<div class="areas-page" data-areas-page>' +
+          '<header class="areas-page-header">' +
+            '<p class="areas-page-kicker">Conoce el proyecto</p>' +
+            '<h2 class="areas-page-title">Áreas</h2>' +
+          '</header>' +
+          '<div class="areas-page-stage"><div class="areas-page-plan-fallback">Planta mock</div></div>' +
+        '</div>';
     },
     onExit: function () {
-      var root = document.getElementById('areasInteractiveRoot');
-      if (root && root.__iaViewer && typeof root.__iaViewer.destroy === 'function') {
-        try { root.__iaViewer.destroy(); } catch (_e) {}
-        root.__iaViewer = null;
+      if (typeof AreasShowroomPage !== 'undefined' && typeof AreasShowroomPage.onExit === 'function') {
+        AreasShowroomPage.onExit();
       }
     }
   },

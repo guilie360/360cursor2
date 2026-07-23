@@ -33,6 +33,7 @@ var BoxiesRouter = (function () {
         url.searchParams.delete('page');
         url.searchParams.delete('project');
         url.searchParams.delete('proyecto');
+        url.searchParams.delete('step');
       } else {
         url.searchParams.set('page', pageId);
         if (project) {

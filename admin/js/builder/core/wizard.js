@@ -1,4 +1,4 @@
-/* Builder wizard — 12-step orchestration */
+/* Builder wizard — step orchestration (incluye Interactivo) */
 var BuilderWizard = (function () {
   var STEPS = [
     { id: 'project-type', label: 'Tipo de proyecto', shortLabel: 'Tipo', icon: 'layout-grid', assistant: '¿Qué tipo de proyecto deseas crear? Selecciona una opción y prepararé la estructura base automáticamente.' },

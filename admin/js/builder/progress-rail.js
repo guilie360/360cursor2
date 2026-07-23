@@ -19,12 +19,35 @@ var BuilderProgressRail = (function () {
     var ai = state.aiContent || {};
     var panoCount = (state.panoramas || []).filter(function (p) { return p.file; }).length;
     var acceptedHotspots = (state.hotspotSuggestions || []).filter(function (h) { return h.accepted; }).length;
-    var validation = state.validation || ValidationEngine.validate(state);
+    var validation = state.validation;
+    if (!validation && typeof ValidationEngine !== 'undefined' && ValidationEngine.validate) {
+      validation = ValidationEngine.validate(state);
+    }
+    validation = validation || { ready: false, score: 0 };
+
+    function heroLabel() {
+      if (typeof MediaEngine !== 'undefined' && MediaEngine.heroMediaLabel) {
+        return MediaEngine.heroMediaLabel(state);
+      }
+      return null;
+    }
+    function heroDone() {
+      if (typeof MediaEngine !== 'undefined' && MediaEngine.hasHeroMedia) {
+        return MediaEngine.hasHeroMedia(state);
+      }
+      return !!(state.heroVideo || state.heroImage);
+    }
+    function typeLabel() {
+      if (typeof ProjectTypesEngine !== 'undefined' && ProjectTypesEngine.getTypeLabel) {
+        return ProjectTypesEngine.getTypeLabel(state.projectType);
+      }
+      return state.projectType || null;
+    }
 
     return [
       {
         label: 'Tipo',
-        value: state.projectType ? ProjectTypesEngine.getTypeLabel(state.projectType) : null,
+        value: state.projectType ? typeLabel() : null,
         done: isDone(state, 'project-type', !!state.projectType),
         stepIndex: BuilderWizard.getStepIndex('project-type')
       },
@@ -36,8 +59,8 @@ var BuilderProgressRail = (function () {
       },
       {
         label: 'Hero',
-        value: MediaEngine.heroMediaLabel(state),
-        done: isDone(state, 'video-hero', MediaEngine.hasHeroMedia(state)),
+        value: heroLabel(),
+        done: isDone(state, 'video-hero', heroDone()),
         stepIndex: BuilderWizard.getStepIndex('video-hero')
       },
       {

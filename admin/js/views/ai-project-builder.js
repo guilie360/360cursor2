@@ -677,11 +677,12 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderInteractivo() {
-    return '<div class="builder-step-content">' +
+    if (typeof InteractivoPage !== 'undefined' && typeof InteractivoPage.html === 'function') {
+      return InteractivoPage.html();
+    }
+    return '<div class="builder-step-content" id="interactivoPage">' +
       stepTitleHtml('Interactivo') +
-      '<p class="builder-step-desc ia-intro">Editor experimental para construir áreas interactivas de proyectos. ' +
-        'El objetivo es crear plantas navegables mediante regiones poligonales.</p>' +
-      '<div class="ia-builder-wrap" id="interactiveAreasMount"></div>' +
+      '<p class="builder-step-desc">Editor experimental para construir áreas interactivas de proyectos.</p>' +
       '</div>';
   }
 
@@ -1009,21 +1010,9 @@ var AiProjectBuilderView = (function () {
     }
 
     if (stepId === 'interactivo') {
-      var mount = rootEl.querySelector('#interactiveAreasMount');
-      if (mount && typeof InteractiveAreasEngine !== 'undefined') {
-        InteractiveAreasEngine.mount(mount, state, {
-          mode: 'editor',
-          onChange: function () {
-            saveState();
-            renderProgressRail();
-          }
-        });
-        requestAnimationFrame(function () {
-          InteractiveAreasEngine.resize();
-        });
+      if (typeof InteractivoPage !== 'undefined' && typeof InteractivoPage.mount === 'function') {
+        InteractivoPage.mount(rootEl.querySelector('#interactivoPage'));
       }
-    } else if (typeof InteractiveAreasEngine !== 'undefined') {
-      InteractiveAreasEngine.unmount();
     }
 
     if (stepId === 'hotspots') {
@@ -1779,14 +1768,46 @@ var AiProjectBuilderView = (function () {
     renderAll();
   }
 
+  function syncStepUrl(stepId) {
+    try {
+      var url = new URL(window.location.href);
+      var path = url.pathname || '';
+      var inBoxies = /\/boxies/i.test(path) || url.searchParams.get('page') === 'builder';
+      if (!inBoxies) return;
+      if (stepId) url.searchParams.set('step', stepId);
+      else url.searchParams.delete('step');
+      window.history.replaceState(
+        Object.assign({}, window.history.state || {}, { step: stepId || null }),
+        '',
+        url.pathname + url.search + url.hash
+      );
+    } catch (e) {}
+  }
+
+  function applyStepFromUrl() {
+    try {
+      var stepId = new URLSearchParams(window.location.search || '').get('step');
+      if (!stepId) return;
+      var idx = BuilderWizard.getStepIndex(stepId);
+      if (idx >= 0) state.currentStep = idx;
+    } catch (e) {}
+  }
+
   function goToStep(index) {
     if (index < 0 || index >= BuilderWizard.STEPS.length) return;
     state.currentStep = index;
     saveState();
-    if (BuilderWizard.getStep(index).id === 'validation') {
+    var step = BuilderWizard.getStep(index);
+    if (step && step.id === 'validation') {
       state.validation = ValidationEngine.validate(state);
     }
+    if (step) syncStepUrl(step.id);
     renderAll();
+  }
+
+  function goToStepById(stepId) {
+    var idx = BuilderWizard.getStepIndex(stepId);
+    if (idx >= 0) goToStep(idx);
   }
 
   function updateNavButtons() {
@@ -1889,6 +1910,7 @@ var AiProjectBuilderView = (function () {
     }
 
     state = BuilderSession.load();
+    applyStepFromUrl();
     BuilderDock.applyBodyPadding();
     renderShell();
     rootEl.querySelector('#builderApp').hidden = false;
@@ -1908,6 +1930,8 @@ var AiProjectBuilderView = (function () {
 
     bindGlobalEvents();
     renderAll();
+    var current = BuilderWizard.getStep(state.currentStep);
+    if (current) syncStepUrl(current.id);
   }
 
   function onLeave() {
@@ -1919,5 +1943,10 @@ var AiProjectBuilderView = (function () {
     rootEl = null;
   }
 
-  return { render: render, onLeave: onLeave };
+  return {
+    render: render,
+    onLeave: onLeave,
+    goToStep: goToStep,
+    goToStepById: goToStepById
+  };
 })();
