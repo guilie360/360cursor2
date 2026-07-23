@@ -87,6 +87,7 @@ var BoxiesShell = (function () {
           iconHtml('chevron-left') +
         '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
+        item('hall', 'Hall', 'home') +
         item('projects', 'Proyectos', 'folder') +
         item('builder', 'Builder', 'panel') +
       '</nav>'
@@ -114,7 +115,7 @@ var BoxiesShell = (function () {
           '</div>' +
         '</header>' +
         '<aside class="boxies-sidebar" id="boxiesSidebar" aria-label="Navegación">' +
-          defaultNavHtml('projects') +
+          defaultNavHtml('hall') +
         '</aside>' +
         '<div class="boxies-workspace">' +
           '<section class="boxies-workspace__panel">' +

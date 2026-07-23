@@ -289,3 +289,42 @@
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.34);
 }
+
+/* Hall — neutral lobby / resting state */
+#boxiesContent .boxies-hall {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px) - 52px);
+  padding: 48px 24px;
+  text-align: center;
+}
+
+#boxiesContent .boxies-hall__brand {
+  margin: 0 0 18px;
+  font-size: 0.75rem;
+  font-weight: 550;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  margin-right: -0.42em;
+}
+
+#boxiesContent .boxies-hall__title {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+#boxiesContent .boxies-hall__hint {
+  margin: 0;
+  max-width: 28ch;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.38);
+}

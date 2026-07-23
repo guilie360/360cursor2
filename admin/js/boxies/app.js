@@ -6,6 +6,9 @@ var BoxiesApp = (function () {
   var booted = false;
 
   function registerPages() {
+    if (typeof BoxiesHallPage !== 'undefined') {
+      BoxiesPages.register(BoxiesHallPage);
+    }
     if (typeof BoxiesProjectsPage !== 'undefined') {
       BoxiesPages.register(BoxiesProjectsPage);
     }
