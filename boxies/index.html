@@ -11,24 +11,24 @@
   <link rel="stylesheet" href="../admin/css/ai-project-builder.css?v=ws43">
   <link rel="stylesheet" href="../css/interactive-areas.css?v=ws41">
   <link rel="stylesheet" href="../css/boxies/shell.css?v=ws45">
-  <link rel="stylesheet" href="../css/boxies/content.css?v=slice-002">
+  <link rel="stylesheet" href="../css/boxies/content.css?v=ws46">
   <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=ws42">
 </head>
 <body class="boxies-host">
 
   <!-- Login (outside Shell) -->
-  <div id="bxLoginView" class="hall-login-page" hidden>
-    <div class="content-modal-box auth-experience-box">
-      <div class="hall-login-brand">BOXIES</div>
-      <h2 class="auth-gate-title">Bienvenido</h2>
-      <p class="auth-view-lead">Entra con tu cuenta de administrador de plataforma.</p>
+  <div id="bxLoginView" class="hall-login-page boxies-login" hidden>
+    <button type="button" class="boxies-header__fs boxies-login__fs" id="bxLoginFullscreenBtn" aria-label="Pantalla completa" title="Pantalla completa" data-fullscreen="enter"></button>
+    <div class="content-modal-box auth-experience-box boxies-login__card">
+      <div class="hall-login-brand boxies-login__brand" aria-label="BOXIES">B O X I E S</div>
+      <p class="boxies-login__subtitle">Administra tu showroom 360° de preventa.</p>
 
       <div class="auth-oauth-row">
-        <button type="button" class="outline-btn auth-oauth-btn" id="bxGoogleBtn">Google</button>
+        <button type="button" class="outline-btn auth-oauth-btn" id="bxGoogleBtn">Continuar con Google</button>
       </div>
-      <div class="auth-oauth-divider" aria-hidden="true">o continúa con tu correo</div>
+      <div class="auth-oauth-divider" aria-hidden="true">o</div>
 
-      <form id="bxLoginForm" class="auth-modal-form" novalidate>
+      <form id="bxLoginForm" class="auth-modal-form boxies-login__form" novalidate>
         <label class="auth-field">
           <span>Correo electrónico</span>
           <input id="bxEmail" type="email" autocomplete="email" placeholder="correo@empresa.com" required>
@@ -36,13 +36,13 @@
         <label class="auth-field">
           <span>Contraseña</span>
           <input id="bxPassword" type="password" autocomplete="current-password" placeholder="••••••••" required>
-          <button type="button" class="auth-toggle-password" id="bxTogglePassword">Mostrar</button>
+          <button type="button" class="auth-toggle-password boxies-login__eye" id="bxTogglePassword" aria-label="Mostrar contraseña" title="Mostrar" data-icon-toggle="1"></button>
         </label>
         <label class="auth-remember-row">
           <input id="bxRemember" type="checkbox" checked>
-          <span>Recordarme en este dispositivo</span>
+          <span>Recordarme</span>
         </label>
-        <button type="submit" class="outline-btn auth-action-btn" id="bxLoginSubmit">
+        <button type="submit" class="outline-btn auth-action-btn boxies-login__submit" id="bxLoginSubmit">
           <span id="bxLoginSubmitText">Iniciar sesión</span>
         </button>
       </form>
@@ -102,7 +102,7 @@
   <script src="../admin/js/core/notifications.js"></script>
   <script src="../admin/js/builder/core/session.js?v=ia3"></script>
   <script src="../admin/js/builder/core/wizard.js?v=ws42"></script>
-  <script src="../admin/js/builder/icons.js?v=ws45"></script>
+  <script src="../admin/js/builder/icons.js?v=ws46"></script>
   <script src="../admin/js/builder/dock.js?v=fsdock1"></script>
   <script src="../admin/js/builder/progress-rail.js?v=ws42"></script>
   <script src="../admin/js/builder/engines/project-types.js"></script>
@@ -137,7 +137,7 @@
   <script src="../admin/js/boxies/shell.js?v=ws45"></script>
   <script src="../admin/js/boxies/pages.js?v=slice-002"></script>
   <script src="../admin/js/boxies/router.js?v=ws43"></script>
-  <script src="../admin/js/boxies/auth-bridge.js?v=slice-002"></script>
+  <script src="../admin/js/boxies/auth-bridge.js?v=ws46"></script>
   <script src="../admin/js/boxies/pages/projects-page.js?v=ws41"></script>
   <script src="../admin/js/boxies/pages/builder-page.js?v=ws45"></script>
   <script src="../admin/js/boxies/app.js?v=slice-002"></script>

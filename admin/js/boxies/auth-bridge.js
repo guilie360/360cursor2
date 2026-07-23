@@ -282,6 +282,38 @@ var BoxiesAuthBridge = (function () {
     throw new Error(access.error || 'No se pudo completar el acceso.');
   }
 
+  function bindLoginFullscreen() {
+    var btn = $('bxLoginFullscreenBtn');
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+
+    function iconHtml(name) {
+      if (typeof BuilderIcons !== 'undefined' && typeof BuilderIcons.render === 'function') {
+        return BuilderIcons.render(name);
+      }
+      return '';
+    }
+
+    function syncIcon() {
+      var isFs = !!document.fullscreenElement;
+      btn.setAttribute('data-fullscreen', isFs ? 'exit' : 'enter');
+      btn.setAttribute('aria-label', isFs ? 'Salir de pantalla completa' : 'Pantalla completa');
+      btn.title = isFs ? 'Salir de pantalla completa' : 'Pantalla completa';
+      btn.innerHTML = iconHtml(isFs ? 'minimize' : 'maximize');
+    }
+
+    btn.addEventListener('click', function () {
+      /* Same contract as Workspace fullscreen — documentElement, persists across login→shell */
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function () {});
+      } else {
+        document.exitFullscreen().catch(function () {});
+      }
+    });
+    document.addEventListener('fullscreenchange', syncIcon);
+    syncIcon();
+  }
+
   async function loginWithGoogle() {
     log('Google OAuth — same showroom flow via /auth/callback.html');
     if (typeof OAuthApi === 'undefined' || typeof OAuthApi.handleGoogleAuth !== 'function') {
@@ -369,12 +401,26 @@ var BoxiesAuthBridge = (function () {
     var togglePassword = $('bxTogglePassword');
     if (togglePassword && passwordInput && !togglePassword.dataset.bound) {
       togglePassword.dataset.bound = '1';
+      function setPasswordToggleIcon(showingPlain) {
+        var useIcon = togglePassword.getAttribute('data-icon-toggle') === '1'
+          || togglePassword.classList.contains('boxies-login__eye');
+        if (useIcon && typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+          togglePassword.innerHTML = BuilderIcons.render(showingPlain ? 'eye-off' : 'eye');
+          togglePassword.setAttribute('aria-label', showingPlain ? 'Ocultar contraseña' : 'Mostrar contraseña');
+          togglePassword.title = showingPlain ? 'Ocultar' : 'Mostrar';
+          return;
+        }
+        togglePassword.textContent = showingPlain ? 'Ocultar' : 'Mostrar';
+      }
+      setPasswordToggleIcon(passwordInput.type !== 'password');
       togglePassword.addEventListener('click', function () {
         var show = passwordInput.type === 'password';
         passwordInput.type = show ? 'text' : 'password';
-        togglePassword.textContent = show ? 'Ocultar' : 'Mostrar';
+        setPasswordToggleIcon(show);
       });
     }
+
+    bindLoginFullscreen();
 
     var forbiddenLogout = $('bxForbiddenLogout');
     if (forbiddenLogout && !forbiddenLogout.dataset.bound) {
