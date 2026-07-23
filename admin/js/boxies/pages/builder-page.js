@@ -63,9 +63,9 @@ var BoxiesBuilderPage = (function () {
     host.innerHTML =
       '<div class="boxies-page boxies-placeholder">' +
         '<p class="boxies-placeholder__kicker">Builder</p>' +
-        '<h1 class="boxies-page__title">Selecciona un proyecto</h1>' +
-        '<p class="boxies-page__desc">Usa <strong>Administrar</strong> en Proyectos para abrir el editor dentro de este Shell.</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Ir a Proyectos</button>' +
+        '<h1 class="boxies-page__title">Selecciona un Showroom</h1>' +
+        '<p class="boxies-page__desc">Usa <strong>Administrar</strong> desde Showrooms para abrir el editor dentro de este Shell.</p>' +
+        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Ir a Showrooms</button>' +
       '</div>';
     var btn = document.getElementById('boxiesBuilderBackProjects');
     if (btn) {
@@ -80,7 +80,7 @@ var BoxiesBuilderPage = (function () {
       '<div class="boxies-page boxies-placeholder">' +
         '<h1 class="boxies-page__title">No se pudo abrir el Builder</h1>' +
         '<p class="boxies-page__desc">' + escapeHtml((err && err.message) || 'Error desconocido') + '</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Proyectos</button>' +
+        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Showrooms</button>' +
       '</div>';
     var btn = document.getElementById('boxiesBuilderBackProjects');
     if (btn) {

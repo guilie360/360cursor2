@@ -50,7 +50,7 @@ var BoxiesShell = (function () {
 
   function dockHtml() {
     return (
-      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones del proyecto">' +
+      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones del showroom">' +
         '<div class="boxies-dock__inner">' +
           '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
             '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
@@ -88,7 +88,7 @@ var BoxiesShell = (function () {
         '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
         item('hall', 'Hall', 'home') +
-        item('projects', 'Proyectos', 'folder') +
+        item('projects', 'Showrooms', 'folder') +
         item('builder', 'Builder', 'panel') +
       '</nav>'
     );

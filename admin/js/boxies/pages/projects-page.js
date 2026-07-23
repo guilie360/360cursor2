@@ -1,6 +1,7 @@
 /**
- * BOXIES ProjectsPage — list only fills #boxiesContent.
+ * BOXIES ShowroomsPage — list only fills #boxiesContent.
  * "Administrar" → BoxiesRouter.navigate('builder', { project }) — same Shell.
+ * Data model remains proyectos; visible term is Showroom.
  */
 var BoxiesProjectsPage = (function () {
   function escapeHtml(v) {
@@ -21,23 +22,23 @@ var BoxiesProjectsPage = (function () {
     } catch (e) { return '—'; }
   }
 
-  function statusBadge(project) {
-    if (project.publicado) {
+  function statusBadge(showroom) {
+    if (showroom.publicado) {
       return '<span class="admin-badge badge-success">Publicado</span>';
     }
-    var estado = project.estado || 'borrador';
+    var estado = showroom.estado || 'borrador';
     return '<span class="admin-badge badge-muted">' + escapeHtml(estado) + '</span>';
   }
 
-  function row(project) {
-    var slug = project.slug || '';
-    var name = project.nombre || slug || 'Sin nombre';
+  function row(showroom) {
+    var slug = showroom.slug || '';
+    var name = showroom.nombre || slug || 'Sin nombre';
     return (
       '<tr>' +
         '<td><strong>' + escapeHtml(name) + '</strong></td>' +
         '<td><code>' + escapeHtml(slug) + '</code></td>' +
-        '<td>' + statusBadge(project) + '</td>' +
-        '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
+        '<td>' + statusBadge(showroom) + '</td>' +
+        '<td>' + escapeHtml(formatDate(showroom.updated_at)) + '</td>' +
         '<td class="table-actions">' +
           '<button type="button" class="boxies-action-btn" data-boxies-open-builder="' +
             escapeHtml(slug) +
@@ -64,8 +65,8 @@ var BoxiesProjectsPage = (function () {
     }
     host.innerHTML =
       '<div class="boxies-page">' +
-        '<h1 class="boxies-page__title">Proyectos</h1>' +
-        '<p class="boxies-page__desc">Abre el Builder dentro de BOXIES. El Shell no se recarga.</p>' +
+        '<h1 class="boxies-page__title">Showrooms</h1>' +
+        '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa.</p>' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table">' +
             '<thead><tr>' +
@@ -85,21 +86,25 @@ var BoxiesProjectsPage = (function () {
     var tbody = document.getElementById('boxiesProjectsBody');
     try {
       if (typeof BoxiesAdmin2ProjectsApi === 'undefined') {
-        throw new Error('Projects API no disponible');
+        throw new Error('API de Showrooms no disponible');
       }
-      var projects = await BoxiesAdmin2ProjectsApi.list();
-      if (!projects || !projects.length) {
-        tbody.innerHTML = '<tr><td colspan="5">No hay proyectos registrados.</td></tr>';
+      var scope =
+        typeof BoxiesShowroomScope !== 'undefined'
+          ? BoxiesShowroomScope.getViewerContext()
+          : null;
+      var showrooms = await BoxiesAdmin2ProjectsApi.list({ scope: scope });
+      if (!showrooms || !showrooms.length) {
+        tbody.innerHTML = '<tr><td colspan="5">No hay showrooms registrados.</td></tr>';
         return;
       }
-      tbody.innerHTML = projects.map(row).join('');
+      tbody.innerHTML = showrooms.map(row).join('');
     } catch (err) {
       tbody.innerHTML =
-        '<tr><td colspan="5">' + escapeHtml(err.message || 'Error cargando proyectos') + '</td></tr>';
+        '<tr><td colspan="5">' + escapeHtml(err.message || 'Error cargando showrooms') + '</td></tr>';
     }
   }
 
   function unmount() {}
 
-  return { id: 'projects', title: 'Proyectos', mount: mount, unmount: unmount };
+  return { id: 'projects', title: 'Showrooms', mount: mount, unmount: unmount };
 })();
