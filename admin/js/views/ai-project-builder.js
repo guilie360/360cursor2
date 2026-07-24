@@ -1974,8 +1974,38 @@ var AiProjectBuilderView = (function () {
       state.published = true;
       state.publishResult = result;
       state.draftProjectId = result.proyectoId || result.draftProjectId;
+      if (result.slug) {
+        state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+          slug: result.slug,
+          nombre: (result.project && result.project.nombre) || (state.projectInfo && state.projectInfo.nombre)
+        });
+      }
       saveState();
-      AdminNotify.success('Proyecto publicado. Recarga el showroom para ver el hero.');
+
+      if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.syncProjectIdentity) {
+        BoxiesRouter.syncProjectIdentity({
+          projectId: state.draftProjectId,
+          slug: result.slug
+        });
+      }
+      if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
+        BoxiesShell.setProjectContext({
+          id: state.draftProjectId,
+          name: (state.projectInfo && state.projectInfo.nombre) || result.slug,
+          slug: result.slug
+        });
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('boxies:showroom-identity-changed', {
+          detail: {
+            id: state.draftProjectId,
+            nombre: (state.projectInfo && state.projectInfo.nombre) || '',
+            slug: result.slug
+          }
+        }));
+      } catch (evErr) {}
+
+      AdminNotify.success('Showroom publicado. Preview y URL pública usan el slug actual.');
       if (typeof ProjectSelector !== 'undefined') await ProjectSelector.init();
     } catch (err) {
       AdminNotify.error(err.message || 'Error publicando proyecto');

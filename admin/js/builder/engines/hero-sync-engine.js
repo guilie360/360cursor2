@@ -52,13 +52,33 @@ var HeroSyncEngine = (function () {
 
   async function fetchProjectBySlug(slug) {
     if (!slug) return null;
-    var result = await AdminApi.getClient()
+    var constructoraId =
+      typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+        ? AdminState.getConstructoraId()
+        : null;
+    var query = AdminApi.getClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
       .eq('slug', slug)
-      .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
-    return result.data || null;
+      .limit(2);
+    if (constructoraId) query = query.eq('constructora_id', constructoraId);
+    var result = await query;
+    if (result.error) {
+      var message = result.error.message || 'Error cargando proyecto';
+      if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
+        throw new Error(
+          'Slug ambiguo («' + slug + '»). Usa projectId (UUID) para abrir el Showroom.'
+        );
+      }
+      throw new Error(message);
+    }
+    var rows = result.data || [];
+    if (rows.length > 1) {
+      throw new Error(
+        'Slug ambiguo («' + slug + '»). Usa projectId (UUID) para abrir el Showroom.'
+      );
+    }
+    return rows[0] || null;
   }
 
   async function fetchProjectById(id) {
@@ -68,12 +88,18 @@ var HeroSyncEngine = (function () {
       .select(PROJECT_SELECT)
       .eq('id', id)
       .maybeSingle();
-    if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
+    if (result.error) {
+      var message = result.error.message || 'Error cargando proyecto';
+      if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
+        throw new Error('Error al cargar el showroom por UUID.');
+      }
+      throw new Error(message);
+    }
     return result.data || null;
   }
 
   async function resolveProject(state) {
-    /* Permanent identity first — slug is editable vanity only */
+    /* Permanent identity first — slug is editable vanity only (read fallback) */
     var id = getProjectIdFromUrl() ||
       (state && state.draftProjectId) ||
       (state && state.publishResult && state.publishResult.proyectoId) ||
@@ -82,12 +108,13 @@ var HeroSyncEngine = (function () {
     if (id) {
       var byId = await fetchProjectById(id);
       if (byId) return byId;
+      /* ID was provided but not found — do not invent another project via slug */
+      return null;
     }
 
     var slug = getSlugFromUrl();
     if (slug) {
-      var bySlug = await fetchProjectBySlug(slug);
-      if (bySlug) return bySlug;
+      return fetchProjectBySlug(slug);
     }
     return null;
   }
@@ -409,6 +436,8 @@ var HeroSyncEngine = (function () {
     getSlugFromUrl: getSlugFromUrl,
     getProjectIdFromUrl: getProjectIdFromUrl,
     isUuid: isUuid,
+    fetchProjectById: fetchProjectById,
+    fetchProjectBySlug: fetchProjectBySlug,
     resolveProject: resolveProject,
     bindFromUrl: bindFromUrl,
     bindStateFromProject: bindStateFromProject,

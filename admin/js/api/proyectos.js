@@ -8,33 +8,54 @@ var ProyectosApi = (function () {
   var BRIEF_SELECT = 'id, nombre, slug, publicado, estado, ciudad';
 
   function sanitizePayload(payload, isCreate) {
-    var data = {
-      nombre: AdminUI.normalizeOptionalText(payload.nombre),
-      slug: AdminUI.normalizeOptionalText(payload.slug),
-      descripcion: AdminUI.normalizeOptionalText(payload.descripcion),
-      ciudad: AdminUI.normalizeOptionalText(payload.ciudad),
-      direccion: AdminUI.normalizeOptionalText(payload.direccion),
-      whatsapp: AdminUI.normalizeOptionalText(payload.whatsapp),
-      email: AdminUI.normalizeOptionalText(payload.email),
-      sitio_web: AdminUI.normalizeUrl(payload.sitio_web),
-      instagram_url: AdminUI.normalizeUrl(payload.instagram_url),
-      estado: payload.estado || 'preventa',
-      publicado: !!payload.publicado
-    };
+    payload = payload || {};
+    var data = {};
 
-    if (payload.latitud === '' || payload.latitud == null) {
-      data.latitud = null;
-    } else {
-      data.latitud = Number(payload.latitud);
+    function has(key) {
+      return Object.prototype.hasOwnProperty.call(payload, key);
     }
 
-    if (payload.longitud === '' || payload.longitud == null) {
-      data.longitud = null;
-    } else {
-      data.longitud = Number(payload.longitud);
+    function putText(key) {
+      if (!has(key)) return;
+      data[key] = AdminUI.normalizeOptionalText(payload[key]);
+    }
+
+    putText('nombre');
+    if (has('slug')) {
+      var slugVal = AdminUI.normalizeOptionalText(payload.slug);
+      if (slugVal) {
+        slugVal = String(slugVal)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+      data.slug = slugVal;
+    }
+    putText('descripcion');
+    putText('ciudad');
+    putText('direccion');
+    putText('whatsapp');
+    putText('email');
+    if (has('sitio_web')) data.sitio_web = AdminUI.normalizeUrl(payload.sitio_web);
+    if (has('instagram_url')) data.instagram_url = AdminUI.normalizeUrl(payload.instagram_url);
+    if (has('estado')) data.estado = payload.estado || 'preventa';
+    if (has('publicado')) data.publicado = !!payload.publicado;
+
+    if (has('latitud')) {
+      if (payload.latitud === '' || payload.latitud == null) data.latitud = null;
+      else data.latitud = Number(payload.latitud);
+    }
+    if (has('longitud')) {
+      if (payload.longitud === '' || payload.longitud == null) data.longitud = null;
+      else data.longitud = Number(payload.longitud);
     }
 
     if (isCreate) {
+      if (!data.nombre) throw new Error('El nombre del showroom es obligatorio.');
+      if (!data.slug) throw new Error('El slug es obligatorio.');
+      if (!has('estado')) data.estado = 'preventa';
+      if (!has('publicado')) data.publicado = false;
       data.constructora_id = payload.constructora_id || AdminState.getConstructoraId();
     }
 
@@ -43,6 +64,11 @@ var ProyectosApi = (function () {
 
   function mapDbError(error, fallback) {
     var message = (error && error.message) || fallback || 'Error de API';
+    if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
+      return new Error(
+        'La consulta esperaba una sola fila y recibió 0 o varias. Usa UUID (projectId), no slug, para localizar el showroom.'
+      );
+    }
     if (/proyectos_slug_unico_por_constructora/i.test(message)) {
       return new Error('Ya existe un proyecto con ese slug en tu constructora.');
     }
@@ -117,15 +143,22 @@ var ProyectosApi = (function () {
   }
 
   async function update(id, payload) {
+    if (!id) throw new Error('Falta el ID del showroom.');
     var data = sanitizePayload(payload, false);
+    if (!Object.keys(data).length) {
+      throw new Error('No hay campos para actualizar.');
+    }
     var result = await AdminApi.getClient()
       .from('proyectos')
       .update(data)
       .eq('id', id)
       .select(PROJECT_SELECT)
-      .single();
+      .maybeSingle();
 
     if (result.error) throw mapDbError(result.error, 'Error actualizando proyecto');
+    if (!result.data) {
+      throw new Error('No se pudo actualizar el showroom (ID no encontrado o sin permisos).');
+    }
     return result.data;
   }
 
@@ -155,9 +188,12 @@ var ProyectosApi = (function () {
       .update({ nombre: nombre, slug: slug })
       .eq('id', id)
       .select(PROJECT_SELECT)
-      .single();
+      .maybeSingle();
 
     if (result.error) throw mapDbError(result.error, 'Error actualizando identidad del showroom');
+    if (!result.data) {
+      throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
+    }
     return result.data;
   }
 

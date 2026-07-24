@@ -1,6 +1,12 @@
-/* Publishing Engine — creates full BOXIES project structure */
+/* Publishing Engine — publishes showroom content by permanent UUID only.
+ * Slug is never used to locate a project and is never rewritten here.
+ * Identity (nombre/slug) is owned by ProyectosApi.updateIdentity.
+ */
 var PublishingEngine = (function () {
   function slugFromName(name) {
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
+      return ShowroomPublicUrl.normalizeSlug(name) || 'proyecto';
+    }
     if (typeof generateSlug === 'function') return generateSlug(name);
     return String(name || 'proyecto')
       .toLowerCase()
@@ -36,78 +42,110 @@ var PublishingEngine = (function () {
     }
   }
 
+  function resolveProjectId(state) {
+    var fromUrl =
+      typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl
+        ? HeroSyncEngine.getProjectIdFromUrl()
+        : null;
+    return (
+      fromUrl ||
+      (state && state.draftProjectId) ||
+      (state && state.publishResult && state.publishResult.proyectoId) ||
+      (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+        ? AdminState.getActiveProjectId()
+        : null) ||
+      null
+    );
+  }
+
+  async function fetchProjectById(projectId) {
+    if (!projectId) return null;
+    if (typeof HeroSyncEngine !== 'undefined' && typeof HeroSyncEngine.fetchProjectById === 'function') {
+      var fromHero = await HeroSyncEngine.fetchProjectById(projectId);
+      if (fromHero) return fromHero;
+    }
+    var result = await AdminApi.getClient()
+      .from('proyectos')
+      .select(
+        'id, nombre, slug, descripcion, ciudad, direccion, whatsapp, email, sitio_web, estado, publicado, constructora_id, ' +
+          'proyecto_config(logo_url, video_hero_url, imagen_hero_url, project_default_theme)'
+      )
+      .eq('id', projectId)
+      .maybeSingle();
+    if (result.error) throw new Error(result.error.message || 'Error cargando showroom');
+    return result.data || null;
+  }
+
+  function publicUrlForSlug(slug) {
+    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl) {
+      return PlatformBuilderBridge.showroomUrl(slug);
+    }
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(slug);
+    }
+    return '/' + encodeURIComponent(slug || '');
+  }
+
+  /**
+   * Publish / republish existing showroom by UUID.
+   * Does not change slug. Reads canonical slug from DB after update for preview URL.
+   */
   async function publish(state) {
     var constructoraId = AdminState.getConstructoraId();
     if (!constructoraId) throw new Error('No se pudo determinar la constructora.');
 
-    var linkedProject = await HeroSyncEngine.resolveProject(state);
-
-    /* Existing showroom project (demo / demo2 / demo3): always UPDATE, never INSERT */
-    if (linkedProject) {
-      var heroDraft = state.heroContent ? Object.assign({}, state.heroContent) : null;
-      HeroSyncEngine.bindStateFromProject(state, linkedProject);
-      state.draftProjectId = linkedProject.id;
-      if (heroDraft) {
-        state.heroContent = Object.assign({}, state.heroContent || {}, heroDraft);
-      }
+    var projectId = resolveProjectId(state);
+    if (!projectId) {
+      throw new Error(
+        'No hay Showroom vinculado (falta UUID). Ábrelo desde Showrooms → Administrar.'
+      );
     }
 
-    if (!state.draftProjectId && typeof AdminState !== 'undefined' && AdminState.getActiveProjectId) {
-      state.draftProjectId = AdminState.getActiveProjectId() || null;
+    var linkedProject = await fetchProjectById(projectId);
+    if (!linkedProject || !linkedProject.id) {
+      throw new Error('Showroom no encontrado para el UUID activo. Vuelve a abrirlo desde la lista.');
+    }
+
+    /* Lock session to permanent id — never re-resolve by slug for this write */
+    state.draftProjectId = linkedProject.id;
+    if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
+      AdminState.setActiveProjectId(linkedProject.id);
     }
 
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
-    var slug = linkedProject && linkedProject.slug
-      ? linkedProject.slug
-      : (typeof HeroSyncEngine.getSlugFromUrl === 'function' && HeroSyncEngine.getSlugFromUrl()) ||
-        slugFromName(info.nombre || 'nuevo-proyecto');
 
-    /* Last guard: if slug already exists in DB, force update on that row */
-    if (!state.draftProjectId && slug && typeof AdminApi !== 'undefined') {
-      var existing = await AdminApi.getClient()
-        .from('proyectos')
-        .select('id, slug, nombre')
-        .eq('slug', slug)
-        .maybeSingle();
-      if (existing.error) throw new Error(existing.error.message || 'Error buscando proyecto');
-      if (existing.data && existing.data.id) {
-        state.draftProjectId = existing.data.id;
-        if (!linkedProject) linkedProject = existing.data;
-      }
-    }
-
+    /* Content + publish flag only. Identity slug is intentionally omitted. */
     var projectPayload = {
-      nombre: info.nombre || linkedProject && linkedProject.nombre || 'Nuevo Proyecto',
-      slug: slug,
-      descripcion: ai.descripcionComercial || info.descripcion || '',
-      ciudad: info.ciudad || (linkedProject && linkedProject.ciudad) || '',
-      direccion: info.direccion || (linkedProject && linkedProject.direccion) || '',
-      whatsapp: info.whatsapp || (linkedProject && linkedProject.whatsapp) || '',
-      email: info.email || (linkedProject && linkedProject.email) || '',
-      sitio_web: info.sitio_web || (linkedProject && linkedProject.sitio_web) || '',
-      estado: info.estado || (linkedProject && linkedProject.estado) || 'preventa',
-      publicado: true,
-      constructora_id: constructoraId
+      nombre: info.nombre || linkedProject.nombre || 'Nuevo Showroom',
+      descripcion: ai.descripcionComercial || info.descripcion || linkedProject.descripcion || '',
+      ciudad: info.ciudad || linkedProject.ciudad || '',
+      direccion: info.direccion || linkedProject.direccion || '',
+      whatsapp: info.whatsapp || linkedProject.whatsapp || '',
+      email: info.email || linkedProject.email || '',
+      sitio_web: info.sitio_web || linkedProject.sitio_web || '',
+      estado: info.estado || linkedProject.estado || 'preventa',
+      publicado: true
     };
 
-    var project;
-    if (state.draftProjectId) {
-      project = await ProyectosApi.update(state.draftProjectId, projectPayload);
-    } else {
-      project = await ProyectosApi.create(projectPayload);
-    }
-
+    var project = await ProyectosApi.update(linkedProject.id, projectPayload);
     var proyectoId = project.id;
     state.draftProjectId = proyectoId;
 
+    /* Keep in-memory identity aligned with DB (slug untouched by this update) */
+    state.projectInfo = Object.assign({}, info, {
+      nombre: project.nombre,
+      slug: project.slug,
+      constructora_id: project.constructora_id || linkedProject.constructora_id || info.constructora_id
+    });
+
     var themeConfig = ThemeEngine.toProyectoConfig(state.branding);
 
-    var existingConfig = linkedProject && linkedProject.id === proyectoId
-      ? (Array.isArray(linkedProject.proyecto_config)
+    var existingConfig =
+      Array.isArray(linkedProject.proyecto_config)
         ? linkedProject.proyecto_config[0]
-        : linkedProject.proyecto_config)
-      : {};
+        : linkedProject.proyecto_config;
+    existingConfig = existingConfig || {};
 
     var branding = state.branding || {};
     var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
@@ -222,23 +260,32 @@ var PublishingEngine = (function () {
     var amenidades = ai.chatbotInfo && ai.chatbotInfo.amenities ? ai.chatbotInfo.amenities : [];
     await insertAmenidades(proyectoId, amenidades);
 
-    AdminState.setActiveProjectId(proyectoId);
+    /* Re-read identity from DB so preview URL uses the saved slug, not the URL bar */
+    var canonical = await fetchProjectById(proyectoId);
+    var slug = (canonical && canonical.slug) || project.slug;
+    if (canonical) {
+      project = canonical;
+      state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+        nombre: canonical.nombre,
+        slug: canonical.slug,
+        constructora_id: canonical.constructora_id || (state.projectInfo && state.projectInfo.constructora_id)
+      });
+    }
 
-    var showroomUrl = typeof PlatformBuilderBridge !== 'undefined'
-      ? PlatformBuilderBridge.showroomUrl(slug)
-      : '../index.html?proyecto=' + encodeURIComponent(slug);
+    AdminState.setActiveProjectId(proyectoId);
 
     return {
       project: project,
       proyectoId: proyectoId,
       draftProjectId: proyectoId,
-      slug: project.slug || slug,
-      url: showroomUrl
+      slug: slug,
+      url: publicUrlForSlug(slug)
     };
   }
 
   return {
     slugFromName: slugFromName,
-    publish: publish
+    publish: publish,
+    resolveProjectId: resolveProjectId
   };
 })();

@@ -49,9 +49,11 @@ var PlatformBuilderBridge = (function () {
         .from('proyectos')
         .select('constructora_id')
         .eq('slug', slug)
-        .maybeSingle();
-      if (bySlug.data && bySlug.data.constructora_id) {
-        return bySlug.data.constructora_id;
+        .limit(2);
+      if (bySlug.error) throw new Error(bySlug.error.message || 'Error resolviendo constructora');
+      var slugRows = bySlug.data || [];
+      if (slugRows.length === 1 && slugRows[0].constructora_id) {
+        return slugRows[0].constructora_id;
       }
     }
 
@@ -123,22 +125,48 @@ var PlatformBuilderBridge = (function () {
       'created_at, updated_at';
 
     function sanitizePayload(payload, isCreate) {
-      var data = {
-        nombre: AdminUI.normalizeOptionalText(payload.nombre),
-        slug: AdminUI.normalizeOptionalText(payload.slug),
-        descripcion: AdminUI.normalizeOptionalText(payload.descripcion),
-        ciudad: AdminUI.normalizeOptionalText(payload.ciudad),
-        direccion: AdminUI.normalizeOptionalText(payload.direccion),
-        whatsapp: AdminUI.normalizeOptionalText(payload.whatsapp),
-        email: AdminUI.normalizeOptionalText(payload.email),
-        sitio_web: AdminUI.normalizeUrl(payload.sitio_web),
-        instagram_url: AdminUI.normalizeUrl(payload.instagram_url),
-        estado: payload.estado || 'preventa',
-        publicado: !!payload.publicado
-      };
+      payload = payload || {};
+      var data = {};
+
+      function has(key) {
+        return Object.prototype.hasOwnProperty.call(payload, key);
+      }
+
+      function putText(key) {
+        if (!has(key)) return;
+        data[key] = AdminUI.normalizeOptionalText(payload[key]);
+      }
+
+      putText('nombre');
+      if (has('slug')) {
+        var slug = AdminUI.normalizeOptionalText(payload.slug);
+        if (slug) {
+          slug = String(slug)
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        }
+        data.slug = slug;
+      }
+      putText('descripcion');
+      putText('ciudad');
+      putText('direccion');
+      putText('whatsapp');
+      putText('email');
+      if (has('sitio_web')) data.sitio_web = AdminUI.normalizeUrl(payload.sitio_web);
+      if (has('instagram_url')) data.instagram_url = AdminUI.normalizeUrl(payload.instagram_url);
+      if (has('estado')) data.estado = payload.estado || 'preventa';
+      if (has('publicado')) data.publicado = !!payload.publicado;
+
       if (isCreate) {
+        if (!data.nombre) throw new Error('El nombre del showroom es obligatorio.');
+        if (!data.slug) throw new Error('El slug es obligatorio.');
+        if (!has('estado')) data.estado = 'preventa';
+        if (!has('publicado')) data.publicado = false;
         data.constructora_id = payload.constructora_id || AdminState.getConstructoraId();
       }
+
       return data;
     }
 
@@ -172,9 +200,33 @@ var PlatformBuilderBridge = (function () {
         return project;
       },
       update: async function (id, payload) {
+        if (!id) throw new Error('Falta el ID del showroom.');
         var data = sanitizePayload(payload, false);
-        var result = await getClient().from('proyectos').update(data).eq('id', id).select(PROJECT_SELECT).single();
-        return unwrap(result, 'Error actualizando proyecto');
+        if (!Object.keys(data).length) {
+          throw new Error('No hay campos para actualizar.');
+        }
+        var result = await getClient()
+          .from('proyectos')
+          .update(data)
+          .eq('id', id)
+          .select(PROJECT_SELECT)
+          .maybeSingle();
+        if (result.error) {
+          var message = result.error.message || 'Error actualizando proyecto';
+          if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
+            throw new Error(
+              'No se pudo actualizar el showroom por UUID (0 o varias filas). Verifica el ID y los permisos.'
+            );
+          }
+          if (/proyectos_slug_unico_por_constructora/i.test(message)) {
+            throw new Error('Ese slug ya pertenece a otro Showroom.');
+          }
+          throw new Error(message);
+        }
+        if (!result.data) {
+          throw new Error('No se pudo actualizar el showroom (ID no encontrado o sin permisos).');
+        }
+        return result.data;
       },
       updateIdentity: async function (id, payload) {
         if (!id) throw new Error('Falta el ID del showroom.');
@@ -202,9 +254,14 @@ var PlatformBuilderBridge = (function () {
           .update({ nombre: nombre, slug: slug })
           .eq('id', id)
           .select(PROJECT_SELECT)
-          .single();
+          .maybeSingle();
         if (result.error) {
           var message = result.error.message || 'Error actualizando identidad';
+          if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
+            throw new Error(
+              'No se pudo guardar la identidad por UUID (0 o varias filas). Verifica el ID y los permisos.'
+            );
+          }
           if (/proyectos_slug_unico_por_constructora/i.test(message)) {
             throw new Error('Ese slug ya pertenece a otro Showroom.');
           }
@@ -212,6 +269,9 @@ var PlatformBuilderBridge = (function () {
             throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
           }
           throw new Error(message);
+        }
+        if (!result.data) {
+          throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
         }
         return result.data;
       },

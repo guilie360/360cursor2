@@ -237,13 +237,23 @@ var ViviendasSyncEngine = (function () {
 
   async function fetchProjectBySlug(slug) {
     if (!slug) return null;
-    var result = await AdminApi.getClient()
+    var constructoraId =
+      typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+        ? AdminState.getConstructoraId()
+        : null;
+    var query = AdminApi.getClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
       .eq('slug', slug)
-      .maybeSingle();
+      .limit(2);
+    if (constructoraId) query = query.eq('constructora_id', constructoraId);
+    var result = await query;
     if (result.error) throw new Error(result.error.message || 'Error cargando proyecto');
-    return result.data || null;
+    var rows = result.data || [];
+    if (rows.length > 1) {
+      throw new Error('Slug ambiguo («' + slug + '»). Usa projectId (UUID).');
+    }
+    return rows[0] || null;
   }
 
   async function fetchProjectById(id) {
@@ -265,12 +275,10 @@ var ViviendasSyncEngine = (function () {
     if (id) {
       var byId = await fetchProjectById(id);
       if (byId) return byId;
+      return null;
     }
     var slug = getSlugFromUrl();
-    if (slug) {
-      var bySlug = await fetchProjectBySlug(slug);
-      if (bySlug) return bySlug;
-    }
+    if (slug) return fetchProjectBySlug(slug);
     return null;
   }
 
