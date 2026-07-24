@@ -281,7 +281,6 @@ var HeroSyncEngine = (function () {
     existingConfig = existingConfig || {};
 
     if (state.heroMediaCleared) {
-      state.heroMediaCleared = false;
       return {
         video_hero_url: null,
         imagen_hero_url: null
@@ -418,6 +417,10 @@ var HeroSyncEngine = (function () {
     });
 
     await HeroApi.upsert(project.id, heroPayload);
+
+    if (mediaCleared) {
+      state.heroMediaCleared = false;
+    }
 
     var waLink = (hero.whatsappLink || '').trim();
     if (waLink && !/^https?:\/\//i.test(waLink) && !/^wa\.me\//i.test(waLink)) {

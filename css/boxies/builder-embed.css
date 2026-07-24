@@ -62,3 +62,76 @@
   max-height: none;
   padding: 24px clamp(20px, 3vw, 40px) 28px;
 }
+
+/* ── Hero V5.8.1 — lock frame between shell header + dock; column scrolls only ── */
+.boxies-workspace:has(#boxiesContent:has(.builder-step-content--hero)),
+.boxies-workspace__panel:has(#boxiesContent:has(.builder-step-content--hero)) {
+  height: calc(
+    100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px)
+  );
+  max-height: calc(
+    100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px)
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
+#boxiesContent.boxies-builder-embed:has(.builder-step-content--hero),
+#boxiesContent.is-builder-embed:has(.builder-step-content--hero) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0 !important;
+  overflow: hidden;
+  padding: 0;
+}
+
+#boxiesContent:has(.builder-step-content--hero) .builder-app {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#boxiesContent:has(.builder-step-content--hero) .builder-workspace,
+.boxies-builder-embed:has(.builder-step-content--hero) .builder-workspace {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#boxiesContent:has(.builder-step-content--hero) .builder-main-panel,
+.boxies-builder-embed:has(.builder-step-content--hero) .builder-main-panel {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#boxiesContent:has(.builder-step-content--hero) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  padding: 14px clamp(16px, 2.4vw, 28px) 10px;
+  box-sizing: border-box;
+}
+
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .builder-workspace {
+  margin-left: var(--builder-rail-width, 52px);
+}

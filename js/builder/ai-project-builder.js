@@ -292,19 +292,22 @@ var AiProjectBuilderView = (function () {
                     ])
                   ) +
                 '</div>' +
-              '</div>' +
-              '<div class="builder-hero-media-card__actions">' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Cambiar</button>' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-clear="video">Eliminar</button>' +
               '</div>'
             : '') +
+          '<div class="builder-hero-media-card__actions">' +
+            (has
+              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Cambiar</button>' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="video">Eliminar</button>'
+              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Subir</button>') +
+          '</div>' +
           '<input type="file" id="videoInput" accept="' + MediaEngine.ACCEPT + '" hidden>' +
         '</article>'
       );
     }
 
     function imageCardHtml() {
-      var has = !!(img && img.previewUrl);
+      var has = !!(img && (img.previewUrl || img.uploadedUrl));
+      var previewSrc = has ? (img.previewUrl || img.uploadedUrl) : '';
       var dims =
         img && img.width && img.height ? img.width + '×' + img.height + 'px' : '';
       var status = has
@@ -319,7 +322,7 @@ var AiProjectBuilderView = (function () {
           '<div class="builder-hero-media-card__stage" id="heroImageDropzone"' +
             (has ? '' : ' title="Haz clic o arrastra una imagen"') + '>' +
             (has
-              ? '<img src="' + AdminUI.escapeHtml(img.previewUrl) +
+              ? '<img src="' + AdminUI.escapeHtml(previewSrc) +
                 '" alt="" class="builder-hero-image-preview">'
               : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
           '</div>' +
@@ -333,12 +336,14 @@ var AiProjectBuilderView = (function () {
                     mediaMetaLine([status, formatBytes(img.size), dims])
                   ) +
                 '</div>' +
-              '</div>' +
-              '<div class="builder-hero-media-card__actions">' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Cambiar</button>' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-clear="image">Eliminar</button>' +
               '</div>'
             : '') +
+          '<div class="builder-hero-media-card__actions">' +
+            (has
+              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Cambiar</button>' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="image">Eliminar</button>'
+              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Subir</button>') +
+          '</div>' +
           '<input type="file" id="heroImageInput" accept="' + MediaEngine.IMAGE_ACCEPT + '" hidden>' +
         '</article>'
       );
@@ -348,7 +353,6 @@ var AiProjectBuilderView = (function () {
       '<div class="builder-step-content builder-step-content--hero">' +
         '<div class="builder-hero-workspace-head">' +
           stepTitleHtml('Hero') +
-          '<p class="builder-step-desc">Media a la izquierda, configuración a la derecha. Video e imagen son excluyentes.</p>' +
         '</div>' +
         '<div class="builder-hero-workspace">' +
           '<div class="builder-hero-col builder-hero-col--media">' +
@@ -1556,6 +1560,7 @@ var AiProjectBuilderView = (function () {
       revokeHeroPreview(state.heroImage);
       state.heroImage = null;
     }
+    /* Exclusivos: al quitar el activo no debe quedar media; bloquear rehidratación. */
     if (!state.heroVideo && !state.heroImage) {
       state.heroMediaCleared = true;
     }
