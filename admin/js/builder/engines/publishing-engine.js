@@ -95,6 +95,21 @@ var PublishingEngine = (function () {
     if (!constructoraId) throw new Error('No se pudo determinar la constructora.');
 
     var projectId = resolveProjectId(state);
+
+    /* TEMP DEBUG V5.2 */
+    console.group('[BOXIES DEBUG] PublishingEngine.publish — origen UUID');
+    console.log('resolveProjectId()', projectId);
+    console.log('state.draftProjectId', state && state.draftProjectId);
+    console.log('publishResult.proyectoId', state && state.publishResult && state.publishResult.proyectoId);
+    console.log('URL projectId', typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl
+      ? HeroSyncEngine.getProjectIdFromUrl()
+      : null);
+    console.log('AdminState.getActiveProjectId()', typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+      ? AdminState.getActiveProjectId()
+      : null);
+    console.log('AdminState.getConstructoraId()', constructoraId);
+    console.groupEnd();
+
     if (!projectId) {
       throw new Error(
         'No hay Showroom vinculado (falta UUID). Ábrelo desde Showrooms → Administrar.'

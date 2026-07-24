@@ -2024,11 +2024,30 @@ var AiProjectBuilderView = (function () {
   }
 
   async function handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl) {
-    var projectId = state.draftProjectId ||
-      (state.publishResult && state.publishResult.proyectoId) ||
-      (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+    var fromDraft = state.draftProjectId || null;
+    var fromPublish = (state.publishResult && state.publishResult.proyectoId) || null;
+    var fromAdmin =
+      typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
         ? AdminState.getActiveProjectId()
-        : null);
+        : null;
+    var fromUrl = null;
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      fromUrl = params.get('projectId') || params.get('proyectoId') || null;
+    } catch (e) {}
+
+    var projectId = fromDraft || fromPublish || fromAdmin || fromUrl;
+
+    /* TEMP DEBUG V5.2 */
+    console.group('[BOXIES DEBUG] Guardar identidad — origen UUID');
+    console.log('state.draftProjectId', fromDraft);
+    console.log('publishResult.proyectoId', fromPublish);
+    console.log('AdminState.getActiveProjectId()', fromAdmin);
+    console.log('URL projectId', fromUrl);
+    console.log('UUID elegido', projectId);
+    console.log('projectInfo', state.projectInfo);
+    console.groupEnd();
+
     if (!projectId) {
       if (statusEl) statusEl.textContent = 'Abre un showroom existente para guardar la identidad.';
       AdminNotify.error('No hay un showroom vinculado (falta ID).');

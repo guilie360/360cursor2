@@ -205,12 +205,46 @@ var PlatformBuilderBridge = (function () {
         if (!Object.keys(data).length) {
           throw new Error('No hay campos para actualizar.');
         }
+
+        /* TEMP DEBUG V5.2 — remove after root-cause confirmed */
+        var preSelect = await getClient()
+          .from('proyectos')
+          .select('id, slug, nombre, constructora_id, publicado')
+          .eq('id', id)
+          .maybeSingle();
+        console.group('[BOXIES DEBUG] ProyectosApi.update');
+        console.log('UUID recibido (WHERE id =)', id);
+        console.log('typeof id', typeof id, 'length', id && String(id).length);
+        console.log('Payload original', payload);
+        console.log('Payload sanitizado enviado', data);
+        console.log('Columna WHERE', 'id');
+        console.log('AdminState.constructoraId', typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
+        console.log('PRE-SELECT by id → data', preSelect.data);
+        console.log('PRE-SELECT by id → error', preSelect.error);
+        console.log('PRE-SELECT: ¿existe visible por SELECT/RLS?', !!(preSelect.data && preSelect.data.id));
+
         var result = await getClient()
           .from('proyectos')
           .update(data)
           .eq('id', id)
           .select(PROJECT_SELECT)
           .maybeSingle();
+
+        console.log('UPDATE result.data', result.data);
+        console.log('UPDATE result.error', result.error);
+        console.log('UPDATE filas efectivas', result.data ? 1 : 0);
+        if (!result.data && !result.error && preSelect.data) {
+          console.warn(
+            'UPDATE devolvió 0 filas pero SELECT sí ve la fila → muy probable bloqueo RLS en UPDATE (proyectos_staff_actualiza).'
+          );
+        }
+        if (!result.data && !result.error && !preSelect.data) {
+          console.warn(
+            'SELECT tampoco ve la fila → UUID inexistente para este usuario, o SELECT/RLS también lo oculta.'
+          );
+        }
+        console.groupEnd();
+
         if (result.error) {
           var message = result.error.message || 'Error actualizando proyecto';
           if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
@@ -249,12 +283,44 @@ var PlatformBuilderBridge = (function () {
             throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
           }
         }
+
+        var identityPayload = { nombre: nombre, slug: slug };
+
+        /* TEMP DEBUG V5.2 — remove after root-cause confirmed */
+        var preSelect = await getClient()
+          .from('proyectos')
+          .select('id, slug, nombre, constructora_id, publicado')
+          .eq('id', id)
+          .maybeSingle();
+        console.group('[BOXIES DEBUG] ProyectosApi.updateIdentity');
+        console.log('UUID recibido (WHERE id =)', id);
+        console.log('typeof id', typeof id, 'length', id && String(id).length);
+        console.log('Nombre', nombre);
+        console.log('Slug', slug);
+        console.log('Payload enviado', identityPayload);
+        console.log('Columna WHERE', 'id');
+        console.log('AdminState.constructoraId', typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
+        console.log('PRE-SELECT by id → data', preSelect.data);
+        console.log('PRE-SELECT by id → error', preSelect.error);
+        console.log('PRE-SELECT: ¿existe visible por SELECT/RLS?', !!(preSelect.data && preSelect.data.id));
+
         var result = await getClient()
           .from('proyectos')
-          .update({ nombre: nombre, slug: slug })
+          .update(identityPayload)
           .eq('id', id)
           .select(PROJECT_SELECT)
           .maybeSingle();
+
+        console.log('UPDATE result.data', result.data);
+        console.log('UPDATE result.error', result.error);
+        console.log('UPDATE filas efectivas', result.data ? 1 : 0);
+        if (!result.data && !result.error && preSelect.data) {
+          console.warn(
+            'UPDATE identidad 0 filas pero SELECT sí ve la fila → bloqueo RLS UPDATE (constructora_id / is_super_admin).'
+          );
+        }
+        console.groupEnd();
+
         if (result.error) {
           var message = result.error.message || 'Error actualizando identidad';
           if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
