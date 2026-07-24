@@ -255,6 +255,84 @@
   min-width: 7.25rem;
 }
 
+#boxiesContent .boxies-projects-order-status {
+  min-height: 1.25rem;
+  margin: -12px 0 14px;
+  padding: 0 8px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#boxiesContent .boxies-projects-order-status.is-error {
+  color: #f0a0a0;
+}
+
+#boxiesContent .boxies-showroom-drag-th,
+#boxiesContent .boxies-showroom-drag {
+  width: 2.5rem;
+  padding-left: 12px;
+  padding-right: 4px;
+}
+
+#boxiesContent .boxies-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: grab;
+  letter-spacing: -0.15em;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+#boxiesContent .boxies-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+#boxiesContent .boxies-drag-handle:active {
+  cursor: grabbing;
+}
+
+#boxiesContent .boxies-showroom-row {
+  cursor: grab;
+}
+
+#boxiesContent .boxies-showroom-row.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+#boxiesContent .boxies-showroom-row.is-drag-over {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+#boxiesContent #boxiesProjectsBody.is-reordering {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+#boxiesContent .boxies-public-cell {
+  vertical-align: middle;
+}
+
+#boxiesContent .boxies-public-toggle {
+  vertical-align: middle;
+}
+
+#boxiesContent .boxies-public-toggle:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 #boxiesContent .admin-badge {
   display: inline-flex;
   align-items: center;

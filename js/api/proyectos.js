@@ -6,10 +6,10 @@
 var ProyectosApi = (function () {
   var PROJECT_SELECT =
     'id, nombre, slug, descripcion, ciudad, direccion, latitud, longitud, ' +
-    'whatsapp, email, sitio_web, instagram_url, estado, publicado, constructora_id, ' +
-    'created_at, updated_at';
+    'whatsapp, email, sitio_web, instagram_url, estado, publicado, is_public, constructora_id, ' +
+    'display_order, created_at, updated_at';
 
-  var BRIEF_SELECT = 'id, nombre, slug, publicado, estado, ciudad';
+  var BRIEF_SELECT = 'id, nombre, slug, publicado, is_public, estado, ciudad, display_order';
 
   function sanitizePayload(payload, isCreate) {
     payload = payload || {};
@@ -66,6 +66,10 @@ var ProyectosApi = (function () {
       data.constructora_id = payload.constructora_id || AdminState.getConstructoraId();
     }
 
+    /* display_order / is_public owned by dedicated APIs — never via update payloads. */
+    delete data.display_order;
+    delete data.is_public;
+
     return data;
   }
 
@@ -97,7 +101,7 @@ var ProyectosApi = (function () {
     var result = await AdminApi.getClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
-      .order('nombre', { ascending: true });
+      .order('display_order', { ascending: true, nullsFirst: false });
     return AdminApi.unwrap(result, 'Error cargando proyectos');
   }
 
@@ -105,7 +109,7 @@ var ProyectosApi = (function () {
     var result = await AdminApi.getClient()
       .from('proyectos')
       .select(BRIEF_SELECT)
-      .order('nombre', { ascending: true });
+      .order('display_order', { ascending: true, nullsFirst: false });
     return AdminApi.unwrap(result, 'Error cargando proyectos');
   }
 
@@ -133,11 +137,25 @@ var ProyectosApi = (function () {
     }
   }
 
+  async function nextDisplayOrder() {
+    var result = await AdminApi.getClient()
+      .from('proyectos')
+      .select('display_order')
+      .order('display_order', { ascending: false, nullsFirst: false })
+      .limit(1);
+    if (result.error) throw mapDbError(result.error, 'Error resolviendo orden de showroom');
+    var row = result.data && result.data[0];
+    var max = row && row.display_order != null ? Number(row.display_order) : 0;
+    if (!isFinite(max) || max < 0) max = 0;
+    return max + 1;
+  }
+
   async function create(payload) {
     var data = sanitizePayload(payload, true);
     if (!data.constructora_id) {
       throw new Error('No se pudo determinar la constructora del proyecto.');
     }
+    data.display_order = await nextDisplayOrder();
 
     var result = await AdminApi.getClient()
       .from('proyectos')
@@ -316,6 +334,59 @@ var ProyectosApi = (function () {
     return true;
   }
 
+  /**
+   * Persist manual list order. orderedIds = UUID[] in desired display_order ASC.
+   * Does not touch nombre/slug/publicado/is_public.
+   */
+  async function reorder(orderedIds) {
+    if (!Array.isArray(orderedIds) || !orderedIds.length) {
+      throw new Error('Lista de orden vacía.');
+    }
+    var client = AdminApi.getClient();
+    var updates = [];
+    for (var i = 0; i < orderedIds.length; i++) {
+      var id = orderedIds[i];
+      if (!id) continue;
+      updates.push(
+        client
+          .from('proyectos')
+          .update({ display_order: i + 1 })
+          .eq('id', id)
+          .select('id, display_order')
+          .maybeSingle()
+      );
+    }
+    var results = await Promise.all(updates);
+    for (var r = 0; r < results.length; r++) {
+      if (results[r].error) {
+        throw mapDbError(results[r].error, 'Error guardando el orden de showrooms');
+      }
+      if (!results[r].data) {
+        throw new Error('No se pudo actualizar el orden (ID no encontrado o sin permisos).');
+      }
+    }
+    return results.map(function (res) { return res.data; });
+  }
+
+  /**
+   * Landing / marketplace visibility flag only.
+   * Does not touch nombre, slug, display_order, or publicado.
+   */
+  async function setPublic(projectId, isPublic) {
+    if (!projectId) throw new Error('Falta el ID del showroom.');
+    var result = await AdminApi.getClient()
+      .from('proyectos')
+      .update({ is_public: !!isPublic })
+      .eq('id', projectId)
+      .select('id, is_public')
+      .maybeSingle();
+    if (result.error) throw mapDbError(result.error, 'Error actualizando visibilidad pública');
+    if (!result.data) {
+      throw new Error('No se pudo actualizar la visibilidad (ID no encontrado o sin permisos).');
+    }
+    return result.data;
+  }
+
   return {
     list: list,
     listBrief: listBrief,
@@ -324,6 +395,8 @@ var ProyectosApi = (function () {
     update: update,
     updateIdentity: updateIdentity,
     checkSlugAvailability: checkSlugAvailability,
-    remove: remove
+    remove: remove,
+    reorder: reorder,
+    setPublic: setPublic
   };
 })();

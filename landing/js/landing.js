@@ -308,7 +308,7 @@
     var host = $('lpProjects');
     if (!host) return;
     if (!list || !list.length) {
-      host.innerHTML = '<p class="lp-projects__empty">No hay showrooms publicados.</p>';
+      host.innerHTML = '<p class="lp-projects__empty">No hay showrooms públicos.</p>';
     } else {
       host.innerHTML = list.map(projectCard).join('');
       observeNewProjects();
@@ -338,11 +338,13 @@
         return;
       }
       var client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      /* Marketplace (future) must use the same filter: publicado + is_public. */
       var result = await client
         .from('proyectos')
-        .select('slug, nombre, descripcion, publicado, updated_at, proyecto_config(imagen_hero_url)')
+        .select('slug, nombre, descripcion, publicado, is_public, display_order, proyecto_config(imagen_hero_url)')
         .eq('publicado', true)
-        .order('updated_at', { ascending: false })
+        .eq('is_public', true)
+        .order('display_order', { ascending: true, nullsFirst: false })
         .limit(12);
 
       if (result.error) throw result.error;
