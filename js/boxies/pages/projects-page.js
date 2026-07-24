@@ -2,11 +2,26 @@
  * BOXIES ShowroomsPage — list only fills #boxiesContent.
  * Open builder by permanent projectId (UUID); slug is vanity for display/URL.
  * Order is manual via display_order (drag & drop); identity/publish do not reorder.
+ * Column widths are user-resizable and persisted in localStorage.
  */
 var BoxiesProjectsPage = (function () {
   var identityListener = null;
   var dragState = null;
   var savingOrder = false;
+  var columnResizeState = null;
+  var columnResizeCleanup = null;
+
+  var COL_STORAGE_KEY = 'boxies.showrooms.columns';
+  var COL_ORDER = ['drag', 'name', 'slug', 'status', 'public', 'updated', 'actions'];
+  var COL_DEFS = {
+    drag: { min: 40, default: 40, resizable: false },
+    name: { min: 120, default: 280, resizable: true },
+    slug: { min: 80, default: 160, resizable: true },
+    status: { min: 72, default: 110, resizable: true },
+    public: { min: 64, default: 88, resizable: true },
+    updated: { min: 100, default: 160, resizable: true },
+    actions: { min: 108, default: 120, resizable: true }
+  };
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -64,13 +79,183 @@ var BoxiesProjectsPage = (function () {
       '</svg>'
   };
 
+  function defaultWidths() {
+    var out = {};
+    COL_ORDER.forEach(function (key) {
+      out[key] = COL_DEFS[key].default;
+    });
+    return out;
+  }
+
+  function loadColumnWidths() {
+    var widths = defaultWidths();
+    try {
+      var raw = window.localStorage.getItem(COL_STORAGE_KEY);
+      if (!raw) return widths;
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return widths;
+      COL_ORDER.forEach(function (key) {
+        var n = Number(parsed[key]);
+        if (isFinite(n) && n > 0) {
+          widths[key] = Math.max(COL_DEFS[key].min, Math.round(n));
+        }
+      });
+    } catch (err) {}
+    return widths;
+  }
+
+  function saveColumnWidths(widths) {
+    try {
+      var payload = {};
+      COL_ORDER.forEach(function (key) {
+        payload[key] = Math.round(widths[key]);
+      });
+      window.localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {}
+  }
+
+  function sumWidths(widths) {
+    return COL_ORDER.reduce(function (sum, key) {
+      return sum + widths[key];
+    }, 0);
+  }
+
+  function applyColumnWidths(table, widths) {
+    if (!table) return;
+    COL_ORDER.forEach(function (key) {
+      var col = table.querySelector('col[data-col="' + key + '"]');
+      if (!col) return;
+      var w = Math.max(COL_DEFS[key].min, Math.round(widths[key]));
+      widths[key] = w;
+      col.style.width = w + 'px';
+      col.style.minWidth = COL_DEFS[key].min + 'px';
+    });
+    var wrap = table.closest('.boxies-showrooms-wrap');
+    var minFill = wrap ? wrap.clientWidth : 0;
+    table.style.width = Math.max(sumWidths(widths), minFill) + 'px';
+  }
+
+  function measureColumnAutoWidth(table, colKey) {
+    var min = COL_DEFS[colKey].min;
+    var cells = table.querySelectorAll(
+      'th[data-col="' + colKey + '"], td.boxies-col-' + colKey
+    );
+    var max = min;
+    Array.prototype.forEach.call(cells, function (cell) {
+      var probe = cell.querySelector(
+        '.boxies-th-label, .boxies-showroom-name, .boxies-showroom-slug, .admin-badge, .boxies-row-actions, .boxies-public-toggle'
+      ) || cell;
+      var prev = probe.style.whiteSpace;
+      probe.style.whiteSpace = 'nowrap';
+      var w = Math.ceil(probe.scrollWidth || probe.offsetWidth || 0);
+      probe.style.whiteSpace = prev;
+      max = Math.max(max, w + 24);
+    });
+    return max;
+  }
+
+  function bindColumnResize(table) {
+    if (!table) return;
+    if (columnResizeCleanup) {
+      columnResizeCleanup();
+      columnResizeCleanup = null;
+    }
+
+    var widths = loadColumnWidths();
+    applyColumnWidths(table, widths);
+
+    function onMove(e) {
+      if (!columnResizeState) return;
+      e.preventDefault();
+      var next = columnResizeState.startWidth + (e.clientX - columnResizeState.startX);
+      next = Math.max(COL_DEFS[columnResizeState.key].min, Math.round(next));
+      widths[columnResizeState.key] = next;
+      applyColumnWidths(table, widths);
+    }
+
+    function onUp() {
+      if (!columnResizeState) return;
+      var handle = columnResizeState.handle;
+      columnResizeState = null;
+      document.body.classList.remove('boxies-col-resizing');
+      if (handle) handle.classList.remove('is-active');
+      saveColumnWidths(widths);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+
+    function onDown(e) {
+      var handle = e.target.closest('.boxies-col-resizer');
+      if (!handle || !table.contains(handle)) return;
+      var key = handle.getAttribute('data-resize');
+      if (!key || !COL_DEFS[key] || !COL_DEFS[key].resizable) return;
+      e.preventDefault();
+      e.stopPropagation();
+      columnResizeState = {
+        key: key,
+        startX: e.clientX,
+        startWidth: widths[key],
+        handle: handle
+      };
+      handle.classList.add('is-active');
+      document.body.classList.add('boxies-col-resizing');
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    }
+
+    function onDblClick(e) {
+      var handle = e.target.closest('.boxies-col-resizer');
+      if (!handle || !table.contains(handle)) return;
+      var key = handle.getAttribute('data-resize');
+      if (!key || !COL_DEFS[key] || !COL_DEFS[key].resizable) return;
+      e.preventDefault();
+      e.stopPropagation();
+      widths[key] = measureColumnAutoWidth(table, key);
+      applyColumnWidths(table, widths);
+      saveColumnWidths(widths);
+    }
+
+    table.addEventListener('mousedown', onDown);
+    table.addEventListener('dblclick', onDblClick);
+
+    columnResizeCleanup = function () {
+      table.removeEventListener('mousedown', onDown);
+      table.removeEventListener('dblclick', onDblClick);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('boxies-col-resizing');
+      columnResizeState = null;
+    };
+  }
+
+  function thCell(key, label, opts) {
+    opts = opts || {};
+    var resizable = COL_DEFS[key] && COL_DEFS[key].resizable;
+    var cls = 'boxies-col-' + key + (opts.extraClass ? ' ' + opts.extraClass : '');
+    var labelHtml = label
+      ? '<span class="boxies-th-label">' + label + '</span>'
+      : '';
+    var aria = opts.ariaLabel
+      ? ' aria-label="' + escapeHtml(opts.ariaLabel) + '"'
+      : '';
+    var resizer = resizable
+      ? '<span class="boxies-col-resizer" data-resize="' + key + '" title="Arrastrar para redimensionar"></span>'
+      : '';
+    return (
+      '<th class="' + cls + '" data-col="' + key + '"' + aria + '>' +
+        labelHtml +
+        resizer +
+      '</th>'
+    );
+  }
+
   function row(showroom) {
     var id = showroom.id || '';
     var slug = showroom.slug || '';
     var name = showroom.nombre || slug || 'Sin nombre';
     return (
       '<tr class="boxies-showroom-row" draggable="true" data-showroom-id="' + escapeHtml(id) + '">' +
-        '<td class="boxies-showroom-drag">' +
+        '<td class="boxies-showroom-drag boxies-col-drag">' +
           '<button type="button" class="boxies-drag-handle" aria-label="Arrastrar para reordenar" title="Arrastrar">' +
             '<span aria-hidden="true">⋮⋮</span>' +
           '</button>' +
@@ -120,7 +305,6 @@ var BoxiesProjectsPage = (function () {
     if (!projectId) return;
     var prev = btn.getAttribute('data-boxies-public') === '1';
     var next = !prev;
-
     applyToggleVisual(btn, next);
     btn.dataset.saving = '1';
     btn.disabled = true;
@@ -205,8 +389,8 @@ var BoxiesProjectsPage = (function () {
     tbody.addEventListener('dragstart', function (e) {
       var tr = e.target.closest('tr[data-showroom-id]');
       if (!tr || !tbody.contains(tr)) return;
-      if (e.target.closest(
-        'button.boxies-action-btn, button.boxies-icon-action, .boxies-public-toggle, [data-boxies-public-id], [data-boxies-clone-id], [data-boxies-delete-id]'
+      if (columnResizeState || e.target.closest(
+        'button.boxies-action-btn, button.boxies-icon-action, .boxies-public-toggle, .boxies-col-resizer, [data-boxies-public-id], [data-boxies-clone-id], [data-boxies-delete-id]'
       )) {
         e.preventDefault();
         return;
@@ -227,7 +411,7 @@ var BoxiesProjectsPage = (function () {
     });
 
     tbody.addEventListener('dragover', function (e) {
-      if (!dragState) return;
+      if (!dragState || columnResizeState) return;
       e.preventDefault();
       try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
       var over = e.target.closest('tr[data-showroom-id]');
@@ -243,7 +427,7 @@ var BoxiesProjectsPage = (function () {
 
     tbody.addEventListener('drop', function (e) {
       e.preventDefault();
-      if (!dragState || !dragState.el) return;
+      if (!dragState || !dragState.el || columnResizeState) return;
       var target = e.target.closest('tr[data-showroom-id]');
       rows().forEach(function (tr) { tr.classList.remove('is-drag-over'); });
       if (!target || target === dragState.el) return;
@@ -418,7 +602,10 @@ var BoxiesProjectsPage = (function () {
     var nameEl = rowEl.querySelector('.boxies-showroom-name');
     var slugEl = rowEl.querySelector('.boxies-showroom-slug');
     if (nameEl && detail.nombre) nameEl.textContent = detail.nombre;
-    if (slugEl && detail.slug) slugEl.textContent = detail.slug;
+    if (slugEl && detail.slug) {
+      slugEl.textContent = detail.slug;
+      slugEl.setAttribute('title', detail.slug);
+    }
     var btn = rowEl.querySelector('[data-boxies-open-builder]');
     if (btn && detail.slug) btn.setAttribute('data-boxies-open-builder', detail.slug);
     var del = rowEl.querySelector('[data-boxies-delete-name]');
@@ -437,15 +624,24 @@ var BoxiesProjectsPage = (function () {
         '</header>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
         '<div class="admin-table-wrap boxies-showrooms-wrap">' +
-          '<table class="admin-table boxies-showrooms-table">' +
+          '<table class="admin-table boxies-showrooms-table" id="boxiesShowroomsTable">' +
+            '<colgroup>' +
+              '<col data-col="drag">' +
+              '<col data-col="name">' +
+              '<col data-col="slug">' +
+              '<col data-col="status">' +
+              '<col data-col="public">' +
+              '<col data-col="updated">' +
+              '<col data-col="actions">' +
+            '</colgroup>' +
             '<thead><tr>' +
-              '<th class="boxies-showroom-drag-th" aria-label="Orden"></th>' +
-              '<th class="boxies-col-name">Nombre</th>' +
-              '<th class="boxies-col-slug">Slug</th>' +
-              '<th class="boxies-col-status">Estado</th>' +
-              '<th class="boxies-col-public">Público</th>' +
-              '<th class="boxies-col-updated">Última modificación</th>' +
-              '<th class="boxies-col-actions" aria-label="Acciones"></th>' +
+              thCell('drag', '', { extraClass: 'boxies-showroom-drag-th', ariaLabel: 'Orden' }) +
+              thCell('name', 'Nombre') +
+              thCell('slug', 'Slug') +
+              thCell('status', 'Estado') +
+              thCell('public', 'Público') +
+              thCell('updated', 'Última modificación') +
+              thCell('actions', '', { ariaLabel: 'Acciones' }) +
             '</tr></thead>' +
             '<tbody id="boxiesProjectsBody"><tr><td colspan="7">Cargando…</td></tr></tbody>' +
           '</table>' +
@@ -460,6 +656,8 @@ var BoxiesProjectsPage = (function () {
     bindOpenBuilder(host);
     bindPublicToggles(host);
     bindShowroomActions(host);
+    bindColumnResize(document.getElementById('boxiesShowroomsTable'));
+
     identityListener = function (ev) {
       patchShowroomRow(ev && ev.detail);
     };
@@ -481,6 +679,10 @@ var BoxiesProjectsPage = (function () {
       }
       tbody.innerHTML = showrooms.map(row).join('');
       bindDragAndDrop(tbody);
+      applyColumnWidths(
+        document.getElementById('boxiesShowroomsTable'),
+        loadColumnWidths()
+      );
     } catch (err) {
       tbody.innerHTML =
         '<tr><td colspan="7">' + escapeHtml(err.message || 'Error cargando showrooms') + '</td></tr>';
@@ -492,7 +694,12 @@ var BoxiesProjectsPage = (function () {
       window.removeEventListener('boxies:showroom-identity-changed', identityListener);
       identityListener = null;
     }
+    if (columnResizeCleanup) {
+      columnResizeCleanup();
+      columnResizeCleanup = null;
+    }
     dragState = null;
+    columnResizeState = null;
     savingOrder = false;
   }
 
