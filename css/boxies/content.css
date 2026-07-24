@@ -176,16 +176,52 @@
   max-width: min(920px, 100%);
 }
 
+/* ── Showrooms workspace shell ──
+ * Content fills the panel. Only the table region scrolls.
+ * Footer stays pinned to the bottom of the content area.
+ */
+.boxies-workspace:has(#boxiesContent.boxies-content--showrooms),
+.boxies-workspace__panel:has(#boxiesContent.boxies-content--showrooms) {
+  height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  min-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  overflow: hidden;
+}
+
+#boxiesContent.boxies-content--showrooms {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  max-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe)
+  );
+  min-height: 0;
+  box-sizing: border-box;
+  padding-bottom: 12px;
+}
+
+.boxies-workspace:has(#boxiesContent.boxies-content--showrooms) #boxiesContent.boxies-content--showrooms,
+.boxies-workspace__panel:has(#boxiesContent.boxies-content--showrooms) #boxiesContent.boxies-content--showrooms {
+  height: 100%;
+  max-height: 100%;
+}
+
 #boxiesContent .boxies-page--showrooms {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   max-width: none;
   width: 100%;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   box-sizing: border-box;
-  min-height: calc(
-    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe) - 52px
-  );
 }
 
 #boxiesContent .boxies-page__title {
@@ -204,13 +240,27 @@
 }
 
 #boxiesContent .boxies-showrooms-header {
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 #boxiesContent .boxies-showrooms-header .boxies-page__desc {
   margin-bottom: 10px;
 }
 
+#boxiesContent .boxies-projects-order-status {
+  flex: 0 0 auto;
+  min-height: 1.25rem;
+  margin: -4px 0 10px;
+  padding: 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#boxiesContent .boxies-projects-order-status.is-error {
+  color: #f0a0a0;
+}
+
+/* Scrollable table region — takes all remaining height */
 #boxiesContent .boxies-showrooms-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -218,6 +268,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 #boxiesContent .admin-table-wrap {
@@ -231,8 +282,19 @@
   width: 100%;
   max-width: 100%;
   padding: 0;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
+}
+
+/* Pinned workspace footer — never inside table scroll */
+#boxiesContent .boxies-showrooms-workspace-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.06));
+  background: transparent;
 }
 
 #boxiesContent .admin-table {
@@ -281,6 +343,7 @@
   background: none;
 }
 
+/* Continuous full-width table */
 #boxiesContent .boxies-showrooms-table {
   table-layout: fixed;
   width: 100%;
@@ -288,19 +351,43 @@
   border-spacing: 0;
 }
 
+/* Padding lives on .boxies-cell so th/td geometry matches exactly */
 #boxiesContent .boxies-showrooms-table th,
 #boxiesContent .boxies-showrooms-table td {
-  padding: 14px 12px;
+  padding: 0;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   vertical-align: middle;
   box-sizing: border-box;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
 }
 
 #boxiesContent .boxies-showrooms-table thead th {
   position: relative;
   user-select: none;
   -webkit-user-select: none;
+  border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.06));
+}
+
+#boxiesContent .boxies-showrooms-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+#boxiesContent .boxies-cell {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+#boxiesContent .boxies-showrooms-table thead .boxies-cell {
+  min-height: 40px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 #boxiesContent .boxies-th-label {
@@ -308,16 +395,49 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 6px;
+  width: 100%;
 }
 
+/* Alignment: header and body share the same flex justification */
+#boxiesContent .boxies-col-actions .boxies-cell,
+#boxiesContent .boxies-col-drag .boxies-cell,
+#boxiesContent .boxies-col-slug .boxies-cell,
+#boxiesContent .boxies-col-status .boxies-cell,
+#boxiesContent .boxies-col-public .boxies-cell,
+#boxiesContent .boxies-col-updated .boxies-cell {
+  justify-content: center;
+  text-align: center;
+}
+
+#boxiesContent .boxies-col-name .boxies-cell {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+#boxiesContent .boxies-col-actions .boxies-th-label,
+#boxiesContent .boxies-col-slug .boxies-th-label,
+#boxiesContent .boxies-col-status .boxies-th-label,
+#boxiesContent .boxies-col-public .boxies-th-label,
+#boxiesContent .boxies-col-updated .boxies-th-label {
+  text-align: center;
+}
+
+#boxiesContent .boxies-col-name .boxies-th-label {
+  text-align: left;
+}
+
+/*
+ * Resize handle: 12px hit target centered on the column boundary.
+ * Visible rule is exactly 1px on that boundary.
+ */
 #boxiesContent .boxies-col-resizer {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 4;
-  width: 8px;
+  z-index: 5;
+  width: 12px;
   height: 100%;
+  transform: translateX(50%);
   cursor: col-resize;
   touch-action: none;
 }
@@ -325,22 +445,29 @@
 #boxiesContent .boxies-col-resizer::after {
   content: '';
   position: absolute;
-  top: 18%;
-  bottom: 18%;
+  top: 14%;
+  bottom: 14%;
   left: 50%;
   width: 1px;
   transform: translateX(-50%);
-  background: transparent;
-  transition: background 0.12s ease, opacity 0.12s ease;
-  opacity: 0;
+  background: rgba(255, 255, 255, 0.12);
   pointer-events: none;
+  transition:
+    background 0.15s ease,
+    width 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-#boxiesContent .boxies-showrooms-table thead th:hover .boxies-col-resizer::after,
-#boxiesContent .boxies-col-resizer:hover::after,
-#boxiesContent .boxies-col-resizer.is-active::after {
-  background: rgba(255, 255, 255, 0.35);
-  opacity: 1;
+#boxiesContent .boxies-col-resizer:hover::after {
+  width: 2px;
+  background: #6fbf86;
+}
+
+#boxiesContent .boxies-col-resizer.is-active::after,
+body.boxies-col-resizing .boxies-col-resizer.is-active::after {
+  width: 3px;
+  background: #6fbf86;
+  box-shadow: 0 0 0 1px rgba(111, 191, 134, 0.2);
 }
 
 body.boxies-col-resizing,
@@ -350,14 +477,9 @@ body.boxies-col-resizing * {
 }
 
 #boxiesContent .boxies-showrooms-table .boxies-col-updated {
-  white-space: nowrap;
   color: rgba(255, 255, 255, 0.42);
   font-size: 0.8rem;
-}
-
-#boxiesContent .boxies-showrooms-table .boxies-col-actions {
-  padding-right: 10px;
-  overflow: visible;
+  white-space: nowrap;
 }
 
 #boxiesContent .boxies-showroom-name {
@@ -366,26 +488,39 @@ body.boxies-col-resizing * {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 550;
+  min-width: 0;
+  width: 100%;
 }
 
 #boxiesContent .boxies-showroom-slug {
   display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
 #boxiesContent .table-actions {
-  text-align: right;
   white-space: nowrap;
 }
 
 #boxiesContent .boxies-row-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Generous space between Editar and the Clonar/Eliminar group */
+#boxiesContent .boxies-row-actions__gap {
+  display: inline-block;
+  width: 28px;
+  flex-shrink: 0;
+}
+
+/* Slightly more space between Clonar and Eliminar */
+#boxiesContent .boxies-row-actions .boxies-icon-action--danger {
+  margin-left: 10px;
 }
 
 #boxiesContent .boxies-icon-action {
@@ -437,33 +572,10 @@ body.boxies-col-resizing * {
   text-transform: uppercase;
 }
 
-#boxiesContent .boxies-showrooms-workspace-footer {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-top: auto;
-  padding: 18px 0 4px;
-  border-top: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-}
-
-#boxiesContent .boxies-projects-order-status {
-  flex-shrink: 0;
-  min-height: 1.25rem;
-  margin: -4px 0 10px;
-  padding: 0;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-#boxiesContent .boxies-projects-order-status.is-error {
-  color: #f0a0a0;
-}
-
-#boxiesContent .boxies-showroom-drag-th,
-#boxiesContent .boxies-showroom-drag {
-  padding-left: 4px;
-  padding-right: 4px;
+#boxiesContent .boxies-showroom-drag-th .boxies-cell,
+#boxiesContent .boxies-showroom-drag .boxies-cell {
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 #boxiesContent .boxies-drag-handle {
