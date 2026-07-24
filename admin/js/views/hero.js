@@ -42,7 +42,13 @@ var HeroView = (function () {
       boton_hero_2: form.boton_hero_2.value,
       boton_hero_1: form.boton_hero_1.value,
       logo_url: state.config.logo_url || null,
-      video_hero_url: state.config.video_hero_url || null,
+      video_hero_url: (function () {
+        var url = state.config.video_hero_url || null;
+        if (!url) return null;
+        if (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(url)) return null;
+        if (typeof sanitizeHeroVideoUrl === 'function') return sanitizeHeroVideoUrl(url);
+        return null;
+      })(),
       imagen_hero_url: state.config.imagen_hero_url || null,
       color_fondo: state.config.color_fondo || '#0A0A0A',
       color_accento: state.config.color_accento || '#FF3B30'
