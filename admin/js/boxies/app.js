@@ -15,6 +15,9 @@ var BoxiesApp = (function () {
     if (typeof BoxiesBuilderPage !== 'undefined') {
       BoxiesPages.register(BoxiesBuilderPage);
     }
+    if (typeof BoxiesSistemaPage !== 'undefined') {
+      BoxiesPages.register(BoxiesSistemaPage);
+    }
   }
 
   async function onAppReady(profile) {

@@ -90,6 +90,7 @@ var BoxiesShell = (function () {
         item('hall', 'Hall', 'home') +
         item('projects', 'Showrooms', 'folder') +
         item('builder', 'Builder', 'panel') +
+        item('sistema', 'Sistema', 'activity') +
       '</nav>'
     );
   }
