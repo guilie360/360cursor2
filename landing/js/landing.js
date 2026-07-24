@@ -7,30 +7,6 @@
     }
   } catch (e) { /* ignore */ }
 
-  var FALLBACK_PROJECTS = [
-    {
-      slug: 'demo1',
-      nombre: 'Proyecto Demo 1',
-      descripcion: 'Experiencia inmobiliaria interactiva lista para compartir.',
-      imagen_hero_url:
-        'https://emefdwzdfnqgjohbtvvn.supabase.co/storage/v1/object/public/proyectos-media/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/hero/image/hero/image-1783567174957.jpg'
-    },
-    {
-      slug: 'demo2',
-      nombre: 'Proyecto Demo 2',
-      descripcion: 'Recorrido digital con identidad visual propia.',
-      imagen_hero_url:
-        'https://emefdwzdfnqgjohbtvvn.supabase.co/storage/v1/object/public/proyectos-media/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/hero/image/hero/image-1783567174957.jpg'
-    },
-    {
-      slug: 'demo3',
-      nombre: 'Proyecto Demo 3',
-      descripcion: 'Showroom publicado desde un solo lugar.',
-      imagen_hero_url:
-        'https://emefdwzdfnqgjohbtvvn.supabase.co/storage/v1/object/public/proyectos-media/11111111-1111-1111-1111-111111111111/22222222-2222-2222-2222-222222222222/hero/image/hero/image-1783567174957.jpg'
-    }
-  ];
-
   function $(id) {
     return document.getElementById(id);
   }
@@ -303,10 +279,13 @@
 
   function projectCard(p) {
     var slug = p.slug || '';
-    var name = p.nombre || slug || 'Proyecto';
+    var name = p.nombre || slug || 'Showroom';
     var img = p.imagen_hero_url || '';
     var desc = shortDesc(p);
-    var href = '/' + encodeURIComponent(slug);
+    var href =
+      typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href
+        ? ShowroomPublicUrl.href(slug)
+        : '/' + encodeURIComponent(slug);
     return (
       '<article class="lp-project">' +
         '<div class="lp-project__media">' +
@@ -329,7 +308,7 @@
     var host = $('lpProjects');
     if (!host) return;
     if (!list || !list.length) {
-      host.innerHTML = '<p class="lp-projects__empty">No hay proyectos publicados.</p>';
+      host.innerHTML = '<p class="lp-projects__empty">No hay showrooms publicados.</p>';
     } else {
       host.innerHTML = list.map(projectCard).join('');
       observeNewProjects();
@@ -355,7 +334,7 @@
   async function loadProjects() {
     try {
       if (typeof supabase === 'undefined' || typeof SUPABASE_URL === 'undefined') {
-        renderProjects(FALLBACK_PROJECTS);
+        renderProjects([]);
         return;
       }
       var client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -367,12 +346,10 @@
         .limit(12);
 
       if (result.error) throw result.error;
-      var list = normalizeRows(result.data);
-      if (!list.length) list = FALLBACK_PROJECTS;
-      renderProjects(list);
+      renderProjects(normalizeRows(result.data));
     } catch (err) {
-      console.warn('[landing] projects fetch fallback', err);
-      renderProjects(FALLBACK_PROJECTS);
+      console.warn('[landing] projects fetch failed', err);
+      renderProjects([]);
     }
   }
 

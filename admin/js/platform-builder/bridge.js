@@ -181,11 +181,22 @@ var PlatformBuilderBridge = (function () {
         var nombre = payload && payload.nombre != null
           ? String(payload.nombre).trim()
           : '';
-        var slug = payload && payload.slug != null
-          ? String(payload.slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
-          : '';
+        var slug = payload && payload.slug != null ? String(payload.slug) : '';
+        if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
+          slug = ShowroomPublicUrl.normalizeSlug(slug);
+        } else {
+          slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+        }
         if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
         if (!slug) throw new Error('El slug es obligatorio.');
+        if (typeof ShowroomPublicUrl !== 'undefined') {
+          if (ShowroomPublicUrl.isReservedSlug(slug)) {
+            throw new Error('Ese slug está reservado por la plataforma.');
+          }
+          if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
+            throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
+          }
+        }
         var result = await getClient()
           .from('proyectos')
           .update({ nombre: nombre, slug: slug })
@@ -195,7 +206,7 @@ var PlatformBuilderBridge = (function () {
         if (result.error) {
           var message = result.error.message || 'Error actualizando identidad';
           if (/proyectos_slug_unico_por_constructora/i.test(message)) {
-            throw new Error('Ya existe un showroom con ese slug en tu constructora.');
+            throw new Error('Ese slug ya pertenece a otro Showroom.');
           }
           if (/proyectos_slug_formato/i.test(message)) {
             throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
@@ -203,6 +214,42 @@ var PlatformBuilderBridge = (function () {
           throw new Error(message);
         }
         return result.data;
+      },
+      checkSlugAvailability: async function (slug, options) {
+        options = options || {};
+        var normalized =
+          typeof ShowroomPublicUrl !== 'undefined'
+            ? ShowroomPublicUrl.normalizeSlug(slug)
+            : String(slug || '').trim().toLowerCase();
+        if (!normalized) return { available: false, reason: 'empty' };
+        if (typeof ShowroomPublicUrl !== 'undefined') {
+          if (ShowroomPublicUrl.isReservedSlug(normalized)) {
+            return { available: false, reason: 'reserved' };
+          }
+          if (!ShowroomPublicUrl.isValidSlugFormat(normalized)) {
+            return { available: false, reason: 'format' };
+          }
+        }
+        var query = getClient()
+          .from('proyectos')
+          .select('id')
+          .eq('slug', normalized)
+          .limit(8);
+        if (options.constructoraId) {
+          query = query.eq('constructora_id', options.constructoraId);
+        }
+        var result = await query;
+        if (result.error) {
+          throw new Error(result.error.message || 'Error validando slug');
+        }
+        var rows = result.data || [];
+        var conflict = rows.some(function (row) {
+          return row && row.id && row.id !== options.excludeId;
+        });
+        if (conflict) {
+          return { available: false, reason: 'taken' };
+        }
+        return { available: true, reason: 'ok' };
       },
       getById: async function (id) {
         var result = await getClient().from('proyectos').select(PROJECT_SELECT).eq('id', id).maybeSingle();
@@ -330,6 +377,9 @@ var PlatformBuilderBridge = (function () {
         resolved = new URLSearchParams(window.location.search).get('proyecto');
       } catch (e) {}
     }
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(resolved);
+    }
     if (resolved) {
       return new URL('/' + encodeURIComponent(resolved), window.location.origin).href;
     }
@@ -339,6 +389,7 @@ var PlatformBuilderBridge = (function () {
   return {
     init: init,
     showroomUrl: showroomUrl,
-    getClient: getClient
+    getClient: getClient,
+    resolveConstructoraId: resolveConstructoraId
   };
 })();

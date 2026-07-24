@@ -94,42 +94,55 @@ var AiProjectBuilderView = (function () {
     });
   }
 
-  var SHOWROOM_PUBLIC_HOST = '360preventa.com';
-
-  function normalizeShowroomSlug(raw) {
-    return String(raw || '')
+  function normalizeShowroomSlug(raw, options) {
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
+      return ShowroomPublicUrl.normalizeSlug(raw, options);
+    }
+    var s = String(raw || '')
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9-]+/g, '-')
       .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '');
+      .replace(/^-+/g, '');
+    if (!(options && options.allowTrailingHyphen)) s = s.replace(/-+$/g, '');
+    return s.slice(0, 60);
+  }
+
+  function publicUrlDisplay(slug) {
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.displayUrl) {
+      return ShowroomPublicUrl.displayUrl(slug);
+    }
+    var s = normalizeShowroomSlug(slug);
+    return s ? 'https://360preventa.com/' + s : 'https://360preventa.com/';
   }
 
   function renderConfig() {
     var info = state.projectInfo || {};
     var nombre = info.nombre || '';
     var slug = info.slug || '';
-    var subdomain = (slug || 'slug') + '.' + SHOWROOM_PUBLIC_HOST;
+    var urlPreview = publicUrlDisplay(slug);
     return '<div class="builder-step-content">' +
       stepTitleHtml('Configuración') +
-      '<p class="builder-step-desc">Identidad del Showroom. El ID interno no cambia; nombre y slug son editables.</p>' +
+      '<p class="builder-step-desc">Identidad del Showroom. Fuente única de nombre y URL pública.</p>' +
       '<div class="builder-config-identity">' +
         '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
         '<div class="builder-field">' +
           '<label for="showroomNameInput">Nombre del Showroom</label>' +
-          '<input type="text" id="showroomNameInput" maxlength="120" value="' + AdminUI.escapeHtml(nombre) + '" placeholder="Valhalla">' +
+          '<input type="text" id="showroomNameInput" maxlength="120" value="' + AdminUI.escapeHtml(nombre) + '" placeholder="Nombre del showroom" autocomplete="off">' +
         '</div>' +
         '<div class="builder-field">' +
           '<label for="showroomSlugInput">Slug</label>' +
-          '<input type="text" id="showroomSlugInput" maxlength="80" value="' + AdminUI.escapeHtml(slug) + '" placeholder="valhalla" autocomplete="off" spellcheck="false">' +
+          '<input type="text" id="showroomSlugInput" maxlength="60" value="' + AdminUI.escapeHtml(slug) + '" placeholder="mi-showroom" autocomplete="off" spellcheck="false" inputmode="latin">' +
+          '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60 caracteres.</p>' +
+          '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
         '</div>' +
         '<div class="builder-field">' +
-          '<label for="showroomSubdomainInput">Subdominio</label>' +
-          '<input type="text" id="showroomSubdomainInput" value="' + AdminUI.escapeHtml(subdomain) + '" readonly>' +
+          '<label>URL pública</label>' +
+          '<div class="builder-config-identity__url" id="showroomPublicUrlPreview">' +
+            AdminUI.escapeHtml(urlPreview) +
+          '</div>' +
         '</div>' +
-        '<p class="builder-config-identity__hint">La URL pública será <code>/' +
-          AdminUI.escapeHtml(slug || 'slug') +
-        '</code>. Si cambias el slug, el enlace anterior dejará de funcionar.</p>' +
+        '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
         '<div class="builder-config-identity__actions">' +
           '<button type="button" class="builder-header-action-btn" id="showroomIdentitySaveBtn">Guardar cambios</button>' +
           '<span class="builder-config-identity__status" id="showroomIdentityStatus" aria-live="polite"></span>' +
@@ -922,27 +935,145 @@ var AiProjectBuilderView = (function () {
     if (stepId === 'config') {
       var nameInput = rootEl.querySelector('#showroomNameInput');
       var slugInput = rootEl.querySelector('#showroomSlugInput');
-      var subdomainInput = rootEl.querySelector('#showroomSubdomainInput');
+      var urlPreviewEl = rootEl.querySelector('#showroomPublicUrlPreview');
+      var slugCheckEl = rootEl.querySelector('#showroomSlugCheck');
       var saveBtn = rootEl.querySelector('#showroomIdentitySaveBtn');
       var statusEl = rootEl.querySelector('#showroomIdentityStatus');
+      var slugCheckTimer = null;
+      var slugCheckSeq = 0;
 
-      function syncSubdomainPreview() {
+      function setSlugCheck(message, tone) {
+        if (!slugCheckEl) return;
+        slugCheckEl.textContent = message || '';
+        slugCheckEl.className = 'builder-config-identity__slug-check' +
+          (tone ? ' is-' + tone : '');
+      }
+
+      function syncPublicUrlPreview() {
         var nextSlug = normalizeShowroomSlug(slugInput ? slugInput.value : '');
-        if (subdomainInput) {
-          subdomainInput.value = (nextSlug || 'slug') + '.' + SHOWROOM_PUBLIC_HOST;
+        if (urlPreviewEl) {
+          urlPreviewEl.textContent = publicUrlDisplay(nextSlug);
         }
       }
 
+      function currentProjectId() {
+        return state.draftProjectId ||
+          (state.publishResult && state.publishResult.proyectoId) ||
+          (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+            ? AdminState.getActiveProjectId()
+            : null);
+      }
+
+      function resolveConstructoraIdForCheck() {
+        if (state.projectInfo && state.projectInfo.constructora_id) {
+          return state.projectInfo.constructora_id;
+        }
+        if (typeof AdminState !== 'undefined' && AdminState.getConstructoraId) {
+          return AdminState.getConstructoraId();
+        }
+        if (typeof VisitorSession !== 'undefined' && VisitorSession.getProfile) {
+          var profile = VisitorSession.getProfile();
+          if (profile && profile.constructora_id) return profile.constructora_id;
+        }
+        return null;
+      }
+
+      async function validateSlugLive() {
+        var seq = ++slugCheckSeq;
+        var raw = slugInput ? slugInput.value : '';
+        var nextSlug = normalizeShowroomSlug(raw);
+
+        if (!String(raw || '').trim()) {
+          setSlugCheck('El slug es obligatorio.', 'error');
+          if (saveBtn) saveBtn.disabled = true;
+          return;
+        }
+
+        if (typeof ShowroomPublicUrl !== 'undefined') {
+          if (ShowroomPublicUrl.isReservedSlug(nextSlug)) {
+            setSlugCheck('✕ Ese slug está reservado.', 'error');
+            if (saveBtn) saveBtn.disabled = true;
+            return;
+          }
+          if (!ShowroomPublicUrl.isValidSlugFormat(nextSlug)) {
+            setSlugCheck('✕ Usa solo letras minúsculas, números y guiones.', 'error');
+            if (saveBtn) saveBtn.disabled = true;
+            return;
+          }
+        }
+
+        var originalSlug = normalizeShowroomSlug(
+          (state.projectInfo && state.projectInfo.slug) || ''
+        );
+        if (nextSlug === originalSlug && nextSlug) {
+          setSlugCheck('✓ URL disponible', 'ok');
+          if (saveBtn) saveBtn.disabled = false;
+          return;
+        }
+
+        if (typeof ProyectosApi === 'undefined' ||
+            typeof ProyectosApi.checkSlugAvailability !== 'function') {
+          setSlugCheck('');
+          if (saveBtn) saveBtn.disabled = false;
+          return;
+        }
+
+        setSlugCheck('Comprobando…', 'pending');
+        if (saveBtn) saveBtn.disabled = true;
+
+        try {
+          var result = await ProyectosApi.checkSlugAvailability(nextSlug, {
+            excludeId: currentProjectId(),
+            constructoraId: resolveConstructoraIdForCheck()
+          });
+          if (seq !== slugCheckSeq) return;
+          if (result.available) {
+            setSlugCheck('✓ URL disponible', 'ok');
+            if (saveBtn) saveBtn.disabled = false;
+          } else if (result.reason === 'reserved') {
+            setSlugCheck('✕ Ese slug está reservado.', 'error');
+          } else if (result.reason === 'format') {
+            setSlugCheck('✕ Usa solo letras minúsculas, números y guiones.', 'error');
+          } else {
+            setSlugCheck('✕ Ese slug ya pertenece a otro Showroom.', 'error');
+          }
+        } catch (err) {
+          if (seq !== slugCheckSeq) return;
+          setSlugCheck(err.message || 'No se pudo validar el slug.', 'error');
+        }
+      }
+
+      function scheduleSlugValidation() {
+        syncPublicUrlPreview();
+        if (slugCheckTimer) clearTimeout(slugCheckTimer);
+        slugCheckTimer = setTimeout(validateSlugLive, 280);
+      }
+
       if (slugInput) {
-        slugInput.addEventListener('input', syncSubdomainPreview);
+        slugInput.addEventListener('input', function () {
+          var live = normalizeShowroomSlug(slugInput.value, { allowTrailingHyphen: true });
+          if (slugInput.value !== live) {
+            var end = slugInput.selectionStart;
+            slugInput.value = live;
+            try {
+              var pos = Math.min(live.length, end || live.length);
+              slugInput.setSelectionRange(pos, pos);
+            } catch (e) {}
+          }
+          scheduleSlugValidation();
+        });
         slugInput.addEventListener('blur', function () {
           slugInput.value = normalizeShowroomSlug(slugInput.value);
-          syncSubdomainPreview();
+          syncPublicUrlPreview();
+          validateSlugLive();
         });
+        scheduleSlugValidation();
       }
 
       if (saveBtn) {
         saveBtn.addEventListener('click', function () {
+          if (slugInput) slugInput.value = normalizeShowroomSlug(slugInput.value);
+          syncPublicUrlPreview();
           handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl);
         });
       }
@@ -1884,6 +2015,36 @@ var AiProjectBuilderView = (function () {
       if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
       return;
     }
+    if (typeof ShowroomPublicUrl !== 'undefined') {
+      if (ShowroomPublicUrl.isReservedSlug(slug)) {
+        if (statusEl) statusEl.textContent = 'Ese slug está reservado.';
+        return;
+      }
+      if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
+        if (statusEl) statusEl.textContent = 'Slug inválido.';
+        return;
+      }
+    }
+
+    if (typeof ProyectosApi.checkSlugAvailability === 'function') {
+      try {
+        var constructoraId = (state.projectInfo && state.projectInfo.constructora_id) || null;
+        var availability = await ProyectosApi.checkSlugAvailability(slug, {
+          excludeId: projectId,
+          constructoraId: constructoraId
+        });
+        if (!availability.available) {
+          var msg = availability.reason === 'reserved'
+            ? 'Ese slug está reservado.'
+            : 'Ese slug ya pertenece a otro Showroom.';
+          if (statusEl) statusEl.textContent = msg;
+          AdminNotify.error(msg);
+          return;
+        }
+      } catch (checkErr) {
+        /* proceed — DB unique constraint remains the final gate */
+      }
+    }
 
     if (saveBtn) saveBtn.disabled = true;
     if (statusEl) statusEl.textContent = 'Guardando…';
@@ -1896,7 +2057,8 @@ var AiProjectBuilderView = (function () {
       state.draftProjectId = updated.id;
       state.projectInfo = Object.assign({}, state.projectInfo || {}, {
         nombre: updated.nombre,
-        slug: updated.slug
+        slug: updated.slug,
+        constructora_id: updated.constructora_id || (state.projectInfo && state.projectInfo.constructora_id)
       });
       if (!state.heroContent) state.heroContent = {};
       state.heroContent.nombre = updated.nombre;
@@ -1906,7 +2068,7 @@ var AiProjectBuilderView = (function () {
         project: updated,
         url: typeof PlatformBuilderBridge !== 'undefined'
           ? PlatformBuilderBridge.showroomUrl(updated.slug)
-          : '/' + encodeURIComponent(updated.slug)
+          : publicUrlDisplay(updated.slug)
       });
       if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(updated.id);

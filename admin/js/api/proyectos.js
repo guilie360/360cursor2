@@ -133,12 +133,22 @@ var ProyectosApi = (function () {
   async function updateIdentity(id, payload) {
     if (!id) throw new Error('Falta el ID del showroom.');
     var nombre = AdminUI.normalizeOptionalText(payload && payload.nombre);
-    var slug = AdminUI.normalizeOptionalText(payload && payload.slug);
-    if (slug) {
-      slug = String(slug).trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+    var slug = payload && payload.slug != null ? String(payload.slug) : '';
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
+      slug = ShowroomPublicUrl.normalizeSlug(slug);
+    } else {
+      slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
     }
     if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
     if (!slug) throw new Error('El slug es obligatorio.');
+    if (typeof ShowroomPublicUrl !== 'undefined') {
+      if (ShowroomPublicUrl.isReservedSlug(slug)) {
+        throw new Error('Ese slug está reservado por la plataforma.');
+      }
+      if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
+        throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
+      }
+    }
 
     var result = await AdminApi.getClient()
       .from('proyectos')
@@ -149,6 +159,52 @@ var ProyectosApi = (function () {
 
     if (result.error) throw mapDbError(result.error, 'Error actualizando identidad del showroom');
     return result.data;
+  }
+
+  /**
+   * Check slug uniqueness within constructora (or globally if constructora unknown).
+   * @returns {{ available: boolean, reason?: string }}
+   */
+  async function checkSlugAvailability(slug, options) {
+    options = options || {};
+    var normalized =
+      typeof ShowroomPublicUrl !== 'undefined'
+        ? ShowroomPublicUrl.normalizeSlug(slug)
+        : String(slug || '').trim().toLowerCase();
+    if (!normalized) {
+      return { available: false, reason: 'empty' };
+    }
+    if (typeof ShowroomPublicUrl !== 'undefined') {
+      if (ShowroomPublicUrl.isReservedSlug(normalized)) {
+        return { available: false, reason: 'reserved' };
+      }
+      if (!ShowroomPublicUrl.isValidSlugFormat(normalized)) {
+        return { available: false, reason: 'format' };
+      }
+    }
+
+    var query = AdminApi.getClient()
+      .from('proyectos')
+      .select('id')
+      .eq('slug', normalized)
+      .limit(8);
+
+    if (options.constructoraId) {
+      query = query.eq('constructora_id', options.constructoraId);
+    }
+
+    var result = await query;
+    if (result.error) {
+      throw mapDbError(result.error, 'Error validando slug');
+    }
+    var rows = result.data || [];
+    var conflict = rows.some(function (row) {
+      return row && row.id && row.id !== options.excludeId;
+    });
+    if (conflict) {
+      return { available: false, reason: 'taken' };
+    }
+    return { available: true, reason: 'ok' };
   }
 
   async function remove(id) {
@@ -168,6 +224,7 @@ var ProyectosApi = (function () {
     create: create,
     update: update,
     updateIdentity: updateIdentity,
+    checkSlugAvailability: checkSlugAvailability,
     remove: remove
   };
 })();

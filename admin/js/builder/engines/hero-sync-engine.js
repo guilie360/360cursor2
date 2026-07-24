@@ -109,6 +109,7 @@ var HeroSyncEngine = (function () {
       state.projectInfo = Object.assign({}, info, {
         nombre: project.nombre,
         slug: project.slug,
+        constructora_id: project.constructora_id || info.constructora_id,
         ciudad: forceCanonical ? (project.ciudad || info.ciudad) : (info.ciudad || project.ciudad),
         direccion: forceCanonical ? (project.direccion || info.direccion) : (info.direccion || project.direccion),
         whatsapp: forceCanonical ? (project.whatsapp || info.whatsapp) : (info.whatsapp || project.whatsapp),
@@ -117,7 +118,12 @@ var HeroSyncEngine = (function () {
         estado: forceCanonical ? (project.estado || info.estado) : (info.estado || project.estado)
       });
     } else if (!info.slug && project.slug) {
-      state.projectInfo = Object.assign({}, info, { slug: project.slug });
+      state.projectInfo = Object.assign({}, info, {
+        slug: project.slug,
+        constructora_id: project.constructora_id || info.constructora_id
+      });
+    } else if (project.constructora_id && !info.constructora_id) {
+      state.projectInfo = Object.assign({}, info, { constructora_id: project.constructora_id });
     }
 
     if (project.publicado) {
