@@ -1977,3 +1977,253 @@ body.builder-has-dock .admin-toast--info {
     width: 100%;
   }
 }
+
+/* ── BOXIES V5.9 — Estructura constructor ── */
+.builder-step-content--estructura {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.builder-estructura-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.builder-estructura-head .builder-step-title-row {
+  margin-bottom: 0;
+}
+
+.builder-estructura-head__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.builder-estructura-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.builder-estructura-card__title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.builder-estructura-card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.builder-estructura-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.builder-estructura-type {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.78);
+  border-radius: 10px;
+  padding: 14px 12px;
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.builder-estructura-type:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.builder-estructura-type.is-selected {
+  border-color: rgba(111, 191, 134, 0.55);
+  background: rgba(111, 191, 134, 0.12);
+  color: rgba(180, 235, 195, 0.98);
+}
+
+.builder-estructura-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+}
+
+.builder-estructura-row__label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.builder-estructura-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.builder-estructura-stepper__btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.builder-estructura-stepper__btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.builder-estructura-stepper__val {
+  min-width: 36px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.builder-estructura-acc {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 0 12px;
+}
+
+.builder-estructura-acc > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 560;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.builder-estructura-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.builder-estructura-acc > summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  margin-right: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.builder-estructura-acc[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.builder-estructura-acc__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 14px;
+}
+
+.builder-estructura-acc--nested {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.builder-estructura-grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.builder-estructura-sublabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  margin-top: 4px;
+}
+
+.builder-estructura-ambiente {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.builder-estructura-ambiente input {
+  flex: 1;
+}
+
+.builder-estructura-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.builder-estructura-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+
+.builder-estructura-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.builder-estructura-chip.is-on {
+  border-color: rgba(111, 191, 134, 0.5);
+  background: rgba(111, 191, 134, 0.12);
+  color: rgba(190, 235, 205, 0.95);
+}
+
+.builder-estructura-zone-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.builder-layout-single #builderStepPanel:has(.builder-step-content--estructura),
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel {
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .builder-estructura-grid2 {
+    grid-template-columns: 1fr;
+  }
+}

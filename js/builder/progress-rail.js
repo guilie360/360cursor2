@@ -52,10 +52,16 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('config')
       },
       {
-        label: 'Tipo',
-        value: state.projectType ? typeLabel() : null,
-        done: isDone(state, 'project-type', !!state.projectType),
-        stepIndex: BuilderWizard.getStepIndex('project-type')
+        label: 'Estructura',
+        value: (function () {
+          if (typeof EstructuraEngine !== 'undefined') {
+            EstructuraEngine.ensureState(state);
+            return EstructuraEngine.summary(state.estructura);
+          }
+          return state.projectType ? typeLabel() : null;
+        })(),
+        done: isDone(state, 'estructura', !!(state.estructura && state.estructura.developmentType) || !!state.projectType),
+        stepIndex: BuilderWizard.getStepIndex('estructura')
       },
       {
         label: 'Logo',

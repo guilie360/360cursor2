@@ -2,7 +2,7 @@
 var BuilderWizard = (function () {
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
-    { id: 'project-type', label: 'Tipo de proyecto', shortLabel: 'Tipo', icon: 'shapes', assistant: '¿Qué tipo de proyecto deseas crear? Selecciona una opción y prepararé la estructura base automáticamente.' },
+    { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Describe la estructura física del proyecto residencial: tipo de desarrollo, tipologías, plantas, ambientes y zonas.' },
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
     { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Sube un video o imagen de fondo para la portada del showroom.' },
     { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
@@ -39,8 +39,8 @@ var BuilderWizard = (function () {
     switch (STEPS[stepIndex].id) {
       case 'config':
         return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
-      case 'project-type':
-        return !!state.projectType;
+      case 'estructura':
+        return !!(state.estructura && state.estructura.developmentType) || !!state.projectType;
       case 'branding':
         return !!(state.branding && (state.branding.logo || state.branding.reference));
       case 'video-hero':

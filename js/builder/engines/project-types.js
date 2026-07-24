@@ -109,10 +109,23 @@ var ProjectTypesEngine = (function () {
   }
 
   function getStructure(typeId) {
-    return STRUCTURES[typeId] || STRUCTURES.otro;
+    var map = {
+      edificio: 'edificio',
+      torres: 'edificio',
+      casas: 'casa',
+      urbanizacion: 'conjunto',
+      loteo: 'lotes',
+      parcelacion: 'lotes'
+    };
+    var key = map[typeId] || typeId;
+    return STRUCTURES[key] || STRUCTURES.otro;
   }
 
   function getTypeLabel(typeId) {
+    if (typeof EstructuraEngine !== 'undefined') {
+      var d = EstructuraEngine.DEVELOPMENT_TYPES.find(function (x) { return x.id === typeId; });
+      if (d) return d.label;
+    }
     var t = TYPES.find(function (x) { return x.id === typeId; });
     return t ? t.label : 'Proyecto';
   }

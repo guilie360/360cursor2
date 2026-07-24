@@ -2,7 +2,7 @@
 var ViviendasSyncEngine = (function () {
   var PROJECT_SELECT = 'id, nombre, slug, publicado, constructora_id';
   var VIVIENDA_SELECT =
-    'id, proyecto_id, nombre, codigo, tipo, torre, piso, area_m2, habitaciones, banos, parqueaderos, precio, administracion, estado, publicado, planos_modo, tour360_modo, ' +
+    'id, proyecto_id, nombre, codigo, tipo, torre, piso, area_m2, habitaciones, banos, parqueaderos, precio, administracion, estado, publicado, planos_modo, tour360_modo, tipologia_id, ' +
     'archivos(id, nombre, url, tipo, extension, orden, miniatura_url)';
 
   var ESTADOS = [
@@ -124,6 +124,7 @@ var ViviendasSyncEngine = (function () {
       administracion: Math.max(0, toNumber(item.administracion, 0)),
       estado: estado,
       publicado: item.publicado !== false,
+      tipologyId: item.tipologia_id || item.tipologiaId || null,
       planosModo: planosModo,
       plans: normalizePlans(item.plans),
       planFileName: item.planFileName || (pendingPlanFiles[localId] && pendingPlanFiles[localId].name) || '',
@@ -207,6 +208,7 @@ var ViviendasSyncEngine = (function () {
       administracion: item.administracion || 0,
       estado: item.estado || 'disponible',
       publicado: item.publicado !== false,
+      tipologia_id: item.tipologia_id || item.tipologyId || null,
       planos_modo: item.planosModo === 'file' ? 'file' : 'proximamente',
       tour360_modo: item.tour360Modo === 'link' ? 'link' : 'proximamente'
     };
@@ -228,6 +230,7 @@ var ViviendasSyncEngine = (function () {
     out.precio = String(row.precio == null ? 0 : row.precio);
     out.administracion = String(row.administracion == null ? 0 : row.administracion);
     out.piso = row.piso == null ? '' : String(row.piso);
+    out.tipologia_id = row.tipologia_id == null ? '' : String(row.tipologia_id);
     return out;
   }
 
@@ -530,6 +533,22 @@ var ViviendasSyncEngine = (function () {
     }
   }
 
+  async function syncOne(state, payload) {
+    var project = await resolveProject(state);
+    var proyectoId = (payload && payload.proyecto_id) || (project && project.id);
+    if (!proyectoId) throw new Error('proyecto_id requerido');
+    var item = normalizeItem(Object.assign({}, payload, {
+      tipologia_id: payload.tipologia_id || payload.tipologiaId || null,
+      planosModo: payload.planos_modo || payload.planosModo || 'proximamente',
+      tour360Modo: payload.tour360_modo || payload.tour360Modo || 'proximamente'
+    }));
+    if (payload.id) item.id = payload.id;
+    item.tipologia_id = payload.tipologia_id || null;
+    var c = AdminApi.getClient();
+    var saved = await upsertViaRpc(c, item, proyectoId);
+    return saved;
+  }
+
   return {
     ESTADOS: ESTADOS,
     PLANOS_MODOS: PLANOS_MODOS,
@@ -543,6 +562,7 @@ var ViviendasSyncEngine = (function () {
     resolveProject: resolveProject,
     bindFromUrl: bindFromUrl,
     sync: sync,
+    syncOne: syncOne,
     formatPrice: formatPrice
   };
 })();

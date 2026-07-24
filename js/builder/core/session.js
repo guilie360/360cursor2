@@ -9,6 +9,7 @@ var BuilderSession = (function () {
       currentStep: 0,
       projectType: null,
       projectStructure: null,
+      estructura: null,
       branding: {
         logo: null,
         reference: null,
