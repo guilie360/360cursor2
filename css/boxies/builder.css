@@ -953,6 +953,218 @@ body.boxies-rail-collapsed .builder-progress-sidebar {
   object-fit: cover;
 }
 
+/* ── Hero editor V5.8 — two-column workspace ── */
+.builder-layout-single #builderStepPanel:has(.builder-step-content--hero) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--builder-dock-height) - var(--builder-dock-safe) - 100px);
+  max-height: calc(100vh - var(--builder-dock-height) - var(--builder-dock-safe) - 100px);
+  padding-bottom: 16px;
+}
+
+.builder-layout-single .builder-step-content--hero,
+.builder-step-content--hero {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.builder-hero-workspace-head {
+  flex-shrink: 0;
+}
+
+.builder-hero-workspace-head .builder-step-desc {
+  margin-bottom: 0;
+}
+
+.builder-hero-workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.builder-hero-col {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.builder-hero-col:hover,
+.builder-hero-col:focus-within,
+.builder-hero-col.is-scrolling {
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.builder-hero-col::-webkit-scrollbar {
+  width: 6px;
+}
+
+.builder-hero-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.builder-hero-col::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.builder-hero-col:hover::-webkit-scrollbar-thumb,
+.builder-hero-col:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.builder-hero-media-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.builder-hero-media-card.has-media {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.builder-hero-media-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.builder-hero-media-card__label {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.builder-hero-media-card__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #050505;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.builder-hero-media-card__stage.is-dragover {
+  outline: 1px solid rgba(255, 255, 255, 0.22);
+  outline-offset: -1px;
+}
+
+.builder-hero-media-card__void {
+  position: absolute;
+  inset: 0;
+  background-color: #050505;
+  background-image:
+    radial-gradient(ellipse 68% 52% at 50% 42%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.014) 32%, transparent 68%),
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(0,0,0,0.72) 0%, transparent 58%),
+    linear-gradient(165deg, #080808 0%, #050505 42%, #030303 100%);
+}
+
+.builder-hero-media-card__stage .builder-video-preview,
+.builder-hero-media-card__stage .builder-hero-image-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 0;
+  display: block;
+}
+
+.builder-hero-media-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.builder-hero-media-card__name {
+  font-size: 13px;
+  font-weight: 560;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.builder-hero-media-card__meta .builder-file-meta {
+  margin-top: 0;
+}
+
+.builder-hero-media-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.builder-hero-media-card__actions .builder-header-action-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+}
+
+.builder-hero-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.builder-hero-config-card__title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 2px;
+}
+
+.builder-hero-config-card .builder-field {
+  margin-bottom: 0;
+}
+
+.builder-hero-config-card .builder-check-row {
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .builder-hero-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 38vh) minmax(0, 1fr);
+  }
+}
+
 .builder-file-meta {
   margin-top: 8px;
   font-size: 12px;

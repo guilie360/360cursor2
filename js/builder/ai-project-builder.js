@@ -238,6 +238,7 @@ var AiProjectBuilderView = (function () {
         ? v.previewUrl
         : null;
     var hero = state.heroContent || {};
+    var branding = state.branding || {};
     var nombre = hero.nombre || (state.projectInfo && state.projectInfo.nombre) || '';
     var eslogan = hero.eslogan || '';
     var btnLeft = hero.botonIzquierdo || 'Explorar';
@@ -247,89 +248,200 @@ var AiProjectBuilderView = (function () {
     var shareUrl = hero.shareUrl || '';
     var showWa = hero.showWhatsapp !== false;
     var showShare = hero.showShare !== false;
-    return '<div class="builder-step-content">' +
-      stepTitleHtml('Hero') +
-      '<p class="builder-step-desc">Elige video o imagen de fondo para la portada del showroom. Solo se usa uno a la vez.</p>' +
-      '<div class="builder-hero-grid">' +
-        '<div class="builder-hero-option' + (localVideoPreview ? ' is-active' : '') + '">' +
-          '<div class="builder-hero-option-head"><span class="builder-hero-option-label">Video</span>' +
-            (localVideoPreview ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+    var showLogo = branding.showHeroLogo !== false;
+    var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
+    var logoUrl =
+      (branding.logo && (branding.logo.uploadedUrl || branding.logo.previewUrl)) || '';
+
+    function mediaMetaLine(parts) {
+      return parts.filter(Boolean).join(' · ');
+    }
+
+    function videoCardHtml() {
+      var has = !!localVideoPreview;
+      var dims =
+        v && v.width && v.height ? v.width + '×' + v.height + 'px' : '';
+      var status = has
+        ? (v.status === 'synced' ? 'Sincronizado' : (v.status === 'remote' ? 'Remoto' : 'Listo'))
+        : '';
+      return (
+        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="video">' +
+          '<header class="builder-hero-media-card__head">' +
+            '<span class="builder-hero-media-card__label">Video</span>' +
+            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+          '</header>' +
+          '<div class="builder-hero-media-card__stage" id="videoDropzone"' +
+            (has ? '' : ' title="Haz clic o arrastra un video"') + '>' +
+            (has
+              ? '<video src="' + AdminUI.escapeHtml(localVideoPreview) +
+                '" controls muted class="builder-video-preview"></video>'
+              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
           '</div>' +
-          '<div class="builder-dropzone builder-dropzone-large" id="videoDropzone">' +
-            (localVideoPreview
-              ? '<video src="' + AdminUI.escapeHtml(localVideoPreview) + '" controls muted class="builder-video-preview"></video>' +
-                '<div class="builder-file-meta">Duración: ' + AdminUI.escapeHtml(v.durationLabel || '-') + ' · ' + formatBytes(v.size) + '</div>'
-              : '<div class="builder-hero-ambient-placeholder" aria-hidden="true"></div>' +
-                '<div class="builder-dropzone-inner"><span>Arrastra MP4, MOV o WebM</span><span class="builder-dropzone-hint">Máx. 200 MB · preview solo local</span></div>') +
-          '</div>' +
+          (has
+            ? '<div class="builder-hero-media-card__meta">' +
+                '<div class="builder-hero-media-card__name">' +
+                  AdminUI.escapeHtml(v.name || 'Video del hero') +
+                '</div>' +
+                '<div class="builder-file-meta">' +
+                  AdminUI.escapeHtml(
+                    mediaMetaLine([
+                      status,
+                      formatBytes(v.size),
+                      dims,
+                      v.durationLabel ? 'Duración ' + v.durationLabel : ''
+                    ])
+                  ) +
+                '</div>' +
+              '</div>' +
+              '<div class="builder-hero-media-card__actions">' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Cambiar</button>' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-clear="video">Eliminar</button>' +
+              '</div>'
+            : '') +
           '<input type="file" id="videoInput" accept="' + MediaEngine.ACCEPT + '" hidden>' +
-        '</div>' +
-        '<div class="builder-hero-separator" aria-hidden="true">o</div>' +
-        '<div class="builder-hero-option' + (img && img.previewUrl ? ' is-active' : '') + '">' +
-          '<div class="builder-hero-option-head"><span class="builder-hero-option-label">Imagen</span>' +
-            (img && img.previewUrl ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+        '</article>'
+      );
+    }
+
+    function imageCardHtml() {
+      var has = !!(img && img.previewUrl);
+      var dims =
+        img && img.width && img.height ? img.width + '×' + img.height + 'px' : '';
+      var status = has
+        ? (img.status === 'synced' ? 'Sincronizado' : (img.status === 'remote' ? 'Remoto' : 'Listo'))
+        : '';
+      return (
+        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="image">' +
+          '<header class="builder-hero-media-card__head">' +
+            '<span class="builder-hero-media-card__label">Imagen</span>' +
+            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+          '</header>' +
+          '<div class="builder-hero-media-card__stage" id="heroImageDropzone"' +
+            (has ? '' : ' title="Haz clic o arrastra una imagen"') + '>' +
+            (has
+              ? '<img src="' + AdminUI.escapeHtml(img.previewUrl) +
+                '" alt="" class="builder-hero-image-preview">'
+              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
           '</div>' +
-          '<div class="builder-dropzone builder-dropzone-large" id="heroImageDropzone">' +
-            (img && img.previewUrl
-              ? '<img src="' + AdminUI.escapeHtml(img.previewUrl) + '" alt="" class="builder-hero-image-preview">' +
-                '<div class="builder-file-meta">' + AdminUI.escapeHtml(img.name) + ' · ' + formatBytes(img.size) + '</div>'
-              : '<div class="builder-hero-ambient-placeholder" aria-hidden="true"></div>' +
-                '<div class="builder-dropzone-inner"><span>Arrastra JPG, PNG o WebP</span><span class="builder-dropzone-hint">Máx. 20 MB</span></div>') +
-          '</div>' +
+          (has
+            ? '<div class="builder-hero-media-card__meta">' +
+                '<div class="builder-hero-media-card__name">' +
+                  AdminUI.escapeHtml(img.name || 'Imagen del hero') +
+                '</div>' +
+                '<div class="builder-file-meta">' +
+                  AdminUI.escapeHtml(
+                    mediaMetaLine([status, formatBytes(img.size), dims])
+                  ) +
+                '</div>' +
+              '</div>' +
+              '<div class="builder-hero-media-card__actions">' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Cambiar</button>' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-clear="image">Eliminar</button>' +
+              '</div>'
+            : '') +
           '<input type="file" id="heroImageInput" accept="' + MediaEngine.IMAGE_ACCEPT + '" hidden>' +
+        '</article>'
+      );
+    }
+
+    return (
+      '<div class="builder-step-content builder-step-content--hero">' +
+        '<div class="builder-hero-workspace-head">' +
+          stepTitleHtml('Hero') +
+          '<p class="builder-step-desc">Media a la izquierda, configuración a la derecha. Video e imagen son excluyentes.</p>' +
         '</div>' +
-      '</div>' +
-      '<div class="builder-confirm-form" id="heroContentForm">' +
-        '<div class="builder-confirm-title">Textos de la portada</div>' +
-        '<div class="builder-field">' +
-          '<label for="heroNombreInput">Nombre del proyecto</label>' +
-          '<input type="text" id="heroNombreInput" maxlength="120" placeholder="PROYECTO DEMO" value="' +
-            AdminUI.escapeHtml(nombre) + '">' +
+        '<div class="builder-hero-workspace">' +
+          '<div class="builder-hero-col builder-hero-col--media">' +
+            videoCardHtml() +
+            imageCardHtml() +
+          '</div>' +
+          '<div class="builder-hero-col builder-hero-col--config">' +
+            '<div class="builder-hero-config-card" id="heroContentForm">' +
+              '<div class="builder-hero-config-card__title">Identidad</div>' +
+              '<div class="builder-field">' +
+                '<label for="heroNombreInput">Nombre</label>' +
+                '<input type="text" id="heroNombreInput" maxlength="120" placeholder="PROYECTO DEMO" value="' +
+                  AdminUI.escapeHtml(nombre) + '">' +
+              '</div>' +
+              '<div class="builder-field">' +
+                '<label for="heroEsloganInput">Eslogan</label>' +
+                '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Proyecto Demo" value="' +
+                  AdminUI.escapeHtml(eslogan) + '">' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-hero-config-card">' +
+              '<div class="builder-hero-config-card__title">Botones</div>' +
+              '<div class="builder-field">' +
+                '<label for="heroBtnLeftInput">Texto izquierdo</label>' +
+                '<input type="text" id="heroBtnLeftInput" maxlength="40" placeholder="Explorar" value="' +
+                  AdminUI.escapeHtml(btnLeft) + '">' +
+              '</div>' +
+              '<div class="builder-field">' +
+                '<label for="heroBtnRightInput">Texto derecho</label>' +
+                '<input type="text" id="heroBtnRightInput" maxlength="40" placeholder="Iniciar" value="' +
+                  AdminUI.escapeHtml(btnRight) + '">' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-hero-config-card">' +
+              '<div class="builder-hero-config-card__title">WhatsApp</div>' +
+              '<label class="builder-check-row">' +
+                '<input type="checkbox" id="heroShowWhatsappInput"' + (showWa ? ' checked' : '') + '>' +
+                '<span>Mostrar</span>' +
+              '</label>' +
+              '<div class="builder-field">' +
+                '<label for="heroWhatsappLinkInput">Número / link</label>' +
+                '<input type="text" id="heroWhatsappLinkInput" maxlength="180" ' +
+                  'placeholder="573001112233 o https://wa.me/573001112233" value="' +
+                  AdminUI.escapeHtml(waLink) + '">' +
+              '</div>' +
+              '<div class="builder-field">' +
+                '<label for="heroWhatsappMsgInput">Mensaje</label>' +
+                '<input type="text" id="heroWhatsappMsgInput" maxlength="280" ' +
+                  'placeholder="Hola, quiero más información..." value="' +
+                  AdminUI.escapeHtml(waMsg) + '">' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-hero-config-card">' +
+              '<div class="builder-hero-config-card__title">Compartir</div>' +
+              '<label class="builder-check-row">' +
+                '<input type="checkbox" id="heroShowShareInput"' + (showShare ? ' checked' : '') + '>' +
+                '<span>Mostrar</span>' +
+              '</label>' +
+              '<div class="builder-field">' +
+                '<label for="heroShareUrlInput">URL al compartir</label>' +
+                '<input type="url" id="heroShareUrlInput" maxlength="400" ' +
+                  'placeholder="Vacío = URL actual del showroom" value="' +
+                  AdminUI.escapeHtml(shareUrl) + '">' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-hero-config-card">' +
+              '<div class="builder-hero-config-card__title">Logo</div>' +
+              '<label class="builder-check-row">' +
+                '<input type="checkbox" id="heroShowLogoInput"' + (showLogo ? ' checked' : '') + '>' +
+                '<span>Mostrar en el hero</span>' +
+              '</label>' +
+              '<div class="builder-field">' +
+                '<label for="heroLogoUrlDisplay">URL</label>' +
+                '<input type="text" id="heroLogoUrlDisplay" readonly ' +
+                  'placeholder="Sin logo — súbelo en el paso Logo" value="' +
+                  AdminUI.escapeHtml(logoUrl) + '">' +
+              '</div>' +
+              '<div class="builder-confirm-title" style="margin-top:4px">Formato</div>' +
+              '<label class="builder-check-row">' +
+                '<input type="radio" name="heroLogoStyle" value="flat" id="heroLogoStyleFlat"' +
+                  (logoStyle === 'flat' ? ' checked' : '') + '>' +
+                '<span>Mantener formato</span>' +
+              '</label>' +
+              '<label class="builder-check-row">' +
+                '<input type="radio" name="heroLogoStyle" value="avatar" id="heroLogoStyleAvatar"' +
+                  (logoStyle === 'avatar' ? ' checked' : '') + '>' +
+                '<span>Convertir a circular</span>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="builder-field">' +
-          '<label for="heroEsloganInput">Eslogan</label>' +
-          '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Proyecto Demo" value="' +
-            AdminUI.escapeHtml(eslogan) + '">' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label for="heroBtnLeftInput">Texto botón izquierdo</label>' +
-          '<input type="text" id="heroBtnLeftInput" maxlength="40" placeholder="Explorar" value="' +
-            AdminUI.escapeHtml(btnLeft) + '">' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label for="heroBtnRightInput">Texto botón derecho</label>' +
-          '<input type="text" id="heroBtnRightInput" maxlength="40" placeholder="Iniciar" value="' +
-            AdminUI.escapeHtml(btnRight) + '">' +
-        '</div>' +
-        '<div class="builder-confirm-title">WhatsApp y compartir</div>' +
-        '<label class="builder-check-row">' +
-          '<input type="checkbox" id="heroShowWhatsappInput"' + (showWa ? ' checked' : '') + '>' +
-          '<span>Mostrar icono de WhatsApp</span>' +
-        '</label>' +
-        '<div class="builder-field">' +
-          '<label for="heroWhatsappLinkInput">Link / número de WhatsApp</label>' +
-          '<input type="text" id="heroWhatsappLinkInput" maxlength="180" ' +
-            'placeholder="573001112233 o https://wa.me/573001112233" value="' +
-            AdminUI.escapeHtml(waLink) + '">' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label for="heroWhatsappMsgInput">Mensaje inicial de WhatsApp</label>' +
-          '<input type="text" id="heroWhatsappMsgInput" maxlength="280" ' +
-            'placeholder="Hola, quiero más información..." value="' +
-            AdminUI.escapeHtml(waMsg) + '">' +
-        '</div>' +
-        '<label class="builder-check-row">' +
-          '<input type="checkbox" id="heroShowShareInput"' + (showShare ? ' checked' : '') + '>' +
-          '<span>Mostrar icono de compartir</span>' +
-        '</label>' +
-        '<div class="builder-field">' +
-          '<label for="heroShareUrlInput">Link al compartir</label>' +
-          '<input type="url" id="heroShareUrlInput" maxlength="400" ' +
-            'placeholder="Vacío = URL actual del showroom" value="' +
-            AdminUI.escapeHtml(shareUrl) + '">' +
-        '</div>' +
-      '</div>' +
-      '</div>';
+      '</div>'
+    );
   }
 
   function renderMenu() {
@@ -1279,6 +1391,7 @@ var AiProjectBuilderView = (function () {
       bindDropzone('videoDropzone', 'videoInput', handleVideoUpload);
       bindDropzone('heroImageDropzone', 'heroImageInput', handleHeroImageUpload);
       bindHeroContentFields();
+      bindHeroMediaActions();
     }
     if (stepId === 'menu') bindMenuFields();
     if (stepId === 'viviendas') bindViviendasFields();
@@ -1347,6 +1460,7 @@ var AiProjectBuilderView = (function () {
         showShare: true
       };
     }
+    if (!state.branding) state.branding = {};
 
     function readField(id, fallback) {
       var el = rootEl.querySelector('#' + id);
@@ -1370,6 +1484,12 @@ var AiProjectBuilderView = (function () {
       state.heroContent.shareUrl = readField('heroShareUrlInput', state.heroContent.shareUrl || '');
       state.heroContent.showWhatsapp = readChecked('heroShowWhatsappInput', state.heroContent.showWhatsapp !== false);
       state.heroContent.showShare = readChecked('heroShowShareInput', state.heroContent.showShare !== false);
+      state.branding.showHeroLogo = readChecked('heroShowLogoInput', state.branding.showHeroLogo !== false);
+      var styleEl = rootEl.querySelector('input[name="heroLogoStyle"]:checked');
+      if (styleEl) {
+        state.branding.logoStyle = styleEl.value === 'avatar' ? 'avatar' : 'flat';
+        if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
+      }
       if (state.heroContent.nombre) {
         state.projectInfo = Object.assign({}, state.projectInfo || {}, {
           nombre: state.heroContent.nombre
@@ -1387,13 +1507,72 @@ var AiProjectBuilderView = (function () {
       'heroWhatsappMsgInput',
       'heroShareUrlInput',
       'heroShowWhatsappInput',
-      'heroShowShareInput'
+      'heroShowShareInput',
+      'heroShowLogoInput',
+      'heroLogoStyleFlat',
+      'heroLogoStyleAvatar'
     ].forEach(function (id) {
       var el = rootEl.querySelector('#' + id);
       if (!el) return;
       el.addEventListener('input', persistHeroContent);
       el.addEventListener('change', persistHeroContent);
     });
+  }
+
+  function revokeHeroPreview(media) {
+    if (!media || !media.previewUrl) return;
+    try {
+      if (String(media.previewUrl).indexOf('blob:') === 0) {
+        URL.revokeObjectURL(media.previewUrl);
+      }
+    } catch (e) {}
+  }
+
+  function bindHeroMediaActions() {
+    rootEl.querySelectorAll('[data-hero-media-change]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var kind = btn.getAttribute('data-hero-media-change');
+        var input = rootEl.querySelector(kind === 'video' ? '#videoInput' : '#heroImageInput');
+        if (input) input.click();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-hero-media-clear]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearHeroMedia(btn.getAttribute('data-hero-media-clear'));
+      });
+    });
+  }
+
+  function clearHeroMedia(kind) {
+    if (kind === 'video') {
+      revokeHeroPreview(state.heroVideo);
+      state.heroVideo = null;
+    } else if (kind === 'image') {
+      revokeHeroPreview(state.heroImage);
+      state.heroImage = null;
+    }
+    if (!state.heroVideo && !state.heroImage) {
+      state.heroMediaCleared = true;
+    }
+    saveState();
+    renderStepContent();
+    updateNavButtons();
+    HeroSyncEngine.sync(state)
+      .then(function (result) {
+        if (result) {
+          AdminNotify.success(
+            kind === 'video' ? 'Video del hero eliminado.' : 'Imagen del hero eliminada.'
+          );
+        }
+      })
+      .catch(function (err) {
+        AdminNotify.error(err.message || 'No se pudo eliminar el media del hero');
+      });
   }
 
   function bindMenuFields() {
@@ -1788,7 +1967,13 @@ var AiProjectBuilderView = (function () {
     var input = rootEl.querySelector('#' + inputId);
     if (!zone || !input) return;
 
-    zone.addEventListener('click', function () { input.click(); });
+    zone.addEventListener('click', function (e) {
+      /* Con media cargada, Cambiar/Eliminar gestionan el archivo; no robar clicks al preview. */
+      var card = zone.closest('.builder-hero-media-card');
+      if (card && card.classList.contains('has-media')) return;
+      if (e.target.closest('video, button, a, input, label')) return;
+      input.click();
+    });
     zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('is-dragover'); });
     zone.addEventListener('dragleave', function () { zone.classList.remove('is-dragover'); });
     zone.addEventListener('drop', function (e) {
@@ -1835,6 +2020,7 @@ var AiProjectBuilderView = (function () {
     try {
       state.heroVideo = await MediaEngine.processVideo(file);
       state.heroImage = null;
+      state.heroMediaCleared = false;
       saveState();
     } catch (err) {
       AdminNotify.error(err.message);
@@ -1847,6 +2033,7 @@ var AiProjectBuilderView = (function () {
     try {
       state.heroImage = await MediaEngine.processImage(file);
       state.heroVideo = null;
+      state.heroMediaCleared = false;
       saveState();
     } catch (err) {
       AdminNotify.error(err.message);
@@ -1959,6 +2146,8 @@ var AiProjectBuilderView = (function () {
       var shareEl = rootEl && rootEl.querySelector('#heroShareUrlInput');
       var showWaEl = rootEl && rootEl.querySelector('#heroShowWhatsappInput');
       var showShareEl = rootEl && rootEl.querySelector('#heroShowShareInput');
+      var showLogoEl = rootEl && rootEl.querySelector('#heroShowLogoInput');
+      var logoStyleEl = rootEl && rootEl.querySelector('input[name="heroLogoStyle"]:checked');
       state.heroContent = Object.assign({
         nombre: '',
         eslogan: '',
@@ -1980,6 +2169,12 @@ var AiProjectBuilderView = (function () {
         showWhatsapp: showWaEl ? !!showWaEl.checked : state.heroContent.showWhatsapp !== false,
         showShare: showShareEl ? !!showShareEl.checked : state.heroContent.showShare !== false
       });
+      if (!state.branding) state.branding = {};
+      if (showLogoEl) state.branding.showHeroLogo = !!showLogoEl.checked;
+      if (logoStyleEl) {
+        state.branding.logoStyle = logoStyleEl.value === 'avatar' ? 'avatar' : 'flat';
+        if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
+      }
       if (state.heroContent.nombre) {
         state.projectInfo = Object.assign({}, state.projectInfo || {}, {
           nombre: state.heroContent.nombre

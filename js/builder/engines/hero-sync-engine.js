@@ -218,31 +218,37 @@ var HeroSyncEngine = (function () {
     var hasNewVideo = state.heroVideo && state.heroVideo.file;
     var hasNewImage = state.heroImage && state.heroImage.file;
 
-    /* TEMP egress: no hidratar vídeo remoto de Storage (evita <video src=cdn>). */
-    if (state.heroVideo && !state.heroVideo.file) {
-      var hvPreview = state.heroVideo.previewUrl || state.heroVideo.uploadedUrl || '';
-      if (
-        state.heroVideo.status === 'remote' ||
-        (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(hvPreview)) ||
-        (typeof isPlayableHeroVideoUrl === 'function' && hvPreview && !isPlayableHeroVideoUrl(hvPreview))
-      ) {
-        state.heroVideo = null;
-      }
-    }
-
-    if (cfg.imagen_hero_url && !hasNewVideo && !hasNewImage) {
-      if (!state.heroImage || state.heroImage.status === 'remote') {
-        state.heroImage = {
-          previewUrl: cfg.imagen_hero_url,
-          uploadedUrl: cfg.imagen_hero_url,
-          name: 'Imagen del showroom',
-          status: 'remote'
-        };
-        state.heroVideo = null;
-      }
-    } else if (cfg.video_hero_url && !hasNewVideo && !hasNewImage) {
-      /* Había vídeo remoto: no previsualizar; dejar slot vacío (placeholder OLED). */
+    /* Explicit clear: do not rehydrate media from DB until sync writes nulls. */
+    if (state.heroMediaCleared) {
       state.heroVideo = null;
+      state.heroImage = null;
+    } else {
+      /* TEMP egress: no hidratar vídeo remoto de Storage (evita <video src=cdn>). */
+      if (state.heroVideo && !state.heroVideo.file) {
+        var hvPreview = state.heroVideo.previewUrl || state.heroVideo.uploadedUrl || '';
+        if (
+          state.heroVideo.status === 'remote' ||
+          (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(hvPreview)) ||
+          (typeof isPlayableHeroVideoUrl === 'function' && hvPreview && !isPlayableHeroVideoUrl(hvPreview))
+        ) {
+          state.heroVideo = null;
+        }
+      }
+
+      if (cfg.imagen_hero_url && !hasNewVideo && !hasNewImage) {
+        if (!state.heroImage || state.heroImage.status === 'remote') {
+          state.heroImage = {
+            previewUrl: cfg.imagen_hero_url,
+            uploadedUrl: cfg.imagen_hero_url,
+            name: 'Imagen del showroom',
+            status: 'remote'
+          };
+          state.heroVideo = null;
+        }
+      } else if (cfg.video_hero_url && !hasNewVideo && !hasNewImage) {
+        /* Había vídeo remoto: no previsualizar; dejar slot vacío (fondo negro). */
+        state.heroVideo = null;
+      }
     }
 
     if (!state.branding) state.branding = {};
@@ -273,6 +279,15 @@ var HeroSyncEngine = (function () {
 
   async function syncHeroMedia(state, constructoraId, proyectoId, existingConfig) {
     existingConfig = existingConfig || {};
+
+    if (state.heroMediaCleared) {
+      state.heroMediaCleared = false;
+      return {
+        video_hero_url: null,
+        imagen_hero_url: null
+      };
+    }
+
     /* TEMP egress: no reutilizar video_hero_url remoto; solo archivos locales nuevos */
     var videoUrl = null;
     var imageUrl = existingConfig.imagen_hero_url || null;
@@ -294,6 +309,9 @@ var HeroSyncEngine = (function () {
     } else if (state.heroImage && state.heroImage.uploadedUrl) {
       imageUrl = state.heroImage.uploadedUrl;
       videoUrl = null;
+    } else if (!state.heroImage && !state.heroVideo) {
+      videoUrl = null;
+      imageUrl = null;
     } else {
       videoUrl = null;
     }
@@ -317,6 +335,9 @@ var HeroSyncEngine = (function () {
     /* Conservar edits del formulario Hero y Logo: bindStateFromProject no debe pisarlos. */
     var heroDraft = state.heroContent ? Object.assign({}, state.heroContent) : null;
     var brandingDraft = state.branding ? Object.assign({}, state.branding) : null;
+    var mediaCleared = !!state.heroMediaCleared;
+    var heroVideoDraft = state.heroVideo;
+    var heroImageDraft = state.heroImage;
     if (brandingDraft && brandingDraft.logo) {
       brandingDraft.logo = Object.assign({}, brandingDraft.logo);
     }
@@ -333,6 +354,15 @@ var HeroSyncEngine = (function () {
           ? null
           : (brandingDraft.logo || (state.branding && state.branding.logo) || null)
       });
+    }
+    /* Keep in-memory media choices across bind; cleared refs must stay null. */
+    state.heroMediaCleared = mediaCleared;
+    if (mediaCleared) {
+      state.heroVideo = null;
+      state.heroImage = null;
+    } else {
+      if (heroVideoDraft || heroVideoDraft === null) state.heroVideo = heroVideoDraft;
+      if (heroImageDraft || heroImageDraft === null) state.heroImage = heroImageDraft;
     }
 
     var constructoraId = project.constructora_id ||
