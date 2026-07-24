@@ -215,6 +215,51 @@ var AiProjectBuilderView = (function () {
       '</div>';
     }
 
+    function ambientePickerHtml(tipLocalId, plantaLocalId, prioritizeExterior) {
+      var priority = {};
+      (EstructuraEngine.AMBIENTE_EXTERIOR_PRIORITY || []).forEach(function (n) { priority[n] = true; });
+      var groups = (EstructuraEngine.AMBIENTE_CATALOG || []).slice();
+      if (prioritizeExterior) {
+        groups = groups.slice().sort(function (a, b) {
+          if (a.id === 'exterior') return -1;
+          if (b.id === 'exterior') return 1;
+          return 0;
+        });
+      }
+      var groupsHtml = groups.map(function (g) {
+        return '<div class="builder-ambiente-picker__group">' +
+          '<div class="builder-ambiente-picker__group-title">' + AdminUI.escapeHtml(g.label) + '</div>' +
+          '<div class="builder-ambiente-picker__options">' +
+            g.items.map(function (name) {
+              var isOther = name === 'Otro...';
+              var isPri = prioritizeExterior && priority[name];
+              return '<label class="builder-ambiente-picker__opt' + (isPri ? ' is-priority' : '') + '">' +
+                '<input type="checkbox" data-amb-pick="' + AdminUI.escapeHtml(name) + '"' +
+                  (isOther ? ' data-amb-pick-other="1"' : '') + '>' +
+                '<span>' + AdminUI.escapeHtml(name) + '</span></label>';
+            }).join('') +
+          '</div></div>';
+      }).join('');
+
+      return '<div class="builder-ambiente-picker" data-amb-picker' +
+        ' data-tipologia-id="' + AdminUI.escapeHtml(tipLocalId) + '"' +
+        ' data-planta-id="' + AdminUI.escapeHtml(plantaLocalId || '') + '">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-amb-picker-open>+ Ambiente</button>' +
+        '<div class="builder-ambiente-picker__panel" hidden>' +
+          groupsHtml +
+          '<div class="builder-ambiente-picker__custom" hidden data-amb-custom-wrap>' +
+            '<label>Nombre del ambiente' +
+              '<input type="text" data-amb-custom-name placeholder="Ej. Sala de juegos" maxlength="80">' +
+            '</label>' +
+          '</div>' +
+          '<div class="builder-ambiente-picker__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-amb-picker-cancel>Cancelar</button>' +
+            '<button type="button" class="builder-header-action-btn is-primary" data-amb-picker-confirm disabled>Agregar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
     var typesHtml = EstructuraEngine.DEVELOPMENT_TYPES.map(function (t) {
       var sel = e.developmentType === t.id ? ' is-selected' : '';
       return '<button type="button" class="builder-estructura-type' + sel + '" data-dev-type="' + t.id + '">' +
@@ -405,8 +450,7 @@ var AiProjectBuilderView = (function () {
                 '<button type="button" class="builder-menu-icon-btn" data-amb-remove title="Quitar">×</button>' +
               '</div>';
             }).join('') +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-add-amb="' +
-              AdminUI.escapeHtml(pl.localId) + '">+ Ambiente</button>' +
+            ambientePickerHtml(tip.localId, pl.localId, false) +
           '</div></details>';
       }).join('');
 
@@ -420,7 +464,7 @@ var AiProjectBuilderView = (function () {
               '<button type="button" class="builder-menu-icon-btn" data-amb-remove title="Quitar">×</button>' +
             '</div>';
           }).join('') +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-add-amb="">+ Ambiente</button>' +
+          ambientePickerHtml(tip.localId, '', true) +
         '</div>';
 
       return '<details class="builder-estructura-acc" data-tipologia="' + AdminUI.escapeHtml(tip.localId) + '"' +
@@ -474,9 +518,11 @@ var AiProjectBuilderView = (function () {
         '<div class="builder-estructura-chips">' +
           g.items.map(function (name) {
             var on = e.zoneNames.indexOf(name) >= 0;
-            return '<label class="builder-estructura-chip' + (on ? ' is-on' : '') + '">' +
-              '<input type="checkbox" data-zone-name="' + AdminUI.escapeHtml(name) + '"' + (on ? ' checked' : '') + '>' +
-              '<span>' + AdminUI.escapeHtml(name) + '</span></label>';
+            return '<button type="button" class="builder-estructura-chip' + (on ? ' is-on' : '') + '"' +
+              ' data-zone-name="' + AdminUI.escapeHtml(name) + '"' +
+              ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+              AdminUI.escapeHtml(name) +
+            '</button>';
           }).join('') +
         '</div></div>';
     }).join('');
@@ -1668,16 +1714,6 @@ var AiProjectBuilderView = (function () {
         if (tip) tip.open = card.open;
       });
 
-      card.querySelectorAll('[data-add-amb]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var tip = state.estructura.tipologias.find(function (x) { return x.localId === id; });
-          if (!tip) return;
-          var plantaLocalId = btn.getAttribute('data-add-amb') || null;
-          tip.ambientes.push(EstructuraEngine.emptyAmbiente('Ambiente', plantaLocalId || null));
-          rerender();
-        });
-      });
-
       card.querySelectorAll('[data-amb]').forEach(function (row) {
         var ambId = row.getAttribute('data-amb');
         var nameInput = row.querySelector('[data-amb-name]');
@@ -1700,6 +1736,103 @@ var AiProjectBuilderView = (function () {
             rerender();
           });
         }
+      });
+
+      card.querySelectorAll('[data-amb-picker]').forEach(function (picker) {
+        var openBtn = picker.querySelector('[data-amb-picker-open]');
+        var panel = picker.querySelector('.builder-ambiente-picker__panel');
+        var cancelBtn = picker.querySelector('[data-amb-picker-cancel]');
+        var confirmBtn = picker.querySelector('[data-amb-picker-confirm]');
+        var customWrap = picker.querySelector('[data-amb-custom-wrap]');
+        var customInput = picker.querySelector('[data-amb-custom-name]');
+        if (!openBtn || !panel || !confirmBtn) return;
+
+        function selectedNames() {
+          var names = [];
+          var wantOther = false;
+          picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) {
+            if (!cb.checked) return;
+            if (cb.getAttribute('data-amb-pick-other') === '1') wantOther = true;
+            else names.push(cb.getAttribute('data-amb-pick'));
+          });
+          if (wantOther) {
+            var custom = customInput ? String(customInput.value || '').trim() : '';
+            if (custom) names.push(custom);
+          }
+          return names;
+        }
+
+        function refreshConfirm() {
+          var otherCb = picker.querySelector('[data-amb-pick-other]');
+          var otherOn = !!(otherCb && otherCb.checked);
+          if (customWrap) customWrap.hidden = !otherOn;
+          var names = selectedNames();
+          var n = names.length;
+          confirmBtn.disabled = n < 1 || (otherOn && !(customInput && String(customInput.value || '').trim()));
+          confirmBtn.textContent = n > 0
+            ? ('Agregar ' + n + ' ambiente' + (n === 1 ? '' : 's'))
+            : 'Agregar';
+        }
+
+        function closePanel() {
+          panel.hidden = true;
+          picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) { cb.checked = false; });
+          if (customInput) customInput.value = '';
+          if (customWrap) customWrap.hidden = true;
+          refreshConfirm();
+        }
+
+        openBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var opening = panel.hidden;
+          rootEl.querySelectorAll('.builder-ambiente-picker__panel').forEach(function (p) {
+            p.hidden = true;
+          });
+          panel.hidden = !opening;
+          if (!panel.hidden) refreshConfirm();
+        });
+
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            closePanel();
+          });
+        }
+
+        picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) {
+          cb.addEventListener('change', function (ev) {
+            ev.stopPropagation();
+            refreshConfirm();
+          });
+          cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
+        });
+
+        if (customInput) {
+          customInput.addEventListener('input', function (ev) {
+            ev.stopPropagation();
+            refreshConfirm();
+          });
+          customInput.addEventListener('click', function (ev) { ev.stopPropagation(); });
+        }
+
+        panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+
+        confirmBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var tip = state.estructura.tipologias.find(function (x) { return x.localId === id; });
+          if (!tip) return;
+          var plantaLocalId = picker.getAttribute('data-planta-id') || null;
+          var names = selectedNames();
+          if (!names.length) return;
+          names.forEach(function (nombre) {
+            tip.ambientes.push(EstructuraEngine.emptyAmbiente(nombre, plantaLocalId || null));
+          });
+          closePanel();
+          rerender();
+        });
       });
     });
 
@@ -1734,11 +1867,16 @@ var AiProjectBuilderView = (function () {
       });
     }
 
-    rootEl.querySelectorAll('[data-zone-name]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        EstructuraEngine.toggleZone(state, input.getAttribute('data-zone-name'));
-        var label = input.closest('.builder-estructura-chip');
-        if (label) label.classList.toggle('is-on', !!input.checked);
+    rootEl.querySelectorAll('button[data-zone-name]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var name = btn.getAttribute('data-zone-name');
+        if (!name) return;
+        EstructuraEngine.toggleZone(state, name);
+        var on = state.estructura.zoneNames.indexOf(name) >= 0;
+        btn.classList.toggle('is-on', on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
         persist();
       });
     });

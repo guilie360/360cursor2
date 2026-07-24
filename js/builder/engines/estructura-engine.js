@@ -88,6 +88,47 @@ var EstructuraEngine = (function () {
     }
   ];
 
+  /* UI catalog only — persisted ambientes remain plain {nombre, plantaLocalId} rows */
+  var AMBIENTE_CATALOG = [
+    {
+      id: 'social',
+      label: 'Social',
+      items: ['Sala', 'Comedor', 'Sala-comedor', 'Sala de TV', 'Estar', 'Estudio']
+    },
+    {
+      id: 'cocina',
+      label: 'Cocina / Servicio',
+      items: [
+        'Cocina', 'Cocina abierta', 'Despensa', 'Lavandería', 'Zona de ropas',
+        'Cuarto de servicio', 'Baño de servicio', 'Depósito'
+      ]
+    },
+    {
+      id: 'habitaciones',
+      label: 'Habitaciones',
+      items: ['Habitación principal', 'Habitación', 'Habitación auxiliar', 'Vestier', 'Clóset']
+    },
+    {
+      id: 'banos',
+      label: 'Baños',
+      items: ['Baño principal', 'Baño', 'Baño social']
+    },
+    {
+      id: 'exterior',
+      label: 'Exterior / Transición',
+      items: ['Balcón', 'Terraza', 'Patio', 'Jardín', 'Piscina privada', 'Parqueadero', 'Garaje']
+    },
+    {
+      id: 'otros',
+      label: 'Otros',
+      items: ['Otro...']
+    }
+  ];
+
+  var AMBIENTE_EXTERIOR_PRIORITY = [
+    'Patio', 'Jardín', 'Terraza', 'Piscina privada', 'Parqueadero', 'Garaje'
+  ];
+
   function uid() {
     return 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
@@ -693,6 +734,8 @@ var EstructuraEngine = (function () {
     DEVELOPMENT_TYPES: DEVELOPMENT_TYPES,
     PRODUCTS: PRODUCTS,
     ZONE_GROUPS: ZONE_GROUPS,
+    AMBIENTE_CATALOG: AMBIENTE_CATALOG,
+    AMBIENTE_EXTERIOR_PRIORITY: AMBIENTE_EXTERIOR_PRIORITY,
     LEGACY_TYPE_MAP: LEGACY_TYPE_MAP,
     uid: uid,
     clampInt: clampInt,
