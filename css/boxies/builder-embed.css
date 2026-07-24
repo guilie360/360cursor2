@@ -93,20 +93,37 @@
 
 #boxiesContent:has(.builder-step-content--hero) .builder-app,
 #boxiesContent:has(.builder-step-content--estructura) .builder-app {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0;
   height: 100%;
   max-height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/*
+ * V5.9.3 — Progress rail is NOT a scroll viewport.
+ * Frame lock constrains #boxiesContent height; without this the rail’s
+ * overflow-y:auto becomes a second scrollbar beside the work zone.
+ */
+#boxiesContent:has(.builder-step-content--hero) .builder-progress-sidebar,
+.boxies-builder-embed:has(.builder-step-content--hero) .builder-progress-sidebar,
+#boxiesContent:has(.builder-step-content--estructura) .builder-progress-sidebar,
+.boxies-builder-embed:has(.builder-step-content--estructura) .builder-progress-sidebar {
+  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  max-height: none;
+  height: auto;
 }
 
 #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
 .boxies-builder-embed:has(.builder-step-content--hero) .builder-workspace,
 #boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
 .boxies-builder-embed:has(.builder-step-content--estructura) .builder-workspace {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0 !important;
   height: 100%;
   max-height: 100%;
@@ -119,7 +136,7 @@
 .boxies-builder-embed:has(.builder-step-content--hero) .builder-main-panel,
 #boxiesContent:has(.builder-step-content--estructura) .builder-main-panel,
 .boxies-builder-embed:has(.builder-step-content--estructura) .builder-main-panel {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0 !important;
   height: 100%;
   max-height: 100%;
@@ -128,11 +145,10 @@
   flex-direction: column;
 }
 
+/* Hero: step panel is a non-scrolling frame; columns scroll inside */
 #boxiesContent:has(.builder-step-content--hero) #builderStepPanel,
-.boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel,
-#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel,
-.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel {
-  flex: 1 1 auto;
+.boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel {
+  flex: 1 1 0%;
   min-height: 0 !important;
   height: 100% !important;
   max-height: 100% !important;
@@ -143,19 +159,52 @@
   box-sizing: border-box;
 }
 
-body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
-body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace {
-  margin-left: var(--builder-rail-width, 52px);
-}
-
-/* V5.9.2 — Estructura: shrink contract (sin height:% en el scroller; Hero intacto) */
-#boxiesContent:has(.builder-step-content--estructura) .builder-app,
-.boxies-builder-embed:has(.builder-step-content--estructura) .builder-app,
-#boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
-.boxies-builder-embed:has(.builder-step-content--estructura) .builder-workspace,
-#boxiesContent:has(.builder-step-content--estructura) .builder-main-panel,
-.boxies-builder-embed:has(.builder-step-content--estructura) .builder-main-panel,
+/*
+ * V5.9.3 — Estructura work-zone viewport.
+ * #builderStepPanel = the large rectangle (right of rail, under header, above dock).
+ * Content grows inside; ONLY this element scrolls vertically.
+ */
 #boxiesContent:has(.builder-step-content--estructura) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel {
   flex: 1 1 0%;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  display: block;
+  padding: 14px clamp(16px, 2.4vw, 28px) 10px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar {
+  width: 5px;
+}
+
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar-track,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar-thumb,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel:hover::-webkit-scrollbar-thumb,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel:hover::-webkit-scrollbar-thumb,
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel:focus-within::-webkit-scrollbar-thumb,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(111, 191, 134, 0.45);
+}
+
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace {
+  margin-left: var(--builder-rail-width, 52px);
 }

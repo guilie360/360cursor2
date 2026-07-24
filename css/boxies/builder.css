@@ -1978,42 +1978,21 @@ body.builder-has-dock .admin-toast--info {
   }
 }
 
-/* ── BOXIES V5.9.2 — Estructura: viewport interno scrolleable (flex 1 1 0%) ── */
+/* ── BOXIES V5.9.3 — Estructura: contenido crece; scroll en #builderStepPanel ── */
 .builder-step-content--estructura {
   max-width: none;
   width: 100%;
   margin: 0;
-  flex: 1 1 0%;
+  flex: 0 0 auto;
   min-height: 0;
+  height: auto;
+  max-height: none;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: clamp(100px, 15vh, 180px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding-bottom: clamp(120px, 20vh, 220px);
+  overflow: visible;
   box-sizing: border-box;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
-}
-
-.builder-step-content--estructura::-webkit-scrollbar {
-  width: 5px;
-}
-
-.builder-step-content--estructura::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.builder-step-content--estructura::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-}
-
-.builder-step-content--estructura:hover::-webkit-scrollbar-thumb,
-.builder-step-content--estructura:focus-within::-webkit-scrollbar-thumb {
-  background: rgba(111, 191, 134, 0.45);
 }
 
 .builder-estructura-head {

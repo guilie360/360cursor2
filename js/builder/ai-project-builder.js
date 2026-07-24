@@ -1314,11 +1314,11 @@ var AiProjectBuilderView = (function () {
     }
 
     function rerender() {
-      var scroller = rootEl.querySelector('.builder-step-content--estructura');
+      var scroller = rootEl.querySelector('#builderStepPanel');
       var scrollTop = scroller ? scroller.scrollTop : 0;
       persist();
       renderStepContent();
-      var scroller2 = rootEl.querySelector('.builder-step-content--estructura');
+      var scroller2 = rootEl.querySelector('#builderStepPanel');
       if (scroller2) scroller2.scrollTop = scrollTop;
     }
 
