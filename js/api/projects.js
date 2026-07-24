@@ -1,25 +1,48 @@
 /* Global Admin — showrooms via PlatformAuth (same session as BOXIES).
  * Table remains public.proyectos; UI terminology is Showroom.
  * List order is always display_order ASC (manual).
- * is_public is independent of publicado (landing/marketplace visibility). */
+ * is_public is independent of publicado (landing/marketplace visibility).
+ * createFromTemplate / cloneProject use SQL RPCs (single clone engine). */
 var BoxiesAdmin2ProjectsApi = (function () {
   var SELECT =
     'id, nombre, slug, descripcion, ciudad, estado, publicado, is_public, constructora_id, ' +
-    'display_order, created_at, updated_at';
+    'display_order, is_system_template, created_at, updated_at';
 
   function getClient() {
     return PlatformAuth.getClient();
   }
 
+  function resolveConstructoraId(options) {
+    options = options || {};
+    if (options.constructoraId) return options.constructoraId;
+    if (typeof BoxiesShowroomScope !== 'undefined' && BoxiesShowroomScope.getViewerContext) {
+      var ctx = BoxiesShowroomScope.getViewerContext(options.scope);
+      if (ctx && ctx.constructoraId) return ctx.constructoraId;
+    }
+    return null;
+  }
+
+  function unwrapRpcProject(result, fallback) {
+    if (result.error) {
+      throw new Error(result.error.message || fallback || 'Error de API');
+    }
+    var row = result.data;
+    if (Array.isArray(row)) row = row[0];
+    if (!row || !row.id) {
+      throw new Error(fallback || 'No se pudo completar la operación.');
+    }
+    return row;
+  }
+
   /**
    * @param {{ scope?: object }=} options
-   *   options.scope — optional BoxiesShowroomScope viewer context
    */
   async function list(options) {
     options = options || {};
     var query = getClient()
       .from('proyectos')
       .select(SELECT)
+      .eq('is_system_template', false)
       .order('display_order', { ascending: true, nullsFirst: false });
 
     if (typeof BoxiesShowroomScope !== 'undefined' && BoxiesShowroomScope.applyListFilter) {
@@ -37,10 +60,6 @@ var BoxiesAdmin2ProjectsApi = (function () {
     return result.data || [];
   }
 
-  /**
-   * Persist drag-and-drop order for the visible list.
-   * Uses PlatformAuth directly (AdminApi only exists inside Builder).
-   */
   async function reorder(orderedIds) {
     if (!Array.isArray(orderedIds) || !orderedIds.length) {
       throw new Error('Lista de orden vacía.');
@@ -71,9 +90,6 @@ var BoxiesAdmin2ProjectsApi = (function () {
     return results.map(function (res) { return res.data; });
   }
 
-  /**
-   * Landing / marketplace visibility. Does not touch identity, order, or publicado.
-   */
   async function setPublic(projectId, isPublic) {
     if (!projectId) throw new Error('Falta el ID del showroom.');
     var result = await getClient()
@@ -91,5 +107,48 @@ var BoxiesAdmin2ProjectsApi = (function () {
     return result.data;
   }
 
-  return { list: list, reorder: reorder, setPublic: setPublic };
+  async function createFromTemplate(options) {
+    options = options || {};
+    var args = {};
+    var constructoraId = resolveConstructoraId(options);
+    if (constructoraId) args.p_constructora_id = constructoraId;
+    var result = await getClient().rpc('create_showroom_from_template', args);
+    return unwrapRpcProject(result, 'Error creando showroom desde plantilla');
+  }
+
+  async function cloneProject(projectId, options) {
+    if (!projectId) throw new Error('Falta el ID del showroom a clonar.');
+    options = options || {};
+    var args = {
+      p_source_id: projectId,
+      p_as_system_template: false
+    };
+    var constructoraId = resolveConstructoraId(options);
+    if (constructoraId) args.p_constructora_id = constructoraId;
+    if (options.nombre) args.p_nombre = options.nombre;
+    if (options.slug) args.p_slug = options.slug;
+    var result = await getClient().rpc('clone_showroom', args);
+    return unwrapRpcProject(result, 'Error clonando showroom');
+  }
+
+  async function remove(projectId) {
+    if (!projectId) throw new Error('Falta el ID del showroom.');
+    var result = await getClient()
+      .from('proyectos')
+      .delete()
+      .eq('id', projectId);
+    if (result.error) {
+      throw new Error(result.error.message || 'Error eliminando showroom');
+    }
+    return true;
+  }
+
+  return {
+    list: list,
+    reorder: reorder,
+    setPublic: setPublic,
+    createFromTemplate: createFromTemplate,
+    cloneProject: cloneProject,
+    remove: remove
+  };
 })();

@@ -246,9 +246,54 @@
   background: none;
 }
 
+#boxiesContent .boxies-page__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#boxiesContent .boxies-page__header-row .boxies-page__title {
+  margin-bottom: 0.35rem;
+}
+
+#boxiesContent .boxies-page__header-row .boxies-page__desc {
+  margin-bottom: 0;
+}
+
+#boxiesContent .boxies-btn-primary {
+  flex-shrink: 0;
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+#boxiesContent .boxies-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+#boxiesContent .boxies-btn-danger {
+  color: #f0a0a0;
+  border-color: rgba(240, 160, 160, 0.35);
+  background: transparent;
+}
+
+#boxiesContent .boxies-btn-danger:hover:not(:disabled) {
+  color: #ffc9c9;
+  border-color: rgba(240, 160, 160, 0.55);
+  background: rgba(240, 160, 160, 0.08);
+}
+
 #boxiesContent .table-actions {
   text-align: right;
   white-space: nowrap;
+}
+
+#boxiesContent .table-actions .boxies-action-btn {
+  margin-left: 0.35rem;
 }
 
 #boxiesContent .admin-table a.boxies-action-btn {

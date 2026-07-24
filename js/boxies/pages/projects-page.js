@@ -71,6 +71,14 @@ var BoxiesProjectsPage = (function () {
           '" data-boxies-open-builder="' +
             escapeHtml(slug) +
           '">Administrar</button>' +
+          '<button type="button" class="boxies-action-btn" data-boxies-clone-id="' +
+            escapeHtml(id) +
+          '">Clonar</button>' +
+          '<button type="button" class="boxies-action-btn boxies-btn-danger" data-boxies-delete-id="' +
+            escapeHtml(id) +
+          '" data-boxies-delete-name="' +
+            escapeHtml(name) +
+          '">Eliminar</button>' +
         '</td>' +
       '</tr>'
     );
@@ -179,7 +187,9 @@ var BoxiesProjectsPage = (function () {
     tbody.addEventListener('dragstart', function (e) {
       var tr = e.target.closest('tr[data-showroom-id]');
       if (!tr || !tbody.contains(tr)) return;
-      if (e.target.closest('button.boxies-action-btn, .boxies-public-toggle, [data-boxies-public-id]')) {
+      if (e.target.closest(
+        'button.boxies-action-btn, .boxies-public-toggle, [data-boxies-public-id], [data-boxies-clone-id], [data-boxies-delete-id]'
+      )) {
         e.preventDefault();
         return;
       }
@@ -236,16 +246,146 @@ var BoxiesProjectsPage = (function () {
 
   function bindOpenBuilder(host) {
     host.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-boxies-open-builder-id], [data-boxies-open-builder]');
-      if (!btn) return;
+      var btn = e.target.closest('[data-boxies-open-builder-id]');
+      if (!btn || !host.contains(btn)) return;
       e.preventDefault();
-      var projectId = btn.getAttribute('data-boxies-open-builder-id');
-      var slug = btn.getAttribute('data-boxies-open-builder');
-      if (!projectId && !slug) return;
-      BoxiesRouter.navigate('builder', {
-        projectId: projectId || null,
-        project: slug || null
-      });
+      openBuilder(
+        btn.getAttribute('data-boxies-open-builder-id'),
+        btn.getAttribute('data-boxies-open-builder')
+      );
+    });
+  }
+
+  function openBuilder(projectId, slug) {
+    BoxiesRouter.navigate('builder', {
+      projectId: projectId || null,
+      project: slug || null
+    });
+  }
+
+  function notifyError(message) {
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      AdminNotify.error(message);
+    } else {
+      setOrderStatus(message, true);
+    }
+  }
+
+  function notifySuccess(message) {
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success(message);
+    } else {
+      setOrderStatus(message, false);
+    }
+  }
+
+  async function handleCreateShowroom(btn) {
+    if (!btn || btn.dataset.busy === '1') return;
+    if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
+        typeof BoxiesAdmin2ProjectsApi.createFromTemplate !== 'function') {
+      notifyError('API de creación no disponible');
+      return;
+    }
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = 'Creando…';
+    try {
+      var scope =
+        typeof BoxiesShowroomScope !== 'undefined'
+          ? BoxiesShowroomScope.getViewerContext()
+          : null;
+      var project = await BoxiesAdmin2ProjectsApi.createFromTemplate({ scope: scope });
+      notifySuccess('Showroom creado');
+      openBuilder(project.id, project.slug);
+    } catch (err) {
+      notifyError(err.message || 'No se pudo crear el showroom');
+      btn.disabled = false;
+      btn.textContent = prev;
+      btn.dataset.busy = '0';
+    }
+  }
+
+  async function handleCloneShowroom(btn) {
+    if (!btn || btn.dataset.busy === '1') return;
+    var projectId = btn.getAttribute('data-boxies-clone-id');
+    if (!projectId) return;
+    if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
+        typeof BoxiesAdmin2ProjectsApi.cloneProject !== 'function') {
+      notifyError('API de clonación no disponible');
+      return;
+    }
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = 'Duplicando...';
+    try {
+      var scope =
+        typeof BoxiesShowroomScope !== 'undefined'
+          ? BoxiesShowroomScope.getViewerContext()
+          : null;
+      var project = await BoxiesAdmin2ProjectsApi.cloneProject(projectId, { scope: scope });
+      notifySuccess('Showroom clonado');
+      openBuilder(project.id, project.slug);
+    } catch (err) {
+      notifyError(err.message || 'No se pudo clonar el showroom');
+      btn.disabled = false;
+      btn.textContent = prev;
+      btn.dataset.busy = '0';
+    }
+  }
+
+  async function handleDeleteShowroom(btn) {
+    if (!btn || btn.dataset.busy === '1') return;
+    var projectId = btn.getAttribute('data-boxies-delete-id');
+    var name = btn.getAttribute('data-boxies-delete-name') || 'este showroom';
+    if (!projectId) return;
+    var ok = window.confirm('¿Eliminar «' + name + '»? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
+        typeof BoxiesAdmin2ProjectsApi.remove !== 'function') {
+      notifyError('API de eliminación no disponible');
+      return;
+    }
+    btn.dataset.busy = '1';
+    btn.disabled = true;
+    try {
+      await BoxiesAdmin2ProjectsApi.remove(projectId);
+      var rowEl = btn.closest('tr[data-showroom-id]');
+      if (rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl);
+      notifySuccess('Showroom eliminado');
+      var tbody = document.getElementById('boxiesProjectsBody');
+      if (tbody && !tbody.querySelector('tr[data-showroom-id]')) {
+        tbody.innerHTML = '<tr><td colspan="7">No hay showrooms registrados.</td></tr>';
+      }
+    } catch (err) {
+      notifyError(err.message || 'No se pudo eliminar el showroom');
+      btn.disabled = false;
+      btn.dataset.busy = '0';
+    }
+  }
+
+  function bindShowroomActions(host) {
+    host.addEventListener('click', function (e) {
+      var createBtn = e.target.closest('#boxiesCreateShowroomBtn');
+      if (createBtn && host.contains(createBtn)) {
+        e.preventDefault();
+        handleCreateShowroom(createBtn);
+        return;
+      }
+      var cloneBtn = e.target.closest('[data-boxies-clone-id]');
+      if (cloneBtn && host.contains(cloneBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCloneShowroom(cloneBtn);
+        return;
+      }
+      var deleteBtn = e.target.closest('[data-boxies-delete-id]');
+      if (deleteBtn && host.contains(deleteBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDeleteShowroom(deleteBtn);
+      }
     });
   }
 
@@ -261,7 +401,8 @@ var BoxiesProjectsPage = (function () {
     if (slugEl && detail.slug) slugEl.textContent = detail.slug;
     var btn = rowEl.querySelector('[data-boxies-open-builder]');
     if (btn && detail.slug) btn.setAttribute('data-boxies-open-builder', detail.slug);
-    /* Do not move the row — identity changes must not affect display_order. */
+    var del = rowEl.querySelector('[data-boxies-delete-name]');
+    if (del && detail.nombre) del.setAttribute('data-boxies-delete-name', detail.nombre);
   }
 
   async function mount(host) {
@@ -270,8 +411,15 @@ var BoxiesProjectsPage = (function () {
     }
     host.innerHTML =
       '<div class="boxies-page">' +
-        '<h1 class="boxies-page__title">Showrooms</h1>' +
-        '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
+        '<div class="boxies-page__header-row">' +
+          '<div>' +
+            '<h1 class="boxies-page__title">Showrooms</h1>' +
+            '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
+          '</div>' +
+          '<button type="button" class="boxies-action-btn boxies-btn-primary" id="boxiesCreateShowroomBtn">' +
+            '+ Crear Showroom' +
+          '</button>' +
+        '</div>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table boxies-showrooms-table">' +
@@ -291,6 +439,7 @@ var BoxiesProjectsPage = (function () {
 
     bindOpenBuilder(host);
     bindPublicToggles(host);
+    bindShowroomActions(host);
     identityListener = function (ev) {
       patchShowroomRow(ev && ev.detail);
     };

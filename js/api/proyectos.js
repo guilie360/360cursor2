@@ -7,9 +7,10 @@ var ProyectosApi = (function () {
   var PROJECT_SELECT =
     'id, nombre, slug, descripcion, ciudad, direccion, latitud, longitud, ' +
     'whatsapp, email, sitio_web, instagram_url, estado, publicado, is_public, constructora_id, ' +
-    'display_order, created_at, updated_at';
+    'display_order, is_system_template, created_at, updated_at';
 
-  var BRIEF_SELECT = 'id, nombre, slug, publicado, is_public, estado, ciudad, display_order';
+  var BRIEF_SELECT =
+    'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template';
 
   function sanitizePayload(payload, isCreate) {
     payload = payload || {};
@@ -101,6 +102,7 @@ var ProyectosApi = (function () {
     var result = await AdminApi.getClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
+      .eq('is_system_template', false)
       .order('display_order', { ascending: true, nullsFirst: false });
     return AdminApi.unwrap(result, 'Error cargando proyectos');
   }
@@ -109,6 +111,7 @@ var ProyectosApi = (function () {
     var result = await AdminApi.getClient()
       .from('proyectos')
       .select(BRIEF_SELECT)
+      .eq('is_system_template', false)
       .order('display_order', { ascending: true, nullsFirst: false });
     return AdminApi.unwrap(result, 'Error cargando proyectos');
   }
@@ -387,6 +390,34 @@ var ProyectosApi = (function () {
     return result.data;
   }
 
+  function unwrapRpcProject(result, fallback) {
+    if (result.error) throw mapDbError(result.error, fallback);
+    var row = result.data;
+    if (Array.isArray(row)) row = row[0];
+    if (!row || !row.id) throw new Error(fallback || 'No se pudo crear el showroom.');
+    return row;
+  }
+
+  async function createFromTemplate(options) {
+    options = options || {};
+    var args = {};
+    if (options.constructoraId) args.p_constructora_id = options.constructoraId;
+    var result = await AdminApi.getClient().rpc('create_showroom_from_template', args);
+    return unwrapRpcProject(result, 'Error creando showroom desde plantilla');
+  }
+
+  async function cloneProject(projectId, options) {
+    if (!projectId) throw new Error('Falta el ID del showroom a clonar.');
+    options = options || {};
+    var args = { p_source_id: projectId };
+    if (options.nombre) args.p_nombre = options.nombre;
+    if (options.slug) args.p_slug = options.slug;
+    if (options.constructoraId) args.p_constructora_id = options.constructoraId;
+    args.p_as_system_template = false;
+    var result = await AdminApi.getClient().rpc('clone_showroom', args);
+    return unwrapRpcProject(result, 'Error clonando showroom');
+  }
+
   return {
     list: list,
     listBrief: listBrief,
@@ -397,6 +428,8 @@ var ProyectosApi = (function () {
     checkSlugAvailability: checkSlugAvailability,
     remove: remove,
     reorder: reorder,
-    setPublic: setPublic
+    setPublic: setPublic,
+    createFromTemplate: createFromTemplate,
+    cloneProject: cloneProject
   };
 })();
