@@ -285,18 +285,6 @@
   overflow: auto;
 }
 
-/* Pinned workspace footer — never inside table scroll */
-#boxiesContent .boxies-showrooms-workspace-footer {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin: 0;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.06));
-  background: transparent;
-}
-
 #boxiesContent .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -367,6 +355,21 @@
   user-select: none;
   -webkit-user-select: none;
   border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.06));
+  font-size: 0.625rem;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  background: transparent;
+}
+
+#boxiesContent .boxies-showrooms-table thead th .boxies-th-label {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  line-height: 1.3;
 }
 
 #boxiesContent .boxies-showrooms-table tbody tr:last-child td {
@@ -476,7 +479,7 @@ body.boxies-col-resizing * {
   user-select: none !important;
 }
 
-#boxiesContent .boxies-showrooms-table .boxies-col-updated {
+#boxiesContent .boxies-showrooms-table td.boxies-col-updated {
   color: rgba(255, 255, 255, 0.42);
   font-size: 0.8rem;
   white-space: nowrap;

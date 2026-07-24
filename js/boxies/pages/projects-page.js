@@ -12,15 +12,15 @@ var BoxiesProjectsPage = (function () {
   var columnController = null;
 
   var COL_STORAGE_KEY = 'boxies.showrooms.columns';
-  var COL_ORDER = ['actions', 'drag', 'name', 'slug', 'status', 'public', 'updated'];
+  var COL_ORDER = ['drag', 'name', 'slug', 'status', 'public', 'updated', 'actions'];
   var COL_DEFS = {
-    actions: { min: 148, default: 168, resizable: true },
     drag: { min: 36, default: 40, resizable: true },
     name: { min: 120, default: 260, resizable: true },
     slug: { min: 90, default: 140, resizable: true },
     status: { min: 88, default: 120, resizable: true },
     public: { min: 72, default: 96, resizable: true },
-    updated: { min: 120, default: 168, resizable: true }
+    updated: { min: 120, default: 168, resizable: true },
+    actions: { min: 148, default: 168, resizable: true }
   };
 
   function escapeHtml(v) {
@@ -385,26 +385,6 @@ var BoxiesProjectsPage = (function () {
     var name = showroom.nombre || slug || 'Sin nombre';
     return (
       '<tr class="boxies-showroom-row" draggable="true" data-showroom-id="' + escapeHtml(id) + '">' +
-        '<td class="table-actions boxies-col-actions">' +
-          '<div class="boxies-cell">' +
-            '<div class="boxies-row-actions">' +
-              '<button type="button" class="boxies-icon-action" data-boxies-open-builder-id="' +
-                escapeHtml(id) +
-              '" data-boxies-open-builder="' +
-                escapeHtml(slug) +
-              '" title="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
-              '<span class="boxies-row-actions__gap" aria-hidden="true"></span>' +
-              '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
-                escapeHtml(id) +
-              '" title="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
-              '<button type="button" class="boxies-icon-action boxies-icon-action--danger" data-boxies-delete-id="' +
-                escapeHtml(id) +
-              '" data-boxies-delete-name="' +
-                escapeHtml(name) +
-              '" title="Eliminar" aria-label="Eliminar">' + ICONS.trash + '</button>' +
-            '</div>' +
-          '</div>' +
-        '</td>' +
         '<td class="boxies-showroom-drag boxies-col-drag">' +
           '<div class="boxies-cell">' +
             '<button type="button" class="boxies-drag-handle" aria-label="Arrastrar para reordenar" title="Arrastrar">' +
@@ -432,6 +412,26 @@ var BoxiesProjectsPage = (function () {
         '</td>' +
         '<td class="boxies-col-updated">' +
           '<div class="boxies-cell">' + escapeHtml(formatDate(showroom.updated_at)) + '</div>' +
+        '</td>' +
+        '<td class="table-actions boxies-col-actions">' +
+          '<div class="boxies-cell">' +
+            '<div class="boxies-row-actions">' +
+              '<button type="button" class="boxies-icon-action" data-boxies-open-builder-id="' +
+                escapeHtml(id) +
+              '" data-boxies-open-builder="' +
+                escapeHtml(slug) +
+              '" title="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
+              '<span class="boxies-row-actions__gap" aria-hidden="true"></span>' +
+              '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
+                escapeHtml(id) +
+              '" title="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
+              '<button type="button" class="boxies-icon-action boxies-icon-action--danger" data-boxies-delete-id="' +
+                escapeHtml(id) +
+              '" data-boxies-delete-name="' +
+                escapeHtml(name) +
+              '" title="Eliminar" aria-label="Eliminar">' + ICONS.trash + '</button>' +
+            '</div>' +
+          '</div>' +
         '</td>' +
       '</tr>'
     );
@@ -721,12 +721,6 @@ var BoxiesProjectsPage = (function () {
 
   function bindShowroomActions(host) {
     host.addEventListener('click', function (e) {
-      var createBtn = e.target.closest('#boxiesCreateShowroomBtn');
-      if (createBtn && host.contains(createBtn)) {
-        e.preventDefault();
-        handleCreateShowroom(createBtn);
-        return;
-      }
       var cloneBtn = e.target.closest('[data-boxies-clone-id]');
       if (cloneBtn && host.contains(cloneBtn)) {
         e.preventDefault();
@@ -741,6 +735,30 @@ var BoxiesProjectsPage = (function () {
         handleDeleteShowroom(deleteBtn);
       }
     });
+  }
+
+  function bindCreateDockButton() {
+    var btn = document.getElementById('boxiesCreateShowroomBtn');
+    if (!btn || btn.dataset.boundCreate === '1') return;
+    btn.dataset.boundCreate = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      handleCreateShowroom(btn);
+    });
+  }
+
+  function installCreateDockAction() {
+    if (typeof BoxiesShell === 'undefined' || typeof BoxiesShell.applyManifest !== 'function') {
+      return;
+    }
+    BoxiesShell.applyManifest({
+      leadingHtml:
+        '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon" id="boxiesCreateShowroomBtn"' +
+          ' aria-label="Crear Showroom" title="Crear Showroom">' +
+          '<span aria-hidden="true">+</span>' +
+        '</button>'
+    });
+    bindCreateDockButton();
   }
 
   function patchShowroomRow(detail) {
@@ -778,34 +796,30 @@ var BoxiesProjectsPage = (function () {
           '<div class="boxies-showrooms-wrap">' +
             '<table class="admin-table boxies-showrooms-table" id="boxiesShowroomsTable">' +
               '<colgroup>' +
-                '<col data-col="actions">' +
                 '<col data-col="drag">' +
                 '<col data-col="name">' +
                 '<col data-col="slug">' +
                 '<col data-col="status">' +
                 '<col data-col="public">' +
                 '<col data-col="updated">' +
+                '<col data-col="actions">' +
               '</colgroup>' +
               '<thead><tr>' +
-                thCell('actions', '', { ariaLabel: 'Acciones' }) +
                 thCell('drag', '', { extraClass: 'boxies-showroom-drag-th', ariaLabel: 'Orden' }) +
                 thCell('name', 'Nombre') +
                 thCell('slug', 'Slug') +
                 thCell('status', 'Estado') +
                 thCell('public', 'Público') +
                 thCell('updated', 'Última modificación') +
+                thCell('actions', '', { ariaLabel: 'Acciones' }) +
               '</tr></thead>' +
               '<tbody id="boxiesProjectsBody"><tr><td colspan="7">Cargando…</td></tr></tbody>' +
             '</table>' +
           '</div>' +
         '</div>' +
-        '<footer class="boxies-showrooms-workspace-footer">' +
-          '<button type="button" class="boxies-action-btn" id="boxiesCreateShowroomBtn">' +
-            '+ Crear Showroom' +
-          '</button>' +
-        '</footer>' +
       '</div>';
 
+    installCreateDockAction();
     bindOpenBuilder(host);
     bindPublicToggles(host);
     bindShowroomActions(host);
@@ -843,6 +857,9 @@ var BoxiesProjectsPage = (function () {
   function unmount() {
     var host = document.getElementById('boxiesContent');
     if (host) host.classList.remove('boxies-content--showrooms');
+    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearPageActions) {
+      BoxiesShell.clearPageActions();
+    }
     if (identityListener) {
       window.removeEventListener('boxies:showroom-identity-changed', identityListener);
       identityListener = null;

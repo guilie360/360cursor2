@@ -513,6 +513,23 @@ body.boxies-nav-collapsed .boxies-sidebar {
   padding: 0 14px;
 }
 
+.boxies-dock__leading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.boxies-dock__leading[hidden] {
+  display: none !important;
+}
+
+.boxies-dock__leading .boxies-btn-secondary--icon {
+  font-size: 1.15rem;
+  font-weight: 450;
+  line-height: 1;
+}
+
 .boxies-dock__project {
   display: flex;
   align-items: center;

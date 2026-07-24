@@ -50,8 +50,9 @@ var BoxiesShell = (function () {
 
   function dockHtml() {
     return (
-      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones del showroom">' +
+      '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones">' +
         '<div class="boxies-dock__inner">' +
+          '<div class="boxies-dock__leading" id="boxiesDockLeading" hidden></div>' +
           '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
             '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
           '</div>' +
@@ -335,9 +336,39 @@ var BoxiesShell = (function () {
     setProjectContext({});
   }
 
+  function injectDockNodes(container, html, attrName, beforeEl) {
+    if (!container || !html) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    while (wrap.firstChild) {
+      var node = wrap.firstChild;
+      if (node.nodeType === 1) {
+        node.setAttribute(attrName, '1');
+        if (beforeEl) container.insertBefore(node, beforeEl);
+        else container.appendChild(node);
+      } else {
+        wrap.removeChild(node);
+      }
+    }
+  }
+
   function applyManifest(manifest) {
     manifest = manifest || {};
+    var leading = document.getElementById('boxiesDockLeading');
     var actions = document.getElementById('boxiesDockActions');
+
+    if (leading) {
+      leading.querySelectorAll('[data-boxies-page-leading]').forEach(function (el) {
+        el.remove();
+      });
+      if (manifest.leadingHtml) {
+        injectDockNodes(leading, manifest.leadingHtml, 'data-boxies-page-leading', null);
+        leading.hidden = false;
+      } else {
+        leading.hidden = true;
+      }
+    }
+
     if (!actions) return;
 
     actions.querySelectorAll('[data-boxies-page-action]').forEach(function (el) {
@@ -346,18 +377,8 @@ var BoxiesShell = (function () {
 
     if (manifest.actionsHtml) {
       var previewBtn = document.getElementById('boxiesPreviewBtn');
-      var wrap = document.createElement('div');
-      wrap.innerHTML = manifest.actionsHtml;
-      while (wrap.firstChild) {
-        var node = wrap.firstChild;
-        if (node.nodeType === 1) {
-          node.setAttribute('data-boxies-page-action', '1');
-          if (previewBtn) actions.insertBefore(node, previewBtn);
-          else actions.appendChild(node);
-        } else {
-          wrap.removeChild(node);
-        }
-      }
+      injectDockNodes(actions, manifest.actionsHtml, 'data-boxies-page-action', previewBtn);
+      actions.hidden = false;
     }
   }
 
