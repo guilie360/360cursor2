@@ -1978,23 +1978,22 @@ body.builder-has-dock .admin-toast--info {
   }
 }
 
-/* ── BOXIES V5.9 — Estructura constructor (frame lock = Hero; scroll interno) ── */
+/* ── BOXIES V5.9.2 — Estructura: viewport interno scrolleable (flex 1 1 0%) ── */
 .builder-step-content--estructura {
   max-width: none;
   width: 100%;
   margin: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: 16px;
+  padding-bottom: clamp(100px, 15vh, 180px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   box-sizing: border-box;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
@@ -2012,8 +2011,9 @@ body.builder-has-dock .admin-toast--info {
   border-radius: 999px;
 }
 
-.builder-step-content--estructura:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.28);
+.builder-step-content--estructura:hover::-webkit-scrollbar-thumb,
+.builder-step-content--estructura:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(111, 191, 134, 0.45);
 }
 
 .builder-estructura-head {
@@ -2033,6 +2033,79 @@ body.builder-has-dock .admin-toast--info {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* Nivel 1 — secciones principales plegables */
+.builder-estructura-section {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 0 16px;
+  flex: 0 0 auto;
+}
+
+.builder-estructura-section__summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 14px 0;
+  user-select: none;
+}
+
+.builder-estructura-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+.builder-estructura-section__summary::before {
+  content: '▸';
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1em;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.builder-estructura-section[open] > .builder-estructura-section__summary::before {
+  transform: rotate(90deg);
+}
+
+.builder-estructura-section__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.builder-estructura-section__hint {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 520;
+  color: rgba(111, 191, 134, 0.88);
+}
+
+.builder-estructura-section__summary .builder-header-action-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.builder-estructura-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 0 14px;
+}
+
+.builder-estructura-section__note {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.4;
 }
 
 .builder-estructura-card {

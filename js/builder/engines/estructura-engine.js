@@ -184,9 +184,10 @@ var EstructuraEngine = (function () {
       appliedAt: null,
       dirty: false,
       openPanels: {
+        dev: true,
         org: true,
         tipologias: true,
-        zonas: false
+        zonas: true
       }
     };
   }
@@ -218,7 +219,11 @@ var EstructuraEngine = (function () {
     if (!Array.isArray(e.buildings)) e.buildings = [];
     if (!Array.isArray(e.tipologias)) e.tipologias = [];
     if (!Array.isArray(e.zoneNames)) e.zoneNames = [];
-    if (!e.openPanels) e.openPanels = { org: true, tipologias: true, zonas: false };
+    if (!e.openPanels) e.openPanels = { dev: true, org: true, tipologias: true, zonas: true };
+    if (e.openPanels.dev == null) e.openPanels.dev = true;
+    if (e.openPanels.org == null) e.openPanels.org = true;
+    if (e.openPanels.tipologias == null) e.openPanels.tipologias = true;
+    if (e.openPanels.zonas == null) e.openPanels.zonas = true;
     if (!e.tipologias.length) e.tipologias = [emptyTypology(e.developmentType, 0)];
     syncTypologyPlantas(e);
     return e;

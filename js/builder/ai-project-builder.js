@@ -357,6 +357,11 @@ var AiProjectBuilderView = (function () {
         '</div></div>';
     }).join('');
 
+    var panels = e.openPanels || {};
+    var devLabel = (EstructuraEngine.DEVELOPMENT_TYPES.find(function (t) {
+      return t.id === e.developmentType;
+    }) || {}).label || '';
+
     return '<div class="builder-step-content builder-step-content--estructura">' +
       '<div class="builder-estructura-head">' +
         stepTitleHtml('Estructura') +
@@ -364,25 +369,44 @@ var AiProjectBuilderView = (function () {
           '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>' +
         '</div>' +
       '</div>' +
-      '<section class="builder-estructura-card">' +
-        '<div class="builder-estructura-card__title">Tipo de desarrollo</div>' +
-        '<div class="builder-estructura-types">' + typesHtml + '</div>' +
-      '</section>' +
-      '<section class="builder-estructura-card">' +
-        '<div class="builder-estructura-card__title">Organización física</div>' +
-        orgHtml +
-      '</section>' +
-      '<section class="builder-estructura-card">' +
-        '<div class="builder-estructura-card__title-row">' +
-          '<div class="builder-estructura-card__title">Tipologías</div>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTipologiaBtn">+ Añadir tipología</button>' +
+      '<details class="builder-estructura-section" data-estructura-panel="dev"' +
+        (panels.dev !== false ? ' open' : '') + '>' +
+        '<summary class="builder-estructura-section__summary">' +
+          '<span class="builder-estructura-section__title">Tipo de desarrollo</span>' +
+          (devLabel
+            ? '<span class="builder-estructura-section__hint">' + AdminUI.escapeHtml(devLabel) + '</span>'
+            : '') +
+        '</summary>' +
+        '<div class="builder-estructura-section__body">' +
+          '<div class="builder-estructura-types">' + typesHtml + '</div>' +
         '</div>' +
-        tipsHtml +
-      '</section>' +
-      '<section class="builder-estructura-card">' +
-        '<div class="builder-estructura-card__title">Zonas del proyecto</div>' +
-        zonesHtml +
-      '</section>' +
+      '</details>' +
+      '<details class="builder-estructura-section" data-estructura-panel="org"' +
+        (panels.org !== false ? ' open' : '') + '>' +
+        '<summary class="builder-estructura-section__summary">' +
+          '<span class="builder-estructura-section__title">Organización física</span>' +
+        '</summary>' +
+        '<div class="builder-estructura-section__body">' + orgHtml + '</div>' +
+      '</details>' +
+      '<details class="builder-estructura-section" data-estructura-panel="tipologias"' +
+        (panels.tipologias !== false ? ' open' : '') + '>' +
+        '<summary class="builder-estructura-section__summary">' +
+          '<span class="builder-estructura-section__title">Tipologías</span>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTipologiaBtn">' +
+            '+ Añadir tipología</button>' +
+        '</summary>' +
+        '<div class="builder-estructura-section__body">' +
+          '<p class="builder-estructura-section__note">Plantas y ambientes se editan dentro de cada tipología.</p>' +
+          tipsHtml +
+        '</div>' +
+      '</details>' +
+      '<details class="builder-estructura-section" data-estructura-panel="zonas"' +
+        (panels.zonas !== false ? ' open' : '') + '>' +
+        '<summary class="builder-estructura-section__summary">' +
+          '<span class="builder-estructura-section__title">Zonas / Amenidades</span>' +
+        '</summary>' +
+        '<div class="builder-estructura-section__body">' + zonesHtml + '</div>' +
+      '</details>' +
     '</div>';
   }
 
@@ -1290,9 +1314,23 @@ var AiProjectBuilderView = (function () {
     }
 
     function rerender() {
+      var scroller = rootEl.querySelector('.builder-step-content--estructura');
+      var scrollTop = scroller ? scroller.scrollTop : 0;
       persist();
       renderStepContent();
+      var scroller2 = rootEl.querySelector('.builder-step-content--estructura');
+      if (scroller2) scroller2.scrollTop = scrollTop;
     }
+
+    rootEl.querySelectorAll('[data-estructura-panel]').forEach(function (panel) {
+      panel.addEventListener('toggle', function () {
+        var key = panel.getAttribute('data-estructura-panel');
+        if (!key) return;
+        if (!state.estructura.openPanels) state.estructura.openPanels = {};
+        state.estructura.openPanels[key] = panel.open;
+        saveState();
+      });
+    });
 
     rootEl.querySelectorAll('[data-dev-type]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1459,7 +1497,9 @@ var AiProjectBuilderView = (function () {
 
     var addTip = rootEl.querySelector('#builderAddTipologiaBtn');
     if (addTip) {
-      addTip.addEventListener('click', function () {
+      addTip.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
         EstructuraEngine.addTypology(state);
         rerender();
       });

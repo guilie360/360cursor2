@@ -147,3 +147,15 @@ body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .buil
 body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace {
   margin-left: var(--builder-rail-width, 52px);
 }
+
+/* V5.9.2 — Estructura: shrink contract (sin height:% en el scroller; Hero intacto) */
+#boxiesContent:has(.builder-step-content--estructura) .builder-app,
+.boxies-builder-embed:has(.builder-step-content--estructura) .builder-app,
+#boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
+.boxies-builder-embed:has(.builder-step-content--estructura) .builder-workspace,
+#boxiesContent:has(.builder-step-content--estructura) .builder-main-panel,
+.boxies-builder-embed:has(.builder-step-content--estructura) .builder-main-panel,
+#boxiesContent:has(.builder-step-content--estructura) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel {
+  flex: 1 1 0%;
+}
