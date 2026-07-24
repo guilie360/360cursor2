@@ -1978,7 +1978,7 @@ body.builder-has-dock .admin-toast--info {
   }
 }
 
-/* ── BOXIES V5.9.3 — Estructura: contenido crece; scroll en #builderStepPanel ── */
+/* ── BOXIES V5.9.4 — Estructura: contenido crece; scroll SOLO en .builder-workspace ── */
 .builder-step-content--estructura {
   max-width: none;
   width: 100%;

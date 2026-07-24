@@ -35,7 +35,6 @@
   width: var(--builder-rail-width, 200px);
   height: auto;
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  /* Align with platform sidebar chrome grid */
   padding-top: var(--boxies-chrome-pad-top, 12px);
 }
 
@@ -63,11 +62,15 @@
   padding: 24px clamp(20px, 3vw, 40px) 28px;
 }
 
-/* ── Hero / Estructura — lock frame between shell header + dock ── */
-.boxies-workspace:has(#boxiesContent:has(.builder-step-content--hero)),
-.boxies-workspace__panel:has(#boxiesContent:has(.builder-step-content--hero)),
-.boxies-workspace:has(#boxiesContent:has(.builder-step-content--estructura)),
-.boxies-workspace__panel:has(#boxiesContent:has(.builder-step-content--estructura)) {
+/*
+ * Frame lock — use single-level :has() only.
+ * Nested :has(#id:has(...)) is rejected by the selector engine and drops the whole rule,
+ * which lets the shell grow with content and kills workspace scrolling.
+ */
+.boxies-workspace:has(.builder-step-content--hero),
+.boxies-workspace__panel:has(.builder-step-content--hero),
+.boxies-workspace:has(.builder-step-content--estructura),
+.boxies-workspace__panel:has(.builder-step-content--estructura) {
   height: calc(
     100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px)
   );
@@ -103,7 +106,7 @@
   position: relative;
 }
 
-/* ── Hero: workspace is a non-scrolling frame; columns scroll inside ── */
+/* Hero: workspace is a non-scrolling frame; columns scroll inside */
 #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
 .boxies-builder-embed:has(.builder-step-content--hero) .builder-workspace {
   flex: 1 1 0%;
@@ -140,26 +143,19 @@
 }
 
 /*
- * V5.9.3 — Estructura: scroll ONLY on the large RIGHT work panel.
- *
- * DOM geometry (verified intent):
- *   .builder-progress-sidebar  → absolute LEFT column (Config / Estructura / …)
- *   .builder-workspace         → RIGHT panel (margin-left = rail width → far right edge)
- *
- * .builder-workspace is the element whose right edge is the work-zone edge.
- * Its native scrollbar therefore sits at the EXTREME RIGHT — never on the rail seam.
- * Rail CSS is intentionally left unchanged.
+ * V5.9.4 — Estructura: ONLY .builder-workspace scrolls (far-right scrollbar).
+ * Must NOT share overflow:hidden with Hero. Children grow; they do not scroll.
  */
 #boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
 .boxies-builder-embed:has(.builder-step-content--estructura) .builder-workspace {
   flex: 1 1 0%;
   min-height: 0 !important;
-  height: 100%;
-  max-height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   overscroll-behavior: contain;
-  display: block;
+  display: block !important;
   box-sizing: border-box;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -189,25 +185,28 @@
   background: rgba(111, 191, 134, 0.45);
 }
 
-/* Children grow with content; they must NOT become nested scroll viewports */
 #boxiesContent:has(.builder-step-content--estructura) .builder-main-panel,
 .boxies-builder-embed:has(.builder-step-content--estructura) .builder-main-panel {
-  flex: none;
+  flex: none !important;
+  width: 100%;
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
   overflow: visible !important;
-  display: block;
+  display: block !important;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 #boxiesContent:has(.builder-step-content--estructura) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--estructura) #builderStepPanel {
-  flex: none;
+  flex: none !important;
   min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
   overflow: visible !important;
-  display: block;
+  display: block !important;
   padding: 14px clamp(16px, 2.4vw, 28px) 10px;
   box-sizing: border-box;
 }
