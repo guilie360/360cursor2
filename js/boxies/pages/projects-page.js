@@ -2,25 +2,26 @@
  * BOXIES ShowroomsPage — list only fills #boxiesContent.
  * Open builder by permanent projectId (UUID); slug is vanity for display/URL.
  * Order is manual via display_order (drag & drop); identity/publish do not reorder.
- * Column widths are user-resizable and persisted in localStorage.
+ * Column widths: Excel-style neighbor resize, persisted in localStorage.
  */
 var BoxiesProjectsPage = (function () {
   var identityListener = null;
   var dragState = null;
   var savingOrder = false;
   var columnResizeState = null;
-  var columnResizeCleanup = null;
+  var columnController = null;
 
   var COL_STORAGE_KEY = 'boxies.showrooms.columns';
   var COL_ORDER = ['drag', 'name', 'slug', 'status', 'public', 'updated', 'actions'];
+  var FLEX_KEYS = ['name', 'slug', 'status', 'public', 'updated', 'actions'];
   var COL_DEFS = {
-    drag: { min: 40, default: 40, resizable: false },
+    drag: { min: 40, default: 40, resizable: true },
     name: { min: 120, default: 280, resizable: true },
-    slug: { min: 80, default: 160, resizable: true },
-    status: { min: 72, default: 110, resizable: true },
-    public: { min: 64, default: 88, resizable: true },
-    updated: { min: 100, default: 160, resizable: true },
-    actions: { min: 108, default: 120, resizable: true }
+    slug: { min: 90, default: 160, resizable: true },
+    status: { min: 80, default: 110, resizable: true },
+    public: { min: 70, default: 88, resizable: true },
+    updated: { min: 110, default: 160, resizable: true },
+    actions: { min: 112, default: 120, resizable: true }
   };
 
   function escapeHtml(v) {
@@ -87,6 +88,30 @@ var BoxiesProjectsPage = (function () {
     return out;
   }
 
+  function flexSum(widths) {
+    return FLEX_KEYS.reduce(function (sum, key) {
+      return sum + widths[key];
+    }, 0);
+  }
+
+  function minFlexSum() {
+    return FLEX_KEYS.reduce(function (sum, key) {
+      return sum + COL_DEFS[key].min;
+    }, 0);
+  }
+
+  /** Persist as fractions of the flexible area (viewport-independent). */
+  function saveColumnWidths(widths) {
+    try {
+      var sum = flexSum(widths) || 1;
+      var payload = { drag: widths.drag, v: 2 };
+      FLEX_KEYS.forEach(function (key) {
+        payload[key] = widths[key] / sum;
+      });
+      window.localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {}
+  }
+
   function loadColumnWidths() {
     var widths = defaultWidths();
     try {
@@ -94,6 +119,31 @@ var BoxiesProjectsPage = (function () {
       if (!raw) return widths;
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return widths;
+
+      if (parsed.v === 2) {
+        var fracSum = 0;
+        FLEX_KEYS.forEach(function (key) {
+          var f = Number(parsed[key]);
+          if (isFinite(f) && f > 0) fracSum += f;
+        });
+        if (fracSum > 0) {
+          var base = 1000;
+          FLEX_KEYS.forEach(function (key) {
+            var f = Number(parsed[key]);
+            widths[key] = Math.max(
+              COL_DEFS[key].min,
+              Math.round(((isFinite(f) && f > 0 ? f : 0) / fracSum) * base)
+            );
+          });
+        }
+        var drag = Number(parsed.drag);
+        if (isFinite(drag) && drag > 0) {
+          widths.drag = Math.max(COL_DEFS.drag.min, Math.round(drag));
+        }
+        return widths;
+      }
+
+      /* Legacy pixel map from V5.7.2 */
       COL_ORDER.forEach(function (key) {
         var n = Number(parsed[key]);
         if (isFinite(n) && n > 0) {
@@ -104,35 +154,76 @@ var BoxiesProjectsPage = (function () {
     return widths;
   }
 
-  function saveColumnWidths(widths) {
-    try {
-      var payload = {};
-      COL_ORDER.forEach(function (key) {
-        payload[key] = Math.round(widths[key]);
-      });
-      window.localStorage.setItem(COL_STORAGE_KEY, JSON.stringify(payload));
-    } catch (err) {}
+  function getNeighborKey(key) {
+    var i = COL_ORDER.indexOf(key);
+    if (i < 0) return null;
+    if (i < COL_ORDER.length - 1) return COL_ORDER[i + 1];
+    if (i > 0) return COL_ORDER[i - 1];
+    return null;
   }
 
-  function sumWidths(widths) {
-    return COL_ORDER.reduce(function (sum, key) {
-      return sum + widths[key];
-    }, 0);
-  }
-
-  function applyColumnWidths(table, widths) {
+  /**
+   * Fit widths into the available wrap width.
+   * Table stays 100% when mins fit; only then overflow if mins exceed space.
+   */
+  function layoutToContainer(table, widths) {
     if (!table) return;
+    var wrap = table.closest('.boxies-showrooms-wrap');
+    var avail = wrap ? wrap.clientWidth : table.parentElement.clientWidth;
+    if (!avail || avail < 1) avail = 800;
+
+    widths.drag = Math.max(COL_DEFS.drag.min, Math.round(widths.drag || COL_DEFS.drag.default));
+    var flexAvail = avail - widths.drag;
+    var mins = minFlexSum();
+
+    if (flexAvail < mins) {
+      FLEX_KEYS.forEach(function (key) {
+        widths[key] = COL_DEFS[key].min;
+      });
+      table.style.width = widths.drag + mins + 'px';
+    } else {
+      var sum = flexSum(widths);
+      if (sum < 1) {
+        widths = defaultWidths();
+        sum = flexSum(widths);
+      }
+      var scale = flexAvail / sum;
+      FLEX_KEYS.forEach(function (key) {
+        widths[key] = Math.max(COL_DEFS[key].min, Math.round(widths[key] * scale));
+      });
+      var fixed = flexSum(widths);
+      var drift = flexAvail - fixed;
+      if (drift !== 0) {
+        var growKey = 'name';
+        widths[growKey] = Math.max(COL_DEFS[growKey].min, widths[growKey] + drift);
+      }
+      table.style.width = '100%';
+    }
+
     COL_ORDER.forEach(function (key) {
       var col = table.querySelector('col[data-col="' + key + '"]');
       if (!col) return;
-      var w = Math.max(COL_DEFS[key].min, Math.round(widths[key]));
-      widths[key] = w;
-      col.style.width = w + 'px';
+      col.style.width = widths[key] + 'px';
+      col.style.minWidth = COL_DEFS[key].min + 'px';
+    });
+  }
+
+  /** Apply only the changed pair without renormalizing the whole table. */
+  function applyPairWidths(table, widths) {
+    COL_ORDER.forEach(function (key) {
+      var col = table.querySelector('col[data-col="' + key + '"]');
+      if (!col) return;
+      col.style.width = widths[key] + 'px';
       col.style.minWidth = COL_DEFS[key].min + 'px';
     });
     var wrap = table.closest('.boxies-showrooms-wrap');
-    var minFill = wrap ? wrap.clientWidth : 0;
-    table.style.width = Math.max(sumWidths(widths), minFill) + 'px';
+    var avail = wrap ? wrap.clientWidth : 0;
+    var total = widths.drag + flexSum(widths);
+    if (avail && total <= avail + 1) {
+      table.style.width = '100%';
+    } else {
+      table.style.width = total + 'px';
+    }
   }
 
   function measureColumnAutoWidth(table, colKey) {
@@ -149,28 +240,44 @@ var BoxiesProjectsPage = (function () {
       probe.style.whiteSpace = 'nowrap';
       var w = Math.ceil(probe.scrollWidth || probe.offsetWidth || 0);
       probe.style.whiteSpace = prev;
-      max = Math.max(max, w + 24);
+      max = Math.max(max, w + 28);
     });
     return max;
   }
 
+  function readRenderedWidths(table, widths) {
+    COL_ORDER.forEach(function (key) {
+      var th = table.querySelector('th[data-col="' + key + '"]');
+      if (th && th.offsetWidth > 0) {
+        widths[key] = th.offsetWidth;
+      }
+    });
+  }
+
   function bindColumnResize(table) {
     if (!table) return;
-    if (columnResizeCleanup) {
-      columnResizeCleanup();
-      columnResizeCleanup = null;
+    if (columnController && columnController.destroy) {
+      columnController.destroy();
+      columnController = null;
     }
 
     var widths = loadColumnWidths();
-    applyColumnWidths(table, widths);
+    layoutToContainer(table, widths);
 
     function onMove(e) {
       if (!columnResizeState) return;
       e.preventDefault();
-      var next = columnResizeState.startWidth + (e.clientX - columnResizeState.startX);
-      next = Math.max(COL_DEFS[columnResizeState.key].min, Math.round(next));
-      widths[columnResizeState.key] = next;
-      applyColumnWidths(table, widths);
+      var key = columnResizeState.key;
+      var neighbor = columnResizeState.neighbor;
+      var delta = e.clientX - columnResizeState.startX;
+      var pair = columnResizeState.startWidth + columnResizeState.startNeighbor;
+      var minKey = COL_DEFS[key].min;
+      var minN = COL_DEFS[neighbor].min;
+      var next = columnResizeState.startWidth + delta;
+      next = Math.max(minKey, Math.min(pair - minN, Math.round(next)));
+      widths[key] = next;
+      widths[neighbor] = pair - next;
+      applyPairWidths(table, widths);
     }
 
     function onUp() {
@@ -179,6 +286,7 @@ var BoxiesProjectsPage = (function () {
       columnResizeState = null;
       document.body.classList.remove('boxies-col-resizing');
       if (handle) handle.classList.remove('is-active');
+      readRenderedWidths(table, widths);
       saveColumnWidths(widths);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -188,13 +296,21 @@ var BoxiesProjectsPage = (function () {
       var handle = e.target.closest('.boxies-col-resizer');
       if (!handle || !table.contains(handle)) return;
       var key = handle.getAttribute('data-resize');
-      if (!key || !COL_DEFS[key] || !COL_DEFS[key].resizable) return;
+      if (!key || !COL_DEFS[key]) return;
+      var neighbor = getNeighborKey(key);
+      if (!neighbor) return;
+
       e.preventDefault();
       e.stopPropagation();
+
+      readRenderedWidths(table, widths);
+
       columnResizeState = {
         key: key,
+        neighbor: neighbor,
         startX: e.clientX,
         startWidth: widths[key],
+        startNeighbor: widths[neighbor],
         handle: handle
       };
       handle.classList.add('is-active');
@@ -207,30 +323,51 @@ var BoxiesProjectsPage = (function () {
       var handle = e.target.closest('.boxies-col-resizer');
       if (!handle || !table.contains(handle)) return;
       var key = handle.getAttribute('data-resize');
-      if (!key || !COL_DEFS[key] || !COL_DEFS[key].resizable) return;
+      if (!key || !COL_DEFS[key]) return;
+      var neighbor = getNeighborKey(key);
+      if (!neighbor) return;
+
       e.preventDefault();
       e.stopPropagation();
-      widths[key] = measureColumnAutoWidth(table, key);
-      applyColumnWidths(table, widths);
+
+      readRenderedWidths(table, widths);
+      var desired = measureColumnAutoWidth(table, key);
+      var pair = widths[key] + widths[neighbor];
+      var minKey = COL_DEFS[key].min;
+      var minN = COL_DEFS[neighbor].min;
+      var next = Math.max(minKey, Math.min(pair - minN, desired));
+      widths[key] = next;
+      widths[neighbor] = pair - next;
+      applyPairWidths(table, widths);
       saveColumnWidths(widths);
+    }
+
+    function onWinResize() {
+      layoutToContainer(table, widths);
     }
 
     table.addEventListener('mousedown', onDown);
     table.addEventListener('dblclick', onDblClick);
+    window.addEventListener('resize', onWinResize);
 
-    columnResizeCleanup = function () {
-      table.removeEventListener('mousedown', onDown);
-      table.removeEventListener('dblclick', onDblClick);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-      document.body.classList.remove('boxies-col-resizing');
-      columnResizeState = null;
+    columnController = {
+      relayout: function () {
+        layoutToContainer(table, widths);
+      },
+      destroy: function () {
+        table.removeEventListener('mousedown', onDown);
+        table.removeEventListener('dblclick', onDblClick);
+        window.removeEventListener('resize', onWinResize);
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        document.body.classList.remove('boxies-col-resizing');
+        columnResizeState = null;
+      }
     };
   }
 
   function thCell(key, label, opts) {
     opts = opts || {};
-    var resizable = COL_DEFS[key] && COL_DEFS[key].resizable;
     var cls = 'boxies-col-' + key + (opts.extraClass ? ' ' + opts.extraClass : '');
     var labelHtml = label
       ? '<span class="boxies-th-label">' + label + '</span>'
@@ -238,9 +375,10 @@ var BoxiesProjectsPage = (function () {
     var aria = opts.ariaLabel
       ? ' aria-label="' + escapeHtml(opts.ariaLabel) + '"'
       : '';
-    var resizer = resizable
-      ? '<span class="boxies-col-resizer" data-resize="' + key + '" title="Arrastrar para redimensionar"></span>'
-      : '';
+    var resizer =
+      '<span class="boxies-col-resizer" data-resize="' +
+      key +
+      '" title="Arrastrar para redimensionar"></span>';
     return (
       '<th class="' + cls + '" data-col="' + key + '"' + aria + '>' +
         labelHtml +
@@ -623,34 +761,36 @@ var BoxiesProjectsPage = (function () {
           '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
         '</header>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
-        '<div class="admin-table-wrap boxies-showrooms-wrap">' +
-          '<table class="admin-table boxies-showrooms-table" id="boxiesShowroomsTable">' +
-            '<colgroup>' +
-              '<col data-col="drag">' +
-              '<col data-col="name">' +
-              '<col data-col="slug">' +
-              '<col data-col="status">' +
-              '<col data-col="public">' +
-              '<col data-col="updated">' +
-              '<col data-col="actions">' +
-            '</colgroup>' +
-            '<thead><tr>' +
-              thCell('drag', '', { extraClass: 'boxies-showroom-drag-th', ariaLabel: 'Orden' }) +
-              thCell('name', 'Nombre') +
-              thCell('slug', 'Slug') +
-              thCell('status', 'Estado') +
-              thCell('public', 'Público') +
-              thCell('updated', 'Última modificación') +
-              thCell('actions', '', { ariaLabel: 'Acciones' }) +
-            '</tr></thead>' +
-            '<tbody id="boxiesProjectsBody"><tr><td colspan="7">Cargando…</td></tr></tbody>' +
-          '</table>' +
-          '<div class="boxies-showrooms-footer">' +
-            '<button type="button" class="boxies-action-btn" id="boxiesCreateShowroomBtn">' +
-              '+ Crear Showroom' +
-            '</button>' +
+        '<div class="boxies-showrooms-body">' +
+          '<div class="boxies-showrooms-wrap">' +
+            '<table class="admin-table boxies-showrooms-table" id="boxiesShowroomsTable">' +
+              '<colgroup>' +
+                '<col data-col="drag">' +
+                '<col data-col="name">' +
+                '<col data-col="slug">' +
+                '<col data-col="status">' +
+                '<col data-col="public">' +
+                '<col data-col="updated">' +
+                '<col data-col="actions">' +
+              '</colgroup>' +
+              '<thead><tr>' +
+                thCell('drag', '', { extraClass: 'boxies-showroom-drag-th', ariaLabel: 'Orden' }) +
+                thCell('name', 'Nombre') +
+                thCell('slug', 'Slug') +
+                thCell('status', 'Estado') +
+                thCell('public', 'Público') +
+                thCell('updated', 'Última modificación') +
+                thCell('actions', '', { ariaLabel: 'Acciones' }) +
+              '</tr></thead>' +
+              '<tbody id="boxiesProjectsBody"><tr><td colspan="7">Cargando…</td></tr></tbody>' +
+            '</table>' +
           '</div>' +
         '</div>' +
+        '<footer class="boxies-showrooms-workspace-footer">' +
+          '<button type="button" class="boxies-action-btn" id="boxiesCreateShowroomBtn">' +
+            '+ Crear Showroom' +
+          '</button>' +
+        '</footer>' +
       '</div>';
 
     bindOpenBuilder(host);
@@ -675,14 +815,12 @@ var BoxiesProjectsPage = (function () {
       var showrooms = await BoxiesAdmin2ProjectsApi.list({ scope: scope });
       if (!showrooms || !showrooms.length) {
         tbody.innerHTML = '<tr><td colspan="7">No hay showrooms registrados.</td></tr>';
+        if (columnController) columnController.relayout();
         return;
       }
       tbody.innerHTML = showrooms.map(row).join('');
       bindDragAndDrop(tbody);
-      applyColumnWidths(
-        document.getElementById('boxiesShowroomsTable'),
-        loadColumnWidths()
-      );
+      if (columnController) columnController.relayout();
     } catch (err) {
       tbody.innerHTML =
         '<tr><td colspan="7">' + escapeHtml(err.message || 'Error cargando showrooms') + '</td></tr>';
@@ -694,9 +832,9 @@ var BoxiesProjectsPage = (function () {
       window.removeEventListener('boxies:showroom-identity-changed', identityListener);
       identityListener = null;
     }
-    if (columnResizeCleanup) {
-      columnResizeCleanup();
-      columnResizeCleanup = null;
+    if (columnController && columnController.destroy) {
+      columnController.destroy();
+      columnController = null;
     }
     dragState = null;
     columnResizeState = null;
