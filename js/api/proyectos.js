@@ -188,9 +188,20 @@ var ProyectosApi = (function () {
    * Returns { project, verify }.
    */
   async function updateIdentity(id, payload) {
+    function trace(step, data) {
+      try {
+        if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
+        var entry = Object.assign({ t: Date.now(), step: step }, data || {});
+        window.__BOXIES_IDENTITY_TRACE__.push(entry);
+        console.log('[IDENTITY]', step, data || {});
+      } catch (e) {}
+    }
+
     if (!id) throw new Error('Falta el ID del showroom.');
     var nombre = AdminUI.normalizeOptionalText(payload && payload.nombre);
     var slug = normalizeIdentitySlug(payload && payload.slug);
+    trace('2_uuid_enviado_update', { id: id });
+    trace('4_payload_supabase', { id: id, nombre: nombre, slug: slug });
     if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
     if (!slug) throw new Error('El slug es obligatorio.');
     if (typeof ShowroomPublicUrl !== 'undefined') {
@@ -210,6 +221,13 @@ var ProyectosApi = (function () {
       .select(PROJECT_SELECT)
       .maybeSingle();
 
+    trace('5_respuesta_update', {
+      error: result.error
+        ? { message: result.error.message, code: result.error.code, details: result.error.details, hint: result.error.hint }
+        : null,
+      data: result.data
+    });
+
     if (result.error) throw mapDbError(result.error, 'Error actualizando identidad del showroom');
     if (!result.data) {
       throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
@@ -217,9 +235,16 @@ var ProyectosApi = (function () {
 
     var verify = await client
       .from('proyectos')
-      .select('nombre, slug')
+      .select('id, nombre, slug')
       .eq('id', id)
       .maybeSingle();
+
+    trace('6_select_inmediato', {
+      error: verify.error
+        ? { message: verify.error.message, code: verify.error.code }
+        : null,
+      data: verify.data
+    });
 
     if (verify.error) {
       throw mapDbError(verify.error, 'No se pudo verificar la identidad guardada.');

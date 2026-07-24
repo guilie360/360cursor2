@@ -1048,6 +1048,14 @@ var AiProjectBuilderView = (function () {
             constructoraId: resolveConstructoraIdForCheck()
           });
           if (seq !== slugCheckSeq) return;
+          try {
+            console.log('[IDENTITY]', 'slug_live_check', {
+              nextSlug: nextSlug,
+              excludeId: currentProjectId(),
+              result: result,
+              saveDisabledBefore: !!(saveBtn && saveBtn.disabled)
+            });
+          } catch (eLog) {}
           if (result.available) {
             setSlugCheck('✓ URL disponible', 'ok');
             if (saveBtn) saveBtn.disabled = false;
@@ -1061,6 +1069,12 @@ var AiProjectBuilderView = (function () {
         } catch (err) {
           if (seq !== slugCheckSeq) return;
           setSlugCheck(err.message || 'No se pudo validar el slug.', 'error');
+          try {
+            console.warn('[IDENTITY]', 'slug_live_check_error', {
+              message: err && err.message,
+              saveDisabled: !!(saveBtn && saveBtn.disabled)
+            });
+          } catch (e2) {}
         }
       }
 
@@ -1092,7 +1106,43 @@ var AiProjectBuilderView = (function () {
       }
 
       if (saveBtn) {
+        var actionsRow = saveBtn.parentNode;
+        if (actionsRow) {
+          actionsRow.addEventListener('click', function (e) {
+            var t = e.target;
+            if (!t || t.id !== 'showroomIdentitySaveBtn') return;
+            if (!t.disabled) return;
+            try {
+              if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
+              window.__BOXIES_IDENTITY_TRACE__.push({
+                t: Date.now(),
+                step: '0_click_bloqueado_disabled',
+                nombre: nameInput ? nameInput.value : null,
+                slug: slugInput ? slugInput.value : null,
+                slugCheck: slugCheckEl ? slugCheckEl.textContent : null
+              });
+              console.warn('[IDENTITY]', '0_click_bloqueado_disabled', {
+                slugCheck: slugCheckEl ? slugCheckEl.textContent : null
+              });
+            } catch (eBlock) {}
+          }, true);
+        }
         saveBtn.addEventListener('click', function () {
+          try {
+            if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
+            window.__BOXIES_IDENTITY_TRACE__.push({
+              t: Date.now(),
+              step: '0_click_guardar',
+              disabled: !!saveBtn.disabled,
+              nombre: nameInput ? nameInput.value : null,
+              slug: slugInput ? slugInput.value : null
+            });
+            console.log('[IDENTITY]', '0_click_guardar', {
+              disabled: !!saveBtn.disabled,
+              nombre: nameInput ? nameInput.value : null,
+              slug: slugInput ? slugInput.value : null
+            });
+          } catch (eClick) {}
           if (slugInput) slugInput.value = normalizeShowroomSlug(slugInput.value);
           syncPublicUrlPreview();
           handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl);
@@ -2048,6 +2098,19 @@ var AiProjectBuilderView = (function () {
   }
 
   async function handleSaveShowroomIdentity(nameInput, slugInput, saveBtn, statusEl) {
+    function trace(step, data) {
+      try {
+        if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
+        var entry = Object.assign({ t: Date.now(), step: step }, data || {});
+        window.__BOXIES_IDENTITY_TRACE__.push(entry);
+        console.log('[IDENTITY]', step, data || {});
+      } catch (e) {}
+    }
+
+    try {
+      window.__BOXIES_IDENTITY_TRACE__ = [];
+    } catch (e0) {}
+
     var fromDraft = state.draftProjectId || null;
     var fromPublish = (state.publishResult && state.publishResult.proyectoId) || null;
     var fromAdmin =
@@ -2062,12 +2125,28 @@ var AiProjectBuilderView = (function () {
 
     var projectId = fromDraft || fromPublish || fromAdmin || fromUrl;
 
+    trace('1_uuid_cargado_pantalla', {
+      projectId: projectId,
+      fromDraft: fromDraft,
+      fromPublish: fromPublish,
+      fromAdmin: fromAdmin,
+      fromUrl: fromUrl,
+      stateNombre: state.projectInfo && state.projectInfo.nombre,
+      stateSlug: state.projectInfo && state.projectInfo.slug
+    });
+
     if (!projectId) {
+      trace('STOP_sin_uuid', {});
       if (statusEl) statusEl.textContent = 'Abre un showroom existente para guardar la identidad.';
       AdminNotify.error('No hay un showroom vinculado (falta ID).');
       return;
     }
     if (typeof ProyectosApi === 'undefined' || typeof ProyectosApi.updateIdentity !== 'function') {
+      trace('STOP_api_ausente', {
+        hasProyectosApi: typeof ProyectosApi !== 'undefined',
+        hasUpdateIdentity: typeof ProyectosApi !== 'undefined' && typeof ProyectosApi.updateIdentity === 'function',
+        hasAdminApi: typeof AdminApi !== 'undefined'
+      });
       AdminNotify.error('API de identidad no disponible.');
       return;
     }
@@ -2075,16 +2154,27 @@ var AiProjectBuilderView = (function () {
     var nombre = nameInput ? String(nameInput.value || '').trim() : '';
     var slug = normalizeShowroomSlug(slugInput ? slugInput.value : '');
 
+    trace('3_inputs', {
+      nombreInput: nameInput ? nameInput.value : null,
+      slugInput: slugInput ? slugInput.value : null,
+      nombre: nombre,
+      slug: slug,
+      saveBtnDisabled: !!(saveBtn && saveBtn.disabled)
+    });
+
     if (!nombre || !slug) {
+      trace('STOP_inputs_vacios', { nombre: nombre, slug: slug });
       if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
       return;
     }
     if (typeof ShowroomPublicUrl !== 'undefined') {
       if (ShowroomPublicUrl.isReservedSlug(slug)) {
+        trace('STOP_slug_reservado', { slug: slug });
         if (statusEl) statusEl.textContent = 'Ese slug está reservado.';
         return;
       }
       if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
+        trace('STOP_slug_invalido', { slug: slug });
         if (statusEl) statusEl.textContent = 'Slug inválido.';
         return;
       }
@@ -2097,15 +2187,21 @@ var AiProjectBuilderView = (function () {
           excludeId: projectId,
           constructoraId: constructoraId
         });
+        trace('3b_slug_availability', availability);
         if (!availability.available) {
           var msg = availability.reason === 'reserved'
             ? 'Ese slug está reservado.'
             : 'Ese slug ya pertenece a otro Showroom.';
+          trace('STOP_slug_no_disponible', { msg: msg, availability: availability });
           if (statusEl) statusEl.textContent = msg;
           AdminNotify.error(msg);
           return;
         }
-      } catch (checkErr) {}
+      } catch (checkErr) {
+        trace('3b_slug_availability_error', {
+          message: checkErr && checkErr.message
+        });
+      }
     }
 
     if (saveBtn) saveBtn.disabled = true;
@@ -2171,11 +2267,21 @@ var AiProjectBuilderView = (function () {
         }));
       } catch (evErr) {}
 
+      trace('8_datos_render', {
+        id: updated.id,
+        nombre: state.projectInfo.nombre,
+        slug: state.projectInfo.slug
+      });
+
       if (statusEl) statusEl.textContent = 'Identidad guardada.';
       AdminNotify.success('Identidad guardada en la base: /' + state.projectInfo.slug);
       renderStepContent();
       updateNavButtons();
     } catch (err) {
+      trace('STOP_error', {
+        message: err && err.message,
+        stack: err && err.stack
+      });
       if (statusEl) statusEl.textContent = err.message || 'Error al guardar.';
       AdminNotify.error(err.message || 'Error al guardar identidad');
     } finally {
@@ -2342,6 +2448,23 @@ var AiProjectBuilderView = (function () {
     } catch (err) {
       console.warn('[Builder] bind project', err);
     }
+
+    try {
+      if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
+      window.__BOXIES_IDENTITY_TRACE__.push({
+        t: Date.now(),
+        step: '7_uuid_reload_pantalla',
+        draftProjectId: state.draftProjectId,
+        nombre: state.projectInfo && state.projectInfo.nombre,
+        slug: state.projectInfo && state.projectInfo.slug,
+        url: window.location.href
+      });
+      console.log('[IDENTITY]', '7_uuid_reload_pantalla', {
+        draftProjectId: state.draftProjectId,
+        nombre: state.projectInfo && state.projectInfo.nombre,
+        slug: state.projectInfo && state.projectInfo.slug
+      });
+    } catch (traceErr) {}
 
     bindGlobalEvents();
     renderAll();

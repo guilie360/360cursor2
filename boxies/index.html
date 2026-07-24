@@ -16,6 +16,17 @@
   <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
 </head>
 <body class="boxies-host">
+  <script>
+    /* Identity debug probe — must exist before any builder click */
+    window.__BOXIES_IDENTITY_PROBE__ = 'ws54i';
+    window.__BOXIES_IDENTITY_TRACE__ = [{
+      t: Date.now(),
+      step: 'boot',
+      probe: 'ws54i',
+      href: String(location.href || '')
+    }];
+    console.log('[IDENTITY] boot probe=ws54i');
+  </script>
 
   <!-- Login (outside Shell) -->
   <div id="bxLoginView" class="hall-login-page boxies-login" hidden>
@@ -128,9 +139,9 @@
   <script src="../js/builder/engines/publishing-engine.js?v=ws54"></script>
   <script src="../js/boxies/app-shell-legacy.js?v=ws54"></script>
   <script src="../js/shared/showroom-public-url.js?v=ws50"></script>
-  <script src="../js/builder/ai-project-builder.js?v=ws54"></script>
+  <script src="../js/builder/ai-project-builder.js?v=ws54i"></script>
   <script src="../js/builder/platform-bridge.js?v=ws54"></script>
-  <script src="../js/api/proyectos.js?v=ws54"></script>
+  <script src="../js/api/proyectos.js?v=ws54i"></script>
 
   <!-- Showrooms list API -->
   <script src="../js/boxies/showroom-scope.js?v=ws54"></script>
