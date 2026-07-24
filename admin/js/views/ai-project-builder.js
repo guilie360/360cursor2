@@ -218,6 +218,25 @@ var AiProjectBuilderView = (function () {
   function renderVideoHero() {
     var v = state.heroVideo;
     var img = state.heroImage;
+    /* TEMP egress: nunca renderizar <video src> con URL remota de Storage */
+    if (v && !v.file) {
+      var raw = v.previewUrl || v.uploadedUrl || '';
+      if (
+        v.status === 'remote' ||
+        (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(raw)) ||
+        (typeof isPlayableHeroVideoUrl === 'function' && raw && !isPlayableHeroVideoUrl(raw))
+      ) {
+        v = null;
+        state.heroVideo = null;
+      }
+    }
+    var localVideoPreview =
+      v && v.previewUrl &&
+      (typeof isPlayableHeroVideoUrl === 'function'
+        ? isPlayableHeroVideoUrl(v.previewUrl)
+        : String(v.previewUrl).indexOf('blob:') === 0)
+        ? v.previewUrl
+        : null;
     var hero = state.heroContent || {};
     var nombre = hero.nombre || (state.projectInfo && state.projectInfo.nombre) || '';
     var eslogan = hero.eslogan || '';
@@ -232,15 +251,16 @@ var AiProjectBuilderView = (function () {
       stepTitleHtml('Hero') +
       '<p class="builder-step-desc">Elige video o imagen de fondo para la portada del showroom. Solo se usa uno a la vez.</p>' +
       '<div class="builder-hero-grid">' +
-        '<div class="builder-hero-option' + (v && v.previewUrl ? ' is-active' : '') + '">' +
+        '<div class="builder-hero-option' + (localVideoPreview ? ' is-active' : '') + '">' +
           '<div class="builder-hero-option-head"><span class="builder-hero-option-label">Video</span>' +
-            (v && v.previewUrl ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+            (localVideoPreview ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
           '</div>' +
           '<div class="builder-dropzone builder-dropzone-large" id="videoDropzone">' +
-            (v && v.previewUrl
-              ? '<video src="' + AdminUI.escapeHtml(v.previewUrl) + '" controls muted class="builder-video-preview"></video>' +
+            (localVideoPreview
+              ? '<video src="' + AdminUI.escapeHtml(localVideoPreview) + '" controls muted class="builder-video-preview"></video>' +
                 '<div class="builder-file-meta">Duración: ' + AdminUI.escapeHtml(v.durationLabel || '-') + ' · ' + formatBytes(v.size) + '</div>'
-              : '<div class="builder-dropzone-inner"><span>Arrastra MP4, MOV o WebM</span><span class="builder-dropzone-hint">Máx. 200 MB</span></div>') +
+              : '<div class="builder-hero-ambient-placeholder" aria-hidden="true"></div>' +
+                '<div class="builder-dropzone-inner"><span>Arrastra MP4, MOV o WebM</span><span class="builder-dropzone-hint">Máx. 200 MB · preview solo local</span></div>') +
           '</div>' +
           '<input type="file" id="videoInput" accept="' + MediaEngine.ACCEPT + '" hidden>' +
         '</div>' +
@@ -253,7 +273,8 @@ var AiProjectBuilderView = (function () {
             (img && img.previewUrl
               ? '<img src="' + AdminUI.escapeHtml(img.previewUrl) + '" alt="" class="builder-hero-image-preview">' +
                 '<div class="builder-file-meta">' + AdminUI.escapeHtml(img.name) + ' · ' + formatBytes(img.size) + '</div>'
-              : '<div class="builder-dropzone-inner"><span>Arrastra JPG, PNG o WebP</span><span class="builder-dropzone-hint">Máx. 20 MB</span></div>') +
+              : '<div class="builder-hero-ambient-placeholder" aria-hidden="true"></div>' +
+                '<div class="builder-dropzone-inner"><span>Arrastra JPG, PNG o WebP</span><span class="builder-dropzone-hint">Máx. 20 MB</span></div>') +
           '</div>' +
           '<input type="file" id="heroImageInput" accept="' + MediaEngine.IMAGE_ACCEPT + '" hidden>' +
         '</div>' +

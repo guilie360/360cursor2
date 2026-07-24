@@ -128,21 +128,33 @@ var VisitorMenu = (function () {
   }
 
   function adminBuilderHref() {
-    /* Platform builder — same Supabase session as showroom (profiles.rol = admin).
-       Never send Administrar to /admin2 or constructora dashboard.html (AdminAuth). */
-    if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
-      return AuthRedirects.adminBuilder();
-    }
+    /* V5.3.2 — Administrar opens canonical /boxies builder by UUID when known. */
     try {
-      var url = new URL('admin/ai-project-builder.html', window.location.href);
-      var proyecto =
-        typeof getProjectSlugFromUrl === 'function'
+      var project =
+        (typeof window !== 'undefined' && window.PROJECT_DATA) ||
+        (typeof PROJECT_DATA !== 'undefined' ? PROJECT_DATA : null);
+      var id = project && project.id ? String(project.id) : '';
+      var slug =
+        (project && project.slug) ||
+        (typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
-          : new URLSearchParams(window.location.search).get('proyecto');
-      if (proyecto) url.searchParams.set('proyecto', proyecto);
-      return url.href;
+          : new URLSearchParams(window.location.search).get('proyecto')) ||
+        '';
+      if (id) {
+        var qs = 'page=builder&projectId=' + encodeURIComponent(id);
+        if (slug) {
+          qs +=
+            '&project=' + encodeURIComponent(slug) +
+            '&proyecto=' + encodeURIComponent(slug);
+        }
+        return new URL('/boxies/?' + qs, window.location.origin).href;
+      }
+      if (typeof AuthRedirects !== 'undefined' && typeof AuthRedirects.adminBuilder === 'function') {
+        return AuthRedirects.adminBuilder();
+      }
+      return new URL('/boxies/?page=projects', window.location.origin).href;
     } catch (e) {
-      return 'admin/ai-project-builder.html';
+      return '/boxies/?page=projects';
     }
   }
 

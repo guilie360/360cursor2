@@ -30,16 +30,22 @@ var ViviendasSyncEngine = (function () {
       return HeroSyncEngine.getSlugFromUrl();
     }
     try {
-      var slug = new URLSearchParams(window.location.search).get('proyecto');
-      if (slug) return slug;
+      var slug = new URLSearchParams(window.location.search).get('proyecto') ||
+        new URLSearchParams(window.location.search).get('project');
+      if (slug && !/^[0-9a-f-]{36}$/i.test(slug)) return slug;
     } catch (e) {}
-    return typeof DEFAULT_PROJECT_SLUG !== 'undefined' ? DEFAULT_PROJECT_SLUG : null;
+    return null;
   }
 
   function getProjectIdFromUrl() {
     if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl) {
       return HeroSyncEngine.getProjectIdFromUrl();
     }
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      var id = params.get('projectId') || params.get('proyectoId');
+      if (id && /^[0-9a-f-]{36}$/i.test(id)) return id;
+    } catch (e) {}
     return null;
   }
 
@@ -267,7 +273,8 @@ var ViviendasSyncEngine = (function () {
     return result.data || null;
   }
 
-  async function resolveProject(state) {
+  async function resolveProject(state, options) {
+    options = options || {};
     var id = getProjectIdFromUrl() ||
       (state && state.draftProjectId) ||
       (state && state.publishResult && state.publishResult.proyectoId) ||
@@ -275,8 +282,9 @@ var ViviendasSyncEngine = (function () {
     if (id) {
       var byId = await fetchProjectById(id);
       if (byId) return byId;
-      return null;
+      if (options.requireUuid) return null;
     }
+    if (options.requireUuid) return null;
     var slug = getSlugFromUrl();
     if (slug) return fetchProjectBySlug(slug);
     return null;
@@ -400,12 +408,11 @@ var ViviendasSyncEngine = (function () {
     if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
       throw new Error('Sesión admin no lista. Recarga BOXIES AI e inicia sesión de nuevo.');
     }
-    var project = await resolveProject(state);
+    var project = await resolveProject(state, { requireUuid: true });
     if (!project) {
-      if (options.requireProject) {
-        throw new Error('Abre el builder desde el showroom del proyecto para sincronizar viviendas.');
-      }
-      return null;
+      throw new Error(
+        'Falta el UUID del showroom. Ábrelo desde Showrooms → Administrar para sincronizar viviendas.'
+      );
     }
 
     state.draftProjectId = project.id;

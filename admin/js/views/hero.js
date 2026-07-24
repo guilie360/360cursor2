@@ -124,24 +124,27 @@ var HeroView = (function () {
       }
     }
 
-    if (values.video_hero_url && videoEl && videoSource) {
-      videoSource.src = values.video_hero_url;
-      videoEl.style.display = 'block';
-      videoEl.load();
-      videoEl.muted = true;
-      videoEl.play().catch(function () {});
-      if (imageEl) imageEl.style.display = 'none';
-    } else {
-      if (videoEl) videoEl.style.display = 'none';
-      if (imageEl) {
-        if (values.imagen_hero_url) {
-          imageEl.src = values.imagen_hero_url;
-          imageEl.style.display = 'block';
-        } else {
-          imageEl.removeAttribute('src');
-          imageEl.style.display = 'none';
-        }
+    /* TEMP egress: nunca asignar video_hero_url remoto a <video> */
+    if (videoEl) {
+      videoEl.style.display = 'none';
+      try { videoEl.pause(); } catch (eV) { /* ignore */ }
+      if (videoSource) {
+        videoSource.removeAttribute('src');
+        try { videoSource.src = ''; } catch (eS) { /* ignore */ }
       }
+      videoEl.removeAttribute('src');
+    }
+    if (imageEl) {
+      if (values.imagen_hero_url) {
+        imageEl.src = values.imagen_hero_url;
+        imageEl.style.display = 'block';
+      } else {
+        imageEl.removeAttribute('src');
+        imageEl.style.display = 'none';
+      }
+    }
+    if (preview) {
+      preview.classList.toggle('is-ambient-depth', !values.imagen_hero_url);
     }
 
     var accentSwatch = rootEl.querySelector('#heroAccentSwatch');
@@ -151,26 +154,51 @@ var HeroView = (function () {
   function renderMediaField(key, config) {
     var rule = MEDIA_RULES[key];
     var url = config[rule.field];
-    var hasMedia = !!url;
+    var hasRemoteVideo =
+      key === 'video' && url &&
+      (typeof isRemoteHeroVideoUrl === 'function'
+        ? isRemoteHeroVideoUrl(url)
+        : /^https?:\/\//i.test(String(url)));
+    var playableVideo =
+      key === 'video' && url &&
+      (typeof sanitizeHeroVideoUrl === 'function' ? sanitizeHeroVideoUrl(url) : null);
+    var hasMedia = key === 'video' ? !!playableVideo : !!url;
+
+    var previewHtml;
+    if (key === 'video') {
+      if (playableVideo) {
+        previewHtml =
+          '<video src="' + AdminUI.escapeHtml(playableVideo) +
+          '" muted playsinline controls class="hero-media-thumb"></video>';
+      } else if (hasRemoteVideo) {
+        previewHtml =
+          '<div class="hero-media-ambient-placeholder" role="img" aria-label="Fondo ambient">' +
+            '<span class="hero-media-ambient-title">Video remoto desactivado</span>' +
+            '<span class="hero-media-ambient-hint">Sube un archivo local para previsualizar</span>' +
+          '</div>';
+      } else {
+        previewHtml = '<span class="hero-media-empty">Sin archivo</span>';
+      }
+    } else if (url) {
+      previewHtml = '<img src="' + AdminUI.escapeHtml(url) + '" alt="" class="hero-media-thumb">';
+    } else {
+      previewHtml = '<span class="hero-media-empty">Sin archivo</span>';
+    }
 
     return (
       '<div class="hero-media-field" data-media="' + key + '">' +
         '<div class="hero-media-head">' +
           '<label>' + rule.label + '</label>' +
-          (hasMedia
+          ((hasMedia || hasRemoteVideo)
             ? '<button type="button" class="btn-ghost btn-compact" data-action="remove-media" data-media="' + key + '">Eliminar</button>'
             : '') +
         '</div>' +
         '<div class="hero-media-preview" id="mediaPreview-' + key + '">' +
-          (hasMedia
-            ? (key === 'video'
-              ? '<video src="' + AdminUI.escapeHtml(url) + '" muted playsinline controls class="hero-media-thumb"></video>'
-              : '<img src="' + AdminUI.escapeHtml(url) + '" alt="" class="hero-media-thumb">')
-            : '<span class="hero-media-empty">Sin archivo</span>') +
+          previewHtml +
         '</div>' +
         '<label class="btn-ghost btn-compact hero-upload-btn">' +
           '<input type="file" accept="' + rule.accept + '" data-upload="' + key + '" hidden>' +
-          (hasMedia ? 'Reemplazar' : 'Subir') +
+          ((hasMedia || hasRemoteVideo) ? 'Reemplazar' : 'Subir') +
         '</label>' +
         '<div class="admin-help" id="mediaStatus-' + key + '"></div>' +
       '</div>'
@@ -273,10 +301,22 @@ var HeroView = (function () {
       return;
     }
     if (key === 'video') {
-      preview.innerHTML = '<video src="' + AdminUI.escapeHtml(url) + '" muted playsinline controls class="hero-media-thumb"></video>';
-    } else {
-      preview.innerHTML = '<img src="' + AdminUI.escapeHtml(url) + '" alt="" class="hero-media-thumb">';
+      var playable =
+        typeof sanitizeHeroVideoUrl === 'function' ? sanitizeHeroVideoUrl(url) : null;
+      if (playable) {
+        preview.innerHTML =
+          '<video src="' + AdminUI.escapeHtml(playable) +
+          '" muted playsinline controls class="hero-media-thumb"></video>';
+      } else {
+        preview.innerHTML =
+          '<div class="hero-media-ambient-placeholder" role="img" aria-label="Fondo ambient">' +
+            '<span class="hero-media-ambient-title">Video remoto desactivado</span>' +
+            '<span class="hero-media-ambient-hint">Sube un archivo local para previsualizar</span>' +
+          '</div>';
+      }
+      return;
     }
+    preview.innerHTML = '<img src="' + AdminUI.escapeHtml(url) + '" alt="" class="hero-media-thumb">';
   }
 
   function refreshMediaFieldChrome(key) {
@@ -492,7 +532,15 @@ var HeroView = (function () {
     try {
       var data = await HeroApi.getForProject(projectId);
       state.project = data.project;
-      state.config = data.config;
+      state.config = data.config || {};
+      /* TEMP egress: no conservar URL remota de vídeo en el editor */
+      if (
+        state.config.video_hero_url &&
+        typeof isRemoteHeroVideoUrl === 'function' &&
+        isRemoteHeroVideoUrl(state.config.video_hero_url)
+      ) {
+        state.config.video_hero_url = null;
+      }
       state.dirty = false;
       rootEl.innerHTML = renderEditor();
       bindFormEvents();

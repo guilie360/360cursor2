@@ -88,7 +88,7 @@ var AdminDashboard = (function () {
       hero_text_color: getSelectedHeroTextColor(),
       hero_button_text_color: getSelectedHeroButtonTextColor(),
       imagen_hero_url: state.pendingImageUrl || (state.config && state.config.imagen_hero_url) || null,
-      video_hero_url: state.pendingImageUrl ? null : (state.config && state.config.video_hero_url) || null,
+      video_hero_url: null,
       logo_url: state.config ? state.config.logo_url : null
     };
   }

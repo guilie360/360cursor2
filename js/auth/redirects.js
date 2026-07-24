@@ -62,27 +62,36 @@ var AuthRedirects = (function () {
   }
 
   function adminBuilder() {
-    var url = new URL('admin/ai-project-builder.html', window.location.href);
+    /* V5.3.2 — canonical product host is /boxies (UUID when known). */
     try {
-      var proyecto =
-        typeof getProjectSlugFromUrl === 'function'
+      var project =
+        (typeof window !== 'undefined' && window.PROJECT_DATA) || null;
+      var id = project && project.id ? String(project.id) : '';
+      var slug =
+        (project && project.slug) ||
+        (typeof getProjectSlugFromUrl === 'function'
           ? getProjectSlugFromUrl()
-          : new URLSearchParams(window.location.search).get('proyecto');
-      if (proyecto) url.searchParams.set('proyecto', proyecto);
-    } catch (e) {}
-    return url.href;
+          : new URLSearchParams(window.location.search).get('proyecto')) ||
+        '';
+      var url = new URL('/boxies/', window.location.origin);
+      if (id) {
+        url.searchParams.set('page', 'builder');
+        url.searchParams.set('projectId', id);
+        if (slug) {
+          url.searchParams.set('project', slug);
+          url.searchParams.set('proyecto', slug);
+        }
+      } else {
+        url.searchParams.set('page', 'projects');
+      }
+      return url.href;
+    } catch (e) {
+      return origin() + '/boxies/';
+    }
   }
 
   function adminDashboard() {
-    var url = new URL('admin/dashboard.html', window.location.href);
-    try {
-      var proyecto =
-        typeof getProjectSlugFromUrl === 'function'
-          ? getProjectSlugFromUrl()
-          : new URLSearchParams(window.location.search).get('proyecto');
-      if (proyecto) url.searchParams.set('proyecto', proyecto);
-    } catch (e) {}
-    return url.href;
+    return origin() + '/boxies/';
   }
 
   function requiredAllowlist() {

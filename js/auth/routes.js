@@ -2,7 +2,7 @@ try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/auth/rou
 /* Role-based routing — prepared for future dashboards */
 var AuthRouter = (function () {
   var DESTINATIONS = {
-    staff: '/admin/dashboard.html',
+    staff: '/boxies/',
     visitante: '/auth/cuenta.html',
     asesor: '/auth/cuenta.html',
     cliente: '/auth/cuenta.html',

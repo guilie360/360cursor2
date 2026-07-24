@@ -100,6 +100,41 @@ var PROJECT_DEFAULT_THEME_FALLBACK = {
 var PROJECT_DEFAULT_STYLE_NAME = 'HALL';
 var PROJECT_DEFAULT_STYLE_ID = 'project-default-hall';
 
+/**
+ * TEMP Cached Egress guard — never assign Supabase Storage URLs to <video>.
+ * Local blob:/data: previews (fresh uploads) remain allowed.
+ */
+function isLocalMediaUrl(url) {
+  var u = String(url || '');
+  return u.indexOf('blob:') === 0 || u.indexOf('data:') === 0;
+}
+
+function isSupabaseStorageUrl(url) {
+  var u = String(url || '');
+  if (!u) return false;
+  return (
+    u.indexOf('/storage/v1/object/') !== -1 ||
+    u.indexOf('supabase.co/storage') !== -1 ||
+    u.indexOf('proyectos-media/') !== -1
+  );
+}
+
+/** Only blob/data URLs may be set on <video src> while egress guard is active. */
+function isPlayableHeroVideoUrl(url) {
+  return isLocalMediaUrl(url);
+}
+
+function sanitizeHeroVideoUrl(url) {
+  return isPlayableHeroVideoUrl(url) ? String(url) : null;
+}
+
+function isRemoteHeroVideoUrl(url) {
+  var u = String(url || '');
+  if (!u) return false;
+  if (isLocalMediaUrl(u)) return false;
+  return /^https?:\/\//i.test(u) || isSupabaseStorageUrl(u);
+}
+
 /* Configuración del extractor de temas (sin LLM para colores) */
 var THEME_AI_CONFIG = {
   provider: 'extract-only',

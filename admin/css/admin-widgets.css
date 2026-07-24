@@ -318,6 +318,44 @@ body.admin-modal-open { overflow: hidden; }
   font-size: 13px;
 }
 
+.hero-media-ambient-placeholder {
+  width: 100%;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  text-align: center;
+  background-color: #050505;
+  background-image:
+    radial-gradient(ellipse 68% 52% at 50% 42%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.014) 32%, transparent 68%),
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(0,0,0,0.72) 0%, transparent 58%),
+    linear-gradient(165deg, #080808 0%, #050505 42%, #030303 100%);
+  border-radius: 10px;
+}
+
+.hero-media-ambient-title {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hero-media-ambient-hint {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 12px;
+}
+
+.hero-preview.is-ambient-depth {
+  background-color: #050505;
+  background-image:
+    radial-gradient(ellipse 68% 52% at 50% 42%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.014) 32%, transparent 68%),
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(0,0,0,0.72) 0%, transparent 58%),
+    linear-gradient(165deg, #080808 0%, #050505 42%, #030303 100%);
+}
+
 .hero-upload-btn {
   display: inline-flex;
   align-items: center;

@@ -25,14 +25,21 @@ var BoxiesAdmin2Projects = (function () {
     return '<span class="admin-badge badge-muted">' + escapeHtml(estado) + '</span>';
   }
 
-  function builderHref(slug) {
-    return '../admin/ai-project-builder.html?proyecto=' + encodeURIComponent(slug || '');
+  function builderHref(project) {
+    var id = project && project.id ? String(project.id) : '';
+    var slug = project && project.slug ? String(project.slug) : '';
+    if (id) {
+      var qs = 'page=builder&projectId=' + encodeURIComponent(id);
+      if (slug) qs += '&project=' + encodeURIComponent(slug) + '&proyecto=' + encodeURIComponent(slug);
+      return '/boxies/?' + qs;
+    }
+    return '/boxies/?page=projects';
   }
 
   function row(project) {
     var slug = project.slug || '';
     var name = project.nombre || slug || 'Sin nombre';
-    var openHref = builderHref(slug);
+    var openHref = builderHref(project);
     return (
       '<tr>' +
         '<td>' +
@@ -42,7 +49,7 @@ var BoxiesAdmin2Projects = (function () {
         '<td>' + statusBadge(project) + '</td>' +
         '<td>' + escapeHtml(formatDate(project.updated_at)) + '</td>' +
         '<td class="table-actions">' +
-          '<a class="builder-header-action-btn" href="' + escapeHtml(openHref) + '">Administrar</a>' +
+          '<a class="builder-header-action-btn" href="' + escapeHtml(openHref) + '">Administrar en BOXIES</a>' +
         '</td>' +
       '</tr>'
     );
@@ -54,7 +61,7 @@ var BoxiesAdmin2Projects = (function () {
         '<div class="builder-step-title-row">' +
           '<h1 class="builder-step-title">Proyectos</h1>' +
         '</div>' +
-        '<p class="builder-step-desc">Abre el Builder oficial de cada showroom. Un solo CMS por proyecto.</p>' +
+        '<p class="builder-step-desc">Adaptador de compatibilidad: abre el Builder canónico en <strong>/boxies</strong> (UUID). No desarrollar features nuevas aquí.</p>' +
         '<div class="admin-table-wrap">' +
           '<table class="admin-table">' +
             '<thead><tr>' +

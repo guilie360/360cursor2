@@ -76,7 +76,21 @@ var BuilderSession = (function () {
     try {
       var raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return emptyState();
-      return Object.assign(emptyState(), JSON.parse(raw));
+      var state = Object.assign(emptyState(), JSON.parse(raw));
+      /* TEMP egress: purgar heroVideo remoto persistido (URLs Storage / status remote) */
+      if (state.heroVideo && !state.heroVideo.file) {
+        var p = state.heroVideo.previewUrl || '';
+        var u = state.heroVideo.uploadedUrl || '';
+        if (
+          state.heroVideo.status === 'remote' ||
+          /^https?:\/\//i.test(p) ||
+          /^https?:\/\//i.test(u) ||
+          (p && p.indexOf('blob:') !== 0 && p.indexOf('data:') !== 0)
+        ) {
+          state.heroVideo = null;
+        }
+      }
+      return state;
     } catch (e) {
       return emptyState();
     }

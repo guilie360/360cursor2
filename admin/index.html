@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BOXIES | Acceso</title>
+  <meta http-equiv="refresh" content="0;url=/boxies/">
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
@@ -18,6 +19,8 @@
     } catch (e) {
       document.documentElement.classList.add('theme-ready');
     }
+    /* V5.3.2 — /admin is a compatibility adapter; product host is /boxies */
+    try { window.location.replace('/boxies/'); } catch (e2) {}
   </script>
 </head>
 <body class="login-page hall-login">
@@ -25,11 +28,13 @@
     <div class="login-card hall-card">
       <div class="hall-login-brand">BOXIES</div>
       <h2 class="auth-gate-title">Plataforma</h2>
-      <p class="auth-view-lead">Elige a dónde quieres entrar. Misma identidad visual en toda BOXIES.</p>
+      <p class="auth-view-lead">
+        El panel canónico es <strong>/boxies</strong>.
+        Esta ruta (<code>/admin</code>) queda como adaptador de compatibilidad.
+      </p>
       <div class="auth-oauth-row">
-        <a class="outline-btn auth-action-btn" href="login.html">Panel administrativo</a>
-        <a class="outline-btn auth-action-btn" href="../admin2/">Dashboard Global</a>
-        <a class="outline-btn auth-action-btn" href="../demo1">Showroom</a>
+        <a class="outline-btn auth-action-btn" href="/boxies/">Continuar a BOXIES</a>
+        <a class="outline-btn auth-action-btn" href="dashboard.html">CMS legacy (solo lectura / compat)</a>
       </div>
     </div>
   </div>

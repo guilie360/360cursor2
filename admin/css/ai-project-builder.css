@@ -855,10 +855,34 @@ body.boxies-rail-collapsed .builder-progress-sidebar {
 .builder-dropzone-icon { display: none; }
 .builder-dropzone-hint { font-size: 11px; opacity: 0.65; }
 
+.builder-hero-ambient-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: #050505;
+  background-image:
+    radial-gradient(ellipse 68% 52% at 50% 42%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.014) 32%, transparent 68%),
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(0,0,0,0.72) 0%, transparent 58%),
+    linear-gradient(165deg, #080808 0%, #050505 42%, #030303 100%);
+  border-radius: inherit;
+}
+
+.builder-dropzone-large {
+  position: relative;
+}
+
+.builder-dropzone-large .builder-dropzone-inner {
+  position: relative;
+  z-index: 1;
+}
+
 .builder-video-preview {
   max-width: 100%;
   max-height: 260px;
   border-radius: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .builder-hero-grid {

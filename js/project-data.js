@@ -260,14 +260,16 @@ function applyHeroModule(project) {
   var sourceEl = document.getElementById('coverVideoSource');
   var imageEl = document.getElementById('coverImage');
   var coverEl = document.getElementById('projectCover');
-  var slug = String(project.slug || '').toLowerCase();
-  /* TEMP: demos sin media de red — fondo OLED CSS mientras se frena Cached Egress */
-  var ambientDemo = slug === 'demo1' || slug === 'demo2' || slug === 'demo3' || slug === 'valhalla';
-  var hasVideo = !ambientDemo && !!config.video_hero_url;
-  var hasImage = !ambientDemo && !!config.imagen_hero_url;
+  /* TEMP egress: nunca cargar vídeo remoto de Storage en el Hero */
+  var playableVideo =
+    typeof sanitizeHeroVideoUrl === 'function'
+      ? sanitizeHeroVideoUrl(config.video_hero_url)
+      : null;
+  var hasVideo = !!playableVideo;
+  var hasImage = !!config.imagen_hero_url;
 
   if (coverEl) {
-    coverEl.classList.toggle('is-ambient-depth', ambientDemo || (!hasVideo && !hasImage));
+    coverEl.classList.toggle('is-ambient-depth', !hasVideo && !hasImage);
   }
 
   function clearCoverVideo() {
@@ -279,13 +281,12 @@ function applyHeroModule(project) {
       try { videoEl.pause(); } catch (e1) { /* ignore */ }
       videoEl.removeAttribute('src');
       videoEl.style.display = 'none';
-      /* No llamar load()/play() sin src de red */
     }
   }
 
   if (hasVideo && videoEl && sourceEl) {
-    sourceEl.src = config.video_hero_url;
-    sourceEl.type = guessVideoMimeType(config.video_hero_url);
+    sourceEl.src = playableVideo;
+    sourceEl.type = guessVideoMimeType(playableVideo);
     videoEl.style.display = '';
     videoEl.muted = true;
     videoEl.preload = 'metadata';
@@ -387,6 +388,12 @@ function guessVideoMimeType(url) {
 
 function setProjectVideoSource(player, sourceEl, url, mimeType) {
   if (!player || !sourceEl || !url) return;
+  if (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(url)) {
+    return;
+  }
+  if (typeof isPlayableHeroVideoUrl === 'function' && !isPlayableHeroVideoUrl(url) && /^https?:/i.test(String(url))) {
+    return;
+  }
   sourceEl.src = url;
   sourceEl.type = mimeType || guessVideoMimeType(url);
   player.load();
@@ -403,13 +410,16 @@ function clearProjectVideoSource(player, sourceEl) {
   }
 }
 
-/** Asigna src de Storage solo al reproducir (nunca en boot). */
+/** Asigna src solo si es local (blob/data). Nunca Storage remoto. */
 function ensureProjectVideoSourceForPlayback() {
   var player = document.getElementById('projectVideoPlayer');
   var sourceEl = document.getElementById('projectVideoSource');
   if (!player || !sourceEl) return Promise.resolve(false);
 
-  var pending = player.dataset.pendingVideoUrl || '';
+  var pending =
+    typeof sanitizeHeroVideoUrl === 'function'
+      ? sanitizeHeroVideoUrl(player.dataset.pendingVideoUrl)
+      : null;
   if (!pending) {
     return resolveBlackPlaceholderVideoUrl().then(function (blobUrl) {
       if (!blobUrl) return false;
@@ -473,30 +483,40 @@ function applyProjectVideoModule(project) {
   var sourceEl = document.getElementById('projectVideoSource');
   if (!player || !sourceEl) return;
 
-  var slug = String(project.slug || '').toLowerCase();
-  var ambientDemo = slug === 'demo1' || slug === 'demo2' || slug === 'demo3' || slug === 'valhalla';
-  var remoteUrl = ambientDemo ? '' : (config.video_hero_url || '');
+  /* TEMP egress: nunca encolar URLs remotas de Storage para el modal */
+  var remoteUrl =
+    typeof sanitizeHeroVideoUrl === 'function'
+      ? sanitizeHeroVideoUrl(config.video_hero_url)
+      : null;
 
-  player.dataset.pendingVideoUrl = remoteUrl;
+  player.dataset.pendingVideoUrl = remoteUrl || '';
   clearProjectVideoSource(player, sourceEl);
   player.preload = 'none';
 
-  /* Poster: evitar URLs de Storage en demos ambient (sin fetch de imagen de fondo). */
-  if (!ambientDemo) {
+  if (remoteUrl) {
     syncProjectVideoPoster(player, config);
   }
-  /* No setProjectVideoSource / load / play en boot — el modal carga bajo demanda. */
+  /* No setProjectVideoSource / load / play en boot */
 }
 
 function getProjectVideoQualityMap(config) {
   var map = {};
-  var fallbackUrl = (config && config.video_hero_url) || '';
+  /* TEMP egress: no usar video_hero_url remoto como fallback de calidades */
+  var fallbackUrl =
+    typeof sanitizeHeroVideoUrl === 'function'
+      ? sanitizeHeroVideoUrl(config && config.video_hero_url)
+      : null;
+  fallbackUrl = fallbackUrl || '';
   var raw = config && (config.video_qualities || config.video_sources);
   if (Array.isArray(raw)) {
     raw.forEach(function (item) {
       if (!item) return;
       var url = item.url || item.src || '';
       if (!url) return;
+      if (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(url)) return;
+      if (typeof isPlayableHeroVideoUrl === 'function' && !isPlayableHeroVideoUrl(url) && /^https?:/i.test(url)) {
+        return;
+      }
       var key = String(item.key || item.label || item.quality || item.name || '')
         .toLowerCase()
         .replace(/\s+/g, '');

@@ -286,7 +286,17 @@ var ProyectosView = (function () {
 
     try {
       if (projectId) {
-        await ProyectosApi.update(projectId, data);
+        var content = Object.assign({}, data);
+        var identity = {
+          nombre: data.nombre,
+          slug: data.slug
+        };
+        delete content.slug;
+        delete content.nombre;
+        if (Object.keys(content).length) {
+          await ProyectosApi.update(projectId, content);
+        }
+        await ProyectosApi.updateIdentity(projectId, identity);
         AdminNotify.success('Proyecto actualizado correctamente.');
       } else {
         var created = await ProyectosApi.create(data);

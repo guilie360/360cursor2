@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>BOXIES | Dashboard Global</title>
+  <title>BOXIES | Dashboard Global (compat)</title>
+  <!-- V5.3.2: /admin2 is a compatibility adapter. Product host is /boxies. -->
+  <meta name="boxies-host-role" content="compatibility-adapter">
   <!-- HALL tokens + official Builder shell CSS -->
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
@@ -78,7 +80,7 @@
   </script>
   <script src="../js/auth/client.js"></script>
   <script src="../js/auth/storage-prefs.js"></script>
-  <script src="../js/auth/redirects.js"></script>
+  <script src="../js/auth/redirects.js?v=ws532"></script>
   <script src="../js/auth/errors.js"></script>
   <script src="../js/auth/roles-permissions.js?v=auth-unify-001"></script>
   <script src="../js/auth/api/login.js"></script>
@@ -93,7 +95,7 @@
   <script src="js/api/projects.js"></script>
   <script src="js/auth-gate.js?v=shell-002"></script>
   <script src="js/views/dashboard.js?v=shell-002"></script>
-  <script src="js/views/projects.js?v=shell-002"></script>
+  <script src="js/views/projects.js?v=ws532"></script>
   <script src="js/views/users.js?v=shell-002"></script>
   <script src="js/views/templates.js?v=shell-002"></script>
   <script src="js/views/media.js?v=shell-002"></script>

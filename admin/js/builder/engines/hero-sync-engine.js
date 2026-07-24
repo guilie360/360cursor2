@@ -218,17 +218,19 @@ var HeroSyncEngine = (function () {
     var hasNewVideo = state.heroVideo && state.heroVideo.file;
     var hasNewImage = state.heroImage && state.heroImage.file;
 
-    if (cfg.video_hero_url && !hasNewVideo && !hasNewImage) {
-      if (!state.heroVideo || state.heroVideo.status === 'remote') {
-        state.heroVideo = {
-          previewUrl: cfg.video_hero_url,
-          uploadedUrl: cfg.video_hero_url,
-          name: 'Video del showroom',
-          status: 'remote'
-        };
-        state.heroImage = null;
+    /* TEMP egress: no hidratar vídeo remoto de Storage (evita <video src=cdn>). */
+    if (state.heroVideo && !state.heroVideo.file) {
+      var hvPreview = state.heroVideo.previewUrl || state.heroVideo.uploadedUrl || '';
+      if (
+        state.heroVideo.status === 'remote' ||
+        (typeof isRemoteHeroVideoUrl === 'function' && isRemoteHeroVideoUrl(hvPreview)) ||
+        (typeof isPlayableHeroVideoUrl === 'function' && hvPreview && !isPlayableHeroVideoUrl(hvPreview))
+      ) {
+        state.heroVideo = null;
       }
-    } else if (cfg.imagen_hero_url && !hasNewVideo && !hasNewImage) {
+    }
+
+    if (cfg.imagen_hero_url && !hasNewVideo && !hasNewImage) {
       if (!state.heroImage || state.heroImage.status === 'remote') {
         state.heroImage = {
           previewUrl: cfg.imagen_hero_url,
@@ -238,6 +240,9 @@ var HeroSyncEngine = (function () {
         };
         state.heroVideo = null;
       }
+    } else if (cfg.video_hero_url && !hasNewVideo && !hasNewImage) {
+      /* Había vídeo remoto: no previsualizar; dejar slot vacío (placeholder OLED). */
+      state.heroVideo = null;
     }
 
     if (!state.branding) state.branding = {};
@@ -268,7 +273,8 @@ var HeroSyncEngine = (function () {
 
   async function syncHeroMedia(state, constructoraId, proyectoId, existingConfig) {
     existingConfig = existingConfig || {};
-    var videoUrl = existingConfig.video_hero_url || null;
+    /* TEMP egress: no reutilizar video_hero_url remoto; solo archivos locales nuevos */
+    var videoUrl = null;
     var imageUrl = existingConfig.imagen_hero_url || null;
 
     if (state.heroVideo && state.heroVideo.file) {
@@ -285,10 +291,10 @@ var HeroSyncEngine = (function () {
       state.heroImage.uploadedUrl = imageUrl;
       state.heroImage.status = 'synced';
       state.heroVideo = null;
-    } else if (state.heroVideo && state.heroVideo.uploadedUrl) {
-      videoUrl = state.heroVideo.uploadedUrl;
     } else if (state.heroImage && state.heroImage.uploadedUrl) {
       imageUrl = state.heroImage.uploadedUrl;
+      videoUrl = null;
+    } else {
       videoUrl = null;
     }
 

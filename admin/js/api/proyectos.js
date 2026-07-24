@@ -1,4 +1,8 @@
-/* Admin API — proyectos CRUD */
+/* ProyectosApi — canonical showroom CRUD (BOXIES V5.3.2).
+ * Identity slug may only be set via create() or updateIdentity().
+ * update() never accepts slug.
+ * Depends on AdminApi + AdminState (CMS or PlatformBuilderBridge shims).
+ */
 var ProyectosApi = (function () {
   var PROJECT_SELECT =
     'id, nombre, slug, descripcion, ciudad, direccion, latitud, longitud, ' +
@@ -21,7 +25,9 @@ var ProyectosApi = (function () {
     }
 
     putText('nombre');
-    if (has('slug')) {
+
+    /* Slug is create-only here. Updates must use updateIdentity(). */
+    if (isCreate && has('slug')) {
       var slugVal = AdminUI.normalizeOptionalText(payload.slug);
       if (slugVal) {
         slugVal = String(slugVal)
@@ -32,6 +38,7 @@ var ProyectosApi = (function () {
       }
       data.slug = slugVal;
     }
+
     putText('descripcion');
     putText('ciudad');
     putText('direccion');
@@ -70,12 +77,20 @@ var ProyectosApi = (function () {
       );
     }
     if (/proyectos_slug_unico_por_constructora/i.test(message)) {
-      return new Error('Ya existe un proyecto con ese slug en tu constructora.');
+      return new Error('Ese slug ya pertenece a otro Showroom.');
     }
     if (/proyectos_slug_formato/i.test(message)) {
       return new Error('El slug solo puede contener letras minúsculas, números y guiones.');
     }
     return new Error(message);
+  }
+
+  function normalizeIdentitySlug(raw) {
+    var slug = raw != null ? String(raw) : '';
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
+      return ShowroomPublicUrl.normalizeSlug(slug);
+    }
+    return slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
   }
 
   async function list() {
@@ -144,6 +159,12 @@ var ProyectosApi = (function () {
 
   async function update(id, payload) {
     if (!id) throw new Error('Falta el ID del showroom.');
+    payload = payload || {};
+    if (Object.prototype.hasOwnProperty.call(payload, 'slug')) {
+      throw new Error(
+        'ProyectosApi.update() no acepta slug. Usa create() o updateIdentity().'
+      );
+    }
     var data = sanitizePayload(payload, false);
     if (!Object.keys(data).length) {
       throw new Error('No hay campos para actualizar.');
@@ -162,16 +183,14 @@ var ProyectosApi = (function () {
     return result.data;
   }
 
-  /** Patch only identity fields — never nulls the rest of the row. */
+  /**
+   * Patch only identity fields (nombre + slug) by UUID, then confirm with SELECT.
+   * Returns { project, verify }.
+   */
   async function updateIdentity(id, payload) {
     if (!id) throw new Error('Falta el ID del showroom.');
     var nombre = AdminUI.normalizeOptionalText(payload && payload.nombre);
-    var slug = payload && payload.slug != null ? String(payload.slug) : '';
-    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.normalizeSlug) {
-      slug = ShowroomPublicUrl.normalizeSlug(slug);
-    } else {
-      slug = slug.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
-    }
+    var slug = normalizeIdentitySlug(payload && payload.slug);
     if (!nombre) throw new Error('El nombre del showroom es obligatorio.');
     if (!slug) throw new Error('El slug es obligatorio.');
     if (typeof ShowroomPublicUrl !== 'undefined') {
@@ -183,7 +202,8 @@ var ProyectosApi = (function () {
       }
     }
 
-    var result = await AdminApi.getClient()
+    var client = AdminApi.getClient();
+    var result = await client
       .from('proyectos')
       .update({ nombre: nombre, slug: slug })
       .eq('id', id)
@@ -194,13 +214,31 @@ var ProyectosApi = (function () {
     if (!result.data) {
       throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
     }
-    return result.data;
+
+    var verify = await client
+      .from('proyectos')
+      .select('nombre, slug')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (verify.error) {
+      throw mapDbError(verify.error, 'No se pudo verificar la identidad guardada.');
+    }
+
+    var dbSlug = verify.data && verify.data.slug;
+    if (dbSlug !== slug) {
+      throw new Error(
+        'No se confirmó el slug guardado. Pedido: "' + slug +
+        '", en base: "' + (dbSlug || '') + '".'
+      );
+    }
+
+    return {
+      project: result.data,
+      verify: verify.data
+    };
   }
 
-  /**
-   * Check slug uniqueness within constructora (or globally if constructora unknown).
-   * @returns {{ available: boolean, reason?: string }}
-   */
   async function checkSlugAvailability(slug, options) {
     options = options || {};
     var normalized =
