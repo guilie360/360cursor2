@@ -206,44 +206,12 @@ var PlatformBuilderBridge = (function () {
           throw new Error('No hay campos para actualizar.');
         }
 
-        /* TEMP DEBUG V5.2 — remove after root-cause confirmed */
-        var preSelect = await getClient()
-          .from('proyectos')
-          .select('id, slug, nombre, constructora_id, publicado')
-          .eq('id', id)
-          .maybeSingle();
-        console.group('[BOXIES DEBUG] ProyectosApi.update');
-        console.log('UUID recibido (WHERE id =)', id);
-        console.log('typeof id', typeof id, 'length', id && String(id).length);
-        console.log('Payload original', payload);
-        console.log('Payload sanitizado enviado', data);
-        console.log('Columna WHERE', 'id');
-        console.log('AdminState.constructoraId', typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
-        console.log('PRE-SELECT by id → data', preSelect.data);
-        console.log('PRE-SELECT by id → error', preSelect.error);
-        console.log('PRE-SELECT: ¿existe visible por SELECT/RLS?', !!(preSelect.data && preSelect.data.id));
-
         var result = await getClient()
           .from('proyectos')
           .update(data)
           .eq('id', id)
           .select(PROJECT_SELECT)
           .maybeSingle();
-
-        console.log('UPDATE result.data', result.data);
-        console.log('UPDATE result.error', result.error);
-        console.log('UPDATE filas efectivas', result.data ? 1 : 0);
-        if (!result.data && !result.error && preSelect.data) {
-          console.warn(
-            'UPDATE devolvió 0 filas pero SELECT sí ve la fila → muy probable bloqueo RLS en UPDATE (proyectos_staff_actualiza).'
-          );
-        }
-        if (!result.data && !result.error && !preSelect.data) {
-          console.warn(
-            'SELECT tampoco ve la fila → UUID inexistente para este usuario, o SELECT/RLS también lo oculta.'
-          );
-        }
-        console.groupEnd();
 
         if (result.error) {
           var message = result.error.message || 'Error actualizando proyecto';
@@ -262,6 +230,10 @@ var PlatformBuilderBridge = (function () {
         }
         return result.data;
       },
+      /**
+       * Update showroom identity (nombre + slug) by UUID, then confirm with SELECT.
+       * Returns { project, verify }.
+       */
       updateIdentity: async function (id, payload) {
         if (!id) throw new Error('Falta el ID del showroom.');
         var nombre = payload && payload.nombre != null
@@ -285,61 +257,51 @@ var PlatformBuilderBridge = (function () {
         }
 
         var identityPayload = { nombre: nombre, slug: slug };
+        var client = getClient();
 
-        /* TEMP DEBUG V5.2 — remove after root-cause confirmed */
-        var preSelect = await getClient()
-          .from('proyectos')
-          .select('id, slug, nombre, constructora_id, publicado')
-          .eq('id', id)
-          .maybeSingle();
-        console.group('[BOXIES DEBUG] ProyectosApi.updateIdentity');
-        console.log('UUID recibido (WHERE id =)', id);
-        console.log('typeof id', typeof id, 'length', id && String(id).length);
-        console.log('Nombre', nombre);
-        console.log('Slug', slug);
-        console.log('Payload enviado', identityPayload);
-        console.log('Columna WHERE', 'id');
-        console.log('AdminState.constructoraId', typeof AdminState !== 'undefined' ? AdminState.getConstructoraId() : null);
-        console.log('PRE-SELECT by id → data', preSelect.data);
-        console.log('PRE-SELECT by id → error', preSelect.error);
-        console.log('PRE-SELECT: ¿existe visible por SELECT/RLS?', !!(preSelect.data && preSelect.data.id));
-
-        var result = await getClient()
+        var result = await client
           .from('proyectos')
           .update(identityPayload)
           .eq('id', id)
           .select(PROJECT_SELECT)
           .maybeSingle();
 
-        console.log('UPDATE result.data', result.data);
-        console.log('UPDATE result.error', result.error);
-        console.log('UPDATE filas efectivas', result.data ? 1 : 0);
-        if (!result.data && !result.error && preSelect.data) {
-          console.warn(
-            'UPDATE identidad 0 filas pero SELECT sí ve la fila → bloqueo RLS UPDATE (constructora_id / is_super_admin).'
-          );
-        }
-        console.groupEnd();
-
         if (result.error) {
           var message = result.error.message || 'Error actualizando identidad';
-          if (/Cannot coerce|multiple \(or no\) rows|JSON object requested/i.test(message)) {
-            throw new Error(
-              'No se pudo guardar la identidad por UUID (0 o varias filas). Verifica el ID y los permisos.'
-            );
-          }
           if (/proyectos_slug_unico_por_constructora/i.test(message)) {
             throw new Error('Ese slug ya pertenece a otro Showroom.');
           }
-          if (/proyectos_slug_formato/i.test(message)) {
-            throw new Error('El slug solo puede contener letras minúsculas, números y guiones.');
-          }
           throw new Error(message);
         }
+
         if (!result.data) {
-          throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
+          throw new Error(
+            'No se pudo actualizar la identidad (ID no encontrado o sin permisos).'
+          );
         }
-        return result.data;
+
+        var verify = await client
+          .from('proyectos')
+          .select('nombre, slug')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (verify.error) {
+          throw new Error(verify.error.message || 'No se pudo verificar la identidad guardada.');
+        }
+
+        var dbSlug = verify.data && verify.data.slug;
+        if (dbSlug !== slug) {
+          throw new Error(
+            'No se confirmó el slug guardado. Pedido: \"' + slug +
+            '\", en base: \"' + (dbSlug || '') + '\".'
+          );
+        }
+
+        return {
+          project: result.data,
+          verify: verify.data
+        };
       },
       checkSlugAvailability: async function (slug, options) {
         options = options || {};

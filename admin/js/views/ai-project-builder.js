@@ -1971,6 +1971,7 @@ var AiProjectBuilderView = (function () {
     renderStepContent();
     try {
       var result = await PublishingEngine.publish(state);
+
       state.published = true;
       state.publishResult = result;
       state.draftProjectId = result.proyectoId || result.draftProjectId;
@@ -2006,7 +2007,9 @@ var AiProjectBuilderView = (function () {
       } catch (evErr) {}
 
       AdminNotify.success('Showroom publicado. Preview y URL pública usan el slug actual.');
-      if (typeof ProjectSelector !== 'undefined') await ProjectSelector.init();
+      if (typeof ProjectSelector !== 'undefined') {
+        await ProjectSelector.init();
+      }
     } catch (err) {
       AdminNotify.error(err.message || 'Error publicando proyecto');
     }
@@ -2038,16 +2041,6 @@ var AiProjectBuilderView = (function () {
 
     var projectId = fromDraft || fromPublish || fromAdmin || fromUrl;
 
-    /* TEMP DEBUG V5.2 */
-    console.group('[BOXIES DEBUG] Guardar identidad — origen UUID');
-    console.log('state.draftProjectId', fromDraft);
-    console.log('publishResult.proyectoId', fromPublish);
-    console.log('AdminState.getActiveProjectId()', fromAdmin);
-    console.log('URL projectId', fromUrl);
-    console.log('UUID elegido', projectId);
-    console.log('projectInfo', state.projectInfo);
-    console.groupEnd();
-
     if (!projectId) {
       if (statusEl) statusEl.textContent = 'Abre un showroom existente para guardar la identidad.';
       AdminNotify.error('No hay un showroom vinculado (falta ID).');
@@ -2060,6 +2053,7 @@ var AiProjectBuilderView = (function () {
 
     var nombre = nameInput ? String(nameInput.value || '').trim() : '';
     var slug = normalizeShowroomSlug(slugInput ? slugInput.value : '');
+
     if (!nombre || !slug) {
       if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
       return;
@@ -2090,34 +2084,42 @@ var AiProjectBuilderView = (function () {
           AdminNotify.error(msg);
           return;
         }
-      } catch (checkErr) {
-        /* proceed — DB unique constraint remains the final gate */
-      }
+      } catch (checkErr) {}
     }
 
     if (saveBtn) saveBtn.disabled = true;
     if (statusEl) statusEl.textContent = 'Guardando…';
     try {
-      var updated = await ProyectosApi.updateIdentity(projectId, {
+      var result = await ProyectosApi.updateIdentity(projectId, {
         nombre: nombre,
         slug: slug
       });
 
+      var updated = result && result.project ? result.project : result;
+      var verify = result && result.verify ? result.verify : null;
+
+      if (!verify || verify.slug !== slug) {
+        throw new Error(
+          'No se confirmó el slug guardado. Pedido: ' + slug +
+          ' / Base: ' + ((verify && verify.slug) || '(vacío)')
+        );
+      }
+
       state.draftProjectId = updated.id;
       state.projectInfo = Object.assign({}, state.projectInfo || {}, {
-        nombre: updated.nombre,
-        slug: updated.slug,
+        nombre: verify.nombre || updated.nombre,
+        slug: verify.slug || updated.slug,
         constructora_id: updated.constructora_id || (state.projectInfo && state.projectInfo.constructora_id)
       });
       if (!state.heroContent) state.heroContent = {};
-      state.heroContent.nombre = updated.nombre;
+      state.heroContent.nombre = state.projectInfo.nombre;
       state.publishResult = Object.assign({}, state.publishResult || {}, {
         proyectoId: updated.id,
-        slug: updated.slug,
+        slug: state.projectInfo.slug,
         project: updated,
         url: typeof PlatformBuilderBridge !== 'undefined'
-          ? PlatformBuilderBridge.showroomUrl(updated.slug)
-          : publicUrlDisplay(updated.slug)
+          ? PlatformBuilderBridge.showroomUrl(state.projectInfo.slug)
+          : publicUrlDisplay(state.projectInfo.slug)
       });
       if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(updated.id);
@@ -2127,14 +2129,14 @@ var AiProjectBuilderView = (function () {
       if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.syncProjectIdentity) {
         BoxiesRouter.syncProjectIdentity({
           projectId: updated.id,
-          slug: updated.slug
+          slug: state.projectInfo.slug
         });
       }
       if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
         BoxiesShell.setProjectContext({
           id: updated.id,
-          name: updated.nombre,
-          slug: updated.slug
+          name: state.projectInfo.nombre,
+          slug: state.projectInfo.slug
         });
       }
 
@@ -2142,14 +2144,14 @@ var AiProjectBuilderView = (function () {
         window.dispatchEvent(new CustomEvent('boxies:showroom-identity-changed', {
           detail: {
             id: updated.id,
-            nombre: updated.nombre,
-            slug: updated.slug
+            nombre: state.projectInfo.nombre,
+            slug: state.projectInfo.slug
           }
         }));
       } catch (evErr) {}
 
-      if (statusEl) statusEl.textContent = 'Guardado.';
-      AdminNotify.success('Identidad del Showroom actualizada.');
+      if (statusEl) statusEl.textContent = 'Identidad guardada.';
+      AdminNotify.success('Identidad guardada en la base: /' + state.projectInfo.slug);
       renderStepContent();
       updateNavButtons();
     } catch (err) {

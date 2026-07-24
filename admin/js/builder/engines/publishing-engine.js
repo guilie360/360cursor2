@@ -96,20 +96,6 @@ var PublishingEngine = (function () {
 
     var projectId = resolveProjectId(state);
 
-    /* TEMP DEBUG V5.2 */
-    console.group('[BOXIES DEBUG] PublishingEngine.publish — origen UUID');
-    console.log('resolveProjectId()', projectId);
-    console.log('state.draftProjectId', state && state.draftProjectId);
-    console.log('publishResult.proyectoId', state && state.publishResult && state.publishResult.proyectoId);
-    console.log('URL projectId', typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.getProjectIdFromUrl
-      ? HeroSyncEngine.getProjectIdFromUrl()
-      : null);
-    console.log('AdminState.getActiveProjectId()', typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
-      ? AdminState.getActiveProjectId()
-      : null);
-    console.log('AdminState.getConstructoraId()', constructoraId);
-    console.groupEnd();
-
     if (!projectId) {
       throw new Error(
         'No hay Showroom vinculado (falta UUID). Ábrelo desde Showrooms → Administrar.'
@@ -278,6 +264,7 @@ var PublishingEngine = (function () {
     /* Re-read identity from DB so preview URL uses the saved slug, not the URL bar */
     var canonical = await fetchProjectById(proyectoId);
     var slug = (canonical && canonical.slug) || project.slug;
+
     if (canonical) {
       project = canonical;
       state.projectInfo = Object.assign({}, state.projectInfo || {}, {
