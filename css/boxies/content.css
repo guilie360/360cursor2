@@ -176,6 +176,13 @@
   max-width: min(920px, 100%);
 }
 
+#boxiesContent .boxies-page--showrooms {
+  max-width: none;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 #boxiesContent .boxies-page__title {
   font-size: 20px;
   font-weight: 600;
@@ -191,8 +198,21 @@
   line-height: 1.55;
 }
 
+#boxiesContent .boxies-showrooms-header .boxies-page__desc {
+  margin-bottom: 10px;
+}
+
 #boxiesContent .admin-table-wrap {
   padding: 0 8px 8px;
+}
+
+#boxiesContent .boxies-showrooms-wrap {
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 #boxiesContent .admin-table {
@@ -202,12 +222,23 @@
   color: var(--hall-text, rgba(255, 255, 255, 0.86));
 }
 
+#boxiesContent .boxies-showrooms-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+}
+
 #boxiesContent .admin-table th,
 #boxiesContent .admin-table td {
   padding: 20px 24px;
   border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   text-align: left;
   vertical-align: middle;
+}
+
+#boxiesContent .boxies-showrooms-table th,
+#boxiesContent .boxies-showrooms-table td {
+  padding: 14px 12px;
 }
 
 #boxiesContent .admin-table thead th {
@@ -246,45 +277,48 @@
   background: none;
 }
 
-#boxiesContent .boxies-page__header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem 1.5rem;
-  margin-bottom: 0.5rem;
+#boxiesContent .boxies-showrooms-table .boxies-col-name {
+  width: auto;
 }
 
-#boxiesContent .boxies-page__header-row .boxies-page__title {
-  margin-bottom: 0.35rem;
+#boxiesContent .boxies-showrooms-table .boxies-col-slug {
+  width: 14%;
 }
 
-#boxiesContent .boxies-page__header-row .boxies-page__desc {
-  margin-bottom: 0;
+#boxiesContent .boxies-showrooms-table .boxies-col-status {
+  width: 7.5rem;
 }
 
-#boxiesContent .boxies-btn-primary {
-  flex-shrink: 0;
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
+#boxiesContent .boxies-showrooms-table .boxies-col-public {
+  width: 5.5rem;
 }
 
-#boxiesContent .boxies-btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #fff;
+#boxiesContent .boxies-showrooms-table .boxies-col-updated {
+  width: 11rem;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.8rem;
 }
 
-#boxiesContent .boxies-btn-danger {
-  color: #f0a0a0;
-  border-color: rgba(240, 160, 160, 0.35);
-  background: transparent;
+#boxiesContent .boxies-showrooms-table .boxies-col-actions {
+  width: 7.5rem;
+  padding-right: 4px;
 }
 
-#boxiesContent .boxies-btn-danger:hover:not(:disabled) {
-  color: #ffc9c9;
-  border-color: rgba(240, 160, 160, 0.55);
-  background: rgba(240, 160, 160, 0.08);
+#boxiesContent .boxies-showroom-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+}
+
+#boxiesContent .boxies-showroom-slug {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 #boxiesContent .table-actions {
@@ -292,18 +326,74 @@
   white-space: nowrap;
 }
 
-#boxiesContent .table-actions .boxies-action-btn {
-  margin-left: 0.35rem;
+#boxiesContent .boxies-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
-#boxiesContent .admin-table a.boxies-action-btn {
-  min-width: 7.25rem;
+#boxiesContent .boxies-icon-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hall-btn-border, rgba(255, 255, 255, 0.14));
+  border-radius: var(--hall-radius-pill, 999px);
+  background: var(--hall-btn-bg, rgba(255, 255, 255, 0.03));
+  color: var(--hall-text, rgba(255, 255, 255, 0.72));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color var(--boxies-transition, 0.18s ease),
+    background var(--boxies-transition, 0.18s ease),
+    border-color var(--boxies-transition, 0.18s ease),
+    opacity var(--boxies-transition, 0.18s ease);
+}
+
+#boxiesContent .boxies-icon-action:hover:not(:disabled) {
+  color: var(--hall-text, #fff);
+  background: var(--hall-btn-hover-bg, rgba(255, 255, 255, 0.07));
+  border-color: var(--hall-btn-hover-border, rgba(255, 255, 255, 0.22));
+}
+
+#boxiesContent .boxies-icon-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#boxiesContent .boxies-icon-action--danger:hover:not(:disabled) {
+  color: #ffc9c9;
+  border-color: rgba(240, 160, 160, 0.45);
+  background: rgba(240, 160, 160, 0.08);
+}
+
+#boxiesContent .boxies-icon-action.is-busy-label {
+  width: auto;
+  min-width: 0;
+  padding: 0 12px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#boxiesContent .boxies-showrooms-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 22px 8px 8px;
+  border-top: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
 }
 
 #boxiesContent .boxies-projects-order-status {
   min-height: 1.25rem;
-  margin: -12px 0 14px;
-  padding: 0 8px;
+  margin: -4px 0 10px;
+  padding: 0;
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.45);
 }
@@ -315,7 +405,7 @@
 #boxiesContent .boxies-showroom-drag-th,
 #boxiesContent .boxies-showroom-drag {
   width: 2.5rem;
-  padding-left: 12px;
+  padding-left: 4px;
   padding-right: 4px;
 }
 

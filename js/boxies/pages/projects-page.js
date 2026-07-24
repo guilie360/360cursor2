@@ -49,6 +49,21 @@ var BoxiesProjectsPage = (function () {
     );
   }
 
+  var ICONS = {
+    edit:
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' +
+      '</svg>',
+    copy:
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>' +
+      '</svg>',
+    trash:
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>' +
+      '</svg>'
+  };
+
   function row(showroom) {
     var id = showroom.id || '';
     var slug = showroom.slug || '';
@@ -60,25 +75,28 @@ var BoxiesProjectsPage = (function () {
             '<span aria-hidden="true">⋮⋮</span>' +
           '</button>' +
         '</td>' +
-        '<td><strong class="boxies-showroom-name">' + escapeHtml(name) + '</strong></td>' +
-        '<td><code class="boxies-showroom-slug">' + escapeHtml(slug) + '</code></td>' +
-        '<td>' + statusBadge(showroom) + '</td>' +
-        '<td class="boxies-public-cell">' + publicToggle(showroom) + '</td>' +
-        '<td>' + escapeHtml(formatDate(showroom.updated_at)) + '</td>' +
-        '<td class="table-actions">' +
-          '<button type="button" class="boxies-action-btn" data-boxies-open-builder-id="' +
-            escapeHtml(id) +
-          '" data-boxies-open-builder="' +
-            escapeHtml(slug) +
-          '">Administrar</button>' +
-          '<button type="button" class="boxies-action-btn" data-boxies-clone-id="' +
-            escapeHtml(id) +
-          '">Clonar</button>' +
-          '<button type="button" class="boxies-action-btn boxies-btn-danger" data-boxies-delete-id="' +
-            escapeHtml(id) +
-          '" data-boxies-delete-name="' +
-            escapeHtml(name) +
-          '">Eliminar</button>' +
+        '<td class="boxies-col-name"><strong class="boxies-showroom-name">' + escapeHtml(name) + '</strong></td>' +
+        '<td class="boxies-col-slug"><code class="boxies-showroom-slug" title="' + escapeHtml(slug) + '">' +
+          escapeHtml(slug) + '</code></td>' +
+        '<td class="boxies-col-status">' + statusBadge(showroom) + '</td>' +
+        '<td class="boxies-public-cell boxies-col-public">' + publicToggle(showroom) + '</td>' +
+        '<td class="boxies-col-updated">' + escapeHtml(formatDate(showroom.updated_at)) + '</td>' +
+        '<td class="table-actions boxies-col-actions">' +
+          '<div class="boxies-row-actions">' +
+            '<button type="button" class="boxies-icon-action" data-boxies-open-builder-id="' +
+              escapeHtml(id) +
+            '" data-boxies-open-builder="' +
+              escapeHtml(slug) +
+            '" title="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
+            '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
+              escapeHtml(id) +
+            '" title="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
+            '<button type="button" class="boxies-icon-action boxies-icon-action--danger" data-boxies-delete-id="' +
+              escapeHtml(id) +
+            '" data-boxies-delete-name="' +
+              escapeHtml(name) +
+            '" title="Eliminar" aria-label="Eliminar">' + ICONS.trash + '</button>' +
+          '</div>' +
         '</td>' +
       '</tr>'
     );
@@ -188,7 +206,7 @@ var BoxiesProjectsPage = (function () {
       var tr = e.target.closest('tr[data-showroom-id]');
       if (!tr || !tbody.contains(tr)) return;
       if (e.target.closest(
-        'button.boxies-action-btn, .boxies-public-toggle, [data-boxies-public-id], [data-boxies-clone-id], [data-boxies-delete-id]'
+        'button.boxies-action-btn, button.boxies-icon-action, .boxies-public-toggle, [data-boxies-public-id], [data-boxies-clone-id], [data-boxies-delete-id]'
       )) {
         e.preventDefault();
         return;
@@ -317,7 +335,8 @@ var BoxiesProjectsPage = (function () {
     }
     btn.dataset.busy = '1';
     btn.disabled = true;
-    var prev = btn.textContent;
+    var prevHtml = btn.innerHTML;
+    btn.classList.add('is-busy-label');
     btn.textContent = 'Duplicando...';
     try {
       var scope =
@@ -330,7 +349,8 @@ var BoxiesProjectsPage = (function () {
     } catch (err) {
       notifyError(err.message || 'No se pudo clonar el showroom');
       btn.disabled = false;
-      btn.textContent = prev;
+      btn.classList.remove('is-busy-label');
+      btn.innerHTML = prevHtml;
       btn.dataset.busy = '0';
     }
   }
@@ -410,30 +430,30 @@ var BoxiesProjectsPage = (function () {
       BoxiesShell.clearProjectContext();
     }
     host.innerHTML =
-      '<div class="boxies-page">' +
-        '<div class="boxies-page__header-row">' +
-          '<div>' +
-            '<h1 class="boxies-page__title">Showrooms</h1>' +
-            '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
-          '</div>' +
-          '<button type="button" class="boxies-action-btn boxies-btn-primary" id="boxiesCreateShowroomBtn">' +
-            '+ Crear Showroom' +
-          '</button>' +
-        '</div>' +
+      '<div class="boxies-page boxies-page--showrooms">' +
+        '<header class="boxies-showrooms-header">' +
+          '<h1 class="boxies-page__title">Showrooms</h1>' +
+          '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
+        '</header>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
-        '<div class="admin-table-wrap">' +
+        '<div class="admin-table-wrap boxies-showrooms-wrap">' +
           '<table class="admin-table boxies-showrooms-table">' +
             '<thead><tr>' +
               '<th class="boxies-showroom-drag-th" aria-label="Orden"></th>' +
-              '<th>Nombre</th>' +
-              '<th>Slug</th>' +
-              '<th>Estado</th>' +
-              '<th>Público</th>' +
-              '<th>Última modificación</th>' +
-              '<th></th>' +
+              '<th class="boxies-col-name">Nombre</th>' +
+              '<th class="boxies-col-slug">Slug</th>' +
+              '<th class="boxies-col-status">Estado</th>' +
+              '<th class="boxies-col-public">Público</th>' +
+              '<th class="boxies-col-updated">Última modificación</th>' +
+              '<th class="boxies-col-actions" aria-label="Acciones"></th>' +
             '</tr></thead>' +
             '<tbody id="boxiesProjectsBody"><tr><td colspan="7">Cargando…</td></tr></tbody>' +
           '</table>' +
+          '<div class="boxies-showrooms-footer">' +
+            '<button type="button" class="boxies-action-btn" id="boxiesCreateShowroomBtn">' +
+              '+ Crear Showroom' +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
 
