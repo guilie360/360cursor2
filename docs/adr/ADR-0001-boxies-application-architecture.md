@@ -238,12 +238,11 @@ Cualquier “sí” en 1–5 invalida el diseño.
 
 ## Decisiones de producto fijadas en v1.0
 
-### Host canónico: `/app`
+### Host canónico: `/boxies` (V5.4)
 
-- La aplicación vive en **`/app`**.
-- `/admin2` es nombre de etapa de desarrollo, no del producto.
-- Transición: `/admin2` → **301** → `/app`.
-- Deep-links legacy del editor de proyecto se resolverán en el plan técnico (alias → `/app` + page id), sin crear un segundo Shell.
+- La aplicación administrativa vive en **`/boxies`**.
+- `/admin` y `/admin2` fueron **eliminados**; deep-links hacen **301 → `/boxies/`**.
+- Nota histórica: el ADR v1.0 mencionaba `/app` como nombre de producto; el host materializado y vigente es `/boxies`.
 
 ### Login: fuera del Shell
 

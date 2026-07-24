@@ -107,10 +107,10 @@ var PlatformBuilderBridge = (function () {
       }
     };
 
-    /* ProyectosApi is canonical (admin/js/api/proyectos.js). Bridge only shims AdminApi/AdminState. */
+    /* ProyectosApi is canonical (js/api/proyectos.js). Bridge only shims AdminApi/AdminState. */
     if (typeof ProyectosApi === 'undefined') {
       throw new Error(
-        'ProyectosApi canónica no está cargada. Incluye admin/js/api/proyectos.js después del bridge.'
+        'ProyectosApi canónica no está cargada. Incluye js/api/proyectos.js después del bridge.'
       );
     }
     if (typeof StorageApi === 'undefined') {

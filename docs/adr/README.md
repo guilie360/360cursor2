@@ -14,7 +14,8 @@ Decisiones de arquitectura versionadas de BOXIES.
 
 | Plan | Status |
 |---|---|
-| [Phase 1 — Foundation](../architecture/Phase-1-Foundation.md) | Draft — pending review |
-| [Vertical Slice v0.1](../architecture/Vertical-Slice-v0.1.md) | `/boxies` host (parallel to `/admin2`) |
+| [BOXIES V5.4 — Host canónico](../architecture/BOXIES-V5.4-Canonical-Host.md) | **Current** — `/boxies` only; `/admin` & `/admin2` removed |
+| [Phase 1 — Foundation](../architecture/Phase-1-Foundation.md) | Historical (superseded host paths) |
+| [Vertical Slice v0.1](../architecture/Vertical-Slice-v0.1.md) | Historical (parallel `/admin2` no longer applies) |
 
 **Proceso:** aprobar ADR → plan técnico → commit docs → fase pequeña → validar → siguiente fase.

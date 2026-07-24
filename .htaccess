@@ -6,6 +6,10 @@
   # Official BOXIES product landing at /
   RewriteRule ^$ landing/index.html [L]
 
+  # V5.4 — legacy CMS hosts retired; only /boxies remains
+  RewriteRule ^admin2(/.*)?$ /boxies/ [R=301,L]
+  RewriteRule ^admin(/.*)?$ /boxies/ [R=301,L]
+
   # Legacy slug alias after rename demo → demo1
   RewriteRule ^demo/?$ /demo1 [R=302,L]
 
@@ -15,7 +19,7 @@
   RewriteRule ^ - [L]
 
   # App folders that are not project slugs
-  RewriteRule ^(admin|admin2|auth|boxies|landing|login|css|js|supabase|assets|images)(/|$) - [L]
+  RewriteRule ^(auth|boxies|landing|login|css|js|supabase|assets|images)(/|$) - [L]
 
   # /demo, /proyecto1, … → index.html (internal rewrite, browser URL unchanged)
   RewriteRule ^([A-Za-z0-9_-]+)/?$ index.html [L]

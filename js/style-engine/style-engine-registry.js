@@ -62,9 +62,9 @@ var StyleEngineRegistry = (function () {
     /* —— Auth / Verificación —— */
     { id: 'auth-modal', name: 'Login / Registro (showroom)', route: '#authExperienceModal', type: TYPE.POPUP, status: STATUS.ADAPTER, files: ['js/visitor-auth-modal.js', 'css/components.css'] },
     { id: 'email-verification', name: 'Verificación de correo', route: '#emailVerificationModal', type: TYPE.POPUP, status: STATUS.ADAPTER, files: ['js/visitor-email-verification.js'] },
-    { id: 'auth-ingresar', name: 'Página Ingresar', route: 'auth/ingresar.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['auth/ingresar.html', 'admin/css/admin-auth.css'] },
+    { id: 'auth-ingresar', name: 'Página Ingresar', route: 'auth/ingresar.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['auth/ingresar.html', 'css/auth/admin-auth.css'] },
     { id: 'auth-registro', name: 'Página Registro', route: 'auth/registro.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['auth/registro.html'] },
-    { id: 'auth-cuenta', name: 'Dashboard visitante (Mi espacio)', route: 'auth/cuenta.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['auth/cuenta.html', 'admin/css/admin-auth.css'] },
+    { id: 'auth-cuenta', name: 'Dashboard visitante (Mi espacio)', route: 'auth/cuenta.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['auth/cuenta.html', 'css/auth/admin-auth.css'] },
 
     /* —— Theme / Style systems —— */
     { id: 'theme-editor-legacy', name: 'Theme Editor Legacy', route: '#mainMenuListPersonalizar', type: TYPE.SYSTEM, status: STATUS.LEGACY, files: ['js/visitor-personalize-panel.js', 'js/theme-system.js'] },
@@ -87,14 +87,11 @@ var StyleEngineRegistry = (function () {
     { id: 'content-modal', name: 'Modal base', route: '.content-modal', type: TYPE.PRIMITIVE, status: STATUS.ADAPTER, files: ['css/components.css'] },
     { id: 'backdrop', name: 'Backdrop / Overlay mask', route: '.main-menu-backdrop', type: TYPE.OVERLAY, status: STATUS.ADAPTER, files: ['css/components.css', 'css/variables.css'] },
 
-    /* —— Admin —— */
-    { id: 'admin-login', name: 'Admin Login', route: 'admin/login.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['admin/login.html', 'admin/css/admin-auth.css'] },
-    { id: 'admin-dashboard', name: 'Admin Dashboard', route: 'admin/dashboard.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['admin/dashboard.html', 'admin/css/admin-auth.css'] },
-    { id: 'admin-modal', name: 'Modal admin genérico', route: '.admin-modal', type: TYPE.POPUP, status: STATUS.LEGACY, files: ['admin/js/core/ui.js'] },
-    { id: 'admin-toast', name: 'Toast admin', route: '.admin-toast', type: TYPE.PRIMITIVE, status: STATUS.LEGACY, files: ['admin/js/core/notifications.js'] },
-    { id: 'ai-project-builder', name: 'AI Project Builder', route: 'admin/ai-project-builder.html', type: TYPE.SCREEN, status: STATUS.LEGACY, files: ['admin/ai-project-builder.html', 'admin/css/ai-project-builder.css'] },
-    { id: 'admin-hero-view', name: 'Admin — Editor Hero', route: 'admin/js/views/hero.js', type: TYPE.PANEL, status: STATUS.LEGACY, files: ['admin/js/views/hero.js'] },
-    { id: 'admin-proyectos', name: 'Admin — Proyectos', route: 'admin/js/views/proyectos.js', type: TYPE.PANEL, status: STATUS.LEGACY, files: ['admin/js/views/proyectos.js'] },
+    /* —— BOXIES (única app administrativa) —— */
+    { id: 'boxies-host', name: 'BOXIES', route: 'boxies/', type: TYPE.SCREEN, status: STATUS.MIGRATED, files: ['boxies/index.html', 'js/boxies/*', 'css/boxies/*'] },
+    { id: 'boxies-modal', name: 'Modal CMS genérico', route: '.admin-modal', type: TYPE.POPUP, status: STATUS.ADAPTER, files: ['js/boxies/ui.js'] },
+    { id: 'boxies-toast', name: 'Toast CMS', route: '.admin-toast', type: TYPE.PRIMITIVE, status: STATUS.ADAPTER, files: ['js/boxies/notifications.js'] },
+    { id: 'ai-project-builder', name: 'AI Project Builder', route: 'boxies/?page=builder', type: TYPE.SCREEN, status: STATUS.MIGRATED, files: ['js/builder/ai-project-builder.js', 'css/boxies/builder.css'] },
 
     /* —— Confirmaciones —— */
     { id: 'theme-confirm', name: 'Confirmar tema oficial', route: '#projectThemeConfirmModal', type: TYPE.POPUP, status: STATUS.ADAPTER, files: ['index.html'] },

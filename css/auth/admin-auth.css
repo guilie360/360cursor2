@@ -8,7 +8,7 @@
  * Do not invent new buttons, inputs, cards, sidebars, or tokens here.
  */
 
-@import url("./admin-widgets.css");
+@import './admin-widgets.css';
 
 :root {
   /* Legacy aliases → HALL tokens from variables.css / ThemeSystem */

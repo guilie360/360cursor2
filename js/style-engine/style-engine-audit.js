@@ -9,8 +9,8 @@ var StyleEngineAudit = (function () {
   var SCAN_FILES = [
     { path: 'css/components.css', label: 'Componentes showroom' },
     { path: 'css/variables.css', label: 'Variables base' },
-    { path: 'admin/css/admin-auth.css', label: 'Admin + Auth' },
-    { path: 'admin/css/ai-project-builder.css', label: 'AI Project Builder' }
+    { path: 'css/auth/admin-auth.css', label: 'Auth + CMS bridge' },
+    { path: 'css/boxies/builder.css', label: 'BOXIES Builder' }
   ];
 
   function scanFileContent(content, filePath) {

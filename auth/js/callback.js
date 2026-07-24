@@ -1,4 +1,4 @@
-/* OAuth callback — exchange PKCE code, then return to saved path (showroom or /admin2) */
+/* OAuth callback — exchange PKCE code, then return to saved path (showroom or /boxies) */
 (function () {
   var RETURN_STATE_KEY = 'guilie_oauth_return';
   var statusEl = document.getElementById('status');
@@ -74,8 +74,8 @@
 
       if (!returnPath) {
         /* Last-resort platform surface (never "/" — htaccess remaps to a showroom). */
-        returnPath = '/admin2';
-        console.warn('[OAuth callback] missing returnPath — falling back to /admin2');
+        returnPath = '/boxies/';
+        console.warn('[OAuth callback] missing returnPath — falling back to /boxies/');
       }
 
       window.location.replace((window.location.origin || '') + returnPath);

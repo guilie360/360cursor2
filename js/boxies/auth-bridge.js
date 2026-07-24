@@ -1,5 +1,5 @@
-/* BOXIES /boxies — auth bridge (PlatformAuth / profiles.rol ONLY — same stack as admin2/showrooms).
- * Does NOT modify OAuth, Supabase, RLS, or admin2 auth-gate. */
+/* BOXIES /boxies — auth bridge (PlatformAuth / profiles.rol ONLY — same stack as showrooms).
+ * Does NOT modify OAuth, Supabase, or RLS. */
 var BoxiesAuthBridge = (function () {
   var LOG_PREFIX = '[boxies:auth]';
 
@@ -60,7 +60,7 @@ var BoxiesAuthBridge = (function () {
       var peek = typeof OAuthApi.peekReturnPath === 'function' ? OAuthApi.peekReturnPath() : null;
       if (!peek) return;
       var normalizedPeek = String(peek).replace(/\/+$/, '') || '';
-      if (normalizedPeek.indexOf('/boxies') === 0 || normalizedPeek.indexOf('/admin2') === 0) {
+      if (normalizedPeek.indexOf('/boxies') === 0) {
         log('OAuth returnPath ok for platform host:', normalizedPeek);
         return;
       }

@@ -1,11 +1,13 @@
 # Vertical Slice v0.1 — `/boxies`
 
+> **V5.4:** `/admin2` ya no existe; este slice es histórico. Ver [BOXIES-V5.4-Canonical-Host.md](./BOXIES-V5.4-Canonical-Host.md).
+
 | Campo | Valor |
 |---|---|
-| **Status** | Implementation |
+| **Status** | Historical |
 | **Date** | 2026-07-21 |
 | **Based on** | ADR-0001 + Phase-1-Foundation (partial) |
-| **Host** | `/boxies` (parallel; does **not** replace `/admin2`) |
+| **Host** | `/boxies` (was parallel to `/admin2`; V5.4 = only host) |
 
 ---
 

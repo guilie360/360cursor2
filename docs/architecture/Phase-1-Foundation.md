@@ -2,12 +2,14 @@
 
 | Campo | Valor |
 |---|---|
-| **Status** | Draft — pending review; **Vertical Slice v0.1** in progress at `/boxies` (see [Vertical-Slice-v0.1.md](./Vertical-Slice-v0.1.md)) |
+| **Status** | Historical — superseded by [BOXIES V5.4](./BOXIES-V5.4-Canonical-Host.md) (`/boxies` only) |
 | **Based on** | [ADR-0001](../adr/ADR-0001-boxies-application-architecture.md) v1.0 |
 | **Goal** | Establecer `BoxiesApp` + Shell inmutable + Registry/Router mínimos + una Page real, sin features nuevas |
 | **Out of band** | Auth contracts, Supabase, RLS, OAuth, HALL redesign, legacy dashboard migration |
 
-> **Nota v0.1:** el primer materializado usa host **`/boxies`** (paralelo a `/admin2`), no `/app`. No hay redirect desde `/admin2`. BuilderPage no se migra en el slice.
+> **V5.4:** `/admin` y `/admin2` eliminados; host canónico = `/boxies`. Paths `admin/js/boxies/` en este doc son históricos.
+>
+> **Nota v0.1 (histórica):** el primer materializado usó host **`/boxies`** (paralelo a `/admin2`), no `/app`.
 
 ---
 

@@ -7,8 +7,8 @@
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
-  <link rel="stylesheet" href="../admin/css/admin-auth.css">
-  <link rel="stylesheet" href="../admin/css/ai-project-builder.css?v=ws50">
+  <link rel="stylesheet" href="../css/auth/admin-auth.css">
+  <link rel="stylesheet" href="../css/boxies/builder.css?v=ws54">
   <link rel="stylesheet" href="../css/interactive-areas.css?v=ws41">
   <link rel="stylesheet" href="../css/boxies/shell.css?v=ws45">
   <link rel="stylesheet" href="../css/boxies/content.css?v=ws473">
@@ -79,7 +79,7 @@
   </script>
   <script src="../js/auth/client.js"></script>
   <script src="../js/auth/storage-prefs.js"></script>
-  <script src="../js/auth/redirects.js?v=ws532"></script>
+  <script src="../js/auth/redirects.js?v=ws54"></script>
   <script src="../js/auth/errors.js"></script>
   <script src="../js/auth/roles-permissions.js?v=auth-unify-001"></script>
   <script src="../js/auth/api/login.js"></script>
@@ -98,56 +98,55 @@
   <script src="../js/theme-ai/theme-role-mapper.js"></script>
   <script src="../js/theme-ai/theme-ai-generator.js"></script>
 
-  <!-- Builder stack (read-only reuse — not bootstrap) -->
-  <script src="../admin/js/core/ui.js"></script>
-  <script src="../admin/js/core/notifications.js"></script>
-  <script src="../admin/js/builder/core/session.js?v=ia3"></script>
-  <script src="../admin/js/builder/core/wizard.js?v=ws49"></script>
-  <script src="../admin/js/builder/icons.js?v=ws51"></script>
-  <script src="../admin/js/builder/dock.js?v=fsdock1"></script>
-  <script src="../admin/js/builder/progress-rail.js?v=ws49"></script>
-  <script src="../admin/js/builder/engines/project-types.js"></script>
-  <script src="../admin/js/builder/engines/branding-engine.js?v=logo1"></script>
-  <script src="../admin/js/builder/engines/media-engine.js"></script>
-  <script src="../admin/js/builder/engines/gallery-engine.js"></script>
-  <script src="../admin/js/builder/engines/panorama-engine.js"></script>
-  <script src="../admin/js/builder/engines/document-engine.js"></script>
-  <script src="../admin/js/builder/engines/theme-engine.js"></script>
-  <script src="../admin/js/builder/engines/hero-sync-engine.js?v=ws53"></script>
+  <!-- Builder stack -->
+  <script src="../js/boxies/ui.js?v=ws54"></script>
+  <script src="../js/boxies/notifications.js?v=ws54"></script>
+  <script src="../js/builder/core/session.js?v=ws54"></script>
+  <script src="../js/builder/core/wizard.js?v=ws54"></script>
+  <script src="../js/builder/icons.js?v=ws54"></script>
+  <script src="../js/builder/dock.js?v=ws54"></script>
+  <script src="../js/builder/progress-rail.js?v=ws54"></script>
+  <script src="../js/builder/engines/project-types.js?v=ws54"></script>
+  <script src="../js/builder/engines/branding-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/media-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/gallery-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/panorama-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/document-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/theme-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/hero-sync-engine.js?v=ws54"></script>
   <script src="../js/menu-config.js?v=ia2"></script>
-  <script src="../admin/js/builder/engines/menu-sync-engine.js?v=ws52"></script>
-  <script src="../admin/js/builder/engines/viviendas-sync-engine.js?v=ws532"></script>
-  <script src="../admin/js/builder/engines/ai-assistant-engine.js"></script>
-  <script src="../admin/js/builder/engines/hotspot-engine.js"></script>
+  <script src="../js/builder/engines/menu-sync-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/viviendas-sync-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/ai-assistant-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/hotspot-engine.js?v=ws54"></script>
   <script src="../js/interactive-areas/mock-plan.js?v=ia3"></script>
   <script src="../js/interactive-areas/interactive-areas-core.js?v=ia3"></script>
   <script src="../js/interactive-areas/interactive-areas-canvas.js?v=ia3"></script>
-  <script src="../admin/js/builder/engines/interactive-areas-engine.js?v=ia3"></script>
-  <script src="../admin/js/builder/pages/interactivo-page.js?v=ws41"></script>
-  <script src="../admin/js/builder/engines/validation-engine.js"></script>
-  <script src="../admin/js/builder/engines/publishing-engine.js?v=ws53"></script>
-  <script src="../admin/js/platform/boxies-app-shell.js?v=shell-001"></script>
+  <script src="../js/builder/engines/interactive-areas-engine.js?v=ws54"></script>
+  <script src="../js/builder/pages/interactivo-page.js?v=ws54"></script>
+  <script src="../js/builder/engines/validation-engine.js?v=ws54"></script>
+  <script src="../js/builder/engines/publishing-engine.js?v=ws54"></script>
+  <script src="../js/boxies/app-shell-legacy.js?v=ws54"></script>
   <script src="../js/shared/showroom-public-url.js?v=ws50"></script>
-  <script src="../admin/js/views/ai-project-builder.js?v=ws53"></script>
-  <script src="../admin/js/platform-builder/bridge.js?v=ws532"></script>
-  <script src="../admin/js/api/proyectos.js?v=ws532"></script>
+  <script src="../js/builder/ai-project-builder.js?v=ws54"></script>
+  <script src="../js/builder/platform-bridge.js?v=ws54"></script>
+  <script src="../js/api/proyectos.js?v=ws54"></script>
 
-  <!-- Existing projects API (read-only reuse) -->
-  <script src="../admin/js/boxies/showroom-scope.js?v=ws48"></script>
-  <script src="../admin2/js/api/projects.js?v=ws48"></script>
+  <!-- Showrooms list API -->
+  <script src="../js/boxies/showroom-scope.js?v=ws54"></script>
+  <script src="../js/api/projects.js?v=ws54"></script>
 
   <!-- BOXIES Core -->
-  <script src="../admin/js/boxies/host-policy.js?v=ws532"></script>
-  <script src="../admin/js/boxies/prefs.js?v=ws41"></script>
-  <script src="../admin/js/boxies/shell.js?v=ws51"></script>
-  <script src="../admin/js/boxies/pages.js?v=slice-002"></script>
-  <script src="../admin/js/boxies/router.js?v=ws49"></script>
-  <script src="../admin/js/boxies/auth-bridge.js?v=ws46"></script>
-  <script src="../admin/js/boxies/services/system-monitor-service.js?v=ws51"></script>
-  <script src="../admin/js/boxies/pages/hall-page.js?v=ws473"></script>
-  <script src="../admin/js/boxies/pages/projects-page.js?v=ws49"></script>
-  <script src="../admin/js/boxies/pages/builder-page.js?v=ws49"></script>
-  <script src="../admin/js/boxies/pages/sistema-page.js?v=ws51"></script>
-  <script src="../admin/js/boxies/app.js?v=ws51"></script>
+  <script src="../js/boxies/prefs.js?v=ws54"></script>
+  <script src="../js/boxies/shell.js?v=ws54"></script>
+  <script src="../js/boxies/pages.js?v=ws54"></script>
+  <script src="../js/boxies/router.js?v=ws54"></script>
+  <script src="../js/boxies/auth-bridge.js?v=ws54"></script>
+  <script src="../js/boxies/services/system-monitor-service.js?v=ws54"></script>
+  <script src="../js/boxies/pages/hall-page.js?v=ws54"></script>
+  <script src="../js/boxies/pages/projects-page.js?v=ws54"></script>
+  <script src="../js/boxies/pages/builder-page.js?v=ws54"></script>
+  <script src="../js/boxies/pages/sistema-page.js?v=ws54"></script>
+  <script src="../js/boxies/app.js?v=ws54"></script>
 </body>
 </html>
