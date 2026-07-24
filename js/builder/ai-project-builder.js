@@ -1314,11 +1314,11 @@ var AiProjectBuilderView = (function () {
     }
 
     function rerender() {
-      var scroller = rootEl.querySelector('#builderStepPanel');
+      var scroller = rootEl.querySelector('.builder-workspace');
       var scrollTop = scroller ? scroller.scrollTop : 0;
       persist();
       renderStepContent();
-      var scroller2 = rootEl.querySelector('#builderStepPanel');
+      var scroller2 = rootEl.querySelector('.builder-workspace');
       if (scroller2) scroller2.scrollTop = scrollTop;
     }
 
