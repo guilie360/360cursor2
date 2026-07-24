@@ -259,20 +259,49 @@ function applyHeroModule(project) {
   var videoEl = document.getElementById('coverVideo');
   var sourceEl = document.getElementById('coverVideoSource');
   var imageEl = document.getElementById('coverImage');
+  var coverEl = document.getElementById('projectCover');
+  var slug = String(project.slug || '').toLowerCase();
+  /* TEMP: demos sin media de red — fondo OLED CSS mientras se frena Cached Egress */
+  var ambientDemo = slug === 'demo1' || slug === 'demo2' || slug === 'demo3' || slug === 'valhalla';
+  var hasVideo = !ambientDemo && !!config.video_hero_url;
+  var hasImage = !ambientDemo && !!config.imagen_hero_url;
 
-  if (config.video_hero_url && videoEl && sourceEl) {
+  if (coverEl) {
+    coverEl.classList.toggle('is-ambient-depth', ambientDemo || (!hasVideo && !hasImage));
+  }
+
+  function clearCoverVideo() {
+    if (sourceEl) {
+      sourceEl.removeAttribute('src');
+      try { sourceEl.src = ''; } catch (e0) { /* ignore */ }
+    }
+    if (videoEl) {
+      try { videoEl.pause(); } catch (e1) { /* ignore */ }
+      videoEl.removeAttribute('src');
+      videoEl.style.display = 'none';
+      /* No llamar load()/play() sin src de red */
+    }
+  }
+
+  if (hasVideo && videoEl && sourceEl) {
     sourceEl.src = config.video_hero_url;
+    sourceEl.type = guessVideoMimeType(config.video_hero_url);
     videoEl.style.display = '';
-    videoEl.load();
     videoEl.muted = true;
+    videoEl.preload = 'metadata';
+    videoEl.load();
     videoEl.play().catch(function () {});
-    if (imageEl) imageEl.style.display = 'none';
+    if (imageEl) {
+      imageEl.removeAttribute('src');
+      imageEl.style.display = 'none';
+    }
   } else {
-    if (videoEl) videoEl.style.display = 'none';
-    if (config.imagen_hero_url && imageEl) {
+    clearCoverVideo();
+    if (hasImage && imageEl) {
       imageEl.src = config.imagen_hero_url;
       imageEl.style.display = '';
     } else if (imageEl) {
+      imageEl.removeAttribute('src');
       imageEl.style.display = 'none';
     }
   }
@@ -363,6 +392,40 @@ function setProjectVideoSource(player, sourceEl, url, mimeType) {
   player.load();
 }
 
+function clearProjectVideoSource(player, sourceEl) {
+  if (sourceEl) {
+    sourceEl.removeAttribute('src');
+    try { sourceEl.src = ''; } catch (e0) { /* ignore */ }
+  }
+  if (player) {
+    try { player.pause(); } catch (e1) { /* ignore */ }
+    player.removeAttribute('src');
+  }
+}
+
+/** Asigna src de Storage solo al reproducir (nunca en boot). */
+function ensureProjectVideoSourceForPlayback() {
+  var player = document.getElementById('projectVideoPlayer');
+  var sourceEl = document.getElementById('projectVideoSource');
+  if (!player || !sourceEl) return Promise.resolve(false);
+
+  var pending = player.dataset.pendingVideoUrl || '';
+  if (!pending) {
+    return resolveBlackPlaceholderVideoUrl().then(function (blobUrl) {
+      if (!blobUrl) return false;
+      if (String(sourceEl.getAttribute('src') || '') === String(blobUrl)) return true;
+      setProjectVideoSource(player, sourceEl, blobUrl, 'video/webm');
+      return true;
+    });
+  }
+
+  var current = sourceEl.getAttribute('src') || '';
+  if (current === pending) return Promise.resolve(true);
+  setProjectVideoSource(player, sourceEl, pending, guessVideoMimeType(pending));
+  return Promise.resolve(true);
+}
+window.ensureProjectVideoSourceForPlayback = ensureProjectVideoSourceForPlayback;
+
 function syncProjectVideoPoster(player, config) {
   if (!player) return;
   var poster = (config && (config.imagen_hero_url || config.video_poster_url)) || '';
@@ -410,16 +473,19 @@ function applyProjectVideoModule(project) {
   var sourceEl = document.getElementById('projectVideoSource');
   if (!player || !sourceEl) return;
 
-  syncProjectVideoPoster(player, config);
+  var slug = String(project.slug || '').toLowerCase();
+  var ambientDemo = slug === 'demo1' || slug === 'demo2' || slug === 'demo3' || slug === 'valhalla';
+  var remoteUrl = ambientDemo ? '' : (config.video_hero_url || '');
 
-  if (config.video_hero_url) {
-    setProjectVideoSource(player, sourceEl, config.video_hero_url, guessVideoMimeType(config.video_hero_url));
-    return;
+  player.dataset.pendingVideoUrl = remoteUrl;
+  clearProjectVideoSource(player, sourceEl);
+  player.preload = 'none';
+
+  /* Poster: evitar URLs de Storage en demos ambient (sin fetch de imagen de fondo). */
+  if (!ambientDemo) {
+    syncProjectVideoPoster(player, config);
   }
-
-  resolveBlackPlaceholderVideoUrl().then(function (blobUrl) {
-    if (blobUrl) setProjectVideoSource(player, sourceEl, blobUrl, 'video/webm');
-  });
+  /* No setProjectVideoSource / load / play en boot — el modal carga bajo demanda. */
 }
 
 function getProjectVideoQualityMap(config) {
@@ -709,6 +775,9 @@ function bindProjectVideoModal() {
         syncPlayUi();
       } else {
         refreshQualitiesFromConfig();
+        if (typeof ensureProjectVideoSourceForPlayback === 'function') {
+          ensureProjectVideoSourceForPlayback();
+        }
         syncPlayUi();
         syncVolumeUi();
       }

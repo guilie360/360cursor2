@@ -404,11 +404,20 @@ var coverVideo = document.getElementById('coverVideo');
 window.__mainTrace('coverVideo', coverVideo ? 'encontrado' : 'null');
 if (coverVideo) {
   coverVideo.addEventListener('canplay', function() {
+    var srcEl = document.getElementById('coverVideoSource');
+    var hasSrc = !!(coverVideo.currentSrc || (srcEl && srcEl.getAttribute('src')));
+    if (!hasSrc) return;
     coverVideo.play().catch(function(){});
   });
 }
 function pauseCoverVideo()  { if (coverVideo && !coverVideo.paused) coverVideo.pause(); }
-function resumeCoverVideo() { if (coverVideo &&  coverVideo.paused) coverVideo.play().catch(function(){}); }
+function resumeCoverVideo() {
+  if (!coverVideo || !coverVideo.paused) return;
+  var srcEl = document.getElementById('coverVideoSource');
+  var hasSrc = !!(coverVideo.currentSrc || (srcEl && srcEl.getAttribute('src')));
+  if (!hasSrc) return;
+  coverVideo.play().catch(function(){});
+}
 
 /* ================= DATOS DE ZONAS CON RECORRIDO 360° ================= */
 var TOUR360 = {
@@ -1780,22 +1789,30 @@ function playVideoModalIntro() {
     player.setAttribute('poster', player.dataset.videoPosterBackup);
   }
 
-  if (isMobileVideoViewport()) {
-    playMobileVideoOrientationGate(player);
-    return;
+  function startIntro() {
+    if (isMobileVideoViewport()) {
+      playMobileVideoOrientationGate(player);
+      return;
+    }
+
+    playSplashModalIntro({
+      modalId: 'videoModal',
+      loaderId: 'videoModalLoader',
+      cardId: 'videoModalCard',
+      onBeforeStart: function () {
+        prepareVideoFirstFrame(player);
+      },
+      onBeforeReady: function (done) {
+        prepareVideoFirstFrame(player, done);
+      }
+    });
   }
 
-  playSplashModalIntro({
-    modalId: 'videoModal',
-    loaderId: 'videoModalLoader',
-    cardId: 'videoModalCard',
-    onBeforeStart: function () {
-      prepareVideoFirstFrame(player);
-    },
-    onBeforeReady: function (done) {
-      prepareVideoFirstFrame(player, done);
-    }
-  });
+  if (typeof ensureProjectVideoSourceForPlayback === 'function') {
+    Promise.resolve(ensureProjectVideoSourceForPlayback()).then(startIntro, startIntro);
+  } else {
+    startIntro();
+  }
 }
 
 var videoOrientGateTimer = null;
@@ -1975,17 +1992,24 @@ function playMobileVideoOrientationGate(player) {
 
   /* Precargar + play silenciado durante el gesto del usuario (mejora FS en Safari). */
   if (player) {
-    try { player.playsInline = true; } catch (e0) {}
-    try { player.setAttribute('playsinline', ''); } catch (e1) {}
-    try { player.setAttribute('webkit-playsinline', ''); } catch (e2) {}
-    try { player.preload = 'auto'; } catch (e3) {}
-    try { player.muted = true; } catch (e4) {}
-    try { player.load(); } catch (e5) {}
-    prepareVideoFirstFrame(player);
-    try {
-      var warm = player.play();
-      if (warm && typeof warm.catch === 'function') warm.catch(function () {});
-    } catch (e6) { /* ignore */ }
+    var warmPlayer = function () {
+      try { player.playsInline = true; } catch (e0) {}
+      try { player.setAttribute('playsinline', ''); } catch (e1) {}
+      try { player.setAttribute('webkit-playsinline', ''); } catch (e2) {}
+      try { player.preload = 'auto'; } catch (e3) {}
+      try { player.muted = true; } catch (e4) {}
+      try { player.load(); } catch (e5) {}
+      prepareVideoFirstFrame(player);
+      try {
+        var warm = player.play();
+        if (warm && typeof warm.catch === 'function') warm.catch(function () {});
+      } catch (e6) { /* ignore */ }
+    };
+    if (typeof ensureProjectVideoSourceForPlayback === 'function') {
+      Promise.resolve(ensureProjectVideoSourceForPlayback()).then(warmPlayer, warmPlayer);
+    } else {
+      warmPlayer();
+    }
   }
 
   var entered = false;

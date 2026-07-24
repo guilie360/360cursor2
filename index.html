@@ -89,8 +89,8 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 
   <!-- ================= PORTADA DEL PROYECTO ================= -->
   <section class="project-cover" id="projectCover" data-hero-text-color="light" data-hero-button-text-color="light" data-hero-layout="centered">
-    <video class="project-cover-video" id="coverVideo" autoplay muted loop playsinline preload="auto" style="display:none">
-      <source id="coverVideoSource" src="" type="video/mp4">
+    <video class="project-cover-video" id="coverVideo" muted loop playsinline preload="none" style="display:none">
+      <source id="coverVideoSource" type="video/mp4">
     </video>
     <img class="project-cover-video" id="coverImage" alt="" style="display:none">
     <div class="project-cover-overlay"></div>
@@ -563,7 +563,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
             class="project-video-player"
             playsinline
             webkit-playsinline
-            preload="metadata"
+            preload="none"
             poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1280' height='720' viewBox='0 0 1280 720'%3E%3Crect width='1280' height='720' fill='%23000000'/%3E%3C/svg%3E"
           >
             <source id="projectVideoSource" type="video/webm">

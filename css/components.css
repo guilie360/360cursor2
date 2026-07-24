@@ -50,10 +50,20 @@ body,
   width:100%;
   position:relative;
   overflow:hidden;
-  background:var(--hero-bg);
+  /* OLED ambient base — profundidad CSS (sin media de red) */
+  background-color:var(--hero-bg, #050505);
+  background-image:
+    radial-gradient(ellipse 68% 52% at 50% 42%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.014) 32%, transparent 68%),
+    radial-gradient(ellipse 110% 70% at 50% 110%, rgba(0,0,0,0.72) 0%, transparent 58%),
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0,0,0,0.45) 0%, transparent 55%),
+    linear-gradient(165deg, #080808 0%, #050505 42%, #030303 100%);
   display:flex;
   align-items:flex-end;
   justify-content:center;
+}
+/* Demos / sin media: refuerza fondo negro premium */
+.project-cover.is-ambient-depth {
+  background-color:#050505;
 }
 .project-cover-video {
   position:absolute;
@@ -74,6 +84,17 @@ body,
     rgba(0,0,0,var(--depth-hero-top, 0.55)) 100%
   );
   transition:background 0.35s ease;
+  pointer-events:none;
+}
+.project-cover.is-ambient-depth .project-cover-overlay {
+  background:
+    radial-gradient(ellipse 58% 48% at 50% 44%, transparent 0%, transparent 42%, rgba(0,0,0,0.22) 78%, rgba(0,0,0,0.58) 100%),
+    linear-gradient(
+      to top,
+      rgba(0,0,0,0.62) 0%,
+      rgba(0,0,0,0.12) 48%,
+      rgba(0,0,0,0.38) 100%
+    );
 }
 .project-cover-content {
   position:relative;
