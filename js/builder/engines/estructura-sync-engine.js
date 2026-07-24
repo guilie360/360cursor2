@@ -83,9 +83,12 @@ var EstructuraSyncEngine = (function () {
       e.tipologiasCount = est.data.tipologias_count || e.tipologiasCount;
       e.repeatFloorDistribution = est.data.repeat_floor_distribution !== false;
       e.appliedAt = est.data.applied_at;
-      if (est.data.draft_json && typeof est.data.draft_json === 'object' && !est.data.applied_at) {
-        /* prefer draft only when never applied */
+      if (est.data.config_json && typeof est.data.config_json === 'object') {
+        EstructuraEngine.applyConfigSnapshot(e, est.data.config_json);
+      } else if (est.data.draft_json && typeof est.data.draft_json === 'object') {
+        EstructuraEngine.applyConfigSnapshot(e, est.data.draft_json);
       }
+      EstructuraEngine.ensureState(state);
     }
 
     e.buildings = (buildingsRes.data || []).map(function (b, i) {
@@ -130,6 +133,7 @@ var EstructuraSyncEngine = (function () {
         return {
           localId: t.id,
           id: t.id,
+          componente: t.componente || null,
           producto: t.producto || '',
           modelo: t.modelo || '',
           nombre: t.nombre || '',
@@ -163,9 +167,13 @@ var EstructuraSyncEngine = (function () {
       if (n) e.zoneNames.push(n);
     });
 
-    state.projectType = e.developmentType;
+    state.projectType = EstructuraEngine.normalizeTypeId(e.developmentType);
+    e.developmentType = state.projectType;
     e.dirty = false;
     EstructuraEngine.syncTypologyPlantas(e);
+    if (typeof ProjectTypesEngine !== 'undefined') {
+      state.projectStructure = ProjectTypesEngine.getStructure(state.projectType) || state.projectStructure;
+    }
     return project;
   }
 
@@ -175,14 +183,15 @@ var EstructuraSyncEngine = (function () {
     var e = EstructuraEngine.ensureState(state);
     var payload = {
       proyecto_id: project.id,
-      development_type: e.developmentType,
+      development_type: EstructuraEngine.normalizeTypeId(e.developmentType),
       org_etapas: !!e.orgEtapas,
       org_sectores: !!e.orgSectores,
       org_manzanas: !!e.orgManzanas,
-      total_viviendas: e.totalViviendas,
+      total_viviendas: e.developmentType === 'unidad' ? e.unidadCount : e.totalViviendas,
       total_lotes: e.totalLotes,
       tipologias_count: (e.tipologias || []).length,
       repeat_floor_distribution: e.repeatFloorDistribution !== false,
+      config_json: EstructuraEngine.configSnapshot(e),
       draft_json: e,
       updated_at: new Date().toISOString()
     };
@@ -348,14 +357,15 @@ var EstructuraSyncEngine = (function () {
     /* Upsert estructura header */
     var header = {
       proyecto_id: pid,
-      development_type: e.developmentType,
+      development_type: EstructuraEngine.normalizeTypeId(e.developmentType),
       org_etapas: !!e.orgEtapas,
       org_sectores: !!e.orgSectores,
       org_manzanas: !!e.orgManzanas,
-      total_viviendas: e.totalViviendas,
+      total_viviendas: e.developmentType === 'unidad' ? e.unidadCount : e.totalViviendas,
       total_lotes: e.totalLotes,
       tipologias_count: (e.tipologias || []).length,
       repeat_floor_distribution: e.repeatFloorDistribution !== false,
+      config_json: EstructuraEngine.configSnapshot(e),
       draft_json: null,
       applied_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -369,7 +379,7 @@ var EstructuraSyncEngine = (function () {
       var b = e.buildings[bi];
       var brow = {
         proyecto_id: pid,
-        kind: b.kind || (e.developmentType === 'torres' ? 'torre' : 'edificio'),
+        kind: b.kind || (e.edificioMode === 'multiples' ? 'torre' : 'edificio'),
         nombre: b.nombre || ('Torre ' + (bi + 1)),
         pisos: clampInt(b.pisos, 0, 200, 1),
         sotanos: clampInt(b.sotanos, 0, 20, 0),
@@ -449,13 +459,17 @@ var EstructuraSyncEngine = (function () {
     for (var ti = 0; ti < (e.tipologias || []).length; ti++) {
       var tip = e.tipologias[ti];
       var tipName = (tip.nombre || '').trim() ||
-        ((EstructuraEngine.productsFor(e.developmentType).find(function (p) { return p.id === tip.producto; }) || {}).label || 'Tipología') +
+        ((EstructuraEngine.productsFor(e.developmentType, {
+          componente: tip.componente,
+          unidadHousingType: e.unidadHousingType
+        }).find(function (p) { return p.id === tip.producto; }) || {}).label || 'Tipología') +
         (tip.modelo ? ' · ' + tip.modelo : '');
       var tipRow = {
         proyecto_id: pid,
         nombre: tipName,
         producto: tip.producto || null,
         modelo: tip.modelo || null,
+        componente: tip.componente || null,
         habitaciones: clampInt(tip.habitaciones, 0, 30, 0),
         banos: clampInt(tip.banos, 0, 30, 0),
         parqueaderos: clampInt(tip.parqueaderos, 0, 30, 0),
@@ -598,18 +612,18 @@ var EstructuraSyncEngine = (function () {
 
     e.appliedAt = header.applied_at;
     e.dirty = false;
-    state.projectType = e.developmentType;
+    state.projectType = EstructuraEngine.normalizeTypeId(e.developmentType);
+    e.developmentType = state.projectType;
     if (typeof ProjectTypesEngine !== 'undefined') {
-      state.projectStructure = ProjectTypesEngine.getStructure(
-        EstructuraEngine.migrateLegacyProjectType(e.developmentType) ? e.developmentType : 'edificio'
-      ) || state.projectStructure;
+      state.projectStructure = ProjectTypesEngine.getStructure(state.projectType) || state.projectStructure;
     }
 
     return {
       projectId: pid,
       tipologias: e.tipologias.length,
       viviendas: vivSync.count,
-      buildings: (e.buildings || []).length
+      buildings: (e.buildings || []).length,
+      unidadesFisicasConceptuales: EstructuraEngine.conceptualPhysicalUnits(e)
     };
   }
 

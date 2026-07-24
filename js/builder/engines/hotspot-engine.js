@@ -11,6 +11,10 @@ var HotspotEngine = (function () {
   ];
 
   function suggestFromGallery(galleryItems, projectType) {
+    var developmentType = projectType;
+    if (typeof ProjectTypesEngine !== 'undefined' && ProjectTypesEngine.normalizeDevelopmentType) {
+      developmentType = ProjectTypesEngine.normalizeDevelopmentType(projectType);
+    }
     var suggestions = [];
     var masterImages = (galleryItems || []).filter(function (item) {
       return item.category === 'exterior' || item.category === 'masterplan' ||
@@ -22,24 +26,24 @@ var HotspotEngine = (function () {
     }
 
     masterImages.forEach(function (image, imgIdx) {
-      HOTSPOT_TYPES.forEach(function (type, typeIdx) {
-        var nameMatch = type.keywords.some(function (kw) {
+      HOTSPOT_TYPES.forEach(function (hsType, typeIdx) {
+        var nameMatch = hsType.keywords.some(function (kw) {
           return image.name.toLowerCase().indexOf(kw) !== -1;
         });
-        var typeMatch = projectType && (
-          (projectType === 'edificio' && type.id === 'torre') ||
-          (projectType === 'conjunto' && type.id === 'casa') ||
-          (projectType === 'lotes' && type.id === 'parque')
+        var typeMatch = developmentType && (
+          ((developmentType === 'edificio' || developmentType === 'mixto') && hsType.id === 'torre') ||
+          ((developmentType === 'conjunto' || developmentType === 'unidad') && hsType.id === 'casa') ||
+          (developmentType === 'lotes' && hsType.id === 'parque')
         );
 
         if (nameMatch || (typeMatch && imgIdx === 0)) {
           suggestions.push({
-            id: 'hs-' + image.id + '-' + type.id,
+            id: 'hs-' + image.id + '-' + hsType.id,
             imageId: image.id,
             imageName: image.name,
             imagePreview: image.previewUrl,
-            type: type.id,
-            label: type.label + (imgIdx > 0 ? ' ' + (imgIdx + 1) : ''),
+            type: hsType.id,
+            label: hsType.label + (imgIdx > 0 ? ' ' + (imgIdx + 1) : ''),
             x: 20 + (typeIdx * 12) % 60,
             y: 25 + (typeIdx * 8) % 50,
             confidence: nameMatch ? 0.85 : 0.55,

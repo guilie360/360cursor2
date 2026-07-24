@@ -152,14 +152,66 @@ var AiProjectBuilderView = (function () {
 
   function renderEstructura() {
     var e = EstructuraEngine.ensureState(state);
-    var family = EstructuraEngine.productFamilyFor(e.developmentType);
-    var products = EstructuraEngine.productsFor(e.developmentType);
+    var dt = e.developmentType;
 
     function stepperHtml(field, value, min, max) {
-      return '<div class="builder-estructura-stepper" data-stepper="' + field + '">' +
+      min = min != null ? min : 0;
+      max = max != null ? max : 99999;
+      return '<div class="builder-estructura-stepper" data-stepper="' + field + '"' +
+        ' data-min="' + min + '" data-max="' + max + '">' +
         '<button type="button" class="builder-estructura-stepper__btn" data-step="-1" aria-label="Menos">−</button>' +
-        '<span class="builder-estructura-stepper__val">' + AdminUI.escapeHtml(String(value)) + '</span>' +
+        '<input type="number" class="builder-estructura-stepper__input" inputmode="numeric" ' +
+          'data-stepper-input value="' + AdminUI.escapeHtml(String(value)) + '" ' +
+          'min="' + min + '" max="' + max + '" step="1">' +
         '<button type="button" class="builder-estructura-stepper__btn" data-step="1" aria-label="Más">+</button>' +
+      '</div>';
+    }
+
+    function buildingAccHtml(b, bi, multi) {
+      return '<details class="builder-estructura-acc" data-building="' + AdminUI.escapeHtml(b.localId) + '"' +
+        (b.open ? ' open' : '') + '>' +
+        '<summary>' + AdminUI.escapeHtml(b.nombre || ('Torre ' + (bi + 1))) + '</summary>' +
+        '<div class="builder-estructura-acc__body">' +
+          '<div class="builder-field">' +
+            '<label>Nombre</label>' +
+            '<input type="text" data-b-field="nombre" value="' + AdminUI.escapeHtml(b.nombre || '') + '">' +
+          '</div>' +
+          '<div class="builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Pisos</span>' +
+            stepperHtml('b.pisos', b.pisos, 1, 200) +
+          '</div>' +
+          '<div class="builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Sótanos</span>' +
+            stepperHtml('b.sotanos', b.sotanos, 0, 20) +
+          '</div>' +
+          '<label class="builder-check-row">' +
+            '<input type="checkbox" data-b-field="rooftop"' + (b.rooftop ? ' checked' : '') + '>' +
+            '<span>Azotea / Rooftop</span>' +
+          '</label>' +
+          '<div class="builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Unidades por piso</span>' +
+            stepperHtml('b.unidadesPorPiso', b.unidadesPorPiso, 1, 40) +
+          '</div>' +
+          (multi
+            ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-copy-building="' +
+                AdminUI.escapeHtml(b.localId) + '">Copiar configuración a otras torres</button>'
+            : '') +
+          '<label class="builder-check-row">' +
+            '<input type="checkbox" data-estructura-field="repeatFloorDistribution"' +
+              (e.repeatFloorDistribution !== false ? ' checked' : '') + '>' +
+            '<span>Repetir distribución en todos los pisos</span>' +
+          '</label>' +
+        '</div></details>';
+    }
+
+    function orgLevelsHtml() {
+      return '<div class="builder-estructura-chips">' +
+        '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgEtapas"' +
+          (e.orgEtapas ? ' checked' : '') + '><span>Etapas / Fases</span></label>' +
+        '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgSectores"' +
+          (e.orgSectores ? ' checked' : '') + '><span>Sectores</span></label>' +
+        '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgManzanas"' +
+          (e.orgManzanas ? ' checked' : '') + '><span>Manzanas / Clústeres</span></label>' +
       '</div>';
     }
 
@@ -171,10 +223,37 @@ var AiProjectBuilderView = (function () {
     }).join('');
 
     var orgHtml = '';
-    var dt = e.developmentType;
 
-    if (dt === 'edificio' || dt === 'torres') {
-      if (dt === 'torres') {
+    if (dt === 'unidad') {
+      orgHtml +=
+        '<div class="builder-estructura-sublabel">Tipo de vivienda</div>' +
+        '<div class="builder-estructura-chips">' +
+          '<label class="builder-estructura-chip' + (e.unidadHousingType === 'casa' ? ' is-on' : '') + '">' +
+            '<input type="radio" name="unidadHousing" data-unidad-housing="casa"' +
+              (e.unidadHousingType === 'casa' ? ' checked' : '') + '><span>Casa</span></label>' +
+          '<label class="builder-estructura-chip' + (e.unidadHousingType === 'apartamento' ? ' is-on' : '') + '">' +
+            '<input type="radio" name="unidadHousing" data-unidad-housing="apartamento"' +
+              (e.unidadHousingType === 'apartamento' ? ' checked' : '') + '><span>Apartamento</span></label>' +
+        '</div>' +
+        '<div class="builder-estructura-row">' +
+          '<span class="builder-estructura-row__label">Cantidad de unidades</span>' +
+          stepperHtml('unidadCount', e.unidadCount || 1, 1, 50000) +
+        '</div>';
+    }
+
+    if (dt === 'edificio') {
+      var multi = e.edificioMode === 'multiples';
+      orgHtml +=
+        '<div class="builder-estructura-sublabel">Tipo</div>' +
+        '<div class="builder-estructura-chips">' +
+          '<label class="builder-estructura-chip' + (!multi ? ' is-on' : '') + '">' +
+            '<input type="radio" name="edificioMode" data-edificio-mode="unico"' +
+              (!multi ? ' checked' : '') + '><span>Edificio único</span></label>' +
+          '<label class="builder-estructura-chip' + (multi ? ' is-on' : '') + '">' +
+            '<input type="radio" name="edificioMode" data-edificio-mode="multiples"' +
+              (multi ? ' checked' : '') + '><span>Múltiples torres / bloques</span></label>' +
+        '</div>';
+      if (multi) {
         orgHtml +=
           '<div class="builder-estructura-row">' +
             '<span class="builder-estructura-row__label">Cantidad de torres</span>' +
@@ -182,45 +261,17 @@ var AiProjectBuilderView = (function () {
           '</div>';
       }
       orgHtml += e.buildings.map(function (b, bi) {
-        return '<details class="builder-estructura-acc" data-building="' + AdminUI.escapeHtml(b.localId) + '"' +
-          (b.open ? ' open' : '') + '>' +
-          '<summary>' + AdminUI.escapeHtml(b.nombre || ('Torre ' + (bi + 1))) + '</summary>' +
-          '<div class="builder-estructura-acc__body">' +
-            '<div class="builder-field">' +
-              '<label>Nombre</label>' +
-              '<input type="text" data-b-field="nombre" value="' + AdminUI.escapeHtml(b.nombre || '') + '">' +
-            '</div>' +
-            '<div class="builder-estructura-row">' +
-              '<span class="builder-estructura-row__label">Pisos</span>' +
-              stepperHtml('b.pisos', b.pisos, 1, 200) +
-            '</div>' +
-            '<div class="builder-estructura-row">' +
-              '<span class="builder-estructura-row__label">Sótanos</span>' +
-              stepperHtml('b.sotanos', b.sotanos, 0, 20) +
-            '</div>' +
-            '<label class="builder-check-row">' +
-              '<input type="checkbox" data-b-field="rooftop"' + (b.rooftop ? ' checked' : '') + '>' +
-              '<span>Azotea / Rooftop</span>' +
-            '</label>' +
-            '<div class="builder-estructura-row">' +
-              '<span class="builder-estructura-row__label">Unidades por piso</span>' +
-              stepperHtml('b.unidadesPorPiso', b.unidadesPorPiso, 1, 40) +
-            '</div>' +
-            (dt === 'torres'
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-copy-building="' +
-                  AdminUI.escapeHtml(b.localId) + '">Copiar configuración a otras torres</button>'
-              : '') +
-            '<label class="builder-check-row">' +
-              '<input type="checkbox" data-estructura-field="repeatFloorDistribution"' +
-                (e.repeatFloorDistribution !== false ? ' checked' : '') + '>' +
-              '<span>Repetir distribución en todos los pisos</span>' +
-            '</label>' +
-          '</div></details>';
+        return buildingAccHtml(b, bi, multi);
       }).join('');
+      if (multi) {
+        orgHtml +=
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTowerBtn">' +
+            '+ Añadir torre / edificio</button>';
+      }
     }
 
-    if (dt === 'casas' || dt === 'urbanizacion') {
-      orgHtml +=
+    if (dt === 'conjunto') {
+      orgHtml += orgLevelsHtml() +
         '<div class="builder-estructura-row">' +
           '<span class="builder-estructura-row__label">Cantidad total de viviendas</span>' +
           stepperHtml('totalViviendas', e.totalViviendas || 50, 1, 50000) +
@@ -229,38 +280,94 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-estructura-row__label">Número de tipologías / modelos</span>' +
           stepperHtml('tipologiasCount', e.tipologias.length || 1, 1, 40) +
         '</div>';
-      if (dt === 'urbanizacion') {
+    }
+
+    if (dt === 'lotes') {
+      orgHtml +=
+        '<div class="builder-estructura-sublabel">Tipo</div>' +
+        '<div class="builder-estructura-chips">' +
+          '<label class="builder-estructura-chip' + (e.lotesSubtype === 'urbano' ? ' is-on' : '') + '">' +
+            '<input type="radio" name="lotesSubtype" data-lotes-subtype="urbano"' +
+              (e.lotesSubtype === 'urbano' ? ' checked' : '') + '><span>Loteo urbano</span></label>' +
+          '<label class="builder-estructura-chip' + (e.lotesSubtype === 'campestre' ? ' is-on' : '') + '">' +
+            '<input type="radio" name="lotesSubtype" data-lotes-subtype="campestre"' +
+              (e.lotesSubtype === 'campestre' ? ' checked' : '') + '><span>Parcelación campestre</span></label>' +
+        '</div>' +
+        orgLevelsHtml() +
+        '<div class="builder-estructura-row">' +
+          '<span class="builder-estructura-row__label">Cantidad total de lotes</span>' +
+          stepperHtml('totalLotes', e.totalLotes || 100, 1, 100000) +
+        '</div>' +
+        '<p class="builder-estructura-section__note">La cantidad se guarda como estructura; no se materializan ' +
+          (e.totalLotes || 100) + ' nodos en el formulario.</p>';
+    }
+
+    if (dt === 'mixto') {
+      var hint = EstructuraEngine.mixtoHint(e);
+      orgHtml +=
+        '<div class="builder-estructura-sublabel">¿Qué contiene el proyecto?</div>' +
+        '<div class="builder-estructura-chips">' +
+          '<label class="builder-check-row"><input type="checkbox" data-mixto-comp="edificios"' +
+            (e.mixto && e.mixto.edificios ? ' checked' : '') + '><span>Edificios / Torres</span></label>' +
+          '<label class="builder-check-row"><input type="checkbox" data-mixto-comp="casas"' +
+            (e.mixto && e.mixto.casas ? ' checked' : '') + '><span>Casas</span></label>' +
+          '<label class="builder-check-row"><input type="checkbox" data-mixto-comp="lotes"' +
+            (e.mixto && e.mixto.lotes ? ' checked' : '') + '><span>Lotes</span></label>' +
+        '</div>' +
+        (hint ? '<p class="builder-estructura-section__note">' + AdminUI.escapeHtml(hint) + '</p>' : '') +
+        '<div class="builder-estructura-sublabel">Componentes del proyecto</div>';
+
+      if (e.mixto && e.mixto.edificios) {
         orgHtml +=
-          '<div class="builder-estructura-chips">' +
-            '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgEtapas"' +
-              (e.orgEtapas ? ' checked' : '') + '><span>Etapas</span></label>' +
-            '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgSectores"' +
-              (e.orgSectores ? ' checked' : '') + '><span>Sectores</span></label>' +
-            '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgManzanas"' +
-              (e.orgManzanas ? ' checked' : '') + '><span>Manzanas</span></label>' +
-          '</div>';
+          '<details class="builder-estructura-acc" open>' +
+            '<summary>Edificios / Torres</summary>' +
+            '<div class="builder-estructura-acc__body">' +
+              e.buildings.map(function (b, bi) { return buildingAccHtml(b, bi, true); }).join('') +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTowerBtn">' +
+                '+ Añadir torre / edificio</button>' +
+            '</div></details>';
+      }
+      if (e.mixto && e.mixto.casas) {
+        orgHtml +=
+          '<details class="builder-estructura-acc" open>' +
+            '<summary>Casas</summary>' +
+            '<div class="builder-estructura-acc__body">' +
+              orgLevelsHtml() +
+              '<div class="builder-estructura-row">' +
+                '<span class="builder-estructura-row__label">Cantidad de viviendas (casas)</span>' +
+                stepperHtml('totalViviendas', e.totalViviendas || 20, 1, 50000) +
+              '</div>' +
+            '</div></details>';
+      }
+      if (e.mixto && e.mixto.lotes) {
+        orgHtml +=
+          '<details class="builder-estructura-acc" open>' +
+            '<summary>Lotes</summary>' +
+            '<div class="builder-estructura-acc__body">' +
+              '<div class="builder-estructura-row">' +
+                '<span class="builder-estructura-row__label">Cantidad de lotes</span>' +
+                stepperHtml('totalLotes', e.totalLotes || 50, 1, 100000) +
+              '</div>' +
+            '</div></details>';
       }
     }
 
-    if (dt === 'loteo' || dt === 'parcelacion') {
-      orgHtml +=
-        '<div class="builder-estructura-row">' +
-          '<span class="builder-estructura-row__label">' +
-            (dt === 'loteo' ? 'Cantidad de lotes' : 'Cantidad de parcelas') +
-          '</span>' +
-          stepperHtml('totalLotes', e.totalLotes || 100, 1, 100000) +
-        '</div>' +
-        '<div class="builder-estructura-chips">' +
-          '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgEtapas"' +
-            (e.orgEtapas ? ' checked' : '') + '><span>Etapas</span></label>' +
-          '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgSectores"' +
-            (e.orgSectores ? ' checked' : '') + '><span>Sectores</span></label>' +
-          '<label class="builder-check-row"><input type="checkbox" data-estructura-field="orgManzanas"' +
-            (e.orgManzanas ? ' checked' : '') + '><span>Manzanas</span></label>' +
-        '</div>';
+    function tipFamily(tip) {
+      if (dt === 'mixto') {
+        return EstructuraEngine.productFamilyFor(dt, tip.componente);
+      }
+      if (dt === 'unidad') {
+        return e.unidadHousingType === 'apartamento' ? 'apartamento' : 'casa';
+      }
+      return EstructuraEngine.productFamilyFor(dt, tip.componente);
     }
 
     var tipsHtml = e.tipologias.map(function (tip, ti) {
+      var products = EstructuraEngine.productsFor(dt, {
+        componente: tip.componente,
+        unidadHousingType: e.unidadHousingType
+      });
+      var family = tipFamily(tip);
       var productOpts = products.map(function (p) {
         return '<option value="' + p.id + '"' + (tip.producto === p.id ? ' selected' : '') + '>' +
           AdminUI.escapeHtml(p.label) + '</option>';
@@ -268,6 +375,22 @@ var AiProjectBuilderView = (function () {
       var showLote = family === 'casa' || family === 'terreno';
       var showPrivada = family === 'apartamento';
       var showRooms = family !== 'terreno';
+
+      var compSelect = '';
+      if (dt === 'mixto') {
+        var comps = [];
+        if (e.mixto && e.mixto.edificios) comps.push({ id: 'edificios', label: 'Edificios / Torres' });
+        if (e.mixto && e.mixto.casas) comps.push({ id: 'casas', label: 'Casas' });
+        if (e.mixto && e.mixto.lotes) comps.push({ id: 'lotes', label: 'Lotes' });
+        compSelect =
+          '<div class="builder-field"><label>Componente</label>' +
+            '<select data-t-field="componente">' +
+              comps.map(function (c) {
+                return '<option value="' + c.id + '"' + (tip.componente === c.id ? ' selected' : '') + '>' +
+                  AdminUI.escapeHtml(c.label) + '</option>';
+              }).join('') +
+            '</select></div>';
+      }
 
       var plantasHtml = (tip.plantas || []).map(function (pl) {
         var ambList = (tip.ambientes || []).filter(function (a) {
@@ -304,6 +427,7 @@ var AiProjectBuilderView = (function () {
         (tip.open ? ' open' : '') + '>' +
         '<summary>' + AdminUI.escapeHtml(tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : ('Tipología ' + (ti + 1)))) + '</summary>' +
         '<div class="builder-estructura-acc__body">' +
+          compSelect +
           '<div class="builder-estructura-grid2">' +
             '<div class="builder-field"><label>Producto</label>' +
               '<select data-t-field="producto">' + productOpts + '</select></div>' +
@@ -396,7 +520,8 @@ var AiProjectBuilderView = (function () {
             '+ Añadir tipología</button>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' +
-          '<p class="builder-estructura-section__note">Plantas y ambientes se editan dentro de cada tipología.</p>' +
+          '<p class="builder-estructura-section__note">Plantas y ambientes se editan dentro de cada tipología. ' +
+            '1 tipología = 1 tarjeta en Viviendas.</p>' +
           tipsHtml +
         '</div>' +
       '</details>' +
@@ -1339,45 +1464,136 @@ var AiProjectBuilderView = (function () {
       });
     });
 
-    rootEl.querySelectorAll('.builder-estructura-stepper').forEach(function (el) {
+    rootEl.querySelectorAll('[data-edificio-mode]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        EstructuraEngine.setEdificioMode(state, input.getAttribute('data-edificio-mode'));
+        rerender();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-unidad-housing]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        state.estructura.unidadHousingType = input.getAttribute('data-unidad-housing');
+        state.estructura.tipologias.forEach(function (t) { t.nombre = ''; });
+        EstructuraEngine.syncTypologyPlantas(state.estructura);
+        persist();
+        rerender();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-lotes-subtype]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        state.estructura.lotesSubtype = input.getAttribute('data-lotes-subtype');
+        persist();
+        rerender();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-mixto-comp]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        EstructuraEngine.toggleMixtoComponent(state, input.getAttribute('data-mixto-comp'), input.checked);
+        rerender();
+      });
+    });
+
+    var addTowerBtn = rootEl.querySelector('#builderAddTowerBtn');
+    if (addTowerBtn) {
+      addTowerBtn.addEventListener('click', function () {
+        EstructuraEngine.addBuilding(state);
+        rerender();
+      });
+    }
+
+    function applyStepperValue(el, raw) {
       var field = el.getAttribute('data-stepper');
+      var min = parseInt(el.getAttribute('data-min'), 10);
+      var max = parseInt(el.getAttribute('data-max'), 10);
+      if (isNaN(min)) min = 0;
+      if (isNaN(max)) max = 99999;
+      var e = state.estructura;
+      var buildingEl = el.closest('[data-building]');
+      var tipEl = el.closest('[data-tipologia]');
+      var n = EstructuraEngine.clampInt(raw, min, max, min);
+
+      if (field === 'towerCount') {
+        EstructuraEngine.setTowerCount(state, n);
+        return true;
+      }
+      if (field === 'unidadCount') {
+        e.unidadCount = n;
+        e.totalViviendas = n;
+        return true;
+      }
+      if (field === 'totalViviendas') {
+        e.totalViviendas = n;
+        return true;
+      }
+      if (field === 'totalLotes') {
+        e.totalLotes = n;
+        return true;
+      }
+      if (field === 'tipologiasCount') {
+        EstructuraEngine.setTypologyCount(state, n);
+        return true;
+      }
+      if (buildingEl && field.indexOf('b.') === 0) {
+        var b = e.buildings.find(function (x) {
+          return x.localId === buildingEl.getAttribute('data-building');
+        });
+        if (b) b[field.slice(2)] = n;
+        return true;
+      }
+      if (tipEl && field.indexOf('t.') === 0) {
+        var tip = e.tipologias.find(function (x) {
+          return x.localId === tipEl.getAttribute('data-tipologia');
+        });
+        if (tip) {
+          tip[field.slice(2)] = n;
+          if (field === 't.plantas_internas') EstructuraEngine.syncTypologyPlantas(e);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    rootEl.querySelectorAll('.builder-estructura-stepper').forEach(function (el) {
       el.querySelectorAll('[data-step]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var delta = parseInt(btn.getAttribute('data-step'), 10) || 0;
-          var e = state.estructura;
-          var buildingEl = el.closest('[data-building]');
-          var tipEl = el.closest('[data-tipologia]');
-          if (field === 'towerCount') {
-            EstructuraEngine.setTowerCount(state, (e.buildings.length || 2) + delta);
-          } else if (field === 'totalViviendas') {
-            e.totalViviendas = EstructuraEngine.clampInt((e.totalViviendas || 50) + delta, 1, 50000, 50);
-          } else if (field === 'totalLotes') {
-            e.totalLotes = EstructuraEngine.clampInt((e.totalLotes || 100) + delta, 1, 100000, 100);
-          } else if (field === 'tipologiasCount') {
-            EstructuraEngine.setTypologyCount(state, (e.tipologias.length || 1) + delta);
-          } else if (buildingEl && field.indexOf('b.') === 0) {
-            var b = e.buildings.find(function (x) {
-              return x.localId === buildingEl.getAttribute('data-building');
-            });
-            if (b) {
-              var bf = field.slice(2);
-              var limits = { pisos: [1, 200], sotanos: [0, 20], unidadesPorPiso: [1, 40] };
-              var lim = limits[bf] || [0, 999];
-              b[bf] = EstructuraEngine.clampInt((b[bf] || 0) + delta, lim[0], lim[1], b[bf] || 0);
-            }
-          } else if (tipEl && field.indexOf('t.') === 0) {
-            var tip = e.tipologias.find(function (x) {
-              return x.localId === tipEl.getAttribute('data-tipologia');
-            });
-            if (tip) {
-              var tf = field.slice(2);
-              tip[tf] = EstructuraEngine.clampInt((tip[tf] || 0) + delta, 0, 30, 0);
-              if (tf === 'plantas_internas') EstructuraEngine.syncTypologyPlantas(e);
-            }
-          }
+          var input = el.querySelector('[data-stepper-input]');
+          var cur = input ? parseInt(input.value, 10) : 0;
+          if (isNaN(cur)) cur = 0;
+          applyStepperValue(el, cur + delta);
           rerender();
         });
       });
+      var input = el.querySelector('[data-stepper-input]');
+      if (input) {
+        input.addEventListener('wheel', function (ev) {
+          if (document.activeElement === input) ev.preventDefault();
+        }, { passive: false });
+        input.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            applyStepperValue(el, input.value);
+            rerender();
+          }
+        });
+        input.addEventListener('change', function () {
+          applyStepperValue(el, input.value);
+          rerender();
+        });
+        input.addEventListener('blur', function () {
+          applyStepperValue(el, input.value);
+          persist();
+          var min = parseInt(el.getAttribute('data-min'), 10);
+          var max = parseInt(el.getAttribute('data-max'), 10);
+          input.value = String(EstructuraEngine.clampInt(input.value, min, max, min));
+        });
+      }
     });
 
     rootEl.querySelectorAll('[data-building]').forEach(function (card) {
@@ -1426,6 +1642,19 @@ var AiProjectBuilderView = (function () {
           var val = input.value;
           if (f === 'area_m2' || f === 'area_privada_m2' || f === 'area_lote_m2' || f === 'precio') {
             tip[f] = val === '' ? null : Number(val);
+          } else if (f === 'componente') {
+            tip.componente = val;
+            tip.producto = '';
+            tip.nombre = '';
+            var prods = EstructuraEngine.productsFor(state.estructura.developmentType, {
+              componente: val,
+              unidadHousingType: state.estructura.unidadHousingType
+            });
+            tip.producto = prods[0] ? prods[0].id : tip.producto;
+            EstructuraEngine.syncTypologyPlantas(state.estructura);
+            persist();
+            rerender();
+            return;
           } else {
             tip[f] = val;
           }
@@ -1508,7 +1737,6 @@ var AiProjectBuilderView = (function () {
     rootEl.querySelectorAll('[data-zone-name]').forEach(function (input) {
       input.addEventListener('change', function () {
         EstructuraEngine.toggleZone(state, input.getAttribute('data-zone-name'));
-        /* keep checkbox in sync without full rerender for zones chips class */
         var label = input.closest('.builder-estructura-chip');
         if (label) label.classList.toggle('is-on', !!input.checked);
         persist();
