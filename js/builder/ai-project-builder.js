@@ -395,39 +395,34 @@ var AiProjectBuilderView = (function () {
     if (dt === 'edificio') {
       var multi = e.edificioMode === 'multiples';
       var edificioGeneral =
-        '<div class="builder-estructura-sublabel">Tipo</div>' +
-        '<div class="builder-estructura-chips">' +
-          '<label class="builder-estructura-chip' + (!multi ? ' is-on' : '') + '">' +
-            '<input type="radio" name="edificioMode" data-edificio-mode="unico"' +
-              (!multi ? ' checked' : '') + '><span>Edificio único</span></label>' +
-          '<label class="builder-estructura-chip' + (multi ? ' is-on' : '') + '">' +
-            '<input type="radio" name="edificioMode" data-edificio-mode="multiples"' +
-              (multi ? ' checked' : '') + '><span>Múltiples torres / bloques</span></label>' +
+        '<div class="builder-estructura-edificio-controls">' +
+          '<div class="builder-estructura-sublabel">Tipo</div>' +
+          '<div class="builder-estructura-chips">' +
+            '<label class="builder-estructura-chip' + (!multi ? ' is-on' : '') + '">' +
+              '<input type="radio" name="edificioMode" data-edificio-mode="unico"' +
+                (!multi ? ' checked' : '') + '><span>Edificio único</span></label>' +
+            '<label class="builder-estructura-chip' + (multi ? ' is-on' : '') + '">' +
+              '<input type="radio" name="edificioMode" data-edificio-mode="multiples"' +
+                (multi ? ' checked' : '') + '><span>Múltiples torres / bloques</span></label>' +
+          '</div>' +
+          (multi
+            ? '<div class="builder-estructura-row builder-estructura-row--tower-count">' +
+                '<span class="builder-estructura-row__label">Cantidad de torres</span>' +
+                stepperHtml('towerCount', e.buildings.length || 2, 1, 40) +
+              '</div>'
+            : '') +
+        '</div>';
+
+      /* Same architecture for único and múltiples: controls above + stable 2-col grid */
+      orgHtml +=
+        edificioGeneral +
+        '<div class="builder-estructura-towers-grid">' +
+          e.buildings.map(function (b, bi) { return buildingAccHtml(b, bi, multi); }).join('') +
         '</div>' +
         (multi
-          ? '<div class="builder-estructura-row">' +
-              '<span class="builder-estructura-row__label">Cantidad de torres</span>' +
-              stepperHtml('towerCount', e.buildings.length || 2, 1, 40) +
-            '</div>'
+          ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTowerBtn">' +
+              '+ Añadir torre / edificio</button>'
           : '');
-
-      if (multi) {
-        orgHtml +=
-          '<div class="builder-estructura-org-layout">' +
-            '<div class="builder-estructura-org-layout__general">' + edificioGeneral + '</div>' +
-            '<div class="builder-estructura-org-layout__towers">' +
-              '<div class="builder-estructura-towers-grid">' +
-                e.buildings.map(function (b, bi) { return buildingAccHtml(b, bi, true); }).join('') +
-              '</div>' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTowerBtn">' +
-                '+ Añadir torre / edificio</button>' +
-            '</div>' +
-          '</div>';
-      } else {
-        orgHtml +=
-          edificioGeneral +
-          e.buildings.map(function (b, bi) { return buildingAccHtml(b, bi, false); }).join('');
-      }
     }
 
     if (dt === 'conjunto') {

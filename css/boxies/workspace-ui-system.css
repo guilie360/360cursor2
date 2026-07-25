@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.13
+   BOXIES Workspace UI System V5.9.14
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -222,6 +222,35 @@
 .builder-estructura-acc--nested {
   background: rgba(255, 255, 255, 0.015);
   border-color: var(--ws-border);
+}
+
+/* Edificio único / múltiples: same card geometry inside towers-grid (Tipologías principle) */
+.builder-step-content--estructura .builder-estructura-edificio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.builder-step-content--estructura .builder-estructura-row--tower-count {
+  max-width: 420px;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid > .builder-estructura-acc--building {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-self: start;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid > .builder-estructura-acc--building .builder-estructura-row {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.builder-step-content--estructura .builder-estructura-towers-grid + .builder-header-action-btn {
+  margin-top: 12px;
 }
 
 /* ── Organización física: compact grids + flatter mixto ── */
