@@ -1,4 +1,4 @@
-/* BOXIES V5.9.20 — Estructura Engine: tipos Unidad/Edificio/Conjunto/Lotes/Mixto */
+/* BOXIES V5.9.21 — Estructura Engine: tipos Unidad/Edificio/Conjunto/Lotes/Mixto */
 var EstructuraEngine = (function () {
   var DEVELOPMENT_TYPES = [
     { id: 'unidad', label: 'Unidad' },
@@ -750,7 +750,8 @@ var EstructuraEngine = (function () {
         dev: true,
         org: true,
         tipologias: true,
-        zonas: true
+        zonas: true,
+        resumen: false
       }
     };
   }
@@ -831,11 +832,12 @@ var EstructuraEngine = (function () {
     if (!Array.isArray(e.buildings)) e.buildings = [];
     if (!Array.isArray(e.tipologias)) e.tipologias = [];
     if (!Array.isArray(e.zoneNames)) e.zoneNames = [];
-    if (!e.openPanels) e.openPanels = { dev: true, org: true, tipologias: true, zonas: true };
+    if (!e.openPanels) e.openPanels = { dev: true, org: true, tipologias: true, zonas: true, resumen: false };
     if (e.openPanels.dev == null) e.openPanels.dev = true;
     if (e.openPanels.org == null) e.openPanels.org = true;
     if (e.openPanels.tipologias == null) e.openPanels.tipologias = true;
     if (e.openPanels.zonas == null) e.openPanels.zonas = true;
+    if (e.openPanels.resumen == null) e.openPanels.resumen = false;
     ensureConjuntoConfig(e);
     if (normalizeTypeId(e.developmentType) === 'conjunto') {
       syncConjuntoResidentialTipologias(e);

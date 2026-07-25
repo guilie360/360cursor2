@@ -150,6 +150,260 @@ var AiProjectBuilderView = (function () {
       '</div></div>';
   }
 
+  /**
+   * Presentational / derived — no persisted summary state.
+   * Reads canonical estructura only.
+   */
+  function buildEstructuraResumenHtml(e) {
+    e = e || {};
+    var esc = AdminUI.escapeHtml;
+    var dt = e.developmentType || '';
+    var typeMeta = (EstructuraEngine.DEVELOPMENT_TYPES || []).find(function (t) {
+      return t.id === dt;
+    });
+    var typeLabel = typeMeta ? typeMeta.label : dt;
+    var blocks = [];
+
+    function block(title, inner, full) {
+      if (!inner) return;
+      blocks.push(
+        '<div class="builder-estructura-resumen__block' + (full ? ' builder-estructura-resumen__block--full' : '') + '">' +
+          '<div class="builder-estructura-resumen__label">' + esc(title) + '</div>' +
+          '<div class="builder-estructura-resumen__content">' + inner + '</div>' +
+        '</div>'
+      );
+    }
+
+    function valueHtml(text) {
+      return '<div class="builder-estructura-resumen__value">' + esc(text) + '</div>';
+    }
+
+    function rowHtml(left, right) {
+      return '<div class="builder-estructura-resumen__row">' +
+        '<span class="builder-estructura-resumen__row-label">' + esc(left) + '</span>' +
+        '<span class="builder-estructura-resumen__row-value">' + esc(right) + '</span>' +
+      '</div>';
+    }
+
+    function productLabel(id) {
+      return EstructuraEngine.productLabel
+        ? (EstructuraEngine.productLabel(id) || id || '')
+        : (id || '');
+    }
+
+    function formatQty(n) {
+      return String(EstructuraEngine.clampInt(n, 0, 100000, 0));
+    }
+
+    function hasNum(v) {
+      return v != null && v !== '' && !isNaN(Number(v)) && Number(v) > 0;
+    }
+
+    function tipModeloLine(tip) {
+      var parts = [];
+      var modelo = String(tip.modelo || tip.nombre || '').trim();
+      if (modelo) parts.push(modelo);
+      if (hasNum(tip.area_m2)) parts.push(Number(tip.area_m2) + ' m²');
+      if (hasNum(tip.area_privada_m2)) parts.push('priv. ' + Number(tip.area_privada_m2) + ' m²');
+      if (hasNum(tip.area_lote_m2)) parts.push('lote ' + Number(tip.area_lote_m2) + ' m²');
+      if (tip.habitaciones != null && Number(tip.habitaciones) > 0) {
+        parts.push(Number(tip.habitaciones) + ' hab');
+      }
+      if (tip.banos != null && Number(tip.banos) > 0) {
+        parts.push(Number(tip.banos) + ' baños');
+      }
+      if (tip.parqueaderos != null && Number(tip.parqueaderos) > 0) {
+        parts.push(Number(tip.parqueaderos) + ' parq');
+      }
+      if (tip.plantas_internas != null && Number(tip.plantas_internas) > 0) {
+        parts.push(Number(tip.plantas_internas) + ' plantas');
+      }
+      if (hasNum(tip.precio)) {
+        parts.push('desde ' + Number(tip.precio).toLocaleString('es-CO'));
+      }
+      return parts.length ? parts.join(' · ') : '';
+    }
+
+    function tipAmbientesHtml(tip) {
+      var lines = [];
+      var plantas = tip.plantas || [];
+      plantas.forEach(function (pl) {
+        var names = (tip.ambientes || [])
+          .filter(function (a) { return a.plantaLocalId === pl.localId; })
+          .map(function (a) { return a.nombre; })
+          .filter(Boolean);
+        if (names.length) {
+          lines.push(esc(pl.nombre || 'Planta') + ': ' + esc(names.join(', ')));
+        }
+      });
+      var ext = (tip.ambientes || [])
+        .filter(function (a) { return !a.plantaLocalId; })
+        .map(function (a) { return a.nombre; })
+        .filter(Boolean);
+      if (ext.length) {
+        lines.push('Exterior: ' + esc(ext.join(', ')));
+      }
+      if (!lines.length) return '';
+      return '<div class="builder-estructura-resumen__sub">' + lines.join('<br>') + '</div>';
+    }
+
+    function conjuntoCompLabel(c) {
+      if (EstructuraEngine.isConjuntoResidentialComponent &&
+          EstructuraEngine.isConjuntoResidentialComponent(c)) {
+        return productLabel(c.producto) || 'Residencial';
+      }
+      var meta = EstructuraEngine.conjuntoComponentTypeMeta
+        ? EstructuraEngine.conjuntoComponentTypeMeta(c.type)
+        : null;
+      var base = meta ? meta.label : (c.type || 'Componente');
+      var name = String(c.nombre || '').trim();
+      if (name && name.toLowerCase() !== String(base).toLowerCase()) {
+        return base + ' · ' + name;
+      }
+      return base;
+    }
+
+    function componentsListHtml(list) {
+      if (!list || !list.length) return '';
+      return list.map(function (c) {
+        return rowHtml(conjuntoCompLabel(c), '× ' + formatQty(c.cantidad));
+      }).join('');
+    }
+
+    /* ── Proyecto ── */
+    if (typeLabel) block('Proyecto', valueHtml(typeLabel), false);
+
+    /* ── Configuración espacial ── */
+    var configParts = [];
+    if (dt === 'unidad') {
+      var uh = e.unidadHousingType === 'apartamento' ? 'Apartamento' : 'Casa';
+      configParts.push(valueHtml(uh));
+      if (e.unidadCount != null) {
+        configParts.push(rowHtml('Cantidad de unidades', formatQty(e.unidadCount)));
+      }
+    } else if (dt === 'edificio') {
+      var mode = e.edificioMode === 'multiples' ? 'Múltiples torres / bloques' : 'Edificio único';
+      configParts.push(valueHtml(mode));
+    } else if (dt === 'conjunto') {
+      EstructuraEngine.ensureConjuntoConfig(e);
+      var cfg = e.conjuntoConfig || {};
+      configParts.push(valueHtml(cfg.useStages ? 'Por etapas' : 'Sin etapas'));
+      if (e.totalViviendas != null && Number(e.totalViviendas) > 0) {
+        configParts.push(rowHtml('Total viviendas', formatQty(e.totalViviendas)));
+      }
+    } else if (dt === 'lotes') {
+      var ls = e.lotesSubtype === 'campestre' ? 'Parcelación campestre' : 'Loteo urbano';
+      configParts.push(valueHtml(ls));
+      if (e.totalLotes != null && Number(e.totalLotes) > 0) {
+        configParts.push(rowHtml('Total lotes', formatQty(e.totalLotes)));
+      }
+      var levels = [];
+      if (e.orgSectores) levels.push('Sectores');
+      if (e.orgManzanas) levels.push('Manzanas');
+      if (e.orgEtapas) levels.push('Etapas');
+      if (levels.length) configParts.push(rowHtml('Organización', levels.join(' · ')));
+    } else if (dt === 'mixto') {
+      var m = e.mixto || {};
+      var comps = [];
+      if (m.edificios) comps.push('Edificios');
+      if (m.casas) comps.push('Casas');
+      if (m.lotes) comps.push('Lotes');
+      if (comps.length) configParts.push(valueHtml(comps.join(' · ')));
+      if (m.casas && e.totalViviendas != null && Number(e.totalViviendas) > 0) {
+        configParts.push(rowHtml('Viviendas (casas)', formatQty(e.totalViviendas)));
+      }
+      if (m.lotes && e.totalLotes != null && Number(e.totalLotes) > 0) {
+        configParts.push(rowHtml('Lotes', formatQty(e.totalLotes)));
+      }
+    }
+    if (configParts.length) block('Configuración', configParts.join(''), false);
+
+    /* ── Edificios / torres ── */
+    if ((dt === 'edificio' || (dt === 'mixto' && e.mixto && e.mixto.edificios)) &&
+        e.buildings && e.buildings.length) {
+      var bHtml = e.buildings.map(function (b) {
+        var bits = [];
+        if (b.pisos != null) bits.push(formatQty(b.pisos) + ' pisos');
+        if (b.sotanos != null && Number(b.sotanos) > 0) bits.push(formatQty(b.sotanos) + ' sótanos');
+        if (b.unidadesPorPiso != null) bits.push(formatQty(b.unidadesPorPiso) + ' u/piso');
+        if (b.rooftop) bits.push('Azotea');
+        return rowHtml(b.nombre || 'Edificio', bits.join(' · ') || '—');
+      }).join('');
+      block('Edificios / Torres', bHtml, true);
+    }
+
+    /* ── Conjunto: componentes / etapas ── */
+    if (dt === 'conjunto') {
+      EstructuraEngine.ensureConjuntoConfig(e);
+      var cj = e.conjuntoConfig || {};
+      if (cj.useStages && cj.stages && cj.stages.length) {
+        var stagesHtml = cj.stages.map(function (st) {
+          var compsHtml = componentsListHtml(st.components);
+          if (!compsHtml) return '';
+          return '<div class="builder-estructura-resumen__group">' +
+            '<div class="builder-estructura-resumen__group-title">' + esc(st.nombre || 'Etapa') + '</div>' +
+            compsHtml +
+          '</div>';
+        }).filter(Boolean).join('');
+        if (stagesHtml) block('Etapas', stagesHtml, true);
+      } else if (cj.components && cj.components.length) {
+        block('Componentes', componentsListHtml(cj.components), false);
+      }
+    }
+
+    /* ── Tipologías ── */
+    if (e.tipologias && e.tipologias.length) {
+      var byProduct = {};
+      var order = [];
+      e.tipologias.forEach(function (tip) {
+        var pid = tip.producto || '_';
+        if (!byProduct[pid]) {
+          byProduct[pid] = [];
+          order.push(pid);
+        }
+        byProduct[pid].push(tip);
+      });
+      var tipsInner = order.map(function (pid) {
+        var label = pid === '_' ? 'Tipología' : (productLabel(pid) || pid);
+        var items = byProduct[pid].map(function (tip) {
+          var line = tipModeloLine(tip);
+          var amb = tipAmbientesHtml(tip);
+          if (!line && !amb) return '';
+          return '<div class="builder-estructura-resumen__tip">' +
+            (line ? '<div class="builder-estructura-resumen__tip-line">' + esc(line) + '</div>' : '') +
+            amb +
+          '</div>';
+        }).filter(Boolean).join('');
+        if (!items) return '';
+        return '<div class="builder-estructura-resumen__group">' +
+          '<div class="builder-estructura-resumen__group-title">' + esc(label) + '</div>' +
+          items +
+        '</div>';
+      }).filter(Boolean).join('');
+      if (tipsInner) block('Tipologías', tipsInner, true);
+    }
+
+    /* ── Amenidades ── */
+    if (e.zoneNames && e.zoneNames.length) {
+      var chips = e.zoneNames.map(function (name) {
+        return '<span class="ws-ms__chip builder-estructura-resumen__chip">' +
+          '<span class="ws-ms__chip-label">' + esc(name) + '</span>' +
+        '</span>';
+      }).join('');
+      block('Amenidades', '<div class="builder-estructura-resumen__chips">' + chips + '</div>', true);
+    }
+
+    if (!blocks.length) {
+      return '<p class="builder-estructura-section__note">Completa la estructura del proyecto para ver el resumen.</p>';
+    }
+
+    return '<div class="builder-estructura-resumen">' +
+      '<div class="builder-estructura-resumen__card">' +
+        '<div class="builder-estructura-resumen__grid">' + blocks.join('') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderEstructura() {
     var e = EstructuraEngine.ensureState(state);
     var dt = e.developmentType;
@@ -827,6 +1081,15 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-estructura-section__title">Amenidades</span>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' + zonesHtml + '</div>' +
+      '</details>' +
+      '<details class="builder-estructura-section" data-estructura-panel="resumen"' +
+        (panels.resumen === true ? ' open' : '') + '>' +
+        '<summary class="builder-estructura-section__summary">' +
+          '<span class="builder-estructura-section__title">Resumen del proyecto</span>' +
+        '</summary>' +
+        '<div class="builder-estructura-section__body" data-estructura-resumen-body>' +
+          buildEstructuraResumenHtml(e) +
+        '</div>' +
       '</details>' +
     '</div>';
   }
@@ -1836,6 +2099,11 @@ var AiProjectBuilderView = (function () {
         if (!key) return;
         if (!state.estructura.openPanels) state.estructura.openPanels = {};
         state.estructura.openPanels[key] = panel.open;
+        /* Refresh derived resumen from live state without full step rerender */
+        if (key === 'resumen' && panel.open) {
+          var body = panel.querySelector('[data-estructura-resumen-body]');
+          if (body) body.innerHTML = buildEstructuraResumenHtml(state.estructura);
+        }
         saveState();
       });
     });
