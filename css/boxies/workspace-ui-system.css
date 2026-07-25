@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.15
+   BOXIES Workspace UI System V5.9.18
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -297,6 +297,41 @@
 
 .builder-step-content--estructura .builder-estructura-towers-grid + .builder-header-action-btn {
   margin-top: 12px;
+}
+
+/* Conjunto: etapas + componentes (V5.9.18) */
+.builder-conjunto-stages-grid {
+  margin-top: 4px;
+}
+
+.builder-conjunto-comp {
+  box-sizing: border-box;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-field-unit-bg, rgba(255, 255, 255, 0.028));
+}
+
+.builder-conjunto-comp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.builder-conjunto-comp__type {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-secondary);
+}
+
+.builder-conjunto-stages-grid + .builder-header-action-btn,
+.builder-conjunto-comp + .ws-ms {
+  margin-top: 8px;
 }
 
 /* ── Organización física: compact grids + flatter mixto ── */

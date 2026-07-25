@@ -296,6 +296,118 @@ var AiProjectBuilderView = (function () {
       });
     }
 
+    function conjuntoComponentRowHtml(comp, stageLocalId) {
+      var meta = EstructuraEngine.conjuntoComponentTypeMeta(comp.type);
+      var typeLabel = meta ? meta.label : comp.type;
+      var stageAttr = stageLocalId
+        ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
+        : '';
+      return '<div class="builder-conjunto-comp" data-cj-comp="' + AdminUI.escapeHtml(comp.localId) + '"' +
+        stageAttr + '>' +
+        '<div class="builder-conjunto-comp__head">' +
+          '<span class="builder-conjunto-comp__type">' + AdminUI.escapeHtml(typeLabel) + '</span>' +
+          '<button type="button" class="builder-menu-icon-btn" data-cj-comp-remove title="Quitar">×</button>' +
+        '</div>' +
+        '<div class="builder-estructura-grid2">' +
+          '<div class="builder-field">' +
+            '<label>Nombre</label>' +
+            '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
+          '</div>' +
+          '<div class="ws-field-unit builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Cantidad</span>' +
+            stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function conjuntoAddCompPickerHtml(stageLocalId) {
+      var stageAttr = stageLocalId
+        ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
+        : '';
+      var opts = (EstructuraEngine.CONJUNTO_COMPONENT_TYPES || []).map(function (t) {
+        return '<button type="button" class="ws-ms__opt" data-cj-add-type="' +
+          AdminUI.escapeHtml(t.id) + '">' + AdminUI.escapeHtml(t.label) + '</button>';
+      }).join('');
+      return '<div class="ws-ms" data-ws-ms data-cj-comp-picker' + stageAttr + '>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-cj-comp-picker-open>' +
+          '+ Añadir componente</button>' +
+        '<div class="ws-ms__panel" hidden data-cj-comp-panel>' +
+          '<div class="ws-ms__group">' +
+            '<div class="ws-ms__group-title">Componente</div>' +
+            '<div class="ws-ms__options">' + opts + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function conjuntoComponentsBlockHtml(components, stageLocalId) {
+      var list = (components || []).map(function (c) {
+        return conjuntoComponentRowHtml(c, stageLocalId);
+      }).join('');
+      return '<div class="builder-estructura-sublabel">Componentes</div>' +
+        (list || '<p class="builder-estructura-section__note">Ningún componente todavía.</p>') +
+        conjuntoAddCompPickerHtml(stageLocalId || '');
+    }
+
+    function conjuntoOrgHtml() {
+      EstructuraEngine.ensureConjuntoConfig(e);
+      var cfg = e.conjuntoConfig || EstructuraEngine.emptyConjuntoConfig(!!e.orgEtapas);
+      var useStages = !!cfg.useStages;
+      var html =
+        '<div class="builder-estructura-sublabel">Organización</div>' +
+        '<div class="builder-estructura-chips">' +
+          '<label class="builder-estructura-chip' + (!useStages ? ' is-on' : '') + '">' +
+            '<input type="radio" name="conjuntoOrgMode" data-cj-use-stages="0"' +
+              (!useStages ? ' checked' : '') + '><span>Sin etapas</span></label>' +
+          '<label class="builder-estructura-chip' + (useStages ? ' is-on' : '') + '">' +
+            '<input type="radio" name="conjuntoOrgMode" data-cj-use-stages="1"' +
+              (useStages ? ' checked' : '') + '><span>Por etapas</span></label>' +
+        '</div>';
+
+      if (!useStages) {
+        html +=
+          '<div class="builder-estructura-sublabel">Componentes del conjunto</div>' +
+          conjuntoComponentsBlockHtml(cfg.components, '');
+      } else {
+        html +=
+          '<div class="builder-estructura-sublabel">Etapas</div>' +
+          '<div class="builder-estructura-tips-grid builder-conjunto-stages-grid">' +
+            (cfg.stages || []).map(function (st) {
+              return '<details class="builder-estructura-acc builder-estructura-acc--building" data-cj-stage-card="' +
+                AdminUI.escapeHtml(st.localId) + '"' + (st.open ? ' open' : '') + '>' +
+                '<summary><span class="builder-estructura-acc__title" data-cj-stage-title>' +
+                  AdminUI.escapeHtml(st.nombre || 'Etapa') +
+                '</span></summary>' +
+                '<div class="builder-estructura-acc__body">' +
+                  '<div class="builder-field">' +
+                    '<label>Nombre</label>' +
+                    '<input type="text" data-cj-stage-nombre value="' +
+                      AdminUI.escapeHtml(st.nombre || '') + '">' +
+                  '</div>' +
+                  conjuntoComponentsBlockHtml(st.components, st.localId) +
+                '</div>' +
+              '</details>';
+            }).join('') +
+          '</div>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-cj-add-stage>' +
+            '+ Nueva etapa</button>';
+      }
+
+      html +=
+        '<div class="builder-estructura-org-compact" style="margin-top:12px">' +
+          '<div class="ws-field-unit builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Cantidad total de viviendas</span>' +
+            stepperHtml('totalViviendas', e.totalViviendas || 50, 1, 50000) +
+          '</div>' +
+          '<div class="ws-field-unit builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Número de tipologías / modelos</span>' +
+            stepperHtml('tipologiasCount', e.tipologias.length || 1, 1, 40) +
+          '</div>' +
+        '</div>';
+      return html;
+    }
+
     function ambientePickerHtml(tip, plantaLocalId, prioritizeExterior) {
       var priority = {};
       (EstructuraEngine.AMBIENTE_EXTERIOR_PRIORITY || []).forEach(function (n) { priority[n] = true; });
@@ -426,17 +538,7 @@ var AiProjectBuilderView = (function () {
     }
 
     if (dt === 'conjunto') {
-      orgHtml += orgLevelsHtml() +
-        '<div class="builder-estructura-org-compact">' +
-          '<div class="ws-field-unit builder-estructura-row">' +
-            '<span class="builder-estructura-row__label">Cantidad total de viviendas</span>' +
-            stepperHtml('totalViviendas', e.totalViviendas || 50, 1, 50000) +
-          '</div>' +
-          '<div class="ws-field-unit builder-estructura-row">' +
-            '<span class="builder-estructura-row__label">Número de tipologías / modelos</span>' +
-            stepperHtml('tipologiasCount', e.tipologias.length || 1, 1, 40) +
-          '</div>' +
-        '</div>';
+      orgHtml += conjuntoOrgHtml();
     }
 
     if (dt === 'lotes') {
@@ -1610,17 +1712,17 @@ var AiProjectBuilderView = (function () {
 
     function closeAllWsPopovers() {
       rootEl.querySelectorAll(
-        '.builder-ambiente-picker__panel, .ws-ms__panel, [data-amb-panel], [data-zones-panel], [data-org-levels-panel], [data-mixto-comps-panel]'
+        '.builder-ambiente-picker__panel, .ws-ms__panel, [data-amb-panel], [data-zones-panel], [data-org-levels-panel], [data-mixto-comps-panel], [data-cj-comp-panel]'
       ).forEach(function (p) {
         p.hidden = true;
       });
       rootEl.querySelectorAll(
-        '[data-ws-ms], [data-amb-picker], [data-zones-picker], [data-org-levels-picker], [data-mixto-comps-picker]'
+        '[data-ws-ms], [data-amb-picker], [data-zones-picker], [data-org-levels-picker], [data-mixto-comps-picker], [data-cj-comp-picker]'
       ).forEach(function (p) {
         p.classList.remove('is-open');
       });
       rootEl.querySelectorAll(
-        '[data-amb-picker-open], [data-zones-picker-open], [data-org-levels-open], [data-mixto-comps-open]'
+        '[data-amb-picker-open], [data-zones-picker-open], [data-org-levels-open], [data-mixto-comps-open], [data-cj-comp-picker-open]'
       ).forEach(function (b) {
         b.setAttribute('aria-expanded', 'false');
       });
@@ -1644,11 +1746,11 @@ var AiProjectBuilderView = (function () {
 
     rootEl._wsMsOutside = function (ev) {
       var openPanel = rootEl.querySelector(
-        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden]), [data-org-levels-panel]:not([hidden]), [data-mixto-comps-panel]:not([hidden])'
+        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden]), [data-org-levels-panel]:not([hidden]), [data-mixto-comps-panel]:not([hidden]), [data-cj-comp-panel]:not([hidden])'
       );
       if (!openPanel) return;
       var host = openPanel.closest(
-        '[data-ws-ms], [data-amb-picker], [data-zones-picker], [data-org-levels-picker], [data-mixto-comps-picker]'
+        '[data-ws-ms], [data-amb-picker], [data-zones-picker], [data-org-levels-picker], [data-mixto-comps-picker], [data-cj-comp-picker]'
       );
       if (host && host.contains(ev.target)) return;
       closeAllWsPopovers();
@@ -1656,7 +1758,7 @@ var AiProjectBuilderView = (function () {
     rootEl._wsMsEscape = function (ev) {
       if (ev.key !== 'Escape') return;
       var openPanel = rootEl.querySelector(
-        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden]), [data-org-levels-panel]:not([hidden]), [data-mixto-comps-panel]:not([hidden])'
+        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden]), [data-org-levels-panel]:not([hidden]), [data-mixto-comps-panel]:not([hidden]), [data-cj-comp-panel]:not([hidden])'
       );
       if (!openPanel) return;
       ev.preventDefault();
@@ -1708,6 +1810,101 @@ var AiProjectBuilderView = (function () {
         persist();
         rerender();
       });
+    });
+
+    rootEl.querySelectorAll('[data-cj-use-stages]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        EstructuraEngine.setConjuntoUseStages(state, input.getAttribute('data-cj-use-stages') === '1');
+        rerender();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-cj-add-stage]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        EstructuraEngine.addConjuntoStage(state);
+        rerender();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-cj-stage-card]').forEach(function (card) {
+      var stageId = card.getAttribute('data-cj-stage-card');
+      card.addEventListener('toggle', function () {
+        EstructuraEngine.updateConjuntoStage(state, stageId, { open: card.open });
+        persist();
+      });
+      var nameInput = card.querySelector('[data-cj-stage-nombre]');
+      if (nameInput) {
+        nameInput.addEventListener('input', function () {
+          EstructuraEngine.updateConjuntoStage(state, stageId, { nombre: nameInput.value });
+          var titleEl = card.querySelector('[data-cj-stage-title]');
+          if (titleEl) {
+            titleEl.textContent = String(nameInput.value || '').trim() || 'Etapa';
+          }
+          persist();
+        });
+      }
+    });
+
+    rootEl.querySelectorAll('[data-cj-comp-picker]').forEach(function (picker) {
+      var openBtn = picker.querySelector('[data-cj-comp-picker-open]');
+      var panel = picker.querySelector('[data-cj-comp-panel]') || picker.querySelector('.ws-ms__panel');
+      if (!openBtn || !panel) return;
+      var stageId = picker.getAttribute('data-cj-stage') || '';
+
+      openBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var opening = panel.hidden;
+        closeAllWsPopovers();
+        if (!opening) return;
+        panel.hidden = false;
+        openBtn.setAttribute('aria-expanded', 'true');
+        picker.classList.add('is-open');
+      });
+
+      panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      panel.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+
+      picker.querySelectorAll('[data-cj-add-type]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          EstructuraEngine.addConjuntoComponent(
+            state,
+            btn.getAttribute('data-cj-add-type'),
+            stageId || null
+          );
+          closeAllWsPopovers();
+          rerender();
+        });
+      });
+    });
+
+    rootEl.querySelectorAll('[data-cj-comp]').forEach(function (row) {
+      var compId = row.getAttribute('data-cj-comp');
+      var stageId = row.getAttribute('data-cj-stage') || '';
+      var nameInput = row.querySelector('[data-cj-comp-nombre]');
+      if (nameInput) {
+        nameInput.addEventListener('input', function () {
+          EstructuraEngine.updateConjuntoComponent(
+            state,
+            compId,
+            { nombre: nameInput.value },
+            stageId || null
+          );
+          persist();
+        });
+      }
+      var rm = row.querySelector('[data-cj-comp-remove]');
+      if (rm) {
+        rm.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          EstructuraEngine.removeConjuntoComponent(state, compId, stageId || null);
+          rerender();
+        });
+      }
     });
 
     rootEl.querySelectorAll('[data-mixto-comp]').forEach(function (input) {
@@ -1901,6 +2098,18 @@ var AiProjectBuilderView = (function () {
       }
       if (field === 'tipologiasCount') {
         EstructuraEngine.setTypologyCount(state, n);
+        return true;
+      }
+      if (field === 'cj.cantidad') {
+        var compEl = el.closest('[data-cj-comp]');
+        if (!compEl) return false;
+        var stageId = compEl.getAttribute('data-cj-stage') || '';
+        EstructuraEngine.updateConjuntoComponent(
+          state,
+          compEl.getAttribute('data-cj-comp'),
+          { cantidad: n },
+          stageId || null
+        );
         return true;
       }
       if (buildingEl && field.indexOf('b.') === 0) {

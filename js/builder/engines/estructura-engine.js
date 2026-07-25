@@ -260,6 +260,220 @@ var EstructuraEngine = (function () {
     };
   }
 
+  /* ── Conjunto: etapas + componentes (config_json only; no Tipologías/Viviendas sync yet) ── */
+  var CONJUNTO_COMPONENT_TYPES = [
+    { id: 'casa', label: 'Casas', defaultNombre: 'Modelo A', defaultCantidad: 1 },
+    { id: 'edificio', label: 'Edificio', defaultNombre: 'Torre A', defaultCantidad: 1 },
+    { id: 'lotes', label: 'Lotes', defaultNombre: 'Lotes', defaultCantidad: 1 },
+    { id: 'comercio', label: 'Comercio', defaultNombre: 'Locales comerciales', defaultCantidad: 1 },
+    { id: 'oficinas', label: 'Oficinas', defaultNombre: 'Oficinas', defaultCantidad: 1 },
+    { id: 'otro', label: 'Otro', defaultNombre: 'Otro', defaultCantidad: 1 }
+  ];
+
+  function conjuntoComponentTypeMeta(typeId) {
+    return CONJUNTO_COMPONENT_TYPES.find(function (t) { return t.id === typeId; }) || CONJUNTO_COMPONENT_TYPES[5];
+  }
+
+  function emptyConjuntoComponent(typeId, orden) {
+    var meta = conjuntoComponentTypeMeta(typeId || 'otro');
+    return {
+      localId: uid(),
+      type: meta.id,
+      nombre: meta.defaultNombre,
+      cantidad: meta.defaultCantidad,
+      orden: orden != null ? orden : 0
+    };
+  }
+
+  function emptyConjuntoStage(orden) {
+    var n = (orden != null ? orden : 0) + 1;
+    return {
+      localId: uid(),
+      nombre: 'Etapa ' + n,
+      open: orden === 0 || orden == null,
+      components: [],
+      orden: orden != null ? orden : 0
+    };
+  }
+
+  function emptyConjuntoConfig(useStages) {
+    return {
+      useStages: !!useStages,
+      components: [],
+      stages: useStages ? [emptyConjuntoStage(0)] : []
+    };
+  }
+
+  function normalizeConjuntoComponent(raw, orden) {
+    var meta = conjuntoComponentTypeMeta(raw && raw.type);
+    return {
+      localId: (raw && raw.localId) || uid(),
+      type: meta.id,
+      nombre: (raw && raw.nombre != null && String(raw.nombre).trim())
+        ? String(raw.nombre).trim()
+        : meta.defaultNombre,
+      cantidad: clampInt(raw && raw.cantidad, 1, 100000, meta.defaultCantidad),
+      orden: raw && raw.orden != null ? raw.orden : (orden || 0)
+    };
+  }
+
+  function normalizeConjuntoStage(raw, orden) {
+    var comps = Array.isArray(raw && raw.components) ? raw.components : [];
+    return {
+      localId: (raw && raw.localId) || uid(),
+      nombre: (raw && raw.nombre != null && String(raw.nombre).trim())
+        ? String(raw.nombre).trim()
+        : ('Etapa ' + ((orden != null ? orden : 0) + 1)),
+      open: raw && raw.open != null ? !!raw.open : (orden === 0),
+      components: comps.map(function (c, i) { return normalizeConjuntoComponent(c, i); }),
+      orden: raw && raw.orden != null ? raw.orden : (orden || 0)
+    };
+  }
+
+  function ensureConjuntoConfig(e) {
+    if (!e || typeof e !== 'object') return e;
+    if (!e.conjuntoConfig || typeof e.conjuntoConfig !== 'object') {
+      e.conjuntoConfig = emptyConjuntoConfig(!!e.orgEtapas);
+    }
+    var cfg = e.conjuntoConfig;
+    cfg.useStages = !!e.orgEtapas;
+    if (!Array.isArray(cfg.components)) cfg.components = [];
+    if (!Array.isArray(cfg.stages)) cfg.stages = [];
+    cfg.components = cfg.components.map(function (c, i) {
+      return normalizeConjuntoComponent(c, i);
+    });
+    cfg.stages = cfg.stages.map(function (s, i) {
+      return normalizeConjuntoStage(s, i);
+    });
+    /* Legacy: orgEtapas true but no stages yet → seed Etapa 1 (non-destructive) */
+    if (cfg.useStages && !cfg.stages.length) {
+      var stage = emptyConjuntoStage(0);
+      if (cfg.components.length) {
+        stage.components = cfg.components.map(function (c, i) {
+          return normalizeConjuntoComponent(c, i);
+        });
+        cfg.components = [];
+      }
+      cfg.stages = [stage];
+    }
+    return e;
+  }
+
+  function setConjuntoUseStages(state, useStages) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var want = !!useStages;
+    var cfg = e.conjuntoConfig;
+    var prev = !!cfg.useStages;
+    cfg.useStages = want;
+    e.orgEtapas = want;
+    if (want && !prev) {
+      if (!cfg.stages.length) {
+        var stage = emptyConjuntoStage(0);
+        if (cfg.components.length) {
+          stage.components = cfg.components.slice();
+          cfg.components = [];
+        }
+        cfg.stages = [stage];
+      }
+    }
+    /* Switching off keeps stages in config for compatibility; UI uses root components */
+    e.dirty = true;
+    return e;
+  }
+
+  function addConjuntoStage(state) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    e.orgEtapas = true;
+    e.conjuntoConfig.useStages = true;
+    var stages = e.conjuntoConfig.stages;
+    stages.forEach(function (s) { s.open = false; });
+    var stage = emptyConjuntoStage(stages.length);
+    stage.open = true;
+    stages.push(stage);
+    e.dirty = true;
+    return stage;
+  }
+
+  function removeConjuntoStage(state, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var stages = e.conjuntoConfig.stages;
+    if (stages.length <= 1) return e;
+    e.conjuntoConfig.stages = stages.filter(function (s) { return s.localId !== stageLocalId; });
+    e.conjuntoConfig.stages.forEach(function (s, i) { s.orden = i; });
+    e.dirty = true;
+    return e;
+  }
+
+  function findConjuntoComponentList(e, stageLocalId) {
+    ensureConjuntoConfig(e);
+    if (stageLocalId) {
+      var stage = e.conjuntoConfig.stages.find(function (s) { return s.localId === stageLocalId; });
+      return stage ? stage.components : null;
+    }
+    return e.conjuntoConfig.components;
+  }
+
+  function addConjuntoComponent(state, typeId, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return null;
+    var comp = emptyConjuntoComponent(typeId, list.length);
+    list.push(comp);
+    e.dirty = true;
+    return comp;
+  }
+
+  function removeConjuntoComponent(state, componentLocalId, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return e;
+    var next = list.filter(function (c) { return c.localId !== componentLocalId; });
+    if (stageLocalId) {
+      var stage = e.conjuntoConfig.stages.find(function (s) { return s.localId === stageLocalId; });
+      if (stage) stage.components = next;
+    } else {
+      e.conjuntoConfig.components = next;
+    }
+    e.dirty = true;
+    return e;
+  }
+
+  function updateConjuntoComponent(state, componentLocalId, patch, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return e;
+    var comp = list.find(function (c) { return c.localId === componentLocalId; });
+    if (!comp || !patch) return e;
+    if (patch.nombre != null) comp.nombre = String(patch.nombre);
+    if (patch.cantidad != null) comp.cantidad = clampInt(patch.cantidad, 1, 100000, comp.cantidad);
+    if (patch.type) {
+      var meta = conjuntoComponentTypeMeta(patch.type);
+      comp.type = meta.id;
+    }
+    e.dirty = true;
+    return e;
+  }
+
+  function updateConjuntoStage(state, stageLocalId, patch) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var stage = e.conjuntoConfig.stages.find(function (s) { return s.localId === stageLocalId; });
+    if (!stage || !patch) return e;
+    if (patch.nombre != null) {
+      var name = String(patch.nombre).trim();
+      if (name) stage.nombre = name;
+    }
+    if (patch.open != null) stage.open = !!patch.open;
+    e.dirty = true;
+    return e;
+  }
+
   function defaultMixto() {
     return { edificios: true, casas: false, lotes: false };
   }
@@ -287,6 +501,7 @@ var EstructuraEngine = (function () {
       tipologias: [emptyTypology(type, 0, { unidadHousingType: 'casa' })],
       zoneNames: [],
       amenidadesCatalog: [],
+      conjuntoConfig: emptyConjuntoConfig(false),
       appliedAt: null,
       dirty: false,
       openPanels: {
@@ -379,6 +594,7 @@ var EstructuraEngine = (function () {
     if (e.openPanels.org == null) e.openPanels.org = true;
     if (e.openPanels.tipologias == null) e.openPanels.tipologias = true;
     if (e.openPanels.zonas == null) e.openPanels.zonas = true;
+    ensureConjuntoConfig(e);
     if (!e.tipologias.length) {
       e.tipologias = [emptyTypology(e.developmentType, 0, {
         unidadHousingType: e.unidadHousingType,
@@ -433,8 +649,9 @@ var EstructuraEngine = (function () {
   }
 
   function configSnapshot(e) {
+    ensureConjuntoConfig(e);
     return {
-      v: 2,
+      v: 3,
       edificioMode: e.edificioMode,
       unidadHousingType: e.unidadHousingType,
       unidadCount: e.unidadCount,
@@ -442,7 +659,16 @@ var EstructuraEngine = (function () {
       mixto: e.mixto,
       tipologiasComponentes: (e.tipologias || []).map(function (t) {
         return { localId: t.localId, id: t.id, componente: t.componente || null };
-      })
+      }),
+      conjuntoConfig: e.conjuntoConfig ? {
+        useStages: !!e.conjuntoConfig.useStages,
+        components: (e.conjuntoConfig.components || []).map(function (c, i) {
+          return normalizeConjuntoComponent(c, i);
+        }),
+        stages: (e.conjuntoConfig.stages || []).map(function (s, i) {
+          return normalizeConjuntoStage(s, i);
+        })
+      } : emptyConjuntoConfig(!!e.orgEtapas)
     };
   }
 
@@ -461,6 +687,23 @@ var EstructuraEngine = (function () {
         if (tip && row.componente) tip.componente = row.componente;
       });
     }
+    if (cfg.conjuntoConfig && typeof cfg.conjuntoConfig === 'object') {
+      e.conjuntoConfig = {
+        useStages: !!cfg.conjuntoConfig.useStages,
+        components: Array.isArray(cfg.conjuntoConfig.components)
+          ? cfg.conjuntoConfig.components.map(function (c, i) {
+              return normalizeConjuntoComponent(c, i);
+            })
+          : [],
+        stages: Array.isArray(cfg.conjuntoConfig.stages)
+          ? cfg.conjuntoConfig.stages.map(function (s, i) {
+              return normalizeConjuntoStage(s, i);
+            })
+          : []
+      };
+      e.orgEtapas = !!e.conjuntoConfig.useStages;
+    }
+    ensureConjuntoConfig(e);
     return e;
   }
 
@@ -489,6 +732,8 @@ var EstructuraEngine = (function () {
       e.buildings = [emptyBuilding('edificio', 0)];
     } else if (typeId === 'conjunto') {
       e.totalViviendas = 50;
+      e.conjuntoConfig = emptyConjuntoConfig(false);
+      e.orgEtapas = false;
     } else if (typeId === 'lotes') {
       e.totalLotes = 100;
     } else if (typeId === 'unidad') {
@@ -747,6 +992,19 @@ var EstructuraEngine = (function () {
     AMBIENTE_CATALOG: AMBIENTE_CATALOG,
     AMBIENTE_EXTERIOR_PRIORITY: AMBIENTE_EXTERIOR_PRIORITY,
     isCustomAmbienteOption: isCustomAmbienteOption,
+    CONJUNTO_COMPONENT_TYPES: CONJUNTO_COMPONENT_TYPES,
+    conjuntoComponentTypeMeta: conjuntoComponentTypeMeta,
+    emptyConjuntoConfig: emptyConjuntoConfig,
+    emptyConjuntoStage: emptyConjuntoStage,
+    emptyConjuntoComponent: emptyConjuntoComponent,
+    ensureConjuntoConfig: ensureConjuntoConfig,
+    setConjuntoUseStages: setConjuntoUseStages,
+    addConjuntoStage: addConjuntoStage,
+    removeConjuntoStage: removeConjuntoStage,
+    addConjuntoComponent: addConjuntoComponent,
+    removeConjuntoComponent: removeConjuntoComponent,
+    updateConjuntoComponent: updateConjuntoComponent,
+    updateConjuntoStage: updateConjuntoStage,
     LEGACY_TYPE_MAP: LEGACY_TYPE_MAP,
     uid: uid,
     clampInt: clampInt,
