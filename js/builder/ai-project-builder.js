@@ -654,7 +654,7 @@ var AiProjectBuilderView = (function () {
       '<details class="builder-estructura-section" data-estructura-panel="dev"' +
         (panels.dev !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
-          '<span class="builder-estructura-section__title">Tipo de desarrollo</span>' +
+          '<span class="builder-estructura-section__title">Tipo de proyecto</span>' +
           (devLabel
             ? '<span class="builder-estructura-section__hint">' + AdminUI.escapeHtml(devLabel) + '</span>'
             : '') +
@@ -666,7 +666,7 @@ var AiProjectBuilderView = (function () {
       '<details class="builder-estructura-section" data-estructura-panel="org"' +
         (panels.org !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
-          '<span class="builder-estructura-section__title">Organización física</span>' +
+          '<span class="builder-estructura-section__title">Configuración espacial</span>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' + orgHtml + '</div>' +
       '</details>' +
@@ -674,19 +674,19 @@ var AiProjectBuilderView = (function () {
         (panels.tipologias !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
           '<span class="builder-estructura-section__title">Tipologías</span>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTipologiaBtn">' +
-            '+ Añadir tipología</button>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' +
           '<p class="builder-estructura-section__note">Plantas y ambientes se editan dentro de cada tipología. ' +
             '1 tipología = 1 tarjeta en Viviendas.</p>' +
           '<div class="builder-estructura-tips-grid">' + tipsHtml + '</div>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTipologiaBtn">' +
+            '+ Añadir tipología</button>' +
         '</div>' +
       '</details>' +
       '<details class="builder-estructura-section" data-estructura-panel="zonas"' +
         (panels.zonas !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
-          '<span class="builder-estructura-section__title">Zonas / Amenidades</span>' +
+          '<span class="builder-estructura-section__title">Amenidades</span>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' + zonesHtml + '</div>' +
       '</details>' +
