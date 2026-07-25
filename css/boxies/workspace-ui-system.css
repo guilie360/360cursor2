@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.22
+   BOXIES Workspace UI System V5.9.23
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -342,23 +342,45 @@
   margin-top: 8px;
 }
 
-/* Resumen del proyecto (V5.9.21) — derived, read-only */
+/* Resumen del proyecto (V5.9.23) — ficha técnica compacta vertical */
 .builder-estructura-resumen__card {
   box-sizing: border-box;
-  padding: 12px;
+  padding: 12px 12px 10px;
   border: 1px solid var(--ws-border);
   border-radius: var(--ws-radius-control);
   background: var(--ws-field-unit-bg, rgba(255, 255, 255, 0.028));
 }
 
-.builder-estructura-resumen__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 20px;
+.builder-estructura-resumen__header {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ws-border);
 }
 
-.builder-estructura-resumen__block--full {
-  grid-column: 1 / -1;
+.builder-estructura-resumen__header-type {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text);
+}
+
+.builder-estructura-resumen__header-meta {
+  margin-top: 4px;
+  font-size: var(--ws-font-control);
+  line-height: 1.4;
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-resumen__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.builder-estructura-resumen__section + .builder-estructura-resumen__section {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .builder-estructura-resumen__label {
@@ -370,22 +392,17 @@
   color: var(--ws-text-title);
 }
 
-.builder-estructura-resumen__value {
-  font-size: var(--ws-font-control);
-  font-weight: 560;
-  color: var(--ws-text);
-}
-
 .builder-estructura-resumen__row {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px 14px;
+  max-width: 28rem;
   min-width: 0;
-  padding: 3px 0;
+  padding: 2px 0;
 }
 
 .builder-estructura-resumen__row-label {
+  flex: 1 1 auto;
   min-width: 0;
   font-size: var(--ws-font-control);
   color: var(--ws-text-secondary);
@@ -396,25 +413,41 @@
   flex: 0 0 auto;
   font-size: var(--ws-font-control);
   font-variant-numeric: tabular-nums;
+  font-weight: 560;
   color: var(--ws-text);
 }
 
 .builder-estructura-resumen__group + .builder-estructura-resumen__group {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .builder-estructura-resumen__group-title {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  font-size: var(--ws-font-secondary);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ws-text-muted);
+}
+
+.builder-estructura-resumen__tip {
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.builder-estructura-resumen__tip:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.builder-estructura-resumen__tip-title {
   font-size: var(--ws-font-control);
   font-weight: 560;
   color: var(--ws-text);
 }
 
-.builder-estructura-resumen__tip {
-  padding: 2px 0 2px 10px;
-}
-
-.builder-estructura-resumen__tip-line {
+.builder-estructura-resumen__tip-meta {
+  margin-top: 2px;
   font-size: var(--ws-font-secondary);
   line-height: 1.45;
   color: var(--ws-text-secondary);
@@ -435,12 +468,6 @@
 
 .builder-estructura-resumen__chip {
   pointer-events: none;
-}
-
-@media (max-width: 720px) {
-  .builder-estructura-resumen__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .builder-estructura-draft-status {

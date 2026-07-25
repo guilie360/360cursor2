@@ -152,7 +152,7 @@ var AiProjectBuilderView = (function () {
 
   /**
    * Presentational / derived — no persisted summary state.
-   * Reads canonical estructura only.
+   * Compact vertical tech sheet (V5.9.23).
    */
   function buildEstructuraResumenHtml(e) {
     e = e || {};
@@ -162,27 +162,16 @@ var AiProjectBuilderView = (function () {
       return t.id === dt;
     });
     var typeLabel = typeMeta ? typeMeta.label : dt;
-    var blocks = [];
+    var sections = [];
 
-    function block(title, inner, full) {
+    function section(title, inner) {
       if (!inner) return;
-      blocks.push(
-        '<div class="builder-estructura-resumen__block' + (full ? ' builder-estructura-resumen__block--full' : '') + '">' +
+      sections.push(
+        '<section class="builder-estructura-resumen__section">' +
           '<div class="builder-estructura-resumen__label">' + esc(title) + '</div>' +
           '<div class="builder-estructura-resumen__content">' + inner + '</div>' +
-        '</div>'
+        '</section>'
       );
-    }
-
-    function valueHtml(text) {
-      return '<div class="builder-estructura-resumen__value">' + esc(text) + '</div>';
-    }
-
-    function rowHtml(left, right) {
-      return '<div class="builder-estructura-resumen__row">' +
-        '<span class="builder-estructura-resumen__row-label">' + esc(left) + '</span>' +
-        '<span class="builder-estructura-resumen__row-value">' + esc(right) + '</span>' +
-      '</div>';
     }
 
     function productLabel(id) {
@@ -199,35 +188,35 @@ var AiProjectBuilderView = (function () {
       return v != null && v !== '' && !isNaN(Number(v)) && Number(v) > 0;
     }
 
-    function tipModeloLine(tip) {
+    function tipMetaParts(tip) {
       var parts = [];
-      var modelo = String(tip.modelo || tip.nombre || '').trim();
-      if (modelo) parts.push(modelo);
       if (hasNum(tip.area_m2)) parts.push(Number(tip.area_m2) + ' m²');
-      if (hasNum(tip.area_privada_m2)) parts.push('priv. ' + Number(tip.area_privada_m2) + ' m²');
-      if (hasNum(tip.area_lote_m2)) parts.push('lote ' + Number(tip.area_lote_m2) + ' m²');
+      if (hasNum(tip.area_privada_m2)) parts.push(Number(tip.area_privada_m2) + ' m² privada');
+      if (hasNum(tip.area_lote_m2)) parts.push(Number(tip.area_lote_m2) + ' m² lote');
       if (tip.habitaciones != null && Number(tip.habitaciones) > 0) {
         parts.push(Number(tip.habitaciones) + ' hab');
       }
       if (tip.banos != null && Number(tip.banos) > 0) {
-        parts.push(Number(tip.banos) + ' baños');
+        var nB = Number(tip.banos);
+        parts.push(nB + (nB === 1 ? ' baño' : ' baños'));
       }
       if (tip.parqueaderos != null && Number(tip.parqueaderos) > 0) {
-        parts.push(Number(tip.parqueaderos) + ' parq');
+        var nP = Number(tip.parqueaderos);
+        parts.push(nP + (nP === 1 ? ' parqueadero' : ' parqueaderos'));
       }
       if (tip.plantas_internas != null && Number(tip.plantas_internas) > 0) {
-        parts.push(Number(tip.plantas_internas) + ' plantas');
+        var nPl = Number(tip.plantas_internas);
+        parts.push(nPl + (nPl === 1 ? ' planta' : ' plantas'));
       }
       if (hasNum(tip.precio)) {
         parts.push('desde ' + Number(tip.precio).toLocaleString('es-CO'));
       }
-      return parts.length ? parts.join(' · ') : '';
+      return parts;
     }
 
     function tipAmbientesHtml(tip) {
       var lines = [];
-      var plantas = tip.plantas || [];
-      plantas.forEach(function (pl) {
+      (tip.plantas || []).forEach(function (pl) {
         var names = (tip.ambientes || [])
           .filter(function (a) { return a.plantaLocalId === pl.localId; })
           .map(function (a) { return a.nombre; })
@@ -240,11 +229,9 @@ var AiProjectBuilderView = (function () {
         .filter(function (a) { return !a.plantaLocalId; })
         .map(function (a) { return a.nombre; })
         .filter(Boolean);
-      if (ext.length) {
-        lines.push('Exterior: ' + esc(ext.join(', ')));
-      }
+      if (ext.length) lines.push('Exterior: ' + esc(ext.join(', ')));
       if (!lines.length) return '';
-      return '<div class="builder-estructura-resumen__sub">' + lines.join('<br>') + '</div>';
+      return '<div class="builder-estructura-resumen__sub">' + lines.join(' · ') + '</div>';
     }
 
     function conjuntoCompLabel(c) {
@@ -263,124 +250,172 @@ var AiProjectBuilderView = (function () {
       return base;
     }
 
+    function compactRow(left, right) {
+      return '<div class="builder-estructura-resumen__row">' +
+        '<span class="builder-estructura-resumen__row-label">' + esc(left) + '</span>' +
+        '<span class="builder-estructura-resumen__row-value">' + esc(right) + '</span>' +
+      '</div>';
+    }
+
     function componentsListHtml(list) {
       if (!list || !list.length) return '';
       return list.map(function (c) {
-        return rowHtml(conjuntoCompLabel(c), '× ' + formatQty(c.cantidad));
+        return compactRow(conjuntoCompLabel(c), formatQty(c.cantidad));
       }).join('');
     }
 
-    /* ── Proyecto ── */
-    if (typeLabel) block('Proyecto', valueHtml(typeLabel), false);
-
-    /* ── Configuración espacial ── */
-    var configParts = [];
+    /* ── Cabecera compacta ── */
+    var headerBits = [];
     if (dt === 'unidad') {
-      var uh = e.unidadHousingType === 'apartamento' ? 'Apartamento' : 'Casa';
-      configParts.push(valueHtml(uh));
+      headerBits.push(e.unidadHousingType === 'apartamento' ? 'Apartamento' : 'Casa');
       if (e.unidadCount != null) {
-        configParts.push(rowHtml('Cantidad de unidades', formatQty(e.unidadCount)));
+        var uc = Number(e.unidadCount) || 0;
+        headerBits.push(uc + (uc === 1 ? ' unidad' : ' unidades'));
       }
     } else if (dt === 'edificio') {
-      var mode = e.edificioMode === 'multiples' ? 'Múltiples torres / bloques' : 'Edificio único';
-      configParts.push(valueHtml(mode));
+      headerBits.push(e.edificioMode === 'multiples' ? 'Múltiples torres' : 'Edificio único');
+      if (e.buildings && e.buildings.length) {
+        var nb = e.buildings.length;
+        headerBits.push(nb + (nb === 1 ? ' torre' : ' torres'));
+      }
     } else if (dt === 'conjunto') {
       EstructuraEngine.ensureConjuntoConfig(e);
       var cfg = e.conjuntoConfig || {};
-      configParts.push(valueHtml(cfg.useStages ? 'Por etapas' : 'Sin etapas'));
+      headerBits.push(cfg.useStages ? 'Por etapas' : 'Sin etapas');
       if (e.totalViviendas != null && Number(e.totalViviendas) > 0) {
-        configParts.push(rowHtml('Total viviendas', formatQty(e.totalViviendas)));
+        headerBits.push(formatQty(e.totalViviendas) + ' viviendas');
+      }
+      if (cfg.useStages && cfg.stages && cfg.stages.length) {
+        var ns = cfg.stages.length;
+        headerBits.push(ns + (ns === 1 ? ' etapa' : ' etapas'));
       }
     } else if (dt === 'lotes') {
-      var ls = e.lotesSubtype === 'campestre' ? 'Parcelación campestre' : 'Loteo urbano';
-      configParts.push(valueHtml(ls));
+      headerBits.push(e.lotesSubtype === 'campestre' ? 'Parcelación campestre' : 'Loteo urbano');
       if (e.totalLotes != null && Number(e.totalLotes) > 0) {
-        configParts.push(rowHtml('Total lotes', formatQty(e.totalLotes)));
+        headerBits.push(formatQty(e.totalLotes) + ' lotes');
       }
       var levels = [];
       if (e.orgSectores) levels.push('Sectores');
       if (e.orgManzanas) levels.push('Manzanas');
       if (e.orgEtapas) levels.push('Etapas');
-      if (levels.length) configParts.push(rowHtml('Organización', levels.join(' · ')));
+      if (levels.length) headerBits.push(levels.join(' · '));
     } else if (dt === 'mixto') {
       var m = e.mixto || {};
       var comps = [];
       if (m.edificios) comps.push('Edificios');
       if (m.casas) comps.push('Casas');
       if (m.lotes) comps.push('Lotes');
-      if (comps.length) configParts.push(valueHtml(comps.join(' · ')));
+      if (comps.length) headerBits.push(comps.join(' · '));
       if (m.casas && e.totalViviendas != null && Number(e.totalViviendas) > 0) {
-        configParts.push(rowHtml('Viviendas (casas)', formatQty(e.totalViviendas)));
+        headerBits.push(formatQty(e.totalViviendas) + ' viviendas');
       }
       if (m.lotes && e.totalLotes != null && Number(e.totalLotes) > 0) {
-        configParts.push(rowHtml('Lotes', formatQty(e.totalLotes)));
+        headerBits.push(formatQty(e.totalLotes) + ' lotes');
       }
     }
-    if (configParts.length) block('Configuración', configParts.join(''), false);
 
-    /* ── Edificios / torres ── */
-    if ((dt === 'edificio' || (dt === 'mixto' && e.mixto && e.mixto.edificios)) &&
-        e.buildings && e.buildings.length) {
-      var bHtml = e.buildings.map(function (b) {
-        var bits = [];
-        if (b.pisos != null) bits.push(formatQty(b.pisos) + ' pisos');
-        if (b.sotanos != null && Number(b.sotanos) > 0) bits.push(formatQty(b.sotanos) + ' sótanos');
-        if (b.unidadesPorPiso != null) bits.push(formatQty(b.unidadesPorPiso) + ' u/piso');
-        if (b.rooftop) bits.push('Azotea');
-        return rowHtml(b.nombre || 'Edificio', bits.join(' · ') || '—');
-      }).join('');
-      block('Edificios / Torres', bHtml, true);
+    var headerHtml = '';
+    if (typeLabel || headerBits.length) {
+      headerHtml =
+        '<header class="builder-estructura-resumen__header">' +
+          (typeLabel
+            ? '<div class="builder-estructura-resumen__header-type">' + esc(typeLabel) + '</div>'
+            : '') +
+          (headerBits.length
+            ? '<div class="builder-estructura-resumen__header-meta">' +
+                esc(headerBits.join(' · ')) +
+              '</div>'
+            : '') +
+        '</header>';
     }
 
-    /* ── Conjunto: componentes / etapas ── */
+    /* ── Estructura / Componentes ── */
+    var structParts = [];
+
+    if ((dt === 'edificio' || (dt === 'mixto' && e.mixto && e.mixto.edificios)) &&
+        e.buildings && e.buildings.length) {
+      structParts.push(
+        '<div class="builder-estructura-resumen__group">' +
+          '<div class="builder-estructura-resumen__group-title">Edificios / Torres</div>' +
+          e.buildings.map(function (b) {
+            var bits = [];
+            if (b.pisos != null) bits.push(formatQty(b.pisos) + ' pisos');
+            if (b.sotanos != null && Number(b.sotanos) > 0) {
+              bits.push(formatQty(b.sotanos) + ' sótanos');
+            }
+            if (b.unidadesPorPiso != null) bits.push(formatQty(b.unidadesPorPiso) + ' u/piso');
+            if (b.rooftop) bits.push('Azotea');
+            return compactRow(b.nombre || 'Edificio', bits.join(' · ') || '—');
+          }).join('') +
+        '</div>'
+      );
+    }
+
     if (dt === 'conjunto') {
       EstructuraEngine.ensureConjuntoConfig(e);
       var cj = e.conjuntoConfig || {};
       if (cj.useStages && cj.stages && cj.stages.length) {
-        var stagesHtml = cj.stages.map(function (st) {
+        cj.stages.forEach(function (st) {
           var compsHtml = componentsListHtml(st.components);
-          if (!compsHtml) return '';
-          return '<div class="builder-estructura-resumen__group">' +
-            '<div class="builder-estructura-resumen__group-title">' + esc(st.nombre || 'Etapa') + '</div>' +
-            compsHtml +
-          '</div>';
-        }).filter(Boolean).join('');
-        if (stagesHtml) block('Etapas', stagesHtml, true);
+          if (!compsHtml) return;
+          structParts.push(
+            '<div class="builder-estructura-resumen__group">' +
+              '<div class="builder-estructura-resumen__group-title">' +
+                esc(st.nombre || 'Etapa') +
+              '</div>' +
+              compsHtml +
+            '</div>'
+          );
+        });
       } else if (cj.components && cj.components.length) {
-        block('Componentes', componentsListHtml(cj.components), false);
+        structParts.push(
+          '<div class="builder-estructura-resumen__group">' +
+            componentsListHtml(cj.components) +
+          '</div>'
+        );
       }
     }
 
-    /* ── Tipologías ── */
+    if (dt === 'mixto' && e.mixto) {
+      if (e.mixto.casas && e.totalViviendas != null && Number(e.totalViviendas) > 0) {
+        structParts.push(
+          '<div class="builder-estructura-resumen__group">' +
+            compactRow('Casas', formatQty(e.totalViviendas)) +
+          '</div>'
+        );
+      }
+      if (e.mixto.lotes && e.totalLotes != null && Number(e.totalLotes) > 0) {
+        structParts.push(
+          '<div class="builder-estructura-resumen__group">' +
+            compactRow('Lotes', formatQty(e.totalLotes)) +
+          '</div>'
+        );
+      }
+    }
+
+    if (structParts.length) {
+      section('Estructura', structParts.join(''));
+    }
+
+    /* ── Tipologías (fila compacta por tipología) ── */
     if (e.tipologias && e.tipologias.length) {
-      var byProduct = {};
-      var order = [];
-      e.tipologias.forEach(function (tip) {
-        var pid = tip.producto || '_';
-        if (!byProduct[pid]) {
-          byProduct[pid] = [];
-          order.push(pid);
-        }
-        byProduct[pid].push(tip);
-      });
-      var tipsInner = order.map(function (pid) {
-        var label = pid === '_' ? 'Tipología' : (productLabel(pid) || pid);
-        var items = byProduct[pid].map(function (tip) {
-          var line = tipModeloLine(tip);
-          var amb = tipAmbientesHtml(tip);
-          if (!line && !amb) return '';
-          return '<div class="builder-estructura-resumen__tip">' +
-            (line ? '<div class="builder-estructura-resumen__tip-line">' + esc(line) + '</div>' : '') +
-            amb +
-          '</div>';
-        }).filter(Boolean).join('');
-        if (!items) return '';
-        return '<div class="builder-estructura-resumen__group">' +
-          '<div class="builder-estructura-resumen__group-title">' + esc(label) + '</div>' +
-          items +
+      var tipsInner = e.tipologias.map(function (tip) {
+        var prod = tip.producto ? productLabel(tip.producto) : '';
+        var modelo = String(tip.modelo || '').trim();
+        var title = [prod, modelo].filter(Boolean).join(' · ');
+        if (!title) title = tip.nombre || 'Tipología';
+        var meta = tipMetaParts(tip).join(' · ');
+        var amb = tipAmbientesHtml(tip);
+        if (!meta && !amb && !title) return '';
+        return '<div class="builder-estructura-resumen__tip">' +
+          '<div class="builder-estructura-resumen__tip-title">' + esc(title) + '</div>' +
+          (meta
+            ? '<div class="builder-estructura-resumen__tip-meta">' + esc(meta) + '</div>'
+            : '') +
+          amb +
         '</div>';
       }).filter(Boolean).join('');
-      if (tipsInner) block('Tipologías', tipsInner, true);
+      if (tipsInner) section('Tipologías', tipsInner);
     }
 
     /* ── Amenidades ── */
@@ -390,16 +425,19 @@ var AiProjectBuilderView = (function () {
           '<span class="ws-ms__chip-label">' + esc(name) + '</span>' +
         '</span>';
       }).join('');
-      block('Amenidades', '<div class="builder-estructura-resumen__chips">' + chips + '</div>', true);
+      section('Amenidades', '<div class="builder-estructura-resumen__chips">' + chips + '</div>');
     }
 
-    if (!blocks.length) {
+    if (!headerHtml && !sections.length) {
       return '<p class="builder-estructura-section__note">Completa la estructura del proyecto para ver el resumen.</p>';
     }
 
     return '<div class="builder-estructura-resumen">' +
       '<div class="builder-estructura-resumen__card">' +
-        '<div class="builder-estructura-resumen__grid">' + blocks.join('') + '</div>' +
+        headerHtml +
+        (sections.length
+          ? '<div class="builder-estructura-resumen__stack">' + sections.join('') + '</div>'
+          : '') +
       '</div>' +
     '</div>';
   }
