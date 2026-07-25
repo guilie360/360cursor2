@@ -1,4 +1,4 @@
-/* BOXIES V5.9.19 — Estructura Engine: tipos Unidad/Edificio/Conjunto/Lotes/Mixto */
+/* BOXIES V5.9.20 — Estructura Engine: tipos Unidad/Edificio/Conjunto/Lotes/Mixto */
 var EstructuraEngine = (function () {
   var DEVELOPMENT_TYPES = [
     { id: 'unidad', label: 'Unidad' },
@@ -382,7 +382,8 @@ var EstructuraEngine = (function () {
       kind: 'residencial',
       type: 'residencial',
       producto: producto,
-      nombre: 'Modelo A',
+      /* Legacy V5.9.19: kept for config_json compat; not used as tipología modelo */
+      nombre: productLabel(producto) || 'Residencial',
       cantidad: 1,
       tipologiaLocalId: null,
       orden: orden != null ? orden : 0
@@ -441,9 +442,10 @@ var EstructuraEngine = (function () {
         kind: 'residencial',
         type: 'residencial',
         producto: producto,
+        /* Preserve legacy nombre/tipologiaLocalId; Spatial UI no longer edits modelo */
         nombre: (raw.nombre != null && String(raw.nombre).trim())
           ? String(raw.nombre).trim()
-          : 'Modelo A',
+          : (productLabel(producto) || 'Residencial'),
         cantidad: clampInt(raw.cantidad, 1, 100000, 1),
         tipologiaLocalId: raw.tipologiaLocalId || null,
         orden: raw.orden != null ? raw.orden : (orden || 0)
@@ -536,108 +538,48 @@ var EstructuraEngine = (function () {
   }
 
   /**
-   * Idempotent link: residential components ↔ tipologías.
-   * Linked comps group by tipologiaLocalId (stable across renames / stages).
-   * Unlinked comps match or create by (producto + modelo).
-   * Physical components (edificio, lotes, comercio…) never create tipologías.
-   * Never deletes existing tipologías.
+   * V5.9.20: Spatial residential components define producto + cantidad only.
+   * Tipologías own modelos. Do not auto-create tipologías from components,
+   * and do not overwrite tip.modelo ↔ comp.nombre.
+   * Legacy tipologiaLocalId / nombre remain in config_json for compat.
    */
   function syncConjuntoResidentialTipologias(e) {
     if (!e || normalizeTypeId(e.developmentType) !== 'conjunto') return e;
     if (!Array.isArray(e.tipologias)) e.tipologias = [];
     ensureConjuntoConfig(e);
 
-    var linked = {};
-    var unlinked = [];
-
     walkConjuntoComponents(e, function (c) {
       if (!isConjuntoResidentialComponent(c)) {
-        if (c) c.tipologiaLocalId = null;
+        if (c && c.kind === 'fisico') c.tipologiaLocalId = null;
         return;
       }
       var producto = c.producto || 'casa_unifamiliar';
-      var modelo = String(c.nombre || '').trim() || 'Modelo A';
-      c.producto = producto;
-      c.nombre = modelo;
+      if (!familyFromProducto(producto)) producto = 'casa_unifamiliar';
       c.kind = 'residencial';
       c.type = 'residencial';
-
-      var tip = c.tipologiaLocalId
-        ? e.tipologias.find(function (t) { return t.localId === c.tipologiaLocalId; })
-        : null;
-      if (tip) {
-        if (!linked[tip.localId]) linked[tip.localId] = { tip: tip, comps: [] };
-        linked[tip.localId].comps.push(c);
-        return;
+      c.producto = producto;
+      if (!c.nombre || !String(c.nombre).trim()) {
+        c.nombre = productLabel(producto) || 'Residencial';
       }
-      c.tipologiaLocalId = null;
-      unlinked.push(c);
-    });
-
-    Object.keys(linked).forEach(function (lid) {
-      var g = linked[lid];
-      var tip = g.tip;
-      /* Once linked, tipología is identity source; handlers keep tip in sync on component edits */
-      g.comps.forEach(function (c) {
-        c.tipologiaLocalId = tip.localId;
-        c.producto = tip.producto;
-        c.nombre = tip.modelo;
-        c.kind = 'residencial';
-        c.type = 'residencial';
-      });
-    });
-
-    var pending = {};
-    unlinked.forEach(function (c) {
-      var key = residentialIdentityKey(c.producto, c.nombre);
-      if (!pending[key]) {
-        pending[key] = { producto: c.producto, modelo: c.nombre, comps: [] };
-      }
-      pending[key].comps.push(c);
-    });
-
-    Object.keys(pending).forEach(function (key) {
-      var g = pending[key];
-      var tip = e.tipologias.find(function (t) {
-        return t.producto === g.producto &&
-          String(t.modelo || '').trim().toLowerCase() === g.modelo.toLowerCase();
-      });
-      if (!tip) {
-        tip = emptyTypology('conjunto', e.tipologias.length, {
-          producto: g.producto,
-          modelo: g.modelo,
-          forceFamily: familyFromProducto(g.producto) || 'casa'
-        });
-        tip.open = e.tipologias.length === 0;
-        e.tipologias.push(tip);
-        syncTypologyPlantas(e);
-      } else {
-        tip.producto = g.producto;
-        tip.modelo = g.modelo;
-      }
-      g.comps.forEach(function (c) {
-        c.tipologiaLocalId = tip.localId;
-        c.producto = tip.producto;
-        c.nombre = tip.modelo;
-      });
     });
 
     syncConjuntoDerivedTotals(e);
     return e;
   }
 
-  /** Tipología → componentes vinculados (rename / cambio de producto). */
+  /** Compat no-op for V5.9.19 callers: tipologías own modelo; comps keep producto only. */
   function propagateTipologiaToConjuntoComponents(e, tipLocalId) {
     if (!e || !tipLocalId) return e;
     var tip = (e.tipologias || []).find(function (t) { return t.localId === tipLocalId; });
-    if (!tip) return e;
+    if (!tip || !tip.producto) return e;
     ensureConjuntoConfig(e);
     walkConjuntoComponents(e, function (c) {
       if (c.tipologiaLocalId !== tipLocalId) return;
+      if (!isConjuntoResidentialComponent(c)) return;
       c.kind = 'residencial';
       c.type = 'residencial';
       c.producto = tip.producto;
-      c.nombre = tip.modelo;
+      /* Do not copy tip.modelo into component — Spatial has no Modelo field */
     });
     syncConjuntoDerivedTotals(e);
     return e;
@@ -737,32 +679,23 @@ var EstructuraEngine = (function () {
     if (!list) return e;
     var comp = list.find(function (c) { return c.localId === componentLocalId; });
     if (!comp || !patch) return e;
-    if (patch.nombre != null) comp.nombre = String(patch.nombre);
+    if (patch.nombre != null && !isConjuntoResidentialComponent(comp)) {
+      comp.nombre = String(patch.nombre);
+    }
     if (patch.cantidad != null) comp.cantidad = clampInt(patch.cantidad, 1, 100000, comp.cantidad);
     if (patch.producto && familyFromProducto(patch.producto)) {
       comp.kind = 'residencial';
       comp.type = 'residencial';
       comp.producto = patch.producto;
+      if (!comp.nombre || !String(comp.nombre).trim()) {
+        comp.nombre = productLabel(patch.producto) || 'Residencial';
+      }
     }
     if (patch.type && conjuntoPhysicalTypeMeta(patch.type)) {
       comp.kind = 'fisico';
       comp.type = patch.type;
       comp.producto = null;
       comp.tipologiaLocalId = null;
-    }
-    /* Sibling stages + tipología share identity via tipLocalId */
-    if (isConjuntoResidentialComponent(comp) && comp.tipologiaLocalId) {
-      var tip = e.tipologias.find(function (t) { return t.localId === comp.tipologiaLocalId; });
-      if (tip) {
-        if (patch.nombre != null) tip.modelo = comp.nombre;
-        if (patch.producto) tip.producto = comp.producto;
-      }
-      walkConjuntoComponents(e, function (c) {
-        if (c.localId === comp.localId) return;
-        if (c.tipologiaLocalId !== comp.tipologiaLocalId) return;
-        c.producto = comp.producto;
-        c.nombre = comp.nombre;
-      });
     }
     syncConjuntoResidentialTipologias(e);
     e.dirty = true;

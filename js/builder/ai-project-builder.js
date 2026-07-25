@@ -308,26 +308,31 @@ var AiProjectBuilderView = (function () {
             var meta = EstructuraEngine.conjuntoComponentTypeMeta(comp.type);
             return meta ? meta.label : (comp.type || 'Componente');
           })();
-      var nameLabel = residential ? 'Modelo' : 'Nombre';
       var stageAttr = stageLocalId
         ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
         : '';
+      var body = residential
+        ? ('<div class="ws-field-unit builder-estructura-row">' +
+            '<span class="builder-estructura-row__label">Cantidad</span>' +
+            stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
+          '</div>')
+        : ('<div class="builder-estructura-grid2">' +
+            '<div class="builder-field">' +
+              '<label>Nombre</label>' +
+              '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
+            '</div>' +
+            '<div class="ws-field-unit builder-estructura-row">' +
+              '<span class="builder-estructura-row__label">Cantidad</span>' +
+              stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
+            '</div>' +
+          '</div>');
       return '<div class="builder-conjunto-comp" data-cj-comp="' + AdminUI.escapeHtml(comp.localId) + '"' +
         stageAttr + '>' +
         '<div class="builder-conjunto-comp__head">' +
           '<span class="builder-conjunto-comp__type">' + AdminUI.escapeHtml(typeLabel) + '</span>' +
           '<button type="button" class="builder-menu-icon-btn" data-cj-comp-remove title="Quitar">×</button>' +
         '</div>' +
-        '<div class="builder-estructura-grid2">' +
-          '<div class="builder-field">' +
-            '<label>' + AdminUI.escapeHtml(nameLabel) + '</label>' +
-            '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
-          '</div>' +
-          '<div class="ws-field-unit builder-estructura-row">' +
-            '<span class="builder-estructura-row__label">Cantidad</span>' +
-            stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
-          '</div>' +
-        '</div>' +
+        body +
       '</div>';
     }
 
@@ -1737,8 +1742,35 @@ var AiProjectBuilderView = (function () {
       var scrollTop = scroller ? scroller.scrollTop : 0;
       persist();
       renderStepContent();
-      var scroller2 = rootEl.querySelector('.builder-workspace');
-      if (scroller2) scroller2.scrollTop = scrollTop;
+      function restoreScroll() {
+        var s = rootEl.querySelector('.builder-workspace');
+        if (s) s.scrollTop = scrollTop;
+      }
+      restoreScroll();
+      requestAnimationFrame(function () {
+        restoreScroll();
+        requestAnimationFrame(restoreScroll);
+      });
+    }
+
+    function tipologiaTitleText(tip) {
+      if (!tip) return 'Tipología';
+      if (tip.nombre) return tip.nombre;
+      if (tip.modelo) return 'Modelo ' + tip.modelo;
+      return 'Tipología';
+    }
+
+    function updateTipologiaTitle(card, tip) {
+      var tipTitle = card && card.querySelector('[data-tipologia-title]');
+      if (tipTitle) tipTitle.textContent = tipologiaTitleText(tip);
+    }
+
+    function updateConjuntoTotalViviendasDisplay() {
+      var el = rootEl.querySelector('[data-cj-total-viviendas]');
+      if (!el || !state.estructura) return;
+      el.textContent = String(
+        state.estructura.totalViviendas != null ? state.estructura.totalViviendas : 0
+      );
     }
 
     function closeAllWsPopovers() {
@@ -1934,7 +1966,7 @@ var AiProjectBuilderView = (function () {
             { nombre: nameInput.value },
             stageId || null
           );
-          rerender();
+          persist();
         });
       }
       var rm = row.querySelector('[data-cj-comp-remove]');
@@ -2173,14 +2205,62 @@ var AiProjectBuilderView = (function () {
     }
 
     rootEl.querySelectorAll('.builder-estructura-stepper').forEach(function (el) {
+      function refreshStepperInput() {
+        var field = el.getAttribute('data-stepper');
+        var input = el.querySelector('[data-stepper-input]');
+        if (!input || !field) return;
+        var e = state.estructura;
+        if (field === 'cj.cantidad') {
+          var compEl = el.closest('[data-cj-comp]');
+          if (!compEl || !e.conjuntoConfig) return;
+          var compId = compEl.getAttribute('data-cj-comp');
+          var stageId = compEl.getAttribute('data-cj-stage') || '';
+          var list = null;
+          if (stageId) {
+            var st = (e.conjuntoConfig.stages || []).find(function (s) {
+              return s.localId === stageId;
+            });
+            list = st ? st.components : null;
+          } else {
+            list = e.conjuntoConfig.components;
+          }
+          var comp = list && list.find(function (c) { return c.localId === compId; });
+          if (comp) input.value = String(comp.cantidad);
+          return;
+        }
+        if (field.indexOf('t.') === 0) {
+          var tipEl = el.closest('[data-tipologia]');
+          if (!tipEl) return;
+          var tip = e.tipologias.find(function (x) {
+            return x.localId === tipEl.getAttribute('data-tipologia');
+          });
+          if (tip) input.value = String(tip[field.slice(2)] != null ? tip[field.slice(2)] : 0);
+        }
+      }
+
+      function applyLocalStepper(raw) {
+        var field = el.getAttribute('data-stepper');
+        var applied = applyStepperValue(el, raw);
+        if (!applied) return false;
+        var localOnly = field === 'cj.cantidad' ||
+          (field && field.indexOf('t.') === 0 && field !== 't.plantas_internas');
+        if (localOnly) {
+          refreshStepperInput();
+          if (field === 'cj.cantidad') updateConjuntoTotalViviendasDisplay();
+          persist();
+          return true;
+        }
+        rerender();
+        return true;
+      }
+
       el.querySelectorAll('[data-step]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var delta = parseInt(btn.getAttribute('data-step'), 10) || 0;
           var input = el.querySelector('[data-stepper-input]');
           var cur = input ? parseInt(input.value, 10) : 0;
           if (isNaN(cur)) cur = 0;
-          applyStepperValue(el, cur + delta);
-          rerender();
+          applyLocalStepper(cur + delta);
         });
       });
       var input = el.querySelector('[data-stepper-input]');
@@ -2191,13 +2271,11 @@ var AiProjectBuilderView = (function () {
         input.addEventListener('keydown', function (ev) {
           if (ev.key === 'Enter') {
             ev.preventDefault();
-            applyStepperValue(el, input.value);
-            rerender();
+            applyLocalStepper(input.value);
           }
         });
         input.addEventListener('change', function () {
-          applyStepperValue(el, input.value);
-          rerender();
+          applyLocalStepper(input.value);
         });
         input.addEventListener('blur', function () {
           applyStepperValue(el, input.value);
@@ -2205,6 +2283,9 @@ var AiProjectBuilderView = (function () {
           var min = parseInt(el.getAttribute('data-min'), 10);
           var max = parseInt(el.getAttribute('data-max'), 10);
           input.value = String(EstructuraEngine.clampInt(input.value, min, max, min));
+          if (el.getAttribute('data-stepper') === 'cj.cantidad') {
+            updateConjuntoTotalViviendasDisplay();
+          }
         });
       }
     });
@@ -2274,6 +2355,7 @@ var AiProjectBuilderView = (function () {
           if (!tip) return;
           var f = input.getAttribute('data-t-field');
           var val = input.value;
+          var prevProducto = tip.producto;
           if (f === 'area_m2' || f === 'area_privada_m2' || f === 'area_lote_m2' || f === 'precio') {
             tip[f] = val === '' ? null : Number(val);
           } else if (f === 'componente') {
@@ -2293,20 +2375,22 @@ var AiProjectBuilderView = (function () {
             tip[f] = val;
           }
           tip.nombre = '';
-          if (state.estructura.developmentType === 'conjunto' &&
-              (f === 'modelo' || f === 'producto') &&
-              EstructuraEngine.propagateTipologiaToConjuntoComponents) {
-            EstructuraEngine.propagateTipologiaToConjuntoComponents(state.estructura, tip.localId);
-          }
           EstructuraEngine.syncTypologyPlantas(state.estructura);
           persist();
-          var tipTitle = card.querySelector('[data-tipologia-title]');
-          if (tipTitle) {
-            tipTitle.textContent = tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : 'Tipología');
-          }
-          if (state.estructura.developmentType === 'conjunto' && (f === 'modelo' || f === 'producto')) {
-            rerender();
-            return;
+          updateTipologiaTitle(card, tip);
+
+          /* Producto may switch casa/apto field layout — only then rebuild.
+             Never rebuild on Modelo / areas / precio (scroll + focus jump). */
+          if (f === 'producto') {
+            var prevFam = EstructuraEngine.familyFromProducto
+              ? EstructuraEngine.familyFromProducto(prevProducto)
+              : null;
+            var nextFam = EstructuraEngine.familyFromProducto
+              ? EstructuraEngine.familyFromProducto(tip.producto)
+              : null;
+            if (prevFam && nextFam && prevFam !== nextFam) {
+              rerender();
+            }
           }
         });
       });
