@@ -219,7 +219,7 @@ var AiProjectBuilderView = (function () {
       '</div>';
     }
 
-    function ambientePickerHtml(tipLocalId, plantaLocalId, prioritizeExterior) {
+    function ambientePickerHtml(tip, plantaLocalId, prioritizeExterior) {
       var priority = {};
       (EstructuraEngine.AMBIENTE_EXTERIOR_PRIORITY || []).forEach(function (n) { priority[n] = true; });
       var groups = (EstructuraEngine.AMBIENTE_CATALOG || []).slice();
@@ -230,39 +230,56 @@ var AiProjectBuilderView = (function () {
           return 0;
         });
       }
+      var plantaKey = plantaLocalId || '';
+      var current = (tip.ambientes || []).filter(function (a) {
+        return plantaKey ? a.plantaLocalId === plantaKey : !a.plantaLocalId;
+      });
+      var selectedNames = {};
+      current.forEach(function (a) { selectedNames[a.nombre] = true; });
+
       var groupsHtml = groups.map(function (g) {
-        return '<div class="builder-ambiente-picker__group">' +
-          '<div class="builder-ambiente-picker__group-title">' + AdminUI.escapeHtml(g.label) + '</div>' +
-          '<div class="builder-ambiente-picker__options">' +
+        return '<div class="ws-ms__group builder-ambiente-picker__group">' +
+          '<div class="ws-ms__group-title builder-ambiente-picker__group-title">' +
+            AdminUI.escapeHtml(g.label) + '</div>' +
+          '<div class="ws-ms__options builder-ambiente-picker__options">' +
             g.items.map(function (name) {
               var isOther = EstructuraEngine.isCustomAmbienteOption
                 ? EstructuraEngine.isCustomAmbienteOption(name)
                 : (name === 'Otro' || name === 'Otro...');
               var isPri = prioritizeExterior && priority[name];
-              return '<label class="builder-ambiente-picker__opt' + (isPri ? ' is-priority' : '') + '">' +
+              var on = !isOther && !!selectedNames[name];
+              return '<label class="ws-ms__opt builder-ambiente-picker__opt' +
+                (isPri ? ' is-priority' : '') + '">' +
                 '<input type="checkbox" data-amb-pick="' + AdminUI.escapeHtml(name) + '"' +
-                  (isOther ? ' data-amb-pick-other="1"' : '') + '>' +
+                  (isOther ? ' data-amb-pick-other="1"' : '') +
+                  (on ? ' checked' : '') + '>' +
                 '<span>' + AdminUI.escapeHtml(name) + '</span></label>';
             }).join('') +
           '</div></div>';
       }).join('');
 
-      return '<div class="builder-ambiente-picker" data-amb-picker' +
-        ' data-tipologia-id="' + AdminUI.escapeHtml(tipLocalId) + '"' +
-        ' data-planta-id="' + AdminUI.escapeHtml(plantaLocalId || '') + '">' +
+      var chipsHtml = current.map(function (a) {
+        return '<span class="ws-ms__chip">' +
+          '<span class="ws-ms__chip-label">' + AdminUI.escapeHtml(a.nombre) + '</span>' +
+          '<button type="button" class="ws-ms__chip-remove" data-amb-chip-remove="' +
+            AdminUI.escapeHtml(a.localId) + '" aria-label="Quitar ' +
+            AdminUI.escapeHtml(a.nombre) + '">×</button>' +
+        '</span>';
+      }).join('');
+
+      return '<div class="ws-ms builder-ambiente-picker" data-amb-picker' +
+        ' data-tipologia-id="' + AdminUI.escapeHtml(tip.localId) + '"' +
+        ' data-planta-id="' + AdminUI.escapeHtml(plantaKey) + '">' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-amb-picker-open>+ Ambiente</button>' +
-        '<div class="builder-ambiente-picker__panel" hidden>' +
+        '<div class="ws-ms__panel builder-ambiente-picker__panel" hidden data-amb-panel>' +
           groupsHtml +
           '<div class="builder-ambiente-picker__custom" hidden data-amb-custom-wrap>' +
             '<label>Nombre del ambiente' +
-              '<input type="text" data-amb-custom-name placeholder="Ej. Sala de juegos" maxlength="80">' +
+              '<input type="text" data-amb-custom-name placeholder="Ej. Sala de juegos — Enter para agregar" maxlength="80">' +
             '</label>' +
           '</div>' +
-          '<div class="builder-ambiente-picker__actions">' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-amb-picker-cancel>Cancelar</button>' +
-            '<button type="button" class="builder-header-action-btn is-primary" data-amb-picker-confirm disabled>Agregar</button>' +
-          '</div>' +
         '</div>' +
+        '<div class="ws-ms__summary" data-amb-summary>' + chipsHtml + '</div>' +
       '</div>';
     }
 
@@ -455,33 +472,17 @@ var AiProjectBuilderView = (function () {
       }
 
       var plantasHtml = (tip.plantas || []).map(function (pl) {
-        var ambList = (tip.ambientes || []).filter(function (a) {
-          return a.plantaLocalId === pl.localId;
-        });
         return '<details class="builder-estructura-acc builder-estructura-acc--nested">' +
           '<summary>' + AdminUI.escapeHtml(pl.nombre) + '</summary>' +
           '<div class="builder-estructura-acc__body">' +
-            ambList.map(function (a) {
-              return '<div class="builder-estructura-ambiente" data-amb="' + AdminUI.escapeHtml(a.localId) + '">' +
-                '<input type="text" data-amb-name value="' + AdminUI.escapeHtml(a.nombre) + '">' +
-                '<button type="button" class="builder-menu-icon-btn" data-amb-remove title="Quitar">×</button>' +
-              '</div>';
-            }).join('') +
-            ambientePickerHtml(tip.localId, pl.localId, false) +
+            ambientePickerHtml(tip, pl.localId, false) +
           '</div></details>';
       }).join('');
 
-      var exteriores = (tip.ambientes || []).filter(function (a) { return !a.plantaLocalId; });
       var extHtml =
         '<div class="builder-estructura-ext">' +
           '<div class="builder-estructura-sublabel">Sin planta (exterior / patio / jardín)</div>' +
-          exteriores.map(function (a) {
-            return '<div class="builder-estructura-ambiente" data-amb="' + AdminUI.escapeHtml(a.localId) + '">' +
-              '<input type="text" data-amb-name value="' + AdminUI.escapeHtml(a.nombre) + '">' +
-              '<button type="button" class="builder-menu-icon-btn" data-amb-remove title="Quitar">×</button>' +
-            '</div>';
-          }).join('') +
-          ambientePickerHtml(tip.localId, '', true) +
+          ambientePickerHtml(tip, '', true) +
         '</div>';
 
       return '<details class="builder-estructura-acc" data-tipologia="' + AdminUI.escapeHtml(tip.localId) + '"' +
@@ -1539,6 +1540,55 @@ var AiProjectBuilderView = (function () {
       if (scroller2) scroller2.scrollTop = scrollTop;
     }
 
+    function closeAllWsPopovers() {
+      rootEl.querySelectorAll('.builder-ambiente-picker__panel, .ws-ms__panel, [data-amb-panel], [data-zones-panel]').forEach(function (p) {
+        p.hidden = true;
+      });
+      rootEl.querySelectorAll('[data-amb-picker], [data-zones-picker]').forEach(function (p) {
+        p.classList.remove('is-open');
+      });
+      rootEl.querySelectorAll('[data-amb-picker-open], [data-zones-picker-open]').forEach(function (b) {
+        b.setAttribute('aria-expanded', 'false');
+      });
+      rootEl.querySelectorAll('[data-amb-custom-wrap]').forEach(function (w) {
+        w.hidden = true;
+      });
+      rootEl.querySelectorAll('[data-amb-pick-other]').forEach(function (cb) {
+        cb.checked = false;
+      });
+      rootEl.querySelectorAll('[data-amb-custom-name]').forEach(function (inp) {
+        inp.value = '';
+      });
+    }
+
+    if (rootEl._wsMsOutside) {
+      document.removeEventListener('pointerdown', rootEl._wsMsOutside, true);
+    }
+    if (rootEl._wsMsEscape) {
+      document.removeEventListener('keydown', rootEl._wsMsEscape, true);
+    }
+
+    rootEl._wsMsOutside = function (ev) {
+      var openPanel = rootEl.querySelector(
+        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden])'
+      );
+      if (!openPanel) return;
+      var host = openPanel.closest('[data-amb-picker], [data-zones-picker]');
+      if (host && host.contains(ev.target)) return;
+      closeAllWsPopovers();
+    };
+    rootEl._wsMsEscape = function (ev) {
+      if (ev.key !== 'Escape') return;
+      var openPanel = rootEl.querySelector(
+        '.builder-ambiente-picker__panel:not([hidden]), .ws-ms__panel:not([hidden]), [data-amb-panel]:not([hidden]), [data-zones-panel]:not([hidden])'
+      );
+      if (!openPanel) return;
+      ev.preventDefault();
+      closeAllWsPopovers();
+    };
+    document.addEventListener('pointerdown', rootEl._wsMsOutside, true);
+    document.addEventListener('keydown', rootEl._wsMsEscape, true);
+
     rootEl.querySelectorAll('[data-estructura-panel]').forEach(function (panel) {
       panel.addEventListener('toggle', function () {
         var key = panel.getAttribute('data-estructura-panel');
@@ -1785,131 +1835,170 @@ var AiProjectBuilderView = (function () {
         if (tip) tip.open = card.open;
       });
 
-      card.querySelectorAll('[data-amb]').forEach(function (row) {
-        var ambId = row.getAttribute('data-amb');
-        var nameInput = row.querySelector('[data-amb-name]');
-        if (nameInput) {
-          nameInput.addEventListener('input', function () {
-            var tip = state.estructura.tipologias.find(function (x) { return x.localId === id; });
-            var amb = tip && tip.ambientes.find(function (a) { return a.localId === ambId; });
-            if (amb) {
-              amb.nombre = nameInput.value;
-              persist();
-            }
-          });
-        }
-        var rm = row.querySelector('[data-amb-remove]');
-        if (rm) {
-          rm.addEventListener('click', function () {
-            var tip = state.estructura.tipologias.find(function (x) { return x.localId === id; });
-            if (!tip) return;
-            tip.ambientes = tip.ambientes.filter(function (a) { return a.localId !== ambId; });
-            rerender();
-          });
-        }
-      });
-
       card.querySelectorAll('[data-amb-picker]').forEach(function (picker) {
         var openBtn = picker.querySelector('[data-amb-picker-open]');
-        var panel = picker.querySelector('.builder-ambiente-picker__panel');
-        var cancelBtn = picker.querySelector('[data-amb-picker-cancel]');
-        var confirmBtn = picker.querySelector('[data-amb-picker-confirm]');
+        var panel = picker.querySelector('[data-amb-panel]') ||
+          picker.querySelector('.builder-ambiente-picker__panel') ||
+          picker.querySelector('.ws-ms__panel');
         var customWrap = picker.querySelector('[data-amb-custom-wrap]');
         var customInput = picker.querySelector('[data-amb-custom-name]');
-        if (!openBtn || !panel || !confirmBtn) return;
+        var summaryEl = picker.querySelector('[data-amb-summary]');
+        if (!openBtn || !panel) return;
 
-        function selectedNames() {
-          var names = [];
-          var wantOther = false;
-          picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) {
-            if (!cb.checked) return;
-            if (cb.getAttribute('data-amb-pick-other') === '1') wantOther = true;
-            else names.push(cb.getAttribute('data-amb-pick'));
-          });
-          if (wantOther) {
-            var custom = customInput ? String(customInput.value || '').trim() : '';
-            if (custom) names.push(custom);
-          }
-          return names;
+        var tipId = picker.getAttribute('data-tipologia-id') || id;
+        var plantaKey = picker.getAttribute('data-planta-id') || '';
+
+        function tipRef() {
+          return state.estructura.tipologias.find(function (x) { return x.localId === tipId; });
         }
 
-        function refreshConfirm() {
+        function ambientesHere() {
+          var tip = tipRef();
+          if (!tip || !Array.isArray(tip.ambientes)) return [];
+          return tip.ambientes.filter(function (a) {
+            return plantaKey ? a.plantaLocalId === plantaKey : !a.plantaLocalId;
+          });
+        }
+
+        function renderSummary() {
+          if (!summaryEl) return;
+          summaryEl.innerHTML = ambientesHere().map(function (a) {
+            return '<span class="ws-ms__chip">' +
+              '<span class="ws-ms__chip-label">' + AdminUI.escapeHtml(a.nombre) + '</span>' +
+              '<button type="button" class="ws-ms__chip-remove" data-amb-chip-remove="' +
+                AdminUI.escapeHtml(a.localId) + '" aria-label="Quitar ' +
+                AdminUI.escapeHtml(a.nombre) + '">×</button>' +
+            '</span>';
+          }).join('');
+        }
+
+        function syncCheckboxes() {
+          var names = {};
+          ambientesHere().forEach(function (a) { names[a.nombre] = true; });
+          picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) {
+            if (cb.getAttribute('data-amb-pick-other') === '1') return;
+            var n = cb.getAttribute('data-amb-pick');
+            cb.checked = !!names[n];
+          });
+        }
+
+        function syncUi() {
+          syncCheckboxes();
+          renderSummary();
+        }
+
+        function addAmbiente(nombre) {
+          var tip = tipRef();
+          var name = String(nombre || '').trim();
+          if (!tip || !name) return false;
+          var exists = tip.ambientes.some(function (a) {
+            if (a.nombre !== name) return false;
+            return plantaKey ? a.plantaLocalId === plantaKey : !a.plantaLocalId;
+          });
+          if (exists) return false;
+          tip.ambientes.push(EstructuraEngine.emptyAmbiente(name, plantaKey || null));
+          return true;
+        }
+
+        function removeAmbienteByName(nombre) {
+          var tip = tipRef();
+          if (!tip) return;
+          tip.ambientes = tip.ambientes.filter(function (a) {
+            if (a.nombre !== nombre) return true;
+            return plantaKey ? a.plantaLocalId !== plantaKey : !!a.plantaLocalId;
+          });
+        }
+
+        function removeAmbienteById(localId) {
+          var tip = tipRef();
+          if (!tip || !localId) return;
+          tip.ambientes = tip.ambientes.filter(function (a) { return a.localId !== localId; });
+        }
+
+        function refreshOtherUi() {
           var otherCb = picker.querySelector('[data-amb-pick-other]');
           var otherOn = !!(otherCb && otherCb.checked);
           if (customWrap) customWrap.hidden = !otherOn;
-          var names = selectedNames();
-          var n = names.length;
-          confirmBtn.disabled = n < 1 || (otherOn && !(customInput && String(customInput.value || '').trim()));
-          confirmBtn.textContent = n > 0
-            ? ('Agregar ' + n + ' ambiente' + (n === 1 ? '' : 's'))
-            : 'Agregar';
+          if (otherOn && customInput) {
+            try { customInput.focus({ preventScroll: true }); } catch (err) {
+              try { customInput.focus(); } catch (err2) { /* ignore */ }
+            }
+          }
         }
 
-        function closePanel() {
-          panel.hidden = true;
-          picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) { cb.checked = false; });
-          if (customInput) customInput.value = '';
-          if (customWrap) customWrap.hidden = true;
-          refreshConfirm();
+        function commitCustom() {
+          if (!customInput) return;
+          var name = String(customInput.value || '').trim();
+          if (!name) return;
+          if (addAmbiente(name)) {
+            customInput.value = '';
+            var otherCb = picker.querySelector('[data-amb-pick-other]');
+            if (otherCb) otherCb.checked = false;
+            if (customWrap) customWrap.hidden = true;
+            syncUi();
+            persist();
+          }
         }
 
         openBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
           ev.stopPropagation();
           var opening = panel.hidden;
-          rootEl.querySelectorAll('.builder-ambiente-picker__panel, .ws-ms__panel').forEach(function (p) {
-            p.hidden = true;
-          });
-          rootEl.querySelectorAll('[data-zones-picker-open]').forEach(function (b) {
-            b.setAttribute('aria-expanded', 'false');
-          });
-          rootEl.querySelectorAll('[data-zones-picker]').forEach(function (p) {
-            p.classList.remove('is-open');
-          });
-          panel.hidden = !opening;
-          if (!panel.hidden) refreshConfirm();
+          closeAllWsPopovers();
+          if (!opening) return;
+          panel.hidden = false;
+          openBtn.setAttribute('aria-expanded', 'true');
+          picker.classList.add('is-open');
+          syncUi();
+          refreshOtherUi();
         });
 
-        if (cancelBtn) {
-          cancelBtn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            closePanel();
-          });
-        }
+        panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+        panel.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+        panel.addEventListener('wheel', function (ev) { ev.stopPropagation(); }, { passive: true });
 
         picker.querySelectorAll('[data-amb-pick]').forEach(function (cb) {
+          cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
           cb.addEventListener('change', function (ev) {
             ev.stopPropagation();
-            refreshConfirm();
+            if (cb.getAttribute('data-amb-pick-other') === '1') {
+              refreshOtherUi();
+              return;
+            }
+            var name = cb.getAttribute('data-amb-pick');
+            if (!name) return;
+            if (cb.checked) addAmbiente(name);
+            else removeAmbienteByName(name);
+            syncUi();
+            persist();
           });
-          cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
         });
 
         if (customInput) {
-          customInput.addEventListener('input', function (ev) {
-            ev.stopPropagation();
-            refreshConfirm();
-          });
           customInput.addEventListener('click', function (ev) { ev.stopPropagation(); });
+          customInput.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+          customInput.addEventListener('keydown', function (ev) {
+            ev.stopPropagation();
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              commitCustom();
+            }
+          });
         }
 
-        panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
-
-        confirmBtn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          var tip = state.estructura.tipologias.find(function (x) { return x.localId === id; });
-          if (!tip) return;
-          var plantaLocalId = picker.getAttribute('data-planta-id') || null;
-          var names = selectedNames();
-          if (!names.length) return;
-          names.forEach(function (nombre) {
-            tip.ambientes.push(EstructuraEngine.emptyAmbiente(nombre, plantaLocalId || null));
+        if (summaryEl) {
+          summaryEl.addEventListener('click', function (ev) {
+            var btn = ev.target && ev.target.closest
+              ? ev.target.closest('[data-amb-chip-remove]')
+              : null;
+            if (!btn) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            removeAmbienteById(btn.getAttribute('data-amb-chip-remove'));
+            syncUi();
+            persist();
           });
-          closePanel();
-          rerender();
-        });
+        }
       });
     });
 
@@ -1999,22 +2088,16 @@ var AiProjectBuilderView = (function () {
         ev.preventDefault();
         ev.stopPropagation();
         var opening = panel.hidden;
-        rootEl.querySelectorAll('.builder-ambiente-picker__panel, .ws-ms__panel').forEach(function (p) {
-          p.hidden = true;
-        });
-        rootEl.querySelectorAll('[data-zones-picker-open]').forEach(function (b) {
-          b.setAttribute('aria-expanded', 'false');
-        });
-        rootEl.querySelectorAll('[data-zones-picker]').forEach(function (p) {
-          p.classList.remove('is-open');
-        });
-        panel.hidden = !opening;
-        openBtn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
-        picker.classList.toggle('is-open', !panel.hidden);
-        if (!panel.hidden) syncUi();
+        closeAllWsPopovers();
+        if (!opening) return;
+        panel.hidden = false;
+        openBtn.setAttribute('aria-expanded', 'true');
+        picker.classList.add('is-open');
+        syncUi();
       });
 
       panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      panel.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
       panel.addEventListener('wheel', function (ev) { ev.stopPropagation(); }, { passive: true });
 
       picker.querySelectorAll('[data-zone-pick]').forEach(function (cb) {

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.11
+   BOXIES Workspace UI System V5.9.12
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -666,12 +666,7 @@
 }
 
 .builder-ambiente-picker__actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 10px;
-  padding: 8px 4px 2px;
-  border-top: 1px solid var(--ws-border);
+  display: none !important;
 }
 
 /* Summary chips (Zonas selected) — display only */
