@@ -352,6 +352,36 @@ body.builder-has-dock.platform-builder-shell {
   display: block;
 }
 
+/* Elder Futhark section markers ? glyph only, decorative */
+.builder-rail-rune {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: "Segoe UI Historic", "Noto Sans Runic", "BabelStone Runic",
+    "Segoe UI Symbol", "DejaVu Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.92);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Subtle optical weight when face has no bold Runic cuts */
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
+  user-select: none;
+  pointer-events: none;
+}
+
 .builder-rail-label {
   min-width: 0;
 }
@@ -2053,7 +2083,7 @@ body.builder-has-dock .admin-toast--info {
   display: none;
 }
 
-/* CSS chevron (encoding-safe) — closed: right, open: down */
+/* CSS chevron (encoding-safe) ? closed: right, open: down */
 .builder-estructura-section__summary::before,
 .builder-estructura-acc > summary::before {
   content: '';

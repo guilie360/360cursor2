@@ -1,9 +1,39 @@
 /* Progress rail — discrete left column checklist */
 var BuilderProgressRail = (function () {
+  /* Elder Futhark markers — visual only; section ids unchanged.
+     Exact sequence for first 15 rail sections (order in buildItems). */
+  var SECTION_RUNES = [
+    '\u16A0', /* ᚠ */
+    '\u16A2', /* ᚢ */
+    '\u16A6', /* ᚦ */
+    '\u16A8', /* ᚨ */
+    '\u16B1', /* ᚱ */
+    '\u16B2', /* ᚲ */
+    '\u16B7', /* ᚷ */
+    '\u16B9', /* ᚹ */
+    '\u16BA', /* ᚺ */
+    '\u16BE', /* ᚾ */
+    '\u16C1', /* ᛁ */
+    '\u16C3', /* ᛃ */
+    '\u16C7', /* ᛇ */
+    '\u16C8', /* ᛈ */
+    '\u16C9'  /* ᛉ */
+  ];
+  /* If rail ever exceeds 15, continue Elder Futhark (not section ids). */
+  var SECTION_RUNES_EXTRA = ['\u16CA']; /* ᛊ */
+
   function shortName(name) {
     if (!name) return null;
     var base = String(name).replace(/\.[^.]+$/, '');
     return base.length > 36 ? base.slice(0, 34) + '…' : base;
+  }
+
+  function sectionRune(index) {
+    var i = parseInt(index, 10);
+    if (isNaN(i) || i < 0) return null;
+    if (i < SECTION_RUNES.length) return SECTION_RUNES[i];
+    var j = i - SECTION_RUNES.length;
+    return SECTION_RUNES_EXTRA[j] || null;
   }
 
   function isDone(state, stepId, autoDone) {
@@ -176,6 +206,14 @@ var BuilderProgressRail = (function () {
     return '○';
   }
 
+  function runeGlyphHtml(index) {
+    var rune = sectionRune(index);
+    if (rune) {
+      return '<span class="builder-rail-rune" aria-hidden="true">' + rune + '</span>';
+    }
+    return stepIcon(index);
+  }
+
   function isRailCollapsed() {
     if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed) {
       return !!BoxiesPrefs.getRailCollapsed();
@@ -209,7 +247,7 @@ var BuilderProgressRail = (function () {
         toggleIcon +
       '</button>';
 
-    html += items.map(function (item) {
+    html += items.map(function (item, index) {
       var cls = 'builder-rail-item' + (item.done ? ' is-done' : '');
       if (item.stepIndex === current) cls += ' is-current';
       var mark = item.done ? '✓' : '○';
@@ -217,7 +255,7 @@ var BuilderProgressRail = (function () {
         ' title="' + escapeHtml(item.label) + '"' +
         ' aria-label="' + escapeHtml(item.label) + '">' +
         '<span class="builder-rail-row">' +
-          '<span class="builder-rail-icon" aria-hidden="true">' + stepIcon(item.stepIndex) + '</span>' +
+          '<span class="builder-rail-icon" aria-hidden="true">' + runeGlyphHtml(index) + '</span>' +
           '<span class="builder-rail-mark" aria-hidden="true">' + mark + '</span>' +
           '<span class="builder-rail-label">' + escapeHtml(item.label) + '</span>' +
         '</span>' +
