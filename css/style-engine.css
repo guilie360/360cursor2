@@ -981,29 +981,105 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
+  color: #f0f0f0;
 }
 .se-color-picker-modal.is-open { opacity: 1; visibility: visible; }
 .se-color-picker-box {
   width: min(420px, 100%);
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
-  background: color-mix(in srgb, var(--text-primary) 3%, var(--bg-popup, var(--bg-card)));
+  border: 1px solid color-mix(in srgb, #ffffff 12%, transparent);
+  background: #121212;
   box-shadow: 0 20px 50px rgba(0,0,0,0.35);
   overflow: hidden;
+  color: #f0f0f0;
 }
-.se-color-picker-head { padding: 14px 16px; border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.se-color-picker-body { padding: 14px 16px; display: grid; gap: 12px; }
-.se-color-picker-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid color-mix(in srgb, var(--text-primary) 8%, transparent); }
+.se-color-picker-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+.se-color-picker-body { padding: 14px 16px; display: grid; gap: 12px; color: #e8e8e8; }
+.se-color-picker-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid color-mix(in srgb, #ffffff 10%, transparent);
+}
 .se-color-picker-main { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
 .se-color-native { width: 56px; height: 56px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .se-color-fields { display: grid; gap: 8px; }
-.se-color-fields label { display: grid; gap: 4px; font-size: 0.54rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.se-color-fields input[type="text"], .se-color-fields input[type="range"] { width: 100%; }
+.se-color-fields label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.54rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #d4d4d4;
+}
+.se-color-fields input[type="text"] {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #0a0a0a;
+  color: #ffffff;
+  caret-color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.se-color-fields input[type="text"]::placeholder {
+  color: #8a8a8a;
+}
+.se-color-fields input[type="text"]:focus {
+  border-color: #3a3a3a;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffffff 8%, transparent);
+}
+.se-color-fields input[type="text"]::selection {
+  background: color-mix(in srgb, #ffffff 28%, transparent);
+  color: #ffffff;
+}
+.se-color-fields input[type="range"] {
+  width: 100%;
+  accent-color: #cfcfcf;
+}
+.se-color-fields #seColorAlphaVal {
+  color: #e8e8e8;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
 .se-palette-block { display: grid; gap: 6px; }
-.se-palette-title { font-size: 0.54rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.65; }
+.se-palette-title {
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c8c8c8;
+  opacity: 1;
+}
 .se-palette-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.se-palette-swatch { width: 24px; height: 24px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--text-primary) 18%, transparent); cursor: pointer; padding: 0; }
-.se-palette-empty { font-size: 0.62rem; opacity: 0.4; }
+.se-palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, #ffffff 18%, transparent);
+  cursor: pointer;
+  padding: 0;
+}
+.se-palette-empty {
+  font-size: 0.62rem;
+  color: #9a9a9a;
+  opacity: 1;
+}
 
 /* Preview dashboard v2 */
 .se-scenario-bar {
