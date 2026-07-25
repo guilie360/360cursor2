@@ -93,41 +93,50 @@ var EstructuraEngine = (function () {
     {
       id: 'social',
       label: 'Social',
-      items: ['Sala', 'Comedor', 'Sala-comedor', 'Sala de TV', 'Estar', 'Estudio']
+      items: ['Sala', 'Comedor', 'Sala / Comedor', 'Estar', 'Sala de TV', 'Estudio', 'Biblioteca']
     },
     {
       id: 'cocina',
       label: 'Cocina / Servicio',
       items: [
-        'Cocina', 'Cocina abierta', 'Despensa', 'Lavandería', 'Zona de ropas',
-        'Cuarto de servicio', 'Baño de servicio', 'Depósito'
+        'Cocina', 'Cocina abierta', 'Cocina cerrada', 'Despensa', 'Zona de ropas',
+        'Lavandería', 'Cuarto de servicio', 'Baño de servicio', 'Depósito'
       ]
     },
     {
       id: 'habitaciones',
       label: 'Habitaciones',
-      items: ['Habitación principal', 'Habitación', 'Habitación auxiliar', 'Vestier', 'Clóset']
+      items: ['Habitación principal', 'Habitación', 'Habitación auxiliar', 'Vestier', 'Walk-in closet']
     },
     {
       id: 'banos',
       label: 'Baños',
-      items: ['Baño principal', 'Baño', 'Baño social']
+      items: ['Baño principal', 'Baño', 'Baño social', 'Medio baño']
     },
     {
       id: 'exterior',
-      label: 'Exterior / Transición',
-      items: ['Balcón', 'Terraza', 'Patio', 'Jardín', 'Piscina privada', 'Parqueadero', 'Garaje']
+      label: 'Exterior / Privado',
+      items: [
+        'Balcón', 'Terraza', 'Patio', 'Jardín', 'Piscina privada', 'Jacuzzi',
+        'BBQ', 'Parqueadero', 'Garaje'
+      ]
     },
     {
       id: 'otros',
       label: 'Otros',
-      items: ['Otro...']
+      items: [
+        'Circulación', 'Hall', 'Escalera', 'Ascensor', 'Mezanine', 'Altillo', 'Sótano', 'Otro'
+      ]
     }
   ];
 
   var AMBIENTE_EXTERIOR_PRIORITY = [
-    'Patio', 'Jardín', 'Terraza', 'Piscina privada', 'Parqueadero', 'Garaje'
+    'Patio', 'Jardín', 'Terraza', 'Piscina privada', 'Jacuzzi', 'BBQ', 'Parqueadero', 'Garaje'
   ];
+
+  function isCustomAmbienteOption(name) {
+    return name === 'Otro' || name === 'Otro...';
+  }
 
   function uid() {
     return 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -543,7 +552,8 @@ var EstructuraEngine = (function () {
     e.buildings.forEach(function (b, i) {
       b.orden = i;
       b.kind = 'torre';
-      if (!b.nombre || /^Torre\s+[A-Z0-9]+$/i.test(b.nombre) || /^Edificio/i.test(b.nombre)) {
+      /* Never rewrite custom names — only fill blanks */
+      if (!b.nombre || !String(b.nombre).trim()) {
         b.nombre = 'Torre ' + String.fromCharCode(65 + (i % 26));
       }
     });
@@ -736,6 +746,7 @@ var EstructuraEngine = (function () {
     ZONE_GROUPS: ZONE_GROUPS,
     AMBIENTE_CATALOG: AMBIENTE_CATALOG,
     AMBIENTE_EXTERIOR_PRIORITY: AMBIENTE_EXTERIOR_PRIORITY,
+    isCustomAmbienteOption: isCustomAmbienteOption,
     LEGACY_TYPE_MAP: LEGACY_TYPE_MAP,
     uid: uid,
     clampInt: clampInt,
