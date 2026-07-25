@@ -99,8 +99,9 @@ var StyleEngineRuntime = (function () {
         : PROJECT_DEFAULT_THEME_FALLBACK;
     }
 
-    /* Prefer official when missing draft or LIVE draft is the project's official theme. */
-    if ((!draft && official) || (draft && official && draftsMatchOfficial(draft, official))) {
+    /* Prefer stored LIVE draft when present. Official is only a fallback when draft is missing.
+       Never overwrite a freshly applied preset (e.g. HALL factory) with a different official. */
+    if (!draft && official) {
       draft = official;
     }
 

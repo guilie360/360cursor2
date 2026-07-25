@@ -85,7 +85,20 @@ var VisitorPersonalizeV2Panel = (function () {
     return !!(defaultId && meta.id && meta.id === defaultId);
   }
 
+  function getHallFactoryDraft() {
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getHallFactoryDraft === 'function') {
+      var factory = ProjectThemeAuthority.getHallFactoryDraft();
+      if (factory) return normalize(factory);
+    }
+    if (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined') {
+      return normalize(PROJECT_DEFAULT_THEME_FALLBACK);
+    }
+    return normalize(defaultDraft());
+  }
+
   function getProjectBaseDraft() {
+    /* Legacy helper: project official theme (may differ from HALL factory). */
     if (typeof ProjectThemeAuthority !== 'undefined' &&
         typeof ProjectThemeAuthority.getOfficialDraft === 'function') {
       var official = ProjectThemeAuthority.getOfficialDraft();
@@ -96,20 +109,17 @@ var VisitorPersonalizeV2Panel = (function () {
       var theme = ProjectThemeAuthority.getProjectDefaultTheme();
       if (theme) return normalize(theme);
     }
-    if (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined') {
-      return normalize(PROJECT_DEFAULT_THEME_FALLBACK);
-    }
-    return null;
+    return getHallFactoryDraft();
   }
 
   function buildProjectHallStyle() {
-    var projectDraft = getProjectBaseDraft() || normalize(defaultDraft());
+    /* HALL card always exposes immutable factory preset — never LIVE / official mutations. */
     return {
       id: PROJECT_HALL_STYLE_ID,
       name: BASE_STYLE_NAME,
-      personalizarDraft: projectDraft,
+      personalizarDraft: getHallFactoryDraft(),
       isProjectLocked: true,
-      source: 'project-default'
+      source: 'hall-factory'
     };
   }
 
@@ -118,14 +128,13 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function getBaseDraft() {
-    var projectDraft = getProjectBaseDraft();
-    if (projectDraft) return normalize(projectDraft);
-    return normalize(defaultDraft());
+    return getHallFactoryDraft();
   }
 
   function resetToBaseStyle() {
     var base = findBaseStyle();
-    draft = getBaseDraft();
+    var factoryDraft = getHallFactoryDraft();
+    draft = factoryDraft;
     editingStyleId = null;
     var displayName = (base && base.name) ? base.name : BASE_STYLE_NAME;
     setStyleNameInput(displayName);
@@ -134,8 +143,8 @@ var VisitorPersonalizeV2Panel = (function () {
     syncUiFromDraft();
 
     if (typeof ProjectThemeAuthority !== 'undefined' &&
-        typeof ProjectThemeAuthority.forceApplyOfficialTheme === 'function' &&
-        ProjectThemeAuthority.forceApplyOfficialTheme()) {
+        typeof ProjectThemeAuthority.forceApplyHallFactoryPreset === 'function' &&
+        ProjectThemeAuthority.forceApplyHallFactoryPreset()) {
       setMessage('Estilo «' + displayName + '» restaurado y aplicado a toda la web.', false);
       if (typeof window.refreshVisitorMenuProfile === 'function') {
         window.refreshVisitorMenuProfile();
@@ -631,7 +640,7 @@ var VisitorPersonalizeV2Panel = (function () {
         typeof StyleEngineLifecycle === 'undefined') {
       return false;
     }
-    var rules = StyleEnginePersonalizarMapper.draftToRules(draft, StyleEngineStore.getDraftRules());
+    var rules = StyleEnginePersonalizarMapper.draftToRules(draft, null);
     StyleEngineStore.setDraftRules(rules, { replace: true });
     StyleEngineStore.setPersonalizarDraft(draft);
     var meta = resolvePublishStyleMeta(styleMeta);
@@ -695,29 +704,8 @@ var VisitorPersonalizeV2Panel = (function () {
     }
 
     var editingHall = editingStyleId === PROJECT_HALL_STYLE_ID;
-    if (editingHall && canApplyAsProjectDefault()) {
-      var proyectoId = ProjectThemeAuthority.getCurrentProyectoId();
-      if (!proyectoId) {
-        setMessage('No se encontró el proyecto activo.', true);
-        return;
-      }
-      ProjectThemeAuthority.setOfficialThemeForProject(proyectoId, draft)
-        .then(function () {
-          setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
-          editingStyleId = PROJECT_HALL_STYLE_ID;
-          setStyleNameInput(BASE_STYLE_NAME);
-          renderMisEstilosList();
-          setMessage('Estilo «' + BASE_STYLE_NAME + '» (predeterminado del proyecto) actualizado.', false);
-          setMisEstilosMessage('', false);
-          if (typeof playSound === 'function') playSound('buttonTap');
-        })
-        .catch(function (err) {
-          setMessage(err.message || 'No se pudo actualizar el estilo del proyecto.', true);
-        });
-      return;
-    }
-
     if (editingHall) {
+      /* HALL factory is immutable — saving edits creates a personal style, never mutates HALL. */
       editingStyleId = null;
       setStyleNameInput('');
     }
@@ -871,8 +859,36 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function applySavedStyle(style) {
-    if (isProjectSeedStyle(style)) {
-      style = buildProjectHallStyle();
+    if (isProjectSeedStyle(style) || (style && isProjectSeedStyleId(style.id))) {
+      /* Always re-apply immutable HALL factory — never skip when already active. */
+      var hall = buildProjectHallStyle();
+      draft = normalize(hall.personalizarDraft);
+      editingStyleId = null;
+      setStyleNameInput(hall.name);
+      persistDraftLocal(draft);
+      syncUiFromDraft();
+
+      if (typeof ProjectThemeAuthority !== 'undefined' &&
+          typeof ProjectThemeAuthority.forceApplyHallFactoryPreset === 'function' &&
+          ProjectThemeAuthority.forceApplyHallFactoryPreset()) {
+        setMisEstilosMessage('Estilo «' + hall.name + '» aplicado.', false);
+        setMessage('', false);
+        if (typeof window.refreshVisitorMenuProfile === 'function') {
+          window.refreshVisitorMenuProfile();
+        }
+        if (typeof playSound === 'function') playSound('buttonTap');
+        return;
+      }
+
+      if (!publishDraftLive({ id: PROJECT_HALL_STYLE_ID, name: hall.name })) {
+        previewLive();
+        setMisEstilosMessage('Estilo cargado (preview). El editor de estilo no está disponible para aplicar.', true);
+        return;
+      }
+      setMisEstilosMessage('Estilo «' + hall.name + '» aplicado.', false);
+      setMessage('', false);
+      if (typeof playSound === 'function') playSound('buttonTap');
+      return;
     }
     if (!style || !style.personalizarDraft) {
       setMisEstilosMessage('Este estilo no tiene configuración válida.', true);

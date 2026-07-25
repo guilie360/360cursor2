@@ -230,9 +230,7 @@ var StyleEngineStore = (function () {
   function setPersonalizarDraft(draft) {
     var state = loadPersisted();
     var next = draft && typeof draft === 'object' ? Object.assign({}, draft) : null;
-    try {
-      if (JSON.stringify(state.personalizarDraft) === JSON.stringify(next)) return;
-    } catch (e) {}
+    /* Always persist — callers may re-apply the same preset after LIVE edits. */
     state.personalizarDraft = next;
     savePersisted();
   }
@@ -241,7 +239,6 @@ var StyleEngineStore = (function () {
     var state = loadPersisted();
     var nextId = id || null;
     var nextName = name || null;
-    if (state.activeStyleId === nextId && state.activeStyleName === nextName) return;
     state.activeStyleId = nextId;
     state.activeStyleName = nextName;
     savePersisted();

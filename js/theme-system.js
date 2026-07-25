@@ -1327,6 +1327,9 @@ var ThemeSystem = (function () {
   }
 
   function getDefaultCustomTheme() {
+    if (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined' && PROJECT_DEFAULT_THEME_FALLBACK) {
+      return normalizeCustomConfig(PROJECT_DEFAULT_THEME_FALLBACK);
+    }
     return Object.assign({}, DEFAULT_CUSTOM_THEME);
   }
 

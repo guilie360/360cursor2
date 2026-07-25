@@ -67,7 +67,7 @@ var NAV_RESUME_GATE_ENABLED = false;
  * Hover: Cristal · Sombras: Alta · Viñeta: Media · Texto: Claro
  * Portada: Posición 2 (EXPLORAR | título | INICIAR)
  */
-var PROJECT_DEFAULT_THEME_FALLBACK = {
+var PROJECT_DEFAULT_THEME_FALLBACK = Object.freeze({
   themeKey: 'custom',
   bg: '#000000',
   menuColor: '#000000',
@@ -96,7 +96,7 @@ var PROJECT_DEFAULT_THEME_FALLBACK = {
   heroButtonGlass: 'solid',
   heroBorderGlass: 'solid',
   heroLayout: 'bottom-bar'
-};
+});
 var PROJECT_DEFAULT_STYLE_NAME = 'HALL';
 var PROJECT_DEFAULT_STYLE_ID = 'project-default-hall';
 
