@@ -7515,6 +7515,66 @@ body.theme-light .mis-tema-icon-btn {
   margin-bottom:0;
 }
 
+/* Style V.3 — barras de color (reemplazan “Elegir color” + swatch) */
+#mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar,
+#mainMenuListPersonalizarV2 .custom-theme-color-bar,
+body[data-button-glass="soft"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar,
+body[data-button-glass="glass"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar,
+body[data-button-glass="solid"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar {
+  flex:0 0 auto;
+  display:inline-block;
+  width:92px;
+  min-width:80px;
+  max-width:min(100px, 100%);
+  height:32px;
+  min-height:30px;
+  padding:0 !important;
+  margin:0;
+  font-size:0;
+  line-height:0;
+  letter-spacing:0;
+  text-transform:none;
+  color:transparent !important;
+  overflow:hidden;
+  white-space:nowrap;
+  cursor:pointer;
+  border-radius:8px;
+  border:1px solid color-mix(in srgb, var(--text-primary) 22%, transparent) !important;
+  border-width:1px !important;
+  background:var(--pick-swatch, #161616) !important;
+  background-image:none !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  transform:none !important;
+  position:relative;
+}
+#mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar::before,
+#mainMenuListPersonalizarV2 .custom-theme-color-bar::before {
+  content:none !important;
+  display:none !important;
+}
+#mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar:hover,
+#mainMenuListPersonalizarV2 .custom-theme-color-bar:hover,
+body[data-button-glass="soft"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar:hover,
+body[data-button-glass="glass"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar:hover,
+body[data-button-glass="solid"] #mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar:hover {
+  background:var(--pick-swatch, #161616) !important;
+  background-image:none !important;
+  color:transparent !important;
+  filter:none;
+  opacity:1;
+  transform:none !important;
+  border-color:color-mix(in srgb, var(--text-primary) 38%, transparent) !important;
+  border-width:1px !important;
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--text-primary) 10%, transparent) !important;
+}
+#mainMenuListPersonalizarV2 .custom-theme-pick-btn.custom-theme-color-bar:focus-visible,
+#mainMenuListPersonalizarV2 .custom-theme-color-bar:focus-visible {
+  outline:2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset:2px;
+}
+
 .custom-theme-color-popover {
   position:fixed;
   z-index:1400;

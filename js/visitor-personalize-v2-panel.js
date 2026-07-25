@@ -534,6 +534,16 @@ var VisitorPersonalizeV2Panel = (function () {
     );
   }
 
+  function colorBarBtn(action, field, color) {
+    var swatch = color || '#000000';
+    return (
+      '<button type="button" class="outline-btn custom-theme-pick-btn custom-theme-color-bar" ' +
+        'data-p2-action="' + action + '" data-theme-color-field="' + field + '" ' +
+        'style="--pick-swatch:' + escapeHtml(swatch) + '" ' +
+        'aria-label="Seleccionar color" title="Seleccionar color"></button>'
+    );
+  }
+
   function surfaceBlock(title, colorField, colorAction, effectField, hint, options) {
     options = options || {};
     var swatch = draft[colorField] || '#000000';
@@ -558,7 +568,7 @@ var VisitorPersonalizeV2Panel = (function () {
             : '') +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="' + colorAction + '" data-theme-color-field="' + colorField + '" style="--pick-swatch:' + escapeHtml(swatch) + '">Elegir color</button>' +
+            colorBarBtn(colorAction, colorField, swatch) +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -585,7 +595,7 @@ var VisitorPersonalizeV2Panel = (function () {
         '<div class="custom-theme-section-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-surface" data-theme-color-field="surface" style="--pick-swatch:' + escapeHtml(swatch) + '">Elegir color</button>' +
+            colorBarBtn('pick-surface', 'surface', swatch) +
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Efecto</span>' +
@@ -605,7 +615,7 @@ var VisitorPersonalizeV2Panel = (function () {
         '<div class="custom-theme-section-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-btn-border" data-theme-color-field="buttonBorderColor" style="--pick-swatch:' + escapeHtml(borderSwatch) + '">Elegir color</button>' +
+            colorBarBtn('pick-btn-border', 'buttonBorderColor', borderSwatch) +
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Espesor</span>' +
@@ -627,7 +637,7 @@ var VisitorPersonalizeV2Panel = (function () {
         '<div class="custom-theme-section-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Fondo</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-hover" data-theme-color-field="hoverColor" style="--pick-swatch:' + escapeHtml(hoverSwatch) + '">Elegir color</button>' +
+            colorBarBtn('pick-hover', 'hoverColor', hoverSwatch) +
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Efecto</span>' +
@@ -637,11 +647,11 @@ var VisitorPersonalizeV2Panel = (function () {
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Texto</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-btn-hover-text" data-theme-color-field="buttonHoverTextColor" style="--pick-swatch:' + escapeHtml(hoverTextSwatch) + '">Elegir color</button>' +
+            colorBarBtn('pick-btn-hover-text', 'buttonHoverTextColor', hoverTextSwatch) +
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Borde</span>' +
-            '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-btn-hover-border" data-theme-color-field="buttonHoverBorderColor" style="--pick-swatch:' + escapeHtml(hoverBorderSwatch) + '">Elegir color</button>' +
+            colorBarBtn('pick-btn-hover-border', 'buttonHoverBorderColor', hoverBorderSwatch) +
           '</div>' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Espesor</span>' +
@@ -1573,7 +1583,7 @@ var VisitorPersonalizeV2Panel = (function () {
               'Acento',
               '<div class="custom-theme-row custom-theme-row--tight">' +
                 '<span class="custom-theme-row-label">Color de acento</span>' +
-                '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(draft.accent) + '">Elegir color</button>' +
+                colorBarBtn('pick-accent', 'accent', draft.accent) +
               '</div>' +
               '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>'
             ) +
