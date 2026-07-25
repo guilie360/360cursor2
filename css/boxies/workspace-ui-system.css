@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.14
+   BOXIES Workspace UI System V5.9.15
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -50,6 +50,9 @@
   --ws-floating-border: rgba(255, 255, 255, 0.12);
   --ws-floating-shadow: 0 14px 32px rgba(0, 0, 0, 0.72);
   --ws-floating-z: 80;
+  /* Micro field unit: label+control association (near-invisible) */
+  --ws-field-unit-bg: rgba(255, 255, 255, 0.028);
+  --ws-field-unit-border: rgba(255, 255, 255, 0.055);
 }
 
 /* ── PRIMARY = Guardar / Republicar (dark). Values mirrored in builder.css. ── */
@@ -222,6 +225,49 @@
 .builder-estructura-acc--nested {
   background: rgba(255, 255, 255, 0.015);
   border-color: var(--ws-border);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   .ws-field-unit — one label + one control as a subtle unit
+   Use only where association is ambiguous (e.g. 2-col metric grids).
+   Not a card. Not green. Not for buttons/headers/chips/popovers.
+   ═══════════════════════════════════════════════════════════ */
+.ws-field-unit {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--ws-field-unit-border);
+  border-radius: var(--ws-radius-control, 8px);
+  background: var(--ws-field-unit-bg);
+  color: inherit;
+}
+
+.ws-field-unit .builder-estructura-row__label,
+.ws-field-unit > span:not(.builder-estructura-stepper) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ws-field-unit .builder-estructura-stepper {
+  flex: 0 0 auto;
+}
+
+.ws-field-unit.builder-check-row,
+.ws-field-unit.builder-check-row--ws {
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+/* Metric grids: cells that already are label+control pairs */
+.builder-estructura-grid2 > .ws-field-unit {
+  height: 100%;
 }
 
 /* Edificio único / múltiples: same card geometry inside towers-grid (Tipologías principle) */

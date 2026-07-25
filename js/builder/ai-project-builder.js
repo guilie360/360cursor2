@@ -179,19 +179,19 @@ var AiProjectBuilderView = (function () {
             '<input type="text" data-b-field="nombre" value="' + AdminUI.escapeHtml(b.nombre || '') + '">' +
           '</div>' +
           '<div class="builder-estructura-grid2">' +
-            '<div class="builder-estructura-row">' +
+            '<div class="ws-field-unit builder-estructura-row">' +
               '<span class="builder-estructura-row__label">Pisos</span>' +
               stepperHtml('b.pisos', b.pisos, 1, 200) +
             '</div>' +
-            '<div class="builder-estructura-row">' +
+            '<div class="ws-field-unit builder-estructura-row">' +
               '<span class="builder-estructura-row__label">Sótanos</span>' +
               stepperHtml('b.sotanos', b.sotanos, 0, 20) +
             '</div>' +
-            '<label class="builder-check-row builder-check-row--ws">' +
+            '<label class="ws-field-unit builder-check-row builder-check-row--ws">' +
               '<input type="checkbox" data-b-field="rooftop"' + (b.rooftop ? ' checked' : '') + '>' +
               '<span>Azotea / Rooftop</span>' +
             '</label>' +
-            '<div class="builder-estructura-row">' +
+            '<div class="ws-field-unit builder-estructura-row">' +
               '<span class="builder-estructura-row__label">Unidades por piso</span>' +
               stepperHtml('b.unidadesPorPiso', b.unidadesPorPiso, 1, 40) +
             '</div>' +
@@ -428,11 +428,11 @@ var AiProjectBuilderView = (function () {
     if (dt === 'conjunto') {
       orgHtml += orgLevelsHtml() +
         '<div class="builder-estructura-org-compact">' +
-          '<div class="builder-estructura-row">' +
+          '<div class="ws-field-unit builder-estructura-row">' +
             '<span class="builder-estructura-row__label">Cantidad total de viviendas</span>' +
             stepperHtml('totalViviendas', e.totalViviendas || 50, 1, 50000) +
           '</div>' +
-          '<div class="builder-estructura-row">' +
+          '<div class="ws-field-unit builder-estructura-row">' +
             '<span class="builder-estructura-row__label">Número de tipologías / modelos</span>' +
             stepperHtml('tipologiasCount', e.tipologias.length || 1, 1, 40) +
           '</div>' +
@@ -583,13 +583,13 @@ var AiProjectBuilderView = (function () {
           '</div>' +
           (showRooms
             ? '<div class="builder-estructura-grid2">' +
-                '<div class="builder-estructura-row"><span class="builder-estructura-row__label">Habitaciones</span>' +
+                '<div class="ws-field-unit builder-estructura-row"><span class="builder-estructura-row__label">Habitaciones</span>' +
                   stepperHtml('t.habitaciones', tip.habitaciones || 0, 0, 20) + '</div>' +
-                '<div class="builder-estructura-row"><span class="builder-estructura-row__label">Baños</span>' +
+                '<div class="ws-field-unit builder-estructura-row"><span class="builder-estructura-row__label">Baños</span>' +
                   stepperHtml('t.banos', tip.banos || 0, 0, 20) + '</div>' +
-                '<div class="builder-estructura-row"><span class="builder-estructura-row__label">Parqueaderos</span>' +
+                '<div class="ws-field-unit builder-estructura-row"><span class="builder-estructura-row__label">Parqueaderos</span>' +
                   stepperHtml('t.parqueaderos', tip.parqueaderos || 0, 0, 20) + '</div>' +
-                '<div class="builder-estructura-row"><span class="builder-estructura-row__label">Plantas internas</span>' +
+                '<div class="ws-field-unit builder-estructura-row"><span class="builder-estructura-row__label">Plantas internas</span>' +
                   stepperHtml('t.plantas_internas', tip.plantas_internas || 0, 0, 10) + '</div>' +
               '</div>'
             : '') +
