@@ -533,22 +533,41 @@ var AiProjectBuilderView = (function () {
         '</div></details>';
     }).join('');
 
+    var zonesSelected = Array.isArray(e.zoneNames) ? e.zoneNames.slice() : [];
+    var zonesCount = zonesSelected.length;
+    var zonesTriggerLabel = zonesCount > 0
+      ? ('Zonas / amenidades · ' + zonesCount + ' seleccionada' + (zonesCount === 1 ? '' : 's'))
+      : 'Seleccionar zonas / amenidades';
+    var zonesGroupsHtml = EstructuraEngine.ZONE_GROUPS.map(function (g) {
+      return '<div class="ws-ms__group">' +
+        '<div class="ws-ms__group-title">' + AdminUI.escapeHtml(g.label) + '</div>' +
+        '<div class="ws-ms__options">' +
+          g.items.map(function (name) {
+            var on = zonesSelected.indexOf(name) >= 0;
+            return '<label class="ws-ms__opt">' +
+              '<input type="checkbox" data-zone-pick="' + AdminUI.escapeHtml(name) + '"' +
+                (on ? ' checked' : '') + '>' +
+              '<span>' + AdminUI.escapeHtml(name) + '</span></label>';
+          }).join('') +
+        '</div></div>';
+    }).join('');
+    var zonesSummaryHtml = zonesCount
+      ? zonesSelected.map(function (name) {
+          return '<span class="ws-ms__chip">' +
+            '<span class="ws-ms__chip-label">' + AdminUI.escapeHtml(name) + '</span>' +
+            '<button type="button" class="ws-ms__chip-remove" data-zone-chip-remove="' +
+              AdminUI.escapeHtml(name) + '" aria-label="Quitar ' + AdminUI.escapeHtml(name) + '">×</button>' +
+          '</span>';
+        }).join('')
+      : '<span class="ws-ms__empty">Ninguna zona o amenidad seleccionada</span>';
     var zonesHtml =
-      '<div class="builder-estructura-zones-grid">' +
-        EstructuraEngine.ZONE_GROUPS.map(function (g) {
-          return '<div class="builder-estructura-zone-group">' +
-            '<div class="builder-estructura-sublabel">' + AdminUI.escapeHtml(g.label) + '</div>' +
-            '<div class="builder-estructura-chips">' +
-              g.items.map(function (name) {
-                var on = e.zoneNames.indexOf(name) >= 0;
-                return '<button type="button" class="builder-estructura-chip' + (on ? ' is-on' : '') + '"' +
-                  ' data-zone-name="' + AdminUI.escapeHtml(name) + '"' +
-                  ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
-                  AdminUI.escapeHtml(name) +
-                '</button>';
-              }).join('') +
-            '</div></div>';
-        }).join('') +
+      '<div class="ws-ms ws-ms--block" data-zones-picker>' +
+        '<button type="button" class="ws-select__trigger" data-zones-picker-open aria-haspopup="listbox" aria-expanded="false">' +
+          '<span class="ws-select__value" data-zones-trigger-label>' + AdminUI.escapeHtml(zonesTriggerLabel) + '</span>' +
+          '<span class="ws-select__chevron" aria-hidden="true"></span>' +
+        '</button>' +
+        '<div class="ws-ms__panel" hidden data-zones-panel>' + zonesGroupsHtml + '</div>' +
+        '<div class="ws-ms__summary" data-zones-summary>' + zonesSummaryHtml + '</div>' +
       '</div>';
 
     var panels = e.openPanels || {};
@@ -1838,8 +1857,14 @@ var AiProjectBuilderView = (function () {
           ev.preventDefault();
           ev.stopPropagation();
           var opening = panel.hidden;
-          rootEl.querySelectorAll('.builder-ambiente-picker__panel').forEach(function (p) {
+          rootEl.querySelectorAll('.builder-ambiente-picker__panel, .ws-ms__panel').forEach(function (p) {
             p.hidden = true;
+          });
+          rootEl.querySelectorAll('[data-zones-picker-open]').forEach(function (b) {
+            b.setAttribute('aria-expanded', 'false');
+          });
+          rootEl.querySelectorAll('[data-zones-picker]').forEach(function (p) {
+            p.classList.remove('is-open');
           });
           panel.hidden = !opening;
           if (!panel.hidden) refreshConfirm();
@@ -1919,18 +1944,104 @@ var AiProjectBuilderView = (function () {
       });
     }
 
-    rootEl.querySelectorAll('button[data-zone-name]').forEach(function (btn) {
-      btn.addEventListener('click', function (ev) {
+    rootEl.querySelectorAll('[data-zones-picker]').forEach(function (picker) {
+      var openBtn = picker.querySelector('[data-zones-picker-open]');
+      var panel = picker.querySelector('[data-zones-panel]') || picker.querySelector('.ws-ms__panel');
+      var labelEl = picker.querySelector('[data-zones-trigger-label]');
+      var summaryEl = picker.querySelector('[data-zones-summary]');
+      if (!openBtn || !panel) return;
+
+      function zoneNames() {
+        return Array.isArray(state.estructura.zoneNames) ? state.estructura.zoneNames : [];
+      }
+
+      function triggerText(count) {
+        if (count > 0) {
+          return 'Zonas / amenidades · ' + count + ' seleccionada' + (count === 1 ? '' : 's');
+        }
+        return 'Seleccionar zonas / amenidades';
+      }
+
+      function renderSummary() {
+        if (!summaryEl) return;
+        var names = zoneNames();
+        if (!names.length) {
+          summaryEl.innerHTML = '<span class="ws-ms__empty">Ninguna zona o amenidad seleccionada</span>';
+          return;
+        }
+        summaryEl.innerHTML = names.map(function (name) {
+          return '<span class="ws-ms__chip">' +
+            '<span class="ws-ms__chip-label">' + AdminUI.escapeHtml(name) + '</span>' +
+            '<button type="button" class="ws-ms__chip-remove" data-zone-chip-remove="' +
+              AdminUI.escapeHtml(name) + '" aria-label="Quitar ' + AdminUI.escapeHtml(name) + '">×</button>' +
+          '</span>';
+        }).join('');
+      }
+
+      function syncUi() {
+        var names = zoneNames();
+        if (labelEl) labelEl.textContent = triggerText(names.length);
+        picker.querySelectorAll('[data-zone-pick]').forEach(function (cb) {
+          var n = cb.getAttribute('data-zone-pick');
+          cb.checked = names.indexOf(n) >= 0;
+        });
+        renderSummary();
+      }
+
+      function setZoneSelected(name, want) {
+        if (!name) return;
+        var has = zoneNames().indexOf(name) >= 0;
+        if (want === has) return;
+        EstructuraEngine.toggleZone(state, name);
+      }
+
+      openBtn.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        var name = btn.getAttribute('data-zone-name');
-        if (!name) return;
-        EstructuraEngine.toggleZone(state, name);
-        var on = state.estructura.zoneNames.indexOf(name) >= 0;
-        btn.classList.toggle('is-on', on);
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        persist();
+        var opening = panel.hidden;
+        rootEl.querySelectorAll('.builder-ambiente-picker__panel, .ws-ms__panel').forEach(function (p) {
+          p.hidden = true;
+        });
+        rootEl.querySelectorAll('[data-zones-picker-open]').forEach(function (b) {
+          b.setAttribute('aria-expanded', 'false');
+        });
+        rootEl.querySelectorAll('[data-zones-picker]').forEach(function (p) {
+          p.classList.remove('is-open');
+        });
+        panel.hidden = !opening;
+        openBtn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
+        picker.classList.toggle('is-open', !panel.hidden);
+        if (!panel.hidden) syncUi();
       });
+
+      panel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      panel.addEventListener('wheel', function (ev) { ev.stopPropagation(); }, { passive: true });
+
+      picker.querySelectorAll('[data-zone-pick]').forEach(function (cb) {
+        cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
+        cb.addEventListener('change', function (ev) {
+          ev.stopPropagation();
+          var name = cb.getAttribute('data-zone-pick');
+          setZoneSelected(name, !!cb.checked);
+          syncUi();
+          persist();
+        });
+      });
+
+      if (summaryEl) {
+        summaryEl.addEventListener('click', function (ev) {
+          var btn = ev.target && ev.target.closest
+            ? ev.target.closest('[data-zone-chip-remove]')
+            : null;
+          if (!btn) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          var name = btn.getAttribute('data-zone-chip-remove');
+          setZoneSelected(name, false);
+          syncUi();
+          persist();
+        });
+      }
     });
 
     var applyBtn = rootEl.querySelector('#builderApplyEstructuraBtn');
