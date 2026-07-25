@@ -297,8 +297,18 @@ var AiProjectBuilderView = (function () {
     }
 
     function conjuntoComponentRowHtml(comp, stageLocalId) {
-      var meta = EstructuraEngine.conjuntoComponentTypeMeta(comp.type);
-      var typeLabel = meta ? meta.label : comp.type;
+      var residential = EstructuraEngine.isConjuntoResidentialComponent
+        ? EstructuraEngine.isConjuntoResidentialComponent(comp)
+        : (comp && comp.kind === 'residencial');
+      var typeLabel = residential
+        ? (EstructuraEngine.productLabel
+          ? EstructuraEngine.productLabel(comp.producto)
+          : (comp.producto || 'Residencial'))
+        : (function () {
+            var meta = EstructuraEngine.conjuntoComponentTypeMeta(comp.type);
+            return meta ? meta.label : (comp.type || 'Componente');
+          })();
+      var nameLabel = residential ? 'Modelo' : 'Nombre';
       var stageAttr = stageLocalId
         ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
         : '';
@@ -310,7 +320,7 @@ var AiProjectBuilderView = (function () {
         '</div>' +
         '<div class="builder-estructura-grid2">' +
           '<div class="builder-field">' +
-            '<label>Nombre</label>' +
+            '<label>' + AdminUI.escapeHtml(nameLabel) + '</label>' +
             '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
           '</div>' +
           '<div class="ws-field-unit builder-estructura-row">' +
@@ -325,7 +335,21 @@ var AiProjectBuilderView = (function () {
       var stageAttr = stageLocalId
         ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
         : '';
-      var opts = (EstructuraEngine.CONJUNTO_COMPONENT_TYPES || []).map(function (t) {
+      var products = EstructuraEngine.PRODUCTS || {};
+      var residentialOpts = []
+        .concat(products.casa || [])
+        .concat(products.apartamento || [])
+        .map(function (p) {
+          return '<button type="button" class="ws-ms__opt" data-cj-add-type="' +
+            AdminUI.escapeHtml(p.id) + '">' + AdminUI.escapeHtml(p.label) + '</button>';
+        }).join('');
+      var physicalOpts = [
+        { id: 'edificio', label: 'Edificio' },
+        { id: 'lotes', label: 'Lotes' },
+        { id: 'comercio', label: 'Comercio' },
+        { id: 'oficinas', label: 'Oficinas' },
+        { id: 'otro', label: 'Otro' }
+      ].map(function (t) {
         return '<button type="button" class="ws-ms__opt" data-cj-add-type="' +
           AdminUI.escapeHtml(t.id) + '">' + AdminUI.escapeHtml(t.label) + '</button>';
       }).join('');
@@ -334,8 +358,12 @@ var AiProjectBuilderView = (function () {
           '+ Añadir componente</button>' +
         '<div class="ws-ms__panel" hidden data-cj-comp-panel>' +
           '<div class="ws-ms__group">' +
-            '<div class="ws-ms__group-title">Componente</div>' +
-            '<div class="ws-ms__options">' + opts + '</div>' +
+            '<div class="ws-ms__group-title">Residencial</div>' +
+            '<div class="ws-ms__options">' + residentialOpts + '</div>' +
+          '</div>' +
+          '<div class="ws-ms__group">' +
+            '<div class="ws-ms__group-title">Físico / no residencial</div>' +
+            '<div class="ws-ms__options">' + physicalOpts + '</div>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -398,11 +426,9 @@ var AiProjectBuilderView = (function () {
         '<div class="builder-estructura-org-compact" style="margin-top:12px">' +
           '<div class="ws-field-unit builder-estructura-row">' +
             '<span class="builder-estructura-row__label">Cantidad total de viviendas</span>' +
-            stepperHtml('totalViviendas', e.totalViviendas || 50, 1, 50000) +
-          '</div>' +
-          '<div class="ws-field-unit builder-estructura-row">' +
-            '<span class="builder-estructura-row__label">Número de tipologías / modelos</span>' +
-            stepperHtml('tipologiasCount', e.tipologias.length || 1, 1, 40) +
+            '<span class="builder-estructura-row__value" data-cj-total-viviendas>' +
+              AdminUI.escapeHtml(String(e.totalViviendas != null ? e.totalViviendas : 0)) +
+            '</span>' +
           '</div>' +
         '</div>';
       return html;
@@ -602,6 +628,11 @@ var AiProjectBuilderView = (function () {
     }
 
     function tipFamily(tip) {
+      if (dt === 'conjunto') {
+        return (EstructuraEngine.familyFromProducto
+          ? EstructuraEngine.familyFromProducto(tip.producto)
+          : null) || 'casa';
+      }
       if (dt === 'mixto') {
         return EstructuraEngine.productFamilyFor(dt, tip.componente);
       }
@@ -1896,6 +1927,15 @@ var AiProjectBuilderView = (function () {
           );
           persist();
         });
+        nameInput.addEventListener('change', function () {
+          EstructuraEngine.updateConjuntoComponent(
+            state,
+            compId,
+            { nombre: nameInput.value },
+            stageId || null
+          );
+          rerender();
+        });
       }
       var rm = row.querySelector('[data-cj-comp-remove]');
       if (rm) {
@@ -2253,11 +2293,20 @@ var AiProjectBuilderView = (function () {
             tip[f] = val;
           }
           tip.nombre = '';
+          if (state.estructura.developmentType === 'conjunto' &&
+              (f === 'modelo' || f === 'producto') &&
+              EstructuraEngine.propagateTipologiaToConjuntoComponents) {
+            EstructuraEngine.propagateTipologiaToConjuntoComponents(state.estructura, tip.localId);
+          }
           EstructuraEngine.syncTypologyPlantas(state.estructura);
           persist();
           var tipTitle = card.querySelector('[data-tipologia-title]');
           if (tipTitle) {
             tipTitle.textContent = tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : 'Tipología');
+          }
+          if (state.estructura.developmentType === 'conjunto' && (f === 'modelo' || f === 'producto')) {
+            rerender();
+            return;
           }
         });
       });

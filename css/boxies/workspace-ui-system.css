@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.18
+   BOXIES Workspace UI System V5.9.19
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -299,7 +299,7 @@
   margin-top: 12px;
 }
 
-/* Conjunto: etapas + componentes (V5.9.18) */
+/* Conjunto: etapas + componentes (V5.9.19) */
 .builder-conjunto-stages-grid {
   margin-top: 4px;
 }
@@ -327,6 +327,14 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ws-text-secondary);
+}
+
+.builder-estructura-row__value {
+  font-size: var(--ws-font-control, 13px);
+  font-variant-numeric: tabular-nums;
+  color: var(--ws-text-primary, rgba(255, 255, 255, 0.9));
+  min-width: 36px;
+  text-align: right;
 }
 
 .builder-conjunto-stages-grid + .builder-header-action-btn,
