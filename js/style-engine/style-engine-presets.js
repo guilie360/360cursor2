@@ -67,9 +67,28 @@ var StyleEnginePresets = (function () {
     { id: 'insp-volvo', name: 'Volvo', rules: base({ surface: '#0e1114', 'color-accent': '#1c6eba', 'radius-card': 12 })}
   ];
 
-  function loadPersonal() {
+  function resolveProjectId(explicit) {
+    if (explicit) return String(explicit);
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getCurrentProyectoId === 'function') {
+      var fromAuth = ProjectThemeAuthority.getCurrentProyectoId();
+      if (fromAuth) return String(fromAuth);
+    }
+    if (window.PROJECT_DATA && window.PROJECT_DATA.id) {
+      return String(window.PROJECT_DATA.id);
+    }
+    return null;
+  }
+
+  function personalStorageKey(projectId) {
+    var pid = resolveProjectId(projectId);
+    if (!pid) return PERSONAL_KEY + ':__none__';
+    return PERSONAL_KEY + ':' + pid;
+  }
+
+  function loadPersonalList(key) {
     try {
-      var raw = localStorage.getItem(PERSONAL_KEY);
+      var raw = localStorage.getItem(key);
       if (!raw) return [];
       var list = JSON.parse(raw);
       return Array.isArray(list) ? list : [];
@@ -78,59 +97,67 @@ var StyleEnginePresets = (function () {
     }
   }
 
-  function savePersonal(list) {
+  function loadPersonal(projectId) {
+    return loadPersonalList(personalStorageKey(projectId));
+  }
+
+  function savePersonal(list, projectId) {
     try {
-      localStorage.setItem(PERSONAL_KEY, JSON.stringify(list));
+      localStorage.setItem(personalStorageKey(projectId), JSON.stringify(list || []));
     } catch (e) { /* quota */ }
   }
 
   function getOfficial() { return OFFICIAL.slice(); }
   function getInspiration() { return INSPIRATION.slice(); }
-  function getPersonal() { return loadPersonal(); }
+  function getPersonal(projectId) { return loadPersonal(projectId); }
 
-  function findById(id) {
-    var all = OFFICIAL.concat(INSPIRATION).concat(loadPersonal());
+  function findById(id, projectId) {
+    if (!id) return null;
+    var all = OFFICIAL.concat(INSPIRATION).concat(loadPersonal(projectId));
     return all.find(function (p) { return p.id === id; }) || null;
   }
 
-  function savePersonalPreset(name, rules, source) {
-    var list = loadPersonal();
+  function savePersonalPreset(name, rules, source, projectId) {
+    var list = loadPersonal(projectId);
     var id = 'personal-' + Date.now();
+    var pid = resolveProjectId(projectId);
     list.unshift({
       id: id,
       name: name,
+      projectId: pid,
       rules: StyleEngineTokens.normalizeRules(rules),
       source: source || 'manual',
       createdAt: new Date().toISOString()
     });
-    savePersonal(list);
+    savePersonal(list, projectId);
     return id;
   }
 
-  function duplicatePersonal(id) {
-    var preset = findById(id);
+  function duplicatePersonal(id, projectId) {
+    var preset = findById(id, projectId);
     if (!preset) return null;
-    return savePersonalPreset(preset.name + ' (copia)', preset.rules, 'duplicate');
+    return savePersonalPreset(preset.name + ' (copia)', preset.rules, 'duplicate', projectId);
   }
 
-  function renamePersonal(id, name) {
-    var list = loadPersonal();
+  function renamePersonal(id, name, projectId) {
+    var list = loadPersonal(projectId);
     var item = list.find(function (p) { return p.id === id; });
     if (!item) return false;
     item.name = name;
-    savePersonal(list);
+    savePersonal(list, projectId);
     return true;
   }
 
-  function deletePersonal(id) {
-    var list = loadPersonal().filter(function (p) { return p.id !== id; });
-    savePersonal(list);
+  function deletePersonal(id, projectId) {
+    var list = loadPersonal(projectId).filter(function (p) { return p.id !== id; });
+    savePersonal(list, projectId);
   }
 
-  /** Guarda o actualiza un estilo con nombre (biblioteca Styles). */
+  /** Guarda o actualiza un estilo con nombre (biblioteca Styles). Scoped por projectId. */
   function saveNamedStyle(name, rules, options) {
     options = options || {};
-    var list = loadPersonal();
+    var projectId = options.projectId || resolveProjectId();
+    var list = loadPersonal(projectId);
     var trimmed = String(name || '').trim();
     if (!trimmed) trimmed = 'Estilo ' + new Date().toLocaleString('es-CO');
 
@@ -149,21 +176,24 @@ var StyleEnginePresets = (function () {
     var personalizarDraft = options.personalizarDraft
       ? Object.assign({}, options.personalizarDraft)
       : null;
+    var pid = resolveProjectId(projectId);
 
     if (existing) {
       existing.name = trimmed;
       existing.rules = normalized;
       existing.updatedAt = now;
+      existing.projectId = pid;
       existing.source = options.source || existing.source || 'manual';
       if (options.publishMeta) existing.publishMeta = options.publishMeta;
       if (personalizarDraft) existing.personalizarDraft = personalizarDraft;
-      savePersonal(list);
+      savePersonal(list, projectId);
       return existing;
     }
 
     var item = {
       id: 'style-' + Date.now(),
       name: trimmed,
+      projectId: pid,
       rules: normalized,
       source: options.source || 'manual',
       createdAt: now,
@@ -172,19 +202,19 @@ var StyleEnginePresets = (function () {
       personalizarDraft: personalizarDraft
     };
     list.unshift(item);
-    savePersonal(list);
+    savePersonal(list, projectId);
     return item;
   }
 
-  function getSavedStyles() {
-    return loadPersonal().slice().sort(function (a, b) {
+  function getSavedStyles(projectId) {
+    return loadPersonal(projectId).slice().sort(function (a, b) {
       return String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || ''));
     });
   }
 
-  /** Estilos guardados desde Personalizar 2.0 (tienen draft V1). */
-  function getPersonalizarStyles() {
-    return getSavedStyles().filter(function (s) {
+  /** Estilos guardados desde Personalizar 2.0 (tienen draft V1). Scoped por projectId. */
+  function getPersonalizarStyles(projectId) {
+    return getSavedStyles(projectId).filter(function (s) {
       return s && s.personalizarDraft && typeof s.personalizarDraft === 'object';
     });
   }
@@ -200,7 +230,8 @@ var StyleEnginePresets = (function () {
     saveNamedStyle: saveNamedStyle,
     duplicatePersonal: duplicatePersonal,
     renamePersonal: renamePersonal,
-    deletePersonal: deletePersonal
+    deletePersonal: deletePersonal,
+    resolveProjectId: resolveProjectId
   };
 })();
 

@@ -70,6 +70,36 @@ var ProjectThemeAuthority = (function () {
     return typeof PROJECT_DEFAULT_STYLE_ID !== 'undefined' ? PROJECT_DEFAULT_STYLE_ID : 'project-default-hall';
   }
 
+  function readProjectDefaultStyleMap() {
+    try {
+      return JSON.parse(localStorage.getItem('boxies_project_default_style_id') || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /** Style id marked as project default (star). Falls back to HALL factory id. */
+  function getProjectDefaultStyleId() {
+    var pid = getCurrentProyectoId();
+    if (!pid) return getOfficialStyleId();
+    var map = readProjectDefaultStyleMap();
+    if (map[pid]) return map[pid];
+    return getOfficialStyleId();
+  }
+
+  function resolveOfficialStyleMeta() {
+    var styleId = getProjectDefaultStyleId();
+    var styleName = getOfficialStyleName();
+    var hallId = getOfficialStyleId();
+    if (styleId && styleId !== hallId && typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.findById) {
+      var found = StyleEnginePresets.findById(styleId, getCurrentProyectoId());
+      if (found && found.name) styleName = found.name;
+    } else if (styleId === hallId) {
+      styleName = getOfficialStyleName();
+    }
+    return { id: styleId, name: styleName };
+  }
+
   function shouldApplyProjectDefault() {
     /* Solo la elección explícita del usuario bloquea el oficial.
        Style Engine LIVE y prefs heredadas no deben impedir HALL. */
@@ -99,6 +129,9 @@ var ProjectThemeAuthority = (function () {
     window.__CASCADE_N = (window.__CASCADE_N || 0) + 1;
     console.log('[CASCADE]', 'ProjectThemeAuthority.publishThemeToStyleEngine', Date.now(), window.__CASCADE_N);
     if (!draft) return false;
+    if (typeof StyleEngineStore !== 'undefined' && typeof StyleEngineStore.ensureProjectScope === 'function') {
+      StyleEngineStore.ensureProjectScope();
+    }
     if (typeof StyleEngineStore === 'undefined' ||
         typeof StyleEnginePersonalizarMapper === 'undefined' ||
         typeof StyleEngineLifecycle === 'undefined') {
@@ -123,7 +156,8 @@ var ProjectThemeAuthority = (function () {
   }
 
   function publishOfficialToStyleEngine(draft) {
-    return publishThemeToStyleEngine(draft, getOfficialStyleId(), getOfficialStyleName());
+    var meta = resolveOfficialStyleMeta();
+    return publishThemeToStyleEngine(draft, meta.id, meta.name);
   }
 
   function applyDefaultForCurrentVisitor() {
@@ -234,6 +268,8 @@ var ProjectThemeAuthority = (function () {
     cloneThemeConfig: cloneThemeConfig,
     getOfficialStyleName: getOfficialStyleName,
     getOfficialStyleId: getOfficialStyleId,
+    getProjectDefaultStyleId: getProjectDefaultStyleId,
+    resolveOfficialStyleMeta: resolveOfficialStyleMeta,
     shouldApplyProjectDefault: shouldApplyProjectDefault,
     applyDefaultForCurrentVisitor: applyDefaultForCurrentVisitor,
     forceApplyOfficialTheme: forceApplyOfficialTheme,

@@ -7,11 +7,47 @@ var StyleEngineStore = (function () {
   var ACTIVE = { LEGACY: 'legacy', STYLE_ENGINE: 'style-engine' };
 
   var persisted = null;
+  var boundProjectId = undefined;
   var draftRules = null;
   var draftMode = null;
   var aiPalette = null;
   var listeners = [];
   var aiModifiedSinceApply = false;
+
+  function resolveProjectId() {
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getCurrentProyectoId === 'function') {
+      var fromAuth = ProjectThemeAuthority.getCurrentProyectoId();
+      if (fromAuth) return String(fromAuth);
+    }
+    if (window.PROJECT_DATA && window.PROJECT_DATA.id) {
+      return String(window.PROJECT_DATA.id);
+    }
+    return null;
+  }
+
+  function storageKeyFor(projectId) {
+    if (!projectId) return STORAGE_KEY + ':__none__';
+    return STORAGE_KEY + ':' + projectId;
+  }
+
+  /** Bind in-memory + localStorage state to the current project. No cross-project leakage. */
+  function ensureProjectScope() {
+    var pid = resolveProjectId();
+    if (pid === boundProjectId && persisted) return persisted;
+    boundProjectId = pid;
+    persisted = null;
+    try {
+      var raw = localStorage.getItem(storageKeyFor(pid));
+      persisted = raw ? migrateParsed(JSON.parse(raw)) : defaultState();
+    } catch (e) {
+      persisted = defaultState();
+    }
+    draftRules = Object.assign({}, persisted.savedDraftRules);
+    draftMode = MODES.PREVIEW;
+    aiModifiedSinceApply = false;
+    return persisted;
+  }
 
   function defaultState() {
     return {
@@ -57,17 +93,7 @@ var StyleEngineStore = (function () {
   }
 
   function loadPersisted() {
-    if (persisted) return persisted;
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY) ||
-        localStorage.getItem('boxies_style_engine_v2') ||
-        localStorage.getItem('boxies_style_engine_v1');
-      persisted = raw ? migrateParsed(JSON.parse(raw)) : defaultState();
-      return persisted;
-    } catch (e) {
-      persisted = defaultState();
-      return persisted;
-    }
+    return ensureProjectScope();
   }
 
   function syncFlagsFromActive(state) {
@@ -81,7 +107,7 @@ var StyleEngineStore = (function () {
     state.updatedAt = new Date().toISOString();
     syncFlagsFromActive(state);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKeyFor(boundProjectId), JSON.stringify(state));
     } catch (e) { /* quota */ }
     notify();
   }
@@ -381,7 +407,9 @@ var StyleEngineStore = (function () {
     setAiPalette: setAiPalette,
     getAiPalette: getAiPalette,
     shouldOfferAiPresetSave: shouldOfferAiPresetSave,
-    markAiPresetOffered: markAiPresetOffered
+    markAiPresetOffered: markAiPresetOffered,
+    ensureProjectScope: ensureProjectScope,
+    resolveProjectId: resolveProjectId
   };
 })();
 

@@ -7476,6 +7476,13 @@ body.theme-light .mis-tema-icon-btn {
   flex-shrink:0;
 }
 
+.personalize-v2-create-style-btn {
+  display:block;
+  width:100%;
+  margin-top:12px;
+  text-align:center;
+}
+
 .custom-theme-color-popover {
   position:fixed;
   z-index:1400;

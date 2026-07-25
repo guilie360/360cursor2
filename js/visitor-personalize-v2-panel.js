@@ -13,6 +13,8 @@ var VisitorPersonalizeV2Panel = (function () {
   var MAX_SAVED_STYLES = 5;
   var draft = null;
   var editingStyleId = null;
+  var editorOpen = false;
+  var boundPanelProjectId = null;
   var pendingProjectStyle = null;
   var pendingProjectThemeDraft = null;
 
@@ -142,9 +144,15 @@ var VisitorPersonalizeV2Panel = (function () {
     onDraftChange();
     syncUiFromDraft();
 
+    var proyectoId = typeof ProjectThemeAuthority !== 'undefined'
+      ? ProjectThemeAuthority.getCurrentProyectoId()
+      : null;
+    if (proyectoId) setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
+
     if (typeof ProjectThemeAuthority !== 'undefined' &&
         typeof ProjectThemeAuthority.forceApplyHallFactoryPreset === 'function' &&
         ProjectThemeAuthority.forceApplyHallFactoryPreset()) {
+      renderMisEstilosList();
       setMessage('Estilo «' + displayName + '» restaurado y aplicado a toda la web.', false);
       if (typeof window.refreshVisitorMenuProfile === 'function') {
         window.refreshVisitorMenuProfile();
@@ -155,12 +163,9 @@ var VisitorPersonalizeV2Panel = (function () {
 
     if (publishDraftLive({ id: PROJECT_HALL_STYLE_ID, name: displayName })) {
       if (typeof ThemeSystem !== 'undefined' && ThemeSystem.setProjectDefaultApplied) {
-        ThemeSystem.setProjectDefaultApplied(
-          typeof ProjectThemeAuthority !== 'undefined'
-            ? ProjectThemeAuthority.getCurrentProyectoId()
-            : null
-        );
+        ThemeSystem.setProjectDefaultApplied(proyectoId);
       }
+      renderMisEstilosList();
       setMessage('Estilo «' + displayName + '» restaurado y aplicado a toda la web.', false);
       return;
     }
@@ -191,12 +196,79 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function clearPanelSession() {
     editingStyleId = null;
+    editorOpen = false;
     draft = null;
     var host = document.getElementById('mainMenuListPersonalizarV2');
     if (host) {
       host.dataset.p2Rendered = '0';
       host.dataset.p2Bound = '0';
     }
+  }
+
+  function getCurrentPanelProjectId() {
+    if (typeof ProjectThemeAuthority !== 'undefined' &&
+        typeof ProjectThemeAuthority.getCurrentProyectoId === 'function') {
+      return ProjectThemeAuthority.getCurrentProyectoId();
+    }
+    return window.PROJECT_DATA && window.PROJECT_DATA.id ? window.PROJECT_DATA.id : null;
+  }
+
+  function draftStorageKey() {
+    var pid = getCurrentPanelProjectId();
+    return pid ? STORAGE_DRAFT_KEY + ':' + pid : STORAGE_DRAFT_KEY + ':__none__';
+  }
+
+  function ensurePanelProjectScope() {
+    if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.ensureProjectScope) {
+      StyleEngineStore.ensureProjectScope();
+    }
+    var pid = getCurrentPanelProjectId();
+    if (pid !== boundPanelProjectId) {
+      boundPanelProjectId = pid;
+      editingStyleId = null;
+      editorOpen = false;
+      draft = null;
+      var host = document.getElementById('mainMenuListPersonalizarV2');
+      if (host) {
+        host.dataset.p2Rendered = '0';
+        host.dataset.p2Bound = '0';
+      }
+    }
+  }
+
+  function setEditorOpen(open, options) {
+    editorOpen = !!open;
+    options = options || {};
+    var section = document.getElementById('personalizarV2EditorSection');
+    if (section) section.hidden = !editorOpen;
+    var createBtn = document.getElementById('personalizarV2CreateStyleBtn');
+    if (createBtn) createBtn.hidden = !!editorOpen;
+    if (editorOpen) {
+      syncToolbar();
+    } else {
+      hideToolbar();
+      editingStyleId = null;
+    }
+    if (options.scroll && editorOpen) {
+      var editor = document.getElementById('personalizarV2Editor');
+      if (editor && editor.scrollIntoView) {
+        editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    }
+  }
+
+  function startCreateNewStyle() {
+    editingStyleId = null;
+    draft = normalize(getProjectBaseDraft() || defaultDraft());
+    persistDraftLocal(draft);
+    setStyleNameInput('');
+    refreshStyleNameField();
+    syncUiFromDraft();
+    setEditorOpen(true, { scroll: true });
+    renderMisEstilosList();
+    setMisEstilosMessage('Creando un estilo nuevo. Guárdalo para añadirlo a Mis estilos.', false);
+    setMessage('', false);
+    if (typeof playSound === 'function') playSound('buttonTap');
   }
 
   function refreshStyleNameField() {
@@ -233,8 +305,13 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function getProjectDefaultStyleId() {
     if (typeof ProjectThemeAuthority !== 'undefined' &&
-        typeof ProjectThemeAuthority.getOfficialStyleId === 'function') {
-      return ProjectThemeAuthority.getOfficialStyleId();
+        typeof ProjectThemeAuthority.getProjectDefaultStyleId === 'function') {
+      return ProjectThemeAuthority.getProjectDefaultStyleId();
+    }
+    var proyectoId = getCurrentPanelProjectId();
+    if (proyectoId) {
+      var map = readProjectDefaultStyleMap();
+      if (map[proyectoId]) return map[proyectoId];
     }
     return PROJECT_HALL_STYLE_ID;
   }
@@ -292,19 +369,16 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function loadStoredDraft() {
-    var meta = typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta
-      ? StyleEngineStore.getActiveStyleMeta()
-      : null;
-    if (meta && isOfficialStyleMeta(meta)) {
-      var officialDraft = getBaseDraft();
-      if (officialDraft) return officialDraft;
-    }
+    /* Editor seed = live/official colors for this project. Never force HALL factory here. */
     try {
+      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.ensureProjectScope) {
+        StyleEngineStore.ensureProjectScope();
+      }
       if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getPersonalizarDraft) {
         var fromStore = StyleEngineStore.getPersonalizarDraft();
         if (fromStore) return normalize(fromStore);
       }
-      var raw = localStorage.getItem(STORAGE_DRAFT_KEY);
+      var raw = localStorage.getItem(draftStorageKey());
       if (raw) return normalize(JSON.parse(raw));
     } catch (e) {}
     var projectDraft = getProjectBaseDraft();
@@ -318,7 +392,7 @@ var VisitorPersonalizeV2Panel = (function () {
   function persistDraftLocal(next) {
     draft = normalize(next);
     try {
-      localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(draft));
+      localStorage.setItem(draftStorageKey(), JSON.stringify(draft));
     } catch (e) {}
   }
 
@@ -577,12 +651,7 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function syncActiveThemeNameFromInput() {
-    if (!isStyleEngineActive()) return;
-    var name = getStyleNameInput();
-    StyleEngineStore.setActiveStyleMeta(editingStyleId || null, name || null);
-    if (typeof window.refreshVisitorMenuProfile === 'function') {
-      window.refreshVisitorMenuProfile();
-    }
+    /* Name edits in the editor must not mutate Tema activo / live meta. */
   }
 
   function bindStyleNameInput() {
@@ -612,7 +681,8 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function onDraftChange() {
     persistDraftLocal(draft);
-    previewLive();
+    /* Preview only while the editor is open — never on mere navigation into Style V.3. */
+    if (editorOpen) previewLive();
   }
 
   function resolvePublishStyleMeta(styleMeta) {
@@ -746,7 +816,8 @@ var VisitorPersonalizeV2Panel = (function () {
       id: isUpdate ? editingStyleId : null,
       source: 'personalizar-v2',
       personalizarDraft: draft,
-      replaceByName: false
+      replaceByName: false,
+      projectId: getCurrentPanelProjectId()
     });
 
     if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta) {
@@ -767,6 +838,7 @@ var VisitorPersonalizeV2Panel = (function () {
       editingStyleId = null;
       setStyleNameInput('');
       refreshStyleNameField();
+      setEditorOpen(false);
     }
     renderMisEstilosList();
     setMessage(
@@ -916,15 +988,16 @@ var VisitorPersonalizeV2Panel = (function () {
       setMisEstilosMessage('Este estilo no tiene configuración válida.', true);
       return;
     }
+    /* EDIT ≠ APPLY: load a copy into the editor only — do not paint the project. */
     draft = normalize(style.personalizarDraft);
     editingStyleId = style.id;
     setStyleNameInput(style.name);
     persistDraftLocal(draft);
     syncUiFromDraft();
-    previewLive();
-    setMisEstilosMessage('Editando «' + style.name + '». Guarda para actualizar.', false);
-    var editor = document.getElementById('personalizarV2Editor');
-    if (editor && editor.scrollIntoView) editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    setEditorOpen(true, { scroll: true });
+    renderMisEstilosList();
+    setMisEstilosMessage('Editando «' + style.name + '». Guarda para actualizar. Esto no aplica el tema.', false);
+    setMessage('', false);
     if (typeof playSound === 'function') playSound('buttonTap');
   }
 
@@ -938,10 +1011,17 @@ var VisitorPersonalizeV2Panel = (function () {
       if (typeof window.grantMenuOpenToken === 'function') window.grantMenuOpenToken(3600000);
       return;
     }
+    var proyectoId = getCurrentPanelProjectId();
     if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.deletePersonal) {
-      StyleEnginePresets.deletePersonal(style.id);
+      StyleEnginePresets.deletePersonal(style.id, proyectoId);
     }
-    if (editingStyleId === style.id) editingStyleId = null;
+    if (editingStyleId === style.id) {
+      editingStyleId = null;
+      setEditorOpen(false);
+    }
+    if (getProjectDefaultStyleId() === style.id && proyectoId) {
+      setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
+    }
     if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta) {
       var active = StyleEngineStore.getActiveStyleMeta();
       if (active && active.id === style.id) {
@@ -1036,8 +1116,14 @@ var VisitorPersonalizeV2Panel = (function () {
     }
 
     try {
+      setProjectDefaultStyleId(proyectoId, style.id || PROJECT_HALL_STYLE_ID);
       await ProjectThemeAuthority.setOfficialThemeForProject(proyectoId, themeDraft);
-      setProjectDefaultStyleId(proyectoId, PROJECT_HALL_STYLE_ID);
+      if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.setActiveStyleMeta) {
+        StyleEngineStore.setActiveStyleMeta(style.id || PROJECT_HALL_STYLE_ID, style.name || BASE_STYLE_NAME);
+      }
+      if (typeof window.refreshVisitorMenuProfile === 'function') {
+        window.refreshVisitorMenuProfile();
+      }
       renderMisEstilosList();
       setMisEstilosMessage(
         'Estilo «' + (style.name || BASE_STYLE_NAME) + '» actualizado como predeterminado del proyecto.',
@@ -1103,7 +1189,7 @@ var VisitorPersonalizeV2Panel = (function () {
         onPreview: function (_key, value) {
           draft[field] = value;
           syncUiFromDraft();
-          previewLive();
+          if (editorOpen) previewLive();
         },
         onApply: function (_key, value) {
           draft[field] = value;
@@ -1113,7 +1199,7 @@ var VisitorPersonalizeV2Panel = (function () {
         onCancel: function (_key, original) {
           draft[field] = original;
           syncUiFromDraft();
-          previewLive();
+          if (editorOpen) previewLive();
         }
       });
       return;
@@ -1143,6 +1229,11 @@ var VisitorPersonalizeV2Panel = (function () {
     var col = document.getElementById('menuNavV2Col');
     var actions = document.getElementById('menuNavV2Actions');
     if (!col || !actions) return;
+    if (!editorOpen) {
+      actions.innerHTML = '';
+      col.hidden = true;
+      return;
+    }
     actions.innerHTML = renderActionsBarHtml();
     col.hidden = false;
   }
@@ -1160,6 +1251,13 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function handlePanelClick(e, root) {
+      var createBtn = e.target.closest('[data-p2-action="create-style"]');
+      if (createBtn && root.contains(createBtn)) {
+        e.preventDefault();
+        startCreateNewStyle();
+        return;
+      }
+
       var estiloEl = e.target.closest('[data-mis-estilo-action]');
       if (estiloEl && root.contains(estiloEl)) {
         e.preventDefault();
@@ -1283,21 +1381,24 @@ var VisitorPersonalizeV2Panel = (function () {
     var host = document.getElementById('mainMenuListPersonalizarV2');
     if (!host) return;
 
+    ensurePanelProjectScope();
+
     if (host.dataset.p2Rendered === '1') {
       syncToolbar();
       refreshStyleNameField();
-      syncUiFromDraft();
+      if (editorOpen) syncUiFromDraft();
       renderMisEstilosList();
-      previewLive();
+      setEditorOpen(editorOpen);
       bindProjectConfirmForV2();
       return;
     }
 
     host.dataset.p2Rendered = '1';
     if (!draft) draft = loadStoredDraft();
-    /* No rehidratar editingStyleId desde el tema activo: Guardar debe crear estilos nuevos
-       salvo que el usuario pulse Editar en Mis estilos. */
-    var namePlaceholder = editingStyleId ? 'Actualizar estilo' : 'Mi estilo 1';
+    /* Entering Style V.3 never applies a theme — editor starts collapsed. */
+    editorOpen = false;
+    editingStyleId = null;
+    var namePlaceholder = 'Mi estilo 1';
 
     host.innerHTML =
       '<div class="personalize-scroll personalize-v2-scroll">' +
@@ -1312,82 +1413,87 @@ var VisitorPersonalizeV2Panel = (function () {
             '<p class="personalize-hint">Cargando estilos...</p>' +
           '</div>' +
           '<p class="personalize-hint" id="misEstilosV2Message"></p>' +
+          '<button type="button" class="outline-btn personalize-v2-create-style-btn" id="personalizarV2CreateStyleBtn" data-p2-action="create-style">' +
+            '+ Crear nuevo estilo' +
+          '</button>' +
         '</div>' +
 
-        '<div class="personalize-block personalize-block--plain">' +
-          '<div class="personalize-block-body theme-visual-panel">' +
-            '<div class="theme-visual-editor is-open" id="personalizarV2Editor">' +
-              '<label class="personalize-field custom-theme-name-field">' +
-                '<span>Nombre del estilo</span>' +
-                '<input type="text" id="personalizarV2StyleName" maxlength="60" placeholder="' + escapeHtml(namePlaceholder) + '" autocomplete="off" value="">' +
-              '</label>' +
-              '<div class="custom-theme-rows">' +
-                '<div class="custom-theme-group-header">Capas</div>' +
-                surfaceBlock('Máscara de fondo', 'maskColor', 'pick-mask', 'mask', 'Oscurece el fondo detrás del menú y los popups.', { maskBlur: true }) +
-                surfaceBlock('Superficies', 'bg', 'pick-bg', 'bg', 'Tarjetas 360°, tarjetas de vivienda y cuadro comparador.') +
-                surfaceBlock('Menú lateral', 'menuColor', 'pick-menu', 'panel', 'Panel del menú Explorar y fondo general de la app.') +
-                '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                '<div class="custom-theme-group-header">Acento</div>' +
-                '<div class="custom-theme-row custom-theme-row--tight">' +
-                  '<span class="custom-theme-row-label">Color de acento</span>' +
-                  '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(draft.accent) + '">Elegir color</button>' +
-                '</div>' +
-                '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>' +
-                '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                '<div class="custom-theme-group-header">Botones</div>' +
-                buttonsBlock() +
-                '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                '<div class="custom-theme-group-header">Detalle visual</div>' +
-                '<div class="custom-theme-row custom-theme-row--tight">' +
-                  '<span class="custom-theme-row-label">Sombras</span>' +
-                  '<div class="custom-theme-text-toggle custom-theme-glass-toggle" data-glass-field="shadow">' +
-                    shadowButtons() +
+        '<div id="personalizarV2EditorSection" hidden>' +
+          '<div class="personalize-block personalize-block--plain">' +
+            '<div class="personalize-block-body theme-visual-panel">' +
+              '<div class="theme-visual-editor is-open" id="personalizarV2Editor">' +
+                '<label class="personalize-field custom-theme-name-field">' +
+                  '<span>Nombre del estilo</span>' +
+                  '<input type="text" id="personalizarV2StyleName" maxlength="60" placeholder="' + escapeHtml(namePlaceholder) + '" autocomplete="off" value="">' +
+                '</label>' +
+                '<div class="custom-theme-rows">' +
+                  '<div class="custom-theme-group-header">Capas</div>' +
+                  surfaceBlock('Máscara de fondo', 'maskColor', 'pick-mask', 'mask', 'Oscurece el fondo detrás del menú y los popups.', { maskBlur: true }) +
+                  surfaceBlock('Superficies', 'bg', 'pick-bg', 'bg', 'Tarjetas 360°, tarjetas de vivienda y cuadro comparador.') +
+                  surfaceBlock('Menú lateral', 'menuColor', 'pick-menu', 'panel', 'Panel del menú Explorar y fondo general de la app.') +
+                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
+                  '<div class="custom-theme-group-header">Acento</div>' +
+                  '<div class="custom-theme-row custom-theme-row--tight">' +
+                    '<span class="custom-theme-row-label">Color de acento</span>' +
+                    '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(draft.accent) + '">Elegir color</button>' +
                   '</div>' +
-                '</div>' +
-                '<div class="custom-theme-row">' +
-                  '<span class="custom-theme-row-label">Viñeta</span>' +
-                  '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
-                    '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-p2-action="depth-low">Baja</button>' +
-                    '<button type="button" class="custom-theme-depth-btn" data-depth-mode="medium" data-p2-action="depth-medium">Media</button>' +
-                    '<button type="button" class="custom-theme-depth-btn" data-depth-mode="high" data-p2-action="depth-high">Alta</button>' +
+                  '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>' +
+                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
+                  '<div class="custom-theme-group-header">Botones</div>' +
+                  buttonsBlock() +
+                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
+                  '<div class="custom-theme-group-header">Detalle visual</div>' +
+                  '<div class="custom-theme-row custom-theme-row--tight">' +
+                    '<span class="custom-theme-row-label">Sombras</span>' +
+                    '<div class="custom-theme-text-toggle custom-theme-glass-toggle" data-glass-field="shadow">' +
+                      shadowButtons() +
+                    '</div>' +
                   '</div>' +
-                '</div>' +
-                '<div class="custom-theme-row">' +
-                  '<span class="custom-theme-row-label">Texto</span>' +
-                  '<div class="custom-theme-text-toggle">' +
-                    '<button type="button" class="custom-theme-text-btn" data-text-mode="light" data-p2-action="text-light">Claro</button>' +
-                    '<button type="button" class="custom-theme-text-btn" data-text-mode="dark" data-p2-action="text-dark">Oscuro</button>' +
+                  '<div class="custom-theme-row">' +
+                    '<span class="custom-theme-row-label">Viñeta</span>' +
+                    '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
+                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-p2-action="depth-low">Baja</button>' +
+                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="medium" data-p2-action="depth-medium">Media</button>' +
+                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="high" data-p2-action="depth-high">Alta</button>' +
+                    '</div>' +
+                  '</div>' +
+                  '<div class="custom-theme-row">' +
+                    '<span class="custom-theme-row-label">Texto</span>' +
+                    '<div class="custom-theme-text-toggle">' +
+                      '<button type="button" class="custom-theme-text-btn" data-text-mode="light" data-p2-action="text-light">Claro</button>' +
+                      '<button type="button" class="custom-theme-text-btn" data-text-mode="dark" data-p2-action="text-dark">Oscuro</button>' +
+                    '</div>' +
                   '</div>' +
                 '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
-        '</div>' +
 
-        '<div class="personalize-block glass-surface">' +
-          '<div class="personalize-block-label">Hover</div>' +
-          '<p class="personalize-hint personalize-theme-block-hint">Botones, campos de texto e iconos al pasar el cursor.</p>' +
-          '<div class="personalize-block-body theme-visual-panel">' +
-            hoverBlock() +
+          '<div class="personalize-block glass-surface">' +
+            '<div class="personalize-block-label">Hover</div>' +
+            '<p class="personalize-hint personalize-theme-block-hint">Botones, campos de texto e iconos al pasar el cursor.</p>' +
+            '<div class="personalize-block-body theme-visual-panel">' +
+              hoverBlock() +
+            '</div>' +
           '</div>' +
-        '</div>' +
 
-        '<div class="personalize-block glass-surface">' +
-          '<div class="personalize-block-label">Portada</div>' +
-          '<div class="personalize-block-body theme-visual-panel">' +
-            heroLayoutBlock() +
+          '<div class="personalize-block glass-surface">' +
+            '<div class="personalize-block-label">Portada</div>' +
+            '<div class="personalize-block-body theme-visual-panel">' +
+              heroLayoutBlock() +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>';
 
     bindPanel(host);
     bindProjectConfirmForV2();
-    syncToolbar();
+    setEditorOpen(false);
     bindStyleNameInput();
     hydrateStyleNameFromActive();
     syncUiFromDraft();
     renderMisEstilosList();
-    previewLive();
+    /* Intentionally NO previewLive() — opening Style V.3 must not change the live theme. */
   }
 
   function isOnPanel() {
@@ -1409,25 +1515,13 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function onLeave() {
-    if (isAppliedLive()) {
-      if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
-        StyleEngineRuntime.reinforcePublished();
-      }
-      clearPanelSession();
-      hideToolbar();
-      return;
-    }
-    if (typeof StyleEngineCompatibility !== 'undefined' &&
-        StyleEngineCompatibility.isStyleEngineLive &&
-        StyleEngineCompatibility.isStyleEngineLive()) {
-      if (typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
-        StyleEngineRuntime.reinforcePublished();
-      }
-      clearPanelSession();
-      hideToolbar();
-      return;
-    }
-    if (typeof ThemeSystem !== 'undefined' && ThemeSystem.reapply) {
+    /* Leaving Style V.3 never commits editor previews — restore published live theme. */
+    var seLive = typeof StyleEngineCompatibility !== 'undefined' &&
+      StyleEngineCompatibility.isStyleEngineLive &&
+      StyleEngineCompatibility.isStyleEngineLive();
+    if (seLive && typeof StyleEngineRuntime !== 'undefined' && StyleEngineRuntime.reinforcePublished) {
+      StyleEngineRuntime.reinforcePublished();
+    } else if (typeof ThemeSystem !== 'undefined' && ThemeSystem.reapply) {
       ThemeSystem.reapply();
     }
     if (typeof StyleEnginePersonalizarMapper !== 'undefined' &&
