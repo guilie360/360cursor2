@@ -7397,9 +7397,20 @@ body[data-theme="signaturered"] .toggle-switch.on .toggle-switch-knob {
   height:22px;
   flex-shrink:0;
   border-radius:6px;
+  border:none;
+  padding:0;
+  margin:0;
   background:var(--thumb-bg, var(--bg-main));
   box-shadow:0 0 0 1px color-mix(in srgb, var(--text-primary) 12%, transparent);
   overflow:hidden;
+  cursor:pointer;
+}
+.mis-tema-thumb:hover {
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--text-primary) 28%, transparent);
+}
+.mis-tema-thumb:focus-visible {
+  outline:2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset:2px;
 }
 .mis-tema-thumb-accent {
   position:absolute;
@@ -7481,6 +7492,27 @@ body.theme-light .mis-tema-icon-btn {
   width:100%;
   margin-top:12px;
   text-align:center;
+}
+
+.personalizar-v2-editor-phases {
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+
+.personalizar-v2-editor-phases > .personalize-block {
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+}
+
+.personalizar-v2-editor-phases .custom-theme-name-field {
+  margin-bottom:0;
 }
 
 .custom-theme-color-popover {

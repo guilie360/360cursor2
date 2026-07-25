@@ -4,12 +4,14 @@ var VisitorPersonalizeV2Panel = (function () {
   var STYLE_V3_LABEL = 'Style V.3';
   var STORAGE_DRAFT_KEY = 'boxies_personalizar_v2_draft';
   var PROJECT_DEFAULT_STYLE_KEY = 'boxies_project_default_style_id';
+  var PREVIEW_COLORS_KEY = 'boxies_style_preview_colors_v1';
   var BASE_STYLE_NAME = typeof PROJECT_DEFAULT_STYLE_NAME !== 'undefined'
     ? PROJECT_DEFAULT_STYLE_NAME
     : 'HALL';
   var PROJECT_HALL_STYLE_ID = typeof PROJECT_DEFAULT_STYLE_ID !== 'undefined'
     ? PROJECT_DEFAULT_STYLE_ID
     : 'project-default-hall';
+  var PREVIEW_COLOR_FALLBACK = '#161616';
   var MAX_SAVED_STYLES = 5;
   var draft = null;
   var editingStyleId = null;
@@ -252,9 +254,115 @@ var VisitorPersonalizeV2Panel = (function () {
     if (options.scroll && editorOpen) {
       var editor = document.getElementById('personalizarV2Editor');
       if (editor && editor.scrollIntoView) {
-        editor.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        editor.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
     }
+  }
+
+  function getEditorScrollEl() {
+    return document.querySelector('#mainMenuListPersonalizarV2 .personalize-v2-scroll') ||
+      document.querySelector('.personalize-v2-scroll');
+  }
+
+  /** Close editor after save without scroll jump; clear create/edit temp state. */
+  function closeEditorAfterSave() {
+    var scrollEl = getEditorScrollEl();
+    var top = scrollEl ? scrollEl.scrollTop : null;
+    editingStyleId = null;
+    setStyleNameInput('');
+    refreshStyleNameField();
+    setEditorOpen(false);
+    if (scrollEl && top != null) scrollEl.scrollTop = top;
+  }
+
+  function readPreviewColorMap() {
+    try {
+      return JSON.parse(localStorage.getItem(PREVIEW_COLORS_KEY) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writePreviewColor(styleId, color) {
+    var pid = getCurrentPanelProjectId();
+    if (!pid || !styleId || !color) return;
+    try {
+      var map = readPreviewColorMap();
+      if (!map[pid] || typeof map[pid] !== 'object') map[pid] = {};
+      map[pid][styleId] = String(color);
+      localStorage.setItem(PREVIEW_COLORS_KEY, JSON.stringify(map));
+    } catch (e) {}
+    if (!isProjectSeedStyleId(styleId) &&
+        typeof StyleEnginePresets !== 'undefined' &&
+        StyleEnginePresets.setStylePreviewColor) {
+      StyleEnginePresets.setStylePreviewColor(styleId, color, pid);
+    }
+  }
+
+  function derivePreviewColorFallback(style) {
+    if (!style) return PREVIEW_COLOR_FALLBACK;
+    if (style.previewColor) return String(style.previewColor);
+    var cfg = style.personalizarDraft || style.configuracion || {};
+    return cfg.bg || cfg.menuColor || cfg.accent || PREVIEW_COLOR_FALLBACK;
+  }
+
+  function resolvePreviewColor(style) {
+    if (!style || !style.id) return PREVIEW_COLOR_FALLBACK;
+    var pid = getCurrentPanelProjectId();
+    if (pid) {
+      var map = readPreviewColorMap();
+      if (map[pid] && map[pid][style.id]) return String(map[pid][style.id]);
+    }
+    return derivePreviewColorFallback(style);
+  }
+
+  function openPreviewColorPicker(style) {
+    if (!style || !style.id) return;
+    var styleId = style.id;
+    var current = resolvePreviewColor(style);
+
+    function paintThumb(value) {
+      var btn = document.querySelector(
+        '#misEstilosV2List [data-saved-style-id="' + styleId + '"] .mis-tema-thumb'
+      );
+      if (btn) btn.style.setProperty('--thumb-bg', value);
+    }
+
+    if (typeof StyleEngineColorPicker !== 'undefined' && StyleEngineColorPicker.open) {
+      StyleEngineColorPicker.open('previewColor', current, {
+        onPreview: function (_key, value) {
+          paintThumb(value);
+        },
+        onApply: function (_key, value) {
+          writePreviewColor(styleId, value);
+          renderMisEstilosList();
+          if (typeof playSound === 'function') playSound('buttonTap');
+        },
+        onCancel: function () {
+          paintThumb(current);
+        }
+      });
+      return;
+    }
+
+    var next = window.prompt('Color identificador (hex)', current);
+    if (!next) return;
+    writePreviewColor(styleId, String(next).trim());
+    renderMisEstilosList();
+  }
+
+  function editorPhaseHtml(label, bodyHtml, hint) {
+    return (
+      '<div class="personalize-block glass-surface">' +
+        '<div class="personalize-block-label">' + escapeHtml(label) + '</div>' +
+        (hint
+          ? '<p class="personalize-hint personalize-theme-block-hint">' + escapeHtml(hint) + '</p>'
+          : '') +
+        '<div class="personalize-block-body theme-visual-panel">' +
+          bodyHtml +
+        '</div>' +
+      '</div>'
+    );
   }
 
   function startCreateNewStyle() {
@@ -454,7 +562,9 @@ var VisitorPersonalizeV2Panel = (function () {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>'
+      (options.noDivider
+        ? ''
+        : '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>')
     );
   }
 
@@ -470,7 +580,6 @@ var VisitorPersonalizeV2Panel = (function () {
 
   function buttonsBlock() {
     var swatch = draft.surface || '#2a2a2a';
-    var borderSwatch = draft.buttonBorderColor || draft.surface || '#ffffff';
     return (
       '<div class="custom-theme-section">' +
         '<div class="custom-theme-section-body">' +
@@ -484,7 +593,16 @@ var VisitorPersonalizeV2Panel = (function () {
               glassButtons() +
             '</div>' +
           '</div>' +
-          '<div class="custom-theme-block-label">Bordes</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function bordersBlock() {
+    var borderSwatch = draft.buttonBorderColor || draft.surface || '#ffffff';
+    return (
+      '<div class="custom-theme-section">' +
+        '<div class="custom-theme-section-body">' +
           '<div class="custom-theme-row custom-theme-row--tight">' +
             '<span class="custom-theme-row-label">Color</span>' +
             '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-btn-border" data-theme-color-field="buttonBorderColor" style="--pick-swatch:' + escapeHtml(borderSwatch) + '">Elegir color</button>' +
@@ -817,8 +935,23 @@ var VisitorPersonalizeV2Panel = (function () {
       source: 'personalizar-v2',
       personalizarDraft: draft,
       replaceByName: false,
-      projectId: getCurrentPanelProjectId()
+      projectId: getCurrentPanelProjectId(),
+      previewColor: isUpdate
+        ? resolvePreviewColor({ id: editingStyleId, personalizarDraft: draft })
+        : (draft.bg || draft.menuColor || draft.accent || PREVIEW_COLOR_FALLBACK)
     });
+
+    if (saved && saved.id) {
+      if (!isUpdate) {
+        writePreviewColor(
+          saved.id,
+          draft.bg || draft.menuColor || draft.accent || PREVIEW_COLOR_FALLBACK
+        );
+      } else {
+        /* Keep existing previewColor map entry; ensure metadata stays in sync. */
+        writePreviewColor(saved.id, resolvePreviewColor(saved));
+      }
+    }
 
     if (typeof StyleEngineStore !== 'undefined' && StyleEngineStore.getActiveStyleMeta) {
       var active = StyleEngineStore.getActiveStyleMeta();
@@ -831,20 +964,13 @@ var VisitorPersonalizeV2Panel = (function () {
       }
     }
 
-    if (isUpdate) {
-      editingStyleId = saved.id;
-      setStyleNameInput(saved.name);
-    } else {
-      editingStyleId = null;
-      setStyleNameInput('');
-      refreshStyleNameField();
-      setEditorOpen(false);
-    }
+    var savedName = saved && saved.name ? saved.name : name;
+    closeEditorAfterSave();
     renderMisEstilosList();
     setMessage(
       isUpdate
-        ? 'Estilo «' + saved.name + '» actualizado.'
-        : 'Estilo «' + saved.name + '» guardado.',
+        ? 'Estilo «' + savedName + '» actualizado.'
+        : 'Estilo «' + savedName + '» guardado.',
       false
     );
     setMisEstilosMessage('', false);
@@ -853,13 +979,12 @@ var VisitorPersonalizeV2Panel = (function () {
   }
 
   function renderStyleSwatch(style) {
-    var cfg = style.personalizarDraft || {};
-    var bg = cfg.bg || cfg.menuColor || '#161616';
-    var accent = cfg.accent || '#8f1d1d';
+    var color = resolvePreviewColor(style);
     return (
-      '<span class="mis-tema-thumb" style="--thumb-bg:' + escapeHtml(bg) + ';--thumb-accent:' + escapeHtml(accent) + '">' +
-        '<span class="mis-tema-thumb-accent"></span>' +
-      '</span>'
+      '<button type="button" class="mis-tema-thumb" data-mis-estilo-action="preview-color" ' +
+        'aria-label="Cambiar color identificador" title="Cambiar color identificador" ' +
+        'style="--thumb-bg:' + escapeHtml(color) + '">' +
+      '</button>'
     );
   }
 
@@ -1014,6 +1139,15 @@ var VisitorPersonalizeV2Panel = (function () {
     var proyectoId = getCurrentPanelProjectId();
     if (typeof StyleEnginePresets !== 'undefined' && StyleEnginePresets.deletePersonal) {
       StyleEnginePresets.deletePersonal(style.id, proyectoId);
+    }
+    if (proyectoId && style.id) {
+      try {
+        var map = readPreviewColorMap();
+        if (map[proyectoId] && map[proyectoId][style.id]) {
+          delete map[proyectoId][style.id];
+          localStorage.setItem(PREVIEW_COLORS_KEY, JSON.stringify(map));
+        }
+      } catch (e) {}
     }
     if (editingStyleId === style.id) {
       editingStyleId = null;
@@ -1265,10 +1399,13 @@ var VisitorPersonalizeV2Panel = (function () {
         var styleId = item ? item.getAttribute('data-saved-style-id') : null;
         var style = styleId ? findStyleById(styleId) : null;
         var estiloAction = estiloEl.getAttribute('data-mis-estilo-action');
-        if (estiloAction === 'apply') applySavedStyle(style);
+        if (estiloAction === 'preview-color') {
+          e.stopPropagation();
+          openPreviewColorPicker(style);
+        } else if (estiloAction === 'apply') applySavedStyle(style);
         else if (estiloAction === 'edit') editSavedStyle(style);
         else if (estiloAction === 'delete') deleteSavedStyle(style);
-    else if (estiloAction === 'apply-project') {
+        else if (estiloAction === 'apply-project') {
           if (canApplyAsProjectDefault()) openProjectDefaultConfirm(style);
         }
         return;
@@ -1419,69 +1556,59 @@ var VisitorPersonalizeV2Panel = (function () {
         '</div>' +
 
         '<div id="personalizarV2EditorSection" hidden>' +
-          '<div class="personalize-block personalize-block--plain">' +
-            '<div class="personalize-block-body theme-visual-panel">' +
-              '<div class="theme-visual-editor is-open" id="personalizarV2Editor">' +
-                '<label class="personalize-field custom-theme-name-field">' +
-                  '<span>Nombre del estilo</span>' +
-                  '<input type="text" id="personalizarV2StyleName" maxlength="60" placeholder="' + escapeHtml(namePlaceholder) + '" autocomplete="off" value="">' +
-                '</label>' +
-                '<div class="custom-theme-rows">' +
-                  '<div class="custom-theme-group-header">Capas</div>' +
-                  surfaceBlock('Máscara de fondo', 'maskColor', 'pick-mask', 'mask', 'Oscurece el fondo detrás del menú y los popups.', { maskBlur: true }) +
-                  surfaceBlock('Superficies', 'bg', 'pick-bg', 'bg', 'Tarjetas 360°, tarjetas de vivienda y cuadro comparador.') +
-                  surfaceBlock('Menú lateral', 'menuColor', 'pick-menu', 'panel', 'Panel del menú Explorar y fondo general de la app.') +
-                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                  '<div class="custom-theme-group-header">Acento</div>' +
-                  '<div class="custom-theme-row custom-theme-row--tight">' +
-                    '<span class="custom-theme-row-label">Color de acento</span>' +
-                    '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(draft.accent) + '">Elegir color</button>' +
-                  '</div>' +
-                  '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>' +
-                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                  '<div class="custom-theme-group-header">Botones</div>' +
-                  buttonsBlock() +
-                  '<div class="custom-theme-divider" role="separator" aria-hidden="true"></div>' +
-                  '<div class="custom-theme-group-header">Detalle visual</div>' +
-                  '<div class="custom-theme-row custom-theme-row--tight">' +
-                    '<span class="custom-theme-row-label">Sombras</span>' +
-                    '<div class="custom-theme-text-toggle custom-theme-glass-toggle" data-glass-field="shadow">' +
-                      shadowButtons() +
-                    '</div>' +
-                  '</div>' +
-                  '<div class="custom-theme-row">' +
-                    '<span class="custom-theme-row-label">Viñeta</span>' +
-                    '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
-                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-p2-action="depth-low">Baja</button>' +
-                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="medium" data-p2-action="depth-medium">Media</button>' +
-                      '<button type="button" class="custom-theme-depth-btn" data-depth-mode="high" data-p2-action="depth-high">Alta</button>' +
-                    '</div>' +
-                  '</div>' +
-                  '<div class="custom-theme-row">' +
-                    '<span class="custom-theme-row-label">Texto</span>' +
-                    '<div class="custom-theme-text-toggle">' +
-                      '<button type="button" class="custom-theme-text-btn" data-text-mode="light" data-p2-action="text-light">Claro</button>' +
-                      '<button type="button" class="custom-theme-text-btn" data-text-mode="dark" data-p2-action="text-dark">Oscuro</button>' +
-                    '</div>' +
-                  '</div>' +
+          '<div class="personalizar-v2-editor-phases" id="personalizarV2Editor">' +
+            editorPhaseHtml(
+              'Nombre del estilo',
+              '<label class="personalize-field custom-theme-name-field">' +
+                '<input type="text" id="personalizarV2StyleName" maxlength="60" placeholder="' + escapeHtml(namePlaceholder) + '" autocomplete="off" value="" aria-label="Nombre del estilo">' +
+              '</label>'
+            ) +
+            editorPhaseHtml(
+              'Capas',
+              surfaceBlock('Máscara de fondo', 'maskColor', 'pick-mask', 'mask', 'Oscurece el fondo detrás del menú y los popups.', { maskBlur: true }) +
+              surfaceBlock('Superficies', 'bg', 'pick-bg', 'bg', 'Tarjetas 360°, tarjetas de vivienda y cuadro comparador.') +
+              surfaceBlock('Menú lateral', 'menuColor', 'pick-menu', 'panel', 'Panel del menú Explorar y fondo general de la app.', { noDivider: true })
+            ) +
+            editorPhaseHtml(
+              'Acento',
+              '<div class="custom-theme-row custom-theme-row--tight">' +
+                '<span class="custom-theme-row-label">Color de acento</span>' +
+                '<button type="button" class="outline-btn custom-theme-pick-btn" data-p2-action="pick-accent" data-theme-color-field="accent" style="--pick-swatch:' + escapeHtml(draft.accent) + '">Elegir color</button>' +
+              '</div>' +
+              '<p class="personalize-hint personalize-theme-block-hint">Badges, precios destacados y estados como Reservado.</p>'
+            ) +
+            editorPhaseHtml('Botones', buttonsBlock()) +
+            editorPhaseHtml('Bordes', bordersBlock()) +
+            editorPhaseHtml(
+              'Detalle visual',
+              '<div class="custom-theme-row custom-theme-row--tight">' +
+                '<span class="custom-theme-row-label">Sombras</span>' +
+                '<div class="custom-theme-text-toggle custom-theme-glass-toggle" data-glass-field="shadow">' +
+                  shadowButtons() +
                 '</div>' +
               '</div>' +
-            '</div>' +
-          '</div>' +
-
-          '<div class="personalize-block glass-surface">' +
-            '<div class="personalize-block-label">Hover</div>' +
-            '<p class="personalize-hint personalize-theme-block-hint">Botones, campos de texto e iconos al pasar el cursor.</p>' +
-            '<div class="personalize-block-body theme-visual-panel">' +
-              hoverBlock() +
-            '</div>' +
-          '</div>' +
-
-          '<div class="personalize-block glass-surface">' +
-            '<div class="personalize-block-label">Portada</div>' +
-            '<div class="personalize-block-body theme-visual-panel">' +
-              heroLayoutBlock() +
-            '</div>' +
+              '<div class="custom-theme-row">' +
+                '<span class="custom-theme-row-label">Viñeta</span>' +
+                '<div class="custom-theme-text-toggle custom-theme-depth-toggle">' +
+                  '<button type="button" class="custom-theme-depth-btn" data-depth-mode="low" data-p2-action="depth-low">Baja</button>' +
+                  '<button type="button" class="custom-theme-depth-btn" data-depth-mode="medium" data-p2-action="depth-medium">Media</button>' +
+                  '<button type="button" class="custom-theme-depth-btn" data-depth-mode="high" data-p2-action="depth-high">Alta</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="custom-theme-row">' +
+                '<span class="custom-theme-row-label">Texto</span>' +
+                '<div class="custom-theme-text-toggle">' +
+                  '<button type="button" class="custom-theme-text-btn" data-text-mode="light" data-p2-action="text-light">Claro</button>' +
+                  '<button type="button" class="custom-theme-text-btn" data-text-mode="dark" data-p2-action="text-dark">Oscuro</button>' +
+                '</div>' +
+              '</div>'
+            ) +
+            editorPhaseHtml(
+              'Hover',
+              hoverBlock(),
+              'Botones, campos de texto e iconos al pasar el cursor.'
+            ) +
+            editorPhaseHtml('Portada', heroLayoutBlock()) +
           '</div>' +
         '</div>' +
       '</div>';

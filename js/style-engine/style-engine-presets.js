@@ -186,6 +186,9 @@ var StyleEnginePresets = (function () {
       existing.source = options.source || existing.source || 'manual';
       if (options.publishMeta) existing.publishMeta = options.publishMeta;
       if (personalizarDraft) existing.personalizarDraft = personalizarDraft;
+      if (options.previewColor != null && options.previewColor !== '') {
+        existing.previewColor = String(options.previewColor);
+      }
       savePersonal(list, projectId);
       return existing;
     }
@@ -201,9 +204,24 @@ var StyleEnginePresets = (function () {
       publishMeta: options.publishMeta || null,
       personalizarDraft: personalizarDraft
     };
+    if (options.previewColor != null && options.previewColor !== '') {
+      item.previewColor = String(options.previewColor);
+    }
     list.unshift(item);
     savePersonal(list, projectId);
     return item;
+  }
+
+  /** Metadata visual only — never mutates theme config. */
+  function setStylePreviewColor(id, color, projectId) {
+    if (!id || !color) return false;
+    var list = loadPersonal(projectId);
+    var item = list.find(function (p) { return p.id === id; });
+    if (!item) return false;
+    item.previewColor = String(color);
+    item.updatedAt = new Date().toISOString();
+    savePersonal(list, projectId);
+    return true;
   }
 
   function getSavedStyles(projectId) {
@@ -228,6 +246,7 @@ var StyleEnginePresets = (function () {
     findById: findById,
     savePersonalPreset: savePersonalPreset,
     saveNamedStyle: saveNamedStyle,
+    setStylePreviewColor: setStylePreviewColor,
     duplicatePersonal: duplicatePersonal,
     renamePersonal: renamePersonal,
     deletePersonal: deletePersonal,
