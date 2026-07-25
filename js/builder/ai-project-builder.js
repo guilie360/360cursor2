@@ -1444,6 +1444,9 @@ var AiProjectBuilderView = (function () {
     panel.innerHTML = html;
     bindStepEvents(step.id);
     bindSectionDoneCheck();
+    if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
+      WorkspaceSelect.enhance(panel);
+    }
   }
 
   function renderShell() {

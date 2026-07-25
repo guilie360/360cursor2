@@ -283,3 +283,164 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
 }
+
+/* ── Native select baseline (closed control + dark color-scheme) ── */
+#boxiesContent,
+.builder-app,
+.builder-step-content {
+  color-scheme: dark;
+}
+
+.builder-field select,
+.builder-menu-child-row select {
+  color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Workspace custom select (Chromium/Windows cannot style option popup)
+   Closed control matches WS inputs. Open list: dark + hover #000.
+   ═══════════════════════════════════════════════════════════ */
+.ws-select {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.ws-select__native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ws-select__trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: var(--ws-control-h, 40px);
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid var(--ws-border-control, rgba(255, 255, 255, 0.08));
+  border-radius: var(--ws-radius-control, 8px);
+  background: var(--ws-control-bg, rgba(0, 0, 0, 0.3));
+  color: var(--ws-text, rgba(255, 255, 255, 0.9));
+  font-size: var(--ws-font-control, 13px);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.ws-select__trigger:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.ws-select__trigger:focus-visible {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.ws-select.is-disabled .ws-select__trigger,
+.ws-select__trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+}
+
+.ws-select__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-select__chevron {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 4px 0 4px;
+  border-color: rgba(255, 255, 255, 0.45) transparent transparent transparent;
+  transition: transform 0.15s ease;
+}
+
+.ws-select.is-open .ws-select__chevron {
+  transform: rotate(180deg);
+}
+
+.ws-select__list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 60;
+  max-height: 240px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--ws-border-strong, rgba(255, 255, 255, 0.12));
+  border-radius: var(--ws-radius-control, 8px);
+  background: var(--ws-control-bg, rgba(0, 0, 0, 0.3));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.ws-select__option {
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--ws-text, rgba(255, 255, 255, 0.9));
+  font-size: var(--ws-font-control, 13px);
+  line-height: 1.3;
+  cursor: pointer;
+  background: transparent;
+}
+
+/* Hover / keyboard active: pure black + white text */
+.ws-select__option:hover,
+.ws-select__option.is-active {
+  background: #000;
+  color: #fff;
+}
+
+/* Selected: WS semantic green */
+.ws-select__option.is-selected {
+  background: var(--ws-selected-bg, rgba(111, 191, 134, 0.12));
+  color: var(--ws-selected-text, rgba(180, 235, 195, 0.98));
+  border: 1px solid var(--ws-selected-border, rgba(111, 191, 134, 0.55));
+}
+
+.ws-select__option.is-selected:hover,
+.ws-select__option.is-selected.is-active {
+  background: #000;
+  color: #fff;
+  border-color: transparent;
+}
+
+.ws-select__option[data-disabled="1"] {
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ws-select__option[data-disabled="1"]:hover {
+  background: transparent;
+  color: var(--ws-text-muted, rgba(255, 255, 255, 0.38));
+}
+
