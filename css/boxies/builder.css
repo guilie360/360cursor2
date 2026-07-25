@@ -178,16 +178,20 @@ body.builder-has-dock.platform-builder-shell {
   border-color: var(--hall-btn-hover-border, rgba(255, 255, 255, 0.22));
 }
 
+/* PRIMARY action = Guardar/Republicar language (dark). White solid removed. */
 .builder-header-action-btn.is-primary {
-  background: var(--hall-btn-solid-bg, rgba(255, 255, 255, 0.92));
-  border-color: var(--hall-btn-solid-bg, rgba(255, 255, 255, 0.92));
-  color: var(--hall-btn-solid-text, rgba(8, 8, 8, 0.92));
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.62rem;
+  font-weight: 650;
+  padding: 0 14px;
 }
 
 .builder-header-action-btn.is-primary:hover:not(:disabled) {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: #080808;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .builder-header-action-btn.is-muted {

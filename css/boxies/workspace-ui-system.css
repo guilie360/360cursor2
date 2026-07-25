@@ -1,0 +1,285 @@
+/* ═══════════════════════════════════════════════════════════
+   BOXIES Workspace UI System V5.9.8
+   Source of truth: Hero surfaces + Guardar/Republicar + Subir
+   Visual only — no scroll/geometry/logic contracts.
+   ═══════════════════════════════════════════════════════════ */
+
+#boxiesContent,
+.builder-app,
+.builder-step-content {
+  --ws-surface: rgba(255, 255, 255, 0.02);
+  --ws-surface-raised: rgba(255, 255, 255, 0.03);
+  --ws-control-bg: rgba(0, 0, 0, 0.3);
+  --ws-border: rgba(255, 255, 255, 0.07);
+  --ws-border-strong: rgba(255, 255, 255, 0.12);
+  --ws-border-control: rgba(255, 255, 255, 0.08);
+  --ws-border-hover: rgba(255, 255, 255, 0.22);
+  --ws-text: rgba(255, 255, 255, 0.9);
+  --ws-text-secondary: rgba(255, 255, 255, 0.62);
+  --ws-text-muted: rgba(255, 255, 255, 0.38);
+  --ws-text-title: rgba(255, 255, 255, 0.55);
+  --ws-font-title: 11px;
+  --ws-font-control: 13px;
+  --ws-font-secondary: 11px;
+  --ws-font-btn: 0.62rem;
+  --ws-font-btn-secondary: 0.65rem;
+  --ws-radius-card: 12px;
+  --ws-radius-control: 8px;
+  --ws-radius-pill: 999px;
+  --ws-space-xs: 4px;
+  --ws-space-sm: 8px;
+  --ws-space-md: 10px;
+  --ws-space-lg: 12px;
+  --ws-space-xl: 14px;
+  --ws-control-h: 40px;
+  --ws-btn-h: 32px;
+  --ws-selected-border: rgba(111, 191, 134, 0.55);
+  --ws-selected-bg: rgba(111, 191, 134, 0.12);
+  --ws-selected-text: rgba(180, 235, 195, 0.98);
+  --ws-btn-primary-bg: rgba(255, 255, 255, 0.04);
+  --ws-btn-primary-border: rgba(255, 255, 255, 0.14);
+  --ws-btn-primary-text: rgba(255, 255, 255, 0.88);
+  --ws-btn-primary-hover-bg: rgba(255, 255, 255, 0.08);
+  --ws-btn-primary-hover-border: rgba(255, 255, 255, 0.24);
+  --ws-btn-secondary-bg: rgba(255, 255, 255, 0.03);
+  --ws-btn-secondary-border: rgba(255, 255, 255, 0.14);
+  --ws-btn-secondary-text: rgba(255, 255, 255, 0.86);
+}
+
+/* ── PRIMARY = Guardar / Republicar (dark). Values mirrored in builder.css. ── */
+.builder-header-action-btn.is-primary {
+  min-width: 108px;
+  height: var(--ws-btn-h);
+  padding: 0 14px;
+  background: var(--ws-btn-primary-bg);
+  border: 1px solid var(--ws-btn-primary-border);
+  border-radius: var(--ws-radius-pill);
+  color: var(--ws-btn-primary-text);
+  font-size: var(--ws-font-btn);
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.builder-header-action-btn.is-primary:hover:not(:disabled) {
+  background: var(--ws-btn-primary-hover-bg);
+  border-color: var(--ws-btn-primary-hover-border);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── SECONDARY = Subir Hero family ── */
+.builder-header-action-btn,
+.builder-header-action-btn.boxies-btn-secondary {
+  height: var(--ws-btn-h);
+  border: 1px solid var(--ws-btn-secondary-border);
+  border-radius: var(--ws-radius-pill);
+  background: var(--ws-btn-secondary-bg);
+  color: var(--ws-btn-secondary-text);
+  font-size: var(--ws-font-btn-secondary);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.builder-header-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--ws-border-hover);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Fields / controls (Hero pattern) ── */
+.builder-field label {
+  font-size: var(--ws-font-secondary);
+  font-weight: 500;
+  color: var(--ws-text-muted);
+}
+
+.builder-field input,
+.builder-field select,
+.builder-field textarea,
+.builder-textarea,
+.builder-menu-child-row input[type="text"],
+.builder-menu-child-row select,
+.builder-estructura-ambiente input {
+  height: var(--ws-control-h);
+  background: var(--ws-control-bg);
+  border: 1px solid var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+  color: var(--ws-text);
+  font-size: var(--ws-font-control);
+}
+
+.builder-field textarea,
+.builder-textarea {
+  height: auto;
+  min-height: 80px;
+  padding: 10px 12px;
+}
+
+.builder-field input:focus,
+.builder-field select:focus,
+.builder-field textarea:focus,
+.builder-textarea:focus {
+  border-color: rgba(255, 255, 255, 0.22);
+  outline: none;
+}
+
+/* ── Surfaces / cards (Hero config + media) ── */
+.builder-hero-media-card,
+.builder-hero-config-card,
+.builder-confirm-form,
+.builder-menu-item,
+.builder-estructura-section,
+.builder-estructura-acc,
+.builder-upload-card {
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-card);
+  background: var(--ws-surface);
+}
+
+.builder-hero-media-card.has-media {
+  border-color: var(--ws-border-strong);
+  background: var(--ws-surface-raised);
+}
+
+.builder-hero-config-card__title,
+.builder-hero-media-card__label,
+.builder-confirm-title,
+.builder-estructura-section__title {
+  font-size: var(--ws-font-title);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ws-text-title);
+}
+
+.builder-hero-media-card__name,
+.builder-menu-item-name,
+.builder-estructura-acc > summary,
+.builder-estructura-acc__title {
+  font-size: var(--ws-font-control);
+  font-weight: 560;
+  color: var(--ws-text);
+}
+
+/* ── Estructura: alias typography to WS tokens; fix input size override ── */
+.builder-step-content--estructura {
+  --estructura-font-title: var(--ws-font-title);
+  --estructura-font-control: var(--ws-font-control);
+  --estructura-font-secondary: var(--ws-font-secondary);
+}
+
+.builder-step-content--estructura .builder-step-title {
+  font-size: 15px;
+}
+
+.builder-step-content--estructura .builder-header-action-btn {
+  font-size: var(--ws-font-btn-secondary);
+}
+
+.builder-step-content--estructura .builder-header-action-btn.is-primary {
+  font-size: var(--ws-font-btn);
+}
+
+.builder-step-content--estructura .builder-field label,
+.builder-step-content--estructura .builder-check-row,
+.builder-step-content--estructura .builder-estructura-row__label,
+.builder-step-content--estructura .builder-estructura-sublabel {
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-step-content--estructura .builder-field input,
+.builder-step-content--estructura .builder-field select,
+.builder-step-content--estructura .builder-estructura-ambiente input {
+  font-size: var(--ws-font-control);
+}
+
+.builder-estructura-type.is-selected,
+.builder-estructura-chip.is-on {
+  border-color: var(--ws-selected-border);
+  background: var(--ws-selected-bg);
+  color: var(--ws-selected-text);
+}
+
+.builder-estructura-chip {
+  background: var(--ws-control-bg);
+  border-color: var(--ws-border-control);
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-estructura-stepper {
+  background: var(--ws-control-bg);
+  border-color: var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+}
+
+.builder-estructura-acc--nested {
+  background: rgba(255, 255, 255, 0.015);
+  border-color: var(--ws-border);
+}
+
+/* ── Menu / Viviendas surface alignment ── */
+.builder-menu-item {
+  background: var(--ws-surface);
+  border-color: var(--ws-border);
+  border-radius: var(--ws-radius-card);
+}
+
+.builder-menu-item-summary:hover {
+  background: var(--ws-surface-raised);
+}
+
+.builder-menu-item-meta,
+.builder-menu-hint,
+.builder-menu-children-title,
+.builder-doc-meta,
+.builder-file-meta {
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-muted);
+}
+
+.builder-vivienda-media {
+  border-top-color: var(--ws-border);
+}
+
+.builder-doc-item,
+.builder-upload-zone {
+  border-color: var(--ws-border-control);
+  border-radius: var(--ws-radius-control);
+  background: var(--ws-control-bg);
+}
+
+/* ── Checkboxes: keep custom section check; soft-align native checks ── */
+.builder-check-row {
+  font-size: var(--ws-font-secondary);
+  color: var(--ws-text-secondary);
+}
+
+.builder-check-row input[type="checkbox"],
+.builder-ambiente-picker__opt input[type="checkbox"] {
+  accent-color: #6fbf86;
+}
+
+/* ── Ambiente picker typography ── */
+.builder-ambiente-picker__group-title {
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-ambiente-picker__opt,
+.builder-ambiente-picker__custom,
+.builder-ambiente-picker__custom input[type="text"] {
+  font-size: var(--ws-font-secondary);
+}
+
+.builder-ambiente-picker__panel {
+  border-color: var(--ws-border-strong);
+  background: #14181c;
+  border-radius: var(--ws-radius-card);
+}
+
+/* ── Scrollbar thumb color only (no overflow/geometry) ── */
+.builder-hero-col,
+.builder-ambiente-picker__panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}

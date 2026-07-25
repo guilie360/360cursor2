@@ -987,7 +987,7 @@ var AiProjectBuilderView = (function () {
         '<div class="builder-confirm-title">Botones del menú</div>' +
         '<p class="builder-menu-hint">No hace falta crear “Submenú 1 / Submenú 2” en el sidebar: eliges por botón si abre sección o submenú.</p>' +
         itemsHtml +
-        '<button type="button" class="builder-header-action-btn is-primary" id="menuAddBtn">+ Agregar botón</button>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="menuAddBtn">+ Agregar botón</button>' +
       '</div>' +
     '</div>';
   }
@@ -1157,7 +1157,7 @@ var AiProjectBuilderView = (function () {
         '<div class="builder-confirm-title">Tarjetas</div>' +
         '<p class="builder-menu-hint">Las tarjetas aparecen en “Selecciona tu vivienda”. Guarda para sincronizarlas con el proyecto.</p>' +
         (itemsHtml || '<p class="builder-menu-hint">Aún no hay viviendas. Agrega la primera tarjeta.</p>') +
-        '<button type="button" class="builder-header-action-btn is-primary" id="viviendaAddBtn">+ Agregar vivienda</button>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="viviendaAddBtn">+ Agregar vivienda</button>' +
       '</div>' +
     '</div>';
   }
