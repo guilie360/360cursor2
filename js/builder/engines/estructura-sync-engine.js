@@ -1,4 +1,4 @@
-/* BOXIES V5.9 — Estructura Sync: persist + Aplicar + sync tipologías → viviendas */
+/* BOXIES V5.9.22 — Estructura Sync: persist + Aplicar + sync tipologías → viviendas */
 var EstructuraSyncEngine = (function () {
   function resolveProject(state) {
     if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.resolveProject) {
@@ -13,6 +13,82 @@ var EstructuraSyncEngine = (function () {
 
   function clampInt(v, min, max, fallback) {
     return EstructuraEngine.clampInt(v, min, max, fallback);
+  }
+
+  /** Serializable draft payload — no catalog bloat, no UI-only flags. */
+  function serializeEstructuraDraft(e) {
+    e = e || {};
+    return {
+      developmentType: e.developmentType,
+      edificioMode: e.edificioMode,
+      unidadHousingType: e.unidadHousingType,
+      unidadCount: e.unidadCount,
+      lotesSubtype: e.lotesSubtype,
+      mixto: e.mixto ? {
+        edificios: !!e.mixto.edificios,
+        casas: !!e.mixto.casas,
+        lotes: !!e.mixto.lotes
+      } : null,
+      orgEtapas: !!e.orgEtapas,
+      orgSectores: !!e.orgSectores,
+      orgManzanas: !!e.orgManzanas,
+      totalViviendas: e.totalViviendas,
+      totalLotes: e.totalLotes,
+      tipologiasCount: (e.tipologias || []).length,
+      repeatFloorDistribution: e.repeatFloorDistribution !== false,
+      buildings: Array.isArray(e.buildings) ? e.buildings : [],
+      tipologias: Array.isArray(e.tipologias) ? e.tipologias : [],
+      zoneNames: Array.isArray(e.zoneNames) ? e.zoneNames.slice() : [],
+      conjuntoConfig: e.conjuntoConfig || null,
+      openPanels: e.openPanels || null
+    };
+  }
+
+  function restoreEstructuraDraft(e, draft) {
+    if (!e || !draft || typeof draft !== 'object') return e;
+    if (draft.developmentType) {
+      e.developmentType = EstructuraEngine.normalizeTypeId(draft.developmentType);
+    }
+    if (draft.edificioMode) e.edificioMode = draft.edificioMode;
+    if (draft.unidadHousingType) e.unidadHousingType = draft.unidadHousingType;
+    if (draft.unidadCount != null) e.unidadCount = draft.unidadCount;
+    if (draft.lotesSubtype) e.lotesSubtype = draft.lotesSubtype;
+    if (draft.mixto && typeof draft.mixto === 'object') e.mixto = draft.mixto;
+    if (draft.orgEtapas != null) e.orgEtapas = !!draft.orgEtapas;
+    if (draft.orgSectores != null) e.orgSectores = !!draft.orgSectores;
+    if (draft.orgManzanas != null) e.orgManzanas = !!draft.orgManzanas;
+    if (draft.totalViviendas != null) e.totalViviendas = draft.totalViviendas;
+    if (draft.totalLotes != null) e.totalLotes = draft.totalLotes;
+    if (draft.tipologiasCount != null) e.tipologiasCount = draft.tipologiasCount;
+    if (draft.repeatFloorDistribution != null) {
+      e.repeatFloorDistribution = draft.repeatFloorDistribution !== false;
+    }
+    if (Array.isArray(draft.buildings)) {
+      e.buildings = draft.buildings.map(function (b) {
+        return Object.assign({}, b);
+      });
+    }
+    if (Array.isArray(draft.tipologias)) {
+      e.tipologias = draft.tipologias.map(function (t) {
+        var tip = Object.assign({}, t);
+        tip.plantas = Array.isArray(t.plantas)
+          ? t.plantas.map(function (p) { return Object.assign({}, p); })
+          : [];
+        tip.ambientes = Array.isArray(t.ambientes)
+          ? t.ambientes.map(function (a) { return Object.assign({}, a); })
+          : [];
+        return tip;
+      });
+      e.tipologiasCount = e.tipologias.length;
+    }
+    if (Array.isArray(draft.zoneNames)) e.zoneNames = draft.zoneNames.slice();
+    if (draft.conjuntoConfig && typeof draft.conjuntoConfig === 'object') {
+      EstructuraEngine.applyConfigSnapshot(e, { conjuntoConfig: draft.conjuntoConfig });
+    }
+    if (draft.openPanels && typeof draft.openPanels === 'object') {
+      e.openPanels = Object.assign({}, draft.openPanels);
+    }
+    return e;
   }
 
   async function loadAmenidadesCatalog(state) {
@@ -85,87 +161,177 @@ var EstructuraSyncEngine = (function () {
       e.appliedAt = est.data.applied_at;
       if (est.data.config_json && typeof est.data.config_json === 'object') {
         EstructuraEngine.applyConfigSnapshot(e, est.data.config_json);
-      } else if (est.data.draft_json && typeof est.data.draft_json === 'object') {
-        EstructuraEngine.applyConfigSnapshot(e, est.data.draft_json);
       }
-      EstructuraEngine.ensureState(state);
     }
 
-    e.buildings = (buildingsRes.data || []).map(function (b, i) {
-      return {
-        localId: b.id,
-        id: b.id,
-        kind: b.kind,
-        nombre: b.nombre || '',
-        pisos: b.pisos,
-        sotanos: b.sotanos,
-        rooftop: !!b.rooftop,
-        unidadesPorPiso: b.unidades_por_piso,
-        orden: b.orden != null ? b.orden : i,
-        open: i === 0
-      };
-    });
+    var hasDraft = !!(est.data && est.data.draft_json && typeof est.data.draft_json === 'object');
 
-    var plantasByTip = {};
-    (plantasRes.data || []).forEach(function (p) {
-      if (!plantasByTip[p.tipologia_id]) plantasByTip[p.tipologia_id] = [];
-      plantasByTip[p.tipologia_id].push(p);
-    });
-    var ambByTip = {};
-    (ambRes.data || []).forEach(function (a) {
-      if (!ambByTip[a.tipologia_id]) ambByTip[a.tipologia_id] = [];
-      ambByTip[a.tipologia_id].push(a);
-    });
-
-    if ((tipsRes.data || []).length) {
-      e.tipologias = tipsRes.data.map(function (t, i) {
-        var plantas = (plantasByTip[t.id] || []).map(function (p) {
+    if (hasDraft) {
+      /* Prefer draft over applied tables — Guardar borrador without Aplicar */
+      restoreEstructuraDraft(e, est.data.draft_json);
+      if (est.data.config_json && typeof est.data.config_json === 'object' &&
+          !e.conjuntoConfig && est.data.config_json.conjuntoConfig) {
+        EstructuraEngine.applyConfigSnapshot(e, {
+          conjuntoConfig: est.data.config_json.conjuntoConfig
+        });
+      }
+      /* Compat: incomplete legacy drafts still fill from applied tables when empty */
+      if (!(e.buildings && e.buildings.length) && (buildingsRes.data || []).length) {
+        e.buildings = (buildingsRes.data || []).map(function (b, i) {
           return {
-            localId: p.id,
-            id: p.id,
-            nombre: p.nombre,
-            orden: p.orden,
-            open: false
+            localId: b.id,
+            id: b.id,
+            kind: b.kind,
+            nombre: b.nombre || '',
+            pisos: b.pisos,
+            sotanos: b.sotanos,
+            rooftop: !!b.rooftop,
+            unidadesPorPiso: b.unidades_por_piso,
+            orden: b.orden != null ? b.orden : i,
+            open: i === 0
           };
         });
-        var plantaIdToLocal = {};
-        plantas.forEach(function (p) { plantaIdToLocal[p.id] = p.localId; });
-        return {
-          localId: t.id,
-          id: t.id,
-          componente: t.componente || null,
-          producto: t.producto || '',
-          modelo: t.modelo || '',
-          nombre: t.nombre || '',
-          area_m2: t.area_m2,
-          area_privada_m2: t.area_privada_m2,
-          area_lote_m2: t.area_lote_m2,
-          habitaciones: t.habitaciones,
-          banos: t.banos,
-          parqueaderos: t.parqueaderos,
-          plantas_internas: t.plantas_internas != null ? t.plantas_internas : plantas.length,
-          precio: t.precio,
-          plantas: plantas,
-          ambientes: (ambByTip[t.id] || []).map(function (a) {
+      }
+      if (!(e.tipologias && e.tipologias.length) && (tipsRes.data || []).length) {
+        var plantasByTipDraft = {};
+        (plantasRes.data || []).forEach(function (p) {
+          if (!plantasByTipDraft[p.tipologia_id]) plantasByTipDraft[p.tipologia_id] = [];
+          plantasByTipDraft[p.tipologia_id].push(p);
+        });
+        var ambByTipDraft = {};
+        (ambRes.data || []).forEach(function (a) {
+          if (!ambByTipDraft[a.tipologia_id]) ambByTipDraft[a.tipologia_id] = [];
+          ambByTipDraft[a.tipologia_id].push(a);
+        });
+        e.tipologias = tipsRes.data.map(function (t, i) {
+          var plantas = (plantasByTipDraft[t.id] || []).map(function (p) {
             return {
-              localId: a.id,
-              id: a.id,
-              nombre: a.nombre,
-              plantaLocalId: a.planta_id ? plantaIdToLocal[a.planta_id] || null : null,
-              orden: a.orden
+              localId: p.id,
+              id: p.id,
+              nombre: p.nombre,
+              orden: p.orden,
+              open: false
             };
-          }),
+          });
+          var plantaIdToLocal = {};
+          plantas.forEach(function (p) { plantaIdToLocal[p.id] = p.localId; });
+          return {
+            localId: t.id,
+            id: t.id,
+            componente: t.componente || null,
+            producto: t.producto || '',
+            modelo: t.modelo || '',
+            nombre: t.nombre || '',
+            area_m2: t.area_m2,
+            area_privada_m2: t.area_privada_m2,
+            area_lote_m2: t.area_lote_m2,
+            habitaciones: t.habitaciones,
+            banos: t.banos,
+            parqueaderos: t.parqueaderos,
+            plantas_internas: t.plantas_internas != null ? t.plantas_internas : plantas.length,
+            precio: t.precio,
+            plantas: plantas,
+            ambientes: (ambByTipDraft[t.id] || []).map(function (a) {
+              return {
+                localId: a.id,
+                id: a.id,
+                nombre: a.nombre,
+                plantaLocalId: a.planta_id ? plantaIdToLocal[a.planta_id] || null : null,
+                orden: a.orden
+              };
+            }),
+            open: i === 0
+          };
+        });
+        e.tipologiasCount = e.tipologias.length;
+      }
+      if (!(e.zoneNames && e.zoneNames.length) && (zonesRes.data || []).length) {
+        e.zoneNames = [];
+        (zonesRes.data || []).forEach(function (row) {
+          var n = row.amenidades && row.amenidades.nombre;
+          if (n) e.zoneNames.push(n);
+        });
+      }
+      EstructuraEngine.ensureState(state);
+    } else {
+      e.buildings = (buildingsRes.data || []).map(function (b, i) {
+        return {
+          localId: b.id,
+          id: b.id,
+          kind: b.kind,
+          nombre: b.nombre || '',
+          pisos: b.pisos,
+          sotanos: b.sotanos,
+          rooftop: !!b.rooftop,
+          unidadesPorPiso: b.unidades_por_piso,
+          orden: b.orden != null ? b.orden : i,
           open: i === 0
         };
       });
-      e.tipologiasCount = e.tipologias.length;
-    }
 
-    e.zoneNames = [];
-    (zonesRes.data || []).forEach(function (row) {
-      var n = row.amenidades && row.amenidades.nombre;
-      if (n) e.zoneNames.push(n);
-    });
+      var plantasByTip = {};
+      (plantasRes.data || []).forEach(function (p) {
+        if (!plantasByTip[p.tipologia_id]) plantasByTip[p.tipologia_id] = [];
+        plantasByTip[p.tipologia_id].push(p);
+      });
+      var ambByTip = {};
+      (ambRes.data || []).forEach(function (a) {
+        if (!ambByTip[a.tipologia_id]) ambByTip[a.tipologia_id] = [];
+        ambByTip[a.tipologia_id].push(a);
+      });
+
+      if ((tipsRes.data || []).length) {
+        e.tipologias = tipsRes.data.map(function (t, i) {
+          var plantas = (plantasByTip[t.id] || []).map(function (p) {
+            return {
+              localId: p.id,
+              id: p.id,
+              nombre: p.nombre,
+              orden: p.orden,
+              open: false
+            };
+          });
+          var plantaIdToLocal = {};
+          plantas.forEach(function (p) { plantaIdToLocal[p.id] = p.localId; });
+          return {
+            localId: t.id,
+            id: t.id,
+            componente: t.componente || null,
+            producto: t.producto || '',
+            modelo: t.modelo || '',
+            nombre: t.nombre || '',
+            area_m2: t.area_m2,
+            area_privada_m2: t.area_privada_m2,
+            area_lote_m2: t.area_lote_m2,
+            habitaciones: t.habitaciones,
+            banos: t.banos,
+            parqueaderos: t.parqueaderos,
+            plantas_internas: t.plantas_internas != null ? t.plantas_internas : plantas.length,
+            precio: t.precio,
+            plantas: plantas,
+            ambientes: (ambByTip[t.id] || []).map(function (a) {
+              return {
+                localId: a.id,
+                id: a.id,
+                nombre: a.nombre,
+                plantaLocalId: a.planta_id ? plantaIdToLocal[a.planta_id] || null : null,
+                orden: a.orden
+              };
+            }),
+            open: i === 0
+          };
+        });
+        e.tipologiasCount = e.tipologias.length;
+      }
+
+      e.zoneNames = [];
+      (zonesRes.data || []).forEach(function (row) {
+        var n = row.amenidades && row.amenidades.nombre;
+        if (n) e.zoneNames.push(n);
+      });
+
+      EstructuraEngine.ensureState(state);
+    }
 
     state.projectType = EstructuraEngine.normalizeTypeId(e.developmentType);
     e.developmentType = state.projectType;
@@ -192,11 +358,12 @@ var EstructuraSyncEngine = (function () {
       tipologias_count: (e.tipologias || []).length,
       repeat_floor_distribution: e.repeatFloorDistribution !== false,
       config_json: EstructuraEngine.configSnapshot(e),
-      draft_json: e,
+      draft_json: serializeEstructuraDraft(e),
       updated_at: new Date().toISOString()
     };
     var res = await client().from('proyecto_estructura').upsert(payload, { onConflict: 'proyecto_id' });
     if (res.error) throw new Error(res.error.message || 'No se pudo guardar el borrador');
+    e.dirty = false;
     return { projectId: project.id };
   }
 

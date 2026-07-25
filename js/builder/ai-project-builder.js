@@ -1035,11 +1035,19 @@ var AiProjectBuilderView = (function () {
     var devLabel = (EstructuraEngine.DEVELOPMENT_TYPES.find(function (t) {
       return t.id === e.developmentType;
     }) || {}).label || '';
+    var draftStatus = e.dirty
+      ? 'Cambios sin guardar'
+      : (e._draftSaved ? 'Guardado' : '');
 
     return '<div class="builder-step-content builder-step-content--estructura">' +
       '<div class="builder-estructura-head">' +
         stepTitleHtml('Estructura') +
         '<div class="builder-estructura-head__actions">' +
+          '<span class="builder-estructura-draft-status' +
+            (e.dirty ? ' is-dirty' : (e._draftSaved ? ' is-saved' : '')) +
+            '" data-estructura-draft-status>' + AdminUI.escapeHtml(draftStatus) + '</span>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderSaveEstructuraDraftBtn">' +
+            'Guardar borrador</button>' +
           '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>' +
         '</div>' +
       '</div>' +
@@ -1995,9 +2003,37 @@ var AiProjectBuilderView = (function () {
 
     function persist() {
       state.estructura.dirty = true;
+      state.estructura._draftSaved = false;
       state.projectType = state.estructura.developmentType;
       saveState();
       updateNavButtons();
+      refreshEstructuraResumenIfOpen();
+      updateEstructuraDraftStatusUi();
+    }
+
+    function refreshEstructuraResumenIfOpen() {
+      if (!rootEl) return;
+      var panel = rootEl.querySelector('[data-estructura-panel="resumen"]');
+      if (!panel || !panel.open) return;
+      var body = panel.querySelector('[data-estructura-resumen-body]');
+      if (!body) return;
+      body.innerHTML = buildEstructuraResumenHtml(state.estructura);
+    }
+
+    function updateEstructuraDraftStatusUi() {
+      if (!rootEl || !state.estructura) return;
+      var el = rootEl.querySelector('[data-estructura-draft-status]');
+      if (!el) return;
+      if (state.estructura.dirty) {
+        el.textContent = 'Cambios sin guardar';
+        el.className = 'builder-estructura-draft-status is-dirty';
+      } else if (state.estructura._draftSaved) {
+        el.textContent = 'Guardado';
+        el.className = 'builder-estructura-draft-status is-saved';
+      } else {
+        el.textContent = '';
+        el.className = 'builder-estructura-draft-status';
+      }
     }
 
     function rerender() {
@@ -2961,6 +2997,43 @@ var AiProjectBuilderView = (function () {
 
     var applyBtn = rootEl.querySelector('#builderApplyEstructuraBtn');
     if (applyBtn) applyBtn.addEventListener('click', handleApplyEstructura);
+
+    var draftBtn = rootEl.querySelector('#builderSaveEstructuraDraftBtn');
+    if (draftBtn) draftBtn.addEventListener('click', handleSaveEstructuraDraft);
+
+    updateEstructuraDraftStatusUi();
+  }
+
+  async function handleSaveEstructuraDraft() {
+    if (processing) return;
+    processing = true;
+    updateHeaderActions();
+    var draftBtn = rootEl && rootEl.querySelector('#builderSaveEstructuraDraftBtn');
+    if (draftBtn) {
+      draftBtn.disabled = true;
+      draftBtn.textContent = 'Guardando…';
+    }
+    try {
+      EstructuraEngine.ensureState(state);
+      await EstructuraSyncEngine.saveDraft(state);
+      state.estructura.dirty = false;
+      state.estructura._draftSaved = true;
+      saveState();
+      if (draftBtn) draftBtn.textContent = 'Guardar borrador';
+      var statusEl = rootEl && rootEl.querySelector('[data-estructura-draft-status]');
+      if (statusEl) {
+        statusEl.textContent = 'Guardado';
+        statusEl.className = 'builder-estructura-draft-status is-saved';
+      }
+      AdminNotify.success('Borrador de estructura guardado.');
+    } catch (err) {
+      AdminNotify.error((err && err.message) || 'No se pudo guardar el borrador');
+      if (draftBtn) draftBtn.textContent = 'Guardar borrador';
+    } finally {
+      processing = false;
+      if (draftBtn) draftBtn.disabled = false;
+      updateHeaderActions();
+    }
   }
 
   async function handleApplyEstructura() {

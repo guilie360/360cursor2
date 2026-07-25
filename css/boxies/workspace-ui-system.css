@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   BOXIES Workspace UI System V5.9.21
+   BOXIES Workspace UI System V5.9.22
    Source of truth: Hero surfaces + Guardar/Republicar + Subir
    Visual only — no scroll/geometry/logic contracts.
    Floating: WorkspaceSelect + Ambientes + Zonas share --ws-floating-*
@@ -441,6 +441,28 @@
   .builder-estructura-resumen__grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.builder-estructura-draft-status {
+  font-size: var(--ws-font-secondary);
+  font-weight: 520;
+  letter-spacing: 0.02em;
+  color: var(--ws-text-muted);
+  white-space: nowrap;
+}
+
+.builder-estructura-draft-status.is-dirty {
+  color: var(--ws-text-secondary);
+}
+
+.builder-estructura-draft-status.is-saved {
+  color: rgba(111, 191, 134, 0.88);
+}
+
+.builder-estructura-head__actions {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* ── Organización física: compact grids + flatter mixto ── */
