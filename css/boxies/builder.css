@@ -2377,7 +2377,7 @@ body.builder-has-dock .admin-toast--info {
 }
 
 .builder-estructura-assign-balance.is-pending {
-  border-color: rgba(220, 180, 90, 0.28);
+  border-color: rgba(155, 143, 212, 0.42);
 }
 
 .builder-estructura-assign-balance.is-empty {
