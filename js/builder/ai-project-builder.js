@@ -3768,15 +3768,28 @@ var AiProjectBuilderView = (function () {
       var resyncBtn = rootEl.querySelector('#builderExpResyncBtn');
       if (resyncBtn) {
         resyncBtn.addEventListener('click', function () {
-          if (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.syncFromEstructura) {
-            ArchitectureEngine.syncFromEstructura(state, { reason: 'manual-experiencia-resync' });
-          } else if (typeof ExperienciaEngine !== 'undefined') {
-            ExperienciaEngine.syncFromEstructura(state, {});
+          if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureFlow) {
+            ExperienciaEngine.ensureFlow(state, { appliedAt: new Date().toISOString() });
           }
           saveState();
           renderStepContent();
           updateNavButtons();
-          AdminNotify.success('Experiencia sincronizada desde estructura.');
+          AdminNotify.success('Hero e interacciones actualizados en Experiencia.');
+        });
+      }
+      var restoreLegacyBtn = rootEl.querySelector('#builderExpRestoreLegacyBtn');
+      if (restoreLegacyBtn) {
+        restoreLegacyBtn.addEventListener('click', function () {
+          if (!window.confirm('¿Restaurar el mapa conceptual V5.9.51? El flujo actual se conserva solo en memoria hasta guardar.')) {
+            return;
+          }
+          if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.restoreLegacySnapshot) {
+            ExperienciaEngine.restoreLegacySnapshot(state);
+          }
+          saveState();
+          renderStepContent();
+          updateNavButtons();
+          AdminNotify.info('Mapa legacy restaurado.');
         });
       }
       if (typeof ExperienciaCanvas !== 'undefined' && ExperienciaCanvas.mount) {

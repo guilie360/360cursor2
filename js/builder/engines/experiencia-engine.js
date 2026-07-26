@@ -1,23 +1,98 @@
-/* BOXIES V5.9.50 — Experiencia: graph model + layout (canvas-ready) */
+/* BOXIES V5.9.52 — Experiencia: editor de flujo del showroom
+ * Legacy V5.9.50/51 (mapa desde Estructura) conservado como recuperable. */
 var ExperienciaEngine = (function () {
   var NODE_W = 200;
   var NODE_H = 92;
+  var HERO_W = 260;
+  var HERO_H = 168;
   var GAP_X = 72;
   var GAP_Y = 28;
 
   var KIND_META = {
-    hero: { typeLabel: 'ESCENA', accent: 'hero' },
-    animacion: { typeLabel: 'TRANSICIÓN', accent: 'transicion' },
-    vista: { typeLabel: 'ESCENA', accent: 'hero' },
-    componente: { typeLabel: 'COMPONENTE', accent: 'componente' },
-    lotes: { typeLabel: 'COMPONENTE', accent: 'componente' },
-    amenidad: { typeLabel: 'COMPONENTE', accent: 'componente' },
-    'selector-pisos': { typeLabel: 'NAVEGACIÓN', accent: 'nav' },
-    'planta-3d': { typeLabel: 'PLANTA 3D', accent: 'planta' },
-    viviendas: { typeLabel: 'VIVIENDAS', accent: 'viviendas' },
-    ficha: { typeLabel: 'FICHA', accent: 'ficha' },
-    transicion: { typeLabel: 'TRANSICIÓN', accent: 'transicion' }
+    hero: { typeLabel: 'HERO', accent: 'hero', role: 'scene' },
+    scene: { typeLabel: 'ESCENA', accent: 'hero', role: 'scene' },
+    image: { typeLabel: 'IMAGEN', accent: 'hero', role: 'scene' },
+    video: { typeLabel: 'ANIMACIÓN', accent: 'transicion', role: 'scene' },
+    pano360: { typeLabel: '360°', accent: 'planta', role: 'scene' },
+    plan: { typeLabel: 'PLANTA', accent: 'planta', role: 'scene' },
+    hotspot: { typeLabel: 'HOTSPOT', accent: 'nav', role: 'interaction' },
+    action: { typeLabel: 'ACCIÓN', accent: 'ficha', role: 'action' },
+    group: { typeLabel: 'GRUPO', accent: 'componente', role: 'group' },
+    structure: { typeLabel: 'PROYECTO', accent: 'componente', role: 'group' },
+    /* legacy kinds kept for recovery */
+    animacion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' },
+    vista: { typeLabel: 'ESCENA', accent: 'hero', role: 'scene' },
+    componente: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
+    lotes: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
+    amenidad: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
+    'selector-pisos': { typeLabel: 'NAVEGACIÓN', accent: 'nav', role: 'interaction' },
+    'planta-3d': { typeLabel: 'PLANTA 3D', accent: 'planta', role: 'scene' },
+    viviendas: { typeLabel: 'VIVIENDAS', accent: 'viviendas', role: 'group' },
+    ficha: { typeLabel: 'FICHA', accent: 'ficha', role: 'scene' },
+    transicion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' }
   };
+
+  var CREATE_MENU = [
+    {
+      id: 'visual',
+      label: 'VISUAL',
+      items: [
+        { id: 'image', label: 'Imagen / escena estática', kind: 'image', role: 'scene' },
+        { id: 'video', label: 'Video / animación', kind: 'video', role: 'scene' },
+        { id: 'pano360', label: 'Escena 360°', kind: 'pano360', role: 'scene' },
+        { id: 'plan', label: 'Planta 2D / 3D', kind: 'plan', role: 'scene' }
+      ]
+    },
+    {
+      id: 'interaccion',
+      label: 'INTERACCIÓN',
+      items: [
+        { id: 'hotspot', label: 'Hotspot', kind: 'hotspot', role: 'interaction' },
+        { id: 'buttons', label: 'Botones / opciones', kind: 'scene', role: 'scene', preset: 'buttons' },
+        { id: 'floor-sel', label: 'Selector de pisos', kind: 'selector-pisos', role: 'interaction' },
+        { id: 'unit-sel', label: 'Selector de unidades/tipologías', kind: 'scene', role: 'scene', preset: 'units' }
+      ]
+    },
+    {
+      id: 'interfaz',
+      label: 'INTERFAZ',
+      items: [
+        { id: 'card', label: 'Tarjeta', kind: 'scene', role: 'scene', preset: 'card' },
+        { id: 'modal', label: 'Modal', kind: 'scene', role: 'scene', preset: 'modal' },
+        { id: 'ficha', label: 'Ficha de vivienda', kind: 'ficha', role: 'scene' },
+        { id: 'gallery', label: 'Galería', kind: 'scene', role: 'scene', preset: 'gallery' },
+        { id: 'panel', label: 'Panel / menú', kind: 'scene', role: 'scene', preset: 'panel' }
+      ]
+    },
+    {
+      id: 'navegacion',
+      label: 'NAVEGACIÓN',
+      items: [
+        { id: 'goto-existing', label: 'Ir a nodo existente', kind: '_link_existing', role: 'nav' },
+        { id: 'back', label: 'Volver', kind: 'action', role: 'action', actionType: 'back' },
+        { id: 'goto-hero', label: 'Ir al Hero', kind: 'action', role: 'action', actionType: 'goto-hero' }
+      ]
+    },
+    {
+      id: 'accion',
+      label: 'ACCIÓN',
+      items: [
+        { id: 'url', label: 'Abrir URL', kind: 'action', role: 'action', actionType: 'url' },
+        { id: 'share', label: 'Compartir', kind: 'action', role: 'action', actionType: 'share' },
+        { id: 'whatsapp', label: 'WhatsApp / contacto', kind: 'action', role: 'action', actionType: 'whatsapp' },
+        { id: 'download', label: 'Descargar documento', kind: 'action', role: 'action', actionType: 'download' },
+        { id: 'fullscreen', label: 'Fullscreen', kind: 'action', role: 'action', actionType: 'fullscreen' },
+        { id: 'close', label: 'Cerrar', kind: 'action', role: 'action', actionType: 'close' }
+      ]
+    },
+    {
+      id: 'proyecto',
+      label: 'PROYECTO',
+      items: [
+        { id: 'link-structure', label: 'Vincular elemento existente de Estructura', kind: '_link_structure', role: 'group' }
+      ]
+    }
+  ];
 
   function uid(prefix) {
     return (prefix || 'n') + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -25,21 +100,25 @@ var ExperienciaEngine = (function () {
 
   function emptyState() {
     return {
-      version: 1,
+      version: 2,
+      mode: 'flow',
       syncedFromApply: false,
       appliedAt: null,
       nodes: [],
       edges: [],
       reviewFlags: [],
       userOverrides: false,
+      legacySnapshot: null,
       canvas: {
         panX: 40,
         panY: 40,
         zoom: 1,
         selectedId: null,
+        selectedEdgeId: null,
         tool: 'select',
         minimapVisible: true,
-        inspectorOpen: true
+        inspectorOpen: false,
+        activeGroupId: null
       }
     };
   }
@@ -55,13 +134,15 @@ var ExperienciaEngine = (function () {
     if (!exp.canvas || typeof exp.canvas !== 'object') {
       exp.canvas = emptyState().canvas;
     }
+    if (exp.canvas.selectedEdgeId == null) exp.canvas.selectedEdgeId = null;
+    if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
     exp.nodes.forEach(normalizeNode);
     exp.edges.forEach(normalizeEdge);
     return exp;
   }
 
   function kindMeta(kind) {
-    return KIND_META[kind] || { typeLabel: 'NODO', accent: 'default' };
+    return KIND_META[kind] || { typeLabel: 'NODO', accent: 'default', role: 'scene' };
   }
 
   function normalizeNode(n) {
@@ -69,12 +150,12 @@ var ExperienciaEngine = (function () {
     var meta = kindMeta(n.kind);
     if (!n.typeLabel) n.typeLabel = meta.typeLabel;
     if (!n.accent) n.accent = meta.accent;
+    if (!n.role) n.role = meta.role || 'scene';
+    if (!Array.isArray(n.ports)) n.ports = [];
     if (n.x == null) n.x = null;
     if (n.y == null) n.y = null;
-    if (n.collapsed == null && n.kind === 'viviendas') n.collapsed = true;
-    if (n.unitCount == null && n.meta && n.meta.capacity != null) {
-      n.unitCount = n.meta.capacity;
-    }
+    if (n.config == null || typeof n.config !== 'object') n.config = {};
+    if (n.parentId === undefined) n.parentId = null;
     return n;
   }
 
@@ -85,13 +166,15 @@ var ExperienciaEngine = (function () {
     if (ed.to == null && ed.targetId != null) ed.to = ed.targetId;
     ed.sourceId = ed.from;
     ed.targetId = ed.to;
+    if (!ed.sourcePort) ed.sourcePort = ed.portId || 'out';
+    if (!ed.portId) ed.portId = ed.sourcePort;
     return ed;
   }
 
   function node(partial) {
-    var base = {
+    var n = Object.assign({
       id: uid('exp'),
-      kind: 'vista',
+      kind: 'scene',
       label: '',
       entityType: null,
       entityKey: null,
@@ -104,9 +187,12 @@ var ExperienciaEngine = (function () {
       collapsed: false,
       unitCount: null,
       contentRef: null,
-      userMoved: false
-    };
-    var n = Object.assign(base, partial || {});
+      userMoved: false,
+      ports: [],
+      config: {},
+      role: 'scene',
+      parentId: null
+    }, partial || {});
     return normalizeNode(n);
   }
 
@@ -117,378 +203,390 @@ var ExperienciaEngine = (function () {
       to: toId,
       sourceId: fromId,
       targetId: toId,
-      label: label || 'transición',
+      label: label || 'flujo',
+      sourcePort: 'out',
+      portId: 'out',
       transitionMedia: null,
       transitionSeconds: 4,
-      manual: false
+      manual: true
     }, extra || {}));
   }
 
-  function infoLine(n) {
-    if (!n) return '';
-    if (n.kind === 'viviendas' || n.kind === 'lotes') {
-      var c = n.unitCount != null ? n.unitCount : (n.meta && n.meta.capacity);
-      if (c != null) {
-        return c + (c === 1
-          ? (n.kind === 'lotes' ? ' lote' : ' vivienda')
-          : (n.kind === 'lotes' ? ' lotes' : ' viviendas'));
-      }
+  /* ── Hero interactions from real Hero config (no invention) ── */
+  function listHeroInteractions(state) {
+    var hero = (state && state.heroContent) || {};
+    var list = [];
+    var left = String(hero.botonIzquierdo || '').trim();
+    var right = String(hero.botonDerecho || '').trim();
+    if (left) {
+      list.push({ id: 'hero-btn-left', label: left, kind: 'button', source: 'hero.botonIzquierdo' });
     }
-    if (n.kind === 'componente' && n.meta && n.meta.capacity) {
-      return n.meta.capacity + ' uds.';
+    if (right) {
+      list.push({ id: 'hero-btn-right', label: right, kind: 'button', source: 'hero.botonDerecho' });
     }
-    if (n.kind === 'animacion' || n.kind === 'transicion') {
-      return (n.transitionSeconds || 4) + '–5 s';
-    }
-    if (n.transitionMedia) return 'Media asignada';
-    if (n.orphaned) return 'Huérfano';
-    return '';
-  }
-
-  function statusLabel(n) {
-    if (!n) return 'Pendiente';
-    if (n.orphaned || n.status === 'review') return 'Revisión';
-    if (n.status === 'ready') return 'Listo';
-    if (n.status === 'error') return 'Error';
-    return 'Pendiente';
-  }
-
-  /** Build a default journey graph from applied structure — no media invented. */
-  function buildFromEstructura(estructura, architecture) {
-    var e = estructura || {};
-    var nodes = [];
-    var edges = [];
-    var reviewFlags = [];
-
-    var hero = node({
-      id: 'exp-hero',
-      kind: 'hero',
-      label: 'Hero',
-      entityType: 'proyecto',
-      entityKey: 'hero',
-      status: 'ready'
-    });
-    var entrada = node({
-      id: 'exp-entrada',
-      kind: 'animacion',
-      label: 'Animación de entrada',
-      status: 'pending',
-      transitionSeconds: 4
-    });
-    var general = node({
-      id: 'exp-vista-general',
-      kind: 'vista',
-      label: 'Vista general',
-      entityType: 'proyecto',
-      entityKey: 'master',
-      status: 'pending'
-    });
-    nodes.push(hero, entrada, general);
-    edges.push(edge(hero.id, entrada.id, 'entrada'));
-    edges.push(edge(entrada.id, general.id, 'apertura'));
-
-    var buckets = (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets)
-      ? EstructuraEngine.listCapacityBuckets(e)
-      : [];
-
-    buckets.forEach(function (b, i) {
-      if (!b || !b.capacity) return;
-      var branchId = 'exp-branch-' + String(b.id || i);
-      var branch = node({
-        id: branchId,
-        kind: b.kind === 'lotes' ? 'lotes' : 'componente',
-        label: b.label || ('Nodo ' + (i + 1)),
-        entityType: 'bucket',
-        entityKey: String(b.id),
-        status: 'pending',
-        unitCount: b.capacity,
-        meta: {
-          capacity: b.capacity,
-          kind: b.kind,
-          stageId: b.stageId || null,
-          componentId: b.componentId || null
-        }
-      });
-      nodes.push(branch);
-      edges.push(edge(general.id, branch.id, 'explorar'));
-
-      if (b.kind === 'edificio' || b.kind === 'conjunto-edificio') {
-        var selId = branchId + '-pisos';
-        var plantaId = branchId + '-planta';
-        var vivId = branchId + '-viviendas';
-        var fichaId = branchId + '-ficha';
-        nodes.push(
-          node({
-            id: selId,
-            kind: 'selector-pisos',
-            label: 'Selector de pisos',
-            entityType: 'bucket',
-            entityKey: String(b.id),
-            status: 'pending'
-          }),
-          node({
-            id: plantaId,
-            kind: 'planta-3d',
-            label: 'Planta 3D',
-            entityType: 'bucket',
-            entityKey: String(b.id),
-            status: 'pending'
-          }),
-          node({
-            id: vivId,
-            kind: 'viviendas',
-            label: 'Viviendas',
-            entityType: 'bucket',
-            entityKey: String(b.id),
-            status: 'pending',
-            unitCount: b.capacity,
-            collapsed: true,
-            meta: { capacity: b.capacity, kind: b.kind }
-          }),
-          node({
-            id: fichaId,
-            kind: 'ficha',
-            label: 'Ficha',
-            entityType: 'bucket',
-            entityKey: String(b.id),
-            status: 'pending'
-          })
-        );
-        edges.push(edge(branch.id, selId, 'transición'));
-        edges.push(edge(selId, plantaId, 'planta'));
-        edges.push(edge(plantaId, vivId, 'unidades'));
-        edges.push(edge(vivId, fichaId, 'ficha'));
-      } else {
-        var leafId = branchId + '-unidades';
-        var fichaLeaf = branchId + '-ficha';
-        nodes.push(node({
-          id: leafId,
-          kind: 'viviendas',
-          label: b.kind === 'lotes' ? 'Lotes' : 'Unidades',
-          entityType: 'bucket',
-          entityKey: String(b.id),
-          status: 'pending',
-          unitCount: b.capacity,
-          collapsed: true,
-          meta: { capacity: b.capacity, kind: b.kind }
-        }));
-        nodes.push(node({
-          id: fichaLeaf,
-          kind: 'ficha',
-          label: 'Ficha',
-          entityType: 'bucket',
-          entityKey: String(b.id),
-          status: 'pending'
-        }));
-        edges.push(edge(branch.id, leafId, 'unidades'));
-        edges.push(edge(leafId, fichaLeaf, 'ficha'));
-      }
-    });
-
-    (e.zoneNames || []).forEach(function (name, zi) {
-      var zid = 'exp-amenidad-' + zi;
-      nodes.push(node({
-        id: zid,
-        kind: 'amenidad',
-        label: name,
-        entityType: 'amenidad',
-        entityKey: name,
-        status: 'pending'
-      }));
-      edges.push(edge(general.id, zid, 'amenidad'));
-    });
-
-    var unitCount = architecture && architecture.units
-      ? architecture.units.filter(function (u) { return u.status !== 'orphaned'; }).length
-      : 0;
-    if (!buckets.length && !e.appliedAt) {
-      reviewFlags.push({
-        severity: 'recomendado',
-        message: 'Aplica la estructura para generar el recorrido base.'
-      });
-    } else if (unitCount === 0 && buckets.length) {
-      reviewFlags.push({
-        severity: 'recomendado',
-        message: 'Hay componentes espaciales sin unidades sincronizadas aún.'
+    /* Asistente: present when AI/chat content exists or always as platform chrome?
+       User said only real interactions. Chatbot exists as dock/platform — include if aiContent or menu has assistant.
+       Conservative: include if aiContent.heroText or menu has asistente item, else skip.
+       Also Hero UI often has assistant — check menuConfig */
+    var hasAssistant = !!(state.aiContent && (state.aiContent.heroText || state.aiContent.descripcionComercial));
+    if (!hasAssistant && state.menuConfig && Array.isArray(state.menuConfig.items)) {
+      hasAssistant = state.menuConfig.items.some(function (it) {
+        var n = String((it && (it.nombre || it.label || it.id)) || '').toLowerCase();
+        return n.indexOf('asist') >= 0 || n.indexOf('chat') >= 0;
       });
     }
-
-    return { nodes: nodes, edges: edges, reviewFlags: reviewFlags };
-  }
-
-  function edgeKey(ed) {
-    return String(ed.from || ed.sourceId) + '→' + String(ed.to || ed.targetId);
-  }
-
-  /**
-   * Layered L→R layout. If onlyMissing, skip nodes that already have x/y
-   * (manual positions preserved across sync).
-   */
-  function autoLayout(nodes, edges, options) {
-    options = options || {};
-    var onlyMissing = options.onlyMissing !== false;
-    var list = nodes || [];
-    var eds = edges || [];
-    var byId = {};
-    list.forEach(function (n) { byId[n.id] = n; });
-
-    var incoming = {};
-    var outgoing = {};
-    list.forEach(function (n) {
-      incoming[n.id] = [];
-      outgoing[n.id] = [];
-    });
-    eds.forEach(function (ed) {
-      var a = ed.from || ed.sourceId;
-      var b = ed.to || ed.targetId;
-      if (!byId[a] || !byId[b]) return;
-      outgoing[a].push(b);
-      incoming[b].push(a);
-    });
-
-    var roots = list.filter(function (n) {
-      return !n.orphaned && (incoming[n.id] || []).length === 0;
-    });
-    if (!roots.length) {
-      roots = list.filter(function (n) { return n.kind === 'hero' || n.id === 'exp-hero'; });
+    if (hasAssistant) {
+      list.push({ id: 'hero-assistant', label: 'Asistente', kind: 'assistant', source: 'assistant' });
     }
-    if (!roots.length && list.length) roots = [list[0]];
-
-    var layerOf = {};
-    var queue = [];
-    roots.forEach(function (r) {
-      layerOf[r.id] = 0;
-      queue.push(r.id);
-    });
-    while (queue.length) {
-      var id = queue.shift();
-      var L = layerOf[id] || 0;
-      (outgoing[id] || []).forEach(function (cid) {
-        var nextL = L + 1;
-        if (layerOf[cid] == null || layerOf[cid] < nextL) {
-          layerOf[cid] = nextL;
-          queue.push(cid);
-        }
-      });
+    if (hero.showShare !== false) {
+      list.push({ id: 'hero-share', label: 'Compartir', kind: 'action', actionType: 'share', source: 'hero.showShare' });
     }
-
-    list.forEach(function (n) {
-      if (layerOf[n.id] == null) layerOf[n.id] = 0;
-    });
-
-    var layers = {};
-    list.forEach(function (n) {
-      if (n.orphaned) return;
-      var L = layerOf[n.id] || 0;
-      if (!layers[L]) layers[L] = [];
-      layers[L].push(n);
-    });
-
-    Object.keys(layers).forEach(function (Lk) {
-      layers[Lk].sort(function (a, b) {
-        return String(a.label || a.id).localeCompare(String(b.label || b.id));
-      });
-      layers[Lk].forEach(function (n, idx) {
-        if (onlyMissing && n.x != null && n.y != null) return;
-        if (n.userMoved && onlyMissing) return;
-        n.x = 48 + (Number(Lk) * (NODE_W + GAP_X));
-        n.y = 48 + (idx * (NODE_H + GAP_Y));
-      });
-    });
-
-    /* Orphans — park below */
-    var orphanRow = 0;
-    list.filter(function (n) { return n.orphaned; }).forEach(function (n) {
-      if (onlyMissing && n.x != null && n.y != null) return;
-      if (n.userMoved && onlyMissing) return;
-      n.x = 48;
-      n.y = 520 + orphanRow * (NODE_H + GAP_Y);
-      orphanRow++;
-    });
-
+    /* Fullscreen is always available in BOXIES chrome */
+    list.push({ id: 'hero-fullscreen', label: 'Fullscreen', kind: 'action', actionType: 'fullscreen', source: 'chrome.fullscreen' });
+    if (hero.showWhatsapp !== false && (hero.whatsappLink || '').trim()) {
+      list.push({ id: 'hero-whatsapp', label: 'WhatsApp', kind: 'action', actionType: 'whatsapp', source: 'hero.whatsapp' });
+    }
     return list;
   }
 
-  /**
-   * Idempotent sync: preserve positions, media, manual edges; layout only new nodes.
-   */
-  function syncFromEstructura(state, options) {
+  function heroPortsFromInteractions(interactions) {
+    return (interactions || []).map(function (it) {
+      return {
+        id: it.id,
+        label: it.label,
+        side: 'out',
+        kind: it.kind === 'action' ? 'action' : 'flow',
+        actionType: it.actionType || null
+      };
+    });
+  }
+
+  function buildHeroNode(state, prev) {
+    var interactions = listHeroInteractions(state);
+    var ports = heroPortsFromInteractions(interactions);
+    var base = {
+      id: 'exp-hero',
+      kind: 'hero',
+      label: 'Hero',
+      typeLabel: 'HERO',
+      accent: 'hero',
+      role: 'scene',
+      entityType: 'proyecto',
+      entityKey: 'hero',
+      status: 'ready',
+      x: prev && prev.x != null ? prev.x : 48,
+      y: prev && prev.y != null ? prev.y : 80,
+      userMoved: !!(prev && prev.userMoved),
+      ports: ports,
+      config: {
+        subtitle: 'Pantalla inicial',
+        interactions: interactions
+      },
+      width: HERO_W,
+      height: Math.max(HERO_H, 72 + ports.length * 22)
+    };
+    if (prev) {
+      base.contentRef = prev.contentRef || null;
+      base.transitionMedia = prev.transitionMedia || null;
+    }
+    return normalizeNode(base);
+  }
+
+  function looksLikeLegacyStructureMap(exp) {
+    if (!exp || !exp.nodes || !exp.nodes.length) return false;
+    if (exp.mode === 'flow' && exp.version >= 2) return false;
+    return exp.nodes.some(function (n) {
+      return String(n.id || '').indexOf('exp-branch-') === 0 ||
+        n.kind === 'componente' || n.kind === 'selector-pisos';
+    });
+  }
+
+  function snapshotLegacy(exp) {
+    try {
+      return JSON.parse(JSON.stringify({
+        at: new Date().toISOString(),
+        version: exp.version || 1,
+        mode: exp.mode || 'legacy-map',
+        nodes: exp.nodes || [],
+        edges: exp.edges || [],
+        reviewFlags: exp.reviewFlags || [],
+        canvas: exp.canvas || null
+      }));
+    } catch (e) {
+      return { at: new Date().toISOString(), nodes: [], edges: [] };
+    }
+  }
+
+  /** Ensure flow editor state: Hero seed; migrate legacy map recoverably. */
+  function ensureFlow(state, options) {
     options = options || {};
     var exp = ensureState(state);
-    var e = (typeof EstructuraEngine !== 'undefined')
-      ? EstructuraEngine.ensureState(state)
-      : (state.estructura || {});
-    var arch = state.architecture || null;
-    var built = buildFromEstructura(e, arch);
+    var prevHero = exp.nodes.find(function (n) { return n.id === 'exp-hero' || n.kind === 'hero'; });
 
-    var prevById = {};
-    (exp.nodes || []).forEach(function (n) { prevById[n.id] = n; });
+    if (looksLikeLegacyStructureMap(exp) && !exp.legacySnapshot) {
+      exp.legacySnapshot = snapshotLegacy(exp);
+      exp.reviewFlags = (exp.reviewFlags || []).concat([{
+        severity: 'recomendado',
+        message: 'Mapa V5.9.51 conservado como legacy. Experiencia ahora es editor de flujo (Hero → interacciones).'
+      }]);
+      exp.nodes = [];
+      exp.edges = [];
+    }
 
-    var nextNodes = built.nodes.map(function (n) {
-      var prev = prevById[n.id];
-      if (!prev) return normalizeNode(n);
-      return normalizeNode(Object.assign({}, n, {
-        x: prev.x,
-        y: prev.y,
-        userMoved: !!prev.userMoved,
-        transitionMedia: prev.transitionMedia || null,
-        transitionSeconds: prev.transitionSeconds != null ? prev.transitionSeconds : n.transitionSeconds,
-        contentRef: prev.contentRef || null,
-        collapsed: prev.collapsed != null ? prev.collapsed : n.collapsed,
-        status: prev.transitionMedia || prev.contentRef ? 'ready' : n.status,
-        userEdited: !!prev.userEdited || !!prev.userMoved
-      }));
+    exp.mode = 'flow';
+    exp.version = Math.max(2, exp.version || 2);
+
+    var hero = buildHeroNode(state, prevHero);
+    var others = exp.nodes.filter(function (n) {
+      return n.id !== 'exp-hero' && n.kind !== 'hero';
+    });
+    exp.nodes = [hero].concat(others);
+
+    /* Drop edges from removed hero ports */
+    var portIds = {};
+    (hero.ports || []).forEach(function (p) { portIds[p.id] = true; });
+    exp.edges = (exp.edges || []).filter(function (ed) {
+      if ((ed.from || ed.sourceId) !== hero.id) return true;
+      var pid = ed.sourcePort || ed.portId || 'out';
+      if (pid === 'out') return true;
+      return !!portIds[pid];
     });
 
-    var nextIds = {};
-    nextNodes.forEach(function (n) { nextIds[n.id] = true; });
-
-    var orphans = (exp.nodes || []).filter(function (n) {
-      return !nextIds[n.id] && (n.transitionMedia || n.contentRef || n.userEdited || n.userMoved);
-    });
-    orphans.forEach(function (n) {
-      nextNodes.push(normalizeNode(Object.assign({}, n, {
-        status: 'review',
-        orphaned: true
-      })));
-      built.reviewFlags.push({
-        severity: 'obligatorio',
-        message: 'Nodo «' + (n.label || n.id) + '» ya no está en la estructura; conservado para revisión.'
-      });
-    });
-
-    var nextEdges = built.edges.map(function (ed) {
-      var prev = (exp.edges || []).find(function (x) {
-        return edgeKey(x) === edgeKey(ed);
-      });
-      if (!prev) return normalizeEdge(ed);
-      return normalizeEdge(Object.assign({}, ed, {
-        id: prev.id || ed.id,
-        transitionMedia: prev.transitionMedia || null,
-        transitionSeconds: prev.transitionSeconds || ed.transitionSeconds
-      }));
-    });
-
-    var builtKeys = {};
-    nextEdges.forEach(function (ed) { builtKeys[edgeKey(ed)] = true; });
-    (exp.edges || []).forEach(function (ed) {
-      if (!ed.manual) return;
-      var a = ed.from || ed.sourceId;
-      var b = ed.to || ed.targetId;
-      if (!nextIds[a] || !nextIds[b]) return;
-      if (builtKeys[edgeKey(ed)]) return;
-      nextEdges.push(normalizeEdge(Object.assign({}, ed, { manual: true })));
-    });
-
-    autoLayout(nextNodes, nextEdges, { onlyMissing: true });
-
-    exp.nodes = nextNodes;
-    exp.edges = nextEdges;
-    exp.reviewFlags = built.reviewFlags;
     exp.syncedFromApply = true;
-    exp.appliedAt = options.appliedAt || new Date().toISOString();
-    exp.version = (exp.version || 0) + 1;
+    if (options.appliedAt) exp.appliedAt = options.appliedAt;
     return exp;
+  }
+
+  /* Keep name used by ArchitectureEngine — now soft: refresh Hero flow, do NOT rebuild structure map */
+  function syncFromEstructura(state, options) {
+    return ensureFlow(state, options || {});
+  }
+
+  function restoreLegacySnapshot(state) {
+    var exp = ensureState(state);
+    if (!exp.legacySnapshot) return null;
+    var snap = exp.legacySnapshot;
+    exp.nodes = (snap.nodes || []).map(function (n) { return normalizeNode(Object.assign({}, n)); });
+    exp.edges = (snap.edges || []).map(function (e) { return normalizeEdge(Object.assign({}, e)); });
+    exp.mode = 'legacy-map';
+    exp.reviewFlags = (exp.reviewFlags || []).concat([{
+      severity: 'recomendado',
+      message: 'Snapshot legacy restaurado temporalmente.'
+    }]);
+    return exp;
+  }
+
+  /* ── Structure library (not auto-nodes) ── */
+  function listStructureLibrary(state) {
+    var e = (state && state.estructura) || {};
+    var items = [];
+    items.push({
+      id: 'proj-root',
+      label: (state.projectInfo && state.projectInfo.nombre) || 'Proyecto',
+      kind: 'proyecto',
+      capacity: null,
+      children: []
+    });
+    var root = items[0];
+
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets) {
+      var buckets = EstructuraEngine.listCapacityBuckets(e) || [];
+      var byStage = {};
+      buckets.forEach(function (b) {
+        var stageKey = b.stageId || '_root';
+        if (!byStage[stageKey]) byStage[stageKey] = [];
+        byStage[stageKey].push(b);
+      });
+      Object.keys(byStage).forEach(function (sk) {
+        var group = {
+          id: 'stage-' + sk,
+          label: sk === '_root' ? 'Componentes' : ('Etapa · ' + sk),
+          kind: 'etapa',
+          children: byStage[sk].map(function (b) {
+            return {
+              id: String(b.id),
+              label: b.label || 'Componente',
+              kind: b.kind || 'componente',
+              capacity: b.capacity || 0,
+              stageId: b.stageId || null,
+              children: []
+            };
+          })
+        };
+        root.children.push(group);
+      });
+    }
+
+    (e.zoneNames || []).forEach(function (name, i) {
+      root.children.push({
+        id: 'amenidad-' + i,
+        label: name,
+        kind: 'amenidad',
+        capacity: null,
+        children: []
+      });
+    });
+
+    return items;
+  }
+
+  function createNodeFromMenu(state, menuItem, at, fromEdge) {
+    var exp = ensureFlow(state);
+    fromEdge = fromEdge || null;
+    at = at || { x: 320, y: 120 };
+
+    if (menuItem.kind === '_link_existing' || menuItem.kind === '_link_structure') {
+      return { needsPicker: menuItem.kind, at: at, fromEdge: fromEdge };
+    }
+
+    var role = menuItem.role || kindMeta(menuItem.kind).role;
+    var isAction = role === 'action';
+    var label = menuItem.label || 'Nodo';
+    if (menuItem.kind === 'video') label = 'Animación';
+    if (menuItem.kind === 'image') label = 'Vista general';
+
+    var n = node({
+      id: uid('flow'),
+      kind: menuItem.kind,
+      label: label,
+      role: role,
+      status: isAction ? 'ready' : 'pending',
+      x: Math.round(at.x),
+      y: Math.round(at.y),
+      userMoved: true,
+      ports: isAction ? [] : defaultPortsForKind(menuItem.kind),
+      config: {
+        actionType: menuItem.actionType || null,
+        preset: menuItem.preset || null,
+        autoplay: menuItem.kind === 'video',
+        onEnd: menuItem.kind === 'video' ? 'next' : null,
+        fileName: null,
+        contentRef: null,
+        hotspots: []
+      }
+    });
+
+    if (menuItem.kind === 'video') {
+      n.ports = [
+        { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
+        { id: 'on-end', label: 'Al finalizar', side: 'out', kind: 'flow' }
+      ];
+    }
+
+    exp.nodes.push(n);
+
+    if (fromEdge && fromEdge.fromId) {
+      /* Action ports on Hero may be inline actions — still allow scene edges */
+      var ed = edge(fromEdge.fromId, n.id, fromEdge.portLabel || menuItem.label || 'flujo', {
+        sourcePort: fromEdge.portId || 'out',
+        portId: fromEdge.portId || 'out',
+        manual: true,
+        inlineAction: isAction && fromEdge.fromId === 'exp-hero'
+      });
+      exp.edges.push(ed);
+      /* Inline actions: keep node but mark as action-only (no forced navigation) */
+      if (isAction) {
+        n.role = 'action';
+        n.config.inline = true;
+      }
+    }
+
+    return { node: n };
+  }
+
+  function defaultPortsForKind(kind) {
+    if (kind === 'action') return [];
+    if (kind === 'hotspot') {
+      return [
+        { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
+        { id: 'out', label: 'Destino', side: 'out', kind: 'flow' }
+      ];
+    }
+    if (kind === 'video' || kind === 'animacion') {
+      return [
+        { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
+        { id: 'on-end', label: 'Al finalizar', side: 'out', kind: 'flow' }
+      ];
+    }
+    return [
+      { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
+      { id: 'out', label: 'Salida', side: 'out', kind: 'flow' }
+    ];
+  }
+
+  function createStructureLinkedNode(state, item, at, fromEdge) {
+    var exp = ensureFlow(state);
+    at = at || { x: 360, y: 140 };
+    var cap = item.capacity != null ? item.capacity : null;
+    var n = node({
+      id: uid('struct'),
+      kind: 'structure',
+      label: item.label || 'Elemento',
+      role: 'group',
+      status: 'pending',
+      x: Math.round(at.x),
+      y: Math.round(at.y),
+      userMoved: true,
+      unitCount: cap,
+      entityType: item.kind || 'componente',
+      entityKey: String(item.id),
+      ports: [
+        { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
+        { id: 'enter', label: 'Entrar', side: 'out', kind: 'flow' }
+      ],
+      config: {
+        structureId: item.id,
+        capacity: cap,
+        stageId: item.stageId || null,
+        group: true
+      },
+      collapsed: true
+    });
+    exp.nodes.push(n);
+    if (fromEdge && fromEdge.fromId) {
+      exp.edges.push(edge(fromEdge.fromId, n.id, fromEdge.portLabel || item.label, {
+        sourcePort: fromEdge.portId || 'out',
+        portId: fromEdge.portId || 'out',
+        manual: true
+      }));
+    }
+    return n;
+  }
+
+  function addManualEdge(state, fromId, toId, label, portId) {
+    var exp = ensureFlow(state);
+    if (fromId === toId) return null;
+    var pid = portId || 'out';
+    var exists = exp.edges.some(function (ed) {
+      return (ed.from || ed.sourceId) === fromId &&
+        (ed.to || ed.targetId) === toId &&
+        (ed.sourcePort || ed.portId || 'out') === pid;
+    });
+    if (exists) return null;
+    var ed = edge(fromId, toId, label || 'flujo', {
+      sourcePort: pid,
+      portId: pid,
+      manual: true
+    });
+    exp.edges.push(ed);
+    return ed;
+  }
+
+  function removeEdge(state, edgeId) {
+    var exp = ensureState(state);
+    var before = exp.edges.length;
+    exp.edges = exp.edges.filter(function (ed) { return ed.id !== edgeId; });
+    if (exp.canvas && exp.canvas.selectedEdgeId === edgeId) exp.canvas.selectedEdgeId = null;
+    return before !== exp.edges.length;
+  }
+
+  function reconnectEdge(state, edgeId, newToId) {
+    var exp = ensureState(state);
+    var ed = exp.edges.find(function (e) { return e.id === edgeId; });
+    if (!ed || !newToId || newToId === (ed.from || ed.sourceId)) return null;
+    ed.to = newToId;
+    ed.targetId = newToId;
+    return ed;
   }
 
   function setNodePosition(state, nodeId, x, y, markMoved) {
@@ -504,21 +602,14 @@ var ExperienciaEngine = (function () {
     return n;
   }
 
-  function addManualEdge(state, fromId, toId, label) {
-    var exp = ensureState(state);
-    if (fromId === toId) return null;
-    var exists = exp.edges.some(function (ed) {
-      return (ed.from || ed.sourceId) === fromId && (ed.to || ed.targetId) === toId;
-    });
-    if (exists) return null;
-    var ed = edge(fromId, toId, label || 'manual', { manual: true });
-    exp.edges.push(ed);
-    return ed;
-  }
-
   function getNode(state, id) {
     var exp = ensureState(state);
     return exp.nodes.find(function (n) { return n.id === id; }) || null;
+  }
+
+  function getEdge(state, id) {
+    var exp = ensureState(state);
+    return exp.edges.find(function (e) { return e.id === id; }) || null;
   }
 
   function connectionsFor(state, nodeId) {
@@ -533,6 +624,25 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  function nodeSize(n) {
+    if (!n) return { w: NODE_W, h: NODE_H };
+    if (n.kind === 'hero') {
+      return {
+        w: n.width || HERO_W,
+        h: n.height || Math.max(HERO_H, 72 + ((n.ports || []).length * 22))
+      };
+    }
+    var outs = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
+    var extra = outs.length > 1 ? Math.max(0, (outs.length - 1) * 20) : 0;
+    if (n.config && n.config.hotspots && n.config.hotspots.length) {
+      extra = Math.max(extra, n.config.hotspots.length * 20);
+    }
+    return {
+      w: n.width || NODE_W,
+      h: (n.height || NODE_H) + extra
+    };
+  }
+
   function bounds(nodes) {
     var list = (nodes || []).filter(function (n) { return n.x != null && n.y != null; });
     if (!list.length) return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
@@ -541,33 +651,125 @@ var ExperienciaEngine = (function () {
     var maxX = -Infinity;
     var maxY = -Infinity;
     list.forEach(function (n) {
+      var s = nodeSize(n);
       minX = Math.min(minX, n.x);
       minY = Math.min(minY, n.y);
-      maxX = Math.max(maxX, n.x + NODE_W);
-      maxY = Math.max(maxY, n.y + NODE_H);
+      maxX = Math.max(maxX, n.x + s.w);
+      maxY = Math.max(maxY, n.y + s.h);
     });
     return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
   }
 
+  function infoLine(n) {
+    if (!n) return '';
+    if (n.kind === 'hero') return (n.config && n.config.subtitle) || 'Pantalla inicial';
+    if (n.kind === 'video') {
+      return (n.config && n.config.fileName) || 'Sin archivo · Al finalizar';
+    }
+    if (n.kind === 'image' || n.kind === 'plan' || n.kind === 'pano360') {
+      return (n.config && n.config.fileName) || 'Sin archivo';
+    }
+    if (n.kind === 'action') {
+      return (n.config && n.config.actionType) || 'Acción';
+    }
+    if (n.kind === 'structure' || n.kind === 'group') {
+      var c = n.unitCount != null ? n.unitCount : (n.config && n.config.capacity);
+      if (c != null) return c + (c === 1 ? ' vivienda' : ' viviendas');
+    }
+    if (n.kind === 'hotspot') return (n.config && n.config.targetLabel) || 'Sin destino';
+    return '';
+  }
+
+  function statusLabel(n) {
+    if (!n) return 'Pendiente';
+    if (n.orphaned || n.status === 'review') return 'Revisión';
+    if (n.status === 'ready') return 'Listo';
+    if (n.status === 'error') return 'Error';
+    if (n.kind === 'action') return 'Acción';
+    return 'Pendiente';
+  }
+
   function summary(state) {
     var exp = ensureState(state);
-    if (!exp.syncedFromApply && !(exp.nodes || []).length) return 'Pendiente';
+    ensureFlow(state);
     var active = (exp.nodes || []).filter(function (n) { return !n.orphaned; }).length;
-    var review = (exp.nodes || []).filter(function (n) { return n.status === 'review' || n.orphaned; }).length;
-    if (review) return active + ' nodos · ' + review + ' revisión';
-    return active ? (active + ' nodos') : 'Pendiente';
+    if (exp.legacySnapshot) return active + ' nodos · legacy OK';
+    return active ? (active + ' nodos') : 'Hero';
   }
 
   function incompleteNodes(state) {
-    var exp = ensureState(state);
+    var exp = ensureFlow(state);
     return (exp.nodes || []).filter(function (n) {
-      return !n.orphaned && n.kind !== 'hero' && n.status === 'pending';
+      return !n.orphaned && n.kind !== 'hero' && n.role !== 'action' && n.status === 'pending';
     });
   }
 
+  function visibleNodes(state) {
+    var exp = ensureFlow(state);
+    var gid = exp.canvas && exp.canvas.activeGroupId;
+    return (exp.nodes || []).filter(function (n) {
+      if (n.orphaned) return true;
+      if (!gid) return !n.parentId;
+      return n.parentId === gid || n.id === gid;
+    });
+  }
+
+  function enterGroup(state, groupId) {
+    var exp = ensureFlow(state);
+    exp.canvas.activeGroupId = groupId || null;
+    return exp;
+  }
+
+  function exitGroup(state) {
+    var exp = ensureFlow(state);
+    exp.canvas.activeGroupId = null;
+    return exp;
+  }
+
+  /* ── Legacy map API (recoverable) ── */
+  function legacyBuildFromEstructura(estructura, architecture) {
+    /* Minimal stub preserving callable API — full legacy lives in snapshot when migrated */
+    void architecture;
+    var e = estructura || {};
+    var hero = node({
+      id: 'exp-hero',
+      kind: 'hero',
+      label: 'Hero',
+      status: 'ready'
+    });
+    return {
+      nodes: [hero],
+      edges: [],
+      reviewFlags: [{
+        severity: 'recomendado',
+        message: 'Legacy buildFromEstructura desactivado en V5.9.52. Usa legacySnapshot / restoreLegacySnapshot.'
+      }],
+      developmentType: e.developmentType || null
+    };
+  }
+
+  function autoLayout(nodes, edges, options) {
+    options = options || {};
+    var onlyMissing = options.onlyMissing !== false;
+    var list = nodes || [];
+    list.forEach(function (n, i) {
+      if (onlyMissing && n.x != null && n.y != null) return;
+      if (n.userMoved && onlyMissing) return;
+      if (n.kind === 'hero') {
+        n.x = 48;
+        n.y = 80;
+        return;
+      }
+      n.x = 360 + (i % 3) * (NODE_W + GAP_X);
+      n.y = 60 + Math.floor(i / 3) * (NODE_H + GAP_Y);
+    });
+    return list;
+  }
+
   function forceRelayout(state) {
-    var exp = ensureState(state);
+    var exp = ensureFlow(state);
     exp.nodes.forEach(function (n) {
+      if (n.kind === 'hero') return;
       n.userMoved = false;
       n.x = null;
       n.y = null;
@@ -576,27 +778,69 @@ var ExperienciaEngine = (function () {
     return exp;
   }
 
+  function addHotspotToScene(state, sceneId, label) {
+    var exp = ensureFlow(state);
+    var scene = getNode(state, sceneId);
+    if (!scene) return null;
+    if (!scene.config) scene.config = {};
+    if (!Array.isArray(scene.config.hotspots)) scene.config.hotspots = [];
+    var hs = {
+      id: uid('hs'),
+      label: label || ('Hotspot ' + (scene.config.hotspots.length + 1))
+    };
+    scene.config.hotspots.push(hs);
+    var portId = 'hs-' + hs.id;
+    scene.ports = (scene.ports || []).filter(function (p) { return p.id !== portId; });
+    scene.ports.push({
+      id: portId,
+      label: hs.label,
+      side: 'out',
+      kind: 'hotspot',
+      hotspotId: hs.id
+    });
+    scene.status = 'pending';
+    return hs;
+  }
+
   return {
     NODE_W: NODE_W,
     NODE_H: NODE_H,
+    HERO_W: HERO_W,
+    HERO_H: HERO_H,
     KIND_META: KIND_META,
+    CREATE_MENU: CREATE_MENU,
     emptyState: emptyState,
     ensureState: ensureState,
-    buildFromEstructura: buildFromEstructura,
+    ensureFlow: ensureFlow,
     syncFromEstructura: syncFromEstructura,
-    autoLayout: autoLayout,
-    forceRelayout: forceRelayout,
-    setNodePosition: setNodePosition,
+    buildFromEstructura: legacyBuildFromEstructura,
+    legacyBuildFromEstructura: legacyBuildFromEstructura,
+    restoreLegacySnapshot: restoreLegacySnapshot,
+    listHeroInteractions: listHeroInteractions,
+    listStructureLibrary: listStructureLibrary,
+    createNodeFromMenu: createNodeFromMenu,
+    createStructureLinkedNode: createStructureLinkedNode,
     addManualEdge: addManualEdge,
+    removeEdge: removeEdge,
+    reconnectEdge: reconnectEdge,
+    setNodePosition: setNodePosition,
     getNode: getNode,
+    getEdge: getEdge,
     connectionsFor: connectionsFor,
     bounds: bounds,
+    nodeSize: nodeSize,
     infoLine: infoLine,
     statusLabel: statusLabel,
     kindMeta: kindMeta,
     summary: summary,
     incompleteNodes: incompleteNodes,
     normalizeNode: normalizeNode,
-    normalizeEdge: normalizeEdge
+    normalizeEdge: normalizeEdge,
+    autoLayout: autoLayout,
+    forceRelayout: forceRelayout,
+    visibleNodes: visibleNodes,
+    enterGroup: enterGroup,
+    exitGroup: exitGroup,
+    addHotspotToScene: addHotspotToScene
   };
 })();

@@ -1,7 +1,5 @@
-/* BOXIES V5.9.50 — Experiencia infinite canvas / node editor (no external deps) */
+/* BOXIES V5.9.52 — Experiencia flow editor canvas (reuses pan/zoom/minimap) */
 var ExperienciaCanvas = (function () {
-  var W = 200;
-  var H = 92;
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
 
@@ -13,32 +11,40 @@ var ExperienciaCanvas = (function () {
   }
 
   function shellHtml(state) {
-    ExperienciaEngine.ensureState(state);
+    ExperienciaEngine.ensureFlow(state);
     var exp = state.experiencia;
-    var applied = !!(state.estructura && state.estructura.appliedAt) ||
-      !!(state.architecture && state.architecture.appliedAt);
     var active = (exp.nodes || []).filter(function (n) { return !n.orphaned; }).length;
     var canvas = exp.canvas || {};
-    /* Closed by default — opens on node select (V5.9.51) */
     var inspectorOpen = canvas.inspectorOpen === true;
     var minimapOn = canvas.minimapVisible !== false;
+    var inGroup = !!(canvas.activeGroupId);
 
     return '' +
       '<div class="builder-step-content builder-step-content--experiencia">' +
         '<div class="builder-exp-chrome">' +
           '<div class="builder-exp-chrome__left">' +
             '<h2 class="builder-step-title">Experiencia</h2>' +
-            '<p class="builder-exp-chrome__sub">Mapa del recorrido del showroom · ' +
-              (applied ? (active + ' nodos') : 'pendiente estructura') + '</p>' +
+            '<p class="builder-exp-chrome__sub">Editor del flujo del showroom · ' +
+              active + ' nodos' +
+              (exp.legacySnapshot ? ' · legacy conservado' : '') +
+              (inGroup ? ' · dentro de grupo' : '') +
+            '</p>' +
           '</div>' +
           '<div class="builder-exp-chrome__actions">' +
+            (inGroup
+              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
+              : '') +
+            (exp.legacySnapshot
+              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpRestoreLegacyBtn">' +
+                'Restaurar mapa legacy</button>'
+              : '') +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
-              'Sincronizar desde estructura</button>' +
+              'Actualizar desde Hero</button>' +
           '</div>' +
         '</div>' +
         ((exp.reviewFlags || []).length
           ? '<ul class="builder-exp-flags builder-exp-flags--compact">' +
-            exp.reviewFlags.slice(0, 3).map(function (f) {
+            exp.reviewFlags.slice(0, 2).map(function (f) {
               return '<li class="builder-exp-flag is-' + esc(f.severity || 'recomendado') + '">' +
                 esc(f.message || '') + '</li>';
             }).join('') +
@@ -68,6 +74,8 @@ var ExperienciaCanvas = (function () {
               '<canvas data-exp-minimap-canvas width="160" height="100"></canvas>' +
               '<button type="button" class="builder-exp-minimap__hide" data-exp-minimap-hide aria-label="Ocultar minimapa">×</button>' +
             '</div>' +
+            '<div class="builder-exp-ctx" data-exp-ctx hidden></div>' +
+            '<div class="builder-exp-picker" data-exp-picker hidden></div>' +
           '</div>' +
           '<aside class="builder-exp-inspector' + (inspectorOpen ? '' : ' is-closed') + '" data-exp-inspector>' +
             '<div class="builder-exp-inspector__head">' +
@@ -75,7 +83,7 @@ var ExperienciaCanvas = (function () {
               '<button type="button" class="builder-exp-inspector__close" data-exp-inspector-close aria-label="Cerrar">×</button>' +
             '</div>' +
             '<div class="builder-exp-inspector__body" data-exp-inspector-body>' +
-              '<p class="builder-menu-hint">Selecciona un nodo del mapa.</p>' +
+              '<p class="builder-menu-hint">Selecciona un nodo o una conexión.</p>' +
             '</div>' +
           '</aside>' +
         '</div>' +
@@ -94,20 +102,85 @@ var ExperienciaCanvas = (function () {
   function nodeCardHtml(n) {
     var status = ExperienciaEngine.statusLabel(n);
     var info = ExperienciaEngine.infoLine(n);
+    var size = ExperienciaEngine.nodeSize(n);
     var statusCls = n.orphaned || n.status === 'review' ? 'is-review'
       : (n.status === 'ready' ? 'is-ready'
         : (n.status === 'error' ? 'is-error' : 'is-pending'));
     var accent = n.accent || (ExperienciaEngine.kindMeta(n.kind).accent);
-    return '' +
-      '<div class="builder-exp-card ' + statusCls + ' accent-' + esc(accent) +
-        (n.orphaned ? ' is-orphan' : '') + '" data-exp-node="' + esc(n.id) + '"' +
-        ' style="transform:translate(' + (n.x || 0) + 'px,' + (n.y || 0) + 'px)">' +
-        '<span class="builder-exp-card__port is-in" data-exp-port="in" data-node="' + esc(n.id) + '"></span>' +
-        '<span class="builder-exp-card__port is-out" data-exp-port="out" data-node="' + esc(n.id) + '"></span>' +
+    var isHero = n.kind === 'hero';
+    var isAction = n.role === 'action' || n.kind === 'action';
+    var portsOut = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
+    var portsIn = (n.ports || []).filter(function (p) { return p.side === 'in'; });
+
+    var body = '';
+    if (isHero) {
+      body =
+        '<div class="builder-exp-card__type">HERO</div>' +
+        '<div class="builder-exp-card__title">Hero</div>' +
+        '<div class="builder-exp-card__info">Pantalla inicial</div>' +
+        '<div class="builder-exp-card__section">Interacciones</div>' +
+        '<div class="builder-exp-card__ports">' +
+          portsOut.map(function (p) {
+            return '<div class="builder-exp-card__irow" data-exp-irow="' + esc(p.id) + '">' +
+              '<span>' + esc(p.label) + '</span>' +
+              '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+                esc(p.id) + '" data-node="' + esc(n.id) + '" data-port-label="' + esc(p.label) + '"></span>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+    } else if (isAction) {
+      body =
+        '<div class="builder-exp-card__type">ACCIÓN</div>' +
+        '<div class="builder-exp-card__title">' + esc(n.label || 'Acción') + '</div>' +
+        '<div class="builder-exp-card__info">' + esc(info || (n.config && n.config.actionType) || '') + '</div>' +
+        '<div class="builder-exp-card__status">' + esc(status) + '</div>';
+    } else {
+      body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'NODO') + '</div>' +
         '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
         (info ? '<div class="builder-exp-card__info">' + esc(info) + '</div>' : '') +
-        '<div class="builder-exp-card__status">' + esc(status) + '</div>' +
+        '<div class="builder-exp-card__status">' + esc(status) + '</div>';
+      var showPortRows = portsOut.length > 1 ||
+        n.kind === 'video' ||
+        n.kind === 'animacion' ||
+        (n.config && n.config.hotspots && n.config.hotspots.length);
+      if (showPortRows) {
+        body += '<div class="builder-exp-card__ports builder-exp-card__ports--compact">' +
+          portsOut.filter(function (p) { return p.kind !== 'meta'; }).map(function (p) {
+            return '<div class="builder-exp-card__irow">' +
+              '<span>' + esc(p.label) + '</span>' +
+              '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+                esc(p.id) + '" data-node="' + esc(n.id) + '" data-port-label="' + esc(p.label) + '"></span>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      }
+    }
+
+    var inPort = portsIn.length
+      ? '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>'
+      : (isHero ? '' : '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>');
+
+    var flowOuts = portsOut.filter(function (p) { return p.kind !== 'meta'; });
+    var defaultOut = (!isHero && flowOuts.length <= 1 &&
+      n.kind !== 'video' && n.kind !== 'animacion' &&
+      !(n.config && n.config.hotspots && n.config.hotspots.length))
+      ? '<span class="builder-exp-card__port is-out" data-exp-port="out" data-port-id="' +
+        esc((flowOuts[0] && flowOuts[0].id) || 'out') + '" data-node="' + esc(n.id) +
+        '" data-port-label="' + esc((flowOuts[0] && flowOuts[0].label) || 'Salida') + '"></span>'
+      : '';
+
+    return '' +
+      '<div class="builder-exp-card ' + statusCls + ' accent-' + esc(accent) +
+        (isHero ? ' is-hero' : '') +
+        (isAction ? ' is-action-node' : '') +
+        (n.orphaned ? ' is-orphan' : '') +
+        '" data-exp-node="' + esc(n.id) + '"' +
+        ' style="width:' + size.w + 'px;min-height:' + size.h + 'px;transform:translate(' +
+        (n.x || 0) + 'px,' + (n.y || 0) + 'px)">' +
+        inPort +
+        defaultOut +
+        body +
       '</div>';
   }
 
@@ -117,10 +190,48 @@ var ExperienciaCanvas = (function () {
       ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2;
   }
 
-  function inspectorHtml(state, nodeId) {
+  function portAnchor(n, portId, side) {
+    var size = ExperienciaEngine.nodeSize(n);
+    var ports = (n.ports || []).filter(function (p) {
+      return side === 'in' ? p.side === 'in' : p.side !== 'in';
+    });
+    if (side === 'in') {
+      return { x: n.x, y: n.y + size.h / 2 };
+    }
+    if (n.kind === 'hero' || ports.length > 1) {
+      var idx = 0;
+      for (var i = 0; i < ports.length; i++) {
+        if (ports[i].id === portId) { idx = i; break; }
+      }
+      var top = 78 + idx * 22 + 8;
+      return { x: n.x + size.w, y: n.y + Math.min(top, size.h - 12) };
+    }
+    return { x: n.x + size.w, y: n.y + size.h / 2 };
+  }
+
+  function inspectorHtml(state, nodeId, edgeId) {
+    if (edgeId) {
+      var ed = ExperienciaEngine.getEdge(state, edgeId);
+      if (!ed) return '<p class="builder-menu-hint">Conexión no encontrada.</p>';
+      var a = ExperienciaEngine.getNode(state, ed.from || ed.sourceId);
+      var b = ExperienciaEngine.getNode(state, ed.to || ed.targetId);
+      return '' +
+        '<div class="builder-exp-inspector__kind">CONEXIÓN</div>' +
+        '<h3 class="builder-exp-inspector__title">' + esc(ed.label || 'Flujo') + '</h3>' +
+        '<div class="builder-exp-inspector__grid">' +
+          row('Origen', (a ? a.label : ed.from) + '.' + (ed.sourcePort || ed.portId || 'out')) +
+          row('Destino', b ? b.label : ed.to) +
+          row('Tipo', ed.inlineAction ? 'Acción inline' : 'Navegación') +
+        '</div>' +
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-del-edge="' +
+            esc(ed.id) + '">Eliminar conexión</button>' +
+        '</div>';
+    }
+
     var n = ExperienciaEngine.getNode(state, nodeId);
     if (!n) {
-      return '<p class="builder-menu-hint">Selecciona un nodo del mapa.</p>';
+      return '<p class="builder-menu-hint">Selecciona un nodo del mapa o arrastra desde un puerto ●.</p>';
     }
     var conn = ExperienciaEngine.connectionsFor(state, n.id);
     var byId = {};
@@ -130,55 +241,102 @@ var ExperienciaCanvas = (function () {
       if (!list.length) return '—';
       return list.map(function (ed) {
         var other = byId[ed[key]];
-        return other ? (other.label || other.id) : ed[key];
+        var port = ed.sourcePort || ed.portId || '';
+        return (other ? (other.label || other.id) : ed[key]) +
+          (key === 'from' && port ? ('.' + port) : '');
       }).join(', ');
     }
 
-    var mediaLine = n.transitionMedia || n.contentRef
-      ? 'Asignado'
-      : 'Sin asignar';
+    var html = '' +
+      '<div class="builder-exp-inspector__kind">' + esc(n.typeLabel || n.kind) + '</div>' +
+      '<h3 class="builder-exp-inspector__title">' + esc(n.label || n.id) + '</h3>';
 
-    var actions = '';
-    if (n.kind === 'animacion' || n.kind === 'transicion' || n.kind === 'hero') {
-      actions =
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-assign="video" disabled>' +
-          'Asignar video</button>' +
-        '<p class="builder-menu-hint">Referencia assets de Galería / Hero (próximo paso).</p>';
-    } else if (n.kind === 'planta-3d') {
-      actions =
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-assign="plan" disabled>' +
-          'Asignar plano</button> ' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-assign="hotspots" disabled>' +
-          'Editar hotspots</button>' +
-        '<p class="builder-menu-hint">Hotspots: 0 / ' + esc(String(n.unitCount || (n.meta && n.meta.capacity) || 0)) + '</p>';
-    } else if (n.kind === 'viviendas') {
-      actions =
-        '<p class="builder-menu-hint">Nodo agrupador · ' +
-          esc(String(n.unitCount || 0)) +
-          ' unidades. No se expanden 1:1 en el canvas.</p>';
-    } else if (n.kind === 'ficha') {
-      actions =
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-assign="docs" disabled>' +
-          'Asignar ficha</button>';
+    if (n.kind === 'hero') {
+      var ints = (n.config && n.config.interactions) || [];
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Estado', ExperienciaEngine.statusLabel(n)) +
+        row('Origen', '—') +
+        row('Destinos', names(conn.out, 'to')) +
+      '</div>' +
+      '<div class="builder-exp-inspector__section">Interacciones</div>' +
+      '<ul class="builder-exp-inspector__list">' +
+        ints.map(function (it) {
+          return '<li>' + esc(it.label) + ' <em>(' + esc(it.source || '') + ')</em></li>';
+        }).join('') +
+      '</ul>';
+      return html;
     }
 
-    return '' +
-      '<div class="builder-exp-inspector__kind">' + esc(n.typeLabel || n.kind) + '</div>' +
-      '<h3 class="builder-exp-inspector__title">' + esc(n.label || n.id) + '</h3>' +
-      '<div class="builder-exp-inspector__grid">' +
-        row('Estado', ExperienciaEngine.statusLabel(n)) +
-        row('Tipo', n.kind || '—') +
-        row('Entidad', (n.entityType || '—') + (n.entityKey ? (':' + n.entityKey) : '')) +
+    if (n.kind === 'image' || n.kind === 'plan' || n.kind === 'pano360' || n.kind === 'scene') {
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Archivo', (n.config && n.config.fileName) || 'Sin asignar') +
+        row('Nombre', n.label || '—') +
         row('Origen', names(conn.in, 'from')) +
         row('Destino', names(conn.out, 'to')) +
-        ((n.kind === 'animacion' || n.kind === 'transicion')
-          ? row('Duración', (n.transitionSeconds || 4) + '–5 segundos')
-          : '') +
-        ((n.unitCount != null) ? row('Unidades', String(n.unitCount)) : '') +
-        row('Contenido', mediaLine) +
       '</div>' +
-      (n.orphaned ? '<div class="builder-warn-banner">Huérfano · conservado para revisión</div>' : '') +
-      '<div class="builder-exp-inspector__actions">' + actions + '</div>';
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-add-hotspot="' +
+            esc(n.id) + '">+ Crear hotspot</button>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar archivo</button>' +
+          '<p class="builder-menu-hint">Referencia assets de Galería / Planos / 360 (sin inventar media).</p>' +
+        '</div>';
+      return html;
+    }
+
+    if (n.kind === 'video' || n.kind === 'animacion') {
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Archivo', (n.config && n.config.fileName) || 'Sin asignar') +
+        row('Autoplay', (n.config && n.config.autoplay) ? 'Sí' : 'No') +
+        row('Al finalizar', (n.config && n.config.onEnd) || 'next') +
+        row('Duración', (n.transitionSeconds || 4) + '–5 s') +
+        row('Origen', names(conn.in, 'from')) +
+        row('Destino', names(conn.out, 'to')) +
+      '</div>' +
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar video</button>' +
+        '</div>';
+      return html;
+    }
+
+    if (n.kind === 'action') {
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Tipo', (n.config && n.config.actionType) || '—') +
+        row('Inline', (n.config && n.config.inline) ? 'Sí (sin cambiar escena)' : 'No') +
+        row('Origen', names(conn.in, 'from')) +
+      '</div>';
+      return html;
+    }
+
+    if (n.kind === 'structure' || n.kind === 'group') {
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Elemento', n.label || '—') +
+        row('Unidades', String(n.unitCount != null ? n.unitCount : '—')) +
+        row('Origen', names(conn.in, 'from')) +
+      '</div>' +
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-enter-group="' +
+            esc(n.id) + '">Entrar al flujo interno</button>' +
+          '<p class="builder-menu-hint">Base de jerarquía lista; pisos/plantas se detallan en versiones siguientes.</p>' +
+        '</div>';
+      return html;
+    }
+
+    if (n.kind === 'hotspot') {
+      html += '<div class="builder-exp-inspector__grid">' +
+        row('Nombre', n.label || '—') +
+        row('Vinculado', (n.config && n.config.structureLabel) || '—') +
+        row('Destino', names(conn.out, 'to')) +
+      '</div>';
+      return html;
+    }
+
+    html += '<div class="builder-exp-inspector__grid">' +
+      row('Estado', ExperienciaEngine.statusLabel(n)) +
+      row('Tipo', n.kind || '—') +
+      row('Origen', names(conn.in, 'from')) +
+      row('Destino', names(conn.out, 'to')) +
+    '</div>';
+    return html;
   }
 
   function row(label, value) {
@@ -186,8 +344,62 @@ var ExperienciaCanvas = (function () {
       '</span><strong>' + esc(value) + '</strong></div>';
   }
 
+  function createMenuHtml() {
+    var menu = ExperienciaEngine.CREATE_MENU || [];
+    return '<div class="builder-exp-ctx__panel">' +
+      '<div class="builder-exp-ctx__title">¿Qué quieres crear?</div>' +
+      menu.map(function (cat) {
+        return '<div class="builder-exp-ctx__cat">' +
+          '<div class="builder-exp-ctx__cat-label">' + esc(cat.label) + '</div>' +
+          cat.items.map(function (it) {
+            return '<button type="button" class="builder-exp-ctx__item" data-exp-create="' +
+              esc(it.id) + '" data-cat="' + esc(cat.id) + '">' + esc(it.label) + '</button>';
+          }).join('') +
+        '</div>';
+      }).join('') +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function structurePickerHtml(state) {
+    var tree = ExperienciaEngine.listStructureLibrary(state) || [];
+    function walk(items, depth) {
+      return (items || []).map(function (it) {
+        var hasKids = it.children && it.children.length;
+        return '<div class="builder-exp-picker__row" style="--d:' + depth + '">' +
+          '<button type="button" class="builder-exp-picker__item" data-exp-struct="' + esc(it.id) + '"' +
+            ' data-label="' + esc(it.label) + '"' +
+            ' data-kind="' + esc(it.kind || '') + '"' +
+            ' data-capacity="' + esc(it.capacity != null ? it.capacity : '') + '"' +
+            ' data-stage="' + esc(it.stageId || '') + '">' +
+            esc(it.label) +
+            (it.capacity != null ? (' · ' + it.capacity + ' viv.') : '') +
+          '</button>' +
+        '</div>' +
+        (hasKids ? walk(it.children, depth + 1) : '');
+      }).join('');
+    }
+    return '<div class="builder-exp-picker__panel">' +
+      '<div class="builder-exp-ctx__title">Vincular desde Estructura</div>' +
+      '<div class="builder-exp-picker__tree">' + walk(tree, 0) + '</div>' +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-picker-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function findMenuItem(id) {
+    var menu = ExperienciaEngine.CREATE_MENU || [];
+    for (var i = 0; i < menu.length; i++) {
+      for (var j = 0; j < menu[i].items.length; j++) {
+        if (menu[i].items[j].id === id) return menu[i].items[j];
+      }
+    }
+    return null;
+  }
+
   function mount(rootEl, state, api) {
     api = api || {};
+    ExperienciaEngine.ensureFlow(state);
+
     var stage = rootEl.querySelector('[data-exp-stage]');
     var viewport = rootEl.querySelector('[data-exp-viewport]');
     var world = rootEl.querySelector('[data-exp-world]');
@@ -198,24 +410,15 @@ var ExperienciaCanvas = (function () {
     var workspace = rootEl.querySelector('[data-exp-workspace]');
     var minimapWrap = rootEl.querySelector('[data-exp-minimap]');
     var minimapCanvas = rootEl.querySelector('[data-exp-minimap-canvas]');
+    var ctxEl = rootEl.querySelector('[data-exp-ctx]');
+    var pickerEl = rootEl.querySelector('[data-exp-picker]');
     if (!viewport || !world || !nodesEl || !edgesEl) return null;
 
-    var exp = ExperienciaEngine.ensureState(state);
-    if (!(exp.nodes || []).length) {
-      /* empty canvas ok */
-    } else {
-      var needsLayout = exp.nodes.some(function (n) { return n.x == null || n.y == null; });
-      if (needsLayout) {
-        ExperienciaEngine.autoLayout(exp.nodes, exp.edges, { onlyMissing: true });
-      }
-    }
-
-    var NW = ExperienciaEngine.NODE_W || W;
-    var NH = ExperienciaEngine.NODE_H || H;
     var dragging = null;
     var panning = null;
-    var connectFrom = null;
+    var linkDrag = null;
     var spacePan = false;
+    var pendingCreate = null;
 
     function canvas() {
       return ExperienciaEngine.ensureState(state).canvas;
@@ -233,8 +436,17 @@ var ExperienciaCanvas = (function () {
       world.style.transformOrigin = '0 0';
     }
 
+    function clientToWorld(clientX, clientY) {
+      var rect = viewport.getBoundingClientRect();
+      var c = canvas();
+      return {
+        x: (clientX - rect.left - c.panX) / c.zoom,
+        y: (clientY - rect.top - c.panY) / c.zoom
+      };
+    }
+
     function paintNodes() {
-      var nodes = state.experiencia.nodes || [];
+      var nodes = ExperienciaEngine.visibleNodes(state);
       var sel = canvas().selectedId;
       nodesEl.innerHTML = nodes.map(nodeCardHtml).join('');
       nodesEl.querySelectorAll('[data-exp-node]').forEach(function (el) {
@@ -244,29 +456,47 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintEdges() {
-      var nodes = state.experiencia.nodes || [];
+      var nodes = ExperienciaEngine.visibleNodes(state);
       var byId = {};
       nodes.forEach(function (n) { byId[n.id] = n; });
+      var all = state.experiencia.nodes || [];
+      all.forEach(function (n) { if (!byId[n.id]) byId[n.id] = n; });
+
       var b = ExperienciaEngine.bounds(nodes);
       var pad = 80;
-      var w = Math.max(1200, b.maxX - b.minX + pad * 2);
-      var h = Math.max(800, b.maxY - b.minY + pad * 2);
+      var w = Math.max(1400, b.maxX - b.minX + pad * 2);
+      var h = Math.max(900, b.maxY - b.minY + pad * 2);
       edgesEl.setAttribute('width', String(w));
       edgesEl.setAttribute('height', String(h));
       edgesEl.style.width = w + 'px';
       edgesEl.style.height = h + 'px';
 
+      var selE = canvas().selectedEdgeId;
       var paths = (state.experiencia.edges || []).map(function (ed) {
         var a = byId[ed.from || ed.sourceId];
         var b2 = byId[ed.to || ed.targetId];
         if (!a || !b2 || a.x == null || b2.x == null) return '';
-        var x1 = a.x + NW;
-        var y1 = a.y + NH / 2;
-        var x2 = b2.x;
-        var y2 = b2.y + NH / 2;
-        return '<path class="builder-exp-edge-path' + (ed.manual ? ' is-manual' : '') +
-          '" d="' + bezierPath(x1, y1, x2, y2) + '" fill="none" />';
+        if (a.parentId !== b2.parentId && a.id !== 'exp-hero') {
+          /* still draw if both visible */
+        }
+        var pOut = portAnchor(a, ed.sourcePort || ed.portId || 'out', 'out');
+        var pIn = portAnchor(b2, 'in', 'in');
+        var cls = 'builder-exp-edge-path' +
+          (ed.manual ? ' is-manual' : '') +
+          (ed.inlineAction ? ' is-inline' : '') +
+          (selE === ed.id ? ' is-selected' : '');
+        return '<path class="' + cls + '" data-exp-edge="' + esc(ed.id) + '" d="' +
+          bezierPath(pOut.x, pOut.y, pIn.x, pIn.y) + '" fill="none" />';
       }).join('');
+
+      if (linkDrag && linkDrag.fromId) {
+        var src = byId[linkDrag.fromId];
+        if (src) {
+          var a2 = portAnchor(src, linkDrag.portId || 'out', 'out');
+          paths += '<path class="builder-exp-edge-path is-draft" d="' +
+            bezierPath(a2.x, a2.y, linkDrag.x, linkDrag.y) + '" fill="none" />';
+        }
+      }
       edgesEl.innerHTML = paths;
     }
 
@@ -279,7 +509,7 @@ var ExperienciaCanvas = (function () {
       ctx.clearRect(0, 0, cw, ch);
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.fillRect(0, 0, cw, ch);
-      var nodes = state.experiencia.nodes || [];
+      var nodes = ExperienciaEngine.visibleNodes(state);
       var b = ExperienciaEngine.bounds(nodes);
       var spanX = Math.max(1, b.maxX - b.minX);
       var spanY = Math.max(1, b.maxY - b.minY);
@@ -288,10 +518,14 @@ var ExperienciaCanvas = (function () {
       var oy = (ch - spanY * scale) / 2;
       nodes.forEach(function (n) {
         if (n.x == null) return;
-        ctx.fillStyle = n.status === 'ready'
-          ? 'rgba(111,191,134,0.85)'
-          : (n.orphaned ? 'rgba(220,120,120,0.7)' : 'rgba(155,143,212,0.85)');
-        ctx.fillRect(ox + (n.x - b.minX) * scale, oy + (n.y - b.minY) * scale, 8, 5);
+        ctx.fillStyle = n.kind === 'hero'
+          ? 'rgba(111,191,134,0.95)'
+          : (n.status === 'ready'
+            ? 'rgba(111,191,134,0.85)'
+            : 'rgba(155,143,212,0.85)');
+        var s = ExperienciaEngine.nodeSize(n);
+        ctx.fillRect(ox + (n.x - b.minX) * scale, oy + (n.y - b.minY) * scale,
+          Math.max(6, s.w * scale * 0.2), Math.max(4, s.h * scale * 0.15));
       });
       var c = canvas();
       var vr = viewport.getBoundingClientRect();
@@ -306,7 +540,35 @@ var ExperienciaCanvas = (function () {
 
     function paintInspector() {
       if (!inspectorBody) return;
-      inspectorBody.innerHTML = inspectorHtml(state, canvas().selectedId);
+      inspectorBody.innerHTML = inspectorHtml(state, canvas().selectedId, canvas().selectedEdgeId);
+      bindInspectorActions();
+    }
+
+    function bindInspectorActions() {
+      var del = inspectorBody.querySelector('[data-exp-del-edge]');
+      if (del) {
+        del.addEventListener('click', function () {
+          ExperienciaEngine.removeEdge(state, del.getAttribute('data-exp-del-edge'));
+          renderAll(); persist();
+        });
+      }
+      var hs = inspectorBody.querySelector('[data-exp-add-hotspot]');
+      if (hs) {
+        hs.addEventListener('click', function () {
+          var id = hs.getAttribute('data-exp-add-hotspot');
+          var label = window.prompt('Nombre del hotspot', 'Torre A');
+          if (label == null) return;
+          ExperienciaEngine.addHotspotToScene(state, id, label.trim() || 'Hotspot');
+          renderAll(); persist();
+        });
+      }
+      var eg = inspectorBody.querySelector('[data-exp-enter-group]');
+      if (eg) {
+        eg.addEventListener('click', function () {
+          ExperienciaEngine.enterGroup(state, eg.getAttribute('data-exp-enter-group'));
+          renderAll(); persist();
+        });
+      }
     }
 
     function renderAll() {
@@ -315,15 +577,9 @@ var ExperienciaCanvas = (function () {
       paintEdges();
       paintMinimap();
       paintInspector();
-      if (inspector) {
-        inspector.classList.toggle('is-closed', canvas().inspectorOpen !== true);
-      }
-      if (workspace) {
-        workspace.classList.toggle('has-inspector', canvas().inspectorOpen === true);
-      }
-      if (minimapWrap) {
-        minimapWrap.classList.toggle('is-hidden', canvas().minimapVisible === false);
-      }
+      if (inspector) inspector.classList.toggle('is-closed', canvas().inspectorOpen !== true);
+      if (workspace) workspace.classList.toggle('has-inspector', canvas().inspectorOpen === true);
+      if (minimapWrap) minimapWrap.classList.toggle('is-hidden', canvas().minimapVisible === false);
     }
 
     function syncToolUi() {
@@ -338,13 +594,22 @@ var ExperienciaCanvas = (function () {
 
     function selectNode(id) {
       canvas().selectedId = id || null;
+      canvas().selectedEdgeId = null;
+      if (id) canvas().inspectorOpen = true;
+      renderAll();
+      persist();
+    }
+
+    function selectEdge(id) {
+      canvas().selectedEdgeId = id || null;
+      canvas().selectedId = null;
       if (id) canvas().inspectorOpen = true;
       renderAll();
       persist();
     }
 
     function fitView() {
-      var nodes = state.experiencia.nodes || [];
+      var nodes = ExperienciaEngine.visibleNodes(state);
       var b = ExperienciaEngine.bounds(nodes);
       var vr = viewport.getBoundingClientRect();
       var spanX = Math.max(1, b.maxX - b.minX + 80);
@@ -358,7 +623,7 @@ var ExperienciaCanvas = (function () {
     }
 
     function centerView() {
-      var nodes = state.experiencia.nodes || [];
+      var nodes = ExperienciaEngine.visibleNodes(state);
       var b = ExperienciaEngine.bounds(nodes);
       var vr = viewport.getBoundingClientRect();
       var cx = (b.minX + b.maxX) / 2;
@@ -370,13 +635,97 @@ var ExperienciaCanvas = (function () {
       persist();
     }
 
-    function clientToWorld(clientX, clientY) {
+    function hideCtx() {
+      if (ctxEl) { ctxEl.hidden = true; ctxEl.innerHTML = ''; }
+      pendingCreate = null;
+    }
+
+    function hidePicker() {
+      if (pickerEl) { pickerEl.hidden = true; pickerEl.innerHTML = ''; }
+    }
+
+    function openCreateMenu(worldPt, fromMeta) {
+      pendingCreate = {
+        at: worldPt,
+        fromId: fromMeta && fromMeta.fromId,
+        portId: fromMeta && fromMeta.portId,
+        portLabel: fromMeta && fromMeta.portLabel
+      };
+      if (!ctxEl) return;
+      ctxEl.innerHTML = createMenuHtml();
+      ctxEl.hidden = false;
       var rect = viewport.getBoundingClientRect();
       var c = canvas();
-      return {
-        x: (clientX - rect.left - c.panX) / c.zoom,
-        y: (clientY - rect.top - c.panY) / c.zoom
-      };
+      var left = worldPt.x * c.zoom + c.panX;
+      var top = worldPt.y * c.zoom + c.panY;
+      left = Math.max(8, Math.min(left, rect.width - 280));
+      top = Math.max(8, Math.min(top, rect.height - 320));
+      ctxEl.style.left = left + 'px';
+      ctxEl.style.top = top + 'px';
+    }
+
+    function openStructurePicker() {
+      if (!pickerEl || !pendingCreate) return;
+      pickerEl.innerHTML = structurePickerHtml(state);
+      pickerEl.hidden = false;
+      pickerEl.style.left = ctxEl.style.left;
+      pickerEl.style.top = ctxEl.style.top;
+      hideCtx();
+      pickerEl.querySelectorAll('[data-exp-struct]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var item = {
+            id: btn.getAttribute('data-exp-struct'),
+            label: btn.getAttribute('data-label'),
+            kind: btn.getAttribute('data-kind'),
+            capacity: btn.getAttribute('data-capacity')
+              ? Number(btn.getAttribute('data-capacity'))
+              : null,
+            stageId: btn.getAttribute('data-stage') || null
+          };
+          var n = ExperienciaEngine.createStructureLinkedNode(state, item, pendingCreate.at, {
+            fromId: pendingCreate.fromId,
+            portId: pendingCreate.portId,
+            portLabel: pendingCreate.portLabel
+          });
+          hidePicker();
+          pendingCreate = null;
+          selectNode(n.id);
+          persist();
+        });
+      });
+      var cancel = pickerEl.querySelector('[data-exp-picker-cancel]');
+      if (cancel) cancel.addEventListener('click', function () { hidePicker(); pendingCreate = null; });
+    }
+
+    if (ctxEl) {
+      ctxEl.addEventListener('click', function (ev) {
+        var cancel = ev.target.closest('[data-exp-ctx-cancel]');
+        if (cancel) { hideCtx(); return; }
+        var item = ev.target.closest('[data-exp-create]');
+        if (!item || !pendingCreate) return;
+        var menuItem = findMenuItem(item.getAttribute('data-exp-create'));
+        if (!menuItem) return;
+        var result = ExperienciaEngine.createNodeFromMenu(state, menuItem, pendingCreate.at, {
+          fromId: pendingCreate.fromId,
+          portId: pendingCreate.portId,
+          portLabel: pendingCreate.portLabel
+        });
+        if (result && result.needsPicker === '_link_structure') {
+          openStructurePicker();
+          return;
+        }
+        if (result && result.needsPicker === '_link_existing') {
+          hideCtx();
+          AdminNotify.info('Selecciona un nodo existente en el canvas y conéctalo arrastrando.');
+          canvas().tool = 'connect';
+          pendingCreate = null;
+          syncToolUi();
+          return;
+        }
+        hideCtx();
+        if (result && result.node) selectNode(result.node.id);
+        else { renderAll(); persist(); }
+      });
     }
 
     /* Toolbar */
@@ -386,7 +735,7 @@ var ExperienciaCanvas = (function () {
         var tool = btn.getAttribute('data-exp-tool');
         if (tool === 'select' || tool === 'connect') {
           canvas().tool = tool;
-          connectFrom = null;
+          linkDrag = null;
           syncToolUi();
           persist();
           return;
@@ -427,16 +776,19 @@ var ExperienciaCanvas = (function () {
       closeInsp.addEventListener('click', function () {
         canvas().inspectorOpen = false;
         canvas().selectedId = null;
-        renderAll();
-        persist();
-        requestAnimationFrame(function () {
-          applyWorldTransform();
-          paintMinimap();
-        });
+        canvas().selectedEdgeId = null;
+        renderAll(); persist();
       });
     }
 
-    /* Wheel zoom */
+    var exitGroup = rootEl.querySelector('#builderExpExitGroupBtn');
+    if (exitGroup) {
+      exitGroup.addEventListener('click', function () {
+        ExperienciaEngine.exitGroup(state);
+        renderAll(); persist();
+      });
+    }
+
     viewport.addEventListener('wheel', function (ev) {
       ev.preventDefault();
       var factor = ev.deltaY > 0 ? 0.92 : 1.08;
@@ -450,38 +802,35 @@ var ExperienciaCanvas = (function () {
       paintMinimap();
     }, { passive: false });
 
-    /* Pointer interactions */
     viewport.addEventListener('pointerdown', function (ev) {
-      var port = ev.target.closest('[data-exp-port]');
-      var card = ev.target.closest('[data-exp-node]');
-      var tool = canvas().tool || 'select';
-
-      if (port && tool === 'connect') {
-        var nid = port.getAttribute('data-node');
-        var side = port.getAttribute('data-exp-port');
-        if (side === 'out') {
-          connectFrom = nid;
-          selectNode(nid);
-        } else if (side === 'in' && connectFrom && connectFrom !== nid) {
-          ExperienciaEngine.addManualEdge(state, connectFrom, nid, 'manual');
-          connectFrom = null;
-          renderAll();
-          persist();
-        }
+      hideCtx();
+      hidePicker();
+      var edgePath = ev.target.closest('[data-exp-edge]');
+      if (edgePath) {
+        selectEdge(edgePath.getAttribute('data-exp-edge'));
         return;
       }
 
-      if (card && tool === 'connect') {
-        var id = card.getAttribute('data-exp-node');
-        if (!connectFrom) {
-          connectFrom = id;
-          selectNode(id);
-        } else if (connectFrom !== id) {
-          ExperienciaEngine.addManualEdge(state, connectFrom, id, 'manual');
-          connectFrom = null;
-          renderAll();
-          persist();
-        }
+      var port = ev.target.closest('[data-exp-port="out"]');
+      var card = ev.target.closest('[data-exp-node]');
+      var tool = canvas().tool || 'select';
+
+      if (port) {
+        var fromId = port.getAttribute('data-node');
+        var portId = port.getAttribute('data-port-id') || 'out';
+        var portLabel = port.getAttribute('data-port-label') || '';
+        var w0 = clientToWorld(ev.clientX, ev.clientY);
+        linkDrag = {
+          fromId: fromId,
+          portId: portId,
+          portLabel: portLabel,
+          x: w0.x,
+          y: w0.y,
+          pointerId: ev.pointerId
+        };
+        selectNode(fromId);
+        try { viewport.setPointerCapture(ev.pointerId); } catch (e0) {}
+        paintEdges();
         return;
       }
 
@@ -490,6 +839,11 @@ var ExperienciaCanvas = (function () {
         selectNode(nodeId);
         var n = ExperienciaEngine.getNode(state, nodeId);
         if (!n) return;
+        if (ev.detail === 2 && (n.kind === 'structure' || n.kind === 'group' || (n.config && n.config.group))) {
+          ExperienciaEngine.enterGroup(state, n.id);
+          renderAll(); persist();
+          return;
+        }
         var worldPt = clientToWorld(ev.clientX, ev.clientY);
         dragging = {
           id: nodeId,
@@ -501,7 +855,6 @@ var ExperienciaCanvas = (function () {
         return;
       }
 
-      /* empty space → pan */
       if (!card) {
         if (tool === 'select' || spacePan || ev.button === 1) {
           panning = {
@@ -512,30 +865,29 @@ var ExperienciaCanvas = (function () {
             pointerId: ev.pointerId
           };
           try { viewport.setPointerCapture(ev.pointerId); } catch (e2) {}
-          if (tool === 'select') {
-            canvas().selectedId = null;
-            paintInspector();
-            paintNodes();
-          }
+          canvas().selectedId = null;
+          canvas().selectedEdgeId = null;
+          paintInspector();
+          paintNodes();
+          paintEdges();
         }
       }
     });
 
     viewport.addEventListener('pointermove', function (ev) {
+      if (linkDrag) {
+        var w = clientToWorld(ev.clientX, ev.clientY);
+        linkDrag.x = w.x;
+        linkDrag.y = w.y;
+        paintEdges();
+        return;
+      }
       if (dragging) {
         var wpt = clientToWorld(ev.clientX, ev.clientY);
-        ExperienciaEngine.setNodePosition(
-          state,
-          dragging.id,
-          wpt.x - dragging.ox,
-          wpt.y - dragging.oy,
-          true
-        );
+        ExperienciaEngine.setNodePosition(state, dragging.id, wpt.x - dragging.ox, wpt.y - dragging.oy, true);
         var el = nodesEl.querySelector('[data-exp-node="' + dragging.id + '"]');
         var n = ExperienciaEngine.getNode(state, dragging.id);
-        if (el && n) {
-          el.style.transform = 'translate(' + n.x + 'px,' + n.y + 'px)';
-        }
+        if (el && n) el.style.transform = 'translate(' + n.x + 'px,' + n.y + 'px)';
         paintEdges();
         paintMinimap();
         return;
@@ -548,30 +900,56 @@ var ExperienciaCanvas = (function () {
       }
     });
 
-    function endPointer() {
-      if (dragging) {
-        dragging = null;
-        persist();
+    function endPointer(ev) {
+      if (linkDrag) {
+        var targetPort = document.elementFromPoint(ev.clientX, ev.clientY);
+        var inPort = targetPort && targetPort.closest ? targetPort.closest('[data-exp-port="in"]') : null;
+        var targetCard = targetPort && targetPort.closest ? targetPort.closest('[data-exp-node]') : null;
+        if (inPort || targetCard) {
+          var toId = (inPort && inPort.getAttribute('data-node')) ||
+            (targetCard && targetCard.getAttribute('data-exp-node'));
+          if (toId && toId !== linkDrag.fromId) {
+            ExperienciaEngine.addManualEdge(
+              state, linkDrag.fromId, toId, linkDrag.portLabel || 'flujo', linkDrag.portId
+            );
+            linkDrag = null;
+            renderAll(); persist();
+            return;
+          }
+        }
+        /* dropped on empty → create menu */
+        var drop = clientToWorld(ev.clientX, ev.clientY);
+        openCreateMenu(drop, {
+          fromId: linkDrag.fromId,
+          portId: linkDrag.portId,
+          portLabel: linkDrag.portLabel
+        });
+        linkDrag = null;
+        paintEdges();
+        return;
       }
-      if (panning) {
-        panning = null;
-        persist();
-      }
+      if (dragging) { dragging = null; persist(); }
+      if (panning) { panning = null; persist(); }
     }
     viewport.addEventListener('pointerup', endPointer);
     viewport.addEventListener('pointercancel', endPointer);
 
     window.addEventListener('keydown', function (ev) {
       if (ev.code === 'Space') spacePan = true;
+      if ((ev.key === 'Delete' || ev.key === 'Backspace') && canvas().selectedEdgeId) {
+        var tag = (ev.target && ev.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        ExperienciaEngine.removeEdge(state, canvas().selectedEdgeId);
+        renderAll(); persist();
+      }
     });
     window.addEventListener('keyup', function (ev) {
       if (ev.code === 'Space') spacePan = false;
     });
 
-    /* Minimap click → jump */
     if (minimapCanvas) {
       minimapCanvas.addEventListener('click', function (ev) {
-        var nodes = state.experiencia.nodes || [];
+        var nodes = ExperienciaEngine.visibleNodes(state);
         var b = ExperienciaEngine.bounds(nodes);
         var rect = minimapCanvas.getBoundingClientRect();
         var cw = minimapCanvas.width;
@@ -587,12 +965,10 @@ var ExperienciaCanvas = (function () {
         var z = canvas().zoom || 1;
         canvas().panX = vr.width / 2 - mx * z;
         canvas().panY = vr.height / 2 - my * z;
-        renderAll();
-        persist();
+        renderAll(); persist();
       });
     }
 
-    /* Recalc viewport on layout changes (rail / inspector / window / fullscreen) */
     var resizeTimer = null;
     function onViewportResize() {
       if (resizeTimer) clearTimeout(resizeTimer);
@@ -612,19 +988,12 @@ var ExperienciaCanvas = (function () {
     window.addEventListener('boxies:rail-toggle', onViewportResize);
 
     renderAll();
-    if ((state.experiencia.nodes || []).length) {
-      requestAnimationFrame(function () {
-        if (canvas().panX === 40 && canvas().panY === 40) fitView();
-        else onViewportResize();
-      });
-    } else {
-      requestAnimationFrame(onViewportResize);
-    }
+    requestAnimationFrame(function () {
+      if (canvas().panX === 40 && canvas().panY === 40) fitView();
+      else onViewportResize();
+    });
 
-    return {
-      refresh: renderAll,
-      fitView: fitView
-    };
+    return { refresh: renderAll, fitView: fitView };
   }
 
   return {
