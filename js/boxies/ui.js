@@ -66,9 +66,18 @@ var AdminUI = (function () {
 
   function confirm(options) {
     return new Promise(function (resolve) {
+      var settled = false;
+      function finish(value) {
+        if (settled) return;
+        settled = true;
+        modalOnClose = null;
+        closeModal();
+        resolve(!!value);
+      }
       openModal({
         title: options.title || 'Confirmar',
-        bodyHtml: '<p class="admin-modal-copy">' + escapeHtml(options.message || '') + '</p>',
+        bodyHtml: options.bodyHtml ||
+          ('<p class="admin-modal-copy">' + escapeHtml(options.message || '') + '</p>'),
         footerHtml:
           '<button type="button" class="btn-ghost" data-modal-action="cancel">' +
             escapeHtml(options.cancelLabel || 'Cancelar') +
@@ -77,17 +86,20 @@ var AdminUI = (function () {
             escapeHtml(options.confirmLabel || 'Confirmar') +
           '</button>',
         onMount: function (root) {
-          root.querySelector('[data-modal-action="cancel"]').addEventListener('click', function () {
-            closeModal();
-            resolve(false);
-          });
-          root.querySelector('[data-modal-action="confirm"]').addEventListener('click', function () {
-            closeModal();
-            resolve(true);
-          });
+          var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+          var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+          if (cancelBtn) {
+            cancelBtn.addEventListener('click', function () { finish(false); });
+          }
+          if (confirmBtn) {
+            confirmBtn.addEventListener('click', function () { finish(true); });
+          }
         },
         onClose: function () {
-          resolve(false);
+          if (!settled) {
+            settled = true;
+            resolve(false);
+          }
         }
       });
     });

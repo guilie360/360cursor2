@@ -726,12 +726,145 @@ body.boxies-col-resizing * {
   to { transform: rotate(360deg); }
 }
 
-body.boxies-is-creating-showroom #boxiesCreateShowroomBtn {
+body.boxies-is-creating-showroom #boxiesCreateShowroomBtn,
+body.boxies-is-global-busy #boxiesCreateShowroomBtn {
   pointer-events: none;
 }
 
 body.boxies-is-creating-showroom #boxiesCreateShowroomBtn.is-creating {
   opacity: 0.55;
+}
+
+/* BOXIES confirm modal (AdminUI) — in-app, fullscreen-safe */
+body.boxies-host .admin-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 11500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+body.boxies-host .admin-modal-root.is-open {
+  display: flex;
+}
+
+body.boxies-host .admin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.boxies-host .admin-modal {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+body.boxies-host .admin-modal-header,
+body.boxies-host .admin-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+body.boxies-host .admin-modal-footer {
+  border-bottom: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  justify-content: flex-end;
+}
+
+body.boxies-host .admin-modal-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+body.boxies-host .admin-modal-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+body.boxies-host .admin-modal-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+body.boxies-host .admin-modal-body {
+  padding: 20px;
+}
+
+body.boxies-host .admin-modal-copy {
+  margin: 0 0 0.65rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+body.boxies-host .admin-modal-copy:last-child {
+  margin-bottom: 0;
+}
+
+body.boxies-host .admin-modal-copy--muted {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.82rem;
+  font-weight: 300;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost,
+body.boxies-host .admin-modal-footer .btn-danger {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost {
+  color: rgba(255, 255, 255, 0.55);
+  border-color: transparent;
+}
+
+body.boxies-host .admin-modal-footer .btn-ghost:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.boxies-host .admin-modal-footer .btn-danger {
+  color: #ff9a9a;
+  border-color: rgba(255, 138, 138, 0.28);
+}
+
+body.boxies-host .admin-modal-footer .btn-danger:hover {
+  background: rgba(240, 160, 160, 0.08);
+  border-color: rgba(240, 160, 160, 0.45);
 }
 
 /* Hall — empty resting state (Shell only; no workspace content) */

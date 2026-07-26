@@ -11,7 +11,8 @@ var BoxiesProjectsPage = (function () {
   var columnResizeState = null;
   var columnController = null;
   var isCreatingShowroom = false;
-  var createBusyEl = null;
+  var isDeletingShowroom = false;
+  var globalBusyEl = null;
 
   var COL_STORAGE_KEY = 'boxies.showrooms.columns';
   var COL_ORDER = ['drag', 'name', 'slug', 'status', 'public', 'updated', 'actions'];
@@ -633,33 +634,51 @@ var BoxiesProjectsPage = (function () {
     }
   }
 
-  function showCreateBusy() {
-    if (createBusyEl) return;
-    createBusyEl = document.createElement('div');
-    createBusyEl.id = 'boxiesCreateShowroomBusy';
-    createBusyEl.className = 'boxies-global-busy';
-    createBusyEl.setAttribute('role', 'alertdialog');
-    createBusyEl.setAttribute('aria-modal', 'true');
-    createBusyEl.setAttribute('aria-busy', 'true');
-    createBusyEl.setAttribute('aria-label', 'Creando showroom');
-    createBusyEl.innerHTML =
+  function showGlobalBusy(message) {
+    var label = message || 'Procesando…';
+    if (globalBusyEl) {
+      var labelEl = globalBusyEl.querySelector('.boxies-global-busy__label');
+      if (labelEl) labelEl.textContent = label;
+      globalBusyEl.setAttribute('aria-label', label);
+      return;
+    }
+    globalBusyEl = document.createElement('div');
+    globalBusyEl.id = 'boxiesGlobalBusy';
+    globalBusyEl.className = 'boxies-global-busy';
+    globalBusyEl.setAttribute('role', 'alertdialog');
+    globalBusyEl.setAttribute('aria-modal', 'true');
+    globalBusyEl.setAttribute('aria-busy', 'true');
+    globalBusyEl.setAttribute('aria-label', label);
+    globalBusyEl.innerHTML =
       '<div class="boxies-global-busy__backdrop" aria-hidden="true"></div>' +
       '<div class="boxies-global-busy__panel" role="status">' +
         '<div class="boxies-global-busy__spinner" aria-hidden="true"></div>' +
-        '<p class="boxies-global-busy__label">Creando showroom</p>' +
+        '<p class="boxies-global-busy__label"></p>' +
       '</div>';
-    document.body.appendChild(createBusyEl);
-    document.body.classList.add('boxies-is-creating-showroom');
+    globalBusyEl.querySelector('.boxies-global-busy__label').textContent = label;
+    document.body.appendChild(globalBusyEl);
+    document.body.classList.add('boxies-is-global-busy');
     document.body.setAttribute('aria-busy', 'true');
   }
 
-  function hideCreateBusy() {
-    if (createBusyEl && createBusyEl.parentNode) {
-      createBusyEl.parentNode.removeChild(createBusyEl);
+  function hideGlobalBusy() {
+    if (globalBusyEl && globalBusyEl.parentNode) {
+      globalBusyEl.parentNode.removeChild(globalBusyEl);
     }
-    createBusyEl = null;
+    globalBusyEl = null;
+    document.body.classList.remove('boxies-is-global-busy');
     document.body.classList.remove('boxies-is-creating-showroom');
     document.body.removeAttribute('aria-busy');
+  }
+
+  /* V5.9.37 aliases — same global operation loader */
+  function showCreateBusy() {
+    document.body.classList.add('boxies-is-creating-showroom');
+    showGlobalBusy('Creando showroom');
+  }
+
+  function hideCreateBusy() {
+    hideGlobalBusy();
   }
 
   function resetCreateButton(btn) {
@@ -708,7 +727,7 @@ var BoxiesProjectsPage = (function () {
   }
 
   async function handleCreateShowroom(btn) {
-    if (!btn || isCreatingShowroom || btn.dataset.busy === '1') return;
+    if (!btn || isCreatingShowroom || isDeletingShowroom || btn.dataset.busy === '1') return;
     if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
         typeof BoxiesAdmin2ProjectsApi.createFromTemplate !== 'function') {
       notifyError('API de creación no disponible');
@@ -778,32 +797,55 @@ var BoxiesProjectsPage = (function () {
   }
 
   async function handleDeleteShowroom(btn) {
-    if (!btn || btn.dataset.busy === '1') return;
+    if (!btn || isDeletingShowroom || isCreatingShowroom || btn.dataset.busy === '1') return;
     var projectId = btn.getAttribute('data-boxies-delete-id');
     var name = btn.getAttribute('data-boxies-delete-name') || 'este showroom';
     if (!projectId) return;
-    var ok = window.confirm('¿Eliminar «' + name + '»? Esta acción no se puede deshacer.');
-    if (!ok) return;
     if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
         typeof BoxiesAdmin2ProjectsApi.remove !== 'function') {
       notifyError('API de eliminación no disponible');
       return;
     }
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.confirm !== 'function') {
+      notifyError('Modal de confirmación no disponible');
+      return;
+    }
+
+    var ok = await AdminUI.confirm({
+      title: 'Eliminar showroom',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      bodyHtml:
+        '<p class="admin-modal-copy">¿Eliminar «' + escapeHtml(name) + '»?</p>' +
+        '<p class="admin-modal-copy admin-modal-copy--muted">Esta acción no se puede deshacer.</p>'
+    });
+    if (!ok) return;
+
+    isDeletingShowroom = true;
     btn.dataset.busy = '1';
     btn.disabled = true;
+    showGlobalBusy('Eliminando showroom');
     try {
       await BoxiesAdmin2ProjectsApi.remove(projectId);
-      var rowEl = btn.closest('tr[data-showroom-id]');
-      if (rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl);
-      notifySuccess('Showroom eliminado');
-      var tbody = document.getElementById('boxiesProjectsBody');
-      if (tbody && !tbody.querySelector('tr[data-showroom-id]')) {
-        tbody.innerHTML = '<tr><td colspan="7">No hay showrooms registrados.</td></tr>';
+      var list = await refreshShowroomsList();
+      if (listContainsShowroom(list, projectId)) {
+        list = await refreshShowroomsList();
       }
+      if (listContainsShowroom(list, projectId)) {
+        throw new Error('El showroom no se eliminó de la lista. Recarga e inténtalo de nuevo.');
+      }
+      /* No success toast — list update is the confirmation (avoids green ghost). */
+      hideGlobalBusy();
+      isDeletingShowroom = false;
     } catch (err) {
+      hideGlobalBusy();
       notifyError(err.message || 'No se pudo eliminar el showroom');
       btn.disabled = false;
       btn.dataset.busy = '0';
+      isDeletingShowroom = false;
+      try {
+        await refreshShowroomsList();
+      } catch (_refreshErr) { /* keep previous UI */ }
     }
   }
 
@@ -930,8 +972,12 @@ var BoxiesProjectsPage = (function () {
   }
 
   function unmount() {
-    hideCreateBusy();
+    hideGlobalBusy();
     isCreatingShowroom = false;
+    isDeletingShowroom = false;
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.closeModal === 'function') {
+      AdminUI.closeModal();
+    }
     var host = document.getElementById('boxiesContent');
     if (host) host.classList.remove('boxies-content--showrooms');
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearPageActions) {
