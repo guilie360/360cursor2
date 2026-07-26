@@ -7,7 +7,6 @@
 .hall-title,
 .section-header h1,
 .dashboard-card h1,
-.auth-gate-title,
 .hall-login-brand,
 .login-logo,
 .dashboard-logo {
@@ -23,21 +22,31 @@
   line-height: var(--hall-leading-tight, 1.35);
 }
 
-.auth-gate-title {
+/*
+ * Auth title/lead colors are HALL-shell only.
+ * On the visitor project page, --hall-text-muted is undefined; using it made
+ * color invalid-at-computed-value-time and the title inherited UA black —
+ * while Style V.3 expects var(--text-primary) from components.css.
+ */
+body.dashboard-shell .auth-gate-title,
+body.login-page .auth-gate-title,
+body.hall-login .auth-gate-title,
+body.hall-app .auth-gate-title,
+body.platform-builder-shell .auth-gate-title,
+body.visitor-dashboard .auth-gate-title,
+.bx-admin2 .auth-gate-title {
   font-size: 0.8125rem;
   font-weight: 550;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   text-align: center;
   margin: 0 0 var(--hall-space-3, 12px);
-  color: var(--hall-text-muted);
+  color: var(--hall-text-muted, var(--hall-text, rgba(255, 255, 255, 0.94)));
 }
 
 .hall-lead,
 .section-header p,
 .placeholder-copy,
-.auth-view-lead,
-.auth-copy,
 .login-subtitle {
   color: var(--hall-text-muted);
   line-height: var(--hall-leading-body, 1.6);
@@ -46,13 +55,55 @@
   letter-spacing: 0.005em;
 }
 
-.auth-view-lead,
-.auth-copy,
-.login-subtitle {
+body.dashboard-shell .auth-view-lead,
+body.dashboard-shell .auth-copy,
+body.login-page .auth-view-lead,
+body.login-page .auth-copy,
+body.hall-login .auth-view-lead,
+body.hall-login .auth-copy,
+body.hall-app .auth-view-lead,
+body.hall-app .auth-copy,
+body.platform-builder-shell .auth-view-lead,
+body.platform-builder-shell .auth-copy,
+body.visitor-dashboard .auth-view-lead,
+body.visitor-dashboard .auth-copy,
+.bx-admin2 .auth-view-lead,
+.bx-admin2 .auth-copy,
+body.dashboard-shell .login-subtitle,
+body.login-page .login-subtitle,
+body.hall-login .login-subtitle,
+body.hall-app .login-subtitle,
+.bx-admin2 .login-subtitle {
+  color: var(--hall-text-muted);
+  line-height: var(--hall-leading-body, 1.6);
+  font-size: var(--hall-lead-size, 0.9375rem);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+}
+
+body.dashboard-shell .auth-view-lead,
+body.dashboard-shell .auth-copy,
+body.login-page .auth-view-lead,
+body.login-page .auth-copy,
+body.hall-login .auth-view-lead,
+body.hall-login .auth-copy,
+body.hall-app .auth-view-lead,
+body.hall-app .auth-copy,
+body.platform-builder-shell .auth-view-lead,
+body.platform-builder-shell .auth-copy,
+body.visitor-dashboard .auth-view-lead,
+body.visitor-dashboard .auth-copy,
+.bx-admin2 .auth-view-lead,
+.bx-admin2 .auth-copy,
+body.dashboard-shell .login-subtitle,
+body.login-page .login-subtitle,
+body.hall-login .login-subtitle,
+body.hall-app .login-subtitle,
+.bx-admin2 .login-subtitle {
   text-align: center;
   margin: 0 0 var(--hall-space-6, 32px);
   font-size: 0.875rem;
-  color: var(--hall-text-faint);
+  color: var(--hall-text-faint, var(--hall-text-muted, rgba(255, 255, 255, 0.34)));
 }
 
 .hall-login-brand,
