@@ -5,11 +5,77 @@
 var BoxiesBuilderPage = (function () {
   var activeHost = null;
   var promotedNodes = [];
+  var PENDING_CREATE_KEY = 'boxies_pending_showroom_creation';
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function hasPendingCreate() {
+    if (window.__BOXIES_PENDING_CREATE__) return true;
+    try {
+      var raw = sessionStorage.getItem(PENDING_CREATE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || !data.t || Date.now() - data.t > 120000) {
+        clearPendingCreate();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function clearPendingCreate() {
+    try {
+      sessionStorage.removeItem(PENDING_CREATE_KEY);
+    } catch (e) {}
+    window.__BOXIES_PENDING_CREATE__ = false;
+  }
+
+  function ensureCreateBusyVisible() {
+    if (!hasPendingCreate()) return;
+    document.body.classList.add('boxies-is-creating-showroom');
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
+      AdminUI.showGlobalBusy('Creando showroom');
+    }
+  }
+
+  function releaseCreateBusy() {
+    clearPendingCreate();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+          AdminUI.hideGlobalBusy();
+        }
+        document.body.classList.remove('boxies-is-creating-showroom');
+      });
+    });
+  }
+
+  function failCreateBusy(message) {
+    clearPendingCreate();
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+      AdminUI.hideGlobalBusy();
+    }
+    document.body.classList.remove('boxies-is-creating-showroom');
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      AdminNotify.error(message || 'No se pudo abrir la configuración del showroom.');
+    }
+  }
+
+  function isBuilderConfigReady(host) {
+    if (!host) return false;
+    return !!(
+      host.querySelector('#builderApp') &&
+      (host.querySelector('.builder-config-identity__title') ||
+        host.querySelector('#builderStepPanel') ||
+        host.querySelector('[data-builder-step="config"]') ||
+        host.querySelector('.builder-workspace'))
+    );
   }
 
   function ensureIdentityInUrl(projectId, slug) {
@@ -96,20 +162,28 @@ var BoxiesBuilderPage = (function () {
     ctx = ctx || {};
     var projectId = (ctx.projectId || '').trim();
     var slug = (ctx.project || ctx.proyecto || ctx.slug || '').trim();
+    var pendingCreate = hasPendingCreate();
+    if (pendingCreate) ensureCreateBusyVisible();
 
     if (!projectId && !slug) {
+      if (pendingCreate) failCreateBusy('Showroom creado, pero faltan datos para abrir la configuración.');
       showPickProject(host);
       return;
     }
 
     if (typeof AiProjectBuilderView === 'undefined' || typeof AiProjectBuilderView.render !== 'function') {
+      if (pendingCreate) failCreateBusy('AiProjectBuilderView no está disponible en este host.');
       showError(host, new Error('AiProjectBuilderView no está disponible en este host.'));
       return;
     }
 
     ensureIdentityInUrl(projectId, slug);
     host.classList.add('boxies-builder-embed');
-    host.innerHTML = '<p class="boxies-page__desc" style="padding:8px 0">Cargando builder…</p>';
+    if (!pendingCreate) {
+      host.innerHTML = '<p class="boxies-page__desc" style="padding:8px 0">Cargando builder…</p>';
+    } else {
+      host.innerHTML = '';
+    }
 
     try {
       if (typeof PlatformBuilderBridge !== 'undefined' && typeof PlatformBuilderBridge.init === 'function') {
@@ -136,8 +210,25 @@ var BoxiesBuilderPage = (function () {
       if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
         BuilderProgressRail.applyCollapsedFromPrefs();
       }
+
+      if (pendingCreate) {
+        if (!isBuilderConfigReady(host)) {
+          /* Allow one paint cycle for late DOM from render */
+          await new Promise(function (resolve) {
+            requestAnimationFrame(function () { resolve(); });
+          });
+        }
+        if (!isBuilderConfigReady(host)) {
+          failCreateBusy('Showroom creado, pero la configuración no terminó de cargar.');
+          return;
+        }
+        releaseCreateBusy();
+      }
     } catch (err) {
       console.error('[boxies:builder-page]', err);
+      if (pendingCreate) {
+        failCreateBusy((err && err.message) || 'No se pudo abrir la configuración del showroom.');
+      }
       showError(host, err);
     }
   }

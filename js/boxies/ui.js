@@ -180,6 +180,52 @@ var AdminUI = (function () {
     );
   }
 
+  /* Global viewport busy overlay — survives SPA page unmount (create → builder). */
+  var globalBusyEl = null;
+
+  function showGlobalBusy(message) {
+    var label = message || 'Procesando…';
+    if (globalBusyEl) {
+      var labelEl = globalBusyEl.querySelector('.boxies-global-busy__label');
+      if (labelEl) labelEl.textContent = label;
+      globalBusyEl.setAttribute('aria-label', label);
+      document.body.classList.add('boxies-is-global-busy');
+      document.body.setAttribute('aria-busy', 'true');
+      return;
+    }
+    globalBusyEl = document.createElement('div');
+    globalBusyEl.id = 'boxiesGlobalBusy';
+    globalBusyEl.className = 'boxies-global-busy';
+    globalBusyEl.setAttribute('role', 'alertdialog');
+    globalBusyEl.setAttribute('aria-modal', 'true');
+    globalBusyEl.setAttribute('aria-busy', 'true');
+    globalBusyEl.setAttribute('aria-label', label);
+    globalBusyEl.innerHTML =
+      '<div class="boxies-global-busy__backdrop" aria-hidden="true"></div>' +
+      '<div class="boxies-global-busy__panel" role="status">' +
+        '<div class="boxies-global-busy__spinner" aria-hidden="true"></div>' +
+        '<p class="boxies-global-busy__label"></p>' +
+      '</div>';
+    globalBusyEl.querySelector('.boxies-global-busy__label').textContent = label;
+    document.body.appendChild(globalBusyEl);
+    document.body.classList.add('boxies-is-global-busy');
+    document.body.setAttribute('aria-busy', 'true');
+  }
+
+  function hideGlobalBusy() {
+    if (globalBusyEl && globalBusyEl.parentNode) {
+      globalBusyEl.parentNode.removeChild(globalBusyEl);
+    }
+    globalBusyEl = null;
+    document.body.classList.remove('boxies-is-global-busy');
+    document.body.classList.remove('boxies-is-creating-showroom');
+    document.body.removeAttribute('aria-busy');
+  }
+
+  function isGlobalBusy() {
+    return !!globalBusyEl;
+  }
+
   return {
     escapeHtml: escapeHtml,
     openModal: openModal,
@@ -194,6 +240,9 @@ var AdminUI = (function () {
     normalizeOptionalText: normalizeOptionalText,
     normalizeUrl: normalizeUrl,
     renderLoadingBlock: renderLoadingBlock,
-    renderEmptyState: renderEmptyState
+    renderEmptyState: renderEmptyState,
+    showGlobalBusy: showGlobalBusy,
+    hideGlobalBusy: hideGlobalBusy,
+    isGlobalBusy: isGlobalBusy
   };
 })();
