@@ -411,6 +411,7 @@ var BoxiesShell = (function () {
     clearPageActions: clearPageActions,
     isMounted: isMounted,
     setChromeClasses: setChromeClasses,
-    applyNavCollapsed: applyNavCollapsed
+    applyNavCollapsed: applyNavCollapsed,
+    resolvePreviewUrl: resolvePreviewUrl
   };
 })();

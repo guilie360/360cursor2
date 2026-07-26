@@ -13,6 +13,7 @@ var BoxiesProjectsPage = (function () {
   var isCreatingShowroom = false;
   var isDeletingShowroom = false;
   var PENDING_CREATE_KEY = 'boxies_pending_showroom_creation';
+  var PENDING_OPEN_KEY = 'boxies_pending_showroom_open';
   var COL_STORAGE_KEY = 'boxies.showrooms.columns';
   var COL_ORDER = ['drag', 'name', 'slug', 'status', 'public', 'updated', 'actions'];
   var COL_DEFS = {
@@ -22,7 +23,7 @@ var BoxiesProjectsPage = (function () {
     status: { min: 88, default: 120, resizable: true },
     public: { min: 72, default: 96, resizable: true },
     updated: { min: 120, default: 168, resizable: true },
-    actions: { min: 148, default: 168, resizable: true }
+    actions: { min: 168, default: 200, resizable: true }
   };
 
   function escapeHtml(v) {
@@ -70,6 +71,11 @@ var BoxiesProjectsPage = (function () {
     edit:
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>' +
+      '</svg>',
+    eye:
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>' +
+        '<circle cx="12" cy="12" r="3"/>' +
       '</svg>',
     copy:
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -423,6 +429,11 @@ var BoxiesProjectsPage = (function () {
               '" data-boxies-open-builder="' +
                 escapeHtml(slug) +
               '" data-tooltip="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
+              '<button type="button" class="boxies-icon-action" data-boxies-preview-slug="' +
+                escapeHtml(slug) +
+              '" data-tooltip="Vista previa" aria-label="Vista previa"' +
+              (slug ? '' : ' disabled') +
+              '>' + ICONS.eye + '</button>' +
               '<span class="boxies-row-actions__gap" aria-hidden="true"></span>' +
               '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
                 escapeHtml(id) +
@@ -445,9 +456,10 @@ var BoxiesProjectsPage = (function () {
     btn.setAttribute('aria-checked', isPublic ? 'true' : 'false');
     btn.setAttribute('aria-label', isPublic ? 'Público' : 'Privado');
     btn.setAttribute(
-      'title',
+      'data-tooltip',
       isPublic ? 'Público — visible en landing' : 'Privado — oculto del landing'
     );
+    btn.removeAttribute('title');
     btn.setAttribute('data-boxies-public', isPublic ? '1' : '0');
   }
 
@@ -598,15 +610,45 @@ var BoxiesProjectsPage = (function () {
     });
   }
 
+  function resolveShowroomPreviewUrl(slug) {
+    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.resolvePreviewUrl === 'function') {
+      return BoxiesShell.resolvePreviewUrl(slug);
+    }
+    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl) {
+      return PlatformBuilderBridge.showroomUrl(slug);
+    }
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(slug);
+    }
+    if (slug) {
+      try {
+        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+      } catch (e) {}
+    }
+    return window.location.origin + '/';
+  }
+
   function bindOpenBuilder(host) {
     host.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-boxies-open-builder-id]');
       if (!btn || !host.contains(btn)) return;
       e.preventDefault();
-      openBuilder(
+      handleOpenBuilder(
         btn.getAttribute('data-boxies-open-builder-id'),
         btn.getAttribute('data-boxies-open-builder')
       );
+    });
+  }
+
+  function bindPreview(host) {
+    host.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-boxies-preview-slug]');
+      if (!btn || !host.contains(btn) || btn.disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var slug = (btn.getAttribute('data-boxies-preview-slug') || '').trim();
+      if (!slug) return;
+      window.open(resolveShowroomPreviewUrl(slug), '_blank', 'noopener,noreferrer');
     });
   }
 
@@ -615,6 +657,24 @@ var BoxiesProjectsPage = (function () {
       projectId: projectId || null,
       project: slug || null
     });
+  }
+
+  async function handleOpenBuilder(projectId, slug) {
+    if ((!projectId && !slug) || isCreatingShowroom || isDeletingShowroom) return;
+    if (hasPendingCreate() || hasPendingOpen()) return;
+    showOpenBusy();
+    markPendingOpen(projectId);
+    try {
+      await openBuilder(projectId, slug);
+      /* Builder should clear pending; backup if still set. */
+      if (hasPendingOpen()) finishPendingOpenBusy();
+    } catch (err) {
+      clearPendingOpen();
+      hideGlobalBusy();
+      notifyError(
+        (err && err.message) || 'No se pudo abrir la configuración del showroom.'
+      );
+    }
   }
 
   function notifyError(message) {
@@ -695,6 +755,54 @@ var BoxiesProjectsPage = (function () {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         hideCreateBusy();
+      });
+    });
+  }
+
+  /* V5.9.41 — edit → builder uses the same global busy overlay */
+  function showOpenBusy() {
+    showGlobalBusy('Cargando showroom');
+  }
+
+  function markPendingOpen(projectId) {
+    try {
+      sessionStorage.setItem(
+        PENDING_OPEN_KEY,
+        JSON.stringify({ projectId: String(projectId || ''), t: Date.now() })
+      );
+    } catch (e) {}
+    window.__BOXIES_PENDING_OPEN__ = true;
+  }
+
+  function clearPendingOpen() {
+    try {
+      sessionStorage.removeItem(PENDING_OPEN_KEY);
+    } catch (e) {}
+    window.__BOXIES_PENDING_OPEN__ = false;
+  }
+
+  function hasPendingOpen() {
+    if (window.__BOXIES_PENDING_OPEN__) return true;
+    try {
+      var raw = sessionStorage.getItem(PENDING_OPEN_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || !data.t || Date.now() - data.t > 120000) {
+        clearPendingOpen();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function finishPendingOpenBusy() {
+    if (!hasPendingOpen()) return;
+    clearPendingOpen();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        hideGlobalBusy();
       });
     });
   }
@@ -981,6 +1089,7 @@ var BoxiesProjectsPage = (function () {
 
     installCreateDockAction();
     bindOpenBuilder(host);
+    bindPreview(host);
     bindPublicToggles(host);
     bindShowroomActions(host);
     bindColumnResize(document.getElementById('boxiesShowroomsTable'));
@@ -1005,7 +1114,7 @@ var BoxiesProjectsPage = (function () {
   }
 
   function unmount() {
-    /* Keep create busy alive across SPA nav into builder (V5.9.39). */
+    /* Keep create/open busy alive across SPA nav into builder (V5.9.39 / V5.9.41). */
     isCreatingShowroom = false;
     isDeletingShowroom = false;
     if (typeof AdminUI !== 'undefined' && typeof AdminUI.closeModal === 'function') {

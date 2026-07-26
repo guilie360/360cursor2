@@ -6,6 +6,7 @@ var BoxiesBuilderPage = (function () {
   var activeHost = null;
   var promotedNodes = [];
   var PENDING_CREATE_KEY = 'boxies_pending_showroom_creation';
+  var PENDING_OPEN_KEY = 'boxies_pending_showroom_open';
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -36,11 +37,41 @@ var BoxiesBuilderPage = (function () {
     window.__BOXIES_PENDING_CREATE__ = false;
   }
 
+  function hasPendingOpen() {
+    if (window.__BOXIES_PENDING_OPEN__) return true;
+    try {
+      var raw = sessionStorage.getItem(PENDING_OPEN_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || !data.t || Date.now() - data.t > 120000) {
+        clearPendingOpen();
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function clearPendingOpen() {
+    try {
+      sessionStorage.removeItem(PENDING_OPEN_KEY);
+    } catch (e) {}
+    window.__BOXIES_PENDING_OPEN__ = false;
+  }
+
   function ensureCreateBusyVisible() {
     if (!hasPendingCreate()) return;
     document.body.classList.add('boxies-is-creating-showroom');
     if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
       AdminUI.showGlobalBusy('Creando showroom');
+    }
+  }
+
+  function ensureOpenBusyVisible() {
+    if (!hasPendingOpen()) return;
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
+      AdminUI.showGlobalBusy('Cargando showroom');
     }
   }
 
@@ -56,12 +87,33 @@ var BoxiesBuilderPage = (function () {
     });
   }
 
+  function releaseOpenBusy() {
+    clearPendingOpen();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+          AdminUI.hideGlobalBusy();
+        }
+      });
+    });
+  }
+
   function failCreateBusy(message) {
     clearPendingCreate();
     if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
       AdminUI.hideGlobalBusy();
     }
     document.body.classList.remove('boxies-is-creating-showroom');
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      AdminNotify.error(message || 'No se pudo abrir la configuración del showroom.');
+    }
+  }
+
+  function failOpenBusy(message) {
+    clearPendingOpen();
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+      AdminUI.hideGlobalBusy();
+    }
     if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
       AdminNotify.error(message || 'No se pudo abrir la configuración del showroom.');
     }
@@ -76,6 +128,14 @@ var BoxiesBuilderPage = (function () {
         host.querySelector('[data-builder-step="config"]') ||
         host.querySelector('.builder-workspace'))
     );
+  }
+
+  async function waitUntilBuilderReady(host) {
+    if (isBuilderConfigReady(host)) return true;
+    await new Promise(function (resolve) {
+      requestAnimationFrame(function () { resolve(); });
+    });
+    return isBuilderConfigReady(host);
   }
 
   function ensureIdentityInUrl(projectId, slug) {
@@ -163,23 +223,28 @@ var BoxiesBuilderPage = (function () {
     var projectId = (ctx.projectId || '').trim();
     var slug = (ctx.project || ctx.proyecto || ctx.slug || '').trim();
     var pendingCreate = hasPendingCreate();
+    var pendingOpen = !pendingCreate && hasPendingOpen();
+    var pendingBusy = pendingCreate || pendingOpen;
     if (pendingCreate) ensureCreateBusyVisible();
+    else if (pendingOpen) ensureOpenBusyVisible();
 
     if (!projectId && !slug) {
       if (pendingCreate) failCreateBusy('Showroom creado, pero faltan datos para abrir la configuración.');
+      else if (pendingOpen) failOpenBusy('Faltan datos para abrir la configuración del showroom.');
       showPickProject(host);
       return;
     }
 
     if (typeof AiProjectBuilderView === 'undefined' || typeof AiProjectBuilderView.render !== 'function') {
       if (pendingCreate) failCreateBusy('AiProjectBuilderView no está disponible en este host.');
+      else if (pendingOpen) failOpenBusy('AiProjectBuilderView no está disponible en este host.');
       showError(host, new Error('AiProjectBuilderView no está disponible en este host.'));
       return;
     }
 
     ensureIdentityInUrl(projectId, slug);
     host.classList.add('boxies-builder-embed');
-    if (!pendingCreate) {
+    if (!pendingBusy) {
       host.innerHTML = '<p class="boxies-page__desc" style="padding:8px 0">Cargando builder…</p>';
     } else {
       host.innerHTML = '';
@@ -211,18 +276,19 @@ var BoxiesBuilderPage = (function () {
         BuilderProgressRail.applyCollapsedFromPrefs();
       }
 
-      if (pendingCreate) {
-        if (!isBuilderConfigReady(host)) {
-          /* Allow one paint cycle for late DOM from render */
-          await new Promise(function (resolve) {
-            requestAnimationFrame(function () { resolve(); });
-          });
-        }
-        if (!isBuilderConfigReady(host)) {
-          failCreateBusy('Showroom creado, pero la configuración no terminó de cargar.');
+      if (pendingBusy) {
+        var ready = await waitUntilBuilderReady(host);
+        if (!ready) {
+          if (pendingCreate) {
+            failCreateBusy('Showroom creado, pero la configuración no terminó de cargar.');
+          } else {
+            failOpenBusy('La configuración del showroom no terminó de cargar.');
+            showError(host, new Error('La configuración del showroom no terminó de cargar.'));
+          }
           return;
         }
-        releaseCreateBusy();
+        if (pendingCreate) releaseCreateBusy();
+        else releaseOpenBusy();
       }
       if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.refresh === 'function') {
         BoxiesTooltip.refresh(host);
@@ -231,6 +297,8 @@ var BoxiesBuilderPage = (function () {
       console.error('[boxies:builder-page]', err);
       if (pendingCreate) {
         failCreateBusy((err && err.message) || 'No se pudo abrir la configuración del showroom.');
+      } else if (pendingOpen) {
+        failOpenBusy((err && err.message) || 'No se pudo abrir la configuración del showroom.');
       }
       showError(host, err);
     }
