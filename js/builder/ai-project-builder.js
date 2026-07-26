@@ -322,6 +322,10 @@ var AiProjectBuilderView = (function () {
     }
 
     function conjuntoCompLabel(c) {
+      if (EstructuraEngine.isConjuntoEdificioComponent &&
+          EstructuraEngine.isConjuntoEdificioComponent(c)) {
+        return String(c.nombre || '').trim() || 'Edificio';
+      }
       if (EstructuraEngine.isConjuntoResidentialComponent &&
           EstructuraEngine.isConjuntoResidentialComponent(c)) {
         return productLabel(c.producto) || 'Residencial';
@@ -347,7 +351,11 @@ var AiProjectBuilderView = (function () {
     function componentsListHtml(list) {
       if (!list || !list.length) return '';
       return list.map(function (c) {
-        return compactRow(conjuntoCompLabel(c), formatQty(c.cantidad));
+        var qty = EstructuraEngine.conjuntoComponentHousingUnits
+          ? EstructuraEngine.conjuntoComponentHousingUnits(c)
+          : EstructuraEngine.clampInt(c.cantidad, 0, 100000, 0);
+        if (!qty) qty = EstructuraEngine.clampInt(c.cantidad, 0, 100000, 0);
+        return compactRow(conjuntoCompLabel(c), formatQty(qty));
       }).join('');
     }
 
@@ -712,6 +720,9 @@ var AiProjectBuilderView = (function () {
       var residential = EstructuraEngine.isConjuntoResidentialComponent
         ? EstructuraEngine.isConjuntoResidentialComponent(comp)
         : (comp && comp.kind === 'residencial');
+      var isEdificio = EstructuraEngine.isConjuntoEdificioComponent
+        ? EstructuraEngine.isConjuntoEdificioComponent(comp)
+        : (comp && comp.type === 'edificio');
       var typeLabel = residential
         ? (EstructuraEngine.productLabel
           ? EstructuraEngine.productLabel(comp.producto)
@@ -723,12 +734,91 @@ var AiProjectBuilderView = (function () {
       var stageAttr = stageLocalId
         ? ' data-cj-stage="' + AdminUI.escapeHtml(stageLocalId) + '"'
         : '';
-      var body = residential
-        ? ('<div class="ws-field-unit builder-estructura-row">' +
+      var body;
+      if (isEdificio) {
+        var mode = comp.edificioMode === 'individual' ? 'individual' : 'uniforme';
+        var cap = EstructuraEngine.conjuntoEdificioCapacity
+          ? EstructuraEngine.conjuntoEdificioCapacity(comp)
+          : 0;
+        var towersHtml = '';
+        if (mode === 'individual') {
+          towersHtml =
+            '<div class="builder-estructura-sublabel">Torres</div>' +
+            ((comp.towers || []).map(function (tw, ti) {
+              return '<details class="builder-estructura-acc builder-estructura-acc--nested" data-cj-tower="' +
+                AdminUI.escapeHtml(tw.localId) + '"' + (tw.open ? ' open' : '') + '>' +
+                '<summary><span data-cj-tower-title>' +
+                  AdminUI.escapeHtml(tw.nombre || ('Torre ' + (ti + 1))) +
+                '</span></summary>' +
+                '<div class="builder-estructura-acc__body">' +
+                  '<div class="builder-field">' +
+                    '<label>Nombre</label>' +
+                    '<input type="text" data-cj-tower-nombre value="' +
+                      AdminUI.escapeHtml(tw.nombre || '') + '">' +
+                  '</div>' +
+                  '<div class="builder-estructura-grid2">' +
+                    '<div class="ws-field-unit builder-estructura-row">' +
+                      '<span class="builder-estructura-row__label">Pisos</span>' +
+                      stepperHtml('cj.tw.pisos', tw.pisos || 5, 1, 200) +
+                    '</div>' +
+                    '<div class="ws-field-unit builder-estructura-row">' +
+                      '<span class="builder-estructura-row__label">Unidades / piso</span>' +
+                      stepperHtml('cj.tw.unidadesPorPiso', tw.unidadesPorPiso || 4, 1, 100) +
+                    '</div>' +
+                  '</div>' +
+                  '<button type="button" class="builder-header-action-btn is-danger boxies-btn-secondary" data-cj-tower-remove="' +
+                    AdminUI.escapeHtml(tw.localId) + '">Quitar torre</button>' +
+                '</div></details>';
+            }).join('') || '<p class="builder-estructura-section__note">Sin torres.</p>') +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-cj-tower-add>' +
+              '+ Añadir torre</button>';
+        }
+        body =
+          '<div class="builder-field">' +
+            '<label>Nombre</label>' +
+            '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
+          '</div>' +
+          '<div class="builder-estructura-chips">' +
+            '<label class="builder-estructura-chip' + (mode === 'uniforme' ? ' is-on' : '') + '">' +
+              '<input type="radio" name="cjEdifMode-' + AdminUI.escapeHtml(comp.localId) +
+                '" data-cj-edificio-mode="uniforme"' + (mode === 'uniforme' ? ' checked' : '') + '>' +
+              '<span>Configuración uniforme</span></label>' +
+            '<label class="builder-estructura-chip' + (mode === 'individual' ? ' is-on' : '') + '">' +
+              '<input type="radio" name="cjEdifMode-' + AdminUI.escapeHtml(comp.localId) +
+                '" data-cj-edificio-mode="individual"' + (mode === 'individual' ? ' checked' : '') + '>' +
+              '<span>Torres individuales</span></label>' +
+          '</div>' +
+          (mode === 'uniforme'
+            ? ('<div class="builder-estructura-grid2">' +
+                '<div class="ws-field-unit builder-estructura-row">' +
+                  '<span class="builder-estructura-row__label">Cantidad de torres</span>' +
+                  stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 50) +
+                '</div>' +
+                '<div class="ws-field-unit builder-estructura-row">' +
+                  '<span class="builder-estructura-row__label">Pisos</span>' +
+                  stepperHtml('cj.pisos', comp.pisos || 5, 1, 200) +
+                '</div>' +
+                '<div class="ws-field-unit builder-estructura-row">' +
+                  '<span class="builder-estructura-row__label">Unidades / piso</span>' +
+                  stepperHtml('cj.unidadesPorPiso', comp.unidadesPorPiso || 4, 1, 100) +
+                '</div>' +
+              '</div>')
+            : towersHtml) +
+          '<div class="builder-estructura-row" style="margin-top:8px">' +
+            '<span class="builder-estructura-row__label">Viviendas del componente</span>' +
+            '<span class="builder-estructura-row__value" data-cj-comp-cap>' +
+              AdminUI.escapeHtml(String(cap)) +
+            '</span>' +
+          '</div>';
+      } else if (residential) {
+        body =
+          '<div class="ws-field-unit builder-estructura-row">' +
             '<span class="builder-estructura-row__label">Cantidad</span>' +
             stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
-          '</div>')
-        : ('<div class="builder-estructura-grid2">' +
+          '</div>';
+      } else {
+        body =
+          '<div class="builder-estructura-grid2">' +
             '<div class="builder-field">' +
               '<label>Nombre</label>' +
               '<input type="text" data-cj-comp-nombre value="' + AdminUI.escapeHtml(comp.nombre || '') + '">' +
@@ -737,7 +827,8 @@ var AiProjectBuilderView = (function () {
               '<span class="builder-estructura-row__label">Cantidad</span>' +
               stepperHtml('cj.cantidad', comp.cantidad || 1, 1, 100000) +
             '</div>' +
-          '</div>');
+          '</div>';
+      }
       return '<div class="builder-conjunto-comp" data-cj-comp="' + AdminUI.escapeHtml(comp.localId) + '"' +
         stageAttr + '>' +
         '<div class="builder-conjunto-comp__head">' +
@@ -760,8 +851,9 @@ var AiProjectBuilderView = (function () {
           return '<button type="button" class="ws-ms__opt" data-cj-add-type="' +
             AdminUI.escapeHtml(p.id) + '">' + AdminUI.escapeHtml(p.label) + '</button>';
         }).join('');
+      residentialOpts +=
+        '<button type="button" class="ws-ms__opt" data-cj-add-type="edificio">Edificio / Torres</button>';
       var physicalOpts = [
-        { id: 'edificio', label: 'Edificio' },
         { id: 'lotes', label: 'Lotes' },
         { id: 'comercio', label: 'Comercio' },
         { id: 'oficinas', label: 'Oficinas' },
@@ -779,7 +871,7 @@ var AiProjectBuilderView = (function () {
             '<div class="ws-ms__options">' + residentialOpts + '</div>' +
           '</div>' +
           '<div class="ws-ms__group">' +
-            '<div class="ws-ms__group-title">Físico / no residencial</div>' +
+            '<div class="ws-ms__group-title">Otros</div>' +
             '<div class="ws-ms__options">' + physicalOpts + '</div>' +
           '</div>' +
         '</div>' +
@@ -2257,9 +2349,32 @@ var AiProjectBuilderView = (function () {
     function updateConjuntoTotalViviendasDisplay() {
       var el = rootEl.querySelector('[data-cj-total-viviendas]');
       if (!el || !state.estructura) return;
+      if (EstructuraEngine.syncConjuntoDerivedTotals) {
+        EstructuraEngine.syncConjuntoDerivedTotals(state.estructura);
+      }
       el.textContent = String(
         state.estructura.totalViviendas != null ? state.estructura.totalViviendas : 0
       );
+    }
+
+    function updateConjuntoCompCapDisplay(compEl) {
+      if (!compEl || !state.estructura) return;
+      var capEl = compEl.querySelector('[data-cj-comp-cap]');
+      if (!capEl) return;
+      var compId = compEl.getAttribute('data-cj-comp');
+      var stageId = compEl.getAttribute('data-cj-stage') || '';
+      var cfg = state.estructura.conjuntoConfig;
+      if (!cfg) return;
+      var list = null;
+      if (stageId) {
+        var st = (cfg.stages || []).find(function (s) { return s.localId === stageId; });
+        list = st ? st.components : null;
+      } else {
+        list = cfg.components;
+      }
+      var comp = list && list.find(function (c) { return c.localId === compId; });
+      if (!comp || !EstructuraEngine.conjuntoComponentHousingUnits) return;
+      capEl.textContent = String(EstructuraEngine.conjuntoComponentHousingUnits(comp));
     }
 
     function closeAllWsPopovers() {
@@ -2381,7 +2496,19 @@ var AiProjectBuilderView = (function () {
       input.addEventListener('change', function () {
         if (!input.checked) return;
         state.estructura.unidadHousingType = input.getAttribute('data-unidad-housing');
-        state.estructura.tipologias.forEach(function (t) { t.nombre = ''; });
+        var wantProd = state.estructura.unidadHousingType === 'apartamento'
+          ? 'apartamento'
+          : 'casa_unifamiliar';
+        (state.estructura.tipologias || []).forEach(function (t) {
+          if (t._autoFromStructure || t.structureKey) {
+            t.producto = wantProd;
+            t.structureKey = wantProd + '::';
+            t.nombre = '';
+          }
+        });
+        if (EstructuraEngine.syncTipologiasFromStructure) {
+          EstructuraEngine.syncTipologiasFromStructure(state.estructura);
+        }
         EstructuraEngine.syncTypologyPlantas(state.estructura);
         persist();
         rerender();
@@ -2392,6 +2519,19 @@ var AiProjectBuilderView = (function () {
       input.addEventListener('change', function () {
         if (!input.checked) return;
         state.estructura.lotesSubtype = input.getAttribute('data-lotes-subtype');
+        var wantProd = state.estructura.lotesSubtype === 'campestre'
+          ? 'lote_campestre'
+          : 'lote_urbano';
+        (state.estructura.tipologias || []).forEach(function (t) {
+          if (t._autoFromStructure || t.structureKey) {
+            t.producto = wantProd;
+            t.structureKey = wantProd + '::';
+            t.nombre = '';
+          }
+        });
+        if (EstructuraEngine.syncTipologiasFromStructure) {
+          EstructuraEngine.syncTipologiasFromStructure(state.estructura);
+        }
         persist();
         rerender();
       });
@@ -2499,6 +2639,60 @@ var AiProjectBuilderView = (function () {
           rerender();
         });
       }
+
+      row.querySelectorAll('[data-cj-edificio-mode]').forEach(function (input) {
+        input.addEventListener('change', function () {
+          if (!input.checked) return;
+          EstructuraEngine.updateConjuntoComponent(
+            state,
+            compId,
+            { edificioMode: input.getAttribute('data-cj-edificio-mode') },
+            stageId || null
+          );
+          rerender();
+        });
+      });
+
+      var addTowerBtn = row.querySelector('[data-cj-tower-add]');
+      if (addTowerBtn) {
+        addTowerBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          EstructuraEngine.addConjuntoEdificioTower(state, compId, stageId || null);
+          rerender();
+        });
+      }
+
+      row.querySelectorAll('[data-cj-tower]').forEach(function (towerCard) {
+        var towerId = towerCard.getAttribute('data-cj-tower');
+        var twName = towerCard.querySelector('[data-cj-tower-nombre]');
+        if (twName) {
+          twName.addEventListener('input', function () {
+            EstructuraEngine.updateConjuntoEdificioTower(
+              state, compId, towerId, { nombre: twName.value }, stageId || null
+            );
+            var titleEl = towerCard.querySelector('[data-cj-tower-title]');
+            if (titleEl) {
+              titleEl.textContent = String(twName.value || '').trim() || 'Torre';
+            }
+            persist();
+          });
+        }
+        var twRm = towerCard.querySelector('[data-cj-tower-remove]');
+        if (twRm) {
+          twRm.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            EstructuraEngine.removeConjuntoEdificioTower(
+              state, compId, towerId, stageId || null
+            );
+            rerender();
+          });
+        }
+        towerCard.addEventListener('toggle', function () {
+          EstructuraEngine.updateConjuntoEdificioTower(
+            state, compId, towerId, { open: towerCard.open }, stageId || null
+          );
+        });
+      });
     });
 
     rootEl.querySelectorAll('[data-mixto-comp]').forEach(function (input) {
@@ -2694,15 +2888,36 @@ var AiProjectBuilderView = (function () {
         EstructuraEngine.setTypologyCount(state, n);
         return true;
       }
-      if (field === 'cj.cantidad') {
+      if (field === 'cj.cantidad' || field === 'cj.pisos' || field === 'cj.unidadesPorPiso') {
         var compEl = el.closest('[data-cj-comp]');
         if (!compEl) return false;
         var stageId = compEl.getAttribute('data-cj-stage') || '';
+        var patch = {};
+        if (field === 'cj.cantidad') patch.cantidad = n;
+        if (field === 'cj.pisos') patch.pisos = n;
+        if (field === 'cj.unidadesPorPiso') patch.unidadesPorPiso = n;
         EstructuraEngine.updateConjuntoComponent(
           state,
           compEl.getAttribute('data-cj-comp'),
-          { cantidad: n },
+          patch,
           stageId || null
+        );
+        return true;
+      }
+      if (field === 'cj.tw.pisos' || field === 'cj.tw.unidadesPorPiso') {
+        var towerEl = el.closest('[data-cj-tower]');
+        var compElTw = el.closest('[data-cj-comp]');
+        if (!towerEl || !compElTw) return false;
+        var stageIdTw = compElTw.getAttribute('data-cj-stage') || '';
+        var twPatch = {};
+        if (field === 'cj.tw.pisos') twPatch.pisos = n;
+        if (field === 'cj.tw.unidadesPorPiso') twPatch.unidadesPorPiso = n;
+        EstructuraEngine.updateConjuntoEdificioTower(
+          state,
+          compElTw.getAttribute('data-cj-comp'),
+          towerEl.getAttribute('data-cj-tower'),
+          twPatch,
+          stageIdTw || null
         );
         return true;
       }
@@ -2741,7 +2956,7 @@ var AiProjectBuilderView = (function () {
         var input = el.querySelector('[data-stepper-input]');
         if (!input || !field) return;
         var e = state.estructura;
-        if (field === 'cj.cantidad') {
+        if (field === 'cj.cantidad' || field === 'cj.pisos' || field === 'cj.unidadesPorPiso') {
           var compEl = el.closest('[data-cj-comp]');
           if (!compEl || !e.conjuntoConfig) return;
           var compId = compEl.getAttribute('data-cj-comp');
@@ -2756,7 +2971,39 @@ var AiProjectBuilderView = (function () {
             list = e.conjuntoConfig.components;
           }
           var comp = list && list.find(function (c) { return c.localId === compId; });
-          if (comp) input.value = String(comp.cantidad);
+          if (!comp) return;
+          if (field === 'cj.cantidad') input.value = String(comp.cantidad);
+          if (field === 'cj.pisos') input.value = String(comp.pisos != null ? comp.pisos : 5);
+          if (field === 'cj.unidadesPorPiso') {
+            input.value = String(comp.unidadesPorPiso != null ? comp.unidadesPorPiso : 4);
+          }
+          return;
+        }
+        if (field === 'cj.tw.pisos' || field === 'cj.tw.unidadesPorPiso') {
+          var towerElR = el.closest('[data-cj-tower]');
+          var compElR = el.closest('[data-cj-comp]');
+          if (!towerElR || !compElR || !e.conjuntoConfig) return;
+          var stageIdR = compElR.getAttribute('data-cj-stage') || '';
+          var listR = null;
+          if (stageIdR) {
+            var stR = (e.conjuntoConfig.stages || []).find(function (s) {
+              return s.localId === stageIdR;
+            });
+            listR = stR ? stR.components : null;
+          } else {
+            listR = e.conjuntoConfig.components;
+          }
+          var compR = listR && listR.find(function (c) {
+            return c.localId === compElR.getAttribute('data-cj-comp');
+          });
+          var twR = compR && (compR.towers || []).find(function (t) {
+            return t.localId === towerElR.getAttribute('data-cj-tower');
+          });
+          if (!twR) return;
+          if (field === 'cj.tw.pisos') input.value = String(twR.pisos != null ? twR.pisos : 5);
+          if (field === 'cj.tw.unidadesPorPiso') {
+            input.value = String(twR.unidadesPorPiso != null ? twR.unidadesPorPiso : 4);
+          }
           return;
         }
         if (field.indexOf('t.assign.') === 0) {
@@ -2810,12 +3057,18 @@ var AiProjectBuilderView = (function () {
         var applied = applyStepperValue(el, raw);
         if (!applied) return false;
         var localOnly = field === 'cj.cantidad' ||
+          field === 'cj.pisos' ||
+          field === 'cj.unidadesPorPiso' ||
+          field === 'cj.tw.pisos' ||
+          field === 'cj.tw.unidadesPorPiso' ||
           (field && field.indexOf('t.assign.') === 0) ||
           (field && field.indexOf('t.') === 0 && field !== 't.plantas_internas');
         if (localOnly) {
           refreshStepperInput();
-          if (field === 'cj.cantidad') {
+          if (field === 'cj.cantidad' || field === 'cj.pisos' || field === 'cj.unidadesPorPiso' ||
+              field === 'cj.tw.pisos' || field === 'cj.tw.unidadesPorPiso') {
             updateConjuntoTotalViviendasDisplay();
+            updateConjuntoCompCapDisplay(el.closest('[data-cj-comp]'));
             updateAssignmentBalanceDisplay();
           }
           if (field && field.indexOf('t.assign.') === 0) updateAssignmentBalanceDisplay();
@@ -2855,8 +3108,15 @@ var AiProjectBuilderView = (function () {
           var min = parseInt(el.getAttribute('data-min'), 10);
           var max = parseInt(el.getAttribute('data-max'), 10);
           input.value = String(EstructuraEngine.clampInt(input.value, min, max, min));
-          if (el.getAttribute('data-stepper') === 'cj.cantidad') {
+          if (el.getAttribute('data-stepper') === 'cj.cantidad' ||
+              el.getAttribute('data-stepper') === 'cj.pisos' ||
+              el.getAttribute('data-stepper') === 'cj.unidadesPorPiso' ||
+              String(el.getAttribute('data-stepper') || '').indexOf('cj.tw.') === 0) {
             updateConjuntoTotalViviendasDisplay();
+            updateConjuntoCompCapDisplay(el.closest('[data-cj-comp]'));
+            if (typeof updateAssignmentBalanceDisplay === 'function') {
+              updateAssignmentBalanceDisplay();
+            }
           }
           if (String(el.getAttribute('data-stepper') || '').indexOf('t.assign.') === 0) {
             updateAssignmentBalanceDisplay();

@@ -1,4 +1,4 @@
-/* BOXIES V5.9.43 — Estructura Engine: tipos + asignación tipología×cantidad por contenedor */
+/* BOXIES V5.9.46 — Estructura Engine: capacidad edificios + tipologías derivadas de estructura */
 var EstructuraEngine = (function () {
   var ROOT_BUCKET_ID = '__root__';
   var CASAS_BUCKET_ID = '__casas__';
@@ -367,6 +367,31 @@ var EstructuraEngine = (function () {
     if (t === 'conjunto') {
       ensureConjuntoConfig(e);
       walkConjuntoComponents(e, function (c, stage) {
+        if (isConjuntoEdificioComponent(c)) {
+          var stagePrefix = stage && stage.nombre ? (String(stage.nombre) + ' · ') : '';
+          if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
+            c.towers.forEach(function (tw, i) {
+              buckets.push({
+                id: tw.localId,
+                label: stagePrefix + (String(tw.nombre || '').trim() || ('Torre ' + (i + 1))),
+                capacity: clampInt(tw.pisos, 0, 200, 0) * clampInt(tw.unidadesPorPiso, 0, 100, 0),
+                kind: 'conjunto-edificio',
+                componentId: c.localId,
+                stageId: stage ? stage.localId : null
+              });
+            });
+          } else {
+            buckets.push({
+              id: c.localId,
+              label: stagePrefix + (String(c.nombre || '').trim() || 'Edificio'),
+              capacity: conjuntoEdificioCapacity(c),
+              kind: 'conjunto-edificio',
+              componentId: c.localId,
+              stageId: stage ? stage.localId : null
+            });
+          }
+          return;
+        }
         if (!isConjuntoResidentialComponent(c)) return;
         buckets.push({
           id: c.localId,
@@ -587,10 +612,51 @@ var EstructuraEngine = (function () {
     return fam2 === 'casa' || fam2 === 'apartamento';
   }
 
+  function emptyConjuntoTower(index, defaults) {
+    defaults = defaults || {};
+    return {
+      localId: uid(),
+      nombre: defaults.nombre || ('Torre ' + String.fromCharCode(65 + ((index || 0) % 26))),
+      pisos: clampInt(defaults.pisos, 1, 200, 5),
+      unidadesPorPiso: clampInt(defaults.unidadesPorPiso, 1, 100, 4),
+      open: index === 0
+    };
+  }
+
+  function isConjuntoEdificioComponent(c) {
+    return !!(c && c.kind === 'fisico' && c.type === 'edificio');
+  }
+
+  function conjuntoEdificioCapacity(c) {
+    if (!isConjuntoEdificioComponent(c)) return 0;
+    if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
+      return c.towers.reduce(function (sum, tw) {
+        return sum +
+          clampInt(tw.pisos, 0, 200, 0) *
+          clampInt(tw.unidadesPorPiso, 0, 100, 0);
+      }, 0);
+    }
+    return clampInt(c.cantidad, 1, 100000, 1) *
+      clampInt(c.pisos, 1, 200, 1) *
+      clampInt(c.unidadesPorPiso, 1, 100, 1);
+  }
+
+  /** Residential housing units contributed by a Conjunto component (casas + edificios). */
+  function conjuntoComponentHousingUnits(c) {
+    if (!c) return 0;
+    if (isConjuntoEdificioComponent(c)) return conjuntoEdificioCapacity(c);
+    if (isConjuntoResidentialComponent(c)) return clampInt(c.cantidad, 0, 100000, 0);
+    return 0;
+  }
+
+  function isConjuntoHousingComponent(c) {
+    return isConjuntoResidentialComponent(c) || isConjuntoEdificioComponent(c);
+  }
+
   function emptyConjuntoComponent(typeId, orden) {
     var phys = conjuntoPhysicalTypeMeta(typeId);
     if (phys) {
-      return {
+      var base = {
         localId: uid(),
         kind: 'fisico',
         type: phys.id,
@@ -600,6 +666,13 @@ var EstructuraEngine = (function () {
         tipologiaLocalId: null,
         orden: orden != null ? orden : 0
       };
+      if (phys.id === 'edificio') {
+        base.pisos = 5;
+        base.unidadesPorPiso = 4;
+        base.edificioMode = 'uniforme';
+        base.towers = [];
+      }
+      return base;
     }
     var producto = CONJUNTO_LEGACY_TYPE_TO_PRODUCTO[typeId] || typeId;
     if (!familyFromProducto(producto)) producto = 'casa_unifamiliar';
@@ -679,7 +752,7 @@ var EstructuraEngine = (function () {
     }
 
     var phys = conjuntoPhysicalTypeMeta(type) || conjuntoPhysicalTypeMeta('otro');
-    return {
+    var fisico = {
       localId: raw.localId || uid(),
       kind: 'fisico',
       type: phys.id,
@@ -691,6 +764,37 @@ var EstructuraEngine = (function () {
       tipologiaLocalId: null,
       orden: raw.orden != null ? raw.orden : (orden || 0)
     };
+    if (phys.id === 'edificio') {
+      fisico.pisos = clampInt(raw.pisos, 1, 200, 5);
+      fisico.unidadesPorPiso = clampInt(raw.unidadesPorPiso, 1, 100, 4);
+      fisico.edificioMode = raw.edificioMode === 'individual' ? 'individual' : 'uniforme';
+      fisico.towers = Array.isArray(raw.towers)
+        ? raw.towers.map(function (tw, i) {
+            return {
+              localId: tw.localId || uid(),
+              nombre: (tw.nombre != null && String(tw.nombre).trim())
+                ? String(tw.nombre).trim()
+                : ('Torre ' + String.fromCharCode(65 + (i % 26))),
+              pisos: clampInt(tw.pisos, 1, 200, fisico.pisos),
+              unidadesPorPiso: clampInt(tw.unidadesPorPiso, 1, 100, fisico.unidadesPorPiso),
+              open: tw.open != null ? !!tw.open : i === 0
+            };
+          })
+        : [];
+      if (fisico.edificioMode === 'individual' && !fisico.towers.length) {
+        var nTowers = clampInt(fisico.cantidad, 1, 50, 1);
+        for (var ti = 0; ti < nTowers; ti++) {
+          fisico.towers.push(emptyConjuntoTower(ti, {
+            pisos: fisico.pisos,
+            unidadesPorPiso: fisico.unidadesPorPiso
+          }));
+        }
+      }
+      if (fisico.edificioMode === 'individual') {
+        fisico.cantidad = Math.max(1, fisico.towers.length);
+      }
+    }
+    return fisico;
   }
 
   function normalizeConjuntoStage(raw, orden) {
@@ -751,23 +855,138 @@ var EstructuraEngine = (function () {
   function syncConjuntoDerivedTotals(e) {
     if (!e || normalizeTypeId(e.developmentType) !== 'conjunto') return e;
     var sum = 0;
-    var hasRes = false;
+    var hasHousing = false;
     walkConjuntoComponents(e, function (c) {
-      if (isConjuntoResidentialComponent(c)) {
-        hasRes = true;
-        sum += clampInt(c.cantidad, 1, 100000, 0);
+      var units = conjuntoComponentHousingUnits(c);
+      if (units > 0 || isConjuntoHousingComponent(c)) {
+        hasHousing = true;
+        sum += units;
       }
     });
-    if (hasRes) e.totalViviendas = sum;
+    if (hasHousing) e.totalViviendas = sum;
     e.tipologiasCount = (e.tipologias || []).length;
     return e;
   }
 
   /**
-   * V5.9.20: Spatial residential components define producto + cantidad only.
-   * Tipologías own modelos. Do not auto-create tipologías from components,
-   * and do not overwrite tip.modelo ↔ comp.nombre.
-   * Legacy tipologiaLocalId / nombre remain in config_json for compat.
+   * V5.9.46 — Tipologías se derivan de la configuración espacial.
+   * Crea tipologías base (Modelo A) por producto/componente detectado; no duplica.
+   */
+  function structureSeedKey(seed) {
+    return String(seed.producto || '') + '::' + String(seed.componente || '');
+  }
+
+  function listStructureProductSeeds(e) {
+    e = e || {};
+    var t = normalizeTypeId(e.developmentType);
+    var seeds = [];
+    var seen = {};
+
+    function pushSeed(producto, componente, note) {
+      if (!producto) return;
+      var seed = {
+        producto: producto,
+        componente: componente || null,
+        note: note || null
+      };
+      var key = structureSeedKey(seed);
+      if (seen[key]) return;
+      seen[key] = true;
+      seeds.push(seed);
+    }
+
+    if (t === 'unidad') {
+      pushSeed(
+        e.unidadHousingType === 'apartamento' ? 'apartamento' : 'casa_unifamiliar',
+        null
+      );
+      return seeds;
+    }
+    if (t === 'edificio') {
+      pushSeed('apartamento', null);
+      return seeds;
+    }
+    if (t === 'lotes') {
+      pushSeed(e.lotesSubtype === 'campestre' ? 'lote_campestre' : 'lote_urbano', null);
+      return seeds;
+    }
+    if (t === 'conjunto') {
+      ensureConjuntoConfig(e);
+      walkConjuntoComponents(e, function (c) {
+        if (isConjuntoResidentialComponent(c)) {
+          pushSeed(c.producto || 'casa_unifamiliar', null);
+        } else if (isConjuntoEdificioComponent(c)) {
+          pushSeed('apartamento', null);
+        }
+      });
+      return seeds;
+    }
+    if (t === 'mixto') {
+      var m = e.mixto || {};
+      if (m.edificios) pushSeed('apartamento', 'edificios');
+      if (m.casas) pushSeed('casa_unifamiliar', 'casas');
+      if (m.lotes) {
+        pushSeed(e.lotesSubtype === 'campestre' ? 'lote_campestre' : 'lote_urbano', 'lotes');
+      }
+    }
+    return seeds;
+  }
+
+  function syncTipologiasFromStructure(e) {
+    if (!e) return e;
+    if (!Array.isArray(e.tipologias)) e.tipologias = [];
+    var seeds = listStructureProductSeeds(e);
+    if (!seeds.length) {
+      e.tipologiasCount = e.tipologias.length;
+      return e;
+    }
+
+    seeds.forEach(function (seed, si) {
+      var key = structureSeedKey(seed);
+      var existing = null;
+      for (var i = 0; i < e.tipologias.length; i++) {
+        var tip = e.tipologias[i];
+        if (tip.structureKey === key) {
+          existing = tip;
+          break;
+        }
+      }
+      if (!existing) {
+        for (var j = 0; j < e.tipologias.length; j++) {
+          var tip2 = e.tipologias[j];
+          if (tip2.producto !== seed.producto) continue;
+          if (seed.componente && tip2.componente !== seed.componente) continue;
+          if (!seed.componente && tip2.componente &&
+              (tip2.componente === 'edificios' || tip2.componente === 'casas' || tip2.componente === 'lotes')) {
+            continue;
+          }
+          existing = tip2;
+          break;
+        }
+      }
+      if (existing) {
+        existing.structureKey = key;
+        if (seed.componente && !existing.componente) existing.componente = seed.componente;
+        return;
+      }
+      var created = emptyTypology(e.developmentType, e.tipologias.length + si, {
+        producto: seed.producto,
+        componente: seed.componente,
+        unidadHousingType: e.unidadHousingType,
+        modelo: 'Modelo A'
+      });
+      created.structureKey = key;
+      created._autoFromStructure = true;
+      e.tipologias.push(created);
+    });
+
+    e.tipologiasCount = e.tipologias.length;
+    syncTypologyPlantas(e);
+    return e;
+  }
+
+  /**
+   * Normalize conjunto residential comps + derive tipologías from structure (V5.9.46).
    */
   function syncConjuntoResidentialTipologias(e) {
     if (!e || normalizeTypeId(e.developmentType) !== 'conjunto') return e;
@@ -775,6 +994,14 @@ var EstructuraEngine = (function () {
     ensureConjuntoConfig(e);
 
     walkConjuntoComponents(e, function (c) {
+      if (isConjuntoEdificioComponent(c)) {
+        c.tipologiaLocalId = null;
+        if (!c.pisos) c.pisos = 5;
+        if (!c.unidadesPorPiso) c.unidadesPorPiso = 4;
+        if (!c.edificioMode) c.edificioMode = 'uniforme';
+        if (!Array.isArray(c.towers)) c.towers = [];
+        return;
+      }
       if (!isConjuntoResidentialComponent(c)) {
         if (c && c.kind === 'fisico') c.tipologiaLocalId = null;
         return;
@@ -790,6 +1017,7 @@ var EstructuraEngine = (function () {
     });
 
     syncConjuntoDerivedTotals(e);
+    syncTipologiasFromStructure(e);
     return e;
   }
 
@@ -908,7 +1136,42 @@ var EstructuraEngine = (function () {
     if (patch.nombre != null && !isConjuntoResidentialComponent(comp)) {
       comp.nombre = String(patch.nombre);
     }
-    if (patch.cantidad != null) comp.cantidad = clampInt(patch.cantidad, 1, 100000, comp.cantidad);
+    if (patch.cantidad != null) {
+      comp.cantidad = clampInt(patch.cantidad, 1, 100000, comp.cantidad);
+      if (isConjuntoEdificioComponent(comp) && comp.edificioMode === 'individual') {
+        if (!Array.isArray(comp.towers)) comp.towers = [];
+        var needQty = clampInt(comp.cantidad, 1, 50, 1);
+        while (comp.towers.length < needQty) {
+          comp.towers.push(emptyConjuntoTower(comp.towers.length, {
+            pisos: comp.pisos,
+            unidadesPorPiso: comp.unidadesPorPiso
+          }));
+        }
+        if (comp.towers.length > needQty) comp.towers = comp.towers.slice(0, needQty);
+      }
+    }
+    if (patch.pisos != null && isConjuntoEdificioComponent(comp)) {
+      comp.pisos = clampInt(patch.pisos, 1, 200, comp.pisos || 5);
+    }
+    if (patch.unidadesPorPiso != null && isConjuntoEdificioComponent(comp)) {
+      comp.unidadesPorPiso = clampInt(patch.unidadesPorPiso, 1, 100, comp.unidadesPorPiso || 4);
+    }
+    if (patch.edificioMode && isConjuntoEdificioComponent(comp)) {
+      var wantIndividual = patch.edificioMode === 'individual';
+      comp.edificioMode = wantIndividual ? 'individual' : 'uniforme';
+      if (wantIndividual) {
+        if (!Array.isArray(comp.towers)) comp.towers = [];
+        var need = clampInt(comp.cantidad, 1, 50, 1);
+        while (comp.towers.length < need) {
+          comp.towers.push(emptyConjuntoTower(comp.towers.length, {
+            pisos: comp.pisos,
+            unidadesPorPiso: comp.unidadesPorPiso
+          }));
+        }
+        if (comp.towers.length > need) comp.towers = comp.towers.slice(0, need);
+        comp.cantidad = comp.towers.length;
+      }
+    }
     if (patch.producto && familyFromProducto(patch.producto)) {
       comp.kind = 'residencial';
       comp.type = 'residencial';
@@ -938,6 +1201,63 @@ var EstructuraEngine = (function () {
       if (name) stage.nombre = name;
     }
     if (patch.open != null) stage.open = !!patch.open;
+    e.dirty = true;
+    return e;
+  }
+
+  function addConjuntoEdificioTower(state, componentLocalId, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return e;
+    var comp = list.find(function (c) { return c.localId === componentLocalId; });
+    if (!comp || !isConjuntoEdificioComponent(comp)) return e;
+    comp.edificioMode = 'individual';
+    if (!Array.isArray(comp.towers)) comp.towers = [];
+    comp.towers.push(emptyConjuntoTower(comp.towers.length, {
+      pisos: comp.pisos,
+      unidadesPorPiso: comp.unidadesPorPiso
+    }));
+    comp.cantidad = comp.towers.length;
+    syncConjuntoResidentialTipologias(e);
+    e.dirty = true;
+    return e;
+  }
+
+  function removeConjuntoEdificioTower(state, componentLocalId, towerLocalId, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return e;
+    var comp = list.find(function (c) { return c.localId === componentLocalId; });
+    if (!comp || !isConjuntoEdificioComponent(comp) || !Array.isArray(comp.towers)) return e;
+    if (comp.towers.length <= 1) return e;
+    comp.towers = comp.towers.filter(function (tw) { return tw.localId !== towerLocalId; });
+    comp.cantidad = comp.towers.length;
+    syncConjuntoResidentialTipologias(e);
+    e.dirty = true;
+    return e;
+  }
+
+  function updateConjuntoEdificioTower(state, componentLocalId, towerLocalId, patch, stageLocalId) {
+    var e = ensureState(state);
+    ensureConjuntoConfig(e);
+    var list = findConjuntoComponentList(e, stageLocalId || null);
+    if (!list) return e;
+    var comp = list.find(function (c) { return c.localId === componentLocalId; });
+    if (!comp || !isConjuntoEdificioComponent(comp) || !Array.isArray(comp.towers)) return e;
+    var tw = comp.towers.find(function (t) { return t.localId === towerLocalId; });
+    if (!tw || !patch) return e;
+    if (patch.nombre != null) {
+      var nm = String(patch.nombre).trim();
+      if (nm) tw.nombre = nm;
+    }
+    if (patch.pisos != null) tw.pisos = clampInt(patch.pisos, 1, 200, tw.pisos);
+    if (patch.unidadesPorPiso != null) {
+      tw.unidadesPorPiso = clampInt(patch.unidadesPorPiso, 1, 100, tw.unidadesPorPiso);
+    }
+    if (patch.open != null) tw.open = !!patch.open;
+    syncConjuntoDerivedTotals(e);
     e.dirty = true;
     return e;
   }
@@ -1067,12 +1387,15 @@ var EstructuraEngine = (function () {
     ensureConjuntoConfig(e);
     if (normalizeTypeId(e.developmentType) === 'conjunto') {
       syncConjuntoResidentialTipologias(e);
+    } else {
+      syncTipologiasFromStructure(e);
     }
     if (!e.tipologias.length) {
       e.tipologias = [emptyTypology(e.developmentType, 0, {
         unidadHousingType: e.unidadHousingType,
         componente: e.developmentType === 'mixto' && e.mixto.edificios ? 'edificios' : null
       })];
+      syncTipologiasFromStructure(e);
     }
     e.tipologias.forEach(function (t) {
       if (t.componente == null) t.componente = null;
@@ -1243,7 +1566,8 @@ var EstructuraEngine = (function () {
     ];
     e.tipologiasCount = 1;
     e.dirty = true;
-    syncTypologyPlantas(e);
+    if (typeId === 'conjunto') syncConjuntoResidentialTipologias(e);
+    else syncTipologiasFromStructure(e);
     return e;
   }
 
@@ -1388,6 +1712,7 @@ var EstructuraEngine = (function () {
     }
     if (!e.mixto.edificios) e.buildings = [];
     e.dirty = true;
+    syncTipologiasFromStructure(e);
     return e;
   }
 
@@ -1407,15 +1732,17 @@ var EstructuraEngine = (function () {
     if (t === 'unidad') return clampInt(e.unidadCount, 1, 50000, 1);
     if (t === 'conjunto') {
       var sum = 0;
-      var hasRes = false;
+      var hasHousing = false;
       if (e.conjuntoConfig) {
         walkConjuntoComponents(e, function (c) {
-          if (!isConjuntoResidentialComponent(c)) return;
-          hasRes = true;
-          sum += clampInt(c.cantidad, 1, 100000, 0);
+          var units = conjuntoComponentHousingUnits(c);
+          if (units > 0 || isConjuntoHousingComponent(c)) {
+            hasHousing = true;
+            sum += units;
+          }
         });
       }
-      if (hasRes) return sum;
+      if (hasHousing) return sum;
       return clampInt(e.totalViviendas, 1, 50000, 0);
     }
     if (t === 'lotes') return clampInt(e.totalLotes, 1, 100000, 0);
@@ -1451,17 +1778,32 @@ var EstructuraEngine = (function () {
     if (t === 'conjunto' || (t === 'mixto' && estructura.mixto && estructura.mixto.casas)) {
       if (t === 'conjunto') {
         var resSum = 0;
-        var hasResComp = false;
+        var hasHousingComp = false;
         if (estructura.conjuntoConfig) {
           walkConjuntoComponents(estructura, function (c) {
-            if (!isConjuntoResidentialComponent(c)) return;
-            hasResComp = true;
-            resSum += clampInt(c.cantidad, 1, 100000, 0);
+            if (!isConjuntoHousingComponent(c)) return;
+            hasHousingComp = true;
+            resSum += conjuntoComponentHousingUnits(c);
           });
         }
-        if (hasResComp && resSum < 1) {
-          errors.push('Indica la cantidad de viviendas en los componentes residenciales.');
+        if (hasHousingComp && resSum < 1) {
+          errors.push('Indica la capacidad de viviendas en los componentes residenciales / edificios.');
         }
+        walkConjuntoComponents(estructura, function (c) {
+          if (!isConjuntoEdificioComponent(c)) return;
+          if (c.edificioMode === 'individual') {
+            if (!c.towers || !c.towers.length) {
+              errors.push('Define al menos una torre en «' + (c.nombre || 'Edificio') + '».');
+            }
+            (c.towers || []).forEach(function (tw) {
+              if (clampInt(tw.pisos, 1, 200, 0) < 1) {
+                errors.push('Pisos inválidos en ' + (tw.nombre || 'torre'));
+              }
+            });
+          } else if (clampInt(c.pisos, 1, 200, 0) < 1) {
+            errors.push('Pisos inválidos en ' + (c.nombre || 'edificio'));
+          }
+        });
       }
     }
     if (t === 'lotes' || (t === 'mixto' && estructura.mixto && estructura.mixto.lotes)) {
@@ -1536,9 +1878,19 @@ var EstructuraEngine = (function () {
     familyFromProducto: familyFromProducto,
     productLabel: productLabel,
     isConjuntoResidentialComponent: isConjuntoResidentialComponent,
+    isConjuntoEdificioComponent: isConjuntoEdificioComponent,
+    isConjuntoHousingComponent: isConjuntoHousingComponent,
+    conjuntoEdificioCapacity: conjuntoEdificioCapacity,
+    conjuntoComponentHousingUnits: conjuntoComponentHousingUnits,
     syncConjuntoResidentialTipologias: syncConjuntoResidentialTipologias,
     syncConjuntoDerivedTotals: syncConjuntoDerivedTotals,
+    syncTipologiasFromStructure: syncTipologiasFromStructure,
+    listStructureProductSeeds: listStructureProductSeeds,
     propagateTipologiaToConjuntoComponents: propagateTipologiaToConjuntoComponents,
+    emptyConjuntoTower: emptyConjuntoTower,
+    addConjuntoEdificioTower: addConjuntoEdificioTower,
+    removeConjuntoEdificioTower: removeConjuntoEdificioTower,
+    updateConjuntoEdificioTower: updateConjuntoEdificioTower,
     emptyState: emptyState,
     emptyBuilding: emptyBuilding,
     emptyTypology: emptyTypology,
