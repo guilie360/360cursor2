@@ -1,13 +1,14 @@
-/* Product Assistant — direct Style V.3 / ThemeSystem tokens only.
-   No private palette. No color-mix / rgba recoloring of theme surfaces.
-   Desktop and mobile share the same color source; @media is layout-only. */
+/* Product Assistant V5.9.32
+   Panel surface = same recipe as .main-menu (::before / ::after).
+   FAB = pre-V5.9.30 appearance (hero trigger unchanged by panel theme).
+   @media = layout only. */
 
 :root {
   --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --pa-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* FAB — same button tokens as the rest of the experience */
+/* ——— FAB: restored to pre-V5.9.30 (panel theme must not restyle this) ——— */
 .pa-fab {
   position: fixed;
   right: max(1.15rem, env(safe-area-inset-right));
@@ -16,33 +17,58 @@
   width: 52px;
   height: 52px;
   padding: 0;
-  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 999px;
-  background: var(--btn-glass-surface, var(--btn-surface));
-  color: var(--text-primary);
+  background: #080808;
   cursor: pointer;
   box-shadow:
-    var(--btn-shadow),
-    var(--glass-inset-shadow);
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 28px rgba(0, 0, 0, 0.4);
   transition:
     border-color 0.35s var(--pa-ease),
-    background 0.35s var(--pa-ease),
-    color 0.35s var(--pa-ease),
     transform 0.35s var(--pa-ease),
-    box-shadow 0.35s var(--pa-ease);
+    box-shadow 0.35s var(--pa-ease),
+    filter 0.35s var(--pa-ease);
 }
 
-.pa-fab:hover,
-.pa-fab:focus-visible,
-.pa-fab.is-active {
-  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-  border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-  background: var(--btn-glass-hover, var(--hover));
-  color: var(--btn-text-hover, var(--text-primary));
+.pa-fab:hover {
+  border-color: rgba(255, 255, 255, 0.28);
   transform: translateY(-1px);
   box-shadow:
-    var(--btn-shadow),
-    var(--glass-inset-shadow);
+    0 0 18px rgba(255, 255, 255, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.pa-fab.is-active {
+  border-color: rgba(255, 255, 255, 0.32);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
+}
+
+/* Desktop: ceder a Hall de Iniciar (components.css) — sin hover glass genérico */
+@media (min-width: 601px) {
+  .pa-fab,
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active {
+    border-color: var(--btn-border, var(--glass-border));
+    background: var(--btn-glass-surface, var(--btn-surface));
+    box-shadow:
+      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    filter: none;
+  }
+  .pa-fab:hover,
+  .pa-fab:focus-visible,
+  .pa-fab.is-active {
+    background: var(--btn-glass-hover, var(--hover));
+    color: var(--btn-text-hover, var(--text-primary));
+    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
+    transform: translateY(-1px);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.36),
+      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
+  }
 }
 
 .pa-fab__mark {
@@ -50,9 +76,9 @@
   width: 14px;
   height: 14px;
   margin: 0 auto;
-  border: 1.5px solid var(--btn-border, var(--glass-border));
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
   border-radius: 4px 4px 4px 1px;
-  box-shadow: var(--glass-inset-shadow);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .pa-root {
@@ -71,15 +97,16 @@
   pointer-events: auto;
 }
 
+/* Same overlay source as .main-menu-backdrop */
 .pa-backdrop {
   position: absolute;
   inset: 0;
-  background: var(--backdrop-55);
-  backdrop-filter: blur(var(--modal-backdrop-blur, 0px));
-  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px));
+  background: var(--overlay-mask, var(--modal-backdrop, var(--backdrop-94)));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
+  backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
 }
 
-/* Panel = same surface token as auth modal / menu panel (--glass-panel) */
+/* Panel shell: transparent — visible surface is ::before (same as .main-menu) */
 .pa-panel {
   position: absolute;
   right: max(1.15rem, env(safe-area-inset-right));
@@ -88,27 +115,58 @@
   flex-direction: column;
   width: min(420px, calc(100vw - 1.5rem));
   height: min(560px, calc(100dvh - 6.5rem));
-  border: 1px solid var(--glass-border);
+  border: none;
   border-radius: 18px;
-  background: var(--glass-panel);
-  backdrop-filter: blur(var(--panel-modal-blur, var(--glass-blur))) saturate(108%);
-  -webkit-backdrop-filter: blur(var(--panel-modal-blur, var(--glass-blur))) saturate(108%);
-  box-shadow:
-    var(--modal-shadow),
-    var(--glass-inset-shadow);
+  background: transparent;
+  isolation: isolate;
   overflow: hidden;
   transform: scale(0.96) translateY(8px);
   transform-origin: bottom right;
-  transition:
-    transform 0.32s var(--pa-ease-out),
-    background 0.35s ease,
-    border-color 0.35s ease,
-    color 0.35s ease;
+  transition: transform 0.32s var(--pa-ease-out);
   color: var(--text-primary);
 }
 
 .pa-root.is-open .pa-panel {
   transform: scale(1) translateY(0);
+}
+
+/* Exact surface recipe from .main-menu::before (components.css) */
+.pa-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(168deg,
+      color-mix(in srgb, var(--glass-panel) 72%, var(--text-primary) 4%) 0%,
+      var(--glass-panel) 42%,
+      color-mix(in srgb, var(--glass-panel) 92%, var(--bg-main) 8%) 100%);
+  backdrop-filter: blur(var(--menu-glass-blur, var(--glass-blur))) saturate(112%) brightness(1.02);
+  -webkit-backdrop-filter: blur(var(--menu-glass-blur, var(--glass-blur))) saturate(112%) brightness(1.02);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  box-shadow:
+    var(--glass-shadow, 24px 0 64px color-mix(in srgb, var(--bg-main) 28%, transparent)),
+    inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
+  z-index: -2;
+  pointer-events: none;
+}
+
+body[data-panel-glass="glass"] .pa-panel::before {
+  border-color: color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+/* Exact highlight recipe from .main-menu::after */
+.pa-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 5%, transparent), transparent 72%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .pa-head {
@@ -117,7 +175,9 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.95rem 1rem 0.85rem;
-  border-bottom: 1px solid var(--glass-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  position: relative;
+  z-index: 0;
 }
 
 .pa-title {
@@ -126,7 +186,7 @@
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
-  opacity: var(--text-secondary-opacity);
+  opacity: var(--text-secondary-opacity, 0.82);
 }
 
 .pa-close {
@@ -136,7 +196,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--text-muted);
-  opacity: var(--text-muted-opacity);
+  opacity: var(--text-muted-opacity, 0.72);
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
@@ -146,7 +206,7 @@
 .pa-close:hover {
   color: var(--text-primary);
   opacity: 1;
-  background: var(--hover);
+  background: var(--btn-glass-hover, var(--hover));
 }
 
 .pa-body {
@@ -154,6 +214,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 0;
 }
 
 .pa-messages {
@@ -170,7 +232,7 @@
 .pa-bubble {
   max-width: 92%;
   padding: 0.85rem 1rem;
-  border-radius: 14px;
+  border-radius: var(--menu-card-radius, 14px);
   font-size: 0.88rem;
   font-weight: 300;
   line-height: 1.55;
@@ -184,19 +246,23 @@
   margin-bottom: 0;
 }
 
-/* Surfaces = same tokens as cards / personalize blocks */
+/* Same inner surface as .main-menu .personalize-block.glass-surface */
 .pa-bubble--bot {
   align-self: flex-start;
   background: var(--panel-glass-surface);
   color: var(--text-secondary);
   border: 1px solid var(--glass-border);
+  backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
 }
 
 .pa-bubble--user {
   align-self: flex-end;
-  background: var(--bg-card);
+  background: var(--panel-glass-surface);
   color: var(--text-primary);
   border: 1px solid var(--glass-border);
+  backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur, 22px) * 0.65)) saturate(125%);
 }
 
 .pa-suggestions {
@@ -206,31 +272,35 @@
   margin-top: 0.15rem;
 }
 
+/* Quick actions = same surface/border recipe as .menu-item */
 .pa-chip {
   padding: 0.45rem 0.75rem;
-  border: var(--btn-border-width, 1px) solid var(--btn-border, var(--glass-border));
+  border: 1px solid color-mix(in srgb, var(--text-primary) 6%, transparent);
   border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--btn-glass-surface, var(--btn-surface)) 88%, var(--text-primary) 3%);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 0.72rem;
   font-weight: 400;
   letter-spacing: 0.01em;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 5%, transparent);
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
 .pa-chip:hover {
   color: var(--btn-text-hover, var(--text-primary));
-  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  border-color: var(--btn-border-hover, var(--btn-border, color-mix(in srgb, var(--text-primary) 9%, transparent)));
   background: var(--btn-glass-hover, var(--hover));
 }
 
 .pa-handoff {
   flex-shrink: 0;
   padding: 0.95rem 1.1rem 1rem;
-  border-top: 1px solid var(--glass-border);
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
   text-align: center;
+  position: relative;
+  z-index: 0;
 }
 
 .pa-handoff__copy {
@@ -239,9 +309,10 @@
   font-weight: 300;
   letter-spacing: 0.02em;
   color: var(--text-muted);
-  opacity: var(--text-muted-opacity);
+  opacity: var(--text-muted-opacity, 0.72);
 }
 
+/* WhatsApp CTA = menu button tokens */
 .pa-wa {
   display: inline-flex;
   align-items: center;
@@ -279,8 +350,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 0.85rem;
-  border-top: 1px solid var(--glass-border);
-  background: var(--glass-panel);
+  border-top: 1px solid color-mix(in srgb, var(--text-primary) 5%, transparent);
+  background: transparent;
+  position: relative;
+  z-index: 0;
 }
 
 .pa-compose input {
@@ -289,7 +362,7 @@
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--glass-border);
   border-radius: 8px;
-  background: var(--bg-glass-surface, var(--panel-glass-surface));
+  background: var(--panel-glass-surface);
   color: var(--text-primary);
   caret-color: var(--text-primary);
   font-family: inherit;
@@ -301,13 +374,13 @@
 
 .pa-compose input::placeholder {
   color: var(--text-muted);
-  opacity: var(--text-muted-opacity);
+  opacity: var(--text-muted-opacity, 0.72);
   font-size: 16px;
 }
 
 .pa-compose input:focus {
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-  background: var(--bg-glass-surface, var(--panel-glass-surface));
+  background: var(--panel-glass-surface);
 }
 
 .pa-send {
@@ -341,7 +414,7 @@
   border: 0;
 }
 
-/* Mobile: layout / spacing only — identical color tokens as desktop */
+/* Mobile: layout / spacing only — no color overrides */
 @media (max-width: 600px) {
   .pa-root {
     z-index: 960;
@@ -365,7 +438,6 @@
     );
     transform-origin: bottom center;
     border-radius: var(--menu-card-radius, 14px);
-    /* color source unchanged: background remains var(--glass-panel) from base */
   }
 
   body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-panel {
