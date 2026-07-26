@@ -2164,6 +2164,11 @@ body.builder-has-dock .admin-toast--info {
   color: rgba(111, 191, 134, 0.88);
 }
 
+/* Collapsed-only summaries (V5.9.47) */
+.builder-estructura-section[open] > .builder-estructura-section__summary > .builder-estructura-section__hint {
+  display: none;
+}
+
 .builder-estructura-section__summary .builder-header-action-btn {
   flex: 0 0 auto;
   margin-left: auto;

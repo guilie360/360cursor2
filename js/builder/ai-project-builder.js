@@ -150,10 +150,42 @@ var AiProjectBuilderView = (function () {
       '</div></div>';
   }
 
-  /**
-   * Presentational / derived — no persisted summary state.
-   * Compact vertical tech sheet (V5.9.23).
-   */
+  /** Collapsed-section summaries (V5.9.47) — presentational only. */
+  function buildEstructuraSectionHints(e) {
+    e = e || {};
+    var hints = { dev: '', org: '', tipologias: '', zonas: '' };
+    var typeMeta = (EstructuraEngine.DEVELOPMENT_TYPES || []).find(function (t) {
+      return t.id === e.developmentType;
+    });
+    hints.dev = typeMeta ? typeMeta.label : (e.developmentType || '');
+
+    function plural(n, one, many) {
+      var v = EstructuraEngine.clampInt(n, 0, 100000, 0);
+      return v + ' ' + (v === 1 ? one : many);
+    }
+
+    /* Viviendas: same V5.9.46 conceptualPhysicalUnits (no parallel formula). */
+    if (e.developmentType === 'conjunto' && EstructuraEngine.syncConjuntoDerivedTotals) {
+      EstructuraEngine.syncConjuntoDerivedTotals(e);
+    }
+    var housing = EstructuraEngine.conceptualPhysicalUnits
+      ? EstructuraEngine.conceptualPhysicalUnits(e)
+      : 0;
+    /* Mixto + casas: engine only counts edificios; add casas from totalViviendas. */
+    if (e.developmentType === 'mixto' && e.mixto && e.mixto.casas) {
+      housing += EstructuraEngine.clampInt(e.totalViviendas, 0, 50000, 0);
+    }
+    if (housing > 0) hints.org = plural(housing, 'vivienda', 'viviendas');
+
+    var tipCount = (e.tipologias && e.tipologias.length) || 0;
+    if (tipCount > 0) hints.tipologias = plural(tipCount, 'tipología', 'tipologías');
+
+    var amenCount = (e.zoneNames && e.zoneNames.length) || 0;
+    if (amenCount > 0) hints.zonas = plural(amenCount, 'amenidad', 'amenidades');
+
+    return hints;
+  }
+
   function buildAssignmentBalanceHtml(e) {
     if (!EstructuraEngine.assignmentBalance) return '';
     var bal = EstructuraEngine.assignmentBalance(e);
@@ -1292,9 +1324,7 @@ var AiProjectBuilderView = (function () {
       '</div>';
 
     var panels = e.openPanels || {};
-    var devLabel = (EstructuraEngine.DEVELOPMENT_TYPES.find(function (t) {
-      return t.id === e.developmentType;
-    }) || {}).label || '';
+    var sectionHints = buildEstructuraSectionHints(e);
     var draftStatus = e.dirty
       ? 'Cambios sin guardar'
       : (e._draftSaved ? 'Guardado' : '');
@@ -1313,6 +1343,12 @@ var AiProjectBuilderView = (function () {
       '</button>';
     var estructuraTitleRow = stepTitleHtml('Estructura').replace('</h2>', '</h2>' + expandBtnHtml);
 
+    function sectionHintHtml(key, text) {
+      if (!text) return '';
+      return '<span class="builder-estructura-section__hint" data-estructura-hint="' +
+        AdminUI.escapeHtml(key) + '">' + AdminUI.escapeHtml(text) + '</span>';
+    }
+
     return '<div class="builder-step-content builder-step-content--estructura">' +
       '<div class="builder-estructura-head">' +
         estructuraTitleRow +
@@ -1329,9 +1365,7 @@ var AiProjectBuilderView = (function () {
         (panels.dev !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
           '<span class="builder-estructura-section__title">Tipo de proyecto</span>' +
-          (devLabel
-            ? '<span class="builder-estructura-section__hint">' + AdminUI.escapeHtml(devLabel) + '</span>'
-            : '') +
+          sectionHintHtml('dev', sectionHints.dev) +
         '</summary>' +
         '<div class="builder-estructura-section__body">' +
           '<div class="builder-estructura-types">' + typesHtml + '</div>' +
@@ -1341,6 +1375,7 @@ var AiProjectBuilderView = (function () {
         (panels.org !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
           '<span class="builder-estructura-section__title">Configuración espacial</span>' +
+          sectionHintHtml('org', sectionHints.org) +
         '</summary>' +
         '<div class="builder-estructura-section__body">' + orgHtml + '</div>' +
       '</details>' +
@@ -1348,6 +1383,7 @@ var AiProjectBuilderView = (function () {
         (panels.tipologias !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
           '<span class="builder-estructura-section__title">Tipologías</span>' +
+          sectionHintHtml('tipologias', sectionHints.tipologias) +
         '</summary>' +
         '<div class="builder-estructura-section__body">' +
           '<p class="builder-estructura-section__note">Asigna cuántas unidades de cada tipología van a cada nivel. ' +
@@ -1362,6 +1398,7 @@ var AiProjectBuilderView = (function () {
         (panels.zonas !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
           '<span class="builder-estructura-section__title">Amenidades</span>' +
+          sectionHintHtml('zonas', sectionHints.zonas) +
         '</summary>' +
         '<div class="builder-estructura-section__body">' + zonesHtml + '</div>' +
       '</details>' +
@@ -2283,6 +2320,7 @@ var AiProjectBuilderView = (function () {
       saveState();
       updateNavButtons();
       refreshEstructuraResumenIfOpen();
+      updateEstructuraSectionHintsUi();
       updateEstructuraDraftStatusUi();
     }
 
@@ -2293,6 +2331,30 @@ var AiProjectBuilderView = (function () {
       var body = panel.querySelector('[data-estructura-resumen-body]');
       if (!body) return;
       body.innerHTML = buildEstructuraResumenHtml(state.estructura);
+    }
+
+    function updateEstructuraSectionHintsUi() {
+      if (!rootEl || !state.estructura) return;
+      var hints = buildEstructuraSectionHints(state.estructura);
+      ['dev', 'org', 'tipologias', 'zonas'].forEach(function (key) {
+        var panel = rootEl.querySelector('[data-estructura-panel="' + key + '"]');
+        if (!panel) return;
+        var summary = panel.querySelector('.builder-estructura-section__summary');
+        if (!summary) return;
+        var el = summary.querySelector('[data-estructura-hint="' + key + '"]');
+        var text = hints[key] || '';
+        if (!text) {
+          if (el) el.remove();
+          return;
+        }
+        if (!el) {
+          el = document.createElement('span');
+          el.className = 'builder-estructura-section__hint';
+          el.setAttribute('data-estructura-hint', key);
+          summary.appendChild(el);
+        }
+        el.textContent = text;
+      });
     }
 
     function updateEstructuraDraftStatusUi() {
