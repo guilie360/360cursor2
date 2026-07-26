@@ -350,6 +350,11 @@ var BuilderProgressRail = (function () {
         }
         applyRailCollapsed(next);
         if (_lastRoot && _lastState) update(_lastRoot, _lastState);
+        try {
+          window.dispatchEvent(new CustomEvent('boxies:rail-toggle', {
+            detail: { collapsed: !!next }
+          }));
+        } catch (errRail) {}
       });
     }
   }

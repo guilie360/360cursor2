@@ -2752,16 +2752,22 @@ button.builder-estructura-chip {
   border-color: rgba(155, 143, 212, 0.42);
 }
 
-/* ── Experiencia canvas (V5.9.50) ── */
+/* ── Experiencia canvas (V5.9.50 / layout V5.9.51) ── */
 .builder-step-content--experiencia {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: none !important;
   height: 100%;
   min-height: 0;
   max-height: 100%;
-  padding: 12px 12px 8px !important;
+  padding: 10px 10px 8px !important;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.builder-layout-single .builder-step-content--experiencia {
+  max-width: none !important;
 }
 
 .builder-exp-chrome {
@@ -2786,7 +2792,11 @@ button.builder-estructura-chip {
 .builder-exp-workspace {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  max-width: none;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
   gap: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -2797,6 +2807,7 @@ button.builder-estructura-chip {
 .builder-exp-stage {
   position: relative;
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -3062,17 +3073,30 @@ button.builder-estructura-chip {
 }
 
 .builder-exp-inspector {
-  flex: 0 0 280px;
-  width: 280px;
+  flex: 0 0 320px;
+  width: 320px;
+  max-width: 340px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(14, 14, 16, 0.96);
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .builder-exp-inspector.is-closed {
-  display: none;
+  display: none !important;
+  width: 0 !important;
+  flex: 0 0 0 !important;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.builder-exp-workspace:not(.has-inspector) .builder-exp-stage {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: none;
 }
 
 .builder-exp-inspector__head {

@@ -177,6 +177,16 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 .boxies-builder-embed:has(.builder-step-content--experiencia) #builderStepPanel {
   padding: 0;
   box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+}
+
+#boxiesContent:has(.builder-step-content--experiencia) .builder-step-content--experiencia,
+.boxies-builder-embed:has(.builder-step-content--experiencia) .builder-step-content--experiencia {
+  width: 100% !important;
+  max-width: none !important;
+  flex: 1 1 0%;
+  min-height: 0;
 }
 
 /*
@@ -249,6 +259,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 }
 
 body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
-body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace {
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace {
   margin-left: var(--builder-rail-width, 52px);
 }

@@ -19,7 +19,8 @@ var ExperienciaCanvas = (function () {
       !!(state.architecture && state.architecture.appliedAt);
     var active = (exp.nodes || []).filter(function (n) { return !n.orphaned; }).length;
     var canvas = exp.canvas || {};
-    var inspectorOpen = canvas.inspectorOpen !== false;
+    /* Closed by default — opens on node select (V5.9.51) */
+    var inspectorOpen = canvas.inspectorOpen === true;
     var minimapOn = canvas.minimapVisible !== false;
 
     return '' +
@@ -315,10 +316,10 @@ var ExperienciaCanvas = (function () {
       paintMinimap();
       paintInspector();
       if (inspector) {
-        inspector.classList.toggle('is-closed', canvas().inspectorOpen === false);
+        inspector.classList.toggle('is-closed', canvas().inspectorOpen !== true);
       }
       if (workspace) {
-        workspace.classList.toggle('has-inspector', canvas().inspectorOpen !== false);
+        workspace.classList.toggle('has-inspector', canvas().inspectorOpen === true);
       }
       if (minimapWrap) {
         minimapWrap.classList.toggle('is-hidden', canvas().minimapVisible === false);
@@ -337,7 +338,7 @@ var ExperienciaCanvas = (function () {
 
     function selectNode(id) {
       canvas().selectedId = id || null;
-      canvas().inspectorOpen = true;
+      if (id) canvas().inspectorOpen = true;
       renderAll();
       persist();
     }
@@ -426,7 +427,12 @@ var ExperienciaCanvas = (function () {
       closeInsp.addEventListener('click', function () {
         canvas().inspectorOpen = false;
         canvas().selectedId = null;
-        renderAll(); persist();
+        renderAll();
+        persist();
+        requestAnimationFrame(function () {
+          applyWorldTransform();
+          paintMinimap();
+        });
       });
     }
 
@@ -586,11 +592,33 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    /* Recalc viewport on layout changes (rail / inspector / window / fullscreen) */
+    var resizeTimer = null;
+    function onViewportResize() {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        applyWorldTransform();
+        paintMinimap();
+      }, 40);
+    }
+    if (typeof ResizeObserver !== 'undefined') {
+      var ro = new ResizeObserver(onViewportResize);
+      ro.observe(viewport);
+      if (stage) ro.observe(stage);
+      if (workspace) ro.observe(workspace);
+    }
+    window.addEventListener('resize', onViewportResize);
+    document.addEventListener('fullscreenchange', onViewportResize);
+    window.addEventListener('boxies:rail-toggle', onViewportResize);
+
     renderAll();
     if ((state.experiencia.nodes || []).length) {
       requestAnimationFrame(function () {
         if (canvas().panX === 40 && canvas().panY === 40) fitView();
+        else onViewportResize();
       });
+    } else {
+      requestAnimationFrame(onViewportResize);
     }
 
     return {
