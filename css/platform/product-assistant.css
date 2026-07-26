@@ -1,19 +1,13 @@
-/* Product Assistant — inherits live Style V.3 / ThemeSystem tokens (no private theme) */
+/* Product Assistant — direct Style V.3 / ThemeSystem tokens only.
+   No private palette. No color-mix / rgba recoloring of theme surfaces.
+   Desktop and mobile share the same color source; @media is layout-only. */
+
 :root {
   --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --pa-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  /* Derived from active project theme — update live when ThemeSystem applies */
-  --pa-line: var(--glass-border, color-mix(in srgb, var(--text-primary) 10%, transparent));
-  --pa-fg: var(--text-primary);
-  --pa-muted: color-mix(in srgb, var(--text-primary) 55%, transparent);
-  --pa-faint: color-mix(in srgb, var(--text-primary) 32%, transparent);
-  --pa-panel-bg: var(--bg-popup, color-mix(in srgb, var(--bg-main) 93%, transparent));
-  --pa-surface: var(--panel-glass-surface, var(--bg-card, color-mix(in srgb, var(--text-primary) 4.5%, transparent)));
-  --pa-elevated: var(--bg-card, color-mix(in srgb, var(--text-primary) 8%, transparent));
-  --pa-hover: var(--hover, color-mix(in srgb, var(--text-primary) 9%, transparent));
-  --pa-backdrop: var(--backdrop-55, color-mix(in srgb, var(--bg-main) 55%, transparent));
 }
 
+/* FAB — same button tokens as the rest of the experience */
 .pa-fab {
   position: fixed;
   right: max(1.15rem, env(safe-area-inset-right));
@@ -22,21 +16,20 @@
   width: 52px;
   height: 52px;
   padding: 0;
-  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border, var(--pa-line)));
+  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
   border-radius: 999px;
-  background: var(--btn-glass-surface, var(--btn-surface, var(--pa-surface)));
+  background: var(--btn-glass-surface, var(--btn-surface));
   color: var(--text-primary);
   cursor: pointer;
   box-shadow:
-    var(--btn-shadow, 0 12px 28px rgba(0, 0, 0, 0.4)),
-    var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent));
+    var(--btn-shadow),
+    var(--glass-inset-shadow);
   transition:
     border-color 0.35s var(--pa-ease),
     background 0.35s var(--pa-ease),
     color 0.35s var(--pa-ease),
     transform 0.35s var(--pa-ease),
-    box-shadow 0.35s var(--pa-ease),
-    filter 0.35s var(--pa-ease);
+    box-shadow 0.35s var(--pa-ease);
 }
 
 .pa-fab:hover,
@@ -44,40 +37,12 @@
 .pa-fab.is-active {
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
   border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-  background: var(--btn-glass-hover, var(--pa-hover));
+  background: var(--btn-glass-hover, var(--hover));
   color: var(--btn-text-hover, var(--text-primary));
   transform: translateY(-1px);
   box-shadow:
-    var(--btn-shadow, 0 14px 32px rgba(0, 0, 0, 0.45)),
-    var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
-  filter: none;
-}
-
-/* Desktop: ceder a Hall de Iniciar (components.css) — sin hover glass genérico */
-@media (min-width: 601px) {
-  .pa-fab,
-  .pa-fab:hover,
-  .pa-fab:focus-visible,
-  .pa-fab.is-active {
-    border-color: var(--btn-border, var(--glass-border));
-    background: var(--btn-glass-surface, var(--btn-surface));
-    box-shadow:
-      var(--btn-shadow, 0 8px 24px rgba(0, 0, 0, 0.32)),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
-    filter: none;
-  }
-  .pa-fab:hover,
-  .pa-fab:focus-visible,
-  .pa-fab.is-active {
-    background: var(--btn-glass-hover, var(--hover));
-    color: var(--btn-text-hover, var(--text-primary));
-    border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-    border-width: var(--btn-border-width-hover, var(--btn-border-width, 2px));
-    transform: translateY(-1px);
-    box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.36),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 12%, transparent));
-  }
+    var(--btn-shadow),
+    var(--glass-inset-shadow);
 }
 
 .pa-fab__mark {
@@ -85,9 +50,9 @@
   width: 14px;
   height: 14px;
   margin: 0 auto;
-  border: 1.5px solid color-mix(in srgb, var(--text-primary) 55%, transparent);
+  border: 1.5px solid var(--btn-border, var(--glass-border));
   border-radius: 4px 4px 4px 1px;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 6%, transparent);
+  box-shadow: var(--glass-inset-shadow);
 }
 
 .pa-root {
@@ -98,7 +63,7 @@
   opacity: 0;
   transition: opacity 0.28s var(--pa-ease-out);
   font-family: inherit;
-  color: var(--pa-fg);
+  color: var(--text-primary);
 }
 
 .pa-root.is-open {
@@ -109,11 +74,12 @@
 .pa-backdrop {
   position: absolute;
   inset: 0;
-  background: var(--pa-backdrop);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: var(--backdrop-55);
+  backdrop-filter: blur(var(--modal-backdrop-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px));
 }
 
+/* Panel = same surface token as auth modal / menu panel (--glass-panel) */
 .pa-panel {
   position: absolute;
   right: max(1.15rem, env(safe-area-inset-right));
@@ -122,19 +88,23 @@
   flex-direction: column;
   width: min(420px, calc(100vw - 1.5rem));
   height: min(560px, calc(100dvh - 6.5rem));
-  border: 1px solid var(--glass-border, var(--pa-line));
+  border: 1px solid var(--glass-border);
   border-radius: 18px;
-  background: var(--pa-panel-bg);
-  backdrop-filter: blur(var(--panel-modal-blur, 20px)) saturate(130%);
-  -webkit-backdrop-filter: blur(var(--panel-modal-blur, 20px)) saturate(130%);
+  background: var(--glass-panel);
+  backdrop-filter: blur(var(--panel-modal-blur, var(--glass-blur))) saturate(108%);
+  -webkit-backdrop-filter: blur(var(--panel-modal-blur, var(--glass-blur))) saturate(108%);
   box-shadow:
-    var(--modal-shadow, 0 24px 56px rgba(0, 0, 0, 0.55)),
-    var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent));
+    var(--modal-shadow),
+    var(--glass-inset-shadow);
   overflow: hidden;
   transform: scale(0.96) translateY(8px);
   transform-origin: bottom right;
-  transition: transform 0.32s var(--pa-ease-out), background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
-  color: var(--pa-fg);
+  transition:
+    transform 0.32s var(--pa-ease-out),
+    background 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease;
+  color: var(--text-primary);
 }
 
 .pa-root.is-open .pa-panel {
@@ -147,7 +117,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.95rem 1rem 0.85rem;
-  border-bottom: 1px solid var(--pa-line);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .pa-title {
@@ -155,7 +125,8 @@
   font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  color: var(--pa-muted);
+  color: var(--text-secondary);
+  opacity: var(--text-secondary-opacity);
 }
 
 .pa-close {
@@ -164,16 +135,18 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--pa-faint);
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity);
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
-  transition: color 0.25s ease, background 0.25s ease;
+  transition: color 0.25s ease, background 0.25s ease, opacity 0.25s ease;
 }
 
 .pa-close:hover {
-  color: var(--pa-fg);
-  background: var(--pa-hover);
+  color: var(--text-primary);
+  opacity: 1;
+  background: var(--hover);
 }
 
 .pa-body {
@@ -211,18 +184,19 @@
   margin-bottom: 0;
 }
 
+/* Surfaces = same tokens as cards / personalize blocks */
 .pa-bubble--bot {
   align-self: flex-start;
-  background: var(--pa-surface);
-  color: var(--pa-muted);
-  border: 1px solid var(--pa-line);
+  background: var(--panel-glass-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
 }
 
 .pa-bubble--user {
   align-self: flex-end;
-  background: var(--pa-elevated);
-  color: var(--pa-fg);
-  border: 1px solid var(--pa-line);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
 }
 
 .pa-suggestions {
@@ -234,10 +208,10 @@
 
 .pa-chip {
   padding: 0.45rem 0.75rem;
-  border: 1px solid var(--btn-border, var(--pa-line));
+  border: var(--btn-border-width, 1px) solid var(--btn-border, var(--glass-border));
   border-radius: 999px;
   background: transparent;
-  color: var(--pa-muted);
+  color: var(--text-secondary);
   font-family: inherit;
   font-size: 0.72rem;
   font-weight: 400;
@@ -247,15 +221,15 @@
 }
 
 .pa-chip:hover {
-  color: var(--btn-text-hover, var(--pa-fg));
-  border-color: var(--btn-border-hover, var(--btn-border, var(--pa-line)));
-  background: var(--btn-glass-hover, var(--pa-hover));
+  color: var(--btn-text-hover, var(--text-primary));
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--btn-glass-hover, var(--hover));
 }
 
 .pa-handoff {
   flex-shrink: 0;
   padding: 0.95rem 1.1rem 1rem;
-  border-top: 1px solid var(--pa-line);
+  border-top: 1px solid var(--glass-border);
   text-align: center;
 }
 
@@ -264,7 +238,8 @@
   font-size: 0.72rem;
   font-weight: 300;
   letter-spacing: 0.02em;
-  color: var(--pa-faint);
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity);
 }
 
 .pa-wa {
@@ -273,35 +248,30 @@
   justify-content: center;
   gap: 0.45rem;
   padding: 0.55rem 1rem;
-  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border, var(--pa-line)));
+  border: var(--btn-border-width, 2px) solid var(--btn-border, var(--glass-border));
   border-radius: 999px;
-  background: var(--btn-glass-surface, var(--btn-surface, transparent));
-  color: var(--pa-fg);
+  background: var(--btn-glass-surface, var(--btn-surface));
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-decoration: none;
-  box-shadow: var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 8%, transparent));
+  box-shadow: var(--glass-inset-shadow);
   transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
 }
 
 .pa-wa:hover {
-  color: var(--btn-text-hover, var(--pa-fg));
+  color: var(--btn-text-hover, var(--text-primary));
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-  background: var(--btn-glass-hover, var(--pa-hover));
+  background: var(--btn-glass-hover, var(--hover));
 }
 
 .pa-wa__icon {
   flex-shrink: 0;
-  opacity: 0.75;
   color: inherit;
   fill: currentColor;
-}
-
-.pa-wa:hover .pa-wa__icon {
-  opacity: 1;
 }
 
 .pa-compose {
@@ -309,21 +279,20 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 0.85rem;
-  border-top: 1px solid var(--pa-line);
-  background: color-mix(in srgb, var(--pa-panel-bg) 92%, var(--bg-main) 8%);
+  border-top: 1px solid var(--glass-border);
+  background: var(--glass-panel);
 }
 
 .pa-compose input {
   flex: 1;
   min-width: 0;
   padding: 0.55rem 0.65rem;
-  border: 1px solid transparent;
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  background: transparent;
-  color: var(--pa-fg);
-  caret-color: var(--pa-fg);
+  background: var(--bg-glass-surface, var(--panel-glass-surface));
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
   font-family: inherit;
-  /* ≥16px evita zoom automático de Safari iOS al enfocar */
   font-size: 16px;
   font-weight: 300;
   outline: none;
@@ -331,32 +300,33 @@
 }
 
 .pa-compose input::placeholder {
-  color: var(--pa-faint);
+  color: var(--text-muted);
+  opacity: var(--text-muted-opacity);
   font-size: 16px;
 }
 
 .pa-compose input:focus {
-  border-color: var(--btn-border-hover, var(--btn-border, var(--pa-line)));
-  background: color-mix(in srgb, var(--bg-main) 35%, transparent);
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--bg-glass-surface, var(--panel-glass-surface));
 }
 
 .pa-send {
   width: 34px;
   height: 34px;
   flex-shrink: 0;
-  border: 1px solid var(--btn-border, var(--pa-line));
+  border: var(--btn-border-width, 1px) solid var(--btn-border, var(--glass-border));
   border-radius: 999px;
-  background: var(--btn-glass-surface, transparent);
-  color: var(--pa-muted);
+  background: var(--btn-glass-surface, var(--btn-surface));
+  color: var(--text-primary);
   font-size: 0.95rem;
   cursor: pointer;
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
 .pa-send:hover {
-  color: var(--btn-text-hover, var(--pa-fg));
-  border-color: var(--btn-border-hover, var(--btn-border, var(--pa-line)));
-  background: var(--btn-glass-hover, var(--pa-hover));
+  color: var(--btn-text-hover, var(--text-primary));
+  border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+  background: var(--btn-glass-hover, var(--hover));
 }
 
 .pa-visually-hidden {
@@ -371,15 +341,10 @@
   border: 0;
 }
 
-/* ——— Móvil: layout / spacing only — same color tokens as desktop ——— */
+/* Mobile: layout / spacing only — identical color tokens as desktop */
 @media (max-width: 600px) {
   .pa-root {
     z-index: 960;
-  }
-
-  .pa-backdrop {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
   }
 
   .pa-panel {
@@ -399,14 +364,8 @@
       var(--mobile-shell-foot-h, 62px) - env(safe-area-inset-bottom) - 1.1rem
     );
     transform-origin: bottom center;
-    border-width: var(--btn-border-width, 2px);
     border-radius: var(--menu-card-radius, 14px);
-    background: var(--btn-glass-surface, var(--pa-panel-bg));
-    backdrop-filter: blur(var(--btn-glass-blur, 16px)) saturate(130%);
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 16px)) saturate(130%);
-    box-shadow:
-      var(--btn-shadow, 0 16px 40px rgba(0, 0, 0, 0.42)),
-      var(--glass-inset-shadow, inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent));
+    /* color source unchanged: background remains var(--glass-panel) from base */
   }
 
   body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-panel {
@@ -422,10 +381,8 @@
     text-transform: uppercase;
     font-size: 0.72rem;
     font-weight: 550;
-    color: var(--pa-fg);
   }
 
-  /* Cierre = Global Close (esquina inferior derecha); sin X en encabezado */
   .pa-close {
     display: none !important;
   }
@@ -435,24 +392,8 @@
     border-radius: var(--menu-card-radius, 14px);
   }
 
-  .pa-bubble--bot {
-    background: color-mix(in srgb, var(--pa-surface) 88%, transparent);
-  }
-
-  .pa-bubble--user {
-    background: var(--btn-glass-hover, var(--pa-elevated));
-  }
-
-  .pa-chip {
-    border-width: var(--btn-border-width, 1px);
-    backdrop-filter: blur(var(--btn-glass-blur, 8px));
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px));
-  }
-
   .pa-wa {
     border-radius: var(--menu-card-radius, 14px);
-    backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
-    -webkit-backdrop-filter: blur(var(--btn-glass-blur, 8px)) saturate(130%);
   }
 
   body:has(#projectCover[data-hero-layout="bottom-bar"]) .pa-wa {
@@ -461,17 +402,13 @@
 
   .pa-compose {
     padding: 0.75rem 0.85rem;
-    padding-bottom: 0.75rem;
   }
 
   .pa-compose input {
-    border: 1px solid var(--pa-line);
     border-radius: calc(var(--menu-card-radius, 14px) - 4px);
-    background: color-mix(in srgb, var(--bg-main) 35%, transparent);
   }
 
   .pa-send {
-    border-width: var(--btn-border-width, 1px);
     border-radius: var(--menu-card-radius, 14px);
   }
 
