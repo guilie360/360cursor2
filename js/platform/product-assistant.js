@@ -457,9 +457,9 @@ var ProductAssistant = (function () {
       if (!fab || !root) return;
       fab.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) {
-        /* Atomic open: prepare final layout off-screen, then reveal in one paint.
-           No enter fade/scale — avoids Safari painting hero-through-backdrop mid-open. */
-        root.classList.remove('is-closing');
+        /* Atomic prepare (V5.9.33) then menu-equivalent slide: right → left.
+           Panel starts off-viewport; backdrop covers hero before motion begins. */
+        root.classList.remove('is-entered');
         root.classList.add('is-preparing');
         root.hidden = false;
         root.setAttribute('aria-hidden', 'false');
@@ -473,10 +473,16 @@ var ProductAssistant = (function () {
         if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
           GlobalClose.update();
         }
+        if (typeof playSound === 'function') playSound('menuOpen');
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
             if (!root.classList.contains('is-open')) return;
             root.classList.remove('is-preparing');
+            if (panel) void panel.offsetWidth;
+            requestAnimationFrame(function () {
+              if (!root.classList.contains('is-open')) return;
+              root.classList.add('is-entered');
+            });
           });
         });
         /* En móvil no autofocus: evita teclado inmediato; el usuario toca el input. */
@@ -487,25 +493,25 @@ var ProductAssistant = (function () {
         }
       } else {
         root.classList.remove('is-preparing');
-        root.classList.add('is-closing');
-        root.classList.remove('is-open');
+        root.classList.remove('is-entered');
         root.classList.remove('is-keyboard');
         fab.classList.remove('is-active');
-        document.body.classList.remove('pa-open');
         if (input) input.blur();
+        if (typeof playSound === 'function') playSound('menuClose');
         if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
           GlobalClose.update();
         }
+        /* Keep is-open / pa-open until slide-out finishes (same 0.55s as menu). */
         window.setTimeout(function () {
-          if (!root.classList.contains('is-open')) {
-            root.hidden = true;
-            root.setAttribute('aria-hidden', 'true');
-            root.classList.remove('is-closing');
-          }
+          if (root.classList.contains('is-entered')) return;
+          root.classList.remove('is-open');
+          document.body.classList.remove('pa-open');
+          root.hidden = true;
+          root.setAttribute('aria-hidden', 'true');
           if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
             GlobalClose.update();
           }
-        }, 280);
+        }, 550);
       }
     }
 

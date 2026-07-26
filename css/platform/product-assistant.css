@@ -88,7 +88,7 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  /* Open is atomic (no enter fade). Close uses .is-closing only. */
+  overflow: hidden; /* clip slide — no horizontal page scroll */
   transition: none;
   font-family: inherit;
   color: var(--text-primary);
@@ -109,23 +109,7 @@
   transition: none !important;
 }
 
-.pa-root.is-closing {
-  opacity: 0;
-  visibility: visible;
-  pointer-events: none;
-  transition: opacity 0.28s var(--pa-ease-out);
-}
-
-/* Same overlay source as .main-menu-backdrop */
-.pa-backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--overlay-mask, var(--modal-backdrop, var(--backdrop-94)));
-  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
-  backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
-}
-
-/* Panel shell: transparent — visible surface is ::before (same as .main-menu) */
+/* Same motion as .main-menu, inverted: right → left */
 .pa-panel {
   position: absolute;
   right: max(1.15rem, env(safe-area-inset-right));
@@ -139,10 +123,29 @@
   background: transparent;
   isolation: isolate;
   overflow: hidden;
-  transform: none;
+  transform: translateX(100%);
   transform-origin: bottom right;
-  transition: none;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   color: var(--text-primary);
+  will-change: transform;
+}
+
+.pa-root.is-open.is-entered .pa-panel {
+  transform: translateX(0);
+}
+
+.pa-root.is-preparing .pa-panel {
+  transition: none !important;
+  transform: translateX(100%) !important;
+}
+
+/* Same overlay source as .main-menu-backdrop */
+.pa-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-mask, var(--modal-backdrop, var(--backdrop-94)));
+  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
+  backdrop-filter: blur(var(--modal-backdrop-blur, 0px)) saturate(140%);
 }
 
 /* Exact surface recipe from .main-menu::before (components.css) */
@@ -508,11 +511,12 @@ body[data-panel-glass="glass"] .pa-panel::before {
     bottom: auto;
     height: calc(var(--pa-vv-height, 100dvh) - 1rem);
     max-height: calc(var(--pa-vv-height, 100dvh) - 1rem);
-    transform: none;
+    transform: none !important;
   }
 
-  .pa-root.is-keyboard.is-open .pa-panel {
-    transform: none;
+  .pa-root.is-keyboard.is-open .pa-panel,
+  .pa-root.is-keyboard.is-entered .pa-panel {
+    transform: none !important;
   }
 
   .pa-root.is-keyboard .pa-compose {
