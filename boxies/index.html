@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../css/interactive-areas.css?v=ws41">
   <link rel="stylesheet" href="../css/boxies/shell.css?v=ws576">
   <link rel="stylesheet" href="../css/boxies/content.css?v=ws5938">
+  <link rel="stylesheet" href="../css/boxies/tooltip.css?v=ws5940">
   <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=ws594">
   <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
 </head>
@@ -31,7 +32,7 @@
 
   <!-- Login (outside Shell) -->
   <div id="bxLoginView" class="hall-login-page boxies-login" hidden>
-    <button type="button" class="boxies-header__fs boxies-login__fs" id="bxLoginFullscreenBtn" aria-label="Pantalla completa" title="Pantalla completa" data-fullscreen="enter"></button>
+    <button type="button" class="boxies-header__fs boxies-login__fs" id="bxLoginFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter"></button>
     <div class="content-modal-box auth-experience-box boxies-login__card">
       <div class="hall-login-brand boxies-login__brand" aria-label="BOXIES">B O X I E S</div>
       <p class="boxies-login__subtitle">Administra tu Showroom Digital <span class="boxies-login__brand-mark">360Preventa</span>.</p>
@@ -112,12 +113,13 @@
 
   <!-- Builder stack -->
   <script src="../js/boxies/ui.js?v=ws5939"></script>
+  <script src="../js/boxies/tooltip.js?v=ws5940"></script>
   <script src="../js/boxies/notifications.js?v=ws54"></script>
   <script src="../js/builder/core/session.js?v=ws59"></script>
   <script src="../js/builder/core/wizard.js?v=ws59"></script>
   <script src="../js/builder/icons.js?v=ws54"></script>
   <script src="../js/builder/dock.js?v=ws54"></script>
-  <script src="../js/builder/progress-rail.js?v=ws5916"></script>
+  <script src="../js/builder/progress-rail.js?v=ws5940"></script>
   <script src="../js/builder/engines/project-types.js?v=ws595"></script>
   <script src="../js/builder/engines/estructura-engine.js?v=ws5921"></script>
   <script src="../js/builder/engines/branding-engine.js?v=ws54"></script>
@@ -153,15 +155,15 @@
 
   <!-- BOXIES Core -->
   <script src="../js/boxies/prefs.js?v=ws54"></script>
-  <script src="../js/boxies/shell.js?v=ws576"></script>
+  <script src="../js/boxies/shell.js?v=ws5940"></script>
   <script src="../js/boxies/pages.js?v=ws54"></script>
   <script src="../js/boxies/router.js?v=ws54"></script>
   <script src="../js/boxies/auth-bridge.js?v=ws54"></script>
   <script src="../js/boxies/services/system-monitor-service.js?v=ws54"></script>
   <script src="../js/boxies/pages/hall-page.js?v=ws54"></script>
-  <script src="../js/boxies/pages/projects-page.js?v=ws5939"></script>
-  <script src="../js/boxies/pages/builder-page.js?v=ws5939"></script>
-  <script src="../js/boxies/pages/sistema-page.js?v=ws54"></script>
+  <script src="../js/boxies/pages/projects-page.js?v=ws5940"></script>
+  <script src="../js/boxies/pages/builder-page.js?v=ws5940"></script>
+  <script src="../js/boxies/pages/sistema-page.js?v=ws5940"></script>
   <script src="../js/boxies/app.js?v=ws54"></script>
 </body>
 </html>

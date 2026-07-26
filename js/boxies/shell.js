@@ -43,8 +43,10 @@ var BoxiesShell = (function () {
     if (btn) {
       btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       btn.setAttribute('aria-label', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
-      btn.title = collapsed ? 'Expandir' : 'Colapsar';
+      btn.setAttribute('data-tooltip', collapsed ? 'Expandir' : 'Colapsar');
+      btn.removeAttribute('title');
       btn.innerHTML = iconHtml(collapsed ? 'chevron-right' : 'chevron-left');
+      if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.adopt) BoxiesTooltip.adopt(btn);
     }
   }
 
@@ -58,7 +60,7 @@ var BoxiesShell = (function () {
           '</div>' +
           '<div class="boxies-dock__spacer"></div>' +
           '<div class="boxies-dock__actions" id="boxiesDockActions" hidden>' +
-            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon boxies-dock__preview" id="boxiesPreviewBtn" aria-label="Visualizar" title="Visualizar" disabled>' +
+            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon boxies-dock__preview" id="boxiesPreviewBtn" aria-label="Visualizar" data-tooltip="Visualizar" disabled>' +
               iconHtml('eye') +
             '</button>' +
           '</div>' +
@@ -72,7 +74,7 @@ var BoxiesShell = (function () {
       return (
         '<button type="button" class="boxies-nav-item' + (activeId === id ? ' is-current' : '') + '"' +
           ' data-boxies-page="' + escapeHtml(id) + '"' +
-          ' title="' + escapeHtml(label) + '"' +
+          ' data-tooltip="' + escapeHtml(label) + '"' +
           ' aria-label="' + escapeHtml(label) + '"' +
         '>' +
           '<span class="boxies-nav-item__row">' +
@@ -84,7 +86,7 @@ var BoxiesShell = (function () {
     }
     return (
       '<nav class="boxies-nav" id="boxiesNav" aria-label="Navegación">' +
-        '<button type="button" class="boxies-nav-collapse" id="boxiesNavCollapseBtn" aria-expanded="true" aria-label="Colapsar navegación" title="Colapsar">' +
+        '<button type="button" class="boxies-nav-collapse" id="boxiesNavCollapseBtn" aria-expanded="true" aria-label="Colapsar navegación" data-tooltip="Colapsar">' +
           iconHtml('chevron-left') +
         '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
@@ -104,14 +106,14 @@ var BoxiesShell = (function () {
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
             '<div class="boxies-user-wrap">' +
               '<div class="boxies-user" id="boxiesUserChip"></div>' +
-              '<button type="button" class="boxies-logout-icon" id="boxiesLogoutBtn" aria-label="Cerrar sesión" title="Cerrar sesión">' +
+              '<button type="button" class="boxies-logout-icon" id="boxiesLogoutBtn" aria-label="Cerrar sesión" data-tooltip="Cerrar sesión">' +
                 iconHtml('log-out') +
               '</button>' +
             '</div>' +
           '</div>' +
           brandTitleHtml() +
           '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
-            '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" title="Pantalla completa" data-fullscreen="enter">' +
+            '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter">' +
               iconHtml('maximize') +
             '</button>' +
           '</div>' +
@@ -245,10 +247,16 @@ var BoxiesShell = (function () {
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
       BuilderProgressRail.applyCollapsedFromPrefs();
     }
+    if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.init === 'function') {
+      BoxiesTooltip.init();
+    }
     return getContentEl();
   }
 
   function unmount() {
+    if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.hide === 'function') {
+      BoxiesTooltip.hide();
+    }
     clearPageActions();
     clearProjectContext();
     /* Leaving BOXIES entirely — release workspace fullscreen */

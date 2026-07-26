@@ -284,7 +284,7 @@ var BoxiesSistemaPage = (function () {
       '<div class="bx-sys-actions">' +
         '<button type="button" class="boxies-action-btn" id="bxSysAnalyzeBtn">Analizar almacenamiento</button>' +
         '<button type="button" class="boxies-action-btn is-disabled" id="bxSysReclaimBtn" disabled ' +
-          'title="Disponible en una próxima versión" aria-disabled="true">' +
+          'data-tooltip="Disponible en una próxima versión" aria-disabled="true">' +
           'Liberar espacio' +
         '</button>' +
       '</div>' +

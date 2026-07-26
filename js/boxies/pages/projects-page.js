@@ -58,7 +58,7 @@ var BoxiesProjectsPage = (function () {
       '<button type="button" class="toggle-switch boxies-public-toggle' + (on ? ' on' : '') + '"' +
         ' role="switch" aria-checked="' + (on ? 'true' : 'false') + '"' +
         ' aria-label="' + (on ? 'Público' : 'Privado') + '"' +
-        ' title="' + (on ? 'Público — visible en landing' : 'Privado — oculto del landing') + '"' +
+        ' data-tooltip="' + (on ? 'Público — visible en landing' : 'Privado — oculto del landing') + '"' +
         ' data-boxies-public-id="' + escapeHtml(id) + '"' +
         ' data-boxies-public="' + (on ? '1' : '0') + '">' +
         '<span class="toggle-switch-knob" aria-hidden="true"></span>' +
@@ -371,7 +371,7 @@ var BoxiesProjectsPage = (function () {
     var resizer = !isLast
       ? '<span class="boxies-col-resizer" data-resize="' +
         key +
-        '" title="Arrastrar para redimensionar"></span>'
+        '" data-tooltip="Arrastrar para redimensionar"></span>'
       : '';
     return (
       '<th class="' + cls + '" data-col="' + key + '"' + aria + '>' +
@@ -389,7 +389,7 @@ var BoxiesProjectsPage = (function () {
       '<tr class="boxies-showroom-row" draggable="true" data-showroom-id="' + escapeHtml(id) + '">' +
         '<td class="boxies-showroom-drag boxies-col-drag">' +
           '<div class="boxies-cell">' +
-            '<button type="button" class="boxies-drag-handle" aria-label="Arrastrar para reordenar" title="Arrastrar">' +
+            '<button type="button" class="boxies-drag-handle" aria-label="Arrastrar para reordenar" data-tooltip="Arrastrar">' +
               '<span aria-hidden="true">⋮⋮</span>' +
             '</button>' +
           '</div>' +
@@ -401,7 +401,7 @@ var BoxiesProjectsPage = (function () {
         '</td>' +
         '<td class="boxies-col-slug">' +
           '<div class="boxies-cell">' +
-            '<code class="boxies-showroom-slug" title="' + escapeHtml(slug) + '">' +
+            '<code class="boxies-showroom-slug" data-tooltip="' + escapeHtml(slug) + '">' +
               escapeHtml(slug) +
             '</code>' +
           '</div>' +
@@ -422,16 +422,16 @@ var BoxiesProjectsPage = (function () {
                 escapeHtml(id) +
               '" data-boxies-open-builder="' +
                 escapeHtml(slug) +
-              '" title="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
+              '" data-tooltip="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
               '<span class="boxies-row-actions__gap" aria-hidden="true"></span>' +
               '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
                 escapeHtml(id) +
-              '" title="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
+              '" data-tooltip="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
               '<button type="button" class="boxies-icon-action boxies-icon-action--danger" data-boxies-delete-id="' +
                 escapeHtml(id) +
               '" data-boxies-delete-name="' +
                 escapeHtml(name) +
-              '" title="Eliminar" aria-label="Eliminar">' + ICONS.trash + '</button>' +
+              '" data-tooltip="Eliminar" aria-label="Eliminar">' + ICONS.trash + '</button>' +
             '</div>' +
           '</div>' +
         '</td>' +
@@ -914,7 +914,7 @@ var BoxiesProjectsPage = (function () {
     BoxiesShell.applyManifest({
       leadingHtml:
         '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon" id="boxiesCreateShowroomBtn"' +
-          ' aria-label="Crear Showroom" title="Crear Showroom">' +
+          ' aria-label="Crear Showroom" data-tooltip="Crear Showroom">' +
           '<span aria-hidden="true">+</span>' +
         '</button>'
     });
@@ -993,6 +993,9 @@ var BoxiesProjectsPage = (function () {
     var tbody = document.getElementById('boxiesProjectsBody');
     try {
       await refreshShowroomsList();
+      if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.refresh === 'function') {
+        BoxiesTooltip.refresh(host);
+      }
     } catch (err) {
       if (tbody) {
         tbody.innerHTML =

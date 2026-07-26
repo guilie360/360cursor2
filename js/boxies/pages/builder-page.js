@@ -224,6 +224,9 @@ var BoxiesBuilderPage = (function () {
         }
         releaseCreateBusy();
       }
+      if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.refresh === 'function') {
+        BoxiesTooltip.refresh(host);
+      }
     } catch (err) {
       console.error('[boxies:builder-page]', err);
       if (pendingCreate) {

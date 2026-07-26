@@ -241,7 +241,7 @@ var BuilderProgressRail = (function () {
       : (collapsed ? '›' : '‹');
     var html =
       '<button type="button" class="builder-rail-collapse" id="builderRailCollapseBtn"' +
-        ' title="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
+        ' data-tooltip="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
         ' aria-label="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
         ' aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
         toggleIcon +
@@ -252,7 +252,7 @@ var BuilderProgressRail = (function () {
       if (item.stepIndex === current) cls += ' is-current';
       var mark = item.done ? '✓' : '○';
       return '<button type="button" class="' + cls + '" data-rail-step="' + item.stepIndex + '"' +
-        ' title="' + escapeHtml(item.label) + '"' +
+        ' data-tooltip="' + escapeHtml(item.label) + '"' +
         ' aria-label="' + escapeHtml(item.label) + '">' +
         '<span class="builder-rail-row">' +
           '<span class="builder-rail-icon" aria-hidden="true">' + runeGlyphHtml(index) + '</span>' +
