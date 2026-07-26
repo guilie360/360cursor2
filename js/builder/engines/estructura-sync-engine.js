@@ -40,7 +40,8 @@ var EstructuraSyncEngine = (function () {
       tipologias: Array.isArray(e.tipologias) ? e.tipologias : [],
       zoneNames: Array.isArray(e.zoneNames) ? e.zoneNames.slice() : [],
       conjuntoConfig: e.conjuntoConfig || null,
-      openPanels: e.openPanels || null
+      openPanels: e.openPanels || null,
+      uiExpandAll: !!e.uiExpandAll
     };
   }
 
@@ -88,6 +89,7 @@ var EstructuraSyncEngine = (function () {
     if (draft.openPanels && typeof draft.openPanels === 'object') {
       e.openPanels = Object.assign({}, draft.openPanels);
     }
+    if (draft.uiExpandAll != null) e.uiExpandAll = !!draft.uiExpandAll;
     return e;
   }
 

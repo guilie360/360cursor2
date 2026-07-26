@@ -2051,6 +2051,49 @@ body.builder-has-dock .admin-toast--info {
   margin-bottom: 0;
 }
 
+.builder-estructura-expand-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.builder-estructura-expand-all:hover {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.builder-estructura-expand-all__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: transform 0.18s ease;
+}
+
+.builder-estructura-expand-all__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.builder-estructura-expand-all.is-expanded .builder-estructura-expand-all__icon {
+  transform: rotate(180deg);
+}
+
 .builder-estructura-head__actions {
   display: flex;
   gap: 8px;
@@ -2375,7 +2418,7 @@ body.builder-has-dock .admin-toast--info {
 }
 
 .builder-estructura-assign-balance__row.is-under .builder-estructura-assign-balance__status {
-  color: rgba(230, 190, 100, 0.95);
+  color: #9b8fd4;
 }
 
 .builder-estructura-assign-balance__row.is-over .builder-estructura-assign-balance__status {

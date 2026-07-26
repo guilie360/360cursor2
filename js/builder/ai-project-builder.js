@@ -550,6 +550,22 @@ var AiProjectBuilderView = (function () {
     var e = EstructuraEngine.ensureState(state);
     var dt = e.developmentType;
 
+    /* Keep expand-all coherent after type switches (Unidad ↔ Edificio ↔ …). */
+    if (e.uiExpandAll) {
+      if (!e.openPanels) e.openPanels = {};
+      ['dev', 'org', 'tipologias', 'zonas', 'resumen'].forEach(function (key) {
+        e.openPanels[key] = true;
+      });
+      (e.buildings || []).forEach(function (b) { b.open = true; });
+      (e.tipologias || []).forEach(function (tip) {
+        tip.open = true;
+        (tip.plantas || []).forEach(function (pl) { pl.open = true; });
+      });
+      if (e.conjuntoConfig) {
+        (e.conjuntoConfig.stages || []).forEach(function (st) { st.open = true; });
+      }
+    }
+
     function stepperHtml(field, value, min, max) {
       min = min != null ? min : 0;
       max = max != null ? max : 99999;
@@ -1074,7 +1090,8 @@ var AiProjectBuilderView = (function () {
       }
 
       var plantasHtml = (tip.plantas || []).map(function (pl) {
-        return '<details class="builder-estructura-acc builder-estructura-acc--nested">' +
+        return '<details class="builder-estructura-acc builder-estructura-acc--nested"' +
+          (pl.open ? ' open' : '') + '>' +
           '<summary>' + AdminUI.escapeHtml(pl.nombre) + '</summary>' +
           '<div class="builder-estructura-acc__body">' +
             ambientePickerHtml(tip, pl.localId, false) +
@@ -1189,10 +1206,24 @@ var AiProjectBuilderView = (function () {
     var draftStatus = e.dirty
       ? 'Cambios sin guardar'
       : (e._draftSaved ? 'Guardado' : '');
+    var allExpanded = !!e.uiExpandAll;
+    var expandIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
+      ? BuilderIcons.render('chevron-down')
+      : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    var expandBtnHtml =
+      '<button type="button" class="builder-estructura-expand-all' +
+        (allExpanded ? ' is-expanded' : '') +
+        '" id="builderEstructuraExpandAll"' +
+        ' aria-label="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '"' +
+        ' aria-expanded="' + (allExpanded ? 'true' : 'false') + '"' +
+        ' data-tooltip="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '">' +
+        '<span class="builder-estructura-expand-all__icon" aria-hidden="true">' + expandIcon + '</span>' +
+      '</button>';
+    var estructuraTitleRow = stepTitleHtml('Estructura').replace('</h2>', '</h2>' + expandBtnHtml);
 
     return '<div class="builder-step-content builder-step-content--estructura">' +
       '<div class="builder-estructura-head">' +
-        stepTitleHtml('Estructura') +
+        estructuraTitleRow +
         '<div class="builder-estructura-head__actions">' +
           '<span class="builder-estructura-draft-status' +
             (e.dirty ? ' is-dirty' : (e._draftSaved ? ' is-saved' : '')) +
@@ -2302,6 +2333,34 @@ var AiProjectBuilderView = (function () {
         saveState();
       });
     });
+
+    var expandAllBtn = rootEl.querySelector('#builderEstructuraExpandAll');
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var e = state.estructura;
+        if (!e) return;
+        var expand = !e.uiExpandAll;
+        e.uiExpandAll = expand;
+        if (!e.openPanels) e.openPanels = {};
+        ['dev', 'org', 'tipologias', 'zonas', 'resumen'].forEach(function (key) {
+          e.openPanels[key] = expand;
+        });
+        (e.buildings || []).forEach(function (b) { b.open = expand; });
+        (e.tipologias || []).forEach(function (tip) {
+          tip.open = expand;
+          (tip.plantas || []).forEach(function (pl) { pl.open = expand; });
+        });
+        if (e.conjuntoConfig) {
+          (e.conjuntoConfig.stages || []).forEach(function (st) {
+            st.open = expand;
+          });
+        }
+        persist();
+        rerender();
+      });
+    }
 
     rootEl.querySelectorAll('[data-dev-type]').forEach(function (btn) {
       btn.addEventListener('click', function () {
