@@ -413,11 +413,13 @@ var ProductAssistant = (function () {
     var fab = wrap.querySelector('[data-pa-fab]');
     var root = wrap.querySelector('[data-pa-root]');
     var panel = wrap.querySelector('.pa-panel');
+    var backdrop = wrap.querySelector('.pa-backdrop');
     var form = wrap.querySelector('[data-pa-form]');
     var input = wrap.querySelector('#paChatInput');
     var messages = wrap.querySelector('[data-pa-messages]');
     var suggestions = wrap.querySelector('[data-pa-suggestions]');
     var vvCleanup = null;
+    var closeTimer = null;
 
     function isPhone() {
       return window.matchMedia('(max-width: 600px)').matches;
@@ -455,16 +457,22 @@ var ProductAssistant = (function () {
 
     function setOpen(open) {
       if (!fab || !root) return;
+      if (closeTimer) {
+        window.clearTimeout(closeTimer);
+        closeTimer = null;
+      }
       fab.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) {
         /* Atomic prepare (V5.9.33) then menu-equivalent slide: right → left.
            Panel starts off-viewport; backdrop covers hero before motion begins. */
+        root.classList.remove('is-closing');
         root.classList.remove('is-entered');
         root.classList.add('is-preparing');
         root.hidden = false;
         root.setAttribute('aria-hidden', 'false');
         document.body.classList.add('pa-open');
         root.classList.add('is-open');
+        if (backdrop) backdrop.classList.add('is-active');
         fab.classList.add('is-active');
         syncVisualViewport();
         if (panel) {
@@ -492,8 +500,11 @@ var ProductAssistant = (function () {
           }, 200);
         }
       } else {
+        /* Same tick as hideMainMenuPanel: panel + mask lose active together. */
         root.classList.remove('is-preparing');
+        root.classList.add('is-closing');
         root.classList.remove('is-entered');
+        if (backdrop) backdrop.classList.remove('is-active');
         root.classList.remove('is-keyboard');
         fab.classList.remove('is-active');
         if (input) input.blur();
@@ -501,10 +512,13 @@ var ProductAssistant = (function () {
         if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
           GlobalClose.update();
         }
-        /* Keep is-open / pa-open until slide-out finishes (same 0.55s as menu). */
-        window.setTimeout(function () {
+        /* Cleanup after longest motion (panel 0.55s; mask 0.45s). */
+        closeTimer = window.setTimeout(function () {
+          closeTimer = null;
           if (root.classList.contains('is-entered')) return;
           root.classList.remove('is-open');
+          root.classList.remove('is-closing');
+          if (backdrop) backdrop.classList.remove('is-active');
           document.body.classList.remove('pa-open');
           root.hidden = true;
           root.setAttribute('aria-hidden', 'true');
@@ -604,6 +618,11 @@ var ProductAssistant = (function () {
       destroy: function () {
         document.removeEventListener('keydown', onKey);
         if (typeof vvCleanup === 'function') vvCleanup();
+        if (closeTimer) {
+          window.clearTimeout(closeTimer);
+          closeTimer = null;
+        }
+        document.body.classList.remove('pa-open');
         if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
       }
     };
