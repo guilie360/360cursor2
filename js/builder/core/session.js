@@ -38,7 +38,8 @@ var BuilderSession = (function () {
         whatsappMessage: '',
         shareUrl: '',
         showWhatsapp: true,
-        showShare: true
+        showShare: true,
+        showFullscreen: true
       },
       menuConfig: null,
       viviendas: [],

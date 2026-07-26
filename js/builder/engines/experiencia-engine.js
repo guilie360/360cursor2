@@ -1,10 +1,11 @@
-/* BOXIES V5.9.54 — Experiencia: editor de flujo del showroom
- * Legacy V5.9.50/51 conservado. V5.9.53 puertos. V5.9.54 edición canvas. */
+/* BOXIES V5.9.55 — Experiencia: editor de flujo del showroom
+ * Legacy V5.9.50/51 conservado. V5.9.53 puertos. V5.9.54 edición.
+ * V5.9.55: Hero orquesta (referencias/acciones vs flujo INICIAR). */
 var ExperienciaEngine = (function () {
   var NODE_W = 200;
   var NODE_H = 92;
-  var HERO_W = 260;
-  var HERO_H = 168;
+  var HERO_W = 280;
+  var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
 
@@ -265,58 +266,202 @@ var ExperienciaEngine = (function () {
     }, extra));
   }
 
-  /* ── Hero interactions from real Hero config (no invention) ── */
-  function listHeroInteractions(state) {
-    var hero = (state && state.heroContent) || {};
-    var list = [];
-    var left = String(hero.botonIzquierdo || '').trim();
-    var right = String(hero.botonDerecho || '').trim();
-    if (left) {
-      list.push({ id: 'hero-btn-left', label: left, kind: 'button', source: 'hero.botonIzquierdo' });
+  /* ── Hero slots: referencias / flujo / acciones (fuente = heroContent + menú) ── */
+  function ensureHeroContent(state) {
+    if (!state.heroContent || typeof state.heroContent !== 'object') {
+      state.heroContent = {};
     }
-    if (right) {
-      list.push({ id: 'hero-btn-right', label: right, kind: 'button', source: 'hero.botonDerecho' });
-    }
-    /* Asistente: present when AI/chat content exists or always as platform chrome?
-       User said only real interactions. Chatbot exists as dock/platform — include if aiContent or menu has assistant.
-       Conservative: include if aiContent.heroText or menu has asistente item, else skip.
-       Also Hero UI often has assistant — check menuConfig */
-    var hasAssistant = !!(state.aiContent && (state.aiContent.heroText || state.aiContent.descripcionComercial));
-    if (!hasAssistant && state.menuConfig && Array.isArray(state.menuConfig.items)) {
-      hasAssistant = state.menuConfig.items.some(function (it) {
-        var n = String((it && (it.nombre || it.label || it.id)) || '').toLowerCase();
-        return n.indexOf('asist') >= 0 || n.indexOf('chat') >= 0;
-      });
-    }
-    if (hasAssistant) {
-      list.push({ id: 'hero-assistant', label: 'Asistente', kind: 'assistant', source: 'assistant' });
-    }
-    if (hero.showShare !== false) {
-      list.push({ id: 'hero-share', label: 'Compartir', kind: 'action', actionType: 'share', source: 'hero.showShare' });
-    }
-    /* Fullscreen is always available in BOXIES chrome */
-    list.push({ id: 'hero-fullscreen', label: 'Fullscreen', kind: 'action', actionType: 'fullscreen', source: 'chrome.fullscreen' });
-    if (hero.showWhatsapp !== false && (hero.whatsappLink || '').trim()) {
-      list.push({ id: 'hero-whatsapp', label: 'WhatsApp', kind: 'action', actionType: 'whatsapp', source: 'hero.whatsapp' });
-    }
-    return list;
+    var h = state.heroContent;
+    if (h.showShare == null) h.showShare = true;
+    if (h.showWhatsapp == null) h.showWhatsapp = true;
+    if (h.showFullscreen == null) h.showFullscreen = true;
+    if (h.whatsappLink == null) h.whatsappLink = '';
+    if (h.whatsappMessage == null) h.whatsappMessage = '';
+    if (!String(h.botonIzquierdo || '').trim()) h.botonIzquierdo = 'Explorar';
+    if (!String(h.botonDerecho || '').trim()) h.botonDerecho = 'Iniciar';
+    return h;
   }
 
-  function heroPortsFromInteractions(interactions) {
-    return (interactions || []).map(function (it) {
-      return {
-        id: it.id,
-        label: it.label,
-        side: 'out',
-        kind: it.kind === 'action' ? 'action' : 'flow',
-        actionType: it.actionType || null
-      };
+  /** Structured hero interactions — roles by BOXIES convention, labels from heroContent. */
+  function listHeroSlots(state) {
+    var hero = ensureHeroContent(state);
+    var left = String(hero.botonIzquierdo || '').trim() || 'Explorar';
+    var right = String(hero.botonDerecho || '').trim() || 'Iniciar';
+
+    var navigation = [{
+      id: 'hero-explorar',
+      label: left,
+      role: 'nav',
+      reference: { type: 'menu', target: 'menu' },
+      source: 'hero.botonIzquierdo'
+    }];
+
+    var flow = [{
+      id: 'hero-iniciar',
+      label: right,
+      role: 'flow',
+      portId: 'hero-iniciar',
+      source: 'hero.botonDerecho'
+    }];
+
+    var actions = [
+      {
+        id: 'hero-share',
+        label: 'Compartir',
+        role: 'action-toggle',
+        field: 'showShare',
+        enabled: hero.showShare !== false,
+        source: 'hero.showShare'
+      },
+      {
+        id: 'hero-fullscreen',
+        label: 'Fullscreen',
+        role: 'action-toggle',
+        field: 'showFullscreen',
+        enabled: hero.showFullscreen !== false,
+        source: 'hero.showFullscreen'
+      },
+      {
+        id: 'hero-whatsapp',
+        label: 'WhatsApp',
+        role: 'action-config',
+        field: 'showWhatsapp',
+        enabled: hero.showWhatsapp !== false,
+        source: 'hero.showWhatsapp',
+        whatsappLink: hero.whatsappLink || '',
+        whatsappMessage: hero.whatsappMessage || ''
+      }
+    ];
+
+    return { navigation: navigation, flow: flow, actions: actions };
+  }
+
+  /** Legacy API: flat list for callers that still expect it. */
+  function listHeroInteractions(state) {
+    var slots = listHeroSlots(state);
+    return []
+      .concat(slots.navigation || [])
+      .concat(slots.flow || [])
+      .concat(slots.actions || []);
+  }
+
+  function setHeroContentField(state, field, value) {
+    var hero = ensureHeroContent(state);
+    if (field === 'showShare' || field === 'showFullscreen' || field === 'showWhatsapp') {
+      hero[field] = !!value;
+    } else if (field === 'whatsappLink' || field === 'whatsappMessage' || field === 'shareUrl') {
+      hero[field] = String(value == null ? '' : value);
+    } else {
+      return null;
+    }
+    return hero;
+  }
+
+  function archiveInlineActionNodes(state) {
+    var exp = ensureState(state);
+    if (!Array.isArray(exp.archivedInlineNodes)) exp.archivedInlineNodes = [];
+
+    /* Always remap legacy INICIAR port id */
+    (exp.edges || []).forEach(function (ed) {
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      if (from === 'exp-hero' && pid === 'hero-btn-right') {
+        ed.sourcePortId = 'hero-iniciar';
+        ed.sourcePort = 'hero-iniciar';
+        ed.portId = 'hero-iniciar';
+        if (!ed.sourcePortLabel) ed.sourcePortLabel = 'Iniciar';
+      }
     });
+
+    if (exp.heroSlotsVersion >= 55) return exp;
+
+    var dropPorts = {
+      'hero-share': true,
+      'hero-fullscreen': true,
+      'hero-whatsapp': true,
+      'hero-btn-left': true,
+      'hero-explorar': true,
+      'hero-assistant': true
+    };
+
+    var dropTargetIds = {};
+    var keptEdges = [];
+    var archivedEdges = [];
+
+    (exp.edges || []).forEach(function (ed) {
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      if (from === 'exp-hero' && dropPorts[pid]) {
+        archivedEdges.push(ed);
+        var to = ed.targetNodeId || ed.to || ed.targetId;
+        if (to) dropTargetIds[to] = true;
+        return;
+      }
+      keptEdges.push(ed);
+    });
+
+    if (!archivedEdges.length) {
+      exp.edges = keptEdges;
+      exp.heroSlotsVersion = 55;
+      return exp;
+    }
+
+    var stillLinked = {};
+    keptEdges.forEach(function (ed) {
+      stillLinked[ed.sourceNodeId || ed.from] = true;
+      stillLinked[ed.targetNodeId || ed.to] = true;
+    });
+
+    var keptNodes = [];
+    (exp.nodes || []).forEach(function (n) {
+      if (n.id === 'exp-hero' || n.kind === 'hero') {
+        keptNodes.push(n);
+        return;
+      }
+      if (dropTargetIds[n.id] && (n.kind === 'action' || n.role === 'action') && !stillLinked[n.id]) {
+        exp.archivedInlineNodes.push({
+          at: new Date().toISOString(),
+          reason: 'V5.9.55 hero inline action → slot',
+          node: n,
+          edges: archivedEdges.filter(function (ed) {
+            return (ed.targetNodeId || ed.to) === n.id || (ed.sourceNodeId || ed.from) === n.id;
+          })
+        });
+        return;
+      }
+      keptNodes.push(n);
+    });
+
+    if (!exp.inlineActionArchive) {
+      exp.inlineActionArchive = {
+        at: new Date().toISOString(),
+        edges: archivedEdges,
+        note: 'Edges de acciones Hero archivados en V5.9.55 (no hard-delete)'
+      };
+    }
+
+    exp.nodes = keptNodes;
+    exp.edges = keptEdges;
+    exp.heroSlotsVersion = 55;
+    exp.reviewFlags = (exp.reviewFlags || []).concat([{
+      severity: 'recomendado',
+      message: 'V5.9.55: Compartir/Fullscreen/WhatsApp/Explorar son slots del Hero (fuente Hero/Menú).'
+    }]).slice(-8);
+    return exp;
   }
 
   function buildHeroNode(state, prev) {
-    var interactions = listHeroInteractions(state);
-    var ports = heroPortsFromInteractions(interactions);
+    ensureHeroContent(state);
+    var slots = listHeroSlots(state);
+    var flowPorts = (slots.flow || []).map(function (it) {
+      return {
+        id: it.portId || it.id || 'hero-iniciar',
+        label: it.label || 'Iniciar',
+        side: 'out',
+        kind: 'flow',
+        role: 'flow'
+      };
+    });
     var base = {
       id: 'exp-hero',
       kind: 'hero',
@@ -330,13 +475,16 @@ var ExperienciaEngine = (function () {
       x: prev && prev.x != null ? prev.x : 48,
       y: prev && prev.y != null ? prev.y : 80,
       userMoved: !!(prev && prev.userMoved),
-      ports: ports,
+      ports: flowPorts,
       config: {
         subtitle: 'Pantalla inicial',
-        interactions: interactions
+        slots: slots,
+        interactions: listHeroInteractions(state),
+        reference: { type: 'hero', target: 'hero' }
       },
       width: HERO_W,
-      height: Math.max(HERO_H, 72 + ports.length * 22),
+      height: Math.max(HERO_H, 120 + flowPorts.length * 24 +
+        ((slots.navigation || []).length + (slots.actions || []).length) * 20),
       protected: true,
       locked: !!(prev && prev.locked)
     };
@@ -345,6 +493,21 @@ var ExperienciaEngine = (function () {
       base.transitionMedia = prev.transitionMedia || null;
     }
     return normalizeNode(base);
+  }
+
+  /* Kept for API compat — ports now only flow (INICIAR) */
+  function heroPortsFromInteractions(interactions) {
+    return (interactions || []).filter(function (it) {
+      return it.role === 'flow' || it.portId;
+    }).map(function (it) {
+      return {
+        id: it.portId || it.id,
+        label: it.label,
+        side: 'out',
+        kind: 'flow',
+        role: 'flow'
+      };
+    });
   }
 
   function looksLikeLegacyStructureMap(exp) {
@@ -397,13 +560,15 @@ var ExperienciaEngine = (function () {
     });
     exp.nodes = [hero].concat(others);
 
-    /* Drop edges from removed hero ports */
+    archiveInlineActionNodes(state);
+
+    /* Keep only flow ports from Hero (INICIAR); drop stale action-port edges */
     var portIds = {};
     (hero.ports || []).forEach(function (p) { portIds[p.id] = true; });
     exp.edges = (exp.edges || []).map(normalizeEdge).filter(function (ed) {
       if ((ed.sourceNodeId || ed.from || ed.sourceId) !== hero.id) return true;
       var pid = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
-      if (pid === 'out') return true; /* legacy generic port */
+      if (pid === 'out' || pid === 'hero-iniciar' || pid === 'hero-btn-right') return true;
       return !!portIds[pid];
     });
 
@@ -1058,6 +1223,10 @@ var ExperienciaEngine = (function () {
     legacyBuildFromEstructura: legacyBuildFromEstructura,
     restoreLegacySnapshot: restoreLegacySnapshot,
     listHeroInteractions: listHeroInteractions,
+    listHeroSlots: listHeroSlots,
+    setHeroContentField: setHeroContentField,
+    ensureHeroContent: ensureHeroContent,
+    archiveInlineActionNodes: archiveInlineActionNodes,
     listStructureLibrary: listStructureLibrary,
     createNodeFromMenu: createNodeFromMenu,
     createStructureLinkedNode: createStructureLinkedNode,

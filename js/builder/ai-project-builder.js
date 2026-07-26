@@ -1667,6 +1667,14 @@ var AiProjectBuilderView = (function () {
               '</div>' +
             '</div>' +
             '<div class="builder-hero-config-card">' +
+              '<div class="builder-hero-config-card__title">Fullscreen</div>' +
+              '<label class="builder-check-row">' +
+                '<input type="checkbox" id="heroShowFullscreenInput"' +
+                  ((hero.showFullscreen !== false) ? ' checked' : '') + '>' +
+                '<span>Mostrar control de pantalla completa</span>' +
+              '</label>' +
+            '</div>' +
+            '<div class="builder-hero-config-card">' +
               '<div class="builder-hero-config-card__title">Logo</div>' +
               '<label class="builder-check-row">' +
                 '<input type="checkbox" id="heroShowLogoInput"' + (showLogo ? ' checked' : '') + '>' +
@@ -4157,7 +4165,8 @@ var AiProjectBuilderView = (function () {
         whatsappMessage: '',
         shareUrl: '',
         showWhatsapp: true,
-        showShare: true
+        showShare: true,
+        showFullscreen: true
       };
     }
     if (!state.branding) state.branding = {};
@@ -4184,6 +4193,7 @@ var AiProjectBuilderView = (function () {
       state.heroContent.shareUrl = readField('heroShareUrlInput', state.heroContent.shareUrl || '');
       state.heroContent.showWhatsapp = readChecked('heroShowWhatsappInput', state.heroContent.showWhatsapp !== false);
       state.heroContent.showShare = readChecked('heroShowShareInput', state.heroContent.showShare !== false);
+      state.heroContent.showFullscreen = readChecked('heroShowFullscreenInput', state.heroContent.showFullscreen !== false);
       state.branding.showHeroLogo = readChecked('heroShowLogoInput', state.branding.showHeroLogo !== false);
       var styleEl = rootEl.querySelector('input[name="heroLogoStyle"]:checked');
       if (styleEl) {
@@ -4819,10 +4829,12 @@ var AiProjectBuilderView = (function () {
     /* Si el formulario Hero está montado, leer checkboxes aunque no sea el paso actual. */
     var showWaElAlways = rootEl && rootEl.querySelector('#heroShowWhatsappInput');
     var showShareElAlways = rootEl && rootEl.querySelector('#heroShowShareInput');
-    if (showWaElAlways || showShareElAlways) {
+    var showFsElAlways = rootEl && rootEl.querySelector('#heroShowFullscreenInput');
+    if (showWaElAlways || showShareElAlways || showFsElAlways) {
       if (!state.heroContent) state.heroContent = {};
       if (showWaElAlways) state.heroContent.showWhatsapp = !!showWaElAlways.checked;
       if (showShareElAlways) state.heroContent.showShare = !!showShareElAlways.checked;
+      if (showFsElAlways) state.heroContent.showFullscreen = !!showFsElAlways.checked;
     }
 
     var brandShowEl = rootEl && rootEl.querySelector('#brandShowHeroLogo');
@@ -4847,6 +4859,7 @@ var AiProjectBuilderView = (function () {
       var shareEl = rootEl && rootEl.querySelector('#heroShareUrlInput');
       var showWaEl = rootEl && rootEl.querySelector('#heroShowWhatsappInput');
       var showShareEl = rootEl && rootEl.querySelector('#heroShowShareInput');
+      var showFsEl = rootEl && rootEl.querySelector('#heroShowFullscreenInput');
       var showLogoEl = rootEl && rootEl.querySelector('#heroShowLogoInput');
       var logoStyleEl = rootEl && rootEl.querySelector('input[name="heroLogoStyle"]:checked');
       state.heroContent = Object.assign({
@@ -4858,7 +4871,8 @@ var AiProjectBuilderView = (function () {
         whatsappMessage: '',
         shareUrl: '',
         showWhatsapp: true,
-        showShare: true
+        showShare: true,
+        showFullscreen: true
       }, state.heroContent || {}, {
         nombre: nombreEl ? nombreEl.value : (state.heroContent && state.heroContent.nombre) || '',
         eslogan: esloganEl ? esloganEl.value : (state.heroContent && state.heroContent.eslogan) || '',
@@ -4868,7 +4882,8 @@ var AiProjectBuilderView = (function () {
         whatsappMessage: waMsgEl ? waMsgEl.value : (state.heroContent && state.heroContent.whatsappMessage) || '',
         shareUrl: shareEl ? shareEl.value : (state.heroContent && state.heroContent.shareUrl) || '',
         showWhatsapp: showWaEl ? !!showWaEl.checked : state.heroContent.showWhatsapp !== false,
-        showShare: showShareEl ? !!showShareEl.checked : state.heroContent.showShare !== false
+        showShare: showShareEl ? !!showShareEl.checked : state.heroContent.showShare !== false,
+        showFullscreen: showFsEl ? !!showFsEl.checked : state.heroContent.showFullscreen !== false
       });
       if (!state.branding) state.branding = {};
       if (showLogoEl) state.branding.showHeroLogo = !!showLogoEl.checked;

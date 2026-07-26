@@ -2980,8 +2980,67 @@ button.builder-estructura-chip {
 }
 
 .builder-exp-card.is-hero {
-  width: 260px;
+  width: 280px;
   padding-bottom: 12px;
+}
+
+.builder-exp-card__slots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.builder-exp-card__irow.is-nav,
+.builder-exp-card__irow.is-action-slot {
+  cursor: pointer;
+}
+
+.builder-exp-card__ref {
+  font-size: 10px;
+  color: rgba(155, 143, 212, 0.9);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.builder-exp-card__ref.is-config {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-exp-card__badge {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.builder-exp-card__badge.is-on {
+  color: rgba(111, 191, 134, 0.95);
+  border-color: rgba(111, 191, 134, 0.35);
+  background: rgba(111, 191, 134, 0.1);
+}
+
+.builder-exp-card__badge.is-off {
+  color: rgba(255, 255, 255, 0.35);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.builder-exp-inspector__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.builder-exp-inspector__field {
+  margin-top: 8px;
+}
+
+.builder-exp-inspector__field input {
+  width: 100%;
 }
 
 .builder-exp-card.is-action-node {

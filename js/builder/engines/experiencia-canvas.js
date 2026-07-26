@@ -1,5 +1,5 @@
-/* BOXIES V5.9.54 — Experiencia flow editor canvas
- * Extiende V5.9.53: menús contextuales, multi-select, cortar, Delete. */
+/* BOXIES V5.9.55 — Experiencia flow editor canvas
+ * Hero: slots (nav/flujo/acciones) + flujo INICIAR. Extiende V5.9.54. */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -117,20 +117,57 @@ var ExperienciaCanvas = (function () {
 
     var body = '';
     if (isHero) {
+      var slots = (n.config && n.config.slots) ||
+        (ExperienciaEngine.listHeroSlots ? ExperienciaEngine.listHeroSlots({ heroContent: {} }) : null) ||
+        { navigation: [], flow: [], actions: [] };
+      /* Prefer live slots from engine when painting after ensureFlow */
+      if (n.config && n.config.slots) slots = n.config.slots;
+
       body =
         '<div class="builder-exp-card__type">HERO</div>' +
         '<div class="builder-exp-card__title">Hero</div>' +
-        '<div class="builder-exp-card__info">Pantalla inicial</div>' +
-        '<div class="builder-exp-card__section">Interacciones</div>' +
-        '<div class="builder-exp-card__ports">' +
-          portsOut.map(function (p) {
-            return '<div class="builder-exp-card__irow" data-exp-irow="' + esc(p.id) + '">' +
-              '<span>' + esc(p.label) + '</span>' +
-              '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
-                esc(p.id) + '" data-node="' + esc(n.id) + '" data-port-label="' + esc(p.label) + '"></span>' +
+        '<div class="builder-exp-card__info">Pantalla inicial</div>';
+
+      if ((slots.navigation || []).length) {
+        body += '<div class="builder-exp-card__section">Navegación</div>' +
+          '<div class="builder-exp-card__slots">' +
+          slots.navigation.map(function (it) {
+            return '<div class="builder-exp-card__irow is-nav" data-exp-hero-slot="nav" data-slot-id="' + esc(it.id) + '">' +
+              '<span>' + esc(it.label) + '</span>' +
+              '<span class="builder-exp-card__ref">→ Menú</span>' +
             '</div>';
           }).join('') +
+          '</div>';
+      }
+
+      body += '<div class="builder-exp-card__section">Flujo</div>' +
+        '<div class="builder-exp-card__ports">' +
+        (slots.flow || []).map(function (it) {
+          var pid = it.portId || it.id || 'hero-iniciar';
+          return '<div class="builder-exp-card__irow is-flow" data-exp-irow="' + esc(pid) + '">' +
+            '<span>' + esc(it.label) + '</span>' +
+            '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+              esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' + esc(it.label) + '"></span>' +
+          '</div>';
+        }).join('') +
         '</div>';
+
+      if ((slots.actions || []).length) {
+        body += '<div class="builder-exp-card__section">Acciones</div>' +
+          '<div class="builder-exp-card__slots">' +
+          slots.actions.map(function (it) {
+            var on = it.enabled !== false;
+            var right = it.role === 'action-config'
+              ? '<span class="builder-exp-card__ref is-config">Configurar ›</span>'
+              : '<span class="builder-exp-card__badge ' + (on ? 'is-on' : 'is-off') + '">' +
+                (on ? 'ON' : 'OFF') + '</span>';
+            return '<div class="builder-exp-card__irow is-action-slot" data-exp-hero-slot="' +
+              esc(it.id) + '" data-slot-field="' + esc(it.field || '') + '">' +
+              '<span>' + esc(it.label) + '</span>' + right +
+            '</div>';
+          }).join('') +
+          '</div>';
+      }
     } else if (isAction) {
       body =
         '<div class="builder-exp-card__type">ACCIÓN</div>' +
@@ -288,18 +325,52 @@ var ExperienciaCanvas = (function () {
       '<h3 class="builder-exp-inspector__title">' + esc(n.label || n.id) + '</h3>';
 
     if (n.kind === 'hero') {
-      var ints = (n.config && n.config.interactions) || [];
+      var hero = (typeof ExperienciaEngine.ensureHeroContent === 'function')
+        ? ExperienciaEngine.ensureHeroContent(state)
+        : (state.heroContent || {});
+      var slots = (n.config && n.config.slots) || {};
+      var flowOut = names(conn.out, 'to');
       html += '<div class="builder-exp-inspector__grid">' +
-        row('Estado', ExperienciaEngine.statusLabel(n)) +
-        row('Origen', '—') +
-        row('Destinos', names(conn.out, 'to')) +
-      '</div>' +
-      '<div class="builder-exp-inspector__section">Interacciones</div>' +
-      '<ul class="builder-exp-inspector__list">' +
-        ints.map(function (it) {
-          return '<li>' + esc(it.label) + ' <em>(' + esc(it.source || '') + ')</em></li>';
-        }).join('') +
-      '</ul>';
+        row('Fuente', 'Sección Hero') +
+        row('Flujo (INICIAR)', flowOut) +
+      '</div>';
+
+      html += '<div class="builder-exp-inspector__section">Navegación</div>' +
+        '<p class="builder-menu-hint">Explorar referencia la sección Menú existente. No se duplican botones aquí.</p>' +
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-goto-step="menu">' +
+            'Ir a Menú / Editar en Menú</button>' +
+        '</div>';
+
+      html += '<div class="builder-exp-inspector__section">Acciones (Hero)</div>' +
+        '<label class="builder-check-row builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-hero-field="showShare"' +
+            (hero.showShare !== false ? ' checked' : '') + '>' +
+          '<span>Compartir habilitado</span>' +
+        '</label>' +
+        '<label class="builder-check-row builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-hero-field="showFullscreen"' +
+            (hero.showFullscreen !== false ? ' checked' : '') + '>' +
+          '<span>Fullscreen habilitado</span>' +
+        '</label>' +
+        '<label class="builder-check-row builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-hero-field="showWhatsapp"' +
+            (hero.showWhatsapp !== false ? ' checked' : '') + '>' +
+          '<span>WhatsApp habilitado</span>' +
+        '</label>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Número WhatsApp</label>' +
+          '<input type="text" data-exp-hero-field="whatsappLink" maxlength="180" ' +
+            'placeholder="573001112233" value="' + esc(hero.whatsappLink || '') + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Mensaje predeterminado</label>' +
+          '<input type="text" data-exp-hero-field="whatsappMessage" maxlength="280" ' +
+            'placeholder="Hola, quiero recibir información..." value="' +
+            esc(hero.whatsappMessage || '') + '">' +
+        '</div>' +
+        '<p class="builder-menu-hint">Misma fuente que la sección Hero. Experiencia no guarda una copia.</p>';
+      void slots;
       return html;
     }
 
@@ -739,6 +810,37 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
+      var gotoMenu = inspectorBody.querySelector('[data-exp-goto-step="menu"]');
+      if (gotoMenu) {
+        gotoMenu.addEventListener('click', function () {
+          if (typeof AiProjectBuilderView !== 'undefined' && AiProjectBuilderView.goToStepById) {
+            AiProjectBuilderView.goToStepById('menu');
+          }
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-hero-field]').forEach(function (el) {
+        var field = el.getAttribute('data-exp-hero-field');
+        var evt = el.type === 'checkbox' ? 'change' : 'change';
+        el.addEventListener(evt, function () {
+          var val = el.type === 'checkbox' ? !!el.checked : el.value;
+          if (ExperienciaEngine.setHeroContentField) {
+            ExperienciaEngine.setHeroContentField(state, field, val);
+          }
+          ExperienciaEngine.ensureFlow(state);
+          renderAll();
+          persist();
+        });
+        if (el.tagName === 'INPUT' && el.type === 'text') {
+          el.addEventListener('blur', function () {
+            if (ExperienciaEngine.setHeroContentField) {
+              ExperienciaEngine.setHeroContentField(state, field, el.value);
+            }
+            ExperienciaEngine.ensureFlow(state);
+            renderAll();
+            persist();
+          });
+        }
+      });
     }
 
     function renderAll() {
@@ -1189,6 +1291,29 @@ var ExperienciaCanvas = (function () {
 
       if (edgePath && tool !== 'cut') {
         selectEdge(edgePath.getAttribute('data-exp-edge'));
+        return;
+      }
+
+      var heroSlot = ev.target.closest('[data-exp-hero-slot]');
+      if (heroSlot && tool === 'select') {
+        ev.stopPropagation();
+        selectNode('exp-hero');
+        var slotId = heroSlot.getAttribute('data-exp-hero-slot');
+        var field = heroSlot.getAttribute('data-slot-field');
+        if ((slotId === 'hero-share' || slotId === 'hero-fullscreen') && field &&
+            ev.target.closest('.builder-exp-card__badge')) {
+          var hc = ExperienciaEngine.ensureHeroContent(state);
+          ExperienciaEngine.setHeroContentField(state, field, !(hc[field] !== false));
+          ExperienciaEngine.ensureFlow(state);
+          renderAll(); persist();
+          return;
+        }
+        if (slotId === 'nav' || slotId === 'hero-explorar') {
+          return;
+        }
+        if (slotId === 'hero-whatsapp') {
+          return;
+        }
         return;
       }
 

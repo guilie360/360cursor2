@@ -182,7 +182,8 @@ var HeroSyncEngine = (function () {
       whatsappMessage: '',
       shareUrl: '',
       showWhatsapp: true,
-      showShare: true
+      showShare: true,
+      showFullscreen: true
     }, state.heroContent || {});
 
     if (!state.heroContent.nombre || forceCanonical) {
