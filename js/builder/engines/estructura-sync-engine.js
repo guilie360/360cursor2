@@ -427,6 +427,12 @@ var EstructuraSyncEngine = (function () {
     }
 
     var pid = project.id;
+
+    /* Local snapshot before mutating (recoverable; never destructive wipe). */
+    if (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.takeSnapshot) {
+      ArchitectureEngine.takeSnapshot(state, 'pre-apply');
+    }
+
     var prevTipsRes = await client()
       .from('tipologias')
       .select('id, nombre, modelo')
@@ -574,43 +580,75 @@ var EstructuraSyncEngine = (function () {
         keepBuildingIds[b.id] = true;
       }
 
-      /* Levels (simple regenerate for building) */
-      await client().from('proyecto_niveles').delete().eq('edificio_id', b.id);
-      var levels = [];
+      /* Levels: upsert by identity; archive missing — never hard-delete */
+      var desiredLevels = [];
       var si;
       for (si = clampInt(b.sotanos, 0, 20, 0); si >= 1; si--) {
-        levels.push({
+        desiredLevels.push({
           proyecto_id: pid,
           edificio_id: b.id,
           kind: 'sotano',
           numero: si,
           nombre: 'Sótano ' + si,
-          orden: -si
+          orden: -si,
+          archived: false
         });
       }
       for (si = 1; si <= clampInt(b.pisos, 0, 200, 0); si++) {
-        levels.push({
+        desiredLevels.push({
           proyecto_id: pid,
           edificio_id: b.id,
           kind: 'piso',
           numero: si,
           nombre: 'Piso ' + si,
-          orden: si
+          orden: si,
+          archived: false
         });
       }
       if (b.rooftop) {
-        levels.push({
+        desiredLevels.push({
           proyecto_id: pid,
           edificio_id: b.id,
           kind: 'azotea',
           numero: 0,
           nombre: 'Azotea / Rooftop',
-          orden: 1000
+          orden: 1000,
+          archived: false
         });
       }
-      if (levels.length) {
-        var lr = await client().from('proyecto_niveles').insert(levels);
-        if (lr.error) throw new Error(lr.error.message);
+      var existingLevels = await client()
+        .from('proyecto_niveles')
+        .select('id, kind, numero, archived')
+        .eq('edificio_id', b.id);
+      if (existingLevels.error) throw new Error(existingLevels.error.message);
+      var levelByKey = {};
+      (existingLevels.data || []).forEach(function (lv) {
+        levelByKey[lv.kind + ':' + lv.numero] = lv;
+      });
+      var keepLevelIds = {};
+      for (var li = 0; li < desiredLevels.length; li++) {
+        var want = desiredLevels[li];
+        var lk = want.kind + ':' + want.numero;
+        var found = levelByKey[lk];
+        if (found) {
+          var lu = await client().from('proyecto_niveles').update({
+            nombre: want.nombre,
+            orden: want.orden,
+            archived: false
+          }).eq('id', found.id);
+          if (lu.error) throw new Error(lu.error.message);
+          keepLevelIds[found.id] = true;
+        } else {
+          var liIns = await client().from('proyecto_niveles').insert(want).select('id').single();
+          if (liIns.error) throw new Error(liIns.error.message);
+          keepLevelIds[liIns.data.id] = true;
+        }
+      }
+      for (var elx = 0; elx < (existingLevels.data || []).length; elx++) {
+        var elv = existingLevels.data[elx];
+        if (!keepLevelIds[elv.id] && !elv.archived) {
+          await client().from('proyecto_niveles').update({ archived: true }).eq('id', elv.id);
+        }
       }
     }
 
@@ -776,7 +814,7 @@ var EstructuraSyncEngine = (function () {
       if (zr.error) throw new Error(zr.error.message);
     }
 
-    /* Sync viviendas cards from tipologías (1:1) */
+    /* Tipología content cards (shared media) — 1 card per tipología, not per unit */
     var vivSync = await syncViviendasFromTipologias(state, pid, e.tipologias);
 
     e.appliedAt = header.applied_at;
@@ -787,12 +825,33 @@ var EstructuraSyncEngine = (function () {
       state.projectStructure = ProjectTypesEngine.getStructure(state.projectType) || state.projectStructure;
     }
 
+    /* Inventory + experiencia architecture (local + proyecto_unidades), idempotent */
+    var archSync = { expectedUnits: 0, remoteUnits: 0 };
+    if (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.syncFromEstructura) {
+      var arch = ArchitectureEngine.syncFromEstructura(state, {
+        appliedAt: header.applied_at,
+        skipSnapshot: true,
+        reason: 'apply-estructura'
+      });
+      archSync.expectedUnits = arch.expectedUnits || 0;
+      try {
+        var uSync = await ArchitectureEngine.syncProyectoUnidades(state, pid);
+        archSync.remoteUnits = (uSync && uSync.count) || 0;
+      } catch (uErr) {
+        archSync.remoteError = (uErr && uErr.message) || 'unidades';
+      }
+    } else if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.syncFromEstructura) {
+      ExperienciaEngine.syncFromEstructura(state, { appliedAt: header.applied_at });
+    }
+
     return {
       projectId: pid,
       tipologias: e.tipologias.length,
       viviendas: vivSync.count,
+      unidades: archSync.expectedUnits,
       buildings: (e.buildings || []).length,
-      unidadesFisicasConceptuales: EstructuraEngine.conceptualPhysicalUnits(e)
+      unidadesFisicasConceptuales: EstructuraEngine.conceptualPhysicalUnits(e),
+      architecture: archSync
     };
   }
 
@@ -892,6 +951,8 @@ var EstructuraSyncEngine = (function () {
     saveDraft: saveDraft,
     apply: apply,
     detectConflicts: detectConflicts,
-    syncViviendasFromTipologias: syncViviendasFromTipologias
+    syncViviendasFromTipologias: syncViviendasFromTipologias,
+    serializeEstructuraDraft: serializeEstructuraDraft,
+    restoreEstructuraDraft: restoreEstructuraDraft
   };
 })();

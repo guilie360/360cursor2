@@ -2664,3 +2664,130 @@ button.builder-estructura-chip {
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* V5.9.48 — Experiencia + architecture UI */
+.builder-rail-item.is-legacy {
+  opacity: 0.72;
+}
+
+.builder-exp-actions {
+  margin: 12px 0 16px;
+}
+
+.builder-exp-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.builder-exp-node {
+  margin-left: calc(var(--exp-depth, 0) * 18px);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.builder-exp-node.is-ready {
+  border-color: rgba(111, 191, 134, 0.35);
+}
+
+.builder-exp-node.is-review {
+  border-color: rgba(220, 170, 90, 0.45);
+}
+
+.builder-exp-node__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.builder-exp-node__kind {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-exp-node__status {
+  margin-left: auto;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.builder-exp-node__media {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.builder-exp-node__media--empty {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.builder-exp-edge {
+  margin-left: calc(var(--exp-depth, 1) * 18px);
+  font-size: 11px;
+  color: rgba(111, 191, 134, 0.75);
+}
+
+.builder-exp-flags {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.builder-exp-flag {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.builder-exp-flag.is-obligatorio {
+  border-color: rgba(220, 120, 120, 0.4);
+}
+
+.builder-exp-flag.is-recomendado {
+  border-color: rgba(220, 170, 90, 0.35);
+}
+
+.builder-exp-orphans {
+  margin-top: 18px;
+}
+
+.builder-exp-orphans h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.builder-gallery-item-ref,
+.builder-hotspot-ref {
+  display: block;
+  font-size: 10px;
+  color: rgba(111, 191, 134, 0.8);
+  margin-top: 2px;
+}
+
+.builder-check-sev {
+  display: inline-block;
+  min-width: 92px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-check.is-recommended .builder-check-icon {
+  color: rgba(220, 170, 90, 0.9);
+}
+
+.builder-viviendas-arch {
+  margin-bottom: 14px;
+}

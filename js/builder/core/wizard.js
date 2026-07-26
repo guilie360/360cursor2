@@ -1,26 +1,36 @@
 /* Builder wizard — step orchestration (incluye Interactivo) */
 var BuilderWizard = (function () {
+  /* V5.9.48 — progressive showroom architecture order.
+     Legacy steps (interactivo, info, ai-content) kept recoverable at the end. */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
     { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Describe la estructura física del proyecto residencial: tipo de desarrollo, tipologías, plantas, ambientes y zonas.' },
-    { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
+    { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Orquesta el recorrido interactivo: nodos, conexiones y transiciones derivados de la estructura.' },
     { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Sube un video o imagen de fondo para la portada del showroom.' },
+    { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
+    { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario y tarjetas comerciales alimentados por la estructura aplicada.' },
+    { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Biblioteca de imágenes asociables a entidades del proyecto.' },
+    { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Tours 360° vinculables a tipologías, amenidades u otras entidades.' },
+    { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Masterplan, plantas 2D/3D y planos de tipología relacionados a su contexto.' },
+    { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Documentos centralizados: brochure, fichas y especificaciones.' },
     { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
-    { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Crea y edita las tarjetas de viviendas del showroom: código, precio, áreas y disponibilidad.' },
-    { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Arrastra tus renders e imágenes. Las clasificaré, ordenaré y agruparé por categoría.' },
-    { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Sube los panoramas 360°. Identificaré cada espacio y crearé la estructura del recorrido.' },
-    { id: 'interactivo', label: 'Interactivo', shortLabel: 'Interactivo', icon: 'pen-tool', assistant: 'Laboratorio experimental: dibuja zonas poligonales sobre plantas navegables. Aún no se publica a Supabase.' },
-    { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Sube planos en PDF, JPG, PNG o DWG. Detectaré tipologías, áreas y niveles.' },
-    { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Sube brochures, fichas técnicas y documentos. Los reconoceré y organizaré automáticamente.' },
-    { id: 'info', label: 'Información', shortLabel: 'Info', icon: 'info', assistant: 'Pega el texto comercial o sube un PDF. Extraeré toda la información del proyecto.' },
-    { id: 'ai-content', label: 'Asistente IA', shortLabel: 'IA', icon: 'sparkles', assistant: 'Con toda la información recopilada, generaré textos comerciales, FAQs y contenido para el chatbot.' },
-    { id: 'hotspots', label: 'Hotspots', shortLabel: 'Hotspots', icon: 'map-pin', assistant: 'Analizaré renders maestros y propondré hotspots. Tú decides cuáles aceptar.' },
-    { id: 'validation', label: 'Validación', shortLabel: 'Check', icon: 'circle-check', assistant: 'Revisemos juntos que todo esté listo antes de publicar.' },
-    { id: 'publish', label: 'Publicar', shortLabel: 'Publicar', icon: 'rocket', assistant: 'Todo listo. Al publicar, crearé automáticamente la estructura BOXIES completa.' }
+    { id: 'hotspots', label: 'Hotspots', shortLabel: 'Hotspots', icon: 'map-pin', assistant: 'Hotspots espaciales que referencian entidades existentes (no duplican inventario).' },
+    { id: 'validation', label: 'Validación', shortLabel: 'Validación', icon: 'circle-check', assistant: 'Verifica relaciones, faltantes y referencias rotas antes de publicar.' },
+    { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Estado de publicación, preview y URL del showroom.' },
+    /* Recoverable legacy — not removed */
+    { id: 'interactivo', label: 'Interactivo', shortLabel: 'Interactivo', icon: 'pen-tool', assistant: 'Laboratorio experimental: dibuja zonas poligonales sobre plantas navegables. Aún no se publica a Supabase.', legacy: true },
+    { id: 'info', label: 'Información', shortLabel: 'Info', icon: 'info', assistant: 'Pega el texto comercial o sube un PDF. Extraeré toda la información del proyecto.', legacy: true },
+    { id: 'ai-content', label: 'Asistente IA', shortLabel: 'IA', icon: 'sparkles', assistant: 'Con toda la información recopilada, generaré textos comerciales, FAQs y contenido para el chatbot.', legacy: true }
   ];
+
+  var NAV_VERSION = 48;
 
   function getSteps() {
     return STEPS.slice();
+  }
+
+  function getPrimarySteps() {
+    return STEPS.filter(function (s) { return !s.legacy; });
   }
 
   function getStep(index) {
@@ -41,6 +51,8 @@ var BuilderWizard = (function () {
         return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
       case 'estructura':
         return !!(state.estructura && state.estructura.developmentType) || !!state.projectType;
+      case 'experiencia':
+        return true;
       case 'branding':
         return !!(state.branding && (state.branding.logo || state.branding.reference));
       case 'video-hero':
@@ -75,12 +87,21 @@ var BuilderWizard = (function () {
   }
 
   function progressPercent(stepIndex) {
-    return Math.round(((stepIndex + 1) / STEPS.length) * 100);
+    var primary = getPrimarySteps();
+    var step = STEPS[stepIndex];
+    if (!step || step.legacy) {
+      return Math.round(((stepIndex + 1) / STEPS.length) * 100);
+    }
+    var pi = primary.findIndex(function (s) { return s.id === step.id; });
+    if (pi < 0) return 0;
+    return Math.round(((pi + 1) / primary.length) * 100);
   }
 
   return {
     STEPS: STEPS,
+    NAV_VERSION: NAV_VERSION,
     getSteps: getSteps,
+    getPrimarySteps: getPrimarySteps,
     getStep: getStep,
     getStepById: getStepById,
     getStepIndex: getStepIndex,

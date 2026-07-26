@@ -1418,6 +1418,100 @@ var AiProjectBuilderView = (function () {
     return renderEstructura();
   }
 
+  function renderExperiencia() {
+    if (typeof ExperienciaEngine !== 'undefined') ExperienciaEngine.ensureState(state);
+    var exp = state.experiencia || { nodes: [], edges: [], reviewFlags: [] };
+    var applied = !!(state.estructura && state.estructura.appliedAt) ||
+      !!(state.architecture && state.architecture.appliedAt);
+    var nodes = exp.nodes || [];
+    var edges = exp.edges || [];
+    var active = nodes.filter(function (n) { return !n.orphaned; });
+    var orphans = nodes.filter(function (n) { return n.orphaned || n.status === 'review'; });
+
+    function childrenOf(nodeId) {
+      return edges
+        .filter(function (ed) { return ed.from === nodeId; })
+        .map(function (ed) {
+          return {
+            edge: ed,
+            node: nodes.find(function (n) { return n.id === ed.to; })
+          };
+        })
+        .filter(function (x) { return x.node; });
+    }
+
+    var roots = active.filter(function (n) {
+      return n.kind === 'hero' || n.id === 'exp-hero';
+    });
+    if (!roots.length && active.length) roots = [active[0]];
+
+    function renderBranch(n, depth) {
+      depth = depth || 0;
+      var kids = childrenOf(n.id);
+      var statusCls = n.status === 'ready' ? 'is-ready'
+        : (n.status === 'review' ? 'is-review' : 'is-pending');
+      var html =
+        '<div class="builder-exp-node ' + statusCls + '" style="--exp-depth:' + depth + '">' +
+          '<div class="builder-exp-node__row">' +
+            '<span class="builder-exp-node__kind">' + AdminUI.escapeHtml(n.kind || 'nodo') + '</span>' +
+            '<strong class="builder-exp-node__label">' + AdminUI.escapeHtml(n.label || n.id) + '</strong>' +
+            '<span class="builder-exp-node__status">' + AdminUI.escapeHtml(n.status || 'pending') + '</span>' +
+          '</div>' +
+          (n.transitionMedia
+            ? '<p class="builder-exp-node__media">Transición: media asociada (' +
+              AdminUI.escapeHtml(String(n.transitionSeconds || 4)) + 's)</p>'
+            : '<p class="builder-exp-node__media builder-exp-node__media--empty">Transición: pendiente (4–5 s)</p>') +
+        '</div>';
+      kids.forEach(function (k) {
+        html += '<div class="builder-exp-edge" style="--exp-depth:' + (depth + 1) + '">' +
+          '<span class="builder-exp-edge__label">' + AdminUI.escapeHtml(k.edge.label || '→') + '</span>' +
+        '</div>';
+        html += renderBranch(k.node, depth + 1);
+      });
+      return html;
+    }
+
+    var treeHtml = roots.length
+      ? roots.map(function (r) { return renderBranch(r, 0); }).join('')
+      : '<p class="builder-step-desc">Aún no hay nodos. Aplica la estructura o genera el recorrido base.</p>';
+
+    var flagsHtml = (exp.reviewFlags || []).length
+      ? '<ul class="builder-exp-flags">' +
+        exp.reviewFlags.map(function (f) {
+          return '<li class="builder-exp-flag is-' + AdminUI.escapeHtml(f.severity || 'recomendado') + '">' +
+            AdminUI.escapeHtml(f.message || '') + '</li>';
+        }).join('') +
+        '</ul>'
+      : '';
+
+    var orphansHtml = orphans.length
+      ? '<div class="builder-exp-orphans">' +
+          '<h3>En revisión / huérfanos</h3>' +
+          orphans.map(function (n) {
+            return '<div class="builder-exp-node is-review">' +
+              AdminUI.escapeHtml(n.label || n.id) +
+            '</div>';
+          }).join('') +
+        '</div>'
+      : '';
+
+    return '<div class="builder-step-content builder-step-content--experiencia">' +
+      stepTitleHtml('Experiencia') +
+      '<p class="builder-step-desc">Orquesta el recorrido del showroom a partir de la estructura. ' +
+        'No inventa media: solo nodos, conexiones y slots de transición.</p>' +
+      (!applied
+        ? '<div class="builder-warn-banner">Pendiente: aplica la estructura para generar el recorrido base.</div>'
+        : '<div class="builder-ready-banner">Estructura aplicada · ' + active.length + ' nodos activos</div>') +
+      '<div class="builder-exp-actions">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
+          'Sincronizar desde estructura</button>' +
+      '</div>' +
+      flagsHtml +
+      '<div class="builder-exp-tree" data-exp-tree>' + treeHtml + '</div>' +
+      orphansHtml +
+    '</div>';
+  }
+
   function renderBranding() {
     var b = state.branding || {};
     var showLogo = b.showHeroLogo !== false;
@@ -1803,8 +1897,25 @@ var AiProjectBuilderView = (function () {
 
   function renderViviendas() {
     ViviendasSyncEngine.ensureState(state);
+    if (typeof ArchitectureEngine !== 'undefined') ArchitectureEngine.ensureState(state);
     var items = state.viviendas || [];
     var expandedIdx = typeof state.viviendaExpandedIdx === 'number' ? state.viviendaExpandedIdx : -1;
+    var arch = state.architecture || {};
+    var unitCount = (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.activeUnitCount)
+      ? ArchitectureEngine.activeUnitCount(state)
+      : 0;
+    var orphanCount = (arch.orphans || []).length;
+    var applied = !!(state.estructura && state.estructura.appliedAt) || !!arch.appliedAt;
+    var inventoryBanner = '<div class="builder-viviendas-arch">' +
+      (!applied
+        ? '<div class="builder-warn-banner">Pendiente estructura: el inventario se generará al aplicar.</div>'
+        : '<div class="builder-ready-banner">' +
+            unitCount + (unitCount === 1 ? ' unidad' : ' unidades') +
+            ' · ' + (arch.tipologyContentCards || items.length) + ' tipología(s) con contenido compartido' +
+            (orphanCount ? (' · ' + orphanCount + ' en revisión') : '') +
+          '</div>') +
+      '<p class="builder-menu-hint">Las tipologías comparten galería/plano/360. Las tarjetas abajo son el contenido comercial por tipología; el inventario físico está sincronizado desde Estructura.</p>' +
+    '</div>';
 
     function estadoOptions(selected) {
       return ViviendasSyncEngine.ESTADOS.map(function (o) {
@@ -1961,11 +2072,11 @@ var AiProjectBuilderView = (function () {
 
     return '<div class="builder-step-content">' +
       stepTitleHtml('Viviendas') +
-      '<p class="builder-step-desc">Tarjetas del menú Viviendas en el showroom. Crea cada una a mano: código, precio, áreas y estado.</p>' +
+      inventoryBanner +
       '<div class="builder-confirm-form builder-menu-list-wrap">' +
-        '<div class="builder-confirm-title">Tarjetas</div>' +
-        '<p class="builder-menu-hint">Las tarjetas aparecen en “Selecciona tu vivienda”. Guarda para sincronizarlas con el proyecto.</p>' +
-        (itemsHtml || '<p class="builder-menu-hint">Aún no hay viviendas. Agrega la primera tarjeta.</p>') +
+        '<div class="builder-confirm-title">Contenido por tipología</div>' +
+        '<p class="builder-menu-hint">1 tipología = 1 tarjeta de contenido compartido. Guarda para sincronizar con el proyecto.</p>' +
+        (itemsHtml || '<p class="builder-menu-hint">Aún no hay tarjetas. Aplica la estructura o agrega manualmente.</p>') +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="viviendaAddBtn">+ Agregar vivienda</button>' +
       '</div>' +
     '</div>';
@@ -1980,30 +2091,46 @@ var AiProjectBuilderView = (function () {
     });
     return '<div class="builder-step-content">' +
       stepTitleHtml('Galería') +
-      '<p class="builder-step-desc">Arrastra imágenes. Las clasificaré, ordenaré y eliminaré duplicados.</p>' +
+      '<p class="builder-step-desc">Biblioteca de imágenes asociables a proyecto, etapa, tipología, amenidad u otras entidades. El contenido actual se conserva.</p>' +
       '<div class="builder-dropzone" id="galleryDropzone">' +
         '<div class="builder-dropzone-inner"><span>Arrastra múltiples imágenes</span></div>' +
       '</div>' +
       '<input type="file" id="galleryInput" accept="image/*" multiple hidden>' +
-      (items.length ? '<div class="builder-gallery-summary">' + items.length + ' imágenes procesadas</div>' : '') +
+      (items.length ? '<div class="builder-gallery-summary">' + items.length + ' imágenes' +
+        ((state.architecture && state.architecture.mediaSlots)
+          ? (' · ' + state.architecture.mediaSlots.filter(function (s) { return s.mediaKind === 'gallery'; }).length + ' slots')
+          : '') +
+        '</div>' : (structureAppliedHint())) +
       Object.keys(groups).map(function (cat) {
         return '<div class="builder-gallery-group"><div class="builder-gallery-group-label">' +
           AdminUI.escapeHtml(GalleryEngine.CATEGORIES[cat] ? GalleryEngine.CATEGORIES[cat].label : cat) +
           ' (' + groups[cat].length + ')</div><div class="builder-gallery-grid">' +
           groups[cat].map(function (item) {
+            var ref = item.entityRef
+              ? ((item.entityRef.type || '') + ':' + (item.entityRef.key || 'root'))
+              : 'proyecto:root';
             return '<div class="builder-gallery-item" title="' + AdminUI.escapeHtml(item.name) + '">' +
               (item.previewUrl ? '<img src="' + AdminUI.escapeHtml(item.previewUrl) + '" alt="">' : '') +
-              '<span class="builder-gallery-item-name">' + AdminUI.escapeHtml(item.name) + '</span></div>';
+              '<span class="builder-gallery-item-name">' + AdminUI.escapeHtml(item.name) + '</span>' +
+              '<span class="builder-gallery-item-ref">' + AdminUI.escapeHtml(ref) + '</span></div>';
           }).join('') + '</div></div>';
       }).join('') +
       '</div>';
+  }
+
+  function structureAppliedHint() {
+    var applied = !!(state.estructura && state.estructura.appliedAt) ||
+      !!(state.architecture && state.architecture.appliedAt);
+    return applied
+      ? '<div class="builder-warn-banner">0 assets · slots listos tras aplicar estructura</div>'
+      : '<div class="builder-warn-banner">Pendiente estructura</div>';
   }
 
   function renderPanoramas() {
     var items = state.panoramas || [];
     return '<div class="builder-step-content">' +
       stepTitleHtml('Recorridos 360°') +
-      '<p class="builder-step-desc">Sube panoramas. Identificaré cada espacio automáticamente.</p>' +
+      '<p class="builder-step-desc">Tours vinculables a tipologías, amenidades u otras entidades. Se reutiliza contenido; no se duplica por unidad idéntica.</p>' +
       '<div class="builder-dropzone" id="panoramaDropzone">' +
         '<div class="builder-dropzone-inner"><span class="builder-dropzone-icon">🔮</span><span>Arrastra panoramas 360°</span></div>' +
       '</div>' +
@@ -2013,17 +2140,30 @@ var AiProjectBuilderView = (function () {
           return '<div class="builder-pano-item">' +
             (p.previewUrl ? '<img src="' + AdminUI.escapeHtml(p.previewUrl) + '" alt="">' : '') +
             '<div class="builder-pano-info"><strong>' + AdminUI.escapeHtml(p.spaceLabel) + '</strong>' +
-            '<span>' + AdminUI.escapeHtml(p.name) + '</span></div></div>';
-        }).join('') + '</div>' : '') +
+            '<span>' + AdminUI.escapeHtml(p.name) + '</span>' +
+            (p.entityRef ? '<span class="builder-gallery-item-ref">' +
+              AdminUI.escapeHtml((p.entityRef.type || '') + ':' + (p.entityRef.key || '')) + '</span>' : '') +
+            '</div></div>';
+        }).join('') + '</div>' : structureAppliedHint()) +
       '</div>';
   }
 
   function renderPlans() {
-    return renderDocumentStep('plans', 'Planos', 'Sube PDF, JPG, PNG o DWG. Detectaré tipologías, áreas y niveles.', state.plans || []);
+    return renderDocumentStep(
+      'plans',
+      'Planos',
+      'Masterplan, plantas 2D/3D y planos de tipología. Relaciona cada asset a su contexto (torre, piso, modelo).',
+      state.plans || []
+    );
   }
 
   function renderDownloads() {
-    return renderDocumentStep('downloads', 'Descargables', 'Brochures, fichas técnicas, cotizaciones, reglamentos.', state.downloads || []);
+    return renderDocumentStep(
+      'downloads',
+      'Docs',
+      'Documentos centralizados y relacionables: brochure, fichas, especificaciones y material comercial/técnico.',
+      state.downloads || []
+    );
   }
 
   function renderDocumentStep(context, title, desc, items) {
@@ -2107,23 +2247,30 @@ var AiProjectBuilderView = (function () {
 
   function renderHotspots() {
     var suggestions = state.hotspotSuggestions || [];
+    var intro =
+      '<p class="builder-step-desc">Los hotspots no duplican inventario: solo posición, tipo visual y referencia a una entidad existente (vivienda, torre, amenidad, nodo).</p>';
     if (!suggestions.length) {
       return '<div class="builder-step-content">' +
         stepTitleHtml('Hotspots') +
-        '<p class="builder-step-desc">Analizaré renders maestros y propondré hotspots.</p>' +
+        intro +
         '<button type="button" class="btn-primary" id="analyzeHotspotsBtn">Analizar y proponer hotspots</button>' +
         '</div>';
     }
     return '<div class="builder-step-content">' +
       stepTitleHtml('Sugerencias de hotspots') +
-      '<p class="builder-step-desc">Selecciona cuáles aceptar. Podrás editarlos después en el Editor Visual.</p>' +
+      intro +
+      '<p class="builder-menu-hint">Selecciona cuáles aceptar. Asigna destino/entidad cuando corresponda.</p>' +
       '<div class="builder-hotspot-list">' +
         suggestions.map(function (hs) {
+          var refLabel = hs.entityRef
+            ? ((hs.entityRef.type || 'entidad') + ':' + (hs.entityRef.key || ''))
+            : 'Sin destino';
           return '<label class="builder-hotspot-card' + (hs.accepted ? ' is-accepted' : '') + '">' +
             '<input type="checkbox" data-hotspot="' + hs.id + '"' + (hs.accepted ? ' checked' : '') + '>' +
             (hs.imagePreview ? '<img src="' + AdminUI.escapeHtml(hs.imagePreview) + '" alt="">' : '') +
             '<div class="builder-hotspot-info"><strong>' + AdminUI.escapeHtml(hs.label) + '</strong>' +
-            '<span>Confianza: ' + Math.round(hs.confidence * 100) + '%</span></div></label>';
+            '<span>Confianza: ' + Math.round(hs.confidence * 100) + '%</span>' +
+            '<span class="builder-hotspot-ref">' + AdminUI.escapeHtml(refLabel) + '</span></div></label>';
         }).join('') +
       '</div></div>';
   }
@@ -2142,42 +2289,65 @@ var AiProjectBuilderView = (function () {
     var v = state.validation || ValidationEngine.validate(state);
     state.validation = v;
     return '<div class="builder-step-content">' +
-      stepTitleHtml('Validación pre-publicación') +
-      '<div class="builder-validation-score">Completitud: ' + v.score + '%</div>' +
+      stepTitleHtml('Validación del showroom') +
+      '<p class="builder-step-desc">Verifica relaciones, faltantes y referencias. Clasificación: OBLIGATORIO / RECOMENDADO / OPCIONAL.</p>' +
+      '<div class="builder-validation-score">Completitud: ' + v.score + '%' +
+        (v.pendingCount ? (' · ' + v.pendingCount + ' pendientes') : '') +
+      '</div>' +
       '<div class="builder-checklist">' +
         v.checks.map(function (c) {
           var icon = c.passed ? '✓' : (c.optional ? '○' : '✗');
-          var cls = c.passed ? 'is-pass' : (c.optional ? 'is-optional' : 'is-fail');
+          var cls = c.passed ? 'is-pass' : (c.optional ? 'is-optional' : (c.recommended ? 'is-recommended' : 'is-fail'));
+          var sev = c.severityLabel || (c.optional ? 'OPCIONAL' : (c.recommended ? 'RECOMENDADO' : 'OBLIGATORIO'));
           return '<div class="builder-check ' + cls + '"><span class="builder-check-icon">' + icon + '</span>' +
-            AdminUI.escapeHtml(c.label) + (c.optional ? ' <em>(opcional)</em>' : '') + '</div>';
+            '<span class="builder-check-sev">' + sev + '</span> ' +
+            AdminUI.escapeHtml(c.label) +
+            (c.detail ? ' <em>(' + AdminUI.escapeHtml(c.detail) + ')</em>' : '') +
+            '</div>';
         }).join('') +
       '</div>' +
-      (v.ready ? '<div class="builder-ready-banner">✅ Todo listo para publicar</div>' : '<div class="builder-warn-banner">Completa los elementos requeridos para continuar</div>') +
+      (v.ready
+        ? '<div class="builder-ready-banner">Listo para publicar (obligatorios OK)</div>'
+        : '<div class="builder-warn-banner">Completa los elementos OBLIGATORIOS para continuar</div>') +
       '</div>';
   }
 
   function renderPublish() {
+    var url = (state.publishResult && state.publishResult.url) || null;
+    var lastAt = (state.publishResult && state.publishResult.publishedAt) || null;
     if (state.published && state.publishResult) {
       var r = state.publishResult;
       return '<div class="builder-step-content builder-publish-success">' +
-        '<h2>Proyecto publicado</h2>' +
-        '<p>' + AdminUI.escapeHtml(r.project.nombre) + ' está listo.</p>' +
-        '<a href="' + AdminUI.escapeHtml(r.url) + '" class="btn-primary" target="_blank">Ver showroom</a>' +
+        stepTitleHtml('Publicado') +
+        '<div class="builder-publish-summary">' +
+          summaryRow('Estado', 'Publicado') +
+          summaryRow('Proyecto', (r.project && r.project.nombre) || '—') +
+          summaryRow('URL', r.url || '—') +
+          summaryRow('Última publicación', r.publishedAt || lastAt || '—') +
+        '</div>' +
+        (r.url ? '<a href="' + AdminUI.escapeHtml(r.url) + '" class="btn-primary" target="_blank" rel="noopener">Vista previa</a> ' : '') +
+        '<button type="button" class="btn-ghost" id="publishBtn">Republicar</button> ' +
         '<button type="button" class="btn-ghost" id="newBuilderBtn">Crear otro proyecto</button></div>';
     }
     return '<div class="builder-step-content">' +
-      stepTitleHtml('Publicar proyecto') +
-      '<p class="builder-step-desc">Al publicar, crearé automáticamente toda la estructura BOXIES.</p>' +
+      stepTitleHtml('Publicado') +
+      '<p class="builder-step-desc">Estado de salida del showroom. Publicar no rompe URLs existentes.</p>' +
       '<div class="builder-publish-summary">' +
+        summaryRow('Estado', 'Borrador') +
+        summaryRow('Preview', url || '—') +
+        summaryRow('URL', url || '—') +
+        summaryRow('Última publicación', '—') +
         summaryRow('Tipo', ProjectTypesEngine.getTypeLabel(state.projectType)) +
-        summaryRow('Nombre', (state.projectInfo || {}).nombre || '—') +
+        summaryRow('Unidades', (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.activeUnitCount)
+          ? ArchitectureEngine.activeUnitCount(state)
+          : (state.viviendas || []).length) +
         summaryRow('Imágenes', (state.gallery || []).length) +
         summaryRow('360°', (state.panoramas || []).filter(function (p) { return p.file; }).length) +
         summaryRow('Planos', (state.plans || []).length) +
         summaryRow('Documentos', (state.downloads || []).length) +
       '</div>' +
       '<button type="button" class="btn-primary builder-publish-btn" id="publishBtn"' + (processing ? ' disabled' : '') + '>' +
-        (processing ? 'Publicando...' : 'Publicar proyecto') + '</button></div>';
+        (processing ? 'Publicando...' : 'Publicar showroom') + '</button></div>';
   }
 
   function summaryRow(label, value) {
@@ -2235,6 +2405,7 @@ var AiProjectBuilderView = (function () {
       case 'config': html = renderConfig(); break;
       case 'estructura':
       case 'project-type': html = renderEstructura(); break;
+      case 'experiencia': html = renderExperiencia(); break;
       case 'branding': html = renderBranding(); break;
       case 'video-hero': html = renderVideoHero(); break;
       case 'menu': html = renderMenu(); break;
@@ -3642,7 +3813,8 @@ var AiProjectBuilderView = (function () {
       saveState();
       AdminNotify.success(
         'Estructura aplicada: ' + result.tipologias + ' tipología(s), ' +
-        result.viviendas + ' tarjeta(s) en Viviendas.'
+        (result.unidades != null ? result.unidades + ' unidad(es), ' : '') +
+        result.viviendas + ' tarjeta(s) de contenido. Experiencia sincronizada.'
       );
       renderStepContent();
       updateNavButtons();
@@ -3676,6 +3848,24 @@ var AiProjectBuilderView = (function () {
   }
 
   function bindStepEvents(stepId) {
+    if (stepId === 'experiencia') {
+      var resyncBtn = rootEl.querySelector('#builderExpResyncBtn');
+      if (resyncBtn) {
+        resyncBtn.addEventListener('click', function () {
+          if (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.syncFromEstructura) {
+            ArchitectureEngine.syncFromEstructura(state, { reason: 'manual-experiencia-resync' });
+          } else if (typeof ExperienciaEngine !== 'undefined') {
+            ExperienciaEngine.syncFromEstructura(state, {});
+          }
+          saveState();
+          renderStepContent();
+          updateNavButtons();
+          AdminNotify.success('Experiencia sincronizada desde estructura.');
+        });
+      }
+      return;
+    }
+
     if (stepId === 'config') {
       var nameInput = rootEl.querySelector('#showroomNameInput');
       var slugInput = rootEl.querySelector('#showroomSlugInput');
@@ -5091,8 +5281,10 @@ var AiProjectBuilderView = (function () {
   function goToStep(index) {
     if (index < 0 || index >= BuilderWizard.STEPS.length) return;
     state.currentStep = index;
-    saveState();
     var step = BuilderWizard.getStep(index);
+    if (step) state.currentStepId = step.id;
+    state.wizardNavVersion = BuilderWizard.NAV_VERSION || 48;
+    saveState();
     if (step && step.id === 'validation') {
       state.validation = ValidationEngine.validate(state);
     }
