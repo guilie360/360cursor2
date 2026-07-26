@@ -3013,11 +3013,16 @@ button.builder-estructura-chip {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 20px;
+  min-height: 22px;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.72);
   position: relative;
-  padding-right: 2px;
+  padding-right: 14px;
+  cursor: crosshair;
+}
+
+.builder-exp-card__irow.is-linking {
+  color: rgba(111, 191, 134, 0.95);
 }
 
 .builder-exp-card__port.is-row {
@@ -3202,12 +3207,19 @@ button.builder-estructura-chip {
 
 .builder-exp-card__port.is-out.is-row,
 .builder-exp-card__port.is-in.is-row {
-  position: relative;
-  top: auto;
+  position: absolute;
+  top: 50%;
+  right: -5px;
   left: auto;
-  right: auto;
-  margin-top: 0;
+  margin-top: -5px;
   flex: 0 0 auto;
+  cursor: crosshair;
+}
+
+.builder-exp-card__port.is-linking {
+  border-color: rgba(111, 191, 134, 0.95);
+  background: rgba(111, 191, 134, 0.4);
+  box-shadow: 0 0 0 3px rgba(111, 191, 134, 0.2);
 }
 
 .builder-exp-card__port:hover {

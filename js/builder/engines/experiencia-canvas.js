@@ -1,4 +1,5 @@
-/* BOXIES V5.9.52 — Experiencia flow editor canvas (reuses pan/zoom/minimap) */
+/* BOXIES V5.9.53 — Experiencia flow editor canvas
+ * Puertos independientes: cada interacción es un sourcePortId propio. */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -190,37 +191,54 @@ var ExperienciaCanvas = (function () {
       ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2;
   }
 
-  function portAnchor(n, portId, side) {
+  /** Math fallback when DOM port is not measurable yet. */
+  function portAnchorFallback(n, portId, side) {
     var size = ExperienciaEngine.nodeSize(n);
     var ports = (n.ports || []).filter(function (p) {
       return side === 'in' ? p.side === 'in' : p.side !== 'in';
     });
     if (side === 'in') {
-      return { x: n.x, y: n.y + size.h / 2 };
+      return { x: n.x || 0, y: (n.y || 0) + size.h / 2 };
     }
-    if (n.kind === 'hero' || ports.length > 1) {
+    var flowOuts = ports.filter(function (p) { return p.kind !== 'meta'; });
+    if (n.kind === 'hero' || flowOuts.length > 1 || n.kind === 'video' || n.kind === 'animacion') {
       var idx = 0;
-      for (var i = 0; i < ports.length; i++) {
-        if (ports[i].id === portId) { idx = i; break; }
+      for (var i = 0; i < flowOuts.length; i++) {
+        if (flowOuts[i].id === portId) { idx = i; break; }
       }
-      var top = 78 + idx * 22 + 8;
-      return { x: n.x + size.w, y: n.y + Math.min(top, size.h - 12) };
+      /* Header ~62px + section ~18px + row ~22px; circle at row center */
+      var top = (n.kind === 'hero' ? 86 : 78) + idx * 22 + 10;
+      return {
+        x: (n.x || 0) + size.w,
+        y: (n.y || 0) + Math.min(top, size.h - 8)
+      };
     }
-    return { x: n.x + size.w, y: n.y + size.h / 2 };
+    return { x: (n.x || 0) + size.w, y: (n.y || 0) + size.h / 2 };
   }
 
   function inspectorHtml(state, nodeId, edgeId) {
     if (edgeId) {
       var ed = ExperienciaEngine.getEdge(state, edgeId);
       if (!ed) return '<p class="builder-menu-hint">Conexión no encontrada.</p>';
-      var a = ExperienciaEngine.getNode(state, ed.from || ed.sourceId);
-      var b = ExperienciaEngine.getNode(state, ed.to || ed.targetId);
+      var a = ExperienciaEngine.getNode(state, ed.sourceNodeId || ed.from || ed.sourceId);
+      var b = ExperienciaEngine.getNode(state, ed.targetNodeId || ed.to || ed.targetId);
+      var srcPortId = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      var srcPortLabel = ed.sourcePortLabel ||
+        (ExperienciaEngine.resolvePortLabel
+          ? ExperienciaEngine.resolvePortLabel(a, srcPortId)
+          : srcPortId);
+      var tgtPortId = ed.targetPortId || ed.targetPort || 'in';
       return '' +
         '<div class="builder-exp-inspector__kind">CONEXIÓN</div>' +
-        '<h3 class="builder-exp-inspector__title">' + esc(ed.label || 'Flujo') + '</h3>' +
+        '<h3 class="builder-exp-inspector__title">' +
+          esc((a ? a.label : 'Nodo') + ' → ' + (b ? b.label : 'Nodo')) +
+        '</h3>' +
         '<div class="builder-exp-inspector__grid">' +
-          row('Origen', (a ? a.label : ed.from) + '.' + (ed.sourcePort || ed.portId || 'out')) +
-          row('Destino', b ? b.label : ed.to) +
+          row('Origen', a ? (a.label || a.id) : (ed.sourceNodeId || ed.from || '—')) +
+          row('Interacción', srcPortLabel || srcPortId) +
+          row('Puerto origen', srcPortId) +
+          row('Destino', b ? (b.label || b.id) : (ed.targetNodeId || ed.to || '—')) +
+          row('Puerto destino', tgtPortId) +
           row('Tipo', ed.inlineAction ? 'Acción inline' : 'Navegación') +
         '</div>' +
         '<div class="builder-exp-inspector__actions">' +
@@ -240,10 +258,22 @@ var ExperienciaCanvas = (function () {
     function names(list, key) {
       if (!list.length) return '—';
       return list.map(function (ed) {
-        var other = byId[ed[key]];
-        var port = ed.sourcePort || ed.portId || '';
-        return (other ? (other.label || other.id) : ed[key]) +
-          (key === 'from' && port ? ('.' + port) : '');
+        var otherId = key === 'from'
+          ? (ed.sourceNodeId || ed.from || ed.sourceId)
+          : (ed.targetNodeId || ed.to || ed.targetId);
+        var other = byId[otherId];
+        var port = ed.sourcePortId || ed.sourcePort || ed.portId || '';
+        var srcNode = byId[ed.sourceNodeId || ed.from || ed.sourceId];
+        var portLabel = ed.sourcePortLabel ||
+          (srcNode && ExperienciaEngine.resolvePortLabel
+            ? ExperienciaEngine.resolvePortLabel(srcNode, port)
+            : port);
+        if (key === 'to') {
+          return (other ? (other.label || other.id) : otherId) +
+            (port ? (' ← ' + (portLabel || port)) : '');
+        }
+        return (other ? (other.label || other.id) : otherId) +
+          (port ? ('.' + (portLabel || port)) : '');
       }).join(', ');
     }
 
@@ -445,6 +475,35 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    /** Exact world anchor from the port circle DOM; fallback to math. */
+    function resolvePortAnchor(n, portId, side) {
+      var pid = portId || (side === 'in' ? 'in' : 'out');
+      if (nodesEl && n && n.id != null) {
+        var card = nodesEl.querySelector('[data-exp-node="' + String(n.id).replace(/"/g, '') + '"]');
+        if (card) {
+          var portEl = card.querySelector(
+            '[data-exp-port="' + (side === 'in' ? 'in' : 'out') + '"][data-port-id="' +
+            String(pid).replace(/"/g, '') + '"]'
+          );
+          if (!portEl && side === 'out') {
+            portEl = card.querySelector('[data-exp-port="out"]');
+          }
+          if (!portEl && side === 'in') {
+            portEl = card.querySelector('[data-exp-port="in"]');
+          }
+          if (portEl) {
+            var zoom = canvas().zoom || 1;
+            var cardRect = card.getBoundingClientRect();
+            var portRect = portEl.getBoundingClientRect();
+            var ox = (portRect.left + portRect.width / 2 - cardRect.left) / zoom;
+            var oy = (portRect.top + portRect.height / 2 - cardRect.top) / zoom;
+            return { x: (n.x || 0) + ox, y: (n.y || 0) + oy };
+          }
+        }
+      }
+      return portAnchorFallback(n, pid, side);
+    }
+
     function paintNodes() {
       var nodes = ExperienciaEngine.visibleNodes(state);
       var sel = canvas().selectedId;
@@ -452,6 +511,17 @@ var ExperienciaCanvas = (function () {
       nodesEl.querySelectorAll('[data-exp-node]').forEach(function (el) {
         if (el.getAttribute('data-exp-node') === sel) el.classList.add('is-selected');
       });
+      if (linkDrag && linkDrag.portId && linkDrag.fromId) {
+        var linkingPort = nodesEl.querySelector(
+          '[data-exp-node="' + String(linkDrag.fromId).replace(/"/g, '') + '"] ' +
+          '[data-exp-port="out"][data-port-id="' + String(linkDrag.portId).replace(/"/g, '') + '"]'
+        );
+        if (linkingPort) {
+          linkingPort.classList.add('is-linking');
+          var row = linkingPort.closest('[data-exp-irow]');
+          if (row) row.classList.add('is-linking');
+        }
+      }
       syncToolUi();
     }
 
@@ -473,26 +543,26 @@ var ExperienciaCanvas = (function () {
 
       var selE = canvas().selectedEdgeId;
       var paths = (state.experiencia.edges || []).map(function (ed) {
-        var a = byId[ed.from || ed.sourceId];
-        var b2 = byId[ed.to || ed.targetId];
+        var a = byId[ed.sourceNodeId || ed.from || ed.sourceId];
+        var b2 = byId[ed.targetNodeId || ed.to || ed.targetId];
         if (!a || !b2 || a.x == null || b2.x == null) return '';
-        if (a.parentId !== b2.parentId && a.id !== 'exp-hero') {
-          /* still draw if both visible */
-        }
-        var pOut = portAnchor(a, ed.sourcePort || ed.portId || 'out', 'out');
-        var pIn = portAnchor(b2, 'in', 'in');
+        var srcPort = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+        var tgtPort = ed.targetPortId || ed.targetPort || 'in';
+        var pOut = resolvePortAnchor(a, srcPort, 'out');
+        var pIn = resolvePortAnchor(b2, tgtPort, 'in');
         var cls = 'builder-exp-edge-path' +
           (ed.manual ? ' is-manual' : '') +
           (ed.inlineAction ? ' is-inline' : '') +
           (selE === ed.id ? ' is-selected' : '');
-        return '<path class="' + cls + '" data-exp-edge="' + esc(ed.id) + '" d="' +
-          bezierPath(pOut.x, pOut.y, pIn.x, pIn.y) + '" fill="none" />';
+        return '<path class="' + cls + '" data-exp-edge="' + esc(ed.id) + '"' +
+          ' data-source-port="' + esc(srcPort) + '"' +
+          ' d="' + bezierPath(pOut.x, pOut.y, pIn.x, pIn.y) + '" fill="none" />';
       }).join('');
 
       if (linkDrag && linkDrag.fromId) {
         var src = byId[linkDrag.fromId];
         if (src) {
-          var a2 = portAnchor(src, linkDrag.portId || 'out', 'out');
+          var a2 = resolvePortAnchor(src, linkDrag.portId || 'out', 'out');
           paths += '<path class="builder-exp-edge-path is-draft" d="' +
             bezierPath(a2.x, a2.y, linkDrag.x, linkDrag.y) + '" fill="none" />';
         }
@@ -648,8 +718,10 @@ var ExperienciaCanvas = (function () {
       pendingCreate = {
         at: worldPt,
         fromId: fromMeta && fromMeta.fromId,
-        portId: fromMeta && fromMeta.portId,
-        portLabel: fromMeta && fromMeta.portLabel
+        portId: fromMeta && (fromMeta.portId || fromMeta.sourcePortId),
+        portLabel: fromMeta && fromMeta.portLabel,
+        sourcePortId: fromMeta && (fromMeta.sourcePortId || fromMeta.portId),
+        targetPortId: (fromMeta && fromMeta.targetPortId) || 'in'
       };
       if (!ctxEl) return;
       ctxEl.innerHTML = createMenuHtml();
@@ -684,8 +756,10 @@ var ExperienciaCanvas = (function () {
           };
           var n = ExperienciaEngine.createStructureLinkedNode(state, item, pendingCreate.at, {
             fromId: pendingCreate.fromId,
-            portId: pendingCreate.portId,
-            portLabel: pendingCreate.portLabel
+            portId: pendingCreate.portId || pendingCreate.sourcePortId,
+            portLabel: pendingCreate.portLabel,
+            sourcePortId: pendingCreate.sourcePortId || pendingCreate.portId,
+            targetPortId: pendingCreate.targetPortId || 'in'
           });
           hidePicker();
           pendingCreate = null;
@@ -707,8 +781,10 @@ var ExperienciaCanvas = (function () {
         if (!menuItem) return;
         var result = ExperienciaEngine.createNodeFromMenu(state, menuItem, pendingCreate.at, {
           fromId: pendingCreate.fromId,
-          portId: pendingCreate.portId,
-          portLabel: pendingCreate.portLabel
+          portId: pendingCreate.portId || pendingCreate.sourcePortId,
+          portLabel: pendingCreate.portLabel,
+          sourcePortId: pendingCreate.sourcePortId || pendingCreate.portId,
+          targetPortId: pendingCreate.targetPortId || 'in'
         });
         if (result && result.needsPicker === '_link_structure') {
           openStructurePicker();
@@ -812,23 +888,39 @@ var ExperienciaCanvas = (function () {
       }
 
       var port = ev.target.closest('[data-exp-port="out"]');
+      if (!port) {
+        var irow = ev.target.closest('[data-exp-irow]');
+        if (irow) {
+          port = irow.querySelector('[data-exp-port="out"]');
+        }
+      }
       var card = ev.target.closest('[data-exp-node]');
       var tool = canvas().tool || 'select';
 
       if (port) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var fromId = port.getAttribute('data-node');
         var portId = port.getAttribute('data-port-id') || 'out';
         var portLabel = port.getAttribute('data-port-label') || '';
-        var w0 = clientToWorld(ev.clientX, ev.clientY);
+        var srcNode = ExperienciaEngine.getNode(state, fromId);
+        if (!portLabel && srcNode && ExperienciaEngine.resolvePortLabel) {
+          portLabel = ExperienciaEngine.resolvePortLabel(srcNode, portId);
+        }
+        var startAnchor = resolvePortAnchor(srcNode || { id: fromId, x: 0, y: 0, ports: [] }, portId, 'out');
         linkDrag = {
           fromId: fromId,
           portId: portId,
           portLabel: portLabel,
-          x: w0.x,
-          y: w0.y,
+          x: startAnchor.x,
+          y: startAnchor.y,
           pointerId: ev.pointerId
         };
-        selectNode(fromId);
+        /* No seleccionar el nodo completo: la conexión es del puerto */
+        canvas().selectedId = null;
+        canvas().selectedEdgeId = null;
+        paintNodes();
+        paintInspector();
         try { viewport.setPointerCapture(ev.pointerId); } catch (e0) {}
         paintEdges();
         return;
@@ -908,23 +1000,32 @@ var ExperienciaCanvas = (function () {
         if (inPort || targetCard) {
           var toId = (inPort && inPort.getAttribute('data-node')) ||
             (targetCard && targetCard.getAttribute('data-exp-node'));
+          var targetPortId = (inPort && inPort.getAttribute('data-port-id')) || 'in';
           if (toId && toId !== linkDrag.fromId) {
             ExperienciaEngine.addManualEdge(
-              state, linkDrag.fromId, toId, linkDrag.portLabel || 'flujo', linkDrag.portId
+              state,
+              linkDrag.fromId,
+              toId,
+              linkDrag.portLabel || 'flujo',
+              linkDrag.portId,
+              targetPortId
             );
             linkDrag = null;
             renderAll(); persist();
             return;
           }
         }
-        /* dropped on empty → create menu */
+        /* dropped on empty → create menu (bound to this exact port) */
         var drop = clientToWorld(ev.clientX, ev.clientY);
         openCreateMenu(drop, {
           fromId: linkDrag.fromId,
           portId: linkDrag.portId,
-          portLabel: linkDrag.portLabel
+          portLabel: linkDrag.portLabel,
+          sourcePortId: linkDrag.portId,
+          targetPortId: 'in'
         });
         linkDrag = null;
+        paintNodes();
         paintEdges();
         return;
       }

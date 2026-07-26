@@ -1,5 +1,6 @@
-/* BOXIES V5.9.52 — Experiencia: editor de flujo del showroom
- * Legacy V5.9.50/51 (mapa desde Estructura) conservado como recuperable. */
+/* BOXIES V5.9.53 — Experiencia: editor de flujo del showroom
+ * Legacy V5.9.50/51 (mapa desde Estructura) conservado como recuperable.
+ * V5.9.53: conexiones por puerto (sourcePortId / targetPortId). */
 var ExperienciaEngine = (function () {
   var NODE_W = 200;
   var NODE_H = 92;
@@ -162,13 +163,47 @@ var ExperienciaEngine = (function () {
   function normalizeEdge(ed) {
     if (!ed || typeof ed !== 'object') return ed;
     if (!ed.id) ed.id = uid('e');
-    if (ed.from == null && ed.sourceId != null) ed.from = ed.sourceId;
-    if (ed.to == null && ed.targetId != null) ed.to = ed.targetId;
-    ed.sourceId = ed.from;
-    ed.targetId = ed.to;
-    if (!ed.sourcePort) ed.sourcePort = ed.portId || 'out';
-    if (!ed.portId) ed.portId = ed.sourcePort;
+
+    /* Node endpoints — canonical + legacy aliases */
+    var srcNode = ed.sourceNodeId != null ? ed.sourceNodeId
+      : (ed.from != null ? ed.from : ed.sourceId);
+    var tgtNode = ed.targetNodeId != null ? ed.targetNodeId
+      : (ed.to != null ? ed.to : ed.targetId);
+    ed.sourceNodeId = srcNode;
+    ed.targetNodeId = tgtNode;
+    ed.from = srcNode;
+    ed.to = tgtNode;
+    ed.sourceId = srcNode;
+    ed.targetId = tgtNode;
+
+    /* Port endpoints — sourcePortId > sourcePort > portId > 'out' */
+    var srcPort = ed.sourcePortId != null && String(ed.sourcePortId) !== ''
+      ? ed.sourcePortId
+      : (ed.sourcePort != null && String(ed.sourcePort) !== ''
+        ? ed.sourcePort
+        : (ed.portId != null && String(ed.portId) !== '' ? ed.portId : 'out'));
+    ed.sourcePortId = srcPort;
+    ed.sourcePort = srcPort;
+    ed.portId = srcPort; /* legacy alias */
+
+    var tgtPort = ed.targetPortId != null && String(ed.targetPortId) !== ''
+      ? ed.targetPortId
+      : (ed.targetPort != null && String(ed.targetPort) !== '' ? ed.targetPort : 'in');
+    ed.targetPortId = tgtPort;
+    ed.targetPort = tgtPort;
+
     return ed;
+  }
+
+  function resolvePortLabel(node, portId) {
+    if (!portId) return '';
+    if (!node || !Array.isArray(node.ports)) return String(portId);
+    for (var i = 0; i < node.ports.length; i++) {
+      if (node.ports[i] && node.ports[i].id === portId) {
+        return node.ports[i].label || String(portId);
+      }
+    }
+    return String(portId);
   }
 
   function node(partial) {
@@ -197,19 +232,28 @@ var ExperienciaEngine = (function () {
   }
 
   function edge(fromId, toId, label, extra) {
+    extra = extra || {};
+    var srcPort = extra.sourcePortId || extra.sourcePort || extra.portId || 'out';
+    var tgtPort = extra.targetPortId || extra.targetPort || 'in';
     return normalizeEdge(Object.assign({
       id: uid('e'),
       from: fromId,
       to: toId,
       sourceId: fromId,
       targetId: toId,
+      sourceNodeId: fromId,
+      targetNodeId: toId,
       label: label || 'flujo',
-      sourcePort: 'out',
-      portId: 'out',
+      sourcePortId: srcPort,
+      sourcePort: srcPort,
+      portId: srcPort,
+      targetPortId: tgtPort,
+      targetPort: tgtPort,
+      sourcePortLabel: extra.sourcePortLabel || null,
       transitionMedia: null,
       transitionSeconds: 4,
       manual: true
-    }, extra || {}));
+    }, extra));
   }
 
   /* ── Hero interactions from real Hero config (no invention) ── */
@@ -345,10 +389,10 @@ var ExperienciaEngine = (function () {
     /* Drop edges from removed hero ports */
     var portIds = {};
     (hero.ports || []).forEach(function (p) { portIds[p.id] = true; });
-    exp.edges = (exp.edges || []).filter(function (ed) {
-      if ((ed.from || ed.sourceId) !== hero.id) return true;
-      var pid = ed.sourcePort || ed.portId || 'out';
-      if (pid === 'out') return true;
+    exp.edges = (exp.edges || []).map(normalizeEdge).filter(function (ed) {
+      if ((ed.sourceNodeId || ed.from || ed.sourceId) !== hero.id) return true;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      if (pid === 'out') return true; /* legacy generic port */
       return !!portIds[pid];
     });
 
@@ -476,15 +520,17 @@ var ExperienciaEngine = (function () {
     exp.nodes.push(n);
 
     if (fromEdge && fromEdge.fromId) {
-      /* Action ports on Hero may be inline actions — still allow scene edges */
+      var srcPortId = fromEdge.portId || fromEdge.sourcePortId || 'out';
       var ed = edge(fromEdge.fromId, n.id, fromEdge.portLabel || menuItem.label || 'flujo', {
-        sourcePort: fromEdge.portId || 'out',
-        portId: fromEdge.portId || 'out',
+        sourcePortId: srcPortId,
+        sourcePort: srcPortId,
+        portId: srcPortId,
+        targetPortId: fromEdge.targetPortId || 'in',
+        sourcePortLabel: fromEdge.portLabel || null,
         manual: true,
         inlineAction: isAction && fromEdge.fromId === 'exp-hero'
       });
       exp.edges.push(ed);
-      /* Inline actions: keep node but mark as action-only (no forced navigation) */
       if (isAction) {
         n.role = 'action';
         n.config.inline = true;
@@ -544,28 +590,37 @@ var ExperienciaEngine = (function () {
     });
     exp.nodes.push(n);
     if (fromEdge && fromEdge.fromId) {
+      var sp = fromEdge.portId || fromEdge.sourcePortId || 'out';
       exp.edges.push(edge(fromEdge.fromId, n.id, fromEdge.portLabel || item.label, {
-        sourcePort: fromEdge.portId || 'out',
-        portId: fromEdge.portId || 'out',
+        sourcePortId: sp,
+        sourcePort: sp,
+        portId: sp,
+        targetPortId: fromEdge.targetPortId || 'in',
+        sourcePortLabel: fromEdge.portLabel || null,
         manual: true
       }));
     }
     return n;
   }
 
-  function addManualEdge(state, fromId, toId, label, portId) {
+  function addManualEdge(state, fromId, toId, label, portId, targetPortId) {
     var exp = ensureFlow(state);
     if (fromId === toId) return null;
     var pid = portId || 'out';
+    var tpid = targetPortId || 'in';
     var exists = exp.edges.some(function (ed) {
-      return (ed.from || ed.sourceId) === fromId &&
-        (ed.to || ed.targetId) === toId &&
-        (ed.sourcePort || ed.portId || 'out') === pid;
+      return (ed.sourceNodeId || ed.from || ed.sourceId) === fromId &&
+        (ed.targetNodeId || ed.to || ed.targetId) === toId &&
+        (ed.sourcePortId || ed.sourcePort || ed.portId || 'out') === pid;
     });
     if (exists) return null;
+    var srcNode = getNode(state, fromId);
     var ed = edge(fromId, toId, label || 'flujo', {
+      sourcePortId: pid,
       sourcePort: pid,
       portId: pid,
+      targetPortId: tpid,
+      sourcePortLabel: resolvePortLabel(srcNode, pid) || label || null,
       manual: true
     });
     exp.edges.push(ed);
@@ -583,10 +638,13 @@ var ExperienciaEngine = (function () {
   function reconnectEdge(state, edgeId, newToId) {
     var exp = ensureState(state);
     var ed = exp.edges.find(function (e) { return e.id === edgeId; });
-    if (!ed || !newToId || newToId === (ed.from || ed.sourceId)) return null;
+    if (!ed || !newToId || newToId === (ed.sourceNodeId || ed.from || ed.sourceId)) return null;
     ed.to = newToId;
     ed.targetId = newToId;
-    return ed;
+    ed.targetNodeId = newToId;
+    if (!ed.targetPortId) ed.targetPortId = 'in';
+    if (!ed.targetPort) ed.targetPort = ed.targetPortId;
+    return normalizeEdge(ed);
   }
 
   function setNodePosition(state, nodeId, x, y, markMoved) {
@@ -616,10 +674,10 @@ var ExperienciaEngine = (function () {
     var exp = ensureState(state);
     return {
       in: exp.edges.filter(function (ed) {
-        return (ed.to || ed.targetId) === nodeId;
+        return (ed.targetNodeId || ed.to || ed.targetId) === nodeId;
       }),
       out: exp.edges.filter(function (ed) {
-        return (ed.from || ed.sourceId) === nodeId;
+        return (ed.sourceNodeId || ed.from || ed.sourceId) === nodeId;
       })
     };
   }
@@ -836,6 +894,7 @@ var ExperienciaEngine = (function () {
     incompleteNodes: incompleteNodes,
     normalizeNode: normalizeNode,
     normalizeEdge: normalizeEdge,
+    resolvePortLabel: resolvePortLabel,
     autoLayout: autoLayout,
     forceRelayout: forceRelayout,
     visibleNodes: visibleNodes,
