@@ -457,16 +457,27 @@ var ProductAssistant = (function () {
       if (!fab || !root) return;
       fab.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) {
+        /* Atomic open: prepare final layout off-screen, then reveal in one paint.
+           No enter fade/scale — avoids Safari painting hero-through-backdrop mid-open. */
+        root.classList.remove('is-closing');
+        root.classList.add('is-preparing');
         root.hidden = false;
         root.setAttribute('aria-hidden', 'false');
         document.body.classList.add('pa-open');
+        root.classList.add('is-open');
+        fab.classList.add('is-active');
+        syncVisualViewport();
+        if (panel) {
+          void panel.offsetHeight;
+        }
+        if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
+          GlobalClose.update();
+        }
         requestAnimationFrame(function () {
-          root.classList.add('is-open');
-          fab.classList.add('is-active');
-          syncVisualViewport();
-          if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
-            GlobalClose.update();
-          }
+          requestAnimationFrame(function () {
+            if (!root.classList.contains('is-open')) return;
+            root.classList.remove('is-preparing');
+          });
         });
         /* En móvil no autofocus: evita teclado inmediato; el usuario toca el input. */
         if (input && !isPhone()) {
@@ -475,6 +486,8 @@ var ProductAssistant = (function () {
           }, 200);
         }
       } else {
+        root.classList.remove('is-preparing');
+        root.classList.add('is-closing');
         root.classList.remove('is-open');
         root.classList.remove('is-keyboard');
         fab.classList.remove('is-active');
@@ -487,6 +500,7 @@ var ProductAssistant = (function () {
           if (!root.classList.contains('is-open')) {
             root.hidden = true;
             root.setAttribute('aria-hidden', 'true');
+            root.classList.remove('is-closing');
           }
           if (typeof GlobalClose !== 'undefined' && typeof GlobalClose.update === 'function') {
             GlobalClose.update();

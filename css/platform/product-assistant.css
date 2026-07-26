@@ -87,14 +87,33 @@
   z-index: 960;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.28s var(--pa-ease-out);
+  visibility: hidden;
+  /* Open is atomic (no enter fade). Close uses .is-closing only. */
+  transition: none;
   font-family: inherit;
   color: var(--text-primary);
 }
 
 .pa-root.is-open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+}
+
+/* Fully prepared but not yet painted — avoids intermediate open frame */
+.pa-root.is-preparing,
+.pa-root.is-preparing.is-open {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+.pa-root.is-closing {
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
+  transition: opacity 0.28s var(--pa-ease-out);
 }
 
 /* Same overlay source as .main-menu-backdrop */
@@ -120,14 +139,10 @@
   background: transparent;
   isolation: isolate;
   overflow: hidden;
-  transform: scale(0.96) translateY(8px);
+  transform: none;
   transform-origin: bottom right;
-  transition: transform 0.32s var(--pa-ease-out);
+  transition: none;
   color: var(--text-primary);
-}
-
-.pa-root.is-open .pa-panel {
-  transform: scale(1) translateY(0);
 }
 
 /* Exact surface recipe from .main-menu::before (components.css) */
