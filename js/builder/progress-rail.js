@@ -297,6 +297,7 @@ var BuilderProgressRail = (function () {
         toggleIcon +
       '</button>';
 
+    html += '<div class="builder-rail-list" data-builder-rail-list>';
     html += items.map(function (item, index) {
       var cls = 'builder-rail-item' + (item.done ? ' is-done' : '');
       if (item.stepIndex === current) cls += ' is-current';
@@ -315,6 +316,7 @@ var BuilderProgressRail = (function () {
           : '') +
       '</button>';
     }).join('');
+    html += '</div>';
     return html;
   }
 
