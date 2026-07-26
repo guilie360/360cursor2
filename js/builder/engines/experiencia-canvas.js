@@ -1,5 +1,5 @@
-/* BOXIES V5.9.53 — Experiencia flow editor canvas
- * Puertos independientes: cada interacción es un sourcePortId propio. */
+/* BOXIES V5.9.54 — Experiencia flow editor canvas
+ * Extiende V5.9.53: menús contextuales, multi-select, cortar, Delete. */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -56,6 +56,7 @@ var ExperienciaCanvas = (function () {
             '<div class="builder-exp-toolbar" data-exp-toolbar role="toolbar" aria-label="Herramientas del canvas">' +
               toolBtn('select', 'Seleccionar', 'layout-grid') +
               toolBtn('connect', 'Conectar', 'pen-tool') +
+              toolBtn('cut', 'Cortar conexión', 'scissors') +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('center', 'Centrar', 'home', true) +
               toolBtn('fit', 'Fit view', 'maximize', true) +
@@ -69,6 +70,7 @@ var ExperienciaCanvas = (function () {
               '<div class="builder-exp-world" data-exp-world>' +
                 '<svg class="builder-exp-edges" data-exp-edges xmlns="http://www.w3.org/2000/svg"></svg>' +
                 '<div class="builder-exp-nodes" data-exp-nodes></div>' +
+                '<div class="builder-exp-marquee" data-exp-marquee hidden></div>' +
               '</div>' +
             '</div>' +
             '<div class="builder-exp-minimap' + (minimapOn ? '' : ' is-hidden') + '" data-exp-minimap>' +
@@ -175,10 +177,14 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-exp-card ' + statusCls + ' accent-' + esc(accent) +
         (isHero ? ' is-hero' : '') +
         (isAction ? ' is-action-node' : '') +
+        (n.locked ? ' is-locked' : '') +
         (n.orphaned ? ' is-orphan' : '') +
         '" data-exp-node="' + esc(n.id) + '"' +
         ' style="width:' + size.w + 'px;min-height:' + size.h + 'px;transform:translate(' +
         (n.x || 0) + 'px,' + (n.y || 0) + 'px)">' +
+        (n.locked
+          ? '<span class="builder-exp-card__lock" title="Bloqueado" aria-label="Bloqueado"></span>'
+          : '') +
         inPort +
         defaultOut +
         body +
@@ -374,10 +380,10 @@ var ExperienciaCanvas = (function () {
       '</span><strong>' + esc(value) + '</strong></div>';
   }
 
-  function createMenuHtml() {
+  function createMenuHtml(title) {
     var menu = ExperienciaEngine.CREATE_MENU || [];
     return '<div class="builder-exp-ctx__panel">' +
-      '<div class="builder-exp-ctx__title">¿Qué quieres crear?</div>' +
+      '<div class="builder-exp-ctx__title">' + esc(title || '¿Qué quieres crear?') + '</div>' +
       menu.map(function (cat) {
         return '<div class="builder-exp-ctx__cat">' +
           '<div class="builder-exp-ctx__cat-label">' + esc(cat.label) + '</div>' +
@@ -387,6 +393,51 @@ var ExperienciaCanvas = (function () {
           }).join('') +
         '</div>';
       }).join('') +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function nodeContextMenuHtml(nodes) {
+    var list = nodes || [];
+    var multi = list.length > 1;
+    var anyLocked = list.some(function (n) { return n && n.locked; });
+    var anyUnlocked = list.some(function (n) {
+      return n && !n.locked && !ExperienciaEngine.isProtectedNode(n);
+    });
+    var allProtected = list.length && list.every(function (n) {
+      return ExperienciaEngine.isProtectedNode(n);
+    });
+    var canDuplicate = list.some(function (n) {
+      return n && !ExperienciaEngine.isProtectedNode(n);
+    });
+    return '<div class="builder-exp-ctx__panel builder-exp-ctx__panel--node">' +
+      '<div class="builder-exp-ctx__title">' +
+        (multi ? ('Selección · ' + list.length) : esc((list[0] && list[0].label) || 'Nodo')) +
+      '</div>' +
+      (canDuplicate
+        ? '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="duplicate">' +
+          (multi ? 'Duplicar selección' : 'Duplicar') + '</button>'
+        : '<button type="button" class="builder-exp-ctx__item is-disabled" disabled>Duplicar (protegido)</button>') +
+      (anyUnlocked
+        ? '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="lock">Bloquear</button>'
+        : '') +
+      (anyLocked
+        ? '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="unlock">Desbloquear</button>'
+        : '') +
+      '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="unlink">Desvincular</button>' +
+      (allProtected
+        ? '<button type="button" class="builder-exp-ctx__item is-disabled" disabled>Eliminar (protegido)</button>'
+        : '<button type="button" class="builder-exp-ctx__item is-danger" data-exp-node-act="delete">' +
+          (multi ? 'Eliminar selección' : 'Eliminar') + '</button>') +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function edgeContextMenuHtml() {
+    return '<div class="builder-exp-ctx__panel builder-exp-ctx__panel--edge">' +
+      '<div class="builder-exp-ctx__title">Conexión</div>' +
+      '<button type="button" class="builder-exp-ctx__item is-danger" data-exp-edge-act="unlink">' +
+        'Desvincular conexión</button>' +
       '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
     '</div>';
   }
@@ -447,8 +498,32 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var panning = null;
     var linkDrag = null;
+    var marquee = null;
     var spacePan = false;
     var pendingCreate = null;
+    var ctxMode = null; /* 'create' | 'node' | 'edge' | null */
+    var marqueeEl = rootEl.querySelector('[data-exp-marquee]');
+    var hoverCutEdgeId = null;
+
+    function isFormField(el) {
+      if (!el) return false;
+      var tag = (el.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      if (el.isContentEditable) return true;
+      return !!(el.closest && el.closest('input, textarea, select, [contenteditable="true"]'));
+    }
+
+    function selectedIds() {
+      var c = canvas();
+      if (Array.isArray(c.selectedIds) && c.selectedIds.length) return c.selectedIds.slice();
+      return c.selectedId ? [c.selectedId] : [];
+    }
+
+    function selectedNodes() {
+      return selectedIds().map(function (id) {
+        return ExperienciaEngine.getNode(state, id);
+      }).filter(Boolean);
+    }
 
     function canvas() {
       return ExperienciaEngine.ensureState(state).canvas;
@@ -506,10 +581,13 @@ var ExperienciaCanvas = (function () {
 
     function paintNodes() {
       var nodes = ExperienciaEngine.visibleNodes(state);
-      var sel = canvas().selectedId;
+      var ids = selectedIds();
+      var idSet = {};
+      ids.forEach(function (id) { idSet[id] = true; });
       nodesEl.innerHTML = nodes.map(nodeCardHtml).join('');
       nodesEl.querySelectorAll('[data-exp-node]').forEach(function (el) {
-        if (el.getAttribute('data-exp-node') === sel) el.classList.add('is-selected');
+        var nid = el.getAttribute('data-exp-node');
+        if (idSet[nid]) el.classList.add('is-selected');
       });
       if (linkDrag && linkDrag.portId && linkDrag.fromId) {
         var linkingPort = nodesEl.querySelector(
@@ -542,6 +620,10 @@ var ExperienciaCanvas = (function () {
       edgesEl.style.height = h + 'px';
 
       var selE = canvas().selectedEdgeId;
+      var edgeSel = {};
+      (canvas().selectedEdgeIds || []).forEach(function (id) { edgeSel[id] = true; });
+      if (selE) edgeSel[selE] = true;
+
       var paths = (state.experiencia.edges || []).map(function (ed) {
         var a = byId[ed.sourceNodeId || ed.from || ed.sourceId];
         var b2 = byId[ed.targetNodeId || ed.to || ed.targetId];
@@ -553,7 +635,8 @@ var ExperienciaCanvas = (function () {
         var cls = 'builder-exp-edge-path' +
           (ed.manual ? ' is-manual' : '') +
           (ed.inlineAction ? ' is-inline' : '') +
-          (selE === ed.id ? ' is-selected' : '');
+          (edgeSel[ed.id] ? ' is-selected' : '') +
+          (hoverCutEdgeId === ed.id ? ' is-cut-hover' : '');
         return '<path class="' + cls + '" data-exp-edge="' + esc(ed.id) + '"' +
           ' data-source-port="' + esc(srcPort) + '"' +
           ' d="' + bezierPath(pOut.x, pOut.y, pIn.x, pIn.y) + '" fill="none" />';
@@ -610,6 +693,23 @@ var ExperienciaCanvas = (function () {
 
     function paintInspector() {
       if (!inspectorBody) return;
+      var ids = selectedIds();
+      if (ids.length > 1) {
+        inspectorBody.innerHTML =
+          '<div class="builder-exp-inspector__kind">SELECCIÓN</div>' +
+          '<h3 class="builder-exp-inspector__title">' + ids.length + ' nodos</h3>' +
+          '<p class="builder-menu-hint">Duplicar, bloquear, desvincular o eliminar desde el menú contextual (clic derecho).</p>' +
+          '<ul class="builder-exp-inspector__list">' +
+            ids.map(function (id) {
+              var n = ExperienciaEngine.getNode(state, id);
+              return '<li>' + esc(n ? (n.label || n.id) : id) +
+                (n && n.locked ? ' · bloqueado' : '') +
+                (n && ExperienciaEngine.isProtectedNode(n) ? ' · protegido' : '') +
+                '</li>';
+            }).join('') +
+          '</ul>';
+        return;
+      }
       inspectorBody.innerHTML = inspectorHtml(state, canvas().selectedId, canvas().selectedEdgeId);
       bindInspectorActions();
     }
@@ -656,26 +756,220 @@ var ExperienciaCanvas = (function () {
       var tool = canvas().tool || 'select';
       rootEl.querySelectorAll('[data-exp-tool]').forEach(function (btn) {
         var t = btn.getAttribute('data-exp-tool');
-        var isMode = t === 'select' || t === 'connect';
+        var isMode = t === 'select' || t === 'connect' || t === 'cut';
         btn.classList.toggle('is-active', isMode && t === tool);
       });
       viewport.classList.toggle('is-connect', tool === 'connect');
+      viewport.classList.toggle('is-cut', tool === 'cut');
     }
 
-    function selectNode(id) {
-      canvas().selectedId = id || null;
-      canvas().selectedEdgeId = null;
-      if (id) canvas().inspectorOpen = true;
+    function selectNode(id, opts) {
+      opts = opts || {};
+      if (opts.toggle && id) {
+        ExperienciaEngine.toggleSelectionId(state, id);
+      } else if (opts.add && id) {
+        var ids = selectedIds();
+        if (ids.indexOf(id) < 0) ids.push(id);
+        ExperienciaEngine.setSelection(state, ids, []);
+      } else {
+        ExperienciaEngine.setSelection(state, id ? [id] : [], []);
+      }
+      if (id || selectedIds().length) canvas().inspectorOpen = true;
       renderAll();
       persist();
     }
 
     function selectEdge(id) {
-      canvas().selectedEdgeId = id || null;
-      canvas().selectedId = null;
+      ExperienciaEngine.setSelection(state, [], id ? [id] : []);
       if (id) canvas().inspectorOpen = true;
       renderAll();
       persist();
+    }
+
+    function clearAllSelection() {
+      ExperienciaEngine.clearSelection(state);
+      renderAll();
+      persist();
+    }
+
+    function positionCtxMenu(clientX, clientY) {
+      if (!ctxEl || !stage) return;
+      ctxEl.hidden = false;
+      var stageRect = stage.getBoundingClientRect();
+      var panel = ctxEl.querySelector('.builder-exp-ctx__panel');
+      var pw = (panel && panel.offsetWidth) || 260;
+      var ph = (panel && panel.offsetHeight) || 280;
+      var left = clientX - stageRect.left;
+      var top = clientY - stageRect.top;
+      left = Math.max(8, Math.min(left, stageRect.width - pw - 8));
+      top = Math.max(8, Math.min(top, stageRect.height - ph - 8));
+      ctxEl.style.left = left + 'px';
+      ctxEl.style.top = top + 'px';
+    }
+
+    function hideCtx() {
+      if (ctxEl) { ctxEl.hidden = true; ctxEl.innerHTML = ''; }
+      pendingCreate = null;
+      ctxMode = null;
+    }
+
+    function hidePicker() {
+      if (pickerEl) { pickerEl.hidden = true; pickerEl.innerHTML = ''; }
+    }
+
+    function openCreateMenu(worldPt, fromMeta, clientXY, title) {
+      pendingCreate = {
+        at: worldPt,
+        fromId: fromMeta && fromMeta.fromId,
+        portId: fromMeta && (fromMeta.portId || fromMeta.sourcePortId),
+        portLabel: fromMeta && fromMeta.portLabel,
+        sourcePortId: fromMeta && (fromMeta.sourcePortId || fromMeta.portId),
+        targetPortId: (fromMeta && fromMeta.targetPortId) || 'in'
+      };
+      ctxMode = 'create';
+      if (!ctxEl) return;
+      ctxEl.innerHTML = createMenuHtml(title || '¿Qué quieres crear?');
+      if (clientXY) positionCtxMenu(clientXY.x, clientXY.y);
+      else {
+        ctxEl.hidden = false;
+        var rect = viewport.getBoundingClientRect();
+        var c = canvas();
+        var left = worldPt.x * c.zoom + c.panX;
+        var top = worldPt.y * c.zoom + c.panY;
+        left = Math.max(8, Math.min(left, rect.width - 280));
+        top = Math.max(8, Math.min(top, rect.height - 320));
+        ctxEl.style.left = left + 'px';
+        ctxEl.style.top = top + 'px';
+      }
+    }
+
+    function openNodeContextMenu(clientX, clientY, nodeId) {
+      var ids = selectedIds();
+      if (!ids.length || ids.indexOf(nodeId) < 0) {
+        ExperienciaEngine.setSelection(state, [nodeId], []);
+        ids = [nodeId];
+        paintNodes();
+      }
+      var nodes = ids.map(function (id) {
+        return ExperienciaEngine.getNode(state, id);
+      }).filter(Boolean);
+      ctxMode = 'node';
+      pendingCreate = null;
+      if (!ctxEl) return;
+      ctxEl.innerHTML = nodeContextMenuHtml(nodes);
+      positionCtxMenu(clientX, clientY);
+    }
+
+    function openEdgeContextMenu(clientX, clientY, edgeId) {
+      selectEdge(edgeId);
+      ctxMode = 'edge';
+      pendingCreate = null;
+      if (!ctxEl) return;
+      ctxEl.innerHTML = edgeContextMenuHtml();
+      positionCtxMenu(clientX, clientY);
+    }
+
+    function updateMarqueeVisual() {
+      if (!marqueeEl || !marquee) {
+        if (marqueeEl) marqueeEl.hidden = true;
+        return;
+      }
+      var x1 = Math.min(marquee.x0, marquee.x1);
+      var y1 = Math.min(marquee.y0, marquee.y1);
+      var x2 = Math.max(marquee.x0, marquee.x1);
+      var y2 = Math.max(marquee.y0, marquee.y1);
+      marqueeEl.hidden = false;
+      marqueeEl.style.left = x1 + 'px';
+      marqueeEl.style.top = y1 + 'px';
+      marqueeEl.style.width = Math.max(1, x2 - x1) + 'px';
+      marqueeEl.style.height = Math.max(1, y2 - y1) + 'px';
+    }
+
+    function nodesInMarquee() {
+      if (!marquee) return [];
+      var x1 = Math.min(marquee.x0, marquee.x1);
+      var y1 = Math.min(marquee.y0, marquee.y1);
+      var x2 = Math.max(marquee.x0, marquee.x1);
+      var y2 = Math.max(marquee.y0, marquee.y1);
+      return ExperienciaEngine.visibleNodes(state).filter(function (n) {
+        if (n.x == null || n.y == null) return false;
+        var s = ExperienciaEngine.nodeSize(n);
+        var nx1 = n.x;
+        var ny1 = n.y;
+        var nx2 = n.x + s.w;
+        var ny2 = n.y + s.h;
+        return nx1 < x2 && nx2 > x1 && ny1 < y2 && ny2 > y1;
+      }).map(function (n) { return n.id; });
+    }
+
+    function deleteSelection() {
+      if (canvas().selectedEdgeId || (canvas().selectedEdgeIds || []).length) {
+        var eids = (canvas().selectedEdgeIds || []).slice();
+        if (canvas().selectedEdgeId && eids.indexOf(canvas().selectedEdgeId) < 0) {
+          eids.push(canvas().selectedEdgeId);
+        }
+        eids.forEach(function (eid) { ExperienciaEngine.removeEdge(state, eid); });
+        ExperienciaEngine.clearSelection(state);
+        renderAll(); persist();
+        return;
+      }
+      var ids = selectedIds();
+      if (!ids.length) return;
+      var res = ExperienciaEngine.removeNodes(state, ids);
+      ExperienciaEngine.clearSelection(state);
+      renderAll(); persist();
+      if (res.skipped.length && typeof AdminNotify !== 'undefined') {
+        AdminNotify.info('Algunos nodos protegidos o bloqueados no se eliminaron.');
+      }
+    }
+
+    function runNodeAction(act) {
+      var ids = selectedIds();
+      if (!ids.length) return;
+      if (act === 'duplicate') {
+        if (ids.length === 1) {
+          var copy = ExperienciaEngine.duplicateNode(state, ids[0]);
+          if (copy) ExperienciaEngine.setSelection(state, [copy.id], []);
+        } else {
+          var dup = ExperienciaEngine.duplicateSelection(state, ids);
+          var newIds = (dup.nodes || []).map(function (n) { return n.id; });
+          ExperienciaEngine.setSelection(state, newIds, []);
+        }
+        hideCtx(); renderAll(); persist();
+        return;
+      }
+      if (act === 'lock') {
+        ExperienciaEngine.setNodesLocked(state, ids, true);
+        hideCtx(); renderAll(); persist();
+        return;
+      }
+      if (act === 'unlock') {
+        ExperienciaEngine.setNodesLocked(state, ids, false);
+        hideCtx(); renderAll(); persist();
+        return;
+      }
+      if (act === 'unlink') {
+        var total = 0;
+        ids.forEach(function (id) {
+          total += ExperienciaEngine.connectionsFor(state, id).in.length +
+            ExperienciaEngine.connectionsFor(state, id).out.length;
+        });
+        if (total > 1 && !window.confirm('¿Desvincular ' + total + ' conexiones de la selección?')) {
+          return;
+        }
+        ExperienciaEngine.unlinkNodes(state, ids);
+        hideCtx(); renderAll(); persist();
+        return;
+      }
+      if (act === 'delete') {
+        if (!window.confirm(ids.length > 1
+          ? '¿Eliminar ' + ids.length + ' nodos del flujo? (no borra media/assets)'
+          : '¿Eliminar este nodo del flujo? (no borra media/assets)')) {
+          return;
+        }
+        deleteSelection();
+        hideCtx();
+      }
     }
 
     function fitView() {
@@ -703,37 +997,6 @@ var ExperienciaCanvas = (function () {
       canvas().panY = vr.height / 2 - cy * z;
       renderAll();
       persist();
-    }
-
-    function hideCtx() {
-      if (ctxEl) { ctxEl.hidden = true; ctxEl.innerHTML = ''; }
-      pendingCreate = null;
-    }
-
-    function hidePicker() {
-      if (pickerEl) { pickerEl.hidden = true; pickerEl.innerHTML = ''; }
-    }
-
-    function openCreateMenu(worldPt, fromMeta) {
-      pendingCreate = {
-        at: worldPt,
-        fromId: fromMeta && fromMeta.fromId,
-        portId: fromMeta && (fromMeta.portId || fromMeta.sourcePortId),
-        portLabel: fromMeta && fromMeta.portLabel,
-        sourcePortId: fromMeta && (fromMeta.sourcePortId || fromMeta.portId),
-        targetPortId: (fromMeta && fromMeta.targetPortId) || 'in'
-      };
-      if (!ctxEl) return;
-      ctxEl.innerHTML = createMenuHtml();
-      ctxEl.hidden = false;
-      var rect = viewport.getBoundingClientRect();
-      var c = canvas();
-      var left = worldPt.x * c.zoom + c.panX;
-      var top = worldPt.y * c.zoom + c.panY;
-      left = Math.max(8, Math.min(left, rect.width - 280));
-      top = Math.max(8, Math.min(top, rect.height - 320));
-      ctxEl.style.left = left + 'px';
-      ctxEl.style.top = top + 'px';
     }
 
     function openStructurePicker() {
@@ -775,6 +1038,20 @@ var ExperienciaCanvas = (function () {
       ctxEl.addEventListener('click', function (ev) {
         var cancel = ev.target.closest('[data-exp-ctx-cancel]');
         if (cancel) { hideCtx(); return; }
+        var nodeAct = ev.target.closest('[data-exp-node-act]');
+        if (nodeAct) {
+          runNodeAction(nodeAct.getAttribute('data-exp-node-act'));
+          return;
+        }
+        var edgeAct = ev.target.closest('[data-exp-edge-act]');
+        if (edgeAct && edgeAct.getAttribute('data-exp-edge-act') === 'unlink') {
+          if (canvas().selectedEdgeId) {
+            ExperienciaEngine.removeEdge(state, canvas().selectedEdgeId);
+            ExperienciaEngine.clearSelection(state);
+            hideCtx(); renderAll(); persist();
+          }
+          return;
+        }
         var item = ev.target.closest('[data-exp-create]');
         if (!item || !pendingCreate) return;
         var menuItem = findMenuItem(item.getAttribute('data-exp-create'));
@@ -809,9 +1086,10 @@ var ExperienciaCanvas = (function () {
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         var tool = btn.getAttribute('data-exp-tool');
-        if (tool === 'select' || tool === 'connect') {
+        if (tool === 'select' || tool === 'connect' || tool === 'cut') {
           canvas().tool = tool;
           linkDrag = null;
+          hoverCutEdgeId = null;
           syncToolUi();
           persist();
           return;
@@ -851,8 +1129,7 @@ var ExperienciaCanvas = (function () {
     if (closeInsp) {
       closeInsp.addEventListener('click', function () {
         canvas().inspectorOpen = false;
-        canvas().selectedId = null;
-        canvas().selectedEdgeId = null;
+        ExperienciaEngine.clearSelection(state);
         renderAll(); persist();
       });
     }
@@ -878,11 +1155,39 @@ var ExperienciaCanvas = (function () {
       paintMinimap();
     }, { passive: false });
 
-    viewport.addEventListener('pointerdown', function (ev) {
-      hideCtx();
+    viewport.addEventListener('contextmenu', function (ev) {
+      ev.preventDefault();
       hidePicker();
       var edgePath = ev.target.closest('[data-exp-edge]');
       if (edgePath) {
+        openEdgeContextMenu(ev.clientX, ev.clientY, edgePath.getAttribute('data-exp-edge'));
+        return;
+      }
+      var card = ev.target.closest('[data-exp-node]');
+      if (card) {
+        openNodeContextMenu(ev.clientX, ev.clientY, card.getAttribute('data-exp-node'));
+        return;
+      }
+      var worldPt = clientToWorld(ev.clientX, ev.clientY);
+      openCreateMenu(worldPt, null, { x: ev.clientX, y: ev.clientY }, 'Crear nuevo');
+    });
+
+    viewport.addEventListener('pointerdown', function (ev) {
+      if (ev.button === 2) return;
+      try { viewport.focus({ preventScroll: true }); } catch (ef) { try { viewport.focus(); } catch (ef2) {} }
+      hideCtx();
+      hidePicker();
+      var tool = canvas().tool || 'select';
+      var edgePath = ev.target.closest('[data-exp-edge]');
+
+      if (tool === 'cut' && edgePath) {
+        ExperienciaEngine.removeEdge(state, edgePath.getAttribute('data-exp-edge'));
+        hoverCutEdgeId = null;
+        renderAll(); persist();
+        return;
+      }
+
+      if (edgePath && tool !== 'cut') {
         selectEdge(edgePath.getAttribute('data-exp-edge'));
         return;
       }
@@ -890,14 +1195,11 @@ var ExperienciaCanvas = (function () {
       var port = ev.target.closest('[data-exp-port="out"]');
       if (!port) {
         var irow = ev.target.closest('[data-exp-irow]');
-        if (irow) {
-          port = irow.querySelector('[data-exp-port="out"]');
-        }
+        if (irow) port = irow.querySelector('[data-exp-port="out"]');
       }
       var card = ev.target.closest('[data-exp-node]');
-      var tool = canvas().tool || 'select';
 
-      if (port) {
+      if (port && tool !== 'cut') {
         ev.preventDefault();
         ev.stopPropagation();
         var fromId = port.getAttribute('data-node');
@@ -916,9 +1218,7 @@ var ExperienciaCanvas = (function () {
           y: startAnchor.y,
           pointerId: ev.pointerId
         };
-        /* No seleccionar el nodo completo: la conexión es del puerto */
-        canvas().selectedId = null;
-        canvas().selectedEdgeId = null;
+        ExperienciaEngine.setSelection(state, [], []);
         paintNodes();
         paintInspector();
         try { viewport.setPointerCapture(ev.pointerId); } catch (e0) {}
@@ -928,19 +1228,44 @@ var ExperienciaCanvas = (function () {
 
       if (card && tool === 'select') {
         var nodeId = card.getAttribute('data-exp-node');
-        selectNode(nodeId);
         var n = ExperienciaEngine.getNode(state, nodeId);
         if (!n) return;
+        if (ev.shiftKey) {
+          selectNode(nodeId, { toggle: true });
+        } else {
+          var already = selectedIds().indexOf(nodeId) >= 0 && selectedIds().length > 1;
+          if (!already) selectNode(nodeId);
+          else {
+            /* keep multi-selection; make this the primary */
+            canvas().selectedId = nodeId;
+            paintNodes();
+            paintInspector();
+          }
+        }
         if (ev.detail === 2 && (n.kind === 'structure' || n.kind === 'group' || (n.config && n.config.group))) {
           ExperienciaEngine.enterGroup(state, n.id);
           renderAll(); persist();
           return;
         }
+        if (ExperienciaEngine.isLockedNode(n) && selectedIds().length === 1) {
+          return; /* locked single: no drag */
+        }
         var worldPt = clientToWorld(ev.clientX, ev.clientY);
+        var moveIds = selectedIds().filter(function (id) {
+          var nn = ExperienciaEngine.getNode(state, id);
+          return nn && !ExperienciaEngine.isLockedNode(nn);
+        });
+        if (!moveIds.length) return;
+        var origins = {};
+        moveIds.forEach(function (id) {
+          var nn = ExperienciaEngine.getNode(state, id);
+          origins[id] = { x: nn.x || 0, y: nn.y || 0 };
+        });
         dragging = {
-          id: nodeId,
-          ox: worldPt.x - (n.x || 0),
-          oy: worldPt.y - (n.y || 0),
+          ids: moveIds,
+          origins: origins,
+          startX: worldPt.x,
+          startY: worldPt.y,
           pointerId: ev.pointerId
         };
         try { viewport.setPointerCapture(ev.pointerId); } catch (e1) {}
@@ -948,7 +1273,7 @@ var ExperienciaCanvas = (function () {
       }
 
       if (!card) {
-        if (tool === 'select' || spacePan || ev.button === 1) {
+        if (spacePan || ev.button === 1 || ev.altKey) {
           panning = {
             x: ev.clientX,
             y: ev.clientY,
@@ -957,16 +1282,31 @@ var ExperienciaCanvas = (function () {
             pointerId: ev.pointerId
           };
           try { viewport.setPointerCapture(ev.pointerId); } catch (e2) {}
-          canvas().selectedId = null;
-          canvas().selectedEdgeId = null;
-          paintInspector();
-          paintNodes();
-          paintEdges();
+          return;
+        }
+        if (tool === 'select') {
+          var w0 = clientToWorld(ev.clientX, ev.clientY);
+          marquee = {
+            x0: w0.x, y0: w0.y, x1: w0.x, y1: w0.y,
+            shift: !!ev.shiftKey,
+            pointerId: ev.pointerId,
+            moved: false
+          };
+          updateMarqueeVisual();
+          try { viewport.setPointerCapture(ev.pointerId); } catch (e3) {}
         }
       }
     });
 
     viewport.addEventListener('pointermove', function (ev) {
+      if (canvas().tool === 'cut') {
+        var hit = ev.target.closest ? ev.target.closest('[data-exp-edge]') : null;
+        var nextHover = hit ? hit.getAttribute('data-exp-edge') : null;
+        if (nextHover !== hoverCutEdgeId) {
+          hoverCutEdgeId = nextHover;
+          paintEdges();
+        }
+      }
       if (linkDrag) {
         var w = clientToWorld(ev.clientX, ev.clientY);
         linkDrag.x = w.x;
@@ -976,12 +1316,27 @@ var ExperienciaCanvas = (function () {
       }
       if (dragging) {
         var wpt = clientToWorld(ev.clientX, ev.clientY);
-        ExperienciaEngine.setNodePosition(state, dragging.id, wpt.x - dragging.ox, wpt.y - dragging.oy, true);
-        var el = nodesEl.querySelector('[data-exp-node="' + dragging.id + '"]');
-        var n = ExperienciaEngine.getNode(state, dragging.id);
-        if (el && n) el.style.transform = 'translate(' + n.x + 'px,' + n.y + 'px)';
+        var dx = wpt.x - dragging.startX;
+        var dy = wpt.y - dragging.startY;
+        dragging.ids.forEach(function (id) {
+          var o = dragging.origins[id];
+          ExperienciaEngine.setNodePosition(state, id, o.x + dx, o.y + dy, true);
+          var el = nodesEl.querySelector('[data-exp-node="' + id + '"]');
+          var n = ExperienciaEngine.getNode(state, id);
+          if (el && n) el.style.transform = 'translate(' + n.x + 'px,' + n.y + 'px)';
+        });
         paintEdges();
         paintMinimap();
+        return;
+      }
+      if (marquee) {
+        var wm = clientToWorld(ev.clientX, ev.clientY);
+        marquee.x1 = wm.x;
+        marquee.y1 = wm.y;
+        if (Math.abs(marquee.x1 - marquee.x0) > 3 || Math.abs(marquee.y1 - marquee.y0) > 3) {
+          marquee.moved = true;
+        }
+        updateMarqueeVisual();
         return;
       }
       if (panning) {
@@ -1015,7 +1370,6 @@ var ExperienciaCanvas = (function () {
             return;
           }
         }
-        /* dropped on empty → create menu (bound to this exact port) */
         var drop = clientToWorld(ev.clientX, ev.clientY);
         openCreateMenu(drop, {
           fromId: linkDrag.fromId,
@@ -1023,10 +1377,31 @@ var ExperienciaCanvas = (function () {
           portLabel: linkDrag.portLabel,
           sourcePortId: linkDrag.portId,
           targetPortId: 'in'
-        });
+        }, { x: ev.clientX, y: ev.clientY });
         linkDrag = null;
         paintNodes();
         paintEdges();
+        return;
+      }
+      if (marquee) {
+        if (marquee.moved) {
+          var hitIds = nodesInMarquee();
+          if (marquee.shift) {
+            var merged = selectedIds().slice();
+            hitIds.forEach(function (id) {
+              if (merged.indexOf(id) < 0) merged.push(id);
+            });
+            ExperienciaEngine.setSelection(state, merged, []);
+          } else {
+            ExperienciaEngine.setSelection(state, hitIds, []);
+          }
+          if (hitIds.length) canvas().inspectorOpen = true;
+        } else if (!marquee.shift) {
+          ExperienciaEngine.clearSelection(state);
+        }
+        marquee = null;
+        updateMarqueeVisual();
+        renderAll(); persist();
         return;
       }
       if (dragging) { dragging = null; persist(); }
@@ -1035,18 +1410,46 @@ var ExperienciaCanvas = (function () {
     viewport.addEventListener('pointerup', endPointer);
     viewport.addEventListener('pointercancel', endPointer);
 
-    window.addEventListener('keydown', function (ev) {
+    function onKeyDown(ev) {
       if (ev.code === 'Space') spacePan = true;
-      if ((ev.key === 'Delete' || ev.key === 'Backspace') && canvas().selectedEdgeId) {
-        var tag = (ev.target && ev.target.tagName) || '';
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        ExperienciaEngine.removeEdge(state, canvas().selectedEdgeId);
-        renderAll(); persist();
+      if (ev.key === 'Escape') {
+        if (ctxMode || (ctxEl && !ctxEl.hidden)) { hideCtx(); return; }
+        if (canvas().tool === 'cut') {
+          canvas().tool = 'select';
+          hoverCutEdgeId = null;
+          syncToolUi(); persist();
+          return;
+        }
+        if (marquee) {
+          marquee = null;
+          updateMarqueeVisual();
+          return;
+        }
+        clearAllSelection();
+        return;
       }
-    });
-    window.addEventListener('keyup', function (ev) {
+      if (ev.key === 'Delete' || ev.key === 'Backspace') {
+        if (isFormField(ev.target)) return;
+        var ae = document.activeElement;
+        var inCanvas = viewport === ae || rootEl.contains(ae) || rootEl.contains(ev.target);
+        if (!inCanvas) return;
+        if (!selectedIds().length && !canvas().selectedEdgeId &&
+          !(canvas().selectedEdgeIds || []).length) return;
+        ev.preventDefault();
+        deleteSelection();
+      }
+    }
+    function onKeyUp(ev) {
       if (ev.code === 'Space') spacePan = false;
-    });
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+
+    document.addEventListener('pointerdown', function (ev) {
+      if (!ctxEl || ctxEl.hidden) return;
+      if (ctxEl.contains(ev.target)) return;
+      hideCtx();
+    }, true);
 
     if (minimapCanvas) {
       minimapCanvas.addEventListener('click', function (ev) {

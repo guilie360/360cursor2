@@ -3227,6 +3227,65 @@ button.builder-estructura-chip {
   background: rgba(111, 191, 134, 0.25);
 }
 
+.builder-exp-card.is-locked {
+  opacity: 0.92;
+}
+
+.builder-exp-card__lock {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 10px;
+  height: 8px;
+  border: 1.5px solid rgba(155, 143, 212, 0.85);
+  border-radius: 2px;
+  z-index: 4;
+}
+
+.builder-exp-card__lock::before {
+  content: '';
+  position: absolute;
+  left: 1.5px;
+  top: -5px;
+  width: 5px;
+  height: 5px;
+  border: 1.5px solid rgba(155, 143, 212, 0.85);
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+}
+
+.builder-exp-marquee {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  border: 1px solid rgba(111, 191, 134, 0.65);
+  background: rgba(111, 191, 134, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(155, 143, 212, 0.12);
+}
+
+.builder-exp-viewport.is-cut {
+  cursor: crosshair;
+}
+
+.builder-exp-viewport.is-cut .builder-exp-edge-path {
+  cursor: crosshair;
+}
+
+.builder-exp-edge-path.is-cut-hover {
+  stroke: rgba(220, 120, 120, 0.95);
+  stroke-width: 2.5;
+}
+
+.builder-exp-ctx__item.is-danger {
+  color: rgba(220, 150, 150, 0.95);
+}
+
+.builder-exp-ctx__item.is-disabled,
+.builder-exp-ctx__item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .builder-exp-minimap {
   position: absolute;
   right: 12px;

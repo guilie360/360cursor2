@@ -1,6 +1,5 @@
-/* BOXIES V5.9.53 — Experiencia: editor de flujo del showroom
- * Legacy V5.9.50/51 (mapa desde Estructura) conservado como recuperable.
- * V5.9.53: conexiones por puerto (sourcePortId / targetPortId). */
+/* BOXIES V5.9.54 — Experiencia: editor de flujo del showroom
+ * Legacy V5.9.50/51 conservado. V5.9.53 puertos. V5.9.54 edición canvas. */
 var ExperienciaEngine = (function () {
   var NODE_W = 200;
   var NODE_H = 92;
@@ -115,7 +114,9 @@ var ExperienciaEngine = (function () {
         panY: 40,
         zoom: 1,
         selectedId: null,
+        selectedIds: [],
         selectedEdgeId: null,
+        selectedEdgeIds: [],
         tool: 'select',
         minimapVisible: true,
         inspectorOpen: false,
@@ -136,6 +137,12 @@ var ExperienciaEngine = (function () {
       exp.canvas = emptyState().canvas;
     }
     if (exp.canvas.selectedEdgeId == null) exp.canvas.selectedEdgeId = null;
+    if (!Array.isArray(exp.canvas.selectedIds)) {
+      exp.canvas.selectedIds = exp.canvas.selectedId ? [exp.canvas.selectedId] : [];
+    }
+    if (!Array.isArray(exp.canvas.selectedEdgeIds)) {
+      exp.canvas.selectedEdgeIds = exp.canvas.selectedEdgeId ? [exp.canvas.selectedEdgeId] : [];
+    }
     if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
     exp.nodes.forEach(normalizeNode);
     exp.edges.forEach(normalizeEdge);
@@ -157,6 +164,8 @@ var ExperienciaEngine = (function () {
     if (n.y == null) n.y = null;
     if (n.config == null || typeof n.config !== 'object') n.config = {};
     if (n.parentId === undefined) n.parentId = null;
+    if (n.locked == null) n.locked = false;
+    if (n.protected == null) n.protected = n.kind === 'hero' || n.id === 'exp-hero';
     return n;
   }
 
@@ -327,7 +336,9 @@ var ExperienciaEngine = (function () {
         interactions: interactions
       },
       width: HERO_W,
-      height: Math.max(HERO_H, 72 + ports.length * 22)
+      height: Math.max(HERO_H, 72 + ports.length * 22),
+      protected: true,
+      locked: !!(prev && prev.locked)
     };
     if (prev) {
       base.contentRef = prev.contentRef || null;
@@ -651,6 +662,7 @@ var ExperienciaEngine = (function () {
     var exp = ensureState(state);
     var n = exp.nodes.find(function (node) { return node.id === nodeId; });
     if (!n) return null;
+    if (isLockedNode(n)) return n;
     n.x = Math.round(x);
     n.y = Math.round(y);
     if (markMoved !== false) {
@@ -836,6 +848,177 @@ var ExperienciaEngine = (function () {
     return exp;
   }
 
+  function isProtectedNode(n) {
+    if (!n) return true;
+    return !!(n.protected || n.kind === 'hero' || n.id === 'exp-hero');
+  }
+
+  function isLockedNode(n) {
+    return !!(n && n.locked);
+  }
+
+  function deepClone(obj) {
+    try { return JSON.parse(JSON.stringify(obj)); }
+    catch (e) { return obj; }
+  }
+
+  function unlinkNode(state, nodeId) {
+    var exp = ensureState(state);
+    var before = exp.edges.length;
+    exp.edges = exp.edges.filter(function (ed) {
+      var s = ed.sourceNodeId || ed.from || ed.sourceId;
+      var t = ed.targetNodeId || ed.to || ed.targetId;
+      return s !== nodeId && t !== nodeId;
+    });
+    if (exp.canvas.selectedEdgeId) {
+      var still = exp.edges.some(function (e) { return e.id === exp.canvas.selectedEdgeId; });
+      if (!still) {
+        exp.canvas.selectedEdgeId = null;
+        exp.canvas.selectedEdgeIds = [];
+      }
+    }
+    return before - exp.edges.length;
+  }
+
+  function unlinkNodes(state, nodeIds) {
+    var set = {};
+    (nodeIds || []).forEach(function (id) { set[id] = true; });
+    var exp = ensureState(state);
+    var removed = 0;
+    exp.edges = exp.edges.filter(function (ed) {
+      var s = ed.sourceNodeId || ed.from || ed.sourceId;
+      var t = ed.targetNodeId || ed.to || ed.targetId;
+      if (set[s] || set[t]) { removed++; return false; }
+      return true;
+    });
+    return removed;
+  }
+
+  function removeNode(state, nodeId, options) {
+    options = options || {};
+    var exp = ensureState(state);
+    var n = getNode(state, nodeId);
+    if (!n) return { ok: false, reason: 'missing' };
+    if (isProtectedNode(n) && !options.force) {
+      return { ok: false, reason: 'protected' };
+    }
+    if (isLockedNode(n) && !options.force) {
+      return { ok: false, reason: 'locked' };
+    }
+    unlinkNode(state, nodeId);
+    exp.nodes = exp.nodes.filter(function (node) { return node.id !== nodeId; });
+    exp.canvas.selectedIds = (exp.canvas.selectedIds || []).filter(function (id) { return id !== nodeId; });
+    if (exp.canvas.selectedId === nodeId) {
+      exp.canvas.selectedId = exp.canvas.selectedIds[0] || null;
+    }
+    return { ok: true, node: n };
+  }
+
+  function removeNodes(state, nodeIds) {
+    var results = { removed: [], skipped: [] };
+    (nodeIds || []).forEach(function (id) {
+      var r = removeNode(state, id);
+      if (r.ok) results.removed.push(id);
+      else results.skipped.push({ id: id, reason: r.reason });
+    });
+    return results;
+  }
+
+  function setNodesLocked(state, nodeIds, locked) {
+    var exp = ensureState(state);
+    var count = 0;
+    (nodeIds || []).forEach(function (id) {
+      var n = getNode(state, id);
+      if (!n || isProtectedNode(n)) return;
+      n.locked = !!locked;
+      count++;
+    });
+    void exp;
+    return count;
+  }
+
+  function duplicateNode(state, nodeId, offset) {
+    offset = offset || { x: 36, y: 36 };
+    var exp = ensureFlow(state);
+    var src = getNode(state, nodeId);
+    if (!src || isProtectedNode(src)) return null;
+    var copy = deepClone(src);
+    copy.id = uid('flow');
+    copy.x = Math.round((src.x || 0) + (offset.x || 36));
+    copy.y = Math.round((src.y || 0) + (offset.y || 36));
+    copy.userMoved = true;
+    copy.locked = false;
+    copy.protected = false;
+    /* Do not copy edges — caller handles selection-internal edges */
+    exp.nodes.push(normalizeNode(copy));
+    return copy;
+  }
+
+  /** Duplicate selection; remap internal edges only. */
+  function duplicateSelection(state, nodeIds) {
+    var ids = (nodeIds || []).slice();
+    var exp = ensureFlow(state);
+    var idMap = {};
+    var created = [];
+    ids.forEach(function (id) {
+      var src = getNode(state, id);
+      if (!src || isProtectedNode(src)) return;
+      var copy = deepClone(src);
+      copy.id = uid('flow');
+      copy.x = Math.round((src.x || 0) + 40);
+      copy.y = Math.round((src.y || 0) + 40);
+      copy.userMoved = true;
+      copy.locked = false;
+      copy.protected = false;
+      idMap[id] = copy.id;
+      exp.nodes.push(normalizeNode(copy));
+      created.push(copy);
+    });
+    (exp.edges || []).slice().forEach(function (ed) {
+      var s = ed.sourceNodeId || ed.from || ed.sourceId;
+      var t = ed.targetNodeId || ed.to || ed.targetId;
+      if (!idMap[s] || !idMap[t]) return;
+      exp.edges.push(edge(idMap[s], idMap[t], ed.label || 'flujo', {
+        sourcePortId: ed.sourcePortId || ed.sourcePort || ed.portId || 'out',
+        targetPortId: ed.targetPortId || ed.targetPort || 'in',
+        sourcePortLabel: ed.sourcePortLabel || null,
+        manual: true,
+        inlineAction: !!ed.inlineAction
+      }));
+    });
+    return { nodes: created, idMap: idMap };
+  }
+
+  function clearSelection(state) {
+    var exp = ensureState(state);
+    exp.canvas.selectedId = null;
+    exp.canvas.selectedIds = [];
+    exp.canvas.selectedEdgeId = null;
+    exp.canvas.selectedEdgeIds = [];
+    return exp;
+  }
+
+  function setSelection(state, nodeIds, edgeIds) {
+    var exp = ensureState(state);
+    var ids = (nodeIds || []).filter(Boolean);
+    var eids = (edgeIds || []).filter(Boolean);
+    exp.canvas.selectedIds = ids;
+    exp.canvas.selectedId = ids.length ? ids[ids.length - 1] : null;
+    exp.canvas.selectedEdgeIds = eids;
+    exp.canvas.selectedEdgeId = eids.length ? eids[eids.length - 1] : null;
+    if (ids.length || eids.length) exp.canvas.inspectorOpen = true;
+    return exp;
+  }
+
+  function toggleSelectionId(state, nodeId) {
+    var exp = ensureState(state);
+    var ids = (exp.canvas.selectedIds || []).slice();
+    var idx = ids.indexOf(nodeId);
+    if (idx >= 0) ids.splice(idx, 1);
+    else ids.push(nodeId);
+    return setSelection(state, ids, []);
+  }
+
   function addHotspotToScene(state, sceneId, label) {
     var exp = ensureFlow(state);
     var scene = getNode(state, sceneId);
@@ -900,6 +1083,18 @@ var ExperienciaEngine = (function () {
     visibleNodes: visibleNodes,
     enterGroup: enterGroup,
     exitGroup: exitGroup,
-    addHotspotToScene: addHotspotToScene
+    addHotspotToScene: addHotspotToScene,
+    isProtectedNode: isProtectedNode,
+    isLockedNode: isLockedNode,
+    unlinkNode: unlinkNode,
+    unlinkNodes: unlinkNodes,
+    removeNode: removeNode,
+    removeNodes: removeNodes,
+    setNodesLocked: setNodesLocked,
+    duplicateNode: duplicateNode,
+    duplicateSelection: duplicateSelection,
+    clearSelection: clearSelection,
+    setSelection: setSelection,
+    toggleSelectionId: toggleSelectionId
   };
 })();
