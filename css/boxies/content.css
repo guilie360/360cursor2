@@ -412,6 +412,11 @@
   text-align: center;
 }
 
+#boxiesContent .boxies-col-actions .boxies-cell {
+  justify-content: flex-end;
+  text-align: right;
+}
+
 #boxiesContent .boxies-col-name .boxies-cell {
   justify-content: flex-start;
   text-align: left;
@@ -508,22 +513,15 @@ body.boxies-col-resizing * {
 }
 
 #boxiesContent .boxies-row-actions {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: repeat(4, auto);
+  column-gap: 14px;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Generous space between Editar and the Clonar/Eliminar group */
-#boxiesContent .boxies-row-actions__gap {
-  display: inline-block;
-  width: 28px;
-  flex-shrink: 0;
-}
-
-/* Slightly more space between Clonar and Eliminar */
-#boxiesContent .boxies-row-actions .boxies-icon-action--danger {
-  margin-left: 10px;
+  justify-items: center;
+  /* Keep the action cluster compact on the right — not stretched across the cell */
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
 }
 
 #boxiesContent .boxies-icon-action {
@@ -573,6 +571,18 @@ body.boxies-col-resizing * {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+@media (max-width: 960px) {
+  #boxiesContent .boxies-row-actions {
+    column-gap: 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  #boxiesContent .boxies-row-actions {
+    column-gap: 8px;
+  }
 }
 
 #boxiesContent .boxies-showroom-drag-th .boxies-cell,
@@ -631,8 +641,34 @@ body.boxies-col-resizing * {
   vertical-align: middle;
 }
 
-#boxiesContent .boxies-public-toggle {
+/*
+ * V5.9.42 — isolate Público from global `.toggle-switch.on { background: var(--accent) }`.
+ * Root cause: components.css paints ON with theme accent (red under Signature Red / red accents).
+ * BOXIES had no override, so the switch inherited accent instead of Hall neutrals.
+ */
+#boxiesContent .boxies-public-toggle.toggle-switch,
+body[data-button-glass="soft"] #boxiesContent .boxies-public-toggle.toggle-switch,
+body[data-button-glass="glass"] #boxiesContent .boxies-public-toggle.toggle-switch {
   vertical-align: middle;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+#boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-button-glass="soft"] #boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-button-glass="glass"] #boxiesContent .boxies-public-toggle.toggle-switch.on,
+body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.toggle-switch.on {
+  background: #111111;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+#boxiesContent .boxies-public-toggle .toggle-switch-knob,
+#boxiesContent .boxies-public-toggle.on .toggle-switch-knob,
+body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-switch-knob {
+  background: #ffffff;
 }
 
 #boxiesContent .boxies-public-toggle:disabled {

@@ -23,7 +23,7 @@ var BoxiesProjectsPage = (function () {
     status: { min: 88, default: 120, resizable: true },
     public: { min: 72, default: 96, resizable: true },
     updated: { min: 120, default: 168, resizable: true },
-    actions: { min: 168, default: 200, resizable: true }
+    actions: { min: 176, default: 212, resizable: true }
   };
 
   function escapeHtml(v) {
@@ -434,7 +434,6 @@ var BoxiesProjectsPage = (function () {
               '" data-tooltip="Vista previa" aria-label="Vista previa"' +
               (slug ? '' : ' disabled') +
               '>' + ICONS.eye + '</button>' +
-              '<span class="boxies-row-actions__gap" aria-hidden="true"></span>' +
               '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
                 escapeHtml(id) +
               '" data-tooltip="Clonar" aria-label="Clonar">' + ICONS.copy + '</button>' +
