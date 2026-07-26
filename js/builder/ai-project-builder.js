@@ -154,6 +154,93 @@ var AiProjectBuilderView = (function () {
    * Presentational / derived — no persisted summary state.
    * Compact vertical tech sheet (V5.9.23).
    */
+  function buildAssignmentBalanceHtml(e) {
+    if (!EstructuraEngine.assignmentBalance) return '';
+    var bal = EstructuraEngine.assignmentBalance(e);
+    if (!bal.buckets.length) {
+      return '<div class="builder-estructura-assign-balance is-empty" data-estructura-assign-balance>' +
+        '<p class="builder-estructura-section__note">Define la capacidad espacial arriba para distribuir tipologías.</p>' +
+      '</div>';
+    }
+    var hasSignal = bal.buckets.some(function (b) {
+      return b.capacity > 0 || b.assigned > 0;
+    });
+    if (!hasSignal) {
+      return '<div class="builder-estructura-assign-balance is-empty" data-estructura-assign-balance>' +
+        '<p class="builder-estructura-section__note">Indica cantidades en la configuración espacial para asignar tipologías.</p>' +
+      '</div>';
+    }
+    var statusClass = bal.ok ? 'is-ok' : 'is-pending';
+    var rows = bal.buckets.map(function (b) {
+      if (b.capacity <= 0 && b.assigned <= 0) return '';
+      var status =
+        b.excess > 0 ? ('+' + b.excess + ' de más') :
+        (b.remaining > 0 ? (b.remaining + ' pendientes') : 'completo');
+      var rowClass =
+        b.excess > 0 ? 'is-over' :
+        (b.remaining > 0 ? 'is-under' : 'is-full');
+      return '<div class="builder-estructura-assign-balance__row ' + rowClass + '">' +
+        '<span class="builder-estructura-assign-balance__label">' +
+          AdminUI.escapeHtml(b.label) +
+        '</span>' +
+        '<span class="builder-estructura-assign-balance__nums">' +
+          AdminUI.escapeHtml(String(b.assigned)) + ' / ' +
+          AdminUI.escapeHtml(String(b.capacity)) +
+        '</span>' +
+        '<span class="builder-estructura-assign-balance__status">' +
+          AdminUI.escapeHtml(status) +
+        '</span>' +
+      '</div>';
+    }).filter(Boolean).join('');
+    return '<div class="builder-estructura-assign-balance ' + statusClass +
+      '" data-estructura-assign-balance>' +
+      '<div class="builder-estructura-sublabel">Distribución de tipologías</div>' +
+      rows +
+    '</div>';
+  }
+
+  function buildTipologiaAssignHtml(e, tip) {
+    if (!EstructuraEngine.bucketsForTipologia) return '';
+    var buckets = EstructuraEngine.bucketsForTipologia(e, tip);
+    if (!buckets.length) {
+      return '<p class="builder-estructura-section__note">' +
+        (e.developmentType === 'mixto' && !tip.componente
+          ? 'Selecciona el componente para asignar cantidades.'
+          : 'Sin contenedores de capacidad para asignar.') +
+      '</p>';
+    }
+    var rows = buckets.map(function (b) {
+      var qty = EstructuraEngine.getTipAssigned(tip, b.id);
+      return '<div class="builder-estructura-row builder-estructura-assign-row">' +
+        '<span class="builder-estructura-row__label">' +
+          AdminUI.escapeHtml(b.label) +
+          '<span class="builder-estructura-assign-row__cap"> · cupo ' +
+            AdminUI.escapeHtml(String(b.capacity)) +
+          '</span>' +
+        '</span>' +
+        stepperHtmlForAssign('t.assign.' + b.id, qty, 0, 100000) +
+      '</div>';
+    }).join('');
+    return '<div class="builder-estructura-assign-block">' +
+      '<div class="builder-estructura-sublabel">Cantidades por nivel</div>' +
+      rows +
+    '</div>';
+  }
+
+  /* Stepper helper used before renderEstructura's local stepperHtml exists */
+  function stepperHtmlForAssign(field, value, min, max) {
+    min = min != null ? min : 0;
+    max = max != null ? max : 99999;
+    return '<div class="builder-estructura-stepper" data-stepper="' + field + '"' +
+      ' data-min="' + min + '" data-max="' + max + '">' +
+      '<button type="button" class="builder-estructura-stepper__btn" data-step="-1" aria-label="Menos">−</button>' +
+      '<input type="number" class="builder-estructura-stepper__input" inputmode="numeric" ' +
+        'data-stepper-input value="' + AdminUI.escapeHtml(String(value)) + '" ' +
+        'min="' + min + '" max="' + max + '" step="1">' +
+      '<button type="button" class="builder-estructura-stepper__btn" data-step="1" aria-label="Más">+</button>' +
+    '</div>';
+  }
+
   function buildEstructuraResumenHtml(e) {
     e = e || {};
     var esc = AdminUI.escapeHtml;
@@ -404,6 +491,10 @@ var AiProjectBuilderView = (function () {
         var modelo = String(tip.modelo || '').trim();
         var title = [prod, modelo].filter(Boolean).join(' · ');
         if (!title) title = tip.nombre || 'Tipología';
+        var qty = EstructuraEngine.getTipAssigned
+          ? EstructuraEngine.getTipAssigned(tip)
+          : 0;
+        if (qty > 0) title += ' · ' + qty + (qty === 1 ? ' unidad' : ' unidades');
         var meta = tipMetaParts(tip).join(' · ');
         var amb = tipAmbientesHtml(tip);
         if (!meta && !amb && !title) return '';
@@ -416,6 +507,19 @@ var AiProjectBuilderView = (function () {
         '</div>';
       }).filter(Boolean).join('');
       if (tipsInner) section('Tipologías', tipsInner);
+    }
+
+    if (EstructuraEngine.assignmentBalance) {
+      var bal = EstructuraEngine.assignmentBalance(e);
+      var balRows = (bal.buckets || []).filter(function (b) {
+        return b.capacity > 0 || b.assigned > 0;
+      }).map(function (b) {
+        var status =
+          b.excess > 0 ? ('+' + b.excess + ' de más') :
+          (b.remaining > 0 ? (b.remaining + ' pendientes') : 'completo');
+        return compactRow(b.label, b.assigned + ' / ' + b.capacity + ' · ' + status);
+      }).join('');
+      if (balRows) section('Distribución', balRows);
     }
 
     /* ── Amenidades ── */
@@ -987,6 +1091,14 @@ var AiProjectBuilderView = (function () {
         (tip.open ? ' open' : '') + '>' +
         '<summary><span class="builder-estructura-acc__title" data-tipologia-title>' +
           AdminUI.escapeHtml(tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : ('Tipología ' + (ti + 1)))) +
+          (function () {
+            var n = EstructuraEngine.getTipAssigned
+              ? EstructuraEngine.getTipAssigned(tip)
+              : 0;
+            return n > 0
+              ? ' <span class="builder-estructura-acc__qty">· ' + n + ' u.</span>'
+              : '';
+          })() +
         '</span></summary>' +
         '<div class="builder-estructura-acc__body">' +
           compSelect +
@@ -996,6 +1108,7 @@ var AiProjectBuilderView = (function () {
             '<div class="builder-field"><label>Modelo</label>' +
               '<input type="text" data-t-field="modelo" value="' + AdminUI.escapeHtml(tip.modelo || '') + '"></div>' +
           '</div>' +
+          buildTipologiaAssignHtml(e, tip) +
           '<div class="builder-estructura-grid2">' +
             '<div class="builder-field"><label>Área construida (m²)</label>' +
               '<input type="number" min="0" step="0.01" data-t-field="area_m2" value="' +
@@ -1114,8 +1227,9 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-estructura-section__title">Tipologías</span>' +
         '</summary>' +
         '<div class="builder-estructura-section__body">' +
-          '<p class="builder-estructura-section__note">Plantas y ambientes se editan dentro de cada tipología. ' +
-            '1 tipología = 1 tarjeta en Viviendas.</p>' +
+          '<p class="builder-estructura-section__note">Asigna cuántas unidades de cada tipología van a cada nivel. ' +
+            '1 tipología = 1 tarjeta en Viviendas; las cantidades definen el inventario.</p>' +
+          buildAssignmentBalanceHtml(e) +
           '<div class="builder-estructura-tips-grid">' + tipsHtml + '</div>' +
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderAddTipologiaBtn">' +
             '+ Añadir tipología</button>' +
@@ -2092,14 +2206,21 @@ var AiProjectBuilderView = (function () {
 
     function tipologiaTitleText(tip) {
       if (!tip) return 'Tipología';
-      if (tip.nombre) return tip.nombre;
-      if (tip.modelo) return 'Modelo ' + tip.modelo;
-      return 'Tipología';
+      var base = tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : 'Tipología');
+      var n = EstructuraEngine.getTipAssigned ? EstructuraEngine.getTipAssigned(tip) : 0;
+      return n > 0 ? (base + ' · ' + n + ' u.') : base;
     }
 
     function updateTipologiaTitle(card, tip) {
       var tipTitle = card && card.querySelector('[data-tipologia-title]');
-      if (tipTitle) tipTitle.textContent = tipologiaTitleText(tip);
+      if (!tipTitle) return;
+      var base = tip && (tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : 'Tipología'));
+      if (!base) base = 'Tipología';
+      var n = tip && EstructuraEngine.getTipAssigned ? EstructuraEngine.getTipAssigned(tip) : 0;
+      tipTitle.innerHTML = AdminUI.escapeHtml(base) +
+        (n > 0
+          ? ' <span class="builder-estructura-acc__qty">· ' + n + ' u.</span>'
+          : '');
     }
 
     function updateConjuntoTotalViviendasDisplay() {
@@ -2533,6 +2654,15 @@ var AiProjectBuilderView = (function () {
         if (b) b[field.slice(2)] = n;
         return true;
       }
+      if (tipEl && field.indexOf('t.assign.') === 0) {
+        var tipAssign = e.tipologias.find(function (x) {
+          return x.localId === tipEl.getAttribute('data-tipologia');
+        });
+        if (tipAssign) {
+          EstructuraEngine.setTipAssigned(tipAssign, field.slice('t.assign.'.length), n);
+        }
+        return true;
+      }
       if (tipEl && field.indexOf('t.') === 0) {
         var tip = e.tipologias.find(function (x) {
           return x.localId === tipEl.getAttribute('data-tipologia');
@@ -2570,6 +2700,19 @@ var AiProjectBuilderView = (function () {
           if (comp) input.value = String(comp.cantidad);
           return;
         }
+        if (field.indexOf('t.assign.') === 0) {
+          var tipElAssign = el.closest('[data-tipologia]');
+          if (!tipElAssign) return;
+          var tipAssign = e.tipologias.find(function (x) {
+            return x.localId === tipElAssign.getAttribute('data-tipologia');
+          });
+          if (tipAssign) {
+            input.value = String(
+              EstructuraEngine.getTipAssigned(tipAssign, field.slice('t.assign.'.length))
+            );
+          }
+          return;
+        }
         if (field.indexOf('t.') === 0) {
           var tipEl = el.closest('[data-tipologia]');
           if (!tipEl) return;
@@ -2580,15 +2723,43 @@ var AiProjectBuilderView = (function () {
         }
       }
 
+      function updateAssignmentBalanceDisplay() {
+        var host = rootEl.querySelector('[data-estructura-assign-balance]');
+        if (!host) return;
+        var wrap = document.createElement('div');
+        wrap.innerHTML = buildAssignmentBalanceHtml(state.estructura);
+        var next = wrap.firstChild;
+        if (next) host.parentNode.replaceChild(next, host);
+        rootEl.querySelectorAll('[data-tipologia]').forEach(function (card) {
+          var tip = state.estructura.tipologias.find(function (x) {
+            return x.localId === card.getAttribute('data-tipologia');
+          });
+          if (!tip) return;
+          var titleEl = card.querySelector('[data-tipologia-title]');
+          if (!titleEl) return;
+          var base = tip.nombre || (tip.modelo ? ('Modelo ' + tip.modelo) : 'Tipología');
+          var n = EstructuraEngine.getTipAssigned(tip);
+          titleEl.innerHTML = AdminUI.escapeHtml(base) +
+            (n > 0
+              ? ' <span class="builder-estructura-acc__qty">· ' + n + ' u.</span>'
+              : '');
+        });
+      }
+
       function applyLocalStepper(raw) {
         var field = el.getAttribute('data-stepper');
         var applied = applyStepperValue(el, raw);
         if (!applied) return false;
         var localOnly = field === 'cj.cantidad' ||
+          (field && field.indexOf('t.assign.') === 0) ||
           (field && field.indexOf('t.') === 0 && field !== 't.plantas_internas');
         if (localOnly) {
           refreshStepperInput();
-          if (field === 'cj.cantidad') updateConjuntoTotalViviendasDisplay();
+          if (field === 'cj.cantidad') {
+            updateConjuntoTotalViviendasDisplay();
+            updateAssignmentBalanceDisplay();
+          }
+          if (field && field.indexOf('t.assign.') === 0) updateAssignmentBalanceDisplay();
           persist();
           return true;
         }
@@ -2627,6 +2798,9 @@ var AiProjectBuilderView = (function () {
           input.value = String(EstructuraEngine.clampInt(input.value, min, max, min));
           if (el.getAttribute('data-stepper') === 'cj.cantidad') {
             updateConjuntoTotalViviendasDisplay();
+          }
+          if (String(el.getAttribute('data-stepper') || '').indexOf('t.assign.') === 0) {
+            updateAssignmentBalanceDisplay();
           }
         });
       }
@@ -2709,6 +2883,9 @@ var AiProjectBuilderView = (function () {
               unidadHousingType: state.estructura.unidadHousingType
             });
             tip.producto = prods[0] ? prods[0].id : tip.producto;
+            if (EstructuraEngine.pruneTipologiaAsignaciones) {
+              EstructuraEngine.pruneTipologiaAsignaciones(state.estructura, tip);
+            }
             EstructuraEngine.syncTypologyPlantas(state.estructura);
             persist();
             rerender();

@@ -1,5 +1,8 @@
-/* BOXIES V5.9.21 — Estructura Engine: tipos Unidad/Edificio/Conjunto/Lotes/Mixto */
+/* BOXIES V5.9.43 — Estructura Engine: tipos + asignación tipología×cantidad por contenedor */
 var EstructuraEngine = (function () {
+  var ROOT_BUCKET_ID = '__root__';
+  var CASAS_BUCKET_ID = '__casas__';
+  var LOTES_BUCKET_ID = '__lotes__';
   var DEVELOPMENT_TYPES = [
     { id: 'unidad', label: 'Unidad' },
     { id: 'edificio', label: 'Edificio' },
@@ -267,8 +270,231 @@ var EstructuraEngine = (function () {
       precio: 0,
       plantas: plantas > 0 ? [emptyPlanta(1)] : [],
       ambientes: [],
+      /* cantidad por contenedor (torre / componente / root) — V5.9.43 */
+      asignaciones: {},
       open: index === 0
     };
+  }
+
+  function normalizeAsignaciones(tip) {
+    if (!tip) return {};
+    if (!tip.asignaciones || typeof tip.asignaciones !== 'object' || Array.isArray(tip.asignaciones)) {
+      tip.asignaciones = {};
+    }
+    /* Legacy shorthand: tip.cantidad → root bucket */
+    if (tip.cantidad != null && tip.asignaciones[ROOT_BUCKET_ID] == null) {
+      tip.asignaciones[ROOT_BUCKET_ID] = clampInt(tip.cantidad, 0, 100000, 0);
+    }
+    Object.keys(tip.asignaciones).forEach(function (key) {
+      tip.asignaciones[key] = clampInt(tip.asignaciones[key], 0, 100000, 0);
+    });
+    return tip.asignaciones;
+  }
+
+  function getTipAssigned(tip, containerId) {
+    if (!tip) return 0;
+    normalizeAsignaciones(tip);
+    if (containerId != null && containerId !== '') {
+      return clampInt(tip.asignaciones[containerId], 0, 100000, 0);
+    }
+    var sum = 0;
+    Object.keys(tip.asignaciones).forEach(function (key) {
+      sum += clampInt(tip.asignaciones[key], 0, 100000, 0);
+    });
+    return sum;
+  }
+
+  function setTipAssigned(tip, containerId, qty) {
+    if (!tip || containerId == null || containerId === '') return tip;
+    normalizeAsignaciones(tip);
+    tip.asignaciones[containerId] = clampInt(qty, 0, 100000, 0);
+    if (containerId === ROOT_BUCKET_ID) tip.cantidad = tip.asignaciones[containerId];
+    return tip;
+  }
+
+  function buildingCapacity(b) {
+    if (!b) return 0;
+    return clampInt(b.pisos, 0, 200, 0) * clampInt(b.unidadesPorPiso, 0, 100, 0);
+  }
+
+  function conjuntoCompBucketLabel(c, stage) {
+    var base;
+    if (isConjuntoResidentialComponent(c)) {
+      base = productLabel(c.producto) || 'Residencial';
+    } else {
+      var meta = conjuntoComponentTypeMeta(c.type);
+      base = meta ? meta.label : (c.type || 'Componente');
+    }
+    var name = String(c.nombre || '').trim();
+    if (name && name.toLowerCase() !== String(base).toLowerCase()) {
+      base = base + ' · ' + name;
+    }
+    if (stage && stage.nombre) base = String(stage.nombre) + ' · ' + base;
+    return base;
+  }
+
+  /**
+   * Capacity containers for typology quantity assignment.
+   * One shared model for all 5 development types — hierarchy comes from existing state.
+   */
+  function listCapacityBuckets(e) {
+    e = e || {};
+    var t = normalizeTypeId(e.developmentType);
+    var buckets = [];
+
+    if (t === 'unidad') {
+      buckets.push({
+        id: ROOT_BUCKET_ID,
+        label: e.unidadHousingType === 'apartamento' ? 'Apartamentos' : 'Casas / unidades',
+        capacity: clampInt(e.unidadCount, 0, 50000, 0),
+        kind: 'unidad'
+      });
+      return buckets;
+    }
+
+    if (t === 'edificio') {
+      (e.buildings || []).forEach(function (b, i) {
+        buckets.push({
+          id: b.localId,
+          label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
+          capacity: buildingCapacity(b),
+          kind: 'edificio'
+        });
+      });
+      return buckets;
+    }
+
+    if (t === 'conjunto') {
+      ensureConjuntoConfig(e);
+      walkConjuntoComponents(e, function (c, stage) {
+        if (!isConjuntoResidentialComponent(c)) return;
+        buckets.push({
+          id: c.localId,
+          label: conjuntoCompBucketLabel(c, stage),
+          capacity: clampInt(c.cantidad, 0, 100000, 0),
+          kind: 'conjunto',
+          stageId: stage ? stage.localId : null
+        });
+      });
+      return buckets;
+    }
+
+    if (t === 'lotes') {
+      buckets.push({
+        id: ROOT_BUCKET_ID,
+        label: 'Lotes',
+        capacity: clampInt(e.totalLotes, 0, 100000, 0),
+        kind: 'lotes'
+      });
+      return buckets;
+    }
+
+    if (t === 'mixto') {
+      var m = e.mixto || {};
+      if (m.edificios) {
+        (e.buildings || []).forEach(function (b, i) {
+          buckets.push({
+            id: b.localId,
+            label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
+            capacity: buildingCapacity(b),
+            kind: 'edificio',
+            componente: 'edificios'
+          });
+        });
+      }
+      if (m.casas) {
+        buckets.push({
+          id: CASAS_BUCKET_ID,
+          label: 'Casas',
+          capacity: clampInt(e.totalViviendas, 0, 50000, 0),
+          kind: 'casas',
+          componente: 'casas'
+        });
+      }
+      if (m.lotes) {
+        buckets.push({
+          id: LOTES_BUCKET_ID,
+          label: 'Lotes',
+          capacity: clampInt(e.totalLotes, 0, 100000, 0),
+          kind: 'lotes',
+          componente: 'lotes'
+        });
+      }
+    }
+    return buckets;
+  }
+
+  function bucketsForTipologia(e, tip) {
+    var all = listCapacityBuckets(e);
+    if (normalizeTypeId(e.developmentType) !== 'mixto') return all;
+    var comp = tip && tip.componente;
+    if (!comp) return all;
+    if (comp === 'edificios') {
+      return all.filter(function (b) { return b.kind === 'edificio'; });
+    }
+    if (comp === 'casas') {
+      return all.filter(function (b) { return b.kind === 'casas'; });
+    }
+    if (comp === 'lotes') {
+      return all.filter(function (b) { return b.kind === 'lotes'; });
+    }
+    return all;
+  }
+
+  function sumAssignedForBucket(e, containerId) {
+    var sum = 0;
+    (e.tipologias || []).forEach(function (tip) {
+      sum += getTipAssigned(tip, containerId);
+    });
+    return sum;
+  }
+
+  function assignmentBalance(e) {
+    e = e || {};
+    var buckets = listCapacityBuckets(e).map(function (b) {
+      var assigned = sumAssignedForBucket(e, b.id);
+      var remaining = b.capacity - assigned;
+      return {
+        id: b.id,
+        label: b.label,
+        kind: b.kind,
+        componente: b.componente || null,
+        capacity: b.capacity,
+        assigned: assigned,
+        remaining: remaining,
+        excess: remaining < 0 ? -remaining : 0,
+        ok: remaining === 0
+      };
+    });
+    var messages = [];
+    var ok = true;
+    buckets.forEach(function (b) {
+      if (b.capacity <= 0 && b.assigned <= 0) return;
+      if (b.remaining > 0) {
+        ok = false;
+        messages.push(
+          b.label + ': faltan ' + b.remaining +
+            (b.remaining === 1 ? ' unidad por asignar' : ' unidades por asignar')
+        );
+      } else if (b.excess > 0) {
+        ok = false;
+        messages.push(
+          b.label + ': sobran ' + b.excess +
+            (b.excess === 1 ? ' unidad asignada' : ' unidades asignadas')
+        );
+      }
+    });
+    return { buckets: buckets, ok: ok, messages: messages };
+  }
+
+  function pruneTipologiaAsignaciones(e, tip) {
+    if (!tip) return;
+    normalizeAsignaciones(tip);
+    var valid = {};
+    bucketsForTipologia(e, tip).forEach(function (b) { valid[b.id] = true; });
+    Object.keys(tip.asignaciones).forEach(function (key) {
+      if (!valid[key]) delete tip.asignaciones[key];
+    });
   }
 
   function emptyPlanta(orden) {
@@ -850,6 +1076,8 @@ var EstructuraEngine = (function () {
     }
     e.tipologias.forEach(function (t) {
       if (t.componente == null) t.componente = null;
+      normalizeAsignaciones(t);
+      pruneTipologiaAsignaciones(e, t);
     });
     if (e.developmentType === 'edificio' && e.edificioMode === 'unico' && !e.buildings.length) {
       e.buildings = [emptyBuilding('edificio', 0)];
@@ -905,7 +1133,14 @@ var EstructuraEngine = (function () {
       lotesSubtype: e.lotesSubtype,
       mixto: e.mixto,
       tipologiasComponentes: (e.tipologias || []).map(function (t) {
-        return { localId: t.localId, id: t.id, componente: t.componente || null };
+        normalizeAsignaciones(t);
+        return {
+          localId: t.localId,
+          id: t.id,
+          componente: t.componente || null,
+          asignaciones: t.asignaciones || {},
+          cantidad: getTipAssigned(t)
+        };
       }),
       conjuntoConfig: e.conjuntoConfig ? {
         useStages: !!e.conjuntoConfig.useStages,
@@ -931,7 +1166,14 @@ var EstructuraEngine = (function () {
         var tip = e.tipologias.find(function (t) {
           return (row.id && t.id === row.id) || (row.localId && t.localId === row.localId);
         });
-        if (tip && row.componente) tip.componente = row.componente;
+        if (!tip) return;
+        if (row.componente) tip.componente = row.componente;
+        if (row.asignaciones && typeof row.asignaciones === 'object') {
+          tip.asignaciones = row.asignaciones;
+          normalizeAsignaciones(tip);
+        } else if (row.cantidad != null) {
+          setTipAssigned(tip, ROOT_BUCKET_ID, row.cantidad);
+        }
       });
     }
     if (cfg.conjuntoConfig && typeof cfg.conjuntoConfig === 'object') {
@@ -1242,7 +1484,17 @@ var EstructuraEngine = (function () {
       if (t === 'mixto' && !tip.componente) {
         errors.push('Tipología ' + (i + 1) + ': indica a qué componente pertenece.');
       }
+      normalizeAsignaciones(tip);
     });
+
+    var balance = assignmentBalance(estructura);
+    if (balance.buckets.length && balance.buckets.some(function (b) {
+      return b.capacity > 0 || b.assigned > 0;
+    })) {
+      balance.messages.forEach(function (msg) {
+        errors.push(msg);
+      });
+    }
     return errors;
   }
 
@@ -1306,6 +1558,17 @@ var EstructuraEngine = (function () {
     toggleMixtoComponent: toggleMixtoComponent,
     mixtoHint: mixtoHint,
     conceptualPhysicalUnits: conceptualPhysicalUnits,
+    ROOT_BUCKET_ID: ROOT_BUCKET_ID,
+    CASAS_BUCKET_ID: CASAS_BUCKET_ID,
+    LOTES_BUCKET_ID: LOTES_BUCKET_ID,
+    listCapacityBuckets: listCapacityBuckets,
+    bucketsForTipologia: bucketsForTipologia,
+    getTipAssigned: getTipAssigned,
+    setTipAssigned: setTipAssigned,
+    sumAssignedForBucket: sumAssignedForBucket,
+    assignmentBalance: assignmentBalance,
+    pruneTipologiaAsignaciones: pruneTipologiaAsignaciones,
+    normalizeAsignaciones: normalizeAsignaciones,
     configSnapshot: configSnapshot,
     applyConfigSnapshot: applyConfigSnapshot,
     validate: validate,

@@ -2318,6 +2318,93 @@ body.builder-has-dock .admin-toast--info {
   margin-top: 4px;
 }
 
+.builder-estructura-assign-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.builder-estructura-assign-balance.is-ok {
+  border-color: rgba(120, 200, 150, 0.28);
+}
+
+.builder-estructura-assign-balance.is-pending {
+  border-color: rgba(220, 180, 90, 0.28);
+}
+
+.builder-estructura-assign-balance.is-empty {
+  border-style: dashed;
+}
+
+.builder-estructura-assign-balance__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: var(--estructura-font-secondary);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.builder-estructura-assign-balance__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-estructura-assign-balance__nums {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.builder-estructura-assign-balance__status {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.builder-estructura-assign-balance__row.is-full .builder-estructura-assign-balance__status {
+  color: rgba(140, 220, 170, 0.9);
+}
+
+.builder-estructura-assign-balance__row.is-under .builder-estructura-assign-balance__status {
+  color: rgba(230, 190, 100, 0.95);
+}
+
+.builder-estructura-assign-balance__row.is-over .builder-estructura-assign-balance__status {
+  color: rgba(240, 150, 150, 0.95);
+}
+
+.builder-estructura-assign-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.builder-estructura-assign-row__cap {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.builder-estructura-acc__qty {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+}
+
 .builder-estructura-ambiente {
   display: flex;
   gap: 8px;
