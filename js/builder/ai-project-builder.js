@@ -1420,96 +1420,12 @@ var AiProjectBuilderView = (function () {
 
   function renderExperiencia() {
     if (typeof ExperienciaEngine !== 'undefined') ExperienciaEngine.ensureState(state);
-    var exp = state.experiencia || { nodes: [], edges: [], reviewFlags: [] };
-    var applied = !!(state.estructura && state.estructura.appliedAt) ||
-      !!(state.architecture && state.architecture.appliedAt);
-    var nodes = exp.nodes || [];
-    var edges = exp.edges || [];
-    var active = nodes.filter(function (n) { return !n.orphaned; });
-    var orphans = nodes.filter(function (n) { return n.orphaned || n.status === 'review'; });
-
-    function childrenOf(nodeId) {
-      return edges
-        .filter(function (ed) { return ed.from === nodeId; })
-        .map(function (ed) {
-          return {
-            edge: ed,
-            node: nodes.find(function (n) { return n.id === ed.to; })
-          };
-        })
-        .filter(function (x) { return x.node; });
+    if (typeof ExperienciaCanvas !== 'undefined' && ExperienciaCanvas.shellHtml) {
+      return ExperienciaCanvas.shellHtml(state);
     }
-
-    var roots = active.filter(function (n) {
-      return n.kind === 'hero' || n.id === 'exp-hero';
-    });
-    if (!roots.length && active.length) roots = [active[0]];
-
-    function renderBranch(n, depth) {
-      depth = depth || 0;
-      var kids = childrenOf(n.id);
-      var statusCls = n.status === 'ready' ? 'is-ready'
-        : (n.status === 'review' ? 'is-review' : 'is-pending');
-      var html =
-        '<div class="builder-exp-node ' + statusCls + '" style="--exp-depth:' + depth + '">' +
-          '<div class="builder-exp-node__row">' +
-            '<span class="builder-exp-node__kind">' + AdminUI.escapeHtml(n.kind || 'nodo') + '</span>' +
-            '<strong class="builder-exp-node__label">' + AdminUI.escapeHtml(n.label || n.id) + '</strong>' +
-            '<span class="builder-exp-node__status">' + AdminUI.escapeHtml(n.status || 'pending') + '</span>' +
-          '</div>' +
-          (n.transitionMedia
-            ? '<p class="builder-exp-node__media">Transición: media asociada (' +
-              AdminUI.escapeHtml(String(n.transitionSeconds || 4)) + 's)</p>'
-            : '<p class="builder-exp-node__media builder-exp-node__media--empty">Transición: pendiente (4–5 s)</p>') +
-        '</div>';
-      kids.forEach(function (k) {
-        html += '<div class="builder-exp-edge" style="--exp-depth:' + (depth + 1) + '">' +
-          '<span class="builder-exp-edge__label">' + AdminUI.escapeHtml(k.edge.label || '→') + '</span>' +
-        '</div>';
-        html += renderBranch(k.node, depth + 1);
-      });
-      return html;
-    }
-
-    var treeHtml = roots.length
-      ? roots.map(function (r) { return renderBranch(r, 0); }).join('')
-      : '<p class="builder-step-desc">Aún no hay nodos. Aplica la estructura o genera el recorrido base.</p>';
-
-    var flagsHtml = (exp.reviewFlags || []).length
-      ? '<ul class="builder-exp-flags">' +
-        exp.reviewFlags.map(function (f) {
-          return '<li class="builder-exp-flag is-' + AdminUI.escapeHtml(f.severity || 'recomendado') + '">' +
-            AdminUI.escapeHtml(f.message || '') + '</li>';
-        }).join('') +
-        '</ul>'
-      : '';
-
-    var orphansHtml = orphans.length
-      ? '<div class="builder-exp-orphans">' +
-          '<h3>En revisión / huérfanos</h3>' +
-          orphans.map(function (n) {
-            return '<div class="builder-exp-node is-review">' +
-              AdminUI.escapeHtml(n.label || n.id) +
-            '</div>';
-          }).join('') +
-        '</div>'
-      : '';
-
     return '<div class="builder-step-content builder-step-content--experiencia">' +
       stepTitleHtml('Experiencia') +
-      '<p class="builder-step-desc">Orquesta el recorrido del showroom a partir de la estructura. ' +
-        'No inventa media: solo nodos, conexiones y slots de transición.</p>' +
-      (!applied
-        ? '<div class="builder-warn-banner">Pendiente: aplica la estructura para generar el recorrido base.</div>'
-        : '<div class="builder-ready-banner">Estructura aplicada · ' + active.length + ' nodos activos</div>') +
-      '<div class="builder-exp-actions">' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
-          'Sincronizar desde estructura</button>' +
-      '</div>' +
-      flagsHtml +
-      '<div class="builder-exp-tree" data-exp-tree>' + treeHtml + '</div>' +
-      orphansHtml +
-    '</div>';
+      '<p class="builder-step-desc">Editor visual no disponible.</p></div>';
   }
 
   function renderBranding() {
@@ -3861,6 +3777,15 @@ var AiProjectBuilderView = (function () {
           renderStepContent();
           updateNavButtons();
           AdminNotify.success('Experiencia sincronizada desde estructura.');
+        });
+      }
+      if (typeof ExperienciaCanvas !== 'undefined' && ExperienciaCanvas.mount) {
+        ExperienciaCanvas.mount(rootEl, state, {
+          saveState: saveState,
+          onChange: function () {
+            saveState();
+            updateNavButtons();
+          }
         });
       }
       return;

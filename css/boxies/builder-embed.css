@@ -80,7 +80,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 .boxies-workspace:has(.builder-step-content--hero),
 .boxies-workspace__panel:has(.builder-step-content--hero),
 .boxies-workspace:has(.builder-step-content--estructura),
-.boxies-workspace__panel:has(.builder-step-content--estructura) {
+.boxies-workspace__panel:has(.builder-step-content--estructura),
+.boxies-workspace:has(.builder-step-content--experiencia),
+.boxies-workspace__panel:has(.builder-step-content--experiencia) {
   height: calc(
     100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px)
   );
@@ -94,7 +96,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 #boxiesContent.boxies-builder-embed:has(.builder-step-content--hero),
 #boxiesContent.is-builder-embed:has(.builder-step-content--hero),
 #boxiesContent.boxies-builder-embed:has(.builder-step-content--estructura),
-#boxiesContent.is-builder-embed:has(.builder-step-content--estructura) {
+#boxiesContent.is-builder-embed:has(.builder-step-content--estructura),
+#boxiesContent.boxies-builder-embed:has(.builder-step-content--experiencia),
+#boxiesContent.is-builder-embed:has(.builder-step-content--experiencia) {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -105,7 +109,8 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 }
 
 #boxiesContent:has(.builder-step-content--hero) .builder-app,
-#boxiesContent:has(.builder-step-content--estructura) .builder-app {
+#boxiesContent:has(.builder-step-content--estructura) .builder-app,
+#boxiesContent:has(.builder-step-content--experiencia) .builder-app {
   flex: 1 1 0%;
   min-height: 0;
   height: 100%;
@@ -149,6 +154,28 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   display: flex;
   flex-direction: column;
   padding: 14px clamp(16px, 2.4vw, 28px) 10px;
+  box-sizing: border-box;
+}
+
+/* Experiencia canvas — same non-scrolling frame as Hero */
+#boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,
+.boxies-builder-embed:has(.builder-step-content--experiencia) .builder-workspace,
+#boxiesContent:has(.builder-step-content--experiencia) .builder-main-panel,
+.boxies-builder-embed:has(.builder-step-content--experiencia) .builder-main-panel,
+#boxiesContent:has(.builder-step-content--experiencia) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--experiencia) #builderStepPanel {
+  flex: 1 1 0%;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+
+#boxiesContent:has(.builder-step-content--experiencia) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--experiencia) #builderStepPanel {
+  padding: 0;
   box-sizing: border-box;
 }
 
