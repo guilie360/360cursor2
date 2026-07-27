@@ -7,7 +7,9 @@ var BoxiesPrefs = (function () {
   function defaults() {
     return {
       navCollapsed: false,
-      railCollapsed: false
+      railCollapsed: false,
+      experienciaCanvasMode: false,
+      _expCanvasRestore: null
     };
   }
 

@@ -2770,6 +2770,122 @@ button.builder-estructura-chip {
   max-width: none !important;
 }
 
+.builder-exp-chrome__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.builder-exp-chrome__icon-btn {
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.builder-exp-chrome__icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.builder-exp-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.builder-exp-modal[hidden] {
+  display: none !important;
+}
+
+.builder-exp-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.builder-exp-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 32px));
+  padding: 18px 18px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(14, 14, 14, 0.98);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.builder-exp-modal__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 560;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.builder-exp-modal__body {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.builder-exp-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.builder-exp-modal__actions .is-danger {
+  background: rgba(160, 60, 60, 0.35);
+  border-color: rgba(220, 100, 100, 0.45);
+  color: #ffc9c9;
+}
+
+.builder-menu-hint.is-warn {
+  color: rgba(220, 160, 120, 0.9);
+}
+
+body.boxies-exp-canvas-mode .builder-progress-sidebar,
+html.boxies-exp-canvas-mode .builder-progress-sidebar {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+body.boxies-exp-canvas-mode .builder-workspace,
+html.boxies-exp-canvas-mode .builder-workspace {
+  left: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+body.boxies-exp-canvas-mode .builder-exp-inspector,
+body.boxies-exp-canvas-mode .builder-exp-inspector-tab {
+  display: none !important;
+}
+
+body.boxies-exp-canvas-mode .builder-exp-workspace {
+  border-radius: 0;
+}
+
+.builder-exp-workspace.is-canvas-mode {
+  border-radius: 0;
+}
+
+.builder-exp-card__title[data-exp-card-title] {
+  cursor: text;
+}
+
 .builder-exp-chrome {
   display: flex;
   align-items: flex-start;

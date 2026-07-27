@@ -1,13 +1,37 @@
-/* BOXIES V5.9.58 — Experiencia: elementos en tarjeta, assets, cortar vínculo */
+/* BOXIES V5.9.59 — Experiencia: estructura, renombrar, fit/canvas mode, draft/reset */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
+  var CANVAS_MODE_KEY = 'experienciaCanvasMode';
 
   function esc(v) {
     if (typeof AdminUI !== 'undefined' && AdminUI.escapeHtml) return AdminUI.escapeHtml(v);
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function isCanvasMode() {
+    if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.load) {
+      return !!BoxiesPrefs.load()[CANVAS_MODE_KEY];
+    }
+    return document.body.classList.contains('boxies-exp-canvas-mode');
+  }
+
+  function setCanvasMode(on, restore) {
+    on = !!on;
+    document.body.classList.toggle('boxies-exp-canvas-mode', on);
+    document.documentElement.classList.toggle('boxies-exp-canvas-mode', on);
+    if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.save) {
+      var patch = {};
+      patch[CANVAS_MODE_KEY] = on;
+      if (restore) {
+        patch._expCanvasRestore = restore;
+      } else if (!on) {
+        patch._expCanvasRestore = null;
+      }
+      BoxiesPrefs.save(patch);
+    }
   }
 
   function shellHtml(state) {
@@ -17,29 +41,37 @@ var ExperienciaCanvas = (function () {
     var canvas = exp.canvas || {};
     var inspectorOpen = canvas.inspectorOpen === true;
     var inspectorCollapsed = canvas.inspectorCollapsed === true;
-    var inspectorVisible = inspectorOpen && !inspectorCollapsed;
-    var showInspectorTab = inspectorOpen && inspectorCollapsed;
+    var canvasMode = isCanvasMode();
+    var inspectorVisible = !canvasMode && inspectorOpen && !inspectorCollapsed;
+    var showInspectorTab = !canvasMode && inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
     var inGroup = !!(canvas.activeGroupId);
+    var draftHint = exp.dirty ? ' · sin guardar' : (exp._draftSaved ? ' · borrador OK' : '');
 
     return '' +
-      '<div class="builder-step-content builder-step-content--experiencia">' +
+      '<div class="builder-step-content builder-step-content--experiencia' +
+        (canvasMode ? ' is-canvas-mode' : '') + '">' +
         '<div class="builder-exp-chrome">' +
           '<div class="builder-exp-chrome__left">' +
             '<h2 class="builder-step-title">Experiencia</h2>' +
             '<p class="builder-exp-chrome__sub">Editor del flujo del showroom · ' +
               active + ' nodos' +
               (inGroup ? ' · dentro de grupo' : '') +
+              esc(draftHint) +
             '</p>' +
           '</div>' +
           '<div class="builder-exp-chrome__actions">' +
             (inGroup
               ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
               : '') +
-            (exp.legacySnapshot
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpRestoreLegacyBtn">' +
-                'Restaurar mapa legacy</button>'
-              : '') +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary builder-exp-chrome__icon-btn" id="builderExpResetBtn"' +
+              ' data-tooltip="Reiniciar flujo" title="Reiniciar flujo" aria-label="Reiniciar flujo">' +
+              (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
+                ? BuilderIcons.render('rotate-ccw')
+                : '↶') +
+            '</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpDraftBtn">' +
+              'Guardar borrador</button>' +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
               'Actualizar desde Hero</button>' +
           '</div>' +
@@ -47,13 +79,17 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-exp-workspace' +
           (inspectorVisible ? ' has-inspector' : '') +
           (showInspectorTab ? ' has-inspector-tab' : '') +
+          (canvasMode ? ' is-canvas-mode' : '') +
           '" data-exp-workspace>' +
           '<div class="builder-exp-stage" data-exp-stage>' +
             '<div class="builder-exp-toolbar" data-exp-toolbar role="toolbar" aria-label="Herramientas del canvas">' +
               toolBtn('select', 'Seleccionar', 'layout-grid') +
               toolBtn('cut', 'Cortar vínculo', 'scissors') +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
-              toolBtn('relayout', 'Auto ordenar', 'layers', true) +
+              toolBtn('fit', 'Ajustar vista', 'maximize', true) +
+              toolBtn('canvas-mode',
+                canvasMode ? 'Mostrar paneles' : 'Modo canvas',
+                'panel', true) +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('minimap', minimapOn ? 'Ocultar minimapa' : 'Mostrar minimapa', 'eye', true) +
             '</div>' +
@@ -70,6 +106,7 @@ var ExperienciaCanvas = (function () {
             '</div>' +
             '<div class="builder-exp-ctx" data-exp-ctx hidden></div>' +
             '<div class="builder-exp-picker" data-exp-picker hidden></div>' +
+            '<div class="builder-exp-modal" data-exp-modal hidden></div>' +
             '<button type="button" class="builder-exp-inspector-tab" data-exp-inspector-expand' +
               ' aria-label="Mostrar propiedades" data-tooltip="Mostrar propiedades" title="Mostrar propiedades">›</button>' +
           '</div>' +
@@ -248,13 +285,13 @@ var ExperienciaCanvas = (function () {
     } else if (isAction) {
       body =
         '<div class="builder-exp-card__type">ACCIÓN</div>' +
-        '<div class="builder-exp-card__title">' + esc(n.label || 'Acción') + '</div>' +
+        '<div class="builder-exp-card__title" data-exp-card-title="' + esc(n.id) + '">' + esc(n.label || 'Acción') + '</div>' +
         '<div class="builder-exp-card__info">' + esc(info || (n.config && n.config.actionType) || '') + '</div>' +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
     } else if (isScene) {
       body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'ESCENA') + '</div>' +
-        '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
+        '<div class="builder-exp-card__title" data-exp-card-title="' + esc(n.id) + '">' + esc(n.label || n.id) + '</div>' +
         mediaBlockHtml(state || {}, n) +
         elementosBlockHtml(n, selectedIx);
 
@@ -271,7 +308,7 @@ var ExperienciaCanvas = (function () {
     } else {
       body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'NODO') + '</div>' +
-        '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
+        '<div class="builder-exp-card__title" data-exp-card-title="' + esc(n.id) + '">' + esc(n.label || n.id) + '</div>' +
         (info ? '<div class="builder-exp-card__info">' + esc(info) + '</div>' : '') +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
       if (portsOut.length > 1) {
@@ -481,22 +518,47 @@ var ExperienciaCanvas = (function () {
       var selIx = selIxId ? ExperienciaEngine.getInteraction(state, n.id, selIxId) : null;
 
       if (selIx) {
+        var structLink = ExperienciaEngine.resolveStructureLink
+          ? ExperienciaEngine.resolveStructureLink(state, selIx)
+          : null;
+        var structOpts = ExperienciaEngine.listStructureLinkOptions
+          ? ExperienciaEngine.listStructureLinkOptions(state)
+          : [];
         html += '<div class="builder-exp-inspector__section">Elemento</div>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Nombre</label>' +
+            '<input type="text" data-exp-ix-label maxlength="120" value="' +
+              esc(selIx.label || '') + '">' +
+          '</div>' +
           '<div class="builder-exp-inspector__grid">' +
-            row('Nombre', selIx.label || '—') +
             row('Tipo', ExperienciaEngine.interactionTypeLabel
               ? ExperienciaEngine.interactionTypeLabel(selIx.type)
               : selIx.type) +
             row('Puerto', selIx.portId || selIx.id) +
             row('Acción', (selIx.actionType || (selIx.behavior && selIx.behavior.type) || '—')) +
             row('Estado', selIx.enabled === false ? 'Deshabilitado' : 'Activo') +
-            row('Posición', (selIx.x != null || selIx.y != null)
-              ? ((selIx.x != null ? selIx.x : '—') + ', ' + (selIx.y != null ? selIx.y : '—'))
-              : 'Sin definir') +
           '</div>' +
+          '<div class="builder-exp-inspector__section">Vincular con Estructura</div>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Elemento estructural</label>' +
+            '<select data-exp-ix-structure>' +
+              '<option value="">Ninguno / Personalizado</option>' +
+              structOpts.map(function (opt) {
+                var sel = (selIx.structureId && String(selIx.structureId) === String(opt.id)) ||
+                  (selIx.structureKey && selIx.structureKey === opt.key);
+                return '<option value="' + esc(opt.id) + '" data-key="' + esc(opt.key) + '"' +
+                  ' data-kind="' + esc(opt.kind || '') + '"' +
+                  ' data-label="' + esc(opt.label) + '"' +
+                  (sel ? ' selected' : '') + '>' + esc(opt.label) +
+                  (opt.kind ? (' · ' + opt.kind) : '') + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          (structLink
+            ? ('<p class="builder-menu-hint' + (structLink.missing ? ' is-warn' : '') + '">' +
+              esc(structLink.display) + '</p>')
+            : '<p class="builder-menu-hint">Opcional. No duplica Estructura; solo referencia.</p>') +
           '<div class="builder-exp-inspector__actions">' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="rename" data-exp-ix-id="' +
-              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">Renombrar</button>' +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="toggle" data-exp-ix-id="' +
               esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">' +
               (selIx.enabled === false ? 'Habilitar' : 'Deshabilitar') + '</button>' +
@@ -512,8 +574,11 @@ var ExperienciaCanvas = (function () {
       }
 
       html += '<div class="builder-exp-inspector__section">Escena</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Nombre de la tarjeta</label>' +
+          '<input type="text" data-exp-node-label maxlength="120" value="' + esc(n.label || '') + '">' +
+        '</div>' +
         '<div class="builder-exp-inspector__grid">' +
-          row('Nombre', n.label || '—') +
           row('Tipo', n.typeLabel || n.kind) +
           row('Asset', media.filename || 'Sin asignar') +
           row('Estado media', media.statusLabel || 'Pendiente') +
@@ -554,7 +619,11 @@ var ExperienciaCanvas = (function () {
     }
 
     if (n.kind === 'action') {
-      html += '<div class="builder-exp-inspector__grid">' +
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre de la tarjeta</label>' +
+        '<input type="text" data-exp-node-label maxlength="120" value="' + esc(n.label || '') + '">' +
+      '</div>' +
+        '<div class="builder-exp-inspector__grid">' +
         row('Tipo', (n.config && n.config.actionType) || '—') +
         row('Inline', (n.config && n.config.inline) ? 'Sí (sin cambiar escena)' : 'No') +
         row('Origen', names(conn.in, 'from')) +
@@ -563,7 +632,11 @@ var ExperienciaCanvas = (function () {
     }
 
     if (n.kind === 'structure' || n.kind === 'group') {
-      html += '<div class="builder-exp-inspector__grid">' +
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre de la tarjeta</label>' +
+        '<input type="text" data-exp-node-label maxlength="120" value="' + esc(n.label || '') + '">' +
+      '</div>' +
+        '<div class="builder-exp-inspector__grid">' +
         row('Elemento', n.label || '—') +
         row('Unidades', String(n.unitCount != null ? n.unitCount : '—')) +
         row('Origen', names(conn.in, 'from')) +
@@ -577,8 +650,11 @@ var ExperienciaCanvas = (function () {
     }
 
     if (n.kind === 'hotspot' || n.kind === 'selector-pisos') {
-      html += '<div class="builder-exp-inspector__grid">' +
-        row('Nombre', n.label || '—') +
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre de la tarjeta</label>' +
+        '<input type="text" data-exp-node-label maxlength="120" value="' + esc(n.label || '') + '">' +
+      '</div>' +
+        '<div class="builder-exp-inspector__grid">' +
         row('Legacy', 'Nodo V5.9.56 (no migrado automáticamente)') +
         row('Vinculado', (n.config && n.config.structureLabel) || '—') +
         row('Destino', names(conn.out, 'to')) +
@@ -587,7 +663,11 @@ var ExperienciaCanvas = (function () {
       return html;
     }
 
-    html += '<div class="builder-exp-inspector__grid">' +
+    html += '<div class="builder-field builder-exp-inspector__field">' +
+      '<label>Nombre de la tarjeta</label>' +
+      '<input type="text" data-exp-node-label maxlength="120" value="' + esc(n.label || '') + '">' +
+    '</div>' +
+      '<div class="builder-exp-inspector__grid">' +
       row('Estado', ExperienciaEngine.statusLabel(n)) +
       row('Tipo', n.kind || '—') +
       row('Origen', names(conn.in, 'from')) +
@@ -693,6 +773,9 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-exp-ctx__title">' +
         (multi ? ('Selección · ' + list.length) : esc((list[0] && list[0].label) || 'Nodo')) +
       '</div>' +
+      (!multi
+        ? '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="rename">Renombrar</button>'
+        : '') +
       (canDuplicate
         ? '<button type="button" class="builder-exp-ctx__item" data-exp-node-act="duplicate">' +
           (multi ? 'Duplicar selección' : 'Duplicar') + '</button>'
@@ -777,6 +860,7 @@ var ExperienciaCanvas = (function () {
     var minimapCanvas = rootEl.querySelector('[data-exp-minimap-canvas]');
     var ctxEl = rootEl.querySelector('[data-exp-ctx]');
     var pickerEl = rootEl.querySelector('[data-exp-picker]');
+    var modalEl = rootEl.querySelector('[data-exp-modal]');
     if (!viewport || !world || !nodesEl || !edgesEl) return null;
 
     var dragging = null;
@@ -814,6 +898,9 @@ var ExperienciaCanvas = (function () {
     }
 
     function persist() {
+      if (ExperienciaEngine.markExperienciaDirty) {
+        ExperienciaEngine.markExperienciaDirty(state);
+      }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
     }
@@ -1077,6 +1164,47 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
+      var nodeLabel = inspectorBody.querySelector('[data-exp-node-label]');
+      if (nodeLabel) {
+        nodeLabel.addEventListener('change', function () {
+          var nid = canvas().selectedId;
+          if (!nid) return;
+          ExperienciaEngine.renameNode(state, nid, nodeLabel.value);
+          renderAll(); persist();
+        });
+      }
+      var ixLabel = inspectorBody.querySelector('[data-exp-ix-label]');
+      if (ixLabel) {
+        ixLabel.addEventListener('change', function () {
+          var sceneId = canvas().selectedInteractionSceneId || canvas().selectedId;
+          var ixId = canvas().selectedInteractionId;
+          if (!sceneId || !ixId) return;
+          ExperienciaEngine.updateInteraction(state, sceneId, ixId, {
+            label: String(ixLabel.value || '').trim() || 'Elemento'
+          });
+          renderAll(); persist();
+        });
+      }
+      var structSel = inspectorBody.querySelector('[data-exp-ix-structure]');
+      if (structSel) {
+        structSel.addEventListener('change', function () {
+          var sceneId = canvas().selectedInteractionSceneId || canvas().selectedId;
+          var ixId = canvas().selectedInteractionId;
+          if (!sceneId || !ixId) return;
+          var opt = structSel.options[structSel.selectedIndex];
+          if (!structSel.value) {
+            ExperienciaEngine.linkInteractionToStructure(state, sceneId, ixId, null);
+          } else {
+            ExperienciaEngine.linkInteractionToStructure(state, sceneId, ixId, {
+              id: structSel.value,
+              key: opt.getAttribute('data-key'),
+              kind: opt.getAttribute('data-kind'),
+              label: opt.getAttribute('data-label')
+            });
+          }
+          renderAll(); persist();
+        });
+      }
       inspectorBody.querySelectorAll('[data-exp-ix-act]').forEach(function (btn) {
         btn.addEventListener('click', function (ev) {
           ev.preventDefault();
@@ -1140,8 +1268,9 @@ var ExperienciaCanvas = (function () {
 
     function syncInspectorChrome() {
       var c = canvas();
-      var visible = c.inspectorOpen === true && c.inspectorCollapsed !== true;
-      var showTab = c.inspectorOpen === true && c.inspectorCollapsed === true;
+      var modeOn = isCanvasMode();
+      var visible = !modeOn && c.inspectorOpen === true && c.inspectorCollapsed !== true;
+      var showTab = !modeOn && c.inspectorOpen === true && c.inspectorCollapsed === true;
       if (inspector) {
         if (visible) {
           inspector.classList.remove('is-closed');
@@ -1157,11 +1286,76 @@ var ExperienciaCanvas = (function () {
       if (workspace) {
         workspace.classList.toggle('has-inspector', visible);
         workspace.classList.toggle('has-inspector-tab', showTab);
+        workspace.classList.toggle('is-canvas-mode', modeOn);
+      }
+      var step = rootEl.querySelector('.builder-step-content--experiencia');
+      if (step) step.classList.toggle('is-canvas-mode', modeOn);
+      var modeBtn = rootEl.querySelector('[data-exp-tool="canvas-mode"]');
+      if (modeBtn) {
+        modeBtn.setAttribute('data-tooltip', modeOn ? 'Mostrar paneles' : 'Modo canvas');
+        modeBtn.setAttribute('aria-label', modeOn ? 'Mostrar paneles' : 'Modo canvas');
+        modeBtn.classList.toggle('is-active', modeOn);
       }
       requestAnimationFrame(function () {
         applyWorldTransform();
         paintMinimap();
         try { window.dispatchEvent(new Event('boxies:rail-toggle')); } catch (e) {}
+      });
+    }
+
+    function toggleCanvasMode() {
+      var next = !isCanvasMode();
+      var prefs = (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.load)
+        ? BoxiesPrefs.load()
+        : {};
+      if (next) {
+        var restore = {
+          railCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed
+            ? BoxiesPrefs.getRailCollapsed()
+            : document.body.classList.contains('boxies-rail-collapsed')),
+          navCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
+            ? BoxiesPrefs.getNavCollapsed()
+            : false),
+          inspectorOpen: canvas().inspectorOpen === true,
+          inspectorCollapsed: canvas().inspectorCollapsed === true
+        };
+        setCanvasMode(true, restore);
+        if (typeof BoxiesPrefs !== 'undefined') {
+          if (BoxiesPrefs.setRailCollapsed) BoxiesPrefs.setRailCollapsed(true);
+          if (BoxiesPrefs.setNavCollapsed) BoxiesPrefs.setNavCollapsed(true);
+        }
+        document.body.classList.add('boxies-rail-collapsed');
+        document.documentElement.classList.add('boxies-rail-collapsed');
+        document.documentElement.style.setProperty('--builder-rail-width', '0px');
+      } else {
+        var prev = prefs._expCanvasRestore || {};
+        setCanvasMode(false, null);
+        if (typeof BoxiesPrefs !== 'undefined') {
+          if (BoxiesPrefs.setRailCollapsed) {
+            BoxiesPrefs.setRailCollapsed(!!prev.railCollapsed);
+          }
+          if (BoxiesPrefs.setNavCollapsed) {
+            BoxiesPrefs.setNavCollapsed(!!prev.navCollapsed);
+          }
+        }
+        var railOn = !!prev.railCollapsed;
+        document.body.classList.toggle('boxies-rail-collapsed', railOn);
+        document.documentElement.classList.toggle('boxies-rail-collapsed', railOn);
+        document.documentElement.style.setProperty(
+          '--builder-rail-width',
+          railOn ? '52px' : '176px'
+        );
+        if (prev.inspectorOpen != null) canvas().inspectorOpen = !!prev.inspectorOpen;
+        if (prev.inspectorCollapsed != null) {
+          canvas().inspectorCollapsed = !!prev.inspectorCollapsed;
+        }
+      }
+      if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.update) {
+        try { BuilderProgressRail.update(rootEl, state); } catch (eRail) {}
+      }
+      renderAll();
+      requestAnimationFrame(function () {
+        onViewportResize();
       });
     }
 
@@ -1436,6 +1630,16 @@ var ExperienciaCanvas = (function () {
     function runNodeAction(act) {
       var ids = selectedIds();
       if (!ids.length) return;
+      if (act === 'rename') {
+        if (ids.length !== 1) return;
+        var rn = ExperienciaEngine.getNode(state, ids[0]);
+        if (!rn) return;
+        var nextName = window.prompt('Nombre de la tarjeta', rn.label || '');
+        if (nextName == null) return;
+        ExperienciaEngine.renameNode(state, rn.id, nextName.trim() || rn.label);
+        hideCtx(); renderAll(); persist();
+        return;
+      }
       if (act === 'duplicate') {
         if (ids.length === 1) {
           var copy = ExperienciaEngine.duplicateNode(state, ids[0]);
@@ -1658,7 +1862,16 @@ var ExperienciaCanvas = (function () {
           canvas().zoom = Math.max(MIN_ZOOM, (canvas().zoom || 1) / 1.15);
           renderAll(); persist(); return;
         }
+        if (tool === 'fit') {
+          fitView();
+          return;
+        }
+        if (tool === 'canvas-mode') {
+          toggleCanvasMode();
+          return;
+        }
         if (tool === 'relayout') {
+          /* Internal only — removed from toolbar UI in V5.9.59 */
           ExperienciaEngine.forceRelayout(state);
           fitView();
           if (api.onChange) api.onChange();
@@ -2128,16 +2341,138 @@ var ExperienciaCanvas = (function () {
     window.addEventListener('boxies:rail-toggle', onViewportResize);
 
     renderAll();
+    function showResetConfirm() {
+      if (!modalEl) {
+        if (!window.confirm('¿Reiniciar flujo?\n\nSe eliminarán del canvas todas las escenas, animaciones, conexiones y elementos de Experiencia. El Hero se conservará.')) {
+          return;
+        }
+        ExperienciaEngine.resetFlow(state);
+        renderAll();
+        fitView();
+        if (api.saveState) api.saveState();
+        else persist();
+        if (typeof AdminNotify !== 'undefined') {
+          AdminNotify.success('Flujo reiniciado. Solo queda el Hero.');
+        }
+        return;
+      }
+      modalEl.hidden = false;
+      modalEl.innerHTML =
+        '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
+        '<div class="builder-exp-modal__panel" role="dialog" aria-labelledby="expResetTitle">' +
+          '<h3 id="expResetTitle" class="builder-exp-modal__title">¿Reiniciar flujo?</h3>' +
+          '<p class="builder-exp-modal__body">Se eliminarán del canvas todas las escenas, animaciones, conexiones y elementos de Experiencia. El Hero se conservará.</p>' +
+          '<p class="builder-menu-hint">Los archivos del proyecto (projectAssets) no se eliminan.</p>' +
+          '<div class="builder-exp-modal__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>Cancelar</button>' +
+            '<button type="button" class="builder-header-action-btn is-danger" data-exp-modal-confirm>Reiniciar flujo</button>' +
+          '</div>' +
+        '</div>';
+      modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          modalEl.hidden = true;
+          modalEl.innerHTML = '';
+        });
+      });
+      var conf = modalEl.querySelector('[data-exp-modal-confirm]');
+      if (conf) {
+        conf.addEventListener('click', function () {
+          modalEl.hidden = true;
+          modalEl.innerHTML = '';
+          ExperienciaEngine.resetFlow(state);
+          renderAll();
+          fitView();
+          if (api.saveState) api.saveState();
+          else persist();
+          if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.success('Flujo reiniciado. Solo queda el Hero.');
+          }
+        });
+      }
+    }
+
+    function saveDraft() {
+      if (ExperienciaEngine.markExperienciaSaved) {
+        ExperienciaEngine.markExperienciaSaved(state);
+      }
+      if (api.saveState) api.saveState();
+      else if (api.onChange) api.onChange();
+      else if (typeof BuilderSession !== 'undefined') BuilderSession.save(state);
+      renderAll();
+      if (typeof AdminNotify !== 'undefined') {
+        AdminNotify.success('Borrador de Experiencia guardado.');
+      }
+    }
+
+    /* Chrome actions */
+    var draftBtn = rootEl.querySelector('#builderExpDraftBtn');
+    if (draftBtn) {
+      draftBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        saveDraft();
+      });
+    }
+    var resetBtn = rootEl.querySelector('#builderExpResetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        showResetConfirm();
+      });
+    }
+    var resyncBtn = rootEl.querySelector('#builderExpResyncBtn');
+    if (resyncBtn) {
+      resyncBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        if (ExperienciaEngine.syncHeroOnly) ExperienciaEngine.syncHeroOnly(state);
+        else ExperienciaEngine.ensureFlow(state);
+        renderAll();
+        persist();
+        if (typeof AdminNotify !== 'undefined') {
+          AdminNotify.success('Hero sincronizado desde la sección Hero.');
+        }
+      });
+    }
+
+    if (nodesEl) {
+      nodesEl.addEventListener('dblclick', function (ev) {
+        var title = ev.target.closest('[data-exp-card-title]');
+        if (!title) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        var nid = title.getAttribute('data-exp-card-title');
+        var n = ExperienciaEngine.getNode(state, nid);
+        if (!n || n.kind === 'hero') return;
+        var next = window.prompt('Nombre de la tarjeta', n.label || '');
+        if (next == null) return;
+        ExperienciaEngine.renameNode(state, nid, next.trim() || n.label);
+        renderAll();
+        persist();
+      });
+    }
+
     requestAnimationFrame(function () {
+      if (isCanvasMode()) {
+        document.body.classList.add('boxies-exp-canvas-mode');
+        document.documentElement.classList.add('boxies-exp-canvas-mode');
+        document.documentElement.style.setProperty('--builder-rail-width', '0px');
+      }
       if (canvas().panX === 40 && canvas().panY === 40) fitView();
       else onViewportResize();
     });
 
-    return { refresh: renderAll, fitView: fitView };
+    return {
+      refresh: renderAll,
+      fitView: fitView,
+      toggleCanvasMode: toggleCanvasMode,
+      saveDraft: saveDraft,
+      showResetConfirm: showResetConfirm
+    };
   }
 
   return {
     shellHtml: shellHtml,
-    mount: mount
+    mount: mount,
+    isCanvasMode: isCanvasMode,
+    setCanvasMode: setCanvasMode
   };
 })();

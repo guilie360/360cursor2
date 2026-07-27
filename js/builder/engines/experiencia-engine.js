@@ -1,5 +1,4 @@
-/* BOXIES V5.9.58 — Experiencia: editor de showroom (elementos en escena + assets)
- * Extiende V5.9.57. Separar “agregar elemento” de “qué ocurre después”. */
+/* BOXIES V5.9.59 — Experiencia: vínculos Estructura, renombrar, fit/canvas mode, reset/draft */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -163,6 +162,7 @@ var ExperienciaEngine = (function () {
       reviewFlags: [],
       userOverrides: false,
       legacySnapshot: null,
+      resetSnapshots: [],
       canvas: {
         panX: 40,
         panY: 40,
@@ -190,6 +190,9 @@ var ExperienciaEngine = (function () {
     if (!Array.isArray(exp.nodes)) exp.nodes = [];
     if (!Array.isArray(exp.edges)) exp.edges = [];
     if (!Array.isArray(exp.reviewFlags)) exp.reviewFlags = [];
+    if (!Array.isArray(exp.resetSnapshots)) exp.resetSnapshots = [];
+    if (!Array.isArray(exp.archivedLegacyNodes)) exp.archivedLegacyNodes = [];
+    if (!Array.isArray(exp.archivedInlineNodes)) exp.archivedInlineNodes = [];
     if (!exp.canvas || typeof exp.canvas !== 'object') {
       exp.canvas = emptyState().canvas;
     }
@@ -265,6 +268,14 @@ var ExperienciaEngine = (function () {
       behavior: (partial && partial.behavior) || null,
       actionType: (partial && partial.actionType) || null,
       structureRef: (partial && partial.structureRef) || null,
+      structureKey: (partial && partial.structureKey) ||
+        (partial && partial.structureRef && partial.structureRef.key) || null,
+      structureId: (partial && partial.structureId) ||
+        (partial && partial.structureRef && partial.structureRef.id) || null,
+      structureKind: (partial && partial.structureKind) ||
+        (partial && partial.structureRef && partial.structureRef.kind) || null,
+      structureLabel: (partial && partial.structureLabel) ||
+        (partial && partial.structureRef && partial.structureRef.label) || null,
       legacyNodeId: (partial && partial.legacyNodeId) || null,
       /* Extensible hotspot / control placement (editor visual futuro) */
       x: partial && partial.x != null ? partial.x : (cfg.x != null ? cfg.x : null),
@@ -543,6 +554,10 @@ var ExperienciaEngine = (function () {
       actionType: extras.actionType || null,
       behavior: extras.behavior || null,
       structureRef: extras.structureRef || null,
+      structureKey: extras.structureKey || null,
+      structureId: extras.structureId || null,
+      structureKind: extras.structureKind || null,
+      structureLabel: extras.structureLabel || null,
       legacyNodeId: extras.legacyNodeId || null,
       group: extras.group || null
     });
@@ -564,6 +579,16 @@ var ExperienciaEngine = (function () {
     });
     if (patch && patch.label) {
       ix.label = patch.label;
+      /* Keep edge labels in sync; never change port ids */
+      var exp = ensureState(state);
+      var portId = ix.portId || ix.id;
+      (exp.edges || []).forEach(function (ed) {
+        var from = ed.sourceNodeId || ed.from;
+        var pid = ed.sourcePortId || ed.portId;
+        if (from === sceneId && pid === portId) {
+          ed.sourcePortLabel = ix.label;
+        }
+      });
     }
     mirrorHotspotsFromInteractions(scene);
     syncScenePorts(scene);
@@ -600,7 +625,11 @@ var ExperienciaEngine = (function () {
     return addInteractionToScene(state, sceneId, ix.type, (ix.label || 'Interacción') + ' copia', {
       actionType: ix.actionType,
       behavior: ix.behavior ? JSON.parse(JSON.stringify(ix.behavior)) : null,
-      structureRef: ix.structureRef,
+      structureRef: ix.structureRef ? JSON.parse(JSON.stringify(ix.structureRef)) : null,
+      structureKey: ix.structureKey,
+      structureId: ix.structureId,
+      structureKind: ix.structureKind,
+      structureLabel: ix.structureLabel,
       group: ix.group
     });
   }
@@ -1105,6 +1134,203 @@ var ExperienciaEngine = (function () {
     });
 
     return items;
+  }
+
+  /** Flat linkable options from live Estructura (no hardcoded towers). */
+  function listStructureLinkOptions(state) {
+    var tree = listStructureLibrary(state) || [];
+    var out = [];
+    function walk(list) {
+      (list || []).forEach(function (it) {
+        if (!it) return;
+        if (it.id && it.id !== 'proj-root') {
+          out.push({
+            id: String(it.id),
+            label: it.label || String(it.id),
+            kind: it.kind || 'componente',
+            stageId: it.stageId || null,
+            capacity: it.capacity != null ? it.capacity : null,
+            key: String(it.kind || 'item') + ':' + String(it.id)
+          });
+        }
+        if (it.children && it.children.length) walk(it.children);
+      });
+    }
+    walk(tree);
+    return out;
+  }
+
+  function resolveStructureLink(state, ix) {
+    if (!ix) return null;
+    var sid = ix.structureId ||
+      (ix.structureRef && (ix.structureRef.id || ix.structureRef.structureId)) || null;
+    var skey = ix.structureKey ||
+      (ix.structureRef && ix.structureRef.key) || null;
+    if (!sid && !skey) return null;
+    var opts = listStructureLinkOptions(state);
+    var found = null;
+    for (var i = 0; i < opts.length; i++) {
+      if ((sid && opts[i].id === String(sid)) || (skey && opts[i].key === skey)) {
+        found = opts[i];
+        break;
+      }
+    }
+    if (found) {
+      return {
+        ok: true,
+        missing: false,
+        id: found.id,
+        key: found.key,
+        kind: found.kind,
+        label: found.label,
+        display: found.label + ' — Estructura'
+      };
+    }
+    return {
+      ok: false,
+      missing: true,
+      id: sid,
+      key: skey,
+      kind: ix.structureKind || null,
+      label: ix.structureLabel || null,
+      display: 'Referencia no disponible'
+    };
+  }
+
+  function linkInteractionToStructure(state, sceneId, interactionId, item, options) {
+    options = options || {};
+    var ix = getInteraction(state, sceneId, interactionId);
+    if (!ix) return null;
+    if (!item || !item.id) {
+      ix.structureKey = null;
+      ix.structureId = null;
+      ix.structureKind = null;
+      ix.structureLabel = null;
+      ix.structureRef = null;
+      return ix;
+    }
+    var key = item.key || (String(item.kind || 'item') + ':' + String(item.id));
+    ix.structureKey = key;
+    ix.structureId = String(item.id);
+    ix.structureKind = item.kind || null;
+    ix.structureLabel = item.label || null;
+    ix.structureRef = {
+      key: key,
+      id: String(item.id),
+      kind: item.kind || null,
+      label: item.label || null,
+      stageId: item.stageId || null
+    };
+    var generic = !ix.label ||
+      ix.label === ix.type ||
+      ix.label === 'HOTSPOT' ||
+      ix.label === 'BUTTON' ||
+      ix.label === 'SELECTOR' ||
+      ix.label === 'Hotspot' ||
+      ix.label === 'Botón' ||
+      ix.label === 'Control';
+    if (options.inheritLabel !== false && generic && item.label) {
+      ix.label = item.label;
+    }
+    var scene = getNode(state, sceneId);
+    if (scene) syncScenePorts(scene);
+    return ix;
+  }
+
+  function renameNode(state, nodeId, label) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var next = String(label == null ? '' : label).trim();
+    if (!next) return n;
+    n.label = next;
+    return n;
+  }
+
+  /** Sync Hero card from heroContent only — keep nodes/edges/positions. */
+  function syncHeroOnly(state) {
+    var exp = ensureState(state);
+    ensureHeroContent(state);
+    var prevHero = exp.nodes.find(function (n) {
+      return n.id === 'exp-hero' || n.kind === 'hero';
+    });
+    var hero = buildHeroNode(state, prevHero);
+    var others = exp.nodes.filter(function (n) {
+      return n.id !== 'exp-hero' && n.kind !== 'hero';
+    });
+    exp.nodes = [hero].concat(others);
+    var portIds = {};
+    (hero.ports || []).forEach(function (p) { portIds[p.id] = true; });
+    exp.edges = (exp.edges || []).map(normalizeEdge).filter(function (ed) {
+      if ((ed.sourceNodeId || ed.from || ed.sourceId) !== hero.id) return true;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      if (pid === 'out' || pid === 'hero-iniciar' || pid === 'hero-btn-right') return true;
+      return !!portIds[pid];
+    });
+    return exp;
+  }
+
+  /**
+   * Reset Experiencia to Hero-only. Archives flow JSON; never touches projectAssets.
+   */
+  function resetFlow(state) {
+    var exp = ensureState(state);
+    if (!Array.isArray(exp.resetSnapshots)) exp.resetSnapshots = [];
+    try {
+      exp.resetSnapshots.push({
+        at: new Date().toISOString(),
+        reason: 'V5.9.59 resetFlow',
+        nodes: JSON.parse(JSON.stringify(exp.nodes || [])),
+        edges: JSON.parse(JSON.stringify(exp.edges || [])),
+        canvas: {
+          panX: exp.canvas && exp.canvas.panX,
+          panY: exp.canvas && exp.canvas.panY,
+          zoom: exp.canvas && exp.canvas.zoom,
+          activeGroupId: exp.canvas && exp.canvas.activeGroupId
+        }
+      });
+      if (exp.resetSnapshots.length > 8) {
+        exp.resetSnapshots = exp.resetSnapshots.slice(-8);
+      }
+    } catch (eSnap) {}
+
+    ensureHeroContent(state);
+    var hero = buildHeroNode(state, null);
+    hero.x = 48;
+    hero.y = 80;
+    hero.userMoved = false;
+    exp.nodes = [hero];
+    exp.edges = [];
+    exp.mode = 'flow';
+    exp.version = Math.max(2, exp.version || 2);
+    exp.canvas.activeGroupId = null;
+    exp.canvas.selectedId = hero.id;
+    exp.canvas.selectedIds = [hero.id];
+    exp.canvas.selectedEdgeId = null;
+    exp.canvas.selectedEdgeIds = [];
+    exp.canvas.selectedInteractionId = null;
+    exp.canvas.selectedInteractionSceneId = null;
+    exp.canvas.panX = 40;
+    exp.canvas.panY = 40;
+    exp.canvas.zoom = 1;
+    exp.dirty = true;
+    exp._draftSaved = false;
+    /* projectAssets / estructura / heroContent / menu untouched */
+    return exp;
+  }
+
+  function markExperienciaDirty(state) {
+    var exp = ensureState(state);
+    exp.dirty = true;
+    exp._draftSaved = false;
+    return exp;
+  }
+
+  function markExperienciaSaved(state) {
+    var exp = ensureState(state);
+    exp.dirty = false;
+    exp._draftSaved = true;
+    exp.draftSavedAt = new Date().toISOString();
+    return exp;
   }
 
   function createNodeFromMenu(state, menuItem, at, fromEdge) {
@@ -1871,6 +2097,14 @@ var ExperienciaEngine = (function () {
     archiveInlineActionNodes: archiveInlineActionNodes,
     migrateEmbeddedInteractions: migrateEmbeddedInteractions,
     listStructureLibrary: listStructureLibrary,
+    listStructureLinkOptions: listStructureLinkOptions,
+    resolveStructureLink: resolveStructureLink,
+    linkInteractionToStructure: linkInteractionToStructure,
+    renameNode: renameNode,
+    syncHeroOnly: syncHeroOnly,
+    resetFlow: resetFlow,
+    markExperienciaDirty: markExperienciaDirty,
+    markExperienciaSaved: markExperienciaSaved,
     createNodeFromMenu: createNodeFromMenu,
     createStructureLinkedNode: createStructureLinkedNode,
     addManualEdge: addManualEdge,
