@@ -1,4 +1,4 @@
-/* BOXIES V5.9.56 — Experiencia canvas UI: fondo neutro, inspector colapsable, toolbar limpia */
+/* BOXIES V5.9.57 — Experiencia: escenas con interacciones embebidas (hotspots/controles) */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -112,6 +112,28 @@ var ExperienciaCanvas = (function () {
       iconHtml + '</button>';
   }
 
+  function interactionRowsHtml(n, list, sectionLabel) {
+    if (!list || !list.length) return '';
+    return '<div class="builder-exp-card__section">' + esc(sectionLabel) + '</div>' +
+      '<div class="builder-exp-card__ports">' +
+      list.map(function (ix) {
+        var pid = ix.portId || ix.id;
+        var disabled = ix.enabled === false;
+        return '<div class="builder-exp-card__irow is-interaction' + (disabled ? ' is-disabled' : '') +
+          '" data-exp-irow="' + esc(pid) + '"' +
+          ' data-exp-interaction="' + esc(ix.id) + '"' +
+          ' data-exp-scene="' + esc(n.id) + '">' +
+          '<span>' + esc(ix.label || ix.type) + '</span>' +
+          (disabled
+            ? '<span class="builder-exp-card__badge is-off">OFF</span>'
+            : '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+              esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' +
+              esc(ix.label || '') + '" data-interaction-id="' + esc(ix.id) + '"></span>') +
+        '</div>';
+      }).join('') +
+      '</div>';
+  }
+
   function nodeCardHtml(n) {
     var status = ExperienciaEngine.statusLabel(n);
     var info = ExperienciaEngine.infoLine(n);
@@ -122,15 +144,21 @@ var ExperienciaCanvas = (function () {
     var accent = n.accent || (ExperienciaEngine.kindMeta(n.kind).accent);
     var isHero = n.kind === 'hero';
     var isAction = n.role === 'action' || n.kind === 'action';
+    var isScene = ExperienciaEngine.isSceneKind
+      ? ExperienciaEngine.isSceneKind(n.kind)
+      : (n.kind === 'image' || n.kind === 'scene' || n.kind === 'video' ||
+         n.kind === 'plan' || n.kind === 'pano360' || n.kind === 'animacion' ||
+         n.kind === 'planta-3d' || n.kind === 'vista' || n.kind === 'ficha' || n.kind === 'gallery');
     var portsOut = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
     var portsIn = (n.ports || []).filter(function (p) { return p.side === 'in'; });
+    var ixs = (n.config && n.config.interactions) || [];
+    var enabledIxs = ixs.filter(function (ix) { return ix && ix.enabled !== false; });
 
     var body = '';
     if (isHero) {
       var slots = (n.config && n.config.slots) ||
         (ExperienciaEngine.listHeroSlots ? ExperienciaEngine.listHeroSlots({ heroContent: {} }) : null) ||
         { navigation: [], flow: [], actions: [] };
-      /* Prefer live slots from engine when painting after ensureFlow */
       if (n.config && n.config.slots) slots = n.config.slots;
 
       body =
@@ -184,17 +212,49 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-exp-card__title">' + esc(n.label || 'Acción') + '</div>' +
         '<div class="builder-exp-card__info">' + esc(info || (n.config && n.config.actionType) || '') + '</div>' +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
+    } else if (isScene) {
+      var mediaOk = !!(n.config && n.config.fileName);
+      body =
+        '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'ESCENA') + '</div>' +
+        '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
+        '<div class="builder-exp-card__info">' +
+          (mediaOk
+            ? ('● ' + esc(n.config.fileName))
+            : (info ? esc(info) : '○ Sin media')) +
+        '</div>' +
+        '<div class="builder-exp-card__status">' + esc(status) + '</div>';
+
+      if (n.kind === 'video' || n.kind === 'animacion') {
+        body += '<div class="builder-exp-card__section">Flujo</div>' +
+          '<div class="builder-exp-card__ports">' +
+          '<div class="builder-exp-card__irow is-flow" data-exp-irow="on-end">' +
+            '<span>Al finalizar</span>' +
+            '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="on-end" data-node="' +
+              esc(n.id) + '" data-port-label="Al finalizar"></span>' +
+          '</div></div>';
+      }
+
+      var hotspots = ixs.filter(function (ix) {
+        return ix.group === 'hotspots' || ix.type === 'HOTSPOT';
+      });
+      var units = ixs.filter(function (ix) { return ix.type === 'UNIT'; });
+      var controls = ixs.filter(function (ix) {
+        return ix.type !== 'HOTSPOT' && ix.type !== 'UNIT' &&
+          (ix.group === 'controls' || !ix.group ||
+            ix.type === 'BUTTON' || ix.type === 'SELECTOR' || ix.type === 'BACK' ||
+            ix.type === 'MENU_TRIGGER' || ix.type === 'PANEL_TRIGGER' || ix.type === 'CUSTOM');
+      });
+
+      body += interactionRowsHtml(n, hotspots, 'Hotspots');
+      body += interactionRowsHtml(n, units, 'Unidades');
+      body += interactionRowsHtml(n, controls, 'Controles');
     } else {
       body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'NODO') + '</div>' +
         '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
         (info ? '<div class="builder-exp-card__info">' + esc(info) + '</div>' : '') +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
-      var showPortRows = portsOut.length > 1 ||
-        n.kind === 'video' ||
-        n.kind === 'animacion' ||
-        (n.config && n.config.hotspots && n.config.hotspots.length);
-      if (showPortRows) {
+      if (portsOut.length > 1) {
         body += '<div class="builder-exp-card__ports builder-exp-card__ports--compact">' +
           portsOut.filter(function (p) { return p.kind !== 'meta'; }).map(function (p) {
             return '<div class="builder-exp-card__irow">' +
@@ -211,10 +271,13 @@ var ExperienciaCanvas = (function () {
       ? '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>'
       : (isHero ? '' : '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>');
 
-    var flowOuts = portsOut.filter(function (p) { return p.kind !== 'meta'; });
-    var defaultOut = (!isHero && flowOuts.length <= 1 &&
-      n.kind !== 'video' && n.kind !== 'animacion' &&
-      !(n.config && n.config.hotspots && n.config.hotspots.length))
+    var hasEmbedded = enabledIxs.length > 0 ||
+      (isScene && (n.kind === 'video' || n.kind === 'animacion'));
+    var flowOuts = portsOut.filter(function (p) {
+      return p.kind !== 'meta' && p.kind !== 'interaction' && p.id !== 'on-end';
+    });
+    var defaultOut = (!isHero && !hasEmbedded && flowOuts.length <= 1 &&
+      n.kind !== 'video' && n.kind !== 'animacion')
       ? '<span class="builder-exp-card__port is-out" data-exp-port="out" data-port-id="' +
         esc((flowOuts[0] && flowOuts[0].id) || 'out') + '" data-node="' + esc(n.id) +
         '" data-port-label="' + esc((flowOuts[0] && flowOuts[0].label) || 'Salida') + '"></span>'
@@ -224,6 +287,8 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-exp-card ' + statusCls + ' accent-' + esc(accent) +
         (isHero ? ' is-hero' : '') +
         (isAction ? ' is-action-node' : '') +
+        (isScene ? ' is-scene' : '') +
+        (n.kind === 'hotspot' ? ' is-legacy-interaction' : '') +
         (n.locked ? ' is-locked' : '') +
         (n.orphaned ? ' is-orphan' : '') +
         '" data-exp-node="' + esc(n.id) + '"' +
@@ -384,34 +449,58 @@ var ExperienciaCanvas = (function () {
       return html;
     }
 
-    if (n.kind === 'image' || n.kind === 'plan' || n.kind === 'pano360' || n.kind === 'scene') {
-      html += '<div class="builder-exp-inspector__grid">' +
-        row('Archivo', (n.config && n.config.fileName) || 'Sin asignar') +
-        row('Nombre', n.label || '—') +
-        row('Origen', names(conn.in, 'from')) +
-        row('Destino', names(conn.out, 'to')) +
-      '</div>' +
-        '<div class="builder-exp-inspector__actions">' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-add-hotspot="' +
-            esc(n.id) + '">+ Crear hotspot</button>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar archivo</button>' +
-          '<p class="builder-menu-hint">Referencia assets de Galería / Planos / 360 (sin inventar media).</p>' +
-        '</div>';
-      return html;
-    }
+    if (n.kind === 'image' || n.kind === 'plan' || n.kind === 'pano360' || n.kind === 'scene' ||
+        n.kind === 'vista' || n.kind === 'planta-3d' || n.kind === 'ficha' || n.kind === 'gallery' ||
+        n.kind === 'video' || n.kind === 'animacion') {
+      var ixs = (n.config && n.config.interactions) || [];
+      var hotspots = ixs.filter(function (ix) {
+        return ix.group === 'hotspots' || ix.type === 'HOTSPOT';
+      });
+      var controls = ixs.filter(function (ix) {
+        return ix.type !== 'HOTSPOT' && ix.type !== 'UNIT';
+      });
+      var units = ixs.filter(function (ix) { return ix.type === 'UNIT'; });
 
-    if (n.kind === 'video' || n.kind === 'animacion') {
-      html += '<div class="builder-exp-inspector__grid">' +
-        row('Archivo', (n.config && n.config.fileName) || 'Sin asignar') +
-        row('Autoplay', (n.config && n.config.autoplay) ? 'Sí' : 'No') +
-        row('Al finalizar', (n.config && n.config.onEnd) || 'next') +
-        row('Duración', (n.transitionSeconds || 4) + '–5 s') +
-        row('Origen', names(conn.in, 'from')) +
-        row('Destino', names(conn.out, 'to')) +
-      '</div>' +
-        '<div class="builder-exp-inspector__actions">' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar video</button>' +
+      html += '<div class="builder-exp-inspector__section">Escena</div>' +
+        '<div class="builder-exp-inspector__grid">' +
+          row('Nombre', n.label || '—') +
+          row('Tipo', n.typeLabel || n.kind) +
+          row('Media', (n.config && n.config.fileName) || 'Sin asignar') +
+          row('Estado', ExperienciaEngine.statusLabel(n)) +
+          row('Origen', names(conn.in, 'from')) +
         '</div>';
+
+      if (n.kind === 'video' || n.kind === 'animacion') {
+        html += '<div class="builder-exp-inspector__grid">' +
+          row('Autoplay', (n.config && n.config.autoplay) ? 'Sí' : 'No') +
+          row('Al finalizar', (n.config && n.config.onEnd) || 'next') +
+          row('Duración', (n.transitionSeconds || 4) + '–5 s') +
+        '</div>';
+      }
+
+      html += '<div class="builder-exp-inspector__section">Interacciones</div>';
+
+      html += '<div class="builder-exp-inspector__ix-head">' +
+        '<span>Hotspots</span>' +
+        '<button type="button" class="builder-exp-inspector__ix-add" data-exp-add-hotspot="' +
+          esc(n.id) + '">+ Agregar</button></div>';
+      html += interactionInspectorList(n, hotspots);
+
+      html += '<div class="builder-exp-inspector__ix-head">' +
+        '<span>Controles</span>' +
+        '<button type="button" class="builder-exp-inspector__ix-add" data-exp-add-control="' +
+          esc(n.id) + '">+ Agregar</button></div>';
+      html += interactionInspectorList(n, controls);
+
+      if (units.length) {
+        html += '<div class="builder-exp-inspector__ix-head"><span>Unidades</span></div>';
+        html += interactionInspectorList(n, units);
+      }
+
+      html += '<div class="builder-exp-inspector__actions">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar archivo</button>' +
+        '<p class="builder-menu-hint">Hotspots y controles viven dentro de la escena. Eliminar una interacción no borra su destino.</p>' +
+      '</div>';
       return html;
     }
 
@@ -438,12 +527,14 @@ var ExperienciaCanvas = (function () {
       return html;
     }
 
-    if (n.kind === 'hotspot') {
+    if (n.kind === 'hotspot' || n.kind === 'selector-pisos') {
       html += '<div class="builder-exp-inspector__grid">' +
         row('Nombre', n.label || '—') +
+        row('Legacy', 'Nodo V5.9.56 (no migrado automáticamente)') +
         row('Vinculado', (n.config && n.config.structureLabel) || '—') +
         row('Destino', names(conn.out, 'to')) +
-      '</div>';
+      '</div>' +
+        '<p class="builder-menu-hint">Si este hotspot pertenece a una sola escena, recarga Experiencia para embeberlo.</p>';
       return html;
     }
 
@@ -456,13 +547,40 @@ var ExperienciaCanvas = (function () {
     return html;
   }
 
+  function interactionInspectorList(scene, list) {
+    if (!list || !list.length) {
+      return '<p class="builder-menu-hint builder-exp-inspector__ix-empty">Ninguno</p>';
+    }
+    return '<ul class="builder-exp-inspector__ix-list">' +
+      list.map(function (ix) {
+        var behavior = (ix.behavior && ix.behavior.type) || ix.actionType || '—';
+        return '<li class="builder-exp-inspector__ix-item' +
+          (ix.enabled === false ? ' is-disabled' : '') +
+          '" data-exp-ix-id="' + esc(ix.id) + '" data-exp-ix-scene="' + esc(scene.id) + '">' +
+          '<div class="builder-exp-inspector__ix-main">' +
+            '<strong>' + esc(ix.label || ix.type) + '</strong>' +
+            '<span>' + esc(ix.type) + (behavior !== '—' ? (' · ' + behavior) : '') + '</span>' +
+          '</div>' +
+          '<div class="builder-exp-inspector__ix-acts">' +
+            '<button type="button" data-exp-ix-act="rename" title="Renombrar">✎</button>' +
+            '<button type="button" data-exp-ix-act="toggle" title="Habilitar/Deshabilitar">' +
+              (ix.enabled === false ? '○' : '●') + '</button>' +
+            '<button type="button" data-exp-ix-act="dup" title="Duplicar">⧉</button>' +
+            '<button type="button" data-exp-ix-act="unlink" title="Desvincular">⊘</button>' +
+            '<button type="button" data-exp-ix-act="del" title="Eliminar" class="is-danger">×</button>' +
+          '</div>' +
+        '</li>';
+      }).join('') +
+    '</ul>';
+  }
+
   function row(label, value) {
     return '<div class="builder-exp-inspector__row"><span>' + esc(label) +
       '</span><strong>' + esc(value) + '</strong></div>';
   }
 
-  function createMenuHtml(title) {
-    var menu = ExperienciaEngine.CREATE_MENU || [];
+  function createMenuHtml(title, menu) {
+    menu = menu || ExperienciaEngine.CREATE_MENU || [];
     return '<div class="builder-exp-ctx__panel">' +
       '<div class="builder-exp-ctx__title">' + esc(title || '¿Qué quieres crear?') + '</div>' +
       menu.map(function (cat) {
@@ -474,6 +592,20 @@ var ExperienciaCanvas = (function () {
           }).join('') +
         '</div>';
       }).join('') +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function interactionContextMenuHtml(ix) {
+    var on = !ix || ix.enabled !== false;
+    return '<div class="builder-exp-ctx__panel builder-exp-ctx__panel--ix">' +
+      '<div class="builder-exp-ctx__title">' + esc((ix && ix.label) || 'Interacción') + '</div>' +
+      '<button type="button" class="builder-exp-ctx__item" data-exp-ix-ctx="configure">Configurar</button>' +
+      '<button type="button" class="builder-exp-ctx__item" data-exp-ix-ctx="duplicate">Duplicar</button>' +
+      '<button type="button" class="builder-exp-ctx__item" data-exp-ix-ctx="toggle">' +
+        (on ? 'Deshabilitar' : 'Habilitar') + '</button>' +
+      '<button type="button" class="builder-exp-ctx__item" data-exp-ix-ctx="unlink">Desvincular</button>' +
+      '<button type="button" class="builder-exp-ctx__item is-danger" data-exp-ix-ctx="delete">Eliminar</button>' +
       '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
     '</div>';
   }
@@ -548,11 +680,16 @@ var ExperienciaCanvas = (function () {
     '</div>';
   }
 
-  function findMenuItem(id) {
-    var menu = ExperienciaEngine.CREATE_MENU || [];
-    for (var i = 0; i < menu.length; i++) {
-      for (var j = 0; j < menu[i].items.length; j++) {
-        if (menu[i].items[j].id === id) return menu[i].items[j];
+  function findMenuItem(id, menu) {
+    var menus = menu
+      ? [menu]
+      : [ExperienciaEngine.CREATE_MENU || [], ExperienciaEngine.CREATE_MENU_BLANK || []];
+    for (var m = 0; m < menus.length; m++) {
+      var cats = menus[m] || [];
+      for (var i = 0; i < cats.length; i++) {
+        for (var j = 0; j < cats[i].items.length; j++) {
+          if (cats[i].items[j].id === id) return cats[i].items[j];
+        }
       }
     }
     return null;
@@ -807,12 +944,41 @@ var ExperienciaCanvas = (function () {
       if (hs) {
         hs.addEventListener('click', function () {
           var id = hs.getAttribute('data-exp-add-hotspot');
-          var label = window.prompt('Nombre del hotspot', 'Torre A');
+          var label = window.prompt('Nombre del hotspot', 'Torre 1');
           if (label == null) return;
           ExperienciaEngine.addHotspotToScene(state, id, label.trim() || 'Hotspot');
           renderAll(); persist();
         });
       }
+      var ctrl = inspectorBody.querySelector('[data-exp-add-control]');
+      if (ctrl) {
+        ctrl.addEventListener('click', function () {
+          var id = ctrl.getAttribute('data-exp-add-control');
+          var label = window.prompt('Nombre del control', 'Plantas');
+          if (label == null) return;
+          var name = label.trim() || 'Control';
+          var isPlantas = /planta/i.test(name);
+          ExperienciaEngine.addControlToScene(state, id, name, {
+            type: isPlantas ? 'SELECTOR' : 'BUTTON',
+            actionType: isPlantas ? 'floor-selector' : null,
+            behavior: isPlantas
+              ? { type: 'floor-selector', inline: true, source: 'estructura' }
+              : null
+          });
+          renderAll(); persist();
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-ix-item], .builder-exp-inspector__ix-item').forEach(function (row) {
+        var sceneId = row.getAttribute('data-exp-ix-scene');
+        var ixId = row.getAttribute('data-exp-ix-id');
+        row.querySelectorAll('[data-exp-ix-act]').forEach(function (btn) {
+          btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            runInteractionAction(btn.getAttribute('data-exp-ix-act'), sceneId, ixId);
+          });
+        });
+      });
       var eg = inspectorBody.querySelector('[data-exp-enter-group]');
       if (eg) {
         eg.addEventListener('click', function () {
@@ -969,11 +1135,17 @@ var ExperienciaCanvas = (function () {
         portId: fromMeta && (fromMeta.portId || fromMeta.sourcePortId),
         portLabel: fromMeta && fromMeta.portLabel,
         sourcePortId: fromMeta && (fromMeta.sourcePortId || fromMeta.portId),
-        targetPortId: (fromMeta && fromMeta.targetPortId) || 'in'
+        targetPortId: (fromMeta && fromMeta.targetPortId) || 'in',
+        fromInteraction: !!(fromMeta && fromMeta.fromInteraction)
       };
+      pendingCreate.menu = (ExperienciaEngine.menuForContext
+        ? ExperienciaEngine.menuForContext(pendingCreate)
+        : ExperienciaEngine.CREATE_MENU) || ExperienciaEngine.CREATE_MENU;
       ctxMode = 'create';
       if (!ctxEl) return;
-      ctxEl.innerHTML = createMenuHtml(title || '¿Qué quieres crear?');
+      var menuTitle = title ||
+        (pendingCreate.fromId ? '¿Qué quieres que ocurra?' : '¿Qué quieres crear?');
+      ctxEl.innerHTML = createMenuHtml(menuTitle, pendingCreate.menu);
       if (clientXY) positionCtxMenu(clientXY.x, clientXY.y);
       else {
         ctxEl.hidden = false;
@@ -986,6 +1158,60 @@ var ExperienciaCanvas = (function () {
         ctxEl.style.left = left + 'px';
         ctxEl.style.top = top + 'px';
       }
+    }
+
+    function runInteractionAction(act, sceneId, ixId) {
+      if (!sceneId || !ixId) return;
+      var ix = ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(state, sceneId, ixId)
+        : null;
+      if (!ix && act !== 'del' && act !== 'delete') return;
+      if (act === 'rename') {
+        var next = window.prompt('Nombre', (ix && ix.label) || '');
+        if (next == null) return;
+        ExperienciaEngine.updateInteraction(state, sceneId, ixId, { label: next.trim() || ix.label });
+      } else if (act === 'toggle') {
+        ExperienciaEngine.updateInteraction(state, sceneId, ixId, {
+          enabled: !(ix.enabled !== false)
+        });
+      } else if (act === 'dup' || act === 'duplicate') {
+        ExperienciaEngine.duplicateInteraction(state, sceneId, ixId);
+      } else if (act === 'unlink') {
+        /* Solo quita conexiones del puerto; conserva la interacción */
+        var exp = ExperienciaEngine.ensureState(state);
+        var portId = ix.portId || ix.id;
+        exp.edges = (exp.edges || []).filter(function (ed) {
+          var from = ed.sourceNodeId || ed.from;
+          var pid = ed.sourcePortId || ed.portId;
+          return !(from === sceneId && pid === portId);
+        });
+      } else if (act === 'del' || act === 'delete') {
+        if (!window.confirm('¿Eliminar esta interacción? Su escena destino se conserva.')) return;
+        ExperienciaEngine.removeInteraction(state, sceneId, ixId);
+      } else if (act === 'configure') {
+        selectNode(sceneId);
+        canvas().inspectorOpen = true;
+        canvas().inspectorCollapsed = false;
+      }
+      hideCtx();
+      renderAll();
+      persist();
+    }
+
+    function openInteractionContextMenu(clientX, clientY, sceneId, ixId) {
+      var scene = ExperienciaEngine.getNode(state, sceneId);
+      var ix = ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(state, sceneId, ixId)
+        : null;
+      if (!scene || !ix) return;
+      ExperienciaEngine.setSelection(state, [sceneId], []);
+      canvas().inspectorOpen = true;
+      ctxMode = { type: 'interaction', sceneId: sceneId, ixId: ixId };
+      if (!ctxEl) return;
+      ctxEl.innerHTML = interactionContextMenuHtml(ix);
+      positionCtxMenu(clientX, clientY);
+      paintNodes();
+      paintInspector();
     }
 
     function openNodeContextMenu(clientX, clientY, nodeId) {
@@ -1188,6 +1414,15 @@ var ExperienciaCanvas = (function () {
           runNodeAction(nodeAct.getAttribute('data-exp-node-act'));
           return;
         }
+        var ixCtx = ev.target.closest('[data-exp-ix-ctx]');
+        if (ixCtx && ctxMode && ctxMode.sceneId && ctxMode.ixId) {
+          runInteractionAction(
+            ixCtx.getAttribute('data-exp-ix-ctx'),
+            ctxMode.sceneId,
+            ctxMode.ixId
+          );
+          return;
+        }
         var edgeAct = ev.target.closest('[data-exp-edge-act]');
         if (edgeAct && edgeAct.getAttribute('data-exp-edge-act') === 'unlink') {
           if (canvas().selectedEdgeId) {
@@ -1199,7 +1434,7 @@ var ExperienciaCanvas = (function () {
         }
         var item = ev.target.closest('[data-exp-create]');
         if (!item || !pendingCreate) return;
-        var menuItem = findMenuItem(item.getAttribute('data-exp-create'));
+        var menuItem = findMenuItem(item.getAttribute('data-exp-create'), pendingCreate.menu);
         if (!menuItem) return;
         var result = ExperienciaEngine.createNodeFromMenu(state, menuItem, pendingCreate.at, {
           fromId: pendingCreate.fromId,
@@ -1208,21 +1443,35 @@ var ExperienciaCanvas = (function () {
           sourcePortId: pendingCreate.sourcePortId || pendingCreate.portId,
           targetPortId: pendingCreate.targetPortId || 'in'
         });
+        if (result && result.error === 'need-scene') {
+          if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.info(result.message || 'Necesitas una escena origen.');
+          }
+          hideCtx();
+          return;
+        }
         if (result && result.needsPicker === '_link_structure') {
           openStructurePicker();
           return;
         }
         if (result && result.needsPicker === '_link_existing') {
           hideCtx();
-          AdminNotify.info('Selecciona un nodo existente en el canvas y conéctalo arrastrando.');
+          if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.info('Selecciona un nodo existente en el canvas y conéctalo arrastrando.');
+          }
           canvas().tool = 'select';
           pendingCreate = null;
           syncToolUi();
           return;
         }
         hideCtx();
-        if (result && result.node) selectNode(result.node.id);
-        else { renderAll(); persist(); }
+        if (result && (result.inline || result.embedded)) {
+          selectNode((result.scene && result.scene.id) || (result.node && result.node.id));
+        } else if (result && result.node) {
+          selectNode(result.node.id);
+        } else {
+          renderAll(); persist();
+        }
       });
     }
 
@@ -1329,6 +1578,16 @@ var ExperienciaCanvas = (function () {
         openEdgeContextMenu(ev.clientX, ev.clientY, edgePath.getAttribute('data-exp-edge'));
         return;
       }
+      var ixRow = ev.target.closest('[data-exp-interaction]');
+      if (ixRow) {
+        openInteractionContextMenu(
+          ev.clientX,
+          ev.clientY,
+          ixRow.getAttribute('data-exp-scene'),
+          ixRow.getAttribute('data-exp-interaction')
+        );
+        return;
+      }
       var card = ev.target.closest('[data-exp-node]');
       if (card) {
         openNodeContextMenu(ev.clientX, ev.clientY, card.getAttribute('data-exp-node'));
@@ -1381,6 +1640,14 @@ var ExperienciaCanvas = (function () {
         return;
       }
 
+      /* Interaction row (not the port circle): select scene, don't start card drag */
+      var ixHit = ev.target.closest('[data-exp-interaction]');
+      if (ixHit && tool === 'select' && !ev.target.closest('[data-exp-port]')) {
+        ev.stopPropagation();
+        selectNode(ixHit.getAttribute('data-exp-scene'));
+        return;
+      }
+
       var port = ev.target.closest('[data-exp-port="out"]');
       if (!port) {
         var irow = ev.target.closest('[data-exp-irow]');
@@ -1403,6 +1670,7 @@ var ExperienciaCanvas = (function () {
           fromId: fromId,
           portId: portId,
           portLabel: portLabel,
+          interactionId: port.getAttribute('data-interaction-id') || null,
           x: startAnchor.x,
           y: startAnchor.y,
           pointerId: ev.pointerId
@@ -1565,7 +1833,10 @@ var ExperienciaCanvas = (function () {
           portId: linkDrag.portId,
           portLabel: linkDrag.portLabel,
           sourcePortId: linkDrag.portId,
-          targetPortId: 'in'
+          targetPortId: 'in',
+          fromInteraction: !!(linkDrag.interactionId ||
+            (linkDrag.portId && linkDrag.portId !== 'out' &&
+              linkDrag.portId !== 'on-end' && linkDrag.portId !== 'hero-iniciar'))
         }, { x: ev.clientX, y: ev.clientY });
         linkDrag = null;
         paintNodes();

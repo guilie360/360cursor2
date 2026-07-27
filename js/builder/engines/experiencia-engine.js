@@ -1,13 +1,17 @@
-/* BOXIES V5.9.55 — Experiencia: editor de flujo del showroom
- * Legacy V5.9.50/51 conservado. V5.9.53 puertos. V5.9.54 edición.
- * V5.9.55: Hero orquesta (referencias/acciones vs flujo INICIAR). */
+/* BOXIES V5.9.57 — Experiencia: escenas con interacciones embebidas
+ * Extiende V5.9.55/56. Hotspots/controles viven DENTRO de la escena. */
 var ExperienciaEngine = (function () {
-  var NODE_W = 200;
+  var NODE_W = 220;
   var NODE_H = 92;
   var HERO_W = 280;
   var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
+
+  var SCENE_KINDS = {
+    scene: true, image: true, video: true, pano360: true, plan: true,
+    animacion: true, vista: true, 'planta-3d': true, ficha: true, gallery: true
+  };
 
   var KIND_META = {
     hero: { typeLabel: 'HERO', accent: 'hero', role: 'scene' },
@@ -20,7 +24,6 @@ var ExperienciaEngine = (function () {
     action: { typeLabel: 'ACCIÓN', accent: 'ficha', role: 'action' },
     group: { typeLabel: 'GRUPO', accent: 'componente', role: 'group' },
     structure: { typeLabel: 'PROYECTO', accent: 'componente', role: 'group' },
-    /* legacy kinds kept for recovery */
     animacion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' },
     vista: { typeLabel: 'ESCENA', accent: 'hero', role: 'scene' },
     componente: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
@@ -36,6 +39,49 @@ var ExperienciaEngine = (function () {
   var CREATE_MENU = [
     {
       id: 'visual',
+      label: 'CREAR ESCENA',
+      items: [
+        { id: 'image', label: 'Imagen estática', kind: 'image', role: 'scene' },
+        { id: 'video', label: 'Animación / Video', kind: 'video', role: 'scene' },
+        { id: 'pano360', label: '360°', kind: 'pano360', role: 'scene' },
+        { id: 'plan', label: 'Planta 3D', kind: 'plan', role: 'scene' },
+        { id: 'gallery', label: 'Galería', kind: 'scene', role: 'scene', preset: 'gallery' },
+        { id: 'scene', label: 'Otra escena', kind: 'scene', role: 'scene' }
+      ]
+    },
+    {
+      id: 'accion',
+      label: 'ACCIÓN / INTERFAZ',
+      items: [
+        { id: 'show-panel', label: 'Mostrar panel', kind: '_inline', role: 'inline', actionType: 'show-panel' },
+        { id: 'open-ficha', label: 'Abrir ficha', kind: '_inline', role: 'inline', actionType: 'open-ficha' },
+        { id: 'floor-sel', label: 'Mostrar selector de plantas', kind: '_inline', role: 'inline', actionType: 'floor-selector' },
+        { id: 'change-floor', label: 'Cambiar planta', kind: '_inline', role: 'inline', actionType: 'change-floor' },
+        { id: 'open-menu', label: 'Abrir menú', kind: '_inline', role: 'inline', actionType: 'open-menu' },
+        { id: 'url', label: 'Abrir URL', kind: 'action', role: 'action', actionType: 'url' },
+        { id: 'back', label: 'Volver', kind: 'action', role: 'action', actionType: 'back' },
+        { id: 'custom-action', label: 'Acción personalizada', kind: '_inline', role: 'inline', actionType: 'custom' }
+      ]
+    },
+    {
+      id: 'proyecto',
+      label: 'PROYECTO',
+      items: [
+        { id: 'link-tower', label: 'Vincular torre', kind: '_link_structure', role: 'group', entityHint: 'torre' },
+        { id: 'link-stage', label: 'Vincular etapa', kind: '_link_structure', role: 'group', entityHint: 'etapa' },
+        { id: 'link-typo', label: 'Vincular tipología', kind: '_link_structure', role: 'group', entityHint: 'tipologia' },
+        { id: 'link-unit', label: 'Vincular unidad', kind: '_link_structure', role: 'group', entityHint: 'unidad' },
+        { id: 'link-amenity', label: 'Vincular amenidad', kind: '_link_structure', role: 'group', entityHint: 'amenidad' },
+        { id: 'link-structure', label: 'Vincular otro elemento', kind: '_link_structure', role: 'group' },
+        { id: 'goto-existing', label: 'Ir a nodo existente', kind: '_link_existing', role: 'nav' }
+      ]
+    }
+  ];
+
+  /* Empty-canvas / generic create (also used when not from an interaction port) */
+  var CREATE_MENU_BLANK = [
+    {
+      id: 'visual',
       label: 'VISUAL',
       items: [
         { id: 'image', label: 'Imagen / escena estática', kind: 'image', role: 'scene' },
@@ -46,23 +92,11 @@ var ExperienciaEngine = (function () {
     },
     {
       id: 'interaccion',
-      label: 'INTERACCIÓN',
+      label: 'AÑADIR A ESCENA',
       items: [
-        { id: 'hotspot', label: 'Hotspot', kind: 'hotspot', role: 'interaction' },
-        { id: 'buttons', label: 'Botones / opciones', kind: 'scene', role: 'scene', preset: 'buttons' },
-        { id: 'floor-sel', label: 'Selector de pisos', kind: 'selector-pisos', role: 'interaction' },
-        { id: 'unit-sel', label: 'Selector de unidades/tipologías', kind: 'scene', role: 'scene', preset: 'units' }
-      ]
-    },
-    {
-      id: 'interfaz',
-      label: 'INTERFAZ',
-      items: [
-        { id: 'card', label: 'Tarjeta', kind: 'scene', role: 'scene', preset: 'card' },
-        { id: 'modal', label: 'Modal', kind: 'scene', role: 'scene', preset: 'modal' },
-        { id: 'ficha', label: 'Ficha de vivienda', kind: 'ficha', role: 'scene' },
-        { id: 'gallery', label: 'Galería', kind: 'scene', role: 'scene', preset: 'gallery' },
-        { id: 'panel', label: 'Panel / menú', kind: 'scene', role: 'scene', preset: 'panel' }
+        { id: 'embed-hotspot', label: 'Hotspot (en escena origen)', kind: '_embed', role: 'interaction', interactionType: 'HOTSPOT' },
+        { id: 'embed-control', label: 'Control / botón (en escena origen)', kind: '_embed', role: 'interaction', interactionType: 'BUTTON' },
+        { id: 'embed-selector', label: 'Selector de pisos (en escena)', kind: '_embed', role: 'interaction', interactionType: 'SELECTOR', actionType: 'floor-selector' }
       ]
     },
     {
@@ -169,7 +203,201 @@ var ExperienciaEngine = (function () {
     if (n.parentId === undefined) n.parentId = null;
     if (n.locked == null) n.locked = false;
     if (n.protected == null) n.protected = n.kind === 'hero' || n.id === 'exp-hero';
+    if (isSceneKind(n.kind)) normalizeSceneInteractions(n);
     return n;
+  }
+
+  function isSceneKind(kind) {
+    return !!SCENE_KINDS[kind];
+  }
+
+  function interactionGroup(type) {
+    var t = String(type || '').toUpperCase();
+    if (t === 'HOTSPOT' || t === 'UNIT') return 'hotspots';
+    if (t === 'BUTTON' || t === 'SELECTOR' || t === 'MENU_TRIGGER' ||
+        t === 'PANEL_TRIGGER' || t === 'BACK' || t === 'CUSTOM') return 'controls';
+    return 'controls';
+  }
+
+  function makeInteraction(partial) {
+    var type = String((partial && partial.type) || 'HOTSPOT').toUpperCase();
+    var id = (partial && partial.id) || uid(type === 'HOTSPOT' ? 'hs' : 'ix');
+    var portId = (partial && partial.portId) || id;
+    return {
+      id: id,
+      type: type,
+      label: (partial && partial.label) || type,
+      enabled: partial && partial.enabled === false ? false : true,
+      portId: portId,
+      group: (partial && partial.group) || interactionGroup(type),
+      behavior: (partial && partial.behavior) || null,
+      actionType: (partial && partial.actionType) || null,
+      structureRef: (partial && partial.structureRef) || null,
+      legacyNodeId: (partial && partial.legacyNodeId) || null
+    };
+  }
+
+  function mirrorHotspotsFromInteractions(n) {
+    if (!n || !n.config) return;
+    var ixs = n.config.interactions || [];
+    n.config.hotspots = ixs.filter(function (ix) {
+      return String(ix.type || '').toUpperCase() === 'HOTSPOT';
+    }).map(function (ix) {
+      return { id: ix.id, label: ix.label };
+    });
+  }
+
+  /** Ensure config.interactions[] + sync ports for scene nodes. */
+  function normalizeSceneInteractions(n) {
+    if (!n || !isSceneKind(n.kind)) return n;
+    if (!n.config) n.config = {};
+    if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+
+    /* Migrate legacy config.hotspots → interactions */
+    if (Array.isArray(n.config.hotspots) && n.config.hotspots.length) {
+      n.config.hotspots.forEach(function (hs) {
+        if (!hs || !hs.id) return;
+        var exists = n.config.interactions.some(function (ix) {
+          return ix.id === hs.id || ix.portId === ('hs-' + hs.id) || ix.portId === hs.id;
+        });
+        if (exists) return;
+        n.config.interactions.push(makeInteraction({
+          id: hs.id,
+          type: 'HOTSPOT',
+          label: hs.label || 'Hotspot',
+          portId: 'hs-' + hs.id,
+          group: 'hotspots'
+        }));
+      });
+    }
+
+    n.config.interactions = n.config.interactions.map(function (ix) {
+      return makeInteraction(ix);
+    });
+
+    mirrorHotspotsFromInteractions(n);
+    syncScenePorts(n);
+    return n;
+  }
+
+  function syncScenePorts(n) {
+    if (!n || n.kind === 'hero') return;
+    var ports = [];
+    ports.push({ id: 'in', label: 'Entrada', side: 'in', kind: 'flow' });
+    if (n.kind === 'video' || n.kind === 'animacion') {
+      ports.push({ id: 'on-end', label: 'Al finalizar', side: 'out', kind: 'flow' });
+    }
+    var ixs = (n.config && n.config.interactions) || [];
+    ixs.forEach(function (ix) {
+      if (ix.enabled === false) return;
+      ports.push({
+        id: ix.portId,
+        label: ix.label,
+        side: 'out',
+        kind: 'interaction',
+        interactionId: ix.id,
+        interactionType: ix.type
+      });
+    });
+    /* Keep generic out only if scene has no interactions and is not video */
+    if (ixs.length === 0 && n.kind !== 'video' && n.kind !== 'animacion') {
+      ports.push({ id: 'out', label: 'Salida', side: 'out', kind: 'flow' });
+    }
+    n.ports = ports;
+  }
+
+  function getInteraction(sceneOrState, interactionIdOrSceneId, maybeIxId) {
+    var scene = sceneOrState;
+    var interactionId = interactionIdOrSceneId;
+    if (maybeIxId != null) {
+      scene = getNode(sceneOrState, interactionIdOrSceneId);
+      interactionId = maybeIxId;
+    }
+    var list = (scene && scene.config && scene.config.interactions) || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === interactionId || list[i].portId === interactionId) return list[i];
+    }
+    return null;
+  }
+
+  function addInteractionToScene(state, sceneId, type, label, extras) {
+    var scene = getNode(state, sceneId);
+    if (!scene || !isSceneKind(scene.kind)) return null;
+    extras = extras || {};
+    var ix = makeInteraction({
+      type: type || 'HOTSPOT',
+      label: label || type || 'Interacción',
+      actionType: extras.actionType || null,
+      behavior: extras.behavior || null,
+      structureRef: extras.structureRef || null,
+      legacyNodeId: extras.legacyNodeId || null,
+      group: extras.group || null
+    });
+    if (!scene.config.interactions) scene.config.interactions = [];
+    scene.config.interactions.push(ix);
+    mirrorHotspotsFromInteractions(scene);
+    syncScenePorts(scene);
+    scene.status = 'pending';
+    return ix;
+  }
+
+  function updateInteraction(state, sceneId, interactionId, patch) {
+    var scene = getNode(state, sceneId);
+    var ix = getInteraction(scene, interactionId);
+    if (!ix) return null;
+    Object.keys(patch || {}).forEach(function (k) {
+      if (k === 'id' || k === 'portId') return;
+      ix[k] = patch[k];
+    });
+    if (patch && patch.label) {
+      ix.label = patch.label;
+    }
+    mirrorHotspotsFromInteractions(scene);
+    syncScenePorts(scene);
+    return ix;
+  }
+
+  function removeInteraction(state, sceneId, interactionId, options) {
+    options = options || {};
+    var exp = ensureState(state);
+    var scene = getNode(state, sceneId);
+    var ix = getInteraction(scene, interactionId);
+    if (!ix) return { ok: false };
+    var portId = ix.portId;
+    scene.config.interactions = scene.config.interactions.filter(function (x) {
+      return x.id !== ix.id;
+    });
+    mirrorHotspotsFromInteractions(scene);
+    syncScenePorts(scene);
+    if (options.keepEdges) return { ok: true, interaction: ix };
+    var removed = 0;
+    exp.edges = exp.edges.filter(function (ed) {
+      var from = ed.sourceNodeId || ed.from;
+      var pid = ed.sourcePortId || ed.portId;
+      if (from === sceneId && pid === portId) { removed++; return false; }
+      return true;
+    });
+    return { ok: true, interaction: ix, edgesRemoved: removed };
+  }
+
+  function duplicateInteraction(state, sceneId, interactionId) {
+    var scene = getNode(state, sceneId);
+    var ix = getInteraction(scene, interactionId);
+    if (!ix) return null;
+    return addInteractionToScene(state, sceneId, ix.type, (ix.label || 'Interacción') + ' copia', {
+      actionType: ix.actionType,
+      behavior: ix.behavior ? JSON.parse(JSON.stringify(ix.behavior)) : null,
+      structureRef: ix.structureRef,
+      group: ix.group
+    });
+  }
+
+  function menuForContext(fromMeta) {
+    /* Drag from any port → destination menu; empty canvas → blank create */
+    if (fromMeta && (fromMeta.fromId || fromMeta.portId || fromMeta.fromInteraction || fromMeta.sourcePortId)) {
+      return CREATE_MENU;
+    }
+    return CREATE_MENU_BLANK;
   }
 
   function normalizeEdge(ed) {
@@ -563,6 +791,7 @@ var ExperienciaEngine = (function () {
     exp.nodes = [hero].concat(others);
 
     archiveInlineActionNodes(state);
+    migrateEmbeddedInteractions(state);
 
     /* Keep only flow ports from Hero (INICIAR); drop stale action-port edges */
     var portIds = {};
@@ -658,7 +887,75 @@ var ExperienciaEngine = (function () {
     at = at || { x: 320, y: 120 };
 
     if (menuItem.kind === '_link_existing' || menuItem.kind === '_link_structure') {
-      return { needsPicker: menuItem.kind, at: at, fromEdge: fromEdge };
+      return { needsPicker: menuItem.kind, at: at, fromEdge: fromEdge, menuItem: menuItem };
+    }
+
+    /* Inline action on an existing interaction port — no new visual node */
+    if (menuItem.kind === '_inline') {
+      if (fromEdge && fromEdge.fromId) {
+        var sceneInline = getNode(state, fromEdge.fromId);
+        var portInline = fromEdge.portId || fromEdge.sourcePortId;
+        var ixInline = getInteraction(sceneInline, portInline);
+        if (ixInline) {
+          ixInline.actionType = menuItem.actionType || 'custom';
+          ixInline.behavior = {
+            type: menuItem.actionType || 'custom',
+            inline: true,
+            label: menuItem.label || null
+          };
+          if (menuItem.actionType === 'floor-selector') {
+            ixInline.type = 'SELECTOR';
+            ixInline.group = 'controls';
+            if (!ixInline.label || ixInline.label === 'HOTSPOT' || ixInline.label === 'BUTTON') {
+              ixInline.label = 'Plantas';
+            }
+            ixInline.behavior.source = 'estructura';
+          }
+          mirrorHotspotsFromInteractions(sceneInline);
+          syncScenePorts(sceneInline);
+          return { inline: true, interaction: ixInline, scene: sceneInline, node: sceneInline };
+        }
+        if (sceneInline && isSceneKind(sceneInline.kind)) {
+          var typeForInline = menuItem.actionType === 'floor-selector' ? 'SELECTOR'
+            : (menuItem.actionType === 'back' ? 'BACK' : 'BUTTON');
+          var createdIx = addInteractionToScene(
+            state,
+            sceneInline.id,
+            typeForInline,
+            menuItem.label || 'Control',
+            {
+              actionType: menuItem.actionType,
+              behavior: { type: menuItem.actionType, inline: true, source: 'estructura' },
+              group: 'controls'
+            }
+          );
+          return { inline: true, interaction: createdIx, scene: sceneInline, node: sceneInline };
+        }
+      }
+      return { inline: true, skipped: true };
+    }
+
+    /* Embed interaction into source scene (no separate hotspot/button card) */
+    if (menuItem.kind === '_embed') {
+      if (fromEdge && fromEdge.fromId) {
+        var sceneEmbed = getNode(state, fromEdge.fromId);
+        if (sceneEmbed && isSceneKind(sceneEmbed.kind)) {
+          var ixEmbed = addInteractionToScene(
+            state,
+            sceneEmbed.id,
+            menuItem.interactionType || 'HOTSPOT',
+            menuItem.label || menuItem.interactionType || 'Interacción',
+            {
+              actionType: menuItem.actionType || null,
+              behavior: menuItem.actionType
+                ? { type: menuItem.actionType, inline: true, source: 'estructura' }
+                : null
+            }
+          );
+          return { embedded: true, interaction: ixEmbed, scene: sceneEmbed, node: sceneEmbed };
+        }
+      }
+      return { error: 'need-scene', message: 'Selecciona primero una escena origen.' };
     }
 
     var role = menuItem.role || kindMeta(menuItem.kind).role;
@@ -666,33 +963,34 @@ var ExperienciaEngine = (function () {
     var label = menuItem.label || 'Nodo';
     if (menuItem.kind === 'video') label = 'Animación';
     if (menuItem.kind === 'image') label = 'Vista general';
+    if (menuItem.preset === 'gallery') label = 'Galería';
+
+    var kind = menuItem.kind === 'gallery' ? 'scene' : menuItem.kind;
 
     var n = node({
       id: uid('flow'),
-      kind: menuItem.kind,
+      kind: kind,
       label: label,
       role: role,
       status: isAction ? 'ready' : 'pending',
       x: Math.round(at.x),
       y: Math.round(at.y),
       userMoved: true,
-      ports: isAction ? [] : defaultPortsForKind(menuItem.kind),
+      ports: isAction ? [] : defaultPortsForKind(kind),
       config: {
         actionType: menuItem.actionType || null,
         preset: menuItem.preset || null,
-        autoplay: menuItem.kind === 'video',
-        onEnd: menuItem.kind === 'video' ? 'next' : null,
+        autoplay: kind === 'video',
+        onEnd: kind === 'video' ? 'next' : null,
         fileName: null,
         contentRef: null,
-        hotspots: []
+        hotspots: [],
+        interactions: []
       }
     });
 
-    if (menuItem.kind === 'video') {
-      n.ports = [
-        { id: 'in', label: 'Entrada', side: 'in', kind: 'flow' },
-        { id: 'on-end', label: 'Al finalizar', side: 'out', kind: 'flow' }
-      ];
+    if (isSceneKind(kind)) {
+      normalizeSceneInteractions(n);
     }
 
     exp.nodes.push(n);
@@ -869,14 +1167,31 @@ var ExperienciaEngine = (function () {
         h: n.height || Math.max(HERO_H, 72 + ((n.ports || []).length * 22))
       };
     }
-    var outs = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
-    var extra = outs.length > 1 ? Math.max(0, (outs.length - 1) * 20) : 0;
-    if (n.config && n.config.hotspots && n.config.hotspots.length) {
-      extra = Math.max(extra, n.config.hotspots.length * 20);
+    var ixs = ((n.config && n.config.interactions) || []).filter(function (ix) {
+      return ix && ix.enabled !== false;
+    });
+    var hasHot = ixs.some(function (ix) {
+      return ix.group === 'hotspots' || ix.type === 'HOTSPOT' || ix.type === 'UNIT';
+    });
+    var hasCtrl = ixs.some(function (ix) {
+      return ix.group === 'controls' ||
+        (ix.type !== 'HOTSPOT' && ix.type !== 'UNIT');
+    });
+    var hasUnits = ixs.some(function (ix) { return ix.type === 'UNIT'; });
+    var sections = (hasHot ? 1 : 0) + (hasCtrl ? 1 : 0) + (hasUnits ? 1 : 0);
+    var flowRows = (n.kind === 'video' || n.kind === 'animacion') ? 1 : 0;
+    var rows = ixs.length + flowRows;
+    if (rows === 0 && sections === 0) {
+      var outs = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
+      var extra = outs.length > 1 ? Math.max(0, (outs.length - 1) * 20) : 0;
+      if (n.config && n.config.hotspots && n.config.hotspots.length) {
+        extra = Math.max(extra, n.config.hotspots.length * 20);
+      }
+      return { w: n.width || NODE_W, h: (n.height || NODE_H) + extra };
     }
     return {
       w: n.width || NODE_W,
-      h: (n.height || NODE_H) + extra
+      h: Math.max(NODE_H, 64 + sections * 16 + rows * 22 + 8)
     };
   }
 
@@ -1187,27 +1502,141 @@ var ExperienciaEngine = (function () {
   }
 
   function addHotspotToScene(state, sceneId, label) {
-    var exp = ensureFlow(state);
-    var scene = getNode(state, sceneId);
-    if (!scene) return null;
-    if (!scene.config) scene.config = {};
-    if (!Array.isArray(scene.config.hotspots)) scene.config.hotspots = [];
-    var hs = {
-      id: uid('hs'),
-      label: label || ('Hotspot ' + (scene.config.hotspots.length + 1))
-    };
-    scene.config.hotspots.push(hs);
-    var portId = 'hs-' + hs.id;
-    scene.ports = (scene.ports || []).filter(function (p) { return p.id !== portId; });
-    scene.ports.push({
-      id: portId,
-      label: hs.label,
-      side: 'out',
-      kind: 'hotspot',
-      hotspotId: hs.id
+    var ix = addInteractionToScene(state, sceneId, 'HOTSPOT', label || 'Hotspot');
+    if (!ix) return null;
+    return { id: ix.id, label: ix.label, portId: ix.portId };
+  }
+
+  function addControlToScene(state, sceneId, label, extras) {
+    extras = extras || {};
+    return addInteractionToScene(
+      state,
+      sceneId,
+      extras.type || 'BUTTON',
+      label || 'Control',
+      extras
+    );
+  }
+
+  function isLegacyInteractionNode(n) {
+    if (!n) return false;
+    if (n.kind === 'hotspot') return true;
+    if (n.kind === 'selector-pisos') return true;
+    var label = String(n.label || '').toLowerCase();
+    if (n.kind === 'action' && /botones|opciones|selector/.test(label)) return true;
+    if (n.role === 'interaction' && n.kind !== 'hero') return true;
+    return false;
+  }
+
+  /**
+   * Soft-migrate Scene → Hotspot/Botones nodes into scene.interactions[].
+   * Archives legacy cards; never hard-deletes. Skips ambiguous graphs.
+   */
+  function migrateEmbeddedInteractions(state) {
+    var exp = ensureState(state);
+    if (exp.embeddedInteractionsVersion >= 57) return exp;
+    if (!Array.isArray(exp.archivedLegacyNodes)) exp.archivedLegacyNodes = [];
+
+    var byId = {};
+    (exp.nodes || []).forEach(function (n) { byId[n.id] = n; });
+
+    var inbound = {};
+    (exp.edges || []).forEach(function (ed) {
+      var to = ed.targetNodeId || ed.to || ed.targetId;
+      if (!to) return;
+      if (!inbound[to]) inbound[to] = [];
+      inbound[to].push(ed);
     });
-    scene.status = 'pending';
-    return hs;
+
+    var toArchive = {};
+    var migrated = 0;
+
+    Object.keys(inbound).forEach(function (legacyId) {
+      var legacy = byId[legacyId];
+      if (!legacy || !isLegacyInteractionNode(legacy)) return;
+      var ins = inbound[legacyId] || [];
+      if (ins.length !== 1) return; /* ambiguous — keep legacy */
+      var inEdge = ins[0];
+      var sceneId = inEdge.sourceNodeId || inEdge.from || inEdge.sourceId;
+      var scene = byId[sceneId];
+      if (!scene || !isSceneKind(scene.kind)) return;
+
+      normalizeSceneInteractions(scene);
+      var type = 'HOTSPOT';
+      if (legacy.kind === 'selector-pisos') type = 'SELECTOR';
+      else if (/botones|opciones|button|control|plantas/.test(String(legacy.label || '').toLowerCase())) {
+        type = /plantas|piso|selector/.test(String(legacy.label || '').toLowerCase())
+          ? 'SELECTOR' : 'BUTTON';
+      }
+
+      var ix = makeInteraction({
+        id: uid(type === 'HOTSPOT' ? 'hs' : 'ix'),
+        type: type,
+        label: legacy.label || type,
+        portId: null,
+        legacyNodeId: legacy.id,
+        actionType: (legacy.config && legacy.config.actionType) ||
+          (type === 'SELECTOR' ? 'floor-selector' : null),
+        behavior: type === 'SELECTOR'
+          ? { type: 'floor-selector', inline: true, source: 'estructura' }
+          : null,
+        group: type === 'HOTSPOT' ? 'hotspots' : 'controls'
+      });
+      /* Stable port id tied to new interaction */
+      ix.portId = ix.id;
+      scene.config.interactions.push(ix);
+      mirrorHotspotsFromInteractions(scene);
+      syncScenePorts(scene);
+
+      /* Remap outgoing edges: legacy → dest becomes scene.port → dest */
+      (exp.edges || []).forEach(function (ed) {
+        var from = ed.sourceNodeId || ed.from || ed.sourceId;
+        if (from !== legacy.id) return;
+        ed.sourceNodeId = scene.id;
+        ed.from = scene.id;
+        ed.sourceId = scene.id;
+        ed.sourcePortId = ix.portId;
+        ed.sourcePort = ix.portId;
+        ed.portId = ix.portId;
+        ed.sourcePortLabel = ix.label;
+        ed.targetPortId = ed.targetPortId || ed.targetPort || 'in';
+      });
+
+      /* Drop the Scene → legacy edge (now internal) */
+      exp.edges = (exp.edges || []).filter(function (ed) {
+        return ed.id !== inEdge.id;
+      });
+
+      toArchive[legacy.id] = {
+        at: new Date().toISOString(),
+        reason: 'V5.9.57 embed interaction into scene',
+        sceneId: scene.id,
+        interactionId: ix.id,
+        node: legacy,
+        inboundEdge: inEdge
+      };
+      migrated++;
+    });
+
+    if (migrated) {
+      var kept = [];
+      (exp.nodes || []).forEach(function (n) {
+        if (toArchive[n.id]) {
+          exp.archivedLegacyNodes.push(toArchive[n.id]);
+          return;
+        }
+        kept.push(n);
+      });
+      exp.nodes = kept;
+      exp.reviewFlags = (exp.reviewFlags || []).concat([{
+        severity: 'recomendado',
+        message: 'V5.9.57: ' + migrated +
+          ' hotspot/control legacy embebido en su escena (archivado, no eliminado).'
+      }]).slice(-10);
+    }
+
+    exp.embeddedInteractionsVersion = 57;
+    return exp;
   }
 
   return {
@@ -1216,7 +1645,9 @@ var ExperienciaEngine = (function () {
     HERO_W: HERO_W,
     HERO_H: HERO_H,
     KIND_META: KIND_META,
+    SCENE_KINDS: SCENE_KINDS,
     CREATE_MENU: CREATE_MENU,
+    CREATE_MENU_BLANK: CREATE_MENU_BLANK,
     emptyState: emptyState,
     ensureState: ensureState,
     ensureFlow: ensureFlow,
@@ -1229,6 +1660,7 @@ var ExperienciaEngine = (function () {
     setHeroContentField: setHeroContentField,
     ensureHeroContent: ensureHeroContent,
     archiveInlineActionNodes: archiveInlineActionNodes,
+    migrateEmbeddedInteractions: migrateEmbeddedInteractions,
     listStructureLibrary: listStructureLibrary,
     createNodeFromMenu: createNodeFromMenu,
     createStructureLinkedNode: createStructureLinkedNode,
@@ -1244,6 +1676,8 @@ var ExperienciaEngine = (function () {
     infoLine: infoLine,
     statusLabel: statusLabel,
     kindMeta: kindMeta,
+    isSceneKind: isSceneKind,
+    menuForContext: menuForContext,
     summary: summary,
     incompleteNodes: incompleteNodes,
     normalizeNode: normalizeNode,
@@ -1255,6 +1689,13 @@ var ExperienciaEngine = (function () {
     enterGroup: enterGroup,
     exitGroup: exitGroup,
     addHotspotToScene: addHotspotToScene,
+    addControlToScene: addControlToScene,
+    addInteractionToScene: addInteractionToScene,
+    updateInteraction: updateInteraction,
+    removeInteraction: removeInteraction,
+    duplicateInteraction: duplicateInteraction,
+    getInteraction: getInteraction,
+    syncScenePorts: syncScenePorts,
     isProtectedNode: isProtectedNode,
     isLockedNode: isLockedNode,
     unlinkNode: unlinkNode,
