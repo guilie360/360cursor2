@@ -1,4 +1,4 @@
-/* BOXIES V5.9.61 — Modo Canvas: aislar del shell BOXIES; inspector permanece */
+/* BOXIES V5.9.62 — Menú destino simplificado; paleta verde/morado */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -215,7 +215,9 @@ var ExperienciaCanvas = (function () {
     var statusCls = n.orphaned || n.status === 'review' ? 'is-review'
       : (n.status === 'ready' ? 'is-ready'
         : (n.status === 'error' ? 'is-error' : 'is-pending'));
-    var accent = n.accent || (ExperienciaEngine.kindMeta(n.kind).accent);
+    var accent = ExperienciaEngine.resolveAccent
+      ? ExperienciaEngine.resolveAccent(n)
+      : (n.accent || (ExperienciaEngine.kindMeta(n.kind).accent));
     var isHero = n.kind === 'hero';
     var isAction = n.role === 'action' || n.kind === 'action';
     var isScene = ExperienciaEngine.isSceneKind

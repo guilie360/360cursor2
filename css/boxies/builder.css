@@ -3163,13 +3163,21 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.builder-exp-card.accent-hero::before { background: rgba(111, 191, 134, 0.7); }
-.builder-exp-card.accent-transicion::before { background: rgba(155, 143, 212, 0.75); }
-.builder-exp-card.accent-componente::before { background: rgba(120, 170, 210, 0.7); }
-.builder-exp-card.accent-nav::before { background: rgba(180, 180, 200, 0.65); }
-.builder-exp-card.accent-planta::before { background: rgba(100, 190, 170, 0.7); }
-.builder-exp-card.accent-viviendas::before { background: rgba(111, 191, 134, 0.55); }
-.builder-exp-card.accent-ficha::before { background: rgba(200, 180, 140, 0.65); }
+.builder-exp-card.accent-green::before,
+.builder-exp-card.accent-hero::before,
+.builder-exp-card.accent-planta::before,
+.builder-exp-card.accent-viviendas::before {
+  background: rgba(111, 191, 134, 0.7);
+}
+
+.builder-exp-card.accent-purple::before,
+.builder-exp-card.accent-transicion::before,
+.builder-exp-card.accent-nav::before,
+.builder-exp-card.accent-componente::before,
+.builder-exp-card.accent-ficha::before,
+.builder-exp-card.accent-default::before {
+  background: rgba(155, 143, 212, 0.75);
+}
 
 .builder-exp-card.is-pending {
   border-color: rgba(155, 143, 212, 0.35);
@@ -3442,7 +3450,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
 }
 
 .builder-exp-card__media-status.is-sync {
-  color: rgba(200, 190, 150, 0.9);
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .builder-exp-card__media-status.is-error {

@@ -1,4 +1,4 @@
-/* BOXIES V5.9.59 — Experiencia: vínculos Estructura, renombrar, fit/canvas mode, reset/draft */
+/* BOXIES V5.9.62 — Menú destino simplificado + paleta verde/morado */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -12,30 +12,45 @@ var ExperienciaEngine = (function () {
     animacion: true, vista: true, 'planta-3d': true, ficha: true, gallery: true
   };
 
+  /* V5.9.62 — solo dos acentos: green (escenas visuales) / purple (animación, acciones, nav) */
   var KIND_META = {
-    hero: { typeLabel: 'HERO', accent: 'hero', role: 'scene' },
-    scene: { typeLabel: 'ESCENA', accent: 'hero', role: 'scene' },
-    image: { typeLabel: 'IMAGEN', accent: 'hero', role: 'scene' },
-    video: { typeLabel: 'ANIMACIÓN', accent: 'transicion', role: 'scene' },
-    pano360: { typeLabel: '360°', accent: 'planta', role: 'scene' },
-    plan: { typeLabel: 'PLANTA', accent: 'planta', role: 'scene' },
-    hotspot: { typeLabel: 'HOTSPOT', accent: 'nav', role: 'interaction' },
-    action: { typeLabel: 'ACCIÓN', accent: 'ficha', role: 'action' },
-    group: { typeLabel: 'GRUPO', accent: 'componente', role: 'group' },
-    structure: { typeLabel: 'PROYECTO', accent: 'componente', role: 'group' },
-    animacion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' },
-    vista: { typeLabel: 'ESCENA', accent: 'hero', role: 'scene' },
-    componente: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
-    lotes: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
-    amenidad: { typeLabel: 'COMPONENTE', accent: 'componente', role: 'group' },
-    'selector-pisos': { typeLabel: 'NAVEGACIÓN', accent: 'nav', role: 'interaction' },
-    'planta-3d': { typeLabel: 'PLANTA 3D', accent: 'planta', role: 'scene' },
-    viviendas: { typeLabel: 'VIVIENDAS', accent: 'viviendas', role: 'group' },
-    ficha: { typeLabel: 'FICHA', accent: 'ficha', role: 'scene' },
-    transicion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' }
+    hero: { typeLabel: 'HERO', accent: 'green', role: 'scene' },
+    scene: { typeLabel: 'ESCENA', accent: 'green', role: 'scene' },
+    image: { typeLabel: 'IMAGEN', accent: 'green', role: 'scene' },
+    video: { typeLabel: 'ANIMACIÓN', accent: 'purple', role: 'scene' },
+    pano360: { typeLabel: '360°', accent: 'green', role: 'scene' },
+    plan: { typeLabel: 'PLANTA', accent: 'green', role: 'scene' },
+    hotspot: { typeLabel: 'HOTSPOT', accent: 'purple', role: 'interaction' },
+    action: { typeLabel: 'ACCIÓN', accent: 'purple', role: 'action' },
+    group: { typeLabel: 'GRUPO', accent: 'purple', role: 'group' },
+    structure: { typeLabel: 'PROYECTO', accent: 'purple', role: 'group' },
+    animacion: { typeLabel: 'TRANSICIÓN', accent: 'purple', role: 'scene' },
+    vista: { typeLabel: 'ESCENA', accent: 'green', role: 'scene' },
+    componente: { typeLabel: 'COMPONENTE', accent: 'purple', role: 'group' },
+    lotes: { typeLabel: 'COMPONENTE', accent: 'purple', role: 'group' },
+    amenidad: { typeLabel: 'COMPONENTE', accent: 'purple', role: 'group' },
+    'selector-pisos': { typeLabel: 'NAVEGACIÓN', accent: 'purple', role: 'interaction' },
+    'planta-3d': { typeLabel: 'PLANTA 3D', accent: 'green', role: 'scene' },
+    viviendas: { typeLabel: 'VIVIENDAS', accent: 'green', role: 'group' },
+    ficha: { typeLabel: 'FICHA', accent: 'green', role: 'scene' },
+    transicion: { typeLabel: 'TRANSICIÓN', accent: 'purple', role: 'scene' }
   };
 
-  /* Menú al arrastrar ○ → destino / qué ocurre (NUNCA “agregar en escena”) */
+  /* Legacy accent keys → green | purple (presentation only) */
+  var ACCENT_REMAP = {
+    green: 'green',
+    hero: 'green',
+    planta: 'green',
+    viviendas: 'green',
+    purple: 'purple',
+    transicion: 'purple',
+    nav: 'purple',
+    componente: 'purple',
+    ficha: 'purple',
+    default: 'purple'
+  };
+
+  /* Menú al arrastrar ○ → canvas vacío */
   var CREATE_MENU = [
     {
       id: 'visual',
@@ -51,7 +66,6 @@ var ExperienciaEngine = (function () {
       id: 'navegacion',
       label: 'NAVEGACIÓN',
       items: [
-        { id: 'goto-existing', label: 'Ir a nodo existente', kind: '_link_existing', role: 'nav' },
         { id: 'back', label: 'Volver', kind: 'action', role: 'action', actionType: 'back' },
         { id: 'goto-hero', label: 'Ir al Hero', kind: 'action', role: 'action', actionType: 'goto-hero' }
       ]
@@ -61,26 +75,16 @@ var ExperienciaEngine = (function () {
       label: 'ACCIÓN',
       items: [
         { id: 'url', label: 'Abrir URL', kind: 'action', role: 'action', actionType: 'url' },
-        { id: 'whatsapp', label: 'WhatsApp / contacto', kind: 'action', role: 'action', actionType: 'whatsapp' },
         { id: 'download', label: 'Descargar documento', kind: 'action', role: 'action', actionType: 'download' },
-        { id: 'share', label: 'Compartir', kind: 'action', role: 'action', actionType: 'share' },
-        { id: 'fullscreen', label: 'Fullscreen', kind: 'action', role: 'action', actionType: 'fullscreen' },
         { id: 'close', label: 'Cerrar', kind: 'action', role: 'action', actionType: 'close' },
         { id: 'show-panel', label: 'Mostrar panel', kind: '_inline', role: 'inline', actionType: 'show-panel' },
         { id: 'open-ficha', label: 'Abrir ficha', kind: '_inline', role: 'inline', actionType: 'open-ficha' },
         { id: 'floor-sel', label: 'Mostrar selector de plantas', kind: '_inline', role: 'inline', actionType: 'floor-selector' }
       ]
-    },
-    {
-      id: 'proyecto',
-      label: 'PROYECTO',
-      items: [
-        { id: 'link-structure', label: 'Vincular elemento existente de Estructura', kind: '_link_structure', role: 'group' }
-      ]
     }
   ];
 
-  /* Clic derecho en vacío / crear suelto */
+  /* Clic derecho en vacío — solo escenas */
   var CREATE_MENU_BLANK = [
     {
       id: 'visual',
@@ -90,13 +94,6 @@ var ExperienciaEngine = (function () {
         { id: 'video', label: 'Video / animación', kind: 'video', role: 'scene' },
         { id: 'pano360', label: 'Escena 360°', kind: 'pano360', role: 'scene' },
         { id: 'plan', label: 'Planta 2D / 3D', kind: 'plan', role: 'scene' }
-      ]
-    },
-    {
-      id: 'proyecto',
-      label: 'PROYECTO',
-      items: [
-        { id: 'link-structure', label: 'Vincular elemento existente de Estructura', kind: '_link_structure', role: 'group' }
       ]
     }
   ];
@@ -219,14 +216,26 @@ var ExperienciaEngine = (function () {
   }
 
   function kindMeta(kind) {
-    return KIND_META[kind] || { typeLabel: 'NODO', accent: 'default', role: 'scene' };
+    return KIND_META[kind] || { typeLabel: 'NODO', accent: 'green', role: 'scene' };
+  }
+
+  /** Resolve card accent to green | purple only (no yellow/blue legacy). */
+  function resolveAccent(nOrAccent) {
+    var raw = nOrAccent;
+    if (raw && typeof raw === 'object') {
+      var meta = kindMeta(raw.kind);
+      raw = raw.accent || meta.accent;
+    }
+    var key = String(raw || 'green');
+    return ACCENT_REMAP[key] || (key === 'green' ? 'green' : 'purple');
   }
 
   function normalizeNode(n) {
     if (!n || typeof n !== 'object') return n;
     var meta = kindMeta(n.kind);
     if (!n.typeLabel) n.typeLabel = meta.typeLabel;
-    if (!n.accent) n.accent = meta.accent;
+    /* V5.9.62 — force visual palette from kind (presentation; ids/edges intact) */
+    n.accent = meta.accent;
     if (!n.role) n.role = meta.role || 'scene';
     if (!Array.isArray(n.ports)) n.ports = [];
     if (n.x == null) n.x = null;
@@ -960,7 +969,7 @@ var ExperienciaEngine = (function () {
       kind: 'hero',
       label: 'Hero',
       typeLabel: 'HERO',
-      accent: 'hero',
+      accent: 'green',
       role: 'scene',
       entityType: 'proyecto',
       entityKey: 'hero',
@@ -2119,6 +2128,7 @@ var ExperienciaEngine = (function () {
     infoLine: infoLine,
     statusLabel: statusLabel,
     kindMeta: kindMeta,
+    resolveAccent: resolveAccent,
     isSceneKind: isSceneKind,
     menuForContext: menuForContext,
     findAddElementItem: findAddElementItem,
