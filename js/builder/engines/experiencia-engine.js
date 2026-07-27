@@ -1,5 +1,5 @@
-/* BOXIES V5.9.57 — Experiencia: escenas con interacciones embebidas
- * Extiende V5.9.55/56. Hotspots/controles viven DENTRO de la escena. */
+/* BOXIES V5.9.58 — Experiencia: editor de showroom (elementos en escena + assets)
+ * Extiende V5.9.57. Separar “agregar elemento” de “qué ocurre después”. */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -36,67 +36,16 @@ var ExperienciaEngine = (function () {
     transicion: { typeLabel: 'TRANSICIÓN', accent: 'transicion', role: 'scene' }
   };
 
+  /* Menú al arrastrar ○ → destino / qué ocurre (NUNCA “agregar en escena”) */
   var CREATE_MENU = [
     {
       id: 'visual',
       label: 'CREAR ESCENA',
       items: [
-        { id: 'image', label: 'Imagen estática', kind: 'image', role: 'scene' },
-        { id: 'video', label: 'Animación / Video', kind: 'video', role: 'scene' },
-        { id: 'pano360', label: '360°', kind: 'pano360', role: 'scene' },
-        { id: 'plan', label: 'Planta 3D', kind: 'plan', role: 'scene' },
-        { id: 'gallery', label: 'Galería', kind: 'scene', role: 'scene', preset: 'gallery' },
-        { id: 'scene', label: 'Otra escena', kind: 'scene', role: 'scene' }
-      ]
-    },
-    {
-      id: 'accion',
-      label: 'ACCIÓN / INTERFAZ',
-      items: [
-        { id: 'show-panel', label: 'Mostrar panel', kind: '_inline', role: 'inline', actionType: 'show-panel' },
-        { id: 'open-ficha', label: 'Abrir ficha', kind: '_inline', role: 'inline', actionType: 'open-ficha' },
-        { id: 'floor-sel', label: 'Mostrar selector de plantas', kind: '_inline', role: 'inline', actionType: 'floor-selector' },
-        { id: 'change-floor', label: 'Cambiar planta', kind: '_inline', role: 'inline', actionType: 'change-floor' },
-        { id: 'open-menu', label: 'Abrir menú', kind: '_inline', role: 'inline', actionType: 'open-menu' },
-        { id: 'url', label: 'Abrir URL', kind: 'action', role: 'action', actionType: 'url' },
-        { id: 'back', label: 'Volver', kind: 'action', role: 'action', actionType: 'back' },
-        { id: 'custom-action', label: 'Acción personalizada', kind: '_inline', role: 'inline', actionType: 'custom' }
-      ]
-    },
-    {
-      id: 'proyecto',
-      label: 'PROYECTO',
-      items: [
-        { id: 'link-tower', label: 'Vincular torre', kind: '_link_structure', role: 'group', entityHint: 'torre' },
-        { id: 'link-stage', label: 'Vincular etapa', kind: '_link_structure', role: 'group', entityHint: 'etapa' },
-        { id: 'link-typo', label: 'Vincular tipología', kind: '_link_structure', role: 'group', entityHint: 'tipologia' },
-        { id: 'link-unit', label: 'Vincular unidad', kind: '_link_structure', role: 'group', entityHint: 'unidad' },
-        { id: 'link-amenity', label: 'Vincular amenidad', kind: '_link_structure', role: 'group', entityHint: 'amenidad' },
-        { id: 'link-structure', label: 'Vincular otro elemento', kind: '_link_structure', role: 'group' },
-        { id: 'goto-existing', label: 'Ir a nodo existente', kind: '_link_existing', role: 'nav' }
-      ]
-    }
-  ];
-
-  /* Empty-canvas / generic create (also used when not from an interaction port) */
-  var CREATE_MENU_BLANK = [
-    {
-      id: 'visual',
-      label: 'VISUAL',
-      items: [
         { id: 'image', label: 'Imagen / escena estática', kind: 'image', role: 'scene' },
         { id: 'video', label: 'Video / animación', kind: 'video', role: 'scene' },
         { id: 'pano360', label: 'Escena 360°', kind: 'pano360', role: 'scene' },
         { id: 'plan', label: 'Planta 2D / 3D', kind: 'plan', role: 'scene' }
-      ]
-    },
-    {
-      id: 'interaccion',
-      label: 'AÑADIR A ESCENA',
-      items: [
-        { id: 'embed-hotspot', label: 'Hotspot (en escena origen)', kind: '_embed', role: 'interaction', interactionType: 'HOTSPOT' },
-        { id: 'embed-control', label: 'Control / botón (en escena origen)', kind: '_embed', role: 'interaction', interactionType: 'BUTTON' },
-        { id: 'embed-selector', label: 'Selector de pisos (en escena)', kind: '_embed', role: 'interaction', interactionType: 'SELECTOR', actionType: 'floor-selector' }
       ]
     },
     {
@@ -113,11 +62,14 @@ var ExperienciaEngine = (function () {
       label: 'ACCIÓN',
       items: [
         { id: 'url', label: 'Abrir URL', kind: 'action', role: 'action', actionType: 'url' },
-        { id: 'share', label: 'Compartir', kind: 'action', role: 'action', actionType: 'share' },
         { id: 'whatsapp', label: 'WhatsApp / contacto', kind: 'action', role: 'action', actionType: 'whatsapp' },
         { id: 'download', label: 'Descargar documento', kind: 'action', role: 'action', actionType: 'download' },
+        { id: 'share', label: 'Compartir', kind: 'action', role: 'action', actionType: 'share' },
         { id: 'fullscreen', label: 'Fullscreen', kind: 'action', role: 'action', actionType: 'fullscreen' },
-        { id: 'close', label: 'Cerrar', kind: 'action', role: 'action', actionType: 'close' }
+        { id: 'close', label: 'Cerrar', kind: 'action', role: 'action', actionType: 'close' },
+        { id: 'show-panel', label: 'Mostrar panel', kind: '_inline', role: 'inline', actionType: 'show-panel' },
+        { id: 'open-ficha', label: 'Abrir ficha', kind: '_inline', role: 'inline', actionType: 'open-ficha' },
+        { id: 'floor-sel', label: 'Mostrar selector de plantas', kind: '_inline', role: 'inline', actionType: 'floor-selector' }
       ]
     },
     {
@@ -128,6 +80,73 @@ var ExperienciaEngine = (function () {
       ]
     }
   ];
+
+  /* Clic derecho en vacío / crear suelto */
+  var CREATE_MENU_BLANK = [
+    {
+      id: 'visual',
+      label: 'CREAR ESCENA',
+      items: [
+        { id: 'image', label: 'Imagen / escena estática', kind: 'image', role: 'scene' },
+        { id: 'video', label: 'Video / animación', kind: 'video', role: 'scene' },
+        { id: 'pano360', label: 'Escena 360°', kind: 'pano360', role: 'scene' },
+        { id: 'plan', label: 'Planta 2D / 3D', kind: 'plan', role: 'scene' }
+      ]
+    },
+    {
+      id: 'proyecto',
+      label: 'PROYECTO',
+      items: [
+        { id: 'link-structure', label: 'Vincular elemento existente de Estructura', kind: '_link_structure', role: 'group' }
+      ]
+    }
+  ];
+
+  /* + Agregar elemento DENTRO de una escena */
+  var ADD_ELEMENT_MENU = [
+    {
+      id: 'interaccion',
+      label: 'INTERACCIÓN',
+      items: [
+        { id: 'el-hotspot', label: 'Hotspot', kind: '_embed', interactionType: 'HOTSPOT', defaultLabel: 'Hotspot' },
+        { id: 'el-button', label: 'Botón / control', kind: '_embed', interactionType: 'BUTTON', defaultLabel: 'Botón' },
+        { id: 'el-selector', label: 'Selector de pisos', kind: '_embed', interactionType: 'SELECTOR', actionType: 'floor-selector', defaultLabel: 'Plantas' },
+        { id: 'el-info', label: 'Información / detalles', kind: '_embed', interactionType: 'CUSTOM', actionType: 'show-info', defaultLabel: 'Información' }
+      ]
+    },
+    {
+      id: 'navegacion',
+      label: 'NAVEGACIÓN',
+      items: [
+        { id: 'el-back', label: 'Volver', kind: '_embed', interactionType: 'BACK', actionType: 'back', defaultLabel: 'Volver' },
+        { id: 'el-hero', label: 'Ir al Hero', kind: '_embed', interactionType: 'BUTTON', actionType: 'goto-hero', defaultLabel: 'Ir al Hero' },
+        { id: 'el-menu', label: 'Abrir Menú', kind: '_embed', interactionType: 'MENU_TRIGGER', actionType: 'open-menu', defaultLabel: 'Menú' }
+      ]
+    },
+    {
+      id: 'accion',
+      label: 'ACCIÓN',
+      items: [
+        { id: 'el-url', label: 'Abrir URL', kind: '_embed', interactionType: 'BUTTON', actionType: 'url', defaultLabel: 'Abrir URL' },
+        { id: 'el-wa', label: 'WhatsApp / contacto', kind: '_embed', interactionType: 'BUTTON', actionType: 'whatsapp', defaultLabel: 'WhatsApp' },
+        { id: 'el-dl', label: 'Descargar documento', kind: '_embed', interactionType: 'BUTTON', actionType: 'download', defaultLabel: 'Descargar' },
+        { id: 'el-share', label: 'Compartir', kind: '_embed', interactionType: 'BUTTON', actionType: 'share', defaultLabel: 'Compartir' },
+        { id: 'el-fs', label: 'Fullscreen', kind: '_embed', interactionType: 'BUTTON', actionType: 'fullscreen', defaultLabel: 'Fullscreen' },
+        { id: 'el-close', label: 'Cerrar', kind: '_embed', interactionType: 'BUTTON', actionType: 'close', defaultLabel: 'Cerrar' }
+      ]
+    }
+  ];
+
+  var INTERACTION_TYPE_LABEL = {
+    HOTSPOT: 'Hotspot',
+    BUTTON: 'Botón',
+    SELECTOR: 'Selector',
+    UNIT: 'Unidad',
+    BACK: 'Volver',
+    MENU_TRIGGER: 'Menú',
+    PANEL_TRIGGER: 'Panel',
+    CUSTOM: 'Info'
+  };
 
   function uid(prefix) {
     return (prefix || 'n') + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -152,6 +171,8 @@ var ExperienciaEngine = (function () {
         selectedIds: [],
         selectedEdgeId: null,
         selectedEdgeIds: [],
+        selectedInteractionId: null,
+        selectedInteractionSceneId: null,
         tool: 'select',
         minimapVisible: true,
         inspectorOpen: false,
@@ -174,6 +195,10 @@ var ExperienciaEngine = (function () {
     }
     if (exp.canvas.selectedEdgeId == null) exp.canvas.selectedEdgeId = null;
     if (exp.canvas.inspectorCollapsed == null) exp.canvas.inspectorCollapsed = false;
+    if (exp.canvas.selectedInteractionId === undefined) exp.canvas.selectedInteractionId = null;
+    if (exp.canvas.selectedInteractionSceneId === undefined) {
+      exp.canvas.selectedInteractionSceneId = null;
+    }
     if (!Array.isArray(exp.canvas.selectedIds)) {
       exp.canvas.selectedIds = exp.canvas.selectedId ? [exp.canvas.selectedId] : [];
     }
@@ -181,7 +206,11 @@ var ExperienciaEngine = (function () {
       exp.canvas.selectedEdgeIds = exp.canvas.selectedEdgeId ? [exp.canvas.selectedEdgeId] : [];
     }
     if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
-    exp.nodes.forEach(normalizeNode);
+    ensureProjectAssets(state);
+    exp.nodes.forEach(function (n) {
+      normalizeNode(n);
+      ensureNodeAssetRef(state, n);
+    });
     exp.edges.forEach(normalizeEdge);
     return exp;
   }
@@ -223,6 +252,9 @@ var ExperienciaEngine = (function () {
     var type = String((partial && partial.type) || 'HOTSPOT').toUpperCase();
     var id = (partial && partial.id) || uid(type === 'HOTSPOT' ? 'hs' : 'ix');
     var portId = (partial && partial.portId) || id;
+    var cfg = (partial && partial.config && typeof partial.config === 'object')
+      ? partial.config
+      : {};
     return {
       id: id,
       type: type,
@@ -233,8 +265,189 @@ var ExperienciaEngine = (function () {
       behavior: (partial && partial.behavior) || null,
       actionType: (partial && partial.actionType) || null,
       structureRef: (partial && partial.structureRef) || null,
-      legacyNodeId: (partial && partial.legacyNodeId) || null
+      legacyNodeId: (partial && partial.legacyNodeId) || null,
+      /* Extensible hotspot / control placement (editor visual futuro) */
+      x: partial && partial.x != null ? partial.x : (cfg.x != null ? cfg.x : null),
+      y: partial && partial.y != null ? partial.y : (cfg.y != null ? cfg.y : null),
+      panoYaw: partial && partial.panoYaw != null ? partial.panoYaw : null,
+      panoPitch: partial && partial.panoPitch != null ? partial.panoPitch : null,
+      icon: (partial && partial.icon) || null,
+      slot: (partial && partial.slot) || null,
+      assetId: (partial && partial.assetId) || null,
+      config: cfg
     };
+  }
+
+  function interactionTypeLabel(type) {
+    return INTERACTION_TYPE_LABEL[String(type || '').toUpperCase()] || String(type || 'Elemento');
+  }
+
+  /* ── projectAssets: biblioteca compartida (JSON, sin schema Supabase) ── */
+  function ensureProjectAssets(state) {
+    if (!state.projectAssets || typeof state.projectAssets !== 'object') {
+      state.projectAssets = { version: 1, byId: {} };
+    }
+    if (!state.projectAssets.byId || typeof state.projectAssets.byId !== 'object') {
+      state.projectAssets.byId = {};
+    }
+    if (state.projectAssets.version == null) state.projectAssets.version = 1;
+    return state.projectAssets;
+  }
+
+  function makeAsset(partial) {
+    var now = new Date().toISOString();
+    var id = (partial && partial.id) || uid('asset');
+    return {
+      id: id,
+      type: (partial && partial.type) || 'image',
+      filename: (partial && partial.filename) || (partial && partial.fileName) || null,
+      provider: (partial && partial.provider) || 'local',
+      storagePath: (partial && partial.storagePath) || null,
+      publicUrl: (partial && partial.publicUrl) || null,
+      thumbnailUrl: (partial && partial.thumbnailUrl) || null,
+      status: (partial && partial.status) || 'local',
+      mimeType: (partial && partial.mimeType) || null,
+      width: partial && partial.width != null ? partial.width : null,
+      height: partial && partial.height != null ? partial.height : null,
+      duration: partial && partial.duration != null ? partial.duration : null,
+      size: partial && partial.size != null ? partial.size : null,
+      updatedAt: (partial && partial.updatedAt) || now,
+      createdAt: (partial && partial.createdAt) || now
+    };
+  }
+
+  function getAsset(state, assetId) {
+    if (!assetId) return null;
+    var lib = ensureProjectAssets(state);
+    return lib.byId[assetId] || null;
+  }
+
+  function upsertAsset(state, partial) {
+    var lib = ensureProjectAssets(state);
+    var asset = makeAsset(partial);
+    var prev = lib.byId[asset.id];
+    if (prev) {
+      Object.keys(asset).forEach(function (k) {
+        if (asset[k] != null) prev[k] = asset[k];
+      });
+      prev.updatedAt = new Date().toISOString();
+      return prev;
+    }
+    lib.byId[asset.id] = asset;
+    return asset;
+  }
+
+  function guessAssetType(kind, filename) {
+    if (kind === 'video' || kind === 'animacion') return 'video';
+    if (kind === 'pano360') return 'pano360';
+    if (kind === 'plan' || kind === 'planta-3d') return 'plan';
+    var name = String(filename || '').toLowerCase();
+    if (/\.(mp4|webm|mov)$/.test(name)) return 'video';
+    if (/\.(pdf|doc|docx)$/.test(name)) return 'document';
+    return 'image';
+  }
+
+  function assetStatusLabel(status) {
+    var s = String(status || 'local');
+    if (s === 'synced') return '✓ Sincronizado';
+    if (s === 'uploading' || s === 'processing' || s === 'pending') return 'Sincronizando…';
+    if (s === 'error') return 'Error de sincronización';
+    if (s === 'local') return 'Local';
+    return s;
+  }
+
+  /** Soft-link legacy fileName → assetId without breaking nodes. */
+  function ensureNodeAssetRef(state, n) {
+    if (!n || !isSceneKind(n.kind) || n.kind === 'hero') return n;
+    if (!n.config) n.config = {};
+    if (n.config.assetId && getAsset(state, n.config.assetId)) {
+      var a = getAsset(state, n.config.assetId);
+      if (!n.config.fileName && a.filename) n.config.fileName = a.filename;
+      return n;
+    }
+    if (n.config.fileName) {
+      var found = null;
+      var lib = ensureProjectAssets(state);
+      Object.keys(lib.byId).forEach(function (id) {
+        if (found) return;
+        if (lib.byId[id].filename === n.config.fileName) found = lib.byId[id];
+      });
+      if (!found) {
+        found = upsertAsset(state, {
+          type: guessAssetType(n.kind, n.config.fileName),
+          filename: n.config.fileName,
+          provider: 'local',
+          status: 'local'
+        });
+      }
+      n.config.assetId = found.id;
+    }
+    return n;
+  }
+
+  function assignAssetToNode(state, nodeId, assetOrPartial) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    if (!n.config) n.config = {};
+    var asset;
+    if (typeof assetOrPartial === 'string') {
+      asset = getAsset(state, assetOrPartial);
+    } else {
+      var patch = Object.assign({}, assetOrPartial || {});
+      if (!patch.id && n.config.assetId) patch.id = n.config.assetId;
+      if (!patch.type) patch.type = guessAssetType(n.kind, patch.filename || n.config.fileName);
+      asset = upsertAsset(state, patch);
+    }
+    if (!asset) return null;
+    n.config.assetId = asset.id;
+    if (asset.filename) n.config.fileName = asset.filename;
+    if (asset.status === 'synced' || asset.status === 'local') {
+      if (n.status === 'pending' && asset.filename) n.status = 'ready';
+    }
+    return asset;
+  }
+
+  function clearNodeAsset(state, nodeId) {
+    var n = getNode(state, nodeId);
+    if (!n || !n.config) return null;
+    var prevId = n.config.assetId || null;
+    n.config.assetId = null;
+    n.config.fileName = null;
+    /* No hard-delete del asset en projectAssets */
+    return prevId;
+  }
+
+  function resolveSceneMedia(state, n) {
+    if (!n) {
+      return {
+        assetId: null, filename: null, status: 'pending',
+        statusLabel: 'Pendiente', thumbnailUrl: null, publicUrl: null, hasMedia: false
+      };
+    }
+    ensureNodeAssetRef(state, n);
+    var asset = n.config && n.config.assetId ? getAsset(state, n.config.assetId) : null;
+    var filename = (asset && asset.filename) || (n.config && n.config.fileName) || null;
+    var status = asset ? asset.status : (filename ? 'local' : 'pending');
+    return {
+      assetId: asset ? asset.id : (n.config && n.config.assetId) || null,
+      filename: filename,
+      status: status,
+      statusLabel: filename ? assetStatusLabel(status) : 'Pendiente',
+      thumbnailUrl: (asset && asset.thumbnailUrl) || null,
+      publicUrl: (asset && asset.publicUrl) || null,
+      hasMedia: !!filename,
+      provider: (asset && asset.provider) || null
+    };
+  }
+
+  function listProjectAssets(state, filterType) {
+    var lib = ensureProjectAssets(state);
+    return Object.keys(lib.byId).map(function (id) {
+      return lib.byId[id];
+    }).filter(function (a) {
+      if (!filterType) return true;
+      return a.type === filterType;
+    });
   }
 
   function mirrorHotspotsFromInteractions(n) {
@@ -393,11 +606,36 @@ var ExperienciaEngine = (function () {
   }
 
   function menuForContext(fromMeta) {
-    /* Drag from any port → destination menu; empty canvas → blank create */
     if (fromMeta && (fromMeta.fromId || fromMeta.portId || fromMeta.fromInteraction || fromMeta.sourcePortId)) {
       return CREATE_MENU;
     }
     return CREATE_MENU_BLANK;
+  }
+
+  function findAddElementItem(id) {
+    for (var i = 0; i < ADD_ELEMENT_MENU.length; i++) {
+      for (var j = 0; j < ADD_ELEMENT_MENU[i].items.length; j++) {
+        if (ADD_ELEMENT_MENU[i].items[j].id === id) return ADD_ELEMENT_MENU[i].items[j];
+      }
+    }
+    return null;
+  }
+
+  function addElementFromMenu(state, sceneId, menuItem) {
+    if (!menuItem) return null;
+    var type = menuItem.interactionType || 'HOTSPOT';
+    var label = menuItem.defaultLabel || menuItem.label || interactionTypeLabel(type);
+    var behavior = menuItem.actionType
+      ? { type: menuItem.actionType, inline: true }
+      : null;
+    if (menuItem.actionType === 'floor-selector') {
+      behavior.source = 'estructura';
+    }
+    return addInteractionToScene(state, sceneId, type, label, {
+      actionType: menuItem.actionType || null,
+      behavior: behavior,
+      group: type === 'HOTSPOT' || type === 'UNIT' ? 'hotspots' : 'controls'
+    });
   }
 
   function normalizeEdge(ed) {
@@ -673,10 +911,6 @@ var ExperienciaEngine = (function () {
     exp.nodes = keptNodes;
     exp.edges = keptEdges;
     exp.heroSlotsVersion = 55;
-    exp.reviewFlags = (exp.reviewFlags || []).concat([{
-      severity: 'recomendado',
-      message: 'V5.9.55: Compartir/Fullscreen/WhatsApp/Explorar son slots del Hero (fuente Hero/Menú).'
-    }]).slice(-8);
     return exp;
   }
 
@@ -773,10 +1007,6 @@ var ExperienciaEngine = (function () {
 
     if (looksLikeLegacyStructureMap(exp) && !exp.legacySnapshot) {
       exp.legacySnapshot = snapshotLegacy(exp);
-      exp.reviewFlags = (exp.reviewFlags || []).concat([{
-        severity: 'recomendado',
-        message: 'Mapa V5.9.51 conservado como legacy. Experiencia ahora es editor de flujo (Hero → interacciones).'
-      }]);
       exp.nodes = [];
       exp.edges = [];
     }
@@ -820,10 +1050,6 @@ var ExperienciaEngine = (function () {
     exp.nodes = (snap.nodes || []).map(function (n) { return normalizeNode(Object.assign({}, n)); });
     exp.edges = (snap.edges || []).map(function (e) { return normalizeEdge(Object.assign({}, e)); });
     exp.mode = 'legacy-map';
-    exp.reviewFlags = (exp.reviewFlags || []).concat([{
-      severity: 'recomendado',
-      message: 'Snapshot legacy restaurado temporalmente.'
-    }]);
     return exp;
   }
 
@@ -1167,31 +1393,18 @@ var ExperienciaEngine = (function () {
         h: n.height || Math.max(HERO_H, 72 + ((n.ports || []).length * 22))
       };
     }
-    var ixs = ((n.config && n.config.interactions) || []).filter(function (ix) {
-      return ix && ix.enabled !== false;
-    });
-    var hasHot = ixs.some(function (ix) {
-      return ix.group === 'hotspots' || ix.type === 'HOTSPOT' || ix.type === 'UNIT';
-    });
-    var hasCtrl = ixs.some(function (ix) {
-      return ix.group === 'controls' ||
-        (ix.type !== 'HOTSPOT' && ix.type !== 'UNIT');
-    });
-    var hasUnits = ixs.some(function (ix) { return ix.type === 'UNIT'; });
-    var sections = (hasHot ? 1 : 0) + (hasCtrl ? 1 : 0) + (hasUnits ? 1 : 0);
-    var flowRows = (n.kind === 'video' || n.kind === 'animacion') ? 1 : 0;
-    var rows = ixs.length + flowRows;
-    if (rows === 0 && sections === 0) {
+    if (!isSceneKind(n.kind)) {
       var outs = (n.ports || []).filter(function (p) { return p.side !== 'in'; });
       var extra = outs.length > 1 ? Math.max(0, (outs.length - 1) * 20) : 0;
-      if (n.config && n.config.hotspots && n.config.hotspots.length) {
-        extra = Math.max(extra, n.config.hotspots.length * 20);
-      }
       return { w: n.width || NODE_W, h: (n.height || NODE_H) + extra };
     }
+    var ixs = (n.config && n.config.interactions) || [];
+    var flowRows = (n.kind === 'video' || n.kind === 'animacion') ? 1 : 0;
+    /* header + media block + elementos section + rows + add btn + optional flow */
+    var h = 56 + 48 + 18 + (ixs.length * 22) + 26 + (flowRows ? 40 : 0) + 8;
     return {
       w: n.width || NODE_W,
-      h: Math.max(NODE_H, 64 + sections * 16 + rows * 22 + 8)
+      h: Math.max(NODE_H + 40, h)
     };
   }
 
@@ -1628,11 +1841,6 @@ var ExperienciaEngine = (function () {
         kept.push(n);
       });
       exp.nodes = kept;
-      exp.reviewFlags = (exp.reviewFlags || []).concat([{
-        severity: 'recomendado',
-        message: 'V5.9.57: ' + migrated +
-          ' hotspot/control legacy embebido en su escena (archivado, no eliminado).'
-      }]).slice(-10);
     }
 
     exp.embeddedInteractionsVersion = 57;
@@ -1648,6 +1856,7 @@ var ExperienciaEngine = (function () {
     SCENE_KINDS: SCENE_KINDS,
     CREATE_MENU: CREATE_MENU,
     CREATE_MENU_BLANK: CREATE_MENU_BLANK,
+    ADD_ELEMENT_MENU: ADD_ELEMENT_MENU,
     emptyState: emptyState,
     ensureState: ensureState,
     ensureFlow: ensureFlow,
@@ -1678,6 +1887,18 @@ var ExperienciaEngine = (function () {
     kindMeta: kindMeta,
     isSceneKind: isSceneKind,
     menuForContext: menuForContext,
+    findAddElementItem: findAddElementItem,
+    addElementFromMenu: addElementFromMenu,
+    interactionTypeLabel: interactionTypeLabel,
+    ensureProjectAssets: ensureProjectAssets,
+    getAsset: getAsset,
+    upsertAsset: upsertAsset,
+    assignAssetToNode: assignAssetToNode,
+    clearNodeAsset: clearNodeAsset,
+    resolveSceneMedia: resolveSceneMedia,
+    listProjectAssets: listProjectAssets,
+    assetStatusLabel: assetStatusLabel,
+    guessAssetType: guessAssetType,
     summary: summary,
     incompleteNodes: incompleteNodes,
     normalizeNode: normalizeNode,

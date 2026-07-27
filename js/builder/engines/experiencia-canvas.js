@@ -1,4 +1,4 @@
-/* BOXIES V5.9.57 — Experiencia: escenas con interacciones embebidas (hotspots/controles) */
+/* BOXIES V5.9.58 — Experiencia: elementos en tarjeta, assets, cortar vínculo */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -29,7 +29,6 @@ var ExperienciaCanvas = (function () {
             '<h2 class="builder-step-title">Experiencia</h2>' +
             '<p class="builder-exp-chrome__sub">Editor del flujo del showroom · ' +
               active + ' nodos' +
-              (exp.legacySnapshot ? ' · legacy conservado' : '') +
               (inGroup ? ' · dentro de grupo' : '') +
             '</p>' +
           '</div>' +
@@ -45,14 +44,6 @@ var ExperienciaCanvas = (function () {
               'Actualizar desde Hero</button>' +
           '</div>' +
         '</div>' +
-        ((exp.reviewFlags || []).length
-          ? '<ul class="builder-exp-flags builder-exp-flags--compact">' +
-            exp.reviewFlags.slice(0, 2).map(function (f) {
-              return '<li class="builder-exp-flag is-' + esc(f.severity || 'recomendado') + '">' +
-                esc(f.message || '') + '</li>';
-            }).join('') +
-            '</ul>'
-          : '') +
         '<div class="builder-exp-workspace' +
           (inspectorVisible ? ' has-inspector' : '') +
           (showInspectorTab ? ' has-inspector-tab' : '') +
@@ -60,9 +51,8 @@ var ExperienciaCanvas = (function () {
           '<div class="builder-exp-stage" data-exp-stage>' +
             '<div class="builder-exp-toolbar" data-exp-toolbar role="toolbar" aria-label="Herramientas del canvas">' +
               toolBtn('select', 'Seleccionar', 'layout-grid') +
+              toolBtn('cut', 'Cortar vínculo', 'scissors') +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
-              toolBtn('zoom-out', 'Zoom −', 'minimize', true) +
-              toolBtn('zoom-in', 'Zoom +', 'maximize', true) +
               toolBtn('relayout', 'Auto ordenar', 'layers', true) +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('minimap', minimapOn ? 'Ocultar minimapa' : 'Mostrar minimapa', 'eye', true) +
@@ -112,29 +102,75 @@ var ExperienciaCanvas = (function () {
       iconHtml + '</button>';
   }
 
-  function interactionRowsHtml(n, list, sectionLabel) {
+  function interactionRowsHtml(n, list, selectedIxId) {
     if (!list || !list.length) return '';
-    return '<div class="builder-exp-card__section">' + esc(sectionLabel) + '</div>' +
+    return list.map(function (ix) {
+      var pid = ix.portId || ix.id;
+      var disabled = ix.enabled === false;
+      var typeLab = ExperienciaEngine.interactionTypeLabel
+        ? ExperienciaEngine.interactionTypeLabel(ix.type)
+        : (ix.type || '');
+      var mark = ix.type === 'HOTSPOT' || ix.type === 'UNIT' ? '●' : '▣';
+      var isSel = selectedIxId && (ix.id === selectedIxId || ix.portId === selectedIxId);
+      return '<div class="builder-exp-card__irow is-interaction' +
+        (disabled ? ' is-disabled' : '') +
+        (isSel ? ' is-selected' : '') +
+        '" data-exp-irow="' + esc(pid) + '"' +
+        ' data-exp-interaction="' + esc(ix.id) + '"' +
+        ' data-exp-scene="' + esc(n.id) + '">' +
+        '<span class="builder-exp-card__ix-label">' +
+          '<em class="builder-exp-card__ix-mark">' + mark + '</em> ' +
+          esc(typeLab) + ' · ' + esc(ix.label || typeLab) +
+        '</span>' +
+        (disabled
+          ? '<span class="builder-exp-card__badge is-off">OFF</span>'
+          : '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+            esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' +
+            esc(ix.label || '') + '" data-interaction-id="' + esc(ix.id) + '"></span>') +
+      '</div>';
+    }).join('');
+  }
+
+  function elementosBlockHtml(n, selectedIxId) {
+    var ixs = (n.config && n.config.interactions) || [];
+    return '<div class="builder-exp-card__section">Elementos</div>' +
       '<div class="builder-exp-card__ports">' +
-      list.map(function (ix) {
-        var pid = ix.portId || ix.id;
-        var disabled = ix.enabled === false;
-        return '<div class="builder-exp-card__irow is-interaction' + (disabled ? ' is-disabled' : '') +
-          '" data-exp-irow="' + esc(pid) + '"' +
-          ' data-exp-interaction="' + esc(ix.id) + '"' +
-          ' data-exp-scene="' + esc(n.id) + '">' +
-          '<span>' + esc(ix.label || ix.type) + '</span>' +
-          (disabled
-            ? '<span class="builder-exp-card__badge is-off">OFF</span>'
-            : '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
-              esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' +
-              esc(ix.label || '') + '" data-interaction-id="' + esc(ix.id) + '"></span>') +
-        '</div>';
-      }).join('') +
+        interactionRowsHtml(n, ixs, selectedIxId) +
+      '</div>' +
+      '<button type="button" class="builder-exp-card__add-el" data-exp-add-element="' +
+        esc(n.id) + '">+ Agregar elemento</button>';
+  }
+
+  function mediaBlockHtml(state, n) {
+    var media = ExperienciaEngine.resolveSceneMedia
+      ? ExperienciaEngine.resolveSceneMedia(state, n)
+      : {
+          filename: n.config && n.config.fileName,
+          statusLabel: (n.config && n.config.fileName) ? 'Local' : 'Pendiente',
+          hasMedia: !!(n.config && n.config.fileName),
+          thumbnailUrl: null
+        };
+    var statusCls = !media.hasMedia ? 'is-pending'
+      : (media.status === 'error' ? 'is-error'
+        : (media.status === 'synced' || media.status === 'local' ? 'is-ok' : 'is-sync'));
+    return '<div class="builder-exp-card__section">Media</div>' +
+      '<div class="builder-exp-card__media">' +
+        (media.thumbnailUrl
+          ? '<div class="builder-exp-card__thumb"><img src="' + esc(media.thumbnailUrl) +
+            '" alt="" loading="lazy"></div>'
+          : '') +
+        '<div class="builder-exp-card__media-text">' +
+          '<div class="builder-exp-card__media-name">' +
+            esc(media.filename || 'Sin asignar') +
+          '</div>' +
+          '<div class="builder-exp-card__media-status ' + statusCls + '">' +
+            esc(media.hasMedia ? media.statusLabel : 'Pendiente') +
+          '</div>' +
+        '</div>' +
       '</div>';
   }
 
-  function nodeCardHtml(n) {
+  function nodeCardHtml(n, state) {
     var status = ExperienciaEngine.statusLabel(n);
     var info = ExperienciaEngine.infoLine(n);
     var size = ExperienciaEngine.nodeSize(n);
@@ -153,6 +189,9 @@ var ExperienciaCanvas = (function () {
     var portsIn = (n.ports || []).filter(function (p) { return p.side === 'in'; });
     var ixs = (n.config && n.config.interactions) || [];
     var enabledIxs = ixs.filter(function (ix) { return ix && ix.enabled !== false; });
+    var selectedIx = state && state.experiencia && state.experiencia.canvas
+      ? state.experiencia.canvas.selectedInteractionId
+      : null;
 
     var body = '';
     if (isHero) {
@@ -213,19 +252,14 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-exp-card__info">' + esc(info || (n.config && n.config.actionType) || '') + '</div>' +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
     } else if (isScene) {
-      var mediaOk = !!(n.config && n.config.fileName);
       body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'ESCENA') + '</div>' +
         '<div class="builder-exp-card__title">' + esc(n.label || n.id) + '</div>' +
-        '<div class="builder-exp-card__info">' +
-          (mediaOk
-            ? ('● ' + esc(n.config.fileName))
-            : (info ? esc(info) : '○ Sin media')) +
-        '</div>' +
-        '<div class="builder-exp-card__status">' + esc(status) + '</div>';
+        mediaBlockHtml(state || {}, n) +
+        elementosBlockHtml(n, selectedIx);
 
       if (n.kind === 'video' || n.kind === 'animacion') {
-        body += '<div class="builder-exp-card__section">Flujo</div>' +
+        body += '<div class="builder-exp-card__section">Flujo automático</div>' +
           '<div class="builder-exp-card__ports">' +
           '<div class="builder-exp-card__irow is-flow" data-exp-irow="on-end">' +
             '<span>Al finalizar</span>' +
@@ -233,21 +267,7 @@ var ExperienciaCanvas = (function () {
               esc(n.id) + '" data-port-label="Al finalizar"></span>' +
           '</div></div>';
       }
-
-      var hotspots = ixs.filter(function (ix) {
-        return ix.group === 'hotspots' || ix.type === 'HOTSPOT';
-      });
-      var units = ixs.filter(function (ix) { return ix.type === 'UNIT'; });
-      var controls = ixs.filter(function (ix) {
-        return ix.type !== 'HOTSPOT' && ix.type !== 'UNIT' &&
-          (ix.group === 'controls' || !ix.group ||
-            ix.type === 'BUTTON' || ix.type === 'SELECTOR' || ix.type === 'BACK' ||
-            ix.type === 'MENU_TRIGGER' || ix.type === 'PANEL_TRIGGER' || ix.type === 'CUSTOM');
-      });
-
-      body += interactionRowsHtml(n, hotspots, 'Hotspots');
-      body += interactionRowsHtml(n, units, 'Unidades');
-      body += interactionRowsHtml(n, controls, 'Controles');
+      void selectedIx;
     } else {
       body =
         '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'NODO') + '</div>' +
@@ -271,13 +291,12 @@ var ExperienciaCanvas = (function () {
       ? '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>'
       : (isHero ? '' : '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>');
 
-    var hasEmbedded = enabledIxs.length > 0 ||
-      (isScene && (n.kind === 'video' || n.kind === 'animacion'));
+    var hasRowPorts = enabledIxs.length > 0 ||
+      n.kind === 'video' || n.kind === 'animacion';
     var flowOuts = portsOut.filter(function (p) {
       return p.kind !== 'meta' && p.kind !== 'interaction' && p.id !== 'on-end';
     });
-    var defaultOut = (!isHero && !hasEmbedded && flowOuts.length <= 1 &&
-      n.kind !== 'video' && n.kind !== 'animacion')
+    var defaultOut = (!isHero && !hasRowPorts && flowOuts.length <= 1)
       ? '<span class="builder-exp-card__port is-out" data-exp-port="out" data-port-id="' +
         esc((flowOuts[0] && flowOuts[0].id) || 'out') + '" data-node="' + esc(n.id) +
         '" data-port-label="' + esc((flowOuts[0] && flowOuts[0].label) || 'Salida') + '"></span>'
@@ -453,19 +472,52 @@ var ExperienciaCanvas = (function () {
         n.kind === 'vista' || n.kind === 'planta-3d' || n.kind === 'ficha' || n.kind === 'gallery' ||
         n.kind === 'video' || n.kind === 'animacion') {
       var ixs = (n.config && n.config.interactions) || [];
-      var hotspots = ixs.filter(function (ix) {
-        return ix.group === 'hotspots' || ix.type === 'HOTSPOT';
-      });
-      var controls = ixs.filter(function (ix) {
-        return ix.type !== 'HOTSPOT' && ix.type !== 'UNIT';
-      });
-      var units = ixs.filter(function (ix) { return ix.type === 'UNIT'; });
+      var media = ExperienciaEngine.resolveSceneMedia
+        ? ExperienciaEngine.resolveSceneMedia(state, n)
+        : { filename: n.config && n.config.fileName, statusLabel: '—', assetId: null };
+      var selIxId = state.experiencia && state.experiencia.canvas
+        ? state.experiencia.canvas.selectedInteractionId
+        : null;
+      var selIx = selIxId ? ExperienciaEngine.getInteraction(state, n.id, selIxId) : null;
+
+      if (selIx) {
+        html += '<div class="builder-exp-inspector__section">Elemento</div>' +
+          '<div class="builder-exp-inspector__grid">' +
+            row('Nombre', selIx.label || '—') +
+            row('Tipo', ExperienciaEngine.interactionTypeLabel
+              ? ExperienciaEngine.interactionTypeLabel(selIx.type)
+              : selIx.type) +
+            row('Puerto', selIx.portId || selIx.id) +
+            row('Acción', (selIx.actionType || (selIx.behavior && selIx.behavior.type) || '—')) +
+            row('Estado', selIx.enabled === false ? 'Deshabilitado' : 'Activo') +
+            row('Posición', (selIx.x != null || selIx.y != null)
+              ? ((selIx.x != null ? selIx.x : '—') + ', ' + (selIx.y != null ? selIx.y : '—'))
+              : 'Sin definir') +
+          '</div>' +
+          '<div class="builder-exp-inspector__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="rename" data-exp-ix-id="' +
+              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">Renombrar</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="toggle" data-exp-ix-id="' +
+              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">' +
+              (selIx.enabled === false ? 'Habilitar' : 'Deshabilitar') + '</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="dup" data-exp-ix-id="' +
+              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">Duplicar</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="unlink" data-exp-ix-id="' +
+              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">Desvincular</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="del" data-exp-ix-id="' +
+              esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">Eliminar</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-clear-ix-sel>Volver a escena</button>' +
+          '</div>';
+        return html;
+      }
 
       html += '<div class="builder-exp-inspector__section">Escena</div>' +
         '<div class="builder-exp-inspector__grid">' +
           row('Nombre', n.label || '—') +
           row('Tipo', n.typeLabel || n.kind) +
-          row('Media', (n.config && n.config.fileName) || 'Sin asignar') +
+          row('Asset', media.filename || 'Sin asignar') +
+          row('Estado media', media.statusLabel || 'Pendiente') +
+          row('Asset ID', media.assetId || '—') +
           row('Estado', ExperienciaEngine.statusLabel(n)) +
           row('Origen', names(conn.in, 'from')) +
         '</div>';
@@ -478,29 +530,26 @@ var ExperienciaCanvas = (function () {
         '</div>';
       }
 
-      html += '<div class="builder-exp-inspector__section">Interacciones</div>';
+      html += '<div class="builder-exp-inspector__section">Media</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Referenciar archivo (nombre)</label>' +
+          '<input type="text" data-exp-asset-filename maxlength="180" placeholder="vista-general.webp" value="' +
+            esc(media.filename || '') + '">' +
+        '</div>' +
+        '<div class="builder-exp-inspector__actions">' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-assign="' +
+            esc(n.id) + '">Asignar / actualizar asset</button>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-clear="' +
+            esc(n.id) + '">Quitar referencia</button>' +
+        '</div>';
 
       html += '<div class="builder-exp-inspector__ix-head">' +
-        '<span>Hotspots</span>' +
-        '<button type="button" class="builder-exp-inspector__ix-add" data-exp-add-hotspot="' +
+        '<span>Elementos de la escena</span>' +
+        '<button type="button" class="builder-exp-inspector__ix-add" data-exp-add-element="' +
           esc(n.id) + '">+ Agregar</button></div>';
-      html += interactionInspectorList(n, hotspots);
+      html += interactionInspectorList(n, ixs);
 
-      html += '<div class="builder-exp-inspector__ix-head">' +
-        '<span>Controles</span>' +
-        '<button type="button" class="builder-exp-inspector__ix-add" data-exp-add-control="' +
-          esc(n.id) + '">+ Agregar</button></div>';
-      html += interactionInspectorList(n, controls);
-
-      if (units.length) {
-        html += '<div class="builder-exp-inspector__ix-head"><span>Unidades</span></div>';
-        html += interactionInspectorList(n, units);
-      }
-
-      html += '<div class="builder-exp-inspector__actions">' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" disabled>Asignar archivo</button>' +
-        '<p class="builder-menu-hint">Hotspots y controles viven dentro de la escena. Eliminar una interacción no borra su destino.</p>' +
-      '</div>';
+      html += '<p class="builder-menu-hint">Eliminar un elemento no borra su escena destino ni el asset.</p>';
       return html;
     }
 
@@ -589,6 +638,23 @@ var ExperienciaCanvas = (function () {
           cat.items.map(function (it) {
             return '<button type="button" class="builder-exp-ctx__item" data-exp-create="' +
               esc(it.id) + '" data-cat="' + esc(cat.id) + '">' + esc(it.label) + '</button>';
+          }).join('') +
+        '</div>';
+      }).join('') +
+      '<button type="button" class="builder-exp-ctx__cancel" data-exp-ctx-cancel>Cancelar</button>' +
+    '</div>';
+  }
+
+  function addElementMenuHtml() {
+    var menu = ExperienciaEngine.ADD_ELEMENT_MENU || [];
+    return '<div class="builder-exp-ctx__panel">' +
+      '<div class="builder-exp-ctx__title">Agregar elemento</div>' +
+      menu.map(function (cat) {
+        return '<div class="builder-exp-ctx__cat">' +
+          '<div class="builder-exp-ctx__cat-label">' + esc(cat.label) + '</div>' +
+          cat.items.map(function (it) {
+            return '<button type="button" class="builder-exp-ctx__item" data-exp-add-el-item="' +
+              esc(it.id) + '">' + esc(it.label) + '</button>';
           }).join('') +
         '</div>';
       }).join('') +
@@ -802,7 +868,9 @@ var ExperienciaCanvas = (function () {
       var ids = selectedIds();
       var idSet = {};
       ids.forEach(function (id) { idSet[id] = true; });
-      nodesEl.innerHTML = nodes.map(nodeCardHtml).join('');
+      nodesEl.innerHTML = nodes.map(function (n) {
+        return nodeCardHtml(n, state);
+      }).join('');
       nodesEl.querySelectorAll('[data-exp-node]').forEach(function (el) {
         var nid = el.getAttribute('data-exp-node');
         if (idSet[nid]) el.classList.add('is-selected');
@@ -968,15 +1036,66 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
-      inspectorBody.querySelectorAll('[data-exp-ix-item], .builder-exp-inspector__ix-item').forEach(function (row) {
-        var sceneId = row.getAttribute('data-exp-ix-scene');
-        var ixId = row.getAttribute('data-exp-ix-id');
-        row.querySelectorAll('[data-exp-ix-act]').forEach(function (btn) {
-          btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            runInteractionAction(btn.getAttribute('data-exp-ix-act'), sceneId, ixId);
+      inspectorBody.querySelectorAll('[data-exp-add-element]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var sid = btn.getAttribute('data-exp-add-element');
+          var rect = btn.getBoundingClientRect();
+          openAddElementMenu(sid, { x: rect.left, y: rect.bottom + 4 });
+        });
+      });
+      var clearIx = inspectorBody.querySelector('[data-exp-clear-ix-sel]');
+      if (clearIx) {
+        clearIx.addEventListener('click', function () {
+          canvas().selectedInteractionId = null;
+          canvas().selectedInteractionSceneId = null;
+          renderAll(); persist();
+        });
+      }
+      var assignBtn = inspectorBody.querySelector('[data-exp-asset-assign]');
+      if (assignBtn) {
+        assignBtn.addEventListener('click', function () {
+          var nid = assignBtn.getAttribute('data-exp-asset-assign');
+          var input = inspectorBody.querySelector('[data-exp-asset-filename]');
+          var fname = input ? String(input.value || '').trim() : '';
+          if (!fname) {
+            if (typeof AdminNotify !== 'undefined') AdminNotify.info('Indica un nombre de archivo.');
+            return;
+          }
+          ExperienciaEngine.assignAssetToNode(state, nid, {
+            filename: fname,
+            provider: 'local',
+            status: 'synced'
           });
+          renderAll(); persist();
+        });
+      }
+      var clearAsset = inspectorBody.querySelector('[data-exp-asset-clear]');
+      if (clearAsset) {
+        clearAsset.addEventListener('click', function () {
+          ExperienciaEngine.clearNodeAsset(state, clearAsset.getAttribute('data-exp-asset-clear'));
+          renderAll(); persist();
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-ix-act]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var row = btn.closest('[data-exp-ix-scene]') || btn;
+          var sceneId = btn.getAttribute('data-exp-ix-scene') ||
+            (row && row.getAttribute('data-exp-ix-scene'));
+          var ixId = btn.getAttribute('data-exp-ix-id') ||
+            (row && row.getAttribute('data-exp-ix-id'));
+          runInteractionAction(btn.getAttribute('data-exp-ix-act'), sceneId, ixId);
+        });
+      });
+      inspectorBody.querySelectorAll('.builder-exp-inspector__ix-item').forEach(function (row) {
+        row.addEventListener('click', function (ev) {
+          if (ev.target.closest('[data-exp-ix-act]')) return;
+          selectInteraction(
+            row.getAttribute('data-exp-ix-scene'),
+            row.getAttribute('data-exp-ix-id')
+          );
         });
       });
       var eg = inspectorBody.querySelector('[data-exp-enter-group]');
@@ -1058,21 +1177,25 @@ var ExperienciaCanvas = (function () {
 
     function syncToolUi() {
       var tool = canvas().tool || 'select';
-      if (tool === 'connect' || tool === 'cut') {
+      if (tool === 'connect') {
         tool = 'select';
         canvas().tool = 'select';
       }
       rootEl.querySelectorAll('[data-exp-tool]').forEach(function (btn) {
         var t = btn.getAttribute('data-exp-tool');
-        var isMode = t === 'select';
+        var isMode = t === 'select' || t === 'cut';
         btn.classList.toggle('is-active', isMode && t === tool);
       });
+      viewport.classList.toggle('is-cut', tool === 'cut');
       viewport.classList.remove('is-connect');
-      viewport.classList.remove('is-cut');
     }
 
     function selectNode(id, opts) {
       opts = opts || {};
+      if (!opts.keepInteraction) {
+        canvas().selectedInteractionId = null;
+        canvas().selectedInteractionSceneId = null;
+      }
       if (opts.toggle && id) {
         ExperienciaEngine.toggleSelectionId(state, id);
       } else if (opts.add && id) {
@@ -1084,10 +1207,26 @@ var ExperienciaCanvas = (function () {
       }
       if (id || selectedIds().length) {
         canvas().inspectorOpen = true;
-        /* Respect collapsed preference — do not force open */
       }
       renderAll();
       persist();
+    }
+
+    function selectInteraction(sceneId, ixId) {
+      ExperienciaEngine.setSelection(state, sceneId ? [sceneId] : [], []);
+      canvas().selectedInteractionId = ixId || null;
+      canvas().selectedInteractionSceneId = sceneId || null;
+      canvas().inspectorOpen = true;
+      renderAll();
+      persist();
+    }
+
+    function openAddElementMenu(sceneId, clientXY) {
+      pendingCreate = { sceneId: sceneId, mode: 'add-element' };
+      ctxMode = { type: 'add-element', sceneId: sceneId };
+      if (!ctxEl) return;
+      ctxEl.innerHTML = addElementMenuHtml();
+      positionCtxMenu(clientXY.x, clientXY.y);
     }
 
     function selectEdge(id) {
@@ -1423,6 +1562,21 @@ var ExperienciaCanvas = (function () {
           );
           return;
         }
+        var addElItem = ev.target.closest('[data-exp-add-el-item]');
+        if (addElItem) {
+          var sceneForEl = (pendingCreate && pendingCreate.sceneId) ||
+            (ctxMode && ctxMode.sceneId);
+          var elItem = ExperienciaEngine.findAddElementItem
+            ? ExperienciaEngine.findAddElementItem(addElItem.getAttribute('data-exp-add-el-item'))
+            : null;
+          if (sceneForEl && elItem) {
+            var created = ExperienciaEngine.addElementFromMenu(state, sceneForEl, elItem);
+            hideCtx();
+            if (created) selectInteraction(sceneForEl, created.id);
+            else { renderAll(); persist(); }
+          }
+          return;
+        }
         var edgeAct = ev.target.closest('[data-exp-edge-act]');
         if (edgeAct && edgeAct.getAttribute('data-exp-edge-act') === 'unlink') {
           if (canvas().selectedEdgeId) {
@@ -1482,6 +1636,14 @@ var ExperienciaCanvas = (function () {
         var tool = btn.getAttribute('data-exp-tool');
         if (tool === 'select') {
           canvas().tool = 'select';
+          linkDrag = null;
+          hoverCutEdgeId = null;
+          syncToolUi();
+          persist();
+          return;
+        }
+        if (tool === 'cut') {
+          canvas().tool = 'cut';
           linkDrag = null;
           hoverCutEdgeId = null;
           syncToolUi();
@@ -1640,11 +1802,25 @@ var ExperienciaCanvas = (function () {
         return;
       }
 
-      /* Interaction row (not the port circle): select scene, don't start card drag */
+      /* Interaction row (not the port circle): select interaction, don't start card drag */
       var ixHit = ev.target.closest('[data-exp-interaction]');
       if (ixHit && tool === 'select' && !ev.target.closest('[data-exp-port]')) {
         ev.stopPropagation();
-        selectNode(ixHit.getAttribute('data-exp-scene'));
+        selectInteraction(
+          ixHit.getAttribute('data-exp-scene'),
+          ixHit.getAttribute('data-exp-interaction')
+        );
+        return;
+      }
+
+      var addElBtn = ev.target.closest('[data-exp-add-element]');
+      if (addElBtn && tool === 'select') {
+        ev.stopPropagation();
+        ev.preventDefault();
+        openAddElementMenu(
+          addElBtn.getAttribute('data-exp-add-element'),
+          { x: ev.clientX, y: ev.clientY }
+        );
         return;
       }
 
