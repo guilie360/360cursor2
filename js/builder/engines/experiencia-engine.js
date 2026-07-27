@@ -1,4 +1,4 @@
-/* BOXIES V5.9.62 — Menú destino simplificado + paleta verde/morado */
+/* BOXIES V5.9.63 — Copy/paste, multi-in, HUB plantas, controles globales */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -6,6 +6,10 @@ var ExperienciaEngine = (function () {
   var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
+
+  /* In-memory clipboard for Ctrl+C / Ctrl+V (nodes + internal edges only) */
+  var _clipboard = null;
+  var _pasteGen = 0;
 
   var SCENE_KINDS = {
     scene: true, image: true, video: true, pano360: true, plan: true,
@@ -98,37 +102,41 @@ var ExperienciaEngine = (function () {
     }
   ];
 
-  /* + Agregar elemento DENTRO de una escena */
+  /* + Agregar elemento DENTRO de una escena (sin controles globales del showroom) */
   var ADD_ELEMENT_MENU = [
     {
-      id: 'interaccion',
-      label: 'INTERACCIÓN',
+      id: 'controles',
+      label: 'CONTROLES',
       items: [
-        { id: 'el-hotspot', label: 'Hotspot', kind: '_embed', interactionType: 'HOTSPOT', defaultLabel: 'Hotspot' },
-        { id: 'el-button', label: 'Botón / control', kind: '_embed', interactionType: 'BUTTON', defaultLabel: 'Botón' },
-        { id: 'el-selector', label: 'Selector de pisos', kind: '_embed', interactionType: 'SELECTOR', actionType: 'floor-selector', defaultLabel: 'Plantas' },
-        { id: 'el-info', label: 'Información / detalles', kind: '_embed', interactionType: 'CUSTOM', actionType: 'show-info', defaultLabel: 'Información' }
+        { id: 'el-selector', label: 'Selector · Plantas', kind: '_embed', interactionType: 'SELECTOR', actionType: 'floor-selector', defaultLabel: 'Plantas', group: 'controls' },
+        { id: 'el-toggle-3d2d', label: 'Toggle · 3D / 2D', kind: '_embed', interactionType: 'TOGGLE_3D2D', actionType: 'toggle-3d2d', defaultLabel: '3D / 2D', group: 'controls' },
+        { id: 'el-button', label: 'Botón / control', kind: '_embed', interactionType: 'BUTTON', defaultLabel: 'Botón', group: 'controls' },
+        { id: 'el-info', label: 'Información / detalles', kind: '_embed', interactionType: 'CUSTOM', actionType: 'show-info', defaultLabel: 'Información', group: 'controls' }
+      ]
+    },
+    {
+      id: 'contenido',
+      label: 'CONTENIDO',
+      items: [
+        { id: 'el-hotspot', label: 'Hotspot', kind: '_embed', interactionType: 'HOTSPOT', defaultLabel: 'Hotspot', group: 'content' },
+        { id: 'el-units', label: 'Unidades · Planta activa', kind: '_embed', interactionType: 'UNITS_FLOOR', actionType: 'units-active-floor', defaultLabel: 'Planta activa', group: 'content' }
       ]
     },
     {
       id: 'navegacion',
       label: 'NAVEGACIÓN',
       items: [
-        { id: 'el-back', label: 'Volver', kind: '_embed', interactionType: 'BACK', actionType: 'back', defaultLabel: 'Volver' },
-        { id: 'el-hero', label: 'Ir al Hero', kind: '_embed', interactionType: 'BUTTON', actionType: 'goto-hero', defaultLabel: 'Ir al Hero' },
-        { id: 'el-menu', label: 'Abrir Menú', kind: '_embed', interactionType: 'MENU_TRIGGER', actionType: 'open-menu', defaultLabel: 'Menú' }
+        { id: 'el-back', label: 'Volver', kind: '_embed', interactionType: 'BACK', actionType: 'back', defaultLabel: 'Volver', group: 'navigation' },
+        { id: 'el-hero', label: 'Ir al Hero', kind: '_embed', interactionType: 'BUTTON', actionType: 'goto-hero', defaultLabel: 'Ir al Hero', group: 'navigation' }
       ]
     },
     {
       id: 'accion',
-      label: 'ACCIÓN',
+      label: 'ACCIÓN LOCAL',
       items: [
-        { id: 'el-url', label: 'Abrir URL', kind: '_embed', interactionType: 'BUTTON', actionType: 'url', defaultLabel: 'Abrir URL' },
-        { id: 'el-wa', label: 'WhatsApp / contacto', kind: '_embed', interactionType: 'BUTTON', actionType: 'whatsapp', defaultLabel: 'WhatsApp' },
-        { id: 'el-dl', label: 'Descargar documento', kind: '_embed', interactionType: 'BUTTON', actionType: 'download', defaultLabel: 'Descargar' },
-        { id: 'el-share', label: 'Compartir', kind: '_embed', interactionType: 'BUTTON', actionType: 'share', defaultLabel: 'Compartir' },
-        { id: 'el-fs', label: 'Fullscreen', kind: '_embed', interactionType: 'BUTTON', actionType: 'fullscreen', defaultLabel: 'Fullscreen' },
-        { id: 'el-close', label: 'Cerrar', kind: '_embed', interactionType: 'BUTTON', actionType: 'close', defaultLabel: 'Cerrar' }
+        { id: 'el-url', label: 'Abrir URL', kind: '_embed', interactionType: 'BUTTON', actionType: 'url', defaultLabel: 'Abrir URL', group: 'controls' },
+        { id: 'el-dl', label: 'Descargar documento', kind: '_embed', interactionType: 'BUTTON', actionType: 'download', defaultLabel: 'Descargar', group: 'controls' },
+        { id: 'el-close', label: 'Cerrar', kind: '_embed', interactionType: 'BUTTON', actionType: 'close', defaultLabel: 'Cerrar', group: 'controls' }
       ]
     }
   ];
@@ -138,10 +146,20 @@ var ExperienciaEngine = (function () {
     BUTTON: 'Botón',
     SELECTOR: 'Selector',
     UNIT: 'Unidad',
+    UNITS_FLOOR: 'Unidades',
+    TOGGLE_3D2D: 'Toggle',
     BACK: 'Volver',
     MENU_TRIGGER: 'Menú',
     PANEL_TRIGGER: 'Panel',
     CUSTOM: 'Info'
+  };
+
+  /** Global showroom controls — configured on Hero, not per-scene elements */
+  var GLOBAL_SHOWROOM_ACTIONS = {
+    whatsapp: true,
+    share: true,
+    fullscreen: true,
+    'open-menu': true
   };
 
   function uid(prefix) {
@@ -254,10 +272,100 @@ var ExperienciaEngine = (function () {
 
   function interactionGroup(type) {
     var t = String(type || '').toUpperCase();
-    if (t === 'HOTSPOT' || t === 'UNIT') return 'hotspots';
-    if (t === 'BUTTON' || t === 'SELECTOR' || t === 'MENU_TRIGGER' ||
-        t === 'PANEL_TRIGGER' || t === 'BACK' || t === 'CUSTOM') return 'controls';
+    if (t === 'HOTSPOT' || t === 'UNIT' || t === 'UNITS_FLOOR') return 'content';
+    if (t === 'BACK') return 'navigation';
+    if (t === 'BUTTON' || t === 'SELECTOR' || t === 'TOGGLE_3D2D' || t === 'MENU_TRIGGER' ||
+        t === 'PANEL_TRIGGER' || t === 'CUSTOM') return 'controls';
     return 'controls';
+  }
+
+  /**
+   * Whether an embedded interaction exposes an outgoing ○ port.
+   * Internal hub controls and contextual Back do not leave the scene via cable.
+   */
+  function interactionHasSourcePort(ix) {
+    if (!ix || ix.enabled === false) return false;
+    var t = String(ix.type || '').toUpperCase();
+    var a = String(ix.actionType || (ix.behavior && ix.behavior.type) || '').toLowerCase();
+    if (t === 'BACK' || a === 'back') return false;
+    if (t === 'TOGGLE_3D2D' || a === 'toggle-3d2d') return false;
+    if (t === 'SELECTOR' || a === 'floor-selector') return false;
+    if (t === 'MENU_TRIGGER' || a === 'open-menu') return false;
+    if (GLOBAL_SHOWROOM_ACTIONS[a]) return false;
+    return true;
+  }
+
+  function ensureHubConfig(n) {
+    if (!n || !n.config) return null;
+    if (!n.config.hub || typeof n.config.hub !== 'object') {
+      n.config.hub = {
+        enabled: false,
+        activeFloor: null,
+        visualMode: '3d',
+        floors: [],
+        navigationStackKey: 'navigationStack'
+      };
+    }
+    if (!Array.isArray(n.config.hub.floors)) n.config.hub.floors = [];
+    if (!n.config.hub.visualMode) n.config.hub.visualMode = '3d';
+    if (!n.config.hub.navigationStackKey) n.config.hub.navigationStackKey = 'navigationStack';
+    return n.config.hub;
+  }
+
+  function enableHubOnScene(n) {
+    var hub = ensureHubConfig(n);
+    if (hub) hub.enabled = true;
+    return hub;
+  }
+
+  function findHubFloor(hub, floorKey) {
+    if (!hub || !floorKey) return null;
+    var key = String(floorKey);
+    for (var i = 0; i < (hub.floors || []).length; i++) {
+      var f = hub.floors[i];
+      if (!f) continue;
+      if (String(f.key) === key || String(f.label) === key) return f;
+    }
+    return null;
+  }
+
+  function setHubActiveFloor(state, nodeId, floorKey) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var hub = enableHubOnScene(n);
+    hub.activeFloor = floorKey != null ? String(floorKey) : null;
+    return hub;
+  }
+
+  function setHubVisualMode(state, nodeId, mode) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var hub = enableHubOnScene(n);
+    hub.visualMode = (String(mode || '').toLowerCase() === '2d') ? '2d' : '3d';
+    return hub;
+  }
+
+  function upsertHubFloor(state, nodeId, floorPartial) {
+    var n = getNode(state, nodeId);
+    if (!n || !floorPartial) return null;
+    var hub = enableHubOnScene(n);
+    var key = String(floorPartial.key || floorPartial.label || uid('floor'));
+    var existing = findHubFloor(hub, key);
+    if (existing) {
+      if (floorPartial.label != null) existing.label = floorPartial.label;
+      if (floorPartial.asset3dId !== undefined) existing.asset3dId = floorPartial.asset3dId;
+      if (floorPartial.asset2dId !== undefined) existing.asset2dId = floorPartial.asset2dId;
+      return existing;
+    }
+    var row = {
+      key: key,
+      label: floorPartial.label || key,
+      asset3dId: floorPartial.asset3dId || null,
+      asset2dId: floorPartial.asset2dId || null
+    };
+    hub.floors.push(row);
+    if (!hub.activeFloor) hub.activeFloor = key;
+    return row;
   }
 
   function makeInteraction(partial) {
@@ -445,7 +553,20 @@ var ExperienciaEngine = (function () {
       };
     }
     ensureNodeAssetRef(state, n);
-    var asset = n.config && n.config.assetId ? getAsset(state, n.config.assetId) : null;
+    var hub = n.config && n.config.hub;
+    var asset = null;
+    if (hub && hub.enabled && hub.activeFloor) {
+      var floor = findHubFloor(hub, hub.activeFloor);
+      if (floor) {
+        var preferId = (hub.visualMode === '2d')
+          ? (floor.asset2dId || floor.asset3dId)
+          : (floor.asset3dId || floor.asset2dId);
+        if (preferId) asset = getAsset(state, preferId);
+      }
+    }
+    if (!asset) {
+      asset = n.config && n.config.assetId ? getAsset(state, n.config.assetId) : null;
+    }
     var filename = (asset && asset.filename) || (n.config && n.config.fileName) || null;
     var status = asset ? asset.status : (filename ? 'local' : 'pending');
     return {
@@ -456,7 +577,9 @@ var ExperienciaEngine = (function () {
       thumbnailUrl: (asset && asset.thumbnailUrl) || null,
       publicUrl: (asset && asset.publicUrl) || null,
       hasMedia: !!filename,
-      provider: (asset && asset.provider) || null
+      provider: (asset && asset.provider) || null,
+      activeFloor: hub && hub.enabled ? hub.activeFloor : null,
+      visualMode: hub && hub.enabled ? hub.visualMode : null
     };
   }
 
@@ -485,6 +608,7 @@ var ExperienciaEngine = (function () {
     if (!n || !isSceneKind(n.kind)) return n;
     if (!n.config) n.config = {};
     if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+    if (n.config.hub) ensureHubConfig(n);
 
     /* Migrate legacy config.hotspots → interactions */
     if (Array.isArray(n.config.hotspots) && n.config.hotspots.length) {
@@ -499,14 +623,26 @@ var ExperienciaEngine = (function () {
           type: 'HOTSPOT',
           label: hs.label || 'Hotspot',
           portId: 'hs-' + hs.id,
-          group: 'hotspots'
+          group: 'content'
         }));
       });
     }
 
     n.config.interactions = n.config.interactions.map(function (ix) {
-      return makeInteraction(ix);
+      var m = makeInteraction(ix);
+      /* Normalize legacy hotspots group name */
+      if (m.group === 'hotspots') m.group = 'content';
+      return m;
     });
+
+    /* Auto-enable hub when advanced planta elements exist */
+    var hasHubEls = n.config.interactions.some(function (ix) {
+      var t = String(ix.type || '').toUpperCase();
+      var a = String(ix.actionType || '').toLowerCase();
+      return t === 'UNITS_FLOOR' || t === 'TOGGLE_3D2D' || t === 'SELECTOR' ||
+        a === 'units-active-floor' || a === 'toggle-3d2d' || a === 'floor-selector';
+    });
+    if (hasHubEls) enableHubOnScene(n);
 
     mirrorHotspotsFromInteractions(n);
     syncScenePorts(n);
@@ -516,13 +652,16 @@ var ExperienciaEngine = (function () {
   function syncScenePorts(n) {
     if (!n || n.kind === 'hero') return;
     var ports = [];
-    ports.push({ id: 'in', label: 'Entrada', side: 'in', kind: 'flow' });
+    /* Single shared input port — accepts N incoming edges */
+    ports.push({ id: 'in', label: 'Entrada', side: 'in', kind: 'flow', multiIn: true });
     if (n.kind === 'video' || n.kind === 'animacion') {
       ports.push({ id: 'on-end', label: 'Al finalizar', side: 'out', kind: 'flow' });
     }
     var ixs = (n.config && n.config.interactions) || [];
+    var outCount = 0;
     ixs.forEach(function (ix) {
-      if (ix.enabled === false) return;
+      if (!interactionHasSourcePort(ix)) return;
+      outCount++;
       ports.push({
         id: ix.portId,
         label: ix.label,
@@ -532,8 +671,8 @@ var ExperienciaEngine = (function () {
         interactionType: ix.type
       });
     });
-    /* Keep generic out only if scene has no interactions and is not video */
-    if (ixs.length === 0 && n.kind !== 'video' && n.kind !== 'animacion') {
+    /* Keep generic out only if scene has no interaction outs and is not video */
+    if (outCount === 0 && n.kind !== 'video' && n.kind !== 'animacion') {
       ports.push({ id: 'out', label: 'Salida', side: 'out', kind: 'flow' });
     }
     n.ports = ports;
@@ -663,17 +802,42 @@ var ExperienciaEngine = (function () {
     if (!menuItem) return null;
     var type = menuItem.interactionType || 'HOTSPOT';
     var label = menuItem.defaultLabel || menuItem.label || interactionTypeLabel(type);
-    var behavior = menuItem.actionType
-      ? { type: menuItem.actionType, inline: true }
-      : null;
-    if (menuItem.actionType === 'floor-selector') {
-      behavior.source = 'estructura';
+    var actionType = menuItem.actionType || null;
+    if (actionType && GLOBAL_SHOWROOM_ACTIONS[actionType]) {
+      return { error: 'global-control', message: 'Ese control es global del showroom (Hero).' };
     }
-    return addInteractionToScene(state, sceneId, type, label, {
-      actionType: menuItem.actionType || null,
+    var behavior = actionType ? { type: actionType, inline: true } : null;
+    if (actionType === 'floor-selector') {
+      behavior.source = 'estructura';
+      behavior.controls = 'activeFloor';
+    }
+    if (actionType === 'toggle-3d2d') {
+      behavior.controls = 'visualMode';
+      behavior.values = ['3d', '2d'];
+    }
+    if (actionType === 'back') {
+      behavior.contextual = true;
+      behavior.useNavigationStack = true;
+      behavior.navigationStackKey = 'navigationStack';
+    }
+    if (actionType === 'units-active-floor') {
+      behavior.emitContext = 'selectedUnitId';
+      behavior.source = 'estructura';
+      behavior.filterBy = 'activeFloor';
+    }
+    var group = menuItem.group || interactionGroup(type);
+    var ix = addInteractionToScene(state, sceneId, type, label, {
+      actionType: actionType,
       behavior: behavior,
-      group: type === 'HOTSPOT' || type === 'UNIT' ? 'hotspots' : 'controls'
+      group: group
     });
+    var scene = getNode(state, sceneId);
+    if (scene && (type === 'SELECTOR' || type === 'TOGGLE_3D2D' || type === 'UNITS_FLOOR' ||
+        actionType === 'floor-selector' || actionType === 'toggle-3d2d' ||
+        actionType === 'units-active-floor')) {
+      enableHubOnScene(scene);
+    }
+    return ix;
   }
 
   function normalizeEdge(ed) {
@@ -1545,10 +1709,12 @@ var ExperienciaEngine = (function () {
     if (fromId === toId) return null;
     var pid = portId || 'out';
     var tpid = targetPortId || 'in';
+    /* Allow N→1: only block exact duplicate (same source + port + target + targetPort) */
     var exists = exp.edges.some(function (ed) {
       return (ed.sourceNodeId || ed.from || ed.sourceId) === fromId &&
         (ed.targetNodeId || ed.to || ed.targetId) === toId &&
-        (ed.sourcePortId || ed.sourcePort || ed.portId || 'out') === pid;
+        (ed.sourcePortId || ed.sourcePort || ed.portId || 'out') === pid &&
+        (ed.targetPortId || ed.targetPort || 'in') === tpid;
     });
     if (exists) return null;
     var srcNode = getNode(state, fromId);
@@ -1635,8 +1801,9 @@ var ExperienciaEngine = (function () {
     }
     var ixs = (n.config && n.config.interactions) || [];
     var flowRows = (n.kind === 'video' || n.kind === 'animacion') ? 1 : 0;
+    var hubExtra = (n.config && n.config.hub && n.config.hub.enabled) ? 24 : 0;
     /* header + media block + elementos section + rows + add btn + optional flow */
-    var h = 56 + 48 + 18 + (ixs.length * 22) + 26 + (flowRows ? 40 : 0) + 8;
+    var h = 56 + 48 + 18 + (ixs.length * 22) + 26 + (flowRows ? 40 : 0) + hubExtra + 8;
     return {
       w: n.width || NODE_W,
       h: Math.max(NODE_H + 40, h)
@@ -1867,56 +2034,178 @@ var ExperienciaEngine = (function () {
     return count;
   }
 
-  function duplicateNode(state, nodeId, offset) {
-    offset = offset || { x: 36, y: 36 };
-    var exp = ensureFlow(state);
-    var src = getNode(state, nodeId);
-    if (!src || isProtectedNode(src)) return null;
+  /**
+   * Clone a node with new id + remapped interaction/port ids.
+   * Keeps assetId references (does not duplicate projectAssets).
+   * Returns { node, portMap } where portMap maps oldPortId → newPortId.
+   */
+  function cloneNodeWithNewIds(src, offset) {
+    offset = offset || { x: 40, y: 40 };
     var copy = deepClone(src);
     copy.id = uid('flow');
-    copy.x = Math.round((src.x || 0) + (offset.x || 36));
-    copy.y = Math.round((src.y || 0) + (offset.y || 36));
+    copy.x = Math.round((src.x || 0) + (offset.x || 40));
+    copy.y = Math.round((src.y || 0) + (offset.y || 40));
     copy.userMoved = true;
     copy.locked = false;
     copy.protected = false;
-    /* Do not copy edges — caller handles selection-internal edges */
-    exp.nodes.push(normalizeNode(copy));
-    return copy;
+    var portMap = {};
+    if (copy.config && Array.isArray(copy.config.interactions)) {
+      copy.config.interactions = copy.config.interactions.map(function (ix) {
+        var oldId = ix.id;
+        var oldPort = ix.portId || ix.id;
+        var prefix = String(ix.type || 'ix').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || 'ix';
+        var newId = uid(prefix);
+        portMap[oldId] = newId;
+        portMap[oldPort] = newId;
+        return makeInteraction(Object.assign({}, ix, { id: newId, portId: newId }));
+      });
+    }
+    if (copy.config && Array.isArray(copy.config.hotspots)) {
+      copy.config.hotspots = copy.config.hotspots.map(function (hs) {
+        if (!hs) return hs;
+        var mapped = portMap[hs.id] || uid('hs');
+        return { id: mapped, label: hs.label };
+      });
+    }
+    if (Array.isArray(copy.ports)) {
+      copy.ports = copy.ports.map(function (p) {
+        var np = Object.assign({}, p);
+        if (portMap[p.id]) np.id = portMap[p.id];
+        if (np.interactionId && portMap[np.interactionId]) {
+          np.interactionId = portMap[np.interactionId];
+        }
+        return np;
+      });
+    }
+    /* in / on-end / out stay stable */
+    portMap.in = 'in';
+    portMap.out = 'out';
+    portMap['on-end'] = 'on-end';
+    normalizeNode(copy);
+    return { node: copy, portMap: portMap };
   }
 
-  /** Duplicate selection; remap internal edges only. */
-  function duplicateSelection(state, nodeIds) {
-    var ids = (nodeIds || []).slice();
+  /**
+   * Insert cloned subgraph. Only edges whose BOTH ends are in sourceNodes are recreated.
+   * External edges are ignored.
+   */
+  function insertClonedSubgraph(state, sourceNodes, sourceEdges, offset) {
     var exp = ensureFlow(state);
+    offset = offset || { x: 40, y: 40 };
     var idMap = {};
+    var portMaps = {};
     var created = [];
-    ids.forEach(function (id) {
-      var src = getNode(state, id);
-      if (!src || isProtectedNode(src)) return;
-      var copy = deepClone(src);
-      copy.id = uid('flow');
-      copy.x = Math.round((src.x || 0) + 40);
-      copy.y = Math.round((src.y || 0) + 40);
-      copy.userMoved = true;
-      copy.locked = false;
-      copy.protected = false;
-      idMap[id] = copy.id;
-      exp.nodes.push(normalizeNode(copy));
-      created.push(copy);
+    (sourceNodes || []).forEach(function (src) {
+      if (!src || isProtectedNode(src) || src.kind === 'hero') return;
+      var cloned = cloneNodeWithNewIds(src, offset);
+      idMap[src.id] = cloned.node.id;
+      portMaps[src.id] = cloned.portMap;
+      exp.nodes.push(cloned.node);
+      created.push(cloned.node);
     });
-    (exp.edges || []).slice().forEach(function (ed) {
+    (sourceEdges || []).forEach(function (ed) {
       var s = ed.sourceNodeId || ed.from || ed.sourceId;
       var t = ed.targetNodeId || ed.to || ed.targetId;
       if (!idMap[s] || !idMap[t]) return;
+      var oldPort = ed.sourcePortId || ed.sourcePort || ed.portId || 'out';
+      var newPort = (portMaps[s] && portMaps[s][oldPort]) || oldPort;
+      var oldTgt = ed.targetPortId || ed.targetPort || 'in';
+      var newTgt = (portMaps[t] && portMaps[t][oldTgt]) || oldTgt;
       exp.edges.push(edge(idMap[s], idMap[t], ed.label || 'flujo', {
-        sourcePortId: ed.sourcePortId || ed.sourcePort || ed.portId || 'out',
-        targetPortId: ed.targetPortId || ed.targetPort || 'in',
+        sourcePortId: newPort,
+        targetPortId: newTgt,
         sourcePortLabel: ed.sourcePortLabel || null,
         manual: true,
         inlineAction: !!ed.inlineAction
       }));
     });
+    markExperienciaDirty(state);
     return { nodes: created, idMap: idMap };
+  }
+
+  function duplicateNode(state, nodeId, offset) {
+    var src = getNode(state, nodeId);
+    if (!src || isProtectedNode(src)) return null;
+    var result = insertClonedSubgraph(state, [src], [], offset || { x: 36, y: 36 });
+    return (result.nodes && result.nodes[0]) || null;
+  }
+
+  /** Duplicate selection; remap internal edges only. Shared by Duplicar + Ctrl+V. */
+  function duplicateSelection(state, nodeIds, offset) {
+    var exp = ensureFlow(state);
+    var ids = (nodeIds || []).filter(Boolean);
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    var sources = ids.map(function (id) { return getNode(state, id); }).filter(Boolean);
+    var internalEdges = (exp.edges || []).filter(function (ed) {
+      var s = ed.sourceNodeId || ed.from || ed.sourceId;
+      var t = ed.targetNodeId || ed.to || ed.targetId;
+      return idSet[s] && idSet[t];
+    });
+    return insertClonedSubgraph(state, sources, internalEdges, offset || { x: 40, y: 40 });
+  }
+
+  function copySelection(state, nodeIds) {
+    var exp = ensureFlow(state);
+    var ids = (nodeIds || []).filter(Boolean);
+    if (!ids.length) return null;
+    var idSet = {};
+    ids.forEach(function (id) { idSet[id] = true; });
+    var nodes = [];
+    ids.forEach(function (id) {
+      var n = getNode(state, id);
+      if (!n || isProtectedNode(n) || n.kind === 'hero') return;
+      nodes.push(deepClone(n));
+    });
+    if (!nodes.length) return null;
+    var edges = (exp.edges || []).filter(function (ed) {
+      var s = ed.sourceNodeId || ed.from || ed.sourceId;
+      var t = ed.targetNodeId || ed.to || ed.targetId;
+      return idSet[s] && idSet[t];
+    }).map(function (ed) { return deepClone(ed); });
+    _clipboard = { nodes: nodes, edges: edges, copiedAt: Date.now() };
+    _pasteGen = 0;
+    return { nodeCount: nodes.length, edgeCount: edges.length };
+  }
+
+  function hasClipboard() {
+    return !!( _clipboard && _clipboard.nodes && _clipboard.nodes.length);
+  }
+
+  function pasteClipboard(state, extraOffset) {
+    if (!_clipboard || !_clipboard.nodes || !_clipboard.nodes.length) return null;
+    _pasteGen += 1;
+    var ox = 40 * _pasteGen;
+    var oy = 40 * _pasteGen;
+    if (extraOffset) {
+      ox += extraOffset.x || 0;
+      oy += extraOffset.y || 0;
+    }
+    return insertClonedSubgraph(state, _clipboard.nodes, _clipboard.edges, { x: ox, y: oy });
+  }
+
+  function partitionInteractions(ixs) {
+    var controls = [];
+    var content = [];
+    var navigation = [];
+    var other = [];
+    (ixs || []).forEach(function (ix) {
+      if (!ix) return;
+      var t = String(ix.type || '').toUpperCase();
+      var a = String(ix.actionType || (ix.behavior && ix.behavior.type) || '').toLowerCase();
+      var g = ix.group || interactionGroup(ix.type);
+      if (t === 'BACK' || a === 'back' || g === 'navigation' || a === 'goto-hero') {
+        navigation.push(ix);
+      } else if (t === 'UNITS_FLOOR' || t === 'HOTSPOT' || t === 'UNIT' ||
+          g === 'content' || g === 'hotspots') {
+        content.push(ix);
+      } else if (t === 'SELECTOR' || t === 'TOGGLE_3D2D' || g === 'controls') {
+        controls.push(ix);
+      } else {
+        other.push(ix);
+      }
+    });
+    return { controls: controls, content: content, navigation: navigation, other: other };
   }
 
   function clearSelection(state) {
@@ -2170,6 +2459,18 @@ var ExperienciaEngine = (function () {
     setNodesLocked: setNodesLocked,
     duplicateNode: duplicateNode,
     duplicateSelection: duplicateSelection,
+    copySelection: copySelection,
+    pasteClipboard: pasteClipboard,
+    hasClipboard: hasClipboard,
+    insertClonedSubgraph: insertClonedSubgraph,
+    interactionHasSourcePort: interactionHasSourcePort,
+    partitionInteractions: partitionInteractions,
+    ensureHubConfig: ensureHubConfig,
+    enableHubOnScene: enableHubOnScene,
+    setHubActiveFloor: setHubActiveFloor,
+    setHubVisualMode: setHubVisualMode,
+    upsertHubFloor: upsertHubFloor,
+    findHubFloor: findHubFloor,
     clearSelection: clearSelection,
     setSelection: setSelection,
     toggleSelectionId: toggleSelectionId

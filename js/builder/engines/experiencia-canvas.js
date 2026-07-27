@@ -1,4 +1,4 @@
-/* BOXIES V5.9.62 — Menú destino simplificado; paleta verde/morado */
+/* BOXIES V5.9.63 — Copy/paste, multi-in, HUB plantas, controles globales */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -148,8 +148,12 @@ var ExperienciaCanvas = (function () {
       var typeLab = ExperienciaEngine.interactionTypeLabel
         ? ExperienciaEngine.interactionTypeLabel(ix.type)
         : (ix.type || '');
-      var mark = ix.type === 'HOTSPOT' || ix.type === 'UNIT' ? '●' : '▣';
+      var mark = (ix.type === 'HOTSPOT' || ix.type === 'UNIT' || ix.type === 'UNITS_FLOOR')
+        ? '●' : '□';
       var isSel = selectedIxId && (ix.id === selectedIxId || ix.portId === selectedIxId);
+      var showPort = ExperienciaEngine.interactionHasSourcePort
+        ? ExperienciaEngine.interactionHasSourcePort(ix)
+        : !disabled;
       return '<div class="builder-exp-card__irow is-interaction' +
         (disabled ? ' is-disabled' : '') +
         (isSel ? ' is-selected' : '') +
@@ -162,21 +166,55 @@ var ExperienciaCanvas = (function () {
         '</span>' +
         (disabled
           ? '<span class="builder-exp-card__badge is-off">OFF</span>'
-          : '<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
-            esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' +
-            esc(ix.label || '') + '" data-interaction-id="' + esc(ix.id) + '"></span>') +
+          : (showPort
+            ? ('<span class="builder-exp-card__port is-out is-row" data-exp-port="out" data-port-id="' +
+              esc(pid) + '" data-node="' + esc(n.id) + '" data-port-label="' +
+              esc(ix.label || '') + '" data-interaction-id="' + esc(ix.id) + '"></span>')
+            : '<span class="builder-exp-card__badge is-local" title="Acción interna">interno</span>')) +
       '</div>';
     }).join('');
   }
 
   function elementosBlockHtml(n, selectedIxId) {
     var ixs = (n.config && n.config.interactions) || [];
-    return '<div class="builder-exp-card__section">Elementos</div>' +
-      '<div class="builder-exp-card__ports">' +
-        interactionRowsHtml(n, ixs, selectedIxId) +
-      '</div>' +
-      '<button type="button" class="builder-exp-card__add-el" data-exp-add-element="' +
-        esc(n.id) + '">+ Agregar elemento</button>';
+    var parts = ExperienciaEngine.partitionInteractions
+      ? ExperienciaEngine.partitionInteractions(ixs)
+      : { controls: [], content: ixs, navigation: [], other: [] };
+    var hubOn = !!(n.config && n.config.hub && n.config.hub.enabled);
+    var categorized = hubOn ||
+      ((parts.controls.length + parts.content.length + parts.navigation.length) >= 2 &&
+        (parts.controls.length + parts.navigation.length) > 0);
+
+    var html = '';
+    function section(title, list) {
+      if (!list || !list.length) return;
+      html += '<div class="builder-exp-card__section">' + esc(title) + '</div>' +
+        '<div class="builder-exp-card__ports">' +
+          interactionRowsHtml(n, list, selectedIxId) +
+        '</div>';
+    }
+
+    if (!categorized) {
+      html += '<div class="builder-exp-card__section">Elementos</div>' +
+        '<div class="builder-exp-card__ports">' +
+          interactionRowsHtml(n, ixs, selectedIxId) +
+        '</div>';
+    } else {
+      section('Controles', parts.controls.concat(parts.other));
+      section('Contenido', parts.content);
+      section('Navegación', parts.navigation);
+      if (!parts.controls.length && !parts.content.length && !parts.navigation.length &&
+          !parts.other.length && ixs.length) {
+        html += '<div class="builder-exp-card__section">Elementos</div>' +
+          '<div class="builder-exp-card__ports">' +
+            interactionRowsHtml(n, ixs, selectedIxId) +
+          '</div>';
+      }
+    }
+
+    html += '<button type="button" class="builder-exp-card__add-el" data-exp-add-element="' +
+      esc(n.id) + '">+ Agregar elemento</button>';
+    return html;
   }
 
   function mediaBlockHtml(state, n) {
@@ -191,6 +229,9 @@ var ExperienciaCanvas = (function () {
     var statusCls = !media.hasMedia ? 'is-pending'
       : (media.status === 'error' ? 'is-error'
         : (media.status === 'synced' || media.status === 'local' ? 'is-ok' : 'is-sync'));
+    var hubHint = (media.activeFloor
+      ? (' · P' + media.activeFloor + (media.visualMode ? (' · ' + String(media.visualMode).toUpperCase()) : ''))
+      : '');
     return '<div class="builder-exp-card__section">Media</div>' +
       '<div class="builder-exp-card__media">' +
         (media.thumbnailUrl
@@ -202,7 +243,7 @@ var ExperienciaCanvas = (function () {
             esc(media.filename || 'Sin asignar') +
           '</div>' +
           '<div class="builder-exp-card__media-status ' + statusCls + '">' +
-            esc(media.hasMedia ? media.statusLabel : 'Pendiente') +
+            esc((media.hasMedia ? media.statusLabel : 'Pendiente') + hubHint) +
           '</div>' +
         '</div>' +
       '</div>';
@@ -292,8 +333,11 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-exp-card__info">' + esc(info || (n.config && n.config.actionType) || '') + '</div>' +
         '<div class="builder-exp-card__status">' + esc(status) + '</div>';
     } else if (isScene) {
+      var hubEnabled = !!(n.config && n.config.hub && n.config.hub.enabled);
       body =
-        '<div class="builder-exp-card__type">' + esc(n.typeLabel || 'ESCENA') + '</div>' +
+        '<div class="builder-exp-card__type">' +
+          esc(hubEnabled ? 'HUB' : (n.typeLabel || 'ESCENA')) +
+        '</div>' +
         '<div class="builder-exp-card__title" data-exp-card-title="' + esc(n.id) + '">' + esc(n.label || n.id) + '</div>' +
         mediaBlockHtml(state || {}, n) +
         elementosBlockHtml(n, selectedIx);
@@ -331,7 +375,12 @@ var ExperienciaCanvas = (function () {
       ? '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>'
       : (isHero ? '' : '<span class="builder-exp-card__port is-in" data-exp-port="in" data-port-id="in" data-node="' + esc(n.id) + '"></span>');
 
-    var hasRowPorts = enabledIxs.length > 0 ||
+    var hasOutIx = enabledIxs.some(function (ix) {
+      return ExperienciaEngine.interactionHasSourcePort
+        ? ExperienciaEngine.interactionHasSourcePort(ix)
+        : true;
+    });
+    var hasRowPorts = hasOutIx ||
       n.kind === 'video' || n.kind === 'animacion';
     var flowOuts = portsOut.filter(function (p) {
       return p.kind !== 'meta' && p.kind !== 'interaction' && p.id !== 'on-end';
@@ -610,6 +659,45 @@ var ExperienciaCanvas = (function () {
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-clear="' +
             esc(n.id) + '">Quitar referencia</button>' +
         '</div>';
+
+      var hub = (n.config && n.config.hub) || null;
+      html += '<div class="builder-exp-inspector__section">HUB / Planta interactiva</div>' +
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-hub-enabled' + (hub && hub.enabled ? ' checked' : '') + '>' +
+          ' Activar modo HUB</label>';
+      if (hub && hub.enabled) {
+        html += '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Planta activa</label>' +
+            '<input type="text" data-exp-hub-floor maxlength="40" placeholder="34" value="' +
+              esc(hub.activeFloor || '') + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Modo visual</label>' +
+            '<select data-exp-hub-mode>' +
+              '<option value="3d"' + (hub.visualMode !== '2d' ? ' selected' : '') + '>3D</option>' +
+              '<option value="2d"' + (hub.visualMode === '2d' ? ' selected' : '') + '>2D</option>' +
+            '</select>' +
+          '</div>' +
+          '<p class="builder-menu-hint">MEDIA = plantaActiva + modoVisual vía projectAssets. Volver usa navigationStack interno (no window.history).</p>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Piso (key) · asset 3D · asset 2D</label>' +
+            '<input type="text" data-exp-hub-floor-key maxlength="40" placeholder="34">' +
+            '<input type="text" data-exp-hub-floor-a3d maxlength="80" placeholder="assetId 3D" style="margin-top:6px">' +
+            '<input type="text" data-exp-hub-floor-a2d maxlength="80" placeholder="assetId 2D" style="margin-top:6px">' +
+          '</div>' +
+          '<div class="builder-exp-inspector__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hub-floor-save>Guardar piso / assets</button>' +
+          '</div>';
+        if ((hub.floors || []).length) {
+          html += '<ul class="builder-exp-inspector__list">' +
+            hub.floors.map(function (f) {
+              return '<li><strong>' + esc(f.label || f.key) + '</strong> · 3D:' +
+                esc(f.asset3dId || '—') + ' · 2D:' + esc(f.asset2dId || '—') + '</li>';
+            }).join('') + '</ul>';
+        }
+      } else {
+        html += '<p class="builder-menu-hint">Activa HUB para Selector · Plantas, Toggle 3D/2D y Unidades · Planta activa.</p>';
+      }
 
       html += '<div class="builder-exp-inspector__ix-head">' +
         '<span>Elementos de la escena</span>' +
@@ -1374,6 +1462,55 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
+      var hubEn = inspectorBody.querySelector('[data-exp-hub-enabled]');
+      if (hubEn) {
+        hubEn.addEventListener('change', function () {
+          var nid = canvas().selectedId;
+          var node = ExperienciaEngine.getNode(state, nid);
+          if (!node) return;
+          if (hubEn.checked) {
+            ExperienciaEngine.enableHubOnScene(node);
+          } else {
+            var hub = ExperienciaEngine.ensureHubConfig(node);
+            hub.enabled = false;
+          }
+          renderAll(); persist();
+        });
+      }
+      var hubFloor = inspectorBody.querySelector('[data-exp-hub-floor]');
+      if (hubFloor) {
+        hubFloor.addEventListener('change', function () {
+          ExperienciaEngine.setHubActiveFloor(state, canvas().selectedId, hubFloor.value);
+          renderAll(); persist();
+        });
+      }
+      var hubMode = inspectorBody.querySelector('[data-exp-hub-mode]');
+      if (hubMode) {
+        hubMode.addEventListener('change', function () {
+          ExperienciaEngine.setHubVisualMode(state, canvas().selectedId, hubMode.value);
+          renderAll(); persist();
+        });
+      }
+      var hubFloorSave = inspectorBody.querySelector('[data-exp-hub-floor-save]');
+      if (hubFloorSave) {
+        hubFloorSave.addEventListener('click', function () {
+          var keyEl = inspectorBody.querySelector('[data-exp-hub-floor-key]');
+          var a3 = inspectorBody.querySelector('[data-exp-hub-floor-a3d]');
+          var a2 = inspectorBody.querySelector('[data-exp-hub-floor-a2d]');
+          var key = keyEl ? String(keyEl.value || '').trim() : '';
+          if (!key) {
+            if (typeof AdminNotify !== 'undefined') AdminNotify.info('Indica la key del piso.');
+            return;
+          }
+          ExperienciaEngine.upsertHubFloor(state, canvas().selectedId, {
+            key: key,
+            label: key,
+            asset3dId: a3 && a3.value ? String(a3.value).trim() : null,
+            asset2dId: a2 && a2.value ? String(a2.value).trim() : null
+          });
+          renderAll(); persist();
+        });
+      }
       var nodeLabel = inspectorBody.querySelector('[data-exp-node-label]');
       if (nodeLabel) {
         nodeLabel.addEventListener('change', function () {
@@ -2040,7 +2177,13 @@ var ExperienciaCanvas = (function () {
           if (sceneForEl && elItem) {
             var created = ExperienciaEngine.addElementFromMenu(state, sceneForEl, elItem);
             hideCtx();
-            if (created) selectInteraction(sceneForEl, created.id);
+            if (created && created.error === 'global-control') {
+              if (typeof AdminNotify !== 'undefined') {
+                AdminNotify.info(created.message || 'Control global del showroom.');
+              }
+              return;
+            }
+            if (created && created.id) selectInteraction(sceneForEl, created.id);
             else { renderAll(); persist(); }
           }
           return;
@@ -2538,6 +2681,42 @@ var ExperienciaCanvas = (function () {
     function onKeyDown(ev) {
       if (ev.code === 'Space') {
         if (!isFormField(ev.target) && !renameEdit) spacePan = true;
+      }
+      if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
+        var key = String(ev.key || '').toLowerCase();
+        if (key === 'c' || key === 'v') {
+          if (isFormField(ev.target) || renameEdit) return;
+          var inScope = viewport === document.activeElement ||
+            rootEl.contains(document.activeElement) || rootEl.contains(ev.target) ||
+            (stage && stage.contains(ev.target));
+          if (!inScope && document.activeElement !== document.body) return;
+          if (key === 'c') {
+            var copyIds = selectedIds();
+            if (!copyIds.length) return;
+            ev.preventDefault();
+            var copied = ExperienciaEngine.copySelection(state, copyIds);
+            if (copied && typeof AdminNotify !== 'undefined') {
+              AdminNotify.success('Copiado: ' + copied.nodeCount + ' nodo(s), ' +
+                copied.edgeCount + ' conexión(es) internas');
+            }
+            return;
+          }
+          if (key === 'v') {
+            if (!ExperienciaEngine.hasClipboard || !ExperienciaEngine.hasClipboard()) return;
+            ev.preventDefault();
+            var pasted = ExperienciaEngine.pasteClipboard(state);
+            if (pasted && pasted.nodes && pasted.nodes.length) {
+              var pastedIds = pasted.nodes.map(function (n) { return n.id; });
+              ExperienciaEngine.setSelection(state, pastedIds, []);
+              canvas().inspectorOpen = true;
+              renderAll(); persist();
+              if (typeof AdminNotify !== 'undefined') {
+                AdminNotify.success('Pegado: ' + pastedIds.length + ' nodo(s)');
+              }
+            }
+            return;
+          }
+        }
       }
       if (ev.key === 'Escape') {
         if (renameEdit) {

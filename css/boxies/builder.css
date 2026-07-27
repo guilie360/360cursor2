@@ -3244,6 +3244,17 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   background: rgba(111, 191, 134, 0.1);
 }
 
+.builder-exp-card__badge.is-local {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: rgba(155, 143, 212, 0.85);
+  border: 1px solid rgba(155, 143, 212, 0.25);
+  background: rgba(155, 143, 212, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
 .builder-exp-card__badge.is-off {
   color: rgba(255, 255, 255, 0.35);
   border-color: rgba(255, 255, 255, 0.1);
