@@ -1,4 +1,4 @@
-/* BOXIES V5.9.60 — Experiencia UX: rename inline, canvas mode real, sin diálogos nativos */
+/* BOXIES V5.9.61 — Modo Canvas: aislar del shell BOXIES; inspector permanece */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -42,8 +42,9 @@ var ExperienciaCanvas = (function () {
     var inspectorOpen = canvas.inspectorOpen === true;
     var inspectorCollapsed = canvas.inspectorCollapsed === true;
     var canvasMode = isCanvasMode();
-    var inspectorVisible = !canvasMode && inspectorOpen && !inspectorCollapsed;
-    var showInspectorTab = !canvasMode && inspectorOpen && inspectorCollapsed;
+    /* Inspector is part of the editor — independent of Modo Canvas */
+    var inspectorVisible = inspectorOpen && !inspectorCollapsed;
+    var showInspectorTab = inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
     var inGroup = !!(canvas.activeGroupId);
     var draftHint = exp.dirty ? ' · sin guardar' : (exp._draftSaved ? ' · borrador OK' : '');
@@ -111,7 +112,7 @@ var ExperienciaCanvas = (function () {
               ' aria-label="Mostrar propiedades" data-tooltip="Mostrar propiedades" title="Mostrar propiedades">›</button>' +
           '</div>' +
           '<aside class="builder-exp-inspector' +
-            (inspectorVisible ? '' : (inspectorCollapsed ? ' is-collapsed' : ' is-closed')) +
+            (inspectorVisible ? '' : (showInspectorTab ? ' is-collapsed' : ' is-closed')) +
             '" data-exp-inspector>' +
             '<div class="builder-exp-inspector__head">' +
               '<strong>Propiedades</strong>' +
@@ -1476,8 +1477,8 @@ var ExperienciaCanvas = (function () {
     function syncInspectorChrome() {
       var c = canvas();
       var modeOn = isCanvasMode();
-      var visible = !modeOn && c.inspectorOpen === true && c.inspectorCollapsed !== true;
-      var showTab = !modeOn && c.inspectorOpen === true && c.inspectorCollapsed === true;
+      var visible = c.inspectorOpen === true && c.inspectorCollapsed !== true;
+      var showTab = c.inspectorOpen === true && c.inspectorCollapsed === true;
       if (inspector) {
         if (visible) {
           inspector.classList.remove('is-closed');
@@ -1504,8 +1505,7 @@ var ExperienciaCanvas = (function () {
         modeBtn.classList.toggle('is-active', modeOn);
       }
       requestAnimationFrame(function () {
-        applyWorldTransform();
-        paintMinimap();
+        onViewportResize();
         try { window.dispatchEvent(new Event('boxies:rail-toggle')); } catch (e) {}
       });
     }
@@ -1516,6 +1516,7 @@ var ExperienciaCanvas = (function () {
         ? BoxiesPrefs.load()
         : {};
       if (next) {
+        /* Save shell chrome only — never force inspector open/closed */
         var restore = {
           railCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed
             ? BoxiesPrefs.getRailCollapsed()
@@ -1523,11 +1524,10 @@ var ExperienciaCanvas = (function () {
           navCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
             ? BoxiesPrefs.getNavCollapsed()
             : document.body.classList.contains('boxies-nav-collapsed')),
-          inspectorOpen: canvas().inspectorOpen === true,
-          inspectorCollapsed: canvas().inspectorCollapsed === true,
           headerH: document.documentElement.style.getPropertyValue('--boxies-header-h') || '',
           dockH: document.documentElement.style.getPropertyValue('--boxies-dock-h') || '',
-          railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || ''
+          railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || '',
+          sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || ''
         };
         setCanvasMode(true, restore);
         if (typeof BoxiesPrefs !== 'undefined') {
@@ -1538,7 +1538,9 @@ var ExperienciaCanvas = (function () {
         document.body.classList.add('boxies-nav-collapsed');
         document.documentElement.classList.add('boxies-rail-collapsed');
         document.documentElement.classList.add('boxies-nav-collapsed');
+        /* Layout vars zeroed primarily by CSS .boxies-exp-canvas-mode; JS reinforces */
         document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
       } else {
@@ -1558,10 +1560,16 @@ var ExperienciaCanvas = (function () {
         document.documentElement.classList.toggle('boxies-rail-collapsed', railOn);
         document.body.classList.toggle('boxies-nav-collapsed', navOn);
         document.documentElement.classList.toggle('boxies-nav-collapsed', navOn);
-        document.documentElement.style.setProperty(
-          '--builder-rail-width',
-          prev.railW || (railOn ? '52px' : '176px')
-        );
+        if (prev.railW) {
+          document.documentElement.style.setProperty('--builder-rail-width', prev.railW);
+        } else {
+          document.documentElement.style.removeProperty('--builder-rail-width');
+        }
+        if (prev.sidebarW) {
+          document.documentElement.style.setProperty('--boxies-sidebar-w', prev.sidebarW);
+        } else {
+          document.documentElement.style.removeProperty('--boxies-sidebar-w');
+        }
         if (prev.headerH) {
           document.documentElement.style.setProperty('--boxies-header-h', prev.headerH);
         } else {
@@ -1572,15 +1580,12 @@ var ExperienciaCanvas = (function () {
         } else {
           document.documentElement.style.removeProperty('--boxies-dock-h');
         }
-        if (prev.inspectorOpen != null) canvas().inspectorOpen = !!prev.inspectorOpen;
-        if (prev.inspectorCollapsed != null) {
-          canvas().inspectorCollapsed = !!prev.inspectorCollapsed;
-        }
+        /* Keep current inspector state — do not restore prior open/collapsed */
       }
       if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.update) {
         try { BuilderProgressRail.update(rootEl, state); } catch (eRail) {}
       }
-      renderAll();
+      syncInspectorChrome();
       requestAnimationFrame(function () {
         onViewportResize();
         requestAnimationFrame(onViewportResize);
@@ -2711,6 +2716,7 @@ var ExperienciaCanvas = (function () {
         document.body.classList.add('boxies-rail-collapsed');
         document.body.classList.add('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
       }

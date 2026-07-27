@@ -2915,6 +2915,25 @@ body.boxies-exp-canvas-mode #builderDock {
   pointer-events: none !important;
 }
 
+/*
+ * Modo Canvas — zero shell offsets that reserve left/top chrome.
+ * Root cause of left strip: .boxies-workspace { margin-left: var(--boxies-sidebar-w) }
+ * even after .boxies-sidebar { display:none }. Also .builder-workspace margin-left for rail.
+ */
+html.boxies-exp-canvas-mode,
+body.boxies-exp-canvas-mode {
+  --boxies-sidebar-w: 0px !important;
+  --boxies-sidebar-collapsed-w: 0px !important;
+  --builder-rail-width: 0px !important;
+  --boxies-header-h: 0px !important;
+  --boxies-dock-h: 0px !important;
+  --builder-header-height: 0px !important;
+  --builder-dock-height: 0px !important;
+}
+
+body.boxies-exp-canvas-mode .boxies-workspace,
+html.boxies-exp-canvas-mode .boxies-workspace,
+body.boxies-exp-canvas-mode .boxies-workspace__panel,
 body.boxies-exp-canvas-mode .builder-workspace,
 html.boxies-exp-canvas-mode .builder-workspace,
 body.boxies-exp-canvas-mode #boxiesContent,
@@ -2922,6 +2941,8 @@ body.boxies-exp-canvas-mode .boxies-content,
 body.boxies-exp-canvas-mode .boxies-main {
   left: 0 !important;
   margin-left: 0 !important;
+  margin-top: 0 !important;
+  padding-left: 0 !important;
   width: 100% !important;
   max-width: none !important;
   top: 0 !important;
@@ -2929,8 +2950,7 @@ body.boxies-exp-canvas-mode .boxies-main {
   min-height: 100dvh !important;
 }
 
-body.boxies-exp-canvas-mode .builder-exp-inspector,
-body.boxies-exp-canvas-mode .builder-exp-inspector-tab,
+/* Chrome del paso Experiencia (título/acciones) se oculta; inspector NO */
 body.boxies-exp-canvas-mode .builder-exp-chrome {
   display: none !important;
 }
