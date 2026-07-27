@@ -2792,6 +2792,44 @@ button.builder-estructura-chip {
   height: 16px;
 }
 
+.builder-exp-reset-btn {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  flex-shrink: 0;
+}
+
+.builder-exp-reset-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.builder-exp-card__title-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 2px 6px;
+  border: 1px solid rgba(111, 191, 134, 0.55);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  line-height: 1.3;
+  outline: none;
+  cursor: text;
+}
+
+.builder-exp-card__title-input:focus {
+  border-color: rgba(111, 191, 134, 0.85);
+  box-shadow: 0 0 0 1px rgba(111, 191, 134, 0.25);
+}
+
 .builder-exp-modal {
   position: absolute;
   inset: 0;
@@ -2854,28 +2892,68 @@ button.builder-estructura-chip {
 }
 
 body.boxies-exp-canvas-mode .builder-progress-sidebar,
-html.boxies-exp-canvas-mode .builder-progress-sidebar {
+html.boxies-exp-canvas-mode .builder-progress-sidebar,
+body.boxies-exp-canvas-mode #builderProgressRail,
+body.boxies-exp-canvas-mode .boxies-sidebar,
+body.boxies-exp-canvas-mode #boxiesSidebar,
+body.boxies-exp-canvas-mode .boxies-nav,
+body.boxies-exp-canvas-mode .boxies-header,
+body.boxies-exp-canvas-mode #boxiesHeader,
+body.boxies-exp-canvas-mode .boxies-dock,
+body.boxies-exp-canvas-mode #boxiesDock,
+body.boxies-exp-canvas-mode .builder-dock,
+body.boxies-exp-canvas-mode #builderDock {
   display: none !important;
   width: 0 !important;
   min-width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
   border: 0 !important;
   padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
 }
 
 body.boxies-exp-canvas-mode .builder-workspace,
-html.boxies-exp-canvas-mode .builder-workspace {
+html.boxies-exp-canvas-mode .builder-workspace,
+body.boxies-exp-canvas-mode #boxiesContent,
+body.boxies-exp-canvas-mode .boxies-content,
+body.boxies-exp-canvas-mode .boxies-main {
   left: 0 !important;
+  margin-left: 0 !important;
   width: 100% !important;
   max-width: none !important;
+  top: 0 !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
 }
 
 body.boxies-exp-canvas-mode .builder-exp-inspector,
-body.boxies-exp-canvas-mode .builder-exp-inspector-tab {
+body.boxies-exp-canvas-mode .builder-exp-inspector-tab,
+body.boxies-exp-canvas-mode .builder-exp-chrome {
   display: none !important;
 }
 
 body.boxies-exp-canvas-mode .builder-exp-workspace {
   border-radius: 0;
+  border: 0;
+  min-height: calc(100vh - 8px);
+  min-height: calc(100dvh - 8px);
+}
+
+body.boxies-exp-canvas-mode .builder-step-content--experiencia {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+  height: 100%;
+}
+
+body.boxies-exp-canvas-mode .builder-main-panel,
+body.boxies-exp-canvas-mode #builderStepPanel {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
 }
 
 .builder-exp-workspace.is-canvas-mode {

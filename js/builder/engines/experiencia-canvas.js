@@ -1,4 +1,4 @@
-/* BOXIES V5.9.59 — Experiencia: estructura, renombrar, fit/canvas mode, draft/reset */
+/* BOXIES V5.9.60 — Experiencia UX: rename inline, canvas mode real, sin diálogos nativos */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -64,7 +64,7 @@ var ExperienciaCanvas = (function () {
             (inGroup
               ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
               : '') +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary builder-exp-chrome__icon-btn" id="builderExpResetBtn"' +
+            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon builder-exp-reset-btn" id="builderExpResetBtn"' +
               ' data-tooltip="Reiniciar flujo" title="Reiniciar flujo" aria-label="Reiniciar flujo">' +
               (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
                 ? BuilderIcons.render('rotate-ccw')
@@ -872,6 +872,7 @@ var ExperienciaCanvas = (function () {
     var ctxMode = null; /* 'create' | 'node' | 'edge' | null */
     var marqueeEl = rootEl.querySelector('[data-exp-marquee]');
     var hoverCutEdgeId = null;
+    var renameEdit = null; /* { nodeId, original, input } */
 
     function isFormField(el) {
       if (!el) return false;
@@ -879,6 +880,199 @@ var ExperienciaCanvas = (function () {
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
       if (el.isContentEditable) return true;
       return !!(el.closest && el.closest('input, textarea, select, [contenteditable="true"]'));
+    }
+
+    function defaultNodeLabel(n) {
+      if (!n) return 'Escena';
+      if (n.kind === 'image') return 'Vista general';
+      if (n.kind === 'video' || n.kind === 'animacion') return 'Animación';
+      if (n.kind === 'plan' || n.kind === 'planta-3d') return 'Planta';
+      if (n.kind === 'pano360') return '360°';
+      return n.typeLabel || n.kind || 'Escena';
+    }
+
+    /** BOXIES confirm — never uses window.confirm (fullscreen-safe). */
+    function boxiesConfirm(opts) {
+      opts = opts || {};
+      if (typeof AdminUI !== 'undefined' && typeof AdminUI.confirm === 'function') {
+        return AdminUI.confirm({
+          title: opts.title || 'Confirmar',
+          message: opts.message || '',
+          confirmLabel: opts.confirmLabel || 'Confirmar',
+          cancelLabel: opts.cancelLabel || 'Cancelar'
+        });
+      }
+      return new Promise(function (resolve) {
+        if (!modalEl) { resolve(false); return; }
+        modalEl.hidden = false;
+        modalEl.innerHTML =
+          '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
+          '<div class="builder-exp-modal__panel" role="dialog">' +
+            '<h3 class="builder-exp-modal__title">' + esc(opts.title || 'Confirmar') + '</h3>' +
+            '<p class="builder-exp-modal__body">' + esc(opts.message || '') + '</p>' +
+            '<div class="builder-exp-modal__actions">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>' +
+                esc(opts.cancelLabel || 'Cancelar') + '</button>' +
+              '<button type="button" class="builder-header-action-btn is-danger" data-exp-modal-confirm>' +
+                esc(opts.confirmLabel || 'Confirmar') + '</button>' +
+            '</div>' +
+          '</div>';
+        function close(val) {
+          modalEl.hidden = true;
+          modalEl.innerHTML = '';
+          resolve(!!val);
+        }
+        modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
+          btn.addEventListener('click', function () { close(false); });
+        });
+        var conf = modalEl.querySelector('[data-exp-modal-confirm]');
+        if (conf) conf.addEventListener('click', function () { close(true); });
+      });
+    }
+
+    /** BOXIES text prompt — never uses window.prompt. */
+    function boxiesPrompt(opts) {
+      opts = opts || {};
+      return new Promise(function (resolve) {
+        if (!modalEl) { resolve(null); return; }
+        modalEl.hidden = false;
+        modalEl.innerHTML =
+          '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
+          '<div class="builder-exp-modal__panel" role="dialog">' +
+            '<h3 class="builder-exp-modal__title">' + esc(opts.title || 'Nombre') + '</h3>' +
+            (opts.message
+              ? ('<p class="builder-exp-modal__body">' + esc(opts.message) + '</p>')
+              : '') +
+            '<div class="builder-field builder-exp-inspector__field">' +
+              '<input type="text" data-exp-modal-input maxlength="120" value="' +
+                esc(opts.defaultValue || '') + '">' +
+            '</div>' +
+            '<div class="builder-exp-modal__actions">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>Cancelar</button>' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-primary" data-exp-modal-confirm>Aceptar</button>' +
+            '</div>' +
+          '</div>';
+        var input = modalEl.querySelector('[data-exp-modal-input]');
+        function close(val) {
+          modalEl.hidden = true;
+          modalEl.innerHTML = '';
+          resolve(val);
+        }
+        modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
+          btn.addEventListener('click', function () { close(null); });
+        });
+        var conf = modalEl.querySelector('[data-exp-modal-confirm]');
+        if (conf) {
+          conf.addEventListener('click', function () {
+            close(input ? String(input.value || '') : '');
+          });
+        }
+        if (input) {
+          setTimeout(function () { input.focus(); input.select(); }, 20);
+          input.addEventListener('keydown', function (ev) {
+            ev.stopPropagation();
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              close(String(input.value || ''));
+            }
+            if (ev.key === 'Escape') {
+              ev.preventDefault();
+              close(null);
+            }
+          });
+        }
+      });
+    }
+
+    function finishInlineRename(save) {
+      if (!renameEdit) return;
+      var nodeId = renameEdit.nodeId;
+      var original = renameEdit.original;
+      var input = renameEdit.input;
+      var n = ExperienciaEngine.getNode(state, nodeId);
+      var raw = input ? String(input.value || '').trim() : '';
+      var next = save
+        ? (raw || defaultNodeLabel(n) || original || 'Escena')
+        : original;
+      renameEdit = null;
+      if (save && n && next && next !== original) {
+        ExperienciaEngine.renameNode(state, nodeId, next);
+        persist();
+      }
+      renderAll();
+    }
+
+    function startInlineRename(nodeId) {
+      if (!nodeId || !nodesEl) return;
+      var n = ExperienciaEngine.getNode(state, nodeId);
+      if (!n) return;
+      if (n.kind === 'hero') return;
+      hideCtx();
+      if (renameEdit) {
+        renameEdit = null;
+      }
+
+      ExperienciaEngine.setSelection(state, [nodeId], []);
+      canvas().selectedInteractionId = null;
+      canvas().selectedInteractionSceneId = null;
+      canvas().inspectorOpen = true;
+      paintNodes();
+      paintEdges();
+      paintInspector();
+      syncInspectorChrome();
+
+      var title = nodesEl.querySelector(
+        '[data-exp-card-title="' + String(nodeId).replace(/"/g, '') + '"]'
+      );
+      if (!title) return;
+
+      var original = n.label || defaultNodeLabel(n);
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'builder-exp-card__title-input';
+      input.value = original;
+      input.maxLength = 120;
+      input.setAttribute('data-exp-rename-input', nodeId);
+      input.setAttribute('aria-label', 'Nombre de la tarjeta');
+      title.replaceWith(input);
+      renameEdit = { nodeId: nodeId, original: original, input: input };
+
+      function onKey(ev) {
+        ev.stopPropagation();
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          finishInlineRename(true);
+        } else if (ev.key === 'Escape') {
+          ev.preventDefault();
+          finishInlineRename(false);
+        }
+      }
+      function onPointer(ev) { ev.stopPropagation(); }
+      input.addEventListener('keydown', onKey);
+      input.addEventListener('keyup', function (ev) { ev.stopPropagation(); });
+      input.addEventListener('keypress', function (ev) { ev.stopPropagation(); });
+      input.addEventListener('pointerdown', onPointer);
+      input.addEventListener('mousedown', onPointer);
+      input.addEventListener('click', onPointer);
+      input.addEventListener('dblclick', onPointer);
+      input.addEventListener('blur', function () {
+        if (!renameEdit || renameEdit.nodeId !== nodeId) return;
+        if (!input.isConnected) return; /* paintNodes detach — ignore */
+        finishInlineRename(true);
+      });
+
+      setTimeout(function () {
+        try { input.focus(); input.select(); } catch (eF) {}
+      }, 0);
+    }
+
+    function reattachRenameInput() {
+      if (!renameEdit || !renameEdit.nodeId || !nodesEl || !renameEdit.input) return;
+      var title = nodesEl.querySelector(
+        '[data-exp-card-title="' + String(renameEdit.nodeId).replace(/"/g, '') + '"]'
+      );
+      if (!title) return;
+      title.replaceWith(renameEdit.input);
     }
 
     function selectedIds() {
@@ -962,6 +1156,9 @@ var ExperienciaCanvas = (function () {
         var nid = el.getAttribute('data-exp-node');
         if (idSet[nid]) el.classList.add('is-selected');
       });
+      if (renameEdit && renameEdit.nodeId) {
+        reattachRenameInput();
+      }
       if (linkDrag && linkDrag.portId && linkDrag.fromId) {
         var linkingPort = nodesEl.querySelector(
           '[data-exp-node="' + String(linkDrag.fromId).replace(/"/g, '') + '"] ' +
@@ -1099,28 +1296,38 @@ var ExperienciaCanvas = (function () {
       if (hs) {
         hs.addEventListener('click', function () {
           var id = hs.getAttribute('data-exp-add-hotspot');
-          var label = window.prompt('Nombre del hotspot', 'Torre 1');
-          if (label == null) return;
-          ExperienciaEngine.addHotspotToScene(state, id, label.trim() || 'Hotspot');
-          renderAll(); persist();
+          boxiesPrompt({
+            title: 'Nuevo hotspot',
+            message: 'Nombre del hotspot',
+            defaultValue: 'Torre 1'
+          }).then(function (label) {
+            if (label == null) return;
+            ExperienciaEngine.addHotspotToScene(state, id, String(label).trim() || 'Hotspot');
+            renderAll(); persist();
+          });
         });
       }
       var ctrl = inspectorBody.querySelector('[data-exp-add-control]');
       if (ctrl) {
         ctrl.addEventListener('click', function () {
           var id = ctrl.getAttribute('data-exp-add-control');
-          var label = window.prompt('Nombre del control', 'Plantas');
-          if (label == null) return;
-          var name = label.trim() || 'Control';
-          var isPlantas = /planta/i.test(name);
-          ExperienciaEngine.addControlToScene(state, id, name, {
-            type: isPlantas ? 'SELECTOR' : 'BUTTON',
-            actionType: isPlantas ? 'floor-selector' : null,
-            behavior: isPlantas
-              ? { type: 'floor-selector', inline: true, source: 'estructura' }
-              : null
+          boxiesPrompt({
+            title: 'Nuevo control',
+            message: 'Nombre del control',
+            defaultValue: 'Plantas'
+          }).then(function (label) {
+            if (label == null) return;
+            var name = String(label).trim() || 'Control';
+            var isPlantas = /planta/i.test(name);
+            ExperienciaEngine.addControlToScene(state, id, name, {
+              type: isPlantas ? 'SELECTOR' : 'BUTTON',
+              actionType: isPlantas ? 'floor-selector' : null,
+              behavior: isPlantas
+                ? { type: 'floor-selector', inline: true, source: 'estructura' }
+                : null
+            });
+            renderAll(); persist();
           });
-          renderAll(); persist();
         });
       }
       inspectorBody.querySelectorAll('[data-exp-add-element]').forEach(function (btn) {
@@ -1315,9 +1522,12 @@ var ExperienciaCanvas = (function () {
             : document.body.classList.contains('boxies-rail-collapsed')),
           navCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
             ? BoxiesPrefs.getNavCollapsed()
-            : false),
+            : document.body.classList.contains('boxies-nav-collapsed')),
           inspectorOpen: canvas().inspectorOpen === true,
-          inspectorCollapsed: canvas().inspectorCollapsed === true
+          inspectorCollapsed: canvas().inspectorCollapsed === true,
+          headerH: document.documentElement.style.getPropertyValue('--boxies-header-h') || '',
+          dockH: document.documentElement.style.getPropertyValue('--boxies-dock-h') || '',
+          railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || ''
         };
         setCanvasMode(true, restore);
         if (typeof BoxiesPrefs !== 'undefined') {
@@ -1325,8 +1535,12 @@ var ExperienciaCanvas = (function () {
           if (BoxiesPrefs.setNavCollapsed) BoxiesPrefs.setNavCollapsed(true);
         }
         document.body.classList.add('boxies-rail-collapsed');
+        document.body.classList.add('boxies-nav-collapsed');
         document.documentElement.classList.add('boxies-rail-collapsed');
+        document.documentElement.classList.add('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        document.documentElement.style.setProperty('--boxies-header-h', '0px');
+        document.documentElement.style.setProperty('--boxies-dock-h', '0px');
       } else {
         var prev = prefs._expCanvasRestore || {};
         setCanvasMode(false, null);
@@ -1339,12 +1553,25 @@ var ExperienciaCanvas = (function () {
           }
         }
         var railOn = !!prev.railCollapsed;
+        var navOn = !!prev.navCollapsed;
         document.body.classList.toggle('boxies-rail-collapsed', railOn);
         document.documentElement.classList.toggle('boxies-rail-collapsed', railOn);
+        document.body.classList.toggle('boxies-nav-collapsed', navOn);
+        document.documentElement.classList.toggle('boxies-nav-collapsed', navOn);
         document.documentElement.style.setProperty(
           '--builder-rail-width',
-          railOn ? '52px' : '176px'
+          prev.railW || (railOn ? '52px' : '176px')
         );
+        if (prev.headerH) {
+          document.documentElement.style.setProperty('--boxies-header-h', prev.headerH);
+        } else {
+          document.documentElement.style.removeProperty('--boxies-header-h');
+        }
+        if (prev.dockH) {
+          document.documentElement.style.setProperty('--boxies-dock-h', prev.dockH);
+        } else {
+          document.documentElement.style.removeProperty('--boxies-dock-h');
+        }
         if (prev.inspectorOpen != null) canvas().inspectorOpen = !!prev.inspectorOpen;
         if (prev.inspectorCollapsed != null) {
           canvas().inspectorCollapsed = !!prev.inspectorCollapsed;
@@ -1356,6 +1583,7 @@ var ExperienciaCanvas = (function () {
       renderAll();
       requestAnimationFrame(function () {
         onViewportResize();
+        requestAnimationFrame(onViewportResize);
       });
     }
 
@@ -1500,9 +1728,16 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!ix && act !== 'del' && act !== 'delete') return;
       if (act === 'rename') {
-        var next = window.prompt('Nombre', (ix && ix.label) || '');
-        if (next == null) return;
-        ExperienciaEngine.updateInteraction(state, sceneId, ixId, { label: next.trim() || ix.label });
+        hideCtx();
+        /* Focus inspector name field — no native prompt */
+        selectInteraction(sceneId, ixId);
+        requestAnimationFrame(function () {
+          var inp = inspectorBody && inspectorBody.querySelector('[data-exp-ix-label]');
+          if (inp) {
+            try { inp.focus(); inp.select(); } catch (eR) {}
+          }
+        });
+        return;
       } else if (act === 'toggle') {
         ExperienciaEngine.updateInteraction(state, sceneId, ixId, {
           enabled: !(ix.enabled !== false)
@@ -1519,8 +1754,19 @@ var ExperienciaCanvas = (function () {
           return !(from === sceneId && pid === portId);
         });
       } else if (act === 'del' || act === 'delete') {
-        if (!window.confirm('¿Eliminar esta interacción? Su escena destino se conserva.')) return;
-        ExperienciaEngine.removeInteraction(state, sceneId, ixId);
+        boxiesConfirm({
+          title: 'Eliminar elemento',
+          message: '¿Eliminar esta interacción? Su escena destino se conserva.',
+          confirmLabel: 'Eliminar',
+          cancelLabel: 'Cancelar'
+        }).then(function (ok) {
+          if (!ok) return;
+          ExperienciaEngine.removeInteraction(state, sceneId, ixId);
+          hideCtx();
+          renderAll();
+          persist();
+        });
+        return;
       } else if (act === 'configure') {
         selectNode(sceneId);
         canvas().inspectorOpen = true;
@@ -1632,12 +1878,8 @@ var ExperienciaCanvas = (function () {
       if (!ids.length) return;
       if (act === 'rename') {
         if (ids.length !== 1) return;
-        var rn = ExperienciaEngine.getNode(state, ids[0]);
-        if (!rn) return;
-        var nextName = window.prompt('Nombre de la tarjeta', rn.label || '');
-        if (nextName == null) return;
-        ExperienciaEngine.renameNode(state, rn.id, nextName.trim() || rn.label);
-        hideCtx(); renderAll(); persist();
+        hideCtx();
+        startInlineRename(ids[0]);
         return;
       }
       if (act === 'duplicate') {
@@ -1668,7 +1910,17 @@ var ExperienciaCanvas = (function () {
           total += ExperienciaEngine.connectionsFor(state, id).in.length +
             ExperienciaEngine.connectionsFor(state, id).out.length;
         });
-        if (total > 1 && !window.confirm('¿Desvincular ' + total + ' conexiones de la selección?')) {
+        if (total > 1) {
+          boxiesConfirm({
+            title: 'Desvincular',
+            message: '¿Desvincular ' + total + ' conexiones de la selección?',
+            confirmLabel: 'Desvincular',
+            cancelLabel: 'Cancelar'
+          }).then(function (ok) {
+            if (!ok) return;
+            ExperienciaEngine.unlinkNodes(state, ids);
+            hideCtx(); renderAll(); persist();
+          });
           return;
         }
         ExperienciaEngine.unlinkNodes(state, ids);
@@ -1676,13 +1928,18 @@ var ExperienciaCanvas = (function () {
         return;
       }
       if (act === 'delete') {
-        if (!window.confirm(ids.length > 1
-          ? '¿Eliminar ' + ids.length + ' nodos del flujo? (no borra media/assets)'
-          : '¿Eliminar este nodo del flujo? (no borra media/assets)')) {
-          return;
-        }
-        deleteSelection();
-        hideCtx();
+        boxiesConfirm({
+          title: 'Eliminar del flujo',
+          message: ids.length > 1
+            ? '¿Eliminar ' + ids.length + ' nodos del flujo? (no borra media/assets)'
+            : '¿Eliminar este nodo del flujo? (no borra media/assets)',
+          confirmLabel: 'Eliminar',
+          cancelLabel: 'Cancelar'
+        }).then(function (ok) {
+          if (!ok) return;
+          deleteSelection();
+          hideCtx();
+        });
       }
     }
 
@@ -2072,6 +2329,18 @@ var ExperienciaCanvas = (function () {
         return;
       }
 
+      if (ev.target.closest('[data-exp-rename-input]') ||
+          ev.target.closest('[data-exp-card-title]')) {
+        /* Título: seleccionar sin iniciar drag (doble clic = rename) */
+        var titleEl = ev.target.closest('[data-exp-card-title], [data-exp-rename-input]');
+        var titleCard = titleEl && titleEl.closest('[data-exp-node]');
+        if (titleCard && tool === 'select') {
+          ev.stopPropagation();
+          selectNode(titleCard.getAttribute('data-exp-node'));
+        }
+        return;
+      }
+
       if (card && tool === 'select') {
         var nodeId = card.getAttribute('data-exp-node');
         var n = ExperienciaEngine.getNode(state, nodeId);
@@ -2260,8 +2529,19 @@ var ExperienciaCanvas = (function () {
     viewport.addEventListener('pointercancel', endPointer);
 
     function onKeyDown(ev) {
-      if (ev.code === 'Space') spacePan = true;
+      if (ev.code === 'Space') {
+        if (!isFormField(ev.target) && !renameEdit) spacePan = true;
+      }
       if (ev.key === 'Escape') {
+        if (renameEdit) {
+          finishInlineRename(false);
+          return;
+        }
+        if (modalEl && !modalEl.hidden) {
+          modalEl.hidden = true;
+          modalEl.innerHTML = '';
+          return;
+        }
         if (ctxMode || (ctxEl && !ctxEl.hidden)) { hideCtx(); return; }
         if (canvas().tool === 'cut') {
           canvas().tool = 'select';
@@ -2279,13 +2559,24 @@ var ExperienciaCanvas = (function () {
       }
       if (ev.key === 'Delete' || ev.key === 'Backspace') {
         if (isFormField(ev.target)) return;
+        if (renameEdit) return;
         var ae = document.activeElement;
         var inCanvas = viewport === ae || rootEl.contains(ae) || rootEl.contains(ev.target);
         if (!inCanvas) return;
         if (!selectedIds().length && !canvas().selectedEdgeId &&
           !(canvas().selectedEdgeIds || []).length) return;
         ev.preventDefault();
-        deleteSelection();
+        boxiesConfirm({
+          title: 'Eliminar del flujo',
+          message: selectedIds().length > 1
+            ? '¿Eliminar ' + selectedIds().length + ' nodos del flujo? (no borra media/assets)'
+            : '¿Eliminar este nodo del flujo? (no borra media/assets)',
+          confirmLabel: 'Eliminar',
+          cancelLabel: 'Cancelar'
+        }).then(function (ok) {
+          if (!ok) return;
+          deleteSelection();
+        });
       }
     }
     function onKeyUp(ev) {
@@ -2342,10 +2633,13 @@ var ExperienciaCanvas = (function () {
 
     renderAll();
     function showResetConfirm() {
-      if (!modalEl) {
-        if (!window.confirm('¿Reiniciar flujo?\n\nSe eliminarán del canvas todas las escenas, animaciones, conexiones y elementos de Experiencia. El Hero se conservará.')) {
-          return;
-        }
+      boxiesConfirm({
+        title: '¿Reiniciar flujo?',
+        message: 'Se eliminarán del canvas todas las escenas, animaciones, conexiones y elementos de Experiencia. El Hero se conservará. Los archivos del proyecto (projectAssets) no se eliminan.',
+        confirmLabel: 'Reiniciar flujo',
+        cancelLabel: 'Cancelar'
+      }).then(function (ok) {
+        if (!ok) return;
         ExperienciaEngine.resetFlow(state);
         renderAll();
         fitView();
@@ -2354,41 +2648,7 @@ var ExperienciaCanvas = (function () {
         if (typeof AdminNotify !== 'undefined') {
           AdminNotify.success('Flujo reiniciado. Solo queda el Hero.');
         }
-        return;
-      }
-      modalEl.hidden = false;
-      modalEl.innerHTML =
-        '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
-        '<div class="builder-exp-modal__panel" role="dialog" aria-labelledby="expResetTitle">' +
-          '<h3 id="expResetTitle" class="builder-exp-modal__title">¿Reiniciar flujo?</h3>' +
-          '<p class="builder-exp-modal__body">Se eliminarán del canvas todas las escenas, animaciones, conexiones y elementos de Experiencia. El Hero se conservará.</p>' +
-          '<p class="builder-menu-hint">Los archivos del proyecto (projectAssets) no se eliminan.</p>' +
-          '<div class="builder-exp-modal__actions">' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>Cancelar</button>' +
-            '<button type="button" class="builder-header-action-btn is-danger" data-exp-modal-confirm>Reiniciar flujo</button>' +
-          '</div>' +
-        '</div>';
-      modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          modalEl.hidden = true;
-          modalEl.innerHTML = '';
-        });
       });
-      var conf = modalEl.querySelector('[data-exp-modal-confirm]');
-      if (conf) {
-        conf.addEventListener('click', function () {
-          modalEl.hidden = true;
-          modalEl.innerHTML = '';
-          ExperienciaEngine.resetFlow(state);
-          renderAll();
-          fitView();
-          if (api.saveState) api.saveState();
-          else persist();
-          if (typeof AdminNotify !== 'undefined') {
-            AdminNotify.success('Flujo reiniciado. Solo queda el Hero.');
-          }
-        });
-      }
     }
 
     function saveDraft() {
@@ -2440,13 +2700,7 @@ var ExperienciaCanvas = (function () {
         ev.preventDefault();
         ev.stopPropagation();
         var nid = title.getAttribute('data-exp-card-title');
-        var n = ExperienciaEngine.getNode(state, nid);
-        if (!n || n.kind === 'hero') return;
-        var next = window.prompt('Nombre de la tarjeta', n.label || '');
-        if (next == null) return;
-        ExperienciaEngine.renameNode(state, nid, next.trim() || n.label);
-        renderAll();
-        persist();
+        startInlineRename(nid);
       });
     }
 
@@ -2454,7 +2708,11 @@ var ExperienciaCanvas = (function () {
       if (isCanvasMode()) {
         document.body.classList.add('boxies-exp-canvas-mode');
         document.documentElement.classList.add('boxies-exp-canvas-mode');
+        document.body.classList.add('boxies-rail-collapsed');
+        document.body.classList.add('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        document.documentElement.style.setProperty('--boxies-header-h', '0px');
+        document.documentElement.style.setProperty('--boxies-dock-h', '0px');
       }
       if (canvas().panX === 40 && canvas().panY === 40) fitView();
       else onViewportResize();
