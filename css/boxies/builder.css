@@ -2801,7 +2801,7 @@ button.builder-estructura-chip {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  background: #050505;
 }
 
 .builder-exp-stage {
@@ -2812,6 +2812,7 @@ button.builder-estructura-chip {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: #050505;
 }
 
 .builder-exp-toolbar {
@@ -2825,7 +2826,7 @@ button.builder-estructura-chip {
   padding: 4px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(12, 12, 14, 0.92);
+  background: rgba(12, 12, 12, 0.94);
   backdrop-filter: blur(8px);
 }
 
@@ -2872,8 +2873,8 @@ button.builder-estructura-chip {
   position: relative;
   overflow: hidden;
   cursor: grab;
-  background-color: #0a0a0c;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-color: #050505;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
   background-size: 18px 18px;
   outline: none;
 }
@@ -2930,7 +2931,7 @@ button.builder-estructura-chip {
   padding: 10px 12px 10px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(22, 22, 26, 0.96);
+  background: rgba(18, 18, 18, 0.96);
   box-sizing: border-box;
   cursor: grab;
   user-select: none;
@@ -3127,7 +3128,7 @@ button.builder-estructura-chip {
 .builder-exp-picker__panel {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(14, 14, 16, 0.97);
+  background: rgba(14, 14, 14, 0.97);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
   padding: 10px;
 }
@@ -3354,7 +3355,7 @@ button.builder-estructura-chip {
   height: 100px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(10, 10, 12, 0.92);
+  background: rgba(10, 10, 10, 0.94);
   overflow: hidden;
 }
 
@@ -3382,18 +3383,21 @@ button.builder-estructura-chip {
 }
 
 .builder-exp-inspector {
-  flex: 0 0 320px;
-  width: 320px;
-  max-width: 340px;
+  flex: 0 0 270px;
+  width: 270px;
+  max-width: 280px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(14, 14, 16, 0.96);
+  background: rgba(12, 12, 12, 0.98);
   display: flex;
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  position: relative;
+  z-index: 4;
 }
 
-.builder-exp-inspector.is-closed {
+.builder-exp-inspector.is-closed,
+.builder-exp-inspector.is-collapsed {
   display: none !important;
   width: 0 !important;
   flex: 0 0 0 !important;
@@ -3408,31 +3412,85 @@ button.builder-estructura-chip {
   max-width: none;
 }
 
+.builder-exp-inspector-tab {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 7;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  background: rgba(12, 12, 12, 0.96);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.builder-exp-workspace.has-inspector-tab .builder-exp-inspector-tab {
+  display: inline-flex;
+}
+
+.builder-exp-inspector-tab:hover {
+  color: rgba(111, 191, 134, 0.95);
+  background: rgba(18, 18, 18, 0.98);
+}
+
 .builder-exp-inspector__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 10px 10px 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55);
 }
 
+.builder-exp-inspector__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.builder-exp-inspector__collapse,
 .builder-exp-inspector__close {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 15px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.builder-exp-inspector__collapse:hover,
+.builder-exp-inspector__close:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .builder-exp-inspector__body {
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px;
+  padding: 12px;
 }
 
 .builder-exp-inspector__kind {
@@ -3444,34 +3502,39 @@ button.builder-estructura-chip {
 }
 
 .builder-exp-inspector__title {
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 10px;
+  font-size: 15px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.92);
+  word-break: break-word;
 }
 
 .builder-exp-inspector__grid {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .builder-exp-inspector__row {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   font-size: 12px;
 }
 
 .builder-exp-inspector__row span {
   color: rgba(255, 255, 255, 0.42);
+  flex: 0 1 auto;
 }
 
 .builder-exp-inspector__row strong {
   color: rgba(255, 255, 255, 0.82);
   font-weight: 520;
   text-align: right;
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .builder-exp-inspector__actions {

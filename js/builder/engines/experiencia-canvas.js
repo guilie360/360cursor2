@@ -1,5 +1,4 @@
-/* BOXIES V5.9.55 — Experiencia flow editor canvas
- * Hero: slots (nav/flujo/acciones) + flujo INICIAR. Extiende V5.9.54. */
+/* BOXIES V5.9.56 — Experiencia canvas UI: fondo neutro, inspector colapsable, toolbar limpia */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -17,6 +16,9 @@ var ExperienciaCanvas = (function () {
     var active = (exp.nodes || []).filter(function (n) { return !n.orphaned; }).length;
     var canvas = exp.canvas || {};
     var inspectorOpen = canvas.inspectorOpen === true;
+    var inspectorCollapsed = canvas.inspectorCollapsed === true;
+    var inspectorVisible = inspectorOpen && !inspectorCollapsed;
+    var showInspectorTab = inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
     var inGroup = !!(canvas.activeGroupId);
 
@@ -51,15 +53,14 @@ var ExperienciaCanvas = (function () {
             }).join('') +
             '</ul>'
           : '') +
-        '<div class="builder-exp-workspace' + (inspectorOpen ? ' has-inspector' : '') + '" data-exp-workspace>' +
+        '<div class="builder-exp-workspace' +
+          (inspectorVisible ? ' has-inspector' : '') +
+          (showInspectorTab ? ' has-inspector-tab' : '') +
+          '" data-exp-workspace>' +
           '<div class="builder-exp-stage" data-exp-stage>' +
             '<div class="builder-exp-toolbar" data-exp-toolbar role="toolbar" aria-label="Herramientas del canvas">' +
               toolBtn('select', 'Seleccionar', 'layout-grid') +
-              toolBtn('connect', 'Conectar', 'pen-tool') +
-              toolBtn('cut', 'Cortar conexión', 'scissors') +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
-              toolBtn('center', 'Centrar', 'home', true) +
-              toolBtn('fit', 'Fit view', 'maximize', true) +
               toolBtn('zoom-out', 'Zoom −', 'minimize', true) +
               toolBtn('zoom-in', 'Zoom +', 'maximize', true) +
               toolBtn('relayout', 'Auto ordenar', 'layers', true) +
@@ -79,11 +80,20 @@ var ExperienciaCanvas = (function () {
             '</div>' +
             '<div class="builder-exp-ctx" data-exp-ctx hidden></div>' +
             '<div class="builder-exp-picker" data-exp-picker hidden></div>' +
+            '<button type="button" class="builder-exp-inspector-tab" data-exp-inspector-expand' +
+              ' aria-label="Mostrar propiedades" data-tooltip="Mostrar propiedades" title="Mostrar propiedades">›</button>' +
           '</div>' +
-          '<aside class="builder-exp-inspector' + (inspectorOpen ? '' : ' is-closed') + '" data-exp-inspector>' +
+          '<aside class="builder-exp-inspector' +
+            (inspectorVisible ? '' : (inspectorCollapsed ? ' is-collapsed' : ' is-closed')) +
+            '" data-exp-inspector>' +
             '<div class="builder-exp-inspector__head">' +
               '<strong>Propiedades</strong>' +
-              '<button type="button" class="builder-exp-inspector__close" data-exp-inspector-close aria-label="Cerrar">×</button>' +
+              '<div class="builder-exp-inspector__head-actions">' +
+                '<button type="button" class="builder-exp-inspector__collapse" data-exp-inspector-collapse' +
+                  ' aria-label="Ocultar propiedades" title="Ocultar propiedades">‹</button>' +
+                '<button type="button" class="builder-exp-inspector__close" data-exp-inspector-close' +
+                  ' aria-label="Cerrar">×</button>' +
+              '</div>' +
             '</div>' +
             '<div class="builder-exp-inspector__body" data-exp-inspector-body>' +
               '<p class="builder-menu-hint">Selecciona un nodo o una conexión.</p>' +
@@ -843,26 +853,56 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    function syncInspectorChrome() {
+      var c = canvas();
+      var visible = c.inspectorOpen === true && c.inspectorCollapsed !== true;
+      var showTab = c.inspectorOpen === true && c.inspectorCollapsed === true;
+      if (inspector) {
+        if (visible) {
+          inspector.classList.remove('is-closed');
+          inspector.classList.remove('is-collapsed');
+        } else if (showTab) {
+          inspector.classList.add('is-collapsed');
+          inspector.classList.remove('is-closed');
+        } else {
+          inspector.classList.add('is-closed');
+          inspector.classList.remove('is-collapsed');
+        }
+      }
+      if (workspace) {
+        workspace.classList.toggle('has-inspector', visible);
+        workspace.classList.toggle('has-inspector-tab', showTab);
+      }
+      requestAnimationFrame(function () {
+        applyWorldTransform();
+        paintMinimap();
+        try { window.dispatchEvent(new Event('boxies:rail-toggle')); } catch (e) {}
+      });
+    }
+
     function renderAll() {
       applyWorldTransform();
       paintNodes();
       paintEdges();
       paintMinimap();
       paintInspector();
-      if (inspector) inspector.classList.toggle('is-closed', canvas().inspectorOpen !== true);
-      if (workspace) workspace.classList.toggle('has-inspector', canvas().inspectorOpen === true);
+      syncInspectorChrome();
       if (minimapWrap) minimapWrap.classList.toggle('is-hidden', canvas().minimapVisible === false);
     }
 
     function syncToolUi() {
       var tool = canvas().tool || 'select';
+      if (tool === 'connect' || tool === 'cut') {
+        tool = 'select';
+        canvas().tool = 'select';
+      }
       rootEl.querySelectorAll('[data-exp-tool]').forEach(function (btn) {
         var t = btn.getAttribute('data-exp-tool');
-        var isMode = t === 'select' || t === 'connect' || t === 'cut';
+        var isMode = t === 'select';
         btn.classList.toggle('is-active', isMode && t === tool);
       });
-      viewport.classList.toggle('is-connect', tool === 'connect');
-      viewport.classList.toggle('is-cut', tool === 'cut');
+      viewport.classList.remove('is-connect');
+      viewport.classList.remove('is-cut');
     }
 
     function selectNode(id, opts) {
@@ -876,7 +916,10 @@ var ExperienciaCanvas = (function () {
       } else {
         ExperienciaEngine.setSelection(state, id ? [id] : [], []);
       }
-      if (id || selectedIds().length) canvas().inspectorOpen = true;
+      if (id || selectedIds().length) {
+        canvas().inspectorOpen = true;
+        /* Respect collapsed preference — do not force open */
+      }
       renderAll();
       persist();
     }
@@ -1172,7 +1215,7 @@ var ExperienciaCanvas = (function () {
         if (result && result.needsPicker === '_link_existing') {
           hideCtx();
           AdminNotify.info('Selecciona un nodo existente en el canvas y conéctalo arrastrando.');
-          canvas().tool = 'connect';
+          canvas().tool = 'select';
           pendingCreate = null;
           syncToolUi();
           return;
@@ -1188,16 +1231,14 @@ var ExperienciaCanvas = (function () {
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         var tool = btn.getAttribute('data-exp-tool');
-        if (tool === 'select' || tool === 'connect' || tool === 'cut') {
-          canvas().tool = tool;
+        if (tool === 'select') {
+          canvas().tool = 'select';
           linkDrag = null;
           hoverCutEdgeId = null;
           syncToolUi();
           persist();
           return;
         }
-        if (tool === 'center') { centerView(); return; }
-        if (tool === 'fit') { fitView(); return; }
         if (tool === 'zoom-in') {
           canvas().zoom = Math.min(MAX_ZOOM, (canvas().zoom || 1) * 1.15);
           renderAll(); persist(); return;
@@ -1227,10 +1268,33 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    var collapseInsp = rootEl.querySelector('[data-exp-inspector-collapse]');
+    if (collapseInsp) {
+      collapseInsp.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        canvas().inspectorCollapsed = true;
+        canvas().inspectorOpen = true;
+        renderAll();
+        persist();
+      });
+    }
+
+    var expandInsp = rootEl.querySelector('[data-exp-inspector-expand]');
+    if (expandInsp) {
+      expandInsp.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        canvas().inspectorCollapsed = false;
+        canvas().inspectorOpen = true;
+        renderAll();
+        persist();
+      });
+    }
+
     var closeInsp = rootEl.querySelector('[data-exp-inspector-close]');
     if (closeInsp) {
       closeInsp.addEventListener('click', function () {
         canvas().inspectorOpen = false;
+        canvas().inspectorCollapsed = false;
         ExperienciaEngine.clearSelection(state);
         renderAll(); persist();
       });

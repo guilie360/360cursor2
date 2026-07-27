@@ -121,6 +121,7 @@ var ExperienciaEngine = (function () {
         tool: 'select',
         minimapVisible: true,
         inspectorOpen: false,
+        inspectorCollapsed: false,
         activeGroupId: null
       }
     };
@@ -138,6 +139,7 @@ var ExperienciaEngine = (function () {
       exp.canvas = emptyState().canvas;
     }
     if (exp.canvas.selectedEdgeId == null) exp.canvas.selectedEdgeId = null;
+    if (exp.canvas.inspectorCollapsed == null) exp.canvas.inspectorCollapsed = false;
     if (!Array.isArray(exp.canvas.selectedIds)) {
       exp.canvas.selectedIds = exp.canvas.selectedId ? [exp.canvas.selectedId] : [];
     }
@@ -1171,7 +1173,7 @@ var ExperienciaEngine = (function () {
     exp.canvas.selectedId = ids.length ? ids[ids.length - 1] : null;
     exp.canvas.selectedEdgeIds = eids;
     exp.canvas.selectedEdgeId = eids.length ? eids[eids.length - 1] : null;
-    if (ids.length || eids.length) exp.canvas.inspectorOpen = true;
+    /* Inspector open/collapsed is owned by canvas UI (V5.9.56) */
     return exp;
   }
 
