@@ -1,4 +1,4 @@
-/* BOXIES V5.9.64 — Plantillas de flujo basadas en Estructura (esqueleto, no narrativa) */
+/* BOXIES V5.9.65 — Plantillas jerárquicas: Estructura como única fuente de verdad */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -1473,57 +1473,33 @@ var ExperienciaEngine = (function () {
     return found;
   }
 
-  /** Scope options for HUB inspector (proyecto / etapas / componentes / torres). */
+  /** Scope options for HUB inspector — hierarchy from live Estructura only. */
   function listHubScopeOptions(state) {
-    var e = (state && state.estructura) || {};
-    var projectLabel = (state.projectInfo && state.projectInfo.nombre) || 'Proyecto completo';
+    var tree = buildStructureHierarchy(state);
     var out = [{
       id: 'project',
-      label: projectLabel,
+      label: tree.label || 'Proyecto completo',
       kind: 'proyecto',
       stageId: null,
       componentId: null,
       key: 'proyecto:proj-root'
     }];
-
-    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
-      EstructuraEngine.ensureConjuntoConfig(e);
-    }
-    var cfg = e.conjuntoConfig;
-    if (cfg && cfg.useStages && Array.isArray(cfg.stages)) {
-      cfg.stages.forEach(function (st, i) {
-        var stName = String(st.nombre || '').trim() || ('Etapa ' + (i + 1));
+    function walk(node) {
+      (node.children || []).forEach(function (ch) {
         out.push({
-          id: String(st.localId),
-          label: stName,
-          kind: 'etapa',
-          stageId: String(st.localId),
-          componentId: null,
-          key: 'etapa:' + st.localId
+          id: ch.id,
+          label: ch.label,
+          kind: ch.structureType || 'componente',
+          stageId: ch.stageId || null,
+          componentId: ch.componentId || null,
+          key: ch.structureKey,
+          pisos: ch.pisos != null ? ch.pisos : null,
+          parentStructureId: ch.parentStructureId || null
         });
-        (st.components || []).forEach(function (c) {
-          pushComponentScopes(out, c, st.localId, stName);
-        });
-      });
-    } else if (cfg && Array.isArray(cfg.components)) {
-      cfg.components.forEach(function (c) {
-        pushComponentScopes(out, c, null, null);
+        walk(ch);
       });
     }
-
-    (e.buildings || []).forEach(function (b, i) {
-      out.push({
-        id: String(b.localId),
-        label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
-        kind: 'edificio',
-        stageId: null,
-        componentId: String(b.localId),
-        key: 'edificio:' + b.localId,
-        pisos: b.pisos
-      });
-    });
-
-    /* Deduplicate by id */
+    walk(tree);
     var seen = {};
     return out.filter(function (o) {
       if (!o || !o.id || seen[o.id]) return false;
@@ -1533,19 +1509,15 @@ var ExperienciaEngine = (function () {
   }
 
   function pushComponentScopes(out, c, stageId, stageName) {
+    /* Kept for compat — prefer buildStructureHierarchy / listHubScopeOptions */
     if (!c) return;
     var prefix = stageName ? (stageName + ' · ') : '';
-    var baseName = String(c.nombre || '').trim() ||
-      (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.productLabel
-        ? EstructuraEngine.productLabel(c.producto)
-        : null) ||
-      'Componente';
+    var baseName = String(c.nombre || '').trim() || 'Componente';
     if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
       c.towers.forEach(function (tw, i) {
-        var twName = String(tw.nombre || '').trim() || ('Torre ' + (i + 1));
         out.push({
           id: String(tw.localId),
-          label: prefix + twName,
+          label: prefix + (String(tw.nombre || '').trim() || ('Torre ' + (i + 1))),
           kind: 'torre',
           stageId: stageId || null,
           componentId: String(c.localId),
@@ -1567,71 +1539,237 @@ var ExperienciaEngine = (function () {
   }
 
   /**
-   * Analyze live Estructura for flow templates.
-   * Never invents floors/towers — only reads existing data.
+   * Canonical structure tree for Experiencia templates.
+   * Source of truth: live state.estructura only.
+   * Never merges legacy e.buildings into conjunto projects.
    */
-  function analyzeStructureForFlow(state) {
+  function buildStructureHierarchy(state) {
     var e = (state && state.estructura) || {};
     if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
       EstructuraEngine.ensureConjuntoConfig(e);
     }
-    var stages = [];
-    var components = [];
+    var projectLabel = (state.projectInfo && state.projectInfo.nombre) || 'Proyecto';
+    var root = {
+      id: 'proj-root',
+      label: projectLabel,
+      structureType: 'proyecto',
+      structureKey: 'proyecto:proj-root',
+      parentStructureId: null,
+      children: []
+    };
     var cfg = e.conjuntoConfig;
-    if (cfg && cfg.useStages && Array.isArray(cfg.stages) && cfg.stages.length) {
-      cfg.stages.forEach(function (st, i) {
-        var name = String(st.nombre || '').trim() || ('Etapa ' + (i + 1));
-        stages.push({
-          id: String(st.localId),
-          label: name,
-          componentCount: (st.components || []).length
-        });
-        (st.components || []).forEach(function (c) {
-          components.push({
-            id: String(c.localId),
-            label: name + ' · ' + (String(c.nombre || '').trim() || 'Componente'),
-            stageId: String(st.localId),
-            kind: c.kind || c.type || 'componente'
-          });
+    var devType = e.developmentType || null;
+
+    function pushTowerChildren(parent, c, stageId) {
+      (c.towers || []).forEach(function (tw, i) {
+        var twName = String(tw.nombre || '').trim() || ('Torre ' + (i + 1));
+        parent.children.push({
+          id: String(tw.localId),
+          label: twName,
+          structureType: 'torre',
+          structureKey: 'torre:' + tw.localId,
+          parentStructureId: parent.id,
+          stageId: stageId || null,
+          componentId: String(c.localId),
+          pisos: tw.pisos != null ? tw.pisos : null,
+          children: []
         });
       });
-    } else {
+    }
+
+    function mapComponentNode(c, parentId, stageId) {
+      var baseName = String(c.nombre || '').trim() ||
+        (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.productLabel
+          ? EstructuraEngine.productLabel(c.producto)
+          : null) ||
+        'Componente';
+      /* Individual towers: expose towers as navigable children of the parent stage/root */
+      if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
+        var group = {
+          id: String(c.localId),
+          label: baseName,
+          structureType: 'componente',
+          structureKey: 'componente:' + c.localId,
+          parentStructureId: parentId,
+          stageId: stageId || null,
+          componentId: String(c.localId),
+          children: []
+        };
+        pushTowerChildren(group, c, stageId);
+        /* If only towers matter for navigation, return towers directly under parent */
+        return group.children.length
+          ? group.children.map(function (tw) {
+              return Object.assign({}, tw, { parentStructureId: parentId });
+            })
+          : [group];
+      }
+      return [{
+        id: String(c.localId),
+        label: baseName,
+        structureType: c.kind || c.type || 'componente',
+        structureKey: 'componente:' + c.localId,
+        parentStructureId: parentId,
+        stageId: stageId || null,
+        componentId: String(c.localId),
+        pisos: c.pisos != null ? c.pisos : null,
+        children: []
+      }];
+    }
+
+    if (devType === 'conjunto' && cfg) {
+      if (cfg.useStages && Array.isArray(cfg.stages) && cfg.stages.length) {
+        cfg.stages.forEach(function (st, i) {
+          var stId = String(st.localId);
+          var stName = String(st.nombre || '').trim() || ('Etapa ' + (i + 1));
+          var stageNode = {
+            id: stId,
+            label: stName,
+            structureType: 'etapa',
+            structureKey: 'etapa:' + stId,
+            parentStructureId: root.id,
+            stageId: stId,
+            componentId: null,
+            children: []
+          };
+          (st.components || []).forEach(function (c) {
+            mapComponentNode(c, stId, stId).forEach(function (child) {
+              stageNode.children.push(child);
+            });
+          });
+          root.children.push(stageNode);
+        });
+      } else if (Array.isArray(cfg.components)) {
+        cfg.components.forEach(function (c) {
+          mapComponentNode(c, root.id, null).forEach(function (child) {
+            root.children.push(child);
+          });
+        });
+      }
+      return root;
+    }
+
+    if (devType === 'edificio' && Array.isArray(e.buildings)) {
+      e.buildings.forEach(function (b, i) {
+        root.children.push({
+          id: String(b.localId),
+          label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
+          structureType: 'edificio',
+          structureKey: 'edificio:' + b.localId,
+          parentStructureId: root.id,
+          stageId: null,
+          componentId: String(b.localId),
+          pisos: b.pisos != null ? b.pisos : null,
+          children: []
+        });
+      });
+      return root;
+    }
+
+    if (devType === 'mixto') {
       var buckets = (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets)
         ? (EstructuraEngine.listCapacityBuckets(e) || [])
         : [];
       buckets.forEach(function (b) {
-        components.push({
+        root.children.push({
           id: String(b.id),
           label: b.label || 'Componente',
+          structureType: b.kind || 'componente',
+          structureKey: String(b.kind || 'item') + ':' + b.id,
+          parentStructureId: root.id,
           stageId: b.stageId || null,
-          kind: b.kind || 'componente',
-          capacity: b.capacity
+          componentId: b.componentId || b.id,
+          children: []
         });
       });
-      if (cfg && Array.isArray(cfg.components)) {
-        /* Prefer named components when buckets empty */
-        if (!components.length) {
-          cfg.components.forEach(function (c) {
-            components.push({
-              id: String(c.localId),
-              label: String(c.nombre || '').trim() || 'Componente',
-              stageId: null,
-              kind: c.kind || 'componente'
-            });
-          });
-        }
-      }
+      return root;
     }
 
-    (e.buildings || []).forEach(function (b, i) {
-      var exists = components.some(function (c) { return c.id === String(b.localId); });
-      if (!exists) {
+    if (devType === 'unidad' || devType === 'lotes') {
+      var singleBuckets = (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets)
+        ? (EstructuraEngine.listCapacityBuckets(e) || [])
+        : [];
+      singleBuckets.forEach(function (b) {
+        root.children.push({
+          id: String(b.id),
+          label: b.label || 'Unidad',
+          structureType: b.kind || 'unidad',
+          structureKey: String(b.kind || 'item') + ':' + b.id,
+          parentStructureId: root.id,
+          children: []
+        });
+      });
+    }
+
+    return root;
+  }
+
+  function flattenStructureNodes(node, out) {
+    out = out || [];
+    if (!node) return out;
+    if (node.id && node.id !== 'proj-root') out.push(node);
+    (node.children || []).forEach(function (ch) { flattenStructureNodes(ch, out); });
+    return out;
+  }
+
+  function countStructureComponents(tree) {
+    var n = 0;
+    function walk(node) {
+      (node.children || []).forEach(function (ch) {
+        if (ch.structureType === 'etapa') {
+          walk(ch);
+        } else {
+          n += 1;
+          /* towers already counted as components; don't double-count empty groups */
+        }
+      });
+    }
+    walk(tree);
+    return n;
+  }
+
+  /**
+   * Analyze live Estructura for flow templates.
+   * Hierarchy-aware — never flattens stages+towers+legacy buildings together.
+   */
+  function analyzeStructureForFlow(state) {
+    var e = (state && state.estructura) || {};
+    var tree = buildStructureHierarchy(state);
+    var stages = [];
+    var components = [];
+    var rootBranches = [];
+
+    (tree.children || []).forEach(function (ch) {
+      rootBranches.push(ch);
+      if (ch.structureType === 'etapa') {
+        stages.push({
+          id: ch.id,
+          label: ch.label,
+          structureType: 'etapa',
+          structureKey: ch.structureKey,
+          parentStructureId: ch.parentStructureId,
+          componentCount: (ch.children || []).length,
+          children: ch.children || []
+        });
+        (ch.children || []).forEach(function (c) {
+          components.push({
+            id: c.id,
+            label: c.label,
+            structureType: c.structureType,
+            structureKey: c.structureKey,
+            parentStructureId: c.parentStructureId || ch.id,
+            stageId: ch.id,
+            kind: c.structureType
+          });
+        });
+      } else {
         components.push({
-          id: String(b.localId),
-          label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
-          stageId: null,
-          kind: 'edificio',
-          pisos: b.pisos
+          id: ch.id,
+          label: ch.label,
+          structureType: ch.structureType,
+          structureKey: ch.structureKey,
+          parentStructureId: ch.parentStructureId,
+          stageId: ch.stageId || null,
+          kind: ch.structureType
         });
       }
     });
@@ -1645,19 +1783,20 @@ var ExperienciaEngine = (function () {
     var recommended = FLOW_TEMPLATE_IDS.simple;
     if (stages.length > 1) recommended = FLOW_TEMPLATE_IDS.stages;
     else if (components.length > 1) recommended = FLOW_TEMPLATE_IDS.components;
-    else recommended = FLOW_TEMPLATE_IDS.simple;
 
     return {
+      tree: tree,
+      rootBranches: rootBranches,
       stages: stages,
       components: components,
       tipologias: tipologias,
       units: units,
       developmentType: e.developmentType || null,
-      useStages: !!(cfg && cfg.useStages),
+      useStages: !!(e.conjuntoConfig && e.conjuntoConfig.useStages && stages.length),
       recommended: recommended,
       summary: {
         stages: stages.length,
-        components: components.length,
+        components: components.length || countStructureComponents(tree),
         units: units,
         tipologias: tipologias
       }
@@ -1820,9 +1959,12 @@ var ExperienciaEngine = (function () {
       ports: [],
       config: {
         templateRole: opts.templateRole || null,
+        templateGenerated: !!opts.templateGenerated,
         structureId: opts.structureId || null,
         structureKey: opts.structureKey || null,
         structureLabel: opts.structureLabel || null,
+        structureType: opts.structureType || null,
+        parentStructureId: opts.parentStructureId || null,
         autoplay: opts.kind === 'video',
         onEnd: opts.kind === 'video' ? 'next' : null,
         fileName: null,
@@ -1889,9 +2031,144 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
+  function toBranchEntity(node) {
+    return {
+      id: node.id,
+      label: node.label,
+      kind: node.structureType || 'componente',
+      structureType: node.structureType || 'componente',
+      structureKey: node.structureKey,
+      parentStructureId: node.parentStructureId || null,
+      stageId: node.stageId || null,
+      componentId: node.componentId || null,
+      key: node.structureKey,
+      children: node.children || []
+    };
+  }
+
+  function clearTemplateGeneratedOnScene(state, scene, exp) {
+    if (!scene || !scene.config) return;
+    normalizeSceneInteractions(scene);
+    var removedPorts = {};
+    scene.config.interactions = (scene.config.interactions || []).filter(function (ix) {
+      if (ix && ix.config && ix.config.templateGenerated) {
+        removedPorts[ix.portId || ix.id] = true;
+        return false;
+      }
+      return true;
+    });
+    if (Object.keys(removedPorts).length) {
+      exp.edges = (exp.edges || []).filter(function (ed) {
+        if ((ed.sourceNodeId || ed.from) !== scene.id) return true;
+        var pid = ed.sourcePortId || ed.portId;
+        return !removedPorts[pid];
+      });
+    }
+  }
+
+  /**
+   * Remove template-generated branch nodes not in keepIds.
+   * Never removes manually created nodes (no config.templateGenerated).
+   */
+  function pruneOrphanTemplateBranches(state, keepIds) {
+    var exp = ensureState(state);
+    var keep = {};
+    (keepIds || []).forEach(function (id) { keep[String(id)] = true; });
+    var removed = {};
+    exp.nodes = (exp.nodes || []).filter(function (n) {
+      if (!n || !n.config) return true;
+      if (n.config.templateRole !== 'branch' && n.config.templateRole !== 'struct-child') return true;
+      if (!n.config.templateGenerated) return true;
+      if (keep[String(n.config.structureId)] || keep[String(n.id)]) return true;
+      removed[n.id] = true;
+      return false;
+    });
+    if (Object.keys(removed).length) {
+      exp.edges = (exp.edges || []).filter(function (ed) {
+        var s = ed.sourceNodeId || ed.from;
+        var t = ed.targetNodeId || ed.to;
+        return !removed[s] && !removed[t];
+      });
+    }
+  }
+
+  function ensureStructuralBranchNode(state, entity, x, y, role) {
+    var exp = ensureState(state);
+    role = role || 'branch';
+    var existing = (exp.nodes || []).find(function (n) {
+      return n.config &&
+        (n.config.templateRole === 'branch' || n.config.templateRole === 'struct-child') &&
+        String(n.config.structureId) === String(entity.id);
+    });
+    if (existing) {
+      existing.label = entity.label;
+      existing.config.structureLabel = entity.label;
+      existing.config.structureKey = entity.key || entity.structureKey;
+      existing.config.structureType = entity.structureType || entity.kind;
+      existing.config.parentStructureId = entity.parentStructureId || null;
+      existing.config.templateGenerated = true;
+      existing.config.templateRole = role;
+      return existing;
+    }
+    var n = createTemplateScene(state, {
+      kind: 'image',
+      label: entity.label,
+      templateRole: role,
+      templateGenerated: true,
+      structureId: entity.id,
+      structureKey: entity.key || entity.structureKey,
+      structureLabel: entity.label,
+      structureType: entity.structureType || entity.kind || null,
+      parentStructureId: entity.parentStructureId || null,
+      x: x,
+      y: y
+    });
+    return n;
+  }
+
+  /** Attach template hotspots + child nodes for children of a structural scene. */
+  function seedStructuralChildren(state, parentScene, childEntities, startX) {
+    var exp = ensureState(state);
+    if (!parentScene || !childEntities || !childEntities.length) return [];
+    clearTemplateGeneratedOnScene(state, parentScene, exp);
+    var created = [];
+    var baseY = (parentScene.y || 80) - Math.floor((childEntities.length - 1) * 70 / 2);
+    var x = startX != null ? startX : ((parentScene.x || 760) + 340);
+    childEntities.forEach(function (raw, i) {
+      var entity = toBranchEntity(raw);
+      var childNode = ensureStructuralBranchNode(
+        state, entity, x, baseY + i * 110, 'struct-child'
+      );
+      var ix = addInteractionToScene(state, parentScene.id, 'HOTSPOT', entity.label, {
+        group: 'content',
+        structureId: entity.id,
+        structureKey: entity.key || entity.structureKey,
+        structureLabel: entity.label,
+        structureKind: entity.structureType || entity.kind,
+        structureRef: {
+          id: entity.id,
+          key: entity.key || entity.structureKey,
+          label: entity.label,
+          kind: entity.structureType || entity.kind,
+          stageId: entity.stageId || null,
+          parentStructureId: entity.parentStructureId || parentScene.config.structureId || null
+        }
+      });
+      if (ix) {
+        if (!ix.config) ix.config = {};
+        ix.config.templateGenerated = true;
+        linkHotspotToStructure(ix, entity);
+        ensureEdge(state, parentScene.id, childNode.id, entity.label, ix.portId || ix.id, 'in');
+      }
+      created.push(childNode);
+    });
+    syncScenePorts(parentScene);
+    return created;
+  }
+
   /**
    * Apply flow template. Creates structural skeleton only — no narrative routes.
-   * templateId: simple | components | stages | empty
+   * Respects hierarchy: stages template never flattens towers onto Vista general.
    */
   function applyFlowTemplate(state, templateId, options) {
     options = options || {};
@@ -1912,6 +2189,9 @@ var ExperienciaEngine = (function () {
     exp = ensureState(state);
 
     if (templateId === FLOW_TEMPLATE_IDS.simple) {
+      /* Remove prior structural template branches from Vista; keep intro chain */
+      clearTemplateGeneratedOnScene(state, chain.entry, exp);
+      pruneOrphanTemplateBranches(state, []);
       exp.flowTemplateId = FLOW_TEMPLATE_IDS.simple;
       exp.structureFingerprint = structureFingerprint(state);
       markExperienciaDirty(state);
@@ -1919,27 +2199,30 @@ var ExperienciaEngine = (function () {
     }
 
     var entry = chain.entry;
-    var branches = templateId === FLOW_TEMPLATE_IDS.stages
-      ? (analysis.stages || []).map(function (s) {
-          return {
-            id: s.id,
-            label: s.label,
-            kind: 'etapa',
-            stageId: s.id,
-            key: 'etapa:' + s.id
-          };
-        })
-      : (analysis.components || []).map(function (c) {
-          return {
-            id: c.id,
-            label: c.label,
-            kind: c.kind || 'componente',
-            stageId: c.stageId || null,
-            key: String(c.kind || 'componente') + ':' + c.id
-          };
+    var levelNodes = [];
+    if (templateId === FLOW_TEMPLATE_IDS.stages) {
+      /* ONLY root etapas — never mix towers/components on Vista general */
+      levelNodes = (analysis.stages || []).map(toBranchEntity);
+    } else {
+      /* Por componentes: root-level navigable nodes (no etapas wrapper) */
+      if (analysis.useStages && (analysis.stages || []).length) {
+        /* Explicit components template while stages exist: use stage children flattened
+           only if user chose components — still NOT legacy buildings */
+        (analysis.stages || []).forEach(function (st) {
+          (st.children || []).forEach(function (c) {
+            levelNodes.push(toBranchEntity(Object.assign({}, c, {
+              parentStructureId: 'proj-root'
+            })));
+          });
         });
+      } else {
+        levelNodes = (analysis.rootBranches || []).map(toBranchEntity);
+      }
+    }
 
-    if (!branches.length) {
+    if (!levelNodes.length) {
+      clearTemplateGeneratedOnScene(state, entry, exp);
+      pruneOrphanTemplateBranches(state, []);
       exp.flowTemplateId = templateId;
       exp.structureFingerprint = structureFingerprint(state);
       markExperienciaDirty(state);
@@ -1952,71 +2235,52 @@ var ExperienciaEngine = (function () {
       };
     }
 
-    /* Clear previous template-generated branch hotspots on entry (keep user ones without templateFlag) */
-    normalizeSceneInteractions(entry);
-    var removedPorts = {};
-    entry.config.interactions = (entry.config.interactions || []).filter(function (ix) {
-      if (ix && ix.config && ix.config.templateGenerated) {
-        removedPorts[ix.portId || ix.id] = true;
-        return false;
-      }
-      return true;
-    });
-    if (Object.keys(removedPorts).length) {
-      exp.edges = (exp.edges || []).filter(function (ed) {
-        if ((ed.sourceNodeId || ed.from) !== entry.id) return true;
-        var pid = ed.sourcePortId || ed.portId;
-        return !removedPorts[pid];
-      });
-    }
+    clearTemplateGeneratedOnScene(state, entry, exp);
 
-    var baseY = (entry.y || 80) - Math.floor((branches.length - 1) * 70 / 2);
-    branches.forEach(function (br, i) {
-      var existing = (exp.nodes || []).find(function (n) {
-        return n.config && n.config.templateRole === 'branch' &&
-          String(n.config.structureId) === String(br.id);
-      });
-      var branchNode = existing;
-      if (!branchNode) {
-        branchNode = createTemplateScene(state, {
-          kind: 'image',
-          label: br.label,
-          templateRole: 'branch',
-          structureId: br.id,
-          structureKey: br.key,
-          structureLabel: br.label,
-          x: (entry.x || 760) + 360,
-          y: baseY + i * 110
-        });
-      } else {
-        branchNode.label = br.label;
-        branchNode.config.structureLabel = br.label;
-      }
+    var keepIds = levelNodes.map(function (b) { return b.id; });
+    var baseY = (entry.y || 80) - Math.floor((levelNodes.length - 1) * 70 / 2);
+    var branchNodes = [];
+
+    levelNodes.forEach(function (br, i) {
+      var branchNode = ensureStructuralBranchNode(
+        state, br, (entry.x || 760) + 360, baseY + i * 130, 'branch'
+      );
+      branchNodes.push(branchNode);
+      keepIds.push(branchNode.id);
 
       var ix = addInteractionToScene(state, entry.id, 'HOTSPOT', br.label, {
         group: 'content',
         structureId: br.id,
-        structureKey: br.key,
+        structureKey: br.key || br.structureKey,
         structureLabel: br.label,
-        structureKind: br.kind,
+        structureKind: br.structureType || br.kind,
         structureRef: {
           id: br.id,
-          key: br.key,
+          key: br.key || br.structureKey,
           label: br.label,
-          kind: br.kind,
-          stageId: br.stageId || null
+          kind: br.structureType || br.kind,
+          stageId: br.stageId || null,
+          parentStructureId: br.parentStructureId || null
         }
       });
       if (ix) {
         if (!ix.config) ix.config = {};
         ix.config.templateGenerated = true;
         linkHotspotToStructure(ix, br);
-      }
-      if (ix) {
         ensureEdge(state, entry.id, branchNode.id, br.label, ix.portId || ix.id, 'in');
+      }
+
+      /* Seed next hierarchy level ON the stage/component node — not on Vista general */
+      if (templateId === FLOW_TEMPLATE_IDS.stages && br.children && br.children.length) {
+        var childNodes = seedStructuralChildren(state, branchNode, br.children);
+        childNodes.forEach(function (cn) {
+          keepIds.push(cn.id);
+          if (cn.config && cn.config.structureId) keepIds.push(cn.config.structureId);
+        });
       }
     });
 
+    pruneOrphanTemplateBranches(state, keepIds);
     syncScenePorts(entry);
     exp.flowTemplateId = templateId;
     exp.structureFingerprint = structureFingerprint(state);
@@ -2026,7 +2290,7 @@ var ExperienciaEngine = (function () {
       templateId: templateId,
       analysis: analysis,
       chain: chain,
-      branches: branches.length
+      branches: levelNodes.length
     };
   }
 
@@ -3096,6 +3360,7 @@ var ExperienciaEngine = (function () {
     resolveStructureLink: resolveStructureLink,
     linkInteractionToStructure: linkInteractionToStructure,
     analyzeStructureForFlow: analyzeStructureForFlow,
+    buildStructureHierarchy: buildStructureHierarchy,
     listHubScopeOptions: listHubScopeOptions,
     listFloorsForScope: listFloorsForScope,
     setHubStructureScope: setHubStructureScope,

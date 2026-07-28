@@ -1,4 +1,4 @@
-/* BOXIES V5.9.64 — Plantillas de flujo basadas en Estructura */
+/* BOXIES V5.9.65 — Plantillas jerárquicas desde Estructura actual */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
