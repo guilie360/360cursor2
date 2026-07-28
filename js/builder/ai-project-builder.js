@@ -2030,7 +2030,9 @@ var AiProjectBuilderView = (function () {
       if (!state.mediaTours.seededAt) MediaToursEngine.syncFromEstructura(state, projectId);
     }
 
-    var focus = (state.bunnyMedia && state.bunnyMedia.focusCategory) || 'all';
+    state.bunnyMedia = state.bunnyMedia || {};
+    var focus = state.bunnyMedia.focusCategory || 'all';
+    var query = String(state.bunnyMedia.searchQuery || '').trim().toLowerCase();
     var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
     var catOptions = '<option value="all"' + (focus === 'all' ? ' selected' : '') + '>Todas las categorías</option>' +
       cats.map(function (c) {
@@ -2042,29 +2044,76 @@ var AiProjectBuilderView = (function () {
     var nodes = (typeof MediaNodesEngine !== 'undefined')
       ? MediaNodesEngine.listCompatibleNodes(state)
       : [];
-    var expanded = (state.bunnyMedia && state.bunnyMedia.expandedNodeId) || null;
-
     hydrateBunnyRowsIntoAssets();
 
-    var body = !nodes.length
-      ? '<p class="builder-menu-hint">No hay nodos en el Canvas. Define tipologías y zonas en Estructura primero.</p>'
-      : '<div class="builder-media-node-list">' + nodes.map(function (n) {
-          return renderMediaNodeCard(n, focus, expanded === n.node_id);
-        }).join('') + '</div>';
+    if (!state.bunnyMedia.selectedNodeId && nodes.length) {
+      state.bunnyMedia.selectedNodeId = nodes[0].node_id;
+    }
+    /* Migrate legacy expand key → selection */
+    if (!state.bunnyMedia.selectedNodeId && state.bunnyMedia.expandedNodeId) {
+      state.bunnyMedia.selectedNodeId = state.bunnyMedia.expandedNodeId;
+    }
 
-    return '<div class="builder-step-content builder-step-content--bunny-media">' +
-      stepTitleHtml('Media') +
-      '<p class="builder-step-desc">Cada recurso pertenece a un nodo del Canvas (<code>node_id</code>). No hay listas paralelas por categoría.</p>' +
-      '<div class="builder-confirm-form builder-bunny-upload">' +
-        '<div class="builder-field">' +
-          '<label>Enfocar categoría</label>' +
-          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
-        '</div>' +
-        '<div class="builder-confirm-title" style="margin-top:12px">Nodos del Canvas' +
-          ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
-        '</div>' +
-        '<p class="builder-menu-hint" id="bunnyMediaStatus"></p>' +
-        body +
+    var selectedId = state.bunnyMedia.selectedNodeId || null;
+    var selected = null;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].node_id === selectedId) { selected = nodes[i]; break; }
+    }
+    if (selectedId && !selected && nodes.length) {
+      selected = nodes[0];
+      selectedId = selected.node_id;
+      state.bunnyMedia.selectedNodeId = selectedId;
+    }
+
+    var filtered = nodes.filter(function (n) {
+      if (!query) return true;
+      var hay = String(n.label || n.nombre || '').toLowerCase();
+      return hay.indexOf(query) !== -1;
+    });
+
+    var listHtml = !nodes.length
+      ? '<p class="builder-menu-hint">No hay nodos en el Canvas. Define tipologías y zonas en Estructura primero.</p>'
+      : (!filtered.length
+        ? '<p class="builder-menu-hint">Ningún nodo coincide con la búsqueda.</p>'
+        : '<div class="builder-media-node-list" id="bunnyMediaNodeList">' +
+            filtered.map(function (n) {
+              return renderMediaNodeListItem(n, focus, n.node_id === selectedId);
+            }).join('') +
+          '</div>');
+
+    var detailHtml = selected
+      ? renderMediaNodeDetail(selected, focus)
+      : '<div class="builder-media-detail-empty">' +
+          '<p class="builder-menu-hint">Selecciona un nodo del Canvas para gestionar sus recursos.</p>' +
+        '</div>';
+
+    return '<div class="builder-step-content builder-step-content--media">' +
+      '<div class="builder-media-workspace-head">' +
+        stepTitleHtml('Media') +
+        '<p class="builder-step-desc">Recursos por nodo del Canvas. Un nodo a la vez · Bunny + Lapentor.</p>' +
+      '</div>' +
+      '<div class="builder-media-workspace">' +
+        '<aside class="builder-media-col builder-media-col--list" id="bunnyMediaListCol">' +
+          '<div class="builder-media-list-toolbar">' +
+            '<div class="builder-field builder-media-search-field">' +
+              '<label for="bunnyMediaSearch">Buscar nodo</label>' +
+              '<input type="search" id="bunnyMediaSearch" placeholder="Lobby, Modelo A…" value="' +
+                AdminUI.escapeHtml(state.bunnyMedia.searchQuery || '') + '">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label for="bunnyMediaCategory">Categoría</label>' +
+              '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
+            '</div>' +
+            '<div class="builder-media-list-actions">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh">Actualizar</button>' +
+              '<span class="builder-menu-hint" id="bunnyMediaStatus"></span>' +
+            '</div>' +
+          '</div>' +
+          listHtml +
+        '</aside>' +
+        '<section class="builder-media-col builder-media-col--detail" id="bunnyMediaDetailCol">' +
+          detailHtml +
+        '</section>' +
       '</div>' +
       '<input type="file" id="bunnyMediaInput" hidden>' +
     '</div>';
@@ -2097,46 +2146,81 @@ var AiProjectBuilderView = (function () {
   }
 
   function statusDot(level) {
-    if (level === 'ok') return '<span class="builder-media-dot is-ok" title="Listo"></span>';
-    if (level === 'warn') return '<span class="builder-media-dot is-warn" title="Pendiente"></span>';
-    return '<span class="builder-media-dot is-missing" title="Falta"></span>';
+    if (level === 'ok') return '<span class="builder-media-dot is-ok" title="Completo"></span>';
+    if (level === 'warn') return '<span class="builder-media-dot is-pending" title="Pendiente"></span>';
+    return '<span class="builder-media-dot is-missing" title="Faltante"></span>';
   }
 
-  function renderMediaNodeCard(n, focus, isExpanded) {
+  function mediaNodeCounters(n, focus) {
     var summary = (typeof MediaNodesEngine !== 'undefined')
       ? MediaNodesEngine.nodeStatusSummary(state, n.node_id)
       : [];
+    var ok = 0;
+    var missing = 0;
+    var pending = 0;
     var chips = summary.map(function (s) {
       if (focus !== 'all' && focus !== s.key) return '';
+      if (s.level === 'ok') ok++;
+      else if (s.level === 'warn') pending++;
+      else missing++;
       return '<span class="builder-media-chip">' + statusDot(s.level) +
         AdminUI.escapeHtml(s.text) + '</span>';
     }).join('');
+    var tally = '<span class="builder-media-node__tally">' +
+      '<span class="builder-media-dot is-ok"></span>' + ok +
+      '<span class="builder-media-dot is-pending"></span>' + pending +
+      '<span class="builder-media-dot is-missing"></span>' + missing +
+    '</span>';
+    return { chips: chips, tally: tally };
+  }
 
-    var sections = '';
-    if (isExpanded && typeof MediaNodesEngine !== 'undefined') {
-      sections = '<div class="builder-media-node__body">' +
-        MediaNodesEngine.MEDIA_CATEGORIES.map(function (cat) {
+  function renderMediaNodeListItem(n, focus, isSelected) {
+    var collapsed = !!(state.bunnyMedia && state.bunnyMedia.collapsedList &&
+      state.bunnyMedia.collapsedList[n.node_id]);
+    var ctr = mediaNodeCounters(n, focus);
+    return '<article class="builder-media-node' + (isSelected ? ' is-selected' : '') +
+      (collapsed ? ' is-collapsed' : '') +
+      '" data-media-node="' + AdminUI.escapeHtml(n.node_id) + '">' +
+      '<div class="builder-media-node__row">' +
+        '<button type="button" class="builder-media-node__select" data-media-select="' +
+          AdminUI.escapeHtml(n.node_id) + '">' +
+          '<span class="builder-media-node__title">' +
+            '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
+            '<span class="builder-tour-scene__tag">' +
+              AdminUI.escapeHtml(n.kind === 'zona' ? 'Zona común' : 'Tipología') +
+            '</span>' +
+          '</span>' +
+          ctr.tally +
+        '</button>' +
+        '<button type="button" class="builder-media-node__chevron-btn" data-media-toggle-list="' +
+          AdminUI.escapeHtml(n.node_id) + '" aria-label="' +
+          (collapsed ? 'Expandir' : 'Contraer') + '">' +
+          (collapsed ? '▶' : '▼') +
+        '</button>' +
+      '</div>' +
+      (collapsed ? '' : '<div class="builder-media-node__chips">' + ctr.chips + '</div>') +
+    '</article>';
+  }
+
+  function renderMediaNodeDetail(n, focus) {
+    var sections = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.MEDIA_CATEGORIES.map(function (cat) {
           if (focus !== 'all' && focus !== cat.key) return '';
           return renderMediaNodeCategorySection(n, cat);
-        }).join('') +
-      '</div>';
-    }
-
-    return '<article class="builder-media-node' + (isExpanded ? ' is-expanded' : '') +
-      '" data-media-node="' + AdminUI.escapeHtml(n.node_id) + '">' +
-      '<button type="button" class="builder-media-node__toggle" data-media-expand="' +
-        AdminUI.escapeHtml(n.node_id) + '">' +
-        '<span class="builder-media-node__chevron" aria-hidden="true">' + (isExpanded ? '▼' : '▶') + '</span>' +
-        '<span class="builder-media-node__title">' +
-          '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
-          '<span class="builder-tour-scene__tag">' +
+        }).join('')
+      : '';
+    return '<div class="builder-media-detail">' +
+      '<header class="builder-media-detail__head">' +
+        '<div>' +
+          '<h3 class="builder-media-detail__title">' + AdminUI.escapeHtml(n.label) + '</h3>' +
+          '<p class="builder-menu-hint" style="margin:4px 0 0">' +
             AdminUI.escapeHtml(n.kind === 'zona' ? 'Zona común' : 'Tipología') +
-          '</span>' +
-        '</span>' +
-        '<span class="builder-media-node__chips">' + chips + '</span>' +
-      '</button>' +
-      sections +
-    '</article>';
+            ' · <code>' + AdminUI.escapeHtml(n.node_id) + '</code>' +
+          '</p>' +
+        '</div>' +
+      '</header>' +
+      '<div class="builder-media-detail__sections">' + sections + '</div>' +
+    '</div>';
   }
 
   function renderMediaNodeCategorySection(n, cat) {
@@ -2203,6 +2287,26 @@ var AiProjectBuilderView = (function () {
 
   function renderMediaToursPanel() {
     return '<p class="builder-menu-hint">Tours 360 se gestionan dentro de cada nodo del Canvas.</p>';
+  }
+
+  function captureMediaScroll() {
+    if (!rootEl || !state.bunnyMedia) return;
+    var list = rootEl.querySelector('#bunnyMediaListCol');
+    var detail = rootEl.querySelector('#bunnyMediaDetailCol');
+    if (list) state.bunnyMedia.listScrollTop = list.scrollTop;
+    if (detail) state.bunnyMedia.detailScrollTop = detail.scrollTop;
+  }
+
+  function restoreMediaScroll() {
+    if (!rootEl || !state.bunnyMedia) return;
+    var listTop = state.bunnyMedia.listScrollTop;
+    var detailTop = state.bunnyMedia.detailScrollTop;
+    requestAnimationFrame(function () {
+      var list = rootEl.querySelector('#bunnyMediaListCol');
+      var detail = rootEl.querySelector('#bunnyMediaDetailCol');
+      if (list && listTop != null) list.scrollTop = listTop;
+      if (detail && detailTop != null) detail.scrollTop = detailTop;
+    });
   }
 
   function renderGallery() {
@@ -4957,6 +5061,7 @@ var AiProjectBuilderView = (function () {
         entityRef: node && node.entityRef ? node.entityRef : null
       });
       state.bunnyMedia = state.bunnyMedia || {};
+      state.bunnyMedia.selectedNodeId = nodeId;
       state.bunnyMedia.expandedNodeId = nodeId;
       state.bunnyMedia.items = state.bunnyMedia.items || [];
       if (result.archivo) {
@@ -4967,7 +5072,9 @@ var AiProjectBuilderView = (function () {
       saveState();
       AdminNotify.success('Asset en nodo · ' + (result.publicUrl || ''));
       setBunnyMediaStatus('OK · ' + (result.publicUrl || ''));
+      captureMediaScroll();
       renderStepContent();
+      restoreMediaScroll();
     } catch (err) {
       var msg = (err && err.message) || 'Error subiendo a Bunny';
       if (err && err.code === 'MISSING_SECRET') {
@@ -4985,13 +5092,33 @@ var AiProjectBuilderView = (function () {
 
   function bindBunnyMediaStep() {
     state.bunnyMedia = state.bunnyMedia || {};
+    if (!state.bunnyMedia.collapsedList) state.bunnyMedia.collapsedList = {};
+
+    var searchEl = rootEl.querySelector('#bunnyMediaSearch');
+    if (searchEl) {
+      searchEl.addEventListener('input', function () {
+        state.bunnyMedia.searchQuery = searchEl.value || '';
+        captureMediaScroll();
+        saveState();
+        renderStepContent();
+        restoreMediaScroll();
+        var again = rootEl.querySelector('#bunnyMediaSearch');
+        if (again) {
+          again.focus();
+          var len = again.value.length;
+          try { again.setSelectionRange(len, len); } catch (e) { /* ignore */ }
+        }
+      });
+    }
 
     var catEl = rootEl.querySelector('#bunnyMediaCategory');
     if (catEl) {
       catEl.addEventListener('change', function () {
         state.bunnyMedia.focusCategory = catEl.value || 'all';
+        captureMediaScroll();
         saveState();
         renderStepContent();
+        restoreMediaScroll();
       });
     }
 
@@ -5000,14 +5127,33 @@ var AiProjectBuilderView = (function () {
       refreshBtn.addEventListener('click', function () { refreshBunnyMediaList(false); });
     }
 
-    rootEl.querySelectorAll('[data-media-expand]').forEach(function (btn) {
+    rootEl.querySelectorAll('[data-media-select]').forEach(function (btn) {
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
-        var nid = btn.getAttribute('data-media-expand');
-        state.bunnyMedia.expandedNodeId =
-          state.bunnyMedia.expandedNodeId === nid ? null : nid;
+        var nid = btn.getAttribute('data-media-select');
+        if (!nid || state.bunnyMedia.selectedNodeId === nid) return;
+        captureMediaScroll();
+        state.bunnyMedia.selectedNodeId = nid;
+        state.bunnyMedia.expandedNodeId = nid;
+        state.bunnyMedia.detailScrollTop = 0;
         saveState();
         renderStepContent();
+        restoreMediaScroll();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-media-toggle-list]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var nid = btn.getAttribute('data-media-toggle-list');
+        if (!nid) return;
+        captureMediaScroll();
+        state.bunnyMedia.collapsedList = state.bunnyMedia.collapsedList || {};
+        state.bunnyMedia.collapsedList[nid] = !state.bunnyMedia.collapsedList[nid];
+        saveState();
+        renderStepContent();
+        restoreMediaScroll();
       });
     });
 
@@ -5020,6 +5166,7 @@ var AiProjectBuilderView = (function () {
         var cat = btn.getAttribute('data-media-cat');
         state.bunnyMedia.uploadNodeId = nid;
         state.bunnyMedia.uploadCategory = cat;
+        state.bunnyMedia.selectedNodeId = nid;
         state.bunnyMedia.expandedNodeId = nid;
         var meta = typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.getCategory(cat);
         if (fileInput) {
@@ -5060,6 +5207,9 @@ var AiProjectBuilderView = (function () {
         MediaToursEngine.syncScenesToProjectAssets(state);
         saveState();
         setBunnyMediaStatus(MediaToursEngine.summary(state));
+        captureMediaScroll();
+        renderStepContent();
+        restoreMediaScroll();
       });
     });
 
@@ -5080,7 +5230,9 @@ var AiProjectBuilderView = (function () {
             );
             saveState();
             AdminNotify.success('Archivo eliminado');
+            captureMediaScroll();
             renderStepContent();
+            restoreMediaScroll();
           }).catch(function (err) {
             AdminNotify.error((err && err.message) || 'No se pudo eliminar');
           });
@@ -5097,6 +5249,8 @@ var AiProjectBuilderView = (function () {
         }
       });
     });
+
+    restoreMediaScroll();
 
     if (!state.bunnyMedia._loaded) {
       state.bunnyMedia._loaded = true;
