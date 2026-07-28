@@ -116,9 +116,9 @@ var PublishingEngine = (function () {
     var info = state.projectInfo || {};
     var ai = state.aiContent || {};
 
-    /* Content + publish flag only. Identity slug is intentionally omitted. */
+    /* V5.9.76 — Publish must not rewrite showroom identity from stale Builder session.
+       nombre/slug belong to Configuración (updateIdentity). */
     var projectPayload = {
-      nombre: info.nombre || linkedProject.nombre || 'Nuevo Showroom',
       descripcion: ai.descripcionComercial || info.descripcion || linkedProject.descripcion || '',
       ciudad: info.ciudad || linkedProject.ciudad || '',
       direccion: info.direccion || linkedProject.direccion || '',
@@ -163,13 +163,13 @@ var PublishingEngine = (function () {
     var media = await HeroSyncEngine.syncHeroMedia(state, constructoraId, proyectoId, existingConfig || {});
 
     var hero = state.heroContent || {};
-    var projectName = (hero.nombre || info.nombre || project.nombre || '').trim();
+    var heroTitle = (hero.nombre || '').trim();
     var eslogan = (hero.eslogan || '').trim();
     if (!eslogan && ai.heroText) eslogan = String(ai.heroText).trim();
 
     var heroPayload = Object.assign({}, themeConfig, {
-      nombre_proyecto: projectName || project.nombre,
-      titulo_hero: projectName || project.nombre,
+      /* V5.9.76 — Hero title ≠ showroom identity; HeroApi must not write proyectos.nombre */
+      titulo_hero: heroTitle || project.nombre || null,
       texto_hero: eslogan || null,
       boton_hero_2: (hero.botonIzquierdo || 'Explorar').trim() || 'Explorar',
       boton_hero_1: (hero.botonDerecho || 'Iniciar').trim() || 'Iniciar',

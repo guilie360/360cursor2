@@ -159,13 +159,15 @@ var PlatformBuilderBridge = (function () {
 
     return {
       upsert: async function (proyectoId, payload) {
-        var projectName = AdminUI.normalizeOptionalText(
-          payload.nombre_proyecto != null ? payload.nombre_proyecto : payload.titulo_hero
+        /* V5.9.76 — Identity (proyectos.nombre / slug) is Config-only via ProyectosApi.updateIdentity.
+           Hero upsert must never overwrite showroom identity. */
+        var tituloHero = AdminUI.normalizeOptionalText(
+          payload.titulo_hero != null ? payload.titulo_hero : payload.nombre_proyecto
         );
 
         var data = {
           proyecto_id: proyectoId,
-          titulo_hero: projectName || AdminUI.normalizeOptionalText(payload.titulo_hero),
+          titulo_hero: tituloHero,
           texto_hero: AdminUI.normalizeOptionalText(payload.texto_hero),
           boton_hero_1: AdminUI.normalizeOptionalText(payload.boton_hero_1) || 'Iniciar',
           boton_hero_2: AdminUI.normalizeOptionalText(payload.boton_hero_2) || 'Explorar',
@@ -189,18 +191,6 @@ var PlatformBuilderBridge = (function () {
         }
         if (payload.project_default_theme) {
           data.project_default_theme = payload.project_default_theme;
-        }
-
-        if (projectName) {
-          var nameResult = await getClient()
-            .from('proyectos')
-            .update({ nombre: projectName })
-            .eq('id', proyectoId)
-            .select('id, nombre')
-            .maybeSingle();
-          if (nameResult.error) {
-            throw new Error(nameResult.error.message || 'Error actualizando el nombre del proyecto');
-          }
         }
 
         var updated = await getClient()

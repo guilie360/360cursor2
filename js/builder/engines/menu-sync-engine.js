@@ -149,12 +149,16 @@ var MenuSyncEngine = (function () {
       if (inserted.error) throw new Error(inserted.error.message || 'Error guardando menú');
     }
 
-    if (menu.projectName) {
-      await client
-        .from('proyectos')
-        .update({ nombre: menu.projectName.trim() })
-        .eq('id', project.id);
-      state.projectInfo = Object.assign({}, state.projectInfo || {}, { nombre: menu.projectName });
+    /* V5.9.76 — Never write proyectos.nombre from Menu. Identity = Configuración only. */
+    if (project.nombre) {
+      state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+        nombre: project.nombre,
+        slug: project.slug || (state.projectInfo && state.projectInfo.slug) || null
+      });
+      if (!menu.projectName) {
+        menu.projectName = project.nombre;
+        state.menuConfig = menu;
+      }
     }
 
     return {

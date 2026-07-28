@@ -187,9 +187,10 @@ var HeroSyncEngine = (function () {
     }, state.heroContent || {});
 
     if (!state.heroContent.nombre || forceCanonical) {
+      /* Prefer canonical showroom identity over stale titulo_hero (e.g. demo placeholders). */
       state.heroContent.nombre = forceCanonical
         ? (project.nombre || '')
-        : (cfg.titulo_hero || project.nombre || '');
+        : (project.nombre || cfg.titulo_hero || '');
     }
     if (!state.heroContent.eslogan && cfg.texto_hero) {
       state.heroContent.eslogan = cfg.texto_hero;
@@ -372,7 +373,6 @@ var HeroSyncEngine = (function () {
     var existingConfig = normalizeConfig(project.proyecto_config) || {};
     var media = await syncHeroMedia(state, constructoraId, project.id, existingConfig);
 
-    var info = state.projectInfo || {};
     var ai = state.aiContent || {};
     var hero = state.heroContent || {};
     var themeConfig = ThemeEngine.toProyectoConfig(state.branding || {});
@@ -391,7 +391,7 @@ var HeroSyncEngine = (function () {
       themeConfig.logo_url = null;
     }
 
-    var projectName = (hero.nombre || info.nombre || project.nombre || '').trim();
+    var projectName = (hero.nombre || '').trim();
     var eslogan = (hero.eslogan || '').trim();
     if (!eslogan && ai.heroText) eslogan = String(ai.heroText).trim();
 
@@ -399,8 +399,8 @@ var HeroSyncEngine = (function () {
     var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
 
     var heroPayload = Object.assign({}, themeConfig, {
-      nombre_proyecto: projectName || project.nombre,
-      titulo_hero: projectName || project.nombre,
+      /* titulo_hero is Hero content only — never used to overwrite proyectos.nombre */
+      titulo_hero: projectName || project.nombre || null,
       texto_hero: eslogan || null,
       boton_hero_2: (hero.botonIzquierdo || 'Explorar').trim() || 'Explorar',
       boton_hero_1: (hero.botonDerecho || 'Iniciar').trim() || 'Iniciar',
@@ -436,6 +436,12 @@ var HeroSyncEngine = (function () {
     }
 
     state.draftProjectId = project.id;
+    /* Keep identity in session aligned with DB — never from hero draft */
+    state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+      id: project.id,
+      nombre: project.nombre,
+      slug: project.slug
+    });
 
     return {
       projectId: project.id,

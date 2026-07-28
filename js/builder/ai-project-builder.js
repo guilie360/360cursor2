@@ -1612,12 +1612,12 @@ var AiProjectBuilderView = (function () {
               '<div class="builder-hero-config-card__title">Identidad</div>' +
               '<div class="builder-field">' +
                 '<label for="heroNombreInput">Nombre</label>' +
-                '<input type="text" id="heroNombreInput" maxlength="120" placeholder="PROYECTO DEMO" value="' +
+                '<input type="text" id="heroNombreInput" maxlength="120" placeholder="Nombre visible en el hero" value="' +
                   AdminUI.escapeHtml(nombre) + '">' +
               '</div>' +
               '<div class="builder-field">' +
                 '<label for="heroEsloganInput">Eslogan</label>' +
-                '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Proyecto Demo" value="' +
+                '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Eslogan del hero" value="' +
                   AdminUI.escapeHtml(eslogan) + '">' +
               '</div>' +
             '</div>' +
@@ -4855,11 +4855,7 @@ var AiProjectBuilderView = (function () {
         state.branding.logoStyle = styleEl.value === 'avatar' ? 'avatar' : 'flat';
         if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
       }
-      if (state.heroContent.nombre) {
-        state.projectInfo = Object.assign({}, state.projectInfo || {}, {
-          nombre: state.heroContent.nombre
-        });
-      }
+      /* V5.9.76 — Hero display name must not overwrite Config identity */
       saveState();
     }
 
@@ -5004,9 +5000,7 @@ var AiProjectBuilderView = (function () {
 
       menu.items = nextItems;
       state.menuConfig = menu;
-      if (menu.projectName) {
-        state.projectInfo = Object.assign({}, state.projectInfo || {}, { nombre: menu.projectName });
-      }
+      /* V5.9.76 — menu.projectName is menu content; never overwrite Config identity */
       saveState();
       if (rerender) {
         renderStepContent();
@@ -5899,11 +5893,7 @@ var AiProjectBuilderView = (function () {
         state.branding.logoStyle = logoStyleEl.value === 'avatar' ? 'avatar' : 'flat';
         if (state.branding.logo) state.branding.logo.logoStyle = state.branding.logoStyle;
       }
-      if (state.heroContent.nombre) {
-        state.projectInfo = Object.assign({}, state.projectInfo || {}, {
-          nombre: state.heroContent.nombre
-        });
-      }
+      /* V5.9.76 — Hero nombre is display content only; never overwrite Config identity */
     }
 
     if (state.currentStep === BuilderWizard.getStepIndex('menu') && rootEl) {
