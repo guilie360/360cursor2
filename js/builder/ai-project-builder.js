@@ -2024,15 +2024,45 @@ var AiProjectBuilderView = (function () {
 
   function renderBunnyMedia() {
     var cats = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.CATEGORIES) || {};
+    var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || 'images';
+    if (!cats[active]) active = 'images';
+    var meta = cats[active] || {};
+    var isTours = meta.mode === 'tours';
+
     var catOptions = Object.keys(cats).map(function (key) {
-      return '<option value="' + AdminUI.escapeHtml(key) + '">' +
+      return '<option value="' + AdminUI.escapeHtml(key) + '"' +
+        (key === active ? ' selected' : '') + '>' +
         AdminUI.escapeHtml(cats[key].label || key) + '</option>';
     }).join('');
-    var items = (state.bunnyMedia && state.bunnyMedia.items) || [];
+
+    var bodyHtml = isTours ? renderMediaToursPanel() : renderMediaBunnyPanel(active, meta);
+
+    return '<div class="builder-step-content builder-step-content--bunny-media">' +
+      stepTitleHtml('Media') +
+      '<p class="builder-step-desc">' +
+        (isTours
+          ? 'Asocia enlaces Lapentor a tipologías y zonas comunes detectadas en Estructura. No se suben archivos.'
+          : 'Archivos físicos en Bunny CDN. Se registran en archivos y projectAssets para Experiencia.') +
+      '</p>' +
+      '<div class="builder-confirm-form builder-bunny-upload">' +
+        '<div class="builder-field">' +
+          '<label>Categoría</label>' +
+          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
+        '</div>' +
+        bodyHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderMediaBunnyPanel(active, meta) {
+    var allItems = (state.bunnyMedia && state.bunnyMedia.items) || [];
+    var items = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.filterItemsByCategory)
+      ? BunnyMediaApi.filterItemsByCategory(allItems, active)
+      : allItems;
     var listHtml = items.length
       ? '<div class="builder-bunny-grid">' + items.map(function (row) {
-          var isImg = row.tipo === 'imagen' || row.tipo === 'tour_360' ||
-            (row.extension && /^(jpg|jpeg|png|webp|gif)$/i.test(row.extension));
+          var isImg = row.tipo === 'imagen' || row.tipo === 'plano' ||
+            (row.extension && /^(jpg|jpeg|png|webp|gif|svg)$/i.test(row.extension));
           var thumb = isImg && row.url
             ? '<img src="' + AdminUI.escapeHtml(row.url) + '" alt="" loading="lazy">'
             : '<div class="builder-bunny-card__ph">' + AdminUI.escapeHtml((row.extension || row.tipo || '').toUpperCase()) + '</div>';
@@ -2055,29 +2085,73 @@ var AiProjectBuilderView = (function () {
             '</div>' +
           '</article>';
         }).join('') + '</div>'
-      : '<p class="builder-menu-hint">Aún no hay archivos Bunny en este proyecto. Sube una imagen para probar el CDN.</p>';
+      : '<p class="builder-menu-hint">No hay archivos en esta categoría. Sube el primero a Bunny CDN.</p>';
 
-    return '<div class="builder-step-content builder-step-content--bunny-media">' +
-      stepTitleHtml('Media') +
-      '<p class="builder-step-desc">Sube archivos a Bunny CDN de forma segura. Se registran en archivos y quedan disponibles en projectAssets para Experiencia.</p>' +
-      '<div class="builder-confirm-form builder-bunny-upload">' +
-        '<div class="builder-confirm-title">Subir a Bunny</div>' +
-        '<div class="builder-field">' +
-          '<label>Carpeta</label>' +
-          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
-        '</div>' +
-        '<div class="builder-dropzone" id="bunnyMediaDropzone">' +
-          '<div class="builder-dropzone-inner"><span>Arrastra un archivo o haz clic para seleccionar</span></div>' +
-        '</div>' +
-        '<input type="file" id="bunnyMediaInput" hidden>' +
-        '<p class="builder-menu-hint" id="bunnyMediaStatus">CDN: boxies.b-cdn.net · máx. 20 MB (Fase 1)</p>' +
+    return '<div class="builder-confirm-title" style="margin-top:12px">Subir a Bunny</div>' +
+      '<div class="builder-dropzone" id="bunnyMediaDropzone">' +
+        '<div class="builder-dropzone-inner"><span>Arrastra un archivo o haz clic para seleccionar</span></div>' +
       '</div>' +
-      '<div class="builder-confirm-form" style="margin-top:18px">' +
-        '<div class="builder-confirm-title">Archivos Bunny del proyecto' +
-          ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
-        '</div>' +
-        listHtml +
+      '<input type="file" id="bunnyMediaInput" accept="' + AdminUI.escapeHtml(meta.accept || '*/*') + '" hidden>' +
+      '<p class="builder-menu-hint" id="bunnyMediaStatus">CDN: boxies.b-cdn.net · máx. 20 MB</p>' +
+      '<div class="builder-confirm-title" style="margin-top:18px">Archivos de esta categoría' +
+        ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
       '</div>' +
+      listHtml;
+  }
+
+  function renderMediaToursPanel() {
+    var projectId = resolveActiveProjectId();
+    if (typeof MediaToursEngine !== 'undefined') {
+      MediaToursEngine.ensureState(state, projectId);
+      /* Seed once from Estructura; manual deletes stick until "Actualizar desde Estructura" */
+      if (!state.mediaTours.seededAt) {
+        MediaToursEngine.syncFromEstructura(state, projectId);
+      }
+    }
+    var scenes = (state.mediaTours && state.mediaTours.scenes) || [];
+    var hasEstructura = !!(state.estructura && (
+      (state.estructura.tipologias && state.estructura.tipologias.length) ||
+      (state.estructura.zoneNames && state.estructura.zoneNames.length)
+    ));
+
+    var rows = scenes.map(function (s) {
+      var tipoLabel = s.tipo === 'tipologia' ? 'Tipología'
+        : (s.tipo === 'zona' ? 'Zona común' : 'Manual');
+      return '<article class="builder-tour-scene" data-tour-id="' + AdminUI.escapeHtml(s.id) + '">' +
+        '<div class="builder-tour-scene__head">' +
+          '<div class="builder-field" style="flex:1;margin:0">' +
+            '<label>Escena</label>' +
+            '<input type="text" data-tour-name maxlength="120" value="' +
+              AdminUI.escapeHtml(s.nombre || '') + '">' +
+          '</div>' +
+          '<span class="builder-tour-scene__tag">' + AdminUI.escapeHtml(tipoLabel) + '</span>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-tour-del="' +
+            AdminUI.escapeHtml(s.id) + '" aria-label="Eliminar escena">Eliminar</button>' +
+        '</div>' +
+        '<div class="builder-field" style="margin-top:10px">' +
+          '<label>URL Lapentor</label>' +
+          '<input type="url" data-tour-url placeholder="https://..." value="' +
+            AdminUI.escapeHtml(s.url || '') + '">' +
+        '</div>' +
+      '</article>';
+    }).join('');
+
+    return '<div class="builder-tours-panel">' +
+      '<div class="builder-confirm-title" style="margin-top:12px">Tours 360 (Lapentor)</div>' +
+      '<p class="builder-menu-hint">' +
+        (hasEstructura
+          ? 'Lista generada desde Estructura: tipologías únicas y zonas comunes (no por vivienda).'
+          : 'Aún no hay tipologías/zonas en Estructura. Puedes agregar escenas manualmente.') +
+      '</p>' +
+      '<div class="builder-tour-list" id="mediaToursList">' +
+        (rows || '<p class="builder-menu-hint">Sin escenas todavía.</p>') +
+      '</div>' +
+      '<div class="builder-tour-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="mediaTourAdd">Agregar escena</button>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="mediaTourResync">Actualizar desde Estructura</button>' +
+        '<button type="button" class="builder-header-action-btn is-primary" id="mediaTourSave">Guardar enlaces</button>' +
+      '</div>' +
+      '<p class="builder-menu-hint" id="bunnyMediaStatus" style="margin-top:10px"></p>' +
     '</div>';
   }
 
@@ -4767,7 +4841,8 @@ var AiProjectBuilderView = (function () {
       return;
     }
     var catEl = rootEl.querySelector('#bunnyMediaCategory');
-    var category = (catEl && catEl.value) || 'images';
+    var category = (state.bunnyMedia && state.bunnyMedia.activeCategory) ||
+      (catEl && catEl.value) || 'images';
     try {
       processing = true;
       setBunnyMediaStatus('Subiendo a Bunny…');
@@ -4801,16 +4876,36 @@ var AiProjectBuilderView = (function () {
 
   function bindBunnyMediaStep() {
     var catEl = rootEl.querySelector('#bunnyMediaCategory');
-    var input = rootEl.querySelector('#bunnyMediaInput');
-    function syncAccept() {
-      if (!input || !catEl || typeof BunnyMediaApi === 'undefined') return;
-      var cat = BunnyMediaApi.CATEGORIES[catEl.value];
-      input.accept = (cat && cat.accept) || '*/*';
-    }
+    var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || 'images';
+    var cats = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.CATEGORIES) || {};
+    var meta = cats[active] || {};
+    var isTours = meta.mode === 'tours';
+
     if (catEl) {
-      catEl.addEventListener('change', syncAccept);
-      syncAccept();
+      catEl.addEventListener('change', function () {
+        state.bunnyMedia = state.bunnyMedia || {};
+        state.bunnyMedia.activeCategory = catEl.value || 'images';
+        saveState();
+        renderStepContent();
+      });
     }
+
+    if (isTours) {
+      /* First visit to Tours: seed from Estructura if empty */
+      if (typeof MediaToursEngine !== 'undefined') {
+        var pid = resolveActiveProjectId();
+        MediaToursEngine.ensureState(state, pid);
+        if (!state.mediaTours.seededAt) {
+          MediaToursEngine.syncFromEstructura(state, pid);
+          saveState();
+        }
+      }
+      bindMediaToursPanel();
+      return;
+    }
+
+    var input = rootEl.querySelector('#bunnyMediaInput');
+    if (input && meta.accept) input.accept = meta.accept;
     bindDropzone('bunnyMediaDropzone', 'bunnyMediaInput', handleBunnyMediaUpload, false);
 
     var refreshBtn = rootEl.querySelector('#bunnyMediaRefresh');
@@ -4825,9 +4920,7 @@ var AiProjectBuilderView = (function () {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(function () {
             AdminNotify.success('URL copiada');
-          }).catch(function () {
-            AdminNotify.info(url);
-          });
+          }).catch(function () { AdminNotify.info(url); });
         } else {
           AdminNotify.info(url);
         }
@@ -4846,8 +4939,7 @@ var AiProjectBuilderView = (function () {
         if (asset) {
           AdminNotify.success(
             'Asset listo en projectAssets: ' + asset.id +
-            (asset.filename ? ' (' + asset.filename + ')' : '') +
-            '. Asígnalo en Experiencia con el nombre o assetId.'
+            (asset.filename ? ' (' + asset.filename + ')' : '')
           );
         }
       });
@@ -4886,12 +4978,102 @@ var AiProjectBuilderView = (function () {
       });
     });
 
-    /* Auto-refresh once when entering the step */
     if (!state.bunnyMedia || !state.bunnyMedia._loaded) {
       state.bunnyMedia = state.bunnyMedia || {};
       state.bunnyMedia._loaded = true;
       refreshBunnyMediaList(true);
     }
+  }
+
+  function readTourFieldsFromDom() {
+    if (!rootEl || typeof MediaToursEngine === 'undefined') return;
+    rootEl.querySelectorAll('[data-tour-id]').forEach(function (card) {
+      var id = card.getAttribute('data-tour-id');
+      var nameInput = card.querySelector('[data-tour-name]');
+      var urlInput = card.querySelector('[data-tour-url]');
+      MediaToursEngine.updateScene(state, id, {
+        nombre: nameInput ? nameInput.value : undefined,
+        url: urlInput ? urlInput.value : undefined
+      });
+    });
+  }
+
+  function bindMediaToursPanel() {
+    var projectId = resolveActiveProjectId();
+    if (typeof MediaToursEngine === 'undefined') {
+      setBunnyMediaStatus('MediaToursEngine no cargada');
+      return;
+    }
+
+    var addBtn = rootEl.querySelector('#mediaTourAdd');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        readTourFieldsFromDom();
+        MediaToursEngine.addScene(state, projectId, { nombre: 'Nueva escena' });
+        saveState();
+        renderStepContent();
+      });
+    }
+
+    var resyncBtn = rootEl.querySelector('#mediaTourResync');
+    if (resyncBtn) {
+      resyncBtn.addEventListener('click', function () {
+        readTourFieldsFromDom();
+        MediaToursEngine.syncFromEstructura(state, projectId);
+        saveState();
+        AdminNotify.success('Escenas actualizadas desde Estructura');
+        renderStepContent();
+      });
+    }
+
+    var saveBtn = rootEl.querySelector('#mediaTourSave');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        readTourFieldsFromDom();
+        MediaToursEngine.syncScenesToProjectAssets(state);
+        saveState();
+        setBunnyMediaStatus('Guardando enlaces…');
+        MediaToursEngine.persistScenesToArchivos(state, projectId).then(function (res) {
+          saveState();
+          if (res && res.ok) {
+            AdminNotify.success('Enlaces Lapentor guardados');
+            setBunnyMediaStatus(MediaToursEngine.summary(state));
+          } else {
+            AdminNotify.success('Guardado en sesión (projectAssets). Persistencia DB: ' +
+              ((res && res.error) || 'parcial'));
+            setBunnyMediaStatus(MediaToursEngine.summary(state));
+          }
+          renderProgressRail();
+        }).catch(function (err) {
+          MediaToursEngine.syncScenesToProjectAssets(state);
+          saveState();
+          AdminNotify.success('Guardado en sesión / projectAssets');
+          setBunnyMediaStatus((err && err.message) || MediaToursEngine.summary(state));
+        });
+      });
+    }
+
+    rootEl.querySelectorAll('[data-tour-del]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-tour-del');
+        readTourFieldsFromDom();
+        MediaToursEngine.removeScene(state, id);
+        if (state.projectAssets && state.projectAssets.byId) {
+          delete state.projectAssets.byId['tour-' + id];
+        }
+        saveState();
+        renderStepContent();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-tour-name], [data-tour-url]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        readTourFieldsFromDom();
+        saveState();
+      });
+    });
+
+    setBunnyMediaStatus(MediaToursEngine.summary(state));
   }
 
   function bindDropzone(zoneId, inputId, handler, multiple) {

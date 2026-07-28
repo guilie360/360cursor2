@@ -10,7 +10,7 @@ var BuilderWizard = (function () {
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
     { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario y tarjetas comerciales alimentados por la estructura aplicada.' },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Biblioteca de imágenes asociables a entidades del proyecto.' },
-    { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Sube archivos a Bunny CDN y regístralos en el proyecto para usarlos en Experiencia.' },
+    { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Centro multimedia: Bunny CDN para archivos y Tours 360 Lapentor desde la estructura.' },
     { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Tours 360° vinculables a tipologías, amenidades u otras entidades.' },
     { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Masterplan, plantas 2D/3D y planos de tipología relacionados a su contexto.' },
     { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Documentos centralizados: brochure, fichas y especificaciones.' },

@@ -152,20 +152,30 @@ var BuilderProgressRail = (function () {
       {
         label: 'Media',
         value: (function () {
+          var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || '';
+          if (active === 'tours360' || (state.mediaTours && state.mediaTours.scenes && state.mediaTours.scenes.length)) {
+            if (typeof MediaToursEngine !== 'undefined' && MediaToursEngine.summary) {
+              return MediaToursEngine.summary(state);
+            }
+          }
           var n = (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) || 0;
           if (n) return n + (n === 1 ? ' archivo CDN' : ' archivos CDN');
           if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.listProjectAssets) {
             var bunny = ExperienciaEngine.listProjectAssets(state).filter(function (a) {
-              return a && a.provider === 'bunny';
+              return a && (a.provider === 'bunny' || a.provider === 'lapentor');
             });
             if (bunny.length) return bunny.length + (bunny.length === 1 ? ' asset' : ' assets');
           }
-          return 'Bunny CDN';
+          return 'Centro multimedia';
         })(),
         done: isDone(state, 'media', !!(
           (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) ||
+          (state.mediaTours && state.mediaTours.scenes && state.mediaTours.scenes.some(function (s) {
+            return s && String(s.url || '').trim();
+          })) ||
           (state.projectAssets && state.projectAssets.byId && Object.keys(state.projectAssets.byId).some(function (id) {
-            return state.projectAssets.byId[id] && state.projectAssets.byId[id].provider === 'bunny';
+            var a = state.projectAssets.byId[id];
+            return a && (a.provider === 'bunny' || a.provider === 'lapentor');
           }))
         )),
         stepIndex: BuilderWizard.getStepIndex('media')

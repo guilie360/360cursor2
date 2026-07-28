@@ -1,12 +1,70 @@
-/* BOXIES V5.9.67 — Bunny Media client (Edge Function proxy; no Access Key in browser) */
+/* BOXIES V5.9.69 — Bunny Media client (Edge Function proxy; no Access Key in browser) */
 var BunnyMediaApi = (function () {
+  /**
+   * Media hub categories.
+   * mode: 'upload' → Bunny · 'tours' → Lapentor URL manager (no file upload)
+   * folder: Bunny path segment under projects/{id}/
+   */
   var CATEGORIES = {
-    images: { label: 'Imágenes', folder: 'images', accept: 'image/*' },
-    animations: { label: 'Animaciones / video', folder: 'animations', accept: 'video/*,image/gif' },
-    panoramas: { label: 'Panoramas 360', folder: 'panoramas', accept: 'image/*' },
-    floorplans: { label: 'Planos', folder: 'floorplans', accept: 'image/*,application/pdf' },
-    documents: { label: 'Documentos', folder: 'documents', accept: '.pdf,.doc,.docx,image/*' },
-    thumbnails: { label: 'Miniaturas', folder: 'thumbnails', accept: 'image/*' }
+    images: {
+      label: 'Imágenes',
+      folder: 'images',
+      accept: 'image/*',
+      mode: 'upload',
+      bunnyCategory: 'images'
+    },
+    animations: {
+      label: 'Videos / Animaciones',
+      folder: 'animations',
+      accept: 'video/*,image/gif,image/webp',
+      mode: 'upload',
+      bunnyCategory: 'animations'
+    },
+    plans2d: {
+      label: 'Planos 2D',
+      folder: 'plans-2d',
+      accept: 'image/*,application/pdf',
+      mode: 'upload',
+      bunnyCategory: 'plans2d'
+    },
+    plans3d: {
+      label: 'Planos 3D',
+      folder: 'plans-3d',
+      accept: 'image/*,model/*,.glb,.gltf,.obj',
+      mode: 'upload',
+      bunnyCategory: 'plans3d'
+    },
+    tours360: {
+      label: 'Tours 360',
+      folder: null,
+      accept: null,
+      mode: 'tours',
+      bunnyCategory: null
+    },
+    documents: {
+      label: 'Documentos',
+      folder: 'documents',
+      accept: '.pdf,.doc,.docx,image/*',
+      mode: 'upload',
+      bunnyCategory: 'documents'
+    },
+    ui: {
+      label: 'Recursos UI',
+      folder: 'ui',
+      accept: 'image/*,.svg,image/svg+xml',
+      mode: 'upload',
+      bunnyCategory: 'ui'
+    }
+  };
+
+  /* Legacy bunny folder aliases still returned by older uploads */
+  var FOLDER_ALIASES = {
+    images: ['images'],
+    animations: ['animations'],
+    plans2d: ['plans-2d', 'floorplans'],
+    plans3d: ['plans-3d'],
+    documents: ['documents'],
+    ui: ['ui', 'thumbnails']
   };
 
   function getClient() {
@@ -25,14 +83,15 @@ var BunnyMediaApi = (function () {
 
   function archivoToAssetPartial(row) {
     if (!row) return null;
+    var provider = row.storage_provider || 'bunny';
     return {
-      id: 'bunny-' + row.id,
+      id: (provider === 'bunny' ? 'bunny-' : 'media-') + row.id,
       type: tipoToAssetType(row.tipo),
       filename: row.nombre || null,
-      provider: 'bunny',
+      provider: provider,
       storagePath: row.storage_path || null,
       publicUrl: row.url || null,
-      thumbnailUrl: row.miniatura_url || row.url || null,
+      thumbnailUrl: row.miniatura_url || (row.tipo !== 'tour_360' ? row.url : null) || null,
       status: 'synced',
       mimeType: null,
       size: row.peso_mb != null ? Math.round(Number(row.peso_mb) * 1048576) : null,
@@ -40,12 +99,33 @@ var BunnyMediaApi = (function () {
     };
   }
 
+  function pathMatchesCategory(storagePath, categoryKey) {
+    var aliases = FOLDER_ALIASES[categoryKey] || [(CATEGORIES[categoryKey] && CATEGORIES[categoryKey].folder)];
+    var path = String(storagePath || '');
+    for (var i = 0; i < aliases.length; i++) {
+      var folder = aliases[i];
+      if (!folder) continue;
+      if (path.indexOf('/' + folder + '/') !== -1) return true;
+    }
+    return false;
+  }
+
+  function filterItemsByCategory(items, categoryKey) {
+    if (!categoryKey || categoryKey === 'tours360') return items || [];
+    return (items || []).filter(function (row) {
+      if (!row) return false;
+      if (row.storage_provider === 'lapentor') return false;
+      return pathMatchesCategory(row.storage_path, categoryKey);
+    });
+  }
+
   /** Upsert archivos bunny rows into state.projectAssets (Experiencia library). */
   function syncArchivosToProjectAssets(state, rows) {
     if (!state || typeof ExperienciaEngine === 'undefined') return [];
     var synced = [];
     (rows || []).forEach(function (row) {
-      if (!row || row.storage_provider !== 'bunny') return;
+      if (!row) return;
+      if (row.storage_provider && row.storage_provider !== 'bunny') return;
       var partial = archivoToAssetPartial(row);
       if (!partial) return;
       var asset = ExperienciaEngine.upsertAsset(state, partial);
@@ -56,19 +136,20 @@ var BunnyMediaApi = (function () {
 
   async function invokeUpload(projectId, category, file) {
     if (!projectId) throw new Error('project_id requerido');
-    if (!CATEGORIES[category]) throw new Error('Categoría inválida');
+    var meta = CATEGORIES[category];
+    if (!meta || meta.mode !== 'upload') throw new Error('Categoría no admite upload a Bunny');
     if (!file) throw new Error('Archivo requerido');
 
+    var bunnyCat = meta.bunnyCategory || category;
     var client = getClient();
     var form = new FormData();
     form.append('project_id', projectId);
-    form.append('category', category);
+    form.append('category', bunnyCat);
     form.append('file', file, file.name || 'upload.bin');
 
     var result = await client.functions.invoke('bunny-media', { body: form });
     if (result.error) {
       var msg = result.error.message || 'Error invocando bunny-media';
-      /* Prefer function JSON body when present */
       if (result.data && result.data.error) msg = result.data.error;
       var err = new Error(msg);
       err.code = result.data && result.data.code;
@@ -90,7 +171,6 @@ var BunnyMediaApi = (function () {
     var result = await client.functions.invoke('bunny-media?project_id=' + encodeURIComponent(projectId), {
       method: 'GET'
     });
-    /* supabase-js invoke GET via functions.invoke may not pass query — fallback REST */
     if (result.error || !result.data) {
       var session = await client.auth.getSession();
       var token = session && session.data && session.data.session && session.data.session.access_token;
@@ -136,10 +216,6 @@ var BunnyMediaApi = (function () {
     return result.data;
   }
 
-  /**
-   * Upload + sync into projectAssets.
-   * Returns { archivo, asset, publicUrl, storagePath }
-   */
   async function uploadAndSync(state, projectId, category, file) {
     var data = await invokeUpload(projectId, category, file);
     var asset = null;
@@ -169,6 +245,8 @@ var BunnyMediaApi = (function () {
     refreshProjectAssets: refreshProjectAssets,
     syncArchivosToProjectAssets: syncArchivosToProjectAssets,
     archivoToAssetPartial: archivoToAssetPartial,
-    tipoToAssetType: tipoToAssetType
+    tipoToAssetType: tipoToAssetType,
+    filterItemsByCategory: filterItemsByCategory,
+    pathMatchesCategory: pathMatchesCategory
   };
 })();

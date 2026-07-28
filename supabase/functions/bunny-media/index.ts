@@ -1,5 +1,5 @@
 /**
- * BOXIES V5.9.67 — bunny-media
+ * BOXIES V5.9.69 - bunny-media
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
  * Actions:
@@ -22,7 +22,7 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-const MAX_BYTES = 20 * 1024 * 1024; // 20MB — aligns with MediaEngine image limit
+const MAX_BYTES = 20 * 1024 * 1024; // 20MB - aligns with MediaEngine image limit
 
 const CATEGORIES: Record<
   string,
@@ -30,9 +30,13 @@ const CATEGORIES: Record<
 > = {
   images: { folder: "images", tipo: "imagen" },
   animations: { folder: "animations", tipo: "video" },
+  plans2d: { folder: "plans-2d", tipo: "plano" },
+  plans3d: { folder: "plans-3d", tipo: "plano" },
+  documents: { folder: "documents", tipo: "pdf" },
+  ui: { folder: "ui", tipo: "imagen" },
+  /* Legacy aliases (V5.9.67) */
   panoramas: { folder: "panoramas", tipo: "tour_360" },
   floorplans: { folder: "floorplans", tipo: "plano" },
-  documents: { folder: "documents", tipo: "pdf" },
   thumbnails: { folder: "thumbnails", tipo: "imagen" },
 };
 
@@ -161,7 +165,7 @@ async function bunnyDelete(
     method: "DELETE",
     headers: { AccessKey: accessKey },
   });
-  /* 404 = already gone — treat as success */
+  /* 404 = already gone - treat as success */
   if (!res.ok && res.status !== 404) {
     const text = await res.text().catch(() => "");
     throw new Error(`Bunny delete failed (${res.status}): ${text.slice(0, 200)}`);
