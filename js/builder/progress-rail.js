@@ -1,7 +1,6 @@
-/* Progress rail — discrete left column checklist (V5.9.68 includes Media) */
+/* Progress rail — V5.9.77 slim Builder flow */
 var BuilderProgressRail = (function () {
-  /* Elder Futhark markers — visual only; section ids unchanged.
-     Exact sequence for first 15 rail sections (order in buildItems). */
+  /* Elder Futhark markers — visual only; section ids unchanged. */
   var SECTION_RUNES = [
     '\u16A0', /* ᚠ */
     '\u16A2', /* ᚢ */
@@ -19,7 +18,6 @@ var BuilderProgressRail = (function () {
     '\u16C8', /* ᛈ */
     '\u16C9'  /* ᛉ */
   ];
-  /* If rail ever exceeds 15, continue Elder Futhark (not section ids). */
   var SECTION_RUNES_EXTRA = [
     '\u16CA', /* ᛊ */
     '\u16CF', /* ᛏ */
@@ -56,29 +54,22 @@ var BuilderProgressRail = (function () {
   function buildItems(state) {
     var b = state.branding || {};
     var info = state.projectInfo || {};
-    var ai = state.aiContent || {};
-    var panoCount = (state.panoramas || []).filter(function (p) { return p.file || p.url || p.uploadedUrl; }).length;
-    var acceptedHotspots = (state.hotspotSuggestions || []).filter(function (h) { return h.accepted; }).length;
-    var hotspotsNeedRef = (state.hotspotSuggestions || []).filter(function (h) {
-      return h.accepted && !h.entityRef;
-    }).length;
-    var validation = state.validation;
-    if (!validation && typeof ValidationEngine !== 'undefined' && ValidationEngine.validate) {
-      validation = ValidationEngine.validate(state);
-    }
-    validation = validation || { ready: false, score: 0, pendingCount: 0 };
+    var applied = structureApplied(state);
+    var hasLogo = !!(b.logo && (b.logo.file || b.logo.name || b.logo.uploadedUrl || b.logo.previewUrl));
 
     function heroLabel() {
       if (typeof MediaEngine !== 'undefined' && MediaEngine.heroMediaLabel) {
-        return MediaEngine.heroMediaLabel(state);
+        var media = MediaEngine.heroMediaLabel(state);
+        if (media) return media;
       }
-      return null;
+      if (state.heroVideo || state.heroImage) return state.heroVideo ? 'Video' : 'Imagen';
+      return hasLogo ? shortName(b.logo.name) || 'Logo' : null;
     }
     function heroDone() {
-      if (typeof MediaEngine !== 'undefined' && MediaEngine.hasHeroMedia) {
-        return MediaEngine.hasHeroMedia(state);
-      }
-      return !!(state.heroVideo || state.heroImage);
+      var mediaOk = typeof MediaEngine !== 'undefined' && MediaEngine.hasHeroMedia
+        ? MediaEngine.hasHeroMedia(state)
+        : !!(state.heroVideo || state.heroImage);
+      return mediaOk || hasLogo;
     }
     function typeLabel() {
       if (typeof ProjectTypesEngine !== 'undefined' && ProjectTypesEngine.getTypeLabel) {
@@ -87,8 +78,7 @@ var BuilderProgressRail = (function () {
       return state.projectType || null;
     }
 
-    var applied = structureApplied(state);
-
+    /* V5.9.77 — Config → Estructura → Experiencia → Hero → Media → Menú → Publicado → Info */
     return [
       {
         label: 'Config',
@@ -121,33 +111,6 @@ var BuilderProgressRail = (function () {
         value: heroLabel(),
         done: isDone(state, 'video-hero', heroDone()),
         stepIndex: BuilderWizard.getStepIndex('video-hero')
-      },
-      {
-        label: 'Logo',
-        value: b.logo ? shortName(b.logo.name) : null,
-        done: isDone(state, 'branding', !!(b.logo && (b.logo.file || b.logo.name || b.logo.uploadedUrl))),
-        stepIndex: BuilderWizard.getStepIndex('branding')
-      },
-      {
-        label: 'Viviendas',
-        value: (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.railViviendasLabel)
-          ? ArchitectureEngine.railViviendasLabel(state)
-          : ((state.viviendas || []).length
-            ? ((state.viviendas || []).length + ' tarjetas')
-            : (applied ? '0 unidades' : 'Pendiente estructura')),
-        done: isDone(state, 'viviendas',
-          (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.activeUnitCount
-            ? ArchitectureEngine.activeUnitCount(state) > 0
-            : (state.viviendas || []).length > 0)),
-        stepIndex: BuilderWizard.getStepIndex('viviendas')
-      },
-      {
-        label: 'Galería',
-        value: (state.gallery || []).length
-          ? ((state.gallery || []).length + ((state.gallery || []).length === 1 ? ' imagen' : ' imágenes'))
-          : (applied ? '0 imágenes' : 'Pendiente estructura'),
-        done: isDone(state, 'gallery', (state.gallery || []).length > 0),
-        stepIndex: BuilderWizard.getStepIndex('gallery')
       },
       {
         label: 'Media',
@@ -183,30 +146,6 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('media')
       },
       {
-        label: '360°',
-        value: panoCount
-          ? (panoCount + (panoCount === 1 ? ' tour' : ' tours'))
-          : (applied ? '0 tours' : 'Pendiente estructura'),
-        done: isDone(state, 'panoramas', panoCount > 0),
-        stepIndex: BuilderWizard.getStepIndex('panoramas')
-      },
-      {
-        label: 'Planos',
-        value: (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.plansProgress)
-          ? ArchitectureEngine.plansProgress(state)
-          : ((state.plans || []).length ? ((state.plans || []).length + ' archivos') : (applied ? '0 / 0' : 'Pendiente')),
-        done: isDone(state, 'plans', (state.plans || []).length > 0),
-        stepIndex: BuilderWizard.getStepIndex('plans')
-      },
-      {
-        label: 'Docs',
-        value: (state.downloads || []).length
-          ? ((state.downloads || []).length + ((state.downloads || []).length === 1 ? ' doc' : ' docs'))
-          : (applied ? '0 docs' : 'Pendiente estructura'),
-        done: isDone(state, 'downloads', (state.downloads || []).length > 0),
-        stepIndex: BuilderWizard.getStepIndex('downloads')
-      },
-      {
         label: 'Menú',
         value: (function () {
           var m = state.menuConfig;
@@ -218,24 +157,6 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('menu')
       },
       {
-        label: 'Hotspots',
-        value: hotspotsNeedRef
-          ? (hotspotsNeedRef + ' pendientes')
-          : (acceptedHotspots ? (acceptedHotspots + ' aceptados') : (applied ? 'Pendientes' : null)),
-        done: isDone(state, 'hotspots', acceptedHotspots > 0 && hotspotsNeedRef === 0),
-        stepIndex: BuilderWizard.getStepIndex('hotspots')
-      },
-      {
-        label: 'Validación',
-        value: validation.ready
-          ? (validation.score + '%')
-          : ((validation.pendingCount != null && validation.pendingCount > 0)
-            ? (validation.pendingCount + ' pendientes')
-            : null),
-        done: isDone(state, 'validation', !!validation.ready),
-        stepIndex: BuilderWizard.getStepIndex('validation')
-      },
-      {
         label: 'Publicado',
         value: state.published && state.publishResult
           ? (state.publishResult.project && state.publishResult.project.nombre) || 'Publicado'
@@ -243,39 +164,11 @@ var BuilderProgressRail = (function () {
         done: isDone(state, 'publish', !!state.published),
         stepIndex: BuilderWizard.getStepIndex('publish')
       },
-      /* Recoverable legacy */
-      {
-        label: 'Interactivo',
-        value: (function () {
-          var lab = state.interactiveLab;
-          if (!lab || !lab.tree) return null;
-          var zones = 0;
-          function walk(nodes) {
-            (nodes || []).forEach(function (n) {
-              zones += (n.zones || []).length;
-              if (n.children) walk(n.children);
-            });
-          }
-          walk(lab.tree);
-          return zones ? (zones + ' zonas') : 'Lab';
-        })(),
-        done: isDone(state, 'interactivo', !!(state.interactiveLab && state.interactiveLab.tree && state.interactiveLab.tree.length)),
-        stepIndex: BuilderWizard.getStepIndex('interactivo'),
-        legacy: true
-      },
       {
         label: 'Info',
         value: info.nombre || null,
         done: isDone(state, 'info', !!info.nombre),
-        stepIndex: BuilderWizard.getStepIndex('info'),
-        legacy: true
-      },
-      {
-        label: 'IA',
-        value: ai.heroText ? 'Listo' : null,
-        done: isDone(state, 'ai-content', !!(ai && ai.heroText)),
-        stepIndex: BuilderWizard.getStepIndex('ai-content'),
-        legacy: true
+        stepIndex: BuilderWizard.getStepIndex('info')
       }
     ];
   }

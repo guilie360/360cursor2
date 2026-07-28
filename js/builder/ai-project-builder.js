@@ -1597,6 +1597,49 @@ var AiProjectBuilderView = (function () {
       );
     }
 
+    function logoCardHtml() {
+      var logo = branding.logo;
+      var previewSrc = logo && (logo.previewUrl || logo.uploadedUrl) ? (logo.previewUrl || logo.uploadedUrl) : '';
+      var has = !!previewSrc;
+      var status = has
+        ? (logo.uploadedUrl ? 'Bunny' : (logo.file ? 'Listo' : 'Remoto'))
+        : '';
+      return (
+        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="logo">' +
+          '<header class="builder-hero-media-card__head">' +
+            '<span class="builder-hero-media-card__label">Logo</span>' +
+            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
+          '</header>' +
+          '<div class="builder-hero-media-card__stage" id="heroLogoDropzone"' +
+            (has ? '' : ' title="Haz clic o arrastra el logo"') + '>' +
+            (has
+              ? '<img src="' + AdminUI.escapeHtml(previewSrc) +
+                '" alt="" class="builder-hero-image-preview">'
+              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
+          '</div>' +
+          (has
+            ? '<div class="builder-hero-media-card__meta">' +
+                '<div class="builder-hero-media-card__name">' +
+                  AdminUI.escapeHtml(logo.name || 'Logo del proyecto') +
+                '</div>' +
+                '<div class="builder-file-meta">' +
+                  AdminUI.escapeHtml(
+                    mediaMetaLine([status, logo.size ? formatBytes(logo.size) : ''])
+                  ) +
+                '</div>' +
+              '</div>'
+            : '') +
+          '<div class="builder-hero-media-card__actions">' +
+            (has
+              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="logo">Cambiar</button>' +
+                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="logo">Eliminar</button>'
+              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="logo">Subir</button>') +
+          '</div>' +
+          '<input type="file" id="heroLogoInput" accept="image/*,.svg" hidden>' +
+        '</article>'
+      );
+    }
+
     return (
       '<div class="builder-step-content builder-step-content--hero">' +
         '<div class="builder-hero-workspace-head">' +
@@ -1606,6 +1649,7 @@ var AiProjectBuilderView = (function () {
           '<div class="builder-hero-col builder-hero-col--media">' +
             videoCardHtml() +
             imageCardHtml() +
+            logoCardHtml() +
           '</div>' +
           '<div class="builder-hero-col builder-hero-col--config">' +
             '<div class="builder-hero-config-card" id="heroContentForm">' +
@@ -1681,9 +1725,9 @@ var AiProjectBuilderView = (function () {
                 '<span>Mostrar en el hero</span>' +
               '</label>' +
               '<div class="builder-field">' +
-                '<label for="heroLogoUrlDisplay">URL</label>' +
+                '<label for="heroLogoUrlDisplay">URL Bunny</label>' +
                 '<input type="text" id="heroLogoUrlDisplay" readonly ' +
-                  'placeholder="Sin logo — súbelo en el paso Logo" value="' +
+                  'placeholder="Sin logo — súbelo a la izquierda" value="' +
                   AdminUI.escapeHtml(logoUrl) + '">' +
               '</div>' +
               '<div class="builder-confirm-title" style="margin-top:4px">Formato</div>' +
@@ -4752,6 +4796,9 @@ var AiProjectBuilderView = (function () {
     if (stepId === 'video-hero') {
       bindDropzone('videoDropzone', 'videoInput', handleVideoUpload);
       bindDropzone('heroImageDropzone', 'heroImageInput', handleHeroImageUpload);
+      bindDropzone('heroLogoDropzone', 'heroLogoInput', function (file) {
+        handleBrandingUpload('logo', file);
+      });
       bindHeroContentFields();
       bindHeroMediaActions();
     }
@@ -4895,7 +4942,11 @@ var AiProjectBuilderView = (function () {
         e.preventDefault();
         e.stopPropagation();
         var kind = btn.getAttribute('data-hero-media-change');
-        var input = rootEl.querySelector(kind === 'video' ? '#videoInput' : '#heroImageInput');
+        var inputId =
+          kind === 'video' ? '#videoInput' :
+          kind === 'image' ? '#heroImageInput' :
+          kind === 'logo' ? '#heroLogoInput' : null;
+        var input = inputId ? rootEl.querySelector(inputId) : null;
         if (input) input.click();
       });
     });
@@ -4910,6 +4961,27 @@ var AiProjectBuilderView = (function () {
   }
 
   function clearHeroMedia(kind) {
+    if (kind === 'logo') {
+      if (!state.branding) state.branding = {};
+      if (state.branding.logo && state.branding.logo.previewUrl &&
+          String(state.branding.logo.previewUrl).indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(state.branding.logo.previewUrl); } catch (err) {}
+      }
+      state.branding.logo = null;
+      state.branding.logoCleared = true;
+      state.branding.status = null;
+      saveState();
+      renderStepContent();
+      updateNavButtons();
+      HeroSyncEngine.sync(state)
+        .then(function (result) {
+          if (result) AdminNotify.success('Logo eliminado del hero.');
+        })
+        .catch(function (err) {
+          AdminNotify.error(err.message || 'Error eliminando el logo');
+        });
+      return;
+    }
     if (kind === 'video') {
       revokeHeroPreview(state.heroVideo);
       state.heroVideo = null;
@@ -6224,17 +6296,42 @@ var AiProjectBuilderView = (function () {
       var stepId = new URLSearchParams(window.location.search || '').get('step');
       if (!stepId) return;
       if (stepId === 'project-type' || stepId === 'tipo' || stepId === 'tipologias') stepId = 'estructura';
+      if (typeof BuilderWizard.resolveVisibleStepId === 'function') {
+        stepId = BuilderWizard.resolveVisibleStepId(stepId);
+      }
       var idx = BuilderWizard.getStepIndex(stepId);
       if (idx >= 0) state.currentStep = idx;
     } catch (e) {}
   }
 
+  function normalizeCurrentStep() {
+    var step = BuilderWizard.getStep(state.currentStep);
+    if (!step) {
+      state.currentStep = 0;
+      return;
+    }
+    if (step.hidden && typeof BuilderWizard.resolveVisibleStepId === 'function') {
+      var resolved = BuilderWizard.resolveVisibleStepId(step.id);
+      var idx = BuilderWizard.getStepIndex(resolved);
+      if (idx >= 0) state.currentStep = idx;
+    }
+  }
+
   function goToStep(index) {
     if (index < 0 || index >= BuilderWizard.STEPS.length) return;
-    state.currentStep = index;
     var step = BuilderWizard.getStep(index);
+    if (step && step.hidden && typeof BuilderWizard.resolveVisibleStepId === 'function') {
+      var resolved = BuilderWizard.resolveVisibleStepId(step.id);
+      var resolvedIdx = BuilderWizard.getStepIndex(resolved);
+      if (resolvedIdx >= 0 && resolvedIdx !== index) {
+        goToStep(resolvedIdx);
+        return;
+      }
+    }
+    state.currentStep = index;
+    step = BuilderWizard.getStep(index);
     if (step) state.currentStepId = step.id;
-    state.wizardNavVersion = BuilderWizard.NAV_VERSION || 68;
+    state.wizardNavVersion = BuilderWizard.NAV_VERSION || 77;
     saveState();
     if (step && step.id === 'validation') {
       state.validation = ValidationEngine.validate(state);
@@ -6244,6 +6341,9 @@ var AiProjectBuilderView = (function () {
   }
 
   function goToStepById(stepId) {
+    if (typeof BuilderWizard.resolveVisibleStepId === 'function') {
+      stepId = BuilderWizard.resolveVisibleStepId(stepId);
+    }
     var idx = BuilderWizard.getStepIndex(stepId);
     if (idx >= 0) goToStep(idx);
   }
@@ -6349,6 +6449,7 @@ var AiProjectBuilderView = (function () {
 
     state = BuilderSession.load();
     applyStepFromUrl();
+    normalizeCurrentStep();
     BuilderDock.applyBodyPadding();
     renderShell();
     rootEl.querySelector('#builderApp').hidden = false;

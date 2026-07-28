@@ -1,37 +1,49 @@
-/* Builder wizard — step orchestration (incluye Interactivo) */
+/* Builder wizard — step orchestration (V5.9.77 slim flow) */
 var BuilderWizard = (function () {
-  /* V5.9.68 — Media (Bunny CDN) visible in left rail after Galería.
-     Legacy steps (interactivo, info, ai-content) kept recoverable at the end. */
+  /**
+   * Primary nav order:
+   * Config → Estructura → Experiencia → Hero → Media → Menú → Publicado → Info
+   *
+   * Steps with hidden:true stay in STEPS for recoverability / deep-links
+   * but are not shown in the sidebar (engines & persistence untouched).
+   */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
     { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Describe la estructura física del proyecto residencial: tipo de desarrollo, tipologías, plantas, ambientes y zonas.' },
     { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Orquesta el recorrido interactivo: nodos, conexiones y transiciones derivados de la estructura.' },
-    { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Sube un video o imagen de fondo para la portada del showroom.' },
-    { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
-    { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario y tarjetas comerciales alimentados por la estructura aplicada.' },
-    { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Biblioteca de imágenes asociables a entidades del proyecto.' },
-    { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Centro multimedia: Bunny CDN para archivos y Tours 360 Lapentor desde la estructura.' },
-    { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Tours 360° vinculables a tipologías, amenidades u otras entidades.' },
-    { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Masterplan, plantas 2D/3D y planos de tipología relacionados a su contexto.' },
-    { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Documentos centralizados: brochure, fichas y especificaciones.' },
+    { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Video, imagen y logo de portada del showroom.' },
+    { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Centro multimedia node-centric: Bunny CDN y Tours 360 Lapentor.' },
     { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
-    { id: 'hotspots', label: 'Hotspots', shortLabel: 'Hotspots', icon: 'map-pin', assistant: 'Hotspots espaciales que referencian entidades existentes (no duplican inventario).' },
-    { id: 'validation', label: 'Validación', shortLabel: 'Validación', icon: 'circle-check', assistant: 'Verifica relaciones, faltantes y referencias rotas antes de publicar.' },
     { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Estado de publicación, preview y URL del showroom.' },
-    /* Recoverable legacy — not removed */
-    { id: 'interactivo', label: 'Interactivo', shortLabel: 'Interactivo', icon: 'pen-tool', assistant: 'Laboratorio experimental: dibuja zonas poligonales sobre plantas navegables. Aún no se publica a Supabase.', legacy: true },
-    { id: 'info', label: 'Información', shortLabel: 'Info', icon: 'info', assistant: 'Pega el texto comercial o sube un PDF. Extraeré toda la información del proyecto.', legacy: true },
-    { id: 'ai-content', label: 'Asistente IA', shortLabel: 'IA', icon: 'sparkles', assistant: 'Con toda la información recopilada, generaré textos comerciales, FAQs y contenido para el chatbot.', legacy: true }
+    { id: 'info', label: 'Información', shortLabel: 'Info', icon: 'info', assistant: 'Pega el texto comercial o sube un PDF. Extraeré toda la información del proyecto.' },
+
+    /* Absorbed / retired from nav — keep ids for recoverability */
+    { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Integrado en Hero.', hidden: true },
+    { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario (recuperable).', hidden: true },
+    { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Absorbido por Media.', hidden: true },
+    { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Absorbido por Media (Tours 360).', hidden: true },
+    { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Absorbido por Media.', hidden: true },
+    { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Absorbido por Media.', hidden: true },
+    { id: 'hotspots', label: 'Hotspots', shortLabel: 'Hotspots', icon: 'map-pin', assistant: 'Se administrarán desde Experiencia.', hidden: true },
+    { id: 'validation', label: 'Validación', shortLabel: 'Validación', icon: 'circle-check', assistant: 'Oculto del flujo.', hidden: true },
+    { id: 'interactivo', label: 'Interactivo', shortLabel: 'Interactivo', icon: 'pen-tool', assistant: 'Absorbido por Experiencia.', hidden: true },
+    { id: 'ai-content', label: 'Asistente IA', shortLabel: 'IA', icon: 'sparkles', assistant: 'Recuperable.', hidden: true },
+    { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 68;
+  var NAV_VERSION = 77;
 
   function getSteps() {
     return STEPS.slice();
   }
 
   function getPrimarySteps() {
-    return STEPS.filter(function (s) { return !s.legacy; });
+    return STEPS.filter(function (s) { return !s.hidden; });
+  }
+
+  function isStepVisible(stepOrId) {
+    var step = typeof stepOrId === 'string' ? getStepById(stepOrId) : stepOrId;
+    return !!(step && !step.hidden);
   }
 
   function getStep(index) {
@@ -46,11 +58,29 @@ var BuilderWizard = (function () {
     return STEPS.findIndex(function (s) { return s.id === id; });
   }
 
+  /** Map retired steps to their replacement in the slim flow. */
+  function resolveVisibleStepId(stepId) {
+    if (stepId === 'branding') return 'video-hero';
+    if (stepId === 'project-type') return 'estructura';
+    if (stepId === 'gallery' || stepId === 'panoramas' || stepId === 'plans' || stepId === 'downloads') {
+      return 'media';
+    }
+    if (stepId === 'hotspots' || stepId === 'interactivo') return 'experiencia';
+    if (stepId === 'validation') return 'publish';
+    if (stepId === 'viviendas' || stepId === 'ai-content') return 'estructura';
+    var step = getStepById(stepId);
+    if (step && step.hidden) return 'config';
+    return stepId;
+  }
+
   function canAdvance(stepIndex, state) {
-    switch (STEPS[stepIndex].id) {
+    var step = STEPS[stepIndex];
+    if (!step) return false;
+    switch (step.id) {
       case 'config':
         return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
       case 'estructura':
+      case 'project-type':
         return !!(state.estructura && state.estructura.developmentType) || !!state.projectType;
       case 'experiencia':
         return true;
@@ -92,7 +122,7 @@ var BuilderWizard = (function () {
   function progressPercent(stepIndex) {
     var primary = getPrimarySteps();
     var step = STEPS[stepIndex];
-    if (!step || step.legacy) {
+    if (!step || step.hidden) {
       return Math.round(((stepIndex + 1) / STEPS.length) * 100);
     }
     var pi = primary.findIndex(function (s) { return s.id === step.id; });
@@ -105,6 +135,8 @@ var BuilderWizard = (function () {
     NAV_VERSION: NAV_VERSION,
     getSteps: getSteps,
     getPrimarySteps: getPrimarySteps,
+    isStepVisible: isStepVisible,
+    resolveVisibleStepId: resolveVisibleStepId,
     getStep: getStep,
     getStepById: getStepById,
     getStepIndex: getStepIndex,
