@@ -2066,8 +2066,51 @@ var AiProjectBuilderView = (function () {
     return fromDraft || fromPublish || fromAdmin || fromUrl || null;
   }
 
+  function resolveShowroomSlug() {
+    var raw =
+      (state && state.projectInfo && state.projectInfo.slug) ||
+      (state && state.publishResult && state.publishResult.slug) ||
+      '';
+    if (!raw) {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        raw = params.get('project') || params.get('proyecto') || '';
+      } catch (e) {}
+    }
+    if (typeof normalizeShowroomSlug === 'function') {
+      return normalizeShowroomSlug(raw) || '';
+    }
+    return String(raw || '').toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  function enabledCategoryKeysForNode(node) {
+    var enabled = getNodeEnabledCategories(node);
+    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+    return cats.filter(function (c) { return !!enabled[c.key]; }).map(function (c) { return c.key; });
+  }
+
+  async function syncBunnyForShowroom(silent) {
+    var projectId = resolveActiveProjectId();
+    var slug = resolveShowroomSlug();
+    if (!projectId || !slug || typeof BunnyMediaApi === 'undefined') return null;
+    if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureBunnySlugs(state);
+    try {
+      return await BunnyMediaApi.syncStructure(state, projectId, slug);
+    } catch (err) {
+      if (!silent) {
+        var msg = (err && err.message) || 'Error sincronizando carpetas Bunny';
+        setBunnyMediaStatus(msg);
+      }
+      try { console.warn('[BunnyMedia] syncStructure', err); } catch (e) {}
+      return null;
+    }
+  }
+
   function renderBunnyMedia() {
-    if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureNodeIds(state);
+    if (typeof MediaNodesEngine !== 'undefined') {
+      MediaNodesEngine.ensureNodeIds(state);
+      MediaNodesEngine.ensureBunnySlugs(state);
+    }
     var projectId = resolveActiveProjectId();
     if (typeof MediaToursEngine !== 'undefined') {
       MediaToursEngine.ensureState(state, projectId);
@@ -2415,7 +2458,8 @@ var AiProjectBuilderView = (function () {
     AdminUI.openModal({
       title: 'Categorías · ' + (node.label || nodeId),
       bodyHtml:
-        '<p class="admin-modal-copy">Activa solo las categorías que este nodo necesita. El progreso se recalcula automáticamente.</p>' +
+        '<p class="admin-modal-copy">Activa o desactiva categorías. Cada categoría es una carpeta física en Bunny bajo media/' +
+          AdminUI.escapeHtml(node.bunny_slug || '') + '/.</p>' +
         '<div class="builder-media-cat-checks">' + checks + '</div>',
       footerHtml:
         '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
@@ -2432,17 +2476,159 @@ var AiProjectBuilderView = (function () {
             root.querySelectorAll('[data-media-cat-toggle]').forEach(function (input) {
               next[input.getAttribute('data-media-cat-toggle')] = !!input.checked;
             });
-            setNodeEnabledCategories(nodeId, next);
             AdminUI.closeModal();
-            captureMediaScroll();
-            saveState();
-            renderStepContent();
-            restoreMediaScroll();
-            AdminNotify.success('Categorías actualizadas');
+            applyMediaCategoryChanges(nodeId, enabled, next);
           });
         }
       }
     });
+  }
+
+  function confirmDisableCategoryWithFiles(catLabel, onDecision) {
+    var copy = 'La categoría "' + catLabel + '" contiene archivos.\n\n¿Qué deseas hacer?';
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.openModal === 'function') {
+      var settled = false;
+      function finish(mode) {
+        if (settled) return;
+        settled = true;
+        onDecision(mode);
+      }
+      AdminUI.openModal({
+        title: 'Categoría con archivos',
+        bodyHtml: '<p class="admin-modal-copy">' + AdminUI.escapeHtml(copy) + '</p>' +
+          '<ul class="admin-modal-copy" style="margin:12px 0 0;padding-left:18px">' +
+            '<li><strong>Cancelar</strong> — mantiene la categoría</li>' +
+            '<li><strong>Eliminar categoría y borrar los archivos</strong></li>' +
+            '<li><strong>Mantener categoría</strong> — no desactiva</li>' +
+          '</ul>',
+        footerHtml:
+          '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+          '<button type="button" class="btn-ghost" data-modal-action="keep">Mantener categoría</button>' +
+          '<button type="button" class="btn-danger" data-modal-action="delete">Eliminar y borrar</button>',
+        onMount: function (root) {
+          var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+          var keepBtn = root.querySelector('[data-modal-action="keep"]');
+          var deleteBtn = root.querySelector('[data-modal-action="delete"]');
+          if (cancelBtn) cancelBtn.addEventListener('click', function () { finish('cancel'); AdminUI.closeModal(); });
+          if (keepBtn) keepBtn.addEventListener('click', function () { finish('keep'); AdminUI.closeModal(); });
+          if (deleteBtn) deleteBtn.addEventListener('click', function () { finish('delete'); AdminUI.closeModal(); });
+        },
+        onClose: function () { if (!settled) finish('cancel'); }
+      });
+      return;
+    }
+    if (window.confirm(copy + '\n\nOK = Eliminar y borrar\nCancelar = mantener')) {
+      onDecision('delete');
+    } else {
+      onDecision('cancel');
+    }
+  }
+
+  async function applyMediaCategoryChanges(nodeId, prevEnabled, nextEnabled) {
+    var node = typeof MediaNodesEngine !== 'undefined' ? MediaNodesEngine.findNode(state, nodeId) : null;
+    if (!node) return;
+    var projectId = resolveActiveProjectId();
+    var slug = resolveShowroomSlug();
+    var nodeSlug = node.bunny_slug ||
+      (typeof MediaNodesEngine !== 'undefined' ? MediaNodesEngine.getNodeBunnySlug(state, nodeId) : null);
+    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+    var finalEnabled = Object.assign({}, nextEnabled);
+    var toEnable = [];
+    var toDisableEmpty = [];
+    var toDisableWithFiles = [];
+
+    cats.forEach(function (c) {
+      var was = !!prevEnabled[c.key];
+      var now = !!nextEnabled[c.key];
+      if (!was && now) toEnable.push(c);
+      if (was && !now) {
+        var assets = typeof MediaNodesEngine !== 'undefined'
+          ? MediaNodesEngine.assetsForNode(state, nodeId, c.key)
+          : [];
+        if (assets.length) toDisableWithFiles.push(c);
+        else toDisableEmpty.push(c);
+      }
+    });
+
+    function commitAndSync() {
+      setNodeEnabledCategories(nodeId, finalEnabled);
+      saveState();
+      captureMediaScroll();
+      renderStepContent();
+      restoreMediaScroll();
+      AdminNotify.success('Categorías actualizadas');
+      if (!projectId || !slug || !nodeSlug || typeof BunnyMediaApi === 'undefined') return;
+      var foldersOn = [];
+      cats.forEach(function (c) {
+        if (finalEnabled[c.key] && c.folder) {
+          foldersOn.push('media/' + nodeSlug + '/' + c.folder);
+        }
+      });
+      foldersOn.unshift('media/' + nodeSlug);
+      BunnyMediaApi.ensureFolders(projectId, slug, foldersOn).catch(function (e) {
+        try { console.warn('[BunnyMedia] ensureFolders', e); } catch (err) {}
+      });
+      toDisableEmpty.forEach(function (c) {
+        if (!c.folder) return;
+        BunnyMediaApi.deleteFolder(projectId, slug, 'media/' + nodeSlug + '/' + c.folder, false)
+          .catch(function () { /* empty or missing — ok */ });
+      });
+    }
+
+    async function purgeCategoryFiles(cat) {
+      var assets = MediaNodesEngine.assetsForNode(state, nodeId, cat.key) || [];
+      for (var i = 0; i < assets.length; i++) {
+        var a = assets[i];
+        if (a.archivoId && a.provider === 'bunny' && projectId) {
+          try {
+            await BunnyMediaApi.remove(projectId, {
+              archivoId: a.archivoId,
+              storagePath: a.storagePath,
+              showroomSlug: slug
+            });
+          } catch (e) { /* continue */ }
+        }
+        if (a.id && state.projectAssets && state.projectAssets.byId) {
+          delete state.projectAssets.byId[a.id];
+        }
+      }
+      if (cat.folder && projectId && slug && nodeSlug) {
+        try {
+          await BunnyMediaApi.deleteFolder(projectId, slug, 'media/' + nodeSlug + '/' + cat.folder, true);
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    if (!toDisableWithFiles.length) {
+      commitAndSync();
+      return;
+    }
+
+    /* Process file-bearing disables sequentially with confirm dialogs */
+    var idx = 0;
+    function nextDisable() {
+      if (idx >= toDisableWithFiles.length) {
+        commitAndSync();
+        return;
+      }
+      var cat = toDisableWithFiles[idx++];
+      confirmDisableCategoryWithFiles(cat.label, function (decision) {
+        if (decision === 'delete') {
+          purgeCategoryFiles(cat).then(function () {
+            finalEnabled[cat.key] = false;
+            nextDisable();
+          }).catch(function () {
+            finalEnabled[cat.key] = false;
+            nextDisable();
+          });
+        } else {
+          /* cancel or keep → leave category enabled */
+          finalEnabled[cat.key] = true;
+          nextDisable();
+        }
+      });
+    }
+    nextDisable();
   }
 
   function renderMediaToursPanel() {
@@ -2568,11 +2754,29 @@ var AiProjectBuilderView = (function () {
       var kindForDefaults = tipo === 'zona' ? 'zona' : (tipo === 'tipologia' ? 'tipologia' : 'custom');
       setNodeEnabledCategories(nodeId, defaultEnabledCategoriesForKind(kindForDefaults));
     }
+    if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureBunnySlugs(state);
     saveState();
     captureMediaScroll();
     renderStepContent();
     restoreMediaScroll();
     AdminNotify.success('Nodo creado');
+    var projectId = resolveActiveProjectId();
+    var slug = resolveShowroomSlug();
+    var created = nodeId && typeof MediaNodesEngine !== 'undefined'
+      ? MediaNodesEngine.findNode(state, nodeId)
+      : null;
+    if (projectId && slug && created && typeof BunnyMediaApi !== 'undefined') {
+      BunnyMediaApi.ensureNodeStructure(
+        projectId,
+        slug,
+        created.bunny_slug,
+        enabledCategoryKeysForNode(created)
+      ).then(function () {
+        setBunnyMediaStatus('Carpeta Bunny creada · media/' + created.bunny_slug + '/');
+      }).catch(function (err) {
+        try { console.warn('[BunnyMedia] ensureNodeStructure', err); } catch (e) {}
+      });
+    }
   }
 
   function deleteMediaNavigatorNode(nodeId) {
@@ -5427,15 +5631,21 @@ var AiProjectBuilderView = (function () {
           if (!silent) AdminNotify.error(bunnyMsg);
           return;
         }
-        /* probe opcional si falla por red; list puede seguir */
         try { console.warn('[BunnyMedia] probe', probeErr); } catch (e) {}
       }
+      var slug = resolveShowroomSlug();
+      if (!slug) {
+        setBunnyMediaStatus('Define el slug del showroom en Config para sincronizar Bunny.');
+        if (!silent) AdminNotify.error('Falta el slug del showroom (paso Config).');
+        return;
+      }
+      await syncBunnyForShowroom(true);
       var items = await BunnyMediaApi.list(projectId);
       state.bunnyMedia = state.bunnyMedia || {};
       state.bunnyMedia.items = items;
       BunnyMediaApi.syncArchivosToProjectAssets(state, items);
       saveState();
-      if (!silent) setBunnyMediaStatus(items.length + ' archivo(s) en Bunny · CDN listo');
+      if (!silent) setBunnyMediaStatus(items.length + ' archivo(s) · estructura Bunny sincronizada');
       renderStepContent();
     } catch (err) {
       var msg = (err && err.message) || 'Error listando Media';
@@ -5465,15 +5675,29 @@ var AiProjectBuilderView = (function () {
     var node = (typeof MediaNodesEngine !== 'undefined')
       ? MediaNodesEngine.findNode(state, nodeId)
       : null;
+    var showroomSlug = resolveShowroomSlug();
+    if (!showroomSlug) {
+      AdminNotify.error('Define el slug del showroom en Config antes de subir.');
+      return;
+    }
     try {
       processing = true;
       setBunnyMediaStatus('Subiendo a Bunny…');
       if (typeof AdminUI !== 'undefined' && AdminUI.showGlobalBusy) {
         AdminUI.showGlobalBusy('Subiendo a Bunny CDN');
       }
+      if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureBunnySlugs(state);
+      var nodeSlug = node && node.bunny_slug
+        ? node.bunny_slug
+        : (typeof MediaNodesEngine !== 'undefined'
+          ? MediaNodesEngine.getNodeBunnySlug(state, nodeId)
+          : null);
       var result = await BunnyMediaApi.uploadAndSync(state, projectId, category, file, {
         nodeId: nodeId,
-        entityRef: node && node.entityRef ? node.entityRef : null
+        nodeSlug: nodeSlug,
+        showroomSlug: showroomSlug,
+        entityRef: node && node.entityRef ? node.entityRef : null,
+        state: state
       });
       state.bunnyMedia = state.bunnyMedia || {};
       state.bunnyMedia.selectedNodeId = nodeId;
@@ -5745,6 +5969,10 @@ var AiProjectBuilderView = (function () {
 
   async function purgeNodeAssets(nodeId, mode) {
     var projectId = resolveActiveProjectId();
+    var slug = resolveShowroomSlug();
+    var nodeSlug = typeof MediaNodesEngine !== 'undefined'
+      ? MediaNodesEngine.getNodeBunnySlug(state, nodeId)
+      : null;
     if (mode === 'orphan') {
       MediaNodesEngine.detachAssets(state, nodeId);
       saveState();
@@ -5758,7 +5986,8 @@ var AiProjectBuilderView = (function () {
           try {
             await BunnyMediaApi.remove(projectId, {
               archivoId: item.archivoId,
-              storagePath: item.storagePath
+              storagePath: item.storagePath,
+              showroomSlug: slug
             });
           } catch (e) { /* continue */ }
         }
@@ -5768,6 +5997,11 @@ var AiProjectBuilderView = (function () {
         state.mediaTours.scenes = state.mediaTours.scenes.filter(function (s) {
           return !s || (s.node_id !== nodeId && s.estructura_id !== nodeId);
         });
+      }
+      if (projectId && slug && nodeSlug && typeof BunnyMediaApi !== 'undefined') {
+        try {
+          await BunnyMediaApi.deleteFolder(projectId, slug, 'media/' + nodeSlug, true);
+        } catch (e) { /* ignore */ }
       }
       saveState();
     }

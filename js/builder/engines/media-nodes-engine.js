@@ -1,34 +1,48 @@
-/* BOXIES V5.9.72 — Canvas nodes = SSOT; Media assets belong to node_id
+/* BOXIES V5.9.86 — Canvas nodes = SSOT; Bunny folders use showroom/node slugs
  *
  * Call graph (no mutual recursion):
  *   ensureNodeIds(state)     → stamp node_id / normalize only
+ *   ensureBunnySlugs(state)  → stamp bunny_slug from labels; returns renames
  *   listCompatibleNodes(state) → read + return array only
  *   findNode(state, node_id) → search inside listCompatibleNodes()
  *   render…                 → ensureNodeIds() then listCompatibleNodes()
+ *
+ * Bunny physical layout (V5.9.86):
+ *   projects/{showroom_slug}/hero/{images|logos|videos}/
+ *   projects/{showroom_slug}/media/{node_slug}/{category}/
  */
 var MediaNodesEngine = (function () {
   /**
-   * Canonical media categories (path segment under projects/{id}/).
-   * Tours never use Bunny.
+   * Canonical media categories.
+   * folder = Bunny segment under media/{node_slug}/ (tours360 is folder-only; no Bunny upload).
    */
   var MEDIA_CATEGORIES = [
     { key: 'images', label: 'Imágenes', folder: 'images', mode: 'upload', assetType: 'image', accept: 'image/*' },
     { key: 'videos', label: 'Videos / Animaciones', folder: 'videos', mode: 'upload', assetType: 'video', accept: 'video/*,image/gif,image/webp', aliases: ['animations'] },
     { key: 'plans2d', label: 'Planos 2D', folder: 'plans2d', mode: 'upload', assetType: 'plan', accept: 'image/*,application/pdf', planKind: '2d', aliases: ['plans-2d', 'floorplans'] },
     { key: 'plans3d', label: 'Planos 3D', folder: 'plans3d', mode: 'upload', assetType: 'plan', accept: 'image/*,model/*,.glb,.gltf', planKind: '3d', aliases: ['plans-3d'] },
-    { key: 'tours360', label: 'Tours 360', folder: null, mode: 'tours', assetType: 'pano360', accept: null },
+    { key: 'tours360', label: 'Tours 360', folder: 'tours360', mode: 'tours', assetType: 'pano360', accept: null },
     { key: 'documents', label: 'Documentos', folder: 'documents', mode: 'upload', assetType: 'document', accept: '.pdf,.doc,.docx,image/*' },
     { key: 'ui', label: 'Recursos UI', folder: 'ui', mode: 'upload', assetType: 'image', accept: 'image/*,.svg,image/svg+xml', uiRole: true }
   ];
 
-  function slugZone(name) {
+  var HERO_FOLDERS = ['images', 'logos', 'videos'];
+
+  function slugify(name) {
     return String(name || '')
       .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\w\s\-]+/g, '')
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, '-')
-      .slice(0, 80) || 'zona';
+      .replace(/[_\s]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'nodo';
+  }
+
+  function slugZone(name) {
+    return slugify(name) || 'zona';
   }
 
   function tipLabel(tip, index) {
@@ -50,6 +64,12 @@ var MediaNodesEngine = (function () {
     if (key === 'animations') return 'videos';
     var c = getCategory(key);
     return c ? c.key : (key || 'images');
+  }
+
+  function categoryFolder(key) {
+    var c = getCategory(key);
+    if (!c) return null;
+    return c.folder || null;
   }
 
   /**
@@ -100,10 +120,91 @@ var MediaNodesEngine = (function () {
     e.zoneNodes = nextZones;
   }
 
+  function uniqueSlug(desired, used) {
+    var base = slugify(desired);
+    var candidate = base;
+    var n = 2;
+    while (used[candidate]) {
+      candidate = base + '-' + n;
+      n++;
+    }
+    used[candidate] = true;
+    return candidate;
+  }
+
+  /**
+   * Stamp bunny_slug on tipologías / zonas / custom from display labels.
+   * Returns { renames: [{ nodeId, from, to }], nodes: [...] }.
+   */
+  function ensureBunnySlugs(state) {
+    ensureNodeIds(state);
+    var renames = [];
+    var used = {};
+    var e = state && state.estructura ? state.estructura : {};
+
+    (e.tipologias || []).forEach(function (tip, i) {
+      if (!tip || !tip.node_id) return;
+      var desired = slugify(tipLabel(tip, i));
+      var prev = tip.bunny_slug ? slugify(tip.bunny_slug) : '';
+      var next = uniqueSlug(desired, used);
+      if (prev && prev !== next) {
+        renames.push({ nodeId: tip.node_id, from: prev, to: next });
+      }
+      tip.bunny_slug = next;
+    });
+
+    (e.zoneNodes || []).forEach(function (z) {
+      if (!z || !z.node_id) return;
+      var desired = slugify(z.nombre || z.node_id);
+      var prev = z.bunny_slug ? slugify(z.bunny_slug) : '';
+      var next = uniqueSlug(desired, used);
+      if (prev && prev !== next) {
+        renames.push({ nodeId: z.node_id, from: prev, to: next });
+      }
+      z.bunny_slug = next;
+    });
+
+    var custom = (state && state.bunnyMedia && state.bunnyMedia.customNodes) || [];
+    custom.forEach(function (c) {
+      if (!c || !c.node_id) return;
+      var desired = slugify(c.nombre || c.label || c.node_id);
+      var prev = c.bunny_slug ? slugify(c.bunny_slug) : '';
+      var next = uniqueSlug(desired, used);
+      if (prev && prev !== next) {
+        renames.push({ nodeId: c.node_id, from: prev, to: next });
+      }
+      c.bunny_slug = next;
+    });
+
+    return { renames: renames, nodes: listCompatibleNodes(state) };
+  }
+
+  function getNodeBunnySlug(state, nodeId) {
+    if (!nodeId || !state) return null;
+    var e = state.estructura || {};
+    var tips = e.tipologias || [];
+    for (var i = 0; i < tips.length; i++) {
+      if (tips[i] && tips[i].node_id === nodeId) {
+        return tips[i].bunny_slug || slugify(tipLabel(tips[i], i));
+      }
+    }
+    var zones = e.zoneNodes || [];
+    for (var z = 0; z < zones.length; z++) {
+      if (zones[z] && zones[z].node_id === nodeId) {
+        return zones[z].bunny_slug || slugify(zones[z].nombre);
+      }
+    }
+    var custom = (state.bunnyMedia && state.bunnyMedia.customNodes) || [];
+    for (var c = 0; c < custom.length; c++) {
+      if (custom[c] && custom[c].node_id === nodeId) {
+        return custom[c].bunny_slug || slugify(custom[c].nombre || custom[c].label);
+      }
+    }
+    return slugify(nodeId);
+  }
+
   /**
    * Read-only projection of Canvas nodes for Media.
-   * Does not mutate state and does not call ensureNodeIds.
-   * Includes tipologías, zonas and optional custom Media nodes.
    */
   function listCompatibleNodes(state) {
     var e = state && state.estructura;
@@ -111,12 +212,14 @@ var MediaNodesEngine = (function () {
     var out = [];
     (e.tipologias || []).forEach(function (tip, i) {
       if (!tip || !tip.node_id) return;
+      var label = tipLabel(tip, i);
       out.push({
         node_id: tip.node_id,
         kind: 'tipologia',
         tipo: 'tipologia',
-        label: tipLabel(tip, i),
-        nombre: tipLabel(tip, i),
+        label: label,
+        nombre: label,
+        bunny_slug: tip.bunny_slug || slugify(label),
         estructura_id: tip.id || tip.localId || tip.node_id,
         entityRef: {
           type: 'tipologia',
@@ -136,6 +239,7 @@ var MediaNodesEngine = (function () {
         tipo: 'zona',
         label: z.nombre,
         nombre: z.nombre,
+        bunny_slug: z.bunny_slug || slugify(z.nombre),
         estructura_id: z.node_id,
         entityRef: { type: 'amenidad', key: z.nombre, node_id: z.node_id },
         orden: 1000 + i,
@@ -145,12 +249,14 @@ var MediaNodesEngine = (function () {
     var custom = (state && state.bunnyMedia && state.bunnyMedia.customNodes) || [];
     custom.forEach(function (c, i) {
       if (!c || !c.node_id) return;
+      var label = c.nombre || c.label || 'Nodo';
       out.push({
         node_id: c.node_id,
         kind: 'custom',
         tipo: 'custom',
-        label: c.nombre || c.label || 'Nodo',
-        nombre: c.nombre || c.label || 'Nodo',
+        label: label,
+        nombre: label,
+        bunny_slug: c.bunny_slug || slugify(label),
         estructura_id: c.node_id,
         entityRef: { type: 'custom', key: c.node_id, node_id: c.node_id },
         orden: 2000 + i,
@@ -361,6 +467,11 @@ var MediaNodesEngine = (function () {
     assetCategory: assetCategory,
     categoryToAssetType: categoryToAssetType,
     categoryAcceptsNodeUploads: categoryAcceptsNodeUploads,
-    slugZone: slugZone
+    slugZone: slugZone,
+    slugify: slugify,
+    categoryFolder: categoryFolder,
+    ensureBunnySlugs: ensureBunnySlugs,
+    getNodeBunnySlug: getNodeBunnySlug,
+    HERO_FOLDERS: HERO_FOLDERS
   };
 })();

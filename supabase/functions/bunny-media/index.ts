@@ -1,13 +1,31 @@
 /**
- * BOXIES V5.9.84 - bunny-media (node-centric)
+ * BOXIES V5.9.86 - bunny-media (slug-based folder layout)
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
- * Path: projects/{project_id}/{category}/{node_id}/{file}
+ * NEW physical layout (V5.9.86) — Bunny folders are controlled by BOXIES
+ * slugs, never by raw UUIDs:
+ *   Media upload : projects/{showroom_slug}/media/{node_slug}/{category_folder}/{stamp}-{file}
+ *   Hero upload  : projects/{showroom_slug}/hero/{images|logos|videos}/{stamp}-{file}
+ * LEGACY layout (still read/deleted for backward compatibility):
+ *   projects/{project_uuid}/{category_folder}/{node_id}/{file}
  *
  * Actions:
- *   POST multipart: upload (fields: project_id, category, node_id, file)
+ *   POST multipart: upload
+ *     fields: project_id, category, node_id, file,
+ *             showroom_slug, node_slug, scope ("media"|"hero", default "media")
  *   POST JSON: { action: "delete", project_id, archivo_id?, storage_path }
- *   GET /?project_id=... : list bunny assets for project
+ *   POST JSON: { action: "probe" }                                    → Bunny connectivity check
+ *   POST JSON: { action: "ensure_folders", project_id, showroom_slug, folders: string[] }
+ *   POST JSON: { action: "list_folder", project_id, showroom_slug, path }
+ *   POST JSON: { action: "delete_folder", project_id, showroom_slug, path, recursive }
+ *   POST JSON: { action: "rename_folder", project_id, showroom_slug, from, to }
+ *   GET  /?project_id=...   : list bunny assets for project (DB-backed)
+ *   GET  /?probe=bunny      : Bunny connectivity check
+ *
+ * Folder ops operate on paths RELATIVE to projects/{showroom_slug}/, e.g.
+ * "media/porteria/images" or "hero". Path traversal ("..", absolute paths)
+ * is always neutralized before touching Bunny — every resolved path is
+ * re-anchored under projects/{showroomSlug}/.
  *
  * Required secrets:
  *   BUNNY_STORAGE_ACCESS_KEY
@@ -37,6 +55,8 @@ const CATEGORIES: Record<
   plans3d: { folder: "plans3d", tipo: "plano" },
   documents: { folder: "documents", tipo: "pdf" },
   ui: { folder: "ui", tipo: "imagen" },
+  tours360: { folder: "tours360", tipo: "tour_360" },
+  logos: { folder: "logos", tipo: "imagen" },
   /* Aliases → canonical folders (V5.9.72) */
   animations: { folder: "videos", tipo: "video" },
   "plans-2d": { folder: "plans2d", tipo: "plano" },
@@ -46,6 +66,9 @@ const CATEGORIES: Record<
   panoramas: { folder: "panoramas", tipo: "tour_360" },
   thumbnails: { folder: "ui", tipo: "imagen" },
 };
+
+/* scope=hero uploads may only target these Bunny folders */
+const HERO_FOLDERS = ["images", "logos", "videos"];
 
 function json(status: number, body: Record<string, unknown>) {
   return new Response(JSON.stringify(body), {
@@ -62,6 +85,23 @@ function sanitizeFilename(name: string): string {
     .replace(/^\.+/, "")
     .slice(0, 120);
   return base || `file-${Date.now()}`;
+}
+
+/**
+ * BOXIES slug rule (V5.9.86): lowercase, accent-stripped, [a-z0-9-] only,
+ * hyphens collapsed, max 80 chars. Used for showroom_slug / node_slug so
+ * Bunny folder names never depend on raw UUIDs.
+ */
+function sanitizeSlug(name: string): string {
+  const stripped = String(name || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const base = stripped
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return base.slice(0, 80).replace(/-+$/, "");
 }
 
 function extFromName(name: string): string {
@@ -95,6 +135,25 @@ function encodeStoragePath(storagePath: string): string {
     .filter((s) => s.length > 0)
     .map((seg) => encodeURIComponent(seg))
     .join("/");
+}
+
+/**
+ * Normalizes a user-supplied relative path (folder ops) into safe segments.
+ * Strips backslashes, drops empty/"." segments, rejects ".." (traversal) and
+ * any character outside [A-Za-z0-9._-]. Returns "" for the root, or null if
+ * the input is invalid.
+ */
+function ensureSafeRelativePath(rel: string): string | null {
+  const segments = String(rel || "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s !== ".");
+  for (const seg of segments) {
+    if (seg === "..") return null;
+    if (!/^[A-Za-z0-9._-]+$/.test(seg)) return null;
+  }
+  return segments.join("/");
 }
 
 function firstEnv(names: string[]): { name: string; value: string } {
@@ -201,7 +260,7 @@ async function assertProjectAccess(
 ) {
   const { data, error } = await supabase
     .from("proyectos")
-    .select("id, constructora_id, nombre")
+    .select("id, constructora_id, nombre, slug")
     .eq("id", projectId)
     .maybeSingle();
   if (error) return { project: null, error: error.message };
@@ -292,6 +351,110 @@ async function bunnyDelete(
     const text = await res.text().catch(() => "");
     throw new Error(`Bunny delete failed (${res.status}): ${text.slice(0, 200)}`);
   }
+}
+
+/** Recursively deletes a directory and everything under it (native Bunny behaviour). */
+async function bunnyDeleteDirRecursive(
+  hostname: string,
+  zone: string,
+  accessKey: string,
+  dirPath: string,
+) {
+  const encodedPath = encodeStoragePath(dirPath);
+  const url = `https://${hostname}/${zone}/${encodedPath}/`;
+  const res = await fetch(url, { method: "DELETE", headers: { AccessKey: accessKey } });
+  if (!res.ok && res.status !== 404) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Bunny recursive delete failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+}
+
+async function bunnyGetObject(
+  hostname: string,
+  zone: string,
+  accessKey: string,
+  storagePath: string,
+) {
+  const encodedPath = encodeStoragePath(storagePath);
+  const url = `https://${hostname}/${zone}/${encodedPath}`;
+  const res = await fetch(url, { method: "GET", headers: { AccessKey: accessKey } });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Bunny GET failed (${res.status}) ${storagePath}: ${text.slice(0, 200)}`);
+  }
+  const contentType = res.headers.get("content-type") || "application/octet-stream";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return { bytes, contentType };
+}
+
+type BunnyDirItem = { name: string; isDirectory: boolean; size: number };
+
+/** Single-level Bunny directory listing. Returns [] for missing directories. */
+async function bunnyListDir(
+  hostname: string,
+  zone: string,
+  accessKey: string,
+  dirPath: string,
+): Promise<BunnyDirItem[]> {
+  const encodedPath = encodeStoragePath(dirPath);
+  const url = `https://${hostname}/${zone}/${encodedPath}/`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { AccessKey: accessKey, Accept: "application/json" },
+  });
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    const text = await res.text().catch(() => "");
+    throw new Error(`Bunny list failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+  const text = await res.text().catch(() => "");
+  // deno-lint-ignore no-explicit-any
+  let arr: any[] = [];
+  try {
+    arr = JSON.parse(text);
+  } catch {
+    arr = [];
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((o) => ({
+    name: String(o.ObjectName || ""),
+    isDirectory: !!o.IsDirectory,
+    size: Number(o.Length || 0),
+  }));
+}
+
+/** Recursively walks a directory, returning every file with its path relative to dirPath. */
+async function bunnyWalkFiles(
+  hostname: string,
+  zone: string,
+  accessKey: string,
+  dirPath: string,
+  relPrefix = "",
+): Promise<{ relPath: string; size: number }[]> {
+  const items = await bunnyListDir(hostname, zone, accessKey, dirPath);
+  let files: { relPath: string; size: number }[] = [];
+  for (const item of items) {
+    if (!item.name) continue;
+    const rel = relPrefix ? `${relPrefix}/${item.name}` : item.name;
+    if (item.isDirectory) {
+      const nested = await bunnyWalkFiles(
+        hostname,
+        zone,
+        accessKey,
+        `${dirPath}/${item.name}`,
+        rel,
+      );
+      files = files.concat(nested);
+    } else {
+      files.push({ relPath: rel, size: item.size });
+    }
+  }
+  return files;
+}
+
+function isMarkerFile(relPath: string): boolean {
+  const base = relPath.split("/").pop() || "";
+  return base === ".boxieskeep";
 }
 
 async function handleBunnyProbe(req: Request) {
@@ -395,12 +558,20 @@ async function handleUpload(req: Request) {
   const projectId = String(form.get("project_id") || "").trim();
   const category = String(form.get("category") || "images").trim();
   const nodeIdRaw = String(form.get("node_id") || "").trim();
+  const showroomSlugRaw = String(form.get("showroom_slug") || "").trim();
+  const nodeSlugRaw = String(form.get("node_slug") || "").trim();
+  const scope = String(form.get("scope") || "media").trim().toLowerCase() === "hero"
+    ? "hero"
+    : "media";
   const fileEntry = form.get("file");
 
   console.log("[bunny-media] upload fields", {
     projectId,
     category,
     nodeId: nodeIdRaw,
+    showroomSlugRaw,
+    nodeSlugRaw,
+    scope,
     fileType: fileEntry == null ? "null" : typeof fileEntry,
     isBlob: isUploadBlob(fileEntry),
     fileName: isUploadBlob(fileEntry) && "name" in fileEntry
@@ -424,13 +595,6 @@ async function handleUpload(req: Request) {
       code: "MISSING_FILE",
     });
   }
-  if (!nodeIdRaw) {
-    return json(400, {
-      ok: false,
-      error: "node_id requerido — todo asset pertenece a un nodo del Canvas",
-      code: "MISSING_NODE_ID",
-    });
-  }
   if (fileEntry.size <= 0) return json(400, { ok: false, error: "Archivo vacío" });
   if (fileEntry.size > MAX_BYTES) {
     return json(400, {
@@ -442,16 +606,46 @@ async function handleUpload(req: Request) {
   const { project, error: projErr } = await assertProjectAccess(supabase, projectId);
   if (!project) return json(403, { ok: false, error: projErr || "Sin acceso" });
 
+  const showroomSlug = sanitizeSlug(showroomSlugRaw || project.slug || "");
+  if (!showroomSlug) {
+    return json(400, {
+      ok: false,
+      error: "showroom_slug requerido (o el proyecto debe tener slug asignado)",
+      code: "SHOWROOM_SLUG_REQUIRED",
+    });
+  }
+
+  const folder = CATEGORIES[category].folder;
+  let nodeSlug = "";
+  if (scope === "hero") {
+    if (!HERO_FOLDERS.includes(folder)) {
+      return json(400, {
+        ok: false,
+        error: "category inválida para scope=hero (usa images|logos|videos)",
+        allowed: HERO_FOLDERS,
+        code: "INVALID_HERO_CATEGORY",
+      });
+    }
+  } else {
+    nodeSlug = sanitizeSlug(nodeSlugRaw);
+    if (!nodeSlug) {
+      return json(400, {
+        ok: false,
+        error: "node_slug requerido para scope=media — todo asset pertenece a un nodo del Canvas",
+        code: "NODE_SLUG_REQUIRED",
+      });
+    }
+  }
+
   const originalName =
     "name" in fileEntry && (fileEntry as File).name
       ? String((fileEntry as File).name)
       : "upload.bin";
   const safeName = sanitizeFilename(originalName);
   const stamp = Date.now();
-  const folder = CATEGORIES[category].folder;
-  const nodeSeg = sanitizeFilename(nodeIdRaw).replace(/\./g, "-");
-  const storagePath =
-    `projects/${projectId}/${folder}/${nodeSeg}/${stamp}-${safeName}`;
+  const storagePath = scope === "hero"
+    ? `projects/${showroomSlug}/hero/${folder}/${stamp}-${safeName}`
+    : `projects/${showroomSlug}/media/${nodeSlug}/${folder}/${stamp}-${safeName}`;
   const contentType = fileEntry.type || "application/octet-stream";
   const bytes = new Uint8Array(await fileEntry.arrayBuffer());
 
@@ -535,6 +729,9 @@ async function handleUpload(req: Request) {
     storagePath,
     category,
     provider: "bunny",
+    scope,
+    showroomSlug,
+    nodeSlug: nodeSlug || null,
     node_id: nodeIdRaw || null,
     bunnyStatus: bunnyResult.status,
   });
@@ -581,7 +778,12 @@ async function handleDelete(req: Request) {
   if (!storagePath) {
     return json(400, { ok: false, error: "storage_path o archivo_id requerido" });
   }
-  if (!String(storagePath).startsWith(`projects/${projectId}/`)) {
+
+  /* V5.9.86: acepta rutas legacy (UUID) y rutas nuevas (showroom_slug) */
+  const showroomSlug = sanitizeSlug(String(body.showroom_slug || "") || project.slug || "");
+  const allowedPrefixes = [`projects/${projectId}/`];
+  if (showroomSlug) allowedPrefixes.push(`projects/${showroomSlug}/`);
+  if (!allowedPrefixes.some((prefix) => String(storagePath).startsWith(prefix))) {
     return json(400, { ok: false, error: "storage_path fuera del proyecto" });
   }
 
@@ -637,6 +839,269 @@ async function handleList(req: Request) {
   return json(200, { ok: true, items: q.data || [] });
 }
 
+/**
+ * Shared prelude for the folder-op actions: auth + project access +
+ * showroom_slug resolution. Returns either an error Response or the
+ * resolved context to proceed with.
+ */
+async function resolveFolderOpContext(
+  req: Request,
+  // deno-lint-ignore no-explicit-any
+  body: any,
+) {
+  const { accessKey, zone, hostname } = getBunnyConfig();
+  if (!accessKey) {
+    return {
+      errorResponse: json(503, {
+        ok: false,
+        error: "BUNNY_STORAGE_ACCESS_KEY no configurada",
+        code: "MISSING_SECRET",
+      }),
+    };
+  }
+
+  const { supabase, user, error: authErr } = await createUserClient(req);
+  if (!supabase || !user) {
+    return { errorResponse: json(401, { ok: false, error: authErr || "No autenticado" }) };
+  }
+
+  const projectId = String(body.project_id || "").trim();
+  if (!projectId) {
+    return { errorResponse: json(400, { ok: false, error: "project_id requerido" }) };
+  }
+
+  const { project, error: projErr } = await assertProjectAccess(supabase, projectId);
+  if (!project) {
+    return { errorResponse: json(403, { ok: false, error: projErr || "Sin acceso" }) };
+  }
+
+  const showroomSlug = sanitizeSlug(String(body.showroom_slug || "") || project.slug || "");
+  if (!showroomSlug) {
+    return {
+      errorResponse: json(400, {
+        ok: false,
+        error: "showroom_slug requerido (o el proyecto debe tener slug asignado)",
+        code: "SHOWROOM_SLUG_REQUIRED",
+      }),
+    };
+  }
+
+  return {
+    errorResponse: null,
+    accessKey,
+    zone,
+    hostname,
+    supabase,
+    project,
+    projectId,
+    showroomSlug,
+  };
+}
+
+async function handleEnsureFolders(req: Request) {
+  // deno-lint-ignore no-explicit-any
+  const body: any = await req.json().catch(() => ({}));
+  const ctx = await resolveFolderOpContext(req, body);
+  if (ctx.errorResponse) return ctx.errorResponse;
+  const { accessKey, zone, hostname, showroomSlug } = ctx;
+
+  const requested: string[] = Array.isArray(body.folders)
+    ? body.folders.map((f: unknown) => String(f || ""))
+    : [];
+  const alwaysOn = HERO_FOLDERS.map((f) => `hero/${f}`);
+  const allFolders = Array.from(new Set([...requested, ...alwaysOn]));
+
+  const results: { folder: string; ok: boolean; status?: number; error?: string }[] = [];
+  for (const raw of allFolders) {
+    const rel = ensureSafeRelativePath(raw);
+    if (rel === null || rel === "") {
+      results.push({ folder: raw, ok: false, error: "path inválido" });
+      continue;
+    }
+    const markerPath = `projects/${showroomSlug}/${rel}/.boxieskeep`;
+    try {
+      const put = await bunnyPut(
+        hostname!,
+        zone!,
+        accessKey!,
+        markerPath,
+        new Uint8Array(0),
+        "application/octet-stream",
+      );
+      results.push({ folder: rel, ok: true, status: put.status });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      results.push({ folder: rel, ok: false, error: message });
+    }
+  }
+
+  const ok = results.every((r) => r.ok);
+  return json(ok ? 200 : 207, { ok, showroomSlug, results });
+}
+
+async function handleListFolder(req: Request) {
+  // deno-lint-ignore no-explicit-any
+  const body: any = await req.json().catch(() => ({}));
+  const ctx = await resolveFolderOpContext(req, body);
+  if (ctx.errorResponse) return ctx.errorResponse;
+  const { accessKey, zone, hostname, showroomSlug } = ctx;
+
+  const rel = ensureSafeRelativePath(String(body.path || ""));
+  if (rel === null) {
+    return json(400, { ok: false, error: "path inválido", code: "INVALID_PATH" });
+  }
+  const dirPath = rel ? `projects/${showroomSlug}/${rel}` : `projects/${showroomSlug}`;
+
+  try {
+    const items = await bunnyListDir(hostname!, zone!, accessKey!, dirPath);
+    const realFiles = items.filter((i) => !i.isDirectory && i.name !== ".boxieskeep");
+    return json(200, {
+      ok: true,
+      path: rel,
+      items,
+      hasFiles: realFiles.length > 0,
+      fileCount: realFiles.length,
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, { ok: false, error: message, code: "BUNNY_LIST_FAILED" });
+  }
+}
+
+async function handleDeleteFolder(req: Request) {
+  // deno-lint-ignore no-explicit-any
+  const body: any = await req.json().catch(() => ({}));
+  const ctx = await resolveFolderOpContext(req, body);
+  if (ctx.errorResponse) return ctx.errorResponse;
+  const { accessKey, zone, hostname, showroomSlug } = ctx;
+
+  const rel = ensureSafeRelativePath(String(body.path || ""));
+  if (rel === null || rel === "") {
+    return json(400, {
+      ok: false,
+      error: "path inválido (no se permite borrar la raíz del showroom)",
+      code: "INVALID_PATH",
+    });
+  }
+  const recursive = body.recursive === true;
+  const dirPath = `projects/${showroomSlug}/${rel}`;
+
+  let realFileCount = 0;
+  try {
+    const files = await bunnyWalkFiles(hostname!, zone!, accessKey!, dirPath);
+    realFileCount = files.filter((f) => !isMarkerFile(f.relPath)).length;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, { ok: false, error: message, code: "BUNNY_LIST_FAILED" });
+  }
+
+  if (!recursive && realFileCount > 0) {
+    return json(409, {
+      ok: false,
+      error: "La carpeta contiene archivos — usa recursive=true para forzar el borrado",
+      code: "FOLDER_NOT_EMPTY",
+      fileCount: realFileCount,
+    });
+  }
+
+  try {
+    await bunnyDeleteDirRecursive(hostname!, zone!, accessKey!, dirPath);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, { ok: false, error: message, code: "BUNNY_DELETE_FAILED" });
+  }
+
+  return json(200, { ok: true, deleted: true, path: rel, fileCount: realFileCount });
+}
+
+async function handleRenameFolder(req: Request) {
+  // deno-lint-ignore no-explicit-any
+  const body: any = await req.json().catch(() => ({}));
+  const ctx = await resolveFolderOpContext(req, body);
+  if (ctx.errorResponse) return ctx.errorResponse;
+  const { accessKey, zone, hostname, showroomSlug, projectId } = ctx;
+
+  const fromRel = ensureSafeRelativePath(String(body.from || ""));
+  const toRel = ensureSafeRelativePath(String(body.to || ""));
+  if (fromRel === null || fromRel === "" || toRel === null || toRel === "") {
+    return json(400, { ok: false, error: "from/to inválidos", code: "INVALID_PATH" });
+  }
+  if (fromRel === toRel) {
+    return json(200, { ok: true, from: fromRel, to: toRel, filesMoved: 0, archivosUpdated: 0 });
+  }
+
+  const fromDir = `projects/${showroomSlug}/${fromRel}`;
+  const toDir = `projects/${showroomSlug}/${toRel}`;
+
+  let files: { relPath: string; size: number }[] = [];
+  try {
+    files = await bunnyWalkFiles(hostname!, zone!, accessKey!, fromDir);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, { ok: false, error: message, code: "BUNNY_LIST_FAILED" });
+  }
+
+  let filesMoved = 0;
+  try {
+    for (const f of files) {
+      const srcPath = `${fromDir}/${f.relPath}`;
+      const dstPath = `${toDir}/${f.relPath}`;
+      const obj = await bunnyGetObject(hostname!, zone!, accessKey!, srcPath);
+      await bunnyPut(hostname!, zone!, accessKey!, dstPath, obj.bytes, obj.contentType);
+      filesMoved++;
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, {
+      ok: false,
+      error: message,
+      code: "RENAME_COPY_FAILED",
+      filesMoved,
+      totalFiles: files.length,
+    });
+  }
+
+  try {
+    await bunnyDeleteDirRecursive(hostname!, zone!, accessKey!, fromDir);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[bunny-media] rename cleanup failed", message);
+  }
+
+  let archivosUpdated = 0;
+  const db = createServiceClient();
+  if (db) {
+    const oldPrefix = `projects/${showroomSlug}/${fromRel}/`;
+    const newPrefix = `projects/${showroomSlug}/${toRel}/`;
+    const q = await db
+      .from("archivos")
+      .select("id, storage_path, url")
+      .eq("proyecto_id", projectId)
+      .like("storage_path", `${oldPrefix}%`);
+    if (!q.error && q.data) {
+      for (const row of q.data) {
+        const oldPath = String(row.storage_path || "");
+        if (!oldPath.startsWith(oldPrefix)) continue;
+        const newStoragePath = newPrefix + oldPath.slice(oldPrefix.length);
+        const newUrl = row.url ? String(row.url).replace(oldPrefix, newPrefix) : row.url;
+        const upd = await db
+          .from("archivos")
+          .update({ storage_path: newStoragePath, url: newUrl })
+          .eq("id", row.id);
+        if (!upd.error) archivosUpdated++;
+      }
+    }
+  }
+
+  return json(200, {
+    ok: true,
+    from: fromRel,
+    to: toRel,
+    filesMoved,
+    archivosUpdated,
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
@@ -663,9 +1128,22 @@ Deno.serve(async (req: Request) => {
       if (peek && peek.action === "probe") {
         return await handleBunnyProbe(req);
       }
+      if (peek && peek.action === "ensure_folders") {
+        return await handleEnsureFolders(req);
+      }
+      if (peek && peek.action === "list_folder") {
+        return await handleListFolder(req);
+      }
+      if (peek && peek.action === "delete_folder") {
+        return await handleDeleteFolder(req);
+      }
+      if (peek && peek.action === "rename_folder") {
+        return await handleRenameFolder(req);
+      }
       return json(400, {
         ok: false,
-        error: 'Usa multipart upload o JSON { action: "delete"|"probe", ... }',
+        error:
+          'Usa multipart upload o JSON { action: "delete"|"probe"|"ensure_folders"|"list_folder"|"delete_folder"|"rename_folder", ... }',
         contentType: ct || null,
       });
     }

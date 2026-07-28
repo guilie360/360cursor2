@@ -1,4 +1,4 @@
-/* BOXIES V5.9.72 — Bunny Media client (node-centric assets; no Access Key in browser) */
+/* BOXIES V5.9.86 — Bunny Media client (slug paths; structure sync; no Access Key in browser) */
 var BunnyMediaApi = (function () {
   function categoriesFromNodes() {
     if (typeof MediaNodesEngine === 'undefined') return {};
@@ -35,31 +35,70 @@ var BunnyMediaApi = (function () {
     return 'image';
   }
 
+  function slugifyLocal(name) {
+    if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.slugify) {
+      return MediaNodesEngine.slugify(name);
+    }
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[^\w\-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'nodo';
+  }
+
+  /* Legacy: projects/{uuid}/{category}/{nodeId}/file */
   function parseNodeIdFromPath(storagePath) {
     var path = String(storagePath || '');
-    var m = path.match(/\/(?:images|videos|animations|plans2d|plans3d|plans-2d|plans-3d|floorplans|documents|ui|thumbnails)\/([^/]+)\//);
+    var mediaM = path.match(/\/media\/([^/]+)\//);
+    if (mediaM) return null;
+    var m = path.match(/\/(?:images|videos|animations|plans2d|plans3d|plans-2d|plans-3d|floorplans|documents|ui|thumbnails|tours360)\/([^/]+)\//);
     if (!m) return null;
     var seg = m[1];
     if (/^\d{10,}-/.test(seg)) return null;
+    if (seg === 'media' || seg === 'hero') return null;
     return seg;
+  }
+
+  function parseNodeSlugFromPath(storagePath) {
+    var path = String(storagePath || '');
+    var m = path.match(/\/media\/([^/]+)\//);
+    return m ? m[1] : null;
   }
 
   function parseCategoryFromPath(storagePath) {
     var path = String(storagePath || '');
+    if (path.indexOf('/tours360/') !== -1) return 'tours360';
     if (path.indexOf('/videos/') !== -1 || path.indexOf('/animations/') !== -1) return 'videos';
     if (path.indexOf('/plans3d/') !== -1 || path.indexOf('/plans-3d/') !== -1) return 'plans3d';
     if (path.indexOf('/plans2d/') !== -1 || path.indexOf('/plans-2d/') !== -1 || path.indexOf('/floorplans/') !== -1) return 'plans2d';
     if (path.indexOf('/documents/') !== -1) return 'documents';
     if (path.indexOf('/ui/') !== -1 || path.indexOf('/thumbnails/') !== -1) return 'ui';
+    if (path.indexOf('/logos/') !== -1) return 'images';
     if (path.indexOf('/images/') !== -1) return 'images';
     return null;
+  }
+
+  function resolveNodeIdFromPath(state, storagePath) {
+    var slug = parseNodeSlugFromPath(storagePath);
+    if (slug && state && typeof MediaNodesEngine !== 'undefined') {
+      var nodes = MediaNodesEngine.listCompatibleNodes(state) || [];
+      for (var i = 0; i < nodes.length; i++) {
+        if (nodes[i].bunny_slug === slug) return nodes[i].node_id;
+      }
+    }
+    return parseNodeIdFromPath(storagePath);
   }
 
   function archivoToAssetPartial(row, extras) {
     if (!row) return null;
     extras = extras || {};
     var provider = row.storage_provider || 'bunny';
-    var nodeId = extras.nodeId || extras.node_id || parseNodeIdFromPath(row.storage_path) || null;
+    var nodeId = extras.nodeId || extras.node_id || null;
+    if (!nodeId && extras.state) {
+      nodeId = resolveNodeIdFromPath(extras.state, row.storage_path);
+    }
+    if (!nodeId) nodeId = parseNodeIdFromPath(row.storage_path);
     var category = extras.category || parseCategoryFromPath(row.storage_path) || null;
     var type = extras.type || tipoToAssetType(row.tipo);
     if (category === 'videos') type = 'video';
@@ -98,6 +137,7 @@ var BunnyMediaApi = (function () {
     if (key === 'videos') folders.push('videos', 'animations');
     if (key === 'plans2d') folders.push('plans2d', 'plans-2d', 'floorplans');
     if (key === 'plans3d') folders.push('plans3d', 'plans-3d');
+    if (key === 'tours360') folders.push('tours360');
     var path = String(storagePath || '');
     for (var i = 0; i < folders.length; i++) {
       if (folders[i] && path.indexOf('/' + folders[i] + '/') !== -1) return true;
@@ -121,6 +161,7 @@ var BunnyMediaApi = (function () {
       if (!row) return;
       if (row.storage_provider && row.storage_provider !== 'bunny') return;
       var extras = extrasByArchivoId[row.id] || {};
+      extras.state = state;
       if (state.projectAssets && state.projectAssets.byId) {
         var prev = state.projectAssets.byId['bunny-' + row.id];
         if (prev) {
@@ -130,6 +171,9 @@ var BunnyMediaApi = (function () {
           if (!extras.type && prev.type) extras.type = prev.type;
           if (!extras.projectId && prev.projectId) extras.projectId = prev.projectId;
         }
+      }
+      if (!extras.nodeId) {
+        extras.nodeId = resolveNodeIdFromPath(state, row.storage_path);
       }
       var partial = archivoToAssetPartial(row, extras);
       if (!partial) return;
@@ -157,6 +201,31 @@ var BunnyMediaApi = (function () {
     };
   }
 
+  async function invokeJson(body) {
+    var headers = await authHeaders();
+    headers['Content-Type'] = 'application/json';
+    var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
+      '/functions/v1/bunny-media';
+    var res = await fetch(base, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(body || {})
+    });
+    var text = await res.text().catch(function () { return ''; });
+    var data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (e) {
+      data = { ok: false, error: text || ('HTTP ' + res.status) };
+    }
+    if (!res.ok || data.ok === false) {
+      var err = new Error((data && data.error) || ('bunny-media JSON failed: ' + res.status));
+      err.code = data && data.code;
+      err.data = data;
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
   async function probeBunny() {
     var headers = await authHeaders();
     var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
@@ -173,6 +242,97 @@ var BunnyMediaApi = (function () {
     return body;
   }
 
+  async function ensureFolders(projectId, showroomSlug, folders) {
+    return invokeJson({
+      action: 'ensure_folders',
+      project_id: projectId,
+      showroom_slug: showroomSlug,
+      folders: folders || []
+    });
+  }
+
+  async function listFolder(projectId, showroomSlug, path) {
+    return invokeJson({
+      action: 'list_folder',
+      project_id: projectId,
+      showroom_slug: showroomSlug,
+      path: path || ''
+    });
+  }
+
+  async function deleteFolder(projectId, showroomSlug, path, recursive) {
+    return invokeJson({
+      action: 'delete_folder',
+      project_id: projectId,
+      showroom_slug: showroomSlug,
+      path: path,
+      recursive: !!recursive
+    });
+  }
+
+  async function renameFolder(projectId, showroomSlug, fromPath, toPath) {
+    return invokeJson({
+      action: 'rename_folder',
+      project_id: projectId,
+      showroom_slug: showroomSlug,
+      from: fromPath,
+      to: toPath
+    });
+  }
+
+  async function syncStructure(state, projectId, showroomSlug) {
+    if (!projectId || !showroomSlug) throw new Error('project_id y showroom_slug requeridos');
+    var slug = slugifyLocal(showroomSlug);
+    var slugInfo = typeof MediaNodesEngine !== 'undefined'
+      ? MediaNodesEngine.ensureBunnySlugs(state)
+      : { renames: [], nodes: [] };
+
+    for (var r = 0; r < (slugInfo.renames || []).length; r++) {
+      var ren = slugInfo.renames[r];
+      if (!ren || !ren.from || !ren.to || ren.from === ren.to) continue;
+      try {
+        logUpload('✔ Rename nodo', ren.from, '→', ren.to);
+        await renameFolder(projectId, slug, 'media/' + ren.from, 'media/' + ren.to);
+      } catch (e) {
+        logUpload('rename skipped/failed', ren.from, e && e.message);
+      }
+    }
+
+    var folders = ['hero', 'hero/images', 'hero/logos', 'hero/videos', 'media'];
+    var nodes = slugInfo.nodes || [];
+    nodes.forEach(function (n) {
+      if (!n || !n.bunny_slug) return;
+      folders.push('media/' + n.bunny_slug);
+      var enabled = null;
+      if (state && state.bunnyMedia && state.bunnyMedia.categoryConfig) {
+        enabled = state.bunnyMedia.categoryConfig[n.node_id];
+      }
+      var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+      cats.forEach(function (c) {
+        if (!c || !c.folder) return;
+        var on = enabled && enabled.hasOwnProperty(c.key) ? !!enabled[c.key] : true;
+        if (on) folders.push('media/' + n.bunny_slug + '/' + c.folder);
+      });
+    });
+
+    logUpload('✔ ensure_folders', folders.length);
+    await ensureFolders(projectId, slug, folders);
+    return { showroomSlug: slug, folders: folders, renames: slugInfo.renames || [] };
+  }
+
+  async function ensureNodeStructure(projectId, showroomSlug, nodeSlug, categoryKeys) {
+    var slug = slugifyLocal(showroomSlug);
+    var ns = slugifyLocal(nodeSlug);
+    var folders = ['media/' + ns];
+    (categoryKeys || []).forEach(function (key) {
+      var folder = typeof MediaNodesEngine !== 'undefined'
+        ? MediaNodesEngine.categoryFolder(key)
+        : key;
+      if (folder) folders.push('media/' + ns + '/' + folder);
+    });
+    return ensureFolders(projectId, slug, folders);
+  }
+
   async function invokeUpload(projectId, category, file, opts) {
     opts = opts || {};
     if (!projectId) throw new Error('project_id requerido');
@@ -184,17 +344,29 @@ var BunnyMediaApi = (function () {
     if (!file) throw new Error('Archivo requerido');
     if (!opts.nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
 
-    /* Enviar key canónica (images/videos/…) — la edge resuelve folder */
+    var showroomSlug = slugifyLocal(opts.showroomSlug || '');
+    if (!showroomSlug) throw new Error('Slug del showroom requerido para Bunny');
+    var nodeSlug = slugifyLocal(opts.nodeSlug || '');
+    if (!nodeSlug && opts.state) {
+      nodeSlug = typeof MediaNodesEngine !== 'undefined'
+        ? MediaNodesEngine.getNodeBunnySlug(opts.state, opts.nodeId)
+        : slugifyLocal(opts.nodeId);
+    }
+    if (!nodeSlug) throw new Error('Slug del nodo requerido para Bunny');
+
     var bunnyCat = key;
     var form = new FormData();
     form.append('project_id', projectId);
     form.append('category', bunnyCat);
     form.append('node_id', opts.nodeId);
+    form.append('showroom_slug', showroomSlug);
+    form.append('node_slug', nodeSlug);
+    form.append('scope', opts.scope || 'media');
     form.append('file', file, file.name || 'upload.bin');
 
     var folderHint = (meta && meta.folder) || bunnyCat;
     var expectedPathHint =
-      'projects/' + projectId + '/' + folderHint + '/' + opts.nodeId + '/' + (file.name || 'file');
+      'projects/' + showroomSlug + '/media/' + nodeSlug + '/' + folderHint + '/' + (file.name || 'file');
     logUpload('✔ Archivo recibido', file.name, file.size, file.type || '');
     logUpload('✔ Ruta generada (hint)', expectedPathHint);
 
@@ -202,7 +374,6 @@ var BunnyMediaApi = (function () {
     var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
       '/functions/v1/bunny-media';
     logUpload('✔ URL Edge', base);
-    /* Importante: NO fijar Content-Type — el browser añade multipart boundary */
     var res = await fetch(base, {
       method: 'POST',
       headers: headers,
@@ -223,6 +394,8 @@ var BunnyMediaApi = (function () {
       var msg = (body && body.error) || ('Upload Bunny falló: HTTP ' + res.status);
       if (body && body.code === 'MISSING_SECRET') {
         msg = 'Falta BUNNY_STORAGE_ACCESS_KEY en Supabase Secrets (Storage Zone Password de boxies).';
+      } else if (body && body.code === 'SHOWROOM_SLUG_REQUIRED') {
+        msg = 'Configura el slug del showroom en Identidad / Config antes de subir.';
       } else if (body && body.bunnyStatus) {
         msg += ' (Bunny ' + body.bunnyStatus + ')';
       }
@@ -238,19 +411,10 @@ var BunnyMediaApi = (function () {
 
   async function list(projectId) {
     if (!projectId) throw new Error('project_id requerido');
-    var client = getClient();
-    var session = await client.auth.getSession();
-    var token = session && session.data && session.data.session && session.data.session.access_token;
-    if (!token) throw new Error('Sesión requerida');
+    var headers = await authHeaders();
     var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
       '/functions/v1/bunny-media?project_id=' + encodeURIComponent(projectId);
-    var res = await fetch(base, {
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + token,
-        apikey: typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : ''
-      }
-    });
+    var res = await fetch(base, { method: 'GET', headers: headers });
     var body = await res.json().catch(function () { return {}; });
     if (!res.ok || body.ok === false) {
       throw new Error(body.error || ('List failed: ' + res.status));
@@ -260,28 +424,18 @@ var BunnyMediaApi = (function () {
 
   async function remove(projectId, opts) {
     opts = opts || {};
-    var client = getClient();
-    var result = await client.functions.invoke('bunny-media', {
-      body: {
-        action: 'delete',
-        project_id: projectId,
-        archivo_id: opts.archivoId || null,
-        storage_path: opts.storagePath || null
-      }
+    return invokeJson({
+      action: 'delete',
+      project_id: projectId,
+      archivo_id: opts.archivoId || null,
+      storage_path: opts.storagePath || null,
+      showroom_slug: opts.showroomSlug || null
     });
-    if (result.error) {
-      throw new Error(
-        (result.data && result.data.error) || result.error.message || 'Delete failed'
-      );
-    }
-    if (!result.data || result.data.ok === false) {
-      throw new Error((result.data && result.data.error) || 'Delete failed');
-    }
-    return result.data;
   }
 
   async function uploadAndSync(state, projectId, category, file, opts) {
     opts = opts || {};
+    opts.state = state;
     var key = (typeof MediaNodesEngine !== 'undefined')
       ? MediaNodesEngine.normalizeCategoryKey(category)
       : category;
@@ -295,7 +449,8 @@ var BunnyMediaApi = (function () {
         entityRef: opts.entityRef || null,
         type: meta.assetType || null,
         category: key,
-        projectId: projectId
+        projectId: projectId,
+        state: state
       };
       var synced = syncArchivosToProjectAssets(state, [data.archivo], extras);
       asset = synced[0] || null;
@@ -327,7 +482,15 @@ var BunnyMediaApi = (function () {
     filterItemsByCategory: filterItemsByCategory,
     pathMatchesCategory: pathMatchesCategory,
     parseNodeIdFromPath: parseNodeIdFromPath,
+    parseNodeSlugFromPath: parseNodeSlugFromPath,
     parseCategoryFromPath: parseCategoryFromPath,
-    probeBunny: probeBunny
+    resolveNodeIdFromPath: resolveNodeIdFromPath,
+    probeBunny: probeBunny,
+    ensureFolders: ensureFolders,
+    listFolder: listFolder,
+    deleteFolder: deleteFolder,
+    renameFolder: renameFolder,
+    syncStructure: syncStructure,
+    ensureNodeStructure: ensureNodeStructure
   };
 })();
