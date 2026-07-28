@@ -580,6 +580,9 @@ var ExperienciaCanvas = (function () {
         var structOpts = ExperienciaEngine.listStructureLinkOptions
           ? ExperienciaEngine.listStructureLinkOptions(state)
           : [];
+        var isFloorSel = String(selIx.type || '').toUpperCase() === 'SELECTOR' ||
+          String(selIx.actionType || (selIx.behavior && selIx.behavior.type) || '').toLowerCase() === 'floor-selector';
+
         html += '<div class="builder-exp-inspector__section">Elemento</div>' +
           '<div class="builder-field builder-exp-inspector__field">' +
             '<label>Nombre</label>' +
@@ -593,28 +596,84 @@ var ExperienciaCanvas = (function () {
             row('Puerto', selIx.portId || selIx.id) +
             row('Acción', (selIx.actionType || (selIx.behavior && selIx.behavior.type) || '—')) +
             row('Estado', selIx.enabled === false ? 'Deshabilitado' : 'Activo') +
-          '</div>' +
-          '<div class="builder-exp-inspector__section">Vincular con Estructura</div>' +
-          '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Elemento estructural</label>' +
-            '<select data-exp-ix-structure>' +
-              '<option value="">Ninguno / Personalizado</option>' +
-              structOpts.map(function (opt) {
-                var sel = (selIx.structureId && String(selIx.structureId) === String(opt.id)) ||
-                  (selIx.structureKey && selIx.structureKey === opt.key);
-                return '<option value="' + esc(opt.id) + '" data-key="' + esc(opt.key) + '"' +
-                  ' data-kind="' + esc(opt.kind || '') + '"' +
-                  ' data-label="' + esc(opt.label) + '"' +
-                  (sel ? ' selected' : '') + '>' + esc(opt.label) +
-                  (opt.kind ? (' · ' + opt.kind) : '') + '</option>';
+          '</div>';
+
+        if (isFloorSel) {
+          var tipOpts = ((state.estructura && state.estructura.tipologias) || []).map(function (tip, i) {
+            var tid = tip.id || tip.localId || tip.node_id || ('t' + i);
+            var label = tip.nombre || tip.modelo || ('Tipología ' + (i + 1));
+            return { id: tid, label: label };
+          });
+          var beh = selIx.behavior || {};
+          var selTip = beh.tipologiaId || (selIx.structureId ? String(selIx.structureId).replace(/^tip:/, '') : '');
+          var plantas = [];
+          if (selTip && ExperienciaEngine.listTypologyPlantas) {
+            plantas = ExperienciaEngine.listTypologyPlantas(state, selTip, {
+              kind: 'tipologia',
+              tipologiaId: selTip
+            }) || [];
+          }
+          var enabledKeys = beh.floorKeys || plantas.map(function (p) { return p.key; });
+          html += '<div class="builder-exp-inspector__section">Selector de plantas</div>' +
+            '<div class="builder-field builder-exp-inspector__field">' +
+              '<label>Tipología</label>' +
+              '<select data-exp-ix-floor-tip>' +
+                '<option value="">Elegir tipología…</option>' +
+                tipOpts.map(function (t) {
+                  return '<option value="' + esc(t.id) + '"' +
+                    (String(selTip) === String(t.id) ? ' selected' : '') + '>' +
+                    esc(t.label) + '</option>';
+                }).join('') +
+              '</select>' +
+            '</div>';
+          if (plantas.length) {
+            html += '<div class="builder-exp-inspector__section">Plantas disponibles</div>' +
+              plantas.map(function (p) {
+                var on = enabledKeys.indexOf(p.key) !== -1 ||
+                  enabledKeys.indexOf(String(p.key)) !== -1;
+                return '<label class="builder-exp-inspector__check">' +
+                  '<input type="checkbox" data-exp-ix-floor-key="' + esc(p.key) + '"' +
+                  (on ? ' checked' : '') + '> ' + esc(p.label) + '</label>';
               }).join('') +
-            '</select>' +
-          '</div>' +
-          (structLink
-            ? ('<p class="builder-menu-hint' + (structLink.missing ? ' is-warn' : '') + '">' +
-              esc(structLink.display) + '</p>')
-            : '<p class="builder-menu-hint">Opcional. No duplica Estructura; solo referencia.</p>') +
-          '<div class="builder-exp-inspector__actions">' +
+              '<div class="builder-field builder-exp-inspector__field" style="margin-top:8px">' +
+                '<label>Planta inicial</label>' +
+                '<select data-exp-ix-floor-initial>' +
+                  plantas.map(function (p) {
+                    var sel = String(beh.initialFloor || '') === String(p.key);
+                    return '<option value="' + esc(p.key) + '"' + (sel ? ' selected' : '') + '>' +
+                      esc(p.label) + '</option>';
+                  }).join('') +
+                '</select>' +
+              '</div>';
+          } else if (selTip) {
+            html += '<p class="builder-menu-hint">Esta tipología no tiene plantas en Estructura.</p>';
+          } else {
+            html += '<p class="builder-menu-hint">Elige una tipología definida en Estructura.</p>';
+          }
+        } else {
+          html += '<div class="builder-exp-inspector__section">Vincular con Estructura</div>' +
+            '<div class="builder-field builder-exp-inspector__field">' +
+              '<label>Elemento estructural</label>' +
+              '<select data-exp-ix-structure>' +
+                '<option value="">Ninguno / Personalizado</option>' +
+                structOpts.map(function (opt) {
+                  var sel = (selIx.structureId && String(selIx.structureId) === String(opt.id)) ||
+                    (selIx.structureKey && selIx.structureKey === opt.key);
+                  return '<option value="' + esc(opt.id) + '" data-key="' + esc(opt.key) + '"' +
+                    ' data-kind="' + esc(opt.kind || '') + '"' +
+                    ' data-label="' + esc(opt.label) + '"' +
+                    (sel ? ' selected' : '') + '>' + esc(opt.label) +
+                    (opt.kind ? (' · ' + opt.kind) : '') + '</option>';
+                }).join('') +
+              '</select>' +
+            '</div>' +
+            (structLink
+              ? ('<p class="builder-menu-hint' + (structLink.missing ? ' is-warn' : '') + '">' +
+                esc(structLink.display) + '</p>')
+              : '<p class="builder-menu-hint">Opcional. No duplica Estructura; solo referencia.</p>');
+        }
+
+        html += '<div class="builder-exp-inspector__actions">' +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-ix-act="toggle" data-exp-ix-id="' +
               esc(selIx.id) + '" data-exp-ix-scene="' + esc(n.id) + '">' +
               (selIx.enabled === false ? 'Habilitar' : 'Deshabilitar') + '</button>' +
@@ -653,17 +712,30 @@ var ExperienciaCanvas = (function () {
 
       html += '<div class="builder-exp-inspector__section">Media</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Referenciar archivo (nombre)</label>' +
-          '<input type="text" data-exp-asset-filename maxlength="180" placeholder="vista-general.webp" value="' +
-            esc(media.filename || '') + '">' +
+          '<label>Asset (desde Media)</label>' +
+          '<select data-exp-asset-pick>' +
+            '<option value="">Sin asignar</option>' +
+            (function () {
+              var assets = ExperienciaEngine.listProjectAssets
+                ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+                  return a && !a.orphan && (a.filename || a.publicUrl);
+                })
+                : [];
+              var curId = media.assetId || null;
+              return assets.map(function (a) {
+                var label = a.filename || a.storagePath || a.id;
+                var sel = curId && String(curId) === String(a.id);
+                return '<option value="' + esc(a.id) + '"' + (sel ? ' selected' : '') + '>' +
+                  esc(label) + '</option>';
+              }).join('');
+            })() +
+          '</select>' +
         '</div>' +
         (media.publicUrl
           ? '<p class="builder-menu-hint" style="margin:6px 0 10px;word-break:break-all">CDN: <a href="' +
             esc(media.publicUrl) + '" target="_blank" rel="noopener">' + esc(media.publicUrl) + '</a></p>'
-          : '') +
+          : '<p class="builder-menu-hint">Solo assets cargados en Media.</p>') +
         '<div class="builder-exp-inspector__actions">' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-assign="' +
-            esc(n.id) + '">Asignar / actualizar asset</button>' +
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-clear="' +
             esc(n.id) + '">Quitar referencia</button>' +
         '</div>';
@@ -679,24 +751,41 @@ var ExperienciaCanvas = (function () {
           ? ExperienciaEngine.listHubScopeOptions(state)
           : [];
         var scopeId = hub.structureScope && (hub.structureScope.scopeId || hub.structureScope.componentId);
+        var floorOpts = (hub.floors || []).slice();
+        var assetsAll = ExperienciaEngine.listProjectAssets
+          ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+            return a && !a.orphan && (a.filename || a.publicUrl);
+          })
+          : [];
+        function assetOptionsHtml(selectedId) {
+          return '<option value="">—</option>' + assetsAll.map(function (a) {
+            var sel = selectedId && String(selectedId) === String(a.id);
+            return '<option value="' + esc(a.id) + '"' + (sel ? ' selected' : '') + '>' +
+              esc(a.filename || a.id) + '</option>';
+          }).join('');
+        }
         html += '<div class="builder-exp-inspector__section">HUB / Estructura</div>' +
           '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Ámbito del HUB</label>' +
+            '<label>Ámbito</label>' +
             '<select data-exp-hub-scope>' +
               '<option value="">Sin ámbito</option>' +
               scopeOpts.map(function (opt) {
                 var sel = scopeId && String(scopeId) === String(opt.id);
                 return '<option value="' + esc(opt.id) + '"' + (sel ? ' selected' : '') + '>' +
-                  esc(opt.label) + '</option>';
+                  esc(opt.label) + (opt.kind === 'tipologia' ? ' · tipología' : '') + '</option>';
               }).join('') +
             '</select>' +
           '</div>' +
-          '<p class="builder-menu-hint">El ámbito define pisos/unidades desde Estructura. La media 2D/3D se asigna en Experiencia.</p>';
-
-        html += '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Planta activa</label>' +
-            '<input type="text" data-exp-hub-floor maxlength="40" placeholder="1" value="' +
-              esc(hub.activeFloor || '') + '">' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Planta inicial</label>' +
+            '<select data-exp-hub-floor>' +
+              '<option value="">—</option>' +
+              floorOpts.map(function (f) {
+                var sel = hub.activeFloor && String(hub.activeFloor) === String(f.key);
+                return '<option value="' + esc(f.key) + '"' + (sel ? ' selected' : '') + '>' +
+                  esc(f.label || f.key) + '</option>';
+              }).join('') +
+            '</select>' +
           '</div>' +
           '<div class="builder-field builder-exp-inspector__field">' +
             '<label>Modo visual</label>' +
@@ -705,22 +794,23 @@ var ExperienciaCanvas = (function () {
               '<option value="2d"' + (hub.visualMode === '2d' ? ' selected' : '') + '>2D</option>' +
             '</select>' +
           '</div>' +
-          '<p class="builder-menu-hint">MEDIA = plantaActiva + modoVisual vía projectAssets. Volver usa navigationStack interno.</p>' +
-          '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Piso (key) · asset 3D · asset 2D</label>' +
-            '<input type="text" data-exp-hub-floor-key maxlength="40" placeholder="1">' +
-            '<input type="text" data-exp-hub-floor-a3d maxlength="80" placeholder="assetId 3D" style="margin-top:6px">' +
-            '<input type="text" data-exp-hub-floor-a2d maxlength="80" placeholder="assetId 2D" style="margin-top:6px">' +
-          '</div>' +
-          '<div class="builder-exp-inspector__actions">' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hub-floor-save>Guardar piso / assets</button>' +
-          '</div>';
-        if ((hub.floors || []).length) {
-          html += '<ul class="builder-exp-inspector__list">' +
-            hub.floors.map(function (f) {
-              return '<li><strong>' + esc(f.label || f.key) + '</strong> · 3D:' +
-                esc(f.asset3dId || '—') + ' · 2D:' + esc(f.asset2dId || '—') + '</li>';
-            }).join('') + '</ul>';
+          '<p class="builder-menu-hint">Plantas y recursos se resuelven desde Estructura + Media. Solo eliges ámbito y planta inicial.</p>';
+        if (floorOpts.length) {
+          html += '<div class="builder-exp-inspector__section">Plantas detectadas</div>' +
+            '<ul class="builder-exp-inspector__list">' +
+            floorOpts.map(function (f) {
+              return '<li><strong>' + esc(f.label || f.key) + '</strong>' +
+                '<div class="builder-field" style="margin-top:6px">' +
+                  '<label>Plano 2D</label><select data-exp-hub-floor-a2d="' + esc(f.key) + '">' +
+                    assetOptionsHtml(f.asset2dId) + '</select>' +
+                  '<label style="margin-top:6px">Plano 3D</label><select data-exp-hub-floor-a3d="' + esc(f.key) + '">' +
+                    assetOptionsHtml(f.asset3dId) + '</select>' +
+                '</div></li>';
+            }).join('') + '</ul>' +
+            '<div class="builder-exp-inspector__actions">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hub-autobind">Auto-detectar recursos Media</button>' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hub-autogen">Crear estructura HUB</button>' +
+            '</div>';
         }
       } else {
         html += '<p class="builder-menu-hint">Activa HUB para Selector · Plantas, Toggle 3D/2D y Unidades · Planta activa.</p>';
@@ -1492,6 +1582,20 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
+      var assetPick = inspectorBody.querySelector('[data-exp-asset-pick]');
+      if (assetPick) {
+        assetPick.addEventListener('change', function () {
+          var nid = canvas().selectedId;
+          var val = assetPick.value;
+          if (!val) {
+            ExperienciaEngine.clearNodeAsset(state, nid);
+          } else {
+            var asset = ExperienciaEngine.getAsset(state, val);
+            ExperienciaEngine.assignAssetToNode(state, nid, asset || { id: val });
+          }
+          renderAll(); persist();
+        });
+      }
       var hubEn = inspectorBody.querySelector('[data-exp-hub-enabled]');
       if (hubEn) {
         hubEn.addEventListener('change', function () {
@@ -1514,13 +1618,35 @@ var ExperienciaCanvas = (function () {
           var val = hubScope.value;
           if (!val) {
             ExperienciaEngine.setHubStructureScope(state, nid, null);
-          } else {
-            var opts = ExperienciaEngine.listHubScopeOptions(state) || [];
-            var found = null;
-            for (var si = 0; si < opts.length; si++) {
-              if (String(opts[si].id) === String(val)) { found = opts[si]; break; }
+            renderAll(); persist();
+            return;
+          }
+          var opts = ExperienciaEngine.listHubScopeOptions(state) || [];
+          var found = null;
+          for (var si = 0; si < opts.length; si++) {
+            if (String(opts[si].id) === String(val)) { found = opts[si]; break; }
+          }
+          ExperienciaEngine.setHubStructureScope(state, nid, found);
+          var floors = (found && ExperienciaEngine.listFloorsForScope)
+            ? (ExperienciaEngine.listFloorsForScope(state, found) || [])
+            : [];
+          if (found && found.kind === 'tipologia' && floors.length >= 2) {
+            var msg = 'Se detectaron ' + floors.length +
+              ' plantas para esta tipología.\n\n¿Deseas crear automáticamente la estructura del HUB?';
+            if (window.confirm(msg)) {
+              var gen = ExperienciaEngine.generateHubStructure(state, {
+                scope: found,
+                at: (function () {
+                  var node = ExperienciaEngine.getNode(state, nid);
+                  return node ? { x: (node.x || 280) + 40, y: (node.y || 140) + 40 } : null;
+                })()
+              });
+              if (gen && gen.error) {
+                if (typeof AdminNotify !== 'undefined') AdminNotify.error(gen.error);
+              } else if (gen && gen.hubNode && typeof AdminNotify !== 'undefined') {
+                AdminNotify.success('HUB creado con ' + (gen.plantaNodes || []).length + ' planta(s).');
+              }
             }
-            ExperienciaEngine.setHubStructureScope(state, nid, found);
           }
           renderAll(); persist();
         });
@@ -1539,6 +1665,144 @@ var ExperienciaCanvas = (function () {
           renderAll(); persist();
         });
       }
+      inspectorBody.querySelectorAll('[data-exp-hub-floor-a2d]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var key = sel.getAttribute('data-exp-hub-floor-a2d');
+          ExperienciaEngine.upsertHubFloor(state, canvas().selectedId, {
+            key: key,
+            asset2dId: sel.value || null
+          });
+          persist();
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hub-floor-a3d]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var key = sel.getAttribute('data-exp-hub-floor-a3d');
+          ExperienciaEngine.upsertHubFloor(state, canvas().selectedId, {
+            key: key,
+            asset3dId: sel.value || null
+          });
+          persist();
+        });
+      });
+      var hubAutobind = inspectorBody.querySelector('[data-exp-hub-autobind]');
+      if (hubAutobind) {
+        hubAutobind.addEventListener('click', function () {
+          ExperienciaEngine.autoBindHubMediaAssets(state, canvas().selectedId);
+          if (typeof AdminNotify !== 'undefined') AdminNotify.success('Recursos Media vinculados a plantas.');
+          renderAll(); persist();
+        });
+      }
+      var hubAutogen = inspectorBody.querySelector('[data-exp-hub-autogen]');
+      if (hubAutogen) {
+        hubAutogen.addEventListener('click', function () {
+          var nid = canvas().selectedId;
+          var node = ExperienciaEngine.getNode(state, nid);
+          var hub = node && node.config && node.config.hub;
+          var scope = hub && hub.structureScope;
+          if (!scope) {
+            if (typeof AdminNotify !== 'undefined') AdminNotify.info('Elige un ámbito tipología primero.');
+            return;
+          }
+          var floors = ExperienciaEngine.listFloorsForScope(state, scope) || [];
+          if (!floors.length) {
+            if (typeof AdminNotify !== 'undefined') AdminNotify.info('No hay plantas en Estructura.');
+            return;
+          }
+          if (!window.confirm('Se detectaron ' + floors.length +
+            ' plantas para esta tipología.\n\n¿Deseas crear automáticamente la estructura del HUB?')) {
+            return;
+          }
+          var scopeOpt = {
+            id: scope.scopeId,
+            label: scope.label,
+            kind: scope.kind,
+            tipologiaId: scope.tipologiaId,
+            nodeId: scope.nodeId,
+            key: scope.structureKey
+          };
+          var gen = ExperienciaEngine.generateHubStructure(state, {
+            scope: scopeOpt,
+            at: { x: (node.x || 280) + 40, y: (node.y || 140) + 40 }
+          });
+          if (gen && gen.error) {
+            if (typeof AdminNotify !== 'undefined') AdminNotify.error(gen.error);
+          } else if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.success('Estructura HUB creada · ' + floors.length + ' planta(s).');
+          }
+          renderAll(); persist();
+        });
+      }
+      var floorTip = inspectorBody.querySelector('[data-exp-ix-floor-tip]');
+      if (floorTip) {
+        floorTip.addEventListener('change', function () {
+          var ixId = state.experiencia && state.experiencia.canvas
+            ? state.experiencia.canvas.selectedInteractionId
+            : null;
+          var sceneId = canvas().selectedId;
+          if (!ixId || !sceneId) return;
+          var tipId = floorTip.value;
+          ExperienciaEngine.updateInteraction(state, sceneId, ixId, {
+            structureId: tipId ? ('tip:' + tipId) : null,
+            structureKind: tipId ? 'tipologia' : null,
+            behavior: Object.assign({}, (function () {
+              var ix = ExperienciaEngine.getInteraction(state, sceneId, ixId);
+              return (ix && ix.behavior) || { type: 'floor-selector', source: 'estructura' };
+            })(), {
+              tipologiaId: tipId || null,
+              source: 'estructura',
+              controls: 'activeFloor'
+            })
+          });
+          /* Also sync scene HUB scope */
+          var tipScope = null;
+          if (tipId) {
+            var opts = ExperienciaEngine.listHubScopeOptions(state) || [];
+            for (var i = 0; i < opts.length; i++) {
+              if (String(opts[i].tipologiaId) === String(tipId) || String(opts[i].id) === ('tip:' + tipId)) {
+                tipScope = opts[i];
+                break;
+              }
+            }
+          }
+          if (tipScope) ExperienciaEngine.setHubStructureScope(state, sceneId, tipScope);
+          renderAll(); persist();
+        });
+      }
+      function syncFloorSelBehavior() {
+        var ixId = state.experiencia && state.experiencia.canvas
+          ? state.experiencia.canvas.selectedInteractionId
+          : null;
+        var sceneId = canvas().selectedId;
+        if (!ixId || !sceneId) return;
+        var keys = [];
+        inspectorBody.querySelectorAll('[data-exp-ix-floor-key]:checked').forEach(function (cb) {
+          keys.push(cb.getAttribute('data-exp-ix-floor-key'));
+        });
+        var initialEl = inspectorBody.querySelector('[data-exp-ix-floor-initial]');
+        var initial = initialEl ? initialEl.value : (keys[0] || null);
+        var tipEl = inspectorBody.querySelector('[data-exp-ix-floor-tip]');
+        var tipId = tipEl ? tipEl.value : null;
+        ExperienciaEngine.updateInteraction(state, sceneId, ixId, {
+          behavior: {
+            type: 'floor-selector',
+            inline: true,
+            source: 'estructura',
+            controls: 'activeFloor',
+            tipologiaId: tipId || null,
+            floorKeys: keys,
+            initialFloor: initial
+          }
+        });
+        if (initial) ExperienciaEngine.setHubActiveFloor(state, sceneId, initial);
+        persist();
+      }
+      inspectorBody.querySelectorAll('[data-exp-ix-floor-key]').forEach(function (cb) {
+        cb.addEventListener('change', syncFloorSelBehavior);
+      });
+      var floorInitial = inspectorBody.querySelector('[data-exp-ix-floor-initial]');
+      if (floorInitial) floorInitial.addEventListener('change', syncFloorSelBehavior);
+
       var hubFloorSave = inspectorBody.querySelector('[data-exp-hub-floor-save]');
       if (hubFloorSave) {
         hubFloorSave.addEventListener('click', function () {

@@ -3125,17 +3125,51 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderInfo() {
-    var info = state.projectInfo || {};
-    return '<div class="builder-step-content">' +
-      stepTitleHtml('Información del proyecto') +
-      '<p class="builder-step-desc">Pega texto comercial o sube un PDF. Extraeré la información automáticamente.</p>' +
-      '<textarea class="builder-textarea" id="infoTextInput" placeholder="Pega aquí la información comercial del proyecto...">' + AdminUI.escapeHtml(info._rawText || '') + '</textarea>' +
-      '<div class="builder-info-actions">' +
-        '<button type="button" class="btn-primary" id="extractInfoBtn">Extraer información</button>' +
-        '<label class="btn-ghost builder-file-label">Subir PDF<input type="file" id="infoPdfInput" accept=".pdf" hidden></label>' +
-      '</div>' +
-      (info.nombre ? renderInfoConfirmForm(info) : '') +
+    if (typeof AiAssistantEngine !== 'undefined') {
+      if (AiAssistantEngine.ensureArchitect) AiAssistantEngine.ensureArchitect(state);
+      if (AiAssistantEngine.seedAssistant) AiAssistantEngine.seedAssistant(state);
+    }
+    var a = (state.aiArchitect) || (state.aiAssistant) || { messages: [] };
+    var msgs = a.messages || [];
+    var chatHtml = msgs.map(function (m) {
+      var role = m.role === 'user' ? 'user' : 'assistant';
+      var bubble = m.text
+        ? ('<div class="builder-ai-msg__bubble">' +
+            AdminUI.escapeHtml(m.text || '').replace(/\n/g, '<br>') + '</div>')
+        : '';
+      var extra = m.html ? String(m.html) : '';
+      return '<div class="builder-ai-msg builder-ai-msg--' + role + '">' +
+        bubble +
+        extra +
+        (m.hint
+          ? '<div class="builder-ai-msg__hint">' + AdminUI.escapeHtml(m.hint) + '</div>'
+          : '') +
       '</div>';
+    }).join('');
+    var info = state.projectInfo || {};
+    var mode = (state.aiArchitect && state.aiArchitect.mode) || 'idle';
+    var title = mode === 'live' ? 'Arquitecto IA' : 'Arquitecto IA';
+    return '<div class="builder-step-content builder-step-content--assistant">' +
+      stepTitleHtml(title) +
+      '<p class="builder-step-desc">Describe el proyecto en lenguaje natural. La IA propone; tú apruebas. Todo alimenta Estructura, Media y Experiencia.</p>' +
+      '<div class="builder-ai-chat" id="builderAiChat">' +
+        '<div class="builder-ai-chat__messages" id="builderAiMessages">' + chatHtml + '</div>' +
+        '<div class="builder-ai-chat__compose">' +
+          '<input type="text" id="builderAiInput" placeholder="Escribe aquí…" autocomplete="off">' +
+          '<button type="button" class="btn-primary" id="builderAiSend">Enviar</button>' +
+        '</div>' +
+      '</div>' +
+      '<details class="builder-ai-advanced"' + (info.nombre ? ' open' : '') + '>' +
+        '<summary>Extracción clásica (texto / PDF)</summary>' +
+        '<textarea class="builder-textarea" id="infoTextInput" placeholder="Pega aquí la información comercial del proyecto...">' +
+          AdminUI.escapeHtml(info._rawText || '') + '</textarea>' +
+        '<div class="builder-info-actions">' +
+          '<button type="button" class="btn-primary" id="extractInfoBtn">Extraer información</button>' +
+          '<label class="btn-ghost builder-file-label">Subir PDF<input type="file" id="infoPdfInput" accept=".pdf" hidden></label>' +
+        '</div>' +
+        (info.nombre ? renderInfoConfirmForm(info) : '') +
+      '</details>' +
+    '</div>';
   }
 
   function renderInfoConfirmForm(info) {
@@ -3250,41 +3284,17 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderPublish() {
+    /* V5.9.90 — Página Publicado retirada del menú. Publicación vía footer. */
     var url = (state.publishResult && state.publishResult.url) || null;
-    var lastAt = (state.publishResult && state.publishResult.publishedAt) || null;
-    if (state.published && state.publishResult) {
-      var r = state.publishResult;
-      return '<div class="builder-step-content builder-publish-success">' +
-        stepTitleHtml('Publicado') +
-        '<div class="builder-publish-summary">' +
-          summaryRow('Estado', 'Publicado') +
-          summaryRow('Proyecto', (r.project && r.project.nombre) || '—') +
-          summaryRow('URL', r.url || '—') +
-          summaryRow('Última publicación', r.publishedAt || lastAt || '—') +
-        '</div>' +
-        (r.url ? '<a href="' + AdminUI.escapeHtml(r.url) + '" class="btn-primary" target="_blank" rel="noopener">Vista previa</a> ' : '') +
-        '<button type="button" class="btn-ghost" id="publishBtn">Republicar</button> ' +
-        '<button type="button" class="btn-ghost" id="newBuilderBtn">Crear otro proyecto</button></div>';
-    }
     return '<div class="builder-step-content">' +
-      stepTitleHtml('Publicado') +
-      '<p class="builder-step-desc">Estado de salida del showroom. Publicar no rompe URLs existentes.</p>' +
-      '<div class="builder-publish-summary">' +
-        summaryRow('Estado', 'Borrador') +
-        summaryRow('Preview', url || '—') +
-        summaryRow('URL', url || '—') +
-        summaryRow('Última publicación', '—') +
-        summaryRow('Tipo', ProjectTypesEngine.getTypeLabel(state.projectType)) +
-        summaryRow('Unidades', (typeof ArchitectureEngine !== 'undefined' && ArchitectureEngine.activeUnitCount)
-          ? ArchitectureEngine.activeUnitCount(state)
-          : (state.viviendas || []).length) +
-        summaryRow('Imágenes', (state.gallery || []).length) +
-        summaryRow('360°', (state.panoramas || []).filter(function (p) { return p.file; }).length) +
-        summaryRow('Planos', (state.plans || []).length) +
-        summaryRow('Documentos', (state.downloads || []).length) +
-      '</div>' +
-      '<button type="button" class="btn-primary builder-publish-btn" id="publishBtn"' + (processing ? ' disabled' : '') + '>' +
-        (processing ? 'Publicando...' : 'Publicar showroom') + '</button></div>';
+      stepTitleHtml('Publicación') +
+      '<p class="builder-step-desc">Esta sección ya no forma parte del menú. Usa <strong>Guardar</strong>, <strong>Republicar</strong> y <strong>Previsualizar</strong> en la barra superior.</p>' +
+      (url
+        ? '<p><a href="' + AdminUI.escapeHtml(url) + '" target="_blank" rel="noopener">Abrir showroom publicado</a></p>'
+        : '<p class="builder-menu-hint">Aún no hay una URL publicada.</p>') +
+      '<button type="button" class="btn-primary" id="publishBtn">' +
+        (state.published ? 'Republicar' : 'Publicar showroom') + '</button>' +
+    '</div>';
   }
 
   function summaryRow(label, value) {
@@ -3377,7 +3387,9 @@ var AiProjectBuilderView = (function () {
         BuilderIcons.render('arrow-left') + '<span>Showroom</span></button>';
     var actionsHtml =
       '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">Publicar</button>';
+      '<button type="button" class="builder-header-action-btn" id="builderPreviewBtn">Previsualizar</button>' +
+      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
+        (state.published ? 'Republicar' : 'Publicar') + '</button>';
 
     var shellHtml =
       typeof BoxiesAppShell !== 'undefined'
@@ -4795,7 +4807,8 @@ var AiProjectBuilderView = (function () {
     }
   }
 
-  async function handleApplyEstructura() {
+  async function handleApplyEstructura(options) {
+    options = options || {};
     if (processing) return;
 
     function runApply(opts) {
@@ -4890,6 +4903,21 @@ var AiProjectBuilderView = (function () {
       })();
     }
 
+    function onApplyError(err) {
+      if (err && err.conflicts && err.conflicts.length) {
+        var msg = err.conflicts.map(function (c) {
+          return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
+        }).join('\n');
+        if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
+          confirmAndApply({ archiveRemoved: true, force: true });
+        }
+      } else if (err && err.validation) {
+        AdminNotify.error(err.validation.join(' · '));
+      } else {
+        AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
+      }
+    }
+
     function confirmAndApply(opts) {
       if (typeof AdminUI !== 'undefined' && typeof AdminUI.openModal === 'function') {
         AdminUI.openModal({
@@ -4908,20 +4936,7 @@ var AiProjectBuilderView = (function () {
             if (confirmBtn) {
               confirmBtn.addEventListener('click', function () {
                 AdminUI.closeModal();
-                runApply(opts).catch(function (err) {
-                  if (err && err.conflicts && err.conflicts.length) {
-                    var msg = err.conflicts.map(function (c) {
-                      return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
-                    }).join('\n');
-                    if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
-                      confirmAndApply({ archiveRemoved: true, force: true });
-                    }
-                  } else if (err && err.validation) {
-                    AdminNotify.error(err.validation.join(' · '));
-                  } else {
-                    AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
-                  }
-                });
+                runApply(opts).catch(onApplyError);
               });
             }
           }
@@ -4931,22 +4946,13 @@ var AiProjectBuilderView = (function () {
       if (!window.confirm('Los cambios actualizarán automáticamente la organización de archivos en BOXIES y Bunny Storage.\n\n¿Aplicar cambios?')) {
         return;
       }
-      runApply(opts).catch(function (err) {
-        if (err && err.conflicts && err.conflicts.length) {
-          var msg = err.conflicts.map(function (c) {
-            return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
-          }).join('\n');
-          if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
-            confirmAndApply({ archiveRemoved: true, force: true });
-          }
-        } else if (err && err.validation) {
-          AdminNotify.error(err.validation.join(' · '));
-        } else {
-          AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
-        }
-      });
+      runApply(opts).catch(onApplyError);
     }
 
+    /* V5.9.91 — Arquitecto IA already got explicit "Crear estructura" approval */
+    if (options.skipConfirm) {
+      return runApply(options).catch(onApplyError);
+    }
     confirmAndApply({});
   }
 
@@ -5273,6 +5279,7 @@ var AiProjectBuilderView = (function () {
       if (pdfInput) pdfInput.addEventListener('change', function () {
         if (pdfInput.files[0]) handleInfoPdf(pdfInput.files[0]);
       });
+      bindAssistantChat();
     }
 
     if (stepId === 'ai-content') {
@@ -6559,6 +6566,129 @@ var AiProjectBuilderView = (function () {
       });
   }
 
+  function bindAssistantChat() {
+    var input = rootEl.querySelector('#builderAiInput');
+    var send = rootEl.querySelector('#builderAiSend');
+    var msgs = rootEl.querySelector('#builderAiMessages');
+    function scrollChat() {
+      if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    }
+    scrollChat();
+    function sendMsg() {
+      if (!input || typeof AiAssistantEngine === 'undefined') return;
+      var text = String(input.value || '').trim();
+      if (!text) return;
+      input.value = '';
+      var result = AiAssistantEngine.submitUserMessage(state, text);
+      saveState();
+      if (!result.ok && result.error) {
+        AdminNotify.error(result.error);
+      }
+      renderStepContent();
+      updateNavButtons();
+    }
+    if (send) send.addEventListener('click', sendMsg);
+    if (input) {
+      input.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          sendMsg();
+        }
+      });
+      setTimeout(function () { input.focus(); }, 40);
+    }
+
+    var createBtn = rootEl.querySelector('[data-ai-proposal-create]');
+    if (createBtn) {
+      createBtn.addEventListener('click', function () {
+        if (typeof AiAssistantEngine === 'undefined' || !AiAssistantEngine.applyProposal) return;
+        var result = AiAssistantEngine.applyProposal(state);
+        if (!result.ok) {
+          AdminNotify.error(result.error || 'No se pudo crear la estructura');
+          return;
+        }
+        saveState();
+        AdminNotify.success('Propuesta aplicada — sincronizando con BOXIES…');
+        renderStepContent();
+        updateNavButtons();
+        /* Same pipeline as «Aplicar estructura»; user already confirmed in chat */
+        if (typeof handleApplyEstructura === 'function') {
+          handleApplyEstructura({ skipConfirm: true });
+        } else if (typeof EstructuraSyncEngine !== 'undefined' && EstructuraSyncEngine.saveDraft) {
+          EstructuraSyncEngine.saveDraft(state).catch(function () {});
+        }
+      });
+    }
+    var editBtn = rootEl.querySelector('[data-ai-proposal-edit]');
+    if (editBtn) {
+      editBtn.addEventListener('click', function () {
+        if (typeof AiAssistantEngine === 'undefined' || !AiAssistantEngine.editProposal) return;
+        AiAssistantEngine.editProposal(state);
+        saveState();
+        renderStepContent();
+      });
+    }
+  }
+
+  function maybeOfferArchitectOnboarding() {
+    if (typeof AiAssistantEngine === 'undefined' || !AiAssistantEngine.needsOnboarding) return;
+    if (!AiAssistantEngine.needsOnboarding(state)) return;
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') {
+      /* Fallback: go to estructura for manual */
+      return;
+    }
+    AdminUI.openModal({
+      title: '¿Cómo quieres comenzar este showroom?',
+      bodyHtml:
+        '<p class="admin-modal-copy">Puedes crear la estructura manualmente o dejar que BOXIES IA construya una primera propuesta mediante una conversación.</p>',
+      footerHtml:
+        '<button type="button" class="btn-primary" data-modal-action="ai">🧠 Crear showroom asistido por IA</button>' +
+        '<button type="button" class="btn-ghost" data-modal-action="manual">🏗 Crear showroom manualmente</button>',
+      onMount: function (root) {
+        var manualBtn = root.querySelector('[data-modal-action="manual"]');
+        var aiBtn = root.querySelector('[data-modal-action="ai"]');
+        if (manualBtn) {
+          manualBtn.addEventListener('click', function () {
+            AiAssistantEngine.setOnboardingChoice(state, 'manual');
+            saveState();
+            AdminUI.closeModal();
+            goToStepById('estructura');
+          });
+        }
+        if (aiBtn) {
+          aiBtn.addEventListener('click', function () {
+            AiAssistantEngine.setOnboardingChoice(state, 'ai');
+            AiAssistantEngine.startArchitectConversation(state);
+            saveState();
+            AdminUI.closeModal();
+            goToStepById('info');
+            renderStepContent();
+            updateNavButtons();
+          });
+        }
+      }
+    });
+  }
+
+  function handlePreview() {
+    var url = (state.publishResult && state.publishResult.url) || null;
+    if (!url) {
+      var slug = (state.projectInfo && state.projectInfo.slug) || null;
+      if (slug) {
+        try {
+          url = new URL('/' + slug, window.location.origin).href;
+        } catch (e) {
+          url = '/' + slug;
+        }
+      }
+    }
+    if (!url) {
+      AdminNotify.info('Publica o define el slug del showroom para previsualizar.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener');
+  }
+
   async function handlePublish() {
     if (processing) return;
     processing = true;
@@ -6899,6 +7029,9 @@ var AiProjectBuilderView = (function () {
     var publishBtn = rootEl.querySelector('#builderPublishBtn');
     if (publishBtn) publishBtn.addEventListener('click', handlePublish);
 
+    var previewBtn = rootEl.querySelector('#builderPreviewBtn');
+    if (previewBtn) previewBtn.addEventListener('click', handlePreview);
+
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
       backInline.addEventListener('click', function () {
@@ -7033,6 +7166,11 @@ var AiProjectBuilderView = (function () {
     renderAll();
     var current = BuilderWizard.getStep(state.currentStep);
     if (current) syncStepUrl(current.id);
+
+    /* V5.9.91 — modal de inicio si el showroom aún no tiene estructura */
+    setTimeout(function () {
+      try { maybeOfferArchitectOnboarding(); } catch (eOnb) {}
+    }, 120);
   }
 
   function onLeave() {

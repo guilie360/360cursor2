@@ -51,12 +51,6 @@ var BuilderProgressRail = (function () {
 
     return [
       {
-        label: 'Config',
-        value: info.nombre || info.slug || null,
-        done: isDone(state, 'config', !!(info.nombre && info.slug)),
-        stepIndex: BuilderWizard.getStepIndex('config')
-      },
-      {
         label: 'Estructura',
         value: (function () {
           if (typeof EstructuraEngine !== 'undefined') {
@@ -69,18 +63,18 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('estructura')
       },
       {
-        label: 'Experiencia',
-        value: (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.summary)
-          ? ExperienciaEngine.summary(state)
-          : (applied ? 'Pendiente sync' : 'Pendiente estructura'),
-        done: isDone(state, 'experiencia', !!(state.experiencia && state.experiencia.syncedFromApply)),
-        stepIndex: BuilderWizard.getStepIndex('experiencia')
-      },
-      {
-        label: 'Hero',
-        value: heroLabel(),
-        done: isDone(state, 'video-hero', heroDone()),
-        stepIndex: BuilderWizard.getStepIndex('video-hero')
+        label: 'Info',
+        value: (function () {
+          if (state.aiArchitect && state.aiArchitect.mode) {
+            return 'Arquitecto · ' + String(state.aiArchitect.mode);
+          }
+          if (state.aiAssistant && state.aiAssistant.phase) {
+            return 'Arquitecto · ' + String(state.aiAssistant.phase);
+          }
+          return info.nombre || 'Arquitecto IA';
+        })(),
+        done: isDone(state, 'info', !!(info.nombre || (state.aiArchitect && state.aiArchitect.structureCreated) || (state.aiAssistant && state.aiAssistant.messages && state.aiAssistant.messages.length > 1))),
+        stepIndex: BuilderWizard.getStepIndex('info')
       },
       {
         label: 'Media',
@@ -96,7 +90,7 @@ var BuilderProgressRail = (function () {
             }
             if (nodes.length || assetCount) {
               return nodes.length + (nodes.length === 1 ? ' nodo' : ' nodos') +
-                (assetCount ? (' Â· ' + assetCount + (assetCount === 1 ? ' asset' : ' assets')) : '');
+                (assetCount ? (' · ' + assetCount + (assetCount === 1 ? ' asset' : ' assets')) : '');
             }
           }
           var n = (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) || 0;
@@ -116,29 +110,12 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('media')
       },
       {
-        label: 'MenÃº',
-        value: (function () {
-          var m = state.menuConfig;
-          if (!m || !Array.isArray(m.items) || !m.items.length) return null;
-          var n = m.items.filter(function (i) { return i.enabled !== false; }).length;
-          return n + ' botones';
-        })(),
-        done: isDone(state, 'menu', !!(state.menuConfig && Array.isArray(state.menuConfig.items) && state.menuConfig.items.length)),
-        stepIndex: BuilderWizard.getStepIndex('menu')
-      },
-      {
-        label: 'Publicado',
-        value: state.published && state.publishResult
-          ? (state.publishResult.project && state.publishResult.project.nombre) || 'Publicado'
-          : (state.publishResult && state.publishResult.url ? 'Preview listo' : null),
-        done: isDone(state, 'publish', !!state.published),
-        stepIndex: BuilderWizard.getStepIndex('publish')
-      },
-      {
-        label: 'Info',
-        value: info.nombre || null,
-        done: isDone(state, 'info', !!info.nombre),
-        stepIndex: BuilderWizard.getStepIndex('info')
+        label: 'Experiencia',
+        value: (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.summary)
+          ? ExperienciaEngine.summary(state)
+          : (applied ? 'Pendiente sync' : 'Pendiente estructura'),
+        done: isDone(state, 'experiencia', !!(state.experiencia && state.experiencia.syncedFromApply)),
+        stepIndex: BuilderWizard.getStepIndex('experiencia')
       }
     ];
   }

@@ -7,8 +7,8 @@ var BuilderSession = (function () {
     return {
       draftProjectId: null,
       currentStep: 0,
-      currentStepId: 'config',
-      wizardNavVersion: 68,
+      currentStepId: 'estructura',
+      wizardNavVersion: 90,
       projectType: null,
       projectStructure: null,
       estructura: null,

@@ -348,10 +348,15 @@ var ExperienciaEngine = (function () {
       componentId: scopeOpt.componentId || null,
       structureKey: scopeOpt.key || scopeOpt.structureKey || null,
       label: scopeOpt.label || null,
-      kind: scopeOpt.kind || null
+      kind: scopeOpt.kind || null,
+      tipologiaId: scopeOpt.tipologiaId || null,
+      nodeId: scopeOpt.nodeId || null
     };
     /* Refresh floor keys from Estructura without wiping asset bindings */
     syncHubFloorsFromScope(state, n);
+    if (hub.structureScope.kind === 'tipologia') {
+      autoBindHubMediaAssets(state, n);
+    }
     return hub;
   }
 
@@ -1442,17 +1447,22 @@ var ExperienciaEngine = (function () {
     return rows;
   }
 
-  /** Floors for a hub/structure scope — from real Estructura only (never invent). */
+  /** Floors for a hub/structure scope — tipología plantas first, then buildings/towers. */
   function listFloorsForScope(state, scope) {
     if (!scope) return [];
     var e = (state && state.estructura) || {};
     var entityId = scope.scopeId || scope.componentId || scope.id || null;
     if (!entityId || entityId === 'project' || entityId === 'proj-root') return [];
 
+    /* V5.9.90 — tipología scope → plantas reales de Estructura */
+    if (scope.kind === 'tipologia' || String(entityId).indexOf('tip:') === 0) {
+      return listTypologyPlantas(state, entityId, scope);
+    }
+
     var buildings = e.buildings || [];
     for (var bi = 0; bi < buildings.length; bi++) {
       var b = buildings[bi];
-      if (String(b.localId) === String(entityId)) {
+      if (String(b.localId) === String(entityId) || String(b.id) === String(entityId)) {
         return floorRowsFromCount(b.pisos, b.unidadesPorPiso);
       }
     }
@@ -1465,7 +1475,6 @@ var ExperienciaEngine = (function () {
       if (!c) return;
       if (String(c.localId) === String(entityId)) {
         if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
-          /* Component-level scope without tower: no single floor list */
           return;
         }
         if (c.pisos != null) {
@@ -1490,7 +1499,52 @@ var ExperienciaEngine = (function () {
     return found;
   }
 
-  /** Scope options for HUB inspector — hierarchy from live Estructura only. */
+  /** Tipología plantas from Estructura — never invent names/IDs. */
+  function listTypologyPlantas(state, entityId, scope) {
+    var e = (state && state.estructura) || {};
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.syncTypologyPlantas) {
+      EstructuraEngine.syncTypologyPlantas(e);
+    }
+    var tipId = scope && scope.tipologiaId
+      ? scope.tipologiaId
+      : String(entityId || '').replace(/^tip:/, '');
+    var tips = e.tipologias || [];
+    var tip = null;
+    for (var i = 0; i < tips.length; i++) {
+      var t = tips[i];
+      if (!t) continue;
+      if (String(t.id) === String(tipId) || String(t.localId) === String(tipId) ||
+          String(t.node_id) === String(tipId)) {
+        tip = t;
+        break;
+      }
+    }
+    if (!tip) return [];
+    var plantas = tip.plantas || [];
+    if (!plantas.length && tip.plantas_internas) {
+      return floorRowsFromCount(tip.plantas_internas, null).map(function (row, idx) {
+        return {
+          key: 'p' + (idx + 1),
+          label: row.label,
+          unitsPerFloor: null,
+          plantaLocalId: null,
+          tipologiaId: tip.id || tip.localId || tip.node_id
+        };
+      });
+    }
+    return plantas.map(function (pl, idx) {
+      var key = String(pl.localId || pl.id || ('p' + (idx + 1)));
+      return {
+        key: key,
+        label: pl.nombre || ('Planta ' + (idx + 1)),
+        unitsPerFloor: null,
+        plantaLocalId: pl.localId || pl.id || null,
+        tipologiaId: tip.id || tip.localId || tip.node_id
+      };
+    });
+  }
+
+  /** Scope options for HUB — hierarchy + tipologías from live Estructura. */
   function listHubScopeOptions(state) {
     var tree = buildStructureHierarchy(state);
     var out = [{
@@ -1517,12 +1571,161 @@ var ExperienciaEngine = (function () {
       });
     }
     walk(tree);
+
+    /* V5.9.90 — tipologías as first-class HUB scopes */
+    var e = (state && state.estructura) || {};
+    (e.tipologias || []).forEach(function (tip, i) {
+      if (!tip) return;
+      var tid = tip.id || tip.localId || tip.node_id || ('tip-local-' + i);
+      var label = tip.nombre || tip.modelo || ('Tipología ' + (i + 1));
+      out.push({
+        id: 'tip:' + tid,
+        label: label,
+        kind: 'tipologia',
+        tipologiaId: tid,
+        nodeId: tip.node_id || null,
+        key: 'tipologia:' + tid,
+        stageId: null,
+        componentId: null
+      });
+    });
+
     var seen = {};
     return out.filter(function (o) {
       if (!o || !o.id || seen[o.id]) return false;
       seen[o.id] = true;
       return true;
     });
+  }
+
+  /**
+   * Auto-bind Media plans2d/plans3d onto hub floors for a tipología scope.
+   * Matches by filename containing planta label/key when possible.
+   */
+  function autoBindHubMediaAssets(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return null;
+    var hub = ensureHubConfig(n);
+    if (!hub || !hub.structureScope) return hub;
+    syncHubFloorsFromScope(state, n);
+    var tipNodeId = hub.structureScope.nodeId || null;
+    if (!tipNodeId && hub.structureScope.tipologiaId && typeof MediaNodesEngine !== 'undefined') {
+      var tips = (state.estructura && state.estructura.tipologias) || [];
+      for (var ti = 0; ti < tips.length; ti++) {
+        if (String(tips[ti].id) === String(hub.structureScope.tipologiaId) ||
+            String(tips[ti].localId) === String(hub.structureScope.tipologiaId)) {
+          tipNodeId = tips[ti].node_id || tips[ti].id || tips[ti].localId;
+          break;
+        }
+      }
+    }
+    var assets2d = [];
+    var assets3d = [];
+    if (tipNodeId && typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.assetsForNode) {
+      assets2d = MediaNodesEngine.assetsForNode(state, tipNodeId, 'plans2d') || [];
+      assets3d = MediaNodesEngine.assetsForNode(state, tipNodeId, 'plans3d') || [];
+    } else {
+      assets2d = listProjectAssets(state, 'plan').filter(function (a) {
+        return a && (a.planKind === '2d' || (a.category && String(a.category).indexOf('2d') !== -1));
+      });
+      assets3d = listProjectAssets(state, 'plan').filter(function (a) {
+        return a && (a.planKind === '3d' || (a.category && String(a.category).indexOf('3d') !== -1));
+      });
+    }
+    function matchAsset(list, floor) {
+      if (!list.length) return null;
+      var needle = String(floor.label || floor.key || '').toLowerCase().replace(/\s+/g, '');
+      for (var i = 0; i < list.length; i++) {
+        var fn = String(list[i].filename || list[i].storagePath || '').toLowerCase().replace(/\s+/g, '');
+        if (needle && fn.indexOf(needle) !== -1) return list[i].id;
+        if (needle && fn.indexOf('planta' + String(i + 1)) !== -1 &&
+            String(floor.key) === String(i + 1)) return list[i].id;
+      }
+      /* Positional fallback when counts align */
+      var idx = (hub.floors || []).indexOf(floor);
+      if (idx >= 0 && list[idx]) return list[idx].id;
+      return null;
+    }
+    (hub.floors || []).forEach(function (f) {
+      if (!f) return;
+      if (!f.asset2dId) f.asset2dId = matchAsset(assets2d, f);
+      if (!f.asset3dId) f.asset3dId = matchAsset(assets3d, f);
+    });
+    return hub;
+  }
+
+  /**
+   * Create HUB scene + one scene node per planta, with basic edges.
+   */
+  function generateHubStructure(state, opts) {
+    opts = opts || {};
+    var scopeOpt = opts.scope || null;
+    if (!scopeOpt) return { error: 'scope requerido' };
+    var floors = listFloorsForScope(state, scopeOpt) || [];
+    if (!floors.length) return { error: 'Sin plantas en Estructura para este ámbito' };
+
+    var exp = ensureFlow(state);
+    var baseX = opts.at && opts.at.x != null ? opts.at.x : 280;
+    var baseY = opts.at && opts.at.y != null ? opts.at.y : 140;
+
+    var hubNode = {
+      id: uid('n'),
+      kind: 'scene',
+      typeLabel: 'HUB',
+      label: (scopeOpt.label || 'HUB') + ' · HUB',
+      x: baseX,
+      y: baseY,
+      config: { interactions: [], fileName: null }
+    };
+    normalizeNode(hubNode);
+    exp.nodes.push(hubNode);
+    enableHubOnScene(hubNode);
+    setHubStructureScope(state, hubNode.id, scopeOpt);
+
+    var plantaNodes = [];
+    var edges = [];
+    floors.forEach(function (f, i) {
+      var pn = {
+        id: uid('n'),
+        kind: 'scene',
+        typeLabel: 'Planta',
+        label: f.label || ('Planta ' + (i + 1)),
+        x: baseX + 260,
+        y: baseY + i * 110,
+        config: {
+          interactions: [],
+          fileName: null,
+          hubFloorKey: f.key,
+          structureRef: {
+            type: 'planta',
+            key: f.key,
+            tipologiaId: scopeOpt.tipologiaId || null
+          }
+        }
+      };
+      normalizeNode(pn);
+      exp.nodes.push(pn);
+      var hub = ensureHubConfig(hubNode);
+      var floorCfg = findHubFloor(hub, f.key);
+      if (floorCfg && floorCfg.asset2dId) {
+        assignAssetToNode(state, pn.id, getAsset(state, floorCfg.asset2dId) || { id: floorCfg.asset2dId });
+      } else if (floorCfg && floorCfg.asset3dId) {
+        assignAssetToNode(state, pn.id, getAsset(state, floorCfg.asset3dId) || { id: floorCfg.asset3dId });
+      }
+      plantaNodes.push(pn);
+      var edge = normalizeEdge({
+        id: uid('e'),
+        sourceNodeId: hubNode.id,
+        targetNodeId: pn.id,
+        from: hubNode.id,
+        to: pn.id,
+        label: f.label || f.key
+      });
+      exp.edges.push(edge);
+      edges.push(edge);
+    });
+
+    return { hubNode: hubNode, plantaNodes: plantaNodes, edges: edges, floors: floors };
   }
 
   function pushComponentScopes(out, c, stageId, stageName) {
@@ -3556,6 +3759,9 @@ var ExperienciaEngine = (function () {
     buildStructureHierarchy: buildStructureHierarchy,
     listHubScopeOptions: listHubScopeOptions,
     listFloorsForScope: listFloorsForScope,
+    listTypologyPlantas: listTypologyPlantas,
+    autoBindHubMediaAssets: autoBindHubMediaAssets,
+    generateHubStructure: generateHubStructure,
     setHubStructureScope: setHubStructureScope,
     syncHubFloorsFromScope: syncHubFloorsFromScope,
     applyFlowTemplate: applyFlowTemplate,

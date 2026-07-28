@@ -1892,6 +1892,117 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 .builder-faq strong { font-size: 12px; display: block; margin-bottom: 3px; }
 .builder-faq p { font-size: 12px; color: rgba(255, 255, 255, 0.42); }
 
+/* V5.9.90 — Asistente chat (Info) */
+.builder-step-content--assistant .builder-ai-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 20px;
+  max-width: 720px;
+}
+
+.builder-ai-chat__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(52vh, 480px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.builder-ai-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 92%;
+}
+
+.builder-ai-msg--user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.builder-ai-msg--assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.builder-ai-msg__bubble {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.builder-ai-msg--user .builder-ai-msg__bubble {
+  background: rgba(229, 72, 77, 0.22);
+}
+
+.builder-ai-msg__hint {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.builder-ai-chat__compose {
+  display: flex;
+  gap: 8px;
+}
+
+.builder-ai-chat__compose input {
+  flex: 1;
+  min-width: 0;
+}
+
+.builder-ai-advanced {
+  margin-top: 8px;
+  max-width: 720px;
+}
+
+.builder-ai-advanced summary {
+  cursor: pointer;
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 10px;
+}
+
+.builder-ai-proposal {
+  margin-top: 10px;
+  padding: 14px 16px;
+  max-width: 520px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.builder-ai-proposal__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.builder-ai-proposal__list {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  opacity: 0.92;
+}
+
+.builder-ai-proposal__list li + li {
+  margin-top: 6px;
+}
+
+.builder-ai-proposal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .builder-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 
 .builder-tag {
