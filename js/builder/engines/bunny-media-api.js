@@ -280,6 +280,13 @@ var BunnyMediaApi = (function () {
     });
   }
 
+  async function syncAllShowrooms() {
+    logUpload('✔ sync_all_showrooms…');
+    var data = await invokeJson({ action: 'sync_all_showrooms' });
+    logUpload('✔ sync_all_showrooms done', data);
+    return data;
+  }
+
   async function syncStructure(state, projectId, showroomSlug) {
     if (!projectId || !showroomSlug) throw new Error('project_id y showroom_slug requeridos');
     var slug = slugifyLocal(showroomSlug);
@@ -491,6 +498,7 @@ var BunnyMediaApi = (function () {
     deleteFolder: deleteFolder,
     renameFolder: renameFolder,
     syncStructure: syncStructure,
-    ensureNodeStructure: ensureNodeStructure
+    ensureNodeStructure: ensureNodeStructure,
+    syncAllShowrooms: syncAllShowrooms
   };
 })();

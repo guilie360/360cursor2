@@ -5639,6 +5639,12 @@ var AiProjectBuilderView = (function () {
         if (!silent) AdminNotify.error('Falta el slug del showroom (paso Config).');
         return;
       }
+      /* Primero sync global Showrooms→Bunny (migra UUID→slug), luego nodos del activo */
+      try {
+        await BunnyMediaApi.syncAllShowrooms();
+      } catch (syncAllErr) {
+        try { console.warn('[BunnyMedia] syncAllShowrooms', syncAllErr); } catch (e) {}
+      }
       await syncBunnyForShowroom(true);
       var items = await BunnyMediaApi.list(projectId);
       state.bunnyMedia = state.bunnyMedia || {};

@@ -1,5 +1,5 @@
 /**
- * BOXIES V5.9.86 - bunny-media (slug-based folder layout)
+ * BOXIES V5.9.87 - bunny-media (slug-based folder layout + full auto-sync)
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
  * NEW physical layout (V5.9.86) — Bunny folders are controlled by BOXIES
@@ -8,6 +8,13 @@
  *   Hero upload  : projects/{showroom_slug}/hero/{images|logos|videos}/{stamp}-{file}
  * LEGACY layout (still read/deleted for backward compatibility):
  *   projects/{project_uuid}/{category_folder}/{node_id}/{file}
+ *
+ * V5.9.87 — sync_all_showrooms: reads every non-template showroom straight
+ * from `proyectos` (no hardcoded names), ensures its Bunny folder skeleton
+ * (hero + media + one folder set per Canvas node derived from `tipologias`
+ * and `proyecto_estructura.draft_json`), and migrates any legacy
+ * projects/{uuid}/... tree into the slug-based layout, updating `archivos`
+ * rows and removing the old UUID directory once migrated.
  *
  * Actions:
  *   POST multipart: upload
@@ -19,6 +26,7 @@
  *   POST JSON: { action: "list_folder", project_id, showroom_slug, path }
  *   POST JSON: { action: "delete_folder", project_id, showroom_slug, path, recursive }
  *   POST JSON: { action: "rename_folder", project_id, showroom_slug, from, to }
+ *   POST JSON: { action: "sync_all_showrooms" }                       → full DB→Bunny mirror (auth only, no body)
  *   GET  /?project_id=...   : list bunny assets for project (DB-backed)
  *   GET  /?probe=bunny      : Bunny connectivity check
  *
@@ -455,6 +463,72 @@ async function bunnyWalkFiles(
 function isMarkerFile(relPath: string): boolean {
   const base = relPath.split("/").pop() || "";
   return base === ".boxieskeep";
+}
+
+/**
+ * Maps a legacy path (relative to projects/{uuid}/) onto its new slug-based
+ * home (relative to projects/{slug}/). Legacy layout was
+ * {category_folder}/{node_id}/{file}; new layout is media/{node_slug}/{category}/{file}.
+ * Paths already in the new shape (media/... or hero/...) pass through untouched.
+ */
+function remapLegacyRelPath(relPath: string): string {
+  const clean = String(relPath || "").replace(/^\/+/, "");
+  if (clean.startsWith("media/") || clean.startsWith("hero/")) return clean;
+
+  const parts = clean.split("/").filter((s) => s.length > 0);
+  const catMap: Record<string, string> = {
+    images: "images",
+    videos: "videos",
+    plans2d: "plans2d",
+    plans3d: "plans3d",
+    documents: "documents",
+    ui: "ui",
+    tours360: "tours360",
+    animations: "videos",
+    panoramas: "tours360",
+    thumbnails: "ui",
+    logos: "images",
+  };
+
+  const cat = parts[0] || "";
+  const canonicalCat = catMap[cat];
+
+  if (canonicalCat && parts.length >= 3) {
+    /* {cat}/{node_id}/{file...} → media/{node_slug}/{canonicalCat}/{file...} */
+    const nodeSlug = sanitizeSlug(parts[1]) || "_root";
+    const rest = parts.slice(2).join("/");
+    return `media/${nodeSlug}/${canonicalCat}/${rest}`;
+  }
+
+  if (cat === "logos" && parts.length === 2) {
+    /* {logos}/{file} — hero logo with no node level */
+    return `hero/logos/${parts[1]}`;
+  }
+  if ((cat === "images" || cat === "videos") && parts.length === 2) {
+    /* {images|videos}/{file} — hero asset with no node level */
+    return `hero/${cat}/${parts[1]}`;
+  }
+
+  return `media/_imported/${clean}`;
+}
+
+const NODE_FOLDERS_FULL = [
+  "images",
+  "videos",
+  "plans2d",
+  "plans3d",
+  "tours360",
+  "documents",
+  "ui",
+];
+const NODE_FOLDERS_ZONE = ["images", "videos", "tours360", "documents"];
+
+// deno-lint-ignore no-explicit-any
+function pickBunnySlug(node: any): string {
+  if (!node || typeof node !== "object") return "";
+  return sanitizeSlug(
+    String(node.bunny_slug || node.nombre || node.name || node.id || ""),
+  );
 }
 
 async function handleBunnyProbe(req: Request) {
@@ -1102,6 +1176,203 @@ async function handleRenameFolder(req: Request) {
   });
 }
 
+/**
+ * V5.9.87 — sync_all_showrooms
+ * Full DB→Bunny mirror: reads every non-template showroom from `proyectos`
+ * (no hardcoded names), ensures its Bunny folder skeleton (hero + media +
+ * one folder set per Canvas node), and migrates any legacy
+ * projects/{uuid}/... tree into the slug-based layout.
+ */
+async function handleSyncAllShowrooms(req: Request) {
+  const { supabase, user, error: authErr } = await createUserClient(req);
+  if (!supabase || !user) return json(401, { ok: false, error: authErr || "No autenticado" });
+
+  const db = createServiceClient();
+  if (!db) {
+    return json(500, {
+      ok: false,
+      error: "SUPABASE_SERVICE_ROLE_KEY no configurada",
+      code: "NO_SERVICE_ROLE",
+    });
+  }
+
+  const { accessKey, zone, cdnBase, hostname } = getBunnyConfig();
+  if (!accessKey) {
+    return json(503, {
+      ok: false,
+      error: "BUNNY_STORAGE_ACCESS_KEY no configurada",
+      code: "MISSING_SECRET",
+    });
+  }
+
+  const { data: rows, error: qErr } = await db
+    .from("proyectos")
+    .select("id, slug, nombre")
+    .eq("is_system_template", false);
+  if (qErr) return json(500, { ok: false, error: qErr.message, code: "DB_QUERY_FAILED" });
+
+  // deno-lint-ignore no-explicit-any
+  const showrooms = (rows || [])
+    .map((r: any) => ({
+      id: String(r.id),
+      slug: sanitizeSlug(String(r.slug || "")),
+      nombre: String(r.nombre || ""),
+    }))
+    .filter((r) => !!r.slug);
+
+  let rootItems: BunnyDirItem[] = [];
+  try {
+    rootItems = await bunnyListDir(hostname, zone, accessKey, "projects");
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, { ok: false, error: message, code: "BUNNY_LIST_FAILED" });
+  }
+  const legacyRootNames = new Set(rootItems.map((i) => i.name));
+
+  const migrated: { id: string; slug: string; filesMoved: number }[] = [];
+  const ensured: { id: string; slug: string }[] = [];
+  const errors: { id: string; slug?: string; error: string }[] = [];
+
+  for (const sh of showrooms) {
+    const slug = sh.slug;
+    try {
+      /* b. ensure base skeleton folders (hero + media root) */
+      const baseFolders = [...HERO_FOLDERS.map((f) => `hero/${f}`), "media"];
+      for (const folder of baseFolders) {
+        await bunnyPut(
+          hostname,
+          zone,
+          accessKey,
+          `projects/${slug}/${folder}/.boxieskeep`,
+          new Uint8Array(0),
+          "application/octet-stream",
+        );
+      }
+
+      /* c. migration: legacy projects/{uuid}/... → projects/{slug}/... */
+      let filesMoved = 0;
+      if (legacyRootNames.has(sh.id)) {
+        const legacyDir = `projects/${sh.id}`;
+        const legacyFiles = await bunnyWalkFiles(hostname, zone, accessKey, legacyDir);
+
+        let destFiles: { relPath: string; size: number }[] = [];
+        try {
+          destFiles = await bunnyWalkFiles(hostname, zone, accessKey, `projects/${slug}`);
+        } catch {
+          destFiles = [];
+        }
+        const destSizeByPath = new Map(destFiles.map((f) => [f.relPath, f.size]));
+
+        for (const f of legacyFiles) {
+          if (isMarkerFile(f.relPath)) continue;
+          const destRel = remapLegacyRelPath(f.relPath);
+          const destPath = `projects/${slug}/${destRel}`;
+          const oldPath = `${legacyDir}/${f.relPath}`;
+
+          const existingSize = destSizeByPath.get(destRel);
+          if (existingSize === undefined || existingSize !== f.size) {
+            const obj = await bunnyGetObject(hostname, zone, accessKey, oldPath);
+            await bunnyPut(hostname, zone, accessKey, destPath, obj.bytes, obj.contentType);
+          }
+
+          const newUrl = `${cdnBase}/${destPath}`;
+          await db
+            .from("archivos")
+            .update({ storage_path: destPath, url: newUrl })
+            .eq("storage_provider", "bunny")
+            .eq("storage_path", oldPath);
+
+          filesMoved++;
+        }
+
+        /* Source is fully copied/verified (or was already redundant) — safe to drop. */
+        await bunnyDeleteDirRecursive(hostname, zone, accessKey, legacyDir);
+        migrated.push({ id: sh.id, slug, filesMoved });
+      }
+
+      /* d. nodes: derive Canvas node slugs from tipologias + draft_json */
+      const usedNodeSlugs = new Set<string>();
+      const nodes: { slug: string; folders: string[] }[] = [];
+
+      const addNode = (rawSlug: string, folders: string[]) => {
+        const base = sanitizeSlug(rawSlug);
+        if (!base) return;
+        let final = base;
+        let n = 2;
+        while (usedNodeSlugs.has(final)) {
+          final = `${base}-${n}`;
+          n++;
+        }
+        usedNodeSlugs.add(final);
+        nodes.push({ slug: final, folders });
+      };
+
+      const { data: tipos } = await db
+        .from("tipologias")
+        .select("id, nombre, modelo")
+        .eq("proyecto_id", sh.id)
+        .or("archived.is.null,archived.eq.false");
+      // deno-lint-ignore no-explicit-any
+      for (const t of (tipos || []) as any[]) {
+        addNode(t.nombre || t.modelo || t.id, NODE_FOLDERS_FULL);
+      }
+
+      const { data: estructura } = await db
+        .from("proyecto_estructura")
+        .select("draft_json")
+        .eq("proyecto_id", sh.id)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const draft: any = estructura?.draft_json || {};
+
+      if (Array.isArray(draft.tipologias)) {
+        for (const t of draft.tipologias) {
+          addNode(pickBunnySlug(t) || sanitizeSlug(t?.nombre || ""), NODE_FOLDERS_FULL);
+        }
+      }
+      const zoneList = Array.isArray(draft.zoneNames)
+        ? draft.zoneNames
+        : Array.isArray(draft.zoneNodes)
+        ? draft.zoneNodes
+        : [];
+      for (const z of zoneList) {
+        addNode(pickBunnySlug(z), NODE_FOLDERS_ZONE);
+      }
+      if (Array.isArray(draft.customNodes)) {
+        for (const c of draft.customNodes) {
+          addNode(pickBunnySlug(c), NODE_FOLDERS_ZONE);
+        }
+      }
+
+      for (const node of nodes) {
+        for (const cat of node.folders) {
+          await bunnyPut(
+            hostname,
+            zone,
+            accessKey,
+            `projects/${slug}/media/${node.slug}/${cat}/.boxieskeep`,
+            new Uint8Array(0),
+            "application/octet-stream",
+          );
+        }
+      }
+
+      ensured.push({ id: sh.id, slug });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      errors.push({ id: sh.id, slug, error: message });
+    }
+  }
+
+  return json(200, {
+    ok: true,
+    showrooms: showrooms.length,
+    migrated,
+    ensured,
+    errors,
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
@@ -1140,10 +1411,13 @@ Deno.serve(async (req: Request) => {
       if (peek && peek.action === "rename_folder") {
         return await handleRenameFolder(req);
       }
+      if (peek && peek.action === "sync_all_showrooms") {
+        return await handleSyncAllShowrooms(req);
+      }
       return json(400, {
         ok: false,
         error:
-          'Usa multipart upload o JSON { action: "delete"|"probe"|"ensure_folders"|"list_folder"|"delete_folder"|"rename_folder", ... }',
+          'Usa multipart upload o JSON { action: "delete"|"probe"|"ensure_folders"|"list_folder"|"delete_folder"|"rename_folder"|"sync_all_showrooms", ... }',
         contentType: ct || null,
       });
     }

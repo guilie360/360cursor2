@@ -837,6 +837,20 @@ var BoxiesProjectsPage = (function () {
     tbody.innerHTML = showrooms.map(row).join('');
     bindDragAndDrop(tbody);
     if (columnController) columnController.relayout();
+    /* V5.9.87 — Bunny debe reflejar Showrooms automáticamente */
+    try {
+      if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.syncAllShowrooms) {
+        BunnyMediaApi.syncAllShowrooms().then(function (res) {
+          try {
+            console.log('[BunnyMedia] sync_all_showrooms', res);
+          } catch (e) {}
+        }).catch(function (err) {
+          try {
+            console.warn('[BunnyMedia] sync_all_showrooms failed', err);
+          } catch (e2) {}
+        });
+      }
+    } catch (e) {}
     return showrooms;
   }
 
@@ -877,6 +891,11 @@ var BoxiesProjectsPage = (function () {
       if (!listContainsShowroom(list, project && project.id)) {
         throw new Error('El showroom se creó pero no aparece en la lista. Recarga e inténtalo de nuevo.');
       }
+      try {
+        if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.syncAllShowrooms) {
+          BunnyMediaApi.syncAllShowrooms().catch(function () {});
+        }
+      } catch (e) {}
       /* Keep loader through SPA navigation into builder config (V5.9.39). */
       markPendingCreate(project.id);
       resetCreateButton(btn);

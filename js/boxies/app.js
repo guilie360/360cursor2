@@ -39,6 +39,17 @@ var BoxiesApp = (function () {
     BoxiesShell.setUser(profile);
     await BoxiesRouter.start();
 
+    /* V5.9.87 — sincronizar Bunny con Showrooms al abrir BOXIES */
+    try {
+      if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.syncAllShowrooms) {
+        BunnyMediaApi.syncAllShowrooms().then(function (res) {
+          try { console.log('[boxies:app] Bunny sync', res); } catch (e) {}
+        }).catch(function (err) {
+          try { console.warn('[boxies:app] Bunny sync failed', err); } catch (e2) {}
+        });
+      }
+    } catch (e) {}
+
     /* Invariants (dev console) */
     try {
       console.log('[boxies:app] shell invariants', {
