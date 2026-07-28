@@ -1,5 +1,5 @@
 /**
- * BOXIES V5.9.72 - bunny-media (node-centric)
+ * BOXIES V5.9.84 - bunny-media (node-centric)
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
  * Path: projects/{project_id}/{category}/{node_id}/{file}
@@ -13,6 +13,7 @@
  *   BUNNY_STORAGE_ACCESS_KEY
  *   BUNNY_STORAGE_ZONE=boxies (optional default)
  *   BUNNY_CDN_BASE=https://boxies.b-cdn.net (optional default)
+ *   BUNNY_STORAGE_HOSTNAME=storage.bunnycdn.com (optional; region host if needed)
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -88,19 +89,72 @@ function resolveTipo(
   return cat.tipo;
 }
 
-function getBunnyConfig() {
-  const accessKey = Deno.env.get("BUNNY_STORAGE_ACCESS_KEY") || "";
-  const zone = Deno.env.get("BUNNY_STORAGE_ZONE") || "boxies";
-  const cdnBase = (
-    Deno.env.get("BUNNY_CDN_BASE") || "https://boxies.b-cdn.net"
-  ).replace(/\/$/, "");
-  return { accessKey, zone, cdnBase };
+function encodeStoragePath(storagePath: string): string {
+  return String(storagePath || "")
+    .split("/")
+    .filter((s) => s.length > 0)
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
 }
 
-async function createUserClient(req: Request) {
-  const authHeader = req.headers.get("Authorization") || "";
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey =
+function firstEnv(names: string[]): { name: string; value: string } {
+  for (const name of names) {
+    const value = (Deno.env.get(name) || "").trim();
+    if (value) return { name, value };
+  }
+  return { name: "", value: "" };
+}
+
+function getBunnyConfig() {
+  const keyInfo = firstEnv([
+    "BUNNY_STORAGE_ACCESS_KEY",
+    "BUNNY_ACCESS_KEY",
+    "BUNNY_STORAGE_PASSWORD",
+    "BUNNY_ZONE_PASSWORD",
+    "BUNNY_STORAGE_ZONE_PASSWORD",
+  ]);
+  const zone = firstEnv([
+    "BUNNY_STORAGE_ZONE",
+    "BUNNY_ZONE",
+    "BUNNY_ZONE_NAME",
+  ]).value || "boxies";
+  const cdnBase = (
+    firstEnv(["BUNNY_CDN_BASE", "BUNNY_PULL_ZONE", "BUNNY_CDN_URL"]).value ||
+    "https://boxies.b-cdn.net"
+  ).replace(/\/$/, "");
+  const hostname = (
+    firstEnv([
+      "BUNNY_STORAGE_HOSTNAME",
+      "BUNNY_STORAGE_HOST",
+      "BUNNY_STORAGE_ENDPOINT",
+    ]).value || "storage.bunnycdn.com"
+  )
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .replace(/\/.*/, "");
+  return {
+    accessKey: keyInfo.value,
+    accessKeyEnv: keyInfo.name || null,
+    zone,
+    cdnBase,
+    hostname,
+  };
+}
+
+const BUNNY_REGION_HOSTS = [
+  "storage.bunnycdn.com",
+  "de.storage.bunnycdn.com",
+  "ny.storage.bunnycdn.com",
+  "la.storage.bunnycdn.com",
+  "uk.storage.bunnycdn.com",
+  "sg.storage.bunnycdn.com",
+  "syd.storage.bunnycdn.com",
+  "br.storage.bunnycdn.com",
+  "jh.storage.bunnycdn.com",
+];
+
+function getAnonKey() {
+  return (
     Deno.env.get("SUPABASE_ANON_KEY") ||
     (() => {
       try {
@@ -111,7 +165,23 @@ async function createUserClient(req: Request) {
       } catch {
         return "";
       }
-    })();
+    })()
+  );
+}
+
+function createServiceClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  if (!serviceKey) return null;
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function createUserClient(req: Request) {
+  const authHeader = req.headers.get("Authorization") || "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = getAnonKey();
 
   const supabase = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
@@ -139,34 +209,80 @@ async function assertProjectAccess(
   return { project: data, error: null };
 }
 
-async function bunnyPut(
+function isUploadBlob(value: FormDataEntryValue | null): value is Blob {
+  return !!value && typeof value !== "string" && typeof (value as Blob).arrayBuffer === "function";
+}
+
+async function bunnyPutOnce(
+  hostname: string,
   zone: string,
   accessKey: string,
   storagePath: string,
-  bytes: Uint8Array,
+  body: Blob,
   contentType: string,
 ) {
-  const url = `https://storage.bunnycdn.com/${zone}/${storagePath}`;
+  const encodedPath = encodeStoragePath(storagePath);
+  const url = `https://${hostname}/${zone}/${encodedPath}`;
+  console.log("[bunny-media] ✔ URL de Bunny", url, "bytes=", body.size, "ct=", contentType);
   const res = await fetch(url, {
     method: "PUT",
     headers: {
       AccessKey: accessKey,
       "Content-Type": contentType || "application/octet-stream",
     },
-    body: bytes,
+    body,
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Bunny upload failed (${res.status}): ${text.slice(0, 200)}`);
+  const text = await res.text().catch(() => "");
+  console.log("[bunny-media] ✔ Status HTTP Bunny", res.status, "body=", text.slice(0, 300));
+  return { ok: res.ok, status: res.status, body: text, url, hostname };
+}
+
+async function bunnyPut(
+  preferredHost: string,
+  zone: string,
+  accessKey: string,
+  storagePath: string,
+  bytes: Uint8Array,
+  contentType: string,
+) {
+  const mime = contentType || "application/octet-stream";
+  const blob = new Blob([bytes], { type: mime });
+  const hosts = [preferredHost]
+    .concat(BUNNY_REGION_HOSTS)
+    .filter((h, i, arr) => h && arr.indexOf(h) === i);
+
+  let last: { ok: boolean; status: number; body: string; url: string; hostname: string } | null =
+    null;
+  for (const host of hosts) {
+    last = await bunnyPutOnce(host, zone, accessKey, storagePath, blob, mime);
+    if (last.ok) {
+      return { status: last.status, body: last.body, url: last.url, hostname: host };
+    }
+    /* 401 suele ser AccessKey o región incorrecta → probar siguiente host */
+    if (last.status !== 401) break;
+    console.warn("[bunny-media] Bunny 401 en", host, "→ reintento otra región");
   }
+
+  const err = new Error(
+    `Bunny upload failed (${last?.status ?? "?"}): ${(last?.body || "").slice(0, 200) || "sin body"}`,
+  );
+  // deno-lint-ignore no-explicit-any
+  (err as any).bunnyStatus = last?.status || null;
+  // deno-lint-ignore no-explicit-any
+  (err as any).bunnyBody = (last?.body || "").slice(0, 500);
+  // deno-lint-ignore no-explicit-any
+  (err as any).bunnyUrl = last?.url || null;
+  throw err;
 }
 
 async function bunnyDelete(
+  hostname: string,
   zone: string,
   accessKey: string,
   storagePath: string,
 ) {
-  const url = `https://storage.bunnycdn.com/${zone}/${storagePath}`;
+  const encodedPath = encodeStoragePath(storagePath);
+  const url = `https://${hostname}/${zone}/${encodedPath}`;
   const res = await fetch(url, {
     method: "DELETE",
     headers: { AccessKey: accessKey },
@@ -178,13 +294,83 @@ async function bunnyDelete(
   }
 }
 
+async function handleBunnyProbe(req: Request) {
+  const { supabase, user, error: authErr } = await createUserClient(req);
+  if (!supabase || !user) return json(401, { ok: false, error: authErr || "No autenticado" });
+
+  const cfg = getBunnyConfig();
+  if (!cfg.accessKey) {
+    return json(503, {
+      ok: false,
+      code: "MISSING_SECRET",
+      error:
+        "Ningún secret Bunny encontrado. Configura BUNNY_STORAGE_ACCESS_KEY (Storage Zone Password) en Supabase → Edge Functions → Secrets.",
+      triedEnv: [
+        "BUNNY_STORAGE_ACCESS_KEY",
+        "BUNNY_ACCESS_KEY",
+        "BUNNY_STORAGE_PASSWORD",
+        "BUNNY_ZONE_PASSWORD",
+      ],
+    });
+  }
+
+  const url = `https://${cfg.hostname}/${cfg.zone}/`;
+  console.log("[bunny-media] probe LIST", url, "keyEnv=", cfg.accessKeyEnv, "keyLen=", cfg.accessKey.length);
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { AccessKey: cfg.accessKey, Accept: "application/json" },
+  });
+  const text = await res.text().catch(() => "");
+  console.log("[bunny-media] probe status=", res.status, "body=", text.slice(0, 200));
+
+  if (!res.ok) {
+    return json(502, {
+      ok: false,
+      code: "BUNNY_PROBE_FAILED",
+      error: `Bunny LIST ${res.status}: ${text.slice(0, 200) || res.statusText}`,
+      bunnyStatus: res.status,
+      bunnyBody: text.slice(0, 300),
+      bunnyUrl: url,
+      accessKeyEnv: cfg.accessKeyEnv,
+      accessKeyLen: cfg.accessKey.length,
+      zone: cfg.zone,
+      hostname: cfg.hostname,
+      hint:
+        res.status === 401
+          ? "AccessKey inválida o hostname de región incorrecto. Usa la Storage Zone Password (FTP & API Access), no la API key de cuenta."
+          : null,
+    });
+  }
+
+  return json(200, {
+    ok: true,
+    code: "BUNNY_OK",
+    bunnyStatus: res.status,
+    accessKeyEnv: cfg.accessKeyEnv,
+    zone: cfg.zone,
+    hostname: cfg.hostname,
+    cdnBase: cfg.cdnBase,
+  });
+}
+
 async function handleUpload(req: Request) {
-  const { accessKey, zone, cdnBase } = getBunnyConfig();
+  const { accessKey, accessKeyEnv, zone, cdnBase, hostname } = getBunnyConfig();
+  console.log(
+    "[bunny-media] upload config",
+    "keyEnv=",
+    accessKeyEnv,
+    "keyLen=",
+    accessKey.length,
+    "zone=",
+    zone,
+    "host=",
+    hostname,
+  );
   if (!accessKey) {
     return json(503, {
       ok: false,
       error:
-        "BUNNY_STORAGE_ACCESS_KEY no configurada. Añádela en Supabase Edge Function Secrets.",
+        "BUNNY_STORAGE_ACCESS_KEY no configurada. Añádela en Supabase Edge Function Secrets (Storage Zone Password de la zona boxies).",
       code: "MISSING_SECRET",
     });
   }
@@ -192,11 +378,36 @@ async function handleUpload(req: Request) {
   const { supabase, user, error: authErr } = await createUserClient(req);
   if (!supabase || !user) return json(401, { ok: false, error: authErr || "No autenticado" });
 
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch (parseErr) {
+    const message = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    console.error("[bunny-media] formData parse failed", message);
+    return json(400, {
+      ok: false,
+      error: "multipart inválido (¿Content-Type sin boundary?). Usa fetch con FormData sin Content-Type manual.",
+      detail: message,
+      code: "BAD_MULTIPART",
+    });
+  }
+
   const projectId = String(form.get("project_id") || "").trim();
   const category = String(form.get("category") || "images").trim();
   const nodeIdRaw = String(form.get("node_id") || "").trim();
-  const file = form.get("file");
+  const fileEntry = form.get("file");
+
+  console.log("[bunny-media] upload fields", {
+    projectId,
+    category,
+    nodeId: nodeIdRaw,
+    fileType: fileEntry == null ? "null" : typeof fileEntry,
+    isBlob: isUploadBlob(fileEntry),
+    fileName: isUploadBlob(fileEntry) && "name" in fileEntry
+      ? String((fileEntry as File).name || "")
+      : "",
+    fileSize: isUploadBlob(fileEntry) ? fileEntry.size : 0,
+  });
 
   if (!projectId) return json(400, { ok: false, error: "project_id requerido" });
   if (!CATEGORIES[category]) {
@@ -206,8 +417,12 @@ async function handleUpload(req: Request) {
       allowed: Object.keys(CATEGORIES),
     });
   }
-  if (!(file instanceof File)) {
-    return json(400, { ok: false, error: "file requerido (multipart)" });
+  if (!isUploadBlob(fileEntry)) {
+    return json(400, {
+      ok: false,
+      error: "file requerido (multipart)",
+      code: "MISSING_FILE",
+    });
   }
   if (!nodeIdRaw) {
     return json(400, {
@@ -216,8 +431,8 @@ async function handleUpload(req: Request) {
       code: "MISSING_NODE_ID",
     });
   }
-  if (file.size <= 0) return json(400, { ok: false, error: "Archivo vacío" });
-  if (file.size > MAX_BYTES) {
+  if (fileEntry.size <= 0) return json(400, { ok: false, error: "Archivo vacío" });
+  if (fileEntry.size > MAX_BYTES) {
     return json(400, {
       ok: false,
       error: `Archivo demasiado grande (máx ${MAX_BYTES / (1024 * 1024)} MB en Fase 1)`,
@@ -227,22 +442,58 @@ async function handleUpload(req: Request) {
   const { project, error: projErr } = await assertProjectAccess(supabase, projectId);
   if (!project) return json(403, { ok: false, error: projErr || "Sin acceso" });
 
-  const safeName = sanitizeFilename(file.name);
+  const originalName =
+    "name" in fileEntry && (fileEntry as File).name
+      ? String((fileEntry as File).name)
+      : "upload.bin";
+  const safeName = sanitizeFilename(originalName);
   const stamp = Date.now();
   const folder = CATEGORIES[category].folder;
   const nodeSeg = sanitizeFilename(nodeIdRaw).replace(/\./g, "-");
   const storagePath =
     `projects/${projectId}/${folder}/${nodeSeg}/${stamp}-${safeName}`;
-  const contentType = file.type || "application/octet-stream";
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const contentType = fileEntry.type || "application/octet-stream";
+  const bytes = new Uint8Array(await fileEntry.arrayBuffer());
 
-  await bunnyPut(zone, accessKey, storagePath, bytes, contentType);
+  console.log("[bunny-media] ✔ Archivo recibido", originalName, fileEntry.size);
+  console.log("[bunny-media] ✔ Ruta generada", storagePath);
+
+  let bunnyResult: { status: number; body: string; url: string };
+  try {
+    bunnyResult = await bunnyPut(
+      hostname,
+      zone,
+      accessKey,
+      storagePath,
+      bytes,
+      contentType,
+    );
+  } catch (bunnyErr) {
+    // deno-lint-ignore no-explicit-any
+    const be = bunnyErr as any;
+    const message = bunnyErr instanceof Error ? bunnyErr.message : String(bunnyErr);
+    console.error("[bunny-media] Bunny PUT failed", message);
+    return json(502, {
+      ok: false,
+      error: message,
+      code: "BUNNY_UPLOAD_FAILED",
+      bunnyStatus: be.bunnyStatus || null,
+      bunnyBody: be.bunnyBody || null,
+      bunnyUrl: be.bunnyUrl || null,
+      storagePath,
+    });
+  }
+
+  console.log("[bunny-media] ✔ Bunny OK", bunnyResult.status);
 
   const publicUrl = `${cdnBase}/${storagePath}`;
   const tipo = resolveTipo(category, contentType, safeName);
-  const pesoMb = Math.round((file.size / (1024 * 1024)) * 1000) / 1000;
+  const pesoMb = Math.round((fileEntry.size / (1024 * 1024)) * 1000) / 1000;
 
-  const insert = await supabase
+  /* Tras auth + acceso a proyecto, insertar con service role evita fallos RLS
+   * (usuario puede leer proyecto pero no tener policy de INSERT en archivos). */
+  const db = createServiceClient() || supabase;
+  const insert = await db
     .from("archivos")
     .insert({
       constructora_id: project.constructora_id,
@@ -262,14 +513,20 @@ async function handleUpload(req: Request) {
     .single();
 
   if (insert.error) {
+    console.error("[bunny-media] Supabase insert failed", insert.error.message);
     try {
-      await bunnyDelete(zone, accessKey, storagePath);
+      await bunnyDelete(hostname, zone, accessKey, storagePath);
     } catch (_) { /* ignore */ }
     return json(500, {
       ok: false,
       error: insert.error.message || "Error registrando en archivos",
+      code: "DB_INSERT_FAILED",
+      storagePath,
+      publicUrl,
     });
   }
+
+  console.log("[bunny-media] ✔ Registro Supabase", insert.data?.id);
 
   return json(200, {
     ok: true,
@@ -279,11 +536,12 @@ async function handleUpload(req: Request) {
     category,
     provider: "bunny",
     node_id: nodeIdRaw || null,
+    bunnyStatus: bunnyResult.status,
   });
 }
 
 async function handleDelete(req: Request) {
-  const { accessKey, zone } = getBunnyConfig();
+  const { accessKey, zone, hostname } = getBunnyConfig();
   if (!accessKey) {
     return json(503, {
       ok: false,
@@ -327,10 +585,11 @@ async function handleDelete(req: Request) {
     return json(400, { ok: false, error: "storage_path fuera del proyecto" });
   }
 
-  await bunnyDelete(zone, accessKey, storagePath);
+  await bunnyDelete(hostname, zone, accessKey, storagePath);
 
+  const db = createServiceClient() || supabase;
   if (row?.id || archivoId) {
-    const del = await supabase
+    const del = await db
       .from("archivos")
       .delete()
       .eq("id", row?.id || archivoId)
@@ -343,7 +602,7 @@ async function handleDelete(req: Request) {
       });
     }
   } else {
-    await supabase
+    await db
       .from("archivos")
       .delete()
       .eq("proyecto_id", projectId)
@@ -385,10 +644,15 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (req.method === "GET") {
+      const url = new URL(req.url);
+      if (url.searchParams.get("probe") === "bunny") {
+        return await handleBunnyProbe(req);
+      }
       return await handleList(req);
     }
     if (req.method === "POST") {
       const ct = req.headers.get("content-type") || "";
+      console.log("[bunny-media] POST content-type=", ct);
       if (ct.includes("multipart/form-data")) {
         return await handleUpload(req);
       }
@@ -396,9 +660,13 @@ Deno.serve(async (req: Request) => {
       if (peek && peek.action === "delete") {
         return await handleDelete(req);
       }
+      if (peek && peek.action === "probe") {
+        return await handleBunnyProbe(req);
+      }
       return json(400, {
         ok: false,
-        error: 'Usa multipart upload o JSON { action: "delete", ... }',
+        error: 'Usa multipart upload o JSON { action: "delete"|"probe", ... }',
+        contentType: ct || null,
       });
     }
     return json(405, { ok: false, error: "Method not allowed" });

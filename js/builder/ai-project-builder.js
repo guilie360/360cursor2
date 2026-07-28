@@ -5411,6 +5411,25 @@ var AiProjectBuilderView = (function () {
     }
     try {
       setBunnyMediaStatus('Cargando archivos Bunny…');
+      try {
+        await BunnyMediaApi.probeBunny();
+      } catch (probeErr) {
+        if (probeErr && probeErr.code === 'MISSING_SECRET') {
+          var secretMsg = (probeErr && probeErr.message) ||
+            'Falta BUNNY_STORAGE_ACCESS_KEY en Supabase Secrets.';
+          setBunnyMediaStatus(secretMsg);
+          if (!silent) AdminNotify.error(secretMsg);
+          return;
+        }
+        if (probeErr && probeErr.code === 'BUNNY_PROBE_FAILED') {
+          var bunnyMsg = (probeErr && probeErr.message) || 'Bunny Storage no responde.';
+          setBunnyMediaStatus(bunnyMsg);
+          if (!silent) AdminNotify.error(bunnyMsg);
+          return;
+        }
+        /* probe opcional si falla por red; list puede seguir */
+        try { console.warn('[BunnyMedia] probe', probeErr); } catch (e) {}
+      }
       var items = await BunnyMediaApi.list(projectId);
       state.bunnyMedia = state.bunnyMedia || {};
       state.bunnyMedia.items = items;
@@ -5475,7 +5494,14 @@ var AiProjectBuilderView = (function () {
       var msg = (err && err.message) || 'Error subiendo a Bunny';
       if (err && err.code === 'MISSING_SECRET') {
         msg = 'Falta configurar BUNNY_STORAGE_ACCESS_KEY en Supabase Secrets.';
+      } else if (err && err.code === 'BUNNY_UPLOAD_FAILED') {
+        msg = 'Bunny rechazó el upload: ' + msg;
+      } else if (err && err.code === 'DB_INSERT_FAILED') {
+        msg = 'Bunny OK, falló registro en Supabase: ' + msg;
       }
+      try {
+        console.error('[BunnyMedia] upload error', err && err.code, err && err.data || err);
+      } catch (e) {}
       setBunnyMediaStatus(msg);
       AdminNotify.error(msg);
     } finally {

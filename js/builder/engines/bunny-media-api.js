@@ -138,6 +138,41 @@ var BunnyMediaApi = (function () {
     return synced;
   }
 
+  function logUpload() {
+    try {
+      if (typeof console !== 'undefined' && console.log) {
+        console.log.apply(console, ['[BunnyMedia]'].concat([].slice.call(arguments)));
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  async function authHeaders() {
+    var client = getClient();
+    var session = await client.auth.getSession();
+    var token = session && session.data && session.data.session && session.data.session.access_token;
+    if (!token) throw new Error('Sesión requerida');
+    return {
+      Authorization: 'Bearer ' + token,
+      apikey: typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : ''
+    };
+  }
+
+  async function probeBunny() {
+    var headers = await authHeaders();
+    var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
+      '/functions/v1/bunny-media?probe=bunny';
+    var res = await fetch(base, { method: 'GET', headers: headers });
+    var body = await res.json().catch(function () { return {}; });
+    logUpload('✔ Probe Bunny', res.status, body);
+    if (!res.ok || body.ok === false) {
+      var err = new Error((body && body.error) || ('Probe Bunny falló: ' + res.status));
+      err.code = body && body.code;
+      err.data = body;
+      throw err;
+    }
+    return body;
+  }
+
   async function invokeUpload(projectId, category, file, opts) {
     opts = opts || {};
     if (!projectId) throw new Error('project_id requerido');
@@ -149,30 +184,56 @@ var BunnyMediaApi = (function () {
     if (!file) throw new Error('Archivo requerido');
     if (!opts.nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
 
-    var bunnyCat = meta.bunnyCategory || key;
-    var client = getClient();
+    /* Enviar key canónica (images/videos/…) — la edge resuelve folder */
+    var bunnyCat = key;
     var form = new FormData();
     form.append('project_id', projectId);
     form.append('category', bunnyCat);
     form.append('node_id', opts.nodeId);
     form.append('file', file, file.name || 'upload.bin');
 
-    var result = await client.functions.invoke('bunny-media', { body: form });
-    if (result.error) {
-      var msg = result.error.message || 'Error invocando bunny-media';
-      if (result.data && result.data.error) msg = result.data.error;
+    var folderHint = (meta && meta.folder) || bunnyCat;
+    var expectedPathHint =
+      'projects/' + projectId + '/' + folderHint + '/' + opts.nodeId + '/' + (file.name || 'file');
+    logUpload('✔ Archivo recibido', file.name, file.size, file.type || '');
+    logUpload('✔ Ruta generada (hint)', expectedPathHint);
+
+    var headers = await authHeaders();
+    var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
+      '/functions/v1/bunny-media';
+    logUpload('✔ URL Edge', base);
+    /* Importante: NO fijar Content-Type — el browser añade multipart boundary */
+    var res = await fetch(base, {
+      method: 'POST',
+      headers: headers,
+      body: form
+    });
+    var bodyText = await res.text().catch(function () { return ''; });
+    var body = {};
+    try { body = bodyText ? JSON.parse(bodyText) : {}; } catch (e) {
+      body = { ok: false, error: bodyText || ('HTTP ' + res.status) };
+    }
+    logUpload('✔ Status HTTP', res.status);
+    logUpload('✔ Body respuesta', body);
+    if (body && body.storagePath) logUpload('✔ Ruta final', body.storagePath);
+    if (body && body.publicUrl) logUpload('✔ CDN URL', body.publicUrl);
+    if (body && body.bunnyStatus) logUpload('✔ Bunny status', body.bunnyStatus);
+
+    if (!res.ok || body.ok === false) {
+      var msg = (body && body.error) || ('Upload Bunny falló: HTTP ' + res.status);
+      if (body && body.code === 'MISSING_SECRET') {
+        msg = 'Falta BUNNY_STORAGE_ACCESS_KEY en Supabase Secrets (Storage Zone Password de boxies).';
+      } else if (body && body.bunnyStatus) {
+        msg += ' (Bunny ' + body.bunnyStatus + ')';
+      }
       var err = new Error(msg);
-      err.code = result.data && result.data.code;
-      err.data = result.data;
+      err.code = body && body.code;
+      err.data = body;
+      err.status = res.status;
       throw err;
     }
-    if (!result.data || result.data.ok === false) {
-      var e2 = new Error((result.data && result.data.error) || 'Upload Bunny falló');
-      e2.code = result.data && result.data.code;
-      e2.data = result.data;
-      throw e2;
-    }
-    return result.data;
+    logUpload('✔ Registro Supabase', body.archivo && body.archivo.id);
+    return body;
   }
 
   async function list(projectId) {
@@ -266,6 +327,7 @@ var BunnyMediaApi = (function () {
     filterItemsByCategory: filterItemsByCategory,
     pathMatchesCategory: pathMatchesCategory,
     parseNodeIdFromPath: parseNodeIdFromPath,
-    parseCategoryFromPath: parseCategoryFromPath
+    parseCategoryFromPath: parseCategoryFromPath,
+    probeBunny: probeBunny
   };
 })();
