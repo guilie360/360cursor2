@@ -1,24 +1,23 @@
-/* Builder wizard — V5.9.91 Arquitecto IA + creación asistida */
+/* Builder wizard — V5.9.92 restaurar secciones originales + Arquitecto IA */
 var BuilderWizard = (function () {
   /**
-   * Primary nav (V5.9.91):
-   *   Estructura → Info (Arquitecto IA) → Media → Experiencia
+   * Primary nav (V5.9.92):
+   *   Configuración → Info (Arquitecto IA) → Estructura → Hero → Menú → Media → Experiencia
    *
-   * Publicado eliminado del menú (publicación vía Guardar / Republicar / Previsualizar).
-   * Config / Hero / Menú quedan hidden (recuperables) — no se muestran en el rail.
+   * Publicado permanece oculto (publicación vía Guardar / Republicar / Previsualizar).
+   * Secciones absorbidas (Logo, Galería, etc.) quedan hidden para deep-links.
    */
   var STEPS = [
-    { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Define el proyecto: tipologías, plantas, ambientes y amenidades. Fuente de verdad del Builder.' },
+    { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
     { id: 'info', label: 'Arquitecto IA', shortLabel: 'Info', icon: 'sparkles', assistant: 'Arquitecto IA: conversa para crear o ajustar el showroom. Alimenta la misma estructura de BOXIES.' },
+    { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Define el proyecto: tipologías, plantas, ambientes y amenidades. Fuente de verdad del Builder.' },
+    { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Video, imagen y logo de portada del showroom.' },
+    { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
     { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Organiza assets por nodos (tipologías y amenidades). Experiencia solo referencia estos archivos.' },
     { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Construye el recorrido consumiendo Estructura + Media. Sin rutas ni nombres manuales.' },
 
     /* Hidden — keep ids for recoverability / deep-links */
-    { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Identidad del showroom (nombre/slug). Accesible vía shell.', hidden: true },
-    { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Portada del showroom.', hidden: true },
-    { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Menú del showroom.', hidden: true },
     { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Republicar / Previsualizar.', hidden: true },
-
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Integrado en Hero.', hidden: true },
     { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario (recuperable).', hidden: true },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Absorbido por Media.', hidden: true },
@@ -32,7 +31,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 91;
+  var NAV_VERSION = 92;
 
   function getSteps() {
     return STEPS.slice();
@@ -59,19 +58,18 @@ var BuilderWizard = (function () {
     return STEPS.findIndex(function (s) { return s.id === id; });
   }
 
-  /** Map retired / hidden steps to the V5.9.90 primary flow. */
+  /** Map retired / hidden steps to a visible section. */
   function resolveVisibleStepId(stepId) {
-    if (stepId === 'branding' || stepId === 'video-hero') return 'media';
+    if (stepId === 'branding') return 'video-hero';
     if (stepId === 'project-type' || stepId === 'viviendas') return 'estructura';
     if (stepId === 'gallery' || stepId === 'panoramas' || stepId === 'plans' || stepId === 'downloads') {
       return 'media';
     }
     if (stepId === 'hotspots' || stepId === 'interactivo') return 'experiencia';
-    if (stepId === 'validation' || stepId === 'publish' || stepId === 'menu') return 'experiencia';
-    if (stepId === 'config') return 'info';
+    if (stepId === 'validation' || stepId === 'publish') return 'config';
     if (stepId === 'ai-content') return 'info';
     var step = getStepById(stepId);
-    if (step && step.hidden) return 'estructura';
+    if (step && step.hidden) return 'config';
     return stepId;
   }
 
@@ -79,17 +77,21 @@ var BuilderWizard = (function () {
     var step = STEPS[stepIndex];
     if (!step) return false;
     switch (step.id) {
+      case 'config':
+        return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
+      case 'info':
+        return true;
       case 'estructura':
       case 'project-type':
         return !!(state.estructura && state.estructura.developmentType) || !!state.projectType;
-      case 'info':
+      case 'video-hero':
+        return true;
+      case 'menu':
         return true;
       case 'media':
         return true;
       case 'experiencia':
         return true;
-      case 'config':
-        return !!(state.projectInfo && state.projectInfo.nombre && state.projectInfo.slug);
       case 'publish':
         return false;
       default:

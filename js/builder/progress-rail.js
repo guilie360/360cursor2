@@ -49,18 +49,13 @@ var BuilderProgressRail = (function () {
       return state.projectType || null;
     }
 
+    /* V5.9.92 ? menú original restaurado (+ Info = Arquitecto IA) */
     return [
       {
-        label: 'Estructura',
-        value: (function () {
-          if (typeof EstructuraEngine !== 'undefined') {
-            EstructuraEngine.ensureState(state);
-            return EstructuraEngine.summary(state.estructura);
-          }
-          return state.projectType ? typeLabel() : null;
-        })(),
-        done: isDone(state, 'estructura', !!(state.estructura && state.estructura.developmentType) || !!state.projectType),
-        stepIndex: BuilderWizard.getStepIndex('estructura')
+        label: 'Config',
+        value: info.nombre || info.slug || null,
+        done: isDone(state, 'config', !!(info.nombre && info.slug)),
+        stepIndex: BuilderWizard.getStepIndex('config')
       },
       {
         label: 'Info',
@@ -75,6 +70,35 @@ var BuilderProgressRail = (function () {
         })(),
         done: isDone(state, 'info', !!(info.nombre || (state.aiArchitect && state.aiArchitect.structureCreated) || (state.aiAssistant && state.aiAssistant.messages && state.aiAssistant.messages.length > 1))),
         stepIndex: BuilderWizard.getStepIndex('info')
+      },
+      {
+        label: 'Estructura',
+        value: (function () {
+          if (typeof EstructuraEngine !== 'undefined') {
+            EstructuraEngine.ensureState(state);
+            return EstructuraEngine.summary(state.estructura);
+          }
+          return state.projectType ? typeLabel() : null;
+        })(),
+        done: isDone(state, 'estructura', !!(state.estructura && state.estructura.developmentType) || !!state.projectType),
+        stepIndex: BuilderWizard.getStepIndex('estructura')
+      },
+      {
+        label: 'Hero',
+        value: heroLabel(),
+        done: isDone(state, 'video-hero', heroDone()),
+        stepIndex: BuilderWizard.getStepIndex('video-hero')
+      },
+      {
+        label: 'Menú',
+        value: (function () {
+          var m = state.menuConfig;
+          if (!m || !Array.isArray(m.items) || !m.items.length) return null;
+          var n = m.items.filter(function (i) { return i.enabled !== false; }).length;
+          return n + ' botones';
+        })(),
+        done: isDone(state, 'menu', !!(state.menuConfig && Array.isArray(state.menuConfig.items) && state.menuConfig.items.length)),
+        stepIndex: BuilderWizard.getStepIndex('menu')
       },
       {
         label: 'Media',
