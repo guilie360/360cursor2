@@ -12,7 +12,7 @@ var BuilderWizard = (function () {
     { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura la navegación principal del showroom.' },
     { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Organiza assets por nodos (tipologías y amenidades). Experiencia solo referencia estos archivos.' },
     { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Construye el recorrido consumiendo Estructura + Media. Sin rutas ni nombres manuales.' },
-    { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Visor del showroom en el Builder (próximamente).' },
+    { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Showroom embebido: pantalla negra + INICIAR (= Hero). Valida el flujo real del canvas.' },
 
     /* Hidden — keep ids for recoverability / deep-links */
     { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Guardar / Republicar o Vista previa.', hidden: true },
@@ -29,7 +29,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 94;
+  var NAV_VERSION = 96;
 
   function getSteps() {
     return STEPS.slice();

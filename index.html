@@ -18,6 +18,16 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <script>
+/* V5.9.96 — Builder «Vista previa»: Hero → pantalla negra + INICIAR (mismo #heroStartBtn) */
+(function () {
+  try {
+    if (/(?:^|[?&])boxiesCanvasPreview=1(?:&|$)/.test(location.search || '')) {
+      document.documentElement.classList.add('boxies-canvas-preview');
+    }
+  } catch (_e) {}
+})();
+</script>
+<script>
 /* Bloquear zoom del documento (móvil); viewers 360/lightbox usan controles propios */
 (function () {
   try {
@@ -66,7 +76,7 @@ console.log('[BOOT 0.00s] index.html primera línea', location.href);
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" type="image/png" href="https://360preventa.com/wp-content/uploads/2026/06/cropped-GM2-scaled-3.png">
 <link rel="stylesheet" href="css/variables.css?v=4">
-<link rel="stylesheet" href="css/components.css?v=ws5929">
+<link rel="stylesheet" href="css/components.css?v=ws5996">
 <link rel="stylesheet" href="css/platform/product-assistant.css?v=ws5935">
 <link rel="stylesheet" href="css/hall/hall.css?v=ws5929">
 <link rel="stylesheet" href="css/interactive-areas.css?v=ia3">
@@ -1430,7 +1440,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/main.js?v=maintrace1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/main.js?v=maintrace1");</script>
-<script src="js/main.js?v=ia3"></script>
+<script src="js/main.js?v=ws5996"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/main.js?v=maintrace1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/main.js?v=maintrace1');</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/platform/product-assistant.js');</script>
@@ -1441,7 +1451,7 @@ console.log(
   </script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/project-data.js?v=hall-match-001');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/project-data.js?v=hall-match-001");</script>
-<script src="js/project-data.js?v=mobile-v3-8"></script>
+<script src="js/project-data.js?v=ws5996"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/project-data.js?v=hall-match-001");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/project-data.js?v=hall-match-001');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/bootstrap.js');</script>

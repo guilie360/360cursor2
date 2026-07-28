@@ -214,7 +214,11 @@ function applyHeroModule(project) {
 
   var btnStart = document.getElementById('heroStartBtn');
   if (btnStart) {
-    btnStart.textContent = config.boton_hero_1 || 'Iniciar';
+    if (document.documentElement.classList.contains('boxies-canvas-preview')) {
+      btnStart.textContent = 'INICIAR';
+    } else {
+      btnStart.textContent = config.boton_hero_1 || 'Iniciar';
+    }
   }
 
   var btnExplore = document.getElementById('mainMenuOpenBtn');

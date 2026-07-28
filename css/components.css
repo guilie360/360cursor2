@@ -366,6 +366,78 @@ body,
   color:var(--text-primary);
 }
 
+/* V5.9.96 — Builder Vista previa: pantalla negra + solo INICIAR (reusa #heroStartBtn) */
+html.boxies-canvas-preview,
+html.boxies-canvas-preview body {
+  background: #000 !important;
+}
+html.boxies-canvas-preview .project-cover {
+  background: #000 !important;
+}
+html.boxies-canvas-preview .project-cover-video,
+html.boxies-canvas-preview .project-cover-overlay,
+html.boxies-canvas-preview .project-cover-logo,
+html.boxies-canvas-preview .project-cover-name,
+html.boxies-canvas-preview .project-cover-tagline,
+html.boxies-canvas-preview .project-cover-hero-copy,
+html.boxies-canvas-preview .project-cover-slot--start,
+html.boxies-canvas-preview #mainMenuOpenBtn,
+html.boxies-canvas-preview .hero-secondary-actions,
+html.boxies-canvas-preview .project-back-btn,
+html.boxies-canvas-preview .whatsapp-float,
+html.boxies-canvas-preview .share-float,
+html.boxies-canvas-preview .global-menu-tools,
+html.boxies-canvas-preview .global-action-stack,
+html.boxies-canvas-preview #deploy-marker,
+html.boxies-canvas-preview .pa-fab,
+html.boxies-canvas-preview #productAssistantRoot,
+html.boxies-canvas-preview .product-assistant,
+html.boxies-canvas-preview .hall-entry,
+html.boxies-canvas-preview [data-hall] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+html.boxies-canvas-preview .project-cover-content {
+  position: absolute;
+  inset: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 2;
+}
+html.boxies-canvas-preview .project-cover-hero-row {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+html.boxies-canvas-preview .project-cover-buttons {
+  display: flex !important;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+}
+html.boxies-canvas-preview .project-cover-slot--end {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+html.boxies-canvas-preview #heroStartBtn {
+  display: inline-flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  min-width: 160px;
+  justify-content: center;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
 /* Colores del hero — configuración oficial del proyecto (panel admin) */
 .project-cover[data-hero-text-color="light"] .project-cover-name {
   color:#ffffff;

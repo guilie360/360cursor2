@@ -1819,6 +1819,84 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   max-width: 520px;
 }
 
+/* V5.9.96 — Vista previa: monitor embebido a pantalla completa del panel */
+.builder-workspace #builderStepPanel:has(.builder-step-content--vista-previa) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: calc(
+    100vh - var(--boxies-header-h, var(--builder-header-height, 52px))
+      - var(--boxies-dock-h, var(--builder-dock-height, 56px))
+      - var(--boxies-dock-safe, var(--builder-dock-safe, 0px))
+  );
+  max-height: none;
+  min-height: 0;
+  padding: 8px clamp(12px, 1.5vw, 20px) 8px;
+}
+
+.builder-step-content--vista-previa {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-vista-previa-frame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: #000;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.builder-vista-previa-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+}
+
+.builder-vista-previa-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.builder-vista-previa-toolbar__slug {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-vista-previa-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
 .builder-menu-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;

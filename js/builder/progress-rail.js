@@ -143,7 +143,7 @@ var BuilderProgressRail = (function () {
       },
       {
         label: 'Vista previa',
-        value: 'Próximamente',
+        value: 'Canvas · INICIAR',
         done: isDone(state, 'vista-previa', false),
         stepIndex: BuilderWizard.getStepIndex('vista-previa')
       }

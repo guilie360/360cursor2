@@ -1921,13 +1921,58 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderVistaPrevia() {
+    var slug = resolveShowroomSlug();
+    var hasSlug = !!(slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug));
     return '<div class="builder-step-content builder-step-content--vista-previa">' +
-      '<h2 class="builder-step-title">Vista previa</h2>' +
-      '<p class="builder-step-desc">Próximamente: visor del showroom dentro del Builder.</p>' +
-      '<div class="builder-vista-previa-placeholder">' +
-        '<p class="builder-menu-hint">Esta sección está preparada. El visor se implementará en una próxima versión.</p>' +
+      '<div class="builder-vista-previa-frame" id="builderVistaPreviaFrame">' +
+        (hasSlug
+          ? '<iframe class="builder-vista-previa-iframe" id="builderVistaPreviaIframe" title="Vista previa del showroom" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen></iframe>' +
+            '<div class="builder-vista-previa-toolbar">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderVistaPreviaReload" title="Recargar">Recargar</button>' +
+              '<span class="builder-vista-previa-toolbar__slug">' + AdminUI.escapeHtml(slug) + '</span>' +
+            '</div>'
+          : '<div class="builder-vista-previa-empty">' +
+              '<p class="builder-menu-hint">Define el <strong>slug</strong> en Configuración para cargar el showroom real aquí.</p>' +
+              '<p class="builder-menu-hint">La vista previa usa el mismo motor del showroom: pantalla negra + INICIAR (= botón Iniciar del Hero).</p>' +
+            '</div>') +
       '</div>' +
     '</div>';
+  }
+
+  function resolveVistaPreviaUrl() {
+    var slug = resolveShowroomSlug();
+    if (!slug || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
+      return null;
+    }
+    var base = null;
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      base = ShowroomPublicUrl.href(slug);
+    } else if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl) {
+      base = PlatformBuilderBridge.showroomUrl(slug);
+    } else {
+      try {
+        base = new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+      } catch (e) {
+        base = '/' + encodeURIComponent(slug);
+      }
+    }
+    if (!base) return null;
+    var sep = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + sep + 'boxiesCanvasPreview=1';
+  }
+
+  function bindVistaPrevia() {
+    var iframe = rootEl.querySelector('#builderVistaPreviaIframe');
+    if (!iframe) return;
+    var url = resolveVistaPreviaUrl();
+    if (!url) return;
+    iframe.src = url;
+    var reloadBtn = rootEl.querySelector('#builderVistaPreviaReload');
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', function () {
+        iframe.src = resolveVistaPreviaUrl() || url;
+      });
+    }
   }
 
   function renderViviendas() {
@@ -5330,6 +5375,7 @@ var AiProjectBuilderView = (function () {
       bindHeroMediaActions();
     }
     if (stepId === 'menu') bindMenuFields();
+    if (stepId === 'vista-previa') bindVistaPrevia();
     if (stepId === 'viviendas') bindViviendasFields();
     if (stepId === 'gallery') bindDropzone('galleryDropzone', 'galleryInput', handleGalleryUpload, true);
     if (stepId === 'media') bindBunnyMediaStep();

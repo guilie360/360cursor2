@@ -4159,7 +4159,12 @@ window.__mainTraceSafe('ensurePopupBoxScrollWrappers', function () { ensurePopup
 
 /* ================= ENTRADA DESDE LA PORTADA ================= */
 window.__mainTraceSafe('bind heroStartBtn', function () {
-  document.getElementById('heroStartBtn').addEventListener('click', function(){ goTo('sphere'); });
+  var btn = document.getElementById('heroStartBtn');
+  if (!btn) return;
+  if (document.documentElement.classList.contains('boxies-canvas-preview')) {
+    btn.textContent = 'INICIAR';
+  }
+  btn.addEventListener('click', function(){ goTo('sphere'); });
 });
 
 /* ================= CIERRES — botón global; backdrops siguen activos ================= */
