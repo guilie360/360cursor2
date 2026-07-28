@@ -1,4 +1,4 @@
-/* BOXIES V5.9.65 — Plantillas jerárquicas desde Estructura actual */
+/* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -2132,14 +2132,25 @@ var ExperienciaCanvas = (function () {
       var nodes = ExperienciaEngine.visibleNodes(state);
       var b = ExperienciaEngine.bounds(nodes);
       var vr = viewport.getBoundingClientRect();
-      var spanX = Math.max(1, b.maxX - b.minX + 80);
-      var spanY = Math.max(1, b.maxY - b.minY + 80);
-      var zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vr.width / spanX, vr.height / spanY) * 0.9));
+      var pad = 120;
+      var spanX = Math.max(1, b.maxX - b.minX + pad);
+      var spanY = Math.max(1, b.maxY - b.minY + pad);
+      var zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vr.width / spanX, vr.height / spanY) * 0.88));
       canvas().zoom = zoom;
-      canvas().panX = (vr.width - spanX * zoom) / 2 - b.minX * zoom + 20;
-      canvas().panY = (vr.height - spanY * zoom) / 2 - b.minY * zoom + 20;
+      canvas().panX = (vr.width - spanX * zoom) / 2 - b.minX * zoom + 24;
+      canvas().panY = (vr.height - spanY * zoom) / 2 - b.minY * zoom + 24;
       renderAll();
       persist();
+    }
+
+    /** Single fitView after template generation — wait one paint so cards exist in DOM. */
+    function fitViewAfterTemplate() {
+      renderAll();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          fitView();
+        });
+      });
     }
 
     function centerView() {
@@ -2948,9 +2959,8 @@ var ExperienciaCanvas = (function () {
           close();
           function run() {
             var result = ExperienciaEngine.applyFlowTemplate(state, tid);
-            renderAll();
-            fitView();
             persist();
+            fitViewAfterTemplate();
             if (typeof AdminNotify !== 'undefined') {
               var msg = 'Flujo base aplicado (' + tid + ').';
               if (result && result.warning) msg += ' ' + result.warning;

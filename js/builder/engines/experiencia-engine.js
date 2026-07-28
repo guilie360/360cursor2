@@ -1,4 +1,4 @@
-/* BOXIES V5.9.65 — Plantillas jerárquicas: Estructura como única fuente de verdad */
+/* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -6,6 +6,13 @@ var ExperienciaEngine = (function () {
   var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
+
+  /* Template layout — horizontal column gap + vertical free space between siblings */
+  var TPL_COL_GAP = 160;
+  var TPL_SIBLING_GAP = 56;
+  var TPL_ORIGIN_X = 48;
+  var TPL_ORIGIN_Y = 100;
+  var TPL_COLLISION_PAD = 24;
 
   /* In-memory clipboard for Ctrl+C / Ctrl+V (nodes + internal edges only) */
   var _clipboard = null;
@@ -1990,24 +1997,35 @@ var ExperienciaEngine = (function () {
       hero = buildHeroNode(state, null);
       exp.nodes.unshift(hero);
     }
+    if (!hero.userMoved) {
+      hero.x = TPL_ORIGIN_X;
+      hero.y = TPL_ORIGIN_Y;
+    }
+    var heroSz = nodeSize(hero);
+    var spineY = hero.y != null ? hero.y : TPL_ORIGIN_Y;
+    var introX = Math.round((hero.x != null ? hero.x : TPL_ORIGIN_X) + heroSz.w + TPL_COL_GAP);
+
     var intro = findNodeByTemplateRole(exp, 'intro');
     if (!intro) {
       intro = createTemplateScene(state, {
         kind: 'video',
         label: 'Intro',
         templateRole: 'intro',
-        x: (hero.x || 48) + 360,
-        y: hero.y || 80
+        templateGenerated: true,
+        x: introX,
+        y: spineY
       });
     }
     var entry = findNodeByTemplateRole(exp, 'entry');
     if (!entry) {
+      var introSz0 = nodeSize(intro);
       entry = createTemplateScene(state, {
         kind: 'image',
         label: 'Vista general',
         templateRole: 'entry',
-        x: (intro.x || 400) + 340,
-        y: intro.y || 80
+        templateGenerated: true,
+        x: Math.round(introX + introSz0.w + TPL_COL_GAP),
+        y: spineY
       });
     }
     ensureEdge(state, hero.id, intro.id, 'INICIAR', 'hero-iniciar', 'in');
@@ -2108,6 +2126,8 @@ var ExperienciaEngine = (function () {
       existing.config.parentStructureId = entity.parentStructureId || null;
       existing.config.templateGenerated = true;
       existing.config.templateRole = role;
+      if (x != null) existing.x = Math.round(x);
+      if (y != null) existing.y = Math.round(y);
       return existing;
     }
     var n = createTemplateScene(state, {
@@ -2126,18 +2146,170 @@ var ExperienciaEngine = (function () {
     return n;
   }
 
+  function templateNodeRect(n) {
+    var s = nodeSize(n);
+    return {
+      id: n.id,
+      x: n.x || 0,
+      y: n.y || 0,
+      w: s.w,
+      h: s.h
+    };
+  }
+
+  function templateRectsOverlap(a, b, pad) {
+    pad = pad != null ? pad : TPL_COLLISION_PAD;
+    return !(
+      a.x + a.w + pad <= b.x ||
+      b.x + b.w + pad <= a.x ||
+      a.y + a.h + pad <= b.y ||
+      b.y + b.h + pad <= a.y
+    );
+  }
+
+  /** Push node down until it clears occupied rects (same column / nearby). */
+  function resolveTemplateCollision(node, occupied) {
+    var r = templateNodeRect(node);
+    var guard = 60;
+    while (guard-- > 0) {
+      var blocker = null;
+      for (var i = 0; i < occupied.length; i++) {
+        if (occupied[i].id === node.id) continue;
+        if (templateRectsOverlap(r, occupied[i], TPL_COLLISION_PAD)) {
+          blocker = occupied[i];
+          break;
+        }
+      }
+      if (!blocker) break;
+      r.y = blocker.y + blocker.h + TPL_SIBLING_GAP;
+    }
+    node.x = Math.round(r.x);
+    node.y = Math.round(r.y);
+    return templateNodeRect(node);
+  }
+
+  /**
+   * Place siblings in a column to the right of parent, vertically centered
+   * on parent center, with real card heights + sibling gaps. Collision-safe.
+   * Optional slotHeightFn expands each sibling's vertical slot (subtree-aware).
+   */
+  function layoutTemplateChildrenColumn(parent, children, occupied, slotHeightFn) {
+    if (!parent || !children || !children.length) return occupied;
+    var pSz = nodeSize(parent);
+    var colX = Math.round((parent.x || 0) + pSz.w + TPL_COL_GAP);
+    var heights = children.map(function (c) {
+      var cardH = nodeSize(c).h;
+      var slotH = slotHeightFn ? slotHeightFn(c) : cardH;
+      return Math.max(cardH, slotH || cardH);
+    });
+    var totalH = 0;
+    heights.forEach(function (h, i) {
+      totalH += h;
+      if (i < heights.length - 1) totalH += TPL_SIBLING_GAP;
+    });
+    var parentCenterY = (parent.y || 0) + pSz.h / 2;
+    var y = parentCenterY - totalH / 2;
+    children.forEach(function (child, i) {
+      var cardH = nodeSize(child).h;
+      var slotH = heights[i];
+      child.x = colX;
+      /* Center the card inside its vertical slot when slot > card */
+      child.y = Math.round(y + (slotH - cardH) / 2);
+      child.userMoved = false;
+      var placed = resolveTemplateCollision(child, occupied);
+      occupied = occupied.filter(function (o) { return o.id !== child.id; });
+      occupied.push(placed);
+      /* Advance by slot (not just card) so sibling subtrees keep clearance */
+      var usedBottom = Math.max(placed.y + placed.h, y + slotH);
+      y = usedBottom + TPL_SIBLING_GAP;
+    });
+    return occupied;
+  }
+
+  /**
+   * Layout main spine + hierarchical branch columns after template generation.
+   * Only repositions template roles / templateGenerated nodes (and intro chain).
+   */
+  function layoutTemplateSkeleton(state, chain, levels) {
+    var exp = ensureState(state);
+    var hero = chain && chain.hero;
+    var intro = chain && chain.intro;
+    var entry = chain && chain.entry;
+    if (!hero || !intro || !entry) return;
+
+    if (!hero.userMoved) {
+      hero.x = TPL_ORIGIN_X;
+      hero.y = TPL_ORIGIN_Y;
+    }
+    var hSz = nodeSize(hero);
+    var spineBaseY = hero.y != null ? hero.y : TPL_ORIGIN_Y;
+
+    intro.x = Math.round((hero.x != null ? hero.x : TPL_ORIGIN_X) + hSz.w + TPL_COL_GAP);
+    intro.y = Math.round(spineBaseY + hSz.h / 2 - nodeSize(intro).h / 2);
+    intro.userMoved = false;
+
+    var iSz = nodeSize(intro);
+    entry.x = Math.round(intro.x + iSz.w + TPL_COL_GAP);
+    entry.y = Math.round(intro.y + iSz.h / 2 - nodeSize(entry).h / 2);
+    entry.userMoved = false;
+
+    var occupied = [
+      templateNodeRect(hero),
+      templateNodeRect(intro),
+      templateNodeRect(entry)
+    ];
+
+    /* Include other non-template nodes as collision obstacles (don't move them) */
+    (exp.nodes || []).forEach(function (n) {
+      if (!n || n.x == null || n.y == null) return;
+      if (n.id === hero.id || n.id === intro.id || n.id === entry.id) return;
+      var isTpl = n.config && (n.config.templateGenerated ||
+        n.config.templateRole === 'branch' || n.config.templateRole === 'struct-child' ||
+        n.config.templateRole === 'intro' || n.config.templateRole === 'entry');
+      if (isTpl) return;
+      occupied.push(templateNodeRect(n));
+    });
+
+    var childMap = {};
+    (levels || []).forEach(function (level) {
+      if (!level || !level.parent) return;
+      childMap[level.parent.id] = level.children || [];
+    });
+
+    function subtreeSlotHeight(n) {
+      var kids = childMap[n.id];
+      if (!kids || !kids.length) return nodeSize(n).h;
+      var th = 0;
+      kids.forEach(function (k, i) {
+        th += subtreeSlotHeight(k);
+        if (i < kids.length - 1) th += TPL_SIBLING_GAP;
+      });
+      return Math.max(nodeSize(n).h, th);
+    }
+
+    (levels || []).forEach(function (level) {
+      if (!level || !level.parent || !level.children || !level.children.length) return;
+      occupied = layoutTemplateChildrenColumn(
+        level.parent, level.children, occupied, subtreeSlotHeight
+      ) || occupied;
+    });
+  }
+
   /** Attach template hotspots + child nodes for children of a structural scene. */
   function seedStructuralChildren(state, parentScene, childEntities, startX) {
     var exp = ensureState(state);
     if (!parentScene || !childEntities || !childEntities.length) return [];
     clearTemplateGeneratedOnScene(state, parentScene, exp);
     var created = [];
-    var baseY = (parentScene.y || 80) - Math.floor((childEntities.length - 1) * 70 / 2);
-    var x = startX != null ? startX : ((parentScene.x || 760) + 340);
+    var pSz = nodeSize(parentScene);
+    var x = startX != null ? startX : Math.round((parentScene.x || 0) + pSz.w + TPL_COL_GAP);
+    /* Temporary Y — final layoutTemplateSkeleton recenters the group */
+    var roughStep = NODE_H + 40 + TPL_SIBLING_GAP;
+    var baseY = (parentScene.y || 0) - Math.floor((childEntities.length - 1) * roughStep / 2);
     childEntities.forEach(function (raw, i) {
       var entity = toBranchEntity(raw);
       var childNode = ensureStructuralBranchNode(
-        state, entity, x, baseY + i * 110, 'struct-child'
+        state, entity, x, baseY + i * roughStep, 'struct-child'
       );
       var ix = addInteractionToScene(state, parentScene.id, 'HOTSPOT', entity.label, {
         group: 'content',
@@ -2192,6 +2364,7 @@ var ExperienciaEngine = (function () {
       /* Remove prior structural template branches from Vista; keep intro chain */
       clearTemplateGeneratedOnScene(state, chain.entry, exp);
       pruneOrphanTemplateBranches(state, []);
+      layoutTemplateSkeleton(state, chain, []);
       exp.flowTemplateId = FLOW_TEMPLATE_IDS.simple;
       exp.structureFingerprint = structureFingerprint(state);
       markExperienciaDirty(state);
@@ -2223,6 +2396,7 @@ var ExperienciaEngine = (function () {
     if (!levelNodes.length) {
       clearTemplateGeneratedOnScene(state, entry, exp);
       pruneOrphanTemplateBranches(state, []);
+      layoutTemplateSkeleton(state, chain, []);
       exp.flowTemplateId = templateId;
       exp.structureFingerprint = structureFingerprint(state);
       markExperienciaDirty(state);
@@ -2238,12 +2412,13 @@ var ExperienciaEngine = (function () {
     clearTemplateGeneratedOnScene(state, entry, exp);
 
     var keepIds = levelNodes.map(function (b) { return b.id; });
-    var baseY = (entry.y || 80) - Math.floor((levelNodes.length - 1) * 70 / 2);
     var branchNodes = [];
+    var layoutLevels = [];
 
     levelNodes.forEach(function (br, i) {
+      /* Rough placeholder — layoutTemplateSkeleton assigns final x/y */
       var branchNode = ensureStructuralBranchNode(
-        state, br, (entry.x || 760) + 360, baseY + i * 130, 'branch'
+        state, br, (entry.x || 760) + 360, (entry.y || 80) + i * 40, 'branch'
       );
       branchNodes.push(branchNode);
       keepIds.push(branchNode.id);
@@ -2277,11 +2452,19 @@ var ExperienciaEngine = (function () {
           keepIds.push(cn.id);
           if (cn.config && cn.config.structureId) keepIds.push(cn.config.structureId);
         });
+        if (childNodes.length) {
+          layoutLevels.push({ parent: branchNode, children: childNodes });
+        }
       }
     });
 
+    if (branchNodes.length) {
+      layoutLevels.unshift({ parent: entry, children: branchNodes });
+    }
+
     pruneOrphanTemplateBranches(state, keepIds);
     syncScenePorts(entry);
+    layoutTemplateSkeleton(state, chain, layoutLevels);
     exp.flowTemplateId = templateId;
     exp.structureFingerprint = structureFingerprint(state);
     markExperienciaDirty(state);
