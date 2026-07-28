@@ -8,7 +8,7 @@ var BuilderSession = (function () {
       draftProjectId: null,
       currentStep: 0,
       currentStepId: 'config',
-      wizardNavVersion: 48,
+      wizardNavVersion: 68,
       projectType: null,
       projectStructure: null,
       estructura: null,
@@ -97,12 +97,13 @@ var BuilderSession = (function () {
           state.heroVideo = null;
         }
       }
-      /* V5.9.48 — resolve step by id after nav reorder */
+      /* Resolve step by id after nav reorder (Media added in V5.9.67/68) */
       if (state.currentStepId && typeof BuilderWizard !== 'undefined') {
         var idx = BuilderWizard.getStepIndex(state.currentStepId);
         if (idx >= 0) state.currentStep = idx;
       }
-      state.wizardNavVersion = 48;
+      state.wizardNavVersion =
+        (typeof BuilderWizard !== 'undefined' && BuilderWizard.NAV_VERSION) || 68;
       return state;
     } catch (e) {
       return emptyState();

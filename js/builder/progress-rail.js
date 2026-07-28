@@ -1,4 +1,4 @@
-/* Progress rail — discrete left column checklist */
+/* Progress rail — discrete left column checklist (V5.9.68 includes Media) */
 var BuilderProgressRail = (function () {
   /* Elder Futhark markers — visual only; section ids unchanged.
      Exact sequence for first 15 rail sections (order in buildItems). */
@@ -148,6 +148,27 @@ var BuilderProgressRail = (function () {
           : (applied ? '0 imágenes' : 'Pendiente estructura'),
         done: isDone(state, 'gallery', (state.gallery || []).length > 0),
         stepIndex: BuilderWizard.getStepIndex('gallery')
+      },
+      {
+        label: 'Media',
+        value: (function () {
+          var n = (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) || 0;
+          if (n) return n + (n === 1 ? ' archivo CDN' : ' archivos CDN');
+          if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.listProjectAssets) {
+            var bunny = ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+              return a && a.provider === 'bunny';
+            });
+            if (bunny.length) return bunny.length + (bunny.length === 1 ? ' asset' : ' assets');
+          }
+          return 'Bunny CDN';
+        })(),
+        done: isDone(state, 'media', !!(
+          (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) ||
+          (state.projectAssets && state.projectAssets.byId && Object.keys(state.projectAssets.byId).some(function (id) {
+            return state.projectAssets.byId[id] && state.projectAssets.byId[id].provider === 'bunny';
+          }))
+        )),
+        stepIndex: BuilderWizard.getStepIndex('media')
       },
       {
         label: '360°',

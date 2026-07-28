@@ -5457,7 +5457,7 @@ var AiProjectBuilderView = (function () {
     state.currentStep = index;
     var step = BuilderWizard.getStep(index);
     if (step) state.currentStepId = step.id;
-    state.wizardNavVersion = BuilderWizard.NAV_VERSION || 48;
+    state.wizardNavVersion = BuilderWizard.NAV_VERSION || 68;
     saveState();
     if (step && step.id === 'validation') {
       state.validation = ValidationEngine.validate(state);

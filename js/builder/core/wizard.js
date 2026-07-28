@@ -1,6 +1,6 @@
 /* Builder wizard — step orchestration (incluye Interactivo) */
 var BuilderWizard = (function () {
-  /* V5.9.67 — Media (Bunny CDN) step added after Galería.
+  /* V5.9.68 — Media (Bunny CDN) visible in left rail after Galería.
      Legacy steps (interactivo, info, ai-content) kept recoverable at the end. */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
@@ -24,7 +24,7 @@ var BuilderWizard = (function () {
     { id: 'ai-content', label: 'Asistente IA', shortLabel: 'IA', icon: 'sparkles', assistant: 'Con toda la información recopilada, generaré textos comerciales, FAQs y contenido para el chatbot.', legacy: true }
   ];
 
-  var NAV_VERSION = 48;
+  var NAV_VERSION = 68;
 
   function getSteps() {
     return STEPS.slice();
