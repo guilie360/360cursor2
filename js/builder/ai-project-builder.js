@@ -6404,10 +6404,14 @@ var AiProjectBuilderView = (function () {
       });
     }
 
-    var rail = rootEl.querySelector('#builderProgressRail');
+    var rail = rootEl && rootEl.querySelector ? rootEl.querySelector('#builderProgressRail') : null;
     if (rail) {
       rail.addEventListener('click', function (e) {
-        var item = e.target.closest('[data-rail-step]');
+        var t = e && e.target;
+        if (!t) return;
+        if (t.nodeType !== 1) t = t.parentElement;
+        if (!t || typeof t.closest !== 'function') return;
+        var item = t.closest('[data-rail-step]');
         if (!item) return;
         var idx = parseInt(item.getAttribute('data-rail-step'), 10);
         if (idx >= 0) goToStep(idx);

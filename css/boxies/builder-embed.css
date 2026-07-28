@@ -36,7 +36,7 @@
   height: auto;
   max-height: 100%;
   overflow: hidden;
-  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   padding-top: var(--boxies-chrome-pad-top, 12px);
 }
 
@@ -57,7 +57,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   margin-top: 0;
   margin-left: var(--builder-rail-width, 200px);
   min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
-  transition: margin-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: margin-left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .boxies-builder-embed .builder-workspace .builder-main-panel,
@@ -260,8 +260,19 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 
 body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
 body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--estructura) .builder-workspace,
-body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace {
-  margin-left: var(--builder-rail-width, 52px);
+body.boxies-rail-collapsed #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,
+body.boxies-rail-collapsed #boxiesContent .builder-workspace,
+body.boxies-rail-collapsed .boxies-builder-embed .builder-workspace {
+  margin-left: 0 !important;
+}
+
+body.boxies-rail-collapsed .boxies-builder-embed .builder-progress-sidebar,
+body.boxies-rail-collapsed #boxiesContent .builder-progress-sidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none;
 }
 
 body.boxies-exp-canvas-mode #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,

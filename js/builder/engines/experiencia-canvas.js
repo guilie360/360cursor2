@@ -1218,7 +1218,9 @@ var ExperienciaCanvas = (function () {
     }
 
     function applyWorldTransform() {
+      if (!world || !world.style) return;
       var c = canvas();
+      if (!c) return;
       world.style.transform =
         'translate(' + c.panX + 'px,' + c.panY + 'px) scale(' + c.zoom + ')';
       world.style.transformOrigin = '0 0';
@@ -1342,7 +1344,7 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintMinimap() {
-      if (!minimapCanvas || !canvas().minimapVisible) return;
+      if (!minimapCanvas || !viewport || !canvas().minimapVisible) return;
       var ctx = minimapCanvas.getContext('2d');
       if (!ctx) return;
       var cw = minimapCanvas.width;
@@ -1403,6 +1405,7 @@ var ExperienciaCanvas = (function () {
     }
 
     function bindInspectorActions() {
+      if (!inspectorBody || !inspectorBody.querySelector) return;
       var del = inspectorBody.querySelector('[data-exp-del-edge]');
       if (del) {
         del.addEventListener('click', function () {
@@ -2857,8 +2860,10 @@ var ExperienciaCanvas = (function () {
 
     var resizeTimer = null;
     function onViewportResize() {
+      if (!viewport || !world) return;
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
+        if (!viewport || !world) return;
         applyWorldTransform();
         paintMinimap();
       }, 40);

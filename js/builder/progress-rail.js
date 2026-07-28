@@ -1,5 +1,7 @@
-/* Progress rail — V5.9.78 minimal nav (slim flow + full collapse) */
+/* Progress rail — V5.9.79 full left-chrome collapse (CSS-only, DOM preserved) */
 var BuilderProgressRail = (function () {
+  var EXPANDED_RAIL_W = '176px';
+
   function shortName(name) {
     if (!name) return null;
     var base = String(name).replace(/\.[^.]+$/, '');
@@ -45,7 +47,6 @@ var BuilderProgressRail = (function () {
       return state.projectType || null;
     }
 
-    /* V5.9.77 — Config → Estructura → Experiencia → Hero → Media → Menú → Publicado → Info */
     return [
       {
         label: 'Config',
@@ -154,21 +155,55 @@ var BuilderProgressRail = (function () {
     return collapsed ? '▶' : '◀';
   }
 
+  function eventElement(target) {
+    if (!target) return null;
+    if (target.nodeType === 1) return target;
+    return target.parentElement || null;
+  }
+
   function syncCollapseButton(rail, collapsed) {
-    var btn = rail && rail.querySelector('#builderRailCollapseBtn');
+    if (!rail || !rail.querySelector) return;
+    var btn = rail.querySelector('#builderRailCollapseBtn');
     if (!btn) return;
-    btn.setAttribute('data-tooltip', collapsed ? 'Expandir pasos' : 'Colapsar pasos');
-    btn.setAttribute('aria-label', collapsed ? 'Expandir pasos' : 'Colapsar pasos');
+    btn.setAttribute('data-tooltip', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
+    btn.setAttribute('aria-label', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     btn.innerHTML = collapseToggleIcon(collapsed);
   }
 
+  /**
+   * V5.9.79 — Collapse the ENTIRE left chrome (platform nav + builder steps).
+   * CSS-only: never remove DOM nodes. Safe to call 100×.
+   */
   function applyRailCollapsed(collapsed) {
-    document.body.classList.toggle('boxies-rail-collapsed', !!collapsed);
-    document.documentElement.classList.toggle('boxies-rail-collapsed', !!collapsed);
-    /* V5.9.78 — fully hide: 0px, only floating arrow remains */
-    var width = collapsed ? '0px' : '176px';
-    document.documentElement.style.setProperty('--builder-rail-width', width);
+    collapsed = !!collapsed;
+    var body = document.body;
+    var root = document.documentElement;
+    if (!body || !root || !root.style) return;
+
+    body.classList.toggle('boxies-rail-collapsed', collapsed);
+    root.classList.toggle('boxies-rail-collapsed', collapsed);
+    /* Keep platform nav in sync — full hide, not icon strip */
+    body.classList.toggle('boxies-nav-collapsed', collapsed);
+    root.classList.toggle('boxies-nav-collapsed', collapsed);
+
+    root.style.setProperty('--builder-rail-width', collapsed ? '0px' : EXPANDED_RAIL_W);
+    if (collapsed) {
+      root.style.setProperty('--boxies-sidebar-w', '0px');
+      root.style.setProperty('--boxies-sidebar-collapsed-w', '0px');
+    } else {
+      root.style.removeProperty('--boxies-sidebar-w');
+      root.style.removeProperty('--boxies-sidebar-collapsed-w');
+    }
+
+    if (typeof BoxiesPrefs !== 'undefined') {
+      if (BoxiesPrefs.setRailCollapsed) BoxiesPrefs.setRailCollapsed(collapsed);
+      if (BoxiesPrefs.setNavCollapsed) BoxiesPrefs.setNavCollapsed(collapsed);
+    }
+
+    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.applyNavCollapsed === 'function') {
+      try { BoxiesShell.applyNavCollapsed(collapsed); } catch (eNav) {}
+    }
   }
 
   function applyCollapsedFromPrefs() {
@@ -181,8 +216,8 @@ var BuilderProgressRail = (function () {
     var collapsed = isRailCollapsed();
     var html =
       '<button type="button" class="builder-rail-collapse" id="builderRailCollapseBtn"' +
-        ' data-tooltip="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
-        ' aria-label="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
+        ' data-tooltip="' + (collapsed ? 'Expandir navegación' : 'Colapsar navegación') + '"' +
+        ' aria-label="' + (collapsed ? 'Expandir navegación' : 'Colapsar navegación') + '"' +
         ' aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
         collapseToggleIcon(collapsed) +
       '</button>';
@@ -220,39 +255,49 @@ var BuilderProgressRail = (function () {
   var _lastState = null;
   var _savedListScroll = 0;
 
+  function resolveRail(rootEl) {
+    if (rootEl && rootEl.querySelector) {
+      var found = rootEl.querySelector('#builderProgressRail');
+      if (found) return found;
+    }
+    return document.getElementById('builderProgressRail');
+  }
+
   function update(rootEl, state) {
-    var rail = rootEl && rootEl.querySelector
-      ? rootEl.querySelector('#builderProgressRail')
-      : document.getElementById('builderProgressRail');
+    var rail = resolveRail(rootEl);
     if (!rail) return;
-    _lastRoot = rootEl;
-    _lastState = state;
+    _lastRoot = rootEl || null;
+    _lastState = state || null;
     applyCollapsedFromPrefs();
 
-    var listBefore = rail.querySelector('[data-builder-rail-list]');
-    if (listBefore) _savedListScroll = listBefore.scrollTop;
+    var listBefore = rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
+    if (listBefore) _savedListScroll = listBefore.scrollTop || 0;
 
     rail.innerHTML = renderHtml(state);
 
-    var listAfter = rail.querySelector('[data-builder-rail-list]');
+    var listAfter = rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
     if (listAfter) listAfter.scrollTop = _savedListScroll;
 
     if (!rail.dataset.collapseBound) {
       rail.dataset.collapseBound = '1';
       rail.addEventListener('click', function (e) {
-        var btn = e.target.closest('#builderRailCollapseBtn');
+        var el = eventElement(e && e.target);
+        if (!el || typeof el.closest !== 'function') return;
+        var btn = el.closest('#builderRailCollapseBtn');
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
-        var list = rail.querySelector('[data-builder-rail-list]');
-        if (list) _savedListScroll = list.scrollTop;
+
+        var list = rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
+        if (list) _savedListScroll = list.scrollTop || 0;
+
         var next = !isRailCollapsed();
-        if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setRailCollapsed) {
-          BoxiesPrefs.setRailCollapsed(next);
-        }
+        /* CSS-only toggle — never destroy rail DOM or remount Builder */
         applyRailCollapsed(next);
         syncCollapseButton(rail, next);
-        if (list) list.scrollTop = _savedListScroll;
+
+        if (list && list.isConnected) list.scrollTop = _savedListScroll;
+
         try {
           window.dispatchEvent(new CustomEvent('boxies:rail-toggle', {
             detail: { collapsed: !!next }
@@ -263,7 +308,9 @@ var BuilderProgressRail = (function () {
   }
 
   function applyLayoutVars() {
-    document.documentElement.style.setProperty('--builder-header-height', '44px');
+    if (document.documentElement && document.documentElement.style) {
+      document.documentElement.style.setProperty('--builder-header-height', '44px');
+    }
     applyCollapsedFromPrefs();
   }
 
@@ -274,6 +321,7 @@ var BuilderProgressRail = (function () {
     applyLayoutVars: applyLayoutVars,
     applyCollapsedFromPrefs: applyCollapsedFromPrefs,
     applyRailCollapsed: applyRailCollapsed,
-    isDone: isDone
+    isDone: isDone,
+    isRailCollapsed: isRailCollapsed
   };
 })();

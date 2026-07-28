@@ -223,7 +223,7 @@ body.builder-has-dock.platform-builder-shell {
   flex-direction: column;
   gap: 0;
   padding: 10px 0 16px;
-  overflow: visible;
+  overflow: hidden;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   background: rgba(8, 8, 8, 0.55);
   box-sizing: border-box;
@@ -238,12 +238,15 @@ body.builder-has-dock .builder-progress-sidebar {
   bottom: calc(var(--builder-dock-height, 56px) + var(--builder-dock-safe, 0px));
 }
 
-/* Floating edge toggle ? right border of sidebar (Canvas inspector pattern) */
+/*
+ * Floating edge toggle ? position:fixed so it survives width:0 / overflow:hidden.
+ * Anchored to the right edge of (platform sidebar + builder rail).
+ */
 .builder-rail-collapse {
-  position: absolute;
+  position: fixed;
   top: 50%;
-  right: 0;
-  z-index: 10002;
+  left: calc(var(--boxies-sidebar-w, 200px) + var(--builder-rail-width, 176px));
+  z-index: 10050;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -252,7 +255,7 @@ body.builder-has-dock .builder-progress-sidebar {
   height: 56px;
   margin: 0;
   padding: 0;
-  transform: translate(50%, -50%);
+  transform: translate(-50%, -50%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0 8px 8px 0;
   background: rgba(12, 12, 12, 0.96);
@@ -265,7 +268,6 @@ body.builder-has-dock .builder-progress-sidebar {
     background 0.2s ease,
     border-color 0.2s ease,
     left 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-    right 0.26s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -430,12 +432,26 @@ body.builder-has-dock .builder-progress-sidebar {
   transition: margin-left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Fully collapsed ? sidebar gone; only floating arrow remains */
-body.boxies-rail-collapsed .builder-progress-sidebar {
+/*
+ * V5.9.79 ? Full left chrome collapse:
+ * platform sidebar (Hall/Showrooms/Builder/Sistema) + builder steps ? 0px.
+ * DOM stays mounted; only width/visibility change.
+ */
+html.boxies-rail-collapsed,
+body.boxies-rail-collapsed {
+  --builder-rail-width: 0px !important;
+  --boxies-sidebar-w: 0px !important;
+  --boxies-sidebar-collapsed-w: 0px !important;
+}
+
+body.boxies-rail-collapsed .builder-progress-sidebar,
+body.boxies-rail-collapsed #builderProgressRail {
   width: 0 !important;
+  min-width: 0 !important;
   padding: 0 !important;
   border-right-color: transparent;
   background: transparent;
+  overflow: hidden !important;
   pointer-events: none;
 }
 
@@ -450,10 +466,31 @@ body.boxies-rail-collapsed .builder-rail-list {
 body.boxies-rail-collapsed .builder-rail-collapse {
   pointer-events: auto;
   left: 0;
-  right: auto;
   transform: translateY(-50%);
-  border-left: none;
   border-radius: 0 8px 8px 0;
+}
+
+body.boxies-rail-collapsed .boxies-sidebar,
+body.boxies-rail-collapsed #boxiesSidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+body.boxies-rail-collapsed .boxies-nav,
+body.boxies-rail-collapsed #boxiesNav,
+body.boxies-rail-collapsed .boxies-nav-collapse {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+body.boxies-rail-collapsed .boxies-workspace,
+body.boxies-rail-collapsed .builder-workspace {
+  margin-left: 0 !important;
 }
 
 .builder-workspace {

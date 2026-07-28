@@ -281,7 +281,10 @@ a.boxies-action-btn {
   background: transparent;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
-  transition: width var(--boxies-transition);
+  transition:
+    width var(--boxies-transition),
+    padding var(--boxies-transition),
+    border-color var(--boxies-transition);
   box-sizing: border-box;
 }
 
