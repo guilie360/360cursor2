@@ -1,4 +1,11 @@
-/* BOXIES V5.9.72 — Canvas nodes = SSOT; Media assets belong to node_id */
+/* BOXIES V5.9.72 — Canvas nodes = SSOT; Media assets belong to node_id
+ *
+ * Call graph (no mutual recursion):
+ *   ensureNodeIds(state)     → stamp node_id / normalize only
+ *   listCompatibleNodes(state) → read + return array only
+ *   findNode(state, node_id) → search inside listCompatibleNodes()
+ *   render…                 → ensureNodeIds() then listCompatibleNodes()
+ */
 var MediaNodesEngine = (function () {
   /**
    * Canonical media categories (path segment under projects/{id}/).
@@ -45,15 +52,20 @@ var MediaNodesEngine = (function () {
     return c ? c.key : (key || 'images');
   }
 
+  /**
+   * Stamp missing node_id + normalize zoneNodes from zoneNames.
+   * Does not list, render, or call other Media APIs.
+   */
   function ensureNodeIds(state) {
-    if (!state) return [];
+    if (!state) return;
     if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureState) {
       EstructuraEngine.ensureState(state);
     }
     var e = state.estructura;
-    if (!e) return [];
+    if (!e) return;
 
-    (e.tipologias || []).forEach(function (tip, i) {
+    if (!Array.isArray(e.tipologias)) e.tipologias = [];
+    e.tipologias.forEach(function (tip, i) {
       if (!tip) return;
       if (!tip.node_id) {
         tip.node_id = tip.id || tip.localId || ('tip-' + i + '-' + Date.now().toString(36));
@@ -61,12 +73,14 @@ var MediaNodesEngine = (function () {
     });
 
     if (!Array.isArray(e.zoneNodes)) e.zoneNodes = [];
+    if (!Array.isArray(e.zoneNames)) e.zoneNames = [];
+
     var byName = {};
     e.zoneNodes.forEach(function (z) {
       if (z && z.nombre) byName[String(z.nombre).toLowerCase()] = z;
     });
     var nextZones = [];
-    (e.zoneNames || []).forEach(function (name) {
+    e.zoneNames.forEach(function (name) {
       var n = String(name || '').trim();
       if (!n) return;
       var prev = byName[n.toLowerCase()];
@@ -84,11 +98,13 @@ var MediaNodesEngine = (function () {
       }
     });
     e.zoneNodes = nextZones;
-    return listCompatibleNodes(state);
   }
 
+  /**
+   * Read-only projection of Canvas nodes for Media.
+   * Does not mutate state and does not call ensureNodeIds.
+   */
   function listCompatibleNodes(state) {
-    ensureNodeIds(state);
     var e = state && state.estructura;
     if (!e) return [];
     var out = [];
@@ -126,6 +142,7 @@ var MediaNodesEngine = (function () {
     return out;
   }
 
+  /** Lookup one node by node_id inside listCompatibleNodes(). */
   function findNode(state, nodeId) {
     if (!nodeId) return null;
     var list = listCompatibleNodes(state);

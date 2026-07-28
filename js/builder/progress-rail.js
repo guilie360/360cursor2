@@ -153,6 +153,7 @@ var BuilderProgressRail = (function () {
         label: 'Media',
         value: (function () {
           if (typeof MediaNodesEngine !== 'undefined') {
+            MediaNodesEngine.ensureNodeIds(state);
             var nodes = MediaNodesEngine.listCompatibleNodes(state) || [];
             var assetCount = 0;
             if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.listProjectAssets) {

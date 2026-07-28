@@ -26,6 +26,7 @@ var MediaToursEngine = (function () {
 
   function collectStructureScenes(state) {
     if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.listCompatibleNodes) {
+      MediaNodesEngine.ensureNodeIds(state);
       return MediaNodesEngine.listCompatibleNodes(state).map(function (n) {
         return {
           nombre: n.label || n.nombre,
