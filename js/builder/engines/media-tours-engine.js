@@ -54,6 +54,12 @@ var MediaToursEngine = (function () {
     (e.zoneNames || []).forEach(function (name) {
       var n = String(name || '').trim();
       if (!n) return;
+      /* V5.9.88 — tours only for amenities opted into Media */
+      if (typeof MediaNodesEngine !== 'undefined' &&
+          MediaNodesEngine.isMediaAmenityEnabled &&
+          !MediaNodesEngine.isMediaAmenityEnabled(state, n)) {
+        return;
+      }
       var nid = 'zona:' + n.toLowerCase().replace(/\s+/g, '-');
       out.push({
         nombre: n,

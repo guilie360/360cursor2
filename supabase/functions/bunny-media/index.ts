@@ -1,5 +1,5 @@
 /**
- * BOXIES V5.9.87 - bunny-media (slug-based folder layout + full auto-sync)
+ * BOXIES V5.9.88 - bunny-media (slug-based folder layout + full auto-sync)
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
  * NEW physical layout (V5.9.86) — Bunny folders are controlled by BOXIES
@@ -15,6 +15,12 @@
  * and `proyecto_estructura.draft_json`), and migrates any legacy
  * projects/{uuid}/... tree into the slug-based layout, updating `archivos`
  * rows and removing the old UUID directory once migrated.
+ *
+ * V5.9.88 — Amenities are opt-in for Media (Structure remains SSOT):
+ *   Tipologías → auto folders
+ *   Amenidades → only `mediaAmenityNames` (subset of Structure zones)
+ *   One-shot migration clears auto-created amenity Media folders and
+ *   resets mediaAmenityNames to [] on every showroom.
  *
  * Actions:
  *   POST multipart: upload
@@ -525,9 +531,10 @@ const NODE_FOLDERS_ZONE = ["images", "videos", "tours360", "documents"];
 
 // deno-lint-ignore no-explicit-any
 function pickBunnySlug(node: any): string {
+  if (typeof node === "string") return sanitizeSlug(node);
   if (!node || typeof node !== "object") return "";
   return sanitizeSlug(
-    String(node.bunny_slug || node.nombre || node.name || node.id || ""),
+    String(node.bunny_slug || node.nombre || node.name || node.label || node.id || ""),
   );
 }
 
@@ -1177,11 +1184,11 @@ async function handleRenameFolder(req: Request) {
 }
 
 /**
- * V5.9.87 — sync_all_showrooms
+ * V5.9.87 / V5.9.88 — sync_all_showrooms
  * Full DB→Bunny mirror: reads every non-template showroom from `proyectos`
  * (no hardcoded names), ensures its Bunny folder skeleton (hero + media +
- * one folder set per Canvas node), and migrates any legacy
- * projects/{uuid}/... tree into the slug-based layout.
+ * tipologías + opted-in amenities), migrates legacy projects/{uuid}/...
+ * trees, and one-shot purges auto-created amenity Media folders (V5.9.88).
  */
 async function handleSyncAllShowrooms(req: Request) {
   const { supabase, user, error: authErr } = await createUserClient(req);
@@ -1230,6 +1237,7 @@ async function handleSyncAllShowrooms(req: Request) {
   const legacyRootNames = new Set(rootItems.map((i) => i.name));
 
   const migrated: { id: string; slug: string; filesMoved: number }[] = [];
+  const amenitiesPurged: { id: string; slug: string; folders: string[] }[] = [];
   const ensured: { id: string; slug: string }[] = [];
   const errors: { id: string; slug?: string; error: string }[] = [];
 
@@ -1285,16 +1293,17 @@ async function handleSyncAllShowrooms(req: Request) {
           filesMoved++;
         }
 
-        /* Source is fully copied/verified (or was already redundant) — safe to drop. */
         await bunnyDeleteDirRecursive(hostname, zone, accessKey, legacyDir);
         migrated.push({ id: sh.id, slug, filesMoved });
       }
 
-      /* d. nodes: derive Canvas node slugs from tipologias + draft_json */
+      /* d. load tipologías + estructura draft/config */
       const usedNodeSlugs = new Set<string>();
+      const tipologiaSlugs = new Set<string>();
+      const amenitySlugs = new Set<string>();
       const nodes: { slug: string; folders: string[] }[] = [];
 
-      const addNode = (rawSlug: string, folders: string[]) => {
+      const addNode = (rawSlug: string, folders: string[], bucket: Set<string> | null) => {
         const base = sanitizeSlug(rawSlug);
         if (!base) return;
         let final = base;
@@ -1304,6 +1313,7 @@ async function handleSyncAllShowrooms(req: Request) {
           n++;
         }
         usedNodeSlugs.add(final);
+        if (bucket) bucket.add(final);
         nodes.push({ slug: final, folders });
       };
 
@@ -1314,33 +1324,145 @@ async function handleSyncAllShowrooms(req: Request) {
         .or("archived.is.null,archived.eq.false");
       // deno-lint-ignore no-explicit-any
       for (const t of (tipos || []) as any[]) {
-        addNode(t.nombre || t.modelo || t.id, NODE_FOLDERS_FULL);
+        addNode(t.nombre || t.modelo || t.id, NODE_FOLDERS_FULL, tipologiaSlugs);
       }
 
       const { data: estructura } = await db
         .from("proyecto_estructura")
-        .select("draft_json")
+        .select("draft_json, config_json")
         .eq("proyecto_id", sh.id)
         .maybeSingle();
       // deno-lint-ignore no-explicit-any
-      const draft: any = estructura?.draft_json || {};
+      const draft: any = (estructura?.draft_json && typeof estructura.draft_json === "object")
+        ? estructura.draft_json
+        : {};
+      // deno-lint-ignore no-explicit-any
+      const config: any = (estructura?.config_json && typeof estructura.config_json === "object")
+        ? estructura.config_json
+        : {};
 
       if (Array.isArray(draft.tipologias)) {
         for (const t of draft.tipologias) {
-          addNode(pickBunnySlug(t) || sanitizeSlug(t?.nombre || ""), NODE_FOLDERS_FULL);
+          addNode(pickBunnySlug(t) || sanitizeSlug(t?.nombre || ""), NODE_FOLDERS_FULL, tipologiaSlugs);
         }
       }
-      const zoneList = Array.isArray(draft.zoneNames)
-        ? draft.zoneNames
-        : Array.isArray(draft.zoneNodes)
-        ? draft.zoneNodes
-        : [];
-      for (const z of zoneList) {
-        addNode(pickBunnySlug(z), NODE_FOLDERS_ZONE);
+
+      /* Collect Structure amenity names (SSOT) for purge + optional opt-in */
+      const structureAmenityNames: string[] = [];
+      const pushAmenityName = (raw: unknown) => {
+        const n = typeof raw === "string"
+          ? raw.trim()
+          : String((raw as { nombre?: string })?.nombre || "").trim();
+        if (!n) return;
+        if (structureAmenityNames.some((x) => x.toLowerCase() === n.toLowerCase())) return;
+        structureAmenityNames.push(n);
+      };
+      if (Array.isArray(draft.zoneNames)) draft.zoneNames.forEach(pushAmenityName);
+      if (Array.isArray(draft.zoneNodes)) draft.zoneNodes.forEach(pushAmenityName);
+
+      const { data: paRows } = await db
+        .from("proyecto_amenidades")
+        .select("amenidades(nombre)")
+        .eq("proyecto_id", sh.id);
+      // deno-lint-ignore no-explicit-any
+      for (const row of (paRows || []) as any[]) {
+        pushAmenityName(row?.amenidades?.nombre);
+      }
+
+      for (const name of structureAmenityNames) {
+        const s = pickBunnySlug(name);
+        if (s) amenitySlugs.add(s);
+      }
+      if (Array.isArray(draft.zoneNodes)) {
+        for (const z of draft.zoneNodes) {
+          const s = pickBunnySlug(z);
+          if (s) amenitySlugs.add(s);
+        }
+      }
+
+      const alreadyMigrated = !!(draft.mediaAmenitiesMigratedV5988 || config.mediaAmenitiesMigratedV5988);
+      let mediaAmenityNames: string[] = Array.isArray(draft.mediaAmenityNames)
+        ? draft.mediaAmenityNames.filter((x: unknown) => typeof x === "string" && String(x).trim())
+        : (Array.isArray(config.mediaAmenityNames)
+          ? config.mediaAmenityNames.filter((x: unknown) => typeof x === "string" && String(x).trim())
+          : []);
+
+      /* e. V5.9.88 one-shot: purge auto amenity Media folders; keep Hero + tipologías */
+      if (!alreadyMigrated) {
+        const purgedFolders: string[] = [];
+        let mediaChildren: BunnyDirItem[] = [];
+        try {
+          mediaChildren = await bunnyListDir(hostname, zone, accessKey, `projects/${slug}/media`);
+        } catch {
+          mediaChildren = [];
+        }
+        for (const child of mediaChildren) {
+          if (!child.isDirectory) continue;
+          const folderSlug = sanitizeSlug(child.name);
+          if (!folderSlug) continue;
+          if (tipologiaSlugs.has(folderSlug)) continue;
+          /* One-shot: Media must end as Hero + tipologías only */
+          const dirPath = `projects/${slug}/media/${folderSlug}`;
+          try {
+            const files = await bunnyWalkFiles(hostname, zone, accessKey, dirPath);
+            for (const f of files) {
+              const full = `${dirPath}/${f.relPath}`;
+              await db
+                .from("archivos")
+                .delete()
+                .eq("storage_provider", "bunny")
+                .eq("storage_path", full);
+            }
+            await bunnyDeleteDirRecursive(hostname, zone, accessKey, dirPath);
+            purgedFolders.push(folderSlug);
+          } catch (purgeErr) {
+            console.warn("[bunny-media] amenity purge failed", slug, folderSlug, purgeErr);
+          }
+        }
+        mediaAmenityNames = [];
+        const nextDraft = Object.assign({}, draft, {
+          mediaAmenityNames: [],
+          mediaAmenitiesMigratedV5988: true,
+        });
+        const nextConfig = Object.assign({}, config, {
+          mediaAmenityNames: [],
+          mediaAmenitiesMigratedV5988: true,
+        });
+        if (estructura) {
+          await db.from("proyecto_estructura").update({
+            draft_json: nextDraft,
+            config_json: nextConfig,
+            updated_at: new Date().toISOString(),
+          }).eq("proyecto_id", sh.id);
+        } else {
+          await db.from("proyecto_estructura").insert({
+            proyecto_id: sh.id,
+            draft_json: nextDraft,
+            config_json: nextConfig,
+            updated_at: new Date().toISOString(),
+          });
+        }
+        draft.mediaAmenityNames = [];
+        draft.mediaAmenitiesMigratedV5988 = true;
+        config.mediaAmenityNames = [];
+        config.mediaAmenitiesMigratedV5988 = true;
+        amenitiesPurged.push({ id: sh.id, slug, folders: purgedFolders });
+      }
+
+      /* f. ensure tipología folders + opted-in amenity folders only */
+      for (const name of mediaAmenityNames) {
+        const key = String(name).trim().toLowerCase();
+        if (!structureAmenityNames.some((n) => n.toLowerCase() === key)) continue;
+        const zn = Array.isArray(draft.zoneNodes)
+          ? draft.zoneNodes.find((z: { nombre?: string }) =>
+            String(z?.nombre || "").toLowerCase() === key
+          )
+          : null;
+        addNode(pickBunnySlug(zn) || pickBunnySlug(name), NODE_FOLDERS_ZONE, null);
       }
       if (Array.isArray(draft.customNodes)) {
         for (const c of draft.customNodes) {
-          addNode(pickBunnySlug(c), NODE_FOLDERS_ZONE);
+          addNode(pickBunnySlug(c), NODE_FOLDERS_ZONE, null);
         }
       }
 
@@ -1368,6 +1490,7 @@ async function handleSyncAllShowrooms(req: Request) {
     ok: true,
     showrooms: showrooms.length,
     migrated,
+    amenitiesPurged,
     ensured,
     errors,
   });

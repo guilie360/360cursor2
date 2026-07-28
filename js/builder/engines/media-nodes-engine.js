@@ -1,4 +1,4 @@
-/* BOXIES V5.9.86 — Canvas nodes = SSOT; Bunny folders use showroom/node slugs
+/* BOXIES V5.9.88 — Canvas nodes = SSOT; Bunny folders use showroom/node slugs
  *
  * Call graph (no mutual recursion):
  *   ensureNodeIds(state)     → stamp node_id / normalize only
@@ -7,7 +7,12 @@
  *   findNode(state, node_id) → search inside listCompatibleNodes()
  *   render…                 → ensureNodeIds() then listCompatibleNodes()
  *
- * Bunny physical layout (V5.9.86):
+ * V5.9.88 — Amenities are opt-in for Media:
+ *   Structure.zoneNames     = amenities that EXIST (SSOT)
+ *   estructura.mediaAmenityNames = amenities shown in Media (subset)
+ *   Tipologías always auto-project into Media.
+ *
+ * Bunny physical layout:
  *   projects/{showroom_slug}/hero/{images|logos|videos}/
  *   projects/{showroom_slug}/media/{node_slug}/{category}/
  */
@@ -118,6 +123,95 @@ var MediaNodesEngine = (function () {
       }
     });
     e.zoneNodes = nextZones;
+    ensureMediaAmenityNames(state);
+  }
+
+  /**
+   * V5.9.88 — Media amenity opt-in list (subset of Structure zoneNames).
+   * Prunes stale names that no longer exist in Estructura.
+   */
+  function ensureMediaAmenityNames(state) {
+    if (!state) return [];
+    if (!state.estructura) state.estructura = {};
+    var e = state.estructura;
+    if (!Array.isArray(e.mediaAmenityNames)) e.mediaAmenityNames = [];
+    var zoneSet = {};
+    (e.zoneNames || []).forEach(function (n) {
+      var key = String(n || '').trim().toLowerCase();
+      if (key) zoneSet[key] = String(n).trim();
+    });
+    var next = [];
+    var seen = {};
+    e.mediaAmenityNames.forEach(function (n) {
+      var key = String(n || '').trim().toLowerCase();
+      if (!key || !zoneSet[key] || seen[key]) return;
+      seen[key] = true;
+      next.push(zoneSet[key]);
+    });
+    e.mediaAmenityNames = next;
+    /* Mirror on bunnyMedia for session convenience */
+    state.bunnyMedia = state.bunnyMedia || {};
+    state.bunnyMedia.mediaAmenityNames = next.slice();
+    return next;
+  }
+
+  function isMediaAmenityEnabled(state, name) {
+    var list = ensureMediaAmenityNames(state);
+    var key = String(name || '').trim().toLowerCase();
+    if (!key) return false;
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i] || '').toLowerCase() === key) return true;
+    }
+    return false;
+  }
+
+  /** Structure amenities not yet added to Media (for Agregar amenidad modal). */
+  function listAvailableStructureAmenities(state) {
+    ensureNodeIds(state);
+    var e = state && state.estructura ? state.estructura : {};
+    var out = [];
+    (e.zoneNames || []).forEach(function (name) {
+      var n = String(name || '').trim();
+      if (!n) return;
+      if (isMediaAmenityEnabled(state, n)) return;
+      out.push(n);
+    });
+    return out;
+  }
+
+  function addMediaAmenities(state, names) {
+    ensureNodeIds(state);
+    var e = state.estructura;
+    if (!Array.isArray(e.mediaAmenityNames)) e.mediaAmenityNames = [];
+    var zoneSet = {};
+    (e.zoneNames || []).forEach(function (n) {
+      zoneSet[String(n || '').trim().toLowerCase()] = String(n || '').trim();
+    });
+    var added = [];
+    (names || []).forEach(function (raw) {
+      var key = String(raw || '').trim().toLowerCase();
+      var canonical = zoneSet[key];
+      if (!canonical) return;
+      if (isMediaAmenityEnabled(state, canonical)) return;
+      e.mediaAmenityNames.push(canonical);
+      added.push(canonical);
+    });
+    ensureMediaAmenityNames(state);
+    e.dirty = true;
+    return added;
+  }
+
+  function removeMediaAmenity(state, name) {
+    ensureMediaAmenityNames(state);
+    var e = state.estructura;
+    var key = String(name || '').trim().toLowerCase();
+    var before = e.mediaAmenityNames.length;
+    e.mediaAmenityNames = e.mediaAmenityNames.filter(function (n) {
+      return String(n || '').toLowerCase() !== key;
+    });
+    ensureMediaAmenityNames(state);
+    if (e.mediaAmenityNames.length !== before) e.dirty = true;
+    return before !== e.mediaAmenityNames.length;
   }
 
   function uniqueSlug(desired, used) {
@@ -158,7 +252,8 @@ var MediaNodesEngine = (function () {
       var desired = slugify(z.nombre || z.node_id);
       var prev = z.bunny_slug ? slugify(z.bunny_slug) : '';
       var next = uniqueSlug(desired, used);
-      if (prev && prev !== next) {
+      /* Only rename Bunny folders for amenities opted into Media */
+      if (prev && prev !== next && isMediaAmenityEnabled(state, z.nombre)) {
         renames.push({ nodeId: z.node_id, from: prev, to: next });
       }
       z.bunny_slug = next;
@@ -233,6 +328,8 @@ var MediaNodesEngine = (function () {
     });
     (e.zoneNodes || []).forEach(function (z, i) {
       if (!z || !z.node_id) return;
+      /* V5.9.88 — amenities only appear in Media when opted in */
+      if (!isMediaAmenityEnabled(state, z.nombre)) return;
       out.push({
         node_id: z.node_id,
         kind: 'zona',
@@ -452,6 +549,11 @@ var MediaNodesEngine = (function () {
     getCategory: getCategory,
     normalizeCategoryKey: normalizeCategoryKey,
     ensureNodeIds: ensureNodeIds,
+    ensureMediaAmenityNames: ensureMediaAmenityNames,
+    isMediaAmenityEnabled: isMediaAmenityEnabled,
+    listAvailableStructureAmenities: listAvailableStructureAmenities,
+    addMediaAmenities: addMediaAmenities,
+    removeMediaAmenity: removeMediaAmenity,
     listCompatibleNodes: listCompatibleNodes,
     findNode: findNode,
     resourceProgress: resourceProgress,

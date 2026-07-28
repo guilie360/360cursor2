@@ -4474,6 +4474,25 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   background: rgba(229, 72, 77, 0.06);
 }
 
+#bunnyMediaAddAmenity {
+  border-style: solid;
+  border-color: rgba(229, 72, 77, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.builder-media-add-node--secondary {
+  opacity: 0.75;
+  font-size: 12px;
+}
+
+.builder-media-amenity-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
 /* Right panel status dots (unchanged semantics) */
 .builder-media-dot {
   display: inline-block;

@@ -40,6 +40,8 @@ var EstructuraSyncEngine = (function () {
       tipologias: Array.isArray(e.tipologias) ? e.tipologias : [],
       zoneNames: Array.isArray(e.zoneNames) ? e.zoneNames.slice() : [],
       zoneNodes: Array.isArray(e.zoneNodes) ? e.zoneNodes : [],
+      mediaAmenityNames: Array.isArray(e.mediaAmenityNames) ? e.mediaAmenityNames.slice() : [],
+      mediaAmenitiesMigratedV5988: !!e.mediaAmenitiesMigratedV5988,
       conjuntoConfig: e.conjuntoConfig || null,
       openPanels: e.openPanels || null,
       uiExpandAll: !!e.uiExpandAll
@@ -86,6 +88,12 @@ var EstructuraSyncEngine = (function () {
     if (Array.isArray(draft.zoneNames)) e.zoneNames = draft.zoneNames.slice();
     if (Array.isArray(draft.zoneNodes)) {
       e.zoneNodes = draft.zoneNodes.map(function (z) { return Object.assign({}, z); });
+    }
+    if (Array.isArray(draft.mediaAmenityNames)) {
+      e.mediaAmenityNames = draft.mediaAmenityNames.slice();
+    }
+    if (draft.mediaAmenitiesMigratedV5988 != null) {
+      e.mediaAmenitiesMigratedV5988 = !!draft.mediaAmenitiesMigratedV5988;
     }
     if (draft.conjuntoConfig && typeof draft.conjuntoConfig === 'object') {
       EstructuraEngine.applyConfigSnapshot(e, { conjuntoConfig: draft.conjuntoConfig });

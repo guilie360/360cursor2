@@ -2169,10 +2169,11 @@ var AiProjectBuilderView = (function () {
           return renderMediaNodeListItem(n, n.node_id === selectedId, hidden);
         }).join('') +
         (!nodes.length
-          ? '<p class="builder-menu-hint">No hay nodos. Usa + Agregar nodo o define Estructura.</p>'
+          ? '<p class="builder-menu-hint">No hay nodos. Las tipologías aparecen solas; agrega amenidades desde Estructura con el botón de abajo.</p>'
           : '') +
       '</div>' +
-      '<button type="button" class="builder-media-add-node" id="bunnyMediaAddNode">+ Agregar nodo</button>';
+      '<button type="button" class="builder-media-add-node" id="bunnyMediaAddAmenity">Agregar amenidad</button>' +
+      '<button type="button" class="builder-media-add-node builder-media-add-node--secondary" id="bunnyMediaAddNode">+ Agregar nodo</button>';
 
     var detailHtml = selected
       ? renderMediaNodeDetail(selected, 'all')
@@ -2655,6 +2656,138 @@ var AiProjectBuilderView = (function () {
     });
   }
 
+  function openAddMediaAmenityModal() {
+    if (typeof MediaNodesEngine === 'undefined') return;
+    MediaNodesEngine.ensureNodeIds(state);
+    var available = MediaNodesEngine.listAvailableStructureAmenities(state) || [];
+    if (!available.length) {
+      var hasZones = !!(state.estructura && state.estructura.zoneNames && state.estructura.zoneNames.length);
+      AdminNotify.info(hasZones
+        ? 'Todas las amenidades de Estructura ya están en Media.'
+        : 'No hay amenidades en Estructura. Créalas primero en la sección Estructura.');
+      return;
+    }
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') {
+      var pick = window.prompt('Amenidad a agregar:\n' + available.join('\n'));
+      if (!pick) return;
+      addMediaAmenitiesFromStructure([pick]);
+      return;
+    }
+    var listHtml = available.map(function (name, idx) {
+      var id = 'mediaAmenityPick_' + idx;
+      return '<label class="builder-media-amenity-pick" for="' + id + '">' +
+        '<input type="checkbox" id="' + id + '" data-amenity-pick="' +
+          AdminUI.escapeHtml(name) + '"> ' +
+        '<span>' + AdminUI.escapeHtml(name) + '</span>' +
+      '</label>';
+    }).join('');
+    AdminUI.openModal({
+      title: 'Agregar amenidad',
+      bodyHtml:
+        '<div class="builder-field">' +
+          '<label for="mediaAmenitySearch">Buscar…</label>' +
+          '<input type="search" id="mediaAmenitySearch" placeholder="Buscar…" autocomplete="off">' +
+        '</div>' +
+        '<div class="builder-media-amenity-list" id="mediaAmenityPickList" style="margin-top:12px;max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:8px">' +
+          listHtml +
+        '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-primary" data-modal-action="confirm">Agregar</button>',
+      onMount: function (root) {
+        var search = root.querySelector('#mediaAmenitySearch');
+        var list = root.querySelector('#mediaAmenityPickList');
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (search) {
+          setTimeout(function () { search.focus(); }, 30);
+          search.addEventListener('input', function () {
+            var q = String(search.value || '').trim().toLowerCase();
+            list.querySelectorAll('.builder-media-amenity-pick').forEach(function (lab) {
+              var text = String(lab.textContent || '').toLowerCase();
+              lab.hidden = !!(q && text.indexOf(q) === -1);
+            });
+          });
+        }
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            var selected = [];
+            list.querySelectorAll('[data-amenity-pick]:checked').forEach(function (cb) {
+              selected.push(cb.getAttribute('data-amenity-pick'));
+            });
+            if (!selected.length) {
+              AdminNotify.error('Selecciona al menos una amenidad');
+              return;
+            }
+            AdminUI.closeModal();
+            addMediaAmenitiesFromStructure(selected);
+          });
+        }
+      }
+    });
+  }
+
+  function persistMediaAmenitySelection() {
+    saveState();
+    if (typeof EstructuraSyncEngine !== 'undefined' && EstructuraSyncEngine.saveDraft) {
+      EstructuraSyncEngine.saveDraft(state).catch(function (err) {
+        try { console.warn('[Media] saveDraft mediaAmenityNames', err); } catch (e) {}
+      });
+    }
+  }
+
+  function addMediaAmenitiesFromStructure(names) {
+    if (typeof MediaNodesEngine === 'undefined') return;
+    var added = MediaNodesEngine.addMediaAmenities(state, names) || [];
+    if (!added.length) {
+      AdminNotify.info('Nada que agregar');
+      return;
+    }
+    MediaNodesEngine.ensureBunnySlugs(state);
+    added.forEach(function (name) {
+      var zn = ((state.estructura && state.estructura.zoneNodes) || []).find(function (z) {
+        return z && String(z.nombre || '').toLowerCase() === String(name).toLowerCase();
+      });
+      if (!zn || !zn.node_id) return;
+      if (!Array.isArray(state.bunnyMedia.nodeOrder)) state.bunnyMedia.nodeOrder = [];
+      if (state.bunnyMedia.nodeOrder.indexOf(zn.node_id) === -1) {
+        state.bunnyMedia.nodeOrder.push(zn.node_id);
+      }
+      state.bunnyMedia.selectedNodeId = zn.node_id;
+      setNodeEnabledCategories(zn.node_id, defaultEnabledCategoriesForKind('zona'));
+    });
+    persistMediaAmenitySelection();
+    captureMediaScroll();
+    renderStepContent();
+    restoreMediaScroll();
+    AdminNotify.success(added.length === 1
+      ? ('Amenidad «' + added[0] + '» agregada a Media')
+      : (added.length + ' amenidades agregadas a Media'));
+    var projectId = resolveActiveProjectId();
+    var slug = resolveShowroomSlug();
+    if (projectId && slug && typeof BunnyMediaApi !== 'undefined') {
+      added.forEach(function (name) {
+        var node = MediaNodesEngine.listCompatibleNodes(state).find(function (n) {
+          return n.kind === 'zona' && String(n.label || '').toLowerCase() === String(name).toLowerCase();
+        });
+        if (!node) return;
+        BunnyMediaApi.ensureNodeStructure(
+          projectId,
+          slug,
+          node.bunny_slug,
+          enabledCategoryKeysForNode(node)
+        ).then(function () {
+          setBunnyMediaStatus('Carpeta Bunny creada · media/' + node.bunny_slug + '/');
+        }).catch(function (err) {
+          try { console.warn('[BunnyMedia] ensureNodeStructure amenity', err); } catch (e) {}
+        });
+      });
+    }
+  }
+
   function openAddMediaNodeModal() {
     if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') {
       var name = window.prompt('Nombre del nodo');
@@ -2673,10 +2806,10 @@ var AiProjectBuilderView = (function () {
           '<label for="mediaNewNodeType">Tipo</label>' +
           '<select id="mediaNewNodeType">' +
             '<option value="tipologia">Tipología</option>' +
-            '<option value="zona">Zona común</option>' +
             '<option value="custom" selected>Personalizado</option>' +
           '</select>' +
-        '</div>',
+        '</div>' +
+        '<p class="builder-menu-hint" style="margin-top:10px">Las amenidades se agregan con «Agregar amenidad» desde las creadas en Estructura.</p>',
       footerHtml:
         '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
         '<button type="button" class="btn-primary" data-modal-action="confirm">Crear</button>',
@@ -2724,16 +2857,9 @@ var AiProjectBuilderView = (function () {
       }
       state.estructura.dirty = true;
     } else if (tipo === 'zona' && typeof EstructuraEngine !== 'undefined') {
-      EstructuraEngine.ensureState(state);
-      var names = state.estructura.zoneNames || [];
-      if (names.indexOf(name) === -1) names.push(name);
-      state.estructura.zoneNames = names;
-      state.estructura.dirty = true;
-      MediaNodesEngine.ensureNodeIds(state);
-      var zn = (state.estructura.zoneNodes || []).find(function (z) {
-        return z && String(z.nombre).toLowerCase() === String(name).toLowerCase();
-      });
-      nodeId = zn && zn.node_id;
+      /* V5.9.88 — amenities must come from Structure via Agregar amenidad */
+      AdminNotify.error('Usa «Agregar amenidad» para amenidades de Estructura.');
+      return;
     } else {
       nodeId = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       state.bunnyMedia.customNodes.push({
@@ -2803,14 +2929,12 @@ var AiProjectBuilderView = (function () {
             }
           }
         } else if (node.kind === 'zona') {
+          /* V5.9.88 — remove from Media only; Structure amenity stays available */
           var zname = node.label || node.nombre;
-          if (zname && state.estructura && Array.isArray(state.estructura.zoneNames)) {
-            state.estructura.zoneNames = state.estructura.zoneNames.filter(function (n) {
-              return n !== zname;
-            });
-            state.estructura.dirty = true;
-            MediaNodesEngine.ensureNodeIds(state);
+          if (zname && typeof MediaNodesEngine !== 'undefined') {
+            MediaNodesEngine.removeMediaAmenity(state, zname);
           }
+          persistMediaAmenitySelection();
         } else {
           state.bunnyMedia.customNodes = (state.bunnyMedia.customNodes || []).filter(function (c) {
             return !c || c.node_id !== nodeId;
@@ -2830,6 +2954,14 @@ var AiProjectBuilderView = (function () {
 
       if (mode === 'none') {
         finish();
+        if (node.kind === 'zona' && node.bunny_slug) {
+          var pidEmpty = resolveActiveProjectId();
+          var slugEmpty = resolveShowroomSlug();
+          if (pidEmpty && slugEmpty && typeof BunnyMediaApi !== 'undefined') {
+            BunnyMediaApi.deleteFolder(pidEmpty, slugEmpty, 'media/' + node.bunny_slug, true)
+              .catch(function () {});
+          }
+        }
         return;
       }
       Promise.resolve(purgeNodeAssets(nodeId, mode)).then(finish).catch(finish);
@@ -4555,8 +4687,12 @@ var AiProjectBuilderView = (function () {
           if (nodeId) {
             confirmNodeMediaDeletion(nodeId, name, function (mode) {
               var apply = function () {
+                if (typeof MediaNodesEngine !== 'undefined') {
+                  MediaNodesEngine.removeMediaAmenity(state, name);
+                }
                 EstructuraEngine.toggleZone(state, name);
                 if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureNodeIds(state);
+                persistMediaAmenitySelection();
                 syncUi();
                 persist();
               };
@@ -4567,6 +4703,9 @@ var AiProjectBuilderView = (function () {
               Promise.resolve(purgeNodeAssets(nodeId, mode)).then(apply).catch(apply);
             });
             return;
+          }
+          if (typeof MediaNodesEngine !== 'undefined') {
+            MediaNodesEngine.removeMediaAmenity(state, name);
           }
         }
         EstructuraEngine.toggleZone(state, name);
@@ -5639,9 +5778,23 @@ var AiProjectBuilderView = (function () {
         if (!silent) AdminNotify.error('Falta el slug del showroom (paso Config).');
         return;
       }
-      /* Primero sync global Showrooms→Bunny (migra UUID→slug), luego nodos del activo */
+      /* Primero sync global Showrooms→Bunny (migra UUID→slug + purge amenidades auto V5.9.88) */
       try {
-        await BunnyMediaApi.syncAllShowrooms();
+        var syncAll = await BunnyMediaApi.syncAllShowrooms();
+        if (state.estructura) {
+          /* Local state must match migrated DB: Media amenities are opt-in only */
+          if (!state.estructura.mediaAmenitiesMigratedV5988) {
+            state.estructura.mediaAmenityNames = [];
+            state.estructura.mediaAmenitiesMigratedV5988 = true;
+          }
+          if (syncAll && Array.isArray(syncAll.amenitiesPurged) && syncAll.amenitiesPurged.length) {
+            state.estructura.mediaAmenityNames = [];
+            state.estructura.mediaAmenitiesMigratedV5988 = true;
+          }
+        }
+        if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.ensureMediaAmenityNames) {
+          MediaNodesEngine.ensureMediaAmenityNames(state);
+        }
       } catch (syncAllErr) {
         try { console.warn('[BunnyMedia] syncAllShowrooms', syncAllErr); } catch (e) {}
       }
@@ -5757,6 +5910,14 @@ var AiProjectBuilderView = (function () {
           el.hidden = !!(q && hay.indexOf(q) === -1);
         });
         saveState();
+      });
+    }
+
+    var addAmenityBtn = rootEl.querySelector('#bunnyMediaAddAmenity');
+    if (addAmenityBtn) {
+      addAmenityBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        openAddMediaAmenityModal();
       });
     }
 

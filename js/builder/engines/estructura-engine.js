@@ -1502,12 +1502,20 @@ var EstructuraEngine = (function () {
         stages: (e.conjuntoConfig.stages || []).map(function (s, i) {
           return normalizeConjuntoStage(s, i);
         })
-      } : emptyConjuntoConfig(!!e.orgEtapas)
+      } : emptyConjuntoConfig(!!e.orgEtapas),
+      mediaAmenityNames: Array.isArray(e.mediaAmenityNames) ? e.mediaAmenityNames.slice() : [],
+      mediaAmenitiesMigratedV5988: !!e.mediaAmenitiesMigratedV5988
     };
   }
 
   function applyConfigSnapshot(e, cfg) {
     if (!cfg || typeof cfg !== 'object') return e;
+    if (Array.isArray(cfg.mediaAmenityNames)) {
+      e.mediaAmenityNames = cfg.mediaAmenityNames.slice();
+    }
+    if (cfg.mediaAmenitiesMigratedV5988 != null) {
+      e.mediaAmenitiesMigratedV5988 = !!cfg.mediaAmenitiesMigratedV5988;
+    }
     if (cfg.edificioMode) e.edificioMode = cfg.edificioMode;
     if (cfg.unidadHousingType) e.unidadHousingType = cfg.unidadHousingType;
     if (cfg.unidadCount != null) e.unidadCount = cfg.unidadCount;
