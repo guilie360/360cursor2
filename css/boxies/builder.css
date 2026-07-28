@@ -1,7 +1,7 @@
 /* ?? BOXIES AI Project Builder ? layout only; identity = Style Engine V3 / css/hall ?? */
 :root {
   --builder-header-height: var(--hall-header-h, 52px);
-  --builder-rail-width: var(--hall-sidebar-w, 200px);
+  --builder-rail-width: 250px;
   --builder-dock-height: 56px;
   --builder-dock-safe: env(safe-area-inset-bottom, 0px);
   --builder-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
@@ -246,7 +246,7 @@ body.builder-has-dock .builder-progress-sidebar {
 #boxiesSidebarFloatBtn {
   position: fixed !important;
   top: 50% !important;
-  left: calc(var(--boxies-sidebar-w, 200px) + var(--builder-rail-width, 176px)) !important;
+  left: calc(var(--boxies-sidebar-w, 64px) + var(--builder-rail-width, 250px)) !important;
   z-index: 10060 !important;
   display: inline-flex !important;
   align-items: center;
@@ -287,13 +287,13 @@ body.builder-has-dock .builder-progress-sidebar {
   display: block;
 }
 
-/* Collapsed: pin to left edge ? never inherit sidebar overflow/visibility */
-body.boxies-rail-collapsed .boxies-sidebar-float-toggle,
-body.boxies-rail-collapsed #boxiesSidebarFloatBtn,
-html.boxies-rail-collapsed .boxies-sidebar-float-toggle,
-html.boxies-rail-collapsed #boxiesSidebarFloatBtn {
-  left: 0 !important;
-  transform: translateY(-50%) !important;
+/* Panel B collapsed: dock to Panel A right edge (64px) */
+body.boxies-builder-chrome.boxies-rail-collapsed .boxies-sidebar-float-toggle,
+body.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn,
+html.boxies-builder-chrome.boxies-rail-collapsed .boxies-sidebar-float-toggle,
+html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
+  left: var(--boxies-sidebar-w, 64px) !important;
+  transform: translate(-50%, -50%) !important;
   border-radius: 0 8px 8px 0;
   display: inline-flex !important;
   opacity: 1 !important;
@@ -301,12 +301,60 @@ html.boxies-rail-collapsed #boxiesSidebarFloatBtn {
   pointer-events: auto !important;
 }
 
-/* While Builder chrome is active, platform in-sidebar collapse is redundant */
+/* V5.9.81 Panel A: fixed 64px icon rail in Builder */
+body.boxies-builder-chrome,
+html.boxies-builder-chrome {
+  --boxies-sidebar-w: 64px;
+  --boxies-sidebar-collapsed-w: 64px;
+}
+
+body.boxies-builder-chrome .boxies-sidebar,
+body.boxies-builder-chrome #boxiesSidebar {
+  width: 64px !important;
+  min-width: 64px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  overflow: hidden;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+body.boxies-builder-chrome .boxies-nav,
+body.boxies-builder-chrome #boxiesNav {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body.boxies-builder-chrome .boxies-nav__group,
+body.boxies-builder-chrome .boxies-nav-item__label {
+  display: none !important;
+}
+
+body.boxies-builder-chrome .boxies-nav-item {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: 0 auto;
+  justify-content: center;
+}
+
+body.boxies-builder-chrome .boxies-nav-item__row {
+  justify-content: center;
+  gap: 0;
+  width: auto;
+}
+
 body.boxies-builder-chrome .boxies-nav-collapse {
   display: none !important;
 }
 
-/* Legacy in-rail button (removed from DOM) ? keep harmless if cached HTML appears */
+body.boxies-builder-chrome .boxies-workspace {
+  margin-left: 64px !important;
+}
+
 .builder-rail-collapse {
   display: none !important;
 }
@@ -461,15 +509,14 @@ body.boxies-builder-chrome .boxies-nav-collapse {
 }
 
 /*
- * V5.9.79 ? Full left chrome collapse:
- * platform sidebar (Hall/Showrooms/Builder/Sistema) + builder steps ? 0px.
- * DOM stays mounted; only width/visibility change.
+ * V5.9.81 ? Panel B collapse only (Builder steps ? 0px).
+ * Panel A (platform icons) stays at 64px.
  */
-html.boxies-rail-collapsed,
-body.boxies-rail-collapsed {
+html.boxies-builder-chrome.boxies-rail-collapsed,
+body.boxies-builder-chrome.boxies-rail-collapsed {
   --builder-rail-width: 0px !important;
-  --boxies-sidebar-w: 0px !important;
-  --boxies-sidebar-collapsed-w: 0px !important;
+  --boxies-sidebar-w: 64px !important;
+  --boxies-sidebar-collapsed-w: 64px !important;
 }
 
 body.boxies-rail-collapsed .builder-progress-sidebar,
@@ -491,26 +538,8 @@ body.boxies-rail-collapsed .builder-rail-list {
   padding: 0;
 }
 
-body.boxies-rail-collapsed .boxies-sidebar,
-body.boxies-rail-collapsed #boxiesSidebar {
-  width: 0 !important;
-  min-width: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
-}
-
-body.boxies-rail-collapsed .boxies-nav,
-body.boxies-rail-collapsed #boxiesNav,
-body.boxies-rail-collapsed .boxies-nav-collapse {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none !important;
-}
-
-body.boxies-rail-collapsed .boxies-workspace,
-body.boxies-rail-collapsed .builder-workspace {
+/* Builder content gains the Panel B width back; platform margin stays */
+body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   margin-left: 0 !important;
 }
 

@@ -1,6 +1,7 @@
-/* Progress rail — V5.9.80 independent floating sidebar toggle */
+/* Progress rail — V5.9.81 two-level sidebar (Panel A fixed / Panel B collapsible) */
 var BuilderProgressRail = (function () {
-  var EXPANDED_RAIL_W = '176px';
+  var EXPANDED_RAIL_W = '250px';
+  var PLATFORM_RAIL_W = '64px';
   var FLOAT_BTN_ID = 'boxiesSidebarFloatBtn';
 
   function shortName(name) {
@@ -143,8 +144,13 @@ var BuilderProgressRail = (function () {
   }
 
   function isRailCollapsed() {
-    if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed) {
-      return !!BoxiesPrefs.getRailCollapsed();
+    if (typeof BoxiesPrefs !== 'undefined') {
+      if (BoxiesPrefs.getBuilderNavigationCollapsed) {
+        return !!BoxiesPrefs.getBuilderNavigationCollapsed();
+      }
+      if (BoxiesPrefs.getRailCollapsed) {
+        return !!BoxiesPrefs.getRailCollapsed();
+      }
     }
     return document.body.classList.contains('boxies-rail-collapsed');
   }
@@ -160,12 +166,11 @@ var BuilderProgressRail = (function () {
     var btn = document.getElementById(FLOAT_BTN_ID);
     if (!btn) return;
     collapsed = !!collapsed;
-    btn.setAttribute('data-tooltip', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
-    btn.setAttribute('aria-label', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
+    btn.setAttribute('data-tooltip', collapsed ? 'Expandir Builder' : 'Colapsar Builder');
+    btn.setAttribute('aria-label', collapsed ? 'Expandir Builder' : 'Colapsar Builder');
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
     btn.innerHTML = collapseToggleIcon(collapsed);
-    /* Never hide via inline styles — visibility is CSS-owned and always visible */
     btn.style.display = 'inline-flex';
     btn.style.visibility = 'visible';
     btn.style.opacity = '1';
@@ -206,17 +211,12 @@ var BuilderProgressRail = (function () {
       document.body;
   }
 
-  /**
-   * V5.9.80 — Floating toggle lives outside the sidebar (body/host sibling).
-   * Recreates itself if missing so the user can never get stuck collapsed.
-   */
   function ensureFloatButton() {
     var mount = floatMountParent();
     if (!mount) return null;
 
     var btn = document.getElementById(FLOAT_BTN_ID);
     if (btn && btn.isConnected) {
-      /* Migrate out of sidebar if a previous build nested it */
       if (btn.closest && (
         btn.closest('#builderProgressRail') ||
         btn.closest('.builder-progress-sidebar') ||
@@ -238,8 +238,8 @@ var BuilderProgressRail = (function () {
     btn.type = 'button';
     btn.id = FLOAT_BTN_ID;
     btn.className = 'boxies-sidebar-float-toggle';
-    btn.setAttribute('aria-label', 'Colapsar navegación');
-    btn.setAttribute('data-tooltip', 'Colapsar navegación');
+    btn.setAttribute('aria-label', 'Colapsar Builder');
+    btn.setAttribute('data-tooltip', 'Colapsar Builder');
     btn.setAttribute('aria-expanded', 'true');
     btn.innerHTML = collapseToggleIcon(false);
     btn.dataset.bound = '1';
@@ -248,22 +248,45 @@ var BuilderProgressRail = (function () {
     return btn;
   }
 
+  function activateBuilderChrome() {
+    var body = document.body;
+    var root = document.documentElement;
+    if (!body || !root) return;
+    body.classList.add('boxies-builder-chrome');
+    root.classList.add('boxies-builder-chrome');
+    if (root.style) {
+      root.style.setProperty('--boxies-sidebar-w', PLATFORM_RAIL_W);
+    }
+  }
+
   function destroyFloatButton() {
     var btn = document.getElementById(FLOAT_BTN_ID);
     if (btn && btn.parentNode) {
       try { btn.parentNode.removeChild(btn); } catch (eRm) {}
     }
-    if (document.body) {
-      document.body.classList.remove('boxies-builder-chrome');
+    var body = document.body;
+    var root = document.documentElement;
+    if (body) {
+      body.classList.remove('boxies-builder-chrome', 'boxies-rail-collapsed');
     }
-    if (document.documentElement) {
-      document.documentElement.classList.remove('boxies-builder-chrome');
+    if (root) {
+      root.classList.remove('boxies-builder-chrome', 'boxies-rail-collapsed');
+      if (root.style) {
+        root.style.removeProperty('--builder-rail-width');
+        root.style.removeProperty('--boxies-sidebar-w');
+      }
+    }
+    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.applyNavCollapsed === 'function') {
+      var navOn = typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
+        ? BoxiesPrefs.getNavCollapsed()
+        : false;
+      try { BoxiesShell.applyNavCollapsed(navOn); } catch (eNav) {}
     }
   }
 
   /**
-   * Collapse entire left chrome (platform + builder steps). CSS width only.
-   * Persists only boolean collapsed flag — never button visibility.
+   * V5.9.81 — Collapse Panel B (Builder steps) only.
+   * Panel A (platform icons) stays at 64px. Never touches navCollapsed.
    */
   function applyRailCollapsed(collapsed) {
     collapsed = !!collapsed;
@@ -271,28 +294,20 @@ var BuilderProgressRail = (function () {
     var root = document.documentElement;
     if (!body || !root || !root.style) return;
 
+    activateBuilderChrome();
+
     body.classList.toggle('boxies-rail-collapsed', collapsed);
     root.classList.toggle('boxies-rail-collapsed', collapsed);
-    body.classList.toggle('boxies-nav-collapsed', collapsed);
-    root.classList.toggle('boxies-nav-collapsed', collapsed);
 
     root.style.setProperty('--builder-rail-width', collapsed ? '0px' : EXPANDED_RAIL_W);
-    if (collapsed) {
-      root.style.setProperty('--boxies-sidebar-w', '0px');
-      root.style.setProperty('--boxies-sidebar-collapsed-w', '0px');
-    } else {
-      root.style.removeProperty('--boxies-sidebar-w');
-      root.style.removeProperty('--boxies-sidebar-collapsed-w');
-    }
+    root.style.setProperty('--boxies-sidebar-w', PLATFORM_RAIL_W);
 
     if (typeof BoxiesPrefs !== 'undefined') {
-      if (BoxiesPrefs.setRailCollapsed) BoxiesPrefs.setRailCollapsed(collapsed);
-      if (BoxiesPrefs.setNavCollapsed) BoxiesPrefs.setNavCollapsed(collapsed);
-    }
-
-    /* Sync platform nav button icon if present — do not rely on it for expand */
-    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.applyNavCollapsed === 'function') {
-      try { BoxiesShell.applyNavCollapsed(collapsed); } catch (eNav) {}
+      if (BoxiesPrefs.setBuilderNavigationCollapsed) {
+        BoxiesPrefs.setBuilderNavigationCollapsed(collapsed);
+      } else if (BoxiesPrefs.setRailCollapsed) {
+        BoxiesPrefs.setRailCollapsed(collapsed);
+      }
     }
 
     ensureFloatButton();
@@ -306,7 +321,6 @@ var BuilderProgressRail = (function () {
   function renderHtml(state) {
     var items = buildItems(state);
     var current = state.currentStep;
-    /* List only — float toggle is a body-level sibling, never inside the rail */
     var html = '<div class="builder-rail-list" data-builder-rail-list>';
     html += items.map(function (item) {
       var cls = 'builder-rail-item' + (item.done ? ' is-done' : ' is-pending');
@@ -350,23 +364,15 @@ var BuilderProgressRail = (function () {
 
   function update(rootEl, state) {
     var rail = resolveRail(rootEl);
+    activateBuilderChrome();
+
     if (!rail) {
-      /* Still guarantee float button if prefs say collapsed */
-      if (document.body) {
-        document.body.classList.add('boxies-builder-chrome');
-        document.documentElement.classList.add('boxies-builder-chrome');
-      }
       ensureFloatButton();
       syncFloatButton(isRailCollapsed());
       return;
     }
     _lastRoot = rootEl || null;
     _lastState = state || null;
-
-    if (document.body) {
-      document.body.classList.add('boxies-builder-chrome');
-      document.documentElement.classList.add('boxies-builder-chrome');
-    }
 
     var listBefore = rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
     if (listBefore) _savedListScroll = listBefore.scrollTop || 0;
@@ -376,7 +382,6 @@ var BuilderProgressRail = (function () {
     var listAfter = rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
     if (listAfter) listAfter.scrollTop = _savedListScroll;
 
-    /* Remove any legacy in-rail collapse buttons from older builds */
     if (rail.querySelectorAll) {
       rail.querySelectorAll('#builderRailCollapseBtn, .builder-rail-collapse').forEach(function (legacy) {
         if (legacy && legacy.parentNode) legacy.parentNode.removeChild(legacy);

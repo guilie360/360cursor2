@@ -8,6 +8,8 @@ var BoxiesPrefs = (function () {
     return {
       navCollapsed: false,
       railCollapsed: false,
+      /* V5.9.81 — Builder Panel B only; platform nav unaffected */
+      builderNavigationCollapsed: false,
       experienciaCanvasMode: false,
       _expCanvasRestore: null
     };
@@ -17,7 +19,12 @@ var BoxiesPrefs = (function () {
     try {
       var raw = localStorage.getItem(KEY);
       if (!raw) return defaults();
-      return Object.assign(defaults(), JSON.parse(raw));
+      var data = Object.assign(defaults(), JSON.parse(raw));
+      /* Migrate legacy railCollapsed → builderNavigationCollapsed once */
+      if (data.builderNavigationCollapsed == null && data.railCollapsed != null) {
+        data.builderNavigationCollapsed = !!data.railCollapsed;
+      }
+      return data;
     } catch (e) {
       return defaults();
     }
@@ -39,12 +46,29 @@ var BoxiesPrefs = (function () {
     return save({ navCollapsed: !!on });
   }
 
+  function getBuilderNavigationCollapsed() {
+    var data = load();
+    if (Object.prototype.hasOwnProperty.call(data, 'builderNavigationCollapsed')) {
+      return !!data.builderNavigationCollapsed;
+    }
+    return !!data.railCollapsed;
+  }
+
+  function setBuilderNavigationCollapsed(on) {
+    on = !!on;
+    return save({
+      builderNavigationCollapsed: on,
+      railCollapsed: on
+    });
+  }
+
+  /* Legacy aliases — same as builderNavigationCollapsed */
   function getRailCollapsed() {
-    return !!load().railCollapsed;
+    return getBuilderNavigationCollapsed();
   }
 
   function setRailCollapsed(on) {
-    return save({ railCollapsed: !!on });
+    return setBuilderNavigationCollapsed(on);
   }
 
   return {
@@ -52,6 +76,8 @@ var BoxiesPrefs = (function () {
     save: save,
     getNavCollapsed: getNavCollapsed,
     setNavCollapsed: setNavCollapsed,
+    getBuilderNavigationCollapsed: getBuilderNavigationCollapsed,
+    setBuilderNavigationCollapsed: setBuilderNavigationCollapsed,
     getRailCollapsed: getRailCollapsed,
     setRailCollapsed: setRailCollapsed
   };
