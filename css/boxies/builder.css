@@ -2718,7 +2718,7 @@ button.builder-estructura-chip {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* V5.9.48 — Experiencia flags (shared) + V5.9.50 canvas */
+/* V5.9.48 ? Experiencia flags (shared) + V5.9.50 canvas */
 .builder-rail-item.is-legacy {
   opacity: 0.72;
 }
@@ -2752,7 +2752,7 @@ button.builder-estructura-chip {
   border-color: rgba(155, 143, 212, 0.42);
 }
 
-/* ── Experiencia canvas (V5.9.50 / layout V5.9.51) ── */
+/* ?? Experiencia canvas (V5.9.50 / layout V5.9.51) ?? */
 .builder-step-content--experiencia {
   display: flex;
   flex-direction: column;
@@ -2976,7 +2976,7 @@ body.boxies-exp-canvas-mode #builderDock {
 }
 
 /*
- * Modo Canvas — zero shell offsets that reserve left/top chrome.
+ * Modo Canvas ? zero shell offsets that reserve left/top chrome.
  * Root cause of left strip: .boxies-workspace { margin-left: var(--boxies-sidebar-w) }
  * even after .boxies-sidebar { display:none }. Also .builder-workspace margin-left for rail.
  */
@@ -3010,7 +3010,7 @@ body.boxies-exp-canvas-mode .boxies-main {
   min-height: 100dvh !important;
 }
 
-/* Chrome del paso Experiencia (título/acciones) se oculta; inspector NO */
+/* Chrome del paso Experiencia (t�tulo/acciones) se oculta; inspector NO */
 body.boxies-exp-canvas-mode .builder-exp-chrome {
   display: none !important;
 }
@@ -4081,7 +4081,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   margin-bottom: 14px;
 }
 
-/* V5.9.67 � Bunny Media Manager (minimal) */
+/* V5.9.67 ? Bunny Media Manager (minimal) */
 .builder-bunny-upload { margin-top: 4px; }
 .builder-bunny-grid {
   display: grid;
@@ -4149,7 +4149,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   gap: 6px;
 }
 
-/* V5.9.69 � Media Tours 360 (Lapentor) */
+/* V5.9.69 ? Media Tours 360 (Lapentor) */
 .builder-tours-panel { margin-top: 4px; }
 .builder-tour-list {
   display: flex;
@@ -4333,13 +4333,6 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   min-width: 0;
 }
 
-.builder-media-node__icon {
-  flex: 0 0 auto;
-  font-size: 14px;
-  line-height: 1.4;
-  opacity: 0.9;
-}
-
 .builder-media-node__title {
   display: flex;
   flex-direction: column;
@@ -4429,6 +4422,28 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   gap: 12px;
   padding-bottom: 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.builder-media-cat-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.builder-media-cat-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.builder-media-cat-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #9b8fd4;
 }
 
 .builder-media-detail__title {

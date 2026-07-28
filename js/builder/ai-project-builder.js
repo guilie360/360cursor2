@@ -2033,6 +2033,7 @@ var AiProjectBuilderView = (function () {
     state.bunnyMedia = state.bunnyMedia || {};
     if (!Array.isArray(state.bunnyMedia.customNodes)) state.bunnyMedia.customNodes = [];
     if (!Array.isArray(state.bunnyMedia.nodeOrder)) state.bunnyMedia.nodeOrder = [];
+    ensureMediaCategoryConfig(state);
     state.bunnyMedia.focusCategory = 'all';
 
     var query = String(state.bunnyMedia.searchQuery || '').trim().toLowerCase();
@@ -2156,16 +2157,92 @@ var AiProjectBuilderView = (function () {
     return 'Tipología';
   }
 
-  function mediaNodeIcon(n) {
-    if (n && n.kind === 'zona') return '🏢';
-    if (n && n.kind === 'custom') return '📦';
-    return '🏠';
+  function defaultEnabledCategoriesForKind(kind) {
+    if (kind === 'zona') {
+      return {
+        images: true,
+        videos: true,
+        plans2d: false,
+        plans3d: false,
+        tours360: true,
+        documents: true,
+        ui: false
+      };
+    }
+    /* tipología + personalizado: todas activas */
+    return {
+      images: true,
+      videos: true,
+      plans2d: true,
+      plans3d: true,
+      tours360: true,
+      documents: true,
+      ui: true
+    };
+  }
+
+  function ensureMediaCategoryConfig(stateObj) {
+    stateObj.bunnyMedia = stateObj.bunnyMedia || {};
+    if (!stateObj.bunnyMedia.categoryConfig || typeof stateObj.bunnyMedia.categoryConfig !== 'object') {
+      stateObj.bunnyMedia.categoryConfig = {};
+    }
+    return stateObj.bunnyMedia.categoryConfig;
+  }
+
+  function getNodeEnabledCategories(node) {
+    if (!node || !node.node_id) return defaultEnabledCategoriesForKind('custom');
+    var map = ensureMediaCategoryConfig(state);
+    var saved = map[node.node_id];
+    if (saved && typeof saved === 'object') {
+      var base = defaultEnabledCategoriesForKind(node.kind);
+      var out = {};
+      Object.keys(base).forEach(function (k) {
+        out[k] = saved.hasOwnProperty(k) ? !!saved[k] : !!base[k];
+      });
+      return out;
+    }
+    return defaultEnabledCategoriesForKind(node.kind);
+  }
+
+  function setNodeEnabledCategories(nodeId, enabled) {
+    if (!nodeId) return;
+    var map = ensureMediaCategoryConfig(state);
+    map[nodeId] = {
+      images: !!enabled.images,
+      videos: !!enabled.videos,
+      plans2d: !!enabled.plans2d,
+      plans3d: !!enabled.plans3d,
+      tours360: !!enabled.tours360,
+      documents: !!enabled.documents,
+      ui: !!enabled.ui
+    };
+  }
+
+  function listEnabledMediaCategories(node) {
+    var enabled = getNodeEnabledCategories(node);
+    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+    return cats.filter(function (c) { return !!enabled[c.key]; });
+  }
+
+  function mediaNodeResourceProgress(node) {
+    var cats = listEnabledMediaCategories(node);
+    var total = cats.length;
+    var filled = 0;
+    if (typeof MediaNodesEngine !== 'undefined') {
+      cats.forEach(function (c) {
+        var st = MediaNodesEngine.categoryStatus(state, node.node_id, c.key);
+        if (st && st.level === 'ok') filled++;
+      });
+    }
+    return {
+      filled: filled,
+      total: total,
+      label: filled + '/' + total
+    };
   }
 
   function renderMediaNodeListItem(n, isSelected, hidden) {
-    var progress = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.resourceProgress)
-      ? MediaNodesEngine.resourceProgress(state, n.node_id)
-      : { filled: 0, total: 7, label: '0/7' };
+    var progress = mediaNodeResourceProgress(n);
     return '<article class="builder-media-node' + (isSelected ? ' is-selected' : '') +
       '" data-media-node="' + AdminUI.escapeHtml(n.node_id) +
       '" data-media-label="' + AdminUI.escapeHtml(n.label || '') +
@@ -2173,7 +2250,6 @@ var AiProjectBuilderView = (function () {
       '" draggable="true"' + (hidden ? ' hidden' : '') + '>' +
       '<div class="builder-media-node__select" role="button" tabindex="0" data-media-select="' +
         AdminUI.escapeHtml(n.node_id) + '">' +
-        '<span class="builder-media-node__icon" aria-hidden="true">' + mediaNodeIcon(n) + '</span>' +
         '<span class="builder-media-node__title">' +
           '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
           '<span class="builder-media-node__meta">' + AdminUI.escapeHtml(mediaNodeKindLabel(n)) + '</span>' +
@@ -2187,23 +2263,27 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderMediaNodeDetail(n, focus) {
-    var sections = (typeof MediaNodesEngine !== 'undefined')
-      ? MediaNodesEngine.MEDIA_CATEGORIES.map(function (cat) {
-          if (focus !== 'all' && focus !== cat.key) return '';
-          return renderMediaNodeCategorySection(n, cat);
-        }).join('')
-      : '';
+    var enabledCats = listEnabledMediaCategories(n);
+    var sections = enabledCats.map(function (cat) {
+      if (focus !== 'all' && focus !== cat.key) return '';
+      return renderMediaNodeCategorySection(n, cat);
+    }).join('');
+    var progress = mediaNodeResourceProgress(n);
     return '<div class="builder-media-detail">' +
       '<header class="builder-media-detail__head">' +
         '<div>' +
           '<h3 class="builder-media-detail__title">' + AdminUI.escapeHtml(n.label) + '</h3>' +
           '<p class="builder-menu-hint" style="margin:4px 0 0">' +
             AdminUI.escapeHtml(mediaNodeKindLabel(n)) +
-            ' · <code>' + AdminUI.escapeHtml(n.node_id) + '</code>' +
+            ' · ' + AdminUI.escapeHtml(progress.label) + ' recursos' +
           '</p>' +
         '</div>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaConfigCats" data-media-config-node="' +
+          AdminUI.escapeHtml(n.node_id) + '">Configurar categorías</button>' +
       '</header>' +
-      '<div class="builder-media-detail__sections">' + sections + '</div>' +
+      (sections
+        ? '<div class="builder-media-detail__sections">' + sections + '</div>'
+        : '<p class="builder-menu-hint">Ninguna categoría activa. Usa Configurar categorías.</p>') +
     '</div>';
   }
 
@@ -2267,6 +2347,58 @@ var AiProjectBuilderView = (function () {
     return '<section class="builder-media-cat" data-media-cat-block="' + AdminUI.escapeHtml(cat.key) + '">' +
       head + files +
     '</section>';
+  }
+
+  function openMediaCategoriesModal(nodeId) {
+    var node = typeof MediaNodesEngine !== 'undefined' ? MediaNodesEngine.findNode(state, nodeId) : null;
+    if (!node) return;
+    var enabled = getNodeEnabledCategories(node);
+    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') {
+      AdminNotify.error('No se pudo abrir la configuración');
+      return;
+    }
+
+    var checks = cats.map(function (c) {
+      return '<label class="builder-media-cat-check">' +
+        '<input type="checkbox" data-media-cat-toggle="' + AdminUI.escapeHtml(c.key) + '"' +
+          (enabled[c.key] ? ' checked' : '') + '>' +
+        '<span>' + AdminUI.escapeHtml(c.label) + '</span>' +
+      '</label>';
+    }).join('');
+
+    AdminUI.openModal({
+      title: 'Categorías · ' + (node.label || nodeId),
+      bodyHtml:
+        '<p class="admin-modal-copy">Activa solo las categorías que este nodo necesita. El progreso se recalcula automáticamente.</p>' +
+        '<div class="builder-media-cat-checks">' + checks + '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-primary" data-modal-action="confirm">Guardar</button>',
+      onMount: function (root) {
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            var next = {};
+            root.querySelectorAll('[data-media-cat-toggle]').forEach(function (input) {
+              next[input.getAttribute('data-media-cat-toggle')] = !!input.checked;
+            });
+            setNodeEnabledCategories(nodeId, next);
+            AdminUI.closeModal();
+            captureMediaScroll();
+            saveState();
+            renderStepContent();
+            restoreMediaScroll();
+            AdminNotify.success('Categorías actualizadas');
+          });
+        }
+      }
+    });
   }
 
   function renderMediaToursPanel() {
@@ -2389,6 +2521,8 @@ var AiProjectBuilderView = (function () {
         state.bunnyMedia.nodeOrder.push(nodeId);
       }
       state.bunnyMedia.selectedNodeId = nodeId;
+      var kindForDefaults = tipo === 'zona' ? 'zona' : (tipo === 'tipologia' ? 'tipologia' : 'custom');
+      setNodeEnabledCategories(nodeId, defaultEnabledCategoriesForKind(kindForDefaults));
     }
     saveState();
     captureMediaScroll();
@@ -5309,6 +5443,15 @@ var AiProjectBuilderView = (function () {
       addBtn.addEventListener('click', function (ev) {
         ev.preventDefault();
         openAddMediaNodeModal();
+      });
+    }
+
+    var configBtn = rootEl.querySelector('#bunnyMediaConfigCats');
+    if (configBtn) {
+      configBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var nid = configBtn.getAttribute('data-media-config-node');
+        if (nid) openMediaCategoriesModal(nid);
       });
     }
 
