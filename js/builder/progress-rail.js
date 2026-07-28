@@ -140,6 +140,12 @@ var BuilderProgressRail = (function () {
           : (applied ? 'Pendiente sync' : 'Pendiente estructura'),
         done: isDone(state, 'experiencia', !!(state.experiencia && state.experiencia.syncedFromApply)),
         stepIndex: BuilderWizard.getStepIndex('experiencia')
+      },
+      {
+        label: 'Vista previa',
+        value: 'Próximamente',
+        done: isDone(state, 'vista-previa', false),
+        stepIndex: BuilderWizard.getStepIndex('vista-previa')
       }
     ];
   }

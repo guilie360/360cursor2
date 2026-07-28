@@ -8,7 +8,7 @@ var BuilderSession = (function () {
       draftProjectId: null,
       currentStep: 0,
       currentStepId: 'config',
-      wizardNavVersion: 92,
+      wizardNavVersion: 93,
       projectType: null,
       projectStructure: null,
       estructura: null,

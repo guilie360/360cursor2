@@ -135,6 +135,8 @@ var MenuConfig = (function () {
     var action = 'section';
     if (item.action === 'submenu') action = 'submenu';
     else if (item.action === 'proximamente') action = 'proximamente';
+    else if (item.action === 'url') action = 'url';
+    else if (item.action === 'pdf') action = 'pdf';
     var children = Array.isArray(item.children)
       ? item.children.map(function (c) {
           return {
@@ -148,6 +150,8 @@ var MenuConfig = (function () {
     var target = item.target;
     if (action === 'proximamente') {
       target = 'proximamente';
+    } else if (action === 'url' || action === 'pdf') {
+      target = target || '';
     } else if (!target) {
       target = action === 'submenu' ? 'menu-proyecto' : 'proximamente';
     }
@@ -160,9 +164,11 @@ var MenuConfig = (function () {
       enabled: item.enabled !== false,
       action: action,
       target: target,
+      href: item.href != null ? String(item.href) : (item.url != null ? String(item.url) : ''),
+      icon: item.icon != null ? String(item.icon) : '',
       children: action === 'submenu' && target === 'menu-proyecto'
         ? children
-        : children
+        : (action === 'submenu' ? children : [])
     };
   }
 

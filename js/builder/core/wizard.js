@@ -1,20 +1,18 @@
-/* Builder wizard — V5.9.92 restaurar secciones originales + Arquitecto IA */
+/* Builder wizard — V5.9.93 Menú 2 columnas + Vista previa (stub) */
 var BuilderWizard = (function () {
   /**
-   * Primary nav (V5.9.92):
-   *   Configuración → Info (Arquitecto IA) → Estructura → Hero → Menú → Media → Experiencia
-   *
-   * Publicado permanece oculto (publicación vía Guardar / Republicar / Previsualizar).
-   * Secciones absorbidas (Logo, Galería, etc.) quedan hidden para deep-links.
+   * Primary nav (V5.9.93):
+   *   Configuración → Info → Estructura → Hero → Menú → Media → Experiencia → Vista previa
    */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
     { id: 'info', label: 'Arquitecto IA', shortLabel: 'Info', icon: 'sparkles', assistant: 'Arquitecto IA: conversa para crear o ajustar el showroom. Alimenta la misma estructura de BOXIES.' },
     { id: 'estructura', label: 'Estructura', shortLabel: 'Estructura', icon: 'shapes', assistant: 'Define el proyecto: tipologías, plantas, ambientes y amenidades. Fuente de verdad del Builder.' },
     { id: 'video-hero', label: 'Hero', shortLabel: 'Hero', icon: 'image', assistant: 'Video, imagen y logo de portada del showroom.' },
-    { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura el menú del showroom: nombre, descripción, botones y si abren sección o submenú.' },
+    { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura la navegación principal del showroom.' },
     { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Organiza assets por nodos (tipologías y amenidades). Experiencia solo referencia estos archivos.' },
     { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Construye el recorrido consumiendo Estructura + Media. Sin rutas ni nombres manuales.' },
+    { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Visor del showroom en el Builder (próximamente).' },
 
     /* Hidden — keep ids for recoverability / deep-links */
     { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Republicar / Previsualizar.', hidden: true },
@@ -31,7 +29,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 92;
+  var NAV_VERSION = 93;
 
   function getSteps() {
     return STEPS.slice();
@@ -91,6 +89,8 @@ var BuilderWizard = (function () {
       case 'media':
         return true;
       case 'experiencia':
+        return true;
+      case 'vista-previa':
         return true;
       case 'publish':
         return false;

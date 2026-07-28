@@ -1753,6 +1753,12 @@ var AiProjectBuilderView = (function () {
     var menu = state.menuConfig;
     var projectName = menu.projectName || (state.projectInfo && state.projectInfo.nombre) || '';
     var description = menu.description || '';
+    var selectedIdx = typeof state.menuSelectedIdx === 'number' ? state.menuSelectedIdx : -1;
+    if (selectedIdx < 0 && typeof state.menuExpandedIdx === 'number' && state.menuExpandedIdx >= 0) {
+      selectedIdx = state.menuExpandedIdx;
+      state.menuSelectedIdx = selectedIdx;
+    }
+    if (selectedIdx >= (menu.items || []).length) selectedIdx = -1;
 
     function buildOptions(list, selected) {
       return list.map(function (o) {
@@ -1761,21 +1767,60 @@ var AiProjectBuilderView = (function () {
       }).join('');
     }
 
-    var expandedIdx = typeof state.menuExpandedIdx === 'number' ? state.menuExpandedIdx : -1;
+    function actionLabel(action) {
+      if (action === 'submenu') return 'Submenú';
+      if (action === 'url') return 'URL';
+      if (action === 'pdf') return 'PDF';
+      if (action === 'proximamente') return 'Próximamente';
+      return 'Sección';
+    }
 
-    var itemsHtml = (menu.items || []).map(function (item, idx) {
+    var listHtml = (menu.items || []).map(function (item, idx) {
+      var selected = selectedIdx === idx;
+      return '<div class="builder-menu-tree-item' + (selected ? ' is-selected' : '') +
+        (item.enabled === false ? ' is-disabled' : '') +
+        '" data-menu-idx="' + idx + '" draggable="true">' +
+        '<span class="builder-menu-tree-item__handle" title="Arrastrar" aria-hidden="true">⋮⋮</span>' +
+        '<button type="button" class="builder-menu-tree-item__select" data-menu-select>' +
+          '<span class="builder-menu-tree-item__label">' + AdminUI.escapeHtml(item.label || 'Botón') + '</span>' +
+          '<span class="builder-menu-tree-item__meta">' + actionLabel(item.action) +
+            (item.enabled === false ? ' · oculto' : '') + '</span>' +
+        '</button>' +
+        '<button type="button" class="builder-menu-icon-btn builder-menu-tree-item__remove" data-menu-remove title="Eliminar">×</button>' +
+      '</div>';
+    }).join('');
+
+    var inspectorHtml = '';
+    if (selectedIdx < 0 || !(menu.items || [])[selectedIdx]) {
+      inspectorHtml =
+        '<div class="builder-menu-inspector__empty">' +
+          '<p class="builder-menu-hint">Selecciona un botón a la izquierda para editar sus propiedades.</p>' +
+          '<div class="builder-confirm-title">Cabecera del menú</div>' +
+          '<div class="builder-field">' +
+            '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
+            '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
+          '</div>' +
+          '<div class="builder-field">' +
+            '<label for="menuDescriptionInput">Descripción (línea bajo el nombre)</label>' +
+            '<input type="text" id="menuDescriptionInput" maxlength="160" placeholder="Constructora Demo S.A.S." value="' +
+              AdminUI.escapeHtml(description) + '">' +
+          '</div>' +
+        '</div>';
+    } else {
+      var item = menu.items[selectedIdx];
       var isSub = item.action === 'submenu';
       var isSoon = item.action === 'proximamente';
-      var isOpen = expandedIdx === idx;
-      var actionSummary = isSoon ? 'Próximamente' : (isSub ? 'Submenú' : 'Sección');
+      var isUrl = item.action === 'url';
+      var isPdf = item.action === 'pdf';
       var targetOpts = isSoon
         ? buildOptions([{ value: 'proximamente', label: 'Próximamente' }], 'proximamente')
         : (isSub
           ? buildOptions(MenuConfig.SUBMENU_OPTIONS, item.target || 'menu-proyecto')
           : buildOptions(MenuConfig.SECTION_OPTIONS, item.target || 'proximamente'));
-      var childrenHtml = '';
+
+      var specificHtml = '';
       if (isSub && item.target === 'menu-proyecto') {
-        childrenHtml =
+        specificHtml =
           '<div class="builder-menu-children">' +
             '<div class="builder-menu-children-title">Ítems del submenú</div>' +
             (item.children || []).map(function (child, cidx) {
@@ -1791,74 +1836,101 @@ var AiProjectBuilderView = (function () {
             '<button type="button" class="builder-header-action-btn" data-menu-child-add>+ Ítem submenú</button>' +
           '</div>';
       } else if (isSub && item.target === 'menu-contacto') {
-        childrenHtml =
+        specificHtml =
           '<p class="builder-menu-hint">Contacto usa enlaces del proyecto (tel, web, WhatsApp…). Se editan en Info / Hero.</p>';
       } else if (isSub && item.target === 'proximamente') {
-        childrenHtml =
+        specificHtml =
           '<p class="builder-menu-hint">Al hacer clic llevará a Próximamente (misma acción que Iniciar en el Hero).</p>';
+      } else if (isUrl) {
+        specificHtml =
+          '<div class="builder-field">' +
+            '<label for="menuItemHref">URL de destino</label>' +
+            '<input type="url" id="menuItemHref" data-menu-href maxlength="500" placeholder="https://…" value="' +
+              AdminUI.escapeHtml(item.href || '') + '">' +
+          '</div>';
+      } else if (isPdf) {
+        specificHtml =
+          '<div class="builder-field">' +
+            '<label for="menuItemHref">Enlace al PDF</label>' +
+            '<input type="url" id="menuItemHref" data-menu-href maxlength="500" placeholder="https://…/archivo.pdf" value="' +
+              AdminUI.escapeHtml(item.href || '') + '">' +
+          '</div>';
       }
 
-      return '<div class="builder-menu-item' + (isOpen ? ' is-open' : '') + '" data-menu-idx="' + idx + '">' +
-        '<button type="button" class="builder-menu-item-summary" data-menu-toggle aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
-          '<span class="builder-menu-item-chevron" aria-hidden="true"></span>' +
-          '<span class="builder-menu-item-summary-text">' +
-            '<span class="builder-menu-item-name">' + AdminUI.escapeHtml(item.label || 'Botón') + '</span>' +
-            '<span class="builder-menu-item-meta">' + actionSummary +
-              (item.enabled === false ? ' · oculto' : '') +
-            '</span>' +
-          '</span>' +
-        '</button>' +
-        '<div class="builder-menu-item-body"' + (isOpen ? '' : ' hidden') + '>' +
-          '<div class="builder-menu-item-top">' +
-            '<label class="builder-check-row builder-check-inline">' +
-              '<input type="checkbox" data-menu-enabled' + (item.enabled !== false ? ' checked' : '') + '>' +
-              '<span>Visible</span>' +
-            '</label>' +
-            '<button type="button" class="builder-menu-icon-btn" data-menu-remove title="Quitar botón">×</button>' +
-          '</div>' +
+      var destinoBlock = (isUrl || isPdf)
+        ? ''
+        : ('<div class="builder-field">' +
+            '<label>' + (isSoon ? 'Destino' : (isSub ? 'Cuál submenú' : 'Cuál sección')) + '</label>' +
+            '<select data-menu-target>' + targetOpts + '</select>' +
+          '</div>');
+
+      inspectorHtml =
+        '<div class="builder-menu-inspector__fields" data-menu-inspector-idx="' + selectedIdx + '">' +
+          '<div class="builder-confirm-title">Propiedades del botón</div>' +
           '<div class="builder-field">' +
-            '<label>Nombre del botón</label>' +
+            '<label>Nombre</label>' +
             '<input type="text" data-menu-label maxlength="60" value="' + AdminUI.escapeHtml(item.label) + '">' +
           '</div>' +
-          '<div class="builder-menu-row-2">' +
+          '<div class="builder-field">' +
+            '<label>Tipo</label>' +
+            '<select data-menu-action>' +
+              '<option value="section"' + (!isSub && !isSoon && !isUrl && !isPdf ? ' selected' : '') + '>Sección</option>' +
+              '<option value="submenu"' + (isSub ? ' selected' : '') + '>Submenú</option>' +
+              '<option value="url"' + (isUrl ? ' selected' : '') + '>URL</option>' +
+              '<option value="pdf"' + (isPdf ? ' selected' : '') + '>PDF</option>' +
+              '<option value="proximamente"' + (isSoon ? ' selected' : '') + '>Próximamente</option>' +
+            '</select>' +
+          '</div>' +
+          destinoBlock +
+          '<div class="builder-field">' +
+            '<label>Icono</label>' +
+            '<input type="text" data-menu-icon maxlength="40" placeholder="Opcional (clave de icono)" value="' +
+              AdminUI.escapeHtml(item.icon || '') + '">' +
+          '</div>' +
+          '<label class="builder-check-row">' +
+            '<input type="checkbox" data-menu-enabled' + (item.enabled !== false ? ' checked' : '') + '>' +
+            '<span>Visible en el showroom</span>' +
+          '</label>' +
+          specificHtml +
+          '<div class="builder-menu-inspector__footer">' +
+            '<div class="builder-confirm-title">Cabecera del menú</div>' +
             '<div class="builder-field">' +
-              '<label>Al hacer clic</label>' +
-              '<select data-menu-action>' +
-                '<option value="section"' + (!isSub && !isSoon ? ' selected' : '') + '>Abrir sección</option>' +
-                '<option value="submenu"' + (isSub ? ' selected' : '') + '>Abrir submenú</option>' +
-                '<option value="proximamente"' + (isSoon ? ' selected' : '') + '>Próximamente</option>' +
-              '</select>' +
+              '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
+              '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
             '</div>' +
             '<div class="builder-field">' +
-              '<label>' + (isSoon ? 'Destino' : (isSub ? 'Cuál submenú' : 'Cuál sección')) + '</label>' +
-              '<select data-menu-target>' + targetOpts + '</select>' +
+              '<label for="menuDescriptionInput">Descripción</label>' +
+              '<input type="text" id="menuDescriptionInput" maxlength="160" value="' + AdminUI.escapeHtml(description) + '">' +
             '</div>' +
           '</div>' +
-          childrenHtml +
-        '</div>' +
-      '</div>';
-    }).join('');
+        '</div>';
+    }
 
-    return '<div class="builder-step-content">' +
-      stepTitleHtml('Menú') +
-      '<p class="builder-step-desc">Cabecera y botones del menú del showroom. Cada botón puede abrir una sección o un submenú.</p>' +
-      '<div class="builder-confirm-form">' +
-        '<div class="builder-confirm-title">Cabecera del menú</div>' +
-        '<div class="builder-field">' +
-          '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
-          '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
+    return '<div class="builder-step-content builder-step-content--menu">' +
+      '<h2 class="builder-step-title">Menú</h2>' +
+      '<p class="builder-step-desc">Configura la navegación principal del showroom.</p>' +
+      '<div class="builder-menu-workspace">' +
+        '<div class="builder-menu-col builder-menu-col--structure">' +
+          '<div class="builder-menu-col__title">Estructura</div>' +
+          '<div class="builder-menu-tree" id="builderMenuTree">' +
+            (listHtml || '<p class="builder-menu-hint">Aún no hay botones.</p>') +
+          '</div>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="menuAddBtn">+ Agregar botón</button>' +
         '</div>' +
-        '<div class="builder-field">' +
-          '<label for="menuDescriptionInput">Descripción (línea bajo el nombre)</label>' +
-          '<input type="text" id="menuDescriptionInput" maxlength="160" placeholder="Constructora Demo S.A.S." value="' +
-            AdminUI.escapeHtml(description) + '">' +
+        '<div class="builder-menu-col builder-menu-col--inspector">' +
+          '<div class="builder-menu-col__title">Propiedades</div>' +
+          inspectorHtml +
         '</div>' +
       '</div>' +
-      '<div class="builder-confirm-form builder-menu-list-wrap">' +
-        '<div class="builder-confirm-title">Botones del menú</div>' +
-        '<p class="builder-menu-hint">No hace falta crear “Submenú 1 / Submenú 2” en el sidebar: eliges por botón si abre sección o submenú.</p>' +
-        itemsHtml +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="menuAddBtn">+ Agregar botón</button>' +
+    '</div>';
+  }
+
+  function renderVistaPrevia() {
+    return '<div class="builder-step-content builder-step-content--vista-previa">' +
+      '<h2 class="builder-step-title">Vista previa</h2>' +
+      '<p class="builder-step-desc">Próximamente: visor del showroom dentro del Builder.</p>' +
+      '<div class="builder-vista-previa-placeholder">' +
+        '<p class="builder-menu-hint">Esta sección está preparada. El visor se implementará en una próxima versión.</p>' +
       '</div>' +
     '</div>';
   }
@@ -3356,6 +3428,7 @@ var AiProjectBuilderView = (function () {
       case 'branding': html = renderBranding(); break;
       case 'video-hero': html = renderVideoHero(); break;
       case 'menu': html = renderMenu(); break;
+      case 'vista-previa': html = renderVistaPrevia(); break;
       case 'viviendas': html = renderViviendas(); break;
       case 'gallery': html = renderGallery(); break;
       case 'media': html = renderBunnyMedia(); break;
@@ -5480,24 +5553,32 @@ var AiProjectBuilderView = (function () {
       if (nameEl) menu.projectName = nameEl.value;
       if (descEl) menu.description = descEl.value;
 
-      var nextItems = [];
-      rootEl.querySelectorAll('.builder-menu-item[data-menu-idx]').forEach(function (row) {
-        var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+      var inspector = rootEl.querySelector('[data-menu-inspector-idx]');
+      if (inspector) {
+        var idx = parseInt(inspector.getAttribute('data-menu-inspector-idx'), 10);
         var prev = menu.items[idx] || MenuConfig.normalizeItem({});
-        var actionEl = row.querySelector('[data-menu-action]');
-        var targetEl = row.querySelector('[data-menu-target]');
-        var labelEl = row.querySelector('[data-menu-label]');
-        var enabledEl = row.querySelector('[data-menu-enabled]');
+        var actionEl = inspector.querySelector('[data-menu-action]');
+        var targetEl = inspector.querySelector('[data-menu-target]');
+        var labelEl = inspector.querySelector('[data-menu-label]');
+        var enabledEl = inspector.querySelector('[data-menu-enabled]');
+        var hrefEl = inspector.querySelector('[data-menu-href]');
+        var iconEl = inspector.querySelector('[data-menu-icon]');
         var action = actionEl ? actionEl.value : prev.action;
         var target = targetEl ? targetEl.value : prev.target;
         var children = prev.children || [];
+        var href = hrefEl ? hrefEl.value : (prev.href || '');
+        var icon = iconEl ? iconEl.value : (prev.icon || '');
 
         if (action === 'proximamente') {
           target = 'proximamente';
           children = [];
+          href = '';
+        } else if (action === 'url' || action === 'pdf') {
+          target = '';
+          children = [];
         } else if (action === 'submenu' && target === 'menu-proyecto') {
           children = [];
-          row.querySelectorAll('.builder-menu-child-row').forEach(function (crow) {
+          inspector.querySelectorAll('.builder-menu-child-row').forEach(function (crow) {
             var cidx = parseInt(crow.getAttribute('data-menu-child-idx'), 10);
             var prevChild = (prev.children || [])[cidx] || {};
             var clabel = crow.querySelector('[data-menu-child-label]');
@@ -5511,8 +5592,10 @@ var AiProjectBuilderView = (function () {
             });
           });
           if (!children.length) children = MenuConfig.defaultChildren();
+          href = '';
         } else {
           children = [];
+          href = '';
           if (action === 'submenu' && (!target || target === 'tour360' || target === 'tipologias' || target === 'location')) {
             target = target === 'proximamente' ? 'proximamente' : 'menu-proyecto';
           }
@@ -5521,23 +5604,40 @@ var AiProjectBuilderView = (function () {
           }
         }
 
-        nextItems.push(MenuConfig.normalizeItem({
+        menu.items[idx] = MenuConfig.normalizeItem({
           id: prev.id,
           label: labelEl ? labelEl.value : prev.label,
           enabled: enabledEl ? !!enabledEl.checked : true,
           action: action,
           target: target,
+          href: href,
+          icon: icon,
           children: children
-        }));
-      });
+        });
+      }
 
-      menu.items = nextItems;
       state.menuConfig = menu;
-      /* V5.9.76 — menu.projectName is menu content; never overwrite Config identity */
       saveState();
       if (rerender) {
         renderStepContent();
         updateNavButtons();
+      } else {
+        /* Live-update label in the left tree */
+        var selIdx = typeof state.menuSelectedIdx === 'number' ? state.menuSelectedIdx : -1;
+        if (selIdx >= 0 && menu.items[selIdx]) {
+          var treeLabel = rootEl.querySelector(
+            '.builder-menu-tree-item[data-menu-idx="' + selIdx + '"] .builder-menu-tree-item__label'
+          );
+          if (treeLabel) treeLabel.textContent = menu.items[selIdx].label || 'Botón';
+          var treeMeta = rootEl.querySelector(
+            '.builder-menu-tree-item[data-menu-idx="' + selIdx + '"] .builder-menu-tree-item__meta'
+          );
+          if (treeMeta) {
+            var a = menu.items[selIdx].action;
+            treeMeta.textContent = (a === 'submenu' ? 'Submenú' : a === 'url' ? 'URL' : a === 'pdf' ? 'PDF' : a === 'proximamente' ? 'Próximamente' : 'Sección') +
+              (menu.items[selIdx].enabled === false ? ' · oculto' : '');
+          }
+        }
       }
     }
 
@@ -5563,47 +5663,29 @@ var AiProjectBuilderView = (function () {
       el.addEventListener('change', function () { persistFromDom(false); });
     });
 
-    rootEl.querySelectorAll('.builder-menu-item').forEach(function (row) {
-      var toggle = row.querySelector('[data-menu-toggle]');
-      if (toggle) {
-        toggle.addEventListener('click', function () {
+    rootEl.querySelectorAll('.builder-menu-tree-item').forEach(function (row) {
+      var selectBtn = row.querySelector('[data-menu-select]');
+      if (selectBtn) {
+        selectBtn.addEventListener('click', function () {
           var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
-          state.menuExpandedIdx = state.menuExpandedIdx === idx ? -1 : idx;
+          persistFromDom(false);
+          state.menuSelectedIdx = idx;
+          state.menuExpandedIdx = idx;
           saveState();
           renderStepContent();
         });
       }
 
-      row.querySelectorAll('.builder-menu-item-body input, .builder-menu-item-body select').forEach(function (el) {
-        var needsRerender = el.hasAttribute('data-menu-action') || el.hasAttribute('data-menu-target');
-        el.addEventListener('change', function () {
-          if (needsRerender) {
-            state.menuExpandedIdx = parseInt(row.getAttribute('data-menu-idx'), 10);
-          }
-          persistFromDom(needsRerender);
-          if (!needsRerender && el.hasAttribute('data-menu-label')) {
-            var nameEl = row.querySelector('.builder-menu-item-name');
-            if (nameEl) nameEl.textContent = el.value || 'Botón';
-          }
-        });
-        if (el.tagName === 'INPUT' && el.type === 'text') {
-          el.addEventListener('input', function () {
-            persistFromDom(false);
-            if (el.hasAttribute('data-menu-label')) {
-              var nameEl = row.querySelector('.builder-menu-item-name');
-              if (nameEl) nameEl.textContent = el.value || 'Botón';
-            }
-          });
-        }
-      });
-
       var removeBtn = row.querySelector('[data-menu-remove]');
       if (removeBtn) {
-        removeBtn.addEventListener('click', function () {
+        removeBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
           var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
           persistFromDom(false);
           if (!state.menuConfig.items[idx]) return;
           state.menuConfig.items.splice(idx, 1);
+          state.menuSelectedIdx = -1;
           state.menuExpandedIdx = -1;
           saveState();
           renderStepContent();
@@ -5612,13 +5694,73 @@ var AiProjectBuilderView = (function () {
         });
       }
 
-      var addChild = row.querySelector('[data-menu-child-add]');
+      /* Drag & drop reorder */
+      row.addEventListener('dragstart', function (ev) {
+        var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', String(idx));
+        row.classList.add('is-dragging');
+        state._menuDragFrom = idx;
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('is-dragging');
+        rootEl.querySelectorAll('.builder-menu-tree-item.is-drop-target').forEach(function (el) {
+          el.classList.remove('is-drop-target');
+        });
+        state._menuDragFrom = null;
+      });
+      row.addEventListener('dragover', function (ev) {
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = 'move';
+        row.classList.add('is-drop-target');
+      });
+      row.addEventListener('dragleave', function () {
+        row.classList.remove('is-drop-target');
+      });
+      row.addEventListener('drop', function (ev) {
+        ev.preventDefault();
+        row.classList.remove('is-drop-target');
+        persistFromDom(false);
+        var from = state._menuDragFrom;
+        if (from == null) {
+          from = parseInt(ev.dataTransfer.getData('text/plain'), 10);
+        }
+        var to = parseInt(row.getAttribute('data-menu-idx'), 10);
+        if (isNaN(from) || isNaN(to) || from === to) return;
+        var items = state.menuConfig.items;
+        if (from < 0 || from >= items.length || to < 0 || to >= items.length) return;
+        var moved = items.splice(from, 1)[0];
+        items.splice(to, 0, moved);
+        state.menuSelectedIdx = to;
+        state.menuExpandedIdx = to;
+        saveState();
+        renderStepContent();
+        updateNavButtons();
+        syncMenuNow();
+      });
+    });
+
+    var inspector = rootEl.querySelector('[data-menu-inspector-idx]');
+    if (inspector) {
+      inspector.querySelectorAll('input, select').forEach(function (el) {
+        var needsRerender = el.hasAttribute('data-menu-action') || el.hasAttribute('data-menu-target');
+        el.addEventListener('change', function () {
+          persistFromDom(needsRerender);
+          if (!needsRerender) syncMenuNow();
+          else syncMenuNow();
+        });
+        if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'url')) {
+          el.addEventListener('input', function () { persistFromDom(false); });
+        }
+      });
+
+      var addChild = inspector.querySelector('[data-menu-child-add]');
       if (addChild) {
         addChild.addEventListener('click', function () {
           persistFromDom(false);
-          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
-          state.menuExpandedIdx = idx;
+          var idx = state.menuSelectedIdx;
           var item = state.menuConfig.items[idx];
+          if (!item) return;
           if (!item.children) item.children = [];
           item.children.push({
             id: MenuConfig.uid('child'),
@@ -5632,14 +5774,12 @@ var AiProjectBuilderView = (function () {
         });
       }
 
-      row.querySelectorAll('[data-menu-child-remove]').forEach(function (btn) {
+      inspector.querySelectorAll('[data-menu-child-remove]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var crow = btn.closest('[data-menu-child-idx]');
-          var idx = parseInt(row.getAttribute('data-menu-idx'), 10);
+          var idx = state.menuSelectedIdx;
           var cidx = crow ? parseInt(crow.getAttribute('data-menu-child-idx'), 10) : -1;
-          /* Mutar estado directo: no re-leer el DOM (evita reinsertar el ítem borrado). */
           MenuSyncEngine.ensureMenuState(state);
-          state.menuExpandedIdx = idx;
           if (cidx >= 0 && state.menuConfig.items[idx] && state.menuConfig.items[idx].children) {
             state.menuConfig.items[idx].children.splice(cidx, 1);
           }
@@ -5648,7 +5788,7 @@ var AiProjectBuilderView = (function () {
           syncMenuNow('Ítem eliminado del showroom.');
         });
       });
-    });
+    }
 
     var addBtn = rootEl.querySelector('#menuAddBtn');
     if (addBtn) {
@@ -5662,7 +5802,8 @@ var AiProjectBuilderView = (function () {
           target: 'proximamente',
           children: []
         }));
-        state.menuExpandedIdx = state.menuConfig.items.length - 1;
+        state.menuSelectedIdx = state.menuConfig.items.length - 1;
+        state.menuExpandedIdx = state.menuSelectedIdx;
         saveState();
         renderStepContent();
         updateNavButtons();
