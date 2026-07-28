@@ -16,10 +16,30 @@ var MenuConfig = (function () {
     { value: 'descargas', label: 'Descargas' }
   ];
 
+  /* Destinos reales del menú primario (showroom) */
+  var PRIMARY_SECTION_OPTIONS = [
+    { value: 'proximamente', label: 'Próximamente' },
+    { value: 'tour360', label: 'Experiencia 360°' },
+    { value: 'tipologias', label: 'Viviendas' },
+    { value: 'location', label: 'Ubicación' }
+  ];
+
+  /* Ítems reales del submenú «Conoce el proyecto» */
+  var CHILD_SECTION_OPTIONS = [
+    { value: 'descripcion', label: 'Descripción' },
+    { value: 'video', label: 'Video' },
+    { value: 'renders', label: 'Galería' },
+    { value: 'amenidades', label: 'Amenidades' },
+    { value: 'areas', label: 'Áreas' },
+    { value: 'estado', label: 'Estado del proyecto' },
+    { value: 'constructora', label: 'Constructora' },
+    { value: 'descargas', label: 'Descargas' }
+  ];
+
   var SUBMENU_OPTIONS = [
     { value: 'proximamente', label: 'Próximamente' },
-    { value: 'menu-proyecto', label: 'Submenú: Conoce el proyecto' },
-    { value: 'menu-contacto', label: 'Submenú: Contacto' }
+    { value: 'menu-proyecto', label: 'Conoce el proyecto' },
+    { value: 'menu-contacto', label: 'Contacto' }
   ];
 
   var DOM_PRIMARY = {
@@ -135,8 +155,7 @@ var MenuConfig = (function () {
     var action = 'section';
     if (item.action === 'submenu') action = 'submenu';
     else if (item.action === 'proximamente') action = 'proximamente';
-    else if (item.action === 'url') action = 'url';
-    else if (item.action === 'pdf') action = 'pdf';
+    /* Ignore invented actions (url/pdf) — map to section for showroom SSOT */
     var children = Array.isArray(item.children)
       ? item.children.map(function (c) {
           return {
@@ -150,8 +169,6 @@ var MenuConfig = (function () {
     var target = item.target;
     if (action === 'proximamente') {
       target = 'proximamente';
-    } else if (action === 'url' || action === 'pdf') {
-      target = target || '';
     } else if (!target) {
       target = action === 'submenu' ? 'menu-proyecto' : 'proximamente';
     }
@@ -164,8 +181,6 @@ var MenuConfig = (function () {
       enabled: item.enabled !== false,
       action: action,
       target: target,
-      href: item.href != null ? String(item.href) : (item.url != null ? String(item.url) : ''),
-      icon: item.icon != null ? String(item.icon) : '',
       children: action === 'submenu' && target === 'menu-proyecto'
         ? children
         : (action === 'submenu' ? children : [])
@@ -313,6 +328,8 @@ var MenuConfig = (function () {
 
   return {
     SECTION_OPTIONS: SECTION_OPTIONS,
+    PRIMARY_SECTION_OPTIONS: PRIMARY_SECTION_OPTIONS,
+    CHILD_SECTION_OPTIONS: CHILD_SECTION_OPTIONS,
     SUBMENU_OPTIONS: SUBMENU_OPTIONS,
     DOM_PRIMARY: DOM_PRIMARY,
     DOM_CHILD: DOM_CHILD,

@@ -1,7 +1,7 @@
-/* Builder wizard — V5.9.93 Menú 2 columnas + Vista previa (stub) */
+/* Builder wizard — V5.9.94 Menú = menu_config del showroom + Vista previa */
 var BuilderWizard = (function () {
   /**
-   * Primary nav (V5.9.93):
+   * Primary nav (V5.9.94):
    *   Configuración → Info → Estructura → Hero → Menú → Media → Experiencia → Vista previa
    */
   var STEPS = [
@@ -15,7 +15,7 @@ var BuilderWizard = (function () {
     { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Visor del showroom en el Builder (próximamente).' },
 
     /* Hidden — keep ids for recoverability / deep-links */
-    { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Republicar / Previsualizar.', hidden: true },
+    { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Guardar / Republicar o Vista previa.', hidden: true },
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Integrado en Hero.', hidden: true },
     { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario (recuperable).', hidden: true },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Absorbido por Media.', hidden: true },
@@ -29,7 +29,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 93;
+  var NAV_VERSION = 94;
 
   function getSteps() {
     return STEPS.slice();

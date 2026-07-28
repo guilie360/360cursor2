@@ -1760,6 +1760,9 @@ var AiProjectBuilderView = (function () {
     }
     if (selectedIdx >= (menu.items || []).length) selectedIdx = -1;
 
+    var primaryOpts = MenuConfig.PRIMARY_SECTION_OPTIONS || MenuConfig.SECTION_OPTIONS;
+    var childOpts = MenuConfig.CHILD_SECTION_OPTIONS || MenuConfig.SECTION_OPTIONS;
+
     function buildOptions(list, selected) {
       return list.map(function (o) {
         return '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' +
@@ -1769,10 +1772,15 @@ var AiProjectBuilderView = (function () {
 
     function actionLabel(action) {
       if (action === 'submenu') return 'Submenú';
-      if (action === 'url') return 'URL';
-      if (action === 'pdf') return 'PDF';
       if (action === 'proximamente') return 'Próximamente';
       return 'Sección';
+    }
+
+    function submenuTitle(target) {
+      if (target === 'menu-proyecto') return 'Conoce el proyecto';
+      if (target === 'menu-contacto') return 'Contacto';
+      if (target === 'proximamente') return 'Próximamente';
+      return target || 'Submenú';
     }
 
     var listHtml = (menu.items || []).map(function (item, idx) {
@@ -1790,119 +1798,100 @@ var AiProjectBuilderView = (function () {
       '</div>';
     }).join('');
 
+    var headerFieldsHtml =
+      '<div class="builder-menu-inspector__header-fields">' +
+        '<div class="builder-confirm-title">Cabecera del menú</div>' +
+        '<div class="builder-field">' +
+          '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
+          '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
+        '</div>' +
+        '<div class="builder-field">' +
+          '<label for="menuDescriptionInput">Descripción (línea bajo el nombre)</label>' +
+          '<input type="text" id="menuDescriptionInput" maxlength="160" placeholder="Constructora Demo S.A.S." value="' +
+            AdminUI.escapeHtml(description) + '">' +
+        '</div>' +
+      '</div>';
+
     var inspectorHtml = '';
     if (selectedIdx < 0 || !(menu.items || [])[selectedIdx]) {
       inspectorHtml =
         '<div class="builder-menu-inspector__empty">' +
-          '<p class="builder-menu-hint">Selecciona un botón a la izquierda para editar sus propiedades.</p>' +
-          '<div class="builder-confirm-title">Cabecera del menú</div>' +
-          '<div class="builder-field">' +
-            '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
-            '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
-          '</div>' +
-          '<div class="builder-field">' +
-            '<label for="menuDescriptionInput">Descripción (línea bajo el nombre)</label>' +
-            '<input type="text" id="menuDescriptionInput" maxlength="160" placeholder="Constructora Demo S.A.S." value="' +
-              AdminUI.escapeHtml(description) + '">' +
-          '</div>' +
+          '<p class="builder-menu-hint">Selecciona un botón a la izquierda. Editas la misma configuración <code>menu_config</code> del showroom.</p>' +
+          headerFieldsHtml +
         '</div>';
     } else {
       var item = menu.items[selectedIdx];
       var isSub = item.action === 'submenu';
       var isSoon = item.action === 'proximamente';
-      var isUrl = item.action === 'url';
-      var isPdf = item.action === 'pdf';
       var targetOpts = isSoon
         ? buildOptions([{ value: 'proximamente', label: 'Próximamente' }], 'proximamente')
         : (isSub
           ? buildOptions(MenuConfig.SUBMENU_OPTIONS, item.target || 'menu-proyecto')
-          : buildOptions(MenuConfig.SECTION_OPTIONS, item.target || 'proximamente'));
+          : buildOptions(primaryOpts, item.target || 'proximamente'));
 
       var specificHtml = '';
       if (isSub && item.target === 'menu-proyecto') {
         specificHtml =
           '<div class="builder-menu-children">' +
-            '<div class="builder-menu-children-title">Ítems del submenú</div>' +
+            '<div class="builder-menu-children-title">Submenú · ' +
+              AdminUI.escapeHtml(submenuTitle(item.target)) +
+            '</div>' +
+            '<p class="builder-menu-hint">Estos son los mismos ítems que ve el visitante al abrir «Conoce el proyecto».</p>' +
             (item.children || []).map(function (child, cidx) {
               return '<div class="builder-menu-child-row" data-menu-child-idx="' + cidx + '">' +
-                '<label class="builder-check-row builder-check-inline">' +
+                '<label class="builder-check-row builder-check-inline" title="Visible">' +
                   '<input type="checkbox" data-menu-child-enabled' + (child.enabled !== false ? ' checked' : '') + '>' +
                 '</label>' +
                 '<input type="text" data-menu-child-label maxlength="60" value="' + AdminUI.escapeHtml(child.label) + '">' +
-                '<select data-menu-child-target>' + buildOptions(MenuConfig.SECTION_OPTIONS, child.target || child.id) + '</select>' +
+                '<select data-menu-child-target>' +
+                  buildOptions(childOpts, child.target || child.id) +
+                '</select>' +
                 '<button type="button" class="builder-menu-icon-btn" data-menu-child-remove title="Quitar">×</button>' +
               '</div>';
             }).join('') +
-            '<button type="button" class="builder-header-action-btn" data-menu-child-add>+ Ítem submenú</button>' +
+            '<button type="button" class="builder-header-action-btn" data-menu-child-add>+ Ítem del submenú</button>' +
           '</div>';
       } else if (isSub && item.target === 'menu-contacto') {
         specificHtml =
-          '<p class="builder-menu-hint">Contacto usa enlaces del proyecto (tel, web, WhatsApp…). Se editan en Info / Hero.</p>';
+          '<div class="builder-menu-children">' +
+            '<div class="builder-menu-children-title">Submenú · Contacto</div>' +
+            '<p class="builder-menu-hint">En el showroom abre el panel de contacto (tel, web, WhatsApp…). Los enlaces se toman de la configuración del proyecto / Hero.</p>' +
+          '</div>';
       } else if (isSub && item.target === 'proximamente') {
         specificHtml =
           '<p class="builder-menu-hint">Al hacer clic llevará a Próximamente (misma acción que Iniciar en el Hero).</p>';
-      } else if (isUrl) {
+      } else if (!isSub && !isSoon) {
         specificHtml =
-          '<div class="builder-field">' +
-            '<label for="menuItemHref">URL de destino</label>' +
-            '<input type="url" id="menuItemHref" data-menu-href maxlength="500" placeholder="https://…" value="' +
-              AdminUI.escapeHtml(item.href || '') + '">' +
-          '</div>';
-      } else if (isPdf) {
-        specificHtml =
-          '<div class="builder-field">' +
-            '<label for="menuItemHref">Enlace al PDF</label>' +
-            '<input type="url" id="menuItemHref" data-menu-href maxlength="500" placeholder="https://…/archivo.pdf" value="' +
-              AdminUI.escapeHtml(item.href || '') + '">' +
-          '</div>';
+          '<p class="builder-menu-hint">Al hacer clic el showroom ejecuta <code>goTo(destino)</code> con la sección elegida.</p>';
       }
-
-      var destinoBlock = (isUrl || isPdf)
-        ? ''
-        : ('<div class="builder-field">' +
-            '<label>' + (isSoon ? 'Destino' : (isSub ? 'Cuál submenú' : 'Cuál sección')) + '</label>' +
-            '<select data-menu-target>' + targetOpts + '</select>' +
-          '</div>');
 
       inspectorHtml =
         '<div class="builder-menu-inspector__fields" data-menu-inspector-idx="' + selectedIdx + '">' +
-          '<div class="builder-confirm-title">Propiedades del botón</div>' +
+          '<div class="builder-confirm-title">Botón del showroom</div>' +
           '<div class="builder-field">' +
             '<label>Nombre</label>' +
             '<input type="text" data-menu-label maxlength="60" value="' + AdminUI.escapeHtml(item.label) + '">' +
-          '</div>' +
-          '<div class="builder-field">' +
-            '<label>Tipo</label>' +
-            '<select data-menu-action>' +
-              '<option value="section"' + (!isSub && !isSoon && !isUrl && !isPdf ? ' selected' : '') + '>Sección</option>' +
-              '<option value="submenu"' + (isSub ? ' selected' : '') + '>Submenú</option>' +
-              '<option value="url"' + (isUrl ? ' selected' : '') + '>URL</option>' +
-              '<option value="pdf"' + (isPdf ? ' selected' : '') + '>PDF</option>' +
-              '<option value="proximamente"' + (isSoon ? ' selected' : '') + '>Próximamente</option>' +
-            '</select>' +
-          '</div>' +
-          destinoBlock +
-          '<div class="builder-field">' +
-            '<label>Icono</label>' +
-            '<input type="text" data-menu-icon maxlength="40" placeholder="Opcional (clave de icono)" value="' +
-              AdminUI.escapeHtml(item.icon || '') + '">' +
           '</div>' +
           '<label class="builder-check-row">' +
             '<input type="checkbox" data-menu-enabled' + (item.enabled !== false ? ' checked' : '') + '>' +
             '<span>Visible en el showroom</span>' +
           '</label>' +
-          specificHtml +
-          '<div class="builder-menu-inspector__footer">' +
-            '<div class="builder-confirm-title">Cabecera del menú</div>' +
+          '<div class="builder-menu-row-2">' +
             '<div class="builder-field">' +
-              '<label for="menuProjectNameInput">Nombre del proyecto</label>' +
-              '<input type="text" id="menuProjectNameInput" maxlength="120" value="' + AdminUI.escapeHtml(projectName) + '">' +
+              '<label>Al hacer clic</label>' +
+              '<select data-menu-action>' +
+                '<option value="section"' + (!isSub && !isSoon ? ' selected' : '') + '>Abrir sección</option>' +
+                '<option value="submenu"' + (isSub ? ' selected' : '') + '>Abrir submenú</option>' +
+                '<option value="proximamente"' + (isSoon ? ' selected' : '') + '>Próximamente</option>' +
+              '</select>' +
             '</div>' +
             '<div class="builder-field">' +
-              '<label for="menuDescriptionInput">Descripción</label>' +
-              '<input type="text" id="menuDescriptionInput" maxlength="160" value="' + AdminUI.escapeHtml(description) + '">' +
+              '<label>' + (isSoon ? 'Destino' : (isSub ? 'Cuál submenú' : 'Cuál sección')) + '</label>' +
+              '<select data-menu-target>' + targetOpts + '</select>' +
             '</div>' +
           '</div>' +
+          specificHtml +
+          '<div class="builder-menu-inspector__footer">' + headerFieldsHtml + '</div>' +
         '</div>';
     }
 
@@ -1918,7 +1907,7 @@ var AiProjectBuilderView = (function () {
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="menuAddBtn">+ Agregar botón</button>' +
         '</div>' +
         '<div class="builder-menu-col builder-menu-col--inspector">' +
-          '<div class="builder-menu-col__title">Propiedades</div>' +
+          '<div class="builder-menu-col__title">Showroom</div>' +
           inspectorHtml +
         '</div>' +
       '</div>' +
@@ -3360,7 +3349,7 @@ var AiProjectBuilderView = (function () {
     var url = (state.publishResult && state.publishResult.url) || null;
     return '<div class="builder-step-content">' +
       stepTitleHtml('Publicación') +
-      '<p class="builder-step-desc">Esta sección ya no forma parte del menú. Usa <strong>Guardar</strong>, <strong>Republicar</strong> y <strong>Previsualizar</strong> en la barra superior.</p>' +
+      '<p class="builder-step-desc">Esta sección ya no forma parte del menú. Usa <strong>Guardar</strong> y <strong>Republicar</strong> en la barra superior, o la sección <strong>Vista previa</strong>.</p>' +
       (url
         ? '<p><a href="' + AdminUI.escapeHtml(url) + '" target="_blank" rel="noopener">Abrir showroom publicado</a></p>'
         : '<p class="builder-menu-hint">Aún no hay una URL publicada.</p>') +
@@ -3460,7 +3449,6 @@ var AiProjectBuilderView = (function () {
         BuilderIcons.render('arrow-left') + '<span>Showroom</span></button>';
     var actionsHtml =
       '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-      '<button type="button" class="builder-header-action-btn" id="builderPreviewBtn">Previsualizar</button>' +
       '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
         (state.published ? 'Republicar' : 'Publicar') + '</button>';
 
@@ -5561,20 +5549,12 @@ var AiProjectBuilderView = (function () {
         var targetEl = inspector.querySelector('[data-menu-target]');
         var labelEl = inspector.querySelector('[data-menu-label]');
         var enabledEl = inspector.querySelector('[data-menu-enabled]');
-        var hrefEl = inspector.querySelector('[data-menu-href]');
-        var iconEl = inspector.querySelector('[data-menu-icon]');
         var action = actionEl ? actionEl.value : prev.action;
         var target = targetEl ? targetEl.value : prev.target;
         var children = prev.children || [];
-        var href = hrefEl ? hrefEl.value : (prev.href || '');
-        var icon = iconEl ? iconEl.value : (prev.icon || '');
 
         if (action === 'proximamente') {
           target = 'proximamente';
-          children = [];
-          href = '';
-        } else if (action === 'url' || action === 'pdf') {
-          target = '';
           children = [];
         } else if (action === 'submenu' && target === 'menu-proyecto') {
           children = [];
@@ -5592,10 +5572,8 @@ var AiProjectBuilderView = (function () {
             });
           });
           if (!children.length) children = MenuConfig.defaultChildren();
-          href = '';
         } else {
           children = [];
-          href = '';
           if (action === 'submenu' && (!target || target === 'tour360' || target === 'tipologias' || target === 'location')) {
             target = target === 'proximamente' ? 'proximamente' : 'menu-proyecto';
           }
@@ -5610,8 +5588,6 @@ var AiProjectBuilderView = (function () {
           enabled: enabledEl ? !!enabledEl.checked : true,
           action: action,
           target: target,
-          href: href,
-          icon: icon,
           children: children
         });
       }
@@ -5634,7 +5610,7 @@ var AiProjectBuilderView = (function () {
           );
           if (treeMeta) {
             var a = menu.items[selIdx].action;
-            treeMeta.textContent = (a === 'submenu' ? 'Submenú' : a === 'url' ? 'URL' : a === 'pdf' ? 'PDF' : a === 'proximamente' ? 'Próximamente' : 'Sección') +
+            treeMeta.textContent = (a === 'submenu' ? 'Submenú' : a === 'proximamente' ? 'Próximamente' : 'Sección') +
               (menu.items[selIdx].enabled === false ? ' · oculto' : '');
           }
         }
@@ -6811,25 +6787,6 @@ var AiProjectBuilderView = (function () {
     });
   }
 
-  function handlePreview() {
-    var url = (state.publishResult && state.publishResult.url) || null;
-    if (!url) {
-      var slug = (state.projectInfo && state.projectInfo.slug) || null;
-      if (slug) {
-        try {
-          url = new URL('/' + slug, window.location.origin).href;
-        } catch (e) {
-          url = '/' + slug;
-        }
-      }
-    }
-    if (!url) {
-      AdminNotify.info('Publica o define el slug del showroom para previsualizar.');
-      return;
-    }
-    window.open(url, '_blank', 'noopener');
-  }
-
   async function handlePublish() {
     if (processing) return;
     processing = true;
@@ -7169,9 +7126,6 @@ var AiProjectBuilderView = (function () {
 
     var publishBtn = rootEl.querySelector('#builderPublishBtn');
     if (publishBtn) publishBtn.addEventListener('click', handlePublish);
-
-    var previewBtn = rootEl.querySelector('#builderPreviewBtn');
-    if (previewBtn) previewBtn.addEventListener('click', handlePreview);
 
     var backInline = rootEl.querySelector('#builderBackInlineBtn');
     if (backInline) {
