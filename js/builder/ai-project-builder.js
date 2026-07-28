@@ -2031,25 +2031,34 @@ var AiProjectBuilderView = (function () {
     }
 
     state.bunnyMedia = state.bunnyMedia || {};
-    var focus = state.bunnyMedia.focusCategory || 'all';
-    var query = String(state.bunnyMedia.searchQuery || '').trim().toLowerCase();
-    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
-    var catOptions = '<option value="all"' + (focus === 'all' ? ' selected' : '') + '>Todas las categorías</option>' +
-      cats.map(function (c) {
-        return '<option value="' + AdminUI.escapeHtml(c.key) + '"' +
-          (focus === c.key ? ' selected' : '') + '>' +
-          AdminUI.escapeHtml(c.label) + '</option>';
-      }).join('');
+    if (!Array.isArray(state.bunnyMedia.customNodes)) state.bunnyMedia.customNodes = [];
+    if (!Array.isArray(state.bunnyMedia.nodeOrder)) state.bunnyMedia.nodeOrder = [];
+    state.bunnyMedia.focusCategory = 'all';
 
+    var query = String(state.bunnyMedia.searchQuery || '').trim().toLowerCase();
     var nodes = (typeof MediaNodesEngine !== 'undefined')
       ? MediaNodesEngine.listCompatibleNodes(state)
       : [];
     hydrateBunnyRowsIntoAssets();
 
+    /* Keep nodeOrder in sync with current set */
+    var known = {};
+    nodes.forEach(function (n) { known[n.node_id] = true; });
+    state.bunnyMedia.nodeOrder = state.bunnyMedia.nodeOrder.filter(function (id) {
+      return known[id];
+    });
+    nodes.forEach(function (n) {
+      if (state.bunnyMedia.nodeOrder.indexOf(n.node_id) === -1) {
+        state.bunnyMedia.nodeOrder.push(n.node_id);
+      }
+    });
+    nodes = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.listCompatibleNodes(state)
+      : nodes;
+
     if (!state.bunnyMedia.selectedNodeId && nodes.length) {
       state.bunnyMedia.selectedNodeId = nodes[0].node_id;
     }
-    /* Migrate legacy expand key → selection */
     if (!state.bunnyMedia.selectedNodeId && state.bunnyMedia.expandedNodeId) {
       state.bunnyMedia.selectedNodeId = state.bunnyMedia.expandedNodeId;
     }
@@ -2065,49 +2074,38 @@ var AiProjectBuilderView = (function () {
       state.bunnyMedia.selectedNodeId = selectedId;
     }
 
-    var filtered = nodes.filter(function (n) {
-      if (!query) return true;
-      var hay = String(n.label || n.nombre || '').toLowerCase();
-      return hay.indexOf(query) !== -1;
-    });
-
-    var listHtml = !nodes.length
-      ? '<p class="builder-menu-hint">No hay nodos en el Canvas. Define tipologías y zonas en Estructura primero.</p>'
-      : (!filtered.length
-        ? '<p class="builder-menu-hint">Ningún nodo coincide con la búsqueda.</p>'
-        : '<div class="builder-media-node-list" id="bunnyMediaNodeList">' +
-            filtered.map(function (n) {
-              return renderMediaNodeListItem(n, focus, n.node_id === selectedId);
-            }).join('') +
-          '</div>');
+    var listHtml =
+      '<div class="builder-media-node-list" id="bunnyMediaNodeList">' +
+        nodes.map(function (n) {
+          var hidden = query && String(n.label || '').toLowerCase().indexOf(query) === -1;
+          return renderMediaNodeListItem(n, n.node_id === selectedId, hidden);
+        }).join('') +
+        (!nodes.length
+          ? '<p class="builder-menu-hint">No hay nodos. Usa + Agregar nodo o define Estructura.</p>'
+          : '') +
+      '</div>' +
+      '<button type="button" class="builder-media-add-node" id="bunnyMediaAddNode">+ Agregar nodo</button>';
 
     var detailHtml = selected
-      ? renderMediaNodeDetail(selected, focus)
+      ? renderMediaNodeDetail(selected, 'all')
       : '<div class="builder-media-detail-empty">' +
-          '<p class="builder-menu-hint">Selecciona un nodo del Canvas para gestionar sus recursos.</p>' +
+          '<p class="builder-menu-hint">Selecciona un nodo para gestionar sus recursos.</p>' +
         '</div>';
 
     return '<div class="builder-step-content builder-step-content--media">' +
       '<div class="builder-media-workspace-head">' +
         stepTitleHtml('Media') +
-        '<p class="builder-step-desc">Recursos por nodo del Canvas. Un nodo a la vez · Bunny + Lapentor.</p>' +
+        '<p class="builder-step-desc">Explorador de nodos · edición en el panel derecho.</p>' +
       '</div>' +
       '<div class="builder-media-workspace">' +
         '<aside class="builder-media-col builder-media-col--list" id="bunnyMediaListCol">' +
           '<div class="builder-media-list-toolbar">' +
             '<div class="builder-field builder-media-search-field">' +
-              '<label for="bunnyMediaSearch">Buscar nodo</label>' +
-              '<input type="search" id="bunnyMediaSearch" placeholder="Lobby, Modelo A…" value="' +
-                AdminUI.escapeHtml(state.bunnyMedia.searchQuery || '') + '">' +
+              '<label for="bunnyMediaSearch">Buscar</label>' +
+              '<input type="search" id="bunnyMediaSearch" placeholder="Buscar nodo…" value="' +
+                AdminUI.escapeHtml(state.bunnyMedia.searchQuery || '') + '" autocomplete="off">' +
             '</div>' +
-            '<div class="builder-field">' +
-              '<label for="bunnyMediaCategory">Categoría</label>' +
-              '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
-            '</div>' +
-            '<div class="builder-media-list-actions">' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh">Actualizar</button>' +
-              '<span class="builder-menu-hint" id="bunnyMediaStatus"></span>' +
-            '</div>' +
+            '<p class="builder-menu-hint" id="bunnyMediaStatus" style="margin:0"></p>' +
           '</div>' +
           listHtml +
         '</aside>' +
@@ -2151,54 +2149,40 @@ var AiProjectBuilderView = (function () {
     return '<span class="builder-media-dot is-missing" title="Faltante"></span>';
   }
 
-  function mediaNodeCounters(n, focus) {
-    var summary = (typeof MediaNodesEngine !== 'undefined')
-      ? MediaNodesEngine.nodeStatusSummary(state, n.node_id)
-      : [];
-    var ok = 0;
-    var missing = 0;
-    var pending = 0;
-    var chips = summary.map(function (s) {
-      if (focus !== 'all' && focus !== s.key) return '';
-      if (s.level === 'ok') ok++;
-      else if (s.level === 'warn') pending++;
-      else missing++;
-      return '<span class="builder-media-chip">' + statusDot(s.level) +
-        AdminUI.escapeHtml(s.text) + '</span>';
-    }).join('');
-    var tally = '<span class="builder-media-node__tally">' +
-      '<span class="builder-media-dot is-ok"></span>' + ok +
-      '<span class="builder-media-dot is-pending"></span>' + pending +
-      '<span class="builder-media-dot is-missing"></span>' + missing +
-    '</span>';
-    return { chips: chips, tally: tally };
+  function mediaNodeKindLabel(n) {
+    if (!n) return 'Nodo';
+    if (n.kind === 'zona') return 'Zona común';
+    if (n.kind === 'custom') return 'Personalizado';
+    return 'Tipología';
   }
 
-  function renderMediaNodeListItem(n, focus, isSelected) {
-    var collapsed = !!(state.bunnyMedia && state.bunnyMedia.collapsedList &&
-      state.bunnyMedia.collapsedList[n.node_id]);
-    var ctr = mediaNodeCounters(n, focus);
+  function mediaNodeIcon(n) {
+    if (n && n.kind === 'zona') return '🏢';
+    if (n && n.kind === 'custom') return '📦';
+    return '🏠';
+  }
+
+  function renderMediaNodeListItem(n, isSelected, hidden) {
+    var progress = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.resourceProgress)
+      ? MediaNodesEngine.resourceProgress(state, n.node_id)
+      : { filled: 0, total: 7, label: '0/7' };
     return '<article class="builder-media-node' + (isSelected ? ' is-selected' : '') +
-      (collapsed ? ' is-collapsed' : '') +
-      '" data-media-node="' + AdminUI.escapeHtml(n.node_id) + '">' +
-      '<div class="builder-media-node__row">' +
-        '<button type="button" class="builder-media-node__select" data-media-select="' +
-          AdminUI.escapeHtml(n.node_id) + '">' +
-          '<span class="builder-media-node__title">' +
-            '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
-            '<span class="builder-tour-scene__tag">' +
-              AdminUI.escapeHtml(n.kind === 'zona' ? 'Zona común' : 'Tipología') +
-            '</span>' +
-          '</span>' +
-          ctr.tally +
-        '</button>' +
-        '<button type="button" class="builder-media-node__chevron-btn" data-media-toggle-list="' +
-          AdminUI.escapeHtml(n.node_id) + '" aria-label="' +
-          (collapsed ? 'Expandir' : 'Contraer') + '">' +
-          (collapsed ? '▶' : '▼') +
-        '</button>' +
+      '" data-media-node="' + AdminUI.escapeHtml(n.node_id) +
+      '" data-media-label="' + AdminUI.escapeHtml(n.label || '') +
+      '" data-media-kind="' + AdminUI.escapeHtml(n.kind || '') +
+      '" draggable="true"' + (hidden ? ' hidden' : '') + '>' +
+      '<div class="builder-media-node__select" role="button" tabindex="0" data-media-select="' +
+        AdminUI.escapeHtml(n.node_id) + '">' +
+        '<span class="builder-media-node__icon" aria-hidden="true">' + mediaNodeIcon(n) + '</span>' +
+        '<span class="builder-media-node__title">' +
+          '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
+          '<span class="builder-media-node__meta">' + AdminUI.escapeHtml(mediaNodeKindLabel(n)) + '</span>' +
+          '<span class="builder-media-node__count">' + AdminUI.escapeHtml(progress.label) +
+            ' recursos</span>' +
+        '</span>' +
       '</div>' +
-      (collapsed ? '' : '<div class="builder-media-node__chips">' + ctr.chips + '</div>') +
+      '<button type="button" class="builder-media-node__delete" data-media-node-del="' +
+        AdminUI.escapeHtml(n.node_id) + '" title="Eliminar nodo" aria-label="Eliminar nodo" draggable="false">×</button>' +
     '</article>';
   }
 
@@ -2214,7 +2198,7 @@ var AiProjectBuilderView = (function () {
         '<div>' +
           '<h3 class="builder-media-detail__title">' + AdminUI.escapeHtml(n.label) + '</h3>' +
           '<p class="builder-menu-hint" style="margin:4px 0 0">' +
-            AdminUI.escapeHtml(n.kind === 'zona' ? 'Zona común' : 'Tipología') +
+            AdminUI.escapeHtml(mediaNodeKindLabel(n)) +
             ' · <code>' + AdminUI.escapeHtml(n.node_id) + '</code>' +
           '</p>' +
         '</div>' +
@@ -2306,6 +2290,218 @@ var AiProjectBuilderView = (function () {
       var detail = rootEl.querySelector('#bunnyMediaDetailCol');
       if (list && listTop != null) list.scrollTop = listTop;
       if (detail && detailTop != null) detail.scrollTop = detailTop;
+    });
+  }
+
+  function openAddMediaNodeModal() {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') {
+      var name = window.prompt('Nombre del nodo');
+      if (!name) return;
+      createMediaNavigatorNode(name, 'custom');
+      return;
+    }
+    AdminUI.openModal({
+      title: 'Agregar nodo',
+      bodyHtml:
+        '<div class="builder-field">' +
+          '<label for="mediaNewNodeName">Nombre</label>' +
+          '<input type="text" id="mediaNewNodeName" placeholder="Ej. Casa unifamiliar · Modelo A" autocomplete="off">' +
+        '</div>' +
+        '<div class="builder-field" style="margin-top:12px">' +
+          '<label for="mediaNewNodeType">Tipo</label>' +
+          '<select id="mediaNewNodeType">' +
+            '<option value="tipologia">Tipología</option>' +
+            '<option value="zona">Zona común</option>' +
+            '<option value="custom" selected>Personalizado</option>' +
+          '</select>' +
+        '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-primary" data-modal-action="confirm">Crear</button>',
+      onMount: function (root) {
+        var nameInput = root.querySelector('#mediaNewNodeName');
+        var typeSel = root.querySelector('#mediaNewNodeType');
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (nameInput) setTimeout(function () { nameInput.focus(); }, 30);
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            var nameVal = nameInput ? String(nameInput.value || '').trim() : '';
+            var tipo = typeSel ? typeSel.value : 'custom';
+            if (!nameVal) {
+              AdminNotify.error('Indica un nombre');
+              return;
+            }
+            AdminUI.closeModal();
+            createMediaNavigatorNode(nameVal, tipo);
+          });
+        }
+      }
+    });
+  }
+
+  function createMediaNavigatorNode(name, tipo) {
+    state.bunnyMedia = state.bunnyMedia || {};
+    if (!Array.isArray(state.bunnyMedia.customNodes)) state.bunnyMedia.customNodes = [];
+    if (!Array.isArray(state.bunnyMedia.nodeOrder)) state.bunnyMedia.nodeOrder = [];
+    MediaNodesEngine.ensureNodeIds(state);
+    var nodeId = null;
+
+    if (tipo === 'tipologia' && typeof EstructuraEngine !== 'undefined') {
+      EstructuraEngine.addTypology(state);
+      var tips = state.estructura.tipologias || [];
+      var tip = tips[tips.length - 1];
+      if (tip) {
+        tip.nombre = name;
+        tip.modelo = tip.modelo || name;
+        if (!tip.node_id) tip.node_id = tip.localId || ('tip-' + Date.now().toString(36));
+        nodeId = tip.node_id;
+      }
+      state.estructura.dirty = true;
+    } else if (tipo === 'zona' && typeof EstructuraEngine !== 'undefined') {
+      EstructuraEngine.ensureState(state);
+      var names = state.estructura.zoneNames || [];
+      if (names.indexOf(name) === -1) names.push(name);
+      state.estructura.zoneNames = names;
+      state.estructura.dirty = true;
+      MediaNodesEngine.ensureNodeIds(state);
+      var zn = (state.estructura.zoneNodes || []).find(function (z) {
+        return z && String(z.nombre).toLowerCase() === String(name).toLowerCase();
+      });
+      nodeId = zn && zn.node_id;
+    } else {
+      nodeId = 'custom-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      state.bunnyMedia.customNodes.push({
+        node_id: nodeId,
+        nombre: name,
+        label: name,
+        tipo: 'custom',
+        kind: 'custom',
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    if (nodeId) {
+      if (state.bunnyMedia.nodeOrder.indexOf(nodeId) === -1) {
+        state.bunnyMedia.nodeOrder.push(nodeId);
+      }
+      state.bunnyMedia.selectedNodeId = nodeId;
+    }
+    saveState();
+    captureMediaScroll();
+    renderStepContent();
+    restoreMediaScroll();
+    AdminNotify.success('Nodo creado');
+  }
+
+  function deleteMediaNavigatorNode(nodeId) {
+    var node = MediaNodesEngine.findNode(state, nodeId);
+    if (!node) return;
+    confirmNodeMediaDeletion(nodeId, node.label, function (mode) {
+      var finish = function () {
+        if (node.kind === 'tipologia') {
+          var localId = node.entityRef && node.entityRef.localId;
+          if (localId && typeof EstructuraEngine !== 'undefined') {
+            var result = EstructuraEngine.removeTypology(state, localId);
+            if (!result.ok) {
+              if (result.reason === 'min') {
+                AdminNotify.error('Debe quedar al menos una tipología.');
+                return;
+              }
+              if (result.reason === 'conflict') {
+                state.estructura.tipologias = state.estructura.tipologias.filter(function (t) {
+                  return t.localId !== localId;
+                });
+                state.estructura.tipologiasCount = state.estructura.tipologias.length;
+                state.estructura.dirty = true;
+              }
+            }
+          }
+        } else if (node.kind === 'zona') {
+          var zname = node.label || node.nombre;
+          if (zname && state.estructura && Array.isArray(state.estructura.zoneNames)) {
+            state.estructura.zoneNames = state.estructura.zoneNames.filter(function (n) {
+              return n !== zname;
+            });
+            state.estructura.dirty = true;
+            MediaNodesEngine.ensureNodeIds(state);
+          }
+        } else {
+          state.bunnyMedia.customNodes = (state.bunnyMedia.customNodes || []).filter(function (c) {
+            return !c || c.node_id !== nodeId;
+          });
+        }
+        state.bunnyMedia.nodeOrder = (state.bunnyMedia.nodeOrder || []).filter(function (id) {
+          return id !== nodeId;
+        });
+        if (state.bunnyMedia.selectedNodeId === nodeId) {
+          state.bunnyMedia.selectedNodeId = state.bunnyMedia.nodeOrder[0] || null;
+        }
+        saveState();
+        captureMediaScroll();
+        renderStepContent();
+        restoreMediaScroll();
+      };
+
+      if (mode === 'none') {
+        finish();
+        return;
+      }
+      Promise.resolve(purgeNodeAssets(nodeId, mode)).then(finish).catch(finish);
+    });
+  }
+
+  function bindMediaNodeDragDrop() {
+    var list = rootEl.querySelector('#bunnyMediaNodeList');
+    if (!list) return;
+    var dragId = null;
+
+    list.querySelectorAll('[data-media-node]').forEach(function (card) {
+      card.addEventListener('dragstart', function (ev) {
+        dragId = card.getAttribute('data-media-node');
+        card.classList.add('is-dragging');
+        if (ev.dataTransfer) {
+          ev.dataTransfer.effectAllowed = 'move';
+          ev.dataTransfer.setData('text/plain', dragId || '');
+        }
+      });
+      card.addEventListener('dragend', function () {
+        card.classList.remove('is-dragging');
+        list.querySelectorAll('.is-drop-target').forEach(function (el) {
+          el.classList.remove('is-drop-target');
+        });
+        dragId = null;
+      });
+      card.addEventListener('dragover', function (ev) {
+        ev.preventDefault();
+        card.classList.add('is-drop-target');
+        if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+      });
+      card.addEventListener('dragleave', function () {
+        card.classList.remove('is-drop-target');
+      });
+      card.addEventListener('drop', function (ev) {
+        ev.preventDefault();
+        card.classList.remove('is-drop-target');
+        var targetId = card.getAttribute('data-media-node');
+        var fromId = dragId || (ev.dataTransfer && ev.dataTransfer.getData('text/plain'));
+        if (!fromId || !targetId || fromId === targetId) return;
+        var order = (state.bunnyMedia.nodeOrder || []).slice();
+        var fromIdx = order.indexOf(fromId);
+        var toIdx = order.indexOf(targetId);
+        if (fromIdx < 0 || toIdx < 0) return;
+        order.splice(fromIdx, 1);
+        toIdx = order.indexOf(targetId);
+        order.splice(toIdx, 0, fromId);
+        state.bunnyMedia.nodeOrder = order;
+        captureMediaScroll();
+        saveState();
+        renderStepContent();
+        restoreMediaScroll();
+      });
     });
   }
 
@@ -5092,44 +5288,33 @@ var AiProjectBuilderView = (function () {
 
   function bindBunnyMediaStep() {
     state.bunnyMedia = state.bunnyMedia || {};
-    if (!state.bunnyMedia.collapsedList) state.bunnyMedia.collapsedList = {};
+    if (!Array.isArray(state.bunnyMedia.customNodes)) state.bunnyMedia.customNodes = [];
+    if (!Array.isArray(state.bunnyMedia.nodeOrder)) state.bunnyMedia.nodeOrder = [];
 
     var searchEl = rootEl.querySelector('#bunnyMediaSearch');
     if (searchEl) {
       searchEl.addEventListener('input', function () {
         state.bunnyMedia.searchQuery = searchEl.value || '';
-        captureMediaScroll();
+        var q = String(searchEl.value || '').trim().toLowerCase();
+        rootEl.querySelectorAll('#bunnyMediaNodeList [data-media-node]').forEach(function (el) {
+          var hay = String(el.getAttribute('data-media-label') || '').toLowerCase();
+          el.hidden = !!(q && hay.indexOf(q) === -1);
+        });
         saveState();
-        renderStepContent();
-        restoreMediaScroll();
-        var again = rootEl.querySelector('#bunnyMediaSearch');
-        if (again) {
-          again.focus();
-          var len = again.value.length;
-          try { again.setSelectionRange(len, len); } catch (e) { /* ignore */ }
-        }
       });
     }
 
-    var catEl = rootEl.querySelector('#bunnyMediaCategory');
-    if (catEl) {
-      catEl.addEventListener('change', function () {
-        state.bunnyMedia.focusCategory = catEl.value || 'all';
-        captureMediaScroll();
-        saveState();
-        renderStepContent();
-        restoreMediaScroll();
+    var addBtn = rootEl.querySelector('#bunnyMediaAddNode');
+    if (addBtn) {
+      addBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        openAddMediaNodeModal();
       });
-    }
-
-    var refreshBtn = rootEl.querySelector('#bunnyMediaRefresh');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', function () { refreshBunnyMediaList(false); });
     }
 
     rootEl.querySelectorAll('[data-media-select]').forEach(function (btn) {
-      btn.addEventListener('click', function (ev) {
-        ev.preventDefault();
+      function selectNode(ev) {
+        if (ev) ev.preventDefault();
         var nid = btn.getAttribute('data-media-select');
         if (!nid || state.bunnyMedia.selectedNodeId === nid) return;
         captureMediaScroll();
@@ -5139,23 +5324,23 @@ var AiProjectBuilderView = (function () {
         saveState();
         renderStepContent();
         restoreMediaScroll();
+      }
+      btn.addEventListener('click', selectNode);
+      btn.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') selectNode(ev);
       });
     });
 
-    rootEl.querySelectorAll('[data-media-toggle-list]').forEach(function (btn) {
+    rootEl.querySelectorAll('[data-media-node-del]').forEach(function (btn) {
       btn.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        var nid = btn.getAttribute('data-media-toggle-list');
-        if (!nid) return;
-        captureMediaScroll();
-        state.bunnyMedia.collapsedList = state.bunnyMedia.collapsedList || {};
-        state.bunnyMedia.collapsedList[nid] = !state.bunnyMedia.collapsedList[nid];
-        saveState();
-        renderStepContent();
-        restoreMediaScroll();
+        var nid = btn.getAttribute('data-media-node-del');
+        if (nid) deleteMediaNavigatorNode(nid);
       });
     });
+
+    bindMediaNodeDragDrop();
 
     var fileInput = rootEl.querySelector('#bunnyMediaInput');
     rootEl.querySelectorAll('[data-media-add]').forEach(function (btn) {

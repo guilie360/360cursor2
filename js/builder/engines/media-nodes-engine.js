@@ -103,10 +103,11 @@ var MediaNodesEngine = (function () {
   /**
    * Read-only projection of Canvas nodes for Media.
    * Does not mutate state and does not call ensureNodeIds.
+   * Includes tipologías, zonas and optional custom Media nodes.
    */
   function listCompatibleNodes(state) {
     var e = state && state.estructura;
-    if (!e) return [];
+    if (!e) e = {};
     var out = [];
     (e.tipologias || []).forEach(function (tip, i) {
       if (!tip || !tip.node_id) return;
@@ -123,7 +124,8 @@ var MediaNodesEngine = (function () {
           localId: tip.localId || null,
           node_id: tip.node_id
         },
-        orden: i
+        orden: i,
+        icon: 'home'
       });
     });
     (e.zoneNodes || []).forEach(function (z, i) {
@@ -136,10 +138,49 @@ var MediaNodesEngine = (function () {
         nombre: z.nombre,
         estructura_id: z.node_id,
         entityRef: { type: 'amenidad', key: z.nombre, node_id: z.node_id },
-        orden: 1000 + i
+        orden: 1000 + i,
+        icon: 'building'
       });
     });
+    var custom = (state && state.bunnyMedia && state.bunnyMedia.customNodes) || [];
+    custom.forEach(function (c, i) {
+      if (!c || !c.node_id) return;
+      out.push({
+        node_id: c.node_id,
+        kind: 'custom',
+        tipo: 'custom',
+        label: c.nombre || c.label || 'Nodo',
+        nombre: c.nombre || c.label || 'Nodo',
+        estructura_id: c.node_id,
+        entityRef: { type: 'custom', key: c.node_id, node_id: c.node_id },
+        orden: 2000 + i,
+        icon: 'box',
+        custom: true
+      });
+    });
+
+    var order = (state && state.bunnyMedia && state.bunnyMedia.nodeOrder) || [];
+    if (order.length) {
+      var rank = {};
+      order.forEach(function (id, idx) { rank[id] = idx; });
+      out.sort(function (a, b) {
+        var ra = rank.hasOwnProperty(a.node_id) ? rank[a.node_id] : 10000 + (a.orden || 0);
+        var rb = rank.hasOwnProperty(b.node_id) ? rank[b.node_id] : 10000 + (b.orden || 0);
+        return ra - rb;
+      });
+    }
     return out;
+  }
+
+  /** Categories with content (ok) vs total active categories for a node. */
+  function resourceProgress(state, nodeId) {
+    var total = MEDIA_CATEGORIES.length;
+    var filled = 0;
+    MEDIA_CATEGORIES.forEach(function (c) {
+      var st = categoryStatus(state, nodeId, c.key);
+      if (st && st.level === 'ok') filled++;
+    });
+    return { filled: filled, total: total, label: filled + '/' + total };
   }
 
   /** Lookup one node by node_id inside listCompatibleNodes(). */
@@ -307,6 +348,7 @@ var MediaNodesEngine = (function () {
     ensureNodeIds: ensureNodeIds,
     listCompatibleNodes: listCompatibleNodes,
     findNode: findNode,
+    resourceProgress: resourceProgress,
     assetsForNode: assetsForNode,
     countForNode: countForNode,
     categoryStatus: categoryStatus,
