@@ -2006,6 +2006,81 @@ var AiProjectBuilderView = (function () {
     '</div>';
   }
 
+  function resolveActiveProjectId() {
+    if (!state) return null;
+    var fromDraft = state.draftProjectId || null;
+    var fromPublish = (state.publishResult && state.publishResult.proyectoId) || null;
+    var fromAdmin =
+      typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+        ? AdminState.getActiveProjectId()
+        : null;
+    var fromUrl = null;
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      fromUrl = params.get('projectId') || params.get('proyectoId') || null;
+    } catch (e) {}
+    return fromDraft || fromPublish || fromAdmin || fromUrl || null;
+  }
+
+  function renderBunnyMedia() {
+    var cats = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.CATEGORIES) || {};
+    var catOptions = Object.keys(cats).map(function (key) {
+      return '<option value="' + AdminUI.escapeHtml(key) + '">' +
+        AdminUI.escapeHtml(cats[key].label || key) + '</option>';
+    }).join('');
+    var items = (state.bunnyMedia && state.bunnyMedia.items) || [];
+    var listHtml = items.length
+      ? '<div class="builder-bunny-grid">' + items.map(function (row) {
+          var isImg = row.tipo === 'imagen' || row.tipo === 'tour_360' ||
+            (row.extension && /^(jpg|jpeg|png|webp|gif)$/i.test(row.extension));
+          var thumb = isImg && row.url
+            ? '<img src="' + AdminUI.escapeHtml(row.url) + '" alt="" loading="lazy">'
+            : '<div class="builder-bunny-card__ph">' + AdminUI.escapeHtml((row.extension || row.tipo || '').toUpperCase()) + '</div>';
+          return '<article class="builder-bunny-card" data-bunny-id="' + AdminUI.escapeHtml(row.id) + '">' +
+            '<div class="builder-bunny-card__media">' + thumb + '</div>' +
+            '<div class="builder-bunny-card__body">' +
+              '<strong>' + AdminUI.escapeHtml(row.nombre || 'archivo') + '</strong>' +
+              '<span class="builder-bunny-card__meta">' + AdminUI.escapeHtml(row.tipo || '') +
+                (row.peso_mb != null ? ' · ' + row.peso_mb + ' MB' : '') + '</span>' +
+              '<a class="builder-bunny-card__url" href="' + AdminUI.escapeHtml(row.url || '#') +
+                '" target="_blank" rel="noopener">' + AdminUI.escapeHtml(row.url || '') + '</a>' +
+            '</div>' +
+            '<div class="builder-bunny-card__actions">' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-bunny-copy="' +
+                AdminUI.escapeHtml(row.url || '') + '">Copiar URL</button>' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-bunny-assign="' +
+                AdminUI.escapeHtml(row.id) + '">Usar en Experiencia</button>' +
+              '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-bunny-del="' +
+                AdminUI.escapeHtml(row.id) + '">Eliminar</button>' +
+            '</div>' +
+          '</article>';
+        }).join('') + '</div>'
+      : '<p class="builder-menu-hint">Aún no hay archivos Bunny en este proyecto. Sube una imagen para probar el CDN.</p>';
+
+    return '<div class="builder-step-content builder-step-content--bunny-media">' +
+      stepTitleHtml('Media') +
+      '<p class="builder-step-desc">Sube archivos a Bunny CDN de forma segura. Se registran en archivos y quedan disponibles en projectAssets para Experiencia.</p>' +
+      '<div class="builder-confirm-form builder-bunny-upload">' +
+        '<div class="builder-confirm-title">Subir a Bunny</div>' +
+        '<div class="builder-field">' +
+          '<label>Carpeta</label>' +
+          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
+        '</div>' +
+        '<div class="builder-dropzone" id="bunnyMediaDropzone">' +
+          '<div class="builder-dropzone-inner"><span>Arrastra un archivo o haz clic para seleccionar</span></div>' +
+        '</div>' +
+        '<input type="file" id="bunnyMediaInput" hidden>' +
+        '<p class="builder-menu-hint" id="bunnyMediaStatus">CDN: boxies.b-cdn.net · máx. 20 MB (Fase 1)</p>' +
+      '</div>' +
+      '<div class="builder-confirm-form" style="margin-top:18px">' +
+        '<div class="builder-confirm-title">Archivos Bunny del proyecto' +
+          ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
+        '</div>' +
+        listHtml +
+      '</div>' +
+    '</div>';
+  }
+
   function renderGallery() {
     var items = state.gallery || [];
     var groups = {};
@@ -2335,6 +2410,7 @@ var AiProjectBuilderView = (function () {
       case 'menu': html = renderMenu(); break;
       case 'viviendas': html = renderViviendas(); break;
       case 'gallery': html = renderGallery(); break;
+      case 'media': html = renderBunnyMedia(); break;
       case 'panoramas': html = renderPanoramas(); break;
       case 'interactivo': html = renderInteractivo(); break;
       case 'plans': html = renderPlans(); break;
@@ -4077,6 +4153,7 @@ var AiProjectBuilderView = (function () {
     if (stepId === 'menu') bindMenuFields();
     if (stepId === 'viviendas') bindViviendasFields();
     if (stepId === 'gallery') bindDropzone('galleryDropzone', 'galleryInput', handleGalleryUpload, true);
+    if (stepId === 'media') bindBunnyMediaStep();
     if (stepId === 'panoramas') bindDropzone('panoramaDropzone', 'panoramaInput', handlePanoramaUpload, true);
     if (stepId === 'plans') bindDropzone('plansDropzone', 'plansInput', function (files) { handleDocUpload(files, 'plans'); }, true);
     if (stepId === 'downloads') bindDropzone('downloadsDropzone', 'downloadsInput', function (files) { handleDocUpload(files, 'downloads'); }, true);
@@ -4643,6 +4720,177 @@ var AiProjectBuilderView = (function () {
             updateNavButtons();
           });
       });
+    }
+  }
+
+  function setBunnyMediaStatus(msg) {
+    var el = rootEl && rootEl.querySelector('#bunnyMediaStatus');
+    if (el) el.textContent = msg || '';
+  }
+
+  async function refreshBunnyMediaList(silent) {
+    var projectId = resolveActiveProjectId();
+    if (!projectId) {
+      if (!silent) AdminNotify.error('Abre un showroom con ID para gestionar Media.');
+      return;
+    }
+    if (typeof BunnyMediaApi === 'undefined') {
+      if (!silent) AdminNotify.error('BunnyMediaApi no cargada');
+      return;
+    }
+    try {
+      setBunnyMediaStatus('Cargando archivos Bunny…');
+      var items = await BunnyMediaApi.list(projectId);
+      state.bunnyMedia = state.bunnyMedia || {};
+      state.bunnyMedia.items = items;
+      BunnyMediaApi.syncArchivosToProjectAssets(state, items);
+      saveState();
+      if (!silent) setBunnyMediaStatus(items.length + ' archivo(s) en Bunny · CDN listo');
+      renderStepContent();
+    } catch (err) {
+      var msg = (err && err.message) || 'Error listando Media';
+      setBunnyMediaStatus(msg);
+      if (!silent) AdminNotify.error(msg);
+    }
+  }
+
+  async function handleBunnyMediaUpload(files) {
+    var file = files && files[0];
+    if (!file) return;
+    var projectId = resolveActiveProjectId();
+    if (!projectId) {
+      AdminNotify.error('Abre un showroom con ID para subir a Bunny.');
+      return;
+    }
+    if (typeof BunnyMediaApi === 'undefined') {
+      AdminNotify.error('BunnyMediaApi no cargada');
+      return;
+    }
+    var catEl = rootEl.querySelector('#bunnyMediaCategory');
+    var category = (catEl && catEl.value) || 'images';
+    try {
+      processing = true;
+      setBunnyMediaStatus('Subiendo a Bunny…');
+      if (typeof AdminUI !== 'undefined' && AdminUI.showGlobalBusy) {
+        AdminUI.showGlobalBusy('Subiendo a Bunny CDN');
+      }
+      var result = await BunnyMediaApi.uploadAndSync(state, projectId, category, file);
+      state.bunnyMedia = state.bunnyMedia || {};
+      state.bunnyMedia.items = state.bunnyMedia.items || [];
+      if (result.archivo) {
+        state.bunnyMedia.items = [result.archivo].concat(
+          state.bunnyMedia.items.filter(function (r) { return r.id !== result.archivo.id; })
+        );
+      }
+      saveState();
+      AdminNotify.success('Archivo en Bunny: ' + (result.publicUrl || ''));
+      setBunnyMediaStatus('OK · ' + (result.publicUrl || ''));
+      renderStepContent();
+    } catch (err) {
+      var msg = (err && err.message) || 'Error subiendo a Bunny';
+      if (err && err.code === 'MISSING_SECRET') {
+        msg = 'Falta configurar BUNNY_STORAGE_ACCESS_KEY en Supabase Secrets.';
+      }
+      setBunnyMediaStatus(msg);
+      AdminNotify.error(msg);
+    } finally {
+      processing = false;
+      if (typeof AdminUI !== 'undefined' && AdminUI.hideGlobalBusy) AdminUI.hideGlobalBusy();
+    }
+  }
+
+  function bindBunnyMediaStep() {
+    var catEl = rootEl.querySelector('#bunnyMediaCategory');
+    var input = rootEl.querySelector('#bunnyMediaInput');
+    function syncAccept() {
+      if (!input || !catEl || typeof BunnyMediaApi === 'undefined') return;
+      var cat = BunnyMediaApi.CATEGORIES[catEl.value];
+      input.accept = (cat && cat.accept) || '*/*';
+    }
+    if (catEl) {
+      catEl.addEventListener('change', syncAccept);
+      syncAccept();
+    }
+    bindDropzone('bunnyMediaDropzone', 'bunnyMediaInput', handleBunnyMediaUpload, false);
+
+    var refreshBtn = rootEl.querySelector('#bunnyMediaRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function () { refreshBunnyMediaList(false); });
+    }
+
+    rootEl.querySelectorAll('[data-bunny-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var url = btn.getAttribute('data-bunny-copy') || '';
+        if (!url) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function () {
+            AdminNotify.success('URL copiada');
+          }).catch(function () {
+            AdminNotify.info(url);
+          });
+        } else {
+          AdminNotify.info(url);
+        }
+      });
+    });
+
+    rootEl.querySelectorAll('[data-bunny-assign]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-bunny-assign');
+        var row = ((state.bunnyMedia && state.bunnyMedia.items) || []).find(function (r) {
+          return String(r.id) === String(id);
+        });
+        if (!row || typeof BunnyMediaApi === 'undefined') return;
+        var asset = BunnyMediaApi.syncArchivosToProjectAssets(state, [row])[0];
+        saveState();
+        if (asset) {
+          AdminNotify.success(
+            'Asset listo en projectAssets: ' + asset.id +
+            (asset.filename ? ' (' + asset.filename + ')' : '') +
+            '. Asígnalo en Experiencia con el nombre o assetId.'
+          );
+        }
+      });
+    });
+
+    rootEl.querySelectorAll('[data-bunny-del]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-bunny-del');
+        var projectId = resolveActiveProjectId();
+        if (!id || !projectId) return;
+        var doDelete = function () {
+          BunnyMediaApi.remove(projectId, { archivoId: id }).then(function () {
+            if (state.projectAssets && state.projectAssets.byId) {
+              delete state.projectAssets.byId['bunny-' + id];
+            }
+            state.bunnyMedia.items = ((state.bunnyMedia && state.bunnyMedia.items) || []).filter(
+              function (r) { return String(r.id) !== String(id); }
+            );
+            saveState();
+            AdminNotify.success('Archivo eliminado de Bunny');
+            renderStepContent();
+          }).catch(function (err) {
+            AdminNotify.error((err && err.message) || 'No se pudo eliminar');
+          });
+        };
+        if (typeof AdminUI !== 'undefined' && AdminUI.confirm) {
+          AdminUI.confirm({
+            title: 'Eliminar archivo',
+            message: 'Se borrará de Bunny CDN y de la tabla archivos.',
+            confirmLabel: 'Eliminar',
+            cancelLabel: 'Cancelar'
+          }).then(function (ok) { if (ok) doDelete(); });
+        } else if (window.confirm('¿Eliminar archivo de Bunny?')) {
+          doDelete();
+        }
+      });
+    });
+
+    /* Auto-refresh once when entering the step */
+    if (!state.bunnyMedia || !state.bunnyMedia._loaded) {
+      state.bunnyMedia = state.bunnyMedia || {};
+      state.bunnyMedia._loaded = true;
+      refreshBunnyMediaList(true);
     }
   }
 

@@ -1,6 +1,6 @@
 /* Builder wizard — step orchestration (incluye Interactivo) */
 var BuilderWizard = (function () {
-  /* V5.9.48 — progressive showroom architecture order.
+  /* V5.9.67 — Media (Bunny CDN) step added after Galería.
      Legacy steps (interactivo, info, ai-content) kept recoverable at the end. */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
@@ -10,6 +10,7 @@ var BuilderWizard = (function () {
     { id: 'branding', label: 'Logo', shortLabel: 'Logo', icon: 'palette', assistant: 'Sube el logo del proyecto. Aparecerá en el hero arriba del título.' },
     { id: 'viviendas', label: 'Viviendas', shortLabel: 'Viviendas', icon: 'building', assistant: 'Inventario y tarjetas comerciales alimentados por la estructura aplicada.' },
     { id: 'gallery', label: 'Galería', shortLabel: 'Galería', icon: 'images', assistant: 'Biblioteca de imágenes asociables a entidades del proyecto.' },
+    { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Sube archivos a Bunny CDN y regístralos en el proyecto para usarlos en Experiencia.' },
     { id: 'panoramas', label: '360°', shortLabel: '360°', icon: 'view360', assistant: 'Tours 360° vinculables a tipologías, amenidades u otras entidades.' },
     { id: 'plans', label: 'Planos', shortLabel: 'Planos', icon: 'blueprint', assistant: 'Masterplan, plantas 2D/3D y planos de tipología relacionados a su contexto.' },
     { id: 'downloads', label: 'Descargables', shortLabel: 'Docs', icon: 'download', assistant: 'Documentos centralizados: brochure, fichas y especificaciones.' },
@@ -62,6 +63,8 @@ var BuilderWizard = (function () {
       case 'viviendas':
         return true;
       case 'gallery':
+        return true;
+      case 'media':
         return true;
       case 'panoramas':
         return true;

@@ -4080,3 +4080,71 @@ body.boxies-exp-canvas-mode #builderStepPanel {
 .builder-viviendas-arch {
   margin-bottom: 14px;
 }
+
+/* V5.9.67 — Bunny Media Manager (minimal) */
+.builder-bunny-upload { margin-top: 4px; }
+.builder-bunny-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.builder-bunny-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+}
+.builder-bunny-card__media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.25);
+}
+.builder-bunny-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.builder-bunny-card__ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: rgba(255,255,255,0.45);
+}
+.builder-bunny-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.builder-bunny-card__body strong {
+  font-size: 13px;
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.builder-bunny-card__meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+.builder-bunny-card__url {
+  font-size: 10px;
+  color: rgba(111, 191, 134, 0.9);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.builder-bunny-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

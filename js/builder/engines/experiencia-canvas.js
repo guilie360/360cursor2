@@ -657,6 +657,10 @@ var ExperienciaCanvas = (function () {
           '<input type="text" data-exp-asset-filename maxlength="180" placeholder="vista-general.webp" value="' +
             esc(media.filename || '') + '">' +
         '</div>' +
+        (media.publicUrl
+          ? '<p class="builder-menu-hint" style="margin:6px 0 10px;word-break:break-all">CDN: <a href="' +
+            esc(media.publicUrl) + '" target="_blank" rel="noopener">' + esc(media.publicUrl) + '</a></p>'
+          : '') +
         '<div class="builder-exp-inspector__actions">' +
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-assign="' +
             esc(n.id) + '">Asignar / actualizar asset</button>' +

@@ -1,4 +1,4 @@
-/* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
+/* BOXIES V5.9.67 — Bunny media: projectAssets provider/path/archivoId */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -503,6 +503,7 @@ var ExperienciaEngine = (function () {
       height: partial && partial.height != null ? partial.height : null,
       duration: partial && partial.duration != null ? partial.duration : null,
       size: partial && partial.size != null ? partial.size : null,
+      archivoId: (partial && partial.archivoId) || null,
       updatedAt: (partial && partial.updatedAt) || now,
       createdAt: (partial && partial.createdAt) || now
     };
