@@ -82,7 +82,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 .boxies-workspace:has(.builder-step-content--estructura),
 .boxies-workspace__panel:has(.builder-step-content--estructura),
 .boxies-workspace:has(.builder-step-content--experiencia),
-.boxies-workspace__panel:has(.builder-step-content--experiencia) {
+.boxies-workspace__panel:has(.builder-step-content--experiencia),
+.boxies-workspace:has(.builder-step-content--menu),
+.boxies-workspace__panel:has(.builder-step-content--menu) {
   height: calc(
     100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px)
   );
@@ -98,7 +100,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 #boxiesContent.boxies-builder-embed:has(.builder-step-content--estructura),
 #boxiesContent.is-builder-embed:has(.builder-step-content--estructura),
 #boxiesContent.boxies-builder-embed:has(.builder-step-content--experiencia),
-#boxiesContent.is-builder-embed:has(.builder-step-content--experiencia) {
+#boxiesContent.is-builder-embed:has(.builder-step-content--experiencia),
+#boxiesContent.boxies-builder-embed:has(.builder-step-content--menu),
+#boxiesContent.is-builder-embed:has(.builder-step-content--menu) {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -110,7 +114,8 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 
 #boxiesContent:has(.builder-step-content--hero) .builder-app,
 #boxiesContent:has(.builder-step-content--estructura) .builder-app,
-#boxiesContent:has(.builder-step-content--experiencia) .builder-app {
+#boxiesContent:has(.builder-step-content--experiencia) .builder-app,
+#boxiesContent:has(.builder-step-content--menu) .builder-app {
   flex: 1 1 0%;
   min-height: 0;
   height: 100%;
@@ -123,7 +128,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 
 /* Hero: workspace is a non-scrolling frame; columns scroll inside */
 #boxiesContent:has(.builder-step-content--hero) .builder-workspace,
-.boxies-builder-embed:has(.builder-step-content--hero) .builder-workspace {
+.boxies-builder-embed:has(.builder-step-content--hero) .builder-workspace,
+#boxiesContent:has(.builder-step-content--menu) .builder-workspace,
+.boxies-builder-embed:has(.builder-step-content--menu) .builder-workspace {
   flex: 1 1 0%;
   min-height: 0 !important;
   height: 100%;
@@ -134,7 +141,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 }
 
 #boxiesContent:has(.builder-step-content--hero) .builder-main-panel,
-.boxies-builder-embed:has(.builder-step-content--hero) .builder-main-panel {
+.boxies-builder-embed:has(.builder-step-content--hero) .builder-main-panel,
+#boxiesContent:has(.builder-step-content--menu) .builder-main-panel,
+.boxies-builder-embed:has(.builder-step-content--menu) .builder-main-panel {
   flex: 1 1 0%;
   min-height: 0 !important;
   height: 100%;
@@ -145,7 +154,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 }
 
 #boxiesContent:has(.builder-step-content--hero) #builderStepPanel,
-.boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel {
+.boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel,
+#boxiesContent:has(.builder-step-content--menu) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--menu) #builderStepPanel {
   flex: 1 1 0%;
   min-height: 0 !important;
   height: 100% !important;

@@ -1896,19 +1896,25 @@ var AiProjectBuilderView = (function () {
     }
 
     return '<div class="builder-step-content builder-step-content--menu">' +
-      '<h2 class="builder-step-title">Menú</h2>' +
-      '<p class="builder-step-desc">Configura la navegación principal del showroom.</p>' +
+      '<div class="builder-menu-workspace-head">' +
+        '<h2 class="builder-step-title">Menú</h2>' +
+        '<p class="builder-step-desc">Configura la navegación principal del showroom.</p>' +
+      '</div>' +
       '<div class="builder-menu-workspace">' +
         '<div class="builder-menu-col builder-menu-col--structure">' +
           '<div class="builder-menu-col__title">Estructura</div>' +
-          '<div class="builder-menu-tree" id="builderMenuTree">' +
-            (listHtml || '<p class="builder-menu-hint">Aún no hay botones.</p>') +
+          '<div class="builder-menu-col__scroll">' +
+            '<div class="builder-menu-tree" id="builderMenuTree">' +
+              (listHtml || '<p class="builder-menu-hint">Aún no hay botones.</p>') +
+            '</div>' +
           '</div>' +
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="menuAddBtn">+ Agregar botón</button>' +
         '</div>' +
         '<div class="builder-menu-col builder-menu-col--inspector">' +
           '<div class="builder-menu-col__title">Showroom</div>' +
-          inspectorHtml +
+          '<div class="builder-menu-col__scroll">' +
+            inspectorHtml +
+          '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
