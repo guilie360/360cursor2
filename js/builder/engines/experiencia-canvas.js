@@ -1,4 +1,4 @@
-/* BOXIES V5.9.63 — Copy/paste, multi-in, HUB plantas, controles globales */
+/* BOXIES V5.9.64 — Plantillas de flujo basadas en Estructura */
 var ExperienciaCanvas = (function () {
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
@@ -71,6 +71,10 @@ var ExperienciaCanvas = (function () {
                 ? BuilderIcons.render('rotate-ccw')
                 : '↶') +
             '</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpTemplateBtn">' +
+              'Crear flujo base</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpStructReviewBtn">' +
+              'Revisar Estructura</button>' +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpDraftBtn">' +
               'Guardar borrador</button>' +
             '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
@@ -665,10 +669,29 @@ var ExperienciaCanvas = (function () {
         '<label class="builder-exp-inspector__check">' +
           '<input type="checkbox" data-exp-hub-enabled' + (hub && hub.enabled ? ' checked' : '') + '>' +
           ' Activar modo HUB</label>';
+
       if (hub && hub.enabled) {
+        var scopeOpts = ExperienciaEngine.listHubScopeOptions
+          ? ExperienciaEngine.listHubScopeOptions(state)
+          : [];
+        var scopeId = hub.structureScope && (hub.structureScope.scopeId || hub.structureScope.componentId);
+        html += '<div class="builder-exp-inspector__section">HUB / Estructura</div>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Ámbito del HUB</label>' +
+            '<select data-exp-hub-scope>' +
+              '<option value="">Sin ámbito</option>' +
+              scopeOpts.map(function (opt) {
+                var sel = scopeId && String(scopeId) === String(opt.id);
+                return '<option value="' + esc(opt.id) + '"' + (sel ? ' selected' : '') + '>' +
+                  esc(opt.label) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<p class="builder-menu-hint">El ámbito define pisos/unidades desde Estructura. La media 2D/3D se asigna en Experiencia.</p>';
+
         html += '<div class="builder-field builder-exp-inspector__field">' +
             '<label>Planta activa</label>' +
-            '<input type="text" data-exp-hub-floor maxlength="40" placeholder="34" value="' +
+            '<input type="text" data-exp-hub-floor maxlength="40" placeholder="1" value="' +
               esc(hub.activeFloor || '') + '">' +
           '</div>' +
           '<div class="builder-field builder-exp-inspector__field">' +
@@ -678,10 +701,10 @@ var ExperienciaCanvas = (function () {
               '<option value="2d"' + (hub.visualMode === '2d' ? ' selected' : '') + '>2D</option>' +
             '</select>' +
           '</div>' +
-          '<p class="builder-menu-hint">MEDIA = plantaActiva + modoVisual vía projectAssets. Volver usa navigationStack interno (no window.history).</p>' +
+          '<p class="builder-menu-hint">MEDIA = plantaActiva + modoVisual vía projectAssets. Volver usa navigationStack interno.</p>' +
           '<div class="builder-field builder-exp-inspector__field">' +
             '<label>Piso (key) · asset 3D · asset 2D</label>' +
-            '<input type="text" data-exp-hub-floor-key maxlength="40" placeholder="34">' +
+            '<input type="text" data-exp-hub-floor-key maxlength="40" placeholder="1">' +
             '<input type="text" data-exp-hub-floor-a3d maxlength="80" placeholder="assetId 3D" style="margin-top:6px">' +
             '<input type="text" data-exp-hub-floor-a2d maxlength="80" placeholder="assetId 2D" style="margin-top:6px">' +
           '</div>' +
@@ -1471,8 +1494,26 @@ var ExperienciaCanvas = (function () {
           if (hubEn.checked) {
             ExperienciaEngine.enableHubOnScene(node);
           } else {
-            var hub = ExperienciaEngine.ensureHubConfig(node);
-            hub.enabled = false;
+            var hubOff = ExperienciaEngine.ensureHubConfig(node);
+            hubOff.enabled = false;
+          }
+          renderAll(); persist();
+        });
+      }
+      var hubScope = inspectorBody.querySelector('[data-exp-hub-scope]');
+      if (hubScope) {
+        hubScope.addEventListener('change', function () {
+          var nid = canvas().selectedId;
+          var val = hubScope.value;
+          if (!val) {
+            ExperienciaEngine.setHubStructureScope(state, nid, null);
+          } else {
+            var opts = ExperienciaEngine.listHubScopeOptions(state) || [];
+            var found = null;
+            for (var si = 0; si < opts.length; si++) {
+              if (String(opts[si].id) === String(val)) { found = opts[si]; break; }
+            }
+            ExperienciaEngine.setHubStructureScope(state, nid, found);
           }
           renderAll(); persist();
         });
@@ -2850,6 +2891,153 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    function showTemplateModal() {
+      if (!modalEl) return;
+      var analysis = ExperienciaEngine.analyzeStructureForFlow
+        ? ExperienciaEngine.analyzeStructureForFlow(state)
+        : { summary: {}, recommended: 'simple', stages: [], components: [] };
+      var s = analysis.summary || {};
+      var rec = analysis.recommended || 'simple';
+      function tplCard(id, title, desc) {
+        var isRec = id === rec;
+        return '<button type="button" class="builder-exp-tpl-card' + (isRec ? ' is-recommended' : '') +
+          '" data-exp-tpl="' + esc(id) + '">' +
+          '<strong>' + esc(title) +
+          (isRec ? ' <span class="builder-exp-tpl-card__badge">RECOMENDADO</span>' : '') +
+          '</strong>' +
+          '<span>' + esc(desc) + '</span>' +
+        '</button>';
+      }
+      modalEl.hidden = false;
+      modalEl.innerHTML =
+        '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
+        '<div class="builder-exp-modal__panel builder-exp-modal__panel--wide" role="dialog">' +
+          '<h3 class="builder-exp-modal__title">Crear flujo base</h3>' +
+          '<p class="builder-exp-modal__body"><strong>Estructura detectada</strong><br>' +
+            esc(String(s.stages || 0)) + ' etapas · ' +
+            esc(String(s.components || 0)) + ' componentes · ' +
+            esc(String(s.units || 0)) + ' viviendas · ' +
+            esc(String(s.tipologias || 0)) + ' tipologías' +
+          '</p>' +
+          '<p class="builder-exp-modal__body">¿Cómo quieres organizar la experiencia?</p>' +
+          '<div class="builder-exp-tpl-grid">' +
+            tplCard('simple', 'Recorrido simple',
+              'Una entrada principal y recorrido completamente libre.') +
+            tplCard('components', 'Por componentes',
+              'Vista general del proyecto y una rama inicial por componente relevante.') +
+            tplCard('stages', 'Por etapas',
+              'Vista general del proyecto y una rama inicial por cada etapa.') +
+            tplCard('empty', 'Empezar vacío',
+              'Crear únicamente Hero.') +
+          '</div>' +
+          '<div class="builder-exp-modal__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>Cancelar</button>' +
+          '</div>' +
+        '</div>';
+
+      function close() {
+        modalEl.hidden = true;
+        modalEl.innerHTML = '';
+      }
+      modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', close);
+      });
+      modalEl.querySelectorAll('[data-exp-tpl]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var tid = btn.getAttribute('data-exp-tpl');
+          close();
+          function run() {
+            var result = ExperienciaEngine.applyFlowTemplate(state, tid);
+            renderAll();
+            fitView();
+            persist();
+            if (typeof AdminNotify !== 'undefined') {
+              var msg = 'Flujo base aplicado (' + tid + ').';
+              if (result && result.warning) msg += ' ' + result.warning;
+              AdminNotify.success(msg);
+            }
+          }
+          if (tid === 'empty') {
+            boxiesConfirm({
+              title: '¿Empezar vacío?',
+              message: 'Se eliminará el flujo editable y quedará solo el Hero. projectAssets no se borran.',
+              confirmLabel: 'Empezar vacío',
+              cancelLabel: 'Cancelar'
+            }).then(function (ok) { if (ok) run(); });
+            return;
+          }
+          var nonHero = (state.experiencia.nodes || []).filter(function (n) {
+            return n && n.kind !== 'hero' && n.id !== 'exp-hero';
+          }).length;
+          if (nonHero > 0) {
+            boxiesConfirm({
+              title: 'Aplicar plantilla',
+              message: 'Se conservarán nodos existentes. Se añadirá o reutilizará el tramo Hero→Intro→Vista y las ramas estructurales faltantes. No se borran recorridos manuales.',
+              confirmLabel: 'Aplicar',
+              cancelLabel: 'Cancelar'
+            }).then(function (ok) { if (ok) run(); });
+            return;
+          }
+          run();
+        });
+      });
+    }
+
+    function showStructureReviewModal() {
+      if (!modalEl) return;
+      var diff = ExperienciaEngine.diffStructureVsFlow
+        ? ExperienciaEngine.diffStructureVsFlow(state)
+        : { changes: [], hasBaseline: false };
+      var analysis = ExperienciaEngine.analyzeStructureForFlow
+        ? ExperienciaEngine.analyzeStructureForFlow(state)
+        : { summary: {} };
+      var s = analysis.summary || {};
+      var listHtml = (diff.changes || []).length
+        ? ('<ul class="builder-exp-inspector__list">' +
+          diff.changes.map(function (c) {
+            return '<li>' + esc(c.message || '') + '</li>';
+          }).join('') + '</ul>')
+        : '<p class="builder-exp-modal__body">Sin diferencias detectadas respecto a la última huella.</p>';
+
+      modalEl.hidden = false;
+      modalEl.innerHTML =
+        '<div class="builder-exp-modal__backdrop" data-exp-modal-cancel></div>' +
+        '<div class="builder-exp-modal__panel builder-exp-modal__panel--wide" role="dialog">' +
+          '<h3 class="builder-exp-modal__title">Estructura actualizada</h3>' +
+          '<p class="builder-exp-modal__body">' +
+            esc(String(s.stages || 0)) + ' etapas · ' +
+            esc(String(s.components || 0)) + ' componentes · ' +
+            esc(String(s.units || 0)) + ' viviendas' +
+          '</p>' +
+          listHtml +
+          '<div class="builder-exp-modal__actions">' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-modal-cancel>Cerrar</button>' +
+            '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-primary" data-exp-struct-sync>Sincronizar</button>' +
+          '</div>' +
+        '</div>';
+
+      function close() {
+        modalEl.hidden = true;
+        modalEl.innerHTML = '';
+      }
+      modalEl.querySelectorAll('[data-exp-modal-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', close);
+      });
+      var syncBtn = modalEl.querySelector('[data-exp-struct-sync]');
+      if (syncBtn) {
+        syncBtn.addEventListener('click', function () {
+          var res = ExperienciaEngine.syncStructureRefs(state);
+          close();
+          renderAll();
+          persist();
+          if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.success('Sincronizado con Estructura (' +
+              ((res && res.updated) || 0) + ' refs). Recorridos manuales conservados.');
+          }
+        });
+      }
+    }
+
     /* Chrome actions */
     var draftBtn = rootEl.querySelector('#builderExpDraftBtn');
     if (draftBtn) {
@@ -2876,6 +3064,20 @@ var ExperienciaCanvas = (function () {
         if (typeof AdminNotify !== 'undefined') {
           AdminNotify.success('Hero sincronizado desde la sección Hero.');
         }
+      });
+    }
+    var tplBtn = rootEl.querySelector('#builderExpTemplateBtn');
+    if (tplBtn) {
+      tplBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        showTemplateModal();
+      });
+    }
+    var structBtn = rootEl.querySelector('#builderExpStructReviewBtn');
+    if (structBtn) {
+      structBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        showStructureReviewModal();
       });
     }
 

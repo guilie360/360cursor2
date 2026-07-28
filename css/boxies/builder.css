@@ -2860,6 +2860,66 @@ button.builder-estructura-chip {
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
 }
 
+.builder-exp-modal__panel--wide {
+  width: min(560px, calc(100% - 32px));
+}
+
+.builder-exp-tpl-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.builder-exp-tpl-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.88);
+  text-align: left;
+  cursor: pointer;
+}
+
+.builder-exp-tpl-card strong {
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.builder-exp-tpl-card span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.builder-exp-tpl-card:hover {
+  border-color: rgba(111, 191, 134, 0.35);
+  background: rgba(111, 191, 134, 0.06);
+}
+
+.builder-exp-tpl-card.is-recommended {
+  border-color: rgba(155, 143, 212, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(155, 143, 212, 0.15);
+}
+
+.builder-exp-tpl-card__badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: rgba(155, 143, 212, 0.95);
+  border: 1px solid rgba(155, 143, 212, 0.35);
+  background: rgba(155, 143, 212, 0.1);
+  vertical-align: middle;
+}
+
 .builder-exp-modal__title {
   margin: 0 0 8px;
   font-size: 16px;

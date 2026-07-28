@@ -1,4 +1,4 @@
-/* BOXIES V5.9.63 — Copy/paste, multi-in, HUB plantas, controles globales */
+/* BOXIES V5.9.64 — Plantillas de flujo basadas en Estructura (esqueleto, no narrativa) */
 var ExperienciaEngine = (function () {
   var NODE_W = 220;
   var NODE_H = 92;
@@ -10,6 +10,13 @@ var ExperienciaEngine = (function () {
   /* In-memory clipboard for Ctrl+C / Ctrl+V (nodes + internal edges only) */
   var _clipboard = null;
   var _pasteGen = 0;
+
+  var FLOW_TEMPLATE_IDS = {
+    simple: 'simple',
+    components: 'components',
+    stages: 'stages',
+    empty: 'empty'
+  };
 
   var SCENE_KINDS = {
     scene: true, image: true, video: true, pano360: true, plan: true,
@@ -303,18 +310,68 @@ var ExperienciaEngine = (function () {
         activeFloor: null,
         visualMode: '3d',
         floors: [],
-        navigationStackKey: 'navigationStack'
+        navigationStackKey: 'navigationStack',
+        structureScope: null
       };
     }
     if (!Array.isArray(n.config.hub.floors)) n.config.hub.floors = [];
     if (!n.config.hub.visualMode) n.config.hub.visualMode = '3d';
     if (!n.config.hub.navigationStackKey) n.config.hub.navigationStackKey = 'navigationStack';
+    if (n.config.hub.structureScope === undefined) n.config.hub.structureScope = null;
     return n.config.hub;
   }
 
   function enableHubOnScene(n) {
     var hub = ensureHubConfig(n);
     if (hub) hub.enabled = true;
+    return hub;
+  }
+
+  function setHubStructureScope(state, nodeId, scopeOpt) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var hub = enableHubOnScene(n);
+    if (!scopeOpt) {
+      hub.structureScope = null;
+      return hub;
+    }
+    hub.structureScope = {
+      scopeId: scopeOpt.id || scopeOpt.scopeId || null,
+      stageId: scopeOpt.stageId || null,
+      componentId: scopeOpt.componentId || null,
+      structureKey: scopeOpt.key || scopeOpt.structureKey || null,
+      label: scopeOpt.label || null,
+      kind: scopeOpt.kind || null
+    };
+    /* Refresh floor keys from Estructura without wiping asset bindings */
+    syncHubFloorsFromScope(state, n);
+    return hub;
+  }
+
+  function syncHubFloorsFromScope(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return null;
+    var hub = ensureHubConfig(n);
+    if (!hub || !hub.structureScope) return hub;
+    var floors = listFloorsForScope(state, hub.structureScope) || [];
+    var byKey = {};
+    (hub.floors || []).forEach(function (f) {
+      if (f && f.key) byKey[String(f.key)] = f;
+    });
+    hub.floors = floors.map(function (f) {
+      var prev = byKey[String(f.key)];
+      return {
+        key: f.key,
+        label: f.label,
+        asset3dId: prev ? prev.asset3dId : null,
+        asset2dId: prev ? prev.asset2dId : null,
+        unitsPerFloor: f.unitsPerFloor != null ? f.unitsPerFloor : null
+      };
+    });
+    if (hub.activeFloor && !findHubFloor(hub, hub.activeFloor)) {
+      hub.activeFloor = hub.floors.length ? hub.floors[0].key : null;
+    }
+    if (!hub.activeFloor && hub.floors.length) hub.activeFloor = hub.floors[0].key;
     return hub;
   }
 
@@ -1268,6 +1325,10 @@ var ExperienciaEngine = (function () {
     });
     var root = items[0];
 
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
+      EstructuraEngine.ensureConjuntoConfig(e);
+    }
+
     if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets) {
       var buckets = EstructuraEngine.listCapacityBuckets(e) || [];
       var byStage = {};
@@ -1277,10 +1338,14 @@ var ExperienciaEngine = (function () {
         byStage[stageKey].push(b);
       });
       Object.keys(byStage).forEach(function (sk) {
+        var stageLabel = sk === '_root'
+          ? 'Componentes'
+          : (stageNameById(e, sk) || ('Etapa · ' + sk));
         var group = {
           id: 'stage-' + sk,
-          label: sk === '_root' ? 'Componentes' : ('Etapa · ' + sk),
+          label: stageLabel,
           kind: 'etapa',
+          stageId: sk === '_root' ? null : sk,
           children: byStage[sk].map(function (b) {
             return {
               id: String(b.id),
@@ -1288,6 +1353,7 @@ var ExperienciaEngine = (function () {
               kind: b.kind || 'componente',
               capacity: b.capacity || 0,
               stageId: b.stageId || null,
+              componentId: b.componentId || b.id,
               children: []
             };
           })
@@ -1322,6 +1388,7 @@ var ExperienciaEngine = (function () {
             label: it.label || String(it.id),
             kind: it.kind || 'componente',
             stageId: it.stageId || null,
+            componentId: it.componentId || null,
             capacity: it.capacity != null ? it.capacity : null,
             key: String(it.kind || 'item') + ':' + String(it.id)
           });
@@ -1331,6 +1398,636 @@ var ExperienciaEngine = (function () {
     }
     walk(tree);
     return out;
+  }
+
+  function stageNameById(e, stageId) {
+    if (!stageId || !e) return null;
+    var cfg = e.conjuntoConfig;
+    if (!cfg || !Array.isArray(cfg.stages)) return null;
+    for (var i = 0; i < cfg.stages.length; i++) {
+      if (String(cfg.stages[i].localId) === String(stageId)) {
+        return String(cfg.stages[i].nombre || '').trim() || ('Etapa ' + (i + 1));
+      }
+    }
+    return null;
+  }
+
+  function floorRowsFromCount(pisos, unitsPerFloor) {
+    var n = Math.max(0, parseInt(pisos, 10) || 0);
+    var rows = [];
+    for (var i = 1; i <= n; i++) {
+      rows.push({
+        key: String(i),
+        label: 'Piso ' + i,
+        unitsPerFloor: unitsPerFloor != null ? unitsPerFloor : null
+      });
+    }
+    return rows;
+  }
+
+  /** Floors for a hub/structure scope — from real Estructura only (never invent). */
+  function listFloorsForScope(state, scope) {
+    if (!scope) return [];
+    var e = (state && state.estructura) || {};
+    var entityId = scope.scopeId || scope.componentId || scope.id || null;
+    if (!entityId || entityId === 'project' || entityId === 'proj-root') return [];
+
+    var buildings = e.buildings || [];
+    for (var bi = 0; bi < buildings.length; bi++) {
+      var b = buildings[bi];
+      if (String(b.localId) === String(entityId)) {
+        return floorRowsFromCount(b.pisos, b.unidadesPorPiso);
+      }
+    }
+
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
+      EstructuraEngine.ensureConjuntoConfig(e);
+    }
+    var found = [];
+    function checkComp(c) {
+      if (!c) return;
+      if (String(c.localId) === String(entityId)) {
+        if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
+          /* Component-level scope without tower: no single floor list */
+          return;
+        }
+        if (c.pisos != null) {
+          found = floorRowsFromCount(c.pisos, c.unidadesPorPiso);
+        }
+        return;
+      }
+      if (Array.isArray(c.towers)) {
+        c.towers.forEach(function (tw) {
+          if (String(tw.localId) === String(entityId)) {
+            found = floorRowsFromCount(tw.pisos, tw.unidadesPorPiso);
+          }
+        });
+      }
+    }
+    if (e.conjuntoConfig) {
+      (e.conjuntoConfig.components || []).forEach(checkComp);
+      (e.conjuntoConfig.stages || []).forEach(function (st) {
+        (st.components || []).forEach(checkComp);
+      });
+    }
+    return found;
+  }
+
+  /** Scope options for HUB inspector (proyecto / etapas / componentes / torres). */
+  function listHubScopeOptions(state) {
+    var e = (state && state.estructura) || {};
+    var projectLabel = (state.projectInfo && state.projectInfo.nombre) || 'Proyecto completo';
+    var out = [{
+      id: 'project',
+      label: projectLabel,
+      kind: 'proyecto',
+      stageId: null,
+      componentId: null,
+      key: 'proyecto:proj-root'
+    }];
+
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
+      EstructuraEngine.ensureConjuntoConfig(e);
+    }
+    var cfg = e.conjuntoConfig;
+    if (cfg && cfg.useStages && Array.isArray(cfg.stages)) {
+      cfg.stages.forEach(function (st, i) {
+        var stName = String(st.nombre || '').trim() || ('Etapa ' + (i + 1));
+        out.push({
+          id: String(st.localId),
+          label: stName,
+          kind: 'etapa',
+          stageId: String(st.localId),
+          componentId: null,
+          key: 'etapa:' + st.localId
+        });
+        (st.components || []).forEach(function (c) {
+          pushComponentScopes(out, c, st.localId, stName);
+        });
+      });
+    } else if (cfg && Array.isArray(cfg.components)) {
+      cfg.components.forEach(function (c) {
+        pushComponentScopes(out, c, null, null);
+      });
+    }
+
+    (e.buildings || []).forEach(function (b, i) {
+      out.push({
+        id: String(b.localId),
+        label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
+        kind: 'edificio',
+        stageId: null,
+        componentId: String(b.localId),
+        key: 'edificio:' + b.localId,
+        pisos: b.pisos
+      });
+    });
+
+    /* Deduplicate by id */
+    var seen = {};
+    return out.filter(function (o) {
+      if (!o || !o.id || seen[o.id]) return false;
+      seen[o.id] = true;
+      return true;
+    });
+  }
+
+  function pushComponentScopes(out, c, stageId, stageName) {
+    if (!c) return;
+    var prefix = stageName ? (stageName + ' · ') : '';
+    var baseName = String(c.nombre || '').trim() ||
+      (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.productLabel
+        ? EstructuraEngine.productLabel(c.producto)
+        : null) ||
+      'Componente';
+    if (c.edificioMode === 'individual' && Array.isArray(c.towers) && c.towers.length) {
+      c.towers.forEach(function (tw, i) {
+        var twName = String(tw.nombre || '').trim() || ('Torre ' + (i + 1));
+        out.push({
+          id: String(tw.localId),
+          label: prefix + twName,
+          kind: 'torre',
+          stageId: stageId || null,
+          componentId: String(c.localId),
+          key: 'torre:' + tw.localId,
+          pisos: tw.pisos
+        });
+      });
+      return;
+    }
+    out.push({
+      id: String(c.localId),
+      label: prefix + baseName,
+      kind: c.kind || c.type || 'componente',
+      stageId: stageId || null,
+      componentId: String(c.localId),
+      key: 'componente:' + c.localId,
+      pisos: c.pisos
+    });
+  }
+
+  /**
+   * Analyze live Estructura for flow templates.
+   * Never invents floors/towers — only reads existing data.
+   */
+  function analyzeStructureForFlow(state) {
+    var e = (state && state.estructura) || {};
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.ensureConjuntoConfig) {
+      EstructuraEngine.ensureConjuntoConfig(e);
+    }
+    var stages = [];
+    var components = [];
+    var cfg = e.conjuntoConfig;
+    if (cfg && cfg.useStages && Array.isArray(cfg.stages) && cfg.stages.length) {
+      cfg.stages.forEach(function (st, i) {
+        var name = String(st.nombre || '').trim() || ('Etapa ' + (i + 1));
+        stages.push({
+          id: String(st.localId),
+          label: name,
+          componentCount: (st.components || []).length
+        });
+        (st.components || []).forEach(function (c) {
+          components.push({
+            id: String(c.localId),
+            label: name + ' · ' + (String(c.nombre || '').trim() || 'Componente'),
+            stageId: String(st.localId),
+            kind: c.kind || c.type || 'componente'
+          });
+        });
+      });
+    } else {
+      var buckets = (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.listCapacityBuckets)
+        ? (EstructuraEngine.listCapacityBuckets(e) || [])
+        : [];
+      buckets.forEach(function (b) {
+        components.push({
+          id: String(b.id),
+          label: b.label || 'Componente',
+          stageId: b.stageId || null,
+          kind: b.kind || 'componente',
+          capacity: b.capacity
+        });
+      });
+      if (cfg && Array.isArray(cfg.components)) {
+        /* Prefer named components when buckets empty */
+        if (!components.length) {
+          cfg.components.forEach(function (c) {
+            components.push({
+              id: String(c.localId),
+              label: String(c.nombre || '').trim() || 'Componente',
+              stageId: null,
+              kind: c.kind || 'componente'
+            });
+          });
+        }
+      }
+    }
+
+    (e.buildings || []).forEach(function (b, i) {
+      var exists = components.some(function (c) { return c.id === String(b.localId); });
+      if (!exists) {
+        components.push({
+          id: String(b.localId),
+          label: String(b.nombre || '').trim() || ('Torre ' + (i + 1)),
+          stageId: null,
+          kind: 'edificio',
+          pisos: b.pisos
+        });
+      }
+    });
+
+    var tipologias = (e.tipologias || []).filter(Boolean).length;
+    var units = 0;
+    if (typeof EstructuraEngine !== 'undefined' && EstructuraEngine.conceptualPhysicalUnits) {
+      units = EstructuraEngine.conceptualPhysicalUnits(e) || 0;
+    }
+
+    var recommended = FLOW_TEMPLATE_IDS.simple;
+    if (stages.length > 1) recommended = FLOW_TEMPLATE_IDS.stages;
+    else if (components.length > 1) recommended = FLOW_TEMPLATE_IDS.components;
+    else recommended = FLOW_TEMPLATE_IDS.simple;
+
+    return {
+      stages: stages,
+      components: components,
+      tipologias: tipologias,
+      units: units,
+      developmentType: e.developmentType || null,
+      useStages: !!(cfg && cfg.useStages),
+      recommended: recommended,
+      summary: {
+        stages: stages.length,
+        components: components.length,
+        units: units,
+        tipologias: tipologias
+      }
+    };
+  }
+
+  function structureFingerprint(state) {
+    var a = analyzeStructureForFlow(state);
+    return JSON.stringify({
+      stages: (a.stages || []).map(function (s) { return { id: s.id, label: s.label }; }),
+      components: (a.components || []).map(function (c) {
+        return { id: c.id, label: c.label, stageId: c.stageId || null };
+      }),
+      tipologias: a.tipologias,
+      units: a.units,
+      scopes: listHubScopeOptions(state).map(function (s) {
+        return { id: s.id, label: s.label, pisos: s.pisos || null };
+      })
+    });
+  }
+
+  function diffStructureVsFlow(state) {
+    var exp = ensureState(state);
+    var current = structureFingerprint(state);
+    var prevRaw = exp.structureFingerprint || null;
+    var changes = [];
+    if (!prevRaw) {
+      return {
+        hasBaseline: false,
+        changes: [{ type: 'info', message: 'Sin huella previa. Aplica una plantilla o sincroniza para crear referencia.' }],
+        current: current
+      };
+    }
+    var prev;
+    try { prev = JSON.parse(prevRaw); } catch (err) { prev = null; }
+    var cur;
+    try { cur = JSON.parse(current); } catch (err2) { cur = null; }
+    if (!prev || !cur) {
+      return { hasBaseline: !!prevRaw, changes: changes, current: current };
+    }
+
+    var prevComp = {};
+    (prev.components || []).forEach(function (c) { prevComp[c.id] = c; });
+    var curComp = {};
+    (cur.components || []).forEach(function (c) { curComp[c.id] = c; });
+
+    Object.keys(curComp).forEach(function (id) {
+      if (!prevComp[id]) {
+        changes.push({ type: 'added', message: '+ ' + curComp[id].label + ' añadido', id: id });
+      } else if (prevComp[id].label !== curComp[id].label) {
+        changes.push({
+          type: 'renamed',
+          message: '~ ' + prevComp[id].label + ' → ' + curComp[id].label,
+          id: id
+        });
+      }
+    });
+    Object.keys(prevComp).forEach(function (id) {
+      if (!curComp[id]) {
+        changes.push({ type: 'removed', message: '- ' + prevComp[id].label + ' ya no está en Estructura', id: id });
+      }
+    });
+
+    var prevScope = {};
+    (prev.scopes || []).forEach(function (s) { prevScope[s.id] = s; });
+    (cur.scopes || []).forEach(function (s) {
+      var p = prevScope[s.id];
+      if (p && p.pisos != null && s.pisos != null && Number(p.pisos) !== Number(s.pisos)) {
+        changes.push({
+          type: 'floors',
+          message: '~ ' + s.label + ' ahora tiene ' + s.pisos + ' pisos (antes ' + p.pisos + ')',
+          id: s.id
+        });
+      }
+    });
+
+    return { hasBaseline: true, changes: changes, current: current, previous: prevRaw };
+  }
+
+  /**
+   * Soft sync: update labels / hub floors from Estructura.
+   * Never deletes nodes, edges, assets or manual routes.
+   */
+  function syncStructureRefs(state) {
+    var exp = ensureFlow(state);
+    var analysis = analyzeStructureForFlow(state);
+    var labelById = {};
+    (analysis.stages || []).forEach(function (s) { labelById[s.id] = s.label; });
+    (analysis.components || []).forEach(function (c) { labelById[c.id] = c.label; });
+    listHubScopeOptions(state).forEach(function (s) { labelById[s.id] = s.label; });
+
+    var updated = 0;
+    (exp.nodes || []).forEach(function (n) {
+      if (!n || !n.config) return;
+      /* Linked interactions */
+      (n.config.interactions || []).forEach(function (ix) {
+        var sid = ix.structureId || (ix.structureRef && ix.structureRef.id);
+        if (sid && labelById[String(sid)]) {
+          var next = labelById[String(sid)];
+          if (ix.structureLabel !== next) {
+            ix.structureLabel = next;
+            if (ix.structureRef) ix.structureRef.label = next;
+            updated++;
+          }
+        }
+      });
+      /* Hub scope label + floors */
+      if (n.config.hub && n.config.hub.structureScope) {
+        var sc = n.config.hub.structureScope;
+        var sid2 = sc.scopeId || sc.componentId;
+        if (sid2 && labelById[String(sid2)] && sc.label !== labelById[String(sid2)]) {
+          sc.label = labelById[String(sid2)];
+          updated++;
+        }
+        syncHubFloorsFromScope(state, n);
+      }
+      /* Node structureLabel */
+      if (n.config.structureId && labelById[String(n.config.structureId)]) {
+        if (n.config.structureLabel !== labelById[String(n.config.structureId)]) {
+          n.config.structureLabel = labelById[String(n.config.structureId)];
+          updated++;
+        }
+      }
+    });
+
+    exp.structureFingerprint = structureFingerprint(state);
+    markExperienciaDirty(state);
+    return { ok: true, updated: updated, analysis: analysis };
+  }
+
+  function findNodeByTemplateRole(exp, role) {
+    return (exp.nodes || []).find(function (n) {
+      return n && n.config && n.config.templateRole === role;
+    }) || null;
+  }
+
+  function ensureEdge(state, fromId, toId, label, portId, targetPortId) {
+    var exp = ensureState(state);
+    var exists = (exp.edges || []).some(function (ed) {
+      return (ed.sourceNodeId || ed.from) === fromId &&
+        (ed.targetNodeId || ed.to) === toId &&
+        (ed.sourcePortId || ed.portId || 'out') === (portId || 'out');
+    });
+    if (exists) return null;
+    return addManualEdge(state, fromId, toId, label, portId, targetPortId);
+  }
+
+  function createTemplateScene(state, opts) {
+    var exp = ensureFlow(state);
+    opts = opts || {};
+    var n = node({
+      id: uid('flow'),
+      kind: opts.kind || 'image',
+      label: opts.label || 'Escena',
+      role: 'scene',
+      status: 'pending',
+      x: opts.x != null ? opts.x : 320,
+      y: opts.y != null ? opts.y : 120,
+      userMoved: true,
+      ports: [],
+      config: {
+        templateRole: opts.templateRole || null,
+        structureId: opts.structureId || null,
+        structureKey: opts.structureKey || null,
+        structureLabel: opts.structureLabel || null,
+        autoplay: opts.kind === 'video',
+        onEnd: opts.kind === 'video' ? 'next' : null,
+        fileName: null,
+        assetId: null,
+        interactions: [],
+        hotspots: []
+      }
+    });
+    if (opts.kind === 'video' || opts.kind === 'animacion') {
+      n.typeLabel = 'ANIMACIÓN';
+      n.accent = 'purple';
+    }
+    normalizeSceneInteractions(n);
+    exp.nodes.push(n);
+    return n;
+  }
+
+  /** Hero → Intro → Entry (universal chain). Reuses existing templateRole nodes. */
+  function ensureIntroChain(state) {
+    var exp = ensureFlow(state);
+    var hero = exp.nodes.find(function (n) { return n.id === 'exp-hero' || n.kind === 'hero'; });
+    if (!hero) {
+      hero = buildHeroNode(state, null);
+      exp.nodes.unshift(hero);
+    }
+    var intro = findNodeByTemplateRole(exp, 'intro');
+    if (!intro) {
+      intro = createTemplateScene(state, {
+        kind: 'video',
+        label: 'Intro',
+        templateRole: 'intro',
+        x: (hero.x || 48) + 360,
+        y: hero.y || 80
+      });
+    }
+    var entry = findNodeByTemplateRole(exp, 'entry');
+    if (!entry) {
+      entry = createTemplateScene(state, {
+        kind: 'image',
+        label: 'Vista general',
+        templateRole: 'entry',
+        x: (intro.x || 400) + 340,
+        y: intro.y || 80
+      });
+    }
+    ensureEdge(state, hero.id, intro.id, 'INICIAR', 'hero-iniciar', 'in');
+    ensureEdge(state, intro.id, entry.id, 'Al finalizar', 'on-end', 'in');
+    return { hero: hero, intro: intro, entry: entry };
+  }
+
+  function linkHotspotToStructure(ix, entity) {
+    if (!ix || !entity) return ix;
+    ix.structureId = entity.id;
+    ix.structureKey = entity.key || (String(entity.kind || 'item') + ':' + entity.id);
+    ix.structureLabel = entity.label;
+    ix.structureKind = entity.kind || null;
+    ix.structureRef = {
+      id: entity.id,
+      key: ix.structureKey,
+      label: entity.label,
+      kind: entity.kind || null,
+      stageId: entity.stageId || null
+    };
+    return ix;
+  }
+
+  /**
+   * Apply flow template. Creates structural skeleton only — no narrative routes.
+   * templateId: simple | components | stages | empty
+   */
+  function applyFlowTemplate(state, templateId, options) {
+    options = options || {};
+    var exp = ensureFlow(state);
+    var analysis = analyzeStructureForFlow(state);
+    templateId = templateId || analysis.recommended || FLOW_TEMPLATE_IDS.simple;
+
+    if (templateId === FLOW_TEMPLATE_IDS.empty) {
+      resetFlow(state);
+      exp = ensureState(state);
+      exp.structureFingerprint = structureFingerprint(state);
+      exp.flowTemplateId = FLOW_TEMPLATE_IDS.empty;
+      markExperienciaDirty(state);
+      return { ok: true, templateId: templateId, analysis: analysis, chain: null };
+    }
+
+    var chain = ensureIntroChain(state);
+    exp = ensureState(state);
+
+    if (templateId === FLOW_TEMPLATE_IDS.simple) {
+      exp.flowTemplateId = FLOW_TEMPLATE_IDS.simple;
+      exp.structureFingerprint = structureFingerprint(state);
+      markExperienciaDirty(state);
+      return { ok: true, templateId: templateId, analysis: analysis, chain: chain };
+    }
+
+    var entry = chain.entry;
+    var branches = templateId === FLOW_TEMPLATE_IDS.stages
+      ? (analysis.stages || []).map(function (s) {
+          return {
+            id: s.id,
+            label: s.label,
+            kind: 'etapa',
+            stageId: s.id,
+            key: 'etapa:' + s.id
+          };
+        })
+      : (analysis.components || []).map(function (c) {
+          return {
+            id: c.id,
+            label: c.label,
+            kind: c.kind || 'componente',
+            stageId: c.stageId || null,
+            key: String(c.kind || 'componente') + ':' + c.id
+          };
+        });
+
+    if (!branches.length) {
+      exp.flowTemplateId = templateId;
+      exp.structureFingerprint = structureFingerprint(state);
+      markExperienciaDirty(state);
+      return {
+        ok: true,
+        templateId: templateId,
+        analysis: analysis,
+        chain: chain,
+        warning: 'Estructura sin ramas detectadas; solo se creó el tramo inicial.'
+      };
+    }
+
+    /* Clear previous template-generated branch hotspots on entry (keep user ones without templateFlag) */
+    normalizeSceneInteractions(entry);
+    var removedPorts = {};
+    entry.config.interactions = (entry.config.interactions || []).filter(function (ix) {
+      if (ix && ix.config && ix.config.templateGenerated) {
+        removedPorts[ix.portId || ix.id] = true;
+        return false;
+      }
+      return true;
+    });
+    if (Object.keys(removedPorts).length) {
+      exp.edges = (exp.edges || []).filter(function (ed) {
+        if ((ed.sourceNodeId || ed.from) !== entry.id) return true;
+        var pid = ed.sourcePortId || ed.portId;
+        return !removedPorts[pid];
+      });
+    }
+
+    var baseY = (entry.y || 80) - Math.floor((branches.length - 1) * 70 / 2);
+    branches.forEach(function (br, i) {
+      var existing = (exp.nodes || []).find(function (n) {
+        return n.config && n.config.templateRole === 'branch' &&
+          String(n.config.structureId) === String(br.id);
+      });
+      var branchNode = existing;
+      if (!branchNode) {
+        branchNode = createTemplateScene(state, {
+          kind: 'image',
+          label: br.label,
+          templateRole: 'branch',
+          structureId: br.id,
+          structureKey: br.key,
+          structureLabel: br.label,
+          x: (entry.x || 760) + 360,
+          y: baseY + i * 110
+        });
+      } else {
+        branchNode.label = br.label;
+        branchNode.config.structureLabel = br.label;
+      }
+
+      var ix = addInteractionToScene(state, entry.id, 'HOTSPOT', br.label, {
+        group: 'content',
+        structureId: br.id,
+        structureKey: br.key,
+        structureLabel: br.label,
+        structureKind: br.kind,
+        structureRef: {
+          id: br.id,
+          key: br.key,
+          label: br.label,
+          kind: br.kind,
+          stageId: br.stageId || null
+        }
+      });
+      if (ix) {
+        if (!ix.config) ix.config = {};
+        ix.config.templateGenerated = true;
+        linkHotspotToStructure(ix, br);
+      }
+      if (ix) {
+        ensureEdge(state, entry.id, branchNode.id, br.label, ix.portId || ix.id, 'in');
+      }
+    });
+
+    syncScenePorts(entry);
+    exp.flowTemplateId = templateId;
+    exp.structureFingerprint = structureFingerprint(state);
+    markExperienciaDirty(state);
+    return {
+      ok: true,
+      templateId: templateId,
+      analysis: analysis,
+      chain: chain,
+      branches: branches.length
+    };
   }
 
   function resolveStructureLink(state, ix) {
@@ -2398,6 +3095,17 @@ var ExperienciaEngine = (function () {
     listStructureLinkOptions: listStructureLinkOptions,
     resolveStructureLink: resolveStructureLink,
     linkInteractionToStructure: linkInteractionToStructure,
+    analyzeStructureForFlow: analyzeStructureForFlow,
+    listHubScopeOptions: listHubScopeOptions,
+    listFloorsForScope: listFloorsForScope,
+    setHubStructureScope: setHubStructureScope,
+    syncHubFloorsFromScope: syncHubFloorsFromScope,
+    applyFlowTemplate: applyFlowTemplate,
+    ensureIntroChain: ensureIntroChain,
+    diffStructureVsFlow: diffStructureVsFlow,
+    syncStructureRefs: syncStructureRefs,
+    structureFingerprint: structureFingerprint,
+    FLOW_TEMPLATE_IDS: FLOW_TEMPLATE_IDS,
     renameNode: renameNode,
     syncHeroOnly: syncHeroOnly,
     resetFlow: resetFlow,
