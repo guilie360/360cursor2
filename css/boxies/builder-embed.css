@@ -166,6 +166,21 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 .boxies-builder-embed:has(.builder-step-content--hero) #builderStepPanel,
 #boxiesContent:has(.builder-step-content--menu) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--menu) #builderStepPanel,
+#boxiesContent:has(.builder-step-content--media) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--media) #builderStepPanel,
+#boxiesContent:has(.builder-step-content--bunny-media) #builderStepPanel,
+.boxies-builder-embed:has(.builder-step-content--bunny-media) #builderStepPanel {
+  flex: 1 1 0%;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  padding: 24px clamp(20px, 3vw, 40px) 12px;
+  box-sizing: border-box;
+}
+
 #boxiesContent:has(.builder-step-content--vista-previa) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--vista-previa) #builderStepPanel {
   flex: 1 1 0%;
@@ -175,7 +190,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   overflow: hidden !important;
   display: flex;
   flex-direction: column;
-  padding: 14px clamp(16px, 2.4vw, 28px) 10px;
+  padding: 8px clamp(12px, 1.5vw, 20px);
   box-sizing: border-box;
 }
 
@@ -197,7 +212,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 
 #boxiesContent:has(.builder-step-content--experiencia) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--experiencia) #builderStepPanel {
-  padding: 0;
+  padding: 24px clamp(20px, 3vw, 40px) 12px;
   box-sizing: border-box;
   width: 100%;
   max-width: none;
@@ -276,7 +291,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   max-height: none !important;
   overflow: visible !important;
   display: block !important;
-  padding: 14px clamp(16px, 2.4vw, 28px) 10px;
+  padding: 24px clamp(20px, 3vw, 40px) 28px;
   box-sizing: border-box;
 }
 

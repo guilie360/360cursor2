@@ -498,6 +498,20 @@ body.boxies-builder-chrome .boxies-workspace {
   color: rgba(255, 255, 255, 0.48);
 }
 
+/* V5.9.97 — Vista previa: herramienta auxiliar, sin indicadores de estado */
+.builder-rail-item.is-auxiliary .builder-rail-mark {
+  display: none;
+}
+
+.builder-rail-item.is-auxiliary .builder-rail-row,
+.builder-rail-item.is-auxiliary .builder-rail-value {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.builder-rail-item.is-auxiliary:hover .builder-rail-row {
+  color: rgba(255, 255, 255, 0.62);
+}
+
 .builder-rail-item.is-current {
   background: rgba(229, 72, 77, 0.08);
   box-shadow: inset 2px 0 0 #e5484d;
@@ -1144,7 +1158,11 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 }
 
 .builder-hero-workspace-head .builder-step-title-row {
-  margin-bottom: 0;
+  margin-bottom: 6px;
+}
+
+.builder-hero-workspace-head .builder-step-desc {
+  margin-bottom: 14px;
 }
 
 .builder-hero-workspace {
@@ -1624,7 +1642,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   line-height: 1.4;
 }
 
-/* V5.9.95 — Menú: frame fijo + scroll independiente por columna */
+/* V5.9.97 — Menú: frame fijo + scroll independiente; encabezado alineado al sistema */
 .builder-workspace #builderStepPanel:has(.builder-step-content--menu) {
   overflow: hidden;
   display: flex;
@@ -1636,8 +1654,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   );
   max-height: none;
   min-height: 0;
-  padding-top: 16px;
-  padding-bottom: 12px;
+  padding: 24px clamp(20px, 3vw, 40px) 12px;
 }
 
 .builder-step-content--menu {
@@ -1654,8 +1671,12 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   flex: 0 0 auto;
 }
 
-.builder-menu-workspace-head .builder-step-title {
+.builder-menu-workspace-head .builder-step-title-row {
   margin-bottom: 6px;
+}
+
+.builder-menu-workspace-head .builder-step-title {
+  margin-bottom: 0;
 }
 
 .builder-menu-workspace-head .builder-step-desc {
@@ -2549,9 +2570,9 @@ body.builder-has-dock .admin-toast--info {
 }
 
 .builder-step-content--estructura .builder-step-title {
-  font-size: var(--estructura-font-title);
-  font-weight: 650;
-  letter-spacing: 0.02em;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .builder-estructura-head {
@@ -2565,6 +2586,10 @@ body.builder-has-dock .admin-toast--info {
 
 .builder-estructura-head .builder-step-title-row {
   margin-bottom: 0;
+}
+
+.builder-step-content--estructura > .builder-step-desc {
+  margin-bottom: 14px;
 }
 
 .builder-estructura-expand-all {
@@ -3516,14 +3541,20 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   margin-bottom: 8px;
 }
 
+.builder-exp-chrome .builder-step-title-row {
+  margin-bottom: 6px;
+}
+
 .builder-exp-chrome .builder-step-title {
   margin: 0;
 }
 
-.builder-exp-chrome__sub {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+.builder-exp-chrome__sub,
+.builder-exp-chrome .builder-step-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .builder-exp-workspace {
@@ -4675,8 +4706,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   ));
   max-height: none;
   min-height: 0;
-  padding-top: 16px;
-  padding-bottom: 12px;
+  padding: 24px clamp(20px, 3vw, 40px) 12px;
 }
 
 .builder-media-workspace-head {
@@ -4684,11 +4714,11 @@ body.boxies-exp-canvas-mode #builderStepPanel {
 }
 
 .builder-media-workspace-head .builder-step-title-row {
-  margin-bottom: 0;
+  margin-bottom: 6px;
 }
 
 .builder-media-workspace-head .builder-step-desc {
-  margin: 6px 0 0;
+  margin: 0 0 14px;
 }
 
 .builder-media-workspace {

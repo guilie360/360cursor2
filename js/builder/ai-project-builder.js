@@ -53,9 +53,11 @@ var AiProjectBuilderView = (function () {
 
   /* ── Step renderers ── */
 
-  function stepTitleHtml(title) {
+  function stepTitleHtml(title, options) {
+    options = options || {};
     var step = BuilderWizard.getStep(state.currentStep);
-    var stepId = step ? step.id : '';
+    var stepId = options.stepId || (step ? step.id : '');
+    var trailingHtml = options.trailingHtml || '';
     var checked = false;
     if (stepId && typeof BuilderProgressRail !== 'undefined') {
       var items = BuilderProgressRail.buildItems(state);
@@ -70,12 +72,13 @@ var AiProjectBuilderView = (function () {
       checked = !!state.sectionChecks[stepId];
     }
     return '<div class="builder-step-title-row">' +
-      '<label class="builder-section-check" title="Marcar o desmarcar sección en la lista">' +
+      '<label class="builder-section-check" title="Marcar o desmarcar secci\u00F3n en la lista">' +
         '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="' +
           AdminUI.escapeHtml(stepId) + '"' + (checked ? ' checked' : '') + '>' +
         '<span class="builder-section-check-box" aria-hidden="true"></span>' +
       '</label>' +
       '<h2 class="builder-step-title">' + AdminUI.escapeHtml(title) + '</h2>' +
+      trailingHtml +
     '</div>';
   }
 
@@ -1341,7 +1344,7 @@ var AiProjectBuilderView = (function () {
         ' data-tooltip="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '">' +
         '<span class="builder-estructura-expand-all__icon" aria-hidden="true">' + expandIcon + '</span>' +
       '</button>';
-    var estructuraTitleRow = stepTitleHtml('Estructura').replace('</h2>', '</h2>' + expandBtnHtml);
+    var estructuraTitleRow = stepTitleHtml('Estructura', { trailingHtml: expandBtnHtml });
 
     function sectionHintHtml(key, text) {
       if (!text) return '';
@@ -1361,6 +1364,7 @@ var AiProjectBuilderView = (function () {
           '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>' +
         '</div>' +
       '</div>' +
+      '<p class="builder-step-desc">Define tipolog\u00EDas, plantas, ambientes y amenidades.</p>' +
       '<details class="builder-estructura-section" data-estructura-panel="dev"' +
         (panels.dev !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
@@ -1644,6 +1648,7 @@ var AiProjectBuilderView = (function () {
       '<div class="builder-step-content builder-step-content--hero">' +
         '<div class="builder-hero-workspace-head">' +
           stepTitleHtml('Hero') +
+          '<p class="builder-step-desc">Video, imagen y logo de portada del showroom.</p>' +
         '</div>' +
         '<div class="builder-hero-workspace">' +
           '<div class="builder-hero-col builder-hero-col--media">' +
@@ -1897,8 +1902,8 @@ var AiProjectBuilderView = (function () {
 
     return '<div class="builder-step-content builder-step-content--menu">' +
       '<div class="builder-menu-workspace-head">' +
-        '<h2 class="builder-step-title">Menú</h2>' +
-        '<p class="builder-step-desc">Configura la navegación principal del showroom.</p>' +
+        stepTitleHtml('Men\u00FA') +
+        '<p class="builder-step-desc">Configura la navegaci\u00F3n principal del showroom.</p>' +
       '</div>' +
       '<div class="builder-menu-workspace">' +
         '<div class="builder-menu-col builder-menu-col--structure">' +

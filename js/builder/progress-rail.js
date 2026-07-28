@@ -1,13 +1,17 @@
-/* Progress rail â€” V5.9.81 two-level sidebar (Panel A fixed / Panel B collapsible) */
+/* Progress rail - V5.9.97 unified chrome + clean UTF-8 */
 var BuilderProgressRail = (function () {
   var EXPANDED_RAIL_W = '185px';
   var PLATFORM_RAIL_W = '50px';
   var FLOAT_BTN_ID = 'boxiesSidebarFloatBtn';
+  var MARK_DONE = '\u2713';
+  var MARK_PENDING = '\u25CB';
+  var ELLIPSIS = '\u2026';
+  var MIDDOT = ' \u00B7 ';
 
   function shortName(name) {
     if (!name) return null;
     var base = String(name).replace(/\.[^.]+$/, '');
-    return base.length > 36 ? base.slice(0, 34) + 'â€¦' : base;
+    return base.length > 36 ? base.slice(0, 34) + ELLIPSIS : base;
   }
 
   function isDone(state, stepId, autoDone) {
@@ -49,7 +53,6 @@ var BuilderProgressRail = (function () {
       return state.projectType || null;
     }
 
-    /* V5.9.92 ? menú original restaurado (+ Info = Arquitecto IA) */
     return [
       {
         label: 'Config',
@@ -61,10 +64,10 @@ var BuilderProgressRail = (function () {
         label: 'Info',
         value: (function () {
           if (state.aiArchitect && state.aiArchitect.mode) {
-            return 'Arquitecto · ' + String(state.aiArchitect.mode);
+            return 'Arquitecto' + MIDDOT + String(state.aiArchitect.mode);
           }
           if (state.aiAssistant && state.aiAssistant.phase) {
-            return 'Arquitecto · ' + String(state.aiAssistant.phase);
+            return 'Arquitecto' + MIDDOT + String(state.aiAssistant.phase);
           }
           return info.nombre || 'Arquitecto IA';
         })(),
@@ -90,7 +93,7 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('video-hero')
       },
       {
-        label: 'Menú',
+        label: 'Men\u00FA',
         value: (function () {
           var m = state.menuConfig;
           if (!m || !Array.isArray(m.items) || !m.items.length) return null;
@@ -114,7 +117,7 @@ var BuilderProgressRail = (function () {
             }
             if (nodes.length || assetCount) {
               return nodes.length + (nodes.length === 1 ? ' nodo' : ' nodos') +
-                (assetCount ? (' · ' + assetCount + (assetCount === 1 ? ' asset' : ' assets')) : '');
+                (assetCount ? (MIDDOT + assetCount + (assetCount === 1 ? ' asset' : ' assets')) : '');
             }
           }
           var n = (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) || 0;
@@ -143,8 +146,9 @@ var BuilderProgressRail = (function () {
       },
       {
         label: 'Vista previa',
-        value: 'Canvas · INICIAR',
-        done: isDone(state, 'vista-previa', false),
+        value: 'Canvas' + MIDDOT + 'INICIAR',
+        auxiliary: true,
+        done: false,
         stepIndex: BuilderWizard.getStepIndex('vista-previa')
       }
     ];
@@ -163,11 +167,10 @@ var BuilderProgressRail = (function () {
   }
 
   function collapseToggleIcon() {
-    /* Always the same glyph â€” open/close is a CSS 180Â° rotate on [data-collapsed] */
     if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
       return BuilderIcons.render('chevron-left');
     }
-    return 'â—€';
+    return '\u25C0';
   }
 
   function syncFloatButton(collapsed) {
@@ -292,10 +295,6 @@ var BuilderProgressRail = (function () {
     }
   }
 
-  /**
-   * V5.9.81 â€” Collapse Panel B (Builder steps) only.
-   * Panel A (platform icons) stays at 64px. Never touches navCollapsed.
-   */
   function applyRailCollapsed(collapsed) {
     collapsed = !!collapsed;
     var body = document.body;
@@ -331,15 +330,23 @@ var BuilderProgressRail = (function () {
     var current = state.currentStep;
     var html = '<div class="builder-rail-list" data-builder-rail-list>';
     html += items.map(function (item) {
-      var cls = 'builder-rail-item' + (item.done ? ' is-done' : ' is-pending');
+      var cls = 'builder-rail-item';
+      if (item.auxiliary) {
+        cls += ' is-auxiliary';
+      } else {
+        cls += item.done ? ' is-done' : ' is-pending';
+      }
       if (item.stepIndex === current) cls += ' is-current';
       if (item.legacy) cls += ' is-legacy';
-      var mark = item.done ? 'âœ“' : 'â—‹';
+      var markHtml = item.auxiliary
+        ? ''
+        : ('<span class="builder-rail-mark" aria-hidden="true">' +
+            (item.done ? MARK_DONE : MARK_PENDING) + '</span>');
       return '<button type="button" class="' + cls + '" data-rail-step="' + item.stepIndex + '"' +
         ' data-tooltip="' + escapeHtml(item.label) + '"' +
         ' aria-label="' + escapeHtml(item.label) + '">' +
         '<span class="builder-rail-row">' +
-          '<span class="builder-rail-mark" aria-hidden="true">' + mark + '</span>' +
+          markHtml +
           '<span class="builder-rail-text">' +
             '<span class="builder-rail-label">' + escapeHtml(item.label) + '</span>' +
             (item.value

@@ -34,6 +34,38 @@ var ExperienciaCanvas = (function () {
     }
   }
 
+  function sectionTitleHtml(state, title, stepId) {
+    var checked = false;
+    if (typeof BuilderProgressRail !== 'undefined') {
+      if (BuilderProgressRail.isDone) {
+        var auto = !!(state.experiencia && state.experiencia.syncedFromApply);
+        checked = BuilderProgressRail.isDone(state, stepId, auto);
+      } else if (BuilderProgressRail.buildItems) {
+        var items = BuilderProgressRail.buildItems(state);
+        var stepIndex = typeof BuilderWizard !== 'undefined'
+          ? BuilderWizard.getStepIndex(stepId)
+          : -1;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].stepIndex === stepIndex) {
+            checked = !!items[i].done;
+            break;
+          }
+        }
+      }
+    } else if (state.sectionChecks && Object.prototype.hasOwnProperty.call(state.sectionChecks, stepId)) {
+      checked = !!state.sectionChecks[stepId];
+    }
+    /* Same chrome as Configuración / stepTitleHtml — do not invent a variant */
+    return '<div class="builder-step-title-row">' +
+      '<label class="builder-section-check" title="Marcar o desmarcar secci\u00F3n en la lista">' +
+        '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="' +
+          esc(stepId) + '"' + (checked ? ' checked' : '') + '>' +
+        '<span class="builder-section-check-box" aria-hidden="true"></span>' +
+      '</label>' +
+      '<h2 class="builder-step-title">' + esc(title) + '</h2>' +
+    '</div>';
+  }
+
   function shellHtml(state) {
     ExperienciaEngine.ensureFlow(state);
     var exp = state.experiencia;
@@ -47,17 +79,17 @@ var ExperienciaCanvas = (function () {
     var showInspectorTab = inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
     var inGroup = !!(canvas.activeGroupId);
-    var draftHint = exp.dirty ? ' · sin guardar' : (exp._draftSaved ? ' · borrador OK' : '');
+    var draftHint = exp.dirty ? ' \u00B7 sin guardar' : (exp._draftSaved ? ' \u00B7 borrador OK' : '');
 
     return '' +
       '<div class="builder-step-content builder-step-content--experiencia' +
         (canvasMode ? ' is-canvas-mode' : '') + '">' +
         '<div class="builder-exp-chrome">' +
           '<div class="builder-exp-chrome__left">' +
-            '<h2 class="builder-step-title">Experiencia</h2>' +
-            '<p class="builder-exp-chrome__sub">Editor del flujo del showroom · ' +
+            sectionTitleHtml(state, 'Experiencia', 'experiencia') +
+            '<p class="builder-step-desc builder-exp-chrome__sub">Editor del flujo del showroom \u00B7 ' +
               active + ' nodos' +
-              (inGroup ? ' · dentro de grupo' : '') +
+              (inGroup ? ' \u00B7 dentro de grupo' : '') +
               esc(draftHint) +
             '</p>' +
           '</div>' +
