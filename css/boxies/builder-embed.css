@@ -32,12 +32,12 @@
   left: 0;
   bottom: 0;
   z-index: 2;
-  width: var(--builder-rail-width, 250px);
+  width: var(--builder-rail-width, 185px);
   height: auto;
   max-height: 100%;
   overflow: hidden;
-  transition: width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
-  padding-top: var(--boxies-chrome-pad-top, 12px);
+  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-top: 6px;
 }
 
 /* Embed lives above the shell dock — do not offset bottom again */
@@ -55,9 +55,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 .boxies-builder-embed .builder-workspace,
 #boxiesContent .builder-workspace {
   margin-top: 0;
-  margin-left: var(--builder-rail-width, 250px);
+  margin-left: var(--builder-rail-width, 185px);
   min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
-  transition: margin-left 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .boxies-builder-embed .builder-workspace .builder-main-panel,
@@ -275,9 +275,9 @@ body.boxies-rail-collapsed #boxiesContent .builder-progress-sidebar {
   pointer-events: none;
 }
 
-/* Panel A remains; shell workspace margin stays at 64px via boxies-builder-chrome */
+/* Panel A remains; shell workspace margin stays at 50px via boxies-builder-chrome */
 body.boxies-builder-chrome.boxies-rail-collapsed .boxies-workspace {
-  margin-left: 64px !important;
+  margin-left: 50px !important;
 }
 
 body.boxies-exp-canvas-mode #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,

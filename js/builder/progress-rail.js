@@ -1,7 +1,7 @@
 /* Progress rail — V5.9.81 two-level sidebar (Panel A fixed / Panel B collapsible) */
 var BuilderProgressRail = (function () {
-  var EXPANDED_RAIL_W = '250px';
-  var PLATFORM_RAIL_W = '64px';
+  var EXPANDED_RAIL_W = '185px';
+  var PLATFORM_RAIL_W = '50px';
   var FLOAT_BTN_ID = 'boxiesSidebarFloatBtn';
 
   function shortName(name) {
@@ -155,11 +155,12 @@ var BuilderProgressRail = (function () {
     return document.body.classList.contains('boxies-rail-collapsed');
   }
 
-  function collapseToggleIcon(collapsed) {
+  function collapseToggleIcon() {
+    /* Always the same glyph — open/close is a CSS 180° rotate on [data-collapsed] */
     if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
-      return BuilderIcons.render(collapsed ? 'chevron-right' : 'chevron-left');
+      return BuilderIcons.render('chevron-left');
     }
-    return collapsed ? '▶' : '◀';
+    return '◀';
   }
 
   function syncFloatButton(collapsed) {
@@ -170,7 +171,7 @@ var BuilderProgressRail = (function () {
     btn.setAttribute('aria-label', collapsed ? 'Expandir Builder' : 'Colapsar Builder');
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
-    btn.innerHTML = collapseToggleIcon(collapsed);
+    btn.innerHTML = collapseToggleIcon();
     btn.style.display = 'inline-flex';
     btn.style.visibility = 'visible';
     btn.style.opacity = '1';
@@ -241,7 +242,7 @@ var BuilderProgressRail = (function () {
     btn.setAttribute('aria-label', 'Colapsar Builder');
     btn.setAttribute('data-tooltip', 'Colapsar Builder');
     btn.setAttribute('aria-expanded', 'true');
-    btn.innerHTML = collapseToggleIcon(false);
+    btn.innerHTML = collapseToggleIcon();
     btn.dataset.bound = '1';
     btn.addEventListener('click', onFloatToggle);
     mount.appendChild(btn);
