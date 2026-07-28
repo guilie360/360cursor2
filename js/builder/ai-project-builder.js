@@ -6500,6 +6500,9 @@ var AiProjectBuilderView = (function () {
   function onLeave() {
     saveState();
     BuilderDock.clearBodyPadding();
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
     /* Keep BOXIES workspace fullscreen across Proyectos ↔ Builder.
        Only exit fullscreen when leaving the BOXIES shell entirely. */
     var inBoxiesShell = document.body.classList.contains('boxies-shell')

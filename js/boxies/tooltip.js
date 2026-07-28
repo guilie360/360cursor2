@@ -20,6 +20,8 @@ var BoxiesTooltip = (function () {
     '.builder-menu-icon-btn[title],' +
     '.builder-upload-remove[title],' +
     '.builder-rail-collapse[title],' +
+    '.boxies-sidebar-float-toggle[title],' +
+    '#boxiesSidebarFloatBtn[title],' +
     '.builder-rail-item[title],' +
     'label[title]';
 
