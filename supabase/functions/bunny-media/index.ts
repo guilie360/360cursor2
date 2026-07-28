@@ -1,9 +1,11 @@
 /**
- * BOXIES V5.9.69 - bunny-media
+ * BOXIES V5.9.72 - bunny-media (node-centric)
  * Secure Bunny Storage proxy. Access key lives only in Supabase Secrets.
  *
+ * Path: projects/{project_id}/{category}/{node_id}/{file}
+ *
  * Actions:
- *   POST multipart: upload (fields: project_id, category, file)
+ *   POST multipart: upload (fields: project_id, category, node_id, file)
  *   POST JSON: { action: "delete", project_id, archivo_id?, storage_path }
  *   GET /?project_id=... : list bunny assets for project
  *
@@ -29,15 +31,19 @@ const CATEGORIES: Record<
   { folder: string; tipo: string }
 > = {
   images: { folder: "images", tipo: "imagen" },
-  animations: { folder: "animations", tipo: "video" },
-  plans2d: { folder: "plans-2d", tipo: "plano" },
-  plans3d: { folder: "plans-3d", tipo: "plano" },
+  videos: { folder: "videos", tipo: "video" },
+  plans2d: { folder: "plans2d", tipo: "plano" },
+  plans3d: { folder: "plans3d", tipo: "plano" },
   documents: { folder: "documents", tipo: "pdf" },
   ui: { folder: "ui", tipo: "imagen" },
-  /* Legacy aliases (V5.9.67) */
+  /* Aliases → canonical folders (V5.9.72) */
+  animations: { folder: "videos", tipo: "video" },
+  "plans-2d": { folder: "plans2d", tipo: "plano" },
+  "plans-3d": { folder: "plans3d", tipo: "plano" },
+  floorplans: { folder: "plans2d", tipo: "plano" },
+  /* Legacy folders still accepted for reads/deletes via path */
   panoramas: { folder: "panoramas", tipo: "tour_360" },
-  floorplans: { folder: "floorplans", tipo: "plano" },
-  thumbnails: { folder: "thumbnails", tipo: "imagen" },
+  thumbnails: { folder: "ui", tipo: "imagen" },
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -75,7 +81,7 @@ function resolveTipo(
     if (ext === "pdf" || (mime || "").includes("pdf")) return "pdf";
     return "brochure";
   }
-  if (category === "animations") {
+  if (category === "animations" || category === "videos") {
     if ((mime || "").startsWith("image/")) return "imagen";
     return "video";
   }
@@ -189,6 +195,7 @@ async function handleUpload(req: Request) {
   const form = await req.formData();
   const projectId = String(form.get("project_id") || "").trim();
   const category = String(form.get("category") || "images").trim();
+  const nodeIdRaw = String(form.get("node_id") || "").trim();
   const file = form.get("file");
 
   if (!projectId) return json(400, { ok: false, error: "project_id requerido" });
@@ -201,6 +208,13 @@ async function handleUpload(req: Request) {
   }
   if (!(file instanceof File)) {
     return json(400, { ok: false, error: "file requerido (multipart)" });
+  }
+  if (!nodeIdRaw) {
+    return json(400, {
+      ok: false,
+      error: "node_id requerido — todo asset pertenece a un nodo del Canvas",
+      code: "MISSING_NODE_ID",
+    });
   }
   if (file.size <= 0) return json(400, { ok: false, error: "Archivo vacío" });
   if (file.size > MAX_BYTES) {
@@ -216,7 +230,9 @@ async function handleUpload(req: Request) {
   const safeName = sanitizeFilename(file.name);
   const stamp = Date.now();
   const folder = CATEGORIES[category].folder;
-  const storagePath = `projects/${projectId}/${folder}/${stamp}-${safeName}`;
+  const nodeSeg = sanitizeFilename(nodeIdRaw).replace(/\./g, "-");
+  const storagePath =
+    `projects/${projectId}/${folder}/${nodeSeg}/${stamp}-${safeName}`;
   const contentType = file.type || "application/octet-stream";
   const bytes = new Uint8Array(await file.arrayBuffer());
 
@@ -246,7 +262,6 @@ async function handleUpload(req: Request) {
     .single();
 
   if (insert.error) {
-    /* Best-effort rollback of Bunny object */
     try {
       await bunnyDelete(zone, accessKey, storagePath);
     } catch (_) { /* ignore */ }
@@ -263,6 +278,7 @@ async function handleUpload(req: Request) {
     storagePath,
     category,
     provider: "bunny",
+    node_id: nodeIdRaw || null,
   });
 }
 

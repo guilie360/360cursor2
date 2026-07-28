@@ -152,20 +152,21 @@ var BuilderProgressRail = (function () {
       {
         label: 'Media',
         value: (function () {
-          var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || '';
-          if (active === 'tours360' || (state.mediaTours && state.mediaTours.scenes && state.mediaTours.scenes.length)) {
-            if (typeof MediaToursEngine !== 'undefined' && MediaToursEngine.summary) {
-              return MediaToursEngine.summary(state);
+          if (typeof MediaNodesEngine !== 'undefined') {
+            var nodes = MediaNodesEngine.listCompatibleNodes(state) || [];
+            var assetCount = 0;
+            if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.listProjectAssets) {
+              assetCount = ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+                return a && !a.orphan && (a.provider === 'bunny' || a.provider === 'lapentor');
+              }).length;
+            }
+            if (nodes.length || assetCount) {
+              return nodes.length + (nodes.length === 1 ? ' nodo' : ' nodos') +
+                (assetCount ? (' · ' + assetCount + (assetCount === 1 ? ' asset' : ' assets')) : '');
             }
           }
           var n = (state.bunnyMedia && state.bunnyMedia.items && state.bunnyMedia.items.length) || 0;
           if (n) return n + (n === 1 ? ' archivo CDN' : ' archivos CDN');
-          if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.listProjectAssets) {
-            var bunny = ExperienciaEngine.listProjectAssets(state).filter(function (a) {
-              return a && (a.provider === 'bunny' || a.provider === 'lapentor');
-            });
-            if (bunny.length) return bunny.length + (bunny.length === 1 ? ' asset' : ' assets');
-          }
           return 'Centro multimedia';
         })(),
         done: isDone(state, 'media', !!(
@@ -175,7 +176,7 @@ var BuilderProgressRail = (function () {
           })) ||
           (state.projectAssets && state.projectAssets.byId && Object.keys(state.projectAssets.byId).some(function (id) {
             var a = state.projectAssets.byId[id];
-            return a && (a.provider === 'bunny' || a.provider === 'lapentor');
+            return a && !a.orphan && (a.provider === 'bunny' || a.provider === 'lapentor');
           }))
         )),
         stepIndex: BuilderWizard.getStepIndex('media')

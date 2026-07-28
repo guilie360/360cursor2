@@ -2023,136 +2023,186 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderBunnyMedia() {
-    var cats = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.CATEGORIES) || {};
-    var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || 'images';
-    if (!cats[active]) active = 'images';
-    var meta = cats[active] || {};
-    var isTours = meta.mode === 'tours';
-
-    var catOptions = Object.keys(cats).map(function (key) {
-      return '<option value="' + AdminUI.escapeHtml(key) + '"' +
-        (key === active ? ' selected' : '') + '>' +
-        AdminUI.escapeHtml(cats[key].label || key) + '</option>';
-    }).join('');
-
-    var bodyHtml = isTours ? renderMediaToursPanel() : renderMediaBunnyPanel(active, meta);
-
-    return '<div class="builder-step-content builder-step-content--bunny-media">' +
-      stepTitleHtml('Media') +
-      '<p class="builder-step-desc">' +
-        (isTours
-          ? 'Asocia enlaces Lapentor a tipologías y zonas comunes detectadas en Estructura. No se suben archivos.'
-          : 'Archivos físicos en Bunny CDN. Se registran en archivos y projectAssets para Experiencia.') +
-      '</p>' +
-      '<div class="builder-confirm-form builder-bunny-upload">' +
-        '<div class="builder-field">' +
-          '<label>Categoría</label>' +
-          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
-        '</div>' +
-        bodyHtml +
-      '</div>' +
-    '</div>';
-  }
-
-  function renderMediaBunnyPanel(active, meta) {
-    var allItems = (state.bunnyMedia && state.bunnyMedia.items) || [];
-    var items = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.filterItemsByCategory)
-      ? BunnyMediaApi.filterItemsByCategory(allItems, active)
-      : allItems;
-    var listHtml = items.length
-      ? '<div class="builder-bunny-grid">' + items.map(function (row) {
-          var isImg = row.tipo === 'imagen' || row.tipo === 'plano' ||
-            (row.extension && /^(jpg|jpeg|png|webp|gif|svg)$/i.test(row.extension));
-          var thumb = isImg && row.url
-            ? '<img src="' + AdminUI.escapeHtml(row.url) + '" alt="" loading="lazy">'
-            : '<div class="builder-bunny-card__ph">' + AdminUI.escapeHtml((row.extension || row.tipo || '').toUpperCase()) + '</div>';
-          return '<article class="builder-bunny-card" data-bunny-id="' + AdminUI.escapeHtml(row.id) + '">' +
-            '<div class="builder-bunny-card__media">' + thumb + '</div>' +
-            '<div class="builder-bunny-card__body">' +
-              '<strong>' + AdminUI.escapeHtml(row.nombre || 'archivo') + '</strong>' +
-              '<span class="builder-bunny-card__meta">' + AdminUI.escapeHtml(row.tipo || '') +
-                (row.peso_mb != null ? ' · ' + row.peso_mb + ' MB' : '') + '</span>' +
-              '<a class="builder-bunny-card__url" href="' + AdminUI.escapeHtml(row.url || '#') +
-                '" target="_blank" rel="noopener">' + AdminUI.escapeHtml(row.url || '') + '</a>' +
-            '</div>' +
-            '<div class="builder-bunny-card__actions">' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-bunny-copy="' +
-                AdminUI.escapeHtml(row.url || '') + '">Copiar URL</button>' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-bunny-assign="' +
-                AdminUI.escapeHtml(row.id) + '">Usar en Experiencia</button>' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-bunny-del="' +
-                AdminUI.escapeHtml(row.id) + '">Eliminar</button>' +
-            '</div>' +
-          '</article>';
-        }).join('') + '</div>'
-      : '<p class="builder-menu-hint">No hay archivos en esta categoría. Sube el primero a Bunny CDN.</p>';
-
-    return '<div class="builder-confirm-title" style="margin-top:12px">Subir a Bunny</div>' +
-      '<div class="builder-dropzone" id="bunnyMediaDropzone">' +
-        '<div class="builder-dropzone-inner"><span>Arrastra un archivo o haz clic para seleccionar</span></div>' +
-      '</div>' +
-      '<input type="file" id="bunnyMediaInput" accept="' + AdminUI.escapeHtml(meta.accept || '*/*') + '" hidden>' +
-      '<p class="builder-menu-hint" id="bunnyMediaStatus">CDN: boxies.b-cdn.net · máx. 20 MB</p>' +
-      '<div class="builder-confirm-title" style="margin-top:18px">Archivos de esta categoría' +
-        ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
-      '</div>' +
-      listHtml;
-  }
-
-  function renderMediaToursPanel() {
+    if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureNodeIds(state);
     var projectId = resolveActiveProjectId();
     if (typeof MediaToursEngine !== 'undefined') {
       MediaToursEngine.ensureState(state, projectId);
-      /* Seed once from Estructura; manual deletes stick until "Actualizar desde Estructura" */
-      if (!state.mediaTours.seededAt) {
-        MediaToursEngine.syncFromEstructura(state, projectId);
-      }
+      if (!state.mediaTours.seededAt) MediaToursEngine.syncFromEstructura(state, projectId);
     }
-    var scenes = (state.mediaTours && state.mediaTours.scenes) || [];
-    var hasEstructura = !!(state.estructura && (
-      (state.estructura.tipologias && state.estructura.tipologias.length) ||
-      (state.estructura.zoneNames && state.estructura.zoneNames.length)
-    ));
 
-    var rows = scenes.map(function (s) {
-      var tipoLabel = s.tipo === 'tipologia' ? 'Tipología'
-        : (s.tipo === 'zona' ? 'Zona común' : 'Manual');
-      return '<article class="builder-tour-scene" data-tour-id="' + AdminUI.escapeHtml(s.id) + '">' +
-        '<div class="builder-tour-scene__head">' +
-          '<div class="builder-field" style="flex:1;margin:0">' +
-            '<label>Escena</label>' +
-            '<input type="text" data-tour-name maxlength="120" value="' +
-              AdminUI.escapeHtml(s.nombre || '') + '">' +
-          '</div>' +
-          '<span class="builder-tour-scene__tag">' + AdminUI.escapeHtml(tipoLabel) + '</span>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-tour-del="' +
-            AdminUI.escapeHtml(s.id) + '" aria-label="Eliminar escena">Eliminar</button>' +
+    var focus = (state.bunnyMedia && state.bunnyMedia.focusCategory) || 'all';
+    var cats = (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.MEDIA_CATEGORIES) || [];
+    var catOptions = '<option value="all"' + (focus === 'all' ? ' selected' : '') + '>Todas las categorías</option>' +
+      cats.map(function (c) {
+        return '<option value="' + AdminUI.escapeHtml(c.key) + '"' +
+          (focus === c.key ? ' selected' : '') + '>' +
+          AdminUI.escapeHtml(c.label) + '</option>';
+      }).join('');
+
+    var nodes = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.listCompatibleNodes(state)
+      : [];
+    var expanded = (state.bunnyMedia && state.bunnyMedia.expandedNodeId) || null;
+
+    hydrateBunnyRowsIntoAssets();
+
+    var body = !nodes.length
+      ? '<p class="builder-menu-hint">No hay nodos en el Canvas. Define tipologías y zonas en Estructura primero.</p>'
+      : '<div class="builder-media-node-list">' + nodes.map(function (n) {
+          return renderMediaNodeCard(n, focus, expanded === n.node_id);
+        }).join('') + '</div>';
+
+    return '<div class="builder-step-content builder-step-content--bunny-media">' +
+      stepTitleHtml('Media') +
+      '<p class="builder-step-desc">Cada recurso pertenece a un nodo del Canvas (<code>node_id</code>). No hay listas paralelas por categoría.</p>' +
+      '<div class="builder-confirm-form builder-bunny-upload">' +
+        '<div class="builder-field">' +
+          '<label>Enfocar categoría</label>' +
+          '<select id="bunnyMediaCategory">' + catOptions + '</select>' +
         '</div>' +
-        '<div class="builder-field" style="margin-top:10px">' +
-          '<label>URL Lapentor</label>' +
-          '<input type="url" data-tour-url placeholder="https://..." value="' +
-            AdminUI.escapeHtml(s.url || '') + '">' +
+        '<div class="builder-confirm-title" style="margin-top:12px">Nodos del Canvas' +
+          ' <button type="button" class="builder-header-action-btn boxies-btn-secondary" id="bunnyMediaRefresh" style="margin-left:8px">Actualizar</button>' +
         '</div>' +
-      '</article>';
+        '<p class="builder-menu-hint" id="bunnyMediaStatus"></p>' +
+        body +
+      '</div>' +
+      '<input type="file" id="bunnyMediaInput" hidden>' +
+    '</div>';
+  }
+
+  function hydrateBunnyRowsIntoAssets() {
+    if (typeof BunnyMediaApi === 'undefined' || typeof ExperienciaEngine === 'undefined') return;
+    var items = (state.bunnyMedia && state.bunnyMedia.items) || [];
+    items.forEach(function (row) {
+      if (!row || row.storage_provider === 'lapentor') return;
+      var nodeId = BunnyMediaApi.parseNodeIdFromPath(row.storage_path);
+      var category = BunnyMediaApi.parseCategoryFromPath
+        ? BunnyMediaApi.parseCategoryFromPath(row.storage_path)
+        : null;
+      var prev = state.projectAssets && state.projectAssets.byId &&
+        state.projectAssets.byId['bunny-' + row.id];
+      BunnyMediaApi.syncArchivosToProjectAssets(state, [row], (function () {
+        var ex = {};
+        ex[row.id] = {
+          nodeId: (prev && prev.nodeId) || nodeId,
+          category: (prev && prev.category) || category,
+          projectId: resolveActiveProjectId()
+        };
+        return ex;
+      })());
+    });
+    if (typeof MediaToursEngine !== 'undefined') {
+      MediaToursEngine.syncScenesToProjectAssets(state);
+    }
+  }
+
+  function statusDot(level) {
+    if (level === 'ok') return '<span class="builder-media-dot is-ok" title="Listo"></span>';
+    if (level === 'warn') return '<span class="builder-media-dot is-warn" title="Pendiente"></span>';
+    return '<span class="builder-media-dot is-missing" title="Falta"></span>';
+  }
+
+  function renderMediaNodeCard(n, focus, isExpanded) {
+    var summary = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.nodeStatusSummary(state, n.node_id)
+      : [];
+    var chips = summary.map(function (s) {
+      if (focus !== 'all' && focus !== s.key) return '';
+      return '<span class="builder-media-chip">' + statusDot(s.level) +
+        AdminUI.escapeHtml(s.text) + '</span>';
     }).join('');
 
-    return '<div class="builder-tours-panel">' +
-      '<div class="builder-confirm-title" style="margin-top:12px">Tours 360 (Lapentor)</div>' +
-      '<p class="builder-menu-hint">' +
-        (hasEstructura
-          ? 'Lista generada desde Estructura: tipologías únicas y zonas comunes (no por vivienda).'
-          : 'Aún no hay tipologías/zonas en Estructura. Puedes agregar escenas manualmente.') +
-      '</p>' +
-      '<div class="builder-tour-list" id="mediaToursList">' +
-        (rows || '<p class="builder-menu-hint">Sin escenas todavía.</p>') +
-      '</div>' +
-      '<div class="builder-tour-actions" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="mediaTourAdd">Agregar escena</button>' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="mediaTourResync">Actualizar desde Estructura</button>' +
-        '<button type="button" class="builder-header-action-btn is-primary" id="mediaTourSave">Guardar enlaces</button>' +
-      '</div>' +
-      '<p class="builder-menu-hint" id="bunnyMediaStatus" style="margin-top:10px"></p>' +
+    var sections = '';
+    if (isExpanded && typeof MediaNodesEngine !== 'undefined') {
+      sections = '<div class="builder-media-node__body">' +
+        MediaNodesEngine.MEDIA_CATEGORIES.map(function (cat) {
+          if (focus !== 'all' && focus !== cat.key) return '';
+          return renderMediaNodeCategorySection(n, cat);
+        }).join('') +
+      '</div>';
+    }
+
+    return '<article class="builder-media-node' + (isExpanded ? ' is-expanded' : '') +
+      '" data-media-node="' + AdminUI.escapeHtml(n.node_id) + '">' +
+      '<button type="button" class="builder-media-node__toggle" data-media-expand="' +
+        AdminUI.escapeHtml(n.node_id) + '">' +
+        '<span class="builder-media-node__chevron" aria-hidden="true">' + (isExpanded ? '▼' : '▶') + '</span>' +
+        '<span class="builder-media-node__title">' +
+          '<strong>' + AdminUI.escapeHtml(n.label) + '</strong>' +
+          '<span class="builder-tour-scene__tag">' +
+            AdminUI.escapeHtml(n.kind === 'zona' ? 'Zona común' : 'Tipología') +
+          '</span>' +
+        '</span>' +
+        '<span class="builder-media-node__chips">' + chips + '</span>' +
+      '</button>' +
+      sections +
+    '</article>';
+  }
+
+  function renderMediaNodeCategorySection(n, cat) {
+    var assets = MediaNodesEngine.assetsForNode(state, n.node_id, cat.key);
+    var st = MediaNodesEngine.categoryStatus(state, n.node_id, cat.key);
+    var head = '<div class="builder-media-cat__head">' +
+      '<strong>' + statusDot(st.level) + AdminUI.escapeHtml(cat.label) + '</strong>' +
+      '<span class="builder-menu-hint" style="margin:0">' + AdminUI.escapeHtml(st.label) + '</span>' +
+      (cat.mode === 'upload'
+        ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-media-add="' +
+          AdminUI.escapeHtml(n.node_id) + '" data-media-cat="' + AdminUI.escapeHtml(cat.key) +
+          '">Agregar</button>'
+        : '') +
     '</div>';
+
+    if (cat.mode === 'tours') {
+      var scene = null;
+      if (state.mediaTours && state.mediaTours.scenes) {
+        scene = state.mediaTours.scenes.find(function (s) {
+          return s && (s.node_id === n.node_id || s.estructura_id === n.node_id);
+        });
+      }
+      return '<section class="builder-media-cat" data-media-cat-block="' + AdminUI.escapeHtml(cat.key) + '">' +
+        head +
+        '<div class="builder-field" style="margin-top:8px">' +
+          '<label>URL Lapentor</label>' +
+          '<input type="url" data-media-tour-url data-node-id="' + AdminUI.escapeHtml(n.node_id) +
+            '" data-scene-id="' + AdminUI.escapeHtml((scene && scene.id) || '') +
+            '" placeholder="https://..." value="' + AdminUI.escapeHtml((scene && scene.url) || '') + '">' +
+        '</div>' +
+        '<p class="builder-menu-hint">Sin Bunny · provider lapentor · ligado a node_id</p>' +
+      '</section>';
+    }
+
+    var files = assets.length
+      ? '<div class="builder-bunny-grid">' + assets.map(function (a) {
+          var isImg = a.type === 'image' || a.type === 'plan';
+          var thumb = isImg && (a.thumbnailUrl || a.publicUrl)
+            ? '<img src="' + AdminUI.escapeHtml(a.thumbnailUrl || a.publicUrl) + '" alt="" loading="lazy">'
+            : '<div class="builder-bunny-card__ph">' + AdminUI.escapeHtml((a.category || a.type || '').toUpperCase()) + '</div>';
+          return '<article class="builder-bunny-card">' +
+            '<div class="builder-bunny-card__media">' + thumb + '</div>' +
+            '<div class="builder-bunny-card__body">' +
+              '<strong>' + AdminUI.escapeHtml(a.filename || 'archivo') + '</strong>' +
+              (a.publicUrl
+                ? '<a class="builder-bunny-card__url" href="' + AdminUI.escapeHtml(a.publicUrl) +
+                  '" target="_blank" rel="noopener">' + AdminUI.escapeHtml(a.publicUrl) + '</a>'
+                : '') +
+            '</div>' +
+            '<div class="builder-bunny-card__actions">' +
+              (a.archivoId
+                ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-bunny-del="' +
+                  AdminUI.escapeHtml(a.archivoId) + '">Eliminar</button>'
+                : '') +
+            '</div>' +
+          '</article>';
+        }).join('') + '</div>'
+      : '<p class="builder-menu-hint">0 archivos</p>';
+
+    return '<section class="builder-media-cat" data-media-cat-block="' + AdminUI.escapeHtml(cat.key) + '">' +
+      head + files +
+    '</section>';
+  }
+
+  function renderMediaToursPanel() {
+    return '<p class="builder-menu-hint">Tours 360 se gestionan dentro de cada nodo del Canvas.</p>';
   }
 
   function renderGallery() {
@@ -3713,22 +3763,46 @@ var AiProjectBuilderView = (function () {
 
     rootEl.querySelectorAll('[data-remove-tipologia]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var result = EstructuraEngine.removeTypology(state, btn.getAttribute('data-remove-tipologia'));
-        if (!result.ok) {
-          if (result.reason === 'conflict') {
-            if (window.confirm('Esta tipología tiene contenido. ¿Archivarla al aplicar (no se borra de la base)? Quitar del borrador ahora.')) {
-              state.estructura.tipologias = state.estructura.tipologias.filter(function (t) {
-                return t.localId !== btn.getAttribute('data-remove-tipologia');
-              });
-              state.estructura.tipologiasCount = state.estructura.tipologias.length;
-              rerender();
+        var localId = btn.getAttribute('data-remove-tipologia');
+        var tip = (state.estructura && state.estructura.tipologias || []).find(function (t) {
+          return t && t.localId === localId;
+        });
+        var nodeId = tip && tip.node_id;
+        var nodeLabel = tip
+          ? (tip.nombre || tip.modelo || tip.producto || tip.componente || 'Tipología')
+          : 'Tipología';
+
+        function finishRemove(mode) {
+          var run = function () {
+            var result = EstructuraEngine.removeTypology(state, localId);
+            if (!result.ok) {
+              if (result.reason === 'conflict') {
+                if (window.confirm('Esta tipología tiene contenido. ¿Archivarla al aplicar (no se borra de la base)? Quitar del borrador ahora.')) {
+                  state.estructura.tipologias = state.estructura.tipologias.filter(function (t) {
+                    return t.localId !== localId;
+                  });
+                  state.estructura.tipologiasCount = state.estructura.tipologias.length;
+                  rerender();
+                }
+              } else {
+                AdminNotify.error('Debe quedar al menos una tipología.');
+              }
+              return;
             }
-          } else {
-            AdminNotify.error('Debe quedar al menos una tipología.');
+            rerender();
+          };
+          if (!nodeId || mode === 'none') {
+            run();
+            return;
           }
-          return;
+          Promise.resolve(purgeNodeAssets(nodeId, mode)).then(run).catch(run);
         }
-        rerender();
+
+        if (nodeId) {
+          confirmNodeMediaDeletion(nodeId, nodeLabel, finishRemove);
+        } else {
+          finishRemove('none');
+        }
       });
     });
 
@@ -3790,6 +3864,29 @@ var AiProjectBuilderView = (function () {
         if (!name) return;
         var has = zoneNames().indexOf(name) >= 0;
         if (want === has) return;
+        /* V5.9.72 — al quitar zona, advertir si hay assets por node_id */
+        if (!want && has) {
+          var zn = ((state.estructura && state.estructura.zoneNodes) || []).find(function (z) {
+            return z && String(z.nombre || '').toLowerCase() === String(name).toLowerCase();
+          });
+          var nodeId = zn && zn.node_id;
+          if (nodeId) {
+            confirmNodeMediaDeletion(nodeId, name, function (mode) {
+              var apply = function () {
+                EstructuraEngine.toggleZone(state, name);
+                if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureNodeIds(state);
+                syncUi();
+                persist();
+              };
+              if (mode === 'none') {
+                apply();
+                return;
+              }
+              Promise.resolve(purgeNodeAssets(nodeId, mode)).then(apply).catch(apply);
+            });
+            return;
+          }
+        }
         EstructuraEngine.toggleZone(state, name);
       }
 
@@ -4840,17 +4937,27 @@ var AiProjectBuilderView = (function () {
       AdminNotify.error('BunnyMediaApi no cargada');
       return;
     }
-    var catEl = rootEl.querySelector('#bunnyMediaCategory');
-    var category = (state.bunnyMedia && state.bunnyMedia.activeCategory) ||
-      (catEl && catEl.value) || 'images';
+    var nodeId = state.bunnyMedia && state.bunnyMedia.uploadNodeId;
+    var category = state.bunnyMedia && state.bunnyMedia.uploadCategory;
+    if (!nodeId || !category) {
+      AdminNotify.error('Elige Agregar en un nodo y categoría.');
+      return;
+    }
+    var node = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.findNode(state, nodeId)
+      : null;
     try {
       processing = true;
       setBunnyMediaStatus('Subiendo a Bunny…');
       if (typeof AdminUI !== 'undefined' && AdminUI.showGlobalBusy) {
         AdminUI.showGlobalBusy('Subiendo a Bunny CDN');
       }
-      var result = await BunnyMediaApi.uploadAndSync(state, projectId, category, file);
+      var result = await BunnyMediaApi.uploadAndSync(state, projectId, category, file, {
+        nodeId: nodeId,
+        entityRef: node && node.entityRef ? node.entityRef : null
+      });
       state.bunnyMedia = state.bunnyMedia || {};
+      state.bunnyMedia.expandedNodeId = nodeId;
       state.bunnyMedia.items = state.bunnyMedia.items || [];
       if (result.archivo) {
         state.bunnyMedia.items = [result.archivo].concat(
@@ -4858,7 +4965,7 @@ var AiProjectBuilderView = (function () {
         );
       }
       saveState();
-      AdminNotify.success('Archivo en Bunny: ' + (result.publicUrl || ''));
+      AdminNotify.success('Asset en nodo · ' + (result.publicUrl || ''));
       setBunnyMediaStatus('OK · ' + (result.publicUrl || ''));
       renderStepContent();
     } catch (err) {
@@ -4871,82 +4978,95 @@ var AiProjectBuilderView = (function () {
     } finally {
       processing = false;
       if (typeof AdminUI !== 'undefined' && AdminUI.hideGlobalBusy) AdminUI.hideGlobalBusy();
+      var input = rootEl && rootEl.querySelector('#bunnyMediaInput');
+      if (input) input.value = '';
     }
   }
 
   function bindBunnyMediaStep() {
-    var catEl = rootEl.querySelector('#bunnyMediaCategory');
-    var active = (state.bunnyMedia && state.bunnyMedia.activeCategory) || 'images';
-    var cats = (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.CATEGORIES) || {};
-    var meta = cats[active] || {};
-    var isTours = meta.mode === 'tours';
+    state.bunnyMedia = state.bunnyMedia || {};
 
+    var catEl = rootEl.querySelector('#bunnyMediaCategory');
     if (catEl) {
       catEl.addEventListener('change', function () {
-        state.bunnyMedia = state.bunnyMedia || {};
-        state.bunnyMedia.activeCategory = catEl.value || 'images';
+        state.bunnyMedia.focusCategory = catEl.value || 'all';
         saveState();
         renderStepContent();
       });
     }
-
-    if (isTours) {
-      /* First visit to Tours: seed from Estructura if empty */
-      if (typeof MediaToursEngine !== 'undefined') {
-        var pid = resolveActiveProjectId();
-        MediaToursEngine.ensureState(state, pid);
-        if (!state.mediaTours.seededAt) {
-          MediaToursEngine.syncFromEstructura(state, pid);
-          saveState();
-        }
-      }
-      bindMediaToursPanel();
-      return;
-    }
-
-    var input = rootEl.querySelector('#bunnyMediaInput');
-    if (input && meta.accept) input.accept = meta.accept;
-    bindDropzone('bunnyMediaDropzone', 'bunnyMediaInput', handleBunnyMediaUpload, false);
 
     var refreshBtn = rootEl.querySelector('#bunnyMediaRefresh');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', function () { refreshBunnyMediaList(false); });
     }
 
-    rootEl.querySelectorAll('[data-bunny-copy]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var url = btn.getAttribute('data-bunny-copy') || '';
-        if (!url) return;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(function () {
-            AdminNotify.success('URL copiada');
-          }).catch(function () { AdminNotify.info(url); });
-        } else {
-          AdminNotify.info(url);
-        }
+    rootEl.querySelectorAll('[data-media-expand]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var nid = btn.getAttribute('data-media-expand');
+        state.bunnyMedia.expandedNodeId =
+          state.bunnyMedia.expandedNodeId === nid ? null : nid;
+        saveState();
+        renderStepContent();
       });
     });
 
-    rootEl.querySelectorAll('[data-bunny-assign]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.getAttribute('data-bunny-assign');
-        var row = ((state.bunnyMedia && state.bunnyMedia.items) || []).find(function (r) {
-          return String(r.id) === String(id);
-        });
-        if (!row || typeof BunnyMediaApi === 'undefined') return;
-        var asset = BunnyMediaApi.syncArchivosToProjectAssets(state, [row])[0];
-        saveState();
-        if (asset) {
-          AdminNotify.success(
-            'Asset listo en projectAssets: ' + asset.id +
-            (asset.filename ? ' (' + asset.filename + ')' : '')
-          );
+    var fileInput = rootEl.querySelector('#bunnyMediaInput');
+    rootEl.querySelectorAll('[data-media-add]').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var nid = btn.getAttribute('data-media-add');
+        var cat = btn.getAttribute('data-media-cat');
+        state.bunnyMedia.uploadNodeId = nid;
+        state.bunnyMedia.uploadCategory = cat;
+        state.bunnyMedia.expandedNodeId = nid;
+        var meta = typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.getCategory(cat);
+        if (fileInput) {
+          fileInput.accept = (meta && meta.accept) || '*/*';
+          fileInput.click();
         }
+      });
+    });
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) {
+          handleBunnyMediaUpload(fileInput.files);
+        }
+      });
+    }
+
+    rootEl.querySelectorAll('[data-media-tour-url]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var nid = input.getAttribute('data-node-id');
+        var sceneId = input.getAttribute('data-scene-id');
+        var url = input.value || '';
+        if (typeof MediaToursEngine === 'undefined') return;
+        var projectId = resolveActiveProjectId();
+        MediaToursEngine.ensureState(state, projectId);
+        if (sceneId) {
+          MediaToursEngine.updateScene(state, sceneId, { url: url, node_id: nid });
+        } else {
+          var scene = MediaToursEngine.addScene(state, projectId, {
+            nombre: (MediaNodesEngine.findNode(state, nid) || {}).label || 'Tour',
+            tipo: ((MediaNodesEngine.findNode(state, nid) || {}).kind) || 'manual',
+            origen: 'estructura',
+            node_id: nid,
+            estructura_id: nid,
+            url: url
+          });
+          input.setAttribute('data-scene-id', scene.id);
+        }
+        MediaToursEngine.syncScenesToProjectAssets(state);
+        saveState();
+        setBunnyMediaStatus(MediaToursEngine.summary(state));
       });
     });
 
     rootEl.querySelectorAll('[data-bunny-del]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var id = btn.getAttribute('data-bunny-del');
         var projectId = resolveActiveProjectId();
         if (!id || !projectId) return;
@@ -4959,7 +5079,7 @@ var AiProjectBuilderView = (function () {
               function (r) { return String(r.id) !== String(id); }
             );
             saveState();
-            AdminNotify.success('Archivo eliminado de Bunny');
+            AdminNotify.success('Archivo eliminado');
             renderStepContent();
           }).catch(function (err) {
             AdminNotify.error((err && err.message) || 'No se pudo eliminar');
@@ -4968,7 +5088,7 @@ var AiProjectBuilderView = (function () {
         if (typeof AdminUI !== 'undefined' && AdminUI.confirm) {
           AdminUI.confirm({
             title: 'Eliminar archivo',
-            message: 'Se borrará de Bunny CDN y de la tabla archivos.',
+            message: 'Se borrará de Bunny CDN y de archivos.',
             confirmLabel: 'Eliminar',
             cancelLabel: 'Cancelar'
           }).then(function (ok) { if (ok) doDelete(); });
@@ -4978,102 +5098,105 @@ var AiProjectBuilderView = (function () {
       });
     });
 
-    if (!state.bunnyMedia || !state.bunnyMedia._loaded) {
-      state.bunnyMedia = state.bunnyMedia || {};
+    if (!state.bunnyMedia._loaded) {
       state.bunnyMedia._loaded = true;
       refreshBunnyMediaList(true);
     }
   }
 
-  function readTourFieldsFromDom() {
-    if (!rootEl || typeof MediaToursEngine === 'undefined') return;
-    rootEl.querySelectorAll('[data-tour-id]').forEach(function (card) {
-      var id = card.getAttribute('data-tour-id');
-      var nameInput = card.querySelector('[data-tour-name]');
-      var urlInput = card.querySelector('[data-tour-url]');
-      MediaToursEngine.updateScene(state, id, {
-        nombre: nameInput ? nameInput.value : undefined,
-        url: urlInput ? urlInput.value : undefined
-      });
-    });
-  }
+  function confirmNodeMediaDeletion(nodeId, nodeLabel, onProceed) {
+    var assets = (typeof MediaNodesEngine !== 'undefined')
+      ? MediaNodesEngine.listAssetsForNode(state, nodeId)
+      : [];
+    if (!assets.length) {
+      onProceed('none');
+      return;
+    }
+    var count = assets.length;
+    var label = nodeLabel || nodeId;
+    var copy = 'El nodo "' + label + '" tiene ' + count +
+      ' recurso(s) multimedia. Nunca se borran archivos sin confirmación.';
 
-  function bindMediaToursPanel() {
-    var projectId = resolveActiveProjectId();
-    if (typeof MediaToursEngine === 'undefined') {
-      setBunnyMediaStatus('MediaToursEngine no cargada');
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.openModal === 'function') {
+      var settled = false;
+      function finish(mode) {
+        if (settled) return;
+        settled = true;
+        if (mode) onProceed(mode);
+      }
+      AdminUI.openModal({
+        title: 'Nodo con recursos Media',
+        bodyHtml: '<p class="admin-modal-copy">' + AdminUI.escapeHtml(copy) + '</p>' +
+          '<ul class="admin-modal-copy" style="margin:12px 0 0;padding-left:18px">' +
+            '<li><strong>Cancelar</strong> — no elimina el nodo</li>' +
+            '<li><strong>Conservar assets</strong> — elimina el nodo; assets quedan huérfanos (node_id)</li>' +
+            '<li><strong>Eliminar todo</strong> — nodo + assets (Bunny / projectAssets)</li>' +
+          '</ul>',
+        footerHtml:
+          '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+          '<button type="button" class="btn-ghost" data-modal-action="orphan">Conservar assets</button>' +
+          '<button type="button" class="btn-danger" data-modal-action="delete">Eliminar todo</button>',
+        onMount: function (root) {
+          var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+          var orphanBtn = root.querySelector('[data-modal-action="orphan"]');
+          var deleteBtn = root.querySelector('[data-modal-action="delete"]');
+          if (cancelBtn) {
+            cancelBtn.addEventListener('click', function () {
+              settled = true;
+              AdminUI.closeModal();
+            });
+          }
+          if (orphanBtn) {
+            orphanBtn.addEventListener('click', function () {
+              finish('orphan');
+              AdminUI.closeModal();
+            });
+          }
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', function () {
+              finish('delete-assets');
+              AdminUI.closeModal();
+            });
+          }
+        },
+        onClose: function () { settled = true; }
+      });
       return;
     }
 
-    var addBtn = rootEl.querySelector('#mediaTourAdd');
-    if (addBtn) {
-      addBtn.addEventListener('click', function () {
-        readTourFieldsFromDom();
-        MediaToursEngine.addScene(state, projectId, { nombre: 'Nueva escena' });
-        saveState();
-        renderStepContent();
-      });
+    if (window.confirm(copy + '\n\nOK = Eliminar todo\nCancelar = abortar')) {
+      onProceed('delete-assets');
     }
+  }
 
-    var resyncBtn = rootEl.querySelector('#mediaTourResync');
-    if (resyncBtn) {
-      resyncBtn.addEventListener('click', function () {
-        readTourFieldsFromDom();
-        MediaToursEngine.syncFromEstructura(state, projectId);
-        saveState();
-        AdminNotify.success('Escenas actualizadas desde Estructura');
-        renderStepContent();
-      });
+  async function purgeNodeAssets(nodeId, mode) {
+    var projectId = resolveActiveProjectId();
+    if (mode === 'orphan') {
+      MediaNodesEngine.detachAssets(state, nodeId);
+      saveState();
+      return;
     }
-
-    var saveBtn = rootEl.querySelector('#mediaTourSave');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', function () {
-        readTourFieldsFromDom();
-        MediaToursEngine.syncScenesToProjectAssets(state);
-        saveState();
-        setBunnyMediaStatus('Guardando enlaces…');
-        MediaToursEngine.persistScenesToArchivos(state, projectId).then(function (res) {
-          saveState();
-          if (res && res.ok) {
-            AdminNotify.success('Enlaces Lapentor guardados');
-            setBunnyMediaStatus(MediaToursEngine.summary(state));
-          } else {
-            AdminNotify.success('Guardado en sesión (projectAssets). Persistencia DB: ' +
-              ((res && res.error) || 'parcial'));
-            setBunnyMediaStatus(MediaToursEngine.summary(state));
-          }
-          renderProgressRail();
-        }).catch(function (err) {
-          MediaToursEngine.syncScenesToProjectAssets(state);
-          saveState();
-          AdminNotify.success('Guardado en sesión / projectAssets');
-          setBunnyMediaStatus((err && err.message) || MediaToursEngine.summary(state));
-        });
-      });
-    }
-
-    rootEl.querySelectorAll('[data-tour-del]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var id = btn.getAttribute('data-tour-del');
-        readTourFieldsFromDom();
-        MediaToursEngine.removeScene(state, id);
-        if (state.projectAssets && state.projectAssets.byId) {
-          delete state.projectAssets.byId['tour-' + id];
+    if (mode === 'delete-assets') {
+      var list = MediaNodesEngine.collectAssetIdsForNode(state, nodeId);
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        if (item.archivoId && item.provider === 'bunny' && projectId && typeof BunnyMediaApi !== 'undefined') {
+          try {
+            await BunnyMediaApi.remove(projectId, {
+              archivoId: item.archivoId,
+              storagePath: item.storagePath
+            });
+          } catch (e) { /* continue */ }
         }
-        saveState();
-        renderStepContent();
-      });
-    });
-
-    rootEl.querySelectorAll('[data-tour-name], [data-tour-url]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        readTourFieldsFromDom();
-        saveState();
-      });
-    });
-
-    setBunnyMediaStatus(MediaToursEngine.summary(state));
+      }
+      MediaNodesEngine.removeAssetsFromLibrary(state, nodeId);
+      if (state.mediaTours && state.mediaTours.scenes) {
+        state.mediaTours.scenes = state.mediaTours.scenes.filter(function (s) {
+          return !s || (s.node_id !== nodeId && s.estructura_id !== nodeId);
+        });
+      }
+      saveState();
+    }
   }
 
   function bindDropzone(zoneId, inputId, handler, multiple) {

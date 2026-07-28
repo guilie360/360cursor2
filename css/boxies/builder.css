@@ -4175,3 +4175,117 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   padding-bottom: 10px;
   white-space: nowrap;
 }
+
+/* V5.9.72 ? Media node-centric (expandable nodes + status chips) */
+.builder-media-node-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.builder-media-node {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+.builder-media-node.is-expanded {
+  border-color: rgba(111, 191, 134, 0.35);
+  background: rgba(111, 191, 134, 0.05);
+}
+.builder-media-node__toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.builder-media-node__chevron {
+  flex: 0 0 auto;
+  opacity: 0.65;
+  margin-top: 2px;
+  font-size: 11px;
+}
+.builder-media-node__title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.builder-media-node__title strong {
+  font-size: 14px;
+  font-weight: 560;
+}
+.builder-media-node__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-left: auto;
+  justify-content: flex-end;
+  max-width: 58%;
+}
+.builder-media-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.2;
+  opacity: 0.88;
+  white-space: nowrap;
+}
+.builder-media-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: #8b9098;
+}
+.builder-media-dot.is-ok { background: #3ecf8e; }
+.builder-media-dot.is-warn { background: #e8b339; }
+.builder-media-dot.is-missing { background: #e5484d; }
+.builder-media-node__body {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.builder-media-cat {
+  padding-top: 12px;
+}
+.builder-media-cat__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.builder-media-cat__head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 560;
+}
+.builder-media-cat__head .builder-menu-hint {
+  flex: 1 1 auto;
+}
+@media (max-width: 720px) {
+  .builder-media-node__toggle {
+    flex-wrap: wrap;
+  }
+  .builder-media-node__chips {
+    max-width: 100%;
+    margin-left: 22px;
+    justify-content: flex-start;
+  }
+}

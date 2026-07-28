@@ -1,4 +1,4 @@
-/* BOXIES V5.9.69 — Media Tours 360 (Lapentor links from Estructura) */
+/* BOXIES V5.9.72 — Media Tours 360 (Lapentor) linked to Canvas node_id */
 var MediaToursEngine = (function () {
   function uid(prefix) {
     return (prefix || 'tour') + '-' + Date.now().toString(36) +
@@ -7,7 +7,7 @@ var MediaToursEngine = (function () {
 
   function emptyLibrary(projectId) {
     return {
-      version: 1,
+      version: 2,
       projectId: projectId || null,
       scenes: [],
       seededAt: null,
@@ -24,55 +24,50 @@ var MediaToursEngine = (function () {
     return state.mediaTours;
   }
 
-  function tipLabel(tip, index) {
-    if (!tip) return 'Tipología ' + (index + 1);
-    return tip.nombre || tip.modelo || tip.producto || tip.componente ||
-      ('Tipología ' + (index + 1));
-  }
-
-  function tipEstructuraId(tip) {
-    if (!tip) return null;
-    return tip.id || tip.localId || null;
-  }
-
-  /**
-   * Unique tipologías + zonas comunes only — never explode viviendas/units.
-   */
   function collectStructureScenes(state) {
+    if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.listCompatibleNodes) {
+      return MediaNodesEngine.listCompatibleNodes(state).map(function (n) {
+        return {
+          nombre: n.label || n.nombre,
+          tipo: n.tipo || n.kind,
+          estructura_id: n.estructura_id || n.node_id,
+          node_id: n.node_id,
+          entityRef: n.entityRef
+        };
+      });
+    }
+    /* Fallback without MediaNodesEngine */
     var out = [];
     var e = state && state.estructura;
     if (!e) return out;
-
     (e.tipologias || []).forEach(function (tip, i) {
-      var eid = tipEstructuraId(tip);
+      var nid = tip.node_id || tip.id || tip.localId || ('tip-local-' + i);
       out.push({
-        nombre: tipLabel(tip, i),
+        nombre: tip.nombre || tip.modelo || ('Tipología ' + (i + 1)),
         tipo: 'tipologia',
-        estructura_id: eid ? String(eid) : ('tip-local-' + i),
-        entityRef: {
-          type: 'tipologia',
-          key: eid ? String(eid) : ('tip-' + i),
-          localId: tip.localId || null
-        }
+        estructura_id: tip.id || tip.localId || nid,
+        node_id: nid,
+        entityRef: { type: 'tipologia', key: String(nid), node_id: nid }
       });
     });
-
     (e.zoneNames || []).forEach(function (name) {
       var n = String(name || '').trim();
       if (!n) return;
+      var nid = 'zona:' + n.toLowerCase().replace(/\s+/g, '-');
       out.push({
         nombre: n,
         tipo: 'zona',
-        estructura_id: 'zona:' + n.toLowerCase(),
-        entityRef: { type: 'amenidad', key: n }
+        estructura_id: nid,
+        node_id: nid,
+        entityRef: { type: 'amenidad', key: n, node_id: nid }
       });
     });
-
     return out;
   }
 
   function makeScene(partial, projectId, orden) {
     var now = new Date().toISOString();
+    var nodeId = (partial && (partial.node_id || partial.estructura_id)) || null;
     return {
       id: (partial && partial.id) || uid('tour'),
       nombre: (partial && partial.nombre) || 'Escena',
@@ -80,7 +75,8 @@ var MediaToursEngine = (function () {
       url: (partial && partial.url) || '',
       orden: partial && partial.orden != null ? partial.orden : (orden != null ? orden : 0),
       project_id: (partial && partial.project_id) || projectId || null,
-      estructura_id: (partial && partial.estructura_id) || null,
+      estructura_id: (partial && partial.estructura_id) || nodeId,
+      node_id: nodeId,
       origen: (partial && partial.origen) || 'manual',
       entityRef: (partial && partial.entityRef) || null,
       assetId: (partial && partial.assetId) || null,
@@ -90,32 +86,34 @@ var MediaToursEngine = (function () {
     };
   }
 
-  /**
-   * Merge structure-derived scenes into library.
-   * Keeps URLs / renames for matching estructura_id; adds missing; never creates per-vivienda rows.
-   * Manual scenes are preserved. Structure scenes removed from Estructura stay if they have a URL.
-   */
+  function sceneKey(s) {
+    if (!s) return '';
+    return String(s.node_id || s.estructura_id || s.id || '');
+  }
+
   function syncFromEstructura(state, projectId) {
+    if (typeof MediaNodesEngine !== 'undefined') MediaNodesEngine.ensureNodeIds(state);
     var lib = ensureState(state, projectId);
     var desired = collectStructureScenes(state);
     var byKey = {};
     lib.scenes.forEach(function (s) {
-      if (s && s.estructura_id) byKey[String(s.estructura_id)] = s;
+      var k = sceneKey(s);
+      if (k) byKey[k] = s;
     });
 
     var next = [];
     var used = {};
     desired.forEach(function (d, i) {
-      var key = String(d.estructura_id);
+      var key = String(d.node_id || d.estructura_id);
       var prev = byKey[key];
       used[key] = true;
       if (prev) {
         prev.tipo = d.tipo;
         prev.origen = 'estructura';
         prev.entityRef = d.entityRef;
+        prev.node_id = d.node_id || prev.node_id;
+        prev.estructura_id = d.estructura_id || prev.estructura_id;
         prev.project_id = projectId || prev.project_id;
-        /* Keep user rename if they already customized and nombre differs intentionally —
-           only refresh nombre when still matching previous structure label or empty */
         if (!prev.nombre || prev._autoName) {
           prev.nombre = d.nombre;
           prev._autoName = true;
@@ -123,26 +121,26 @@ var MediaToursEngine = (function () {
         prev.orden = i;
         next.push(prev);
       } else {
-        var scene = makeScene({
+        next.push(makeScene({
           nombre: d.nombre,
           tipo: d.tipo,
           estructura_id: d.estructura_id,
+          node_id: d.node_id,
           origen: 'estructura',
           entityRef: d.entityRef,
           _autoName: true
-        }, projectId, i);
-        next.push(scene);
+        }, projectId, i));
       }
     });
 
-    /* Keep leftover structure scenes with URL, and all manual scenes */
     lib.scenes.forEach(function (s) {
       if (!s) return;
       if (s.origen === 'manual') {
         next.push(s);
         return;
       }
-      if (s.estructura_id && used[String(s.estructura_id)]) return;
+      var k = sceneKey(s);
+      if (k && used[k]) return;
       if (s.url && String(s.url).trim()) next.push(s);
     });
 
@@ -184,7 +182,6 @@ var MediaToursEngine = (function () {
     return scene;
   }
 
-  /** Upsert scenes with URL into projectAssets for Experiencia. */
   function syncScenesToProjectAssets(state) {
     if (!state || typeof ExperienciaEngine === 'undefined') return [];
     var lib = ensureState(state);
@@ -200,7 +197,9 @@ var MediaToursEngine = (function () {
         publicUrl: String(s.url).trim(),
         thumbnailUrl: null,
         status: 'synced',
-        archivoId: s.archivoId || null
+        archivoId: s.archivoId || null,
+        nodeId: s.node_id || s.estructura_id || null,
+        entityRef: s.entityRef || null
       });
       s.assetId = asset.id;
       synced.push(asset);
@@ -208,9 +207,6 @@ var MediaToursEngine = (function () {
     return synced;
   }
 
-  /**
-   * Persist scenes with URL into archivos (URL-only tour_360). Best-effort.
-   */
   async function persistScenesToArchivos(state, projectId, constructoraId) {
     if (!projectId || typeof AdminApi === 'undefined' || !AdminApi.getClient) {
       return { ok: false, error: 'Sin cliente' };
@@ -231,7 +227,7 @@ var MediaToursEngine = (function () {
       var s = lib.scenes[i];
       var url = String(s.url || '').trim();
       if (!url) continue;
-
+      var nodeKey = s.node_id || s.estructura_id || s.id;
       var payload = {
         constructora_id: cid,
         proyecto_id: projectId,
@@ -240,7 +236,7 @@ var MediaToursEngine = (function () {
         extension: 'url',
         url: url,
         storage_provider: 'lapentor',
-        storage_path: s.estructura_id ? ('tours/' + s.estructura_id) : ('tours/' + s.id),
+        storage_path: 'tours/' + nodeKey,
         estado: 'activo',
         orden: s.orden != null ? s.orden : i
       };
@@ -248,7 +244,6 @@ var MediaToursEngine = (function () {
       if (s.archivoId) {
         var up = await client.from('archivos').update(payload).eq('id', s.archivoId).eq('proyecto_id', projectId).select('id').maybeSingle();
         if (up.error) {
-          /* row missing — insert */
           var ins = await client.from('archivos').insert(payload).select('id').single();
           if (!ins.error && ins.data) s.archivoId = ins.data.id;
         } else if (up.data) {

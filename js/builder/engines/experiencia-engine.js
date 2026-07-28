@@ -503,7 +503,16 @@ var ExperienciaEngine = (function () {
       height: partial && partial.height != null ? partial.height : null,
       duration: partial && partial.duration != null ? partial.duration : null,
       size: partial && partial.size != null ? partial.size : null,
+      category: (partial && partial.category) || null,
       archivoId: (partial && partial.archivoId) || null,
+      nodeId: (partial && partial.nodeId) || (partial && partial.node_id) || null,
+      projectId: (partial && partial.projectId) || (partial && partial.project_id) || null,
+      entityRef: (partial && partial.entityRef) || null,
+      planKind: (partial && partial.planKind) || null,
+      uiRole: !!(partial && partial.uiRole),
+      metadata: (partial && partial.metadata) || null,
+      sortOrder: partial && partial.sortOrder != null ? partial.sortOrder : 0,
+      orphan: !!(partial && partial.orphan),
       updatedAt: (partial && partial.updatedAt) || now,
       createdAt: (partial && partial.createdAt) || now
     };

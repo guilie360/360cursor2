@@ -39,6 +39,7 @@ var EstructuraSyncEngine = (function () {
       buildings: Array.isArray(e.buildings) ? e.buildings : [],
       tipologias: Array.isArray(e.tipologias) ? e.tipologias : [],
       zoneNames: Array.isArray(e.zoneNames) ? e.zoneNames.slice() : [],
+      zoneNodes: Array.isArray(e.zoneNodes) ? e.zoneNodes : [],
       conjuntoConfig: e.conjuntoConfig || null,
       openPanels: e.openPanels || null,
       uiExpandAll: !!e.uiExpandAll
@@ -83,6 +84,9 @@ var EstructuraSyncEngine = (function () {
       e.tipologiasCount = e.tipologias.length;
     }
     if (Array.isArray(draft.zoneNames)) e.zoneNames = draft.zoneNames.slice();
+    if (Array.isArray(draft.zoneNodes)) {
+      e.zoneNodes = draft.zoneNodes.map(function (z) { return Object.assign({}, z); });
+    }
     if (draft.conjuntoConfig && typeof draft.conjuntoConfig === 'object') {
       EstructuraEngine.applyConfigSnapshot(e, { conjuntoConfig: draft.conjuntoConfig });
     }
@@ -706,6 +710,8 @@ var EstructuraSyncEngine = (function () {
         tip.id = tiNew.data.id;
       }
       tip.localId = tip.id;
+      /* V5.9.72 — keep permanent node_id across UUID remap */
+      if (!tip.node_id) tip.node_id = tip.id;
       tip.nombre = tipName;
       keepTipIds[tip.id] = true;
       tipologiaIdMap[tip.localId] = tip.id;

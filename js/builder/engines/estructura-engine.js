@@ -1401,7 +1401,36 @@ var EstructuraEngine = (function () {
       if (t.componente == null) t.componente = null;
       normalizeAsignaciones(t);
       pruneTipologiaAsignaciones(e, t);
+      /* V5.9.72 — permanent Canvas node_id (never overwrite once set; Media links by node_id) */
+      if (!t.node_id) t.node_id = t.id || t.localId || uid();
     });
+    if (!Array.isArray(e.zoneNodes)) e.zoneNodes = [];
+    if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.ensureNodeIds) {
+      /* zoneNodes stamped from zoneNames without depending on Media import order */
+    }
+    /* Stamp zoneNodes from zoneNames */
+    (function syncZoneNodes() {
+      var byName = {};
+      (e.zoneNodes || []).forEach(function (z) {
+        if (z && z.nombre) byName[String(z.nombre).toLowerCase()] = z;
+      });
+      var next = [];
+      (e.zoneNames || []).forEach(function (name) {
+        var n = String(name || '').trim();
+        if (!n) return;
+        var prev = byName[n.toLowerCase()];
+        var slug = String(n).normalize('NFKD').replace(/[^\w\s\-]+/g, '')
+          .trim().toLowerCase().replace(/\s+/g, '-').slice(0, 80) || 'zona';
+        if (prev) {
+          if (!prev.node_id) prev.node_id = 'zona:' + slug;
+          prev.nombre = n;
+          next.push(prev);
+        } else {
+          next.push({ node_id: 'zona:' + slug, nombre: n, tipo: 'zona', origen: 'estructura' });
+        }
+      });
+      e.zoneNodes = next;
+    })();
     if (e.developmentType === 'edificio' && e.edificioMode === 'unico' && !e.buildings.length) {
       e.buildings = [emptyBuilding('edificio', 0)];
     }
