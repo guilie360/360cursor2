@@ -1,42 +1,9 @@
-/* Progress rail — V5.9.77 slim Builder flow */
+/* Progress rail — V5.9.78 minimal nav (slim flow + full collapse) */
 var BuilderProgressRail = (function () {
-  /* Elder Futhark markers — visual only; section ids unchanged. */
-  var SECTION_RUNES = [
-    '\u16A0', /* ᚠ */
-    '\u16A2', /* ᚢ */
-    '\u16A6', /* ᚦ */
-    '\u16A8', /* ᚨ */
-    '\u16B1', /* ᚱ */
-    '\u16B2', /* ᚲ */
-    '\u16B7', /* ᚷ */
-    '\u16B9', /* ᚹ */
-    '\u16BA', /* ᚺ */
-    '\u16BE', /* ᚾ */
-    '\u16C1', /* ᛁ */
-    '\u16C3', /* ᛃ */
-    '\u16C7', /* ᛇ */
-    '\u16C8', /* ᛈ */
-    '\u16C9'  /* ᛉ */
-  ];
-  var SECTION_RUNES_EXTRA = [
-    '\u16CA', /* ᛊ */
-    '\u16CF', /* ᛏ */
-    '\u16D6', /* ᛖ */
-    '\u16D7'  /* ᛗ */
-  ];
-
   function shortName(name) {
     if (!name) return null;
     var base = String(name).replace(/\.[^.]+$/, '');
     return base.length > 36 ? base.slice(0, 34) + '…' : base;
-  }
-
-  function sectionRune(index) {
-    var i = parseInt(index, 10);
-    if (isNaN(i) || i < 0) return null;
-    if (i < SECTION_RUNES.length) return SECTION_RUNES[i];
-    var j = i - SECTION_RUNES.length;
-    return SECTION_RUNES_EXTRA[j] || null;
   }
 
   function isDone(state, stepId, autoDone) {
@@ -173,23 +140,6 @@ var BuilderProgressRail = (function () {
     ];
   }
 
-  function stepIcon(stepIndex) {
-    var step = typeof BuilderWizard !== 'undefined' ? BuilderWizard.getStep(stepIndex) : null;
-    var name = step && step.icon ? step.icon : 'circle-check';
-    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
-      return BuilderIcons.render(name);
-    }
-    return '○';
-  }
-
-  function runeGlyphHtml(index) {
-    var rune = sectionRune(index);
-    if (rune) {
-      return '<span class="builder-rail-rune" aria-hidden="true">' + rune + '</span>';
-    }
-    return stepIcon(index);
-  }
-
   function isRailCollapsed() {
     if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed) {
       return !!BoxiesPrefs.getRailCollapsed();
@@ -197,10 +147,27 @@ var BuilderProgressRail = (function () {
     return document.body.classList.contains('boxies-rail-collapsed');
   }
 
+  function collapseToggleIcon(collapsed) {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(collapsed ? 'chevron-right' : 'chevron-left');
+    }
+    return collapsed ? '▶' : '◀';
+  }
+
+  function syncCollapseButton(rail, collapsed) {
+    var btn = rail && rail.querySelector('#builderRailCollapseBtn');
+    if (!btn) return;
+    btn.setAttribute('data-tooltip', collapsed ? 'Expandir pasos' : 'Colapsar pasos');
+    btn.setAttribute('aria-label', collapsed ? 'Expandir pasos' : 'Colapsar pasos');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    btn.innerHTML = collapseToggleIcon(collapsed);
+  }
+
   function applyRailCollapsed(collapsed) {
     document.body.classList.toggle('boxies-rail-collapsed', !!collapsed);
     document.documentElement.classList.toggle('boxies-rail-collapsed', !!collapsed);
-    var width = collapsed ? '52px' : '176px';
+    /* V5.9.78 — fully hide: 0px, only floating arrow remains */
+    var width = collapsed ? '0px' : '176px';
     document.documentElement.style.setProperty('--builder-rail-width', width);
   }
 
@@ -212,20 +179,17 @@ var BuilderProgressRail = (function () {
     var items = buildItems(state);
     var current = state.currentStep;
     var collapsed = isRailCollapsed();
-    var toggleIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
-      ? BuilderIcons.render(collapsed ? 'chevron-right' : 'chevron-left')
-      : (collapsed ? '›' : '‹');
     var html =
       '<button type="button" class="builder-rail-collapse" id="builderRailCollapseBtn"' +
         ' data-tooltip="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
         ' aria-label="' + (collapsed ? 'Expandir pasos' : 'Colapsar pasos') + '"' +
         ' aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
-        toggleIcon +
+        collapseToggleIcon(collapsed) +
       '</button>';
 
     html += '<div class="builder-rail-list" data-builder-rail-list>';
-    html += items.map(function (item, index) {
-      var cls = 'builder-rail-item' + (item.done ? ' is-done' : '');
+    html += items.map(function (item) {
+      var cls = 'builder-rail-item' + (item.done ? ' is-done' : ' is-pending');
       if (item.stepIndex === current) cls += ' is-current';
       if (item.legacy) cls += ' is-legacy';
       var mark = item.done ? '✓' : '○';
@@ -233,13 +197,14 @@ var BuilderProgressRail = (function () {
         ' data-tooltip="' + escapeHtml(item.label) + '"' +
         ' aria-label="' + escapeHtml(item.label) + '">' +
         '<span class="builder-rail-row">' +
-          '<span class="builder-rail-icon" aria-hidden="true">' + runeGlyphHtml(index) + '</span>' +
           '<span class="builder-rail-mark" aria-hidden="true">' + mark + '</span>' +
-          '<span class="builder-rail-label">' + escapeHtml(item.label) + '</span>' +
+          '<span class="builder-rail-text">' +
+            '<span class="builder-rail-label">' + escapeHtml(item.label) + '</span>' +
+            (item.value
+              ? '<span class="builder-rail-value">' + escapeHtml(item.value) + '</span>'
+              : '') +
+          '</span>' +
         '</span>' +
-        (item.value && !collapsed
-          ? '<span class="builder-rail-value">' + escapeHtml(item.value) + '</span>'
-          : '') +
       '</button>';
     }).join('');
     html += '</div>';
@@ -253,6 +218,7 @@ var BuilderProgressRail = (function () {
 
   var _lastRoot = null;
   var _lastState = null;
+  var _savedListScroll = 0;
 
   function update(rootEl, state) {
     var rail = rootEl && rootEl.querySelector
@@ -262,7 +228,15 @@ var BuilderProgressRail = (function () {
     _lastRoot = rootEl;
     _lastState = state;
     applyCollapsedFromPrefs();
+
+    var listBefore = rail.querySelector('[data-builder-rail-list]');
+    if (listBefore) _savedListScroll = listBefore.scrollTop;
+
     rail.innerHTML = renderHtml(state);
+
+    var listAfter = rail.querySelector('[data-builder-rail-list]');
+    if (listAfter) listAfter.scrollTop = _savedListScroll;
+
     if (!rail.dataset.collapseBound) {
       rail.dataset.collapseBound = '1';
       rail.addEventListener('click', function (e) {
@@ -270,12 +244,15 @@ var BuilderProgressRail = (function () {
         if (!btn) return;
         e.preventDefault();
         e.stopPropagation();
+        var list = rail.querySelector('[data-builder-rail-list]');
+        if (list) _savedListScroll = list.scrollTop;
         var next = !isRailCollapsed();
         if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setRailCollapsed) {
           BoxiesPrefs.setRailCollapsed(next);
         }
         applyRailCollapsed(next);
-        if (_lastRoot && _lastState) update(_lastRoot, _lastState);
+        syncCollapseButton(rail, next);
+        if (list) list.scrollTop = _savedListScroll;
         try {
           window.dispatchEvent(new CustomEvent('boxies:rail-toggle', {
             detail: { collapsed: !!next }

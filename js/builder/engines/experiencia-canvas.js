@@ -1363,7 +1363,7 @@ var ExperienciaCanvas = (function () {
           ? 'rgba(111,191,134,0.95)'
           : (n.status === 'ready'
             ? 'rgba(111,191,134,0.85)'
-            : 'rgba(155,143,212,0.85)');
+            : 'rgba(229,72,77,0.85)');
         var s = ExperienciaEngine.nodeSize(n);
         ctx.fillRect(ox + (n.x - b.minX) * scale, oy + (n.y - b.minY) * scale,
           Math.max(6, s.w * scale * 0.2), Math.max(4, s.h * scale * 0.15));
