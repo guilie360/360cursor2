@@ -307,8 +307,10 @@ var BunnyMediaApi = (function () {
 
     var folders = ['hero', 'hero/images', 'hero/logos', 'hero/videos', 'media'];
     var nodes = slugInfo.nodes || [];
+    var desiredSlugs = {};
     nodes.forEach(function (n) {
       if (!n || !n.bunny_slug) return;
+      desiredSlugs[n.bunny_slug] = true;
       folders.push('media/' + n.bunny_slug);
       var enabled = null;
       if (state && state.bunnyMedia && state.bunnyMedia.categoryConfig) {
@@ -324,7 +326,43 @@ var BunnyMediaApi = (function () {
 
     logUpload('✔ ensure_folders', folders.length);
     await ensureFolders(projectId, slug, folders);
-    return { showroomSlug: slug, folders: folders, renames: slugInfo.renames || [] };
+
+    /* V5.9.89 — purge orphan media/{slug}/ folders not in desired set */
+    var purged = [];
+    try {
+      var listed = await listFolder(projectId, slug, 'media');
+      var items = (listed && listed.items) || [];
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item) continue;
+        var isDir = item.isDirectory || item.IsDirectory;
+        if (!isDir) continue;
+        var name = slugifyLocal(item.name || item.ObjectName || '');
+        if (!name || desiredSlugs[name]) continue;
+        try {
+          logUpload('✔ Purge orphan', 'media/' + name);
+          await deleteFolder(projectId, slug, 'media/' + name, true);
+          purged.push(name);
+        } catch (delErr) {
+          logUpload('purge failed', name, delErr && delErr.message);
+        }
+      }
+    } catch (listErr) {
+      logUpload('list media for purge failed', listErr && listErr.message);
+    }
+
+    return {
+      showroomSlug: slug,
+      folders: folders,
+      renames: slugInfo.renames || [],
+      purged: purged,
+      nodes: nodes
+    };
+  }
+
+  /** Alias: full create/rename/delete reconcile after Aplicar estructura */
+  async function reconcileStructure(state, projectId, showroomSlug) {
+    return syncStructure(state, projectId, showroomSlug);
   }
 
   async function ensureNodeStructure(projectId, showroomSlug, nodeSlug, categoryKeys) {
@@ -498,6 +536,7 @@ var BunnyMediaApi = (function () {
     deleteFolder: deleteFolder,
     renameFolder: renameFolder,
     syncStructure: syncStructure,
+    reconcileStructure: reconcileStructure,
     ensureNodeStructure: ensureNodeStructure,
     syncAllShowrooms: syncAllShowrooms
   };

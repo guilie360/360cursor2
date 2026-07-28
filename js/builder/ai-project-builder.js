@@ -4797,46 +4797,157 @@ var AiProjectBuilderView = (function () {
 
   async function handleApplyEstructura() {
     if (processing) return;
-    processing = true;
-    updateHeaderActions();
-    try {
-      EstructuraEngine.ensureState(state);
-      var result = await EstructuraSyncEngine.apply(state);
-      saveState();
-      AdminNotify.success(
-        'Estructura aplicada: ' + result.tipologias + ' tipología(s), ' +
-        (result.unidades != null ? result.unidades + ' unidad(es), ' : '') +
-        result.viviendas + ' tarjeta(s) de contenido. Experiencia sincronizada.'
-      );
-      renderStepContent();
-      updateNavButtons();
-    } catch (err) {
-      if (err && err.conflicts && err.conflicts.length) {
-        var msg = err.conflicts.map(function (c) {
-          return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
-        }).join('\n');
-        if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
-          try {
-            var result2 = await EstructuraSyncEngine.apply(state, { archiveRemoved: true, force: true });
-            saveState();
-            AdminNotify.success(
-              'Estructura aplicada (archivando conflictos): ' + result2.tipologias + ' tipologías.'
-            );
-            renderStepContent();
-            updateNavButtons();
-          } catch (err2) {
-            AdminNotify.error(err2.message || 'No se pudo aplicar la estructura');
+
+    function runApply(opts) {
+      return (async function () {
+        processing = true;
+        updateHeaderActions();
+        try {
+          EstructuraEngine.ensureState(state);
+
+          /* Snapshot bunny slugs BEFORE mutate so renames are detected after apply */
+          if (typeof MediaNodesEngine !== 'undefined') {
+            MediaNodesEngine.ensureNodeIds(state);
+            MediaNodesEngine.ensureBunnySlugs(state);
           }
+
+          var result = await EstructuraSyncEngine.apply(state, opts || {});
+
+          /* Rebuild Media projection from new Structure */
+          if (typeof MediaNodesEngine !== 'undefined') {
+            MediaNodesEngine.ensureNodeIds(state);
+            if (MediaNodesEngine.ensureMediaAmenityNames) {
+              MediaNodesEngine.ensureMediaAmenityNames(state);
+            }
+            MediaNodesEngine.ensureBunnySlugs(state);
+          }
+          state.bunnyMedia = state.bunnyMedia || {};
+          var nodes = (typeof MediaNodesEngine !== 'undefined')
+            ? MediaNodesEngine.listCompatibleNodes(state)
+            : [];
+          var known = {};
+          nodes.forEach(function (n) { known[n.node_id] = true; });
+          state.bunnyMedia.nodeOrder = (state.bunnyMedia.nodeOrder || []).filter(function (id) {
+            return known[id];
+          });
+          nodes.forEach(function (n) {
+            if (state.bunnyMedia.nodeOrder.indexOf(n.node_id) === -1) {
+              state.bunnyMedia.nodeOrder.push(n.node_id);
+            }
+          });
+          if (state.bunnyMedia.selectedNodeId && !known[state.bunnyMedia.selectedNodeId]) {
+            state.bunnyMedia.selectedNodeId = state.bunnyMedia.nodeOrder[0] || null;
+          }
+
+          /* Sync Bunny immediately: create / rename / delete orphans */
+          var bunnyResult = null;
+          var projectId = resolveActiveProjectId();
+          var showroomSlug = resolveShowroomSlug();
+          if (projectId && showroomSlug && typeof BunnyMediaApi !== 'undefined') {
+            try {
+              bunnyResult = await (BunnyMediaApi.reconcileStructure || BunnyMediaApi.syncStructure)(
+                state,
+                projectId,
+                showroomSlug
+              );
+            } catch (bunnyErr) {
+              try { console.warn('[Apply] Bunny reconcile', bunnyErr); } catch (e) {}
+              throw new Error(
+                'Estructura guardada, pero Bunny no sincronizó: ' +
+                ((bunnyErr && bunnyErr.message) || 'error desconocido')
+              );
+            }
+          }
+
+          saveState();
+          if (typeof EstructuraSyncEngine !== 'undefined' && EstructuraSyncEngine.saveDraft) {
+            try {
+              /* Persist mediaAmenityNames after draft_json was cleared by apply */
+              state.estructura = state.estructura || {};
+              state.estructura.dirty = true;
+              await EstructuraSyncEngine.saveDraft(state);
+            } catch (sdErr) {
+              try { console.warn('[Apply] saveDraft post-media', sdErr); } catch (e) {}
+            }
+          }
+
+          var purgeN = (bunnyResult && bunnyResult.purged && bunnyResult.purged.length) || 0;
+          var renameN = (bunnyResult && bunnyResult.renames && bunnyResult.renames.length) || 0;
+          AdminNotify.success(
+            'Estructura multimedia actualizada · ' +
+            result.tipologias + ' tipología(s) · ' +
+            (result.viviendas || 0) + ' tarjeta(s)' +
+            (renameN ? ' · ' + renameN + ' carpeta(s) renombrada(s)' : '') +
+            (purgeN ? ' · ' + purgeN + ' carpeta(s) eliminada(s)' : '')
+          );
+          renderStepContent();
+          updateNavButtons();
+          return result;
+        } finally {
+          processing = false;
+          updateHeaderActions();
         }
-      } else if (err && err.validation) {
-        AdminNotify.error(err.validation.join(' · '));
-      } else {
-        AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
-      }
-    } finally {
-      processing = false;
-      updateHeaderActions();
+      })();
     }
+
+    function confirmAndApply(opts) {
+      if (typeof AdminUI !== 'undefined' && typeof AdminUI.openModal === 'function') {
+        AdminUI.openModal({
+          title: 'Actualizar estructura multimedia',
+          bodyHtml:
+            '<p class="admin-modal-copy">Los cambios actualizarán automáticamente la organización de archivos en BOXIES y Bunny Storage.</p>',
+          footerHtml:
+            '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+            '<button type="button" class="btn-primary" data-modal-action="confirm">Aplicar cambios</button>',
+          onMount: function (root) {
+            var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+            var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+            if (cancelBtn) {
+              cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+            }
+            if (confirmBtn) {
+              confirmBtn.addEventListener('click', function () {
+                AdminUI.closeModal();
+                runApply(opts).catch(function (err) {
+                  if (err && err.conflicts && err.conflicts.length) {
+                    var msg = err.conflicts.map(function (c) {
+                      return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
+                    }).join('\n');
+                    if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
+                      confirmAndApply({ archiveRemoved: true, force: true });
+                    }
+                  } else if (err && err.validation) {
+                    AdminNotify.error(err.validation.join(' · '));
+                  } else {
+                    AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
+                  }
+                });
+              });
+            }
+          }
+        });
+        return;
+      }
+      if (!window.confirm('Los cambios actualizarán automáticamente la organización de archivos en BOXIES y Bunny Storage.\n\n¿Aplicar cambios?')) {
+        return;
+      }
+      runApply(opts).catch(function (err) {
+        if (err && err.conflicts && err.conflicts.length) {
+          var msg = err.conflicts.map(function (c) {
+            return c.message || (c.nombre + ' (' + (c.ambientes || 0) + ' ambientes)');
+          }).join('\n');
+          if (window.confirm(msg + '\n\n¿Archivar tipologías removidas y continuar?')) {
+            confirmAndApply({ archiveRemoved: true, force: true });
+          }
+        } else if (err && err.validation) {
+          AdminNotify.error(err.validation.join(' · '));
+        } else {
+          AdminNotify.error((err && err.message) || 'No se pudo aplicar la estructura');
+        }
+      });
+    }
+
+    confirmAndApply({});
   }
 
   function bindStepEvents(stepId) {

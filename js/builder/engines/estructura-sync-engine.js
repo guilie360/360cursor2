@@ -1,4 +1,4 @@
-/* BOXIES V5.9.22 — Estructura Sync: persist + Aplicar + sync tipologías → viviendas */
+/* BOXIES V5.9.89 — Estructura Sync: persist + Aplicar + reconstrucción Media/Bunny */
 var EstructuraSyncEngine = (function () {
   function resolveProject(state) {
     if (typeof HeroSyncEngine !== 'undefined' && HeroSyncEngine.resolveProject) {
@@ -672,9 +672,16 @@ var EstructuraSyncEngine = (function () {
       }
     }
 
-    /* Tipologías */
+    /* Tipologías — reutilizar existentes por id o nombre; crear solo las nuevas */
     var keepTipIds = {};
     var tipologiaIdMap = {};
+    var claimedTipIds = {};
+    var prevTipByName = {};
+    (prevTipsRes.data || []).forEach(function (t) {
+      var key = String(t.nombre || '').trim().toLowerCase();
+      if (key && !prevTipByName[key]) prevTipByName[key] = t;
+    });
+
     for (var ti = 0; ti < (e.tipologias || []).length; ti++) {
       var tip = e.tipologias[ti];
       var tipName = (tip.nombre || '').trim() ||
@@ -702,13 +709,34 @@ var EstructuraSyncEngine = (function () {
         updated_at: new Date().toISOString()
       };
 
+      /* V5.9.89 — si no hay id, reutilizar tipología existente con el mismo nombre */
+      if (!tip.id) {
+        var byName = prevTipByName[String(tipName).toLowerCase()];
+        if (byName && byName.id && !claimedTipIds[byName.id]) {
+          tip.id = byName.id;
+        }
+      }
+
       if (tip.id) {
         var tu = await client().from('tipologias').update(tipRow).eq('id', tip.id).eq('proyecto_id', pid).select('id').maybeSingle();
         if (tu.error) throw new Error(tu.error.message);
         if (!tu.data) {
-          var tiIns = await client().from('tipologias').insert(tipRow).select('id').single();
-          if (tiIns.error) throw new Error(tiIns.error.message);
-          tip.id = tiIns.data.id;
+          /* id stale: try name match before insert */
+          var reuse = prevTipByName[String(tipName).toLowerCase()];
+          if (reuse && reuse.id && !claimedTipIds[reuse.id]) {
+            tip.id = reuse.id;
+            var tu2 = await client().from('tipologias').update(tipRow).eq('id', tip.id).eq('proyecto_id', pid).select('id').maybeSingle();
+            if (tu2.error) throw new Error(tu2.error.message);
+            if (!tu2.data) {
+              var tiIns = await client().from('tipologias').insert(tipRow).select('id').single();
+              if (tiIns.error) throw new Error(tiIns.error.message);
+              tip.id = tiIns.data.id;
+            }
+          } else {
+            var tiIns2 = await client().from('tipologias').insert(tipRow).select('id').single();
+            if (tiIns2.error) throw new Error(tiIns2.error.message);
+            tip.id = tiIns2.data.id;
+          }
         } else {
           tip.id = tu.data.id;
         }
@@ -718,6 +746,7 @@ var EstructuraSyncEngine = (function () {
         tip.id = tiNew.data.id;
       }
       tip.localId = tip.id;
+      claimedTipIds[tip.id] = true;
       /* V5.9.72 — keep permanent node_id across UUID remap */
       if (!tip.node_id) tip.node_id = tip.id;
       tip.nombre = tipName;
@@ -869,6 +898,12 @@ var EstructuraSyncEngine = (function () {
     };
   }
 
+  /**
+   * V5.9.89 — 1 content card (vivienda) per tipología.
+   * Never insert a duplicate (proyecto_id, codigo). Match by tipologia_id,
+   * then codigo, then nombre; update in place; invent unique codes only for
+   * brand-new cards.
+   */
   async function syncViviendasFromTipologias(state, proyectoId, tipologias) {
     var existing = await client()
       .from('viviendas')
@@ -877,19 +912,68 @@ var EstructuraSyncEngine = (function () {
     if (existing.error) throw new Error(existing.error.message);
 
     var byTip = {};
+    var byCodigo = {};
+    var byNombre = {};
+    var usedCodigos = {};
     (existing.data || []).forEach(function (v) {
       if (v.tipologia_id) byTip[v.tipologia_id] = v;
+      var ck = String(v.codigo || '').trim().toLowerCase();
+      if (ck && !byCodigo[ck]) byCodigo[ck] = v;
+      var nk = String(v.nombre || '').trim().toLowerCase();
+      if (nk && !byNombre[nk]) byNombre[nk] = v;
+      if (ck) usedCodigos[ck] = true;
     });
 
+    function uniqueCodigo(desired) {
+      var base = String(desired || 'T').trim().slice(0, 20) || 'T';
+      var candidate = base;
+      var n = 2;
+      while (usedCodigos[candidate.toLowerCase()]) {
+        var suffix = '-' + n;
+        candidate = base.slice(0, Math.max(1, 20 - suffix.length)) + suffix;
+        n++;
+      }
+      usedCodigos[candidate.toLowerCase()] = true;
+      return candidate;
+    }
+
+    var keepVivIds = {};
     var count = 0;
     for (var i = 0; i < (tipologias || []).length; i++) {
       var tip = tipologias[i];
       if (!tip.id) continue;
       var nombre = tip.nombre || tip.modelo || ('Tipología ' + (i + 1));
+      var desiredCodigo = tip.modelo
+        ? String(tip.modelo).slice(0, 20)
+        : ('T' + (i + 1));
+
+      var matched = byTip[tip.id] || null;
+      if (!matched) {
+        var ck0 = String(desiredCodigo || '').trim().toLowerCase();
+        if (ck0 && byCodigo[ck0] && !keepVivIds[byCodigo[ck0].id]) {
+          matched = byCodigo[ck0];
+        }
+      }
+      if (!matched) {
+        var nk0 = String(nombre || '').trim().toLowerCase();
+        if (nk0 && byNombre[nk0] && !keepVivIds[byNombre[nk0].id]) {
+          matched = byNombre[nk0];
+        }
+      }
+
+      var codigo;
+      if (matched && matched.codigo) {
+        /* Keep existing codigo to avoid unique collisions; free it from used if reclaiming */
+        codigo = String(matched.codigo);
+        usedCodigos[codigo.toLowerCase()] = true;
+      } else {
+        codigo = uniqueCodigo(desiredCodigo);
+      }
+
       var payload = {
         proyecto_id: proyectoId,
         nombre: nombre,
-        codigo: tip.modelo ? String(tip.modelo).slice(0, 20) : ('T' + (i + 1)),
+        codigo: codigo,
         tipo: tip.producto || 'Apartamento',
         area_m2: tip.area_m2 || 0,
         habitaciones: tip.habitaciones || 0,
@@ -903,17 +987,58 @@ var EstructuraSyncEngine = (function () {
         tipologia_id: tip.id
       };
 
-      var matched = byTip[tip.id];
       if (matched) {
         payload.id = matched.id;
+        keepVivIds[matched.id] = true;
       }
 
       if (typeof ViviendasSyncEngine !== 'undefined' && ViviendasSyncEngine.syncOne) {
-        await ViviendasSyncEngine.syncOne(state, payload);
+        try {
+          var saved = await ViviendasSyncEngine.syncOne(state, payload);
+          if (saved && saved.id) keepVivIds[saved.id] = true;
+        } catch (syncErr) {
+          var msg = (syncErr && syncErr.message) || '';
+          if (matched && /viviendas_codigo_unico|duplicate key/i.test(msg)) {
+            /* Last resort: update without touching codigo */
+            var uSafe = await client().from('viviendas').update({
+              nombre: payload.nombre,
+              tipo: payload.tipo,
+              area_m2: payload.area_m2,
+              habitaciones: payload.habitaciones,
+              banos: payload.banos,
+              parqueaderos: payload.parqueaderos,
+              precio: payload.precio,
+              tipologia_id: tip.id,
+              updated_at: new Date().toISOString()
+            }).eq('id', matched.id);
+            if (uSafe.error) throw new Error(uSafe.error.message);
+            keepVivIds[matched.id] = true;
+          } else if (!matched && /viviendas_codigo_unico|duplicate key/i.test(msg)) {
+            var collide = byCodigo[String(codigo).toLowerCase()];
+            if (collide) {
+              var uCol = await client().from('viviendas').update({
+                nombre: payload.nombre,
+                tipo: payload.tipo,
+                area_m2: payload.area_m2,
+                habitaciones: payload.habitaciones,
+                banos: payload.banos,
+                parqueaderos: payload.parqueaderos,
+                precio: payload.precio,
+                tipologia_id: tip.id,
+                updated_at: new Date().toISOString()
+              }).eq('id', collide.id);
+              if (uCol.error) throw new Error(uCol.error.message);
+              keepVivIds[collide.id] = true;
+            } else {
+              throw syncErr;
+            }
+          } else {
+            throw syncErr;
+          }
+        }
       } else {
         var rpc = await client().rpc('admin_sync_vivienda', { payload: payload });
         if (rpc.error) {
-          /* fallback direct */
           if (matched) {
             var u = await client().from('viviendas').update({
               nombre: payload.nombre,
@@ -927,7 +1052,26 @@ var EstructuraSyncEngine = (function () {
               tipologia_id: tip.id,
               updated_at: new Date().toISOString()
             }).eq('id', matched.id);
-            if (u.error) throw new Error(u.error.message);
+            if (u.error) {
+              /* codigo collision: update without codigo */
+              if (/viviendas_codigo_unico|duplicate key/i.test(u.error.message || '')) {
+                var u2 = await client().from('viviendas').update({
+                  nombre: payload.nombre,
+                  tipo: payload.tipo,
+                  area_m2: payload.area_m2,
+                  habitaciones: payload.habitaciones,
+                  banos: payload.banos,
+                  parqueaderos: payload.parqueaderos,
+                  precio: payload.precio,
+                  tipologia_id: tip.id,
+                  updated_at: new Date().toISOString()
+                }).eq('id', matched.id);
+                if (u2.error) throw new Error(u2.error.message);
+              } else {
+                throw new Error(u.error.message);
+              }
+            }
+            keepVivIds[matched.id] = true;
           } else {
             var ins = await client().from('viviendas').insert({
               proyecto_id: proyectoId,
@@ -942,9 +1086,36 @@ var EstructuraSyncEngine = (function () {
               tipologia_id: tip.id,
               estado: 'disponible',
               publicado: true
-            });
-            if (ins.error) throw new Error(ins.error.message);
+            }).select('id').single();
+            if (ins.error) {
+              if (/viviendas_codigo_unico|duplicate key/i.test(ins.error.message || '')) {
+                var hit = byCodigo[String(payload.codigo).toLowerCase()];
+                if (hit) {
+                  var uHit = await client().from('viviendas').update({
+                    nombre: payload.nombre,
+                    tipo: payload.tipo,
+                    area_m2: payload.area_m2,
+                    habitaciones: payload.habitaciones,
+                    banos: payload.banos,
+                    parqueaderos: payload.parqueaderos,
+                    precio: payload.precio,
+                    tipologia_id: tip.id,
+                    updated_at: new Date().toISOString()
+                  }).eq('id', hit.id);
+                  if (uHit.error) throw new Error(uHit.error.message);
+                  keepVivIds[hit.id] = true;
+                } else {
+                  throw new Error(ins.error.message);
+                }
+              } else {
+                throw new Error(ins.error.message);
+              }
+            } else if (ins.data) {
+              keepVivIds[ins.data.id] = true;
+            }
           }
+        } else if (rpc.data && rpc.data.id) {
+          keepVivIds[rpc.data.id] = true;
         }
       }
       count++;
@@ -956,7 +1127,7 @@ var EstructuraSyncEngine = (function () {
       } catch (e2) {}
     }
 
-    return { count: count };
+    return { count: count, keptIds: keepVivIds };
   }
 
   return {
