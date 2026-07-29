@@ -83,6 +83,7 @@ var ExperienciaCanvas = (function () {
               '<div class="builder-exp-mode-tabs" data-exp-mode-tabs role="tablist" aria-label="Modo de edición">' +
                 '<button type="button" class="builder-exp-mode-tab is-active" data-exp-edit-mode="flow" role="tab" aria-selected="true">FLUJO</button>' +
                 '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="buttons" role="tab" aria-selected="false" disabled>BOTONES</button>' +
+                '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="hotspots" role="tab" aria-selected="false" disabled>HOTSPOTS</button>' +
               '</div>' +
             '</div>' +
             '<button type="button" class="builder-exp-focus-fs" data-exp-fullscreen' +
@@ -105,6 +106,17 @@ var ExperienciaCanvas = (function () {
               '<div class="builder-exp-buttons-frame" data-exp-buttons-frame>' +
                 '<img class="builder-exp-buttons-img" data-exp-buttons-img alt="" draggable="false">' +
                 '<div class="builder-exp-buttons-layer" data-exp-buttons-layer></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-exp-hotspots-stage" data-exp-hotspots-stage hidden>' +
+              '<div class="builder-exp-hotspots-stage__empty" data-exp-hotspots-empty hidden>' +
+                '<p>Selecciona un nodo Imagen para dibujar máscaras.</p>' +
+              '</div>' +
+              '<div class="builder-exp-hotspots-frame" data-exp-hotspots-frame>' +
+                '<img class="builder-exp-hotspots-img" data-exp-hotspots-img alt="" draggable="false">' +
+                '<div class="builder-exp-hotspots-layer" data-exp-hotspots-layer>' +
+                  '<svg class="builder-exp-hotspots-svg" data-exp-hotspots-svg xmlns="http://www.w3.org/2000/svg"></svg>' +
+                '</div>' +
               '</div>' +
             '</div>' +
             '<div class="builder-exp-minimap' + (minimapOn ? '' : ' is-hidden') + '" data-exp-minimap>' +
@@ -679,6 +691,112 @@ var ExperienciaCanvas = (function () {
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-duplicate="' +
           esc(selected.id) + '">Duplicar</button>' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
+          esc(selected.id) + '">Eliminar</button>' +
+      '</div></div>';
+
+    return html;
+  }
+
+  function hotspotsInspectorHtml(state, n) {
+    var masks = ExperienciaEngine.listSceneHotspotMasks
+      ? ExperienciaEngine.listSceneHotspotMasks(state, n)
+      : [];
+    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
+    var selectedId = canvasState.selectedHotspotId || null;
+    var selected = null;
+    if (selectedId) {
+      for (var i = 0; i < masks.length; i++) {
+        if (String(masks[i].id) === String(selectedId)) {
+          selected = masks[i];
+          break;
+        }
+      }
+    }
+
+    function segBtn(attr, val, label, isOn) {
+      return '<button type="button" class="builder-hub-segment__btn' +
+        (isOn ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' +
+        esc(label) + '</button>';
+    }
+
+    var html = '<div class="builder-exp-btn-panel builder-exp-hotspot-panel">' +
+      '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-hs-add="' +
+        esc(n.id) + '">+ Nuevo Hotspot</button>';
+
+    if (!masks.length) {
+      html += '<p class="builder-menu-hint">Dibuja polígonos sobre la imagen para resaltar regiones del proyecto.</p></div>';
+      return html;
+    }
+
+    html += '<div class="builder-exp-inspector__section">Máscaras</div>' +
+      '<div class="builder-exp-btn-list">' +
+        masks.map(function (m) {
+          return '<button type="button" class="builder-exp-btn-list__item' +
+            (selected && String(selected.id) === String(m.id) ? ' is-selected' : '') +
+            '" data-exp-hs-select="' + esc(m.id) + '">' +
+            '<span class="builder-exp-hs-swatch" style="background:' + esc(m.color || '#6fbf86') + '"></span>' +
+            '<span>' + esc(m.name || 'Hotspot') + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>';
+
+    if (!selected) {
+      html += '<p class="builder-menu-hint">Selecciona una máscara o crea una nueva.</p></div>';
+      return html;
+    }
+
+    var kind = selected.hotspotKind || 'highlight';
+    var anim = selected.animation || 'none';
+    var opacityPct = Math.round((Number(selected.opacity) || 0.22) * 100);
+
+    html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre</label>' +
+        '<input type="text" data-exp-hs-name maxlength="80" value="' +
+          esc(selected.name || '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Tipo</label>' +
+        '<div class="builder-hub-segment builder-hub-segment--3" data-exp-hs-kinds>' +
+          segBtn('data-exp-hs-kind', 'highlight', 'Resaltado', kind === 'highlight') +
+          segBtn('data-exp-hs-kind', 'info', 'Información', kind === 'info') +
+          segBtn('data-exp-hs-kind', 'navigation', 'Navegación', kind === 'navigation') +
+        '</div>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Color resaltado</label>' +
+        '<input type="color" data-exp-hs-color value="' +
+          esc(selected.color || '#6fbf86') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Opacidad (' + opacityPct + '%)</label>' +
+        '<input type="range" min="0" max="100" step="1" data-exp-hs-opacity value="' +
+          esc(String(opacityPct)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Borde (px)</label>' +
+        '<input type="number" min="0" max="12" step="0.5" data-exp-hs-border value="' +
+          esc(String(selected.borderWidth != null ? selected.borderWidth : 1.5)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Animación</label>' +
+        '<div class="builder-hub-segment builder-hub-segment--3">' +
+          segBtn('data-exp-hs-anim', 'none', 'Ninguna', anim === 'none') +
+          segBtn('data-exp-hs-anim', 'pulse', 'Pulso', anim === 'pulse') +
+          segBtn('data-exp-hs-anim', 'fade', 'Fade', anim === 'fade') +
+        '</div>' +
+      '</div>' +
+      '<label class="builder-exp-inspector__check">' +
+        '<input type="checkbox" data-exp-hs-visible' +
+          (selected.visible !== false ? ' checked' : '') + '>' +
+        ' Visible</label>' +
+      '<p class="builder-menu-hint builder-exp-btn-hint">' +
+        (selected.polygon ? selected.polygon.length : 0) +
+        ' vértices · clic = vértice · doble clic = cerrar · Del = borrar vértice</p>' +
+      '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-duplicate="' +
+          esc(selected.id) + '">Duplicar</button>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-hs-delete="' +
           esc(selected.id) + '">Eliminar</button>' +
       '</div></div>';
 
@@ -1503,6 +1621,14 @@ var ExperienciaCanvas = (function () {
     var buttonsImg = rootEl.querySelector('[data-exp-buttons-img]');
     var buttonsLayer = rootEl.querySelector('[data-exp-buttons-layer]');
     var buttonsEmpty = rootEl.querySelector('[data-exp-buttons-empty]');
+    var hotspotsStage = rootEl.querySelector('[data-exp-hotspots-stage]');
+    var hotspotsFrame = rootEl.querySelector('[data-exp-hotspots-frame]');
+    var hotspotsImg = rootEl.querySelector('[data-exp-hotspots-img]');
+    var hotspotsLayer = rootEl.querySelector('[data-exp-hotspots-layer]');
+    var hotspotsSvg = rootEl.querySelector('[data-exp-hotspots-svg]');
+    var hotspotsEmpty = rootEl.querySelector('[data-exp-hotspots-empty]');
+    var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null } */
+    var hotspotDrag = null; /* vertex | poly move */
     var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
     var inspectorBody = (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
       ? BuilderPropertiesRail.getInspectorBody(rootEl)
@@ -1969,7 +2095,7 @@ var ExperienciaCanvas = (function () {
     function paintInspector() {
       if (!inspectorBody) return;
       var ids = selectedIds();
-      var editMode = canvas().editMode === 'buttons' ? 'buttons' : 'flow';
+      var editMode = canvas().editMode || 'flow';
 
       if (editMode === 'buttons') {
         var scene = ExperienciaEngine.getNode(state, canvas().selectedId);
@@ -1980,6 +2106,16 @@ var ExperienciaCanvas = (function () {
           if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
             WorkspaceSelect.enhance(inspectorBody);
           }
+          return;
+        }
+      }
+
+      if (editMode === 'hotspots') {
+        var hsScene = ExperienciaEngine.getNode(state, canvas().selectedId);
+        if (hsScene && ExperienciaEngine.isHotspotsEditableNode &&
+            ExperienciaEngine.isHotspotsEditableNode(hsScene)) {
+          inspectorBody.innerHTML = hotspotsInspectorHtml(state, hsScene);
+          bindHotspotsInspectorActions();
           return;
         }
       }
@@ -2289,6 +2425,116 @@ var ExperienciaCanvas = (function () {
             return String(id) !== String(bid);
           });
           setButtonSelection(left, left[0] || null);
+          renderAll(); persist();
+        });
+      }
+    }
+
+    function bindHotspotsInspectorActions() {
+      if (!inspectorBody) return;
+      var sceneId = canvas().selectedId;
+      function patchHs(patch, opts) {
+        opts = opts || {};
+        var id = canvas().selectedHotspotId;
+        if (!id) return;
+        ExperienciaEngine.updateSceneHotspotMask(state, sceneId, id, patch);
+        paintHotspotsStage();
+        if (opts.inspector) paintInspector();
+        if (opts.persist) persist();
+      }
+      var addBtn = inspectorBody.querySelector('[data-exp-hs-add]');
+      if (addBtn) {
+        addBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          hotspotDraw = { points: [], cursor: null };
+          canvas().selectedHotspotId = null;
+          paintHotspotsStage();
+          paintInspector();
+          if (typeof AdminNotify !== 'undefined') {
+            AdminNotify.info('Dibujo: clic para vértices · doble clic para cerrar · Esc cancela');
+          }
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-hs-select]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          hotspotDraw = null;
+          canvas().selectedHotspotId = el.getAttribute('data-exp-hs-select');
+          paintHotspotsStage();
+          paintInspector();
+        });
+      });
+      var nameEl = inspectorBody.querySelector('[data-exp-hs-name]');
+      if (nameEl) {
+        nameEl.addEventListener('change', function () {
+          patchHs({ name: nameEl.value }, { persist: true });
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-hs-kind]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchHs({ hotspotKind: el.getAttribute('data-exp-hs-kind') }, {
+            inspector: true, persist: true
+          });
+        });
+      });
+      var colorEl = inspectorBody.querySelector('[data-exp-hs-color]');
+      if (colorEl) {
+        colorEl.addEventListener('input', function () {
+          patchHs({ color: colorEl.value });
+        });
+        colorEl.addEventListener('change', function () {
+          patchHs({ color: colorEl.value }, { persist: true });
+        });
+      }
+      var opacityEl = inspectorBody.querySelector('[data-exp-hs-opacity]');
+      if (opacityEl) {
+        opacityEl.addEventListener('input', function () {
+          patchHs({ opacity: Number(opacityEl.value) / 100 });
+        });
+        opacityEl.addEventListener('change', function () {
+          patchHs({ opacity: Number(opacityEl.value) / 100 }, {
+            inspector: true, persist: true
+          });
+        });
+      }
+      var borderEl = inspectorBody.querySelector('[data-exp-hs-border]');
+      if (borderEl) {
+        borderEl.addEventListener('change', function () {
+          patchHs({ borderWidth: borderEl.value }, { persist: true });
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-hs-anim]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchHs({ animation: el.getAttribute('data-exp-hs-anim') }, {
+            inspector: true, persist: true
+          });
+        });
+      });
+      var visEl = inspectorBody.querySelector('[data-exp-hs-visible]');
+      if (visEl) {
+        visEl.addEventListener('change', function () {
+          patchHs({ visible: !!visEl.checked }, { persist: true });
+        });
+      }
+      var dupBtn = inspectorBody.querySelector('[data-exp-hs-duplicate]');
+      if (dupBtn) {
+        dupBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var copy = ExperienciaEngine.duplicateSceneHotspotMask(state, sceneId,
+            dupBtn.getAttribute('data-exp-hs-duplicate'));
+          if (copy) canvas().selectedHotspotId = copy.id;
+          renderAll(); persist();
+        });
+      }
+      var delBtn = inspectorBody.querySelector('[data-exp-hs-delete]');
+      if (delBtn) {
+        delBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ExperienciaEngine.removeSceneHotspotMask(state, sceneId,
+            delBtn.getAttribute('data-exp-hs-delete'));
+          canvas().selectedHotspotId = null;
           renderAll(); persist();
         });
       }
@@ -3018,10 +3264,13 @@ var ExperienciaCanvas = (function () {
       paintEdges();
       paintMinimap();
       paintButtonsStage();
+      paintHotspotsStage();
       paintInspector();
       syncInspectorChrome();
       if (minimapWrap) minimapWrap.classList.toggle('is-hidden',
-        canvas().editMode === 'buttons' || canvas().minimapVisible === false);
+        canvas().editMode === 'buttons' ||
+        canvas().editMode === 'hotspots' ||
+        canvas().minimapVisible === false);
     }
 
     function canUseButtonsMode() {
@@ -3031,24 +3280,45 @@ var ExperienciaCanvas = (function () {
         selectedIds().length <= 1);
     }
 
+    function canUseHotspotsMode() {
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      return !!(n && ExperienciaEngine.isHotspotsEditableNode &&
+        ExperienciaEngine.isHotspotsEditableNode(n) &&
+        selectedIds().length <= 1);
+    }
+
     function syncEditModeUi() {
-      if (!canUseButtonsMode() && canvas().editMode === 'buttons') {
+      if (canvas().editMode === 'buttons' && !canUseButtonsMode()) {
         canvas().editMode = 'flow';
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
       }
-      var mode = canvas().editMode === 'buttons' ? 'buttons' : 'flow';
-      if (stage) stage.classList.toggle('is-buttons-mode', mode === 'buttons');
-      if (viewport) viewport.hidden = mode === 'buttons';
+      if (canvas().editMode === 'hotspots' && !canUseHotspotsMode()) {
+        canvas().editMode = 'flow';
+        canvas().selectedHotspotId = null;
+        hotspotDraw = null;
+      }
+      var mode = canvas().editMode === 'buttons' ? 'buttons'
+        : (canvas().editMode === 'hotspots' ? 'hotspots' : 'flow');
+      if (stage) {
+        stage.classList.toggle('is-buttons-mode', mode === 'buttons');
+        stage.classList.toggle('is-hotspots-mode', mode === 'hotspots');
+      }
+      if (viewport) viewport.hidden = mode === 'buttons' || mode === 'hotspots';
       if (buttonsStage) {
         buttonsStage.hidden = mode !== 'buttons';
         buttonsStage.setAttribute('aria-hidden', mode === 'buttons' ? 'false' : 'true');
       }
+      if (hotspotsStage) {
+        hotspotsStage.hidden = mode !== 'hotspots';
+        hotspotsStage.setAttribute('aria-hidden', mode === 'hotspots' ? 'false' : 'true');
+      }
       if (modeTabs) {
         modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
           var m = btn.getAttribute('data-exp-edit-mode');
-          var isButtonsTab = m === 'buttons';
-          var enabled = !isButtonsTab || canUseButtonsMode();
+          var enabled = m === 'flow' ||
+            (m === 'buttons' && canUseButtonsMode()) ||
+            (m === 'hotspots' && canUseHotspotsMode());
           btn.disabled = !enabled;
           btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
           var active = m === mode && enabled;
@@ -3098,22 +3368,41 @@ var ExperienciaCanvas = (function () {
         overlayLayoutTimer = null;
         applyWorldTransform();
         paintMinimap();
-        if (canvas().editMode !== 'buttons') return;
-        syncButtonsLayerBounds();
-        paintButtonsStage();
-        requestAnimationFrame(function () {
-          var changed = syncButtonsLayerBounds();
-          if (changed || overlayLayoutPass < 2) {
-            overlayLayoutPass += 1;
-            paintButtonsStage();
-            requestAnimationFrame(function () {
-              syncButtonsLayerBounds();
+        if (canvas().editMode === 'buttons') {
+          syncButtonsLayerBounds();
+          paintButtonsStage();
+          requestAnimationFrame(function () {
+            var changed = syncButtonsLayerBounds();
+            if (changed || overlayLayoutPass < 2) {
+              overlayLayoutPass += 1;
+              paintButtonsStage();
+              requestAnimationFrame(function () {
+                syncButtonsLayerBounds();
+                overlayLayoutPass = 0;
+              });
+            } else {
               overlayLayoutPass = 0;
-            });
-          } else {
-            overlayLayoutPass = 0;
-          }
-        });
+            }
+          });
+          return;
+        }
+        if (canvas().editMode === 'hotspots') {
+          syncHotspotsLayerBounds();
+          paintHotspotsStage();
+          requestAnimationFrame(function () {
+            var changedHs = syncHotspotsLayerBounds();
+            if (changedHs || overlayLayoutPass < 2) {
+              overlayLayoutPass += 1;
+              paintHotspotsStage();
+              requestAnimationFrame(function () {
+                syncHotspotsLayerBounds();
+                overlayLayoutPass = 0;
+              });
+            } else {
+              overlayLayoutPass = 0;
+            }
+          });
+        }
       }, 16);
     }
 
@@ -3219,6 +3508,158 @@ var ExperienciaCanvas = (function () {
         '</button>';
       }).join('');
       requestAnimationFrame(syncButtonsLayerBounds);
+    }
+
+    function syncHotspotsLayerBounds() {
+      if (!hotspotsImg || !hotspotsLayer || !hotspotsFrame) return false;
+      if (hotspotsImg.hidden || !hotspotsImg.getAttribute('src')) {
+        hotspotsLayer.style.left = '0';
+        hotspotsLayer.style.top = '0';
+        hotspotsLayer.style.width = '100%';
+        hotspotsLayer.style.height = '100%';
+        return false;
+      }
+      var fr = hotspotsFrame.getBoundingClientRect();
+      var ir = hotspotsImg.getBoundingClientRect();
+      if (!fr.width || !ir.width) return false;
+      var nextLeft = Math.max(0, ir.left - fr.left) + 'px';
+      var nextTop = Math.max(0, ir.top - fr.top) + 'px';
+      var nextW = Math.max(1, ir.width) + 'px';
+      var nextH = Math.max(1, ir.height) + 'px';
+      var changed =
+        hotspotsLayer.style.left !== nextLeft ||
+        hotspotsLayer.style.top !== nextTop ||
+        hotspotsLayer.style.width !== nextW ||
+        hotspotsLayer.style.height !== nextH;
+      hotspotsLayer.style.left = nextLeft;
+      hotspotsLayer.style.top = nextTop;
+      hotspotsLayer.style.width = nextW;
+      hotspotsLayer.style.height = nextH;
+      return changed;
+    }
+
+    function paintHotspotsStage() {
+      if (!hotspotsStage || !hotspotsLayer || !hotspotsImg || !hotspotsSvg) return;
+      if (canvas().editMode !== 'hotspots') return;
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      if (!n || !ExperienciaEngine.isHotspotsEditableNode(n)) {
+        if (hotspotsEmpty) hotspotsEmpty.hidden = false;
+        if (hotspotsFrame) hotspotsFrame.hidden = true;
+        hotspotsSvg.innerHTML = '';
+        return;
+      }
+      if (hotspotsEmpty) hotspotsEmpty.hidden = true;
+      if (hotspotsFrame) hotspotsFrame.hidden = false;
+
+      var media = ExperienciaEngine.resolveSceneMedia(state, n);
+      var url = (media && (media.publicUrl || media.thumbnailUrl)) || '';
+      if (url) {
+        if (hotspotsImg.getAttribute('src') !== url) {
+          hotspotsImg.onload = function () { recomputeOverlayLayout(); };
+          hotspotsImg.src = url;
+        }
+        hotspotsImg.hidden = false;
+        hotspotsImg.alt = media.filename || n.label || 'Escena';
+      } else {
+        hotspotsImg.removeAttribute('src');
+        hotspotsImg.hidden = true;
+        hotspotsImg.alt = '';
+      }
+
+      var masks = ExperienciaEngine.listSceneHotspotMasks(state, n) || [];
+      var selId = canvas().selectedHotspotId ? String(canvas().selectedHotspotId) : '';
+      var svgParts = [];
+
+      masks.forEach(function (m) {
+        if (!m || !m.polygon || m.polygon.length < 2) return;
+        var pts = m.polygon.map(function (p) {
+          return Number(p.x) + ',' + Number(p.y);
+        }).join(' ');
+        var isSel = selId && String(m.id) === selId;
+        var fillOp = isSel
+          ? Math.max(0.08, Math.min(0.28, (Number(m.opacity) || 0.22) * 0.55))
+          : 0.02;
+        var strokeOp = m.visible === false ? 0.25 : 0.9;
+        var cls = 'builder-exp-hs-poly' +
+          (isSel ? ' is-selected' : '') +
+          (m.visible === false ? ' is-invisible' : '') +
+          (m.animation === 'pulse' ? ' is-anim-pulse' : '') +
+          (m.animation === 'fade' ? ' is-anim-fade' : '');
+        svgParts.push(
+          '<polygon class="' + cls + '" data-exp-hs-poly="' + esc(m.id) + '"' +
+          ' points="' + pts + '"' +
+          ' fill="' + esc(m.color || '#6fbf86') + '"' +
+          ' fill-opacity="' + fillOp + '"' +
+          ' stroke="' + esc(m.color || '#6fbf86') + '"' +
+          ' stroke-opacity="' + strokeOp + '"' +
+          ' stroke-width="' + esc(String(m.borderWidth != null ? m.borderWidth : 1.5)) + '"' +
+          ' vector-effect="non-scaling-stroke"></polygon>'
+        );
+        if (isSel) {
+          m.polygon.forEach(function (p, idx) {
+            svgParts.push(
+              '<circle class="builder-exp-hs-vertex" data-exp-hs-vertex="' + esc(m.id) + '"' +
+              ' data-exp-hs-vi="' + idx + '"' +
+              ' cx="' + Number(p.x) + '" cy="' + Number(p.y) + '" r="1.1"></circle>'
+            );
+          });
+        }
+      });
+
+      if (hotspotDraw && hotspotDraw.points && hotspotDraw.points.length) {
+        var dPts = hotspotDraw.points.slice();
+        if (hotspotDraw.cursor) dPts.push(hotspotDraw.cursor);
+        var dStr = dPts.map(function (p) {
+          return Number(p.x) + ',' + Number(p.y);
+        }).join(' ');
+        if (dPts.length >= 2) {
+          svgParts.push(
+            '<polyline class="builder-exp-hs-draft" points="' + dStr + '"' +
+            ' fill="none" stroke="#6fbf86" stroke-width="1.5"' +
+            ' stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></polyline>'
+          );
+        }
+        hotspotDraw.points.forEach(function (p) {
+          svgParts.push(
+            '<circle class="builder-exp-hs-draft-vertex" cx="' + Number(p.x) +
+            '" cy="' + Number(p.y) + '" r="1.1"></circle>'
+          );
+        });
+      }
+
+      hotspotsSvg.setAttribute('viewBox', '0 0 100 100');
+      hotspotsSvg.setAttribute('preserveAspectRatio', 'none');
+      hotspotsSvg.innerHTML = svgParts.join('');
+      requestAnimationFrame(syncHotspotsLayerBounds);
+    }
+
+    function hotspotPercentFromPointer(ev) {
+      var el = hotspotsLayer || hotspotsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      var x = ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      var y = ((ev.clientY - rect.top) / Math.max(1, rect.height)) * 100;
+      return {
+        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
+        y: Math.max(0, Math.min(100, Math.round(y * 10) / 10))
+      };
+    }
+
+    function closeHotspotDraft() {
+      if (!hotspotDraw || !hotspotDraw.points || hotspotDraw.points.length < 3) {
+        hotspotDraw = null;
+        paintHotspotsStage();
+        return;
+      }
+      var sceneId = canvas().selectedId;
+      var created = ExperienciaEngine.addSceneHotspotMask(
+        state, sceneId, hotspotDraw.points
+      );
+      hotspotDraw = null;
+      if (created) canvas().selectedHotspotId = created.id;
+      paintHotspotsStage();
+      paintInspector();
+      persist();
     }
 
     function computeButtonGuides(sceneId, buttonId, x, y) {
@@ -3517,6 +3958,10 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
       }
+      if (!opts.keepHotspot) {
+        canvas().selectedHotspotId = null;
+        hotspotDraw = null;
+      }
       if (opts.toggle && id) {
         ExperienciaEngine.toggleSelectionId(state, id);
       } else if (opts.add && id) {
@@ -3527,8 +3972,9 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.setSelection(state, id ? [id] : [], []);
       }
       var next = ExperienciaEngine.getNode(state, canvas().selectedId);
-      if (!next || !ExperienciaEngine.isButtonsEditableNode ||
-          !ExperienciaEngine.isButtonsEditableNode(next)) {
+      var editable = next && ExperienciaEngine.isButtonsEditableNode &&
+        ExperienciaEngine.isButtonsEditableNode(next);
+      if (!editable && (canvas().editMode === 'buttons' || canvas().editMode === 'hotspots')) {
         canvas().editMode = 'flow';
       }
       if (id || selectedIds().length) {
@@ -4069,10 +4515,16 @@ var ExperienciaCanvas = (function () {
           if (btn.disabled) return;
           var mode = btn.getAttribute('data-exp-edit-mode');
           if (mode === 'buttons' && !canUseButtonsMode()) return;
-          canvas().editMode = mode === 'buttons' ? 'buttons' : 'flow';
+          if (mode === 'hotspots' && !canUseHotspotsMode()) return;
+          canvas().editMode = mode === 'buttons' ? 'buttons'
+            : (mode === 'hotspots' ? 'hotspots' : 'flow');
           if (canvas().editMode !== 'buttons') {
             canvas().selectedButtonId = null;
             canvas().selectedButtonIds = [];
+          }
+          if (canvas().editMode !== 'hotspots') {
+            canvas().selectedHotspotId = null;
+            hotspotDraw = null;
           }
           openPropertiesRail();
           renderAll();
@@ -4174,6 +4626,138 @@ var ExperienciaCanvas = (function () {
         paintButtonsStage();
         paintInspector();
       });
+    }
+
+    /* V6.2.00 — HOTSPOTS polygon draw / edit */
+    if (hotspotsLayer) {
+      hotspotsLayer.addEventListener('dblclick', function (ev) {
+        if (canvas().editMode !== 'hotspots') return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (hotspotDraw) {
+          closeHotspotDraft();
+          return;
+        }
+        /* Insert vertex on selected polygon at click */
+        var poly = ev.target.closest('[data-exp-hs-poly]');
+        if (!poly) return;
+        var hid = poly.getAttribute('data-exp-hs-poly');
+        if (!hid) return;
+        canvas().selectedHotspotId = hid;
+        var pct = hotspotPercentFromPointer(ev);
+        var mask = ExperienciaEngine.getSceneHotspotMask(state,
+          ExperienciaEngine.getNode(state, canvas().selectedId), hid);
+        if (!mask || !mask.polygon || mask.polygon.length < 3) return;
+        var best = 0;
+        var bestD = Infinity;
+        for (var i = 0; i < mask.polygon.length; i++) {
+          var a = mask.polygon[i];
+          var b = mask.polygon[(i + 1) % mask.polygon.length];
+          var mx = (a.x + b.x) / 2;
+          var my = (a.y + b.y) / 2;
+          var d = (pct.x - mx) * (pct.x - mx) + (pct.y - my) * (pct.y - my);
+          if (d < bestD) { bestD = d; best = i; }
+        }
+        ExperienciaEngine.insertHotspotVertex(
+          state, canvas().selectedId, hid, best, pct.x, pct.y
+        );
+        paintHotspotsStage();
+        paintInspector();
+        persist();
+      });
+      hotspotsLayer.addEventListener('pointerdown', function (ev) {
+        if (canvas().editMode !== 'hotspots') return;
+        var pct = hotspotPercentFromPointer(ev);
+        var vertex = ev.target.closest('[data-exp-hs-vertex]');
+        var poly = ev.target.closest('[data-exp-hs-poly]');
+
+        if (hotspotDraw) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          hotspotDraw.points.push(pct);
+          paintHotspotsStage();
+          return;
+        }
+
+        if (vertex) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var hid = vertex.getAttribute('data-exp-hs-vertex');
+          canvas().selectedHotspotId = hid;
+          hotspotDrag = {
+            kind: 'vertex',
+            hotspotId: hid,
+            index: Number(vertex.getAttribute('data-exp-hs-vi')),
+            pointerId: ev.pointerId
+          };
+          try { hotspotsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
+          paintHotspotsStage();
+          paintInspector();
+          return;
+        }
+
+        if (poly) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var pid = poly.getAttribute('data-exp-hs-poly');
+          canvas().selectedHotspotId = pid;
+          hotspotDrag = {
+            kind: 'move',
+            hotspotId: pid,
+            pointerId: ev.pointerId,
+            lastX: pct.x,
+            lastY: pct.y,
+            moved: false
+          };
+          try { hotspotsLayer.setPointerCapture(ev.pointerId); } catch (eCap2) {}
+          paintHotspotsStage();
+          paintInspector();
+          return;
+        }
+
+        canvas().selectedHotspotId = null;
+        paintHotspotsStage();
+        paintInspector();
+      });
+      hotspotsLayer.addEventListener('pointermove', function (ev) {
+        if (canvas().editMode !== 'hotspots') return;
+        var pct = hotspotPercentFromPointer(ev);
+        if (hotspotDraw) {
+          hotspotDraw.cursor = pct;
+          paintHotspotsStage();
+          return;
+        }
+        if (!hotspotDrag || ev.pointerId !== hotspotDrag.pointerId) return;
+        var sceneId = canvas().selectedId;
+        if (hotspotDrag.kind === 'vertex') {
+          ExperienciaEngine.setHotspotVertex(
+            state, sceneId, hotspotDrag.hotspotId, hotspotDrag.index, pct.x, pct.y
+          );
+          paintHotspotsStage();
+        } else if (hotspotDrag.kind === 'move') {
+          var dx = pct.x - hotspotDrag.lastX;
+          var dy = pct.y - hotspotDrag.lastY;
+          if (dx || dy) {
+            ExperienciaEngine.translateHotspotMask(
+              state, sceneId, hotspotDrag.hotspotId, dx, dy
+            );
+            hotspotDrag.lastX = pct.x;
+            hotspotDrag.lastY = pct.y;
+            hotspotDrag.moved = true;
+            paintHotspotsStage();
+          }
+        }
+      });
+      function endHotspotDrag(ev) {
+        if (!hotspotDrag || (ev && ev.pointerId !== hotspotDrag.pointerId)) return;
+        var moved = !!hotspotDrag.moved || hotspotDrag.kind === 'vertex';
+        hotspotDrag = null;
+        paintHotspotsStage();
+        paintInspector();
+        if (moved) persist();
+      }
+      hotspotsLayer.addEventListener('pointerup', endHotspotDrag);
+      hotspotsLayer.addEventListener('pointercancel', endHotspotDrag);
     }
 
     window.addEventListener('blur', function () {
@@ -4641,6 +5225,13 @@ var ExperienciaCanvas = (function () {
           finishInlineRename(false);
           return;
         }
+        if (canvas().editMode === 'hotspots' && hotspotDraw) {
+          ev.preventDefault();
+          hotspotDraw = null;
+          paintHotspotsStage();
+          paintInspector();
+          return;
+        }
         if (modalEl && !modalEl.hidden) {
           modalEl.hidden = true;
           modalEl.innerHTML = '';
@@ -4667,6 +5258,34 @@ var ExperienciaCanvas = (function () {
         var ae = document.activeElement;
         var inCanvas = viewport === ae || rootEl.contains(ae) || rootEl.contains(ev.target);
         if (!inCanvas) return;
+
+        /* V6.2.00 — HOTSPOTS: delete selected mask (or vertex with Alt) */
+        if (canvas().editMode === 'hotspots') {
+          var hsId = canvas().selectedHotspotId;
+          if (!hsId) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          var sceneHs = canvas().selectedId;
+          if (!sceneHs) return;
+          if (ev.altKey) {
+            var mask = ExperienciaEngine.getSceneHotspotMask(state,
+              ExperienciaEngine.getNode(state, sceneHs), hsId);
+            if (mask && mask.polygon && mask.polygon.length > 3) {
+              ExperienciaEngine.removeHotspotVertex(
+                state, sceneHs, hsId, mask.polygon.length - 1
+              );
+              paintHotspotsStage();
+              paintInspector();
+              persist();
+            }
+            return;
+          }
+          ExperienciaEngine.removeSceneHotspotMask(state, sceneHs, hsId);
+          canvas().selectedHotspotId = null;
+          renderAll();
+          persist();
+          return;
+        }
 
         /* V6.1.04 — in BOTONES mode, Delete never removes the scene node */
         if (canvas().editMode === 'buttons') {
@@ -4757,6 +5376,8 @@ var ExperienciaCanvas = (function () {
       if (workspace) ro.observe(workspace);
       if (buttonsStage) ro.observe(buttonsStage);
       if (buttonsFrame) ro.observe(buttonsFrame);
+      if (hotspotsStage) ro.observe(hotspotsStage);
+      if (hotspotsFrame) ro.observe(hotspotsFrame);
     }
     window.addEventListener('resize', onViewportResize);
     document.addEventListener('fullscreenchange', onViewportResize);

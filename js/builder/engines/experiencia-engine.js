@@ -318,6 +318,8 @@ var ExperienciaEngine = (function () {
     if (t === 'SELECTOR' || a === 'floor-selector') return false;
     if (t === 'MENU_TRIGGER' || a === 'open-menu') return false;
     if (GLOBAL_SHOWROOM_ACTIONS[a]) return false;
+    /* V6.2.00 — polygon masks are visual regions; no flow port until Runtime wires them */
+    if (t === 'HOTSPOT' && (ix.shape === 'polygon' || Array.isArray(ix.polygon))) return false;
     return true;
   }
 
@@ -813,6 +815,245 @@ var ExperienciaEngine = (function () {
     }
     syncScenePorts(n);
     return buttonViewModel(state, n, ix);
+  }
+
+  /**
+   * V6.2.00 — HOTSPOTS editor = polygon mask layer over image scenes.
+   * SSOT: scene.config.interactions[] where type === 'HOTSPOT' && shape === 'polygon'.
+   * Independent from BUTTON layer and from legacy point HOTSPOTs in FLUJO.
+   */
+  var HOTSPOT_KINDS = { highlight: 1, info: 1, navigation: 1 };
+  var HOTSPOT_ANIMATIONS = { none: 1, pulse: 1, fade: 1 };
+  var HOTSPOT_DEFAULT_COLOR = '#6fbf86';
+
+  function isHotspotsEditableNode(n) {
+    return isButtonsEditableNode(n);
+  }
+
+  function isSceneHotspotMask(ix) {
+    if (!ix || String(ix.type || '').toUpperCase() !== 'HOTSPOT') return false;
+    if (ix.shape === 'polygon') return true;
+    return Array.isArray(ix.polygon) && ix.polygon.length >= 3;
+  }
+
+  function clampHotspotOpacity(v) {
+    var n = Number(v);
+    if (isNaN(n)) n = 0.22;
+    return Math.max(0, Math.min(1, Math.round(n * 100) / 100));
+  }
+
+  function clampHotspotBorder(v) {
+    var n = Number(v);
+    if (isNaN(n)) n = 1.5;
+    return Math.max(0, Math.min(12, Math.round(n * 10) / 10));
+  }
+
+  function normalizePolygon(points) {
+    if (!Array.isArray(points)) return [];
+    return points.map(function (p) {
+      if (!p || typeof p !== 'object') return null;
+      return {
+        x: clampPercent(p.x, 0),
+        y: clampPercent(p.y, 0)
+      };
+    }).filter(Boolean);
+  }
+
+  function ensureHotspotMaskDefaults(ix) {
+    if (!ix || !isSceneHotspotMask(ix)) return ix;
+    ix.shape = 'polygon';
+    ix.polygon = normalizePolygon(ix.polygon);
+    if (!ix.name && ix.label) ix.name = String(ix.label);
+    if (ix.name && (!ix.label || ix.label === 'HOTSPOT' || ix.label === 'Hotspot')) {
+      ix.label = String(ix.name);
+    }
+    if (!ix.hotspotKind || !HOTSPOT_KINDS[ix.hotspotKind]) ix.hotspotKind = 'highlight';
+    if (!ix.color || typeof ix.color !== 'string') ix.color = HOTSPOT_DEFAULT_COLOR;
+    ix.opacity = clampHotspotOpacity(ix.opacity != null ? ix.opacity : 0.22);
+    ix.borderWidth = clampHotspotBorder(ix.borderWidth != null ? ix.borderWidth : 1.5);
+    if (!ix.animation || !HOTSPOT_ANIMATIONS[ix.animation]) ix.animation = 'none';
+    if (ix.enabled == null) ix.enabled = true;
+    return ix;
+  }
+
+  function hotspotMaskViewModel(ix) {
+    ensureHotspotMaskDefaults(ix);
+    return {
+      id: ix.id,
+      portId: ix.portId || ix.id,
+      name: ix.name != null ? String(ix.name) : (ix.label != null ? String(ix.label) : ''),
+      label: ix.label != null ? String(ix.label) : '',
+      polygon: (ix.polygon || []).map(function (p) {
+        return { x: Number(p.x), y: Number(p.y) };
+      }),
+      color: ix.color || HOTSPOT_DEFAULT_COLOR,
+      opacity: Number(ix.opacity),
+      borderWidth: Number(ix.borderWidth),
+      animation: ix.animation || 'none',
+      hotspotKind: ix.hotspotKind || 'highlight',
+      visible: ix.enabled !== false,
+      enabled: ix.enabled !== false,
+      shape: 'polygon',
+      _ix: ix
+    };
+  }
+
+  function listSceneHotspotMasks(state, n) {
+    if (!n) return [];
+    normalizeSceneInteractions(n);
+    return (n.config.interactions || [])
+      .filter(isSceneHotspotMask)
+      .map(function (ix) {
+        ensureHotspotMaskDefaults(ix);
+        return hotspotMaskViewModel(ix);
+      });
+  }
+
+  function getSceneHotspotMask(state, n, hotspotId) {
+    var list = listSceneHotspotMasks(state, n);
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(hotspotId) ||
+          String(list[i].portId) === String(hotspotId)) return list[i];
+    }
+    return null;
+  }
+
+  function addSceneHotspotMask(state, nodeId, polygon) {
+    var n = getNode(state, nodeId);
+    if (!n || !isHotspotsEditableNode(n)) return null;
+    var pts = normalizePolygon(polygon);
+    if (pts.length < 3) return null;
+    var ix = addInteractionToScene(state, nodeId, 'HOTSPOT', 'Hotspot', {
+      group: 'content'
+    });
+    if (!ix) return null;
+    ix.shape = 'polygon';
+    ix.polygon = pts;
+    ix.name = 'Hotspot';
+    ix.hotspotKind = 'highlight';
+    ix.color = HOTSPOT_DEFAULT_COLOR;
+    ix.opacity = 0.22;
+    ix.borderWidth = 1.5;
+    ix.animation = 'none';
+    ensureHotspotMaskDefaults(ix);
+    syncScenePorts(n);
+    return hotspotMaskViewModel(ix);
+  }
+
+  function updateSceneHotspotMask(state, nodeId, hotspotId, patch) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    patch = patch || {};
+    ensureHotspotMaskDefaults(ix);
+
+    if (patch.name != null || patch.label != null) {
+      var name = patch.name != null ? String(patch.name) : String(patch.label);
+      ix.name = name;
+      updateInteraction(state, nodeId, ix.id, { label: name });
+    }
+    if (patch.hotspotKind != null && HOTSPOT_KINDS[patch.hotspotKind]) {
+      ix.hotspotKind = patch.hotspotKind;
+    }
+    if (patch.color != null && String(patch.color).trim()) {
+      ix.color = String(patch.color).trim();
+    }
+    if (patch.opacity != null) ix.opacity = clampHotspotOpacity(patch.opacity);
+    if (patch.borderWidth != null) ix.borderWidth = clampHotspotBorder(patch.borderWidth);
+    if (patch.animation != null && HOTSPOT_ANIMATIONS[patch.animation]) {
+      ix.animation = patch.animation;
+    }
+    if (patch.visible != null || patch.enabled != null) {
+      ix.enabled = patch.visible != null ? !!patch.visible : !!patch.enabled;
+    }
+    if (patch.polygon != null) {
+      var nextPoly = normalizePolygon(patch.polygon);
+      if (nextPoly.length >= 3) ix.polygon = nextPoly;
+    }
+    ix.shape = 'polygon';
+    ensureHotspotMaskDefaults(ix);
+    syncScenePorts(n);
+    return hotspotMaskViewModel(ix);
+  }
+
+  function setHotspotVertex(state, nodeId, hotspotId, index, x, y) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    ensureHotspotMaskDefaults(ix);
+    var i = Number(index);
+    if (!(i >= 0) || i >= ix.polygon.length) return null;
+    ix.polygon[i] = { x: clampPercent(x, ix.polygon[i].x), y: clampPercent(y, ix.polygon[i].y) };
+    return hotspotMaskViewModel(ix);
+  }
+
+  function insertHotspotVertex(state, nodeId, hotspotId, afterIndex, x, y) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    ensureHotspotMaskDefaults(ix);
+    var i = Math.max(0, Math.min(ix.polygon.length, Number(afterIndex) + 1));
+    ix.polygon.splice(i, 0, { x: clampPercent(x, 50), y: clampPercent(y, 50) });
+    return hotspotMaskViewModel(ix);
+  }
+
+  function removeHotspotVertex(state, nodeId, hotspotId, index) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    ensureHotspotMaskDefaults(ix);
+    if (ix.polygon.length <= 3) return hotspotMaskViewModel(ix);
+    var i = Number(index);
+    if (!(i >= 0) || i >= ix.polygon.length) return null;
+    ix.polygon.splice(i, 1);
+    return hotspotMaskViewModel(ix);
+  }
+
+  function translateHotspotMask(state, nodeId, hotspotId, dxPct, dyPct) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    ensureHotspotMaskDefaults(ix);
+    var dx = Number(dxPct) || 0;
+    var dy = Number(dyPct) || 0;
+    ix.polygon = ix.polygon.map(function (p) {
+      return { x: clampPercent(p.x + dx, p.x), y: clampPercent(p.y + dy, p.y) };
+    });
+    return hotspotMaskViewModel(ix);
+  }
+
+  function duplicateSceneHotspotMask(state, nodeId, hotspotId) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return null;
+    ensureHotspotMaskDefaults(ix);
+    var name = (ix.name || ix.label || 'Hotspot') + ' copia';
+    var copy = addInteractionToScene(state, nodeId, 'HOTSPOT', name, {
+      group: 'content'
+    });
+    if (!copy) return null;
+    copy.shape = 'polygon';
+    copy.polygon = ix.polygon.map(function (p) {
+      return { x: clampPercent(p.x + 1.5, p.x), y: clampPercent(p.y + 1.5, p.y) };
+    });
+    copy.name = name;
+    copy.hotspotKind = ix.hotspotKind;
+    copy.color = ix.color;
+    copy.opacity = ix.opacity;
+    copy.borderWidth = ix.borderWidth;
+    copy.animation = ix.animation;
+    copy.enabled = ix.enabled !== false;
+    ensureHotspotMaskDefaults(copy);
+    syncScenePorts(n);
+    return hotspotMaskViewModel(copy);
+  }
+
+  function removeSceneHotspotMask(state, nodeId, hotspotId) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, hotspotId);
+    if (!ix || !isSceneHotspotMask(ix)) return false;
+    removeInteraction(state, nodeId, ix.id);
+    return true;
   }
 
   function resolveButtonsForLayout(state, nodeId, ids, imageW, imageH) {
@@ -1688,9 +1929,29 @@ var ExperienciaEngine = (function () {
       else if (cfg.marginY != null) ix.marginY = cfg.marginY;
       if (partial.positionInitialized != null) ix.positionInitialized = partial.positionInitialized;
       else if (cfg.positionInitialized != null) ix.positionInitialized = cfg.positionInitialized;
+      /* V6.2.00 — polygon mask hotspots */
+      if (partial.shape != null) ix.shape = partial.shape;
+      else if (cfg.shape != null) ix.shape = cfg.shape;
+      if (partial.polygon != null) ix.polygon = partial.polygon;
+      else if (cfg.polygon != null) ix.polygon = cfg.polygon;
+      if (partial.name != null) ix.name = partial.name;
+      else if (cfg.name != null) ix.name = cfg.name;
+      if (partial.hotspotKind != null) ix.hotspotKind = partial.hotspotKind;
+      else if (cfg.hotspotKind != null) ix.hotspotKind = cfg.hotspotKind;
+      if (partial.opacity != null) ix.opacity = partial.opacity;
+      else if (cfg.opacity != null) ix.opacity = cfg.opacity;
+      if (partial.borderWidth != null) ix.borderWidth = partial.borderWidth;
+      else if (cfg.borderWidth != null) ix.borderWidth = cfg.borderWidth;
+      if (partial.animation != null) ix.animation = partial.animation;
+      else if (cfg.animation != null) ix.animation = cfg.animation;
+      if (partial.color != null) ix.color = partial.color;
+      else if (cfg.color != null) ix.color = cfg.color;
     }
-    if (ix.color != null) delete ix.color;
-    if (cfg.color != null) delete cfg.color;
+    /* Button colors come from Theme — strip only on BUTTON */
+    if (String(ix.type || '').toUpperCase() === 'BUTTON') {
+      if (ix.color != null) delete ix.color;
+      if (cfg.color != null) delete cfg.color;
+    }
     return ix;
   }
 
@@ -5085,6 +5346,20 @@ var ExperienciaEngine = (function () {
     mirrorSceneButton: mirrorSceneButton,
     duplicateSceneButton: duplicateSceneButton,
     createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
+    isHotspotsEditableNode: isHotspotsEditableNode,
+    isSceneHotspotMask: isSceneHotspotMask,
+    listSceneHotspotMasks: listSceneHotspotMasks,
+    getSceneHotspotMask: getSceneHotspotMask,
+    addSceneHotspotMask: addSceneHotspotMask,
+    updateSceneHotspotMask: updateSceneHotspotMask,
+    setHotspotVertex: setHotspotVertex,
+    insertHotspotVertex: insertHotspotVertex,
+    removeHotspotVertex: removeHotspotVertex,
+    translateHotspotMask: translateHotspotMask,
+    duplicateSceneHotspotMask: duplicateSceneHotspotMask,
+    removeSceneHotspotMask: removeSceneHotspotMask,
+    HOTSPOT_KINDS: HOTSPOT_KINDS,
+    HOTSPOT_ANIMATIONS: HOTSPOT_ANIMATIONS,
     alignSceneButtons: alignSceneButtons,
     distributeSceneButtons: distributeSceneButtons,
     spaceSceneButtons: spaceSceneButtons,

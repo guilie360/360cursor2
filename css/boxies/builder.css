@@ -6785,7 +6785,9 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
 }
 
 .builder-exp-stage.is-buttons-mode .builder-exp-minimap,
-.builder-exp-stage.is-buttons-mode .builder-exp-focus-fs {
+.builder-exp-stage.is-buttons-mode .builder-exp-focus-fs,
+.builder-exp-stage.is-hotspots-mode .builder-exp-minimap,
+.builder-exp-stage.is-hotspots-mode .builder-exp-focus-fs {
   display: none;
 }
 
@@ -7441,5 +7443,150 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .boxies-xp__scene-btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* ── V6.2.00 HOTSPOTS polygon masks ── */
+.builder-exp-hotspots-stage {
+  position: absolute;
+  inset: 52px 12px 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050505;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
+.builder-exp-workspace.is-canvas-mode .builder-exp-hotspots-stage {
+  inset: 58px 16px 16px;
+}
+
+.builder-exp-hotspots-stage[hidden] {
+  display: none !important;
+}
+
+.builder-exp-hotspots-stage__empty {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+  text-align: center;
+  padding: 24px;
+}
+
+.builder-exp-hotspots-frame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+}
+
+.builder-exp-hotspots-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+
+.builder-exp-hotspots-layer {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.builder-exp-hotspots-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.builder-exp-hs-poly {
+  cursor: pointer;
+  transition: fill-opacity 0.15s ease;
+}
+
+.builder-exp-hs-poly.is-selected {
+  cursor: move;
+}
+
+.builder-exp-hs-poly.is-invisible {
+  opacity: 0.35;
+}
+
+.builder-exp-hs-vertex {
+  fill: #0a0a0a;
+  stroke: #6fbf86;
+  stroke-width: 0.35;
+  cursor: grab;
+  vector-effect: non-scaling-stroke;
+}
+
+.builder-exp-hs-vertex:active {
+  cursor: grabbing;
+}
+
+.builder-exp-hs-draft-vertex {
+  fill: #6fbf86;
+  stroke: #0a0a0a;
+  stroke-width: 0.25;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.builder-exp-hs-draft {
+  pointer-events: none;
+}
+
+.builder-exp-hs-poly.is-anim-pulse {
+  animation: builderExpHsPulse 1.4s ease-in-out infinite;
+}
+
+.builder-exp-hs-poly.is-anim-fade {
+  animation: builderExpHsFade 1.8s ease-in-out infinite;
+}
+
+@keyframes builderExpHsPulse {
+  0%, 100% { stroke-opacity: 0.55; }
+  50% { stroke-opacity: 1; }
+}
+
+@keyframes builderExpHsFade {
+  0%, 100% { fill-opacity: 0.04; }
+  50% { fill-opacity: 0.18; }
+}
+
+.builder-exp-hs-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.builder-exp-hotspot-panel input[type="color"] {
+  width: 100%;
+  height: 32px;
+  padding: 2px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0a0a0a;
+  cursor: pointer;
 }
 
