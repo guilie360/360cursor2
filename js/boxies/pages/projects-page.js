@@ -674,8 +674,13 @@ var BoxiesProjectsPage = (function () {
     });
   }
 
-  function openBuilder(projectId, slug) {
-    return BoxiesRouter.navigate('builder', {
+  function openBuilder(projectId, slug, experienceType) {
+    var type = experienceType || activeExperienceType;
+    var page =
+      typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.getBuilderPage
+        ? BoxiesExperienceTypes.getBuilderPage(type)
+        : 'builder';
+    return BoxiesRouter.navigate(page, {
       projectId: projectId || null,
       project: slug || null
     });
@@ -731,8 +736,11 @@ var BoxiesProjectsPage = (function () {
   /* V5.9.37 aliases — same global operation loader */
   function showCreateBusy() {
     document.body.classList.add('boxies-is-creating-showroom');
-    var meta = experienceMeta(activeExperienceType);
-    showGlobalBusy('Creando ' + (meta.singular || 'experiencia').toLowerCase());
+    var label =
+      typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.getCreateBusyLabel
+        ? BoxiesExperienceTypes.getCreateBusyLabel(activeExperienceType)
+        : ('Creando ' + String((experienceMeta(activeExperienceType).singular || 'experiencia')).toLowerCase());
+    showGlobalBusy(label);
   }
 
   function hideCreateBusy() {
@@ -784,7 +792,11 @@ var BoxiesProjectsPage = (function () {
 
   /* V5.9.41 — edit → builder uses the same global busy overlay */
   function showOpenBusy() {
-    showGlobalBusy('Cargando showroom');
+    var label =
+      typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.getOpenBusyLabel
+        ? BoxiesExperienceTypes.getOpenBusyLabel(activeExperienceType)
+        : 'Cargando showroom';
+    showGlobalBusy(label);
   }
 
   function markPendingOpen(projectId) {

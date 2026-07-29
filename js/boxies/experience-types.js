@@ -46,7 +46,11 @@ var BoxiesExperienceTypes = (function () {
       emptyMessage: 'No hay cotizaciones registradas.',
       selectorTitle: 'Cotización',
       selectorDesc: 'Propuesta comercial interactiva para clientes.',
-      selectorCta: 'Crear →'
+      selectorCta: 'Crear →',
+      /* V7.1.00 — exclusive Quotation Builder host */
+      builderPage: 'quotation-builder',
+      createBusyLabel: 'Creando Quotation Room',
+      openBusyLabel: 'Cargando Quotation Room'
     },
     {
       id: 'landing',
@@ -112,6 +116,24 @@ var BoxiesExperienceTypes = (function () {
     return (TOOLS_BY_TYPE[id] || []).slice();
   }
 
+  /** V7.1.00 — which Boxies page hosts the editor for this experience type. */
+  function getBuilderPage(typeId) {
+    var t = get(typeId);
+    return (t && t.builderPage) || 'builder';
+  }
+
+  function getCreateBusyLabel(typeId) {
+    var t = get(typeId);
+    if (t && t.createBusyLabel) return t.createBusyLabel;
+    return 'Creando ' + String((t && t.singular) || 'experiencia').toLowerCase();
+  }
+
+  function getOpenBusyLabel(typeId) {
+    var t = get(typeId);
+    if (t && t.openBusyLabel) return t.openBusyLabel;
+    return 'Cargando ' + String((t && t.singular) || 'experiencia').toLowerCase();
+  }
+
   function isToolEnabled(typeId, toolId) {
     var tools = enabledTools(typeId);
     return tools.indexOf(String(toolId || '')) >= 0;
@@ -142,6 +164,9 @@ var BoxiesExperienceTypes = (function () {
     list: list,
     enabledTools: enabledTools,
     isToolEnabled: isToolEnabled,
+    getBuilderPage: getBuilderPage,
+    getCreateBusyLabel: getCreateBusyLabel,
+    getOpenBusyLabel: getOpenBusyLabel,
     getActive: getActive,
     setActive: setActive
   };

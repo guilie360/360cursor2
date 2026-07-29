@@ -2,6 +2,7 @@
  * BOXIES Router (minimal) — activates one registered page inside #boxiesContent.
  * Builder identity: projectId (UUID) is canonical; proyecto/project slug is vanity for public URL + legacy engines.
  * History API only — never reloads the app or remounts the Shell.
+ * V7.1.00 — quotation-builder is a first-class builder host (own nav, not Showroom).
  */
 var BoxiesRouter = (function () {
   var currentId = null;
@@ -10,6 +11,14 @@ var BoxiesRouter = (function () {
   var started = false;
   var TRANSITION_MS = 0;
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  var BUILDER_HOST_PAGES = {
+    builder: 1,
+    'quotation-builder': 1
+  };
+
+  function isBuilderHostPage(pageId) {
+    return !!BUILDER_HOST_PAGES[String(pageId || '')];
+  }
 
   function wait(ms) {
     return new Promise(function (resolve) {
@@ -102,11 +111,11 @@ var BoxiesRouter = (function () {
     var id = pageId || 'hall';
     var projectId = opts.projectId || null;
     var project = opts.project != null ? opts.project : (opts.proyecto || opts.slug || null);
-    if (id !== 'builder') {
+    if (!isBuilderHostPage(id)) {
       projectId = null;
       project = null;
     }
-    if (id === 'builder' && !projectId && !project) {
+    if (isBuilderHostPage(id) && !projectId && !project) {
       var fromUrl = parseState();
       projectId = fromUrl.projectId;
       project = fromUrl.project;
@@ -149,8 +158,9 @@ var BoxiesRouter = (function () {
     }
 
     slot.innerHTML = '';
-    slot.classList.toggle('is-builder-embed', id === 'builder' && !!(projectId || project));
-    BoxiesShell.setActiveNav(id);
+    slot.classList.toggle('is-builder-embed', isBuilderHostPage(id) && !!(projectId || project));
+    /* Quotation Builder highlights the platform Builder nav item */
+    BoxiesShell.setActiveNav(id === 'quotation-builder' ? 'builder' : id);
     if (!opts.silentUrl) writeUrl(id, { projectId: projectId, project: project });
     currentId = id;
     currentProjectId = projectId;
