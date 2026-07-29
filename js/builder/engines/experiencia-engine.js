@@ -192,6 +192,7 @@ var ExperienciaEngine = (function () {
       userOverrides: false,
       legacySnapshot: null,
       resetSnapshots: [],
+      flowSnapshots: [],
       canvas: {
         panX: 40,
         panY: 40,
@@ -225,6 +226,7 @@ var ExperienciaEngine = (function () {
     if (!Array.isArray(exp.edges)) exp.edges = [];
     if (!Array.isArray(exp.reviewFlags)) exp.reviewFlags = [];
     if (!Array.isArray(exp.resetSnapshots)) exp.resetSnapshots = [];
+    if (!Array.isArray(exp.flowSnapshots)) exp.flowSnapshots = [];
     if (!Array.isArray(exp.archivedLegacyNodes)) exp.archivedLegacyNodes = [];
     if (!Array.isArray(exp.archivedInlineNodes)) exp.archivedInlineNodes = [];
     if (!exp.canvas || typeof exp.canvas !== 'object') {
@@ -2879,6 +2881,10 @@ var ExperienciaEngine = (function () {
     var prevHero = exp.nodes.find(function (n) { return n.id === 'exp-hero' || n.kind === 'hero'; });
 
     if (looksLikeLegacyStructureMap(exp) && !exp.legacySnapshot) {
+      /* V6.5.01 — snapshot before automatic legacy wipe */
+      if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+        ExperienciaSnapshot.capture(state, 'pre-legacy-migrate', 'migration');
+      }
       exp.legacySnapshot = snapshotLegacy(exp);
       exp.nodes = [];
       exp.edges = [];
@@ -4149,6 +4155,21 @@ var ExperienciaEngine = (function () {
    */
   function applyFlowTemplate(state, templateId, options) {
     options = options || {};
+    var run = function () {
+      return applyFlowTemplateInner(state, templateId, options);
+    };
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.runGuarded) {
+      /* User-initiated template apply may shrink intentionally */
+      var guarded = ExperienciaSnapshot.runGuarded(state, 'applyFlowTemplate:' + (templateId || ''), run, {
+        allowShrink: true
+      });
+      return guarded.result;
+    }
+    return run();
+  }
+
+  function applyFlowTemplateInner(state, templateId, options) {
+    options = options || {};
     var exp = ensureFlow(state);
     var analysis = analyzeStructureForFlow(state);
     templateId = templateId || analysis.recommended || FLOW_TEMPLATE_IDS.simple;
@@ -4395,6 +4416,9 @@ var ExperienciaEngine = (function () {
    * Reset Experiencia to Hero-only. Archives flow JSON; never touches projectAssets.
    */
   function resetFlow(state) {
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'pre-resetFlow', 'reset');
+    }
     var exp = ensureState(state);
     if (!Array.isArray(exp.resetSnapshots)) exp.resetSnapshots = [];
     try {
@@ -4437,6 +4461,9 @@ var ExperienciaEngine = (function () {
     exp.dirty = true;
     exp._draftSaved = false;
     /* projectAssets / estructura / heroContent / menu untouched */
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'post-resetFlow', 'reset');
+    }
     return exp;
   }
 
@@ -4444,6 +4471,9 @@ var ExperienciaEngine = (function () {
     var exp = ensureState(state);
     exp.dirty = true;
     exp._draftSaved = false;
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.captureDeferred) {
+      ExperienciaSnapshot.captureDeferred(state, 'auto-dirty');
+    }
     return exp;
   }
 
@@ -4452,6 +4482,9 @@ var ExperienciaEngine = (function () {
     exp.dirty = false;
     exp._draftSaved = true;
     exp.draftSavedAt = new Date().toISOString();
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'save', 'save');
+    }
     return exp;
   }
 
@@ -4654,6 +4687,9 @@ var ExperienciaEngine = (function () {
   }
 
   function addManualEdge(state, fromId, toId, label, portId, targetPortId) {
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'pre-addEdge', 'mutation');
+    }
     var exp = ensureFlow(state);
     if (fromId === toId) return null;
     var pid = portId || 'out';
@@ -4676,14 +4712,24 @@ var ExperienciaEngine = (function () {
       manual: true
     });
     exp.edges.push(ed);
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'addEdge', 'mutation');
+    }
     return ed;
   }
 
   function removeEdge(state, edgeId) {
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'pre-removeEdge', 'mutation');
+    }
     var exp = ensureState(state);
     var before = exp.edges.length;
     exp.edges = exp.edges.filter(function (ed) { return ed.id !== edgeId; });
     if (exp.canvas && exp.canvas.selectedEdgeId === edgeId) exp.canvas.selectedEdgeId = null;
+    if (before !== exp.edges.length &&
+        typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'removeEdge', 'mutation');
+    }
     return before !== exp.edges.length;
   }
 
@@ -4942,6 +4988,9 @@ var ExperienciaEngine = (function () {
 
   function removeNode(state, nodeId, options) {
     options = options || {};
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'pre-removeNode', 'mutation');
+    }
     var exp = ensureState(state);
     var n = getNode(state, nodeId);
     if (!n) return { ok: false, reason: 'missing' };
@@ -4956,6 +5005,9 @@ var ExperienciaEngine = (function () {
     exp.canvas.selectedIds = (exp.canvas.selectedIds || []).filter(function (id) { return id !== nodeId; });
     if (exp.canvas.selectedId === nodeId) {
       exp.canvas.selectedId = exp.canvas.selectedIds[0] || null;
+    }
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'removeNode', 'mutation');
     }
     return { ok: true, node: n };
   }
@@ -5367,6 +5419,12 @@ var ExperienciaEngine = (function () {
     resetFlow: resetFlow,
     markExperienciaDirty: markExperienciaDirty,
     markExperienciaSaved: markExperienciaSaved,
+    runGuardedMutation: function (state, reason, fn, options) {
+      if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.runGuarded) {
+        return ExperienciaSnapshot.runGuarded(state, reason, fn, options);
+      }
+      return { ok: true, rolledBack: false, result: typeof fn === 'function' ? fn() : null };
+    },
     createNodeFromMenu: createNodeFromMenu,
     createStructureLinkedNode: createStructureLinkedNode,
     addManualEdge: addManualEdge,

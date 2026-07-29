@@ -8084,3 +8084,108 @@ body.boxies-exp-canvas-mode .builder-exp-proto-stage,
   background: rgba(111, 191, 134, 0.28);
 }
 
+/* ── V6.5.01 Flow recovery dialog ── */
+.boxies-flow-recovery {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.boxies-flow-recovery__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.boxies-flow-recovery__panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 96%);
+  padding: 22px 24px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #121212;
+  color: #fff;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.boxies-flow-recovery__title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.boxies-flow-recovery__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.boxies-flow-recovery__card {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.boxies-flow-recovery__card.is-better {
+  border-color: rgba(111, 191, 134, 0.4);
+  background: rgba(111, 191, 134, 0.1);
+}
+
+.boxies-flow-recovery__lab {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  margin-bottom: 4px;
+}
+
+.boxies-flow-recovery__val {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.boxies-flow-recovery__meta {
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.boxies-flow-recovery__meta > div {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.boxies-flow-recovery__meta dt {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-flow-recovery__meta dd {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.boxies-flow-recovery__hint {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.boxies-flow-recovery__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+

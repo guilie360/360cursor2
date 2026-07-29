@@ -1786,6 +1786,11 @@ var ExperienciaCanvas = (function () {
     api = api || {};
     ExperienciaEngine.ensureFlow(state);
 
+    /* V6.5.01 — baseline snapshot + recovery offer if a richer copy exists */
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+      ExperienciaSnapshot.capture(state, 'open-experiencia', 'autosave');
+    }
+
     var stage = rootEl.querySelector('[data-exp-stage]');
     var viewport = rootEl.querySelector('[data-exp-viewport]');
     var world = rootEl.querySelector('[data-exp-world]');
@@ -5802,6 +5807,23 @@ var ExperienciaCanvas = (function () {
     window.addEventListener('boxies:rail-toggle', onViewportResize);
 
     renderAll();
+
+    /* V6.5.01 — offer restore if a richer snapshot exists */
+    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.checkAndOfferRecovery) {
+      ExperienciaSnapshot.checkAndOfferRecovery(state, {
+        host: workspace || rootEl || document.body
+      }).then(function (res) {
+        if (res && res.action === 'restore') {
+          renderAll();
+          fitView();
+          if (api.saveState) api.saveState();
+          else persist();
+        } else if (res && res.action === 'duplicate') {
+          if (api.saveState) api.saveState();
+        }
+      });
+    }
+
     function showResetConfirm() {
       boxiesConfirm({
         title: '¿Reiniciar flujo?',
@@ -5824,6 +5846,8 @@ var ExperienciaCanvas = (function () {
     function saveDraft() {
       if (ExperienciaEngine.markExperienciaSaved) {
         ExperienciaEngine.markExperienciaSaved(state);
+      } else if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+        ExperienciaSnapshot.capture(state, 'saveDraft', 'save');
       }
       if (api.saveState) api.saveState();
       else if (api.onChange) api.onChange();
