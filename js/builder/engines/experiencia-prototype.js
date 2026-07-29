@@ -142,25 +142,63 @@ var ExperienciaPrototype = (function () {
     return { path: path, branchCount: branchCount };
   }
 
-  function layoutVolumes(nodes, typeId) {
-    var cols = Math.max(2, Math.ceil(Math.sqrt(Math.max(1, nodes.length))));
+  function layoutVolumes(nodes, typeId, adj) {
+    adj = adj || {};
+    var byId = {};
+    nodes.forEach(function (n) { byId[n.id] = n; });
+
+    /* BFS order from hero — spatial progression follows Canvas edges */
+    var order = [];
+    var seen = {};
+    function enqueue(id) {
+      if (!id || !byId[id] || seen[id]) return;
+      seen[id] = true;
+      order.push(byId[id]);
+      (adj[id] || []).forEach(enqueue);
+    }
+    var hero = nodes.find(function (n) {
+      return n.kind === 'hero' || n.id === 'exp-hero';
+    });
+    if (hero) enqueue(hero.id);
+    nodes.forEach(function (n) {
+      if (!seen[n.id]) enqueue(n.id);
+    });
+
     var volumes = [];
-    nodes.forEach(function (n, i) {
+    var lane = 0;
+    var depth = 0;
+    order.forEach(function (n, i) {
       var shape = inferShape(n, typeId);
       var size = shapeSize(shape);
-      var col = i % cols;
-      var row = Math.floor(i / cols);
       var level = nodeLevelHint(n);
-      var gap = 3.2;
-      var x = (col - (cols - 1) / 2) * (size.w + gap * 0.55);
-      var y = (row - Math.floor((nodes.length - 1) / cols) / 2) * (size.d + gap * 0.55);
-      var z = level > 0 ? (level - 1) * 1.15 : 0;
+      var outs = (adj[n.id] || []).filter(function (to) { return !!byId[to]; });
+
+      /* Step forward along path; branch fans sideways */
+      var x = depth * 5.2;
+      var y = lane * 4.4;
+      var z = level > 0 ? (level - 1) * 1.2 : 0;
       if (shape === 'tower') z = 0;
+      if (shape === 'floor') z = Math.max(z, 1.2 + level * 0.15);
+      if (shape === 'apt') z = Math.max(z, 2.4);
+      if (shape === 'room') z = Math.max(z, 3.2);
       if (shape === 'overview') {
         x = 0;
         y = 0;
-        z = -0.4;
+        z = -0.35;
       }
+      if (shape === 'park') {
+        y = 6.5;
+        z = -0.2;
+      }
+      if (shape === 'pool') {
+        y = -5.5;
+        z = -0.15;
+      }
+      if (shape === 'transition') {
+        x = depth * 5.2 - 1.6;
+        z = Math.max(0.4, z);
+      }
+
       volumes.push({
         id: n.id,
         nodeId: n.id,
@@ -175,8 +213,21 @@ var ExperienciaPrototype = (function () {
         w: size.w,
         d: size.d,
         h: size.h,
-        fill: shapeFill(shape)
+        fill: shapeFill(shape),
+        dual: shape === 'house'
       });
+
+      if (outs.length > 1) {
+        lane += 1;
+      } else if (outs.length === 1) {
+        depth += 1;
+      } else {
+        depth += 1;
+      }
+      /* Soft stagger so siblings don't stack */
+      if (i > 0 && outs.length <= 1) {
+        lane += (i % 3 === 0) ? 0.15 : 0;
+      }
     });
     return volumes;
   }
@@ -211,7 +262,7 @@ var ExperienciaPrototype = (function () {
     var nodes = listFlowNodes(state);
     var adj = adjacency(state);
     var play = buildPlaybackPath(nodes, adj);
-    var volumes = layoutVolumes(nodes, typeId);
+    var volumes = layoutVolumes(nodes, typeId, adj);
     var levels = {};
     volumes.forEach(function (v) {
       if (v.level > 0) levels[v.level] = true;

@@ -7612,35 +7612,84 @@ body.boxies-exp-canvas-mode .builder-exp-proto-stage,
   display: none !important;
 }
 
-.builder-exp-proto-canvas {
+.builder-exp-proto-host,
+.builder-exp-proto-stage .builder-xp-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.boxies-proto-rt__canvas {
   display: block;
   width: 100%;
   height: 100%;
   background: #000;
 }
 
-.builder-exp-proto-info {
+.boxies-xp__hud {
   position: absolute;
   left: 16px;
-  bottom: 16px;
-  z-index: 2;
+  bottom: 56px;
+  z-index: 6;
   display: flex;
   flex-direction: column;
   gap: 2px;
   pointer-events: none;
-  max-width: min(280px, 70%);
+  max-width: min(320px, 70%);
 }
 
-.builder-exp-proto-info__title {
+.boxies-xp__hud[hidden] {
+  display: none !important;
+}
+
+.boxies-xp__hud-title {
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-.builder-exp-proto-info__meta {
+.boxies-xp__hud-meta {
   color: rgba(255, 255, 255, 0.45);
   font-size: 11px;
+}
+
+.boxies-xp__transport {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 7;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(8, 8, 8, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.boxies-xp__transport[hidden] {
+  display: none !important;
+}
+
+.boxies-xp__tbtn {
+  appearance: none;
+  width: 34px;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.boxies-xp__tbtn:hover {
+  background: rgba(111, 191, 134, 0.16);
+  color: #6fbf86;
 }
 
 .builder-exp-proto-panel {

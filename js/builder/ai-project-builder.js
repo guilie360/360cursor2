@@ -2207,7 +2207,12 @@ var AiProjectBuilderView = (function () {
       host.innerHTML = '<div class="builder-vista-previa-empty"><p class="builder-menu-hint">ExperienceRuntime no disponible.</p></div>';
       return;
     }
-    var player = ExperienceRuntime.mount(host, { runtime: runtime });
+    var player = ExperienceRuntime.mount(host, {
+      runtime: runtime,
+      renderer: typeof MediaRenderer !== 'undefined' ? MediaRenderer : null,
+      mode: 'preview',
+      startLabel: 'INICIAR'
+    });
     if (player) player.showGate();
 
     var reloadBtn = rootEl.querySelector('#builderVistaPreviaReload');
@@ -2218,7 +2223,12 @@ var AiProjectBuilderView = (function () {
           return;
         }
         var rt = RuntimeCompiler.getRuntime();
-        var p = ExperienceRuntime.mount(host, { runtime: rt });
+        var p = ExperienceRuntime.mount(host, {
+          runtime: rt,
+          renderer: typeof MediaRenderer !== 'undefined' ? MediaRenderer : null,
+          mode: 'preview',
+          startLabel: 'INICIAR'
+        });
         if (p) p.showGate();
       };
     }

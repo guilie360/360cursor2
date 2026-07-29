@@ -1,8 +1,10 @@
-/* BOXIES ExperienceRuntime — single execution engine for Vista previa + Showroom.
- * Reads window.BuilderRuntime (or an injected runtime) and plays the graph. */
+/* BOXIES ExperienceRuntime — single navigation / playback engine.
+ * Preview and Prototipo share this graph walker; only the Renderer differs.
+ *   ExperienceRuntime → MediaRenderer | PrototypeRenderer */
 var ExperienceRuntime = (function () {
   var FADE_MS = 420;
   var MIN_LOADER_MS = 900;
+  var _players = [];
   var _active = null;
 
   function esc(v) {
@@ -28,7 +30,6 @@ var ExperienceRuntime = (function () {
   }
 
   function outsFrom(nodeOrConnections, nodeId, connectionsFallback) {
-    /* Prefer node.outputs from compiled graph */
     if (nodeOrConnections && Array.isArray(nodeOrConnections.outputs)) {
       return nodeOrConnections.outputs.map(function (o) {
         return {
@@ -141,78 +142,46 @@ var ExperienceRuntime = (function () {
     return result;
   }
 
-  function collectPreloadUrls(runtime) {
-    var urls = [];
-    var seen = {};
-    function add(u) {
-      if (!u || seen[u]) return;
-      seen[u] = true;
-      urls.push(u);
+  function resolveRendererFactory(options) {
+    var r = options && options.renderer;
+    if (r && typeof r.create === 'function') return r;
+    if (typeof r === 'string' && r === 'prototype' &&
+        typeof PrototypeRenderer !== 'undefined') {
+      return PrototypeRenderer;
     }
-    (runtime.assets || []).forEach(function (a) {
-      if (!a) return;
-      add(a.publicUrl);
-      add(a.thumbnailUrl);
-    });
-    (runtime.nodes || []).forEach(function (n) {
-      if (!n) return;
-      if (n.media) {
-        add(n.media.url);
-        add(n.media.thumbnailUrl);
-      }
-      (n.hubPlants || []).forEach(function (p) {
-        add(p.url);
-        add(p.thumbnailUrl);
-      });
-    });
-    return urls;
+    if (typeof MediaRenderer !== 'undefined') return MediaRenderer;
+    return null;
   }
 
-  function preloadUrl(url) {
-    return new Promise(function (resolve) {
-      if (!url) {
-        resolve(false);
-        return;
-      }
-      var lower = String(url).toLowerCase();
-      var isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(lower) || lower.indexOf('/videos/') !== -1;
-      if (isVideo) {
-        var v = document.createElement('video');
-        v.preload = 'auto';
-        v.muted = true;
-        v.playsInline = true;
-        var done = false;
-        function finish(ok) {
-          if (done) return;
-          done = true;
-          resolve(!!ok);
-        }
-        v.onloadeddata = function () { finish(true); };
-        v.onerror = function () { finish(false); };
-        setTimeout(function () { finish(true); }, 8000);
-        v.src = url;
-        try { v.load(); } catch (e) { finish(false); }
-        return;
-      }
-      var img = new Image();
-      img.onload = function () { resolve(true); };
-      img.onerror = function () { resolve(false); };
-      img.src = url;
-    });
-  }
-
-  function createShell(host) {
+  function createShell(host, options) {
+    var startLabel = (options && options.startLabel) || 'INICIAR';
+    var modeClass = (options && options.mode === 'prototype')
+      ? ' boxies-xp--prototype'
+      : '';
     var root = document.createElement('div');
-    root.className = 'boxies-xp';
+    root.className = 'boxies-xp' + modeClass;
     root.setAttribute('data-boxies-xp', '1');
+    if (options && options.mode === 'prototype') {
+      root.setAttribute('data-boxies-prototype', '1');
+    }
     root.innerHTML =
       '<div class="boxies-xp__stage" data-xp-stage></div>' +
+      '<div class="boxies-xp__hud" data-xp-hud hidden>' +
+        '<div class="boxies-xp__hud-title" data-xp-hud-title></div>' +
+        '<div class="boxies-xp__hud-meta" data-xp-hud-meta></div>' +
+      '</div>' +
+      '<div class="boxies-xp__transport" data-xp-transport hidden>' +
+        '<button type="button" class="boxies-xp__tbtn" data-xp-pause title="Pausa">❚❚</button>' +
+        '<button type="button" class="boxies-xp__tbtn" data-xp-play title="Play">▶</button>' +
+        '<button type="button" class="boxies-xp__tbtn" data-xp-restart title="Reiniciar">↺</button>' +
+        '<button type="button" class="boxies-xp__tbtn" data-xp-exit title="Salir">✕</button>' +
+      '</div>' +
       '<div class="boxies-xp__loader" data-xp-loader hidden aria-hidden="true">' +
         '<div class="boxies-xp__spinner" aria-hidden="true"></div>' +
         '<div class="boxies-xp__loader-label">C A R G A N D O</div>' +
       '</div>' +
       '<div class="boxies-xp__gate" data-xp-gate>' +
-        '<button type="button" class="boxies-xp__start" data-xp-start>INICIAR</button>' +
+        '<button type="button" class="boxies-xp__start" data-xp-start>' + esc(startLabel) + '</button>' +
       '</div>';
     host.appendChild(root);
     return root;
@@ -223,18 +192,30 @@ var ExperienceRuntime = (function () {
     this.host = host;
     this.options = options;
     this.runtime = options.runtime || null;
-    this.root = createShell(host);
+    this.state = options.state || null;
+    this.mode = options.mode || 'preview';
+    this.root = createShell(host, options);
     this.stage = this.root.querySelector('[data-xp-stage]');
     this.loader = this.root.querySelector('[data-xp-loader]');
     this.gate = this.root.querySelector('[data-xp-gate]');
     this.startBtn = this.root.querySelector('[data-xp-start]');
+    this.hud = this.root.querySelector('[data-xp-hud]');
+    this.hudTitle = this.root.querySelector('[data-xp-hud-title]');
+    this.hudMeta = this.root.querySelector('[data-xp-hud-meta]');
+    this.transport = this.root.querySelector('[data-xp-transport]');
     this._running = false;
+    this._paused = false;
     this._stopped = false;
     this._token = 0;
     this._nodesById = {};
     this._connections = [];
-    this._currentVideo = null;
+    this._visitIndex = 0;
+    this._visitTotal = 0;
     this._unbindStart = null;
+    this._onResize = null;
+
+    var factory = resolveRendererFactory(options);
+    this.renderer = factory ? factory.create(this) : null;
 
     var self = this;
     function onStart(ev) {
@@ -245,17 +226,64 @@ var ExperienceRuntime = (function () {
     this._unbindStart = function () {
       self.startBtn.removeEventListener('click', onStart);
     };
+
+    var pauseBtn = this.root.querySelector('[data-xp-pause]');
+    var playBtn = this.root.querySelector('[data-xp-play]');
+    var restartBtn = this.root.querySelector('[data-xp-restart]');
+    var exitBtn = this.root.querySelector('[data-xp-exit]');
+    if (pauseBtn) pauseBtn.addEventListener('click', function () { self.pause(); });
+    if (playBtn) playBtn.addEventListener('click', function () { self.resume(); });
+    if (restartBtn) restartBtn.addEventListener('click', function () { self.restart(); });
+    if (exitBtn) exitBtn.addEventListener('click', function () { self.exit(); });
+
+    this._onResize = function () {
+      if (self.renderer && self.renderer.resize) self.renderer.resize();
+    };
+    window.addEventListener('resize', this._onResize);
   }
 
   Player.prototype.setRuntime = function (runtime) {
     this.runtime = runtime || null;
+    if (this.renderer && this.renderer.setGraph) {
+      this.renderer.setGraph(this.runtime, this.state);
+    }
     return this;
+  };
+
+  Player.prototype.setState = function (state) {
+    this.state = state || null;
+    if (this.renderer && this.renderer.setGraph) {
+      this.renderer.setGraph(this.runtime, this.state);
+    }
+    return this;
+  };
+
+  Player.prototype.ctrl = function () {
+    var self = this;
+    return {
+      stage: this.stage,
+      runtime: this.runtime,
+      fadeMs: FADE_MS,
+      advance: function () { self.gotoNext(self._currentNodeId); },
+      advanceTo: function (id) { self.enterNode(id); },
+      isStopped: function () { return self._stopped; },
+      isPaused: function () { return self._paused; },
+      outputsOf: function (node) { return self.outputsOf(node); },
+      getNode: function (id) { return self._nodesById[String(id)] || null; },
+      listButtons: function (node) {
+        return listRuntimeSceneButtons(node, self._connections || []);
+      },
+      esc: esc
+    };
   };
 
   Player.prototype.showGate = function () {
     this.stopPlayback(true);
+    if (this.renderer && this.renderer.clear) this.renderer.clear();
     this.stage.innerHTML = '';
     this.hideLoader();
+    this.hideHud();
+    if (this.transport) this.transport.hidden = true;
     if (this.gate) {
       this.gate.hidden = false;
       this.gate.setAttribute('aria-hidden', 'false');
@@ -287,6 +315,26 @@ var ExperienceRuntime = (function () {
     }, 480);
   };
 
+  Player.prototype.showHud = function () {
+    if (this.hud) this.hud.hidden = false;
+    if (this.transport) this.transport.hidden = false;
+  };
+
+  Player.prototype.hideHud = function () {
+    if (this.hud) this.hud.hidden = true;
+  };
+
+  Player.prototype.updateHud = function (node) {
+    if (!this.hudTitle) return;
+    var label = node ? (node.label || node.typeLabel || 'Nodo') : '';
+    var type = node ? (node.typeLabel || node.kind || '') : '';
+    this.hudTitle.textContent = label;
+    this.hudMeta.textContent = type +
+      (this._visitTotal
+        ? (' · Nodo ' + this._visitIndex + ' / ' + this._visitTotal)
+        : '');
+  };
+
   Player.prototype.begin = function () {
     var runtime = this.runtime || window.BuilderRuntime || null;
     if (!runtime || !runtime.nodes || !runtime.nodes.length) {
@@ -297,18 +345,19 @@ var ExperienceRuntime = (function () {
     }
     this.runtime = runtime;
     this._stopped = false;
+    this._paused = false;
     this._running = true;
     this._token += 1;
     var token = this._token;
     this.hideGate();
     this.showLoader();
+    this.showHud();
     this.stage.innerHTML = '';
+    if (this.renderer && this.renderer.clear) this.renderer.clear();
 
     var self = this;
     var t0 = Date.now();
-    var urls = collectPreloadUrls(runtime);
-    var tasks = urls.slice(0, 24).map(preloadUrl);
-    Promise.all(tasks).then(function () {
+    function afterPrepare() {
       if (self._token !== token || self._stopped) return;
       var wait = Math.max(0, MIN_LOADER_MS - (Date.now() - t0));
       setTimeout(function () {
@@ -316,13 +365,33 @@ var ExperienceRuntime = (function () {
         self.hideLoader();
         self._bootGraph();
       }, wait);
-    });
+    }
+
+    if (this.renderer && this.renderer.prepare) {
+      this.renderer.prepare(runtime, afterPrepare, {
+        state: this.state,
+        mode: this.mode
+      });
+    } else {
+      afterPrepare();
+    }
   };
 
   Player.prototype._bootGraph = function () {
     var runtime = this.runtime;
     this._nodesById = indexById(runtime.nodes);
     this._connections = runtime.connections || [];
+    this._visitTotal = (runtime.nodes || []).filter(function (n) {
+      return n && n.kind !== 'action' && n.kind !== 'hero' && n.role !== 'hero';
+    }).length;
+    this._visitIndex = 0;
+    this._currentNodeId = null;
+
+    if (this.renderer && this.renderer.setGraph) {
+      this.renderer.setGraph(runtime, this.state);
+    }
+    if (this.renderer && this.renderer.resize) this.renderer.resize();
+
     var hero = findHero(runtime.nodes);
     var startId = runtime.entryNodeId || null;
     if (!startId && hero) startId = hero.id;
@@ -334,26 +403,51 @@ var ExperienceRuntime = (function () {
     this.enterNode(startId);
   };
 
+  Player.prototype.pause = function () {
+    if (!this._running || this._paused) return;
+    this._paused = true;
+    if (this.renderer && this.renderer.pause) this.renderer.pause();
+  };
+
+  Player.prototype.resume = function () {
+    if (!this._running || !this._paused) return;
+    this._paused = false;
+    if (this.renderer && this.renderer.resume) this.renderer.resume();
+  };
+
+  Player.prototype.restart = function () {
+    this.begin();
+  };
+
+  Player.prototype.exit = function () {
+    this.showGate();
+  };
+
   Player.prototype.stopPlayback = function (silent) {
     this._stopped = true;
     this._running = false;
+    this._paused = false;
     this._token += 1;
-    if (this._currentVideo) {
-      try {
-        this._currentVideo.pause();
-        this._currentVideo.removeAttribute('src');
-        this._currentVideo.load();
-      } catch (e) {}
-      this._currentVideo = null;
-    }
+    if (this.renderer && this.renderer.clear) this.renderer.clear();
     if (!silent) this.stage.innerHTML = '';
   };
 
   Player.prototype.destroy = function () {
     this.stopPlayback(true);
+    if (this.renderer && this.renderer.destroy) {
+      try { this.renderer.destroy(); } catch (e) {}
+    }
+    this.renderer = null;
     if (this._unbindStart) this._unbindStart();
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
     if (this.root && this.root.parentNode) this.root.parentNode.removeChild(this.root);
     this.root = null;
+    _players = _players.filter(function (p) { return p !== this; }, this);
+    if (_active === this) _active = null;
+  };
+
+  Player.prototype.resize = function () {
+    if (this.renderer && this.renderer.resize) this.renderer.resize();
   };
 
   Player.prototype.outputsOf = function (node) {
@@ -361,8 +455,22 @@ var ExperienceRuntime = (function () {
     return outsFrom(node, node.id, this._connections);
   };
 
+  Player.prototype.clearStage = function () {
+    if (this.renderer && this.renderer.clear) this.renderer.clear();
+    /* Keep prototype canvas; media clears via renderer + innerHTML below */
+    if (!this.renderer || this.renderer.id !== 'prototype') {
+      this.stage.innerHTML = '';
+    } else {
+      var leftovers = this.stage.querySelectorAll('.boxies-xp__empty, .boxies-xp__media, [data-proto-branch]');
+      for (var i = 0; i < leftovers.length; i++) {
+        if (leftovers[i].parentNode) leftovers[i].parentNode.removeChild(leftovers[i]);
+      }
+    }
+  };
+
   Player.prototype.gotoNext = function (fromNodeId, preferredTargetId) {
     if (this._stopped) return;
+    if (this._paused) return;
     var node = this._nodesById[String(fromNodeId)];
     var outs = this.outputsOf(node);
     if (preferredTargetId) {
@@ -370,23 +478,30 @@ var ExperienceRuntime = (function () {
       return;
     }
     if (!outs.length) {
-      this.stage.innerHTML =
-        '<div class="boxies-xp__empty boxies-xp__empty--end">Experiencia finalizada</div>';
+      this._running = false;
+      this.clearStage();
+      this.stage.insertAdjacentHTML('beforeend',
+        '<div class="boxies-xp__empty boxies-xp__empty--end">' +
+        (this.mode === 'prototype' ? 'Prototipo finalizado' : 'Experiencia finalizada') +
+        '</div>');
       return;
     }
     if (outs.length === 1) {
       this.enterNode(outs[0].toNodeId);
       return;
     }
-    /* Multiple exits — Runtime presents the branch; compiler did not pick one */
     this.playBranchChoice(node, outs);
   };
 
   Player.prototype.playBranchChoice = function (node, outs) {
     var self = this;
     this.clearStage();
+    if (this.renderer && this.renderer.highlightBranch) {
+      this.renderer.highlightBranch(node, outs);
+    }
     var wrap = document.createElement('div');
     wrap.className = 'boxies-xp__media boxies-xp__media--branch is-enter';
+    wrap.setAttribute('data-proto-branch', '1');
     var title = document.createElement('div');
     title.className = 'boxies-xp__branch-title';
     title.textContent = (node && node.label) ? node.label : 'Elegir camino';
@@ -418,6 +533,8 @@ var ExperienceRuntime = (function () {
       this.gotoNext(nodeId);
       return;
     }
+    this._currentNodeId = String(nodeId);
+
     if (node.kind === 'hero' || node.role === 'hero' || node.type === 'hero') {
       var outs = this.outputsOf(node);
       if (outs.length === 1) {
@@ -429,264 +546,58 @@ var ExperienceRuntime = (function () {
       }
       return;
     }
+
+    this._visitIndex += 1;
+    this.updateHud(node);
+    this.clearStage();
+
+    if (!this.renderer) {
+      this.stage.innerHTML = '<div class="boxies-xp__empty">Renderer no disponible.</div>';
+      return;
+    }
+
     var kind = String(node.kind || node.type || '').toLowerCase();
+    var ctrl = this.ctrl();
     if (kind === 'video' || kind === 'animacion' || kind === 'transicion') {
-      this.playVideo(node);
+      this.renderer.playVideo(node, ctrl);
       return;
     }
     if (node.config && node.config.hub && node.config.hub.enabled) {
-      this.playHub(node);
+      this.renderer.playHub(node, ctrl);
       return;
     }
-    this.playImage(node);
+    this.renderer.playImage(node, ctrl);
   };
 
-  Player.prototype.clearStage = function () {
-    if (this._currentVideo) {
-      try {
-        this._currentVideo.pause();
-      } catch (e) {}
-      this._currentVideo = null;
+  function findPlayerByHost(host) {
+    for (var i = 0; i < _players.length; i++) {
+      if (_players[i].host === host) return _players[i];
     }
-    this.stage.innerHTML = '';
-  };
-
-  Player.prototype.playVideo = function (node) {
-    var self = this;
-    this.clearStage();
-    var url = (node.media && node.media.url) || null;
-    var wrap = document.createElement('div');
-    wrap.className = 'boxies-xp__media boxies-xp__media--video is-enter';
-    if (!url) {
-      wrap.innerHTML = '<div class="boxies-xp__empty">Video sin asset: ' + esc(node.label) + '</div>';
-      this.stage.appendChild(wrap);
-      setTimeout(function () { self.gotoNext(node.id); }, 1200);
-      return;
-    }
-    var video = document.createElement('video');
-    video.className = 'boxies-xp__video';
-    video.setAttribute('playsinline', '');
-    video.setAttribute('webkit-playsinline', '');
-    video.preload = 'auto';
-    video.src = url;
-    wrap.appendChild(video);
-    this.stage.appendChild(wrap);
-    this._currentVideo = video;
-
-    var advanced = false;
-    function advance() {
-      if (advanced || self._stopped) return;
-      advanced = true;
-      wrap.classList.remove('is-enter');
-      wrap.classList.add('is-exit');
-      setTimeout(function () { self.gotoNext(node.id); }, FADE_MS);
-    }
-
-    video.addEventListener('ended', advance);
-    video.addEventListener('error', function () {
-      wrap.innerHTML = '<div class="boxies-xp__empty">No se pudo reproducir: ' + esc(node.label) + '</div>';
-      setTimeout(advance, 1000);
-    });
-    var playPromise = video.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(function () {
-        video.muted = true;
-        video.play().catch(function () { setTimeout(advance, 800); });
-      });
-    }
-  };
-
-  Player.prototype.playImage = function (node) {
-    var self = this;
-    this.clearStage();
-    var url = (node.media && (node.media.url || node.media.thumbnailUrl)) || null;
-    var wrap = document.createElement('div');
-    wrap.className = 'boxies-xp__media boxies-xp__media--image is-enter';
-
-    if (url) {
-      wrap.style.backgroundImage = 'url("' + String(url).replace(/"/g, '\\"') + '")';
-    } else {
-      wrap.innerHTML = '<div class="boxies-xp__empty">Imagen sin asset: ' + esc(node.label) + '</div>';
-    }
-
-    var buttons = listRuntimeSceneButtons(node, this._connections || []);
-    var advanced = false;
-    function advanceTo(targetId) {
-      if (advanced || self._stopped) return;
-      advanced = true;
-      wrap.classList.remove('is-enter');
-      wrap.classList.add('is-exit');
-      setTimeout(function () {
-        if (targetId) self.enterNode(targetId);
-        else self.gotoNext(node.id);
-      }, FADE_MS);
-    }
-
-    if (buttons.length) {
-      var layer = document.createElement('div');
-      layer.className = 'boxies-xp__btn-layer';
-      buttons.forEach(function (b) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip');
-        var text = b.label != null ? String(b.label) : '';
-        btn.textContent = text || (b.style === 'icon' ? '·' : '');
-        btn.style.left = b.x + '%';
-        btn.style.top = b.y + '%';
-        btn.style.setProperty('--btn-rot', (b.rotation || 0) + 'deg');
-        btn.style.transform = 'translate(-50%, -50%) rotate(' + (b.rotation || 0) + 'deg)';
-        if (b.targetId) {
-          btn.addEventListener('click', function (ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            advanceTo(b.targetId);
-          });
-        } else {
-          btn.disabled = true;
-          btn.title = 'Sin destino';
-        }
-        layer.appendChild(btn);
-      });
-      wrap.appendChild(layer);
-    } else {
-      wrap.setAttribute('role', 'button');
-      wrap.setAttribute('tabindex', '0');
-      wrap.title = 'Continuar';
-      var hint = document.createElement('div');
-      hint.className = 'boxies-xp__tap-hint';
-      hint.textContent = 'Toca para continuar';
-      wrap.appendChild(hint);
-      wrap.addEventListener('click', function () { advanceTo(null); });
-      wrap.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault();
-          advanceTo(null);
-        }
-      });
-    }
-
-    this.stage.appendChild(wrap);
-  };
-
-  Player.prototype.playHub = function (node) {
-    var self = this;
-    this.clearStage();
-    var hub = (node.config && node.config.hub) || {};
-    var plants = Array.isArray(node.hubPlants) ? node.hubPlants.slice() : [];
-    if (!plants.length && Array.isArray(hub.selectedPlants)) {
-      var assetById = indexById(this.runtime.assets || []);
-      plants = hub.selectedPlants.map(function (id, idx) {
-        var a = assetById[String(id)];
-        return {
-          id: id,
-          label: String(idx + 1),
-          title: (a && a.filename) || ('Planta ' + (idx + 1)),
-          url: a ? (a.publicUrl || a.thumbnailUrl) : null,
-          thumbnailUrl: a ? (a.thumbnailUrl || a.publicUrl) : null
-        };
-      });
-    }
-
-    var ap = hub.appearance || {};
-    var style = ap.style || 'numbers';
-    var position = ap.position || 'top-right';
-    var alignment = ap.alignment === 'vertical' ? 'vertical' : 'horizontal';
-    var gap = ap.gap != null ? Number(ap.gap) : 8;
-    var size = ap.size != null ? Number(ap.size) : 32;
-
-    var wrap = document.createElement('div');
-    wrap.className = 'boxies-xp__media boxies-xp__media--hub is-enter';
-    wrap.style.setProperty('--hub-gap', gap + 'px');
-    wrap.style.setProperty('--hub-size', size + 'px');
-
-    var bg = document.createElement('div');
-    bg.className = 'boxies-xp__hub-bg';
-    wrap.appendChild(bg);
-
-    var overlay = document.createElement('div');
-    overlay.className = 'boxies-xp__hub-overlay is-pos-' + position + ' is-' + alignment + ' is-style-' + style;
-    wrap.appendChild(overlay);
-
-    var continueBtn = document.createElement('button');
-    continueBtn.type = 'button';
-    continueBtn.className = 'boxies-xp__hub-continue';
-    continueBtn.textContent = 'Continuar';
-    continueBtn.hidden = true;
-    wrap.appendChild(continueBtn);
-
-    if (!plants.length) {
-      wrap.innerHTML = '<div class="boxies-xp__empty">HUB sin plantas seleccionadas</div>';
-      this.stage.appendChild(wrap);
-      setTimeout(function () { self.gotoNext(node.id); }, 1400);
-      return;
-    }
-
-    var activeId = null;
-    function setPlant(plant) {
-      activeId = plant.id;
-      if (plant.url || plant.thumbnailUrl) {
-        bg.style.backgroundImage = 'url("' +
-          String(plant.url || plant.thumbnailUrl).replace(/"/g, '\\"') + '")';
-      }
-      overlay.querySelectorAll('[data-plant-id]').forEach(function (el) {
-        el.classList.toggle('is-active', String(el.getAttribute('data-plant-id')) === String(plant.id));
-      });
-      continueBtn.hidden = false;
-    }
-
-    plants.forEach(function (plant, idx) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'boxies-xp__hub-chip';
-      btn.setAttribute('data-plant-id', String(plant.id));
-      if (style === 'thumbnails' && (plant.thumbnailUrl || plant.url)) {
-        btn.classList.add('is-thumb');
-        btn.style.backgroundImage = 'url("' +
-          String(plant.thumbnailUrl || plant.url).replace(/"/g, '\\"') + '")';
-        btn.setAttribute('aria-label', plant.title || plant.label);
-      } else if (style === 'chips') {
-        btn.textContent = plant.title || plant.label || String(idx + 1);
-      } else {
-        btn.textContent = plant.label || String(idx + 1);
-      }
-      btn.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        setPlant(plant);
-      });
-      overlay.appendChild(btn);
-    });
-
-    this.stage.appendChild(wrap);
-    setPlant(plants[0]);
-
-    var advanced = false;
-    function advance() {
-      if (advanced || self._stopped || !activeId) return;
-      advanced = true;
-      wrap.classList.remove('is-enter');
-      wrap.classList.add('is-exit');
-      setTimeout(function () { self.gotoNext(node.id); }, FADE_MS);
-    }
-    continueBtn.addEventListener('click', function (ev) {
-      ev.preventDefault();
-      advance();
-    });
-  };
+    return null;
+  }
 
   function mount(host, options) {
     if (!host) return null;
-    if (_active && _active.host === host) {
-      if (options && options.runtime) _active.setRuntime(options.runtime);
-      return _active;
-    }
-    if (_active) {
-      try { _active.destroy(); } catch (e) {}
-      _active = null;
+    options = options || {};
+    var existing = findPlayerByHost(host);
+    if (existing) {
+      var wantMode = options.mode || 'preview';
+      var wantRenderer = resolveRendererFactory(options);
+      var sameRenderer = existing.renderer && wantRenderer &&
+        existing.renderer.id === wantRenderer.id;
+      if (sameRenderer && existing.mode === wantMode) {
+        if (options.runtime) existing.setRuntime(options.runtime);
+        if (options.state) existing.setState(options.state);
+        _active = existing;
+        return existing;
+      }
+      try { existing.destroy(); } catch (e) {}
     }
     host.innerHTML = '';
-    _active = new Player(host, options || {});
-    return _active;
+    var player = new Player(host, options);
+    _players.push(player);
+    _active = player;
+    return player;
   }
 
   function getActive() {
@@ -700,7 +611,11 @@ var ExperienceRuntime = (function () {
       if (existing) target = existing;
     }
     if (!target) return null;
-    var player = mount(target, { runtime: runtime || window.BuilderRuntime });
+    var player = mount(target, {
+      runtime: runtime || window.BuilderRuntime,
+      renderer: typeof MediaRenderer !== 'undefined' ? MediaRenderer : null,
+      mode: 'preview'
+    });
     if (player) player.begin();
     return player;
   }
@@ -714,13 +629,12 @@ var ExperienceRuntime = (function () {
   }
 
   function destroy() {
-    if (_active) {
-      try { _active.destroy(); } catch (e) {}
-      _active = null;
+    while (_players.length) {
+      try { _players[0].destroy(); } catch (e) {}
     }
+    _active = null;
   }
 
-  /* Showroom / iframe: accept injected runtime from Builder parent */
   if (typeof window !== 'undefined') {
     window.addEventListener('message', function (ev) {
       var data = ev && ev.data;
@@ -739,6 +653,7 @@ var ExperienceRuntime = (function () {
     stop: stop,
     destroy: destroy,
     getActive: getActive,
-    Player: Player
+    Player: Player,
+    FADE_MS: FADE_MS
   };
 })();

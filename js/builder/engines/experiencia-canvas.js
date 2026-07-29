@@ -121,8 +121,7 @@ var ExperienciaCanvas = (function () {
               '</div>' +
             '</div>' +
             '<div class="builder-exp-proto-stage" data-exp-proto-stage hidden>' +
-              '<canvas class="builder-exp-proto-canvas" data-exp-proto-canvas></canvas>' +
-              '<div class="builder-exp-proto-info" data-exp-proto-info></div>' +
+              '<div class="builder-xp-host builder-exp-proto-host" data-exp-proto-host></div>' +
             '</div>' +
             '<div class="builder-exp-minimap' + (minimapOn ? '' : ' is-hidden') + '" data-exp-minimap>' +
               '<canvas data-exp-minimap-canvas width="160" height="100"></canvas>' +
@@ -842,7 +841,7 @@ var ExperienciaCanvas = (function () {
         '</div>' +
       '</div>' +
       '<p class="builder-menu-hint builder-exp-btn-hint">' +
-        'Storyboard procedural generado desde el Canvas y la Estructura. Sin renders ni video.' +
+        'Mismo recorrido que Preview (ExperienceRuntime). PrototypeRenderer dibuja geometría procedural.' +
       '</p>' +
       '<button type="button" class="builder-exp-proto-play" data-exp-proto-play>' +
         '▶ Ver Prototipo' +
@@ -1675,9 +1674,8 @@ var ExperienciaCanvas = (function () {
     var hotspotsSvg = rootEl.querySelector('[data-exp-hotspots-svg]');
     var hotspotsEmpty = rootEl.querySelector('[data-exp-hotspots-empty]');
     var protoStage = rootEl.querySelector('[data-exp-proto-stage]');
-    var protoCanvas = rootEl.querySelector('[data-exp-proto-canvas]');
-    var protoInfo = rootEl.querySelector('[data-exp-proto-info]');
-    var protoPlayer = null;
+    var protoHost = rootEl.querySelector('[data-exp-proto-host]');
+    var protoRuntimePlayer = null;
     var protoFingerprint = null;
     var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null } */
     var hotspotDrag = null; /* vertex | poly move */
@@ -2598,33 +2596,68 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    function ensurePrototypePlayer() {
-      if (!protoCanvas || typeof ExperienciaPrototype === 'undefined') return null;
-      if (!protoPlayer && ExperienciaPrototype.createPlayer) {
-        protoPlayer = ExperienciaPrototype.createPlayer(protoCanvas, protoInfo, {
-          onDone: function () {
-            paintInspector();
-          }
-        });
+    function buildLiveRuntimeFromState() {
+      if (typeof RuntimeSerializer !== 'undefined' && RuntimeSerializer.serialize) {
+        try {
+          return RuntimeSerializer.serialize(state, {
+            generatedAt: new Date().toISOString()
+          });
+        } catch (eSer) {}
       }
-      return protoPlayer;
+      /* Minimal fallback graph from canvas */
+      ExperienciaEngine.ensureFlow(state);
+      var exp = state.experiencia || {};
+      var nodes = (ExperienciaEngine.visibleNodes
+        ? ExperienciaEngine.visibleNodes(state)
+        : (exp.nodes || [])).filter(function (n) {
+        return n && n.kind !== 'action';
+      });
+      var hero = nodes.find(function (n) {
+        return n && (n.kind === 'hero' || n.id === 'exp-hero');
+      });
+      return {
+        nodes: nodes,
+        connections: exp.edges || [],
+        entryNodeId: hero ? hero.id : (nodes[0] && nodes[0].id) || null
+      };
+    }
+
+    function ensurePrototypePlayer() {
+      if (!protoHost || typeof ExperienceRuntime === 'undefined' || !ExperienceRuntime.mount) {
+        return null;
+      }
+      if (typeof PrototypeRenderer === 'undefined') return null;
+      var runtime = buildLiveRuntimeFromState();
+      if (!protoRuntimePlayer) {
+        protoRuntimePlayer = ExperienceRuntime.mount(protoHost, {
+          runtime: runtime,
+          state: state,
+          renderer: PrototypeRenderer,
+          mode: 'prototype',
+          startLabel: '▶ Ver Prototipo'
+        });
+      } else {
+        if (protoRuntimePlayer.setRuntime) protoRuntimePlayer.setRuntime(runtime);
+        if (protoRuntimePlayer.setState) protoRuntimePlayer.setState(state);
+      }
+      return protoRuntimePlayer;
     }
 
     function syncPrototypeStoryboard() {
-      if (typeof ExperienciaPrototype === 'undefined' || !ExperienciaPrototype.buildStoryboard) {
-        return;
-      }
-      var fp = ExperienciaPrototype.fingerprint
+      /* Live Canvas → same ExperienceRuntime graph; PrototypeRenderer redraws volumes */
+      var fp = (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.fingerprint)
         ? ExperienciaPrototype.fingerprint(state)
         : String(Date.now());
-      if (fp === protoFingerprint && protoPlayer) return;
-      protoFingerprint = fp;
-      var sb = ExperienciaPrototype.buildStoryboard(state);
       var player = ensurePrototypePlayer();
-      if (player) {
-        player.setStoryboard(sb);
-        player.resize();
+      if (!player) return;
+      if (fp !== protoFingerprint) {
+        protoFingerprint = fp;
+        var runtime = buildLiveRuntimeFromState();
+        if (player.setRuntime) player.setRuntime(runtime);
+        if (player.setState) player.setState(state);
+        if (!player._running && player.showGate) player.showGate();
       }
+      if (player.resize) player.resize();
     }
 
     function bindPrototypeInspectorActions() {
@@ -2634,17 +2667,15 @@ var ExperienciaCanvas = (function () {
       if (playBtn) {
         playBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
-          syncPrototypeStoryboard();
           var player = ensurePrototypePlayer();
           if (!player) return;
-          if (player.isPlaying && player.isPlaying()) {
-            player.stop();
-            playBtn.textContent = '▶ Ver Prototipo';
-            return;
-          }
-          if (player.play()) {
-            playBtn.textContent = '■ Detener';
-          }
+          protoFingerprint = (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.fingerprint)
+            ? ExperienciaPrototype.fingerprint(state)
+            : protoFingerprint;
+          var runtime = buildLiveRuntimeFromState();
+          if (player.setRuntime) player.setRuntime(runtime);
+          if (player.setState) player.setState(state);
+          if (player.begin) player.begin();
         });
       }
     }
@@ -3432,8 +3463,9 @@ var ExperienciaCanvas = (function () {
         protoStage.hidden = mode !== 'prototype';
         protoStage.setAttribute('aria-hidden', mode === 'prototype' ? 'false' : 'true');
       }
-      if (mode !== 'prototype' && protoPlayer && protoPlayer.stop) {
-        protoPlayer.stop();
+      if (mode !== 'prototype' && protoRuntimePlayer) {
+        if (protoRuntimePlayer.showGate) protoRuntimePlayer.showGate();
+        else if (protoRuntimePlayer.stopPlayback) protoRuntimePlayer.stopPlayback(true);
       }
       if (modeTabs) {
         modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
@@ -3527,8 +3559,8 @@ var ExperienciaCanvas = (function () {
           });
           return;
         }
-        if (canvas().editMode === 'prototype' && protoPlayer && protoPlayer.resize) {
-          protoPlayer.resize();
+        if (canvas().editMode === 'prototype' && protoRuntimePlayer && protoRuntimePlayer.resize) {
+          protoRuntimePlayer.resize();
         }
       }, 16);
     }
@@ -4661,7 +4693,7 @@ var ExperienciaCanvas = (function () {
           if (canvas().editMode === 'prototype') {
             requestAnimationFrame(function () {
               syncPrototypeStoryboard();
-              if (protoPlayer && protoPlayer.resize) protoPlayer.resize();
+              if (protoRuntimePlayer && protoRuntimePlayer.resize) protoRuntimePlayer.resize();
             });
           }
         });
@@ -5805,9 +5837,9 @@ var ExperienciaCanvas = (function () {
         window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
         document.removeEventListener('fullscreenchange', onFullscreenChange);
         document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
-        if (protoPlayer && protoPlayer.destroy) {
-          try { protoPlayer.destroy(); } catch (eProto) {}
-          protoPlayer = null;
+        if (protoRuntimePlayer && protoRuntimePlayer.destroy) {
+          try { protoRuntimePlayer.destroy(); } catch (eProto) {}
+          protoRuntimePlayer = null;
         }
         exitBrowserFullscreen();
       }
