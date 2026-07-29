@@ -6011,14 +6011,98 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
 
 .builder-hub-scene-card {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: auto 52px minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
   padding: 10px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.025);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.builder-hub-scene-card:not(.builder-hub-plant-card) {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.builder-hub-plant-card.is-off {
+  opacity: 0.55;
+}
+
+.builder-hub-plant-card.is-selected {
+  border-color: rgba(111, 191, 134, 0.35);
+  background: rgba(111, 191, 134, 0.06);
+}
+
+.builder-hub-plant-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.builder-hub-plant-check:hover {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.builder-hub-plant-check.is-on {
+  color: rgba(111, 191, 134, 0.98);
+}
+
+.builder-hub-plant-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.builder-hub-plant-order__btn {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 26px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.builder-hub-plant-order__btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.builder-hub-plant-order__btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.builder-hub-preview.is-style-thumbnails .builder-hub-preview__thumb {
+  width: var(--hub-size);
+  min-width: var(--hub-size);
+  height: var(--hub-size);
+  padding: 0;
+  border-radius: 8px;
+  background-color: rgba(20, 20, 20, 0.9);
+  background-size: cover;
+  background-position: center;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .builder-hub-scene-card:hover {

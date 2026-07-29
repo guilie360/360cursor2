@@ -337,6 +337,14 @@ var ExperienciaEngine = (function () {
     /* V6.0.05 — smart selector (compat: legacy floors/scope kept) */
     if (!n.config.hub.selectorType) n.config.hub.selectorType = 'plantas';
     if (!Array.isArray(n.config.hub.options)) n.config.hub.options = [];
+    /* V6.0.07 — selectedPlants = ordered Media Plantas 2D ids (runtime prep).
+       undefined = not seeded yet; [] = none selected on purpose. */
+    if (
+      n.config.hub.selectedPlants != null &&
+      !Array.isArray(n.config.hub.selectedPlants)
+    ) {
+      n.config.hub.selectedPlants = [];
+    }
     if (!n.config.hub.appearance || typeof n.config.hub.appearance !== 'object') {
       n.config.hub.appearance = {
         style: 'numbers',
@@ -414,37 +422,200 @@ var ExperienciaEngine = (function () {
     return false;
   }
 
-  function enrichHubOption(state, target, index) {
-    var media = resolveSceneMedia(state, target);
-    var statusLabel = media.statusLabel || (media.hasMedia ? 'Sincronizado' : 'Pendiente');
-    if (media.hasMedia && (media.status === 'synced' || media.status === 'local')) {
-      statusLabel = 'Sincronizado';
+  function derivePlantAssetLabel(asset, index) {
+    var meta = (asset && asset.metadata) || {};
+    var name = String(meta.label || meta.name || meta.title || '').trim();
+    if (!name && asset && asset.filename) {
+      name = String(asset.filename).replace(/\.[^.]+$/, '').trim();
     }
+    var m = name.match(/(?:planta|piso|floor|nivel)\s*[-:]?\s*(\d+)/i) ||
+      name.match(/\b(\d+)\s*$/) ||
+      name.match(/\b(\d+)\b/);
+    if (m && m[1]) return String(m[1]);
+    if (name) {
+      var short = name.replace(/^.*[-–—]\s*/, '').trim();
+      if (short && short.length <= 24) return short;
+      return name.slice(0, 24);
+    }
+    return String(index + 1);
+  }
+
+  function derivePlantAssetTitle(asset, index) {
+    var meta = (asset && asset.metadata) || {};
+    var name = String(meta.label || meta.name || meta.title || '').trim();
+    if (!name && asset && asset.filename) {
+      name = String(asset.filename).replace(/\.[^.]+$/, '').trim();
+    }
+    if (name) return name;
+    return 'Planta ' + (index + 1);
+  }
+
+  function listMediaPlantas2d(state) {
+    if (typeof MediaNodesEngine !== 'undefined') {
+      if (MediaNodesEngine.listPlantas2d) return MediaNodesEngine.listPlantas2d(state) || [];
+      if (MediaNodesEngine.listInventoryByCategory) {
+        return MediaNodesEngine.listInventoryByCategory(state, 'plans2d') || [];
+      }
+    }
+    return [];
+  }
+
+  function enrichHubPlantOption(asset, index, enabled) {
+    if (!asset) return null;
+    var thumb = asset.thumbnailUrl || asset.publicUrl || null;
+    var synced = asset.status === 'synced' || asset.status === 'local' || !!(asset.publicUrl || asset.filename);
     return {
-      id: 'opt-' + target.id,
-      label: deriveHubOptionLabel(target, index),
-      targetNodeId: target.id,
-      targetLabel: target.label || target.id,
-      targetKind: target.kind || null,
-      filename: media.filename || null,
-      thumbnailUrl: media.thumbnailUrl || media.publicUrl || null,
-      publicUrl: media.publicUrl || null,
-      status: media.status || (media.hasMedia ? 'local' : 'pending'),
-      statusLabel: statusLabel,
-      hasMedia: !!media.hasMedia
+      id: 'opt-' + asset.id,
+      plantId: asset.id,
+      label: derivePlantAssetLabel(asset, index),
+      targetLabel: derivePlantAssetTitle(asset, index),
+      targetNodeId: null,
+      targetKind: 'media-plant',
+      filename: asset.filename || null,
+      thumbnailUrl: thumb,
+      publicUrl: asset.publicUrl || null,
+      status: asset.status || (synced ? 'synced' : 'pending'),
+      statusLabel: synced ? 'En Media' : 'Pendiente',
+      hasMedia: !!synced,
+      enabled: !!enabled,
+      source: 'media-plans2d'
     };
   }
 
   /**
-   * Discover HUB selector targets from the full Experiencia graph.
-   * Sources (union): direct edges, reverse edges, hubFloorKey / structureRef,
-   * structure-scope floors, BFS neighborhood matching selector type.
+   * Official Plantas 2D cards for the HUB inspector (Media inventory only).
+   * selectedPlants order first (enabled), then remaining inventory (disabled).
+   */
+  function listHubPlantasCards(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return [];
+    var hub = ensureHubConfig(n);
+    var inventory = listMediaPlantas2d(state);
+    var byId = {};
+    inventory.forEach(function (a) {
+      if (a && a.id != null) byId[String(a.id)] = a;
+    });
+    var selected = Array.isArray(hub.selectedPlants) ? hub.selectedPlants.slice() : [];
+    var seen = {};
+    var cards = [];
+    selected.forEach(function (id, idx) {
+      var asset = byId[String(id)];
+      if (!asset) return;
+      seen[String(asset.id)] = true;
+      cards.push(enrichHubPlantOption(asset, idx, true));
+    });
+    inventory.forEach(function (asset, idx) {
+      if (!asset || asset.id == null || seen[String(asset.id)]) return;
+      cards.push(enrichHubPlantOption(asset, selected.length + idx, false));
+    });
+    return cards.filter(Boolean);
+  }
+
+  /**
+   * Sync HUB plant selector from Media → Plantas 2D only (no canvas discovery).
+   * Persists hub.selectedPlants (ordered ids) and hub.options (selected only).
+   */
+  function syncHubPlantasFromMedia(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return null;
+    var hub = ensureHubConfig(n);
+    if (!hub) return null;
+    var inventory = listMediaPlantas2d(state);
+    var byId = {};
+    inventory.forEach(function (a) {
+      if (a && a.id != null) byId[String(a.id)] = a;
+    });
+
+    function resolvePlant(id) {
+      if (id == null) return null;
+      return byId[String(id)] || null;
+    }
+
+    if (!Array.isArray(hub.selectedPlants)) {
+      hub.selectedPlants = inventory.map(function (a) { return a.id; });
+    } else {
+      var cleaned = [];
+      hub.selectedPlants.forEach(function (id) {
+        var asset = resolvePlant(id);
+        if (asset && cleaned.indexOf(asset.id) === -1) cleaned.push(asset.id);
+      });
+      hub.selectedPlants = cleaned;
+    }
+
+    hub.options = hub.selectedPlants.map(function (id, idx) {
+      return enrichHubPlantOption(resolvePlant(id), idx, true);
+    }).filter(Boolean);
+
+    return hub;
+  }
+
+  function setHubPlantSelected(state, nodeId, plantId, enabled) {
+    var n = getNode(state, nodeId);
+    if (!n || !plantId) return null;
+    var hub = enableHubOnScene(n);
+    syncHubPlantasFromMedia(state, n);
+    var list = hub.selectedPlants || [];
+    var idx = -1;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (String(list[i]) === String(plantId)) { idx = i; break; }
+    }
+    if (enabled) {
+      if (idx === -1) {
+        var canon = plantId;
+        var inv = listMediaPlantas2d(state);
+        for (i = 0; i < inv.length; i++) {
+          if (inv[i] && String(inv[i].id) === String(plantId)) {
+            canon = inv[i].id;
+            break;
+          }
+        }
+        list.push(canon);
+      }
+    } else if (idx !== -1) {
+      list.splice(idx, 1);
+    }
+    hub.selectedPlants = list;
+    syncHubPlantasFromMedia(state, n);
+    return hub;
+  }
+
+  function moveHubPlant(state, nodeId, plantId, direction) {
+    var n = getNode(state, nodeId);
+    if (!n || !plantId) return null;
+    var hub = enableHubOnScene(n);
+    syncHubPlantasFromMedia(state, n);
+    var list = hub.selectedPlants || [];
+    var idx = -1;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (String(list[i]) === String(plantId)) { idx = i; break; }
+    }
+    if (idx === -1) return hub;
+    var dir = direction === 'up' || direction === -1 ? -1 : 1;
+    var next = idx + dir;
+    if (next < 0 || next >= list.length) return hub;
+    var tmp = list[idx];
+    list[idx] = list[next];
+    list[next] = tmp;
+    hub.selectedPlants = list;
+    syncHubPlantasFromMedia(state, n);
+    return hub;
+  }
+
+  /**
+   * Discover HUB selector targets from the Experiencia graph.
+   * Used for tipologías / torres / pisos — NOT for plantas (Media SSOT).
    */
   function detectHubSelectorOptions(state, nodeOrId) {
     var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
     if (!n) return [];
     var hub = ensureHubConfig(n);
     var selectorType = (hub && hub.selectorType) || 'plantas';
+    if (selectorType === 'plantas') {
+      syncHubPlantasFromMedia(state, n);
+      return (hub && hub.options) || [];
+    }
     var exp = ensureState(state);
     var nodes = exp.nodes || [];
     var edges = exp.edges || [];
@@ -456,14 +627,12 @@ var ExperienciaEngine = (function () {
       if (target.id === n.id) return;
       if (target.kind === 'hero' || target.role === 'action' || target.kind === 'action') return;
       if (target.orphaned) return;
-      /* Prefer type-aware match; still accept direct scene links that look related */
       if (looksLikeHubSelectorTarget(target, selectorType, n)) {
         seen[target.id] = true;
         ordered.push(target);
         return;
       }
       if (isSceneKind(target.kind) || target.kind === 'structure' || target.kind === 'group') {
-        /* Direct graph neighbors: keep scene nodes even if naming is ambiguous */
         if (target.kind === 'animacion' || target.kind === 'video' || target.kind === 'transicion') {
           return;
         }
@@ -479,28 +648,21 @@ var ExperienciaEngine = (function () {
       };
     }
 
-    /* 1–2. Direct edges both directions */
     edges.forEach(function (ed) {
       var e = edgeEnds(ed);
       if (e.from === n.id && e.to) addTarget(getNode(state, e.to));
       if (e.to === n.id && e.from) addTarget(getNode(state, e.from));
     });
 
-    /* 3. Explicit planta/floor bindings on canvas nodes */
     nodes.forEach(function (node) {
       if (!node || node.id === n.id) return;
       var cfg = node.config || {};
-      if (cfg.hubFloorKey) {
-        if (!hub.floors || !hub.floors.length) addTarget(node);
-        else if (findHubFloor(hub, cfg.hubFloorKey)) addTarget(node);
-        else addTarget(node);
-      }
+      if (cfg.hubFloorKey) addTarget(node);
       if (cfg.structureRef && looksLikeHubSelectorTarget(node, selectorType, n)) {
         addTarget(node);
       }
     });
 
-    /* 4. Match Estructura floors / scope to canvas nodes by key or label */
     if (hub.structureScope && typeof listFloorsForScope === 'function') {
       var floors = listFloorsForScope(state, hub.structureScope) || [];
       floors.forEach(function (f) {
@@ -522,7 +684,6 @@ var ExperienciaEngine = (function () {
       });
     }
 
-    /* 5. BFS neighborhood (depth ≤ 3) for type-matching scenes */
     var adj = {};
     edges.forEach(function (ed) {
       var e = edgeEnds(ed);
@@ -548,25 +709,9 @@ var ExperienciaEngine = (function () {
       });
     }
 
-    /* 6. Project-wide type match — always union (not only when empty) */
     nodes.forEach(function (node) {
       if (looksLikeHubSelectorTarget(node, selectorType, n)) addTarget(node);
     });
-
-    /* 7. Same-group siblings of the HUB (canvas folders / groups) */
-    if (n.parentId) {
-      nodes.forEach(function (node) {
-        if (!node || node.id === n.id) return;
-        if (node.parentId !== n.parentId) return;
-        if (looksLikeHubSelectorTarget(node, selectorType, n) || isSceneKind(node.kind)) {
-          if (selectorType === 'plantas' || selectorType === 'pisos' || selectorType === 'custom') {
-            if (isSceneKind(node.kind) && node.kind !== 'hero') addTarget(node);
-          } else if (looksLikeHubSelectorTarget(node, selectorType, n)) {
-            addTarget(node);
-          }
-        }
-      });
-    }
 
     ordered.sort(function (a, b) {
       var la = deriveHubOptionLabel(a, 0);
@@ -587,16 +732,30 @@ var ExperienciaEngine = (function () {
     if (!n) return null;
     var hub = ensureHubConfig(n);
     if (!hub) return null;
+    if ((hub.selectorType || 'plantas') === 'plantas') {
+      return syncHubPlantasFromMedia(state, n);
+    }
     hub.options = detectHubSelectorOptions(state, n);
     return hub;
   }
 
   function hubSelectorStatus(hub) {
-    var count = (hub && Array.isArray(hub.options)) ? hub.options.length : 0;
     var type = (hub && hub.selectorType) || 'plantas';
+    var count = type === 'plantas'
+      ? ((hub && Array.isArray(hub.selectedPlants)) ? hub.selectedPlants.length
+        : ((hub && Array.isArray(hub.options)) ? hub.options.length : 0))
+      : ((hub && Array.isArray(hub.options)) ? hub.options.length : 0);
     var noun = type === 'tipologias' ? 'tipologías'
       : (type === 'torres' ? 'torres'
-        : (type === 'pisos' ? 'pisos' : 'escenas'));
+        : (type === 'pisos' ? 'pisos'
+          : (type === 'plantas' ? 'plantas' : 'escenas')));
+    if (type === 'plantas' && count <= 0) {
+      return {
+        level: 'warn',
+        code: 'no-targets',
+        message: 'No hay plantas en Media → Plantas 2D, o ninguna está seleccionada.'
+      };
+    }
     if (count <= 0) {
       return {
         level: 'warn',
@@ -609,6 +768,13 @@ var ExperienciaEngine = (function () {
         level: 'warn',
         code: 'need-two',
         message: 'Se necesitan al menos dos ' + noun + ' para generar un selector.'
+      };
+    }
+    if (type === 'plantas') {
+      return {
+        level: 'ok',
+        code: 'ready',
+        message: 'Selector desde Media · ' + count + ' plantas activas'
       };
     }
     return {
@@ -4184,6 +4350,11 @@ var ExperienciaEngine = (function () {
     enableHubOnScene: enableHubOnScene,
     detectHubSelectorOptions: detectHubSelectorOptions,
     syncHubSmartSelector: syncHubSmartSelector,
+    syncHubPlantasFromMedia: syncHubPlantasFromMedia,
+    listHubPlantasCards: listHubPlantasCards,
+    listMediaPlantas2d: listMediaPlantas2d,
+    setHubPlantSelected: setHubPlantSelected,
+    moveHubPlant: moveHubPlant,
     hubSelectorStatus: hubSelectorStatus,
     setHubSelectorType: setHubSelectorType,
     setHubAppearance: setHubAppearance,

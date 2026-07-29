@@ -425,7 +425,7 @@ var ExperienciaCanvas = (function () {
         ' Activar HUB</label>';
 
     if (!enabled) {
-      html += '<p class="builder-menu-hint">Activa el HUB para generar un selector inteligente. BOXIES descubrirá las escenas relacionadas en el Canvas.</p>';
+      html += '<p class="builder-menu-hint">Activa el HUB para configurar el selector. Las plantas se toman de Media → Plantas 2D.</p>';
       return html;
     }
 
@@ -437,6 +437,10 @@ var ExperienciaCanvas = (function () {
     var ap = (hub && hub.appearance) || {
       style: 'numbers', position: 'top-right', alignment: 'horizontal', gap: 8, size: 32
     };
+    var isPlantas = selectorType === 'plantas';
+    var plantCards = isPlantas && ExperienciaEngine.listHubPlantasCards
+      ? ExperienciaEngine.listHubPlantasCards(state, n)
+      : [];
 
     function segmentBtn(value, label, active, disabled) {
       return '<button type="button" class="builder-hub-segment__btn' +
@@ -469,53 +473,127 @@ var ExperienciaCanvas = (function () {
       '</div>' +
     '</div>';
 
-    html += '<div class="builder-exp-inspector__section">Escenas enlazadas</div>';
-    if (!options.length) {
-      html += '<div class="builder-hub-status is-warn">' +
-        esc(status.message || 'No se encontraron escenas relacionadas con este HUB.') +
-      '</div>' +
-      '<p class="builder-menu-hint">BOXIES busca escenas en el grafo (conexiones, plantas vinculadas y vecinos del HUB).</p>';
-    } else {
-      html += '<div class="builder-hub-scenes">' +
-        options.map(function (opt) {
-          var thumb = opt.thumbnailUrl
-            ? ('<div class="builder-hub-scene-card__thumb" style="background-image:url(\'' +
-              esc(opt.thumbnailUrl) + '\')"></div>')
-            : '<div class="builder-hub-scene-card__thumb is-empty" aria-hidden="true"></div>';
-          return '<article class="builder-hub-scene-card">' +
-            thumb +
-            '<div class="builder-hub-scene-card__body">' +
-              '<div class="builder-hub-scene-card__title">' +
-                '<span class="builder-hub-scene-card__check" aria-hidden="true">✓</span>' +
-                '<strong>' + esc(opt.targetLabel || opt.label) + '</strong>' +
+    if (isPlantas) {
+      html += '<div class="builder-exp-inspector__section">Plantas 2D</div>';
+      if (!plantCards.length) {
+        html += '<div class="builder-hub-status is-warn">' +
+          esc(status.message || 'No hay plantas en Media → Plantas 2D.') +
+        '</div>' +
+        '<p class="builder-menu-hint">Sube las plantas en Media → Plantas 2D. El HUB las cargará automáticamente.</p>';
+      } else {
+        html += '<div class="builder-hub-scenes" data-exp-hub-plants>' +
+          plantCards.map(function (opt, idx) {
+            var on = !!opt.enabled;
+            var thumb = opt.thumbnailUrl
+              ? ('<div class="builder-hub-scene-card__thumb" style="background-image:url(\'' +
+                esc(opt.thumbnailUrl) + '\')"></div>')
+              : '<div class="builder-hub-scene-card__thumb is-empty" aria-hidden="true"></div>';
+            return '<article class="builder-hub-scene-card builder-hub-plant-card' +
+              (on ? ' is-selected' : ' is-off') + '" data-plant-id="' + esc(opt.plantId) + '">' +
+              '<button type="button" class="builder-hub-plant-check' + (on ? ' is-on' : '') + '"' +
+                ' data-exp-hub-plant-toggle="' + esc(opt.plantId) + '"' +
+                ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
+                ' title="' + (on ? 'Desactivar' : 'Activar') + '">' +
+                (on ? '☑' : '☐') +
+              '</button>' +
+              thumb +
+              '<div class="builder-hub-scene-card__body">' +
+                '<div class="builder-hub-scene-card__title">' +
+                  '<strong>' + esc(opt.targetLabel || opt.label) + '</strong>' +
+                '</div>' +
+                '<span class="builder-hub-scene-card__asset">' +
+                  esc(opt.filename || 'Sin archivo') +
+                '</span>' +
+                '<span class="builder-hub-scene-card__status' +
+                  (on ? ' is-ok' : ' is-pending') + '">' +
+                  esc(on ? 'Activa en selector' : 'Omitida') +
+                '</span>' +
               '</div>' +
-              '<span class="builder-hub-scene-card__asset">' +
-                esc(opt.filename || 'Sin asset') +
-              '</span>' +
-              '<span class="builder-hub-scene-card__status' +
-                (opt.hasMedia ? ' is-ok' : ' is-pending') + '">' +
-                esc(opt.statusLabel || (opt.hasMedia ? 'Sincronizado' : 'Pendiente')) +
-              '</span>' +
-            '</div>' +
-          '</article>';
-        }).join('') +
-      '</div>';
-      html += '<div class="builder-hub-status ' + (status.level === 'ok' ? 'is-ok' : 'is-warn') + '">' +
-        (status.level === 'ok' ? '✔ ' : '') + esc(status.message) +
-      '</div>';
+              (on
+                ? ('<div class="builder-hub-plant-order">' +
+                    '<button type="button" class="builder-hub-plant-order__btn" data-exp-hub-plant-up="' +
+                      esc(opt.plantId) + '" title="Subir" aria-label="Subir"' +
+                      (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+                    '<button type="button" class="builder-hub-plant-order__btn" data-exp-hub-plant-down="' +
+                      esc(opt.plantId) + '" title="Bajar" aria-label="Bajar"' +
+                      (idx >= (hub.selectedPlants || []).length - 1 ? ' disabled' : '') + '>↓</button>' +
+                  '</div>')
+                : '') +
+            '</article>';
+          }).join('') +
+        '</div>';
+        html += '<div class="builder-hub-status ' + (status.level === 'ok' ? 'is-ok' : 'is-warn') + '">' +
+          (status.level === 'ok' ? '✔ ' : '') + esc(status.message) +
+        '</div>' +
+        '<p class="builder-menu-hint">Marca las plantas del inventario Media. El orden ↑↓ define el selector del Runtime.</p>';
+      }
+    } else {
+      html += '<div class="builder-exp-inspector__section">Escenas enlazadas</div>';
+      if (!options.length) {
+        html += '<div class="builder-hub-status is-warn">' +
+          esc(status.message || 'No se encontraron escenas relacionadas con este HUB.') +
+        '</div>';
+      } else {
+        html += '<div class="builder-hub-scenes">' +
+          options.map(function (opt) {
+            var thumb = opt.thumbnailUrl
+              ? ('<div class="builder-hub-scene-card__thumb" style="background-image:url(\'' +
+                esc(opt.thumbnailUrl) + '\')"></div>')
+              : '<div class="builder-hub-scene-card__thumb is-empty" aria-hidden="true"></div>';
+            return '<article class="builder-hub-scene-card">' +
+              thumb +
+              '<div class="builder-hub-scene-card__body">' +
+                '<div class="builder-hub-scene-card__title">' +
+                  '<span class="builder-hub-scene-card__check" aria-hidden="true">✓</span>' +
+                  '<strong>' + esc(opt.targetLabel || opt.label) + '</strong>' +
+                '</div>' +
+                '<span class="builder-hub-scene-card__asset">' +
+                  esc(opt.filename || 'Sin asset') +
+                '</span>' +
+                '<span class="builder-hub-scene-card__status' +
+                  (opt.hasMedia ? ' is-ok' : ' is-pending') + '">' +
+                  esc(opt.statusLabel || (opt.hasMedia ? 'Sincronizado' : 'Pendiente')) +
+                '</span>' +
+              '</div>' +
+            '</article>';
+          }).join('') +
+        '</div>';
+        html += '<div class="builder-hub-status ' + (status.level === 'ok' ? 'is-ok' : 'is-warn') + '">' +
+          (status.level === 'ok' ? '✔ ' : '') + esc(status.message) +
+        '</div>';
+      }
     }
 
+    var previewOpts = isPlantas
+      ? plantCards.filter(function (c) { return c && c.enabled; })
+      : options;
     var previewThumb = '';
-    for (var pi = 0; pi < options.length; pi++) {
-      if (options[pi].thumbnailUrl) {
-        previewThumb = options[pi].thumbnailUrl;
+    for (var pi = 0; pi < previewOpts.length; pi++) {
+      if (previewOpts[pi].thumbnailUrl) {
+        previewThumb = previewOpts[pi].thumbnailUrl;
         break;
       }
     }
+    var styleKey = ap.style || 'numbers';
     var previewClass = 'builder-hub-preview' +
       ' is-pos-' + (ap.position || 'top-right') +
       ' is-' + (ap.alignment || 'horizontal') +
-      ' is-style-' + (ap.style || 'numbers');
+      ' is-style-' + styleKey;
+
+    function previewChipHtml(opt, i) {
+      if (styleKey === 'thumbnails') {
+        var t = opt.thumbnailUrl
+          ? (' style="background-image:url(\'' + esc(opt.thumbnailUrl) + '\')"')
+          : '';
+        return '<span class="builder-hub-preview__chip builder-hub-preview__thumb"' + t +
+          ' title="' + esc(opt.targetLabel || opt.label) + '"></span>';
+      }
+      if (styleKey === 'chips') {
+        return '<span class="builder-hub-preview__chip">' +
+          esc(opt.targetLabel || opt.label) + '</span>';
+      }
+      return '<span class="builder-hub-preview__chip">' + esc(opt.label || String(i + 1)) + '</span>';
+    }
 
     html += '<div class="builder-exp-inspector__section">Vista previa</div>' +
       '<div class="' + previewClass + '" data-exp-hub-preview aria-hidden="true" style="' +
@@ -528,10 +606,8 @@ var ExperienciaCanvas = (function () {
             : '') + '>' +
           '<div class="builder-hub-preview__scrim"></div>' +
           '<div class="builder-hub-preview__overlay">' +
-            (options.length
-              ? options.map(function (opt) {
-                return '<span class="builder-hub-preview__chip">' + esc(opt.label) + '</span>';
-              }).join('')
+            (previewOpts.length
+              ? previewOpts.map(previewChipHtml).join('')
               : '<span class="builder-hub-preview__chip is-empty">—</span>') +
           '</div>' +
         '</div>' +
@@ -541,9 +617,9 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Estilo</label>' +
         '<div class="builder-hub-chips" data-exp-hub-style>' +
-          choiceChip('numbers', 'Números', ap.style === 'numbers') +
-          choiceChip('chips', 'Chips', ap.style === 'chips') +
-          choiceChip('thumbnails', 'Miniaturas', ap.style === 'thumbnails', true) +
+          choiceChip('numbers', 'Números', styleKey === 'numbers') +
+          choiceChip('chips', 'Chips', styleKey === 'chips') +
+          choiceChip('thumbnails', 'Miniaturas', styleKey === 'thumbnails') +
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
@@ -582,7 +658,7 @@ var ExperienciaCanvas = (function () {
         '<input type="range" min="22" max="48" step="1" data-exp-hub-size value="' +
           esc(String(ap.size != null ? ap.size : 32)) + '">' +
       '</div>' +
-      '<p class="builder-menu-hint">La apariencia define cómo se verá el selector en Runtime. Las escenas se descubren automáticamente.</p>';
+      '<p class="builder-menu-hint">La apariencia se guarda en el HUB. Runtime usará las plantas seleccionadas de Media.</p>';
 
     return html;
   }
@@ -1746,6 +1822,43 @@ var ExperienciaCanvas = (function () {
         if (ExperienciaEngine.setHubAppearance) {
           ExperienciaEngine.setHubAppearance(state, canvas().selectedId, { alignment: val });
         }
+      });
+
+      inspectorBody.querySelectorAll('[data-exp-hub-plant-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var pid = btn.getAttribute('data-exp-hub-plant-toggle');
+          if (!pid || !ExperienciaEngine.setHubPlantSelected) return;
+          var hubNow = ExperienciaEngine.ensureHubConfig(
+            ExperienciaEngine.getNode(state, canvas().selectedId)
+          );
+          var selected = (hubNow && hubNow.selectedPlants) || [];
+          var isOn = selected.some(function (id) { return String(id) === String(pid); });
+          ExperienciaEngine.setHubPlantSelected(state, canvas().selectedId, pid, !isOn);
+          renderAll(); persist();
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hub-plant-up]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          if (btn.disabled) return;
+          var pid = btn.getAttribute('data-exp-hub-plant-up');
+          if (pid && ExperienciaEngine.moveHubPlant) {
+            ExperienciaEngine.moveHubPlant(state, canvas().selectedId, pid, 'up');
+            renderAll(); persist();
+          }
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hub-plant-down]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          if (btn.disabled) return;
+          var pid = btn.getAttribute('data-exp-hub-plant-down');
+          if (pid && ExperienciaEngine.moveHubPlant) {
+            ExperienciaEngine.moveHubPlant(state, canvas().selectedId, pid, 'down');
+            renderAll(); persist();
+          }
+        });
       });
 
       var gapEl = inspectorBody.querySelector('[data-exp-hub-gap]');

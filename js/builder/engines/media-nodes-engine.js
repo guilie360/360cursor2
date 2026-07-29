@@ -24,7 +24,7 @@ var MediaNodesEngine = (function () {
   var MEDIA_CATEGORIES = [
     { key: 'images', label: 'Imágenes', folder: 'images', mode: 'upload', assetType: 'image', accept: 'image/*' },
     { key: 'videos', label: 'Videos / Animaciones', folder: 'videos', mode: 'upload', assetType: 'video', accept: 'video/*,image/gif,image/webp', aliases: ['animations'] },
-    { key: 'plans2d', label: 'Planos 2D', folder: 'plans2d', mode: 'upload', assetType: 'plan', accept: 'image/*,application/pdf', planKind: '2d', aliases: ['plans-2d', 'floorplans'] },
+    { key: 'plans2d', label: 'Plantas 2D', folder: 'plans2d', mode: 'upload', assetType: 'plan', accept: 'image/*,application/pdf', planKind: '2d', aliases: ['plans-2d', 'floorplans', 'plantas-2d', 'plantas2d'] },
     { key: 'plans3d', label: 'Planos 3D', folder: 'plans3d', mode: 'upload', assetType: 'plan', accept: 'image/*,model/*,.glb,.gltf', planKind: '3d', aliases: ['plans-3d'] },
     { key: 'tours360', label: 'Tours 360', folder: 'tours360', mode: 'tours', assetType: 'pano360', accept: null },
     { key: 'documents', label: 'Documentos', folder: 'documents', mode: 'upload', assetType: 'document', accept: '.pdf,.doc,.docx,image/*' },
@@ -445,12 +445,12 @@ var MediaNodesEngine = (function () {
       var okLabel = n + ' archivo' + (n === 1 ? '' : 's');
       if (categoryKey === 'videos') okLabel = n + (n === 1 ? ' video' : ' videos');
       else if (categoryKey === 'images') okLabel = n + (n === 1 ? ' imagen' : ' imágenes');
-      else if (categoryKey === 'plans2d') okLabel = 'Plano 2D';
+      else if (categoryKey === 'plans2d') okLabel = n + (n === 1 ? ' planta' : ' plantas');
       else if (categoryKey === 'plans3d') okLabel = 'Plano 3D';
       else if (categoryKey === 'ui') okLabel = n + (n === 1 ? ' recurso UI' : ' recursos UI');
       return { level: 'ok', count: n, label: okLabel };
     }
-    if (categoryKey === 'plans2d') return { level: 'missing', count: 0, label: 'Sin Plano 2D' };
+    if (categoryKey === 'plans2d') return { level: 'missing', count: 0, label: 'Sin plantas 2D' };
     if (categoryKey === 'plans3d') return { level: 'missing', count: 0, label: 'Sin Plano 3D' };
     return { level: 'missing', count: 0, label: 'Sin ' + ((cat && cat.label) || categoryKey) };
   }
@@ -501,6 +501,45 @@ var MediaNodesEngine = (function () {
       var bn = String((b && b.filename) || b.id || '');
       return an.localeCompare(bn, 'es', { sensitivity: 'base' });
     });
+  }
+
+  /**
+   * Inventory filtered by Media category key (e.g. plans2d = Plantas 2D).
+   * Official source for HUB plant selector — not canvas nodes.
+   */
+  function listInventoryByCategory(state, categoryKey) {
+    if (!state) return [];
+    var want = categoryKey ? normalizeCategoryKey(categoryKey) : null;
+    if (!want) return listInventoryAssets(state);
+    ensureNodeIds(state);
+    var nodes = listCompatibleNodes(state) || [];
+    var seen = {};
+    var out = [];
+    nodes.forEach(function (n) {
+      if (!n || !n.node_id) return;
+      var assets = assetsForNode(state, n.node_id, want) || [];
+      assets.forEach(function (a) {
+        if (!a || !a.id || seen[a.id]) return;
+        if (a.orphan) return;
+        if (!(a.filename || a.publicUrl || a.storagePath)) return;
+        if (assetCategory(a) !== want) return;
+        seen[a.id] = true;
+        out.push(a);
+      });
+    });
+    return out.sort(function (a, b) {
+      var ao = (a && a.sortOrder) || 0;
+      var bo = (b && b.sortOrder) || 0;
+      if (ao !== bo) return ao - bo;
+      var an = String((a && a.filename) || a.id || '');
+      var bn = String((b && b.filename) || b.id || '');
+      return an.localeCompare(bn, 'es', { sensitivity: 'base' });
+    });
+  }
+
+  /** Official Plantas 2D inventory (Media category plans2d). */
+  function listPlantas2d(state) {
+    return listInventoryByCategory(state, 'plans2d');
   }
 
   function detachAssets(state, nodeId) {
@@ -594,6 +633,8 @@ var MediaNodesEngine = (function () {
     nodeStatusSummary: nodeStatusSummary,
     listAssetsForNode: listAssetsForNode,
     listInventoryAssets: listInventoryAssets,
+    listInventoryByCategory: listInventoryByCategory,
+    listPlantas2d: listPlantas2d,
     detachAssets: detachAssets,
     collectAssetIdsForNode: collectAssetIdsForNode,
     removeAssetsFromLibrary: removeAssetsFromLibrary,
