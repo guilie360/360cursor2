@@ -84,6 +84,7 @@ var ExperienciaCanvas = (function () {
                 '<button type="button" class="builder-exp-mode-tab is-active" data-exp-edit-mode="flow" role="tab" aria-selected="true">FLUJO</button>' +
                 '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="buttons" role="tab" aria-selected="false" disabled>BOTONES</button>' +
                 '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="hotspots" role="tab" aria-selected="false" disabled>HOTSPOTS</button>' +
+                '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="prototype" role="tab" aria-selected="false">PROTOTIPO</button>' +
               '</div>' +
             '</div>' +
             '<button type="button" class="builder-exp-focus-fs" data-exp-fullscreen' +
@@ -118,6 +119,10 @@ var ExperienciaCanvas = (function () {
                   '<svg class="builder-exp-hotspots-svg" data-exp-hotspots-svg xmlns="http://www.w3.org/2000/svg"></svg>' +
                 '</div>' +
               '</div>' +
+            '</div>' +
+            '<div class="builder-exp-proto-stage" data-exp-proto-stage hidden>' +
+              '<canvas class="builder-exp-proto-canvas" data-exp-proto-canvas></canvas>' +
+              '<div class="builder-exp-proto-info" data-exp-proto-info></div>' +
             '</div>' +
             '<div class="builder-exp-minimap' + (minimapOn ? '' : ' is-hidden') + '" data-exp-minimap>' +
               '<canvas data-exp-minimap-canvas width="160" height="100"></canvas>' +
@@ -801,6 +806,48 @@ var ExperienciaCanvas = (function () {
       '</div></div>';
 
     return html;
+  }
+
+  function prototypeInspectorHtml(state) {
+    var sb = (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.buildStoryboard)
+      ? ExperienciaPrototype.buildStoryboard(state)
+      : null;
+    var stats = (sb && sb.stats) || {
+      nodeCount: 0, branchCount: 0, levelCount: 0, durationSec: 0
+    };
+    var mins = Math.floor(stats.durationSec / 60);
+    var secs = stats.durationSec % 60;
+    var durLabel = mins > 0
+      ? (mins + ' min ' + secs + ' s')
+      : (stats.durationSec + ' s');
+
+    return '<div class="builder-exp-proto-panel">' +
+      '<div class="builder-exp-inspector__section">Resumen</div>' +
+      '<div class="builder-exp-proto-stats">' +
+        '<div class="builder-exp-proto-stat">' +
+          '<span class="builder-exp-proto-stat__val">' + esc(String(stats.nodeCount)) + '</span>' +
+          '<span class="builder-exp-proto-stat__lab">Nodos</span>' +
+        '</div>' +
+        '<div class="builder-exp-proto-stat">' +
+          '<span class="builder-exp-proto-stat__val">' + esc(durLabel) + '</span>' +
+          '<span class="builder-exp-proto-stat__lab">Duración est.</span>' +
+        '</div>' +
+        '<div class="builder-exp-proto-stat">' +
+          '<span class="builder-exp-proto-stat__val">' + esc(String(stats.branchCount)) + '</span>' +
+          '<span class="builder-exp-proto-stat__lab">Ramas</span>' +
+        '</div>' +
+        '<div class="builder-exp-proto-stat">' +
+          '<span class="builder-exp-proto-stat__val">' + esc(String(stats.levelCount)) + '</span>' +
+          '<span class="builder-exp-proto-stat__lab">Niveles</span>' +
+        '</div>' +
+      '</div>' +
+      '<p class="builder-menu-hint builder-exp-btn-hint">' +
+        'Storyboard procedural generado desde el Canvas y la Estructura. Sin renders ni video.' +
+      '</p>' +
+      '<button type="button" class="builder-exp-proto-play" data-exp-proto-play>' +
+        '▶ Ver Prototipo' +
+      '</button>' +
+    '</div>';
   }
 
   function hubSmartInspectorHtml(state, n, hub) {
@@ -1627,6 +1674,11 @@ var ExperienciaCanvas = (function () {
     var hotspotsLayer = rootEl.querySelector('[data-exp-hotspots-layer]');
     var hotspotsSvg = rootEl.querySelector('[data-exp-hotspots-svg]');
     var hotspotsEmpty = rootEl.querySelector('[data-exp-hotspots-empty]');
+    var protoStage = rootEl.querySelector('[data-exp-proto-stage]');
+    var protoCanvas = rootEl.querySelector('[data-exp-proto-canvas]');
+    var protoInfo = rootEl.querySelector('[data-exp-proto-info]');
+    var protoPlayer = null;
+    var protoFingerprint = null;
     var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null } */
     var hotspotDrag = null; /* vertex | poly move */
     var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
@@ -2120,6 +2172,12 @@ var ExperienciaCanvas = (function () {
         }
       }
 
+      if (editMode === 'prototype') {
+        inspectorBody.innerHTML = prototypeInspectorHtml(state);
+        bindPrototypeInspectorActions();
+        return;
+      }
+
       if (ids.length > 1) {
         inspectorBody.innerHTML =
           '<div class="builder-exp-inspector__kind">SELECCIÓN</div>' +
@@ -2536,6 +2594,57 @@ var ExperienciaCanvas = (function () {
             delBtn.getAttribute('data-exp-hs-delete'));
           canvas().selectedHotspotId = null;
           renderAll(); persist();
+        });
+      }
+    }
+
+    function ensurePrototypePlayer() {
+      if (!protoCanvas || typeof ExperienciaPrototype === 'undefined') return null;
+      if (!protoPlayer && ExperienciaPrototype.createPlayer) {
+        protoPlayer = ExperienciaPrototype.createPlayer(protoCanvas, protoInfo, {
+          onDone: function () {
+            paintInspector();
+          }
+        });
+      }
+      return protoPlayer;
+    }
+
+    function syncPrototypeStoryboard() {
+      if (typeof ExperienciaPrototype === 'undefined' || !ExperienciaPrototype.buildStoryboard) {
+        return;
+      }
+      var fp = ExperienciaPrototype.fingerprint
+        ? ExperienciaPrototype.fingerprint(state)
+        : String(Date.now());
+      if (fp === protoFingerprint && protoPlayer) return;
+      protoFingerprint = fp;
+      var sb = ExperienciaPrototype.buildStoryboard(state);
+      var player = ensurePrototypePlayer();
+      if (player) {
+        player.setStoryboard(sb);
+        player.resize();
+      }
+    }
+
+    function bindPrototypeInspectorActions() {
+      if (!inspectorBody) return;
+      syncPrototypeStoryboard();
+      var playBtn = inspectorBody.querySelector('[data-exp-proto-play]');
+      if (playBtn) {
+        playBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          syncPrototypeStoryboard();
+          var player = ensurePrototypePlayer();
+          if (!player) return;
+          if (player.isPlaying && player.isPlaying()) {
+            player.stop();
+            playBtn.textContent = '▶ Ver Prototipo';
+            return;
+          }
+          if (player.play()) {
+            playBtn.textContent = '■ Detener';
+          }
         });
       }
     }
@@ -3265,11 +3374,13 @@ var ExperienciaCanvas = (function () {
       paintMinimap();
       paintButtonsStage();
       paintHotspotsStage();
+      if (canvas().editMode === 'prototype') syncPrototypeStoryboard();
       paintInspector();
       syncInspectorChrome();
       if (minimapWrap) minimapWrap.classList.toggle('is-hidden',
         canvas().editMode === 'buttons' ||
         canvas().editMode === 'hotspots' ||
+        canvas().editMode === 'prototype' ||
         canvas().minimapVisible === false);
     }
 
@@ -3299,12 +3410,16 @@ var ExperienciaCanvas = (function () {
         hotspotDraw = null;
       }
       var mode = canvas().editMode === 'buttons' ? 'buttons'
-        : (canvas().editMode === 'hotspots' ? 'hotspots' : 'flow');
+        : (canvas().editMode === 'hotspots' ? 'hotspots'
+          : (canvas().editMode === 'prototype' ? 'prototype' : 'flow'));
       if (stage) {
         stage.classList.toggle('is-buttons-mode', mode === 'buttons');
         stage.classList.toggle('is-hotspots-mode', mode === 'hotspots');
+        stage.classList.toggle('is-proto-mode', mode === 'prototype');
       }
-      if (viewport) viewport.hidden = mode === 'buttons' || mode === 'hotspots';
+      if (viewport) {
+        viewport.hidden = mode === 'buttons' || mode === 'hotspots' || mode === 'prototype';
+      }
       if (buttonsStage) {
         buttonsStage.hidden = mode !== 'buttons';
         buttonsStage.setAttribute('aria-hidden', mode === 'buttons' ? 'false' : 'true');
@@ -3313,10 +3428,18 @@ var ExperienciaCanvas = (function () {
         hotspotsStage.hidden = mode !== 'hotspots';
         hotspotsStage.setAttribute('aria-hidden', mode === 'hotspots' ? 'false' : 'true');
       }
+      if (protoStage) {
+        protoStage.hidden = mode !== 'prototype';
+        protoStage.setAttribute('aria-hidden', mode === 'prototype' ? 'false' : 'true');
+      }
+      if (mode !== 'prototype' && protoPlayer && protoPlayer.stop) {
+        protoPlayer.stop();
+      }
       if (modeTabs) {
         modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
           var m = btn.getAttribute('data-exp-edit-mode');
           var enabled = m === 'flow' ||
+            m === 'prototype' ||
             (m === 'buttons' && canUseButtonsMode()) ||
             (m === 'hotspots' && canUseHotspotsMode());
           btn.disabled = !enabled;
@@ -3402,6 +3525,10 @@ var ExperienciaCanvas = (function () {
               overlayLayoutPass = 0;
             }
           });
+          return;
+        }
+        if (canvas().editMode === 'prototype' && protoPlayer && protoPlayer.resize) {
+          protoPlayer.resize();
         }
       }, 16);
     }
@@ -4507,7 +4634,7 @@ var ExperienciaCanvas = (function () {
       });
     });
 
-    /* V6.1.00 — FLUJO | BOTONES */
+    /* V6.3.00 — FLUJO | BOTONES | HOTSPOTS | PROTOTIPO */
     if (modeTabs) {
       modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
         btn.addEventListener('click', function (ev) {
@@ -4517,7 +4644,8 @@ var ExperienciaCanvas = (function () {
           if (mode === 'buttons' && !canUseButtonsMode()) return;
           if (mode === 'hotspots' && !canUseHotspotsMode()) return;
           canvas().editMode = mode === 'buttons' ? 'buttons'
-            : (mode === 'hotspots' ? 'hotspots' : 'flow');
+            : (mode === 'hotspots' ? 'hotspots'
+              : (mode === 'prototype' ? 'prototype' : 'flow'));
           if (canvas().editMode !== 'buttons') {
             canvas().selectedButtonId = null;
             canvas().selectedButtonIds = [];
@@ -4530,6 +4658,12 @@ var ExperienciaCanvas = (function () {
           renderAll();
           persist();
           requestAnimationFrame(recomputeOverlayLayout);
+          if (canvas().editMode === 'prototype') {
+            requestAnimationFrame(function () {
+              syncPrototypeStoryboard();
+              if (protoPlayer && protoPlayer.resize) protoPlayer.resize();
+            });
+          }
         });
       });
     }
@@ -5378,6 +5512,7 @@ var ExperienciaCanvas = (function () {
       if (buttonsFrame) ro.observe(buttonsFrame);
       if (hotspotsStage) ro.observe(hotspotsStage);
       if (hotspotsFrame) ro.observe(hotspotsFrame);
+      if (protoStage) ro.observe(protoStage);
     }
     window.addEventListener('resize', onViewportResize);
     document.addEventListener('fullscreenchange', onViewportResize);
@@ -5670,6 +5805,10 @@ var ExperienciaCanvas = (function () {
         window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
         document.removeEventListener('fullscreenchange', onFullscreenChange);
         document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+        if (protoPlayer && protoPlayer.destroy) {
+          try { protoPlayer.destroy(); } catch (eProto) {}
+          protoPlayer = null;
+        }
         exitBrowserFullscreen();
       }
     };
