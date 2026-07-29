@@ -6791,7 +6791,7 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
 
 .builder-exp-buttons-stage {
   position: absolute;
-  inset: 44px 12px 12px;
+  inset: 52px 12px 12px;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -6800,6 +6800,12 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
+}
+
+/* Focus / canvas mode — keep image clear of top chrome */
+body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
+.builder-exp-workspace.is-canvas-mode .builder-exp-buttons-stage {
+  inset: 58px 16px 16px;
 }
 
 .builder-exp-buttons-stage[hidden] {
@@ -7045,6 +7051,62 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   height: 28px;
   margin: 0;
   padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* V6.1.05 — rotation slider: black track, red thumb, green hover (Style.v3) */
+.builder-exp-btn-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.builder-exp-btn-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #e5484d;
+  border: 2px solid #141414;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.builder-exp-btn-panel input[type="range"]:hover::-webkit-slider-thumb {
+  background: #6fbf86;
+  transform: scale(1.06);
+}
+
+.builder-exp-btn-panel input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid rgba(111, 191, 134, 0.7);
+  outline-offset: 2px;
+}
+
+.builder-exp-btn-panel input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.builder-exp-btn-panel input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #e5484d;
+  border: 2px solid #141414;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: background 0.15s ease;
+}
+
+.builder-exp-btn-panel input[type="range"]:hover::-moz-range-thumb {
+  background: #6fbf86;
 }
 
 .builder-exp-btn-panel .builder-hub-segment {
@@ -7164,78 +7226,17 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   z-index: 2;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(20, 20, 20, 0.85);
-  border: 1px solid rgba(111, 191, 134, 0.55);
-  color: rgba(190, 235, 205, 0.98);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(18, 18, 18, 0.92);
+  border: 1px solid rgba(111, 191, 134, 0.45);
+  color: rgba(200, 235, 210, 0.98);
   font-size: 10px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-}
-
-.builder-exp-btn-dist-label {
-  position: absolute;
-  z-index: 3;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: rgba(12, 12, 12, 0.88);
-  border: 1px solid rgba(120, 200, 255, 0.55);
-  color: rgba(180, 220, 255, 0.98);
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.builder-exp-btn-dist-label.is-edge.is-left {
-  left: 8px;
-  transform: translate(0, -50%);
-}
-
-.builder-exp-btn-dist-label.is-edge.is-right {
-  right: 8px;
-  left: auto;
-  transform: translate(0, -50%);
-}
-
-.builder-exp-btn-dist-label.is-edge.is-top {
-  top: 8px;
-  transform: translate(-50%, 0);
-}
-
-.builder-exp-btn-dist-label.is-edge.is-bottom {
-  bottom: 8px;
-  top: auto;
-  transform: translate(-50%, 0);
-}
-
-.builder-exp-btn-guide--spacing.is-uniform {
-  border-color: rgba(255, 196, 92, 0.85);
-  color: rgba(255, 220, 160, 0.98);
-}
-
-.builder-exp-btn-uniform-banner {
-  position: absolute;
-  left: 50%;
-  top: 12px;
-  z-index: 4;
-  transform: translateX(-50%);
-  pointer-events: none;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: rgba(20, 20, 20, 0.9);
-  border: 1px solid rgba(255, 196, 92, 0.7);
-  color: rgba(255, 220, 160, 0.98);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-
-.builder-exp-btn-dist-label.is-live {
-  opacity: 0.95;
+  line-height: 1.35;
+  box-shadow: none;
 }
 
 .builder-exp-btn-list__item {

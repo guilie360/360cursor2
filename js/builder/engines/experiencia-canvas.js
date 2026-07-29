@@ -1510,9 +1510,9 @@ var ExperienciaCanvas = (function () {
 
     var dragging = null;
     var buttonDrag = null;
-    var buttonAltHeld = false;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
+    var buttonNudgeDirty = false;
 
     function pushButtonHistory(sceneId) {
       if (!ExperienciaEngine.snapshotSceneButtons) return;
@@ -2988,8 +2988,8 @@ var ExperienciaCanvas = (function () {
       }
       syncInspectorChrome();
       requestAnimationFrame(function () {
-        onViewportResize();
-        requestAnimationFrame(onViewportResize);
+        recomputeOverlayLayout();
+        requestAnimationFrame(recomputeOverlayLayout);
       });
     }
 
@@ -3047,15 +3047,56 @@ var ExperienciaCanvas = (function () {
         buttonsLayer.style.top = '0';
         buttonsLayer.style.width = '100%';
         buttonsLayer.style.height = '100%';
-        return;
+        return false;
       }
       var fr = buttonsFrame.getBoundingClientRect();
       var ir = buttonsImg.getBoundingClientRect();
-      if (!fr.width || !ir.width) return;
-      buttonsLayer.style.left = Math.max(0, ir.left - fr.left) + 'px';
-      buttonsLayer.style.top = Math.max(0, ir.top - fr.top) + 'px';
-      buttonsLayer.style.width = Math.max(1, ir.width) + 'px';
-      buttonsLayer.style.height = Math.max(1, ir.height) + 'px';
+      if (!fr.width || !ir.width) return false;
+      var nextLeft = Math.max(0, ir.left - fr.left) + 'px';
+      var nextTop = Math.max(0, ir.top - fr.top) + 'px';
+      var nextW = Math.max(1, ir.width) + 'px';
+      var nextH = Math.max(1, ir.height) + 'px';
+      var changed =
+        buttonsLayer.style.left !== nextLeft ||
+        buttonsLayer.style.top !== nextTop ||
+        buttonsLayer.style.width !== nextW ||
+        buttonsLayer.style.height !== nextH;
+      buttonsLayer.style.left = nextLeft;
+      buttonsLayer.style.top = nextTop;
+      buttonsLayer.style.width = nextW;
+      buttonsLayer.style.height = nextH;
+      return changed;
+    }
+
+    var overlayLayoutTimer = null;
+    var overlayLayoutPass = 0;
+    /**
+     * Keep button overlays locked to the image after any chrome/layout change.
+     * Must not wait for click/drag.
+     */
+    function recomputeOverlayLayout() {
+      if (overlayLayoutTimer) clearTimeout(overlayLayoutTimer);
+      overlayLayoutTimer = setTimeout(function () {
+        overlayLayoutTimer = null;
+        applyWorldTransform();
+        paintMinimap();
+        if (canvas().editMode !== 'buttons') return;
+        syncButtonsLayerBounds();
+        paintButtonsStage();
+        requestAnimationFrame(function () {
+          var changed = syncButtonsLayerBounds();
+          if (changed || overlayLayoutPass < 2) {
+            overlayLayoutPass += 1;
+            paintButtonsStage();
+            requestAnimationFrame(function () {
+              syncButtonsLayerBounds();
+              overlayLayoutPass = 0;
+            });
+          } else {
+            overlayLayoutPass = 0;
+          }
+        });
+      }, 16);
     }
 
     function paintButtonsStage() {
@@ -3076,7 +3117,7 @@ var ExperienciaCanvas = (function () {
       if (url) {
         if (buttonsImg.getAttribute('src') !== url) {
           buttonsImg.onload = function () {
-            syncButtonsLayerBounds();
+            recomputeOverlayLayout();
           };
           buttonsImg.src = url;
         }
@@ -3116,82 +3157,23 @@ var ExperienciaCanvas = (function () {
       var guidesHtml = '';
       if (buttonDrag && buttonDrag.guides) {
         var g = buttonDrag.guides;
-        if (g.vCenter) {
-          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v is-center"></div>';
-        }
-        if (g.hCenter) {
-          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--h is-center"></div>';
-        }
-        (g.vAlign || []).forEach(function (x) {
-          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v" style="left:' +
-            Number(x) + '%"></div>';
-        });
-        (g.hAlign || []).forEach(function (y) {
-          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--h" style="top:' +
-            Number(y) + '%"></div>';
-        });
-        if (g.mirrorX != null) {
-          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v is-mirror" style="left:' +
-            Number(g.mirrorX) + '%"></div>';
-        }
+        /* V6.1.05 — only peer spacing labels (Figma-clean) */
+        var seenSpace = {};
         (g.spacing || []).forEach(function (s) {
-          var label = s.uniform
-            ? ('Espaciado uniforme · ' + s.px + ' px')
-            : (String(s.px) + ' px');
+          if (!s || s.px == null) return;
+          var key = String(s.axis) + ':' + Math.round(Number(s.pos) * 10) + ':' +
+            Math.round(Number(s.cross) * 10) + ':' + s.px;
+          if (seenSpace[key]) return;
+          seenSpace[key] = true;
+          var label = String(s.px) + ' px';
           if (s.axis === 'x') {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x' +
-              (s.uniform ? ' is-uniform' : '') + '" style="left:' +
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x" style="left:' +
               Number(s.pos) + '%;top:' + Number(s.cross) + '%"><span>' + esc(label) + '</span></div>';
           } else {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y' +
-              (s.uniform ? ' is-uniform' : '') + '" style="left:' +
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y" style="left:' +
               Number(s.cross) + '%;top:' + Number(s.pos) + '%"><span>' + esc(label) + '</span></div>';
           }
         });
-        (g.distances || []).forEach(function (d) {
-          guidesHtml += '<div class="builder-exp-btn-dist-label is-live' +
-            (d.kind ? (' is-' + d.kind) : '') + '" style="left:' +
-            Number(d.x) + '%;top:' + Number(d.y) + '%">' + esc(String(d.px) + ' px') + '</div>';
-        });
-        if (g.uniformBanner) {
-          guidesHtml += '<div class="builder-exp-btn-uniform-banner">' +
-            esc(g.uniformBanner) + '</div>';
-        }
-      }
-      if ((buttonAltHeld || buttonDrag) && selIds.length) {
-        var primary = buttons.filter(function (b) {
-          return b && String(b.id) === String(
-            (buttonDrag && buttonDrag.buttonId) || canvas().selectedButtonId || selIds[0]
-          );
-        })[0];
-        if (primary && !buttonDrag) {
-          var leftPx = Math.round(primary.x / 100 * layerW);
-          var rightPx = Math.round((100 - primary.x) / 100 * layerW);
-          var topPx = Math.round(primary.y / 100 * layerH);
-          var bottomPx = Math.round((100 - primary.y) / 100 * layerH);
-          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-left" style="top:' +
-            Number(primary.y) + '%">' + leftPx + 'px</div>';
-          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-right" style="top:' +
-            Number(primary.y) + '%">' + rightPx + 'px</div>';
-          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-top" style="left:' +
-            Number(primary.x) + '%">' + topPx + 'px</div>';
-          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-bottom" style="left:' +
-            Number(primary.x) + '%">' + bottomPx + 'px</div>';
-          buttons.forEach(function (b) {
-            if (!b || String(b.id) === String(primary.id)) return;
-            var dx = Math.round(Math.abs(b.x - primary.x) / 100 * layerW);
-            var dy = Math.round(Math.abs(b.y - primary.y) / 100 * layerH);
-            var midX = (b.x + primary.x) / 2;
-            var midY = (b.y + primary.y) / 2;
-            if (Math.abs(b.y - primary.y) < 2) {
-              guidesHtml += '<div class="builder-exp-btn-dist-label is-peer" style="left:' +
-                midX + '%;top:' + primary.y + '%">' + dx + 'px</div>';
-            } else if (Math.abs(b.x - primary.x) < 2) {
-              guidesHtml += '<div class="builder-exp-btn-dist-label is-peer" style="left:' +
-                primary.x + '%;top:' + midY + '%">' + dy + 'px</div>';
-            }
-          });
-        }
       }
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
@@ -3227,48 +3209,15 @@ var ExperienciaCanvas = (function () {
       var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
       var SNAP = 1.15;
       var SPACE_SNAP = 1.35;
-      var guides = {
-        vCenter: false,
-        hCenter: false,
-        vAlign: [],
-        hAlign: [],
-        mirrorX: null,
-        spacing: [],
-        distances: [],
-        uniformBanner: null
-      };
+      var ALIGN = 2.2;
+      var guides = { spacing: [] };
       var nx = x;
       var ny = y;
 
-      /* Edge + center distances (always while dragging) */
-      guides.distances.push({
-        kind: 'edge', x: Math.max(2, Math.min(x / 2, 20)), y: y,
-        px: Math.round(x / 100 * layerW)
-      });
-      guides.distances.push({
-        kind: 'edge', x: Math.min(98, Math.max((x + 100) / 2, 80)), y: y,
-        px: Math.round((100 - x) / 100 * layerW)
-      });
-      guides.distances.push({
-        kind: 'edge', x: x, y: Math.max(3, Math.min(y / 2, 18)),
-        px: Math.round(y / 100 * layerH)
-      });
-      guides.distances.push({
-        kind: 'edge', x: x, y: Math.min(97, Math.max((y + 100) / 2, 82)),
-        px: Math.round((100 - y) / 100 * layerH)
-      });
+      /* Soft align snap (silent — no guide chrome) */
+      if (Math.abs(x - 50) <= SNAP) nx = 50;
+      if (Math.abs(y - 50) <= SNAP) ny = 50;
 
-      if (Math.abs(x - 50) <= SNAP) {
-        nx = 50;
-        guides.vCenter = true;
-        guides.distances.push({ kind: 'center', x: 50, y: y, px: 0 });
-      }
-      if (Math.abs(y - 50) <= SNAP) {
-        ny = 50;
-        guides.hCenter = true;
-      }
-
-      /* Collect existing pairwise gaps for spacing snap */
       var knownGapsX = [];
       var knownGapsY = [];
       for (var i = 0; i < list.length; i++) {
@@ -3276,115 +3225,169 @@ var ExperienciaCanvas = (function () {
           var a = list[i];
           var b = list[j];
           if (!a || !b) continue;
-          if (Math.abs(a.y - b.y) <= 2) {
-            knownGapsX.push({
-              gap: Math.abs(a.x - b.x),
-              y: (a.y + b.y) / 2,
-              from: Math.min(a.x, b.x)
-            });
+          if (String(a.id) === String(buttonId) || String(b.id) === String(buttonId)) continue;
+          if (Math.abs(a.y - b.y) <= ALIGN) {
+            knownGapsX.push({ gap: Math.abs(a.x - b.x), y: (a.y + b.y) / 2 });
           }
-          if (Math.abs(a.x - b.x) <= 2) {
-            knownGapsY.push({
-              gap: Math.abs(a.y - b.y),
-              x: (a.x + b.x) / 2,
-              from: Math.min(a.y, b.y)
-            });
+          if (Math.abs(a.x - b.x) <= ALIGN) {
+            knownGapsY.push({ gap: Math.abs(a.y - b.y), x: (a.x + b.x) / 2 });
           }
         }
       }
 
       list.forEach(function (peer) {
         if (!peer || String(peer.id) === String(buttonId)) return;
-        if (Math.abs(x - peer.x) <= SNAP) {
-          nx = peer.x;
-          if (guides.vAlign.indexOf(peer.x) < 0) guides.vAlign.push(peer.x);
-        }
-        if (Math.abs(y - peer.y) <= SNAP) {
-          ny = peer.y;
-          if (guides.hAlign.indexOf(peer.y) < 0) guides.hAlign.push(peer.y);
-        }
+        if (Math.abs(x - peer.x) <= SNAP) nx = peer.x;
+        if (Math.abs(y - peer.y) <= SNAP) ny = peer.y;
         var mirror = Math.round((100 - peer.x) * 10) / 10;
-        if (Math.abs(x - mirror) <= SNAP) {
-          nx = mirror;
-          guides.mirrorX = mirror;
-        }
+        if (Math.abs(x - mirror) <= SNAP) nx = mirror;
 
-        /* Live peer distances when roughly aligned */
-        if (Math.abs(y - peer.y) < 3) {
+        /* Live spacing label between this button and peers when aligned */
+        if (Math.abs(y - peer.y) <= ALIGN) {
           var dxPct = Math.abs(x - peer.x);
-          var dxPx = Math.round(dxPct / 100 * layerW);
-          guides.distances.push({
-            kind: 'peer',
-            x: (x + peer.x) / 2,
-            y: peer.y,
-            px: dxPx
-          });
+          if (dxPct > 0.3) {
+            guides.spacing.push({
+              axis: 'x',
+              pos: (x + peer.x) / 2,
+              cross: peer.y,
+              px: Math.round(dxPct / 100 * layerW),
+              uniform: false
+            });
+          }
         }
-        if (Math.abs(x - peer.x) < 3) {
+        if (Math.abs(x - peer.x) <= ALIGN) {
           var dyPct = Math.abs(y - peer.y);
-          var dyPx = Math.round(dyPct / 100 * layerH);
-          guides.distances.push({
-            kind: 'peer',
-            x: peer.x,
-            y: (y + peer.y) / 2,
-            px: dyPx
-          });
+          if (dyPct > 0.3) {
+            guides.spacing.push({
+              axis: 'y',
+              pos: (y + peer.y) / 2,
+              cross: peer.x,
+              px: Math.round(dyPct / 100 * layerH),
+              uniform: false
+            });
+          }
         }
       });
 
-      /* Snap to known uniform spacing from any pair */
+      /* Snap to known uniform spacing — keep a single small px label */
+      var snappedSpace = null;
       knownGapsX.forEach(function (kg) {
-        if (!(kg.gap > 0.4)) return;
+        if (!(kg.gap > 0.4) || snappedSpace) return;
         list.forEach(function (peer) {
-          if (!peer || String(peer.id) === String(buttonId)) return;
-          if (Math.abs(y - peer.y) > SNAP && Math.abs(y - kg.y) > SNAP) return;
+          if (!peer || String(peer.id) === String(buttonId) || snappedSpace) return;
+          if (Math.abs(y - peer.y) > SNAP) return;
           var right = peer.x + kg.gap;
           var left = peer.x - kg.gap;
           var px = Math.round(kg.gap / 100 * layerW);
           if (Math.abs(x - right) <= SPACE_SNAP) {
             nx = right;
             ny = peer.y;
-            guides.spacing.push({
+            snappedSpace = {
               axis: 'x', pos: (peer.x + right) / 2, cross: peer.y, px: px, uniform: true
-            });
-            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+            };
           } else if (Math.abs(x - left) <= SPACE_SNAP) {
             nx = left;
             ny = peer.y;
-            guides.spacing.push({
+            snappedSpace = {
               axis: 'x', pos: (peer.x + left) / 2, cross: peer.y, px: px, uniform: true
-            });
-            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+            };
           }
         });
       });
       knownGapsY.forEach(function (kg) {
-        if (!(kg.gap > 0.4)) return;
+        if (!(kg.gap > 0.4) || snappedSpace) return;
         list.forEach(function (peer) {
-          if (!peer || String(peer.id) === String(buttonId)) return;
-          if (Math.abs(x - peer.x) > SNAP && Math.abs(x - kg.x) > SNAP) return;
+          if (!peer || String(peer.id) === String(buttonId) || snappedSpace) return;
+          if (Math.abs(x - peer.x) > SNAP) return;
           var below = peer.y + kg.gap;
           var above = peer.y - kg.gap;
           var px = Math.round(kg.gap / 100 * layerH);
           if (Math.abs(y - below) <= SPACE_SNAP) {
             ny = below;
             nx = peer.x;
-            guides.spacing.push({
+            snappedSpace = {
               axis: 'y', pos: (peer.y + below) / 2, cross: peer.x, px: px, uniform: true
-            });
-            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+            };
           } else if (Math.abs(y - above) <= SPACE_SNAP) {
             ny = above;
             nx = peer.x;
-            guides.spacing.push({
+            snappedSpace = {
               axis: 'y', pos: (peer.y + above) / 2, cross: peer.x, px: px, uniform: true
-            });
-            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+            };
           }
         });
       });
 
+      if (snappedSpace) {
+        guides.spacing = [snappedSpace];
+      } else if (guides.spacing.length > 2) {
+        /* Keep nearest peer spacing only — avoid clutter */
+        guides.spacing.sort(function (a, b) { return a.px - b.px; });
+        guides.spacing = guides.spacing.slice(0, 2);
+      }
+
       return { x: nx, y: ny, guides: guides };
+    }
+
+    function nudgeSelectedButtons(dxPx, dyPx) {
+      if (canvas().editMode !== 'buttons') return false;
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return false;
+      var ids = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.slice()
+        : [];
+      if (!ids.length && canvas().selectedButtonId) ids = [canvas().selectedButtonId];
+      if (!ids.length) return false;
+      var layerW = Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000);
+      var layerH = Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000);
+      var dx = (Number(dxPx) || 0) / layerW * 100;
+      var dy = (Number(dyPx) || 0) / layerH * 100;
+      if (!dx && !dy) return false;
+      armButtonOp(sceneId);
+      buttonNudgeDirty = true;
+      var single = ids.length === 1;
+      ids.forEach(function (bid) {
+        var btn = ExperienciaEngine.getSceneButton(state,
+          ExperienciaEngine.getNode(state, sceneId), bid);
+        if (!btn) return;
+        var x0 = btn.storedX != null ? Number(btn.storedX) : Number(btn.x);
+        var y0 = btn.storedY != null ? Number(btn.storedY) : Number(btn.y);
+        var nextX = x0 + dx;
+        var nextY = y0 + dy;
+        if (single) {
+          var snapped = computeButtonGuides(sceneId, bid, nextX, nextY);
+          buttonDrag = {
+            buttonId: bid,
+            sceneId: sceneId,
+            guides: snapped.guides,
+            nudge: true
+          };
+          nextX = snapped.x;
+          nextY = snapped.y;
+        } else {
+          buttonDrag = {
+            buttonId: bid,
+            sceneId: sceneId,
+            guides: { spacing: [] },
+            nudge: true
+          };
+        }
+        ExperienciaEngine.setSceneButtonPosition(
+          state, sceneId, bid, nextX, nextY
+        );
+      });
+      paintButtonsStage();
+      return true;
+    }
+
+    function finishButtonNudge() {
+      if (!buttonNudgeDirty && !(buttonDrag && buttonDrag.nudge)) return;
+      buttonNudgeDirty = false;
+      buttonDrag = null;
+      endButtonOp();
+      paintButtonsStage();
+      paintInspector();
+      persist();
     }
 
     function syncToolUi() {
@@ -3972,6 +3975,7 @@ var ExperienciaCanvas = (function () {
           openPropertiesRail();
           renderAll();
           persist();
+          requestAnimationFrame(recomputeOverlayLayout);
         });
       });
     }
@@ -4069,21 +4073,8 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    document.addEventListener('keydown', function (ev) {
-      if (ev.key !== 'Alt') return;
-      if (canvas().editMode !== 'buttons') return;
-      buttonAltHeld = true;
-      paintButtonsStage();
-    });
-    document.addEventListener('keyup', function (ev) {
-      if (ev.key !== 'Alt') return;
-      buttonAltHeld = false;
-      if (canvas().editMode === 'buttons') paintButtonsStage();
-    });
     window.addEventListener('blur', function () {
-      if (!buttonAltHeld) return;
-      buttonAltHeld = false;
-      if (canvas().editMode === 'buttons') paintButtonsStage();
+      finishButtonNudge();
     });
 
     var fsBtn = rootEl.querySelector('[data-exp-fullscreen]');
@@ -4458,6 +4449,25 @@ var ExperienciaCanvas = (function () {
       if (ev.code === 'Space') {
         if (!isFormField(ev.target) && !renameEdit) spacePan = true;
       }
+      /* V6.1.05 — arrow nudge in BOTONES (1 / 10 / 0.5 px) */
+      if (canvas().editMode === 'buttons' && !isFormField(ev.target) && !renameEdit) {
+        var arrow = ev.key;
+        if (arrow === 'ArrowUp' || arrow === 'ArrowDown' ||
+            arrow === 'ArrowLeft' || arrow === 'ArrowRight') {
+          var step = ev.altKey ? 0.5 : (ev.shiftKey ? 10 : 1);
+          var ndx = 0;
+          var ndy = 0;
+          if (arrow === 'ArrowLeft') ndx = -step;
+          else if (arrow === 'ArrowRight') ndx = step;
+          else if (arrow === 'ArrowUp') ndy = -step;
+          else if (arrow === 'ArrowDown') ndy = step;
+          if (nudgeSelectedButtons(ndx, ndy)) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            return;
+          }
+        }
+      }
       if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
         var key = String(ev.key || '').toLowerCase();
         if (key === 'z' || key === 'y') {
@@ -4582,6 +4592,11 @@ var ExperienciaCanvas = (function () {
     }
     function onKeyUp(ev) {
       if (ev.code === 'Space') spacePan = false;
+      if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown' ||
+          ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
+          ev.key === 'Alt' || ev.key === 'Shift') {
+        finishButtonNudge();
+      }
     }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -4614,21 +4629,16 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    var resizeTimer = null;
     function onViewportResize() {
-      if (!viewport || !world) return;
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () {
-        if (!viewport || !world) return;
-        applyWorldTransform();
-        paintMinimap();
-      }, 40);
+      recomputeOverlayLayout();
     }
     if (typeof ResizeObserver !== 'undefined') {
       var ro = new ResizeObserver(onViewportResize);
       ro.observe(viewport);
       if (stage) ro.observe(stage);
       if (workspace) ro.observe(workspace);
+      if (buttonsStage) ro.observe(buttonsStage);
+      if (buttonsFrame) ro.observe(buttonsFrame);
     }
     window.addEventListener('resize', onViewportResize);
     document.addEventListener('fullscreenchange', onViewportResize);
