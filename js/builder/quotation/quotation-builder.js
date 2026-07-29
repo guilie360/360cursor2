@@ -102,7 +102,8 @@ var QuotationBuilderView = (function () {
     projectCtx = {
       id: String(projectId || '').trim(),
       slug: String(slug || '').trim(),
-      name: String(slug || projectId || 'Quotation Room')
+      name: String(slug || projectId || 'Quotation Room'),
+      constructora_id: null
     };
     try {
       if (typeof BoxiesAdmin2ProjectsApi !== 'undefined' && BoxiesAdmin2ProjectsApi.list) {
@@ -123,6 +124,7 @@ var QuotationBuilderView = (function () {
           projectCtx.id = match.id || projectCtx.id;
           projectCtx.name = match.nombre || match.name || projectCtx.name;
           projectCtx.slug = match.slug || projectCtx.slug;
+          projectCtx.constructora_id = match.constructora_id || projectCtx.constructora_id || null;
         }
       }
     } catch (eHydrate) {}
