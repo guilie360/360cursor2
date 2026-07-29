@@ -53,7 +53,7 @@ var AiProjectBuilderView = (function () {
 
   /* ── Step renderers ── */
 
-  /* ── V5.9.98 — Unique page coordinates (builder-page) ── */
+  /* ── V5.9.98/99 — Unique page coordinates (builder-page) ── */
 
   function resolveSectionChecked(stepId) {
     if (!stepId) return false;
@@ -75,6 +75,7 @@ var AiProjectBuilderView = (function () {
     meta = meta || {};
     var stepId = meta.stepId || '';
     var showCheck = meta.showCheck !== false;
+    var showDesc = meta.showDesc !== false && !!(meta.desc && String(meta.desc).trim());
     var checked = showCheck && resolveSectionChecked(stepId);
     var checkHtml = showCheck
       ? ('<label class="builder-section-check" title="Marcar o desmarcar secci\u00F3n en la lista">' +
@@ -83,11 +84,16 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-section-check-box" aria-hidden="true"></span>' +
         '</label>')
       : '<span class="builder-section-check builder-section-check--spacer" aria-hidden="true"></span>';
-    return '<div class="builder-step-title-row">' +
-        checkHtml +
-        '<h2 class="builder-step-title" data-builder-page-title>' + AdminUI.escapeHtml(meta.title || '') + '</h2>' +
+    return '<div class="builder-page-header__main">' +
+        '<div class="builder-step-title-row">' +
+          checkHtml +
+          '<h2 class="builder-step-title" data-builder-page-title>' + AdminUI.escapeHtml(meta.title || '') + '</h2>' +
+        '</div>' +
+        '<p class="builder-step-desc" data-builder-page-desc' + (showDesc ? '' : ' hidden') + '>' +
+          AdminUI.escapeHtml(meta.desc || '') +
+        '</p>' +
       '</div>' +
-      '<p class="builder-step-desc" data-builder-page-desc>' + AdminUI.escapeHtml(meta.desc || '') + '</p>';
+      '<div class="builder-page-header__actions" data-builder-page-actions></div>';
   }
 
   function getBuilderPageMeta(step) {
@@ -97,6 +103,7 @@ var AiProjectBuilderView = (function () {
         title: 'Configuraci\u00F3n',
         desc: 'Identidad del Showroom. Fuente \u00FAnica de nombre y URL p\u00FAblica.',
         showCheck: true,
+        showDesc: true,
         frame: false,
         contentClass: ''
       },
@@ -104,6 +111,7 @@ var AiProjectBuilderView = (function () {
         title: 'Arquitecto IA',
         desc: 'Describe el proyecto en lenguaje natural. La IA propone; t\u00FA apruebas. Todo alimenta Estructura, Media y Experiencia.',
         showCheck: true,
+        showDesc: true,
         frame: false,
         contentClass: 'builder-page--assistant'
       },
@@ -111,6 +119,7 @@ var AiProjectBuilderView = (function () {
         title: 'Estructura',
         desc: 'Define tipolog\u00EDas, plantas, ambientes y amenidades.',
         showCheck: true,
+        showDesc: true,
         frame: false,
         contentClass: 'builder-page--estructura'
       },
@@ -118,6 +127,7 @@ var AiProjectBuilderView = (function () {
         title: 'Estructura',
         desc: 'Define tipolog\u00EDas, plantas, ambientes y amenidades.',
         showCheck: true,
+        showDesc: true,
         frame: false,
         contentClass: 'builder-page--estructura'
       },
@@ -125,6 +135,7 @@ var AiProjectBuilderView = (function () {
         title: 'Hero',
         desc: 'Video, imagen y logo de portada del showroom.',
         showCheck: true,
+        showDesc: true,
         frame: true,
         contentClass: 'builder-page--hero'
       },
@@ -132,6 +143,7 @@ var AiProjectBuilderView = (function () {
         title: 'Men\u00FA',
         desc: 'Configura la navegaci\u00F3n principal del showroom.',
         showCheck: true,
+        showDesc: true,
         frame: true,
         contentClass: 'builder-page--menu'
       },
@@ -139,6 +151,7 @@ var AiProjectBuilderView = (function () {
         title: 'Media',
         desc: 'Explorador de nodos \u00B7 edici\u00F3n en el panel derecho.',
         showCheck: true,
+        showDesc: true,
         frame: true,
         contentClass: 'builder-page--media'
       },
@@ -146,13 +159,15 @@ var AiProjectBuilderView = (function () {
         title: 'Experiencia',
         desc: 'Editor del flujo del showroom. Consume Estructura y Media.',
         showCheck: true,
+        showDesc: true,
         frame: true,
         contentClass: 'builder-page--experiencia'
       },
       'vista-previa': {
         title: 'Vista previa',
-        desc: 'Canvas \u00B7 INICIAR',
+        desc: '',
         showCheck: false,
+        showDesc: false,
         frame: true,
         contentClass: 'builder-page--vista-previa'
       }
@@ -161,11 +176,57 @@ var AiProjectBuilderView = (function () {
       title: (step && (step.label || step.shortLabel)) || '',
       desc: (step && step.assistant) || '',
       showCheck: true,
+      showDesc: true,
       frame: false,
       contentClass: ''
     };
     meta.stepId = id === 'project-type' ? 'estructura' : id;
     return meta;
+  }
+
+  function getBuilderPageActionsHtml(step) {
+    if (!step) return '';
+    var id = step.id;
+    if (id === 'estructura' || id === 'project-type') {
+      return buildEstructuraHeaderActionsHtml();
+    }
+    if (id === 'experiencia') {
+      if (typeof ExperienciaCanvas !== 'undefined' && ExperienciaCanvas.actionsHtml) {
+        return ExperienciaCanvas.actionsHtml(state);
+      }
+      return '';
+    }
+    if (id === 'vista-previa') {
+      var slug = resolveShowroomSlug();
+      var hasSlug = !!(slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug));
+      if (!hasSlug) return '';
+      return '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderVistaPreviaReload" title="Recargar">Recargar</button>';
+    }
+    return '';
+  }
+
+  function buildEstructuraHeaderActionsHtml() {
+    if (typeof EstructuraEngine !== 'undefined') EstructuraEngine.ensureState(state);
+    var e = state.estructura || {};
+    var draftStatus = e.dirty ? 'Cambios sin guardar' : (e._draftSaved ? 'Guardado' : '');
+    var allExpanded = !!e.uiExpandAll;
+    var expandIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
+      ? BuilderIcons.render('chevron-down')
+      : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    return '<button type="button" class="builder-estructura-expand-all' +
+        (allExpanded ? ' is-expanded' : '') +
+        '" id="builderEstructuraExpandAll"' +
+        ' aria-label="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '"' +
+        ' aria-expanded="' + (allExpanded ? 'true' : 'false') + '"' +
+        ' data-tooltip="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '">' +
+        '<span class="builder-estructura-expand-all__icon" aria-hidden="true">' + expandIcon + '</span>' +
+      '</button>' +
+      '<span class="builder-estructura-draft-status' +
+        (e.dirty ? ' is-dirty' : (e._draftSaved ? ' is-saved' : '')) +
+        '" data-estructura-draft-status>' + AdminUI.escapeHtml(draftStatus) + '</span>' +
+      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderSaveEstructuraDraftBtn">' +
+        'Guardar borrador</button>' +
+      '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>';
   }
 
   function ensureBuilderPage(panel) {
@@ -179,22 +240,29 @@ var AiProjectBuilderView = (function () {
     return panel.querySelector('[data-builder-page]');
   }
 
-  function syncBuilderPageHeader(headerEl, meta) {
+  function syncBuilderPageHeader(headerEl, meta, actionsHtml) {
     if (!headerEl) return;
     if (!headerEl.querySelector('[data-builder-page-title]')) {
       headerEl.innerHTML = builderPageHeaderHtml(meta);
-      return;
     }
     var titleEl = headerEl.querySelector('[data-builder-page-title]');
     var descEl = headerEl.querySelector('[data-builder-page-desc]');
     var row = headerEl.querySelector('.builder-step-title-row');
+    var actionsEl = headerEl.querySelector('[data-builder-page-actions]');
     var showCheck = meta.showCheck !== false;
+    var showDesc = meta.showDesc !== false && !!(meta.desc && String(meta.desc).trim());
     var existingCheck = headerEl.querySelector('#builderSectionDoneCheck');
     var spacer = headerEl.querySelector('.builder-section-check--spacer');
     var checkLabel = headerEl.querySelector('label.builder-section-check');
 
     if (titleEl) titleEl.textContent = meta.title || '';
-    if (descEl) descEl.textContent = meta.desc || '';
+    if (descEl) {
+      descEl.textContent = meta.desc || '';
+      if (showDesc) descEl.removeAttribute('hidden');
+      else descEl.setAttribute('hidden', '');
+    }
+    headerEl.classList.toggle('has-no-desc', !showDesc);
+    headerEl.classList.toggle('has-actions', !!(actionsHtml && String(actionsHtml).trim()));
 
     if (showCheck) {
       if (!existingCheck && row) {
@@ -231,6 +299,8 @@ var AiProjectBuilderView = (function () {
         row.insertBefore(sp, row.firstChild);
       }
     }
+
+    if (actionsEl) actionsEl.innerHTML = actionsHtml || '';
   }
 
   /** @deprecated Use builder-page header — kept for rare legacy body helpers */
@@ -240,8 +310,9 @@ var AiProjectBuilderView = (function () {
       title: title,
       desc: '',
       stepId: options.stepId || (BuilderWizard.getStep(state.currentStep) || {}).id || '',
-      showCheck: true
-    }).replace(/<p class="builder-step-desc"[^>]*>[\s\S]*?<\/p>/, '') + (options.trailingHtml || '');
+      showCheck: true,
+      showDesc: false
+    }).replace(/<div class="builder-page-header__actions"[\s\S]*$/, '') + (options.trailingHtml || '');
   }
 
   function bindSectionDoneCheck() {
@@ -1490,22 +1561,6 @@ var AiProjectBuilderView = (function () {
 
     var panels = e.openPanels || {};
     var sectionHints = buildEstructuraSectionHints(e);
-    var draftStatus = e.dirty
-      ? 'Cambios sin guardar'
-      : (e._draftSaved ? 'Guardado' : '');
-    var allExpanded = !!e.uiExpandAll;
-    var expandIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
-      ? BuilderIcons.render('chevron-down')
-      : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-    var expandBtnHtml =
-      '<button type="button" class="builder-estructura-expand-all' +
-        (allExpanded ? ' is-expanded' : '') +
-        '" id="builderEstructuraExpandAll"' +
-        ' aria-label="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '"' +
-        ' aria-expanded="' + (allExpanded ? 'true' : 'false') + '"' +
-        ' data-tooltip="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '">' +
-        '<span class="builder-estructura-expand-all__icon" aria-hidden="true">' + expandIcon + '</span>' +
-      '</button>';
 
     function sectionHintHtml(key, text) {
       if (!text) return '';
@@ -1514,17 +1569,6 @@ var AiProjectBuilderView = (function () {
     }
 
     return '<div class="builder-step-content builder-step-content--estructura">' +
-      '<div class="builder-estructura-toolbar">' +
-        expandBtnHtml +
-        '<div class="builder-estructura-head__actions">' +
-          '<span class="builder-estructura-draft-status' +
-            (e.dirty ? ' is-dirty' : (e._draftSaved ? ' is-saved' : '')) +
-            '" data-estructura-draft-status>' + AdminUI.escapeHtml(draftStatus) + '</span>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderSaveEstructuraDraftBtn">' +
-            'Guardar borrador</button>' +
-          '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>' +
-        '</div>' +
-      '</div>' +
       '<details class="builder-estructura-section" data-estructura-panel="dev"' +
         (panels.dev !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
@@ -2083,10 +2127,7 @@ var AiProjectBuilderView = (function () {
       '<div class="builder-vista-previa-frame" id="builderVistaPreviaFrame">' +
         (hasSlug
           ? '<iframe class="builder-vista-previa-iframe" id="builderVistaPreviaIframe" title="Vista previa del showroom" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen></iframe>' +
-            '<div class="builder-vista-previa-toolbar">' +
-              '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderVistaPreviaReload" title="Recargar">Recargar</button>' +
-              '<span class="builder-vista-previa-toolbar__slug">' + AdminUI.escapeHtml(slug) + '</span>' +
-            '</div>'
+            '<button type="button" class="builder-vista-previa-reset" id="builderVistaPreviaReset" title="Volver a INICIAR" aria-label="Cerrar simulaci\u00F3n y volver a INICIAR">\u00D7</button>'
           : '<div class="builder-vista-previa-empty">' +
               '<p class="builder-menu-hint">Define el <strong>slug</strong> en Configuración para cargar el showroom real aquí.</p>' +
               '<p class="builder-menu-hint">La vista previa usa el mismo motor del showroom: pantalla negra + INICIAR (= botón Iniciar del Hero).</p>' +
@@ -2122,12 +2163,23 @@ var AiProjectBuilderView = (function () {
     if (!iframe) return;
     var url = resolveVistaPreviaUrl();
     if (!url) return;
-    iframe.src = url;
+    if (iframe.getAttribute('src') !== url) {
+      iframe.src = url;
+    }
     var reloadBtn = rootEl.querySelector('#builderVistaPreviaReload');
     if (reloadBtn) {
-      reloadBtn.addEventListener('click', function () {
+      reloadBtn.onclick = function () {
         iframe.src = resolveVistaPreviaUrl() || url;
-      });
+      };
+    }
+    var resetBtn = rootEl.querySelector('#builderVistaPreviaReset');
+    if (resetBtn) {
+      resetBtn.onclick = function () {
+        try {
+          var win = iframe.contentWindow;
+          if (win) win.postMessage({ type: 'boxies-canvas-preview-reset' }, '*');
+        } catch (errReset) {}
+      };
     }
   }
 
@@ -3632,11 +3684,13 @@ var AiProjectBuilderView = (function () {
     }
 
     var meta = getBuilderPageMeta(step);
+    var actionsHtml = getBuilderPageActionsHtml(step);
     var page = ensureBuilderPage(panel);
     var mods = ['builder-page'];
     if (meta.frame) mods.push('is-framed');
     else mods.push('is-scroll');
     if (meta.contentClass) mods.push(meta.contentClass);
+    if (meta.showDesc === false) mods.push('has-no-desc');
     page.className = mods.join(' ');
     page.setAttribute('data-step', step.id);
     panel.classList.toggle('is-framed-step', !!meta.frame);
@@ -3644,7 +3698,7 @@ var AiProjectBuilderView = (function () {
 
     var headerEl = page.querySelector('[data-builder-page-header]');
     var bodyEl = page.querySelector('[data-builder-page-body]');
-    syncBuilderPageHeader(headerEl, meta);
+    syncBuilderPageHeader(headerEl, meta, actionsHtml);
     if (bodyEl) bodyEl.innerHTML = html;
 
     bindStepEvents(step.id);

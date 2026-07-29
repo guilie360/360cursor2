@@ -29,7 +29,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 98;
+  var NAV_VERSION = 99;
 
   function getSteps() {
     return STEPS.slice();

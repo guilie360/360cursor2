@@ -2857,6 +2857,33 @@ function forceHeroIdleUi() {
   syncNavigationCloseState();
 }
 
+/** V5.9.99 — Builder Vista previa: volver a pantalla negra + INICIAR sin recargar iframe */
+function resetCanvasPreviewToStart() {
+  if (!document.documentElement.classList.contains('boxies-canvas-preview')) return;
+  try {
+    navResumePending = false;
+    if (typeof clearNavResumeAwaiting === 'function') clearNavResumeAwaiting();
+    if (typeof clearNavFreezeState === 'function') clearNavFreezeState();
+  } catch (_eClr) {}
+  hideAllOverlayScreens();
+  hideNavResumeGate();
+  navStack.length = 0;
+  clearPreservedOverlay();
+  liveNavSnapshot = null;
+  var backdrop = document.getElementById('mainMenuBackdrop');
+  var menu = document.getElementById('mainMenu');
+  if (backdrop) backdrop.classList.remove('active');
+  if (menu) menu.classList.remove('active');
+  document.body.classList.remove('main-menu-open', 'global-close-docked', 'nav-resume-active');
+  unlockBodyScroll();
+  var btn = document.getElementById('heroStartBtn');
+  if (btn) btn.textContent = 'INICIAR';
+  if (typeof syncNavigationCloseState === 'function') syncNavigationCloseState();
+  try { saveNavSession(); } catch (_eSave) {}
+}
+
+window.resetCanvasPreviewToStart = resetCanvasPreviewToStart;
+
 function shouldEnforceNavDom() {
   if (typeof isStyleV3MenuLocked === 'function' && isStyleV3MenuLocked()) return false;
   if (isNavResumeLocked()) return false;
@@ -4165,6 +4192,17 @@ window.__mainTraceSafe('bind heroStartBtn', function () {
     btn.textContent = 'INICIAR';
   }
   btn.addEventListener('click', function(){ goTo('sphere'); });
+});
+
+window.__mainTraceSafe('bind boxiesCanvasPreviewReset', function () {
+  if (!document.documentElement.classList.contains('boxies-canvas-preview')) return;
+  window.addEventListener('message', function (ev) {
+    var data = ev && ev.data;
+    if (!data || data.type !== 'boxies-canvas-preview-reset') return;
+    if (typeof resetCanvasPreviewToStart === 'function') {
+      resetCanvasPreviewToStart();
+    }
+  });
 });
 
 /* ================= CIERRES — botón global; backdrops siguen activos ================= */

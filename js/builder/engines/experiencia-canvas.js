@@ -38,6 +38,30 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
+  function actionsHtml(state) {
+    ExperienciaEngine.ensureFlow(state);
+    var canvas = (state.experiencia && state.experiencia.canvas) || {};
+    var inGroup = !!(canvas.activeGroupId);
+    return '' +
+      (inGroup
+        ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
+        : '') +
+      '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon builder-exp-reset-btn" id="builderExpResetBtn"' +
+        ' data-tooltip="Reiniciar flujo" title="Reiniciar flujo" aria-label="Reiniciar flujo">' +
+        (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
+          ? BuilderIcons.render('rotate-ccw')
+          : '↶') +
+      '</button>' +
+      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpTemplateBtn">' +
+        'Crear flujo base</button>' +
+      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpStructReviewBtn">' +
+        'Revisar Estructura</button>' +
+      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpDraftBtn">' +
+        'Guardar borrador</button>' +
+      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
+        'Actualizar desde Hero</button>';
+  }
+
   function shellHtml(state) {
     ExperienciaEngine.ensureFlow(state);
     var exp = state.experiencia;
@@ -49,32 +73,10 @@ var ExperienciaCanvas = (function () {
     var inspectorVisible = inspectorOpen && !inspectorCollapsed;
     var showInspectorTab = inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
-    var inGroup = !!(canvas.activeGroupId);
 
     return '' +
       '<div class="builder-step-content builder-step-content--experiencia' +
         (canvasMode ? ' is-canvas-mode' : '') + '">' +
-        '<div class="builder-exp-chrome builder-exp-chrome--actions-only">' +
-          '<div class="builder-exp-chrome__actions">' +
-            (inGroup
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
-              : '') +
-            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon builder-exp-reset-btn" id="builderExpResetBtn"' +
-              ' data-tooltip="Reiniciar flujo" title="Reiniciar flujo" aria-label="Reiniciar flujo">' +
-              (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
-                ? BuilderIcons.render('rotate-ccw')
-                : '↶') +
-            '</button>' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpTemplateBtn">' +
-              'Crear flujo base</button>' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpStructReviewBtn">' +
-              'Revisar Estructura</button>' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpDraftBtn">' +
-              'Guardar borrador</button>' +
-            '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
-              'Actualizar desde Hero</button>' +
-          '</div>' +
-        '</div>' +
         '<div class="builder-exp-workspace' +
           (inspectorVisible ? ' has-inspector' : '') +
           (showInspectorTab ? ' has-inspector-tab' : '') +
@@ -3395,6 +3397,7 @@ var ExperienciaCanvas = (function () {
 
   return {
     shellHtml: shellHtml,
+    actionsHtml: actionsHtml,
     mount: mount,
     isCanvasMode: isCanvasMode,
     setCanvasMode: setCanvasMode

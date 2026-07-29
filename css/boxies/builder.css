@@ -733,15 +733,15 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 }
 
 /*
- * V5.9.98 — Unique Builder coordinates.
+ * V5.9.99 — Compact shared header (~40% less vertical chrome).
  * ONLY .builder-page owns padding X/Y. Modules must not add their own.
  */
 .builder-page {
   --builder-page-pad-x: clamp(20px, 3vw, 40px);
-  --builder-page-pad-y: 24px;
-  --builder-page-pad-bottom: 28px;
-  --builder-page-header-title-h: 28px;
-  --builder-page-header-desc-h: 40px;
+  --builder-page-pad-y: 14px;
+  --builder-page-pad-bottom: 16px;
+  --builder-page-header-title-h: 24px;
+  --builder-page-header-desc-h: 22px;
   box-sizing: border-box;
   width: 100%;
   min-height: 0;
@@ -763,7 +763,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  --builder-page-pad-bottom: 12px;
+  --builder-page-pad-bottom: 8px;
 }
 
 #builderStepPanel.is-scroll-step {
@@ -778,16 +778,40 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 
 .builder-page-header {
   flex: 0 0 auto;
-  margin: 0;
+  margin: 0 0 8px;
   padding: 0;
   width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.builder-page-header__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.builder-page-header__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: var(--builder-page-header-title-h);
+  max-width: min(58%, 640px);
+}
+
+.builder-page-header:not(.has-actions) .builder-page-header__actions {
+  display: none;
 }
 
 .builder-page-header .builder-step-title-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   padding: 0;
   height: var(--builder-page-header-title-h);
   min-height: var(--builder-page-header-title-h);
@@ -805,7 +829,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 }
 
 .builder-page-header .builder-step-desc {
-  margin: 0 0 14px;
+  margin: 0;
   padding: 0;
   min-height: var(--builder-page-header-desc-h);
   height: var(--builder-page-header-desc-h);
@@ -813,8 +837,36 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   overflow: hidden;
   color: rgba(255, 255, 255, 0.42);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.4;
   box-sizing: border-box;
+}
+
+.builder-page-header.has-no-desc .builder-step-desc,
+.builder-page.has-no-desc .builder-page-header .builder-step-desc {
+  display: none;
+  height: 0;
+  min-height: 0;
+  max-height: 0;
+  margin: 0;
+}
+
+.builder-page-header.has-no-desc .builder-step-title-row,
+.builder-page.has-no-desc .builder-page-header .builder-step-title-row {
+  margin-bottom: 0;
+}
+
+.builder-page-header__actions .builder-estructura-draft-status {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.builder-page-header__actions .builder-estructura-draft-status.is-dirty {
+  color: rgba(255, 180, 90, 0.9);
+}
+
+.builder-page-header__actions .builder-estructura-draft-status.is-saved {
+  color: rgba(120, 210, 150, 0.85);
 }
 
 .builder-page-body {
@@ -1971,28 +2023,33 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   background: #000;
 }
 
-.builder-vista-previa-toolbar {
+.builder-vista-previa-reset {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 4px 4px 10px;
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   backdrop-filter: blur(8px);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.builder-vista-previa-toolbar__slug {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.builder-vista-previa-reset:hover {
+  background: rgba(0, 0, 0, 0.72);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #fff;
 }
 
 .builder-vista-previa-empty {
@@ -2603,7 +2660,7 @@ body.builder-has-dock .admin-toast--info {
 
   .builder-page {
     --builder-page-pad-x: 16px;
-    --builder-page-pad-y: 20px;
+    --builder-page-pad-y: 12px;
   }
 
   .builder-upload-grid,
