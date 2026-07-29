@@ -345,18 +345,18 @@ body.boxies-builder-chrome.boxies-rail-collapsed .boxies-workspace {
 
 body.boxies-exp-canvas-mode #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,
 body.boxies-exp-canvas-mode #boxiesContent .builder-workspace {
-  margin-left: 0 !important;
+  margin-left: var(--builder-rail-width, 0px) !important;
+  margin-right: var(--builder-props-rail-width, 0px) !important;
   margin-top: 0 !important;
   left: 0 !important;
-  width: 100% !important;
+  width: auto !important;
   max-width: none !important;
   top: 0 !important;
   min-height: 100vh !important;
   min-height: 100dvh !important;
 }
 
-body.boxies-exp-canvas-mode .builder-progress-sidebar,
-body.boxies-exp-canvas-mode #builderProgressRail,
+/* Focus: hide platform shell only — builder rails stay toggleable */
 body.boxies-exp-canvas-mode .boxies-sidebar,
 body.boxies-exp-canvas-mode #boxiesSidebar,
 body.boxies-exp-canvas-mode .boxies-header,
@@ -374,7 +374,6 @@ html.boxies-exp-canvas-mode,
 body.boxies-exp-canvas-mode {
   --boxies-sidebar-w: 0px !important;
   --boxies-sidebar-collapsed-w: 0px !important;
-  --builder-rail-width: 0px !important;
   --boxies-header-h: 0px !important;
   --boxies-dock-h: 0px !important;
 }
@@ -391,7 +390,40 @@ body.boxies-exp-canvas-mode .boxies-content {
   padding: 0 !important;
 }
 
+body.boxies-exp-canvas-mode.boxies-builder-chrome .boxies-workspace {
+  margin-left: 0 !important;
+}
+
 body.boxies-exp-canvas-mode .builder-step-content--experiencia {
   padding: 0 !important;
   height: 100%;
+}
+
+body.boxies-exp-canvas-mode .boxies-builder-embed .builder-progress-sidebar,
+body.boxies-exp-canvas-mode #boxiesContent .builder-progress-sidebar {
+  display: flex !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  pointer-events: auto;
+}
+
+body.boxies-exp-canvas-mode.boxies-rail-collapsed .boxies-builder-embed .builder-progress-sidebar,
+body.boxies-exp-canvas-mode.boxies-rail-collapsed #boxiesContent .builder-progress-sidebar {
+  width: 0 !important;
+  pointer-events: none;
+}
+
+body.boxies-exp-canvas-mode .boxies-builder-embed .builder-properties-sidebar,
+body.boxies-exp-canvas-mode #boxiesContent .builder-properties-sidebar {
+  display: flex !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  pointer-events: auto;
+}
+
+body.boxies-exp-canvas-mode.boxies-props-rail-collapsed .boxies-builder-embed .builder-properties-sidebar,
+body.boxies-exp-canvas-mode.boxies-props-rail-collapsed #boxiesContent .builder-properties-sidebar {
+  width: 0 !important;
+  pointer-events: none;
 }

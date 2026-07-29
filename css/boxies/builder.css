@@ -736,19 +736,31 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   transform: rotate(180deg);
 }
 
-body.boxies-exp-canvas-mode .builder-properties-sidebar,
-html.boxies-exp-canvas-mode .builder-properties-sidebar,
-body.boxies-exp-canvas-mode #builderPropertiesRail,
+/* Focus mode: float arrows stay usable; rails collapse via width, not display:none */
 body.boxies-exp-canvas-mode .boxies-props-rail-float-toggle,
-body.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn {
-  display: none !important;
-  pointer-events: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
+body.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn,
+html.boxies-exp-canvas-mode .boxies-props-rail-float-toggle,
+html.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn {
+  display: inline-flex !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-body.boxies-exp-canvas-mode {
-  --builder-props-rail-width: 0px !important;
+body.boxies-exp-canvas-mode .boxies-sidebar-float-toggle,
+body.boxies-exp-canvas-mode #boxiesSidebarFloatBtn,
+html.boxies-exp-canvas-mode .boxies-sidebar-float-toggle,
+html.boxies-exp-canvas-mode #boxiesSidebarFloatBtn {
+  display: inline-flex !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  left: var(--builder-rail-width, 0px) !important;
+}
+
+body.boxies-exp-canvas-mode.boxies-rail-collapsed .boxies-sidebar-float-toggle,
+body.boxies-exp-canvas-mode.boxies-rail-collapsed #boxiesSidebarFloatBtn {
+  left: 0 !important;
 }
 
 .builder-topbar {
@@ -3847,9 +3859,7 @@ body.boxies-props-rail-active:not(.boxies-props-rail-collapsed) .builder-page--e
   color: rgba(220, 160, 120, 0.9);
 }
 
-body.boxies-exp-canvas-mode .builder-progress-sidebar,
-html.boxies-exp-canvas-mode .builder-progress-sidebar,
-body.boxies-exp-canvas-mode #builderProgressRail,
+/* V6.0.02 — Modo Focus: hide shell chrome only; builder rails toggle via arrows */
 body.boxies-exp-canvas-mode .boxies-sidebar,
 body.boxies-exp-canvas-mode #boxiesSidebar,
 body.boxies-exp-canvas-mode .boxies-nav,
@@ -3872,15 +3882,13 @@ body.boxies-exp-canvas-mode #builderDock {
 }
 
 /*
- * Modo Canvas ? zero shell offsets that reserve left/top chrome.
- * Root cause of left strip: .boxies-workspace { margin-left: var(--boxies-sidebar-w) }
- * even after .boxies-sidebar { display:none }. Also .builder-workspace margin-left for rail.
+ * Modo Focus — zero platform chrome offsets.
+ * Builder rail widths follow collapsed/expanded state (not forced to 0).
  */
 html.boxies-exp-canvas-mode,
 body.boxies-exp-canvas-mode {
   --boxies-sidebar-w: 0px !important;
   --boxies-sidebar-collapsed-w: 0px !important;
-  --builder-rail-width: 0px !important;
   --boxies-header-h: 0px !important;
   --boxies-dock-h: 0px !important;
   --builder-header-height: 0px !important;
@@ -3890,8 +3898,6 @@ body.boxies-exp-canvas-mode {
 body.boxies-exp-canvas-mode .boxies-workspace,
 html.boxies-exp-canvas-mode .boxies-workspace,
 body.boxies-exp-canvas-mode .boxies-workspace__panel,
-body.boxies-exp-canvas-mode .builder-workspace,
-html.boxies-exp-canvas-mode .builder-workspace,
 body.boxies-exp-canvas-mode #boxiesContent,
 body.boxies-exp-canvas-mode .boxies-content,
 body.boxies-exp-canvas-mode .boxies-main {
@@ -3906,7 +3912,27 @@ body.boxies-exp-canvas-mode .boxies-main {
   min-height: 100dvh !important;
 }
 
-/* Chrome del paso Experiencia (título/acciones) se oculta; inspector NO */
+/* Canvas pushes when Focus rails open */
+body.boxies-exp-canvas-mode .builder-workspace,
+html.boxies-exp-canvas-mode .builder-workspace {
+  left: 0 !important;
+  margin-left: var(--builder-rail-width, 0px) !important;
+  margin-right: var(--builder-props-rail-width, 0px) !important;
+  margin-top: 0 !important;
+  padding-left: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  top: 0 !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+}
+
+body.boxies-exp-canvas-mode.boxies-builder-chrome .boxies-workspace,
+html.boxies-exp-canvas-mode.boxies-builder-chrome .boxies-workspace {
+  margin-left: 0 !important;
+}
+
+/* Chrome del paso Experiencia (título/acciones) se oculta */
 body.boxies-exp-canvas-mode .builder-exp-chrome,
 body.boxies-exp-canvas-mode .builder-page-header {
   display: none !important;
@@ -3935,6 +3961,80 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   padding: 0 !important;
   margin: 0 !important;
   max-width: none !important;
+}
+
+body.boxies-exp-canvas-mode .builder-progress-sidebar,
+body.boxies-exp-canvas-mode #builderProgressRail {
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  display: flex !important;
+  pointer-events: auto;
+}
+
+body.boxies-exp-canvas-mode.boxies-rail-collapsed .builder-progress-sidebar,
+body.boxies-exp-canvas-mode.boxies-rail-collapsed #builderProgressRail {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-right-color: transparent;
+  pointer-events: none;
+}
+
+body.boxies-exp-canvas-mode .builder-properties-sidebar,
+body.boxies-exp-canvas-mode #builderPropertiesRail {
+  top: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  pointer-events: auto;
+}
+
+body.boxies-exp-canvas-mode.boxies-props-rail-collapsed .builder-properties-sidebar,
+body.boxies-exp-canvas-mode.boxies-props-rail-collapsed #builderPropertiesRail {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-left-color: transparent;
+  pointer-events: none;
+}
+
+/* Fullscreen control — Focus only, top-right of canvas */
+.builder-exp-focus-fs {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 12, 12, 0.94);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+}
+
+.builder-exp-focus-fs svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.builder-exp-focus-fs:hover,
+.builder-exp-focus-fs.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+body.boxies-exp-canvas-mode .builder-exp-focus-fs,
+.builder-exp-workspace.is-canvas-mode .builder-exp-focus-fs {
+  display: inline-flex;
 }
 
 .builder-exp-workspace.is-canvas-mode {

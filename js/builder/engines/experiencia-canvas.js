@@ -76,12 +76,16 @@ var ExperienciaCanvas = (function () {
               toolBtn('cut', 'Cortar vínculo', 'scissors') +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('fit', 'Ajustar vista', 'maximize', true) +
-              toolBtn('canvas-mode',
-                canvasMode ? 'Mostrar paneles' : 'Modo canvas',
-                'panel', true) +
+              toolBtn('canvas-mode', 'Modo Focus', 'panel', true) +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('minimap', minimapOn ? 'Ocultar minimapa' : 'Mostrar minimapa', 'eye', true) +
             '</div>' +
+            '<button type="button" class="builder-exp-focus-fs" data-exp-fullscreen' +
+              ' data-tooltip="Pantalla completa" title="Pantalla completa" aria-label="Pantalla completa">' +
+              ((typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
+                ? BuilderIcons.render('maximize')
+                : '') +
+            '</button>' +
             '<div class="builder-exp-viewport" data-exp-viewport tabindex="0">' +
               '<div class="builder-exp-world" data-exp-world>' +
                 '<svg class="builder-exp-edges" data-exp-edges xmlns="http://www.w3.org/2000/svg"></svg>' +
@@ -1911,10 +1915,11 @@ var ExperienciaCanvas = (function () {
       if (step) step.classList.toggle('is-canvas-mode', modeOn);
       var modeBtn = rootEl.querySelector('[data-exp-tool="canvas-mode"]');
       if (modeBtn) {
-        modeBtn.setAttribute('data-tooltip', modeOn ? 'Mostrar paneles' : 'Modo canvas');
-        modeBtn.setAttribute('aria-label', modeOn ? 'Mostrar paneles' : 'Modo canvas');
+        modeBtn.setAttribute('data-tooltip', 'Modo Focus');
+        modeBtn.setAttribute('aria-label', 'Modo Focus');
         modeBtn.classList.toggle('is-active', modeOn);
       }
+      syncFocusFullscreenBtn();
       if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody) {
         inspectorBody = BuilderPropertiesRail.getInspectorBody(rootEl) || inspectorBody;
       }
@@ -1932,61 +1937,128 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    function isBrowserFullscreen() {
+      return !!(document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement);
+    }
+
+    function syncFocusFullscreenBtn() {
+      var btn = rootEl.querySelector('[data-exp-fullscreen]');
+      if (!btn) return;
+      var on = isBrowserFullscreen();
+      var icon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
+        ? BuilderIcons.render(on ? 'minimize' : 'maximize')
+        : '';
+      btn.innerHTML = icon;
+      btn.setAttribute('data-tooltip', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+      btn.setAttribute('title', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+      btn.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+      btn.classList.toggle('is-active', on);
+      if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.adopt) {
+        try { BoxiesTooltip.adopt(btn); } catch (eTip) {}
+      }
+    }
+
+    function toggleBrowserFullscreen() {
+      if (isBrowserFullscreen()) {
+        var exitFs = document.exitFullscreen ||
+          document.webkitExitFullscreen ||
+          document.mozCancelFullScreen ||
+          document.msExitFullscreen;
+        if (exitFs) {
+          try { exitFs.call(document); } catch (eExit) {}
+        }
+        return;
+      }
+      var el = document.documentElement;
+      var req = el.requestFullscreen ||
+        el.webkitRequestFullscreen ||
+        el.mozRequestFullScreen ||
+        el.msRequestFullscreen;
+      if (req) {
+        try { req.call(el); } catch (eReq) {}
+      }
+    }
+
+    function exitBrowserFullscreen() {
+      if (!isBrowserFullscreen()) return;
+      var exitFs = document.exitFullscreen ||
+        document.webkitExitFullscreen ||
+        document.mozCancelFullScreen ||
+        document.msExitFullscreen;
+      if (exitFs) {
+        try { exitFs.call(document); } catch (eExit) {}
+      }
+    }
+
     function toggleCanvasMode() {
       var next = !isCanvasMode();
       var prefs = (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.load)
         ? BoxiesPrefs.load()
         : {};
       if (next) {
-        /* Save shell chrome only — never force inspector open/closed */
+        /* Save shell + rail state — Focus collapses both rails; arrows reopen them */
         var restore = {
           railCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed
             ? BoxiesPrefs.getRailCollapsed()
             : document.body.classList.contains('boxies-rail-collapsed')),
+          propsRailCollapsed: !!(typeof BuilderPropertiesRail !== 'undefined' &&
+            BuilderPropertiesRail.isCollapsed
+            ? BuilderPropertiesRail.isCollapsed()
+            : document.body.classList.contains('boxies-props-rail-collapsed')),
           navCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
             ? BoxiesPrefs.getNavCollapsed()
             : document.body.classList.contains('boxies-nav-collapsed')),
           headerH: document.documentElement.style.getPropertyValue('--boxies-header-h') || '',
           dockH: document.documentElement.style.getPropertyValue('--boxies-dock-h') || '',
           railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || '',
+          propsRailW: document.documentElement.style.getPropertyValue('--builder-props-rail-width') || '',
           sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || ''
         };
         setCanvasMode(true, restore);
-        if (typeof BoxiesPrefs !== 'undefined') {
-          if (BoxiesPrefs.setRailCollapsed) BoxiesPrefs.setRailCollapsed(true);
-          if (BoxiesPrefs.setNavCollapsed) BoxiesPrefs.setNavCollapsed(true);
+        if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setNavCollapsed) {
+          BoxiesPrefs.setNavCollapsed(true);
         }
-        document.body.classList.add('boxies-rail-collapsed');
         document.body.classList.add('boxies-nav-collapsed');
-        document.documentElement.classList.add('boxies-rail-collapsed');
         document.documentElement.classList.add('boxies-nav-collapsed');
-        /* Layout vars zeroed primarily by CSS .boxies-exp-canvas-mode; JS reinforces */
-        document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        /* Shell chrome only — rails owned by ProgressRail / PropertiesRail */
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
+        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyRailCollapsed) {
+          BuilderProgressRail.applyRailCollapsed(true);
+        } else {
+          document.body.classList.add('boxies-rail-collapsed');
+          document.documentElement.classList.add('boxies-rail-collapsed');
+          document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        }
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.collapse) {
+          BuilderPropertiesRail.collapse(state);
+        } else {
+          document.body.classList.add('boxies-props-rail-collapsed');
+          document.documentElement.classList.add('boxies-props-rail-collapsed');
+          document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
+        }
+        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.ensureFloatButton) {
+          try { BuilderProgressRail.ensureFloatButton(); } catch (eL) {}
+        }
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.ensureFloatButton) {
+          try { BuilderPropertiesRail.ensureFloatButton(); } catch (eR) {}
+        }
       } else {
         var prev = prefs._expCanvasRestore || {};
+        exitBrowserFullscreen();
         setCanvasMode(false, null);
         if (typeof BoxiesPrefs !== 'undefined') {
-          if (BoxiesPrefs.setRailCollapsed) {
-            BoxiesPrefs.setRailCollapsed(!!prev.railCollapsed);
-          }
           if (BoxiesPrefs.setNavCollapsed) {
             BoxiesPrefs.setNavCollapsed(!!prev.navCollapsed);
           }
         }
-        var railOn = !!prev.railCollapsed;
         var navOn = !!prev.navCollapsed;
-        document.body.classList.toggle('boxies-rail-collapsed', railOn);
-        document.documentElement.classList.toggle('boxies-rail-collapsed', railOn);
         document.body.classList.toggle('boxies-nav-collapsed', navOn);
         document.documentElement.classList.toggle('boxies-nav-collapsed', navOn);
-        if (prev.railW) {
-          document.documentElement.style.setProperty('--builder-rail-width', prev.railW);
-        } else {
-          document.documentElement.style.removeProperty('--builder-rail-width');
-        }
         if (prev.sidebarW) {
           document.documentElement.style.setProperty('--boxies-sidebar-w', prev.sidebarW);
         } else {
@@ -2002,7 +2074,23 @@ var ExperienciaCanvas = (function () {
         } else {
           document.documentElement.style.removeProperty('--boxies-dock-h');
         }
-        /* Keep current inspector state — do not restore prior open/collapsed */
+        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyRailCollapsed) {
+          BuilderProgressRail.applyRailCollapsed(!!prev.railCollapsed);
+        } else if (prev.railW) {
+          document.documentElement.style.setProperty('--builder-rail-width', prev.railW);
+        } else {
+          document.documentElement.style.removeProperty('--builder-rail-width');
+        }
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.applyCollapsed) {
+          BuilderPropertiesRail.applyCollapsed(
+            prev.propsRailCollapsed != null ? !!prev.propsRailCollapsed : true,
+            { state: state }
+          );
+        } else if (prev.propsRailW) {
+          document.documentElement.style.setProperty('--builder-props-rail-width', prev.propsRailW);
+        } else {
+          document.documentElement.style.removeProperty('--builder-props-rail-width');
+        }
       }
       if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.update) {
         try { BuilderProgressRail.update(rootEl, state); } catch (eRail) {}
@@ -2584,6 +2672,19 @@ var ExperienciaCanvas = (function () {
       });
     });
 
+    var fsBtn = rootEl.querySelector('[data-exp-fullscreen]');
+    if (fsBtn) {
+      fsBtn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        toggleBrowserFullscreen();
+      });
+    }
+    function onFullscreenChange() {
+      syncFocusFullscreenBtn();
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
     var hideMini = rootEl.querySelector('[data-exp-minimap-hide]');
     if (hideMini) {
       hideMini.addEventListener('click', function () {
@@ -3317,14 +3418,30 @@ var ExperienciaCanvas = (function () {
       if (isCanvasMode()) {
         document.body.classList.add('boxies-exp-canvas-mode');
         document.documentElement.classList.add('boxies-exp-canvas-mode');
-        document.body.classList.add('boxies-rail-collapsed');
         document.body.classList.add('boxies-nav-collapsed');
-        document.documentElement.style.setProperty('--builder-rail-width', '0px');
-        document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
+        document.documentElement.classList.add('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
+        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyRailCollapsed) {
+          BuilderProgressRail.applyRailCollapsed(true);
+        } else {
+          document.body.classList.add('boxies-rail-collapsed');
+          document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        }
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.collapse) {
+          BuilderPropertiesRail.collapse(state);
+        } else {
+          document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
+        }
+        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.ensureFloatButton) {
+          try { BuilderProgressRail.ensureFloatButton(); } catch (eL) {}
+        }
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.ensureFloatButton) {
+          try { BuilderPropertiesRail.ensureFloatButton(); } catch (eR) {}
+        }
       }
+      syncFocusFullscreenBtn();
       if (canvas().panX === 40 && canvas().panY === 40) fitView();
       else onViewportResize();
     });
@@ -3349,6 +3466,9 @@ var ExperienciaCanvas = (function () {
       showResetConfirm: showResetConfirm,
       destroy: function () {
         window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
+        document.removeEventListener('fullscreenchange', onFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+        exitBrowserFullscreen();
       }
     };
   }
