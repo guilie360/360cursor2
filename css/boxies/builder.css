@@ -309,31 +309,6 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
   pointer-events: auto !important;
 }
 
-body.boxies-builder-chrome,
-html.boxies-builder-chrome {
-  --boxies-icon-size: 15px;
-  --boxies-icon-cell: 32px;
-  --boxies-icon-gap: 2px;
-}
-
-body.boxies-builder-chrome .boxies-sidebar,
-body.boxies-builder-chrome #boxiesSidebar {
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-body.boxies-builder-chrome .boxies-nav,
-body.boxies-builder-chrome #boxiesNav {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-body.boxies-builder-chrome .boxies-workspace {
-  margin-left: var(--boxies-sidebar-w) !important;
-}
-
 .builder-rail-collapse {
   display: none !important;
 }

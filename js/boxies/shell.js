@@ -78,7 +78,6 @@ var BoxiesShell = (function () {
     }
     return (
       '<nav class="boxies-nav" id="boxiesNav" aria-label="Navegación">' +
-        '<div class="boxies-nav__group">Plataforma</div>' +
         item('hall', 'Hall', 'home') +
         item('projects', 'Experiencias', 'folder') +
         item('builder', 'Builder', 'panel') +
@@ -243,8 +242,8 @@ var BoxiesShell = (function () {
       rootEl.hidden = true;
     }
     setChromeClasses(false);
-    document.body.classList.remove('boxies-nav-collapsed', 'boxies-rail-collapsed');
-    document.documentElement.classList.remove('boxies-nav-collapsed', 'boxies-rail-collapsed');
+    document.body.classList.remove('boxies-rail-collapsed');
+    document.documentElement.classList.remove('boxies-rail-collapsed');
     mounted = false;
     rootEl = null;
     onNav = null;

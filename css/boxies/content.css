@@ -747,15 +747,14 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
 
 /* V7.0.03 — Builder experience type selector (design tokens only) */
 #boxiesContent .boxies-exp-select {
-  max-width: 960px;
   width: 100%;
-  margin: 0 auto;
-  padding: var(--hall-space-5, 24px) var(--hall-space-2, 8px) var(--hall-space-7, 48px);
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 #boxiesContent .boxies-exp-select__header {
-  margin-bottom: var(--hall-space-6, 32px);
+  margin-bottom: var(--hall-space-5, 24px);
 }
 
 #boxiesContent .boxies-exp-select__kicker {
@@ -768,20 +767,14 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
 }
 
 #boxiesContent .boxies-exp-select__header .boxies-page__title {
-  margin-bottom: var(--hall-space-2, 8px);
-  color: var(--hall-text, rgba(255, 255, 255, 0.94));
-}
-
-#boxiesContent .boxies-exp-select__header .boxies-page__desc {
   margin-bottom: 0;
-  max-width: 42ch;
-  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
 }
 
 #boxiesContent .boxies-exp-select__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--hall-space-3, 12px);
+  gap: var(--hall-space-4, 16px);
 }
 
 #boxiesContent .boxies-exp-select-card {
@@ -789,9 +782,10 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--hall-space-2, 8px);
-  min-height: 168px;
-  padding: var(--hall-space-4, 16px) var(--hall-space-4, 16px) var(--hall-space-3, 12px);
+  justify-content: space-between;
+  gap: var(--hall-space-6, 32px);
+  min-height: 196px;
+  padding: var(--hall-space-5, 24px);
   margin: 0;
   text-align: left;
   font: inherit;
@@ -820,24 +814,16 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
 
 #boxiesContent .boxies-exp-select-card__title {
   display: block;
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: var(--hall-leading-tight, 1.35);
   color: var(--hall-text, rgba(255, 255, 255, 0.94));
 }
 
-#boxiesContent .boxies-exp-select-card__desc {
-  display: block;
-  flex: 1 1 auto;
-  font-size: 0.8125rem;
-  line-height: var(--hall-leading-body, 1.6);
-  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
-}
-
 #boxiesContent .boxies-exp-select-card__action {
   display: block;
-  margin-top: var(--hall-space-2, 8px);
+  margin-top: 0;
   font-size: var(--hall-label-size, 0.6875rem);
   font-weight: 600;
   letter-spacing: var(--hall-tracking-action, 0.12em);

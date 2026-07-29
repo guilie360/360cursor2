@@ -198,9 +198,6 @@ var BoxiesBuilderPage = (function () {
         '<span class="boxies-exp-select-card__title">' +
           escapeHtml(type.selectorTitle || type.singular || type.tabLabel) +
         '</span>' +
-        '<span class="boxies-exp-select-card__desc">' +
-          escapeHtml(type.selectorDesc || '') +
-        '</span>' +
         '<span class="boxies-exp-select-card__action">' +
           escapeHtml(type.selectorCta || 'Crear →') +
         '</span>' +
@@ -222,7 +219,6 @@ var BoxiesBuilderPage = (function () {
         '<header class="boxies-exp-select__header">' +
           '<p class="boxies-exp-select__kicker">Builder</p>' +
           '<h1 class="boxies-page__title">¿Qué deseas crear?</h1>' +
-          '<p class="boxies-page__desc">Selecciona el tipo de experiencia que deseas construir.</p>' +
         '</header>' +
         '<div class="boxies-exp-select__grid" role="list">' +
           types.map(renderSelectorCard).join('') +

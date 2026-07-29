@@ -297,10 +297,7 @@ var BuilderProgressRail = (function () {
       }
     }
     if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.applyNavCollapsed === 'function') {
-      var navOn = typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
-        ? BoxiesPrefs.getNavCollapsed()
-        : false;
-      try { BoxiesShell.applyNavCollapsed(navOn); } catch (eNav) {}
+      try { BoxiesShell.applyNavCollapsed(); } catch (eNav) {}
     }
   }
 
