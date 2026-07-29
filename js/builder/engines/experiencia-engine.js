@@ -318,14 +318,155 @@ var ExperienciaEngine = (function () {
         visualMode: '3d',
         floors: [],
         navigationStackKey: 'navigationStack',
-        structureScope: null
+        structureScope: null,
+        selectorType: 'plantas',
+        options: [],
+        appearance: {
+          style: 'numbers',
+          position: 'top-right',
+          alignment: 'horizontal',
+          gap: 8,
+          size: 32
+        }
       };
     }
     if (!Array.isArray(n.config.hub.floors)) n.config.hub.floors = [];
     if (!n.config.hub.visualMode) n.config.hub.visualMode = '3d';
     if (!n.config.hub.navigationStackKey) n.config.hub.navigationStackKey = 'navigationStack';
     if (n.config.hub.structureScope === undefined) n.config.hub.structureScope = null;
+    /* V6.0.05 — smart selector (compat: legacy floors/scope kept) */
+    if (!n.config.hub.selectorType) n.config.hub.selectorType = 'plantas';
+    if (!Array.isArray(n.config.hub.options)) n.config.hub.options = [];
+    if (!n.config.hub.appearance || typeof n.config.hub.appearance !== 'object') {
+      n.config.hub.appearance = {
+        style: 'numbers',
+        position: 'top-right',
+        alignment: 'horizontal',
+        gap: 8,
+        size: 32
+      };
+    } else {
+      var ap = n.config.hub.appearance;
+      if (!ap.style) ap.style = 'numbers';
+      if (!ap.position) ap.position = 'top-right';
+      if (!ap.alignment) ap.alignment = 'horizontal';
+      if (ap.gap == null || isNaN(Number(ap.gap))) ap.gap = 8;
+      if (ap.size == null || isNaN(Number(ap.size))) ap.size = 32;
+    }
     return n.config.hub;
+  }
+
+  function deriveHubOptionLabel(node, index) {
+    var name = String((node && (node.label || node.typeLabel)) || '');
+    var m = name.match(/(?:planta|piso|floor|nivel)\s*[-:]?\s*(\d+)/i) ||
+      name.match(/\b(\d+)\s*$/) ||
+      name.match(/\b(\d+)\b/);
+    if (m && m[1]) return String(m[1]);
+    if (name) {
+      var short = name.replace(/^.*[-–—]\s*/, '').trim();
+      if (short && short.length <= 12) return short;
+    }
+    return String(index + 1);
+  }
+
+  /**
+   * Smart HUB options = outgoing graph edges from this node.
+   * Does not create canvas nodes; only reads existing connections.
+   */
+  function detectHubSelectorOptions(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return [];
+    var conn = connectionsFor(state, n.id);
+    var outs = (conn && conn.out) || [];
+    var seen = {};
+    var options = [];
+    outs.forEach(function (ed) {
+      var tid = ed.targetNodeId || ed.to || ed.targetId;
+      if (!tid || seen[tid]) return;
+      var target = getNode(state, tid);
+      if (!target) return;
+      seen[tid] = true;
+      var idx = options.length;
+      options.push({
+        id: 'opt-' + tid,
+        label: deriveHubOptionLabel(target, idx),
+        targetNodeId: tid,
+        targetLabel: target.label || target.id,
+        targetKind: target.kind || null
+      });
+    });
+    return options;
+  }
+
+  function syncHubSmartSelector(state, nodeOrId) {
+    var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
+    if (!n) return null;
+    var hub = ensureHubConfig(n);
+    if (!hub) return null;
+    hub.options = detectHubSelectorOptions(state, n);
+    return hub;
+  }
+
+  function hubSelectorStatus(hub) {
+    var count = (hub && Array.isArray(hub.options)) ? hub.options.length : 0;
+    if (count <= 0) {
+      return {
+        level: 'warn',
+        code: 'no-targets',
+        message: 'No se encontraron plantas conectadas.'
+      };
+    }
+    if (count === 1) {
+      return {
+        level: 'warn',
+        code: 'need-two',
+        message: 'Se necesitan al menos dos plantas para generar un selector.'
+      };
+    }
+    return {
+      level: 'ok',
+      code: 'ready',
+      message: 'Selector generado automáticamente'
+    };
+  }
+
+  function setHubSelectorType(state, nodeId, type) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var hub = enableHubOnScene(n);
+    var allowed = { plantas: 1, tipologias: 1, torres: 1, pisos: 1, custom: 1 };
+    var next = String(type || 'plantas');
+    hub.selectorType = allowed[next] ? next : 'plantas';
+    syncHubSmartSelector(state, n);
+    return hub;
+  }
+
+  function setHubAppearance(state, nodeId, patch) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var hub = enableHubOnScene(n);
+    var ap = hub.appearance;
+    patch = patch || {};
+    if (patch.style != null) {
+      var styles = { numbers: 1, chips: 1, thumbnails: 1 };
+      ap.style = styles[patch.style] ? patch.style : ap.style;
+    }
+    if (patch.position != null) {
+      var positions = {
+        'top-left': 1, 'top-right': 1, 'bottom-left': 1, 'bottom-right': 1
+      };
+      ap.position = positions[patch.position] ? patch.position : ap.position;
+    }
+    if (patch.alignment != null) {
+      ap.alignment = patch.alignment === 'vertical' ? 'vertical' : 'horizontal';
+    }
+    if (patch.gap != null) {
+      ap.gap = Math.max(0, Math.min(40, Number(patch.gap) || 0));
+    }
+    if (patch.size != null) {
+      ap.size = Math.max(20, Math.min(64, Number(patch.size) || 32));
+    }
+    return hub;
   }
 
   function enableHubOnScene(n) {
@@ -3853,6 +3994,11 @@ var ExperienciaEngine = (function () {
     partitionInteractions: partitionInteractions,
     ensureHubConfig: ensureHubConfig,
     enableHubOnScene: enableHubOnScene,
+    detectHubSelectorOptions: detectHubSelectorOptions,
+    syncHubSmartSelector: syncHubSmartSelector,
+    hubSelectorStatus: hubSelectorStatus,
+    setHubSelectorType: setHubSelectorType,
+    setHubAppearance: setHubAppearance,
     setHubActiveFloor: setHubActiveFloor,
     setHubVisualMode: setHubVisualMode,
     upsertHubFloor: upsertHubFloor,
