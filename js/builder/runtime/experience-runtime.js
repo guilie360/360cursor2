@@ -263,6 +263,7 @@ var ExperienceRuntime = (function () {
     return {
       stage: this.stage,
       runtime: this.runtime,
+      state: this.state,
       fadeMs: FADE_MS,
       advance: function () { self.gotoNext(self._currentNodeId); },
       advanceTo: function (id) { self.enterNode(id); },

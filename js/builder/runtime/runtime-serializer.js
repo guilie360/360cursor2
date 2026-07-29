@@ -339,6 +339,14 @@ var RuntimeSerializer = (function () {
         joins: joins
       },
       assets: assets,
+      /* Live card resolution for smart hotspots (Estructura SSOT snapshot) */
+      estructura: cloneJson({
+        tipologias: ((state && state.estructura) || {}).tipologias || [],
+        developmentType: ((state && state.estructura) || {}).developmentType || null
+      }),
+      projectInfo: cloneJson({
+        nombre: (state && state.projectInfo && state.projectInfo.nombre) || null
+      }),
       statistics: options.statistics || null,
       meta: {
         source: 'experiencia',

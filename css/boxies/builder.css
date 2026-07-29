@@ -7772,3 +7772,315 @@ body.boxies-exp-canvas-mode .builder-exp-proto-stage,
   border-color: rgba(111, 191, 134, 0.7);
 }
 
+/* ── V6.5.00 Smart Hotspots ── */
+.builder-exp-hs-content-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.builder-exp-hs-linked {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(111, 191, 134, 0.28);
+  background: rgba(111, 191, 134, 0.08);
+}
+
+.builder-exp-hs-linked__label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-exp-hs-linked__value {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 2px 0 8px;
+}
+
+.builder-exp-hs-linked__type {
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.builder-exp-hs-missing {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 80, 80, 0.35);
+  background: rgba(220, 80, 80, 0.08);
+}
+
+.builder-menu-hint.is-warn {
+  color: rgba(255, 180, 180, 0.9);
+}
+
+.builder-exp-hs-picker {
+  margin: 0 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.builder-exp-hs-picker__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.builder-exp-hs-picker__crumb {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(200, 235, 210, 0.95);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.builder-exp-hs-picker__crumb:hover {
+  text-decoration: underline;
+}
+
+.builder-exp-hs-picker__sep {
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 10px;
+}
+
+.builder-exp-hs-picker__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.builder-exp-hs-picker__item {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.builder-exp-hs-picker__item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.builder-exp-hs-picker__item.is-linked {
+  background: rgba(111, 191, 134, 0.12);
+}
+
+.builder-exp-hs-picker__nav,
+.builder-exp-hs-picker__link {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.builder-exp-hs-picker__link {
+  color: rgba(111, 191, 134, 0.95);
+  cursor: pointer;
+}
+
+.builder-exp-hs-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 12px;
+}
+
+.boxies-xp__hs-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.boxies-xp__hs-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.boxies-xp__hs-poly {
+  pointer-events: auto;
+  transition: fill-opacity 0.2s ease;
+}
+
+.boxies-xp__hs-poly:hover {
+  fill-opacity: 0.4 !important;
+}
+
+.boxies-xp__hs-poly.is-anim-pulse {
+  animation: boxies-hs-pulse 1.6s ease-in-out infinite;
+}
+
+.boxies-xp__hs-poly.is-anim-fade {
+  animation: boxies-hs-fade 2.2s ease-in-out infinite;
+}
+
+@keyframes boxies-hs-pulse {
+  0%, 100% { fill-opacity: 0.18; }
+  50% { fill-opacity: 0.42; }
+}
+
+@keyframes boxies-hs-fade {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.boxies-smart-card-host {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 24px;
+}
+
+.boxies-smart-card {
+  position: relative;
+  width: min(380px, 92%);
+  max-height: min(80vh, 560px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #101010;
+  color: #fff;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.boxies-smart-card.is-tpl-compacta {
+  width: min(280px, 90%);
+}
+
+.boxies-smart-card.is-tpl-premium {
+  border-color: rgba(111, 191, 134, 0.35);
+  background: linear-gradient(160deg, #121612 0%, #0c0c0c 100%);
+}
+
+.boxies-smart-card.is-tpl-ficha .boxies-smart-card__rows {
+  font-variant-numeric: tabular-nums;
+}
+
+.boxies-smart-card__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.boxies-smart-card__media {
+  height: 140px;
+  background: #1a1a1a center / cover no-repeat;
+}
+
+.boxies-smart-card.is-tpl-premium .boxies-smart-card__media {
+  height: 180px;
+}
+
+.boxies-smart-card__body {
+  padding: 16px 18px 18px;
+}
+
+.boxies-smart-card__title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  padding-right: 24px;
+}
+
+.boxies-smart-card__warn {
+  color: rgba(255, 180, 180, 0.95);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.boxies-smart-card__rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.boxies-smart-card__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.boxies-smart-card__row dt {
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+}
+
+.boxies-smart-card__row dd {
+  margin: 0;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.boxies-smart-card__row.is-muted dd {
+  text-align: left;
+  color: rgba(255, 255, 255, 0.55);
+  padding-left: 8px;
+}
+
+.boxies-smart-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.boxies-smart-card__btn {
+  appearance: none;
+  border: 1px solid rgba(111, 191, 134, 0.45);
+  border-radius: 8px;
+  background: rgba(111, 191, 134, 0.16);
+  color: rgba(200, 235, 210, 0.98);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.boxies-smart-card__btn:hover {
+  background: rgba(111, 191, 134, 0.28);
+}
+

@@ -879,6 +879,35 @@ var ExperienciaEngine = (function () {
     ix.borderWidth = clampHotspotBorder(ix.borderWidth != null ? ix.borderWidth : 1.5);
     if (!ix.animation || !HOTSPOT_ANIMATIONS[ix.animation]) ix.animation = 'none';
     if (ix.enabled == null) ix.enabled = true;
+    /* V6.5.00 — smart content (refs only; Estructura is SSOT) */
+    if (ix.contentMode !== 'custom' && ix.contentMode !== 'structure') {
+      ix.contentMode = 'structure';
+    }
+    if (ix.entityId === undefined) ix.entityId = null;
+    if (ix.entityType === undefined) ix.entityType = null;
+    if (!ix.entityId && ix.structureId) {
+      ix.entityId = String(ix.structureId);
+      var sk = String(ix.structureKind || '').toLowerCase();
+      if (!ix.entityType) {
+        if (sk.indexOf('ambiente') >= 0 || sk === 'room') ix.entityType = 'ambiente';
+        else if (sk.indexOf('planta') >= 0 || sk === 'floor' || sk === 'nivel') ix.entityType = 'planta';
+        else ix.entityType = 'tipologia';
+      }
+    }
+    if (ix.entityType && !({ tipologia: 1, planta: 1, ambiente: 1 }[ix.entityType])) {
+      ix.entityType = null;
+      ix.entityId = null;
+    }
+    if (!ix.cardTemplate || !({ compacta: 1, completa: 1, ficha: 1, premium: 1 }[ix.cardTemplate])) {
+      ix.cardTemplate = 'completa';
+    }
+    if (!ix.cardFields || typeof ix.cardFields !== 'object') {
+      ix.cardFields = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.defaultCardFields)
+        ? EstructuraEntity.defaultCardFields()
+        : {};
+    } else if (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.normalizeCardFields) {
+      ix.cardFields = EstructuraEntity.normalizeCardFields(ix.cardFields);
+    }
     return ix;
   }
 
@@ -900,6 +929,11 @@ var ExperienciaEngine = (function () {
       visible: ix.enabled !== false,
       enabled: ix.enabled !== false,
       shape: 'polygon',
+      contentMode: ix.contentMode || 'structure',
+      entityId: ix.entityId || null,
+      entityType: ix.entityType || null,
+      cardTemplate: ix.cardTemplate || 'completa',
+      cardFields: ix.cardFields || {},
       _ix: ix
     };
   }
@@ -941,6 +975,10 @@ var ExperienciaEngine = (function () {
     ix.opacity = 0.22;
     ix.borderWidth = 1.5;
     ix.animation = 'none';
+    ix.contentMode = 'structure';
+    ix.entityId = null;
+    ix.entityType = null;
+    ix.cardTemplate = 'completa';
     ensureHotspotMaskDefaults(ix);
     syncScenePorts(n);
     return hotspotMaskViewModel(ix);
@@ -975,6 +1013,54 @@ var ExperienciaEngine = (function () {
     if (patch.polygon != null) {
       var nextPoly = normalizePolygon(patch.polygon);
       if (nextPoly.length >= 3) ix.polygon = nextPoly;
+    }
+    if (patch.contentMode === 'custom' || patch.contentMode === 'structure') {
+      ix.contentMode = patch.contentMode;
+      if (ix.contentMode === 'custom') {
+        ix.entityId = null;
+        ix.entityType = null;
+      }
+    }
+    if (patch.entityId !== undefined || patch.entityType !== undefined) {
+      var nextType = patch.entityType !== undefined ? patch.entityType : ix.entityType;
+      var nextId = patch.entityId !== undefined ? patch.entityId : ix.entityId;
+      if (nextId && nextType && ({ tipologia: 1, planta: 1, ambiente: 1 }[nextType])) {
+        ix.entityId = String(nextId);
+        ix.entityType = nextType;
+        ix.contentMode = 'structure';
+        /* Keep legacy keys as thin mirrors of the ref only (no payload copy) */
+        ix.structureId = ix.entityId;
+        ix.structureKind = ix.entityType;
+        ix.structureKey = ix.entityType + ':' + ix.entityId;
+        ix.structureLabel = null;
+        ix.structureRef = {
+          id: ix.entityId,
+          key: ix.structureKey,
+          kind: ix.entityType,
+          label: null
+        };
+      } else if (patch.entityId === null || patch.entityType === null) {
+        ix.entityId = null;
+        ix.entityType = null;
+        ix.structureId = null;
+        ix.structureKind = null;
+        ix.structureKey = null;
+        ix.structureLabel = null;
+        ix.structureRef = null;
+      }
+    }
+    if (patch.cardTemplate != null &&
+        ({ compacta: 1, completa: 1, ficha: 1, premium: 1 }[patch.cardTemplate])) {
+      ix.cardTemplate = patch.cardTemplate;
+    }
+    if (patch.cardFields != null && typeof patch.cardFields === 'object') {
+      var base = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.normalizeCardFields)
+        ? EstructuraEntity.normalizeCardFields(ix.cardFields)
+        : (ix.cardFields || {});
+      Object.keys(patch.cardFields).forEach(function (k) {
+        base[k] = !!patch.cardFields[k];
+      });
+      ix.cardFields = base;
     }
     ix.shape = 'polygon';
     ensureHotspotMaskDefaults(ix);
@@ -1049,6 +1135,13 @@ var ExperienciaEngine = (function () {
     copy.borderWidth = ix.borderWidth;
     copy.animation = ix.animation;
     copy.enabled = ix.enabled !== false;
+    copy.contentMode = ix.contentMode || 'structure';
+    copy.entityId = ix.entityId || null;
+    copy.entityType = ix.entityType || null;
+    copy.cardTemplate = ix.cardTemplate || 'completa';
+    copy.cardFields = ix.cardFields
+      ? JSON.parse(JSON.stringify(ix.cardFields))
+      : null;
     ensureHotspotMaskDefaults(copy);
     syncScenePorts(n);
     return hotspotMaskViewModel(copy);

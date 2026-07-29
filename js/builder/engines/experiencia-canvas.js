@@ -752,6 +752,42 @@ var ExperienciaCanvas = (function () {
     var kind = selected.hotspotKind || 'highlight';
     var anim = selected.animation || 'none';
     var opacityPct = Math.round((Number(selected.opacity) || 0.22) * 100);
+    var contentMode = selected.contentMode || 'structure';
+    var resolved = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.resolveFromHotspot)
+      ? EstructuraEntity.resolveFromHotspot(state, selected._ix || selected)
+      : { ok: false, missing: !selected.entityId };
+    var pickerPath = Array.isArray(canvasState.hotspotPickerPath)
+      ? canvasState.hotspotPickerPath.slice()
+      : null;
+    if (!pickerPath || !pickerPath.length) {
+      if (contentMode === 'structure' && selected.entityId && selected.entityType &&
+          typeof EstructuraEntity !== 'undefined') {
+        pickerPath = EstructuraEntity.breadcrumbFromEntity(
+          state, selected.entityId, selected.entityType
+        );
+        /* Stay one level above leaf so children list shows siblings / deeper */
+        if (pickerPath.length > 1) pickerPath = pickerPath.slice(0, -1);
+      } else {
+        pickerPath = [{
+          type: 'project',
+          id: 'project',
+          label: (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.projectName)
+            ? EstructuraEntity.projectName(state)
+            : 'Proyecto'
+        }];
+      }
+      if (state.experiencia && state.experiencia.canvas) {
+        state.experiencia.canvas.hotspotPickerPath = pickerPath;
+      }
+    }
+    var pickerChildren = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.listPickerChildren)
+      ? EstructuraEntity.listPickerChildren(state, pickerPath)
+      : [];
+    var template = selected.cardTemplate || 'completa';
+    var fields = selected.cardFields || {};
+    var fieldToggles = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.fieldTogglesForType)
+      ? EstructuraEntity.fieldTogglesForType(selected.entityType)
+      : [];
 
     html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
@@ -793,8 +829,101 @@ var ExperienciaCanvas = (function () {
       '<label class="builder-exp-inspector__check">' +
         '<input type="checkbox" data-exp-hs-visible' +
           (selected.visible !== false ? ' checked' : '') + '>' +
-        ' Visible</label>' +
-      '<p class="builder-menu-hint builder-exp-btn-hint">' +
+        ' Visible</label>';
+
+    /* ── V6.5.00 CONTENIDO ── */
+    html += '<div class="builder-exp-inspector__section">Contenido</div>' +
+      '<div class="builder-exp-hs-content-mode">' +
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="radio" name="exp-hs-content" data-exp-hs-content="custom"' +
+            (contentMode === 'custom' ? ' checked' : '') + '>' +
+          ' Personalizado</label>' +
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="radio" name="exp-hs-content" data-exp-hs-content="structure"' +
+            (contentMode === 'structure' ? ' checked' : '') + '>' +
+          ' Vinculado a la estructura</label>' +
+      '</div>';
+
+    if (contentMode === 'structure') {
+      if (selected.entityId && resolved.missing) {
+        html += '<div class="builder-exp-hs-missing">' +
+          '<p class="builder-menu-hint is-warn">Este hotspot apunta a un elemento que ya no existe.</p>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-reselect>' +
+            'Seleccionar otro elemento</button>' +
+        '</div>';
+      } else if (selected.entityId && resolved.ok) {
+        html += '<div class="builder-exp-hs-linked">' +
+          '<div class="builder-exp-hs-linked__label">Vinculado</div>' +
+          '<div class="builder-exp-hs-linked__value">' + esc(resolved.label) +
+            ' <span class="builder-exp-hs-linked__type">(' + esc(resolved.entityType) + ')</span></div>' +
+          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-reselect>' +
+            'Cambiar elemento</button>' +
+        '</div>';
+      }
+
+      html += '<div class="builder-exp-hs-picker" data-exp-hs-picker>' +
+        '<div class="builder-exp-hs-picker__crumbs">';
+      pickerPath.forEach(function (crumb, idx) {
+        html += '<button type="button" class="builder-exp-hs-picker__crumb" data-exp-hs-crumb="' +
+          esc(String(idx)) + '">' + esc(crumb.label) + '</button>';
+        if (idx < pickerPath.length - 1) {
+          html += '<span class="builder-exp-hs-picker__sep">↓</span>';
+        }
+      });
+      html += '</div><div class="builder-exp-hs-picker__list">';
+      if (!pickerChildren.length) {
+        html += '<p class="builder-menu-hint">Sin elementos en este nivel.</p>';
+      } else {
+        pickerChildren.forEach(function (child) {
+          var isLinked = selected.entityId && child.entityId &&
+            String(selected.entityId) === String(child.entityId) &&
+            selected.entityType === child.entityType;
+          html += '<button type="button" class="builder-exp-hs-picker__item' +
+            (isLinked ? ' is-linked' : '') + '"' +
+            ' data-exp-hs-pick-type="' + esc(child.type) + '"' +
+            ' data-exp-hs-pick-id="' + esc(child.id) + '"' +
+            ' data-exp-hs-pick-label="' + esc(child.label) + '"' +
+            (child.linkable
+              ? ' data-exp-hs-link-type="' + esc(child.entityType) + '"' +
+                ' data-exp-hs-link-id="' + esc(child.entityId) + '"'
+              : '') +
+            '>' +
+            '<span>' + esc(child.label) + '</span>' +
+            (child.linkable
+              ? '<em class="builder-exp-hs-picker__link">Vincular</em>'
+              : '<em class="builder-exp-hs-picker__nav">Abrir</em>') +
+          '</button>';
+        });
+      }
+      html += '</div></div>';
+
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Plantilla</label>' +
+        '<select data-exp-hs-template>' +
+          '<option value="compacta"' + (template === 'compacta' ? ' selected' : '') + '>Compacta</option>' +
+          '<option value="completa"' + (template === 'completa' ? ' selected' : '') + '>Completa</option>' +
+          '<option value="ficha"' + (template === 'ficha' ? ' selected' : '') + '>Ficha Técnica</option>' +
+          '<option value="premium"' + (template === 'premium' ? ' selected' : '') + '>Premium</option>' +
+        '</select>' +
+      '</div>';
+
+      if (fieldToggles.length && selected.entityId && !resolved.missing) {
+        html += '<div class="builder-exp-inspector__section">Campos visibles</div>' +
+          '<div class="builder-exp-hs-fields">';
+        fieldToggles.forEach(function (f) {
+          var on = fields[f.key] !== false;
+          html += '<label class="builder-exp-inspector__check">' +
+            '<input type="checkbox" data-exp-hs-field="' + esc(f.key) + '"' +
+              (on ? ' checked' : '') + '> ' + esc(f.label) +
+          '</label>';
+        });
+        html += '</div>';
+      }
+    } else {
+      html += '<p class="builder-menu-hint">Modo personalizado: el hotspot no lee datos de la Estructura.</p>';
+    }
+
+    html += '<p class="builder-menu-hint builder-exp-btn-hint">' +
         (selected.polygon ? selected.polygon.length : 0) +
         ' vértices · clic = vértice · doble clic = cerrar · Del = borrar vértice</p>' +
       '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
@@ -2574,13 +2703,126 @@ var ExperienciaCanvas = (function () {
           patchHs({ visible: !!visEl.checked }, { persist: true });
         });
       }
+
+      function setPickerPath(path) {
+        canvas().hotspotPickerPath = path || [];
+        paintInspector();
+      }
+
+      /* V6.5.00 — content mode + structure picker */
+      inspectorBody.querySelectorAll('[data-exp-hs-content]').forEach(function (el) {
+        el.addEventListener('change', function () {
+          if (!el.checked) return;
+          canvas().hotspotPickerPath = null;
+          patchHs({ contentMode: el.getAttribute('data-exp-hs-content') }, {
+            inspector: true, persist: true
+          });
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hs-reselect]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          setPickerPath([{
+            type: 'project',
+            id: 'project',
+            label: (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.projectName)
+              ? EstructuraEntity.projectName(state)
+              : 'Proyecto'
+          }]);
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hs-crumb]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var idx = Number(el.getAttribute('data-exp-hs-crumb'));
+          var path = Array.isArray(canvas().hotspotPickerPath)
+            ? canvas().hotspotPickerPath.slice()
+            : [];
+          if (!path.length && typeof EstructuraEntity !== 'undefined') {
+            path = [{
+              type: 'project',
+              id: 'project',
+              label: EstructuraEntity.projectName(state)
+            }];
+          }
+          setPickerPath(path.slice(0, idx + 1));
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hs-pick-type]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          if (ev.target && ev.target.classList &&
+              ev.target.classList.contains('builder-exp-hs-picker__link')) {
+            return;
+          }
+          var type = el.getAttribute('data-exp-hs-pick-type');
+          var id = el.getAttribute('data-exp-hs-pick-id');
+          var label = el.getAttribute('data-exp-hs-pick-label') || id;
+          var path = Array.isArray(canvas().hotspotPickerPath)
+            ? canvas().hotspotPickerPath.slice()
+            : [];
+          if (!path.length) {
+            path = [{
+              type: 'project',
+              id: 'project',
+              label: (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.projectName)
+                ? EstructuraEntity.projectName(state)
+                : 'Proyecto'
+            }];
+          }
+          path.push({ type: type, id: id, label: label });
+          setPickerPath(path);
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-hs-link-id]').forEach(function (el) {
+        var linkBtn = el.querySelector('.builder-exp-hs-picker__link');
+        if (!linkBtn) return;
+        linkBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var linkType = el.getAttribute('data-exp-hs-link-type');
+          var linkId = el.getAttribute('data-exp-hs-link-id');
+          if (!linkType || !linkId) return;
+          patchHs({
+            contentMode: 'structure',
+            entityId: linkId,
+            entityType: linkType
+          }, { inspector: true, persist: true });
+          var resolved = (typeof EstructuraEntity !== 'undefined')
+            ? EstructuraEntity.resolve(state, linkId, linkType)
+            : null;
+          if (resolved && resolved.ok && resolved.label) {
+            patchHs({ name: resolved.label }, { persist: true });
+          }
+          canvas().hotspotPickerPath = null;
+          paintInspector();
+        });
+      });
+      var tplEl = inspectorBody.querySelector('[data-exp-hs-template]');
+      if (tplEl) {
+        tplEl.addEventListener('change', function () {
+          patchHs({ cardTemplate: tplEl.value }, { persist: true });
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-hs-field]').forEach(function (el) {
+        el.addEventListener('change', function () {
+          var key = el.getAttribute('data-exp-hs-field');
+          var patch = { cardFields: {} };
+          patch.cardFields[key] = !!el.checked;
+          patchHs(patch, { persist: true });
+        });
+      });
+
       var dupBtn = inspectorBody.querySelector('[data-exp-hs-duplicate]');
       if (dupBtn) {
         dupBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
           var copy = ExperienciaEngine.duplicateSceneHotspotMask(state, sceneId,
             dupBtn.getAttribute('data-exp-hs-duplicate'));
-          if (copy) canvas().selectedHotspotId = copy.id;
+          if (copy) {
+            canvas().selectedHotspotId = copy.id;
+            canvas().hotspotPickerPath = null;
+          }
           renderAll(); persist();
         });
       }
@@ -2591,6 +2833,7 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.removeSceneHotspotMask(state, sceneId,
             delBtn.getAttribute('data-exp-hs-delete'));
           canvas().selectedHotspotId = null;
+          canvas().hotspotPickerPath = null;
           renderAll(); persist();
         });
       }

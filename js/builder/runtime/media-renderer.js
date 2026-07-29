@@ -156,6 +156,7 @@ var MediaRenderer = (function () {
   };
 
   Renderer.prototype.playImage = function (node, ctrl) {
+    var self = this;
     var stage = ctrl.stage;
     var wrap = document.createElement('div');
     wrap.className = 'boxies-xp__media boxies-xp__media--image is-enter';
@@ -167,6 +168,7 @@ var MediaRenderer = (function () {
     }
 
     var buttons = ctrl.listButtons(node);
+    var hotspots = listHotspotMasks(node);
     var advanced = false;
     function advanceTo(targetId) {
       if (advanced || ctrl.isStopped()) return;
@@ -177,6 +179,37 @@ var MediaRenderer = (function () {
         if (targetId) ctrl.advanceTo(targetId);
         else ctrl.advance();
       }, FADE_MS);
+    }
+
+    if (hotspots.length) {
+      var hsLayer = document.createElement('div');
+      hsLayer.className = 'boxies-xp__hs-layer';
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'boxies-xp__hs-svg');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      hotspots.forEach(function (hs) {
+        var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        var pts = (hs.polygon || []).map(function (p) {
+          return Number(p.x) + ',' + Number(p.y);
+        }).join(' ');
+        poly.setAttribute('points', pts);
+        poly.setAttribute('class', 'boxies-xp__hs-poly' +
+          (hs.animation && hs.animation !== 'none' ? ' is-anim-' + hs.animation : ''));
+        poly.style.fill = hs.color || '#6fbf86';
+        poly.style.fillOpacity = String(hs.opacity != null ? hs.opacity : 0.22);
+        poly.style.stroke = hs.color || '#6fbf86';
+        poly.style.strokeWidth = String((hs.borderWidth != null ? hs.borderWidth : 1.5) / 10);
+        poly.style.cursor = 'pointer';
+        poly.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          self.showSmartCard(hs, ctrl, stage);
+        });
+        svg.appendChild(poly);
+      });
+      hsLayer.appendChild(svg);
+      wrap.appendChild(hsLayer);
     }
 
     if (buttons.length) {
@@ -205,7 +238,7 @@ var MediaRenderer = (function () {
         layer.appendChild(btn);
       });
       wrap.appendChild(layer);
-    } else {
+    } else if (!hotspots.length) {
       wrap.setAttribute('role', 'button');
       wrap.setAttribute('tabindex', '0');
       wrap.title = 'Continuar';
@@ -220,8 +253,77 @@ var MediaRenderer = (function () {
           advanceTo(null);
         }
       });
+    } else {
+      /* Hotspots present: continue via transport / empty tap on media */
+      wrap.addEventListener('click', function (ev) {
+        if (ev.target && ev.target.closest && ev.target.closest('.boxies-xp__hs-poly')) return;
+        if (ev.target && ev.target.closest && ev.target.closest('.boxies-smart-card')) return;
+        advanceTo(null);
+      });
     }
     stage.appendChild(wrap);
+  };
+
+  function listHotspotMasks(node) {
+    var ixs = (node && node.config && node.config.interactions) || [];
+    return ixs.filter(function (ix) {
+      if (!ix || String(ix.type || '').toUpperCase() !== 'HOTSPOT') return false;
+      if (ix.enabled === false) return false;
+      var poly = ix.polygon;
+      return Array.isArray(poly) && poly.length >= 3;
+    });
+  }
+
+  Renderer.prototype.showSmartCard = function (ix, ctrl, stage) {
+    var existing = stage.querySelector('[data-smart-card-host]');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+
+    var host = document.createElement('div');
+    host.className = 'boxies-smart-card-host';
+    host.setAttribute('data-smart-card-host', '1');
+
+    var state = (ctrl && ctrl.state) || null;
+    if (!state || !state.estructura) {
+      state = {
+        estructura: (ctrl.runtime && ctrl.runtime.estructura) || {},
+        projectInfo: (ctrl.runtime && ctrl.runtime.projectInfo) || {},
+        projectAssets: (ctrl.state && ctrl.state.projectAssets) || {}
+      };
+    }
+    var card = null;
+    if (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.buildCardModel) {
+      card = EstructuraEntity.buildCardModel(state, ix);
+    } else {
+      card = {
+        ok: false,
+        missing: true,
+        title: 'Sin resolver',
+        message: 'EstructuraEntity no disponible.',
+        template: 'completa'
+      };
+    }
+
+    host.innerHTML = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.renderCardHtml)
+      ? EstructuraEntity.renderCardHtml(card)
+      : '<div class="boxies-smart-card"><p>Tarjeta no disponible</p></div>';
+
+    host.addEventListener('click', function (ev) {
+      if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-smart-close') != null) {
+        ev.preventDefault();
+        if (host.parentNode) host.parentNode.removeChild(host);
+        return;
+      }
+      if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-smart-reselect') != null) {
+        ev.preventDefault();
+        if (host.parentNode) host.parentNode.removeChild(host);
+        return;
+      }
+      if (ev.target === host) {
+        if (host.parentNode) host.parentNode.removeChild(host);
+      }
+    });
+
+    stage.appendChild(host);
   };
 
   Renderer.prototype.playHub = function (node, ctrl) {

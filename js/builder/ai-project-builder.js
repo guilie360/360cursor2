@@ -2209,6 +2209,7 @@ var AiProjectBuilderView = (function () {
     }
     var player = ExperienceRuntime.mount(host, {
       runtime: runtime,
+      state: state,
       renderer: typeof MediaRenderer !== 'undefined' ? MediaRenderer : null,
       mode: 'preview',
       startLabel: 'INICIAR'
@@ -2225,6 +2226,7 @@ var AiProjectBuilderView = (function () {
         var rt = RuntimeCompiler.getRuntime();
         var p = ExperienceRuntime.mount(host, {
           runtime: rt,
+          state: state,
           renderer: typeof MediaRenderer !== 'undefined' ? MediaRenderer : null,
           mode: 'preview',
           startLabel: 'INICIAR'
