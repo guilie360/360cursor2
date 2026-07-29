@@ -378,7 +378,7 @@ var ExperienciaEngine = (function () {
     }
 
     if (!ix.style || !BUTTON_STYLES[ix.style]) ix.style = 'chip';
-    if (!ix.color) ix.color = '#ffffff';
+    if (!ix.color) ix.color = '';
     if (ix.rotation == null || isNaN(Number(ix.rotation))) ix.rotation = 0;
     else ix.rotation = clampRotation(ix.rotation);
     if (ix.icon === 'none') ix.icon = null;
@@ -515,15 +515,15 @@ var ExperienciaEngine = (function () {
     return {
       id: ix.id,
       portId: ix.portId || ix.id,
-      label: ix.label || 'Botón',
+      label: ix.label != null ? String(ix.label) : '',
       x: layout.x,
       y: layout.y,
       storedX: ix.x,
       storedY: ix.y,
       style: ix.style || 'chip',
-      color: ix.color || '#ffffff',
+      color: ix.color || '',
       icon: ix.icon || null,
-      rotation: ix.rotation || 0,
+      rotation: ix.rotation != null ? Number(ix.rotation) : 0,
       visible: ix.enabled !== false,
       enabled: ix.enabled !== false,
       targetNodeId: resolveButtonTarget(state, n.id, ix),
@@ -605,7 +605,7 @@ var ExperienciaEngine = (function () {
     ix.y = 50;
     ix.positionInitialized = true;
     ix.style = 'chip';
-    ix.color = '#ffffff';
+    ix.color = '';
     ix.rotation = 0;
     ix.positionMode = 'free';
     ensureButtonVisualDefaults(ix);
@@ -1350,10 +1350,11 @@ var ExperienciaEngine = (function () {
     var cfg = (partial && partial.config && typeof partial.config === 'object')
       ? partial.config
       : {};
-    return {
+    var label = (partial && partial.label != null) ? String(partial.label) : type;
+    var ix = {
       id: id,
       type: type,
-      label: (partial && partial.label) || type,
+      label: label,
       enabled: partial && partial.enabled === false ? false : true,
       portId: portId,
       group: (partial && partial.group) || interactionGroup(type),
@@ -1379,6 +1380,26 @@ var ExperienciaEngine = (function () {
       assetId: (partial && partial.assetId) || null,
       config: cfg
     };
+    /* V6.1.02 — preserve BUTTON visual props across normalize (Style.v3 overlay) */
+    if (partial) {
+      if (partial.style != null) ix.style = partial.style;
+      else if (cfg.style != null) ix.style = cfg.style;
+      if (partial.color != null) ix.color = partial.color;
+      else if (cfg.color != null) ix.color = cfg.color;
+      if (partial.rotation != null) ix.rotation = partial.rotation;
+      else if (cfg.rotation != null) ix.rotation = cfg.rotation;
+      if (partial.positionMode != null) ix.positionMode = partial.positionMode;
+      else if (cfg.positionMode != null) ix.positionMode = cfg.positionMode;
+      if (partial.anchor != null) ix.anchor = partial.anchor;
+      else if (cfg.anchor != null) ix.anchor = cfg.anchor;
+      if (partial.marginX != null) ix.marginX = partial.marginX;
+      else if (cfg.marginX != null) ix.marginX = cfg.marginX;
+      if (partial.marginY != null) ix.marginY = partial.marginY;
+      else if (cfg.marginY != null) ix.marginY = cfg.marginY;
+      if (partial.positionInitialized != null) ix.positionInitialized = partial.positionInitialized;
+      else if (cfg.positionInitialized != null) ix.positionInitialized = cfg.positionInitialized;
+    }
+    return ix;
   }
 
   function interactionTypeLabel(type) {
@@ -1696,7 +1717,7 @@ var ExperienciaEngine = (function () {
     extras = extras || {};
     var ix = makeInteraction({
       type: type || 'HOTSPOT',
-      label: label || type || 'Interacción',
+      label: label != null ? label : (type || 'Interacción'),
       actionType: extras.actionType || null,
       behavior: extras.behavior || null,
       structureRef: extras.structureRef || null,
@@ -1723,8 +1744,8 @@ var ExperienciaEngine = (function () {
       if (k === 'id' || k === 'portId') return;
       ix[k] = patch[k];
     });
-    if (patch && patch.label) {
-      ix.label = patch.label;
+    if (patch && patch.label != null) {
+      ix.label = String(patch.label);
       /* Keep edge labels in sync; never change port ids */
       var exp = ensureState(state);
       var portId = ix.portId || ix.id;

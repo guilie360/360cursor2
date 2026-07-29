@@ -115,11 +115,13 @@ var ExperienceRuntime = (function () {
         }
       }
       var layout = resolveRuntimeButtonLayout(ix);
+      var tint = ix.color || (ix.config && ix.config.color) || '';
       result.push({
         id: ix.id,
-        label: ix.label || 'Botón',
+        label: ix.label != null ? String(ix.label) : '',
         style: ix.style || 'chip',
-        color: ix.color || '#ffffff',
+        color: tint,
+        icon: ix.icon || null,
         rotation: Number(ix.rotation) || 0,
         x: layout.x,
         y: layout.y,
@@ -516,12 +518,15 @@ var ExperienceRuntime = (function () {
       buttons.forEach(function (b) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip');
-        btn.textContent = b.label || 'Botón';
+        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip') +
+          (b.color ? ' has-tint' : '');
+        var text = b.label != null ? String(b.label) : '';
+        btn.textContent = text || (b.style === 'icon' ? '·' : '');
         btn.style.left = b.x + '%';
         btn.style.top = b.y + '%';
-        btn.style.setProperty('--btn-color', b.color || '#ffffff');
+        btn.style.setProperty('--btn-rot', (b.rotation || 0) + 'deg');
         btn.style.transform = 'translate(-50%, -50%) rotate(' + (b.rotation || 0) + 'deg)';
+        if (b.color) btn.style.setProperty('--exp-btn-tint', b.color);
         if (b.targetId) {
           btn.addEventListener('click', function (ev) {
             ev.preventDefault();

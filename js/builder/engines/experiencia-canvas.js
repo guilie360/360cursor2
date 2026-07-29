@@ -349,9 +349,12 @@ var ExperienciaCanvas = (function () {
         body += '<div class="builder-exp-card__section">BOTONES</div>' +
           '<div class="builder-exp-card__btn-summary">' +
             btns.map(function (b) {
+              var listLabel = (b.label != null && String(b.label).length)
+                ? b.label
+                : (b.icon ? '· icono' : 'Sin texto');
               return '<div class="builder-exp-card__btn-row">' +
                 '<span class="builder-exp-card__btn-check" aria-hidden="true">✓</span>' +
-                '<span>' + esc(b.label || 'Botón') + '</span>' +
+                '<span>' + esc(listLabel) + '</span>' +
               '</div>';
             }).join('') +
           '</div>';
@@ -489,20 +492,23 @@ var ExperienciaCanvas = (function () {
       }).join('');
 
     var html = '' +
+      '<div class="builder-exp-btn-panel">' +
       '<div class="builder-exp-inspector__kind">BOTONES</div>' +
       '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>' +
-      '<p class="builder-menu-hint" style="margin:0 0 10px">Mismos elementos «Botón / Control» del Canvas. Una sola fuente de verdad.</p>' +
       '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
         esc(n.id) + '">+ Nuevo botón</button>';
 
     if (!buttons.length) {
-      html += '<p class="builder-menu-hint">No hay botones en esta escena. Crea uno aquí o en FLUJO → Agregar elemento → Botón / Control.</p>';
+      html += '<p class="builder-menu-hint">No hay botones en esta escena. Crea uno aquí o en FLUJO → Agregar elemento → Botón / Control.</p></div>';
       return html;
     }
 
     html += '<div class="builder-exp-inspector__section">Lista</div>' +
       '<div class="builder-exp-btn-list">' +
         buttons.map(function (b) {
+          var listLabel = (b.label != null && String(b.label).length)
+            ? b.label
+            : (b.icon ? '· icono' : 'Sin texto');
           return '<button type="button" class="builder-exp-btn-list__item' +
             (selected && String(selected.id) === String(b.id) ? ' is-selected' : '') +
             (b.visible === false ? ' is-hidden-btn' : '') + '"' +
@@ -510,20 +516,20 @@ var ExperienciaCanvas = (function () {
             '<span class="builder-exp-btn-list__mark" aria-hidden="true">' +
               (b.visible === false ? '○' : '●') +
             '</span>' +
-            '<span>' + esc(b.label || 'Botón') + '</span>' +
+            '<span>' + esc(listLabel) + '</span>' +
           '</button>';
         }).join('') +
       '</div>';
 
     if (!selected) {
-      html += '<p class="builder-menu-hint">Selecciona un botón en la lista o sobre la imagen.</p>';
+      html += '<p class="builder-menu-hint">Selecciona un botón en la lista o sobre la imagen.</p></div>';
       return html;
     }
 
-    function styleChip(val, label) {
-      return '<button type="button" class="builder-estructura-chip' +
-        (selected.style === val ? ' is-on' : '') +
-        '" data-exp-btn-style="' + esc(val) + '">' + esc(label) + '</button>';
+    function segBtn(attr, val, label, isOn) {
+      return '<button type="button" class="builder-hub-segment__btn' +
+        (isOn ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' +
+        esc(label) + '</button>';
     }
 
     var anchors = ExperienciaEngine.BUTTON_ANCHORS || {};
@@ -545,32 +551,39 @@ var ExperienciaCanvas = (function () {
     }).join('');
 
     var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
+    var tint = selected.color || '';
+    var colorVal = tint && /^#[0-9a-fA-F]{6}$/.test(tint) ? tint : '#c8873a';
 
     html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Nombre</label>' +
-        '<input type="text" data-exp-btn-label maxlength="60" value="' + esc(selected.label || '') + '">' +
+        '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
+          esc(selected.label != null ? selected.label : '') + '">' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Destino</label>' +
-        '<select data-exp-btn-target class="ws-select">' + destOpts + '</select>' +
+        '<select data-exp-btn-target class="ws-select builder-exp-btn-select">' + destOpts + '</select>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Estilo</label>' +
-        '<div class="builder-hub-chips" data-exp-btn-styles>' +
-          styleChip('chip', 'Chip') +
-          styleChip('button', 'Botón') +
-          styleChip('icon', 'Icono') +
+        '<div class="builder-hub-segment builder-hub-segment--3" data-exp-btn-styles>' +
+          segBtn('data-exp-btn-style', 'chip', 'Chip', selected.style === 'chip') +
+          segBtn('data-exp-btn-style', 'button', 'Botón', selected.style === 'button') +
+          segBtn('data-exp-btn-style', 'icon', 'Icono', selected.style === 'icon') +
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Color</label>' +
-        '<input type="color" data-exp-btn-color value="' +
-          esc(selected.color || '#ffffff') + '">' +
+        '<label>Color · tint (Style.v3)</label>' +
+        '<div class="builder-exp-btn-color-row">' +
+          '<input type="color" data-exp-btn-color value="' + esc(colorVal) + '" title="Acento / tint">' +
+          '<button type="button" class="builder-hub-segment__btn builder-exp-btn-color-reset' +
+            (!tint ? ' is-active' : '') + '" data-exp-btn-color-reset>Tema</button>' +
+        '</div>' +
+        '<p class="builder-menu-hint builder-exp-btn-hint">Alimenta tokens de acento. Fondo, borde y texto siguen el Theme.</p>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Icono</label>' +
-        '<select data-exp-btn-icon class="ws-select">' +
+        '<select data-exp-btn-icon class="ws-select builder-exp-btn-select">' +
           '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
           '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
           '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izquierda</option>' +
@@ -591,41 +604,42 @@ var ExperienciaCanvas = (function () {
         '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
         ' Visible</label>' +
       '<div class="builder-exp-inspector__section">Posición</div>' +
-      '<div class="builder-hub-chips" data-exp-btn-pos-mode style="margin-bottom:10px">' +
-        '<button type="button" class="builder-estructura-chip' + (posMode === 'free' ? ' is-on' : '') +
-          '" data-exp-btn-pos-mode="free">Libre</button>' +
-        '<button type="button" class="builder-estructura-chip' + (posMode === 'anchor' ? ' is-on' : '') +
-          '" data-exp-btn-pos-mode="anchor">Anclas</button>' +
+      '<div class="builder-hub-segment" data-exp-btn-pos-modes>' +
+        segBtn('data-exp-btn-pos-mode', 'free', 'Libre', posMode === 'free') +
+        segBtn('data-exp-btn-pos-mode', 'anchor', 'Anclas', posMode === 'anchor') +
       '</div>';
 
     if (posMode === 'anchor') {
       html += '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Ancla</label>' +
-        '<select data-exp-btn-anchor class="ws-select">' + anchorOpts + '</select>' +
+        '<select data-exp-btn-anchor class="ws-select builder-exp-btn-select">' + anchorOpts + '</select>' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Margen X (px)</label>' +
-        '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
-          esc(String(selected.marginX || 0)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Margen Y (px)</label>' +
-        '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
-          esc(String(selected.marginY || 0)) + '">' +
+      '<div class="builder-exp-btn-margins">' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Margen X</label>' +
+          '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
+            esc(String(selected.marginX || 0)) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Margen Y</label>' +
+          '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
+            esc(String(selected.marginY || 0)) + '">' +
+        '</div>' +
       '</div>';
     } else {
-      html += '<p class="builder-menu-hint">X ' + esc(String(selected.x)) +
-        '% · Y ' + esc(String(selected.y)) + '% (arrastre sobre la imagen)</p>';
+      html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
+        '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
+        '% · arrastre sobre la imagen</p>';
     }
 
-    html += '<div class="builder-exp-inspector__actions" style="display:flex;flex-direction:column;gap:8px">' +
+    html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-mirror="' +
-          esc(selected.id) + '">Reflejar horizontalmente</button>' +
+          esc(selected.id) + '">Reflejar</button>' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-duplicate="' +
           esc(selected.id) + '">Duplicar</button>' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
           esc(selected.id) + '">Eliminar</button>' +
-      '</div>';
+      '</div></div>';
 
     return html;
   }
@@ -1906,6 +1920,13 @@ var ExperienciaCanvas = (function () {
     function bindButtonsInspectorActions() {
       if (!inspectorBody) return;
       var sceneId = canvas().selectedId;
+      function patchBtn(patch, opts) {
+        opts = opts || {};
+        ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, patch);
+        paintButtonsStage();
+        if (opts.inspector) paintInspector();
+        if (opts.persist) persist();
+      }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
         addBtn.addEventListener('click', function (ev) {
@@ -1926,59 +1947,52 @@ var ExperienciaCanvas = (function () {
       });
       var labelEl = inspectorBody.querySelector('[data-exp-btn-label]');
       if (labelEl) {
+        labelEl.addEventListener('input', function () {
+          patchBtn({ label: labelEl.value });
+        });
         labelEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            label: labelEl.value
-          });
-          renderAll(); persist();
+          persist();
         });
       }
       var targetEl = inspectorBody.querySelector('[data-exp-btn-target]');
       if (targetEl) {
         targetEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            targetNodeId: targetEl.value || null
-          });
-          renderAll(); persist();
+          patchBtn({ targetNodeId: targetEl.value || null }, { persist: true });
         });
       }
       inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            style: el.getAttribute('data-exp-btn-style')
-          });
-          renderAll(); persist();
+          ev.stopPropagation();
+          patchBtn({ style: el.getAttribute('data-exp-btn-style') }, { inspector: true, persist: true });
         });
       });
       var colorEl = inspectorBody.querySelector('[data-exp-btn-color]');
       if (colorEl) {
         colorEl.addEventListener('input', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            color: colorEl.value
-          });
-          paintButtonsStage();
+          patchBtn({ color: colorEl.value });
         });
         colorEl.addEventListener('change', function () {
           persist();
         });
       }
+      var colorReset = inspectorBody.querySelector('[data-exp-btn-color-reset]');
+      if (colorReset) {
+        colorReset.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchBtn({ color: '' }, { inspector: true, persist: true });
+        });
+      }
       var iconEl = inspectorBody.querySelector('[data-exp-btn-icon]');
       if (iconEl) {
         iconEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            icon: iconEl.value
-          });
-          renderAll(); persist();
+          patchBtn({ icon: iconEl.value }, { persist: true });
         });
       }
       var visEl = inspectorBody.querySelector('[data-exp-btn-visible]');
       if (visEl) {
         visEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            visible: !!visEl.checked
-          });
-          renderAll(); persist();
+          patchBtn({ visible: !!visEl.checked }, { persist: true });
         });
       }
       var rotEl = inspectorBody.querySelector('[data-exp-btn-rotation]');
@@ -1987,10 +2001,7 @@ var ExperienciaCanvas = (function () {
         rotEl.addEventListener('input', function () {
           var deg = Number(rotEl.value) || 0;
           if (rotVal) rotVal.textContent = deg + ' °';
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            rotation: deg
-          });
-          paintButtonsStage();
+          patchBtn({ rotation: deg });
         });
         rotEl.addEventListener('change', function () {
           persist();
@@ -1999,40 +2010,37 @@ var ExperienciaCanvas = (function () {
       inspectorBody.querySelectorAll('[data-exp-btn-pos-mode]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            positionMode: el.getAttribute('data-exp-btn-pos-mode')
-          });
-          renderAll(); persist();
+          ev.stopPropagation();
+          var mode = el.getAttribute('data-exp-btn-pos-mode');
+          if (!mode) return;
+          patchBtn({ positionMode: mode }, { inspector: true, persist: true });
         });
       });
       var anchorEl = inspectorBody.querySelector('[data-exp-btn-anchor]');
       if (anchorEl) {
         anchorEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+          patchBtn({
             anchor: anchorEl.value,
             positionMode: 'anchor'
-          });
-          renderAll(); persist();
+          }, { persist: true });
         });
       }
       var mxEl = inspectorBody.querySelector('[data-exp-btn-margin-x]');
       if (mxEl) {
+        mxEl.addEventListener('input', function () {
+          patchBtn({ marginX: mxEl.value, keepAnchor: true });
+        });
         mxEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            marginX: mxEl.value,
-            keepAnchor: true
-          });
-          renderAll(); persist();
+          persist();
         });
       }
       var myEl = inspectorBody.querySelector('[data-exp-btn-margin-y]');
       if (myEl) {
+        myEl.addEventListener('input', function () {
+          patchBtn({ marginY: myEl.value, keepAnchor: true });
+        });
         myEl.addEventListener('change', function () {
-          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
-            marginY: myEl.value,
-            keepAnchor: true
-          });
-          renderAll(); persist();
+          persist();
         });
       }
       var mirrorBtn = inspectorBody.querySelector('[data-exp-btn-mirror]');
@@ -2921,17 +2929,27 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
         var glyph = buttonIconGlyph(b.icon);
-        var label = b.style === 'icon'
-          ? (glyph || '·')
-          : ((glyph ? (glyph + ' ') : '') + (b.label || 'Botón'));
+        var text = b.label != null ? String(b.label) : '';
+        var label;
+        if (b.style === 'icon') {
+          label = glyph || (text || '·');
+        } else if (glyph && text) {
+          label = glyph + ' ' + text;
+        } else {
+          label = glyph || text;
+        }
         var rot = Number(b.rotation) || 0;
+        var tint = b.color ? String(b.color) : '';
+        var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
+          '--btn-rot:' + rot + 'deg;' +
+          'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
+        if (tint) styleBits += '--exp-btn-tint:' + esc(tint) + ';';
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (String(b.id) === String(sel) ? ' is-selected' : '') +
-          (b.visible === false ? ' is-invisible' : '') + '"' +
+          (b.visible === false ? ' is-invisible' : '') +
+          (tint ? ' has-tint' : '') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
-          ' style="left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
-            'transform:translate(-50%,-50%) rotate(' + rot + 'deg);' +
-            '--btn-color:' + esc(b.color || '#ffffff') + '">' +
+          ' style="' + styleBits + '">' +
           esc(label) +
         '</button>';
       }).join('');
