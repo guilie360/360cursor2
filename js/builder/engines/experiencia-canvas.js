@@ -2604,7 +2604,6 @@ var ExperienciaCanvas = (function () {
           });
         } catch (eSer) {}
       }
-      /* Minimal fallback graph from canvas */
       ExperienciaEngine.ensureFlow(state);
       var exp = state.experiencia || {};
       var nodes = (ExperienciaEngine.visibleNodes
@@ -2623,17 +2622,18 @@ var ExperienciaCanvas = (function () {
     }
 
     function ensurePrototypePlayer() {
-      if (!protoHost || typeof ExperienceRuntime === 'undefined' || !ExperienceRuntime.mount) {
-        return null;
-      }
-      if (typeof PrototypeRenderer === 'undefined') return null;
+      if (!protoHost) return null;
+      var mountFn = (typeof PrototypeView !== 'undefined' && PrototypeView.mount)
+        ? PrototypeView.mount
+        : (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.mountPrototypeView)
+          ? ExperienciaPrototype.mountPrototypeView
+          : null;
+      if (!mountFn) return null;
       var runtime = buildLiveRuntimeFromState();
       if (!protoRuntimePlayer) {
-        protoRuntimePlayer = ExperienceRuntime.mount(protoHost, {
+        protoRuntimePlayer = mountFn(protoHost, {
           runtime: runtime,
           state: state,
-          renderer: PrototypeRenderer,
-          mode: 'prototype',
           startLabel: '▶ Ver Prototipo'
         });
       } else {
@@ -2644,7 +2644,6 @@ var ExperienciaCanvas = (function () {
     }
 
     function syncPrototypeStoryboard() {
-      /* Live Canvas → same ExperienceRuntime graph; PrototypeRenderer redraws volumes */
       var fp = (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.fingerprint)
         ? ExperienciaPrototype.fingerprint(state)
         : String(Date.now());
@@ -3447,9 +3446,14 @@ var ExperienciaCanvas = (function () {
         stage.classList.toggle('is-buttons-mode', mode === 'buttons');
         stage.classList.toggle('is-hotspots-mode', mode === 'hotspots');
         stage.classList.toggle('is-proto-mode', mode === 'prototype');
+        stage.setAttribute('data-exp-active-mode', mode);
       }
+      /* Hard-swap views: Canvas editor must never remain visible in PROTOTIPO */
       if (viewport) {
-        viewport.hidden = mode === 'buttons' || mode === 'hotspots' || mode === 'prototype';
+        var hideFlow = mode === 'buttons' || mode === 'hotspots' || mode === 'prototype';
+        viewport.hidden = hideFlow;
+        viewport.setAttribute('aria-hidden', hideFlow ? 'true' : 'false');
+        viewport.style.display = hideFlow ? 'none' : '';
       }
       if (buttonsStage) {
         buttonsStage.hidden = mode !== 'buttons';
@@ -3462,6 +3466,10 @@ var ExperienciaCanvas = (function () {
       if (protoStage) {
         protoStage.hidden = mode !== 'prototype';
         protoStage.setAttribute('aria-hidden', mode === 'prototype' ? 'false' : 'true');
+        if (mode === 'prototype') {
+          protoStage.style.display = '';
+          protoStage.removeAttribute('hidden');
+        }
       }
       if (mode !== 'prototype' && protoRuntimePlayer) {
         if (protoRuntimePlayer.showGate) protoRuntimePlayer.showGate();

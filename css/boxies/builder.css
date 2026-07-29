@@ -6793,6 +6793,23 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   display: none;
 }
 
+/* V6.3.03 — PROTOTIPO hides Canvas editor completely */
+.builder-exp-stage.is-proto-mode .builder-exp-viewport,
+.builder-exp-stage.is-buttons-mode .builder-exp-viewport,
+.builder-exp-stage.is-hotspots-mode .builder-exp-viewport {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="select"],
+.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="cut"],
+.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="fit"],
+.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="minimap"],
+.builder-exp-stage.is-proto-mode .builder-exp-toolbar__sep {
+  display: none;
+}
+
 .builder-exp-buttons-stage {
   position: absolute;
   inset: 52px 12px 12px;
@@ -7596,7 +7613,7 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
 .builder-exp-proto-stage {
   position: absolute;
   inset: 52px 12px 12px;
-  z-index: 3;
+  z-index: 5;
   background: #000;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -7606,6 +7623,10 @@ body.boxies-exp-canvas-mode .builder-exp-hotspots-stage,
 body.boxies-exp-canvas-mode .builder-exp-proto-stage,
 .builder-exp-workspace.is-canvas-mode .builder-exp-proto-stage {
   inset: 58px 16px 16px;
+}
+
+.builder-exp-stage.is-proto-mode .builder-exp-proto-stage {
+  display: block !important;
 }
 
 .builder-exp-proto-stage[hidden] {

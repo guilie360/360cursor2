@@ -207,10 +207,11 @@ var ExperienciaEngine = (function () {
         inspectorOpen: false,
         inspectorCollapsed: false,
         activeGroupId: null,
-        /* V6.1.00 — FLUJO | BOTONES */
+        /* V6.3.00 — FLUJO | BOTONES | HOTSPOTS | PROTOTIPO */
         editMode: 'flow',
         selectedButtonId: null,
-        selectedButtonIds: []
+        selectedButtonIds: [],
+        selectedHotspotId: null
       }
     };
   }
@@ -242,13 +243,18 @@ var ExperienciaEngine = (function () {
       exp.canvas.selectedEdgeIds = exp.canvas.selectedEdgeId ? [exp.canvas.selectedEdgeId] : [];
     }
     if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
-    if (exp.canvas.editMode !== 'buttons') exp.canvas.editMode = 'flow';
+    /* V6.3.03 — allow FLUJO | BOTONES | HOTSPOTS | PROTOTIPO (do not clobber) */
+    var mode = String(exp.canvas.editMode || 'flow');
+    if (mode !== 'flow' && mode !== 'buttons' && mode !== 'hotspots' && mode !== 'prototype') {
+      exp.canvas.editMode = 'flow';
+    }
     if (exp.canvas.selectedButtonId === undefined) exp.canvas.selectedButtonId = null;
     if (!Array.isArray(exp.canvas.selectedButtonIds)) {
       exp.canvas.selectedButtonIds = exp.canvas.selectedButtonId
         ? [exp.canvas.selectedButtonId]
         : [];
     }
+    if (exp.canvas.selectedHotspotId === undefined) exp.canvas.selectedHotspotId = null;
     ensureProjectAssets(state);
     exp.nodes.forEach(function (n) {
       normalizeNode(n);

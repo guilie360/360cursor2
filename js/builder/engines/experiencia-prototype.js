@@ -582,9 +582,70 @@ var ExperienciaPrototype = (function () {
     };
   }
 
+  /**
+   * PrototypeView — dedicated Preview-like mount (not the Canvas editor).
+   * Uses ExperienceRuntime + PrototypeRenderer exclusively.
+   */
+  function mountPrototypeView(host, options) {
+    options = options || {};
+    if (!host) return null;
+    if (typeof ExperienceRuntime === 'undefined' || !ExperienceRuntime.mount) return null;
+    if (typeof PrototypeRenderer === 'undefined') return null;
+
+    var state = options.state || null;
+    var runtime = options.runtime || null;
+    if (!runtime && state && typeof RuntimeSerializer !== 'undefined' && RuntimeSerializer.serialize) {
+      try {
+        runtime = RuntimeSerializer.serialize(state, {
+          generatedAt: new Date().toISOString()
+        });
+      } catch (eSer) {
+        runtime = null;
+      }
+    }
+    if (!runtime && state) {
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureFlow) {
+        ExperienciaEngine.ensureFlow(state);
+      }
+      var exp = (state && state.experiencia) || {};
+      var nodes = (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.visibleNodes)
+        ? ExperienciaEngine.visibleNodes(state)
+        : (exp.nodes || []);
+      nodes = (nodes || []).filter(function (n) { return n && n.kind !== 'action'; });
+      var hero = nodes.find(function (n) {
+        return n && (n.kind === 'hero' || n.id === 'exp-hero');
+      });
+      runtime = {
+        nodes: nodes,
+        connections: exp.edges || [],
+        entryNodeId: hero ? hero.id : (nodes[0] && nodes[0].id) || null
+      };
+    }
+
+    var player = ExperienceRuntime.mount(host, {
+      runtime: runtime,
+      state: state,
+      renderer: PrototypeRenderer,
+      mode: 'prototype',
+      startLabel: options.startLabel || '▶ Ver Prototipo'
+    });
+    if (player && player.showGate) player.showGate();
+    return player;
+  }
+
   return {
     buildStoryboard: buildStoryboard,
     fingerprint: fingerprint,
-    createPlayer: createPlayer
+    createPlayer: createPlayer,
+    mountPrototypeView: mountPrototypeView
   };
 })();
+
+/* Alias for clear view routing */
+var PrototypeView = {
+  mount: function (host, options) {
+    return (typeof ExperienciaPrototype !== 'undefined' && ExperienciaPrototype.mountPrototypeView)
+      ? ExperienciaPrototype.mountPrototypeView(host, options)
+      : null;
+  }
+};
