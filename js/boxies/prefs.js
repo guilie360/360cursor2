@@ -41,11 +41,11 @@ var BoxiesPrefs = (function () {
   }
 
   function getNavCollapsed() {
-    return !!load().navCollapsed;
+    return false;
   }
 
-  function setNavCollapsed(on) {
-    return save({ navCollapsed: !!on });
+  function setNavCollapsed() {
+    return save({ navCollapsed: false });
   }
 
   function getBuilderNavigationCollapsed() {

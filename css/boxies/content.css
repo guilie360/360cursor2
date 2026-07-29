@@ -745,114 +745,109 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   color: rgba(255, 255, 255, 0.34);
 }
 
-/* V7.0.01 — Builder experience type selector */
+/* V7.0.03 — Builder experience type selector (design tokens only) */
 #boxiesContent .boxies-exp-select {
-  max-width: 1120px;
+  max-width: 960px;
   width: 100%;
   margin: 0 auto;
-  padding: 12px 4px 28px;
+  padding: var(--hall-space-5, 24px) var(--hall-space-2, 8px) var(--hall-space-7, 48px);
   box-sizing: border-box;
 }
 
 #boxiesContent .boxies-exp-select__header {
-  margin-bottom: 28px;
+  margin-bottom: var(--hall-space-6, 32px);
 }
 
 #boxiesContent .boxies-exp-select__kicker {
-  margin: 0 0 8px;
-  font-size: 0.65rem;
+  margin: 0 0 var(--hall-space-2, 8px);
+  font-size: var(--hall-label-size, 0.6875rem);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--hall-tracking-ui, 0.1em);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.34);
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
 #boxiesContent .boxies-exp-select__header .boxies-page__title {
-  margin-bottom: 8px;
+  margin-bottom: var(--hall-space-2, 8px);
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
 }
 
 #boxiesContent .boxies-exp-select__header .boxies-page__desc {
   margin-bottom: 0;
   max-width: 42ch;
+  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
 }
 
 #boxiesContent .boxies-exp-select__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
+  gap: var(--hall-space-3, 12px);
 }
 
 #boxiesContent .boxies-exp-select-card {
+  appearance: none;
   display: flex;
   flex-direction: column;
-  min-height: 248px;
-  padding: 20px 18px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  align-items: flex-start;
+  gap: var(--hall-space-2, 8px);
+  min-height: 168px;
+  padding: var(--hall-space-4, 16px) var(--hall-space-4, 16px) var(--hall-space-3, 12px);
+  margin: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--hall-radius-control, 14px);
+  border: 1px solid var(--border-subtle, var(--hall-border, rgba(255, 255, 255, 0.06)));
+  background: var(--hall-surface, rgba(255, 255, 255, 0.028));
+  color: inherit;
+  box-shadow: none;
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
+    transform var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    background var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 #boxiesContent .boxies-exp-select-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.055);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  transform: translateY(-2px);
+  border-color: var(--border-subtle-hover, var(--hall-border-subtle-hover, rgba(255, 255, 255, 0.14)));
+  background: var(--hall-surface-hover, rgba(255, 255, 255, 0.055));
 }
 
-#boxiesContent .boxies-exp-select-card__icon {
-  font-size: 2rem;
-  line-height: 1;
-  margin-bottom: 14px;
+#boxiesContent .boxies-exp-select-card:focus-visible {
+  outline: 2px solid var(--hall-border-strong, rgba(255, 255, 255, 0.11));
+  outline-offset: 2px;
 }
 
 #boxiesContent .boxies-exp-select-card__title {
-  margin: 0 0 8px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.94);
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: var(--hall-leading-tight, 1.35);
+  color: var(--hall-text, rgba(255, 255, 255, 0.94));
 }
 
 #boxiesContent .boxies-exp-select-card__desc {
-  margin: 0;
+  display: block;
   flex: 1 1 auto;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.8125rem;
+  line-height: var(--hall-leading-body, 1.6);
+  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
 }
 
-#boxiesContent .boxies-exp-select-card__btn {
-  appearance: none;
-  margin-top: 18px;
-  width: 100%;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.9);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+#boxiesContent .boxies-exp-select-card__action {
+  display: block;
+  margin-top: var(--hall-space-2, 8px);
+  font-size: var(--hall-label-size, 0.6875rem);
+  font-weight: 600;
+  letter-spacing: var(--hall-tracking-action, 0.12em);
+  text-transform: uppercase;
+  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+  transition: color var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-#boxiesContent .boxies-exp-select-card__btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-}
-
-#boxiesContent .boxies-exp-select-card__btn:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.45);
-  outline-offset: 2px;
+#boxiesContent .boxies-exp-select-card:hover .boxies-exp-select-card__action {
+  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
 }
 
 @media (max-width: 720px) {

@@ -311,8 +311,6 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
 
 body.boxies-builder-chrome,
 html.boxies-builder-chrome {
-  --boxies-sidebar-w: 50px;
-  --boxies-sidebar-collapsed-w: 50px;
   --boxies-icon-size: 15px;
   --boxies-icon-cell: 32px;
   --boxies-icon-gap: 2px;
@@ -320,12 +318,6 @@ html.boxies-builder-chrome {
 
 body.boxies-builder-chrome .boxies-sidebar,
 body.boxies-builder-chrome #boxiesSidebar {
-  width: 50px !important;
-  min-width: 50px !important;
-  padding-left: 7px !important;
-  padding-right: 7px !important;
-  padding-top: 8px !important;
-  overflow: hidden;
   pointer-events: auto !important;
   opacity: 1 !important;
   visibility: visible !important;
@@ -336,42 +328,10 @@ body.boxies-builder-chrome #boxiesNav {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-  gap: 2px;
-}
-
-body.boxies-builder-chrome .boxies-nav__group,
-body.boxies-builder-chrome .boxies-nav-item__label {
-  display: none !important;
-}
-
-body.boxies-builder-chrome .boxies-nav-item {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  padding: 0;
-  margin: 0 auto;
-  justify-content: center;
-  border-radius: 8px;
-}
-
-body.boxies-builder-chrome .boxies-nav-item__row {
-  justify-content: center;
-  gap: 0;
-  width: auto;
-}
-
-body.boxies-builder-chrome .boxies-nav-item__icon,
-body.boxies-builder-chrome .boxies-nav-item__icon svg {
-  width: 15px;
-  height: 15px;
-}
-
-body.boxies-builder-chrome .boxies-nav-collapse {
-  display: none !important;
 }
 
 body.boxies-builder-chrome .boxies-workspace {
-  margin-left: 50px !important;
+  margin-left: var(--boxies-sidebar-w) !important;
 }
 
 .builder-rail-collapse {
@@ -544,13 +504,12 @@ body.boxies-builder-chrome .boxies-workspace {
 }
 
 /*
- * V5.9.83 — Panel B collapse only. Panel A stays ~50px.
+ * V5.9.83 — Panel B (progress rail) collapse only.
+ * V7.0.03 — platform sidebar width stays fixed.
  */
 html.boxies-builder-chrome.boxies-rail-collapsed,
 body.boxies-builder-chrome.boxies-rail-collapsed {
   --builder-rail-width: 0px !important;
-  --boxies-sidebar-w: 50px !important;
-  --boxies-sidebar-collapsed-w: 50px !important;
 }
 
 body.boxies-rail-collapsed .builder-progress-sidebar,
@@ -3888,7 +3847,6 @@ body.boxies-exp-canvas-mode #builderDock {
 html.boxies-exp-canvas-mode,
 body.boxies-exp-canvas-mode {
   --boxies-sidebar-w: 0px !important;
-  --boxies-sidebar-collapsed-w: 0px !important;
   --boxies-header-h: 0px !important;
   --boxies-dock-h: 0px !important;
   --builder-header-height: 0px !important;

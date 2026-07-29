@@ -17,11 +17,10 @@ var BoxiesExperienceTypes = (function () {
       defaultName: 'Nuevo Showroom',
       slugPrefix: 'showroom',
       emptyMessage: 'No hay showrooms registrados.',
-      selectorIcon: '🏢',
-      selectorTitle: 'SHOWROOM',
+      selectorTitle: 'Showroom',
       selectorDesc:
         'Experiencia comercial completa con Runtime, 360, hotspots y herramientas avanzadas.',
-      selectorCta: 'Crear Showroom'
+      selectorCta: 'Crear →'
     },
     {
       id: 'presentation',
@@ -32,10 +31,9 @@ var BoxiesExperienceTypes = (function () {
       defaultName: 'Nueva Presentación',
       slugPrefix: 'presentacion',
       emptyMessage: 'No hay presentaciones registradas.',
-      selectorIcon: '📄',
-      selectorTitle: 'PRESENTACIÓN',
+      selectorTitle: 'Presentación',
       selectorDesc: 'Presentación ejecutiva ligera para reuniones e inversionistas.',
-      selectorCta: 'Crear Presentación'
+      selectorCta: 'Crear →'
     },
     {
       id: 'quotation',
@@ -46,10 +44,9 @@ var BoxiesExperienceTypes = (function () {
       defaultName: 'Nueva Cotización',
       slugPrefix: 'cotizacion',
       emptyMessage: 'No hay cotizaciones registradas.',
-      selectorIcon: '💰',
-      selectorTitle: 'COTIZACIÓN',
+      selectorTitle: 'Cotización',
       selectorDesc: 'Propuesta comercial interactiva para clientes.',
-      selectorCta: 'Crear Cotización'
+      selectorCta: 'Crear →'
     },
     {
       id: 'landing',
@@ -60,10 +57,9 @@ var BoxiesExperienceTypes = (function () {
       defaultName: 'Nueva Landing',
       slugPrefix: 'landing',
       emptyMessage: 'No hay landings registradas.',
-      selectorIcon: '🌐',
-      selectorTitle: 'LANDING',
+      selectorTitle: 'Landing',
       selectorDesc: 'Landing comercial para captación de clientes.',
-      selectorCta: 'Crear Landing'
+      selectorCta: 'Crear →'
     },
     {
       id: 'catalog',
@@ -74,10 +70,9 @@ var BoxiesExperienceTypes = (function () {
       defaultName: 'Nuevo Catálogo',
       slugPrefix: 'catalogo',
       emptyMessage: 'No hay catálogos registrados.',
-      selectorIcon: '📚',
-      selectorTitle: 'CATÁLOGO',
+      selectorTitle: 'Catálogo',
       selectorDesc: 'Catálogo digital de tipologías y documentación.',
-      selectorCta: 'Crear Catálogo'
+      selectorCta: 'Crear →'
     }
   ];
 

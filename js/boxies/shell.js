@@ -36,18 +36,10 @@ var BoxiesShell = (function () {
     return '<span class="boxies-header__title" id="boxiesHeaderTitle" aria-label="BOXIES">B O X I E S</span>';
   }
 
-  function applyNavCollapsed(collapsed) {
-    document.body.classList.toggle('boxies-nav-collapsed', !!collapsed);
-    document.documentElement.classList.toggle('boxies-nav-collapsed', !!collapsed);
-    var btn = document.getElementById('boxiesNavCollapseBtn');
-    if (btn) {
-      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-      btn.setAttribute('aria-label', collapsed ? 'Expandir navegación' : 'Colapsar navegación');
-      btn.setAttribute('data-tooltip', collapsed ? 'Expandir' : 'Colapsar');
-      btn.removeAttribute('title');
-      btn.innerHTML = iconHtml(collapsed ? 'chevron-right' : 'chevron-left');
-      if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.adopt) BoxiesTooltip.adopt(btn);
-    }
+  /** V7.0.03 — shell nav is always expanded; kept as no-op for legacy callers. */
+  function applyNavCollapsed() {
+    document.body.classList.remove('boxies-nav-collapsed');
+    document.documentElement.classList.remove('boxies-nav-collapsed');
   }
 
   function dockHtml() {
@@ -86,9 +78,6 @@ var BoxiesShell = (function () {
     }
     return (
       '<nav class="boxies-nav" id="boxiesNav" aria-label="Navegación">' +
-        '<button type="button" class="boxies-nav-collapse" id="boxiesNavCollapseBtn" aria-expanded="true" aria-label="Colapsar navegación" data-tooltip="Colapsar">' +
-          iconHtml('chevron-left') +
-        '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
         item('hall', 'Hall', 'home') +
         item('projects', 'Experiencias', 'folder') +
@@ -179,17 +168,6 @@ var BoxiesShell = (function () {
     if (nav && !nav.dataset.bound) {
       nav.dataset.bound = '1';
       nav.addEventListener('click', function (e) {
-        var collapseBtn = e.target.closest('#boxiesNavCollapseBtn');
-        if (collapseBtn) {
-          var next = !(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
-            ? BoxiesPrefs.getNavCollapsed()
-            : document.body.classList.contains('boxies-nav-collapsed'));
-          if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setNavCollapsed) {
-            BoxiesPrefs.setNavCollapsed(next);
-          }
-          applyNavCollapsed(next);
-          return;
-        }
         var btn = e.target.closest('[data-boxies-page]');
         if (!btn || btn.disabled) return;
         var id = btn.getAttribute('data-boxies-page');
@@ -240,10 +218,7 @@ var BoxiesShell = (function () {
     setChromeClasses(true);
     mounted = true;
     bind();
-    var navCollapsed = typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
-      ? BoxiesPrefs.getNavCollapsed()
-      : false;
-    applyNavCollapsed(navCollapsed);
+    applyNavCollapsed();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
       BuilderProgressRail.applyCollapsedFromPrefs();
     }

@@ -10,7 +10,6 @@ var BoxiesTooltip = (function () {
     'a[title],' +
     '[role="button"][title],' +
     '.boxies-nav-item[title],' +
-    '.boxies-nav-collapse[title],' +
     '.boxies-logout-icon[title],' +
     '.boxies-header__fs[title],' +
     '.boxies-drag-handle[title],' +

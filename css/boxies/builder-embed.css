@@ -338,9 +338,9 @@ body.boxies-rail-collapsed #boxiesContent .builder-progress-sidebar {
   pointer-events: none;
 }
 
-/* Panel A remains; shell workspace margin stays at 50px via boxies-builder-chrome */
+/* Panel A (platform sidebar) remains fixed width (V7.0.03) */
 body.boxies-builder-chrome.boxies-rail-collapsed .boxies-workspace {
-  margin-left: 50px !important;
+  margin-left: var(--boxies-sidebar-w) !important;
 }
 
 body.boxies-exp-canvas-mode #boxiesContent:has(.builder-step-content--experiencia) .builder-workspace,
@@ -373,7 +373,6 @@ body.boxies-exp-canvas-mode #boxiesDock {
 html.boxies-exp-canvas-mode,
 body.boxies-exp-canvas-mode {
   --boxies-sidebar-w: 0px !important;
-  --boxies-sidebar-collapsed-w: 0px !important;
   --boxies-header-h: 0px !important;
   --boxies-dock-h: 0px !important;
 }

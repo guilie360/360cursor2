@@ -192,24 +192,19 @@ var BoxiesBuilderPage = (function () {
 
   function renderSelectorCard(type) {
     return (
-      '<article class="boxies-exp-select-card" data-experience-type="' +
+      '<button type="button" class="boxies-exp-select-card" data-experience-open="' +
         escapeHtml(type.id) +
       '">' +
-        '<div class="boxies-exp-select-card__icon" aria-hidden="true">' +
-          escapeHtml(type.selectorIcon || '') +
-        '</div>' +
-        '<h2 class="boxies-exp-select-card__title">' +
-          escapeHtml(type.selectorTitle || type.tabLabel || type.singular) +
-        '</h2>' +
-        '<p class="boxies-exp-select-card__desc">' +
+        '<span class="boxies-exp-select-card__title">' +
+          escapeHtml(type.selectorTitle || type.singular || type.tabLabel) +
+        '</span>' +
+        '<span class="boxies-exp-select-card__desc">' +
           escapeHtml(type.selectorDesc || '') +
-        '</p>' +
-        '<button type="button" class="boxies-exp-select-card__btn" data-experience-open="' +
-          escapeHtml(type.id) +
-        '">' +
-          escapeHtml(type.selectorCta || ('Crear ' + (type.singular || 'experiencia'))) +
-        '</button>' +
-      '</article>'
+        '</span>' +
+        '<span class="boxies-exp-select-card__action">' +
+          escapeHtml(type.selectorCta || 'Crear →') +
+        '</span>' +
+      '</button>'
     );
   }
 
@@ -234,10 +229,10 @@ var BoxiesBuilderPage = (function () {
         '</div>' +
       '</div>';
 
-    host.querySelectorAll('[data-experience-open]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
+    host.querySelectorAll('[data-experience-open]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
         e.preventDefault();
-        navigateToExperienceTab(btn.getAttribute('data-experience-open'));
+        navigateToExperienceTab(card.getAttribute('data-experience-open'));
       });
     });
   }

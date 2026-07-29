@@ -58,6 +58,11 @@ body.visitor-dashboard,
   --hall-border: rgba(255, 255, 255, 0.06);
   --hall-border-strong: rgba(255, 255, 255, 0.11);
   --hall-border-hairline: rgba(255, 255, 255, 0.04);
+  /* Subtle interactive borders (cards, selectors) */
+  --hall-border-subtle: var(--hall-border);
+  --hall-border-subtle-hover: rgba(255, 255, 255, 0.14);
+  --border-subtle: var(--hall-border-subtle);
+  --border-subtle-hover: var(--hall-border-subtle-hover);
 
   --hall-text: rgba(255, 255, 255, 0.94);
   --hall-text-muted: rgba(255, 255, 255, 0.52);

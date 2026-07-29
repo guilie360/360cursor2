@@ -3550,9 +3550,6 @@ var ExperienciaCanvas = (function () {
             BuilderPropertiesRail.isCollapsed
             ? BuilderPropertiesRail.isCollapsed()
             : document.body.classList.contains('boxies-props-rail-collapsed')),
-          navCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getNavCollapsed
-            ? BoxiesPrefs.getNavCollapsed()
-            : document.body.classList.contains('boxies-nav-collapsed')),
           headerH: document.documentElement.style.getPropertyValue('--boxies-header-h') || '',
           dockH: document.documentElement.style.getPropertyValue('--boxies-dock-h') || '',
           railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || '',
@@ -3560,12 +3557,9 @@ var ExperienciaCanvas = (function () {
           sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || ''
         };
         setCanvasMode(true, restore);
-        if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.setNavCollapsed) {
-          BoxiesPrefs.setNavCollapsed(true);
-        }
-        document.body.classList.add('boxies-nav-collapsed');
-        document.documentElement.classList.add('boxies-nav-collapsed');
-        /* Shell chrome only — rails owned by ProgressRail / PropertiesRail */
+        /* V7.0.03 — hide chrome via width tokens only; platform nav is never collapsible */
+        document.body.classList.remove('boxies-nav-collapsed');
+        document.documentElement.classList.remove('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
@@ -3593,14 +3587,8 @@ var ExperienciaCanvas = (function () {
         var prev = prefs._expCanvasRestore || {};
         /* Focus and Fullscreen are independent — never exit FS when leaving Focus */
         setCanvasMode(false, null);
-        if (typeof BoxiesPrefs !== 'undefined') {
-          if (BoxiesPrefs.setNavCollapsed) {
-            BoxiesPrefs.setNavCollapsed(!!prev.navCollapsed);
-          }
-        }
-        var navOn = !!prev.navCollapsed;
-        document.body.classList.toggle('boxies-nav-collapsed', navOn);
-        document.documentElement.classList.toggle('boxies-nav-collapsed', navOn);
+        document.body.classList.remove('boxies-nav-collapsed');
+        document.documentElement.classList.remove('boxies-nav-collapsed');
         if (prev.sidebarW) {
           document.documentElement.style.setProperty('--boxies-sidebar-w', prev.sidebarW);
         } else {
@@ -6062,8 +6050,8 @@ var ExperienciaCanvas = (function () {
       if (isCanvasMode()) {
         document.body.classList.add('boxies-exp-canvas-mode');
         document.documentElement.classList.add('boxies-exp-canvas-mode');
-        document.body.classList.add('boxies-nav-collapsed');
-        document.documentElement.classList.add('boxies-nav-collapsed');
+        document.body.classList.remove('boxies-nav-collapsed');
+        document.documentElement.classList.remove('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');

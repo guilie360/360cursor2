@@ -4,7 +4,6 @@
 :root {
   --boxies-header-h: var(--hall-header-h, 52px);
   --boxies-sidebar-w: var(--hall-sidebar-w, 200px);
-  --boxies-sidebar-collapsed-w: 52px;
   --boxies-chrome-pad-x: 8px;
   --boxies-chrome-pad-top: 12px;
   --boxies-icon-cell: 36px;
@@ -281,42 +280,7 @@ a.boxies-action-btn {
   background: transparent;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
-  transition:
-    width var(--boxies-transition),
-    padding var(--boxies-transition),
-    border-color var(--boxies-transition);
   box-sizing: border-box;
-}
-
-.boxies-nav-collapse {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: var(--boxies-icon-cell);
-  margin: 0 0 var(--boxies-icon-gap);
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  box-sizing: border-box;
-  transition:
-    color var(--boxies-transition),
-    background var(--boxies-transition),
-    border-color var(--boxies-transition);
-}
-
-.boxies-nav-collapse:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.boxies-nav-collapse svg {
-  width: var(--boxies-icon-size);
-  height: var(--boxies-icon-size);
 }
 
 .boxies-nav {
@@ -426,43 +390,6 @@ a.boxies-action-btn {
   margin-top: var(--boxies-header-h);
   margin-left: var(--boxies-sidebar-w);
   min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
-  transition: margin-left var(--boxies-transition);
-}
-
-/* Collapsed shell nav — icon grid */
-body.boxies-nav-collapsed {
-  --boxies-sidebar-w: var(--boxies-sidebar-collapsed-w);
-}
-
-body.boxies-nav-collapsed .boxies-nav__group,
-body.boxies-nav-collapsed .boxies-nav-item__label {
-  display: none;
-}
-
-body.boxies-nav-collapsed .boxies-nav-item {
-  width: var(--boxies-icon-cell);
-  height: var(--boxies-icon-cell);
-  min-height: var(--boxies-icon-cell);
-  padding: 0;
-  margin: 0 auto;
-  justify-content: center;
-}
-
-body.boxies-nav-collapsed .boxies-nav-item__row {
-  justify-content: center;
-  gap: 0;
-  width: auto;
-}
-
-body.boxies-nav-collapsed .boxies-nav-collapse {
-  width: var(--boxies-icon-cell);
-  margin-left: auto;
-  margin-right: auto;
-}
-
-body.boxies-nav-collapsed .boxies-sidebar {
-  padding-left: calc((var(--boxies-sidebar-collapsed-w) - var(--boxies-icon-cell)) / 2);
-  padding-right: calc((var(--boxies-sidebar-collapsed-w) - var(--boxies-icon-cell)) / 2);
 }
 
 .boxies-workspace__panel {
@@ -637,10 +564,6 @@ body.boxies-nav-collapsed .boxies-sidebar {
 @media (max-width: 720px) {
   :root {
     --boxies-sidebar-w: 160px;
-  }
-
-  body.boxies-nav-collapsed {
-    --boxies-sidebar-w: var(--boxies-sidebar-collapsed-w);
   }
 
   .boxies-sidebar {
