@@ -358,44 +358,228 @@ var ExperienciaEngine = (function () {
 
   function deriveHubOptionLabel(node, index) {
     var name = String((node && (node.label || node.typeLabel)) || '');
-    var m = name.match(/(?:planta|piso|floor|nivel)\s*[-:]?\s*(\d+)/i) ||
+    var m = name.match(/(?:planta|piso|floor|nivel|torre|tipolog[ií]a)\s*[-:]?\s*(\d+)/i) ||
       name.match(/\b(\d+)\s*$/) ||
       name.match(/\b(\d+)\b/);
     if (m && m[1]) return String(m[1]);
     if (name) {
       var short = name.replace(/^.*[-–—]\s*/, '').trim();
-      if (short && short.length <= 12) return short;
+      if (short && short.length <= 16) return short;
     }
     return String(index + 1);
   }
 
+  function looksLikeHubSelectorTarget(node, selectorType, hubNode) {
+    if (!node || !hubNode || node.id === hubNode.id) return false;
+    if (node.kind === 'hero' || node.role === 'action' || node.kind === 'action') return false;
+    if (node.orphaned) return false;
+    var label = String(node.label || '').toLowerCase();
+    var typeLabel = String(node.typeLabel || '').toLowerCase();
+    var kind = String(node.kind || '').toLowerCase();
+    var blob = label + ' ' + typeLabel + ' ' + kind;
+    var cfg = node.config || {};
+    var ref = cfg.structureRef || {};
+    var refType = String(ref.type || '').toLowerCase();
+
+    if (selectorType === 'tipologias') {
+      return /tipolog|modelo|producto/.test(blob) || refType === 'tipologia' ||
+        kind === 'structure';
+    }
+    if (selectorType === 'torres') {
+      return /torre|tower|edificio/.test(blob) || refType === 'torre';
+    }
+    if (selectorType === 'pisos') {
+      return /piso|nivel|floor|planta/.test(blob) || refType === 'piso' || !!cfg.hubFloorKey;
+    }
+    /* plantas (default) + custom */
+    if (cfg.hubFloorKey) return true;
+    if (refType === 'planta' || refType === 'piso') return true;
+    if (kind === 'planta-3d' || kind === 'plan' || kind === 'vista') return true;
+    if (/planta|piso|floor|plan|nivel/.test(blob)) return true;
+    if (isSceneKind(node.kind) && /hub/i.test(String(hubNode.label || '')) &&
+      !/hub/i.test(String(node.label || ''))) {
+      /* Sibling scenes under same flow branch often share a prefix with the HUB */
+      var hubBase = String(hubNode.label || '').replace(/\s*·?\s*hub\s*$/i, '').trim().toLowerCase();
+      if (hubBase && label.indexOf(hubBase.split(/\s+/)[0]) === 0) return true;
+    }
+    /* Same canvas group as the HUB → candidate floor/plan scenes */
+    if (
+      hubNode.parentId &&
+      node.parentId === hubNode.parentId &&
+      isSceneKind(node.kind) &&
+      (kind === 'plan' || kind === 'planta-3d' || kind === 'image' || kind === 'scene' || kind === 'vista')
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  function enrichHubOption(state, target, index) {
+    var media = resolveSceneMedia(state, target);
+    var statusLabel = media.statusLabel || (media.hasMedia ? 'Sincronizado' : 'Pendiente');
+    if (media.hasMedia && (media.status === 'synced' || media.status === 'local')) {
+      statusLabel = 'Sincronizado';
+    }
+    return {
+      id: 'opt-' + target.id,
+      label: deriveHubOptionLabel(target, index),
+      targetNodeId: target.id,
+      targetLabel: target.label || target.id,
+      targetKind: target.kind || null,
+      filename: media.filename || null,
+      thumbnailUrl: media.thumbnailUrl || media.publicUrl || null,
+      publicUrl: media.publicUrl || null,
+      status: media.status || (media.hasMedia ? 'local' : 'pending'),
+      statusLabel: statusLabel,
+      hasMedia: !!media.hasMedia
+    };
+  }
+
   /**
-   * Smart HUB options = outgoing graph edges from this node.
-   * Does not create canvas nodes; only reads existing connections.
+   * Discover HUB selector targets from the full Experiencia graph.
+   * Sources (union): direct edges, reverse edges, hubFloorKey / structureRef,
+   * structure-scope floors, BFS neighborhood matching selector type.
    */
   function detectHubSelectorOptions(state, nodeOrId) {
     var n = typeof nodeOrId === 'string' ? getNode(state, nodeOrId) : nodeOrId;
     if (!n) return [];
-    var conn = connectionsFor(state, n.id);
-    var outs = (conn && conn.out) || [];
+    var hub = ensureHubConfig(n);
+    var selectorType = (hub && hub.selectorType) || 'plantas';
+    var exp = ensureState(state);
+    var nodes = exp.nodes || [];
+    var edges = exp.edges || [];
     var seen = {};
-    var options = [];
-    outs.forEach(function (ed) {
-      var tid = ed.targetNodeId || ed.to || ed.targetId;
-      if (!tid || seen[tid]) return;
-      var target = getNode(state, tid);
-      if (!target) return;
-      seen[tid] = true;
-      var idx = options.length;
-      options.push({
-        id: 'opt-' + tid,
-        label: deriveHubOptionLabel(target, idx),
-        targetNodeId: tid,
-        targetLabel: target.label || target.id,
-        targetKind: target.kind || null
-      });
+    var ordered = [];
+
+    function addTarget(target) {
+      if (!target || seen[target.id]) return;
+      if (target.id === n.id) return;
+      if (target.kind === 'hero' || target.role === 'action' || target.kind === 'action') return;
+      if (target.orphaned) return;
+      /* Prefer type-aware match; still accept direct scene links that look related */
+      if (looksLikeHubSelectorTarget(target, selectorType, n)) {
+        seen[target.id] = true;
+        ordered.push(target);
+        return;
+      }
+      if (isSceneKind(target.kind) || target.kind === 'structure' || target.kind === 'group') {
+        /* Direct graph neighbors: keep scene nodes even if naming is ambiguous */
+        if (target.kind === 'animacion' || target.kind === 'video' || target.kind === 'transicion') {
+          return;
+        }
+        seen[target.id] = true;
+        ordered.push(target);
+      }
+    }
+
+    function edgeEnds(ed) {
+      return {
+        from: ed.sourceNodeId || ed.from || ed.sourceId || null,
+        to: ed.targetNodeId || ed.to || ed.targetId || null
+      };
+    }
+
+    /* 1–2. Direct edges both directions */
+    edges.forEach(function (ed) {
+      var e = edgeEnds(ed);
+      if (e.from === n.id && e.to) addTarget(getNode(state, e.to));
+      if (e.to === n.id && e.from) addTarget(getNode(state, e.from));
     });
-    return options;
+
+    /* 3. Explicit planta/floor bindings on canvas nodes */
+    nodes.forEach(function (node) {
+      if (!node || node.id === n.id) return;
+      var cfg = node.config || {};
+      if (cfg.hubFloorKey) {
+        if (!hub.floors || !hub.floors.length) addTarget(node);
+        else if (findHubFloor(hub, cfg.hubFloorKey)) addTarget(node);
+        else addTarget(node);
+      }
+      if (cfg.structureRef && looksLikeHubSelectorTarget(node, selectorType, n)) {
+        addTarget(node);
+      }
+    });
+
+    /* 4. Match Estructura floors / scope to canvas nodes by key or label */
+    if (hub.structureScope && typeof listFloorsForScope === 'function') {
+      var floors = listFloorsForScope(state, hub.structureScope) || [];
+      floors.forEach(function (f) {
+        if (!f) return;
+        var key = String(f.key || '');
+        var flabel = String(f.label || '').toLowerCase();
+        nodes.forEach(function (node) {
+          if (!node || node.id === n.id) return;
+          var cfg = node.config || {};
+          if (cfg.hubFloorKey && String(cfg.hubFloorKey) === key) {
+            addTarget(node);
+            return;
+          }
+          var nl = String(node.label || '').toLowerCase();
+          if (flabel && (nl === flabel || nl.indexOf(flabel) !== -1 || flabel.indexOf(nl) !== -1)) {
+            addTarget(node);
+          }
+        });
+      });
+    }
+
+    /* 5. BFS neighborhood (depth ≤ 3) for type-matching scenes */
+    var adj = {};
+    edges.forEach(function (ed) {
+      var e = edgeEnds(ed);
+      if (!e.from || !e.to) return;
+      if (!adj[e.from]) adj[e.from] = [];
+      if (!adj[e.to]) adj[e.to] = [];
+      adj[e.from].push(e.to);
+      adj[e.to].push(e.from);
+    });
+    var queue = [n.id];
+    var depth = {};
+    depth[n.id] = 0;
+    while (queue.length) {
+      var cur = queue.shift();
+      var d = depth[cur] || 0;
+      if (d >= 3) continue;
+      (adj[cur] || []).forEach(function (nid) {
+        if (depth[nid] != null) return;
+        depth[nid] = d + 1;
+        var t = getNode(state, nid);
+        if (t && looksLikeHubSelectorTarget(t, selectorType, n)) addTarget(t);
+        if (depth[nid] < 3) queue.push(nid);
+      });
+    }
+
+    /* 6. Project-wide type match — always union (not only when empty) */
+    nodes.forEach(function (node) {
+      if (looksLikeHubSelectorTarget(node, selectorType, n)) addTarget(node);
+    });
+
+    /* 7. Same-group siblings of the HUB (canvas folders / groups) */
+    if (n.parentId) {
+      nodes.forEach(function (node) {
+        if (!node || node.id === n.id) return;
+        if (node.parentId !== n.parentId) return;
+        if (looksLikeHubSelectorTarget(node, selectorType, n) || isSceneKind(node.kind)) {
+          if (selectorType === 'plantas' || selectorType === 'pisos' || selectorType === 'custom') {
+            if (isSceneKind(node.kind) && node.kind !== 'hero') addTarget(node);
+          } else if (looksLikeHubSelectorTarget(node, selectorType, n)) {
+            addTarget(node);
+          }
+        }
+      });
+    }
+
+    ordered.sort(function (a, b) {
+      var la = deriveHubOptionLabel(a, 0);
+      var lb = deriveHubOptionLabel(b, 0);
+      var na = parseInt(la, 10);
+      var nb = parseInt(lb, 10);
+      if (!isNaN(na) && !isNaN(nb) && String(na) === la && String(nb) === lb) return na - nb;
+      return String(a.label || '').localeCompare(String(b.label || ''), 'es', { sensitivity: 'base' });
+    });
+
+    return ordered.map(function (target, idx) {
+      return enrichHubOption(state, target, idx);
+    });
   }
 
   function syncHubSmartSelector(state, nodeOrId) {
@@ -409,24 +593,28 @@ var ExperienciaEngine = (function () {
 
   function hubSelectorStatus(hub) {
     var count = (hub && Array.isArray(hub.options)) ? hub.options.length : 0;
+    var type = (hub && hub.selectorType) || 'plantas';
+    var noun = type === 'tipologias' ? 'tipologías'
+      : (type === 'torres' ? 'torres'
+        : (type === 'pisos' ? 'pisos' : 'escenas'));
     if (count <= 0) {
       return {
         level: 'warn',
         code: 'no-targets',
-        message: 'No se encontraron plantas conectadas.'
+        message: 'No se encontraron ' + noun + ' relacionadas con este HUB.'
       };
     }
     if (count === 1) {
       return {
         level: 'warn',
         code: 'need-two',
-        message: 'Se necesitan al menos dos plantas para generar un selector.'
+        message: 'Se necesitan al menos dos ' + noun + ' para generar un selector.'
       };
     }
     return {
       level: 'ok',
       code: 'ready',
-      message: 'Selector generado automáticamente'
+      message: 'Selector generado automáticamente · ' + count + ' ' + noun
     };
   }
 

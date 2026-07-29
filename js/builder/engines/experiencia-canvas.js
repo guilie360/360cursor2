@@ -425,7 +425,7 @@ var ExperienciaCanvas = (function () {
         ' Activar HUB</label>';
 
     if (!enabled) {
-      html += '<p class="builder-menu-hint">Activa el HUB para convertir esta escena en un selector inteligente de plantas (u otras opciones). Conecta nodos destino desde el Canvas.</p>';
+      html += '<p class="builder-menu-hint">Activa el HUB para generar un selector inteligente. BOXIES descubrirá las escenas relacionadas en el Canvas.</p>';
       return html;
     }
 
@@ -438,108 +438,151 @@ var ExperienciaCanvas = (function () {
       style: 'numbers', position: 'top-right', alignment: 'horizontal', gap: 8, size: 32
     };
 
-    function radio(name, value, label, checked, disabled) {
-      return '<label class="builder-hub-radio' + (disabled ? ' is-disabled' : '') + '">' +
-        '<input type="radio" name="' + name + '" value="' + esc(value) + '"' +
-          (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + '>' +
-        '<span>' + esc(label) + '</span></label>';
+    function segmentBtn(value, label, active, disabled) {
+      return '<button type="button" class="builder-hub-segment__btn' +
+        (active ? ' is-active' : '') +
+        (disabled ? ' is-disabled' : '') + '"' +
+        ' data-value="' + esc(value) + '"' +
+        (disabled ? ' disabled aria-disabled="true"' : '') +
+        ' aria-pressed="' + (active ? 'true' : 'false') + '">' +
+        esc(label) +
+      '</button>';
+    }
+
+    function choiceChip(value, label, active, disabled) {
+      return '<button type="button" class="builder-estructura-chip builder-hub-choice' +
+        (active ? ' is-on' : '') +
+        (disabled ? ' is-disabled' : '') + '"' +
+        ' data-value="' + esc(value) + '"' +
+        (disabled ? ' disabled' : '') + '>' +
+        esc(label) +
+      '</button>';
     }
 
     html += '<div class="builder-field builder-exp-inspector__field">' +
       '<label>Tipo de selector</label>' +
-      '<div class="builder-hub-radio-group" data-exp-hub-selector-type>' +
-        radio('hubSelType', 'plantas', 'Plantas', selectorType === 'plantas') +
-        radio('hubSelType', 'tipologias', 'Tipologías', selectorType === 'tipologias') +
-        radio('hubSelType', 'torres', 'Torres', selectorType === 'torres') +
-        radio('hubSelType', 'pisos', 'Pisos', selectorType === 'pisos') +
-        radio('hubSelType', 'custom', 'Personalizado (futuro)', selectorType === 'custom', true) +
+      '<div class="builder-hub-segment" data-exp-hub-selector-type role="group" aria-label="Tipo de selector">' +
+        segmentBtn('plantas', 'Plantas', selectorType === 'plantas') +
+        segmentBtn('tipologias', 'Tipologías', selectorType === 'tipologias') +
+        segmentBtn('torres', 'Torres', selectorType === 'torres') +
+        segmentBtn('pisos', 'Pisos', selectorType === 'pisos') +
       '</div>' +
     '</div>';
 
-    html += '<div class="builder-exp-inspector__section">Plantas detectadas</div>';
+    html += '<div class="builder-exp-inspector__section">Escenas enlazadas</div>';
     if (!options.length) {
-      html += '<p class="builder-menu-hint is-warn">' + esc(status.message || 'No se encontraron plantas conectadas.') + '</p>' +
-        '<p class="builder-menu-hint">Conecta salidas desde este HUB hacia las escenas de cada planta en el Canvas.</p>';
+      html += '<div class="builder-hub-status is-warn">' +
+        esc(status.message || 'No se encontraron escenas relacionadas con este HUB.') +
+      '</div>' +
+      '<p class="builder-menu-hint">BOXIES busca escenas en el grafo (conexiones, plantas vinculadas y vecinos del HUB).</p>';
     } else {
-      html += '<ul class="builder-hub-detected">' +
+      html += '<div class="builder-hub-scenes">' +
         options.map(function (opt) {
-          return '<li class="builder-hub-detected__item">' +
-            '<span class="builder-hub-detected__mark" aria-hidden="true">✓</span>' +
-            '<span class="builder-hub-detected__body">' +
-              '<strong>' + esc(opt.label) + '</strong>' +
-              '<em>Nodo: ' + esc(opt.targetLabel || opt.targetNodeId) + '</em>' +
-            '</span>' +
-          '</li>';
+          var thumb = opt.thumbnailUrl
+            ? ('<div class="builder-hub-scene-card__thumb" style="background-image:url(\'' +
+              esc(opt.thumbnailUrl) + '\')"></div>')
+            : '<div class="builder-hub-scene-card__thumb is-empty" aria-hidden="true"></div>';
+          return '<article class="builder-hub-scene-card">' +
+            thumb +
+            '<div class="builder-hub-scene-card__body">' +
+              '<div class="builder-hub-scene-card__title">' +
+                '<span class="builder-hub-scene-card__check" aria-hidden="true">✓</span>' +
+                '<strong>' + esc(opt.targetLabel || opt.label) + '</strong>' +
+              '</div>' +
+              '<span class="builder-hub-scene-card__asset">' +
+                esc(opt.filename || 'Sin asset') +
+              '</span>' +
+              '<span class="builder-hub-scene-card__status' +
+                (opt.hasMedia ? ' is-ok' : ' is-pending') + '">' +
+                esc(opt.statusLabel || (opt.hasMedia ? 'Sincronizado' : 'Pendiente')) +
+              '</span>' +
+            '</div>' +
+          '</article>';
         }).join('') +
-      '</ul>';
-      if (status.level === 'ok') {
-        html += '<p class="builder-hub-status is-ok">✔ ' + esc(status.message) + '</p>';
-      } else {
-        html += '<p class="builder-hub-status is-warn">' + esc(status.message) + '</p>';
-      }
+      '</div>';
+      html += '<div class="builder-hub-status ' + (status.level === 'ok' ? 'is-ok' : 'is-warn') + '">' +
+        (status.level === 'ok' ? '✔ ' : '') + esc(status.message) +
+      '</div>';
     }
 
-    var posLabel = {
-      'top-left': 'Superior izquierda',
-      'top-right': 'Superior derecha',
-      'bottom-left': 'Inferior izquierda',
-      'bottom-right': 'Inferior derecha'
-    };
-    var previewClass = 'builder-hub-preview is-' + (ap.alignment || 'horizontal') +
+    var previewThumb = '';
+    for (var pi = 0; pi < options.length; pi++) {
+      if (options[pi].thumbnailUrl) {
+        previewThumb = options[pi].thumbnailUrl;
+        break;
+      }
+    }
+    var previewClass = 'builder-hub-preview' +
+      ' is-pos-' + (ap.position || 'top-right') +
+      ' is-' + (ap.alignment || 'horizontal') +
       ' is-style-' + (ap.style || 'numbers');
-    html += '<div class="builder-exp-inspector__section">Selector generado</div>' +
-      '<div class="' + previewClass + '" aria-hidden="true" style="' +
+
+    html += '<div class="builder-exp-inspector__section">Vista previa</div>' +
+      '<div class="' + previewClass + '" data-exp-hub-preview aria-hidden="true" style="' +
         '--hub-gap:' + Number(ap.gap || 8) + 'px;' +
         '--hub-size:' + Number(ap.size || 32) + 'px;' +
       '">' +
-        '<div class="builder-hub-preview__chips">' +
-          (options.length
-            ? options.map(function (opt) {
-              return '<span class="builder-hub-preview__chip">' + esc(opt.label) + '</span>';
-            }).join('')
-            : '<span class="builder-hub-preview__chip is-empty">—</span>') +
-        '</div>' +
-        '<div class="builder-hub-preview__meta">Posición: ' +
-          esc(posLabel[ap.position] || 'Superior derecha') +
+        '<div class="builder-hub-preview__stage"' +
+          (previewThumb
+            ? (' style="background-image:url(\'' + esc(previewThumb) + '\')"')
+            : '') + '>' +
+          '<div class="builder-hub-preview__scrim"></div>' +
+          '<div class="builder-hub-preview__overlay">' +
+            (options.length
+              ? options.map(function (opt) {
+                return '<span class="builder-hub-preview__chip">' + esc(opt.label) + '</span>';
+              }).join('')
+              : '<span class="builder-hub-preview__chip is-empty">—</span>') +
+          '</div>' +
         '</div>' +
       '</div>';
 
     html += '<div class="builder-exp-inspector__section">Apariencia</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Estilo</label>' +
-        '<div class="builder-hub-radio-group" data-exp-hub-style>' +
-          radio('hubStyle', 'numbers', 'Números', ap.style === 'numbers') +
-          radio('hubStyle', 'chips', 'Chips', ap.style === 'chips') +
-          radio('hubStyle', 'thumbnails', 'Miniaturas (futuro)', ap.style === 'thumbnails', true) +
+        '<div class="builder-hub-chips" data-exp-hub-style>' +
+          choiceChip('numbers', 'Números', ap.style === 'numbers') +
+          choiceChip('chips', 'Chips', ap.style === 'chips') +
+          choiceChip('thumbnails', 'Miniaturas', ap.style === 'thumbnails', true) +
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Posición</label>' +
-        '<div class="builder-hub-radio-group" data-exp-hub-position>' +
-          radio('hubPos', 'top-left', 'Superior izquierda', ap.position === 'top-left') +
-          radio('hubPos', 'top-right', 'Superior derecha', ap.position === 'top-right') +
-          radio('hubPos', 'bottom-left', 'Inferior izquierda', ap.position === 'bottom-left') +
-          radio('hubPos', 'bottom-right', 'Inferior derecha', ap.position === 'bottom-right') +
+        '<div class="builder-hub-pos-grid" data-exp-hub-position role="group" aria-label="Posición">' +
+          '<button type="button" class="builder-hub-pos' + (ap.position === 'top-left' ? ' is-active' : '') +
+            '" data-value="top-left" title="Superior izquierda" aria-label="Superior izquierda">↖</button>' +
+          '<button type="button" class="builder-hub-pos' + (ap.position === 'top-right' ? ' is-active' : '') +
+            '" data-value="top-right" title="Superior derecha" aria-label="Superior derecha">↗</button>' +
+          '<button type="button" class="builder-hub-pos' + (ap.position === 'bottom-left' ? ' is-active' : '') +
+            '" data-value="bottom-left" title="Inferior izquierda" aria-label="Inferior izquierda">↙</button>' +
+          '<button type="button" class="builder-hub-pos' + (ap.position === 'bottom-right' ? ' is-active' : '') +
+            '" data-value="bottom-right" title="Inferior derecha" aria-label="Inferior derecha">↘</button>' +
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Alineación</label>' +
-        '<div class="builder-hub-radio-group" data-exp-hub-align>' +
-          radio('hubAlign', 'horizontal', 'Horizontal', ap.alignment !== 'vertical') +
-          radio('hubAlign', 'vertical', 'Vertical', ap.alignment === 'vertical') +
+        '<div class="builder-hub-chips" data-exp-hub-align>' +
+          choiceChip('horizontal', 'Horizontal', ap.alignment !== 'vertical') +
+          choiceChip('vertical', 'Vertical', ap.alignment === 'vertical') +
         '</div>' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Separación <span data-exp-hub-gap-val>' + esc(String(ap.gap || 8)) + 'px</span></label>' +
+      '<div class="builder-field builder-exp-inspector__field builder-hub-slider-field">' +
+        '<div class="builder-hub-slider-label">' +
+          '<label>Separación</label>' +
+          '<span data-exp-hub-gap-val>' + esc(String(ap.gap != null ? ap.gap : 8)) + ' px</span>' +
+        '</div>' +
         '<input type="range" min="0" max="32" step="1" data-exp-hub-gap value="' +
           esc(String(ap.gap != null ? ap.gap : 8)) + '">' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Tamaño <span data-exp-hub-size-val>' + esc(String(ap.size || 32)) + 'px</span></label>' +
+      '<div class="builder-field builder-exp-inspector__field builder-hub-slider-field">' +
+        '<div class="builder-hub-slider-label">' +
+          '<label>Tamaño</label>' +
+          '<span data-exp-hub-size-val>' + esc(String(ap.size != null ? ap.size : 32)) + ' px</span>' +
+        '</div>' +
         '<input type="range" min="22" max="48" step="1" data-exp-hub-size value="' +
           esc(String(ap.size != null ? ap.size : 32)) + '">' +
       '</div>' +
-      '<p class="builder-menu-hint">La apariencia solo afecta el selector en Runtime. Conecta las plantas en el Canvas; BOXIES genera los botones.</p>';
+      '<p class="builder-menu-hint">La apariencia define cómo se verá el selector en Runtime. Las escenas se descubren automáticamente.</p>';
 
     return html;
   }
@@ -1671,34 +1714,35 @@ var ExperienciaCanvas = (function () {
         });
       }
 
-      function bindHubRadioGroup(attr, apply) {
+      function bindHubChoiceGroup(attr, apply) {
         var wrap = inspectorBody.querySelector('[' + attr + ']');
         if (!wrap) return;
-        wrap.querySelectorAll('input[type="radio"]').forEach(function (radio) {
-          radio.addEventListener('change', function () {
-            if (!radio.checked) return;
-            apply(radio.value);
+        wrap.querySelectorAll('[data-value]').forEach(function (btn) {
+          btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            if (btn.disabled || btn.classList.contains('is-disabled')) return;
+            apply(btn.getAttribute('data-value'));
             renderAll(); persist();
           });
         });
       }
 
-      bindHubRadioGroup('data-exp-hub-selector-type', function (val) {
+      bindHubChoiceGroup('data-exp-hub-selector-type', function (val) {
         if (ExperienciaEngine.setHubSelectorType) {
           ExperienciaEngine.setHubSelectorType(state, canvas().selectedId, val);
         }
       });
-      bindHubRadioGroup('data-exp-hub-style', function (val) {
+      bindHubChoiceGroup('data-exp-hub-style', function (val) {
         if (ExperienciaEngine.setHubAppearance) {
           ExperienciaEngine.setHubAppearance(state, canvas().selectedId, { style: val });
         }
       });
-      bindHubRadioGroup('data-exp-hub-position', function (val) {
+      bindHubChoiceGroup('data-exp-hub-position', function (val) {
         if (ExperienciaEngine.setHubAppearance) {
           ExperienciaEngine.setHubAppearance(state, canvas().selectedId, { position: val });
         }
       });
-      bindHubRadioGroup('data-exp-hub-align', function (val) {
+      bindHubChoiceGroup('data-exp-hub-align', function (val) {
         if (ExperienciaEngine.setHubAppearance) {
           ExperienciaEngine.setHubAppearance(state, canvas().selectedId, { alignment: val });
         }
@@ -1708,7 +1752,7 @@ var ExperienciaCanvas = (function () {
       if (gapEl) {
         gapEl.addEventListener('input', function () {
           var valEl = inspectorBody.querySelector('[data-exp-hub-gap-val]');
-          if (valEl) valEl.textContent = gapEl.value + 'px';
+          if (valEl) valEl.textContent = gapEl.value + ' px';
           var preview = inspectorBody.querySelector('.builder-hub-preview');
           if (preview) preview.style.setProperty('--hub-gap', gapEl.value + 'px');
         });
@@ -1725,7 +1769,7 @@ var ExperienciaCanvas = (function () {
       if (sizeEl) {
         sizeEl.addEventListener('input', function () {
           var valEl = inspectorBody.querySelector('[data-exp-hub-size-val]');
-          if (valEl) valEl.textContent = sizeEl.value + 'px';
+          if (valEl) valEl.textContent = sizeEl.value + ' px';
           var preview = inspectorBody.querySelector('.builder-hub-preview');
           if (preview) preview.style.setProperty('--hub-size', sizeEl.value + 'px');
         });
