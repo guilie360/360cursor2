@@ -79,6 +79,11 @@ var ExperienciaCanvas = (function () {
               toolBtn('canvas-mode', 'Modo Focus', 'panel', true) +
               '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
               toolBtn('minimap', minimapOn ? 'Ocultar minimapa' : 'Mostrar minimapa', 'eye', true) +
+              '<span class="builder-exp-toolbar__sep" aria-hidden="true"></span>' +
+              '<div class="builder-exp-mode-tabs" data-exp-mode-tabs role="tablist" aria-label="Modo de edición">' +
+                '<button type="button" class="builder-exp-mode-tab is-active" data-exp-edit-mode="flow" role="tab" aria-selected="true">FLUJO</button>' +
+                '<button type="button" class="builder-exp-mode-tab" data-exp-edit-mode="buttons" role="tab" aria-selected="false" disabled>BOTONES</button>' +
+              '</div>' +
             '</div>' +
             '<button type="button" class="builder-exp-focus-fs" data-exp-fullscreen' +
               ' data-tooltip="Pantalla completa" title="Pantalla completa" aria-label="Pantalla completa">' +
@@ -91,6 +96,15 @@ var ExperienciaCanvas = (function () {
                 '<svg class="builder-exp-edges" data-exp-edges xmlns="http://www.w3.org/2000/svg"></svg>' +
                 '<div class="builder-exp-nodes" data-exp-nodes></div>' +
                 '<div class="builder-exp-marquee" data-exp-marquee hidden></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="builder-exp-buttons-stage" data-exp-buttons-stage hidden>' +
+              '<div class="builder-exp-buttons-stage__empty" data-exp-buttons-empty hidden>' +
+                '<p>Selecciona un nodo Imagen para diseñar botones.</p>' +
+              '</div>' +
+              '<div class="builder-exp-buttons-frame" data-exp-buttons-frame>' +
+                '<img class="builder-exp-buttons-img" data-exp-buttons-img alt="" draggable="false">' +
+                '<div class="builder-exp-buttons-layer" data-exp-buttons-layer></div>' +
               '</div>' +
             '</div>' +
             '<div class="builder-exp-minimap' + (minimapOn ? '' : ' is-hidden') + '" data-exp-minimap>' +
@@ -325,6 +339,23 @@ var ExperienciaCanvas = (function () {
               esc(n.id) + '" data-port-label="Al finalizar"></span>' +
           '</div></div>';
       }
+
+      var btns = (ExperienciaEngine.listSceneButtons
+        ? ExperienciaEngine.listSceneButtons(n)
+        : ((n.config && n.config.buttons) || [])).filter(function (b) {
+          return b && b.visible !== false;
+        });
+      if (btns.length && !hubEnabled) {
+        body += '<div class="builder-exp-card__section">BOTONES</div>' +
+          '<div class="builder-exp-card__btn-summary">' +
+            btns.map(function (b) {
+              return '<div class="builder-exp-card__btn-row">' +
+                '<span class="builder-exp-card__btn-check" aria-hidden="true">✓</span>' +
+                '<span>' + esc(b.label || 'Botón') + '</span>' +
+              '</div>';
+            }).join('') +
+          '</div>';
+      }
       void selectedIx;
     } else {
       body =
@@ -414,6 +445,128 @@ var ExperienciaCanvas = (function () {
       };
     }
     return { x: (n.x || 0) + size.w, y: (n.y || 0) + size.h / 2 };
+  }
+
+  function buttonPreviewClass(btn) {
+    var style = (btn && btn.style) || 'chip';
+    return 'builder-exp-ui-btn is-style-' + style +
+      (btn && btn.icon ? ' has-icon' : '');
+  }
+
+  function buttonIconGlyph(icon) {
+    if (icon === 'arrow') return '→';
+    if (icon === 'rotate-left') return '↺';
+    if (icon === 'rotate-right') return '↻';
+    if (icon === 'plus') return '+';
+    return '';
+  }
+
+  function buttonsInspectorHtml(state, n) {
+    var buttons = ExperienciaEngine.listSceneButtons
+      ? ExperienciaEngine.listSceneButtons(n)
+      : [];
+    var selectedBtnId = (state.experiencia && state.experiencia.canvas &&
+      state.experiencia.canvas.selectedButtonId) || null;
+    var selected = null;
+    if (selectedBtnId) {
+      for (var i = 0; i < buttons.length; i++) {
+        if (String(buttons[i].id) === String(selectedBtnId)) {
+          selected = buttons[i];
+          break;
+        }
+      }
+    }
+
+    var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
+      return node && node.id !== n.id && node.kind !== 'action';
+    });
+    var destOpts = '<option value="">Sin destino</option>' +
+      nodes.map(function (node) {
+        return '<option value="' + esc(node.id) + '"' +
+          (selected && String(selected.targetNodeId) === String(node.id) ? ' selected' : '') +
+          '>' + esc(node.label || node.id) + '</option>';
+      }).join('');
+
+    var html = '' +
+      '<div class="builder-exp-inspector__kind">BOTONES</div>' +
+      '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>' +
+      '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
+        esc(n.id) + '">+ Nuevo botón</button>';
+
+    if (!buttons.length) {
+      html += '<p class="builder-menu-hint">Crea botones y colócalos sobre la imagen. Se guardan en porcentaje para cualquier resolución.</p>';
+      return html;
+    }
+
+    html += '<div class="builder-exp-inspector__section">Lista</div>' +
+      '<div class="builder-exp-btn-list">' +
+        buttons.map(function (b) {
+          return '<button type="button" class="builder-exp-btn-list__item' +
+            (selected && String(selected.id) === String(b.id) ? ' is-selected' : '') +
+            (b.visible === false ? ' is-hidden-btn' : '') + '"' +
+            ' data-exp-btn-select="' + esc(b.id) + '">' +
+            '<span class="builder-exp-btn-list__mark" aria-hidden="true">' +
+              (b.visible === false ? '○' : '●') +
+            '</span>' +
+            '<span>' + esc(b.label || 'Botón') + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>';
+
+    if (!selected) {
+      html += '<p class="builder-menu-hint">Selecciona un botón en la lista o sobre la imagen.</p>';
+      return html;
+    }
+
+    function styleChip(val, label) {
+      return '<button type="button" class="builder-estructura-chip' +
+        (selected.style === val ? ' is-on' : '') +
+        '" data-exp-btn-style="' + esc(val) + '">' + esc(label) + '</button>';
+    }
+
+    html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre</label>' +
+        '<input type="text" data-exp-btn-label maxlength="60" value="' + esc(selected.label || '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Destino</label>' +
+        '<select data-exp-btn-target class="ws-select">' + destOpts + '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Estilo</label>' +
+        '<div class="builder-hub-chips" data-exp-btn-styles>' +
+          styleChip('chip', 'Chip') +
+          styleChip('button', 'Botón') +
+          styleChip('icon', 'Icono') +
+        '</div>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Color</label>' +
+        '<input type="color" data-exp-btn-color value="' +
+          esc(selected.color || '#ffffff') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Icono</label>' +
+        '<select data-exp-btn-icon class="ws-select">' +
+          '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
+          '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
+          '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izquierda</option>' +
+          '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar derecha</option>' +
+          '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
+        '</select>' +
+      '</div>' +
+      '<label class="builder-exp-inspector__check">' +
+        '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
+        ' Visible</label>' +
+      '<div class="builder-exp-inspector__actions">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
+          esc(selected.id) + '">Eliminar</button>' +
+      '</div>' +
+      '<p class="builder-menu-hint">Posición · ' +
+        esc(String(selected.x)) + '% · ' + esc(String(selected.y)) + '%</p>';
+
+    return html;
   }
 
   function hubSmartInspectorHtml(state, n, hub) {
@@ -1229,6 +1382,12 @@ var ExperienciaCanvas = (function () {
     var world = rootEl.querySelector('[data-exp-world]');
     var nodesEl = rootEl.querySelector('[data-exp-nodes]');
     var edgesEl = rootEl.querySelector('[data-exp-edges]');
+    var buttonsStage = rootEl.querySelector('[data-exp-buttons-stage]');
+    var buttonsFrame = rootEl.querySelector('[data-exp-buttons-frame]');
+    var buttonsImg = rootEl.querySelector('[data-exp-buttons-img]');
+    var buttonsLayer = rootEl.querySelector('[data-exp-buttons-layer]');
+    var buttonsEmpty = rootEl.querySelector('[data-exp-buttons-empty]');
+    var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
     var inspectorBody = (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
       ? BuilderPropertiesRail.getInspectorBody(rootEl)
       : rootEl.querySelector('[data-exp-inspector-body]');
@@ -1242,6 +1401,7 @@ var ExperienciaCanvas = (function () {
     if (!viewport || !world || !nodesEl || !edgesEl) return null;
 
     var dragging = null;
+    var buttonDrag = null;
     var panning = null;
     var linkDrag = null;
     var marquee = null;
@@ -1644,6 +1804,21 @@ var ExperienciaCanvas = (function () {
     function paintInspector() {
       if (!inspectorBody) return;
       var ids = selectedIds();
+      var editMode = canvas().editMode === 'buttons' ? 'buttons' : 'flow';
+
+      if (editMode === 'buttons') {
+        var scene = ExperienciaEngine.getNode(state, canvas().selectedId);
+        if (scene && ExperienciaEngine.isButtonsEditableNode &&
+            ExperienciaEngine.isButtonsEditableNode(scene)) {
+          inspectorBody.innerHTML = buttonsInspectorHtml(state, scene);
+          bindButtonsInspectorActions();
+          if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
+            WorkspaceSelect.enhance(inspectorBody);
+          }
+          return;
+        }
+      }
+
       if (ids.length > 1) {
         inspectorBody.innerHTML =
           '<div class="builder-exp-inspector__kind">SELECCIÓN</div>' +
@@ -1664,6 +1839,96 @@ var ExperienciaCanvas = (function () {
       bindInspectorActions();
       if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
         WorkspaceSelect.enhance(inspectorBody);
+      }
+    }
+
+    function bindButtonsInspectorActions() {
+      if (!inspectorBody) return;
+      var sceneId = canvas().selectedId;
+      var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
+      if (addBtn) {
+        addBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var btn = ExperienciaEngine.addSceneButton(state, sceneId);
+          if (btn) {
+            canvas().selectedButtonId = btn.id;
+            renderAll(); persist();
+          }
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-btn-select]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          canvas().selectedButtonId = el.getAttribute('data-exp-btn-select');
+          renderAll();
+        });
+      });
+      var labelEl = inspectorBody.querySelector('[data-exp-btn-label]');
+      if (labelEl) {
+        labelEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            label: labelEl.value
+          });
+          renderAll(); persist();
+        });
+      }
+      var targetEl = inspectorBody.querySelector('[data-exp-btn-target]');
+      if (targetEl) {
+        targetEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            targetNodeId: targetEl.value || null
+          });
+          persist();
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            style: el.getAttribute('data-exp-btn-style')
+          });
+          renderAll(); persist();
+        });
+      });
+      var colorEl = inspectorBody.querySelector('[data-exp-btn-color]');
+      if (colorEl) {
+        colorEl.addEventListener('input', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            color: colorEl.value
+          });
+          paintButtonsStage();
+        });
+        colorEl.addEventListener('change', function () {
+          persist();
+        });
+      }
+      var iconEl = inspectorBody.querySelector('[data-exp-btn-icon]');
+      if (iconEl) {
+        iconEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            icon: iconEl.value
+          });
+          renderAll(); persist();
+        });
+      }
+      var visEl = inspectorBody.querySelector('[data-exp-btn-visible]');
+      if (visEl) {
+        visEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            visible: !!visEl.checked
+          });
+          renderAll(); persist();
+        });
+      }
+      var delBtn = inspectorBody.querySelector('[data-exp-btn-delete]');
+      if (delBtn) {
+        delBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var bid = delBtn.getAttribute('data-exp-btn-delete');
+          ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+          canvas().selectedButtonId = null;
+          renderAll(); persist();
+        });
       }
     }
 
@@ -2385,13 +2650,117 @@ var ExperienciaCanvas = (function () {
     }
 
     function renderAll() {
+      syncEditModeUi();
       applyWorldTransform();
       paintNodes();
       paintEdges();
       paintMinimap();
+      paintButtonsStage();
       paintInspector();
       syncInspectorChrome();
-      if (minimapWrap) minimapWrap.classList.toggle('is-hidden', canvas().minimapVisible === false);
+      if (minimapWrap) minimapWrap.classList.toggle('is-hidden',
+        canvas().editMode === 'buttons' || canvas().minimapVisible === false);
+    }
+
+    function canUseButtonsMode() {
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      return !!(n && ExperienciaEngine.isButtonsEditableNode &&
+        ExperienciaEngine.isButtonsEditableNode(n) &&
+        selectedIds().length <= 1);
+    }
+
+    function syncEditModeUi() {
+      if (!canUseButtonsMode() && canvas().editMode === 'buttons') {
+        canvas().editMode = 'flow';
+        canvas().selectedButtonId = null;
+      }
+      var mode = canvas().editMode === 'buttons' ? 'buttons' : 'flow';
+      if (stage) stage.classList.toggle('is-buttons-mode', mode === 'buttons');
+      if (viewport) viewport.hidden = mode === 'buttons';
+      if (buttonsStage) {
+        buttonsStage.hidden = mode !== 'buttons';
+        buttonsStage.setAttribute('aria-hidden', mode === 'buttons' ? 'false' : 'true');
+      }
+      if (modeTabs) {
+        modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
+          var m = btn.getAttribute('data-exp-edit-mode');
+          var isButtonsTab = m === 'buttons';
+          var enabled = !isButtonsTab || canUseButtonsMode();
+          btn.disabled = !enabled;
+          btn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+          var active = m === mode && enabled;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+      }
+    }
+
+    function syncButtonsLayerBounds() {
+      if (!buttonsImg || !buttonsLayer || !buttonsFrame) return;
+      if (buttonsImg.hidden || !buttonsImg.getAttribute('src')) {
+        buttonsLayer.style.left = '0';
+        buttonsLayer.style.top = '0';
+        buttonsLayer.style.width = '100%';
+        buttonsLayer.style.height = '100%';
+        return;
+      }
+      var fr = buttonsFrame.getBoundingClientRect();
+      var ir = buttonsImg.getBoundingClientRect();
+      if (!fr.width || !ir.width) return;
+      buttonsLayer.style.left = Math.max(0, ir.left - fr.left) + 'px';
+      buttonsLayer.style.top = Math.max(0, ir.top - fr.top) + 'px';
+      buttonsLayer.style.width = Math.max(1, ir.width) + 'px';
+      buttonsLayer.style.height = Math.max(1, ir.height) + 'px';
+    }
+
+    function paintButtonsStage() {
+      if (!buttonsStage || !buttonsLayer || !buttonsImg) return;
+      if (canvas().editMode !== 'buttons') return;
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) {
+        if (buttonsEmpty) buttonsEmpty.hidden = false;
+        if (buttonsFrame) buttonsFrame.hidden = true;
+        buttonsLayer.innerHTML = '';
+        return;
+      }
+      if (buttonsEmpty) buttonsEmpty.hidden = true;
+      if (buttonsFrame) buttonsFrame.hidden = false;
+
+      var media = ExperienciaEngine.resolveSceneMedia(state, n);
+      var url = (media && (media.publicUrl || media.thumbnailUrl)) || '';
+      if (url) {
+        if (buttonsImg.getAttribute('src') !== url) {
+          buttonsImg.onload = function () {
+            syncButtonsLayerBounds();
+          };
+          buttonsImg.src = url;
+        }
+        buttonsImg.hidden = false;
+        buttonsImg.alt = media.filename || n.label || 'Escena';
+      } else {
+        buttonsImg.removeAttribute('src');
+        buttonsImg.hidden = true;
+        buttonsImg.alt = '';
+      }
+
+      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
+      var sel = canvas().selectedButtonId;
+      buttonsLayer.innerHTML = buttons.map(function (b) {
+        if (!b) return '';
+        var glyph = buttonIconGlyph(b.icon);
+        var label = b.style === 'icon'
+          ? (glyph || '·')
+          : ((glyph ? (glyph + ' ') : '') + (b.label || 'Botón'));
+        return '<button type="button" class="' + buttonPreviewClass(b) +
+          (String(b.id) === String(sel) ? ' is-selected' : '') +
+          (b.visible === false ? ' is-invisible' : '') + '"' +
+          ' data-exp-stage-btn="' + esc(b.id) + '"' +
+          ' style="left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
+            '--btn-color:' + esc(b.color || '#ffffff') + '">' +
+          esc(label) +
+        '</button>';
+      }).join('');
+      requestAnimationFrame(syncButtonsLayerBounds);
     }
 
     function syncToolUi() {
@@ -2415,6 +2784,9 @@ var ExperienciaCanvas = (function () {
         canvas().selectedInteractionId = null;
         canvas().selectedInteractionSceneId = null;
       }
+      if (!opts.keepButton) {
+        canvas().selectedButtonId = null;
+      }
       if (opts.toggle && id) {
         ExperienciaEngine.toggleSelectionId(state, id);
       } else if (opts.add && id) {
@@ -2423,6 +2795,11 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.setSelection(state, ids, []);
       } else {
         ExperienciaEngine.setSelection(state, id ? [id] : [], []);
+      }
+      var next = ExperienciaEngine.getNode(state, canvas().selectedId);
+      if (!next || !ExperienciaEngine.isButtonsEditableNode ||
+          !ExperienciaEngine.isButtonsEditableNode(next)) {
+        canvas().editMode = 'flow';
       }
       if (id || selectedIds().length) {
         openPropertiesRail();
@@ -2953,6 +3330,89 @@ var ExperienciaCanvas = (function () {
         }
       });
     });
+
+    /* V6.1.00 — FLUJO | BOTONES */
+    if (modeTabs) {
+      modeTabs.querySelectorAll('[data-exp-edit-mode]').forEach(function (btn) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          if (btn.disabled) return;
+          var mode = btn.getAttribute('data-exp-edit-mode');
+          if (mode === 'buttons' && !canUseButtonsMode()) return;
+          canvas().editMode = mode === 'buttons' ? 'buttons' : 'flow';
+          if (canvas().editMode !== 'buttons') canvas().selectedButtonId = null;
+          openPropertiesRail();
+          renderAll();
+          persist();
+        });
+      });
+    }
+
+    function percentFromPointer(ev) {
+      var el = buttonsLayer || buttonsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      var x = ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      var y = ((ev.clientY - rect.top) / Math.max(1, rect.height)) * 100;
+      return {
+        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
+        y: Math.max(0, Math.min(100, Math.round(y * 10) / 10))
+      };
+    }
+
+    if (buttonsLayer) {
+      buttonsLayer.addEventListener('pointerdown', function (ev) {
+        var hit = ev.target.closest('[data-exp-stage-btn]');
+        if (!hit) {
+          canvas().selectedButtonId = null;
+          renderAll();
+          return;
+        }
+        ev.preventDefault();
+        ev.stopPropagation();
+        var bid = hit.getAttribute('data-exp-stage-btn');
+        canvas().selectedButtonId = bid;
+        var sceneId = canvas().selectedId;
+        var btn = ExperienciaEngine.getSceneButton(
+          ExperienciaEngine.getNode(state, sceneId), bid
+        );
+        buttonDrag = {
+          buttonId: bid,
+          sceneId: sceneId,
+          pointerId: ev.pointerId,
+          startX: btn ? btn.x : 50,
+          startY: btn ? btn.y : 50
+        };
+        try { hit.setPointerCapture(ev.pointerId); } catch (eCap) {}
+        paintButtonsStage();
+        paintInspector();
+      });
+      buttonsLayer.addEventListener('pointermove', function (ev) {
+        if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId) return;
+        var pct = percentFromPointer(ev);
+        ExperienciaEngine.setSceneButtonPosition(
+          state, buttonDrag.sceneId, buttonDrag.buttonId, pct.x, pct.y
+        );
+        paintButtonsStage();
+      });
+      function endButtonDrag(ev) {
+        if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
+        buttonDrag = null;
+        paintInspector();
+        persist();
+      }
+      buttonsLayer.addEventListener('pointerup', endButtonDrag);
+      buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+    }
+
+    if (buttonsFrame) {
+      buttonsFrame.addEventListener('pointerdown', function (ev) {
+        if (ev.target.closest('[data-exp-stage-btn]')) return;
+        canvas().selectedButtonId = null;
+        paintButtonsStage();
+        paintInspector();
+      });
+    }
 
     var fsBtn = rootEl.querySelector('[data-exp-fullscreen]');
     if (fsBtn) {

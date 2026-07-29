@@ -206,7 +206,10 @@ var ExperienciaEngine = (function () {
         minimapVisible: true,
         inspectorOpen: false,
         inspectorCollapsed: false,
-        activeGroupId: null
+        activeGroupId: null,
+        /* V6.1.00 — FLUJO | BOTONES */
+        editMode: 'flow',
+        selectedButtonId: null
       }
     };
   }
@@ -238,6 +241,8 @@ var ExperienciaEngine = (function () {
       exp.canvas.selectedEdgeIds = exp.canvas.selectedEdgeId ? [exp.canvas.selectedEdgeId] : [];
     }
     if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
+    if (exp.canvas.editMode !== 'buttons') exp.canvas.editMode = 'flow';
+    if (exp.canvas.selectedButtonId === undefined) exp.canvas.selectedButtonId = null;
     ensureProjectAssets(state);
     exp.nodes.forEach(function (n) {
       normalizeNode(n);
@@ -276,7 +281,10 @@ var ExperienciaEngine = (function () {
     if (n.parentId === undefined) n.parentId = null;
     if (n.locked == null) n.locked = false;
     if (n.protected == null) n.protected = n.kind === 'hero' || n.id === 'exp-hero';
-    if (isSceneKind(n.kind)) normalizeSceneInteractions(n);
+    if (isSceneKind(n.kind)) {
+      normalizeSceneInteractions(n);
+      ensureSceneButtons(n);
+    }
     return n;
   }
 
@@ -306,6 +314,135 @@ var ExperienciaEngine = (function () {
     if (t === 'SELECTOR' || a === 'floor-selector') return false;
     if (t === 'MENU_TRIGGER' || a === 'open-menu') return false;
     if (GLOBAL_SHOWROOM_ACTIONS[a]) return false;
+    return true;
+  }
+
+  /**
+   * V6.1.00 — Scene UI buttons (visual overlay). Stored as scene.config.buttons[].
+   * Independent from graph interactions / ports.
+   */
+  var BUTTON_STYLES = { chip: 1, button: 1, icon: 1 };
+  var BUTTON_ICONS = { none: 1, arrow: 1, 'rotate-left': 1, 'rotate-right': 1, plus: 1 };
+
+  function isButtonsEditableNode(n) {
+    if (!n) return false;
+    if (n.kind === 'hero' || n.role === 'action' || n.kind === 'action') return false;
+    if (n.kind === 'video' || n.kind === 'animacion' || n.kind === 'transicion') return false;
+    if (n.config && n.config.hub && n.config.hub.enabled) return false;
+    var k = String(n.kind || '');
+    return k === 'image' || k === 'scene' || k === 'vista' || k === 'gallery' || k === 'plan';
+  }
+
+  function clampPercent(v, fallback) {
+    var n = Number(v);
+    if (isNaN(n)) n = fallback != null ? fallback : 50;
+    return Math.max(0, Math.min(100, Math.round(n * 10) / 10));
+  }
+
+  function normalizeSceneButton(btn, index) {
+    btn = btn && typeof btn === 'object' ? btn : {};
+    var style = String(btn.style || 'chip');
+    if (!BUTTON_STYLES[style]) style = 'chip';
+    var icon = btn.icon == null || btn.icon === '' ? null : String(btn.icon);
+    if (icon && !BUTTON_ICONS[icon]) icon = null;
+    if (icon === 'none') icon = null;
+    return {
+      id: btn.id || uid('btn'),
+      label: String(btn.label != null ? btn.label : ('Botón ' + ((index || 0) + 1))),
+      x: clampPercent(btn.x, 50),
+      y: clampPercent(btn.y, 50),
+      style: style,
+      color: btn.color ? String(btn.color) : '#ffffff',
+      icon: icon,
+      targetNodeId: btn.targetNodeId != null ? btn.targetNodeId : null,
+      visible: btn.visible !== false
+    };
+  }
+
+  function ensureSceneButtons(n) {
+    if (!n || !n.config) return [];
+    if (!Array.isArray(n.config.buttons)) n.config.buttons = [];
+    n.config.buttons = n.config.buttons.map(normalizeSceneButton);
+    /* Mirror top-level for Runtime prep: scene.buttons */
+    n.buttons = n.config.buttons;
+    return n.config.buttons;
+  }
+
+  function listSceneButtons(n) {
+    return ensureSceneButtons(n).slice();
+  }
+
+  function getSceneButton(n, buttonId) {
+    var list = ensureSceneButtons(n);
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(buttonId)) return list[i];
+    }
+    return null;
+  }
+
+  function addSceneButton(state, nodeId, partial) {
+    var n = getNode(state, nodeId);
+    if (!n || !isButtonsEditableNode(n)) return null;
+    var list = ensureSceneButtons(n);
+    var base = {
+      label: 'Nuevo botón',
+      x: 50,
+      y: 50,
+      style: 'chip',
+      color: '#ffffff',
+      icon: null,
+      targetNodeId: null,
+      visible: true
+    };
+    partial = partial || {};
+    Object.keys(partial).forEach(function (k) { base[k] = partial[k]; });
+    var btn = normalizeSceneButton(base, list.length);
+    list.push(btn);
+    n.config.buttons = list;
+    n.buttons = list;
+    return btn;
+  }
+
+  function updateSceneButton(state, nodeId, buttonId, patch) {
+    var n = getNode(state, nodeId);
+    if (!n) return null;
+    var btn = getSceneButton(n, buttonId);
+    if (!btn) return null;
+    patch = patch || {};
+    if (patch.label != null) btn.label = String(patch.label);
+    if (patch.style != null && BUTTON_STYLES[patch.style]) btn.style = patch.style;
+    if (patch.color != null) btn.color = String(patch.color);
+    if (patch.icon !== undefined) {
+      var icon = patch.icon == null || patch.icon === '' || patch.icon === 'none'
+        ? null
+        : String(patch.icon);
+      btn.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
+    }
+    if (patch.targetNodeId !== undefined) {
+      btn.targetNodeId = patch.targetNodeId ? patch.targetNodeId : null;
+    }
+    if (patch.visible != null) btn.visible = !!patch.visible;
+    if (patch.x != null) btn.x = clampPercent(patch.x, btn.x);
+    if (patch.y != null) btn.y = clampPercent(patch.y, btn.y);
+    ensureSceneButtons(n);
+    return btn;
+  }
+
+  function setSceneButtonPosition(state, nodeId, buttonId, x, y) {
+    return updateSceneButton(state, nodeId, buttonId, { x: x, y: y });
+  }
+
+  function removeSceneButton(state, nodeId, buttonId) {
+    var n = getNode(state, nodeId);
+    if (!n) return false;
+    var list = ensureSceneButtons(n);
+    var next = list.filter(function (b) { return String(b.id) !== String(buttonId); });
+    n.config.buttons = next;
+    n.buttons = next;
+    var exp = ensureState(state);
+    if (exp.canvas && String(exp.canvas.selectedButtonId) === String(buttonId)) {
+      exp.canvas.selectedButtonId = null;
+    }
     return true;
   }
 
@@ -4348,6 +4485,14 @@ var ExperienciaEngine = (function () {
     partitionInteractions: partitionInteractions,
     ensureHubConfig: ensureHubConfig,
     enableHubOnScene: enableHubOnScene,
+    isButtonsEditableNode: isButtonsEditableNode,
+    ensureSceneButtons: ensureSceneButtons,
+    listSceneButtons: listSceneButtons,
+    getSceneButton: getSceneButton,
+    addSceneButton: addSceneButton,
+    updateSceneButton: updateSceneButton,
+    setSceneButtonPosition: setSceneButtonPosition,
+    removeSceneButton: removeSceneButton,
     detectHubSelectorOptions: detectHubSelectorOptions,
     syncHubSmartSelector: syncHubSmartSelector,
     syncHubPlantasFromMedia: syncHubPlantasFromMedia,
