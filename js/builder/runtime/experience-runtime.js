@@ -27,19 +27,32 @@ var ExperienceRuntime = (function () {
     return null;
   }
 
-  function outsFrom(connections, nodeId) {
+  function outsFrom(nodeOrConnections, nodeId, connectionsFallback) {
+    /* Prefer node.outputs from compiled graph */
+    if (nodeOrConnections && Array.isArray(nodeOrConnections.outputs)) {
+      return nodeOrConnections.outputs.map(function (o) {
+        return {
+          toNodeId: o.toNodeId,
+          portId: o.portId || null,
+          portLabel: o.portLabel || null,
+          edgeId: o.edgeId || null
+        };
+      }).filter(function (o) { return !!o.toNodeId; });
+    }
     var out = [];
-    (connections || []).forEach(function (ed) {
+    (connectionsFallback || []).forEach(function (ed) {
       var from = ed.sourceNodeId || ed.from || ed.sourceId;
       var to = ed.targetNodeId || ed.to || ed.targetId;
-      if (String(from) === String(nodeId) && to) out.push(ed);
+      if (String(from) === String(nodeId) && to) {
+        out.push({
+          toNodeId: to,
+          portId: ed.sourcePortId || null,
+          portLabel: ed.sourcePortLabel || null,
+          edgeId: ed.id || null
+        });
+      }
     });
     return out;
-  }
-
-  function firstTarget(connections, nodeId) {
-    var list = outsFrom(connections, nodeId);
-    return list.length ? (list[0].targetNodeId || list[0].to || list[0].targetId) : null;
   }
 
   function collectPreloadUrls(runtime) {
@@ -225,15 +238,11 @@ var ExperienceRuntime = (function () {
     this._nodesById = indexById(runtime.nodes);
     this._connections = runtime.connections || [];
     var hero = findHero(runtime.nodes);
-    var startId = null;
-    if (hero) {
-      startId = firstTarget(this._connections, hero.id);
-      if (!startId) startId = hero.id;
-    } else if (runtime.nodes[0]) {
-      startId = runtime.nodes[0].id;
-    }
+    var startId = runtime.entryNodeId || null;
+    if (!startId && hero) startId = hero.id;
+    if (!startId && runtime.nodes[0]) startId = runtime.nodes[0].id;
     if (!startId) {
-      this.stage.innerHTML = '<div class="boxies-xp__empty">No hay flujo conectado desde Hero.</div>';
+      this.stage.innerHTML = '<div class="boxies-xp__empty">No hay nodo de entrada en el grafo.</div>';
       return;
     }
     this.enterNode(startId);
@@ -261,15 +270,59 @@ var ExperienceRuntime = (function () {
     this.root = null;
   };
 
-  Player.prototype.gotoNext = function (fromNodeId) {
+  Player.prototype.outputsOf = function (node) {
+    if (!node) return [];
+    return outsFrom(node, node.id, this._connections);
+  };
+
+  Player.prototype.gotoNext = function (fromNodeId, preferredTargetId) {
     if (this._stopped) return;
-    var nextId = firstTarget(this._connections, fromNodeId);
-    if (!nextId) {
+    var node = this._nodesById[String(fromNodeId)];
+    var outs = this.outputsOf(node);
+    if (preferredTargetId) {
+      this.enterNode(preferredTargetId);
+      return;
+    }
+    if (!outs.length) {
       this.stage.innerHTML =
         '<div class="boxies-xp__empty boxies-xp__empty--end">Experiencia finalizada</div>';
       return;
     }
-    this.enterNode(nextId);
+    if (outs.length === 1) {
+      this.enterNode(outs[0].toNodeId);
+      return;
+    }
+    /* Multiple exits — Runtime presents the branch; compiler did not pick one */
+    this.playBranchChoice(node, outs);
+  };
+
+  Player.prototype.playBranchChoice = function (node, outs) {
+    var self = this;
+    this.clearStage();
+    var wrap = document.createElement('div');
+    wrap.className = 'boxies-xp__media boxies-xp__media--branch is-enter';
+    var title = document.createElement('div');
+    title.className = 'boxies-xp__branch-title';
+    title.textContent = (node && node.label) ? node.label : 'Elegir camino';
+    wrap.appendChild(title);
+    var list = document.createElement('div');
+    list.className = 'boxies-xp__branch-list';
+    outs.forEach(function (o) {
+      var target = self._nodesById[String(o.toNodeId)];
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'boxies-xp__branch-btn';
+      btn.textContent = (o.portLabel ? (o.portLabel + ' → ') : '') +
+        ((target && target.label) || o.toNodeId);
+      btn.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        wrap.classList.add('is-exit');
+        setTimeout(function () { self.enterNode(o.toNodeId); }, FADE_MS);
+      });
+      list.appendChild(btn);
+    });
+    wrap.appendChild(list);
+    this.stage.appendChild(wrap);
   };
 
   Player.prototype.enterNode = function (nodeId) {
@@ -279,15 +332,18 @@ var ExperienceRuntime = (function () {
       this.gotoNext(nodeId);
       return;
     }
-    if (node.kind === 'hero' || node.role === 'hero') {
-      var afterHero = firstTarget(this._connections, node.id);
-      if (afterHero) this.enterNode(afterHero);
-      else {
-        this.stage.innerHTML = '<div class="boxies-xp__empty">Hero sin continuidad.</div>';
+    if (node.kind === 'hero' || node.role === 'hero' || node.type === 'hero') {
+      var outs = this.outputsOf(node);
+      if (outs.length === 1) {
+        this.enterNode(outs[0].toNodeId);
+      } else if (outs.length > 1) {
+        this.playBranchChoice(node, outs);
+      } else {
+        this.stage.innerHTML = '<div class="boxies-xp__empty">Hero sin salidas en el grafo.</div>';
       }
       return;
     }
-    var kind = String(node.kind || '').toLowerCase();
+    var kind = String(node.kind || node.type || '').toLowerCase();
     if (kind === 'video' || kind === 'animacion' || kind === 'transicion') {
       this.playVideo(node);
       return;

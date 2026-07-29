@@ -1,6 +1,6 @@
-/* BOXIES RuntimeSerializer — builds the executable runtime object (in-memory). */
+/* BOXIES RuntimeSerializer — serializes the Experiencia directed graph (no path picking). */
 var RuntimeSerializer = (function () {
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   function cloneJson(value) {
     try {
@@ -58,34 +58,27 @@ var RuntimeSerializer = (function () {
     };
   }
 
-  function normalizeNode(n) {
-    if (!n) return null;
+  function edgeEnds(ed) {
     return {
-      id: n.id,
-      kind: n.kind || null,
-      typeLabel: n.typeLabel || null,
-      label: n.label || n.id,
-      role: n.role || null,
-      status: n.status || null,
-      orphaned: !!n.orphaned,
-      locked: !!n.locked,
-      config: cloneJson(n.config) || {},
-      ports: cloneJson(n.ports) || [],
-      x: n.x != null ? n.x : null,
-      y: n.y != null ? n.y : null
+      from: ed.sourceNodeId || ed.from || ed.sourceId || null,
+      to: ed.targetNodeId || ed.to || ed.targetId || null
     };
   }
 
   function normalizeEdge(ed) {
     if (!ed) return null;
+    var ends = edgeEnds(ed);
     return {
       id: ed.id || null,
-      sourceNodeId: ed.sourceNodeId || ed.from || ed.sourceId || null,
-      targetNodeId: ed.targetNodeId || ed.to || ed.targetId || null,
+      sourceNodeId: ends.from,
+      targetNodeId: ends.to,
       sourcePortId: ed.sourcePortId || ed.sourcePort || ed.portId || null,
       sourcePortLabel: ed.sourcePortLabel || null,
       targetPortId: ed.targetPortId || ed.targetPort || 'in',
-      inlineAction: !!ed.inlineAction
+      inlineAction: !!ed.inlineAction,
+      condition: ed.condition != null ? cloneJson(ed.condition) : null,
+      transitionMedia: ed.transitionMedia != null ? cloneJson(ed.transitionMedia) : null,
+      transitionSeconds: ed.transitionSeconds != null ? ed.transitionSeconds : null
     };
   }
 
@@ -117,8 +110,7 @@ var RuntimeSerializer = (function () {
     var cfg = (n && n.config) || {};
     var aid = cfg.assetId;
     var asset = aid != null ? assetById[String(aid)] : null;
-    if (!asset && cfg.fileName && typeof window !== 'undefined') {
-      /* filename-only fallback: scan assets */
+    if (!asset && cfg.fileName) {
       Object.keys(assetById).some(function (id) {
         var a = assetById[id];
         if (a && a.filename && a.filename === cfg.fileName) {
@@ -134,9 +126,7 @@ var RuntimeSerializer = (function () {
     return {
       assetId: asset ? asset.id : (aid || null),
       url: url,
-      thumbnailUrl: asset
-        ? (asset.thumbnailUrl || asset.publicUrl || null)
-        : null,
+      thumbnailUrl: asset ? (asset.thumbnailUrl || asset.publicUrl || null) : null,
       filename: asset ? asset.filename : (cfg.fileName || null),
       type: asset ? asset.type : null
     };
@@ -170,17 +160,150 @@ var RuntimeSerializer = (function () {
     }).filter(function (p) { return p && p.id; });
   }
 
+  function resolveMode(outCount, inCount) {
+    if (outCount <= 0) return 'none';
+    if (outCount === 1) return 'linear';
+    return 'parallel';
+  }
+
   /**
-   * Build a plain runtime object ready for Vista previa / Publicar.
-   * Does not persist — caller stores it.
+   * Attach graph topology to each node. Preserves canvas node order.
+   * Does NOT pick a primary path, DFS, or BFS order.
+   */
+  function attachTopology(nodes, connections) {
+    var buckets = {};
+    nodes.forEach(function (n) {
+      if (!n || n.id == null) return;
+      buckets[String(n.id)] = {
+        inputs: [],
+        outputs: [],
+        connections: [],
+        conditions: [],
+        transitions: []
+      };
+    });
+
+    connections.forEach(function (ed) {
+      if (!ed) return;
+      var from = ed.sourceNodeId;
+      var to = ed.targetNodeId;
+      if (!from || !to) return;
+      var fromKey = String(from);
+      var toKey = String(to);
+      var link = {
+        id: ed.id,
+        fromNodeId: from,
+        toNodeId: to,
+        sourcePortId: ed.sourcePortId || null,
+        sourcePortLabel: ed.sourcePortLabel || null,
+        targetPortId: ed.targetPortId || 'in',
+        inlineAction: !!ed.inlineAction,
+        condition: ed.condition || null,
+        transitionMedia: ed.transitionMedia || null,
+        transitionSeconds: ed.transitionSeconds != null ? ed.transitionSeconds : null
+      };
+
+      if (buckets[fromKey]) {
+        buckets[fromKey].outputs.push({
+          edgeId: ed.id,
+          toNodeId: to,
+          portId: ed.sourcePortId || null,
+          portLabel: ed.sourcePortLabel || null,
+          targetPortId: ed.targetPortId || 'in',
+          condition: ed.condition || null,
+          transitionMedia: ed.transitionMedia || null,
+          transitionSeconds: ed.transitionSeconds != null ? ed.transitionSeconds : null
+        });
+        buckets[fromKey].transitions.push({
+          edgeId: ed.id,
+          toNodeId: to,
+          portId: ed.sourcePortId || null,
+          portLabel: ed.sourcePortLabel || null,
+          condition: ed.condition || null,
+          media: ed.transitionMedia || null,
+          seconds: ed.transitionSeconds != null ? ed.transitionSeconds : null
+        });
+        buckets[fromKey].connections.push(link);
+        if (ed.condition) buckets[fromKey].conditions.push(cloneJson(ed.condition));
+      }
+
+      if (buckets[toKey]) {
+        buckets[toKey].inputs.push({
+          edgeId: ed.id,
+          fromNodeId: from,
+          portId: ed.targetPortId || 'in',
+          sourcePortId: ed.sourcePortId || null,
+          sourcePortLabel: ed.sourcePortLabel || null,
+          condition: ed.condition || null
+        });
+        buckets[toKey].connections.push(link);
+        if (ed.condition) buckets[toKey].conditions.push(cloneJson(ed.condition));
+      }
+    });
+
+    nodes.forEach(function (n) {
+      if (!n || n.id == null) return;
+      var topo = buckets[String(n.id)] || {
+        inputs: [], outputs: [], connections: [], conditions: [], transitions: []
+      };
+      n.inputs = topo.inputs;
+      n.outputs = topo.outputs;
+      n.connections = topo.connections;
+      n.conditions = topo.conditions;
+      n.transitions = topo.transitions;
+      n.inDegree = topo.inputs.length;
+      n.outDegree = topo.outputs.length;
+      n.mode = resolveMode(topo.outputs.length, topo.inputs.length);
+      if (topo.inputs.length > 1) n.join = true;
+      if (topo.outputs.length > 1) n.fork = true;
+    });
+
+    return nodes;
+  }
+
+  function normalizeNodeBase(n) {
+    if (!n) return null;
+    return {
+      id: n.id,
+      type: n.kind || n.type || null,
+      kind: n.kind || null,
+      typeLabel: n.typeLabel || null,
+      label: n.label || n.id,
+      role: n.role || null,
+      status: n.status || null,
+      orphaned: !!n.orphaned,
+      locked: !!n.locked,
+      config: cloneJson(n.config) || {},
+      ports: cloneJson(n.ports) || [],
+      x: n.x != null ? n.x : null,
+      y: n.y != null ? n.y : null,
+      /* topology filled by attachTopology — placeholders for schema clarity */
+      inputs: [],
+      outputs: [],
+      connections: [],
+      conditions: [],
+      transitions: [],
+      mode: 'none',
+      inDegree: 0,
+      outDegree: 0,
+      fork: false,
+      join: false
+    };
+  }
+
+  /**
+   * Build executable runtime = faithful directed graph of the Canvas.
+   * Node array order matches Experiencia canvas order (no reordering).
    */
   function serialize(state, options) {
     options = options || {};
     var flow = readFlow(state);
     var assets = collectAssets(state).map(normalizeAsset).filter(Boolean);
     var assetById = indexAssets(assets);
+
+    /* Preserve canvas order exactly */
     var nodes = flow.nodes.map(function (raw) {
-      var n = normalizeNode(raw);
+      var n = normalizeNodeBase(raw);
       if (!n) return null;
       n.media = resolveMediaForNode(n, assetById);
       if (n.config && n.config.hub && n.config.hub.enabled) {
@@ -188,25 +311,43 @@ var RuntimeSerializer = (function () {
       }
       return n;
     }).filter(Boolean);
+
     var connections = flow.edges.map(normalizeEdge).filter(Boolean);
+    attachTopology(nodes, connections);
+
     var heroNode = findHero(flow.nodes);
     var generatedAt = options.generatedAt || new Date().toISOString();
+    var forks = nodes.filter(function (n) { return n && n.fork; }).map(function (n) {
+      return { id: n.id, label: n.label, mode: n.mode, outputs: n.outputs };
+    });
+    var joins = nodes.filter(function (n) { return n && n.join; }).map(function (n) {
+      return { id: n.id, label: n.label, inputs: n.inputs };
+    });
 
     return {
       version: VERSION,
       generatedAt: generatedAt,
       projectId: (state && (state.draftProjectId || state.projectId)) || null,
       slug: (state && state.projectInfo && state.projectInfo.slug) || null,
+      topology: 'directed-graph',
       hero: buildHeroSnapshot(state, heroNode),
+      entryNodeId: heroNode ? heroNode.id : (nodes[0] ? nodes[0].id : null),
       nodes: nodes,
       connections: connections,
+      graph: {
+        forks: forks,
+        joins: joins
+      },
       assets: assets,
       statistics: options.statistics || null,
       meta: {
         source: 'experiencia',
+        topology: 'directed-graph',
         nodeCount: nodes.length,
         connectionCount: connections.length,
         assetCount: assets.length,
+        forkCount: forks.length,
+        joinCount: joins.length,
         durationMs: options.durationMs != null ? options.durationMs : null
       }
     };
@@ -218,6 +359,7 @@ var RuntimeSerializer = (function () {
     readFlow: readFlow,
     findHero: findHero,
     collectAssets: collectAssets,
-    cloneJson: cloneJson
+    cloneJson: cloneJson,
+    attachTopology: attachTopology
   };
 })();

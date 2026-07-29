@@ -64,7 +64,7 @@ var RuntimeCompiler = (function () {
     runtime.statistics = statistics;
 
     var validations = RuntimeValidator.validate(state, runtime);
-    var pipeline = RuntimePipeline.build(state);
+    var pipeline = RuntimePipeline.build(state, runtime);
 
     var t1 = (typeof performance !== 'undefined' && performance.now)
       ? performance.now()

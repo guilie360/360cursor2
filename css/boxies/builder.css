@@ -5818,6 +5818,181 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   gap: 0;
 }
 
+.builder-runtime-graph {
+  position: relative;
+  height: 280px;
+  margin: 0 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(111, 191, 134, 0.05), transparent 55%),
+    rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.builder-runtime-graph__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.builder-runtime-graph__edge {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.35;
+  fill: none;
+}
+
+.builder-runtime-graph__nodes {
+  position: absolute;
+  inset: 12px;
+  z-index: 2;
+}
+
+.builder-runtime-graph__node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 88px;
+  max-width: 140px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 18, 18, 0.92);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.builder-runtime-graph__node strong {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-runtime-graph__node span {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-runtime-graph__node.is-entry {
+  border-color: rgba(111, 191, 134, 0.55);
+  background: rgba(111, 191, 134, 0.1);
+}
+
+.builder-runtime-graph__node.is-fork {
+  border-color: rgba(180, 160, 255, 0.45);
+}
+
+.builder-runtime-graph__node.is-join {
+  border-color: rgba(220, 170, 110, 0.45);
+}
+
+.builder-runtime-graph__node.is-disconnected {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.builder-runtime-graph__branches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.builder-runtime-graph__branch {
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(180, 160, 255, 0.22);
+  background: rgba(180, 160, 255, 0.05);
+}
+
+.builder-runtime-graph__branch.is-join {
+  border-color: rgba(220, 170, 110, 0.22);
+  background: rgba(220, 170, 110, 0.05);
+}
+
+.builder-runtime-graph__branch-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+}
+
+.builder-runtime-graph__branch-title em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  margin-left: 6px;
+}
+
+.builder-runtime-graph__branch ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.builder-runtime-graph__branch li {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.boxies-xp__media--branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #000;
+}
+
+.boxies-xp__branch-title {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.boxies-xp__branch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.boxies-xp__branch-btn {
+  appearance: none;
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.boxies-xp__branch-btn:hover {
+  border-color: rgba(111, 191, 134, 0.55);
+  background: rgba(111, 191, 134, 0.12);
+}
+
 .builder-runtime-pipeline > li {
   display: flex;
   align-items: center;

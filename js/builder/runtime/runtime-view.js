@@ -92,28 +92,108 @@ var RuntimeView = (function () {
   }
 
   function pipelineHtml(last) {
-    var steps = (last && last.pipeline) || [];
-    if (!steps.length) {
+    var graph = (last && last.pipeline) || null;
+    if (!graph || !graph.nodes || !graph.nodes.length) {
       return '' +
         '<section class="builder-runtime-card">' +
           '<div class="builder-runtime-card__head">Pipeline</div>' +
-          '<p class="builder-menu-hint">El recorrido textual aparecerá tras compilar.</p>' +
+          '<p class="builder-menu-hint">El grafo del Canvas aparecerá tras compilar.</p>' +
         '</section>';
     }
-    var html = '<section class="builder-runtime-card">' +
-      '<div class="builder-runtime-card__head">Pipeline</div>' +
-      '<ol class="builder-runtime-pipeline">';
-    steps.forEach(function (step, idx) {
-      html += '<li class="' + (step.disconnected ? 'is-disconnected' : '') + '">' +
-        '<span class="builder-runtime-pipeline__label">' + esc(step.label) + '</span>' +
-        (step.kind ? ('<span class="builder-runtime-pipeline__kind">' + esc(step.kind) + '</span>') : '') +
-      '</li>';
-      if (idx < steps.length - 1) {
-        html += '<li class="builder-runtime-pipeline__arrow" aria-hidden="true">↓</li>';
-      }
-    });
-    html += '</ol></section>';
-    return html;
+
+    var edges = graph.edges || [];
+    var forks = graph.forks || [];
+    var joins = graph.joins || [];
+    var svgLines = edges.map(function (ed) {
+      var x1 = Number(ed.x1) || 0;
+      var y1 = Number(ed.y1) || 0;
+      var x2 = Number(ed.x2) || 0;
+      var y2 = Number(ed.y2) || 0;
+      /* Offset toward node centers (nodes are ~pad inset) */
+      return '<line x1="' + (x1 + 4) + '%" y1="' + (y1 + 4) + '%" x2="' +
+        (x2 + 4) + '%" y2="' + (y2 + 4) + '%" class="builder-runtime-graph__edge" />';
+    }).join('');
+
+    var nodesHtml = (graph.nodes || []).map(function (n) {
+      var cls = 'builder-runtime-graph__node';
+      if (n.fork) cls += ' is-fork';
+      if (n.join) cls += ' is-join';
+      if (n.disconnected) cls += ' is-disconnected';
+      if (graph.entryNodeId && String(n.id) === String(graph.entryNodeId)) cls += ' is-entry';
+      var meta = [];
+      if (n.fork) meta.push('bifurcación');
+      if (n.join) meta.push('convergencia');
+      if (n.mode && n.mode !== 'none' && n.mode !== 'linear') meta.push(n.mode);
+      return '<div class="' + cls + '" style="left:' + Number(n.left).toFixed(2) +
+        '%;top:' + Number(n.top).toFixed(2) + '%" title="' + esc(n.label) + '">' +
+        '<strong>' + esc(n.label) + '</strong>' +
+        '<span>' + esc(n.typeLabel || n.kind || '') +
+          (meta.length ? (' · ' + esc(meta.join(' · '))) : '') +
+        '</span>' +
+      '</div>';
+    }).join('');
+
+    var forkBlocks = forks.map(function (f) {
+      var outs = (f.outputs || []).map(function (o) {
+        var target = null;
+        (graph.nodes || []).some(function (n) {
+          if (String(n.id) === String(o.toNodeId)) {
+            target = n;
+            return true;
+          }
+          return false;
+        });
+        return '<li>→ ' + esc((o.portLabel ? (o.portLabel + ' · ') : '') +
+          (target ? target.label : o.toNodeId)) + '</li>';
+      }).join('');
+      return '<div class="builder-runtime-graph__branch">' +
+        '<div class="builder-runtime-graph__branch-title">' +
+          esc(f.label || f.id) +
+          ' <em>' + esc(f.mode || 'parallel') + '</em>' +
+        '</div>' +
+        '<ul>' + (outs || '<li>—</li>') + '</ul>' +
+      '</div>';
+    }).join('');
+
+    var joinBlocks = joins.map(function (j) {
+      var ins = (j.inputs || []).map(function (inp) {
+        var source = null;
+        (graph.nodes || []).some(function (n) {
+          if (String(n.id) === String(inp.fromNodeId)) {
+            source = n;
+            return true;
+          }
+          return false;
+        });
+        return '<li>← ' + esc(source ? source.label : inp.fromNodeId) + '</li>';
+      }).join('');
+      return '<div class="builder-runtime-graph__branch is-join">' +
+        '<div class="builder-runtime-graph__branch-title">' +
+          esc(j.label || j.id) + ' <em>convergencia</em>' +
+        '</div>' +
+        '<ul>' + (ins || '<li>—</li>') + '</ul>' +
+      '</div>';
+    }).join('');
+
+    return '' +
+      '<section class="builder-runtime-card">' +
+        '<div class="builder-runtime-card__head">Pipeline</div>' +
+        '<p class="builder-menu-hint" style="margin:0 0 10px">Grafo dirigido del Canvas · ' +
+          esc(String(graph.nodes.length)) + ' nodos · ' +
+          esc(String(edges.length)) + ' conexiones' +
+          (forks.length ? (' · ' + forks.length + ' bifurcación' + (forks.length === 1 ? '' : 'es')) : '') +
+          (joins.length ? (' · ' + joins.length + ' convergencia' + (joins.length === 1 ? '' : 's')) : '') +
+        '</p>' +
+        '<div class="builder-runtime-graph" aria-label="Grafo del Runtime">' +
+          '<svg class="builder-runtime-graph__svg" viewBox="0 0 100 100" preserveAspectRatio="none">' +
+            svgLines +
+          '</svg>' +
+          '<div class="builder-runtime-graph__nodes">' + nodesHtml + '</div>' +
+        '</div>' +
+        ((forkBlocks || joinBlocks)
+          ? ('<div class="builder-runtime-graph__branches">' + forkBlocks + joinBlocks + '</div>')
+          : '') +
+      '</section>';
   }
 
   function statsHtml(last) {
@@ -156,8 +236,8 @@ var RuntimeView = (function () {
           runtime: rt,
           validations: null,
           pipeline: (typeof RuntimePipeline !== 'undefined' && RuntimePipeline.build)
-            ? RuntimePipeline.build(state)
-            : [],
+            ? RuntimePipeline.build(state, rt)
+            : { topology: 'directed-graph', nodes: [], edges: [], forks: [], joins: [] },
           statistics: rt.statistics ||
             ((typeof RuntimeStatistics !== 'undefined' && RuntimeStatistics.compute)
               ? RuntimeStatistics.compute(rt)
