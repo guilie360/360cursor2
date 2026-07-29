@@ -840,8 +840,22 @@ var ExperienciaEngine = (function () {
   }
 
   function removeSceneButton(state, nodeId, buttonId) {
-    var result = removeInteraction(state, nodeId, buttonId);
+    var n = getNode(state, nodeId);
+    if (!n || !n.config) return false;
+    var ix = getInteraction(n, buttonId);
+    if (!ix || !isSceneButtonInteraction(ix)) return false;
+    /* Defensive: never allow button delete to remove canvas nodes */
     var exp = ensureState(state);
+    var nodeCount = (exp.nodes || []).length;
+    var nodeIds = (exp.nodes || []).map(function (node) { return String(node.id); });
+    var result = removeInteraction(state, nodeId, buttonId, { keepEdges: false });
+    exp = ensureState(state);
+    if ((exp.nodes || []).length !== nodeCount) {
+      /* Rollback node list if somehow mutated */
+      exp.nodes = (exp.nodes || []).filter(function (node) {
+        return nodeIds.indexOf(String(node.id)) >= 0;
+      });
+    }
     if (exp.canvas) {
       if (String(exp.canvas.selectedButtonId) === String(buttonId)) {
         exp.canvas.selectedButtonId = null;
@@ -853,6 +867,95 @@ var ExperienciaEngine = (function () {
       }
     }
     return !!(result && result.ok);
+  }
+
+  /**
+   * Lightweight scene-scoped snapshot of BUTTON interactions + their outbound edges.
+   * Used by editor undo/redo (V6.1.04). Does not touch non-BUTTON elements or nodes.
+   */
+  function snapshotSceneButtons(state, sceneId) {
+    var n = getNode(state, sceneId);
+    if (!n || !n.config) return null;
+    var exp = ensureState(state);
+    var buttons = listSceneButtonInteractions(n).map(function (ix) {
+      return JSON.parse(JSON.stringify(ix));
+    });
+    var portIds = {};
+    buttons.forEach(function (ix) {
+      portIds[String(ix.portId || ix.id)] = true;
+    });
+    var edges = (exp.edges || []).filter(function (ed) {
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId;
+      return String(from) === String(sceneId) && portIds[String(pid)];
+    }).map(function (ed) {
+      return JSON.parse(JSON.stringify(ed));
+    });
+    return {
+      sceneId: String(sceneId),
+      interactions: buttons,
+      edges: edges,
+      selectedButtonId: exp.canvas ? exp.canvas.selectedButtonId : null,
+      selectedButtonIds: exp.canvas && Array.isArray(exp.canvas.selectedButtonIds)
+        ? exp.canvas.selectedButtonIds.slice()
+        : []
+    };
+  }
+
+  function restoreSceneButtons(state, snap) {
+    if (!snap || !snap.sceneId) return false;
+    var n = getNode(state, snap.sceneId);
+    if (!n || !n.config) return false;
+    var exp = ensureState(state);
+    var nodeCount = (exp.nodes || []).length;
+
+    var portIds = {};
+    listSceneButtonInteractions(n).forEach(function (ix) {
+      portIds[String(ix.portId || ix.id)] = true;
+    });
+    (snap.interactions || []).forEach(function (ix) {
+      if (!ix) return;
+      portIds[String(ix.portId || ix.id)] = true;
+    });
+
+    /* Keep non-BUTTON interactions; replace BUTTON set */
+    var others = (n.config.interactions || []).filter(function (ix) {
+      return !isSceneButtonInteraction(ix);
+    });
+    var restored = (snap.interactions || []).map(function (ix) {
+      return JSON.parse(JSON.stringify(ix));
+    });
+    n.config.interactions = others.concat(restored);
+
+    /* Drop previous button edges for this scene, then restore snapshot edges */
+    exp.edges = (exp.edges || []).filter(function (ed) {
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId;
+      if (String(from) !== String(snap.sceneId)) return true;
+      return !portIds[String(pid)];
+    });
+    (snap.edges || []).forEach(function (ed) {
+      exp.edges.push(JSON.parse(JSON.stringify(ed)));
+    });
+
+    restored.forEach(function (ix) {
+      ensureButtonVisualDefaults(ix);
+    });
+    mirrorHotspotsFromInteractions(n);
+    syncScenePorts(n);
+
+    if (exp.canvas) {
+      exp.canvas.selectedButtonId = snap.selectedButtonId || null;
+      exp.canvas.selectedButtonIds = Array.isArray(snap.selectedButtonIds)
+        ? snap.selectedButtonIds.slice()
+        : (snap.selectedButtonId ? [snap.selectedButtonId] : []);
+    }
+
+    /* Defensive: nodes must never change */
+    if ((exp.nodes || []).length !== nodeCount) {
+      return false;
+    }
+    return true;
   }
 
   function ensureHubConfig(n) {
@@ -4923,6 +5026,8 @@ var ExperienciaEngine = (function () {
     updateSceneButton: updateSceneButton,
     setSceneButtonPosition: setSceneButtonPosition,
     removeSceneButton: removeSceneButton,
+    snapshotSceneButtons: snapshotSceneButtons,
+    restoreSceneButtons: restoreSceneButtons,
     mirrorSceneButton: mirrorSceneButton,
     duplicateSceneButton: duplicateSceneButton,
     alignSceneButtons: alignSceneButtons,

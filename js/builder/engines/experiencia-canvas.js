@@ -1511,6 +1511,52 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var buttonDrag = null;
     var buttonAltHeld = false;
+    var buttonHistory = { past: [], future: [], max: 100 };
+    var buttonOpArmed = false;
+
+    function pushButtonHistory(sceneId) {
+      if (!ExperienciaEngine.snapshotSceneButtons) return;
+      var sid = sceneId || canvas().selectedId;
+      if (!sid) return;
+      var snap = ExperienciaEngine.snapshotSceneButtons(state, sid);
+      if (!snap) return;
+      buttonHistory.past.push(snap);
+      if (buttonHistory.past.length > buttonHistory.max) {
+        buttonHistory.past.shift();
+      }
+      buttonHistory.future = [];
+    }
+
+    function undoButtonEdit() {
+      if (!buttonHistory.past.length || !ExperienciaEngine.restoreSceneButtons) return false;
+      var prev = buttonHistory.past.pop();
+      var current = ExperienciaEngine.snapshotSceneButtons(state, prev.sceneId);
+      if (current) buttonHistory.future.push(current);
+      ExperienciaEngine.restoreSceneButtons(state, prev);
+      return true;
+    }
+
+    function redoButtonEdit() {
+      if (!buttonHistory.future.length || !ExperienciaEngine.restoreSceneButtons) return false;
+      var next = buttonHistory.future.pop();
+      var current = ExperienciaEngine.snapshotSceneButtons(state, next.sceneId);
+      if (current) {
+        buttonHistory.past.push(current);
+        if (buttonHistory.past.length > buttonHistory.max) buttonHistory.past.shift();
+      }
+      ExperienciaEngine.restoreSceneButtons(state, next);
+      return true;
+    }
+
+    function armButtonOp(sceneId) {
+      if (buttonOpArmed) return;
+      pushButtonHistory(sceneId);
+      buttonOpArmed = true;
+    }
+
+    function endButtonOp() {
+      buttonOpArmed = false;
+    }
     var panning = null;
     var linkDrag = null;
     var marquee = null;
@@ -1979,15 +2025,26 @@ var ExperienciaCanvas = (function () {
         opts = opts || {};
         var id = canvas().selectedButtonId;
         if (!id) return;
+        if (opts.history !== false) {
+          if (opts.gesture) armButtonOp(sceneId);
+          else {
+            pushButtonHistory(sceneId);
+            endButtonOp();
+          }
+        }
         ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
         paintButtonsStage();
         if (opts.inspector) paintInspector();
-        if (opts.persist) persist();
+        if (opts.persist) {
+          endButtonOp();
+          persist();
+        }
       }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
         addBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
+          pushButtonHistory(sceneId);
           var btn = ExperienciaEngine.addSceneButton(state, sceneId);
           if (btn) {
             setButtonSelection([btn.id], btn.id);
@@ -2014,9 +2071,10 @@ var ExperienciaCanvas = (function () {
       var labelEl = inspectorBody.querySelector('[data-exp-btn-label]');
       if (labelEl) {
         labelEl.addEventListener('input', function () {
-          patchBtn({ label: labelEl.value });
+          patchBtn({ label: labelEl.value }, { gesture: true });
         });
         labelEl.addEventListener('change', function () {
+          endButtonOp();
           persist();
         });
       }
@@ -2051,13 +2109,16 @@ var ExperienciaCanvas = (function () {
         deg = Math.max(-360, Math.min(360, Number(deg) || 0));
         if (rotEl && from !== 'range') rotEl.value = String(deg);
         if (rotNum && from !== 'num') rotNum.value = String(deg);
-        patchBtn({ rotation: deg });
+        patchBtn({ rotation: deg }, { gesture: true });
       }
       if (rotEl) {
         rotEl.addEventListener('input', function () {
           syncRotation(rotEl.value, 'range');
         });
-        rotEl.addEventListener('change', function () { persist(); });
+        rotEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
       }
       if (rotNum) {
         rotNum.addEventListener('input', function () {
@@ -2065,6 +2126,7 @@ var ExperienciaCanvas = (function () {
         });
         rotNum.addEventListener('change', function () {
           syncRotation(rotNum.value, 'num');
+          endButtonOp();
           persist();
         });
       }
@@ -2089,21 +2151,28 @@ var ExperienciaCanvas = (function () {
       var mxEl = inspectorBody.querySelector('[data-exp-btn-margin-x]');
       if (mxEl) {
         mxEl.addEventListener('input', function () {
-          patchBtn({ marginX: mxEl.value, keepAnchor: true });
+          patchBtn({ marginX: mxEl.value, keepAnchor: true }, { gesture: true });
         });
-        mxEl.addEventListener('change', function () { persist(); });
+        mxEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
       }
       var myEl = inspectorBody.querySelector('[data-exp-btn-margin-y]');
       if (myEl) {
         myEl.addEventListener('input', function () {
-          patchBtn({ marginY: myEl.value, keepAnchor: true });
+          patchBtn({ marginY: myEl.value, keepAnchor: true }, { gesture: true });
         });
-        myEl.addEventListener('change', function () { persist(); });
+        myEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
       }
       inspectorBody.querySelectorAll('[data-exp-btn-align]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
           var size = layerSize();
+          pushButtonHistory(sceneId);
           ExperienciaEngine.alignSceneButtons(
             state, sceneId, selectedIds(), el.getAttribute('data-exp-btn-align'), size.w, size.h
           );
@@ -2116,6 +2185,7 @@ var ExperienciaCanvas = (function () {
           var size = layerSize();
           var mode = el.getAttribute('data-exp-btn-distribute');
           var ids = selectedIds();
+          pushButtonHistory(sceneId);
           if (mode === 'uniform') {
             var items = ids.map(function (id) {
               return ExperienciaEngine.getSceneButton(state,
@@ -2157,6 +2227,7 @@ var ExperienciaCanvas = (function () {
           var gapEl = inspectorBody.querySelector('[data-exp-btn-gap]');
           var gap = gapEl ? Number(gapEl.value) : 24;
           var size = layerSize();
+          pushButtonHistory(sceneId);
           ExperienciaEngine.spaceSceneButtons(
             state, sceneId, selectedIds(), gap, spaceAxis, size.w, size.h
           );
@@ -2167,6 +2238,7 @@ var ExperienciaCanvas = (function () {
       if (mirrorBtn) {
         mirrorBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
+          pushButtonHistory(sceneId);
           ExperienciaEngine.mirrorSceneButton(state, sceneId,
             mirrorBtn.getAttribute('data-exp-btn-mirror'));
           renderAll(); persist();
@@ -2177,6 +2249,7 @@ var ExperienciaCanvas = (function () {
         dupBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
           var size = layerSize();
+          pushButtonHistory(sceneId);
           var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId,
             dupBtn.getAttribute('data-exp-btn-duplicate'),
             { imageW: size.w, imageH: size.h });
@@ -2188,7 +2261,11 @@ var ExperienciaCanvas = (function () {
       if (delBtn) {
         delBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
+          ev.stopPropagation();
           var bid = delBtn.getAttribute('data-exp-btn-delete');
+          if (!bid) return;
+          pushButtonHistory(sceneId);
+          /* Safe delete: BUTTON interaction only — never the scene node */
           ExperienciaEngine.removeSceneButton(state, sceneId, bid);
           var left = selectedIds().filter(function (id) {
             return String(id) !== String(bid);
@@ -3058,20 +3135,36 @@ var ExperienciaCanvas = (function () {
             Number(g.mirrorX) + '%"></div>';
         }
         (g.spacing || []).forEach(function (s) {
+          var label = s.uniform
+            ? ('Espaciado uniforme · ' + s.px + ' px')
+            : (String(s.px) + ' px');
           if (s.axis === 'x') {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x" style="left:' +
-              Number(s.pos) + '%;top:' + Number(s.cross) + '%"><span>' + esc(String(s.px)) + 'px</span></div>';
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x' +
+              (s.uniform ? ' is-uniform' : '') + '" style="left:' +
+              Number(s.pos) + '%;top:' + Number(s.cross) + '%"><span>' + esc(label) + '</span></div>';
           } else {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y" style="left:' +
-              Number(s.cross) + '%;top:' + Number(s.pos) + '%"><span>' + esc(String(s.px)) + 'px</span></div>';
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y' +
+              (s.uniform ? ' is-uniform' : '') + '" style="left:' +
+              Number(s.cross) + '%;top:' + Number(s.pos) + '%"><span>' + esc(label) + '</span></div>';
           }
         });
+        (g.distances || []).forEach(function (d) {
+          guidesHtml += '<div class="builder-exp-btn-dist-label is-live' +
+            (d.kind ? (' is-' + d.kind) : '') + '" style="left:' +
+            Number(d.x) + '%;top:' + Number(d.y) + '%">' + esc(String(d.px) + ' px') + '</div>';
+        });
+        if (g.uniformBanner) {
+          guidesHtml += '<div class="builder-exp-btn-uniform-banner">' +
+            esc(g.uniformBanner) + '</div>';
+        }
       }
-      if (buttonAltHeld && selIds.length) {
+      if ((buttonAltHeld || buttonDrag) && selIds.length) {
         var primary = buttons.filter(function (b) {
-          return b && String(b.id) === String(canvas().selectedButtonId || selIds[0]);
+          return b && String(b.id) === String(
+            (buttonDrag && buttonDrag.buttonId) || canvas().selectedButtonId || selIds[0]
+          );
         })[0];
-        if (primary) {
+        if (primary && !buttonDrag) {
           var leftPx = Math.round(primary.x / 100 * layerW);
           var rightPx = Math.round((100 - primary.x) / 100 * layerW);
           var topPx = Math.round(primary.y / 100 * layerH);
@@ -3133,95 +3226,164 @@ var ExperienciaCanvas = (function () {
       var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
       var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
       var SNAP = 1.15;
-      var SPACE_SNAP = 1.4;
+      var SPACE_SNAP = 1.35;
       var guides = {
         vCenter: false,
         hCenter: false,
         vAlign: [],
         hAlign: [],
         mirrorX: null,
-        spacing: []
+        spacing: [],
+        distances: [],
+        uniformBanner: null
       };
       var nx = x;
       var ny = y;
+
+      /* Edge + center distances (always while dragging) */
+      guides.distances.push({
+        kind: 'edge', x: Math.max(2, Math.min(x / 2, 20)), y: y,
+        px: Math.round(x / 100 * layerW)
+      });
+      guides.distances.push({
+        kind: 'edge', x: Math.min(98, Math.max((x + 100) / 2, 80)), y: y,
+        px: Math.round((100 - x) / 100 * layerW)
+      });
+      guides.distances.push({
+        kind: 'edge', x: x, y: Math.max(3, Math.min(y / 2, 18)),
+        px: Math.round(y / 100 * layerH)
+      });
+      guides.distances.push({
+        kind: 'edge', x: x, y: Math.min(97, Math.max((y + 100) / 2, 82)),
+        px: Math.round((100 - y) / 100 * layerH)
+      });
+
       if (Math.abs(x - 50) <= SNAP) {
         nx = 50;
         guides.vCenter = true;
+        guides.distances.push({ kind: 'center', x: 50, y: y, px: 0 });
       }
       if (Math.abs(y - 50) <= SNAP) {
         ny = 50;
         guides.hCenter = true;
       }
-      list.forEach(function (b) {
-        if (!b || String(b.id) === String(buttonId)) return;
-        /* Same column / same row (centers) */
-        if (Math.abs(x - b.x) <= SNAP) {
-          nx = b.x;
-          if (guides.vAlign.indexOf(b.x) < 0) guides.vAlign.push(b.x);
+
+      /* Collect existing pairwise gaps for spacing snap */
+      var knownGapsX = [];
+      var knownGapsY = [];
+      for (var i = 0; i < list.length; i++) {
+        for (var j = i + 1; j < list.length; j++) {
+          var a = list[i];
+          var b = list[j];
+          if (!a || !b) continue;
+          if (Math.abs(a.y - b.y) <= 2) {
+            knownGapsX.push({
+              gap: Math.abs(a.x - b.x),
+              y: (a.y + b.y) / 2,
+              from: Math.min(a.x, b.x)
+            });
+          }
+          if (Math.abs(a.x - b.x) <= 2) {
+            knownGapsY.push({
+              gap: Math.abs(a.y - b.y),
+              x: (a.x + b.x) / 2,
+              from: Math.min(a.y, b.y)
+            });
+          }
         }
-        if (Math.abs(y - b.y) <= SNAP) {
-          ny = b.y;
-          if (guides.hAlign.indexOf(b.y) < 0) guides.hAlign.push(b.y);
+      }
+
+      list.forEach(function (peer) {
+        if (!peer || String(peer.id) === String(buttonId)) return;
+        if (Math.abs(x - peer.x) <= SNAP) {
+          nx = peer.x;
+          if (guides.vAlign.indexOf(peer.x) < 0) guides.vAlign.push(peer.x);
         }
-        /* Symmetry */
-        var mirror = Math.round((100 - b.x) * 10) / 10;
+        if (Math.abs(y - peer.y) <= SNAP) {
+          ny = peer.y;
+          if (guides.hAlign.indexOf(peer.y) < 0) guides.hAlign.push(peer.y);
+        }
+        var mirror = Math.round((100 - peer.x) * 10) / 10;
         if (Math.abs(x - mirror) <= SNAP) {
           nx = mirror;
           guides.mirrorX = mirror;
         }
-        /* Uniform spacing snap vs pairs (center distance) */
-        list.forEach(function (c) {
-          if (!c || String(c.id) === String(buttonId) || String(c.id) === String(b.id)) return;
-          var gapX = Math.abs(c.x - b.x);
-          var gapY = Math.abs(c.y - b.y);
-          if (gapX > 0.5 && Math.abs(y - b.y) <= SNAP) {
-            var right = b.x + gapX;
-            var left = b.x - gapX;
-            if (Math.abs(x - right) <= SPACE_SNAP) {
-              nx = right;
-              ny = b.y;
-              guides.spacing.push({
-                axis: 'x',
-                pos: (b.x + right) / 2,
-                cross: b.y,
-                px: Math.round(gapX / 100 * layerW)
-              });
-            } else if (Math.abs(x - left) <= SPACE_SNAP) {
-              nx = left;
-              ny = b.y;
-              guides.spacing.push({
-                axis: 'x',
-                pos: (b.x + left) / 2,
-                cross: b.y,
-                px: Math.round(gapX / 100 * layerW)
-              });
-            }
-          }
-          if (gapY > 0.5 && Math.abs(x - b.x) <= SNAP) {
-            var below = b.y + gapY;
-            var above = b.y - gapY;
-            if (Math.abs(y - below) <= SPACE_SNAP) {
-              ny = below;
-              nx = b.x;
-              guides.spacing.push({
-                axis: 'y',
-                pos: (b.y + below) / 2,
-                cross: b.x,
-                px: Math.round(gapY / 100 * layerH)
-              });
-            } else if (Math.abs(y - above) <= SPACE_SNAP) {
-              ny = above;
-              nx = b.x;
-              guides.spacing.push({
-                axis: 'y',
-                pos: (b.y + above) / 2,
-                cross: b.x,
-                px: Math.round(gapY / 100 * layerH)
-              });
-            }
+
+        /* Live peer distances when roughly aligned */
+        if (Math.abs(y - peer.y) < 3) {
+          var dxPct = Math.abs(x - peer.x);
+          var dxPx = Math.round(dxPct / 100 * layerW);
+          guides.distances.push({
+            kind: 'peer',
+            x: (x + peer.x) / 2,
+            y: peer.y,
+            px: dxPx
+          });
+        }
+        if (Math.abs(x - peer.x) < 3) {
+          var dyPct = Math.abs(y - peer.y);
+          var dyPx = Math.round(dyPct / 100 * layerH);
+          guides.distances.push({
+            kind: 'peer',
+            x: peer.x,
+            y: (y + peer.y) / 2,
+            px: dyPx
+          });
+        }
+      });
+
+      /* Snap to known uniform spacing from any pair */
+      knownGapsX.forEach(function (kg) {
+        if (!(kg.gap > 0.4)) return;
+        list.forEach(function (peer) {
+          if (!peer || String(peer.id) === String(buttonId)) return;
+          if (Math.abs(y - peer.y) > SNAP && Math.abs(y - kg.y) > SNAP) return;
+          var right = peer.x + kg.gap;
+          var left = peer.x - kg.gap;
+          var px = Math.round(kg.gap / 100 * layerW);
+          if (Math.abs(x - right) <= SPACE_SNAP) {
+            nx = right;
+            ny = peer.y;
+            guides.spacing.push({
+              axis: 'x', pos: (peer.x + right) / 2, cross: peer.y, px: px, uniform: true
+            });
+            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+          } else if (Math.abs(x - left) <= SPACE_SNAP) {
+            nx = left;
+            ny = peer.y;
+            guides.spacing.push({
+              axis: 'x', pos: (peer.x + left) / 2, cross: peer.y, px: px, uniform: true
+            });
+            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
           }
         });
       });
+      knownGapsY.forEach(function (kg) {
+        if (!(kg.gap > 0.4)) return;
+        list.forEach(function (peer) {
+          if (!peer || String(peer.id) === String(buttonId)) return;
+          if (Math.abs(x - peer.x) > SNAP && Math.abs(x - kg.x) > SNAP) return;
+          var below = peer.y + kg.gap;
+          var above = peer.y - kg.gap;
+          var px = Math.round(kg.gap / 100 * layerH);
+          if (Math.abs(y - below) <= SPACE_SNAP) {
+            ny = below;
+            nx = peer.x;
+            guides.spacing.push({
+              axis: 'y', pos: (peer.y + below) / 2, cross: peer.x, px: px, uniform: true
+            });
+            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+          } else if (Math.abs(y - above) <= SPACE_SNAP) {
+            ny = above;
+            nx = peer.x;
+            guides.spacing.push({
+              axis: 'y', pos: (peer.y + above) / 2, cross: peer.x, px: px, uniform: true
+            });
+            guides.uniformBanner = 'Espaciado uniforme · ' + px + ' px';
+          }
+        });
+      });
+
       return { x: nx, y: ny, guides: guides };
     }
 
@@ -3862,7 +4024,8 @@ var ExperienciaCanvas = (function () {
           pointerId: ev.pointerId,
           startX: btn ? (btn.storedX != null ? btn.storedX : btn.x) : 50,
           startY: btn ? (btn.storedY != null ? btn.storedY : btn.y) : 50,
-          guides: null
+          guides: null,
+          historyPushed: false
         };
         try { hit.setPointerCapture(ev.pointerId); } catch (eCap) {}
         paintButtonsStage();
@@ -3871,6 +4034,10 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.addEventListener('pointermove', function (ev) {
         if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId) return;
         var pct = percentFromPointer(ev);
+        if (!buttonDrag.historyPushed) {
+          pushButtonHistory(buttonDrag.sceneId);
+          buttonDrag.historyPushed = true;
+        }
         var snapped = computeButtonGuides(
           buttonDrag.sceneId, buttonDrag.buttonId, pct.x, pct.y
         );
@@ -3882,10 +4049,11 @@ var ExperienciaCanvas = (function () {
       });
       function endButtonDrag(ev) {
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
+        var moved = buttonDrag.historyPushed;
         buttonDrag = null;
         paintButtonsStage();
         paintInspector();
-        persist();
+        if (moved) persist();
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
@@ -4292,6 +4460,20 @@ var ExperienciaCanvas = (function () {
       }
       if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
         var key = String(ev.key || '').toLowerCase();
+        if (key === 'z' || key === 'y') {
+          if (isFormField(ev.target) || renameEdit) return;
+          if (canvas().editMode === 'buttons') {
+            ev.preventDefault();
+            var ok = false;
+            if (key === 'y' || (key === 'z' && ev.shiftKey)) ok = redoButtonEdit();
+            else ok = undoButtonEdit();
+            if (ok) {
+              renderAll();
+              persist();
+            }
+            return;
+          }
+        }
         if (key === 'c' || key === 'v') {
           if (isFormField(ev.target) || renameEdit) return;
           var inScope = viewport === document.activeElement ||
@@ -4357,6 +4539,31 @@ var ExperienciaCanvas = (function () {
         var ae = document.activeElement;
         var inCanvas = viewport === ae || rootEl.contains(ae) || rootEl.contains(ev.target);
         if (!inCanvas) return;
+
+        /* V6.1.04 — in BOTONES mode, Delete never removes the scene node */
+        if (canvas().editMode === 'buttons') {
+          var btnIds = Array.isArray(canvas().selectedButtonIds)
+            ? canvas().selectedButtonIds.slice()
+            : [];
+          if (!btnIds.length && canvas().selectedButtonId) {
+            btnIds = [canvas().selectedButtonId];
+          }
+          if (!btnIds.length) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          var sceneIdDel = canvas().selectedId;
+          if (!sceneIdDel) return;
+          pushButtonHistory(sceneIdDel);
+          btnIds.forEach(function (bid) {
+            ExperienciaEngine.removeSceneButton(state, sceneIdDel, bid);
+          });
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+          renderAll();
+          persist();
+          return;
+        }
+
         if (!selectedIds().length && !canvas().selectedEdgeId &&
           !(canvas().selectedEdgeIds || []).length) return;
         ev.preventDefault();
