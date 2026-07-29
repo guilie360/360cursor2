@@ -44,22 +44,18 @@ var ExperienciaCanvas = (function () {
     var inGroup = !!(canvas.activeGroupId);
     return '' +
       (inGroup
-        ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpExitGroupBtn">Salir del grupo</button>'
+        ? '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpExitGroupBtn" title="Salir del grupo">Salir</button>'
         : '') +
-      '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon builder-exp-reset-btn" id="builderExpResetBtn"' +
+      '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon builder-exp-reset-btn builder-exp-tool-btn" id="builderExpResetBtn"' +
         ' data-tooltip="Reiniciar flujo" title="Reiniciar flujo" aria-label="Reiniciar flujo">' +
         (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
           ? BuilderIcons.render('rotate-ccw')
           : '↶') +
       '</button>' +
-      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpTemplateBtn">' +
-        'Crear flujo base</button>' +
-      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpStructReviewBtn">' +
-        'Revisar Estructura</button>' +
-      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpDraftBtn">' +
-        'Guardar borrador</button>' +
-      '<button type="button" class="builder-header-action-btn boxies-btn-secondary" id="builderExpResyncBtn">' +
-        'Actualizar desde Hero</button>';
+      '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpTemplateBtn" title="Crear flujo base">Flujo</button>' +
+      '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpStructReviewBtn" title="Revisar Estructura">Estructura</button>' +
+      '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpDraftBtn" title="Guardar borrador">Borrador</button>' +
+      '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpResyncBtn" title="Actualizar desde Hero">Hero</button>';
   }
 
   function shellHtml(state) {

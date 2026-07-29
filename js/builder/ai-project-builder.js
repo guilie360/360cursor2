@@ -84,16 +84,16 @@ var AiProjectBuilderView = (function () {
           '<span class="builder-section-check-box" aria-hidden="true"></span>' +
         '</label>')
       : '<span class="builder-section-check builder-section-check--spacer" aria-hidden="true"></span>';
-    return '<div class="builder-page-header__main">' +
+    return '<div class="builder-page-header__bar">' +
         '<div class="builder-step-title-row">' +
           checkHtml +
           '<h2 class="builder-step-title" data-builder-page-title>' + AdminUI.escapeHtml(meta.title || '') + '</h2>' +
         '</div>' +
-        '<p class="builder-step-desc" data-builder-page-desc' + (showDesc ? '' : ' hidden') + '>' +
-          AdminUI.escapeHtml(meta.desc || '') +
-        '</p>' +
+        '<div class="builder-page-header__actions" data-builder-page-actions></div>' +
       '</div>' +
-      '<div class="builder-page-header__actions" data-builder-page-actions></div>';
+      '<p class="builder-step-desc" data-builder-page-desc' + (showDesc ? '' : ' hidden') + '>' +
+        AdminUI.escapeHtml(meta.desc || '') +
+      '</p>';
   }
 
   function getBuilderPageMeta(step) {

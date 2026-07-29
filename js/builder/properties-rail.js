@@ -1,6 +1,6 @@
-/* Properties rail (right) — V6.0.00 twin of left progress rail */
+/* Properties rail (right) — V6.0.01 editor inspector (slightly wider than nav) */
 var BuilderPropertiesRail = (function () {
-  var EXPANDED_RAIL_W = '185px';
+  var EXPANDED_RAIL_W = '260px';
   var FLOAT_BTN_ID = 'boxiesPropsRailFloatBtn';
   var RAIL_ID = 'builderPropertiesRail';
 

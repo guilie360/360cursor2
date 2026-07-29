@@ -52,7 +52,10 @@
   max-height: 100%;
   overflow: hidden;
   transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  padding-top: 6px;
+  padding-top: 0;
+  border-radius: 0;
+  background: #0a0a0a;
+  box-shadow: none;
 }
 
 /* Embed lives above the shell dock — do not offset bottom again */

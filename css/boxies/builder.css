@@ -599,14 +599,15 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   display: none;
   flex-direction: column;
   gap: 0;
-  padding: 6px 0 10px;
+  padding: 0;
   overflow: hidden;
-  border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  background: rgba(8, 8, 8, 0.55);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  background: #0a0a0a;
+  box-shadow: none;
   box-sizing: border-box;
   transition:
     width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.22s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.22s ease,
     background 0.22s ease;
 }
@@ -642,20 +643,22 @@ body.boxies-props-rail-collapsed .builder-props-rail-panel {
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  width: 185px;
-  max-width: 185px;
+  width: 260px;
+  max-width: 260px;
   box-sizing: border-box;
-  padding: 0 10px;
+  padding: 0;
 }
 
 .builder-props-rail-title {
   flex: 0 0 auto;
-  margin: 4px 0 10px;
+  margin: 0;
+  padding: 14px 16px 12px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.48);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .builder-props-rail-scroll {
@@ -665,7 +668,7 @@ body.boxies-props-rail-collapsed .builder-props-rail-panel {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding-right: 2px;
+  padding: 14px 16px 28px;
 }
 
 .builder-props-rail-body {
@@ -949,9 +952,18 @@ body.boxies-exp-canvas-mode {
   padding: 0;
   width: 100%;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.builder-page-header__bar {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--builder-page-header-title-h);
 }
 
 .builder-page-header__main {
@@ -964,10 +976,10 @@ body.boxies-exp-canvas-mode {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 4px;
   min-height: var(--builder-page-header-title-h);
-  max-width: min(58%, 640px);
+  max-width: none;
 }
 
 .builder-page-header:not(.has-actions) .builder-page-header__actions {
@@ -978,12 +990,14 @@ body.boxies-exp-canvas-mode {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 4px;
+  margin: 0;
   padding: 0;
   height: var(--builder-page-header-title-h);
   min-height: var(--builder-page-header-title-h);
   max-height: var(--builder-page-header-title-h);
   box-sizing: border-box;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .builder-page-header .builder-step-title {
@@ -996,7 +1010,7 @@ body.boxies-exp-canvas-mode {
 }
 
 .builder-page-header .builder-step-desc {
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
   min-height: var(--builder-page-header-desc-h);
   height: var(--builder-page-header-desc-h);
@@ -3566,7 +3580,7 @@ button.builder-estructura-chip {
   border-color: rgba(229, 72, 77, 0.42);
 }
 
-/* ?? Experiencia canvas (V5.9.50 / layout V5.9.51) ?? */
+/* ?? Experiencia canvas (V5.9.50 / layout V6.0.01) ?? */
 .builder-step-content--experiencia {
   display: flex;
   flex-direction: column;
@@ -3575,9 +3589,77 @@ button.builder-estructura-chip {
   height: 100%;
   min-height: 0;
   max-height: 100%;
-  padding: 10px 10px 8px !important;
+  padding: 0 !important;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* V6.0.01 — maximize canvas: one compact chrome bar, no gap to props rail */
+.builder-page--experiencia {
+  --builder-page-pad-y: 6px;
+  --builder-page-pad-bottom: 0;
+  --builder-page-pad-x: 10px;
+  --builder-page-header-title-h: 26px;
+  --builder-page-header-desc-h: 18px;
+  padding: 6px 0 0 10px !important;
+}
+
+.builder-page--experiencia .builder-page-header {
+  margin-bottom: 6px;
+  padding-right: 10px;
+}
+
+.builder-page--experiencia .builder-page-header .builder-step-desc {
+  margin-top: 2px;
+  min-height: 18px;
+  height: 18px;
+  max-height: 18px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.builder-page--experiencia .builder-page-header__actions {
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.builder-page--experiencia .builder-page-header__actions .builder-header-action-btn,
+.builder-page--experiencia .builder-exp-tool-btn.builder-header-action-btn {
+  min-width: 0;
+  height: 26px;
+  padding: 0 9px;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+}
+
+.builder-page--experiencia .builder-exp-reset-btn.builder-exp-tool-btn,
+.builder-page--experiencia .builder-exp-tool-btn.boxies-btn-secondary--icon {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 7px;
+}
+
+.builder-page--experiencia .builder-exp-reset-btn svg,
+.builder-page--experiencia .builder-exp-tool-btn.boxies-btn-secondary--icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.builder-page--experiencia .builder-page-body,
+.builder-page--experiencia .builder-page-body > .builder-step-content {
+  border-radius: 0;
+}
+
+.builder-page--experiencia .builder-exp-workspace {
+  border-radius: 0;
+}
+
+/* Shared edge with props rail — no dead margin, no double border */
+body.boxies-props-rail-active:not(.boxies-props-rail-collapsed) .builder-page--experiencia .builder-exp-workspace {
+  border-right: none;
 }
 
 .builder-layout-single .builder-step-content--experiencia {
@@ -4533,11 +4615,87 @@ body.boxies-exp-canvas-mode #builderStepPanel {
 }
 
 .builder-exp-inspector__section {
-  margin: 10px 0 6px;
+  margin: 20px 0 12px;
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 10px;
-  letter-spacing: 0.06em;
+  font-weight: 650;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.builder-props-rail-body > .builder-exp-inspector__kind,
+.builder-props-rail-body > .builder-exp-inspector__title,
+.builder-props-rail-body > .builder-exp-inspector__grid,
+.builder-props-rail-body > .builder-exp-inspector__section:first-child,
+.builder-props-rail-body > .builder-menu-hint:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.builder-props-rail-body .builder-exp-inspector__title {
+  margin: 4px 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.builder-props-rail-body .builder-exp-inspector__kind {
+  margin: 0 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.builder-props-rail-body .builder-field,
+.builder-props-rail-body .builder-exp-inspector__field {
+  margin-bottom: 14px;
+}
+
+.builder-props-rail-body .builder-field label,
+.builder-props-rail-body .builder-exp-inspector__field label {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.builder-props-rail-body .builder-exp-inspector__grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.builder-props-rail-body .builder-exp-inspector__actions {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.builder-props-rail-body .builder-exp-inspector__actions .builder-header-action-btn {
+  min-width: 0;
+  width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+}
+
+.builder-props-rail-body .builder-check-row,
+.builder-props-rail-body .builder-exp-inspector__check {
+  margin-bottom: 10px;
+}
+
+.builder-props-rail-body .builder-menu-hint {
+  margin: 0 0 14px;
+  line-height: 1.5;
 }
 
 .builder-exp-inspector__list {
