@@ -1,4 +1,4 @@
-/* Progress rail - V7.0.04 — sidebar is always full-width, never collapsed */
+/* Progress rail - V7.0.06 — platform sidebar is fixed compact; never mutate its width */
 var BuilderProgressRail = (function () {
   var EXPANDED_RAIL_W = '185px';
   var FLOAT_BTN_ID = 'boxiesSidebarFloatBtn';
@@ -273,7 +273,7 @@ var BuilderProgressRail = (function () {
     if (!body || !root) return;
     body.classList.add('boxies-builder-chrome');
     root.classList.add('boxies-builder-chrome');
-    // Never override --boxies-sidebar-w here; the platform sidebar is always full-width.
+    // Never override --boxies-sidebar-w; platform icon rail width is owned by shell.css.
   }
 
   function destroyFloatButton() {

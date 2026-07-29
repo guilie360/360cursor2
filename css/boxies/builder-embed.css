@@ -338,7 +338,7 @@ body.boxies-rail-collapsed #boxiesContent .builder-progress-sidebar {
   pointer-events: none;
 }
 
-/* Panel A (platform sidebar) remains fixed width (V7.0.03) */
+/* Panel A (platform sidebar) — fixed compact icon rail (V7.0.06) */
 body.boxies-builder-chrome.boxies-rail-collapsed .boxies-workspace {
   margin-left: var(--boxies-sidebar-w) !important;
 }

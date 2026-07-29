@@ -1,10 +1,11 @@
 /* BOXIES App Shell — chrome geometry only (canonical boxies-* names).
- * Visual language aligned with Builder; Builder is NOT the app host. */
+ * V7.0.06 — single compact icon sidebar (Builder original). Fixed width. No expand. */
 
 :root {
   --boxies-header-h: var(--hall-header-h, 52px);
-  --boxies-sidebar-w: var(--hall-sidebar-w, 200px);
-  --boxies-chrome-pad-x: 8px;
+  /* Definitive platform sidebar: compact icon rail (Builder original width). */
+  --boxies-sidebar-w: 50px;
+  --boxies-chrome-pad-x: 7px;
   --boxies-chrome-pad-top: 12px;
   --boxies-icon-cell: 36px;
   --boxies-icon-size: 18px;
@@ -273,6 +274,8 @@ a.boxies-action-btn {
   bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
   z-index: 9999;
   width: var(--boxies-sidebar-w);
+  min-width: var(--boxies-sidebar-w);
+  max-width: var(--boxies-sidebar-w);
   padding: var(--boxies-chrome-pad-top) var(--boxies-chrome-pad-x) 16px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -286,20 +289,24 @@ a.boxies-action-btn {
 .boxies-nav {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--boxies-icon-gap);
 }
 
 .boxies-nav-item {
   display: flex;
   align-items: center;
-  width: 100%;
+  justify-content: center;
+  width: var(--boxies-icon-cell);
+  height: var(--boxies-icon-cell);
+  min-width: var(--boxies-icon-cell);
   min-height: var(--boxies-icon-cell);
   margin: 0;
-  padding: 0 10px;
+  padding: 0;
   border: none;
   border-radius: var(--hall-radius-nav, 10px);
   background: transparent;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   transition: background var(--boxies-transition);
   font: inherit;
@@ -319,10 +326,10 @@ a.boxies-action-btn {
 .boxies-nav-item__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  font-size: 13px;
-  line-height: 1.2;
+  justify-content: center;
+  gap: 0;
+  width: auto;
+  line-height: 0;
   color: rgba(255, 255, 255, 0.42);
 }
 
@@ -343,15 +350,11 @@ a.boxies-action-btn {
   display: block;
 }
 
-.boxies-nav-item__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.boxies-nav-item__mark {
-  display: none;
+/* Labels never render — icon-only rail is the sole platform sidebar. */
+.boxies-nav-item__label,
+.boxies-nav-item__mark,
+.boxies-nav-item__hint {
+  display: none !important;
 }
 
 .boxies-nav-item.is-current {
@@ -361,15 +364,10 @@ a.boxies-action-btn {
 
 .boxies-nav-item.is-current .boxies-nav-item__row {
   color: var(--hall-text, rgba(255, 255, 255, 0.94));
-  font-weight: 550;
 }
 
 .boxies-nav-item.is-current .boxies-nav-item__icon {
   opacity: 1;
-}
-
-.boxies-nav-item__hint {
-  display: none;
 }
 
 .boxies-workspace {

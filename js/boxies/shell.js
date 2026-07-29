@@ -1,6 +1,7 @@
 /**
  * BOXIES App Shell — immutable chrome.
  * Pages never build header/sidebar/workspace/dock; they only fill #boxiesContent.
+ * V7.0.06 — platform sidebar is the compact icon rail (fixed). No labels, no expand.
  */
 var BoxiesShell = (function () {
   var mounted = false;
@@ -60,12 +61,10 @@ var BoxiesShell = (function () {
       return (
         '<button type="button" class="boxies-nav-item' + (activeId === id ? ' is-current' : '') + '"' +
           ' data-boxies-page="' + escapeHtml(id) + '"' +
-          ' data-tooltip="' + escapeHtml(label) + '"' +
           ' aria-label="' + escapeHtml(label) + '"' +
         '>' +
           '<span class="boxies-nav-item__row">' +
             '<span class="boxies-nav-item__icon" aria-hidden="true">' + iconHtml(icon) + '</span>' +
-            '<span class="boxies-nav-item__label">' + escapeHtml(label) + '</span>' +
           '</span>' +
         '</button>'
       );

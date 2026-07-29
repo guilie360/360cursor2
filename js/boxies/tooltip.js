@@ -9,7 +9,6 @@ var BoxiesTooltip = (function () {
     'button[title],' +
     'a[title],' +
     '[role="button"][title],' +
-    '.boxies-nav-item[title],' +
     '.boxies-logout-icon[title],' +
     '.boxies-header__fs[title],' +
     '.boxies-drag-handle[title],' +
@@ -103,6 +102,10 @@ var BoxiesTooltip = (function () {
     if (from.closest('iframe')) return null;
     var el = from.closest(SOURCE_SEL);
     if (!el || !host.contains(el)) return null;
+    /* V7.0.06 — platform icon sidebar never shows tooltips */
+    if (el.closest('#boxiesNav, #boxiesSidebar') && el.classList.contains('boxies-nav-item')) {
+      return null;
+    }
     /* Skip plain text fields / password toggles that use title differently if any */
     var tag = (el.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return null;
@@ -113,7 +116,7 @@ var BoxiesTooltip = (function () {
   }
 
   function preferredPlacement(el) {
-    if (el.closest('.boxies-nav, .builder-progress-rail, .builder-progress-sidebar')) {
+    if (el.closest('.builder-progress-rail, .builder-progress-sidebar')) {
       return 'right';
     }
     if (el.closest('.boxies-row-actions, .table-actions, .boxies-col-actions')) {

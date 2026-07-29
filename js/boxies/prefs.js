@@ -1,6 +1,6 @@
 /**
  * BOXIES workspace prefs — persisted UI chrome (independent panel collapse).
- * V7.0.04 — sidebar is always full-width, no collapse state.
+ * V7.0.06 — platform sidebar is fixed compact (icon-only). No nav collapse prefs.
  */
 var BoxiesPrefs = (function () {
   var KEY = 'boxies_workspace_prefs_v1';
