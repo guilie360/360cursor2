@@ -51,6 +51,7 @@ var BoxiesAppShell = (function () {
             '<div id="builderStepPanel"></div>' +
           '</section>' +
         '</div>' +
+        '<aside class="builder-properties-sidebar" id="builderPropertiesRail" aria-label="Propiedades" hidden></aside>' +
       '</div>' +
       dock
     );

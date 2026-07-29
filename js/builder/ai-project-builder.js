@@ -3699,6 +3699,11 @@ var AiProjectBuilderView = (function () {
     var headerEl = page.querySelector('[data-builder-page-header]');
     var bodyEl = page.querySelector('[data-builder-page-body]');
     syncBuilderPageHeader(headerEl, meta, actionsHtml);
+
+    if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.setActive) {
+      BuilderPropertiesRail.setActive(step.id === 'experiencia', rootEl, state);
+    }
+
     if (bodyEl) bodyEl.innerHTML = html;
 
     bindStepEvents(step.id);
@@ -3745,6 +3750,7 @@ var AiProjectBuilderView = (function () {
                 '<div id="builderStepPanel"></div>' +
               '</section>' +
             '</div>' +
+            '<aside class="builder-properties-sidebar" id="builderPropertiesRail" aria-label="Propiedades" hidden></aside>' +
           '</div>' +
           dockHtml
         );

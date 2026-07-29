@@ -10,6 +10,8 @@ var BoxiesPrefs = (function () {
       railCollapsed: false,
       /* V5.9.81 — Builder Panel B only; platform nav unaffected */
       builderNavigationCollapsed: false,
+      /* V6.0.00 — Experiencia properties rail (right) */
+      propsRailCollapsed: false,
       experienciaCanvasMode: false,
       _expCanvasRestore: null
     };
@@ -71,6 +73,14 @@ var BoxiesPrefs = (function () {
     return setBuilderNavigationCollapsed(on);
   }
 
+  function getPropsRailCollapsed() {
+    return !!load().propsRailCollapsed;
+  }
+
+  function setPropsRailCollapsed(on) {
+    return save({ propsRailCollapsed: !!on });
+  }
+
   return {
     load: load,
     save: save,
@@ -79,6 +89,8 @@ var BoxiesPrefs = (function () {
     getBuilderNavigationCollapsed: getBuilderNavigationCollapsed,
     setBuilderNavigationCollapsed: setBuilderNavigationCollapsed,
     getRailCollapsed: getRailCollapsed,
-    setRailCollapsed: setRailCollapsed
+    setRailCollapsed: setRailCollapsed,
+    getPropsRailCollapsed: getPropsRailCollapsed,
+    setPropsRailCollapsed: setPropsRailCollapsed
   };
 })();

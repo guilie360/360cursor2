@@ -40,6 +40,21 @@
   padding-top: 6px;
 }
 
+.boxies-builder-embed .builder-properties-sidebar,
+#boxiesContent .builder-properties-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  width: var(--builder-props-rail-width, 0px);
+  height: auto;
+  max-height: 100%;
+  overflow: hidden;
+  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-top: 6px;
+}
+
 /* Embed lives above the shell dock — do not offset bottom again */
 .boxies-builder-embed .builder-progress-sidebar,
 #boxiesContent .builder-progress-sidebar,
@@ -56,8 +71,11 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 #boxiesContent .builder-workspace {
   margin-top: 0;
   margin-left: var(--builder-rail-width, 185px);
+  margin-right: var(--builder-props-rail-width, 0px);
   min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
-  transition: margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-right 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .boxies-builder-embed .builder-workspace .builder-main-panel,

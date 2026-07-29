@@ -538,11 +538,13 @@ body.boxies-builder-chrome .boxies-workspace {
 }
 
 .builder-workspace {
-  transition: margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    margin-left 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-right 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /*
- * V5.9.83 ? Panel B collapse only. Panel A stays ~50px.
+ * V5.9.83 — Panel B collapse only. Panel A stays ~50px.
  */
 html.boxies-builder-chrome.boxies-rail-collapsed,
 body.boxies-builder-chrome.boxies-rail-collapsed {
@@ -578,7 +580,172 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 .builder-workspace {
   margin-top: var(--builder-header-height);
   margin-left: var(--builder-rail-width);
+  margin-right: var(--builder-props-rail-width, 0px);
   min-height: calc(100vh - var(--builder-header-height) - var(--builder-dock-height) - var(--builder-dock-safe));
+}
+
+/* ── V6.0.00 — Right properties rail (twin of left) ── */
+:root {
+  --builder-props-rail-width: 0px;
+}
+
+.builder-properties-sidebar {
+  position: fixed;
+  top: var(--builder-header-height);
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  width: var(--builder-props-rail-width, 0px);
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 0 10px;
+  overflow: hidden;
+  border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  background: rgba(8, 8, 8, 0.55);
+  box-sizing: border-box;
+  transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+body.builder-has-dock .builder-properties-sidebar {
+  bottom: calc(var(--builder-dock-height, 56px) + var(--builder-dock-safe, 0px));
+}
+
+body.boxies-props-rail-active .builder-properties-sidebar,
+html.boxies-props-rail-active .builder-properties-sidebar {
+  display: flex;
+}
+
+body.boxies-props-rail-collapsed .builder-properties-sidebar,
+html.boxies-props-rail-collapsed .builder-properties-sidebar {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-left-color: transparent;
+  background: transparent;
+  overflow: hidden !important;
+  pointer-events: none;
+}
+
+body.boxies-props-rail-collapsed .builder-props-rail-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.builder-props-rail-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  width: 185px;
+  max-width: 185px;
+  box-sizing: border-box;
+  padding: 0 10px;
+}
+
+.builder-props-rail-title {
+  flex: 0 0 auto;
+  margin: 4px 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-props-rail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.builder-props-rail-body {
+  min-width: 0;
+}
+
+.boxies-props-rail-float-toggle,
+#boxiesPropsRailFloatBtn {
+  position: fixed !important;
+  top: 50% !important;
+  right: var(--builder-props-rail-width, 0px) !important;
+  z-index: 10060 !important;
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 72px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-right: none;
+  border-radius: 7px 0 0 7px;
+  background: rgba(8, 8, 8, 0.92);
+  color: rgba(255, 255, 255, 0.38);
+  cursor: ew-resize;
+  box-sizing: border-box;
+  box-shadow: -1px 0 0 rgba(0, 0, 0, 0.25);
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    right 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.boxies-props-rail-active .boxies-props-rail-float-toggle,
+body.boxies-props-rail-active #boxiesPropsRailFloatBtn,
+html.boxies-props-rail-active .boxies-props-rail-float-toggle,
+html.boxies-props-rail-active #boxiesPropsRailFloatBtn {
+  display: inline-flex !important;
+}
+
+.boxies-props-rail-float-toggle:hover,
+#boxiesPropsRailFloatBtn:hover {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(10, 10, 10, 0.96);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.boxies-props-rail-float-toggle svg,
+#boxiesPropsRailFloatBtn svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.boxies-props-rail-float-toggle[data-collapsed="1"] svg,
+#boxiesPropsRailFloatBtn[data-collapsed="1"] svg,
+body.boxies-props-rail-collapsed .boxies-props-rail-float-toggle svg,
+body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
+  transform: rotate(180deg);
+}
+
+body.boxies-exp-canvas-mode .builder-properties-sidebar,
+html.boxies-exp-canvas-mode .builder-properties-sidebar,
+body.boxies-exp-canvas-mode #builderPropertiesRail,
+body.boxies-exp-canvas-mode .boxies-props-rail-float-toggle,
+body.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn {
+  display: none !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+body.boxies-exp-canvas-mode {
+  --builder-props-rail-width: 0px !important;
 }
 
 .builder-topbar {

@@ -64,22 +64,14 @@ var ExperienciaCanvas = (function () {
 
   function shellHtml(state) {
     ExperienciaEngine.ensureFlow(state);
-    var exp = state.experiencia;
-    var canvas = exp.canvas || {};
-    var inspectorOpen = canvas.inspectorOpen === true;
-    var inspectorCollapsed = canvas.inspectorCollapsed === true;
+    var canvas = (state.experiencia && state.experiencia.canvas) || {};
     var canvasMode = isCanvasMode();
-    /* Inspector is part of the editor — independent of Modo Canvas */
-    var inspectorVisible = inspectorOpen && !inspectorCollapsed;
-    var showInspectorTab = inspectorOpen && inspectorCollapsed;
     var minimapOn = canvas.minimapVisible !== false;
 
     return '' +
       '<div class="builder-step-content builder-step-content--experiencia' +
         (canvasMode ? ' is-canvas-mode' : '') + '">' +
         '<div class="builder-exp-workspace' +
-          (inspectorVisible ? ' has-inspector' : '') +
-          (showInspectorTab ? ' has-inspector-tab' : '') +
           (canvasMode ? ' is-canvas-mode' : '') +
           '" data-exp-workspace>' +
           '<div class="builder-exp-stage" data-exp-stage>' +
@@ -108,25 +100,7 @@ var ExperienciaCanvas = (function () {
             '<div class="builder-exp-ctx" data-exp-ctx hidden></div>' +
             '<div class="builder-exp-picker" data-exp-picker hidden></div>' +
             '<div class="builder-exp-modal" data-exp-modal hidden></div>' +
-            '<button type="button" class="builder-exp-inspector-tab" data-exp-inspector-expand' +
-              ' aria-label="Mostrar propiedades" data-tooltip="Mostrar propiedades" title="Mostrar propiedades">›</button>' +
           '</div>' +
-          '<aside class="builder-exp-inspector' +
-            (inspectorVisible ? '' : (showInspectorTab ? ' is-collapsed' : ' is-closed')) +
-            '" data-exp-inspector>' +
-            '<div class="builder-exp-inspector__head">' +
-              '<strong>Propiedades</strong>' +
-              '<div class="builder-exp-inspector__head-actions">' +
-                '<button type="button" class="builder-exp-inspector__collapse" data-exp-inspector-collapse' +
-                  ' aria-label="Ocultar propiedades" title="Ocultar propiedades">‹</button>' +
-                '<button type="button" class="builder-exp-inspector__close" data-exp-inspector-close' +
-                  ' aria-label="Cerrar">×</button>' +
-              '</div>' +
-            '</div>' +
-            '<div class="builder-exp-inspector__body" data-exp-inspector-body>' +
-              '<p class="builder-menu-hint">Selecciona un nodo o una conexión.</p>' +
-            '</div>' +
-          '</aside>' +
         '</div>' +
       '</div>';
   }
@@ -1057,8 +1031,10 @@ var ExperienciaCanvas = (function () {
     var world = rootEl.querySelector('[data-exp-world]');
     var nodesEl = rootEl.querySelector('[data-exp-nodes]');
     var edgesEl = rootEl.querySelector('[data-exp-edges]');
-    var inspectorBody = rootEl.querySelector('[data-exp-inspector-body]');
-    var inspector = rootEl.querySelector('[data-exp-inspector]');
+    var inspectorBody = (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
+      ? BuilderPropertiesRail.getInspectorBody(rootEl)
+      : rootEl.querySelector('[data-exp-inspector-body]');
+    var inspector = null;
     var workspace = rootEl.querySelector('[data-exp-workspace]');
     var minimapWrap = rootEl.querySelector('[data-exp-minimap]');
     var minimapCanvas = rootEl.querySelector('[data-exp-minimap-canvas]');
@@ -1219,7 +1195,7 @@ var ExperienciaCanvas = (function () {
       ExperienciaEngine.setSelection(state, [nodeId], []);
       canvas().selectedInteractionId = null;
       canvas().selectedInteractionSceneId = null;
-      canvas().inspectorOpen = true;
+      openPropertiesRail();
       paintNodes();
       paintEdges();
       paintInspector();
@@ -1922,25 +1898,17 @@ var ExperienciaCanvas = (function () {
     }
 
     function syncInspectorChrome() {
-      var c = canvas();
       var modeOn = isCanvasMode();
-      var visible = c.inspectorOpen === true && c.inspectorCollapsed !== true;
-      var showTab = c.inspectorOpen === true && c.inspectorCollapsed === true;
-      if (inspector) {
-        if (visible) {
-          inspector.classList.remove('is-closed');
-          inspector.classList.remove('is-collapsed');
-        } else if (showTab) {
-          inspector.classList.add('is-collapsed');
-          inspector.classList.remove('is-closed');
-        } else {
-          inspector.classList.add('is-closed');
-          inspector.classList.remove('is-collapsed');
-        }
+      if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.isActive()) {
+        var collapsed = typeof BuilderPropertiesRail.isCollapsed === 'function'
+          ? BuilderPropertiesRail.isCollapsed()
+          : !!(canvas().inspectorCollapsed);
+        canvas().inspectorOpen = true;
+        canvas().inspectorCollapsed = collapsed;
+        BuilderPropertiesRail.applyCollapsed(collapsed, { state: state });
       }
       if (workspace) {
-        workspace.classList.toggle('has-inspector', visible);
-        workspace.classList.toggle('has-inspector-tab', showTab);
+        workspace.classList.remove('has-inspector', 'has-inspector-tab');
         workspace.classList.toggle('is-canvas-mode', modeOn);
       }
       var step = rootEl.querySelector('.builder-step-content--experiencia');
@@ -1951,10 +1919,21 @@ var ExperienciaCanvas = (function () {
         modeBtn.setAttribute('aria-label', modeOn ? 'Mostrar paneles' : 'Modo canvas');
         modeBtn.classList.toggle('is-active', modeOn);
       }
+      if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody) {
+        inspectorBody = BuilderPropertiesRail.getInspectorBody(rootEl) || inspectorBody;
+      }
       requestAnimationFrame(function () {
         onViewportResize();
         try { window.dispatchEvent(new Event('boxies:rail-toggle')); } catch (e) {}
       });
+    }
+
+    function openPropertiesRail() {
+      canvas().inspectorOpen = true;
+      canvas().inspectorCollapsed = false;
+      if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.expand) {
+        BuilderPropertiesRail.expand(state);
+      }
     }
 
     function toggleCanvasMode() {
@@ -2080,7 +2059,7 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.setSelection(state, id ? [id] : [], []);
       }
       if (id || selectedIds().length) {
-        canvas().inspectorOpen = true;
+        openPropertiesRail();
       }
       renderAll();
       persist();
@@ -2090,7 +2069,7 @@ var ExperienciaCanvas = (function () {
       ExperienciaEngine.setSelection(state, sceneId ? [sceneId] : [], []);
       canvas().selectedInteractionId = ixId || null;
       canvas().selectedInteractionSceneId = sceneId || null;
-      canvas().inspectorOpen = true;
+      openPropertiesRail();
       renderAll();
       persist();
     }
@@ -2105,7 +2084,7 @@ var ExperienciaCanvas = (function () {
 
     function selectEdge(id) {
       ExperienciaEngine.setSelection(state, [], id ? [id] : []);
-      if (id) canvas().inspectorOpen = true;
+      if (id) openPropertiesRail();
       renderAll();
       persist();
     }
@@ -2221,8 +2200,7 @@ var ExperienciaCanvas = (function () {
         return;
       } else if (act === 'configure') {
         selectNode(sceneId);
-        canvas().inspectorOpen = true;
-        canvas().inspectorCollapsed = false;
+        openPropertiesRail();
       }
       hideCtx();
       renderAll();
@@ -2236,7 +2214,7 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!scene || !ix) return;
       ExperienciaEngine.setSelection(state, [sceneId], []);
-      canvas().inspectorOpen = true;
+      openPropertiesRail();
       ctxMode = { type: 'interaction', sceneId: sceneId, ixId: ixId };
       if (!ctxEl) return;
       ctxEl.innerHTML = interactionContextMenuHtml(ix);
@@ -2618,38 +2596,6 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    var collapseInsp = rootEl.querySelector('[data-exp-inspector-collapse]');
-    if (collapseInsp) {
-      collapseInsp.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        canvas().inspectorCollapsed = true;
-        canvas().inspectorOpen = true;
-        renderAll();
-        persist();
-      });
-    }
-
-    var expandInsp = rootEl.querySelector('[data-exp-inspector-expand]');
-    if (expandInsp) {
-      expandInsp.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        canvas().inspectorCollapsed = false;
-        canvas().inspectorOpen = true;
-        renderAll();
-        persist();
-      });
-    }
-
-    var closeInsp = rootEl.querySelector('[data-exp-inspector-close]');
-    if (closeInsp) {
-      closeInsp.addEventListener('click', function () {
-        canvas().inspectorOpen = false;
-        canvas().inspectorCollapsed = false;
-        ExperienciaEngine.clearSelection(state);
-        renderAll(); persist();
-      });
-    }
-
     var exitGroup = rootEl.querySelector('#builderExpExitGroupBtn');
     if (exitGroup) {
       exitGroup.addEventListener('click', function () {
@@ -2982,7 +2928,7 @@ var ExperienciaCanvas = (function () {
           } else {
             ExperienciaEngine.setSelection(state, hitIds, []);
           }
-          if (hitIds.length) canvas().inspectorOpen = true;
+          if (hitIds.length) openPropertiesRail();
         } else if (!marquee.shift) {
           ExperienciaEngine.clearSelection(state);
         }
@@ -3027,7 +2973,7 @@ var ExperienciaCanvas = (function () {
             if (pasted && pasted.nodes && pasted.nodes.length) {
               var pastedIds = pasted.nodes.map(function (n) { return n.id; });
               ExperienciaEngine.setSelection(state, pastedIds, []);
-              canvas().inspectorOpen = true;
+              openPropertiesRail();
               renderAll(); persist();
               if (typeof AdminNotify !== 'undefined') {
                 AdminNotify.success('Pegado: ' + pastedIds.length + ' nodo(s)');
@@ -3378,6 +3324,7 @@ var ExperienciaCanvas = (function () {
         document.body.classList.add('boxies-rail-collapsed');
         document.body.classList.add('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--builder-rail-width', '0px');
+        document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
@@ -3386,12 +3333,27 @@ var ExperienciaCanvas = (function () {
       else onViewportResize();
     });
 
+    function onPropsRailToggle(ev) {
+      var collapsed = !!(ev && ev.detail && ev.detail.collapsed);
+      canvas().inspectorOpen = true;
+      canvas().inspectorCollapsed = collapsed;
+      persist();
+      requestAnimationFrame(function () { onViewportResize(); });
+    }
+    window.addEventListener('boxies:props-rail-toggle', onPropsRailToggle);
+
+    syncInspectorChrome();
+    paintInspector();
+
     return {
       refresh: renderAll,
       fitView: fitView,
       toggleCanvasMode: toggleCanvasMode,
       saveDraft: saveDraft,
-      showResetConfirm: showResetConfirm
+      showResetConfirm: showResetConfirm,
+      destroy: function () {
+        window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
+      }
     };
   }
 
