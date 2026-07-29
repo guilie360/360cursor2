@@ -209,7 +209,8 @@ var ExperienciaEngine = (function () {
         activeGroupId: null,
         /* V6.1.00 — FLUJO | BOTONES */
         editMode: 'flow',
-        selectedButtonId: null
+        selectedButtonId: null,
+        selectedButtonIds: []
       }
     };
   }
@@ -243,6 +244,11 @@ var ExperienciaEngine = (function () {
     if (exp.canvas.activeGroupId === undefined) exp.canvas.activeGroupId = null;
     if (exp.canvas.editMode !== 'buttons') exp.canvas.editMode = 'flow';
     if (exp.canvas.selectedButtonId === undefined) exp.canvas.selectedButtonId = null;
+    if (!Array.isArray(exp.canvas.selectedButtonIds)) {
+      exp.canvas.selectedButtonIds = exp.canvas.selectedButtonId
+        ? [exp.canvas.selectedButtonId]
+        : [];
+    }
     ensureProjectAssets(state);
     exp.nodes.forEach(function (n) {
       normalizeNode(n);
@@ -367,7 +373,6 @@ var ExperienciaEngine = (function () {
     if (ix.x == null && cfg.x != null) ix.x = cfg.x;
     if (ix.y == null && cfg.y != null) ix.y = cfg.y;
     if (ix.style == null && cfg.style != null) ix.style = cfg.style;
-    if (ix.color == null && cfg.color != null) ix.color = cfg.color;
     if (ix.rotation == null && cfg.rotation != null) ix.rotation = cfg.rotation;
     if (ix.positionMode == null && cfg.positionMode != null) ix.positionMode = cfg.positionMode;
     if (ix.anchor == null && cfg.anchor != null) ix.anchor = cfg.anchor;
@@ -378,15 +383,21 @@ var ExperienciaEngine = (function () {
     }
 
     if (!ix.style || !BUTTON_STYLES[ix.style]) ix.style = 'chip';
-    if (!ix.color) ix.color = '';
+    /* V6.1.03 — no per-button color; Theme tokens only */
+    if (ix.color != null) delete ix.color;
+    if (cfg.color != null) delete cfg.color;
     if (ix.rotation == null || isNaN(Number(ix.rotation))) ix.rotation = 0;
     else ix.rotation = clampRotation(ix.rotation);
     if (ix.icon === 'none') ix.icon = null;
     if (ix.icon && !BUTTON_ICONS[ix.icon]) ix.icon = null;
     if (ix.positionMode !== 'anchor') ix.positionMode = 'free';
     if (ix.anchor && !BUTTON_ANCHORS[ix.anchor]) ix.anchor = 'center';
-    if (ix.marginX == null || isNaN(Number(ix.marginX))) ix.marginX = 0;
-    if (ix.marginY == null || isNaN(Number(ix.marginY))) ix.marginY = 0;
+    if (ix.marginX == null || isNaN(Number(ix.marginX))) {
+      ix.marginX = ix.positionMode === 'anchor' ? 32 : 0;
+    }
+    if (ix.marginY == null || isNaN(Number(ix.marginY))) {
+      ix.marginY = ix.positionMode === 'anchor' ? 32 : 0;
+    }
 
     /* First-time center only — never re-center after move */
     if (ix.x == null || ix.y == null) {
@@ -432,7 +443,6 @@ var ExperienciaEngine = (function () {
           ix.x = btn.x != null ? btn.x : 50;
           ix.y = btn.y != null ? btn.y : 50;
           ix.style = btn.style || 'chip';
-          ix.color = btn.color || '#ffffff';
           ix.icon = btn.icon || null;
           ix.rotation = 0;
           ix.positionInitialized = true;
@@ -521,7 +531,6 @@ var ExperienciaEngine = (function () {
       storedX: ix.x,
       storedY: ix.y,
       style: ix.style || 'chip',
-      color: ix.color || '',
       icon: ix.icon || null,
       rotation: ix.rotation != null ? Number(ix.rotation) : 0,
       visible: ix.enabled !== false,
@@ -536,32 +545,56 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  function buttonHalfSizePx(ix) {
+    var style = (ix && ix.style) || 'chip';
+    if (style === 'icon') return { w: 22, h: 22 };
+    if (style === 'button') return { w: 54, h: 20 };
+    return { w: 46, h: 18 };
+  }
+
+  /**
+   * Anchor margins always push inward. Half-size keeps the control fully visible.
+   */
   function resolveButtonLayout(ix, imageW, imageH) {
     ensureButtonVisualDefaults(ix);
-    if (ix.positionMode !== 'anchor') {
-      return { x: clampPercent(ix.x, 50), y: clampPercent(ix.y, 50) };
-    }
-    var base = BUTTON_ANCHORS[ix.anchor] || BUTTON_ANCHORS.center;
     var w = Math.max(1, Number(imageW) || 1);
     var h = Math.max(1, Number(imageH) || 1);
-    var mxp = (Number(ix.marginX) || 0) / w * 100;
-    var myp = (Number(ix.marginY) || 0) / h * 100;
-    var x = base.x;
-    var y = base.y;
-    if (base.x === 0) x = mxp;
-    else if (base.x === 100) x = 100 - mxp;
-    else x = 50 + ((Number(ix.marginX) || 0) / w * 100); /* center ± marginX */
-    if (base.y === 0) y = myp;
-    else if (base.y === 100) y = 100 - myp;
-    else y = 50 + ((Number(ix.marginY) || 0) / h * 100);
-    /* For pure center anchor, ignore margin offset on both axes unless margins set intentionally */
+    var half = buttonHalfSizePx(ix);
+    var halfWp = (half.w / w) * 100;
+    var halfHp = (half.h / h) * 100;
+    var mxp = (Math.max(0, Number(ix.marginX) || 0) / w) * 100;
+    var myp = (Math.max(0, Number(ix.marginY) || 0) / h) * 100;
+
+    function clampInside(x, y) {
+      return {
+        x: clampPercent(Math.max(halfWp, Math.min(100 - halfWp, x)), 50),
+        y: clampPercent(Math.max(halfHp, Math.min(100 - halfHp, y)), 50)
+      };
+    }
+
+    if (ix.positionMode !== 'anchor') {
+      return clampInside(Number(ix.x), Number(ix.y));
+    }
+
+    var base = BUTTON_ANCHORS[ix.anchor] || BUTTON_ANCHORS.center;
+    var x = 50;
+    var y = 50;
+    if (base.x === 0) x = mxp + halfWp;
+    else if (base.x === 100) x = 100 - mxp - halfWp;
+    else x = 50;
+
+    if (base.y === 0) y = myp + halfHp;
+    else if (base.y === 100) y = 100 - myp - halfHp;
+    else y = 50;
+
     if (ix.anchor === 'center') {
       x = 50;
       y = 50;
     }
     if (ix.anchor === 'top-center' || ix.anchor === 'bottom-center') x = 50;
     if (ix.anchor === 'center-left' || ix.anchor === 'center-right') y = 50;
-    return { x: clampPercent(x, 50), y: clampPercent(y, 50) };
+
+    return clampInside(x, y);
   }
 
   function listSceneButtons(state, n) {
@@ -605,9 +638,11 @@ var ExperienciaEngine = (function () {
     ix.y = 50;
     ix.positionInitialized = true;
     ix.style = 'chip';
-    ix.color = '';
     ix.rotation = 0;
     ix.positionMode = 'free';
+    ix.marginX = 32;
+    ix.marginY = 32;
+    if (ix.color != null) delete ix.color;
     ensureButtonVisualDefaults(ix);
     return buttonViewModel(state, n, ix);
   }
@@ -623,7 +658,6 @@ var ExperienciaEngine = (function () {
       updateInteraction(state, nodeId, ix.id, { label: String(patch.label) });
     }
     if (patch.style != null && BUTTON_STYLES[patch.style]) ix.style = patch.style;
-    if (patch.color != null) ix.color = String(patch.color);
     if (patch.rotation != null) ix.rotation = clampRotation(patch.rotation);
     if (patch.icon !== undefined) {
       var icon = patch.icon == null || patch.icon === '' || patch.icon === 'none'
@@ -636,17 +670,23 @@ var ExperienciaEngine = (function () {
     }
     if (patch.positionMode != null) {
       ix.positionMode = patch.positionMode === 'anchor' ? 'anchor' : 'free';
+      if (ix.positionMode === 'anchor') {
+        if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
+        if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
+      }
     }
     if (patch.anchor != null && BUTTON_ANCHORS[patch.anchor]) {
       ix.anchor = patch.anchor;
       ix.positionMode = 'anchor';
+      if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
+      if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
     }
     if (patch.marginX != null) {
-      ix.marginX = Number(patch.marginX) || 0;
+      ix.marginX = Math.max(0, Number(patch.marginX) || 0);
       if (patch.keepAnchor) ix.positionMode = 'anchor';
     }
     if (patch.marginY != null) {
-      ix.marginY = Number(patch.marginY) || 0;
+      ix.marginY = Math.max(0, Number(patch.marginY) || 0);
       if (patch.keepAnchor) ix.positionMode = 'anchor';
     }
     if (patch.x != null || patch.y != null) {
@@ -658,6 +698,7 @@ var ExperienciaEngine = (function () {
     if (patch.targetNodeId !== undefined) {
       setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
     }
+    if (ix.color != null) delete ix.color;
     syncScenePorts(n);
     return buttonViewModel(state, n, ix);
   }
@@ -687,35 +728,129 @@ var ExperienciaEngine = (function () {
     return buttonViewModel(state, n, ix);
   }
 
-  function duplicateSceneButton(state, nodeId, buttonId) {
+  function duplicateSceneButton(state, nodeId, buttonId, opts) {
+    opts = opts || {};
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
     if (!ix || !isSceneButtonInteraction(ix)) return null;
     ensureButtonVisualDefaults(ix);
     var copy = duplicateInteraction(state, nodeId, ix.id);
     if (!copy) return null;
-    copy.x = clampPercent(Number(ix.x) + 3, ix.x);
-    copy.y = clampPercent(Number(ix.y) + 3, ix.y);
+    var imageW = Math.max(1, Number(opts.imageW) || 1000);
+    var imageH = Math.max(1, Number(opts.imageH) || 1000);
+    var layout = resolveButtonLayout(ix, imageW, imageH);
+    var dyPct = (32 / imageH) * 100;
+    copy.x = clampPercent(layout.x, layout.x);
+    copy.y = clampPercent(layout.y + dyPct, layout.y);
     copy.style = ix.style;
-    copy.color = ix.color;
     copy.icon = ix.icon;
     copy.rotation = ix.rotation;
-    copy.positionMode = ix.positionMode;
+    copy.positionMode = 'free';
     copy.anchor = ix.anchor;
     copy.marginX = ix.marginX;
     copy.marginY = ix.marginY;
     copy.positionInitialized = true;
-    copy.label = (ix.label || 'Botón') + ' copia';
+    if (ix.label != null && String(ix.label).length) {
+      copy.label = String(ix.label) + ' copia';
+    } else {
+      copy.label = '';
+    }
+    if (copy.color != null) delete copy.color;
     ensureButtonVisualDefaults(copy);
     syncScenePorts(n);
     return buttonViewModel(state, n, copy);
   }
 
+  function resolveButtonsForLayout(state, nodeId, ids, imageW, imageH) {
+    var n = getNode(state, nodeId);
+    if (!n) return [];
+    var out = [];
+    (ids || []).forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneButtonInteraction(ix)) return;
+      var layout = resolveButtonLayout(ix, imageW, imageH);
+      out.push({ id: ix.id, ix: ix, x: layout.x, y: layout.y });
+    });
+    return out;
+  }
+
+  function commitFreePositions(state, nodeId, items) {
+    var n = getNode(state, nodeId);
+    (items || []).forEach(function (item) {
+      if (!item || !item.ix) return;
+      item.ix.x = clampPercent(item.x, 50);
+      item.ix.y = clampPercent(item.y, 50);
+      item.ix.positionMode = 'free';
+      item.ix.positionInitialized = true;
+    });
+    if (n) syncScenePorts(n);
+    return true;
+  }
+
+  function alignSceneButtons(state, nodeId, ids, mode, imageW, imageH) {
+    var items = resolveButtonsForLayout(state, nodeId, ids, imageW, imageH);
+    if (items.length < 2) return false;
+    var xs = items.map(function (i) { return i.x; });
+    var ys = items.map(function (i) { return i.y; });
+    var minX = Math.min.apply(null, xs);
+    var maxX = Math.max.apply(null, xs);
+    var minY = Math.min.apply(null, ys);
+    var maxY = Math.max.apply(null, ys);
+    var midX = (minX + maxX) / 2;
+    var midY = (minY + maxY) / 2;
+    items.forEach(function (item) {
+      if (mode === 'left') item.x = minX;
+      else if (mode === 'right') item.x = maxX;
+      else if (mode === 'top') item.y = minY;
+      else if (mode === 'bottom') item.y = maxY;
+      else if (mode === 'center-h') item.x = midX;
+      else if (mode === 'center-v') item.y = midY;
+    });
+    return commitFreePositions(state, nodeId, items);
+  }
+
+  function distributeSceneButtons(state, nodeId, ids, axis, imageW, imageH) {
+    var items = resolveButtonsForLayout(state, nodeId, ids, imageW, imageH);
+    if (items.length < 2) return false;
+    var key = axis === 'x' ? 'x' : 'y';
+    items.sort(function (a, b) { return a[key] - b[key]; });
+    if (items.length === 2) return commitFreePositions(state, nodeId, items);
+    var first = items[0][key];
+    var last = items[items.length - 1][key];
+    var step = (last - first) / (items.length - 1);
+    items.forEach(function (item, idx) {
+      item[key] = first + step * idx;
+    });
+    return commitFreePositions(state, nodeId, items);
+  }
+
+  function spaceSceneButtons(state, nodeId, ids, gapPx, axis, imageW, imageH) {
+    var items = resolveButtonsForLayout(state, nodeId, ids, imageW, imageH);
+    if (items.length < 2) return false;
+    var key = axis === 'x' ? 'x' : 'y';
+    var dim = key === 'x'
+      ? Math.max(1, Number(imageW) || 1000)
+      : Math.max(1, Number(imageH) || 1000);
+    var gapPct = (Math.max(0, Number(gapPx) || 0) / dim) * 100;
+    items.sort(function (a, b) { return a[key] - b[key]; });
+    for (var i = 1; i < items.length; i++) {
+      items[i][key] = items[i - 1][key] + gapPct;
+    }
+    return commitFreePositions(state, nodeId, items);
+  }
+
   function removeSceneButton(state, nodeId, buttonId) {
     var result = removeInteraction(state, nodeId, buttonId);
     var exp = ensureState(state);
-    if (exp.canvas && String(exp.canvas.selectedButtonId) === String(buttonId)) {
-      exp.canvas.selectedButtonId = null;
+    if (exp.canvas) {
+      if (String(exp.canvas.selectedButtonId) === String(buttonId)) {
+        exp.canvas.selectedButtonId = null;
+      }
+      if (Array.isArray(exp.canvas.selectedButtonIds)) {
+        exp.canvas.selectedButtonIds = exp.canvas.selectedButtonIds.filter(function (id) {
+          return String(id) !== String(buttonId);
+        });
+      }
     }
     return !!(result && result.ok);
   }
@@ -1384,8 +1519,6 @@ var ExperienciaEngine = (function () {
     if (partial) {
       if (partial.style != null) ix.style = partial.style;
       else if (cfg.style != null) ix.style = cfg.style;
-      if (partial.color != null) ix.color = partial.color;
-      else if (cfg.color != null) ix.color = cfg.color;
       if (partial.rotation != null) ix.rotation = partial.rotation;
       else if (cfg.rotation != null) ix.rotation = cfg.rotation;
       if (partial.positionMode != null) ix.positionMode = partial.positionMode;
@@ -1399,6 +1532,8 @@ var ExperienciaEngine = (function () {
       if (partial.positionInitialized != null) ix.positionInitialized = partial.positionInitialized;
       else if (cfg.positionInitialized != null) ix.positionInitialized = cfg.positionInitialized;
     }
+    if (ix.color != null) delete ix.color;
+    if (cfg.color != null) delete cfg.color;
     return ix;
   }
 
@@ -4790,6 +4925,9 @@ var ExperienciaEngine = (function () {
     removeSceneButton: removeSceneButton,
     mirrorSceneButton: mirrorSceneButton,
     duplicateSceneButton: duplicateSceneButton,
+    alignSceneButtons: alignSceneButtons,
+    distributeSceneButtons: distributeSceneButtons,
+    spaceSceneButtons: spaceSceneButtons,
     resolveButtonLayout: resolveButtonLayout,
     resolveButtonTarget: resolveButtonTarget,
     setButtonTarget: setButtonTarget,

@@ -468,9 +468,17 @@ var ExperienciaCanvas = (function () {
     var buttons = ExperienciaEngine.listSceneButtons
       ? ExperienciaEngine.listSceneButtons(state, n)
       : [];
-    var selectedBtnId = (state.experiencia && state.experiencia.canvas &&
-      state.experiencia.canvas.selectedButtonId) || null;
+    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
+    var selectedIds = Array.isArray(canvasState.selectedButtonIds)
+      ? canvasState.selectedButtonIds.slice()
+      : [];
+    if (!selectedIds.length && canvasState.selectedButtonId) {
+      selectedIds = [canvasState.selectedButtonId];
+    }
+    var selectedBtnId = canvasState.selectedButtonId || selectedIds[0] || null;
     var selected = null;
+    var selectedSet = {};
+    selectedIds.forEach(function (id) { selectedSet[String(id)] = true; });
     if (selectedBtnId) {
       for (var i = 0; i < buttons.length; i++) {
         if (String(buttons[i].id) === String(selectedBtnId) ||
@@ -504,13 +512,14 @@ var ExperienciaCanvas = (function () {
     }
 
     html += '<div class="builder-exp-inspector__section">Lista</div>' +
+      '<p class="builder-menu-hint builder-exp-btn-hint">Shift / Ctrl · selección múltiple</p>' +
       '<div class="builder-exp-btn-list">' +
         buttons.map(function (b) {
           var listLabel = (b.label != null && String(b.label).length)
             ? b.label
             : (b.icon ? '· icono' : 'Sin texto');
           return '<button type="button" class="builder-exp-btn-list__item' +
-            (selected && String(selected.id) === String(b.id) ? ' is-selected' : '') +
+            (selectedSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-hidden-btn' : '') + '"' +
             ' data-exp-btn-select="' + esc(b.id) + '">' +
             '<span class="builder-exp-btn-list__mark" aria-hidden="true">' +
@@ -520,6 +529,33 @@ var ExperienciaCanvas = (function () {
           '</button>';
         }).join('') +
       '</div>';
+
+    if (selectedIds.length >= 2) {
+      html += '<div class="builder-exp-inspector__section">Distribución</div>' +
+        '<div class="builder-exp-btn-dist">' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="left">Alinear izquierda</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="right">Alinear derecha</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="top">Alinear arriba</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="bottom">Alinear abajo</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="center-h">Centrar horizontalmente</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="center-v">Centrar verticalmente</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="x">Distribuir horizontalmente</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="y">Distribuir verticalmente</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="uniform">Espaciado uniforme</button>' +
+        '</div>' +
+        '<div class="builder-exp-inspector__section">Espaciado</div>' +
+        '<div class="builder-exp-btn-space-row">' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Separación</label>' +
+            '<input type="number" data-exp-btn-gap min="0" max="400" step="1" value="24">' +
+          '</div>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-space-apply>Aplicar</button>' +
+        '</div>' +
+        '<div class="builder-hub-segment" style="margin-top:6px">' +
+          '<button type="button" class="builder-hub-segment__btn is-active" data-exp-btn-space-axis="y">Vertical</button>' +
+          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-space-axis="x">Horizontal</button>' +
+        '</div>';
+    }
 
     if (!selected) {
       html += '<p class="builder-menu-hint">Selecciona un botón en la lista o sobre la imagen.</p></div>';
@@ -551,11 +587,15 @@ var ExperienciaCanvas = (function () {
     }).join('');
 
     var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
-    var tint = selected.color || '';
-    var colorVal = tint && /^#[0-9a-fA-F]{6}$/.test(tint) ? tint : '#c8873a';
+    var rot = selected.rotation != null ? Number(selected.rotation) : 0;
 
-    html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
+    if (selectedIds.length <= 1) {
+      html += '<div class="builder-exp-inspector__section">Propiedades</div>';
+    } else {
+      html += '<div class="builder-exp-inspector__section">Propiedades · primario</div>';
+    }
+
+    html += '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Nombre</label>' +
         '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
           esc(selected.label != null ? selected.label : '') + '">' +
@@ -573,15 +613,6 @@ var ExperienciaCanvas = (function () {
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Color · tint (Style.v3)</label>' +
-        '<div class="builder-exp-btn-color-row">' +
-          '<input type="color" data-exp-btn-color value="' + esc(colorVal) + '" title="Acento / tint">' +
-          '<button type="button" class="builder-hub-segment__btn builder-exp-btn-color-reset' +
-            (!tint ? ' is-active' : '') + '" data-exp-btn-color-reset>Tema</button>' +
-        '</div>' +
-        '<p class="builder-menu-hint builder-exp-btn-hint">Alimenta tokens de acento. Fondo, borde y texto siguen el Theme.</p>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Icono</label>' +
         '<select data-exp-btn-icon class="ws-select builder-exp-btn-select">' +
           '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
@@ -593,12 +624,13 @@ var ExperienciaCanvas = (function () {
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Rotación</label>' +
-        '<div class="builder-hub-slider-label">' +
-          '<span></span>' +
-          '<span data-exp-btn-rot-val>' + esc(String(selected.rotation || 0)) + ' °</span>' +
-        '</div>' +
         '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
-          esc(String(selected.rotation || 0)) + '">' +
+          esc(String(rot)) + '">' +
+        '<div class="builder-exp-btn-rot-row">' +
+          '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
+            esc(String(rot)) + '">' +
+          '<span class="builder-exp-btn-rot-unit">°</span>' +
+        '</div>' +
       '</div>' +
       '<label class="builder-exp-inspector__check">' +
         '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
@@ -616,20 +648,21 @@ var ExperienciaCanvas = (function () {
       '</div>' +
       '<div class="builder-exp-btn-margins">' +
         '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Margen X</label>' +
+          '<label>Margen X (px)</label>' +
           '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
-            esc(String(selected.marginX || 0)) + '">' +
+            esc(String(selected.marginX != null ? selected.marginX : 32)) + '">' +
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Margen Y</label>' +
+          '<label>Margen Y (px)</label>' +
           '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
-            esc(String(selected.marginY || 0)) + '">' +
+            esc(String(selected.marginY != null ? selected.marginY : 32)) + '">' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      '<p class="builder-menu-hint builder-exp-btn-hint">El margen empuja hacia dentro. El botón permanece visible.</p>';
     } else {
       html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
         '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
-        '% · arrastre sobre la imagen</p>';
+        '% · arrastre · ALT = distancias</p>';
     }
 
     html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
@@ -1477,6 +1510,7 @@ var ExperienciaCanvas = (function () {
 
     var dragging = null;
     var buttonDrag = null;
+    var buttonAltHeld = false;
     var panning = null;
     var linkDrag = null;
     var marquee = null;
@@ -1920,9 +1954,32 @@ var ExperienciaCanvas = (function () {
     function bindButtonsInspectorActions() {
       if (!inspectorBody) return;
       var sceneId = canvas().selectedId;
+      var spaceAxis = 'y';
+      function layerSize() {
+        return {
+          w: (buttonsLayer && buttonsLayer.clientWidth) || 1000,
+          h: (buttonsLayer && buttonsLayer.clientHeight) || 1000
+        };
+      }
+      function selectedIds() {
+        var ids = canvas().selectedButtonIds;
+        if (!Array.isArray(ids) || !ids.length) {
+          return canvas().selectedButtonId ? [canvas().selectedButtonId] : [];
+        }
+        return ids.slice();
+      }
+      function setButtonSelection(ids, primary) {
+        var next = (ids || []).filter(Boolean).map(String);
+        canvas().selectedButtonIds = next;
+        canvas().selectedButtonId = primary
+          ? String(primary)
+          : (next.length ? next[next.length - 1] : null);
+      }
       function patchBtn(patch, opts) {
         opts = opts || {};
-        ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, patch);
+        var id = canvas().selectedButtonId;
+        if (!id) return;
+        ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
         paintButtonsStage();
         if (opts.inspector) paintInspector();
         if (opts.persist) persist();
@@ -1933,7 +1990,7 @@ var ExperienciaCanvas = (function () {
           ev.preventDefault();
           var btn = ExperienciaEngine.addSceneButton(state, sceneId);
           if (btn) {
-            canvas().selectedButtonId = btn.id;
+            setButtonSelection([btn.id], btn.id);
             renderAll(); persist();
           }
         });
@@ -1941,7 +1998,16 @@ var ExperienciaCanvas = (function () {
       inspectorBody.querySelectorAll('[data-exp-btn-select]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
-          canvas().selectedButtonId = el.getAttribute('data-exp-btn-select');
+          var bid = el.getAttribute('data-exp-btn-select');
+          var cur = selectedIds();
+          if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
+            var idx = cur.indexOf(String(bid));
+            if (idx >= 0) cur.splice(idx, 1);
+            else cur.push(String(bid));
+            setButtonSelection(cur, bid);
+          } else {
+            setButtonSelection([bid], bid);
+          }
           renderAll();
         });
       });
@@ -1967,22 +2033,6 @@ var ExperienciaCanvas = (function () {
           patchBtn({ style: el.getAttribute('data-exp-btn-style') }, { inspector: true, persist: true });
         });
       });
-      var colorEl = inspectorBody.querySelector('[data-exp-btn-color]');
-      if (colorEl) {
-        colorEl.addEventListener('input', function () {
-          patchBtn({ color: colorEl.value });
-        });
-        colorEl.addEventListener('change', function () {
-          persist();
-        });
-      }
-      var colorReset = inspectorBody.querySelector('[data-exp-btn-color-reset]');
-      if (colorReset) {
-        colorReset.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          patchBtn({ color: '' }, { inspector: true, persist: true });
-        });
-      }
       var iconEl = inspectorBody.querySelector('[data-exp-btn-icon]');
       if (iconEl) {
         iconEl.addEventListener('change', function () {
@@ -1996,14 +2046,25 @@ var ExperienciaCanvas = (function () {
         });
       }
       var rotEl = inspectorBody.querySelector('[data-exp-btn-rotation]');
-      var rotVal = inspectorBody.querySelector('[data-exp-btn-rot-val]');
+      var rotNum = inspectorBody.querySelector('[data-exp-btn-rotation-num]');
+      function syncRotation(deg, from) {
+        deg = Math.max(-360, Math.min(360, Number(deg) || 0));
+        if (rotEl && from !== 'range') rotEl.value = String(deg);
+        if (rotNum && from !== 'num') rotNum.value = String(deg);
+        patchBtn({ rotation: deg });
+      }
       if (rotEl) {
         rotEl.addEventListener('input', function () {
-          var deg = Number(rotEl.value) || 0;
-          if (rotVal) rotVal.textContent = deg + ' °';
-          patchBtn({ rotation: deg });
+          syncRotation(rotEl.value, 'range');
         });
-        rotEl.addEventListener('change', function () {
+        rotEl.addEventListener('change', function () { persist(); });
+      }
+      if (rotNum) {
+        rotNum.addEventListener('input', function () {
+          syncRotation(rotNum.value, 'num');
+        });
+        rotNum.addEventListener('change', function () {
+          syncRotation(rotNum.value, 'num');
           persist();
         });
       }
@@ -2030,17 +2091,76 @@ var ExperienciaCanvas = (function () {
         mxEl.addEventListener('input', function () {
           patchBtn({ marginX: mxEl.value, keepAnchor: true });
         });
-        mxEl.addEventListener('change', function () {
-          persist();
-        });
+        mxEl.addEventListener('change', function () { persist(); });
       }
       var myEl = inspectorBody.querySelector('[data-exp-btn-margin-y]');
       if (myEl) {
         myEl.addEventListener('input', function () {
           patchBtn({ marginY: myEl.value, keepAnchor: true });
         });
-        myEl.addEventListener('change', function () {
-          persist();
+        myEl.addEventListener('change', function () { persist(); });
+      }
+      inspectorBody.querySelectorAll('[data-exp-btn-align]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var size = layerSize();
+          ExperienciaEngine.alignSceneButtons(
+            state, sceneId, selectedIds(), el.getAttribute('data-exp-btn-align'), size.w, size.h
+          );
+          paintButtonsStage(); paintInspector(); persist();
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-btn-distribute]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var size = layerSize();
+          var mode = el.getAttribute('data-exp-btn-distribute');
+          var ids = selectedIds();
+          if (mode === 'uniform') {
+            var items = ids.map(function (id) {
+              return ExperienciaEngine.getSceneButton(state,
+                ExperienciaEngine.getNode(state, sceneId), id);
+            }).filter(Boolean);
+            var spanX = 0;
+            var spanY = 0;
+            if (items.length >= 2) {
+              var xs = items.map(function (b) { return b.x; });
+              var ys = items.map(function (b) { return b.y; });
+              spanX = Math.max.apply(null, xs) - Math.min.apply(null, xs);
+              spanY = Math.max.apply(null, ys) - Math.min.apply(null, ys);
+            }
+            ExperienciaEngine.distributeSceneButtons(
+              state, sceneId, ids, spanX >= spanY ? 'x' : 'y', size.w, size.h
+            );
+          } else {
+            ExperienciaEngine.distributeSceneButtons(
+              state, sceneId, ids, mode, size.w, size.h
+            );
+          }
+          paintButtonsStage(); paintInspector(); persist();
+        });
+      });
+      inspectorBody.querySelectorAll('[data-exp-btn-space-axis]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          spaceAxis = el.getAttribute('data-exp-btn-space-axis') === 'x' ? 'x' : 'y';
+          inspectorBody.querySelectorAll('[data-exp-btn-space-axis]').forEach(function (btn) {
+            btn.classList.toggle('is-active',
+              btn.getAttribute('data-exp-btn-space-axis') === spaceAxis);
+          });
+        });
+      });
+      var spaceApply = inspectorBody.querySelector('[data-exp-btn-space-apply]');
+      if (spaceApply) {
+        spaceApply.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var gapEl = inspectorBody.querySelector('[data-exp-btn-gap]');
+          var gap = gapEl ? Number(gapEl.value) : 24;
+          var size = layerSize();
+          ExperienciaEngine.spaceSceneButtons(
+            state, sceneId, selectedIds(), gap, spaceAxis, size.w, size.h
+          );
+          paintButtonsStage(); paintInspector(); persist();
         });
       }
       var mirrorBtn = inspectorBody.querySelector('[data-exp-btn-mirror]');
@@ -2056,9 +2176,11 @@ var ExperienciaCanvas = (function () {
       if (dupBtn) {
         dupBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
+          var size = layerSize();
           var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId,
-            dupBtn.getAttribute('data-exp-btn-duplicate'));
-          if (copy) canvas().selectedButtonId = copy.id;
+            dupBtn.getAttribute('data-exp-btn-duplicate'),
+            { imageW: size.w, imageH: size.h });
+          if (copy) setButtonSelection([copy.id], copy.id);
           renderAll(); persist();
         });
       }
@@ -2068,7 +2190,10 @@ var ExperienciaCanvas = (function () {
           ev.preventDefault();
           var bid = delBtn.getAttribute('data-exp-btn-delete');
           ExperienciaEngine.removeSceneButton(state, sceneId, bid);
-          canvas().selectedButtonId = null;
+          var left = selectedIds().filter(function (id) {
+            return String(id) !== String(bid);
+          });
+          setButtonSelection(left, left[0] || null);
           renderAll(); persist();
         });
       }
@@ -2815,6 +2940,7 @@ var ExperienciaCanvas = (function () {
       if (!canUseButtonsMode() && canvas().editMode === 'buttons') {
         canvas().editMode = 'flow';
         canvas().selectedButtonId = null;
+        canvas().selectedButtonIds = [];
       }
       var mode = canvas().editMode === 'buttons' ? 'buttons' : 'flow';
       if (stage) stage.classList.toggle('is-buttons-mode', mode === 'buttons');
@@ -2897,13 +3023,19 @@ var ExperienciaCanvas = (function () {
           x: layout.x,
           y: layout.y,
           style: b.style,
-          color: b.color,
           icon: b.icon,
           rotation: b.rotation,
           visible: b.visible
         };
       });
-      var sel = canvas().selectedButtonId;
+      var selIds = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.map(String)
+        : [];
+      if (!selIds.length && canvas().selectedButtonId) {
+        selIds = [String(canvas().selectedButtonId)];
+      }
+      var selSet = {};
+      selIds.forEach(function (id) { selSet[id] = true; });
       var guidesHtml = '';
       if (buttonDrag && buttonDrag.guides) {
         var g = buttonDrag.guides;
@@ -2925,6 +3057,48 @@ var ExperienciaCanvas = (function () {
           guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v is-mirror" style="left:' +
             Number(g.mirrorX) + '%"></div>';
         }
+        (g.spacing || []).forEach(function (s) {
+          if (s.axis === 'x') {
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x" style="left:' +
+              Number(s.pos) + '%;top:' + Number(s.cross) + '%"><span>' + esc(String(s.px)) + 'px</span></div>';
+          } else {
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y" style="left:' +
+              Number(s.cross) + '%;top:' + Number(s.pos) + '%"><span>' + esc(String(s.px)) + 'px</span></div>';
+          }
+        });
+      }
+      if (buttonAltHeld && selIds.length) {
+        var primary = buttons.filter(function (b) {
+          return b && String(b.id) === String(canvas().selectedButtonId || selIds[0]);
+        })[0];
+        if (primary) {
+          var leftPx = Math.round(primary.x / 100 * layerW);
+          var rightPx = Math.round((100 - primary.x) / 100 * layerW);
+          var topPx = Math.round(primary.y / 100 * layerH);
+          var bottomPx = Math.round((100 - primary.y) / 100 * layerH);
+          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-left" style="top:' +
+            Number(primary.y) + '%">' + leftPx + 'px</div>';
+          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-right" style="top:' +
+            Number(primary.y) + '%">' + rightPx + 'px</div>';
+          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-top" style="left:' +
+            Number(primary.x) + '%">' + topPx + 'px</div>';
+          guidesHtml += '<div class="builder-exp-btn-dist-label is-edge is-bottom" style="left:' +
+            Number(primary.x) + '%">' + bottomPx + 'px</div>';
+          buttons.forEach(function (b) {
+            if (!b || String(b.id) === String(primary.id)) return;
+            var dx = Math.round(Math.abs(b.x - primary.x) / 100 * layerW);
+            var dy = Math.round(Math.abs(b.y - primary.y) / 100 * layerH);
+            var midX = (b.x + primary.x) / 2;
+            var midY = (b.y + primary.y) / 2;
+            if (Math.abs(b.y - primary.y) < 2) {
+              guidesHtml += '<div class="builder-exp-btn-dist-label is-peer" style="left:' +
+                midX + '%;top:' + primary.y + '%">' + dx + 'px</div>';
+            } else if (Math.abs(b.x - primary.x) < 2) {
+              guidesHtml += '<div class="builder-exp-btn-dist-label is-peer" style="left:' +
+                primary.x + '%;top:' + midY + '%">' + dy + 'px</div>';
+            }
+          });
+        }
       }
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
@@ -2939,15 +3113,12 @@ var ExperienciaCanvas = (function () {
           label = glyph || text;
         }
         var rot = Number(b.rotation) || 0;
-        var tint = b.color ? String(b.color) : '';
         var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
           '--btn-rot:' + rot + 'deg;' +
           'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
-        if (tint) styleBits += '--exp-btn-tint:' + esc(tint) + ';';
         return '<button type="button" class="' + buttonPreviewClass(b) +
-          (String(b.id) === String(sel) ? ' is-selected' : '') +
-          (b.visible === false ? ' is-invisible' : '') +
-          (tint ? ' has-tint' : '') + '"' +
+          (selSet[String(b.id)] ? ' is-selected' : '') +
+          (b.visible === false ? ' is-invisible' : '') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
@@ -2959,8 +3130,18 @@ var ExperienciaCanvas = (function () {
     function computeButtonGuides(sceneId, buttonId, x, y) {
       var n = ExperienciaEngine.getNode(state, sceneId);
       var list = ExperienciaEngine.listSceneButtons(state, n) || [];
-      var SNAP = 1.2;
-      var guides = { vCenter: false, hCenter: false, vAlign: [], hAlign: [], mirrorX: null };
+      var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
+      var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
+      var SNAP = 1.15;
+      var SPACE_SNAP = 1.4;
+      var guides = {
+        vCenter: false,
+        hCenter: false,
+        vAlign: [],
+        hAlign: [],
+        mirrorX: null,
+        spacing: []
+      };
       var nx = x;
       var ny = y;
       if (Math.abs(x - 50) <= SNAP) {
@@ -2973,6 +3154,7 @@ var ExperienciaCanvas = (function () {
       }
       list.forEach(function (b) {
         if (!b || String(b.id) === String(buttonId)) return;
+        /* Same column / same row (centers) */
         if (Math.abs(x - b.x) <= SNAP) {
           nx = b.x;
           if (guides.vAlign.indexOf(b.x) < 0) guides.vAlign.push(b.x);
@@ -2981,11 +3163,64 @@ var ExperienciaCanvas = (function () {
           ny = b.y;
           if (guides.hAlign.indexOf(b.y) < 0) guides.hAlign.push(b.y);
         }
+        /* Symmetry */
         var mirror = Math.round((100 - b.x) * 10) / 10;
         if (Math.abs(x - mirror) <= SNAP) {
           nx = mirror;
           guides.mirrorX = mirror;
         }
+        /* Uniform spacing snap vs pairs (center distance) */
+        list.forEach(function (c) {
+          if (!c || String(c.id) === String(buttonId) || String(c.id) === String(b.id)) return;
+          var gapX = Math.abs(c.x - b.x);
+          var gapY = Math.abs(c.y - b.y);
+          if (gapX > 0.5 && Math.abs(y - b.y) <= SNAP) {
+            var right = b.x + gapX;
+            var left = b.x - gapX;
+            if (Math.abs(x - right) <= SPACE_SNAP) {
+              nx = right;
+              ny = b.y;
+              guides.spacing.push({
+                axis: 'x',
+                pos: (b.x + right) / 2,
+                cross: b.y,
+                px: Math.round(gapX / 100 * layerW)
+              });
+            } else if (Math.abs(x - left) <= SPACE_SNAP) {
+              nx = left;
+              ny = b.y;
+              guides.spacing.push({
+                axis: 'x',
+                pos: (b.x + left) / 2,
+                cross: b.y,
+                px: Math.round(gapX / 100 * layerW)
+              });
+            }
+          }
+          if (gapY > 0.5 && Math.abs(x - b.x) <= SNAP) {
+            var below = b.y + gapY;
+            var above = b.y - gapY;
+            if (Math.abs(y - below) <= SPACE_SNAP) {
+              ny = below;
+              nx = b.x;
+              guides.spacing.push({
+                axis: 'y',
+                pos: (b.y + below) / 2,
+                cross: b.x,
+                px: Math.round(gapY / 100 * layerH)
+              });
+            } else if (Math.abs(y - above) <= SPACE_SNAP) {
+              ny = above;
+              nx = b.x;
+              guides.spacing.push({
+                axis: 'y',
+                pos: (b.y + above) / 2,
+                cross: b.x,
+                px: Math.round(gapY / 100 * layerH)
+              });
+            }
+          }
+        });
       });
       return { x: nx, y: ny, guides: guides };
     }
@@ -3013,6 +3248,7 @@ var ExperienciaCanvas = (function () {
       }
       if (!opts.keepButton) {
         canvas().selectedButtonId = null;
+        canvas().selectedButtonIds = [];
       }
       if (opts.toggle && id) {
         ExperienciaEngine.toggleSelectionId(state, id);
@@ -3567,7 +3803,10 @@ var ExperienciaCanvas = (function () {
           var mode = btn.getAttribute('data-exp-edit-mode');
           if (mode === 'buttons' && !canUseButtonsMode()) return;
           canvas().editMode = mode === 'buttons' ? 'buttons' : 'flow';
-          if (canvas().editMode !== 'buttons') canvas().selectedButtonId = null;
+          if (canvas().editMode !== 'buttons') {
+            canvas().selectedButtonId = null;
+            canvas().selectedButtonIds = [];
+          }
           openPropertiesRail();
           renderAll();
           persist();
@@ -3592,13 +3831,27 @@ var ExperienciaCanvas = (function () {
         var hit = ev.target.closest('[data-exp-stage-btn]');
         if (!hit) {
           canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
           renderAll();
           return;
         }
         ev.preventDefault();
         ev.stopPropagation();
         var bid = hit.getAttribute('data-exp-stage-btn');
-        canvas().selectedButtonId = bid;
+        var cur = Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.map(String)
+          : [];
+        if (!cur.length && canvas().selectedButtonId) cur = [String(canvas().selectedButtonId)];
+        if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
+          var idx = cur.indexOf(String(bid));
+          if (idx >= 0) cur.splice(idx, 1);
+          else cur.push(String(bid));
+          canvas().selectedButtonIds = cur;
+          canvas().selectedButtonId = bid;
+        } else {
+          canvas().selectedButtonIds = [String(bid)];
+          canvas().selectedButtonId = bid;
+        }
         var sceneId = canvas().selectedId;
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid
@@ -3642,10 +3895,28 @@ var ExperienciaCanvas = (function () {
       buttonsFrame.addEventListener('pointerdown', function (ev) {
         if (ev.target.closest('[data-exp-stage-btn]')) return;
         canvas().selectedButtonId = null;
+        canvas().selectedButtonIds = [];
         paintButtonsStage();
         paintInspector();
       });
     }
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Alt') return;
+      if (canvas().editMode !== 'buttons') return;
+      buttonAltHeld = true;
+      paintButtonsStage();
+    });
+    document.addEventListener('keyup', function (ev) {
+      if (ev.key !== 'Alt') return;
+      buttonAltHeld = false;
+      if (canvas().editMode === 'buttons') paintButtonsStage();
+    });
+    window.addEventListener('blur', function () {
+      if (!buttonAltHeld) return;
+      buttonAltHeld = false;
+      if (canvas().editMode === 'buttons') paintButtonsStage();
+    });
 
     var fsBtn = rootEl.querySelector('[data-exp-fullscreen]');
     if (fsBtn) {

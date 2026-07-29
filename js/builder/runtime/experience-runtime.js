@@ -77,26 +77,38 @@ var ExperienceRuntime = (function () {
     var x = ix.x != null ? ix.x : (ix.config && ix.config.x);
     var y = ix.y != null ? ix.y : (ix.config && ix.config.y);
     var mode = ix.positionMode || (ix.config && ix.config.positionMode) || 'free';
+    var style = ix.style || 'chip';
+    var halfW = style === 'icon' ? 22 : (style === 'button' ? 54 : 46);
+    var halfH = style === 'icon' ? 22 : 18;
+    var halfWp = halfW / 10;
+    var halfHp = halfH / 10;
+    function clampInside(px, py) {
+      return {
+        x: clampPct(Math.max(halfWp, Math.min(100 - halfWp, px)), 50),
+        y: clampPct(Math.max(halfHp, Math.min(100 - halfHp, py)), 50)
+      };
+    }
     if (mode !== 'anchor') {
-      return { x: clampPct(x, 50), y: clampPct(y, 50) };
+      return clampInside(x, y);
     }
     var anchor = ix.anchor || (ix.config && ix.config.anchor) || 'center';
     var base = RUNTIME_BUTTON_ANCHORS[anchor] || RUNTIME_BUTTON_ANCHORS.center;
-    var mx = Number(ix.marginX != null ? ix.marginX : (ix.config && ix.config.marginX)) || 0;
-    var my = Number(ix.marginY != null ? ix.marginY : (ix.config && ix.config.marginY)) || 0;
-    /* Approximate px→% using a 1000px reference (editor uses live layer size) */
+    var mx = Number(ix.marginX != null ? ix.marginX : (ix.config && ix.config.marginX));
+    var my = Number(ix.marginY != null ? ix.marginY : (ix.config && ix.config.marginY));
+    if (!(mx > 0)) mx = 32;
+    if (!(my > 0)) my = 32;
     var mxp = mx / 10;
     var myp = my / 10;
-    var lx = base.x;
-    var ly = base.y;
-    if (base.x === 0) lx = mxp;
-    else if (base.x === 100) lx = 100 - mxp;
-    if (base.y === 0) ly = myp;
-    else if (base.y === 100) ly = 100 - myp;
+    var lx = 50;
+    var ly = 50;
+    if (base.x === 0) lx = mxp + halfWp;
+    else if (base.x === 100) lx = 100 - mxp - halfWp;
+    if (base.y === 0) ly = myp + halfHp;
+    else if (base.y === 100) ly = 100 - myp - halfHp;
     if (anchor === 'center') { lx = 50; ly = 50; }
     if (anchor === 'top-center' || anchor === 'bottom-center') lx = 50;
     if (anchor === 'center-left' || anchor === 'center-right') ly = 50;
-    return { x: clampPct(lx, 50), y: clampPct(ly, 50) };
+    return clampInside(lx, ly);
   }
 
   function listRuntimeSceneButtons(node, connections) {
@@ -115,12 +127,10 @@ var ExperienceRuntime = (function () {
         }
       }
       var layout = resolveRuntimeButtonLayout(ix);
-      var tint = ix.color || (ix.config && ix.config.color) || '';
       result.push({
         id: ix.id,
         label: ix.label != null ? String(ix.label) : '',
         style: ix.style || 'chip',
-        color: tint,
         icon: ix.icon || null,
         rotation: Number(ix.rotation) || 0,
         x: layout.x,
@@ -518,15 +528,13 @@ var ExperienceRuntime = (function () {
       buttons.forEach(function (b) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip') +
-          (b.color ? ' has-tint' : '');
+        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip');
         var text = b.label != null ? String(b.label) : '';
         btn.textContent = text || (b.style === 'icon' ? '·' : '');
         btn.style.left = b.x + '%';
         btn.style.top = b.y + '%';
         btn.style.setProperty('--btn-rot', (b.rotation || 0) + 'deg');
         btn.style.transform = 'translate(-50%, -50%) rotate(' + (b.rotation || 0) + 'deg)';
-        if (b.color) btn.style.setProperty('--exp-btn-tint', b.color);
         if (b.targetId) {
           btn.addEventListener('click', function (ev) {
             ev.preventDefault();

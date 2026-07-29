@@ -6905,22 +6905,10 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
     transform 0.05s linear;
 }
 
-.builder-exp-ui-btn.has-tint {
-  background: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 16%, var(--btn-glass-surface, var(--btn-surface)));
-  border-color: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 55%, var(--btn-border, var(--glass-border)));
-  color: var(--exp-btn-tint, var(--text-primary));
-}
-
 .builder-exp-ui-btn:hover {
   background: var(--btn-glass-hover, var(--hover, rgba(255, 255, 255, 0.08)));
   color: var(--btn-text-hover, var(--text-primary));
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-}
-
-.builder-exp-ui-btn.has-tint:hover {
-  background: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 28%, var(--btn-glass-hover, var(--hover)));
-  border-color: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 70%, var(--btn-border-hover, var(--btn-border)));
-  color: var(--exp-btn-tint, var(--btn-text-hover, var(--text-primary)));
 }
 
 .builder-exp-ui-btn:focus-visible {
@@ -6930,7 +6918,7 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
 
 .builder-exp-ui-btn:active {
   cursor: grabbing;
-  background: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 22%, var(--btn-glass-hover, var(--hover)));
+  background: var(--btn-glass-hover, var(--hover, rgba(255, 255, 255, 0.12)));
 }
 
 .builder-exp-ui-btn.is-selected {
@@ -7001,26 +6989,96 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   opacity: 0.65;
 }
 
-.builder-exp-btn-color-row {
+.builder-exp-btn-rot-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.builder-exp-btn-rot-row input[type="number"] {
+  width: 72px;
+  min-height: 30px;
+  height: 30px;
+  padding: 4px 8px;
+  border-radius: 7px;
+}
+
+.builder-exp-btn-rot-unit {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.builder-exp-btn-dist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.builder-exp-btn-dist .builder-hub-segment__btn {
+  padding: 6px 8px;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.builder-exp-btn-space-row {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 6px;
-  align-items: center;
+  align-items: end;
 }
 
-.builder-exp-btn-color-row input[type="color"] {
-  width: 100%;
-  height: 30px;
-  padding: 2px;
-  border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-
-.builder-exp-btn-color-reset {
-  padding: 6px 10px;
+.builder-exp-btn-guide--spacing {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.85);
+  border: 1px solid rgba(111, 191, 134, 0.55);
+  color: rgba(190, 235, 205, 0.98);
+  font-size: 10px;
+  font-weight: 600;
   white-space: nowrap;
+}
+
+.builder-exp-btn-dist-label {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(12, 12, 12, 0.88);
+  border: 1px solid rgba(120, 200, 255, 0.55);
+  color: rgba(180, 220, 255, 0.98);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.builder-exp-btn-dist-label.is-edge.is-left {
+  left: 8px;
+  transform: translate(0, -50%);
+}
+
+.builder-exp-btn-dist-label.is-edge.is-right {
+  right: 8px;
+  left: auto;
+  transform: translate(0, -50%);
+}
+
+.builder-exp-btn-dist-label.is-edge.is-top {
+  top: 8px;
+  transform: translate(-50%, 0);
+}
+
+.builder-exp-btn-dist-label.is-edge.is-bottom {
+  bottom: 8px;
+  top: auto;
+  transform: translate(-50%, 0);
 }
 
 .builder-exp-btn-margins {
@@ -7109,16 +7167,6 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   font-size: 10px;
 }
 
-.builder-exp-inspector__field input[type="color"][data-exp-btn-color] {
-  width: 100%;
-  height: 30px;
-  padding: 2px;
-  border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-
 .boxies-xp__btn-layer {
   position: absolute;
   inset: 0;
@@ -7151,20 +7199,10 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
     border-color var(--motion-duration, 0.22s) var(--motion-easing, ease);
 }
 
-.boxies-xp__scene-btn.has-tint {
-  background: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 16%, var(--btn-glass-surface, var(--btn-surface)));
-  border-color: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 55%, var(--btn-border, var(--glass-border)));
-  color: var(--exp-btn-tint, var(--text-primary));
-}
-
 .boxies-xp__scene-btn:hover:not(:disabled) {
   background: var(--btn-glass-hover, var(--hover));
   color: var(--btn-text-hover, var(--text-primary));
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
-}
-
-.boxies-xp__scene-btn.has-tint:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--exp-btn-tint, var(--accent)) 28%, var(--btn-glass-hover, var(--hover)));
 }
 
 .boxies-xp__scene-btn.is-style-button {
