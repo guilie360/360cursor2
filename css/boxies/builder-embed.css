@@ -69,7 +69,10 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 #boxiesContent #builderStepPanel {
   min-height: calc(100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) - var(--boxies-dock-safe, 0px));
   max-height: none;
-  padding: 24px clamp(20px, 3vw, 40px) 28px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /*
@@ -169,7 +172,9 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 #boxiesContent:has(.builder-step-content--media) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--media) #builderStepPanel,
 #boxiesContent:has(.builder-step-content--bunny-media) #builderStepPanel,
-.boxies-builder-embed:has(.builder-step-content--bunny-media) #builderStepPanel {
+.boxies-builder-embed:has(.builder-step-content--bunny-media) #builderStepPanel,
+#boxiesContent:has(.builder-page) #builderStepPanel,
+.boxies-builder-embed:has(.builder-page) #builderStepPanel {
   flex: 1 1 0%;
   min-height: 0 !important;
   height: 100% !important;
@@ -177,7 +182,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   overflow: hidden !important;
   display: flex;
   flex-direction: column;
-  padding: 24px clamp(20px, 3vw, 40px) 12px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -190,7 +195,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   overflow: hidden !important;
   display: flex;
   flex-direction: column;
-  padding: 8px clamp(12px, 1.5vw, 20px);
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -212,7 +217,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
 
 #boxiesContent:has(.builder-step-content--experiencia) #builderStepPanel,
 .boxies-builder-embed:has(.builder-step-content--experiencia) #builderStepPanel {
-  padding: 24px clamp(20px, 3vw, 40px) 12px;
+  padding: 0;
   box-sizing: border-box;
   width: 100%;
   max-width: none;
@@ -291,7 +296,7 @@ body.builder-has-dock #boxiesContent .builder-progress-sidebar {
   max-height: none !important;
   overflow: visible !important;
   display: block !important;
-  padding: 24px clamp(20px, 3vw, 40px) 28px;
+  padding: 0;
   box-sizing: border-box;
 }
 

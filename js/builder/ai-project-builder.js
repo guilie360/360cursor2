@@ -53,43 +53,207 @@ var AiProjectBuilderView = (function () {
 
   /* ── Step renderers ── */
 
-  function stepTitleHtml(title, options) {
-    options = options || {};
-    var step = BuilderWizard.getStep(state.currentStep);
-    var stepId = options.stepId || (step ? step.id : '');
-    var trailingHtml = options.trailingHtml || '';
-    var checked = false;
-    if (stepId && typeof BuilderProgressRail !== 'undefined') {
+  /* ── V5.9.98 — Unique page coordinates (builder-page) ── */
+
+  function resolveSectionChecked(stepId) {
+    if (!stepId) return false;
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.buildItems) {
       var items = BuilderProgressRail.buildItems(state);
       var stepIndex = BuilderWizard.getStepIndex(stepId);
       for (var i = 0; i < items.length; i++) {
-        if (items[i].stepIndex === stepIndex) {
-          checked = !!items[i].done;
-          break;
-        }
+        if (items[i].stepIndex === stepIndex) return !!items[i].done;
       }
-    } else if (state.sectionChecks && Object.prototype.hasOwnProperty.call(state.sectionChecks, stepId)) {
-      checked = !!state.sectionChecks[stepId];
     }
+    if (state.sectionChecks && Object.prototype.hasOwnProperty.call(state.sectionChecks, stepId)) {
+      return !!state.sectionChecks[stepId];
+    }
+    return false;
+  }
+
+  /** Single shared header component — never duplicate markup per module. */
+  function builderPageHeaderHtml(meta) {
+    meta = meta || {};
+    var stepId = meta.stepId || '';
+    var showCheck = meta.showCheck !== false;
+    var checked = showCheck && resolveSectionChecked(stepId);
+    var checkHtml = showCheck
+      ? ('<label class="builder-section-check" title="Marcar o desmarcar secci\u00F3n en la lista">' +
+          '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="' +
+            AdminUI.escapeHtml(stepId) + '"' + (checked ? ' checked' : '') + '>' +
+          '<span class="builder-section-check-box" aria-hidden="true"></span>' +
+        '</label>')
+      : '<span class="builder-section-check builder-section-check--spacer" aria-hidden="true"></span>';
     return '<div class="builder-step-title-row">' +
-      '<label class="builder-section-check" title="Marcar o desmarcar secci\u00F3n en la lista">' +
-        '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="' +
-          AdminUI.escapeHtml(stepId) + '"' + (checked ? ' checked' : '') + '>' +
-        '<span class="builder-section-check-box" aria-hidden="true"></span>' +
-      '</label>' +
-      '<h2 class="builder-step-title">' + AdminUI.escapeHtml(title) + '</h2>' +
-      trailingHtml +
-    '</div>';
+        checkHtml +
+        '<h2 class="builder-step-title" data-builder-page-title>' + AdminUI.escapeHtml(meta.title || '') + '</h2>' +
+      '</div>' +
+      '<p class="builder-step-desc" data-builder-page-desc>' + AdminUI.escapeHtml(meta.desc || '') + '</p>';
+  }
+
+  function getBuilderPageMeta(step) {
+    var id = step && step.id ? step.id : '';
+    var map = {
+      config: {
+        title: 'Configuraci\u00F3n',
+        desc: 'Identidad del Showroom. Fuente \u00FAnica de nombre y URL p\u00FAblica.',
+        showCheck: true,
+        frame: false,
+        contentClass: ''
+      },
+      info: {
+        title: 'Arquitecto IA',
+        desc: 'Describe el proyecto en lenguaje natural. La IA propone; t\u00FA apruebas. Todo alimenta Estructura, Media y Experiencia.',
+        showCheck: true,
+        frame: false,
+        contentClass: 'builder-page--assistant'
+      },
+      estructura: {
+        title: 'Estructura',
+        desc: 'Define tipolog\u00EDas, plantas, ambientes y amenidades.',
+        showCheck: true,
+        frame: false,
+        contentClass: 'builder-page--estructura'
+      },
+      'project-type': {
+        title: 'Estructura',
+        desc: 'Define tipolog\u00EDas, plantas, ambientes y amenidades.',
+        showCheck: true,
+        frame: false,
+        contentClass: 'builder-page--estructura'
+      },
+      'video-hero': {
+        title: 'Hero',
+        desc: 'Video, imagen y logo de portada del showroom.',
+        showCheck: true,
+        frame: true,
+        contentClass: 'builder-page--hero'
+      },
+      menu: {
+        title: 'Men\u00FA',
+        desc: 'Configura la navegaci\u00F3n principal del showroom.',
+        showCheck: true,
+        frame: true,
+        contentClass: 'builder-page--menu'
+      },
+      media: {
+        title: 'Media',
+        desc: 'Explorador de nodos \u00B7 edici\u00F3n en el panel derecho.',
+        showCheck: true,
+        frame: true,
+        contentClass: 'builder-page--media'
+      },
+      experiencia: {
+        title: 'Experiencia',
+        desc: 'Editor del flujo del showroom. Consume Estructura y Media.',
+        showCheck: true,
+        frame: true,
+        contentClass: 'builder-page--experiencia'
+      },
+      'vista-previa': {
+        title: 'Vista previa',
+        desc: 'Canvas \u00B7 INICIAR',
+        showCheck: false,
+        frame: true,
+        contentClass: 'builder-page--vista-previa'
+      }
+    };
+    var meta = map[id] || {
+      title: (step && (step.label || step.shortLabel)) || '',
+      desc: (step && step.assistant) || '',
+      showCheck: true,
+      frame: false,
+      contentClass: ''
+    };
+    meta.stepId = id === 'project-type' ? 'estructura' : id;
+    return meta;
+  }
+
+  function ensureBuilderPage(panel) {
+    var page = panel.querySelector('[data-builder-page]');
+    if (page) return page;
+    panel.innerHTML =
+      '<div class="builder-page" data-builder-page>' +
+        '<header class="builder-page-header" data-builder-page-header></header>' +
+        '<div class="builder-page-body" data-builder-page-body></div>' +
+      '</div>';
+    return panel.querySelector('[data-builder-page]');
+  }
+
+  function syncBuilderPageHeader(headerEl, meta) {
+    if (!headerEl) return;
+    if (!headerEl.querySelector('[data-builder-page-title]')) {
+      headerEl.innerHTML = builderPageHeaderHtml(meta);
+      return;
+    }
+    var titleEl = headerEl.querySelector('[data-builder-page-title]');
+    var descEl = headerEl.querySelector('[data-builder-page-desc]');
+    var row = headerEl.querySelector('.builder-step-title-row');
+    var showCheck = meta.showCheck !== false;
+    var existingCheck = headerEl.querySelector('#builderSectionDoneCheck');
+    var spacer = headerEl.querySelector('.builder-section-check--spacer');
+    var checkLabel = headerEl.querySelector('label.builder-section-check');
+
+    if (titleEl) titleEl.textContent = meta.title || '';
+    if (descEl) descEl.textContent = meta.desc || '';
+
+    if (showCheck) {
+      if (!existingCheck && row) {
+        if (spacer && spacer.parentNode) spacer.parentNode.removeChild(spacer);
+        var label = document.createElement('label');
+        label.className = 'builder-section-check';
+        label.title = 'Marcar o desmarcar secci\u00F3n en la lista';
+        label.innerHTML =
+          '<input type="checkbox" id="builderSectionDoneCheck" data-section-id="">' +
+          '<span class="builder-section-check-box" aria-hidden="true"></span>';
+        row.insertBefore(label, row.firstChild);
+        existingCheck = label.querySelector('#builderSectionDoneCheck');
+      }
+      if (existingCheck) {
+        existingCheck.setAttribute('data-section-id', meta.stepId || '');
+        existingCheck.checked = resolveSectionChecked(meta.stepId);
+      }
+      if (checkLabel) checkLabel.hidden = false;
+    } else {
+      if (existingCheck && checkLabel) {
+        checkLabel.parentNode.replaceChild(
+          (function () {
+            var s = document.createElement('span');
+            s.className = 'builder-section-check builder-section-check--spacer';
+            s.setAttribute('aria-hidden', 'true');
+            return s;
+          })(),
+          checkLabel
+        );
+      } else if (!spacer && row && !existingCheck) {
+        var sp = document.createElement('span');
+        sp.className = 'builder-section-check builder-section-check--spacer';
+        sp.setAttribute('aria-hidden', 'true');
+        row.insertBefore(sp, row.firstChild);
+      }
+    }
+  }
+
+  /** @deprecated Use builder-page header — kept for rare legacy body helpers */
+  function stepTitleHtml(title, options) {
+    options = options || {};
+    return builderPageHeaderHtml({
+      title: title,
+      desc: '',
+      stepId: options.stepId || (BuilderWizard.getStep(state.currentStep) || {}).id || '',
+      showCheck: true
+    }).replace(/<p class="builder-step-desc"[^>]*>[\s\S]*?<\/p>/, '') + (options.trailingHtml || '');
   }
 
   function bindSectionDoneCheck() {
-    var el = rootEl && rootEl.querySelector('#builderSectionDoneCheck');
-    if (!el) return;
-    el.addEventListener('change', function () {
+    var header = rootEl && rootEl.querySelector('[data-builder-page-header]');
+    if (!header || header.dataset.checkBound === '1') return;
+    header.dataset.checkBound = '1';
+    header.addEventListener('change', function (e) {
+      var el = e.target;
+      if (!el || el.id !== 'builderSectionDoneCheck') return;
       var stepId = el.getAttribute('data-section-id');
       if (!stepId) return;
       if (!state.sectionChecks) state.sectionChecks = {};
-      /* true/false explícito: desmarcar gana sobre el “listo” automático */
       state.sectionChecks[stepId] = !!el.checked;
       saveState();
       renderProgressRail();
@@ -125,8 +289,6 @@ var AiProjectBuilderView = (function () {
     var slug = info.slug || '';
     var urlPreview = publicUrlDisplay(slug);
     return '<div class="builder-step-content">' +
-      stepTitleHtml('Configuración') +
-      '<p class="builder-step-desc">Identidad del Showroom. Fuente única de nombre y URL pública.</p>' +
       '<div class="builder-config-identity">' +
         '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
         '<div class="builder-field">' +
@@ -1344,7 +1506,6 @@ var AiProjectBuilderView = (function () {
         ' data-tooltip="' + (allExpanded ? 'Contraer todo' : 'Desplegar todo') + '">' +
         '<span class="builder-estructura-expand-all__icon" aria-hidden="true">' + expandIcon + '</span>' +
       '</button>';
-    var estructuraTitleRow = stepTitleHtml('Estructura', { trailingHtml: expandBtnHtml });
 
     function sectionHintHtml(key, text) {
       if (!text) return '';
@@ -1353,8 +1514,8 @@ var AiProjectBuilderView = (function () {
     }
 
     return '<div class="builder-step-content builder-step-content--estructura">' +
-      '<div class="builder-estructura-head">' +
-        estructuraTitleRow +
+      '<div class="builder-estructura-toolbar">' +
+        expandBtnHtml +
         '<div class="builder-estructura-head__actions">' +
           '<span class="builder-estructura-draft-status' +
             (e.dirty ? ' is-dirty' : (e._draftSaved ? ' is-saved' : '')) +
@@ -1364,7 +1525,6 @@ var AiProjectBuilderView = (function () {
           '<button type="button" class="builder-header-action-btn is-primary" id="builderApplyEstructuraBtn">Aplicar estructura</button>' +
         '</div>' +
       '</div>' +
-      '<p class="builder-step-desc">Define tipolog\u00EDas, plantas, ambientes y amenidades.</p>' +
       '<details class="builder-estructura-section" data-estructura-panel="dev"' +
         (panels.dev !== false ? ' open' : '') + '>' +
         '<summary class="builder-estructura-section__summary">' +
@@ -1428,8 +1588,7 @@ var AiProjectBuilderView = (function () {
       return ExperienciaCanvas.shellHtml(state);
     }
     return '<div class="builder-step-content builder-step-content--experiencia">' +
-      stepTitleHtml('Experiencia') +
-      '<p class="builder-step-desc">Editor visual no disponible.</p></div>';
+      '<p class="builder-menu-hint">Editor visual no disponible.</p></div>';
   }
 
   function renderBranding() {
@@ -1646,10 +1805,6 @@ var AiProjectBuilderView = (function () {
 
     return (
       '<div class="builder-step-content builder-step-content--hero">' +
-        '<div class="builder-hero-workspace-head">' +
-          stepTitleHtml('Hero') +
-          '<p class="builder-step-desc">Video, imagen y logo de portada del showroom.</p>' +
-        '</div>' +
         '<div class="builder-hero-workspace">' +
           '<div class="builder-hero-col builder-hero-col--media">' +
             videoCardHtml() +
@@ -1901,10 +2056,6 @@ var AiProjectBuilderView = (function () {
     }
 
     return '<div class="builder-step-content builder-step-content--menu">' +
-      '<div class="builder-menu-workspace-head">' +
-        stepTitleHtml('Men\u00FA') +
-        '<p class="builder-step-desc">Configura la navegaci\u00F3n principal del showroom.</p>' +
-      '</div>' +
       '<div class="builder-menu-workspace">' +
         '<div class="builder-menu-col builder-menu-col--structure">' +
           '<div class="builder-menu-col__title">Estructura</div>' +
@@ -2299,10 +2450,6 @@ var AiProjectBuilderView = (function () {
         '</div>';
 
     return '<div class="builder-step-content builder-step-content--media">' +
-      '<div class="builder-media-workspace-head">' +
-        stepTitleHtml('Media') +
-        '<p class="builder-step-desc">Explorador de nodos · edición en el panel derecho.</p>' +
-      '</div>' +
       '<div class="builder-media-workspace">' +
         '<aside class="builder-media-col builder-media-col--list" id="bunnyMediaListCol">' +
           '<div class="builder-media-list-toolbar">' +
@@ -3264,11 +3411,7 @@ var AiProjectBuilderView = (function () {
       '</div>';
     }).join('');
     var info = state.projectInfo || {};
-    var mode = (state.aiArchitect && state.aiArchitect.mode) || 'idle';
-    var title = mode === 'live' ? 'Arquitecto IA' : 'Arquitecto IA';
     return '<div class="builder-step-content builder-step-content--assistant">' +
-      stepTitleHtml(title) +
-      '<p class="builder-step-desc">Describe el proyecto en lenguaje natural. La IA propone; tú apruebas. Todo alimenta Estructura, Media y Experiencia.</p>' +
       '<div class="builder-ai-chat" id="builderAiChat">' +
         '<div class="builder-ai-chat__messages" id="builderAiMessages">' + chatHtml + '</div>' +
         '<div class="builder-ai-chat__compose">' +
@@ -3487,7 +3630,23 @@ var AiProjectBuilderView = (function () {
       case 'validation': html = renderValidation(); break;
       case 'publish': html = renderPublish(); break;
     }
-    panel.innerHTML = html;
+
+    var meta = getBuilderPageMeta(step);
+    var page = ensureBuilderPage(panel);
+    var mods = ['builder-page'];
+    if (meta.frame) mods.push('is-framed');
+    else mods.push('is-scroll');
+    if (meta.contentClass) mods.push(meta.contentClass);
+    page.className = mods.join(' ');
+    page.setAttribute('data-step', step.id);
+    panel.classList.toggle('is-framed-step', !!meta.frame);
+    panel.classList.toggle('is-scroll-step', !meta.frame);
+
+    var headerEl = page.querySelector('[data-builder-page-header]');
+    var bodyEl = page.querySelector('[data-builder-page-body]');
+    syncBuilderPageHeader(headerEl, meta);
+    if (bodyEl) bodyEl.innerHTML = html;
+
     bindStepEvents(step.id);
     bindSectionDoneCheck();
     if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {

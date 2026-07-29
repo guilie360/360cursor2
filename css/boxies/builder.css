@@ -695,8 +695,10 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 .builder-workspace #builderStepPanel {
   max-height: none;
   min-height: calc(100vh - var(--builder-header-height) - var(--builder-dock-height) - var(--builder-dock-safe));
-  padding: 24px clamp(20px, 3vw, 40px) 28px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .builder-layout-single .builder-main-panel {
@@ -706,7 +708,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 
 .builder-layout-single #builderStepPanel {
   max-height: calc(100vh - var(--builder-dock-height) - var(--builder-dock-safe) - 100px);
-  padding: 28px clamp(24px, 4vw, 48px) 32px;
+  padding: 0;
 }
 
 .builder-layout-single .builder-step-content {
@@ -723,9 +725,120 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
 }
 
 #builderStepPanel {
-  overflow-y: auto;
-  padding: 24px 28px 28px;
+  overflow: hidden;
+  padding: 0;
   max-height: calc(100vh - var(--builder-dock-height) - var(--builder-dock-safe) - 120px);
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * V5.9.98 — Unique Builder coordinates.
+ * ONLY .builder-page owns padding X/Y. Modules must not add their own.
+ */
+.builder-page {
+  --builder-page-pad-x: clamp(20px, 3vw, 40px);
+  --builder-page-pad-y: 24px;
+  --builder-page-pad-bottom: 28px;
+  --builder-page-header-title-h: 28px;
+  --builder-page-header-desc-h: 40px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: var(--builder-page-pad-y) var(--builder-page-pad-x) var(--builder-page-pad-bottom);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.builder-page.is-scroll {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.builder-page.is-framed {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  --builder-page-pad-bottom: 12px;
+}
+
+#builderStepPanel.is-scroll-step {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#builderStepPanel.is-framed-step {
+  overflow: hidden;
+}
+
+.builder-page-header {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.builder-page-header .builder-step-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  padding: 0;
+  height: var(--builder-page-header-title-h);
+  min-height: var(--builder-page-header-title-h);
+  max-height: var(--builder-page-header-title-h);
+  box-sizing: border-box;
+}
+
+.builder-page-header .builder-step-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.builder-page-header .builder-step-desc {
+  margin: 0 0 14px;
+  padding: 0;
+  min-height: var(--builder-page-header-desc-h);
+  height: var(--builder-page-header-desc-h);
+  max-height: var(--builder-page-header-desc-h);
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 13px;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+
+.builder-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-page-body > .builder-step-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.builder-section-check--spacer {
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .builder-step-content {
@@ -1151,18 +1264,6 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   gap: 10px;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-.builder-hero-workspace-head {
-  flex: 0 0 auto;
-}
-
-.builder-hero-workspace-head .builder-step-title-row {
-  margin-bottom: 6px;
-}
-
-.builder-hero-workspace-head .builder-step-desc {
-  margin-bottom: 14px;
 }
 
 .builder-hero-workspace {
@@ -1642,7 +1743,8 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   line-height: 1.4;
 }
 
-/* V5.9.97 — Menú: frame fijo + scroll independiente; encabezado alineado al sistema */
+/* V5.9.98 — Menú: frame fijo; padding ONLY from .builder-page */
+.builder-workspace #builderStepPanel:has(.builder-page--menu),
 .builder-workspace #builderStepPanel:has(.builder-step-content--menu) {
   overflow: hidden;
   display: flex;
@@ -1654,7 +1756,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   );
   max-height: none;
   min-height: 0;
-  padding: 24px clamp(20px, 3vw, 40px) 12px;
+  padding: 0;
 }
 
 .builder-step-content--menu {
@@ -1665,22 +1767,6 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   display: flex;
   flex-direction: column;
   gap: 0;
-}
-
-.builder-menu-workspace-head {
-  flex: 0 0 auto;
-}
-
-.builder-menu-workspace-head .builder-step-title-row {
-  margin-bottom: 6px;
-}
-
-.builder-menu-workspace-head .builder-step-title {
-  margin-bottom: 0;
-}
-
-.builder-menu-workspace-head .builder-step-desc {
-  margin-bottom: 14px;
 }
 
 .builder-menu-workspace {
@@ -1840,7 +1926,8 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   max-width: 520px;
 }
 
-/* V5.9.96 — Vista previa: monitor embebido a pantalla completa del panel */
+/* V5.9.98 — Vista previa: mismo builder-page; body a pantalla completa del slot */
+.builder-workspace #builderStepPanel:has(.builder-page--vista-previa),
 .builder-workspace #builderStepPanel:has(.builder-step-content--vista-previa) {
   overflow: hidden;
   display: flex;
@@ -1852,7 +1939,7 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   );
   max-height: none;
   min-height: 0;
-  padding: 8px clamp(12px, 1.5vw, 20px) 8px;
+  padding: 0;
 }
 
 .builder-step-content--vista-previa {
@@ -2511,7 +2598,12 @@ body.builder-has-dock .admin-toast--info {
 
   .builder-workspace #builderStepPanel {
     max-height: none;
-    padding: 20px 16px 24px;
+    padding: 0;
+  }
+
+  .builder-page {
+    --builder-page-pad-x: 16px;
+    --builder-page-pad-y: 20px;
   }
 
   .builder-upload-grid,
@@ -2573,6 +2665,16 @@ body.builder-has-dock .admin-toast--info {
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.builder-estructura-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  margin: 0 0 14px;
 }
 
 .builder-estructura-head {
@@ -3498,9 +3600,14 @@ body.boxies-exp-canvas-mode .boxies-main {
   min-height: 100dvh !important;
 }
 
-/* Chrome del paso Experiencia (t?tulo/acciones) se oculta; inspector NO */
-body.boxies-exp-canvas-mode .builder-exp-chrome {
+/* Chrome del paso Experiencia (título/acciones) se oculta; inspector NO */
+body.boxies-exp-canvas-mode .builder-exp-chrome,
+body.boxies-exp-canvas-mode .builder-page-header {
   display: none !important;
+}
+
+body.boxies-exp-canvas-mode .builder-page {
+  padding: 0 !important;
 }
 
 body.boxies-exp-canvas-mode .builder-exp-workspace {
@@ -3535,10 +3642,14 @@ body.boxies-exp-canvas-mode #builderStepPanel {
 .builder-exp-chrome {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex: 0 0 auto;
   margin-bottom: 8px;
+}
+
+.builder-exp-chrome--actions-only {
+  justify-content: flex-end;
 }
 
 .builder-exp-chrome .builder-step-title-row {
@@ -4694,6 +4805,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   box-sizing: border-box;
 }
 
+.builder-workspace #builderStepPanel:has(.builder-page--media),
 .builder-workspace #builderStepPanel:has(.builder-step-content--media),
 .builder-workspace #builderStepPanel:has(.builder-step-content--bunny-media) {
   overflow: hidden;
@@ -4706,19 +4818,7 @@ body.boxies-exp-canvas-mode #builderStepPanel {
   ));
   max-height: none;
   min-height: 0;
-  padding: 24px clamp(20px, 3vw, 40px) 12px;
-}
-
-.builder-media-workspace-head {
-  flex: 0 0 auto;
-}
-
-.builder-media-workspace-head .builder-step-title-row {
-  margin-bottom: 6px;
-}
-
-.builder-media-workspace-head .builder-step-desc {
-  margin: 0 0 14px;
+  padding: 0;
 }
 
 .builder-media-workspace {
