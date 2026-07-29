@@ -6842,9 +6842,40 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   pointer-events: auto;
 }
 
+.builder-exp-btn-guide {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.builder-exp-btn-guide--v {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed rgba(111, 191, 134, 0.75);
+  left: 50%;
+}
+
+.builder-exp-btn-guide--h {
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed rgba(111, 191, 134, 0.75);
+  top: 50%;
+}
+
+.builder-exp-btn-guide.is-center {
+  border-color: rgba(120, 200, 255, 0.85);
+}
+
+.builder-exp-btn-guide.is-mirror {
+  border-color: rgba(255, 196, 92, 0.9);
+  border-style: dotted;
+}
+
 .builder-exp-ui-btn {
   position: absolute;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
   appearance: none;
   margin: 0;
   padding: 8px 14px;
@@ -6971,5 +7002,49 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.35);
   cursor: pointer;
+}
+
+.boxies-xp__btn-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.boxies-xp__scene-btn {
+  position: absolute;
+  pointer-events: auto;
+  appearance: none;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(8, 8, 8, 0.72);
+  color: var(--btn-color, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.boxies-xp__scene-btn.is-style-button {
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.boxies-xp__scene-btn.is-style-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.boxies-xp__scene-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 

@@ -247,6 +247,7 @@ var ExperienciaEngine = (function () {
     exp.nodes.forEach(function (n) {
       normalizeNode(n);
       ensureNodeAssetRef(state, n);
+      if (n && isSceneKind(n.kind)) migrateLegacySceneButtons(state, n);
     });
     exp.edges.forEach(normalizeEdge);
     return exp;
@@ -281,10 +282,7 @@ var ExperienciaEngine = (function () {
     if (n.parentId === undefined) n.parentId = null;
     if (n.locked == null) n.locked = false;
     if (n.protected == null) n.protected = n.kind === 'hero' || n.id === 'exp-hero';
-    if (isSceneKind(n.kind)) {
-      normalizeSceneInteractions(n);
-      ensureSceneButtons(n);
-    }
+    if (isSceneKind(n.kind)) normalizeSceneInteractions(n);
     return n;
   }
 
@@ -318,11 +316,23 @@ var ExperienciaEngine = (function () {
   }
 
   /**
-   * V6.1.00 — Scene UI buttons (visual overlay). Stored as scene.config.buttons[].
-   * Independent from graph interactions / ports.
+   * V6.1.01 — BOTONES editor = visual layer over FLUJO "Botón / Control" interactions.
+   * Single SSOT: scene.config.interactions[] where type === 'BUTTON'.
+   * Never a separate config.buttons collection.
    */
   var BUTTON_STYLES = { chip: 1, button: 1, icon: 1 };
   var BUTTON_ICONS = { none: 1, arrow: 1, 'rotate-left': 1, 'rotate-right': 1, plus: 1 };
+  var BUTTON_ANCHORS = {
+    center: { x: 50, y: 50 },
+    'top-center': { x: 50, y: 0 },
+    'bottom-center': { x: 50, y: 100 },
+    'center-left': { x: 0, y: 50 },
+    'center-right': { x: 100, y: 50 },
+    'top-left': { x: 0, y: 0 },
+    'top-right': { x: 100, y: 0 },
+    'bottom-left': { x: 0, y: 100 },
+    'bottom-right': { x: 100, y: 100 }
+  };
 
   function isButtonsEditableNode(n) {
     if (!n) return false;
@@ -333,117 +343,381 @@ var ExperienciaEngine = (function () {
     return k === 'image' || k === 'scene' || k === 'vista' || k === 'gallery' || k === 'plan';
   }
 
+  function isSceneButtonInteraction(ix) {
+    return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON');
+  }
+
   function clampPercent(v, fallback) {
     var n = Number(v);
     if (isNaN(n)) n = fallback != null ? fallback : 50;
     return Math.max(0, Math.min(100, Math.round(n * 10) / 10));
   }
 
-  function normalizeSceneButton(btn, index) {
-    btn = btn && typeof btn === 'object' ? btn : {};
-    var style = String(btn.style || 'chip');
-    if (!BUTTON_STYLES[style]) style = 'chip';
-    var icon = btn.icon == null || btn.icon === '' ? null : String(btn.icon);
-    if (icon && !BUTTON_ICONS[icon]) icon = null;
-    if (icon === 'none') icon = null;
-    return {
-      id: btn.id || uid('btn'),
-      label: String(btn.label != null ? btn.label : ('Botón ' + ((index || 0) + 1))),
-      x: clampPercent(btn.x, 50),
-      y: clampPercent(btn.y, 50),
-      style: style,
-      color: btn.color ? String(btn.color) : '#ffffff',
-      icon: icon,
-      targetNodeId: btn.targetNodeId != null ? btn.targetNodeId : null,
-      visible: btn.visible !== false
-    };
+  function clampRotation(v) {
+    var n = Number(v);
+    if (isNaN(n)) n = 0;
+    return Math.max(-360, Math.min(360, Math.round(n * 10) / 10));
   }
 
-  function ensureSceneButtons(n) {
+  function ensureButtonVisualDefaults(ix) {
+    if (!ix || !isSceneButtonInteraction(ix)) return ix;
+    if (!ix.config || typeof ix.config !== 'object') ix.config = {};
+    var cfg = ix.config;
+    /* Promote legacy layout fields from config */
+    if (ix.x == null && cfg.x != null) ix.x = cfg.x;
+    if (ix.y == null && cfg.y != null) ix.y = cfg.y;
+    if (ix.style == null && cfg.style != null) ix.style = cfg.style;
+    if (ix.color == null && cfg.color != null) ix.color = cfg.color;
+    if (ix.rotation == null && cfg.rotation != null) ix.rotation = cfg.rotation;
+    if (ix.positionMode == null && cfg.positionMode != null) ix.positionMode = cfg.positionMode;
+    if (ix.anchor == null && cfg.anchor != null) ix.anchor = cfg.anchor;
+    if (ix.marginX == null && cfg.marginX != null) ix.marginX = cfg.marginX;
+    if (ix.marginY == null && cfg.marginY != null) ix.marginY = cfg.marginY;
+    if (ix.positionInitialized == null && cfg.positionInitialized != null) {
+      ix.positionInitialized = cfg.positionInitialized;
+    }
+
+    if (!ix.style || !BUTTON_STYLES[ix.style]) ix.style = 'chip';
+    if (!ix.color) ix.color = '#ffffff';
+    if (ix.rotation == null || isNaN(Number(ix.rotation))) ix.rotation = 0;
+    else ix.rotation = clampRotation(ix.rotation);
+    if (ix.icon === 'none') ix.icon = null;
+    if (ix.icon && !BUTTON_ICONS[ix.icon]) ix.icon = null;
+    if (ix.positionMode !== 'anchor') ix.positionMode = 'free';
+    if (ix.anchor && !BUTTON_ANCHORS[ix.anchor]) ix.anchor = 'center';
+    if (ix.marginX == null || isNaN(Number(ix.marginX))) ix.marginX = 0;
+    if (ix.marginY == null || isNaN(Number(ix.marginY))) ix.marginY = 0;
+
+    /* First-time center only — never re-center after move */
+    if (ix.x == null || ix.y == null) {
+      if (!ix.positionInitialized) {
+        ix.x = 50;
+        ix.y = 50;
+        ix.positionInitialized = true;
+      } else {
+        if (ix.x == null) ix.x = 50;
+        if (ix.y == null) ix.y = 50;
+      }
+    } else {
+      ix.x = clampPercent(ix.x, 50);
+      ix.y = clampPercent(ix.y, 50);
+      ix.positionInitialized = true;
+    }
+    return ix;
+  }
+
+  /**
+   * One-time migrate of obsolete config.buttons → BUTTON interactions, then drop collection.
+   */
+  function migrateLegacySceneButtons(state, n) {
+    if (!n || !n.config) return;
+    if (n.config._buttonsMigrating) return;
+    var legacy = n.config.buttons;
+    if (Array.isArray(legacy) && legacy.length) {
+      n.config._buttonsMigrating = true;
+      try {
+        normalizeSceneInteractions(n);
+        legacy.forEach(function (btn) {
+          if (!btn) return;
+          var exists = (n.config.interactions || []).some(function (ix) {
+            return isSceneButtonInteraction(ix) &&
+              (String(ix.id) === String(btn.id) ||
+                (ix.label && btn.label && String(ix.label) === String(btn.label)));
+          });
+          if (exists) return;
+          var ix = addInteractionToScene(state, n.id, 'BUTTON', btn.label || 'Botón', {
+            group: 'controls'
+          });
+          if (!ix) return;
+          ix.x = btn.x != null ? btn.x : 50;
+          ix.y = btn.y != null ? btn.y : 50;
+          ix.style = btn.style || 'chip';
+          ix.color = btn.color || '#ffffff';
+          ix.icon = btn.icon || null;
+          ix.rotation = 0;
+          ix.positionInitialized = true;
+          ix.enabled = btn.visible !== false;
+          if (btn.targetNodeId && state) {
+            setButtonTarget(state, n.id, ix.id, btn.targetNodeId);
+          }
+          ensureButtonVisualDefaults(ix);
+        });
+      } finally {
+        delete n.config._buttonsMigrating;
+      }
+    }
+    if (n.config.buttons != null) delete n.config.buttons;
+    if (n.buttons != null) delete n.buttons;
+  }
+
+  function ensureSceneButtons(stateOrNull, n) {
+    if (!n) return [];
+    if (arguments.length === 1) {
+      n = stateOrNull;
+      stateOrNull = null;
+    }
+    if (!n.config) n.config = {};
+    if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+    if (stateOrNull) migrateLegacySceneButtons(stateOrNull, n);
+    else if (n.config.buttons) {
+      /* Without state, just drop orphan collection — interactions win */
+      delete n.config.buttons;
+      delete n.buttons;
+    }
+    n.config.interactions.forEach(function (ix) {
+      if (isSceneButtonInteraction(ix)) ensureButtonVisualDefaults(ix);
+    });
+    return listSceneButtonInteractions(n);
+  }
+
+  function listSceneButtonInteractions(n) {
     if (!n || !n.config) return [];
-    if (!Array.isArray(n.config.buttons)) n.config.buttons = [];
-    n.config.buttons = n.config.buttons.map(normalizeSceneButton);
-    /* Mirror top-level for Runtime prep: scene.buttons */
-    n.buttons = n.config.buttons;
-    return n.config.buttons;
+    return (n.config.interactions || []).filter(isSceneButtonInteraction);
   }
 
-  function listSceneButtons(n) {
-    return ensureSceneButtons(n).slice();
-  }
-
-  function getSceneButton(n, buttonId) {
-    var list = ensureSceneButtons(n);
-    for (var i = 0; i < list.length; i++) {
-      if (String(list[i].id) === String(buttonId)) return list[i];
+  function resolveButtonTarget(state, sceneId, ix) {
+    if (!state || !ix) return null;
+    var exp = ensureState(state);
+    var portId = ix.portId || ix.id;
+    for (var i = 0; i < (exp.edges || []).length; i++) {
+      var ed = exp.edges[i];
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId;
+      if (String(from) === String(sceneId) && String(pid) === String(portId)) {
+        return ed.targetNodeId || ed.to || ed.targetId || null;
+      }
     }
     return null;
   }
 
-  function addSceneButton(state, nodeId, partial) {
+  function setButtonTarget(state, sceneId, buttonId, targetNodeId) {
+    var scene = getNode(state, sceneId);
+    var ix = getInteraction(scene, buttonId);
+    if (!ix || !isSceneButtonInteraction(ix)) return null;
+    var exp = state && state.experiencia ? state.experiencia : ensureState(state);
+    if (!Array.isArray(exp.edges)) exp.edges = [];
+    var portId = ix.portId || ix.id;
+    exp.edges = (exp.edges || []).filter(function (ed) {
+      var from = ed.sourceNodeId || ed.from || ed.sourceId;
+      var pid = ed.sourcePortId || ed.sourcePort || ed.portId;
+      return !(String(from) === String(sceneId) && String(pid) === String(portId));
+    });
+    if (targetNodeId) {
+      addManualEdge(state, sceneId, targetNodeId, ix.label || 'Botón', portId, 'in');
+    }
+    syncScenePorts(scene);
+    return ix;
+  }
+
+  function buttonViewModel(state, n, ix) {
+    ensureButtonVisualDefaults(ix);
+    var layout = resolveButtonLayout(ix, 1000, 1000);
+    return {
+      id: ix.id,
+      portId: ix.portId || ix.id,
+      label: ix.label || 'Botón',
+      x: layout.x,
+      y: layout.y,
+      storedX: ix.x,
+      storedY: ix.y,
+      style: ix.style || 'chip',
+      color: ix.color || '#ffffff',
+      icon: ix.icon || null,
+      rotation: ix.rotation || 0,
+      visible: ix.enabled !== false,
+      enabled: ix.enabled !== false,
+      targetNodeId: resolveButtonTarget(state, n.id, ix),
+      positionMode: ix.positionMode || 'free',
+      anchor: ix.anchor || 'center',
+      marginX: Number(ix.marginX) || 0,
+      marginY: Number(ix.marginY) || 0,
+      positionInitialized: !!ix.positionInitialized,
+      _ix: ix
+    };
+  }
+
+  function resolveButtonLayout(ix, imageW, imageH) {
+    ensureButtonVisualDefaults(ix);
+    if (ix.positionMode !== 'anchor') {
+      return { x: clampPercent(ix.x, 50), y: clampPercent(ix.y, 50) };
+    }
+    var base = BUTTON_ANCHORS[ix.anchor] || BUTTON_ANCHORS.center;
+    var w = Math.max(1, Number(imageW) || 1);
+    var h = Math.max(1, Number(imageH) || 1);
+    var mxp = (Number(ix.marginX) || 0) / w * 100;
+    var myp = (Number(ix.marginY) || 0) / h * 100;
+    var x = base.x;
+    var y = base.y;
+    if (base.x === 0) x = mxp;
+    else if (base.x === 100) x = 100 - mxp;
+    else x = 50 + ((Number(ix.marginX) || 0) / w * 100); /* center ± marginX */
+    if (base.y === 0) y = myp;
+    else if (base.y === 100) y = 100 - myp;
+    else y = 50 + ((Number(ix.marginY) || 0) / h * 100);
+    /* For pure center anchor, ignore margin offset on both axes unless margins set intentionally */
+    if (ix.anchor === 'center') {
+      x = 50;
+      y = 50;
+    }
+    if (ix.anchor === 'top-center' || ix.anchor === 'bottom-center') x = 50;
+    if (ix.anchor === 'center-left' || ix.anchor === 'center-right') y = 50;
+    return { x: clampPercent(x, 50), y: clampPercent(y, 50) };
+  }
+
+  function listSceneButtons(state, n) {
+    if (arguments.length === 1) {
+      n = state;
+      state = null;
+    }
+    if (!n) return [];
+    if (state) migrateLegacySceneButtons(state, n);
+    return listSceneButtonInteractions(n).map(function (ix) {
+      return buttonViewModel(state, n, ix);
+    });
+  }
+
+  function getSceneButton(state, n, buttonId) {
+    if (typeof n === 'string' || (n && n.id && arguments.length === 2)) {
+      /* getSceneButton(n, buttonId) legacy */
+      buttonId = n;
+      n = state;
+      state = null;
+    }
+    var list = listSceneButtons(state, n);
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(buttonId) ||
+          String(list[i].portId) === String(buttonId)) return list[i];
+    }
+    return null;
+  }
+
+  function addSceneButton(state, nodeId) {
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
-    var list = ensureSceneButtons(n);
-    var base = {
-      label: 'Nuevo botón',
-      x: 50,
-      y: 50,
-      style: 'chip',
-      color: '#ffffff',
-      icon: null,
-      targetNodeId: null,
-      visible: true
+    var menuItem = findAddElementItem('el-button') || {
+      interactionType: 'BUTTON',
+      defaultLabel: 'Botón',
+      group: 'controls'
     };
-    partial = partial || {};
-    Object.keys(partial).forEach(function (k) { base[k] = partial[k]; });
-    var btn = normalizeSceneButton(base, list.length);
-    list.push(btn);
-    n.config.buttons = list;
-    n.buttons = list;
-    return btn;
+    var ix = addElementFromMenu(state, nodeId, menuItem);
+    if (!ix || ix.error) return null;
+    ix.x = 50;
+    ix.y = 50;
+    ix.positionInitialized = true;
+    ix.style = 'chip';
+    ix.color = '#ffffff';
+    ix.rotation = 0;
+    ix.positionMode = 'free';
+    ensureButtonVisualDefaults(ix);
+    return buttonViewModel(state, n, ix);
   }
 
   function updateSceneButton(state, nodeId, buttonId, patch) {
     var n = getNode(state, nodeId);
-    if (!n) return null;
-    var btn = getSceneButton(n, buttonId);
-    if (!btn) return null;
+    var ix = getInteraction(n, buttonId);
+    if (!ix || !isSceneButtonInteraction(ix)) return null;
     patch = patch || {};
-    if (patch.label != null) btn.label = String(patch.label);
-    if (patch.style != null && BUTTON_STYLES[patch.style]) btn.style = patch.style;
-    if (patch.color != null) btn.color = String(patch.color);
+    ensureButtonVisualDefaults(ix);
+
+    if (patch.label != null) {
+      updateInteraction(state, nodeId, ix.id, { label: String(patch.label) });
+    }
+    if (patch.style != null && BUTTON_STYLES[patch.style]) ix.style = patch.style;
+    if (patch.color != null) ix.color = String(patch.color);
+    if (patch.rotation != null) ix.rotation = clampRotation(patch.rotation);
     if (patch.icon !== undefined) {
       var icon = patch.icon == null || patch.icon === '' || patch.icon === 'none'
-        ? null
-        : String(patch.icon);
-      btn.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
+        ? null : String(patch.icon);
+      ix.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
+    }
+    if (patch.visible != null || patch.enabled != null) {
+      var on = patch.visible != null ? !!patch.visible : !!patch.enabled;
+      ix.enabled = on;
+    }
+    if (patch.positionMode != null) {
+      ix.positionMode = patch.positionMode === 'anchor' ? 'anchor' : 'free';
+    }
+    if (patch.anchor != null && BUTTON_ANCHORS[patch.anchor]) {
+      ix.anchor = patch.anchor;
+      ix.positionMode = 'anchor';
+    }
+    if (patch.marginX != null) {
+      ix.marginX = Number(patch.marginX) || 0;
+      if (patch.keepAnchor) ix.positionMode = 'anchor';
+    }
+    if (patch.marginY != null) {
+      ix.marginY = Number(patch.marginY) || 0;
+      if (patch.keepAnchor) ix.positionMode = 'anchor';
+    }
+    if (patch.x != null || patch.y != null) {
+      if (patch.x != null) ix.x = clampPercent(patch.x, ix.x);
+      if (patch.y != null) ix.y = clampPercent(patch.y, ix.y);
+      ix.positionInitialized = true;
+      if (patch.keepAnchor !== true) ix.positionMode = 'free';
     }
     if (patch.targetNodeId !== undefined) {
-      btn.targetNodeId = patch.targetNodeId ? patch.targetNodeId : null;
+      setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
     }
-    if (patch.visible != null) btn.visible = !!patch.visible;
-    if (patch.x != null) btn.x = clampPercent(patch.x, btn.x);
-    if (patch.y != null) btn.y = clampPercent(patch.y, btn.y);
-    ensureSceneButtons(n);
-    return btn;
+    syncScenePorts(n);
+    return buttonViewModel(state, n, ix);
   }
 
   function setSceneButtonPosition(state, nodeId, buttonId, x, y) {
     return updateSceneButton(state, nodeId, buttonId, { x: x, y: y });
   }
 
-  function removeSceneButton(state, nodeId, buttonId) {
+  function mirrorSceneButton(state, nodeId, buttonId) {
     var n = getNode(state, nodeId);
-    if (!n) return false;
-    var list = ensureSceneButtons(n);
-    var next = list.filter(function (b) { return String(b.id) !== String(buttonId); });
-    n.config.buttons = next;
-    n.buttons = next;
+    var ix = getInteraction(n, buttonId);
+    if (!ix || !isSceneButtonInteraction(ix)) return null;
+    ensureButtonVisualDefaults(ix);
+    if (ix.positionMode === 'anchor' && ix.anchor) {
+      var flip = {
+        'center-left': 'center-right',
+        'center-right': 'center-left',
+        'top-left': 'top-right',
+        'top-right': 'top-left',
+        'bottom-left': 'bottom-right',
+        'bottom-right': 'bottom-left'
+      };
+      if (flip[ix.anchor]) ix.anchor = flip[ix.anchor];
+    }
+    ix.x = clampPercent(100 - Number(ix.x), 50);
+    ix.positionInitialized = true;
+    return buttonViewModel(state, n, ix);
+  }
+
+  function duplicateSceneButton(state, nodeId, buttonId) {
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, buttonId);
+    if (!ix || !isSceneButtonInteraction(ix)) return null;
+    ensureButtonVisualDefaults(ix);
+    var copy = duplicateInteraction(state, nodeId, ix.id);
+    if (!copy) return null;
+    copy.x = clampPercent(Number(ix.x) + 3, ix.x);
+    copy.y = clampPercent(Number(ix.y) + 3, ix.y);
+    copy.style = ix.style;
+    copy.color = ix.color;
+    copy.icon = ix.icon;
+    copy.rotation = ix.rotation;
+    copy.positionMode = ix.positionMode;
+    copy.anchor = ix.anchor;
+    copy.marginX = ix.marginX;
+    copy.marginY = ix.marginY;
+    copy.positionInitialized = true;
+    copy.label = (ix.label || 'Botón') + ' copia';
+    ensureButtonVisualDefaults(copy);
+    syncScenePorts(n);
+    return buttonViewModel(state, n, copy);
+  }
+
+  function removeSceneButton(state, nodeId, buttonId) {
+    var result = removeInteraction(state, nodeId, buttonId);
     var exp = ensureState(state);
     if (exp.canvas && String(exp.canvas.selectedButtonId) === String(buttonId)) {
       exp.canvas.selectedButtonId = null;
     }
-    return true;
+    return !!(result && result.ok);
   }
 
   function ensureHubConfig(n) {
@@ -4493,6 +4767,12 @@ var ExperienciaEngine = (function () {
     updateSceneButton: updateSceneButton,
     setSceneButtonPosition: setSceneButtonPosition,
     removeSceneButton: removeSceneButton,
+    mirrorSceneButton: mirrorSceneButton,
+    duplicateSceneButton: duplicateSceneButton,
+    resolveButtonLayout: resolveButtonLayout,
+    resolveButtonTarget: resolveButtonTarget,
+    setButtonTarget: setButtonTarget,
+    BUTTON_ANCHORS: BUTTON_ANCHORS,
     detectHubSelectorOptions: detectHubSelectorOptions,
     syncHubSmartSelector: syncHubSmartSelector,
     syncHubPlantasFromMedia: syncHubPlantasFromMedia,

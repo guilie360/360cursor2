@@ -55,6 +55,80 @@ var ExperienceRuntime = (function () {
     return out;
   }
 
+  var RUNTIME_BUTTON_ANCHORS = {
+    center: { x: 50, y: 50 },
+    'top-center': { x: 50, y: 0 },
+    'bottom-center': { x: 50, y: 100 },
+    'center-left': { x: 0, y: 50 },
+    'center-right': { x: 100, y: 50 },
+    'top-left': { x: 0, y: 0 },
+    'top-right': { x: 100, y: 0 },
+    'bottom-left': { x: 0, y: 100 },
+    'bottom-right': { x: 100, y: 100 }
+  };
+
+  function clampPct(v, fallback) {
+    var n = Number(v);
+    if (isNaN(n)) n = fallback != null ? fallback : 50;
+    return Math.max(0, Math.min(100, Math.round(n * 10) / 10));
+  }
+
+  function resolveRuntimeButtonLayout(ix) {
+    var x = ix.x != null ? ix.x : (ix.config && ix.config.x);
+    var y = ix.y != null ? ix.y : (ix.config && ix.config.y);
+    var mode = ix.positionMode || (ix.config && ix.config.positionMode) || 'free';
+    if (mode !== 'anchor') {
+      return { x: clampPct(x, 50), y: clampPct(y, 50) };
+    }
+    var anchor = ix.anchor || (ix.config && ix.config.anchor) || 'center';
+    var base = RUNTIME_BUTTON_ANCHORS[anchor] || RUNTIME_BUTTON_ANCHORS.center;
+    var mx = Number(ix.marginX != null ? ix.marginX : (ix.config && ix.config.marginX)) || 0;
+    var my = Number(ix.marginY != null ? ix.marginY : (ix.config && ix.config.marginY)) || 0;
+    /* Approximate px→% using a 1000px reference (editor uses live layer size) */
+    var mxp = mx / 10;
+    var myp = my / 10;
+    var lx = base.x;
+    var ly = base.y;
+    if (base.x === 0) lx = mxp;
+    else if (base.x === 100) lx = 100 - mxp;
+    if (base.y === 0) ly = myp;
+    else if (base.y === 100) ly = 100 - myp;
+    if (anchor === 'center') { lx = 50; ly = 50; }
+    if (anchor === 'top-center' || anchor === 'bottom-center') lx = 50;
+    if (anchor === 'center-left' || anchor === 'center-right') ly = 50;
+    return { x: clampPct(lx, 50), y: clampPct(ly, 50) };
+  }
+
+  function listRuntimeSceneButtons(node, connections) {
+    var ixs = (node && node.config && node.config.interactions) || [];
+    var outs = outsFrom(node, node && node.id, connections);
+    var result = [];
+    ixs.forEach(function (ix) {
+      if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+      if (ix.enabled === false) return;
+      var portId = ix.portId || ix.id;
+      var targetId = null;
+      for (var i = 0; i < outs.length; i++) {
+        if (outs[i].portId && String(outs[i].portId) === String(portId)) {
+          targetId = outs[i].toNodeId;
+          break;
+        }
+      }
+      var layout = resolveRuntimeButtonLayout(ix);
+      result.push({
+        id: ix.id,
+        label: ix.label || 'Botón',
+        style: ix.style || 'chip',
+        color: ix.color || '#ffffff',
+        rotation: Number(ix.rotation) || 0,
+        x: layout.x,
+        y: layout.y,
+        targetId: targetId
+      });
+    });
+    return result;
+  }
+
   function collectPreloadUrls(runtime) {
     var urls = [];
     var seen = {};
@@ -416,9 +490,6 @@ var ExperienceRuntime = (function () {
     var url = (node.media && (node.media.url || node.media.thumbnailUrl)) || null;
     var wrap = document.createElement('div');
     wrap.className = 'boxies-xp__media boxies-xp__media--image is-enter';
-    wrap.setAttribute('role', 'button');
-    wrap.setAttribute('tabindex', '0');
-    wrap.title = 'Continuar';
 
     if (url) {
       wrap.style.backgroundImage = 'url("' + String(url).replace(/"/g, '\\"') + '")';
@@ -426,27 +497,62 @@ var ExperienceRuntime = (function () {
       wrap.innerHTML = '<div class="boxies-xp__empty">Imagen sin asset: ' + esc(node.label) + '</div>';
     }
 
-    var hint = document.createElement('div');
-    hint.className = 'boxies-xp__tap-hint';
-    hint.textContent = 'Toca para continuar';
-    wrap.appendChild(hint);
-    this.stage.appendChild(wrap);
-
+    var buttons = listRuntimeSceneButtons(node, this._connections || []);
     var advanced = false;
-    function advance() {
+    function advanceTo(targetId) {
       if (advanced || self._stopped) return;
       advanced = true;
       wrap.classList.remove('is-enter');
       wrap.classList.add('is-exit');
-      setTimeout(function () { self.gotoNext(node.id); }, FADE_MS);
+      setTimeout(function () {
+        if (targetId) self.enterNode(targetId);
+        else self.gotoNext(node.id);
+      }, FADE_MS);
     }
-    wrap.addEventListener('click', advance);
-    wrap.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter' || ev.key === ' ') {
-        ev.preventDefault();
-        advance();
-      }
-    });
+
+    if (buttons.length) {
+      var layer = document.createElement('div');
+      layer.className = 'boxies-xp__btn-layer';
+      buttons.forEach(function (b) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'boxies-xp__scene-btn is-style-' + (b.style || 'chip');
+        btn.textContent = b.label || 'Botón';
+        btn.style.left = b.x + '%';
+        btn.style.top = b.y + '%';
+        btn.style.setProperty('--btn-color', b.color || '#ffffff');
+        btn.style.transform = 'translate(-50%, -50%) rotate(' + (b.rotation || 0) + 'deg)';
+        if (b.targetId) {
+          btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            advanceTo(b.targetId);
+          });
+        } else {
+          btn.disabled = true;
+          btn.title = 'Sin destino';
+        }
+        layer.appendChild(btn);
+      });
+      wrap.appendChild(layer);
+    } else {
+      wrap.setAttribute('role', 'button');
+      wrap.setAttribute('tabindex', '0');
+      wrap.title = 'Continuar';
+      var hint = document.createElement('div');
+      hint.className = 'boxies-xp__tap-hint';
+      hint.textContent = 'Toca para continuar';
+      wrap.appendChild(hint);
+      wrap.addEventListener('click', function () { advanceTo(null); });
+      wrap.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          advanceTo(null);
+        }
+      });
+    }
+
+    this.stage.appendChild(wrap);
   };
 
   Player.prototype.playHub = function (node) {

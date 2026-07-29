@@ -341,8 +341,8 @@ var ExperienciaCanvas = (function () {
       }
 
       var btns = (ExperienciaEngine.listSceneButtons
-        ? ExperienciaEngine.listSceneButtons(n)
-        : ((n.config && n.config.buttons) || [])).filter(function (b) {
+        ? ExperienciaEngine.listSceneButtons(state || {}, n)
+        : []).filter(function (b) {
           return b && b.visible !== false;
         });
       if (btns.length && !hubEnabled) {
@@ -463,14 +463,15 @@ var ExperienciaCanvas = (function () {
 
   function buttonsInspectorHtml(state, n) {
     var buttons = ExperienciaEngine.listSceneButtons
-      ? ExperienciaEngine.listSceneButtons(n)
+      ? ExperienciaEngine.listSceneButtons(state, n)
       : [];
     var selectedBtnId = (state.experiencia && state.experiencia.canvas &&
       state.experiencia.canvas.selectedButtonId) || null;
     var selected = null;
     if (selectedBtnId) {
       for (var i = 0; i < buttons.length; i++) {
-        if (String(buttons[i].id) === String(selectedBtnId)) {
+        if (String(buttons[i].id) === String(selectedBtnId) ||
+            String(buttons[i].portId) === String(selectedBtnId)) {
           selected = buttons[i];
           break;
         }
@@ -490,11 +491,12 @@ var ExperienciaCanvas = (function () {
     var html = '' +
       '<div class="builder-exp-inspector__kind">BOTONES</div>' +
       '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>' +
+      '<p class="builder-menu-hint" style="margin:0 0 10px">Mismos elementos «Botón / Control» del Canvas. Una sola fuente de verdad.</p>' +
       '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
         esc(n.id) + '">+ Nuevo botón</button>';
 
     if (!buttons.length) {
-      html += '<p class="builder-menu-hint">Crea botones y colócalos sobre la imagen. Se guardan en porcentaje para cualquier resolución.</p>';
+      html += '<p class="builder-menu-hint">No hay botones en esta escena. Crea uno aquí o en FLUJO → Agregar elemento → Botón / Control.</p>';
       return html;
     }
 
@@ -523,6 +525,26 @@ var ExperienciaCanvas = (function () {
         (selected.style === val ? ' is-on' : '') +
         '" data-exp-btn-style="' + esc(val) + '">' + esc(label) + '</button>';
     }
+
+    var anchors = ExperienciaEngine.BUTTON_ANCHORS || {};
+    var anchorLabels = {
+      center: 'Centro',
+      'top-center': 'Centro superior',
+      'bottom-center': 'Centro inferior',
+      'center-left': 'Centro izquierda',
+      'center-right': 'Centro derecha',
+      'top-left': 'Esquina superior izquierda',
+      'top-right': 'Esquina superior derecha',
+      'bottom-left': 'Esquina inferior izquierda',
+      'bottom-right': 'Esquina inferior derecha'
+    };
+    var anchorOpts = Object.keys(anchors).map(function (key) {
+      return '<option value="' + esc(key) + '"' +
+        (selected.anchor === key ? ' selected' : '') + '>' +
+        esc(anchorLabels[key] || key) + '</option>';
+    }).join('');
+
+    var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
 
     html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
@@ -556,15 +578,54 @@ var ExperienciaCanvas = (function () {
           '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
         '</select>' +
       '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Rotación</label>' +
+        '<div class="builder-hub-slider-label">' +
+          '<span></span>' +
+          '<span data-exp-btn-rot-val>' + esc(String(selected.rotation || 0)) + ' °</span>' +
+        '</div>' +
+        '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
+          esc(String(selected.rotation || 0)) + '">' +
+      '</div>' +
       '<label class="builder-exp-inspector__check">' +
         '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
         ' Visible</label>' +
-      '<div class="builder-exp-inspector__actions">' +
+      '<div class="builder-exp-inspector__section">Posición</div>' +
+      '<div class="builder-hub-chips" data-exp-btn-pos-mode style="margin-bottom:10px">' +
+        '<button type="button" class="builder-estructura-chip' + (posMode === 'free' ? ' is-on' : '') +
+          '" data-exp-btn-pos-mode="free">Libre</button>' +
+        '<button type="button" class="builder-estructura-chip' + (posMode === 'anchor' ? ' is-on' : '') +
+          '" data-exp-btn-pos-mode="anchor">Anclas</button>' +
+      '</div>';
+
+    if (posMode === 'anchor') {
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Ancla</label>' +
+        '<select data-exp-btn-anchor class="ws-select">' + anchorOpts + '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Margen X (px)</label>' +
+        '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
+          esc(String(selected.marginX || 0)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Margen Y (px)</label>' +
+        '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
+          esc(String(selected.marginY || 0)) + '">' +
+      '</div>';
+    } else {
+      html += '<p class="builder-menu-hint">X ' + esc(String(selected.x)) +
+        '% · Y ' + esc(String(selected.y)) + '% (arrastre sobre la imagen)</p>';
+    }
+
+    html += '<div class="builder-exp-inspector__actions" style="display:flex;flex-direction:column;gap:8px">' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-mirror="' +
+          esc(selected.id) + '">Reflejar horizontalmente</button>' +
+        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-duplicate="' +
+          esc(selected.id) + '">Duplicar</button>' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
           esc(selected.id) + '">Eliminar</button>' +
-      '</div>' +
-      '<p class="builder-menu-hint">Posición · ' +
-        esc(String(selected.x)) + '% · ' + esc(String(selected.y)) + '%</p>';
+      '</div>';
 
     return html;
   }
@@ -1878,7 +1939,7 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
             targetNodeId: targetEl.value || null
           });
-          persist();
+          renderAll(); persist();
         });
       }
       inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {
@@ -1917,6 +1978,79 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
             visible: !!visEl.checked
           });
+          renderAll(); persist();
+        });
+      }
+      var rotEl = inspectorBody.querySelector('[data-exp-btn-rotation]');
+      var rotVal = inspectorBody.querySelector('[data-exp-btn-rot-val]');
+      if (rotEl) {
+        rotEl.addEventListener('input', function () {
+          var deg = Number(rotEl.value) || 0;
+          if (rotVal) rotVal.textContent = deg + ' °';
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            rotation: deg
+          });
+          paintButtonsStage();
+        });
+        rotEl.addEventListener('change', function () {
+          persist();
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-btn-pos-mode]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            positionMode: el.getAttribute('data-exp-btn-pos-mode')
+          });
+          renderAll(); persist();
+        });
+      });
+      var anchorEl = inspectorBody.querySelector('[data-exp-btn-anchor]');
+      if (anchorEl) {
+        anchorEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            anchor: anchorEl.value,
+            positionMode: 'anchor'
+          });
+          renderAll(); persist();
+        });
+      }
+      var mxEl = inspectorBody.querySelector('[data-exp-btn-margin-x]');
+      if (mxEl) {
+        mxEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            marginX: mxEl.value,
+            keepAnchor: true
+          });
+          renderAll(); persist();
+        });
+      }
+      var myEl = inspectorBody.querySelector('[data-exp-btn-margin-y]');
+      if (myEl) {
+        myEl.addEventListener('change', function () {
+          ExperienciaEngine.updateSceneButton(state, sceneId, canvas().selectedButtonId, {
+            marginY: myEl.value,
+            keepAnchor: true
+          });
+          renderAll(); persist();
+        });
+      }
+      var mirrorBtn = inspectorBody.querySelector('[data-exp-btn-mirror]');
+      if (mirrorBtn) {
+        mirrorBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ExperienciaEngine.mirrorSceneButton(state, sceneId,
+            mirrorBtn.getAttribute('data-exp-btn-mirror'));
+          renderAll(); persist();
+        });
+      }
+      var dupBtn = inspectorBody.querySelector('[data-exp-btn-duplicate]');
+      if (dupBtn) {
+        dupBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId,
+            dupBtn.getAttribute('data-exp-btn-duplicate'));
+          if (copy) canvas().selectedButtonId = copy.id;
           renderAll(); persist();
         });
       }
@@ -2743,24 +2877,99 @@ var ExperienciaCanvas = (function () {
         buttonsImg.alt = '';
       }
 
-      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
+      var layerW = buttonsLayer.clientWidth || (buttonsImg.naturalWidth || 1000);
+      var layerH = buttonsLayer.clientHeight || (buttonsImg.naturalHeight || 1000);
+      var buttons = (ExperienciaEngine.listSceneButtons(state, n) || []).map(function (b) {
+        if (!b || !b._ix || !ExperienciaEngine.resolveButtonLayout) return b;
+        var layout = ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH);
+        return {
+          id: b.id,
+          portId: b.portId,
+          label: b.label,
+          x: layout.x,
+          y: layout.y,
+          style: b.style,
+          color: b.color,
+          icon: b.icon,
+          rotation: b.rotation,
+          visible: b.visible
+        };
+      });
       var sel = canvas().selectedButtonId;
-      buttonsLayer.innerHTML = buttons.map(function (b) {
+      var guidesHtml = '';
+      if (buttonDrag && buttonDrag.guides) {
+        var g = buttonDrag.guides;
+        if (g.vCenter) {
+          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v is-center"></div>';
+        }
+        if (g.hCenter) {
+          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--h is-center"></div>';
+        }
+        (g.vAlign || []).forEach(function (x) {
+          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v" style="left:' +
+            Number(x) + '%"></div>';
+        });
+        (g.hAlign || []).forEach(function (y) {
+          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--h" style="top:' +
+            Number(y) + '%"></div>';
+        });
+        if (g.mirrorX != null) {
+          guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--v is-mirror" style="left:' +
+            Number(g.mirrorX) + '%"></div>';
+        }
+      }
+      buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
         var glyph = buttonIconGlyph(b.icon);
         var label = b.style === 'icon'
           ? (glyph || '·')
           : ((glyph ? (glyph + ' ') : '') + (b.label || 'Botón'));
+        var rot = Number(b.rotation) || 0;
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (String(b.id) === String(sel) ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
           ' style="left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
+            'transform:translate(-50%,-50%) rotate(' + rot + 'deg);' +
             '--btn-color:' + esc(b.color || '#ffffff') + '">' +
           esc(label) +
         '</button>';
       }).join('');
       requestAnimationFrame(syncButtonsLayerBounds);
+    }
+
+    function computeButtonGuides(sceneId, buttonId, x, y) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var list = ExperienciaEngine.listSceneButtons(state, n) || [];
+      var SNAP = 1.2;
+      var guides = { vCenter: false, hCenter: false, vAlign: [], hAlign: [], mirrorX: null };
+      var nx = x;
+      var ny = y;
+      if (Math.abs(x - 50) <= SNAP) {
+        nx = 50;
+        guides.vCenter = true;
+      }
+      if (Math.abs(y - 50) <= SNAP) {
+        ny = 50;
+        guides.hCenter = true;
+      }
+      list.forEach(function (b) {
+        if (!b || String(b.id) === String(buttonId)) return;
+        if (Math.abs(x - b.x) <= SNAP) {
+          nx = b.x;
+          if (guides.vAlign.indexOf(b.x) < 0) guides.vAlign.push(b.x);
+        }
+        if (Math.abs(y - b.y) <= SNAP) {
+          ny = b.y;
+          if (guides.hAlign.indexOf(b.y) < 0) guides.hAlign.push(b.y);
+        }
+        var mirror = Math.round((100 - b.x) * 10) / 10;
+        if (Math.abs(x - mirror) <= SNAP) {
+          nx = mirror;
+          guides.mirrorX = mirror;
+        }
+      });
+      return { x: nx, y: ny, guides: guides };
     }
 
     function syncToolUi() {
@@ -3373,15 +3582,16 @@ var ExperienciaCanvas = (function () {
         var bid = hit.getAttribute('data-exp-stage-btn');
         canvas().selectedButtonId = bid;
         var sceneId = canvas().selectedId;
-        var btn = ExperienciaEngine.getSceneButton(
+        var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid
         );
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
           pointerId: ev.pointerId,
-          startX: btn ? btn.x : 50,
-          startY: btn ? btn.y : 50
+          startX: btn ? (btn.storedX != null ? btn.storedX : btn.x) : 50,
+          startY: btn ? (btn.storedY != null ? btn.storedY : btn.y) : 50,
+          guides: null
         };
         try { hit.setPointerCapture(ev.pointerId); } catch (eCap) {}
         paintButtonsStage();
@@ -3390,14 +3600,19 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.addEventListener('pointermove', function (ev) {
         if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId) return;
         var pct = percentFromPointer(ev);
+        var snapped = computeButtonGuides(
+          buttonDrag.sceneId, buttonDrag.buttonId, pct.x, pct.y
+        );
+        buttonDrag.guides = snapped.guides;
         ExperienciaEngine.setSceneButtonPosition(
-          state, buttonDrag.sceneId, buttonDrag.buttonId, pct.x, pct.y
+          state, buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
         );
         paintButtonsStage();
       });
       function endButtonDrag(ev) {
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
         buttonDrag = null;
+        paintButtonsStage();
         paintInspector();
         persist();
       }
