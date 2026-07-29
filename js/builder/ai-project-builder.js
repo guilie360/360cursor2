@@ -2543,6 +2543,20 @@ var AiProjectBuilderView = (function () {
         return ex;
       })());
     });
+    /* Remove bunny assets not present in current Media items list */
+    if (state.projectAssets && state.projectAssets.byId) {
+      var keep = {};
+      items.forEach(function (row) {
+        if (row && row.id != null) keep['bunny-' + row.id] = true;
+      });
+      Object.keys(state.projectAssets.byId).forEach(function (aid) {
+        var asset = state.projectAssets.byId[aid];
+        if (!asset) return;
+        if (asset.provider === 'bunny' && String(aid).indexOf('bunny-') === 0 && !keep[aid]) {
+          delete state.projectAssets.byId[aid];
+        }
+      });
+    }
     if (typeof MediaToursEngine !== 'undefined') {
       MediaToursEngine.syncScenesToProjectAssets(state);
     }
@@ -6314,6 +6328,20 @@ var AiProjectBuilderView = (function () {
       state.bunnyMedia = state.bunnyMedia || {};
       state.bunnyMedia.items = items;
       BunnyMediaApi.syncArchivosToProjectAssets(state, items);
+      /* Drop Bunny ghosts no longer in Media inventory (deleted files must not linger) */
+      if (state.projectAssets && state.projectAssets.byId) {
+        var keepBunny = {};
+        (items || []).forEach(function (row) {
+          if (row && row.id != null) keepBunny['bunny-' + row.id] = true;
+        });
+        Object.keys(state.projectAssets.byId).forEach(function (aid) {
+          var asset = state.projectAssets.byId[aid];
+          if (!asset) return;
+          if (asset.provider === 'bunny' && String(aid).indexOf('bunny-') === 0 && !keepBunny[aid]) {
+            delete state.projectAssets.byId[aid];
+          }
+        });
+      }
       saveState();
       if (!silent) setBunnyMediaStatus(items.length + ' archivo(s) · estructura Bunny sincronizada');
       renderStepContent();

@@ -472,6 +472,37 @@ var MediaNodesEngine = (function () {
     return assetsForNode(state, nodeId, null);
   }
 
+  /**
+   * Official Media inventory for cross-module pickers (Experiencia, etc.).
+   * Same visibility rule as the Media section: assets attached to compatible
+   * Media nodes, non-orphan, with a filename/url. Never lists Bunny orphans
+   * or historical projectAssets without a Media node.
+   */
+  function listInventoryAssets(state, filterType) {
+    if (!state) return [];
+    ensureNodeIds(state);
+    var nodes = listCompatibleNodes(state) || [];
+    var seen = {};
+    var out = [];
+    nodes.forEach(function (n) {
+      if (!n || !n.node_id) return;
+      var assets = assetsForNode(state, n.node_id, null) || [];
+      assets.forEach(function (a) {
+        if (!a || !a.id || seen[a.id]) return;
+        if (a.orphan) return;
+        if (!(a.filename || a.publicUrl || a.storagePath)) return;
+        if (filterType && a.type !== filterType) return;
+        seen[a.id] = true;
+        out.push(a);
+      });
+    });
+    return out.sort(function (a, b) {
+      var an = String((a && a.filename) || a.id || '');
+      var bn = String((b && b.filename) || b.id || '');
+      return an.localeCompare(bn, 'es', { sensitivity: 'base' });
+    });
+  }
+
   function detachAssets(state, nodeId) {
     if (!state || !nodeId || typeof ExperienciaEngine === 'undefined') return 0;
     var n = 0;
@@ -562,6 +593,7 @@ var MediaNodesEngine = (function () {
     categoryStatus: categoryStatus,
     nodeStatusSummary: nodeStatusSummary,
     listAssetsForNode: listAssetsForNode,
+    listInventoryAssets: listInventoryAssets,
     detachAssets: detachAssets,
     collectAssetIdsForNode: collectAssetIdsForNode,
     removeAssetsFromLibrary: removeAssetsFromLibrary,

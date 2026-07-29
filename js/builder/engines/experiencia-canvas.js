@@ -686,25 +686,37 @@ var ExperienciaCanvas = (function () {
           '<select data-exp-asset-pick>' +
             '<option value="">Sin asignar</option>' +
             (function () {
-              var assets = ExperienciaEngine.listProjectAssets
-                ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
-                  return a && !a.orphan && (a.filename || a.publicUrl);
-                })
-                : [];
+              var assets = ExperienciaEngine.listSelectableMediaAssets
+                ? ExperienciaEngine.listSelectableMediaAssets(state)
+                : (ExperienciaEngine.listProjectAssets
+                  ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+                    return a && !a.orphan && a.nodeId && (a.filename || a.publicUrl);
+                  })
+                  : []);
               var curId = media.assetId || null;
-              return assets.map(function (a) {
+              var curStillValid = curId && assets.some(function (a) {
+                return String(a.id) === String(curId);
+              });
+              var htmlOpts = assets.map(function (a) {
                 var label = a.filename || a.storagePath || a.id;
                 var sel = curId && String(curId) === String(a.id);
                 return '<option value="' + esc(a.id) + '"' + (sel ? ' selected' : '') + '>' +
                   esc(label) + '</option>';
               }).join('');
+              if (curId && !curStillValid) {
+                htmlOpts =
+                  '<option value="' + esc(curId) + '" selected disabled>' +
+                    esc((media.filename || curId) + ' (no está en Media)') +
+                  '</option>' + htmlOpts;
+              }
+              return htmlOpts;
             })() +
           '</select>' +
         '</div>' +
         (media.publicUrl
           ? '<p class="builder-menu-hint" style="margin:6px 0 10px;word-break:break-all">CDN: <a href="' +
             esc(media.publicUrl) + '" target="_blank" rel="noopener">' + esc(media.publicUrl) + '</a></p>'
-          : '<p class="builder-menu-hint">Solo assets cargados en Media.</p>') +
+          : '<p class="builder-menu-hint">Solo assets del inventario Media.</p>') +
         '<div class="builder-exp-inspector__actions">' +
           '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-asset-clear="' +
             esc(n.id) + '">Quitar referencia</button>' +
@@ -722,17 +734,24 @@ var ExperienciaCanvas = (function () {
           : [];
         var scopeId = hub.structureScope && (hub.structureScope.scopeId || hub.structureScope.componentId);
         var floorOpts = (hub.floors || []).slice();
-        var assetsAll = ExperienciaEngine.listProjectAssets
-          ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
-            return a && !a.orphan && (a.filename || a.publicUrl);
-          })
-          : [];
+        var assetsAll = ExperienciaEngine.listSelectableMediaAssets
+          ? ExperienciaEngine.listSelectableMediaAssets(state)
+          : (ExperienciaEngine.listProjectAssets
+            ? ExperienciaEngine.listProjectAssets(state).filter(function (a) {
+              return a && !a.orphan && a.nodeId && (a.filename || a.publicUrl);
+            })
+            : []);
         function assetOptionsHtml(selectedId) {
-          return '<option value="">—</option>' + assetsAll.map(function (a) {
+          var opts = '<option value="">—</option>' + assetsAll.map(function (a) {
             var sel = selectedId && String(selectedId) === String(a.id);
             return '<option value="' + esc(a.id) + '"' + (sel ? ' selected' : '') + '>' +
               esc(a.filename || a.id) + '</option>';
           }).join('');
+          if (selectedId && !assetsAll.some(function (a) { return String(a.id) === String(selectedId); })) {
+            opts = '<option value="' + esc(selectedId) + '" selected disabled>' +
+              esc(selectedId + ' (no está en Media)') + '</option>' + opts;
+          }
+          return opts;
         }
         html += '<div class="builder-exp-inspector__section">HUB / Estructura</div>' +
           '<div class="builder-field builder-exp-inspector__field">' +
@@ -1464,6 +1483,9 @@ var ExperienciaCanvas = (function () {
       }
       inspectorBody.innerHTML = inspectorHtml(state, canvas().selectedId, canvas().selectedEdgeId);
       bindInspectorActions();
+      if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
+        WorkspaceSelect.enhance(inspectorBody);
+      }
     }
 
     function bindInspectorActions() {

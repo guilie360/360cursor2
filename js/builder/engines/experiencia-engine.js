@@ -672,6 +672,19 @@ var ExperienciaEngine = (function () {
     });
   }
 
+  /**
+   * Assets selectable in Experiencia = Media inventory only (SSOT).
+   * Never Bunny listings, never orphan/historical projectAssets.
+   */
+  function listSelectableMediaAssets(state, filterType) {
+    if (typeof MediaNodesEngine !== 'undefined' && MediaNodesEngine.listInventoryAssets) {
+      return MediaNodesEngine.listInventoryAssets(state, filterType) || [];
+    }
+    return listProjectAssets(state, filterType).filter(function (a) {
+      return a && !a.orphan && a.nodeId && (a.filename || a.publicUrl || a.storagePath);
+    });
+  }
+
   function mirrorHotspotsFromInteractions(n) {
     if (!n || !n.config) return;
     var ixs = n.config.interactions || [];
@@ -3802,6 +3815,7 @@ var ExperienciaEngine = (function () {
     clearNodeAsset: clearNodeAsset,
     resolveSceneMedia: resolveSceneMedia,
     listProjectAssets: listProjectAssets,
+    listSelectableMediaAssets: listSelectableMediaAssets,
     assetStatusLabel: assetStatusLabel,
     guessAssetType: guessAssetType,
     summary: summary,
