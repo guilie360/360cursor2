@@ -3557,9 +3557,7 @@ var ExperienciaCanvas = (function () {
           sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || ''
         };
         setCanvasMode(true, restore);
-        /* V7.0.03 — hide chrome via width tokens only; platform nav is never collapsible */
-        document.body.classList.remove('boxies-nav-collapsed');
-        document.documentElement.classList.remove('boxies-nav-collapsed');
+        /* V7.0.04 — hide chrome via width tokens; platform nav is always full-width */
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
@@ -3587,8 +3585,6 @@ var ExperienciaCanvas = (function () {
         var prev = prefs._expCanvasRestore || {};
         /* Focus and Fullscreen are independent — never exit FS when leaving Focus */
         setCanvasMode(false, null);
-        document.body.classList.remove('boxies-nav-collapsed');
-        document.documentElement.classList.remove('boxies-nav-collapsed');
         if (prev.sidebarW) {
           document.documentElement.style.setProperty('--boxies-sidebar-w', prev.sidebarW);
         } else {
@@ -6050,8 +6046,6 @@ var ExperienciaCanvas = (function () {
       if (isCanvasMode()) {
         document.body.classList.add('boxies-exp-canvas-mode');
         document.documentElement.classList.add('boxies-exp-canvas-mode');
-        document.body.classList.remove('boxies-nav-collapsed');
-        document.documentElement.classList.remove('boxies-nav-collapsed');
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');

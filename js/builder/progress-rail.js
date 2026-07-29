@@ -1,7 +1,6 @@
-/* Progress rail - V5.9.97 unified chrome + clean UTF-8 */
+/* Progress rail - V7.0.04 — sidebar is always full-width, never collapsed */
 var BuilderProgressRail = (function () {
   var EXPANDED_RAIL_W = '185px';
-  var PLATFORM_RAIL_W = '50px';
   var FLOAT_BTN_ID = 'boxiesSidebarFloatBtn';
   var MARK_DONE = '\u2713';
   var MARK_PENDING = '\u25CB';
@@ -274,9 +273,7 @@ var BuilderProgressRail = (function () {
     if (!body || !root) return;
     body.classList.add('boxies-builder-chrome');
     root.classList.add('boxies-builder-chrome');
-    if (root.style) {
-      root.style.setProperty('--boxies-sidebar-w', PLATFORM_RAIL_W);
-    }
+    // Never override --boxies-sidebar-w here; the platform sidebar is always full-width.
   }
 
   function destroyFloatButton() {
@@ -296,9 +293,7 @@ var BuilderProgressRail = (function () {
         root.style.removeProperty('--boxies-sidebar-w');
       }
     }
-    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.applyNavCollapsed === 'function') {
-      try { BoxiesShell.applyNavCollapsed(); } catch (eNav) {}
-    }
+    // Sidebar is always expanded; nothing to restore.
   }
 
   function applyRailCollapsed(collapsed) {
@@ -313,7 +308,6 @@ var BuilderProgressRail = (function () {
     root.classList.toggle('boxies-rail-collapsed', collapsed);
 
     root.style.setProperty('--builder-rail-width', collapsed ? '0px' : EXPANDED_RAIL_W);
-    root.style.setProperty('--boxies-sidebar-w', PLATFORM_RAIL_W);
 
     if (typeof BoxiesPrefs !== 'undefined') {
       if (BoxiesPrefs.setBuilderNavigationCollapsed) {

@@ -36,12 +36,6 @@ var BoxiesShell = (function () {
     return '<span class="boxies-header__title" id="boxiesHeaderTitle" aria-label="BOXIES">B O X I E S</span>';
   }
 
-  /** V7.0.03 — shell nav is always expanded; kept as no-op for legacy callers. */
-  function applyNavCollapsed() {
-    document.body.classList.remove('boxies-nav-collapsed');
-    document.documentElement.classList.remove('boxies-nav-collapsed');
-  }
-
   function dockHtml() {
     return (
       '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones">' +
@@ -217,7 +211,6 @@ var BoxiesShell = (function () {
     setChromeClasses(true);
     mounted = true;
     bind();
-    applyNavCollapsed();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
       BuilderProgressRail.applyCollapsedFromPrefs();
     }
@@ -385,7 +378,6 @@ var BoxiesShell = (function () {
     clearPageActions: clearPageActions,
     isMounted: isMounted,
     setChromeClasses: setChromeClasses,
-    applyNavCollapsed: applyNavCollapsed,
     resolvePreviewUrl: resolvePreviewUrl
   };
 })();

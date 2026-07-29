@@ -1,12 +1,12 @@
 /**
  * BOXIES workspace prefs — persisted UI chrome (independent panel collapse).
+ * V7.0.04 — sidebar is always full-width, no collapse state.
  */
 var BoxiesPrefs = (function () {
   var KEY = 'boxies_workspace_prefs_v1';
 
   function defaults() {
     return {
-      navCollapsed: false,
       railCollapsed: false,
       /* V5.9.81 — Builder Panel B only; platform nav unaffected */
       builderNavigationCollapsed: false,
@@ -38,14 +38,6 @@ var BoxiesPrefs = (function () {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch (e) {}
     return next;
-  }
-
-  function getNavCollapsed() {
-    return false;
-  }
-
-  function setNavCollapsed() {
-    return save({ navCollapsed: false });
   }
 
   function getBuilderNavigationCollapsed() {
@@ -84,8 +76,6 @@ var BoxiesPrefs = (function () {
   return {
     load: load,
     save: save,
-    getNavCollapsed: getNavCollapsed,
-    setNavCollapsed: setNavCollapsed,
     getBuilderNavigationCollapsed: getBuilderNavigationCollapsed,
     setBuilderNavigationCollapsed: setBuilderNavigationCollapsed,
     getRailCollapsed: getRailCollapsed,
