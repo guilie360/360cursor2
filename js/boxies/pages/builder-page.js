@@ -206,6 +206,9 @@ var BoxiesBuilderPage = (function () {
   }
 
   function showPickProject(host) {
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
     }
@@ -217,8 +220,8 @@ var BoxiesBuilderPage = (function () {
     host.innerHTML =
       '<div class="boxies-page boxies-exp-select">' +
         '<header class="boxies-exp-select__header">' +
-          '<p class="boxies-exp-select__kicker">Builder</p>' +
-          '<h1 class="boxies-page__title">¿Qué deseas crear?</h1>' +
+          '<h1 class="boxies-page__title">Builder</h1>' +
+          '<p class="boxies-page__desc">Selecciona el tipo de experiencia que deseas crear.</p>' +
         '</header>' +
         '<div class="boxies-exp-select__grid" role="list">' +
           types.map(renderSelectorCard).join('') +
@@ -234,6 +237,9 @@ var BoxiesBuilderPage = (function () {
   }
 
   function showError(host, err) {
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
     host.innerHTML =
       '<div class="boxies-page boxies-placeholder">' +
         '<h1 class="boxies-page__title">No se pudo abrir el Builder</h1>' +
@@ -303,8 +309,13 @@ var BoxiesBuilderPage = (function () {
       if (nestedApp) nestedApp.hidden = false;
 
       syncProjectDock(projectId, slug);
-      if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
-        BuilderProgressRail.applyCollapsedFromPrefs();
+      /* V7.0.07 — editor entry always opens the tools rail; float exists only with the rail. */
+      if (typeof BuilderProgressRail !== 'undefined') {
+        if (BuilderProgressRail.openEditorRail) {
+          BuilderProgressRail.openEditorRail();
+        } else if (BuilderProgressRail.applyRailCollapsed) {
+          BuilderProgressRail.applyRailCollapsed(false);
+        }
       }
 
       if (pendingBusy) {
@@ -379,6 +390,9 @@ var BoxiesBuilderPage = (function () {
       }
     } catch (e) {
       console.warn('[boxies:builder-page] onLeave', e);
+    }
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();

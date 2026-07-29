@@ -210,9 +210,6 @@ var BoxiesShell = (function () {
     setChromeClasses(true);
     mounted = true;
     bind();
-    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.applyCollapsedFromPrefs) {
-      BuilderProgressRail.applyCollapsedFromPrefs();
-    }
     if (typeof BoxiesTooltip !== 'undefined' && typeof BoxiesTooltip.init === 'function') {
       BoxiesTooltip.init();
     }
@@ -225,6 +222,9 @@ var BoxiesShell = (function () {
     }
     clearPageActions();
     clearProjectContext();
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
     /* Leaving BOXIES entirely — release workspace fullscreen */
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(function () {});

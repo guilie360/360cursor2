@@ -190,10 +190,6 @@ var BuilderProgressRail = (function () {
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
     btn.innerHTML = collapseToggleIcon();
-    btn.style.display = 'inline-flex';
-    btn.style.visibility = 'visible';
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = 'auto';
     if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.adopt) {
       try { BoxiesTooltip.adopt(btn); } catch (eTip) {}
     }
@@ -204,6 +200,10 @@ var BuilderProgressRail = (function () {
       e.preventDefault();
       e.stopPropagation();
     }
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return;
+    }
     var rail = document.getElementById('builderProgressRail');
     var list = rail && rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
     var scroll = list ? list.scrollTop || 0 : _savedListScroll;
@@ -211,7 +211,6 @@ var BuilderProgressRail = (function () {
 
     var next = !isRailCollapsed();
     applyRailCollapsed(next);
-    ensureFloatButton();
     syncFloatButton(next);
 
     list = rail && rail.querySelector ? rail.querySelector('[data-builder-rail-list]') : null;
@@ -230,7 +229,17 @@ var BuilderProgressRail = (function () {
       document.body;
   }
 
+  /** V7.0.07 — float handle only exists when the Builder progress rail is in the DOM. */
+  function hasEditorRail() {
+    return !!document.getElementById('builderProgressRail');
+  }
+
   function ensureFloatButton() {
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return null;
+    }
+
     var mount = floatMountParent();
     if (!mount) return null;
 
@@ -293,7 +302,6 @@ var BuilderProgressRail = (function () {
         root.style.removeProperty('--boxies-sidebar-w');
       }
     }
-    // Sidebar is always expanded; nothing to restore.
   }
 
   function applyRailCollapsed(collapsed) {
@@ -301,6 +309,11 @@ var BuilderProgressRail = (function () {
     var body = document.body;
     var root = document.documentElement;
     if (!body || !root || !root.style) return;
+
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return;
+    }
 
     activateBuilderChrome();
 
@@ -322,7 +335,20 @@ var BuilderProgressRail = (function () {
   }
 
   function applyCollapsedFromPrefs() {
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return;
+    }
     applyRailCollapsed(isRailCollapsed());
+  }
+
+  /** V7.0.07 — editor entry always opens the tools rail. */
+  function openEditorRail() {
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return;
+    }
+    applyRailCollapsed(false);
   }
 
   function renderHtml(state) {
@@ -379,13 +405,11 @@ var BuilderProgressRail = (function () {
 
   function update(rootEl, state) {
     var rail = resolveRail(rootEl);
-    activateBuilderChrome();
-
     if (!rail) {
-      ensureFloatButton();
-      syncFloatButton(isRailCollapsed());
+      destroyFloatButton();
       return;
     }
+    activateBuilderChrome();
     _lastRoot = rootEl || null;
     _lastState = state || null;
 
@@ -404,17 +428,17 @@ var BuilderProgressRail = (function () {
     }
 
     applyCollapsedFromPrefs();
-    ensureFloatButton();
-    syncFloatButton(isRailCollapsed());
   }
 
   function applyLayoutVars() {
     if (document.documentElement && document.documentElement.style) {
       document.documentElement.style.setProperty('--builder-header-height', '44px');
     }
+    if (!hasEditorRail()) {
+      destroyFloatButton();
+      return;
+    }
     applyCollapsedFromPrefs();
-    ensureFloatButton();
-    syncFloatButton(isRailCollapsed());
   }
 
   return {
@@ -424,9 +448,11 @@ var BuilderProgressRail = (function () {
     applyLayoutVars: applyLayoutVars,
     applyCollapsedFromPrefs: applyCollapsedFromPrefs,
     applyRailCollapsed: applyRailCollapsed,
+    openEditorRail: openEditorRail,
     ensureFloatButton: ensureFloatButton,
     destroyFloatButton: destroyFloatButton,
     isDone: isDone,
-    isRailCollapsed: isRailCollapsed
+    isRailCollapsed: isRailCollapsed,
+    hasEditorRail: hasEditorRail
   };
 })();

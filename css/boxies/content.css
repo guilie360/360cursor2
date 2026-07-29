@@ -224,17 +224,20 @@
   box-sizing: border-box;
 }
 
+/* V7.0.07 — single page typography hierarchy for BOXIES content */
 #boxiesContent .boxies-page__title {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0 0 6px;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary, #ffffff);
 }
 
 #boxiesContent .boxies-page__desc {
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--text-secondary, #ffffff);
+  opacity: var(--text-secondary-opacity, 0.78);
   font-size: 13px;
+  font-weight: 400;
   margin: 0 0 22px;
   line-height: 1.55;
 }
@@ -745,7 +748,7 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   color: rgba(255, 255, 255, 0.34);
 }
 
-/* V7.0.03 — Builder experience type selector (design tokens only) */
+/* V7.0.07 — Builder experience type selector */
 #boxiesContent .boxies-exp-select {
   width: 100%;
   margin: 0;
@@ -757,23 +760,17 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   margin-bottom: var(--hall-space-5, 24px);
 }
 
-#boxiesContent .boxies-exp-select__kicker {
-  margin: 0 0 var(--hall-space-2, 8px);
-  font-size: var(--hall-label-size, 0.6875rem);
-  font-weight: 600;
-  letter-spacing: var(--hall-tracking-ui, 0.1em);
-  text-transform: uppercase;
-  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
+#boxiesContent .boxies-exp-select__header .boxies-page__title {
+  margin-bottom: 6px;
 }
 
-#boxiesContent .boxies-exp-select__header .boxies-page__title {
+#boxiesContent .boxies-exp-select__header .boxies-page__desc {
   margin-bottom: 0;
-  color: var(--hall-text, rgba(255, 255, 255, 0.94));
 }
 
 #boxiesContent .boxies-exp-select__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--hall-space-4, 16px);
 }
 
@@ -785,6 +782,7 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   justify-content: space-between;
   gap: var(--hall-space-6, 32px);
   min-height: 196px;
+  min-width: 0;
   padding: var(--hall-space-5, 24px);
   margin: 0;
   text-align: left;
@@ -834,6 +832,12 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
 
 #boxiesContent .boxies-exp-select-card:hover .boxies-exp-select-card__action {
   color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
+}
+
+@media (max-width: 1100px) {
+  #boxiesContent .boxies-exp-select__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
