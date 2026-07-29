@@ -1869,6 +1869,101 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   color: rgba(255, 255, 255, 0.45);
 }
 
+/* V7.1.07 — Social share preview */
+.builder-config-share {
+  max-width: 440px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.builder-config-share__desc {
+  margin: 0 0 16px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.builder-config-share__upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.builder-config-share__file {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.builder-field textarea {
+  appearance: none;
+  width: 100%;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--hall-border, rgba(255, 255, 255, 0.06));
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-primary, #fff);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  box-sizing: border-box;
+  min-height: 84px;
+}
+
+.builder-share-mock {
+  margin-top: 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.builder-share-mock__media {
+  width: 100%;
+  aspect-ratio: 1.91 / 1;
+  background-color: rgba(255, 255, 255, 0.04);
+  background-size: cover;
+  background-position: center;
+}
+
+.builder-share-mock__media--empty {
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+}
+
+.builder-share-mock__body {
+  padding: 12px 14px 14px;
+}
+
+.builder-share-mock__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.builder-share-mock__desc {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.48);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.builder-share-mock__host {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.34);
+}
+
 .builder-check-row {
   display: flex;
   align-items: center;

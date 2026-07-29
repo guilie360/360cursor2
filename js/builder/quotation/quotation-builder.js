@@ -1,12 +1,22 @@
 /**
  * QuotationBuilderView — Quotation Room builder host.
- * V7.1.05 — shared Builder shell (tokens + progress rail chrome).
+ * V7.1.07 — shared Config + Guardar/Republicar dock + social share preview.
  */
 var QuotationBuilderView = (function () {
   var rootEl = null;
   var currentStep = 'config';
-  var projectCtx = { id: '', name: '', slug: '' };
+  var projectCtx = {
+    id: '',
+    name: '',
+    slug: '',
+    constructora_id: null,
+    og_image: '',
+    og_title: '',
+    og_description: '',
+    published: false
+  };
   var sectionChecks = {};
+  var processing = false;
 
   function resolvePanel(stepId) {
     var id = typeof QuotationRouter !== 'undefined'
@@ -23,8 +33,20 @@ var QuotationBuilderView = (function () {
       typeof QuotationSidebar !== 'undefined' && QuotationSidebar.renderHtml
         ? QuotationSidebar.renderHtml(stepId, sectionChecks)
         : '';
+    var actions =
+      typeof BuilderDockActions !== 'undefined' && BuilderDockActions.mountHostHtml
+        ? BuilderDockActions.mountHostHtml({ published: !!projectCtx.published })
+        : (
+          '<div class="builder-header-actions" hidden>' +
+            '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
+            '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
+              (projectCtx.published ? 'Republicar' : 'Publicar') +
+            '</button>' +
+          '</div>'
+        );
     return '' +
       '<div class="quotation-builder builder-app" id="quotationBuilderRoot" data-quotation-builder>' +
+        actions +
         '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Navegación Builder">' +
           sidebar +
         '</aside>' +
@@ -53,6 +75,95 @@ var QuotationBuilderView = (function () {
       sectionChecks[stepId] = !!input.checked;
       refreshSidebar();
     });
+  }
+
+  function configAdapter() {
+    return {
+      getProjectId: function () { return projectCtx.id || null; },
+      resolveConstructoraId: function () {
+        return projectCtx.constructora_id ||
+          (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+            ? AdminState.getConstructoraId()
+            : null);
+      },
+      onShareSaved: function (meta) {
+        projectCtx.og_image = meta.og_image || '';
+        projectCtx.og_title = meta.og_title || '';
+        projectCtx.og_description = meta.og_description || '';
+      }
+    };
+  }
+
+  async function handleSave() {
+    if (processing) return;
+    processing = true;
+    try {
+      var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
+      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
+        await BuilderConfig.saveShareMeta(configAdapter(), panel);
+      }
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+        AdminNotify.success('Cambios guardados.');
+      }
+    } catch (err) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error((err && err.message) || 'No se pudo guardar.');
+      }
+    } finally {
+      processing = false;
+    }
+  }
+
+  async function handlePublish() {
+    if (processing) return;
+    if (!projectCtx.id) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('No hay un proyecto vinculado.');
+      }
+      return;
+    }
+    processing = true;
+    try {
+      var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
+      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
+        try { await BuilderConfig.saveShareMeta(configAdapter(), panel); } catch (eShare) {}
+      }
+      if (typeof ProyectosApi === 'undefined' || !ProyectosApi.update) {
+        throw new Error('API de publicación no disponible.');
+      }
+      var updated = await ProyectosApi.update(projectCtx.id, { publicado: true });
+      projectCtx.published = !!(updated && updated.publicado !== false);
+      if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.setPublished) {
+        BuilderDockActions.setPublished(true);
+      }
+      var url =
+        typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl
+          ? PlatformBuilderBridge.showroomUrl(projectCtx.slug)
+          : (typeof BuilderConfig !== 'undefined'
+            ? BuilderConfig.publicUrlDisplay(projectCtx.slug)
+            : '/' + projectCtx.slug);
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+        AdminNotify.success(
+          projectCtx.published ? 'Proyecto republicado: ' + url : 'Proyecto publicado: ' + url
+        );
+      }
+    } catch (err) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error((err && err.message) || 'No se pudo publicar.');
+      }
+    } finally {
+      processing = false;
+    }
+  }
+
+  function mountDockActions(host) {
+    if (typeof BuilderDockActions === 'undefined') return;
+    BuilderDockActions.promote(host);
+    BuilderDockActions.bind({
+      onSave: handleSave,
+      onPublish: handlePublish
+    });
+    BuilderDockActions.setPublished(!!projectCtx.published);
   }
 
   function renderStep(stepId) {
@@ -103,7 +214,11 @@ var QuotationBuilderView = (function () {
       id: String(projectId || '').trim(),
       slug: String(slug || '').trim(),
       name: String(slug || projectId || 'Quotation Room'),
-      constructora_id: null
+      constructora_id: null,
+      og_image: '',
+      og_title: '',
+      og_description: '',
+      published: false
     };
     try {
       if (typeof BoxiesAdmin2ProjectsApi !== 'undefined' && BoxiesAdmin2ProjectsApi.list) {
@@ -124,10 +239,21 @@ var QuotationBuilderView = (function () {
           projectCtx.id = match.id || projectCtx.id;
           projectCtx.name = match.nombre || match.name || projectCtx.name;
           projectCtx.slug = match.slug || projectCtx.slug;
-          projectCtx.constructora_id = match.constructora_id || projectCtx.constructora_id || null;
+          projectCtx.constructora_id = match.constructora_id || null;
+          projectCtx.published = !!match.publicado;
         }
       }
     } catch (eHydrate) {}
+
+    if (projectCtx.id && typeof ProyectosApi !== 'undefined' && ProyectosApi.fetchShareMeta) {
+      try {
+        var share = await ProyectosApi.fetchShareMeta(projectCtx.id);
+        projectCtx.og_image = share.og_image || '';
+        projectCtx.og_title = share.og_title || '';
+        projectCtx.og_description = share.og_description || '';
+      } catch (eShare) {}
+    }
+
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.setProjectContext) {
       BoxiesShell.setProjectContext({
         id: projectCtx.id,
@@ -154,6 +280,7 @@ var QuotationBuilderView = (function () {
       QuotationSidebar.bind(host.querySelector('#builderProgressRail'), goToStep);
     }
     activateSharedChrome();
+    mountDockActions(host);
     renderStep(currentStep);
     return {
       goToStep: goToStep,
@@ -171,6 +298,9 @@ var QuotationBuilderView = (function () {
   }
 
   function onLeave() {
+    if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.restore) {
+      try { BuilderDockActions.restore(); } catch (eDock) {}
+    }
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eL) {}
     }
@@ -182,7 +312,10 @@ var QuotationBuilderView = (function () {
     }
     rootEl = null;
     sectionChecks = {};
-    projectCtx = { id: '', name: '', slug: '' };
+    projectCtx = {
+      id: '', name: '', slug: '', constructora_id: null,
+      og_image: '', og_title: '', og_description: '', published: false
+    };
   }
 
   return {

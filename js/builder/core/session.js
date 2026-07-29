@@ -55,6 +55,11 @@ var BuilderSession = (function () {
       validation: null,
       published: false,
       publishResult: null,
+      shareMeta: {
+        og_image: '',
+        og_title: '',
+        og_description: ''
+      },
       sectionChecks: {},
       messages: []
     };

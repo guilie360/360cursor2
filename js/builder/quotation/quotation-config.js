@@ -1,8 +1,17 @@
 /**
- * Quotation Config — V7.1.06 reuses shared BuilderConfig (same as Showroom).
+ * Quotation Config — V7.1.07 shared BuilderConfig + social share preview.
  */
 var QuotationConfig = (function () {
-  var _ctx = { id: '', name: '', slug: '', constructora_id: null };
+  var _ctx = {
+    id: '',
+    name: '',
+    slug: '',
+    constructora_id: null,
+    og_image: '',
+    og_title: '',
+    og_description: '',
+    published: false
+  };
   var _projectRef = null;
 
   function syncProjectRef() {
@@ -10,9 +19,22 @@ var QuotationConfig = (function () {
     _projectRef.id = _ctx.id;
     _projectRef.name = _ctx.name;
     _projectRef.slug = _ctx.slug;
-    if (_ctx.constructora_id != null) {
-      _projectRef.constructora_id = _ctx.constructora_id;
-    }
+    _projectRef.constructora_id = _ctx.constructora_id;
+    _projectRef.og_image = _ctx.og_image;
+    _projectRef.og_title = _ctx.og_title;
+    _projectRef.og_description = _ctx.og_description;
+    _projectRef.published = _ctx.published;
+  }
+
+  function identityPayload() {
+    return {
+      nombre: _ctx.name || '',
+      slug: _ctx.slug || '',
+      constructora_id: _ctx.constructora_id || null,
+      og_image: _ctx.og_image || '',
+      og_title: _ctx.og_title || '',
+      og_description: _ctx.og_description || ''
+    };
   }
 
   function makeAdapter(panel) {
@@ -21,11 +43,13 @@ var QuotationConfig = (function () {
         return _ctx.id || null;
       },
       getIdentity: function () {
-        return {
-          nombre: _ctx.name || '',
-          slug: _ctx.slug || '',
-          constructora_id: _ctx.constructora_id || null
-        };
+        return identityPayload();
+      },
+      resolveConstructoraId: function () {
+        return _ctx.constructora_id ||
+          (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+            ? AdminState.getConstructoraId()
+            : null);
       },
       onSaved: function (payload) {
         _ctx.id = payload.id;
@@ -34,15 +58,24 @@ var QuotationConfig = (function () {
         _ctx.constructora_id = payload.constructora_id || _ctx.constructora_id;
         syncProjectRef();
       },
+      onShareChange: function (meta) {
+        _ctx.og_image = meta.og_image || '';
+        _ctx.og_title = meta.og_title || '';
+        _ctx.og_description = meta.og_description || '';
+        syncProjectRef();
+      },
+      onShareSaved: function (meta) {
+        _ctx.og_image = meta.og_image || '';
+        _ctx.og_title = meta.og_title || '';
+        _ctx.og_description = meta.og_description || '';
+        syncProjectRef();
+      },
       afterSave: function () {
         if (!panel || typeof BuilderConfig === 'undefined') return;
         var host = panel.querySelector('.builder-step-content');
         if (!host || !host.parentNode) return;
         var wrap = document.createElement('div');
-        wrap.innerHTML = BuilderConfig.render({
-          nombre: _ctx.name,
-          slug: _ctx.slug
-        });
+        wrap.innerHTML = BuilderConfig.render(identityPayload());
         var next = wrap.firstChild;
         if (!next) return;
         host.parentNode.replaceChild(next, host);
@@ -58,7 +91,11 @@ var QuotationConfig = (function () {
       id: ctx.id || '',
       name: ctx.name || ctx.nombre || '',
       slug: ctx.slug || '',
-      constructora_id: ctx.constructora_id || null
+      constructora_id: ctx.constructora_id || null,
+      og_image: ctx.og_image || '',
+      og_title: ctx.og_title || '',
+      og_description: ctx.og_description || '',
+      published: !!ctx.published
     };
 
     var header =
@@ -66,17 +103,14 @@ var QuotationConfig = (function () {
         ? QuotationSidebar.pageHeaderHtml(
           'config',
           'Configuración',
-          'Identidad y datos del proyecto.',
+          'Identidad, publicación y vista previa al compartir.',
           opts.sectionChecks
         )
         : '';
 
     var body =
       typeof BuilderConfig !== 'undefined' && BuilderConfig.render
-        ? BuilderConfig.render({
-          nombre: _ctx.name,
-          slug: _ctx.slug
-        })
+        ? BuilderConfig.render(identityPayload())
         : '<p class="builder-step-desc">Configuración no disponible.</p>';
 
     return '' +
@@ -93,7 +127,11 @@ var QuotationConfig = (function () {
         id: ctx.id || '',
         name: ctx.name || ctx.nombre || '',
         slug: ctx.slug || '',
-        constructora_id: ctx.constructora_id || null
+        constructora_id: ctx.constructora_id || null,
+        og_image: ctx.og_image || '',
+        og_title: ctx.og_title || '',
+        og_description: ctx.og_description || '',
+        published: !!ctx.published
       };
     }
     if (!panel || typeof BuilderConfig === 'undefined' || !BuilderConfig.bind) return;

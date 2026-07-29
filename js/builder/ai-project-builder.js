@@ -371,10 +371,14 @@ var AiProjectBuilderView = (function () {
 
   function renderConfig() {
     var info = state.projectInfo || {};
+    var share = state.shareMeta || {};
     if (typeof BuilderConfig !== 'undefined' && BuilderConfig.render) {
       return BuilderConfig.render({
         nombre: info.nombre || '',
-        slug: info.slug || ''
+        slug: info.slug || '',
+        og_image: share.og_image || '',
+        og_title: share.og_title || '',
+        og_description: share.og_description || ''
       });
     }
     var nombre = info.nombre || '';
@@ -3804,9 +3808,13 @@ var AiProjectBuilderView = (function () {
       '<button type="button" class="builder-header-btn builder-header-back" id="builderBackInlineBtn" aria-label="Volver al showroom">' +
         BuilderIcons.render('arrow-left') + '<span>Showroom</span></button>';
     var actionsHtml =
-      '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
-        (state.published ? 'Republicar' : 'Publicar') + '</button>';
+      typeof BuilderDockActions !== 'undefined' && BuilderDockActions.html
+        ? BuilderDockActions.html({ published: !!state.published })
+        : (
+          '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
+          '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
+            (state.published ? 'Republicar' : 'Publicar') + '</button>'
+        );
 
     var shellHtml =
       typeof BoxiesAppShell !== 'undefined'
@@ -5443,6 +5451,10 @@ var AiProjectBuilderView = (function () {
             });
             saveState();
           },
+          onShareSaved: function (meta) {
+            state.shareMeta = Object.assign({}, state.shareMeta || {}, meta || {});
+            saveState();
+          },
           afterSave: function () {
             renderStepContent();
             updateNavButtons();
@@ -6893,6 +6905,28 @@ var AiProjectBuilderView = (function () {
 
     saveState();
 
+    var sharePromise =
+      (typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta && rootEl)
+        ? BuilderConfig.saveShareMeta({
+          getProjectId: function () {
+            return state.draftProjectId ||
+              (state.publishResult && state.publishResult.proyectoId) ||
+              (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+                ? AdminState.getActiveProjectId()
+                : null);
+          },
+          resolveConstructoraId: function () {
+            return (state.projectInfo && state.projectInfo.constructora_id) ||
+              (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+                ? AdminState.getConstructoraId()
+                : null);
+          },
+          onShareSaved: function (meta) {
+            state.shareMeta = Object.assign({}, state.shareMeta || {}, meta || {});
+          }
+        }, rootEl).catch(function () { return null; })
+        : Promise.resolve(null);
+
     var syncHero = HeroSyncEngine.sync(state);
     var syncMenu = typeof MenuSyncEngine !== 'undefined'
       ? MenuSyncEngine.sync(state)
@@ -6904,15 +6938,17 @@ var AiProjectBuilderView = (function () {
       ? EstructuraSyncEngine.saveDraft(state).catch(function () { return null; })
       : Promise.resolve(null);
 
-    Promise.all([syncHero, syncMenu, syncViviendas, syncEstructura])
+    Promise.all([sharePromise, syncHero, syncMenu, syncViviendas, syncEstructura])
       .then(function (results) {
-        var heroResult = results[0];
-        var menuResult = results[1];
-        var vivResult = results[2];
-        var estResult = results[3];
-        if (heroResult || menuResult || vivResult || estResult) {
+        var shareResult = results[0];
+        var heroResult = results[1];
+        var menuResult = results[2];
+        var vivResult = results[3];
+        var estResult = results[4];
+        if (shareResult || heroResult || menuResult || vivResult || estResult) {
           saveState();
           var parts = [];
+          if (shareResult) parts.push('vista previa social');
           if (heroResult) parts.push('hero');
           if (menuResult) parts.push('menú');
           if (vivResult) parts.push('viviendas');
@@ -7485,6 +7521,22 @@ var AiProjectBuilderView = (function () {
       }
       if (typeof ViviendasSyncEngine !== 'undefined') {
         await ViviendasSyncEngine.bindFromUrl(state);
+      }
+      if (typeof ProyectosApi !== 'undefined' && ProyectosApi.fetchShareMeta) {
+        var pid = state.draftProjectId ||
+          (state.publishResult && state.publishResult.proyectoId) ||
+          (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+            ? AdminState.getActiveProjectId()
+            : null);
+        if (pid) {
+          try {
+            state.shareMeta = await ProyectosApi.fetchShareMeta(pid);
+          } catch (eShare) {
+            state.shareMeta = state.shareMeta || {
+              og_image: '', og_title: '', og_description: ''
+            };
+          }
+        }
       }
       saveState();
     } catch (err) {

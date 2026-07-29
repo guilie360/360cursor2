@@ -33,7 +33,7 @@ var BuilderConfig = (function () {
   }
 
   /**
-   * @param {object} identity — { nombre, slug }
+   * @param {object} identity — { nombre, slug, og_image?, og_title?, og_description? }
    * @returns {string} HTML (builder-step-content wrapper included)
    */
   function render(identity) {
@@ -41,6 +41,23 @@ var BuilderConfig = (function () {
     var nombre = identity.nombre || '';
     var slug = identity.slug || '';
     var urlPreview = publicUrlDisplay(slug);
+    var ogImage = identity.og_image || '';
+    var ogTitle = identity.og_title || '';
+    var ogDescription = identity.og_description || '';
+    var hostLabel = '360preventa.com';
+    try {
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.displayUrl) {
+        var sample = ShowroomPublicUrl.displayUrl(slug || 'proyecto');
+        var u = new URL(sample.indexOf('http') === 0 ? sample : 'https://' + sample);
+        hostLabel = u.hostname || hostLabel;
+      }
+    } catch (eHost) {}
+
+    var mockImg = ogImage
+      ? ('<div class="builder-share-mock__media" style="background-image:url(\'' +
+          escapeHtml(ogImage) + '\')"></div>')
+      : '<div class="builder-share-mock__media builder-share-mock__media--empty" aria-hidden="true"></div>';
+
     return '<div class="builder-step-content">' +
       '<div class="builder-config-identity">' +
         '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
@@ -67,20 +84,203 @@ var BuilderConfig = (function () {
           '<button type="button" class="builder-header-action-btn" id="showroomIdentitySaveBtn">Guardar cambios</button>' +
           '<span class="builder-config-identity__status" id="showroomIdentityStatus" aria-live="polite"></span>' +
         '</div>' +
-      '</div></div>';
+      '</div>' +
+
+      '<div class="builder-config-share" data-builder-share>' +
+        '<h3 class="builder-config-identity__title">Vista previa al compartir</h3>' +
+        '<p class="builder-config-share__desc">Personaliza cómo se verá este proyecto cuando compartas el enlace por WhatsApp, Facebook, LinkedIn o cualquier red social.</p>' +
+
+        '<div class="builder-field">' +
+          '<label>Imagen de vista previa</label>' +
+          '<div class="builder-config-share__upload">' +
+            '<button type="button" class="builder-header-action-btn" id="builderOgImageBtn">Subir imagen</button>' +
+            '<input type="file" id="builderOgImageInput" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>' +
+            '<span class="builder-config-share__file" id="builderOgImageName" aria-live="polite">' +
+              (ogImage ? 'Imagen cargada' : 'Sin imagen') +
+            '</span>' +
+          '</div>' +
+          '<p class="builder-config-identity__slug-hint">Recomendado: 1200 × 630 px. Acepta JPG y PNG.</p>' +
+          '<input type="hidden" id="builderOgImageUrl" value="' + escapeHtml(ogImage) + '">' +
+        '</div>' +
+
+        '<div class="builder-field">' +
+          '<label for="builderOgTitle">Título para compartir</label>' +
+          '<input type="text" id="builderOgTitle" maxlength="120" value="' +
+            escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
+        '</div>' +
+
+        '<div class="builder-field">' +
+          '<label for="builderOgDescription">Descripción</label>' +
+          '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
+            escapeHtml(ogDescription) +
+          '</textarea>' +
+        '</div>' +
+
+        '<div class="builder-share-mock" data-builder-share-mock>' +
+          mockImg +
+          '<div class="builder-share-mock__body">' +
+            '<div class="builder-share-mock__title" data-share-mock-title>' +
+              escapeHtml(ogTitle || nombre || 'Título para compartir') +
+            '</div>' +
+            '<div class="builder-share-mock__desc" data-share-mock-desc>' +
+              escapeHtml(ogDescription || 'La descripción aparecerá aquí.') +
+            '</div>' +
+            '<div class="builder-share-mock__host" data-share-mock-host>' +
+              escapeHtml(hostLabel) +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var pendingOgImageFile = null;
+
+  function readShareFromDom(rootEl) {
+    if (!rootEl) {
+      return { og_image: '', og_title: '', og_description: '' };
+    }
+    var img = rootEl.querySelector('#builderOgImageUrl');
+    var title = rootEl.querySelector('#builderOgTitle');
+    var desc = rootEl.querySelector('#builderOgDescription');
+    return {
+      og_image: img ? String(img.value || '').trim() : '',
+      og_title: title ? String(title.value || '').trim() : '',
+      og_description: desc ? String(desc.value || '').trim() : '',
+      _pendingFile: pendingOgImageFile
+    };
+  }
+
+  function syncShareMock(rootEl) {
+    if (!rootEl) return;
+    var share = readShareFromDom(rootEl);
+    var nameInput = rootEl.querySelector('#showroomNameInput');
+    var fallbackTitle = nameInput ? String(nameInput.value || '').trim() : '';
+    var titleEl = rootEl.querySelector('[data-share-mock-title]');
+    var descEl = rootEl.querySelector('[data-share-mock-desc]');
+    var media = rootEl.querySelector('.builder-share-mock__media');
+    if (titleEl) {
+      titleEl.textContent = share.og_title || fallbackTitle || 'Título para compartir';
+    }
+    if (descEl) {
+      descEl.textContent = share.og_description || 'La descripción aparecerá aquí.';
+    }
+    if (media) {
+      if (share.og_image) {
+        media.classList.remove('builder-share-mock__media--empty');
+        media.style.backgroundImage = 'url(\'' + share.og_image.replace(/'/g, '%27') + '\')';
+      } else {
+        media.classList.add('builder-share-mock__media--empty');
+        media.style.backgroundImage = '';
+      }
+    }
+  }
+
+  function bindShare(rootEl, adapter) {
+    if (!rootEl) return;
+    pendingOgImageFile = null;
+    var fileBtn = rootEl.querySelector('#builderOgImageBtn');
+    var fileInput = rootEl.querySelector('#builderOgImageInput');
+    var fileName = rootEl.querySelector('#builderOgImageName');
+    var hiddenUrl = rootEl.querySelector('#builderOgImageUrl');
+    var titleInput = rootEl.querySelector('#builderOgTitle');
+    var descInput = rootEl.querySelector('#builderOgDescription');
+
+    function onShareChange() {
+      syncShareMock(rootEl);
+      if (typeof adapter.onShareChange === 'function') {
+        adapter.onShareChange(readShareFromDom(rootEl));
+      }
+    }
+
+    if (fileBtn && fileInput) {
+      fileBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        var type = String(file.type || '').toLowerCase();
+        if (type && type !== 'image/jpeg' && type !== 'image/png') {
+          if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+            AdminNotify.error('Solo se admiten JPG y PNG.');
+          }
+          fileInput.value = '';
+          return;
+        }
+        pendingOgImageFile = file;
+        if (hiddenUrl && hiddenUrl.value && hiddenUrl.value.indexOf('blob:') === 0) {
+          try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev) {}
+        }
+        var preview = URL.createObjectURL(file);
+        if (hiddenUrl) hiddenUrl.value = preview;
+        if (fileName) fileName.textContent = file.name || 'Imagen cargada';
+        onShareChange();
+      });
+    }
+    if (titleInput) titleInput.addEventListener('input', onShareChange);
+    if (descInput) descInput.addEventListener('input', onShareChange);
+    syncShareMock(rootEl);
+  }
+
+  /**
+   * Persist og_* fields to proyecto_config. Uploads pending image when possible.
+   */
+  async function saveShareMeta(adapter, rootEl) {
+    var projectId = adapter && adapter.getProjectId ? adapter.getProjectId() : null;
+    if (!projectId) throw new Error('No hay proyecto vinculado.');
+    var share = readShareFromDom(rootEl || document);
+    var ogImage = share.og_image || '';
+
+    if (share._pendingFile && typeof StorageApi !== 'undefined' && StorageApi.upload) {
+      var constructoraId =
+        (adapter.resolveConstructoraId && adapter.resolveConstructoraId()) ||
+        (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+          ? AdminState.getConstructoraId()
+          : null);
+      if (constructoraId) {
+        var uploaded = await StorageApi.upload(
+          constructoraId,
+          projectId,
+          'share',
+          share._pendingFile
+        );
+        ogImage = (uploaded && uploaded.publicUrl) || ogImage;
+        pendingOgImageFile = null;
+        if (rootEl) {
+          var hidden = rootEl.querySelector('#builderOgImageUrl');
+          if (hidden) hidden.value = ogImage;
+        }
+      }
+    }
+
+    var meta = {
+      og_image: ogImage || null,
+      og_title: share.og_title || null,
+      og_description: share.og_description || null
+    };
+
+    if (typeof ProyectosApi !== 'undefined' && ProyectosApi.updateShareMeta) {
+      await ProyectosApi.updateShareMeta(projectId, meta);
+    }
+
+    if (typeof adapter.onShareSaved === 'function') {
+      await adapter.onShareSaved(meta);
+    }
+    return meta;
   }
 
   /**
    * Adapter contract:
    *   getProjectId() -> string|null
-   *   getIdentity() -> { nombre, slug, constructora_id? }
+   *   getIdentity() -> { nombre, slug, constructora_id?, og_*? }
    *   resolveConstructoraId() -> string|null  (optional)
-   *   onSaved(payload) -> void|Promise  (optional; payload has id, nombre, slug, project, verify)
-   *   afterSave() -> void  (optional; re-render hooks)
+   *   onSaved(payload) -> void|Promise  (optional)
+   *   afterSave() -> void  (optional)
+   *   onShareChange(meta) / onShareSaved(meta) (optional)
    *   missingProjectMessage() -> string (optional)
    */
   function bind(rootEl, adapter) {
     if (!rootEl || !adapter) return;
+    bindShare(rootEl, adapter);
     var nameInput = rootEl.querySelector('#showroomNameInput');
     var slugInput = rootEl.querySelector('#showroomSlugInput');
     var urlPreviewEl = rootEl.querySelector('#showroomPublicUrlPreview');
@@ -270,12 +470,12 @@ var BuilderConfig = (function () {
         } catch (eClick) {}
         if (slugInput) slugInput.value = normalizeSlug(slugInput.value);
         syncPublicUrlPreview();
-        saveIdentity(adapter, nameInput, slugInput, saveBtn, statusEl);
+        saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl);
       });
     }
   }
 
-  async function saveIdentity(adapter, nameInput, slugInput, saveBtn, statusEl) {
+  async function saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl) {
     function trace(step, data) {
       try {
         if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
@@ -413,6 +613,12 @@ var BuilderConfig = (function () {
         await adapter.onSaved(payload);
       }
 
+      try {
+        await saveShareMeta(adapter, rootEl);
+      } catch (shareErr) {
+        trace('share_meta_error', { message: shareErr && shareErr.message });
+      }
+
       if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(updated.id);
       }
@@ -473,6 +679,8 @@ var BuilderConfig = (function () {
     render: render,
     bind: bind,
     saveIdentity: saveIdentity,
+    saveShareMeta: saveShareMeta,
+    readShareFromDom: readShareFromDom,
     normalizeSlug: normalizeSlug,
     publicUrlDisplay: publicUrlDisplay
   };

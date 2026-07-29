@@ -432,6 +432,57 @@ var ProyectosApi = (function () {
     return unwrapRpcProject(result, 'Error clonando showroom');
   }
 
+  async function updateShareMeta(proyectoId, meta) {
+    if (!proyectoId) throw new Error('Falta el ID del proyecto.');
+    meta = meta || {};
+    var payload = {
+      og_image: meta.og_image || null,
+      og_title: meta.og_title || null,
+      og_description: meta.og_description || null
+    };
+    var client = AdminApi.getClient();
+    var existing = await client
+      .from('proyecto_config')
+      .select('proyecto_id')
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (existing.error) throw mapDbError(existing.error, 'Error leyendo configuración del proyecto');
+
+    var result;
+    if (existing.data && existing.data.proyecto_id) {
+      result = await client
+        .from('proyecto_config')
+        .update(payload)
+        .eq('proyecto_id', proyectoId)
+        .select('og_image, og_title, og_description')
+        .maybeSingle();
+    } else {
+      result = await client
+        .from('proyecto_config')
+        .insert(Object.assign({ proyecto_id: proyectoId }, payload))
+        .select('og_image, og_title, og_description')
+        .maybeSingle();
+    }
+    if (result.error) throw mapDbError(result.error, 'Error guardando vista previa social');
+    return result.data || payload;
+  }
+
+  async function fetchShareMeta(proyectoId) {
+    if (!proyectoId) return { og_image: '', og_title: '', og_description: '' };
+    var result = await AdminApi.getClient()
+      .from('proyecto_config')
+      .select('og_image, og_title, og_description')
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (result.error) throw mapDbError(result.error, 'Error cargando vista previa social');
+    var row = result.data || {};
+    return {
+      og_image: row.og_image || '',
+      og_title: row.og_title || '',
+      og_description: row.og_description || ''
+    };
+  }
+
   return {
     list: list,
     listBrief: listBrief,
@@ -439,6 +490,8 @@ var ProyectosApi = (function () {
     create: create,
     update: update,
     updateIdentity: updateIdentity,
+    updateShareMeta: updateShareMeta,
+    fetchShareMeta: fetchShareMeta,
     checkSlugAvailability: checkSlugAvailability,
     remove: remove,
     reorder: reorder,
