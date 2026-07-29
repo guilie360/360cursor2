@@ -209,6 +209,12 @@ var BoxiesBuilderPage = (function () {
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
+    if (typeof BuilderPropertiesRail !== 'undefined') {
+      try {
+        if (BuilderPropertiesRail.deactivate) BuilderPropertiesRail.deactivate();
+        else if (BuilderPropertiesRail.destroyFloatButton) BuilderPropertiesRail.destroyFloatButton();
+      } catch (eProps) {}
+    }
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
     }
@@ -393,6 +399,12 @@ var BoxiesBuilderPage = (function () {
     }
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
+    if (typeof BuilderPropertiesRail !== 'undefined') {
+      try {
+        if (BuilderPropertiesRail.deactivate) BuilderPropertiesRail.deactivate();
+        else if (BuilderPropertiesRail.destroyFloatButton) BuilderPropertiesRail.destroyFloatButton();
+      } catch (eProps) {}
     }
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();

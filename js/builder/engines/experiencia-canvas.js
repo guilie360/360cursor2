@@ -3503,17 +3503,8 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    function toggleBrowserFullscreen() {
-      if (isBrowserFullscreen()) {
-        var exitFs = document.exitFullscreen ||
-          document.webkitExitFullscreen ||
-          document.mozCancelFullScreen ||
-          document.msExitFullscreen;
-        if (exitFs) {
-          try { exitFs.call(document); } catch (eExit) {}
-        }
-        return;
-      }
+    function enterBrowserFullscreen() {
+      if (isBrowserFullscreen()) return;
       var el = document.documentElement;
       var req = el.requestFullscreen ||
         el.webkitRequestFullscreen ||
@@ -3535,13 +3526,24 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    function toggleBrowserFullscreen() {
+      if (isBrowserFullscreen()) exitBrowserFullscreen();
+      else enterBrowserFullscreen();
+    }
+
+    function removeLeftRailFloat() {
+      var btn = document.getElementById('boxiesSidebarFloatBtn');
+      if (btn && btn.parentNode) {
+        try { btn.parentNode.removeChild(btn); } catch (eRm) {}
+      }
+    }
+
     function toggleCanvasMode() {
       var next = !isCanvasMode();
       var prefs = (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.load)
         ? BoxiesPrefs.load()
         : {};
       if (next) {
-        /* Save shell + rail state — Focus collapses both rails; arrows reopen them */
         var restore = {
           railCollapsed: !!(typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.getRailCollapsed
             ? BoxiesPrefs.getRailCollapsed()
@@ -3554,10 +3556,11 @@ var ExperienciaCanvas = (function () {
           dockH: document.documentElement.style.getPropertyValue('--boxies-dock-h') || '',
           railW: document.documentElement.style.getPropertyValue('--builder-rail-width') || '',
           propsRailW: document.documentElement.style.getPropertyValue('--builder-props-rail-width') || '',
-          sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || ''
+          sidebarW: document.documentElement.style.getPropertyValue('--boxies-sidebar-w') || '',
+          wasFullscreen: isBrowserFullscreen()
         };
         setCanvasMode(true, restore);
-        /* V7.0.04 — hide chrome via width tokens; platform nav is always full-width */
+        /* Hide platform sidebar + chrome completely */
         document.documentElement.style.setProperty('--boxies-sidebar-w', '0px');
         document.documentElement.style.setProperty('--boxies-header-h', '0px');
         document.documentElement.style.setProperty('--boxies-dock-h', '0px');
@@ -3568,22 +3571,16 @@ var ExperienciaCanvas = (function () {
           document.documentElement.classList.add('boxies-rail-collapsed');
           document.documentElement.style.setProperty('--builder-rail-width', '0px');
         }
-        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.collapse) {
-          BuilderPropertiesRail.collapse(state);
-        } else {
-          document.body.classList.add('boxies-props-rail-collapsed');
-          document.documentElement.classList.add('boxies-props-rail-collapsed');
-          document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
+        removeLeftRailFloat();
+        /* Keep right properties panel open */
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.expand) {
+          BuilderPropertiesRail.expand(state);
+        } else if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.applyCollapsed) {
+          BuilderPropertiesRail.applyCollapsed(false, { state: state });
         }
-        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.ensureFloatButton) {
-          try { BuilderProgressRail.ensureFloatButton(); } catch (eL) {}
-        }
-        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.ensureFloatButton) {
-          try { BuilderPropertiesRail.ensureFloatButton(); } catch (eR) {}
-        }
+        enterBrowserFullscreen();
       } else {
         var prev = prefs._expCanvasRestore || {};
-        /* Focus and Fullscreen are independent — never exit FS when leaving Focus */
         setCanvasMode(false, null);
         if (prev.sidebarW) {
           document.documentElement.style.setProperty('--boxies-sidebar-w', prev.sidebarW);
@@ -3609,7 +3606,7 @@ var ExperienciaCanvas = (function () {
         }
         if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.applyCollapsed) {
           BuilderPropertiesRail.applyCollapsed(
-            prev.propsRailCollapsed != null ? !!prev.propsRailCollapsed : true,
+            prev.propsRailCollapsed != null ? !!prev.propsRailCollapsed : false,
             { state: state }
           );
         } else if (prev.propsRailW) {
@@ -3617,10 +3614,14 @@ var ExperienciaCanvas = (function () {
         } else {
           document.documentElement.style.removeProperty('--builder-props-rail-width');
         }
+        if (!prev.wasFullscreen) {
+          exitBrowserFullscreen();
+        }
       }
       if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.update) {
         try { BuilderProgressRail.update(rootEl, state); } catch (eRail) {}
       }
+      if (isCanvasMode()) removeLeftRailFloat();
       syncInspectorChrome();
       requestAnimationFrame(function () {
         recomputeOverlayLayout();
@@ -3658,6 +3659,26 @@ var ExperienciaCanvas = (function () {
       return !!(n && ExperienciaEngine.isHotspotsEditableNode &&
         ExperienciaEngine.isHotspotsEditableNode(n) &&
         selectedIds().length <= 1);
+    }
+
+    function syncToolbarForMode(mode) {
+      var toolbar = rootEl.querySelector('[data-exp-toolbar]');
+      if (!toolbar) return;
+      /* Flow keeps full canvas tools; other modes only keep Focus (like PROTOTIPO). */
+      var allowed = mode === 'flow'
+        ? { select: 1, cut: 1, fit: 1, 'canvas-mode': 1, minimap: 1 }
+        : { 'canvas-mode': 1 };
+      toolbar.querySelectorAll('[data-exp-tool]').forEach(function (btn) {
+        var t = btn.getAttribute('data-exp-tool');
+        var show = !!allowed[t];
+        btn.hidden = !show;
+        if (show) btn.removeAttribute('aria-hidden');
+        else btn.setAttribute('aria-hidden', 'true');
+      });
+      toolbar.querySelectorAll('.builder-exp-toolbar__sep').forEach(function (sep) {
+        sep.hidden = mode !== 'flow';
+        sep.setAttribute('aria-hidden', mode === 'flow' ? 'true' : 'true');
+      });
     }
 
     function syncEditModeUi() {
@@ -3721,6 +3742,7 @@ var ExperienciaCanvas = (function () {
           btn.setAttribute('aria-selected', active ? 'true' : 'false');
         });
       }
+      syncToolbarForMode(mode);
     }
 
     function syncButtonsLayerBounds() {
@@ -6055,17 +6077,13 @@ var ExperienciaCanvas = (function () {
           document.body.classList.add('boxies-rail-collapsed');
           document.documentElement.style.setProperty('--builder-rail-width', '0px');
         }
-        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.collapse) {
-          BuilderPropertiesRail.collapse(state);
-        } else {
-          document.documentElement.style.setProperty('--builder-props-rail-width', '0px');
+        removeLeftRailFloat();
+        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.expand) {
+          BuilderPropertiesRail.expand(state);
+        } else if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.applyCollapsed) {
+          BuilderPropertiesRail.applyCollapsed(false, { state: state });
         }
-        if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.ensureFloatButton) {
-          try { BuilderProgressRail.ensureFloatButton(); } catch (eL) {}
-        }
-        if (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.ensureFloatButton) {
-          try { BuilderPropertiesRail.ensureFloatButton(); } catch (eR) {}
-        }
+        enterBrowserFullscreen();
       }
       syncFocusFullscreenBtn();
       if (canvas().panX === 40 && canvas().panY === 40) fitView();
@@ -6097,6 +6115,12 @@ var ExperienciaCanvas = (function () {
         if (protoRuntimePlayer && protoRuntimePlayer.destroy) {
           try { protoRuntimePlayer.destroy(); } catch (eProto) {}
           protoRuntimePlayer = null;
+        }
+        if (isCanvasMode()) {
+          setCanvasMode(false, null);
+          document.documentElement.style.removeProperty('--boxies-sidebar-w');
+          document.documentElement.style.removeProperty('--boxies-header-h');
+          document.documentElement.style.removeProperty('--boxies-dock-h');
         }
         exitBrowserFullscreen();
       }

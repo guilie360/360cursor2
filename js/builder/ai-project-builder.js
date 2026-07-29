@@ -7652,6 +7652,13 @@ var AiProjectBuilderView = (function () {
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
+    if (typeof BuilderPropertiesRail !== 'undefined') {
+      try {
+        if (BuilderPropertiesRail.deactivate) BuilderPropertiesRail.deactivate();
+        else if (BuilderPropertiesRail.setActive) BuilderPropertiesRail.setActive(false, rootEl, state);
+        else if (BuilderPropertiesRail.destroyFloatButton) BuilderPropertiesRail.destroyFloatButton();
+      } catch (eProps) {}
+    }
     /* Keep BOXIES workspace fullscreen across Proyectos ↔ Builder.
        Only exit fullscreen when leaving the BOXIES shell entirely. */
     var inBoxiesShell = document.body.classList.contains('boxies-shell')

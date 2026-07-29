@@ -239,6 +239,15 @@ var BuilderProgressRail = (function () {
       destroyFloatButton();
       return null;
     }
+    /* V7.0.08 — Focus mode hides left chrome; never mount the left handle there. */
+    if (document.body.classList.contains('boxies-exp-canvas-mode') ||
+        document.documentElement.classList.contains('boxies-exp-canvas-mode')) {
+      var existing = document.getElementById(FLOAT_BTN_ID);
+      if (existing && existing.parentNode) {
+        try { existing.parentNode.removeChild(existing); } catch (eRm) {}
+      }
+      return null;
+    }
 
     var mount = floatMountParent();
     if (!mount) return null;

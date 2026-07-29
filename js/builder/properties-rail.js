@@ -1,4 +1,4 @@
-/* Properties rail (right) — V6.0.01 editor inspector (slightly wider than nav) */
+/* Properties rail (right) — V7.0.08: float handle only when Canvas props panel is usable */
 var BuilderPropertiesRail = (function () {
   var EXPANDED_RAIL_W = '260px';
   var FLOAT_BTN_ID = 'boxiesPropsRailFloatBtn';
@@ -25,6 +25,21 @@ var BuilderPropertiesRail = (function () {
     return document.body.classList.contains('boxies-props-rail-collapsed');
   }
 
+  function isActive() {
+    return document.body.classList.contains('boxies-props-rail-active');
+  }
+
+  /** V7.0.08 — handle only when Editor Canvas + props rail are actually present. */
+  function hasUsablePropsRail() {
+    if (!isActive()) return false;
+    var rail = resolveRail(null);
+    if (!rail || !rail.isConnected || rail.hidden) return false;
+    if (!document.querySelector('.builder-step-content--experiencia, [data-exp-workspace]')) {
+      return false;
+    }
+    return true;
+  }
+
   function collapseToggleIcon() {
     if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
       return BuilderIcons.render('chevron-right');
@@ -41,10 +56,6 @@ var BuilderPropertiesRail = (function () {
     btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
     btn.innerHTML = collapseToggleIcon();
-    btn.style.display = 'inline-flex';
-    btn.style.visibility = 'visible';
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = 'auto';
     if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.adopt) {
       try { BoxiesTooltip.adopt(btn); } catch (eTip) {}
     }
@@ -55,12 +66,15 @@ var BuilderPropertiesRail = (function () {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!isActive()) return;
+    if (!hasUsablePropsRail()) {
+      destroyFloatButton();
+      return;
+    }
     applyCollapsed(!isCollapsed());
   }
 
   function ensureFloatButton() {
-    if (!isActive()) {
+    if (!hasUsablePropsRail()) {
       destroyFloatButton();
       return null;
     }
@@ -105,10 +119,6 @@ var BuilderPropertiesRail = (function () {
     }
   }
 
-  function isActive() {
-    return document.body.classList.contains('boxies-props-rail-active');
-  }
-
   function panelHtml() {
     return '<div class="builder-props-rail-panel" data-builder-props-panel>' +
       '<div class="builder-props-rail-title">Propiedades</div>' +
@@ -151,7 +161,7 @@ var BuilderPropertiesRail = (function () {
       options.state.experiencia.canvas.inspectorOpen = true;
     }
 
-    if (isActive()) {
+    if (hasUsablePropsRail()) {
       ensureFloatButton();
       syncFloatButton(collapsed);
     } else {
@@ -181,15 +191,14 @@ var BuilderPropertiesRail = (function () {
 
     if (!on) {
       if (root && root.style) root.style.setProperty('--builder-props-rail-width', '0px');
-      body.classList.remove('boxies-props-rail-collapsed');
-      root.classList.remove('boxies-props-rail-collapsed');
+      if (body) body.classList.remove('boxies-props-rail-collapsed');
+      if (root) root.classList.remove('boxies-props-rail-collapsed');
       destroyFloatButton();
       return;
     }
 
     var collapsed = isCollapsed();
     if (state && state.experiencia && state.experiencia.canvas) {
-      /* Prefer persisted prefs; keep canvas flag in sync */
       state.experiencia.canvas.inspectorCollapsed = collapsed;
       state.experiencia.canvas.inspectorOpen = true;
     }
@@ -215,11 +224,17 @@ var BuilderPropertiesRail = (function () {
     applyCollapsed(true, { state: state });
   }
 
+  function deactivate() {
+    setActive(false, null, null);
+  }
+
   return {
     setActive: setActive,
+    deactivate: deactivate,
     applyCollapsed: applyCollapsed,
     isCollapsed: isCollapsed,
     isActive: isActive,
+    hasUsablePropsRail: hasUsablePropsRail,
     expand: expand,
     collapse: collapse,
     ensureFloatButton: ensureFloatButton,

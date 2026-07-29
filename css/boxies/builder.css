@@ -615,7 +615,7 @@ body.boxies-props-rail-collapsed .builder-props-rail-panel {
   top: 50% !important;
   right: var(--builder-props-rail-width, 0px) !important;
   z-index: 10060 !important;
-  display: none !important;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 16px;
@@ -631,21 +631,12 @@ body.boxies-props-rail-collapsed .builder-props-rail-panel {
   cursor: ew-resize;
   box-sizing: border-box;
   box-shadow: -1px 0 0 rgba(0, 0, 0, 0.25);
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
+  pointer-events: auto;
   transition:
     color 0.18s ease,
     background 0.18s ease,
     border-color 0.18s ease,
     right 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-body.boxies-props-rail-active .boxies-props-rail-float-toggle,
-body.boxies-props-rail-active #boxiesPropsRailFloatBtn,
-html.boxies-props-rail-active .boxies-props-rail-float-toggle,
-html.boxies-props-rail-active #boxiesPropsRailFloatBtn {
-  display: inline-flex !important;
 }
 
 .boxies-props-rail-float-toggle:hover,
@@ -670,32 +661,7 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   transform: rotate(180deg);
 }
 
-/* Focus mode: float arrows stay usable; rails collapse via width, not display:none */
-body.boxies-exp-canvas-mode .boxies-props-rail-float-toggle,
-body.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn,
-html.boxies-exp-canvas-mode .boxies-props-rail-float-toggle,
-html.boxies-exp-canvas-mode #boxiesPropsRailFloatBtn {
-  display: inline-flex !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-body.boxies-exp-canvas-mode .boxies-sidebar-float-toggle,
-body.boxies-exp-canvas-mode #boxiesSidebarFloatBtn,
-html.boxies-exp-canvas-mode .boxies-sidebar-float-toggle,
-html.boxies-exp-canvas-mode #boxiesSidebarFloatBtn {
-  display: inline-flex !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  left: var(--builder-rail-width, 0px) !important;
-}
-
-body.boxies-exp-canvas-mode.boxies-rail-collapsed .boxies-sidebar-float-toggle,
-body.boxies-exp-canvas-mode.boxies-rail-collapsed #boxiesSidebarFloatBtn {
-  left: 0 !important;
-}
+/* V7.0.08 — left float is never mounted in Focus; do not resurrect via CSS */
 
 .builder-topbar {
   display: flex;
@@ -6598,12 +6564,10 @@ body.boxies-exp-canvas-mode .builder-exp-focus-fs,
   pointer-events: none !important;
 }
 
-.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="select"],
-.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="cut"],
-.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="fit"],
-.builder-exp-stage.is-proto-mode .builder-exp-tool[data-exp-tool="minimap"],
-.builder-exp-stage.is-proto-mode .builder-exp-toolbar__sep {
-  display: none;
+/* V7.0.08 — toolbar tools are hidden via [hidden] in JS per edit mode */
+.builder-exp-toolbar [data-exp-tool][hidden],
+.builder-exp-toolbar .builder-exp-toolbar__sep[hidden] {
+  display: none !important;
 }
 
 .builder-exp-buttons-stage {
