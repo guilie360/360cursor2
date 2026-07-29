@@ -1,8 +1,8 @@
 /* Builder wizard — V5.9.94 Menú = menu_config del showroom + Vista previa */
 var BuilderWizard = (function () {
   /**
-   * Primary nav (V5.9.94):
-   *   Configuración → Info → Estructura → Hero → Menú → Media → Experiencia → Vista previa
+   * Primary nav (V6.0.04):
+   *   Configuración → Info → Estructura → Hero → Menú → Media → Experiencia → Runtime → Vista previa
    */
   var STEPS = [
     { id: 'config', label: 'Configuración', shortLabel: 'Config', icon: 'settings', assistant: 'Define el nombre comercial, el slug y el subdominio del Showroom. El ID interno no cambia.' },
@@ -12,7 +12,8 @@ var BuilderWizard = (function () {
     { id: 'menu', label: 'Menú', shortLabel: 'Menú', icon: 'list', assistant: 'Configura la navegación principal del showroom.' },
     { id: 'media', label: 'Media', shortLabel: 'Media', icon: 'images', assistant: 'Organiza assets por nodos (tipologías y amenidades). Experiencia solo referencia estos archivos.' },
     { id: 'experiencia', label: 'Experiencia', shortLabel: 'Experiencia', icon: 'layers', assistant: 'Construye el recorrido consumiendo Estructura + Media. Sin rutas ni nombres manuales.' },
-    { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Showroom embebido: pantalla negra + INICIAR (= Hero). Valida el flujo real del canvas.' },
+    { id: 'runtime', label: 'Runtime', shortLabel: 'Runtime', icon: 'activity', assistant: 'Compila el flujo ejecutable desde Hero, Media y Experiencia. Vista previa solo ejecuta este Runtime.' },
+    { id: 'vista-previa', label: 'Vista previa', shortLabel: 'Vista previa', icon: 'eye', assistant: 'Ejecuta el Runtime compilado. Requiere RUN en la etapa Runtime.' },
 
     /* Hidden — keep ids for recoverability / deep-links */
     { id: 'publish', label: 'Publicado', shortLabel: 'Publicado', icon: 'rocket', assistant: 'Retirado del menú — usa Guardar / Republicar o Vista previa.', hidden: true },
@@ -29,7 +30,7 @@ var BuilderWizard = (function () {
     { id: 'project-type', label: 'Tipo', shortLabel: 'Tipo', icon: 'shapes', assistant: 'Alias de Estructura.', hidden: true }
   ];
 
-  var NAV_VERSION = 103;
+  var NAV_VERSION = 104;
 
   function getSteps() {
     return STEPS.slice();
@@ -89,6 +90,8 @@ var BuilderWizard = (function () {
       case 'media':
         return true;
       case 'experiencia':
+        return true;
+      case 'runtime':
         return true;
       case 'vista-previa':
         return true;

@@ -163,6 +163,14 @@ var AiProjectBuilderView = (function () {
         frame: true,
         contentClass: 'builder-page--experiencia'
       },
+      runtime: {
+        title: 'Runtime',
+        desc: 'Construye el flujo ejecutable desde Hero, Media y Experiencia.',
+        showCheck: true,
+        showDesc: true,
+        frame: true,
+        contentClass: 'builder-page--runtime'
+      },
       'vista-previa': {
         title: 'Vista previa',
         desc: '',
@@ -196,7 +204,14 @@ var AiProjectBuilderView = (function () {
       }
       return '';
     }
+    if (id === 'runtime') {
+      if (typeof RuntimeView !== 'undefined' && RuntimeView.actionsHtml) {
+        return RuntimeView.actionsHtml();
+      }
+      return '<button type="button" class="builder-header-action-btn is-primary" id="builderRuntimeRunBtn">RUN</button>';
+    }
     if (id === 'vista-previa') {
+      if (!hasCompiledRuntime()) return '';
       var slug = resolveShowroomSlug();
       var hasSlug = !!(slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug));
       if (!hasSlug) return '';
@@ -2120,9 +2135,31 @@ var AiProjectBuilderView = (function () {
     '</div>';
   }
 
+  function renderRuntime() {
+    if (typeof RuntimeView !== 'undefined' && RuntimeView.render) {
+      return RuntimeView.render(state);
+    }
+    return '<div class="builder-step-content"><p class="builder-menu-hint">Runtime no disponible.</p></div>';
+  }
+
+  function hasCompiledRuntime() {
+    return typeof RuntimeCompiler !== 'undefined' && RuntimeCompiler.isReady && RuntimeCompiler.isReady();
+  }
+
   function renderVistaPrevia() {
     var slug = resolveShowroomSlug();
     var hasSlug = !!(slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug));
+    if (!hasCompiledRuntime()) {
+      return '<div class="builder-step-content builder-step-content--vista-previa">' +
+        '<div class="builder-vista-previa-frame builder-vista-previa-frame--gate" id="builderVistaPreviaFrame">' +
+          '<div class="builder-vista-previa-empty builder-runtime-gate">' +
+            '<p class="builder-runtime-gate__title">Runtime requerido</p>' +
+            '<p class="builder-menu-hint">Debes ejecutar Runtime antes de iniciar la vista previa.</p>' +
+            '<button type="button" class="builder-header-action-btn is-primary" id="builderVistaPreviaGoRuntime">Ir a Runtime</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
     return '<div class="builder-step-content builder-step-content--vista-previa">' +
       '<div class="builder-vista-previa-frame" id="builderVistaPreviaFrame">' +
         (hasSlug
@@ -2130,7 +2167,7 @@ var AiProjectBuilderView = (function () {
             '<button type="button" class="builder-vista-previa-reset" id="builderVistaPreviaReset" title="Volver a INICIAR" aria-label="Cerrar simulaci\u00F3n y volver a INICIAR">\u00D7</button>'
           : '<div class="builder-vista-previa-empty">' +
               '<p class="builder-menu-hint">Define el <strong>slug</strong> en Configuración para cargar el showroom real aquí.</p>' +
-              '<p class="builder-menu-hint">La vista previa usa el mismo motor del showroom: pantalla negra + INICIAR (= botón Iniciar del Hero).</p>' +
+              '<p class="builder-menu-hint">La vista previa ejecuta el Runtime compilado (pantalla negra + INICIAR).</p>' +
             '</div>') +
       '</div>' +
     '</div>';
@@ -2159,8 +2196,17 @@ var AiProjectBuilderView = (function () {
   }
 
   function bindVistaPrevia() {
+    var goRuntime = rootEl.querySelector('#builderVistaPreviaGoRuntime');
+    if (goRuntime) {
+      goRuntime.onclick = function (ev) {
+        if (ev) ev.preventDefault();
+        goToStepById('runtime');
+      };
+      return;
+    }
     var iframe = rootEl.querySelector('#builderVistaPreviaIframe');
     if (!iframe) return;
+    if (!hasCompiledRuntime()) return;
     var url = resolveVistaPreviaUrl();
     if (!url) return;
     if (iframe.getAttribute('src') !== url) {
@@ -2169,6 +2215,10 @@ var AiProjectBuilderView = (function () {
     var reloadBtn = rootEl.querySelector('#builderVistaPreviaReload');
     if (reloadBtn) {
       reloadBtn.onclick = function () {
+        if (!hasCompiledRuntime()) {
+          renderStepContent();
+          return;
+        }
         iframe.src = resolveVistaPreviaUrl() || url;
       };
     }
@@ -3679,6 +3729,7 @@ var AiProjectBuilderView = (function () {
       case 'estructura':
       case 'project-type': html = renderEstructura(); break;
       case 'experiencia': html = renderExperiencia(); break;
+      case 'runtime': html = renderRuntime(); break;
       case 'branding': html = renderBranding(); break;
       case 'video-hero': html = renderVideoHero(); break;
       case 'menu': html = renderMenu(); break;
@@ -5613,6 +5664,18 @@ var AiProjectBuilderView = (function () {
       bindHeroMediaActions();
     }
     if (stepId === 'menu') bindMenuFields();
+    if (stepId === 'runtime') {
+      if (typeof RuntimeView !== 'undefined' && RuntimeView.bind) {
+        RuntimeView.bind(rootEl, state, {
+          rerender: function () {
+            saveState();
+            renderStepContent();
+            renderProgressRail();
+          },
+          onChange: function () { saveState(); }
+        });
+      }
+    }
     if (stepId === 'vista-previa') bindVistaPrevia();
     if (stepId === 'viviendas') bindViviendasFields();
     if (stepId === 'gallery') bindDropzone('galleryDropzone', 'galleryInput', handleGalleryUpload, true);

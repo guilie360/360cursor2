@@ -145,6 +145,15 @@ var BuilderProgressRail = (function () {
         stepIndex: BuilderWizard.getStepIndex('experiencia')
       },
       {
+        label: 'Runtime',
+        value: (typeof RuntimeCompiler !== 'undefined' && RuntimeCompiler.isReady && RuntimeCompiler.isReady())
+          ? 'Compilado'
+          : 'Sin construir',
+        done: isDone(state, 'runtime',
+          !!(typeof RuntimeCompiler !== 'undefined' && RuntimeCompiler.isReady && RuntimeCompiler.isReady())),
+        stepIndex: BuilderWizard.getStepIndex('runtime')
+      },
+      {
         label: 'Vista previa',
         value: 'Canvas' + MIDDOT + 'INICIAR',
         auxiliary: true,
