@@ -533,6 +533,16 @@ body.boxies-nav-collapsed .boxies-sidebar {
   line-height: 1;
 }
 
+.boxies-dock__leading .boxies-btn-secondary--create {
+  min-width: 0;
+  height: 32px;
+  padding: 0 14px;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
 .boxies-dock__project {
   display: flex;
   align-items: center;

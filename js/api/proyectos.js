@@ -7,10 +7,10 @@ var ProyectosApi = (function () {
   var PROJECT_SELECT =
     'id, nombre, slug, descripcion, ciudad, direccion, latitud, longitud, ' +
     'whatsapp, email, sitio_web, instagram_url, estado, publicado, is_public, constructora_id, ' +
-    'display_order, is_system_template, created_at, updated_at';
+    'display_order, is_system_template, experience_type, created_at, updated_at';
 
   var BRIEF_SELECT =
-    'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template';
+    'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template, experience_type';
 
   function sanitizePayload(payload, isCreate) {
     payload = payload || {};
@@ -49,6 +49,20 @@ var ProyectosApi = (function () {
     if (has('instagram_url')) data.instagram_url = AdminUI.normalizeUrl(payload.instagram_url);
     if (has('estado')) data.estado = payload.estado || 'preventa';
     if (has('publicado')) data.publicado = !!payload.publicado;
+
+    var expType =
+      has('experience_type')
+        ? payload.experience_type
+        : has('experienceType')
+          ? payload.experienceType
+          : null;
+    if (expType != null || (isCreate && !has('experience_type') && !has('experienceType'))) {
+      var normalized =
+        typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.normalize
+          ? BoxiesExperienceTypes.normalize(expType || 'showroom')
+          : String(expType || 'showroom').toLowerCase();
+      if (isCreate || expType != null) data.experience_type = normalized;
+    }
 
     if (has('latitud')) {
       if (payload.latitud === '' || payload.latitud == null) data.latitud = null;

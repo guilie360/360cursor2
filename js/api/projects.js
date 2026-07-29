@@ -1,12 +1,32 @@
-/* Global Admin — showrooms via PlatformAuth (same session as BOXIES).
- * Table remains public.proyectos; UI terminology is Showroom.
+/* Global Admin — experiences via PlatformAuth (same session as BOXIES).
+ * Table remains public.proyectos; filtered by experience_type (V7.0.00).
  * List order is always display_order ASC (manual).
  * is_public is independent of publicado (landing/marketplace visibility).
  * createFromTemplate / cloneProject use SQL RPCs (single clone engine). */
 var BoxiesAdmin2ProjectsApi = (function () {
   var SELECT =
     'id, nombre, slug, descripcion, ciudad, estado, publicado, is_public, constructora_id, ' +
-    'display_order, is_system_template, created_at, updated_at';
+    'display_order, is_system_template, experience_type, created_at, updated_at';
+
+  function resolveExperienceType(options) {
+    options = options || {};
+    var raw =
+      options.experienceType ||
+      options.experience_type ||
+      null;
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.normalize) {
+      return BoxiesExperienceTypes.normalize(raw || 'showroom');
+    }
+    var t = String(raw == null ? 'showroom' : raw).trim().toLowerCase();
+    var allowed = {
+      showroom: 1,
+      presentation: 1,
+      quotation: 1,
+      landing: 1,
+      catalog: 1
+    };
+    return allowed[t] ? t : 'showroom';
+  }
 
   function getClient() {
     return PlatformAuth.getClient();
@@ -35,14 +55,16 @@ var BoxiesAdmin2ProjectsApi = (function () {
   }
 
   /**
-   * @param {{ scope?: object }=} options
+   * @param {{ scope?: object, experienceType?: string }=} options
    */
   async function list(options) {
     options = options || {};
+    var experienceType = resolveExperienceType(options);
     var query = getClient()
       .from('proyectos')
       .select(SELECT)
       .eq('is_system_template', false)
+      .eq('experience_type', experienceType)
       .order('display_order', { ascending: true, nullsFirst: false });
 
     if (typeof BoxiesShowroomScope !== 'undefined' && BoxiesShowroomScope.applyListFilter) {
@@ -55,7 +77,7 @@ var BoxiesAdmin2ProjectsApi = (function () {
     var result = await query;
 
     if (result.error) {
-      throw new Error(result.error.message || 'Error cargando showrooms');
+      throw new Error(result.error.message || 'Error cargando experiencias');
     }
     return result.data || [];
   }
@@ -109,11 +131,13 @@ var BoxiesAdmin2ProjectsApi = (function () {
 
   async function createFromTemplate(options) {
     options = options || {};
-    var args = {};
+    var args = {
+      p_experience_type: resolveExperienceType(options)
+    };
     var constructoraId = resolveConstructoraId(options);
     if (constructoraId) args.p_constructora_id = constructoraId;
     var result = await getClient().rpc('create_showroom_from_template', args);
-    return unwrapRpcProject(result, 'Error creando showroom desde plantilla');
+    return unwrapRpcProject(result, 'Error creando experiencia desde plantilla');
   }
 
   async function cloneProject(projectId, options) {

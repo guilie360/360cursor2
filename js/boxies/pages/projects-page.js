@@ -1,5 +1,6 @@
 /**
- * BOXIES ShowroomsPage — list only fills #boxiesContent.
+ * BOXIES ExperiencesPage (V7.0.00) — list only fills #boxiesContent.
+ * Tabs filter one proyectos collection by experience_type.
  * Open builder by permanent projectId (UUID); slug is vanity for display/URL.
  * Order is manual via display_order (drag & drop); identity/publish do not reorder.
  * Column widths: Excel-style neighbor resize, persisted in localStorage.
@@ -12,6 +13,7 @@ var BoxiesProjectsPage = (function () {
   var columnController = null;
   var isCreatingShowroom = false;
   var isDeletingShowroom = false;
+  var activeExperienceType = 'showroom';
   var PENDING_CREATE_KEY = 'boxies_pending_showroom_creation';
   var PENDING_OPEN_KEY = 'boxies_pending_showroom_open';
   var COL_STORAGE_KEY = 'boxies.showrooms.columns';
@@ -25,6 +27,27 @@ var BoxiesProjectsPage = (function () {
     updated: { min: 120, default: 168, resizable: true },
     actions: { min: 176, default: 212, resizable: true }
   };
+
+  function experienceMeta(typeId) {
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.get) {
+      return BoxiesExperienceTypes.get(typeId || activeExperienceType);
+    }
+    return {
+      id: 'showroom',
+      tabLabel: 'SHOWROOMS',
+      singular: 'Showroom',
+      plural: 'Showrooms',
+      createLabel: '+ Nuevo Showroom',
+      emptyMessage: 'No hay showrooms registrados.'
+    };
+  }
+
+  function resolveActiveType(typeId) {
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.normalize) {
+      return BoxiesExperienceTypes.normalize(typeId);
+    }
+    return String(typeId || 'showroom').toLowerCase() || 'showroom';
+  }
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -708,7 +731,8 @@ var BoxiesProjectsPage = (function () {
   /* V5.9.37 aliases — same global operation loader */
   function showCreateBusy() {
     document.body.classList.add('boxies-is-creating-showroom');
-    showGlobalBusy('Creando showroom');
+    var meta = experienceMeta(activeExperienceType);
+    showGlobalBusy('Creando ' + (meta.singular || 'experiencia').toLowerCase());
   }
 
   function hideCreateBusy() {
@@ -806,38 +830,48 @@ var BoxiesProjectsPage = (function () {
     });
   }
 
+  function syncCreateButtonLabel(btn) {
+    var el = btn || document.getElementById('boxiesCreateShowroomBtn');
+    if (!el) return;
+    var meta = experienceMeta(activeExperienceType);
+    var label = meta.createLabel || '+ Nuevo Showroom';
+    el.disabled = false;
+    el.dataset.busy = '0';
+    el.removeAttribute('aria-disabled');
+    el.classList.remove('is-creating');
+    el.setAttribute('aria-label', label);
+    el.setAttribute('data-tooltip', label);
+    el.textContent = label;
+  }
+
   function resetCreateButton(btn) {
-    if (!btn) return;
-    btn.disabled = false;
-    btn.dataset.busy = '0';
-    btn.removeAttribute('aria-disabled');
-    btn.classList.remove('is-creating');
-    /* Keep geometry: restore "+" mark if anything mutated it. */
-    if (!btn.querySelector('[aria-hidden="true"]') || btn.textContent.trim() !== '+') {
-      btn.innerHTML = '<span aria-hidden="true">+</span>';
-    }
+    syncCreateButtonLabel(btn);
   }
 
   async function refreshShowroomsList() {
     var tbody = document.getElementById('boxiesProjectsBody');
     if (!tbody) return [];
     if (typeof BoxiesAdmin2ProjectsApi === 'undefined') {
-      throw new Error('API de Showrooms no disponible');
+      throw new Error('API de Experiencias no disponible');
     }
     var scope =
       typeof BoxiesShowroomScope !== 'undefined'
         ? BoxiesShowroomScope.getViewerContext()
         : null;
-    var showrooms = await BoxiesAdmin2ProjectsApi.list({ scope: scope });
+    var meta = experienceMeta(activeExperienceType);
+    var showrooms = await BoxiesAdmin2ProjectsApi.list({
+      scope: scope,
+      experienceType: activeExperienceType
+    });
     if (!showrooms || !showrooms.length) {
-      tbody.innerHTML = '<tr><td colspan="7">No hay showrooms registrados.</td></tr>';
+      tbody.innerHTML =
+        '<tr><td colspan="7">' + escapeHtml(meta.emptyMessage || 'Sin experiencias.') + '</td></tr>';
       if (columnController) columnController.relayout();
       return [];
     }
     tbody.innerHTML = showrooms.map(row).join('');
     bindDragAndDrop(tbody);
     if (columnController) columnController.relayout();
-    /* V5.9.87 — Bunny debe reflejar Showrooms automáticamente */
     try {
       if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.syncAllShowrooms) {
         BunnyMediaApi.syncAllShowrooms().then(function (res) {
@@ -872,6 +906,7 @@ var BoxiesProjectsPage = (function () {
       notifyError('API de creación no disponible');
       return;
     }
+    var meta = experienceMeta(activeExperienceType);
     isCreatingShowroom = true;
     btn.dataset.busy = '1';
     btn.disabled = true;
@@ -883,40 +918,43 @@ var BoxiesProjectsPage = (function () {
         typeof BoxiesShowroomScope !== 'undefined'
           ? BoxiesShowroomScope.getViewerContext()
           : null;
-      var project = await BoxiesAdmin2ProjectsApi.createFromTemplate({ scope: scope });
+      var project = await BoxiesAdmin2ProjectsApi.createFromTemplate({
+        scope: scope,
+        experienceType: activeExperienceType
+      });
       var list = await refreshShowroomsList();
       if (!listContainsShowroom(list, project && project.id)) {
         list = await refreshShowroomsList();
       }
       if (!listContainsShowroom(list, project && project.id)) {
-        throw new Error('El showroom se creó pero no aparece en la lista. Recarga e inténtalo de nuevo.');
+        throw new Error(
+          'La experiencia se creó pero no aparece en la lista. Recarga e inténtalo de nuevo.'
+        );
       }
       try {
         if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.syncAllShowrooms) {
           BunnyMediaApi.syncAllShowrooms().catch(function () {});
         }
       } catch (e) {}
-      /* Keep loader through SPA navigation into builder config (V5.9.39). */
       markPendingCreate(project.id);
-      resetCreateButton(btn);
+      syncCreateButtonLabel(btn);
       isCreatingShowroom = false;
       try {
         await openBuilder(project.id, project.slug);
-        /* Builder should clear pending; backup if still set. */
         if (hasPendingCreate()) finishPendingCreateBusy();
       } catch (navErr) {
         clearPendingCreate();
         hideCreateBusy();
         notifyError(
           (navErr && navErr.message) ||
-            'Showroom creado, pero no se pudo abrir la configuración.'
+            meta.singular + ' creada, pero no se pudo abrir la configuración.'
         );
       }
     } catch (err) {
       clearPendingCreate();
       hideCreateBusy();
-      notifyError(err.message || 'No se pudo crear el showroom');
-      resetCreateButton(btn);
+      notifyError(err.message || 'No se pudo crear la experiencia');
+      syncCreateButtonLabel(btn);
       isCreatingShowroom = false;
     }
   }
@@ -941,10 +979,10 @@ var BoxiesProjectsPage = (function () {
           ? BoxiesShowroomScope.getViewerContext()
           : null;
       var project = await BoxiesAdmin2ProjectsApi.cloneProject(projectId, { scope: scope });
-      notifySuccess('Showroom clonado');
+      notifySuccess('Experiencia clonada');
       openBuilder(project.id, project.slug);
     } catch (err) {
-      notifyError(err.message || 'No se pudo clonar el showroom');
+      notifyError(err.message || 'No se pudo clonar la experiencia');
       btn.disabled = false;
       btn.classList.remove('is-busy-label');
       btn.innerHTML = prevHtml;
@@ -955,7 +993,7 @@ var BoxiesProjectsPage = (function () {
   async function handleDeleteShowroom(btn) {
     if (!btn || isDeletingShowroom || isCreatingShowroom || btn.dataset.busy === '1') return;
     var projectId = btn.getAttribute('data-boxies-delete-id');
-    var name = btn.getAttribute('data-boxies-delete-name') || 'este showroom';
+    var name = btn.getAttribute('data-boxies-delete-name') || 'esta experiencia';
     if (!projectId) return;
     if (typeof BoxiesAdmin2ProjectsApi === 'undefined' ||
         typeof BoxiesAdmin2ProjectsApi.remove !== 'function') {
@@ -968,7 +1006,7 @@ var BoxiesProjectsPage = (function () {
     }
 
     var ok = await AdminUI.confirm({
-      title: 'Eliminar showroom',
+      title: 'Eliminar experiencia',
       confirmLabel: 'Eliminar',
       cancelLabel: 'Cancelar',
       bodyHtml:
@@ -980,7 +1018,7 @@ var BoxiesProjectsPage = (function () {
     isDeletingShowroom = true;
     btn.dataset.busy = '1';
     btn.disabled = true;
-    showGlobalBusy('Eliminando showroom');
+    showGlobalBusy('Eliminando experiencia');
     try {
       await BoxiesAdmin2ProjectsApi.remove(projectId);
       var list = await refreshShowroomsList();
@@ -988,14 +1026,13 @@ var BoxiesProjectsPage = (function () {
         list = await refreshShowroomsList();
       }
       if (listContainsShowroom(list, projectId)) {
-        throw new Error('El showroom no se eliminó de la lista. Recarga e inténtalo de nuevo.');
+        throw new Error('La experiencia no se eliminó de la lista. Recarga e inténtalo de nuevo.');
       }
-      /* No success toast — list update is the confirmation (avoids green ghost). */
       hideGlobalBusy();
       isDeletingShowroom = false;
     } catch (err) {
       hideGlobalBusy();
-      notifyError(err.message || 'No se pudo eliminar el showroom');
+      notifyError(err.message || 'No se pudo eliminar la experiencia');
       btn.disabled = false;
       btn.dataset.busy = '0';
       isDeletingShowroom = false;
@@ -1023,6 +1060,65 @@ var BoxiesProjectsPage = (function () {
     });
   }
 
+  function renderExperienceTabs() {
+    var types =
+      typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.list
+        ? BoxiesExperienceTypes.list()
+        : [{ id: 'showroom', tabLabel: 'SHOWROOMS' }];
+    return (
+      '<nav class="boxies-experience-tabs" role="tablist" aria-label="Tipos de experiencia">' +
+        types
+          .map(function (t) {
+            var active = t.id === activeExperienceType;
+            return (
+              '<button type="button" class="boxies-experience-tab' +
+                (active ? ' is-active' : '') +
+                '" role="tab" aria-selected="' +
+                (active ? 'true' : 'false') +
+                '" data-experience-type="' +
+                escapeHtml(t.id) +
+                '">' +
+                escapeHtml(t.tabLabel) +
+              '</button>'
+            );
+          })
+          .join('') +
+      '</nav>'
+    );
+  }
+
+  async function setActiveExperienceType(typeId, opts) {
+    opts = opts || {};
+    activeExperienceType = resolveActiveType(typeId);
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.setActive) {
+      BoxiesExperienceTypes.setActive(activeExperienceType);
+    }
+    var host = document.getElementById('boxiesContent');
+    if (host) {
+      host.querySelectorAll('[data-experience-type]').forEach(function (btn) {
+        var on = btn.getAttribute('data-experience-type') === activeExperienceType;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+    syncCreateButtonLabel();
+    if (opts.skipRefresh) return;
+    await refreshShowroomsList();
+  }
+
+  function bindExperienceTabs(host) {
+    host.addEventListener('click', function (e) {
+      var tab = e.target.closest('[data-experience-type]');
+      if (!tab || !host.contains(tab)) return;
+      e.preventDefault();
+      var next = tab.getAttribute('data-experience-type');
+      if (!next || next === activeExperienceType) return;
+      setActiveExperienceType(next).catch(function (err) {
+        notifyError((err && err.message) || 'No se pudo filtrar experiencias');
+      });
+    });
+  }
+
   function bindCreateDockButton() {
     var btn = document.getElementById('boxiesCreateShowroomBtn');
     if (!btn || btn.dataset.boundCreate === '1') return;
@@ -1037,11 +1133,17 @@ var BoxiesProjectsPage = (function () {
     if (typeof BoxiesShell === 'undefined' || typeof BoxiesShell.applyManifest !== 'function') {
       return;
     }
+    var meta = experienceMeta(activeExperienceType);
+    var label = meta.createLabel || '+ Nuevo Showroom';
     BoxiesShell.applyManifest({
       leadingHtml:
-        '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon" id="boxiesCreateShowroomBtn"' +
-          ' aria-label="Crear Showroom" data-tooltip="Crear Showroom">' +
-          '<span aria-hidden="true">+</span>' +
+        '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--create" id="boxiesCreateShowroomBtn"' +
+          ' aria-label="' +
+          escapeHtml(label) +
+          '" data-tooltip="' +
+          escapeHtml(label) +
+          '">' +
+          escapeHtml(label) +
         '</button>'
     });
     bindCreateDockButton();
@@ -1070,12 +1172,19 @@ var BoxiesProjectsPage = (function () {
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
     }
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.getActive) {
+      activeExperienceType = BoxiesExperienceTypes.getActive();
+    } else {
+      activeExperienceType = 'showroom';
+    }
+
     host.classList.add('boxies-content--showrooms');
     host.innerHTML =
       '<div class="boxies-page boxies-page--showrooms">' +
         '<header class="boxies-showrooms-header">' +
-          '<h1 class="boxies-page__title">Showrooms</h1>' +
-          '<p class="boxies-page__desc">Administra los Showrooms Digitales de tu empresa. Arrastra las filas para cambiar el orden.</p>' +
+          '<h1 class="boxies-page__title">Experiencias</h1>' +
+          '<p class="boxies-page__desc">Administra las experiencias digitales del proyecto. Cada pestaña filtra por tipo; la estructura, media y hotspots se comparten.</p>' +
+          renderExperienceTabs() +
         '</header>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
         '<div class="boxies-showrooms-body">' +
@@ -1106,6 +1215,7 @@ var BoxiesProjectsPage = (function () {
       '</div>';
 
     installCreateDockAction();
+    bindExperienceTabs(host);
     bindOpenBuilder(host);
     bindPreview(host);
     bindPublicToggles(host);
@@ -1126,13 +1236,14 @@ var BoxiesProjectsPage = (function () {
     } catch (err) {
       if (tbody) {
         tbody.innerHTML =
-          '<tr><td colspan="7">' + escapeHtml(err.message || 'Error cargando showrooms') + '</td></tr>';
+          '<tr><td colspan="7">' +
+          escapeHtml(err.message || 'Error cargando experiencias') +
+          '</td></tr>';
       }
     }
   }
 
   function unmount() {
-    /* Keep create/open busy alive across SPA nav into builder (V5.9.39 / V5.9.41). */
     isCreatingShowroom = false;
     isDeletingShowroom = false;
     if (typeof AdminUI !== 'undefined' && typeof AdminUI.closeModal === 'function') {
@@ -1156,5 +1267,5 @@ var BoxiesProjectsPage = (function () {
     savingOrder = false;
   }
 
-  return { id: 'projects', title: 'Showrooms', mount: mount, unmount: unmount };
+  return { id: 'projects', title: 'Experiencias', mount: mount, unmount: unmount };
 })();

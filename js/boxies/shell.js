@@ -91,7 +91,7 @@ var BoxiesShell = (function () {
         '</button>' +
         '<div class="boxies-nav__group">Plataforma</div>' +
         item('hall', 'Hall', 'home') +
-        item('projects', 'Showrooms', 'folder') +
+        item('projects', 'Experiencias', 'folder') +
         item('builder', 'Builder', 'panel') +
         item('sistema', 'Sistema', 'activity') +
       '</nav>'
