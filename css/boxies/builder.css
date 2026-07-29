@@ -1803,6 +1803,11 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   margin-top: 8px;
 }
 
+.builder-config-workspace .builder-config-identity,
+.builder-config-workspace .builder-config-share {
+  max-width: none;
+}
+
 .builder-config-identity__title {
   margin: 0 0 16px;
   font-size: 0.95rem;
@@ -1869,12 +1874,88 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* V7.1.07 — Social share preview */
+/* V7.1.07 — Social share preview / V7.1.08 two-column config */
+.builder-config-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.92fr);
+  gap: 28px;
+  align-items: start;
+  max-width: 1100px;
+  margin-top: 8px;
+}
+
+.builder-config-col--main {
+  min-width: 0;
+}
+
+.builder-config-col--media {
+  min-width: 0;
+  position: sticky;
+  top: 12px;
+}
+
+.builder-config-identity {
+  max-width: none;
+  margin-top: 0;
+}
+
 .builder-config-share {
-  max-width: 440px;
+  max-width: none;
   margin-top: 28px;
   padding-top: 22px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.builder-config-og-card {
+  width: 100%;
+}
+
+.builder-config-og-stage {
+  aspect-ratio: 1.91 / 1;
+  min-height: 180px;
+}
+
+.builder-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 10px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.builder-save-status.is-dirty {
+  color: rgba(229, 72, 77, 0.95);
+}
+
+.builder-save-status.is-clean {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.builder-save-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(229, 72, 77, 0.95);
+  box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.16);
+}
+
+.builder-save-status__mark {
+  font-size: 11px;
+  color: rgba(62, 207, 142, 0.9);
+}
+
+@media (max-width: 900px) {
+  .builder-config-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .builder-config-col--media {
+    position: static;
+  }
 }
 
 .builder-config-share__desc {
@@ -1919,6 +2000,7 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
 
 .builder-share-mock__media {

@@ -738,7 +738,14 @@ var QuotationEditor = (function () {
     state.openFolders[folder.id] = true;
     state.folderComposerGroup = null;
     state.openGroups[groupId] = true;
+    markDirtyLocal();
     rerender();
+  }
+
+  function markDirtyLocal() {
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
+      BuilderDirtyState.mark();
+    }
   }
 
   function setHeroFromFile(file, media) {
@@ -771,6 +778,7 @@ var QuotationEditor = (function () {
       state.selectedContentId = item.id;
       state.selectedItem = null;
     }
+    markDirtyLocal();
     rerender();
   }
 
@@ -810,6 +818,7 @@ var QuotationEditor = (function () {
     if (lastId) {
       state.selectedContentId = lastId;
       state.selectedItem = null;
+      markDirtyLocal();
       rerender();
     }
   }
@@ -839,6 +848,7 @@ var QuotationEditor = (function () {
       state.selectedContentId = lastId;
       state.selectedItem = null;
     }
+    markDirtyLocal();
     rerender();
   }
 
@@ -855,6 +865,7 @@ var QuotationEditor = (function () {
     };
     bag.buttons.push(item);
     state.selectedItem = { kind: 'button', id: item.id };
+    markDirtyLocal();
     rerender();
   }
 
@@ -872,6 +883,7 @@ var QuotationEditor = (function () {
     };
     bag.hotspots.push(item);
     state.selectedItem = { kind: 'hotspot', id: item.id };
+    markDirtyLocal();
     rerender();
   }
 
@@ -879,6 +891,7 @@ var QuotationEditor = (function () {
     var found = findSelectedItem();
     if (!found) return;
     mutator(found.data);
+    markDirtyLocal();
     rerender();
   }
 

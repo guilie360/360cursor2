@@ -38,6 +38,9 @@ var BuilderDockActions = (function () {
     });
     if (dockActions.hasAttribute('hidden')) dockActions.removeAttribute('hidden');
     dockActions.hidden = false;
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mount) {
+      BuilderDirtyState.mount();
+    }
   }
 
   function restore() {
@@ -45,8 +48,8 @@ var BuilderDockActions = (function () {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     });
     promotedNodes = [];
-    if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearPageActions) {
-      /* keep Visualizar; clearPageActions may wipe all — only remove our nodes above */
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.destroy) {
+      BuilderDirtyState.destroy();
     }
   }
 

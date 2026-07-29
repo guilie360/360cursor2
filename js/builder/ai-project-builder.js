@@ -7,6 +7,10 @@ var AiProjectBuilderView = (function () {
 
   function saveState() {
     BuilderSession.save(state);
+    if (!state || state._hydrating) return;
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
+      BuilderDirtyState.mark();
+    }
   }
 
   function renderProgressRail() {
@@ -381,34 +385,7 @@ var AiProjectBuilderView = (function () {
         og_description: share.og_description || ''
       });
     }
-    var nombre = info.nombre || '';
-    var slug = info.slug || '';
-    var urlPreview = publicUrlDisplay(slug);
-    return '<div class="builder-step-content">' +
-      '<div class="builder-config-identity">' +
-        '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
-        '<div class="builder-field">' +
-          '<label for="showroomNameInput">Nombre del Showroom</label>' +
-          '<input type="text" id="showroomNameInput" maxlength="120" value="' + AdminUI.escapeHtml(nombre) + '" placeholder="Nombre del showroom" autocomplete="off">' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label for="showroomSlugInput">Slug</label>' +
-          '<input type="text" id="showroomSlugInput" maxlength="60" value="' + AdminUI.escapeHtml(slug) + '" placeholder="mi-showroom" autocomplete="off" spellcheck="false" inputmode="latin">' +
-          '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60 caracteres.</p>' +
-          '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label>URL pública</label>' +
-          '<div class="builder-config-identity__url" id="showroomPublicUrlPreview">' +
-            AdminUI.escapeHtml(urlPreview) +
-          '</div>' +
-        '</div>' +
-        '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
-        '<div class="builder-config-identity__actions">' +
-          '<button type="button" class="builder-header-action-btn" id="showroomIdentitySaveBtn">Guardar cambios</button>' +
-          '<span class="builder-config-identity__status" id="showroomIdentityStatus" aria-live="polite"></span>' +
-        '</div>' +
-      '</div></div>';
+    return '<p class="builder-step-desc">Configuración no disponible.</p>';
   }
 
   /** Collapsed-section summaries (V5.9.47) — presentational only. */
@@ -5455,6 +5432,20 @@ var AiProjectBuilderView = (function () {
             state.shareMeta = Object.assign({}, state.shareMeta || {}, meta || {});
             saveState();
           },
+          onShareChange: function (meta) {
+            state.shareMeta = Object.assign({}, state.shareMeta || {}, {
+              og_image: meta.og_image || '',
+              og_title: meta.og_title || '',
+              og_description: meta.og_description || ''
+            });
+            /* Dirty is marked by BuilderConfig; avoid saveState re-entry marking twice. */
+          },
+          onIdentityDraft: function (draft) {
+            state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+              nombre: draft.nombre != null ? String(draft.nombre) : (state.projectInfo && state.projectInfo.nombre) || '',
+              slug: draft.slug != null ? String(draft.slug) : (state.projectInfo && state.projectInfo.slug) || ''
+            });
+          },
           afterSave: function () {
             renderStepContent();
             updateNavButtons();
@@ -6905,27 +6896,65 @@ var AiProjectBuilderView = (function () {
 
     saveState();
 
+    function configSaveAdapter() {
+      return {
+        getProjectId: function () {
+          return state.draftProjectId ||
+            (state.publishResult && state.publishResult.proyectoId) ||
+            (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
+              ? AdminState.getActiveProjectId()
+              : null);
+        },
+        getIdentity: function () {
+          return {
+            nombre: (state.projectInfo && state.projectInfo.nombre) || '',
+            slug: (state.projectInfo && state.projectInfo.slug) || '',
+            constructora_id: (state.projectInfo && state.projectInfo.constructora_id) || null
+          };
+        },
+        resolveConstructoraId: function () {
+          return (state.projectInfo && state.projectInfo.constructora_id) ||
+            (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+              ? AdminState.getConstructoraId()
+              : null);
+        },
+        onSaved: function (payload) {
+          state.draftProjectId = payload.id;
+          state.projectInfo = Object.assign({}, state.projectInfo || {}, {
+            nombre: payload.nombre,
+            slug: payload.slug,
+            constructora_id: payload.constructora_id ||
+              (state.projectInfo && state.projectInfo.constructora_id)
+          });
+          if (!state.heroContent) state.heroContent = {};
+          state.heroContent.nombre = state.projectInfo.nombre;
+          state.publishResult = Object.assign({}, state.publishResult || {}, {
+            proyectoId: payload.id,
+            slug: state.projectInfo.slug,
+            project: payload.project,
+            url: payload.url
+          });
+        },
+        onShareSaved: function (meta) {
+          state.shareMeta = Object.assign({}, state.shareMeta || {}, meta || {});
+        }
+      };
+    }
+
+    var hasConfigFields = !!(rootEl && (
+      rootEl.querySelector('#showroomNameInput') ||
+      rootEl.querySelector('#showroomSlugInput') ||
+      rootEl.querySelector('#builderOgTitle')
+    ));
+
     var sharePromise =
-      (typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta && rootEl)
-        ? BuilderConfig.saveShareMeta({
-          getProjectId: function () {
-            return state.draftProjectId ||
-              (state.publishResult && state.publishResult.proyectoId) ||
-              (typeof AdminState !== 'undefined' && AdminState.getActiveProjectId
-                ? AdminState.getActiveProjectId()
-                : null);
-          },
-          resolveConstructoraId: function () {
-            return (state.projectInfo && state.projectInfo.constructora_id) ||
-              (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
-                ? AdminState.getConstructoraId()
-                : null);
-          },
-          onShareSaved: function (meta) {
-            state.shareMeta = Object.assign({}, state.shareMeta || {}, meta || {});
-          }
-        }, rootEl).catch(function () { return null; })
-        : Promise.resolve(null);
+      hasConfigFields && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll
+        ? BuilderConfig.commitAll(configSaveAdapter(), rootEl, { silent: true })
+            .then(function () { return { committed: true }; })
+            .catch(function (err) { throw err; })
+        : (typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta && rootEl)
+          ? BuilderConfig.saveShareMeta(configSaveAdapter(), rootEl).catch(function () { return null; })
+          : Promise.resolve(null);
 
     var syncHero = HeroSyncEngine.sync(state);
     var syncMenu = typeof MenuSyncEngine !== 'undefined'
@@ -6948,7 +6977,7 @@ var AiProjectBuilderView = (function () {
         if (shareResult || heroResult || menuResult || vivResult || estResult) {
           saveState();
           var parts = [];
-          if (shareResult) parts.push('vista previa social');
+          if (shareResult) parts.push(shareResult.committed ? 'configuración' : 'vista previa social');
           if (heroResult) parts.push('hero');
           if (menuResult) parts.push('menú');
           if (vivResult) parts.push('viviendas');
@@ -6959,6 +6988,9 @@ var AiProjectBuilderView = (function () {
           AdminNotify.error('Abre Administrar desde el showroom del proyecto para sincronizar.');
         } else {
           AdminNotify.success('Progreso guardado en esta sesión.');
+        }
+        if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+          BuilderDirtyState.clear();
         }
       })
       .catch(function (err) {
@@ -7505,6 +7537,7 @@ var AiProjectBuilderView = (function () {
     }
 
     state = BuilderSession.load();
+    state._hydrating = true;
     applyStepFromUrl();
     normalizeCurrentStep();
     BuilderDock.applyBodyPadding();
@@ -7538,9 +7571,14 @@ var AiProjectBuilderView = (function () {
           }
         }
       }
-      saveState();
+      BuilderSession.save(state);
     } catch (err) {
       console.warn('[Builder] bind project', err);
+    } finally {
+      state._hydrating = false;
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
+      }
     }
 
     try {

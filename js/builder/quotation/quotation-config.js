@@ -64,6 +64,11 @@ var QuotationConfig = (function () {
         _ctx.og_description = meta.og_description || '';
         syncProjectRef();
       },
+      onIdentityDraft: function (draft) {
+        if (draft.nombre != null) _ctx.name = String(draft.nombre);
+        if (draft.slug != null) _ctx.slug = String(draft.slug);
+        syncProjectRef();
+      },
       onShareSaved: function (meta) {
         _ctx.og_image = meta.og_image || '';
         _ctx.og_title = meta.og_title || '';

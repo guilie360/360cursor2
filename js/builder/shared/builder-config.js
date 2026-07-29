@@ -1,6 +1,6 @@
 /**
- * BuilderConfig — V7.1.06 shared Configuration page for all BOXIES Builders.
- * Showroom and Quotation (and future builders) render the same component.
+ * BuilderConfig — V7.1.08 publication panel (2 columns) for all BOXIES Builders.
+ * Save only via Builder dock Guardar — no inline save button.
  */
 var BuilderConfig = (function () {
   function escapeHtml(v) {
@@ -53,83 +53,94 @@ var BuilderConfig = (function () {
       }
     } catch (eHost) {}
 
-    var mockImg = ogImage
+    var hasImage = !!ogImage;
+    var mockImg = hasImage
       ? ('<div class="builder-share-mock__media" style="background-image:url(\'' +
           escapeHtml(ogImage) + '\')"></div>')
       : '<div class="builder-share-mock__media builder-share-mock__media--empty" aria-hidden="true"></div>';
+    var ogStage = hasImage
+      ? ('<img class="builder-hero-image-preview" id="builderOgImagePreview" src="' +
+          escapeHtml(ogImage) + '" alt="Vista previa Open Graph">')
+      : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>';
 
-    return '<div class="builder-step-content">' +
-      '<div class="builder-config-identity">' +
-        '<h3 class="builder-config-identity__title">Identidad del Showroom</h3>' +
-        '<div class="builder-field">' +
-          '<label for="showroomNameInput">Nombre del Showroom</label>' +
-          '<input type="text" id="showroomNameInput" maxlength="120" value="' +
-            escapeHtml(nombre) + '" placeholder="Nombre del showroom" autocomplete="off">' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label for="showroomSlugInput">Slug</label>' +
-          '<input type="text" id="showroomSlugInput" maxlength="60" value="' +
-            escapeHtml(slug) + '" placeholder="mi-showroom" autocomplete="off" spellcheck="false" inputmode="latin">' +
-          '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60 caracteres.</p>' +
-          '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
-        '</div>' +
-        '<div class="builder-field">' +
-          '<label>URL pública</label>' +
-          '<div class="builder-config-identity__url" id="showroomPublicUrlPreview">' +
-            escapeHtml(urlPreview) +
+    return '<div class="builder-step-content builder-config-workspace">' +
+      '<div class="builder-config-col builder-config-col--main">' +
+        '<div class="builder-config-identity">' +
+          '<h3 class="builder-config-identity__title">Identidad</h3>' +
+          '<div class="builder-field">' +
+            '<label for="showroomNameInput">Nombre del Showroom</label>' +
+            '<input type="text" id="showroomNameInput" maxlength="120" value="' +
+              escapeHtml(nombre) + '" placeholder="Nombre del showroom" autocomplete="off">' +
           '</div>' +
+          '<div class="builder-field">' +
+            '<label for="showroomSlugInput">Slug</label>' +
+            '<input type="text" id="showroomSlugInput" maxlength="60" value="' +
+              escapeHtml(slug) + '" placeholder="mi-showroom" autocomplete="off" spellcheck="false" inputmode="latin">' +
+            '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60 caracteres.</p>' +
+            '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
+          '</div>' +
+          '<div class="builder-field">' +
+            '<label>URL pública</label>' +
+            '<div class="builder-config-identity__url" id="showroomPublicUrlPreview">' +
+              escapeHtml(urlPreview) +
+            '</div>' +
+          '</div>' +
+          '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
         '</div>' +
-        '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
-        '<div class="builder-config-identity__actions">' +
-          '<button type="button" class="builder-header-action-btn" id="showroomIdentitySaveBtn">Guardar cambios</button>' +
-          '<span class="builder-config-identity__status" id="showroomIdentityStatus" aria-live="polite"></span>' +
+        '<div class="builder-config-share" data-builder-share>' +
+          '<h3 class="builder-config-identity__title">Vista previa al compartir</h3>' +
+          '<p class="builder-config-share__desc">Personaliza cómo se verá este proyecto cuando compartas el enlace por WhatsApp, Facebook, LinkedIn o cualquier red social.</p>' +
+          '<div class="builder-field">' +
+            '<label for="builderOgTitle">Título para compartir</label>' +
+            '<input type="text" id="builderOgTitle" maxlength="120" value="' +
+              escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
+          '</div>' +
+          '<div class="builder-field">' +
+            '<label for="builderOgDescription">Descripción</label>' +
+            '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
+              escapeHtml(ogDescription) +
+            '</textarea>' +
+          '</div>' +
+          '<div class="builder-share-mock" data-builder-share-mock>' +
+            mockImg +
+            '<div class="builder-share-mock__body">' +
+              '<div class="builder-share-mock__title" data-share-mock-title>' +
+                escapeHtml(ogTitle || nombre || 'Título para compartir') +
+              '</div>' +
+              '<div class="builder-share-mock__desc" data-share-mock-desc>' +
+                escapeHtml(ogDescription || 'La descripción aparecerá aquí.') +
+              '</div>' +
+              '<div class="builder-share-mock__host" data-share-mock-host>' +
+                escapeHtml(hostLabel) +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
-
-      '<div class="builder-config-share" data-builder-share>' +
-        '<h3 class="builder-config-identity__title">Vista previa al compartir</h3>' +
-        '<p class="builder-config-share__desc">Personaliza cómo se verá este proyecto cuando compartas el enlace por WhatsApp, Facebook, LinkedIn o cualquier red social.</p>' +
-
-        '<div class="builder-field">' +
-          '<label>Imagen de vista previa</label>' +
-          '<div class="builder-config-share__upload">' +
+      '<div class="builder-config-col builder-config-col--media">' +
+        '<article class="builder-hero-media-card builder-config-og-card' +
+          (hasImage ? ' has-media' : ' is-empty') + '" data-builder-og-card>' +
+          '<header class="builder-hero-media-card__head">' +
+            '<span class="builder-hero-media-card__label">Imagen Open Graph</span>' +
+          '</header>' +
+          '<div class="builder-hero-media-card__stage builder-config-og-stage" id="builderOgDropzone" role="button" tabindex="0">' +
+            ogStage +
+          '</div>' +
+          '<div class="builder-hero-media-card__meta">' +
+            '<div class="builder-hero-media-card__name" id="builderOgImageName">' +
+              (hasImage ? 'Imagen cargada' : 'Sin imagen') +
+            '</div>' +
+            '<p class="builder-file-meta">Recomendado: 1200 × 630 px · JPG o PNG</p>' +
+          '</div>' +
+          '<div class="builder-hero-media-card__actions">' +
             '<button type="button" class="builder-header-action-btn" id="builderOgImageBtn">Subir imagen</button>' +
+            '<button type="button" class="builder-header-action-btn is-danger' +
+              (hasImage ? '' : '') + '" id="builderOgImageClear"' +
+              (hasImage ? '' : ' hidden') + '>Quitar</button>' +
             '<input type="file" id="builderOgImageInput" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>' +
-            '<span class="builder-config-share__file" id="builderOgImageName" aria-live="polite">' +
-              (ogImage ? 'Imagen cargada' : 'Sin imagen') +
-            '</span>' +
+            '<input type="hidden" id="builderOgImageUrl" value="' + escapeHtml(ogImage) + '">' +
           '</div>' +
-          '<p class="builder-config-identity__slug-hint">Recomendado: 1200 × 630 px. Acepta JPG y PNG.</p>' +
-          '<input type="hidden" id="builderOgImageUrl" value="' + escapeHtml(ogImage) + '">' +
-        '</div>' +
-
-        '<div class="builder-field">' +
-          '<label for="builderOgTitle">Título para compartir</label>' +
-          '<input type="text" id="builderOgTitle" maxlength="120" value="' +
-            escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
-        '</div>' +
-
-        '<div class="builder-field">' +
-          '<label for="builderOgDescription">Descripción</label>' +
-          '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
-            escapeHtml(ogDescription) +
-          '</textarea>' +
-        '</div>' +
-
-        '<div class="builder-share-mock" data-builder-share-mock>' +
-          mockImg +
-          '<div class="builder-share-mock__body">' +
-            '<div class="builder-share-mock__title" data-share-mock-title>' +
-              escapeHtml(ogTitle || nombre || 'Título para compartir') +
-            '</div>' +
-            '<div class="builder-share-mock__desc" data-share-mock-desc>' +
-              escapeHtml(ogDescription || 'La descripción aparecerá aquí.') +
-            '</div>' +
-            '<div class="builder-share-mock__host" data-share-mock-host>' +
-              escapeHtml(hostLabel) +
-            '</div>' +
-          '</div>' +
-        '</div>' +
+        '</article>' +
       '</div>' +
     '</div>';
   }
@@ -159,6 +170,11 @@ var BuilderConfig = (function () {
     var titleEl = rootEl.querySelector('[data-share-mock-title]');
     var descEl = rootEl.querySelector('[data-share-mock-desc]');
     var media = rootEl.querySelector('.builder-share-mock__media');
+    var card = rootEl.querySelector('[data-builder-og-card]');
+    var stage = rootEl.querySelector('#builderOgDropzone');
+    var fileName = rootEl.querySelector('#builderOgImageName');
+    var clearBtn = rootEl.querySelector('#builderOgImageClear');
+
     if (titleEl) {
       titleEl.textContent = share.og_title || fallbackTitle || 'Título para compartir';
     }
@@ -174,6 +190,34 @@ var BuilderConfig = (function () {
         media.style.backgroundImage = '';
       }
     }
+    if (card) {
+      card.classList.toggle('has-media', !!share.og_image);
+      card.classList.toggle('is-empty', !share.og_image);
+    }
+    if (stage) {
+      if (share.og_image) {
+        stage.innerHTML = '<img class="builder-hero-image-preview" id="builderOgImagePreview" src="' +
+          escapeHtml(share.og_image) + '" alt="Vista previa Open Graph">';
+      } else {
+        stage.innerHTML = '<div class="builder-hero-media-card__void" aria-hidden="true"></div>';
+      }
+    }
+    if (fileName) {
+      fileName.textContent = share.og_image
+        ? (pendingOgImageFile && pendingOgImageFile.name
+          ? pendingOgImageFile.name
+          : 'Imagen cargada')
+        : 'Sin imagen';
+    }
+    if (clearBtn) {
+      clearBtn.hidden = !share.og_image;
+    }
+  }
+
+  function markDirty() {
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
+      BuilderDirtyState.mark();
+    }
   }
 
   function bindShare(rootEl, adapter) {
@@ -181,38 +225,76 @@ var BuilderConfig = (function () {
     pendingOgImageFile = null;
     var fileBtn = rootEl.querySelector('#builderOgImageBtn');
     var fileInput = rootEl.querySelector('#builderOgImageInput');
-    var fileName = rootEl.querySelector('#builderOgImageName');
+    var clearBtn = rootEl.querySelector('#builderOgImageClear');
+    var dropzone = rootEl.querySelector('#builderOgDropzone');
     var hiddenUrl = rootEl.querySelector('#builderOgImageUrl');
     var titleInput = rootEl.querySelector('#builderOgTitle');
     var descInput = rootEl.querySelector('#builderOgDescription');
 
     function onShareChange() {
       syncShareMock(rootEl);
+      markDirty();
       if (typeof adapter.onShareChange === 'function') {
         adapter.onShareChange(readShareFromDom(rootEl));
       }
     }
 
+    function applyFile(file) {
+      if (!file) return;
+      var type = String(file.type || '').toLowerCase();
+      if (type && type !== 'image/jpeg' && type !== 'image/png') {
+        if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+          AdminNotify.error('Solo se admiten JPG y PNG.');
+        }
+        return;
+      }
+      pendingOgImageFile = file;
+      if (hiddenUrl && hiddenUrl.value && hiddenUrl.value.indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev) {}
+      }
+      var preview = URL.createObjectURL(file);
+      if (hiddenUrl) hiddenUrl.value = preview;
+      onShareChange();
+    }
+
     if (fileBtn && fileInput) {
       fileBtn.addEventListener('click', function () { fileInput.click(); });
       fileInput.addEventListener('change', function () {
-        var file = fileInput.files && fileInput.files[0];
-        if (!file) return;
-        var type = String(file.type || '').toLowerCase();
-        if (type && type !== 'image/jpeg' && type !== 'image/png') {
-          if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-            AdminNotify.error('Solo se admiten JPG y PNG.');
+        applyFile(fileInput.files && fileInput.files[0]);
+        fileInput.value = '';
+      });
+    }
+    if (dropzone && fileInput) {
+      dropzone.addEventListener('click', function () { fileInput.click(); });
+      dropzone.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+      dropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropzone.classList.add('is-dragover');
+      });
+      dropzone.addEventListener('dragleave', function () {
+        dropzone.classList.remove('is-dragover');
+      });
+      dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropzone.classList.remove('is-dragover');
+        var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        applyFile(file);
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        pendingOgImageFile = null;
+        if (hiddenUrl) {
+          if (hiddenUrl.value && hiddenUrl.value.indexOf('blob:') === 0) {
+            try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev2) {}
           }
-          fileInput.value = '';
-          return;
+          hiddenUrl.value = '';
         }
-        pendingOgImageFile = file;
-        if (hiddenUrl && hiddenUrl.value && hiddenUrl.value.indexOf('blob:') === 0) {
-          try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev) {}
-        }
-        var preview = URL.createObjectURL(file);
-        if (hiddenUrl) hiddenUrl.value = preview;
-        if (fileName) fileName.textContent = file.name || 'Imagen cargada';
         onShareChange();
       });
     }
@@ -285,8 +367,6 @@ var BuilderConfig = (function () {
     var slugInput = rootEl.querySelector('#showroomSlugInput');
     var urlPreviewEl = rootEl.querySelector('#showroomPublicUrlPreview');
     var slugCheckEl = rootEl.querySelector('#showroomSlugCheck');
-    var saveBtn = rootEl.querySelector('#showroomIdentitySaveBtn');
-    var statusEl = rootEl.querySelector('#showroomIdentityStatus');
     var slugCheckTimer = null;
     var slugCheckSeq = 0;
 
@@ -332,19 +412,16 @@ var BuilderConfig = (function () {
 
       if (!String(raw || '').trim()) {
         setSlugCheck('El slug es obligatorio.', 'error');
-        if (saveBtn) saveBtn.disabled = true;
         return;
       }
 
       if (typeof ShowroomPublicUrl !== 'undefined') {
         if (ShowroomPublicUrl.isReservedSlug(nextSlug)) {
           setSlugCheck('✕ Ese slug está reservado.', 'error');
-          if (saveBtn) saveBtn.disabled = true;
           return;
         }
         if (!ShowroomPublicUrl.isValidSlugFormat(nextSlug)) {
           setSlugCheck('✕ Usa solo letras minúsculas, números y guiones.', 'error');
-          if (saveBtn) saveBtn.disabled = true;
           return;
         }
       }
@@ -353,19 +430,16 @@ var BuilderConfig = (function () {
       var originalSlug = normalizeSlug((identity && identity.slug) || '');
       if (nextSlug === originalSlug && nextSlug) {
         setSlugCheck('✓ URL disponible', 'ok');
-        if (saveBtn) saveBtn.disabled = false;
         return;
       }
 
       if (typeof ProyectosApi === 'undefined' ||
           typeof ProyectosApi.checkSlugAvailability !== 'function') {
         setSlugCheck('');
-        if (saveBtn) saveBtn.disabled = false;
         return;
       }
 
       setSlugCheck('Comprobando…', 'pending');
-      if (saveBtn) saveBtn.disabled = true;
 
       try {
         var result = await ProyectosApi.checkSlugAvailability(nextSlug, {
@@ -373,17 +447,8 @@ var BuilderConfig = (function () {
           constructoraId: resolveConstructoraIdForCheck()
         });
         if (seq !== slugCheckSeq) return;
-        try {
-          console.log('[IDENTITY]', 'slug_live_check', {
-            nextSlug: nextSlug,
-            excludeId: currentProjectId(),
-            result: result,
-            saveDisabledBefore: !!(saveBtn && saveBtn.disabled)
-          });
-        } catch (eLog) {}
         if (result.available) {
           setSlugCheck('✓ URL disponible', 'ok');
-          if (saveBtn) saveBtn.disabled = false;
         } else if (result.reason === 'reserved') {
           setSlugCheck('✕ Ese slug está reservado.', 'error');
         } else if (result.reason === 'format') {
@@ -394,12 +459,6 @@ var BuilderConfig = (function () {
       } catch (err) {
         if (seq !== slugCheckSeq) return;
         setSlugCheck(err.message || 'No se pudo validar el slug.', 'error');
-        try {
-          console.warn('[IDENTITY]', 'slug_live_check_error', {
-            message: err && err.message,
-            saveDisabled: !!(saveBtn && saveBtn.disabled)
-          });
-        } catch (e2) {}
       }
     }
 
@@ -407,6 +466,19 @@ var BuilderConfig = (function () {
       syncPublicUrlPreview();
       if (slugCheckTimer) clearTimeout(slugCheckTimer);
       slugCheckTimer = setTimeout(validateSlugLive, 280);
+    }
+
+    if (nameInput) {
+      nameInput.addEventListener('input', function () {
+        markDirty();
+        syncShareMock(rootEl);
+        if (typeof adapter.onIdentityDraft === 'function') {
+          adapter.onIdentityDraft({
+            nombre: String(nameInput.value || ''),
+            slug: slugInput ? String(slugInput.value || '') : ''
+          });
+        }
+      });
     }
 
     if (slugInput) {
@@ -420,62 +492,49 @@ var BuilderConfig = (function () {
             slugInput.setSelectionRange(pos, pos);
           } catch (e) {}
         }
+        markDirty();
         scheduleSlugValidation();
+        if (typeof adapter.onIdentityDraft === 'function') {
+          adapter.onIdentityDraft({
+            nombre: nameInput ? String(nameInput.value || '') : '',
+            slug: String(slugInput.value || '')
+          });
+        }
       });
       slugInput.addEventListener('blur', function () {
         slugInput.value = normalizeSlug(slugInput.value);
         syncPublicUrlPreview();
         validateSlugLive();
+        if (typeof adapter.onIdentityDraft === 'function') {
+          adapter.onIdentityDraft({
+            nombre: nameInput ? String(nameInput.value || '') : '',
+            slug: String(slugInput.value || '')
+          });
+        }
       });
       scheduleSlugValidation();
     }
+  }
 
-    if (saveBtn) {
-      var actionsRow = saveBtn.parentNode;
-      if (actionsRow) {
-        actionsRow.addEventListener('click', function (e) {
-          var t = e.target;
-          if (!t || t.id !== 'showroomIdentitySaveBtn') return;
-          if (!t.disabled) return;
-          try {
-            if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
-            window.__BOXIES_IDENTITY_TRACE__.push({
-              t: Date.now(),
-              step: '0_click_bloqueado_disabled',
-              nombre: nameInput ? nameInput.value : null,
-              slug: slugInput ? slugInput.value : null,
-              slugCheck: slugCheckEl ? slugCheckEl.textContent : null
-            });
-            console.warn('[IDENTITY]', '0_click_bloqueado_disabled', {
-              slugCheck: slugCheckEl ? slugCheckEl.textContent : null
-            });
-          } catch (eBlock) {}
-        }, true);
-      }
-      saveBtn.addEventListener('click', function () {
-        try {
-          if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
-          window.__BOXIES_IDENTITY_TRACE__.push({
-            t: Date.now(),
-            step: '0_click_guardar',
-            disabled: !!saveBtn.disabled,
-            nombre: nameInput ? nameInput.value : null,
-            slug: slugInput ? slugInput.value : null
-          });
-          console.log('[IDENTITY]', '0_click_guardar', {
-            disabled: !!saveBtn.disabled,
-            nombre: nameInput ? nameInput.value : null,
-            slug: slugInput ? slugInput.value : null
-          });
-        } catch (eClick) {}
-        if (slugInput) slugInput.value = normalizeSlug(slugInput.value);
-        syncPublicUrlPreview();
-        saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl);
+  async function commitAll(adapter, rootEl, opts) {
+    opts = opts || {};
+    var nameInput = rootEl && rootEl.querySelector('#showroomNameInput');
+    var slugInput = rootEl && rootEl.querySelector('#showroomSlugInput');
+    if (nameInput || slugInput) {
+      await saveIdentity(adapter, rootEl, nameInput, slugInput, null, null, {
+        silent: !!opts.silent
       });
+    } else if (rootEl) {
+      await saveShareMeta(adapter, rootEl);
+    }
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+      BuilderDirtyState.clear();
     }
   }
 
-  async function saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl) {
+  async function saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl, options) {
+    options = options || {};
+    var silent = !!options.silent;
     function trace(step, data) {
       try {
         if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
@@ -504,10 +563,10 @@ var BuilderConfig = (function () {
         ? adapter.missingProjectMessage()
         : 'Abre un showroom existente para guardar la identidad.';
       if (statusEl) statusEl.textContent = missingMsg;
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error('No hay un showroom vinculado (falta ID).');
       }
-      return;
+      throw new Error(missingMsg || 'No hay un showroom vinculado.');
     }
     if (typeof ProyectosApi === 'undefined' || typeof ProyectosApi.updateIdentity !== 'function') {
       trace('STOP_api_ausente', {
@@ -515,10 +574,10 @@ var BuilderConfig = (function () {
         hasUpdateIdentity: typeof ProyectosApi !== 'undefined' &&
           typeof ProyectosApi.updateIdentity === 'function'
       });
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error('API de identidad no disponible.');
       }
-      return;
+      throw new Error('API de identidad no disponible.');
     }
 
     var nombre = nameInput ? String(nameInput.value || '').trim() : '';
@@ -535,18 +594,18 @@ var BuilderConfig = (function () {
     if (!nombre || !slug) {
       trace('STOP_inputs_vacios', { nombre: nombre, slug: slug });
       if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
-      return;
+      throw new Error('Nombre y slug son obligatorios.');
     }
     if (typeof ShowroomPublicUrl !== 'undefined') {
       if (ShowroomPublicUrl.isReservedSlug(slug)) {
         trace('STOP_slug_reservado', { slug: slug });
         if (statusEl) statusEl.textContent = 'Ese slug está reservado.';
-        return;
+        throw new Error('Ese slug está reservado.');
       }
       if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
         trace('STOP_slug_invalido', { slug: slug });
         if (statusEl) statusEl.textContent = 'Slug inválido.';
-        return;
+        throw new Error('Slug inválido.');
       }
     }
 
@@ -567,12 +626,15 @@ var BuilderConfig = (function () {
             : 'Ese slug ya pertenece a otro Showroom.';
           trace('STOP_slug_no_disponible', { msg: msg, availability: availability });
           if (statusEl) statusEl.textContent = msg;
-          if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-            AdminNotify.error(msg);
-          }
-          return;
+          throw new Error(msg);
         }
       } catch (checkErr) {
+        if (checkErr && (
+          checkErr.message === 'Ese slug está reservado.' ||
+          checkErr.message === 'Ese slug ya pertenece a otro Showroom.'
+        )) {
+          throw checkErr;
+        }
         trace('3b_slug_availability_error', {
           message: checkErr && checkErr.message
         });
@@ -654,8 +716,12 @@ var BuilderConfig = (function () {
       });
 
       if (statusEl) statusEl.textContent = 'Identidad guardada.';
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.success) {
         AdminNotify.success('Identidad guardada en la base: /' + payload.slug);
+      }
+
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
       }
 
       if (typeof adapter.afterSave === 'function') {
@@ -667,9 +733,10 @@ var BuilderConfig = (function () {
         stack: err && err.stack
       });
       if (statusEl) statusEl.textContent = err.message || 'Error al guardar.';
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+      if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error(err.message || 'Error al guardar identidad');
       }
+      throw err;
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
@@ -680,6 +747,7 @@ var BuilderConfig = (function () {
     bind: bind,
     saveIdentity: saveIdentity,
     saveShareMeta: saveShareMeta,
+    commitAll: commitAll,
     readShareFromDom: readShareFromDom,
     normalizeSlug: normalizeSlug,
     publicUrlDisplay: publicUrlDisplay

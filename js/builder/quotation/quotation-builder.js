@@ -1,6 +1,6 @@
 /**
  * QuotationBuilderView — Quotation Room builder host.
- * V7.1.07 — shared Config + Guardar/Republicar dock + social share preview.
+ * V7.1.08 — global dirty state + shared Config commitAll via dock Guardar.
  */
 var QuotationBuilderView = (function () {
   var rootEl = null;
@@ -80,11 +80,24 @@ var QuotationBuilderView = (function () {
   function configAdapter() {
     return {
       getProjectId: function () { return projectCtx.id || null; },
+      getIdentity: function () {
+        return {
+          nombre: projectCtx.name || '',
+          slug: projectCtx.slug || '',
+          constructora_id: projectCtx.constructora_id || null
+        };
+      },
       resolveConstructoraId: function () {
         return projectCtx.constructora_id ||
           (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
             ? AdminState.getConstructoraId()
             : null);
+      },
+      onSaved: function (payload) {
+        projectCtx.id = payload.id;
+        projectCtx.name = payload.nombre;
+        projectCtx.slug = payload.slug;
+        projectCtx.constructora_id = payload.constructora_id || projectCtx.constructora_id;
       },
       onShareSaved: function (meta) {
         projectCtx.og_image = meta.og_image || '';
@@ -99,8 +112,13 @@ var QuotationBuilderView = (function () {
     processing = true;
     try {
       var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
-      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
+      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
+        await BuilderConfig.commitAll(configAdapter(), panel, { silent: true });
+      } else if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
         await BuilderConfig.saveShareMeta(configAdapter(), panel);
+      }
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
       }
       if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
         AdminNotify.success('Cambios guardados.');

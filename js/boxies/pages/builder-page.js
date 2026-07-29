@@ -171,6 +171,9 @@ var BoxiesBuilderPage = (function () {
       else dockActions.appendChild(btn);
       promotedNodes.push(btn);
     });
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mount) {
+      BuilderDirtyState.mount();
+    }
   }
 
   function restorePromotedActions() {
@@ -178,6 +181,9 @@ var BoxiesBuilderPage = (function () {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     });
     promotedNodes = [];
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.destroy) {
+      BuilderDirtyState.destroy();
+    }
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearPageActions) {
       BoxiesShell.clearPageActions();
     }
