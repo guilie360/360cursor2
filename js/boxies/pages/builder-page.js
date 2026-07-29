@@ -183,23 +183,63 @@ var BoxiesBuilderPage = (function () {
     }
   }
 
+  function navigateToExperienceTab(typeId) {
+    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.setActive) {
+      BoxiesExperienceTypes.setActive(typeId);
+    }
+    BoxiesRouter.navigate('projects');
+  }
+
+  function renderSelectorCard(type) {
+    return (
+      '<article class="boxies-exp-select-card" data-experience-type="' +
+        escapeHtml(type.id) +
+      '">' +
+        '<div class="boxies-exp-select-card__icon" aria-hidden="true">' +
+          escapeHtml(type.selectorIcon || '') +
+        '</div>' +
+        '<h2 class="boxies-exp-select-card__title">' +
+          escapeHtml(type.selectorTitle || type.tabLabel || type.singular) +
+        '</h2>' +
+        '<p class="boxies-exp-select-card__desc">' +
+          escapeHtml(type.selectorDesc || '') +
+        '</p>' +
+        '<button type="button" class="boxies-exp-select-card__btn" data-experience-open="' +
+          escapeHtml(type.id) +
+        '">' +
+          escapeHtml(type.selectorCta || ('Crear ' + (type.singular || 'experiencia'))) +
+        '</button>' +
+      '</article>'
+    );
+  }
+
   function showPickProject(host) {
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
     }
+    var types =
+      typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.list
+        ? BoxiesExperienceTypes.list()
+        : [];
+
     host.innerHTML =
-      '<div class="boxies-page boxies-placeholder">' +
-        '<p class="boxies-placeholder__kicker">Builder</p>' +
-        '<h1 class="boxies-page__title">Selecciona un Showroom</h1>' +
-        '<p class="boxies-page__desc">Usa <strong>Administrar</strong> desde Showrooms para abrir el editor dentro de este Shell.</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Ir a Showrooms</button>' +
+      '<div class="boxies-page boxies-exp-select">' +
+        '<header class="boxies-exp-select__header">' +
+          '<p class="boxies-exp-select__kicker">Builder</p>' +
+          '<h1 class="boxies-page__title">¿Qué deseas crear?</h1>' +
+          '<p class="boxies-page__desc">Selecciona el tipo de experiencia que deseas construir.</p>' +
+        '</header>' +
+        '<div class="boxies-exp-select__grid" role="list">' +
+          types.map(renderSelectorCard).join('') +
+        '</div>' +
       '</div>';
-    var btn = document.getElementById('boxiesBuilderBackProjects');
-    if (btn) {
-      btn.addEventListener('click', function () {
-        BoxiesRouter.navigate('projects');
+
+    host.querySelectorAll('[data-experience-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        navigateToExperienceTab(btn.getAttribute('data-experience-open'));
       });
-    }
+    });
   }
 
   function showError(host, err) {
@@ -207,7 +247,7 @@ var BoxiesBuilderPage = (function () {
       '<div class="boxies-page boxies-placeholder">' +
         '<h1 class="boxies-page__title">No se pudo abrir el Builder</h1>' +
         '<p class="boxies-page__desc">' + escapeHtml((err && err.message) || 'Error desconocido') + '</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Showrooms</button>' +
+        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Experiencias</button>' +
       '</div>';
     var btn = document.getElementById('boxiesBuilderBackProjects');
     if (btn) {

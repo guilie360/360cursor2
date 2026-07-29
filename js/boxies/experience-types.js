@@ -1,7 +1,8 @@
 /**
- * BOXIES V7.0.00 — Experiencias (tipos + herramientas futuras).
+ * BOXIES V7 — Experiencias (tipos + herramientas futuras).
  * Una sola colección (proyectos); experience_type filtra la UI.
  * enabledTools() prepara especialización por tipo sin duplicar módulos.
+ * V7.0.01 — selector metadata for Builder entry screen.
  */
 var BoxiesExperienceTypes = (function () {
   var STORAGE_KEY = 'boxies.experiences.activeType';
@@ -15,7 +16,12 @@ var BoxiesExperienceTypes = (function () {
       createLabel: '+ Nuevo Showroom',
       defaultName: 'Nuevo Showroom',
       slugPrefix: 'showroom',
-      emptyMessage: 'No hay showrooms registrados.'
+      emptyMessage: 'No hay showrooms registrados.',
+      selectorIcon: '🏢',
+      selectorTitle: 'SHOWROOM',
+      selectorDesc:
+        'Experiencia comercial completa con Runtime, 360, hotspots y herramientas avanzadas.',
+      selectorCta: 'Crear Showroom'
     },
     {
       id: 'presentation',
@@ -25,7 +31,11 @@ var BoxiesExperienceTypes = (function () {
       createLabel: '+ Nueva Presentación',
       defaultName: 'Nueva Presentación',
       slugPrefix: 'presentacion',
-      emptyMessage: 'No hay presentaciones registradas.'
+      emptyMessage: 'No hay presentaciones registradas.',
+      selectorIcon: '📄',
+      selectorTitle: 'PRESENTACIÓN',
+      selectorDesc: 'Presentación ejecutiva ligera para reuniones e inversionistas.',
+      selectorCta: 'Crear Presentación'
     },
     {
       id: 'quotation',
@@ -35,7 +45,11 @@ var BoxiesExperienceTypes = (function () {
       createLabel: '+ Nueva Cotización',
       defaultName: 'Nueva Cotización',
       slugPrefix: 'cotizacion',
-      emptyMessage: 'No hay cotizaciones registradas.'
+      emptyMessage: 'No hay cotizaciones registradas.',
+      selectorIcon: '💰',
+      selectorTitle: 'COTIZACIÓN',
+      selectorDesc: 'Propuesta comercial interactiva para clientes.',
+      selectorCta: 'Crear Cotización'
     },
     {
       id: 'landing',
@@ -45,7 +59,11 @@ var BoxiesExperienceTypes = (function () {
       createLabel: '+ Nueva Landing',
       defaultName: 'Nueva Landing',
       slugPrefix: 'landing',
-      emptyMessage: 'No hay landings registradas.'
+      emptyMessage: 'No hay landings registradas.',
+      selectorIcon: '🌐',
+      selectorTitle: 'LANDING',
+      selectorDesc: 'Landing comercial para captación de clientes.',
+      selectorCta: 'Crear Landing'
     },
     {
       id: 'catalog',
@@ -55,7 +73,11 @@ var BoxiesExperienceTypes = (function () {
       createLabel: '+ Nuevo Catálogo',
       defaultName: 'Nuevo Catálogo',
       slugPrefix: 'catalogo',
-      emptyMessage: 'No hay catálogos registrados.'
+      emptyMessage: 'No hay catálogos registrados.',
+      selectorIcon: '📚',
+      selectorTitle: 'CATÁLOGO',
+      selectorDesc: 'Catálogo digital de tipologías y documentación.',
+      selectorCta: 'Crear Catálogo'
     }
   ];
 
