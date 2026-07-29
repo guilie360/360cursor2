@@ -1,12 +1,19 @@
-/* Quotation Builder — Hero placeholder (independent from Showroom Hero). */
+/* Quotation Builder — Hero placeholder (shared Builder chrome). */
 var QuotationHero = (function () {
-  function render() {
+  function render(ctx, opts) {
+    opts = opts || {};
+    var header =
+      typeof QuotationSidebar !== 'undefined' && QuotationSidebar.pageHeaderHtml
+        ? QuotationSidebar.pageHeaderHtml(
+          'hero',
+          'Hero',
+          'Portada comercial de la cotización.',
+          opts.sectionChecks
+        )
+        : '';
     return '' +
       '<div class="quotation-step quotation-step--hero">' +
-        '<header class="quotation-step__header">' +
-          '<h1 class="boxies-page__title">Hero</h1>' +
-          '<p class="boxies-page__desc">Portada comercial de la cotización.</p>' +
-        '</header>' +
+        header +
       '</div>';
   }
 

@@ -1,4 +1,4 @@
-/* Quotation Builder — Configuración (temporary layout reuse; redesign later). */
+/* Quotation Builder — Configuración (shared Builder chrome). */
 var QuotationConfig = (function () {
   function escapeHtml(v) {
     if (typeof AdminUI !== 'undefined' && AdminUI.escapeHtml) return AdminUI.escapeHtml(v);
@@ -7,16 +7,23 @@ var QuotationConfig = (function () {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function render(ctx) {
+  function render(ctx, opts) {
     ctx = ctx || {};
+    opts = opts || {};
     var name = ctx.name || ctx.nombre || 'Quotation Room';
     var slug = ctx.slug || '';
+    var header =
+      typeof QuotationSidebar !== 'undefined' && QuotationSidebar.pageHeaderHtml
+        ? QuotationSidebar.pageHeaderHtml(
+          'config',
+          'Configuración',
+          'Identidad básica de la cotización. Layout temporal.',
+          opts.sectionChecks
+        )
+        : '';
     return '' +
       '<div class="quotation-step quotation-step--config">' +
-        '<header class="quotation-step__header">' +
-          '<h1 class="boxies-page__title">Configuración</h1>' +
-          '<p class="boxies-page__desc">Identidad básica de la cotización. Layout temporal.</p>' +
-        '</header>' +
+        header +
         '<div class="builder-config-identity quotation-config-card">' +
           '<h3 class="builder-config-identity__title">Identidad de la Quotation Room</h3>' +
           '<div class="builder-field">' +

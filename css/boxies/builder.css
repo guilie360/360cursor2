@@ -1,4 +1,7 @@
-/* ?? BOXIES AI Project Builder ? layout only; identity = Style Engine V3 / css/hall ?? */
+/* ?? BOXIES AI Project Builder ? layout only; identity = Style Engine V3 / css/hall ??
+ * V7.1.05 — layout tokens live in css/boxies/builder-tokens.css (loaded first).
+ * Fallbacks below keep builder usable if tokens are missing.
+ */
 :root {
   --builder-header-height: var(--hall-header-h, 52px);
   --builder-rail-width: 185px;
@@ -7,6 +10,7 @@
   --builder-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
   --builder-dock-bg: rgba(5, 5, 5, 0.82);
   --builder-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  --builder-props-rail-width: 0px;
 }
 
 html.builder-has-dock,
@@ -211,7 +215,7 @@ body.builder-has-dock.platform-builder-shell {
   cursor: default;
 }
 
-/* ?? Left progress rail ? V5.9.83 compact ?? */
+/* ?? Left progress rail ? V5.9.83 compact / V7.1.05 tokens ?? */
 .builder-progress-sidebar {
   position: fixed;
   top: var(--builder-header-height);
@@ -222,14 +226,14 @@ body.builder-has-dock.platform-builder-shell {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 6px 0 10px;
+  padding: var(--builder-rail-pad-y, 6px) var(--builder-rail-pad-x, 0) 10px;
   overflow: hidden;
-  border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  background: rgba(8, 8, 8, 0.55);
+  border-right: 1px solid var(--builder-border, var(--hall-border-hairline, rgba(255, 255, 255, 0.04)));
+  background: var(--builder-bg, rgba(8, 8, 8, 0.55));
   box-sizing: border-box;
   transition:
-    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    padding 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    padding var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
     border-color 0.22s ease,
     background 0.22s ease;
 }
@@ -251,16 +255,16 @@ body.builder-has-dock .builder-progress-sidebar {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 72px;
+  width: var(--builder-float-w, 16px);
+  height: var(--builder-float-h, 72px);
   margin: 0;
   padding: 0;
   transform: translateY(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--builder-float-border, rgba(255, 255, 255, 0.07));
   border-left: none;
-  border-radius: 0 7px 7px 0;
-  background: rgba(8, 8, 8, 0.92);
-  color: rgba(255, 255, 255, 0.38);
+  border-radius: var(--builder-float-radius, 0 7px 7px 0);
+  background: var(--builder-float-bg, rgba(8, 8, 8, 0.92));
+  color: var(--builder-float-color, rgba(255, 255, 255, 0.38));
   cursor: ew-resize;
   box-sizing: border-box;
   box-shadow: 1px 0 0 rgba(0, 0, 0, 0.25);
@@ -271,13 +275,13 @@ body.builder-has-dock .builder-progress-sidebar {
     color 0.18s ease,
     background 0.18s ease,
     border-color 0.18s ease,
-    left 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    left var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .boxies-sidebar-float-toggle:hover,
 #boxiesSidebarFloatBtn:hover {
   color: rgba(255, 255, 255, 0.92);
-  background: rgba(10, 10, 10, 0.96);
+  background: var(--builder-float-bg-hover, rgba(10, 10, 10, 0.96));
   border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -323,17 +327,17 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 6px;
+  padding: 0 var(--builder-rail-list-pad-x, 6px);
   box-sizing: border-box;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--builder-rail-scrollbar-thumb, rgba(255, 255, 255, 0.18)) transparent;
   opacity: 1;
   visibility: visible;
   transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .builder-rail-list::-webkit-scrollbar {
-  width: 3px;
+  width: var(--builder-rail-scrollbar-size, 3px);
 }
 
 .builder-rail-list::-webkit-scrollbar-track {
@@ -341,12 +345,12 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
 }
 
 .builder-rail-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--builder-rail-scrollbar-thumb, rgba(255, 255, 255, 0.16));
   border-radius: 999px;
 }
 
 .builder-rail-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--builder-rail-scrollbar-thumb-hover, rgba(255, 255, 255, 0.28));
 }
 
 .builder-rail-item {
@@ -360,14 +364,14 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
   height: auto;
   max-height: none;
   margin: 0;
-  padding: 7px 5px;
+  padding: var(--builder-rail-item-pad-y, 7px) var(--builder-rail-item-pad-x, 5px);
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 0;
+  border-bottom: 1px solid var(--builder-divider, rgba(255, 255, 255, 0.05));
+  border-radius: var(--builder-item-radius, 0);
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background 0.18s ease, box-shadow 0.18s ease;
+  transition: var(--builder-item-transition, background 0.18s ease, box-shadow 0.18s ease);
   box-sizing: border-box;
   overflow: visible;
 }
@@ -377,17 +381,18 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
 }
 
 .builder-rail-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--builder-bg-hover, rgba(255, 255, 255, 0.03));
 }
 
 .builder-rail-row {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: var(--builder-rail-item-gap, 6px);
   width: 100%;
-  font-size: 12px;
-  line-height: 1.25;
-  color: rgba(255, 255, 255, 0.42);
+  font-family: var(--builder-font-family, inherit);
+  font-size: var(--builder-font-size, 12px);
+  line-height: var(--builder-line-height, 1.25);
+  color: var(--builder-text-secondary, rgba(255, 255, 255, 0.42));
   overflow: visible;
 }
 
@@ -405,24 +410,24 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
   margin-top: 1px;
   font-size: 11px;
   line-height: 1.25;
-  color: rgba(229, 72, 77, 0.72);
+  color: var(--builder-rail-mark-pending, rgba(229, 72, 77, 0.72));
   text-align: center;
 }
 
 .builder-rail-item.is-done .builder-rail-mark {
-  color: rgba(62, 207, 142, 0.95);
+  color: var(--builder-rail-mark-done, rgba(62, 207, 142, 0.95));
 }
 
 .builder-rail-item.is-done .builder-rail-row {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--builder-text-done, rgba(255, 255, 255, 0.72));
 }
 
 .builder-rail-value {
   display: block;
   margin: 0;
-  font-size: 10px;
+  font-size: var(--builder-font-size-sm, 10px);
   line-height: 1.3;
-  color: rgba(255, 255, 255, 0.34);
+  color: var(--builder-text-muted, rgba(255, 255, 255, 0.34));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -440,7 +445,7 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
 
 .builder-rail-item.is-auxiliary .builder-rail-row,
 .builder-rail-item.is-auxiliary .builder-rail-value {
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--builder-text-secondary, rgba(255, 255, 255, 0.42));
 }
 
 .builder-rail-item.is-auxiliary:hover .builder-rail-row {
@@ -448,13 +453,13 @@ html.boxies-builder-chrome.boxies-rail-collapsed #boxiesSidebarFloatBtn {
 }
 
 .builder-rail-item.is-current {
-  background: rgba(229, 72, 77, 0.08);
-  box-shadow: inset 2px 0 0 #e5484d;
+  background: var(--builder-bg-selected, rgba(229, 72, 77, 0.08));
+  box-shadow: inset 2px 0 0 var(--builder-rail-current-bar, #e5484d);
 }
 
 .builder-rail-item.is-current .builder-rail-row {
-  color: var(--hall-text, rgba(255, 255, 255, 0.94));
-  font-weight: 550;
+  color: var(--builder-text, var(--hall-text, rgba(255, 255, 255, 0.94)));
+  font-weight: var(--builder-font-weight-current, 550);
 }
 
 /* Decorative icons removed in V5.9.78 */
@@ -518,10 +523,8 @@ body.boxies-builder-chrome.boxies-rail-collapsed .builder-workspace {
   min-height: calc(100vh - var(--builder-header-height) - var(--builder-dock-height) - var(--builder-dock-safe));
 }
 
-/* ── V6.0.00 — Right properties rail (twin of left) ── */
-:root {
-  --builder-props-rail-width: 0px;
-}
+  /* ── V6.0.00 — Right properties rail (twin of left) ── */
+  /* --builder-props-rail-width owned by builder-tokens.css */
 
 .builder-properties-sidebar {
   position: fixed;
@@ -914,10 +917,11 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
 
 .builder-page-header .builder-step-title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  font-family: var(--builder-font-family, inherit);
+  font-size: var(--builder-font-size-title, 20px);
+  font-weight: var(--builder-font-weight-title, 700);
+  letter-spacing: var(--builder-letter-spacing-title, -0.02em);
+  line-height: var(--builder-line-height-title, 1.2);
   color: var(--text-primary, #ffffff);
 }
 

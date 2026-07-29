@@ -1,12 +1,19 @@
-/* Quotation Builder — Preview placeholder. */
+/* Quotation Builder — Preview placeholder (shared Builder chrome). */
 var QuotationPreview = (function () {
-  function render() {
+  function render(ctx, opts) {
+    opts = opts || {};
+    var header =
+      typeof QuotationSidebar !== 'undefined' && QuotationSidebar.pageHeaderHtml
+        ? QuotationSidebar.pageHeaderHtml(
+          'preview',
+          'Preview',
+          'Vista previa de la cotización.',
+          opts.sectionChecks
+        )
+        : '';
     return '' +
       '<div class="quotation-step quotation-step--preview">' +
-        '<header class="quotation-step__header">' +
-          '<h1 class="boxies-page__title">Preview</h1>' +
-          '<p class="boxies-page__desc">Vista previa de la cotización.</p>' +
-        '</header>' +
+        header +
       '</div>';
   }
 

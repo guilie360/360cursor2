@@ -1,4 +1,4 @@
-/* V7.1.00 — Quotation Builder chrome (independent from Showroom progress rail) */
+/* V7.1.05 — Quotation Builder content (chrome = shared builder-tokens + builder.css) */
 
 .quotation-builder-host,
 #boxiesContent.quotation-builder-host {
@@ -17,113 +17,17 @@
   box-sizing: border-box;
 }
 
-.quotation-sidebar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 2;
-  width: 185px;
-  padding: var(--hall-space-3, 12px) var(--hall-space-2, 8px) var(--hall-space-4, 16px);
-  border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  background: rgba(8, 8, 8, 0.55);
-  box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
-}
-
-.quotation-sidebar__nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hall-space-1, 4px);
-}
-
-.quotation-sidebar__brand {
-  margin: 0 0 var(--hall-space-3, 12px);
-  padding: 0 8px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
-}
-
-.quotation-sidebar__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 36px;
-  margin: 0;
-  padding: 8px 10px;
-  border: none;
-  border-radius: var(--hall-radius-nav, 10px);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.42);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  box-sizing: border-box;
-  transition: background var(--hall-duration-fast, 0.18s) ease, color var(--hall-duration-fast, 0.18s) ease;
-}
-
-.quotation-sidebar__item:hover {
-  background: var(--hall-surface-hover, rgba(255, 255, 255, 0.055));
-  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
-}
-
-.quotation-sidebar__item.is-current {
-  background: var(--hall-surface-raised, rgba(255, 255, 255, 0.045));
-  color: var(--hall-text, rgba(255, 255, 255, 0.94));
-  box-shadow: var(--hall-inset, inset 0 1px 0 rgba(255, 255, 255, 0.045));
-}
-
-.quotation-sidebar__icon {
-  display: inline-flex;
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-
-.quotation-sidebar__icon svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-
-.quotation-sidebar__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* Workspace offset comes from builder-embed (.builder-workspace + --builder-rail-width) */
 .quotation-workspace {
-  margin-left: 185px;
   min-height: inherit;
   height: 100%;
   box-sizing: border-box;
 }
 
 .quotation-panel {
-  padding: var(--hall-space-4, 16px) clamp(20px, 3vw, 36px) var(--hall-space-5, 24px);
+  padding: var(--builder-page-pad-y, 16px) var(--builder-page-pad-x, clamp(20px, 3vw, 36px))
+    var(--hall-space-5, 24px);
   box-sizing: border-box;
-}
-
-.quotation-step__header {
-  margin: 0 0 var(--hall-space-5, 24px);
-}
-
-.quotation-step__header .boxies-page__title {
-  margin-bottom: 6px;
-}
-
-.quotation-step__header .boxies-page__desc {
-  margin-bottom: 0;
 }
 
 .quotation-config-card {

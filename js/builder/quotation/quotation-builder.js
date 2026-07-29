@@ -1,17 +1,12 @@
 /**
- * QuotationBuilderView — independent Quotation Room builder host.
- * V7.1.00 — architecture + navigation only (no Showroom wizard reuse).
+ * QuotationBuilderView — Quotation Room builder host.
+ * V7.1.05 — shared Builder shell (tokens + progress rail chrome).
  */
 var QuotationBuilderView = (function () {
   var rootEl = null;
   var currentStep = 'config';
   var projectCtx = { id: '', name: '', slug: '' };
-
-  function escapeHtml(v) {
-    return String(v == null ? '' : v)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  var sectionChecks = {};
 
   function resolvePanel(stepId) {
     var id = typeof QuotationRouter !== 'undefined'
@@ -26,17 +21,38 @@ var QuotationBuilderView = (function () {
   function shellHtml(stepId) {
     var sidebar =
       typeof QuotationSidebar !== 'undefined' && QuotationSidebar.renderHtml
-        ? QuotationSidebar.renderHtml(stepId)
+        ? QuotationSidebar.renderHtml(stepId, sectionChecks)
         : '';
     return '' +
-      '<div class="quotation-builder" id="quotationBuilderRoot" data-quotation-builder>' +
-        '<aside class="quotation-sidebar" id="quotationSidebar" aria-label="Navegación Quotation">' +
+      '<div class="quotation-builder builder-app" id="quotationBuilderRoot" data-quotation-builder>' +
+        '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Navegación Builder">' +
           sidebar +
         '</aside>' +
-        '<div class="quotation-workspace">' +
+        '<div class="builder-workspace quotation-workspace">' +
           '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
         '</div>' +
       '</div>';
+  }
+
+  function refreshSidebar() {
+    if (!rootEl) return;
+    var rail = rootEl.querySelector('#builderProgressRail');
+    if (!rail) return;
+    if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
+      QuotationSidebar.setActive(rail, currentStep, sectionChecks);
+      QuotationSidebar.bind(rail, goToStep);
+    }
+  }
+
+  function bindSectionCheck(panel) {
+    if (!panel) return;
+    var input = panel.querySelector('#builderSectionDoneCheck');
+    if (!input) return;
+    input.addEventListener('change', function () {
+      var stepId = input.getAttribute('data-section-id') || currentStep;
+      sectionChecks[stepId] = !!input.checked;
+      refreshSidebar();
+    });
   }
 
   function renderStep(stepId) {
@@ -45,7 +61,8 @@ var QuotationBuilderView = (function () {
       ? QuotationRouter.writeToUrl(stepId)
       : stepId;
     var panel = rootEl.querySelector('[data-quotation-panel]');
-    var workspace = rootEl.querySelector('.quotation-workspace');
+    var workspace = rootEl.querySelector('.quotation-workspace') ||
+      rootEl.querySelector('.builder-workspace');
     var mod = resolvePanel(currentStep);
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
@@ -53,19 +70,32 @@ var QuotationBuilderView = (function () {
     if (panel) {
       panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
       panel.innerHTML = mod && mod.render
-        ? mod.render(projectCtx)
-        : '<p class="boxies-page__desc">Paso no disponible.</p>';
+        ? mod.render(projectCtx, { sectionChecks: sectionChecks, stepId: currentStep })
+        : '<p class="builder-step-desc">Paso no disponible.</p>';
       if (mod && mod.bind) {
         try { mod.bind(panel, projectCtx); } catch (eBind) {}
       }
+      bindSectionCheck(panel);
     }
-    if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
-      QuotationSidebar.setActive(rootEl.querySelector('#quotationSidebar'), currentStep);
-    }
+    refreshSidebar();
   }
 
   function goToStep(stepId) {
     renderStep(stepId);
+  }
+
+  function activateSharedChrome() {
+    if (typeof BuilderProgressRail === 'undefined') return;
+    try {
+      if (BuilderProgressRail.openEditorRail) {
+        BuilderProgressRail.openEditorRail();
+      } else if (BuilderProgressRail.ensureFloatButton) {
+        BuilderProgressRail.ensureFloatButton();
+        if (BuilderProgressRail.applyCollapsedFromPrefs) {
+          BuilderProgressRail.applyCollapsedFromPrefs();
+        }
+      }
+    } catch (eChrome) {}
   }
 
   async function hydrateIdentity(projectId, slug) {
@@ -119,8 +149,9 @@ var QuotationBuilderView = (function () {
 
     host.innerHTML = shellHtml(currentStep);
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {
-      QuotationSidebar.bind(host.querySelector('#quotationSidebar'), goToStep);
+      QuotationSidebar.bind(host.querySelector('#builderProgressRail'), goToStep);
     }
+    activateSharedChrome();
     renderStep(currentStep);
     return {
       goToStep: goToStep,
@@ -148,6 +179,7 @@ var QuotationBuilderView = (function () {
       BoxiesShell.clearProjectContext();
     }
     rootEl = null;
+    sectionChecks = {};
     projectCtx = { id: '', name: '', slug: '' };
   }
 
