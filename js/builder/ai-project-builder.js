@@ -2147,8 +2147,6 @@ var AiProjectBuilderView = (function () {
   }
 
   function renderVistaPrevia() {
-    var slug = resolveShowroomSlug();
-    var hasSlug = !!(slug && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug));
     if (!hasCompiledRuntime()) {
       return '<div class="builder-step-content builder-step-content--vista-previa">' +
         '<div class="builder-vista-previa-frame builder-vista-previa-frame--gate" id="builderVistaPreviaFrame">' +
@@ -2162,13 +2160,8 @@ var AiProjectBuilderView = (function () {
     }
     return '<div class="builder-step-content builder-step-content--vista-previa">' +
       '<div class="builder-vista-previa-frame" id="builderVistaPreviaFrame">' +
-        (hasSlug
-          ? '<iframe class="builder-vista-previa-iframe" id="builderVistaPreviaIframe" title="Vista previa del showroom" allow="autoplay; fullscreen; xr-spatial-tracking" allowfullscreen></iframe>' +
-            '<button type="button" class="builder-vista-previa-reset" id="builderVistaPreviaReset" title="Volver a INICIAR" aria-label="Cerrar simulaci\u00F3n y volver a INICIAR">\u00D7</button>'
-          : '<div class="builder-vista-previa-empty">' +
-              '<p class="builder-menu-hint">Define el <strong>slug</strong> en Configuración para cargar el showroom real aquí.</p>' +
-              '<p class="builder-menu-hint">La vista previa ejecuta el Runtime compilado (pantalla negra + INICIAR).</p>' +
-            '</div>') +
+        '<div class="builder-xp-host" id="builderXpHost" data-boxies-xp-host="1"></div>' +
+        '<button type="button" class="builder-vista-previa-reset" id="builderVistaPreviaReset" title="Volver a INICIAR" aria-label="Cerrar simulaci\u00F3n y volver a INICIAR">\u00D7</button>' +
       '</div>' +
     '</div>';
   }
@@ -2204,14 +2197,19 @@ var AiProjectBuilderView = (function () {
       };
       return;
     }
-    var iframe = rootEl.querySelector('#builderVistaPreviaIframe');
-    if (!iframe) return;
+    var host = rootEl.querySelector('#builderXpHost');
+    if (!host) return;
     if (!hasCompiledRuntime()) return;
-    var url = resolveVistaPreviaUrl();
-    if (!url) return;
-    if (iframe.getAttribute('src') !== url) {
-      iframe.src = url;
+    var runtime = (typeof RuntimeCompiler !== 'undefined' && RuntimeCompiler.getRuntime)
+      ? RuntimeCompiler.getRuntime()
+      : window.BuilderRuntime;
+    if (typeof ExperienceRuntime === 'undefined' || !ExperienceRuntime.mount) {
+      host.innerHTML = '<div class="builder-vista-previa-empty"><p class="builder-menu-hint">ExperienceRuntime no disponible.</p></div>';
+      return;
     }
+    var player = ExperienceRuntime.mount(host, { runtime: runtime });
+    if (player) player.showGate();
+
     var reloadBtn = rootEl.querySelector('#builderVistaPreviaReload');
     if (reloadBtn) {
       reloadBtn.onclick = function () {
@@ -2219,16 +2217,17 @@ var AiProjectBuilderView = (function () {
           renderStepContent();
           return;
         }
-        iframe.src = resolveVistaPreviaUrl() || url;
+        var rt = RuntimeCompiler.getRuntime();
+        var p = ExperienceRuntime.mount(host, { runtime: rt });
+        if (p) p.showGate();
       };
     }
     var resetBtn = rootEl.querySelector('#builderVistaPreviaReset');
     if (resetBtn) {
       resetBtn.onclick = function () {
-        try {
-          var win = iframe.contentWindow;
-          if (win) win.postMessage({ type: 'boxies-canvas-preview-reset' }, '*');
-        } catch (errReset) {}
+        if (typeof ExperienceRuntime !== 'undefined' && ExperienceRuntime.reset) {
+          ExperienceRuntime.reset();
+        }
       };
     }
   }

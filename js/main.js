@@ -2865,6 +2865,14 @@ function resetCanvasPreviewToStart() {
     if (typeof clearNavResumeAwaiting === 'function') clearNavResumeAwaiting();
     if (typeof clearNavFreezeState === 'function') clearNavFreezeState();
   } catch (_eClr) {}
+  if (typeof ExperienceRuntime !== 'undefined') {
+    try {
+      if (ExperienceRuntime.reset) ExperienceRuntime.reset();
+      if (ExperienceRuntime.destroy) ExperienceRuntime.destroy();
+    } catch (_eXp) {}
+  }
+  var xpHost = document.getElementById('boxiesXpShowroomHost');
+  if (xpHost && xpHost.parentNode) xpHost.parentNode.removeChild(xpHost);
   hideAllOverlayScreens();
   hideNavResumeGate();
   navStack.length = 0;
@@ -4191,7 +4199,23 @@ window.__mainTraceSafe('bind heroStartBtn', function () {
   if (document.documentElement.classList.contains('boxies-canvas-preview')) {
     btn.textContent = 'INICIAR';
   }
-  btn.addEventListener('click', function(){ goTo('sphere'); });
+  btn.addEventListener('click', function () {
+    var runtime = window.BuilderRuntime || null;
+    if (runtime && typeof ExperienceRuntime !== 'undefined' && ExperienceRuntime.start) {
+      var host = document.getElementById('boxiesXpShowroomHost');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'boxiesXpShowroomHost';
+        host.setAttribute('data-boxies-xp-host', '1');
+        host.style.cssText = 'position:fixed;inset:0;z-index:2000;background:#000;';
+        document.body.appendChild(host);
+      }
+      ExperienceRuntime.mount(host, { runtime: runtime });
+      ExperienceRuntime.start(runtime, host);
+      return;
+    }
+    goTo('sphere');
+  });
 });
 
 window.__mainTraceSafe('bind boxiesCanvasPreviewReset', function () {

@@ -5144,10 +5144,11 @@ body[data-shadow-glass="solid"] .uc-hero-card {
   box-sizing:border-box;
   margin:0 auto;
   color:var(--text-primary);
-  opacity:0.4;
+  opacity:0.55;
   font-weight:300;
   font-size:0.8rem;
-  letter-spacing:0.04em;
+  letter-spacing:0.34em;
+  text-indent:0.34em;
   text-transform:uppercase;
   text-align:center;
   padding:0 24px;

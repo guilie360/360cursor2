@@ -98,10 +98,76 @@ var RuntimeSerializer = (function () {
       filename: a.filename || null,
       provider: a.provider || null,
       publicUrl: a.publicUrl || null,
+      thumbnailUrl: a.thumbnailUrl || a.publicUrl || null,
       storagePath: a.storagePath || null,
       nodeId: a.nodeId || null,
       status: a.status || null
     };
+  }
+
+  function indexAssets(assets) {
+    var map = {};
+    (assets || []).forEach(function (a) {
+      if (a && a.id != null) map[String(a.id)] = a;
+    });
+    return map;
+  }
+
+  function resolveMediaForNode(n, assetById) {
+    var cfg = (n && n.config) || {};
+    var aid = cfg.assetId;
+    var asset = aid != null ? assetById[String(aid)] : null;
+    if (!asset && cfg.fileName && typeof window !== 'undefined') {
+      /* filename-only fallback: scan assets */
+      Object.keys(assetById).some(function (id) {
+        var a = assetById[id];
+        if (a && a.filename && a.filename === cfg.fileName) {
+          asset = a;
+          return true;
+        }
+        return false;
+      });
+    }
+    var url = asset
+      ? (asset.publicUrl || asset.thumbnailUrl || null)
+      : (cfg.publicUrl || cfg.mediaUrl || null);
+    return {
+      assetId: asset ? asset.id : (aid || null),
+      url: url,
+      thumbnailUrl: asset
+        ? (asset.thumbnailUrl || asset.publicUrl || null)
+        : null,
+      filename: asset ? asset.filename : (cfg.fileName || null),
+      type: asset ? asset.type : null
+    };
+  }
+
+  function resolveHubPlants(n, assetById) {
+    var hub = (n && n.config && n.config.hub) || null;
+    if (!hub || !hub.enabled) return [];
+    var ids = Array.isArray(hub.selectedPlants) ? hub.selectedPlants : [];
+    if (!ids.length && Array.isArray(hub.options)) {
+      ids = hub.options.map(function (o) {
+        return o && (o.plantId || o.targetNodeId || o.id);
+      }).filter(Boolean);
+    }
+    return ids.map(function (id, idx) {
+      var asset = assetById[String(id)] || null;
+      var label = null;
+      if (asset && asset.filename) {
+        label = String(asset.filename).replace(/\.[^.]+$/, '');
+      }
+      if (!label) label = 'Planta ' + (idx + 1);
+      var num = label.match(/(?:planta|piso|nivel)?\s*[-:]?\s*(\d+)/i) || label.match(/(\d+)/);
+      return {
+        id: asset ? asset.id : id,
+        label: num && num[1] ? String(num[1]) : String(idx + 1),
+        title: label,
+        url: asset ? (asset.publicUrl || asset.thumbnailUrl || null) : null,
+        thumbnailUrl: asset ? (asset.thumbnailUrl || asset.publicUrl || null) : null,
+        filename: asset ? asset.filename : null
+      };
+    }).filter(function (p) { return p && p.id; });
   }
 
   /**
@@ -111,10 +177,19 @@ var RuntimeSerializer = (function () {
   function serialize(state, options) {
     options = options || {};
     var flow = readFlow(state);
-    var nodes = flow.nodes.map(normalizeNode).filter(Boolean);
+    var assets = collectAssets(state).map(normalizeAsset).filter(Boolean);
+    var assetById = indexAssets(assets);
+    var nodes = flow.nodes.map(function (raw) {
+      var n = normalizeNode(raw);
+      if (!n) return null;
+      n.media = resolveMediaForNode(n, assetById);
+      if (n.config && n.config.hub && n.config.hub.enabled) {
+        n.hubPlants = resolveHubPlants(n, assetById);
+      }
+      return n;
+    }).filter(Boolean);
     var connections = flow.edges.map(normalizeEdge).filter(Boolean);
     var heroNode = findHero(flow.nodes);
-    var assets = collectAssets(state).map(normalizeAsset).filter(Boolean);
     var generatedAt = options.generatedAt || new Date().toISOString();
 
     return {

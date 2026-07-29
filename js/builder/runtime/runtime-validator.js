@@ -92,19 +92,24 @@ var RuntimeValidator = (function () {
     addCheck(checks, 'assets-found', 'Assets encontrados', assets.length > 0,
       assets.length ? (assets.length + ' disponibles') : 'Inventario Media vacío');
 
-    /* ✔ HUB válido */
+    /* ✔ HUB válido — Media Plantas 2D via hub.selectedPlants (not canvas) */
     var hubs = nodes.filter(function (n) {
       return n && n.config && n.config.hub && n.config.hub.enabled;
     });
     var hubsInvalid = hubs.filter(function (n) {
-      var floors = (n.config.hub && n.config.hub.floors) || [];
-      return !floors.length;
+      var hub = n.config.hub || {};
+      var selected = Array.isArray(hub.selectedPlants) ? hub.selectedPlants : null;
+      if (selected) return selected.length === 0;
+      /* Legacy fallback only if selectedPlants never seeded */
+      var floors = hub.floors || [];
+      var options = hub.options || [];
+      return floors.length === 0 && options.length === 0;
     });
     var hubOk = hubs.length === 0 || hubsInvalid.length === 0;
     addCheck(checks, 'hub-valid', 'HUB válido', hubOk,
       hubs.length
         ? (hubsInvalid.length
-          ? (hubsInvalid.length + ' HUB sin plantas')
+          ? (hubsInvalid.length + ' HUB sin plantas (selectedPlants vacío)')
           : (hubs.length + ' HUB ok'))
         : 'Sin HUB activos');
 

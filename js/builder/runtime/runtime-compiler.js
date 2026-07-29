@@ -46,6 +46,18 @@ var RuntimeCompiler = (function () {
       try { ExperienciaEngine.ensureFlow(state); } catch (eFlow) {}
     }
 
+    /* Ensure HUB selectedPlants are synced from Media before serialize/validate */
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.syncHubPlantasFromMedia) {
+      try {
+        var exp = (state && state.experiencia) || {};
+        (exp.nodes || []).forEach(function (n) {
+          if (n && n.config && n.config.hub && n.config.hub.enabled) {
+            ExperienciaEngine.syncHubPlantasFromMedia(state, n);
+          }
+        });
+      } catch (eHub) {}
+    }
+
     var generatedAt = new Date().toISOString();
     var runtime = RuntimeSerializer.serialize(state, { generatedAt: generatedAt });
     var statistics = RuntimeStatistics.compute(runtime);
