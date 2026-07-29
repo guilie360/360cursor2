@@ -568,26 +568,32 @@ var ExperienciaCanvas = (function () {
         esc(label) + '</button>';
     }
 
-    var anchors = ExperienciaEngine.BUTTON_ANCHORS || {};
-    var anchorLabels = {
-      center: 'Centro',
-      'top-center': 'Centro superior',
-      'bottom-center': 'Centro inferior',
-      'center-left': 'Centro izquierda',
-      'center-right': 'Centro derecha',
-      'top-left': 'Esquina superior izquierda',
-      'top-right': 'Esquina superior derecha',
-      'bottom-left': 'Esquina inferior izquierda',
-      'bottom-right': 'Esquina inferior derecha'
-    };
-    var anchorOpts = Object.keys(anchors).map(function (key) {
-      return '<option value="' + esc(key) + '"' +
-        (selected.anchor === key ? ' selected' : '') + '>' +
-        esc(anchorLabels[key] || key) + '</option>';
-    }).join('');
-
     var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
     var rot = selected.rotation != null ? Number(selected.rotation) : 0;
+    var anchorGrid = [
+      ['top-left', 'Superior izquierda'],
+      ['top-center', 'Superior centro'],
+      ['top-right', 'Superior derecha'],
+      ['center-left', 'Centro izquierda'],
+      ['center', 'Centro'],
+      ['center-right', 'Centro derecha'],
+      ['bottom-left', 'Inferior izquierda'],
+      ['bottom-center', 'Inferior centro'],
+      ['bottom-right', 'Inferior derecha']
+    ];
+    var currentAnchor = selected.anchor || 'center';
+    var anchorPadHtml = anchorGrid.map(function (cell) {
+      var key = cell[0];
+      var title = cell[1];
+      var on = posMode === 'anchor' && currentAnchor === key;
+      return '<button type="button" class="builder-exp-btn-anchor-cell' +
+        (on ? ' is-active' : '') +
+        '" data-exp-btn-anchor="' + esc(key) + '"' +
+        ' title="' + esc(title) + '" aria-label="' + esc(title) + '"' +
+        ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<span class="builder-exp-btn-anchor-dot" aria-hidden="true"></span>' +
+      '</button>';
+    }).join('');
 
     if (selectedIds.length <= 1) {
       html += '<div class="builder-exp-inspector__section">Propiedades</div>';
@@ -639,14 +645,16 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-hub-segment" data-exp-btn-pos-modes>' +
         segBtn('data-exp-btn-pos-mode', 'free', 'Libre', posMode === 'free') +
         segBtn('data-exp-btn-pos-mode', 'anchor', 'Anclas', posMode === 'anchor') +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Ancla</label>' +
+        '<div class="builder-exp-btn-anchor-grid" role="group" aria-label="Selector de ancla">' +
+          anchorPadHtml +
+        '</div>' +
       '</div>';
 
     if (posMode === 'anchor') {
-      html += '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Ancla</label>' +
-        '<select data-exp-btn-anchor class="ws-select builder-exp-btn-select">' + anchorOpts + '</select>' +
-      '</div>' +
-      '<div class="builder-exp-btn-margins">' +
+      html += '<div class="builder-exp-btn-margins">' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Margen X (px)</label>' +
           '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
@@ -662,7 +670,7 @@ var ExperienciaCanvas = (function () {
     } else {
       html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
         '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
-        '% · arrastre · ALT = distancias</p>';
+        '% · arrastre libre</p>';
     }
 
     html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
@@ -1513,6 +1521,8 @@ var ExperienciaCanvas = (function () {
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
     var buttonNudgeDirty = false;
+    var buttonClipboard = null; /* { sourceIds: string[] } */
+    var pendingMoveIds = {}; /* id -> true while stacked on original after paste */
 
     function pushButtonHistory(sceneId) {
       if (!ExperienciaEngine.snapshotSceneButtons) return;
@@ -2139,15 +2149,18 @@ var ExperienciaCanvas = (function () {
           patchBtn({ positionMode: mode }, { inspector: true, persist: true });
         });
       });
-      var anchorEl = inspectorBody.querySelector('[data-exp-btn-anchor]');
-      if (anchorEl) {
-        anchorEl.addEventListener('change', function () {
+      inspectorBody.querySelectorAll('[data-exp-btn-anchor]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var key = el.getAttribute('data-exp-btn-anchor');
+          if (!key) return;
           patchBtn({
-            anchor: anchorEl.value,
+            anchor: key,
             positionMode: 'anchor'
-          }, { persist: true });
+          }, { inspector: true, persist: true });
         });
-      }
+      });
       var mxEl = inspectorBody.querySelector('[data-exp-btn-margin-x]');
       if (mxEl) {
         mxEl.addEventListener('input', function () {
@@ -2176,6 +2189,7 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.alignSceneButtons(
             state, sceneId, selectedIds(), el.getAttribute('data-exp-btn-align'), size.w, size.h
           );
+          selectedIds().forEach(clearPendingMove);
           paintButtonsStage(); paintInspector(); persist();
         });
       });
@@ -2207,6 +2221,7 @@ var ExperienciaCanvas = (function () {
               state, sceneId, ids, mode, size.w, size.h
             );
           }
+          ids.forEach(clearPendingMove);
           paintButtonsStage(); paintInspector(); persist();
         });
       });
@@ -2227,10 +2242,12 @@ var ExperienciaCanvas = (function () {
           var gapEl = inspectorBody.querySelector('[data-exp-btn-gap]');
           var gap = gapEl ? Number(gapEl.value) : 24;
           var size = layerSize();
+          var ids = selectedIds();
           pushButtonHistory(sceneId);
           ExperienciaEngine.spaceSceneButtons(
-            state, sceneId, selectedIds(), gap, spaceAxis, size.w, size.h
+            state, sceneId, ids, gap, spaceAxis, size.w, size.h
           );
+          ids.forEach(clearPendingMove);
           paintButtonsStage(); paintInspector(); persist();
         });
       }
@@ -2239,8 +2256,9 @@ var ExperienciaCanvas = (function () {
         mirrorBtn.addEventListener('click', function (ev) {
           ev.preventDefault();
           pushButtonHistory(sceneId);
-          ExperienciaEngine.mirrorSceneButton(state, sceneId,
-            mirrorBtn.getAttribute('data-exp-btn-mirror'));
+          var mid = mirrorBtn.getAttribute('data-exp-btn-mirror');
+          ExperienciaEngine.mirrorSceneButton(state, sceneId, mid);
+          clearPendingMove(mid);
           renderAll(); persist();
         });
       }
@@ -2940,7 +2958,7 @@ var ExperienciaCanvas = (function () {
         }
       } else {
         var prev = prefs._expCanvasRestore || {};
-        exitBrowserFullscreen();
+        /* Focus and Fullscreen are independent — never exit FS when leaving Focus */
         setCanvasMode(false, null);
         if (typeof BoxiesPrefs !== 'undefined') {
           if (BoxiesPrefs.setNavCollapsed) {
@@ -3193,7 +3211,8 @@ var ExperienciaCanvas = (function () {
           'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (selSet[String(b.id)] ? ' is-selected' : '') +
-          (b.visible === false ? ' is-invisible' : '') + '"' +
+          (b.visible === false ? ' is-invisible' : '') +
+          (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
@@ -3375,8 +3394,102 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.setSceneButtonPosition(
           state, sceneId, bid, nextX, nextY
         );
+        clearPendingMove(bid);
       });
       paintButtonsStage();
+      return true;
+    }
+
+    function clearPendingMove(buttonId) {
+      if (buttonId == null) {
+        pendingMoveIds = {};
+        return;
+      }
+      if (pendingMoveIds[String(buttonId)]) {
+        delete pendingMoveIds[String(buttonId)];
+      }
+    }
+
+    function markPendingMove(buttonId) {
+      if (buttonId == null) return;
+      pendingMoveIds[String(buttonId)] = true;
+    }
+
+    function copySelectedButtons() {
+      if (canvas().editMode !== 'buttons') return false;
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return false;
+      var ids = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.slice()
+        : [];
+      if (!ids.length && canvas().selectedButtonId) ids = [canvas().selectedButtonId];
+      if (!ids.length) return false;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var items = [];
+      ids.forEach(function (id) {
+        var b = ExperienciaEngine.getSceneButton(state, n, id);
+        if (!b) return;
+        items.push({
+          label: b.label != null ? String(b.label) : '',
+          style: b.style || 'chip',
+          icon: b.icon || null,
+          rotation: b.rotation != null ? Number(b.rotation) : 0,
+          visible: b.visible !== false,
+          x: b.storedX != null ? Number(b.storedX) : Number(b.x),
+          y: b.storedY != null ? Number(b.storedY) : Number(b.y),
+          positionMode: b.positionMode === 'anchor' ? 'anchor' : 'free',
+          anchor: b.anchor || 'center',
+          marginX: b.marginX != null ? Number(b.marginX) : 32,
+          marginY: b.marginY != null ? Number(b.marginY) : 32,
+          targetNodeId: b.targetNodeId || null
+        });
+      });
+      if (!items.length) return false;
+      buttonClipboard = { items: items };
+      return true;
+    }
+
+    function pasteCopiedButtons() {
+      if (canvas().editMode !== 'buttons') return false;
+      if (!buttonClipboard || !buttonClipboard.items || !buttonClipboard.items.length) {
+        return false;
+      }
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return false;
+      pushButtonHistory(sceneId);
+      var pastedIds = [];
+      buttonClipboard.items.forEach(function (item) {
+        var created = ExperienciaEngine.addSceneButton(state, sceneId);
+        if (!created || !created.id) return;
+        var patch = {
+          label: item.label,
+          style: item.style,
+          icon: item.icon || 'none',
+          rotation: item.rotation,
+          visible: item.visible !== false,
+          marginX: item.marginX,
+          marginY: item.marginY,
+          x: item.x,
+          y: item.y,
+          targetNodeId: item.targetNodeId != null ? item.targetNodeId : null
+        };
+        if (item.positionMode === 'anchor') {
+          patch.anchor = item.anchor || 'center';
+          patch.positionMode = 'anchor';
+          patch.keepAnchor = true;
+        } else {
+          patch.positionMode = 'free';
+        }
+        ExperienciaEngine.updateSceneButton(state, sceneId, created.id, patch);
+        pastedIds.push(String(created.id));
+        markPendingMove(created.id);
+      });
+      if (!pastedIds.length) return false;
+      canvas().selectedButtonIds = pastedIds.slice();
+      canvas().selectedButtonId = pastedIds[pastedIds.length - 1];
+      paintButtonsStage();
+      paintInspector();
+      persist();
       return true;
     }
 
@@ -4049,6 +4162,7 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.setSceneButtonPosition(
           state, buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
         );
+        clearPendingMove(buttonDrag.buttonId);
         paintButtonsStage();
       });
       function endButtonDrag(ev) {
@@ -4490,6 +4604,21 @@ var ExperienciaCanvas = (function () {
             rootEl.contains(document.activeElement) || rootEl.contains(ev.target) ||
             (stage && stage.contains(ev.target));
           if (!inScope && document.activeElement !== document.body) return;
+
+          /* V6.1.06 — button clipboard in BOTONES mode */
+          if (canvas().editMode === 'buttons') {
+            if (key === 'c') {
+              if (!copySelectedButtons()) return;
+              ev.preventDefault();
+              return;
+            }
+            if (key === 'v') {
+              if (!pasteCopiedButtons()) return;
+              ev.preventDefault();
+              return;
+            }
+          }
+
           if (key === 'c') {
             var copyIds = selectedIds();
             if (!copyIds.length) return;

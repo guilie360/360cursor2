@@ -739,24 +739,36 @@ var ExperienciaEngine = (function () {
     var imageW = Math.max(1, Number(opts.imageW) || 1000);
     var imageH = Math.max(1, Number(opts.imageH) || 1000);
     var layout = resolveButtonLayout(ix, imageW, imageH);
-    var dyPct = (32 / imageH) * 100;
-    copy.x = clampPercent(layout.x, layout.x);
+    var exact = !!opts.exact;
+    var offsetYpx = opts.offsetY != null ? Number(opts.offsetY) : (exact ? 0 : 32);
+    var offsetXpx = opts.offsetX != null ? Number(opts.offsetX) : 0;
+    var dxPct = (offsetXpx / imageW) * 100;
+    var dyPct = (offsetYpx / imageH) * 100;
+    copy.x = clampPercent(layout.x + dxPct, layout.x);
     copy.y = clampPercent(layout.y + dyPct, layout.y);
     copy.style = ix.style;
     copy.icon = ix.icon;
     copy.rotation = ix.rotation;
-    copy.positionMode = 'free';
+    copy.enabled = ix.enabled !== false;
     copy.anchor = ix.anchor;
     copy.marginX = ix.marginX;
     copy.marginY = ix.marginY;
     copy.positionInitialized = true;
-    if (ix.label != null && String(ix.label).length) {
-      copy.label = String(ix.label) + ' copia';
+    if (exact) {
+      copy.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
+      copy.label = ix.label != null ? String(ix.label) : '';
     } else {
-      copy.label = '';
+      copy.positionMode = 'free';
+      if (ix.label != null && String(ix.label).length) {
+        copy.label = String(ix.label) + ' copia';
+      } else {
+        copy.label = '';
+      }
     }
     if (copy.color != null) delete copy.color;
     ensureButtonVisualDefaults(copy);
+    var targetId = resolveButtonTarget(state, nodeId, ix);
+    if (targetId) setButtonTarget(state, nodeId, copy.id, targetId);
     syncScenePorts(n);
     return buttonViewModel(state, n, copy);
   }
