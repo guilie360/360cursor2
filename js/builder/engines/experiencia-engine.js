@@ -773,6 +773,48 @@ var ExperienciaEngine = (function () {
     return buttonViewModel(state, n, copy);
   }
 
+  /**
+   * Absolute 1:1 paste — places the button at exact free coords from the snapshot.
+   * Never recenters, never redistributes. Anchor/margins are preserved as metadata.
+   */
+  function createSceneButtonFromSnapshot(state, nodeId, snap) {
+    snap = snap || {};
+    var created = addSceneButton(state, nodeId);
+    if (!created || !created.id) return null;
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, created.id);
+    if (!ix) return null;
+    ensureButtonVisualDefaults(ix);
+
+    ix.label = snap.label != null ? String(snap.label) : '';
+    if (snap.style != null && BUTTON_STYLES[snap.style]) ix.style = snap.style;
+    ix.rotation = clampRotation(snap.rotation != null ? snap.rotation : 0);
+    if (snap.icon === null || snap.icon === '' || snap.icon === 'none') {
+      ix.icon = null;
+    } else if (snap.icon && BUTTON_ICONS[snap.icon]) {
+      ix.icon = snap.icon;
+    }
+    ix.enabled = snap.visible !== false;
+
+    /* Preserve anchor metadata for later Anclas mode — geometry stays absolute free */
+    if (snap.anchor && BUTTON_ANCHORS[snap.anchor]) ix.anchor = snap.anchor;
+    ix.marginX = Math.max(0, Number(snap.marginX) || 0);
+    ix.marginY = Math.max(0, Number(snap.marginY) || 0);
+
+    /* Absolute geometry — never recenter */
+    ix.x = clampPercent(snap.x, 50);
+    ix.y = clampPercent(snap.y, 50);
+    ix.positionMode = 'free';
+    ix.positionInitialized = true;
+    if (ix.color != null) delete ix.color;
+
+    if (snap.targetNodeId) {
+      setButtonTarget(state, nodeId, ix.id, snap.targetNodeId);
+    }
+    syncScenePorts(n);
+    return buttonViewModel(state, n, ix);
+  }
+
   function resolveButtonsForLayout(state, nodeId, ids, imageW, imageH) {
     var n = getNode(state, nodeId);
     if (!n) return [];
@@ -5042,6 +5084,7 @@ var ExperienciaEngine = (function () {
     restoreSceneButtons: restoreSceneButtons,
     mirrorSceneButton: mirrorSceneButton,
     duplicateSceneButton: duplicateSceneButton,
+    createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
     alignSceneButtons: alignSceneButtons,
     distributeSceneButtons: distributeSceneButtons,
     spaceSceneButtons: spaceSceneButtons,

@@ -3425,18 +3425,24 @@ var ExperienciaCanvas = (function () {
       if (!ids.length && canvas().selectedButtonId) ids = [canvas().selectedButtonId];
       if (!ids.length) return false;
       var n = ExperienciaEngine.getNode(state, sceneId);
+      var layerW = Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000);
+      var layerH = Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000);
       var items = [];
       ids.forEach(function (id) {
         var b = ExperienciaEngine.getSceneButton(state, n, id);
-        if (!b) return;
+        if (!b || !b._ix) return;
+        /* Absolute on-screen geometry (not stored/anchor-derived after the fact) */
+        var layout = ExperienciaEngine.resolveButtonLayout
+          ? ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH)
+          : { x: b.x, y: b.y };
         items.push({
           label: b.label != null ? String(b.label) : '',
           style: b.style || 'chip',
           icon: b.icon || null,
           rotation: b.rotation != null ? Number(b.rotation) : 0,
           visible: b.visible !== false,
-          x: b.storedX != null ? Number(b.storedX) : Number(b.x),
-          y: b.storedY != null ? Number(b.storedY) : Number(b.y),
+          x: Number(layout.x),
+          y: Number(layout.y),
           positionMode: b.positionMode === 'anchor' ? 'anchor' : 'free',
           anchor: b.anchor || 'center',
           marginX: b.marginX != null ? Number(b.marginX) : 32,
@@ -3456,33 +3462,16 @@ var ExperienciaCanvas = (function () {
       }
       var sceneId = canvas().selectedId;
       if (!sceneId) return false;
+      if (!ExperienciaEngine.createSceneButtonFromSnapshot) return false;
       pushButtonHistory(sceneId);
       var pastedIds = [];
+      /* Paste in original order — each at exact absolute coords, no recenter */
       buttonClipboard.items.forEach(function (item) {
-        var created = ExperienciaEngine.addSceneButton(state, sceneId);
-        if (!created || !created.id) return;
-        var patch = {
-          label: item.label,
-          style: item.style,
-          icon: item.icon || 'none',
-          rotation: item.rotation,
-          visible: item.visible !== false,
-          marginX: item.marginX,
-          marginY: item.marginY,
-          x: item.x,
-          y: item.y,
-          targetNodeId: item.targetNodeId != null ? item.targetNodeId : null
-        };
-        if (item.positionMode === 'anchor') {
-          patch.anchor = item.anchor || 'center';
-          patch.positionMode = 'anchor';
-          patch.keepAnchor = true;
-        } else {
-          patch.positionMode = 'free';
+        var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, item);
+        if (copy && copy.id) {
+          pastedIds.push(String(copy.id));
+          markPendingMove(copy.id);
         }
-        ExperienciaEngine.updateSceneButton(state, sceneId, created.id, patch);
-        pastedIds.push(String(created.id));
-        markPendingMove(created.id);
       });
       if (!pastedIds.length) return false;
       canvas().selectedButtonIds = pastedIds.slice();
