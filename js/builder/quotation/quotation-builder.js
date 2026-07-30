@@ -18,15 +18,6 @@ var QuotationBuilderView = (function () {
   var sectionChecks = {};
   var processing = false;
   var builderExperienceType = 'quotation';
-  var ICON_RAIL_W = '48px';
-  var workspaceMenuBound = false;
-
-  function iconHtml(name) {
-    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
-      return BuilderIcons.render(name);
-    }
-    return '○';
-  }
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -44,11 +35,16 @@ var QuotationBuilderView = (function () {
     return typeof QuotationConfig !== 'undefined' ? QuotationConfig : null;
   }
 
+  function stepsBarHtml(stepId) {
+    if (typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) return '';
+    return (
+      '<div class="quotation-steps-bar" id="quotationStepsBar" aria-label="Pasos del Builder">' +
+        QuotationSidebar.renderHtml(stepId, sectionChecks) +
+      '</div>'
+    );
+  }
+
   function shellHtml(stepId) {
-    var sidebar =
-      typeof QuotationSidebar !== 'undefined' && QuotationSidebar.renderHtml
-        ? QuotationSidebar.renderHtml(stepId, sectionChecks)
-        : '';
     var actions =
       typeof BuilderDockActions !== 'undefined' && BuilderDockActions.mountHostHtml
         ? BuilderDockActions.mountHostHtml({ published: !!projectCtx.published })
@@ -64,137 +60,21 @@ var QuotationBuilderView = (function () {
       '<div class="quotation-builder builder-app quotation-canvas-first" id="quotationBuilderRoot" data-quotation-builder' +
         (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
         actions +
-        '<aside class="builder-progress-sidebar quotation-icon-rail" id="builderProgressRail" aria-label="' +
-          (builderExperienceType === 'template' ? 'Template Builder' : 'Quotation Builder') + '">' +
-          sidebar +
-        '</aside>' +
         '<div class="builder-workspace quotation-workspace">' +
+          stepsBarHtml(stepId) +
           '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
         '</div>' +
       '</div>';
   }
 
-  function closeWorkspaceMenu() {
-    var btn = document.getElementById('boxiesWorkspaceMenuBtn');
-    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-    if (panel) panel.hidden = true;
-  }
-
-  function syncWorkspaceMenu() {
-    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
-    if (!panel) return;
-    panel.querySelectorAll('[data-quotation-step]').forEach(function (btn) {
-      var on = btn.getAttribute('data-quotation-step') === currentStep;
-      btn.classList.toggle('is-current', on);
-      btn.setAttribute('aria-current', on ? 'page' : 'false');
-    });
-  }
-
-  function mountWorkspaceMenu() {
-    var left = document.getElementById('boxiesHeaderLeft');
-    if (!left) return;
-    var existing = document.getElementById('boxiesWorkspaceMenu');
-    if (existing) existing.remove();
-
-    var steps = typeof QuotationSidebar !== 'undefined' && QuotationSidebar.getSteps
-      ? QuotationSidebar.getSteps()
-      : [
-        { id: 'config', label: 'Config' },
-        { id: 'hero', label: 'Hero' },
-        { id: 'editor', label: 'Editor' },
-        { id: 'preview', label: 'Preview' }
-      ];
-
-    var items = steps.map(function (step) {
-      return (
-        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
-          ' data-quotation-step="' + escapeHtml(step.id) + '">' +
-          escapeHtml(step.label) +
-        '</button>'
-      );
-    }).join('');
-
-    var wrap = document.createElement('div');
-    wrap.id = 'boxiesWorkspaceMenu';
-    wrap.className = 'boxies-workspace-menu';
-    wrap.innerHTML =
-      '<button type="button" class="boxies-workspace-menu__btn" id="boxiesWorkspaceMenuBtn"' +
-        ' aria-label="Menú del workspace" aria-haspopup="menu" aria-expanded="false"' +
-        ' data-tooltip="Menú">' +
-        iconHtml('menu') +
-      '</button>' +
-      '<div class="boxies-workspace-menu__panel" id="boxiesWorkspaceMenuPanel" role="menu" hidden>' +
-        items +
-        '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
-        '<button type="button" class="boxies-workspace-menu__item boxies-workspace-menu__item--exit"' +
-          ' role="menuitem" data-quotation-exit="1">Salir</button>' +
-      '</div>';
-
-    left.insertBefore(wrap, left.firstChild);
-
-    var btn = wrap.querySelector('#boxiesWorkspaceMenuBtn');
-    var panel = wrap.querySelector('#boxiesWorkspaceMenuPanel');
-    if (btn && panel) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var open = panel.hidden;
-        panel.hidden = !open;
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-    }
-
-    wrap.querySelectorAll('[data-quotation-step]').forEach(function (item) {
-      item.addEventListener('click', function (e) {
-        e.preventDefault();
-        closeWorkspaceMenu();
-        goToStep(item.getAttribute('data-quotation-step'));
-      });
-    });
-
-    var exitBtn = wrap.querySelector('[data-quotation-exit]');
-    if (exitBtn) {
-      exitBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        closeWorkspaceMenu();
-        if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.navigate) {
-          BoxiesRouter.navigate('projects');
-        }
-      });
-    }
-
-    if (!workspaceMenuBound) {
-      workspaceMenuBound = true;
-      document.addEventListener('click', function (e) {
-        var menu = document.getElementById('boxiesWorkspaceMenu');
-        if (!menu) return;
-        if (e.target.closest && e.target.closest('#boxiesWorkspaceMenu')) return;
-        closeWorkspaceMenu();
-      });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeWorkspaceMenu();
-      });
-    }
-
-    syncWorkspaceMenu();
-  }
-
-  function unmountWorkspaceMenu() {
-    closeWorkspaceMenu();
-    var el = document.getElementById('boxiesWorkspaceMenu');
-    if (el) el.remove();
-  }
-
   function refreshSidebar() {
     if (!rootEl) return;
-    var rail = rootEl.querySelector('#builderProgressRail');
-    if (!rail) return;
+    var bar = rootEl.querySelector('#quotationStepsBar');
+    if (!bar) return;
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
-      QuotationSidebar.setActive(rail, currentStep, sectionChecks);
-      QuotationSidebar.bind(rail, goToStep);
+      QuotationSidebar.setActive(bar, currentStep, sectionChecks);
+      QuotationSidebar.bind(bar, goToStep);
     }
-    syncWorkspaceMenu();
   }
 
   function bindSectionCheck(panel) {
@@ -357,18 +237,17 @@ var QuotationBuilderView = (function () {
   }
 
   function activateSharedChrome() {
-    /* V7.2.16 — fixed 48px icon rail; no float collapse chrome. */
+    /* V7.2.17 — no second Builder rail; platform rail is the only lateral nav. */
     document.body.classList.add('quotation-canvas-first');
     document.documentElement.classList.add('quotation-canvas-first');
     document.body.classList.remove('boxies-rail-collapsed');
     document.documentElement.classList.remove('boxies-rail-collapsed');
     try {
-      document.documentElement.style.setProperty('--builder-rail-width', ICON_RAIL_W);
+      document.documentElement.style.setProperty('--builder-rail-width', '0px');
     } catch (eW) {}
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
-    mountWorkspaceMenu();
   }
 
   function deactivateSharedChrome() {
@@ -377,7 +256,6 @@ var QuotationBuilderView = (function () {
     try {
       document.documentElement.style.removeProperty('--builder-rail-width');
     } catch (eW) {}
-    unmountWorkspaceMenu();
   }
 
   async function hydrateIdentity(projectId, slug, experienceType) {
@@ -455,7 +333,7 @@ var QuotationBuilderView = (function () {
 
     host.innerHTML = shellHtml(currentStep);
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {
-      QuotationSidebar.bind(host.querySelector('#builderProgressRail'), goToStep);
+      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep);
     }
     activateSharedChrome();
     mountDockActions(host);

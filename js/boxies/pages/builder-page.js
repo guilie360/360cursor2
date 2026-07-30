@@ -163,11 +163,12 @@ var BoxiesBuilderPage = (function () {
     if (!dockActions || !nested) return;
 
     promotedNodes = [];
+    var beforeEl = (previewBtn && previewBtn.parentNode === dockActions) ? previewBtn : null;
     Array.prototype.slice.call(nested.children).forEach(function (btn) {
       btn.setAttribute('data-boxies-page-action', '1');
       btn.classList.add('boxies-btn-secondary');
       btn.classList.remove('is-primary', 'boxies-action-btn');
-      if (previewBtn) dockActions.insertBefore(btn, previewBtn);
+      if (beforeEl) dockActions.insertBefore(btn, beforeEl);
       else dockActions.appendChild(btn);
       promotedNodes.push(btn);
     });

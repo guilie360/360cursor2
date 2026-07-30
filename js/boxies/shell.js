@@ -1,7 +1,8 @@
 /**
  * BOXIES App Shell — immutable chrome.
  * Pages never build header/sidebar/workspace/dock; they only fill #boxiesContent.
- * V7.0.06 — platform sidebar is the compact icon rail (fixed). No labels, no expand.
+ * V7.2.17 — single left rail (Hall / Proyectos / Builder / Visualizar);
+ * header = ☰ menu + project name; user account lives at rail foot.
  */
 var BoxiesShell = (function () {
   var mounted = false;
@@ -9,6 +10,7 @@ var BoxiesShell = (function () {
   var onNav = null;
   var onLogout = null;
   var fullscreenBound = false;
+  var menuBound = false;
   var defaultActionsHtml = '';
   var projectCtx = { id: '', name: '', slug: '', experienceType: '' };
 
@@ -42,15 +44,8 @@ var BoxiesShell = (function () {
       '<footer class="boxies-dock" id="boxiesDock" role="toolbar" aria-label="Acciones">' +
         '<div class="boxies-dock__inner">' +
           '<div class="boxies-dock__leading" id="boxiesDockLeading" hidden></div>' +
-          '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
-            '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
-          '</div>' +
           '<div class="boxies-dock__spacer"></div>' +
-          '<div class="boxies-dock__actions" id="boxiesDockActions" hidden>' +
-            '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon boxies-dock__preview" id="boxiesPreviewBtn" aria-label="Visualizar" data-tooltip="Visualizar" disabled>' +
-              iconHtml('eye') +
-            '</button>' +
-          '</div>' +
+          '<div class="boxies-dock__actions" id="boxiesDockActions" hidden></div>' +
         '</div>' +
       '</footer>'
     );
@@ -62,6 +57,7 @@ var BoxiesShell = (function () {
         '<button type="button" class="boxies-nav-item' + (activeId === id ? ' is-current' : '') + '"' +
           ' data-boxies-page="' + escapeHtml(id) + '"' +
           ' aria-label="' + escapeHtml(label) + '"' +
+          ' data-tooltip="' + escapeHtml(label) + '"' +
         '>' +
           '<span class="boxies-nav-item__row">' +
             '<span class="boxies-nav-item__icon" aria-hidden="true">' + iconHtml(icon) + '</span>' +
@@ -74,8 +70,27 @@ var BoxiesShell = (function () {
         item('hall', 'Hall', 'home') +
         item('projects', 'Proyectos', 'folder') +
         item('builder', 'Builder', 'panel') +
-        item('sistema', 'Sistema', 'activity') +
       '</nav>'
+    );
+  }
+
+  function mainMenuHtml() {
+    return (
+      '<div class="boxies-workspace-menu" id="boxiesWorkspaceMenu">' +
+        '<button type="button" class="boxies-workspace-menu__btn" id="boxiesWorkspaceMenuBtn"' +
+          ' aria-label="Menú principal" aria-haspopup="menu" aria-expanded="false"' +
+          ' data-tooltip="Menú">' +
+          iconHtml('menu') +
+        '</button>' +
+        '<div class="boxies-workspace-menu__panel" id="boxiesWorkspaceMenuPanel" role="menu" hidden>' +
+          '<button type="button" class="boxies-workspace-menu__item" role="menuitem" data-boxies-page="hall">' +
+            'Hall</button>' +
+          '<button type="button" class="boxies-workspace-menu__item" role="menuitem" data-boxies-page="projects">' +
+            'Proyectos</button>' +
+          '<button type="button" class="boxies-workspace-menu__item" role="menuitem" data-boxies-page="builder">' +
+            'Builder</button>' +
+        '</div>' +
+      '</div>'
     );
   }
 
@@ -85,11 +100,9 @@ var BoxiesShell = (function () {
       '<div class="boxies-app" id="boxiesAppRoot">' +
         '<header class="boxies-header">' +
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
-            '<div class="boxies-user-wrap">' +
-              '<div class="boxies-user" id="boxiesUserChip"></div>' +
-              '<button type="button" class="boxies-logout-icon" id="boxiesLogoutBtn" aria-label="Cerrar sesión" data-tooltip="Cerrar sesión">' +
-                iconHtml('log-out') +
-              '</button>' +
+            mainMenuHtml() +
+            '<div class="boxies-header__project" id="boxiesHeaderProject" hidden>' +
+              '<strong class="boxies-header__project-name" id="boxiesHeaderProjectName"></strong>' +
             '</div>' +
           '</div>' +
           brandTitleHtml() +
@@ -101,6 +114,25 @@ var BoxiesShell = (function () {
         '</header>' +
         '<aside class="boxies-sidebar" id="boxiesSidebar" aria-label="Navegación">' +
           defaultNavHtml('hall') +
+          '<div class="boxies-sidebar__tools">' +
+            '<button type="button" class="boxies-nav-item boxies-sidebar__preview" id="boxiesPreviewBtn"' +
+              ' aria-label="Visualizar" data-tooltip="Visualizar" disabled>' +
+              '<span class="boxies-nav-item__row">' +
+                '<span class="boxies-nav-item__icon" aria-hidden="true">' + iconHtml('eye') + '</span>' +
+              '</span>' +
+            '</button>' +
+          '</div>' +
+          '<div class="boxies-sidebar__spacer" aria-hidden="true"></div>' +
+          '<div class="boxies-sidebar__foot">' +
+            '<div class="boxies-sidebar__user-card">' +
+              '<div class="boxies-user" id="boxiesUserChip"></div>' +
+              '<button type="button" class="boxies-sidebar__logout" id="boxiesLogoutBtn"' +
+                ' aria-label="Salir" data-tooltip="Salir">' +
+                '<span class="boxies-sidebar__logout-icon" aria-hidden="true">' + iconHtml('log-out') + '</span>' +
+                '<span class="boxies-sidebar__logout-label">Salir</span>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
         '</aside>' +
         '<div class="boxies-workspace">' +
           '<section class="boxies-workspace__panel">' +
@@ -110,6 +142,55 @@ var BoxiesShell = (function () {
       '</div>' +
       dockHtml()
     );
+  }
+
+  function closeMainMenu() {
+    var btn = document.getElementById('boxiesWorkspaceMenuBtn');
+    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (panel) panel.hidden = true;
+  }
+
+  function syncMainMenu(pageId) {
+    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
+    if (!panel) return;
+    panel.querySelectorAll('[data-boxies-page]').forEach(function (btn) {
+      btn.classList.toggle('is-current', btn.getAttribute('data-boxies-page') === pageId);
+    });
+  }
+
+  function bindMainMenu() {
+    var btn = document.getElementById('boxiesWorkspaceMenuBtn');
+    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
+    if (!btn || !panel || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = panel.hidden;
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    panel.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-boxies-page]');
+      if (!item) return;
+      e.preventDefault();
+      closeMainMenu();
+      var id = item.getAttribute('data-boxies-page');
+      if (id && onNav) onNav(id);
+    });
+    if (!menuBound) {
+      menuBound = true;
+      document.addEventListener('click', function (e) {
+        var menu = document.getElementById('boxiesWorkspaceMenu');
+        if (!menu) return;
+        if (e.target.closest && e.target.closest('#boxiesWorkspaceMenu')) return;
+        closeMainMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeMainMenu();
+      });
+    }
   }
 
   function bindFullscreen() {
@@ -169,7 +250,6 @@ var BoxiesShell = (function () {
     if (!slug && projectCtx && String(projectCtx.id) === String(id)) {
       slug = projectCtx.slug;
     }
-    /* Public Visualizar/Preview: only the published client URL /{slug}. */
     if (!slug) return null;
     if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
       return ShowroomPublicUrl.href(slug);
@@ -247,6 +327,7 @@ var BoxiesShell = (function () {
       });
     }
 
+    bindMainMenu();
     bindFullscreen();
   }
 
@@ -273,10 +354,10 @@ var BoxiesShell = (function () {
     }
     clearPageActions();
     clearProjectContext();
+    closeMainMenu();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
-    /* Leaving BOXIES entirely — release workspace fullscreen */
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(function () {});
     }
@@ -308,6 +389,7 @@ var BoxiesShell = (function () {
     nav.querySelectorAll('[data-boxies-page]').forEach(function (btn) {
       btn.classList.toggle('is-current', btn.getAttribute('data-boxies-page') === pageId);
     });
+    syncMainMenu(pageId);
   }
 
   function setUser(profile) {
@@ -315,24 +397,29 @@ var BoxiesShell = (function () {
     if (!chip) return;
     if (!profile) {
       chip.innerHTML = '';
+      chip.removeAttribute('data-tooltip');
       return;
     }
+    var name = profile.nombre || profile.email || 'Admin';
     var roleLabel =
       typeof PlatformRoles !== 'undefined'
         ? PlatformRoles.getRoleLabel(profile)
-        : (profile.rol || 'admin');
+        : (profile.rol || 'Administrador');
     chip.innerHTML =
-      '<strong>' + escapeHtml(profile.nombre || profile.email || 'Admin') + '</strong>' +
-      ' · ' + escapeHtml(roleLabel);
+      '<span class="boxies-user__avatar" aria-hidden="true">' + iconHtml('user') + '</span>' +
+      '<span class="boxies-user__meta">' +
+        '<strong class="boxies-user__name">' + escapeHtml(name) + '</strong>' +
+        '<span class="boxies-user__role">' + escapeHtml(roleLabel) + '</span>' +
+      '</span>';
+    chip.setAttribute('data-tooltip', name + ' · ' + roleLabel);
   }
 
   /**
-   * Project strip in dock (Builder). Name is always dynamic from the open project.
+   * Project identity in header (Builder). Visualizar enabled when slug exists.
    */
   function setProjectContext(ctx) {
     ctx = ctx || {};
     var expType = String(ctx.experienceType || ctx.experience_type || '').trim().toLowerCase();
-    /* Preserve experience type across identity-only updates (e.g. Config save). */
     if (!expType && (ctx.id || ctx.projectId || ctx.name || ctx.nombre || ctx.slug)) {
       expType = projectCtx.experienceType || '';
     }
@@ -342,26 +429,34 @@ var BoxiesShell = (function () {
       slug: (ctx.slug || ctx.project || ctx.proyecto || '').trim(),
       experienceType: expType
     };
-    var wrap = document.getElementById('boxiesDockProject');
-    var nameEl = document.getElementById('boxiesDockProjectName');
+
+    var headerWrap = document.getElementById('boxiesHeaderProject');
+    var headerName = document.getElementById('boxiesHeaderProjectName');
     var actions = document.getElementById('boxiesDockActions');
     var previewBtn = document.getElementById('boxiesPreviewBtn');
-    if (!wrap || !nameEl) return;
 
-    if (!projectCtx.slug && !projectCtx.name && !projectCtx.id) {
-      wrap.hidden = true;
-      nameEl.textContent = '';
-      if (actions) actions.hidden = true;
-      if (previewBtn) previewBtn.disabled = true;
-      return;
-    }
-
+    var hasProject = !!(projectCtx.slug || projectCtx.name || projectCtx.id);
     var label = projectCtx.name || projectCtx.slug ||
       (projectCtx.experienceType === 'quotation' ? 'Cotización' : 'Showroom');
-    nameEl.textContent = label;
-    wrap.hidden = false;
-    if (actions) actions.hidden = false;
-    /* Visualizar = public /{slug} only (same URL the client opens). */
+
+    if (headerWrap && headerName) {
+      if (!hasProject) {
+        headerWrap.hidden = true;
+        headerName.textContent = '';
+      } else {
+        headerName.textContent = label;
+        headerWrap.hidden = false;
+      }
+    }
+
+    if (actions) {
+      /* Actions visibility still driven by applyManifest / builder mount;
+         keep enabled whenever a project context exists and actions were injected. */
+      if (!hasProject && !actions.querySelector('[data-boxies-page-action], .builder-header-action-btn')) {
+        actions.hidden = true;
+      }
+    }
+
     if (previewBtn) {
       previewBtn.disabled = !projectCtx.slug;
     }
@@ -377,13 +472,12 @@ var BoxiesShell = (function () {
     wrap.innerHTML = html;
     while (wrap.firstChild) {
       var node = wrap.firstChild;
-      if (node.nodeType === 1) {
+      wrap.removeChild(node);
+      if (node.nodeType === 1 && attrName) {
         node.setAttribute(attrName, '1');
-        if (beforeEl) container.insertBefore(node, beforeEl);
-        else container.appendChild(node);
-      } else {
-        wrap.removeChild(node);
       }
+      if (beforeEl) container.insertBefore(node, beforeEl);
+      else container.appendChild(node);
     }
   }
 
@@ -411,9 +505,10 @@ var BoxiesShell = (function () {
     });
 
     if (manifest.actionsHtml) {
-      var previewBtn = document.getElementById('boxiesPreviewBtn');
-      injectDockNodes(actions, manifest.actionsHtml, 'data-boxies-page-action', previewBtn);
+      injectDockNodes(actions, manifest.actionsHtml, 'data-boxies-page-action', null);
       actions.hidden = false;
+    } else if (!actions.querySelector('.builder-header-action-btn')) {
+      actions.hidden = true;
     }
   }
 

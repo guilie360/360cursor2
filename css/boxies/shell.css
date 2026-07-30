@@ -63,7 +63,28 @@ body.boxies-has-dock.boxies-shell {
   justify-self: start;
 }
 
-/* V7.2.16 — Workspace hamburger (Config / Hero / Editor / Preview / Salir) */
+.boxies-header__project {
+  min-width: 0;
+  max-width: min(42vw, 320px);
+}
+
+.boxies-header__project[hidden] {
+  display: none !important;
+}
+
+.boxies-header__project-name {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* V7.2.17 — Main BOXIES menu (Hall / Proyectos / Builder) */
 .boxies-workspace-menu {
   position: relative;
   flex: 0 0 auto;
@@ -150,14 +171,6 @@ body.boxies-has-dock.boxies-shell {
   height: 1px;
   margin: 4px 6px;
   background: rgba(255, 255, 255, 0.08);
-}
-
-.boxies-user-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
 }
 
 .boxies-logout-icon {
@@ -378,14 +391,14 @@ a.boxies-action-btn {
   width: var(--boxies-sidebar-w);
   min-width: var(--boxies-sidebar-w);
   max-width: var(--boxies-sidebar-w);
-  padding: var(--boxies-chrome-pad-top) var(--boxies-chrome-pad-x) 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: var(--boxies-chrome-pad-top) var(--boxies-chrome-pad-x) 10px;
+  overflow: visible;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   background: transparent;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .boxies-nav {
@@ -393,6 +406,91 @@ a.boxies-action-btn {
   flex-direction: column;
   align-items: center;
   gap: var(--boxies-icon-gap);
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--boxies-icon-gap);
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__preview:disabled {
+  opacity: 0.35;
+}
+
+.boxies-sidebar__spacer {
+  flex: 1 1 auto;
+  min-height: 12px;
+  width: 100%;
+}
+
+.boxies-sidebar__foot {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  z-index: 20;
+  padding-left: 4px;
+}
+
+.boxies-sidebar__user-card {
+  width: 168px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0c0c0c;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boxies-sidebar__logout {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.48);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.boxies-sidebar__logout:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-sidebar__logout-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.boxies-sidebar__logout-icon svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.boxies-sidebar__logout-label {
+  flex: 1 1 auto;
 }
 
 .boxies-nav-item {
@@ -634,16 +732,59 @@ a.boxies-action-btn {
 }
 
 .boxies-user {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.42);
+}
+
+.boxies-user__avatar {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.boxies-user__avatar svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+.boxies-user__meta {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.boxies-user__name,
+.boxies-user strong {
+  display: block;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
 }
 
-.boxies-user strong {
-  color: rgba(255, 255, 255, 0.72);
-  font-weight: 550;
+.boxies-user__role {
+  display: block;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 

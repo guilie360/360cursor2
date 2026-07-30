@@ -1,4 +1,4 @@
-/* Quotation Builder — V7.2.16 icon activity rail (Canvas-first). */
+/* Quotation Builder — V7.2.17 internal step switcher (inside editor only). */
 var QuotationSidebar = (function () {
   var STEPS = [
     { id: 'config', label: 'Config', icon: 'settings', checkable: true },
@@ -34,11 +34,11 @@ var QuotationSidebar = (function () {
 
   function renderHtml(activeId, sectionChecks) {
     sectionChecks = sectionChecks || {};
-    var html = '<div class="builder-rail-list quotation-icon-rail__list" data-builder-rail-list aria-label="Quotation Builder">';
+    var html = '<div class="quotation-steps" data-builder-rail-list aria-label="Pasos del Builder">';
     html += STEPS.map(function (step) {
       var active = step.id === activeId;
       var done = isDone(sectionChecks, step);
-      var cls = 'builder-rail-item quotation-icon-rail__item';
+      var cls = 'quotation-steps__item';
       if (step.auxiliary) cls += ' is-auxiliary';
       else cls += done ? ' is-done' : ' is-pending';
       if (active) cls += ' is-current';
@@ -46,13 +46,12 @@ var QuotationSidebar = (function () {
       return (
         '<button type="button" class="' + cls + '"' +
           ' data-quotation-step="' + escapeHtml(step.id) + '"' +
-          ' data-tooltip="' + escapeHtml(step.label) + '"' +
           ' aria-current="' + (active ? 'page' : 'false') + '"' +
           ' aria-label="' + escapeHtml(step.label) + '">' +
-          '<span class="quotation-icon-rail__bar" aria-hidden="true"></span>' +
-          '<span class="quotation-icon-rail__icon" aria-hidden="true">' +
+          '<span class="quotation-steps__icon" aria-hidden="true">' +
             iconHtml(step.icon) +
           '</span>' +
+          '<span class="quotation-steps__label">' + escapeHtml(step.label) + '</span>' +
         '</button>'
       );
     }).join('');
@@ -76,10 +75,6 @@ var QuotationSidebar = (function () {
     rootEl.innerHTML = renderHtml(stepId, sectionChecks);
   }
 
-  /**
-   * Shared page header — same structure as Showroom Builder.
-   * Preview (auxiliary) uses spacer instead of checkbox.
-   */
   function pageHeaderHtml(stepId, title, desc, sectionChecks) {
     sectionChecks = sectionChecks || {};
     var step = null;
