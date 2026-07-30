@@ -1,5 +1,5 @@
 /**
- * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.42).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.43).
  *
  * Modes:
  *   - Runtime: public experience (/{slug} → here, Visualizar)
@@ -442,15 +442,14 @@ var QuotationRuntime = (function () {
     }
 
     if (!coverHostEl || !stageEl) return;
-    var coverRoot = coverHostEl.querySelector('[data-project-cover-root]');
-    if (coverRoot) coverRoot.hidden = true;
     if (ixLayerEl && ixLayerEl.parentNode === coverHostEl) {
       coverHostEl.removeChild(ixLayerEl);
       ixLayerEl = null;
     }
-    stageEl.hidden = false;
-    stageEl.classList.add('qr-stage--scene');
+    /* V7.2.43 — exclusive SCENE mode: cover out of layout, stage visible. */
+    enterSceneMode();
     stageEl.innerHTML = '';
+    sceneMediaEl = null;
     var mediaHost = paintSceneMedia(stageEl, scene, bundle);
     paintInteractionLayer(mediaHost, scene, interactionsInteractive());
     /* Volver only when a distinct cover chrome exists to return to. */
@@ -469,6 +468,50 @@ var QuotationRuntime = (function () {
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
     }
+    verifySceneModeHitTarget();
+  }
+
+  /**
+   * V7.2.43 — Exclusive layout modes. Only one host participates in document flow.
+   * COVER: cover visible, stage hidden. SCENE: cover hidden, stage visible.
+   */
+  function enterCoverMode() {
+    if (coverHostEl) coverHostEl.hidden = false;
+    if (stageEl) {
+      stageEl.hidden = true;
+      stageEl.classList.remove('qr-stage--scene');
+    }
+  }
+
+  function enterSceneMode() {
+    if (coverHostEl) coverHostEl.hidden = true;
+    if (stageEl) {
+      stageEl.hidden = false;
+      stageEl.classList.add('qr-stage--scene');
+    }
+  }
+
+  function verifySceneModeHitTarget() {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        var x = window.innerWidth / 2;
+        var y = window.innerHeight / 2;
+        var topEl = document.elementFromPoint(x, y);
+        var inStage = !!(stageEl && topEl && stageEl.contains(topEl));
+        var isCover = !!(topEl && topEl.classList && topEl.classList.contains('qr-cover-host'));
+        console.log('[QR V7.2.43] MODE=SCENE verify elementFromPoint(center)', {
+          x: x,
+          y: y,
+          element: topEl,
+          tag: topEl && topEl.tagName,
+          className: topEl && topEl.className,
+          inStage: inStage,
+          isCoverHost: isCover,
+          coverHidden: coverHostEl ? coverHostEl.hidden : null,
+          stageHidden: stageEl ? stageEl.hidden : null
+        });
+      });
+    });
   }
 
   function interactionsInteractive() {
@@ -797,10 +840,10 @@ var QuotationRuntime = (function () {
 
   function leaveStage() {
     if (!coverHostEl || !stageEl) return;
-    stageEl.hidden = true;
-    stageEl.classList.remove('qr-stage--scene');
     stageEl.innerHTML = '';
     sceneMediaEl = null;
+    /* V7.2.43 — exclusive COVER mode: stage out of layout, cover visible. */
+    enterCoverMode();
     var coverRoot = coverHostEl.querySelector('[data-project-cover-root]');
     if (coverRoot) coverRoot.hidden = false;
     var video = coverHostEl.querySelector('video.project-cover-video');
@@ -823,8 +866,9 @@ var QuotationRuntime = (function () {
     stageEl = document.createElement('section');
     stageEl.className = 'qr-stage';
     stageEl.id = 'qrStage';
-    stageEl.hidden = true;
     host.appendChild(stageEl);
+    /* Default: COVER mode until a media scene takes over. */
+    enterCoverMode();
 
     /*
      * V7.2.40 — Editor is SSOT. Preview/Web paint the active media scene immediately.
