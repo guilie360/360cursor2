@@ -6963,13 +6963,33 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   touch-action: none;
   user-select: none;
   opacity: var(--btn-opacity, 1);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     background var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
     color var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
     border-color var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
     box-shadow var(--motion-duration, 0.22s) var(--motion-easing, ease),
-    transform 0.05s linear,
+    transform var(--btn-hover-ms, 0.2s) var(--motion-easing, ease),
     opacity 0.15s ease;
+}
+
+.builder-exp-ui-btn.is-box {
+  --btn-scale: 1;
+  padding: 0 12px;
+  font-size: var(--button-font-size, 13px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.builder-exp-ui-btn.has-local-look {
+  background: color-mix(in srgb, var(--btn-local-bg, #141414) calc(var(--btn-local-bg-a, 1) * 100%), transparent);
+  color: var(--btn-local-text, var(--text-primary, #fff));
+  border-color: var(--btn-local-border, var(--btn-border, rgba(255, 255, 255, 0.28)));
+  border-width: var(--btn-local-bw, var(--btn-border-width, 1px));
+  border-radius: var(--btn-local-radius, var(--badge-radius, 999px));
 }
 
 .builder-exp-ui-btn[data-exp-btn-size="sm"] {
@@ -6992,9 +7012,9 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-ui-btn.is-hover-on:hover,
 .qe-canvas__design .builder-exp-ui-btn.is-hover-on:hover {
-  color: var(--btn-hover-color, #6fbf86) !important;
+  color: var(--btn-hover-text, var(--btn-hover-color, #6fbf86)) !important;
   border-color: var(--btn-hover-color, #6fbf86) !important;
-  background: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 28%, rgba(8, 8, 8, 0.78)) !important;
+  background: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 32%, rgba(8, 8, 8, 0.72)) !important;
 }
 
 .builder-exp-ui-btn.is-hover-off:hover {
@@ -7006,26 +7026,36 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   outline-offset: 2px;
 }
 
+.builder-exp-ui-btn.is-hover-on:active,
+.qe-canvas__design .builder-exp-ui-btn.is-hover-on:active {
+  color: var(--btn-pressed-text, #ffffff) !important;
+  border-color: var(--btn-pressed-color, #5aaa74) !important;
+  background: color-mix(in srgb, var(--btn-pressed-color, #5aaa74) 40%, rgba(8, 8, 8, 0.78)) !important;
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg)) scale(var(--btn-pressed-scale, 0.96));
+  cursor: grabbing;
+}
+
 .builder-exp-ui-btn:active {
   cursor: grabbing;
-  background: var(--btn-glass-hover, var(--hover, rgba(255, 255, 255, 0.12)));
 }
 
 .builder-exp-ui-btn.is-selected {
-  outline: 2px solid rgba(111, 191, 134, 0.9);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .builder-exp-ui-btn.is-invisible {
   opacity: 0.35;
 }
 
-.builder-exp-ui-btn.is-style-button {
-  border-radius: var(--menu-card-radius, 10px);
-  padding: 10px 16px;
+.builder-exp-ui-btn.is-locked {
+  cursor: default;
 }
 
-.builder-exp-ui-btn.is-style-icon {
+.builder-exp-ui-btn.is-style-button {
+  border-radius: var(--menu-card-radius, 10px);
+}
+
+.builder-exp-ui-btn.is-style-icon:not(.is-box) {
   width: 40px;
   height: 40px;
   padding: 0;
@@ -7034,6 +7064,120 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   align-items: center;
   justify-content: center;
   font-size: 16px;
+}
+
+/* Selection gizmo */
+.builder-exp-sel-gizmo {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
+  pointer-events: none;
+  z-index: 20;
+  box-sizing: border-box;
+}
+
+.builder-exp-sel-box {
+  position: absolute;
+  inset: -2px;
+  border: 1.5px solid rgba(111, 191, 134, 0.95);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.builder-exp-sel-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 1.5px solid rgba(111, 191, 134, 1);
+  border-radius: 2px;
+  pointer-events: auto;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.builder-exp-sel-handle[data-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="n"]  { left: 50%; top: -5px; margin-left: -4.5px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="e"]  { right: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+.builder-exp-sel-handle[data-handle="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="s"]  { left: 50%; bottom: -5px; margin-left: -4.5px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="w"]  { left: -5px; top: 50%; margin-top: -4.5px; cursor: ew-resize; }
+
+.builder-exp-sel-rotate {
+  position: absolute;
+  left: 50%;
+  top: -28px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid rgba(111, 191, 134, 1);
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 3;
+}
+
+.builder-exp-sel-rotate::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 14px;
+  margin-left: -0.5px;
+  background: rgba(111, 191, 134, 0.9);
+}
+
+.builder-exp-block {
+  margin: 0 0 12px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.builder-exp-block:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.builder-exp-block__title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.builder-exp-size-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.builder-exp-size-chip {
+  appearance: none;
+  margin: 0;
+  min-width: 32px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.builder-exp-size-chip.is-active,
+.builder-exp-size-chip:hover {
+  border-color: rgba(111, 191, 134, 0.7);
+  background: rgba(111, 191, 134, 0.16);
+}
+
+.builder-exp-ui-btn.is-stage-text,
+.builder-exp-stage-text {
+  text-align: var(--t-align, center);
 }
 
 .builder-exp-btn-add {

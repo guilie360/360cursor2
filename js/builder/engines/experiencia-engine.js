@@ -389,7 +389,8 @@ var ExperienciaEngine = (function () {
     if (t === 'TEXT') {
       if (ix.label == null || ix.label === '') ix.label = 'Texto';
       if (ix.fontSize == null) ix.fontSize = 28;
-      if (ix.fontSizeUnit !== '%') ix.fontSizeUnit = 'px';
+      ix.fontSizeUnit = 'px';
+      ix.fontSize = Math.max(8, Math.min(200, Number(ix.fontSize) || 28));
       if (ix.color == null) ix.color = '#ffffff';
       if (ix.fontFamily == null) ix.fontFamily = 'system-ui, sans-serif';
       else ix.fontFamily = String(ix.fontFamily).replace(/"/g, '');
@@ -403,6 +404,8 @@ var ExperienciaEngine = (function () {
       if (ix.textShadow == null) ix.textShadow = 'none';
       if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
       else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
+      if (ix.locked == null) ix.locked = false;
+      else ix.locked = !!ix.locked;
     }
     if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
       if (ix.label == null) ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo';
@@ -445,8 +448,8 @@ var ExperienciaEngine = (function () {
       ix.positionInitialized = cfg.positionInitialized;
     }
 
-    if (!ix.style || !BUTTON_STYLES[ix.style]) ix.style = 'chip';
-    /* V6.1.03 — no per-button color; Theme tokens only */
+    if (!ix.style || !BUTTON_STYLES[ix.style]) ix.style = 'button';
+    /* Local textColor override allowed; strip legacy theme-only color field */
     if (ix.color != null) delete ix.color;
     if (cfg.color != null) delete cfg.color;
     if (ix.rotation == null || isNaN(Number(ix.rotation))) ix.rotation = 0;
@@ -461,7 +464,7 @@ var ExperienciaEngine = (function () {
     if (ix.marginY == null || isNaN(Number(ix.marginY))) {
       ix.marginY = ix.positionMode === 'anchor' ? 32 : 0;
     }
-    /* V7.2.46 — scale / opacity / hover (Builder preview; pass-through on ix) */
+    /* Legacy scale kept for migration → boxW/boxH */
     if (ix.scaleUnit !== 'px') ix.scaleUnit = '%';
     if (ix.scaleValue == null || isNaN(Number(ix.scaleValue))) {
       if (ix.size === 'sm') ix.scaleValue = 78;
@@ -470,13 +473,55 @@ var ExperienciaEngine = (function () {
     } else {
       ix.scaleValue = Number(ix.scaleValue);
     }
+    /* Ola 2.1 — real box size (% of stage). Migrate from scale once. */
+    if (ix.boxW == null || isNaN(Number(ix.boxW))) {
+      var styleKey = ix.style || 'chip';
+      var baseW = styleKey === 'icon' ? 6 : (styleKey === 'button' ? 14 : 12);
+      var sv = Number(ix.scaleValue) || 100;
+      if (ix.scaleUnit === 'px') {
+        ix.boxW = Math.max(2, Math.min(80, Math.round((sv / 14) * baseW * 10) / 10));
+      } else {
+        ix.boxW = Math.max(2, Math.min(80, Math.round(baseW * (sv / 100) * 10) / 10));
+      }
+    } else {
+      ix.boxW = Math.max(1, Math.min(100, Number(ix.boxW)));
+    }
+    if (ix.boxH == null || isNaN(Number(ix.boxH))) {
+      var styleKeyH = ix.style || 'chip';
+      var baseH = styleKeyH === 'icon' ? 6 : 4.5;
+      var svH = Number(ix.scaleValue) || 100;
+      if (ix.scaleUnit === 'px') {
+        ix.boxH = Math.max(1.5, Math.min(60, Math.round((svH / 14) * baseH * 10) / 10));
+      } else {
+        ix.boxH = Math.max(1.5, Math.min(60, Math.round(baseH * (svH / 100) * 10) / 10));
+      }
+    } else {
+      ix.boxH = Math.max(1, Math.min(100, Number(ix.boxH)));
+    }
     if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
     else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
+    if (ix.locked == null) ix.locked = false;
+    else ix.locked = !!ix.locked;
+    /* Appearance overrides: null/undefined = inherit Style Engine tokens */
+    if (ix.bgOpacity != null && !isNaN(Number(ix.bgOpacity))) {
+      ix.bgOpacity = Math.max(0, Math.min(1, Number(ix.bgOpacity)));
+    }
+    if (ix.borderWidth != null && !isNaN(Number(ix.borderWidth))) {
+      ix.borderWidth = Math.max(0, Math.min(20, Number(ix.borderWidth)));
+    }
+    if (ix.borderRadius != null && !isNaN(Number(ix.borderRadius))) {
+      ix.borderRadius = Math.max(0, Math.min(999, Number(ix.borderRadius)));
+    }
     if (ix.hoverEnabled == null) ix.hoverEnabled = true;
     else ix.hoverEnabled = !!ix.hoverEnabled;
     if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#6fbf86';
+    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
     if (ix.hoverTransition == null || isNaN(Number(ix.hoverTransition))) ix.hoverTransition = 200;
     else ix.hoverTransition = Math.max(0, Math.min(2000, Number(ix.hoverTransition)));
+    if (ix.pressedColor == null || ix.pressedColor === '') ix.pressedColor = '#5aaa74';
+    if (ix.pressedTextColor == null || ix.pressedTextColor === '') ix.pressedTextColor = '#ffffff';
+    if (ix.pressedScale == null || isNaN(Number(ix.pressedScale))) ix.pressedScale = 0.96;
+    else ix.pressedScale = Math.max(0.8, Math.min(1.1, Number(ix.pressedScale)));
 
     /* First-time center only — never re-center after move */
     if (ix.x == null || ix.y == null) {
@@ -610,11 +655,12 @@ var ExperienciaEngine = (function () {
       y: layout.y,
       storedX: ix.x,
       storedY: ix.y,
-      style: ix.style || 'chip',
+      style: ix.style || 'button',
       icon: ix.icon || null,
       rotation: ix.rotation != null ? Number(ix.rotation) : 0,
       visible: ix.enabled !== false,
       enabled: ix.enabled !== false,
+      locked: !!ix.locked,
       targetNodeId: isSceneButtonInteraction(ix) ? resolveButtonTarget(state, n.id, ix) : null,
       positionMode: ix.positionMode || 'free',
       anchor: ix.anchor || 'center',
@@ -643,15 +689,35 @@ var ExperienciaEngine = (function () {
       size: ix.size || 'md',
       scaleValue: ix.scaleValue != null ? Number(ix.scaleValue) : 100,
       scaleUnit: ix.scaleUnit === 'px' ? 'px' : '%',
+      boxW: ix.boxW != null ? Number(ix.boxW) : null,
+      boxH: ix.boxH != null ? Number(ix.boxH) : null,
+      bgColor: ix.bgColor || null,
+      bgOpacity: ix.bgOpacity != null ? Number(ix.bgOpacity) : null,
+      textColor: ix.textColor || null,
+      borderColor: ix.borderColor || null,
+      borderWidth: ix.borderWidth != null ? Number(ix.borderWidth) : null,
       hoverEnabled: ix.hoverEnabled !== false,
       hoverColor: ix.hoverColor || '#6fbf86',
+      hoverTextColor: ix.hoverTextColor || '#ffffff',
       hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
+      pressedColor: ix.pressedColor || '#5aaa74',
+      pressedTextColor: ix.pressedTextColor || '#ffffff',
+      pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       _ix: ix
     };
   }
 
-  function buttonHalfSizePx(ix) {
-    var style = (ix && ix.style) || 'chip';
+  function buttonHalfSizePx(ix, imageW, imageH) {
+    ensureButtonVisualDefaults(ix);
+    var w = Math.max(1, Number(imageW) || 1000);
+    var h = Math.max(1, Number(imageH) || 1000);
+    if (ix && ix.boxW != null && ix.boxH != null) {
+      return {
+        w: Math.max(4, (Number(ix.boxW) / 100) * w / 2),
+        h: Math.max(4, (Number(ix.boxH) / 100) * h / 2)
+      };
+    }
+    var style = (ix && ix.style) || 'button';
     if (style === 'icon') return { w: 22, h: 22 };
     if (style === 'button') return { w: 54, h: 20 };
     return { w: 46, h: 18 };
@@ -664,7 +730,7 @@ var ExperienciaEngine = (function () {
     ensureButtonVisualDefaults(ix);
     var w = Math.max(1, Number(imageW) || 1);
     var h = Math.max(1, Number(imageH) || 1);
-    var half = buttonHalfSizePx(ix);
+    var half = buttonHalfSizePx(ix, w, h);
     var halfWp = (half.w / w) * 100;
     var halfHp = (half.h / h) * 100;
     var mxp = (Math.max(0, Number(ix.marginX) || 0) / w) * 100;
@@ -833,12 +899,49 @@ var ExperienciaEngine = (function () {
       if (patch.scaleUnit === 'px' || patch.scaleUnit === '%') {
         ix.scaleUnit = patch.scaleUnit;
       }
+      if (patch.boxW != null) {
+        ix.boxW = Math.max(1, Math.min(100, Number(patch.boxW) || 12));
+      }
+      if (patch.boxH != null) {
+        ix.boxH = Math.max(1, Math.min(100, Number(patch.boxH) || 4.5));
+      }
+      if (patch.locked != null) ix.locked = !!patch.locked;
+      if (patch.bgColor !== undefined) {
+        ix.bgColor = patch.bgColor ? String(patch.bgColor) : null;
+      }
+      if (patch.bgOpacity != null) {
+        ix.bgOpacity = Math.max(0, Math.min(1, Number(patch.bgOpacity)));
+      }
+      if (patch.textColor !== undefined) {
+        ix.textColor = patch.textColor ? String(patch.textColor) : null;
+      }
+      if (patch.borderColor !== undefined) {
+        ix.borderColor = patch.borderColor ? String(patch.borderColor) : null;
+      }
+      if (patch.borderWidth != null) {
+        ix.borderWidth = Math.max(0, Math.min(20, Number(patch.borderWidth) || 0));
+      }
+      if (patch.borderRadius != null) {
+        ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
+      }
       if (patch.hoverEnabled != null) ix.hoverEnabled = !!patch.hoverEnabled;
       if (patch.hoverColor != null) {
         ix.hoverColor = String(patch.hoverColor || '#6fbf86');
       }
+      if (patch.hoverTextColor != null) {
+        ix.hoverTextColor = String(patch.hoverTextColor || '#ffffff');
+      }
       if (patch.hoverTransition != null) {
         ix.hoverTransition = Math.max(0, Math.min(2000, Number(patch.hoverTransition) || 0));
+      }
+      if (patch.pressedColor != null) {
+        ix.pressedColor = String(patch.pressedColor || '#5aaa74');
+      }
+      if (patch.pressedTextColor != null) {
+        ix.pressedTextColor = String(patch.pressedTextColor || '#ffffff');
+      }
+      if (patch.pressedScale != null) {
+        ix.pressedScale = Math.max(0.8, Math.min(1.1, Number(patch.pressedScale) || 0.96));
       }
       if (patch.positionMode != null) {
         ix.positionMode = patch.positionMode === 'anchor' ? 'anchor' : 'free';
@@ -864,30 +967,14 @@ var ExperienciaEngine = (function () {
       if (patch.targetNodeId !== undefined) {
         setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
       }
+      /* Local textColor override allowed; strip legacy theme-only color field */
       if (ix.color != null) delete ix.color;
     }
 
     if (t === 'TEXT') {
       if (patch.fontSize != null) {
-        var fsu = patch.fontSizeUnit != null
-          ? patch.fontSizeUnit
-          : (ix.fontSizeUnit === '%' ? '%' : 'px');
-        if (fsu === '%') {
-          ix.fontSize = Math.max(1, Math.min(40, Number(patch.fontSize) || 4));
-          ix.fontSizeUnit = '%';
-        } else {
-          ix.fontSize = Math.max(8, Math.min(200, Number(patch.fontSize) || 28));
-          ix.fontSizeUnit = 'px';
-        }
-      }
-      if (patch.fontSizeUnit === '%' || patch.fontSizeUnit === 'px') {
-        ix.fontSizeUnit = patch.fontSizeUnit;
-        if (ix.fontSizeUnit === '%' && !(Number(ix.fontSize) > 0 && Number(ix.fontSize) <= 40)) {
-          ix.fontSize = 4;
-        }
-        if (ix.fontSizeUnit === 'px' && !(Number(ix.fontSize) >= 8)) {
-          ix.fontSize = 28;
-        }
+        ix.fontSize = Math.max(8, Math.min(200, Number(patch.fontSize) || 28));
+        ix.fontSizeUnit = 'px';
       }
       if (patch.color != null) ix.color = String(patch.color || '#ffffff');
       if (patch.fontFamily != null) ix.fontFamily = String(patch.fontFamily).replace(/"/g, '');
@@ -903,6 +990,7 @@ var ExperienciaEngine = (function () {
       }
       if (patch.textTransform != null) ix.textTransform = String(patch.textTransform);
       if (patch.textShadow != null) ix.textShadow = String(patch.textShadow);
+      if (patch.locked != null) ix.locked = !!patch.locked;
       ix.positionMode = 'free';
     }
 
@@ -991,10 +1079,22 @@ var ExperienciaEngine = (function () {
     copy.size = ix.size;
     copy.scaleValue = ix.scaleValue;
     copy.scaleUnit = ix.scaleUnit;
+    copy.boxW = ix.boxW;
+    copy.boxH = ix.boxH;
+    copy.locked = !!ix.locked;
     copy.opacity = ix.opacity;
+    copy.bgColor = ix.bgColor;
+    copy.bgOpacity = ix.bgOpacity;
+    copy.textColor = ix.textColor;
+    copy.borderColor = ix.borderColor;
+    copy.borderWidth = ix.borderWidth;
     copy.hoverEnabled = ix.hoverEnabled;
     copy.hoverColor = ix.hoverColor;
+    copy.hoverTextColor = ix.hoverTextColor;
     copy.hoverTransition = ix.hoverTransition;
+    copy.pressedColor = ix.pressedColor;
+    copy.pressedTextColor = ix.pressedTextColor;
+    copy.pressedScale = ix.pressedScale;
     copy.fontSize = ix.fontSize;
     copy.fontSizeUnit = ix.fontSizeUnit;
     copy.color = ix.color;

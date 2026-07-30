@@ -517,7 +517,8 @@ var ExperienciaCanvas = (function () {
     if (t === 'TEXT') return 'builder-exp-stage-text';
     if (t === 'SHAPE_RECT') return 'builder-exp-stage-shape builder-exp-stage-shape--rect';
     if (t === 'SHAPE_CIRCLE') return 'builder-exp-stage-shape builder-exp-stage-shape--circle';
-    var style = (btn && btn.style) || 'chip';
+    var style = (btn && btn.style) || 'button';
+    if (style === 'chip') style = 'button';
     return 'builder-exp-ui-btn is-style-' + style +
       (btn && btn.icon ? ' has-icon' : '');
   }
@@ -549,93 +550,191 @@ var ExperienciaCanvas = (function () {
     ];
     var ff = selected.fontFamily || 'system-ui, sans-serif';
     var fw = String(selected.fontWeight || '400');
-    var fs = selected.fontStyle === 'italic' ? 'italic' : 'normal';
-    var td = String(selected.textDecoration || 'none');
-    var tt = selected.textTransform || 'none';
-    var shadowOn = selected.textShadow && selected.textShadow !== 'none';
     var op = selected.opacity != null ? Number(selected.opacity) : 1;
-    var rot = selected.rotation != null ? Number(selected.rotation) : 0;
+    var align = selected.textAlign || 'center';
+    var size = Number(selected.fontSize) || 28;
+    var sizes = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 96, 120, 160, 200];
     function fontOpt(v, l) {
       return '<option value="' + esc(v) + '"' + (ff === v ? ' selected' : '') + '>' + esc(l) + '</option>';
     }
-    function seg(attr, val, label, on) {
+    function sizeChip(n) {
+      return '<button type="button" class="builder-exp-size-chip' +
+        (size === n ? ' is-active' : '') + '" data-exp-text-size-chip="' + n + '">' + n + '</button>';
+    }
+    function alignBtn(v, label) {
       return '<button type="button" class="builder-hub-segment__btn' +
-        (on ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' + esc(label) + '</button>';
+        (align === v ? ' is-active' : '') + '" data-exp-text-align="' + esc(v) + '">' +
+        esc(label) + '</button>';
     }
     return '' +
-      '<div class="builder-exp-inspector__section">Texto</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Contenido</label>' +
-        '<textarea data-exp-text-content rows="3" maxlength="500" placeholder="Escribe…">' +
-          esc(selected.label != null ? selected.label : '') +
-        '</textarea>' +
-        '<p class="builder-menu-hint builder-exp-btn-hint">Doble clic en el lienzo para editar.</p>' +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Contenido</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<textarea data-exp-text-content rows="2" maxlength="500" placeholder="Escribe…">' +
+            esc(selected.label != null ? selected.label : '') +
+          '</textarea>' +
+          '<p class="builder-menu-hint builder-exp-btn-hint">Doble clic en el lienzo para editar.</p>' +
+        '</div>' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Tipografía</label>' +
-        '<select data-exp-text-font class="builder-exp-btn-select">' +
-          fonts.map(function (f) { return fontOpt(f[0], f[1]); }).join('') +
-        '</select>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Tamaño</label>' +
-        '<div class="builder-exp-btn-hover-row">' +
-          '<input type="number" data-exp-text-size min="1" max="200" step="1" value="' +
-            esc(String(selected.fontSize != null ? selected.fontSize : 28)) + '">' +
-          '<select data-exp-text-size-unit class="builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
-            '<option value="px"' + ((selected.fontSizeUnit || 'px') !== '%' ? ' selected' : '') + '>px</option>' +
-            '<option value="%"' + (selected.fontSizeUnit === '%' ? ' selected' : '') + '>%</option>' +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Apariencia</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Fuente</label>' +
+          '<select data-exp-text-font class="builder-exp-btn-select">' +
+            fonts.map(function (f) { return fontOpt(f[0], f[1]); }).join('') +
+          '</select>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Tamaño</label>' +
+          '<div class="builder-exp-size-chips">' + sizes.map(sizeChip).join('') + '</div>' +
+        '</div>' +
+        '<div class="builder-hub-segment" style="margin-bottom:8px">' +
+          '<button type="button" class="builder-hub-segment__btn' +
+            (fw === '700' || fw === 'bold' ? ' is-active' : '') +
+            '" data-exp-text-bold="1">Negrita</button>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Color</label>' +
+          '<input type="color" data-exp-text-color value="' +
+            esc(/^#[0-9a-fA-F]{6}$/.test(String(selected.color || '')) ? selected.color : '#ffffff') + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Alineación</label>' +
+          '<div class="builder-hub-segment">' +
+            alignBtn('left', 'Izq') +
+            alignBtn('center', 'Centro') +
+            alignBtn('right', 'Der') +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Opacidad</label>' +
+          '<input type="range" data-exp-text-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(op)) + '">' +
+        '</div>' +
+      '</div>';
+  }
+
+  function hexOr(v, fallback) {
+    return /^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v) : fallback;
+  }
+
+  function buttonInspectorFieldsHtml(selected, destOpts) {
+    var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
+    var bgOp = selected.bgOpacity != null ? Number(selected.bgOpacity) : 1;
+    var hoverOn = selected.hoverEnabled !== false;
+    var hoverMs = selected.hoverTransition != null ? Number(selected.hoverTransition) : 200;
+    var hoverCol = hexOr(selected.hoverColor, '#6fbf86');
+    var hoverText = hexOr(selected.hoverTextColor, '#ffffff');
+    var pressedCol = hexOr(selected.pressedColor, '#5aaa74');
+    var pressedText = hexOr(selected.pressedTextColor, '#ffffff');
+    var bg = hexOr(selected.bgColor, '#141414');
+    var textCol = hexOr(selected.textColor, '#ffffff');
+    var borderCol = hexOr(selected.borderColor, '#ffffff');
+    var bw = selected.borderWidth != null ? Number(selected.borderWidth) : 1;
+    var br = selected.borderRadius != null ? Number(selected.borderRadius) : 999;
+    return '' +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Contenido</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Texto</label>' +
+          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
+            esc(selected.label != null ? selected.label : '') + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Icono</label>' +
+          '<select data-exp-btn-icon class="builder-exp-btn-select">' +
+            '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
+            '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
+            '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izq.</option>' +
+            '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar der.</option>' +
+            '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
           '</select>' +
         '</div>' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Color</label>' +
-        '<input type="color" data-exp-text-color value="' +
-          esc(/^#[0-9a-fA-F]{6}$/.test(String(selected.color || '')) ? selected.color : '#ffffff') + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Estilo</label>' +
-        '<div class="builder-hub-segment">' +
-          seg('data-exp-text-bold', '1', 'Negrita', fw === '700' || fw === 'bold') +
-          seg('data-exp-text-italic', '1', 'Cursiva', fs === 'italic') +
-          seg('data-exp-text-underline', '1', 'Subrayado', td.indexOf('underline') >= 0) +
-          seg('data-exp-text-strike', '1', 'Tachado', td.indexOf('line-through') >= 0) +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Apariencia</div>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Fondo</label>' +
+            '<input type="color" data-exp-btn-bg-color value="' + esc(bg) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Transp. fondo</label>' +
+            '<input type="range" data-exp-btn-bg-opacity min="0" max="1" step="0.05" value="' +
+              esc(String(bgOp)) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Color texto</label>' +
+          '<input type="color" data-exp-btn-text-color value="' + esc(textCol) + '">' +
+        '</div>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Borde</label>' +
+            '<input type="color" data-exp-btn-border-color value="' + esc(borderCol) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Grosor</label>' +
+            '<input type="number" data-exp-btn-border-width min="0" max="20" step="1" value="' +
+              esc(String(bw)) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Radio</label>' +
+          '<input type="number" data-exp-btn-radius min="0" max="999" step="1" value="' +
+            esc(String(br)) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Opacidad</label>' +
+          '<input type="range" data-exp-btn-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(btnOp)) + '">' +
+        '</div>' +
+        '<div class="builder-exp-btn-hover-row" style="gap:12px;margin-top:4px">' +
+          '<label class="builder-exp-inspector__check">' +
+            '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
+            ' Visible</label>' +
+          '<label class="builder-exp-inspector__check">' +
+            '<input type="checkbox" data-exp-btn-locked' + (selected.locked ? ' checked' : '') + '>' +
+            ' Bloqueado</label>' +
         '</div>' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Mayúsculas</label>' +
-        '<select data-exp-text-transform class="builder-exp-btn-select">' +
-          '<option value="none"' + (tt === 'none' ? ' selected' : '') + '>Ninguna</option>' +
-          '<option value="uppercase"' + (tt === 'uppercase' ? ' selected' : '') + '>MAYÚSCULAS</option>' +
-          '<option value="lowercase"' + (tt === 'lowercase' ? ' selected' : '') + '>minúsculas</option>' +
-          '<option value="capitalize"' + (tt === 'capitalize' ? ' selected' : '') + '>Capitalizar</option>' +
-        '</select>' +
-      '</div>' +
-      '<label class="builder-exp-inspector__check">' +
-        '<input type="checkbox" data-exp-text-shadow' + (shadowOn ? ' checked' : '') + '>' +
-        ' Sombra</label>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Opacidad</label>' +
-        '<input type="range" data-exp-text-opacity min="0" max="1" step="0.05" value="' +
-          esc(String(op)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Rotación</label>' +
-        '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
-          esc(String(rot)) + '">' +
-        '<div class="builder-exp-btn-rot-row">' +
-          '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
-            esc(String(rot)) + '">' +
-          '<span class="builder-exp-btn-rot-unit">°</span>' +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Interacción</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Acción</label>' +
+          '<select data-exp-btn-target class="builder-exp-btn-select">' + destOpts + '</select>' +
         '</div>' +
-      '</div>' +
-      '<label class="builder-exp-inspector__check">' +
-        '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
-        ' Visible</label>' +
-      '<p class="builder-menu-hint builder-exp-btn-hint">X ' +
-        esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
-        '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
-        '% · arrastre libre</p>';
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-btn-hover-enabled' + (hoverOn ? ' checked' : '') + '>' +
+          ' Activar hover</label>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Hover</label>' +
+            '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
+              (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Texto hover</label>' +
+            '<input type="color" data-exp-btn-hover-text value="' + esc(hoverText) + '"' +
+              (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Pressed</label>' +
+            '<input type="color" data-exp-btn-pressed-color value="' + esc(pressedCol) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Texto pressed</label>' +
+            '<input type="color" data-exp-btn-pressed-text value="' + esc(pressedText) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Transición (ms)</label>' +
+          '<input type="number" data-exp-btn-hover-ms min="0" max="2000" step="50" value="' +
+            esc(String(hoverMs)) + '">' +
+        '</div>' +
+      '</div>';
   }
 
   function shapeInspectorFieldsHtml(selected) {
@@ -719,8 +818,8 @@ var ExperienciaCanvas = (function () {
     }
 
     var selType = selected ? String(selected.type || 'BUTTON').toUpperCase() : 'BUTTON';
-    var kindTitle = selType === 'TEXT' ? 'TEXTO'
-      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'FORMA' : 'BOTONES');
+    var kindTitle = selType === 'TEXT' ? 'Texto'
+      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'Forma' : 'Elemento');
 
     var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
       return node && node.id !== n.id && node.kind !== 'action';
@@ -813,7 +912,7 @@ var ExperienciaCanvas = (function () {
     }
 
     if (selectedIds.length <= 1) {
-      html += '<div class="builder-exp-inspector__section">Propiedades</div>';
+      /* no "Propiedades" header — blocks have their own titles */
     } else {
       html += '<div class="builder-exp-inspector__section">Propiedades · primario</div>';
     }
@@ -823,145 +922,7 @@ var ExperienciaCanvas = (function () {
     } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
       html += shapeInspectorFieldsHtml(selected);
     } else {
-      var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
-      var rot = selected.rotation != null ? Number(selected.rotation) : 0;
-      var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
-      var hoverOn = selected.hoverEnabled !== false;
-      var hoverMs = selected.hoverTransition != null ? Number(selected.hoverTransition) : 200;
-      var hoverCol = /^#[0-9a-fA-F]{6}$/.test(String(selected.hoverColor || ''))
-        ? selected.hoverColor
-        : '#6fbf86';
-      var scaleVal = selected.scaleValue != null ? Number(selected.scaleValue)
-        : (selected.size === 'sm' ? 78 : (selected.size === 'lg' ? 138 : 100));
-      var scaleUnit = selected.scaleUnit === 'px' ? 'px' : '%';
-      if (scaleUnit === 'px' && !(scaleVal >= 8)) scaleVal = 14;
-      if (scaleUnit === '%' && !(scaleVal > 0)) scaleVal = 100;
-      var anchorGrid = [
-        ['top-left', 'Superior izquierda'],
-        ['top-center', 'Superior centro'],
-        ['top-right', 'Superior derecha'],
-        ['center-left', 'Centro izquierda'],
-        ['center', 'Centro'],
-        ['center-right', 'Centro derecha'],
-        ['bottom-left', 'Inferior izquierda'],
-        ['bottom-center', 'Inferior centro'],
-        ['bottom-right', 'Inferior derecha']
-      ];
-      var currentAnchor = selected.anchor || 'center';
-      var anchorPadHtml = anchorGrid.map(function (cell) {
-        var key = cell[0];
-        var title = cell[1];
-        var on = posMode === 'anchor' && currentAnchor === key;
-        return '<button type="button" class="builder-exp-btn-anchor-cell' +
-          (on ? ' is-active' : '') +
-          '" data-exp-btn-anchor="' + esc(key) + '"' +
-          ' title="' + esc(title) + '" aria-label="' + esc(title) + '"' +
-          ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
-          '<span class="builder-exp-btn-anchor-dot" aria-hidden="true"></span>' +
-        '</button>';
-      }).join('');
-
-      html += '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Nombre</label>' +
-          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
-            esc(selected.label != null ? selected.label : '') + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Destino</label>' +
-          '<select data-exp-btn-target class="ws-select builder-exp-btn-select">' + destOpts + '</select>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Estilo</label>' +
-          '<div class="builder-hub-segment builder-hub-segment--3" data-exp-btn-styles>' +
-            segBtn('data-exp-btn-style', 'chip', 'Chip', selected.style === 'chip') +
-            segBtn('data-exp-btn-style', 'button', 'Botón', selected.style === 'button') +
-            segBtn('data-exp-btn-style', 'icon', 'Icono', selected.style === 'icon') +
-          '</div>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Tamaño</label>' +
-          '<div class="builder-exp-btn-hover-row">' +
-            '<input type="number" data-exp-btn-scale-value min="1" max="400" step="1" value="' +
-              esc(String(scaleVal)) + '">' +
-            '<select data-exp-btn-scale-unit class="builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
-              '<option value="%"' + (scaleUnit === '%' ? ' selected' : '') + '>%</option>' +
-              '<option value="px"' + (scaleUnit === 'px' ? ' selected' : '') + '>px</option>' +
-            '</select>' +
-          '</div>' +
-          '<p class="builder-menu-hint builder-exp-btn-hint">% = escala relativa · px = tamaño de fuente</p>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Transparencia</label>' +
-          '<input type="range" data-exp-btn-opacity min="0" max="1" step="0.05" value="' +
-            esc(String(btnOp)) + '">' +
-        '</div>' +
-        '<label class="builder-exp-inspector__check">' +
-          '<input type="checkbox" data-exp-btn-hover-enabled' + (hoverOn ? ' checked' : '') + '>' +
-          ' Activar hover</label>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Color hover</label>' +
-          '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
-            (hoverOn ? '' : ' disabled') + '>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Transición hover (ms)</label>' +
-          '<input type="number" data-exp-btn-hover-ms min="0" max="2000" step="50" value="' +
-            esc(String(hoverMs)) + '"' + (hoverOn ? '' : ' disabled') + '>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Icono</label>' +
-          '<select data-exp-btn-icon class="ws-select builder-exp-btn-select">' +
-            '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
-            '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
-            '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izquierda</option>' +
-            '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar derecha</option>' +
-            '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
-          '</select>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Rotación</label>' +
-          '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
-            esc(String(rot)) + '">' +
-          '<div class="builder-exp-btn-rot-row">' +
-            '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
-              esc(String(rot)) + '">' +
-            '<span class="builder-exp-btn-rot-unit">°</span>' +
-          '</div>' +
-        '</div>' +
-        '<label class="builder-exp-inspector__check">' +
-          '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
-          ' Visible</label>' +
-        '<div class="builder-exp-inspector__section">Posición</div>' +
-        '<div class="builder-hub-segment" data-exp-btn-pos-modes>' +
-          segBtn('data-exp-btn-pos-mode', 'free', 'Libre', posMode === 'free') +
-          segBtn('data-exp-btn-pos-mode', 'anchor', 'Anclas', posMode === 'anchor') +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Ancla</label>' +
-          '<div class="builder-exp-btn-anchor-grid" role="group" aria-label="Selector de ancla">' +
-            anchorPadHtml +
-          '</div>' +
-        '</div>';
-
-      if (posMode === 'anchor') {
-        html += '<div class="builder-exp-btn-margins">' +
-          '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Margen X (px)</label>' +
-            '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
-              esc(String(selected.marginX != null ? selected.marginX : 32)) + '">' +
-          '</div>' +
-          '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Margen Y (px)</label>' +
-            '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
-              esc(String(selected.marginY != null ? selected.marginY : 32)) + '">' +
-          '</div>' +
-        '</div>' +
-        '<p class="builder-menu-hint builder-exp-btn-hint">El margen empuja hacia dentro. El botón permanece visible.</p>';
-      } else {
-        html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
-          '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
-          '% · arrastre libre</p>';
-      }
+      html += buttonInspectorFieldsHtml(selected, destOpts);
     }
 
     html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
@@ -2108,6 +2069,8 @@ var ExperienciaCanvas = (function () {
 
     var dragging = null;
     var buttonDrag = null;
+    var transformDrag = null;
+    var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
     var buttonNudgeDirty = false;
@@ -2747,26 +2710,65 @@ var ExperienciaCanvas = (function () {
           patchBtn({ icon: iconEl.value }, { persist: true });
         });
       }
-      var scaleValEl = inspectorBody.querySelector('[data-exp-btn-scale-value]');
-      var scaleUnitEl = inspectorBody.querySelector('[data-exp-btn-scale-unit]');
-      function patchBtnScale(opts) {
-        patchBtn({
-          scaleValue: scaleValEl ? scaleValEl.value : 100,
-          scaleUnit: scaleUnitEl && scaleUnitEl.value === 'px' ? 'px' : '%'
-        }, opts || { persist: true });
-      }
-      if (scaleValEl) {
-        scaleValEl.addEventListener('input', function () {
-          patchBtnScale({ gesture: true });
+      function bindColor(sel, key) {
+        var el = inspectorBody.querySelector(sel);
+        if (!el) return;
+        var live = null;
+        el.addEventListener('input', function () {
+          var col = String(el.value || '').trim();
+          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+          live = col.toLowerCase();
+          var p = {};
+          p[key] = col;
+          patchBtn(p, { gesture: true });
         });
-        scaleValEl.addEventListener('change', function () {
+        el.addEventListener('change', function () {
           endButtonOp();
-          patchBtnScale({ persist: true });
+          var col = String(el.value || '').trim().toLowerCase();
+          if (live && col === '#ffffff' && live !== '#ffffff') {
+            col = live;
+            el.value = col;
+          }
+          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+          var p = {};
+          p[key] = col;
+          patchBtn(p, { persist: true });
+          live = null;
         });
       }
-      if (scaleUnitEl) {
-        scaleUnitEl.addEventListener('change', function () {
-          patchBtnScale({ persist: true });
+      bindColor('[data-exp-btn-bg-color]', 'bgColor');
+      bindColor('[data-exp-btn-text-color]', 'textColor');
+      bindColor('[data-exp-btn-border-color]', 'borderColor');
+      bindColor('[data-exp-btn-hover-color]', 'hoverColor');
+      bindColor('[data-exp-btn-hover-text]', 'hoverTextColor');
+      bindColor('[data-exp-btn-pressed-color]', 'pressedColor');
+      bindColor('[data-exp-btn-pressed-text]', 'pressedTextColor');
+      var bgOpEl = inspectorBody.querySelector('[data-exp-btn-bg-opacity]');
+      if (bgOpEl) {
+        bgOpEl.addEventListener('input', function () {
+          patchBtn({ bgOpacity: bgOpEl.value }, { gesture: true });
+        });
+        bgOpEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      var bwEl = inspectorBody.querySelector('[data-exp-btn-border-width]');
+      if (bwEl) {
+        bwEl.addEventListener('change', function () {
+          patchBtn({ borderWidth: bwEl.value }, { persist: true });
+        });
+      }
+      var brEl = inspectorBody.querySelector('[data-exp-btn-radius]');
+      if (brEl) {
+        brEl.addEventListener('change', function () {
+          patchBtn({ borderRadius: brEl.value }, { persist: true });
+        });
+      }
+      var lockEl = inspectorBody.querySelector('[data-exp-btn-locked]');
+      if (lockEl) {
+        lockEl.addEventListener('change', function () {
+          patchBtn({ locked: !!lockEl.checked }, { persist: true });
         });
       }
       var opEl = inspectorBody.querySelector('[data-exp-btn-opacity]');
@@ -2783,28 +2785,6 @@ var ExperienciaCanvas = (function () {
       if (hoverEn) {
         hoverEn.addEventListener('change', function () {
           patchBtn({ hoverEnabled: !!hoverEn.checked }, { inspector: true, persist: true });
-        });
-      }
-      var hoverCol = inspectorBody.querySelector('[data-exp-btn-hover-color]');
-      var liveHoverColor = null;
-      if (hoverCol) {
-        hoverCol.addEventListener('input', function () {
-          var col = String(hoverCol.value || '').trim();
-          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
-          liveHoverColor = col.toLowerCase();
-          patchBtn({ hoverColor: col }, { gesture: true });
-        });
-        hoverCol.addEventListener('change', function () {
-          endButtonOp();
-          var col = String(hoverCol.value || '').trim().toLowerCase();
-          /* OS color picker often resets to #ffffff when dismissed — keep last live color. */
-          if (liveHoverColor && col === '#ffffff' && liveHoverColor !== '#ffffff') {
-            col = liveHoverColor;
-            hoverCol.value = col;
-          }
-          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
-          patchBtn({ hoverColor: col }, { persist: true });
-          liveHoverColor = null;
         });
       }
       var hoverMs = inspectorBody.querySelector('[data-exp-btn-hover-ms]');
@@ -2830,28 +2810,15 @@ var ExperienciaCanvas = (function () {
           patchBtn({ fontFamily: textFont.value }, { persist: true });
         });
       }
-      var textSize = inspectorBody.querySelector('[data-exp-text-size]');
-      var textSizeUnit = inspectorBody.querySelector('[data-exp-text-size-unit]');
-      function patchTextSize(opts) {
-        patchBtn({
-          fontSize: textSize ? textSize.value : 28,
-          fontSizeUnit: textSizeUnit && textSizeUnit.value === '%' ? '%' : 'px'
-        }, opts || { persist: true });
-      }
-      if (textSize) {
-        textSize.addEventListener('input', function () {
-          patchTextSize({ gesture: true });
+      inspectorBody.querySelectorAll('[data-exp-text-size-chip]').forEach(function (chip) {
+        chip.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchBtn({
+            fontSize: Number(chip.getAttribute('data-exp-text-size-chip')) || 28,
+            fontSizeUnit: 'px'
+          }, { inspector: true, persist: true });
         });
-        textSize.addEventListener('change', function () {
-          endButtonOp();
-          patchTextSize({ persist: true });
-        });
-      }
-      if (textSizeUnit) {
-        textSizeUnit.addEventListener('change', function () {
-          patchTextSize({ persist: true });
-        });
-      }
+      });
       var textColor = inspectorBody.querySelector('[data-exp-text-color]');
       if (textColor) {
         textColor.addEventListener('input', function () {
@@ -2862,27 +2829,12 @@ var ExperienciaCanvas = (function () {
           persist();
         });
       }
-      var textTransform = inspectorBody.querySelector('[data-exp-text-transform]');
-      if (textTransform) {
-        textTransform.addEventListener('change', function () {
-          patchBtn({ textTransform: textTransform.value }, { persist: true });
+      inspectorBody.querySelectorAll('[data-exp-text-align]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchBtn({ textAlign: el.getAttribute('data-exp-text-align') }, { inspector: true, persist: true });
         });
-      }
-      function currentTextDeco() {
-        var id = canvas().selectedButtonId;
-        var b = ExperienciaEngine.getSceneButton(state,
-          ExperienciaEngine.getNode(state, sceneId), id);
-        return (b && b.textDecoration) ? String(b.textDecoration) : 'none';
-      }
-      function toggleDeco(token) {
-        var cur = currentTextDeco().split(/\s+/).filter(function (x) {
-          return x && x !== 'none';
-        });
-        var idx = cur.indexOf(token);
-        if (idx >= 0) cur.splice(idx, 1);
-        else cur.push(token);
-        patchBtn({ textDecoration: cur.length ? cur.join(' ') : 'none' }, { inspector: true, persist: true });
-      }
+      });
       var boldBtn = inspectorBody.querySelector('[data-exp-text-bold]');
       if (boldBtn) {
         boldBtn.addEventListener('click', function (ev) {
@@ -2892,39 +2844,6 @@ var ExperienciaCanvas = (function () {
             ExperienciaEngine.getNode(state, sceneId), id);
           var on = b && (String(b.fontWeight) === '700' || b.fontWeight === 'bold');
           patchBtn({ fontWeight: on ? '400' : '700' }, { inspector: true, persist: true });
-        });
-      }
-      var italicBtn = inspectorBody.querySelector('[data-exp-text-italic]');
-      if (italicBtn) {
-        italicBtn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          var id = canvas().selectedButtonId;
-          var b = ExperienciaEngine.getSceneButton(state,
-            ExperienciaEngine.getNode(state, sceneId), id);
-          var on = b && b.fontStyle === 'italic';
-          patchBtn({ fontStyle: on ? 'normal' : 'italic' }, { inspector: true, persist: true });
-        });
-      }
-      var underBtn = inspectorBody.querySelector('[data-exp-text-underline]');
-      if (underBtn) {
-        underBtn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          toggleDeco('underline');
-        });
-      }
-      var strikeBtn = inspectorBody.querySelector('[data-exp-text-strike]');
-      if (strikeBtn) {
-        strikeBtn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          toggleDeco('line-through');
-        });
-      }
-      var textShadow = inspectorBody.querySelector('[data-exp-text-shadow]');
-      if (textShadow) {
-        textShadow.addEventListener('change', function () {
-          patchBtn({
-            textShadow: textShadow.checked ? '0 2px 10px rgba(0,0,0,0.55)' : 'none'
-          }, { persist: true });
         });
       }
       var textOp = inspectorBody.querySelector('[data-exp-text-opacity]');
@@ -4388,6 +4307,7 @@ var ExperienciaCanvas = (function () {
     function paintButtonsStage() {
       if (!buttonsStage || !buttonsLayer || !buttonsImg) return;
       if (canvas().editMode !== 'buttons') return;
+      if (textEditEl && document.activeElement === textEditEl) return;
       var n = ExperienciaEngine.getNode(state, canvas().selectedId);
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) {
         if (buttonsEmpty) buttonsEmpty.hidden = false;
@@ -4462,40 +4382,28 @@ var ExperienciaCanvas = (function () {
         var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
           '--btn-rot:' + rot + 'deg;';
         if (t === 'TEXT') {
-          var tUnit = b.fontSizeUnit === '%' ? '%' : 'px';
-          var tSize = Number(b.fontSize) || (tUnit === '%' ? 4 : 28);
+          var tSize = Number(b.fontSize) || 28;
           var tOp = b.opacity != null ? Number(b.opacity) : 1;
-          var sizeCss = tUnit === '%'
-            ? (Math.max(8, Math.round((tSize / 100) * layerH)) + 'px')
-            : (tSize + 'px');
           var fam = String(b.fontFamily || 'system-ui, sans-serif').replace(/"/g, '');
           var fw = String(b.fontWeight || '400');
           var isBold = fw === '700' || fw === 'bold';
-          var isItalic = b.fontStyle === 'italic';
-          var deco = String(b.textDecoration || 'none');
-          var isUnder = deco.indexOf('underline') >= 0;
-          var isStrike = deco.indexOf('line-through') >= 0;
-          var tt = String(b.textTransform || 'none');
-          var shadowOn = b.textShadow && b.textShadow !== 'none';
+          var align = String(b.textAlign || 'center');
           styleBits +=
-            '--t-size:' + sizeCss + ';' +
+            '--t-size:' + tSize + 'px;' +
             '--t-color:' + cssToken(b.color || '#ffffff') + ';' +
             '--t-family:' + JSON.stringify(fam) + ';' +
             '--t-weight:' + (isBold ? '700' : '400') + ';' +
-            '--t-style:' + (isItalic ? 'italic' : 'normal') + ';' +
-            '--t-deco:' + (deco === 'none' ? 'none' : cssToken(deco)) + ';' +
-            '--t-transform:' + cssToken(tt) + ';' +
-            '--t-shadow:' + (shadowOn ? '0 2px 10px rgba(0,0,0,0.55)' : 'none') + ';' +
+            '--t-align:' + cssToken(align) + ';' +
             '--t-opacity:' + tOp + ';';
           return '<button type="button" class="' + buttonPreviewClass(b) +
+            ' is-stage-text' +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
-            (isBold ? ' is-text-bold' : '') +
-            (isItalic ? ' is-text-italic' : '') +
-            (isUnder ? ' is-text-under' : '') +
-            (isStrike ? ' is-text-strike' : '') + '"' +
+            (b.locked ? ' is-locked' : '') +
+            (isBold ? ' is-text-bold' : '') + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
             ' data-exp-stage-text="1"' +
+            (b.locked ? ' data-locked="1"' : '') +
             ' style="' + styleBits + '">' +
             esc(b.label != null ? String(b.label) : 'Texto') +
           '</button>';
@@ -4509,53 +4417,106 @@ var ExperienciaCanvas = (function () {
             'border-radius:' + (b.borderRadius != null ? Number(b.borderRadius) : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px;';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
-            (b.visible === false ? ' is-invisible' : '') + '"' +
+            (b.visible === false ? ' is-invisible' : '') +
+            (b.locked ? ' is-locked' : '') + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
+            (b.locked ? ' data-locked="1"' : '') +
             ' aria-label="' + esc(b.label || t) + '"' +
             ' style="' + styleBits + '"></button>';
         }
         var glyph = buttonIconGlyph(b.icon);
         var text = b.label != null ? String(b.label) : '';
         var label;
-        if (b.style === 'icon') {
-          label = glyph || (text || '·');
-        } else if (glyph && text) {
-          label = glyph + ' ' + text;
-        } else {
-          label = glyph || text;
-        }
+        if (glyph && text) label = glyph + ' ' + text;
+        else label = glyph || text || 'Botón';
         var btnOp = b.opacity != null ? Number(b.opacity) : 1;
         var hoverOn = b.hoverEnabled !== false;
         var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
         var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
-        var scaleUnit = b.scaleUnit === 'px' ? 'px' : '%';
-        var scaleValue = b.scaleValue != null ? Number(b.scaleValue)
-          : (b.size === 'sm' ? 78 : (b.size === 'lg' ? 138 : 100));
-        var btnScale = 1;
-        var fontPx = null;
-        if (scaleUnit === 'px') {
-          fontPx = Math.max(8, Math.min(96, scaleValue || 14));
-          btnScale = fontPx / 14;
-        } else {
-          btnScale = Math.max(0.25, Math.min(4, (scaleValue || 100) / 100));
-        }
+        var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
+        var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
+        var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
+        var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
+        var boxW = b.boxW != null ? Number(b.boxW) : 14;
+        var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
+        var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
         styleBits +=
-          '--btn-scale:' + btnScale + ';' +
-          (fontPx != null ? ('--button-font-size:' + fontPx + 'px;') : '') +
+          'width:' + boxW + '%;height:' + boxH + '%;' +
           '--btn-opacity:' + btnOp + ';' +
           '--btn-hover-color:' + hoverCol + ';' +
-          '--btn-hover-ms:' + hoverMs + 'ms;';
+          '--btn-hover-text:' + hoverTextCol + ';' +
+          '--btn-hover-ms:' + hoverMs + 'ms;' +
+          '--btn-pressed-color:' + pressedCol + ';' +
+          '--btn-pressed-text:' + pressedTextCol + ';' +
+          '--btn-pressed-scale:' + pressedScale + ';';
+        if (b.bgColor) {
+          styleBits += '--btn-local-bg:' + cssToken(b.bgColor) + ';' +
+            '--btn-local-bg-a:' + bgOp + ';';
+        }
+        if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
+        if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
+        if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
+        if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
         return '<button type="button" class="' + buttonPreviewClass(b) +
+          ' is-box' +
           (selSet[String(b.id)] ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') +
+          (b.locked ? ' is-locked' : '') +
           (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
-          (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
+          (hoverOn ? ' is-hover-on' : ' is-hover-off') +
+          (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null
+            ? ' has-local-look' : '') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
+          (b.locked ? ' data-locked="1"' : '') +
           ' data-hover-color="' + esc(hoverCol) + '"' +
+          ' data-hover-text="' + esc(hoverTextCol) + '"' +
+          ' data-box-w="' + boxW + '" data-box-h="' + boxH + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
         '</button>';
       }).join('');
+
+      /* Selection gizmos: resize + rotate (single selection, unlocked) */
+      if (selIds.length === 1) {
+        var selBtn = null;
+        for (var gi = 0; gi < buttons.length; gi++) {
+          if (buttons[gi] && String(buttons[gi].id) === selIds[0]) {
+            selBtn = buttons[gi];
+            break;
+          }
+        }
+        if (selBtn && !selBtn.locked && selBtn.visible !== false) {
+          var st = String(selBtn.type || 'BUTTON').toUpperCase();
+          var gx = Number(selBtn.x) || 50;
+          var gy = Number(selBtn.y) || 50;
+          var grot = Number(selBtn.rotation) || 0;
+          var gw;
+          var gh;
+          if (st === 'BUTTON') {
+            gw = selBtn.boxW != null ? Number(selBtn.boxW) : 14;
+            gh = selBtn.boxH != null ? Number(selBtn.boxH) : 4.5;
+          } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
+            gw = Number(selBtn.width) || 12;
+            gh = Number(selBtn.height) || 8;
+          } else {
+            /* TEXT: approximate box from font size for rotate-only + light resize */
+            gw = Math.max(8, Math.min(40, (String(selBtn.label || 'Texto').length) * 1.2));
+            gh = Math.max(3, ((Number(selBtn.fontSize) || 28) / layerH) * 100 * 1.4);
+          }
+          var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+          buttonsLayer.innerHTML +=
+            '<div class="builder-exp-sel-gizmo" data-exp-gizmo="1" data-gizmo-id="' + esc(selBtn.id) + '"' +
+              ' data-gizmo-type="' + esc(st) + '"' +
+              ' style="left:' + gx + '%;top:' + gy + '%;width:' + gw + '%;height:' + gh + '%;' +
+              '--btn-rot:' + grot + 'deg">' +
+              '<div class="builder-exp-sel-box"></div>' +
+              handles.map(function (h) {
+                return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
+              }).join('') +
+              '<span class="builder-exp-sel-rotate" data-handle="rotate" title="Rotar"></span>' +
+            '</div>';
+        }
+      }
       requestAnimationFrame(syncButtonsLayerBounds);
     }
 
@@ -5611,13 +5572,52 @@ var ExperienciaCanvas = (function () {
 
     if (buttonsLayer) {
       buttonsLayer.addEventListener('pointerdown', function (ev) {
+        /* Gizmo resize / rotate */
+        var handle = ev.target.closest && ev.target.closest('[data-handle]');
+        if (handle && handle.closest('[data-exp-gizmo]')) {
+          var gizmo = handle.closest('[data-exp-gizmo]');
+          var gid = gizmo.getAttribute('data-gizmo-id');
+          var gtype = gizmo.getAttribute('data-gizmo-type') || 'BUTTON';
+          var sceneIdG = canvas().selectedId;
+          var btnG = ExperienciaEngine.getSceneButton(state,
+            ExperienciaEngine.getNode(state, sceneIdG), gid);
+          if (!btnG || btnG.locked) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          var pct0 = percentFromPointer(ev);
+          transformDrag = {
+            mode: handle.getAttribute('data-handle'),
+            buttonId: gid,
+            sceneId: sceneIdG,
+            type: gtype,
+            pointerId: ev.pointerId,
+            startX: btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50,
+            startY: btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50,
+            startW: gtype === 'BUTTON'
+              ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
+              : (Number(btnG.width) || 12),
+            startH: gtype === 'BUTTON'
+              ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
+              : (Number(btnG.height) || 8),
+            startRot: Number(btnG.rotation) || 0,
+            startPx: pct0.x,
+            startPy: pct0.y,
+            keepRatio: !!ev.shiftKey,
+            historyPushed: false
+          };
+          try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
+          return;
+        }
+
         var hit = ev.target.closest('[data-exp-stage-btn]');
         if (!hit) {
+          if (ev.target.closest('[data-exp-gizmo]')) return;
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
           renderAll();
           return;
         }
+        if (hit.isContentEditable || hit.getAttribute('contenteditable') === 'true') return;
         ev.preventDefault();
         ev.stopPropagation();
         var bid = hit.getAttribute('data-exp-stage-btn');
@@ -5639,6 +5639,11 @@ var ExperienciaCanvas = (function () {
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid
         );
+        if (btn && btn.locked) {
+          paintButtonsStage();
+          paintInspector();
+          return;
+        }
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
@@ -5653,6 +5658,56 @@ var ExperienciaCanvas = (function () {
         paintInspector();
       });
       buttonsLayer.addEventListener('pointermove', function (ev) {
+        if (transformDrag && ev.pointerId === transformDrag.pointerId) {
+          var pctT = percentFromPointer(ev);
+          if (!transformDrag.historyPushed) {
+            pushButtonHistory(transformDrag.sceneId);
+            transformDrag.historyPushed = true;
+          }
+          var mode = transformDrag.mode;
+          if (mode === 'rotate') {
+            var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
+            var deg = Math.round((ang * 180) / Math.PI) + 90;
+            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
+              rotation: deg
+            });
+          } else {
+            var dx = pctT.x - transformDrag.startPx;
+            var dy = pctT.y - transformDrag.startPy;
+            var nw = transformDrag.startW;
+            var nh = transformDrag.startH;
+            var nx = transformDrag.startX;
+            var ny = transformDrag.startY;
+            if (mode.indexOf('e') >= 0) { nw = transformDrag.startW + dx; nx = transformDrag.startX + dx / 2; }
+            if (mode.indexOf('w') >= 0) { nw = transformDrag.startW - dx; nx = transformDrag.startX + dx / 2; }
+            if (mode.indexOf('s') >= 0) { nh = transformDrag.startH + dy; ny = transformDrag.startY + dy / 2; }
+            if (mode.indexOf('n') >= 0) { nh = transformDrag.startH - dy; ny = transformDrag.startY + dy / 2; }
+            if (transformDrag.keepRatio && transformDrag.startW > 0) {
+              var ratio = transformDrag.startH / transformDrag.startW;
+              if (mode === 'n' || mode === 's') {
+                nw = nh / ratio;
+                nx = transformDrag.startX + (mode === 'e' || mode.indexOf('e') >= 0 ? (nw - transformDrag.startW) / 2 : 0);
+              } else {
+                nh = nw * ratio;
+              }
+            }
+            nw = Math.max(1.5, Math.min(90, nw));
+            nh = Math.max(1.5, Math.min(90, nh));
+            nx = Math.max(0, Math.min(100, nx));
+            ny = Math.max(0, Math.min(100, ny));
+            var patchT = { x: nx, y: ny };
+            if (transformDrag.type === 'BUTTON') {
+              patchT.boxW = nw;
+              patchT.boxH = nh;
+            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE') {
+              patchT.width = nw;
+              patchT.height = nh;
+            }
+            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
+          }
+          paintButtonsStage();
+          return;
+        }
         if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId) return;
         var pct = percentFromPointer(ev);
         if (!buttonDrag.historyPushed) {
@@ -5670,6 +5725,14 @@ var ExperienciaCanvas = (function () {
         paintButtonsStage();
       });
       function endButtonDrag(ev) {
+        if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
+          var movedT = transformDrag.historyPushed;
+          transformDrag = null;
+          paintButtonsStage();
+          paintInspector();
+          if (movedT) persist();
+          return;
+        }
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
         var moved = buttonDrag.historyPushed;
         buttonDrag = null;
@@ -5685,11 +5748,16 @@ var ExperienciaCanvas = (function () {
         if (!btn || btn._hoverPainted) return;
         var c = btn.getAttribute('data-hover-color') ||
           (btn.style && btn.style.getPropertyValue('--btn-hover-color')) || '';
+        var tc = btn.getAttribute('data-hover-text') ||
+          (btn.style && btn.style.getPropertyValue('--btn-hover-text')) || '';
         c = String(c || '').trim();
+        tc = String(tc || '').trim();
         if (!/^#[0-9a-fA-F]{6}$/.test(c)) return;
         btn._hoverPainted = true;
-        btn.style.setProperty('color', c, 'important');
+        btn.style.setProperty('color', (/^#[0-9a-fA-F]{6}$/.test(tc) ? tc : c), 'important');
         btn.style.setProperty('border-color', c, 'important');
+        btn.style.setProperty('background',
+          'color-mix(in srgb, ' + c + ' 32%, rgba(8, 8, 8, 0.72))', 'important');
       });
       buttonsLayer.addEventListener('mouseout', function (ev) {
         var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn');
@@ -5699,6 +5767,7 @@ var ExperienciaCanvas = (function () {
         btn._hoverPainted = false;
         btn.style.removeProperty('color');
         btn.style.removeProperty('border-color');
+        btn.style.removeProperty('background');
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
         if (canvas().editMode !== 'buttons') return;
@@ -5712,18 +5781,53 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.getNode(state, sceneId), bid
         );
         if (!btn || String(btn.type || '').toUpperCase() !== 'TEXT') return;
+        if (btn.locked) return;
         canvas().selectedButtonIds = [String(bid)];
         canvas().selectedButtonId = bid;
-        var next = window.prompt('Editar texto', btn.label != null ? String(btn.label) : '');
-        if (next == null) {
-          paintInspector();
-          return;
+        if (textEditEl && textEditEl !== hit) {
+          textEditEl.contentEditable = 'false';
+          textEditEl.removeAttribute('contenteditable');
         }
-        pushButtonHistory(sceneId);
-        ExperienciaEngine.updateSceneButton(state, sceneId, bid, { label: next });
-        paintButtonsStage();
+        textEditEl = hit;
+        hit.contentEditable = 'true';
+        hit.setAttribute('contenteditable', 'true');
+        hit.focus();
+        try {
+          var range = document.createRange();
+          range.selectNodeContents(hit);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } catch (eSel) {}
+        function commitTextEdit() {
+          if (!textEditEl || textEditEl !== hit) return;
+          var next = String(hit.innerText || hit.textContent || '').replace(/\n+/g, ' ').trim();
+          hit.contentEditable = 'false';
+          hit.removeAttribute('contenteditable');
+          textEditEl = null;
+          hit.removeEventListener('blur', commitTextEdit);
+          hit.removeEventListener('keydown', onTextKey);
+          pushButtonHistory(sceneId);
+          ExperienciaEngine.updateSceneButton(state, sceneId, bid, {
+            label: next || 'Texto'
+          });
+          paintButtonsStage();
+          paintInspector();
+          persist();
+        }
+        function onTextKey(kev) {
+          if (kev.key === 'Enter' && !kev.shiftKey) {
+            kev.preventDefault();
+            hit.blur();
+          } else if (kev.key === 'Escape') {
+            kev.preventDefault();
+            hit.textContent = btn.label != null ? String(btn.label) : 'Texto';
+            hit.blur();
+          }
+        }
+        hit.addEventListener('blur', commitTextEdit);
+        hit.addEventListener('keydown', onTextKey);
         paintInspector();
-        persist();
       });
     }
 
