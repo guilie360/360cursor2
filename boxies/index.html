@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../css/boxies/content.css?v=ws7201">
   <link rel="stylesheet" href="../css/boxies/tooltip.css?v=ws5940">
   <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=ws7105">
-  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7236">
+  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7244">
   <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
 </head>
 <body class="boxies-host">
@@ -79,6 +79,75 @@
   <!-- Shell mounts here once; pages only fill #boxiesContent -->
   <div id="bxAppView" hidden></div>
 
+  <!-- V7.2.44 — Showroom main menu host (same IDs; BOXIES only; Showroom index untouched) -->
+  <div class="main-menu-backdrop" id="mainMenuBackdrop"></div>
+  <nav class="main-menu" id="mainMenu" aria-label="Menú principal">
+    <div class="main-menu-shell">
+      <div class="main-menu-header">
+        <button type="button" class="main-menu-recovery-close" id="mainMenuRecoveryClose" aria-label="Cerrar menú" hidden>&times;</button>
+        <div class="main-menu-project" id="mainMenuProject"></div>
+        <div class="main-menu-constructora" id="mainMenuConstructora"></div>
+      </div>
+      <div class="main-menu-body">
+        <div class="main-menu-nav-col">
+          <div class="menu-nav-toolbar" id="menuNavToolbar">
+            <button type="button" class="menu-nav-back" id="menuNavBack" hidden>
+              <span class="menu-nav-back-icon" aria-hidden="true">↶</span>
+              <span class="menu-nav-back-label">volver</span>
+            </button>
+            <div class="menu-nav-v2-col" id="menuNavV2Col" hidden>
+              <div class="personalize-v2-actions" id="menuNavV2Actions" role="group" aria-label="Acciones del estilo"></div>
+            </div>
+            <div class="menu-nav-save-col" id="menuNavSaveCol" hidden>
+              <p class="menu-nav-save-message" id="menuNavSaveThemeMessage" hidden></p>
+              <button type="button" class="menu-nav-save" id="menuNavSaveTheme">
+                <span class="menu-nav-back-label">guardar tema</span>
+              </button>
+            </div>
+          </div>
+          <div class="main-menu-content">
+            <div class="main-menu-list" id="mainMenuListPrimary">
+              <div class="menu-item" id="menuConoce">
+                <span class="menu-item-label">Conoce el proyecto</span>
+              </div>
+              <div class="menu-item" id="menuTour360">
+                <span class="menu-item-label">Experiencia 360°</span>
+              </div>
+              <div class="menu-item" id="menuViviendas">
+                <span class="menu-item-label">Viviendas</span>
+              </div>
+              <div class="menu-item" id="menuUbicacion">
+                <span class="menu-item-label">Ubicación</span>
+              </div>
+              <div class="menu-item" id="menuContacto">
+                <span class="menu-item-label">Contacto</span>
+              </div>
+            </div>
+            <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizar" style="display:none;"></div>
+            <div class="main-menu-list menu-personalize-panel" id="mainMenuListPersonalizarV2" style="display:none;"></div>
+            <div class="main-menu-list" id="mainMenuListProyecto" style="display:none;">
+              <div class="menu-item" id="menuDescripcion"><span class="menu-item-label">Descripción</span></div>
+              <div class="menu-item" id="menuVideo"><span class="menu-item-label">Video</span></div>
+              <div class="menu-item" id="menuRenders"><span class="menu-item-label">Galería</span></div>
+              <div class="menu-item" id="menuAmenidades"><span class="menu-item-label">Amenidades</span></div>
+              <div class="menu-item" id="menuAreas"><span class="menu-item-label">Áreas</span></div>
+              <div class="menu-item" id="menuEstado"><span class="menu-item-label">Estado del proyecto</span></div>
+              <div class="menu-item" id="menuConstructora"><span class="menu-item-label">Constructora</span></div>
+              <div class="menu-item" id="menuDescargas"><span class="menu-item-label">Descargas</span></div>
+            </div>
+            <div class="main-menu-list" id="mainMenuListContacto" style="display:none;"></div>
+          </div>
+          <div class="main-menu-profile-slot" id="mainMenuProfileSlot"></div>
+          <footer class="main-menu-footer" aria-label="Plataforma">
+            <span class="main-menu-brand">BOXIES</span>
+            <span class="main-menu-version">v 2.5.0</span>
+          </footer>
+        </div>
+      </div>
+      <div class="main-menu-glass-vignette" aria-hidden="true"></div>
+    </div>
+  </nav>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
   <script src="../js/shared/constants.js"></script>
@@ -106,6 +175,8 @@
   <script src="../js/auth/api/oauth.js?v=auth-unify-001"></script>
   <script src="../js/auth/visitor-auth.js"></script>
   <script src="../js/visitor-session.js"></script>
+  <script src="../js/visitor-menu.js?v=ws7244"></script>
+  <script src="../js/builder/quotation/quotation-main-menu-host.js?v=ws7244"></script>
 
   <!-- Theme AI (Builder engines) -->
   <script src="../js/theme-ai/theme-color-math.js"></script>
@@ -128,9 +199,9 @@
   <script src="../js/builder/engines/estructura-engine.js?v=ws5989"></script>
   <script src="../js/builder/engines/estructura-entity.js?v=ws6500"></script>
   <script src="../js/builder/engines/experiencia-snapshot.js?v=ws6501"></script>
-  <script src="../js/builder/engines/experiencia-engine.js?v=ws6501"></script>
+  <script src="../js/builder/engines/experiencia-engine.js?v=ws7244"></script>
   <script src="../js/builder/engines/experiencia-prototype.js?v=ws6303"></script>
-  <script src="../js/builder/engines/experiencia-canvas.js?v=ws7220"></script>
+  <script src="../js/builder/engines/experiencia-canvas.js?v=ws7244"></script>
   <script src="../js/builder/engines/architecture-engine.js?v=ws5948"></script>
   <script src="../js/builder/engines/branding-engine.js?v=ws54"></script>
   <script src="../js/builder/engines/media-engine.js?v=ws54"></script>
@@ -184,8 +255,8 @@
   <script src="../js/builder/quotation/quotation-router.js?v=ws7101"></script>
   <script src="../js/builder/quotation/quotation-config.js?v=ws7110"></script>
   <script src="../js/builder/quotation/quotation-hero.js?v=ws7229"></script>
-  <script src="../js/builder/quotation/quotation-experiencia-bridge.js?v=ws7236"></script>
-  <script src="../js/builder/quotation/quotation-editor.js?v=ws7238"></script>
+  <script src="../js/builder/quotation/quotation-experiencia-bridge.js?v=ws7244"></script>
+  <script src="../js/builder/quotation/quotation-editor.js?v=ws7244"></script>
   <script src="../js/builder/quotation/quotation-preview.js?v=ws7227"></script>
   <script src="../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
   <script src="../js/builder/quotation/quotation-runtime.js?v=ws7243"></script>

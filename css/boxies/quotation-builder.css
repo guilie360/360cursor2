@@ -2297,3 +2297,62 @@ body.quotation-canvas-first .builder-workspace,
 .qe-editor.qe-editor--external-library.is-focus .qe-col--inspector {
   display: none;
 }
+
+.qe-content__collapse-all {
+  appearance: none;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.qe-content__collapse-all:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+.qe-col__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.builder-exp-stage-text {
+  position: absolute;
+  appearance: none;
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: move;
+  z-index: 3;
+}
+.builder-exp-stage-text.is-selected {
+  border-color: #6fbf86;
+  box-shadow: 0 0 0 1px rgba(111, 191, 134, 0.55);
+}
+.builder-exp-stage-shape {
+  position: absolute;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  cursor: move;
+  z-index: 2;
+  min-width: 24px;
+  min-height: 24px;
+}
+.builder-exp-stage-shape.is-selected {
+  outline: 2px solid #6fbf86;
+  outline-offset: 2px;
+}
+

@@ -281,6 +281,12 @@ var QuotationExperienciaBridge = (function () {
       addButton: function () {
         return handle.addButton ? handle.addButton() : null;
       },
+      addText: function () {
+        return handle.addText ? handle.addText() : null;
+      },
+      addShape: function (kind) {
+        return handle.addShape ? handle.addShape(kind) : null;
+      },
       startHotspotDraw: function () {
         if (handle.startHotspotDraw) handle.startHotspotDraw();
       },

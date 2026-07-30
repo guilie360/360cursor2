@@ -1,5 +1,5 @@
 /**
- * Quotation Editor — V7.2.13 Showroom ExperienciaCanvas overlay (buttons + hotspots).
+ * Quotation Editor — V7.2.44 Builder UX (templates, elements, menu host).
  */
 var QuotationEditor = (function () {
   /* V7.2.38 — controlled test: isolate Editor from Runtime completely. */
@@ -9,7 +9,6 @@ var QuotationEditor = (function () {
   var CANVAS_DESIGN_H = 1080;
 
   var CONTENT_GROUPS = [
-    { id: 'hero', label: 'Hero' },
     { id: 'renders', label: 'Imágenes', accept: 'image/*', addLabel: '+ Agregar' },
     { id: 'videos', label: 'Videos', accept: 'video/*', addLabel: '+ Agregar' },
     { id: 'tours360', label: 'Tours 360', linkMode: true, addLabel: '+ Agregar enlace' },
@@ -61,7 +60,6 @@ var QuotationEditor = (function () {
 
   /* Tools by content group — unsupported tools are not rendered. */
   var TOOLS_BY_GROUP = {
-    hero: { buttons: true, hotspots: false },
     renders: { buttons: true, hotspots: true },
     videos: { buttons: true, hotspots: false },
     tours360: { buttons: true, hotspots: true },
@@ -487,7 +485,6 @@ var QuotationEditor = (function () {
       resourcePickerOpen: false,
       expEditMode: 'buttons',
       openGroups: {
-        hero: true,
         renders: true,
         videos: true,
         tours360: true,
@@ -497,6 +494,7 @@ var QuotationEditor = (function () {
         audio: false,
         models: false
       },
+      libraryGroupsCollapsed: false,
       openFolders: {},
       folderComposerGroup: null,
       tourComposer: { open: false, folderId: null },
@@ -513,9 +511,169 @@ var QuotationEditor = (function () {
   /** True after first successful hydrate/draft restore for loadedProjectId. */
   var documentReady = false;
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
+  var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
+  }
+
+  function templatesStorageKey(projectId) {
+    return TEMPLATE_PREFIX + String(
+      projectId ||
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+  }
+
+  function listSceneTemplates() {
+    var key = templatesStorageKey();
+    if (!key || key === TEMPLATE_PREFIX) return [];
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return [];
+      var list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveSceneTemplates(list) {
+    var key = templatesStorageKey();
+    if (!key || key === TEMPLATE_PREFIX) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(list || []));
+    } catch (e) { /* quota */ }
+  }
+
+  function stripMediaFromInteraction(ix) {
+    if (!ix || typeof ix !== 'object') return null;
+    var copy;
+    try { copy = JSON.parse(JSON.stringify(ix)); } catch (e) { return null; }
+    delete copy.mediaUrl;
+    delete copy.publicUrl;
+    delete copy.resourceId;
+    delete copy.archivoId;
+    delete copy.storagePath;
+    delete copy.assetId;
+    delete copy.previewUrl;
+    return copy;
+  }
+
+  function structureFromScene(scene) {
+    if (!scene) return null;
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) {}
+    }
+    var interactions = (Array.isArray(scene.interactions) ? scene.interactions : [])
+      .map(stripMediaFromInteraction)
+      .filter(Boolean);
+    var elements = (Array.isArray(scene.elements) ? scene.elements : []).map(function (el) {
+      if (!el) return null;
+      try { return JSON.parse(JSON.stringify(el)); } catch (e2) { return null; }
+    }).filter(Boolean);
+    return {
+      interactions: interactions,
+      elements: elements,
+      layout: {
+        type: scene.type || 'scene',
+        templateId: null
+      }
+    };
+  }
+
+  function createTemplateFromActiveScene() {
+    var scene = activeScene();
+    if (!scene) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('No hay escena activa para guardar como plantilla.');
+      }
+      return;
+    }
+    var name = window.prompt('Nombre de la plantilla', scene.name || 'Plantilla');
+    if (name == null) return;
+    name = String(name).trim();
+    if (!name) return;
+    var structure = structureFromScene(scene);
+    if (!structure) return;
+    var list = listSceneTemplates();
+    list.push({
+      id: nextId('tpl'),
+      name: name,
+      at: Date.now(),
+      structure: structure
+    });
+    saveSceneTemplates(list);
+    state.dockOpen = false;
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success('Plantilla “‘ + name + '” guardada.');
+    }
+    rerender();
+  }
+
+  function createSceneFromTemplate(templateId) {
+    var list = listSceneTemplates();
+    var tpl = null;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === String(templateId)) {
+        tpl = list[i];
+        break;
+      }
+    }
+    if (!tpl || !tpl.structure) return;
+    var structure = tpl.structure;
+    var interactions = (structure.interactions || []).map(function (ix) {
+      if (!ix) return null;
+      try {
+        var copy = JSON.parse(JSON.stringify(ix));
+        copy.id = nextId('ix');
+        copy.portId = copy.id;
+        return copy;
+      } catch (e) { return null; }
+    }).filter(Boolean);
+    var elements = (structure.elements || []).map(function (el) {
+      if (!el) return null;
+      try {
+        var copy = JSON.parse(JSON.stringify(el));
+        copy.id = nextId('el');
+        return copy;
+      } catch (e2) { return null; }
+    }).filter(Boolean);
+    var scene = {
+      id: nextId('sc'),
+      name: nextSceneName(),
+      type: 'scene',
+      templateId: null,
+      resourceId: null,
+      mediaUrl: null,
+      publicUrl: null,
+      coverModel: null,
+      elements: elements,
+      interactions: interactions,
+      buttons: [],
+      hotspots: []
+    };
+    state.scenes.push(scene);
+    state.activeSceneId = scene.id;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.sceneMenuOpen = false;
+    state.dockOpen = false;
+    state.resourcePickerOpen = false;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function toggleAllLibraryGroups() {
+    var collapse = !state.libraryGroupsCollapsed;
+    state.libraryGroupsCollapsed = collapse;
+    CONTENT_GROUPS.forEach(function (g) {
+      if (!g) return;
+      state.openGroups[g.id] = !collapse;
+    });
+    rerender();
   }
 
   function persistDraft() {
@@ -891,9 +1049,6 @@ var QuotationEditor = (function () {
   }
 
   function groupBodyHtml(group) {
-    var actions = '';
-    var tree = '';
-
     if (group.prepared) {
       return '' +
         '<div class="qe-content__body">' +
@@ -901,48 +1056,34 @@ var QuotationEditor = (function () {
         '</div>';
     }
 
-    if (group.id === 'hero') {
-      var heroItems = contentInGroup('hero');
-      tree = heroItems.length
-        ? ('<div class="qe-content__items">' +
-            heroItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
-          '</div>')
-        : '';
-      /* Library only — uploads never assign to scenes. */
-      actions = '' +
-        '<button type="button" class="qe-content__add" data-qe-file-add="hero" data-qe-folder="">+ Agregar imagen</button>' +
-        '<button type="button" class="qe-content__add" data-qe-file-add="hero" data-qe-folder="" data-qe-hero-media="video">+ Agregar video</button>' +
-        '<input type="file" accept="image/*" hidden data-qe-file-input="hero" multiple>' +
-        '<input type="file" accept="video/*" hidden data-qe-file-input="hero-video" multiple>';
-    } else {
-      var rootItems = rootContentInGroup(group.id);
-      var folders = foldersInGroup(group.id);
-      var rootHtml = rootItems.length
-        ? ('<div class="qe-content__items">' +
-            rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
-          '</div>')
-        : '';
-      var foldersHtml = folders.map(function (f) { return folderBlockHtml(f, group); }).join('');
-      tree = rootHtml + foldersHtml;
+    var rootItems = rootContentInGroup(group.id);
+    var folders = foldersInGroup(group.id);
+    var rootHtml = rootItems.length
+      ? ('<div class="qe-content__items">' +
+          rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
+        '</div>')
+      : '';
+    var foldersHtml = folders.map(function (f) { return folderBlockHtml(f, group); }).join('');
+    var tree = rootHtml + foldersHtml;
+    var actions;
 
-      if (group.linkMode) {
-        actions = '' +
-          '<button type="button" class="qe-content__add" data-qe-folder-new="' +
-            escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
-          folderComposerHtml(group.id) +
-          '<button type="button" class="qe-content__add" data-qe-tour-add data-qe-folder="">+ Agregar enlace</button>' +
-          tourComposerHtml(null);
-      } else {
-        actions = '' +
-          '<button type="button" class="qe-content__add" data-qe-folder-new="' +
-            escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
-          folderComposerHtml(group.id) +
-          '<button type="button" class="qe-content__add" data-qe-file-add="' +
-            escapeHtml(group.id) + '" data-qe-folder="">' +
-            escapeHtml(group.addLabel || '+ Agregar') + '</button>' +
-          '<input type="file" accept="' + escapeHtml(group.accept || 'image/*') + '" hidden' +
-            ' data-qe-file-input="' + escapeHtml(group.id) + '" multiple>';
-      }
+    if (group.linkMode) {
+      actions = '' +
+        '<button type="button" class="qe-content__add" data-qe-folder-new="' +
+          escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
+        folderComposerHtml(group.id) +
+        '<button type="button" class="qe-content__add" data-qe-tour-add data-qe-folder="">+ Agregar enlace</button>' +
+        tourComposerHtml(null);
+    } else {
+      actions = '' +
+        '<button type="button" class="qe-content__add" data-qe-folder-new="' +
+          escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
+        folderComposerHtml(group.id) +
+        '<button type="button" class="qe-content__add" data-qe-file-add="' +
+          escapeHtml(group.id) + '" data-qe-folder="">' +
+          escapeHtml(group.addLabel || '+ Agregar') + '</button>' +
+        '<input type="file" accept="' + escapeHtml(group.accept || 'image/*') + '" hidden' +
+          ' data-qe-file-input="' + escapeHtml(group.id) + '" multiple>';
     }
 
     return '' +
@@ -981,6 +1122,10 @@ var QuotationEditor = (function () {
             '<h2 class="qe-col__title">Recursos</h2>' +
             '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
           '</div>' +
+          '<button type="button" class="qe-content__collapse-all" data-qe-toggle-all-groups' +
+            ' title="' + (state.libraryGroupsCollapsed ? 'Desplegar categorías' : 'Plegar categorías') + '">' +
+            (state.libraryGroupsCollapsed ? 'Desplegar' : 'Plegar') +
+          '</button>' +
         '</div>' +
         '<div class="qe-content__list" data-qe-content-list>' + groups + '</div>' +
       '</aside>';
@@ -1243,14 +1388,25 @@ var QuotationEditor = (function () {
         '</div>';
     }
     if (state.sceneMenuOpen === 'templates') {
+      var tpls = listSceneTemplates();
+      var items;
+      if (!tpls.length) {
+        items = '<p class="qe-dock__menu-hint">No hay plantillas guardadas.</p>';
+      } else {
+        items = tpls.map(function (tpl) {
+          return '' +
+            '<button type="button" class="qe-scenes__menu-item" data-qe-scene-from-template="' +
+              escapeHtml(tpl.id) + '" role="menuitem">' +
+              escapeHtml(tpl.name || 'Plantilla') +
+            '</button>';
+        }).join('');
+      }
       return '' +
         '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
           '<button type="button" class="qe-scenes__menu-item qe-scenes__menu-item--back" data-qe-scene-menu-root role="menuitem">' +
             '← Nueva escena' +
           '</button>' +
-          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="hero-default" role="menuitem">' +
-            'Hero Default' +
-          '</button>' +
+          items +
         '</div>';
     }
     return '';
@@ -1298,6 +1454,9 @@ var QuotationEditor = (function () {
         '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' +
           '<button type="button" class="qe-dock__menu-item" data-qe-add-button role="menuitem">Botón</button>' +
           '<button type="button" class="qe-dock__menu-item" data-qe-add-hotspot role="menuitem">Hotspot</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-text role="menuitem">Texto</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-shape="SHAPE_RECT" role="menuitem">Forma → Rectángulo</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-shape="SHAPE_CIRCLE" role="menuitem">Forma → Círculo</button>' +
         '</div>';
     }
     var stylesMenu = state.dockOpen === 'styles'
@@ -1310,10 +1469,8 @@ var QuotationEditor = (function () {
     var menuMenu = state.dockOpen === 'menu'
       ? (
         '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' +
-          '<button type="button" class="qe-dock__menu-item' + (state.focusMode ? ' is-active' : '') + '"' +
-            ' data-qe-focus role="menuitem">' +
-            (state.focusMode ? 'Salir de Focus' : 'Focus') +
-          '</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-open-main-menu role="menuitem">Abrir menú</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-create-template role="menuitem">Crear plantilla</button>' +
         '</div>'
       )
       : '';
@@ -2332,6 +2489,12 @@ var QuotationEditor = (function () {
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
         expOverlay.addButton();
+      } else if (act.type === 'addText') {
+        expOverlay.setEditMode('buttons');
+        if (expOverlay.addText) expOverlay.addText();
+      } else if (act.type === 'addShape') {
+        expOverlay.setEditMode('buttons');
+        if (expOverlay.addShape) expOverlay.addShape(act.kind || 'SHAPE_RECT');
       } else if (act.type === 'startHotspotDraw') {
         expOverlay.setEditMode('hotspots');
         expOverlay.startHotspotDraw();
@@ -2668,6 +2831,44 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function addTextElement() {
+    if (!activeScene()) return;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'buttons';
+    state.dockOpen = false;
+    markDirtyLocal();
+    if (expOverlay) {
+      refreshInspectorOnly();
+      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
+      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      expOverlay.setEditMode('buttons');
+      if (expOverlay.addText) expOverlay.addText();
+      return;
+    }
+    pendingExpAction = { type: 'addText' };
+    rerender();
+  }
+
+  function addShapeElement(kind) {
+    if (!activeScene()) return;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'buttons';
+    state.dockOpen = false;
+    markDirtyLocal();
+    if (expOverlay) {
+      refreshInspectorOnly();
+      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
+      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      expOverlay.setEditMode('buttons');
+      if (expOverlay.addShape) expOverlay.addShape(kind || 'SHAPE_RECT');
+      return;
+    }
+    pendingExpAction = { type: 'addShape', kind: kind || 'SHAPE_RECT' };
+    rerender();
+  }
+
   function patchSelected(mutator) {
     var found = findSelectedItem();
     if (found) {
@@ -2882,16 +3083,44 @@ var QuotationEditor = (function () {
       btn.addEventListener('click', function () {
         var mode = btn.getAttribute('data-qe-scene-new');
         if (mode === 'empty') createScene({});
-        else if (mode === 'hero-default' || mode === 'template') {
-          createScene({ templateId: 'hero-default' });
-        }
       });
     });
 
-    var focusBtn = editor.querySelector('[data-qe-focus]');
-    if (focusBtn) {
-      focusBtn.addEventListener('click', function () {
-        toggleFocusMode();
+    editor.querySelectorAll('[data-qe-scene-from-template]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        createSceneFromTemplate(btn.getAttribute('data-qe-scene-from-template'));
+      });
+    });
+
+    var toggleAllBtn = qOne('[data-qe-toggle-all-groups]');
+    if (toggleAllBtn) {
+      toggleAllBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        toggleAllLibraryGroups();
+      });
+    }
+
+    var openMenuBtn = editor.querySelector('[data-qe-open-main-menu]');
+    if (openMenuBtn) {
+      openMenuBtn.addEventListener('click', function () {
+        state.dockOpen = false;
+        if (typeof QuotationMainMenuHost !== 'undefined' && QuotationMainMenuHost.open) {
+          QuotationMainMenuHost.open();
+        } else if (typeof VisitorMenu !== 'undefined' && VisitorMenu.handleExplorar) {
+          if (typeof window.grantMenuOpenToken === 'function') window.grantMenuOpenToken(6000);
+          VisitorMenu.handleExplorar();
+        } else if (typeof goTo === 'function') {
+          if (typeof window.grantMenuOpenToken === 'function') window.grantMenuOpenToken(6000);
+          goTo('menu-primary');
+        }
+        rerender();
+      });
+    }
+
+    var createTplBtn = editor.querySelector('[data-qe-create-template]');
+    if (createTplBtn) {
+      createTplBtn.addEventListener('click', function () {
+        createTemplateFromActiveScene();
       });
     }
 
@@ -3107,6 +3336,13 @@ var QuotationEditor = (function () {
     if (addBtn) addBtn.addEventListener('click', addButton);
     var addHs = editor.querySelector('[data-qe-add-hotspot]');
     if (addHs) addHs.addEventListener('click', addHotspot);
+    var addTextBtn = editor.querySelector('[data-qe-add-text]');
+    if (addTextBtn) addTextBtn.addEventListener('click', addTextElement);
+    editor.querySelectorAll('[data-qe-add-shape]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        addShapeElement(btn.getAttribute('data-qe-add-shape') || 'SHAPE_RECT');
+      });
+    });
 
     wireInspectorFields(editor);
     } /* wireEditor */

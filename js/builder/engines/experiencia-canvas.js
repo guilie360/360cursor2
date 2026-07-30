@@ -506,6 +506,10 @@ var ExperienciaCanvas = (function () {
   }
 
   function buttonPreviewClass(btn) {
+    var t = String((btn && btn.type) || 'BUTTON').toUpperCase();
+    if (t === 'TEXT') return 'builder-exp-stage-text';
+    if (t === 'SHAPE_RECT') return 'builder-exp-stage-shape builder-exp-stage-shape--rect';
+    if (t === 'SHAPE_CIRCLE') return 'builder-exp-stage-shape builder-exp-stage-shape--circle';
     var style = (btn && btn.style) || 'chip';
     return 'builder-exp-ui-btn is-style-' + style +
       (btn && btn.icon ? ' has-icon' : '');
@@ -3935,13 +3939,22 @@ var ExperienciaCanvas = (function () {
         return {
           id: b.id,
           portId: b.portId,
+          type: b.type || 'BUTTON',
           label: b.label,
           x: layout.x,
           y: layout.y,
           style: b.style,
           icon: b.icon,
           rotation: b.rotation,
-          visible: b.visible
+          visible: b.visible,
+          width: b.width,
+          height: b.height,
+          fill: b.fill,
+          stroke: b.stroke,
+          strokeWidth: b.strokeWidth,
+          borderRadius: b.borderRadius,
+          fontSize: b.fontSize,
+          color: b.color
         };
       });
       var selIds = Array.isArray(canvas().selectedButtonIds)
@@ -3975,6 +3988,36 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
+        var t = String(b.type || 'BUTTON').toUpperCase();
+        var rot = Number(b.rotation) || 0;
+        var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
+          '--btn-rot:' + rot + 'deg;' +
+          'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
+        if (t === 'TEXT') {
+          styleBits += 'font-size:' + (Number(b.fontSize) || 28) + 'px;' +
+            'color:' + (b.color || '#ffffff') + ';';
+          return '<button type="button" class="' + buttonPreviewClass(b) +
+            (selSet[String(b.id)] ? ' is-selected' : '') +
+            (b.visible === false ? ' is-invisible' : '') + '"' +
+            ' data-exp-stage-btn="' + esc(b.id) + '"' +
+            ' style="' + styleBits + '">' +
+            esc(b.label != null ? String(b.label) : 'Texto') +
+          '</button>';
+        }
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+          styleBits += 'width:' + (Number(b.width) || 12) + '%;' +
+            'height:' + (Number(b.height) || 8) + '%;' +
+            'background:' + (b.fill || 'rgba(255,255,255,0.18)') + ';' +
+            'border:' + (Number(b.strokeWidth) || 2) + 'px solid ' +
+              (b.stroke || 'rgba(255,255,255,0.65)') + ';' +
+            'border-radius:' + (b.borderRadius != null ? Number(b.borderRadius) : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px;';
+          return '<button type="button" class="' + buttonPreviewClass(b) +
+            (selSet[String(b.id)] ? ' is-selected' : '') +
+            (b.visible === false ? ' is-invisible' : '') + '"' +
+            ' data-exp-stage-btn="' + esc(b.id) + '"' +
+            ' aria-label="' + esc(b.label || t) + '"' +
+            ' style="' + styleBits + '"></button>';
+        }
         var glyph = buttonIconGlyph(b.icon);
         var text = b.label != null ? String(b.label) : '';
         var label;
@@ -3985,10 +4028,6 @@ var ExperienciaCanvas = (function () {
         } else {
           label = glyph || text;
         }
-        var rot = Number(b.rotation) || 0;
-        var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
-          '--btn-rot:' + rot + 'deg;' +
-          'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (selSet[String(b.id)] ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') +
@@ -5891,8 +5930,9 @@ var ExperienciaCanvas = (function () {
 
     renderAll();
 
-    /* V6.5.01 — offer restore if a richer snapshot exists */
-    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.checkAndOfferRecovery) {
+    /* V6.5.01 — offer restore if a richer snapshot exists (full Experiencia only).
+     * V7.2.44 — Quotation Builder overlay must never show flow-recovery modal. */
+    if (!overlayMode && typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.checkAndOfferRecovery) {
       ExperienciaSnapshot.checkAndOfferRecovery(state, {
         host: workspace || rootEl || document.body
       }).then(function (res) {
@@ -6214,6 +6254,38 @@ var ExperienciaCanvas = (function () {
         persist();
         requestAnimationFrame(recomputeOverlayLayout);
         return btn;
+      },
+      addText: function () {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !ExperienciaEngine.addSceneText) return null;
+        canvas().editMode = 'buttons';
+        hotspotDraw = null;
+        var el = ExperienciaEngine.addSceneText(state, sceneId);
+        if (el) {
+          canvas().selectedButtonId = el.id;
+          canvas().selectedButtonIds = [String(el.id)];
+        }
+        renderAll();
+        paintInspector();
+        persist();
+        requestAnimationFrame(recomputeOverlayLayout);
+        return el;
+      },
+      addShape: function (kind) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !ExperienciaEngine.addSceneShape) return null;
+        canvas().editMode = 'buttons';
+        hotspotDraw = null;
+        var el = ExperienciaEngine.addSceneShape(state, sceneId, kind);
+        if (el) {
+          canvas().selectedButtonId = el.id;
+          canvas().selectedButtonIds = [String(el.id)];
+        }
+        renderAll();
+        paintInspector();
+        persist();
+        requestAnimationFrame(recomputeOverlayLayout);
+        return el;
       },
       startHotspotDraw: function () {
         canvas().editMode = 'hotspots';

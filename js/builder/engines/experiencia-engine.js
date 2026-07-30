@@ -125,6 +125,9 @@ var ExperienciaEngine = (function () {
         { id: 'el-selector', label: 'Selector · Plantas', kind: '_embed', interactionType: 'SELECTOR', actionType: 'floor-selector', defaultLabel: 'Plantas', group: 'controls' },
         { id: 'el-toggle-3d2d', label: 'Toggle · 3D / 2D', kind: '_embed', interactionType: 'TOGGLE_3D2D', actionType: 'toggle-3d2d', defaultLabel: '3D / 2D', group: 'controls' },
         { id: 'el-button', label: 'Botón / control', kind: '_embed', interactionType: 'BUTTON', defaultLabel: 'Botón', group: 'controls' },
+        { id: 'el-text', label: 'Texto', kind: '_embed', interactionType: 'TEXT', defaultLabel: 'Texto', group: 'controls' },
+        { id: 'el-shape-rect', label: 'Forma · Rectángulo', kind: '_embed', interactionType: 'SHAPE_RECT', defaultLabel: 'Rectángulo', group: 'controls' },
+        { id: 'el-shape-circle', label: 'Forma · Círculo', kind: '_embed', interactionType: 'SHAPE_CIRCLE', defaultLabel: 'Círculo', group: 'controls' },
         { id: 'el-info', label: 'Información / detalles', kind: '_embed', interactionType: 'CUSTOM', actionType: 'show-info', defaultLabel: 'Información', group: 'controls' }
       ]
     },
@@ -158,6 +161,9 @@ var ExperienciaEngine = (function () {
   var INTERACTION_TYPE_LABEL = {
     HOTSPOT: 'Hotspot',
     BUTTON: 'Botón',
+    TEXT: 'Texto',
+    SHAPE_RECT: 'Rectángulo',
+    SHAPE_CIRCLE: 'Círculo',
     SELECTOR: 'Selector',
     UNIT: 'Unidad',
     UNITS_FLOOR: 'Unidades',
@@ -363,6 +369,40 @@ var ExperienciaEngine = (function () {
     return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON');
   }
 
+  /* V7.2.44 — free-position overlays on buttons stage (buttons + text + shapes). */
+  function isSceneFreeOverlayInteraction(ix) {
+    if (!ix) return false;
+    var t = String(ix.type || '').toUpperCase();
+    return t === 'BUTTON' || t === 'TEXT' || t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE';
+  }
+
+  function ensureFreeOverlayDefaults(ix) {
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) return ix;
+    var t = String(ix.type || '').toUpperCase();
+    if (t === 'BUTTON') return ensureButtonVisualDefaults(ix);
+    if (!ix.config || typeof ix.config !== 'object') ix.config = {};
+    if (ix.x == null) ix.x = 50;
+    if (ix.y == null) ix.y = 50;
+    if (ix.positionMode !== 'anchor') ix.positionMode = 'free';
+    if (ix.positionInitialized == null) ix.positionInitialized = true;
+    if (ix.rotation == null || isNaN(Number(ix.rotation))) ix.rotation = 0;
+    if (t === 'TEXT') {
+      if (ix.label == null || ix.label === '') ix.label = 'Texto';
+      if (ix.fontSize == null) ix.fontSize = 28;
+      if (ix.color == null) ix.color = '#ffffff';
+    }
+    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      if (ix.label == null) ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo';
+      if (ix.width == null) ix.width = 12;
+      if (ix.height == null) ix.height = t === 'SHAPE_CIRCLE' ? 12 : 8;
+      if (ix.fill == null) ix.fill = 'rgba(255,255,255,0.18)';
+      if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.65)';
+      if (ix.strokeWidth == null) ix.strokeWidth = 2;
+      if (ix.borderRadius == null) ix.borderRadius = t === 'SHAPE_CIRCLE' ? 999 : 8;
+    }
+    return ix;
+  }
+
   function clampPercent(v, fallback) {
     var n = Number(v);
     if (isNaN(n)) n = fallback != null ? fallback : 50;
@@ -485,14 +525,14 @@ var ExperienciaEngine = (function () {
       delete n.buttons;
     }
     n.config.interactions.forEach(function (ix) {
-      if (isSceneButtonInteraction(ix)) ensureButtonVisualDefaults(ix);
+      if (isSceneFreeOverlayInteraction(ix)) ensureFreeOverlayDefaults(ix);
     });
     return listSceneButtonInteractions(n);
   }
 
   function listSceneButtonInteractions(n) {
     if (!n || !n.config) return [];
-    return (n.config.interactions || []).filter(isSceneButtonInteraction);
+    return (n.config.interactions || []).filter(isSceneFreeOverlayInteraction);
   }
 
   function resolveButtonTarget(state, sceneId, ix) {
@@ -530,11 +570,12 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix) {
-    ensureButtonVisualDefaults(ix);
+    ensureFreeOverlayDefaults(ix);
     var layout = resolveButtonLayout(ix, 1000, 1000);
     return {
       id: ix.id,
       portId: ix.portId || ix.id,
+      type: String(ix.type || 'BUTTON').toUpperCase(),
       label: ix.label != null ? String(ix.label) : '',
       x: layout.x,
       y: layout.y,
@@ -545,12 +586,20 @@ var ExperienciaEngine = (function () {
       rotation: ix.rotation != null ? Number(ix.rotation) : 0,
       visible: ix.enabled !== false,
       enabled: ix.enabled !== false,
-      targetNodeId: resolveButtonTarget(state, n.id, ix),
+      targetNodeId: isSceneButtonInteraction(ix) ? resolveButtonTarget(state, n.id, ix) : null,
       positionMode: ix.positionMode || 'free',
       anchor: ix.anchor || 'center',
       marginX: Number(ix.marginX) || 0,
       marginY: Number(ix.marginY) || 0,
       positionInitialized: !!ix.positionInitialized,
+      width: ix.width != null ? Number(ix.width) : null,
+      height: ix.height != null ? Number(ix.height) : null,
+      fill: ix.fill || null,
+      stroke: ix.stroke || null,
+      strokeWidth: ix.strokeWidth != null ? Number(ix.strokeWidth) : null,
+      borderRadius: ix.borderRadius != null ? Number(ix.borderRadius) : null,
+      fontSize: ix.fontSize != null ? Number(ix.fontSize) : null,
+      color: ix.color || null,
       _ix: ix
     };
   }
@@ -657,6 +706,47 @@ var ExperienciaEngine = (function () {
     return buttonViewModel(state, n, ix);
   }
 
+  /* V7.2.44 — TEXT / SHAPE free overlays (Quotation Builder). */
+  function addSceneText(state, nodeId) {
+    var n = getNode(state, nodeId);
+    if (!n || !isButtonsEditableNode(n)) return null;
+    var menuItem = findAddElementItem('el-text') || {
+      interactionType: 'TEXT',
+      defaultLabel: 'Texto',
+      group: 'controls'
+    };
+    var ix = addElementFromMenu(state, nodeId, menuItem);
+    if (!ix || ix.error) return null;
+    ix.x = 50;
+    ix.y = 42;
+    ix.positionInitialized = true;
+    ix.positionMode = 'free';
+    ensureFreeOverlayDefaults(ix);
+    return buttonViewModel(state, n, ix);
+  }
+
+  function addSceneShape(state, nodeId, kind) {
+    var n = getNode(state, nodeId);
+    if (!n || !isButtonsEditableNode(n)) return null;
+    var t = String(kind || 'SHAPE_RECT').toUpperCase();
+    if (t !== 'SHAPE_RECT' && t !== 'SHAPE_CIRCLE') t = 'SHAPE_RECT';
+    var menuId = t === 'SHAPE_CIRCLE' ? 'el-shape-circle' : 'el-shape-rect';
+    var menuItem = findAddElementItem(menuId) || {
+      interactionType: t,
+      defaultLabel: t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo',
+      group: 'controls'
+    };
+    var ix = addElementFromMenu(state, nodeId, menuItem);
+    if (!ix || ix.error) return null;
+    ix.type = t;
+    ix.x = 50;
+    ix.y = 58;
+    ix.positionInitialized = true;
+    ix.positionMode = 'free';
+    ensureFreeOverlayDefaults(ix);
+    return buttonViewModel(state, n, ix);
+  }
+
   function updateSceneButton(state, nodeId, buttonId, patch) {
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
@@ -714,7 +804,19 @@ var ExperienciaEngine = (function () {
   }
 
   function setSceneButtonPosition(state, nodeId, buttonId, x, y) {
-    return updateSceneButton(state, nodeId, buttonId, { x: x, y: y });
+    var n = getNode(state, nodeId);
+    var ix = getInteraction(n, buttonId);
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
+    if (isSceneButtonInteraction(ix)) {
+      return updateSceneButton(state, nodeId, buttonId, { x: x, y: y });
+    }
+    ix.x = clampPercent(x, ix.x);
+    ix.y = clampPercent(y, ix.y);
+    ix.positionInitialized = true;
+    ix.positionMode = 'free';
+    ensureFreeOverlayDefaults(ix);
+    syncScenePorts(n);
+    return buttonViewModel(state, n, ix);
   }
 
   function mirrorSceneButton(state, nodeId, buttonId) {
@@ -1239,7 +1341,7 @@ var ExperienciaEngine = (function () {
     var n = getNode(state, nodeId);
     if (!n || !n.config) return false;
     var ix = getInteraction(n, buttonId);
-    if (!ix || !isSceneButtonInteraction(ix)) return false;
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) return false;
     /* Defensive: never allow button delete to remove canvas nodes */
     var exp = ensureState(state);
     var nodeCount = (exp.nodes || []).length;
@@ -2047,6 +2149,20 @@ var ExperienciaEngine = (function () {
       else if (cfg.animation != null) ix.animation = cfg.animation;
       if (partial.color != null) ix.color = partial.color;
       else if (cfg.color != null) ix.color = cfg.color;
+      if (partial.width != null) ix.width = partial.width;
+      else if (cfg.width != null) ix.width = cfg.width;
+      if (partial.height != null) ix.height = partial.height;
+      else if (cfg.height != null) ix.height = cfg.height;
+      if (partial.fill != null) ix.fill = partial.fill;
+      else if (cfg.fill != null) ix.fill = cfg.fill;
+      if (partial.stroke != null) ix.stroke = partial.stroke;
+      else if (cfg.stroke != null) ix.stroke = cfg.stroke;
+      if (partial.strokeWidth != null) ix.strokeWidth = partial.strokeWidth;
+      else if (cfg.strokeWidth != null) ix.strokeWidth = cfg.strokeWidth;
+      if (partial.borderRadius != null) ix.borderRadius = partial.borderRadius;
+      else if (cfg.borderRadius != null) ix.borderRadius = cfg.borderRadius;
+      if (partial.fontSize != null) ix.fontSize = partial.fontSize;
+      else if (cfg.fontSize != null) ix.fontSize = cfg.fontSize;
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
@@ -5495,6 +5611,8 @@ var ExperienciaEngine = (function () {
     listSceneButtons: listSceneButtons,
     getSceneButton: getSceneButton,
     addSceneButton: addSceneButton,
+    addSceneText: addSceneText,
+    addSceneShape: addSceneShape,
     updateSceneButton: updateSceneButton,
     setSceneButtonPosition: setSceneButtonPosition,
     removeSceneButton: removeSceneButton,
