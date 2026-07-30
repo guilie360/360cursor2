@@ -624,12 +624,35 @@ var ProyectosApi = (function () {
     if (!lib || typeof lib !== 'object') return null;
     var content = Array.isArray(lib.content) ? lib.content : [];
     var folders = Array.isArray(lib.folders) ? lib.folders : [];
+    console.log('[QE-LIB V7.2.37] sanitizeLibrary:IN', {
+      contentLength: content.length,
+      content: content.map(function (c) {
+        if (!c) return null;
+        return {
+          id: c.id,
+          archivoId: c.archivoId || null,
+          storagePath: c.storagePath || null,
+          provider: c.provider || null,
+          publicUrl: c.publicUrl || c.remoteUrl || null,
+          uploadStatus: c.uploadStatus || null
+        };
+      })
+    });
     var outContent = content.map(function (c) {
       if (!c || typeof c !== 'object') return null;
       var id = heroText(c.id);
       if (!id) return null;
       var pub = heroText(c.publicUrl) || heroText(c.remoteUrl) || heroText(c.previewUrl) || null;
-      if (!pub || pub.indexOf('blob:') === 0) return null;
+      if (!pub || pub.indexOf('blob:') === 0) {
+        console.log('[QE-LIB V7.2.37] sanitizeLibrary:DROP item (no publicUrl)', {
+          id: id,
+          archivoId: c.archivoId || null,
+          storagePath: c.storagePath || null,
+          provider: c.provider || null,
+          publicUrl: pub
+        });
+        return null;
+      }
       return {
         id: id,
         group: heroText(c.group) || 'renders',
@@ -656,11 +679,16 @@ var ProyectosApi = (function () {
         name: heroText(f.name) || 'Carpeta'
       };
     }).filter(Boolean);
-    return {
+    var out = {
       version: Number(lib.version) || 1,
       content: outContent,
       folders: outFolders
     };
+    console.log('[QE-LIB V7.2.37] sanitizeLibrary:OUT', {
+      contentLength: outContent.length,
+      library: out
+    });
+    return out;
   }
 
   function sanitizeHeroQuotation(payload) {
@@ -718,8 +746,13 @@ var ProyectosApi = (function () {
       .maybeSingle();
     if (result.error) throw mapDbError(result.error, 'Error cargando el hero de la cotización');
     var raw = result.data && result.data.hero_quotation;
+    console.log('[QE-LIB V7.2.37] fetchHeroQuotation:RAW DB hero_quotation.library');
+    console.log(JSON.stringify(raw && raw.library, null, 2));
     if (!raw || typeof raw !== 'object') return null;
-    return sanitizeHeroQuotation(raw);
+    var sanitized = sanitizeHeroQuotation(raw);
+    console.log('[QE-LIB V7.2.37] fetchHeroQuotation:AFTER sanitizeHeroQuotation.library');
+    console.log(JSON.stringify(sanitized && sanitized.library, null, 2));
+    return sanitized;
   }
 
   async function updateHeroQuotation(proyectoId, payload) {
@@ -741,7 +774,11 @@ var ProyectosApi = (function () {
     if (!merged.library && prev && typeof prev === 'object' && prev.library) {
       merged.library = prev.library;
     }
+    console.log('[QE-LIB V7.2.37] updateHeroQuotation:merged.library BEFORE sanitize');
+    console.log(JSON.stringify(merged.library, null, 2));
     var data = sanitizeHeroQuotation(merged);
+    console.log('[QE-LIB V7.2.37] updateHeroQuotation:data.library AFTER sanitize (written to DB)');
+    console.log(JSON.stringify(data.library, null, 2));
 
     var result;
     if (existing.data && existing.data.proyecto_id) {
@@ -760,6 +797,8 @@ var ProyectosApi = (function () {
     }
     if (result.error) throw mapDbError(result.error, 'Error guardando el hero de la cotización');
     var saved = result.data && result.data.hero_quotation;
+    console.log('[QE-LIB V7.2.37] updateHeroQuotation:RAW DB response hero_quotation.library');
+    console.log(JSON.stringify(saved && saved.library, null, 2));
     return saved && typeof saved === 'object' ? sanitizeHeroQuotation(saved) : data;
   }
 

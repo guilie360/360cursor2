@@ -219,6 +219,36 @@ var QuotationEditor = (function () {
     return u || null;
   }
 
+  /** V7.2.37 TEMP audit — remove after root cause found. */
+  function qeLibAudit(step, item) {
+    var rows = (state.content || []).map(function (c) {
+      if (!c) return null;
+      return {
+        id: c.id,
+        archivoId: c.archivoId || null,
+        storagePath: c.storagePath || null,
+        provider: c.provider || null,
+        publicUrl: c.publicUrl || null,
+        uploadStatus: c.uploadStatus || null
+      };
+    }).filter(Boolean);
+    var focus = item
+      ? {
+        id: item.id,
+        archivoId: item.archivoId || null,
+        storagePath: item.storagePath || null,
+        provider: item.provider || null,
+        publicUrl: item.publicUrl || null,
+        uploadStatus: item.uploadStatus || null
+      }
+      : null;
+    console.log('[QE-LIB V7.2.37]', step, {
+      contentLength: state.content ? state.content.length : 0,
+      focus: focus,
+      content: rows
+    });
+  }
+
   /**
    * Library persistence gate — publicUrl is optional.
    * previewUrl / blob-only local files are NOT persistable.
@@ -309,13 +339,16 @@ var QuotationEditor = (function () {
 
   async function uploadLibraryItem(item) {
     if (!item) return null;
+    qeLibAudit('uploadLibraryItem:enter', item);
     if (publicUrlOf(item) && !item.file) {
       item.uploadStatus = 'synced';
       item.provider = item.provider || 'bunny';
+      qeLibAudit('uploadLibraryItem:already-synced', item);
       return item;
     }
     if (!item.file) {
       item.uploadStatus = publicUrlOf(item) ? 'synced' : 'missing';
+      qeLibAudit('uploadLibraryItem:no-file', item);
       return item;
     }
     var projectId = resolveProjectId();
@@ -331,6 +364,12 @@ var QuotationEditor = (function () {
     }
     item.uploadStatus = 'uploading';
     await ensureQuotationBunnyStructure();
+    console.log('[QE-LIB V7.2.37] BunnyMediaApi.uploadAndSync:before', {
+      projectId: projectId,
+      slug: slug,
+      itemId: item.id,
+      fileName: item.file && item.file.name
+    });
     var result = await BunnyMediaApi.uploadAndSync(
       null,
       projectId,
@@ -343,8 +382,15 @@ var QuotationEditor = (function () {
         scope: 'media'
       }
     );
+    console.log('[QE-LIB V7.2.37] BunnyMediaApi.uploadAndSync:response', {
+      publicUrl: result && result.publicUrl,
+      storagePath: result && result.storagePath,
+      archivoId: result && result.archivo && result.archivo.id,
+      result: result
+    });
     applyBunnyResultToItem(item, result);
     syncScenesForResource(item);
+    qeLibAudit('uploadLibraryItem:after-bunny', item);
     if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onResourceAdded) {
       QuotationPersistAudit.onResourceAdded(item, {
         projectId: projectId,
@@ -2503,6 +2549,7 @@ var QuotationEditor = (function () {
       ensureItems(item.id);
       lastId = item.id;
       created.push(item);
+      qeLibAudit('1-select-file:added', item);
     });
     if (!lastId) return;
     state.selectedContentId = lastId;
@@ -2512,6 +2559,7 @@ var QuotationEditor = (function () {
     if (folderId) state.openFolders[folderId] = true;
     markDirtyLocal();
     rerender();
+    qeLibAudit('1-select-file:after-rerender');
 
     /* V7.2.29 — Upload immediately via BunnyMediaApi (sole media provider). */
     (function uploadCreated(list) {
@@ -2521,14 +2569,16 @@ var QuotationEditor = (function () {
           return uploadLibraryItem(item).then(function () {
             markDirtyLocal();
             rerender();
+            qeLibAudit('2-after-uploadLibraryItem', item);
           });
         });
       });
       chain.catch(function (err) {
-        console.error('[QuotationEditor] upload library', err);
+        console.error('[QE-LIB V7.2.37] upload library FAILED', err);
         if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
           AdminNotify.error((err && err.message) || 'No se pudo subir el archivo a Storage.');
         }
+        qeLibAudit('2-upload-FAILED');
         rerender();
       });
     })(created);
@@ -3388,11 +3438,17 @@ var QuotationEditor = (function () {
     loadPromise = ProyectosApi.fetchHeroQuotation(id)
       .then(function (hq) {
         if (documentReady && loadedProjectId === id) return hq;
+        console.log('[QE-LIB V7.2.37] 8-load:fetchHeroQuotation.library BEFORE hydrate');
+        console.log(JSON.stringify(hq && hq.library, null, 2));
+        qeLibAudit('8-load:before-hydrate');
         /*
          * V7.2.28 — DB is SSOT after save (canvas + library with publicUrl).
          * Do not prefer session draft over network: drafts held dead blob: URLs.
          */
         hydrateFromHeroQuotation(hq, editorProjectCtx);
+        qeLibAudit('9-load:after-hydrateFromHeroQuotation');
+        console.log('[QE-LIB V7.2.37] 9-load:state.content.length after hydrate',
+          state.content ? state.content.length : 0);
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
@@ -3400,9 +3456,11 @@ var QuotationEditor = (function () {
       })
       .catch(function () {
         if (documentReady && loadedProjectId === id) return null;
+        console.log('[QE-LIB V7.2.37] 8-load:fetch FAILED → draft/empty');
         if (!restoreDraft(id)) {
           hydrateFromHeroQuotation(null, editorProjectCtx);
         }
+        qeLibAudit('9-load:after-catch-hydrate');
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
@@ -3433,9 +3491,13 @@ var QuotationEditor = (function () {
 
     /* Ensure every library File is in Storage before serializing. */
     await ensureLibraryUploaded();
+    qeLibAudit('3-commit:after-ensureLibraryUploaded');
 
     var doc = serializeDocument();
     var library = serializeLibrary();
+    console.log('[QE-LIB V7.2.37] 4-BEFORE-SAVE heroQuotation.library EXACT JSON');
+    console.log(JSON.stringify(library, null, 2));
+    qeLibAudit('4-commit:after-serializeLibrary');
     prepareLivePreview(editorProjectCtx || { id: projectId });
 
     var entry = entryCoverScene();
@@ -3486,7 +3548,23 @@ var QuotationEditor = (function () {
       };
     payload.library = library;
 
+    console.log('[QE-LIB V7.2.37] 5-commit:payload.library before updateHeroQuotation');
+    console.log(JSON.stringify(payload.library, null, 2));
+
     var saved = await ProyectosApi.updateHeroQuotation(projectId, payload);
+    console.log('[QE-LIB V7.2.37] 6-commit:updateHeroQuotation returned library');
+    console.log(JSON.stringify(saved && saved.library, null, 2));
+
+    /* Immediate raw+sanitized readback from Supabase. */
+    try {
+      var stored = await ProyectosApi.fetchHeroQuotation(projectId);
+      console.log('[QE-LIB V7.2.37] 7-AFTER-SAVE re-read fetchHeroQuotation.library EXACT JSON');
+      console.log(JSON.stringify(stored && stored.library, null, 2));
+      qeLibAudit('7-commit:after-readback-state.content');
+    } catch (eReadLib) {
+      console.error('[QE-LIB V7.2.37] 7-AFTER-SAVE readback FAILED', eReadLib);
+    }
+
     loadedProjectId = String(projectId);
     documentReady = true;
     persistDraft();
@@ -3502,12 +3580,12 @@ var QuotationEditor = (function () {
     if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onSaveReadBack &&
         typeof ProyectosApi.fetchHeroQuotation === 'function') {
       try {
-        var stored = await ProyectosApi.fetchHeroQuotation(projectId);
+        var storedAudit = await ProyectosApi.fetchHeroQuotation(projectId);
         QuotationPersistAudit.onSaveReadBack(
           projectId,
           editorProjectCtx && editorProjectCtx.slug,
           doc,
-          stored
+          storedAudit
         );
       } catch (eRead) {
         console.warn('[QE-AUDIT] D.readback failed', eRead);
