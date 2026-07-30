@@ -962,7 +962,10 @@ var QuotationEditor = (function () {
         (on ? ' is-selected' : '') + '"' +
         ' role="button" tabindex="0"' +
         ' data-qe-content="' + escapeHtml(item.id) + '"' +
-        (canAssign ? ' draggable="true" data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') + '>' +
+        ' draggable="true"' +
+        ' data-qe-drag-lib="' + escapeHtml(item.id) + '"' +
+        ' data-qe-lib-group="' + escapeHtml(item.group || '') + '"' +
+        (canAssign ? ' data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') + '>' +
         '<span class="qe-lib__thumb-wrap">' +
           '<span class="' + thumbClass(item) + '" aria-hidden="true"' +
             (thumbUrl
@@ -1013,7 +1016,9 @@ var QuotationEditor = (function () {
     }
     return '' +
       '<div class="qe-folder' + (open ? ' is-open' : '') + '" data-qe-folder-block="' +
-        escapeHtml(folder.id) + '">' +
+        escapeHtml(folder.id) + '"' +
+        ' data-qe-lib-drop-folder="' + escapeHtml(folder.id) + '"' +
+        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
         '<button type="button" class="qe-folder__toggle" data-qe-folder-toggle="' +
           escapeHtml(folder.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="qe-folder__chevron" aria-hidden="true"></span>' +
@@ -1087,7 +1092,9 @@ var QuotationEditor = (function () {
     }
 
     return '' +
-      '<div class="qe-content__body">' +
+      '<div class="qe-content__body"' +
+        ' data-qe-lib-drop-root' +
+        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
         tree +
         '<div class="qe-content__actions">' + actions + '</div>' +
       '</div>';
@@ -1251,13 +1258,11 @@ var QuotationEditor = (function () {
         '<div class="qe-scene-media" data-qe-drop-scene>' +
           '<video class="qe-scene-media__video" src="' + escapeHtml(url) + '"' +
             ' muted loop playsinline autoplay></video>' +
-          '<button type="button" class="qe-scene-media__change" data-qe-open-resource-picker>Cambiar archivo</button>' +
         '</div>';
     }
     return '' +
       '<div class="qe-scene-media" data-qe-drop-scene>' +
         '<img class="qe-scene-media__img" src="' + escapeHtml(url) + '" alt="">' +
-        '<button type="button" class="qe-scene-media__change" data-qe-open-resource-picker>Cambiar archivo</button>' +
       '</div>';
   }
 
@@ -2659,6 +2664,23 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  /* Same-category only: mutate folderId, never item.group / media / URLs. */
+  function moveLibraryItemToFolder(contentId, targetFolderId) {
+    var item = contentById(contentId);
+    if (!item) return false;
+    var nextFolderId = targetFolderId ? String(targetFolderId) : null;
+    if (nextFolderId) {
+      var folder = folderById(nextFolderId);
+      if (!folder || String(folder.group) !== String(item.group)) return false;
+    }
+    var cur = item.folderId ? String(item.folderId) : null;
+    if (cur === nextFolderId) return false;
+    item.folderId = nextFolderId;
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
   function markDirtyLocal() {
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
       BuilderDirtyState.mark();
@@ -2942,13 +2964,6 @@ var QuotationEditor = (function () {
         });
       });
 
-      qAll('[data-qe-open-resource-picker]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          openResourcePicker();
-        });
-      });
       var closePicker = qOne('[data-qe-close-resource-picker]');
       if (closePicker) {
         closePicker.addEventListener('click', function () { closeResourcePicker(); });
@@ -2965,26 +2980,85 @@ var QuotationEditor = (function () {
         });
       });
 
-      qAll('[data-qe-drag-resource]').forEach(function (el) {
+      qAll('[data-qe-drag-lib], [data-qe-drag-resource]').forEach(function (el) {
         el.addEventListener('dragstart', function (e) {
           if (e.target && e.target.closest && e.target.closest('[data-qe-remove-resource]')) {
             e.preventDefault();
             return;
           }
-          var id = el.getAttribute('data-qe-drag-resource');
-          if (!id || !e.dataTransfer) return;
-          e.dataTransfer.setData('text/qe-resource', id);
-          e.dataTransfer.setData('text/plain', id);
-          e.dataTransfer.effectAllowed = 'copy';
+          var libId = el.getAttribute('data-qe-drag-lib') || el.getAttribute('data-qe-drag-resource');
+          var sceneId = el.getAttribute('data-qe-drag-resource');
+          var group = el.getAttribute('data-qe-lib-group') || '';
+          if (!libId || !e.dataTransfer) return;
+          e.dataTransfer.setData('text/qe-lib-move', libId);
+          e.dataTransfer.setData('text/qe-lib-group', group);
+          if (sceneId) {
+            e.dataTransfer.setData('text/qe-resource', sceneId);
+            e.dataTransfer.setData('text/plain', sceneId);
+            e.dataTransfer.effectAllowed = 'copyMove';
+          } else {
+            e.dataTransfer.setData('text/plain', libId);
+            e.dataTransfer.effectAllowed = 'move';
+          }
           el.classList.add('is-dragging');
         });
         el.addEventListener('dragend', function () {
           el.classList.remove('is-dragging');
+          qAll('.is-lib-drop-target').forEach(function (z) {
+            z.classList.remove('is-lib-drop-target');
+          });
+        });
+      });
+
+      function libDropGroupOf(zone) {
+        return zone.getAttribute('data-qe-lib-drop-group') || '';
+      }
+
+      qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
+        zone.addEventListener('dragover', function (e) {
+          var dragEl = document.querySelector('.qe-lib__item.is-dragging');
+          var dragGroup = dragEl
+            ? (dragEl.getAttribute('data-qe-lib-group') || '')
+            : '';
+          var dropGroup = libDropGroupOf(zone);
+          if (!dragGroup || !dropGroup || dragGroup !== dropGroup) {
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+            zone.classList.remove('is-lib-drop-target');
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          zone.classList.add('is-lib-drop-target');
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        });
+        zone.addEventListener('dragleave', function (e) {
+          if (e.relatedTarget && zone.contains(e.relatedTarget)) return;
+          zone.classList.remove('is-lib-drop-target');
+        });
+        zone.addEventListener('drop', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          zone.classList.remove('is-lib-drop-target');
+          var id = (e.dataTransfer && (
+            e.dataTransfer.getData('text/qe-lib-move') ||
+            e.dataTransfer.getData('text/plain')
+          )) || '';
+          if (!id) return;
+          var item = contentById(id);
+          var dropGroup = libDropGroupOf(zone);
+          if (!item || String(item.group) !== String(dropGroup)) return;
+          var folderId = zone.getAttribute('data-qe-lib-drop-folder') || null;
+          moveLibraryItemToFolder(id, folderId);
         });
       });
 
       qAll('[data-qe-drop-scene]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
+          var dragEl = document.querySelector('.qe-lib__item.is-dragging');
+          if (dragEl && !dragEl.getAttribute('data-qe-drag-resource')) {
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
           zone.classList.add('is-drop-target');

@@ -7103,6 +7103,22 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   margin: 0;
 }
 
+/* V7.2.46 — inspector selects never transparent */
+.builder-exp-btn-panel select,
+.builder-exp-btn-panel .builder-exp-btn-select,
+.builder-exp-hs-panel select,
+.builder-exp-inspector select,
+.builder-exp-btn-panel .ws-select__trigger,
+.builder-exp-hs-panel .ws-select__trigger,
+.builder-field select {
+  background: #141414 !important;
+  background-color: #141414 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .builder-exp-btn-panel input[type="range"] {
   position: relative;
   z-index: 1;
