@@ -1,15 +1,31 @@
 /**
- * Quotation Editor — V7.1.04 optional folders inside content groups.
+ * Quotation Editor — V7.2.02 Quotation Canvas Evolution (Phase 1).
+ * Project library (Recursos) + scenes bar + free canvas + contextual inspector + Focus.
  * Folders organize only; selection of a resource still drives Canvas / Inspector.
  */
 var QuotationEditor = (function () {
   var CONTENT_GROUPS = [
     { id: 'hero', label: 'Hero' },
-    { id: 'renders', label: 'Renders', accept: 'image/*', addLabel: '+ Agregar' },
+    { id: 'renders', label: 'Imágenes', accept: 'image/*', addLabel: '+ Agregar' },
     { id: 'videos', label: 'Videos', accept: 'video/*', addLabel: '+ Agregar' },
     { id: 'tours360', label: 'Tours 360', linkMode: true, addLabel: '+ Agregar enlace' },
-    { id: 'plantas2d', label: 'Plantas 2D', accept: 'image/*', addLabel: '+ Agregar' },
-    { id: 'plantas3d', label: 'Plantas 3D', accept: 'image/*', addLabel: '+ Agregar' }
+    { id: 'plantas2d', label: 'Planos 2D', accept: 'image/*', addLabel: '+ Agregar' },
+    { id: 'plantas3d', label: 'Planos 3D', accept: 'image/*', addLabel: '+ Agregar' },
+    { id: 'pdf', label: 'PDF', accept: 'application/pdf,.pdf', addLabel: '+ Agregar' },
+    { id: 'audio', label: 'Audio', prepared: true },
+    { id: 'models', label: 'Modelos', prepared: true }
+  ];
+
+  /* Canvas element types — infrastructure for free composition (Phase 1). */
+  var ELEMENT_TYPES = [
+    { id: 'text', label: 'Texto' },
+    { id: 'button', label: 'Botón' },
+    { id: 'hotspot', label: 'Hotspot' },
+    { id: 'image', label: 'Imagen' },
+    { id: 'video', label: 'Video' },
+    { id: 'container', label: 'Contenedor' },
+    { id: 'popup', label: 'Popup' },
+    { id: 'icon', label: 'Icono' }
   ];
 
   var ACTION_OPTIONS = [
@@ -46,8 +62,13 @@ var QuotationEditor = (function () {
     videos: { buttons: true, hotspots: false },
     tours360: { buttons: true, hotspots: true },
     plantas2d: { buttons: true, hotspots: true },
-    plantas3d: { buttons: true, hotspots: true }
+    plantas3d: { buttons: true, hotspots: true },
+    pdf: { buttons: true, hotspots: false },
+    audio: { buttons: false, hotspots: false },
+    models: { buttons: false, hotspots: false }
   };
+
+  var focusEscBound = false;
 
   var uid = 1;
   function nextId(prefix) {
@@ -70,7 +91,14 @@ var QuotationEditor = (function () {
 
   function groupLabel(groupId) {
     var g = groupMeta(groupId);
-    return g ? g.label : (groupId || 'Contenido');
+    return g ? g.label : (groupId || 'Recurso');
+  }
+
+  function elementTypeLabel(typeId) {
+    for (var i = 0; i < ELEMENT_TYPES.length; i++) {
+      if (ELEMENT_TYPES[i].id === typeId) return ELEMENT_TYPES[i].label;
+    }
+    return typeId || 'Elemento';
   }
 
   function toolsFor(content) {
@@ -124,18 +152,32 @@ var QuotationEditor = (function () {
   }
 
   function createEmptyState() {
+    var heroScene = {
+      id: nextId('sc'),
+      name: 'Hero',
+      type: 'hero',
+      elements: []
+    };
     return {
       content: [],
       folders: [],
+      scenes: [heroScene],
+      activeSceneId: heroScene.id,
       selectedContentId: null,
       selectedItem: null,
+      selectedElementId: null,
+      focusMode: false,
+      sceneMenuOpen: false,
       openGroups: {
         hero: true,
         renders: true,
         videos: true,
         tours360: true,
         plantas2d: true,
-        plantas3d: true
+        plantas3d: true,
+        pdf: true,
+        audio: false,
+        models: false
       },
       openFolders: {},
       folderComposerGroup: null,
@@ -147,6 +189,103 @@ var QuotationEditor = (function () {
 
   var state = createEmptyState();
   var rootEl = null;
+
+  function sceneById(id) {
+    if (!id || !state.scenes) return null;
+    for (var i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i].id === id) return state.scenes[i];
+    }
+    return null;
+  }
+
+  function activeScene() {
+    ensureScenes();
+    return sceneById(state.activeSceneId) || state.scenes[0] || null;
+  }
+
+  function ensureScenes() {
+    if (!state.scenes || !state.scenes.length) {
+      var hero = {
+        id: nextId('sc'),
+        name: 'Hero',
+        type: 'hero',
+        elements: []
+      };
+      state.scenes = [hero];
+      state.activeSceneId = hero.id;
+    }
+    if (!sceneById(state.activeSceneId)) {
+      state.activeSceneId = state.scenes[0].id;
+    }
+  }
+
+  function nextSceneName() {
+    var n = 1;
+    state.scenes.forEach(function (sc) {
+      var m = String(sc.name || '').match(/^Escena\s+(\d+)/i);
+      if (m) {
+        var num = parseInt(m[1], 10);
+        if (num >= n) n = num + 1;
+      }
+    });
+    return 'Escena ' + (n < 10 ? '0' + n : String(n));
+  }
+
+  function buildHeroTemplateElements() {
+    return [
+      {
+        id: nextId('el'),
+        type: 'container',
+        role: 'background',
+        props: { label: 'Fondo', fill: '#050505' }
+      },
+      {
+        id: nextId('el'),
+        type: 'image',
+        role: 'logo',
+        props: { label: 'Logo', text: 'LOGO' }
+      },
+      {
+        id: nextId('el'),
+        type: 'text',
+        role: 'title',
+        props: { label: 'Título', text: 'Proyecto', variant: 'title' }
+      },
+      {
+        id: nextId('el'),
+        type: 'text',
+        role: 'subtitle',
+        props: { label: 'Subtítulo', text: 'Cotización interactiva', variant: 'subtitle' }
+      },
+      {
+        id: nextId('el'),
+        type: 'button',
+        role: 'explore',
+        props: { label: 'Explorar', action: null }
+      },
+      {
+        id: nextId('el'),
+        type: 'button',
+        role: 'start',
+        props: { label: 'Iniciar', action: null }
+      },
+      {
+        id: nextId('el'),
+        type: 'icon',
+        role: 'menu',
+        props: { label: 'Menú' }
+      }
+    ];
+  }
+
+  function findSelectedElement() {
+    var scene = activeScene();
+    if (!scene || !state.selectedElementId || !scene.elements) return null;
+    for (var i = 0; i < scene.elements.length; i++) {
+      if (scene.elements[i].id === state.selectedElementId) return scene.elements[i];
+    }
+    return null;
+  }
 
   function contentById(id) {
     for (var i = 0; i < state.content.length; i++) {
@@ -210,14 +349,13 @@ var QuotationEditor = (function () {
     var found = findSelectedItem();
     if (!found) {
       state.selectedItem = null;
-      return;
-    }
-    if (found.kind === 'hotspot' && !tools.hotspots) {
+    } else if (found.kind === 'hotspot' && !tools.hotspots) {
       state.selectedItem = null;
-      return;
-    }
-    if (found.kind === 'button' && !tools.buttons) {
+    } else if (found.kind === 'button' && !tools.buttons) {
       state.selectedItem = null;
+    }
+    if (state.selectedElementId && !findSelectedElement()) {
+      state.selectedElementId = null;
     }
   }
 
@@ -227,6 +365,7 @@ var QuotationEditor = (function () {
     else if (content.group === 'hero') kind = 'hero';
     else if (content.group === 'videos' || content.media === 'video') kind = 'video';
     else if (content.group === 'tours360') kind = 'pano360';
+    else if (content.group === 'pdf' || content.media === 'pdf') kind = 'image';
     else if (content.group === 'plantas2d' || content.group === 'plantas3d') kind = 'image';
     return 'qe-lib__thumb qe-lib__thumb--' + kind;
   }
@@ -325,6 +464,13 @@ var QuotationEditor = (function () {
     var actions = '';
     var tree = '';
 
+    if (group.prepared) {
+      return '' +
+        '<div class="qe-content__body">' +
+          '<p class="qe-content__prepared">Preparado para próximas versiones.</p>' +
+        '</div>';
+    }
+
     if (group.id === 'hero') {
       var heroItems = contentInGroup('hero');
       tree = heroItems.length
@@ -387,17 +533,17 @@ var QuotationEditor = (function () {
             escapeHtml(group.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
             '<span class="qe-content__chevron" aria-hidden="true"></span>' +
             '<span class="qe-content__group-label">' + escapeHtml(group.label) + '</span>' +
-            '<span class="qe-content__count">' + count + '</span>' +
+            '<span class="qe-content__count">' + (group.prepared ? '—' : count) + '</span>' +
           '</button>' +
           (open ? groupBodyHtml(group) : '') +
         '</section>';
     }).join('');
 
     return '' +
-      '<aside class="qe-col qe-col--library" aria-label="Contenido">' +
+      '<aside class="qe-col qe-col--library" aria-label="Recursos">' +
         '<div class="qe-col__head">' +
-          '<h2 class="qe-col__title">Contenido</h2>' +
-          '<p class="qe-col__hint">Recursos del proyecto</p>' +
+          '<h2 class="qe-col__title">Recursos</h2>' +
+          '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
         '</div>' +
         '<div class="qe-content__list" data-qe-content-list>' + groups + '</div>' +
       '</aside>';
@@ -405,7 +551,15 @@ var QuotationEditor = (function () {
 
   function mediaPreviewHtml(content) {
     if (!content) {
-      return '<div class="qe-canvas__empty">Selecciona un contenido.</div>';
+      return '<div class="qe-canvas__empty">Selecciona un recurso o crea una escena.</div>';
+    }
+
+    if (content.group === 'pdf' || content.media === 'pdf') {
+      return '' +
+        '<div class="qe-canvas__mock qe-canvas__mock--image">' +
+          '<div class="qe-canvas__mock-title">' + escapeHtml(content.name || 'PDF') + '</div>' +
+          '<div class="qe-canvas__mock-sub">Documento PDF</div>' +
+        '</div>';
     }
 
     if (content.group === 'tours360') {
@@ -467,6 +621,50 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function sceneElementHtml(el) {
+    var on = state.selectedElementId === el.id;
+    var props = el.props || {};
+    var role = el.role || '';
+    var base = 'qe-el qe-el--' + escapeHtml(el.type || 'text') +
+      (role ? ' qe-el--role-' + escapeHtml(role) : '') +
+      (on ? ' is-selected' : '');
+    var label = props.label || props.text || elementTypeLabel(el.type);
+    var inner = '';
+
+    if (el.type === 'container' && role === 'background') {
+      return '' +
+        '<div class="' + base + '" data-qe-element="' + escapeHtml(el.id) + '"' +
+          ' aria-label="Fondo"></div>';
+    }
+    if (el.type === 'image' && role === 'logo') {
+      inner = '<span class="qe-el__logo">' + escapeHtml(props.text || 'LOGO') + '</span>';
+    } else if (el.type === 'text') {
+      inner = '<span class="qe-el__text qe-el__text--' +
+        escapeHtml(props.variant || 'body') + '">' +
+        escapeHtml(props.text || label) + '</span>';
+    } else if (el.type === 'button') {
+      inner = '<span class="qe-el__btn">' + escapeHtml(props.label || 'Botón') + '</span>';
+    } else if (el.type === 'icon') {
+      inner = '<span class="qe-el__icon" aria-hidden="true"></span>' +
+        '<span class="qe-el__icon-label">' + escapeHtml(props.label || 'Menú') + '</span>';
+    } else {
+      inner = '<span class="qe-el__fallback">' + escapeHtml(label) + '</span>';
+    }
+
+    return '' +
+      '<button type="button" class="' + base + '" data-qe-element="' +
+        escapeHtml(el.id) + '">' + inner + '</button>';
+  }
+
+  function sceneCompositionHtml(scene) {
+    if (!scene || !scene.elements || !scene.elements.length) return '';
+    return '' +
+      '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
+        escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
+        scene.elements.map(sceneElementHtml).join('') +
+      '</div>';
+  }
+
   function canvasChipsHtml(content) {
     if (!content) return '';
     var tools = toolsFor(content);
@@ -500,6 +698,51 @@ var QuotationEditor = (function () {
     return '<div class="qe-canvas__chips" data-qe-chips>' + chips.join('') + '</div>';
   }
 
+  function stageBodyHtml(content, scene) {
+    var hasElements = scene && scene.elements && scene.elements.length;
+    if (hasElements) {
+      return sceneCompositionHtml(scene) + canvasChipsHtml(content);
+    }
+    return mediaPreviewHtml(content) + canvasChipsHtml(content);
+  }
+
+  function scenesBarHtml() {
+    ensureScenes();
+    var tabs = state.scenes.map(function (sc) {
+      var on = sc.id === state.activeSceneId;
+      return '' +
+        '<button type="button" class="qe-scenes__tab' + (on ? ' is-active' : '') + '"' +
+          ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
+          ' title="' + escapeHtml(sc.type + ' · ' + sc.id) + '">' +
+          escapeHtml(sc.name || 'Escena') +
+        '</button>';
+    }).join('');
+
+    var menu = state.sceneMenuOpen
+      ? ('' +
+        '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
+          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="empty" role="menuitem">' +
+            'Escena vacía' +
+          '</button>' +
+          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="template" role="menuitem">' +
+            'Desde plantilla' +
+          '</button>' +
+          '<p class="qe-scenes__menu-hint">El selector de plantillas llegará en una próxima versión.</p>' +
+        '</div>')
+      : '';
+
+    return '' +
+      '<div class="qe-scenes" data-qe-scenes>' +
+        '<div class="qe-scenes__tabs">' + tabs + '</div>' +
+        '<div class="qe-scenes__add-wrap">' +
+          '<button type="button" class="qe-scenes__add' + (state.sceneMenuOpen ? ' is-open' : '') + '"' +
+            ' data-qe-scene-menu-toggle aria-label="Nueva escena" aria-expanded="' +
+            (state.sceneMenuOpen ? 'true' : 'false') + '">+</button>' +
+          menu +
+        '</div>' +
+      '</div>';
+  }
+
   function canvasToolbarHtml(content) {
     var tools = toolsFor(content);
     var actions = [];
@@ -515,13 +758,21 @@ var QuotationEditor = (function () {
 
   function canvasHtml() {
     var content = selectedContent();
+    var scene = activeScene();
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
+        scenesBarHtml() +
         '<div class="qe-col__head qe-col__head--canvas">' +
           '<div>' +
             '<h2 class="qe-col__title">Canvas</h2>' +
+            '<p class="qe-col__hint">' +
+              escapeHtml((scene && scene.name) || 'Escena') +
+              (scene ? ' · ' + escapeHtml(scene.type || 'scene') : '') +
+            '</p>' +
           '</div>' +
           '<div class="qe-canvas__head-right">' +
+            '<button type="button" class="qe-canvas__focus' + (state.focusMode ? ' is-active' : '') + '"' +
+              ' data-qe-focus aria-pressed="' + (state.focusMode ? 'true' : 'false') + '">Focus</button>' +
             (content
               ? ('<span class="qe-canvas__badge">' + escapeHtml(groupLabel(content.group)) + '</span>')
               : '') +
@@ -529,19 +780,26 @@ var QuotationEditor = (function () {
           '</div>' +
         '</div>' +
         '<div class="qe-canvas__stage" data-qe-canvas>' +
-          mediaPreviewHtml(content) +
-          canvasChipsHtml(content) +
+          stageBodyHtml(content, scene) +
         '</div>' +
       '</section>';
   }
 
   function destinationOptionsHtml(selectedId) {
-    return state.content.map(function (c) {
-      return '<option value="' + escapeHtml(c.id) + '"' +
-        (c.id === selectedId ? ' selected' : '') + '>' +
-        escapeHtml(c.name || groupLabel(c.group)) +
+    ensureScenes();
+    var sceneOpts = state.scenes.map(function (sc) {
+      return '<option value="' + escapeHtml(sc.id) + '"' +
+        (sc.id === selectedId ? ' selected' : '') + '>' +
+        escapeHtml(sc.name || 'Escena') +
       '</option>';
     }).join('');
+    var contentOpts = state.content.map(function (c) {
+      return '<option value="' + escapeHtml(c.id) + '"' +
+        (c.id === selectedId ? ' selected' : '') + '>' +
+        escapeHtml((c.name || groupLabel(c.group)) + ' (recurso)') +
+      '</option>';
+    }).join('');
+    return sceneOpts + contentOpts;
   }
 
   function segmentHtml(options, selectedId, dataAttr) {
@@ -567,7 +825,7 @@ var QuotationEditor = (function () {
         '<select id="qeItemDest" data-qe-item-dest>' +
           destinationOptionsHtml(item.targetSceneId || state.selectedContentId) +
         '</select>' +
-        '<p class="qe-field__hint">Contenido</p>' +
+        '<p class="qe-field__hint">Escena o recurso</p>' +
       '</div>' +
       (showDest ? '<div class="qe-insp__rule" aria-hidden="true"></div>' : '') +
       '<div class="qe-field">' +
@@ -623,7 +881,20 @@ var QuotationEditor = (function () {
   function idleInspectorHtml(content) {
     var tools = toolsFor(content);
     var bag = content ? ensureItems(content.id) : { buttons: [], hotspots: [] };
+    var scene = activeScene();
     var pickRows = [];
+    if (scene && scene.elements && scene.elements.length) {
+      scene.elements.forEach(function (el) {
+        var props = el.props || {};
+        pickRows.push(
+          '<button type="button" class="qe-insp__pick" data-qe-element="' +
+            escapeHtml(el.id) + '">' +
+            '<span>' + escapeHtml(elementTypeLabel(el.type)) + '</span><strong>' +
+            escapeHtml(props.label || props.text || el.role || 'Elemento') + '</strong>' +
+          '</button>'
+        );
+      });
+    }
     if (tools.buttons) {
       bag.buttons.forEach(function (b) {
         pickRows.push(
@@ -644,9 +915,7 @@ var QuotationEditor = (function () {
         );
       });
     }
-    var emptyMsg = tools.hotspots
-      ? 'Selecciona un botón o hotspot para comenzar a editar.'
-      : 'Selecciona un botón para comenzar a editar.';
+    var emptyMsg = 'Selecciona un elemento, botón o hotspot para editar.';
     return '' +
       '<div class="qe-insp__idle">' +
         '<div class="qe-insp__detail-kicker">Propiedades</div>' +
@@ -657,22 +926,51 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function elementInspectorHtml(el) {
+    var props = el.props || {};
+    var textVal = props.text != null ? props.text : (props.label || '');
+    var showText = el.type === 'text' || el.type === 'button' || el.type === 'icon' ||
+      el.type === 'image';
+    return '' +
+      '<div class="qe-insp__editor" data-qe-detail data-qe-element-detail>' +
+        '<div class="qe-insp__detail-kicker">' + escapeHtml(elementTypeLabel(el.type)) + '</div>' +
+        '<div class="qe-field">' +
+          '<div class="qe-field__label">Rol</div>' +
+          '<p class="qe-field__hint">' + escapeHtml(el.role || '—') + '</p>' +
+        '</div>' +
+        (showText
+          ? ('' +
+            '<div class="qe-field">' +
+              '<label for="qeElText">Texto</label>' +
+              '<input type="text" id="qeElText" data-qe-el-text maxlength="120" value="' +
+                escapeHtml(textVal) + '">' +
+            '</div>')
+          : '') +
+        '<p class="qe-field__hint">Sin enlaces ni acciones en esta fase — solo composición editable.</p>' +
+      '</div>';
+  }
+
   function inspectorHtml() {
     clearInvalidSelection();
     var content = selectedContent();
     var found = findSelectedItem();
+    var el = findSelectedElement();
+    var scene = activeScene();
     var body;
     if (found && found.kind === 'button') body = buttonInspectorHtml(found.data);
     else if (found && found.kind === 'hotspot') body = hotspotInspectorHtml(found.data);
+    else if (el) body = elementInspectorHtml(el);
     else body = idleInspectorHtml(content);
+
+    var hint = content
+      ? (content.name || groupLabel(content.group))
+      : (scene ? scene.name : 'Sin selección');
 
     return '' +
       '<aside class="qe-col qe-col--inspector" aria-label="Inspector">' +
         '<div class="qe-col__head">' +
           '<h2 class="qe-col__title">Inspector</h2>' +
-          '<p class="qe-col__hint">' +
-            (content ? escapeHtml(content.name || groupLabel(content.group)) : 'Sin contenido') +
-          '</p>' +
+          '<p class="qe-col__hint">' + escapeHtml(hint) + '</p>' +
         '</div>' +
         '<div class="qe-insp__scroll">' + body + '</div>' +
       '</aside>';
@@ -680,8 +978,10 @@ var QuotationEditor = (function () {
 
   function render() {
     clearInvalidSelection();
+    ensureScenes();
     return '' +
-      '<div class="quotation-step quotation-step--editor qe-editor" data-qe-editor>' +
+      '<div class="quotation-step quotation-step--editor qe-editor' +
+        (state.focusMode ? ' is-focus' : '') + '" data-qe-editor>' +
         contentColumnHtml() +
         canvasHtml() +
         inspectorHtml() +
@@ -702,6 +1002,8 @@ var QuotationEditor = (function () {
     if (!contentById(id)) return;
     state.selectedContentId = id;
     state.selectedItem = null;
+    state.selectedElementId = null;
+    state.sceneMenuOpen = false;
     rerender();
   }
 
@@ -711,6 +1013,79 @@ var QuotationEditor = (function () {
     if (kind === 'button' && !tools.buttons) return;
     if (kind === 'hotspot' && !tools.hotspots) return;
     state.selectedItem = { kind: kind, id: id };
+    state.selectedElementId = null;
+    rerender();
+  }
+
+  function selectElement(id) {
+    var scene = activeScene();
+    if (!scene || !scene.elements) return;
+    var found = false;
+    for (var i = 0; i < scene.elements.length; i++) {
+      if (scene.elements[i].id === id) { found = true; break; }
+    }
+    if (!found) return;
+    state.selectedElementId = id;
+    state.selectedItem = null;
+    rerender();
+  }
+
+  function selectScene(id) {
+    if (!sceneById(id)) return;
+    state.activeSceneId = id;
+    state.selectedElementId = null;
+    state.sceneMenuOpen = false;
+    rerender();
+  }
+
+  function createScene(opts) {
+    opts = opts || {};
+    var fromTemplate = opts.fromTemplate === true;
+    var scene = {
+      id: nextId('sc'),
+      name: fromTemplate ? 'Hero' : nextSceneName(),
+      type: fromTemplate ? 'hero' : 'scene',
+      elements: fromTemplate ? buildHeroTemplateElements() : []
+    };
+    state.scenes.push(scene);
+    state.activeSceneId = scene.id;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.sceneMenuOpen = false;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function setFocusMode(on) {
+    state.focusMode = !!on;
+    state.sceneMenuOpen = false;
+    rerender();
+  }
+
+  function toggleFocusMode() {
+    setFocusMode(!state.focusMode);
+  }
+
+  function onFocusEsc(e) {
+    if (!state.focusMode) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setFocusMode(false);
+    }
+  }
+
+  function bindFocusEsc() {
+    if (focusEscBound) return;
+    document.addEventListener('keydown', onFocusEsc);
+    focusEscBound = true;
+  }
+
+  function patchSelectedElement(mutator) {
+    var el = findSelectedElement();
+    if (!el) return;
+    if (!el.props) el.props = {};
+    mutator(el);
+    markDirtyLocal();
     rerender();
   }
 
@@ -726,7 +1101,7 @@ var QuotationEditor = (function () {
 
   function createFolder(groupId, name) {
     var meta = groupMeta(groupId);
-    if (!meta || groupId === 'hero') return;
+    if (!meta || groupId === 'hero' || meta.prepared) return;
     var label = String(name || '').trim();
     if (!label) return;
     var folder = {
@@ -784,7 +1159,7 @@ var QuotationEditor = (function () {
 
   function addFilesToGroup(groupId, fileList, folderId) {
     var meta = groupMeta(groupId);
-    if (!meta || meta.linkMode || groupId === 'hero') return;
+    if (!meta || meta.linkMode || meta.prepared || groupId === 'hero') return;
     if (folderId && !folderById(folderId)) folderId = null;
     var files = Array.prototype.slice.call(fileList || []);
     if (!files.length) return;
@@ -793,11 +1168,17 @@ var QuotationEditor = (function () {
       var name = nameFromFile(file);
       if (!name) return;
       var isVideo = groupId === 'videos' || (file.type && file.type.indexOf('video/') === 0);
-      if (groupId === 'videos' && file.type && file.type.indexOf('video/') !== 0 &&
-          !/\.(mp4|webm|mov|m4v|ogg)$/i.test(name)) {
-        return;
-      }
-      if (groupId !== 'videos' && file.type && file.type.indexOf('image/') !== 0 &&
+      var isPdf = groupId === 'pdf' ||
+        (file.type === 'application/pdf') ||
+        /\.pdf$/i.test(name);
+      if (groupId === 'pdf') {
+        if (!isPdf) return;
+      } else if (groupId === 'videos') {
+        if (file.type && file.type.indexOf('video/') !== 0 &&
+            !/\.(mp4|webm|mov|m4v|ogg)$/i.test(name)) {
+          return;
+        }
+      } else if (file.type && file.type.indexOf('image/') !== 0 &&
           !/\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i.test(name)) {
         return;
       }
@@ -806,9 +1187,10 @@ var QuotationEditor = (function () {
         group: groupId,
         folderId: folderId || null,
         name: name,
-        media: isVideo ? 'video' : 'image',
-        previewUrl: URL.createObjectURL(file),
-        remoteUrl: null
+        media: isPdf ? 'pdf' : (isVideo ? 'video' : 'image'),
+        previewUrl: isPdf ? null : URL.createObjectURL(file),
+        remoteUrl: null,
+        file: file
       };
       state.content.push(item);
       ensureItems(item.id);
@@ -818,6 +1200,7 @@ var QuotationEditor = (function () {
     if (lastId) {
       state.selectedContentId = lastId;
       state.selectedItem = null;
+      state.selectedElementId = null;
       markDirtyLocal();
       rerender();
     }
@@ -856,15 +1239,17 @@ var QuotationEditor = (function () {
     var content = selectedContent();
     if (!content || !toolsFor(content).buttons) return;
     var bag = ensureItems(content.id);
+    var scene = activeScene();
     var item = {
       id: nextId('btn'),
       label: 'Botón',
       style: 'button',
       action: 'goto-scene',
-      targetSceneId: content.id
+      targetSceneId: (scene && scene.id) || content.id
     };
     bag.buttons.push(item);
     state.selectedItem = { kind: 'button', id: item.id };
+    state.selectedElementId = null;
     markDirtyLocal();
     rerender();
   }
@@ -873,16 +1258,18 @@ var QuotationEditor = (function () {
     var content = selectedContent();
     if (!content || !toolsFor(content).hotspots) return;
     var bag = ensureItems(content.id);
+    var scene = activeScene();
     var item = {
       id: nextId('hs'),
       label: 'Hotspot',
       shape: 'polygon',
       color: 'white',
       action: 'goto-scene',
-      targetSceneId: content.id
+      targetSceneId: (scene && scene.id) || content.id
     };
     bag.hotspots.push(item);
     state.selectedItem = { kind: 'hotspot', id: item.id };
+    state.selectedElementId = null;
     markDirtyLocal();
     rerender();
   }
@@ -897,7 +1284,62 @@ var QuotationEditor = (function () {
 
   function bind(panel) {
     rootEl = panel;
+    bindFocusEsc();
     var editor = panel.querySelector('[data-qe-editor]') || panel;
+
+    editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectScene(btn.getAttribute('data-qe-scene'));
+      });
+    });
+
+    var sceneMenuToggle = editor.querySelector('[data-qe-scene-menu-toggle]');
+    if (sceneMenuToggle) {
+      sceneMenuToggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.sceneMenuOpen = !state.sceneMenuOpen;
+        rerender();
+      });
+    }
+
+    editor.querySelectorAll('[data-qe-scene-new]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var mode = btn.getAttribute('data-qe-scene-new');
+        createScene({ fromTemplate: mode === 'template' });
+      });
+    });
+
+    var focusBtn = editor.querySelector('[data-qe-focus]');
+    if (focusBtn) {
+      focusBtn.addEventListener('click', function () {
+        toggleFocusMode();
+      });
+    }
+
+    editor.querySelectorAll('[data-qe-element]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectElement(btn.getAttribute('data-qe-element'));
+      });
+    });
+
+    var elText = editor.querySelector('[data-qe-el-text]');
+    if (elText) {
+      elText.addEventListener('change', function () {
+        patchSelectedElement(function (el) {
+          var val = String(elText.value || '').trim();
+          if (el.type === 'text') el.props.text = val || el.props.text;
+          else if (el.type === 'image') el.props.text = val || el.props.text;
+          else el.props.label = val || el.props.label;
+        });
+      });
+      elText.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          elText.blur();
+        }
+      });
+    }
 
     editor.querySelectorAll('[data-qe-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
