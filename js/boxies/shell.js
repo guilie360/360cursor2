@@ -333,6 +333,8 @@ var BoxiesShell = (function () {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
     if (document.fullscreenElement) {
+      /* V7.2.20 — only leave FS when abandoning the BOXIES shell (logout / leave app).
+         In-shell navigation must never reach here; page unmounts keep the shell mounted. */
       document.exitFullscreen().catch(function () {});
     }
     if (rootEl) {

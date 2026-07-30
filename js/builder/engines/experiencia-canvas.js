@@ -6247,7 +6247,12 @@ var ExperienciaCanvas = (function () {
           document.documentElement.style.removeProperty('--boxies-header-h');
           document.documentElement.style.removeProperty('--boxies-dock-h');
         }
-        exitBrowserFullscreen();
+        /*
+         * V7.2.20 — Never exit document fullscreen from canvas/overlay teardown.
+         * Workspace FS is owned by BoxiesShell (documentElement). Editor remounts
+         * (add button, inspector, library, step change) destroy this handle often;
+         * exiting FS here broke the entire editing session.
+         */
       }
     };
   }

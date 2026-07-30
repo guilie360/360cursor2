@@ -204,6 +204,66 @@ var QuotationEditor = (function () {
   var editorProjectCtx = null;
   var loadedProjectId = null;
   var loadPromise = null;
+  /** True after first successful hydrate/draft restore for loadedProjectId. */
+  var documentReady = false;
+  var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
+
+  function draftStorageKey(projectId) {
+    return DRAFT_PREFIX + String(projectId || '').trim();
+  }
+
+  function persistDraft() {
+    var id = String(
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+    if (!id || !documentReady) return;
+    try {
+      if (expOverlay && typeof expOverlay.pull === 'function') {
+        try { expOverlay.pull(); } catch (ePull) {}
+      }
+      var payload = {
+        v: 1,
+        at: Date.now(),
+        projectId: id,
+        content: state.content,
+        folders: state.folders,
+        scenes: state.scenes,
+        activeSceneId: state.activeSceneId,
+        selectedContentId: state.selectedContentId,
+        expEditMode: state.expEditMode
+      };
+      sessionStorage.setItem(draftStorageKey(id), JSON.stringify(payload));
+    } catch (eDraft) { /* quota / private mode */ }
+  }
+
+  function restoreDraft(projectId) {
+    var id = String(projectId || '').trim();
+    if (!id) return false;
+    try {
+      var raw = sessionStorage.getItem(draftStorageKey(id));
+      if (!raw) return false;
+      var draft = JSON.parse(raw);
+      if (!draft || !Array.isArray(draft.scenes) || !draft.scenes.length) return false;
+      state.content = Array.isArray(draft.content) ? draft.content : [];
+      state.folders = Array.isArray(draft.folders) ? draft.folders : [];
+      state.scenes = draft.scenes;
+      state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+      state.activeSceneId = draft.activeSceneId || state.scenes[0].id;
+      if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
+      if (draft.expEditMode) state.expEditMode = draft.expEditMode;
+      return true;
+    } catch (eRest) {
+      return false;
+    }
+  }
+
+  function clearDraft(projectId) {
+    var id = String(projectId || loadedProjectId || '').trim();
+    if (!id) return;
+    try { sessionStorage.removeItem(draftStorageKey(id)); } catch (eClr) {}
+  }
 
   function sceneById(id) {
     if (!id || !state.scenes) return null;
@@ -1569,10 +1629,20 @@ var QuotationEditor = (function () {
   var pendingExpAction = null;
 
   function destroyExperienciaOverlay() {
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) {}
+    }
     if (expOverlay && typeof expOverlay.destroy === 'function') {
       try { expOverlay.destroy(); } catch (e) { /* ignore */ }
     }
     expOverlay = null;
+  }
+
+  /** Detach editor chrome without resetting the document SSOT. */
+  function detachUi() {
+    destroyExperienciaOverlay();
+    persistDraft();
+    rootEl = null;
   }
 
   function mountExperienciaOverlay() {
@@ -1776,6 +1846,7 @@ var QuotationEditor = (function () {
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
       BuilderDirtyState.mark();
     }
+    persistDraft();
   }
 
   function setHeroFromFile(file, media) {
@@ -2314,7 +2385,7 @@ var QuotationEditor = (function () {
     wireInspectorFields(editor);
     } /* wireEditor */
 
-    if (projectId && loadedProjectId !== projectId) {
+    if (projectId && !(documentReady && loadedProjectId === projectId)) {
       load(projectId).then(function () {
         if (!rootEl) return;
         var host = rootEl.matches && rootEl.matches('[data-quotation-panel]')
@@ -2443,19 +2514,57 @@ var QuotationEditor = (function () {
 
   function load(projectId) {
     var id = String(projectId || '').trim();
-    if (loadPromise && loadedProjectId === id) return loadPromise;
-    loadedProjectId = id;
-    if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
+    if (!id) {
       loadPromise = Promise.resolve(null);
       return loadPromise;
     }
+
+    /* Live document already bound — workspace remounts must not rebuild it. */
+    if (documentReady && loadedProjectId === id) {
+      return loadPromise || Promise.resolve(null);
+    }
+
+    if (loadPromise && loadedProjectId === id && !documentReady) {
+      return loadPromise;
+    }
+
+    loadedProjectId = id;
+    if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
+      if (restoreDraft(id)) {
+        documentReady = true;
+        persistDraft();
+      } else {
+        hydrateFromHeroQuotation(null, editorProjectCtx);
+        documentReady = true;
+        persistDraft();
+      }
+      loadPromise = Promise.resolve(null);
+      return loadPromise;
+    }
+
     loadPromise = ProyectosApi.fetchHeroQuotation(id)
       .then(function (hq) {
-        hydrateFromHeroQuotation(hq, editorProjectCtx);
+        if (documentReady && loadedProjectId === id) return hq;
+        /*
+         * Session draft wins over a fresh network hydrate so UI refactors /
+         * remounts never wipe unsaved scenes, buttons, hotspots, or library.
+         */
+        if (!restoreDraft(id)) {
+          hydrateFromHeroQuotation(hq, editorProjectCtx);
+        }
+        documentReady = true;
+        loadedProjectId = id;
+        persistDraft();
         return hq;
       })
       .catch(function () {
-        hydrateFromHeroQuotation(null, editorProjectCtx);
+        if (documentReady && loadedProjectId === id) return null;
+        if (!restoreDraft(id)) {
+          hydrateFromHeroQuotation(null, editorProjectCtx);
+        }
+        documentReady = true;
+        loadedProjectId = id;
+        persistDraft();
         return null;
       });
     return loadPromise;
@@ -2513,6 +2622,8 @@ var QuotationEditor = (function () {
 
     var saved = await ProyectosApi.updateHeroQuotation(projectId, payload);
     loadedProjectId = String(projectId);
+    documentReady = true;
+    persistDraft();
     return saved;
   }
 
@@ -2531,13 +2642,17 @@ var QuotationEditor = (function () {
     bind: bind,
     load: load,
     commit: commit,
+    detachUi: detachUi,
     serializeDocument: serializeDocument,
     syncCoverFromHeroPayload: syncCoverFromHeroPayload,
     _getState: function () { return state; },
     _resetDemo: function () {
+      destroyExperienciaOverlay();
       state = createEmptyState();
       loadedProjectId = null;
       loadPromise = null;
+      documentReady = false;
+      clearDraft();
     }
   };
 })();

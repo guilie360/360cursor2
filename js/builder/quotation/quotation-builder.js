@@ -298,6 +298,10 @@ var QuotationBuilderView = (function () {
     var workspace = rootEl.querySelector('.quotation-workspace') ||
       rootEl.querySelector('.builder-workspace');
     var mod = resolvePanel(currentStep);
+    /* Detach editor UI only — never reset QuotationEditor document SSOT. */
+    if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
+      try { QuotationEditor.detachUi(); } catch (eDetach) {}
+    }
     clearLeftBody();
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
@@ -448,6 +452,9 @@ var QuotationBuilderView = (function () {
   }
 
   function onLeave() {
+    if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
+      try { QuotationEditor.detachUi(); } catch (eEd) {}
+    }
     if (typeof QuotationHero !== 'undefined' && QuotationHero.reset) {
       try { QuotationHero.reset(); } catch (eHero) {}
     }
