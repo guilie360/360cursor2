@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es" class="theme-ready">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Quotation Runtime</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/components.css?v=ws7113">
+  <link rel="stylesheet" href="../css/hall/hall.css">
+  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7113">
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') {
+        /* painted after script load */
+      }
+    } catch (e) {}
+  </script>
+</head>
+<body class="qr-host">
+  <div id="quotationRuntimeRoot" data-quotation-runtime></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/shared/config.js"></script>
+  <script src="../js/platform/hall-design-system.js"></script>
+  <script>
+    try {
+      if (typeof HallDesignSystem !== 'undefined') HallDesignSystem.paint({ persist: false });
+      else document.documentElement.classList.add('theme-ready');
+    } catch (e) {
+      document.documentElement.classList.add('theme-ready');
+    }
+  </script>
+  <script src="../js/auth/storage-prefs.js"></script>
+  <script src="../js/auth/client.js"></script>
+  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7113"></script>
+  <script>
+    (function () {
+      function start() {
+        if (typeof QuotationRuntime === 'undefined' || !QuotationRuntime.boot) {
+          var host = document.getElementById('quotationRuntimeRoot');
+          if (host) {
+            host.innerHTML =
+              '<div class="qr-error" role="alert">' +
+                '<h1 class="qr-error__title">QuotationRuntime no disponible</h1>' +
+              '</div>';
+          }
+          return;
+        }
+        QuotationRuntime.boot().catch(function (err) {
+          console.error('[QuotationRuntime]', err);
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+      } else {
+        start();
+      }
+    })();
+  </script>
+</body>
+</html>

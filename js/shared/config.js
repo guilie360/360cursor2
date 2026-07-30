@@ -30,6 +30,7 @@ function getProjectSlugFromUrl() {
             boxies: 1,
             landing: 1,
             login: 1,
+            quotation: 1,
             css: 1,
             js: 1,
             supabase: 1,

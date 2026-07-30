@@ -10,7 +10,7 @@ var BoxiesShell = (function () {
   var onLogout = null;
   var fullscreenBound = false;
   var defaultActionsHtml = '';
-  var projectCtx = { id: '', name: '', slug: '' };
+  var projectCtx = { id: '', name: '', slug: '', experienceType: '' };
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -143,7 +143,7 @@ var BoxiesShell = (function () {
     fullscreenBound = true;
   }
 
-  function resolvePreviewUrl(slug) {
+  function resolveShowroomPreviewUrl(slug) {
     if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl) {
       return PlatformBuilderBridge.showroomUrl(slug);
     }
@@ -153,6 +153,57 @@ var BoxiesShell = (function () {
       } catch (e) {}
     }
     return window.location.origin + '/';
+  }
+
+  /** Quotation Runtime — projectId only; never Showroom /{slug}. */
+  function resolveQuotationPreviewUrl(projectId) {
+    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
+      return PlatformBuilderBridge.quotationUrl(projectId);
+    }
+    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      return QuotationRuntime.href(projectId, { preview: true });
+    }
+    var id = String(projectId || '').trim();
+    if (!id) return null;
+    try {
+      var url = new URL('/quotation/', window.location.origin);
+      url.searchParams.set('projectId', id);
+      url.searchParams.set('experience_type', 'quotation');
+      url.searchParams.set('preview', '1');
+      return url.href;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function resolvePreviewUrl(slugOrOpts) {
+    if (slugOrOpts && typeof slugOrOpts === 'object') {
+      var type = String(slugOrOpts.experienceType || slugOrOpts.experience_type || '').toLowerCase();
+      if (type === 'quotation') {
+        return resolveQuotationPreviewUrl(slugOrOpts.projectId || slugOrOpts.id);
+      }
+      return resolveShowroomPreviewUrl(slugOrOpts.slug);
+    }
+    return resolveShowroomPreviewUrl(slugOrOpts);
+  }
+
+  function openActivePreview() {
+    var type = String(projectCtx.experienceType || '').toLowerCase();
+    if (type === 'quotation') {
+      var qUrl = resolveQuotationPreviewUrl(projectCtx.id);
+      if (!qUrl) return;
+      window.open(qUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    var slug = projectCtx.slug;
+    if (!slug) {
+      try {
+        slug = new URLSearchParams(window.location.search || '').get('project')
+          || new URLSearchParams(window.location.search || '').get('proyecto');
+      } catch (e) {}
+    }
+    if (!slug) return;
+    window.open(resolveShowroomPreviewUrl(slug), '_blank', 'noopener,noreferrer');
   }
 
   function bind() {
@@ -184,15 +235,7 @@ var BoxiesShell = (function () {
     if (previewBtn && !previewBtn.dataset.bound) {
       previewBtn.dataset.bound = '1';
       previewBtn.addEventListener('click', function () {
-        var slug = projectCtx.slug;
-        if (!slug) {
-          try {
-            slug = new URLSearchParams(window.location.search || '').get('project')
-              || new URLSearchParams(window.location.search || '').get('proyecto');
-          } catch (e) {}
-        }
-        if (!slug) return;
-        window.open(resolvePreviewUrl(slug), '_blank', 'noopener,noreferrer');
+        openActivePreview();
       });
     }
 
@@ -280,10 +323,16 @@ var BoxiesShell = (function () {
    */
   function setProjectContext(ctx) {
     ctx = ctx || {};
+    var expType = String(ctx.experienceType || ctx.experience_type || '').trim().toLowerCase();
+    /* Preserve experience type across identity-only updates (e.g. Config save). */
+    if (!expType && (ctx.id || ctx.projectId || ctx.name || ctx.nombre || ctx.slug)) {
+      expType = projectCtx.experienceType || '';
+    }
     projectCtx = {
       id: (ctx.id || ctx.projectId || '').trim(),
       name: (ctx.name || ctx.nombre || '').trim(),
-      slug: (ctx.slug || ctx.project || ctx.proyecto || '').trim()
+      slug: (ctx.slug || ctx.project || ctx.proyecto || '').trim(),
+      experienceType: expType
     };
     var wrap = document.getElementById('boxiesDockProject');
     var nameEl = document.getElementById('boxiesDockProjectName');
@@ -299,11 +348,17 @@ var BoxiesShell = (function () {
       return;
     }
 
-    var label = projectCtx.name || projectCtx.slug || 'Showroom';
+    var label = projectCtx.name || projectCtx.slug ||
+      (projectCtx.experienceType === 'quotation' ? 'Cotización' : 'Showroom');
     nameEl.textContent = label;
     wrap.hidden = false;
     if (actions) actions.hidden = false;
-    if (previewBtn) previewBtn.disabled = !projectCtx.slug;
+    /* Quotation Visualizar keys off projectId; Showroom still needs slug. */
+    if (previewBtn) {
+      previewBtn.disabled = projectCtx.experienceType === 'quotation'
+        ? !projectCtx.id
+        : !projectCtx.slug;
+    }
   }
 
   function clearProjectContext() {
@@ -377,6 +432,9 @@ var BoxiesShell = (function () {
     clearPageActions: clearPageActions,
     isMounted: isMounted,
     setChromeClasses: setChromeClasses,
-    resolvePreviewUrl: resolvePreviewUrl
+    resolvePreviewUrl: resolvePreviewUrl,
+    resolveShowroomPreviewUrl: resolveShowroomPreviewUrl,
+    resolveQuotationPreviewUrl: resolveQuotationPreviewUrl,
+    openActivePreview: openActivePreview
   };
 })();

@@ -282,7 +282,8 @@ var QuotationBuilderView = (function () {
       BoxiesShell.setProjectContext({
         id: projectCtx.id,
         name: projectCtx.name,
-        slug: projectCtx.slug
+        slug: projectCtx.slug,
+        experienceType: 'quotation'
       });
     }
   }

@@ -414,6 +414,8 @@ var BoxiesProjectsPage = (function () {
     var id = showroom.id || '';
     var slug = showroom.slug || '';
     var name = showroom.nombre || slug || 'Sin nombre';
+    var expType = showroom.experience_type || activeExperienceType || '';
+    var previewDisabled = String(expType).toLowerCase() === 'quotation' ? !id : !slug;
     return (
       '<tr class="boxies-showroom-row" draggable="true" data-showroom-id="' + escapeHtml(id) + '">' +
         '<td class="boxies-showroom-drag boxies-col-drag">' +
@@ -452,10 +454,14 @@ var BoxiesProjectsPage = (function () {
               '" data-boxies-open-builder="' +
                 escapeHtml(slug) +
               '" data-tooltip="Administrar" aria-label="Administrar">' + ICONS.edit + '</button>' +
-              '<button type="button" class="boxies-icon-action" data-boxies-preview-slug="' +
+              '<button type="button" class="boxies-icon-action" data-boxies-preview-id="' +
+                escapeHtml(id) +
+              '" data-boxies-preview-slug="' +
                 escapeHtml(slug) +
+              '" data-boxies-preview-type="' +
+                escapeHtml(expType) +
               '" data-tooltip="Vista previa" aria-label="Vista previa"' +
-              (slug ? '' : ' disabled') +
+              (previewDisabled ? ' disabled' : '') +
               '>' + ICONS.eye + '</button>' +
               '<button type="button" class="boxies-icon-action" data-boxies-clone-id="' +
                 escapeHtml(id) +
@@ -632,7 +638,36 @@ var BoxiesProjectsPage = (function () {
     });
   }
 
+  function resolveExperiencePreviewUrl(row) {
+    row = row || {};
+    var type = String(row.experience_type || row.experienceType || activeExperienceType || '').toLowerCase();
+    var id = row.id || '';
+    var slug = row.slug || '';
+    if (type === 'quotation') {
+      if (typeof BoxiesShell !== 'undefined' && BoxiesShell.resolveQuotationPreviewUrl) {
+        return BoxiesShell.resolveQuotationPreviewUrl(id);
+      }
+      if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
+        return PlatformBuilderBridge.quotationUrl(id);
+      }
+      if (!id) return null;
+      try {
+        var url = new URL('/quotation/', window.location.origin);
+        url.searchParams.set('projectId', id);
+        url.searchParams.set('experience_type', 'quotation');
+        url.searchParams.set('preview', '1');
+        return url.href;
+      } catch (e) {
+        return null;
+      }
+    }
+    return resolveShowroomPreviewUrl(slug);
+  }
+
   function resolveShowroomPreviewUrl(slug) {
+    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.resolveShowroomPreviewUrl === 'function') {
+      return BoxiesShell.resolveShowroomPreviewUrl(slug);
+    }
     if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.resolvePreviewUrl === 'function') {
       return BoxiesShell.resolvePreviewUrl(slug);
     }
@@ -664,13 +699,20 @@ var BoxiesProjectsPage = (function () {
 
   function bindPreview(host) {
     host.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-boxies-preview-slug]');
+      var btn = e.target.closest('[data-boxies-preview-slug], [data-boxies-preview-id]');
       if (!btn || !host.contains(btn) || btn.disabled) return;
       e.preventDefault();
       e.stopPropagation();
+      var id = (btn.getAttribute('data-boxies-preview-id') || '').trim();
       var slug = (btn.getAttribute('data-boxies-preview-slug') || '').trim();
-      if (!slug) return;
-      window.open(resolveShowroomPreviewUrl(slug), '_blank', 'noopener,noreferrer');
+      var type = (btn.getAttribute('data-boxies-preview-type') || activeExperienceType || '').trim();
+      var url = resolveExperiencePreviewUrl({
+        id: id,
+        slug: slug,
+        experience_type: type
+      });
+      if (!url) return;
+      window.open(url, '_blank', 'noopener,noreferrer');
     });
   }
 

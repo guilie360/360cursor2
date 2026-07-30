@@ -20,7 +20,8 @@ var ShowroomPublicUrl = (function () {
     auth: 1,
     landing: 1,
     www: 1,
-    app: 1
+    app: 1,
+    quotation: 1
   };
 
   function stripDiacritics(value) {

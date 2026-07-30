@@ -249,10 +249,33 @@ var PlatformBuilderBridge = (function () {
     return new URL('/', window.location.origin).href;
   }
 
+  /**
+   * Quotation Runtime URL — always by projectId + experience_type=quotation.
+   * Never opens the Showroom public path /{slug}.
+   */
+  function quotationUrl(projectId) {
+    var id = String(projectId || '').trim();
+    if (!id) return null;
+    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      return QuotationRuntime.href(id, { preview: true });
+    }
+    try {
+      var url = new URL('/quotation/', window.location.origin);
+      url.searchParams.set('projectId', id);
+      url.searchParams.set('experience_type', 'quotation');
+      url.searchParams.set('preview', '1');
+      return url.href;
+    } catch (e) {
+      return '/quotation/?projectId=' + encodeURIComponent(id) +
+        '&experience_type=quotation&preview=1';
+    }
+  }
+
   return {
     init: init,
     ensureShims: ensureShims,
     showroomUrl: showroomUrl,
+    quotationUrl: quotationUrl,
     getClient: getClient,
     resolveConstructoraId: resolveConstructoraId
   };
