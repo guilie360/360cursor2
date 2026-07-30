@@ -913,6 +913,18 @@ var BoxiesProjectsPage = (function () {
       typeof BoxiesShowroomScope !== 'undefined'
         ? BoxiesShowroomScope.getViewerContext()
         : null;
+
+    /* V7.2.01 — seed BOXIES Default the first time Plantillas is opened. */
+    if (activeExperienceType === 'template' &&
+        typeof BoxiesProjectTemplateContract !== 'undefined' &&
+        BoxiesProjectTemplateContract.ensureDefaultTemplate) {
+      try {
+        await BoxiesProjectTemplateContract.ensureDefaultTemplate({ scope: scope });
+      } catch (eSeed) {
+        console.warn('[boxies:projects] ensureDefaultTemplate', eSeed);
+      }
+    }
+
     var meta = experienceMeta(activeExperienceType);
     var showrooms = await BoxiesAdmin2ProjectsApi.list({
       scope: scope,
@@ -920,7 +932,7 @@ var BoxiesProjectsPage = (function () {
     });
     if (!showrooms || !showrooms.length) {
       tbody.innerHTML =
-        '<tr><td colspan="7">' + escapeHtml(meta.emptyMessage || 'Sin experiencias.') + '</td></tr>';
+        '<tr><td colspan="7">' + escapeHtml(meta.emptyMessage || 'Sin proyectos.') + '</td></tr>';
       if (columnController) columnController.relayout();
       return [];
     }

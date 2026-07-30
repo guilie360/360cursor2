@@ -838,33 +838,197 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   color: rgba(255, 255, 255, 0.34);
 }
 
-/* V7.0.07 — Builder experience type selector */
-#boxiesContent .boxies-exp-select {
+/* V7.2.01 — Builder Gallery (immersive project-type cards) */
+#boxiesContent .boxies-exp-select.boxies-exp-gallery {
+  width: 100%;
+  margin: 0;
+  padding: 8px 4px 28px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(
+    100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe) - 24px
+  );
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header {
+  margin-bottom: 36px;
+  max-width: 42rem;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header .boxies-page__title {
+  margin-bottom: 8px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__header .boxies-page__desc {
+  margin-bottom: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.48);
+  letter-spacing: 0.01em;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px 20px;
+  flex: 1 1 auto;
+  align-content: stretch;
+  width: 100%;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 0;
+  min-height: clamp(220px, 28vh, 320px);
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(120% 80% at 20% 0%, rgba(255, 255, 255, 0.07), transparent 55%),
+    rgba(255, 255, 255, 0.03);
+  color: inherit;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 18px 40px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__media {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.02);
+  transform: scale(1.02);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__media-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 5, 0.15) 0%, rgba(5, 5, 5, 0.55) 48%, rgba(5, 5, 5, 0.92) 100%),
+    radial-gradient(80% 60% at 70% 20%, rgba(255, 255, 255, 0.06), transparent 60%);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 26px 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__title {
+  display: block;
+  font-size: clamp(1.15rem, 1.6vw, 1.45rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.96);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__meta {
+  display: none;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__meta:not([hidden]) {
+  display: block;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card__action {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 56px rgba(0, 0, 0, 0.42);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover .boxies-exp-select-card__media {
+  transform: scale(1.06);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:hover .boxies-exp-select-card__action {
+  color: rgba(255, 255, 255, 0.78);
+  transform: translateX(2px);
+}
+
+#boxiesContent .boxies-exp-gallery .boxies-exp-select-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.28);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1100px) {
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select__grid {
+    grid-template-columns: 1fr;
+  }
+
+  #boxiesContent .boxies-exp-gallery .boxies-exp-select-card {
+    min-height: 200px;
+  }
+}
+
+/* Legacy admin grid kept for non-gallery contexts */
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) {
   width: 100%;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-#boxiesContent .boxies-exp-select__header {
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__header {
   margin-bottom: var(--hall-space-5, 24px);
 }
 
-#boxiesContent .boxies-exp-select__header .boxies-page__title {
-  margin-bottom: 6px;
-}
-
-#boxiesContent .boxies-exp-select__header .boxies-page__desc {
-  margin-bottom: 0;
-}
-
-#boxiesContent .boxies-exp-select__grid {
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--hall-space-4, 16px);
 }
 
-#boxiesContent .boxies-exp-select-card {
+#boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select-card {
   appearance: none;
   display: flex;
   flex-direction: column;
@@ -889,49 +1053,14 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
     background var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-#boxiesContent .boxies-exp-select-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-subtle-hover, var(--hall-border-subtle-hover, rgba(255, 255, 255, 0.14)));
-  background: var(--hall-surface-hover, rgba(255, 255, 255, 0.055));
-}
-
-#boxiesContent .boxies-exp-select-card:focus-visible {
-  outline: 2px solid var(--hall-border-strong, rgba(255, 255, 255, 0.11));
-  outline-offset: 2px;
-}
-
-#boxiesContent .boxies-exp-select-card__title {
-  display: block;
-  font-size: 0.98rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: var(--hall-leading-tight, 1.35);
-  color: var(--hall-text, rgba(255, 255, 255, 0.94));
-}
-
-#boxiesContent .boxies-exp-select-card__action {
-  display: block;
-  margin-top: 0;
-  font-size: var(--hall-label-size, 0.6875rem);
-  font-weight: 600;
-  letter-spacing: var(--hall-tracking-action, 0.12em);
-  text-transform: uppercase;
-  color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
-  transition: color var(--hall-duration-fast, 0.18s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
-}
-
-#boxiesContent .boxies-exp-select-card:hover .boxies-exp-select-card__action {
-  color: var(--hall-text-muted, rgba(255, 255, 255, 0.52));
-}
-
 @media (max-width: 1100px) {
-  #boxiesContent .boxies-exp-select__grid {
+  #boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  #boxiesContent .boxies-exp-select__grid {
+  #boxiesContent .boxies-exp-select:not(.boxies-exp-gallery) .boxies-exp-select__grid {
     grid-template-columns: 1fr;
   }
 }

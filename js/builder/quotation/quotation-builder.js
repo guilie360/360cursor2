@@ -17,6 +17,7 @@ var QuotationBuilderView = (function () {
   };
   var sectionChecks = {};
   var processing = false;
+  var builderExperienceType = 'quotation';
 
   function resolvePanel(stepId) {
     var id = typeof QuotationRouter !== 'undefined'
@@ -45,9 +46,11 @@ var QuotationBuilderView = (function () {
           '</div>'
         );
     return '' +
-      '<div class="quotation-builder builder-app" id="quotationBuilderRoot" data-quotation-builder>' +
+      '<div class="quotation-builder builder-app" id="quotationBuilderRoot" data-quotation-builder' +
+        (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
         actions +
-        '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="Navegación Builder">' +
+        '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="' +
+          (builderExperienceType === 'template' ? 'Template Builder' : 'Quotation Builder') + '">' +
           sidebar +
         '</aside>' +
         '<div class="builder-workspace quotation-workspace">' +
@@ -233,11 +236,12 @@ var QuotationBuilderView = (function () {
     } catch (eChrome) {}
   }
 
-  async function hydrateIdentity(projectId, slug) {
+  async function hydrateIdentity(projectId, slug, experienceType) {
+    var expType = experienceType || 'quotation';
     projectCtx = {
       id: String(projectId || '').trim(),
       slug: String(slug || '').trim(),
-      name: String(slug || projectId || 'Quotation Room'),
+      name: String(slug || projectId || (expType === 'template' ? 'Plantilla' : 'Quotation Room')),
       constructora_id: null,
       og_image: '',
       og_title: '',
@@ -246,7 +250,7 @@ var QuotationBuilderView = (function () {
     };
     try {
       if (typeof BoxiesAdmin2ProjectsApi !== 'undefined' && BoxiesAdmin2ProjectsApi.list) {
-        var rows = await BoxiesAdmin2ProjectsApi.list({ experienceType: 'quotation' });
+        var rows = await BoxiesAdmin2ProjectsApi.list({ experienceType: expType });
         var match = null;
         (rows || []).some(function (row) {
           if (projectCtx.id && String(row.id) === projectCtx.id) {
@@ -283,7 +287,7 @@ var QuotationBuilderView = (function () {
         id: projectCtx.id,
         name: projectCtx.name,
         slug: projectCtx.slug,
-        experienceType: 'quotation'
+        experienceType: expType
       });
     }
   }
@@ -291,10 +295,15 @@ var QuotationBuilderView = (function () {
   async function render(host, opts) {
     opts = opts || {};
     rootEl = host;
+    var expType = String(opts.experienceType || opts.experience_type || 'quotation').toLowerCase();
+    builderExperienceType = expType === 'template' ? 'template' : 'quotation';
     host.classList.add('boxies-builder-embed', 'quotation-builder-host');
+    if (builderExperienceType === 'template') {
+      host.classList.add('template-builder-host');
+    }
     var projectId = (opts.projectId || '').trim();
     var slug = (opts.project || opts.slug || opts.proyecto || '').trim();
-    await hydrateIdentity(projectId, slug);
+    await hydrateIdentity(projectId, slug, builderExperienceType);
 
     currentStep = typeof QuotationRouter !== 'undefined'
       ? QuotationRouter.readFromUrl()

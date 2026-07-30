@@ -197,15 +197,27 @@ var BoxiesBuilderPage = (function () {
   }
 
   function renderSelectorCard(type) {
+    var title = type.selectorTitle || type.singular || type.tabLabel || '';
+    var cta = type.selectorCta || 'Crear →';
+    var cover = type.galleryCover || type.coverUrl || '';
+    var coverStyle = cover
+      ? ' style="background-image:url(\'' + escapeHtml(cover).replace(/'/g, '%27') + '\')"'
+      : '';
     return (
       '<button type="button" class="boxies-exp-select-card" data-experience-open="' +
         escapeHtml(type.id) +
-      '">' +
-        '<span class="boxies-exp-select-card__title">' +
-          escapeHtml(type.selectorTitle || type.singular || type.tabLabel) +
+        '" role="listitem">' +
+        '<span class="boxies-exp-select-card__media" aria-hidden="true"' + coverStyle + '>' +
+          '<span class="boxies-exp-select-card__media-veil"></span>' +
         '</span>' +
-        '<span class="boxies-exp-select-card__action">' +
-          escapeHtml(type.selectorCta || 'Crear →') +
+        '<span class="boxies-exp-select-card__body">' +
+          '<span class="boxies-exp-select-card__title">' +
+            escapeHtml(title) +
+          '</span>' +
+          '<span class="boxies-exp-select-card__meta" data-gallery-meta hidden></span>' +
+          '<span class="boxies-exp-select-card__action">' +
+            escapeHtml(cta) +
+          '</span>' +
         '</span>' +
       '</button>'
     );
@@ -230,10 +242,10 @@ var BoxiesBuilderPage = (function () {
         : [];
 
     host.innerHTML =
-      '<div class="boxies-page boxies-exp-select">' +
+      '<div class="boxies-page boxies-exp-select boxies-exp-gallery">' +
         '<header class="boxies-exp-select__header">' +
           '<h1 class="boxies-page__title">Builder</h1>' +
-          '<p class="boxies-page__desc">Selecciona el tipo de experiencia que deseas crear.</p>' +
+          '<p class="boxies-page__desc">Selecciona el tipo de proyecto que deseas crear.</p>' +
         '</header>' +
         '<div class="boxies-exp-select__grid" role="list">' +
           types.map(renderSelectorCard).join('') +

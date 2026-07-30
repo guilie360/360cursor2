@@ -93,7 +93,7 @@ var BoxiesExperienceTypes = (function () {
     {
       id: 'template',
       kind: 'template',
-      builderReady: false,
+      builderReady: true,
       tabLabel: 'PLANTILLAS',
       singular: 'Plantilla',
       plural: 'Plantillas',
