@@ -710,6 +710,7 @@ var QuotationEditor = (function () {
   }
 
   function contentItemRowHtml(item, nested) {
+    console.log('[QE] render item', item && item.id);
     var on = item.id === state.selectedContentId;
     var sub = item.group === 'tours360'
       ? 'Enlace'
@@ -1668,6 +1669,7 @@ var QuotationEditor = (function () {
   }
 
   function render(ctx) {
+    console.log('[QE] render');
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     hydrateEditorProjectCtxSlug();
     clearInvalidSelection();
@@ -1823,12 +1825,19 @@ var QuotationEditor = (function () {
     var res = contentById(contentId);
     var targetId = sceneId || state.activeSceneId;
     var scene = sceneById(targetId);
+    var url = res ? displayUrlOf(res) : null;
+    console.log('assignResourceToScene', {
+      contentId: contentId,
+      sceneId: sceneId,
+      sceneExists: !!scene,
+      resourceExists: !!res,
+      url: url
+    });
     if (!res || !scene) return;
     if (!(res.media === 'image' || res.media === 'video' ||
         res.group === 'renders' || res.group === 'videos' || res.group === 'hero')) {
       return;
     }
-    var url = displayUrlOf(res);
     if (!url) {
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error('Este recurso no tiene archivo para usar como fondo.');
@@ -2234,6 +2243,7 @@ var QuotationEditor = (function () {
         e.dataTransfer.getData('text/qe-resource') ||
         e.dataTransfer.getData('text/plain')
       )) || '';
+      console.log('drop', id, null);
       if (id) assignResourceToScene(id);
     });
 
@@ -2609,6 +2619,7 @@ var QuotationEditor = (function () {
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 
     function wireEditor() {
+      console.log('[QE] wireEditor');
       bindCanvasFit();
       mountRuntimeCanvas();
       mountExperienciaOverlay();
@@ -2675,6 +2686,7 @@ var QuotationEditor = (function () {
             return;
           }
           var id = el.getAttribute('data-qe-drag-resource');
+          console.log('dragstart', id);
           if (!id || !e.dataTransfer) return;
           e.dataTransfer.setData('text/qe-resource', id);
           e.dataTransfer.setData('text/plain', id);
@@ -2705,9 +2717,11 @@ var QuotationEditor = (function () {
             e.dataTransfer.getData('text/plain')
           )) || '';
           var sceneId = zone.getAttribute('data-qe-drop-scene-id') || null;
+          console.log('drop', id, sceneId);
           if (id) assignResourceToScene(id, sceneId || undefined);
         });
       });
+      console.log('drop zones', document.querySelectorAll('[data-qe-drop-scene]').length);
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -2869,6 +2883,7 @@ var QuotationEditor = (function () {
         e.stopPropagation();
       });
     });
+    console.log('remove buttons', document.querySelectorAll('[data-qe-remove-resource]').length);
 
     qAll('[data-qe-folder-new]').forEach(function (btn) {
       btn.addEventListener('click', function () {
