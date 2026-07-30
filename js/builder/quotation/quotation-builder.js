@@ -423,6 +423,24 @@ var QuotationBuilderView = (function () {
       }
     } catch (eHydrate) {}
 
+    /* List may miss the row (scope / experience filter). Resolve slug by id — SSOT for editorProjectCtx. */
+    if (
+      projectCtx.id &&
+      !projectCtx.slug &&
+      typeof ProyectosApi !== 'undefined' &&
+      typeof ProyectosApi.getById === 'function'
+    ) {
+      try {
+        var row = await ProyectosApi.getById(projectCtx.id);
+        if (row) {
+          projectCtx.slug = String(row.slug || '').trim() || projectCtx.slug;
+          projectCtx.name = row.nombre || row.name || projectCtx.name;
+          if (row.constructora_id) projectCtx.constructora_id = row.constructora_id;
+          if (row.publicado != null) projectCtx.published = !!row.publicado;
+        }
+      } catch (eById) {}
+    }
+
     if (projectCtx.id && typeof ProyectosApi !== 'undefined' && ProyectosApi.fetchShareMeta) {
       try {
         var share = await ProyectosApi.fetchShareMeta(projectCtx.id);

@@ -121,8 +121,60 @@ var QuotationEditor = (function () {
     ).trim();
   }
 
+  /**
+   * Ensure editorProjectCtx.slug mirrors builder identity (hydrateIdentity → projectCtx)
+   * before uploadLibraryItem / Bunny paths read resolveShowroomSlug().
+   */
+  function hydrateEditorProjectCtxSlug() {
+    if (!editorProjectCtx || typeof editorProjectCtx !== 'object') {
+      editorProjectCtx = { id: '', slug: '', name: '' };
+    }
+    var slug = String(editorProjectCtx.slug || '').trim();
+    if (slug) {
+      editorProjectCtx.slug = slug;
+      return slug;
+    }
+
+    if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.getProjectIdentity) {
+      try {
+        var idn = QuotationBuilderView.getProjectIdentity();
+        if (idn) {
+          if (!editorProjectCtx.id && idn.id) {
+            editorProjectCtx.id = String(idn.id || '').trim();
+          }
+          if (!editorProjectCtx.name && (idn.nombre || idn.name)) {
+            editorProjectCtx.name = idn.nombre || idn.name;
+          }
+          if (idn.slug) {
+            editorProjectCtx.slug = String(idn.slug).trim();
+            slug = editorProjectCtx.slug;
+          }
+        }
+      } catch (eIdn) {}
+    }
+
+    if (!slug && typeof BoxiesRouter !== 'undefined' && BoxiesRouter.currentProjectSlug) {
+      slug = String(BoxiesRouter.currentProjectSlug() || '').trim();
+      if (slug) editorProjectCtx.slug = slug;
+    }
+
+    if (!slug) {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        var fromUrl = String(params.get('project') || params.get('proyecto') || '').trim();
+        var uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (fromUrl && !uuidRe.test(fromUrl)) {
+          editorProjectCtx.slug = fromUrl;
+          slug = fromUrl;
+        }
+      } catch (eUrl) {}
+    }
+
+    return String(editorProjectCtx.slug || '').trim();
+  }
+
   function resolveShowroomSlug() {
-    return String((editorProjectCtx && editorProjectCtx.slug) || '').trim();
+    return hydrateEditorProjectCtxSlug();
   }
 
   /** Fixed Bunny media node for Quotation library (decoupled from Showroom canvas nodes). */
@@ -1576,6 +1628,7 @@ var QuotationEditor = (function () {
 
   function render(ctx) {
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
+    hydrateEditorProjectCtxSlug();
     clearInvalidSelection();
     ensureScenes();
     var leftBody = document.getElementById('quotationLeftBody');
@@ -2370,6 +2423,7 @@ var QuotationEditor = (function () {
   function bind(panel, ctx) {
     rootEl = panel;
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
+    hydrateEditorProjectCtxSlug();
     bindFocusEsc();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
