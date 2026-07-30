@@ -1,6 +1,6 @@
 /**
- * Quotation Editor — V7.2.06 Canvas = Preview = Runtime SSOT.
- * Persists canvas document; ProjectCover is the only hero renderer.
+ * Quotation Editor — V7.2.07 Runtime-in-Canvas.
+ * Hero stages embed QuotationRuntime (iframe); Editor never mounts ProjectCover.
  */
 var QuotationEditor = (function () {
   var CONTENT_GROUPS = [
@@ -634,20 +634,40 @@ var QuotationEditor = (function () {
   }
 
   function sceneCompositionHtml(scene) {
-    if (!sceneUsesProjectCover(scene)) {
-      if (!scene || !scene.elements || !scene.elements.length) return '';
-      return '' +
-        '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
-          escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
-          '<div class="qe-canvas__empty">Escena sin composición.</div>' +
-        '</div>';
-    }
-    /* Host only — ProjectCover.mount() is the SSOT (same module as Runtime). */
+    if (!scene || !scene.elements || !scene.elements.length) return '';
     return '' +
-      '<div class="qe-scene-comp qe-scene-comp--project-cover" data-qe-scene-comp' +
-        ' data-qe-cover-host' +
-        ' data-element-types="' +
+      '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
         escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
+        '<div class="qe-canvas__empty">Escena sin composición.</div>' +
+      '</div>';
+  }
+
+  /** Hero stage: same Runtime as Visualizar / Preview / Publicado (iframe). */
+  function heroRuntimeStageHtml() {
+    var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
+    var src = '';
+    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      src = QuotationRuntime.href(projectId, { preview: true, editor: true }) || '';
+    } else {
+      try {
+        var url = new URL('/quotation/', window.location.origin);
+        if (projectId) url.searchParams.set('projectId', projectId);
+        url.searchParams.set('experience_type', 'quotation');
+        url.searchParams.set('preview', '1');
+        url.searchParams.set('editor', '1');
+        src = url.href;
+      } catch (e) {
+        src = '/quotation/?experience_type=quotation&preview=1&editor=1' +
+          (projectId ? '&projectId=' + encodeURIComponent(projectId) : '');
+      }
+    }
+    return '' +
+      '<div class="qe-canvas__runtime-host" data-qe-runtime-host>' +
+        '<iframe class="qe-canvas__runtime-iframe" data-qe-runtime-iframe' +
+          ' title="Hero Runtime"' +
+          ' src="' + String(src).replace(/"/g, '&quot;') + '"' +
+          ' allow="fullscreen"></iframe>' +
+        '<div class="qe-canvas__edit-layer" data-qe-edit-layer aria-hidden="true"></div>' +
       '</div>';
   }
   function canvasChipsHtml(content) {
@@ -684,9 +704,8 @@ var QuotationEditor = (function () {
   }
 
   function stageBodyHtml(content, scene) {
-    if (sceneUsesProjectCover(scene)) {
-      return sceneCompositionHtml(scene) + canvasChipsHtml(content);
-    }
+    /* Hero / ProjectCover scenes render via Runtime iframe — not inline ProjectCover. */
+    if (sceneUsesProjectCover(scene)) return '';
     var hasElements = scene && scene.elements && scene.elements.length;
     if (hasElements) {
       return sceneCompositionHtml(scene) + canvasChipsHtml(content);
@@ -726,7 +745,7 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="hero-default" role="menuitem">' +
             'Hero Default' +
           '</button>' +
-          '<p class="qe-scenes__menu-hint">Misma ProjectCover que el Runtime (única fuente).</p>' +
+          '<p class="qe-scenes__menu-hint">Mismo Runtime que Visualizar (única fuente).</p>' +
         '</div>';
     }
 
@@ -758,6 +777,18 @@ var QuotationEditor = (function () {
   function canvasHtml() {
     var content = selectedContent();
     var scene = activeScene();
+    var isHero = sceneUsesProjectCover(scene);
+    var stageInner = isHero
+      ? heroRuntimeStageHtml()
+      : (
+        '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
+          '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
+            '<div class="qe-canvas__design" data-qe-canvas-design>' +
+              stageBodyHtml(content, scene) +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         scenesBarHtml() +
@@ -767,7 +798,7 @@ var QuotationEditor = (function () {
             '<p class="qe-col__hint">' +
               escapeHtml((scene && scene.name) || 'Escena') +
               (scene ? ' · ' + escapeHtml(scene.type || 'scene') : '') +
-              ' · 16:9' +
+              (isHero ? ' · Runtime 1:1' : ' · 16:9') +
             '</p>' +
           '</div>' +
           '<div class="qe-canvas__head-right">' +
@@ -779,14 +810,8 @@ var QuotationEditor = (function () {
             canvasToolbarHtml(content) +
           '</div>' +
         '</div>' +
-        '<div class="qe-canvas__stage" data-qe-canvas>' +
-          '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
-            '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
-              '<div class="qe-canvas__design" data-qe-canvas-design>' +
-                stageBodyHtml(content, scene) +
-              '</div>' +
-            '</div>' +
-          '</div>' +
+        '<div class="qe-canvas__stage' + (isHero ? ' qe-canvas__stage--runtime' : '') + '" data-qe-canvas>' +
+          stageInner +
         '</div>' +
       '</section>';
   }
@@ -816,9 +841,9 @@ var QuotationEditor = (function () {
   }
 
   function bindCanvasFit() {
-    fitCanvasDesign();
     var viewport = rootEl && rootEl.querySelector('[data-qe-canvas-viewport]');
     if (!viewport) return;
+    fitCanvasDesign();
     if (typeof ResizeObserver !== 'undefined') {
       if (canvasRo) canvasRo.disconnect();
       canvasRo = new ResizeObserver(function () { fitCanvasDesign(); });
@@ -1089,6 +1114,11 @@ var QuotationEditor = (function () {
     if (!found) return;
     state.selectedElementId = id;
     state.selectedItem = null;
+    if (sceneUsesProjectCover(scene)) {
+      pushSelectionToRuntime();
+      refreshInspectorOnly();
+      return;
+    }
     rerender();
   }
 
@@ -1150,39 +1180,150 @@ var QuotationEditor = (function () {
     }
   }
 
-  function mountActiveProjectCover() {
-    if (!rootEl) return;
-    var host = rootEl.querySelector('[data-qe-cover-host]');
-    if (!host) return;
-    var scene = activeScene();
-    if (!sceneUsesProjectCover(scene)) return;
+  function coverElementIds(scene) {
+    var map = {};
+    if (!scene || !scene.elements) return map;
+    scene.elements.forEach(function (el) {
+      if (el && el.role) map[el.role] = el.id;
+    });
+    return map;
+  }
 
-    if (typeof ProjectCover === 'undefined' || !ProjectCover.mount) {
-      host.innerHTML =
-        '<div class="qe-canvas__empty">ProjectCover no disponible (js/shared/project-cover.js).</div>';
-      return;
-    }
-
+  function ensureHeroCoverModel(scene) {
+    if (!scene) return null;
     if (!scene.coverModel) {
       var payload = buildHeroDefaultScenePayload(editorProjectCtx);
       scene.coverModel = payload.coverModel;
       if (!scene.elements || !scene.elements.length) scene.elements = payload.elements;
     }
+    return scene.coverModel;
+  }
 
-    var elementIds = {};
-    (scene.elements || []).forEach(function (el) {
-      if (el && el.role) elementIds[el.role] = el.id;
+  function runtimeIframe() {
+    return rootEl ? rootEl.querySelector('[data-qe-runtime-iframe]') : null;
+  }
+
+  function pushCoverToRuntime() {
+    var scene = activeScene();
+    if (!sceneUsesProjectCover(scene)) return;
+    var iframe = runtimeIframe();
+    if (!iframe || typeof QuotationRuntimeBridge === 'undefined') return;
+    ensureHeroCoverModel(scene);
+    QuotationRuntimeBridge.postToFrame(iframe, QuotationRuntimeBridge.TYPE.SET_MODEL, {
+      coverModel: scene.coverModel,
+      elementIds: coverElementIds(scene),
+      selectedElementId: state.selectedElementId || null
     });
+  }
 
-    ProjectCover.mount(host, scene.coverModel, {
-      idPrefix: 'qe' + String(scene.id || '').replace(/[^a-zA-Z0-9]/g, ''),
-      editable: true,
-      selectedElementId: state.selectedElementId,
-      elementIds: elementIds,
-      onSelect: function (id) {
-        selectElement(id);
+  function pushSelectionToRuntime() {
+    var iframe = runtimeIframe();
+    if (!iframe || typeof QuotationRuntimeBridge === 'undefined') return;
+    QuotationRuntimeBridge.postToFrame(iframe, QuotationRuntimeBridge.TYPE.SET_SELECTION, {
+      elementId: state.selectedElementId || null
+    });
+  }
+
+  function refreshInspectorOnly() {
+    if (!rootEl) return;
+    var insp = rootEl.querySelector('.qe-col--inspector');
+    if (!insp) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = inspectorHtml();
+    var next = wrap.firstChild;
+    if (next) insp.replaceWith(next);
+    wireInspectorFields(rootEl.querySelector('[data-qe-editor]') || rootEl);
+  }
+
+  function wireInspectorFields(editor) {
+    if (!editor) return;
+    var elText = editor.querySelector('[data-qe-el-text]');
+    if (elText && !elText.dataset.qeBound) {
+      elText.dataset.qeBound = '1';
+      elText.addEventListener('change', function () {
+        patchSelectedElement(function (el) {
+          var val = String(elText.value || '').trim();
+          if (el.type === 'text') el.props.text = val;
+          else if (el.type === 'image') el.props.label = val || el.props.label;
+          else el.props.label = val || el.props.label;
+        });
+      });
+      elText.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          elText.blur();
+        }
+      });
+    }
+    var elSrc = editor.querySelector('[data-qe-el-src]');
+    if (elSrc && !elSrc.dataset.qeBound) {
+      elSrc.dataset.qeBound = '1';
+      elSrc.addEventListener('change', function () {
+        patchSelectedElement(function (el) {
+          el.props.src = String(elSrc.value || '').trim();
+          el.props.show = !!el.props.src;
+        });
+      });
+    }
+  }
+
+  var runtimeBridgeBound = false;
+
+  function onRuntimeBridgeMessage(ev) {
+    if (typeof QuotationRuntimeBridge === 'undefined') return;
+    if (!QuotationRuntimeBridge.isMessage(ev.data)) return;
+    var iframe = runtimeIframe();
+    if (iframe && ev.source && iframe.contentWindow && ev.source !== iframe.contentWindow) return;
+
+    var type = ev.data.type;
+    var payload = ev.data.payload || {};
+    var T = QuotationRuntimeBridge.TYPE;
+
+    if (type === T.READY) {
+      pushCoverToRuntime();
+      return;
+    }
+    if (type === T.ELEMENT_SELECTED) {
+      var id = payload.elementId;
+      if (!id) return;
+      var scene = activeScene();
+      if (!scene || !scene.elements) return;
+      var found = false;
+      for (var i = 0; i < scene.elements.length; i++) {
+        if (scene.elements[i].id === id) { found = true; break; }
       }
+      if (!found) return;
+      state.selectedElementId = id;
+      state.selectedItem = null;
+      refreshInspectorOnly();
+    }
+  }
+
+  function bindRuntimeBridge() {
+    if (runtimeBridgeBound) return;
+    runtimeBridgeBound = true;
+    window.addEventListener('message', onRuntimeBridgeMessage);
+  }
+
+  /** Wire Canvas Hero iframe — Editor never mounts ProjectCover itself. */
+  function mountRuntimeCanvas() {
+    var scene = activeScene();
+    if (!sceneUsesProjectCover(scene)) return;
+    ensureHeroCoverModel(scene);
+    bindRuntimeBridge();
+    var iframe = runtimeIframe();
+    if (!iframe) return;
+    iframe.addEventListener('load', function onLoad() {
+      pushCoverToRuntime();
     });
+    /* If already loaded (cached), push immediately. */
+    try {
+      if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+        pushCoverToRuntime();
+      }
+    } catch (e) {
+      /* cross-origin until same-origin load — READY message handles it */
+    }
   }
 
   function setFocusMode(on) {
@@ -1216,6 +1357,11 @@ var QuotationEditor = (function () {
     mutator(el);
     applyElementToCoverModel(activeScene(), el);
     markDirtyLocal();
+    if (sceneUsesProjectCover(activeScene())) {
+      pushCoverToRuntime();
+      refreshInspectorOnly();
+      return;
+    }
     rerender();
   }
 
@@ -1424,6 +1570,11 @@ var QuotationEditor = (function () {
     el.props.targetSceneId = shim.targetSceneId;
     applyElementToCoverModel(activeScene(), el);
     markDirtyLocal();
+    if (sceneUsesProjectCover(activeScene())) {
+      pushCoverToRuntime();
+      refreshInspectorOnly();
+      return;
+    }
     rerender();
   }
 
@@ -1436,7 +1587,7 @@ var QuotationEditor = (function () {
 
     function wireEditor() {
       bindCanvasFit();
-      mountActiveProjectCover();
+      mountRuntimeCanvas();
       var editor = panel.querySelector('[data-qe-editor]') || panel;
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {

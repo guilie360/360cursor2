@@ -113,3 +113,9 @@ html, body.qr-host {
 .qr-stage__back {
   margin-top: 12px;
 }
+
+/* Editor mode (Canvas iframe) — selection chrome only; no layout overrides */
+html.qr-editor-mode [data-qe-element].is-qe-selected {
+  outline: 1px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 3px;
+}

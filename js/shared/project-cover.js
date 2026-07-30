@@ -1,9 +1,8 @@
 /**
  * ProjectCover — single source of truth for the published Hero (project-cover).
  *
- * Markup + paint logic shared by:
- *   - Quotation Runtime
- *   - Quotation Editor Canvas (Hero Default)
+ * Markup + paint logic used by QuotationRuntime (visitor, preview, Canvas iframe).
+ * The Quotation Editor does not mount this module for Hero stages (V7.2.07).
  *
  * Structure mirrors index.html portada + chrome floats (back, share, fullscreen, pa-fab).
  * Visual styles live in css/components.css (+ product-assistant.css for .pa-fab).
