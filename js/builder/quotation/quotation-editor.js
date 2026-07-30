@@ -1003,12 +1003,42 @@ var QuotationEditor = (function () {
   var canvasRo = null;
   var stageRo = null;
   var stageFitBound = false;
+  var STAGE_FIT_INSET = 8;
+  var STAGE_SCENES_MIN_H = 72;
+  var STAGE_DOCK_MIN_H = 44;
 
   /**
-   * V7.2.22 — Figma-style stage fit.
-   * Scenes + 16:9 canvas + dock are one natural-size unit (1920-wide).
-   * Only a single transform:scale is applied so layout never reflows when
-   * panels, fullscreen, or window size change — only the scale factor does.
+   * Visible rectangle for the Stage — clamped by header + fixed BOXIES footer.
+   * Never trust col.clientHeight alone: the column can extend under the dock.
+   */
+  function measureStageViewport(col) {
+    var rect = col.getBoundingClientRect();
+    var cs = window.getComputedStyle(col);
+    var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+
+    var headerEl = document.getElementById('boxiesHeader') ||
+      document.querySelector('.boxies-header');
+    var dockEl = document.getElementById('boxiesDock');
+    var headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 0;
+    var dockTop = dockEl
+      ? dockEl.getBoundingClientRect().top
+      : (window.visualViewport
+        ? window.visualViewport.offsetTop + window.visualViewport.height
+        : window.innerHeight);
+
+    var top = Math.max(rect.top, headerBottom);
+    var bottom = Math.min(rect.bottom, dockTop);
+    var width = Math.max(1, rect.width - padX - STAGE_FIT_INSET * 2);
+    var height = Math.max(1, bottom - top - padY - STAGE_FIT_INSET * 2);
+
+    return { width: width, height: height };
+  }
+
+  /**
+   * V7.2.23 — REAL Stage Auto-Fit (Figma).
+   * One natural block: scenes + 1920×1080 canvas + dock.
+   * One transform: scale(...). Never reflow pieces independently.
    */
   function fitStageWorkspace() {
     if (!rootEl) return;
@@ -1017,16 +1047,14 @@ var QuotationEditor = (function () {
     var unit = rootEl.querySelector('[data-qe-stage-unit]');
     if (!col || !shell || !unit) return;
 
-    var cs = window.getComputedStyle(col);
-    var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    var availW = Math.max(1, col.clientWidth - padX);
-    var availH = Math.max(1, col.clientHeight - padY);
+    var vp = measureStageViewport(col);
+    var availW = vp.width;
+    var availH = vp.height;
 
     var natW = CANVAS_DESIGN_W;
     var natCanvasH = CANVAS_DESIGN_H;
 
-    /* 1) Lock unit to natural size (no scale) so measurements are stable. */
+    /* 1) Natural size — unlock scale, lock design pixels. */
     unit.style.transform = 'none';
     unit.style.width = natW + 'px';
     unit.style.height = 'auto';
@@ -1035,6 +1063,7 @@ var QuotationEditor = (function () {
     unit.style.top = '0';
     unit.style.left = '0';
     unit.style.transformOrigin = 'top left';
+    unit.style.visibility = 'hidden';
 
     var stage = unit.querySelector('[data-qe-canvas]');
     if (stage) {
@@ -1044,14 +1073,31 @@ var QuotationEditor = (function () {
       stage.style.maxHeight = natCanvasH + 'px';
       stage.style.flex = '0 0 auto';
     }
-
-    /* Design frame is 1:1 with the stage — outer scale is the only zoom. */
     syncDesignIdentity();
 
     var scenes = unit.querySelector('.qe-scenes');
-    var dock = unit.querySelector('.qe-dock');
-    var scenesH = scenes ? scenes.offsetHeight : 0;
-    var dockH = dock ? dock.offsetHeight : 0;
+    var dock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
+    if (scenes) {
+      scenes.style.width = natW + 'px';
+      scenes.style.flex = '0 0 auto';
+    }
+    if (dock) {
+      dock.style.width = natW + 'px';
+      dock.style.flex = '0 0 auto';
+      dock.style.display = 'grid';
+    }
+
+    /* Force layout before measuring chrome. */
+    void unit.offsetHeight;
+
+    var scenesH = Math.max(
+      scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0,
+      STAGE_SCENES_MIN_H
+    );
+    var dockH = Math.max(
+      dock ? Math.ceil(dock.getBoundingClientRect().height) : 0,
+      STAGE_DOCK_MIN_H
+    );
     var scenesMb = scenes
       ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0)
       : 0;
@@ -1067,34 +1113,37 @@ var QuotationEditor = (function () {
       Math.ceil(scenesH + scenesMb + natCanvasH + dockMt + dockH + dockMb)
     );
     unit.style.height = natH + 'px';
+    unit.style.visibility = '';
 
-    /* 2) Single uniform scale to fit remaining column space. */
+    /* 2) Single uniform scale for the whole Stage block. */
     var scale = Math.min(availW / natW, availH / natH);
     if (!isFinite(scale) || scale <= 0) scale = 0.01;
+    if (scale > 1) scale = 1;
 
     var scaledW = Math.max(1, Math.floor(natW * scale));
     var scaledH = Math.max(1, Math.floor(natH * scale));
 
+    shell.style.boxSizing = 'border-box';
     shell.style.width = scaledW + 'px';
     shell.style.height = scaledH + 'px';
     shell.style.maxWidth = '100%';
     shell.style.maxHeight = '100%';
     shell.style.position = 'relative';
     shell.style.overflow = 'hidden';
-    shell.setAttribute('data-qe-stage-scale', String(scale));
+    shell.style.flex = '0 0 auto';
+    shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
+    shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
 
     unit.style.transform = 'scale(' + scale + ')';
   }
 
-  /** Design pixels == stage pixels; no inner scale. */
+  /** Design pixels == stage pixels; outer Stage scale is the only zoom. */
   function syncDesignIdentity() {
     if (!rootEl) return;
     var viewport = rootEl.querySelector('[data-qe-canvas-viewport]');
     var screen = rootEl.querySelector('[data-qe-canvas-screen]');
     var design = rootEl.querySelector('[data-qe-canvas-design]');
-    if (viewport) {
-      viewport.style.padding = '0';
-    }
+    if (viewport) viewport.style.padding = '0';
     if (screen) {
       screen.style.width = CANVAS_DESIGN_W + 'px';
       screen.style.height = CANVAS_DESIGN_H + 'px';
@@ -1108,7 +1157,6 @@ var QuotationEditor = (function () {
   }
 
   function fitCanvasDesign() {
-    /* Kept as alias — outer stage scale is the SSOT (V7.2.22). */
     fitStageWorkspace();
   }
 
@@ -1127,12 +1175,15 @@ var QuotationEditor = (function () {
       if (stageRo) stageRo.disconnect();
       if (canvasRo) canvasRo.disconnect();
       canvasRo = null;
-      stageRo = new ResizeObserver(function () { fitStageWorkspace(); });
+      stageRo = new ResizeObserver(function () {
+        fitStageWorkspace();
+      });
       if (col) stageRo.observe(col);
-      /* Also observe workspace so left/right panel transitions retrigger fit. */
       var workspace = rootEl && (rootEl.closest('.quotation-workspace') ||
         document.querySelector('.quotation-workspace'));
       if (workspace) stageRo.observe(workspace);
+      var dockEl = document.getElementById('boxiesDock');
+      if (dockEl) stageRo.observe(dockEl);
     }
     if (!stageFitBound && typeof window !== 'undefined') {
       stageFitBound = true;

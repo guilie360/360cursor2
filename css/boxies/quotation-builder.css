@@ -3,10 +3,16 @@
 .quotation-builder-host,
 #boxiesContent.quotation-builder-host {
   position: relative;
-  min-height: calc(
+  height: calc(
     100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) -
       var(--boxies-dock-safe, 0px)
   );
+  max-height: calc(
+    100vh - var(--boxies-header-h, 52px) - var(--boxies-dock-h, 56px) -
+      var(--boxies-dock-safe, 0px)
+  );
+  min-height: 0;
+  overflow: hidden;
 }
 
 .quotation-builder {
@@ -91,10 +97,10 @@
 .quotation-workspace.is-editor {
   display: flex;
   flex-direction: row;
-  min-height: inherit;
+  min-height: 0;
   height: 100%;
   max-height: 100%;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .quotation-panel--editor {
@@ -219,7 +225,7 @@
   overflow: hidden;
 }
 
-/* V7.2.22 — Stage shell: natural unit + uniform scale (Figma-style) */
+/* V7.2.22/23 — Stage shell: natural unit + uniform scale (Figma-style) */
 .qe-stage-shell {
   position: relative;
   flex: 0 0 auto;
@@ -227,6 +233,7 @@
   max-height: 100%;
   overflow: hidden;
   display: block;
+  margin: 0 auto;
 }
 
 .qe-stage-unit {
@@ -1958,8 +1965,9 @@ body.quotation-canvas-first .builder-workspace,
   align-items: stretch;
   min-height: 0;
   height: 100%;
+  max-height: 100%;
   gap: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Left visual block: icon rail + recursos */
@@ -2097,6 +2105,8 @@ body.quotation-canvas-first .builder-workspace,
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2159,7 +2169,7 @@ body.quotation-canvas-first .builder-workspace,
 /* Editor grid without in-column library */
 .qe-editor {
   position: relative;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .qe-editor.qe-editor--external-library {
