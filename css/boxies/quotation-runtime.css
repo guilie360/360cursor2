@@ -249,3 +249,85 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   left: 20px;
   z-index: 6;
 }
+
+/* ── V7.2.24 — Proposals picker (reuses .unit-card / .units-popup) ── */
+.qr-proposals-popup {
+  z-index: 12050;
+}
+
+.qr-proposals-popup .qr-proposals-box {
+  width: min(920px, 100%);
+  max-height: min(88vh, 880px);
+  position: relative;
+}
+
+.qr-proposals-popup .popup-box-scroll {
+  padding: 48px 28px 36px;
+}
+
+.qr-proposals-popup .demo-title {
+  margin: 0 0 28px;
+  text-align: center;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.qr-proposals-popup .qr-proposals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.qr-proposals-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  appearance: none;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.qr-proposals-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.qr-proposals-popup .unit-typo-price-value--desc {
+  font-size: 0.82rem !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em !important;
+  line-height: 1.45 !important;
+  text-transform: none !important;
+  opacity: 0.78;
+}
+
+@media (max-width: 700px) {
+  .qr-proposals-popup .qr-proposals-grid {
+    grid-template-columns: 1fr;
+    max-width: 360px;
+  }
+}
+
+body.qr-proposals-open {
+  overflow: hidden;
+}

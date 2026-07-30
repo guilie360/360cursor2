@@ -548,7 +548,14 @@ var QuotationRuntime = (function () {
     };
 
     if (!editorMode) {
-      opts.onExplore = function () { enterStage(); };
+      /* Left CTA (Cotización / Explorar): proposals picker — no longer opens menu or jumps scene. */
+      opts.onExplore = function () {
+        if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
+          QuotationProposalsModal.open();
+          return;
+        }
+        enterStage();
+      };
       opts.onStart = function () { enterStage(); };
     }
 
