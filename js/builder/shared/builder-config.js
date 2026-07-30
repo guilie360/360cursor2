@@ -565,30 +565,11 @@ var BuilderConfig = (function () {
   async function saveIdentity(adapter, rootEl, nameInput, slugInput, saveBtn, statusEl, options) {
     options = options || {};
     var silent = !!options.silent;
-    function trace(step, data) {
-      try {
-        if (!window.__BOXIES_IDENTITY_TRACE__) window.__BOXIES_IDENTITY_TRACE__ = [];
-        var entry = Object.assign({ t: Date.now(), step: step }, data || {});
-        window.__BOXIES_IDENTITY_TRACE__.push(entry);
-        console.log('[IDENTITY]', step, data || {});
-      } catch (e) {}
-    }
-
-    try {
-      window.__BOXIES_IDENTITY_TRACE__ = [];
-    } catch (e0) {}
 
     var identity = adapter.getIdentity ? (adapter.getIdentity() || {}) : {};
     var projectId = adapter.getProjectId ? adapter.getProjectId() : null;
 
-    trace('1_uuid_cargado_pantalla', {
-      projectId: projectId,
-      stateNombre: identity.nombre,
-      stateSlug: identity.slug
-    });
-
     if (!projectId) {
-      trace('STOP_sin_uuid', {});
       var missingMsg = typeof adapter.missingProjectMessage === 'function'
         ? adapter.missingProjectMessage()
         : 'Abre un showroom existente para guardar la identidad.';
@@ -599,11 +580,6 @@ var BuilderConfig = (function () {
       throw new Error(missingMsg || 'No hay un showroom vinculado.');
     }
     if (typeof ProyectosApi === 'undefined' || typeof ProyectosApi.updateIdentity !== 'function') {
-      trace('STOP_api_ausente', {
-        hasProyectosApi: typeof ProyectosApi !== 'undefined',
-        hasUpdateIdentity: typeof ProyectosApi !== 'undefined' &&
-          typeof ProyectosApi.updateIdentity === 'function'
-      });
       if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error('API de identidad no disponible.');
       }
@@ -613,27 +589,16 @@ var BuilderConfig = (function () {
     var nombre = nameInput ? String(nameInput.value || '').trim() : '';
     var slug = normalizeSlug(slugInput ? slugInput.value : '');
 
-    trace('3_inputs', {
-      nombreInput: nameInput ? nameInput.value : null,
-      slugInput: slugInput ? slugInput.value : null,
-      nombre: nombre,
-      slug: slug,
-      saveBtnDisabled: !!(saveBtn && saveBtn.disabled)
-    });
-
     if (!nombre || !slug) {
-      trace('STOP_inputs_vacios', { nombre: nombre, slug: slug });
       if (statusEl) statusEl.textContent = 'Nombre y slug son obligatorios.';
       throw new Error('Nombre y slug son obligatorios.');
     }
     if (typeof ShowroomPublicUrl !== 'undefined') {
       if (ShowroomPublicUrl.isReservedSlug(slug)) {
-        trace('STOP_slug_reservado', { slug: slug });
         if (statusEl) statusEl.textContent = 'Ese slug está reservado.';
         throw new Error('Ese slug está reservado.');
       }
       if (!ShowroomPublicUrl.isValidSlugFormat(slug)) {
-        trace('STOP_slug_invalido', { slug: slug });
         if (statusEl) statusEl.textContent = 'Slug inválido.';
         throw new Error('Slug inválido.');
       }
@@ -649,12 +614,10 @@ var BuilderConfig = (function () {
           excludeId: projectId,
           constructoraId: constructoraId
         });
-        trace('3b_slug_availability', availability);
         if (!availability.available) {
           var msg = availability.reason === 'reserved'
             ? 'Ese slug está reservado.'
             : 'Ese slug ya pertenece a otro Showroom.';
-          trace('STOP_slug_no_disponible', { msg: msg, availability: availability });
           if (statusEl) statusEl.textContent = msg;
           throw new Error(msg);
         }
@@ -665,9 +628,13 @@ var BuilderConfig = (function () {
         )) {
           throw checkErr;
         }
-        trace('3b_slug_availability_error', {
-          message: checkErr && checkErr.message
-        });
+        if (checkErr && (
+          checkErr.name === 'RangeError' ||
+          /Maximum call stack/i.test((checkErr && checkErr.message) || '')
+        )) {
+          throw checkErr;
+        }
+        /* Transient availability-check failure — continue to updateIdentity. */
       }
     }
 
@@ -707,9 +674,7 @@ var BuilderConfig = (function () {
 
       try {
         await saveShareMeta(adapter, rootEl);
-      } catch (shareErr) {
-        trace('share_meta_error', { message: shareErr && shareErr.message });
-      }
+      } catch (shareErr) {}
 
       if (typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(updated.id);
@@ -739,12 +704,6 @@ var BuilderConfig = (function () {
         }));
       } catch (evErr) {}
 
-      trace('8_datos_render', {
-        id: updated.id,
-        nombre: payload.nombre,
-        slug: payload.slug
-      });
-
       if (statusEl) statusEl.textContent = 'Identidad guardada.';
       if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.success) {
         AdminNotify.success('Identidad guardada en la base: /' + payload.slug);
@@ -758,10 +717,6 @@ var BuilderConfig = (function () {
         adapter.afterSave(payload);
       }
     } catch (err) {
-      trace('STOP_error', {
-        message: err && err.message,
-        stack: err && err.stack
-      });
       if (statusEl) statusEl.textContent = err.message || 'Error al guardar.';
       if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error(err.message || 'Error al guardar identidad');
