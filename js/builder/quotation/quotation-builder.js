@@ -39,10 +39,11 @@ var QuotationBuilderView = (function () {
     var id = typeof QuotationRouter !== 'undefined'
       ? QuotationRouter.normalize(stepId)
       : (stepId || 'config');
-    if (id === 'hero' && typeof QuotationHero !== 'undefined') return QuotationHero;
     if (id === 'editor' && typeof QuotationEditor !== 'undefined') return QuotationEditor;
+    if (id === 'hero' && typeof QuotationHero !== 'undefined') return QuotationHero;
     if (id === 'preview' && typeof QuotationPreview !== 'undefined') return QuotationPreview;
-    return typeof QuotationConfig !== 'undefined' ? QuotationConfig : null;
+    if (id === 'config' && typeof QuotationConfig !== 'undefined') return QuotationConfig;
+    return null;
   }
 
   function iconRailHtml(stepId) {

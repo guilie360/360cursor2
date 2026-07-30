@@ -607,7 +607,7 @@ var QuotationEditor = (function () {
     saveSceneTemplates(list);
     state.dockOpen = false;
     if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
-      AdminNotify.success('Plantilla “‘ + name + '” guardada.');
+      AdminNotify.success('Plantilla "' + name + '" guardada.');
     }
     rerender();
   }
