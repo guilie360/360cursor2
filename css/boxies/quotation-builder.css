@@ -248,10 +248,17 @@
   will-change: transform;
 }
 
-.qe-stage-unit .qe-scenes,
-.qe-stage-unit .qe-dock {
+.qe-stage-unit .qe-scenes {
   width: 100%;
   box-sizing: border-box;
+}
+
+.qe-stage-unit .qe-dock {
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .qe-stage-unit .qe-canvas__stage {
@@ -276,8 +283,8 @@
 }
 
 .qe-stage-unit .qe-dock {
-  margin-top: 10px;
-  margin-bottom: 0;
+  margin-top: 16px;
+  margin-bottom: 4px;
 }
 
 .qe-col--inspector {
