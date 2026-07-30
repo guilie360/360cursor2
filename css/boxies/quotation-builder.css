@@ -91,25 +91,31 @@
   flex-direction: column;
   min-height: inherit;
   height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .quotation-panel--editor {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  max-height: 100%;
   padding: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .qe-editor {
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  max-height: 100%;
   display: grid;
   grid-template-columns: 176px minmax(0, 1fr) 200px;
   gap: 0;
   background: transparent;
+  overflow: hidden;
 }
 
 .qe-editor.is-focus {
@@ -138,9 +144,54 @@
 .qe-col--canvas {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 0;
-  padding: 8px 10px 0;
+  height: 100%;
+  max-height: 100%;
+  padding: 6px 8px;
   gap: 0;
+  overflow: hidden;
+}
+
+/* V7.2.10 — Stage unit (scenes + 16:9 canvas + dock) scales as one */
+.qe-stage-shell {
+  flex: 0 0 auto;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: visible;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.qe-stage-unit {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transform-origin: top left;
+  will-change: transform;
+}
+
+.qe-stage-unit .qe-canvas__stage {
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  margin: 0;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+}
+
+.qe-stage-unit .qe-dock {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
 .qe-col--inspector {
@@ -310,13 +361,6 @@
 }
 
 /* ── V7.2.09 — Stage + bottom dock ── */
-
-.qe-col--canvas .qe-canvas__stage {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 0;
-  border-radius: 8px;
-}
 
 .qe-dock {
   flex: 0 0 auto;
@@ -1492,22 +1536,17 @@
 
 @media (max-width: 1100px) {
   .qe-editor {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(280px, 42vh) auto;
-    overflow: auto;
+    grid-template-columns: 120px minmax(0, 1fr) 160px;
+    overflow: hidden;
   }
 
   .qe-editor.is-focus {
-    grid-template-rows: minmax(280px, 1fr);
-  }
-
-  .qe-col--library,
-  .qe-col--inspector {
-    border: none;
-    border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .qe-lib__list {
-    max-height: 220px;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 }

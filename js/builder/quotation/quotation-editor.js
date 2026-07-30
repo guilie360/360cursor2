@@ -1,6 +1,6 @@
 /**
- * Quotation Editor — V7.2.09 Workspace Redesign.
- * Hero = Runtime iframe in 1920×1080 frame; UI chrome only (scenes / dock).
+ * Quotation Editor — V7.2.10 Responsive Workspace 16:9.
+ * Stage unit (scenes + canvas + dock) scales uniformly to stay fully visible.
  */
 var QuotationEditor = (function () {
   var CANVAS_DESIGN_W = 1920;
@@ -851,21 +851,74 @@ var QuotationEditor = (function () {
     var designBody = isHero ? heroRuntimeStageHtml() : stageBodyHtml(content, scene);
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
-        scenesBarHtml() +
-        '<div class="qe-canvas__stage" data-qe-canvas>' +
-          '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
-            '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
-              '<div class="qe-canvas__design" data-qe-canvas-design>' +
-                designBody +
+        '<div class="qe-stage-shell" data-qe-stage-shell>' +
+          '<div class="qe-stage-unit" data-qe-stage-unit>' +
+            scenesBarHtml() +
+            '<div class="qe-canvas__stage" data-qe-canvas>' +
+              '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
+                '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
+                  '<div class="qe-canvas__design" data-qe-canvas-design>' +
+                    designBody +
+                  '</div>' +
+                '</div>' +
               '</div>' +
             '</div>' +
+            stageDockHtml() +
           '</div>' +
         '</div>' +
-        stageDockHtml() +
       '</section>';
   }
 
   var canvasRo = null;
+  var stageRo = null;
+
+  /**
+   * Fit scenes + 16:9 canvas + dock as one unit inside the column (Figma-style).
+   * Outer scale only — Hero design still uses fitCanvasDesign for 1920×1080.
+   */
+  function fitStageWorkspace() {
+    if (!rootEl) return;
+    var col = rootEl.querySelector('.qe-col--canvas');
+    var shell = rootEl.querySelector('[data-qe-stage-shell]');
+    var unit = rootEl.querySelector('[data-qe-stage-unit]');
+    if (!col || !shell || !unit) return;
+
+    unit.style.transform = 'none';
+    unit.style.width = '';
+    shell.style.width = '100%';
+    shell.style.height = '100%';
+
+    var cs = window.getComputedStyle(col);
+    var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    var availW = Math.max(1, col.clientWidth - padX);
+    var availH = Math.max(1, col.clientHeight - padY);
+
+    var unitW = Math.max(1, Math.floor(availW));
+    unit.style.width = unitW + 'px';
+
+    var stage = unit.querySelector('[data-qe-canvas]');
+    if (stage) {
+      var stageH = Math.max(1, Math.round(unitW * 9 / 16));
+      stage.style.width = unitW + 'px';
+      stage.style.height = stageH + 'px';
+    }
+
+    var naturalW = unit.offsetWidth || unitW;
+    var naturalH = unit.offsetHeight || 1;
+    var scale = Math.min(availW / naturalW, availH / naturalH, 1);
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+
+    var scaledW = Math.max(1, Math.floor(naturalW * scale));
+    var scaledH = Math.max(1, Math.floor(naturalH * scale));
+    shell.style.width = scaledW + 'px';
+    shell.style.height = scaledH + 'px';
+    unit.style.width = naturalW + 'px';
+    unit.style.transformOrigin = 'top left';
+    unit.style.transform = scale < 0.999 ? ('scale(' + scale + ')') : 'none';
+
+    fitCanvasDesign();
+  }
 
   function fitCanvasDesign() {
     if (!rootEl) return;
@@ -888,13 +941,20 @@ var QuotationEditor = (function () {
   }
 
   function bindCanvasFit() {
-    var viewport = rootEl && rootEl.querySelector('[data-qe-canvas-viewport]');
-    if (!viewport) return;
-    fitCanvasDesign();
+    fitStageWorkspace();
+    var col = rootEl && rootEl.querySelector('.qe-col--canvas');
     if (typeof ResizeObserver !== 'undefined') {
+      if (stageRo) stageRo.disconnect();
       if (canvasRo) canvasRo.disconnect();
-      canvasRo = new ResizeObserver(function () { fitCanvasDesign(); });
-      canvasRo.observe(viewport);
+      stageRo = new ResizeObserver(function () { fitStageWorkspace(); });
+      if (col) stageRo.observe(col);
+      var viewport = rootEl && rootEl.querySelector('[data-qe-canvas-viewport]');
+      if (viewport) {
+        canvasRo = new ResizeObserver(function () { fitCanvasDesign(); });
+        canvasRo.observe(viewport);
+      }
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', fitStageWorkspace);
     }
   }
 
