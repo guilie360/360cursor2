@@ -56,7 +56,7 @@ var QuotationBuilderView = (function () {
 
   function leftFloatHtml() {
     return (
-      '<button type="button" class="boxies-sidebar-float-toggle quotation-panel-float quotation-panel-float--left"' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--left"' +
         ' id="' + FLOAT_BTN_ID + '"' +
         ' data-collapsed="' + (leftCollapsed ? '1' : '0') + '"' +
         ' aria-expanded="' + (leftCollapsed ? 'false' : 'true') + '"' +

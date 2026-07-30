@@ -245,12 +245,17 @@ var QuotationEditor = (function () {
       var raw = sessionStorage.getItem(draftStorageKey(id));
       if (!raw) return false;
       var draft = JSON.parse(raw);
-      if (!draft || !Array.isArray(draft.scenes) || !draft.scenes.length) return false;
+      if (!draft || !Array.isArray(draft.scenes)) return false;
       state.content = Array.isArray(draft.content) ? draft.content : [];
       state.folders = Array.isArray(draft.folders) ? draft.folders : [];
       state.scenes = draft.scenes;
       state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
-      state.activeSceneId = draft.activeSceneId || state.scenes[0].id;
+      state.activeSceneId = draft.activeSceneId ||
+        (state.scenes[0] && state.scenes[0].id) ||
+        null;
+      if (state.activeSceneId && !sceneById(state.activeSceneId)) {
+        state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
+      }
       if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
       if (draft.expEditMode) state.expEditMode = draft.expEditMode;
       return true;
@@ -279,20 +284,12 @@ var QuotationEditor = (function () {
   }
 
   function ensureScenes() {
-    if (!state.scenes || !state.scenes.length) {
-      var hero = {
-        id: nextId('sc'),
-        name: 'Hero',
-        type: 'hero',
-        elements: [],
-        interactions: [],
-        buttons: [],
-        hotspots: []
-      };
-      state.scenes = [hero];
-      state.activeSceneId = hero.id;
-    }
+    if (!Array.isArray(state.scenes)) state.scenes = [];
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+    if (!state.scenes.length) {
+      state.activeSceneId = null;
+      return;
+    }
     if (!sceneById(state.activeSceneId)) {
       state.activeSceneId = state.scenes[0].id;
     }
@@ -731,10 +728,7 @@ var QuotationEditor = (function () {
   function emptyScenePlaceholderHtml() {
     return '' +
       '<div class="qe-scene-empty" data-qe-scene-empty data-qe-drop-scene>' +
-        '<div class="qe-scene-empty__icon" aria-hidden="true">📷</div>' +
-        '<p class="qe-scene-empty__title">Agrega un archivo</p>' +
-        '<p class="qe-scene-empty__sub">Selecciona una imagen o un video desde tu biblioteca.</p>' +
-        '<button type="button" class="qe-scene-empty__btn" data-qe-open-resource-picker>+ Agregar archivo</button>' +
+        '<p class="qe-scene-empty__line">Agregar o arrastra un archivo</p>' +
       '</div>';
   }
 
@@ -811,7 +805,7 @@ var QuotationEditor = (function () {
   }
 
   function stageBodyHtml(scene) {
-    if (!sceneHasResource(scene)) return emptyScenePlaceholderHtml();
+    if (!scene || !sceneHasResource(scene)) return emptyScenePlaceholderHtml();
     if (sceneUsesProjectCover(scene)) {
       return '<div class="qe-scene-runtime-wrap" data-qe-drop-scene></div>';
     }
@@ -902,12 +896,17 @@ var QuotationEditor = (function () {
         ? ' style="background-image:url(\'' + escapeHtml(res.previewUrl) + '\');background-size:cover;background-position:center"'
         : '';
       return '' +
-        '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
-          ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
-          ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
-          '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
-          '<span class="qe-scenes__thumb-name">' + escapeHtml(label) + '</span>' +
-        '</button>';
+        '<div class="qe-scenes__thumb-wrap">' +
+          '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
+            ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
+            ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
+            '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
+            '<span class="qe-scenes__thumb-name">' + escapeHtml(label) + '</span>' +
+          '</button>' +
+          '<button type="button" class="qe-scenes__thumb-del"' +
+            ' data-qe-scene-delete="' + escapeHtml(sc.id) + '"' +
+            ' aria-label="Eliminar escena" title="Eliminar escena">×</button>' +
+        '</div>';
     }).join('');
 
     return '' +
@@ -1004,8 +1003,8 @@ var QuotationEditor = (function () {
   var stageRo = null;
   var stageFitBound = false;
   var STAGE_FIT_INSET = 8;
-  var STAGE_SCENES_MIN_H = 72;
-  var STAGE_DOCK_MIN_H = 44;
+  var STAGE_SCENES_MIN_H = 120;
+  var STAGE_DOCK_MIN_H = 64;
 
   /**
    * Visible rectangle for the Stage — clamped by header + fixed BOXIES footer.
@@ -1331,7 +1330,7 @@ var QuotationEditor = (function () {
     var scene = activeScene();
 
     var floatBtn =
-      '<button type="button" class="boxies-sidebar-float-toggle quotation-panel-float quotation-panel-float--right"' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--right"' +
         ' data-qe-toggle-inspector' +
         ' data-collapsed="' + (state.inspectorCollapsed ? '1' : '0') + '"' +
         ' aria-expanded="' + (state.inspectorCollapsed ? 'false' : 'true') + '"' +
@@ -1456,6 +1455,39 @@ var QuotationEditor = (function () {
     state.selectedElementId = null;
     state.sceneMenuOpen = false;
     state.dockOpen = false;
+    rerender();
+  }
+
+  function deleteScene(id) {
+    ensureScenes();
+    var sid = String(id || '').trim();
+    if (!sid) return;
+    var idx = -1;
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i] && state.scenes[i].id === sid) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx < 0) return;
+
+    destroyExperienciaOverlay();
+    state.scenes.splice(idx, 1);
+
+    if (state.activeSceneId === sid) {
+      var next = state.scenes[idx] || state.scenes[idx - 1] || null;
+      state.activeSceneId = next ? next.id : null;
+    } else if (state.activeSceneId && !sceneById(state.activeSceneId)) {
+      state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
+    }
+
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.sceneMenuOpen = false;
+    state.dockOpen = false;
+    state.resourcePickerOpen = false;
+    markDirtyLocal();
     rerender();
   }
 
@@ -2028,6 +2060,7 @@ var QuotationEditor = (function () {
   }
 
   function addButton() {
+    if (!activeScene()) return;
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'buttons';
@@ -2046,6 +2079,7 @@ var QuotationEditor = (function () {
   }
 
   function addHotspot() {
+    if (!activeScene()) return;
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'hotspots';
@@ -2194,12 +2228,20 @@ var QuotationEditor = (function () {
         });
       });
 
+      editor.querySelectorAll('[data-qe-scene-delete]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteScene(btn.getAttribute('data-qe-scene-delete'));
+        });
+      });
+
       var scenesTrack = editor.querySelector('[data-qe-scenes-track]');
       var scenesPrev = editor.querySelector('[data-qe-scenes-prev]');
       var scenesNext = editor.querySelector('[data-qe-scenes-next]');
       function scrollScenes(dir) {
         if (!scenesTrack) return;
-        scenesTrack.scrollBy({ left: dir * Math.max(160, scenesTrack.clientWidth * 0.6), behavior: 'smooth' });
+        scenesTrack.scrollBy({ left: dir * Math.max(200, scenesTrack.clientWidth * 0.6), behavior: 'smooth' });
       }
       if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
@@ -2532,7 +2574,12 @@ var QuotationEditor = (function () {
 
   function hydrateFromHeroQuotation(hq, ctx) {
     hq = hq || null;
-    if (hq && hq.canvas && Array.isArray(hq.canvas.scenes) && hq.canvas.scenes.length) {
+    if (hq && hq.canvas && Array.isArray(hq.canvas.scenes)) {
+      if (!hq.canvas.scenes.length) {
+        state.scenes = [];
+        state.activeSceneId = null;
+        return;
+      }
       state.scenes = hq.canvas.scenes.map(function (sc) {
         var scene = {
           id: sc.id,
@@ -2552,6 +2599,9 @@ var QuotationEditor = (function () {
         return scene;
       });
       state.activeSceneId = hq.canvas.activeSceneId || state.scenes[0].id;
+      if (!sceneById(state.activeSceneId)) {
+        state.activeSceneId = state.scenes[0].id;
+      }
       return;
     }
 
