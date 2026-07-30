@@ -1,5 +1,5 @@
 /**
- * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.26).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.40).
  *
  * Modes:
  *   - Runtime: public experience (/{slug} → here, Visualizar)
@@ -141,6 +141,17 @@ var QuotationRuntime = (function () {
     return scenes[0] || null;
   }
 
+  /**
+   * Editor SSOT: a scene with mediaUrl / publicUrl / resourceId is a media scene.
+   * Runtime must paint it on the stage — never substitute ProjectCover / hero.image_url.
+   */
+  function sceneIsMediaScene(scene) {
+    if (!scene) return false;
+    if (scene.resourceId) return true;
+    var u = scene.mediaUrl || scene.publicUrl || null;
+    return !!(u && String(u).indexOf('blob:') !== 0);
+  }
+
   function resolveSceneMedia(scene, bundle) {
     if (!scene) return null;
     var url = scene.mediaUrl || scene.publicUrl || null;
@@ -159,17 +170,34 @@ var QuotationRuntime = (function () {
         return { url: cm.imageUrl, type: 'image' };
       }
     }
-    /* Never borrow top-level hero media for arbitrary scenes — that shows stale backgrounds. */
-    var entry = entryScene(bundle);
-    var isEntry = !!(entry && scene && String(entry.id) === String(scene.id));
-    if (isEntry) {
-      var hero = bundle && bundle.hero;
-      if (hero) {
-        if (hero.video_url) return { url: hero.video_url, type: 'video' };
-        if (hero.image_url) return { url: hero.image_url, type: 'image' };
+    /* Do not borrow top-level hero.image_url / video_url — Editor paints the scene, not hero. */
+    return null;
+  }
+
+  /** First scene Preview/Web must show: active with media, else first media scene. */
+  function pickStartupScene(bundle) {
+    var doc = canvasDoc(bundle);
+    var scenes = listScenes(bundle);
+    var preferred = null;
+    if (doc && doc.activeSceneId) {
+      preferred = sceneById(bundle, doc.activeSceneId);
+    }
+    if (preferred && (sceneIsMediaScene(preferred) || resolveSceneMedia(preferred, bundle))) {
+      return preferred;
+    }
+    var i;
+    for (i = 0; i < scenes.length; i++) {
+      if (!scenes[i]) continue;
+      if (sceneIsMediaScene(scenes[i]) || resolveSceneMedia(scenes[i], bundle)) {
+        return scenes[i];
       }
     }
     return null;
+  }
+
+  function sceneHasCoverChrome(scene) {
+    if (!scene) return false;
+    return !!(scene.coverModel || scene.type === 'hero' || scene.templateId === 'hero-default');
   }
 
   function isButtonIx(ix) {
@@ -315,10 +343,13 @@ var QuotationRuntime = (function () {
     var scene = sceneById(bundle, sceneId);
     if (!scene) return;
     activeSceneId = String(scene.id);
-    var isEntry = entryScene(bundle) && String(entryScene(bundle).id) === activeSceneId &&
-      (scene.type === 'hero' || scene.templateId === 'hero-default' || scene.coverModel);
 
-    if (isEntry && coverHostEl) {
+    /*
+     * Media scenes always use the stage (Editor parity).
+     * Cover-only entry (no mediaUrl/publicUrl/resourceId) stays on ProjectCover.
+     */
+    var paintAsMedia = sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle);
+    if (!paintAsMedia && sceneHasCoverChrome(scene) && coverHostEl) {
       leaveStage();
       paintInteractionLayer(coverHostEl, scene, interactionsInteractive());
       return;
@@ -336,12 +367,18 @@ var QuotationRuntime = (function () {
     stageEl.innerHTML = '';
     var mediaHost = paintSceneMedia(stageEl, scene, bundle);
     paintInteractionLayer(mediaHost, scene, interactionsInteractive());
-    var back = document.createElement('button');
-    back.type = 'button';
-    back.className = 'project-cover-btn qr-stage__back';
-    back.textContent = 'Volver';
-    back.addEventListener('click', leaveStage);
-    stageEl.appendChild(back);
+    /* Volver only when a distinct cover chrome exists to return to. */
+    var entry = entryScene(bundle);
+    var canReturnToCover = !!(entry && sceneHasCoverChrome(entry) &&
+      String(entry.id) !== String(scene.id));
+    if (canReturnToCover) {
+      var back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'project-cover-btn qr-stage__back';
+      back.textContent = 'Volver';
+      back.addEventListener('click', leaveStage);
+      stageEl.appendChild(back);
+    }
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
@@ -692,6 +729,27 @@ var QuotationRuntime = (function () {
   }
 
   function paintHero(host, bundle) {
+    host.innerHTML = '';
+    coverHostEl = document.createElement('div');
+    coverHostEl.className = 'qr-cover-host';
+    host.appendChild(coverHostEl);
+
+    stageEl = document.createElement('section');
+    stageEl.className = 'qr-stage';
+    stageEl.id = 'qrStage';
+    stageEl.hidden = true;
+    host.appendChild(stageEl);
+
+    /*
+     * V7.2.40 — Editor is SSOT. Preview/Web paint the active media scene immediately.
+     * Do not wait on ProjectCover / hero.image_url / coverModel for the first image.
+     */
+    var startup = pickStartupScene(bundle || loaded);
+    if (startup && !(editorMode && canvasMode)) {
+      goToScene(startup.id);
+      return;
+    }
+
     if (typeof ProjectCover === 'undefined' || !ProjectCover.mount) {
       host.innerHTML =
         '<div class="qr-error" role="alert">' +
@@ -713,20 +771,9 @@ var QuotationRuntime = (function () {
       return;
     }
 
-    host.innerHTML = '';
-    coverHostEl = document.createElement('div');
-    coverHostEl.className = 'qr-cover-host';
-    host.appendChild(coverHostEl);
-
-    stageEl = document.createElement('section');
-    stageEl.className = 'qr-stage';
-    stageEl.id = 'qrStage';
-    stageEl.hidden = true;
-    host.appendChild(stageEl);
-
     remountCover(bundle);
 
-    /* If active scene is not the entry cover, jump straight to it (live Preview). */
+    /* Non-media: jump to active scene when it is not the cover entry. */
     var doc = canvasDoc(bundle || loaded);
     if (doc && doc.activeSceneId && !(editorMode && canvasMode)) {
       var entry = entryScene(bundle || loaded);
