@@ -1,16 +1,20 @@
 /**
- * BuilderDockActions — V7.1.07 shared Guardar / Republicar chrome.
- * Same buttons Showroom uses; promoted into #boxiesDockActions.
+ * BuilderDockActions — shared Guardar / Republicar chrome + execution states (V7.1.09).
+ * States: idle | saving | publishing | success | error
  */
 var BuilderDockActions = (function () {
   var promotedNodes = [];
+  var phase = 'idle';
+  var publishedFlag = false;
+  var resetTimer = null;
 
   function html(opts) {
     opts = opts || {};
     var published = !!opts.published;
     return '' +
-      '<button type="button" class="builder-header-action-btn" id="builderSaveBtn">Guardar</button>' +
-      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn">' +
+      '<button type="button" class="builder-header-action-btn" id="builderSaveBtn" data-dock-idle-label="Guardar">Guardar</button>' +
+      '<button type="button" class="builder-header-action-btn is-primary" id="builderPublishBtn" data-dock-idle-label="' +
+        (published ? 'Republicar' : 'Publicar') + '">' +
         (published ? 'Republicar' : 'Publicar') +
       '</button>';
   }
@@ -41,9 +45,15 @@ var BuilderDockActions = (function () {
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mount) {
       BuilderDirtyState.mount();
     }
+    syncUi();
   }
 
   function restore() {
+    if (resetTimer) {
+      clearTimeout(resetTimer);
+      resetTimer = null;
+    }
+    phase = 'idle';
     promotedNodes.forEach(function (node) {
       if (node && node.parentNode) node.parentNode.removeChild(node);
     });
@@ -54,8 +64,108 @@ var BuilderDockActions = (function () {
   }
 
   function setPublished(published) {
+    publishedFlag = !!published;
     var btn = document.getElementById('builderPublishBtn');
-    if (btn) btn.textContent = published ? 'Republicar' : 'Publicar';
+    if (!btn) return;
+    var label = publishedFlag ? 'Republicar' : 'Publicar';
+    btn.setAttribute('data-dock-idle-label', label);
+    if (phase === 'idle') btn.textContent = label;
+  }
+
+  function clearBtnClasses(btn) {
+    if (!btn) return;
+    btn.classList.remove('is-busy', 'is-success', 'is-error');
+    btn.removeAttribute('aria-busy');
+  }
+
+  function syncUi() {
+    var saveBtn = document.getElementById('builderSaveBtn');
+    var publishBtn = document.getElementById('builderPublishBtn');
+    var busy = phase === 'saving' || phase === 'publishing';
+
+    [saveBtn, publishBtn].forEach(clearBtnClasses);
+
+    if (saveBtn) {
+      var saveIdle = saveBtn.getAttribute('data-dock-idle-label') || 'Guardar';
+      if (phase === 'saving') {
+        saveBtn.classList.add('is-busy');
+        saveBtn.setAttribute('aria-busy', 'true');
+        saveBtn.innerHTML = '<span class="builder-dock-spinner" aria-hidden="true"></span>';
+        saveBtn.disabled = true;
+      } else if (phase === 'success' && saveBtn.dataset.lastAction === 'save') {
+        saveBtn.classList.add('is-success');
+        saveBtn.textContent = '✓';
+        saveBtn.disabled = true;
+      } else if (phase === 'error' && saveBtn.dataset.lastAction === 'save') {
+        saveBtn.classList.add('is-error');
+        saveBtn.textContent = saveIdle;
+        saveBtn.disabled = false;
+      } else {
+        saveBtn.textContent = saveIdle;
+        saveBtn.disabled = busy;
+      }
+    }
+
+    if (publishBtn) {
+      var pubIdle = publishBtn.getAttribute('data-dock-idle-label') ||
+        (publishedFlag ? 'Republicar' : 'Publicar');
+      if (phase === 'publishing') {
+        publishBtn.classList.add('is-busy');
+        publishBtn.setAttribute('aria-busy', 'true');
+        publishBtn.innerHTML = '<span class="builder-dock-spinner" aria-hidden="true"></span>';
+        publishBtn.disabled = true;
+      } else if (phase === 'success' && publishBtn.dataset.lastAction === 'publish') {
+        publishBtn.classList.add('is-success');
+        publishBtn.textContent = '✓';
+        publishBtn.disabled = true;
+      } else if (phase === 'error' && publishBtn.dataset.lastAction === 'publish') {
+        publishBtn.classList.add('is-error');
+        publishBtn.textContent = pubIdle;
+        publishBtn.disabled = false;
+      } else {
+        publishBtn.textContent = pubIdle;
+        publishBtn.disabled = busy;
+      }
+    }
+  }
+
+  function setState(next, opts) {
+    opts = opts || {};
+    if (resetTimer) {
+      clearTimeout(resetTimer);
+      resetTimer = null;
+    }
+    var saveBtn = document.getElementById('builderSaveBtn');
+    var publishBtn = document.getElementById('builderPublishBtn');
+    if (next === 'saving' && saveBtn) saveBtn.dataset.lastAction = 'save';
+    if (next === 'publishing' && publishBtn) publishBtn.dataset.lastAction = 'publish';
+    if (next === 'success' || next === 'error') {
+      /* keep lastAction from whoever started */
+    }
+    if (next === 'idle') {
+      if (saveBtn) delete saveBtn.dataset.lastAction;
+      if (publishBtn) delete publishBtn.dataset.lastAction;
+    }
+    phase = next || 'idle';
+    syncUi();
+    if (phase === 'success' || phase === 'error') {
+      var delay = typeof opts.resetMs === 'number' ? opts.resetMs : 900;
+      resetTimer = setTimeout(function () {
+        phase = 'idle';
+        if (saveBtn) delete saveBtn.dataset.lastAction;
+        if (publishBtn) delete publishBtn.dataset.lastAction;
+        syncUi();
+        resetTimer = null;
+      }, delay);
+    }
+  }
+
+  function getState() {
+    return phase;
+  }
+
+  function isBusy() {
+    return phase === 'saving' || phase === 'publishing';
   }
 
   function bind(handlers) {
@@ -65,12 +175,14 @@ var BuilderDockActions = (function () {
     if (saveBtn && typeof handlers.onSave === 'function') {
       saveBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        if (isBusy()) return;
         handlers.onSave();
       });
     }
     if (publishBtn && typeof handlers.onPublish === 'function') {
       publishBtn.addEventListener('click', function (e) {
         e.preventDefault();
+        if (isBusy()) return;
         handlers.onPublish();
       });
     }
@@ -82,6 +194,9 @@ var BuilderDockActions = (function () {
     promote: promote,
     restore: restore,
     setPublished: setPublished,
+    setState: setState,
+    getState: getState,
+    isBusy: isBusy,
     bind: bind
   };
 })();

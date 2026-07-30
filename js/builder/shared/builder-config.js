@@ -64,20 +64,19 @@ var BuilderConfig = (function () {
       : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>';
 
     return '<div class="builder-step-content builder-config-workspace">' +
-      '<div class="builder-config-col builder-config-col--main">' +
-        '<div class="builder-config-identity">' +
-          '<h3 class="builder-config-identity__title">Identidad</h3>' +
+      '<div class="builder-config-col builder-config-col--identity">' +
+        '<div class="builder-hero-config-card builder-config-identity">' +
+          '<div class="builder-hero-config-card__title">Identidad</div>' +
           '<div class="builder-field">' +
-            '<label for="showroomNameInput">Nombre del Showroom</label>' +
+            '<label for="showroomNameInput">Nombre</label>' +
             '<input type="text" id="showroomNameInput" maxlength="120" value="' +
-              escapeHtml(nombre) + '" placeholder="Nombre del showroom" autocomplete="off">' +
+              escapeHtml(nombre) + '" placeholder="Nombre del proyecto" autocomplete="off">' +
           '</div>' +
           '<div class="builder-field">' +
             '<label for="showroomSlugInput">Slug</label>' +
             '<input type="text" id="showroomSlugInput" maxlength="60" value="' +
-              escapeHtml(slug) + '" placeholder="mi-showroom" autocomplete="off" spellcheck="false" inputmode="latin">' +
-            '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60 caracteres.</p>' +
-            '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
+              escapeHtml(slug) + '" placeholder="mi-proyecto" autocomplete="off" spellcheck="false" inputmode="latin">' +
+            '<p class="builder-config-identity__slug-hint">Minúsculas, números y guiones. Máx. 60.</p>' +
           '</div>' +
           '<div class="builder-field">' +
             '<label>URL pública</label>' +
@@ -85,13 +84,18 @@ var BuilderConfig = (function () {
               escapeHtml(urlPreview) +
             '</div>' +
           '</div>' +
+          '<div class="builder-field">' +
+            '<label>Estado URL</label>' +
+            '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
+          '</div>' +
           '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
         '</div>' +
-        '<div class="builder-config-share" data-builder-share>' +
-          '<h3 class="builder-config-identity__title">Vista previa al compartir</h3>' +
-          '<p class="builder-config-share__desc">Personaliza cómo se verá este proyecto cuando compartas el enlace por WhatsApp, Facebook, LinkedIn o cualquier red social.</p>' +
+      '</div>' +
+      '<div class="builder-config-col builder-config-col--share" data-builder-share>' +
+        '<div class="builder-hero-config-card builder-config-share">' +
+          '<div class="builder-hero-config-card__title">Vista previa al compartir</div>' +
           '<div class="builder-field">' +
-            '<label for="builderOgTitle">Título para compartir</label>' +
+            '<label for="builderOgTitle">Título</label>' +
             '<input type="text" id="builderOgTitle" maxlength="120" value="' +
               escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
           '</div>' +
@@ -130,12 +134,11 @@ var BuilderConfig = (function () {
             '<div class="builder-hero-media-card__name" id="builderOgImageName">' +
               (hasImage ? 'Imagen cargada' : 'Sin imagen') +
             '</div>' +
-            '<p class="builder-file-meta">Recomendado: 1200 × 630 px · JPG o PNG</p>' +
+            '<p class="builder-file-meta">1200 × 630 · JPG / PNG</p>' +
           '</div>' +
           '<div class="builder-hero-media-card__actions">' +
             '<button type="button" class="builder-header-action-btn" id="builderOgImageBtn">Subir imagen</button>' +
-            '<button type="button" class="builder-header-action-btn is-danger' +
-              (hasImage ? '' : '') + '" id="builderOgImageClear"' +
+            '<button type="button" class="builder-header-action-btn is-danger" id="builderOgImageClear"' +
               (hasImage ? '' : ' hidden') + '>Quitar</button>' +
             '<input type="file" id="builderOgImageInput" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden>' +
             '<input type="hidden" id="builderOgImageUrl" value="' + escapeHtml(ogImage) + '">' +

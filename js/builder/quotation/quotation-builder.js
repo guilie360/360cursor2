@@ -1,6 +1,6 @@
 /**
  * QuotationBuilderView — Quotation Room builder host.
- * V7.1.08 — global dirty state + shared Config commitAll via dock Guardar.
+ * V7.1.09 — Config 3-col + dock action states + shared BuilderHero.
  */
 var QuotationBuilderView = (function () {
   var rootEl = null;
@@ -107,9 +107,15 @@ var QuotationBuilderView = (function () {
     };
   }
 
+  function setDockState(phase) {
+    if (typeof BuilderDockActions === 'undefined' || !BuilderDockActions.setState) return;
+    try { BuilderDockActions.setState(phase); } catch (eDock) {}
+  }
+
   async function handleSave() {
     if (processing) return;
     processing = true;
+    setDockState('saving');
     try {
       var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
       if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
@@ -117,13 +123,18 @@ var QuotationBuilderView = (function () {
       } else if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
         await BuilderConfig.saveShareMeta(configAdapter(), panel);
       }
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
+        await QuotationHero.commit(configAdapter());
+      }
       if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
         BuilderDirtyState.clear();
       }
+      setDockState('success');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
         AdminNotify.success('Cambios guardados.');
       }
     } catch (err) {
+      setDockState('error');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error((err && err.message) || 'No se pudo guardar.');
       }
@@ -141,10 +152,14 @@ var QuotationBuilderView = (function () {
       return;
     }
     processing = true;
+    setDockState('publishing');
     try {
       var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
       if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
         try { await BuilderConfig.saveShareMeta(configAdapter(), panel); } catch (eShare) {}
+      }
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
+        try { await QuotationHero.commit(configAdapter()); } catch (eHero) {}
       }
       if (typeof ProyectosApi === 'undefined' || !ProyectosApi.update) {
         throw new Error('API de publicación no disponible.');
@@ -160,12 +175,14 @@ var QuotationBuilderView = (function () {
           : (typeof BuilderConfig !== 'undefined'
             ? BuilderConfig.publicUrlDisplay(projectCtx.slug)
             : '/' + projectCtx.slug);
+      setDockState('success');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
         AdminNotify.success(
           projectCtx.published ? 'Proyecto republicado: ' + url : 'Proyecto publicado: ' + url
         );
       }
     } catch (err) {
+      setDockState('error');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error((err && err.message) || 'No se pudo publicar.');
       }
@@ -316,6 +333,9 @@ var QuotationBuilderView = (function () {
   }
 
   function onLeave() {
+    if (typeof QuotationHero !== 'undefined' && QuotationHero.reset) {
+      try { QuotationHero.reset(); } catch (eHero) {}
+    }
     if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.restore) {
       try { BuilderDockActions.restore(); } catch (eDock) {}
     }

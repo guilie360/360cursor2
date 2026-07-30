@@ -46,6 +46,18 @@ var AiProjectBuilderView = (function () {
 
   function updateHeaderActions() {
     if (!rootEl) return;
+    /* V7.1.09 — Dock chrome owns busy/success labels; don't clobber the spinner. */
+    if (typeof BuilderDockActions !== 'undefined') {
+      if (BuilderDockActions.isBusy && BuilderDockActions.isBusy()) return;
+      var phase = BuilderDockActions.getState ? BuilderDockActions.getState() : 'idle';
+      if (phase === 'saving' || phase === 'publishing' || phase === 'success' || phase === 'error') {
+        return;
+      }
+      if (BuilderDockActions.setPublished) {
+        BuilderDockActions.setPublished(!!state.published);
+      }
+      return;
+    }
     var pubBtn = rootEl.querySelector('#builderPublishBtn');
     if (pubBtn) {
       pubBtn.disabled = !!processing;
@@ -1687,271 +1699,21 @@ var AiProjectBuilderView = (function () {
         state.heroVideo = null;
       }
     }
-    var localVideoPreview =
-      v && v.previewUrl &&
-      (typeof isPlayableHeroVideoUrl === 'function'
-        ? isPlayableHeroVideoUrl(v.previewUrl)
-        : String(v.previewUrl).indexOf('blob:') === 0)
-        ? v.previewUrl
-        : null;
-    var hero = state.heroContent || {};
-    var branding = state.branding || {};
-    var nombre = hero.nombre || (state.projectInfo && state.projectInfo.nombre) || '';
-    var eslogan = hero.eslogan || '';
-    var btnLeft = hero.botonIzquierdo || 'Explorar';
-    var btnRight = hero.botonDerecho || 'Iniciar';
-    var waLink = hero.whatsappLink || '';
-    var waMsg = hero.whatsappMessage || '';
-    var shareUrl = hero.shareUrl || '';
-    var showWa = hero.showWhatsapp !== false;
-    var showShare = hero.showShare !== false;
-    var showLogo = branding.showHeroLogo !== false;
-    var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
-    var logoUrl =
-      (branding.logo && (branding.logo.uploadedUrl || branding.logo.previewUrl)) || '';
-
-    function mediaMetaLine(parts) {
-      return parts.filter(Boolean).join(' · ');
+    /* UI compartida con Quotation: BuilderHero es la única fuente del markup del hero. */
+    if (typeof BuilderHero !== 'undefined' && BuilderHero.render) {
+      return BuilderHero.render({
+        mode: 'showroom',
+        heroContent: state.heroContent || {},
+        branding: state.branding || {},
+        heroVideo: v,
+        heroImage: img,
+        projectNameFallback: (state.projectInfo && state.projectInfo.nombre) || ''
+      });
     }
 
-    function videoCardHtml() {
-      var has = !!localVideoPreview;
-      var dims =
-        v && v.width && v.height ? v.width + '×' + v.height + 'px' : '';
-      var status = has
-        ? (v.status === 'synced' ? 'Sincronizado' : (v.status === 'remote' ? 'Remoto' : 'Listo'))
-        : '';
-      return (
-        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="video">' +
-          '<header class="builder-hero-media-card__head">' +
-            '<span class="builder-hero-media-card__label">Video</span>' +
-            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
-          '</header>' +
-          '<div class="builder-hero-media-card__stage" id="videoDropzone"' +
-            (has ? '' : ' title="Haz clic o arrastra un video"') + '>' +
-            (has
-              ? '<video src="' + AdminUI.escapeHtml(localVideoPreview) +
-                '" controls muted class="builder-video-preview"></video>'
-              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
-          '</div>' +
-          (has
-            ? '<div class="builder-hero-media-card__meta">' +
-                '<div class="builder-hero-media-card__name">' +
-                  AdminUI.escapeHtml(v.name || 'Video del hero') +
-                '</div>' +
-                '<div class="builder-file-meta">' +
-                  AdminUI.escapeHtml(
-                    mediaMetaLine([
-                      status,
-                      formatBytes(v.size),
-                      dims,
-                      v.durationLabel ? 'Duración ' + v.durationLabel : ''
-                    ])
-                  ) +
-                '</div>' +
-              '</div>'
-            : '') +
-          '<div class="builder-hero-media-card__actions">' +
-            (has
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Cambiar</button>' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="video">Eliminar</button>'
-              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="video">Subir</button>') +
-          '</div>' +
-          '<input type="file" id="videoInput" accept="' + MediaEngine.ACCEPT + '" hidden>' +
-        '</article>'
-      );
-    }
-
-    function imageCardHtml() {
-      var has = !!(img && (img.previewUrl || img.uploadedUrl));
-      var previewSrc = has ? (img.previewUrl || img.uploadedUrl) : '';
-      var dims =
-        img && img.width && img.height ? img.width + '×' + img.height + 'px' : '';
-      var status = has
-        ? (img.status === 'synced' ? 'Sincronizado' : (img.status === 'remote' ? 'Remoto' : 'Listo'))
-        : '';
-      return (
-        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="image">' +
-          '<header class="builder-hero-media-card__head">' +
-            '<span class="builder-hero-media-card__label">Imagen</span>' +
-            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
-          '</header>' +
-          '<div class="builder-hero-media-card__stage" id="heroImageDropzone"' +
-            (has ? '' : ' title="Haz clic o arrastra una imagen"') + '>' +
-            (has
-              ? '<img src="' + AdminUI.escapeHtml(previewSrc) +
-                '" alt="" class="builder-hero-image-preview">'
-              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
-          '</div>' +
-          (has
-            ? '<div class="builder-hero-media-card__meta">' +
-                '<div class="builder-hero-media-card__name">' +
-                  AdminUI.escapeHtml(img.name || 'Imagen del hero') +
-                '</div>' +
-                '<div class="builder-file-meta">' +
-                  AdminUI.escapeHtml(
-                    mediaMetaLine([status, formatBytes(img.size), dims])
-                  ) +
-                '</div>' +
-              '</div>'
-            : '') +
-          '<div class="builder-hero-media-card__actions">' +
-            (has
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Cambiar</button>' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="image">Eliminar</button>'
-              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="image">Subir</button>') +
-          '</div>' +
-          '<input type="file" id="heroImageInput" accept="' + MediaEngine.IMAGE_ACCEPT + '" hidden>' +
-        '</article>'
-      );
-    }
-
-    function logoCardHtml() {
-      var logo = branding.logo;
-      var previewSrc = logo && (logo.previewUrl || logo.uploadedUrl) ? (logo.previewUrl || logo.uploadedUrl) : '';
-      var has = !!previewSrc;
-      var status = has
-        ? (logo.uploadedUrl ? 'Bunny' : (logo.file ? 'Listo' : 'Remoto'))
-        : '';
-      return (
-        '<article class="builder-hero-media-card' + (has ? ' has-media' : ' is-empty') + '" data-hero-media="logo">' +
-          '<header class="builder-hero-media-card__head">' +
-            '<span class="builder-hero-media-card__label">Logo</span>' +
-            (has ? '<span class="builder-hero-option-badge">Activo</span>' : '') +
-          '</header>' +
-          '<div class="builder-hero-media-card__stage" id="heroLogoDropzone"' +
-            (has ? '' : ' title="Haz clic o arrastra el logo"') + '>' +
-            (has
-              ? '<img src="' + AdminUI.escapeHtml(previewSrc) +
-                '" alt="" class="builder-hero-image-preview">'
-              : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>') +
-          '</div>' +
-          (has
-            ? '<div class="builder-hero-media-card__meta">' +
-                '<div class="builder-hero-media-card__name">' +
-                  AdminUI.escapeHtml(logo.name || 'Logo del proyecto') +
-                '</div>' +
-                '<div class="builder-file-meta">' +
-                  AdminUI.escapeHtml(
-                    mediaMetaLine([status, logo.size ? formatBytes(logo.size) : ''])
-                  ) +
-                '</div>' +
-              '</div>'
-            : '') +
-          '<div class="builder-hero-media-card__actions">' +
-            (has
-              ? '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="logo">Cambiar</button>' +
-                '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-hero-media-clear="logo">Eliminar</button>'
-              : '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-hero-media-change="logo">Subir</button>') +
-          '</div>' +
-          '<input type="file" id="heroLogoInput" accept="image/*,.svg" hidden>' +
-        '</article>'
-      );
-    }
-
-    return (
-      '<div class="builder-step-content builder-step-content--hero">' +
-        '<div class="builder-hero-workspace">' +
-          '<div class="builder-hero-col builder-hero-col--media">' +
-            videoCardHtml() +
-            imageCardHtml() +
-            logoCardHtml() +
-          '</div>' +
-          '<div class="builder-hero-col builder-hero-col--config">' +
-            '<div class="builder-hero-config-card" id="heroContentForm">' +
-              '<div class="builder-hero-config-card__title">Identidad</div>' +
-              '<div class="builder-field">' +
-                '<label for="heroNombreInput">Nombre</label>' +
-                '<input type="text" id="heroNombreInput" maxlength="120" placeholder="Nombre visible en el hero" value="' +
-                  AdminUI.escapeHtml(nombre) + '">' +
-              '</div>' +
-              '<div class="builder-field">' +
-                '<label for="heroEsloganInput">Eslogan</label>' +
-                '<input type="text" id="heroEsloganInput" maxlength="220" placeholder="Eslogan del hero" value="' +
-                  AdminUI.escapeHtml(eslogan) + '">' +
-              '</div>' +
-            '</div>' +
-            '<div class="builder-hero-config-card">' +
-              '<div class="builder-hero-config-card__title">Botones</div>' +
-              '<div class="builder-field">' +
-                '<label for="heroBtnLeftInput">Texto izquierdo</label>' +
-                '<input type="text" id="heroBtnLeftInput" maxlength="40" placeholder="Explorar" value="' +
-                  AdminUI.escapeHtml(btnLeft) + '">' +
-              '</div>' +
-              '<div class="builder-field">' +
-                '<label for="heroBtnRightInput">Texto derecho</label>' +
-                '<input type="text" id="heroBtnRightInput" maxlength="40" placeholder="Iniciar" value="' +
-                  AdminUI.escapeHtml(btnRight) + '">' +
-              '</div>' +
-            '</div>' +
-            '<div class="builder-hero-config-card">' +
-              '<div class="builder-hero-config-card__title">WhatsApp</div>' +
-              '<label class="builder-check-row">' +
-                '<input type="checkbox" id="heroShowWhatsappInput"' + (showWa ? ' checked' : '') + '>' +
-                '<span>Mostrar</span>' +
-              '</label>' +
-              '<div class="builder-field">' +
-                '<label for="heroWhatsappLinkInput">Número / link</label>' +
-                '<input type="text" id="heroWhatsappLinkInput" maxlength="180" ' +
-                  'placeholder="573001112233 o https://wa.me/573001112233" value="' +
-                  AdminUI.escapeHtml(waLink) + '">' +
-              '</div>' +
-              '<div class="builder-field">' +
-                '<label for="heroWhatsappMsgInput">Mensaje</label>' +
-                '<input type="text" id="heroWhatsappMsgInput" maxlength="280" ' +
-                  'placeholder="Hola, quiero más información..." value="' +
-                  AdminUI.escapeHtml(waMsg) + '">' +
-              '</div>' +
-            '</div>' +
-            '<div class="builder-hero-config-card">' +
-              '<div class="builder-hero-config-card__title">Compartir</div>' +
-              '<label class="builder-check-row">' +
-                '<input type="checkbox" id="heroShowShareInput"' + (showShare ? ' checked' : '') + '>' +
-                '<span>Mostrar</span>' +
-              '</label>' +
-              '<div class="builder-field">' +
-                '<label for="heroShareUrlInput">URL al compartir</label>' +
-                '<input type="url" id="heroShareUrlInput" maxlength="400" ' +
-                  'placeholder="Vacío = URL actual del showroom" value="' +
-                  AdminUI.escapeHtml(shareUrl) + '">' +
-              '</div>' +
-            '</div>' +
-            '<div class="builder-hero-config-card">' +
-              '<div class="builder-hero-config-card__title">Fullscreen</div>' +
-              '<label class="builder-check-row">' +
-                '<input type="checkbox" id="heroShowFullscreenInput"' +
-                  ((hero.showFullscreen !== false) ? ' checked' : '') + '>' +
-                '<span>Mostrar control de pantalla completa</span>' +
-              '</label>' +
-            '</div>' +
-            '<div class="builder-hero-config-card">' +
-              '<div class="builder-hero-config-card__title">Logo</div>' +
-              '<label class="builder-check-row">' +
-                '<input type="checkbox" id="heroShowLogoInput"' + (showLogo ? ' checked' : '') + '>' +
-                '<span>Mostrar en el hero</span>' +
-              '</label>' +
-              '<div class="builder-field">' +
-                '<label for="heroLogoUrlDisplay">URL Bunny</label>' +
-                '<input type="text" id="heroLogoUrlDisplay" readonly ' +
-                  'placeholder="Sin logo — súbelo a la izquierda" value="' +
-                  AdminUI.escapeHtml(logoUrl) + '">' +
-              '</div>' +
-              '<div class="builder-confirm-title" style="margin-top:4px">Formato</div>' +
-              '<label class="builder-check-row">' +
-                '<input type="radio" name="heroLogoStyle" value="flat" id="heroLogoStyleFlat"' +
-                  (logoStyle === 'flat' ? ' checked' : '') + '>' +
-                '<span>Mantener formato</span>' +
-              '</label>' +
-              '<label class="builder-check-row">' +
-                '<input type="radio" name="heroLogoStyle" value="avatar" id="heroLogoStyleAvatar"' +
-                  (logoStyle === 'avatar' ? ' checked' : '') + '>' +
-                '<span>Convertir a circular</span>' +
-              '</label>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>'
-    );
+    return '<div class="builder-step-content builder-step-content--hero">' +
+      '<p class="builder-menu-hint">Editor del hero no disponible (BuilderHero no está cargado).</p>' +
+      '</div>';
   }
 
   function renderMenu() {
@@ -3704,13 +3466,6 @@ var AiProjectBuilderView = (function () {
           '<strong>' + AdminUI.escapeHtml(p.name) + '</strong>' +
           '<span>' + AdminUI.escapeHtml(p.description) + '</span></button>';
       }).join('') + '</div></div>';
-  }
-
-  function formatBytes(bytes) {
-    if (!bytes) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
   function renderStepContent() {
@@ -6811,9 +6566,15 @@ var AiProjectBuilderView = (function () {
     renderStepContent();
   }
 
+  function setDockState(phase) {
+    if (typeof BuilderDockActions === 'undefined' || !BuilderDockActions.setState) return;
+    try { BuilderDockActions.setState(phase); } catch (eDock) {}
+  }
+
   function handleSave() {
     if (processing) return;
     processing = true;
+    setDockState('saving');
     updateHeaderActions();
 
     /* Si el formulario Hero está montado, leer checkboxes aunque no sea el paso actual. */
@@ -6992,8 +6753,10 @@ var AiProjectBuilderView = (function () {
         if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
           BuilderDirtyState.clear();
         }
+        setDockState('success');
       })
       .catch(function (err) {
+        setDockState('error');
         AdminNotify.error(err.message || 'Error guardando cambios');
       })
       .finally(function () {
@@ -7109,6 +6872,7 @@ var AiProjectBuilderView = (function () {
   async function handlePublish() {
     if (processing) return;
     processing = true;
+    setDockState('publishing');
     updateHeaderActions();
     renderStepContent();
     try {
@@ -7152,7 +6916,12 @@ var AiProjectBuilderView = (function () {
       if (typeof ProjectSelector !== 'undefined') {
         await ProjectSelector.init();
       }
+      if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.setPublished) {
+        BuilderDockActions.setPublished(true);
+      }
+      setDockState('success');
     } catch (err) {
+      setDockState('error');
       AdminNotify.error(err.message || 'Error publicando proyecto');
     }
     processing = false;

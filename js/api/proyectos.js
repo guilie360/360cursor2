@@ -483,6 +483,98 @@ var ProyectosApi = (function () {
     };
   }
 
+  /* ---------------------------------------------------------------------
+   * hero_quotation (jsonb) — Quotation Builder hero namespace.
+   * Shares the UI with the Showroom hero, never the legacy hero columns.
+   * ------------------------------------------------------------------ */
+
+  function heroText(value) {
+    if (value == null) return '';
+    return String(value).trim();
+  }
+
+  function sanitizeHeroQuotation(payload) {
+    payload = payload || {};
+    var hc = payload.heroContent || {};
+    var br = payload.branding || {};
+    var rawLogo = br.logo || null;
+    var logo =
+      rawLogo && (rawLogo.uploadedUrl || rawLogo.name)
+        ? {
+          name: heroText(rawLogo.name),
+          uploadedUrl: heroText(rawLogo.uploadedUrl) || null,
+          size: Number(rawLogo.size) || 0
+        }
+        : null;
+
+    return {
+      heroContent: {
+        nombre: heroText(hc.nombre),
+        eslogan: heroText(hc.eslogan),
+        botonIzquierdo: heroText(hc.botonIzquierdo) || 'Explorar',
+        botonDerecho: heroText(hc.botonDerecho) || 'Iniciar',
+        whatsappLink: heroText(hc.whatsappLink),
+        whatsappMessage: heroText(hc.whatsappMessage),
+        shareUrl: heroText(hc.shareUrl),
+        showWhatsapp: hc.showWhatsapp !== false,
+        showShare: hc.showShare !== false,
+        showFullscreen: hc.showFullscreen !== false
+      },
+      branding: {
+        showHeroLogo: br.showHeroLogo !== false,
+        logoStyle: br.logoStyle === 'avatar' ? 'avatar' : 'flat',
+        logo: logo
+      },
+      video_url: heroText(payload.video_url) || null,
+      image_url: heroText(payload.image_url) || null
+    };
+  }
+
+  async function fetchHeroQuotation(proyectoId) {
+    if (!proyectoId) return null;
+    var result = await AdminApi.getClient()
+      .from('proyecto_config')
+      .select('hero_quotation')
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (result.error) throw mapDbError(result.error, 'Error cargando el hero de la cotización');
+    var raw = result.data && result.data.hero_quotation;
+    if (!raw || typeof raw !== 'object') return null;
+    return sanitizeHeroQuotation(raw);
+  }
+
+  async function updateHeroQuotation(proyectoId, payload) {
+    if (!proyectoId) throw new Error('Falta el ID del proyecto.');
+    var data = sanitizeHeroQuotation(payload);
+    var client = AdminApi.getClient();
+
+    var existing = await client
+      .from('proyecto_config')
+      .select('proyecto_id')
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (existing.error) throw mapDbError(existing.error, 'Error leyendo configuración del proyecto');
+
+    var result;
+    if (existing.data && existing.data.proyecto_id) {
+      result = await client
+        .from('proyecto_config')
+        .update({ hero_quotation: data })
+        .eq('proyecto_id', proyectoId)
+        .select('hero_quotation')
+        .maybeSingle();
+    } else {
+      result = await client
+        .from('proyecto_config')
+        .insert({ proyecto_id: proyectoId, hero_quotation: data })
+        .select('hero_quotation')
+        .maybeSingle();
+    }
+    if (result.error) throw mapDbError(result.error, 'Error guardando el hero de la cotización');
+    var saved = result.data && result.data.hero_quotation;
+    return saved && typeof saved === 'object' ? sanitizeHeroQuotation(saved) : data;
+  }
+
   return {
     list: list,
     listBrief: listBrief,
@@ -492,6 +584,8 @@ var ProyectosApi = (function () {
     updateIdentity: updateIdentity,
     updateShareMeta: updateShareMeta,
     fetchShareMeta: fetchShareMeta,
+    fetchHeroQuotation: fetchHeroQuotation,
+    updateHeroQuotation: updateHeroQuotation,
     checkSlugAvailability: checkSlugAvailability,
     remove: remove,
     reorder: reorder,
