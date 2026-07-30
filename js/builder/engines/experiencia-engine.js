@@ -1613,7 +1613,25 @@ var ExperienciaEngine = (function () {
         });
       }
     }
-    return !!(result && result.ok);
+    return !!result;
+  }
+
+  /** Move overlay interaction to end of array (paint order = front). */
+  function bringSceneOverlayToFront(state, nodeId, buttonId) {
+    var n = getNode(state, nodeId);
+    if (!n || !n.config || !Array.isArray(n.config.interactions)) return null;
+    var list = n.config.interactions;
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(buttonId)) { idx = i; break; }
+    }
+    if (idx < 0) return null;
+    var item = list.splice(idx, 1)[0];
+    list.push(item);
+    if (isSceneFreeOverlayInteraction(item)) {
+      return buttonViewModel(state, n, item);
+    }
+    return item;
   }
 
   /**
@@ -5865,6 +5883,7 @@ var ExperienciaEngine = (function () {
     updateSceneButton: updateSceneButton,
     setSceneButtonPosition: setSceneButtonPosition,
     removeSceneButton: removeSceneButton,
+    bringSceneOverlayToFront: bringSceneOverlayToFront,
     snapshotSceneButtons: snapshotSceneButtons,
     restoreSceneButtons: restoreSceneButtons,
     mirrorSceneButton: mirrorSceneButton,

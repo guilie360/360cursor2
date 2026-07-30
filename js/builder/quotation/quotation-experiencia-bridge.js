@@ -265,7 +265,8 @@ var QuotationExperienciaBridge = (function () {
       onChange: function () {
         pullToScenes(shim, scenes);
         if (typeof options.onChange === 'function') options.onChange();
-      }
+      },
+      onSelectionChange: options.onSelectionChange
     });
     if (!handle) return null;
 
@@ -289,6 +290,21 @@ var QuotationExperienciaBridge = (function () {
       },
       startHotspotDraw: function () {
         if (handle.startHotspotDraw) handle.startHotspotDraw();
+      },
+      getSelection: function () {
+        return handle.getSelection ? handle.getSelection() : { hasSelection: false };
+      },
+      duplicateSelected: function () {
+        return handle.duplicateSelected ? handle.duplicateSelected() : null;
+      },
+      deleteSelected: function () {
+        return handle.deleteSelected ? handle.deleteSelected() : false;
+      },
+      toggleLockSelected: function () {
+        return handle.toggleLockSelected ? handle.toggleLockSelected() : null;
+      },
+      bringSelectedToFront: function () {
+        return handle.bringSelectedToFront ? handle.bringSelectedToFront() : null;
       },
       setInspectorBody: function (el) {
         if (handle.setInspectorBody) handle.setInspectorBody(el);

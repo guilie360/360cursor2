@@ -445,6 +445,56 @@
 .qe-scenes__thumb.is-active .qe-scenes__thumb-frame {
   border-color: rgba(255, 255, 255, 0.28);
   box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.qe-scenes__thumb--add .qe-scenes__thumb-frame--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.03);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.qe-scenes__thumb--add:hover .qe-scenes__thumb-frame--add {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.qe-scenes__thumb-wrap--add .qe-scenes__thumb-del {
+  display: none;
+}
+
+.qe-insp__idle {
+  padding: 28px 8px 12px;
+  text-align: left;
+}
+
+.qe-insp__idle .qe-insp__detail-kicker,
+.builder-exp-btn-panel--empty .builder-exp-inspector__kind {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.42);
+  margin: 0 0 10px;
+}
+
+.builder-exp-btn-panel--empty {
+  padding: 8px 4px;
+}
+
+.builder-exp-btn-panel--empty .builder-menu-hint {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+}
     0 0 0 1px rgba(255, 255, 255, 0.12),
     inset 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
@@ -492,21 +542,61 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.09 / V7.2.25 — Stage + bottom dock (natural sizes, fit scales) ── */
+/* ── V7.2.09 / V7.2.25 / V7.2.53 — Stage + bottom dock ── */
 
 .qe-dock {
   flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 14px;
   margin-bottom: 0;
+  padding: 10px 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  overflow: visible;
-  background: rgba(10, 10, 10, 0.92);
+  border-radius: 18px;
+  background: rgba(12, 12, 12, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  min-height: 56px;
 }
 
+.qe-dock--create,
+.qe-dock--contextual {
+  width: min(720px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.qe-dock__item {
+  appearance: none;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.qe-dock__item:hover {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.qe-dock__item--danger:hover {
+  color: #fff;
+  background: rgba(180, 48, 48, 0.28);
+}
+
+/* Legacy dock modules (unused in V7.2.53 create bar; keep for safety) */
 .qe-dock__mod-wrap {
   position: relative;
   min-width: 0;

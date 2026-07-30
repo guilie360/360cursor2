@@ -793,385 +793,21 @@ var ExperienciaCanvas = (function () {
   }
 
   function buttonsInspectorHtml(state, n) {
-    var buttons = ExperienciaEngine.listSceneButtons
-      ? ExperienciaEngine.listSceneButtons(state, n)
-      : [];
-    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
-    var selectedIds = Array.isArray(canvasState.selectedButtonIds)
-      ? canvasState.selectedButtonIds.slice()
-      : [];
-    if (!selectedIds.length && canvasState.selectedButtonId) {
-      selectedIds = [canvasState.selectedButtonId];
-    }
-    var selectedBtnId = canvasState.selectedButtonId || selectedIds[0] || null;
-    var selected = null;
-    var selectedSet = {};
-    selectedIds.forEach(function (id) { selectedSet[String(id)] = true; });
-    if (selectedBtnId) {
-      for (var i = 0; i < buttons.length; i++) {
-        if (String(buttons[i].id) === String(selectedBtnId) ||
-            String(buttons[i].portId) === String(selectedBtnId)) {
-          selected = buttons[i];
-          break;
-        }
-      }
-    }
-
-    var selType = selected ? String(selected.type || 'BUTTON').toUpperCase() : 'BUTTON';
-    var kindTitle = selType === 'TEXT' ? 'Texto'
-      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'Forma' : 'Elemento');
-
-    var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
-      return node && node.id !== n.id && node.kind !== 'action';
-    });
-    var destOpts = '<option value="">Sin destino</option>' +
-      nodes.map(function (node) {
-        return '<option value="' + esc(node.id) + '"' +
-          (selected && String(selected.targetNodeId) === String(node.id) ? ' selected' : '') +
-          '>' + esc(node.label || node.id) + '</option>';
-      }).join('');
-
-    var html = '' +
-      '<div class="builder-exp-btn-panel">' +
-      '<div class="builder-exp-inspector__kind">' + kindTitle + '</div>' +
-      '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>';
-
-    if (selType === 'TEXT') {
-      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-text-add="' +
-        esc(n.id) + '">+ Nuevo texto</button>';
-    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
-      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-shape-add="' +
-        esc(n.id) + '">+ Nueva forma</button>';
-    } else {
-      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
-        esc(n.id) + '">+ Nuevo botón</button>';
-    }
-
-    if (!buttons.length) {
-      html += '<p class="builder-menu-hint">No hay elementos en esta escena. Usa el dock Agregar elemento.</p></div>';
-      return html;
-    }
-
-    html += '<div class="builder-exp-inspector__section">Lista</div>' +
-      '<p class="builder-menu-hint builder-exp-btn-hint">Shift / Ctrl · selección múltiple</p>' +
-      '<div class="builder-exp-btn-list">' +
-        buttons.map(function (b) {
-          var t = String(b.type || 'BUTTON').toUpperCase();
-          var listLabel = (b.label != null && String(b.label).length)
-            ? b.label
-            : (t === 'TEXT' ? 'Texto' : (b.icon ? '· icono' : overlayTypeLabel(t)));
-          return '<button type="button" class="builder-exp-btn-list__item' +
-            (selectedSet[String(b.id)] ? ' is-selected' : '') +
-            (b.visible === false ? ' is-hidden-btn' : '') + '"' +
-            ' data-exp-btn-select="' + esc(b.id) + '">' +
-            '<span class="builder-exp-btn-list__mark" aria-hidden="true">' +
-              (b.visible === false ? '○' : '●') +
-            '</span>' +
-            '<span class="builder-exp-btn-list__type">' + esc(overlayTypeLabel(t)) + '</span>' +
-            '<span>' + esc(listLabel) + '</span>' +
-          '</button>';
-        }).join('') +
+    /* V7.2.53 — inspector emptied (visual reset). Controls return in later versions. */
+    return '' +
+      '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
+        '<div class="builder-exp-inspector__kind">PROPIEDADES</div>' +
+        '<p class="builder-menu-hint">Selecciona un elemento</p>' +
       '</div>';
-
-    if (selectedIds.length >= 2) {
-      html += '<div class="builder-exp-inspector__section">Distribución</div>' +
-        '<div class="builder-exp-btn-dist">' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="left">Alinear izquierda</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="right">Alinear derecha</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="top">Alinear arriba</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="bottom">Alinear abajo</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="center-h">Centrar horizontalmente</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-align="center-v">Centrar verticalmente</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="x">Distribuir horizontalmente</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="y">Distribuir verticalmente</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-distribute="uniform">Espaciado uniforme</button>' +
-        '</div>' +
-        '<div class="builder-exp-inspector__section">Espaciado</div>' +
-        '<div class="builder-exp-btn-space-row">' +
-          '<div class="builder-field builder-exp-inspector__field">' +
-            '<label>Separación</label>' +
-            '<input type="number" data-exp-btn-gap min="0" max="400" step="1" value="24">' +
-          '</div>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-space-apply>Aplicar</button>' +
-        '</div>' +
-        '<div class="builder-hub-segment" style="margin-top:6px">' +
-          '<button type="button" class="builder-hub-segment__btn is-active" data-exp-btn-space-axis="y">Vertical</button>' +
-          '<button type="button" class="builder-hub-segment__btn" data-exp-btn-space-axis="x">Horizontal</button>' +
-        '</div>';
-    }
-
-    if (!selected) {
-      html += '<p class="builder-menu-hint">Selecciona un elemento en la lista o sobre la imagen.</p></div>';
-      return html;
-    }
-
-    function segBtn(attr, val, label, isOn) {
-      return '<button type="button" class="builder-hub-segment__btn' +
-        (isOn ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' +
-        esc(label) + '</button>';
-    }
-
-    if (selectedIds.length <= 1) {
-      /* no "Propiedades" header — blocks have their own titles */
-    } else {
-      html += '<div class="builder-exp-inspector__section">Propiedades · primario</div>';
-    }
-
-    if (selType === 'TEXT') {
-      html += textInspectorFieldsHtml(selected);
-    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
-      html += shapeInspectorFieldsHtml(selected);
-    } else {
-      html += buttonInspectorFieldsHtml(selected, destOpts);
-    }
-
-    html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
-        (selType === 'BUTTON'
-          ? ('<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-mirror="' +
-              esc(selected.id) + '">Reflejar</button>')
-          : '') +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-duplicate="' +
-          esc(selected.id) + '">Duplicar</button>' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
-          esc(selected.id) + '">Eliminar</button>' +
-      '</div></div>';
-
-    return html;
   }
 
   function hotspotsInspectorHtml(state, n) {
-    var masks = ExperienciaEngine.listSceneHotspotMasks
-      ? ExperienciaEngine.listSceneHotspotMasks(state, n)
-      : [];
-    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
-    var selectedId = canvasState.selectedHotspotId || null;
-    var selected = null;
-    if (selectedId) {
-      for (var i = 0; i < masks.length; i++) {
-        if (String(masks[i].id) === String(selectedId)) {
-          selected = masks[i];
-          break;
-        }
-      }
-    }
-
-    function segBtn(attr, val, label, isOn) {
-      return '<button type="button" class="builder-hub-segment__btn' +
-        (isOn ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' +
-        esc(label) + '</button>';
-    }
-
-    var html = '<div class="builder-exp-btn-panel builder-exp-hotspot-panel">' +
-      '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-hs-add="' +
-        esc(n.id) + '">+ Nuevo Hotspot</button>';
-
-    if (!masks.length) {
-      html += '<p class="builder-menu-hint">Dibuja polígonos sobre la imagen para resaltar regiones del proyecto.</p></div>';
-      return html;
-    }
-
-    html += '<div class="builder-exp-inspector__section">Máscaras</div>' +
-      '<div class="builder-exp-btn-list">' +
-        masks.map(function (m) {
-          return '<button type="button" class="builder-exp-btn-list__item' +
-            (selected && String(selected.id) === String(m.id) ? ' is-selected' : '') +
-            '" data-exp-hs-select="' + esc(m.id) + '">' +
-            '<span class="builder-exp-hs-swatch" style="background:' + esc(m.color || '#6fbf86') + '"></span>' +
-            '<span>' + esc(m.name || 'Hotspot') + '</span>' +
-          '</button>';
-        }).join('') +
+    /* V7.2.53 — inspector emptied (visual reset). */
+    return '' +
+      '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
+        '<div class="builder-exp-inspector__kind">PROPIEDADES</div>' +
+        '<p class="builder-menu-hint">Selecciona un elemento</p>' +
       '</div>';
-
-    if (!selected) {
-      html += '<p class="builder-menu-hint">Selecciona una máscara o crea una nueva.</p></div>';
-      return html;
-    }
-
-    var kind = selected.hotspotKind || 'highlight';
-    var anim = selected.animation || 'none';
-    var opacityPct = Math.round((Number(selected.opacity) || 0.22) * 100);
-    var contentMode = selected.contentMode || 'structure';
-    var resolved = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.resolveFromHotspot)
-      ? EstructuraEntity.resolveFromHotspot(state, selected._ix || selected)
-      : { ok: false, missing: !selected.entityId };
-    var pickerPath = Array.isArray(canvasState.hotspotPickerPath)
-      ? canvasState.hotspotPickerPath.slice()
-      : null;
-    if (!pickerPath || !pickerPath.length) {
-      if (contentMode === 'structure' && selected.entityId && selected.entityType &&
-          typeof EstructuraEntity !== 'undefined') {
-        pickerPath = EstructuraEntity.breadcrumbFromEntity(
-          state, selected.entityId, selected.entityType
-        );
-        /* Stay one level above leaf so children list shows siblings / deeper */
-        if (pickerPath.length > 1) pickerPath = pickerPath.slice(0, -1);
-      } else {
-        pickerPath = [{
-          type: 'project',
-          id: 'project',
-          label: (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.projectName)
-            ? EstructuraEntity.projectName(state)
-            : 'Proyecto'
-        }];
-      }
-      if (state.experiencia && state.experiencia.canvas) {
-        state.experiencia.canvas.hotspotPickerPath = pickerPath;
-      }
-    }
-    var pickerChildren = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.listPickerChildren)
-      ? EstructuraEntity.listPickerChildren(state, pickerPath)
-      : [];
-    var template = selected.cardTemplate || 'completa';
-    var fields = selected.cardFields || {};
-    var fieldToggles = (typeof EstructuraEntity !== 'undefined' && EstructuraEntity.fieldTogglesForType)
-      ? EstructuraEntity.fieldTogglesForType(selected.entityType)
-      : [];
-
-    html += '<div class="builder-exp-inspector__section">Propiedades</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Nombre</label>' +
-        '<input type="text" data-exp-hs-name maxlength="80" value="' +
-          esc(selected.name || '') + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Tipo</label>' +
-        '<div class="builder-hub-segment builder-hub-segment--3" data-exp-hs-kinds>' +
-          segBtn('data-exp-hs-kind', 'highlight', 'Resaltado', kind === 'highlight') +
-          segBtn('data-exp-hs-kind', 'info', 'Información', kind === 'info') +
-          segBtn('data-exp-hs-kind', 'navigation', 'Navegación', kind === 'navigation') +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Color resaltado</label>' +
-        '<input type="color" data-exp-hs-color value="' +
-          esc(selected.color || '#6fbf86') + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Opacidad (' + opacityPct + '%)</label>' +
-        '<input type="range" min="0" max="100" step="1" data-exp-hs-opacity value="' +
-          esc(String(opacityPct)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Borde (px)</label>' +
-        '<input type="number" min="0" max="12" step="0.5" data-exp-hs-border value="' +
-          esc(String(selected.borderWidth != null ? selected.borderWidth : 1.5)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Animación</label>' +
-        '<div class="builder-hub-segment builder-hub-segment--3">' +
-          segBtn('data-exp-hs-anim', 'none', 'Ninguna', anim === 'none') +
-          segBtn('data-exp-hs-anim', 'pulse', 'Pulso', anim === 'pulse') +
-          segBtn('data-exp-hs-anim', 'fade', 'Fade', anim === 'fade') +
-        '</div>' +
-      '</div>' +
-      '<label class="builder-exp-inspector__check">' +
-        '<input type="checkbox" data-exp-hs-visible' +
-          (selected.visible !== false ? ' checked' : '') + '>' +
-        ' Visible</label>';
-
-    /* ── V6.5.00 CONTENIDO ── */
-    html += '<div class="builder-exp-inspector__section">Contenido</div>' +
-      '<div class="builder-exp-hs-content-mode">' +
-        '<label class="builder-exp-inspector__check">' +
-          '<input type="radio" name="exp-hs-content" data-exp-hs-content="custom"' +
-            (contentMode === 'custom' ? ' checked' : '') + '>' +
-          ' Personalizado</label>' +
-        '<label class="builder-exp-inspector__check">' +
-          '<input type="radio" name="exp-hs-content" data-exp-hs-content="structure"' +
-            (contentMode === 'structure' ? ' checked' : '') + '>' +
-          ' Vinculado a la estructura</label>' +
-      '</div>';
-
-    if (contentMode === 'structure') {
-      if (selected.entityId && resolved.missing) {
-        html += '<div class="builder-exp-hs-missing">' +
-          '<p class="builder-menu-hint is-warn">Este hotspot apunta a un elemento que ya no existe.</p>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-reselect>' +
-            'Seleccionar otro elemento</button>' +
-        '</div>';
-      } else if (selected.entityId && resolved.ok) {
-        html += '<div class="builder-exp-hs-linked">' +
-          '<div class="builder-exp-hs-linked__label">Vinculado</div>' +
-          '<div class="builder-exp-hs-linked__value">' + esc(resolved.label) +
-            ' <span class="builder-exp-hs-linked__type">(' + esc(resolved.entityType) + ')</span></div>' +
-          '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-reselect>' +
-            'Cambiar elemento</button>' +
-        '</div>';
-      }
-
-      html += '<div class="builder-exp-hs-picker" data-exp-hs-picker>' +
-        '<div class="builder-exp-hs-picker__crumbs">';
-      pickerPath.forEach(function (crumb, idx) {
-        html += '<button type="button" class="builder-exp-hs-picker__crumb" data-exp-hs-crumb="' +
-          esc(String(idx)) + '">' + esc(crumb.label) + '</button>';
-        if (idx < pickerPath.length - 1) {
-          html += '<span class="builder-exp-hs-picker__sep">↓</span>';
-        }
-      });
-      html += '</div><div class="builder-exp-hs-picker__list">';
-      if (!pickerChildren.length) {
-        html += '<p class="builder-menu-hint">Sin elementos en este nivel.</p>';
-      } else {
-        pickerChildren.forEach(function (child) {
-          var isLinked = selected.entityId && child.entityId &&
-            String(selected.entityId) === String(child.entityId) &&
-            selected.entityType === child.entityType;
-          html += '<button type="button" class="builder-exp-hs-picker__item' +
-            (isLinked ? ' is-linked' : '') + '"' +
-            ' data-exp-hs-pick-type="' + esc(child.type) + '"' +
-            ' data-exp-hs-pick-id="' + esc(child.id) + '"' +
-            ' data-exp-hs-pick-label="' + esc(child.label) + '"' +
-            (child.linkable
-              ? ' data-exp-hs-link-type="' + esc(child.entityType) + '"' +
-                ' data-exp-hs-link-id="' + esc(child.entityId) + '"'
-              : '') +
-            '>' +
-            '<span>' + esc(child.label) + '</span>' +
-            (child.linkable
-              ? '<em class="builder-exp-hs-picker__link">Vincular</em>'
-              : '<em class="builder-exp-hs-picker__nav">Abrir</em>') +
-          '</button>';
-        });
-      }
-      html += '</div></div>';
-
-      html += '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Plantilla</label>' +
-        '<select data-exp-hs-template>' +
-          '<option value="compacta"' + (template === 'compacta' ? ' selected' : '') + '>Compacta</option>' +
-          '<option value="completa"' + (template === 'completa' ? ' selected' : '') + '>Completa</option>' +
-          '<option value="ficha"' + (template === 'ficha' ? ' selected' : '') + '>Ficha Técnica</option>' +
-          '<option value="premium"' + (template === 'premium' ? ' selected' : '') + '>Premium</option>' +
-        '</select>' +
-      '</div>';
-
-      if (fieldToggles.length && selected.entityId && !resolved.missing) {
-        html += '<div class="builder-exp-inspector__section">Campos visibles</div>' +
-          '<div class="builder-exp-hs-fields">';
-        fieldToggles.forEach(function (f) {
-          var on = fields[f.key] !== false;
-          html += '<label class="builder-exp-inspector__check">' +
-            '<input type="checkbox" data-exp-hs-field="' + esc(f.key) + '"' +
-              (on ? ' checked' : '') + '> ' + esc(f.label) +
-          '</label>';
-        });
-        html += '</div>';
-      }
-    } else {
-      html += '<p class="builder-menu-hint">Modo personalizado: el hotspot no lee datos de la Estructura.</p>';
-    }
-
-    html += '<p class="builder-menu-hint builder-exp-btn-hint">' +
-        (selected.polygon ? selected.polygon.length : 0) +
-        ' vértices · clic = vértice · doble clic = cerrar · Del = borrar vértice</p>' +
-      '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-hs-duplicate="' +
-          esc(selected.id) + '">Duplicar</button>' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-hs-delete="' +
-          esc(selected.id) + '">Eliminar</button>' +
-      '</div></div>';
-
-    return html;
   }
 
   function prototypeInspectorHtml(state) {
@@ -2365,6 +2001,25 @@ var ExperienciaCanvas = (function () {
       else if (api.saveState) api.saveState();
     }
 
+    function notifyOverlaySelection() {
+      if (!api.onSelectionChange) return;
+      var ids = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.map(String)
+        : [];
+      if (!ids.length && canvas().selectedButtonId) {
+        ids = [String(canvas().selectedButtonId)];
+      }
+      var hs = canvas().selectedHotspotId || null;
+      try {
+        api.onSelectionChange({
+          buttonIds: ids,
+          buttonId: canvas().selectedButtonId || null,
+          hotspotId: hs,
+          hasSelection: !!(ids.length || hs)
+        });
+      } catch (eSelNotify) { /* ignore */ }
+    }
+
     function applyWorldTransform() {
       if (!world || !world.style) return;
       var c = canvas();
@@ -2530,6 +2185,7 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintInspector() {
+      if (overlayMode) notifyOverlaySelection();
       if (!inspectorBody) return;
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
@@ -6956,6 +6612,83 @@ var ExperienciaCanvas = (function () {
         requestAnimationFrame(recomputeOverlayLayout);
         return el;
       },
+      getSelection: function () {
+        var ids = Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.map(String)
+          : [];
+        if (!ids.length && canvas().selectedButtonId) {
+          ids = [String(canvas().selectedButtonId)];
+        }
+        return {
+          buttonIds: ids,
+          buttonId: canvas().selectedButtonId || null,
+          hotspotId: canvas().selectedHotspotId || null,
+          hasSelection: !!(ids.length || canvas().selectedHotspotId)
+        };
+      },
+      duplicateSelected: function () {
+        var sceneId = canvas().selectedId;
+        var id = canvas().selectedButtonId;
+        if (!sceneId || !id || !ExperienciaEngine.duplicateSceneButton) return null;
+        var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
+        var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
+        var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId, id, {
+          imageW: layerW,
+          imageH: layerH
+        });
+        if (copy) {
+          canvas().selectedButtonId = copy.id;
+          canvas().selectedButtonIds = [String(copy.id)];
+        }
+        renderAll();
+        paintInspector();
+        persist();
+        return copy;
+      },
+      deleteSelected: function () {
+        var sceneId = canvas().selectedId;
+        var id = canvas().selectedButtonId;
+        var hs = canvas().selectedHotspotId;
+        if (!sceneId) return false;
+        if (hs && ExperienciaEngine.removeSceneHotspotMask) {
+          ExperienciaEngine.removeSceneHotspotMask(state, sceneId, hs);
+          canvas().selectedHotspotId = null;
+        } else if (id && ExperienciaEngine.removeSceneButton) {
+          ExperienciaEngine.removeSceneButton(state, sceneId, id);
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        } else {
+          return false;
+        }
+        renderAll();
+        paintInspector();
+        persist();
+        return true;
+      },
+      toggleLockSelected: function () {
+        var sceneId = canvas().selectedId;
+        var id = canvas().selectedButtonId;
+        if (!sceneId || !id) return null;
+        var btn = ExperienciaEngine.getSceneButton(state,
+          ExperienciaEngine.getNode(state, sceneId), id);
+        if (!btn) return null;
+        var next = !btn.locked;
+        ExperienciaEngine.updateSceneButton(state, sceneId, id, { locked: next });
+        renderAll();
+        paintInspector();
+        persist();
+        return next;
+      },
+      bringSelectedToFront: function () {
+        var sceneId = canvas().selectedId;
+        var id = canvas().selectedButtonId;
+        if (!sceneId || !id || !ExperienciaEngine.bringSceneOverlayToFront) return null;
+        var res = ExperienciaEngine.bringSceneOverlayToFront(state, sceneId, id);
+        renderAll();
+        paintInspector();
+        persist();
+        return res;
+      },
       startHotspotDraw: function () {
         canvas().editMode = 'hotspots';
         canvas().selectedButtonId = null;
@@ -7019,6 +6752,7 @@ var ExperienciaCanvas = (function () {
       editMode: options.editMode || 'buttons',
       inspectorBody: options.inspectorBody || null,
       onChange: options.onChange,
+      onSelectionChange: options.onSelectionChange,
       saveState: options.saveState
     });
     if (handle) {
