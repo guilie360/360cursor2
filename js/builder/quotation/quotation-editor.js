@@ -1256,21 +1256,22 @@ var QuotationEditor = (function () {
     var el = findSelectedElement();
     var scene = activeScene();
 
-    var toggleIcon = state.inspectorCollapsed ? 'chevron-left' : 'chevron-right';
-    var toggleBtn =
-      '<button type="button" class="qe-panel-toggle" data-qe-toggle-inspector' +
+    var floatBtn =
+      '<button type="button" class="boxies-sidebar-float-toggle quotation-panel-float quotation-panel-float--right"' +
+        ' data-qe-toggle-inspector' +
+        ' data-collapsed="' + (state.inspectorCollapsed ? '1' : '0') + '"' +
         ' aria-expanded="' + (state.inspectorCollapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (state.inspectorCollapsed ? 'Abrir inspector' : 'Cerrar inspector') + '"' +
-        ' data-tooltip="' + (state.inspectorCollapsed ? 'Abrir inspector' : 'Cerrar inspector') + '">' +
+        ' aria-label="' + (state.inspectorCollapsed ? 'Expandir inspector' : 'Colapsar inspector') + '"' +
+        ' data-tooltip="' + (state.inspectorCollapsed ? 'Expandir inspector' : 'Colapsar inspector') + '">' +
         (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
-          ? BuilderIcons.render(toggleIcon)
-          : (state.inspectorCollapsed ? '‹' : '›')) +
+          ? BuilderIcons.render('chevron-right')
+          : '›') +
       '</button>';
 
     if (state.inspectorCollapsed) {
       return '' +
         '<aside class="qe-col qe-col--inspector is-collapsed" aria-label="Inspector">' +
-          toggleBtn +
+          floatBtn +
         '</aside>';
     }
 
@@ -1290,12 +1291,12 @@ var QuotationEditor = (function () {
 
     return '' +
       '<aside class="qe-col qe-col--inspector" aria-label="Inspector">' +
+        floatBtn +
         '<div class="qe-col__head">' +
           '<div class="qe-col__head-text">' +
             '<h2 class="qe-col__title">Inspector</h2>' +
             '<p class="qe-col__hint">' + escapeHtml(hint) + '</p>' +
           '</div>' +
-          toggleBtn +
         '</div>' +
         '<div class="qe-insp__scroll">' + body + '</div>' +
       '</aside>';
@@ -1774,7 +1775,16 @@ var QuotationEditor = (function () {
   function setInspectorCollapsed(on) {
     state.inspectorCollapsed = !!on;
     state.sceneMenuOpen = false;
+    try {
+      document.documentElement.style.setProperty(
+        '--qe-inspector-w',
+        state.inspectorCollapsed ? '0px' : '220px'
+      );
+    } catch (eW) {}
     rerender();
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) {}
   }
 
   function toggleLibraryCollapsed() {

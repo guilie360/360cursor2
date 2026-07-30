@@ -19,7 +19,7 @@ var QuotationBuilderView = (function () {
   var processing = false;
   var builderExperienceType = 'quotation';
   var leftCollapsed = false;
-  var LEFT_PANEL_W = '220px';
+  var RECURSOS_W = '200px';
   var FLOAT_BTN_ID = 'quotationLeftFloatBtn';
 
   function escapeHtml(v) {
@@ -45,12 +45,25 @@ var QuotationBuilderView = (function () {
     return typeof QuotationConfig !== 'undefined' ? QuotationConfig : null;
   }
 
-  function stepsBarHtml(stepId) {
+  function iconRailHtml(stepId) {
     if (typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) return '';
     return (
-      '<div class="quotation-steps-bar" id="quotationStepsBar" aria-label="Pasos del Builder">' +
+      '<nav class="quotation-icon-rail" id="quotationStepsBar" aria-label="Pasos del Builder">' +
         QuotationSidebar.renderHtml(stepId, sectionChecks) +
-      '</div>'
+      '</nav>'
+    );
+  }
+
+  function leftFloatHtml() {
+    return (
+      '<button type="button" class="boxies-sidebar-float-toggle quotation-panel-float quotation-panel-float--left"' +
+        ' id="' + FLOAT_BTN_ID + '"' +
+        ' data-collapsed="' + (leftCollapsed ? '1' : '0') + '"' +
+        ' aria-expanded="' + (leftCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '"' +
+        ' data-tooltip="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '">' +
+        iconHtml('chevron-left') +
+      '</button>'
     );
   }
 
@@ -72,10 +85,14 @@ var QuotationBuilderView = (function () {
         actions +
         '<div class="builder-workspace quotation-workspace' +
           (leftCollapsed ? ' is-left-collapsed' : '') + '">' +
-          '<aside class="quotation-left-panel" id="quotationLeftPanel" aria-label="Panel del Builder">' +
-            stepsBarHtml(stepId) +
-            '<div class="quotation-left-body" id="quotationLeftBody"></div>' +
-          '</aside>' +
+          '<div class="quotation-left-block" id="quotationLeftBlock">' +
+            iconRailHtml(stepId) +
+            '<aside class="quotation-recursos' + (leftCollapsed ? ' is-collapsed' : '') + '"' +
+              ' id="quotationRecursosPanel" aria-label="Recursos">' +
+              leftFloatHtml() +
+              '<div class="quotation-left-body" id="quotationLeftBody"></div>' +
+            '</aside>' +
+          '</div>' +
           '<div class="quotation-main">' +
             '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
           '</div>' +
@@ -84,12 +101,13 @@ var QuotationBuilderView = (function () {
   }
 
   function syncFloatButton() {
-    var btn = document.getElementById(FLOAT_BTN_ID);
+    var btn = (rootEl && rootEl.querySelector('#' + FLOAT_BTN_ID)) ||
+      document.getElementById(FLOAT_BTN_ID);
     if (!btn) return;
     btn.setAttribute('data-collapsed', leftCollapsed ? '1' : '0');
     btn.setAttribute('aria-expanded', leftCollapsed ? 'false' : 'true');
-    btn.setAttribute('aria-label', leftCollapsed ? 'Expandir panel' : 'Colapsar panel');
-    btn.setAttribute('data-tooltip', leftCollapsed ? 'Expandir panel' : 'Colapsar panel');
+    btn.setAttribute('aria-label', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
+    btn.setAttribute('data-tooltip', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
     btn.innerHTML = iconHtml('chevron-left');
   }
 
@@ -97,53 +115,42 @@ var QuotationBuilderView = (function () {
     leftCollapsed = !!collapsed;
     if (!rootEl) return;
     var workspace = rootEl.querySelector('.quotation-workspace');
+    var recursos = rootEl.querySelector('#quotationRecursosPanel');
     if (workspace) workspace.classList.toggle('is-left-collapsed', leftCollapsed);
+    if (recursos) recursos.classList.toggle('is-collapsed', leftCollapsed);
     try {
       document.documentElement.style.setProperty(
-        '--quotation-left-w',
-        leftCollapsed ? '0px' : LEFT_PANEL_W
+        '--quotation-recursos-w',
+        leftCollapsed ? '0px' : RECURSOS_W
       );
     } catch (eW) {}
     syncFloatButton();
-    /* Refit editor canvas after width change */
     try {
       window.dispatchEvent(new Event('resize'));
     } catch (eR) {}
   }
 
   function ensureFloatButton() {
-    var mount = document.getElementById('boxiesAppRoot') || document.body;
-    if (!mount) return null;
-    var btn = document.getElementById(FLOAT_BTN_ID);
-    if (btn && btn.isConnected) {
-      if (!btn.dataset.bound) {
-        btn.dataset.bound = '1';
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          applyLeftCollapsed(!leftCollapsed);
-        });
-      }
-      syncFloatButton();
-      return btn;
+    if (!rootEl) return null;
+    var btn = rootEl.querySelector('#' + FLOAT_BTN_ID);
+    if (!btn) return null;
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyLeftCollapsed(!leftCollapsed);
+      });
     }
-    btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = FLOAT_BTN_ID;
-    btn.className = 'boxies-sidebar-float-toggle quotation-left-float';
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      applyLeftCollapsed(!leftCollapsed);
-    });
-    mount.appendChild(btn);
     syncFloatButton();
     return btn;
   }
 
   function destroyFloatButton() {
-    var btn = document.getElementById(FLOAT_BTN_ID);
-    if (btn && btn.parentNode) {
-      try { btn.parentNode.removeChild(btn); } catch (e) {}
+    /* Remove orphaned viewport-fixed floats from prior versions. */
+    var orphan = document.getElementById(FLOAT_BTN_ID);
+    if (orphan && (!rootEl || !rootEl.contains(orphan))) {
+      try { orphan.parentNode.removeChild(orphan); } catch (e) {}
     }
   }
 
@@ -335,13 +342,14 @@ var QuotationBuilderView = (function () {
     try {
       document.documentElement.style.setProperty('--builder-rail-width', '0px');
       document.documentElement.style.setProperty(
-        '--quotation-left-w',
-        leftCollapsed ? '0px' : LEFT_PANEL_W
+        '--quotation-recursos-w',
+        leftCollapsed ? '0px' : RECURSOS_W
       );
     } catch (eW) {}
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
+    destroyFloatButton();
     ensureFloatButton();
     applyLeftCollapsed(leftCollapsed);
   }
@@ -351,6 +359,7 @@ var QuotationBuilderView = (function () {
     document.documentElement.classList.remove('quotation-canvas-first', 'boxies-builder-chrome');
     try {
       document.documentElement.style.removeProperty('--builder-rail-width');
+      document.documentElement.style.removeProperty('--quotation-recursos-w');
       document.documentElement.style.removeProperty('--quotation-left-w');
     } catch (eW) {}
     destroyFloatButton();

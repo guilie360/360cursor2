@@ -1,4 +1,4 @@
-/* Quotation Builder — V7.2.17 internal step switcher (inside editor only). */
+/* Quotation Builder — V7.2.21 icon-only vertical step rail. */
 var QuotationSidebar = (function () {
   var STEPS = [
     { id: 'config', label: 'Config', icon: 'settings', checkable: true },
@@ -34,11 +34,11 @@ var QuotationSidebar = (function () {
 
   function renderHtml(activeId, sectionChecks) {
     sectionChecks = sectionChecks || {};
-    var html = '<div class="quotation-steps" data-builder-rail-list aria-label="Pasos del Builder">';
+    var html = '<div class="quotation-icon-rail__list" data-builder-rail-list aria-label="Pasos del Builder">';
     html += STEPS.map(function (step) {
       var active = step.id === activeId;
       var done = isDone(sectionChecks, step);
-      var cls = 'quotation-steps__item';
+      var cls = 'quotation-icon-rail__item';
       if (step.auxiliary) cls += ' is-auxiliary';
       else cls += done ? ' is-done' : ' is-pending';
       if (active) cls += ' is-current';
@@ -47,11 +47,11 @@ var QuotationSidebar = (function () {
         '<button type="button" class="' + cls + '"' +
           ' data-quotation-step="' + escapeHtml(step.id) + '"' +
           ' aria-current="' + (active ? 'page' : 'false') + '"' +
-          ' aria-label="' + escapeHtml(step.label) + '">' +
-          '<span class="quotation-steps__icon" aria-hidden="true">' +
+          ' aria-label="' + escapeHtml(step.label) + '"' +
+          ' data-tooltip="' + escapeHtml(step.label) + '" title="' + escapeHtml(step.label) + '">' +
+          '<span class="quotation-icon-rail__icon" aria-hidden="true">' +
             iconHtml(step.icon) +
           '</span>' +
-          '<span class="quotation-steps__label">' + escapeHtml(step.label) + '</span>' +
         '</button>'
       );
     }).join('');
