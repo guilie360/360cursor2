@@ -219,6 +219,33 @@ var QuotationEditor = (function () {
     return u || null;
   }
 
+  /**
+   * Library persistence gate — publicUrl is optional.
+   * previewUrl / blob-only local files are NOT persistable.
+   */
+  function libraryItemIsPersistable(item) {
+    if (!item || !item.id) return false;
+    if (item.archivoId) return true;
+    if (item.storagePath) return true;
+    if (item.provider) return true;
+    var pub = item.publicUrl || item.remoteUrl || null;
+    if (pub && String(pub).indexOf('blob:') !== 0) return true;
+    return false;
+  }
+
+  function libraryItemUploadStatus(item) {
+    if (!item) return 'failed';
+    if (item.uploadStatus === 'failed') return 'failed';
+    var pub = item.publicUrl || item.remoteUrl || null;
+    if (pub && String(pub).indexOf('blob:') === 0) pub = null;
+    if (pub) return 'synced';
+    if (item.archivoId || item.storagePath || item.provider) return 'pending';
+    if (item.file || (item.previewUrl && String(item.previewUrl).indexOf('blob:') === 0)) {
+      return 'local';
+    }
+    return 'pending';
+  }
+
   /** Editor display URL — allows blob preview so DnD works before Bunny sync. */
   function displayUrlOf(item) {
     if (!item) return null;
@@ -480,21 +507,23 @@ var QuotationEditor = (function () {
       if (!raw) return false;
       var draft = JSON.parse(raw);
       if (!draft || !Array.isArray(draft.scenes)) return false;
-      /* Drop blob-only library entries — they are dead after reload. */
+      /* Keep persistable library entries; drop blob-only local (not persistable). */
       state.content = (Array.isArray(draft.content) ? draft.content : []).map(function (c) {
-        if (!c || !c.id) return null;
+        if (!libraryItemIsPersistable(c)) return null;
         var pub = c.publicUrl || c.remoteUrl || null;
-        if ((!pub || String(pub).indexOf('blob:') === 0) &&
-            c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
-          pub = c.previewUrl;
+        if (pub && String(pub).indexOf('blob:') === 0) pub = null;
+        var preview = pub || null;
+        if (!preview && c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
+          preview = c.previewUrl;
         }
-        if (!pub || String(pub).indexOf('blob:') === 0) return null;
         c.publicUrl = pub;
         c.remoteUrl = pub;
-        c.previewUrl = pub;
-        c.provider = c.provider || 'bunny';
+        c.previewUrl = preview;
+        c.storagePath = c.storagePath || null;
+        c.archivoId = c.archivoId || null;
+        c.provider = c.provider || null;
         c.file = null;
-        c.uploadStatus = 'synced';
+        c.uploadStatus = libraryItemUploadStatus(c);
         return c;
       }).filter(Boolean);
       state.folders = Array.isArray(draft.folders) ? draft.folders : [];
@@ -710,7 +739,6 @@ var QuotationEditor = (function () {
   }
 
   function contentItemRowHtml(item, nested) {
-    console.log('[QE] render item', item && item.id);
     var on = item.id === state.selectedContentId;
     var sub = item.group === 'tours360'
       ? 'Enlace'
@@ -1669,7 +1697,6 @@ var QuotationEditor = (function () {
   }
 
   function render(ctx) {
-    console.log('[QE] render');
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     hydrateEditorProjectCtxSlug();
     clearInvalidSelection();
@@ -1825,19 +1852,12 @@ var QuotationEditor = (function () {
     var res = contentById(contentId);
     var targetId = sceneId || state.activeSceneId;
     var scene = sceneById(targetId);
-    var url = res ? displayUrlOf(res) : null;
-    console.log('assignResourceToScene', {
-      contentId: contentId,
-      sceneId: sceneId,
-      sceneExists: !!scene,
-      resourceExists: !!res,
-      url: url
-    });
     if (!res || !scene) return;
     if (!(res.media === 'image' || res.media === 'video' ||
         res.group === 'renders' || res.group === 'videos' || res.group === 'hero')) {
       return;
     }
+    var url = displayUrlOf(res);
     if (!url) {
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
         AdminNotify.error('Este recurso no tiene archivo para usar como fondo.');
@@ -2243,7 +2263,6 @@ var QuotationEditor = (function () {
         e.dataTransfer.getData('text/qe-resource') ||
         e.dataTransfer.getData('text/plain')
       )) || '';
-      console.log('drop', id, null);
       if (id) assignResourceToScene(id);
     });
 
@@ -2619,7 +2638,6 @@ var QuotationEditor = (function () {
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 
     function wireEditor() {
-      console.log('[QE] wireEditor');
       bindCanvasFit();
       mountRuntimeCanvas();
       mountExperienciaOverlay();
@@ -2686,7 +2704,6 @@ var QuotationEditor = (function () {
             return;
           }
           var id = el.getAttribute('data-qe-drag-resource');
-          console.log('dragstart', id);
           if (!id || !e.dataTransfer) return;
           e.dataTransfer.setData('text/qe-resource', id);
           e.dataTransfer.setData('text/plain', id);
@@ -2717,11 +2734,9 @@ var QuotationEditor = (function () {
             e.dataTransfer.getData('text/plain')
           )) || '';
           var sceneId = zone.getAttribute('data-qe-drop-scene-id') || null;
-          console.log('drop', id, sceneId);
           if (id) assignResourceToScene(id, sceneId || undefined);
         });
       });
-      console.log('drop zones', document.querySelectorAll('[data-qe-drop-scene]').length);
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -2883,7 +2898,6 @@ var QuotationEditor = (function () {
         e.stopPropagation();
       });
     });
-    console.log('remove buttons', document.querySelectorAll('[data-qe-remove-resource]').length);
 
     qAll('[data-qe-folder-new]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3092,9 +3106,8 @@ var QuotationEditor = (function () {
     return {
       version: 1,
       content: state.content.map(function (c) {
-        if (!c) return null;
+        if (!libraryItemIsPersistable(c)) return null;
         var pub = publicUrlOf(c);
-        if (!pub) return null;
         return {
           id: c.id,
           group: c.group || 'renders',
@@ -3107,8 +3120,9 @@ var QuotationEditor = (function () {
           previewUrl: pub,
           storagePath: c.storagePath || null,
           archivoId: c.archivoId || null,
-          provider: c.provider || 'bunny',
-          projectId: c.projectId || resolveProjectId() || null
+          provider: c.provider || null,
+          projectId: c.projectId || resolveProjectId() || null,
+          uploadStatus: libraryItemUploadStatus(c)
         };
       }).filter(Boolean),
       folders: (state.folders || []).map(function (f) {
@@ -3209,11 +3223,14 @@ var QuotationEditor = (function () {
     }
     if (Array.isArray(lib.content)) {
       state.content = lib.content.map(function (c) {
-        if (!c || !c.id) return null;
-        var pub = c.publicUrl || c.remoteUrl || c.previewUrl || null;
+        if (!libraryItemIsPersistable(c)) return null;
+        var pub = c.publicUrl || c.remoteUrl || null;
         if (pub && String(pub).indexOf('blob:') === 0) pub = null;
-        if (!pub) return null;
-        return {
+        var preview = pub || null;
+        if (!preview && c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
+          preview = c.previewUrl;
+        }
+        var row = {
           id: c.id,
           group: c.group || 'renders',
           folderId: c.folderId || null,
@@ -3222,14 +3239,16 @@ var QuotationEditor = (function () {
           mime: c.mime || null,
           publicUrl: pub,
           remoteUrl: pub,
-          previewUrl: pub,
+          previewUrl: preview,
           storagePath: c.storagePath || null,
           archivoId: c.archivoId || null,
-          provider: c.provider || 'bunny',
+          provider: c.provider || null,
           projectId: c.projectId || resolveProjectId() || null,
-          uploadStatus: 'synced',
+          uploadStatus: c.uploadStatus || null,
           file: null
         };
+        row.uploadStatus = libraryItemUploadStatus(row);
+        return row;
       }).filter(Boolean);
     }
   }
