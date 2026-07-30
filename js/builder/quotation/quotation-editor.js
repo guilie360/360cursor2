@@ -936,8 +936,8 @@ var QuotationEditor = (function () {
   var stageRo = null;
 
   /**
-   * Fit scenes + 16:9 canvas + dock as one unit inside the column (Figma-style).
-   * Outer scale only — Hero design still uses fitCanvasDesign for 1920×1080.
+   * Fit scenes + 16:9 canvas + dock inside the column without page scroll.
+   * Sizes the canvas to remaining height (Figma-style) — no outer transform scale.
    */
   function fitStageWorkspace() {
     if (!rootEl) return;
@@ -948,8 +948,11 @@ var QuotationEditor = (function () {
 
     unit.style.transform = 'none';
     unit.style.width = '';
+    unit.style.height = '';
     shell.style.width = '100%';
     shell.style.height = '100%';
+    shell.style.maxWidth = '100%';
+    shell.style.maxHeight = '100%';
 
     var cs = window.getComputedStyle(col);
     var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
@@ -957,28 +960,55 @@ var QuotationEditor = (function () {
     var availW = Math.max(1, col.clientWidth - padX);
     var availH = Math.max(1, col.clientHeight - padY);
 
-    var unitW = Math.max(1, Math.floor(availW));
-    unit.style.width = unitW + 'px';
-
+    var scenes = unit.querySelector('.qe-scenes');
+    var dock = unit.querySelector('.qe-dock');
     var stage = unit.querySelector('[data-qe-canvas]');
+
+    /* Measure chrome at full column width; collapse stage temporarily. */
+    unit.style.width = Math.floor(availW) + 'px';
     if (stage) {
-      var stageH = Math.max(1, Math.round(unitW * 9 / 16));
-      stage.style.width = unitW + 'px';
-      stage.style.height = stageH + 'px';
+      stage.style.width = Math.floor(availW) + 'px';
+      stage.style.height = '0px';
+      stage.style.minHeight = '0';
+      stage.style.maxHeight = 'none';
     }
 
-    var naturalW = unit.offsetWidth || unitW;
-    var naturalH = unit.offsetHeight || 1;
-    var scale = Math.min(availW / naturalW, availH / naturalH, 1);
-    if (!isFinite(scale) || scale <= 0) scale = 1;
+    var scenesH = scenes ? scenes.offsetHeight : 0;
+    var dockH = dock ? dock.offsetHeight : 0;
+    var scenesMb = scenes
+      ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0)
+      : 0;
+    var dockMt = dock
+      ? (parseFloat(window.getComputedStyle(dock).marginTop) || 0)
+      : 0;
+    var dockMb = dock
+      ? (parseFloat(window.getComputedStyle(dock).marginBottom) || 0)
+      : 0;
+    var chromeH = scenesH + dockH + scenesMb + dockMt + dockMb;
+    var remainH = Math.max(48, availH - chromeH);
 
-    var scaledW = Math.max(1, Math.floor(naturalW * scale));
-    var scaledH = Math.max(1, Math.floor(naturalH * scale));
-    shell.style.width = scaledW + 'px';
-    shell.style.height = scaledH + 'px';
-    unit.style.width = naturalW + 'px';
-    unit.style.transformOrigin = 'top left';
-    unit.style.transform = scale < 0.999 ? ('scale(' + scale + ')') : 'none';
+    /* Largest 16:9 rectangle that fits in availW × remainH. */
+    var canvasW = Math.min(availW, remainH * 16 / 9);
+    var canvasH = canvasW * 9 / 16;
+    if (canvasH > remainH) {
+      canvasH = remainH;
+      canvasW = canvasH * 16 / 9;
+    }
+    canvasW = Math.max(1, Math.floor(canvasW));
+    canvasH = Math.max(1, Math.floor(canvasH));
+
+    unit.style.width = canvasW + 'px';
+    if (stage) {
+      stage.style.width = canvasW + 'px';
+      stage.style.height = canvasH + 'px';
+      stage.style.flex = '0 0 auto';
+    }
+
+    var unitH = (scenes ? scenes.offsetHeight : 0) + scenesMb + canvasH +
+      dockMt + (dock ? dock.offsetHeight : 0) + dockMb;
+    shell.style.width = canvasW + 'px';
+    shell.style.height = Math.min(availH, Math.max(1, Math.ceil(unitH))) + 'px';
+    unit.style.transform = 'none';
 
     fitCanvasDesign();
   }

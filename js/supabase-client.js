@@ -52,6 +52,56 @@ function supabaseFetch(path) {
     });
 }
 
+/**
+ * Keep the public /{slug} address bar; paint Quotation Runtime full-viewport.
+ * Runtime still loads by projectId internally (iframe) — visitor never sees that URL.
+ */
+function handoffQuotationPublicExperience(project) {
+  project = project || {};
+  var id = String(project.id || '').trim();
+  if (!id) {
+    return Promise.reject(new Error('Cotización sin projectId'));
+  }
+
+  var runtimeSrc;
+  try {
+    var u = new URL('/quotation/', window.location.origin);
+    u.searchParams.set('projectId', id);
+    u.searchParams.set('experience_type', 'quotation');
+    runtimeSrc = u.href;
+  } catch (e) {
+    runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
+      '&experience_type=quotation';
+  }
+
+  try {
+    document.title = (project.nombre || project.slug || 'Cotización');
+  } catch (eTitle) {}
+
+  try {
+    document.documentElement.classList.add('qr-public-handoff');
+    document.body.className = 'qr-host qr-public-handoff-body';
+    document.body.style.cssText =
+      'margin:0;padding:0;overflow:hidden;background:#000;width:100%;height:100%;';
+    document.body.innerHTML = '';
+    var frame = document.createElement('iframe');
+    frame.className = 'qr-public-handoff-frame';
+    frame.title = project.nombre || 'Cotización';
+    frame.setAttribute('allow', 'fullscreen; autoplay; encrypted-media');
+    frame.style.cssText =
+      'position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;' +
+      'background:#000;z-index:2147483000;display:block;';
+    frame.src = runtimeSrc;
+    document.body.appendChild(frame);
+  } catch (eMount) {
+    console.error('[handoffQuotationPublicExperience]', eMount);
+    return Promise.reject(eMount);
+  }
+
+  /* Never resolve — showroom boot must not continue after handoff. */
+  return new Promise(function () {});
+}
+
 function fetchPublishedProject() {
   var slug = typeof getProjectSlugFromUrl === 'function' ? getProjectSlugFromUrl() : null;
   if (typeof BootDebug !== 'undefined') BootDebug.log('fetchPublishedProject slug', slug);
@@ -94,21 +144,12 @@ function fetchPublishedProject() {
     });
     if (!rows || !rows.length) throw new Error('No hay proyectos publicados');
     var project = rows[0];
-    /* Quotation public URL /{slug} → Quotation Runtime (same experience as client). */
+    /*
+     * Quotation public URL must stay /{slug} (address bar = client URL).
+     * Do NOT redirect to /quotation/?projectId=… — mount Runtime in-place instead.
+     */
     if (String(project.experience_type || '').toLowerCase() === 'quotation' && project.id) {
-      var dest;
-      if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-        dest = QuotationRuntime.href(project.id);
-      } else {
-        dest = '/quotation/?projectId=' + encodeURIComponent(project.id) +
-          '&experience_type=quotation';
-      }
-      try {
-        window.location.replace(dest);
-      } catch (eRedir) {
-        window.location.href = dest;
-      }
-      return new Promise(function () { /* redirecting */ });
+      return handoffQuotationPublicExperience(project);
     }
     if (typeof BootDebug !== 'undefined') {
       BootDebug.log('proyecto cargado', { id: project.id, slug: project.slug, nombre: project.nombre });

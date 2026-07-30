@@ -149,17 +149,17 @@
   min-height: 0;
   height: 100%;
   max-height: 100%;
-  padding: 6px 8px;
+  padding: 4px 6px;
   gap: 0;
   overflow: hidden;
 }
 
-/* V7.2.10 — Stage unit (scenes + 16:9 canvas + dock) scales as one */
+/* V7.2.15 — Stage fills column; no outer scale, no vertical scroll */
 .qe-stage-shell {
   flex: 0 0 auto;
   max-width: 100%;
   max-height: 100%;
-  overflow: visible;
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -170,14 +170,14 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
   transform-origin: top left;
-  will-change: transform;
 }
 
 .qe-stage-unit .qe-canvas__stage {
   flex: 0 0 auto;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: auto;
   min-height: 0;
   margin: 0;
   border-radius: 8px;
@@ -190,7 +190,7 @@
 }
 
 .qe-stage-unit .qe-dock {
-  margin-top: 8px;
+  margin-top: 4px;
   margin-bottom: 0;
 }
 
@@ -212,7 +212,7 @@
   display: flex;
   align-items: stretch;
   gap: 6px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   min-height: 0;
   width: 100%;
 }
@@ -261,7 +261,7 @@
 .qe-scenes__thumb {
   appearance: none;
   flex: 0 0 auto;
-  width: 88px;
+  width: 120px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -272,13 +272,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .qe-scenes__thumb-frame {
   display: block;
-  width: 88px;
-  height: 50px;
+  width: 120px;
+  height: 68px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: #050505;
@@ -287,7 +287,7 @@
 
 .qe-scenes__thumb-name {
   display: block;
-  max-width: 88px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -367,8 +367,8 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  margin-top: 8px;
-  margin-bottom: 8px;
+  margin-top: 4px;
+  margin-bottom: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   overflow: visible;
@@ -388,7 +388,7 @@
   appearance: none;
   width: 100%;
   margin: 0;
-  padding: 14px 10px;
+  padding: 10px 8px;
   border: 0;
   border-radius: 0;
   background: transparent;

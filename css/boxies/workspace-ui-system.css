@@ -764,6 +764,14 @@
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
+/* Portaled to body (V7.2.15) — escape overflow:auto ancestors */
+body > .ws-select__list {
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 10050 !important;
+}
+
 .ws-select__list::-webkit-scrollbar {
   width: 5px;
 }

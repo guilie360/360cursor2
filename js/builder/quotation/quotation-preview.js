@@ -1,41 +1,22 @@
 /**
- * QuotationPreview — opens the same public experience a client visits (V7.2.14).
- * Prefers /{slug}; falls back to Quotation Runtime by projectId (drafts).
+ * QuotationPreview — embeds the published public URL /{slug} (V7.2.15).
+ * Never opens /quotation/?projectId=… or preview flags.
  */
 var QuotationPreview = (function () {
   function resolveRuntimeUrl(projectIdOrCtx) {
     var ctx = projectIdOrCtx && typeof projectIdOrCtx === 'object'
       ? projectIdOrCtx
       : { id: projectIdOrCtx };
-    var id = String(ctx.id || ctx.projectId || '').trim();
     var slug = String(ctx.slug || '').trim();
 
-    if (slug) {
-      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
-        return ShowroomPublicUrl.href(slug);
-      }
-      try {
-        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
-      } catch (e0) {
-        return '/' + encodeURIComponent(slug);
-      }
+    if (!slug) return null;
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(slug);
     }
-
-    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-      return PlatformBuilderBridge.quotationUrl({ id: id, slug: slug });
-    }
-    if (id && typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      return QuotationRuntime.href(id);
-    }
-    if (!id) return null;
     try {
-      var url = new URL('/quotation/', window.location.origin);
-      url.searchParams.set('projectId', id);
-      url.searchParams.set('experience_type', 'quotation');
-      return url.href;
-    } catch (e) {
-      return '/quotation/?projectId=' + encodeURIComponent(id) +
-        '&experience_type=quotation';
+      return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+    } catch (e0) {
+      return '/' + encodeURIComponent(slug);
     }
   }
 

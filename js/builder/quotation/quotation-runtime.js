@@ -344,6 +344,20 @@ var QuotationRuntime = (function () {
     }
   }
 
+  function mergeBootQuery(opts) {
+    var q = readQuery();
+    opts = opts || {};
+    if (opts.projectId) q.projectId = String(opts.projectId).trim();
+    if (opts.experienceType) q.experienceType = String(opts.experienceType).trim().toLowerCase();
+    if (opts.preview != null) q.preview = !!opts.preview;
+    if (opts.editor != null) q.editor = !!opts.editor;
+    if (opts.canvas != null) q.canvas = !!opts.canvas;
+    if (opts.designWidth > 0) q.designWidth = opts.designWidth;
+    if (opts.designHeight > 0) q.designHeight = opts.designHeight;
+    if (!q.experienceType) q.experienceType = EXPERIENCE_TYPE;
+    return q;
+  }
+
   function getClient() {
     if (typeof PlatformAuth !== 'undefined' && PlatformAuth.getClient) {
       try {
@@ -688,12 +702,28 @@ var QuotationRuntime = (function () {
     window.addEventListener('message', onBridgeMessage);
   }
 
-  async function boot(host) {
-    host = host || document.getElementById('quotationRuntimeRoot');
+  /**
+   * @param {HTMLElement|{host?:HTMLElement,projectId?:string}} hostOrOpts
+   * @param {{projectId?:string,editor?:boolean,canvas?:boolean}=} maybeOpts
+   */
+  async function boot(hostOrOpts, maybeOpts) {
+    var opts = {};
+    var host;
+    if (hostOrOpts && typeof hostOrOpts === 'object' && !hostOrOpts.nodeType &&
+        !(hostOrOpts instanceof Element)) {
+      opts = hostOrOpts;
+      host = opts.host || document.getElementById('quotationRuntimeRoot');
+    } else {
+      host = hostOrOpts || document.getElementById('quotationRuntimeRoot');
+      opts = maybeOpts || {};
+    }
     if (!host) throw new Error('Falta #quotationRuntimeRoot');
 
-    var q = readQuery();
+    var q = mergeBootQuery(opts);
     applyCanvasViewport(q);
+    canvasMode = !!q.canvas;
+    designWidth = q.designWidth || DEFAULT_DESIGN_W;
+    designHeight = q.designHeight || DEFAULT_DESIGN_H;
     editorMode = !!q.editor;
     if (editorMode) {
       document.documentElement.classList.add('qr-editor-mode');
@@ -720,7 +750,7 @@ var QuotationRuntime = (function () {
         }
         paintHero(host, bundle);
         document.title = (bundle.project.nombre || 'Cotización') +
-          (canvasMode ? ' · Canvas' : (editorMode ? ' · Editor' : ' · Quotation Runtime'));
+          (canvasMode ? ' · Canvas' : (editorMode ? ' · Editor' : ''));
       } else if (editorMode || canvasMode) {
         loaded = blankEditorBundle();
         liveModel = liveModel || (typeof ProjectCover !== 'undefined' && ProjectCover.blankModel

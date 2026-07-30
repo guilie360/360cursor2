@@ -1,7 +1,10 @@
-/* BOXIES Workspace custom select — dark UI; syncs to native <select> value/change */
+/* BOXIES Workspace custom select — dark UI; syncs to native <select> value/change.
+ * V7.2.15 — portal list to document.body so overflow:auto ancestors cannot clip. */
 var WorkspaceSelect = (function () {
   var OPEN_CLASS = 'is-open';
   var docBound = false;
+  var portalList = null;
+  var portalWrap = null;
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -11,6 +14,52 @@ var WorkspaceSelect = (function () {
       .replace(/"/g, '&quot;');
   }
 
+  function releasePortal() {
+    if (portalList && portalWrap && portalList.parentNode === document.body) {
+      portalWrap.appendChild(portalList);
+      portalList.style.position = '';
+      portalList.style.left = '';
+      portalList.style.top = '';
+      portalList.style.bottom = '';
+      portalList.style.width = '';
+      portalList.style.minWidth = '';
+      portalList.style.zIndex = '';
+      portalList.style.maxHeight = '';
+    }
+    portalList = null;
+    portalWrap = null;
+  }
+
+  function positionPortal(wrap, list) {
+    var trigger = wrap.querySelector('.ws-select__trigger') || wrap;
+    var rect = trigger.getBoundingClientRect();
+    var gap = 4;
+    var maxH = 240;
+    var spaceBelow = window.innerHeight - rect.bottom - gap - 8;
+    var spaceAbove = rect.top - gap - 8;
+    var openUp = spaceBelow < 120 && spaceAbove > spaceBelow;
+    var height = Math.min(maxH, Math.max(100, openUp ? spaceAbove : spaceBelow));
+
+    list.style.position = 'fixed';
+    list.style.left = Math.max(8, Math.round(rect.left)) + 'px';
+    list.style.width = Math.max(Math.round(rect.width), 160) + 'px';
+    list.style.minWidth = list.style.width;
+    list.style.zIndex = '10050';
+    list.style.maxHeight = height + 'px';
+    if (openUp) {
+      list.style.top = 'auto';
+      list.style.bottom = Math.max(8, Math.round(window.innerHeight - rect.top + gap)) + 'px';
+    } else {
+      list.style.bottom = 'auto';
+      list.style.top = Math.round(rect.bottom + gap) + 'px';
+    }
+    if (list.parentNode !== document.body) {
+      document.body.appendChild(list);
+    }
+    portalList = list;
+    portalWrap = wrap;
+  }
+
   function closeAll(except) {
     document.querySelectorAll('.ws-select.' + OPEN_CLASS).forEach(function (el) {
       if (except && el === except) return;
@@ -18,17 +67,27 @@ var WorkspaceSelect = (function () {
     });
   }
 
+  function getList(wrap) {
+    return (wrap && wrap.querySelector('.ws-select__list')) ||
+      (portalWrap === wrap ? portalList : null);
+  }
+
   function setOpen(wrap, open) {
     var trigger = wrap.querySelector('.ws-select__trigger');
-    var list = wrap.querySelector('.ws-select__list');
+    var list = getList(wrap);
     wrap.classList.toggle(OPEN_CLASS, !!open);
     if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (list) list.hidden = !open;
-    if (open && list) {
+    if (!list) return;
+    if (open) {
+      list.hidden = false;
+      positionPortal(wrap, list);
       var selected = list.querySelector('[aria-selected="true"]');
       if (selected && selected.scrollIntoView) {
         selected.scrollIntoView({ block: 'nearest' });
       }
+    } else {
+      list.hidden = true;
+      if (portalWrap === wrap) releasePortal();
     }
   }
 
@@ -41,7 +100,7 @@ var WorkspaceSelect = (function () {
   }
 
   function rebuildOptions(wrap, select) {
-    var list = wrap.querySelector('.ws-select__list');
+    var list = getList(wrap);
     if (!list) return;
     var html = '';
     Array.prototype.forEach.call(select.options, function (opt, idx) {
@@ -78,7 +137,7 @@ var WorkspaceSelect = (function () {
   }
 
   function moveHighlight(wrap, delta) {
-    var list = wrap.querySelector('.ws-select__list');
+    var list = getList(wrap);
     if (!list) return;
     var options = Array.prototype.slice.call(list.querySelectorAll('.ws-select__option:not([data-disabled])'));
     if (!options.length) return;
@@ -222,12 +281,25 @@ var WorkspaceSelect = (function () {
     if (!docBound) {
       docBound = true;
       document.addEventListener('click', function (e) {
-        if (e.target.closest && e.target.closest('.ws-select')) return;
+        if (e.target.closest && (
+          e.target.closest('.ws-select') ||
+          e.target.closest('.ws-select__list')
+        )) return;
         closeAll(null);
       });
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeAll(null);
       });
+      window.addEventListener('resize', function () {
+        if (portalWrap && portalList && portalWrap.classList.contains(OPEN_CLASS)) {
+          positionPortal(portalWrap, portalList);
+        }
+      });
+      window.addEventListener('scroll', function () {
+        if (portalWrap && portalList && portalWrap.classList.contains(OPEN_CLASS)) {
+          positionPortal(portalWrap, portalList);
+        }
+      }, true);
     }
   }
 

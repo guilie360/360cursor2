@@ -415,7 +415,7 @@ var BoxiesProjectsPage = (function () {
     var slug = showroom.slug || '';
     var name = showroom.nombre || slug || 'Sin nombre';
     var expType = showroom.experience_type || activeExperienceType || '';
-    var previewDisabled = String(expType).toLowerCase() === 'quotation' ? !id : !slug;
+    var previewDisabled = !slug;
     return (
       '<tr class="boxies-showroom-row" draggable="true" data-showroom-id="' + escapeHtml(id) + '">' +
         '<td class="boxies-showroom-drag boxies-col-drag">' +
@@ -644,25 +644,15 @@ var BoxiesProjectsPage = (function () {
     var id = row.id || '';
     var slug = row.slug || '';
     if (type === 'quotation') {
-      var slugQ = row.slug || '';
-      var idQ = row.id || '';
-      if (typeof BoxiesShell !== 'undefined' && BoxiesShell.resolveQuotationPreviewUrl) {
-        return BoxiesShell.resolveQuotationPreviewUrl({ id: idQ, slug: slugQ });
-      }
-      if (slugQ && typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      var slugQ = String(row.slug || '').trim();
+      if (!slugQ) return null;
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
         return ShowroomPublicUrl.href(slugQ);
       }
-      if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-        return PlatformBuilderBridge.quotationUrl({ id: idQ, slug: slugQ });
-      }
-      if (!idQ) return null;
       try {
-        var url = new URL('/quotation/', window.location.origin);
-        url.searchParams.set('projectId', idQ);
-        url.searchParams.set('experience_type', 'quotation');
-        return url.href;
-      } catch (e) {
-        return null;
+        return new URL('/' + encodeURIComponent(slugQ), window.location.origin).href;
+      } catch (eQ) {
+        return '/' + encodeURIComponent(slugQ);
       }
     }
     return resolveShowroomPreviewUrl(slug);

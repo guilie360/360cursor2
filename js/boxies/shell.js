@@ -169,24 +169,16 @@ var BoxiesShell = (function () {
     if (!slug && projectCtx && String(projectCtx.id) === String(id)) {
       slug = projectCtx.slug;
     }
-    if (slug) {
-      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
-        return ShowroomPublicUrl.href(slug);
-      }
-      try {
-        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
-      } catch (e) {
-        return window.location.origin + '/' + encodeURIComponent(slug);
-      }
+    /* Public Visualizar/Preview: only the published client URL /{slug}. */
+    if (!slug) return null;
+    if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+      return ShowroomPublicUrl.href(slug);
     }
-    /* Draft without slug: real Quotation Runtime (not editor, not preview flag). */
-    if (id && typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      return QuotationRuntime.href(id);
+    try {
+      return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+    } catch (e) {
+      return window.location.origin + '/' + encodeURIComponent(slug);
     }
-    if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-      return PlatformBuilderBridge.quotationUrl(id);
-    }
-    return null;
   }
 
   function resolvePreviewUrl(slugOrOpts) {
@@ -369,11 +361,9 @@ var BoxiesShell = (function () {
     nameEl.textContent = label;
     wrap.hidden = false;
     if (actions) actions.hidden = false;
-    /* Quotation Visualizar keys off projectId; Showroom still needs slug. */
+    /* Visualizar = public /{slug} only (same URL the client opens). */
     if (previewBtn) {
-      previewBtn.disabled = projectCtx.experienceType === 'quotation'
-        ? !projectCtx.id
-        : !projectCtx.slug;
+      previewBtn.disabled = !projectCtx.slug;
     }
   }
 
