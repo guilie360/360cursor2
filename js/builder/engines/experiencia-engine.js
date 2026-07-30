@@ -389,6 +389,7 @@ var ExperienciaEngine = (function () {
     if (t === 'TEXT') {
       if (ix.label == null || ix.label === '') ix.label = 'Texto';
       if (ix.fontSize == null) ix.fontSize = 28;
+      if (ix.fontSizeUnit !== '%') ix.fontSizeUnit = 'px';
       if (ix.color == null) ix.color = '#ffffff';
       if (ix.fontFamily == null) ix.fontFamily = 'system-ui, sans-serif';
       else ix.fontFamily = String(ix.fontFamily).replace(/"/g, '');
@@ -620,6 +621,7 @@ var ExperienciaEngine = (function () {
       strokeWidth: ix.strokeWidth != null ? Number(ix.strokeWidth) : null,
       borderRadius: ix.borderRadius != null ? Number(ix.borderRadius) : null,
       fontSize: ix.fontSize != null ? Number(ix.fontSize) : null,
+      fontSizeUnit: ix.fontSizeUnit === '%' ? '%' : 'px',
       color: ix.color || null,
       fontFamily: ix.fontFamily || null,
       fontWeight: ix.fontWeight || null,
@@ -852,10 +854,28 @@ var ExperienciaEngine = (function () {
 
     if (t === 'TEXT') {
       if (patch.fontSize != null) {
-        ix.fontSize = Math.max(8, Math.min(200, Number(patch.fontSize) || 28));
+        var fsu = patch.fontSizeUnit != null
+          ? patch.fontSizeUnit
+          : (ix.fontSizeUnit === '%' ? '%' : 'px');
+        if (fsu === '%') {
+          ix.fontSize = Math.max(1, Math.min(40, Number(patch.fontSize) || 4));
+          ix.fontSizeUnit = '%';
+        } else {
+          ix.fontSize = Math.max(8, Math.min(200, Number(patch.fontSize) || 28));
+          ix.fontSizeUnit = 'px';
+        }
+      }
+      if (patch.fontSizeUnit === '%' || patch.fontSizeUnit === 'px') {
+        ix.fontSizeUnit = patch.fontSizeUnit;
+        if (ix.fontSizeUnit === '%' && !(Number(ix.fontSize) > 0 && Number(ix.fontSize) <= 40)) {
+          ix.fontSize = 4;
+        }
+        if (ix.fontSizeUnit === 'px' && !(Number(ix.fontSize) >= 8)) {
+          ix.fontSize = 28;
+        }
       }
       if (patch.color != null) ix.color = String(patch.color || '#ffffff');
-      if (patch.fontFamily != null) ix.fontFamily = String(patch.fontFamily);
+      if (patch.fontFamily != null) ix.fontFamily = String(patch.fontFamily).replace(/"/g, '');
       if (patch.fontWeight != null) ix.fontWeight = String(patch.fontWeight);
       if (patch.fontStyle != null) ix.fontStyle = String(patch.fontStyle);
       if (patch.textDecoration != null) ix.textDecoration = String(patch.textDecoration);
@@ -959,6 +979,7 @@ var ExperienciaEngine = (function () {
     copy.hoverColor = ix.hoverColor;
     copy.hoverTransition = ix.hoverTransition;
     copy.fontSize = ix.fontSize;
+    copy.fontSizeUnit = ix.fontSizeUnit;
     copy.color = ix.color;
     copy.fontFamily = ix.fontFamily;
     copy.fontWeight = ix.fontWeight;

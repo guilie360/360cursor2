@@ -580,8 +580,14 @@ var ExperienciaCanvas = (function () {
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Tamaño</label>' +
-        '<input type="number" data-exp-text-size min="8" max="200" step="1" value="' +
-          esc(String(selected.fontSize != null ? selected.fontSize : 28)) + '">' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<input type="number" data-exp-text-size min="1" max="200" step="1" value="' +
+            esc(String(selected.fontSize != null ? selected.fontSize : 28)) + '">' +
+          '<select data-exp-text-size-unit class="ws-select builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
+            '<option value="px"' + ((selected.fontSizeUnit || 'px') !== '%' ? ' selected' : '') + '>px</option>' +
+            '<option value="%"' + (selected.fontSizeUnit === '%' ? ' selected' : '') + '>%</option>' +
+          '</select>' +
+        '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Peso</label>' +
@@ -915,12 +921,9 @@ var ExperienciaCanvas = (function () {
           ' Activar hover</label>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Color hover</label>' +
-          '<div class="builder-exp-btn-hover-row">' +
-            '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
-              (hoverOn ? '' : ' disabled') + '>' +
-            '<button type="button" class="builder-hub-segment__btn" data-exp-btn-hover-apply' +
-              (hoverOn ? '' : ' disabled') + '>Aplicar</button>' +
-          '</div>' +
+          '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
+            (hoverOn ? '' : ' disabled') +
+            ' title="El color se aplica al soltar el selector">' +
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Transición hover (ms)</label>' +
@@ -2790,29 +2793,19 @@ var ExperienciaCanvas = (function () {
         });
       }
       var hoverCol = inspectorBody.querySelector('[data-exp-btn-hover-color]');
-      function applyHoverColor(persistNow) {
-        if (!hoverCol || hoverCol.disabled) return;
-        var col = String(hoverCol.value || '').trim();
-        if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
-        patchBtn({ hoverColor: col }, persistNow
-          ? { persist: true, inspector: true }
-          : { gesture: true });
-      }
+      /* Apply inside the native color flow: input = live preview, change = commit.
+         Never require a separate outside button (OS picker cancels on outside click). */
       if (hoverCol) {
         hoverCol.addEventListener('input', function () {
-          applyHoverColor(false);
+          var col = String(hoverCol.value || '').trim();
+          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+          patchBtn({ hoverColor: col }, { gesture: true });
         });
         hoverCol.addEventListener('change', function () {
+          var col = String(hoverCol.value || '').trim();
+          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
           endButtonOp();
-          applyHoverColor(true);
-        });
-      }
-      var hoverApply = inspectorBody.querySelector('[data-exp-btn-hover-apply]');
-      if (hoverApply) {
-        hoverApply.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          endButtonOp();
-          applyHoverColor(true);
+          patchBtn({ hoverColor: col }, { persist: true });
         });
       }
       var hoverMs = inspectorBody.querySelector('[data-exp-btn-hover-ms]');
@@ -2839,10 +2832,24 @@ var ExperienciaCanvas = (function () {
         });
       }
       var textSize = inspectorBody.querySelector('[data-exp-text-size]');
+      var textSizeUnit = inspectorBody.querySelector('[data-exp-text-size-unit]');
+      function patchTextSize() {
+        var patch = {};
+        if (textSize) patch.fontSize = textSize.value;
+        if (textSizeUnit) patch.fontSizeUnit = textSizeUnit.value === '%' ? '%' : 'px';
+        patchBtn(patch, { persist: true });
+      }
       if (textSize) {
-        textSize.addEventListener('change', function () {
-          patchBtn({ fontSize: textSize.value }, { persist: true });
+        textSize.addEventListener('change', patchTextSize);
+        textSize.addEventListener('input', function () {
+          patchBtn({
+            fontSize: textSize.value,
+            fontSizeUnit: textSizeUnit && textSizeUnit.value === '%' ? '%' : 'px'
+          }, { gesture: true });
         });
+      }
+      if (textSizeUnit) {
+        textSizeUnit.addEventListener('change', patchTextSize);
       }
       var textWeight = inspectorBody.querySelector('[data-exp-text-weight]');
       if (textWeight) {
@@ -4436,26 +4443,11 @@ var ExperienciaCanvas = (function () {
       var buttons = (ExperienciaEngine.listSceneButtons(state, n) || []).map(function (b) {
         if (!b || !b._ix || !ExperienciaEngine.resolveButtonLayout) return b;
         var layout = ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH);
-        return {
-          id: b.id,
-          portId: b.portId,
-          type: b.type || 'BUTTON',
-          label: b.label,
+        /* Keep all view-model fields (typography, size, hover…) — only refresh layout. */
+        return Object.assign({}, b, {
           x: layout.x,
-          y: layout.y,
-          style: b.style,
-          icon: b.icon,
-          rotation: b.rotation,
-          visible: b.visible,
-          width: b.width,
-          height: b.height,
-          fill: b.fill,
-          stroke: b.stroke,
-          strokeWidth: b.strokeWidth,
-          borderRadius: b.borderRadius,
-          fontSize: b.fontSize,
-          color: b.color
-        };
+          y: layout.y
+        });
       });
       var selIds = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
@@ -4491,16 +4483,17 @@ var ExperienciaCanvas = (function () {
         var t = String(b.type || 'BUTTON').toUpperCase();
         var rot = Number(b.rotation) || 0;
         var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
-          '--btn-rot:' + rot + 'deg;' +
-          'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
+          '--btn-rot:' + rot + 'deg;';
         if (t === 'TEXT') {
-          var tSize = Number(b.fontSize) || 28;
+          var tUnit = b.fontSizeUnit === '%' ? '%' : 'px';
+          var tSize = Number(b.fontSize) || (tUnit === '%' ? 4 : 28);
           var tOp = b.opacity != null ? Number(b.opacity) : 1;
           var tShadow = (b.textShadow && b.textShadow !== 'none')
             ? cssToken(b.textShadow)
             : 'none';
+          var sizeCss = tUnit === '%' ? (tSize + 'vh') : (tSize + 'px');
           styleBits +=
-            '--t-size:' + tSize + 'px;' +
+            '--t-size:' + sizeCss + ';' +
             '--t-color:' + cssToken(b.color || '#ffffff') + ';' +
             '--t-family:' + cssToken(b.fontFamily || 'system-ui, sans-serif') + ';' +
             '--t-weight:' + cssToken(b.fontWeight || '400') + ';' +
@@ -4550,8 +4543,10 @@ var ExperienciaCanvas = (function () {
         var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
         var hoverCol = cssToken(b.hoverColor || '#ffffff') || '#ffffff';
         var btnSize = (b.size === 'sm' || b.size === 'lg') ? b.size : 'md';
+        var btnScale = btnSize === 'sm' ? 0.78 : (btnSize === 'lg' ? 1.38 : 1);
         /* Size/hover via CSS vars — do not fight .builder-exp-ui-btn transform. */
         styleBits +=
+          '--btn-scale:' + btnScale + ';' +
           '--btn-opacity:' + btnOp + ';' +
           '--btn-hover-color:' + hoverCol + ';' +
           '--btn-hover-ms:' + hoverMs + 'ms;';

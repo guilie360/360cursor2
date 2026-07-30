@@ -2366,6 +2366,7 @@ body.quotation-canvas-first .builder-workspace,
   background: transparent;
   box-shadow: none;
   outline: none;
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
   color: var(--t-color, #fff);
   font-family: var(--t-family, system-ui, sans-serif) !important;
   font-size: var(--t-size, 28px) !important;
