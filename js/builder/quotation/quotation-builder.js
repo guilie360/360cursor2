@@ -18,11 +18,21 @@ var QuotationBuilderView = (function () {
   var sectionChecks = {};
   var processing = false;
   var builderExperienceType = 'quotation';
+  var leftCollapsed = false;
+  var LEFT_PANEL_W = '220px';
+  var FLOAT_BTN_ID = 'quotationLeftFloatBtn';
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function iconHtml(name) {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(name);
+    }
+    return '‹';
   }
 
   function resolvePanel(stepId) {
@@ -60,11 +70,81 @@ var QuotationBuilderView = (function () {
       '<div class="quotation-builder builder-app quotation-canvas-first" id="quotationBuilderRoot" data-quotation-builder' +
         (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
         actions +
-        '<div class="builder-workspace quotation-workspace">' +
-          stepsBarHtml(stepId) +
-          '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
+        '<div class="builder-workspace quotation-workspace' +
+          (leftCollapsed ? ' is-left-collapsed' : '') + '">' +
+          '<aside class="quotation-left-panel" id="quotationLeftPanel" aria-label="Panel del Builder">' +
+            stepsBarHtml(stepId) +
+            '<div class="quotation-left-body" id="quotationLeftBody"></div>' +
+          '</aside>' +
+          '<div class="quotation-main">' +
+            '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
+          '</div>' +
         '</div>' +
       '</div>';
+  }
+
+  function syncFloatButton() {
+    var btn = document.getElementById(FLOAT_BTN_ID);
+    if (!btn) return;
+    btn.setAttribute('data-collapsed', leftCollapsed ? '1' : '0');
+    btn.setAttribute('aria-expanded', leftCollapsed ? 'false' : 'true');
+    btn.setAttribute('aria-label', leftCollapsed ? 'Expandir panel' : 'Colapsar panel');
+    btn.setAttribute('data-tooltip', leftCollapsed ? 'Expandir panel' : 'Colapsar panel');
+    btn.innerHTML = iconHtml('chevron-left');
+  }
+
+  function applyLeftCollapsed(collapsed) {
+    leftCollapsed = !!collapsed;
+    if (!rootEl) return;
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    if (workspace) workspace.classList.toggle('is-left-collapsed', leftCollapsed);
+    try {
+      document.documentElement.style.setProperty(
+        '--quotation-left-w',
+        leftCollapsed ? '0px' : LEFT_PANEL_W
+      );
+    } catch (eW) {}
+    syncFloatButton();
+    /* Refit editor canvas after width change */
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) {}
+  }
+
+  function ensureFloatButton() {
+    var mount = document.getElementById('boxiesAppRoot') || document.body;
+    if (!mount) return null;
+    var btn = document.getElementById(FLOAT_BTN_ID);
+    if (btn && btn.isConnected) {
+      if (!btn.dataset.bound) {
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          applyLeftCollapsed(!leftCollapsed);
+        });
+      }
+      syncFloatButton();
+      return btn;
+    }
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = FLOAT_BTN_ID;
+    btn.className = 'boxies-sidebar-float-toggle quotation-left-float';
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      applyLeftCollapsed(!leftCollapsed);
+    });
+    mount.appendChild(btn);
+    syncFloatButton();
+    return btn;
+  }
+
+  function destroyFloatButton() {
+    var btn = document.getElementById(FLOAT_BTN_ID);
+    if (btn && btn.parentNode) {
+      try { btn.parentNode.removeChild(btn); } catch (e) {}
+    }
   }
 
   function refreshSidebar() {
@@ -75,6 +155,11 @@ var QuotationBuilderView = (function () {
       QuotationSidebar.setActive(bar, currentStep, sectionChecks);
       QuotationSidebar.bind(bar, goToStep);
     }
+  }
+
+  function clearLeftBody() {
+    var body = rootEl && rootEl.querySelector('#quotationLeftBody');
+    if (body) body.innerHTML = '';
   }
 
   function bindSectionCheck(panel) {
@@ -213,9 +298,11 @@ var QuotationBuilderView = (function () {
     var workspace = rootEl.querySelector('.quotation-workspace') ||
       rootEl.querySelector('.builder-workspace');
     var mod = resolvePanel(currentStep);
+    clearLeftBody();
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
       workspace.classList.toggle('is-hero', currentStep === 'hero');
+      workspace.classList.toggle('is-left-collapsed', leftCollapsed);
     }
     if (panel) {
       panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
@@ -237,25 +324,32 @@ var QuotationBuilderView = (function () {
   }
 
   function activateSharedChrome() {
-    /* V7.2.17 — no second Builder rail; platform rail is the only lateral nav. */
-    document.body.classList.add('quotation-canvas-first');
-    document.documentElement.classList.add('quotation-canvas-first');
+    document.body.classList.add('quotation-canvas-first', 'boxies-builder-chrome');
+    document.documentElement.classList.add('quotation-canvas-first', 'boxies-builder-chrome');
     document.body.classList.remove('boxies-rail-collapsed');
     document.documentElement.classList.remove('boxies-rail-collapsed');
     try {
       document.documentElement.style.setProperty('--builder-rail-width', '0px');
+      document.documentElement.style.setProperty(
+        '--quotation-left-w',
+        leftCollapsed ? '0px' : LEFT_PANEL_W
+      );
     } catch (eW) {}
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
+    ensureFloatButton();
+    applyLeftCollapsed(leftCollapsed);
   }
 
   function deactivateSharedChrome() {
-    document.body.classList.remove('quotation-canvas-first');
-    document.documentElement.classList.remove('quotation-canvas-first');
+    document.body.classList.remove('quotation-canvas-first', 'boxies-builder-chrome');
+    document.documentElement.classList.remove('quotation-canvas-first', 'boxies-builder-chrome');
     try {
       document.documentElement.style.removeProperty('--builder-rail-width');
+      document.documentElement.style.removeProperty('--quotation-left-w');
     } catch (eW) {}
+    destroyFloatButton();
   }
 
   async function hydrateIdentity(projectId, slug, experienceType) {

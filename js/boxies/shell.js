@@ -378,6 +378,7 @@ var BoxiesShell = (function () {
       '<span class="boxies-user__avatar" aria-hidden="true">' + iconHtml('user') + '</span>' +
       '<span class="boxies-user__meta">' +
         '<strong class="boxies-user__name">' + escapeHtml(name) + '</strong>' +
+        '<span class="boxies-user__sep" aria-hidden="true">·</span>' +
         '<span class="boxies-user__role">' + escapeHtml(roleLabel) + '</span>' +
       '</span>';
     chip.setAttribute('data-tooltip', name + ' · ' + roleLabel);

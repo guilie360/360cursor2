@@ -548,24 +548,8 @@ var QuotationEditor = (function () {
 
   function contentColumnHtml() {
     if (state.focusMode) return '';
-
-    var toggleIcon = state.libraryCollapsed ? 'chevron-right' : 'chevron-left';
-    var toggleBtn =
-      '<button type="button" class="qe-panel-toggle" data-qe-toggle-library' +
-        ' aria-expanded="' + (state.libraryCollapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (state.libraryCollapsed ? 'Abrir recursos' : 'Cerrar recursos') + '"' +
-        ' data-tooltip="' + (state.libraryCollapsed ? 'Abrir recursos' : 'Cerrar recursos') + '">' +
-        (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
-          ? BuilderIcons.render(toggleIcon)
-          : (state.libraryCollapsed ? '›' : '‹')) +
-      '</button>';
-
-    if (state.libraryCollapsed) {
-      return '' +
-        '<aside class="qe-col qe-col--library is-collapsed" aria-label="Recursos">' +
-          toggleBtn +
-        '</aside>';
-    }
+    var external = !!document.getElementById('quotationLeftBody');
+    if (!external && state.libraryCollapsed) return '';
 
     var groups = CONTENT_GROUPS.map(function (group) {
       var open = state.openGroups[group.id] !== false;
@@ -591,7 +575,6 @@ var QuotationEditor = (function () {
             '<h2 class="qe-col__title">Recursos</h2>' +
             '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
           '</div>' +
-          toggleBtn +
         '</div>' +
         '<div class="qe-content__list" data-qe-content-list>' + groups + '</div>' +
       '</aside>';
@@ -1261,8 +1244,8 @@ var QuotationEditor = (function () {
   function editorLayoutClass() {
     var cls = 'quotation-step quotation-step--editor qe-editor';
     if (state.focusMode) cls += ' is-focus';
-    if (state.libraryCollapsed && !state.focusMode) cls += ' is-library-collapsed';
     if (state.inspectorCollapsed && !state.focusMode) cls += ' is-inspector-collapsed';
+    if (document.getElementById('quotationLeftBody')) cls += ' qe-editor--external-library';
     return cls;
   }
 
@@ -1270,9 +1253,19 @@ var QuotationEditor = (function () {
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     clearInvalidSelection();
     ensureScenes();
+    var leftBody = document.getElementById('quotationLeftBody');
+    var libHtml = contentColumnHtml();
+    if (leftBody) {
+      leftBody.innerHTML = libHtml || '';
+      return '' +
+        '<div class="' + editorLayoutClass() + '" data-qe-editor>' +
+          canvasHtml() +
+          inspectorHtml() +
+        '</div>';
+    }
     return '' +
       '<div class="' + editorLayoutClass() + '" data-qe-editor>' +
-        contentColumnHtml() +
+        libHtml +
         canvasHtml() +
         inspectorHtml() +
       '</div>';
@@ -1955,15 +1948,31 @@ var QuotationEditor = (function () {
       mountRuntimeCanvas();
       mountExperienciaOverlay();
       var editor = panel.querySelector('[data-qe-editor]') || panel;
+      var leftBody = document.getElementById('quotationLeftBody');
 
-      editor.querySelectorAll('[data-qe-toggle-library]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleLibraryCollapsed();
-        });
-      });
-      editor.querySelectorAll('[data-qe-toggle-inspector]').forEach(function (btn) {
+      function qAll(sel) {
+        var out = [];
+        function collect(root) {
+          if (!root || !root.querySelectorAll) return;
+          Array.prototype.forEach.call(root.querySelectorAll(sel), function (el) {
+            out.push(el);
+          });
+        }
+        collect(editor);
+        if (leftBody) collect(leftBody);
+        return out;
+      }
+
+      function qOne(sel) {
+        if (editor && editor.querySelector) {
+          var a = editor.querySelector(sel);
+          if (a) return a;
+        }
+        if (leftBody && leftBody.querySelector) return leftBody.querySelector(sel);
+        return null;
+      }
+
+      qAll('[data-qe-toggle-inspector]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
@@ -1971,30 +1980,30 @@ var QuotationEditor = (function () {
         });
       });
 
-      editor.querySelectorAll('[data-qe-open-resource-picker]').forEach(function (btn) {
+      qAll('[data-qe-open-resource-picker]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
           openResourcePicker();
         });
       });
-      var closePicker = editor.querySelector('[data-qe-close-resource-picker]');
+      var closePicker = qOne('[data-qe-close-resource-picker]');
       if (closePicker) {
         closePicker.addEventListener('click', function () { closeResourcePicker(); });
       }
-      var picker = editor.querySelector('[data-qe-resource-picker]');
+      var picker = qOne('[data-qe-resource-picker]');
       if (picker) {
         picker.addEventListener('click', function (e) {
           if (e.target === picker) closeResourcePicker();
         });
       }
-      editor.querySelectorAll('[data-qe-pick-resource]').forEach(function (btn) {
+      qAll('[data-qe-pick-resource]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           assignResourceToScene(btn.getAttribute('data-qe-pick-resource'));
         });
       });
 
-      editor.querySelectorAll('[data-qe-drag-resource]').forEach(function (el) {
+      qAll('[data-qe-drag-resource]').forEach(function (el) {
         el.addEventListener('dragstart', function (e) {
           var id = el.getAttribute('data-qe-drag-resource');
           if (!id || !e.dataTransfer) return;
@@ -2004,7 +2013,7 @@ var QuotationEditor = (function () {
         });
       });
 
-      editor.querySelectorAll('[data-qe-drop-scene]').forEach(function (zone) {
+      qAll('[data-qe-drop-scene]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
           e.preventDefault();
           zone.classList.add('is-drop-target');
@@ -2142,45 +2151,45 @@ var QuotationEditor = (function () {
       });
     }
 
-    editor.querySelectorAll('[data-qe-toggle]').forEach(function (btn) {
+    qAll('[data-qe-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         toggleGroup(btn.getAttribute('data-qe-toggle'));
       });
     });
 
-    editor.querySelectorAll('[data-qe-folder-toggle]').forEach(function (btn) {
+    qAll('[data-qe-folder-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         toggleFolder(btn.getAttribute('data-qe-folder-toggle'));
       });
     });
 
-    editor.querySelectorAll('[data-qe-content]').forEach(function (btn) {
+    qAll('[data-qe-content]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         selectContent(btn.getAttribute('data-qe-content'));
       });
     });
 
-    editor.querySelectorAll('[data-qe-folder-new]').forEach(function (btn) {
+    qAll('[data-qe-folder-new]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         state.folderComposerGroup = btn.getAttribute('data-qe-folder-new');
         state.tourComposer = { open: false, folderId: null };
         rerender();
-        var input = rootEl.querySelector('[data-qe-folder-name]');
+        var input = qOne('[data-qe-folder-name]');
         if (input) {
           setTimeout(function () { input.focus(); }, 0);
         }
       });
     });
 
-    var folderCancel = editor.querySelector('[data-qe-folder-cancel]');
+    var folderCancel = qOne('[data-qe-folder-cancel]');
     if (folderCancel) {
       folderCancel.addEventListener('click', function () {
         state.folderComposerGroup = null;
         rerender();
       });
     }
-    var folderSubmit = editor.querySelector('[data-qe-folder-submit]');
-    var folderName = editor.querySelector('[data-qe-folder-name]');
+    var folderSubmit = qOne('[data-qe-folder-submit]');
+    var folderName = qOne('[data-qe-folder-name]');
     if (folderSubmit && folderName) {
       folderSubmit.addEventListener('click', function () {
         createFolder(state.folderComposerGroup, folderName.value);
@@ -2193,16 +2202,16 @@ var QuotationEditor = (function () {
       });
     }
 
-    editor.querySelectorAll('[data-qe-hero-add]').forEach(function (btn) {
+    qAll('[data-qe-hero-add]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var kind = btn.getAttribute('data-qe-hero-add');
         var inputKey = kind === 'video' ? 'hero-video' : 'hero';
-        var input = editor.querySelector('[data-qe-file-input="' + inputKey + '"]');
+        var input = qOne('[data-qe-file-input="' + inputKey + '"]');
         if (input) input.click();
       });
     });
 
-    editor.querySelectorAll('[data-qe-file-add]').forEach(function (btn) {
+    qAll('[data-qe-file-add]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var groupId = btn.getAttribute('data-qe-file-add');
         var folderAttr = btn.getAttribute('data-qe-folder');
@@ -2213,12 +2222,12 @@ var QuotationEditor = (function () {
           media: heroMedia || null
         };
         var inputKey = (groupId === 'hero' && heroMedia === 'video') ? 'hero-video' : groupId;
-        var input = editor.querySelector('[data-qe-file-input="' + inputKey + '"]');
+        var input = qOne('[data-qe-file-input="' + inputKey + '"]');
         if (input) input.click();
       });
     });
 
-    editor.querySelectorAll('[data-qe-file-input]').forEach(function (input) {
+    qAll('[data-qe-file-input]').forEach(function (input) {
       input.addEventListener('change', function () {
         var key = input.getAttribute('data-qe-file-input');
         var files = input.files;
@@ -2239,7 +2248,7 @@ var QuotationEditor = (function () {
       });
     });
 
-    editor.querySelectorAll('[data-qe-tour-add]').forEach(function (btn) {
+    qAll('[data-qe-tour-add]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var folderAttr = btn.getAttribute('data-qe-folder');
         state.folderComposerGroup = null;
@@ -2253,15 +2262,15 @@ var QuotationEditor = (function () {
       });
     });
 
-    var tourCancel = editor.querySelector('[data-qe-tour-cancel]');
+    var tourCancel = qOne('[data-qe-tour-cancel]');
     if (tourCancel) {
       tourCancel.addEventListener('click', function () {
         state.tourComposer = { open: false, folderId: null };
         rerender();
       });
     }
-    var tourSubmit = editor.querySelector('[data-qe-tour-submit]');
-    var tourText = editor.querySelector('[data-qe-tour-text]');
+    var tourSubmit = qOne('[data-qe-tour-submit]');
+    var tourText = qOne('[data-qe-tour-text]');
     if (tourSubmit && tourText) {
       tourSubmit.addEventListener('click', function () {
         addTourUrls(tourText.value, state.tourComposer.folderId);
@@ -2276,7 +2285,7 @@ var QuotationEditor = (function () {
       });
     }
 
-    var dropzone = editor.querySelector('[data-qe-tour-dropzone]');
+    var dropzone = qOne('[data-qe-tour-dropzone]');
     if (dropzone) {
       dropzone.addEventListener('dragover', function (e) {
         e.preventDefault();
