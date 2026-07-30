@@ -4,18 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Quotation Runtime</title>
+  <script>
+    /* V7.2.08 — Canvas mode: lock logical viewport before CSS/layout (1920×1080). */
+    (function () {
+      try {
+        var p = new URLSearchParams(window.location.search || '');
+        if (p.get('canvas') !== '1' && p.get('canvas') !== 'true') return;
+        var w = parseInt(p.get('designWidth'), 10) || 1920;
+        var h = parseInt(p.get('designHeight'), 10) || 1080;
+        var root = document.documentElement;
+        root.classList.add('qr-canvas-mode');
+        root.setAttribute('data-qr-design-w', String(w));
+        root.setAttribute('data-qr-design-h', String(h));
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute(
+            'content',
+            'width=' + w + ', height=' + h + ', initial-scale=1, maximum-scale=1, user-scalable=no'
+          );
+        }
+        root.style.setProperty('--qr-design-w', w + 'px');
+        root.style.setProperty('--qr-design-h', h + 'px');
+        root.style.setProperty('--qr-vw', (w / 100) + 'px');
+        root.style.setProperty('--qr-vh', (h / 100) + 'px');
+        root.style.width = w + 'px';
+        root.style.height = h + 'px';
+        root.style.overflow = 'hidden';
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="../css/variables.css">
-  <link rel="stylesheet" href="../css/components.css?v=ws7205">
+  <link rel="stylesheet" href="../css/components.css?v=ws7208">
   <link rel="stylesheet" href="../css/platform/product-assistant.css">
   <link rel="stylesheet" href="../css/hall/hall.css">
-  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7207">
-  <script>
-    try {
-      if (typeof HallDesignSystem !== 'undefined') {
-        /* painted after script load */
-      }
-    } catch (e) {}
-  </script>
+  <link rel="stylesheet" href="../css/boxies/quotation-runtime.css?v=ws7208">
 </head>
 <body class="qr-host">
   <div id="quotationRuntimeRoot" data-quotation-runtime></div>
@@ -33,9 +55,9 @@
   </script>
   <script src="../js/auth/storage-prefs.js"></script>
   <script src="../js/auth/client.js"></script>
-  <script src="../js/shared/project-cover.js?v=ws7207"></script>
-  <script src="../js/builder/quotation/quotation-runtime-bridge.js?v=ws7207"></script>
-  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7207"></script>
+  <script src="../js/shared/project-cover.js?v=ws7208"></script>
+  <script src="../js/builder/quotation/quotation-runtime-bridge.js?v=ws7208"></script>
+  <script src="../js/builder/quotation/quotation-runtime.js?v=ws7208"></script>
   <script>
     (function () {
       function start() {

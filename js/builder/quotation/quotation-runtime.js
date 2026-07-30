@@ -1,15 +1,23 @@
 /**
- * QuotationRuntime — visitor / preview / Canvas iframe renderer (V7.2.07).
+ * QuotationRuntime — visitor / preview / Canvas iframe renderer (V7.2.08).
  *
- * Single ProjectCover mount path for Visualizar, Preview, Publicado and Canvas.
- * Editor mode (editor=1) accepts live coverModel via QuotationRuntimeBridge.
+ * Modes:
+ *   - Runtime: browser viewport (Publicado, Visualizar, Preview)
+ *   - Canvas: virtual 1920×1080 viewport (editor iframe inside design frame)
+ *
+ * Single ProjectCover mount. Editor+canvas accept live coverModel via bridge.
  */
 var QuotationRuntime = (function () {
   var EXPERIENCE_TYPE = 'quotation';
+  var DEFAULT_DESIGN_W = 1920;
+  var DEFAULT_DESIGN_H = 1080;
   var loaded = null;
   var coverHostEl = null;
   var stageEl = null;
   var editorMode = false;
+  var canvasMode = false;
+  var designWidth = DEFAULT_DESIGN_W;
+  var designHeight = DEFAULT_DESIGN_H;
   var liveModel = null;
   var liveElementIds = {};
   var liveSelectedId = null;
@@ -28,16 +36,70 @@ var QuotationRuntime = (function () {
     } catch (e) {
       params = { get: function () { return null; } };
     }
+    var dw = parseInt(params.get('designWidth'), 10);
+    var dh = parseInt(params.get('designHeight'), 10);
     return {
       projectId: String(params.get('projectId') || params.get('proyectoId') || '').trim(),
       experienceType: String(params.get('experience_type') || params.get('experienceType') || '').trim().toLowerCase(),
       preview: params.get('preview') === '1' || params.get('preview') === 'true',
-      editor: params.get('editor') === '1' || params.get('editor') === 'true'
+      editor: params.get('editor') === '1' || params.get('editor') === 'true',
+      canvas: params.get('canvas') === '1' || params.get('canvas') === 'true',
+      designWidth: (dw > 0 ? dw : DEFAULT_DESIGN_W),
+      designHeight: (dh > 0 ? dh : DEFAULT_DESIGN_H)
     };
   }
 
+  /**
+   * Canvas mode: lock the document so CSS vh/vw/svh/dvh resolve against the
+   * design frame (iframe sized to designWidth×designHeight), not the editor chrome.
+   */
+  function applyCanvasViewport(q) {
+    if (!q || !q.canvas) return;
+    canvasMode = true;
+    designWidth = q.designWidth || DEFAULT_DESIGN_W;
+    designHeight = q.designHeight || DEFAULT_DESIGN_H;
+
+    document.documentElement.classList.add('qr-canvas-mode');
+    document.documentElement.setAttribute('data-qr-design-w', String(designWidth));
+    document.documentElement.setAttribute('data-qr-design-h', String(designHeight));
+
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      meta.setAttribute(
+        'content',
+        'width=' + designWidth + ', height=' + designHeight +
+          ', initial-scale=1, maximum-scale=1, user-scalable=no'
+      );
+    }
+
+    /* Logical viewport units for anything that must not depend on iframe chrome. */
+    var root = document.documentElement;
+    root.style.setProperty('--qr-design-w', designWidth + 'px');
+    root.style.setProperty('--qr-design-h', designHeight + 'px');
+    root.style.setProperty('--qr-vw', (designWidth / 100) + 'px');
+    root.style.setProperty('--qr-vh', (designHeight / 100) + 'px');
+
+    if (document.body) {
+      document.body.style.width = designWidth + 'px';
+      document.body.style.height = designHeight + 'px';
+      document.body.style.overflow = 'hidden';
+      document.body.style.margin = '0';
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        if (!document.body) return;
+        document.body.style.width = designWidth + 'px';
+        document.body.style.height = designHeight + 'px';
+        document.body.style.overflow = 'hidden';
+        document.body.style.margin = '0';
+      });
+    }
+    root.style.width = designWidth + 'px';
+    root.style.height = designHeight + 'px';
+    root.style.overflow = 'hidden';
+  }
+
   function assertQuotationQuery(q) {
-    if (q.editor) return;
+    if (q.editor || q.canvas) return;
     if (!q.projectId) {
       throw new Error('Falta projectId. El Runtime de Cotización no acepta fallbacks.');
     }
@@ -68,7 +130,7 @@ var QuotationRuntime = (function () {
 
   /**
    * Build Runtime URL. Always requires projectId for visitor/preview;
-   * editor mode may omit projectId (live model via bridge).
+   * editor/canvas may omit projectId (live model via bridge).
    */
   function href(projectId, opts) {
     opts = opts || {};
@@ -87,12 +149,22 @@ var QuotationRuntime = (function () {
       if (id) q = 'projectId=' + encodeURIComponent(id) + '&' + q;
       if (opts.preview) q += '&preview=1';
       if (opts.editor) q += '&editor=1';
+      if (opts.canvas) {
+        q += '&canvas=1';
+        q += '&designWidth=' + encodeURIComponent(String(opts.designWidth || DEFAULT_DESIGN_W));
+        q += '&designHeight=' + encodeURIComponent(String(opts.designHeight || DEFAULT_DESIGN_H));
+      }
       return base + '?' + q;
     }
     if (id) url.searchParams.set('projectId', id);
     url.searchParams.set('experience_type', EXPERIENCE_TYPE);
     if (opts.preview) url.searchParams.set('preview', '1');
     if (opts.editor) url.searchParams.set('editor', '1');
+    if (opts.canvas) {
+      url.searchParams.set('canvas', '1');
+      url.searchParams.set('designWidth', String(opts.designWidth || DEFAULT_DESIGN_W));
+      url.searchParams.set('designHeight', String(opts.designHeight || DEFAULT_DESIGN_H));
+    }
     return url.href;
   }
 
@@ -379,6 +451,7 @@ var QuotationRuntime = (function () {
     if (!host) throw new Error('Falta #quotationRuntimeRoot');
 
     var q = readQuery();
+    applyCanvasViewport(q);
     editorMode = !!q.editor;
     if (editorMode) {
       document.documentElement.classList.add('qr-editor-mode');
@@ -405,20 +478,23 @@ var QuotationRuntime = (function () {
         }
         paintHero(host, bundle);
         document.title = (bundle.project.nombre || 'Cotización') +
-          (editorMode ? ' · Editor' : ' · Quotation Runtime');
-      } else if (editorMode) {
+          (canvasMode ? ' · Canvas' : (editorMode ? ' · Editor' : ' · Quotation Runtime'));
+      } else if (editorMode || canvasMode) {
         loaded = blankEditorBundle();
         liveModel = liveModel || (typeof ProjectCover !== 'undefined' && ProjectCover.blankModel
           ? ProjectCover.blankModel()
           : { nombre: '', eslogan: '', botonIzquierdo: 'Explorar', botonDerecho: 'Iniciar' });
         paintHero(host, loaded);
-        document.title = 'Cotización · Editor';
+        document.title = 'Cotización · Canvas';
       }
 
       if (editorMode && typeof QuotationRuntimeBridge !== 'undefined') {
         QuotationRuntimeBridge.postToParent(QuotationRuntimeBridge.TYPE.READY, {
           projectId: q.projectId || null,
-          editor: true
+          editor: true,
+          canvas: canvasMode,
+          designWidth: designWidth,
+          designHeight: designHeight
         });
         postBoxes();
       }
@@ -431,11 +507,15 @@ var QuotationRuntime = (function () {
 
   return {
     EXPERIENCE_TYPE: EXPERIENCE_TYPE,
+    DEFAULT_DESIGN_W: DEFAULT_DESIGN_W,
+    DEFAULT_DESIGN_H: DEFAULT_DESIGN_H,
     href: href,
     boot: boot,
     readQuery: readQuery,
+    applyCanvasViewport: applyCanvasViewport,
     getLoaded: function () { return loaded; },
     applyEditorPayload: applyEditorPayload,
-    collectBoxes: collectBoxes
+    collectBoxes: collectBoxes,
+    isCanvasMode: function () { return canvasMode; }
   };
 })();

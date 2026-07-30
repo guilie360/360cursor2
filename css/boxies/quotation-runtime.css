@@ -119,3 +119,27 @@ html.qr-editor-mode [data-qe-element].is-qe-selected {
   outline: 1px solid rgba(255, 255, 255, 0.45);
   outline-offset: 3px;
 }
+
+/*
+ * Canvas mode: document is locked to designWidth×designHeight by JS.
+ * Fill that logical viewport with % (not a second Hero layout).
+ */
+html.qr-canvas-mode,
+html.qr-canvas-mode body.qr-host {
+  margin: 0;
+  overflow: hidden;
+}
+
+html.qr-canvas-mode #quotationRuntimeRoot,
+html.qr-canvas-mode .qr-cover-host,
+html.qr-canvas-mode .qr-cover-host .project-cover-root {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+html.qr-canvas-mode .qr-cover-host .project-cover {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}

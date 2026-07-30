@@ -395,25 +395,17 @@
   z-index: 4;
 }
 
-/* V7.2.07 — Hero = Runtime iframe. No ProjectCover layout overrides. */
-.qe-canvas__stage--runtime {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  min-height: 0;
-}
-
-.qe-canvas__runtime-host {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: min(72vh, 820px);
+/* Runtime iframe fills the 1920×1080 design frame (scale only on .qe-canvas__design). */
+.qe-canvas__design > .qe-canvas__runtime-host {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: #050505;
 }
 
-.qe-canvas__runtime-iframe {
+.qe-canvas__design .qe-canvas__runtime-iframe {
   position: absolute;
   inset: 0;
   display: block;
@@ -423,7 +415,7 @@
   background: #050505;
 }
 
-.qe-canvas__edit-layer {
+.qe-canvas__design .qe-canvas__edit-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;

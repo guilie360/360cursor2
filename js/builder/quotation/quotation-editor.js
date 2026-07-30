@@ -1,8 +1,11 @@
 /**
- * Quotation Editor — V7.2.07 Runtime-in-Canvas.
- * Hero stages embed QuotationRuntime (iframe); Editor never mounts ProjectCover.
+ * Quotation Editor — V7.2.08 Runtime Canvas (virtual 1920×1080 viewport).
+ * Hero stages embed QuotationRuntime iframe inside the design frame; scale is outside.
  */
 var QuotationEditor = (function () {
+  var CANVAS_DESIGN_W = 1920;
+  var CANVAS_DESIGN_H = 1080;
+
   var CONTENT_GROUPS = [
     { id: 'hero', label: 'Hero' },
     { id: 'renders', label: 'Imágenes', accept: 'image/*', addLabel: '+ Agregar' },
@@ -642,12 +645,19 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  /** Hero stage: same Runtime as Visualizar / Preview / Publicado (iframe). */
+  /** Hero: Runtime iframe inside fixed 1920×1080 design frame (scale outside). */
   function heroRuntimeStageHtml() {
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
     var src = '';
+    var opts = {
+      preview: true,
+      editor: true,
+      canvas: true,
+      designWidth: CANVAS_DESIGN_W,
+      designHeight: CANVAS_DESIGN_H
+    };
     if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      src = QuotationRuntime.href(projectId, { preview: true, editor: true }) || '';
+      src = QuotationRuntime.href(projectId, opts) || '';
     } else {
       try {
         var url = new URL('/quotation/', window.location.origin);
@@ -655,16 +665,21 @@ var QuotationEditor = (function () {
         url.searchParams.set('experience_type', 'quotation');
         url.searchParams.set('preview', '1');
         url.searchParams.set('editor', '1');
+        url.searchParams.set('canvas', '1');
+        url.searchParams.set('designWidth', String(CANVAS_DESIGN_W));
+        url.searchParams.set('designHeight', String(CANVAS_DESIGN_H));
         src = url.href;
       } catch (e) {
-        src = '/quotation/?experience_type=quotation&preview=1&editor=1' +
+        src = '/quotation/?experience_type=quotation&preview=1&editor=1&canvas=1' +
+          '&designWidth=' + CANVAS_DESIGN_W + '&designHeight=' + CANVAS_DESIGN_H +
           (projectId ? '&projectId=' + encodeURIComponent(projectId) : '');
       }
     }
     return '' +
       '<div class="qe-canvas__runtime-host" data-qe-runtime-host>' +
         '<iframe class="qe-canvas__runtime-iframe" data-qe-runtime-iframe' +
-          ' title="Hero Runtime"' +
+          ' title="Hero Runtime Canvas"' +
+          ' width="' + CANVAS_DESIGN_W + '" height="' + CANVAS_DESIGN_H + '"' +
           ' src="' + String(src).replace(/"/g, '&quot;') + '"' +
           ' allow="fullscreen"></iframe>' +
         '<div class="qe-canvas__edit-layer" data-qe-edit-layer aria-hidden="true"></div>' +
@@ -778,17 +793,7 @@ var QuotationEditor = (function () {
     var content = selectedContent();
     var scene = activeScene();
     var isHero = sceneUsesProjectCover(scene);
-    var stageInner = isHero
-      ? heroRuntimeStageHtml()
-      : (
-        '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
-          '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
-            '<div class="qe-canvas__design" data-qe-canvas-design>' +
-              stageBodyHtml(content, scene) +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
+    var designBody = isHero ? heroRuntimeStageHtml() : stageBodyHtml(content, scene);
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         scenesBarHtml() +
@@ -798,7 +803,7 @@ var QuotationEditor = (function () {
             '<p class="qe-col__hint">' +
               escapeHtml((scene && scene.name) || 'Escena') +
               (scene ? ' · ' + escapeHtml(scene.type || 'scene') : '') +
-              (isHero ? ' · Runtime 1:1' : ' · 16:9') +
+              ' · 1920×1080' +
             '</p>' +
           '</div>' +
           '<div class="qe-canvas__head-right">' +
@@ -810,15 +815,19 @@ var QuotationEditor = (function () {
             canvasToolbarHtml(content) +
           '</div>' +
         '</div>' +
-        '<div class="qe-canvas__stage' + (isHero ? ' qe-canvas__stage--runtime' : '') + '" data-qe-canvas>' +
-          stageInner +
+        '<div class="qe-canvas__stage" data-qe-canvas>' +
+          '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
+            '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
+              '<div class="qe-canvas__design" data-qe-canvas-design>' +
+                designBody +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
       '</section>';
   }
 
   var canvasRo = null;
-  var CANVAS_DESIGN_W = 1920;
-  var CANVAS_DESIGN_H = 1080;
 
   function fitCanvasDesign() {
     if (!rootEl) return;
