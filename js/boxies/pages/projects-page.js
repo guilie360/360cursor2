@@ -644,18 +644,22 @@ var BoxiesProjectsPage = (function () {
     var id = row.id || '';
     var slug = row.slug || '';
     if (type === 'quotation') {
+      var slugQ = row.slug || '';
+      var idQ = row.id || '';
       if (typeof BoxiesShell !== 'undefined' && BoxiesShell.resolveQuotationPreviewUrl) {
-        return BoxiesShell.resolveQuotationPreviewUrl(id);
+        return BoxiesShell.resolveQuotationPreviewUrl({ id: idQ, slug: slugQ });
+      }
+      if (slugQ && typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+        return ShowroomPublicUrl.href(slugQ);
       }
       if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-        return PlatformBuilderBridge.quotationUrl(id);
+        return PlatformBuilderBridge.quotationUrl({ id: idQ, slug: slugQ });
       }
-      if (!id) return null;
+      if (!idQ) return null;
       try {
         var url = new URL('/quotation/', window.location.origin);
-        url.searchParams.set('projectId', id);
+        url.searchParams.set('projectId', idQ);
         url.searchParams.set('experience_type', 'quotation');
-        url.searchParams.set('preview', '1');
         return url.href;
       } catch (e) {
         return null;

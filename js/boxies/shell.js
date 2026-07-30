@@ -155,32 +155,45 @@ var BoxiesShell = (function () {
     return window.location.origin + '/';
   }
 
-  /** Quotation Runtime — projectId only; never Showroom /{slug}. */
-  function resolveQuotationPreviewUrl(projectId) {
+  /** Quotation public URL — same address a client visits (/{slug}). */
+  function resolveQuotationPreviewUrl(projectIdOrOpts) {
+    var slug = null;
+    var id = null;
+    if (projectIdOrOpts && typeof projectIdOrOpts === 'object') {
+      slug = projectIdOrOpts.slug || null;
+      id = projectIdOrOpts.projectId || projectIdOrOpts.id || null;
+    } else {
+      id = projectIdOrOpts;
+      slug = projectCtx && projectCtx.slug;
+    }
+    if (!slug && projectCtx && String(projectCtx.id) === String(id)) {
+      slug = projectCtx.slug;
+    }
+    if (slug) {
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+        return ShowroomPublicUrl.href(slug);
+      }
+      try {
+        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+      } catch (e) {
+        return window.location.origin + '/' + encodeURIComponent(slug);
+      }
+    }
+    /* Draft without slug: real Quotation Runtime (not editor, not preview flag). */
+    if (id && typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      return QuotationRuntime.href(id);
+    }
     if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-      return PlatformBuilderBridge.quotationUrl(projectId);
+      return PlatformBuilderBridge.quotationUrl(id);
     }
-    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      return QuotationRuntime.href(projectId, { preview: true });
-    }
-    var id = String(projectId || '').trim();
-    if (!id) return null;
-    try {
-      var url = new URL('/quotation/', window.location.origin);
-      url.searchParams.set('projectId', id);
-      url.searchParams.set('experience_type', 'quotation');
-      url.searchParams.set('preview', '1');
-      return url.href;
-    } catch (e) {
-      return null;
-    }
+    return null;
   }
 
   function resolvePreviewUrl(slugOrOpts) {
     if (slugOrOpts && typeof slugOrOpts === 'object') {
       var type = String(slugOrOpts.experienceType || slugOrOpts.experience_type || '').toLowerCase();
       if (type === 'quotation') {
-        return resolveQuotationPreviewUrl(slugOrOpts.projectId || slugOrOpts.id);
+        return resolveQuotationPreviewUrl(slugOrOpts);
       }
       return resolveShowroomPreviewUrl(slugOrOpts.slug);
     }
@@ -190,7 +203,10 @@ var BoxiesShell = (function () {
   function openActivePreview() {
     var type = String(projectCtx.experienceType || '').toLowerCase();
     if (type === 'quotation') {
-      var qUrl = resolveQuotationPreviewUrl(projectCtx.id);
+      var qUrl = resolveQuotationPreviewUrl({
+        id: projectCtx.id,
+        slug: projectCtx.slug
+      });
       if (!qUrl) return;
       window.open(qUrl, '_blank', 'noopener,noreferrer');
       return;

@@ -233,6 +233,12 @@ var QuotationExperienciaBridge = (function () {
           });
         }
         ix.targetSceneId = targetNodeId ? sceneIdFromNode(targetNodeId) : null;
+        if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
+      });
+      /* Hotspots: keep targetSceneId if already set via Quotation fields. */
+      sc.interactions.forEach(function (ix) {
+        if (!ix || String(ix.type || '').toUpperCase() !== 'HOTSPOT') return;
+        if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
       });
     });
   }

@@ -72,6 +72,7 @@ function fetchPublishedProject() {
     'sitio_web',
     'instagram_url',
     'estado',
+    'experience_type',
     'proyecto_config(*)',
     'constructoras(id,nombre,descripcion,ciudad,direccion,telefono,email,sitio_web,logo_url)',
     'proyecto_amenidades(descripcion,imagen_url,amenidades(nombre,icono,categoria))',
@@ -92,10 +93,27 @@ function fetchPublishedProject() {
       type: typeof rows
     });
     if (!rows || !rows.length) throw new Error('No hay proyectos publicados');
-    if (typeof BootDebug !== 'undefined') {
-      BootDebug.log('proyecto cargado', { id: rows[0].id, slug: rows[0].slug, nombre: rows[0].nombre });
+    var project = rows[0];
+    /* Quotation public URL /{slug} → Quotation Runtime (same experience as client). */
+    if (String(project.experience_type || '').toLowerCase() === 'quotation' && project.id) {
+      var dest;
+      if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+        dest = QuotationRuntime.href(project.id);
+      } else {
+        dest = '/quotation/?projectId=' + encodeURIComponent(project.id) +
+          '&experience_type=quotation';
+      }
+      try {
+        window.location.replace(dest);
+      } catch (eRedir) {
+        window.location.href = dest;
+      }
+      return new Promise(function () { /* redirecting */ });
     }
-    return rows[0];
+    if (typeof BootDebug !== 'undefined') {
+      BootDebug.log('proyecto cargado', { id: project.id, slug: project.slug, nombre: project.nombre });
+    }
+    return project;
   });
 }
 

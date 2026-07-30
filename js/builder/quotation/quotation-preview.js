@@ -1,26 +1,41 @@
 /**
- * QuotationPreview — same project as Canvas / Runtime (V7.2.06).
- * Embeds QuotationRuntime for the current projectId (no second renderer).
+ * QuotationPreview — opens the same public experience a client visits (V7.2.14).
+ * Prefers /{slug}; falls back to Quotation Runtime by projectId (drafts).
  */
 var QuotationPreview = (function () {
-  function resolveRuntimeUrl(projectId) {
-    var id = String(projectId || '').trim();
-    if (!id) return null;
-    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      return QuotationRuntime.href(id, { preview: true });
+  function resolveRuntimeUrl(projectIdOrCtx) {
+    var ctx = projectIdOrCtx && typeof projectIdOrCtx === 'object'
+      ? projectIdOrCtx
+      : { id: projectIdOrCtx };
+    var id = String(ctx.id || ctx.projectId || '').trim();
+    var slug = String(ctx.slug || '').trim();
+
+    if (slug) {
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+        return ShowroomPublicUrl.href(slug);
+      }
+      try {
+        return new URL('/' + encodeURIComponent(slug), window.location.origin).href;
+      } catch (e0) {
+        return '/' + encodeURIComponent(slug);
+      }
     }
+
     if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.quotationUrl) {
-      return PlatformBuilderBridge.quotationUrl(id);
+      return PlatformBuilderBridge.quotationUrl({ id: id, slug: slug });
     }
+    if (id && typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
+      return QuotationRuntime.href(id);
+    }
+    if (!id) return null;
     try {
       var url = new URL('/quotation/', window.location.origin);
       url.searchParams.set('projectId', id);
       url.searchParams.set('experience_type', 'quotation');
-      url.searchParams.set('preview', '1');
       return url.href;
     } catch (e) {
       return '/quotation/?projectId=' + encodeURIComponent(id) +
-        '&experience_type=quotation&preview=1';
+        '&experience_type=quotation';
     }
   }
 
@@ -32,15 +47,15 @@ var QuotationPreview = (function () {
         ? QuotationSidebar.pageHeaderHtml(
           'preview',
           'Preview',
-          'Misma fuente que el Canvas y el Runtime.',
+          'Misma URL pública que verá el cliente.',
           opts.sectionChecks
         )
         : '';
-    var url = resolveRuntimeUrl(ctx.id);
+    var url = resolveRuntimeUrl(ctx);
     var body;
     if (!url) {
       body =
-        '<p class="builder-menu-hint">Guarda el proyecto para previsualizar el Canvas publicado.</p>';
+        '<p class="builder-menu-hint">Define un slug y publica para previsualizar la experiencia pública.</p>';
     } else {
       body =
         '<div class="qe-preview-frame">' +

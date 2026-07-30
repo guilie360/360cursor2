@@ -518,11 +518,80 @@ var ProyectosApi = (function () {
     }).filter(function (el) { return el && el.id; });
   }
 
+  /**
+   * V7.2.14 — Persist Showroom interactions[] (BUTTON / HOTSPOT) for Runtime.
+   * Keep fields the visitor needs; drop ephemeral editor-only junk.
+   */
+  function sanitizeCanvasInteractions(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (ix) {
+      if (!ix || typeof ix !== 'object') return null;
+      var type = String(ix.type || '').toUpperCase();
+      if (type !== 'BUTTON' && type !== 'HOTSPOT') return null;
+      var id = heroText(ix.id);
+      if (!id) return null;
+      var out = {
+        id: id,
+        portId: heroText(ix.portId) || id,
+        type: type,
+        label: heroText(ix.label) || (type === 'HOTSPOT' ? 'Hotspot' : 'Botón'),
+        enabled: ix.enabled !== false
+      };
+      if (type === 'BUTTON') {
+        out.x = Number(ix.x);
+        out.y = Number(ix.y);
+        if (!isFinite(out.x)) out.x = 50;
+        if (!isFinite(out.y)) out.y = 50;
+        out.style = heroText(ix.style) || 'chip';
+        out.icon = ix.icon == null || ix.icon === '' ? null : heroText(ix.icon);
+        out.rotation = Number(ix.rotation) || 0;
+        out.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
+        out.anchor = heroText(ix.anchor) || 'center';
+        out.marginX = Number(ix.marginX) || 0;
+        out.marginY = Number(ix.marginY) || 0;
+        out.positionInitialized = ix.positionInitialized !== false;
+        out.action = heroText(ix.action) || 'goto-scene';
+        out.targetSceneId = heroText(ix.targetSceneId) || null;
+        out.url = heroText(ix.url) || null;
+        out.downloadUrl = heroText(ix.downloadUrl) || null;
+      } else {
+        out.shape = heroText(ix.shape) || 'polygon';
+        out.name = heroText(ix.name) || out.label;
+        out.hotspotKind = heroText(ix.hotspotKind) || 'highlight';
+        out.color = heroText(ix.color) || '#6fbf86';
+        out.opacity = Number(ix.opacity);
+        if (!isFinite(out.opacity)) out.opacity = 0.22;
+        out.borderWidth = Number(ix.borderWidth);
+        if (!isFinite(out.borderWidth)) out.borderWidth = 1.5;
+        out.animation = heroText(ix.animation) || 'none';
+        out.action = heroText(ix.action) || 'goto-scene';
+        out.targetSceneId = heroText(ix.targetSceneId) || null;
+        out.url = heroText(ix.url) || null;
+        out.polygon = Array.isArray(ix.polygon)
+          ? ix.polygon.map(function (p) {
+            if (!p || typeof p !== 'object') return null;
+            var x = Number(p.x);
+            var y = Number(p.y);
+            if (!isFinite(x) || !isFinite(y)) return null;
+            return {
+              x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
+              y: Math.max(0, Math.min(100, Math.round(y * 10) / 10))
+            };
+          }).filter(Boolean)
+          : [];
+        if (out.polygon.length < 3 && out.shape === 'polygon') return null;
+      }
+      return out;
+    }).filter(Boolean);
+  }
+
   function sanitizeCanvasDocument(doc) {
     if (!doc || typeof doc !== 'object') return null;
     var scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
     var outScenes = scenes.map(function (sc) {
       if (!sc || typeof sc !== 'object') return null;
+      var mediaType = heroText(sc.mediaType) || null;
+      if (mediaType !== 'image' && mediaType !== 'video') mediaType = null;
       return {
         id: heroText(sc.id) || null,
         name: heroText(sc.name) || 'Escena',
@@ -530,7 +599,10 @@ var ProyectosApi = (function () {
         templateId: heroText(sc.templateId) || null,
         coverModel: sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null,
         resourceId: heroText(sc.resourceId) || null,
-        elements: sanitizeCanvasElements(sc.elements)
+        mediaUrl: heroText(sc.mediaUrl) || null,
+        mediaType: mediaType,
+        elements: sanitizeCanvasElements(sc.elements),
+        interactions: sanitizeCanvasInteractions(sc.interactions)
       };
     }).filter(function (sc) { return sc && sc.id; });
     if (!outScenes.length) return null;

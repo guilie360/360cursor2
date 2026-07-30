@@ -1296,6 +1296,10 @@ var QuotationEditor = (function () {
       return;
     }
     scene.resourceId = res.id;
+    var url = res.previewUrl || res.remoteUrl || '';
+    var isVideo = res.media === 'video' || res.group === 'videos';
+    scene.mediaUrl = url || null;
+    scene.mediaType = url ? (isVideo ? 'video' : 'image') : null;
     if (scene.type === 'hero' || scene.templateId === 'hero-default') {
       applyResourceToCoverModel(scene, res);
     } else {
@@ -2219,10 +2223,13 @@ var QuotationEditor = (function () {
               : sc.coverModel)
             : null,
           resourceId: sc.resourceId || null,
+          mediaUrl: sc.mediaUrl ||
+            (sc.coverModel && (sc.coverModel.imageUrl || sc.coverModel.videoUrl)) || null,
+          mediaType: sc.mediaType ||
+            (sc.coverModel && sc.coverModel.videoUrl ? 'video'
+              : (sc.coverModel && sc.coverModel.imageUrl ? 'image' : null)),
           elements: Array.isArray(sc.elements) ? sc.elements : [],
-          interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
-          buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
-          hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
+          interactions: Array.isArray(sc.interactions) ? sc.interactions : []
         };
       })
     };
@@ -2239,6 +2246,8 @@ var QuotationEditor = (function () {
           templateId: sc.templateId || null,
           coverModel: sc.coverModel || null,
           resourceId: sc.resourceId || null,
+          mediaUrl: sc.mediaUrl || null,
+          mediaType: sc.mediaType || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
@@ -2331,6 +2340,11 @@ var QuotationEditor = (function () {
 
     if (typeof ProyectosApi === 'undefined' || !ProyectosApi.updateHeroQuotation) {
       throw new Error('API de cotización no disponible.');
+    }
+
+    /* Flush Showroom overlay → scene.interactions before serialize. */
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) {}
     }
 
     var doc = serializeDocument();

@@ -1,11 +1,11 @@
 /**
- * QuotationRuntime — visitor / preview / Canvas iframe renderer (V7.2.08).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.14).
  *
  * Modes:
- *   - Runtime: browser viewport (Publicado, Visualizar, Preview)
+ *   - Runtime: public experience (/{slug} → here, Visualizar, Preview)
  *   - Canvas: virtual 1920×1080 viewport (editor iframe inside design frame)
  *
- * Single ProjectCover mount. Editor+canvas accept live coverModel via bridge.
+ * SSOT: hero_quotation.canvas.scenes[].interactions (BUTTON / HOTSPOT).
  */
 var QuotationRuntime = (function () {
   var EXPERIENCE_TYPE = 'quotation';
@@ -22,6 +22,9 @@ var QuotationRuntime = (function () {
   var liveElementIds = {};
   var liveSelectedId = null;
   var bridgeBound = false;
+  var activeSceneId = null;
+  var ixLayerEl = null;
+  var sceneMediaEl = null;
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -96,6 +99,236 @@ var QuotationRuntime = (function () {
     root.style.width = designWidth + 'px';
     root.style.height = designHeight + 'px';
     root.style.overflow = 'hidden';
+  }
+
+  function canvasDoc(bundle) {
+    var hero = bundle && bundle.hero;
+    return hero && hero.canvas && typeof hero.canvas === 'object' ? hero.canvas : null;
+  }
+
+  function listScenes(bundle) {
+    var doc = canvasDoc(bundle);
+    return doc && Array.isArray(doc.scenes) ? doc.scenes : [];
+  }
+
+  function sceneById(bundle, id) {
+    var scenes = listScenes(bundle);
+    var sid = String(id || '');
+    for (var i = 0; i < scenes.length; i++) {
+      if (scenes[i] && String(scenes[i].id) === sid) return scenes[i];
+    }
+    return null;
+  }
+
+  function entryScene(bundle) {
+    var scenes = listScenes(bundle);
+    var i;
+    for (i = 0; i < scenes.length; i++) {
+      if (scenes[i] && (scenes[i].type === 'hero' || scenes[i].templateId === 'hero-default') &&
+          scenes[i].coverModel) {
+        return scenes[i];
+      }
+    }
+    for (i = 0; i < scenes.length; i++) {
+      if (scenes[i] && scenes[i].coverModel) return scenes[i];
+    }
+    return scenes[0] || null;
+  }
+
+  function resolveSceneMedia(scene, bundle) {
+    if (!scene) return null;
+    if (scene.mediaUrl) {
+      return {
+        url: scene.mediaUrl,
+        type: scene.mediaType === 'video' ? 'video' : 'image'
+      };
+    }
+    var cm = scene.coverModel;
+    if (cm) {
+      if (cm.videoUrl) return { url: cm.videoUrl, type: 'video' };
+      if (cm.imageUrl) return { url: cm.imageUrl, type: 'image' };
+    }
+    var hero = bundle && bundle.hero;
+    if (hero) {
+      if (hero.video_url) return { url: hero.video_url, type: 'video' };
+      if (hero.image_url) return { url: hero.image_url, type: 'image' };
+    }
+    return null;
+  }
+
+  function isButtonIx(ix) {
+    return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON' && ix.enabled !== false);
+  }
+
+  function isHotspotIx(ix) {
+    if (!ix || String(ix.type || '').toUpperCase() !== 'HOTSPOT' || ix.enabled === false) return false;
+    return Array.isArray(ix.polygon) && ix.polygon.length >= 3;
+  }
+
+  function runInteractionAction(ix) {
+    if (!ix) return;
+    var action = String(ix.action || 'goto-scene').toLowerCase();
+    var target = ix.targetSceneId || null;
+    if (action === 'goto-scene' || action === 'goto' || (!action && target)) {
+      if (target) goToScene(target);
+      else enterStage();
+      return;
+    }
+    if (action === 'url' || action === 'open-url') {
+      var href = ix.url || ix.href;
+      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (action === 'download') {
+      var dl = ix.downloadUrl || ix.url;
+      if (dl) {
+        var a = document.createElement('a');
+        a.href = dl;
+        a.download = '';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      return;
+    }
+    if (action === 'close' || action === 'back') {
+      leaveStage();
+    }
+  }
+
+  function paintInteractionLayer(parentEl, scene, interactive) {
+    if (!parentEl) return;
+    if (ixLayerEl && ixLayerEl.parentNode) ixLayerEl.parentNode.removeChild(ixLayerEl);
+    ixLayerEl = null;
+    if (!scene || editorMode || canvasMode) return;
+
+    var ixs = Array.isArray(scene.interactions) ? scene.interactions : [];
+    var buttons = ixs.filter(isButtonIx);
+    var hotspots = ixs.filter(isHotspotIx);
+    if (!buttons.length && !hotspots.length) return;
+
+    ixLayerEl = document.createElement('div');
+    ixLayerEl.className = 'qr-ix-layer';
+    ixLayerEl.setAttribute('data-qr-ix-layer', '1');
+
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'qr-ix-hotspots');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    hotspots.forEach(function (hs) {
+      var pts = hs.polygon.map(function (p, idx) {
+        return (idx === 0 ? 'M' : 'L') + Number(p.x) + ' ' + Number(p.y);
+      }).join(' ') + ' Z';
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pts);
+      path.setAttribute('class', 'qr-ix-hs');
+      path.setAttribute('fill', hs.color || 'rgba(111,191,134,0.28)');
+      path.setAttribute('fill-opacity', String(hs.opacity != null ? hs.opacity : 0.22));
+      path.setAttribute('stroke', hs.color || 'rgba(255,255,255,0.85)');
+      path.setAttribute('stroke-width', '0.35');
+      if (interactive) {
+        path.style.cursor = 'pointer';
+        path.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          runInteractionAction(hs);
+        });
+      }
+      svg.appendChild(path);
+    });
+    ixLayerEl.appendChild(svg);
+
+    var btnsHost = document.createElement('div');
+    btnsHost.className = 'qr-ix-buttons';
+    buttons.forEach(function (b) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'qr-ix-btn qr-ix-btn--' + (b.style || 'chip');
+      btn.textContent = b.label || 'Botón';
+      var rot = Number(b.rotation) || 0;
+      btn.style.left = Number(b.x) + '%';
+      btn.style.top = Number(b.y) + '%';
+      btn.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+      if (interactive) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          runInteractionAction(b);
+        });
+      } else {
+        btn.disabled = true;
+      }
+      btnsHost.appendChild(btn);
+    });
+    ixLayerEl.appendChild(btnsHost);
+    parentEl.appendChild(ixLayerEl);
+  }
+
+  function ensureSceneMediaHost(parentEl) {
+    if (sceneMediaEl && sceneMediaEl.parentNode) return sceneMediaEl;
+    sceneMediaEl = document.createElement('div');
+    sceneMediaEl.className = 'qr-scene-media';
+    sceneMediaEl.setAttribute('data-qr-scene-media', '1');
+    parentEl.appendChild(sceneMediaEl);
+    return sceneMediaEl;
+  }
+
+  function paintSceneMedia(parentEl, scene, bundle) {
+    var host = ensureSceneMediaHost(parentEl);
+    var media = resolveSceneMedia(scene, bundle);
+    if (!media || !media.url) {
+      host.innerHTML = '<div class="qr-scene-media__void" aria-hidden="true"></div>';
+      return host;
+    }
+    if (media.type === 'video') {
+      host.innerHTML =
+        '<video class="qr-scene-media__video" src="' + escapeHtml(media.url) +
+          '" autoplay muted loop playsinline></video>';
+    } else {
+      host.innerHTML =
+        '<img class="qr-scene-media__img" src="' + escapeHtml(media.url) +
+          '" alt="">';
+    }
+    return host;
+  }
+
+  function goToScene(sceneId) {
+    var bundle = loaded || blankEditorBundle();
+    var scene = sceneById(bundle, sceneId);
+    if (!scene) return;
+    activeSceneId = String(scene.id);
+    var isEntry = entryScene(bundle) && String(entryScene(bundle).id) === activeSceneId &&
+      (scene.type === 'hero' || scene.templateId === 'hero-default' || scene.coverModel);
+
+    if (isEntry && coverHostEl) {
+      leaveStage();
+      paintInteractionLayer(coverHostEl, scene, !editorMode && !canvasMode);
+      return;
+    }
+
+    if (!coverHostEl || !stageEl) return;
+    var coverRoot = coverHostEl.querySelector('[data-project-cover-root]');
+    if (coverRoot) coverRoot.hidden = true;
+    if (ixLayerEl && ixLayerEl.parentNode === coverHostEl) {
+      coverHostEl.removeChild(ixLayerEl);
+      ixLayerEl = null;
+    }
+    stageEl.hidden = false;
+    stageEl.classList.add('qr-stage--scene');
+    stageEl.innerHTML = '';
+    var mediaHost = paintSceneMedia(stageEl, scene, bundle);
+    paintInteractionLayer(mediaHost, scene, !editorMode && !canvasMode);
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'project-cover-btn qr-stage__back';
+    back.textContent = 'Volver';
+    back.addEventListener('click', leaveStage);
+    stageEl.appendChild(back);
+    var video = coverHostEl.querySelector('video.project-cover-video');
+    if (video && !video.paused) {
+      try { video.pause(); } catch (e) {}
+    }
   }
 
   function assertQuotationQuery(q) {
@@ -307,27 +540,58 @@ var QuotationRuntime = (function () {
 
     ProjectCover.mount(coverHostEl, model, opts);
     if (editorMode) postBoxes();
+
+    /* Visitor: paint hero-scene interactions over the cover. */
+    if (!editorMode && !canvasMode) {
+      var entry = entryScene(bundle || loaded);
+      if (entry) {
+        activeSceneId = String(entry.id);
+        paintInteractionLayer(coverHostEl, entry, true);
+      }
+    }
   }
 
   function enterStage() {
-    if (!coverHostEl || !stageEl) return;
-    var coverRoot = coverHostEl.querySelector('[data-project-cover-root]');
-    if (coverRoot) coverRoot.hidden = true;
-    stageEl.hidden = false;
-    var video = coverHostEl.querySelector('video.project-cover-video');
-    if (video && !video.paused) {
-      try { video.pause(); } catch (e) {}
+    var bundle = loaded || blankEditorBundle();
+    var scenes = listScenes(bundle);
+    var entry = entryScene(bundle);
+    var next = null;
+    var i;
+    for (i = 0; i < scenes.length; i++) {
+      if (!scenes[i]) continue;
+      if (entry && String(scenes[i].id) === String(entry.id)) continue;
+      next = scenes[i];
+      break;
     }
+    if (!next) {
+      /* Stay on hero but ensure overlays; or first scene with media. */
+      for (i = 0; i < scenes.length; i++) {
+        if (scenes[i] && resolveSceneMedia(scenes[i], bundle)) {
+          next = scenes[i];
+          break;
+        }
+      }
+    }
+    if (next) goToScene(next.id);
+    else if (entry) goToScene(entry.id);
   }
 
   function leaveStage() {
     if (!coverHostEl || !stageEl) return;
     stageEl.hidden = true;
+    stageEl.classList.remove('qr-stage--scene');
+    stageEl.innerHTML = '';
+    sceneMediaEl = null;
     var coverRoot = coverHostEl.querySelector('[data-project-cover-root]');
     if (coverRoot) coverRoot.hidden = false;
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video) {
       try { video.play(); } catch (e2) {}
+    }
+    var entry = entryScene(loaded);
+    if (entry && !editorMode && !canvasMode) {
+      activeSceneId = String(entry.id);
+      paintInteractionLayer(coverHostEl, entry, true);
     }
   }
 
@@ -350,11 +614,6 @@ var QuotationRuntime = (function () {
       return;
     }
 
-    var hc = {
-      nombre: model.nombre,
-      eslogan: model.eslogan
-    };
-
     host.innerHTML = '';
     coverHostEl = document.createElement('div');
     coverHostEl.className = 'qr-cover-host';
@@ -364,26 +623,9 @@ var QuotationRuntime = (function () {
     stageEl.className = 'qr-stage';
     stageEl.id = 'qrStage';
     stageEl.hidden = true;
-    stageEl.innerHTML =
-      '<header class="qr-stage__header">' +
-        '<p class="qr-stage__eyebrow">Cotización</p>' +
-        '<h1 class="qr-stage__title">' +
-          escapeHtml(hc.nombre || (bundle.project && bundle.project.nombre) || '') +
-        '</h1>' +
-        '<p class="qr-stage__lead">' +
-          escapeHtml(hc.eslogan || (bundle.share && bundle.share.og_description) ||
-            'Experiencia de cotización cargada desde hero_quotation + proyecto_config.') +
-        '</p>' +
-      '</header>' +
-      '<p class="qr-stage__meta">projectId · ' +
-        escapeHtml(bundle.project && bundle.project.id) + '</p>' +
-      '<button type="button" class="project-cover-btn qr-stage__back" id="qrBackBtn">Volver al hero</button>';
     host.appendChild(stageEl);
 
     remountCover(bundle);
-
-    var back = stageEl.querySelector('#qrBackBtn');
-    if (back) back.addEventListener('click', leaveStage);
   }
 
   function applyEditorPayload(payload) {

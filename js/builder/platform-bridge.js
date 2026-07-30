@@ -250,24 +250,41 @@ var PlatformBuilderBridge = (function () {
   }
 
   /**
-   * Quotation Runtime URL — always by projectId + experience_type=quotation.
-   * Never opens the Showroom public path /{slug}.
+   * Quotation visitor URL.
+   * Prefer public /{slug} (same as client). Fallback: Runtime by projectId.
    */
-  function quotationUrl(projectId) {
-    var id = String(projectId || '').trim();
+  function quotationUrl(projectIdOrOpts, slug) {
+    var id = null;
+    var s = slug || null;
+    if (projectIdOrOpts && typeof projectIdOrOpts === 'object') {
+      id = projectIdOrOpts.projectId || projectIdOrOpts.id || null;
+      s = projectIdOrOpts.slug || s;
+    } else {
+      id = projectIdOrOpts;
+    }
+    if (s) {
+      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.href) {
+        return ShowroomPublicUrl.href(s);
+      }
+      try {
+        return new URL('/' + encodeURIComponent(s), window.location.origin).href;
+      } catch (e0) {
+        return '/' + encodeURIComponent(s);
+      }
+    }
+    id = String(id || '').trim();
     if (!id) return null;
     if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
-      return QuotationRuntime.href(id, { preview: true });
+      return QuotationRuntime.href(id);
     }
     try {
       var url = new URL('/quotation/', window.location.origin);
       url.searchParams.set('projectId', id);
       url.searchParams.set('experience_type', 'quotation');
-      url.searchParams.set('preview', '1');
       return url.href;
     } catch (e) {
       return '/quotation/?projectId=' + encodeURIComponent(id) +
-        '&experience_type=quotation&preview=1';
+        '&experience_type=quotation';
     }
   }
 
