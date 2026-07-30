@@ -1,6 +1,6 @@
 /**
- * Quotation Editor — V7.2.08 Runtime Canvas (virtual 1920×1080 viewport).
- * Hero stages embed QuotationRuntime iframe inside the design frame; scale is outside.
+ * Quotation Editor — V7.2.09 Workspace Redesign.
+ * Hero = Runtime iframe in 1920×1080 frame; UI chrome only (scenes / dock).
  */
 var QuotationEditor = (function () {
   var CANVAS_DESIGN_W = 1920;
@@ -171,6 +171,7 @@ var QuotationEditor = (function () {
       selectedElementId: null,
       focusMode: false,
       sceneMenuOpen: false,
+      dockOpen: false,
       openGroups: {
         hero: true,
         renders: true,
@@ -728,21 +729,9 @@ var QuotationEditor = (function () {
     return mediaPreviewHtml(content) + canvasChipsHtml(content);
   }
 
-  function scenesBarHtml() {
-    ensureScenes();
-    var tabs = state.scenes.map(function (sc) {
-      var on = sc.id === state.activeSceneId;
-      return '' +
-        '<button type="button" class="qe-scenes__tab' + (on ? ' is-active' : '') + '"' +
-          ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
-          ' title="' + escapeHtml(sc.type + ' · ' + sc.id) + '">' +
-          escapeHtml(sc.name || 'Escena') +
-        '</button>';
-    }).join('');
-
-    var menu = '';
+  function sceneCreateMenuHtml() {
     if (state.sceneMenuOpen === 'root') {
-      menu = '' +
+      return '' +
         '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
           '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="empty" role="menuitem">' +
             'Escena vacía' +
@@ -751,8 +740,9 @@ var QuotationEditor = (function () {
             'Desde plantilla' +
           '</button>' +
         '</div>';
-    } else if (state.sceneMenuOpen === 'templates') {
-      menu = '' +
+    }
+    if (state.sceneMenuOpen === 'templates') {
+      return '' +
         '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
           '<button type="button" class="qe-scenes__menu-item qe-scenes__menu-item--back" data-qe-scene-menu-root role="menuitem">' +
             '← Nueva escena' +
@@ -760,33 +750,98 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="hero-default" role="menuitem">' +
             'Hero Default' +
           '</button>' +
-          '<p class="qe-scenes__menu-hint">Mismo Runtime que Visualizar (única fuente).</p>' +
+        '</div>';
+    }
+    return '';
+  }
+
+  function scenesBarHtml() {
+    ensureScenes();
+    var thumbs = state.scenes.map(function (sc) {
+      var on = sc.id === state.activeSceneId;
+      var label = String(sc.name || 'Escena').toLowerCase();
+      return '' +
+        '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
+          ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
+          ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
+          '<span class="qe-scenes__thumb-frame" aria-hidden="true"></span>' +
+          '<span class="qe-scenes__thumb-name">' + escapeHtml(label) + '</span>' +
+        '</button>';
+    }).join('');
+
+    return '' +
+      '<div class="qe-scenes" data-qe-scenes>' +
+        '<button type="button" class="qe-scenes__nav" data-qe-scenes-prev aria-label="Escenas anteriores">←</button>' +
+        '<div class="qe-scenes__track-wrap">' +
+          '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
+        '</div>' +
+        '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
+      '</div>';
+  }
+
+  function stageDockHtml() {
+    var content = selectedContent();
+    var tools = toolsFor(content);
+    var sceneMenu = state.dockOpen === 'scene' ? sceneCreateMenuHtml() : '';
+    var elementMenu = '';
+    if (state.dockOpen === 'element') {
+      var items = [];
+      if (tools.buttons) {
+        items.push(
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-button role="menuitem">Botón</button>'
+        );
+      }
+      if (tools.hotspots) {
+        items.push(
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-hotspot role="menuitem">Hotspot</button>'
+        );
+      }
+      if (!items.length) {
+        items.push('<p class="qe-dock__menu-hint">Selecciona un recurso con botones o hotspots.</p>');
+      }
+      elementMenu =
+        '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' + items.join('') + '</div>';
+    }
+    var stylesMenu = state.dockOpen === 'styles'
+      ? (
+        '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' +
+          '<p class="qe-dock__menu-hint">Estilos del elemento en el Inspector.</p>' +
+        '</div>'
+      )
+      : '';
+    var menuMenu = state.dockOpen === 'menu'
+      ? (
+        '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' +
+          '<button type="button" class="qe-dock__menu-item' + (state.focusMode ? ' is-active' : '') + '"' +
+            ' data-qe-focus role="menuitem">' +
+            (state.focusMode ? 'Salir de Focus' : 'Focus') +
+          '</button>' +
+        '</div>'
+      )
+      : '';
+
+    function mod(id, label) {
+      var on = state.dockOpen === id || (id === 'scene' && state.sceneMenuOpen);
+      return '' +
+        '<div class="qe-dock__mod-wrap">' +
+          '<button type="button" class="qe-dock__mod' + (on ? ' is-open' : '') + '"' +
+            ' data-qe-dock="' + id + '">' +
+            '<span class="qe-dock__mod-label">' + escapeHtml(label) + '</span>' +
+          '</button>' +
+          (id === 'scene' ? sceneMenu : '') +
+          (id === 'element' ? elementMenu : '') +
+          (id === 'styles' ? stylesMenu : '') +
+          (id === 'menu' ? menuMenu : '') +
         '</div>';
     }
 
     return '' +
-      '<div class="qe-scenes" data-qe-scenes>' +
-        '<div class="qe-scenes__tabs">' + tabs + '</div>' +
-        '<div class="qe-scenes__add-wrap">' +
-          '<button type="button" class="qe-scenes__add' + (state.sceneMenuOpen ? ' is-open' : '') + '"' +
-            ' data-qe-scene-menu-toggle aria-label="Nueva escena" aria-expanded="' +
-            (state.sceneMenuOpen ? 'true' : 'false') + '">+</button>' +
-          menu +
-        '</div>' +
+      '<div class="qe-dock" data-qe-dock-bar>' +
+        mod('scene', 'crear escena') +
+        mod('element', 'agregar elemento') +
+        mod('styles', 'styles') +
+        mod('menu', 'menu') +
       '</div>';
-  }
-
-  function canvasToolbarHtml(content) {
-    var tools = toolsFor(content);
-    var actions = [];
-    if (tools.buttons) {
-      actions.push('<button type="button" class="qe-canvas__tool" data-qe-add-button>+ Botón</button>');
-    }
-    if (tools.hotspots) {
-      actions.push('<button type="button" class="qe-canvas__tool" data-qe-add-hotspot>+ Hotspot</button>');
-    }
-    if (!actions.length) return '';
-    return '<div class="qe-canvas__tools">' + actions.join('') + '</div>';
   }
 
   function canvasHtml() {
@@ -797,24 +852,6 @@ var QuotationEditor = (function () {
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         scenesBarHtml() +
-        '<div class="qe-col__head qe-col__head--canvas">' +
-          '<div>' +
-            '<h2 class="qe-col__title">Canvas</h2>' +
-            '<p class="qe-col__hint">' +
-              escapeHtml((scene && scene.name) || 'Escena') +
-              (scene ? ' · ' + escapeHtml(scene.type || 'scene') : '') +
-              ' · 1920×1080' +
-            '</p>' +
-          '</div>' +
-          '<div class="qe-canvas__head-right">' +
-            '<button type="button" class="qe-canvas__focus' + (state.focusMode ? ' is-active' : '') + '"' +
-              ' data-qe-focus aria-pressed="' + (state.focusMode ? 'true' : 'false') + '">Focus</button>' +
-            (content
-              ? ('<span class="qe-canvas__badge">' + escapeHtml(groupLabel(content.group)) + '</span>')
-              : '') +
-            canvasToolbarHtml(content) +
-          '</div>' +
-        '</div>' +
         '<div class="qe-canvas__stage" data-qe-canvas>' +
           '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
             '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
@@ -824,6 +861,7 @@ var QuotationEditor = (function () {
             '</div>' +
           '</div>' +
         '</div>' +
+        stageDockHtml() +
       '</section>';
   }
 
@@ -1136,6 +1174,7 @@ var QuotationEditor = (function () {
     state.activeSceneId = id;
     state.selectedElementId = null;
     state.sceneMenuOpen = false;
+    state.dockOpen = false;
     rerender();
   }
 
@@ -1157,6 +1196,7 @@ var QuotationEditor = (function () {
     state.selectedElementId = null;
     state.selectedItem = null;
     state.sceneMenuOpen = false;
+    state.dockOpen = false;
     markDirtyLocal();
     rerender();
   }
@@ -1338,6 +1378,7 @@ var QuotationEditor = (function () {
   function setFocusMode(on) {
     state.focusMode = !!on;
     state.sceneMenuOpen = false;
+    state.dockOpen = false;
     rerender();
   }
 
@@ -1535,6 +1576,7 @@ var QuotationEditor = (function () {
     bag.buttons.push(item);
     state.selectedItem = { kind: 'button', id: item.id };
     state.selectedElementId = null;
+    state.dockOpen = false;
     markDirtyLocal();
     rerender();
   }
@@ -1555,6 +1597,7 @@ var QuotationEditor = (function () {
     bag.hotspots.push(item);
     state.selectedItem = { kind: 'hotspot', id: item.id };
     state.selectedElementId = null;
+    state.dockOpen = false;
     markDirtyLocal();
     rerender();
   }
@@ -1605,11 +1648,43 @@ var QuotationEditor = (function () {
         });
       });
 
+      var scenesTrack = editor.querySelector('[data-qe-scenes-track]');
+      var scenesPrev = editor.querySelector('[data-qe-scenes-prev]');
+      var scenesNext = editor.querySelector('[data-qe-scenes-next]');
+      function scrollScenes(dir) {
+        if (!scenesTrack) return;
+        scenesTrack.scrollBy({ left: dir * Math.max(160, scenesTrack.clientWidth * 0.6), behavior: 'smooth' });
+      }
+      if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
+      if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
+
+      editor.querySelectorAll('[data-qe-dock]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var id = btn.getAttribute('data-qe-dock');
+          if (id === 'scene') {
+            if (state.dockOpen === 'scene' && state.sceneMenuOpen) {
+              state.dockOpen = false;
+              state.sceneMenuOpen = false;
+            } else {
+              state.dockOpen = 'scene';
+              state.sceneMenuOpen = 'root';
+            }
+          } else {
+            state.sceneMenuOpen = false;
+            state.dockOpen = state.dockOpen === id ? false : id;
+          }
+          rerender();
+        });
+      });
+
       var sceneMenuToggle = editor.querySelector('[data-qe-scene-menu-toggle]');
       if (sceneMenuToggle) {
         sceneMenuToggle.addEventListener('click', function (e) {
           e.stopPropagation();
+          state.dockOpen = 'scene';
           state.sceneMenuOpen = state.sceneMenuOpen ? false : 'root';
+          if (!state.sceneMenuOpen) state.dockOpen = false;
           rerender();
         });
       }
