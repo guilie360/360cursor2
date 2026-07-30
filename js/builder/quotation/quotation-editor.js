@@ -479,10 +479,11 @@ var QuotationEditor = (function () {
       selectedElementId: null,
       focusMode: false,
       libraryCollapsed: false,
-      inspectorCollapsed: false,
+      inspectorCollapsed: true,
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
+      pendingSceneDeleteId: null,
       expEditMode: 'buttons',
       expHasSelection: false,
       openGroups: {
@@ -1475,6 +1476,12 @@ var QuotationEditor = (function () {
     if (kind === 'plus') {
       return '<svg' + common + '><path d="M8 3.2v9.6M3.2 8h9.6"/></svg>';
     }
+    if (kind === 'edit') {
+      return '<svg' + common + '>' +
+        '<path d="M3.5 12.5 12.2 3.8a1.4 1.4 0 0 1 2 2L5.5 14.5H3.5v-2z"/>' +
+        '<path d="M10.2 5.8l2 2"/>' +
+      '</svg>';
+    }
     if (kind === 'dup') {
       return '<svg' + common + '>' +
         '<rect x="2.5" y="4.5" width="7.5" height="7.5" rx="1.2"/>' +
@@ -1516,6 +1523,7 @@ var QuotationEditor = (function () {
   function stageDockRailHtml() {
     if (dockHasSelection()) {
       return '' +
+        dockSegHtml('data-qe-dock-edit', 'edit', 'Editar') +
         dockSegHtml('data-qe-dock-dup', 'dup', 'Duplicar') +
         dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
         dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
@@ -1535,6 +1543,22 @@ var QuotationEditor = (function () {
       '<div class="qe-dock" data-qe-dock-bar data-mode="' + mode + '">' +
         '<div class="qe-dock__rail" data-qe-dock-rail>' +
           stageDockRailHtml() +
+        '</div>' +
+      '</div>';
+  }
+
+  function sceneConfirmHtml() {
+    if (!state.pendingSceneDeleteId) return '';
+    return '' +
+      '<div class="qe-confirm" data-qe-scene-confirm role="dialog" aria-modal="true"' +
+        ' aria-labelledby="qeSceneConfirmTitle">' +
+        '<div class="qe-confirm__backdrop" data-qe-scene-confirm-cancel tabindex="-1"></div>' +
+        '<div class="qe-confirm__panel">' +
+          '<p class="qe-confirm__title" id="qeSceneConfirmTitle">¿Deseas eliminar esta escena?</p>' +
+          '<div class="qe-confirm__actions">' +
+            '<button type="button" class="qe-confirm__btn" data-qe-scene-confirm-cancel>Cancelar</button>' +
+            '<button type="button" class="qe-confirm__btn qe-confirm__btn--danger" data-qe-scene-confirm-ok>Eliminar</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
   }
@@ -1564,6 +1588,7 @@ var QuotationEditor = (function () {
           '</div>' +
         '</div>' +
         resourcePickerHtml() +
+        sceneConfirmHtml() +
       '</section>';
   }
 
@@ -1894,30 +1919,28 @@ var QuotationEditor = (function () {
 
     clearInvalidSelection();
 
+    /* V7.2.55 — inspector on demand: hidden until Editar */
+    if (state.inspectorCollapsed) {
+      return '' +
+        '<aside class="qe-col qe-col--inspector is-collapsed" aria-hidden="true"></aside>';
+    }
+
     var floatBtn =
       '<button type="button" class="quotation-panel-float quotation-panel-float--right"' +
         ' data-qe-toggle-inspector' +
-        ' data-collapsed="' + (state.inspectorCollapsed ? '1' : '0') + '"' +
-        ' aria-expanded="' + (state.inspectorCollapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (state.inspectorCollapsed ? 'Expandir inspector' : 'Colapsar inspector') + '"' +
-        ' data-tooltip="' + (state.inspectorCollapsed ? 'Expandir inspector' : 'Colapsar inspector') + '">' +
+        ' data-collapsed="0"' +
+        ' aria-expanded="true"' +
+        ' aria-label="Cerrar inspector"' +
+        ' data-tooltip="Cerrar inspector">' +
         (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
           ? BuilderIcons.render('chevron-right')
           : '›') +
       '</button>';
 
-    if (state.inspectorCollapsed) {
-      return '' +
-        '<aside class="qe-col qe-col--inspector is-collapsed" aria-label="Inspector">' +
-          floatBtn +
-        '</aside>';
-    }
-
-    /* V7.2.53 — inspector emptied (visual reset). Always idle stub. */
     var body = idleInspectorHtml();
 
     return '' +
-      '<aside class="qe-col qe-col--inspector" aria-label="Inspector">' +
+      '<aside class="qe-col qe-col--inspector is-open" aria-label="Inspector">' +
         floatBtn +
         '<div class="qe-col__head">' +
           '<div class="qe-col__head-text">' +
@@ -2011,7 +2034,30 @@ var QuotationEditor = (function () {
     state.expHasSelection = false;
     state.sceneMenuOpen = false;
     state.dockOpen = false;
+    state.inspectorCollapsed = true;
+    try {
+      document.documentElement.style.setProperty('--qe-inspector-w', '0px');
+    } catch (eW) {}
     rerender();
+  }
+
+  function requestDeleteScene(id) {
+    var sid = String(id || '').trim();
+    if (!sid || !sceneById(sid)) return;
+    state.pendingSceneDeleteId = sid;
+    rerender();
+  }
+
+  function cancelDeleteScene() {
+    state.pendingSceneDeleteId = null;
+    rerender();
+  }
+
+  function confirmDeleteScene() {
+    var sid = state.pendingSceneDeleteId;
+    state.pendingSceneDeleteId = null;
+    if (sid) deleteScene(sid);
+    else rerender();
   }
 
   function deleteScene(id) {
@@ -2513,6 +2559,12 @@ var QuotationEditor = (function () {
         addShapeElement(btn.getAttribute('data-qe-add-shape') || 'SHAPE_RECT');
       });
     });
+    var edit = editor.querySelector('[data-qe-dock-edit]');
+    if (edit) {
+      edit.addEventListener('click', function () {
+        setInspectorCollapsed(false);
+      });
+    }
     var dup = editor.querySelector('[data-qe-dock-dup]');
     if (dup) {
       dup.addEventListener('click', function () {
@@ -2537,7 +2589,8 @@ var QuotationEditor = (function () {
         if (expOverlay && expOverlay.deleteSelected) {
           expOverlay.deleteSelected();
           state.expHasSelection = false;
-          refreshDockOnly();
+          if (!state.inspectorCollapsed) setInspectorCollapsed(true);
+          else refreshDockOnly();
         }
       });
     }
@@ -3213,9 +3266,23 @@ var QuotationEditor = (function () {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          deleteScene(btn.getAttribute('data-qe-scene-delete'));
+          requestDeleteScene(btn.getAttribute('data-qe-scene-delete'));
         });
       });
+
+      editor.querySelectorAll('[data-qe-scene-confirm-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          cancelDeleteScene();
+        });
+      });
+      var confirmOk = editor.querySelector('[data-qe-scene-confirm-ok]');
+      if (confirmOk) {
+        confirmOk.addEventListener('click', function (e) {
+          e.preventDefault();
+          confirmDeleteScene();
+        });
+      }
 
       var sceneAdd = editor.querySelector('[data-qe-scene-add]');
       if (sceneAdd) {

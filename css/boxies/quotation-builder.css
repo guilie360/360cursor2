@@ -123,11 +123,11 @@
   grid-template-columns:
     var(--qe-library-w, 200px)
     minmax(0, 1fr)
-    var(--qe-inspector-w, 220px);
+    var(--qe-inspector-w, 0px);
   gap: 0;
   background: transparent;
   overflow: hidden;
-  transition: grid-template-columns 0.2s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  transition: grid-template-columns 0.18s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .qe-editor.is-library-collapsed {
@@ -255,7 +255,7 @@
 
 .qe-stage-unit .qe-dock {
   width: fit-content;
-  max-width: calc(100% - 32px);
+  max-width: min(420px, calc(100% - 48px));
   box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
@@ -292,7 +292,27 @@
   border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   background: rgba(8, 8, 8, 0.45);
   padding: var(--hall-space-3, 12px) var(--hall-space-2, 8px);
-  overflow: visible;
+  overflow: hidden;
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    transform 0.18s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity 0.18s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.qe-col--inspector.is-open {
+  animation: qe-insp-slide-in 0.18s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@keyframes qe-insp-slide-in {
+  from {
+    transform: translateX(18px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .qe-col--inspector.is-collapsed {
@@ -300,7 +320,12 @@
   border-left-color: transparent;
   background: transparent;
   min-width: 0;
-  overflow: visible;
+  width: 0;
+  overflow: hidden;
+  transform: translateX(12px);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 /* ── V7.2.09 / V7.2.25 — Scene thumbnail strip (natural sizes, fit scales) ── */
@@ -546,7 +571,7 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.54 — Unified pill dock (create ↔ actions) ── */
+/* ── V7.2.54 / V7.2.55 — Unified pill dock (create ↔ actions) ── */
 
 .qe-dock {
   flex: 0 0 auto;
@@ -554,7 +579,7 @@
   align-items: stretch;
   justify-content: center;
   width: fit-content;
-  max-width: calc(100% - 32px);
+  max-width: min(420px, calc(100% - 48px));
   height: 52px;
   margin: 16px auto 4px;
   padding: 0;
@@ -585,18 +610,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   height: 100%;
   margin: 0;
-  padding: 0 22px;
+  padding: 0 12px;
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.72);
   font: inherit;
+  /* Match .qe-lib__name exactly */
   font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-weight: 560;
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
@@ -632,12 +658,88 @@
 .qe-dock__ico {
   flex: 0 0 auto;
   display: block;
+  width: 14px;
+  height: 14px;
   opacity: 0.9;
 }
 
 .qe-dock__label {
   flex: 0 0 auto;
   line-height: 1;
+}
+
+/* Scene delete confirm — BOXIES chrome */
+.qe-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qe-confirm__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.qe-confirm__panel {
+  position: relative;
+  z-index: 1;
+  width: min(360px, calc(100% - 40px));
+  padding: 22px 20px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(14, 14, 14, 0.98);
+}
+
+.qe-confirm__title {
+  margin: 0 0 18px;
+  font-size: 15px;
+  font-weight: 560;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+}
+
+.qe-confirm__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: stretch;
+}
+
+.qe-confirm__btn {
+  appearance: none;
+  flex: 1 1 0;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.qe-confirm__btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.qe-confirm__btn--danger {
+  border-color: rgba(180, 60, 60, 0.45);
+  color: rgba(255, 200, 200, 0.92);
+}
+
+.qe-confirm__btn--danger:hover {
+  background: rgba(180, 48, 48, 0.22);
+  border-color: rgba(200, 70, 70, 0.6);
+  color: #fff;
 }
 
 /* Legacy dock modules (unused; keep for safety) */
