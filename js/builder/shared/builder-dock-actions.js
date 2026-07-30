@@ -1,5 +1,6 @@
 /**
- * BuilderDockActions — shared Guardar / Republicar chrome + execution states (V7.1.09).
+ * BuilderDockActions — shared Guardar / Republicar chrome + in-button busy states (V7.1.10).
+ * Feedback lives only inside the clicked button (loader). No banners / toasts from this module.
  * States: idle | saving | publishing | success | error
  */
 var BuilderDockActions = (function () {
@@ -92,14 +93,6 @@ var BuilderDockActions = (function () {
         saveBtn.setAttribute('aria-busy', 'true');
         saveBtn.innerHTML = '<span class="builder-dock-spinner" aria-hidden="true"></span>';
         saveBtn.disabled = true;
-      } else if (phase === 'success' && saveBtn.dataset.lastAction === 'save') {
-        saveBtn.classList.add('is-success');
-        saveBtn.textContent = '✓';
-        saveBtn.disabled = true;
-      } else if (phase === 'error' && saveBtn.dataset.lastAction === 'save') {
-        saveBtn.classList.add('is-error');
-        saveBtn.textContent = saveIdle;
-        saveBtn.disabled = false;
       } else {
         saveBtn.textContent = saveIdle;
         saveBtn.disabled = busy;
@@ -114,14 +107,6 @@ var BuilderDockActions = (function () {
         publishBtn.setAttribute('aria-busy', 'true');
         publishBtn.innerHTML = '<span class="builder-dock-spinner" aria-hidden="true"></span>';
         publishBtn.disabled = true;
-      } else if (phase === 'success' && publishBtn.dataset.lastAction === 'publish') {
-        publishBtn.classList.add('is-success');
-        publishBtn.textContent = '✓';
-        publishBtn.disabled = true;
-      } else if (phase === 'error' && publishBtn.dataset.lastAction === 'publish') {
-        publishBtn.classList.add('is-error');
-        publishBtn.textContent = pubIdle;
-        publishBtn.disabled = false;
       } else {
         publishBtn.textContent = pubIdle;
         publishBtn.disabled = busy;
@@ -139,25 +124,21 @@ var BuilderDockActions = (function () {
     var publishBtn = document.getElementById('builderPublishBtn');
     if (next === 'saving' && saveBtn) saveBtn.dataset.lastAction = 'save';
     if (next === 'publishing' && publishBtn) publishBtn.dataset.lastAction = 'publish';
-    if (next === 'success' || next === 'error') {
-      /* keep lastAction from whoever started */
-    }
     if (next === 'idle') {
       if (saveBtn) delete saveBtn.dataset.lastAction;
       if (publishBtn) delete publishBtn.dataset.lastAction;
     }
+    /* V7.1.10 — success/error return immediately to idle label inside the same button.
+       No banners. Loader feedback only while saving/publishing. */
+    if (next === 'success' || next === 'error') {
+      phase = 'idle';
+      if (saveBtn) delete saveBtn.dataset.lastAction;
+      if (publishBtn) delete publishBtn.dataset.lastAction;
+      syncUi();
+      return;
+    }
     phase = next || 'idle';
     syncUi();
-    if (phase === 'success' || phase === 'error') {
-      var delay = typeof opts.resetMs === 'number' ? opts.resetMs : 900;
-      resetTimer = setTimeout(function () {
-        phase = 'idle';
-        if (saveBtn) delete saveBtn.dataset.lastAction;
-        if (publishBtn) delete publishBtn.dataset.lastAction;
-        syncUi();
-        resetTimer = null;
-      }, delay);
-    }
   }
 
   function getState() {

@@ -220,6 +220,18 @@ body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-se
   line-height: 1;
 }
 
+/* V7.1.10 — busy state: keep spinner visible inside the dock button */
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.is-busy {
+  color: transparent !important;
+  pointer-events: none;
+  opacity: 1 !important;
+}
+
+body.boxies-shell .boxies-dock__actions .builder-header-action-btn.is-busy .builder-dock-spinner {
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: rgba(255, 255, 255, 0.92);
+}
+
 body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary:hover:not(:disabled),
 body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-primary:hover:not(:disabled),
 body.boxies-shell .boxies-dock__actions .builder-header-action-btn.boxies-btn-secondary.is-muted:hover:not(:disabled) {

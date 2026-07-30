@@ -6,7 +6,7 @@
  * `hero_quotation/<kind>` in Storage.
  */
 var QuotationHero = (function () {
-  var BODY_SELECTOR = '[data-quotation-hero-body]';
+  var BODY_SELECTOR = '[data-builder-page-body]';
   var STORAGE_FOLDERS = {
     video: 'hero_quotation/video',
     image: 'hero_quotation/image',
@@ -352,14 +352,17 @@ var QuotationHero = (function () {
         ? QuotationSidebar.pageHeaderHtml(
           'hero',
           'Hero',
-          'Portada comercial de la cotización.',
+          'Video, imagen y logo de portada de la cotización.',
           opts.sectionChecks
         )
         : '';
+    /* Same framed page chrome as Showroom video-hero (independent column scrolls). */
     return '' +
-      '<div class="quotation-step quotation-step--hero">' +
+      '<div class="builder-page is-framed builder-page--hero" data-builder-page data-step="hero">' +
         header +
-        '<div data-quotation-hero-body>' + bodyHtml() + '</div>' +
+        '<div class="builder-page-body" data-builder-page-body>' +
+          bodyHtml() +
+        '</div>' +
       '</div>';
   }
 

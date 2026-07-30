@@ -108,7 +108,7 @@ var QuotationConfig = (function () {
         ? QuotationSidebar.pageHeaderHtml(
           'config',
           'Configuración',
-          'Identidad, publicación y vista previa al compartir.',
+          'Identidad, slug y metadatos de publicación.',
           opts.sectionChecks
         )
         : '';

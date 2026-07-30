@@ -130,9 +130,6 @@ var QuotationBuilderView = (function () {
         BuilderDirtyState.clear();
       }
       setDockState('success');
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
-        AdminNotify.success('Cambios guardados.');
-      }
     } catch (err) {
       setDockState('error');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
@@ -169,18 +166,7 @@ var QuotationBuilderView = (function () {
       if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.setPublished) {
         BuilderDockActions.setPublished(true);
       }
-      var url =
-        typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.showroomUrl
-          ? PlatformBuilderBridge.showroomUrl(projectCtx.slug)
-          : (typeof BuilderConfig !== 'undefined'
-            ? BuilderConfig.publicUrlDisplay(projectCtx.slug)
-            : '/' + projectCtx.slug);
       setDockState('success');
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
-        AdminNotify.success(
-          projectCtx.published ? 'Proyecto republicado: ' + url : 'Proyecto publicado: ' + url
-        );
-      }
     } catch (err) {
       setDockState('error');
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
@@ -212,9 +198,12 @@ var QuotationBuilderView = (function () {
     var mod = resolvePanel(currentStep);
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
+      workspace.classList.toggle('is-hero', currentStep === 'hero');
     }
     if (panel) {
       panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
+      panel.classList.toggle('quotation-panel--hero', currentStep === 'hero');
+      panel.classList.toggle('is-framed-step', currentStep === 'hero');
       panel.innerHTML = mod && mod.render
         ? mod.render(projectCtx, { sectionChecks: sectionChecks, stepId: currentStep })
         : '<p class="builder-step-desc">Paso no disponible.</p>';

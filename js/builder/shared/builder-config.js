@@ -1,5 +1,5 @@
 /**
- * BuilderConfig — V7.1.08 publication panel (2 columns) for all BOXIES Builders.
+ * BuilderConfig — V7.1.10 publication panel (3 columns) for all BOXIES Builders.
  * Save only via Builder dock Guardar — no inline save button.
  */
 var BuilderConfig = (function () {
@@ -32,6 +32,24 @@ var BuilderConfig = (function () {
     return s ? 'https://360preventa.com/' + s : 'https://360preventa.com/';
   }
 
+  function formatPublicUrlPath(urlOrSlug) {
+    var raw = String(urlOrSlug || '').trim();
+    if (!raw) return '';
+    try {
+      var withProto = raw.indexOf('http') === 0 ? raw : ('https://' + raw.replace(/^\/+/, ''));
+      var u = new URL(withProto);
+      var path = (u.pathname || '/').replace(/\/+$/, '');
+      if (path === '/') path = '';
+      return (u.hostname + path).toLowerCase();
+    } catch (e) {
+      return raw.replace(/^https?:\/\//i, '').replace(/\/+$/, '').toLowerCase();
+    }
+  }
+
+  function mockHostFromSlug(slug) {
+    return formatPublicUrlPath(publicUrlDisplay(slug));
+  }
+
   /**
    * @param {object} identity — { nombre, slug, og_image?, og_title?, og_description? }
    * @returns {string} HTML (builder-step-content wrapper included)
@@ -44,14 +62,7 @@ var BuilderConfig = (function () {
     var ogImage = identity.og_image || '';
     var ogTitle = identity.og_title || '';
     var ogDescription = identity.og_description || '';
-    var hostLabel = '360preventa.com';
-    try {
-      if (typeof ShowroomPublicUrl !== 'undefined' && ShowroomPublicUrl.displayUrl) {
-        var sample = ShowroomPublicUrl.displayUrl(slug || 'proyecto');
-        var u = new URL(sample.indexOf('http') === 0 ? sample : 'https://' + sample);
-        hostLabel = u.hostname || hostLabel;
-      }
-    } catch (eHost) {}
+    var hostLabel = mockHostFromSlug(slug);
 
     var hasImage = !!ogImage;
     var mockImg = hasImage
@@ -95,12 +106,12 @@ var BuilderConfig = (function () {
         '<div class="builder-hero-config-card builder-config-share">' +
           '<div class="builder-hero-config-card__title">Vista previa al compartir</div>' +
           '<div class="builder-field">' +
-            '<label for="builderOgTitle">Título</label>' +
+            '<label for="builderOgTitle">Título del enlace</label>' +
             '<input type="text" id="builderOgTitle" maxlength="120" value="' +
               escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
           '</div>' +
           '<div class="builder-field">' +
-            '<label for="builderOgDescription">Descripción</label>' +
+            '<label for="builderOgDescription">Descripción del enlace</label>' +
             '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
               escapeHtml(ogDescription) +
             '</textarea>' +
@@ -169,9 +180,16 @@ var BuilderConfig = (function () {
     if (!rootEl) return;
     var share = readShareFromDom(rootEl);
     var nameInput = rootEl.querySelector('#showroomNameInput');
+    var slugInput = rootEl.querySelector('#showroomSlugInput');
+    var urlPreviewEl = rootEl.querySelector('#showroomPublicUrlPreview');
     var fallbackTitle = nameInput ? String(nameInput.value || '').trim() : '';
+    var liveSlug = normalizeSlug(slugInput ? slugInput.value : '');
+    var livePublicUrl = urlPreviewEl
+      ? String(urlPreviewEl.textContent || '').trim()
+      : publicUrlDisplay(liveSlug);
     var titleEl = rootEl.querySelector('[data-share-mock-title]');
     var descEl = rootEl.querySelector('[data-share-mock-desc]');
+    var hostEl = rootEl.querySelector('[data-share-mock-host]');
     var media = rootEl.querySelector('.builder-share-mock__media');
     var card = rootEl.querySelector('[data-builder-og-card]');
     var stage = rootEl.querySelector('#builderOgDropzone');
@@ -183,6 +201,9 @@ var BuilderConfig = (function () {
     }
     if (descEl) {
       descEl.textContent = share.og_description || 'La descripción aparecerá aquí.';
+    }
+    if (hostEl) {
+      hostEl.textContent = formatPublicUrlPath(livePublicUrl) || mockHostFromSlug(liveSlug);
     }
     if (media) {
       if (share.og_image) {
@@ -385,6 +406,7 @@ var BuilderConfig = (function () {
       if (urlPreviewEl) {
         urlPreviewEl.textContent = publicUrlDisplay(nextSlug);
       }
+      syncShareMock(rootEl);
     }
 
     function currentProjectId() {

@@ -6737,18 +6737,9 @@ var AiProjectBuilderView = (function () {
         var estResult = results[4];
         if (shareResult || heroResult || menuResult || vivResult || estResult) {
           saveState();
-          var parts = [];
-          if (shareResult) parts.push(shareResult.committed ? 'configuración' : 'vista previa social');
-          if (heroResult) parts.push('hero');
-          if (menuResult) parts.push('menú');
-          if (vivResult) parts.push('viviendas');
-          if (estResult) parts.push('estructura (borrador)');
-          AdminNotify.success('Guardado. Actualizado: ' + parts.join(', ') + '.');
           updateNavButtons();
         } else if (MediaEngine.hasHeroMedia(state)) {
-          AdminNotify.error('Abre Administrar desde el showroom del proyecto para sincronizar.');
-        } else {
-          AdminNotify.success('Progreso guardado en esta sesión.');
+          /* Sync requires project binding — no floating toast; dock returns to idle. */
         }
         if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
           BuilderDirtyState.clear();
@@ -6757,7 +6748,9 @@ var AiProjectBuilderView = (function () {
       })
       .catch(function (err) {
         setDockState('error');
-        AdminNotify.error(err.message || 'Error guardando cambios');
+        if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+          AdminNotify.error(err.message || 'Error guardando cambios');
+        }
       })
       .finally(function () {
         processing = false;
@@ -6912,7 +6905,6 @@ var AiProjectBuilderView = (function () {
         }));
       } catch (evErr) {}
 
-      AdminNotify.success('Showroom publicado. Preview y URL pública usan el slug actual.');
       if (typeof ProjectSelector !== 'undefined') {
         await ProjectSelector.init();
       }
@@ -6922,7 +6914,9 @@ var AiProjectBuilderView = (function () {
       setDockState('success');
     } catch (err) {
       setDockState('error');
-      AdminNotify.error(err.message || 'Error publicando proyecto');
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error(err.message || 'Error publicando proyecto');
+      }
     }
     processing = false;
     updateHeaderActions();
