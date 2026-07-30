@@ -1,16 +1,15 @@
 /* BOXIES App Shell — chrome geometry only (canonical boxies-* names).
- * V7.0.06 — single compact icon sidebar (Builder original). Fixed width. No expand. */
+ * V7.2.18 — no left sidebar; footer hosts user + create + module actions. */
 
 :root {
   --boxies-header-h: var(--hall-header-h, 52px);
-  /* Definitive platform sidebar: compact icon rail (Builder original width). */
-  --boxies-sidebar-w: 50px;
+  --boxies-sidebar-w: 0px;
   --boxies-chrome-pad-x: 7px;
   --boxies-chrome-pad-top: 12px;
   --boxies-icon-cell: 36px;
   --boxies-icon-size: 18px;
   --boxies-icon-gap: 4px;
-  --boxies-dock-h: 56px;
+  --boxies-dock-h: 72px;
   --boxies-dock-safe: env(safe-area-inset-bottom, 0px);
   --boxies-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
   --boxies-dock-bg: rgba(5, 5, 5, 0.82);
@@ -570,9 +569,13 @@ a.boxies-action-btn {
   opacity: 1;
 }
 
+.boxies-sidebar {
+  display: none !important;
+}
+
 .boxies-workspace {
   margin-top: var(--boxies-header-h);
-  margin-left: var(--boxies-sidebar-w);
+  margin-left: 0;
   min-height: calc(100vh - var(--boxies-header-h) - var(--boxies-dock-h) - var(--boxies-dock-safe));
 }
 
@@ -621,78 +624,117 @@ a.boxies-action-btn {
   position: relative;
   height: var(--boxies-dock-h);
   max-width: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  padding: 0 14px;
+  column-gap: 16px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
-.boxies-dock__leading {
+/* Left — account (integrated, no floating card) */
+.boxies-dock__user {
+  justify-self: start;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.boxies-dock__leading[hidden] {
-  display: none !important;
-}
-
-.boxies-dock__leading .boxies-btn-secondary--icon {
-  font-size: 1.15rem;
-  font-weight: 450;
-  line-height: 1;
-}
-
-.boxies-dock__leading .boxies-btn-secondary--create {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   min-width: 0;
-  height: 32px;
-  padding: 0 14px;
+  max-width: min(280px, 36vw);
+}
+
+.boxies-dock__logout {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 0 0 36px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.42);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+
+.boxies-dock__logout:hover {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.boxies-dock__logout-icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+
+.boxies-dock__logout-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Center — primary create action */
+.boxies-dock__center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.boxies-dock__center.is-empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__center[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__center .boxies-btn-secondary--create {
+  min-width: 0;
+  height: 36px;
+  padding: 0 18px;
   white-space: nowrap;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 650;
   letter-spacing: 0.02em;
 }
 
-.boxies-dock__project {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  max-width: min(420px, 48vw);
-  flex-shrink: 1;
-}
-
-.boxies-dock__project[hidden] {
-  display: none !important;
-}
-
-/* Same hierarchy as header user name (.boxies-user strong) */
-.boxies-dock__project-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 550;
-  color: rgba(255, 255, 255, 0.72);
-  letter-spacing: normal;
-  text-transform: none;
-}
-
-.boxies-dock__spacer {
-  flex: 1;
-  min-width: 8px;
-}
-
+/* Right — module actions + Visualizar */
 .boxies-dock__actions {
+  justify-self: end;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 8px;
+  min-width: 0;
+}
+
+.boxies-dock__actions.is-empty {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .boxies-dock__actions[hidden] {
+  display: flex !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boxies-dock__preview[hidden] {
+  display: none !important;
+}
+
+.boxies-dock__leading,
+.boxies-dock__spacer,
+.boxies-dock__project {
   display: none !important;
 }
 
@@ -736,6 +778,7 @@ a.boxies-action-btn {
   align-items: flex-start;
   gap: 8px;
   min-width: 0;
+  width: 100%;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.42);
 }
@@ -748,13 +791,13 @@ a.boxies-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
   color: rgba(255, 255, 255, 0.72);
 }
 
 .boxies-user__avatar svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
@@ -763,7 +806,7 @@ a.boxies-action-btn {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .boxies-user__name,
