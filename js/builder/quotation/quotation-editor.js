@@ -1,6 +1,5 @@
 /**
- * Quotation Editor — V7.2.11 Library ≠ Scene assignment.
- * Resources store files only; scenes get media via picker or drag & drop.
+ * Quotation Editor — V7.2.12 Interaction Engine (buttons + hotspots on canvas).
  */
 var QuotationEditor = (function () {
   var CANVAS_DESIGN_W = 1920;
@@ -161,7 +160,9 @@ var QuotationEditor = (function () {
       templateId: null,
       resourceId: null,
       coverModel: null,
-      elements: []
+      elements: [],
+      buttons: [],
+      hotspots: []
     };
     return {
       content: [],
@@ -219,11 +220,14 @@ var QuotationEditor = (function () {
         id: nextId('sc'),
         name: 'Hero',
         type: 'hero',
-        elements: []
+        elements: [],
+        buttons: [],
+        hotspots: []
       };
       state.scenes = [hero];
       state.activeSceneId = hero.id;
     }
+    state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
     if (!sceneById(state.activeSceneId)) {
       state.activeSceneId = state.scenes[0].id;
     }
@@ -341,6 +345,14 @@ var QuotationEditor = (function () {
     return state.items[contentId];
   }
 
+  /** Scene-level overlays — BOXIES Interaction Engine storage (V7.2.12). */
+  function ensureSceneOverlays(scene) {
+    if (!scene) return { buttons: [], hotspots: [] };
+    if (!Array.isArray(scene.buttons)) scene.buttons = [];
+    if (!Array.isArray(scene.hotspots)) scene.hotspots = [];
+    return scene;
+  }
+
   function selectedContent() {
     return contentById(state.selectedContentId) || state.content[0] || null;
   }
@@ -348,7 +360,7 @@ var QuotationEditor = (function () {
   function findSelectedItem() {
     var sel = state.selectedItem;
     if (!sel) return null;
-    var bag = ensureItems(state.selectedContentId);
+    var bag = ensureSceneOverlays(activeScene());
     var list = sel.kind === 'hotspot' ? bag.hotspots : bag.buttons;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === sel.id) {
@@ -359,14 +371,7 @@ var QuotationEditor = (function () {
   }
 
   function clearInvalidSelection() {
-    var content = selectedContent();
-    var tools = toolsFor(content);
-    var found = findSelectedItem();
-    if (!found) {
-      state.selectedItem = null;
-    } else if (found.kind === 'hotspot' && !tools.hotspots) {
-      state.selectedItem = null;
-    } else if (found.kind === 'button' && !tools.buttons) {
+    if (state.selectedItem && !findSelectedItem()) {
       state.selectedItem = null;
     }
     if (state.selectedElementId && !findSelectedElement()) {
@@ -745,9 +750,9 @@ var QuotationEditor = (function () {
     }
     var hasElements = scene && scene.elements && scene.elements.length;
     if (hasElements) {
-      return sceneCompositionHtml(scene) + canvasChipsHtml(sceneResource(scene));
+      return sceneCompositionHtml(scene);
     }
-    return sceneMediaStageHtml(scene) + canvasChipsHtml(sceneResource(scene));
+    return sceneMediaStageHtml(scene);
   }
 
   /** Hero: Runtime iframe inside fixed 1920×1080 design frame (scale outside). */
@@ -787,40 +792,11 @@ var QuotationEditor = (function () {
           ' width="' + CANVAS_DESIGN_W + '" height="' + CANVAS_DESIGN_H + '"' +
           ' src="' + String(src).replace(/"/g, '&quot;') + '"' +
           ' allow="fullscreen"></iframe>' +
-        '<div class="qe-canvas__edit-layer" data-qe-edit-layer aria-hidden="true"></div>' +
       '</div>';
   }
-  function canvasChipsHtml(content) {
-    if (!content) return '';
-    var tools = toolsFor(content);
-    var bag = ensureItems(content.id);
-    var chips = [];
-    if (tools.buttons) {
-      bag.buttons.forEach(function (b) {
-        var on = state.selectedItem && state.selectedItem.kind === 'button' &&
-          state.selectedItem.id === b.id;
-        chips.push(
-          '<button type="button" class="qe-chip qe-chip--button' + (on ? ' is-selected' : '') + '"' +
-            ' data-qe-item-kind="button" data-qe-item-id="' + escapeHtml(b.id) + '">' +
-            escapeHtml(b.label || 'Botón') +
-          '</button>'
-        );
-      });
-    }
-    if (tools.hotspots) {
-      bag.hotspots.forEach(function (h) {
-        var on = state.selectedItem && state.selectedItem.kind === 'hotspot' &&
-          state.selectedItem.id === h.id;
-        chips.push(
-          '<button type="button" class="qe-chip qe-chip--hotspot' + (on ? ' is-selected' : '') + '"' +
-            ' data-qe-item-kind="hotspot" data-qe-item-id="' + escapeHtml(h.id) + '">' +
-            escapeHtml(h.label || 'Hotspot') +
-          '</button>'
-        );
-      });
-    }
-    if (!chips.length) return '';
-    return '<div class="qe-canvas__chips" data-qe-chips>' + chips.join('') + '</div>';
+
+  function editLayerHtml() {
+    return '<div class="qe-canvas__edit-layer" data-qe-edit-layer tabindex="0" aria-label="Capa de interacción"></div>';
   }
 
   function sceneCreateMenuHtml() {
@@ -878,27 +854,14 @@ var QuotationEditor = (function () {
   }
 
   function stageDockHtml() {
-    var content = selectedContent();
-    var tools = toolsFor(content);
     var sceneMenu = state.dockOpen === 'scene' ? sceneCreateMenuHtml() : '';
     var elementMenu = '';
     if (state.dockOpen === 'element') {
-      var items = [];
-      if (tools.buttons) {
-        items.push(
-          '<button type="button" class="qe-dock__menu-item" data-qe-add-button role="menuitem">Botón</button>'
-        );
-      }
-      if (tools.hotspots) {
-        items.push(
-          '<button type="button" class="qe-dock__menu-item" data-qe-add-hotspot role="menuitem">Hotspot</button>'
-        );
-      }
-      if (!items.length) {
-        items.push('<p class="qe-dock__menu-hint">Selecciona un recurso con botones o hotspots.</p>');
-      }
       elementMenu =
-        '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' + items.join('') + '</div>';
+        '<div class="qe-dock__menu" data-qe-dock-menu role="menu">' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-button role="menuitem">Botón</button>' +
+          '<button type="button" class="qe-dock__menu-item" data-qe-add-hotspot role="menuitem">Hotspot</button>' +
+        '</div>';
     }
     var stylesMenu = state.dockOpen === 'styles'
       ? (
@@ -958,6 +921,7 @@ var QuotationEditor = (function () {
                 '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
                   '<div class="qe-canvas__design" data-qe-canvas-design>' +
                     designBody +
+                    editLayerHtml() +
                   '</div>' +
                 '</div>' +
               '</div>' +
@@ -1119,6 +1083,7 @@ var QuotationEditor = (function () {
   }
 
   function buttonInspectorHtml(item) {
+    var rot = item.rotation != null ? Number(item.rotation) : 0;
     return '' +
       '<div class="qe-insp__editor" data-qe-detail>' +
         '<div class="qe-insp__detail-kicker">Botón</div>' +
@@ -1131,7 +1096,27 @@ var QuotationEditor = (function () {
           '<div class="qe-field__label">Estilo</div>' +
           segmentHtml(BUTTON_STYLES, item.style || 'button', 'data-qe-item-style') +
         '</div>' +
+        '<div class="qe-field qe-field--row">' +
+          '<div class="qe-field">' +
+            '<label for="qeItemX">X %</label>' +
+            '<input type="number" id="qeItemX" data-qe-item-x min="0" max="100" step="0.1" value="' +
+              escapeHtml(item.x != null ? item.x : 50) + '">' +
+          '</div>' +
+          '<div class="qe-field">' +
+            '<label for="qeItemY">Y %</label>' +
+            '<input type="number" id="qeItemY" data-qe-item-y min="0" max="100" step="0.1" value="' +
+              escapeHtml(item.y != null ? item.y : 50) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="qe-field">' +
+          '<label for="qeItemRot">Rotación °</label>' +
+          '<input type="number" id="qeItemRot" data-qe-item-rot min="-360" max="360" step="1" value="' +
+            escapeHtml(rot) + '">' +
+        '</div>' +
         destinoYAccionHtml(item) +
+        '<div class="qe-field">' +
+          '<button type="button" class="qe-insp__action" data-qe-item-duplicate>Duplicar</button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -1139,6 +1124,11 @@ var QuotationEditor = (function () {
     return '' +
       '<div class="qe-insp__editor" data-qe-detail>' +
         '<div class="qe-insp__detail-kicker">Hotspot</div>' +
+        '<div class="qe-field">' +
+          '<label for="qeHsLabel">Nombre</label>' +
+          '<input type="text" id="qeHsLabel" data-qe-item-label maxlength="60" value="' +
+            escapeHtml(item.label || '') + '">' +
+        '</div>' +
         '<div class="qe-field">' +
           '<div class="qe-field__label">Forma</div>' +
           segmentHtml(HOTSPOT_SHAPES, item.shape || 'polygon', 'data-qe-item-shape') +
@@ -1148,13 +1138,15 @@ var QuotationEditor = (function () {
           segmentHtml(HOTSPOT_COLORS, item.color || 'white', 'data-qe-item-color') +
         '</div>' +
         destinoYAccionHtml(item) +
+        '<div class="qe-field">' +
+          '<button type="button" class="qe-insp__action" data-qe-item-duplicate>Duplicar</button>' +
+        '</div>' +
       '</div>';
   }
 
   function idleInspectorHtml(content) {
-    var tools = toolsFor(content);
-    var bag = content ? ensureItems(content.id) : { buttons: [], hotspots: [] };
     var scene = activeScene();
+    var bag = ensureSceneOverlays(scene);
     var pickRows = [];
     if (scene && scene.elements && scene.elements.length) {
       scene.elements.forEach(function (el) {
@@ -1168,26 +1160,22 @@ var QuotationEditor = (function () {
         );
       });
     }
-    if (tools.buttons) {
-      bag.buttons.forEach(function (b) {
-        pickRows.push(
-          '<button type="button" class="qe-insp__pick" data-qe-item-kind="button" data-qe-item-id="' +
-            escapeHtml(b.id) + '">' +
-            '<span>Botón</span><strong>' + escapeHtml(b.label || 'Sin nombre') + '</strong>' +
-          '</button>'
-        );
-      });
-    }
-    if (tools.hotspots) {
-      bag.hotspots.forEach(function (h) {
-        pickRows.push(
-          '<button type="button" class="qe-insp__pick" data-qe-item-kind="hotspot" data-qe-item-id="' +
-            escapeHtml(h.id) + '">' +
-            '<span>Hotspot</span><strong>' + escapeHtml(h.label || 'Sin nombre') + '</strong>' +
-          '</button>'
-        );
-      });
-    }
+    bag.buttons.forEach(function (b) {
+      pickRows.push(
+        '<button type="button" class="qe-insp__pick" data-qe-item-kind="button" data-qe-item-id="' +
+          escapeHtml(b.id) + '">' +
+          '<span>Botón</span><strong>' + escapeHtml(b.label || 'Sin nombre') + '</strong>' +
+        '</button>'
+      );
+    });
+    bag.hotspots.forEach(function (h) {
+      pickRows.push(
+        '<button type="button" class="qe-insp__pick" data-qe-item-kind="hotspot" data-qe-item-id="' +
+          escapeHtml(h.id) + '">' +
+          '<span>Hotspot</span><strong>' + escapeHtml(h.label || 'Sin nombre') + '</strong>' +
+        '</button>'
+      );
+    });
     var emptyMsg = 'Selecciona un elemento, botón o hotspot para editar.';
     return '' +
       '<div class="qe-insp__idle">' +
@@ -1302,10 +1290,7 @@ var QuotationEditor = (function () {
   }
 
   function selectItem(kind, id) {
-    var content = selectedContent();
-    var tools = toolsFor(content);
-    if (kind === 'button' && !tools.buttons) return;
-    if (kind === 'hotspot' && !tools.hotspots) return;
+    if (!kind || !id) return;
     state.selectedItem = { kind: kind, id: id };
     state.selectedElementId = null;
     rerender();
@@ -1350,7 +1335,9 @@ var QuotationEditor = (function () {
       templateId: fromHeroDefault ? 'hero-default' : null,
       resourceId: null,
       coverModel: null,
-      elements: []
+      elements: [],
+      buttons: [],
+      hotspots: []
     };
     state.scenes.push(scene);
     state.activeSceneId = scene.id;
@@ -1521,9 +1508,192 @@ var QuotationEditor = (function () {
         });
       });
     }
+
+    var dupBtn = editor.querySelector('[data-qe-item-duplicate]');
+    if (dupBtn && !dupBtn.dataset.qeBound) {
+      dupBtn.dataset.qeBound = '1';
+      dupBtn.addEventListener('click', function () { duplicateSelectedItem(); });
+    }
+
+    var labelInput = editor.querySelector('[data-qe-item-label]');
+    if (labelInput && !labelInput.dataset.qeBound) {
+      labelInput.dataset.qeBound = '1';
+      labelInput.addEventListener('change', function () {
+        patchSelected(function (item) {
+          item.label = String(labelInput.value || '').trim() || item.label;
+        });
+      });
+      labelInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          labelInput.blur();
+        }
+      });
+    }
+
+    function bindNumField(sel, key, clampFn) {
+      var input = editor.querySelector(sel);
+      if (!input || input.dataset.qeBound) return;
+      input.dataset.qeBound = '1';
+      input.addEventListener('change', function () {
+        patchSelected(function (item) {
+          var n = Number(input.value);
+          item[key] = typeof clampFn === 'function' ? clampFn(n) : n;
+        });
+      });
+    }
+    bindNumField('[data-qe-item-x]', 'x', function (n) {
+      return typeof BoxiesInteractionEngine !== 'undefined'
+        ? BoxiesInteractionEngine.clampPct(n) : Math.max(0, Math.min(100, n));
+    });
+    bindNumField('[data-qe-item-y]', 'y', function (n) {
+      return typeof BoxiesInteractionEngine !== 'undefined'
+        ? BoxiesInteractionEngine.clampPct(n) : Math.max(0, Math.min(100, n));
+    });
+    bindNumField('[data-qe-item-rot]', 'rotation', function (n) {
+      return typeof BoxiesInteractionEngine !== 'undefined'
+        ? BoxiesInteractionEngine.clampRotation(n) : Math.round(n || 0);
+    });
+
+    editor.querySelectorAll('[data-qe-item-style]').forEach(function (btn) {
+      if (btn.dataset.qeBound) return;
+      btn.dataset.qeBound = '1';
+      btn.addEventListener('click', function () {
+        patchSelected(function (item) {
+          item.style = btn.getAttribute('data-qe-item-style');
+        });
+      });
+    });
+    editor.querySelectorAll('[data-qe-item-shape]').forEach(function (btn) {
+      if (btn.dataset.qeBound) return;
+      btn.dataset.qeBound = '1';
+      btn.addEventListener('click', function () {
+        patchSelected(function (item) {
+          var shape = btn.getAttribute('data-qe-item-shape');
+          item.shape = shape;
+          if (typeof BoxiesInteractionEngine === 'undefined') return;
+          if (shape === 'rectangle') {
+            item.polygon = BoxiesInteractionEngine.defaultRectPolygon();
+          } else if (shape === 'circle') {
+            var pts = [];
+            var i;
+            for (i = 0; i < 16; i++) {
+              var a = (i / 16) * Math.PI * 2;
+              pts.push({
+                x: BoxiesInteractionEngine.clampPct(50 + Math.cos(a) * 15),
+                y: BoxiesInteractionEngine.clampPct(50 + Math.sin(a) * 15)
+              });
+            }
+            item.polygon = pts;
+          }
+        });
+      });
+    });
+    editor.querySelectorAll('[data-qe-item-color]').forEach(function (btn) {
+      if (btn.dataset.qeBound) return;
+      btn.dataset.qeBound = '1';
+      btn.addEventListener('click', function () {
+        patchSelected(function (item) {
+          item.color = btn.getAttribute('data-qe-item-color');
+        });
+      });
+    });
+    editor.querySelectorAll('[data-qe-action]').forEach(function (input) {
+      if (input.dataset.qeBound) return;
+      input.dataset.qeBound = '1';
+      input.addEventListener('change', function () {
+        if (!input.checked) return;
+        patchSelected(function (item) {
+          item.action = input.getAttribute('data-qe-action');
+        });
+      });
+    });
+    var dest = editor.querySelector('[data-qe-item-dest]');
+    if (dest && !dest.dataset.qeBound) {
+      dest.dataset.qeBound = '1';
+      dest.addEventListener('change', function () {
+        patchSelected(function (item) {
+          item.targetSceneId = dest.value;
+        });
+      });
+    }
+
+    editor.querySelectorAll('[data-qe-item-id]').forEach(function (btn) {
+      if (btn.dataset.qeBound) return;
+      btn.dataset.qeBound = '1';
+      btn.addEventListener('click', function () {
+        selectItem(btn.getAttribute('data-qe-item-kind'), btn.getAttribute('data-qe-item-id'));
+      });
+    });
   }
 
   var runtimeBridgeBound = false;
+  var ixHandle = null;
+
+  function destroyInteractionEngine() {
+    if (ixHandle && typeof ixHandle.destroy === 'function') {
+      try { ixHandle.destroy(); } catch (e) { /* ignore */ }
+    }
+    ixHandle = null;
+  }
+
+  function mountInteractionEngine() {
+    destroyInteractionEngine();
+    if (!rootEl || typeof BoxiesInteractionEngine === 'undefined') return;
+    var layer = rootEl.querySelector('[data-qe-edit-layer]');
+    if (!layer) return;
+    var scene = activeScene();
+    ensureSceneOverlays(scene);
+    ixHandle = BoxiesInteractionEngine.mount(layer, {
+      getScene: function () {
+        return ensureSceneOverlays(activeScene());
+      },
+      idFactory: nextId,
+      onSelect: function (kind, id) {
+        if (!kind || !id) {
+          if (state.selectedItem) {
+            state.selectedItem = null;
+            refreshInspectorOnly();
+          }
+          return;
+        }
+        var same = state.selectedItem &&
+          state.selectedItem.kind === kind &&
+          String(state.selectedItem.id) === String(id);
+        state.selectedItem = { kind: kind, id: id };
+        state.selectedElementId = null;
+        if (!same) refreshInspectorOnly();
+      },
+      onChange: function () {
+        markDirtyLocal();
+        if (state.selectedItem) refreshInspectorOnly();
+      }
+    });
+    if (state.selectedItem && state.selectedItem.kind === 'button') {
+      ixHandle.setButtonSelection([state.selectedItem.id], state.selectedItem.id);
+    } else if (state.selectedItem && state.selectedItem.kind === 'hotspot') {
+      ixHandle.setHotspotSelection(state.selectedItem.id);
+    }
+
+    /* Keep library → scene DnD working above the interaction layer. */
+    layer.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      layer.classList.add('is-drop-target');
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    });
+    layer.addEventListener('dragleave', function () {
+      layer.classList.remove('is-drop-target');
+    });
+    layer.addEventListener('drop', function (e) {
+      e.preventDefault();
+      layer.classList.remove('is-drop-target');
+      var id = (e.dataTransfer && (
+        e.dataTransfer.getData('text/qe-resource') ||
+        e.dataTransfer.getData('text/plain')
+      )) || '';
+      if (id) assignResourceToScene(id);
+    });
+  }
 
   function onRuntimeBridgeMessage(ev) {
     if (typeof QuotationRuntimeBridge === 'undefined') return;
@@ -1751,18 +1921,29 @@ var QuotationEditor = (function () {
   }
 
   function addButton() {
-    var content = selectedContent();
-    if (!content || !toolsFor(content).buttons) return;
-    var bag = ensureItems(content.id);
     var scene = activeScene();
-    var item = {
-      id: nextId('btn'),
-      label: 'Botón',
-      style: 'button',
-      action: 'goto-scene',
-      targetSceneId: (scene && scene.id) || content.id
-    };
-    bag.buttons.push(item);
+    if (!scene) return;
+    ensureSceneOverlays(scene);
+    var item = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createButton)
+      ? BoxiesInteractionEngine.createButton(nextId, {
+        x: 50,
+        y: 50,
+        label: 'Botón',
+        style: 'button',
+        action: 'goto-scene',
+        targetSceneId: scene.id
+      })
+      : {
+        id: nextId('btn'),
+        label: 'Botón',
+        style: 'button',
+        action: 'goto-scene',
+        targetSceneId: scene.id,
+        x: 50,
+        y: 50,
+        rotation: 0
+      };
+    scene.buttons.push(item);
     state.selectedItem = { kind: 'button', id: item.id };
     state.selectedElementId = null;
     state.dockOpen = false;
@@ -1771,22 +1952,61 @@ var QuotationEditor = (function () {
   }
 
   function addHotspot() {
-    var content = selectedContent();
-    if (!content || !toolsFor(content).hotspots) return;
-    var bag = ensureItems(content.id);
     var scene = activeScene();
-    var item = {
-      id: nextId('hs'),
-      label: 'Hotspot',
-      shape: 'polygon',
-      color: 'white',
-      action: 'goto-scene',
-      targetSceneId: (scene && scene.id) || content.id
-    };
-    bag.hotspots.push(item);
+    if (!scene) return;
+    ensureSceneOverlays(scene);
+    var item = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createHotspot)
+      ? BoxiesInteractionEngine.createHotspot(nextId, {
+        label: 'Hotspot',
+        shape: 'polygon',
+        color: 'white',
+        action: 'goto-scene',
+        targetSceneId: scene.id
+      })
+      : {
+        id: nextId('hs'),
+        label: 'Hotspot',
+        shape: 'polygon',
+        color: 'white',
+        action: 'goto-scene',
+        targetSceneId: scene.id,
+        polygon: [
+          { x: 35, y: 35 }, { x: 65, y: 35 },
+          { x: 65, y: 65 }, { x: 35, y: 65 }
+        ]
+      };
+    scene.hotspots.push(item);
     state.selectedItem = { kind: 'hotspot', id: item.id };
     state.selectedElementId = null;
     state.dockOpen = false;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function duplicateSelectedItem() {
+    var found = findSelectedItem();
+    if (!found) return;
+    var scene = ensureSceneOverlays(activeScene());
+    if (found.kind === 'button') {
+      var src = found.data;
+      var copy = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createButton)
+        ? BoxiesInteractionEngine.createButton(nextId, src)
+        : JSON.parse(JSON.stringify(src));
+      if (!copy.id || copy.id === src.id) copy.id = nextId('btn');
+      copy.x = src.x;
+      copy.y = src.y;
+      scene.buttons.push(copy);
+      state.selectedItem = { kind: 'button', id: copy.id };
+    } else {
+      var hs = found.data;
+      var hscopy = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createHotspot)
+        ? BoxiesInteractionEngine.createHotspot(nextId, hs)
+        : JSON.parse(JSON.stringify(hs));
+      if (!hscopy.id || hscopy.id === hs.id) hscopy.id = nextId('hs');
+      scene.hotspots.push(hscopy);
+      state.selectedItem = { kind: 'hotspot', id: hscopy.id };
+    }
+    state.selectedElementId = null;
     markDirtyLocal();
     rerender();
   }
@@ -1829,6 +2049,7 @@ var QuotationEditor = (function () {
     function wireEditor() {
       bindCanvasFit();
       mountRuntimeCanvas();
+      mountInteractionEngine();
       var editor = panel.querySelector('[data-qe-editor]') || panel;
 
       editor.querySelectorAll('[data-qe-open-resource-picker]').forEach(function (btn) {
@@ -2162,66 +2383,7 @@ var QuotationEditor = (function () {
     var addHs = editor.querySelector('[data-qe-add-hotspot]');
     if (addHs) addHs.addEventListener('click', addHotspot);
 
-    editor.querySelectorAll('[data-qe-item-id]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        selectItem(btn.getAttribute('data-qe-item-kind'), btn.getAttribute('data-qe-item-id'));
-      });
-    });
-
-    var labelInput = editor.querySelector('[data-qe-item-label]');
-    if (labelInput) {
-      labelInput.addEventListener('change', function () {
-        patchSelected(function (item) {
-          item.label = String(labelInput.value || '').trim() || item.label;
-        });
-      });
-      labelInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          labelInput.blur();
-        }
-      });
-    }
-
-    editor.querySelectorAll('[data-qe-item-style]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        patchSelected(function (item) {
-          item.style = btn.getAttribute('data-qe-item-style');
-        });
-      });
-    });
-    editor.querySelectorAll('[data-qe-item-shape]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        patchSelected(function (item) {
-          item.shape = btn.getAttribute('data-qe-item-shape');
-        });
-      });
-    });
-    editor.querySelectorAll('[data-qe-item-color]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        patchSelected(function (item) {
-          item.color = btn.getAttribute('data-qe-item-color');
-        });
-      });
-    });
-
-    editor.querySelectorAll('[data-qe-action]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        if (!input.checked) return;
-        patchSelected(function (item) {
-          item.action = input.getAttribute('data-qe-action');
-        });
-      });
-    });
-
-    var dest = editor.querySelector('[data-qe-item-dest]');
-    if (dest) {
-      dest.addEventListener('change', function () {
-        patchSelected(function (item) {
-          item.targetSceneId = dest.value;
-        });
-      });
-    }
+    wireInspectorFields(editor);
     } /* wireEditor */
 
     if (projectId && loadedProjectId !== projectId) {
@@ -2261,6 +2423,7 @@ var QuotationEditor = (function () {
       version: 1,
       activeSceneId: state.activeSceneId || (state.scenes[0] && state.scenes[0].id) || null,
       scenes: state.scenes.map(function (sc) {
+        ensureSceneOverlays(sc);
         return {
           id: sc.id,
           name: sc.name || 'Escena',
@@ -2272,7 +2435,9 @@ var QuotationEditor = (function () {
               : sc.coverModel)
             : null,
           resourceId: sc.resourceId || null,
-          elements: Array.isArray(sc.elements) ? sc.elements : []
+          elements: Array.isArray(sc.elements) ? sc.elements : [],
+          buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
+          hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
         };
       })
     };
@@ -2282,15 +2447,19 @@ var QuotationEditor = (function () {
     hq = hq || null;
     if (hq && hq.canvas && Array.isArray(hq.canvas.scenes) && hq.canvas.scenes.length) {
       state.scenes = hq.canvas.scenes.map(function (sc) {
-        return {
+        var scene = {
           id: sc.id,
           name: sc.name || 'Escena',
           type: sc.type || 'scene',
           templateId: sc.templateId || null,
           coverModel: sc.coverModel || null,
           resourceId: sc.resourceId || null,
-          elements: Array.isArray(sc.elements) ? sc.elements : []
+          elements: Array.isArray(sc.elements) ? sc.elements : [],
+          buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
+          hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
         };
+        ensureSceneOverlays(scene);
+        return scene;
       });
       state.activeSceneId = hq.canvas.activeSceneId || state.scenes[0].id;
       return;
@@ -2304,7 +2473,9 @@ var QuotationEditor = (function () {
       templateId: 'hero-default',
       resourceId: null,
       coverModel: null,
-      elements: []
+      elements: [],
+      buttons: [],
+      hotspots: []
     };
     /* If legacy hero_quotation has media URLs, keep coverModel for Runtime but do not invent library links. */
     var model = typeof ProjectCover !== 'undefined' && ProjectCover.fromQuotationHero
