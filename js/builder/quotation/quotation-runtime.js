@@ -1,5 +1,5 @@
 /**
- * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.40).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.41).
  *
  * Modes:
  *   - Runtime: public experience (/{slug} → here, Visualizar)
@@ -153,13 +153,26 @@ var QuotationRuntime = (function () {
   }
 
   function resolveSceneMedia(scene, bundle) {
-    if (!scene) return null;
+    if (!scene) {
+      /* V7.2.41 audit — no logic change */
+      console.log('[QR V7.2.41] resolveSceneMedia → null: scene es null/undefined');
+      return null;
+    }
     var url = scene.mediaUrl || scene.publicUrl || null;
     if (url && String(url).indexOf('blob:') !== 0) {
       return {
         url: url,
         type: scene.mediaType === 'video' ? 'video' : 'image'
       };
+    }
+    if (url && String(url).indexOf('blob:') === 0) {
+      console.log('[QR V7.2.41] resolveSceneMedia: mediaUrl/publicUrl es blob: (descartado)', url);
+    } else if (!url) {
+      console.log('[QR V7.2.41] resolveSceneMedia: mediaUrl y publicUrl ausentes o vacíos', {
+        mediaUrl: scene.mediaUrl,
+        publicUrl: scene.publicUrl,
+        resourceId: scene.resourceId
+      });
     }
     var cm = scene.coverModel;
     if (cm) {
@@ -169,8 +182,15 @@ var QuotationRuntime = (function () {
       if (cm.imageUrl && String(cm.imageUrl).indexOf('blob:') !== 0) {
         return { url: cm.imageUrl, type: 'image' };
       }
+      console.log('[QR V7.2.41] resolveSceneMedia → null: coverModel sin imageUrl/videoUrl persistibles', {
+        imageUrl: cm.imageUrl || null,
+        videoUrl: cm.videoUrl || null
+      });
+    } else {
+      console.log('[QR V7.2.41] resolveSceneMedia → null: sin coverModel y sin mediaUrl/publicUrl usable');
     }
     /* Do not borrow top-level hero.image_url / video_url — Editor paints the scene, not hero. */
+    console.log('[QR V7.2.41] resolveSceneMedia → null: no se usa hero.image_url (prohibido en V7.2.40+)');
     return null;
   }
 
@@ -321,11 +341,25 @@ var QuotationRuntime = (function () {
 
   function paintSceneMedia(parentEl, scene, bundle) {
     var host = ensureSceneMediaHost(parentEl);
+    var urlRecibida = scene
+      ? (scene.mediaUrl || scene.publicUrl || null)
+      : null;
+    console.log('[QR V7.2.41] paintSceneMedia URL recibida (scene.mediaUrl || scene.publicUrl):', urlRecibida);
     var media = resolveSceneMedia(scene, bundle);
+    var urlFinal = media && media.url ? media.url : null;
+    console.log('[QR V7.2.41] paintSceneMedia URL final utilizada:', urlFinal);
     if (!media || !media.url) {
+      var why = !scene
+        ? 'scene es null'
+        : (!media
+          ? 'resolveSceneMedia() devolvió null (ver logs previos)'
+          : 'resolveSceneMedia() devolvió objeto sin .url');
+      console.log('[QR V7.2.41] paintSceneMedia NO pinta imagen — condición:', why);
+      console.log('[QR V7.2.41] paintSceneMedia → void porque URL final es null. Motivo:', why);
       host.innerHTML = '<div class="qr-scene-media__void" aria-hidden="true"></div>';
       return host;
     }
+    console.log('[QR V7.2.41] paintSceneMedia pinta', media.type, 'con src=', media.url);
     if (media.type === 'video') {
       host.innerHTML =
         '<video class="qr-scene-media__video" src="' + escapeHtml(media.url) +
@@ -745,7 +779,13 @@ var QuotationRuntime = (function () {
      * Do not wait on ProjectCover / hero.image_url / coverModel for the first image.
      */
     var startup = pickStartupScene(bundle || loaded);
+    if (!startup && !(editorMode && canvasMode)) {
+      console.log('[QR V7.2.41] RUNTIME START: pickStartupScene() → null (no goToScene). doc.activeSceneId=',
+        (canvasDoc(bundle || loaded) || {}).activeSceneId,
+        'scenes=', listScenes(bundle || loaded));
+    }
     if (startup && !(editorMode && canvasMode)) {
+      logRuntimeStartDump(bundle || loaded, startup, 'paintHero→startup');
       goToScene(startup.id);
       return;
     }
@@ -778,9 +818,34 @@ var QuotationRuntime = (function () {
     if (doc && doc.activeSceneId && !(editorMode && canvasMode)) {
       var entry = entryScene(bundle || loaded);
       if (!entry || String(entry.id) !== String(doc.activeSceneId)) {
+        var jumpScene = sceneById(bundle || loaded, doc.activeSceneId);
+        logRuntimeStartDump(bundle || loaded, jumpScene, 'paintHero→activeSceneId≠entry');
         goToScene(doc.activeSceneId);
       }
     }
+  }
+
+  /* V7.2.41 — audit only; no behavior change */
+  function logRuntimeStartDump(bundle, scene, via) {
+    var doc = canvasDoc(bundle);
+    var entry = entryScene(bundle);
+    var hero = bundle && bundle.hero;
+    console.log('=========================');
+    console.log('RUNTIME START');
+    console.log('=========================');
+    console.log('via:', via || '');
+    console.log('activeSceneId', doc && doc.activeSceneId != null ? doc.activeSceneId : activeSceneId);
+    console.log('entryScene.id', entry && entry.id != null ? entry.id : null);
+    console.log('scene encontrada', scene || null);
+    console.log('scene.mediaUrl', scene ? scene.mediaUrl : null);
+    console.log('scene.publicUrl', scene ? scene.publicUrl : null);
+    console.log('scene.resourceId', scene ? scene.resourceId : null);
+    console.log('scene.archivoId', scene ? scene.archivoId : null);
+    console.log('scene.storagePath', scene ? scene.storagePath : null);
+    console.log('scene.provider', scene ? scene.provider : null);
+    console.log('coverModel', scene ? scene.coverModel : null);
+    console.log('hero.image_url', hero ? hero.image_url : null);
+    console.log('=========================');
   }
 
   function applyEditorPayload(payload) {
