@@ -1,6 +1,6 @@
 /**
- * Quotation Editor — V7.2.04 Hero Template Fidelity + Canvas Layout.
- * Hero Default = exact project-cover clone; Canvas = 16:9 (1920×1080) desktop frame.
+ * Quotation Editor — V7.2.05 ProjectCover SSOT in Canvas.
+ * Hero Default mounts shared ProjectCover (same module as Quotation Runtime).
  */
 var QuotationEditor = (function () {
   var CONTENT_GROUPS = [
@@ -232,127 +232,48 @@ var QuotationEditor = (function () {
     return 'Escena ' + (n < 10 ? '0' + n : String(n));
   }
 
-  function buildHeroDefaultElements(ctx) {
-    var projectName = '';
-    if (ctx && typeof ctx === 'object') {
-      projectName = String(ctx.name || ctx.nombre || '').trim();
+  function buildHeroDefaultScenePayload(ctx) {
+    var model;
+    if (typeof ProjectCover !== 'undefined' && ProjectCover.fromQuotationHeroState) {
+      var hs = null;
+      try {
+        if (typeof QuotationHero !== 'undefined' && QuotationHero.getState) {
+          hs = QuotationHero.getState();
+        }
+      } catch (e) { hs = null; }
+      model = ProjectCover.fromQuotationHeroState(hs, ctx || editorProjectCtx);
+    } else {
+      model = {
+        nombre: (ctx && (ctx.name || ctx.nombre)) || '',
+        eslogan: '',
+        botonIzquierdo: 'Explorar',
+        botonDerecho: 'Iniciar'
+      };
     }
 
-    var hs = null;
-    try {
-      if (typeof QuotationHero !== 'undefined' && QuotationHero.getState) {
-        hs = QuotationHero.getState();
+    var elements = (typeof ProjectCover !== 'undefined' && ProjectCover.elementDescriptors)
+      ? ProjectCover.elementDescriptors(function () { return nextId('el'); })
+      : [];
+
+    elements.forEach(function (el) {
+      if (!el.props) el.props = {};
+      if (el.role === 'title') el.props.text = model.nombre || '';
+      if (el.role === 'subtitle') el.props.text = model.eslogan || '';
+      if (el.role === 'explore') el.props.label = model.botonIzquierdo || 'Explorar';
+      if (el.role === 'start') el.props.label = model.botonDerecho || 'Iniciar';
+      if (el.role === 'back') el.props.label = model.backLabel || 'Demos';
+      if (el.role === 'logo') {
+        el.props.src = model.logoUrl || '';
+        el.props.show = !!model.showLogo;
       }
-    } catch (e) { hs = null; }
+    });
 
-    var hc = (hs && hs.heroContent) || {};
-    var branding = (hs && hs.branding) || {};
-    var logo = branding.logo || null;
-    var logoUrl = (logo && (logo.uploadedUrl || logo.previewUrl)) || '';
-    var showLogo = branding.showHeroLogo !== false && !!logoUrl;
-    var videoUrl = (hs && (hs.videoUrl || (hs.heroVideo && (hs.heroVideo.uploadedUrl || hs.heroVideo.previewUrl)))) || '';
-    var imageUrl = (hs && (hs.imageUrl || (hs.heroImage && (hs.heroImage.uploadedUrl || hs.heroImage.previewUrl)))) || '';
-    var mediaKind = 'ambient';
-    var mediaSrc = '';
-    if (videoUrl) {
-      mediaKind = 'video';
-      mediaSrc = videoUrl;
-    } else if (imageUrl) {
-      mediaKind = 'image';
-      mediaSrc = imageUrl;
-    }
-
-    var titleText = String(hc.nombre || projectName || '').trim();
-    var subtitleText = String(hc.eslogan || '').trim();
-    var exploreLabel = String(hc.botonIzquierdo || 'Explorar').trim() || 'Explorar';
-    var startLabel = String(hc.botonDerecho || 'Iniciar').trim() || 'Iniciar';
-    var showShare = hc.showShare !== false;
-    var showFullscreen = hc.showFullscreen !== false;
-
-    /* Exact leaf roles of the published project-cover (index.html + project-data). */
-    return [
-      {
-        id: nextId('el'),
-        type: 'container',
-        role: 'media',
-        props: { label: 'Fondo', media: mediaKind, src: mediaSrc }
-      },
-      {
-        id: nextId('el'),
-        type: 'container',
-        role: 'overlay',
-        props: { label: 'Overlay' }
-      },
-      {
-        id: nextId('el'),
-        type: 'image',
-        role: 'logo',
-        props: {
-          label: 'Logo',
-          src: logoUrl,
-          show: showLogo,
-          logoStyle: branding.logoStyle === 'avatar' ? 'avatar' : 'flat'
-        }
-      },
-      {
-        id: nextId('el'),
-        type: 'text',
-        role: 'title',
-        props: { label: 'Título', text: titleText }
-      },
-      {
-        id: nextId('el'),
-        type: 'text',
-        role: 'subtitle',
-        props: { label: 'Subtítulo', text: subtitleText }
-      },
-      {
-        id: nextId('el'),
-        type: 'button',
-        role: 'explore',
-        props: {
-          label: exploreLabel,
-          style: 'button',
-          action: null,
-          withIcon: true
-        }
-      },
-      {
-        id: nextId('el'),
-        type: 'button',
-        role: 'start',
-        props: { label: startLabel, style: 'button', action: null }
-      },
-      {
-        id: nextId('el'),
-        type: 'button',
-        role: 'back',
-        props: { label: 'Demos', style: 'button', action: null, show: true }
-      },
-      {
-        id: nextId('el'),
-        type: 'icon',
-        role: 'share',
-        props: { label: 'Compartir', show: showShare }
-      },
-      {
-        id: nextId('el'),
-        type: 'icon',
-        role: 'fullscreen',
-        props: { label: 'Fullscreen', show: showFullscreen }
-      },
-      {
-        id: nextId('el'),
-        type: 'icon',
-        role: 'assistant',
-        props: { label: 'Asistente', show: true }
-      }
-    ];
+    return { coverModel: model, elements: elements };
   }
 
-  /* @deprecated alias — V7.2.03 uses Hero Default clone */
+  /* @deprecated — V7.2.05 uses ProjectCover SSOT */
   function buildHeroTemplateElements() {
-    return buildHeroDefaultElements(editorProjectCtx);
+    return buildHeroDefaultScenePayload(editorProjectCtx).elements;
   }
 
   function elementByRole(scene, role) {
@@ -706,171 +627,27 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  var SHARE_FLOAT_SVG =
-    '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
-      '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>' +
-      '<path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/>' +
-    '</svg>';
-
-  var BACK_BTN_SVG =
-    '<svg class="project-back-btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
-      '<path d="M15 18l-6-6 6-6"/>' +
-    '</svg>';
-
-  function qeSelectedClass(el) {
-    return (el && state.selectedElementId === el.id) ? ' is-qe-selected' : '';
-  }
-
-  function qeElementAttr(el) {
-    if (!el) return '';
-    return ' data-qe-element="' + escapeHtml(el.id) + '"';
-  }
-
-  /**
-   * Exact clone of published project-cover DOM (index.html + project-data applyHeroModule).
-   * Uses real .project-cover* / float classes from components.css — no redesign.
-   */
-  function heroDefaultCloneHtml(scene) {
-    var media = elementByRole(scene, 'media');
-    var overlay = elementByRole(scene, 'overlay');
-    var logo = elementByRole(scene, 'logo');
-    var title = elementByRole(scene, 'title');
-    var subtitle = elementByRole(scene, 'subtitle');
-    var explore = elementByRole(scene, 'explore');
-    var start = elementByRole(scene, 'start');
-    var back = elementByRole(scene, 'back');
-    var share = elementByRole(scene, 'share');
-    var fullscreen = elementByRole(scene, 'fullscreen');
-    var assistant = elementByRole(scene, 'assistant');
-
-    var mediaProps = (media && media.props) || {};
-    var hasVideo = mediaProps.media === 'video' && !!mediaProps.src;
-    var hasImage = mediaProps.media === 'image' && !!mediaProps.src;
-    var ambient = !hasVideo && !hasImage;
-
-    var logoProps = (logo && logo.props) || {};
-    var logoSrc = String(logoProps.src || '').trim();
-    var showLogo = logoProps.show !== false && !!logoSrc;
-
-    var exploreLabel = (explore && explore.props && explore.props.label) || 'Explorar';
-    var startLabel = (start && start.props && start.props.label) || 'Iniciar';
-    var backLabel = (back && back.props && back.props.label) || 'Demos';
-    var showBack = !back || back.props.show !== false;
-    var showShare = !share || share.props.show !== false;
-    var showFullscreen = !fullscreen || fullscreen.props.show !== false;
-    var showAssistant = !assistant || assistant.props.show !== false;
-
-    var mediaHtml = '';
-    if (hasVideo) {
-      mediaHtml =
-        '<video class="project-cover-video' + qeSelectedClass(media) + '"' + qeElementAttr(media) +
-          ' muted loop playsinline autoplay src="' + escapeHtml(mediaProps.src) + '"></video>';
-    } else if (hasImage) {
-      mediaHtml =
-        '<img class="project-cover-video' + qeSelectedClass(media) + '"' + qeElementAttr(media) +
-          ' alt="" src="' + escapeHtml(mediaProps.src) + '">';
-    } else {
-      mediaHtml =
-        '<div class="project-cover-video qe-hero-clone__media-hit' + qeSelectedClass(media) + '"' +
-          qeElementAttr(media) + ' aria-label="Fondo" style="opacity:0"></div>';
-    }
-
-    var logoHtml = showLogo
-      ? ('<img class="project-cover-logo' +
-          (logoProps.logoStyle === 'avatar' ? ' is-avatar' : '') +
-          qeSelectedClass(logo) + '"' + qeElementAttr(logo) +
-          ' src="' + escapeHtml(logoSrc) + '" alt="">')
-      : ('<img class="project-cover-logo is-hidden' + qeSelectedClass(logo) + '"' +
-          qeElementAttr(logo) + ' alt="" hidden style="display:none">');
-
-    return '' +
-      '<section class="project-cover qe-hero-clone' + (ambient ? ' is-ambient-depth' : '') + '"' +
-        ' data-qe-hero-clone="hero-default"' +
-        ' data-hero-layout="centered"' +
-        ' data-hero-text-color="light"' +
-        ' data-hero-button-text-color="light">' +
-        mediaHtml +
-        '<div class="project-cover-overlay' + qeSelectedClass(overlay) + '"' +
-          qeElementAttr(overlay) + '></div>' +
-        '<div class="project-cover-content">' +
-          logoHtml +
-          '<div class="project-cover-hero-row">' +
-            '<div class="project-cover-hero-copy">' +
-              '<div class="project-cover-name' + qeSelectedClass(title) + '"' +
-                qeElementAttr(title) + '>' +
-                escapeHtml((title && title.props && title.props.text) || '') +
-              '</div>' +
-              '<div class="project-cover-tagline' + qeSelectedClass(subtitle) + '"' +
-                qeElementAttr(subtitle) + '>' +
-                escapeHtml((subtitle && subtitle.props && subtitle.props.text) || '') +
-              '</div>' +
-            '</div>' +
-            '<div class="project-cover-buttons">' +
-              '<div class="project-cover-slot project-cover-slot--start">' +
-                '<button type="button" class="project-cover-btn with-icon' +
-                  qeSelectedClass(explore) + '"' + qeElementAttr(explore) +
-                  ' aria-label="' + escapeHtml(exploreLabel) + '">' +
-                  '<span class="menu-btn-icon" aria-hidden="true">☰</span>' +
-                  escapeHtml(exploreLabel) +
-                '</button>' +
-              '</div>' +
-              '<div class="project-cover-slot project-cover-slot--end">' +
-                '<button type="button" class="project-cover-btn' +
-                  qeSelectedClass(start) + '"' + qeElementAttr(start) + '>' +
-                  escapeHtml(startLabel) +
-                '</button>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<a class="project-back-btn' + qeSelectedClass(back) + '"' + qeElementAttr(back) +
-          ' href="#"' +
-          (showBack ? '' : ' hidden aria-hidden="true"') + '>' +
-          BACK_BTN_SVG +
-          '<span class="project-back-btn__label">' + escapeHtml(backLabel) + '</span>' +
-        '</a>' +
-        '<button type="button" class="share-float' +
-          (showShare ? '' : ' is-float-hidden') +
-          qeSelectedClass(share) + '"' + qeElementAttr(share) +
-          (showShare ? '' : ' hidden aria-hidden="true"') +
-          ' aria-label="Compartir proyecto">' +
-          SHARE_FLOAT_SVG +
-        '</button>' +
-        '<div class="global-action-stack is-visible is-hero-only' +
-          (showFullscreen ? '' : ' is-float-hidden') + '"' +
-          (showFullscreen ? '' : ' hidden aria-hidden="true"') + '>' +
-          '<button type="button" class="global-fullscreen-btn is-visible' +
-            qeSelectedClass(fullscreen) + '"' + qeElementAttr(fullscreen) +
-            ' aria-label="Pantalla completa" aria-pressed="false">' +
-            '<span class="global-fullscreen-icon" aria-hidden="true">⛶</span>' +
-          '</button>' +
-        '</div>' +
-        '<button type="button" class="pa-fab' +
-          qeSelectedClass(assistant) + '"' + qeElementAttr(assistant) +
-          (showAssistant ? '' : ' hidden aria-hidden="true"') +
-          ' aria-label="Abrir asistente" aria-expanded="false">' +
-          '<span class="pa-fab__mark" aria-hidden="true"></span>' +
-        '</button>' +
-      '</section>';
+  function sceneUsesProjectCover(scene) {
+    return !!(scene && (scene.templateId === 'hero-default' || scene.coverModel));
   }
 
   function sceneCompositionHtml(scene) {
-    if (!scene || !scene.elements || !scene.elements.length) return '';
-    if (scene.templateId === 'hero-default' || scene.type === 'hero') {
+    if (!sceneUsesProjectCover(scene)) {
+      if (!scene || !scene.elements || !scene.elements.length) return '';
       return '' +
-        '<div class="qe-scene-comp qe-scene-comp--hero-clone" data-qe-scene-comp' +
-          ' data-element-types="' +
+        '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
           escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
-          heroDefaultCloneHtml(scene) +
+          '<div class="qe-canvas__empty">Escena sin composición.</div>' +
         '</div>';
     }
+    /* Host only — ProjectCover.mount() is the SSOT (same module as Runtime). */
     return '' +
-      '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
+      '<div class="qe-scene-comp qe-scene-comp--project-cover" data-qe-scene-comp' +
+        ' data-qe-cover-host' +
+        ' data-element-types="' +
         escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
-        '<div class="qe-canvas__empty">Escena sin composición.</div>' +
       '</div>';
   }
-
   function canvasChipsHtml(content) {
     if (!content) return '';
     var tools = toolsFor(content);
@@ -905,6 +682,9 @@ var QuotationEditor = (function () {
   }
 
   function stageBodyHtml(content, scene) {
+    if (sceneUsesProjectCover(scene)) {
+      return sceneCompositionHtml(scene) + canvasChipsHtml(content);
+    }
     var hasElements = scene && scene.elements && scene.elements.length;
     if (hasElements) {
       return sceneCompositionHtml(scene) + canvasChipsHtml(content);
@@ -944,7 +724,7 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="hero-default" role="menuitem">' +
             'Hero Default' +
           '</button>' +
-          '<p class="qe-scenes__menu-hint">Clon exacto del Hero publicado (project-cover).</p>' +
+          '<p class="qe-scenes__menu-hint">Misma ProjectCover que el Runtime (única fuente).</p>' +
         '</div>';
     }
 
@@ -1322,12 +1102,14 @@ var QuotationEditor = (function () {
     opts = opts || {};
     var templateId = opts.templateId || null;
     var fromHeroDefault = templateId === 'hero-default' || opts.fromTemplate === true;
+    var payload = fromHeroDefault ? buildHeroDefaultScenePayload(editorProjectCtx) : null;
     var scene = {
       id: nextId('sc'),
       name: fromHeroDefault ? 'Hero Default' : nextSceneName(),
       type: fromHeroDefault ? 'hero' : 'scene',
       templateId: fromHeroDefault ? 'hero-default' : null,
-      elements: fromHeroDefault ? buildHeroDefaultElements(editorProjectCtx) : []
+      coverModel: payload ? payload.coverModel : null,
+      elements: payload ? payload.elements : []
     };
     state.scenes.push(scene);
     state.activeSceneId = scene.id;
@@ -1336,6 +1118,69 @@ var QuotationEditor = (function () {
     state.sceneMenuOpen = false;
     markDirtyLocal();
     rerender();
+  }
+
+  function applyElementToCoverModel(scene, el) {
+    if (!scene || !scene.coverModel || !el) return;
+    var m = scene.coverModel;
+    var props = el.props || {};
+    if (el.role === 'title') {
+      m.nombre = props.text != null ? String(props.text) : String(props.label || '');
+    } else if (el.role === 'subtitle') {
+      m.eslogan = props.text != null ? String(props.text) : '';
+    } else if (el.role === 'explore') {
+      m.botonIzquierdo = props.label || 'Explorar';
+    } else if (el.role === 'start') {
+      m.botonDerecho = props.label || 'Iniciar';
+    } else if (el.role === 'back') {
+      m.backLabel = props.label || 'Demos';
+      if (props.show != null) m.showBack = props.show !== false;
+    } else if (el.role === 'logo') {
+      m.logoUrl = props.src || '';
+      m.showLogo = props.show !== false && !!m.logoUrl;
+      if (props.logoStyle) m.logoStyle = props.logoStyle;
+    } else if (el.role === 'share') {
+      if (props.show != null) m.showShare = props.show !== false;
+    } else if (el.role === 'fullscreen') {
+      if (props.show != null) m.showFullscreen = props.show !== false;
+    } else if (el.role === 'assistant') {
+      if (props.show != null) m.showAssistant = props.show !== false;
+    }
+  }
+
+  function mountActiveProjectCover() {
+    if (!rootEl) return;
+    var host = rootEl.querySelector('[data-qe-cover-host]');
+    if (!host) return;
+    var scene = activeScene();
+    if (!sceneUsesProjectCover(scene)) return;
+
+    if (typeof ProjectCover === 'undefined' || !ProjectCover.mount) {
+      host.innerHTML =
+        '<div class="qe-canvas__empty">ProjectCover no disponible (js/shared/project-cover.js).</div>';
+      return;
+    }
+
+    if (!scene.coverModel) {
+      var payload = buildHeroDefaultScenePayload(editorProjectCtx);
+      scene.coverModel = payload.coverModel;
+      if (!scene.elements || !scene.elements.length) scene.elements = payload.elements;
+    }
+
+    var elementIds = {};
+    (scene.elements || []).forEach(function (el) {
+      if (el && el.role) elementIds[el.role] = el.id;
+    });
+
+    ProjectCover.mount(host, scene.coverModel, {
+      idPrefix: 'qe' + String(scene.id || '').replace(/[^a-zA-Z0-9]/g, ''),
+      editable: true,
+      selectedElementId: state.selectedElementId,
+      elementIds: elementIds,
+      onSelect: function (id) {
+        selectElement(id);
+      }
+    });
   }
 
   function setFocusMode(on) {
@@ -1367,6 +1212,7 @@ var QuotationEditor = (function () {
     if (!el) return;
     if (!el.props) el.props = {};
     mutator(el);
+    applyElementToCoverModel(activeScene(), el);
     markDirtyLocal();
     rerender();
   }
@@ -1574,6 +1420,7 @@ var QuotationEditor = (function () {
     el.props.style = shim.style;
     el.props.action = shim.action;
     el.props.targetSceneId = shim.targetSceneId;
+    applyElementToCoverModel(activeScene(), el);
     markDirtyLocal();
     rerender();
   }
@@ -1583,6 +1430,7 @@ var QuotationEditor = (function () {
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     bindFocusEsc();
     bindCanvasFit();
+    mountActiveProjectCover();
     var editor = panel.querySelector('[data-qe-editor]') || panel;
 
     editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {

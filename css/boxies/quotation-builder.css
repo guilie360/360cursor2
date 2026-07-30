@@ -335,6 +335,7 @@
   z-index: 1;
 }
 
+.qe-scene-comp--project-cover,
 .qe-scene-comp--hero-clone {
   overflow: hidden;
 }
@@ -394,7 +395,15 @@
   z-index: 4;
 }
 
-.qe-canvas__design .qe-hero-clone.project-cover {
+/* ProjectCover SSOT inside 1920×1080 design frame — containment only */
+.qe-canvas__design .project-cover-root {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.qe-canvas__design .project-cover-root .project-cover {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -402,19 +411,14 @@
   min-height: 100%;
 }
 
-.qe-canvas__design .qe-hero-clone .qe-hero-clone__media-hit {
-  pointer-events: auto;
-  z-index: 0;
-}
-
-.qe-canvas__design .qe-hero-clone .project-back-btn,
-.qe-canvas__design .qe-hero-clone .share-float,
-.qe-canvas__design .qe-hero-clone .pa-fab,
-.qe-canvas__design .qe-hero-clone .global-action-stack {
+.qe-canvas__design .project-cover-root .project-back-btn,
+.qe-canvas__design .project-cover-root .share-float,
+.qe-canvas__design .project-cover-root .pa-fab,
+.qe-canvas__design .project-cover-root .global-action-stack {
   position: absolute;
 }
 
-.qe-canvas__design .qe-hero-clone .global-action-stack.is-visible {
+.qe-canvas__design .project-cover-root .global-action-stack.is-visible {
   display: flex;
   top: 24px;
   right: 24px;
@@ -423,7 +427,7 @@
   z-index: 5;
 }
 
-.qe-canvas__design .qe-hero-clone .pa-fab {
+.qe-canvas__design .project-cover-root .pa-fab {
   right: 1.15rem;
   bottom: 1.15rem;
   left: auto;
@@ -431,19 +435,19 @@
   z-index: 5;
 }
 
-.qe-canvas__design .qe-hero-clone .share-float {
+.qe-canvas__design .project-cover-root .share-float {
   bottom: 92px;
   right: 24px;
   z-index: 5;
 }
 
-.qe-canvas__design .qe-hero-clone .project-back-btn {
+.qe-canvas__design .project-cover-root .project-back-btn {
   top: 18px;
   left: 16px;
   z-index: 5;
 }
 
-.qe-canvas__design .qe-hero-clone [data-qe-element].is-qe-selected {
+.qe-canvas__design .project-cover-root [data-qe-element].is-qe-selected {
   outline: 1px solid rgba(255, 255, 255, 0.45);
   outline-offset: 3px;
 }

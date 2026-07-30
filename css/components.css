@@ -73,6 +73,12 @@ body,
   transform:translate(-50%, -50%);
   z-index:0;
 }
+/* Media slot wrapper used by ProjectCover SSOT (same absolute plane as video/image). */
+.project-cover-media-slot {
+  position:absolute;
+  inset:0;
+  z-index:0;
+}
 .project-cover-overlay {
   position:absolute;
   top:0; left:0;

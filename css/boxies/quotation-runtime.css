@@ -45,6 +45,18 @@ html, body.qr-host {
   min-height: 100dvh;
 }
 
+.qr-cover-host,
+.qr-cover-host .project-cover-root {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.qr-cover-host .project-cover {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .qr-cover__void {
   position: absolute;
   inset: 0;
