@@ -235,6 +235,14 @@ var QuotationEditor = (function () {
         expEditMode: state.expEditMode
       };
       sessionStorage.setItem(draftStorageKey(id), JSON.stringify(payload));
+      /* Keep live Preview envelope in sync with Editor SSOT. */
+      try {
+        prepareLivePreview({
+          id: id,
+          name: (editorProjectCtx && (editorProjectCtx.name || editorProjectCtx.nombre)) || '',
+          slug: (editorProjectCtx && editorProjectCtx.slug) || ''
+        });
+      } catch (eLiveSync) {}
     } catch (eDraft) { /* quota / private mode */ }
   }
 
@@ -1620,16 +1628,21 @@ var QuotationEditor = (function () {
   }
 
   function pushCoverToRuntime() {
-    var scene = activeScene();
-    if (!sceneUsesProjectCover(scene)) return;
     var iframe = runtimeIframe();
     if (!iframe || typeof QuotationRuntimeBridge === 'undefined') return;
-    ensureHeroCoverModel(scene);
-    QuotationRuntimeBridge.postToFrame(iframe, QuotationRuntimeBridge.TYPE.SET_MODEL, {
-      coverModel: scene.coverModel,
-      elementIds: coverElementIds(scene),
+    var scene = activeScene();
+    if (sceneUsesProjectCover(scene)) {
+      ensureHeroCoverModel(scene);
+    }
+    var doc = serializeDocument();
+    var payload = {
+      canvas: doc,
+      coverModel: (scene && scene.coverModel) || null,
+      elementIds: scene ? coverElementIds(scene) : {},
       selectedElementId: state.selectedElementId || null
-    });
+    };
+    var type = QuotationRuntimeBridge.TYPE.SET_DOCUMENT || QuotationRuntimeBridge.TYPE.SET_MODEL;
+    QuotationRuntimeBridge.postToFrame(iframe, type, payload);
   }
 
   function pushSelectionToRuntime() {
@@ -2542,6 +2555,28 @@ var QuotationEditor = (function () {
     return null;
   }
 
+  function resolvePersistableUrl(url, resourceId) {
+    var u = String(url || '').trim();
+    if (!u) return null;
+    if (u.indexOf('blob:') === 0 && resourceId) {
+      var res = contentById(resourceId);
+      if (res && res.remoteUrl) return res.remoteUrl;
+    }
+    return u;
+  }
+
+  function serializeSceneCover(sc) {
+    if (!sc || !sc.coverModel) return null;
+    var cm = typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel
+      ? ProjectCover.sanitizeModel(sc.coverModel)
+      : Object.assign({}, sc.coverModel);
+    if (cm) {
+      if (cm.imageUrl) cm.imageUrl = resolvePersistableUrl(cm.imageUrl, sc.resourceId) || cm.imageUrl;
+      if (cm.videoUrl) cm.videoUrl = resolvePersistableUrl(cm.videoUrl, sc.resourceId) || cm.videoUrl;
+    }
+    return cm;
+  }
+
   function serializeDocument() {
     ensureScenes();
     return {
@@ -2549,19 +2584,21 @@ var QuotationEditor = (function () {
       activeSceneId: state.activeSceneId || (state.scenes[0] && state.scenes[0].id) || null,
       scenes: state.scenes.map(function (sc) {
         ensureSceneOverlays(sc);
+        var mediaUrl = resolvePersistableUrl(
+          sc.mediaUrl ||
+            (sc.coverModel && (sc.coverModel.imageUrl || sc.coverModel.videoUrl)) ||
+            null,
+          sc.resourceId
+        );
+        var cover = serializeSceneCover(sc);
         return {
           id: sc.id,
           name: sc.name || 'Escena',
           type: sc.type || 'scene',
           templateId: sc.templateId || null,
-          coverModel: sc.coverModel
-            ? (typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel
-              ? ProjectCover.sanitizeModel(sc.coverModel)
-              : sc.coverModel)
-            : null,
+          coverModel: cover,
           resourceId: sc.resourceId || null,
-          mediaUrl: sc.mediaUrl ||
-            (sc.coverModel && (sc.coverModel.imageUrl || sc.coverModel.videoUrl)) || null,
+          mediaUrl: mediaUrl,
           mediaType: sc.mediaType ||
             (sc.coverModel && sc.coverModel.videoUrl ? 'video'
               : (sc.coverModel && sc.coverModel.imageUrl ? 'image' : null)),
@@ -2570,6 +2607,41 @@ var QuotationEditor = (function () {
         };
       })
     };
+  }
+
+  /** Flush overlay + write live ProjectDocument for Preview / Runtime. */
+  function prepareLivePreview(ctx) {
+    ctx = ctx || editorProjectCtx || {};
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) {}
+    }
+    var doc = serializeDocument();
+    var id = String(
+      (ctx && (ctx.id || ctx.projectId)) ||
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+    if (id) {
+      try {
+        var envelope = {
+          v: 1,
+          at: Date.now(),
+          projectId: id,
+          project: {
+            id: id,
+            nombre: (ctx && (ctx.name || ctx.nombre)) || '',
+            slug: (ctx && ctx.slug) || ''
+          },
+          canvas: doc
+        };
+        var key = (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.LIVE_KEY_PREFIX
+          ? QuotationRuntime.LIVE_KEY_PREFIX
+          : 'boxies_qe_live_doc_v1_') + id;
+        sessionStorage.setItem(key, JSON.stringify(envelope));
+      } catch (eLive) { /* quota */ }
+    }
+    return doc;
   }
 
   function hydrateFromHeroQuotation(hq, ctx) {
@@ -2705,8 +2777,8 @@ var QuotationEditor = (function () {
   }
 
   /**
-   * Persist canvas document as SSOT. Derives hero_quotation fields from entry coverModel
-   * so Runtime/Preview never need a second hero tree.
+   * Persist canvas ProjectDocument as SSOT.
+   * Always writes canvas — never no-ops when scenes exist without a Hero cover.
    */
   async function commit(adapter) {
     var projectId =
@@ -2714,12 +2786,6 @@ var QuotationEditor = (function () {
       (editorProjectCtx && editorProjectCtx.id) ||
       loadedProjectId;
     if (!projectId) return null;
-
-    var entry = entryCoverScene();
-    if (!entry || !entry.coverModel) {
-      /* No canvas hero yet — leave hero_quotation alone. */
-      return null;
-    }
 
     if (typeof ProyectosApi === 'undefined' || !ProyectosApi.updateHeroQuotation) {
       throw new Error('API de cotización no disponible.');
@@ -2731,26 +2797,42 @@ var QuotationEditor = (function () {
     }
 
     var doc = serializeDocument();
+    prepareLivePreview(editorProjectCtx || { id: projectId });
+
+    var entry = entryCoverScene();
+    var cover = entry && entry.coverModel
+      ? entry.coverModel
+      : (typeof ProjectCover !== 'undefined' && ProjectCover.blankModel
+        ? ProjectCover.blankModel()
+        : {
+          nombre: '',
+          eslogan: '',
+          botonIzquierdo: 'Explorar',
+          botonDerecho: 'Iniciar',
+          videoUrl: null,
+          imageUrl: null
+        });
+
     var payload = typeof ProjectCover !== 'undefined' && ProjectCover.toHeroQuotationPayload
-      ? ProjectCover.toHeroQuotationPayload(entry.coverModel, doc)
+      ? ProjectCover.toHeroQuotationPayload(cover, doc)
       : {
         heroContent: {
-          nombre: entry.coverModel.nombre || '',
-          eslogan: entry.coverModel.eslogan || '',
-          botonIzquierdo: entry.coverModel.botonIzquierdo || 'Explorar',
-          botonDerecho: entry.coverModel.botonDerecho || 'Iniciar',
-          showShare: entry.coverModel.showShare !== false,
-          showFullscreen: entry.coverModel.showFullscreen !== false
+          nombre: cover.nombre || '',
+          eslogan: cover.eslogan || '',
+          botonIzquierdo: cover.botonIzquierdo || 'Explorar',
+          botonDerecho: cover.botonDerecho || 'Iniciar',
+          showShare: cover.showShare !== false,
+          showFullscreen: cover.showFullscreen !== false
         },
         branding: {
-          showHeroLogo: !!entry.coverModel.showLogo,
-          logoStyle: entry.coverModel.logoStyle || 'flat',
-          logo: entry.coverModel.logoUrl
-            ? { name: 'Logo', uploadedUrl: entry.coverModel.logoUrl, size: 0 }
+          showHeroLogo: !!cover.showLogo,
+          logoStyle: cover.logoStyle || 'flat',
+          logo: cover.logoUrl
+            ? { name: 'Logo', uploadedUrl: cover.logoUrl, size: 0 }
             : null
         },
-        video_url: entry.coverModel.videoUrl || null,
-        image_url: entry.coverModel.imageUrl || null,
+        video_url: cover.videoUrl || null,
+        image_url: cover.imageUrl || null,
         canvas: doc
       };
 
@@ -2778,6 +2860,7 @@ var QuotationEditor = (function () {
     commit: commit,
     detachUi: detachUi,
     serializeDocument: serializeDocument,
+    prepareLivePreview: prepareLivePreview,
     syncCoverFromHeroPayload: syncCoverFromHeroPayload,
     _getState: function () { return state; },
     _resetDemo: function () {

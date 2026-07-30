@@ -1,21 +1,26 @@
 /**
- * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.14).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.26).
  *
  * Modes:
- *   - Runtime: public experience (/{slug} → here, Visualizar, Preview)
+ *   - Runtime: public experience (/{slug} → here, Visualizar)
+ *   - Preview live: Builder Preview — same ProjectDocument as Editor (session + bridge)
  *   - Canvas: virtual 1920×1080 viewport (editor iframe inside design frame)
  *
- * SSOT: hero_quotation.canvas.scenes[].interactions (BUTTON / HOTSPOT).
+ * SSOT: ProjectDocument at hero_quotation.canvas (scenes + interactions).
+ * QuotationRuntime.render(ProjectDocument) paints that document — never rebuilds demos.
  */
 var QuotationRuntime = (function () {
   var EXPERIENCE_TYPE = 'quotation';
   var DEFAULT_DESIGN_W = 1920;
   var DEFAULT_DESIGN_H = 1080;
+  var LIVE_KEY_PREFIX = 'boxies_qe_live_doc_v1_';
   var loaded = null;
   var coverHostEl = null;
   var stageEl = null;
   var editorMode = false;
   var canvasMode = false;
+  var previewMode = false;
+  var liveMode = false;
   var designWidth = DEFAULT_DESIGN_W;
   var designHeight = DEFAULT_DESIGN_H;
   var liveModel = null;
@@ -45,6 +50,7 @@ var QuotationRuntime = (function () {
       projectId: String(params.get('projectId') || params.get('proyectoId') || '').trim(),
       experienceType: String(params.get('experience_type') || params.get('experienceType') || '').trim().toLowerCase(),
       preview: params.get('preview') === '1' || params.get('preview') === 'true',
+      live: params.get('live') === '1' || params.get('live') === 'true',
       editor: params.get('editor') === '1' || params.get('editor') === 'true',
       canvas: params.get('canvas') === '1' || params.get('canvas') === 'true',
       designWidth: (dw > 0 ? dw : DEFAULT_DESIGN_W),
@@ -148,10 +154,15 @@ var QuotationRuntime = (function () {
       if (cm.videoUrl) return { url: cm.videoUrl, type: 'video' };
       if (cm.imageUrl) return { url: cm.imageUrl, type: 'image' };
     }
-    var hero = bundle && bundle.hero;
-    if (hero) {
-      if (hero.video_url) return { url: hero.video_url, type: 'video' };
-      if (hero.image_url) return { url: hero.image_url, type: 'image' };
+    /* Never borrow top-level hero media for arbitrary scenes — that shows stale backgrounds. */
+    var entry = entryScene(bundle);
+    var isEntry = !!(entry && scene && String(entry.id) === String(scene.id));
+    if (isEntry) {
+      var hero = bundle && bundle.hero;
+      if (hero) {
+        if (hero.video_url) return { url: hero.video_url, type: 'video' };
+        if (hero.image_url) return { url: hero.image_url, type: 'image' };
+      }
     }
     return null;
   }
@@ -201,7 +212,8 @@ var QuotationRuntime = (function () {
     if (!parentEl) return;
     if (ixLayerEl && ixLayerEl.parentNode) ixLayerEl.parentNode.removeChild(ixLayerEl);
     ixLayerEl = null;
-    if (!scene || editorMode || canvasMode) return;
+    /* Canvas editor iframe uses Experiencia overlay — skip Runtime ix there only. */
+    if (!scene || (editorMode && canvasMode)) return;
 
     var ixs = Array.isArray(scene.interactions) ? scene.interactions : [];
     var buttons = ixs.filter(isButtonIx);
@@ -303,7 +315,7 @@ var QuotationRuntime = (function () {
 
     if (isEntry && coverHostEl) {
       leaveStage();
-      paintInteractionLayer(coverHostEl, scene, !editorMode && !canvasMode);
+      paintInteractionLayer(coverHostEl, scene, interactionsInteractive());
       return;
     }
 
@@ -318,7 +330,7 @@ var QuotationRuntime = (function () {
     stageEl.classList.add('qr-stage--scene');
     stageEl.innerHTML = '';
     var mediaHost = paintSceneMedia(stageEl, scene, bundle);
-    paintInteractionLayer(mediaHost, scene, !editorMode && !canvasMode);
+    paintInteractionLayer(mediaHost, scene, interactionsInteractive());
     var back = document.createElement('button');
     back.type = 'button';
     back.className = 'project-cover-btn qr-stage__back';
@@ -329,6 +341,11 @@ var QuotationRuntime = (function () {
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
     }
+  }
+
+  function interactionsInteractive() {
+    /* Preview + published: clickable. Canvas editor: no (overlay owns edits). */
+    return !(editorMode && canvasMode);
   }
 
   function assertQuotationQuery(q) {
@@ -350,6 +367,7 @@ var QuotationRuntime = (function () {
     if (opts.projectId) q.projectId = String(opts.projectId).trim();
     if (opts.experienceType) q.experienceType = String(opts.experienceType).trim().toLowerCase();
     if (opts.preview != null) q.preview = !!opts.preview;
+    if (opts.live != null) q.live = !!opts.live;
     if (opts.editor != null) q.editor = !!opts.editor;
     if (opts.canvas != null) q.canvas = !!opts.canvas;
     if (opts.designWidth > 0) q.designWidth = opts.designWidth;
@@ -395,6 +413,7 @@ var QuotationRuntime = (function () {
       var q = 'experience_type=' + EXPERIENCE_TYPE;
       if (id) q = 'projectId=' + encodeURIComponent(id) + '&' + q;
       if (opts.preview) q += '&preview=1';
+      if (opts.live) q += '&live=1';
       if (opts.editor) q += '&editor=1';
       if (opts.canvas) {
         q += '&canvas=1';
@@ -406,6 +425,7 @@ var QuotationRuntime = (function () {
     if (id) url.searchParams.set('projectId', id);
     url.searchParams.set('experience_type', EXPERIENCE_TYPE);
     if (opts.preview) url.searchParams.set('preview', '1');
+    if (opts.live) url.searchParams.set('live', '1');
     if (opts.editor) url.searchParams.set('editor', '1');
     if (opts.canvas) {
       url.searchParams.set('canvas', '1');
@@ -473,6 +493,56 @@ var QuotationRuntime = (function () {
       hero: null,
       share: { og_image: '', og_title: '', og_description: '' }
     };
+  }
+
+  function liveStorageKey(projectId) {
+    return LIVE_KEY_PREFIX + String(projectId || '').trim();
+  }
+
+  function readLiveEnvelope(projectId) {
+    var id = String(projectId || '').trim();
+    if (!id) return null;
+    try {
+      var raw = sessionStorage.getItem(liveStorageKey(id));
+      if (!raw) return null;
+      var env = JSON.parse(raw);
+      if (!env || !env.canvas || typeof env.canvas !== 'object') return null;
+      return env;
+    } catch (eLive) {
+      return null;
+    }
+  }
+
+  /**
+   * Apply ProjectDocument as Runtime SSOT. Does not invent scenes/buttons/hero.
+   */
+  function applyDocument(canvasDoc, meta) {
+    meta = meta || {};
+    if (!loaded) loaded = blankEditorBundle();
+    if (!loaded.hero || typeof loaded.hero !== 'object') loaded.hero = {};
+    if (canvasDoc && typeof canvasDoc === 'object') {
+      loaded.hero.canvas = canvasDoc;
+    }
+    if (meta.project && typeof meta.project === 'object') {
+      loaded.project = Object.assign({}, loaded.project || {}, meta.project);
+    }
+    if (meta.coverModel) {
+      liveModel = meta.coverModel;
+    } else if (canvasDoc && Array.isArray(canvasDoc.scenes)) {
+      var entry = entryScene(loaded);
+      if (entry && entry.coverModel) liveModel = entry.coverModel;
+      else liveModel = null;
+    }
+    if (meta.elementIds && typeof meta.elementIds === 'object') {
+      liveElementIds = meta.elementIds;
+    }
+    if (meta.selectedElementId !== undefined) {
+      liveSelectedId = meta.selectedElementId || null;
+    }
+    if (canvasDoc && canvasDoc.activeSceneId) {
+      activeSceneId = String(canvasDoc.activeSceneId);
+    }
+    return loaded;
   }
 
   function resolvePaintModel(bundle) {
@@ -562,12 +632,12 @@ var QuotationRuntime = (function () {
     ProjectCover.mount(coverHostEl, model, opts);
     if (editorMode) postBoxes();
 
-    /* Visitor: paint hero-scene interactions over the cover. */
-    if (!editorMode && !canvasMode) {
+    /* Visitor + Builder Preview: paint hero-scene interactions over the cover. */
+    if (!(editorMode && canvasMode)) {
       var entry = entryScene(bundle || loaded);
       if (entry) {
         activeSceneId = String(entry.id);
-        paintInteractionLayer(coverHostEl, entry, true);
+        paintInteractionLayer(coverHostEl, entry, interactionsInteractive());
       }
     }
   }
@@ -610,9 +680,9 @@ var QuotationRuntime = (function () {
       try { video.play(); } catch (e2) {}
     }
     var entry = entryScene(loaded);
-    if (entry && !editorMode && !canvasMode) {
+    if (entry && !(editorMode && canvasMode)) {
       activeSceneId = String(entry.id);
-      paintInteractionLayer(coverHostEl, entry, true);
+      paintInteractionLayer(coverHostEl, entry, interactionsInteractive());
     }
   }
 
@@ -627,6 +697,9 @@ var QuotationRuntime = (function () {
     }
 
     var model = resolvePaintModel(bundle);
+    if (!model && typeof ProjectCover.blankModel === 'function') {
+      model = ProjectCover.blankModel();
+    }
     if (!model) {
       host.innerHTML =
         '<div class="qr-error" role="alert">' +
@@ -647,24 +720,67 @@ var QuotationRuntime = (function () {
     host.appendChild(stageEl);
 
     remountCover(bundle);
+
+    /* If active scene is not the entry cover, jump straight to it (live Preview). */
+    var doc = canvasDoc(bundle || loaded);
+    if (doc && doc.activeSceneId && !(editorMode && canvasMode)) {
+      var entry = entryScene(bundle || loaded);
+      if (!entry || String(entry.id) !== String(doc.activeSceneId)) {
+        goToScene(doc.activeSceneId);
+      }
+    }
   }
 
   function applyEditorPayload(payload) {
     payload = payload || {};
-    if (payload.coverModel) {
-      liveModel = payload.coverModel;
+    if (payload.canvas && typeof payload.canvas === 'object') {
+      applyDocument(payload.canvas, {
+        project: payload.project || null,
+        coverModel: payload.coverModel || null,
+        elementIds: payload.elementIds,
+        selectedElementId: payload.selectedElementId
+      });
+    } else {
+      if (payload.coverModel) {
+        liveModel = payload.coverModel;
+      }
+      if (payload.elementIds && typeof payload.elementIds === 'object') {
+        liveElementIds = payload.elementIds;
+      }
+      if (payload.selectedElementId !== undefined) {
+        liveSelectedId = payload.selectedElementId || null;
+      }
+      if (!loaded) loaded = blankEditorBundle();
     }
-    if (payload.elementIds && typeof payload.elementIds === 'object') {
-      liveElementIds = payload.elementIds;
+    var host = document.getElementById('quotationRuntimeRoot');
+    /* Canvas editor: soft remount — parent Experiencia overlay owns the chrome. */
+    if (editorMode && canvasMode) {
+      if (coverHostEl) remountCover(loaded);
+      else if (host) paintHero(host, loaded);
+      return;
     }
-    if (payload.selectedElementId !== undefined) {
-      liveSelectedId = payload.selectedElementId || null;
+    if (coverHostEl && payload.canvas) {
+      if (host) paintHero(host, loaded);
+      else remountCover(loaded);
+    } else if (coverHostEl) {
+      remountCover(loaded);
+    } else if (host) {
+      paintHero(host, loaded);
     }
-    if (!loaded) loaded = blankEditorBundle();
-    if (coverHostEl) remountCover(loaded);
-    else if (document.getElementById('quotationRuntimeRoot')) {
-      paintHero(document.getElementById('quotationRuntimeRoot'), loaded);
-    }
+  }
+
+  /**
+   * Public API — paint exactly this ProjectDocument (WYSIWYG).
+   * @param {object} projectDocument canvas doc { version, activeSceneId, scenes }
+   * @param {HTMLElement=} host
+   * @param {{project?:object,coverModel?:object}=} meta
+   */
+  function render(projectDocument, host, meta) {
+    host = host || document.getElementById('quotationRuntimeRoot');
+    if (!host) throw new Error('Falta #quotationRuntimeRoot');
+    applyDocument(projectDocument, meta || {});
+    paintHero(host, loaded);
+    return loaded;
   }
 
   function onBridgeMessage(ev) {
@@ -674,7 +790,7 @@ var QuotationRuntime = (function () {
     var payload = ev.data.payload || {};
     var T = QuotationRuntimeBridge.TYPE;
 
-    if (type === T.SET_MODEL) {
+    if (type === T.SET_DOCUMENT || type === T.SET_MODEL) {
       applyEditorPayload(payload);
       return;
     }
@@ -691,6 +807,14 @@ var QuotationRuntime = (function () {
     if (type === T.REFRESH) {
       var q = readQuery();
       if (!q.projectId) return;
+      if (q.live || liveMode) {
+        var env = readLiveEnvelope(q.projectId);
+        if (env && env.canvas) {
+          applyDocument(env.canvas, { project: env.project || null });
+          paintHero(document.getElementById('quotationRuntimeRoot'), loaded);
+          return;
+        }
+      }
       fetchBundle(q.projectId).then(function (bundle) {
         loaded = bundle;
         if (!liveModel && bundle.hero) {
@@ -732,8 +856,16 @@ var QuotationRuntime = (function () {
     designWidth = q.designWidth || DEFAULT_DESIGN_W;
     designHeight = q.designHeight || DEFAULT_DESIGN_H;
     editorMode = !!q.editor;
+    previewMode = !!q.preview;
+    liveMode = !!q.live || !!opts.liveDocument;
     if (editorMode) {
       document.documentElement.classList.add('qr-editor-mode');
+    }
+    if (previewMode) {
+      document.documentElement.classList.add('qr-preview-mode');
+    }
+    /* Bridge for Canvas editor AND Builder live Preview. */
+    if (editorMode || liveMode || previewMode) {
       bindBridge();
     }
 
@@ -747,17 +879,42 @@ var QuotationRuntime = (function () {
     host.innerHTML = '<p class="qr-loading">Cargando cotización…</p>';
 
     try {
+      var liveEnv = null;
+      if (opts.liveDocument && opts.liveDocument.canvas) {
+        liveEnv = opts.liveDocument;
+      } else if (liveMode && q.projectId) {
+        liveEnv = readLiveEnvelope(q.projectId);
+      }
+
       if (q.projectId) {
-        var bundle = await fetchBundle(q.projectId);
-        loaded = bundle;
-        if (!liveModel) {
+        try {
+          var bundle = await fetchBundle(q.projectId);
+          loaded = bundle;
+        } catch (eFetch) {
+          if (!liveEnv) throw eFetch;
+          loaded = blankEditorBundle();
+          loaded.project = { id: q.projectId, nombre: '', slug: '' };
+        }
+        if (liveEnv && liveEnv.canvas) {
+          applyDocument(liveEnv.canvas, {
+            project: liveEnv.project || loaded.project,
+            coverModel: null
+          });
+        } else if (!liveModel && loaded.hero) {
           liveModel = typeof ProjectCover !== 'undefined' && ProjectCover.resolveModel
-            ? ProjectCover.resolveModel(bundle.hero, bundle.project)
+            ? ProjectCover.resolveModel(loaded.hero, loaded.project)
             : null;
         }
-        paintHero(host, bundle);
-        document.title = (bundle.project.nombre || 'Cotización') +
-          (canvasMode ? ' · Canvas' : (editorMode ? ' · Editor' : ''));
+        paintHero(host, loaded);
+        document.title = (loaded.project && loaded.project.nombre
+          ? loaded.project.nombre
+          : 'Cotización') +
+          (canvasMode ? ' · Canvas' : (previewMode ? ' · Preview' : (editorMode ? ' · Editor' : '')));
+      } else if (liveEnv && liveEnv.canvas) {
+        loaded = blankEditorBundle();
+        applyDocument(liveEnv.canvas, { project: liveEnv.project || null });
+        paintHero(host, loaded);
+        document.title = 'Cotización · Preview';
       } else if (editorMode || canvasMode) {
         loaded = blankEditorBundle();
         liveModel = liveModel || (typeof ProjectCover !== 'undefined' && ProjectCover.blankModel
@@ -767,15 +924,17 @@ var QuotationRuntime = (function () {
         document.title = 'Cotización · Canvas';
       }
 
-      if (editorMode && typeof QuotationRuntimeBridge !== 'undefined') {
+      if ((editorMode || liveMode || previewMode) && typeof QuotationRuntimeBridge !== 'undefined') {
         QuotationRuntimeBridge.postToParent(QuotationRuntimeBridge.TYPE.READY, {
           projectId: q.projectId || null,
-          editor: true,
+          editor: !!editorMode,
+          preview: !!previewMode,
+          live: !!liveMode,
           canvas: canvasMode,
           designWidth: designWidth,
           designHeight: designHeight
         });
-        postBoxes();
+        if (editorMode) postBoxes();
       }
       return loaded;
     } catch (err) {
@@ -788,13 +947,18 @@ var QuotationRuntime = (function () {
     EXPERIENCE_TYPE: EXPERIENCE_TYPE,
     DEFAULT_DESIGN_W: DEFAULT_DESIGN_W,
     DEFAULT_DESIGN_H: DEFAULT_DESIGN_H,
+    LIVE_KEY_PREFIX: LIVE_KEY_PREFIX,
     href: href,
     boot: boot,
+    render: render,
     readQuery: readQuery,
     applyCanvasViewport: applyCanvasViewport,
+    applyDocument: applyDocument,
     getLoaded: function () { return loaded; },
     applyEditorPayload: applyEditorPayload,
     collectBoxes: collectBoxes,
-    isCanvasMode: function () { return canvasMode; }
+    isCanvasMode: function () { return canvasMode; },
+    isPreviewMode: function () { return previewMode; },
+    isLiveMode: function () { return liveMode; }
   };
 })();

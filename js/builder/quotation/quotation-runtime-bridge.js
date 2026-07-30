@@ -9,6 +9,7 @@ var QuotationRuntimeBridge = (function () {
   var TYPE = {
     /* Editor → Runtime */
     SET_MODEL: 'set-model',
+    SET_DOCUMENT: 'set-document',
     SET_SELECTION: 'set-selection',
     REFRESH: 'refresh',
     REQUEST_BOXES: 'request-boxes',

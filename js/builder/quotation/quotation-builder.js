@@ -226,6 +226,7 @@ var QuotationBuilderView = (function () {
       } else if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
         await BuilderConfig.saveShareMeta(configAdapter(), panel);
       }
+      /* Hero may upload media; Editor commit LAST so ProjectDocument (canvas) is SSOT. */
       if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
         await QuotationHero.commit(configAdapter());
       }
@@ -264,6 +265,7 @@ var QuotationBuilderView = (function () {
       if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
         try { await QuotationHero.commit(configAdapter()); } catch (eHero) {}
       }
+      /* Editor LAST — published Runtime must match Editor ProjectDocument. */
       if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
         try { await QuotationEditor.commit(configAdapter()); } catch (eEditor) {}
       }

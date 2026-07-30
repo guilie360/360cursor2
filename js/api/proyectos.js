@@ -592,20 +592,28 @@ var ProyectosApi = (function () {
       if (!sc || typeof sc !== 'object') return null;
       var mediaType = heroText(sc.mediaType) || null;
       if (mediaType !== 'image' && mediaType !== 'video') mediaType = null;
+      var mediaUrl = heroText(sc.mediaUrl) || null;
+      /* Never persist blob: into published Runtime — prefer empty so live Preview handles blobs. */
+      if (mediaUrl && mediaUrl.indexOf('blob:') === 0) mediaUrl = null;
+      var cover = sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null;
+      if (cover) {
+        if (cover.imageUrl && String(cover.imageUrl).indexOf('blob:') === 0) cover.imageUrl = null;
+        if (cover.videoUrl && String(cover.videoUrl).indexOf('blob:') === 0) cover.videoUrl = null;
+      }
       return {
         id: heroText(sc.id) || null,
         name: heroText(sc.name) || 'Escena',
         type: heroText(sc.type) || 'scene',
         templateId: heroText(sc.templateId) || null,
-        coverModel: sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null,
+        coverModel: cover,
         resourceId: heroText(sc.resourceId) || null,
-        mediaUrl: heroText(sc.mediaUrl) || null,
+        mediaUrl: mediaUrl,
         mediaType: mediaType,
         elements: sanitizeCanvasElements(sc.elements),
         interactions: sanitizeCanvasInteractions(sc.interactions)
       };
     }).filter(function (sc) { return sc && sc.id; });
-    if (!outScenes.length) return null;
+    /* Allow empty ProjectDocument (0 scenes) — Editor is SSOT. */
     return {
       version: Number(doc.version) || 1,
       activeSceneId: heroText(doc.activeSceneId) || (outScenes[0] && outScenes[0].id) || null,
@@ -651,6 +659,7 @@ var ProyectosApi = (function () {
 
     var canvas = sanitizeCanvasDocument(payload.canvas);
     if (canvas) out.canvas = canvas;
+    else if (payload.canvas === null) out.canvas = { version: 1, activeSceneId: null, scenes: [] };
     return out;
   }
 
