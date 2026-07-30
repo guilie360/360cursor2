@@ -256,15 +256,16 @@
 
 .qe-stage-unit .qe-dock {
   width: max-content;
-  max-width: calc(100% - 32px);
+  max-width: none;
   box-sizing: border-box;
+  align-self: center;
   margin-left: auto;
   margin-right: auto;
   transition: max-width 180ms ease;
 }
 
 .qe-stage-unit .qe-dock[data-mode="actions"] {
-  max-width: calc(100% - 32px);
+  max-width: none;
 }
 
 .qe-stage-unit .qe-canvas__stage {
@@ -589,7 +590,7 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.54–V7.2.57 — Unified pill dock (create ↔ actions) ── */
+/* ── V7.2.54–V7.2.58 — Unified pill dock (create ↔ actions) ── */
 
 .qe-dock {
   flex: 0 0 auto;
@@ -597,7 +598,7 @@
   align-items: stretch;
   justify-content: center;
   width: max-content;
-  max-width: calc(100% - 32px);
+  max-width: none;
   height: 52px;
   margin: 16px auto 4px;
   padding: 0;
@@ -611,7 +612,8 @@
 
 .qe-dock[data-mode="create"],
 .qe-dock[data-mode="actions"] {
-  max-width: calc(100% - 32px);
+  width: max-content;
+  max-width: none;
 }
 
 .qe-dock__rail {

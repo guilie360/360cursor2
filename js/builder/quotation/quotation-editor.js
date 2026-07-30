@@ -1680,9 +1680,15 @@ var QuotationEditor = (function () {
       scenes.style.flex = '0 0 auto';
     }
     if (dock) {
-      dock.style.width = natW + 'px';
+      /* V7.2.58 — compact pill: never stretch to canvas width. */
+      dock.style.width = '';
+      dock.style.maxWidth = '';
+      dock.style.minWidth = '';
       dock.style.flex = '0 0 auto';
-      dock.style.display = 'grid';
+      dock.style.alignSelf = 'center';
+      dock.style.display = '';
+      dock.style.marginLeft = 'auto';
+      dock.style.marginRight = 'auto';
     }
 
     /* Force layout before measuring chrome. */
