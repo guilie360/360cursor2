@@ -8,10 +8,13 @@
 var QuotationHero = (function () {
   var BODY_SELECTOR = '[data-builder-page-body]';
   var STORAGE_FOLDERS = {
-    video: 'hero_quotation/video',
-    image: 'hero_quotation/image',
-    logo: 'hero_quotation/logo'
+    video: 'videos',
+    image: 'images',
+    logo: 'ui'
   };
+  var QE_HERO_NODE_ID = 'qe-hero';
+  var QE_HERO_NODE_SLUG = 'quotation-hero';
+  var heroBunnyReady = false;
 
   var heroState = null;
   var loadedProjectId = null;
@@ -226,6 +229,7 @@ var QuotationHero = (function () {
     var id = String(projectId || '').trim();
     if (loadPromise && loadedProjectId === id) return loadPromise;
     loadedProjectId = id;
+    heroBunnyReady = false;
 
     if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
       heroState = blankState();
@@ -246,28 +250,50 @@ var QuotationHero = (function () {
     return loadPromise;
   }
 
-  function resolveConstructoraId() {
-    return (projectCtx && projectCtx.constructora_id) ||
-      (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
-        ? AdminState.getConstructoraId()
-        : null);
+  async function ensureHeroBunnyStructure(projectId, slug) {
+    if (heroBunnyReady) return;
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.ensureNodeStructure) {
+      throw new Error('BunnyMediaApi no disponible.');
+    }
+    await BunnyMediaApi.ensureNodeStructure(
+      projectId,
+      slug,
+      QE_HERO_NODE_SLUG,
+      ['images', 'videos', 'ui']
+    );
+    heroBunnyReady = true;
   }
 
-  async function uploadPending(kind, projectId, constructoraId, media) {
+  async function uploadPending(kind, projectId, media) {
     if (!media || !media.file) return media && media.uploadedUrl ? media.uploadedUrl : null;
-    if (typeof StorageApi === 'undefined' || !StorageApi.upload) {
-      throw new Error('Storage no disponible: no se pueden subir archivos del hero.');
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadAndSync) {
+      throw new Error('BunnyMediaApi no disponible: no se pueden subir archivos del hero.');
     }
-    var uploaded = await StorageApi.upload(
-      constructoraId,
+    var slug = String((projectCtx && projectCtx.slug) || '').trim();
+    if (!slug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var category = STORAGE_FOLDERS[kind] || 'images';
+    await ensureHeroBunnyStructure(projectId, slug);
+    var result = await BunnyMediaApi.uploadAndSync(
+      null,
       projectId,
-      STORAGE_FOLDERS[kind],
-      media.file
+      category,
+      media.file,
+      {
+        nodeId: QE_HERO_NODE_ID,
+        nodeSlug: QE_HERO_NODE_SLUG,
+        showroomSlug: slug,
+        scope: 'media'
+      }
     );
     media.file = null;
-    media.uploadedUrl = uploaded.publicUrl;
+    media.uploadedUrl = result.publicUrl;
+    media.storagePath = result.storagePath || null;
+    media.archivoId = (result.archivo && result.archivo.id) || null;
+    media.provider = 'bunny';
     media.status = 'synced';
-    return uploaded.publicUrl;
+    return result.publicUrl;
   }
 
   /** Persists the hero into `hero_quotation`. Safe to call when the panel never mounted. */
@@ -296,17 +322,9 @@ var QuotationHero = (function () {
       heroState.branding.logoStyle = read.brandingPartial.logoStyle;
     }
 
-    var constructoraId = resolveConstructoraId();
-    if (!constructoraId &&
-        ((heroState.heroVideo && heroState.heroVideo.file) ||
-         (heroState.heroImage && heroState.heroImage.file) ||
-         (heroState.branding.logo && heroState.branding.logo.file))) {
-      throw new Error('No se pudo determinar la constructora para subir los archivos del hero.');
-    }
-
-    var videoUrl = await uploadPending('video', projectId, constructoraId, heroState.heroVideo);
-    var imageUrl = await uploadPending('image', projectId, constructoraId, heroState.heroImage);
-    var logoUrl = await uploadPending('logo', projectId, constructoraId, heroState.branding.logo);
+    var videoUrl = await uploadPending('video', projectId, heroState.heroVideo);
+    var imageUrl = await uploadPending('image', projectId, heroState.heroImage);
+    var logoUrl = await uploadPending('logo', projectId, heroState.branding.logo);
 
     heroState.videoUrl = videoUrl || heroState.videoUrl || null;
     heroState.imageUrl = imageUrl || heroState.imageUrl || null;

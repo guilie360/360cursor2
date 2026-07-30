@@ -113,14 +113,6 @@ var QuotationEditor = (function () {
     }
   }
 
-  function resolveConstructoraId() {
-    return (editorProjectCtx && editorProjectCtx.constructora_id) ||
-      (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
-        ? AdminState.getConstructoraId()
-        : null) ||
-      null;
-  }
-
   function resolveProjectId() {
     return String(
       loadedProjectId ||
@@ -129,15 +121,40 @@ var QuotationEditor = (function () {
     ).trim();
   }
 
-  /** Storage folder under constructora/project — never blob-only resources. */
-  function storageFolderForItem(item) {
-    if (!item) return 'quotation/library';
-    if (item.group === 'videos' || item.media === 'video') return 'quotation/videos';
-    if (item.group === 'hero') {
-      return item.media === 'video' ? 'quotation/hero-video' : 'quotation/hero-image';
+  function resolveShowroomSlug() {
+    return String((editorProjectCtx && editorProjectCtx.slug) || '').trim();
+  }
+
+  /** Fixed Bunny media node for Quotation library (decoupled from Showroom canvas nodes). */
+  var QE_BUNNY_NODE_ID = 'qe-library';
+  var QE_BUNNY_NODE_SLUG = 'quotation';
+  var bunnyStructureReady = false;
+
+  function bunnyCategoryForItem(item) {
+    if (!item) return 'images';
+    if (item.group === 'videos' || item.media === 'video') return 'videos';
+    if (item.group === 'pdf' || item.media === 'pdf') return 'documents';
+    if (item.group === 'hero' && item.media === 'video') return 'videos';
+    return 'images';
+  }
+
+  async function ensureQuotationBunnyStructure() {
+    if (bunnyStructureReady) return;
+    var projectId = resolveProjectId();
+    var slug = resolveShowroomSlug();
+    if (!projectId || !slug) {
+      throw new Error('projectId y slug son requeridos para Bunny Storage.');
     }
-    if (item.group === 'pdf') return 'quotation/pdf';
-    return 'quotation/renders';
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.ensureNodeStructure) {
+      throw new Error('BunnyMediaApi no disponible.');
+    }
+    await BunnyMediaApi.ensureNodeStructure(
+      projectId,
+      slug,
+      QE_BUNNY_NODE_SLUG,
+      ['images', 'videos', 'documents', 'ui']
+    );
+    bunnyStructureReady = true;
   }
 
   function publicUrlOf(item) {
@@ -150,13 +167,16 @@ var QuotationEditor = (function () {
     return u || null;
   }
 
-  function applyPublicUrlToItem(item, path, publicUrl) {
-    if (!item || !publicUrl) return;
+  function applyBunnyResultToItem(item, result) {
+    if (!item || !result) return;
     revokePreview(item);
-    item.storagePath = path || item.storagePath || null;
-    item.publicUrl = publicUrl;
-    item.remoteUrl = publicUrl;
-    item.previewUrl = publicUrl;
+    var pub = result.publicUrl || null;
+    item.storagePath = result.storagePath || item.storagePath || null;
+    item.publicUrl = pub;
+    item.remoteUrl = pub;
+    item.previewUrl = pub;
+    item.provider = 'bunny';
+    item.archivoId = (result.archivo && result.archivo.id) || item.archivoId || null;
     item.file = null;
     item.uploadStatus = 'synced';
     item.projectId = resolveProjectId() || item.projectId || null;
@@ -186,6 +206,7 @@ var QuotationEditor = (function () {
     if (!item) return null;
     if (publicUrlOf(item) && !item.file) {
       item.uploadStatus = 'synced';
+      item.provider = item.provider || 'bunny';
       return item;
     }
     if (!item.file) {
@@ -193,29 +214,36 @@ var QuotationEditor = (function () {
       return item;
     }
     var projectId = resolveProjectId();
-    var constructoraId = resolveConstructoraId();
+    var slug = resolveShowroomSlug();
     if (!projectId) {
-      throw new Error('No hay projectId para subir el recurso a Storage.');
+      throw new Error('No hay projectId para subir el recurso a Bunny.');
     }
-    if (!constructoraId) {
-      throw new Error('No se pudo determinar la constructora para subir archivos.');
+    if (!slug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
     }
-    if (typeof StorageApi === 'undefined' || !StorageApi.upload) {
-      throw new Error('Storage no disponible: no se pueden subir recursos de la biblioteca.');
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadAndSync) {
+      throw new Error('BunnyMediaApi no disponible: no se pueden subir recursos.');
     }
     item.uploadStatus = 'uploading';
-    var uploaded = await StorageApi.upload(
-      constructoraId,
+    await ensureQuotationBunnyStructure();
+    var result = await BunnyMediaApi.uploadAndSync(
+      null,
       projectId,
-      storageFolderForItem(item),
-      item.file
+      bunnyCategoryForItem(item),
+      item.file,
+      {
+        nodeId: QE_BUNNY_NODE_ID,
+        nodeSlug: QE_BUNNY_NODE_SLUG,
+        showroomSlug: slug,
+        scope: 'media'
+      }
     );
-    applyPublicUrlToItem(item, uploaded.path, uploaded.publicUrl);
+    applyBunnyResultToItem(item, result);
     syncScenesForResource(item);
     if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onResourceAdded) {
       QuotationPersistAudit.onResourceAdded(item, {
         projectId: projectId,
-        slug: editorProjectCtx && editorProjectCtx.slug,
+        slug: slug,
         id: projectId
       });
     }
@@ -386,6 +414,7 @@ var QuotationEditor = (function () {
         c.publicUrl = pub;
         c.remoteUrl = pub;
         c.previewUrl = pub;
+        c.provider = c.provider || 'bunny';
         c.file = null;
         c.uploadStatus = 'synced';
         return c;
@@ -1708,7 +1737,7 @@ var QuotationEditor = (function () {
     var url = publicUrlOf(res);
     if (!url) {
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-        AdminNotify.error('El recurso aún no tiene publicUrl. Espera a que termine la subida a Storage.');
+        AdminNotify.error('El recurso aún no tiene publicUrl. Espera a que termine la subida a Bunny.');
       }
       return;
     }
@@ -1716,6 +1745,8 @@ var QuotationEditor = (function () {
     scene.mediaUrl = url;
     scene.mediaType = isVideo ? 'video' : 'image';
     scene.storagePath = res.storagePath || null;
+    scene.archivoId = res.archivoId || null;
+    scene.provider = res.provider || 'bunny';
     if (scene.type === 'hero' || scene.templateId === 'hero-default') {
       applyResourceToCoverModel(scene, res);
     } else {
@@ -2200,6 +2231,8 @@ var QuotationEditor = (function () {
         remoteUrl: null,
         publicUrl: null,
         storagePath: null,
+        provider: null,
+        archivoId: null,
         projectId: resolveProjectId() || null,
         uploadStatus: 'pending',
         file: file
@@ -2218,7 +2251,7 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     rerender();
 
-    /* V7.2.28 — Upload immediately to Supabase Storage; replace blob with publicUrl. */
+    /* V7.2.29 — Upload immediately via BunnyMediaApi (sole media provider). */
     (function uploadCreated(list) {
       var chain = Promise.resolve();
       list.forEach(function (item) {
@@ -2796,6 +2829,8 @@ var QuotationEditor = (function () {
           remoteUrl: pub,
           previewUrl: pub,
           storagePath: c.storagePath || null,
+          archivoId: c.archivoId || null,
+          provider: c.provider || 'bunny',
           projectId: c.projectId || resolveProjectId() || null
         };
       }).filter(Boolean),
@@ -2834,6 +2869,8 @@ var QuotationEditor = (function () {
           coverModel: cover,
           resourceId: sc.resourceId || null,
           storagePath: (res && res.storagePath) || sc.storagePath || null,
+          archivoId: (res && res.archivoId) || sc.archivoId || null,
+          provider: (res && res.provider) || sc.provider || (mediaUrl ? 'bunny' : null),
           publicUrl: mediaUrl,
           mediaUrl: mediaUrl,
           mediaType: sc.mediaType ||
@@ -2910,6 +2947,8 @@ var QuotationEditor = (function () {
           remoteUrl: pub,
           previewUrl: pub,
           storagePath: c.storagePath || null,
+          archivoId: c.archivoId || null,
+          provider: c.provider || 'bunny',
           projectId: c.projectId || resolveProjectId() || null,
           uploadStatus: 'synced',
           file: null
@@ -2941,6 +2980,8 @@ var QuotationEditor = (function () {
           coverModel: sc.coverModel || null,
           resourceId: sc.resourceId || null,
           storagePath: sc.storagePath || null,
+          archivoId: sc.archivoId || null,
+          provider: sc.provider || null,
           mediaUrl: mediaUrl,
           mediaType: sc.mediaType || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
@@ -3034,6 +3075,7 @@ var QuotationEditor = (function () {
     }
 
     loadedProjectId = id;
+    bunnyStructureReady = false;
     if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
       if (restoreDraft(id)) {
         documentReady = true;

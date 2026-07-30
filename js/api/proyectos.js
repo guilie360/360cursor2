@@ -603,6 +603,8 @@ var ProyectosApi = (function () {
         coverModel: cover,
         resourceId: heroText(sc.resourceId) || null,
         storagePath: heroText(sc.storagePath) || null,
+        archivoId: heroText(sc.archivoId) || null,
+        provider: heroText(sc.provider) || (mediaUrl ? 'bunny' : null),
         publicUrl: mediaUrl,
         mediaUrl: mediaUrl,
         mediaType: mediaType,
@@ -639,6 +641,8 @@ var ProyectosApi = (function () {
         remoteUrl: pub,
         previewUrl: pub,
         storagePath: heroText(c.storagePath) || null,
+        archivoId: heroText(c.archivoId) || null,
+        provider: heroText(c.provider) || 'bunny',
         projectId: heroText(c.projectId) || null
       };
     }).filter(Boolean);
