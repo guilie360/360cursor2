@@ -6944,16 +6944,16 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-ui-btn {
   position: absolute;
-  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg)) scale(var(--btn-scale, 1));
   appearance: none;
   margin: 0;
-  padding: 8px 14px;
+  padding: calc(8px * var(--btn-scale, 1)) calc(14px * var(--btn-scale, 1));
   border-radius: var(--badge-radius, 999px);
   border: var(--btn-border-width, 1px) solid var(--btn-border, var(--glass-border, rgba(255, 255, 255, 0.28)));
   background: var(--btn-glass-surface, var(--btn-surface, rgba(8, 8, 8, 0.72)));
   color: var(--text-primary, #fff);
   font: inherit;
-  font-size: var(--button-font-size, 12px);
+  font-size: calc(var(--button-font-size, 12px) * var(--btn-scale, 1));
   font-weight: 600;
   white-space: nowrap;
   cursor: grab;
@@ -6962,18 +6962,42 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   box-shadow: var(--btn-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
   touch-action: none;
   user-select: none;
+  opacity: var(--btn-opacity, 1);
   transition:
-    background var(--motion-duration, 0.22s) var(--motion-easing, ease),
-    color var(--motion-duration, 0.22s) var(--motion-easing, ease),
-    border-color var(--motion-duration, 0.22s) var(--motion-easing, ease),
+    background var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
+    color var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
+    border-color var(--btn-hover-ms, var(--motion-duration, 0.22s)) var(--motion-easing, ease),
     box-shadow var(--motion-duration, 0.22s) var(--motion-easing, ease),
-    transform 0.05s linear;
+    transform 0.05s linear,
+    opacity 0.15s ease;
+}
+
+.builder-exp-ui-btn[data-exp-btn-size="sm"] {
+  --btn-scale: 0.78;
+}
+
+.builder-exp-ui-btn[data-exp-btn-size="md"] {
+  --btn-scale: 1;
+}
+
+.builder-exp-ui-btn[data-exp-btn-size="lg"] {
+  --btn-scale: 1.38;
 }
 
 .builder-exp-ui-btn:hover {
   background: var(--btn-glass-hover, var(--hover, rgba(255, 255, 255, 0.08)));
   color: var(--btn-text-hover, var(--text-primary));
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
+}
+
+.builder-exp-ui-btn.is-hover-on:hover {
+  color: var(--btn-hover-color, #ffffff) !important;
+  border-color: var(--btn-hover-color, #ffffff) !important;
+  background: color-mix(in srgb, var(--btn-hover-color, #ffffff) 24%, rgba(8, 8, 8, 0.72)) !important;
+}
+
+.builder-exp-ui-btn.is-hover-off:hover {
+  /* keep theme hover when hover styling is disabled */
 }
 
 .builder-exp-ui-btn:focus-visible {
@@ -7454,9 +7478,14 @@ body > .ws-select__list {
   min-width: 4.5em;
 }
 
-.builder-exp-ui-btn.is-hover-on:hover {
-  color: var(--btn-hover-color, #fff) !important;
-  border-color: var(--btn-hover-color, #fff) !important;
+.builder-exp-btn-hover-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.builder-exp-btn-hover-row input[type="color"] {
+  flex: 1 1 auto;
 }
 
 .builder-exp-btn-panel textarea[data-exp-text-content] {

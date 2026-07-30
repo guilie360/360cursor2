@@ -391,6 +391,7 @@ var ExperienciaEngine = (function () {
       if (ix.fontSize == null) ix.fontSize = 28;
       if (ix.color == null) ix.color = '#ffffff';
       if (ix.fontFamily == null) ix.fontFamily = 'system-ui, sans-serif';
+      else ix.fontFamily = String(ix.fontFamily).replace(/"/g, '');
       if (ix.fontWeight == null) ix.fontWeight = '400';
       if (ix.fontStyle == null) ix.fontStyle = 'normal';
       if (ix.textDecoration == null) ix.textDecoration = 'none';
@@ -400,6 +401,7 @@ var ExperienciaEngine = (function () {
       if (ix.textTransform == null) ix.textTransform = 'none';
       if (ix.textShadow == null) ix.textShadow = 'none';
       if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
+      else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
     }
     if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
       if (ix.label == null) ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo';

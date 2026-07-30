@@ -505,6 +505,13 @@ var ExperienciaCanvas = (function () {
     return { x: (n.x || 0) + size.w, y: (n.y || 0) + size.h / 2 };
   }
 
+  function cssToken(v) {
+    return String(v == null ? '' : v)
+      .replace(/[;\n\r{}]/g, '')
+      .replace(/"/g, '')
+      .replace(/'/g, '');
+  }
+
   function buttonPreviewClass(btn) {
     var t = String((btn && btn.type) || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'builder-exp-stage-text';
@@ -536,9 +543,9 @@ var ExperienciaCanvas = (function () {
       ['system-ui, sans-serif', 'Sistema'],
       ['Georgia, serif', 'Georgia'],
       ['Arial, Helvetica, sans-serif', 'Arial'],
-      ['"Times New Roman", Times, serif', 'Times'],
+      ['Times New Roman, Times, serif', 'Times'],
       ['Verdana, Geneva, sans-serif', 'Verdana'],
-      ['"Courier New", Courier, monospace', 'Mono']
+      ['Courier New, Courier, monospace', 'Mono']
     ];
     var ff = selected.fontFamily || 'system-ui, sans-serif';
     var fw = String(selected.fontWeight || '400');
@@ -908,8 +915,12 @@ var ExperienciaCanvas = (function () {
           ' Activar hover</label>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Color hover</label>' +
-          '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
-            (hoverOn ? '' : ' disabled') + '>' +
+          '<div class="builder-exp-btn-hover-row">' +
+            '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
+              (hoverOn ? '' : ' disabled') + '>' +
+            '<button type="button" class="builder-hub-segment__btn" data-exp-btn-hover-apply' +
+              (hoverOn ? '' : ' disabled') + '>Aplicar</button>' +
+          '</div>' +
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Transición hover (ms)</label>' +
@@ -2779,13 +2790,29 @@ var ExperienciaCanvas = (function () {
         });
       }
       var hoverCol = inspectorBody.querySelector('[data-exp-btn-hover-color]');
+      function applyHoverColor(persistNow) {
+        if (!hoverCol || hoverCol.disabled) return;
+        var col = String(hoverCol.value || '').trim();
+        if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+        patchBtn({ hoverColor: col }, persistNow
+          ? { persist: true, inspector: true }
+          : { gesture: true });
+      }
       if (hoverCol) {
         hoverCol.addEventListener('input', function () {
-          patchBtn({ hoverColor: hoverCol.value }, { gesture: true });
+          applyHoverColor(false);
         });
         hoverCol.addEventListener('change', function () {
           endButtonOp();
-          persist();
+          applyHoverColor(true);
+        });
+      }
+      var hoverApply = inspectorBody.querySelector('[data-exp-btn-hover-apply]');
+      if (hoverApply) {
+        hoverApply.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          endButtonOp();
+          applyHoverColor(true);
         });
       }
       var hoverMs = inspectorBody.querySelector('[data-exp-btn-hover-ms]');
@@ -4467,18 +4494,24 @@ var ExperienciaCanvas = (function () {
           '--btn-rot:' + rot + 'deg;' +
           'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
         if (t === 'TEXT') {
-          styleBits += 'font-size:' + (Number(b.fontSize) || 28) + 'px;' +
-            'color:' + (b.color || '#ffffff') + ';' +
-            'font-family:' + (b.fontFamily || 'system-ui, sans-serif') + ';' +
-            'font-weight:' + (b.fontWeight || '400') + ';' +
-            'font-style:' + (b.fontStyle || 'normal') + ';' +
-            'text-decoration:' + (b.textDecoration || 'none') + ';' +
-            'text-align:' + (b.textAlign || 'center') + ';' +
-            'line-height:' + (b.lineHeight != null ? Number(b.lineHeight) : 1.3) + ';' +
-            'letter-spacing:' + (b.letterSpacing != null ? Number(b.letterSpacing) : 0) + 'px;' +
-            'text-transform:' + (b.textTransform || 'none') + ';' +
-            'text-shadow:' + (b.textShadow && b.textShadow !== 'none' ? b.textShadow : 'none') + ';' +
-            'opacity:' + (b.opacity != null ? Number(b.opacity) : 1) + ';';
+          var tSize = Number(b.fontSize) || 28;
+          var tOp = b.opacity != null ? Number(b.opacity) : 1;
+          var tShadow = (b.textShadow && b.textShadow !== 'none')
+            ? cssToken(b.textShadow)
+            : 'none';
+          styleBits +=
+            '--t-size:' + tSize + 'px;' +
+            '--t-color:' + cssToken(b.color || '#ffffff') + ';' +
+            '--t-family:' + cssToken(b.fontFamily || 'system-ui, sans-serif') + ';' +
+            '--t-weight:' + cssToken(b.fontWeight || '400') + ';' +
+            '--t-style:' + cssToken(b.fontStyle || 'normal') + ';' +
+            '--t-deco:' + cssToken(b.textDecoration || 'none') + ';' +
+            '--t-align:' + cssToken(b.textAlign || 'center') + ';' +
+            '--t-leading:' + (b.lineHeight != null ? Number(b.lineHeight) : 1.3) + ';' +
+            '--t-tracking:' + (b.letterSpacing != null ? Number(b.letterSpacing) : 0) + 'px;' +
+            '--t-transform:' + cssToken(b.textTransform || 'none') + ';' +
+            '--t-shadow:' + tShadow + ';' +
+            '--t-opacity:' + tOp + ';';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') + '"' +
@@ -4512,23 +4545,23 @@ var ExperienciaCanvas = (function () {
         } else {
           label = glyph || text;
         }
-        var sizeScale = b.size === 'sm' ? 0.85 : (b.size === 'lg' ? 1.2 : 1);
         var btnOp = b.opacity != null ? Number(b.opacity) : 1;
         var hoverOn = b.hoverEnabled !== false;
         var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-        var hoverCol = b.hoverColor || '#ffffff';
-        styleBits += 'opacity:' + btnOp + ';' +
-          'transform:translate(-50%,-50%) rotate(' + rot + 'deg) scale(' + sizeScale + ');' +
+        var hoverCol = cssToken(b.hoverColor || '#ffffff') || '#ffffff';
+        var btnSize = (b.size === 'sm' || b.size === 'lg') ? b.size : 'md';
+        /* Size/hover via CSS vars — do not fight .builder-exp-ui-btn transform. */
+        styleBits +=
+          '--btn-opacity:' + btnOp + ';' +
           '--btn-hover-color:' + hoverCol + ';' +
-          'transition:color ' + hoverMs + 'ms ease, background-color ' + hoverMs + 'ms ease, border-color ' +
-            hoverMs + 'ms ease, opacity ' + hoverMs + 'ms ease;';
+          '--btn-hover-ms:' + hoverMs + 'ms;';
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (selSet[String(b.id)] ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') +
           (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
           (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
-          ' data-exp-btn-size="' + esc(b.size || 'md') + '"' +
+          ' data-exp-btn-size="' + esc(btnSize) + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
         '</button>';

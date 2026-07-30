@@ -2361,19 +2361,35 @@ body.quotation-canvas-first .builder-workspace,
   position: absolute;
   appearance: none;
   margin: 0;
-  padding: 4px 8px;
-  border: 1px dashed rgba(255, 255, 255, 0.35);
+  padding: 0;
+  border: none;
   background: transparent;
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  white-space: nowrap;
+  box-shadow: none;
+  outline: none;
+  color: var(--t-color, #fff);
+  font-family: var(--t-family, system-ui, sans-serif) !important;
+  font-size: var(--t-size, 28px) !important;
+  font-weight: var(--t-weight, 400) !important;
+  font-style: var(--t-style, normal) !important;
+  text-decoration: var(--t-deco, none) !important;
+  text-align: var(--t-align, center) !important;
+  line-height: var(--t-leading, 1.3) !important;
+  letter-spacing: var(--t-tracking, 0px) !important;
+  text-transform: var(--t-transform, none) !important;
+  text-shadow: var(--t-shadow, none) !important;
+  opacity: var(--t-opacity, 1) !important;
+  white-space: pre-wrap;
   cursor: move;
   z-index: 3;
 }
 .builder-exp-stage-text.is-selected {
-  border-color: #6fbf86;
-  box-shadow: 0 0 0 1px rgba(111, 191, 134, 0.55);
+  border: none;
+  box-shadow: none;
+  outline: 1px solid rgba(111, 191, 134, 0.9);
+  outline-offset: 3px;
+}
+.builder-exp-stage-text.is-invisible {
+  opacity: 0.28 !important;
 }
 .builder-exp-stage-shape {
   position: absolute;
