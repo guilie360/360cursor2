@@ -255,11 +255,16 @@
 }
 
 .qe-stage-unit .qe-dock {
-  width: fit-content;
+  width: max-content;
   max-width: min(420px, calc(100% - 48px));
   box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
+  transition: max-width 180ms ease;
+}
+
+.qe-stage-unit .qe-dock[data-mode="actions"] {
+  max-width: min(720px, calc(100% - 48px));
 }
 
 .qe-stage-unit .qe-canvas__stage {
@@ -291,8 +296,8 @@
 .qe-col--inspector {
   position: relative;
   border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  background: rgba(8, 8, 8, 0.45);
-  padding: var(--hall-space-3, 12px) var(--hall-space-2, 8px);
+  background: #0a0a0a;
+  padding: 0;
   overflow: hidden;
   transform: translateX(0);
   opacity: 1;
@@ -303,6 +308,18 @@
 
 .qe-col--inspector.is-open {
   animation: qe-insp-slide-in 0.18s var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.qe-insp__blank,
+.qe-insp__exp-host.qe-insp__blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 @keyframes qe-insp-slide-in {
@@ -572,14 +589,14 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.54 / V7.2.55 — Unified pill dock (create ↔ actions) ── */
+/* ── V7.2.54–V7.2.56 — Unified pill dock (create ↔ actions) ── */
 
 .qe-dock {
   flex: 0 0 auto;
   display: flex;
   align-items: stretch;
   justify-content: center;
-  width: fit-content;
+  width: max-content;
   max-width: min(420px, calc(100% - 48px));
   height: 52px;
   margin: 16px auto 4px;
@@ -589,12 +606,25 @@
   background: rgba(16, 16, 16, 0.94);
   overflow: hidden;
   box-sizing: border-box;
+  transition: max-width 180ms ease;
+}
+
+.qe-dock[data-mode="create"] {
+  max-width: min(420px, calc(100% - 48px));
+}
+
+.qe-dock[data-mode="actions"] {
+  max-width: min(720px, calc(100% - 48px));
 }
 
 .qe-dock__rail {
   display: flex;
   align-items: stretch;
+  justify-content: center;
   height: 100%;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
   opacity: 1;
   transition: opacity 180ms ease;
   will-change: opacity;
@@ -647,6 +677,11 @@
 
 .qe-dock__seg:focus-visible {
   outline: none;
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.qe-dock__seg.is-active {
   color: rgba(255, 255, 255, 0.96);
   background: rgba(255, 255, 255, 0.06);
 }

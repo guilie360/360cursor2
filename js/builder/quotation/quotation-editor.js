@@ -71,6 +71,7 @@ var QuotationEditor = (function () {
   };
 
   var focusEscBound = false;
+  var inspectorChromeBound = false;
 
   var uid = 1;
   function nextId(prefix) {
@@ -1523,7 +1524,12 @@ var QuotationEditor = (function () {
   function stageDockRailHtml() {
     if (dockHasSelection()) {
       return '' +
-        dockSegHtml('data-qe-dock-edit', 'edit', 'Editar') +
+        dockSegHtml(
+          'data-qe-dock-edit',
+          'edit',
+          'Editar',
+          state.inspectorCollapsed ? '' : 'is-active'
+        ) +
         dockSegHtml('data-qe-dock-dup', 'dup', 'Duplicar') +
         dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
         dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
@@ -1863,13 +1869,8 @@ var QuotationEditor = (function () {
   }
 
   function idleInspectorHtml() {
-    return '' +
-      '<div class="qe-insp__exp-host" data-exp-inspector-body>' +
-        '<div class="qe-insp__idle">' +
-          '<div class="qe-insp__detail-kicker">PROPIEDADES</div>' +
-          '<p class="qe-insp__empty">Selecciona un elemento</p>' +
-        '</div>' +
-      '</div>';
+    /* V7.2.56 — blank column only; host kept for overlay bridge. */
+    return '<div class="qe-insp__exp-host qe-insp__blank" data-exp-inspector-body></div>';
   }
 
   function elementAsButtonItem(el) {
@@ -1914,41 +1915,20 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  /* V7.2.56 — blank on-demand column; no chrome, no copy. */
   function inspectorHtml() {
     if (state.focusMode) return '';
 
     clearInvalidSelection();
 
-    /* V7.2.55 — inspector on demand: hidden until Editar */
     if (state.inspectorCollapsed) {
       return '' +
         '<aside class="qe-col qe-col--inspector is-collapsed" aria-hidden="true"></aside>';
     }
 
-    var floatBtn =
-      '<button type="button" class="quotation-panel-float quotation-panel-float--right"' +
-        ' data-qe-toggle-inspector' +
-        ' data-collapsed="0"' +
-        ' aria-expanded="true"' +
-        ' aria-label="Cerrar inspector"' +
-        ' data-tooltip="Cerrar inspector">' +
-        (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
-          ? BuilderIcons.render('chevron-right')
-          : '›') +
-      '</button>';
-
-    var body = idleInspectorHtml();
-
     return '' +
-      '<aside class="qe-col qe-col--inspector is-open" aria-label="Inspector">' +
-        floatBtn +
-        '<div class="qe-col__head">' +
-          '<div class="qe-col__head-text">' +
-            '<h2 class="qe-col__title">Inspector</h2>' +
-            '<p class="qe-col__hint">Propiedades</p>' +
-          '</div>' +
-        '</div>' +
-        '<div class="qe-insp__scroll">' + body + '</div>' +
+      '<aside class="qe-col qe-col--inspector is-open" aria-hidden="true">' +
+        idleInspectorHtml() +
       '</aside>';
   }
 
@@ -2532,13 +2512,15 @@ var QuotationEditor = (function () {
       applyRail();
       return;
     }
+    /* V7.2.56 — fade + horizontal resize together (~180ms), grow from center. */
+    bar.setAttribute('data-mode', nextMode);
     if (rail) {
       rail.classList.add('is-fading-out');
       if (dockFadeTimer) clearTimeout(dockFadeTimer);
       dockFadeTimer = setTimeout(function () {
         dockFadeTimer = null;
         applyRail();
-      }, 170);
+      }, 90);
       return;
     }
     applyRail();
@@ -2561,8 +2543,10 @@ var QuotationEditor = (function () {
     });
     var edit = editor.querySelector('[data-qe-dock-edit]');
     if (edit) {
-      edit.addEventListener('click', function () {
-        setInspectorCollapsed(false);
+      edit.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        setInspectorCollapsed(!state.inspectorCollapsed);
       });
     }
     var dup = editor.querySelector('[data-qe-dock-dup]');
@@ -2783,18 +2767,50 @@ var QuotationEditor = (function () {
     setInspectorCollapsed(!state.inspectorCollapsed);
   }
 
+  function closeInspectorIfOpen() {
+    if (!state.inspectorCollapsed) setInspectorCollapsed(true);
+  }
+
   function onFocusEsc(e) {
-    if (!state.focusMode) return;
-    if (e.key === 'Escape') {
+    if (e.key !== 'Escape') return;
+    if (state.pendingSceneDeleteId) {
+      e.preventDefault();
+      cancelDeleteScene();
+      return;
+    }
+    if (state.focusMode) {
       e.preventDefault();
       setFocusMode(false);
+      return;
     }
+    if (!state.inspectorCollapsed) {
+      e.preventDefault();
+      closeInspectorIfOpen();
+    }
+  }
+
+  function onInspectorOutsidePointer(e) {
+    if (state.inspectorCollapsed || state.focusMode) return;
+    if (state.pendingSceneDeleteId) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('.qe-col--inspector')) return;
+    if (t.closest('[data-qe-dock-edit]')) return;
+    if (t.closest('[data-qe-toggle-inspector]')) return;
+    if (t.closest('[data-qe-scene-confirm]')) return;
+    closeInspectorIfOpen();
   }
 
   function bindFocusEsc() {
     if (focusEscBound) return;
     document.addEventListener('keydown', onFocusEsc);
     focusEscBound = true;
+  }
+
+  function bindInspectorChrome() {
+    if (inspectorChromeBound) return;
+    document.addEventListener('pointerdown', onInspectorOutsidePointer, true);
+    inspectorChromeBound = true;
   }
 
   function patchSelectedElement(mutator) {
@@ -3100,6 +3116,7 @@ var QuotationEditor = (function () {
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     hydrateEditorProjectCtxSlug();
     bindFocusEsc();
+    bindInspectorChrome();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 

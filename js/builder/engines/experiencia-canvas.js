@@ -2187,6 +2187,11 @@ var ExperienciaCanvas = (function () {
     function paintInspector() {
       if (overlayMode) notifyOverlaySelection();
       if (!inspectorBody) return;
+      /* Quotation overlay: inspector stays blank until real props land. */
+      if (overlayMode) {
+        inspectorBody.innerHTML = '';
+        return;
+      }
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
 
