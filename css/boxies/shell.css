@@ -58,8 +58,98 @@ body.boxies-has-dock.boxies-shell {
 .boxies-header__left {
   display: flex;
   align-items: center;
+  gap: 10px;
   min-width: 0;
   justify-self: start;
+}
+
+/* V7.2.16 — Workspace hamburger (Config / Hero / Editor / Preview / Salir) */
+.boxies-workspace-menu {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: 40;
+}
+
+.boxies-workspace-menu__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition:
+    color var(--boxies-transition, 0.15s ease),
+    background var(--boxies-transition, 0.15s ease);
+}
+
+.boxies-workspace-menu__btn:hover,
+.boxies-workspace-menu__btn[aria-expanded="true"] {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.boxies-workspace-menu__btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.boxies-workspace-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0c0c0c;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 80;
+}
+
+.boxies-workspace-menu__panel[hidden] {
+  display: none !important;
+}
+
+.boxies-workspace-menu__item {
+  appearance: none;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.boxies-workspace-menu__item:hover,
+.boxies-workspace-menu__item.is-current {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.boxies-workspace-menu__item--exit {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.boxies-workspace-menu__sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .boxies-user-wrap {

@@ -1,19 +1,23 @@
-/* Quotation Builder — sidebar uses Showroom builder-rail chrome (V7.1.05). */
+/* Quotation Builder — V7.2.16 icon activity rail (Canvas-first). */
 var QuotationSidebar = (function () {
-  var MARK_DONE = '\u2713';
-  var MARK_PENDING = '\u25CB';
-
   var STEPS = [
-    { id: 'config', label: 'Config', checkable: true },
-    { id: 'hero', label: 'Hero', checkable: true },
-    { id: 'editor', label: 'Editor', checkable: true },
-    { id: 'preview', label: 'Preview', checkable: false, auxiliary: true }
+    { id: 'config', label: 'Config', icon: 'settings', checkable: true },
+    { id: 'hero', label: 'Hero', icon: 'image', checkable: true },
+    { id: 'editor', label: 'Editor', icon: 'pen-tool', checkable: true },
+    { id: 'preview', label: 'Preview', icon: 'eye', checkable: false, auxiliary: true }
   ];
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function iconHtml(name) {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(name);
+    }
+    return '○';
   }
 
   function getSteps() {
@@ -30,19 +34,14 @@ var QuotationSidebar = (function () {
 
   function renderHtml(activeId, sectionChecks) {
     sectionChecks = sectionChecks || {};
-    var html = '<div class="builder-rail-list" data-builder-rail-list aria-label="Quotation Builder">';
+    var html = '<div class="builder-rail-list quotation-icon-rail__list" data-builder-rail-list aria-label="Quotation Builder">';
     html += STEPS.map(function (step) {
       var active = step.id === activeId;
       var done = isDone(sectionChecks, step);
-      var cls = 'builder-rail-item';
+      var cls = 'builder-rail-item quotation-icon-rail__item';
       if (step.auxiliary) cls += ' is-auxiliary';
       else cls += done ? ' is-done' : ' is-pending';
       if (active) cls += ' is-current';
-
-      var markHtml = step.auxiliary
-        ? ''
-        : ('<span class="builder-rail-mark" aria-hidden="true">' +
-            (done ? MARK_DONE : MARK_PENDING) + '</span>');
 
       return (
         '<button type="button" class="' + cls + '"' +
@@ -50,11 +49,9 @@ var QuotationSidebar = (function () {
           ' data-tooltip="' + escapeHtml(step.label) + '"' +
           ' aria-current="' + (active ? 'page' : 'false') + '"' +
           ' aria-label="' + escapeHtml(step.label) + '">' +
-          '<span class="builder-rail-row">' +
-            markHtml +
-            '<span class="builder-rail-text">' +
-              '<span class="builder-rail-label">' + escapeHtml(step.label) + '</span>' +
-            '</span>' +
+          '<span class="quotation-icon-rail__bar" aria-hidden="true"></span>' +
+          '<span class="quotation-icon-rail__icon" aria-hidden="true">' +
+            iconHtml(step.icon) +
           '</span>' +
         '</button>'
       );

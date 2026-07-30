@@ -18,6 +18,21 @@ var QuotationBuilderView = (function () {
   var sectionChecks = {};
   var processing = false;
   var builderExperienceType = 'quotation';
+  var ICON_RAIL_W = '48px';
+  var workspaceMenuBound = false;
+
+  function iconHtml(name) {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render(name);
+    }
+    return '○';
+  }
+
+  function escapeHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
 
   function resolvePanel(stepId) {
     var id = typeof QuotationRouter !== 'undefined'
@@ -46,10 +61,10 @@ var QuotationBuilderView = (function () {
           '</div>'
         );
     return '' +
-      '<div class="quotation-builder builder-app" id="quotationBuilderRoot" data-quotation-builder' +
+      '<div class="quotation-builder builder-app quotation-canvas-first" id="quotationBuilderRoot" data-quotation-builder' +
         (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
         actions +
-        '<aside class="builder-progress-sidebar" id="builderProgressRail" aria-label="' +
+        '<aside class="builder-progress-sidebar quotation-icon-rail" id="builderProgressRail" aria-label="' +
           (builderExperienceType === 'template' ? 'Template Builder' : 'Quotation Builder') + '">' +
           sidebar +
         '</aside>' +
@@ -57,6 +72,118 @@ var QuotationBuilderView = (function () {
           '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
         '</div>' +
       '</div>';
+  }
+
+  function closeWorkspaceMenu() {
+    var btn = document.getElementById('boxiesWorkspaceMenuBtn');
+    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (panel) panel.hidden = true;
+  }
+
+  function syncWorkspaceMenu() {
+    var panel = document.getElementById('boxiesWorkspaceMenuPanel');
+    if (!panel) return;
+    panel.querySelectorAll('[data-quotation-step]').forEach(function (btn) {
+      var on = btn.getAttribute('data-quotation-step') === currentStep;
+      btn.classList.toggle('is-current', on);
+      btn.setAttribute('aria-current', on ? 'page' : 'false');
+    });
+  }
+
+  function mountWorkspaceMenu() {
+    var left = document.getElementById('boxiesHeaderLeft');
+    if (!left) return;
+    var existing = document.getElementById('boxiesWorkspaceMenu');
+    if (existing) existing.remove();
+
+    var steps = typeof QuotationSidebar !== 'undefined' && QuotationSidebar.getSteps
+      ? QuotationSidebar.getSteps()
+      : [
+        { id: 'config', label: 'Config' },
+        { id: 'hero', label: 'Hero' },
+        { id: 'editor', label: 'Editor' },
+        { id: 'preview', label: 'Preview' }
+      ];
+
+    var items = steps.map(function (step) {
+      return (
+        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+          ' data-quotation-step="' + escapeHtml(step.id) + '">' +
+          escapeHtml(step.label) +
+        '</button>'
+      );
+    }).join('');
+
+    var wrap = document.createElement('div');
+    wrap.id = 'boxiesWorkspaceMenu';
+    wrap.className = 'boxies-workspace-menu';
+    wrap.innerHTML =
+      '<button type="button" class="boxies-workspace-menu__btn" id="boxiesWorkspaceMenuBtn"' +
+        ' aria-label="Menú del workspace" aria-haspopup="menu" aria-expanded="false"' +
+        ' data-tooltip="Menú">' +
+        iconHtml('menu') +
+      '</button>' +
+      '<div class="boxies-workspace-menu__panel" id="boxiesWorkspaceMenuPanel" role="menu" hidden>' +
+        items +
+        '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+        '<button type="button" class="boxies-workspace-menu__item boxies-workspace-menu__item--exit"' +
+          ' role="menuitem" data-quotation-exit="1">Salir</button>' +
+      '</div>';
+
+    left.insertBefore(wrap, left.firstChild);
+
+    var btn = wrap.querySelector('#boxiesWorkspaceMenuBtn');
+    var panel = wrap.querySelector('#boxiesWorkspaceMenuPanel');
+    if (btn && panel) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var open = panel.hidden;
+        panel.hidden = !open;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+
+    wrap.querySelectorAll('[data-quotation-step]').forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeWorkspaceMenu();
+        goToStep(item.getAttribute('data-quotation-step'));
+      });
+    });
+
+    var exitBtn = wrap.querySelector('[data-quotation-exit]');
+    if (exitBtn) {
+      exitBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeWorkspaceMenu();
+        if (typeof BoxiesRouter !== 'undefined' && BoxiesRouter.navigate) {
+          BoxiesRouter.navigate('projects');
+        }
+      });
+    }
+
+    if (!workspaceMenuBound) {
+      workspaceMenuBound = true;
+      document.addEventListener('click', function (e) {
+        var menu = document.getElementById('boxiesWorkspaceMenu');
+        if (!menu) return;
+        if (e.target.closest && e.target.closest('#boxiesWorkspaceMenu')) return;
+        closeWorkspaceMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeWorkspaceMenu();
+      });
+    }
+
+    syncWorkspaceMenu();
+  }
+
+  function unmountWorkspaceMenu() {
+    closeWorkspaceMenu();
+    var el = document.getElementById('boxiesWorkspaceMenu');
+    if (el) el.remove();
   }
 
   function refreshSidebar() {
@@ -67,6 +194,7 @@ var QuotationBuilderView = (function () {
       QuotationSidebar.setActive(rail, currentStep, sectionChecks);
       QuotationSidebar.bind(rail, goToStep);
     }
+    syncWorkspaceMenu();
   }
 
   function bindSectionCheck(panel) {
@@ -229,17 +357,27 @@ var QuotationBuilderView = (function () {
   }
 
   function activateSharedChrome() {
-    if (typeof BuilderProgressRail === 'undefined') return;
+    /* V7.2.16 — fixed 48px icon rail; no float collapse chrome. */
+    document.body.classList.add('quotation-canvas-first');
+    document.documentElement.classList.add('quotation-canvas-first');
+    document.body.classList.remove('boxies-rail-collapsed');
+    document.documentElement.classList.remove('boxies-rail-collapsed');
     try {
-      if (BuilderProgressRail.openEditorRail) {
-        BuilderProgressRail.openEditorRail();
-      } else if (BuilderProgressRail.ensureFloatButton) {
-        BuilderProgressRail.ensureFloatButton();
-        if (BuilderProgressRail.applyCollapsedFromPrefs) {
-          BuilderProgressRail.applyCollapsedFromPrefs();
-        }
-      }
-    } catch (eChrome) {}
+      document.documentElement.style.setProperty('--builder-rail-width', ICON_RAIL_W);
+    } catch (eW) {}
+    if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
+      try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
+    }
+    mountWorkspaceMenu();
+  }
+
+  function deactivateSharedChrome() {
+    document.body.classList.remove('quotation-canvas-first');
+    document.documentElement.classList.remove('quotation-canvas-first');
+    try {
+      document.documentElement.style.removeProperty('--builder-rail-width');
+    } catch (eW) {}
+    unmountWorkspaceMenu();
   }
 
   async function hydrateIdentity(projectId, slug, experienceType) {
@@ -344,6 +482,7 @@ var QuotationBuilderView = (function () {
     if (typeof BuilderDockActions !== 'undefined' && BuilderDockActions.restore) {
       try { BuilderDockActions.restore(); } catch (eDock) {}
     }
+    deactivateSharedChrome();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eL) {}
     }

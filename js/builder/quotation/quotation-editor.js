@@ -174,6 +174,8 @@ var QuotationEditor = (function () {
       selectedItem: null,
       selectedElementId: null,
       focusMode: false,
+      libraryCollapsed: false,
+      inspectorCollapsed: false,
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
@@ -545,6 +547,26 @@ var QuotationEditor = (function () {
   }
 
   function contentColumnHtml() {
+    if (state.focusMode) return '';
+
+    var toggleIcon = state.libraryCollapsed ? 'chevron-right' : 'chevron-left';
+    var toggleBtn =
+      '<button type="button" class="qe-panel-toggle" data-qe-toggle-library' +
+        ' aria-expanded="' + (state.libraryCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + (state.libraryCollapsed ? 'Abrir recursos' : 'Cerrar recursos') + '"' +
+        ' data-tooltip="' + (state.libraryCollapsed ? 'Abrir recursos' : 'Cerrar recursos') + '">' +
+        (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
+          ? BuilderIcons.render(toggleIcon)
+          : (state.libraryCollapsed ? '›' : '‹')) +
+      '</button>';
+
+    if (state.libraryCollapsed) {
+      return '' +
+        '<aside class="qe-col qe-col--library is-collapsed" aria-label="Recursos">' +
+          toggleBtn +
+        '</aside>';
+    }
+
     var groups = CONTENT_GROUPS.map(function (group) {
       var open = state.openGroups[group.id] !== false;
       var count = contentInGroup(group.id).length;
@@ -565,8 +587,11 @@ var QuotationEditor = (function () {
     return '' +
       '<aside class="qe-col qe-col--library" aria-label="Recursos">' +
         '<div class="qe-col__head">' +
-          '<h2 class="qe-col__title">Recursos</h2>' +
-          '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
+          '<div class="qe-col__head-text">' +
+            '<h2 class="qe-col__title">Recursos</h2>' +
+            '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
+          '</div>' +
+          toggleBtn +
         '</div>' +
         '<div class="qe-content__list" data-qe-content-list>' + groups + '</div>' +
       '</aside>';
@@ -1181,10 +1206,31 @@ var QuotationEditor = (function () {
   }
 
   function inspectorHtml() {
+    if (state.focusMode) return '';
+
     clearInvalidSelection();
     var content = selectedContent();
     var el = findSelectedElement();
     var scene = activeScene();
+
+    var toggleIcon = state.inspectorCollapsed ? 'chevron-left' : 'chevron-right';
+    var toggleBtn =
+      '<button type="button" class="qe-panel-toggle" data-qe-toggle-inspector' +
+        ' aria-expanded="' + (state.inspectorCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + (state.inspectorCollapsed ? 'Abrir inspector' : 'Cerrar inspector') + '"' +
+        ' data-tooltip="' + (state.inspectorCollapsed ? 'Abrir inspector' : 'Cerrar inspector') + '">' +
+        (typeof BuilderIcons !== 'undefined' && BuilderIcons.render
+          ? BuilderIcons.render(toggleIcon)
+          : (state.inspectorCollapsed ? '‹' : '›')) +
+      '</button>';
+
+    if (state.inspectorCollapsed) {
+      return '' +
+        '<aside class="qe-col qe-col--inspector is-collapsed" aria-label="Inspector">' +
+          toggleBtn +
+        '</aside>';
+    }
+
     var body;
     /* Hero ProjectCover elements keep Quotation inspector; buttons/hotspots use Showroom. */
     if (el && (el.type === 'button' || el.type === 'icon')) {
@@ -1202,11 +1248,22 @@ var QuotationEditor = (function () {
     return '' +
       '<aside class="qe-col qe-col--inspector" aria-label="Inspector">' +
         '<div class="qe-col__head">' +
-          '<h2 class="qe-col__title">Inspector</h2>' +
-          '<p class="qe-col__hint">' + escapeHtml(hint) + '</p>' +
+          '<div class="qe-col__head-text">' +
+            '<h2 class="qe-col__title">Inspector</h2>' +
+            '<p class="qe-col__hint">' + escapeHtml(hint) + '</p>' +
+          '</div>' +
+          toggleBtn +
         '</div>' +
         '<div class="qe-insp__scroll">' + body + '</div>' +
       '</aside>';
+  }
+
+  function editorLayoutClass() {
+    var cls = 'quotation-step quotation-step--editor qe-editor';
+    if (state.focusMode) cls += ' is-focus';
+    if (state.libraryCollapsed && !state.focusMode) cls += ' is-library-collapsed';
+    if (state.inspectorCollapsed && !state.focusMode) cls += ' is-inspector-collapsed';
+    return cls;
   }
 
   function render(ctx) {
@@ -1214,8 +1271,7 @@ var QuotationEditor = (function () {
     clearInvalidSelection();
     ensureScenes();
     return '' +
-      '<div class="quotation-step quotation-step--editor qe-editor' +
-        (state.focusMode ? ' is-focus' : '') + '" data-qe-editor>' +
+      '<div class="' + editorLayoutClass() + '" data-qe-editor>' +
         contentColumnHtml() +
         canvasHtml() +
         inspectorHtml() +
@@ -1432,7 +1488,17 @@ var QuotationEditor = (function () {
     wrap.innerHTML = inspectorHtml();
     var next = wrap.firstChild;
     if (next) insp.replaceWith(next);
-    wireInspectorFields(rootEl.querySelector('[data-qe-editor]') || rootEl);
+    var editor = rootEl.querySelector('[data-qe-editor]') || rootEl;
+    wireInspectorFields(editor);
+    editor.querySelectorAll('[data-qe-toggle-inspector]').forEach(function (btn) {
+      if (btn.dataset.qeBound) return;
+      btn.dataset.qeBound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleInspectorCollapsed();
+      });
+    });
   }
 
   function wireInspectorFields(editor) {
@@ -1634,6 +1700,26 @@ var QuotationEditor = (function () {
 
   function toggleFocusMode() {
     setFocusMode(!state.focusMode);
+  }
+
+  function setLibraryCollapsed(on) {
+    state.libraryCollapsed = !!on;
+    state.sceneMenuOpen = false;
+    rerender();
+  }
+
+  function setInspectorCollapsed(on) {
+    state.inspectorCollapsed = !!on;
+    state.sceneMenuOpen = false;
+    rerender();
+  }
+
+  function toggleLibraryCollapsed() {
+    setLibraryCollapsed(!state.libraryCollapsed);
+  }
+
+  function toggleInspectorCollapsed() {
+    setInspectorCollapsed(!state.inspectorCollapsed);
   }
 
   function onFocusEsc(e) {
@@ -1869,6 +1955,21 @@ var QuotationEditor = (function () {
       mountRuntimeCanvas();
       mountExperienciaOverlay();
       var editor = panel.querySelector('[data-qe-editor]') || panel;
+
+      editor.querySelectorAll('[data-qe-toggle-library]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleLibraryCollapsed();
+        });
+      });
+      editor.querySelectorAll('[data-qe-toggle-inspector]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleInspectorCollapsed();
+        });
+      });
 
       editor.querySelectorAll('[data-qe-open-resource-picker]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
