@@ -1,5 +1,5 @@
 /**
- * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.41).
+ * QuotationRuntime — visitor / public / Canvas iframe renderer (V7.2.42).
  *
  * Modes:
  *   - Runtime: public experience (/{slug} → here, Visualizar)
@@ -369,7 +369,59 @@ var QuotationRuntime = (function () {
         '<img class="qr-scene-media__img" src="' + escapeHtml(media.url) +
           '" alt="">';
     }
+    /* V7.2.42 — DOM audit only; no behavior change */
+    logPaintSceneMediaDomAudit(parentEl, host);
     return host;
+  }
+
+  function logPaintSceneMediaDomAudit(parentEl, container) {
+    var mediaEl = container && (container.querySelector('img.qr-scene-media__img') ||
+      container.querySelector('video.qr-scene-media__video'));
+    function dump(label) {
+      console.log('=========================');
+      console.log('DOM AUDIT ' + label);
+      console.log('=========================');
+      console.log('parentElement', parentEl);
+      console.log('container', container);
+      if (!mediaEl) {
+        console.log('mediaEl: null — no img/video en container');
+        console.log('container.innerHTML', container ? container.innerHTML : null);
+        console.log('=========================');
+        return;
+      }
+      var cs = window.getComputedStyle(mediaEl);
+      console.log('img.outerHTML', mediaEl.outerHTML);
+      console.log('container.innerHTML', container.innerHTML);
+      console.log('img.clientWidth', mediaEl.clientWidth);
+      console.log('img.clientHeight', mediaEl.clientHeight);
+      console.log('img.offsetWidth', mediaEl.offsetWidth);
+      console.log('img.offsetHeight', mediaEl.offsetHeight);
+      console.log('getComputedStyle(img).display', cs.display);
+      console.log('visibility', cs.visibility);
+      console.log('opacity', cs.opacity);
+      console.log('z-index', cs.zIndex);
+      console.log('position', cs.position);
+      var x = window.innerWidth / 2;
+      var y = window.innerHeight / 2;
+      var topEl = document.elementFromPoint(x, y);
+      console.log('elementFromPoint(center)', { x: x, y: y, element: topEl });
+      console.log('elementFromPoint.tagName', topEl && topEl.tagName);
+      console.log('elementFromPoint.className', topEl && topEl.className);
+      console.log('elementFromPoint.id', topEl && topEl.id);
+      console.log('elementFromPoint outerHTML (trunc)', topEl
+        ? String(topEl.outerHTML || '').slice(0, 400)
+        : null);
+      console.log('mediaEl === topEl', mediaEl === topEl);
+      console.log('mediaEl.contains(topEl)', mediaEl.contains ? mediaEl.contains(topEl) : null);
+      console.log('container.contains(topEl)', container.contains ? container.contains(topEl) : null);
+      console.log('=========================');
+    }
+    dump('(sync post-insert)');
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        dump('(after layout/paint)');
+      });
+    });
   }
 
   function goToScene(sceneId) {
