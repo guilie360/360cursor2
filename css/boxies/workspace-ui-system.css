@@ -650,16 +650,16 @@
 .ws-select__list,
 .ws-ms__panel,
 .builder-ambiente-picker__panel {
-  background: var(--ws-floating-bg) !important;
-  background-color: var(--ws-floating-bg) !important;
+  background: var(--ws-floating-bg, #050505) !important;
+  background-color: var(--ws-floating-bg, #050505) !important;
   opacity: 1 !important;
-  border: 1px solid var(--ws-floating-border);
+  border: 1px solid var(--ws-floating-border, rgba(255, 255, 255, 0.12));
   border-radius: var(--ws-radius-control, 8px);
-  box-shadow: var(--ws-floating-shadow);
-  z-index: var(--ws-floating-z);
+  box-shadow: var(--ws-floating-shadow, 0 14px 32px rgba(0, 0, 0, 0.72));
+  z-index: var(--ws-floating-z, 80);
   isolation: isolate;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -702,7 +702,8 @@
   margin: 0;
   border: 1px solid var(--ws-border-control, rgba(255, 255, 255, 0.08));
   border-radius: var(--ws-radius-control, 8px);
-  background: var(--ws-control-bg, rgba(0, 0, 0, 0.3));
+  background: #141414;
+  background-color: #141414;
   color: var(--ws-text, rgba(255, 255, 255, 0.9));
   font-size: var(--ws-font-control, 13px);
   font-weight: 500;
@@ -764,12 +765,20 @@
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-/* Portaled to body (V7.2.15) — escape overflow:auto ancestors */
+/* Portaled to body (V7.2.15) — escape overflow:auto ancestors.
+   Must hardcode opaque bg: body is outside #boxiesContent so --ws-floating-* is undefined. */
 body > .ws-select__list {
   position: fixed;
   right: auto;
   top: auto;
   z-index: 10050 !important;
+  background: #141414 !important;
+  background-color: #141414 !important;
+  opacity: 1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .ws-select__list::-webkit-scrollbar {

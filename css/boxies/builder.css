@@ -7119,6 +7119,14 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   appearance: none;
 }
 
+body > .ws-select__list {
+  background: #141414 !important;
+  background-color: #141414 !important;
+  opacity: 1 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 .builder-exp-btn-panel input[type="range"] {
   position: relative;
   z-index: 1;

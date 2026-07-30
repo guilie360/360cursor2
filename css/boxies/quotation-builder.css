@@ -1952,13 +1952,27 @@
 .qe-insp select,
 .qe-insp__exp-host select,
 .qe-insp__exp-host .builder-exp-btn-select,
-.qe-insp__exp-host .ws-select__trigger {
+.qe-insp__exp-host .ws-select__trigger,
+.qe-insp .ws-select__trigger,
+body.quotation-canvas-first .ws-select__trigger,
+body.boxies-builder-chrome .ws-select__trigger {
   background: #141414 !important;
   background-color: #141414 !important;
   color: rgba(255, 255, 255, 0.92) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* Portaled DESTINO / ICONO lists must stay solid over inspector chrome */
+body.quotation-canvas-first > .ws-select__list,
+body.boxies-builder-chrome > .ws-select__list,
+body > .ws-select__list {
+  background: #141414 !important;
+  background-color: #141414 !important;
+  opacity: 1 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .qe-field__hint {
