@@ -300,6 +300,12 @@ var QuotationExperienciaBridge = (function () {
       deleteSelected: function () {
         return handle.deleteSelected ? handle.deleteSelected() : false;
       },
+      clearSelection: function () {
+        return handle.clearSelection ? handle.clearSelection() : false;
+      },
+      cancelActiveTool: function () {
+        return handle.cancelActiveTool ? handle.cancelActiveTool() : false;
+      },
       toggleLockSelected: function () {
         return handle.toggleLockSelected ? handle.toggleLockSelected() : null;
       },

@@ -6106,6 +6106,8 @@ var ExperienciaCanvas = (function () {
           paintInspector();
           return;
         }
+        /* Quotation overlay: chrome owns dialog / inspector / deselect layers. */
+        if (overlayMode) return;
         if (modalEl && !modalEl.hidden) {
           modalEl.hidden = true;
           modalEl.innerHTML = '';
@@ -6131,7 +6133,8 @@ var ExperienciaCanvas = (function () {
         if (renameEdit) return;
         var ae = document.activeElement;
         var inCanvas = viewport === ae || rootEl.contains(ae) || rootEl.contains(ev.target);
-        if (!inCanvas) return;
+        /* Overlay: Delete must work even when focus is on dock / body. */
+        if (!overlayMode && !inCanvas) return;
 
         /* V6.2.00 — HOTSPOTS: delete selected mask (or vertex with Alt) */
         if (canvas().editMode === 'hotspots') {
@@ -6184,6 +6187,8 @@ var ExperienciaCanvas = (function () {
           persist();
           return;
         }
+
+        if (overlayMode) return;
 
         if (!selectedIds().length && !canvas().selectedEdgeId &&
           !(canvas().selectedEdgeIds || []).length) return;
@@ -6652,14 +6657,22 @@ var ExperienciaCanvas = (function () {
       },
       deleteSelected: function () {
         var sceneId = canvas().selectedId;
-        var id = canvas().selectedButtonId;
         var hs = canvas().selectedHotspotId;
+        var ids = Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.slice()
+          : [];
+        if (!ids.length && canvas().selectedButtonId) {
+          ids = [canvas().selectedButtonId];
+        }
         if (!sceneId) return false;
         if (hs && ExperienciaEngine.removeSceneHotspotMask) {
           ExperienciaEngine.removeSceneHotspotMask(state, sceneId, hs);
           canvas().selectedHotspotId = null;
-        } else if (id && ExperienciaEngine.removeSceneButton) {
-          ExperienciaEngine.removeSceneButton(state, sceneId, id);
+        } else if (ids.length && ExperienciaEngine.removeSceneButton) {
+          pushButtonHistory(sceneId);
+          ids.forEach(function (bid) {
+            ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+          });
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
         } else {
@@ -6668,6 +6681,21 @@ var ExperienciaCanvas = (function () {
         renderAll();
         paintInspector();
         persist();
+        return true;
+      },
+      clearSelection: function () {
+        canvas().selectedButtonId = null;
+        canvas().selectedButtonIds = [];
+        canvas().selectedHotspotId = null;
+        renderAll();
+        paintInspector();
+        return true;
+      },
+      cancelActiveTool: function () {
+        if (!hotspotDraw) return false;
+        hotspotDraw = null;
+        paintHotspotsStage();
+        paintInspector();
         return true;
       },
       toggleLockSelected: function () {

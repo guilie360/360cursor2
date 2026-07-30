@@ -2771,21 +2771,106 @@ var QuotationEditor = (function () {
     if (!state.inspectorCollapsed) setInspectorCollapsed(true);
   }
 
-  function onFocusEsc(e) {
-    if (e.key !== 'Escape') return;
-    if (state.pendingSceneDeleteId) {
-      e.preventDefault();
-      cancelDeleteScene();
+  function isBuilderFormField(el) {
+    if (!el) return false;
+    var tag = (el.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    return !!(el.closest && el.closest('input, textarea, select, [contenteditable="true"]'));
+  }
+
+  function hasOverlaySelection() {
+    if (state.expHasSelection) return true;
+    if (state.selectedElementId) return true;
+    if (!expOverlay || !expOverlay.getSelection) return false;
+    try {
+      var sel = expOverlay.getSelection();
+      return !!(sel && sel.hasSelection);
+    } catch (eSel) {
+      return false;
+    }
+  }
+
+  function deleteOverlaySelection() {
+    if (!expOverlay || !expOverlay.deleteSelected) return false;
+    var ok = false;
+    try { ok = !!expOverlay.deleteSelected(); } catch (eDel) { ok = false; }
+    if (ok) {
+      state.expHasSelection = false;
+      state.selectedElementId = null;
+      if (!state.inspectorCollapsed) setInspectorCollapsed(true);
+      else refreshDockOnly();
+    }
+    return ok;
+  }
+
+  function deselectOverlay() {
+    if (!expOverlay || !expOverlay.clearSelection) {
+      state.expHasSelection = false;
+      state.selectedElementId = null;
+      refreshDockOnly();
+      return false;
+    }
+    try { expOverlay.clearSelection(); } catch (eClr) { /* ignore */ }
+    state.expHasSelection = false;
+    state.selectedElementId = null;
+    refreshDockOnly();
+    return true;
+  }
+
+  /* V7.2.57 — universal Escape + Delete for Quotation Builder chrome. */
+  function onBuilderShortcut(e) {
+    if (!rootEl) return;
+    if (isBuilderFormField(e.target)) return;
+
+    if (e.key === 'Escape') {
+      try {
+        if (state.pendingSceneDeleteId) {
+          e.preventDefault();
+          e.stopPropagation();
+          cancelDeleteScene();
+          return;
+        }
+        if (state.resourcePickerOpen) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeResourcePicker();
+          return;
+        }
+        if (expOverlay && expOverlay.cancelActiveTool && expOverlay.cancelActiveTool()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        if (hasOverlaySelection()) {
+          e.preventDefault();
+          e.stopPropagation();
+          deselectOverlay();
+          return;
+        }
+        if (!state.inspectorCollapsed) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeInspectorIfOpen();
+          return;
+        }
+        if (state.focusMode) {
+          e.preventDefault();
+          e.stopPropagation();
+          setFocusMode(false);
+        }
+      } catch (eEsc) { /* never throw from ESC */ }
       return;
     }
-    if (state.focusMode) {
-      e.preventDefault();
-      setFocusMode(false);
-      return;
-    }
-    if (!state.inspectorCollapsed) {
-      e.preventDefault();
-      closeInspectorIfOpen();
+
+    /* DELETE / SUPR — immediate delete of selection (not Backspace). */
+    if (e.key === 'Delete') {
+      try {
+        if (!hasOverlaySelection()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        deleteOverlaySelection();
+      } catch (eDelKey) { /* ignore */ }
     }
   }
 
@@ -2803,7 +2888,7 @@ var QuotationEditor = (function () {
 
   function bindFocusEsc() {
     if (focusEscBound) return;
-    document.addEventListener('keydown', onFocusEsc);
+    document.addEventListener('keydown', onBuilderShortcut, true);
     focusEscBound = true;
   }
 
