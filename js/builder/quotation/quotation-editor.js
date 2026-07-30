@@ -2,6 +2,9 @@
  * Quotation Editor — V7.2.13 Showroom ExperienciaCanvas overlay (buttons + hotspots).
  */
 var QuotationEditor = (function () {
+  /* V7.2.38 — controlled test: isolate Editor from Runtime completely. */
+  var DISABLE_RUNTIME_FOR_EDITOR = true;
+
   var CANVAS_DESIGN_W = 1920;
   var CANVAS_DESIGN_H = 1080;
 
@@ -81,6 +84,10 @@ var QuotationEditor = (function () {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function isEditorRuntimeDisabled() {
+    return DISABLE_RUNTIME_FOR_EDITOR === true;
   }
 
   function groupMeta(groupId) {
@@ -1165,6 +1172,8 @@ var QuotationEditor = (function () {
   function stageBodyHtml(scene) {
     if (!scene || !sceneHasResource(scene)) return emptyScenePlaceholderHtml();
     if (sceneUsesProjectCover(scene)) {
+      /* V7.2.38 — without Runtime iframe, paint Editor-owned media stage. */
+      if (isEditorRuntimeDisabled()) return sceneMediaStageHtml(scene);
       return '<div class="qe-scene-runtime-wrap" data-qe-drop-scene></div>';
     }
     var hasElements = scene && scene.elements && scene.elements.length;
@@ -1176,6 +1185,9 @@ var QuotationEditor = (function () {
 
   /** Hero: Runtime iframe inside fixed 1920×1080 design frame (scale outside). */
   function heroRuntimeStageHtml() {
+    if (isEditorRuntimeDisabled()) {
+      return emptyScenePlaceholderHtml();
+    }
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
     var src = '';
     var opts = {
@@ -1332,7 +1344,7 @@ var QuotationEditor = (function () {
 
   function canvasHtml() {
     var scene = activeScene();
-    var useRuntime = sceneUsesProjectCover(scene);
+    var useRuntime = !isEditorRuntimeDisabled() && sceneUsesProjectCover(scene);
     var designBody = useRuntime
       ? (heroRuntimeStageHtml() + '<div class="qe-scene-drop-hit" data-qe-drop-scene></div>')
       : stageBodyHtml(scene);
@@ -2134,6 +2146,7 @@ var QuotationEditor = (function () {
   }
 
   function pushCoverToRuntime() {
+    if (isEditorRuntimeDisabled()) return;
     var iframe = runtimeIframe();
     if (!iframe || typeof QuotationRuntimeBridge === 'undefined') return;
     var scene = activeScene();
@@ -2152,6 +2165,7 @@ var QuotationEditor = (function () {
   }
 
   function pushSelectionToRuntime() {
+    if (isEditorRuntimeDisabled()) return;
     var iframe = runtimeIframe();
     if (!iframe || typeof QuotationRuntimeBridge === 'undefined') return;
     QuotationRuntimeBridge.postToFrame(iframe, QuotationRuntimeBridge.TYPE.SET_SELECTION, {
@@ -2326,6 +2340,7 @@ var QuotationEditor = (function () {
   }
 
   function onRuntimeBridgeMessage(ev) {
+    if (isEditorRuntimeDisabled()) return;
     if (typeof QuotationRuntimeBridge === 'undefined') return;
     if (!QuotationRuntimeBridge.isMessage(ev.data)) return;
     var iframe = runtimeIframe();
@@ -2356,6 +2371,7 @@ var QuotationEditor = (function () {
   }
 
   function bindRuntimeBridge() {
+    if (isEditorRuntimeDisabled()) return;
     if (runtimeBridgeBound) return;
     runtimeBridgeBound = true;
     window.addEventListener('message', onRuntimeBridgeMessage);
@@ -2363,6 +2379,7 @@ var QuotationEditor = (function () {
 
   /** Wire Canvas Hero iframe — Editor never mounts ProjectCover itself. */
   function mountRuntimeCanvas() {
+    if (isEditorRuntimeDisabled()) return;
     var scene = activeScene();
     if (!sceneUsesProjectCover(scene)) return;
     ensureHeroCoverModel(scene);
@@ -3226,6 +3243,13 @@ var QuotationEditor = (function () {
 
   /** Flush overlay + write live ProjectDocument for Preview / Runtime. */
   function prepareLivePreview(ctx) {
+    if (isEditorRuntimeDisabled()) {
+      /* V7.2.38 — do not feed Runtime/Preview live envelope while Editor is isolated. */
+      if (expOverlay && typeof expOverlay.pull === 'function') {
+        try { expOverlay.pull(); } catch (ePull) {}
+      }
+      return serializeDocument();
+    }
     ctx = ctx || editorProjectCtx || {};
     if (expOverlay && typeof expOverlay.pull === 'function') {
       try { expOverlay.pull(); } catch (ePull) {}
