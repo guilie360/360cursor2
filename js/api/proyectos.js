@@ -529,6 +529,7 @@ var ProyectosApi = (function () {
         type: heroText(sc.type) || 'scene',
         templateId: heroText(sc.templateId) || null,
         coverModel: sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null,
+        resourceId: heroText(sc.resourceId) || null,
         elements: sanitizeCanvasElements(sc.elements)
       };
     }).filter(function (sc) { return sc && sc.id; });

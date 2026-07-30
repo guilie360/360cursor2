@@ -1272,6 +1272,231 @@
   font-size: 13px;
 }
 
+/* V7.2.11 — Empty scene + resource picker + drop */
+.qe-scene-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+  background: #080808;
+  box-sizing: border-box;
+}
+
+.qe-scene-empty__icon {
+  font-size: 28px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.qe-scene-empty__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.qe-scene-empty__sub {
+  margin: 0;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.qe-scene-empty__btn {
+  appearance: none;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.qe-scene-empty__btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.qe-scene-media {
+  position: absolute;
+  inset: 0;
+  background: #050505;
+}
+
+.qe-scene-media__img,
+.qe-scene-media__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qe-scene-media__change {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  appearance: none;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.qe-scene-drop-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.qe-canvas__stage.is-drop-target,
+.qe-scene-empty.is-drop-target,
+.qe-scene-media.is-drop-target {
+  outline: 1px dashed rgba(255, 255, 255, 0.35);
+  outline-offset: -6px;
+}
+
+.qe-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+
+.qe-picker__panel {
+  width: min(560px, 100%);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0c0c0c;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.qe-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.qe-picker__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.qe-picker__close {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qe-picker__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.qe-picker__hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.qe-picker__empty {
+  margin: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.qe-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.qe-picker__card {
+  appearance: none;
+  margin: 0;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qe-picker__card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.qe-picker__thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  background: #151515 center/cover no-repeat;
+  margin-bottom: 8px;
+}
+
+.qe-picker__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qe-picker__type {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.qe-lib__item[draggable="true"] {
+  cursor: grab;
+}
+
 .qe-canvas__mock {
   flex: 1;
   display: flex;
