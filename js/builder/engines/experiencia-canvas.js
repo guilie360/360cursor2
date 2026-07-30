@@ -58,6 +58,45 @@ var ExperienciaCanvas = (function () {
       '<button type="button" class="builder-header-action-btn builder-exp-tool-btn boxies-btn-secondary" id="builderExpResyncBtn" title="Actualizar desde Hero">Hero</button>';
   }
 
+  /**
+   * Minimal shell for Quotation (and any host) that reuses the SAME
+   * BOTONES / HOTSPOTS stages from Showroom — no FLUJO UI.
+   */
+  function overlayShellHtml() {
+    return '' +
+      '<div class="builder-exp-workspace qe-exp-overlay" data-exp-workspace data-qe-exp-overlay>' +
+        '<div class="builder-exp-stage" data-exp-stage>' +
+          '<div class="builder-exp-viewport" data-exp-viewport hidden tabindex="-1" aria-hidden="true">' +
+            '<div class="builder-exp-world" data-exp-world>' +
+              '<svg class="builder-exp-edges" data-exp-edges xmlns="http://www.w3.org/2000/svg"></svg>' +
+              '<div class="builder-exp-nodes" data-exp-nodes></div>' +
+              '<div class="builder-exp-marquee" data-exp-marquee hidden></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-exp-buttons-stage" data-exp-buttons-stage>' +
+            '<div class="builder-exp-buttons-stage__empty" data-exp-buttons-empty hidden>' +
+              '<p>Agrega un botón desde el dock.</p>' +
+            '</div>' +
+            '<div class="builder-exp-buttons-frame" data-exp-buttons-frame>' +
+              '<img class="builder-exp-buttons-img" data-exp-buttons-img alt="" draggable="false">' +
+              '<div class="builder-exp-buttons-layer" data-exp-buttons-layer></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="builder-exp-hotspots-stage" data-exp-hotspots-stage hidden>' +
+            '<div class="builder-exp-hotspots-stage__empty" data-exp-hotspots-empty hidden>' +
+              '<p>Dibuja un hotspot: clic para vértices, doble clic para cerrar.</p>' +
+            '</div>' +
+            '<div class="builder-exp-hotspots-frame" data-exp-hotspots-frame>' +
+              '<img class="builder-exp-hotspots-img" data-exp-hotspots-img alt="" draggable="false">' +
+              '<div class="builder-exp-hotspots-layer" data-exp-hotspots-layer>' +
+                '<svg class="builder-exp-hotspots-svg" data-exp-hotspots-svg xmlns="http://www.w3.org/2000/svg"></svg>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
   function shellHtml(state) {
     ExperienciaEngine.ensureFlow(state);
     var canvas = (state.experiencia && state.experiencia.canvas) || {};
@@ -1784,10 +1823,12 @@ var ExperienciaCanvas = (function () {
 
   function mount(rootEl, state, api) {
     api = api || {};
+    var overlayMode = !!api.overlayMode;
+
     ExperienciaEngine.ensureFlow(state);
 
     /* V6.5.01 — baseline snapshot + recovery offer if a richer copy exists */
-    if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
+    if (!overlayMode && typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.capture) {
       ExperienciaSnapshot.capture(state, 'open-experiencia', 'autosave');
     }
 
@@ -1814,9 +1855,10 @@ var ExperienciaCanvas = (function () {
     var hotspotDraw = null; /* { points: [{x,y}], cursor: {x,y}|null } */
     var hotspotDrag = null; /* vertex | poly move */
     var modeTabs = rootEl.querySelector('[data-exp-mode-tabs]');
-    var inspectorBody = (typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
-      ? BuilderPropertiesRail.getInspectorBody(rootEl)
-      : rootEl.querySelector('[data-exp-inspector-body]');
+    var inspectorBody = api.inspectorBody ||
+      ((typeof BuilderPropertiesRail !== 'undefined' && BuilderPropertiesRail.getInspectorBody)
+        ? BuilderPropertiesRail.getInspectorBody(rootEl)
+        : rootEl.querySelector('[data-exp-inspector-body]'));
     var inspector = null;
     var workspace = rootEl.querySelector('[data-exp-workspace]');
     var minimapWrap = rootEl.querySelector('[data-exp-minimap]');
@@ -2102,6 +2144,16 @@ var ExperienciaCanvas = (function () {
 
     function canvas() {
       return ExperienciaEngine.ensureState(state).canvas;
+    }
+
+    if (overlayMode && api.overlayNodeId) {
+      canvas().selectedId = api.overlayNodeId;
+      canvas().selectedIds = [api.overlayNodeId];
+      if (api.editMode === 'hotspots' || api.editMode === 'buttons') {
+        canvas().editMode = api.editMode;
+      } else if (canvas().editMode !== 'buttons' && canvas().editMode !== 'hotspots') {
+        canvas().editMode = 'buttons';
+      }
     }
 
     function persist() {
@@ -3682,15 +3734,25 @@ var ExperienciaCanvas = (function () {
     }
 
     function syncEditModeUi() {
-      if (canvas().editMode === 'buttons' && !canUseButtonsMode()) {
-        canvas().editMode = 'flow';
-        canvas().selectedButtonId = null;
-        canvas().selectedButtonIds = [];
-      }
-      if (canvas().editMode === 'hotspots' && !canUseHotspotsMode()) {
-        canvas().editMode = 'flow';
-        canvas().selectedHotspotId = null;
-        hotspotDraw = null;
+      if (overlayMode) {
+        if (canvas().editMode !== 'buttons' && canvas().editMode !== 'hotspots') {
+          canvas().editMode = 'buttons';
+        }
+        if (api.overlayNodeId) {
+          canvas().selectedId = api.overlayNodeId;
+          canvas().selectedIds = [api.overlayNodeId];
+        }
+      } else {
+        if (canvas().editMode === 'buttons' && !canUseButtonsMode()) {
+          canvas().editMode = 'flow';
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        }
+        if (canvas().editMode === 'hotspots' && !canUseHotspotsMode()) {
+          canvas().editMode = 'flow';
+          canvas().selectedHotspotId = null;
+          hotspotDraw = null;
+        }
       }
       var mode = canvas().editMode === 'buttons' ? 'buttons'
         : (canvas().editMode === 'hotspots' ? 'hotspots'
@@ -3703,7 +3765,7 @@ var ExperienciaCanvas = (function () {
       }
       /* Hard-swap views: Canvas editor must never remain visible in PROTOTIPO */
       if (viewport) {
-        var hideFlow = mode === 'buttons' || mode === 'hotspots' || mode === 'prototype';
+        var hideFlow = mode === 'buttons' || mode === 'hotspots' || mode === 'prototype' || overlayMode;
         viewport.hidden = hideFlow;
         viewport.setAttribute('aria-hidden', hideFlow ? 'true' : 'false');
         viewport.style.display = hideFlow ? 'none' : '';
@@ -3747,6 +3809,14 @@ var ExperienciaCanvas = (function () {
 
     function syncButtonsLayerBounds() {
       if (!buttonsImg || !buttonsLayer || !buttonsFrame) return;
+      /* Quotation overlay: design frame IS the coordinate space (1920×1080). */
+      if (overlayMode) {
+        buttonsLayer.style.left = '0';
+        buttonsLayer.style.top = '0';
+        buttonsLayer.style.width = '100%';
+        buttonsLayer.style.height = '100%';
+        return false;
+      }
       if (buttonsImg.hidden || !buttonsImg.getAttribute('src')) {
         buttonsLayer.style.left = '0';
         buttonsLayer.style.top = '0';
@@ -3933,6 +4003,13 @@ var ExperienciaCanvas = (function () {
 
     function syncHotspotsLayerBounds() {
       if (!hotspotsImg || !hotspotsLayer || !hotspotsFrame) return false;
+      if (overlayMode) {
+        hotspotsLayer.style.left = '0';
+        hotspotsLayer.style.top = '0';
+        hotspotsLayer.style.width = '100%';
+        hotspotsLayer.style.height = '100%';
+        return false;
+      }
       if (hotspotsImg.hidden || !hotspotsImg.getAttribute('src')) {
         hotspotsLayer.style.left = '0';
         hotspotsLayer.style.top = '0';
@@ -6108,6 +6185,54 @@ var ExperienciaCanvas = (function () {
       toggleCanvasMode: toggleCanvasMode,
       saveDraft: saveDraft,
       showResetConfirm: showResetConfirm,
+      setEditMode: function (mode) {
+        if (mode !== 'buttons' && mode !== 'hotspots') return;
+        canvas().editMode = mode;
+        if (mode === 'buttons') {
+          hotspotDraw = null;
+          canvas().selectedHotspotId = null;
+        } else {
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        }
+        renderAll();
+        paintInspector();
+        requestAnimationFrame(recomputeOverlayLayout);
+      },
+      addButton: function () {
+        var sceneId = canvas().selectedId;
+        if (!sceneId) return null;
+        canvas().editMode = 'buttons';
+        hotspotDraw = null;
+        var btn = ExperienciaEngine.addSceneButton(state, sceneId);
+        if (btn) {
+          canvas().selectedButtonId = btn.id;
+          canvas().selectedButtonIds = [String(btn.id)];
+        }
+        renderAll();
+        paintInspector();
+        persist();
+        requestAnimationFrame(recomputeOverlayLayout);
+        return btn;
+      },
+      startHotspotDraw: function () {
+        canvas().editMode = 'hotspots';
+        canvas().selectedButtonId = null;
+        canvas().selectedButtonIds = [];
+        canvas().selectedHotspotId = null;
+        hotspotDraw = { points: [], cursor: null };
+        renderAll();
+        paintHotspotsStage();
+        paintInspector();
+        requestAnimationFrame(recomputeOverlayLayout);
+        if (typeof AdminNotify !== 'undefined' && AdminNotify.info) {
+          AdminNotify.info('Dibujo: clic para vértices · doble clic para cerrar · Esc cancela');
+        }
+      },
+      setInspectorBody: function (el) {
+        inspectorBody = el || null;
+        paintInspector();
+      },
       destroy: function () {
         window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
         document.removeEventListener('fullscreenchange', onFullscreenChange);
@@ -6127,10 +6252,43 @@ var ExperienciaCanvas = (function () {
     };
   }
 
+  /**
+   * Mount Showroom BOTONES/HOTSPOTS editor onto an external host (Quotation Canvas).
+   * Reuses ExperienciaCanvas.mount — does not reimplement interaction logic.
+   *
+   * options:
+   *   state — builder-like state with experiencia.nodes / canvas
+   *   overlayNodeId — image/scene node id to edit
+   *   editMode — 'buttons' | 'hotspots'
+   *   inspectorBody — DOM node for Showroom inspector HTML
+   *   onChange / saveState — same as mount api
+   */
+  function mountOverlay(hostEl, options) {
+    options = options || {};
+    if (!hostEl || !options.state) return null;
+    hostEl.innerHTML = overlayShellHtml();
+    var handle = mount(hostEl, options.state, {
+      overlayMode: true,
+      overlayNodeId: options.overlayNodeId || null,
+      editMode: options.editMode || 'buttons',
+      inspectorBody: options.inspectorBody || null,
+      onChange: options.onChange,
+      saveState: options.saveState
+    });
+    if (handle) {
+      requestAnimationFrame(function () {
+        if (handle.refresh) handle.refresh();
+      });
+    }
+    return handle;
+  }
+
   return {
     shellHtml: shellHtml,
+    overlayShellHtml: overlayShellHtml,
     actionsHtml: actionsHtml,
     mount: mount,
+    mountOverlay: mountOverlay,
     isCanvasMode: isCanvasMode,
     setCanvasMode: setCanvasMode
   };

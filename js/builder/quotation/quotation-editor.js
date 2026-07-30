@@ -1,5 +1,5 @@
 /**
- * Quotation Editor — V7.2.12 Interaction Engine (buttons + hotspots on canvas).
+ * Quotation Editor — V7.2.13 Showroom ExperienciaCanvas overlay (buttons + hotspots).
  */
 var QuotationEditor = (function () {
   var CANVAS_DESIGN_W = 1920;
@@ -161,6 +161,7 @@ var QuotationEditor = (function () {
       resourceId: null,
       coverModel: null,
       elements: [],
+      interactions: [],
       buttons: [],
       hotspots: []
     };
@@ -176,6 +177,7 @@ var QuotationEditor = (function () {
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
+      expEditMode: 'buttons',
       openGroups: {
         hero: true,
         renders: true,
@@ -221,6 +223,7 @@ var QuotationEditor = (function () {
         name: 'Hero',
         type: 'hero',
         elements: [],
+        interactions: [],
         buttons: [],
         hotspots: []
       };
@@ -345,11 +348,17 @@ var QuotationEditor = (function () {
     return state.items[contentId];
   }
 
-  /** Scene-level overlays — BOXIES Interaction Engine storage (V7.2.12). */
+  /** Scene overlays — Showroom interactions[] SSOT (V7.2.13). */
   function ensureSceneOverlays(scene) {
-    if (!scene) return { buttons: [], hotspots: [] };
-    if (!Array.isArray(scene.buttons)) scene.buttons = [];
-    if (!Array.isArray(scene.hotspots)) scene.hotspots = [];
+    if (!scene) return { interactions: [], buttons: [], hotspots: [] };
+    if (typeof QuotationExperienciaBridge !== 'undefined' &&
+        QuotationExperienciaBridge.ensureSceneInteractions) {
+      QuotationExperienciaBridge.ensureSceneInteractions(scene);
+    } else {
+      if (!Array.isArray(scene.interactions)) scene.interactions = [];
+      if (!Array.isArray(scene.buttons)) scene.buttons = [];
+      if (!Array.isArray(scene.hotspots)) scene.hotspots = [];
+    }
     return scene;
   }
 
@@ -358,22 +367,12 @@ var QuotationEditor = (function () {
   }
 
   function findSelectedItem() {
-    var sel = state.selectedItem;
-    if (!sel) return null;
-    var bag = ensureSceneOverlays(activeScene());
-    var list = sel.kind === 'hotspot' ? bag.hotspots : bag.buttons;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].id === sel.id) {
-        return { kind: sel.kind, data: list[i] };
-      }
-    }
+    /* Buttons/hotspots are edited by ExperienciaCanvas inspector — not QE chips. */
     return null;
   }
 
   function clearInvalidSelection() {
-    if (state.selectedItem && !findSelectedItem()) {
-      state.selectedItem = null;
-    }
+    if (state.selectedItem) state.selectedItem = null;
     if (state.selectedElementId && !findSelectedElement()) {
       state.selectedElementId = null;
     }
@@ -1083,7 +1082,6 @@ var QuotationEditor = (function () {
   }
 
   function buttonInspectorHtml(item) {
-    var rot = item.rotation != null ? Number(item.rotation) : 0;
     return '' +
       '<div class="qe-insp__editor" data-qe-detail>' +
         '<div class="qe-insp__detail-kicker">Botón</div>' +
@@ -1096,94 +1094,17 @@ var QuotationEditor = (function () {
           '<div class="qe-field__label">Estilo</div>' +
           segmentHtml(BUTTON_STYLES, item.style || 'button', 'data-qe-item-style') +
         '</div>' +
-        '<div class="qe-field qe-field--row">' +
-          '<div class="qe-field">' +
-            '<label for="qeItemX">X %</label>' +
-            '<input type="number" id="qeItemX" data-qe-item-x min="0" max="100" step="0.1" value="' +
-              escapeHtml(item.x != null ? item.x : 50) + '">' +
-          '</div>' +
-          '<div class="qe-field">' +
-            '<label for="qeItemY">Y %</label>' +
-            '<input type="number" id="qeItemY" data-qe-item-y min="0" max="100" step="0.1" value="' +
-              escapeHtml(item.y != null ? item.y : 50) + '">' +
-          '</div>' +
-        '</div>' +
-        '<div class="qe-field">' +
-          '<label for="qeItemRot">Rotación °</label>' +
-          '<input type="number" id="qeItemRot" data-qe-item-rot min="-360" max="360" step="1" value="' +
-            escapeHtml(rot) + '">' +
-        '</div>' +
         destinoYAccionHtml(item) +
-        '<div class="qe-field">' +
-          '<button type="button" class="qe-insp__action" data-qe-item-duplicate>Duplicar</button>' +
-        '</div>' +
       '</div>';
   }
 
-  function hotspotInspectorHtml(item) {
+  function idleInspectorHtml() {
     return '' +
-      '<div class="qe-insp__editor" data-qe-detail>' +
-        '<div class="qe-insp__detail-kicker">Hotspot</div>' +
-        '<div class="qe-field">' +
-          '<label for="qeHsLabel">Nombre</label>' +
-          '<input type="text" id="qeHsLabel" data-qe-item-label maxlength="60" value="' +
-            escapeHtml(item.label || '') + '">' +
+      '<div class="qe-insp__exp-host" data-exp-inspector-body>' +
+        '<div class="qe-insp__idle">' +
+          '<div class="qe-insp__detail-kicker">Propiedades</div>' +
+          '<p class="qe-insp__empty">Usa Agregar elemento → Botón / Hotspot, o selecciona un elemento del Hero.</p>' +
         '</div>' +
-        '<div class="qe-field">' +
-          '<div class="qe-field__label">Forma</div>' +
-          segmentHtml(HOTSPOT_SHAPES, item.shape || 'polygon', 'data-qe-item-shape') +
-        '</div>' +
-        '<div class="qe-field">' +
-          '<div class="qe-field__label">Color</div>' +
-          segmentHtml(HOTSPOT_COLORS, item.color || 'white', 'data-qe-item-color') +
-        '</div>' +
-        destinoYAccionHtml(item) +
-        '<div class="qe-field">' +
-          '<button type="button" class="qe-insp__action" data-qe-item-duplicate>Duplicar</button>' +
-        '</div>' +
-      '</div>';
-  }
-
-  function idleInspectorHtml(content) {
-    var scene = activeScene();
-    var bag = ensureSceneOverlays(scene);
-    var pickRows = [];
-    if (scene && scene.elements && scene.elements.length) {
-      scene.elements.forEach(function (el) {
-        var props = el.props || {};
-        pickRows.push(
-          '<button type="button" class="qe-insp__pick" data-qe-element="' +
-            escapeHtml(el.id) + '">' +
-            '<span>' + escapeHtml(elementTypeLabel(el.type)) + '</span><strong>' +
-            escapeHtml(props.label || props.text || el.role || 'Elemento') + '</strong>' +
-          '</button>'
-        );
-      });
-    }
-    bag.buttons.forEach(function (b) {
-      pickRows.push(
-        '<button type="button" class="qe-insp__pick" data-qe-item-kind="button" data-qe-item-id="' +
-          escapeHtml(b.id) + '">' +
-          '<span>Botón</span><strong>' + escapeHtml(b.label || 'Sin nombre') + '</strong>' +
-        '</button>'
-      );
-    });
-    bag.hotspots.forEach(function (h) {
-      pickRows.push(
-        '<button type="button" class="qe-insp__pick" data-qe-item-kind="hotspot" data-qe-item-id="' +
-          escapeHtml(h.id) + '">' +
-          '<span>Hotspot</span><strong>' + escapeHtml(h.label || 'Sin nombre') + '</strong>' +
-        '</button>'
-      );
-    });
-    var emptyMsg = 'Selecciona un elemento, botón o hotspot para editar.';
-    return '' +
-      '<div class="qe-insp__idle">' +
-        '<div class="qe-insp__detail-kicker">Propiedades</div>' +
-        '<p class="qe-insp__empty">' + emptyMsg + '</p>' +
-        (pickRows.length
-          ? ('<div class="qe-insp__picks">' + pickRows.join('') + '</div>')
-          : '') +
       '</div>';
   }
 
@@ -1232,16 +1153,17 @@ var QuotationEditor = (function () {
   function inspectorHtml() {
     clearInvalidSelection();
     var content = selectedContent();
-    var found = findSelectedItem();
     var el = findSelectedElement();
     var scene = activeScene();
     var body;
-    if (found && found.kind === 'button') body = buttonInspectorHtml(found.data);
-    else if (found && found.kind === 'hotspot') body = hotspotInspectorHtml(found.data);
-    else if (el && (el.type === 'button' || el.type === 'icon')) {
+    /* Hero ProjectCover elements keep Quotation inspector; buttons/hotspots use Showroom. */
+    if (el && (el.type === 'button' || el.type === 'icon')) {
       body = buttonInspectorHtml(elementAsButtonItem(el));
-    } else if (el) body = elementInspectorHtml(el);
-    else body = idleInspectorHtml(content);
+    } else if (el) {
+      body = elementInspectorHtml(el);
+    } else {
+      body = idleInspectorHtml();
+    }
 
     var hint = content
       ? (content.name || groupLabel(content.group))
@@ -1336,6 +1258,7 @@ var QuotationEditor = (function () {
       resourceId: null,
       coverModel: null,
       elements: [],
+      interactions: [],
       buttons: [],
       hotspots: []
     };
@@ -1509,92 +1432,12 @@ var QuotationEditor = (function () {
       });
     }
 
-    var dupBtn = editor.querySelector('[data-qe-item-duplicate]');
-    if (dupBtn && !dupBtn.dataset.qeBound) {
-      dupBtn.dataset.qeBound = '1';
-      dupBtn.addEventListener('click', function () { duplicateSelectedItem(); });
-    }
-
-    var labelInput = editor.querySelector('[data-qe-item-label]');
-    if (labelInput && !labelInput.dataset.qeBound) {
-      labelInput.dataset.qeBound = '1';
-      labelInput.addEventListener('change', function () {
-        patchSelected(function (item) {
-          item.label = String(labelInput.value || '').trim() || item.label;
-        });
-      });
-      labelInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          labelInput.blur();
-        }
-      });
-    }
-
-    function bindNumField(sel, key, clampFn) {
-      var input = editor.querySelector(sel);
-      if (!input || input.dataset.qeBound) return;
-      input.dataset.qeBound = '1';
-      input.addEventListener('change', function () {
-        patchSelected(function (item) {
-          var n = Number(input.value);
-          item[key] = typeof clampFn === 'function' ? clampFn(n) : n;
-        });
-      });
-    }
-    bindNumField('[data-qe-item-x]', 'x', function (n) {
-      return typeof BoxiesInteractionEngine !== 'undefined'
-        ? BoxiesInteractionEngine.clampPct(n) : Math.max(0, Math.min(100, n));
-    });
-    bindNumField('[data-qe-item-y]', 'y', function (n) {
-      return typeof BoxiesInteractionEngine !== 'undefined'
-        ? BoxiesInteractionEngine.clampPct(n) : Math.max(0, Math.min(100, n));
-    });
-    bindNumField('[data-qe-item-rot]', 'rotation', function (n) {
-      return typeof BoxiesInteractionEngine !== 'undefined'
-        ? BoxiesInteractionEngine.clampRotation(n) : Math.round(n || 0);
-    });
-
     editor.querySelectorAll('[data-qe-item-style]').forEach(function (btn) {
       if (btn.dataset.qeBound) return;
       btn.dataset.qeBound = '1';
       btn.addEventListener('click', function () {
         patchSelected(function (item) {
           item.style = btn.getAttribute('data-qe-item-style');
-        });
-      });
-    });
-    editor.querySelectorAll('[data-qe-item-shape]').forEach(function (btn) {
-      if (btn.dataset.qeBound) return;
-      btn.dataset.qeBound = '1';
-      btn.addEventListener('click', function () {
-        patchSelected(function (item) {
-          var shape = btn.getAttribute('data-qe-item-shape');
-          item.shape = shape;
-          if (typeof BoxiesInteractionEngine === 'undefined') return;
-          if (shape === 'rectangle') {
-            item.polygon = BoxiesInteractionEngine.defaultRectPolygon();
-          } else if (shape === 'circle') {
-            var pts = [];
-            var i;
-            for (i = 0; i < 16; i++) {
-              var a = (i / 16) * Math.PI * 2;
-              pts.push({
-                x: BoxiesInteractionEngine.clampPct(50 + Math.cos(a) * 15),
-                y: BoxiesInteractionEngine.clampPct(50 + Math.sin(a) * 15)
-              });
-            }
-            item.polygon = pts;
-          }
-        });
-      });
-    });
-    editor.querySelectorAll('[data-qe-item-color]').forEach(function (btn) {
-      if (btn.dataset.qeBound) return;
-      btn.dataset.qeBound = '1';
-      btn.addEventListener('click', function () {
-        patchSelected(function (item) {
-          item.color = btn.getAttribute('data-qe-item-color');
         });
       });
     });
@@ -1617,65 +1460,49 @@ var QuotationEditor = (function () {
         });
       });
     }
-
-    editor.querySelectorAll('[data-qe-item-id]').forEach(function (btn) {
-      if (btn.dataset.qeBound) return;
-      btn.dataset.qeBound = '1';
-      btn.addEventListener('click', function () {
-        selectItem(btn.getAttribute('data-qe-item-kind'), btn.getAttribute('data-qe-item-id'));
+    var labelInput = editor.querySelector('[data-qe-item-label]');
+    if (labelInput && !labelInput.dataset.qeBound) {
+      labelInput.dataset.qeBound = '1';
+      labelInput.addEventListener('change', function () {
+        patchSelected(function (item) {
+          item.label = String(labelInput.value || '').trim() || item.label;
+        });
       });
-    });
+    }
   }
 
   var runtimeBridgeBound = false;
-  var ixHandle = null;
+  var expOverlay = null;
+  var pendingExpAction = null;
 
-  function destroyInteractionEngine() {
-    if (ixHandle && typeof ixHandle.destroy === 'function') {
-      try { ixHandle.destroy(); } catch (e) { /* ignore */ }
+  function destroyExperienciaOverlay() {
+    if (expOverlay && typeof expOverlay.destroy === 'function') {
+      try { expOverlay.destroy(); } catch (e) { /* ignore */ }
     }
-    ixHandle = null;
+    expOverlay = null;
   }
 
-  function mountInteractionEngine() {
-    destroyInteractionEngine();
-    if (!rootEl || typeof BoxiesInteractionEngine === 'undefined') return;
+  function mountExperienciaOverlay() {
+    destroyExperienciaOverlay();
+    if (!rootEl || typeof QuotationExperienciaBridge === 'undefined') return;
     var layer = rootEl.querySelector('[data-qe-edit-layer]');
     if (!layer) return;
-    var scene = activeScene();
-    ensureSceneOverlays(scene);
-    ixHandle = BoxiesInteractionEngine.mount(layer, {
-      getScene: function () {
-        return ensureSceneOverlays(activeScene());
-      },
-      idFactory: nextId,
-      onSelect: function (kind, id) {
-        if (!kind || !id) {
-          if (state.selectedItem) {
-            state.selectedItem = null;
-            refreshInspectorOnly();
-          }
-          return;
-        }
-        var same = state.selectedItem &&
-          state.selectedItem.kind === kind &&
-          String(state.selectedItem.id) === String(id);
-        state.selectedItem = { kind: kind, id: id };
-        state.selectedElementId = null;
-        if (!same) refreshInspectorOnly();
-      },
+    ensureScenes();
+    state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+
+    var inspHost = rootEl.querySelector('[data-exp-inspector-body]');
+    expOverlay = QuotationExperienciaBridge.mount(layer, {
+      scenes: state.scenes,
+      activeSceneId: state.activeSceneId,
+      contentById: contentById,
+      inspectorBody: inspHost,
+      editMode: state.expEditMode === 'hotspots' ? 'hotspots' : 'buttons',
       onChange: function () {
         markDirtyLocal();
-        if (state.selectedItem) refreshInspectorOnly();
       }
     });
-    if (state.selectedItem && state.selectedItem.kind === 'button') {
-      ixHandle.setButtonSelection([state.selectedItem.id], state.selectedItem.id);
-    } else if (state.selectedItem && state.selectedItem.kind === 'hotspot') {
-      ixHandle.setHotspotSelection(state.selectedItem.id);
-    }
 
-    /* Keep library → scene DnD working above the interaction layer. */
+    /* Keep library → scene DnD working above the overlay. */
     layer.addEventListener('dragover', function (e) {
       e.preventDefault();
       layer.classList.add('is-drop-target');
@@ -1693,6 +1520,18 @@ var QuotationEditor = (function () {
       )) || '';
       if (id) assignResourceToScene(id);
     });
+
+    if (pendingExpAction && expOverlay) {
+      var act = pendingExpAction;
+      pendingExpAction = null;
+      if (act.type === 'addButton') {
+        expOverlay.setEditMode('buttons');
+        expOverlay.addButton();
+      } else if (act.type === 'startHotspotDraw') {
+        expOverlay.setEditMode('hotspots');
+        expOverlay.startHotspotDraw();
+      }
+    }
   }
 
   function onRuntimeBridgeMessage(ev) {
@@ -1921,93 +1760,38 @@ var QuotationEditor = (function () {
   }
 
   function addButton() {
-    var scene = activeScene();
-    if (!scene) return;
-    ensureSceneOverlays(scene);
-    var item = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createButton)
-      ? BoxiesInteractionEngine.createButton(nextId, {
-        x: 50,
-        y: 50,
-        label: 'Botón',
-        style: 'button',
-        action: 'goto-scene',
-        targetSceneId: scene.id
-      })
-      : {
-        id: nextId('btn'),
-        label: 'Botón',
-        style: 'button',
-        action: 'goto-scene',
-        targetSceneId: scene.id,
-        x: 50,
-        y: 50,
-        rotation: 0
-      };
-    scene.buttons.push(item);
-    state.selectedItem = { kind: 'button', id: item.id };
     state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'buttons';
     state.dockOpen = false;
     markDirtyLocal();
+    if (expOverlay) {
+      refreshInspectorOnly();
+      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
+      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      expOverlay.setEditMode('buttons');
+      expOverlay.addButton();
+      return;
+    }
+    pendingExpAction = { type: 'addButton' };
     rerender();
   }
 
   function addHotspot() {
-    var scene = activeScene();
-    if (!scene) return;
-    ensureSceneOverlays(scene);
-    var item = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createHotspot)
-      ? BoxiesInteractionEngine.createHotspot(nextId, {
-        label: 'Hotspot',
-        shape: 'polygon',
-        color: 'white',
-        action: 'goto-scene',
-        targetSceneId: scene.id
-      })
-      : {
-        id: nextId('hs'),
-        label: 'Hotspot',
-        shape: 'polygon',
-        color: 'white',
-        action: 'goto-scene',
-        targetSceneId: scene.id,
-        polygon: [
-          { x: 35, y: 35 }, { x: 65, y: 35 },
-          { x: 65, y: 65 }, { x: 35, y: 65 }
-        ]
-      };
-    scene.hotspots.push(item);
-    state.selectedItem = { kind: 'hotspot', id: item.id };
     state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'hotspots';
     state.dockOpen = false;
     markDirtyLocal();
-    rerender();
-  }
-
-  function duplicateSelectedItem() {
-    var found = findSelectedItem();
-    if (!found) return;
-    var scene = ensureSceneOverlays(activeScene());
-    if (found.kind === 'button') {
-      var src = found.data;
-      var copy = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createButton)
-        ? BoxiesInteractionEngine.createButton(nextId, src)
-        : JSON.parse(JSON.stringify(src));
-      if (!copy.id || copy.id === src.id) copy.id = nextId('btn');
-      copy.x = src.x;
-      copy.y = src.y;
-      scene.buttons.push(copy);
-      state.selectedItem = { kind: 'button', id: copy.id };
-    } else {
-      var hs = found.data;
-      var hscopy = (typeof BoxiesInteractionEngine !== 'undefined' && BoxiesInteractionEngine.createHotspot)
-        ? BoxiesInteractionEngine.createHotspot(nextId, hs)
-        : JSON.parse(JSON.stringify(hs));
-      if (!hscopy.id || hscopy.id === hs.id) hscopy.id = nextId('hs');
-      scene.hotspots.push(hscopy);
-      state.selectedItem = { kind: 'hotspot', id: hscopy.id };
+    if (expOverlay) {
+      refreshInspectorOnly();
+      var hostHs = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
+      if (hostHs && expOverlay.setInspectorBody) expOverlay.setInspectorBody(hostHs);
+      expOverlay.setEditMode('hotspots');
+      expOverlay.startHotspotDraw();
+      return;
     }
-    state.selectedElementId = null;
-    markDirtyLocal();
+    pendingExpAction = { type: 'startHotspotDraw' };
     rerender();
   }
 
@@ -2049,7 +1833,7 @@ var QuotationEditor = (function () {
     function wireEditor() {
       bindCanvasFit();
       mountRuntimeCanvas();
-      mountInteractionEngine();
+      mountExperienciaOverlay();
       var editor = panel.querySelector('[data-qe-editor]') || panel;
 
       editor.querySelectorAll('[data-qe-open-resource-picker]').forEach(function (btn) {
@@ -2436,6 +2220,7 @@ var QuotationEditor = (function () {
             : null,
           resourceId: sc.resourceId || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
+          interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
           hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
         };
@@ -2455,6 +2240,7 @@ var QuotationEditor = (function () {
           coverModel: sc.coverModel || null,
           resourceId: sc.resourceId || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
+          interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
           hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
         };
@@ -2474,6 +2260,7 @@ var QuotationEditor = (function () {
       resourceId: null,
       coverModel: null,
       elements: [],
+      interactions: [],
       buttons: [],
       hotspots: []
     };

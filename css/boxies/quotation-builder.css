@@ -619,241 +619,61 @@
   touch-action: none;
 }
 
-/* ── BOXIES Interaction Engine (V7.2.12) ─────────────────────────── */
-.qe-ix-layer {
+/* ── Showroom Experiencia overlay on Quotation Canvas (V7.2.13) ─── */
+.qe-canvas__design .qe-exp-overlay,
+.qe-canvas__design .qe-exp-overlay .builder-exp-stage,
+.qe-canvas__design .qe-exp-overlay .builder-exp-buttons-stage,
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  z-index: 6;
+}
+
+.qe-canvas__design .qe-exp-overlay .builder-exp-buttons-frame,
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-frame {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-}
-
-.qe-ix-buttons {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.qe-ix-hotspots {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  pointer-events: auto;
-  overflow: visible;
-}
-
-.qe-ix-btn {
-  position: absolute;
-  appearance: none;
-  margin: 0;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(8, 8, 8, 0.72);
-  color: #fff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: grab;
-  backdrop-filter: blur(6px);
-  pointer-events: auto;
-  touch-action: none;
-  user-select: none;
-  z-index: 2;
-}
-
-.qe-ix-btn--chip {
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 12px;
-}
-
-.qe-ix-btn--icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
-  font-size: 0;
-}
-
-.qe-ix-btn:active {
-  cursor: grabbing;
-}
-
-.qe-ix-btn.is-selected {
-  box-shadow:
-    0 0 0 1px rgba(255, 80, 80, 0.95),
-    0 0 0 3px rgba(255, 80, 80, 0.28);
-}
-
-.qe-ix-btn.is-invisible {
-  opacity: 0.35;
-}
-
-.qe-ix-bbox {
-  position: absolute;
-  inset: -6px;
-  border: 1px solid rgba(255, 80, 80, 0.85);
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.qe-ix-handle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border: 1px solid rgba(255, 80, 80, 0.9);
-  border-radius: 1px;
-  pointer-events: auto;
-  z-index: 3;
-}
-
-.qe-ix-handle--nw { left: -10px; top: -10px; cursor: nwse-resize; }
-.qe-ix-handle--ne { right: -10px; top: -10px; cursor: nesw-resize; }
-.qe-ix-handle--sw { left: -10px; bottom: -10px; cursor: nesw-resize; }
-.qe-ix-handle--se { right: -10px; bottom: -10px; cursor: nwse-resize; }
-
-.qe-ix-rotate {
-  position: absolute;
-  left: 50%;
-  top: -28px;
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid rgba(255, 80, 80, 0.9);
-  cursor: grab;
-  pointer-events: auto;
-  z-index: 3;
-}
-
-.qe-ix-rotate::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  width: 1px;
-  height: 12px;
-  background: rgba(255, 80, 80, 0.85);
-  transform: translateX(-50%);
-}
-
-.qe-ix-rot-label {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(8, 8, 8, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.qe-ix-guide {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.qe-ix-guide--v {
-  top: 0;
-  bottom: 0;
-  width: 0;
-  border-left: 1px dashed rgba(111, 191, 134, 0.75);
-}
-
-.qe-ix-guide--h {
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 1px dashed rgba(111, 191, 134, 0.75);
-}
-
-.qe-ix-guide.is-center {
-  border-color: rgba(120, 200, 255, 0.85);
-}
-
-.qe-ix-guide.is-mirror {
-  border-color: rgba(255, 196, 92, 0.9);
-  border-style: dotted;
-}
-
-.qe-ix-guide--spacing {
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-  z-index: 4;
-}
-
-.qe-ix-guide--spacing span {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(8, 8, 8, 0.82);
-  border: 1px solid rgba(111, 191, 134, 0.55);
-  color: rgba(180, 255, 200, 0.95);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.qe-ix-guide--spacing.is-y span {
-  writing-mode: horizontal-tb;
-}
-
-.qe-ix-hs-poly {
-  cursor: move;
-  vector-effect: non-scaling-stroke;
-}
-
-.qe-ix-hs-poly.is-selected {
-  stroke: rgba(255, 80, 80, 0.95) !important;
-  stroke-width: 0.5;
-}
-
-.qe-ix-hs-vertex {
-  fill: #fff;
-  stroke: rgba(255, 80, 80, 0.95);
-  stroke-width: 0.35;
-  cursor: crosshair;
-  pointer-events: auto;
-}
-
-.qe-ix-hs-draft-pt {
-  fill: rgba(255, 200, 80, 0.95);
-}
-
-.qe-field--row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.qe-insp__action {
-  appearance: none;
-  width: 100%;
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  max-width: none;
+  max-height: none;
+  display: block;
   background: transparent;
-  color: rgba(255, 255, 255, 0.9);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-.qe-insp__action:hover {
-  background: rgba(255, 255, 255, 0.06);
+/* Design frame is the coordinate space — media underneath provides the image. */
+.qe-canvas__design .qe-exp-overlay .builder-exp-buttons-img,
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.qe-canvas__design .qe-exp-overlay .builder-exp-buttons-layer,
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-layer {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.qe-insp__exp-host {
+  min-height: 120px;
+}
+
+.qe-insp__exp-host .builder-exp-btn-panel,
+.qe-insp__exp-host .builder-exp-hs-panel {
+  padding: 0;
 }
 
 .qe-canvas__chips {
