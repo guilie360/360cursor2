@@ -74,11 +74,13 @@ var PlatformBuilderBridge = (function () {
   async function init() {
     profile = typeof VisitorSession !== 'undefined' ? VisitorSession.getProfile() : null;
     constructoraId = await resolveConstructoraId();
-    installShims();
+    installShims({ requireProyectosApi: true });
     return { profile: profile, constructoraId: constructoraId };
   }
 
-  function installShims() {
+  function installShims(opts) {
+    opts = opts || {};
+    /* Always install AdminApi first — engines/ProyectosApi depend on it. */
     window.AdminApi = {
       getClient: getClient,
       unwrap: unwrap,
@@ -107,18 +109,26 @@ var PlatformBuilderBridge = (function () {
       }
     };
 
-    /* ProyectosApi is canonical (js/api/proyectos.js). Bridge only shims AdminApi/AdminState. */
-    if (typeof ProyectosApi === 'undefined') {
-      throw new Error(
-        'ProyectosApi canónica no está cargada. Incluye js/api/proyectos.js después del bridge.'
-      );
-    }
     if (typeof StorageApi === 'undefined') {
       window.StorageApi = createStorageApi();
     }
     if (typeof HeroApi === 'undefined') {
       window.HeroApi = createHeroApi();
     }
+
+    if (opts.requireProyectosApi && typeof ProyectosApi === 'undefined') {
+      throw new Error(
+        'ProyectosApi canónica no está cargada. Incluye js/api/proyectos.js después del bridge.'
+      );
+    }
+  }
+
+  /** Ensure AdminApi exists before Guardar/Publish (e.g. Quotation mount). */
+  function ensureShims() {
+    if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
+      installShims({ requireProyectosApi: false });
+    }
+    return typeof AdminApi !== 'undefined' && !!AdminApi.getClient;
   }
 
   function createStorageApi() {
@@ -241,8 +251,19 @@ var PlatformBuilderBridge = (function () {
 
   return {
     init: init,
+    ensureShims: ensureShims,
     showroomUrl: showroomUrl,
     getClient: getClient,
     resolveConstructoraId: resolveConstructoraId
   };
 })();
+
+/* Soft boot: expose AdminApi as soon as the bridge script loads so Quotation
+   Guardar cannot race PlatformBuilderBridge.init(). Profile/constructora fill on init(). */
+try {
+  if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.ensureShims) {
+    PlatformBuilderBridge.ensureShims();
+  }
+} catch (eBootShim) {
+  console.error('[PlatformBuilderBridge] soft AdminApi shim failed', eBootShim);
+}

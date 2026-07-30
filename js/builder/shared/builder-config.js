@@ -103,30 +103,35 @@ var BuilderConfig = (function () {
         '</div>' +
       '</div>' +
       '<div class="builder-config-col builder-config-col--share" data-builder-share>' +
-        '<div class="builder-hero-config-card builder-config-share">' +
-          '<div class="builder-hero-config-card__title">Vista previa al compartir</div>' +
-          '<div class="builder-field">' +
-            '<label for="builderOgTitle">Título del enlace</label>' +
-            '<input type="text" id="builderOgTitle" maxlength="120" value="' +
-              escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
+        '<div class="builder-config-share">' +
+          '<div class="builder-config-share__heading">Vista previa al compartir</div>' +
+          '<div class="builder-config-share__fields">' +
+            '<div class="builder-field">' +
+              '<label for="builderOgTitle">Título del enlace</label>' +
+              '<input type="text" id="builderOgTitle" maxlength="120" value="' +
+                escapeHtml(ogTitle) + '" placeholder="Proyecto Altos del Bosque" autocomplete="off">' +
+            '</div>' +
+            '<div class="builder-field">' +
+              '<label for="builderOgDescription">Descripción del enlace</label>' +
+              '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
+                escapeHtml(ogDescription) +
+              '</textarea>' +
+            '</div>' +
           '</div>' +
-          '<div class="builder-field">' +
-            '<label for="builderOgDescription">Descripción del enlace</label>' +
-            '<textarea id="builderOgDescription" rows="3" maxlength="300" placeholder="Conoce este proyecto y explora todas sus tipologías, recorridos 360, renders y características.">' +
-              escapeHtml(ogDescription) +
-            '</textarea>' +
-          '</div>' +
-          '<div class="builder-share-mock" data-builder-share-mock>' +
-            mockImg +
-            '<div class="builder-share-mock__body">' +
-              '<div class="builder-share-mock__title" data-share-mock-title>' +
-                escapeHtml(ogTitle || nombre || 'Título para compartir') +
-              '</div>' +
-              '<div class="builder-share-mock__desc" data-share-mock-desc>' +
-                escapeHtml(ogDescription || 'La descripción aparecerá aquí.') +
-              '</div>' +
-              '<div class="builder-share-mock__host" data-share-mock-host>' +
-                escapeHtml(hostLabel) +
+          '<div class="builder-config-share__preview">' +
+            '<div class="builder-config-share__preview-label">Vista previa</div>' +
+            '<div class="builder-share-mock" data-builder-share-mock>' +
+              mockImg +
+              '<div class="builder-share-mock__body">' +
+                '<div class="builder-share-mock__title" data-share-mock-title>' +
+                  escapeHtml(ogTitle || nombre || 'Título para compartir') +
+                '</div>' +
+                '<div class="builder-share-mock__desc" data-share-mock-desc>' +
+                  escapeHtml(ogDescription || 'La descripción aparecerá aquí.') +
+                '</div>' +
+                '<div class="builder-share-mock__host" data-share-mock-host>' +
+                  escapeHtml(hostLabel) +
+                '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +

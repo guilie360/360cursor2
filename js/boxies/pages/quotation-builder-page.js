@@ -164,6 +164,10 @@ var BoxiesQuotationBuilderPage = (function () {
     }
 
     try {
+      if (typeof PlatformBuilderBridge !== 'undefined' && typeof PlatformBuilderBridge.init === 'function') {
+        await PlatformBuilderBridge.init();
+      }
+
       if (projectId && typeof AdminState !== 'undefined' && AdminState.setActiveProjectId) {
         AdminState.setActiveProjectId(projectId);
       }

@@ -12,6 +12,17 @@ var ProyectosApi = (function () {
   var BRIEF_SELECT =
     'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template, experience_type';
 
+  function dbClient() {
+    if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
+      if (typeof PlatformBuilderBridge !== 'undefined' && PlatformBuilderBridge.ensureShims) {
+        PlatformBuilderBridge.ensureShims();
+      }
+    }
+    if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {
+      throw new Error('AdminApi no disponible. Reinicia la sesión BOXIES e intenta de nuevo.');
+    }
+    return dbClient();
+  }
   function sanitizePayload(payload, isCreate) {
     payload = payload || {};
     var data = {};
@@ -113,7 +124,7 @@ var ProyectosApi = (function () {
   }
 
   async function list() {
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
       .eq('is_system_template', false)
@@ -122,7 +133,7 @@ var ProyectosApi = (function () {
   }
 
   async function listBrief() {
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .select(BRIEF_SELECT)
       .eq('is_system_template', false)
@@ -131,7 +142,7 @@ var ProyectosApi = (function () {
   }
 
   async function getById(id) {
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .select(PROJECT_SELECT)
       .eq('id', id)
@@ -146,7 +157,7 @@ var ProyectosApi = (function () {
         : (typeof PROJECT_DEFAULT_THEME_FALLBACK !== 'undefined'
           ? { project_default_theme: PROJECT_DEFAULT_THEME_FALLBACK }
           : {});
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyecto_config')
       .insert(Object.assign({ proyecto_id: proyectoId }, seed));
     if (result.error) {
@@ -155,7 +166,7 @@ var ProyectosApi = (function () {
   }
 
   async function nextDisplayOrder() {
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .select('display_order')
       .order('display_order', { ascending: false, nullsFirst: false })
@@ -174,7 +185,7 @@ var ProyectosApi = (function () {
     }
     data.display_order = await nextDisplayOrder();
 
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .insert(data)
       .select(PROJECT_SELECT)
@@ -185,7 +196,7 @@ var ProyectosApi = (function () {
     try {
       await createDefaultConfig(result.data.id);
     } catch (err) {
-      await AdminApi.getClient().from('proyectos').delete().eq('id', result.data.id);
+      await dbClient().from('proyectos').delete().eq('id', result.data.id);
       throw err;
     }
 
@@ -204,7 +215,7 @@ var ProyectosApi = (function () {
     if (!Object.keys(data).length) {
       throw new Error('No hay campos para actualizar.');
     }
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .update(data)
       .eq('id', id)
@@ -248,7 +259,7 @@ var ProyectosApi = (function () {
       }
     }
 
-    var client = AdminApi.getClient();
+    var client = dbClient();
     var result = await client
       .from('proyectos')
       .update({ nombre: nombre, slug: slug })
@@ -317,7 +328,7 @@ var ProyectosApi = (function () {
       }
     }
 
-    var query = AdminApi.getClient()
+    var query = dbClient()
       .from('proyectos')
       .select('id')
       .eq('slug', normalized)
@@ -342,7 +353,7 @@ var ProyectosApi = (function () {
   }
 
   async function remove(id) {
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .delete()
       .eq('id', id);
@@ -359,7 +370,7 @@ var ProyectosApi = (function () {
     if (!Array.isArray(orderedIds) || !orderedIds.length) {
       throw new Error('Lista de orden vacía.');
     }
-    var client = AdminApi.getClient();
+    var client = dbClient();
     var updates = [];
     for (var i = 0; i < orderedIds.length; i++) {
       var id = orderedIds[i];
@@ -391,7 +402,7 @@ var ProyectosApi = (function () {
    */
   async function setPublic(projectId, isPublic) {
     if (!projectId) throw new Error('Falta el ID del showroom.');
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyectos')
       .update({ is_public: !!isPublic })
       .eq('id', projectId)
@@ -416,7 +427,7 @@ var ProyectosApi = (function () {
     options = options || {};
     var args = {};
     if (options.constructoraId) args.p_constructora_id = options.constructoraId;
-    var result = await AdminApi.getClient().rpc('create_showroom_from_template', args);
+    var result = await dbClient().rpc('create_showroom_from_template', args);
     return unwrapRpcProject(result, 'Error creando showroom desde plantilla');
   }
 
@@ -428,7 +439,7 @@ var ProyectosApi = (function () {
     if (options.slug) args.p_slug = options.slug;
     if (options.constructoraId) args.p_constructora_id = options.constructoraId;
     args.p_as_system_template = false;
-    var result = await AdminApi.getClient().rpc('clone_showroom', args);
+    var result = await dbClient().rpc('clone_showroom', args);
     return unwrapRpcProject(result, 'Error clonando showroom');
   }
 
@@ -440,7 +451,7 @@ var ProyectosApi = (function () {
       og_title: meta.og_title || null,
       og_description: meta.og_description || null
     };
-    var client = AdminApi.getClient();
+    var client = dbClient();
     var existing = await client
       .from('proyecto_config')
       .select('proyecto_id')
@@ -469,7 +480,7 @@ var ProyectosApi = (function () {
 
   async function fetchShareMeta(proyectoId) {
     if (!proyectoId) return { og_image: '', og_title: '', og_description: '' };
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyecto_config')
       .select('og_image, og_title, og_description')
       .eq('proyecto_id', proyectoId)
@@ -532,7 +543,7 @@ var ProyectosApi = (function () {
 
   async function fetchHeroQuotation(proyectoId) {
     if (!proyectoId) return null;
-    var result = await AdminApi.getClient()
+    var result = await dbClient()
       .from('proyecto_config')
       .select('hero_quotation')
       .eq('proyecto_id', proyectoId)
@@ -546,7 +557,7 @@ var ProyectosApi = (function () {
   async function updateHeroQuotation(proyectoId, payload) {
     if (!proyectoId) throw new Error('Falta el ID del proyecto.');
     var data = sanitizeHeroQuotation(payload);
-    var client = AdminApi.getClient();
+    var client = dbClient();
 
     var existing = await client
       .from('proyecto_config')
