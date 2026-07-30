@@ -143,16 +143,21 @@ var QuotationRuntime = (function () {
 
   function resolveSceneMedia(scene, bundle) {
     if (!scene) return null;
-    if (scene.mediaUrl) {
+    var url = scene.mediaUrl || scene.publicUrl || null;
+    if (url && String(url).indexOf('blob:') !== 0) {
       return {
-        url: scene.mediaUrl,
+        url: url,
         type: scene.mediaType === 'video' ? 'video' : 'image'
       };
     }
     var cm = scene.coverModel;
     if (cm) {
-      if (cm.videoUrl) return { url: cm.videoUrl, type: 'video' };
-      if (cm.imageUrl) return { url: cm.imageUrl, type: 'image' };
+      if (cm.videoUrl && String(cm.videoUrl).indexOf('blob:') !== 0) {
+        return { url: cm.videoUrl, type: 'video' };
+      }
+      if (cm.imageUrl && String(cm.imageUrl).indexOf('blob:') !== 0) {
+        return { url: cm.imageUrl, type: 'image' };
+      }
     }
     /* Never borrow top-level hero media for arbitrary scenes — that shows stale backgrounds. */
     var entry = entryScene(bundle);
@@ -910,6 +915,17 @@ var QuotationRuntime = (function () {
           ? loaded.project.nombre
           : 'Cotización') +
           (canvasMode ? ' · Canvas' : (previewMode ? ' · Preview' : (editorMode ? ' · Editor' : '')));
+        if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onRuntimeBoot) {
+          QuotationPersistAudit.onRuntimeBoot({
+            projectId: q.projectId || (loaded.project && loaded.project.id) || null,
+            slug: loaded.project && loaded.project.slug || null,
+            source: liveEnv && liveEnv.canvas
+              ? 'LIVE sessionStorage envelope (overrides DB canvas)'
+              : 'DB fetchBundle → proyecto_config.hero_quotation.canvas',
+            mode: canvasMode ? 'canvas' : (previewMode ? 'preview' : (editorMode ? 'editor' : 'public')),
+            canvas: loaded.hero && loaded.hero.canvas ? loaded.hero.canvas : null
+          });
+        }
       } else if (liveEnv && liveEnv.canvas) {
         loaded = blankEditorBundle();
         applyDocument(liveEnv.canvas, { project: liveEnv.project || null });

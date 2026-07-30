@@ -63,6 +63,27 @@ function handoffQuotationPublicExperience(project) {
     return Promise.reject(new Error('Cotización sin projectId'));
   }
 
+  try {
+    var hq = project.proyecto_config && (
+      Array.isArray(project.proyecto_config)
+        ? project.proyecto_config[0]
+        : project.proyecto_config
+    );
+    var hero = hq && hq.hero_quotation ? hq.hero_quotation : null;
+    console.groupCollapsed('[QE-AUDIT V7.2.27] G.public-slug-handoff');
+    console.log({
+      projectId: id,
+      slug: project.slug || null,
+      source: 'fetchPublishedProject → handoffQuotationPublicExperience → iframe /quotation/?projectId=',
+      experience_type: project.experience_type || null,
+      hero_quotation_canvas: hero && hero.canvas ? hero.canvas : null,
+      timestamp: new Date().toISOString()
+    });
+    console.log('[QE-AUDIT] hero_quotation.canvas JSON ↓');
+    console.log(JSON.stringify(hero && hero.canvas ? hero.canvas : null, null, 2));
+    console.groupEnd();
+  } catch (eAudH) {}
+
   var runtimeSrc;
   try {
     var u = new URL('/quotation/', window.location.origin);

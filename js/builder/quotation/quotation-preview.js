@@ -98,6 +98,18 @@ var QuotationPreview = (function () {
         : '';
     var envelope = prepareLiveDocument(ctx);
     var url = resolveRuntimeUrl(ctx);
+    if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onPreview) {
+      QuotationPersistAudit.onPreview({
+        projectId: ctx.id || ctx.projectId || null,
+        slug: ctx.slug || null,
+        source: 'sessionStorage boxies_qe_live_doc_v1_{projectId} + QuotationRuntime.href(preview+live)',
+        url: url,
+        liveDocPresent: !!(envelope && envelope.canvas),
+        canvasSceneCount: envelope && envelope.canvas && Array.isArray(envelope.canvas.scenes)
+          ? envelope.canvas.scenes.length
+          : 0
+      });
+    }
     var body;
     if (!url) {
       body =

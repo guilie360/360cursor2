@@ -269,6 +269,25 @@ var QuotationBuilderView = (function () {
       if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
         try { await QuotationEditor.commit(configAdapter()); } catch (eEditor) {}
       }
+      if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onPublish) {
+        var pubDoc = null;
+        try {
+          pubDoc = typeof QuotationEditor !== 'undefined' && QuotationEditor.serializeDocument
+            ? QuotationEditor.serializeDocument()
+            : null;
+        } catch (eDoc) {}
+        QuotationPersistAudit.onPublish({
+          projectId: projectCtx.id,
+          slug: projectCtx.slug,
+          source: 'QuotationBuilder.handlePublish',
+          documentOrigin:
+            '1) QuotationHero.commit (hero_quotation top-level, canvas preserved if absent) → ' +
+            '2) QuotationEditor.commit (hero_quotation.canvas = serializeDocument) → ' +
+            '3) ProyectosApi.update({ publicado: true }) — flag only, does not rewrite canvas',
+          note: 'Public Runtime /{slug} will load hero_quotation from DB after this, not Editor memory.',
+          memoryDocumentSummary: pubDoc
+        });
+      }
       if (typeof ProyectosApi === 'undefined' || !ProyectosApi.update) {
         throw new Error('API de publicación no disponible.');
       }
