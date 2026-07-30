@@ -87,19 +87,18 @@ var QuotationExperienciaBridge = (function () {
 
   function mediaUrlForScene(scene, contentById) {
     if (!scene) return null;
-    if (scene.mediaUrl && String(scene.mediaUrl).indexOf('blob:') !== 0) return scene.mediaUrl;
-    if (scene.publicUrl && String(scene.publicUrl).indexOf('blob:') !== 0) return scene.publicUrl;
+    if (scene.mediaUrl) return scene.mediaUrl;
+    if (scene.publicUrl) return scene.publicUrl;
     if (scene.coverModel) {
       var cm = scene.coverModel;
-      if (cm.imageUrl && String(cm.imageUrl).indexOf('blob:') !== 0) return cm.imageUrl;
-      if (cm.videoUrl && String(cm.videoUrl).indexOf('blob:') !== 0) return null;
+      if (cm.imageUrl) return cm.imageUrl;
+      if (cm.videoUrl) return cm.videoUrl;
     }
     var rid = scene.resourceId;
     if (!rid || typeof contentById !== 'function') return null;
     var res = contentById(rid);
     if (!res) return null;
-    return res.publicUrl || res.remoteUrl ||
-      (res.previewUrl && String(res.previewUrl).indexOf('blob:') !== 0 ? res.previewUrl : null);
+    return res.publicUrl || res.remoteUrl || res.previewUrl || null;
   }
 
   /**

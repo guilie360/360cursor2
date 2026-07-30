@@ -219,6 +219,32 @@ var QuotationEditor = (function () {
     return u || null;
   }
 
+  /** Editor display URL — allows blob preview so DnD works before Bunny sync. */
+  function displayUrlOf(item) {
+    if (!item) return null;
+    var pub = publicUrlOf(item);
+    if (pub) return pub;
+    return item.previewUrl || null;
+  }
+
+  function collectItemUrls(item) {
+    if (!item) return [];
+    var out = [];
+    [item.publicUrl, item.remoteUrl, item.previewUrl].forEach(function (u) {
+      if (u && out.indexOf(u) < 0) out.push(String(u));
+    });
+    return out;
+  }
+
+  function urlInList(url, urls) {
+    if (!url || !urls || !urls.length) return false;
+    var s = String(url);
+    for (var i = 0; i < urls.length; i++) {
+      if (String(urls[i]) === s) return true;
+    }
+    return false;
+  }
+
   function applyBunnyResultToItem(item, result) {
     if (!item || !result) return;
     revokePreview(item);
@@ -690,21 +716,27 @@ var QuotationEditor = (function () {
       : (item.media === 'video' ? 'Video' : 'Imagen');
     var canAssign = item.media === 'image' || item.media === 'video' ||
       item.group === 'renders' || item.group === 'videos' || item.group === 'hero';
+    var thumbUrl = displayUrlOf(item) || item.previewUrl || '';
     return '' +
-      '<button type="button" class="qe-lib__item' + (nested ? ' qe-lib__item--nested' : '') +
+      '<div class="qe-lib__item' + (nested ? ' qe-lib__item--nested' : '') +
         (on ? ' is-selected' : '') + '"' +
+        ' role="button" tabindex="0"' +
         ' data-qe-content="' + escapeHtml(item.id) + '"' +
         (canAssign ? ' draggable="true" data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') + '>' +
-        '<span class="' + thumbClass(item) + '" aria-hidden="true"' +
-          (item.previewUrl
-            ? ' style="background-image:url(\'' + escapeHtml(item.previewUrl) + '\');background-size:cover;background-position:center"'
-            : '') +
-        '></span>' +
+        '<span class="qe-lib__thumb-wrap">' +
+          '<span class="' + thumbClass(item) + '" aria-hidden="true"' +
+            (thumbUrl
+              ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
+              : '') +
+          '></span>' +
+          '<button type="button" class="qe-lib__remove" data-qe-remove-resource="' +
+            escapeHtml(item.id) + '" aria-label="Eliminar recurso" title="Eliminar">×</button>' +
+        '</span>' +
         '<span class="qe-lib__meta">' +
           '<span class="qe-lib__name">' + escapeHtml(item.name || 'Sin nombre') + '</span>' +
           '<span class="qe-lib__type">' + escapeHtml(sub) + '</span>' +
         '</span>' +
-      '</button>';
+      '</div>';
   }
 
   function tourComposerHtml(folderId) {
@@ -969,11 +1001,21 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function sceneDisplayUrl(scene) {
+    if (!scene) return '';
+    var res = sceneResource(scene);
+    if (res) {
+      var fromRes = displayUrlOf(res);
+      if (fromRes) return fromRes;
+    }
+    if (scene.mediaUrl) return String(scene.mediaUrl);
+    if (scene.publicUrl) return String(scene.publicUrl);
+    return '';
+  }
+
   function sceneMediaStageHtml(scene) {
     var res = sceneResource(scene);
-    var url = (res && publicUrlOf(res)) ||
-      (scene && scene.mediaUrl && String(scene.mediaUrl).indexOf('blob:') !== 0 ? scene.mediaUrl : '') ||
-      '';
+    var url = sceneDisplayUrl(scene);
     if (!url) return emptyScenePlaceholderHtml();
     var isVideo = (res && (res.media === 'video' || res.group === 'videos')) ||
       (scene && scene.mediaType === 'video');
@@ -1132,14 +1174,13 @@ var QuotationEditor = (function () {
     var thumbs = state.scenes.map(function (sc) {
       var on = sc.id === state.activeSceneId;
       var label = String(sc.name || 'Escena').toLowerCase();
-      var res = sceneResource(sc);
-      var thumbUrl = (res && publicUrlOf(res)) ||
-        (sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') !== 0 ? sc.mediaUrl : null);
+      var thumbUrl = sceneDisplayUrl(sc) || null;
       var bg = thumbUrl
         ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
         : '';
       return '' +
-        '<div class="qe-scenes__thumb-wrap">' +
+        '<div class="qe-scenes__thumb-wrap" data-qe-drop-scene data-qe-drop-scene-id="' +
+          escapeHtml(sc.id) + '">' +
           '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
             ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
             ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
@@ -1766,7 +1807,7 @@ var QuotationEditor = (function () {
   function applyResourceToCoverModel(scene, res) {
     if (!scene || !res) return;
     ensureHeroCoverModel(scene);
-    var url = publicUrlOf(res);
+    var url = displayUrlOf(res);
     if (!url) return;
     var isVideo = res.media === 'video' || res.group === 'videos';
     if (isVideo) {
@@ -1780,26 +1821,30 @@ var QuotationEditor = (function () {
 
   function assignResourceToScene(contentId, sceneId) {
     var res = contentById(contentId);
-    var scene = sceneById(sceneId || state.activeSceneId);
+    var targetId = sceneId || state.activeSceneId;
+    var scene = sceneById(targetId);
     if (!res || !scene) return;
     if (!(res.media === 'image' || res.media === 'video' ||
         res.group === 'renders' || res.group === 'videos' || res.group === 'hero')) {
       return;
     }
-    scene.resourceId = res.id;
-    var url = publicUrlOf(res);
+    var url = displayUrlOf(res);
     if (!url) {
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-        AdminNotify.error('El recurso aún no tiene publicUrl. Espera a que termine la subida a Bunny.');
+        AdminNotify.error('Este recurso no tiene archivo para usar como fondo.');
       }
       return;
     }
+    if (targetId) state.activeSceneId = targetId;
+    var pub = publicUrlOf(res);
     var isVideo = res.media === 'video' || res.group === 'videos';
+    scene.resourceId = res.id;
     scene.mediaUrl = url;
+    scene.publicUrl = pub || (String(url).indexOf('blob:') === 0 ? null : url);
     scene.mediaType = isVideo ? 'video' : 'image';
     scene.storagePath = res.storagePath || null;
     scene.archivoId = res.archivoId || null;
-    scene.provider = res.provider || 'bunny';
+    scene.provider = res.provider || (pub ? 'bunny' : null);
     if (scene.type === 'hero' || scene.templateId === 'hero-default') {
       applyResourceToCoverModel(scene, res);
     } else {
@@ -1816,6 +1861,139 @@ var QuotationEditor = (function () {
     }
     markDirtyLocal();
     rerender();
+  }
+
+  function sceneUsesLibraryItem(sc, item, urls) {
+    if (!sc || !item) return false;
+    if (sc.resourceId && String(sc.resourceId) === String(item.id)) return true;
+    if (item.archivoId && sc.archivoId && String(sc.archivoId) === String(item.archivoId)) return true;
+    if (item.storagePath && sc.storagePath && String(sc.storagePath) === String(item.storagePath)) {
+      return true;
+    }
+    if (urlInList(sc.mediaUrl, urls) || urlInList(sc.publicUrl, urls)) return true;
+    if (sc.coverModel) {
+      if (urlInList(sc.coverModel.imageUrl, urls) || urlInList(sc.coverModel.videoUrl, urls)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function clearSceneLibraryRefs(sc, item, urls) {
+    if (!sceneUsesLibraryItem(sc, item, urls)) return;
+    sc.resourceId = null;
+    sc.mediaUrl = null;
+    sc.publicUrl = null;
+    sc.mediaType = null;
+    sc.storagePath = null;
+    sc.archivoId = null;
+    sc.provider = null;
+    if (sc.coverModel) {
+      if (urlInList(sc.coverModel.imageUrl, urls)) sc.coverModel.imageUrl = null;
+      if (urlInList(sc.coverModel.videoUrl, urls)) sc.coverModel.videoUrl = null;
+    }
+  }
+
+  function clearElementLibraryRefs(el, item, urls) {
+    if (!el || !el.props) return;
+    var p = el.props;
+    if (p.resourceId && String(p.resourceId) === String(item.id)) p.resourceId = null;
+    if (urlInList(p.src, urls)) { p.src = ''; p.show = false; }
+    if (urlInList(p.url, urls)) p.url = '';
+    if (urlInList(p.imageUrl, urls)) p.imageUrl = '';
+    if (urlInList(p.mediaUrl, urls)) p.mediaUrl = '';
+  }
+
+  function clearHeroLibraryRefs(item, urls) {
+    if (typeof QuotationHero === 'undefined' || !QuotationHero.getState) return;
+    var hs = QuotationHero.getState();
+    if (!hs) return;
+    function mediaHit(media) {
+      if (!media) return false;
+      return urlInList(media.uploadedUrl, urls) ||
+        urlInList(media.previewUrl, urls) ||
+        (item.archivoId && media.archivoId && String(media.archivoId) === String(item.archivoId)) ||
+        (item.storagePath && media.storagePath &&
+          String(media.storagePath) === String(item.storagePath));
+    }
+    if (urlInList(hs.imageUrl, urls) || mediaHit(hs.heroImage)) {
+      hs.imageUrl = null;
+      hs.heroImage = null;
+    }
+    if (urlInList(hs.videoUrl, urls) || mediaHit(hs.heroVideo)) {
+      hs.videoUrl = null;
+      hs.heroVideo = null;
+    }
+  }
+
+  async function autosaveAfterLibraryChange() {
+    try {
+      if (typeof QuotationBuilderView !== 'undefined' && typeof QuotationBuilderView.save === 'function') {
+        await QuotationBuilderView.save();
+        return;
+      }
+      var projectId = resolveProjectId();
+      if (!projectId) return;
+      await commit({
+        getProjectId: function () { return projectId; }
+      });
+    } catch (eSave) {
+      console.warn('[QuotationEditor] autosave after library change', eSave);
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error((eSave && eSave.message) || 'No se pudo guardar tras eliminar el recurso.');
+      }
+    }
+  }
+
+  async function removeLibraryResource(contentId) {
+    var item = contentById(contentId);
+    if (!item) return;
+    var label = item.name || 'este recurso';
+    if (!window.confirm('¿Eliminar «' + label + '» de la biblioteca?\nSe quitará de escenas, canvas y Hero. Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    var urls = collectItemUrls(item);
+    var projectId = resolveProjectId();
+    var slug = resolveShowroomSlug();
+    var archivoId = item.archivoId || null;
+    var storagePath = item.storagePath || null;
+
+    state.scenes.forEach(function (sc) {
+      clearSceneLibraryRefs(sc, item, urls);
+      (sc.elements || []).forEach(function (el) {
+        clearElementLibraryRefs(el, item, urls);
+      });
+    });
+    clearHeroLibraryRefs(item, urls);
+
+    revokePreview(item);
+    state.content = state.content.filter(function (c) {
+      return !c || String(c.id) !== String(item.id);
+    });
+    if (String(state.selectedContentId || '') === String(item.id)) {
+      state.selectedContentId = null;
+    }
+    if (state.items && state.items[item.id]) {
+      try { delete state.items[item.id]; } catch (eItems) {}
+    }
+
+    if ((archivoId || storagePath) && projectId &&
+        typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.remove) {
+      try {
+        await BunnyMediaApi.remove(projectId, {
+          archivoId: archivoId,
+          storagePath: storagePath,
+          showroomSlug: slug || null
+        });
+      } catch (eBunny) {
+        console.warn('[QuotationEditor] Bunny remove', eBunny);
+      }
+    }
+
+    markDirtyLocal();
+    rerender();
+    await autosaveAfterLibraryChange();
   }
 
   function openResourcePicker() {
@@ -2041,6 +2219,7 @@ var QuotationEditor = (function () {
     /* Keep library → scene DnD working above the overlay. */
     layer.addEventListener('dragover', function (e) {
       e.preventDefault();
+      e.stopPropagation();
       layer.classList.add('is-drop-target');
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
     });
@@ -2049,6 +2228,7 @@ var QuotationEditor = (function () {
     });
     layer.addEventListener('drop', function (e) {
       e.preventDefault();
+      e.stopPropagation();
       layer.classList.remove('is-drop-target');
       var id = (e.dataTransfer && (
         e.dataTransfer.getData('text/qe-resource') ||
@@ -2490,17 +2670,26 @@ var QuotationEditor = (function () {
 
       qAll('[data-qe-drag-resource]').forEach(function (el) {
         el.addEventListener('dragstart', function (e) {
+          if (e.target && e.target.closest && e.target.closest('[data-qe-remove-resource]')) {
+            e.preventDefault();
+            return;
+          }
           var id = el.getAttribute('data-qe-drag-resource');
           if (!id || !e.dataTransfer) return;
           e.dataTransfer.setData('text/qe-resource', id);
           e.dataTransfer.setData('text/plain', id);
           e.dataTransfer.effectAllowed = 'copy';
+          el.classList.add('is-dragging');
+        });
+        el.addEventListener('dragend', function () {
+          el.classList.remove('is-dragging');
         });
       });
 
       qAll('[data-qe-drop-scene]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           zone.classList.add('is-drop-target');
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
         });
@@ -2509,12 +2698,14 @@ var QuotationEditor = (function () {
         });
         zone.addEventListener('drop', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           zone.classList.remove('is-drop-target');
           var id = (e.dataTransfer && (
             e.dataTransfer.getData('text/qe-resource') ||
             e.dataTransfer.getData('text/plain')
           )) || '';
-          if (id) assignResourceToScene(id);
+          var sceneId = zone.getAttribute('data-qe-drop-scene-id') || null;
+          if (id) assignResourceToScene(id, sceneId || undefined);
         });
       });
 
@@ -2656,9 +2847,26 @@ var QuotationEditor = (function () {
       });
     });
 
-    qAll('[data-qe-content]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        selectContent(btn.getAttribute('data-qe-content'));
+    qAll('[data-qe-content]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('[data-qe-remove-resource]')) return;
+        selectContent(el.getAttribute('data-qe-content'));
+      });
+      el.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        selectContent(el.getAttribute('data-qe-content'));
+      });
+    });
+
+    qAll('[data-qe-remove-resource]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        removeLibraryResource(btn.getAttribute('data-qe-remove-resource'));
+      });
+      btn.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
       });
     });
 

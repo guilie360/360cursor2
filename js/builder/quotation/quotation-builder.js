@@ -531,6 +531,7 @@ var QuotationBuilderView = (function () {
     render: render,
     onLeave: onLeave,
     goToStep: goToStep,
+    save: handleSave,
     getProjectLabel: function () {
       return projectCtx.name || projectCtx.slug || '';
     },
