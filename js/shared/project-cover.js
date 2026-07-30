@@ -448,10 +448,107 @@ var ProjectCover = (function () {
     return model;
   }
 
+  function sanitizeModel(raw) {
+    var base = blankModel();
+    if (!raw || typeof raw !== 'object') return base;
+    base.layout = raw.layout === 'bottom-bar' ? 'bottom-bar' : 'centered';
+    base.textColor = raw.textColor === 'dark' ? 'dark' : 'light';
+    base.buttonTextColor = raw.buttonTextColor === 'dark' ? 'dark' : 'light';
+    base.nombre = String(raw.nombre || '').trim();
+    base.eslogan = String(raw.eslogan || '').trim();
+    base.botonIzquierdo = String(raw.botonIzquierdo || 'Explorar').trim() || 'Explorar';
+    base.botonDerecho = String(raw.botonDerecho || 'Iniciar').trim() || 'Iniciar';
+    base.logoUrl = String(raw.logoUrl || '').trim();
+    base.logoStyle = raw.logoStyle === 'avatar' ? 'avatar' : 'flat';
+    base.showLogo = raw.showLogo !== false && !!base.logoUrl;
+    base.videoUrl = String(raw.videoUrl || '').trim() || null;
+    base.imageUrl = String(raw.imageUrl || '').trim() || null;
+    base.showBack = raw.showBack !== false;
+    base.backLabel = String(raw.backLabel || 'Demos').trim() || 'Demos';
+    base.showShare = raw.showShare !== false;
+    base.showFullscreen = raw.showFullscreen !== false;
+    base.showAssistant = raw.showAssistant !== false;
+    return base;
+  }
+
+  /**
+   * Prefer canvas coverModel (entry hero). Never fall back to parallel legacy fields
+   * when a canvas cover exists — Preview/Runtime must match Canvas.
+   */
+  function resolveModel(heroQuotation, project) {
+    var hq = heroQuotation && typeof heroQuotation === 'object' ? heroQuotation : null;
+    var canvas = hq && hq.canvas && typeof hq.canvas === 'object' ? hq.canvas : null;
+    if (canvas && Array.isArray(canvas.scenes) && canvas.scenes.length) {
+      var scenes = canvas.scenes;
+      var activeId = canvas.activeSceneId;
+      var scene = null;
+      var i;
+      /* Active scene only if it carries the cover (Hero Default). */
+      if (activeId) {
+        for (i = 0; i < scenes.length; i++) {
+          if (scenes[i] && scenes[i].id === activeId && scenes[i].coverModel) {
+            scene = scenes[i];
+            break;
+          }
+        }
+      }
+      if (!scene) {
+        for (i = 0; i < scenes.length; i++) {
+          if (scenes[i] && scenes[i].coverModel &&
+              (scenes[i].templateId === 'hero-default' || scenes[i].type === 'hero')) {
+            scene = scenes[i];
+            break;
+          }
+        }
+      }
+      if (!scene) {
+        for (i = 0; i < scenes.length; i++) {
+          if (scenes[i] && scenes[i].coverModel) { scene = scenes[i]; break; }
+        }
+      }
+      if (scene && scene.coverModel) return sanitizeModel(scene.coverModel);
+    }
+    return fromQuotationHero(hq, project);
+  }
+
+  function toHeroQuotationPayload(model, canvasDoc) {
+    model = sanitizeModel(model);
+    var payload = {
+      heroContent: {
+        nombre: model.nombre,
+        eslogan: model.eslogan,
+        botonIzquierdo: model.botonIzquierdo,
+        botonDerecho: model.botonDerecho,
+        whatsappLink: '',
+        whatsappMessage: '',
+        shareUrl: '',
+        showWhatsapp: false,
+        showShare: model.showShare !== false,
+        showFullscreen: model.showFullscreen !== false
+      },
+      branding: {
+        showHeroLogo: model.showLogo !== false,
+        logoStyle: model.logoStyle === 'avatar' ? 'avatar' : 'flat',
+        logo: model.logoUrl
+          ? { name: 'Logo', uploadedUrl: model.logoUrl, size: 0 }
+          : null
+      },
+      video_url: model.videoUrl || null,
+      image_url: model.imageUrl || null
+    };
+    if (canvasDoc && typeof canvasDoc === 'object') {
+      payload.canvas = canvasDoc;
+    }
+    return payload;
+  }
+
   return {
     blankModel: blankModel,
+    sanitizeModel: sanitizeModel,
     fromQuotationHero: fromQuotationHero,
     fromQuotationHeroState: fromQuotationHeroState,
+    resolveModel: resolveModel,
+    toHeroQuotationPayload: toHeroQuotationPayload,
     shellHtml: shellHtml,
     mount: mount,
     paint: paint,

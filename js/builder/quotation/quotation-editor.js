@@ -1,6 +1,6 @@
 /**
- * Quotation Editor — V7.2.05 ProjectCover SSOT in Canvas.
- * Hero Default mounts shared ProjectCover (same module as Quotation Runtime).
+ * Quotation Editor — V7.2.06 Canvas = Preview = Runtime SSOT.
+ * Persists canvas document; ProjectCover is the only hero renderer.
  */
 var QuotationEditor = (function () {
   var CONTENT_GROUPS = [
@@ -190,6 +190,8 @@ var QuotationEditor = (function () {
   var state = createEmptyState();
   var rootEl = null;
   var editorProjectCtx = null;
+  var loadedProjectId = null;
+  var loadPromise = null;
 
   function sceneById(id) {
     if (!id || !state.scenes) return null;
@@ -1429,24 +1431,28 @@ var QuotationEditor = (function () {
     rootEl = panel;
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     bindFocusEsc();
-    bindCanvasFit();
-    mountActiveProjectCover();
-    var editor = panel.querySelector('[data-qe-editor]') || panel;
 
-    editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        selectScene(btn.getAttribute('data-qe-scene'));
-      });
-    });
+    var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 
-    var sceneMenuToggle = editor.querySelector('[data-qe-scene-menu-toggle]');
-    if (sceneMenuToggle) {
-      sceneMenuToggle.addEventListener('click', function (e) {
-        e.stopPropagation();
-        state.sceneMenuOpen = state.sceneMenuOpen ? false : 'root';
-        rerender();
+    function wireEditor() {
+      bindCanvasFit();
+      mountActiveProjectCover();
+      var editor = panel.querySelector('[data-qe-editor]') || panel;
+
+      editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          selectScene(btn.getAttribute('data-qe-scene'));
+        });
       });
-    }
+
+      var sceneMenuToggle = editor.querySelector('[data-qe-scene-menu-toggle]');
+      if (sceneMenuToggle) {
+        sceneMenuToggle.addEventListener('click', function (e) {
+          e.stopPropagation();
+          state.sceneMenuOpen = state.sceneMenuOpen ? false : 'root';
+          rerender();
+        });
+      }
 
     var sceneMenuTemplates = editor.querySelector('[data-qe-scene-menu-templates]');
     if (sceneMenuTemplates) {
@@ -1730,12 +1736,207 @@ var QuotationEditor = (function () {
         });
       });
     }
+    } /* wireEditor */
+
+    if (projectId && loadedProjectId !== projectId) {
+      load(projectId).then(function () {
+        if (!rootEl) return;
+        var host = rootEl.matches && rootEl.matches('[data-quotation-panel]')
+          ? rootEl
+          : ((rootEl.closest && rootEl.closest('[data-quotation-panel]')) || rootEl);
+        host.innerHTML = render(editorProjectCtx);
+        rootEl = host;
+        panel = host;
+        wireEditor();
+      });
+      return;
+    }
+    wireEditor();
+  }
+
+  function entryCoverScene() {
+    ensureScenes();
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i] && state.scenes[i].coverModel &&
+          (state.scenes[i].templateId === 'hero-default' || state.scenes[i].type === 'hero')) {
+        return state.scenes[i];
+      }
+    }
+    for (i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i] && state.scenes[i].coverModel) return state.scenes[i];
+    }
+    return null;
+  }
+
+  function serializeDocument() {
+    ensureScenes();
+    return {
+      version: 1,
+      activeSceneId: state.activeSceneId || (state.scenes[0] && state.scenes[0].id) || null,
+      scenes: state.scenes.map(function (sc) {
+        return {
+          id: sc.id,
+          name: sc.name || 'Escena',
+          type: sc.type || 'scene',
+          templateId: sc.templateId || null,
+          coverModel: sc.coverModel
+            ? (typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel
+              ? ProjectCover.sanitizeModel(sc.coverModel)
+              : sc.coverModel)
+            : null,
+          elements: Array.isArray(sc.elements) ? sc.elements : []
+        };
+      })
+    };
+  }
+
+  function hydrateFromHeroQuotation(hq, ctx) {
+    hq = hq || null;
+    if (hq && hq.canvas && Array.isArray(hq.canvas.scenes) && hq.canvas.scenes.length) {
+      state.scenes = hq.canvas.scenes.map(function (sc) {
+        return {
+          id: sc.id,
+          name: sc.name || 'Escena',
+          type: sc.type || 'scene',
+          templateId: sc.templateId || null,
+          coverModel: sc.coverModel || null,
+          elements: Array.isArray(sc.elements) ? sc.elements : []
+        };
+      });
+      state.activeSceneId = hq.canvas.activeSceneId || state.scenes[0].id;
+      return;
+    }
+
+    /* Legacy projects: seed one Hero Default from hero_quotation fields. */
+    var model = typeof ProjectCover !== 'undefined' && ProjectCover.fromQuotationHero
+      ? ProjectCover.fromQuotationHero(hq, {
+        nombre: (ctx && (ctx.name || ctx.nombre)) || ''
+      })
+      : null;
+    if (!model) {
+      state = createEmptyState();
+      return;
+    }
+    var elements = ProjectCover.elementDescriptors
+      ? ProjectCover.elementDescriptors(function () { return nextId('el'); })
+      : [];
+    elements.forEach(function (el) {
+      if (!el.props) el.props = {};
+      if (el.role === 'title') el.props.text = model.nombre || '';
+      if (el.role === 'subtitle') el.props.text = model.eslogan || '';
+      if (el.role === 'explore') el.props.label = model.botonIzquierdo || 'Explorar';
+      if (el.role === 'start') el.props.label = model.botonDerecho || 'Iniciar';
+      if (el.role === 'back') el.props.label = model.backLabel || 'Demos';
+      if (el.role === 'logo') {
+        el.props.src = model.logoUrl || '';
+        el.props.show = !!model.showLogo;
+      }
+    });
+    var scene = {
+      id: nextId('sc'),
+      name: 'Hero Default',
+      type: 'hero',
+      templateId: 'hero-default',
+      coverModel: model,
+      elements: elements
+    };
+    state.scenes = [scene];
+    state.activeSceneId = scene.id;
+  }
+
+  function load(projectId) {
+    var id = String(projectId || '').trim();
+    if (loadPromise && loadedProjectId === id) return loadPromise;
+    loadedProjectId = id;
+    if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
+      loadPromise = Promise.resolve(null);
+      return loadPromise;
+    }
+    loadPromise = ProyectosApi.fetchHeroQuotation(id)
+      .then(function (hq) {
+        hydrateFromHeroQuotation(hq, editorProjectCtx);
+        return hq;
+      })
+      .catch(function () {
+        hydrateFromHeroQuotation(null, editorProjectCtx);
+        return null;
+      });
+    return loadPromise;
+  }
+
+  /**
+   * Persist canvas document as SSOT. Derives hero_quotation fields from entry coverModel
+   * so Runtime/Preview never need a second hero tree.
+   */
+  async function commit(adapter) {
+    var projectId =
+      (adapter && adapter.getProjectId && adapter.getProjectId()) ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      loadedProjectId;
+    if (!projectId) return null;
+
+    var entry = entryCoverScene();
+    if (!entry || !entry.coverModel) {
+      /* No canvas hero yet — leave hero_quotation alone. */
+      return null;
+    }
+
+    if (typeof ProyectosApi === 'undefined' || !ProyectosApi.updateHeroQuotation) {
+      throw new Error('API de cotización no disponible.');
+    }
+
+    var doc = serializeDocument();
+    var payload = typeof ProjectCover !== 'undefined' && ProjectCover.toHeroQuotationPayload
+      ? ProjectCover.toHeroQuotationPayload(entry.coverModel, doc)
+      : {
+        heroContent: {
+          nombre: entry.coverModel.nombre || '',
+          eslogan: entry.coverModel.eslogan || '',
+          botonIzquierdo: entry.coverModel.botonIzquierdo || 'Explorar',
+          botonDerecho: entry.coverModel.botonDerecho || 'Iniciar',
+          showShare: entry.coverModel.showShare !== false,
+          showFullscreen: entry.coverModel.showFullscreen !== false
+        },
+        branding: {
+          showHeroLogo: !!entry.coverModel.showLogo,
+          logoStyle: entry.coverModel.logoStyle || 'flat',
+          logo: entry.coverModel.logoUrl
+            ? { name: 'Logo', uploadedUrl: entry.coverModel.logoUrl, size: 0 }
+            : null
+        },
+        video_url: entry.coverModel.videoUrl || null,
+        image_url: entry.coverModel.imageUrl || null,
+        canvas: doc
+      };
+
+    var saved = await ProyectosApi.updateHeroQuotation(projectId, payload);
+    loadedProjectId = String(projectId);
+    return saved;
+  }
+
+  function syncCoverFromHeroPayload(hq) {
+    if (!hq) return;
+    var entry = entryCoverScene();
+    if (!entry) return;
+    if (typeof ProjectCover === 'undefined' || !ProjectCover.fromQuotationHero) return;
+    entry.coverModel = ProjectCover.fromQuotationHero(hq, {
+      nombre: (editorProjectCtx && (editorProjectCtx.name || editorProjectCtx.nombre)) || ''
+    });
   }
 
   return {
     render: render,
     bind: bind,
+    load: load,
+    commit: commit,
+    serializeDocument: serializeDocument,
+    syncCoverFromHeroPayload: syncCoverFromHeroPayload,
     _getState: function () { return state; },
-    _resetDemo: function () { state = createEmptyState(); }
+    _resetDemo: function () {
+      state = createEmptyState();
+      loadedProjectId = null;
+      loadPromise = null;
+    }
   };
 })();

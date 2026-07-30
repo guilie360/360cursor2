@@ -479,6 +479,67 @@ var ProyectosApi = (function () {
     return String(value).trim();
   }
 
+  function sanitizeCoverModel(raw) {
+    if (typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel) {
+      return ProjectCover.sanitizeModel(raw);
+    }
+    raw = raw || {};
+    return {
+      layout: raw.layout === 'bottom-bar' ? 'bottom-bar' : 'centered',
+      textColor: raw.textColor === 'dark' ? 'dark' : 'light',
+      buttonTextColor: raw.buttonTextColor === 'dark' ? 'dark' : 'light',
+      nombre: heroText(raw.nombre),
+      eslogan: heroText(raw.eslogan),
+      botonIzquierdo: heroText(raw.botonIzquierdo) || 'Explorar',
+      botonDerecho: heroText(raw.botonDerecho) || 'Iniciar',
+      logoUrl: heroText(raw.logoUrl),
+      logoStyle: raw.logoStyle === 'avatar' ? 'avatar' : 'flat',
+      showLogo: raw.showLogo !== false && !!heroText(raw.logoUrl),
+      videoUrl: heroText(raw.videoUrl) || null,
+      imageUrl: heroText(raw.imageUrl) || null,
+      showBack: raw.showBack !== false,
+      backLabel: heroText(raw.backLabel) || 'Demos',
+      showShare: raw.showShare !== false,
+      showFullscreen: raw.showFullscreen !== false,
+      showAssistant: raw.showAssistant !== false
+    };
+  }
+
+  function sanitizeCanvasElements(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (el) {
+      if (!el || typeof el !== 'object') return null;
+      return {
+        id: heroText(el.id) || null,
+        type: heroText(el.type) || 'text',
+        role: heroText(el.role) || '',
+        props: el.props && typeof el.props === 'object' ? el.props : {}
+      };
+    }).filter(function (el) { return el && el.id; });
+  }
+
+  function sanitizeCanvasDocument(doc) {
+    if (!doc || typeof doc !== 'object') return null;
+    var scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
+    var outScenes = scenes.map(function (sc) {
+      if (!sc || typeof sc !== 'object') return null;
+      return {
+        id: heroText(sc.id) || null,
+        name: heroText(sc.name) || 'Escena',
+        type: heroText(sc.type) || 'scene',
+        templateId: heroText(sc.templateId) || null,
+        coverModel: sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null,
+        elements: sanitizeCanvasElements(sc.elements)
+      };
+    }).filter(function (sc) { return sc && sc.id; });
+    if (!outScenes.length) return null;
+    return {
+      version: Number(doc.version) || 1,
+      activeSceneId: heroText(doc.activeSceneId) || (outScenes[0] && outScenes[0].id) || null,
+      scenes: outScenes
+    };
+  }
+
   function sanitizeHeroQuotation(payload) {
     payload = payload || {};
     var hc = payload.heroContent || {};
@@ -493,7 +554,7 @@ var ProyectosApi = (function () {
         }
         : null;
 
-    return {
+    var out = {
       heroContent: {
         nombre: heroText(hc.nombre),
         eslogan: heroText(hc.eslogan),
@@ -514,6 +575,10 @@ var ProyectosApi = (function () {
       video_url: heroText(payload.video_url) || null,
       image_url: heroText(payload.image_url) || null
     };
+
+    var canvas = sanitizeCanvasDocument(payload.canvas);
+    if (canvas) out.canvas = canvas;
+    return out;
   }
 
   async function fetchHeroQuotation(proyectoId) {
@@ -531,15 +596,21 @@ var ProyectosApi = (function () {
 
   async function updateHeroQuotation(proyectoId, payload) {
     if (!proyectoId) throw new Error('Falta el ID del proyecto.');
-    var data = sanitizeHeroQuotation(payload);
     var client = dbClient();
 
     var existing = await client
       .from('proyecto_config')
-      .select('proyecto_id')
+      .select('proyecto_id, hero_quotation')
       .eq('proyecto_id', proyectoId)
       .maybeSingle();
     if (existing.error) throw mapDbError(existing.error, 'Error leyendo configuración del proyecto');
+
+    var prev = existing.data && existing.data.hero_quotation;
+    var merged = Object.assign({}, payload || {});
+    if (!merged.canvas && prev && typeof prev === 'object' && prev.canvas) {
+      merged.canvas = prev.canvas;
+    }
+    var data = sanitizeHeroQuotation(merged);
 
     var result;
     if (existing.data && existing.data.proyecto_id) {

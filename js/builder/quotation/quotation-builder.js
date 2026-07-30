@@ -129,6 +129,9 @@ var QuotationBuilderView = (function () {
       if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
         await QuotationHero.commit(configAdapter());
       }
+      if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
+        await QuotationEditor.commit(configAdapter());
+      }
       if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
         BuilderDirtyState.clear();
       }
@@ -160,6 +163,9 @@ var QuotationBuilderView = (function () {
       }
       if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
         try { await QuotationHero.commit(configAdapter()); } catch (eHero) {}
+      }
+      if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
+        try { await QuotationEditor.commit(configAdapter()); } catch (eEditor) {}
       }
       if (typeof ProyectosApi === 'undefined' || !ProyectosApi.update) {
         throw new Error('API de publicación no disponible.');

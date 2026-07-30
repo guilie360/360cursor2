@@ -143,7 +143,20 @@ var QuotationRuntime = (function () {
       return;
     }
 
-    var model = ProjectCover.fromQuotationHero(bundle.hero, bundle.project);
+    var model = typeof ProjectCover !== 'undefined' && ProjectCover.resolveModel
+      ? ProjectCover.resolveModel(bundle.hero, bundle.project)
+      : (typeof ProjectCover !== 'undefined' && ProjectCover.fromQuotationHero
+        ? ProjectCover.fromQuotationHero(bundle.hero, bundle.project)
+        : null);
+
+    if (!model) {
+      host.innerHTML =
+        '<div class="qr-error" role="alert">' +
+          '<h1 class="qr-error__title">ProjectCover no disponible</h1>' +
+        '</div>';
+      return;
+    }
+
     var hc = {
       nombre: model.nombre,
       eslogan: model.eslogan
