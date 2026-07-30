@@ -7445,6 +7445,47 @@ body > .ws-select__list {
   opacity: 0.5;
 }
 
+.builder-exp-btn-list__type {
+  flex: 0 0 auto;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  min-width: 4.5em;
+}
+
+.builder-exp-ui-btn.is-hover-on:hover {
+  color: var(--btn-hover-color, #fff) !important;
+  border-color: var(--btn-hover-color, #fff) !important;
+}
+
+.builder-exp-btn-panel textarea[data-exp-text-content] {
+  appearance: none;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #141414;
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.builder-exp-btn-panel input[type="color"] {
+  width: 100%;
+  height: 32px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #141414;
+  cursor: pointer;
+}
+
 .builder-exp-btn-list__mark {
   color: rgba(111, 191, 134, 0.9);
   font-size: 10px;

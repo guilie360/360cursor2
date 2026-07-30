@@ -523,6 +523,192 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
+  function overlayTypeLabel(t) {
+    t = String(t || 'BUTTON').toUpperCase();
+    if (t === 'TEXT') return 'Texto';
+    if (t === 'SHAPE_RECT') return 'Rectángulo';
+    if (t === 'SHAPE_CIRCLE') return 'Círculo';
+    return 'Botón';
+  }
+
+  function textInspectorFieldsHtml(selected) {
+    var fonts = [
+      ['system-ui, sans-serif', 'Sistema'],
+      ['Georgia, serif', 'Georgia'],
+      ['Arial, Helvetica, sans-serif', 'Arial'],
+      ['"Times New Roman", Times, serif', 'Times'],
+      ['Verdana, Geneva, sans-serif', 'Verdana'],
+      ['"Courier New", Courier, monospace', 'Mono']
+    ];
+    var ff = selected.fontFamily || 'system-ui, sans-serif';
+    var fw = String(selected.fontWeight || '400');
+    var fs = selected.fontStyle === 'italic' ? 'italic' : 'normal';
+    var td = String(selected.textDecoration || 'none');
+    var ta = selected.textAlign || 'center';
+    var tt = selected.textTransform || 'none';
+    var shadowOn = selected.textShadow && selected.textShadow !== 'none';
+    var op = selected.opacity != null ? Number(selected.opacity) : 1;
+    var rot = selected.rotation != null ? Number(selected.rotation) : 0;
+    function fontOpt(v, l) {
+      return '<option value="' + esc(v) + '"' + (ff === v ? ' selected' : '') + '>' + esc(l) + '</option>';
+    }
+    function seg(attr, val, label, on) {
+      return '<button type="button" class="builder-hub-segment__btn' +
+        (on ? ' is-active' : '') + '" ' + attr + '="' + esc(val) + '">' + esc(label) + '</button>';
+    }
+    return '' +
+      '<div class="builder-exp-inspector__section">Texto</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Contenido</label>' +
+        '<textarea data-exp-text-content rows="3" maxlength="500" placeholder="Escribe…">' +
+          esc(selected.label != null ? selected.label : '') +
+        '</textarea>' +
+        '<p class="builder-menu-hint builder-exp-btn-hint">Doble clic en el lienzo para editar.</p>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Tipografía</label>' +
+        '<select data-exp-text-font class="ws-select builder-exp-btn-select">' +
+          fonts.map(function (f) { return fontOpt(f[0], f[1]); }).join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Tamaño</label>' +
+        '<input type="number" data-exp-text-size min="8" max="200" step="1" value="' +
+          esc(String(selected.fontSize != null ? selected.fontSize : 28)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Peso</label>' +
+        '<select data-exp-text-weight class="ws-select builder-exp-btn-select">' +
+          '<option value="300"' + (fw === '300' ? ' selected' : '') + '>Light</option>' +
+          '<option value="400"' + (fw === '400' || fw === 'normal' ? ' selected' : '') + '>Regular</option>' +
+          '<option value="500"' + (fw === '500' ? ' selected' : '') + '>Medium</option>' +
+          '<option value="600"' + (fw === '600' ? ' selected' : '') + '>Semibold</option>' +
+          '<option value="700"' + (fw === '700' || fw === 'bold' ? ' selected' : '') + '>Bold</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Color</label>' +
+        '<input type="color" data-exp-text-color value="' +
+          esc(/^#[0-9a-fA-F]{6}$/.test(String(selected.color || '')) ? selected.color : '#ffffff') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Alineación</label>' +
+        '<div class="builder-hub-segment builder-hub-segment--3">' +
+          seg('data-exp-text-align', 'left', 'Izq', ta === 'left') +
+          seg('data-exp-text-align', 'center', 'Cen', ta === 'center') +
+          seg('data-exp-text-align', 'right', 'Der', ta === 'right') +
+        '</div>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Interlineado</label>' +
+        '<input type="number" data-exp-text-leading min="0.8" max="3" step="0.05" value="' +
+          esc(String(selected.lineHeight != null ? selected.lineHeight : 1.3)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Espaciado</label>' +
+        '<input type="number" data-exp-text-tracking min="-5" max="40" step="0.5" value="' +
+          esc(String(selected.letterSpacing != null ? selected.letterSpacing : 0)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Mayúsculas</label>' +
+        '<select data-exp-text-transform class="ws-select builder-exp-btn-select">' +
+          '<option value="none"' + (tt === 'none' ? ' selected' : '') + '>Ninguna</option>' +
+          '<option value="uppercase"' + (tt === 'uppercase' ? ' selected' : '') + '>MAYÚSCULAS</option>' +
+          '<option value="lowercase"' + (tt === 'lowercase' ? ' selected' : '') + '>minúsculas</option>' +
+          '<option value="capitalize"' + (tt === 'capitalize' ? ' selected' : '') + '>Capitalizar</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Estilo</label>' +
+        '<div class="builder-hub-segment">' +
+          seg('data-exp-text-bold', '1', 'Negrita', fw === '700' || fw === 'bold') +
+          seg('data-exp-text-italic', '1', 'Cursiva', fs === 'italic') +
+          seg('data-exp-text-underline', '1', 'Subrayado', td.indexOf('underline') >= 0) +
+          seg('data-exp-text-strike', '1', 'Tachado', td.indexOf('line-through') >= 0) +
+        '</div>' +
+      '</div>' +
+      '<label class="builder-exp-inspector__check">' +
+        '<input type="checkbox" data-exp-text-shadow' + (shadowOn ? ' checked' : '') + '>' +
+        ' Sombra</label>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Opacidad</label>' +
+        '<input type="range" data-exp-text-opacity min="0" max="1" step="0.05" value="' +
+          esc(String(op)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Rotación</label>' +
+        '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
+          esc(String(rot)) + '">' +
+        '<div class="builder-exp-btn-rot-row">' +
+          '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
+            esc(String(rot)) + '">' +
+          '<span class="builder-exp-btn-rot-unit">°</span>' +
+        '</div>' +
+      '</div>' +
+      '<label class="builder-exp-inspector__check">' +
+        '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
+        ' Visible</label>' +
+      '<p class="builder-menu-hint builder-exp-btn-hint">X ' +
+        esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
+        '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
+        '% · arrastre libre</p>';
+  }
+
+  function shapeInspectorFieldsHtml(selected) {
+    var t = String(selected.type || '').toUpperCase();
+    var rot = selected.rotation != null ? Number(selected.rotation) : 0;
+    return '' +
+      '<div class="builder-exp-inspector__section">Forma</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre</label>' +
+        '<input type="text" data-exp-btn-label maxlength="60" value="' +
+          esc(selected.label != null ? selected.label : '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Ancho %</label>' +
+        '<input type="number" data-exp-shape-w min="1" max="100" step="0.5" value="' +
+          esc(String(selected.width != null ? selected.width : 12)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Alto %</label>' +
+        '<input type="number" data-exp-shape-h min="1" max="100" step="0.5" value="' +
+          esc(String(selected.height != null ? selected.height : 8)) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Relleno</label>' +
+        '<input type="text" data-exp-shape-fill value="' + esc(selected.fill || '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Borde</label>' +
+        '<input type="text" data-exp-shape-stroke value="' + esc(selected.stroke || '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Grosor borde</label>' +
+        '<input type="number" data-exp-shape-sw min="0" max="20" step="1" value="' +
+          esc(String(selected.strokeWidth != null ? selected.strokeWidth : 2)) + '">' +
+      '</div>' +
+      (t === 'SHAPE_RECT'
+        ? ('<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Radio</label>' +
+            '<input type="number" data-exp-shape-radius min="0" max="999" step="1" value="' +
+              esc(String(selected.borderRadius != null ? selected.borderRadius : 8)) + '">' +
+          '</div>')
+        : '') +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Rotación</label>' +
+        '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
+          esc(String(rot)) + '">' +
+        '<div class="builder-exp-btn-rot-row">' +
+          '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
+            esc(String(rot)) + '">' +
+          '<span class="builder-exp-btn-rot-unit">°</span>' +
+        '</div>' +
+      '</div>' +
+      '<label class="builder-exp-inspector__check">' +
+        '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
+        ' Visible</label>';
+  }
+
   function buttonsInspectorHtml(state, n) {
     var buttons = ExperienciaEngine.listSceneButtons
       ? ExperienciaEngine.listSceneButtons(state, n)
@@ -548,6 +734,10 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    var selType = selected ? String(selected.type || 'BUTTON').toUpperCase() : 'BUTTON';
+    var kindTitle = selType === 'TEXT' ? 'TEXTO'
+      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'FORMA' : 'BOTONES');
+
     var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
       return node && node.id !== n.id && node.kind !== 'action';
     });
@@ -560,13 +750,22 @@ var ExperienciaCanvas = (function () {
 
     var html = '' +
       '<div class="builder-exp-btn-panel">' +
-      '<div class="builder-exp-inspector__kind">BOTONES</div>' +
-      '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>' +
-      '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
+      '<div class="builder-exp-inspector__kind">' + kindTitle + '</div>' +
+      '<h3 class="builder-exp-inspector__title">' + esc(n.label || 'Escena') + '</h3>';
+
+    if (selType === 'TEXT') {
+      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-text-add="' +
+        esc(n.id) + '">+ Nuevo texto</button>';
+    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
+      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-shape-add="' +
+        esc(n.id) + '">+ Nueva forma</button>';
+    } else {
+      html += '<button type="button" class="builder-header-action-btn is-primary builder-exp-btn-add" data-exp-btn-add="' +
         esc(n.id) + '">+ Nuevo botón</button>';
+    }
 
     if (!buttons.length) {
-      html += '<p class="builder-menu-hint">No hay botones en esta escena. Crea uno aquí o en FLUJO → Agregar elemento → Botón / Control.</p></div>';
+      html += '<p class="builder-menu-hint">No hay elementos en esta escena. Usa el dock Agregar elemento.</p></div>';
       return html;
     }
 
@@ -574,9 +773,10 @@ var ExperienciaCanvas = (function () {
       '<p class="builder-menu-hint builder-exp-btn-hint">Shift / Ctrl · selección múltiple</p>' +
       '<div class="builder-exp-btn-list">' +
         buttons.map(function (b) {
+          var t = String(b.type || 'BUTTON').toUpperCase();
           var listLabel = (b.label != null && String(b.label).length)
             ? b.label
-            : (b.icon ? '· icono' : 'Sin texto');
+            : (t === 'TEXT' ? 'Texto' : (b.icon ? '· icono' : overlayTypeLabel(t)));
           return '<button type="button" class="builder-exp-btn-list__item' +
             (selectedSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-hidden-btn' : '') + '"' +
@@ -584,6 +784,7 @@ var ExperienciaCanvas = (function () {
             '<span class="builder-exp-btn-list__mark" aria-hidden="true">' +
               (b.visible === false ? '○' : '●') +
             '</span>' +
+            '<span class="builder-exp-btn-list__type">' + esc(overlayTypeLabel(t)) + '</span>' +
             '<span>' + esc(listLabel) + '</span>' +
           '</button>';
         }).join('') +
@@ -617,7 +818,7 @@ var ExperienciaCanvas = (function () {
     }
 
     if (!selected) {
-      html += '<p class="builder-menu-hint">Selecciona un botón en la lista o sobre la imagen.</p></div>';
+      html += '<p class="builder-menu-hint">Selecciona un elemento en la lista o sobre la imagen.</p></div>';
       return html;
     }
 
@@ -627,114 +828,155 @@ var ExperienciaCanvas = (function () {
         esc(label) + '</button>';
     }
 
-    var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
-    var rot = selected.rotation != null ? Number(selected.rotation) : 0;
-    var anchorGrid = [
-      ['top-left', 'Superior izquierda'],
-      ['top-center', 'Superior centro'],
-      ['top-right', 'Superior derecha'],
-      ['center-left', 'Centro izquierda'],
-      ['center', 'Centro'],
-      ['center-right', 'Centro derecha'],
-      ['bottom-left', 'Inferior izquierda'],
-      ['bottom-center', 'Inferior centro'],
-      ['bottom-right', 'Inferior derecha']
-    ];
-    var currentAnchor = selected.anchor || 'center';
-    var anchorPadHtml = anchorGrid.map(function (cell) {
-      var key = cell[0];
-      var title = cell[1];
-      var on = posMode === 'anchor' && currentAnchor === key;
-      return '<button type="button" class="builder-exp-btn-anchor-cell' +
-        (on ? ' is-active' : '') +
-        '" data-exp-btn-anchor="' + esc(key) + '"' +
-        ' title="' + esc(title) + '" aria-label="' + esc(title) + '"' +
-        ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
-        '<span class="builder-exp-btn-anchor-dot" aria-hidden="true"></span>' +
-      '</button>';
-    }).join('');
-
     if (selectedIds.length <= 1) {
       html += '<div class="builder-exp-inspector__section">Propiedades</div>';
     } else {
       html += '<div class="builder-exp-inspector__section">Propiedades · primario</div>';
     }
 
-    html += '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Nombre</label>' +
-        '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
-          esc(selected.label != null ? selected.label : '') + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Destino</label>' +
-        '<select data-exp-btn-target class="ws-select builder-exp-btn-select">' + destOpts + '</select>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Estilo</label>' +
-        '<div class="builder-hub-segment builder-hub-segment--3" data-exp-btn-styles>' +
-          segBtn('data-exp-btn-style', 'chip', 'Chip', selected.style === 'chip') +
-          segBtn('data-exp-btn-style', 'button', 'Botón', selected.style === 'button') +
-          segBtn('data-exp-btn-style', 'icon', 'Icono', selected.style === 'icon') +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Icono</label>' +
-        '<select data-exp-btn-icon class="ws-select builder-exp-btn-select">' +
-          '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
-          '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
-          '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izquierda</option>' +
-          '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar derecha</option>' +
-          '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Rotación</label>' +
-        '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
-          esc(String(rot)) + '">' +
-        '<div class="builder-exp-btn-rot-row">' +
-          '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
-            esc(String(rot)) + '">' +
-          '<span class="builder-exp-btn-rot-unit">°</span>' +
-        '</div>' +
-      '</div>' +
-      '<label class="builder-exp-inspector__check">' +
-        '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
-        ' Visible</label>' +
-      '<div class="builder-exp-inspector__section">Posición</div>' +
-      '<div class="builder-hub-segment" data-exp-btn-pos-modes>' +
-        segBtn('data-exp-btn-pos-mode', 'free', 'Libre', posMode === 'free') +
-        segBtn('data-exp-btn-pos-mode', 'anchor', 'Anclas', posMode === 'anchor') +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Ancla</label>' +
-        '<div class="builder-exp-btn-anchor-grid" role="group" aria-label="Selector de ancla">' +
-          anchorPadHtml +
-        '</div>' +
-      '</div>';
-
-    if (posMode === 'anchor') {
-      html += '<div class="builder-exp-btn-margins">' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Margen X (px)</label>' +
-          '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
-            esc(String(selected.marginX != null ? selected.marginX : 32)) + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Margen Y (px)</label>' +
-          '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
-            esc(String(selected.marginY != null ? selected.marginY : 32)) + '">' +
-        '</div>' +
-      '</div>' +
-      '<p class="builder-menu-hint builder-exp-btn-hint">El margen empuja hacia dentro. El botón permanece visible.</p>';
+    if (selType === 'TEXT') {
+      html += textInspectorFieldsHtml(selected);
+    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
+      html += shapeInspectorFieldsHtml(selected);
     } else {
-      html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
-        '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
-        '% · arrastre libre</p>';
+      var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
+      var rot = selected.rotation != null ? Number(selected.rotation) : 0;
+      var btnSize = selected.size || 'md';
+      var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
+      var hoverOn = selected.hoverEnabled !== false;
+      var hoverMs = selected.hoverTransition != null ? Number(selected.hoverTransition) : 200;
+      var hoverCol = /^#[0-9a-fA-F]{6}$/.test(String(selected.hoverColor || ''))
+        ? selected.hoverColor
+        : '#ffffff';
+      var anchorGrid = [
+        ['top-left', 'Superior izquierda'],
+        ['top-center', 'Superior centro'],
+        ['top-right', 'Superior derecha'],
+        ['center-left', 'Centro izquierda'],
+        ['center', 'Centro'],
+        ['center-right', 'Centro derecha'],
+        ['bottom-left', 'Inferior izquierda'],
+        ['bottom-center', 'Inferior centro'],
+        ['bottom-right', 'Inferior derecha']
+      ];
+      var currentAnchor = selected.anchor || 'center';
+      var anchorPadHtml = anchorGrid.map(function (cell) {
+        var key = cell[0];
+        var title = cell[1];
+        var on = posMode === 'anchor' && currentAnchor === key;
+        return '<button type="button" class="builder-exp-btn-anchor-cell' +
+          (on ? ' is-active' : '') +
+          '" data-exp-btn-anchor="' + esc(key) + '"' +
+          ' title="' + esc(title) + '" aria-label="' + esc(title) + '"' +
+          ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+          '<span class="builder-exp-btn-anchor-dot" aria-hidden="true"></span>' +
+        '</button>';
+      }).join('');
+
+      html += '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Nombre</label>' +
+          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
+            esc(selected.label != null ? selected.label : '') + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Destino</label>' +
+          '<select data-exp-btn-target class="ws-select builder-exp-btn-select">' + destOpts + '</select>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Estilo</label>' +
+          '<div class="builder-hub-segment builder-hub-segment--3" data-exp-btn-styles>' +
+            segBtn('data-exp-btn-style', 'chip', 'Chip', selected.style === 'chip') +
+            segBtn('data-exp-btn-style', 'button', 'Botón', selected.style === 'button') +
+            segBtn('data-exp-btn-style', 'icon', 'Icono', selected.style === 'icon') +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Tamaño</label>' +
+          '<div class="builder-hub-segment builder-hub-segment--3">' +
+            segBtn('data-exp-btn-size', 'sm', 'S', btnSize === 'sm') +
+            segBtn('data-exp-btn-size', 'md', 'M', btnSize === 'md') +
+            segBtn('data-exp-btn-size', 'lg', 'L', btnSize === 'lg') +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Transparencia</label>' +
+          '<input type="range" data-exp-btn-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(btnOp)) + '">' +
+        '</div>' +
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-btn-hover-enabled' + (hoverOn ? ' checked' : '') + '>' +
+          ' Activar hover</label>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Color hover</label>' +
+          '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
+            (hoverOn ? '' : ' disabled') + '>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Transición hover (ms)</label>' +
+          '<input type="number" data-exp-btn-hover-ms min="0" max="2000" step="50" value="' +
+            esc(String(hoverMs)) + '"' + (hoverOn ? '' : ' disabled') + '>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Icono</label>' +
+          '<select data-exp-btn-icon class="ws-select builder-exp-btn-select">' +
+            '<option value="none"' + (!selected.icon ? ' selected' : '') + '>Ninguno</option>' +
+            '<option value="arrow"' + (selected.icon === 'arrow' ? ' selected' : '') + '>Flecha</option>' +
+            '<option value="rotate-left"' + (selected.icon === 'rotate-left' ? ' selected' : '') + '>Rotar izquierda</option>' +
+            '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar derecha</option>' +
+            '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Rotación</label>' +
+          '<input type="range" min="-360" max="360" step="1" data-exp-btn-rotation value="' +
+            esc(String(rot)) + '">' +
+          '<div class="builder-exp-btn-rot-row">' +
+            '<input type="number" min="-360" max="360" step="1" data-exp-btn-rotation-num value="' +
+              esc(String(rot)) + '">' +
+            '<span class="builder-exp-btn-rot-unit">°</span>' +
+          '</div>' +
+        '</div>' +
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-btn-visible' + (selected.visible !== false ? ' checked' : '') + '>' +
+          ' Visible</label>' +
+        '<div class="builder-exp-inspector__section">Posición</div>' +
+        '<div class="builder-hub-segment" data-exp-btn-pos-modes>' +
+          segBtn('data-exp-btn-pos-mode', 'free', 'Libre', posMode === 'free') +
+          segBtn('data-exp-btn-pos-mode', 'anchor', 'Anclas', posMode === 'anchor') +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Ancla</label>' +
+          '<div class="builder-exp-btn-anchor-grid" role="group" aria-label="Selector de ancla">' +
+            anchorPadHtml +
+          '</div>' +
+        '</div>';
+
+      if (posMode === 'anchor') {
+        html += '<div class="builder-exp-btn-margins">' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Margen X (px)</label>' +
+            '<input type="number" data-exp-btn-margin-x min="0" max="400" step="1" value="' +
+              esc(String(selected.marginX != null ? selected.marginX : 32)) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field">' +
+            '<label>Margen Y (px)</label>' +
+            '<input type="number" data-exp-btn-margin-y min="0" max="400" step="1" value="' +
+              esc(String(selected.marginY != null ? selected.marginY : 32)) + '">' +
+          '</div>' +
+        '</div>' +
+        '<p class="builder-menu-hint builder-exp-btn-hint">El margen empuja hacia dentro. El botón permanece visible.</p>';
+      } else {
+        html += '<p class="builder-menu-hint builder-exp-btn-hint">X ' + esc(String(selected.storedX != null ? selected.storedX : selected.x)) +
+          '% · Y ' + esc(String(selected.storedY != null ? selected.storedY : selected.y)) +
+          '% · arrastre libre</p>';
+      }
     }
 
     html += '<div class="builder-exp-inspector__actions builder-exp-btn-actions">' +
-        '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-mirror="' +
-          esc(selected.id) + '">Reflejar</button>' +
+        (selType === 'BUTTON'
+          ? ('<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-mirror="' +
+              esc(selected.id) + '">Reflejar</button>')
+          : '') +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary" data-exp-btn-duplicate="' +
           esc(selected.id) + '">Duplicar</button>' +
         '<button type="button" class="builder-header-action-btn boxies-btn-secondary is-danger" data-exp-btn-delete="' +
@@ -2444,6 +2686,30 @@ var ExperienciaCanvas = (function () {
           }
         });
       }
+      var addText = inspectorBody.querySelector('[data-exp-text-add]');
+      if (addText) {
+        addText.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          pushButtonHistory(sceneId);
+          var tx = ExperienciaEngine.addSceneText(state, sceneId);
+          if (tx) {
+            setButtonSelection([tx.id], tx.id);
+            renderAll(); persist();
+          }
+        });
+      }
+      var addShape = inspectorBody.querySelector('[data-exp-shape-add]');
+      if (addShape) {
+        addShape.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          pushButtonHistory(sceneId);
+          var sh = ExperienciaEngine.addSceneShape(state, sceneId, 'SHAPE_RECT');
+          if (sh) {
+            setButtonSelection([sh.id], sh.id);
+            renderAll(); persist();
+          }
+        });
+      }
       inspectorBody.querySelectorAll('[data-exp-btn-select]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
@@ -2487,6 +2753,213 @@ var ExperienciaCanvas = (function () {
       if (iconEl) {
         iconEl.addEventListener('change', function () {
           patchBtn({ icon: iconEl.value }, { persist: true });
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-btn-size]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          patchBtn({ size: el.getAttribute('data-exp-btn-size') }, { inspector: true, persist: true });
+        });
+      });
+      var opEl = inspectorBody.querySelector('[data-exp-btn-opacity]');
+      if (opEl) {
+        opEl.addEventListener('input', function () {
+          patchBtn({ opacity: opEl.value }, { gesture: true });
+        });
+        opEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      var hoverEn = inspectorBody.querySelector('[data-exp-btn-hover-enabled]');
+      if (hoverEn) {
+        hoverEn.addEventListener('change', function () {
+          patchBtn({ hoverEnabled: !!hoverEn.checked }, { inspector: true, persist: true });
+        });
+      }
+      var hoverCol = inspectorBody.querySelector('[data-exp-btn-hover-color]');
+      if (hoverCol) {
+        hoverCol.addEventListener('input', function () {
+          patchBtn({ hoverColor: hoverCol.value }, { gesture: true });
+        });
+        hoverCol.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      var hoverMs = inspectorBody.querySelector('[data-exp-btn-hover-ms]');
+      if (hoverMs) {
+        hoverMs.addEventListener('change', function () {
+          patchBtn({ hoverTransition: hoverMs.value }, { persist: true });
+        });
+      }
+
+      var textContent = inspectorBody.querySelector('[data-exp-text-content]');
+      if (textContent) {
+        textContent.addEventListener('input', function () {
+          patchBtn({ label: textContent.value }, { gesture: true });
+        });
+        textContent.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      var textFont = inspectorBody.querySelector('[data-exp-text-font]');
+      if (textFont) {
+        textFont.addEventListener('change', function () {
+          patchBtn({ fontFamily: textFont.value }, { persist: true });
+        });
+      }
+      var textSize = inspectorBody.querySelector('[data-exp-text-size]');
+      if (textSize) {
+        textSize.addEventListener('change', function () {
+          patchBtn({ fontSize: textSize.value }, { persist: true });
+        });
+      }
+      var textWeight = inspectorBody.querySelector('[data-exp-text-weight]');
+      if (textWeight) {
+        textWeight.addEventListener('change', function () {
+          patchBtn({ fontWeight: textWeight.value }, { persist: true });
+        });
+      }
+      var textColor = inspectorBody.querySelector('[data-exp-text-color]');
+      if (textColor) {
+        textColor.addEventListener('input', function () {
+          patchBtn({ color: textColor.value }, { gesture: true });
+        });
+        textColor.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      inspectorBody.querySelectorAll('[data-exp-text-align]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          patchBtn({ textAlign: el.getAttribute('data-exp-text-align') }, { inspector: true, persist: true });
+        });
+      });
+      var textLeading = inspectorBody.querySelector('[data-exp-text-leading]');
+      if (textLeading) {
+        textLeading.addEventListener('change', function () {
+          patchBtn({ lineHeight: textLeading.value }, { persist: true });
+        });
+      }
+      var textTracking = inspectorBody.querySelector('[data-exp-text-tracking]');
+      if (textTracking) {
+        textTracking.addEventListener('change', function () {
+          patchBtn({ letterSpacing: textTracking.value }, { persist: true });
+        });
+      }
+      var textTransform = inspectorBody.querySelector('[data-exp-text-transform]');
+      if (textTransform) {
+        textTransform.addEventListener('change', function () {
+          patchBtn({ textTransform: textTransform.value }, { persist: true });
+        });
+      }
+      function currentTextDeco() {
+        var id = canvas().selectedButtonId;
+        var b = ExperienciaEngine.getSceneButton(state,
+          ExperienciaEngine.getNode(state, sceneId), id);
+        return (b && b.textDecoration) ? String(b.textDecoration) : 'none';
+      }
+      function toggleDeco(token) {
+        var cur = currentTextDeco().split(/\s+/).filter(function (x) {
+          return x && x !== 'none';
+        });
+        var idx = cur.indexOf(token);
+        if (idx >= 0) cur.splice(idx, 1);
+        else cur.push(token);
+        patchBtn({ textDecoration: cur.length ? cur.join(' ') : 'none' }, { inspector: true, persist: true });
+      }
+      var boldBtn = inspectorBody.querySelector('[data-exp-text-bold]');
+      if (boldBtn) {
+        boldBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var id = canvas().selectedButtonId;
+          var b = ExperienciaEngine.getSceneButton(state,
+            ExperienciaEngine.getNode(state, sceneId), id);
+          var on = b && (String(b.fontWeight) === '700' || b.fontWeight === 'bold');
+          patchBtn({ fontWeight: on ? '400' : '700' }, { inspector: true, persist: true });
+        });
+      }
+      var italicBtn = inspectorBody.querySelector('[data-exp-text-italic]');
+      if (italicBtn) {
+        italicBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          var id = canvas().selectedButtonId;
+          var b = ExperienciaEngine.getSceneButton(state,
+            ExperienciaEngine.getNode(state, sceneId), id);
+          var on = b && b.fontStyle === 'italic';
+          patchBtn({ fontStyle: on ? 'normal' : 'italic' }, { inspector: true, persist: true });
+        });
+      }
+      var underBtn = inspectorBody.querySelector('[data-exp-text-underline]');
+      if (underBtn) {
+        underBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          toggleDeco('underline');
+        });
+      }
+      var strikeBtn = inspectorBody.querySelector('[data-exp-text-strike]');
+      if (strikeBtn) {
+        strikeBtn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          toggleDeco('line-through');
+        });
+      }
+      var textShadow = inspectorBody.querySelector('[data-exp-text-shadow]');
+      if (textShadow) {
+        textShadow.addEventListener('change', function () {
+          patchBtn({
+            textShadow: textShadow.checked ? '0 2px 10px rgba(0,0,0,0.55)' : 'none'
+          }, { persist: true });
+        });
+      }
+      var textOp = inspectorBody.querySelector('[data-exp-text-opacity]');
+      if (textOp) {
+        textOp.addEventListener('input', function () {
+          patchBtn({ opacity: textOp.value }, { gesture: true });
+        });
+        textOp.addEventListener('change', function () {
+          endButtonOp();
+          persist();
+        });
+      }
+      var shapeW = inspectorBody.querySelector('[data-exp-shape-w]');
+      if (shapeW) {
+        shapeW.addEventListener('change', function () {
+          patchBtn({ width: shapeW.value }, { persist: true });
+        });
+      }
+      var shapeH = inspectorBody.querySelector('[data-exp-shape-h]');
+      if (shapeH) {
+        shapeH.addEventListener('change', function () {
+          patchBtn({ height: shapeH.value }, { persist: true });
+        });
+      }
+      var shapeFill = inspectorBody.querySelector('[data-exp-shape-fill]');
+      if (shapeFill) {
+        shapeFill.addEventListener('change', function () {
+          patchBtn({ fill: shapeFill.value }, { persist: true });
+        });
+      }
+      var shapeStroke = inspectorBody.querySelector('[data-exp-shape-stroke]');
+      if (shapeStroke) {
+        shapeStroke.addEventListener('change', function () {
+          patchBtn({ stroke: shapeStroke.value }, { persist: true });
+        });
+      }
+      var shapeSw = inspectorBody.querySelector('[data-exp-shape-sw]');
+      if (shapeSw) {
+        shapeSw.addEventListener('change', function () {
+          patchBtn({ strokeWidth: shapeSw.value }, { persist: true });
+        });
+      }
+      var shapeR = inspectorBody.querySelector('[data-exp-shape-radius]');
+      if (shapeR) {
+        shapeR.addEventListener('change', function () {
+          patchBtn({ borderRadius: shapeR.value }, { persist: true });
         });
       }
       var visEl = inspectorBody.querySelector('[data-exp-btn-visible]');
@@ -3995,11 +4468,22 @@ var ExperienciaCanvas = (function () {
           'transform:translate(-50%,-50%) rotate(' + rot + 'deg);';
         if (t === 'TEXT') {
           styleBits += 'font-size:' + (Number(b.fontSize) || 28) + 'px;' +
-            'color:' + (b.color || '#ffffff') + ';';
+            'color:' + (b.color || '#ffffff') + ';' +
+            'font-family:' + (b.fontFamily || 'system-ui, sans-serif') + ';' +
+            'font-weight:' + (b.fontWeight || '400') + ';' +
+            'font-style:' + (b.fontStyle || 'normal') + ';' +
+            'text-decoration:' + (b.textDecoration || 'none') + ';' +
+            'text-align:' + (b.textAlign || 'center') + ';' +
+            'line-height:' + (b.lineHeight != null ? Number(b.lineHeight) : 1.3) + ';' +
+            'letter-spacing:' + (b.letterSpacing != null ? Number(b.letterSpacing) : 0) + 'px;' +
+            'text-transform:' + (b.textTransform || 'none') + ';' +
+            'text-shadow:' + (b.textShadow && b.textShadow !== 'none' ? b.textShadow : 'none') + ';' +
+            'opacity:' + (b.opacity != null ? Number(b.opacity) : 1) + ';';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
+            ' data-exp-stage-text="1"' +
             ' style="' + styleBits + '">' +
             esc(b.label != null ? String(b.label) : 'Texto') +
           '</button>';
@@ -4028,11 +4512,23 @@ var ExperienciaCanvas = (function () {
         } else {
           label = glyph || text;
         }
+        var sizeScale = b.size === 'sm' ? 0.85 : (b.size === 'lg' ? 1.2 : 1);
+        var btnOp = b.opacity != null ? Number(b.opacity) : 1;
+        var hoverOn = b.hoverEnabled !== false;
+        var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
+        var hoverCol = b.hoverColor || '#ffffff';
+        styleBits += 'opacity:' + btnOp + ';' +
+          'transform:translate(-50%,-50%) rotate(' + rot + 'deg) scale(' + sizeScale + ');' +
+          '--btn-hover-color:' + hoverCol + ';' +
+          'transition:color ' + hoverMs + 'ms ease, background-color ' + hoverMs + 'ms ease, border-color ' +
+            hoverMs + 'ms ease, opacity ' + hoverMs + 'ms ease;';
         return '<button type="button" class="' + buttonPreviewClass(b) +
           (selSet[String(b.id)] ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') +
-          (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') + '"' +
+          (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
+          (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
+          ' data-exp-btn-size="' + esc(b.size || 'md') + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
         '</button>';
@@ -5160,6 +5656,31 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+      buttonsLayer.addEventListener('dblclick', function (ev) {
+        if (canvas().editMode !== 'buttons') return;
+        var hit = ev.target.closest('[data-exp-stage-text][data-exp-stage-btn]');
+        if (!hit) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        var bid = hit.getAttribute('data-exp-stage-btn');
+        var sceneId = canvas().selectedId;
+        var btn = ExperienciaEngine.getSceneButton(state,
+          ExperienciaEngine.getNode(state, sceneId), bid
+        );
+        if (!btn || String(btn.type || '').toUpperCase() !== 'TEXT') return;
+        canvas().selectedButtonIds = [String(bid)];
+        canvas().selectedButtonId = bid;
+        var next = window.prompt('Editar texto', btn.label != null ? String(btn.label) : '');
+        if (next == null) {
+          paintInspector();
+          return;
+        }
+        pushButtonHistory(sceneId);
+        ExperienciaEngine.updateSceneButton(state, sceneId, bid, { label: next });
+        paintButtonsStage();
+        paintInspector();
+        persist();
+      });
     }
 
     if (buttonsFrame) {

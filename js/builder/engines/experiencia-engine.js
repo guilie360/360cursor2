@@ -390,6 +390,16 @@ var ExperienciaEngine = (function () {
       if (ix.label == null || ix.label === '') ix.label = 'Texto';
       if (ix.fontSize == null) ix.fontSize = 28;
       if (ix.color == null) ix.color = '#ffffff';
+      if (ix.fontFamily == null) ix.fontFamily = 'system-ui, sans-serif';
+      if (ix.fontWeight == null) ix.fontWeight = '400';
+      if (ix.fontStyle == null) ix.fontStyle = 'normal';
+      if (ix.textDecoration == null) ix.textDecoration = 'none';
+      if (ix.textAlign == null) ix.textAlign = 'center';
+      if (ix.lineHeight == null) ix.lineHeight = 1.3;
+      if (ix.letterSpacing == null) ix.letterSpacing = 0;
+      if (ix.textTransform == null) ix.textTransform = 'none';
+      if (ix.textShadow == null) ix.textShadow = 'none';
+      if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
     }
     if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
       if (ix.label == null) ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo';
@@ -448,6 +458,15 @@ var ExperienciaEngine = (function () {
     if (ix.marginY == null || isNaN(Number(ix.marginY))) {
       ix.marginY = ix.positionMode === 'anchor' ? 32 : 0;
     }
+    /* V7.2.46 — size / opacity / hover (Builder preview; pass-through on ix) */
+    if (ix.size !== 'sm' && ix.size !== 'md' && ix.size !== 'lg') ix.size = 'md';
+    if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
+    else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
+    if (ix.hoverEnabled == null) ix.hoverEnabled = true;
+    else ix.hoverEnabled = !!ix.hoverEnabled;
+    if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#ffffff';
+    if (ix.hoverTransition == null || isNaN(Number(ix.hoverTransition))) ix.hoverTransition = 200;
+    else ix.hoverTransition = Math.max(0, Math.min(2000, Number(ix.hoverTransition)));
 
     /* First-time center only — never re-center after move */
     if (ix.x == null || ix.y == null) {
@@ -600,6 +619,20 @@ var ExperienciaEngine = (function () {
       borderRadius: ix.borderRadius != null ? Number(ix.borderRadius) : null,
       fontSize: ix.fontSize != null ? Number(ix.fontSize) : null,
       color: ix.color || null,
+      fontFamily: ix.fontFamily || null,
+      fontWeight: ix.fontWeight || null,
+      fontStyle: ix.fontStyle || null,
+      textDecoration: ix.textDecoration || null,
+      textAlign: ix.textAlign || null,
+      lineHeight: ix.lineHeight != null ? Number(ix.lineHeight) : null,
+      letterSpacing: ix.letterSpacing != null ? Number(ix.letterSpacing) : null,
+      textTransform: ix.textTransform || null,
+      textShadow: ix.textShadow || null,
+      opacity: ix.opacity != null ? Number(ix.opacity) : 1,
+      size: ix.size || 'md',
+      hoverEnabled: ix.hoverEnabled !== false,
+      hoverColor: ix.hoverColor || '#ffffff',
+      hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
       _ix: ix
     };
   }
@@ -750,44 +783,21 @@ var ExperienciaEngine = (function () {
   function updateSceneButton(state, nodeId, buttonId, patch) {
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
-    if (!ix || !isSceneButtonInteraction(ix)) return null;
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
     patch = patch || {};
-    ensureButtonVisualDefaults(ix);
+    var t = String(ix.type || 'BUTTON').toUpperCase();
+    ensureFreeOverlayDefaults(ix);
 
     if (patch.label != null) {
       updateInteraction(state, nodeId, ix.id, { label: String(patch.label) });
-    }
-    if (patch.style != null && BUTTON_STYLES[patch.style]) ix.style = patch.style;
-    if (patch.rotation != null) ix.rotation = clampRotation(patch.rotation);
-    if (patch.icon !== undefined) {
-      var icon = patch.icon == null || patch.icon === '' || patch.icon === 'none'
-        ? null : String(patch.icon);
-      ix.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
     }
     if (patch.visible != null || patch.enabled != null) {
       var on = patch.visible != null ? !!patch.visible : !!patch.enabled;
       ix.enabled = on;
     }
-    if (patch.positionMode != null) {
-      ix.positionMode = patch.positionMode === 'anchor' ? 'anchor' : 'free';
-      if (ix.positionMode === 'anchor') {
-        if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
-        if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
-      }
-    }
-    if (patch.anchor != null && BUTTON_ANCHORS[patch.anchor]) {
-      ix.anchor = patch.anchor;
-      ix.positionMode = 'anchor';
-      if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
-      if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
-    }
-    if (patch.marginX != null) {
-      ix.marginX = Math.max(0, Number(patch.marginX) || 0);
-      if (patch.keepAnchor) ix.positionMode = 'anchor';
-    }
-    if (patch.marginY != null) {
-      ix.marginY = Math.max(0, Number(patch.marginY) || 0);
-      if (patch.keepAnchor) ix.positionMode = 'anchor';
+    if (patch.rotation != null) ix.rotation = clampRotation(patch.rotation);
+    if (patch.opacity != null) {
+      ix.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
     }
     if (patch.x != null || patch.y != null) {
       if (patch.x != null) ix.x = clampPercent(patch.x, ix.x);
@@ -795,10 +805,85 @@ var ExperienciaEngine = (function () {
       ix.positionInitialized = true;
       if (patch.keepAnchor !== true) ix.positionMode = 'free';
     }
-    if (patch.targetNodeId !== undefined) {
-      setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
+
+    if (t === 'BUTTON') {
+      if (patch.style != null && BUTTON_STYLES[patch.style]) ix.style = patch.style;
+      if (patch.icon !== undefined) {
+        var icon = patch.icon == null || patch.icon === '' || patch.icon === 'none'
+          ? null : String(patch.icon);
+        ix.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
+      }
+      if (patch.size === 'sm' || patch.size === 'md' || patch.size === 'lg') ix.size = patch.size;
+      if (patch.hoverEnabled != null) ix.hoverEnabled = !!patch.hoverEnabled;
+      if (patch.hoverColor != null) {
+        ix.hoverColor = String(patch.hoverColor || '#ffffff');
+      }
+      if (patch.hoverTransition != null) {
+        ix.hoverTransition = Math.max(0, Math.min(2000, Number(patch.hoverTransition) || 0));
+      }
+      if (patch.positionMode != null) {
+        ix.positionMode = patch.positionMode === 'anchor' ? 'anchor' : 'free';
+        if (ix.positionMode === 'anchor') {
+          if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
+          if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
+        }
+      }
+      if (patch.anchor != null && BUTTON_ANCHORS[patch.anchor]) {
+        ix.anchor = patch.anchor;
+        ix.positionMode = 'anchor';
+        if (!(Number(ix.marginX) > 0)) ix.marginX = 32;
+        if (!(Number(ix.marginY) > 0)) ix.marginY = 32;
+      }
+      if (patch.marginX != null) {
+        ix.marginX = Math.max(0, Number(patch.marginX) || 0);
+        if (patch.keepAnchor) ix.positionMode = 'anchor';
+      }
+      if (patch.marginY != null) {
+        ix.marginY = Math.max(0, Number(patch.marginY) || 0);
+        if (patch.keepAnchor) ix.positionMode = 'anchor';
+      }
+      if (patch.targetNodeId !== undefined) {
+        setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
+      }
+      if (ix.color != null) delete ix.color;
     }
-    if (ix.color != null) delete ix.color;
+
+    if (t === 'TEXT') {
+      if (patch.fontSize != null) {
+        ix.fontSize = Math.max(8, Math.min(200, Number(patch.fontSize) || 28));
+      }
+      if (patch.color != null) ix.color = String(patch.color || '#ffffff');
+      if (patch.fontFamily != null) ix.fontFamily = String(patch.fontFamily);
+      if (patch.fontWeight != null) ix.fontWeight = String(patch.fontWeight);
+      if (patch.fontStyle != null) ix.fontStyle = String(patch.fontStyle);
+      if (patch.textDecoration != null) ix.textDecoration = String(patch.textDecoration);
+      if (patch.textAlign != null) ix.textAlign = String(patch.textAlign);
+      if (patch.lineHeight != null) {
+        ix.lineHeight = Math.max(0.8, Math.min(3, Number(patch.lineHeight) || 1.3));
+      }
+      if (patch.letterSpacing != null) {
+        ix.letterSpacing = Math.max(-5, Math.min(40, Number(patch.letterSpacing) || 0));
+      }
+      if (patch.textTransform != null) ix.textTransform = String(patch.textTransform);
+      if (patch.textShadow != null) ix.textShadow = String(patch.textShadow);
+      ix.positionMode = 'free';
+    }
+
+    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      if (patch.width != null) ix.width = Math.max(1, Math.min(100, Number(patch.width) || 12));
+      if (patch.height != null) ix.height = Math.max(1, Math.min(100, Number(patch.height) || 8));
+      if (patch.fill != null) ix.fill = String(patch.fill);
+      if (patch.stroke != null) ix.stroke = String(patch.stroke);
+      if (patch.strokeWidth != null) {
+        ix.strokeWidth = Math.max(0, Math.min(20, Number(patch.strokeWidth) || 0));
+      }
+      if (patch.borderRadius != null && t === 'SHAPE_RECT') {
+        ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
+      }
+      ix.positionMode = 'free';
+    }
+
+    ensureFreeOverlayDefaults(ix);
     syncScenePorts(n);
     return buttonViewModel(state, n, ix);
   }
@@ -844,8 +929,8 @@ var ExperienciaEngine = (function () {
     opts = opts || {};
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
-    if (!ix || !isSceneButtonInteraction(ix)) return null;
-    ensureButtonVisualDefaults(ix);
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
+    ensureFreeOverlayDefaults(ix);
     var copy = duplicateInteraction(state, nodeId, ix.id);
     if (!copy) return null;
     var imageW = Math.max(1, Number(opts.imageW) || 1000);
@@ -866,6 +951,28 @@ var ExperienciaEngine = (function () {
     copy.marginX = ix.marginX;
     copy.marginY = ix.marginY;
     copy.positionInitialized = true;
+    copy.size = ix.size;
+    copy.opacity = ix.opacity;
+    copy.hoverEnabled = ix.hoverEnabled;
+    copy.hoverColor = ix.hoverColor;
+    copy.hoverTransition = ix.hoverTransition;
+    copy.fontSize = ix.fontSize;
+    copy.color = ix.color;
+    copy.fontFamily = ix.fontFamily;
+    copy.fontWeight = ix.fontWeight;
+    copy.fontStyle = ix.fontStyle;
+    copy.textDecoration = ix.textDecoration;
+    copy.textAlign = ix.textAlign;
+    copy.lineHeight = ix.lineHeight;
+    copy.letterSpacing = ix.letterSpacing;
+    copy.textTransform = ix.textTransform;
+    copy.textShadow = ix.textShadow;
+    copy.width = ix.width;
+    copy.height = ix.height;
+    copy.fill = ix.fill;
+    copy.stroke = ix.stroke;
+    copy.strokeWidth = ix.strokeWidth;
+    copy.borderRadius = ix.borderRadius;
     if (exact) {
       copy.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
       copy.label = ix.label != null ? String(ix.label) : '';
@@ -877,10 +984,12 @@ var ExperienciaEngine = (function () {
         copy.label = '';
       }
     }
-    if (copy.color != null) delete copy.color;
-    ensureButtonVisualDefaults(copy);
-    var targetId = resolveButtonTarget(state, nodeId, ix);
-    if (targetId) setButtonTarget(state, nodeId, copy.id, targetId);
+    if (isSceneButtonInteraction(copy) && copy.color != null) delete copy.color;
+    ensureFreeOverlayDefaults(copy);
+    if (isSceneButtonInteraction(ix)) {
+      var targetId = resolveButtonTarget(state, nodeId, ix);
+      if (targetId) setButtonTarget(state, nodeId, copy.id, targetId);
+    }
     syncScenePorts(n);
     return buttonViewModel(state, n, copy);
   }
