@@ -2392,6 +2392,21 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-text.is-invisible {
   opacity: 0.28 !important;
 }
+.builder-exp-stage-text.is-text-bold {
+  font-weight: 700 !important;
+}
+.builder-exp-stage-text.is-text-italic {
+  font-style: italic !important;
+}
+.builder-exp-stage-text.is-text-under {
+  text-decoration: underline !important;
+}
+.builder-exp-stage-text.is-text-strike {
+  text-decoration: line-through !important;
+}
+.builder-exp-stage-text.is-text-under.is-text-strike {
+  text-decoration: underline line-through !important;
+}
 .builder-exp-stage-shape {
   position: absolute;
   appearance: none;

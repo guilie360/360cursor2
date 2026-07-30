@@ -6990,10 +6990,11 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   border-color: var(--btn-border-hover, var(--btn-border, var(--glass-border)));
 }
 
-.builder-exp-ui-btn.is-hover-on:hover {
-  color: var(--btn-hover-color, #ffffff) !important;
-  border-color: var(--btn-hover-color, #ffffff) !important;
-  background: color-mix(in srgb, var(--btn-hover-color, #ffffff) 24%, rgba(8, 8, 8, 0.72)) !important;
+.builder-exp-ui-btn.is-hover-on:hover,
+.qe-canvas__design .builder-exp-ui-btn.is-hover-on:hover {
+  color: var(--btn-hover-color, #6fbf86) !important;
+  border-color: var(--btn-hover-color, #6fbf86) !important;
+  background: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 28%, rgba(8, 8, 8, 0.78)) !important;
 }
 
 .builder-exp-ui-btn.is-hover-off:hover {

@@ -551,7 +551,6 @@ var ExperienciaCanvas = (function () {
     var fw = String(selected.fontWeight || '400');
     var fs = selected.fontStyle === 'italic' ? 'italic' : 'normal';
     var td = String(selected.textDecoration || 'none');
-    var ta = selected.textAlign || 'center';
     var tt = selected.textTransform || 'none';
     var shadowOn = selected.textShadow && selected.textShadow !== 'none';
     var op = selected.opacity != null ? Number(selected.opacity) : 1;
@@ -574,7 +573,7 @@ var ExperienciaCanvas = (function () {
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Tipografía</label>' +
-        '<select data-exp-text-font class="ws-select builder-exp-btn-select">' +
+        '<select data-exp-text-font class="builder-exp-btn-select">' +
           fonts.map(function (f) { return fontOpt(f[0], f[1]); }).join('') +
         '</select>' +
       '</div>' +
@@ -583,53 +582,16 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-exp-btn-hover-row">' +
           '<input type="number" data-exp-text-size min="1" max="200" step="1" value="' +
             esc(String(selected.fontSize != null ? selected.fontSize : 28)) + '">' +
-          '<select data-exp-text-size-unit class="ws-select builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
+          '<select data-exp-text-size-unit class="builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
             '<option value="px"' + ((selected.fontSizeUnit || 'px') !== '%' ? ' selected' : '') + '>px</option>' +
             '<option value="%"' + (selected.fontSizeUnit === '%' ? ' selected' : '') + '>%</option>' +
           '</select>' +
         '</div>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Peso</label>' +
-        '<select data-exp-text-weight class="ws-select builder-exp-btn-select">' +
-          '<option value="300"' + (fw === '300' ? ' selected' : '') + '>Light</option>' +
-          '<option value="400"' + (fw === '400' || fw === 'normal' ? ' selected' : '') + '>Regular</option>' +
-          '<option value="500"' + (fw === '500' ? ' selected' : '') + '>Medium</option>' +
-          '<option value="600"' + (fw === '600' ? ' selected' : '') + '>Semibold</option>' +
-          '<option value="700"' + (fw === '700' || fw === 'bold' ? ' selected' : '') + '>Bold</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Color</label>' +
         '<input type="color" data-exp-text-color value="' +
           esc(/^#[0-9a-fA-F]{6}$/.test(String(selected.color || '')) ? selected.color : '#ffffff') + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Alineación</label>' +
-        '<div class="builder-hub-segment builder-hub-segment--3">' +
-          seg('data-exp-text-align', 'left', 'Izq', ta === 'left') +
-          seg('data-exp-text-align', 'center', 'Cen', ta === 'center') +
-          seg('data-exp-text-align', 'right', 'Der', ta === 'right') +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Interlineado</label>' +
-        '<input type="number" data-exp-text-leading min="0.8" max="3" step="0.05" value="' +
-          esc(String(selected.lineHeight != null ? selected.lineHeight : 1.3)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Espaciado</label>' +
-        '<input type="number" data-exp-text-tracking min="-5" max="40" step="0.5" value="' +
-          esc(String(selected.letterSpacing != null ? selected.letterSpacing : 0)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Mayúsculas</label>' +
-        '<select data-exp-text-transform class="ws-select builder-exp-btn-select">' +
-          '<option value="none"' + (tt === 'none' ? ' selected' : '') + '>Ninguna</option>' +
-          '<option value="uppercase"' + (tt === 'uppercase' ? ' selected' : '') + '>MAYÚSCULAS</option>' +
-          '<option value="lowercase"' + (tt === 'lowercase' ? ' selected' : '') + '>minúsculas</option>' +
-          '<option value="capitalize"' + (tt === 'capitalize' ? ' selected' : '') + '>Capitalizar</option>' +
-        '</select>' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Estilo</label>' +
@@ -639,6 +601,15 @@ var ExperienciaCanvas = (function () {
           seg('data-exp-text-underline', '1', 'Subrayado', td.indexOf('underline') >= 0) +
           seg('data-exp-text-strike', '1', 'Tachado', td.indexOf('line-through') >= 0) +
         '</div>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Mayúsculas</label>' +
+        '<select data-exp-text-transform class="builder-exp-btn-select">' +
+          '<option value="none"' + (tt === 'none' ? ' selected' : '') + '>Ninguna</option>' +
+          '<option value="uppercase"' + (tt === 'uppercase' ? ' selected' : '') + '>MAYÚSCULAS</option>' +
+          '<option value="lowercase"' + (tt === 'lowercase' ? ' selected' : '') + '>minúsculas</option>' +
+          '<option value="capitalize"' + (tt === 'capitalize' ? ' selected' : '') + '>Capitalizar</option>' +
+        '</select>' +
       '</div>' +
       '<label class="builder-exp-inspector__check">' +
         '<input type="checkbox" data-exp-text-shadow' + (shadowOn ? ' checked' : '') + '>' +
@@ -854,13 +825,17 @@ var ExperienciaCanvas = (function () {
     } else {
       var posMode = selected.positionMode === 'anchor' ? 'anchor' : 'free';
       var rot = selected.rotation != null ? Number(selected.rotation) : 0;
-      var btnSize = selected.size || 'md';
       var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
       var hoverOn = selected.hoverEnabled !== false;
       var hoverMs = selected.hoverTransition != null ? Number(selected.hoverTransition) : 200;
       var hoverCol = /^#[0-9a-fA-F]{6}$/.test(String(selected.hoverColor || ''))
         ? selected.hoverColor
-        : '#ffffff';
+        : '#6fbf86';
+      var scaleVal = selected.scaleValue != null ? Number(selected.scaleValue)
+        : (selected.size === 'sm' ? 78 : (selected.size === 'lg' ? 138 : 100));
+      var scaleUnit = selected.scaleUnit === 'px' ? 'px' : '%';
+      if (scaleUnit === 'px' && !(scaleVal >= 8)) scaleVal = 14;
+      if (scaleUnit === '%' && !(scaleVal > 0)) scaleVal = 100;
       var anchorGrid = [
         ['top-left', 'Superior izquierda'],
         ['top-center', 'Superior centro'],
@@ -905,11 +880,15 @@ var ExperienciaCanvas = (function () {
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Tamaño</label>' +
-          '<div class="builder-hub-segment builder-hub-segment--3">' +
-            segBtn('data-exp-btn-size', 'sm', 'S', btnSize === 'sm') +
-            segBtn('data-exp-btn-size', 'md', 'M', btnSize === 'md') +
-            segBtn('data-exp-btn-size', 'lg', 'L', btnSize === 'lg') +
+          '<div class="builder-exp-btn-hover-row">' +
+            '<input type="number" data-exp-btn-scale-value min="1" max="400" step="1" value="' +
+              esc(String(scaleVal)) + '">' +
+            '<select data-exp-btn-scale-unit class="builder-exp-btn-select" style="width:72px;flex:0 0 72px">' +
+              '<option value="%"' + (scaleUnit === '%' ? ' selected' : '') + '>%</option>' +
+              '<option value="px"' + (scaleUnit === 'px' ? ' selected' : '') + '>px</option>' +
+            '</select>' +
           '</div>' +
+          '<p class="builder-menu-hint builder-exp-btn-hint">% = escala relativa · px = tamaño de fuente</p>' +
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Transparencia</label>' +
@@ -922,8 +901,7 @@ var ExperienciaCanvas = (function () {
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Color hover</label>' +
           '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
-            (hoverOn ? '' : ' disabled') +
-            ' title="El color se aplica al soltar el selector">' +
+            (hoverOn ? '' : ' disabled') + '>' +
         '</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Transición hover (ms)</label>' +
@@ -2769,13 +2747,28 @@ var ExperienciaCanvas = (function () {
           patchBtn({ icon: iconEl.value }, { persist: true });
         });
       }
-      inspectorBody.querySelectorAll('[data-exp-btn-size]').forEach(function (el) {
-        el.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          patchBtn({ size: el.getAttribute('data-exp-btn-size') }, { inspector: true, persist: true });
+      var scaleValEl = inspectorBody.querySelector('[data-exp-btn-scale-value]');
+      var scaleUnitEl = inspectorBody.querySelector('[data-exp-btn-scale-unit]');
+      function patchBtnScale(opts) {
+        patchBtn({
+          scaleValue: scaleValEl ? scaleValEl.value : 100,
+          scaleUnit: scaleUnitEl && scaleUnitEl.value === 'px' ? 'px' : '%'
+        }, opts || { persist: true });
+      }
+      if (scaleValEl) {
+        scaleValEl.addEventListener('input', function () {
+          patchBtnScale({ gesture: true });
         });
-      });
+        scaleValEl.addEventListener('change', function () {
+          endButtonOp();
+          patchBtnScale({ persist: true });
+        });
+      }
+      if (scaleUnitEl) {
+        scaleUnitEl.addEventListener('change', function () {
+          patchBtnScale({ persist: true });
+        });
+      }
       var opEl = inspectorBody.querySelector('[data-exp-btn-opacity]');
       if (opEl) {
         opEl.addEventListener('input', function () {
@@ -2793,19 +2786,25 @@ var ExperienciaCanvas = (function () {
         });
       }
       var hoverCol = inspectorBody.querySelector('[data-exp-btn-hover-color]');
-      /* Apply inside the native color flow: input = live preview, change = commit.
-         Never require a separate outside button (OS picker cancels on outside click). */
+      var liveHoverColor = null;
       if (hoverCol) {
         hoverCol.addEventListener('input', function () {
           var col = String(hoverCol.value || '').trim();
           if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
+          liveHoverColor = col.toLowerCase();
           patchBtn({ hoverColor: col }, { gesture: true });
         });
         hoverCol.addEventListener('change', function () {
-          var col = String(hoverCol.value || '').trim();
-          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
           endButtonOp();
+          var col = String(hoverCol.value || '').trim().toLowerCase();
+          /* OS color picker often resets to #ffffff when dismissed — keep last live color. */
+          if (liveHoverColor && col === '#ffffff' && liveHoverColor !== '#ffffff') {
+            col = liveHoverColor;
+            hoverCol.value = col;
+          }
+          if (!/^#[0-9a-fA-F]{6}$/.test(col)) return;
           patchBtn({ hoverColor: col }, { persist: true });
+          liveHoverColor = null;
         });
       }
       var hoverMs = inspectorBody.querySelector('[data-exp-btn-hover-ms]');
@@ -2833,28 +2832,24 @@ var ExperienciaCanvas = (function () {
       }
       var textSize = inspectorBody.querySelector('[data-exp-text-size]');
       var textSizeUnit = inspectorBody.querySelector('[data-exp-text-size-unit]');
-      function patchTextSize() {
-        var patch = {};
-        if (textSize) patch.fontSize = textSize.value;
-        if (textSizeUnit) patch.fontSizeUnit = textSizeUnit.value === '%' ? '%' : 'px';
-        patchBtn(patch, { persist: true });
+      function patchTextSize(opts) {
+        patchBtn({
+          fontSize: textSize ? textSize.value : 28,
+          fontSizeUnit: textSizeUnit && textSizeUnit.value === '%' ? '%' : 'px'
+        }, opts || { persist: true });
       }
       if (textSize) {
-        textSize.addEventListener('change', patchTextSize);
         textSize.addEventListener('input', function () {
-          patchBtn({
-            fontSize: textSize.value,
-            fontSizeUnit: textSizeUnit && textSizeUnit.value === '%' ? '%' : 'px'
-          }, { gesture: true });
+          patchTextSize({ gesture: true });
+        });
+        textSize.addEventListener('change', function () {
+          endButtonOp();
+          patchTextSize({ persist: true });
         });
       }
       if (textSizeUnit) {
-        textSizeUnit.addEventListener('change', patchTextSize);
-      }
-      var textWeight = inspectorBody.querySelector('[data-exp-text-weight]');
-      if (textWeight) {
-        textWeight.addEventListener('change', function () {
-          patchBtn({ fontWeight: textWeight.value }, { persist: true });
+        textSizeUnit.addEventListener('change', function () {
+          patchTextSize({ persist: true });
         });
       }
       var textColor = inspectorBody.querySelector('[data-exp-text-color]');
@@ -2865,24 +2860,6 @@ var ExperienciaCanvas = (function () {
         textColor.addEventListener('change', function () {
           endButtonOp();
           persist();
-        });
-      }
-      inspectorBody.querySelectorAll('[data-exp-text-align]').forEach(function (el) {
-        el.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          patchBtn({ textAlign: el.getAttribute('data-exp-text-align') }, { inspector: true, persist: true });
-        });
-      });
-      var textLeading = inspectorBody.querySelector('[data-exp-text-leading]');
-      if (textLeading) {
-        textLeading.addEventListener('change', function () {
-          patchBtn({ lineHeight: textLeading.value }, { persist: true });
-        });
-      }
-      var textTracking = inspectorBody.querySelector('[data-exp-text-tracking]');
-      if (textTracking) {
-        textTracking.addEventListener('change', function () {
-          patchBtn({ letterSpacing: textTracking.value }, { persist: true });
         });
       }
       var textTransform = inspectorBody.querySelector('[data-exp-text-transform]');
@@ -4488,26 +4465,35 @@ var ExperienciaCanvas = (function () {
           var tUnit = b.fontSizeUnit === '%' ? '%' : 'px';
           var tSize = Number(b.fontSize) || (tUnit === '%' ? 4 : 28);
           var tOp = b.opacity != null ? Number(b.opacity) : 1;
-          var tShadow = (b.textShadow && b.textShadow !== 'none')
-            ? cssToken(b.textShadow)
-            : 'none';
-          var sizeCss = tUnit === '%' ? (tSize + 'vh') : (tSize + 'px');
+          var sizeCss = tUnit === '%'
+            ? (Math.max(8, Math.round((tSize / 100) * layerH)) + 'px')
+            : (tSize + 'px');
+          var fam = String(b.fontFamily || 'system-ui, sans-serif').replace(/"/g, '');
+          var fw = String(b.fontWeight || '400');
+          var isBold = fw === '700' || fw === 'bold';
+          var isItalic = b.fontStyle === 'italic';
+          var deco = String(b.textDecoration || 'none');
+          var isUnder = deco.indexOf('underline') >= 0;
+          var isStrike = deco.indexOf('line-through') >= 0;
+          var tt = String(b.textTransform || 'none');
+          var shadowOn = b.textShadow && b.textShadow !== 'none';
           styleBits +=
             '--t-size:' + sizeCss + ';' +
             '--t-color:' + cssToken(b.color || '#ffffff') + ';' +
-            '--t-family:' + cssToken(b.fontFamily || 'system-ui, sans-serif') + ';' +
-            '--t-weight:' + cssToken(b.fontWeight || '400') + ';' +
-            '--t-style:' + cssToken(b.fontStyle || 'normal') + ';' +
-            '--t-deco:' + cssToken(b.textDecoration || 'none') + ';' +
-            '--t-align:' + cssToken(b.textAlign || 'center') + ';' +
-            '--t-leading:' + (b.lineHeight != null ? Number(b.lineHeight) : 1.3) + ';' +
-            '--t-tracking:' + (b.letterSpacing != null ? Number(b.letterSpacing) : 0) + 'px;' +
-            '--t-transform:' + cssToken(b.textTransform || 'none') + ';' +
-            '--t-shadow:' + tShadow + ';' +
+            '--t-family:' + JSON.stringify(fam) + ';' +
+            '--t-weight:' + (isBold ? '700' : '400') + ';' +
+            '--t-style:' + (isItalic ? 'italic' : 'normal') + ';' +
+            '--t-deco:' + (deco === 'none' ? 'none' : cssToken(deco)) + ';' +
+            '--t-transform:' + cssToken(tt) + ';' +
+            '--t-shadow:' + (shadowOn ? '0 2px 10px rgba(0,0,0,0.55)' : 'none') + ';' +
             '--t-opacity:' + tOp + ';';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
-            (b.visible === false ? ' is-invisible' : '') + '"' +
+            (b.visible === false ? ' is-invisible' : '') +
+            (isBold ? ' is-text-bold' : '') +
+            (isItalic ? ' is-text-italic' : '') +
+            (isUnder ? ' is-text-under' : '') +
+            (isStrike ? ' is-text-strike' : '') + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
             ' data-exp-stage-text="1"' +
             ' style="' + styleBits + '">' +
@@ -4541,12 +4527,21 @@ var ExperienciaCanvas = (function () {
         var btnOp = b.opacity != null ? Number(b.opacity) : 1;
         var hoverOn = b.hoverEnabled !== false;
         var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-        var hoverCol = cssToken(b.hoverColor || '#ffffff') || '#ffffff';
-        var btnSize = (b.size === 'sm' || b.size === 'lg') ? b.size : 'md';
-        var btnScale = btnSize === 'sm' ? 0.78 : (btnSize === 'lg' ? 1.38 : 1);
-        /* Size/hover via CSS vars — do not fight .builder-exp-ui-btn transform. */
+        var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
+        var scaleUnit = b.scaleUnit === 'px' ? 'px' : '%';
+        var scaleValue = b.scaleValue != null ? Number(b.scaleValue)
+          : (b.size === 'sm' ? 78 : (b.size === 'lg' ? 138 : 100));
+        var btnScale = 1;
+        var fontPx = null;
+        if (scaleUnit === 'px') {
+          fontPx = Math.max(8, Math.min(96, scaleValue || 14));
+          btnScale = fontPx / 14;
+        } else {
+          btnScale = Math.max(0.25, Math.min(4, (scaleValue || 100) / 100));
+        }
         styleBits +=
           '--btn-scale:' + btnScale + ';' +
+          (fontPx != null ? ('--button-font-size:' + fontPx + 'px;') : '') +
           '--btn-opacity:' + btnOp + ';' +
           '--btn-hover-color:' + hoverCol + ';' +
           '--btn-hover-ms:' + hoverMs + 'ms;';
@@ -4556,7 +4551,7 @@ var ExperienciaCanvas = (function () {
           (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
           (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
           ' data-exp-stage-btn="' + esc(b.id) + '"' +
-          ' data-exp-btn-size="' + esc(btnSize) + '"' +
+          ' data-hover-color="' + esc(hoverCol) + '"' +
           ' style="' + styleBits + '">' +
           esc(label) +
         '</button>';
@@ -5684,6 +5679,27 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+      /* Force hover color in Builder (theme tokens otherwise keep white). */
+      buttonsLayer.addEventListener('mouseover', function (ev) {
+        var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn.is-hover-on');
+        if (!btn || btn._hoverPainted) return;
+        var c = btn.getAttribute('data-hover-color') ||
+          (btn.style && btn.style.getPropertyValue('--btn-hover-color')) || '';
+        c = String(c || '').trim();
+        if (!/^#[0-9a-fA-F]{6}$/.test(c)) return;
+        btn._hoverPainted = true;
+        btn.style.setProperty('color', c, 'important');
+        btn.style.setProperty('border-color', c, 'important');
+      });
+      buttonsLayer.addEventListener('mouseout', function (ev) {
+        var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn');
+        if (!btn || !btn._hoverPainted) return;
+        var to = ev.relatedTarget;
+        if (to && btn.contains(to)) return;
+        btn._hoverPainted = false;
+        btn.style.removeProperty('color');
+        btn.style.removeProperty('border-color');
+      });
       buttonsLayer.addEventListener('dblclick', function (ev) {
         if (canvas().editMode !== 'buttons') return;
         var hit = ev.target.closest('[data-exp-stage-text][data-exp-stage-btn]');

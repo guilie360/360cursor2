@@ -461,13 +461,20 @@ var ExperienciaEngine = (function () {
     if (ix.marginY == null || isNaN(Number(ix.marginY))) {
       ix.marginY = ix.positionMode === 'anchor' ? 32 : 0;
     }
-    /* V7.2.46 — size / opacity / hover (Builder preview; pass-through on ix) */
-    if (ix.size !== 'sm' && ix.size !== 'md' && ix.size !== 'lg') ix.size = 'md';
+    /* V7.2.46 — scale / opacity / hover (Builder preview; pass-through on ix) */
+    if (ix.scaleUnit !== 'px') ix.scaleUnit = '%';
+    if (ix.scaleValue == null || isNaN(Number(ix.scaleValue))) {
+      if (ix.size === 'sm') ix.scaleValue = 78;
+      else if (ix.size === 'lg') ix.scaleValue = 138;
+      else ix.scaleValue = ix.scaleUnit === 'px' ? 14 : 100;
+    } else {
+      ix.scaleValue = Number(ix.scaleValue);
+    }
     if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
     else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
     if (ix.hoverEnabled == null) ix.hoverEnabled = true;
     else ix.hoverEnabled = !!ix.hoverEnabled;
-    if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#ffffff';
+    if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#6fbf86';
     if (ix.hoverTransition == null || isNaN(Number(ix.hoverTransition))) ix.hoverTransition = 200;
     else ix.hoverTransition = Math.max(0, Math.min(2000, Number(ix.hoverTransition)));
 
@@ -634,8 +641,10 @@ var ExperienciaEngine = (function () {
       textShadow: ix.textShadow || null,
       opacity: ix.opacity != null ? Number(ix.opacity) : 1,
       size: ix.size || 'md',
+      scaleValue: ix.scaleValue != null ? Number(ix.scaleValue) : 100,
+      scaleUnit: ix.scaleUnit === 'px' ? 'px' : '%',
       hoverEnabled: ix.hoverEnabled !== false,
-      hoverColor: ix.hoverColor || '#ffffff',
+      hoverColor: ix.hoverColor || '#6fbf86',
       hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
       _ix: ix
     };
@@ -818,9 +827,15 @@ var ExperienciaEngine = (function () {
         ix.icon = (icon && BUTTON_ICONS[icon]) ? icon : null;
       }
       if (patch.size === 'sm' || patch.size === 'md' || patch.size === 'lg') ix.size = patch.size;
+      if (patch.scaleValue != null) {
+        ix.scaleValue = Math.max(1, Math.min(400, Number(patch.scaleValue) || 100));
+      }
+      if (patch.scaleUnit === 'px' || patch.scaleUnit === '%') {
+        ix.scaleUnit = patch.scaleUnit;
+      }
       if (patch.hoverEnabled != null) ix.hoverEnabled = !!patch.hoverEnabled;
       if (patch.hoverColor != null) {
-        ix.hoverColor = String(patch.hoverColor || '#ffffff');
+        ix.hoverColor = String(patch.hoverColor || '#6fbf86');
       }
       if (patch.hoverTransition != null) {
         ix.hoverTransition = Math.max(0, Math.min(2000, Number(patch.hoverTransition) || 0));
@@ -974,6 +989,8 @@ var ExperienciaEngine = (function () {
     copy.marginY = ix.marginY;
     copy.positionInitialized = true;
     copy.size = ix.size;
+    copy.scaleValue = ix.scaleValue;
+    copy.scaleUnit = ix.scaleUnit;
     copy.opacity = ix.opacity;
     copy.hoverEnabled = ix.hoverEnabled;
     copy.hoverColor = ix.hoverColor;
