@@ -18,6 +18,12 @@ var BoxiesApp = (function () {
     if (typeof BoxiesQuotationBuilderPage !== 'undefined') {
       BoxiesPages.register(BoxiesQuotationBuilderPage);
     }
+    if (typeof BoxiesTemplateBuilderPage !== 'undefined') {
+      BoxiesPages.register(BoxiesTemplateBuilderPage);
+    }
+    if (typeof BoxiesComparatorBuilderPage !== 'undefined') {
+      BoxiesPages.register(BoxiesComparatorBuilderPage);
+    }
     if (typeof BoxiesSistemaPage !== 'undefined') {
       BoxiesPages.register(BoxiesSistemaPage);
     }

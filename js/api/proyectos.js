@@ -7,10 +7,10 @@ var ProyectosApi = (function () {
   var PROJECT_SELECT =
     'id, nombre, slug, descripcion, ciudad, direccion, latitud, longitud, ' +
     'whatsapp, email, sitio_web, instagram_url, estado, publicado, is_public, constructora_id, ' +
-    'display_order, is_system_template, experience_type, created_at, updated_at';
+    'display_order, is_system_template, experience_type, template_id, created_at, updated_at';
 
   var BRIEF_SELECT =
-    'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template, experience_type';
+    'id, nombre, slug, publicado, is_public, estado, ciudad, display_order, is_system_template, experience_type, template_id';
 
   function dbClient() {
     if (typeof AdminApi === 'undefined' || !AdminApi.getClient) {

@@ -72,7 +72,7 @@ var BoxiesShell = (function () {
     return (
       '<nav class="boxies-nav" id="boxiesNav" aria-label="Navegación">' +
         item('hall', 'Hall', 'home') +
-        item('projects', 'Experiencias', 'folder') +
+        item('projects', 'Proyectos', 'folder') +
         item('builder', 'Builder', 'panel') +
         item('sistema', 'Sistema', 'activity') +
       '</nav>'

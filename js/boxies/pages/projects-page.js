@@ -82,7 +82,7 @@ var BoxiesProjectsPage = (function () {
       '<button type="button" class="toggle-switch boxies-public-toggle' + (on ? ' on' : '') + '"' +
         ' role="switch" aria-checked="' + (on ? 'true' : 'false') + '"' +
         ' aria-label="' + (on ? 'Público' : 'Privado') + '"' +
-        ' data-tooltip="' + (on ? 'Público — visible en landing' : 'Privado — oculto del landing') + '"' +
+        ' data-tooltip="' + (on ? 'Público — visible en marketplace' : 'Privado — oculto del marketplace') + '"' +
         ' data-boxies-public-id="' + escapeHtml(id) + '"' +
         ' data-boxies-public="' + (on ? '1' : '0') + '">' +
         '<span class="toggle-switch-knob" aria-hidden="true"></span>' +
@@ -485,7 +485,7 @@ var BoxiesProjectsPage = (function () {
     btn.setAttribute('aria-label', isPublic ? 'Público' : 'Privado');
     btn.setAttribute(
       'data-tooltip',
-      isPublic ? 'Público — visible en landing' : 'Privado — oculto del landing'
+      isPublic ? 'Público — visible en marketplace' : 'Privado — oculto del marketplace'
     );
     btn.removeAttribute('title');
     btn.setAttribute('data-boxies-public', isPublic ? '1' : '0');
@@ -724,7 +724,8 @@ var BoxiesProjectsPage = (function () {
         : 'builder';
     return BoxiesRouter.navigate(page, {
       projectId: projectId || null,
-      project: slug || null
+      project: slug || null,
+      experienceType: type || null
     });
   }
 
@@ -734,14 +735,14 @@ var BoxiesProjectsPage = (function () {
     showOpenBusy();
     markPendingOpen(projectId);
     try {
-      await openBuilder(projectId, slug);
+      await openBuilder(projectId, slug, activeExperienceType);
       /* Builder should clear pending; backup if still set. */
       if (hasPendingOpen()) finishPendingOpenBusy();
     } catch (err) {
       clearPendingOpen();
       hideGlobalBusy();
       notifyError(
-        (err && err.message) || 'No se pudo abrir la configuración del showroom.'
+        (err && err.message) || 'No se pudo abrir el proyecto.'
       );
     }
   }
@@ -906,7 +907,7 @@ var BoxiesProjectsPage = (function () {
     var tbody = document.getElementById('boxiesProjectsBody');
     if (!tbody) return [];
     if (typeof BoxiesAdmin2ProjectsApi === 'undefined') {
-      throw new Error('API de Experiencias no disponible');
+      throw new Error('API de Proyectos no disponible');
     }
     var scope =
       typeof BoxiesShowroomScope !== 'undefined'
@@ -1234,16 +1235,16 @@ var BoxiesProjectsPage = (function () {
 
     host.classList.add('boxies-content--showrooms');
     host.innerHTML =
-      '<div class="boxies-page boxies-page--showrooms">' +
-        '<header class="boxies-showrooms-header">' +
-          '<h1 class="boxies-page__title">Experiencias</h1>' +
-          '<p class="boxies-page__desc">Administra las experiencias digitales del proyecto. Cada pestaña filtra por tipo; la estructura, media y hotspots se comparten.</p>' +
+      '<div class="boxies-page boxies-page--showrooms boxies-page--projects">' +
+        '<header class="boxies-showrooms-header boxies-projects-header">' +
+          '<h1 class="boxies-page__title">Proyectos</h1>' +
+          '<p class="boxies-page__desc boxies-page__desc--lead">Biblioteca.</p>' +
           renderExperienceTabs() +
         '</header>' +
         '<p class="boxies-projects-order-status" id="boxiesProjectsOrderStatus" aria-live="polite"></p>' +
-        '<div class="boxies-showrooms-body">' +
+        '<div class="boxies-showrooms-body boxies-projects-body">' +
           '<div class="boxies-showrooms-wrap">' +
-            '<table class="admin-table boxies-showrooms-table" id="boxiesShowroomsTable">' +
+            '<table class="admin-table boxies-showrooms-table boxies-projects-table" id="boxiesShowroomsTable">' +
               '<colgroup>' +
                 '<col data-col="drag">' +
                 '<col data-col="name">' +
@@ -1321,5 +1322,5 @@ var BoxiesProjectsPage = (function () {
     savingOrder = false;
   }
 
-  return { id: 'projects', title: 'Experiencias', mount: mount, unmount: unmount };
+  return { id: 'projects', title: 'Proyectos', mount: mount, unmount: unmount };
 })();

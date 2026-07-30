@@ -1,12 +1,13 @@
-/* Global Admin — experiences via PlatformAuth (same session as BOXIES).
- * Table remains public.proyectos; filtered by experience_type (V7.0.00).
+/* Global Admin — projects via PlatformAuth (same session as BOXIES).
+ * Table remains public.proyectos; filtered by experience_type (V7.2.00).
  * List order is always display_order ASC (manual).
- * is_public is independent of publicado (landing/marketplace visibility).
- * createFromTemplate / cloneProject use SQL RPCs (single clone engine). */
+ * is_public is independent of publicado (marketplace visibility).
+ * createFromTemplate / cloneProject use SQL RPCs (single clone engine).
+ * Plantillas: experience_type=template (listed without is_system_template filter). */
 var BoxiesAdmin2ProjectsApi = (function () {
   var SELECT =
     'id, nombre, slug, descripcion, ciudad, estado, publicado, is_public, constructora_id, ' +
-    'display_order, is_system_template, experience_type, created_at, updated_at';
+    'display_order, is_system_template, experience_type, template_id, created_at, updated_at';
 
   function resolveExperienceType(options) {
     options = options || {};
@@ -18,12 +19,14 @@ var BoxiesAdmin2ProjectsApi = (function () {
       return BoxiesExperienceTypes.normalize(raw || 'showroom');
     }
     var t = String(raw == null ? 'showroom' : raw).trim().toLowerCase();
+    if (t === 'landing' || t === 'landings') t = 'comparator';
     var allowed = {
       showroom: 1,
       presentation: 1,
       quotation: 1,
-      landing: 1,
-      catalog: 1
+      comparator: 1,
+      catalog: 1,
+      template: 1
     };
     return allowed[t] ? t : 'showroom';
   }
@@ -63,9 +66,13 @@ var BoxiesAdmin2ProjectsApi = (function () {
     var query = getClient()
       .from('proyectos')
       .select(SELECT)
-      .eq('is_system_template', false)
       .eq('experience_type', experienceType)
       .order('display_order', { ascending: true, nullsFirst: false });
+
+    /* Content projects hide the system bootstrap template; Plantillas tab lists templates. */
+    if (experienceType !== 'template') {
+      query = query.eq('is_system_template', false);
+    }
 
     if (typeof BoxiesShowroomScope !== 'undefined' && BoxiesShowroomScope.applyListFilter) {
       query = BoxiesShowroomScope.applyListFilter(
@@ -77,7 +84,7 @@ var BoxiesAdmin2ProjectsApi = (function () {
     var result = await query;
 
     if (result.error) {
-      throw new Error(result.error.message || 'Error cargando experiencias');
+      throw new Error(result.error.message || 'Error cargando proyectos');
     }
     return result.data || [];
   }

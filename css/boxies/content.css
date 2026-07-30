@@ -224,6 +224,116 @@
   box-sizing: border-box;
 }
 
+/* V7.2.00 — Project Hall: editorial header + tabs + table breathing room */
+#boxiesContent .boxies-page--projects .boxies-page__title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+}
+
+#boxiesContent .boxies-page--projects .boxies-page__desc--lead {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.42);
+  max-width: none;
+}
+
+#boxiesContent .boxies-projects-header {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+}
+
+#boxiesContent .boxies-experience-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 20px;
+  margin: 28px 0 0;
+  padding: 0 0 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+#boxiesContent .boxies-experience-tab {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 0 0 -3px;
+  padding: 14px 4px 12px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+#boxiesContent .boxies-experience-tab:hover {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+#boxiesContent .boxies-experience-tab.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 600;
+  border-bottom-color: rgba(255, 255, 255, 0.92);
+}
+
+#boxiesContent .boxies-projects-order-status {
+  flex: 0 0 auto;
+  min-height: 1.1rem;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+#boxiesContent .boxies-projects-body.boxies-showrooms-body,
+#boxiesContent .boxies-page--projects .boxies-showrooms-body {
+  margin-top: 20px;
+  padding-top: 4px;
+}
+
+#boxiesContent .boxies-projects-table.boxies-showrooms-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#boxiesContent .boxies-projects-table thead th {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 10px;
+  padding-bottom: 14px;
+}
+
+#boxiesContent .boxies-projects-table tbody td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  padding-top: 16px;
+  padding-bottom: 16px;
+  vertical-align: middle;
+}
+
+#boxiesContent .boxies-projects-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+#boxiesContent .boxies-projects-table .boxies-showroom-name {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
 /* V7.0.07 — single page typography hierarchy for BOXIES content */
 #boxiesContent .boxies-page__title {
   font-size: 20px;
@@ -250,48 +360,7 @@
   margin-bottom: 10px;
 }
 
-#boxiesContent .boxies-experience-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin: 12px 0 4px;
-  padding: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-#boxiesContent .boxies-experience-tab {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.45);
-  cursor: pointer;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  margin: 0 0 -1px;
-  padding: 10px 12px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-#boxiesContent .boxies-experience-tab:hover {
-  color: rgba(255, 255, 255, 0.78);
-}
-
-#boxiesContent .boxies-experience-tab.is-active {
-  color: rgba(255, 255, 255, 0.95);
-  border-bottom-color: rgba(255, 255, 255, 0.85);
-}
-
-#boxiesContent .boxies-projects-order-status {
-  flex: 0 0 auto;
-  min-height: 1.25rem;
-  margin: -4px 0 10px;
-  padding: 0;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
-}
+/* V7.2.00 — tab / order-status base styles live in the editorial block above. */
 
 #boxiesContent .boxies-projects-order-status.is-error {
   color: #f0a0a0;
@@ -737,6 +806,27 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
 #boxiesContent .boxies-placeholder {
   max-width: 420px;
   padding: 8px 0;
+}
+
+#boxiesContent .boxies-builder-stub {
+  max-width: 520px;
+  padding: 24px 0;
+}
+
+#boxiesContent .boxies-builder-stub .boxies-page__eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+#boxiesContent .boxies-builder-stub .boxies-page__meta {
+  margin: 0 0 20px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
 }
 
 #boxiesContent .boxies-placeholder__kicker {

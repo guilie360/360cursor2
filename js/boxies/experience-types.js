@@ -1,8 +1,8 @@
 /**
- * BOXIES V7 — Experiencias (tipos + herramientas futuras).
+ * BOXIES V7.2.00 — Project types (Hall Proyectos).
  * Una sola colección (proyectos); experience_type filtra la UI.
+ * kind: content | template — Plantillas son primer nivel, misma fila de tabs.
  * enabledTools() prepara especialización por tipo sin duplicar módulos.
- * V7.0.01 — selector metadata for Builder entry screen.
  */
 var BoxiesExperienceTypes = (function () {
   var STORAGE_KEY = 'boxies.experiences.activeType';
@@ -10,6 +10,8 @@ var BoxiesExperienceTypes = (function () {
   var TYPES = [
     {
       id: 'showroom',
+      kind: 'content',
+      builderReady: true,
       tabLabel: 'SHOWROOMS',
       singular: 'Showroom',
       plural: 'Showrooms',
@@ -24,6 +26,8 @@ var BoxiesExperienceTypes = (function () {
     },
     {
       id: 'presentation',
+      kind: 'content',
+      builderReady: true,
       tabLabel: 'PRESENTACIONES',
       singular: 'Presentación',
       plural: 'Presentaciones',
@@ -37,6 +41,8 @@ var BoxiesExperienceTypes = (function () {
     },
     {
       id: 'quotation',
+      kind: 'content',
+      builderReady: true,
       tabLabel: 'COTIZACIONES',
       singular: 'Cotización',
       plural: 'Cotizaciones',
@@ -47,26 +53,32 @@ var BoxiesExperienceTypes = (function () {
       selectorTitle: 'Cotización',
       selectorDesc: 'Propuesta comercial interactiva para clientes.',
       selectorCta: 'Crear →',
-      /* V7.1.00 — exclusive Quotation Builder host */
       builderPage: 'quotation-builder',
       createBusyLabel: 'Creando Quotation Room',
       openBusyLabel: 'Cargando Quotation Room'
     },
     {
-      id: 'landing',
-      tabLabel: 'LANDINGS',
-      singular: 'Landing',
-      plural: 'Landings',
-      createLabel: '+ Nueva Landing',
-      defaultName: 'Nueva Landing',
-      slugPrefix: 'landing',
-      emptyMessage: 'No hay landings registradas.',
-      selectorTitle: 'Landing',
-      selectorDesc: 'Landing comercial para captación de clientes.',
-      selectorCta: 'Crear →'
+      id: 'comparator',
+      kind: 'content',
+      builderReady: false,
+      tabLabel: 'COMPARADORES',
+      singular: 'Comparador',
+      plural: 'Comparadores',
+      createLabel: '+ Nuevo Comparador',
+      defaultName: 'Nuevo Comparador',
+      slugPrefix: 'comparador',
+      emptyMessage: 'No hay comparadores registrados.',
+      selectorTitle: 'Comparador',
+      selectorDesc: 'Comparación de tipologías y unidades para el cliente.',
+      selectorCta: 'Crear →',
+      builderPage: 'comparator-builder',
+      createBusyLabel: 'Creando Comparador',
+      openBusyLabel: 'Cargando Comparador'
     },
     {
       id: 'catalog',
+      kind: 'content',
+      builderReady: true,
       tabLabel: 'CATÁLOGOS',
       singular: 'Catálogo',
       plural: 'Catálogos',
@@ -77,6 +89,24 @@ var BoxiesExperienceTypes = (function () {
       selectorTitle: 'Catálogo',
       selectorDesc: 'Catálogo digital de tipologías y documentación.',
       selectorCta: 'Crear →'
+    },
+    {
+      id: 'template',
+      kind: 'template',
+      builderReady: false,
+      tabLabel: 'PLANTILLAS',
+      singular: 'Plantilla',
+      plural: 'Plantillas',
+      createLabel: '+ Nueva Plantilla',
+      defaultName: 'Nueva Plantilla',
+      slugPrefix: 'plantilla',
+      emptyMessage: 'No hay plantillas registradas.',
+      selectorTitle: 'Plantilla',
+      selectorDesc: 'Estructura reutilizable para nuevos proyectos.',
+      selectorCta: 'Crear →',
+      builderPage: 'template-builder',
+      createBusyLabel: 'Creando Plantilla',
+      openBusyLabel: 'Cargando Plantilla'
     }
   ];
 
@@ -85,8 +115,9 @@ var BoxiesExperienceTypes = (function () {
     showroom: ['runtime', '360', 'inventory', 'login', 'videos', 'hotspots'],
     presentation: ['images', 'hotspots', 'cards', 'videos'],
     quotation: ['proposal', 'budget', 'scope', 'schedule', 'options'],
-    landing: ['hero', 'form', 'cta', 'gallery'],
-    catalog: ['typologies', 'plans', 'pdf', 'gallery']
+    comparator: ['compare', 'units', 'matrix'],
+    catalog: ['typologies', 'plans', 'pdf', 'gallery'],
+    template: ['structure', 'layout', 'components', 'behavior']
   };
 
   var ALLOWED = {};
@@ -99,6 +130,8 @@ var BoxiesExperienceTypes = (function () {
       .trim()
       .toLowerCase();
     if (raw === 'experience' || raw === 'experiencias') return 'showroom';
+    /* V7.2.00 — Landings retired; map legacy session/DB values. */
+    if (raw === 'landing' || raw === 'landings') return 'comparator';
     if (ALLOWED[raw]) return raw;
     return 'showroom';
   }
@@ -111,12 +144,30 @@ var BoxiesExperienceTypes = (function () {
     return TYPES.slice();
   }
 
+  function listContentTypes() {
+    return TYPES.filter(function (t) { return t.kind !== 'template'; });
+  }
+
+  function listTemplateTypes() {
+    return TYPES.filter(function (t) { return t.kind === 'template'; });
+  }
+
+  function isTemplateType(typeId) {
+    var t = get(typeId);
+    return !!(t && t.kind === 'template');
+  }
+
+  function isBuilderReady(typeId) {
+    var t = get(typeId);
+    return !!(t && t.builderReady);
+  }
+
   function enabledTools(typeId) {
     var id = normalize(typeId);
     return (TOOLS_BY_TYPE[id] || []).slice();
   }
 
-  /** V7.1.00 — which Boxies page hosts the editor for this experience type. */
+  /** Which Boxies page hosts the editor for this experience type. */
   function getBuilderPage(typeId) {
     var t = get(typeId);
     return (t && t.builderPage) || 'builder';
@@ -125,13 +176,13 @@ var BoxiesExperienceTypes = (function () {
   function getCreateBusyLabel(typeId) {
     var t = get(typeId);
     if (t && t.createBusyLabel) return t.createBusyLabel;
-    return 'Creando ' + String((t && t.singular) || 'experiencia').toLowerCase();
+    return 'Creando ' + String((t && t.singular) || 'proyecto').toLowerCase();
   }
 
   function getOpenBusyLabel(typeId) {
     var t = get(typeId);
     if (t && t.openBusyLabel) return t.openBusyLabel;
-    return 'Cargando ' + String((t && t.singular) || 'experiencia').toLowerCase();
+    return 'Cargando ' + String((t && t.singular) || 'proyecto').toLowerCase();
   }
 
   function isToolEnabled(typeId, toolId) {
@@ -162,6 +213,10 @@ var BoxiesExperienceTypes = (function () {
     normalize: normalize,
     get: get,
     list: list,
+    listContentTypes: listContentTypes,
+    listTemplateTypes: listTemplateTypes,
+    isTemplateType: isTemplateType,
+    isBuilderReady: isBuilderReady,
     enabledTools: enabledTools,
     isToolEnabled: isToolEnabled,
     getBuilderPage: getBuilderPage,

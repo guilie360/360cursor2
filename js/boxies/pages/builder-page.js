@@ -256,7 +256,7 @@ var BoxiesBuilderPage = (function () {
       '<div class="boxies-page boxies-placeholder">' +
         '<h1 class="boxies-page__title">No se pudo abrir el Builder</h1>' +
         '<p class="boxies-page__desc">' + escapeHtml((err && err.message) || 'Error desconocido') + '</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Experiencias</button>' +
+        '<button type="button" class="boxies-action-btn" id="boxiesBuilderBackProjects">Volver a Proyectos</button>' +
       '</div>';
     var btn = document.getElementById('boxiesBuilderBackProjects');
     if (btn) {

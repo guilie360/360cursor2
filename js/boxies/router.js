@@ -13,7 +13,9 @@ var BoxiesRouter = (function () {
   var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   var BUILDER_HOST_PAGES = {
     builder: 1,
-    'quotation-builder': 1
+    'quotation-builder': 1,
+    'template-builder': 1,
+    'comparator-builder': 1
   };
 
   function isBuilderHostPage(pageId) {
@@ -159,8 +161,8 @@ var BoxiesRouter = (function () {
 
     slot.innerHTML = '';
     slot.classList.toggle('is-builder-embed', isBuilderHostPage(id) && !!(projectId || project));
-    /* Quotation Builder highlights the platform Builder nav item */
-    BoxiesShell.setActiveNav(id === 'quotation-builder' ? 'builder' : id);
+    /* Builder hosts (showroom / quotation / stubs) highlight platform Builder nav */
+    BoxiesShell.setActiveNav(isBuilderHostPage(id) ? 'builder' : id);
     if (!opts.silentUrl) writeUrl(id, { projectId: projectId, project: project });
     currentId = id;
     currentProjectId = projectId;

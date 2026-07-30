@@ -124,7 +124,7 @@ var BoxiesQuotationBuilderPage = (function () {
       '<div class="boxies-page boxies-placeholder">' +
         '<h1 class="boxies-page__title">No se pudo abrir Quotation Builder</h1>' +
         '<p class="boxies-page__desc">' + escapeHtml((err && err.message) || 'Error desconocido') + '</p>' +
-        '<button type="button" class="boxies-action-btn" id="boxiesQuotationBackProjects">Volver a Experiencias</button>' +
+        '<button type="button" class="boxies-action-btn" id="boxiesQuotationBackProjects">Volver a Proyectos</button>' +
       '</div>';
     var btn = document.getElementById('boxiesQuotationBackProjects');
     if (btn) {
