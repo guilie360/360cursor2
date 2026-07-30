@@ -495,9 +495,6 @@
   color: rgba(255, 255, 255, 0.55);
   font-size: 14px;
 }
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
-}
 
 .qe-scenes__menu {
   position: absolute;
@@ -542,61 +539,101 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.09 / V7.2.25 / V7.2.53 — Stage + bottom dock ── */
+/* ── V7.2.54 — Unified pill dock (create ↔ actions) ── */
 
 .qe-dock {
   flex: 0 0 auto;
   display: flex;
+  align-items: stretch;
+  justify-content: center;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  height: 52px;
+  margin: 16px auto 4px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.94);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.qe-dock__rail {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  opacity: 1;
+  transition: opacity 180ms ease;
+  will-change: opacity;
+}
+
+.qe-dock__rail.is-fading-out,
+.qe-dock__rail.is-fading-in {
+  opacity: 0;
+}
+
+.qe-dock__seg {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  margin-top: 14px;
-  margin-bottom: 0;
-  padding: 10px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(12, 12, 12, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-  min-height: 56px;
-}
-
-.qe-dock--create,
-.qe-dock--contextual {
-  width: min(720px, 100%);
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.qe-dock__item {
-  appearance: none;
+  gap: 8px;
+  height: 100%;
   margin: 0;
-  padding: 10px 16px;
+  padding: 0 22px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.68);
   font: inherit;
   font-size: 13px;
-  font-weight: 550;
-  letter-spacing: 0.02em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.15s ease, background 0.15s ease;
 }
 
-.qe-dock__item:hover {
+.qe-dock__seg + .qe-dock__seg::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 30%;
+  bottom: 30%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.10);
+  pointer-events: none;
+}
+
+.qe-dock__seg:hover {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.qe-dock__seg:focus-visible {
+  outline: none;
   color: rgba(255, 255, 255, 0.96);
   background: rgba(255, 255, 255, 0.06);
 }
 
-.qe-dock__item--danger:hover {
-  color: #fff;
-  background: rgba(180, 48, 48, 0.28);
+.qe-dock__seg--danger:hover {
+  color: rgba(255, 210, 210, 0.96);
+  background: rgba(180, 48, 48, 0.18);
 }
 
-/* Legacy dock modules (unused in V7.2.53 create bar; keep for safety) */
+.qe-dock__ico {
+  flex: 0 0 auto;
+  display: block;
+  opacity: 0.9;
+}
+
+.qe-dock__label {
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+/* Legacy dock modules (unused; keep for safety) */
 .qe-dock__mod-wrap {
   position: relative;
   min-width: 0;

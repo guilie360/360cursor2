@@ -1467,23 +1467,75 @@ var QuotationEditor = (function () {
     return false;
   }
 
-  function stageDockHtml() {
+  function dockIconSvg(kind) {
+    var common =
+      ' class="qe-dock__ico" width="15" height="15" viewBox="0 0 16 16" fill="none"' +
+      ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true"';
+    if (kind === 'plus') {
+      return '<svg' + common + '><path d="M8 3.2v9.6M3.2 8h9.6"/></svg>';
+    }
+    if (kind === 'dup') {
+      return '<svg' + common + '>' +
+        '<rect x="2.5" y="4.5" width="7.5" height="7.5" rx="1.2"/>' +
+        '<rect x="6" y="2.5" width="7.5" height="7.5" rx="1.2"/>' +
+      '</svg>';
+    }
+    if (kind === 'lock') {
+      return '<svg' + common + '>' +
+        '<rect x="3.5" y="7" width="9" height="6.5" rx="1.4"/>' +
+        '<path d="M5.5 7V5.4a2.5 2.5 0 0 1 5 0V7"/>' +
+      '</svg>';
+    }
+    if (kind === 'front') {
+      return '<svg' + common + '>' +
+        '<path d="M3 3.5h10"/>' +
+        '<path d="M8 13V5.5"/>' +
+        '<path d="M5.2 8.2 8 5.4l2.8 2.8"/>' +
+      '</svg>';
+    }
+    if (kind === 'del') {
+      return '<svg' + common + '>' +
+        '<path d="M3.2 5h9.6"/>' +
+        '<path d="M6 5V3.8h4V5"/>' +
+        '<path d="M5.2 5l.6 7.2h4.4L10.8 5"/>' +
+      '</svg>';
+    }
+    return '';
+  }
+
+  function dockSegHtml(attrs, icon, label, extraClass) {
+    return '' +
+      '<button type="button" class="qe-dock__seg' +
+        (extraClass ? ' ' + extraClass : '') + '" ' + attrs + '>' +
+        dockIconSvg(icon) +
+        '<span class="qe-dock__label">' + escapeHtml(label) + '</span>' +
+      '</button>';
+  }
+
+  function stageDockRailHtml() {
     if (dockHasSelection()) {
       return '' +
-        '<div class="qe-dock qe-dock--contextual" data-qe-dock-bar>' +
-          '<button type="button" class="qe-dock__item" data-qe-dock-dup>Duplicar</button>' +
-          '<button type="button" class="qe-dock__item" data-qe-dock-lock>Bloquear</button>' +
-          '<button type="button" class="qe-dock__item" data-qe-dock-front>Traer al frente</button>' +
-          '<button type="button" class="qe-dock__item qe-dock__item--danger" data-qe-dock-del>Eliminar</button>' +
-        '</div>';
+        dockSegHtml('data-qe-dock-dup', 'dup', 'Duplicar') +
+        dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
+        dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
+        dockSegHtml('data-qe-dock-del', 'del', 'Eliminar', 'qe-dock__seg--danger');
     }
     return '' +
-      '<div class="qe-dock qe-dock--create" data-qe-dock-bar>' +
-        '<button type="button" class="qe-dock__item" data-qe-add-button>+ Botón</button>' +
-        '<button type="button" class="qe-dock__item" data-qe-add-text>+ Texto</button>' +
-        '<button type="button" class="qe-dock__item" data-qe-add-hotspot>+ Hotspot</button>' +
-        '<button type="button" class="qe-dock__item" data-qe-add-image>+ Imagen</button>' +
-        '<button type="button" class="qe-dock__item" data-qe-add-shape="SHAPE_RECT">+ Forma</button>' +
+      dockSegHtml('data-qe-add-button', 'plus', 'Botón') +
+      dockSegHtml('data-qe-add-text', 'plus', 'Texto') +
+      dockSegHtml('data-qe-add-hotspot', 'plus', 'Hotspot') +
+      dockSegHtml('data-qe-add-image', 'plus', 'Imagen') +
+      dockSegHtml('data-qe-add-shape="SHAPE_RECT"', 'plus', 'Forma');
+  }
+
+  function stageDockHtml() {
+    var mode = dockHasSelection() ? 'actions' : 'create';
+    return '' +
+      '<div class="qe-dock" data-qe-dock-bar data-mode="' + mode + '">' +
+        '<div class="qe-dock__rail" data-qe-dock-rail>' +
+          stageDockRailHtml() +
+        '</div>' +
       '</div>';
   }
 
@@ -2399,17 +2451,51 @@ var QuotationEditor = (function () {
   var runtimeBridgeBound = false;
   var expOverlay = null;
   var pendingExpAction = null;
+  var dockFadeTimer = null;
 
   function refreshDockOnly() {
     if (!rootEl) return;
     var bar = rootEl.querySelector('[data-qe-dock-bar]');
     if (!bar || !bar.parentNode) return;
-    var wrap = document.createElement('div');
-    wrap.innerHTML = stageDockHtml();
-    var next = wrap.firstElementChild;
-    if (!next) return;
-    bar.parentNode.replaceChild(next, bar);
-    bindDockBar(rootEl);
+    var nextMode = dockHasSelection() ? 'actions' : 'create';
+    var curMode = bar.getAttribute('data-mode') || '';
+    var rail = bar.querySelector('[data-qe-dock-rail]');
+
+    function applyRail() {
+      bar.setAttribute('data-mode', nextMode);
+      if (!rail) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = stageDockHtml();
+        var next = wrap.firstElementChild;
+        if (next) bar.parentNode.replaceChild(next, bar);
+        bindDockBar(rootEl);
+        return;
+      }
+      rail.innerHTML = stageDockRailHtml();
+      rail.classList.remove('is-fading-out');
+      rail.classList.add('is-fading-in');
+      bindDockBar(rootEl);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          rail.classList.remove('is-fading-in');
+        });
+      });
+    }
+
+    if (curMode === nextMode) {
+      applyRail();
+      return;
+    }
+    if (rail) {
+      rail.classList.add('is-fading-out');
+      if (dockFadeTimer) clearTimeout(dockFadeTimer);
+      dockFadeTimer = setTimeout(function () {
+        dockFadeTimer = null;
+        applyRail();
+      }, 170);
+      return;
+    }
+    applyRail();
   }
 
   function bindDockBar(editor) {
