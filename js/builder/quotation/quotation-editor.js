@@ -1,7 +1,6 @@
 /**
- * Quotation Editor — V7.2.02 Quotation Canvas Evolution (Phase 1).
- * Project library (Recursos) + scenes bar + free canvas + contextual inspector + Focus.
- * Folders organize only; selection of a resource still drives Canvas / Inspector.
+ * Quotation Editor — V7.2.03 Hero Template Clone (No Redesign).
+ * Project library + scenes + free canvas. Hero Default = exact project-cover clone.
  */
 var QuotationEditor = (function () {
   var CONTENT_GROUPS = [
@@ -156,6 +155,7 @@ var QuotationEditor = (function () {
       id: nextId('sc'),
       name: 'Hero',
       type: 'hero',
+      templateId: null,
       elements: []
     };
     return {
@@ -189,6 +189,7 @@ var QuotationEditor = (function () {
 
   var state = createEmptyState();
   var rootEl = null;
+  var editorProjectCtx = null;
 
   function sceneById(id) {
     if (!id || !state.scenes) return null;
@@ -231,51 +232,129 @@ var QuotationEditor = (function () {
     return 'Escena ' + (n < 10 ? '0' + n : String(n));
   }
 
-  function buildHeroTemplateElements() {
+  function buildHeroDefaultElements(ctx) {
+    var projectName = '';
+    if (ctx && typeof ctx === 'object') {
+      projectName = String(ctx.name || ctx.nombre || '').trim();
+    }
+
+    var hs = null;
+    try {
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.getState) {
+        hs = QuotationHero.getState();
+      }
+    } catch (e) { hs = null; }
+
+    var hc = (hs && hs.heroContent) || {};
+    var branding = (hs && hs.branding) || {};
+    var logo = branding.logo || null;
+    var logoUrl = (logo && (logo.uploadedUrl || logo.previewUrl)) || '';
+    var showLogo = branding.showHeroLogo !== false && !!logoUrl;
+    var videoUrl = (hs && (hs.videoUrl || (hs.heroVideo && (hs.heroVideo.uploadedUrl || hs.heroVideo.previewUrl)))) || '';
+    var imageUrl = (hs && (hs.imageUrl || (hs.heroImage && (hs.heroImage.uploadedUrl || hs.heroImage.previewUrl)))) || '';
+    var mediaKind = 'ambient';
+    var mediaSrc = '';
+    if (videoUrl) {
+      mediaKind = 'video';
+      mediaSrc = videoUrl;
+    } else if (imageUrl) {
+      mediaKind = 'image';
+      mediaSrc = imageUrl;
+    }
+
+    var titleText = String(hc.nombre || projectName || '').trim();
+    var subtitleText = String(hc.eslogan || '').trim();
+    var exploreLabel = String(hc.botonIzquierdo || 'Explorar').trim() || 'Explorar';
+    var startLabel = String(hc.botonDerecho || 'Iniciar').trim() || 'Iniciar';
+    var showShare = hc.showShare !== false;
+    var showWhatsapp = false; /* published runtime keeps WhatsApp float hidden */
+
+    /* Exact leaf roles of the published project-cover (index.html + project-data). */
     return [
       {
         id: nextId('el'),
         type: 'container',
-        role: 'background',
-        props: { label: 'Fondo', fill: '#050505' }
+        role: 'media',
+        props: { label: 'Fondo', media: mediaKind, src: mediaSrc }
+      },
+      {
+        id: nextId('el'),
+        type: 'container',
+        role: 'overlay',
+        props: { label: 'Overlay' }
       },
       {
         id: nextId('el'),
         type: 'image',
         role: 'logo',
-        props: { label: 'Logo', text: 'LOGO' }
+        props: {
+          label: 'Logo',
+          src: logoUrl,
+          show: showLogo,
+          logoStyle: branding.logoStyle === 'avatar' ? 'avatar' : 'flat'
+        }
       },
       {
         id: nextId('el'),
         type: 'text',
         role: 'title',
-        props: { label: 'Título', text: 'Proyecto', variant: 'title' }
+        props: { label: 'Título', text: titleText }
       },
       {
         id: nextId('el'),
         type: 'text',
         role: 'subtitle',
-        props: { label: 'Subtítulo', text: 'Cotización interactiva', variant: 'subtitle' }
+        props: { label: 'Subtítulo', text: subtitleText }
       },
       {
         id: nextId('el'),
         type: 'button',
         role: 'explore',
-        props: { label: 'Explorar', action: null }
+        props: {
+          label: exploreLabel,
+          style: 'button',
+          action: null,
+          withIcon: true
+        }
       },
       {
         id: nextId('el'),
         type: 'button',
         role: 'start',
-        props: { label: 'Iniciar', action: null }
+        props: { label: startLabel, style: 'button', action: null }
+      },
+      {
+        id: nextId('el'),
+        type: 'button',
+        role: 'back',
+        props: { label: 'Demos', style: 'button', action: null, show: true }
       },
       {
         id: nextId('el'),
         type: 'icon',
-        role: 'menu',
-        props: { label: 'Menú' }
+        role: 'share',
+        props: { label: 'Compartir', show: showShare }
+      },
+      {
+        id: nextId('el'),
+        type: 'icon',
+        role: 'whatsapp',
+        props: { label: 'WhatsApp', show: showWhatsapp }
       }
     ];
+  }
+
+  /* @deprecated alias — V7.2.03 uses Hero Default clone */
+  function buildHeroTemplateElements() {
+    return buildHeroDefaultElements(editorProjectCtx);
+  }
+
+  function elementByRole(scene, role) {
+    if (!scene || !scene.elements) return null;
+    for (var i = 0; i < scene.elements.length; i++) {
+      if (scene.elements[i].role === role) return scene.elements[i];
+    }
+    return null;
   }
 
   function findSelectedElement() {
@@ -621,47 +700,163 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  function sceneElementHtml(el) {
-    var on = state.selectedElementId === el.id;
-    var props = el.props || {};
-    var role = el.role || '';
-    var base = 'qe-el qe-el--' + escapeHtml(el.type || 'text') +
-      (role ? ' qe-el--role-' + escapeHtml(role) : '') +
-      (on ? ' is-selected' : '');
-    var label = props.label || props.text || elementTypeLabel(el.type);
-    var inner = '';
+  var SHARE_FLOAT_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>' +
+      '<path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/>' +
+    '</svg>';
 
-    if (el.type === 'container' && role === 'background') {
-      return '' +
-        '<div class="' + base + '" data-qe-element="' + escapeHtml(el.id) + '"' +
+  var WHATSAPP_FLOAT_SVG =
+    '<svg viewBox="0 0 24 24" fill="#fff">' +
+      '<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.3-.347.45-.52.146-.174.194-.298.293-.497.099-.198.05-.371-.05-.52-.099-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/>' +
+    '</svg>';
+
+  var BACK_BTN_SVG =
+    '<svg class="project-back-btn__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M15 18l-6-6 6-6"/>' +
+    '</svg>';
+
+  function qeSelectedClass(el) {
+    return (el && state.selectedElementId === el.id) ? ' is-qe-selected' : '';
+  }
+
+  function qeElementAttr(el) {
+    if (!el) return '';
+    return ' data-qe-element="' + escapeHtml(el.id) + '"';
+  }
+
+  /**
+   * Exact clone of published project-cover DOM (index.html + project-data applyHeroModule).
+   * Uses real .project-cover* / float classes from components.css — no redesign.
+   */
+  function heroDefaultCloneHtml(scene) {
+    var media = elementByRole(scene, 'media');
+    var overlay = elementByRole(scene, 'overlay');
+    var logo = elementByRole(scene, 'logo');
+    var title = elementByRole(scene, 'title');
+    var subtitle = elementByRole(scene, 'subtitle');
+    var explore = elementByRole(scene, 'explore');
+    var start = elementByRole(scene, 'start');
+    var back = elementByRole(scene, 'back');
+    var share = elementByRole(scene, 'share');
+    var whatsapp = elementByRole(scene, 'whatsapp');
+
+    var mediaProps = (media && media.props) || {};
+    var hasVideo = mediaProps.media === 'video' && !!mediaProps.src;
+    var hasImage = mediaProps.media === 'image' && !!mediaProps.src;
+    var ambient = !hasVideo && !hasImage;
+
+    var logoProps = (logo && logo.props) || {};
+    var logoSrc = String(logoProps.src || '').trim();
+    var showLogo = logoProps.show !== false && !!logoSrc;
+
+    var exploreLabel = (explore && explore.props && explore.props.label) || 'Explorar';
+    var startLabel = (start && start.props && start.props.label) || 'Iniciar';
+    var backLabel = (back && back.props && back.props.label) || 'Demos';
+    var showBack = !back || back.props.show !== false;
+    var showShare = !share || share.props.show !== false;
+    var showWhatsapp = !!(whatsapp && whatsapp.props && whatsapp.props.show === true);
+
+    var mediaHtml = '';
+    if (hasVideo) {
+      mediaHtml =
+        '<video class="project-cover-video' + qeSelectedClass(media) + '"' + qeElementAttr(media) +
+          ' muted loop playsinline autoplay src="' + escapeHtml(mediaProps.src) + '"></video>';
+    } else if (hasImage) {
+      mediaHtml =
+        '<img class="project-cover-video' + qeSelectedClass(media) + '"' + qeElementAttr(media) +
+          ' alt="" src="' + escapeHtml(mediaProps.src) + '">';
+    } else {
+      mediaHtml =
+        '<div class="qe-hero-clone__ambient' + qeSelectedClass(media) + '"' + qeElementAttr(media) +
           ' aria-label="Fondo"></div>';
     }
-    if (el.type === 'image' && role === 'logo') {
-      inner = '<span class="qe-el__logo">' + escapeHtml(props.text || 'LOGO') + '</span>';
-    } else if (el.type === 'text') {
-      inner = '<span class="qe-el__text qe-el__text--' +
-        escapeHtml(props.variant || 'body') + '">' +
-        escapeHtml(props.text || label) + '</span>';
-    } else if (el.type === 'button') {
-      inner = '<span class="qe-el__btn">' + escapeHtml(props.label || 'Botón') + '</span>';
-    } else if (el.type === 'icon') {
-      inner = '<span class="qe-el__icon" aria-hidden="true"></span>' +
-        '<span class="qe-el__icon-label">' + escapeHtml(props.label || 'Menú') + '</span>';
-    } else {
-      inner = '<span class="qe-el__fallback">' + escapeHtml(label) + '</span>';
-    }
+
+    var logoHtml = showLogo
+      ? ('<img class="project-cover-logo' +
+          (logoProps.logoStyle === 'avatar' ? ' is-avatar' : '') +
+          qeSelectedClass(logo) + '"' + qeElementAttr(logo) +
+          ' src="' + escapeHtml(logoSrc) + '" alt="">')
+      : ('<img class="project-cover-logo is-hidden' + qeSelectedClass(logo) + '"' +
+          qeElementAttr(logo) + ' alt="" hidden style="display:none">');
 
     return '' +
-      '<button type="button" class="' + base + '" data-qe-element="' +
-        escapeHtml(el.id) + '">' + inner + '</button>';
+      '<section class="project-cover qe-hero-clone' + (ambient ? ' is-ambient-depth' : '') + '"' +
+        ' data-qe-hero-clone="hero-default"' +
+        ' data-hero-layout="centered"' +
+        ' data-hero-text-color="light"' +
+        ' data-hero-button-text-color="light">' +
+        mediaHtml +
+        '<div class="project-cover-overlay' + qeSelectedClass(overlay) + '"' +
+          qeElementAttr(overlay) + '></div>' +
+        '<div class="project-cover-content">' +
+          logoHtml +
+          '<div class="project-cover-hero-row">' +
+            '<div class="project-cover-hero-copy">' +
+              '<div class="project-cover-name' + qeSelectedClass(title) + '"' +
+                qeElementAttr(title) + '>' +
+                escapeHtml((title && title.props && title.props.text) || '') +
+              '</div>' +
+              '<div class="project-cover-tagline' + qeSelectedClass(subtitle) + '"' +
+                qeElementAttr(subtitle) + '>' +
+                escapeHtml((subtitle && subtitle.props && subtitle.props.text) || '') +
+              '</div>' +
+            '</div>' +
+            '<div class="project-cover-buttons">' +
+              '<div class="project-cover-slot project-cover-slot--start">' +
+                '<button type="button" class="project-cover-btn with-icon' +
+                  qeSelectedClass(explore) + '"' + qeElementAttr(explore) +
+                  ' aria-label="' + escapeHtml(exploreLabel) + '">' +
+                  '<span class="menu-btn-icon" aria-hidden="true">☰</span>' +
+                  escapeHtml(exploreLabel) +
+                '</button>' +
+              '</div>' +
+              '<div class="project-cover-slot project-cover-slot--end">' +
+                '<button type="button" class="project-cover-btn' +
+                  qeSelectedClass(start) + '"' + qeElementAttr(start) + '>' +
+                  escapeHtml(startLabel) +
+                '</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<a class="project-back-btn' + qeSelectedClass(back) + '"' + qeElementAttr(back) +
+          ' href="#"' +
+          (showBack ? '' : ' hidden aria-hidden="true"') + '>' +
+          BACK_BTN_SVG +
+          '<span class="project-back-btn__label">' + escapeHtml(backLabel) + '</span>' +
+        '</a>' +
+        '<a class="whatsapp-float' + (showWhatsapp ? '' : ' is-float-hidden') +
+          qeSelectedClass(whatsapp) + '"' + qeElementAttr(whatsapp) +
+          ' href="#"' +
+          (showWhatsapp ? '' : ' hidden aria-hidden="true"') +
+          ' aria-label="Chatear por WhatsApp">' +
+          WHATSAPP_FLOAT_SVG +
+        '</a>' +
+        '<button type="button" class="share-float' +
+          (showShare ? '' : ' is-float-hidden') +
+          qeSelectedClass(share) + '"' + qeElementAttr(share) +
+          (showShare ? '' : ' hidden aria-hidden="true"') +
+          ' aria-label="Compartir proyecto">' +
+          SHARE_FLOAT_SVG +
+        '</button>' +
+      '</section>';
   }
 
   function sceneCompositionHtml(scene) {
     if (!scene || !scene.elements || !scene.elements.length) return '';
+    if (scene.templateId === 'hero-default' || scene.type === 'hero') {
+      return '' +
+        '<div class="qe-scene-comp qe-scene-comp--hero-clone" data-qe-scene-comp' +
+          ' data-element-types="' +
+          escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
+          heroDefaultCloneHtml(scene) +
+        '</div>';
+    }
     return '' +
       '<div class="qe-scene-comp" data-qe-scene-comp data-element-types="' +
         escapeHtml(ELEMENT_TYPES.map(function (t) { return t.id; }).join(',')) + '">' +
-        scene.elements.map(sceneElementHtml).join('') +
+        '<div class="qe-canvas__empty">Escena sin composición.</div>' +
       '</div>';
   }
 
@@ -718,18 +913,29 @@ var QuotationEditor = (function () {
         '</button>';
     }).join('');
 
-    var menu = state.sceneMenuOpen
-      ? ('' +
+    var menu = '';
+    if (state.sceneMenuOpen === 'root') {
+      menu = '' +
         '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
           '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="empty" role="menuitem">' +
             'Escena vacía' +
           '</button>' +
-          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="template" role="menuitem">' +
+          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-menu-templates role="menuitem">' +
             'Desde plantilla' +
           '</button>' +
-          '<p class="qe-scenes__menu-hint">El selector de plantillas llegará en una próxima versión.</p>' +
-        '</div>')
-      : '';
+        '</div>';
+    } else if (state.sceneMenuOpen === 'templates') {
+      menu = '' +
+        '<div class="qe-scenes__menu" data-qe-scene-menu role="menu">' +
+          '<button type="button" class="qe-scenes__menu-item qe-scenes__menu-item--back" data-qe-scene-menu-root role="menuitem">' +
+            '← Nueva escena' +
+          '</button>' +
+          '<button type="button" class="qe-scenes__menu-item" data-qe-scene-new="hero-default" role="menuitem">' +
+            'Hero Default' +
+          '</button>' +
+          '<p class="qe-scenes__menu-hint">Clon exacto del Hero publicado (project-cover).</p>' +
+        '</div>';
+    }
 
     return '' +
       '<div class="qe-scenes" data-qe-scenes>' +
@@ -926,6 +1132,16 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function elementAsButtonItem(el) {
+    var props = el.props || {};
+    return {
+      label: props.label || props.text || '',
+      style: props.style || 'button',
+      action: props.action || 'goto-scene',
+      targetSceneId: props.targetSceneId || (activeScene() && activeScene().id) || ''
+    };
+  }
+
   function elementInspectorHtml(el) {
     var props = el.props || {};
     var textVal = props.text != null ? props.text : (props.label || '');
@@ -946,7 +1162,15 @@ var QuotationEditor = (function () {
                 escapeHtml(textVal) + '">' +
             '</div>')
           : '') +
-        '<p class="qe-field__hint">Sin enlaces ni acciones en esta fase — solo composición editable.</p>' +
+        (el.type === 'image'
+          ? ('' +
+            '<div class="qe-field">' +
+              '<label for="qeElSrc">URL imagen</label>' +
+              '<input type="text" id="qeElSrc" data-qe-el-src maxlength="500" value="' +
+                escapeHtml(props.src || '') + '" placeholder="https://…">' +
+            '</div>')
+          : '') +
+        '<p class="qe-field__hint">Composición del Hero publicado — sin acciones en esta fase.</p>' +
       '</div>';
   }
 
@@ -959,7 +1183,9 @@ var QuotationEditor = (function () {
     var body;
     if (found && found.kind === 'button') body = buttonInspectorHtml(found.data);
     else if (found && found.kind === 'hotspot') body = hotspotInspectorHtml(found.data);
-    else if (el) body = elementInspectorHtml(el);
+    else if (el && (el.type === 'button' || el.type === 'icon')) {
+      body = buttonInspectorHtml(elementAsButtonItem(el));
+    } else if (el) body = elementInspectorHtml(el);
     else body = idleInspectorHtml(content);
 
     var hint = content
@@ -976,7 +1202,8 @@ var QuotationEditor = (function () {
       '</aside>';
   }
 
-  function render() {
+  function render(ctx) {
+    if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     clearInvalidSelection();
     ensureScenes();
     return '' +
@@ -1040,12 +1267,14 @@ var QuotationEditor = (function () {
 
   function createScene(opts) {
     opts = opts || {};
-    var fromTemplate = opts.fromTemplate === true;
+    var templateId = opts.templateId || null;
+    var fromHeroDefault = templateId === 'hero-default' || opts.fromTemplate === true;
     var scene = {
       id: nextId('sc'),
-      name: fromTemplate ? 'Hero' : nextSceneName(),
-      type: fromTemplate ? 'hero' : 'scene',
-      elements: fromTemplate ? buildHeroTemplateElements() : []
+      name: fromHeroDefault ? 'Hero Default' : nextSceneName(),
+      type: fromHeroDefault ? 'hero' : 'scene',
+      templateId: fromHeroDefault ? 'hero-default' : null,
+      elements: fromHeroDefault ? buildHeroDefaultElements(editorProjectCtx) : []
     };
     state.scenes.push(scene);
     state.activeSceneId = scene.id;
@@ -1276,14 +1505,29 @@ var QuotationEditor = (function () {
 
   function patchSelected(mutator) {
     var found = findSelectedItem();
-    if (!found) return;
-    mutator(found.data);
+    if (found) {
+      mutator(found.data);
+      markDirtyLocal();
+      rerender();
+      return;
+    }
+    var el = findSelectedElement();
+    if (!el) return;
+    if (!el.props) el.props = {};
+    var shim = elementAsButtonItem(el);
+    mutator(shim);
+    el.props.label = shim.label;
+    if (el.type === 'text') el.props.text = shim.label;
+    el.props.style = shim.style;
+    el.props.action = shim.action;
+    el.props.targetSceneId = shim.targetSceneId;
     markDirtyLocal();
     rerender();
   }
 
-  function bind(panel) {
+  function bind(panel, ctx) {
     rootEl = panel;
+    if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     bindFocusEsc();
     var editor = panel.querySelector('[data-qe-editor]') || panel;
 
@@ -1297,7 +1541,25 @@ var QuotationEditor = (function () {
     if (sceneMenuToggle) {
       sceneMenuToggle.addEventListener('click', function (e) {
         e.stopPropagation();
-        state.sceneMenuOpen = !state.sceneMenuOpen;
+        state.sceneMenuOpen = state.sceneMenuOpen ? false : 'root';
+        rerender();
+      });
+    }
+
+    var sceneMenuTemplates = editor.querySelector('[data-qe-scene-menu-templates]');
+    if (sceneMenuTemplates) {
+      sceneMenuTemplates.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.sceneMenuOpen = 'templates';
+        rerender();
+      });
+    }
+
+    var sceneMenuRoot = editor.querySelector('[data-qe-scene-menu-root]');
+    if (sceneMenuRoot) {
+      sceneMenuRoot.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.sceneMenuOpen = 'root';
         rerender();
       });
     }
@@ -1305,7 +1567,10 @@ var QuotationEditor = (function () {
     editor.querySelectorAll('[data-qe-scene-new]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var mode = btn.getAttribute('data-qe-scene-new');
-        createScene({ fromTemplate: mode === 'template' });
+        if (mode === 'empty') createScene({});
+        else if (mode === 'hero-default' || mode === 'template') {
+          createScene({ templateId: 'hero-default' });
+        }
       });
     });
 
@@ -1318,6 +1583,7 @@ var QuotationEditor = (function () {
 
     editor.querySelectorAll('[data-qe-element]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
+        e.preventDefault();
         e.stopPropagation();
         selectElement(btn.getAttribute('data-qe-element'));
       });
@@ -1328,8 +1594,8 @@ var QuotationEditor = (function () {
       elText.addEventListener('change', function () {
         patchSelectedElement(function (el) {
           var val = String(elText.value || '').trim();
-          if (el.type === 'text') el.props.text = val || el.props.text;
-          else if (el.type === 'image') el.props.text = val || el.props.text;
+          if (el.type === 'text') el.props.text = val;
+          else if (el.type === 'image') el.props.label = val || el.props.label;
           else el.props.label = val || el.props.label;
         });
       });
@@ -1338,6 +1604,16 @@ var QuotationEditor = (function () {
           e.preventDefault();
           elText.blur();
         }
+      });
+    }
+
+    var elSrc = editor.querySelector('[data-qe-el-src]');
+    if (elSrc) {
+      elSrc.addEventListener('change', function () {
+        patchSelectedElement(function (el) {
+          el.props.src = String(elSrc.value || '').trim();
+          el.props.show = !!el.props.src;
+        });
       });
     }
 
