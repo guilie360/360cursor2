@@ -1632,15 +1632,19 @@ var QuotationEditor = (function () {
           '<div class="qe-stage-unit" data-qe-stage-unit>' +
             scenesBarHtml() +
             viewportChromeHtml() +
-            '<div class="qe-canvas__stage hero-canvas-host" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
-              ' data-hero-canvas-host="1"' +
-              ' style="width:' + win.width + 'px;height:' + win.height + 'px;">' +
-              '<div class="hero-canvas qe-canvas__lienzo" data-qe-canvas-lienzo data-hero-canvas="1"' +
-                ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;">' +
-                '<div class="qe-canvas__design" data-qe-canvas-design' +
-                  ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;position:absolute;inset:0;">' +
-                  designBody +
-                  editLayerHtml() +
+            '<div class="qe-canvas-fit" data-qe-canvas-fit>' +
+              '<div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>' +
+                '<div class="qe-canvas__stage hero-canvas-host" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
+                  ' data-hero-canvas-host="1"' +
+                  ' style="width:' + win.width + 'px;height:' + win.height + 'px;">' +
+                  '<div class="hero-canvas qe-canvas__lienzo" data-qe-canvas-lienzo data-hero-canvas="1"' +
+                    ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;">' +
+                    '<div class="qe-canvas__design" data-qe-canvas-design' +
+                      ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;position:absolute;inset:0;">' +
+                      designBody +
+                      editLayerHtml() +
+                    '</div>' +
+                  '</div>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -1658,6 +1662,8 @@ var QuotationEditor = (function () {
   var STAGE_FIT_INSET = 8;
   var STAGE_SCENES_MIN_H = 120;
   var STAGE_DOCK_MIN_H = 64;
+  /** Visual scale of the device canvas frame only (chrome stays 1). */
+  var canvasFitScale = 1;
 
   /**
    * Visible rectangle for the Stage — clamped by header + fixed BOXIES footer.
@@ -1688,9 +1694,10 @@ var QuotationEditor = (function () {
   }
 
   /**
-   * V7.2.23 — REAL Stage Auto-Fit (Figma).
-   * One natural block: scenes + 1920×1080 canvas + dock.
-   * One transform: scale(...). Never reflow pieces independently.
+   * V7.2.63 — Desktop-only Builder chrome (Xcode / Figma simulator).
+   * Scenes, viewport presets, Safe Area and dock stay 1:1 forever.
+   * Only the device canvas rectangle changes size/aspect; it may scale
+   * down to fit the remaining slot — never the surrounding editor UI.
    */
   function fitStageWorkspace() {
     if (!rootEl) return;
@@ -1700,47 +1707,53 @@ var QuotationEditor = (function () {
     if (!col || !shell || !unit) return;
 
     var vp = measureStageViewport(col);
-    var availW = vp.width;
-    var availH = vp.height;
+    var availW = Math.max(1, vp.width);
+    var availH = Math.max(1, vp.height);
+    var device = activeViewportSize();
+    var natW = device.width;
+    var natH = device.height;
 
-    var vpSize = activeViewportSize();
-    var natW = vpSize.width;
-    var natCanvasH = vpSize.height;
+    shell.style.boxSizing = 'border-box';
+    shell.style.width = availW + 'px';
+    shell.style.height = availH + 'px';
+    shell.style.maxWidth = '100%';
+    shell.style.maxHeight = '100%';
+    shell.style.position = 'relative';
+    shell.style.overflow = 'hidden';
+    shell.style.flex = '0 0 auto';
+    shell.style.margin = '0 auto';
 
-    /* 1) Natural size — unlock scale, lock design pixels. */
+    /* Chrome never scales with the device preset. */
     unit.style.transform = 'none';
-    unit.style.width = natW + 'px';
-    unit.style.height = 'auto';
+    unit.style.width = '100%';
+    unit.style.height = '100%';
     unit.style.maxWidth = 'none';
-    unit.style.position = 'absolute';
-    unit.style.top = '0';
-    unit.style.left = '0';
-    unit.style.transformOrigin = 'top left';
-    unit.style.visibility = 'hidden';
-
-    var stage = unit.querySelector('[data-qe-canvas]');
-    if (stage) {
-      stage.style.width = natW + 'px';
-      stage.style.height = natCanvasH + 'px';
-      stage.style.minHeight = natCanvasH + 'px';
-      stage.style.maxHeight = natCanvasH + 'px';
-      stage.style.flex = '0 0 auto';
-    }
-    syncDesignIdentity();
+    unit.style.position = 'relative';
+    unit.style.top = '';
+    unit.style.left = '';
+    unit.style.transformOrigin = '';
+    unit.style.visibility = '';
+    unit.style.display = 'flex';
+    unit.style.flexDirection = 'column';
+    unit.style.alignItems = 'stretch';
+    unit.style.boxSizing = 'border-box';
 
     var scenes = unit.querySelector('.qe-scenes');
     var vpChrome = unit.querySelector('[data-qe-viewport-bar]');
     var dock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
+    var fitSlot = unit.querySelector('[data-qe-canvas-fit]');
+    var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
+    var stage = unit.querySelector('[data-qe-canvas]');
+
     if (scenes) {
-      scenes.style.width = natW + 'px';
+      scenes.style.width = '';
       scenes.style.flex = '0 0 auto';
     }
     if (vpChrome) {
-      vpChrome.style.width = natW + 'px';
+      vpChrome.style.width = '';
       vpChrome.style.flex = '0 0 auto';
     }
     if (dock) {
-      /* V7.2.58 — compact pill: never stretch to canvas width. */
       dock.style.width = '';
       dock.style.maxWidth = '';
       dock.style.minWidth = '';
@@ -1751,62 +1764,72 @@ var QuotationEditor = (function () {
       dock.style.marginRight = 'auto';
     }
 
-    /* Force layout before measuring chrome. */
     void unit.offsetHeight;
 
-    var scenesH = Math.max(
-      scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0,
-      STAGE_SCENES_MIN_H
-    );
+    var scenesH = scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
+    var scenesMb = scenes
+      ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0) : 0;
     var vpChromeH = vpChrome
       ? Math.ceil(vpChrome.getBoundingClientRect().height) : 0;
     var vpChromeMb = vpChrome
-      ? (parseFloat(window.getComputedStyle(vpChrome).marginBottom) || 0)
-      : 0;
-    var dockH = Math.max(
-      dock ? Math.ceil(dock.getBoundingClientRect().height) : 0,
-      STAGE_DOCK_MIN_H
-    );
-    var scenesMb = scenes
-      ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0)
-      : 0;
+      ? (parseFloat(window.getComputedStyle(vpChrome).marginBottom) || 0) : 0;
+    var dockH = dock ? Math.ceil(dock.getBoundingClientRect().height) : 0;
     var dockMt = dock
-      ? (parseFloat(window.getComputedStyle(dock).marginTop) || 0)
-      : 0;
+      ? (parseFloat(window.getComputedStyle(dock).marginTop) || 0) : 0;
     var dockMb = dock
-      ? (parseFloat(window.getComputedStyle(dock).marginBottom) || 0)
-      : 0;
+      ? (parseFloat(window.getComputedStyle(dock).marginBottom) || 0) : 0;
 
-    var natH = Math.max(
-      1,
-      Math.ceil(
-        scenesH + scenesMb + vpChromeH + vpChromeMb +
-        natCanvasH + dockMt + dockH + dockMb
-      )
+    var chromeH = Math.ceil(
+      scenesH + scenesMb + vpChromeH + vpChromeMb + dockMt + dockH + dockMb
     );
-    unit.style.height = natH + 'px';
-    unit.style.visibility = '';
+    var slotW = availW;
+    var slotH = Math.max(1, availH - chromeH);
 
-    /* 2) Single uniform scale for the whole Stage block. */
-    var scale = Math.min(availW / natW, availH / natH);
+    /* Device window keeps logical pixels; only the fit frame scales visually. */
+    var scale = Math.min(slotW / natW, slotH / natH);
     if (!isFinite(scale) || scale <= 0) scale = 0.01;
     if (scale > 1) scale = 1;
 
     var scaledW = Math.max(1, Math.floor(natW * scale));
     var scaledH = Math.max(1, Math.floor(natH * scale));
 
-    shell.style.boxSizing = 'border-box';
-    shell.style.width = scaledW + 'px';
-    shell.style.height = scaledH + 'px';
-    shell.style.maxWidth = '100%';
-    shell.style.maxHeight = '100%';
-    shell.style.position = 'relative';
-    shell.style.overflow = 'hidden';
-    shell.style.flex = '0 0 auto';
+    if (fitSlot) {
+      fitSlot.style.flex = '1 1 auto';
+      fitSlot.style.minHeight = '0';
+      fitSlot.style.minWidth = '0';
+      fitSlot.style.width = '100%';
+      fitSlot.style.height = slotH + 'px';
+      fitSlot.style.display = 'flex';
+      fitSlot.style.alignItems = 'center';
+      fitSlot.style.justifyContent = 'center';
+      fitSlot.style.overflow = 'hidden';
+    }
+    if (fitFrame) {
+      fitFrame.style.width = scaledW + 'px';
+      fitFrame.style.height = scaledH + 'px';
+      fitFrame.style.position = 'relative';
+      fitFrame.style.flex = '0 0 auto';
+      fitFrame.style.overflow = 'hidden';
+    }
+    if (stage) {
+      stage.style.width = natW + 'px';
+      stage.style.height = natH + 'px';
+      stage.style.minHeight = natH + 'px';
+      stage.style.maxHeight = natH + 'px';
+      stage.style.flex = '0 0 auto';
+      stage.style.position = 'absolute';
+      stage.style.top = '0';
+      stage.style.left = '0';
+      stage.style.transform = 'scale(' + scale + ')';
+      stage.style.transformOrigin = 'top left';
+    }
+
     shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
+    shell.setAttribute('data-qe-chrome-locked', '1');
+    canvasFitScale = scale;
 
-    unit.style.transform = 'scale(' + scale + ')';
+    syncDesignIdentity();
     bindBuilderHeroCamera();
     refreshSafeAreaGuide();
   }
@@ -1888,29 +1911,26 @@ var QuotationEditor = (function () {
     var dragging = false;
     var lastX = 0;
     var lastY = 0;
-    var spaceDown = false;
 
-    function onKeyDown(ev) {
-      if (ev.code === 'Space' && !ev.repeat) {
-        var tag = (ev.target && ev.target.tagName) || '';
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        spaceDown = true;
-        host.classList.add('is-pan-ready');
-      }
+    function isInteractiveTarget(t) {
+      if (!t || !t.closest) return false;
+      return !!t.closest(
+        'button, a, input, textarea, select,' +
+        ' .builder-exp-stage-btn, .builder-exp-hs, [data-exp-handle],' +
+        ' [data-exp-hs-poly], [data-exp-hs-vertex], [data-exp-stage-btn],' +
+        ' .builder-exp-text, .builder-exp-shape'
+      );
     }
-    function onKeyUp(ev) {
-      if (ev.code === 'Space') {
-        spaceDown = false;
-        host.classList.remove('is-pan-ready');
-      }
-    }
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
+
+    host.addEventListener('dragstart', function (ev) { ev.preventDefault(); }, true);
+    host.addEventListener('gesturestart', function (ev) { ev.preventDefault(); }, { passive: false });
+    host.addEventListener('gesturechange', function (ev) { ev.preventDefault(); }, { passive: false });
+    host.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false });
 
     host.addEventListener('pointerdown', function (ev) {
-      var allow = spaceDown || ev.button === 1;
-      if (!allow) return;
-      if (ev.button != null && ev.button !== 0 && ev.button !== 1) return;
+      /* Left / primary touch / middle-mouse pan — maps window over fixed lienzo. */
+      if (ev.pointerType === 'mouse' && ev.button != null && ev.button !== 0 && ev.button !== 1) return;
+      if (isInteractiveTarget(ev.target)) return;
       dragging = true;
       lastX = ev.clientX;
       lastY = ev.clientY;
@@ -1920,8 +1940,9 @@ var QuotationEditor = (function () {
     });
     host.addEventListener('pointermove', function (ev) {
       if (!dragging) return;
-      builderCamera.panX += ev.clientX - lastX;
-      builderCamera.panY += ev.clientY - lastY;
+      var s = canvasFitScale > 0.0001 ? canvasFitScale : 1;
+      builderCamera.panX += (ev.clientX - lastX) / s;
+      builderCamera.panY += (ev.clientY - lastY) / s;
       lastX = ev.clientX;
       lastY = ev.clientY;
       applyBuilderCamera();

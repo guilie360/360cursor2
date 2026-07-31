@@ -1,8 +1,9 @@
 /**
- * HeroRenderer + HeroCanvas — V7.2.61 BOXIES official Hero lienzo (maps).
+ * HeroRenderer + HeroCanvas — V7.2.62 BOXIES Hero as interactive map.
  *
- * Design canvas is ALWAYS 1920×1080 at zoom=1. Never contain/shrink to fit.
- * Device viewport is a window; pan/drag to explore. % overlays stay on the lienzo.
+ * Design canvas ALWAYS 1920×1080 at zoom=1. Never contain/shrink.
+ * Viewport is a window; left-button / one-finger pan only. No pinch zoom.
+ * % overlays stay on the lienzo (no coord migration).
  */
 var HeroRenderer = (function () {
   var DESIGN_W = 1920;
@@ -58,7 +59,7 @@ var HeroRenderer = (function () {
       host.innerHTML =
         '<video class="hero-renderer__media' + extra + '"' +
           ' src="' + escapeHtml(rec.src) + '"' +
-          ' autoplay muted loop playsinline' +
+          ' autoplay muted loop playsinline draggable="false"' +
           (opts.preload === false ? ' preload="none"' : '') +
           '></video>';
       var video = host.querySelector('video.hero-renderer__media');
@@ -68,7 +69,7 @@ var HeroRenderer = (function () {
     } else {
       host.innerHTML =
         '<img class="hero-renderer__media' + extra + '"' +
-          ' src="' + escapeHtml(rec.src) + '" alt="">';
+          ' src="' + escapeHtml(rec.src) + '" alt="" draggable="false">';
     }
     return host;
   }
@@ -158,7 +159,7 @@ var HeroRenderer = (function () {
 })();
 
 /**
- * HeroCanvas — fixed 1920×1080 lienzo + viewport camera (pan/zoom).
+ * HeroCanvas — fixed 1920×1080 lienzo + viewport camera (pan only, zoom locked at 1).
  */
 var HeroCanvas = (function () {
   var DESIGN_W = 1920;
@@ -230,6 +231,16 @@ var HeroCanvas = (function () {
     return DESIGN_W * state.zoom > hostW + 0.5 || DESIGN_H * state.zoom > hostH + 0.5;
   }
 
+  function isTouchOrNarrowHost(state) {
+    var hostW = (state.host && state.host.clientWidth) || 0;
+    var hostH = (state.host && state.host.clientHeight) || 0;
+    var coarse = false;
+    try {
+      coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    } catch (eM) { /* ignore */ }
+    return coarse || hostW <= 900 || (hostH > hostW && hostW <= 1024);
+  }
+
   function dismissHint(state) {
     var hint = state.host && state.host.querySelector('[data-hero-canvas-hint]');
     if (hint) hint.classList.remove('is-visible');
@@ -239,6 +250,8 @@ var HeroCanvas = (function () {
   function showHintOnce(state) {
     if (state.opts.disableHint) return;
     if (!needsPan(state)) return;
+    /* Spec: first open on Tablet/Mobile only. */
+    if (!isTouchOrNarrowHost(state)) return;
     try {
       if (sessionStorage.getItem(HINT_KEY) === '1') return;
     } catch (eSs) { /* ignore */ }
@@ -247,7 +260,7 @@ var HeroCanvas = (function () {
       hint = document.createElement('p');
       hint.className = 'hero-canvas__hint';
       hint.setAttribute('data-hero-canvas-hint', '1');
-      hint.textContent = '← Arrastra para explorar el proyecto →';
+      hint.textContent = '← Arrastra para explorar →';
       state.host.appendChild(hint);
     }
     requestAnimationFrame(function () {
@@ -266,14 +279,19 @@ var HeroCanvas = (function () {
     var pointerId = null;
     var moved = false;
 
+    function isInteractiveTarget(t) {
+      if (!t || !t.closest) return false;
+      return !!t.closest(
+        'button, a, input, textarea, select,' +
+        ' [data-qr-ix-layer] .qr-ix-btn, .qr-ix-hs, .qr-stage__back,' +
+        ' .builder-exp-stage-btn, .builder-exp-hs, [data-exp-handle]'
+      );
+    }
+
     function onDown(ev) {
-      if (ev.button != null && ev.button !== 0) return;
-      var t = ev.target;
-      if (t && t.closest) {
-        if (t.closest('button, a, input, textarea, select, [data-qr-ix-layer] .qr-ix-btn, .qr-ix-hs, .qr-stage__back')) {
-          return;
-        }
-      }
+      /* Left button or primary touch only. */
+      if (ev.pointerType === 'mouse' && ev.button != null && ev.button !== 0) return;
+      if (isInteractiveTarget(ev.target)) return;
       dragging = true;
       moved = false;
       pointerId = ev.pointerId;
@@ -311,15 +329,37 @@ var HeroCanvas = (function () {
       }
     }
 
+    function onDragStart(ev) {
+      ev.preventDefault();
+    }
+
+    function onGesture(ev) {
+      /* Block Safari pinch-zoom on the hero host. */
+      ev.preventDefault();
+    }
+
+    function onWheel(ev) {
+      /* Pan only — never zoom via wheel/pinch-emulation. */
+      ev.preventDefault();
+    }
+
     host.addEventListener('pointerdown', onDown);
     host.addEventListener('pointermove', onMove);
     host.addEventListener('pointerup', onUp);
     host.addEventListener('pointercancel', onUp);
+    host.addEventListener('dragstart', onDragStart, true);
+    host.addEventListener('gesturestart', onGesture, { passive: false });
+    host.addEventListener('gesturechange', onGesture, { passive: false });
+    host.addEventListener('wheel', onWheel, { passive: false });
     state._unbindPan = function () {
       host.removeEventListener('pointerdown', onDown);
       host.removeEventListener('pointermove', onMove);
       host.removeEventListener('pointerup', onUp);
       host.removeEventListener('pointercancel', onUp);
+      host.removeEventListener('dragstart', onDragStart, true);
+      host.removeEventListener('gesturestart', onGesture);
+      host.removeEventListener('gesturechange', onGesture);
+      host.removeEventListener('wheel', onWheel);
     };
   }
 

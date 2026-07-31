@@ -1,6 +1,6 @@
 /**
- * V7.2.60 — BOXIES HeroCanvas (fixed design lienzo 1920×1080)
- * Viewport is a window; pan/drag over the canvas. Never stretch the lienzo.
+ * V7.2.62 — BOXIES HeroCanvas (mapa interactivo)
+ * Lienzo fijo 1920×1080. Viewport = ventana. Pan only. Never contain/shrink.
  */
 
 .hero-canvas-host {
@@ -15,10 +15,26 @@
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hero-canvas-host::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .hero-canvas-host.is-panning {
   cursor: grabbing;
+}
+
+.hero-canvas-host,
+.hero-canvas-host * {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .hero-canvas {
@@ -41,6 +57,7 @@
   height: 100%;
   overflow: hidden;
   z-index: 0;
+  pointer-events: none;
 }
 
 .hero-canvas__media.hero-renderer,
@@ -51,6 +68,8 @@
   height: 100%;
   object-fit: cover;
   object-position: center center;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .hero-canvas__ix {
@@ -106,6 +125,7 @@
   object-position: center center;
   border: 0;
   pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 .hero-renderer__void {

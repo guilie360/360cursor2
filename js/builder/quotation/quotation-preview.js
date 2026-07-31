@@ -1,6 +1,6 @@
 /**
- * QuotationPreview — V7.2.59 WYSIWYG.
- * Same QuotationRuntime + HeroRenderer as published. Viewport presets match Builder.
+ * QuotationPreview — V7.2.62 WYSIWYG.
+ * Same QuotationRuntime + HeroCanvas as published. Viewport = window over 1920×1080.
  */
 var QuotationPreview = (function () {
   var LIVE_KEY_PREFIX = 'boxies_qe_live_doc_v1_';
