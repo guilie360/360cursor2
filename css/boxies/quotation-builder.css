@@ -2065,13 +2065,7 @@
   margin-left: 2px;
 }
 
-.qe-folder-menu {
-  position: relative;
-  flex: 0 0 auto;
-  z-index: 30;
-}
-
-.qe-folder-menu__btn {
+.qe-lib-menu-btn {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -2087,29 +2081,48 @@
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+  flex: 0 0 auto;
   transition: color 0.12s ease, background 0.12s ease;
 }
 
-.qe-folder-menu__btn:hover,
-.qe-folder-menu__btn[aria-expanded="true"] {
+.qe-lib-menu-btn:hover,
+.qe-lib-menu-btn[aria-expanded="true"] {
   color: rgba(255, 255, 255, 0.9);
   background: rgba(255, 255, 255, 0.06);
 }
 
-.qe-folder-menu__panel.is-fixed {
+.qe-lib-menu-portal {
   position: fixed;
-  top: auto;
-  left: auto;
-  z-index: 120;
+  inset: 0;
+  z-index: 11000;
+  pointer-events: none;
 }
 
-.qe-folder-menu__hint {
+.qe-lib-menu-portal .qe-lib-menu-panel {
+  pointer-events: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 168px;
+  z-index: 11001;
+}
+
+.qe-lib-menu__hint {
   margin: 2px 12px 6px;
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.34);
+}
+
+.qe-lib-menu__danger {
+  color: rgba(255, 120, 120, 0.88) !important;
+}
+
+.qe-lib-menu__danger:hover {
+  color: rgba(255, 160, 160, 0.98) !important;
+  background: rgba(255, 80, 80, 0.08) !important;
 }
 
 .qe-folder__body {
@@ -2215,42 +2228,31 @@
 }
 
 .qe-lib__remove {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  z-index: 2;
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(12, 12, 12, 0.92);
-  color: rgba(255, 255, 255, 0.88);
+  display: none !important;
+}
+
+.qe-lib__item > .qe-lib-menu-btn {
+  opacity: 0.55;
+}
+
+.qe-lib__item:hover > .qe-lib-menu-btn,
+.qe-lib__item:focus-within > .qe-lib-menu-btn,
+.qe-lib__item > .qe-lib-menu-btn[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.qe-lib__rename {
+  width: 100%;
+  margin: 0 0 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.92);
   font: inherit;
   font-size: 12px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.qe-lib__item:hover .qe-lib__remove,
-.qe-lib__item:focus-within .qe-lib__remove,
-.qe-lib__remove:focus {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.qe-lib__remove:hover {
-  background: rgba(180, 40, 40, 0.92);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  outline: none;
+  box-sizing: border-box;
 }
 
 .qe-lib__thumb--hero {
@@ -3501,8 +3503,9 @@ body.quotation-canvas-first .builder-workspace,
 .qe-content__list.is-view-grid .qe-lib__item {
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 0;
   padding: 6px;
+  position: relative;
 }
 
 .qe-content__list.is-view-grid .qe-lib__thumb-wrap {
@@ -3516,13 +3519,47 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .qe-content__list.is-view-grid .qe-lib__meta {
+  position: absolute;
+  left: 10px;
+  right: 28px;
+  bottom: 10px;
   min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.qe-content__list.is-view-grid .qe-lib__item:hover .qe-lib__meta,
+.qe-content__list.is-view-grid .qe-lib__item.is-renaming .qe-lib__meta,
+.qe-content__list.is-view-grid .qe-lib__item:focus-within .qe-lib__meta {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .qe-content__list.is-view-grid .qe-lib__name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
+}
+
+.qe-content__list.is-view-grid .qe-lib__type {
+  display: none;
+}
+
+.qe-content__list.is-view-grid .qe-lib-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.qe-content__list.is-view-grid .qe-lib__item:hover .qe-lib-menu-btn,
+.qe-content__list.is-view-grid .qe-lib__item:focus-within .qe-lib-menu-btn,
+.qe-content__list.is-view-grid .qe-lib-menu-btn[aria-expanded="true"] {
+  opacity: 1;
 }
 
 .builder-exp-stage-text {
