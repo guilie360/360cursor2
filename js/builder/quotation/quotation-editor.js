@@ -531,6 +531,7 @@ var QuotationEditor = (function () {
       libraryAvailableOnly: false,
       libraryView: 'list',
       libraryStatusOpen: false,
+      renamingFolderId: null,
       openFolders: {},
       folderComposerGroup: null,
       tourComposer: { open: false, folderId: null },
@@ -863,6 +864,7 @@ var QuotationEditor = (function () {
         return c;
       }).filter(Boolean);
       state.folders = Array.isArray(draft.folders) ? draft.folders : [];
+      ensureFolderOrders();
       state.scenes = draft.scenes.map(function (sc) {
         if (!sc) return sc;
         if (sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0) {
@@ -1012,8 +1014,51 @@ var QuotationEditor = (function () {
     return state.content.filter(function (c) { return c.group === groupId; });
   }
 
+  function folderOrderValue(folder) {
+    var n = Number(folder && folder.order);
+    return isNaN(n) ? 0 : n;
+  }
+
   function foldersInGroup(groupId) {
-    return state.folders.filter(function (f) { return f.group === groupId; });
+    return state.folders
+      .filter(function (f) { return f && f.group === groupId; })
+      .slice()
+      .sort(function (a, b) {
+        var diff = folderOrderValue(a) - folderOrderValue(b);
+        if (diff !== 0) return diff;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'es');
+      });
+  }
+
+  function nextFolderOrder(groupId) {
+    var max = -1;
+    state.folders.forEach(function (f) {
+      if (!f || f.group !== groupId) return;
+      var o = folderOrderValue(f);
+      if (o > max) max = o;
+    });
+    return max + 1;
+  }
+
+  function rewriteFolderOrders(groupId) {
+    foldersInGroup(groupId).forEach(function (f, idx) {
+      f.order = idx;
+    });
+  }
+
+  function ensureFolderOrders() {
+    CONTENT_GROUPS.forEach(function (g) {
+      if (!g) return;
+      var list = state.folders.filter(function (f) { return f && f.group === g.id; });
+      var missing = list.some(function (f) {
+        return f.order == null || f.order === '' || isNaN(Number(f.order));
+      });
+      if (!missing) return;
+      list.forEach(function (f, idx) {
+        if (f.order == null || f.order === '' || isNaN(Number(f.order))) f.order = idx;
+      });
+      rewriteFolderOrders(g.id);
+    });
   }
 
   function rootContentInGroup(groupId) {
@@ -1127,6 +1172,7 @@ var QuotationEditor = (function () {
   function folderBlockHtml(folder, group) {
     var open = state.openFolders[folder.id] !== false;
     var kids = contentInFolder(folder.id).filter(matchesLibrarySearch);
+    var renaming = String(state.renamingFolderId || '') === String(folder.id);
     var addControls = '';
     if (group.linkMode) {
       addControls = '' +
@@ -1141,18 +1187,69 @@ var QuotationEditor = (function () {
     }
     var searching = !!String(state.librarySearchQuery || '').trim();
     if (searching && !kids.length) return '';
+
+    var nameHtml = renaming
+      ? ('<input type="text" class="qe-folder__rename" data-qe-folder-rename="' +
+          escapeHtml(folder.id) + '" value="' + escapeHtml(folder.name || '') + '"' +
+          ' maxlength="80" autocomplete="off" spellcheck="false">')
+      : ('<span class="qe-folder__name">' + escapeHtml(folder.name) + '</span>');
+
+    var moveOptions = CONTENT_GROUPS.map(function (g) {
+      if (!g || g.id === group.id) return '';
+      return '' +
+        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+          ' data-qe-folder-move-to="' + escapeHtml(g.id) + '">' +
+          escapeHtml(g.label) +
+        '</button>';
+    }).join('');
+
     return '' +
       '<div class="qe-folder' + (open ? ' is-open' : '') + '" data-qe-folder-block="' +
         escapeHtml(folder.id) + '"' +
+        ' data-qe-folder-drag="' + escapeHtml(folder.id) + '"' +
         ' data-qe-lib-drop-folder="' + escapeHtml(folder.id) + '"' +
-        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
-        '<button type="button" class="qe-folder__toggle" data-qe-folder-toggle="' +
-          escapeHtml(folder.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="qe-folder__chevron" aria-hidden="true"></span>' +
-          '<span class="qe-folder__icon" aria-hidden="true"></span>' +
-          '<span class="qe-folder__name">' + escapeHtml(folder.name) + '</span>' +
+        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '"' +
+        ' draggable="' + (renaming ? 'false' : 'true') + '">' +
+        '<div class="qe-folder__head">' +
+          '<button type="button" class="qe-folder__toggle" data-qe-folder-toggle="' +
+            escapeHtml(folder.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+            '<span class="qe-folder__chevron" aria-hidden="true"></span>' +
+            '<span class="qe-folder__icon" aria-hidden="true"></span>' +
+            (renaming ? '' : nameHtml) +
+          '</button>' +
+          (renaming ? nameHtml : '') +
           '<span class="qe-content__count">' + kids.length + '</span>' +
-        '</button>' +
+          '<div class="qe-folder-menu boxies-workspace-menu">' +
+            '<button type="button" class="qe-folder-menu__btn" data-qe-folder-menu="' +
+              escapeHtml(folder.id) + '" aria-label="Opciones de carpeta"' +
+              ' aria-haspopup="menu" aria-expanded="false" title="Opciones">⋮</button>' +
+            '<div class="boxies-workspace-menu__panel qe-folder-menu__panel" role="menu" hidden' +
+              ' data-qe-folder-menu-panel="' + escapeHtml(folder.id) + '">' +
+              '<div class="qe-folder-menu__main" data-qe-folder-menu-main>' +
+                '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+                  ' data-qe-folder-action="rename" data-qe-folder-id="' +
+                  escapeHtml(folder.id) + '">Renombrar</button>' +
+                '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+                  ' data-qe-folder-action="duplicate" data-qe-folder-id="' +
+                  escapeHtml(folder.id) + '">Duplicar</button>' +
+                '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+                  ' data-qe-folder-action="move" data-qe-folder-id="' +
+                  escapeHtml(folder.id) + '">Mover</button>' +
+                '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+                '<button type="button" class="boxies-workspace-menu__item boxies-workspace-menu__item--exit"' +
+                  ' role="menuitem" data-qe-folder-action="delete" data-qe-folder-id="' +
+                  escapeHtml(folder.id) + '">Eliminar</button>' +
+              '</div>' +
+              '<div class="qe-folder-menu__move" data-qe-folder-menu-move hidden>' +
+                '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+                  ' data-qe-folder-action="move-back">← Volver</button>' +
+                '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+                '<p class="qe-folder-menu__hint">Mover a</p>' +
+                moveOptions +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
         (open
           ? ('<div class="qe-folder__body">' +
               (kids.length
@@ -1266,8 +1363,7 @@ var QuotationEditor = (function () {
             '<button type="button" class="qe-lib-available' + (availableOn ? ' is-on' : '') + '"' +
               ' data-qe-lib-available aria-pressed="' + (availableOn ? 'true' : 'false') + '"' +
               ' title="Mostrar solo grupos con recursos">' +
-              '<span class="qe-lib-available__icon" aria-hidden="true">' + libraryIcon('filter') + '</span>' +
-              '<span class="qe-lib-available__label">Disponibles</span>' +
+              '<span class="qe-lib-available__label">Activas</span>' +
               '<span class="qe-lib-available__switch" aria-hidden="true">' +
                 '<span class="qe-lib-available__knob"></span>' +
               '</span>' +
@@ -1290,6 +1386,7 @@ var QuotationEditor = (function () {
     var external = !!document.getElementById('quotationLeftBody');
     if (!external && state.libraryCollapsed) return '';
 
+    ensureFolderOrders();
     var view = state.libraryView === 'grid' ? 'grid' : 'list';
     var groups = CONTENT_GROUPS.map(function (group) {
       if (!groupVisibleInLibrary(group)) return '';
@@ -2553,6 +2650,218 @@ var QuotationEditor = (function () {
     });
   }
 
+  function closeAllFolderMenus() {
+    document.querySelectorAll('[data-qe-folder-menu-panel]').forEach(function (panel) {
+      panel.hidden = true;
+      panel.classList.remove('is-fixed');
+      panel.style.top = '';
+      panel.style.left = '';
+      panel.style.right = '';
+      var main = panel.querySelector('[data-qe-folder-menu-main]');
+      var move = panel.querySelector('[data-qe-folder-menu-move]');
+      if (main) main.hidden = false;
+      if (move) move.hidden = true;
+    });
+    document.querySelectorAll('[data-qe-folder-menu]').forEach(function (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function positionFolderMenuPanel(btn, panel) {
+    if (!btn || !panel) return;
+    var rect = btn.getBoundingClientRect();
+    var width = 168;
+    var left = Math.min(rect.right - width, window.innerWidth - width - 8);
+    if (left < 8) left = 8;
+    var top = rect.bottom + 6;
+    panel.classList.add('is-fixed');
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+    panel.style.right = 'auto';
+  }
+
+  function bindFolderMenus() {
+    closeAllFolderMenus();
+
+    document.querySelectorAll('[data-qe-folder-menu]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var folderId = btn.getAttribute('data-qe-folder-menu');
+        var panel = document.querySelector('[data-qe-folder-menu-panel="' + folderId + '"]');
+        if (!panel) return;
+        var wasOpen = !panel.hidden;
+        closeAllFolderMenus();
+        if (wasOpen) return;
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        positionFolderMenuPanel(btn, panel);
+      });
+    });
+
+    document.querySelectorAll('[data-qe-folder-action]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var action = btn.getAttribute('data-qe-folder-action');
+        var folderId = btn.getAttribute('data-qe-folder-id');
+        var panel = btn.closest('[data-qe-folder-menu-panel]');
+
+        if (action === 'move' && panel) {
+          var main = panel.querySelector('[data-qe-folder-menu-main]');
+          var move = panel.querySelector('[data-qe-folder-menu-move]');
+          if (main) main.hidden = true;
+          if (move) move.hidden = false;
+          return;
+        }
+        if (action === 'move-back' && panel) {
+          var mainBack = panel.querySelector('[data-qe-folder-menu-main]');
+          var moveBack = panel.querySelector('[data-qe-folder-menu-move]');
+          if (mainBack) mainBack.hidden = false;
+          if (moveBack) moveBack.hidden = true;
+          return;
+        }
+
+        closeAllFolderMenus();
+        if (action === 'rename' && folderId) startRenameFolder(folderId);
+        else if (action === 'duplicate' && folderId) duplicateFolder(folderId);
+        else if (action === 'delete' && folderId) deleteFolder(folderId);
+      });
+    });
+
+    document.querySelectorAll('[data-qe-folder-move-to]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var panel = btn.closest('[data-qe-folder-menu-panel]');
+        var folderId = panel ? panel.getAttribute('data-qe-folder-menu-panel') : '';
+        var target = btn.getAttribute('data-qe-folder-move-to');
+        closeAllFolderMenus();
+        if (folderId && target) moveFolderToGroup(folderId, target);
+      });
+    });
+
+    if (!bindFolderMenus._docBound) {
+      bindFolderMenus._docBound = true;
+      document.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('.qe-folder-menu')) return;
+        closeAllFolderMenus();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAllFolderMenus();
+      });
+    }
+  }
+
+  function bindFolderRenameInputs() {
+    document.querySelectorAll('[data-qe-folder-rename]').forEach(function (input) {
+      var folderId = input.getAttribute('data-qe-folder-rename');
+      var committed = false;
+      function commit() {
+        if (committed) return;
+        committed = true;
+        renameFolder(folderId, input.value);
+      }
+      function cancel() {
+        if (committed) return;
+        committed = true;
+        cancelRenameFolder();
+      }
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          commit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          cancel();
+        }
+      });
+      input.addEventListener('blur', function () { commit(); });
+      input.addEventListener('click', function (e) { e.stopPropagation(); });
+      input.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    });
+  }
+
+  function bindFolderDragReorder() {
+    var dragId = null;
+    var dragGroup = null;
+
+    function clearFolderDropMarks() {
+      document.querySelectorAll('.qe-folder').forEach(function (el) {
+        el.classList.remove('is-drop-before', 'is-drop-after');
+      });
+    }
+
+    document.querySelectorAll('[data-qe-folder-drag]').forEach(function (el) {
+      el.addEventListener('dragstart', function (e) {
+        if (e.target && e.target.closest && (
+          e.target.closest('[data-qe-folder-menu]') ||
+          e.target.closest('.qe-folder-menu') ||
+          e.target.closest('[data-qe-folder-rename]') ||
+          e.target.closest('.qe-lib__item')
+        )) {
+          e.preventDefault();
+          return;
+        }
+        dragId = el.getAttribute('data-qe-folder-drag');
+        var folder = folderById(dragId);
+        dragGroup = folder ? folder.group : null;
+        el.classList.add('is-dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/qe-folder', dragId || ''); } catch (e1) {}
+          e.dataTransfer.setData('text/plain', dragId || '');
+        }
+      });
+
+      el.addEventListener('dragend', function () {
+        el.classList.remove('is-dragging');
+        clearFolderDropMarks();
+        dragId = null;
+        dragGroup = null;
+      });
+
+      el.addEventListener('dragover', function (e) {
+        if (!dragId || !dragGroup) return;
+        var toId = el.getAttribute('data-qe-folder-drag');
+        var toFolder = folderById(toId);
+        if (!toId || toId === dragId || !toFolder || String(toFolder.group) !== String(dragGroup)) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        clearFolderDropMarks();
+        var rect = el.getBoundingClientRect();
+        var after = (e.clientY - rect.top) > rect.height / 2;
+        el.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+      });
+
+      el.addEventListener('dragleave', function () {
+        el.classList.remove('is-drop-before', 'is-drop-after');
+      });
+
+      el.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var after = el.classList.contains('is-drop-after');
+        clearFolderDropMarks();
+        var from = dragId || '';
+        if (!from && e.dataTransfer) {
+          try { from = e.dataTransfer.getData('text/qe-folder') || ''; } catch (e2) {}
+          if (!from) from = e.dataTransfer.getData('text/plain') || '';
+        }
+        var to = el.getAttribute('data-qe-folder-drag');
+        if (from && to && from !== to) {
+          reorderFolder(from, to, after);
+          rerender();
+        }
+      });
+    });
+  }
+
   function requestDeleteScene(id) {
     var sid = String(id || '').trim();
     if (!sid || !sceneById(sid)) return;
@@ -3642,10 +3951,12 @@ var QuotationEditor = (function () {
     if (!meta || groupId === 'hero' || meta.prepared) return;
     var label = String(name || '').trim();
     if (!label) return;
+    ensureFolderOrders();
     var folder = {
       id: nextId('fd'),
       group: groupId,
-      name: label
+      name: label,
+      order: nextFolderOrder(groupId)
     };
     state.folders.push(folder);
     state.openFolders[folder.id] = true;
@@ -3653,6 +3964,171 @@ var QuotationEditor = (function () {
     state.openGroups[groupId] = true;
     markDirtyLocal();
     rerender();
+  }
+
+  function uniqueFolderCopyName(baseName, groupId) {
+    var base = String(baseName || 'Carpeta').trim() || 'Carpeta';
+    var names = {};
+    foldersInGroup(groupId).forEach(function (f) {
+      names[String(f.name || '').trim().toLowerCase()] = true;
+    });
+    var candidate = base + ' copia';
+    if (!names[candidate.toLowerCase()]) return candidate;
+    var n = 2;
+    while (names[(candidate + ' (' + n + ')').toLowerCase()]) n += 1;
+    return candidate + ' (' + n + ')';
+  }
+
+  function renameFolder(folderId, name) {
+    var folder = folderById(folderId);
+    if (!folder) return;
+    var next = String(name == null ? '' : name).trim();
+    state.renamingFolderId = null;
+    if (!next || next === folder.name) {
+      rerender();
+      return;
+    }
+    folder.name = next;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function cancelRenameFolder() {
+    if (!state.renamingFolderId) return;
+    state.renamingFolderId = null;
+    rerender();
+  }
+
+  function startRenameFolder(folderId) {
+    if (!folderById(folderId)) return;
+    state.renamingFolderId = folderId;
+    rerender();
+    setTimeout(function () {
+      var input = document.querySelector('[data-qe-folder-rename="' + folderId + '"]');
+      if (!input) return;
+      input.focus();
+      try { input.select(); } catch (eSel) {}
+    }, 0);
+  }
+
+  function duplicateFolder(folderId) {
+    var src = folderById(folderId);
+    if (!src) return;
+    ensureFolderOrders();
+    var newFolder = {
+      id: nextId('fd'),
+      group: src.group,
+      name: uniqueFolderCopyName(src.name, src.group),
+      order: nextFolderOrder(src.group)
+    };
+    state.folders.push(newFolder);
+    contentInFolder(src.id).forEach(function (item) {
+      if (!item) return;
+      var copy = {
+        id: nextId('ct'),
+        group: item.group,
+        folderId: newFolder.id,
+        name: item.name || 'Archivo',
+        media: item.media || 'image',
+        mime: item.mime || null,
+        previewUrl: item.previewUrl || item.publicUrl || item.remoteUrl || null,
+        remoteUrl: item.remoteUrl || item.publicUrl || null,
+        publicUrl: item.publicUrl || item.remoteUrl || null,
+        storagePath: item.storagePath || null,
+        provider: item.provider || null,
+        archivoId: null,
+        projectId: item.projectId || resolveProjectId() || null,
+        uploadStatus: item.uploadStatus || (item.publicUrl || item.remoteUrl ? 'ready' : null),
+        file: null
+      };
+      state.content.push(copy);
+      ensureItems(copy.id);
+    });
+    state.openFolders[newFolder.id] = true;
+    state.openGroups[src.group] = true;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function moveFolderToGroup(folderId, targetGroupId) {
+    var folder = folderById(folderId);
+    var meta = groupMeta(targetGroupId);
+    if (!folder || !meta || String(folder.group) === String(targetGroupId)) return;
+    var fromGroup = folder.group;
+    ensureFolderOrders();
+    folder.group = targetGroupId;
+    folder.order = nextFolderOrder(targetGroupId);
+    contentInFolder(folderId).forEach(function (item) {
+      if (!item) return;
+      item.group = targetGroupId;
+    });
+    rewriteFolderOrders(fromGroup);
+    rewriteFolderOrders(targetGroupId);
+    state.openGroups[targetGroupId] = true;
+    state.openFolders[folderId] = true;
+    markDirtyLocal();
+    rerender();
+  }
+
+  async function deleteFolder(folderId) {
+    var folder = folderById(folderId);
+    if (!folder) return;
+    var label = folder.name || 'esta carpeta';
+    var ok = false;
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.confirm === 'function') {
+      ok = await AdminUI.confirm({
+        title: 'Eliminar carpeta',
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        bodyHtml:
+          '<p class="admin-modal-copy">¿Eliminar «' + escapeHtml(label) + '»?</p>' +
+          '<p class="admin-modal-copy admin-modal-copy--muted">' +
+            'Los recursos de la carpeta pasarán a la raíz del grupo.' +
+          '</p>'
+      });
+    } else {
+      ok = window.confirm('¿Eliminar «' + label + '»?\nLos recursos pasarán a la raíz del grupo.');
+    }
+    if (!ok) return;
+    var groupId = folder.group;
+    contentInFolder(folderId).forEach(function (item) {
+      if (item) item.folderId = null;
+    });
+    state.folders = state.folders.filter(function (f) {
+      return !f || String(f.id) !== String(folderId);
+    });
+    try { delete state.openFolders[folderId]; } catch (eOpen) {}
+    if (String(state.renamingFolderId || '') === String(folderId)) {
+      state.renamingFolderId = null;
+    }
+    rewriteFolderOrders(groupId);
+    markDirtyLocal();
+    rerender();
+  }
+
+  function reorderFolder(fromId, toId, placeAfter) {
+    var from = folderById(fromId);
+    var to = folderById(toId);
+    if (!from || !to) return;
+    if (String(from.group) !== String(to.group)) return;
+    if (String(fromId) === String(toId)) return;
+    ensureFolderOrders();
+    var groupId = from.group;
+    var ordered = foldersInGroup(groupId).filter(function (f) {
+      return String(f.id) !== String(fromId);
+    });
+    var toIdx = -1;
+    for (var i = 0; i < ordered.length; i++) {
+      if (String(ordered[i].id) === String(toId)) {
+        toIdx = i;
+        break;
+      }
+    }
+    if (toIdx < 0) return;
+    var insertAt = placeAfter ? toIdx + 1 : toIdx;
+    ordered.splice(insertAt, 0, from);
+    ordered.forEach(function (f, idx) { f.order = idx; });
+    markDirtyLocal();
   }
 
   /* Same-category only: mutate folderId, never item.group / media / URLs. */
@@ -4012,6 +4488,11 @@ var QuotationEditor = (function () {
 
       qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
+          if (document.querySelector('.qe-folder.is-dragging') ||
+              (e.dataTransfer && e.dataTransfer.types &&
+                Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
+            return;
+          }
           var dragEl = document.querySelector('.qe-lib__item.is-dragging');
           var dragGroup = dragEl
             ? (dragEl.getAttribute('data-qe-lib-group') || '')
@@ -4032,6 +4513,10 @@ var QuotationEditor = (function () {
           zone.classList.remove('is-lib-drop-target');
         });
         zone.addEventListener('drop', function (e) {
+          if (document.querySelector('.qe-folder.is-dragging') ||
+              (e.dataTransfer && e.dataTransfer.getData('text/qe-folder'))) {
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
           zone.classList.remove('is-lib-drop-target');
@@ -4124,6 +4609,9 @@ var QuotationEditor = (function () {
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
       bindSceneNameEditing(editor);
       bindSceneDragReorder(editor);
+      bindFolderMenus();
+      bindFolderRenameInputs();
+      bindFolderDragReorder();
 
       editor.querySelectorAll('[data-qe-viewport]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -4589,7 +5077,8 @@ var QuotationEditor = (function () {
         return {
           id: f.id,
           group: f.group || null,
-          name: f.name || 'Carpeta'
+          name: f.name || 'Carpeta',
+          order: folderOrderValue(f)
         };
       }).filter(Boolean)
     };
@@ -4683,9 +5172,11 @@ var QuotationEditor = (function () {
         return {
           id: f.id,
           group: f.group || null,
-          name: f.name || 'Carpeta'
+          name: f.name || 'Carpeta',
+          order: f.order != null && !isNaN(Number(f.order)) ? Number(f.order) : null
         };
       }).filter(function (f) { return f && f.id; });
+      ensureFolderOrders();
     }
     if (Array.isArray(lib.content)) {
       state.content = lib.content.map(function (c) {
