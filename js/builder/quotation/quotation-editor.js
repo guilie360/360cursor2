@@ -1481,7 +1481,7 @@ var QuotationEditor = (function () {
         '</section>' +
         '<section class="qe-props-panel__props" aria-label="Propiedades">' +
           '<div class="qe-props-panel__head">Propiedades</div>' +
-          '<div class="qe-props-panel__body" data-exp-inspector-body>' +
+          '<div class="qe-props-panel__body" data-qe-props-empty>' +
             '<p class="qe-props-panel__empty">Selecciona un elemento</p>' +
           '</div>' +
         '</section>' +
@@ -1557,12 +1557,14 @@ var QuotationEditor = (function () {
         );
       return '' +
         '<div class="qe-scenes__thumb-wrap" data-qe-drop-scene data-qe-drop-scene-id="' +
-          escapeHtml(sc.id) + '">' +
+          escapeHtml(sc.id) + '"' +
+          ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '">' +
           '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
             ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
             ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
             '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
-            '<span class="qe-scenes__thumb-name">' + escapeHtml(label) + '</span>' +
+            '<span class="qe-scenes__thumb-name" data-qe-scene-name="' +
+              escapeHtml(sc.id) + '">' + escapeHtml(label) + '</span>' +
           '</button>' +
           delBtn +
         '</div>';
@@ -1610,15 +1612,6 @@ var QuotationEditor = (function () {
       '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
         btns +
       '</div>';
-  }
-
-  function safeAreaToolHtml() {
-    return '' +
-      '<button type="button" class="qe-canvas-tool qe-canvas-tool--safe' +
-        (state.safeAreaVisible ? ' is-active' : '') + '"' +
-        ' data-qe-safe-area aria-pressed="' + (state.safeAreaVisible ? 'true' : 'false') + '">' +
-        'Safe Area' +
-      '</button>';
   }
 
   function dockHasSelection() {
@@ -1738,7 +1731,6 @@ var QuotationEditor = (function () {
               '<div class="qe-canvas-fit" data-qe-canvas-fit>' +
                 '<div class="qe-canvas-fit__stack" data-qe-canvas-fit-stack>' +
                   viewportChromeHtml() +
-                  safeAreaToolHtml() +
                   '<div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>' +
                     '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
                       ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
@@ -1793,7 +1785,7 @@ var QuotationEditor = (function () {
 
   /**
    * V7.2.63 — Desktop-only Builder chrome (Xcode / Figma simulator).
-   * Scenes, viewport presets, Safe Area and dock stay 1:1 forever.
+   * Scenes, viewport presets and dock stay 1:1 forever.
    * Only the device canvas rectangle changes size/aspect; it may scale
    * down to fit the remaining slot — never the surrounding editor UI.
    */
@@ -1842,7 +1834,6 @@ var QuotationEditor = (function () {
     var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
     var stage = unit.querySelector('[data-qe-canvas]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
-    var toolSafe = unit.querySelector('[data-qe-safe-area]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
 
     if (scenes) {
@@ -1855,7 +1846,7 @@ var QuotationEditor = (function () {
     var scenesH = scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
     var scenesMb = scenes
       ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0) : 0;
-    /* Viewport / Safe Area / Dock sit on the canvas stack — not stage chrome. */
+    /* Viewport / Dock sit on the canvas stack — not stage chrome. */
     var TOOL_PAD = 44;
     var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
@@ -1913,13 +1904,6 @@ var QuotationEditor = (function () {
       toolVp.style.transform = 'translate(-50%, calc(-100% - 8px))';
       toolVp.style.zIndex = '6';
     }
-    if (toolSafe) {
-      toolSafe.style.position = 'absolute';
-      toolSafe.style.right = '0';
-      toolSafe.style.top = '0';
-      toolSafe.style.transform = 'translateY(calc(-100% - 8px))';
-      toolSafe.style.zIndex = '6';
-    }
     if (toolDock) {
       toolDock.style.position = 'absolute';
       toolDock.style.left = '50%';
@@ -1947,7 +1931,6 @@ var QuotationEditor = (function () {
     canvasFitScale = scale;
 
     syncDesignIdentity();
-    refreshSafeAreaGuide();
   }
 
   /** Design pixels == official 1920×1080 lienzo; viewport window is separate. */
@@ -2026,10 +2009,6 @@ var QuotationEditor = (function () {
     }
 
     if (preview) {
-      if (state.safeAreaVisible) {
-        state.safeAreaVisible = false;
-      }
-      refreshSafeAreaGuide();
       return;
     }
 
@@ -2044,33 +2023,6 @@ var QuotationEditor = (function () {
     }
 
     mountExperienciaOverlay();
-    refreshSafeAreaGuide();
-  }
-
-  function refreshSafeAreaGuide() {
-    if (!rootEl || typeof HeroRenderer === 'undefined') return;
-    var lienzo = (builderSceneApi && builderSceneApi.canvas) ||
-      rootEl.querySelector('[data-hero-canvas]') ||
-      rootEl.querySelector('[data-qe-canvas-lienzo]');
-    if (!lienzo) return;
-    if (!state.safeAreaVisible) {
-      HeroRenderer.setSafeAreaGuide(lienzo, null, { visible: false });
-      return;
-    }
-    var cam = builderSceneApi && builderSceneApi.getCamera
-      ? builderSceneApi.getCamera()
-      : { panX: 0, panY: 0, zoom: 1 };
-    var box = HeroRenderer.windowSafeAreaPercent(
-      activeViewportSize().width,
-      activeViewportSize().height,
-      cam.panX,
-      cam.panY,
-      cam.zoom || 1
-    );
-    HeroRenderer.setSafeAreaGuide(lienzo, box, {
-      visible: true,
-      label: 'Área visible'
-    });
   }
 
   function fitCanvasDesign() {
@@ -2087,7 +2039,6 @@ var QuotationEditor = (function () {
       fitStageWorkspace();
       requestAnimationFrame(function () {
         fitStageWorkspace();
-        refreshSafeAreaGuide();
       });
     });
     var col = rootEl && rootEl.querySelector('.qe-col--canvas');
@@ -2097,7 +2048,6 @@ var QuotationEditor = (function () {
       canvasRo = null;
       stageRo = new ResizeObserver(function () {
         fitStageWorkspace();
-        refreshSafeAreaGuide();
       });
       if (col) stageRo.observe(col);
       var workspace = rootEl && (rootEl.closest('.quotation-workspace') ||
@@ -2328,6 +2278,132 @@ var QuotationEditor = (function () {
       document.documentElement.style.setProperty('--qe-inspector-w', '0px');
     } catch (eW) {}
     rerender();
+  }
+
+  function renameScene(id, name) {
+    var sc = sceneById(id);
+    if (!sc) return;
+    var next = String(name == null ? '' : name).trim();
+    if (!next || sc.name === next) return;
+    sc.name = next;
+    markDirtyLocal();
+  }
+
+  function reorderScene(fromId, toId) {
+    ensureScenes();
+    var from = String(fromId || '');
+    var to = String(toId || '');
+    if (!from || !to || from === to) return;
+    var fromIdx = -1;
+    var toIdx = -1;
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (!state.scenes[i]) continue;
+      if (state.scenes[i].id === from) fromIdx = i;
+      if (state.scenes[i].id === to) toIdx = i;
+    }
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+    var moved = state.scenes.splice(fromIdx, 1)[0];
+    /* After splice, toIdx may shift if from was before to. */
+    if (fromIdx < toIdx) toIdx -= 1;
+    state.scenes.splice(toIdx, 0, moved);
+    markDirtyLocal();
+  }
+
+  function bindSceneNameEditing(editor) {
+    if (!editor) return;
+    editor.querySelectorAll('[data-qe-scene-name]').forEach(function (span) {
+      span.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = span.getAttribute('data-qe-scene-name');
+        var sc = sceneById(id);
+        if (!sc) return;
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'qe-scenes__thumb-name-input';
+        input.value = sc.name || '';
+        var done = false;
+        function finish(save) {
+          if (done) return;
+          done = true;
+          if (save) renameScene(id, input.value);
+          rerender();
+        }
+        input.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            finish(true);
+          } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            finish(false);
+          }
+        });
+        input.addEventListener('blur', function () { finish(true); });
+        input.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        });
+        input.addEventListener('mousedown', function (ev) {
+          ev.stopPropagation();
+        });
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+      });
+    });
+  }
+
+  function bindSceneDragReorder(editor) {
+    if (!editor) return;
+    var track = editor.querySelector('[data-qe-scenes-track]');
+    if (!track) return;
+    var dragId = null;
+    track.querySelectorAll('[data-qe-scene-drag]').forEach(function (wrap) {
+      wrap.addEventListener('dragstart', function (e) {
+        dragId = wrap.getAttribute('data-qe-scene-drag');
+        wrap.classList.add('is-dragging');
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/qe-scene', dragId || ''); } catch (e1) {}
+          e.dataTransfer.setData('text/plain', dragId || '');
+        }
+      });
+      wrap.addEventListener('dragend', function () {
+        wrap.classList.remove('is-dragging');
+        track.querySelectorAll('.is-drop-target').forEach(function (el) {
+          el.classList.remove('is-drop-target');
+        });
+        dragId = null;
+      });
+      wrap.addEventListener('dragover', function (e) {
+        if (!dragId) return;
+        var toId = wrap.getAttribute('data-qe-scene-drag');
+        if (!toId || toId === dragId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        wrap.classList.add('is-drop-target');
+      });
+      wrap.addEventListener('dragleave', function () {
+        wrap.classList.remove('is-drop-target');
+      });
+      wrap.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        wrap.classList.remove('is-drop-target');
+        var from = dragId || '';
+        if (!from && e.dataTransfer) {
+          try { from = e.dataTransfer.getData('text/qe-scene') || ''; } catch (e2) {}
+          if (!from) from = e.dataTransfer.getData('text/plain') || '';
+        }
+        var to = wrap.getAttribute('data-qe-scene-drag');
+        if (from && to && from !== to) {
+          reorderScene(from, to);
+          rerender();
+        }
+      });
+    });
   }
 
   function requestDeleteScene(id) {
@@ -3016,6 +3092,7 @@ var QuotationEditor = (function () {
           b.classList.remove('is-active');
         });
         sel.classList.add('is-active');
+        focusPropsPanel();
         refreshDockOnly();
       }
     });
@@ -3029,13 +3106,11 @@ var QuotationEditor = (function () {
     ensureScenes();
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
 
-    var inspHost = document.querySelector('#quotationRightBody [data-exp-inspector-body]') ||
-      document.querySelector('[data-exp-inspector-body]');
     expOverlay = QuotationExperienciaBridge.mount(layer, {
       scenes: state.scenes,
       activeSceneId: state.activeSceneId,
       contentById: contentById,
-      inspectorBody: inspHost,
+      inspectorBody: null,
       editMode: state.expEditMode === 'hotspots' ? 'hotspots' : 'buttons',
       onChange: function () {
         markDirtyLocal();
@@ -3049,6 +3124,7 @@ var QuotationEditor = (function () {
         var prev = state.expHasSelection;
         state.expHasSelection = next;
         if (next) state.selectedElementId = null;
+        if (next) focusPropsPanel();
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
       }
@@ -3185,7 +3261,6 @@ var QuotationEditor = (function () {
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expHasSelection = false;
-    if (next) state.safeAreaVisible = false;
     if (opts.silent) return;
     if (rootEl) rerender();
     notifyPreviewModeChanged();
@@ -3900,6 +3975,8 @@ var QuotationEditor = (function () {
       }
       if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
+      bindSceneNameEditing(editor);
+      bindSceneDragReorder(editor);
 
       editor.querySelectorAll('[data-qe-viewport]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -3909,32 +3986,6 @@ var QuotationEditor = (function () {
           destroyBuilderRuntimeScene();
           rerender();
         });
-      });
-      var safeBtn = editor.querySelector('[data-qe-safe-area]');
-      if (safeBtn) {
-        safeBtn.addEventListener('click', function () {
-          state.safeAreaVisible = !state.safeAreaVisible;
-          refreshSafeAreaGuide();
-          /* Keep chrome buttons in sync without full remount when possible. */
-          editor.querySelectorAll('[data-qe-safe-area]').forEach(function (b) {
-            b.classList.toggle('is-active', !!state.safeAreaVisible);
-            b.setAttribute('aria-pressed', state.safeAreaVisible ? 'true' : 'false');
-          });
-        });
-      }
-      /* Refresh Safe Area once media natural size is known. */
-      editor.querySelectorAll(
-        '[data-qe-viewport-window] img.hero-renderer__media, [data-qe-viewport-window] video.hero-renderer__media'
-      ).forEach(function (mediaEl) {
-        if (mediaEl.dataset.qeSafeBound) return;
-        mediaEl.dataset.qeSafeBound = '1';
-        var bump = function () { refreshSafeAreaGuide(); };
-        mediaEl.addEventListener('load', bump);
-        mediaEl.addEventListener('loadedmetadata', bump);
-        if ((mediaEl.tagName === 'IMG' && mediaEl.complete) ||
-            (mediaEl.tagName === 'VIDEO' && mediaEl.readyState >= 1)) {
-          bump();
-        }
       });
 
       /* Legacy dock toggles kept for template menus if present */

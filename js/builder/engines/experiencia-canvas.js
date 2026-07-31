@@ -2293,36 +2293,12 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintInspector() {
-      if (overlayMode) notifyOverlaySelection();
-      if (!inspectorBody) return;
-
       if (overlayMode) {
-        var ovScene = ExperienciaEngine.getNode(state, canvas().selectedId) ||
-          (api.overlayNodeId ? ExperienciaEngine.getNode(state, api.overlayNodeId) : null);
-        if (!ovScene) {
-          inspectorBody.innerHTML =
-            '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
-              '<p class="builder-menu-hint">Selecciona un elemento</p>' +
-            '</div>';
-          return;
-        }
-        var editModeOv = canvas().editMode || 'buttons';
-        if (editModeOv === 'hotspots' || canvas().selectedHotspotId) {
-          inspectorBody.innerHTML = hotspotsInspectorHtml(state, ovScene);
-          if (typeof bindHotspotsInspectorActions === 'function') {
-            try { bindHotspotsInspectorActions(); } catch (eHs) { /* ignore */ }
-          }
-        } else {
-          inspectorBody.innerHTML = buttonsInspectorHtml(state, ovScene);
-          if (typeof bindButtonsInspectorActions === 'function') {
-            try { bindButtonsInspectorActions(); } catch (eBtn) { /* ignore */ }
-          }
-        }
-        if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
-          WorkspaceSelect.enhance(inspectorBody);
-        }
+        notifyOverlaySelection();
+        /* V7.2.67 — Quotation Propiedades reset: never paint forms into the right rail. */
         return;
       }
+      if (!inspectorBody) return;
 
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
