@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Published chrome verify ws7263</title>
+  <link rel="stylesheet" href="https://360preventa.com/css/boxies/quotation-builder.css?v=ws7263">
+  <style>
+    html, body { margin:0; height:100%; background:#050505; color:#fff; font-family:system-ui,sans-serif; }
+    .harness { display:flex; flex-direction:column; height:100%; padding:12px; box-sizing:border-box; }
+    .meta { flex:0 0 auto; margin-bottom:8px; font-size:13px; color:rgba(255,255,255,.75); }
+    .meta strong { color:#fff; }
+    .stage-wrap { flex:1 1 auto; min-height:0; overflow:hidden; border:1px solid rgba(255,255,255,.06); }
+    .qe-col--canvas { width:100%; height:100%; padding:8px; box-sizing:border-box; }
+    .fake-map { position:absolute; inset:0; background:linear-gradient(135deg,#1a3a1a,#2d5a2d 45%,#4a6b3a); }
+  </style>
+</head>
+<body>
+  <div class="harness">
+    <div class="meta">PUBLISHED CSS ?v=ws7263 — Preset: <strong id="p">—</strong> | Thumb: <strong id="t">—</strong> | Dock: <strong id="d">—</strong> | Canvas: <strong id="c">—</strong> | Unit: <strong id="u">—</strong></div>
+    <div class="stage-wrap">
+      <section class="qe-col qe-col--canvas">
+        <div class="qe-stage-shell" data-qe-stage-shell>
+          <div class="qe-stage-unit" data-qe-stage-unit>
+            <div class="qe-scenes">
+              <button type="button" class="qe-scenes__nav">‹</button>
+              <div class="qe-scenes__track-wrap"><div class="qe-scenes__track">
+                <div class="qe-scenes__thumb-wrap"><button type="button" class="qe-scenes__thumb is-active"><span class="qe-scenes__thumb-frame" style="background:#234"></span><span class="qe-scenes__thumb-name">escena 01</span></button></div>
+                <div class="qe-scenes__thumb-wrap"><button type="button" class="qe-scenes__thumb"><span class="qe-scenes__thumb-frame" style="background:#345"></span><span class="qe-scenes__thumb-name">escena 02</span></button></div>
+                <div class="qe-scenes__thumb-wrap"><button type="button" class="qe-scenes__thumb qe-scenes__thumb--add"><span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add">+</span><span class="qe-scenes__thumb-name">nueva</span></button></div>
+              </div></div>
+              <button type="button" class="qe-scenes__nav">›</button>
+            </div>
+            <div class="qe-viewport" data-qe-viewport-bar>
+              <div class="qe-viewport__presets">
+                <button type="button" class="qe-viewport__btn is-active" data-preset="desktop">Desktop</button>
+                <button type="button" class="qe-viewport__btn" data-preset="tablet">Tablet</button>
+                <button type="button" class="qe-viewport__btn" data-preset="mobile">Mobile</button>
+              </div>
+              <button type="button" class="qe-viewport__safe">Safe Area</button>
+            </div>
+            <div class="qe-canvas-fit" data-qe-canvas-fit>
+              <div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>
+                <div class="qe-canvas__stage" data-qe-canvas><div class="fake-map"></div></div>
+              </div>
+            </div>
+            <div class="qe-dock" data-qe-dock-bar data-mode="create">
+              <div class="qe-dock__rail">
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Botón</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Texto</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Hotspot</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Imagen</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Forma</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    var PRESETS = { desktop:{width:1280,height:720}, tablet:{width:768,height:1024}, mobile:{width:390,height:844} };
+    var preset = 'desktop';
+    function fit() {
+      var col = document.querySelector('.qe-col--canvas');
+      var shell = document.querySelector('[data-qe-stage-shell]');
+      var unit = document.querySelector('[data-qe-stage-unit]');
+      var rect = col.getBoundingClientRect();
+      var availW = Math.max(1, rect.width - 16);
+      var availH = Math.max(1, rect.height - 16);
+      var device = PRESETS[preset];
+      shell.style.cssText = 'box-sizing:border-box;width:'+availW+'px;height:'+availH+'px;max-width:100%;max-height:100%;position:relative;overflow:hidden;flex:0 0 auto;margin:0 auto';
+      unit.style.cssText = 'transform:none;width:100%;height:100%;position:relative;display:flex;flex-direction:column;align-items:stretch';
+      var scenes = unit.querySelector('.qe-scenes');
+      var vpChrome = unit.querySelector('[data-qe-viewport-bar]');
+      var dock = unit.querySelector('[data-qe-dock-bar]');
+      var fitSlot = unit.querySelector('[data-qe-canvas-fit]');
+      var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
+      var stage = unit.querySelector('[data-qe-canvas]');
+      scenes.style.cssText = 'flex:0 0 auto';
+      vpChrome.style.cssText = 'flex:0 0 auto';
+      dock.style.cssText = 'flex:0 0 auto;align-self:center;margin-left:auto;margin-right:auto';
+      void unit.offsetHeight;
+      var chromeH = Math.ceil(
+        scenes.getBoundingClientRect().height + (parseFloat(getComputedStyle(scenes).marginBottom)||0) +
+        vpChrome.getBoundingClientRect().height + (parseFloat(getComputedStyle(vpChrome).marginBottom)||0) +
+        dock.getBoundingClientRect().height + (parseFloat(getComputedStyle(dock).marginTop)||0) + (parseFloat(getComputedStyle(dock).marginBottom)||0)
+      );
+      var slotH = Math.max(1, availH - chromeH);
+      var scale = Math.min(availW / device.width, slotH / device.height);
+      if (!isFinite(scale) || scale <= 0) scale = 0.01;
+      if (scale > 1) scale = 1;
+      var sw = Math.floor(device.width * scale), sh = Math.floor(device.height * scale);
+      fitSlot.style.cssText = 'flex:1 1 auto;min-height:0;width:100%;height:'+slotH+'px;display:flex;align-items:center;justify-content:center;overflow:hidden';
+      fitFrame.style.cssText = 'width:'+sw+'px;height:'+sh+'px;position:relative;overflow:hidden';
+      stage.style.cssText = 'width:'+device.width+'px;height:'+device.height+'px;position:absolute;top:0;left:0;transform:scale('+scale+');transform-origin:top left';
+      var thumb = document.querySelector('.qe-scenes__thumb').getBoundingClientRect();
+      document.getElementById('p').textContent = preset;
+      document.getElementById('t').textContent = Math.round(thumb.width)+'x'+Math.round(thumb.height);
+      document.getElementById('d').textContent = Math.round(dock.getBoundingClientRect().height)+'px / '+getComputedStyle(document.querySelector('.qe-dock__label')).fontSize;
+      document.getElementById('c').textContent = sw+'x'+sh+' @'+scale.toFixed(3);
+      document.getElementById('u').textContent = getComputedStyle(unit).transform;
+    }
+    document.querySelectorAll('[data-preset]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        preset = btn.getAttribute('data-preset');
+        document.querySelectorAll('[data-preset]').forEach(function(b){ b.classList.toggle('is-active', b===btn); });
+        fit();
+      });
+    });
+    window.addEventListener('resize', fit);
+    fit();
+  </script>
+</body>
+</html>

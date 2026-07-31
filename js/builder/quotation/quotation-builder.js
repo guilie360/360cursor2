@@ -41,16 +41,25 @@ var QuotationBuilderView = (function () {
       : (stepId || 'config');
     if (id === 'editor' && typeof QuotationEditor !== 'undefined') return QuotationEditor;
     if (id === 'hero' && typeof QuotationHero !== 'undefined') return QuotationHero;
-    if (id === 'preview' && typeof QuotationPreview !== 'undefined') return QuotationPreview;
     if (id === 'config' && typeof QuotationConfig !== 'undefined') return QuotationConfig;
     return null;
+  }
+
+  function sidebarOpts() {
+    return {
+      previewMode: !!(
+        typeof QuotationEditor !== 'undefined' &&
+        QuotationEditor.isCanvasPreviewMode &&
+        QuotationEditor.isCanvasPreviewMode()
+      )
+    };
   }
 
   function iconRailHtml(stepId) {
     if (typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) return '';
     return (
       '<nav class="quotation-icon-rail" id="quotationStepsBar" aria-label="Pasos del Builder">' +
-        QuotationSidebar.renderHtml(stepId, sectionChecks) +
+        QuotationSidebar.renderHtml(stepId, sectionChecks, sidebarOpts()) +
       '</nav>'
     );
   }
@@ -160,9 +169,31 @@ var QuotationBuilderView = (function () {
     var bar = rootEl.querySelector('#quotationStepsBar');
     if (!bar) return;
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
-      QuotationSidebar.setActive(bar, currentStep, sectionChecks);
-      QuotationSidebar.bind(bar, goToStep);
+      QuotationSidebar.setActive(bar, currentStep, sectionChecks, sidebarOpts());
+      QuotationSidebar.bind(bar, goToStep, toggleCanvasPreview);
     }
+  }
+
+  /**
+   * Eye icon: same central canvas ↔ Vista Previa (no separate Preview panel).
+   */
+  function toggleCanvasPreview() {
+    if (typeof QuotationEditor === 'undefined') return;
+    var on = QuotationEditor.isCanvasPreviewMode
+      ? QuotationEditor.isCanvasPreviewMode()
+      : false;
+    if (currentStep !== 'editor') {
+      goToStep('editor');
+      if (QuotationEditor.setCanvasPreviewMode) {
+        QuotationEditor.setCanvasPreviewMode(true);
+      }
+      refreshSidebar();
+      return;
+    }
+    if (QuotationEditor.setCanvasPreviewMode) {
+      QuotationEditor.setCanvasPreviewMode(!on);
+    }
+    refreshSidebar();
   }
 
   function clearLeftBody() {
@@ -327,6 +358,14 @@ var QuotationBuilderView = (function () {
     var workspace = rootEl.querySelector('.quotation-workspace') ||
       rootEl.querySelector('.builder-workspace');
     var mod = resolvePanel(currentStep);
+    /* Leaving editor clears canvas preview mode; eye toggle re-enables it. */
+    if (
+      currentStep !== 'editor' &&
+      typeof QuotationEditor !== 'undefined' &&
+      QuotationEditor.setCanvasPreviewMode
+    ) {
+      try { QuotationEditor.setCanvasPreviewMode(false, { silent: true }); } catch (ePrev) {}
+    }
     /* Detach editor UI only — never reset QuotationEditor document SSOT. */
     if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
       try { QuotationEditor.detachUi(); } catch (eDetach) {}
@@ -336,6 +375,13 @@ var QuotationBuilderView = (function () {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
       workspace.classList.toggle('is-hero', currentStep === 'hero');
       workspace.classList.toggle('is-left-collapsed', leftCollapsed);
+      workspace.classList.toggle(
+        'is-canvas-preview',
+        currentStep === 'editor' &&
+          typeof QuotationEditor !== 'undefined' &&
+          QuotationEditor.isCanvasPreviewMode &&
+          QuotationEditor.isCanvasPreviewMode()
+      );
     }
     if (panel) {
       panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
@@ -353,6 +399,22 @@ var QuotationBuilderView = (function () {
   }
 
   function goToStep(stepId) {
+    /* Step navigation exits canvas preview (edit tools return). */
+    if (
+      typeof QuotationEditor !== 'undefined' &&
+      QuotationEditor.isCanvasPreviewMode &&
+      QuotationEditor.isCanvasPreviewMode() &&
+      QuotationEditor.setCanvasPreviewMode
+    ) {
+      var next = typeof QuotationRouter !== 'undefined'
+        ? QuotationRouter.normalize(stepId)
+        : stepId;
+      if (next === 'editor') {
+        QuotationEditor.setCanvasPreviewMode(false);
+        refreshSidebar();
+        return;
+      }
+    }
     renderStep(stepId);
   }
 
@@ -480,7 +542,7 @@ var QuotationBuilderView = (function () {
 
     host.innerHTML = shellHtml(currentStep);
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {
-      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep);
+      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep, toggleCanvasPreview);
     }
     activateSharedChrome();
     mountDockActions(host);
@@ -532,6 +594,8 @@ var QuotationBuilderView = (function () {
     render: render,
     onLeave: onLeave,
     goToStep: goToStep,
+    toggleCanvasPreview: toggleCanvasPreview,
+    refreshSidebar: refreshSidebar,
     save: handleSave,
     getProjectLabel: function () {
       return projectCtx.name || projectCtx.slug || '';

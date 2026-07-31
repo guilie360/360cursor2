@@ -1,15 +1,16 @@
-/* Quotation Builder — in-builder step router (Configuración → Hero → Editor → Preview). */
+/* Quotation Builder — in-builder step router (Configuración → Hero → Editor). */
 var QuotationRouter = (function () {
   var DEFAULT_STEP = 'config';
   var ALLOWED = {
     config: 1,
     hero: 1,
-    editor: 1,
-    preview: 1
+    editor: 1
   };
 
   function normalize(stepId) {
     var id = String(stepId || '').trim().toLowerCase();
+    /* Legacy ?step=preview → Editor (canvas preview mode is separate). */
+    if (id === 'preview') return 'editor';
     return ALLOWED[id] ? id : DEFAULT_STEP;
   }
 
@@ -28,6 +29,8 @@ var QuotationRouter = (function () {
       var url = new URL(window.location.href);
       if (id === DEFAULT_STEP) url.searchParams.delete('step');
       else url.searchParams.set('step', id);
+      /* Drop legacy preview step param leftovers. */
+      if (url.searchParams.get('step') === 'preview') url.searchParams.set('step', 'editor');
       window.history.replaceState(
         Object.assign({}, window.history.state || {}, { step: id }),
         '',

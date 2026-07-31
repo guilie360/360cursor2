@@ -1,10 +1,9 @@
-/* Quotation Builder — V7.2.21 icon-only vertical step rail. */
+/* Quotation Builder — V7.2.65 icon-only vertical step rail (no Preview step). */
 var QuotationSidebar = (function () {
   var STEPS = [
     { id: 'config', label: 'Config', icon: 'settings', checkable: true },
     { id: 'hero', label: 'Hero', icon: 'image', checkable: true },
-    { id: 'editor', label: 'Editor', icon: 'pen-tool', checkable: true },
-    { id: 'preview', label: 'Preview', icon: 'eye', checkable: false, auxiliary: true }
+    { id: 'editor', label: 'Editor', icon: 'pen-tool', checkable: true }
   ];
 
   function escapeHtml(v) {
@@ -32,15 +31,19 @@ var QuotationSidebar = (function () {
     return false;
   }
 
-  function renderHtml(activeId, sectionChecks) {
+  /**
+   * opts.previewMode — highlights the eye toggle (canvas preview, not a step).
+   */
+  function renderHtml(activeId, sectionChecks, opts) {
+    opts = opts || {};
     sectionChecks = sectionChecks || {};
+    var previewOn = !!opts.previewMode;
     var html = '<div class="quotation-icon-rail__list" data-builder-rail-list aria-label="Pasos del Builder">';
     html += STEPS.map(function (step) {
-      var active = step.id === activeId;
+      var active = step.id === activeId && !previewOn;
       var done = isDone(sectionChecks, step);
       var cls = 'quotation-icon-rail__item';
-      if (step.auxiliary) cls += ' is-auxiliary';
-      else cls += done ? ' is-done' : ' is-pending';
+      cls += done ? ' is-done' : ' is-pending';
       if (active) cls += ' is-current';
 
       return (
@@ -55,11 +58,25 @@ var QuotationSidebar = (function () {
         '</button>'
       );
     }).join('');
+
+    /* Eye = canvas Vista Previa toggle (same central canvas), not a separate Preview step. */
+    html += '' +
+      '<button type="button" class="quotation-icon-rail__item is-auxiliary' +
+        (previewOn ? ' is-current is-preview-on' : '') + '"' +
+        ' data-quotation-preview-toggle="1"' +
+        ' aria-pressed="' + (previewOn ? 'true' : 'false') + '"' +
+        ' aria-label="Vista previa"' +
+        ' data-tooltip="Vista previa" title="Vista previa">' +
+        '<span class="quotation-icon-rail__icon" aria-hidden="true">' +
+          iconHtml('eye') +
+        '</span>' +
+      '</button>';
+
     html += '</div>';
     return html;
   }
 
-  function bind(rootEl, onNavigate) {
+  function bind(rootEl, onNavigate, onPreviewToggle) {
     if (!rootEl) return;
     rootEl.querySelectorAll('[data-quotation-step]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
@@ -68,11 +85,17 @@ var QuotationSidebar = (function () {
         if (id && typeof onNavigate === 'function') onNavigate(id);
       });
     });
+    rootEl.querySelectorAll('[data-quotation-preview-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (typeof onPreviewToggle === 'function') onPreviewToggle();
+      });
+    });
   }
 
-  function setActive(rootEl, stepId, sectionChecks) {
+  function setActive(rootEl, stepId, sectionChecks, opts) {
     if (!rootEl) return;
-    rootEl.innerHTML = renderHtml(stepId, sectionChecks);
+    rootEl.innerHTML = renderHtml(stepId, sectionChecks, opts);
   }
 
   function pageHeaderHtml(stepId, title, desc, sectionChecks) {

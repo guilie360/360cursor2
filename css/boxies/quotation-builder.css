@@ -274,15 +274,119 @@
   max-width: none;
 }
 
-.qe-canvas-fit {
+.qe-stage-work {
   flex: 1 1 auto;
-  min-width: 0;
   min-height: 0;
-  width: 100%;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.qe-stage-work .qe-canvas-fit {
+  flex: 1 1 auto;
+}
+
+.qe-layers {
+  flex: 0 0 200px;
+  width: 200px;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(8, 8, 8, 0.72);
   overflow: hidden;
+}
+
+.qe-layers__head {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qe-layers__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.qe-layers__item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 22px 18px 18px;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 2px;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.qe-layers__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.qe-layers__vis,
+.qe-layers__lock,
+.qe-layers__ord,
+.qe-layers__sel {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.qe-layers__vis,
+.qe-layers__lock,
+.qe-layers__ord {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  line-height: 22px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.qe-layers__vis.is-off,
+.qe-layers__lock:not(.is-on) {
+  opacity: 0.28;
+}
+
+.qe-layers__sel {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 560;
+  color: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 4px;
+  border-radius: 4px;
+}
+
+.qe-layers__sel.is-active,
+.qe-layers__item.is-selected .qe-layers__sel {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qe-layers__item.is-hero .qe-layers__ord {
+  visibility: hidden;
 }
 
 .qe-canvas-fit__frame {
@@ -1122,7 +1226,9 @@
   background: #050505;
 }
 
-.qe-canvas__design .qe-canvas__edit-layer {
+.qe-canvas__design .qe-canvas__edit-layer,
+.hero-canvas .qe-canvas__edit-layer,
+[data-hero-canvas] .qe-canvas__edit-layer {
   position: absolute;
   inset: 0;
   pointer-events: auto;
@@ -1131,11 +1237,19 @@
   touch-action: none;
 }
 
-/* ── Showroom Experiencia overlay on Quotation Canvas (V7.2.13) ─── */
+/* ── Showroom Experiencia overlay on Quotation Canvas (V7.2.13 / V7.2.64) ─── */
 .qe-canvas__design .qe-exp-overlay,
 .qe-canvas__design .qe-exp-overlay .builder-exp-stage,
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-stage,
-.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage {
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage,
+.hero-canvas .qe-exp-overlay,
+.hero-canvas .qe-exp-overlay .builder-exp-stage,
+.hero-canvas .qe-exp-overlay .builder-exp-buttons-stage,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-stage,
+[data-hero-canvas] .qe-exp-overlay,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-stage,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-stage,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-stage {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -1148,7 +1262,11 @@
 }
 
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-frame,
-.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-frame {
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-frame,
+.hero-canvas .qe-exp-overlay .builder-exp-buttons-frame,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-frame,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-frame,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-frame {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1162,7 +1280,11 @@
 /* Design frame is the coordinate space — media underneath provides the image.
    V7.2.59 — ghost must use cover (same as HeroRenderer), never fill. */
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-img,
-.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-img {
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-img,
+.hero-canvas .qe-exp-overlay .builder-exp-buttons-img,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-img,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-img,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1174,7 +1296,11 @@
 }
 
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-layer,
-.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-layer {
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-layer,
+.hero-canvas .qe-exp-overlay .builder-exp-buttons-layer,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-layer,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-layer,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-layer {
   left: 0 !important;
   top: 0 !important;
   width: 100% !important;
@@ -1879,33 +2005,6 @@
   justify-content: stretch;
 }
 
-.qe-preview-frame {
-  flex: 0 0 auto;
-  align-self: center;
-  min-height: 0;
-  margin: var(--hall-space-3, 12px) auto 0;
-  border-radius: var(--hall-radius-control, 14px);
-  border: 1px solid var(--hall-border, rgba(255, 255, 255, 0.06));
-  overflow: hidden;
-  background: #050505;
-  width: 1280px;
-  height: 720px;
-  max-width: 100%;
-}
-
-.qe-preview-frame__iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: #050505;
-}
-
-.quotation-step--preview .qe-viewport--preview {
-  margin-top: var(--hall-space-3, 12px);
-  max-width: 100%;
-}
-
 .qe-canvas__empty {
   margin: auto;
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
@@ -2502,6 +2601,34 @@ body.quotation-canvas-first .builder-workspace,
 .quotation-icon-rail__item.is-current {
   color: rgba(255, 255, 255, 0.96);
   background: rgba(255, 255, 255, 0.08);
+}
+
+.quotation-icon-rail__item.is-auxiliary {
+  margin-top: 8px;
+}
+
+.quotation-icon-rail__item.is-preview-on {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+/* V7.2.65 — canvas Vista Previa: hide leftover edit chrome */
+.qe-editor.is-canvas-preview .qe-dock,
+.qe-editor.is-canvas-preview .qe-layers,
+.qe-col--canvas.is-canvas-preview .qe-dock,
+.qe-col--canvas.is-canvas-preview .qe-layers {
+  display: none !important;
+}
+
+.qe-editor.is-canvas-preview .qe-canvas__edit-layer,
+.qe-col--canvas.is-canvas-preview .qe-canvas__edit-layer {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.quotation-workspace.is-canvas-preview #quotationLeftBody:empty {
+  min-height: 0;
 }
 
 .quotation-icon-rail__icon {

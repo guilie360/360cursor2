@@ -3839,12 +3839,13 @@ var ExperienciaCanvas = (function () {
         viewport.style.display = hideFlow ? 'none' : '';
       }
       if (buttonsStage) {
-        buttonsStage.hidden = mode !== 'buttons';
-        buttonsStage.setAttribute('aria-hidden', mode === 'buttons' ? 'false' : 'true');
+        /* V7.2.64 — always show buttons + hotspots together (Runtime parity). */
+        buttonsStage.hidden = false;
+        buttonsStage.setAttribute('aria-hidden', 'false');
       }
       if (hotspotsStage) {
-        hotspotsStage.hidden = mode !== 'hotspots';
-        hotspotsStage.setAttribute('aria-hidden', mode === 'hotspots' ? 'false' : 'true');
+        hotspotsStage.hidden = false;
+        hotspotsStage.setAttribute('aria-hidden', 'false');
       }
       if (protoStage) {
         protoStage.hidden = mode !== 'prototype';
@@ -3923,39 +3924,19 @@ var ExperienciaCanvas = (function () {
         overlayLayoutTimer = null;
         applyWorldTransform();
         paintMinimap();
-        if (canvas().editMode === 'buttons') {
-          syncButtonsLayerBounds();
-          paintButtonsStage();
+        if (overlayMode || canvas().editMode === 'buttons' || canvas().editMode === 'hotspots') {
+          if (overlayMode || canvas().editMode === 'buttons') {
+            syncButtonsLayerBounds();
+            paintButtonsStage();
+          }
+          if (overlayMode || canvas().editMode === 'hotspots') {
+            syncHotspotsLayerBounds();
+            paintHotspotsStage();
+          }
           requestAnimationFrame(function () {
-            var changed = syncButtonsLayerBounds();
-            if (changed || overlayLayoutPass < 2) {
-              overlayLayoutPass += 1;
-              paintButtonsStage();
-              requestAnimationFrame(function () {
-                syncButtonsLayerBounds();
-                overlayLayoutPass = 0;
-              });
-            } else {
-              overlayLayoutPass = 0;
-            }
-          });
-          return;
-        }
-        if (canvas().editMode === 'hotspots') {
-          syncHotspotsLayerBounds();
-          paintHotspotsStage();
-          requestAnimationFrame(function () {
-            var changedHs = syncHotspotsLayerBounds();
-            if (changedHs || overlayLayoutPass < 2) {
-              overlayLayoutPass += 1;
-              paintHotspotsStage();
-              requestAnimationFrame(function () {
-                syncHotspotsLayerBounds();
-                overlayLayoutPass = 0;
-              });
-            } else {
-              overlayLayoutPass = 0;
-            }
+            if (overlayMode || canvas().editMode === 'buttons') syncButtonsLayerBounds();
+            if (overlayMode || canvas().editMode === 'hotspots') syncHotspotsLayerBounds();
+            overlayLayoutPass = 0;
           });
           return;
         }
@@ -3967,7 +3948,8 @@ var ExperienciaCanvas = (function () {
 
     function paintButtonsStage() {
       if (!buttonsStage || !buttonsLayer || !buttonsImg) return;
-      if (canvas().editMode !== 'buttons') return;
+      /* V7.2.64 — paint free overlays whenever overlay is mounted (not mode-gated). */
+      if (!overlayMode && canvas().editMode !== 'buttons') return;
       if (textEditEl && document.activeElement === textEditEl) return;
       var n = ExperienciaEngine.getNode(state, canvas().selectedId);
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) {
@@ -4218,7 +4200,8 @@ var ExperienciaCanvas = (function () {
 
     function paintHotspotsStage() {
       if (!hotspotsStage || !hotspotsLayer || !hotspotsImg || !hotspotsSvg) return;
-      if (canvas().editMode !== 'hotspots') return;
+      /* V7.2.64 — always paint hotspots in overlay (Runtime parity). */
+      if (!overlayMode && canvas().editMode !== 'hotspots') return;
       var n = ExperienciaEngine.getNode(state, canvas().selectedId);
       if (!n || !ExperienciaEngine.isHotspotsEditableNode(n)) {
         if (hotspotsEmpty) hotspotsEmpty.hidden = false;
@@ -6721,6 +6704,91 @@ var ExperienciaCanvas = (function () {
         paintInspector();
         persist();
         return res;
+      },
+      /** V7.2.64 — select any overlay by id without hiding the other layer. */
+      selectOverlayItem: function (itemId) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !itemId) return false;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+        var ix = null;
+        for (var i = 0; i < n.config.interactions.length; i++) {
+          if (String(n.config.interactions[i].id) === String(itemId)) {
+            ix = n.config.interactions[i];
+            break;
+          }
+        }
+        if (!ix) return false;
+        var t = String(ix.type || '').toUpperCase();
+        if (t === 'HOTSPOT') {
+          canvas().editMode = 'hotspots';
+          canvas().selectedHotspotId = String(itemId);
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        } else {
+          canvas().editMode = 'buttons';
+          canvas().selectedButtonId = String(itemId);
+          canvas().selectedButtonIds = [String(itemId)];
+          canvas().selectedHotspotId = null;
+        }
+        paintButtonsStage();
+        paintHotspotsStage();
+        paintInspector();
+        notifyOverlaySelection();
+        return true;
+      },
+      setInteractionFlags: function (itemId, flags) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !itemId || !flags) return false;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+        var ix = null;
+        for (var i = 0; i < n.config.interactions.length; i++) {
+          if (String(n.config.interactions[i].id) === String(itemId)) {
+            ix = n.config.interactions[i];
+            break;
+          }
+        }
+        if (!ix) return false;
+        var t = String(ix.type || '').toUpperCase();
+        if (t === 'HOTSPOT') {
+          if (flags.visible != null) {
+            ix.enabled = !!flags.visible;
+            ix.visible = !!flags.visible;
+          }
+          if (flags.locked != null) ix.locked = !!flags.locked;
+        } else if (ExperienciaEngine.updateSceneButton) {
+          var patch = {};
+          if (flags.visible != null) patch.visible = !!flags.visible;
+          if (flags.locked != null) patch.locked = !!flags.locked;
+          ExperienciaEngine.updateSceneButton(state, sceneId, itemId, patch);
+        }
+        paintButtonsStage();
+        paintHotspotsStage();
+        paintInspector();
+        persist();
+        return true;
+      },
+      reorderInteraction: function (itemId, dir) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !itemId) return false;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+        var list = n.config.interactions;
+        var idx = -1;
+        for (var i = 0; i < list.length; i++) {
+          if (String(list[i].id) === String(itemId)) { idx = i; break; }
+        }
+        if (idx < 0) return false;
+        var next = idx + (dir < 0 ? -1 : 1);
+        if (next < 0 || next >= list.length) return false;
+        var tmp = list[idx];
+        list[idx] = list[next];
+        list[next] = tmp;
+        paintButtonsStage();
+        paintHotspotsStage();
+        persist();
+        return true;
       },
       startHotspotDraw: function () {
         canvas().editMode = 'hotspots';

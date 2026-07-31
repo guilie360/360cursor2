@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Builder chrome harness V7.2.63</title>
+  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7263">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #050505;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+    }
+    .harness {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+    }
+    .harness__meta {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.7);
+    }
+    .harness__meta strong { color: #fff; }
+    .harness__stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      overflow: hidden;
+      background: #0a0a0a;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .qe-col--canvas {
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    .fake-map {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, #1a3a1a 0%, #2d5a2d 40%, #4a6b3a 70%, #1e3d1e 100%);
+    }
+    .fake-map::after {
+      content: '';
+      position: absolute;
+      left: 28%;
+      top: 34%;
+      width: 22%;
+      height: 18%;
+      border: 2px solid #111;
+      background: rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="harness">
+    <div class="harness__meta">
+      <span>Preset: <strong id="metaPreset">desktop</strong></span>
+      <span>Thumb H: <strong id="metaThumb">—</strong></span>
+      <span>Dock H: <strong id="metaDock">—</strong></span>
+      <span>Canvas: <strong id="metaCanvas">—</strong></span>
+      <span>Unit transform: <strong id="metaUnit">—</strong></span>
+    </div>
+    <div class="harness__stage">
+      <section class="qe-col qe-col--canvas" aria-label="Canvas">
+        <div class="qe-stage-shell" data-qe-stage-shell>
+          <div class="qe-stage-unit" data-qe-stage-unit>
+            <div class="qe-scenes">
+              <button type="button" class="qe-scenes__nav" aria-hidden="true">‹</button>
+              <div class="qe-scenes__track-wrap">
+                <div class="qe-scenes__track">
+                  <div class="qe-scenes__thumb-wrap">
+                    <button type="button" class="qe-scenes__thumb is-active">
+                      <span class="qe-scenes__thumb-frame" style="background:#234"></span>
+                      <span class="qe-scenes__thumb-name">escena 01</span>
+                    </button>
+                  </div>
+                  <div class="qe-scenes__thumb-wrap">
+                    <button type="button" class="qe-scenes__thumb">
+                      <span class="qe-scenes__thumb-frame" style="background:#345"></span>
+                      <span class="qe-scenes__thumb-name">escena 02</span>
+                    </button>
+                  </div>
+                  <div class="qe-scenes__thumb-wrap">
+                    <button type="button" class="qe-scenes__thumb qe-scenes__thumb--add">
+                      <span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add">+</span>
+                      <span class="qe-scenes__thumb-name">nueva</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="qe-scenes__nav" aria-hidden="true">›</button>
+            </div>
+
+            <div class="qe-viewport" data-qe-viewport-bar>
+              <div class="qe-viewport__presets" role="group">
+                <button type="button" class="qe-viewport__btn is-active" data-preset="desktop">Desktop</button>
+                <button type="button" class="qe-viewport__btn" data-preset="tablet">Tablet</button>
+                <button type="button" class="qe-viewport__btn" data-preset="mobile">Mobile</button>
+              </div>
+              <button type="button" class="qe-viewport__safe">Safe Area</button>
+            </div>
+
+            <div class="qe-canvas-fit" data-qe-canvas-fit>
+              <div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>
+                <div class="qe-canvas__stage hero-canvas-host" data-qe-canvas data-qe-viewport-window>
+                  <div class="fake-map"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="qe-dock" data-qe-dock-bar data-mode="create">
+              <div class="qe-dock__rail">
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Botón</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Texto</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Hotspot</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Imagen</span></button>
+                <button type="button" class="qe-dock__seg"><span class="qe-dock__label">+ Forma</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    var PRESETS = {
+      desktop: { width: 1280, height: 720 },
+      tablet: { width: 768, height: 1024 },
+      mobile: { width: 390, height: 844 }
+    };
+    var preset = 'desktop';
+
+    function measureStageViewport(col) {
+      var rect = col.getBoundingClientRect();
+      return {
+        width: Math.max(1, rect.width - 16),
+        height: Math.max(1, rect.height - 16)
+      };
+    }
+
+    function fitStageWorkspace() {
+      var col = document.querySelector('.qe-col--canvas');
+      var shell = document.querySelector('[data-qe-stage-shell]');
+      var unit = document.querySelector('[data-qe-stage-unit]');
+      var vp = measureStageViewport(col);
+      var availW = vp.width;
+      var availH = vp.height;
+      var device = PRESETS[preset];
+      var natW = device.width;
+      var natH = device.height;
+
+      shell.style.boxSizing = 'border-box';
+      shell.style.width = availW + 'px';
+      shell.style.height = availH + 'px';
+      shell.style.maxWidth = '100%';
+      shell.style.maxHeight = '100%';
+      shell.style.position = 'relative';
+      shell.style.overflow = 'hidden';
+      shell.style.flex = '0 0 auto';
+      shell.style.margin = '0 auto';
+
+      unit.style.transform = 'none';
+      unit.style.width = '100%';
+      unit.style.height = '100%';
+      unit.style.position = 'relative';
+      unit.style.display = 'flex';
+      unit.style.flexDirection = 'column';
+      unit.style.alignItems = 'stretch';
+
+      var scenes = unit.querySelector('.qe-scenes');
+      var vpChrome = unit.querySelector('[data-qe-viewport-bar]');
+      var dock = unit.querySelector('[data-qe-dock-bar]');
+      var fitSlot = unit.querySelector('[data-qe-canvas-fit]');
+      var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
+      var stage = unit.querySelector('[data-qe-canvas]');
+
+      scenes.style.width = '';
+      scenes.style.flex = '0 0 auto';
+      vpChrome.style.width = '';
+      vpChrome.style.flex = '0 0 auto';
+      dock.style.width = '';
+      dock.style.flex = '0 0 auto';
+      dock.style.alignSelf = 'center';
+      dock.style.marginLeft = 'auto';
+      dock.style.marginRight = 'auto';
+
+      void unit.offsetHeight;
+
+      var scenesH = Math.ceil(scenes.getBoundingClientRect().height);
+      var scenesMb = parseFloat(getComputedStyle(scenes).marginBottom) || 0;
+      var vpChromeH = Math.ceil(vpChrome.getBoundingClientRect().height);
+      var vpChromeMb = parseFloat(getComputedStyle(vpChrome).marginBottom) || 0;
+      var dockH = Math.ceil(dock.getBoundingClientRect().height);
+      var dockMt = parseFloat(getComputedStyle(dock).marginTop) || 0;
+      var dockMb = parseFloat(getComputedStyle(dock).marginBottom) || 0;
+      var chromeH = Math.ceil(scenesH + scenesMb + vpChromeH + vpChromeMb + dockMt + dockH + dockMb);
+      var slotW = availW;
+      var slotH = Math.max(1, availH - chromeH);
+      var scale = Math.min(slotW / natW, slotH / natH);
+      if (!isFinite(scale) || scale <= 0) scale = 0.01;
+      if (scale > 1) scale = 1;
+      var scaledW = Math.floor(natW * scale);
+      var scaledH = Math.floor(natH * scale);
+
+      fitSlot.style.flex = '1 1 auto';
+      fitSlot.style.minHeight = '0';
+      fitSlot.style.width = '100%';
+      fitSlot.style.height = slotH + 'px';
+      fitSlot.style.display = 'flex';
+      fitSlot.style.alignItems = 'center';
+      fitSlot.style.justifyContent = 'center';
+      fitSlot.style.overflow = 'hidden';
+
+      fitFrame.style.width = scaledW + 'px';
+      fitFrame.style.height = scaledH + 'px';
+      fitFrame.style.position = 'relative';
+      fitFrame.style.overflow = 'hidden';
+
+      stage.style.width = natW + 'px';
+      stage.style.height = natH + 'px';
+      stage.style.position = 'absolute';
+      stage.style.top = '0';
+      stage.style.left = '0';
+      stage.style.transform = 'scale(' + scale + ')';
+      stage.style.transformOrigin = 'top left';
+
+      var thumb = document.querySelector('.qe-scenes__thumb');
+      document.getElementById('metaPreset').textContent = preset;
+      document.getElementById('metaThumb').textContent =
+        Math.round(thumb.getBoundingClientRect().height) + 'px';
+      document.getElementById('metaDock').textContent =
+        Math.round(dock.getBoundingClientRect().height) + 'px';
+      document.getElementById('metaCanvas').textContent =
+        scaledW + '×' + scaledH + ' (scale ' + scale.toFixed(3) + ')';
+      document.getElementById('metaUnit').textContent =
+        getComputedStyle(unit).transform;
+    }
+
+    document.querySelectorAll('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        preset = btn.getAttribute('data-preset');
+        document.querySelectorAll('[data-preset]').forEach(function (b) {
+          b.classList.toggle('is-active', b === btn);
+        });
+        fitStageWorkspace();
+      });
+    });
+
+    window.addEventListener('resize', fitStageWorkspace);
+    fitStageWorkspace();
+  </script>
+</body>
+</html>

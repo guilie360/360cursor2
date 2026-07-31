@@ -284,7 +284,9 @@ var HeroCanvas = (function () {
       return !!t.closest(
         'button, a, input, textarea, select,' +
         ' [data-qr-ix-layer] .qr-ix-btn, .qr-ix-hs, .qr-stage__back,' +
-        ' .builder-exp-stage-btn, .builder-exp-hs, [data-exp-handle]'
+        ' .builder-exp-stage-btn, .builder-exp-hs, [data-exp-handle],' +
+        ' [data-exp-hs-poly], [data-exp-hs-vertex], [data-exp-stage-btn],' +
+        ' .builder-exp-buttons-layer button, .builder-exp-hotspots-layer path'
       );
     }
 
@@ -305,8 +307,14 @@ var HeroCanvas = (function () {
     function onMove(ev) {
       if (!dragging) return;
       if (pointerId != null && ev.pointerId !== pointerId) return;
-      var dx = ev.clientX - lastX;
-      var dy = ev.clientY - lastY;
+      /* Compensate CSS scale on ancestors (Builder device-frame fit). */
+      var rect = host.getBoundingClientRect();
+      var sx = host.clientWidth > 0 ? rect.width / host.clientWidth : 1;
+      var sy = host.clientHeight > 0 ? rect.height / host.clientHeight : 1;
+      if (!isFinite(sx) || sx < 0.0001) sx = 1;
+      if (!isFinite(sy) || sy < 0.0001) sy = 1;
+      var dx = (ev.clientX - lastX) / sx;
+      var dy = (ev.clientY - lastY) / sy;
       if (dx || dy) moved = true;
       lastX = ev.clientX;
       lastY = ev.clientY;

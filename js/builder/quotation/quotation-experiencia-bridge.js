@@ -312,6 +312,15 @@ var QuotationExperienciaBridge = (function () {
       bringSelectedToFront: function () {
         return handle.bringSelectedToFront ? handle.bringSelectedToFront() : null;
       },
+      selectOverlayItem: function (id) {
+        return handle.selectOverlayItem ? handle.selectOverlayItem(id) : false;
+      },
+      setInteractionFlags: function (id, flags) {
+        return handle.setInteractionFlags ? handle.setInteractionFlags(id, flags) : false;
+      },
+      reorderInteraction: function (id, dir) {
+        return handle.reorderInteraction ? handle.reorderInteraction(id, dir) : false;
+      },
       setInspectorBody: function (el) {
         if (handle.setInspectorBody) handle.setInspectorBody(el);
       },

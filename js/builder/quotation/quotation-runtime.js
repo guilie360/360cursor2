@@ -229,8 +229,28 @@ var QuotationRuntime = (function () {
     return Array.isArray(ix.polygon) && ix.polygon.length >= 3;
   }
 
-  function runInteractionAction(ix) {
+  function isTextIx(ix) {
+    return !!(ix && String(ix.type || '').toUpperCase() === 'TEXT' && ix.enabled !== false);
+  }
+
+  function isShapeIx(ix) {
+    if (!ix || ix.enabled === false) return false;
+    var t = String(ix.type || '').toUpperCase();
+    return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE';
+  }
+
+  function ixIsVisible(ix) {
+    return !(ix && ix.visible === false);
+  }
+
+  function runInteractionAction(ix, actionOpts) {
     if (!ix) return;
+    actionOpts = actionOpts || {};
+    if (typeof actionOpts.onAction === 'function') {
+      try {
+        if (actionOpts.onAction(ix) === true) return;
+      } catch (eAct) { /* fall through */ }
+    }
     var action = String(ix.action || 'goto-scene').toLowerCase();
     var target = ix.targetSceneId || null;
     if (action === 'goto-scene' || action === 'goto' || (!action && target)) {
@@ -261,17 +281,21 @@ var QuotationRuntime = (function () {
     }
   }
 
-  function paintInteractionLayer(parentEl, scene, interactive) {
-    if (!parentEl) return;
+  function paintInteractionLayer(parentEl, scene, interactive, opts) {
+    opts = opts || {};
+    if (!parentEl) return null;
     if (ixLayerEl && ixLayerEl.parentNode) ixLayerEl.parentNode.removeChild(ixLayerEl);
     ixLayerEl = null;
-    /* Canvas editor iframe uses Experiencia overlay — skip Runtime ix there only. */
-    if (!scene || (editorMode && canvasMode)) return;
+    /* Legacy canvas iframe: Experiencia owns edits — skip Runtime ix there only. */
+    if (!scene || (editorMode && canvasMode && !opts.force)) return null;
+    if (opts.paintInteractions === false) return null;
 
     var ixs = Array.isArray(scene.interactions) ? scene.interactions : [];
-    var buttons = ixs.filter(isButtonIx);
-    var hotspots = ixs.filter(isHotspotIx);
-    if (!buttons.length && !hotspots.length) return;
+    var hotspots = ixs.filter(function (ix) { return isHotspotIx(ix) && ixIsVisible(ix); });
+    var buttons = ixs.filter(function (ix) { return isButtonIx(ix) && ixIsVisible(ix); });
+    var texts = ixs.filter(function (ix) { return isTextIx(ix) && ixIsVisible(ix); });
+    var shapes = ixs.filter(function (ix) { return isShapeIx(ix) && ixIsVisible(ix); });
+    if (!hotspots.length && !buttons.length && !texts.length && !shapes.length) return null;
 
     ixLayerEl = document.createElement('div');
     ixLayerEl.className = 'qr-ix-layer';
@@ -288,6 +312,7 @@ var QuotationRuntime = (function () {
       var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', pts);
       path.setAttribute('class', 'qr-ix-hs');
+      if (hs.id) path.setAttribute('data-qr-ix-id', String(hs.id));
       path.setAttribute('fill', hs.color || 'rgba(111,191,134,0.28)');
       path.setAttribute('fill-opacity', String(hs.opacity != null ? hs.opacity : 0.22));
       path.setAttribute('stroke', hs.color || 'rgba(255,255,255,0.85)');
@@ -297,7 +322,7 @@ var QuotationRuntime = (function () {
         path.addEventListener('click', function (ev) {
           ev.preventDefault();
           ev.stopPropagation();
-          runInteractionAction(hs);
+          runInteractionAction(hs, opts);
         });
       }
       svg.appendChild(path);
@@ -310,6 +335,7 @@ var QuotationRuntime = (function () {
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'qr-ix-btn qr-ix-btn--' + (b.style || 'chip');
+      if (b.id) btn.setAttribute('data-qr-ix-id', String(b.id));
       btn.textContent = b.label || 'Botón';
       var rot = Number(b.rotation) || 0;
       btn.style.left = Number(b.x) + '%';
@@ -319,15 +345,71 @@ var QuotationRuntime = (function () {
         btn.addEventListener('click', function (ev) {
           ev.preventDefault();
           ev.stopPropagation();
-          runInteractionAction(b);
+          runInteractionAction(b, opts);
         });
       } else {
         btn.disabled = true;
       }
       btnsHost.appendChild(btn);
     });
+    texts.forEach(function (tx) {
+      var el = document.createElement('div');
+      el.className = 'qr-ix-text';
+      if (tx.id) el.setAttribute('data-qr-ix-id', String(tx.id));
+      el.textContent = tx.label != null ? String(tx.label) : 'Texto';
+      var rot = Number(tx.rotation) || 0;
+      var fw = String(tx.fontWeight || '400');
+      el.style.left = Number(tx.x) + '%';
+      el.style.top = Number(tx.y) + '%';
+      el.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+      el.style.fontSize = (Number(tx.fontSize) || 28) + 'px';
+      el.style.color = tx.color || '#ffffff';
+      el.style.fontFamily = String(tx.fontFamily || 'system-ui, sans-serif');
+      el.style.fontWeight = (fw === '700' || fw === 'bold') ? '700' : '400';
+      el.style.textAlign = String(tx.textAlign || 'center');
+      el.style.opacity = String(tx.opacity != null ? tx.opacity : 1);
+      el.style.pointerEvents = interactive ? 'auto' : 'none';
+      if (interactive) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          runInteractionAction(tx, opts);
+        });
+      }
+      btnsHost.appendChild(el);
+    });
+    shapes.forEach(function (sh) {
+      var t = String(sh.type || '').toUpperCase();
+      var el = document.createElement('div');
+      el.className = 'qr-ix-shape' + (t === 'SHAPE_CIRCLE' ? ' qr-ix-shape--circle' : ' qr-ix-shape--rect');
+      if (sh.id) el.setAttribute('data-qr-ix-id', String(sh.id));
+      var rot = Number(sh.rotation) || 0;
+      el.style.left = Number(sh.x) + '%';
+      el.style.top = Number(sh.y) + '%';
+      el.style.width = (Number(sh.width) || 12) + '%';
+      el.style.height = (Number(sh.height) || (t === 'SHAPE_CIRCLE' ? 12 : 8)) + '%';
+      el.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+      el.style.background = sh.fill || 'rgba(255,255,255,0.18)';
+      el.style.border = (Number(sh.strokeWidth) || 2) + 'px solid ' +
+        (sh.stroke || 'rgba(255,255,255,0.65)');
+      el.style.borderRadius = (sh.borderRadius != null
+        ? Number(sh.borderRadius)
+        : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px';
+      el.style.pointerEvents = interactive ? 'auto' : 'none';
+      if (interactive) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          runInteractionAction(sh, opts);
+        });
+      }
+      btnsHost.appendChild(el);
+    });
     ixLayerEl.appendChild(btnsHost);
     parentEl.appendChild(ixLayerEl);
+    return ixLayerEl;
   }
 
   function ensureSceneMediaHost(parentEl) {
@@ -337,17 +419,23 @@ var QuotationRuntime = (function () {
 
   var heroCanvasApi = null;
 
-  function paintSceneMedia(parentEl, scene, bundle) {
+  function paintSceneMedia(parentEl, scene, bundle, opts) {
+    opts = opts || {};
     if (!parentEl) return null;
     parentEl.innerHTML = '';
     sceneMediaEl = null;
 
     var media = resolveSceneMedia(scene, bundle);
     var urlFinal = media && media.url ? media.url : null;
-    console.log('[QR V7.2.60] paintSceneMedia URL final:', urlFinal);
+    console.log('[QR V7.2.64] paintSceneMedia URL final:', urlFinal);
+
+    var enablePan = opts.enablePan != null ? !!opts.enablePan : !(editorMode && canvasMode);
+    var disableHint = opts.disableHint != null
+      ? !!opts.disableHint
+      : !!(editorMode && canvasMode);
 
     if (typeof HeroCanvas === 'undefined' || !HeroCanvas.mount) {
-      console.warn('[QR V7.2.60] HeroCanvas missing — fallback flat cover host');
+      console.warn('[QR V7.2.64] HeroCanvas missing — fallback flat cover host');
       var fallback = document.createElement('div');
       fallback.className = 'qr-scene-media hero-renderer';
       parentEl.appendChild(fallback);
@@ -370,8 +458,8 @@ var QuotationRuntime = (function () {
       paintOpts: {
         mediaClass: media && media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
       },
-      enablePan: !(editorMode && canvasMode),
-      disableHint: !!(editorMode && canvasMode)
+      enablePan: enablePan,
+      disableHint: disableHint
     });
 
     sceneMediaEl = heroCanvasApi.mediaSlot;
@@ -381,6 +469,64 @@ var QuotationRuntime = (function () {
     logPaintSceneMediaDomAudit(parentEl, sceneMediaEl);
     /* Interaction layer must attach to the lienzo (1920×1080), not the window. */
     return heroCanvasApi.canvas;
+  }
+
+  /**
+   * V7.2.64 — Single shared scene paint for Builder / Preview / Runtime.
+   * hostEl = viewport window. Returns api with canvas (1920×1080 lienzo).
+   */
+  function paintScene(hostEl, scene, bundle, opts) {
+    opts = opts || {};
+    if (!hostEl) return null;
+    var interactive = opts.interactive === true;
+    var paintIx = opts.paintInteractions !== false;
+    var canvas = paintSceneMedia(hostEl, scene, bundle, {
+      enablePan: opts.enablePan,
+      disableHint: opts.disableHint != null ? opts.disableHint : (opts.mode === 'builder')
+    });
+    if (paintIx && canvas) {
+      paintInteractionLayer(canvas, scene, interactive, {
+        force: opts.mode === 'builder' || opts.mode === 'preview',
+        paintInteractions: true,
+        onAction: typeof opts.onAction === 'function' ? opts.onAction : null
+      });
+    }
+    return {
+      host: hostEl,
+      canvas: canvas,
+      mediaSlot: sceneMediaEl,
+      heroCanvas: heroCanvasApi,
+      mode: opts.mode || 'publish',
+      refreshInteractions: function (nextScene, nextInteractive) {
+        if (!canvas) return null;
+        return paintInteractionLayer(
+          canvas,
+          nextScene || scene,
+          nextInteractive != null ? !!nextInteractive : interactive,
+          { force: true, paintInteractions: paintIx }
+        );
+      },
+      getCamera: function () {
+        return heroCanvasApi && heroCanvasApi.getCamera
+          ? heroCanvasApi.getCamera()
+          : { panX: 0, panY: 0, zoom: 1 };
+      },
+      setCamera: function (cam) {
+        if (heroCanvasApi && heroCanvasApi.setCamera) heroCanvasApi.setCamera(cam);
+      },
+      destroy: function () {
+        if (ixLayerEl && ixLayerEl.parentNode) {
+          try { ixLayerEl.parentNode.removeChild(ixLayerEl); } catch (eR) { /* ignore */ }
+        }
+        ixLayerEl = null;
+        if (heroCanvasApi && heroCanvasApi.destroy) {
+          try { heroCanvasApi.destroy(); } catch (eD) { /* ignore */ }
+        }
+        heroCanvasApi = null;
+        sceneMediaEl = null;
+        if (hostEl) hostEl.innerHTML = '';
+      }
+    };
   }
 
   function logPaintSceneMediaDomAudit(parentEl, container) {
@@ -462,8 +608,14 @@ var QuotationRuntime = (function () {
     enterSceneMode();
     stageEl.innerHTML = '';
     sceneMediaEl = null;
-    var mediaHost = paintSceneMedia(stageEl, scene, bundle);
-    paintInteractionLayer(mediaHost, scene, interactionsInteractive());
+    var sceneApi = paintScene(stageEl, scene, bundle, {
+      interactive: interactionsInteractive(),
+      enablePan: !(editorMode && canvasMode),
+      disableHint: !!(editorMode && canvasMode),
+      paintInteractions: true,
+      mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
+    });
+    void sceneApi;
     /* Volver only when a distinct cover chrome exists to return to. */
     var entry = entryScene(bundle);
     var canReturnToCover = !!(entry && sceneHasCoverChrome(entry) &&
@@ -1192,6 +1344,9 @@ var QuotationRuntime = (function () {
     href: href,
     boot: boot,
     render: render,
+    paintScene: paintScene,
+    paintInteractionLayer: paintInteractionLayer,
+    resolveSceneMedia: resolveSceneMedia,
     readQuery: readQuery,
     applyCanvasViewport: applyCanvasViewport,
     applyDocument: applyDocument,
