@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../css/boxies/content.css?v=ws7201">
   <link rel="stylesheet" href="../css/boxies/tooltip.css?v=ws5940">
   <link rel="stylesheet" href="../css/boxies/builder-embed.css?v=ws7105">
-  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7267">
+  <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7268">
   <link rel="stylesheet" href="../css/boxies/hero-renderer.css?v=ws7264">
   <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
 </head>
@@ -149,6 +149,28 @@
     </div>
   </nav>
 
+  <!-- Estado del proyecto (showroom panel — toggled from Biblioteca toolbar) -->
+  <div class="content-modal" id="estadoModal">
+    <span class="modal-close" id="estadoModalClose">&times;</span>
+    <div class="content-modal-box">
+      <div class="content-modal-title">Estado del proyecto</div>
+
+      <div class="progress-overall">
+        <div class="progress-overall-header">
+          <span class="progress-overall-label">Avance general</span>
+          <span class="progress-overall-pct" id="progressOverallPct">0%</span>
+        </div>
+        <div class="progress-overall-track">
+          <div class="progress-overall-fill" id="progressOverallFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="progress-list" id="progressList"></div>
+
+      <p class="progress-updated-note" id="progressUpdatedNote"></p>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/shared/config.js"></script>
   <script src="../js/shared/constants.js"></script>
@@ -258,7 +280,7 @@
   <script src="../js/builder/quotation/quotation-config.js?v=ws7110"></script>
   <script src="../js/builder/quotation/quotation-hero.js?v=ws7229"></script>
   <script src="../js/builder/quotation/quotation-experiencia-bridge.js?v=ws7264"></script>
-  <script src="../js/builder/quotation/quotation-editor.js?v=ws7267"></script>
+  <script src="../js/builder/quotation/quotation-editor.js?v=ws7268"></script>
   <script src="../js/builder/quotation/quotation-preview.js?v=ws7265"></script>
   <script src="../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
   <script src="../js/builder/quotation/quotation-runtime.js?v=ws7265"></script>

@@ -527,6 +527,10 @@ var QuotationEditor = (function () {
         models: false
       },
       libraryGroupsCollapsed: false,
+      librarySearchQuery: '',
+      libraryAvailableOnly: false,
+      libraryView: 'list',
+      libraryStatusOpen: false,
       openFolders: {},
       folderComposerGroup: null,
       tourComposer: { open: false, folderId: null },
@@ -706,6 +710,95 @@ var QuotationEditor = (function () {
       state.openGroups[g.id] = !collapse;
     });
     rerender();
+  }
+
+  function libraryIcon(name) {
+    var S = 'xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    if (name === 'search') {
+      return '<svg ' + S + '><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+    }
+    if (name === 'chart') {
+      return '<svg ' + S + '><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20V8"/></svg>';
+    }
+    if (name === 'filter') {
+      return '<svg ' + S + '><path d="M4 5h16"/><path d="M7 12h10"/><path d="M10 19h4"/></svg>';
+    }
+    if (name === 'grid') {
+      return '<svg ' + S + '><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>';
+    }
+    if (name === 'list') {
+      return '<svg ' + S + '><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>';
+    }
+    if (name === 'arrow-up') {
+      return '<svg ' + S + '><path d="m5 15 7-7 7 7"/></svg>';
+    }
+    if (name === 'arrow-down') {
+      return '<svg ' + S + '><path d="m19 9-7 7-7-7"/></svg>';
+    }
+    if (name === 'fold') {
+      return '<svg ' + S + '><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>';
+    }
+    return '';
+  }
+
+  function matchesLibrarySearch(item) {
+    var q = String(state.librarySearchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    return String(item && item.name || '').toLowerCase().indexOf(q) !== -1;
+  }
+
+  function groupVisibleInLibrary(group) {
+    if (!group) return false;
+    var items = contentInGroup(group.id).filter(matchesLibrarySearch);
+    var q = String(state.librarySearchQuery || '').trim();
+    if (q) return items.length > 0;
+    if (state.libraryAvailableOnly) {
+      if (group.prepared) return false;
+      return contentInGroup(group.id).length > 0;
+    }
+    return true;
+  }
+
+  function toggleProjectStatusPanel() {
+    var modal = document.getElementById('estadoModal');
+    if (!modal) {
+      var menuItem = document.getElementById('menuEstado');
+      if (menuItem && typeof menuItem.click === 'function') menuItem.click();
+      return;
+    }
+    var open = modal.classList.contains('active');
+    if (open) {
+      modal.classList.remove('active');
+      state.libraryStatusOpen = false;
+    } else {
+      modal.classList.add('active');
+      state.libraryStatusOpen = true;
+      try {
+        if (typeof buildProgressList === 'function') buildProgressList();
+        if (typeof animateProgressBars === 'function') animateProgressBars();
+      } catch (eStatus) {}
+    }
+    var statusBtn = document.querySelector('[data-qe-lib-status]');
+    if (statusBtn) {
+      statusBtn.classList.toggle('is-active', !!state.libraryStatusOpen);
+      statusBtn.setAttribute('aria-pressed', state.libraryStatusOpen ? 'true' : 'false');
+    }
+  }
+
+  function ensureEstadoModalCloseBound() {
+    var closeBtn = document.getElementById('estadoModalClose');
+    if (!closeBtn || closeBtn.getAttribute('data-qe-lib-status-bound')) return;
+    closeBtn.setAttribute('data-qe-lib-status-bound', '1');
+    closeBtn.addEventListener('click', function () {
+      var modal = document.getElementById('estadoModal');
+      if (modal) modal.classList.remove('active');
+      state.libraryStatusOpen = false;
+      var statusBtn = document.querySelector('[data-qe-lib-status]');
+      if (statusBtn) {
+        statusBtn.classList.remove('is-active');
+        statusBtn.setAttribute('aria-pressed', 'false');
+      }
+    });
   }
 
   function persistDraft() {
@@ -1033,7 +1126,7 @@ var QuotationEditor = (function () {
 
   function folderBlockHtml(folder, group) {
     var open = state.openFolders[folder.id] !== false;
-    var kids = contentInFolder(folder.id);
+    var kids = contentInFolder(folder.id).filter(matchesLibrarySearch);
     var addControls = '';
     if (group.linkMode) {
       addControls = '' +
@@ -1046,6 +1139,8 @@ var QuotationEditor = (function () {
           escapeHtml(group.id) + '" data-qe-folder="' + escapeHtml(folder.id) + '">' +
           escapeHtml(group.addLabel || '+ Agregar') + '</button>';
     }
+    var searching = !!String(state.librarySearchQuery || '').trim();
+    if (searching && !kids.length) return '';
     return '' +
       '<div class="qe-folder' + (open ? ' is-open' : '') + '" data-qe-folder-block="' +
         escapeHtml(folder.id) + '"' +
@@ -1093,7 +1188,7 @@ var QuotationEditor = (function () {
         '</div>';
     }
 
-    var rootItems = rootContentInGroup(group.id);
+    var rootItems = rootContentInGroup(group.id).filter(matchesLibrarySearch);
     var folders = foldersInGroup(group.id);
     var rootHtml = rootItems.length
       ? ('<div class="qe-content__items">' +
@@ -1103,6 +1198,7 @@ var QuotationEditor = (function () {
     var foldersHtml = folders.map(function (f) { return folderBlockHtml(f, group); }).join('');
     var tree = rootHtml + foldersHtml;
     var actions;
+    var searching = !!String(state.librarySearchQuery || '').trim();
 
     if (group.linkMode) {
       actions = '' +
@@ -1128,7 +1224,64 @@ var QuotationEditor = (function () {
         ' data-qe-lib-drop-root' +
         ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
         tree +
-        '<div class="qe-content__actions">' + actions + '</div>' +
+        (searching ? '' : ('<div class="qe-content__actions">' + actions + '</div>')) +
+      '</div>';
+  }
+
+  function libraryChromeHtml() {
+    var collapsed = !!state.libraryGroupsCollapsed;
+    var view = state.libraryView === 'grid' ? 'grid' : 'list';
+    var modal = document.getElementById('estadoModal');
+    if (modal) state.libraryStatusOpen = modal.classList.contains('active');
+    var statusOpen = !!state.libraryStatusOpen;
+    var availableOn = !!state.libraryAvailableOnly;
+    var q = String(state.librarySearchQuery || '');
+    return '' +
+      '<div class="qe-lib-chrome">' +
+        '<div class="qe-lib-chrome__head">' +
+          '<h2 class="qe-lib-chrome__title">Biblioteca</h2>' +
+          '<p class="qe-lib-chrome__sub">recursos del showroom</p>' +
+        '</div>' +
+        '<button type="button" class="qe-lib-chrome__fold-all" data-qe-toggle-all-groups' +
+          ' title="' + (collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos') + '"' +
+          ' aria-label="' + (collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos') + '"' +
+          ' data-collapsed="' + (collapsed ? '1' : '0') + '">' +
+          libraryIcon('fold') +
+        '</button>' +
+        '<div class="qe-lib-toolbar">' +
+          '<div class="qe-lib-toolbar__row">' +
+            '<label class="qe-lib-search">' +
+              '<span class="qe-lib-search__icon" aria-hidden="true">' + libraryIcon('search') + '</span>' +
+              '<input type="search" class="qe-lib-search__input" data-qe-lib-search' +
+                ' placeholder="Buscar por nombre..." autocomplete="off" spellcheck="false"' +
+                ' value="' + escapeHtml(q) + '">' +
+            '</label>' +
+            '<button type="button" class="qe-lib-toolbtn' + (statusOpen ? ' is-active' : '') + '"' +
+              ' data-qe-lib-status title="Estado del proyecto"' +
+              ' aria-label="Estado del proyecto" aria-pressed="' + (statusOpen ? 'true' : 'false') + '">' +
+              libraryIcon('chart') +
+            '</button>' +
+          '</div>' +
+          '<div class="qe-lib-toolbar__row">' +
+            '<button type="button" class="qe-lib-available' + (availableOn ? ' is-on' : '') + '"' +
+              ' data-qe-lib-available aria-pressed="' + (availableOn ? 'true' : 'false') + '"' +
+              ' title="Mostrar solo grupos con recursos">' +
+              '<span class="qe-lib-available__icon" aria-hidden="true">' + libraryIcon('filter') + '</span>' +
+              '<span class="qe-lib-available__label">Disponibles</span>' +
+              '<span class="qe-lib-available__switch" aria-hidden="true">' +
+                '<span class="qe-lib-available__knob"></span>' +
+              '</span>' +
+            '</button>' +
+            '<div class="qe-lib-view" role="group" aria-label="Vista de biblioteca">' +
+              '<button type="button" class="qe-lib-view__btn' + (view === 'grid' ? ' is-active' : '') + '"' +
+                ' data-qe-lib-view="grid" title="Vista miniaturas" aria-pressed="' +
+                (view === 'grid' ? 'true' : 'false') + '">' + libraryIcon('grid') + '</button>' +
+              '<button type="button" class="qe-lib-view__btn' + (view === 'list' ? ' is-active' : '') + '"' +
+                ' data-qe-lib-view="list" title="Vista lista" aria-pressed="' +
+                (view === 'list' ? 'true' : 'false') + '">' + libraryIcon('list') + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
       '</div>';
   }
 
@@ -1137,7 +1290,9 @@ var QuotationEditor = (function () {
     var external = !!document.getElementById('quotationLeftBody');
     if (!external && state.libraryCollapsed) return '';
 
+    var view = state.libraryView === 'grid' ? 'grid' : 'list';
     var groups = CONTENT_GROUPS.map(function (group) {
+      if (!groupVisibleInLibrary(group)) return '';
       var open = state.openGroups[group.id] !== false;
       var count = contentInGroup(group.id).length;
       return '' +
@@ -1155,18 +1310,10 @@ var QuotationEditor = (function () {
     }).join('');
 
     return '' +
-      '<aside class="qe-col qe-col--library" aria-label="Recursos">' +
-        '<div class="qe-col__head">' +
-          '<div class="qe-col__head-text">' +
-            '<h2 class="qe-col__title">Recursos</h2>' +
-            '<p class="qe-col__hint">Biblioteca del proyecto</p>' +
-          '</div>' +
-          '<button type="button" class="qe-content__collapse-all" data-qe-toggle-all-groups' +
-            ' title="' + (state.libraryGroupsCollapsed ? 'Desplegar categorías' : 'Plegar categorías') + '">' +
-            (state.libraryGroupsCollapsed ? 'Desplegar' : 'Plegar') +
-          '</button>' +
-        '</div>' +
-        '<div class="qe-content__list" data-qe-content-list>' + groups + '</div>' +
+      '<aside class="qe-col qe-col--library" aria-label="Biblioteca">' +
+        libraryChromeHtml() +
+        '<div class="qe-content__list is-view-' + view + '" data-qe-content-list data-qe-lib-view-mode="' +
+          view + '">' + groups + '</div>' +
       '</aside>';
   }
 
@@ -4057,6 +4204,66 @@ var QuotationEditor = (function () {
         e.preventDefault();
         toggleAllLibraryGroups();
       });
+    }
+
+    ensureEstadoModalCloseBound();
+
+    var libSearch = qOne('[data-qe-lib-search]');
+    if (libSearch) {
+      libSearch.addEventListener('input', function () {
+        state.librarySearchQuery = String(libSearch.value || '');
+        state._libSearchCaret = libSearch.selectionStart;
+        state._restoreLibSearch = true;
+        rerender();
+      });
+      libSearch.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          state.librarySearchQuery = '';
+          state._restoreLibSearch = true;
+          state._libSearchCaret = 0;
+          rerender();
+        }
+      });
+    }
+
+    var statusBtn = qOne('[data-qe-lib-status]');
+    if (statusBtn) {
+      statusBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        toggleProjectStatusPanel();
+      });
+    }
+
+    var availableBtn = qOne('[data-qe-lib-available]');
+    if (availableBtn) {
+      availableBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        state.libraryAvailableOnly = !state.libraryAvailableOnly;
+        rerender();
+      });
+    }
+
+    qAll('[data-qe-lib-view]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var next = btn.getAttribute('data-qe-lib-view') === 'grid' ? 'grid' : 'list';
+        if (state.libraryView === next) return;
+        state.libraryView = next;
+        rerender();
+      });
+    });
+
+    if (state._restoreLibSearch) {
+      state._restoreLibSearch = false;
+      var restoreSearch = qOne('[data-qe-lib-search]');
+      if (restoreSearch) {
+        restoreSearch.focus();
+        var caret = state._libSearchCaret;
+        if (typeof caret === 'number') {
+          try { restoreSearch.setSelectionRange(caret, caret); } catch (eCaret) {}
+        }
+      }
     }
 
     var openMenuBtn = editor.querySelector('[data-qe-open-main-menu]');
