@@ -1,17 +1,18 @@
 /**
- * HeroRenderer — V7.2.59 BOXIES official Hero paint (Model B).
+ * HeroRenderer + HeroCanvas — V7.2.60 BOXIES official Hero lienzo.
  *
- * Single source of truth for Builder, Preview, and Runtime media fill.
- * Always object-fit: cover. Never fill / stretch / non-uniform scale.
- * Does not own interactions, gizmos, or ProjectDocument serialization.
+ * Design canvas is ALWAYS 1920×1080 (16:9). Media covers that canvas once.
+ * Device/viewport is a window with pan/drag. Never stretch the lienzo.
+ * % overlays stay relative to the 1920×1080 canvas (no coord migration).
  */
 var HeroRenderer = (function () {
+  var DESIGN_W = 1920;
+  var DESIGN_H = 1080;
   var VIEWPORTS = {
     desktop: { id: 'desktop', label: 'Desktop', width: 1280, height: 720 },
     tablet: { id: 'tablet', label: 'Tablet', width: 768, height: 1024 },
     mobile: { id: 'mobile', label: 'Mobile', width: 390, height: 844 }
   };
-
   var VIEWPORT_ORDER = ['desktop', 'tablet', 'mobile'];
 
   function escapeHtml(v) {
@@ -22,9 +23,7 @@ var HeroRenderer = (function () {
 
   function normalizeMedia(media) {
     if (!media) return null;
-    if (typeof media === 'string') {
-      return { src: media, kind: 'image' };
-    }
+    if (typeof media === 'string') return { src: media, kind: 'image' };
     var src = media.src || media.url || null;
     if (!src) return null;
     var kind = media.kind || media.type || 'image';
@@ -47,10 +46,6 @@ var HeroRenderer = (function () {
     return host;
   }
 
-  /**
-   * Paint cover media into host. Replaces media children; preserves sibling overlays
-   * only if they live outside host (callers should paint media into a dedicated slot).
-   */
   function paint(host, media, opts) {
     opts = opts || {};
     if (!ensureHost(host)) return null;
@@ -79,100 +74,15 @@ var HeroRenderer = (function () {
     return host;
   }
 
-  function mount(host, media, opts) {
-    return paint(host, media, opts);
-  }
-
   function getViewport(id) {
     var key = String(id || 'desktop').toLowerCase();
     return VIEWPORTS[key] || VIEWPORTS.desktop;
   }
 
   function listViewports() {
-    return VIEWPORT_ORDER.map(function (id) {
-      return VIEWPORTS[id];
-    });
+    return VIEWPORT_ORDER.map(function (id) { return VIEWPORTS[id]; });
   }
 
-  /**
-   * Visible portion of an image (iw×ih) when covered into viewport (vw×vh),
-   * in normalized image space 0..1.
-   */
-  function coverCropInImageSpace(iw, ih, vw, vh) {
-    iw = Math.max(1, Number(iw) || 1);
-    ih = Math.max(1, Number(ih) || 1);
-    vw = Math.max(1, Number(vw) || 1);
-    vh = Math.max(1, Number(vh) || 1);
-    var scale = Math.max(vw / iw, vh / ih);
-    var dispW = iw * scale;
-    var dispH = ih * scale;
-    var ox = (dispW - vw) / 2;
-    var oy = (dispH - vh) / 2;
-    return {
-      x: ox / dispW,
-      y: oy / dispH,
-      w: vw / dispW,
-      h: vh / dispH
-    };
-  }
-
-  function intersectRects(a, b) {
-    if (!a || !b) return null;
-    var x1 = Math.max(a.x, b.x);
-    var y1 = Math.max(a.y, b.y);
-    var x2 = Math.min(a.x + a.w, b.x + b.w);
-    var y2 = Math.min(a.y + a.h, b.y + b.h);
-    if (x2 <= x1 || y2 <= y1) return null;
-    return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
-  }
-
-  /** Intersection of cover crops across all official viewports (image 0..1). */
-  function safeAreaInImageSpace(iw, ih) {
-    iw = Math.max(1, Number(iw) || 16);
-    ih = Math.max(1, Number(ih) || 9);
-    var acc = null;
-    VIEWPORT_ORDER.forEach(function (id) {
-      var vp = VIEWPORTS[id];
-      var crop = coverCropInImageSpace(iw, ih, vp.width, vp.height);
-      acc = acc ? intersectRects(acc, crop) : crop;
-    });
-    return acc;
-  }
-
-  /**
-   * Map an image-space rect (0..1) into the current cover viewport as CSS % box.
-   */
-  function imageRectToViewportPercent(imgRect, iw, ih, vw, vh) {
-    if (!imgRect) return null;
-    iw = Math.max(1, Number(iw) || 1);
-    ih = Math.max(1, Number(ih) || 1);
-    vw = Math.max(1, Number(vw) || 1);
-    vh = Math.max(1, Number(vh) || 1);
-    var scale = Math.max(vw / iw, vh / ih);
-    var dispW = iw * scale;
-    var dispH = ih * scale;
-    var ox = (dispW - vw) / 2;
-    var oy = (dispH - vh) / 2;
-    var left = imgRect.x * iw * scale - ox;
-    var top = imgRect.y * ih * scale - oy;
-    var right = (imgRect.x + imgRect.w) * iw * scale - ox;
-    var bottom = (imgRect.y + imgRect.h) * ih * scale - oy;
-    return {
-      left: (left / vw) * 100,
-      top: (top / vh) * 100,
-      width: ((right - left) / vw) * 100,
-      height: ((bottom - top) / vh) * 100
-    };
-  }
-
-  function safeAreaViewportPercent(iw, ih, vw, vh) {
-    return imageRectToViewportPercent(safeAreaInImageSpace(iw, ih), iw, ih, vw, vh);
-  }
-
-  /**
-   * Draw / remove Safe Area guide inside a host (Builder only).
-   * box = { left, top, width, height } in % of host.
-   */
   function setSafeAreaGuide(host, box, opts) {
     opts = opts || {};
     if (!host) return;
@@ -192,6 +102,21 @@ var HeroRenderer = (function () {
     label.textContent = opts.label || 'Área garantizada';
     el.appendChild(label);
     host.appendChild(el);
+  }
+
+  /** Visible window of the design canvas as % of the 1920×1080 lienzo. */
+  function windowSafeAreaPercent(hostW, hostH, panX, panY, zoom) {
+    var z = Math.max(0.0001, Number(zoom) || 1);
+    var vw = Math.max(1, Number(hostW) || 1) / z;
+    var vh = Math.max(1, Number(hostH) || 1) / z;
+    var left = (-Number(panX) || 0) / DESIGN_W * 100;
+    var top = (-Number(panY) || 0) / DESIGN_H * 100;
+    return {
+      left: left,
+      top: top,
+      width: (vw / DESIGN_W) * 100,
+      height: (vh / DESIGN_H) * 100
+    };
   }
 
   function readNaturalSize(mediaEl, fallbackW, fallbackH) {
@@ -217,19 +142,295 @@ var HeroRenderer = (function () {
   }
 
   return {
+    DESIGN_W: DESIGN_W,
+    DESIGN_H: DESIGN_H,
     VIEWPORTS: VIEWPORTS,
     VIEWPORT_ORDER: VIEWPORT_ORDER,
     getViewport: getViewport,
     listViewports: listViewports,
-    mount: mount,
+    mount: paint,
     paint: paint,
     clear: clear,
-    coverCropInImageSpace: coverCropInImageSpace,
-    safeAreaInImageSpace: safeAreaInImageSpace,
-    imageRectToViewportPercent: imageRectToViewportPercent,
-    safeAreaViewportPercent: safeAreaViewportPercent,
     setSafeAreaGuide: setSafeAreaGuide,
+    windowSafeAreaPercent: windowSafeAreaPercent,
     readNaturalSize: readNaturalSize,
     mediaElement: mediaElement
+  };
+})();
+
+/**
+ * HeroCanvas — fixed 1920×1080 lienzo + viewport camera (pan/zoom).
+ */
+var HeroCanvas = (function () {
+  var DESIGN_W = 1920;
+  var DESIGN_H = 1080;
+  var HINT_KEY = 'boxies_hero_pan_hint_v1';
+  var instances = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+
+  function getState(host) {
+    if (!host) return null;
+    if (instances) return instances.get(host) || null;
+    return host._heroCanvasState || null;
+  }
+
+  function setState(host, state) {
+    if (!host) return;
+    if (instances) instances.set(host, state);
+    else host._heroCanvasState = state;
+  }
+
+  function clampPan(state) {
+    var hostW = state.host.clientWidth || 1;
+    var hostH = state.host.clientHeight || 1;
+    var z = state.zoom;
+    var maxPanX = 0;
+    var maxPanY = 0;
+    var minPanX = hostW - DESIGN_W * z;
+    var minPanY = hostH - DESIGN_H * z;
+    if (minPanX > maxPanX) {
+      state.panX = (hostW - DESIGN_W * z) / 2;
+    } else {
+      state.panX = Math.min(maxPanX, Math.max(minPanX, state.panX));
+    }
+    if (minPanY > maxPanY) {
+      state.panY = (hostH - DESIGN_H * z) / 2;
+    } else {
+      state.panY = Math.min(maxPanY, Math.max(minPanY, state.panY));
+    }
+  }
+
+  function applyTransform(state) {
+    if (!state || !state.canvas) return;
+    clampPan(state);
+    state.canvas.style.transform =
+      'translate(' + state.panX + 'px,' + state.panY + 'px) scale(' + state.zoom + ')';
+  }
+
+  function fitContain(state) {
+    var hostW = state.host.clientWidth || 1;
+    var hostH = state.host.clientHeight || 1;
+    /* Never upscale past 1 — 1 design px = 1 CSS px when host allows. */
+    state.zoom = Math.min(1, hostW / DESIGN_W, hostH / DESIGN_H);
+    state.panX = (hostW - DESIGN_W * state.zoom) / 2;
+    state.panY = (hostH - DESIGN_H * state.zoom) / 2;
+    applyTransform(state);
+  }
+
+  function needsPan(state) {
+    var hostW = state.host.clientWidth || 1;
+    var hostH = state.host.clientHeight || 1;
+    return DESIGN_W * state.zoom > hostW + 0.5 || DESIGN_H * state.zoom > hostH + 0.5;
+  }
+
+  function showHintOnce(state) {
+    if (state.opts.disableHint) return;
+    if (!needsPan(state)) return;
+    try {
+      if (sessionStorage.getItem(HINT_KEY) === '1') return;
+      sessionStorage.setItem(HINT_KEY, '1');
+    } catch (eSs) { /* ignore */ }
+    var hint = state.host.querySelector('[data-hero-canvas-hint]');
+    if (!hint) {
+      hint = document.createElement('p');
+      hint.className = 'hero-canvas__hint';
+      hint.setAttribute('data-hero-canvas-hint', '1');
+      hint.textContent = '← Arrastra para explorar el proyecto →';
+      state.host.appendChild(hint);
+    }
+    requestAnimationFrame(function () {
+      hint.classList.add('is-visible');
+    });
+    setTimeout(function () {
+      hint.classList.remove('is-visible');
+    }, 2000);
+  }
+
+  function bindPan(state) {
+    var host = state.host;
+    var dragging = false;
+    var lastX = 0;
+    var lastY = 0;
+    var pointerId = null;
+
+    function onDown(ev) {
+      if (ev.button != null && ev.button !== 0) return;
+      var t = ev.target;
+      if (t && t.closest) {
+        if (t.closest('button, a, input, textarea, select, [data-qr-ix-layer] .qr-ix-btn, .qr-ix-hs, .qr-stage__back')) {
+          return;
+        }
+      }
+      dragging = true;
+      pointerId = ev.pointerId;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      host.classList.add('is-panning');
+      try { host.setPointerCapture(ev.pointerId); } catch (eCap) { /* ignore */ }
+      ev.preventDefault();
+    }
+
+    function onMove(ev) {
+      if (!dragging) return;
+      if (pointerId != null && ev.pointerId !== pointerId) return;
+      var dx = ev.clientX - lastX;
+      var dy = ev.clientY - lastY;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      state.panX += dx;
+      state.panY += dy;
+      applyTransform(state);
+      ev.preventDefault();
+    }
+
+    function onUp(ev) {
+      if (!dragging) return;
+      if (pointerId != null && ev.pointerId !== pointerId) return;
+      dragging = false;
+      pointerId = null;
+      host.classList.remove('is-panning');
+      try { host.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
+    }
+
+    host.addEventListener('pointerdown', onDown);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerup', onUp);
+    host.addEventListener('pointercancel', onUp);
+    state._unbindPan = function () {
+      host.removeEventListener('pointerdown', onDown);
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerup', onUp);
+      host.removeEventListener('pointercancel', onUp);
+    };
+  }
+
+  function ensureStructure(host) {
+    host.classList.add('hero-canvas-host');
+    host.setAttribute('data-hero-canvas-host', '1');
+    var canvas = host.querySelector('[data-hero-canvas]');
+    if (!canvas) {
+      host.innerHTML = '';
+      canvas = document.createElement('div');
+      canvas.className = 'hero-canvas';
+      canvas.setAttribute('data-hero-canvas', '1');
+      canvas.style.width = DESIGN_W + 'px';
+      canvas.style.height = DESIGN_H + 'px';
+      var media = document.createElement('div');
+      media.className = 'hero-canvas__media hero-renderer';
+      media.setAttribute('data-hero-canvas-media', '1');
+      media.setAttribute('data-hero-renderer', '1');
+      canvas.appendChild(media);
+      host.appendChild(canvas);
+    }
+    var mediaSlot = canvas.querySelector('[data-hero-canvas-media]');
+    return { canvas: canvas, mediaSlot: mediaSlot };
+  }
+
+  /**
+   * Mount HeroCanvas into host (viewport window).
+   * opts: { media, disableHint, enablePan, panOnlyWhenNeeded }
+   */
+  function mount(host, opts) {
+    opts = opts || {};
+    if (!host) return null;
+    var prev = getState(host);
+    if (prev && prev._unbindPan) {
+      try { prev._unbindPan(); } catch (eU) { /* ignore */ }
+    }
+    if (prev && prev._ro) {
+      try { prev._ro.disconnect(); } catch (eRo) { /* ignore */ }
+    }
+
+    var parts = ensureStructure(host);
+    var state = {
+      host: host,
+      canvas: parts.canvas,
+      mediaSlot: parts.mediaSlot,
+      panX: 0,
+      panY: 0,
+      zoom: 1,
+      opts: opts
+    };
+    setState(host, state);
+
+    if (opts.media && typeof HeroRenderer !== 'undefined') {
+      HeroRenderer.paint(parts.mediaSlot, opts.media, opts.paintOpts || {});
+    }
+
+    if (opts.enablePan !== false) bindPan(state);
+
+    fitContain(state);
+    showHintOnce(state);
+
+    if (typeof ResizeObserver !== 'undefined') {
+      state._ro = new ResizeObserver(function () {
+        fitContain(state);
+      });
+      state._ro.observe(host);
+    } else {
+      state._onResize = function () { fitContain(state); };
+      window.addEventListener('resize', state._onResize);
+    }
+
+    return api(state);
+  }
+
+  function api(state) {
+    return {
+      host: state.host,
+      canvas: state.canvas,
+      mediaSlot: state.mediaSlot,
+      DESIGN_W: DESIGN_W,
+      DESIGN_H: DESIGN_H,
+      paintMedia: function (media, paintOpts) {
+        if (typeof HeroRenderer !== 'undefined') {
+          HeroRenderer.paint(state.mediaSlot, media, paintOpts || {});
+        }
+        return state.mediaSlot;
+      },
+      clearMedia: function () {
+        if (typeof HeroRenderer !== 'undefined') HeroRenderer.clear(state.mediaSlot);
+        return state.mediaSlot;
+      },
+      setCamera: function (cam) {
+        cam = cam || {};
+        if (cam.zoom != null) state.zoom = Number(cam.zoom) || state.zoom;
+        if (cam.panX != null) state.panX = Number(cam.panX);
+        if (cam.panY != null) state.panY = Number(cam.panY);
+        applyTransform(state);
+      },
+      fitContain: function () { fitContain(state); },
+      center: function () { fitContain(state); },
+      getCamera: function () {
+        return { panX: state.panX, panY: state.panY, zoom: state.zoom };
+      },
+      needsPan: function () { return needsPan(state); },
+      windowSafeAreaPercent: function () {
+        return HeroRenderer.windowSafeAreaPercent(
+          state.host.clientWidth,
+          state.host.clientHeight,
+          state.panX,
+          state.panY,
+          state.zoom
+        );
+      },
+      destroy: function () {
+        if (state._unbindPan) state._unbindPan();
+        if (state._ro) state._ro.disconnect();
+        if (state._onResize) window.removeEventListener('resize', state._onResize);
+        setState(state.host, null);
+      }
+    };
+  }
+
+  function fromHost(host) {
+    var state = getState(host);
+    return state ? api(state) : null;
+  }
+
+  return {
+    DESIGN_W: DESIGN_W,
+    DESIGN_H: DESIGN_H,
+    mount: mount,
+    fromHost: fromHost
   };
 })();

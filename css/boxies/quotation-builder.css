@@ -281,8 +281,36 @@
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: #0a0a0a;
-  display: flex;
-  flex-direction: column;
+  display: block;
+  touch-action: none;
+}
+
+.qe-canvas__lienzo,
+.qe-stage-unit .hero-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: 0 0;
+  will-change: transform;
+  background: #050505;
+  overflow: hidden;
+}
+
+.qe-canvas__design {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: top left;
+  overflow: hidden;
+  background: #050505;
+}
+
+.hero-canvas-host.is-pan-ready {
+  cursor: grab;
 }
 
 /* V7.2.59 — Viewport presets + Safe Area (Builder chrome only) */
@@ -1018,8 +1046,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 1280px;
-  height: 720px;
+  width: 1920px;
+  height: 1080px;
   transform-origin: top left;
   overflow: hidden;
   background: #050505;

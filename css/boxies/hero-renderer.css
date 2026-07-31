@@ -1,8 +1,91 @@
 /**
- * V7.2.59 — BOXIES HeroRenderer (Model B)
- * Single media paint contract: object-fit: cover only. Never fill/stretch.
+ * V7.2.60 — BOXIES HeroCanvas (fixed design lienzo 1920×1080)
+ * Viewport is a window; pan/drag over the canvas. Never stretch the lienzo.
  */
 
+.hero-canvas-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050505;
+  touch-action: none;
+  cursor: grab;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hero-canvas-host.is-panning {
+  cursor: grabbing;
+}
+
+.hero-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: 0 0;
+  will-change: transform;
+  background: #050505;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hero-canvas__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.hero-canvas__media.hero-renderer,
+.hero-canvas__media .hero-renderer__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.hero-canvas__ix {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hero-canvas__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  z-index: 30;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.62);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.hero-canvas__hint.is-visible {
+  opacity: 1;
+}
+
+/* Keep legacy HeroRenderer media styles */
 .hero-renderer {
   position: absolute;
   inset: 0;
@@ -31,7 +114,6 @@
   background: #050505;
 }
 
-/* Safe Area guide — Builder only */
 .hero-renderer__safe {
   position: absolute;
   z-index: 20;

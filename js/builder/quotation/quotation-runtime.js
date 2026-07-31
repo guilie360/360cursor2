@@ -331,57 +331,56 @@ var QuotationRuntime = (function () {
   }
 
   function ensureSceneMediaHost(parentEl) {
-    if (sceneMediaEl && sceneMediaEl.parentNode) return sceneMediaEl;
-    sceneMediaEl = document.createElement('div');
-    sceneMediaEl.className = 'qr-scene-media';
-    sceneMediaEl.setAttribute('data-qr-scene-media', '1');
-    parentEl.appendChild(sceneMediaEl);
-    return sceneMediaEl;
+    /* V7.2.60 — media lives inside HeroCanvas lienzo. */
+    return null;
   }
 
+  var heroCanvasApi = null;
+
   function paintSceneMedia(parentEl, scene, bundle) {
-    var host = ensureSceneMediaHost(parentEl);
-    host.classList.add('hero-renderer');
-    host.setAttribute('data-hero-renderer', '1');
-    var urlRecibida = scene
-      ? (scene.mediaUrl || scene.publicUrl || null)
-      : null;
-    console.log('[QR V7.2.41] paintSceneMedia URL recibida (scene.mediaUrl || scene.publicUrl):', urlRecibida);
+    if (!parentEl) return null;
+    parentEl.innerHTML = '';
+    sceneMediaEl = null;
+
     var media = resolveSceneMedia(scene, bundle);
     var urlFinal = media && media.url ? media.url : null;
-    console.log('[QR V7.2.41] paintSceneMedia URL final utilizada:', urlFinal);
-    if (!media || !media.url) {
-      var why = !scene
-        ? 'scene es null'
-        : (!media
-          ? 'resolveSceneMedia() devolvió null (ver logs previos)'
-          : 'resolveSceneMedia() devolvió objeto sin .url');
-      console.log('[QR V7.2.41] paintSceneMedia NO pinta imagen — condición:', why);
-      console.log('[QR V7.2.41] paintSceneMedia → void porque URL final es null. Motivo:', why);
-      if (typeof HeroRenderer !== 'undefined' && HeroRenderer.clear) {
-        HeroRenderer.clear(host);
-      } else {
-        host.innerHTML = '<div class="qr-scene-media__void hero-renderer__void" aria-hidden="true"></div>';
+    console.log('[QR V7.2.60] paintSceneMedia URL final:', urlFinal);
+
+    if (typeof HeroCanvas === 'undefined' || !HeroCanvas.mount) {
+      console.warn('[QR V7.2.60] HeroCanvas missing — fallback flat cover host');
+      var fallback = document.createElement('div');
+      fallback.className = 'qr-scene-media hero-renderer';
+      parentEl.appendChild(fallback);
+      sceneMediaEl = fallback;
+      if (media && media.url && typeof HeroRenderer !== 'undefined') {
+        HeroRenderer.paint(fallback, { src: media.url, kind: media.type === 'video' ? 'video' : 'image' });
       }
-      return host;
+      return fallback;
     }
-    console.log('[QR V7.2.41] paintSceneMedia pinta', media.type, 'con src=', media.url);
-    if (typeof HeroRenderer !== 'undefined' && HeroRenderer.paint) {
-      HeroRenderer.paint(host, { src: media.url, kind: media.type === 'video' ? 'video' : 'image' }, {
-        mediaClass: media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
-      });
-    } else if (media.type === 'video') {
-      host.innerHTML =
-        '<video class="hero-renderer__media qr-scene-media__video" src="' + escapeHtml(media.url) +
-          '" autoplay muted loop playsinline></video>';
-    } else {
-      host.innerHTML =
-        '<img class="hero-renderer__media qr-scene-media__img" src="' + escapeHtml(media.url) +
-          '" alt="">';
+
+    if (heroCanvasApi && heroCanvasApi.destroy) {
+      try { heroCanvasApi.destroy(); } catch (eD) { /* ignore */ }
+      heroCanvasApi = null;
     }
-    /* V7.2.42 — DOM audit only; no behavior change */
-    logPaintSceneMediaDomAudit(parentEl, host);
-    return host;
+
+    heroCanvasApi = HeroCanvas.mount(parentEl, {
+      media: media && media.url
+        ? { src: media.url, kind: media.type === 'video' ? 'video' : 'image' }
+        : null,
+      paintOpts: {
+        mediaClass: media && media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
+      },
+      enablePan: !(editorMode && canvasMode),
+      disableHint: !!(editorMode && canvasMode)
+    });
+
+    sceneMediaEl = heroCanvasApi.mediaSlot;
+    if (!media || !media.url) {
+      if (heroCanvasApi.clearMedia) heroCanvasApi.clearMedia();
+    }
+    logPaintSceneMediaDomAudit(parentEl, sceneMediaEl);
+    /* Interaction layer must attach to the lienzo (1920×1080), not the window. */
+    return heroCanvasApi.canvas;
   }
 
   function logPaintSceneMediaDomAudit(parentEl, container) {
@@ -475,6 +474,7 @@ var QuotationRuntime = (function () {
       back.className = 'project-cover-btn qr-stage__back';
       back.textContent = 'Volver';
       back.addEventListener('click', leaveStage);
+      /* Outside the transformed lienzo — fixed to the viewport window. */
       stageEl.appendChild(back);
     }
     var video = coverHostEl.querySelector('video.project-cover-video');
@@ -853,6 +853,10 @@ var QuotationRuntime = (function () {
 
   function leaveStage() {
     if (!coverHostEl || !stageEl) return;
+    if (heroCanvasApi && heroCanvasApi.destroy) {
+      try { heroCanvasApi.destroy(); } catch (eHc) { /* ignore */ }
+      heroCanvasApi = null;
+    }
     stageEl.innerHTML = '';
     sceneMediaEl = null;
     /* V7.2.43 — exclusive COVER mode: stage out of layout, cover visible. */

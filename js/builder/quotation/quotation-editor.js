@@ -5,7 +5,7 @@ var QuotationEditor = (function () {
   /* V7.2.38 — controlled test: isolate Editor from Runtime completely. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
-  /* Legacy design constants — viewport presets are the WYSIWYG host (V7.2.59). */
+  /* Official BOXIES design lienzo (V7.2.60). Viewport presets are windows only. */
   var CANVAS_DESIGN_W = 1920;
   var CANVAS_DESIGN_H = 1080;
 
@@ -17,11 +17,19 @@ var QuotationEditor = (function () {
     return { id: 'desktop', label: 'Desktop', width: 1280, height: 720 };
   }
 
+  /** Simulated device window size — not the design lienzo. */
   function activeViewportSize() {
     var vp = activeViewport();
     return {
       width: Math.max(1, Number(vp.width) || 1280),
       height: Math.max(1, Number(vp.height) || 720)
+    };
+  }
+
+  function designLienzoSize() {
+    return {
+      width: CANVAS_DESIGN_W,
+      height: CANVAS_DESIGN_H
     };
   }
 
@@ -1617,19 +1625,22 @@ var QuotationEditor = (function () {
     var designBody = useRuntime
       ? (heroRuntimeStageHtml() + '<div class="qe-scene-drop-hit" data-qe-drop-scene></div>')
       : stageBodyHtml(scene);
+    var win = activeViewportSize();
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         '<div class="qe-stage-shell" data-qe-stage-shell>' +
           '<div class="qe-stage-unit" data-qe-stage-unit>' +
             scenesBarHtml() +
             viewportChromeHtml() +
-            '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene>' +
-              '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
-                '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
-                  '<div class="qe-canvas__design" data-qe-canvas-design>' +
-                    designBody +
-                    editLayerHtml() +
-                  '</div>' +
+            '<div class="qe-canvas__stage hero-canvas-host" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
+              ' data-hero-canvas-host="1"' +
+              ' style="width:' + win.width + 'px;height:' + win.height + 'px;">' +
+              '<div class="hero-canvas qe-canvas__lienzo" data-qe-canvas-lienzo data-hero-canvas="1"' +
+                ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;">' +
+                '<div class="qe-canvas__design" data-qe-canvas-design' +
+                  ' style="width:' + CANVAS_DESIGN_W + 'px;height:' + CANVAS_DESIGN_H + 'px;position:absolute;inset:0;">' +
+                  designBody +
+                  editLayerHtml() +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -1796,48 +1807,156 @@ var QuotationEditor = (function () {
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
 
     unit.style.transform = 'scale(' + scale + ')';
+    bindBuilderHeroCamera();
     refreshSafeAreaGuide();
   }
 
-  /** Design pixels == active viewport; outer Stage scale is the only zoom. */
+  /** Design pixels == official 1920×1080 lienzo; viewport window is separate. */
   function syncDesignIdentity() {
     if (!rootEl) return;
-    var size = activeViewportSize();
-    var viewport = rootEl.querySelector('[data-qe-canvas-viewport]');
-    var screen = rootEl.querySelector('[data-qe-canvas-screen]');
     var design = rootEl.querySelector('[data-qe-canvas-design]');
-    if (viewport) viewport.style.padding = '0';
-    if (screen) {
-      screen.style.width = size.width + 'px';
-      screen.style.height = size.height + 'px';
+    var lienzo = rootEl.querySelector('[data-qe-canvas-lienzo]');
+    var win = rootEl.querySelector('[data-qe-viewport-window]');
+    var size = designLienzoSize();
+    var vp = activeViewportSize();
+    if (win) {
+      win.style.width = vp.width + 'px';
+      win.style.height = vp.height + 'px';
+    }
+    if (lienzo) {
+      lienzo.style.width = size.width + 'px';
+      lienzo.style.height = size.height + 'px';
     }
     if (design) {
       design.style.width = size.width + 'px';
       design.style.height = size.height + 'px';
       design.style.transform = 'none';
       design.style.transformOrigin = 'top left';
+      design.style.position = 'absolute';
+      design.style.inset = '0';
     }
+  }
+
+  var builderCamera = { panX: 0, panY: 0, zoom: 1, bound: false };
+
+  function applyBuilderCamera() {
+    if (!rootEl) return;
+    var host = rootEl.querySelector('[data-qe-viewport-window]');
+    var lienzo = rootEl.querySelector('[data-qe-canvas-lienzo]');
+    if (!host || !lienzo) return;
+    var hostW = host.clientWidth || activeViewportSize().width;
+    var hostH = host.clientHeight || activeViewportSize().height;
+    var z = builderCamera.zoom;
+    var maxPanX = 0;
+    var maxPanY = 0;
+    var minPanX = hostW - CANVAS_DESIGN_W * z;
+    var minPanY = hostH - CANVAS_DESIGN_H * z;
+    if (minPanX > maxPanX) builderCamera.panX = (hostW - CANVAS_DESIGN_W * z) / 2;
+    else builderCamera.panX = Math.min(maxPanX, Math.max(minPanX, builderCamera.panX));
+    if (minPanY > maxPanY) builderCamera.panY = (hostH - CANVAS_DESIGN_H * z) / 2;
+    else builderCamera.panY = Math.min(maxPanY, Math.max(minPanY, builderCamera.panY));
+    lienzo.style.transform =
+      'translate(' + builderCamera.panX + 'px,' + builderCamera.panY + 'px) scale(' + z + ')';
+    lienzo.style.transformOrigin = '0 0';
+  }
+
+  function fitBuilderCamera() {
+    if (!rootEl) return;
+    var host = rootEl.querySelector('[data-qe-viewport-window]');
+    if (!host) return;
+    var hostW = host.clientWidth || activeViewportSize().width;
+    var hostH = host.clientHeight || activeViewportSize().height;
+    builderCamera.zoom = Math.min(1, hostW / CANVAS_DESIGN_W, hostH / CANVAS_DESIGN_H);
+    builderCamera.panX = (hostW - CANVAS_DESIGN_W * builderCamera.zoom) / 2;
+    builderCamera.panY = (hostH - CANVAS_DESIGN_H * builderCamera.zoom) / 2;
+    applyBuilderCamera();
+  }
+
+  function bindBuilderHeroCamera() {
+    if (!rootEl) return;
+    var host = rootEl.querySelector('[data-qe-viewport-window]');
+    if (!host) return;
+    fitBuilderCamera();
+    if (host.dataset.qeCamBound === '1') {
+      refreshSafeAreaGuide();
+      return;
+    }
+    host.dataset.qeCamBound = '1';
+    host.classList.add('hero-canvas-host');
+
+    var dragging = false;
+    var lastX = 0;
+    var lastY = 0;
+    var spaceDown = false;
+
+    function onKeyDown(ev) {
+      if (ev.code === 'Space' && !ev.repeat) {
+        var tag = (ev.target && ev.target.tagName) || '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        spaceDown = true;
+        host.classList.add('is-pan-ready');
+      }
+    }
+    function onKeyUp(ev) {
+      if (ev.code === 'Space') {
+        spaceDown = false;
+        host.classList.remove('is-pan-ready');
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+
+    host.addEventListener('pointerdown', function (ev) {
+      var allow = spaceDown || ev.button === 1;
+      if (!allow) return;
+      if (ev.button != null && ev.button !== 0 && ev.button !== 1) return;
+      dragging = true;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      host.classList.add('is-panning');
+      try { host.setPointerCapture(ev.pointerId); } catch (eC) { /* ignore */ }
+      ev.preventDefault();
+    });
+    host.addEventListener('pointermove', function (ev) {
+      if (!dragging) return;
+      builderCamera.panX += ev.clientX - lastX;
+      builderCamera.panY += ev.clientY - lastY;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      applyBuilderCamera();
+      refreshSafeAreaGuide();
+    });
+    function endPan(ev) {
+      if (!dragging) return;
+      dragging = false;
+      host.classList.remove('is-panning');
+      try { host.releasePointerCapture(ev.pointerId); } catch (eR) { /* ignore */ }
+    }
+    host.addEventListener('pointerup', endPan);
+    host.addEventListener('pointercancel', endPan);
+    refreshSafeAreaGuide();
   }
 
   function refreshSafeAreaGuide() {
     if (!rootEl || typeof HeroRenderer === 'undefined') return;
     var design = rootEl.querySelector('[data-qe-canvas-design]');
-    if (!design) return;
+    var lienzo = rootEl.querySelector('[data-qe-canvas-lienzo]') || design;
+    if (!lienzo) return;
     if (!state.safeAreaVisible) {
-      HeroRenderer.setSafeAreaGuide(design, null, { visible: false });
+      HeroRenderer.setSafeAreaGuide(lienzo, null, { visible: false });
       return;
     }
-    var size = activeViewportSize();
-    var mediaHost = design.querySelector('[data-hero-renderer], .qe-scene-media, .qe-canvas__runtime-host');
-    var mediaEl = HeroRenderer.mediaElement(mediaHost) ||
-      (mediaHost && mediaHost.querySelector('img, video'));
-    var nat = HeroRenderer.readNaturalSize(mediaEl, 16, 9);
-    var box = HeroRenderer.safeAreaViewportPercent(
-      nat.width, nat.height, size.width, size.height
+    /* Safe Area = visible device window projected onto the 1920×1080 lienzo. */
+    var box = HeroRenderer.windowSafeAreaPercent(
+      activeViewportSize().width,
+      activeViewportSize().height,
+      builderCamera.panX,
+      builderCamera.panY,
+      builderCamera.zoom
     );
-    HeroRenderer.setSafeAreaGuide(design, box, {
+    HeroRenderer.setSafeAreaGuide(lienzo, box, {
       visible: true,
-      label: 'Área garantizada'
+      label: 'Área visible'
     });
   }
 
@@ -1851,9 +1970,14 @@ var QuotationEditor = (function () {
 
   function bindCanvasFit() {
     fitStageWorkspace();
+    bindBuilderHeroCamera();
     requestAnimationFrame(function () {
       fitStageWorkspace();
-      requestAnimationFrame(fitStageWorkspace);
+      bindBuilderHeroCamera();
+      requestAnimationFrame(function () {
+        fitStageWorkspace();
+        bindBuilderHeroCamera();
+      });
     });
     var col = rootEl && rootEl.querySelector('.qe-col--canvas');
     if (typeof ResizeObserver !== 'undefined') {
@@ -1862,6 +1986,7 @@ var QuotationEditor = (function () {
       canvasRo = null;
       stageRo = new ResizeObserver(function () {
         fitStageWorkspace();
+        bindBuilderHeroCamera();
       });
       if (col) stageRo.observe(col);
       var workspace = rootEl && (rootEl.closest('.quotation-workspace') ||
@@ -3497,6 +3622,7 @@ var QuotationEditor = (function () {
           var next = btn.getAttribute('data-qe-viewport') || 'desktop';
           if (state.viewportPreset === next) return;
           state.viewportPreset = next;
+          builderCamera = { panX: 0, panY: 0, zoom: 1, bound: false };
           rerender();
         });
       });
