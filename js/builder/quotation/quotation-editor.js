@@ -1866,9 +1866,10 @@ var QuotationEditor = (function () {
     if (!host) return;
     var hostW = host.clientWidth || activeViewportSize().width;
     var hostH = host.clientHeight || activeViewportSize().height;
-    builderCamera.zoom = Math.min(1, hostW / CANVAS_DESIGN_W, hostH / CANVAS_DESIGN_H);
-    builderCamera.panX = (hostW - CANVAS_DESIGN_W * builderCamera.zoom) / 2;
-    builderCamera.panY = (hostH - CANVAS_DESIGN_H * builderCamera.zoom) / 2;
+    /* V7.2.61 — fixed zoom=1 (maps). Never shrink lienzo to fit window. */
+    builderCamera.zoom = 1;
+    builderCamera.panX = (hostW - CANVAS_DESIGN_W) / 2;
+    builderCamera.panY = (hostH - CANVAS_DESIGN_H) / 2;
     applyBuilderCamera();
   }
 

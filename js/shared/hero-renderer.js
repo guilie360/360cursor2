@@ -1,9 +1,8 @@
 /**
- * HeroRenderer + HeroCanvas — V7.2.60 BOXIES official Hero lienzo.
+ * HeroRenderer + HeroCanvas — V7.2.61 BOXIES official Hero lienzo (maps).
  *
- * Design canvas is ALWAYS 1920×1080 (16:9). Media covers that canvas once.
- * Device/viewport is a window with pan/drag. Never stretch the lienzo.
- * % overlays stay relative to the 1920×1080 canvas (no coord migration).
+ * Design canvas is ALWAYS 1920×1080 at zoom=1. Never contain/shrink to fit.
+ * Device viewport is a window; pan/drag to explore. % overlays stay on the lienzo.
  */
 var HeroRenderer = (function () {
   var DESIGN_W = 1920;
@@ -206,14 +205,23 @@ var HeroCanvas = (function () {
       'translate(' + state.panX + 'px,' + state.panY + 'px) scale(' + state.zoom + ')';
   }
 
-  function fitContain(state) {
+  /**
+   * V7.2.61 — Fixed zoom (maps philosophy).
+   * Never shrink the lienzo to fit the host (no contain).
+   * zoom stays 1: 1 design px = 1 CSS px. Viewport is a window; user pans.
+   */
+  function centerAtFixedZoom(state) {
     var hostW = state.host.clientWidth || 1;
     var hostH = state.host.clientHeight || 1;
-    /* Never upscale past 1 — 1 design px = 1 CSS px when host allows. */
-    state.zoom = Math.min(1, hostW / DESIGN_W, hostH / DESIGN_H);
-    state.panX = (hostW - DESIGN_W * state.zoom) / 2;
-    state.panY = (hostH - DESIGN_H * state.zoom) / 2;
+    state.zoom = 1;
+    state.panX = (hostW - DESIGN_W) / 2;
+    state.panY = (hostH - DESIGN_H) / 2;
     applyTransform(state);
+  }
+
+  /* Deprecated alias — keep callers compiling; behaves as fixed-zoom center. */
+  function fitContain(state) {
+    centerAtFixedZoom(state);
   }
 
   function needsPan(state) {
@@ -222,12 +230,17 @@ var HeroCanvas = (function () {
     return DESIGN_W * state.zoom > hostW + 0.5 || DESIGN_H * state.zoom > hostH + 0.5;
   }
 
+  function dismissHint(state) {
+    var hint = state.host && state.host.querySelector('[data-hero-canvas-hint]');
+    if (hint) hint.classList.remove('is-visible');
+    try { sessionStorage.setItem(HINT_KEY, '1'); } catch (eSs) { /* ignore */ }
+  }
+
   function showHintOnce(state) {
     if (state.opts.disableHint) return;
     if (!needsPan(state)) return;
     try {
       if (sessionStorage.getItem(HINT_KEY) === '1') return;
-      sessionStorage.setItem(HINT_KEY, '1');
     } catch (eSs) { /* ignore */ }
     var hint = state.host.querySelector('[data-hero-canvas-hint]');
     if (!hint) {
@@ -240,9 +253,9 @@ var HeroCanvas = (function () {
     requestAnimationFrame(function () {
       hint.classList.add('is-visible');
     });
-    setTimeout(function () {
-      hint.classList.remove('is-visible');
-    }, 2000);
+    state._hintTimer = setTimeout(function () {
+      dismissHint(state);
+    }, 2500);
   }
 
   function bindPan(state) {
@@ -251,6 +264,7 @@ var HeroCanvas = (function () {
     var lastX = 0;
     var lastY = 0;
     var pointerId = null;
+    var moved = false;
 
     function onDown(ev) {
       if (ev.button != null && ev.button !== 0) return;
@@ -261,6 +275,7 @@ var HeroCanvas = (function () {
         }
       }
       dragging = true;
+      moved = false;
       pointerId = ev.pointerId;
       lastX = ev.clientX;
       lastY = ev.clientY;
@@ -274,6 +289,7 @@ var HeroCanvas = (function () {
       if (pointerId != null && ev.pointerId !== pointerId) return;
       var dx = ev.clientX - lastX;
       var dy = ev.clientY - lastY;
+      if (dx || dy) moved = true;
       lastX = ev.clientX;
       lastY = ev.clientY;
       state.panX += dx;
@@ -289,6 +305,10 @@ var HeroCanvas = (function () {
       pointerId = null;
       host.classList.remove('is-panning');
       try { host.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
+      if (moved) {
+        if (state._hintTimer) clearTimeout(state._hintTimer);
+        dismissHint(state);
+      }
     }
 
     host.addEventListener('pointerdown', onDown);
@@ -358,16 +378,23 @@ var HeroCanvas = (function () {
 
     if (opts.enablePan !== false) bindPan(state);
 
-    fitContain(state);
+    centerAtFixedZoom(state);
     showHintOnce(state);
 
     if (typeof ResizeObserver !== 'undefined') {
       state._ro = new ResizeObserver(function () {
-        fitContain(state);
+        /* Keep zoom=1; only re-center if we haven't panned yet, else clamp. */
+        var z = state.zoom;
+        state.zoom = 1;
+        if (Math.abs(z - 1) > 0.001) {
+          centerAtFixedZoom(state);
+        } else {
+          applyTransform(state);
+        }
       });
       state._ro.observe(host);
     } else {
-      state._onResize = function () { fitContain(state); };
+      state._onResize = function () { applyTransform(state); };
       window.addEventListener('resize', state._onResize);
     }
 
@@ -393,13 +420,14 @@ var HeroCanvas = (function () {
       },
       setCamera: function (cam) {
         cam = cam || {};
-        if (cam.zoom != null) state.zoom = Number(cam.zoom) || state.zoom;
+        /* Zoom locked at 1 for maps philosophy — ignore external zoom changes. */
+        state.zoom = 1;
         if (cam.panX != null) state.panX = Number(cam.panX);
         if (cam.panY != null) state.panY = Number(cam.panY);
         applyTransform(state);
       },
-      fitContain: function () { fitContain(state); },
-      center: function () { fitContain(state); },
+      fitContain: function () { centerAtFixedZoom(state); },
+      center: function () { centerAtFixedZoom(state); },
       getCamera: function () {
         return { panX: state.panX, panY: state.panY, zoom: state.zoom };
       },
@@ -414,6 +442,7 @@ var HeroCanvas = (function () {
         );
       },
       destroy: function () {
+        if (state._hintTimer) clearTimeout(state._hintTimer);
         if (state._unbindPan) state._unbindPan();
         if (state._ro) state._ro.disconnect();
         if (state._onResize) window.removeEventListener('resize', state._onResize);
