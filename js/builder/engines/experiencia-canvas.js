@@ -793,20 +793,128 @@ var ExperienciaCanvas = (function () {
   }
 
   function buttonsInspectorHtml(state, n) {
-    /* V7.2.53 — inspector emptied (visual reset). Controls return in later versions. */
+    var buttons = ExperienciaEngine.listSceneButtons
+      ? ExperienciaEngine.listSceneButtons(state, n)
+      : [];
+    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
+    var selectedIds = Array.isArray(canvasState.selectedButtonIds)
+      ? canvasState.selectedButtonIds.slice()
+      : [];
+    if (!selectedIds.length && canvasState.selectedButtonId) {
+      selectedIds = [canvasState.selectedButtonId];
+    }
+    var selectedBtnId = canvasState.selectedButtonId || selectedIds[0] || null;
+    var selected = null;
+    if (selectedBtnId) {
+      for (var i = 0; i < buttons.length; i++) {
+        if (String(buttons[i].id) === String(selectedBtnId) ||
+            String(buttons[i].portId) === String(selectedBtnId)) {
+          selected = buttons[i];
+          break;
+        }
+      }
+    }
+
+    if (!selected) {
+      return '' +
+        '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
+          '<p class="builder-menu-hint">Selecciona un elemento</p>' +
+        '</div>';
+    }
+
+    var selType = String(selected.type || 'BUTTON').toUpperCase();
+    var kindTitle = selType === 'TEXT' ? 'Texto'
+      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'Forma'
+        : (selType === 'IMAGE' ? 'Imagen' : 'Botón'));
+
+    var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
+      return node && node.id !== n.id && node.kind !== 'action';
+    });
+    var destOpts = '<option value="">Sin destino</option>' +
+      nodes.map(function (node) {
+        return '<option value="' + esc(node.id) + '"' +
+          (String(selected.targetNodeId) === String(node.id) ? ' selected' : '') +
+          '>' + esc(node.label || node.id) + '</option>';
+      }).join('');
+
+    var html = '' +
+      '<div class="builder-exp-btn-panel">' +
+      '<div class="builder-exp-inspector__kind">' + kindTitle + '</div>';
+
+    if (selType === 'TEXT') {
+      html += textInspectorFieldsHtml(selected);
+    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
+      html += shapeInspectorFieldsHtml(selected);
+    } else {
+      html += buttonInspectorFieldsHtml(selected, destOpts);
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function hotspotInspectorFieldsHtml(selected, destOpts) {
+    var op = selected.opacity != null ? Number(selected.opacity) : 0.22;
+    var col = selected.color || 'rgba(111,191,134,0.28)';
     return '' +
-      '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
-        '<div class="builder-exp-inspector__kind">PROPIEDADES</div>' +
-        '<p class="builder-menu-hint">Selecciona un elemento</p>' +
+      '<div class="builder-exp-block">' +
+        '<div class="builder-exp-block__title">Hotspot</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Nombre</label>' +
+          '<input type="text" data-exp-hs-label maxlength="60" value="' +
+            esc(selected.label != null ? selected.label : '') + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Acción / destino</label>' +
+          '<select data-exp-hs-target class="builder-exp-btn-select">' + destOpts + '</select>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Color</label>' +
+          '<input type="color" data-exp-hs-color value="' +
+            esc(hexOr(selected.fill || selected.color, '#6fbf86')) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Opacidad</label>' +
+          '<input type="range" data-exp-hs-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(op)) + '">' +
+        '</div>' +
       '</div>';
   }
 
   function hotspotsInspectorHtml(state, n) {
-    /* V7.2.53 — inspector emptied (visual reset). */
+    var list = (ExperienciaEngine.listSceneHotspotMasks
+      ? ExperienciaEngine.listSceneHotspotMasks(state, n)
+      : []) || [];
+    var canvasState = (state.experiencia && state.experiencia.canvas) || {};
+    var selectedId = canvasState.selectedHotspotId || null;
+    var selected = null;
+    if (selectedId) {
+      for (var i = 0; i < list.length; i++) {
+        if (String(list[i].id) === String(selectedId) ||
+            String(list[i].portId) === String(selectedId)) {
+          selected = list[i];
+          break;
+        }
+      }
+    }
+    if (!selected) {
+      return '' +
+        '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
+          '<p class="builder-menu-hint">Selecciona un hotspot</p>' +
+        '</div>';
+    }
+    var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
+      return node && node.id !== n.id && node.kind !== 'action';
+    });
+    var destOpts = '<option value="">Sin destino</option>' +
+      nodes.map(function (node) {
+        return '<option value="' + esc(node.id) + '"' +
+          (String(selected.targetNodeId) === String(node.id) ? ' selected' : '') +
+          '>' + esc(node.label || node.id) + '</option>';
+      }).join('');
     return '' +
-      '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
-        '<div class="builder-exp-inspector__kind">PROPIEDADES</div>' +
-        '<p class="builder-menu-hint">Selecciona un elemento</p>' +
+      '<div class="builder-exp-btn-panel">' +
+        '<div class="builder-exp-inspector__kind">Hotspot</div>' +
+        hotspotInspectorFieldsHtml(selected, destOpts) +
       '</div>';
   }
 
@@ -2187,11 +2295,35 @@ var ExperienciaCanvas = (function () {
     function paintInspector() {
       if (overlayMode) notifyOverlaySelection();
       if (!inspectorBody) return;
-      /* Quotation overlay: inspector stays blank until real props land. */
+
       if (overlayMode) {
-        inspectorBody.innerHTML = '';
+        var ovScene = ExperienciaEngine.getNode(state, canvas().selectedId) ||
+          (api.overlayNodeId ? ExperienciaEngine.getNode(state, api.overlayNodeId) : null);
+        if (!ovScene) {
+          inspectorBody.innerHTML =
+            '<div class="builder-exp-btn-panel builder-exp-btn-panel--empty">' +
+              '<p class="builder-menu-hint">Selecciona un elemento</p>' +
+            '</div>';
+          return;
+        }
+        var editModeOv = canvas().editMode || 'buttons';
+        if (editModeOv === 'hotspots' || canvas().selectedHotspotId) {
+          inspectorBody.innerHTML = hotspotsInspectorHtml(state, ovScene);
+          if (typeof bindHotspotsInspectorActions === 'function') {
+            try { bindHotspotsInspectorActions(); } catch (eHs) { /* ignore */ }
+          }
+        } else {
+          inspectorBody.innerHTML = buttonsInspectorHtml(state, ovScene);
+          if (typeof bindButtonsInspectorActions === 'function') {
+            try { bindButtonsInspectorActions(); } catch (eBtn) { /* ignore */ }
+          }
+        }
+        if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
+          WorkspaceSelect.enhance(inspectorBody);
+        }
         return;
       }
+
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
 

@@ -19,8 +19,11 @@ var QuotationBuilderView = (function () {
   var processing = false;
   var builderExperienceType = 'quotation';
   var leftCollapsed = false;
+  var rightCollapsed = false;
   var RECURSOS_W = '200px';
+  var PROPS_W = '220px';
   var FLOAT_BTN_ID = 'quotationLeftFloatBtn';
+  var RIGHT_FLOAT_BTN_ID = 'quotationRightFloatBtn';
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -45,21 +48,11 @@ var QuotationBuilderView = (function () {
     return null;
   }
 
-  function sidebarOpts() {
-    return {
-      previewMode: !!(
-        typeof QuotationEditor !== 'undefined' &&
-        QuotationEditor.isCanvasPreviewMode &&
-        QuotationEditor.isCanvasPreviewMode()
-      )
-    };
-  }
-
   function iconRailHtml(stepId) {
     if (typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) return '';
     return (
       '<nav class="quotation-icon-rail" id="quotationStepsBar" aria-label="Pasos del Builder">' +
-        QuotationSidebar.renderHtml(stepId, sectionChecks, sidebarOpts()) +
+        QuotationSidebar.renderHtml(stepId, sectionChecks) +
       '</nav>'
     );
   }
@@ -73,6 +66,19 @@ var QuotationBuilderView = (function () {
         ' aria-label="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '"' +
         ' data-tooltip="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '">' +
         iconHtml('chevron-left') +
+      '</button>'
+    );
+  }
+
+  function rightFloatHtml() {
+    return (
+      '<button type="button" class="quotation-panel-float quotation-panel-float--right"' +
+        ' id="' + RIGHT_FLOAT_BTN_ID + '"' +
+        ' data-collapsed="' + (rightCollapsed ? '1' : '0') + '"' +
+        ' aria-expanded="' + (rightCollapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + (rightCollapsed ? 'Expandir capas' : 'Colapsar capas') + '"' +
+        ' data-tooltip="' + (rightCollapsed ? 'Expandir capas' : 'Colapsar capas') + '">' +
+        iconHtml('chevron-right') +
       '</button>'
     );
   }
@@ -94,7 +100,8 @@ var QuotationBuilderView = (function () {
         (builderExperienceType === 'template' ? ' data-template-builder' : '') + '>' +
         actions +
         '<div class="builder-workspace quotation-workspace' +
-          (leftCollapsed ? ' is-left-collapsed' : '') + '">' +
+          (leftCollapsed ? ' is-left-collapsed' : '') +
+          (rightCollapsed ? ' is-right-collapsed' : '') + '">' +
           '<div class="quotation-left-block" id="quotationLeftBlock">' +
             iconRailHtml(stepId) +
             '<aside class="quotation-recursos' + (leftCollapsed ? ' is-collapsed' : '') + '"' +
@@ -106,6 +113,11 @@ var QuotationBuilderView = (function () {
           '<div class="quotation-main">' +
             '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
           '</div>' +
+          '<aside class="quotation-props' + (rightCollapsed ? ' is-collapsed' : '') + '"' +
+            ' id="quotationPropsPanel" aria-label="Capas y propiedades" hidden>' +
+            rightFloatHtml() +
+            '<div class="quotation-props-body" id="quotationRightBody"></div>' +
+          '</aside>' +
         '</div>' +
       '</div>';
   }
@@ -119,6 +131,17 @@ var QuotationBuilderView = (function () {
     btn.setAttribute('aria-label', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
     btn.setAttribute('data-tooltip', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
     btn.innerHTML = iconHtml('chevron-left');
+  }
+
+  function syncRightFloatButton() {
+    var btn = (rootEl && rootEl.querySelector('#' + RIGHT_FLOAT_BTN_ID)) ||
+      document.getElementById(RIGHT_FLOAT_BTN_ID);
+    if (!btn) return;
+    btn.setAttribute('data-collapsed', rightCollapsed ? '1' : '0');
+    btn.setAttribute('aria-expanded', rightCollapsed ? 'false' : 'true');
+    btn.setAttribute('aria-label', rightCollapsed ? 'Expandir capas' : 'Colapsar capas');
+    btn.setAttribute('data-tooltip', rightCollapsed ? 'Expandir capas' : 'Colapsar capas');
+    btn.innerHTML = iconHtml('chevron-right');
   }
 
   function applyLeftCollapsed(collapsed) {
@@ -140,6 +163,40 @@ var QuotationBuilderView = (function () {
     } catch (eR) {}
   }
 
+  function applyRightCollapsed(collapsed) {
+    rightCollapsed = !!collapsed;
+    if (!rootEl) return;
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    var props = rootEl.querySelector('#quotationPropsPanel');
+    if (workspace) workspace.classList.toggle('is-right-collapsed', rightCollapsed);
+    if (props) props.classList.toggle('is-collapsed', rightCollapsed);
+    try {
+      document.documentElement.style.setProperty(
+        '--quotation-props-w',
+        rightCollapsed ? '0px' : PROPS_W
+      );
+    } catch (eW) {}
+    syncRightFloatButton();
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) {}
+  }
+
+  function setPropsPanelVisible(on) {
+    if (!rootEl) return;
+    var props = rootEl.querySelector('#quotationPropsPanel');
+    if (!props) return;
+    if (on) {
+      props.hidden = false;
+      applyRightCollapsed(rightCollapsed);
+    } else {
+      props.hidden = true;
+      try {
+        document.documentElement.style.setProperty('--quotation-props-w', '0px');
+      } catch (eW) {}
+    }
+  }
+
   function ensureFloatButton() {
     if (!rootEl) return null;
     var btn = rootEl.querySelector('#' + FLOAT_BTN_ID);
@@ -156,11 +213,31 @@ var QuotationBuilderView = (function () {
     return btn;
   }
 
+  function ensureRightFloatButton() {
+    if (!rootEl) return null;
+    var btn = rootEl.querySelector('#' + RIGHT_FLOAT_BTN_ID);
+    if (!btn) return null;
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyRightCollapsed(!rightCollapsed);
+      });
+    }
+    syncRightFloatButton();
+    return btn;
+  }
+
   function destroyFloatButton() {
     /* Remove orphaned viewport-fixed floats from prior versions. */
     var orphan = document.getElementById(FLOAT_BTN_ID);
     if (orphan && (!rootEl || !rootEl.contains(orphan))) {
       try { orphan.parentNode.removeChild(orphan); } catch (e) {}
+    }
+    var orphanR = document.getElementById(RIGHT_FLOAT_BTN_ID);
+    if (orphanR && (!rootEl || !rootEl.contains(orphanR))) {
+      try { orphanR.parentNode.removeChild(orphanR); } catch (e2) {}
     }
   }
 
@@ -169,35 +246,18 @@ var QuotationBuilderView = (function () {
     var bar = rootEl.querySelector('#quotationStepsBar');
     if (!bar) return;
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
-      QuotationSidebar.setActive(bar, currentStep, sectionChecks, sidebarOpts());
-      QuotationSidebar.bind(bar, goToStep, toggleCanvasPreview);
+      QuotationSidebar.setActive(bar, currentStep, sectionChecks);
+      QuotationSidebar.bind(bar, goToStep);
     }
-  }
-
-  /**
-   * Eye icon: same central canvas ↔ Vista Previa (no separate Preview panel).
-   */
-  function toggleCanvasPreview() {
-    if (typeof QuotationEditor === 'undefined') return;
-    var on = QuotationEditor.isCanvasPreviewMode
-      ? QuotationEditor.isCanvasPreviewMode()
-      : false;
-    if (currentStep !== 'editor') {
-      goToStep('editor');
-      if (QuotationEditor.setCanvasPreviewMode) {
-        QuotationEditor.setCanvasPreviewMode(true);
-      }
-      refreshSidebar();
-      return;
-    }
-    if (QuotationEditor.setCanvasPreviewMode) {
-      QuotationEditor.setCanvasPreviewMode(!on);
-    }
-    refreshSidebar();
   }
 
   function clearLeftBody() {
     var body = rootEl && rootEl.querySelector('#quotationLeftBody');
+    if (body) body.innerHTML = '';
+  }
+
+  function clearRightBody() {
+    var body = rootEl && rootEl.querySelector('#quotationRightBody');
     if (body) body.innerHTML = '';
   }
 
@@ -358,30 +418,19 @@ var QuotationBuilderView = (function () {
     var workspace = rootEl.querySelector('.quotation-workspace') ||
       rootEl.querySelector('.builder-workspace');
     var mod = resolvePanel(currentStep);
-    /* Leaving editor clears canvas preview mode; eye toggle re-enables it. */
-    if (
-      currentStep !== 'editor' &&
-      typeof QuotationEditor !== 'undefined' &&
-      QuotationEditor.setCanvasPreviewMode
-    ) {
-      try { QuotationEditor.setCanvasPreviewMode(false, { silent: true }); } catch (ePrev) {}
-    }
     /* Detach editor UI only — never reset QuotationEditor document SSOT. */
     if (typeof QuotationEditor !== 'undefined' && QuotationEditor.detachUi) {
       try { QuotationEditor.detachUi(); } catch (eDetach) {}
     }
     clearLeftBody();
+    clearRightBody();
+    setPropsPanelVisible(currentStep === 'editor');
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
       workspace.classList.toggle('is-hero', currentStep === 'hero');
       workspace.classList.toggle('is-left-collapsed', leftCollapsed);
-      workspace.classList.toggle(
-        'is-canvas-preview',
-        currentStep === 'editor' &&
-          typeof QuotationEditor !== 'undefined' &&
-          QuotationEditor.isCanvasPreviewMode &&
-          QuotationEditor.isCanvasPreviewMode()
-      );
+      workspace.classList.toggle('is-right-collapsed', rightCollapsed);
+      workspace.classList.remove('is-canvas-preview');
     }
     if (panel) {
       panel.classList.toggle('quotation-panel--editor', currentStep === 'editor');
@@ -399,22 +448,6 @@ var QuotationBuilderView = (function () {
   }
 
   function goToStep(stepId) {
-    /* Step navigation exits canvas preview (edit tools return). */
-    if (
-      typeof QuotationEditor !== 'undefined' &&
-      QuotationEditor.isCanvasPreviewMode &&
-      QuotationEditor.isCanvasPreviewMode() &&
-      QuotationEditor.setCanvasPreviewMode
-    ) {
-      var next = typeof QuotationRouter !== 'undefined'
-        ? QuotationRouter.normalize(stepId)
-        : stepId;
-      if (next === 'editor') {
-        QuotationEditor.setCanvasPreviewMode(false);
-        refreshSidebar();
-        return;
-      }
-    }
     renderStep(stepId);
   }
 
@@ -429,13 +462,19 @@ var QuotationBuilderView = (function () {
         '--quotation-recursos-w',
         leftCollapsed ? '0px' : RECURSOS_W
       );
+      document.documentElement.style.setProperty(
+        '--quotation-props-w',
+        rightCollapsed ? '0px' : PROPS_W
+      );
     } catch (eW) {}
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
     destroyFloatButton();
     ensureFloatButton();
+    ensureRightFloatButton();
     applyLeftCollapsed(leftCollapsed);
+    applyRightCollapsed(rightCollapsed);
   }
 
   function deactivateSharedChrome() {
@@ -444,6 +483,7 @@ var QuotationBuilderView = (function () {
     try {
       document.documentElement.style.removeProperty('--builder-rail-width');
       document.documentElement.style.removeProperty('--quotation-recursos-w');
+      document.documentElement.style.removeProperty('--quotation-props-w');
       document.documentElement.style.removeProperty('--quotation-left-w');
     } catch (eW) {}
     destroyFloatButton();
@@ -542,7 +582,7 @@ var QuotationBuilderView = (function () {
 
     host.innerHTML = shellHtml(currentStep);
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {
-      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep, toggleCanvasPreview);
+      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep);
     }
     activateSharedChrome();
     mountDockActions(host);
@@ -594,8 +634,10 @@ var QuotationBuilderView = (function () {
     render: render,
     onLeave: onLeave,
     goToStep: goToStep,
-    toggleCanvasPreview: toggleCanvasPreview,
     refreshSidebar: refreshSidebar,
+    applyRightCollapsed: applyRightCollapsed,
+    setPropsPanelVisible: setPropsPanelVisible,
+    expandPropsPanel: function () { applyRightCollapsed(false); },
     save: handleSave,
     getProjectLabel: function () {
       return projectCtx.name || projectCtx.slug || '';

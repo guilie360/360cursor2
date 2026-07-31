@@ -303,6 +303,260 @@
   overflow: hidden;
 }
 
+/* V7.2.66 — Capas + Propiedades right rail */
+.quotation-props {
+  position: relative;
+  flex: 0 0 var(--quotation-props-w, 220px);
+  width: var(--quotation-props-w, 220px);
+  max-width: var(--quotation-props-w, 220px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: visible;
+  background: rgba(8, 8, 8, 0.42);
+  border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  transition:
+    flex-basis var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    max-width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.quotation-props[hidden] {
+  display: none !important;
+}
+
+.quotation-props.is-collapsed,
+.quotation-workspace.is-right-collapsed .quotation-props {
+  flex-basis: 0;
+  width: 0;
+  max-width: 0;
+  min-width: 0;
+  overflow: visible;
+  border: 0;
+}
+
+.quotation-props.is-collapsed .quotation-props-body,
+.quotation-workspace.is-right-collapsed .quotation-props .quotation-props-body {
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.quotation-props-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.qe-props-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qe-props-panel__layers {
+  flex: 1 1 48%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qe-props-panel__props {
+  flex: 1 1 52%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.qe-props-panel__head {
+  flex: 0 0 auto;
+  padding: 10px 12px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.qe-props-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 12px;
+  pointer-events: auto;
+}
+
+.qe-props-panel__empty,
+.qe-props-panel__body .builder-menu-hint {
+  margin: 8px 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.qe-props-panel .qe-layers__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px 10px;
+}
+
+.qe-layers__type {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  line-height: 1.2;
+}
+
+.qe-layers__name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qe-layers__sel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+/* Canvas-relative tool language (viewport / safe / dock) */
+.qe-canvas-fit__stack {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.qe-canvas-tool {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  height: 36px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.94);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+  white-space: nowrap;
+  cursor: pointer;
+  z-index: 6;
+}
+
+.qe-canvas-tool--viewport {
+  padding: 3px;
+  gap: 0;
+}
+
+.qe-canvas-tool__btn {
+  appearance: none;
+  margin: 0;
+  padding: 0 12px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.qe-canvas-tool__btn:hover,
+.qe-canvas-tool--safe:hover {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.qe-canvas-tool__btn.is-active,
+.qe-canvas-tool--safe.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qe-canvas-tool--safe {
+  padding: 0 14px;
+}
+
+.qe-canvas-tool--dock.qe-dock {
+  height: 36px;
+  margin: 0;
+  width: max-content;
+  max-width: none;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.94);
+  overflow: hidden;
+}
+
+.qe-canvas-tool--dock .qe-dock__seg {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+.qe-editor.qe-editor--canvas-only,
+.qe-editor.qe-editor--external-library.qe-editor--canvas-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.qe-editor.qe-editor--external-library {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.qe-editor.qe-editor--external-library.is-inspector-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#quotationRightFloatBtn.quotation-panel-float--right,
+.quotation-props > .quotation-panel-float--right,
+.quotation-panel-float--right {
+  left: 0 !important;
+  right: auto !important;
+  transform: translate(-100%, -50%) !important;
+  border-right: none;
+  border-left: 1px solid var(--builder-float-border, rgba(255, 255, 255, 0.07));
+  border-radius: 7px 0 0 7px;
+}
+
+.quotation-props.is-collapsed > .quotation-panel-float--right,
+.quotation-workspace.is-right-collapsed .quotation-props > .quotation-panel-float--right {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.quotation-icon-rail__item.is-auxiliary,
+.quotation-icon-rail__item.is-preview-on {
+  display: none !important;
+}
+
 .qe-layers__head {
   flex: 0 0 auto;
   padding: 10px 12px;
@@ -2510,7 +2764,8 @@ html.quotation-canvas-first {
   --builder-rail-width: 0px;
   --quotation-icon-rail-w: 52px;
   --quotation-recursos-w: 200px;
-  --qe-inspector-w: 220px;
+  --quotation-props-w: 220px;
+  --qe-inspector-w: 0px;
 }
 
 body.quotation-canvas-first .builder-progress-sidebar,

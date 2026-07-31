@@ -1404,39 +1404,61 @@ var QuotationEditor = (function () {
   }
 
   function layerTypeLabel(type) {
-    var t = String(type || '').toUpperCase();
-    if (t === 'BUTTON') return 'Botón';
-    if (t === 'HOTSPOT') return 'Hotspot';
-    if (t === 'TEXT') return 'Texto';
-    if (t === 'SHAPE_RECT') return 'Rectángulo';
-    if (t === 'SHAPE_CIRCLE') return 'Círculo';
-    return t || 'Capa';
+    var t = String(type || '').toUpperCase().replace(/[\s-]+/g, '_');
+    var MAP = {
+      HERO: 'Hero',
+      BUTTON: 'Botón',
+      HOTSPOT: 'Hotspot',
+      TEXT: 'Texto',
+      SHAPE_RECT: 'Rectángulo',
+      SHAPE_CIRCLE: 'Círculo',
+      SHAPE: 'Forma',
+      IMAGE: 'Imagen',
+      VIDEO: 'Video',
+      AUDIO: 'Audio',
+      PDF: 'PDF',
+      MODEL: 'Modelo 3D',
+      MODEL_3D: 'Modelo 3D',
+      GALLERY: 'Galería',
+      MAP: 'Mapa',
+      GROUP: 'Grupo'
+    };
+    if (MAP[t]) return MAP[t];
+    if (!t) return 'Capa';
+    return t.charAt(0) + t.slice(1).toLowerCase().replace(/_/g, ' ');
   }
 
-  function layersPanelHtml() {
-    if (state.canvasPreviewMode) return '';
+  function layersListHtml() {
     var scene = activeScene();
     if (scene) ensureSceneOverlays(scene);
     var ixs = (scene && Array.isArray(scene.interactions)) ? scene.interactions.slice() : [];
     var rows = '' +
-      '<li class="qe-layers__item is-hero" data-qe-layer="hero">' +
+      '<li class="qe-layers__item is-hero" data-qe-layer="hero" data-qe-layer-type="HERO">' +
         '<button type="button" class="qe-layers__vis" data-qe-layer-vis="hero" title="Hero" disabled aria-label="Hero">👁</button>' +
-        '<button type="button" class="qe-layers__sel is-active" data-qe-layer-sel="hero">Hero</button>' +
+        '<button type="button" class="qe-layers__sel is-active" data-qe-layer-sel="hero">' +
+          '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel('HERO')) + '</span>' +
+        '</button>' +
         '<span class="qe-layers__lock" title="Fijo">🔒</span>' +
       '</li>';
     ixs.forEach(function (ix) {
       if (!ix || !ix.id) return;
       var t = String(ix.type || '').toUpperCase();
-      var label = ix.label || layerTypeLabel(t);
+      var label = (ix.label != null && String(ix.label).trim())
+        ? String(ix.label)
+        : layerTypeLabel(t);
       var vis = ix.visible !== false && ix.enabled !== false;
       var locked = !!ix.locked;
       rows += '' +
-        '<li class="qe-layers__item" data-qe-layer="' + escapeHtml(ix.id) + '">' +
+        '<li class="qe-layers__item" data-qe-layer="' + escapeHtml(ix.id) + '"' +
+          ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '">' +
           '<button type="button" class="qe-layers__vis' + (vis ? '' : ' is-off') + '"' +
             ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
             ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
           '<button type="button" class="qe-layers__sel" data-qe-layer-sel="' +
-            escapeHtml(ix.id) + '">' + escapeHtml(layerTypeLabel(t) + ' · ' + label) + '</button>' +
+            escapeHtml(ix.id) + '">' +
+            '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel(t)) + '</span>' +
+            '<span class="qe-layers__name">' + escapeHtml(label) + '</span>' +
+          '</button>' +
           '<button type="button" class="qe-layers__lock' + (locked ? ' is-on' : '') + '"' +
             ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
             ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '">🔒</button>' +
@@ -1446,11 +1468,38 @@ var QuotationEditor = (function () {
             escapeHtml(ix.id) + '" title="Bajar">↓</button>' +
         '</li>';
     });
+    return '<ul class="qe-layers__list" data-qe-layers-list>' + rows + '</ul>';
+  }
+
+  /** Right rail: Capas (top) + Propiedades host (bottom). */
+  function rightPanelHtml() {
     return '' +
-      '<aside class="qe-layers" data-qe-layers aria-label="Capas">' +
-        '<div class="qe-layers__head">Capas</div>' +
-        '<ul class="qe-layers__list">' + rows + '</ul>' +
-      '</aside>';
+      '<div class="qe-props-panel" data-qe-props-panel aria-label="Capas y propiedades">' +
+        '<section class="qe-props-panel__layers" data-qe-layers aria-label="Capas">' +
+          '<div class="qe-props-panel__head">Capas</div>' +
+          layersListHtml() +
+        '</section>' +
+        '<section class="qe-props-panel__props" aria-label="Propiedades">' +
+          '<div class="qe-props-panel__head">Propiedades</div>' +
+          '<div class="qe-props-panel__body" data-exp-inspector-body>' +
+            '<p class="qe-props-panel__empty">Selecciona un elemento</p>' +
+          '</div>' +
+        '</section>' +
+      '</div>';
+  }
+
+  function syncRightPanel() {
+    var body = document.getElementById('quotationRightBody');
+    if (!body) return;
+    body.innerHTML = rightPanelHtml();
+    if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
+      QuotationBuilderView.setPropsPanelVisible(true);
+    }
+  }
+
+  function layersPanelHtml() {
+    /* Layers live in the right props rail (V7.2.66). */
+    return '';
   }
 
   function sceneCreateMenuHtml() {
@@ -1551,26 +1600,25 @@ var QuotationEditor = (function () {
       ];
     var btns = list.map(function (vp) {
       return '' +
-        '<button type="button" class="qe-viewport__btn' +
+        '<button type="button" class="qe-canvas-tool__btn' +
           (preset === vp.id ? ' is-active' : '') + '"' +
           ' data-qe-viewport="' + escapeHtml(vp.id) + '">' +
           escapeHtml(vp.label) +
         '</button>';
     }).join('');
-    var safeBtn = state.canvasPreviewMode
-      ? ''
-      : (
-        '<button type="button" class="qe-viewport__safe' +
-          (state.safeAreaVisible ? ' is-active' : '') + '"' +
-          ' data-qe-safe-area aria-pressed="' + (state.safeAreaVisible ? 'true' : 'false') + '">' +
-          'Safe Area' +
-        '</button>'
-      );
     return '' +
-      '<div class="qe-viewport" data-qe-viewport-bar>' +
-        '<div class="qe-viewport__presets" role="group" aria-label="Viewport">' + btns + '</div>' +
-        safeBtn +
+      '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
+        btns +
       '</div>';
+  }
+
+  function safeAreaToolHtml() {
+    return '' +
+      '<button type="button" class="qe-canvas-tool qe-canvas-tool--safe' +
+        (state.safeAreaVisible ? ' is-active' : '') + '"' +
+        ' data-qe-safe-area aria-pressed="' + (state.safeAreaVisible ? 'true' : 'false') + '">' +
+        'Safe Area' +
+      '</button>';
   }
 
   function dockHasSelection() {
@@ -1638,7 +1686,7 @@ var QuotationEditor = (function () {
           'data-qe-dock-edit',
           'edit',
           'Editar',
-          state.inspectorCollapsed ? '' : 'is-active'
+          ''
         ) +
         dockSegHtml('data-qe-dock-dup', 'dup', 'Duplicar') +
         dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
@@ -1654,10 +1702,9 @@ var QuotationEditor = (function () {
   }
 
   function stageDockHtml() {
-    if (state.canvasPreviewMode) return '';
     var mode = dockHasSelection() ? 'actions' : 'create';
     return '' +
-      '<div class="qe-dock" data-qe-dock-bar data-mode="' + mode + '">' +
+      '<div class="qe-canvas-tool qe-canvas-tool--dock qe-dock" data-qe-dock-bar data-mode="' + mode + '">' +
         '<div class="qe-dock__rail" data-qe-dock-rail>' +
           stageDockRailHtml() +
         '</div>' +
@@ -1682,29 +1729,28 @@ var QuotationEditor = (function () {
 
   function canvasHtml() {
     var win = activeViewportSize();
-    var preview = !!state.canvasPreviewMode;
     return '' +
-      '<section class="qe-col qe-col--canvas' + (preview ? ' is-canvas-preview' : '') +
-        '" aria-label="' + (preview ? 'Vista previa' : 'Canvas') + '">' +
+      '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         '<div class="qe-stage-shell" data-qe-stage-shell>' +
           '<div class="qe-stage-unit" data-qe-stage-unit>' +
             scenesBarHtml() +
-            viewportChromeHtml() +
             '<div class="qe-stage-work" data-qe-stage-work>' +
               '<div class="qe-canvas-fit" data-qe-canvas-fit>' +
-                '<div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>' +
-                  /* Empty host — QuotationRuntime.paintScene mounts HeroCanvas here. */
-                  '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
-                    ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
+                '<div class="qe-canvas-fit__stack" data-qe-canvas-fit-stack>' +
+                  viewportChromeHtml() +
+                  safeAreaToolHtml() +
+                  '<div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>' +
+                    '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
+                      ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
+                  '</div>' +
+                  stageDockHtml() +
                 '</div>' +
               '</div>' +
-              layersPanelHtml() +
             '</div>' +
-            stageDockHtml() +
           '</div>' +
         '</div>' +
-        (preview ? '' : resourcePickerHtml()) +
-        (preview ? '' : sceneConfirmHtml()) +
+        resourcePickerHtml() +
+        sceneConfirmHtml() +
       '</section>';
   }
 
@@ -1791,29 +1837,17 @@ var QuotationEditor = (function () {
     unit.style.boxSizing = 'border-box';
 
     var scenes = unit.querySelector('.qe-scenes');
-    var vpChrome = unit.querySelector('[data-qe-viewport-bar]');
-    var dock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
     var fitSlot = unit.querySelector('[data-qe-canvas-fit]');
+    var fitStack = unit.querySelector('[data-qe-canvas-fit-stack]');
     var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
     var stage = unit.querySelector('[data-qe-canvas]');
+    var toolVp = unit.querySelector('[data-qe-viewport-bar]');
+    var toolSafe = unit.querySelector('[data-qe-safe-area]');
+    var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
 
     if (scenes) {
       scenes.style.width = '';
       scenes.style.flex = '0 0 auto';
-    }
-    if (vpChrome) {
-      vpChrome.style.width = '';
-      vpChrome.style.flex = '0 0 auto';
-    }
-    if (dock) {
-      dock.style.width = '';
-      dock.style.maxWidth = '';
-      dock.style.minWidth = '';
-      dock.style.flex = '0 0 auto';
-      dock.style.alignSelf = 'center';
-      dock.style.display = '';
-      dock.style.marginLeft = 'auto';
-      dock.style.marginRight = 'auto';
     }
 
     void unit.offsetHeight;
@@ -1821,27 +1855,14 @@ var QuotationEditor = (function () {
     var scenesH = scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
     var scenesMb = scenes
       ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0) : 0;
-    var vpChromeH = vpChrome
-      ? Math.ceil(vpChrome.getBoundingClientRect().height) : 0;
-    var vpChromeMb = vpChrome
-      ? (parseFloat(window.getComputedStyle(vpChrome).marginBottom) || 0) : 0;
-    var dockH = dock ? Math.ceil(dock.getBoundingClientRect().height) : 0;
-    var dockMt = dock
-      ? (parseFloat(window.getComputedStyle(dock).marginTop) || 0) : 0;
-    var dockMb = dock
-      ? (parseFloat(window.getComputedStyle(dock).marginBottom) || 0) : 0;
-
-    var chromeH = Math.ceil(
-      scenesH + scenesMb + vpChromeH + vpChromeMb + dockMt + dockH + dockMb
-    );
-    var layers = unit.querySelector('[data-qe-layers]');
-    var layersW = layers ? Math.ceil(layers.getBoundingClientRect().width) : 0;
-    var layersGap = layersW > 0 ? 10 : 0;
-    var slotW = Math.max(1, availW - layersW - layersGap);
+    /* Viewport / Safe Area / Dock sit on the canvas stack — not stage chrome. */
+    var TOOL_PAD = 44;
+    var chromeH = Math.ceil(scenesH + scenesMb);
+    var slotW = Math.max(1, availW);
     var slotH = Math.max(1, availH - chromeH);
 
     /* Device window keeps logical pixels; only the fit frame scales visually. */
-    var scale = Math.min(slotW / natW, slotH / natH);
+    var scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
     if (!isFinite(scale) || scale <= 0) scale = 0.01;
     if (scale > 1) scale = 1;
 
@@ -1857,7 +1878,9 @@ var QuotationEditor = (function () {
       fitSlot.style.display = 'flex';
       fitSlot.style.alignItems = 'center';
       fitSlot.style.justifyContent = 'center';
-      fitSlot.style.overflow = 'hidden';
+      fitSlot.style.overflow = 'visible';
+      fitSlot.style.padding = TOOL_PAD + 'px 0';
+      fitSlot.style.boxSizing = 'border-box';
     }
     var work = unit.querySelector('[data-qe-stage-work]');
     if (work) {
@@ -1867,7 +1890,14 @@ var QuotationEditor = (function () {
       work.style.display = 'flex';
       work.style.flexDirection = 'row';
       work.style.alignItems = 'stretch';
-      work.style.gap = '10px';
+      work.style.gap = '0';
+      work.style.overflow = 'visible';
+    }
+    if (fitStack) {
+      fitStack.style.width = scaledW + 'px';
+      fitStack.style.height = scaledH + 'px';
+      fitStack.style.position = 'relative';
+      fitStack.style.flex = '0 0 auto';
     }
     if (fitFrame) {
       fitFrame.style.width = scaledW + 'px';
@@ -1875,6 +1905,28 @@ var QuotationEditor = (function () {
       fitFrame.style.position = 'relative';
       fitFrame.style.flex = '0 0 auto';
       fitFrame.style.overflow = 'hidden';
+    }
+    if (toolVp) {
+      toolVp.style.position = 'absolute';
+      toolVp.style.left = '50%';
+      toolVp.style.top = '0';
+      toolVp.style.transform = 'translate(-50%, calc(-100% - 8px))';
+      toolVp.style.zIndex = '6';
+    }
+    if (toolSafe) {
+      toolSafe.style.position = 'absolute';
+      toolSafe.style.right = '0';
+      toolSafe.style.top = '0';
+      toolSafe.style.transform = 'translateY(calc(-100% - 8px))';
+      toolSafe.style.zIndex = '6';
+    }
+    if (toolDock) {
+      toolDock.style.position = 'absolute';
+      toolDock.style.left = '50%';
+      toolDock.style.bottom = '0';
+      toolDock.style.transform = 'translate(-50%, calc(100% + 8px))';
+      toolDock.style.zIndex = '6';
+      toolDock.style.margin = '0';
     }
     if (stage) {
       stage.style.width = natW + 'px';
@@ -2186,31 +2238,16 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  /* V7.2.56 — blank on-demand column; no chrome, no copy. */
+  /* V7.2.66 — sliding inspector removed; props live in right rail. */
   function inspectorHtml() {
-    if (state.focusMode || state.canvasPreviewMode) return '';
-
-    clearInvalidSelection();
-
-    if (state.inspectorCollapsed) {
-      return '' +
-        '<aside class="qe-col qe-col--inspector is-collapsed" aria-hidden="true"></aside>';
-    }
-
-    return '' +
-      '<aside class="qe-col qe-col--inspector is-open" aria-hidden="true">' +
-        idleInspectorHtml() +
-      '</aside>';
+    return '';
   }
 
   function editorLayoutClass() {
     var cls = 'quotation-step quotation-step--editor qe-editor';
     if (state.focusMode) cls += ' is-focus';
-    if (state.canvasPreviewMode) cls += ' is-canvas-preview';
-    if (state.inspectorCollapsed && !state.focusMode && !state.canvasPreviewMode) {
-      cls += ' is-inspector-collapsed';
-    }
     if (document.getElementById('quotationLeftBody')) cls += ' qe-editor--external-library';
+    cls += ' qe-editor--canvas-only';
     return cls;
   }
 
@@ -2226,14 +2263,12 @@ var QuotationEditor = (function () {
       return '' +
         '<div class="' + editorLayoutClass() + '" data-qe-editor>' +
           canvasHtml() +
-          inspectorHtml() +
         '</div>';
     }
     return '' +
       '<div class="' + editorLayoutClass() + '" data-qe-editor>' +
         libHtml +
         canvasHtml() +
-        inspectorHtml() +
       '</div>';
   }
 
@@ -2658,24 +2693,7 @@ var QuotationEditor = (function () {
   }
 
   function refreshInspectorOnly() {
-    if (!rootEl) return;
-    var insp = rootEl.querySelector('.qe-col--inspector');
-    if (!insp) return;
-    var wrap = document.createElement('div');
-    wrap.innerHTML = inspectorHtml();
-    var next = wrap.firstChild;
-    if (next) insp.replaceWith(next);
-    var editor = rootEl.querySelector('[data-qe-editor]') || rootEl;
-    wireInspectorFields(editor);
-    editor.querySelectorAll('[data-qe-toggle-inspector]').forEach(function (btn) {
-      if (btn.dataset.qeBound) return;
-      btn.dataset.qeBound = '1';
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleInspectorCollapsed();
-      });
-    });
+    /* V7.2.66 — props live in right rail; Experiencia.paintInspector owns content. */
   }
 
   function wireInspectorFields(editor) {
@@ -2820,7 +2838,7 @@ var QuotationEditor = (function () {
       edit.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        setInspectorCollapsed(!state.inspectorCollapsed);
+        focusPropsPanel();
       });
     }
     var dup = editor.querySelector('[data-qe-dock-dup]');
@@ -2847,8 +2865,7 @@ var QuotationEditor = (function () {
         if (expOverlay && expOverlay.deleteSelected) {
           expOverlay.deleteSelected();
           state.expHasSelection = false;
-          if (!state.inspectorCollapsed) setInspectorCollapsed(true);
-          else refreshDockOnly();
+          refreshDockOnly();
         }
       });
     }
@@ -2869,23 +2886,31 @@ var QuotationEditor = (function () {
     destroyBuilderRuntimeScene();
     persistDraft();
     rootEl = null;
+    var rightBody = document.getElementById('quotationRightBody');
+    if (rightBody) rightBody.innerHTML = '';
   }
 
   function refreshLayersPanel() {
-    if (!rootEl) return;
-    var host = rootEl.querySelector('[data-qe-layers]');
-    if (!host || !host.parentNode) return;
-    var wrap = document.createElement('div');
-    wrap.innerHTML = layersPanelHtml();
-    var next = wrap.firstElementChild;
-    if (!next) return;
-    host.parentNode.replaceChild(next, host);
+    var host = document.querySelector('[data-qe-layers]');
+    if (!host) {
+      syncRightPanel();
+      host = document.querySelector('[data-qe-layers]');
+    }
+    if (!host) return;
+    var list = host.querySelector('[data-qe-layers-list], .qe-layers__list');
+    if (list) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = layersListHtml();
+      var next = wrap.firstElementChild;
+      if (next) list.replaceWith(next);
+    } else {
+      syncRightPanel();
+    }
     bindLayersPanel();
   }
 
   function bindLayersPanel() {
-    if (!rootEl) return;
-    var panel = rootEl.querySelector('[data-qe-layers]');
+    var panel = document.querySelector('[data-qe-layers]');
     if (!panel || panel.dataset.qeLayersBound === '1') return;
     panel.dataset.qeLayersBound = '1';
 
@@ -3004,7 +3029,8 @@ var QuotationEditor = (function () {
     ensureScenes();
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
 
-    var inspHost = rootEl.querySelector('[data-exp-inspector-body]');
+    var inspHost = document.querySelector('#quotationRightBody [data-exp-inspector-body]') ||
+      document.querySelector('[data-exp-inspector-body]');
     expOverlay = QuotationExperienciaBridge.mount(layer, {
       scenes: state.scenes,
       activeSceneId: state.activeSceneId,
@@ -3193,19 +3219,30 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function focusPropsPanel() {
+    if (typeof QuotationBuilderView !== 'undefined') {
+      if (QuotationBuilderView.setPropsPanelVisible) {
+        QuotationBuilderView.setPropsPanelVisible(true);
+      }
+      if (QuotationBuilderView.expandPropsPanel) {
+        QuotationBuilderView.expandPropsPanel();
+      } else if (QuotationBuilderView.applyRightCollapsed) {
+        QuotationBuilderView.applyRightCollapsed(false);
+      }
+    }
+    state.inspectorCollapsed = false;
+  }
+
   function setInspectorCollapsed(on) {
-    state.inspectorCollapsed = !!on;
-    state.sceneMenuOpen = false;
-    try {
-      document.documentElement.style.setProperty(
-        '--qe-inspector-w',
-        state.inspectorCollapsed ? '0px' : '220px'
-      );
-    } catch (eW) {}
-    rerender();
-    try {
-      window.dispatchEvent(new Event('resize'));
-    } catch (eR) {}
+    /* Legacy API — maps to right props rail collapse. */
+    if (on) {
+      if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.applyRightCollapsed) {
+        QuotationBuilderView.applyRightCollapsed(true);
+      }
+      state.inspectorCollapsed = true;
+    } else {
+      focusPropsPanel();
+    }
   }
 
   function toggleLibraryCollapsed() {
@@ -3217,7 +3254,7 @@ var QuotationEditor = (function () {
   }
 
   function closeInspectorIfOpen() {
-    if (!state.inspectorCollapsed) setInspectorCollapsed(true);
+    /* No sliding inspector — keep props rail as-is. */
   }
 
   function isBuilderFormField(el) {
@@ -3657,6 +3694,7 @@ var QuotationEditor = (function () {
     hydrateEditorProjectCtxSlug();
     bindFocusEsc();
     bindInspectorChrome();
+    syncRightPanel();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 
@@ -3676,6 +3714,8 @@ var QuotationEditor = (function () {
         }
         collect(editor);
         if (leftBody) collect(leftBody);
+        var rightBody = document.getElementById('quotationRightBody');
+        if (rightBody) collect(rightBody);
         return out;
       }
 
@@ -3685,6 +3725,8 @@ var QuotationEditor = (function () {
           if (a) return a;
         }
         if (leftBody && leftBody.querySelector) return leftBody.querySelector(sel);
+        var rightBody = document.getElementById('quotationRightBody');
+        if (rightBody && rightBody.querySelector) return rightBody.querySelector(sel);
         return null;
       }
 
