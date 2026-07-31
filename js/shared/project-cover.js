@@ -144,9 +144,6 @@ var ProjectCover = (function () {
     options = options || {};
     var p = options.idPrefix || '';
     var coverId = uid(p, 'projectCover');
-    var videoId = uid(p, 'coverVideo');
-    var videoSrcId = uid(p, 'coverVideoSource');
-    var imageId = uid(p, 'coverImage');
     var logoId = uid(p, 'projectCoverLogo');
     var nameId = uid(p, 'projectCoverName');
     var taglineId = uid(p, 'projectCoverTagline');
@@ -166,12 +163,8 @@ var ProjectCover = (function () {
         ' data-hero-text-color="light"' +
         ' data-hero-button-text-color="light"' +
         ' data-hero-layout="centered">' +
-        '<div data-pc-slot="media" class="project-cover-media-slot">' +
-          '<video class="project-cover-video" id="' + escapeHtml(videoId) + '"' +
-            ' muted loop playsinline preload="none" style="display:none">' +
-            '<source id="' + escapeHtml(videoSrcId) + '" type="video/mp4">' +
-          '</video>' +
-          '<img class="project-cover-video" id="' + escapeHtml(imageId) + '" alt="" style="display:none">' +
+        '<div data-pc-slot="media" class="project-cover-media-slot hero-renderer" data-hero-renderer="1">' +
+          '<!-- HeroRenderer paints cover media here -->' +
         '</div>' +
         '<div class="project-cover-overlay"></div>' +
         '<div class="project-cover-content">' +
@@ -235,30 +228,33 @@ var ProjectCover = (function () {
     var hasImage = !!model.imageUrl && !hasVideo;
     cover.classList.toggle('is-ambient-depth', !hasVideo && !hasImage);
 
-    var video = q(root, 'video.project-cover-video');
-    var source = video ? video.querySelector('source') : null;
-    var image = q(root, 'img.project-cover-video');
-
-    if (video) {
+    /* V7.2.59 — media via HeroRenderer (cover only). */
+    var mediaSlot = q(root, '[data-pc-slot="media"]') || q(root, '.project-cover-media-slot');
+    if (mediaSlot && typeof HeroRenderer !== 'undefined' && HeroRenderer.paint) {
       if (hasVideo) {
-        if (source) source.src = model.videoUrl;
-        else video.src = model.videoUrl;
-        video.style.display = '';
-        try { video.load(); video.play(); } catch (e) { /* ignore */ }
+        HeroRenderer.paint(mediaSlot, { src: model.videoUrl, kind: 'video' }, {
+          mediaClass: 'project-cover-video',
+          preload: false
+        });
+      } else if (hasImage) {
+        HeroRenderer.paint(mediaSlot, { src: model.imageUrl, kind: 'image' }, {
+          mediaClass: 'project-cover-video'
+        });
       } else {
-        if (source) source.removeAttribute('src');
-        video.removeAttribute('src');
-        video.style.display = 'none';
-        try { video.pause(); } catch (e2) { /* ignore */ }
+        HeroRenderer.clear(mediaSlot);
       }
-    }
-    if (image) {
-      if (hasImage) {
-        image.src = model.imageUrl;
-        image.style.display = '';
+    } else if (mediaSlot) {
+      /* Fallback if HeroRenderer missing — still cover via CSS class. */
+      if (hasVideo) {
+        mediaSlot.innerHTML =
+          '<video class="hero-renderer__media project-cover-video" src="' +
+            escapeHtml(model.videoUrl) + '" autoplay muted loop playsinline></video>';
+      } else if (hasImage) {
+        mediaSlot.innerHTML =
+          '<img class="hero-renderer__media project-cover-video" src="' +
+            escapeHtml(model.imageUrl) + '" alt="">';
       } else {
-        image.removeAttribute('src');
-        image.style.display = 'none';
+        mediaSlot.innerHTML = '<div class="hero-renderer__void" aria-hidden="true"></div>';
       }
     }
 

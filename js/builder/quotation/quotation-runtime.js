@@ -341,6 +341,8 @@ var QuotationRuntime = (function () {
 
   function paintSceneMedia(parentEl, scene, bundle) {
     var host = ensureSceneMediaHost(parentEl);
+    host.classList.add('hero-renderer');
+    host.setAttribute('data-hero-renderer', '1');
     var urlRecibida = scene
       ? (scene.mediaUrl || scene.publicUrl || null)
       : null;
@@ -356,17 +358,25 @@ var QuotationRuntime = (function () {
           : 'resolveSceneMedia() devolvió objeto sin .url');
       console.log('[QR V7.2.41] paintSceneMedia NO pinta imagen — condición:', why);
       console.log('[QR V7.2.41] paintSceneMedia → void porque URL final es null. Motivo:', why);
-      host.innerHTML = '<div class="qr-scene-media__void" aria-hidden="true"></div>';
+      if (typeof HeroRenderer !== 'undefined' && HeroRenderer.clear) {
+        HeroRenderer.clear(host);
+      } else {
+        host.innerHTML = '<div class="qr-scene-media__void hero-renderer__void" aria-hidden="true"></div>';
+      }
       return host;
     }
     console.log('[QR V7.2.41] paintSceneMedia pinta', media.type, 'con src=', media.url);
-    if (media.type === 'video') {
+    if (typeof HeroRenderer !== 'undefined' && HeroRenderer.paint) {
+      HeroRenderer.paint(host, { src: media.url, kind: media.type === 'video' ? 'video' : 'image' }, {
+        mediaClass: media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
+      });
+    } else if (media.type === 'video') {
       host.innerHTML =
-        '<video class="qr-scene-media__video" src="' + escapeHtml(media.url) +
+        '<video class="hero-renderer__media qr-scene-media__video" src="' + escapeHtml(media.url) +
           '" autoplay muted loop playsinline></video>';
     } else {
       host.innerHTML =
-        '<img class="qr-scene-media__img" src="' + escapeHtml(media.url) +
+        '<img class="hero-renderer__media qr-scene-media__img" src="' + escapeHtml(media.url) +
           '" alt="">';
     }
     /* V7.2.42 — DOM audit only; no behavior change */
@@ -375,8 +385,11 @@ var QuotationRuntime = (function () {
   }
 
   function logPaintSceneMediaDomAudit(parentEl, container) {
-    var mediaEl = container && (container.querySelector('img.qr-scene-media__img') ||
-      container.querySelector('video.qr-scene-media__video'));
+    var mediaEl = container && (
+      container.querySelector('img.hero-renderer__media, video.hero-renderer__media') ||
+      container.querySelector('img.qr-scene-media__img') ||
+      container.querySelector('video.qr-scene-media__video')
+    );
     function dump(label) {
       console.log('=========================');
       console.log('DOM AUDIT ' + label);

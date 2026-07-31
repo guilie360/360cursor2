@@ -1,13 +1,20 @@
 /**
- * QuotationPreview — V7.2.26 WYSIWYG.
- * Renders QuotationRuntime with the live ProjectDocument from the Editor.
- * Never opens /{slug} as the Builder preview source of truth.
+ * QuotationPreview — V7.2.59 WYSIWYG.
+ * Same QuotationRuntime + HeroRenderer as published. Viewport presets match Builder.
  */
 var QuotationPreview = (function () {
   var LIVE_KEY_PREFIX = 'boxies_qe_live_doc_v1_';
+  var previewViewport = 'desktop';
 
   function liveStorageKey(projectId) {
     return LIVE_KEY_PREFIX + String(projectId || '').trim();
+  }
+
+  function activeViewport() {
+    if (typeof HeroRenderer !== 'undefined' && HeroRenderer.getViewport) {
+      return HeroRenderer.getViewport(previewViewport);
+    }
+    return { id: 'desktop', label: 'Desktop', width: 1280, height: 720 };
   }
 
   function resolveRuntimeUrl(projectIdOrCtx) {
@@ -84,9 +91,32 @@ var QuotationPreview = (function () {
     );
   }
 
+  function viewportChromeHtml() {
+    var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
+      ? HeroRenderer.listViewports()
+      : [
+        { id: 'desktop', label: 'Desktop' },
+        { id: 'tablet', label: 'Tablet' },
+        { id: 'mobile', label: 'Mobile' }
+      ];
+    var btns = list.map(function (vp) {
+      return '' +
+        '<button type="button" class="qe-viewport__btn' +
+          (previewViewport === vp.id ? ' is-active' : '') + '"' +
+          ' data-qe-preview-viewport="' + String(vp.id).replace(/"/g, '') + '">' +
+          String(vp.label || vp.id) +
+        '</button>';
+    }).join('');
+    return '' +
+      '<div class="qe-viewport qe-viewport--preview" data-qe-preview-viewport-bar>' +
+        '<div class="qe-viewport__presets" role="group" aria-label="Viewport">' + btns + '</div>' +
+      '</div>';
+  }
+
   function render(ctx, opts) {
     opts = opts || {};
     ctx = ctx || {};
+    if (opts.viewportPreset) previewViewport = String(opts.viewportPreset);
     var header =
       typeof QuotationSidebar !== 'undefined' && QuotationSidebar.pageHeaderHtml
         ? QuotationSidebar.pageHeaderHtml(
@@ -118,9 +148,13 @@ var QuotationPreview = (function () {
       body =
         '<p class="builder-menu-hint">No hay un ProjectDocument listo. Edita escenas en el Editor y vuelve a Preview.</p>';
     } else {
+      var vp = activeViewport();
       body =
-        '<div class="qe-preview-frame">' +
+        viewportChromeHtml() +
+        '<div class="qe-preview-frame" data-qe-preview-frame' +
+          ' style="width:' + vp.width + 'px;height:' + vp.height + 'px;max-width:100%;">' +
           '<iframe class="qe-preview-frame__iframe" data-qe-preview-iframe title="Preview cotización" ' +
+            'width="' + vp.width + '" height="' + vp.height + '" ' +
             'src="' + String(url).replace(/"/g, '&quot;') + '"></iframe>' +
         '</div>';
     }
@@ -134,9 +168,31 @@ var QuotationPreview = (function () {
   function bind(panel, ctx) {
     if (!panel) return;
     var iframe = panel.querySelector('[data-qe-preview-iframe]');
-    if (!iframe) return;
     var envelope = prepareLiveDocument(ctx || {});
-    if (!envelope) return;
+
+    panel.querySelectorAll('[data-qe-preview-viewport]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var next = btn.getAttribute('data-qe-preview-viewport') || 'desktop';
+        if (previewViewport === next) return;
+        previewViewport = next;
+        if (typeof QuotationBuilder !== 'undefined' && QuotationBuilder.goToStep) {
+          QuotationBuilder.goToStep('preview');
+          return;
+        }
+        var host = panel.closest('.quotation-step--preview') || panel;
+        if (host && host.parentNode) {
+          var wrap = document.createElement('div');
+          wrap.innerHTML = render(ctx || {}, {});
+          var nextEl = wrap.firstElementChild;
+          if (nextEl) {
+            host.parentNode.replaceChild(nextEl, host);
+            bind(nextEl, ctx);
+          }
+        }
+      });
+    });
+
+    if (!iframe || !envelope) return;
 
     function onReady(ev) {
       if (typeof QuotationRuntimeBridge === 'undefined') return;
@@ -148,7 +204,6 @@ var QuotationPreview = (function () {
 
     window.addEventListener('message', onReady);
     iframe.addEventListener('load', function () {
-      /* Fallback if READY raced before listener. */
       pushDocumentToFrame(iframe, prepareLiveDocument(ctx || {}) || envelope);
     });
   }
@@ -158,6 +213,8 @@ var QuotationPreview = (function () {
     bind: bind,
     resolveRuntimeUrl: resolveRuntimeUrl,
     prepareLiveDocument: prepareLiveDocument,
-    LIVE_KEY_PREFIX: LIVE_KEY_PREFIX
+    LIVE_KEY_PREFIX: LIVE_KEY_PREFIX,
+    getViewportPreset: function () { return previewViewport; },
+    setViewportPreset: function (id) { previewViewport = String(id || 'desktop'); }
   };
 })();

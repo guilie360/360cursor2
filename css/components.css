@@ -65,12 +65,13 @@ body,
 .project-cover.is-ambient-depth {
   background-color:#050505;
 }
-.project-cover-video {
+.project-cover-video,
+.project-cover-media-slot .hero-renderer__media {
   position:absolute;
-  top:50%; left:50%;
+  top:0; left:0;
   width:100%; height:100%;
   object-fit:cover;
-  transform:translate(-50%, -50%);
+  object-position:center center;
   z-index:0;
 }
 /* Media slot wrapper used by ProjectCover SSOT (same absolute plane as video/image). */

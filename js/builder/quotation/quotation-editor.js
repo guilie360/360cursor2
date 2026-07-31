@@ -5,8 +5,25 @@ var QuotationEditor = (function () {
   /* V7.2.38 — controlled test: isolate Editor from Runtime completely. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
+  /* Legacy design constants — viewport presets are the WYSIWYG host (V7.2.59). */
   var CANVAS_DESIGN_W = 1920;
   var CANVAS_DESIGN_H = 1080;
+
+  function activeViewport() {
+    var id = (state && state.viewportPreset) || 'desktop';
+    if (typeof HeroRenderer !== 'undefined' && HeroRenderer.getViewport) {
+      return HeroRenderer.getViewport(id);
+    }
+    return { id: 'desktop', label: 'Desktop', width: 1280, height: 720 };
+  }
+
+  function activeViewportSize() {
+    var vp = activeViewport();
+    return {
+      width: Math.max(1, Number(vp.width) || 1280),
+      height: Math.max(1, Number(vp.height) || 720)
+    };
+  }
 
   var CONTENT_GROUPS = [
     { id: 'renders', label: 'Imágenes', accept: 'image/*', addLabel: '+ Agregar' },
@@ -485,6 +502,8 @@ var QuotationEditor = (function () {
       dockOpen: false,
       resourcePickerOpen: false,
       pendingSceneDeleteId: null,
+      viewportPreset: 'desktop',
+      safeAreaVisible: false,
       expEditMode: 'buttons',
       expHasSelection: false,
       openGroups: {
@@ -1256,16 +1275,17 @@ var QuotationEditor = (function () {
     if (!url) return emptyScenePlaceholderHtml();
     var isVideo = (res && (res.media === 'video' || res.group === 'videos')) ||
       (scene && scene.mediaType === 'video');
+    /* V7.2.59 — same HeroRenderer markup/CSS as Runtime (cover only). */
     if (isVideo) {
       return '' +
-        '<div class="qe-scene-media" data-qe-drop-scene>' +
-          '<video class="qe-scene-media__video" src="' + escapeHtml(url) + '"' +
+        '<div class="qe-scene-media hero-renderer" data-qe-drop-scene data-hero-renderer="1">' +
+          '<video class="hero-renderer__media qe-scene-media__video" src="' + escapeHtml(url) + '"' +
             ' muted loop playsinline autoplay></video>' +
         '</div>';
     }
     return '' +
-      '<div class="qe-scene-media" data-qe-drop-scene>' +
-        '<img class="qe-scene-media__img" src="' + escapeHtml(url) + '" alt="">' +
+      '<div class="qe-scene-media hero-renderer" data-qe-drop-scene data-hero-renderer="1">' +
+        '<img class="hero-renderer__media qe-scene-media__img" src="' + escapeHtml(url) + '" alt="">' +
       '</div>';
   }
 
@@ -1336,19 +1356,17 @@ var QuotationEditor = (function () {
     return sceneMediaStageHtml(scene);
   }
 
-  /** Hero: Runtime iframe inside fixed 1920×1080 design frame (scale outside). */
+  /** Hero: Runtime iframe sized to active viewport (Model B — no canvas lock). */
   function heroRuntimeStageHtml() {
     if (isEditorRuntimeDisabled()) {
       return emptyScenePlaceholderHtml();
     }
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
+    var size = activeViewportSize();
     var src = '';
     var opts = {
       preview: true,
-      editor: true,
-      canvas: true,
-      designWidth: CANVAS_DESIGN_W,
-      designHeight: CANVAS_DESIGN_H
+      editor: true
     };
     if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
       src = QuotationRuntime.href(projectId, opts) || '';
@@ -1359,13 +1377,9 @@ var QuotationEditor = (function () {
         url.searchParams.set('experience_type', 'quotation');
         url.searchParams.set('preview', '1');
         url.searchParams.set('editor', '1');
-        url.searchParams.set('canvas', '1');
-        url.searchParams.set('designWidth', String(CANVAS_DESIGN_W));
-        url.searchParams.set('designHeight', String(CANVAS_DESIGN_H));
         src = url.href;
       } catch (e) {
-        src = '/quotation/?experience_type=quotation&preview=1&editor=1&canvas=1' +
-          '&designWidth=' + CANVAS_DESIGN_W + '&designHeight=' + CANVAS_DESIGN_H +
+        src = '/quotation/?experience_type=quotation&preview=1&editor=1' +
           (projectId ? '&projectId=' + encodeURIComponent(projectId) : '');
       }
     }
@@ -1373,7 +1387,7 @@ var QuotationEditor = (function () {
       '<div class="qe-canvas__runtime-host" data-qe-runtime-host>' +
         '<iframe class="qe-canvas__runtime-iframe" data-qe-runtime-iframe' +
           ' title="Hero Runtime Canvas"' +
-          ' width="' + CANVAS_DESIGN_W + '" height="' + CANVAS_DESIGN_H + '"' +
+          ' width="' + size.width + '" height="' + size.height + '"' +
           ' src="' + String(src).replace(/"/g, '&quot;') + '"' +
           ' allow="fullscreen"></iframe>' +
       '</div>';
@@ -1460,6 +1474,34 @@ var QuotationEditor = (function () {
           '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
         '</div>' +
         '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
+      '</div>';
+  }
+
+  function viewportChromeHtml() {
+    var preset = state.viewportPreset || 'desktop';
+    var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
+      ? HeroRenderer.listViewports()
+      : [
+        { id: 'desktop', label: 'Desktop' },
+        { id: 'tablet', label: 'Tablet' },
+        { id: 'mobile', label: 'Mobile' }
+      ];
+    var btns = list.map(function (vp) {
+      return '' +
+        '<button type="button" class="qe-viewport__btn' +
+          (preset === vp.id ? ' is-active' : '') + '"' +
+          ' data-qe-viewport="' + escapeHtml(vp.id) + '">' +
+          escapeHtml(vp.label) +
+        '</button>';
+    }).join('');
+    return '' +
+      '<div class="qe-viewport" data-qe-viewport-bar>' +
+        '<div class="qe-viewport__presets" role="group" aria-label="Viewport">' + btns + '</div>' +
+        '<button type="button" class="qe-viewport__safe' +
+          (state.safeAreaVisible ? ' is-active' : '') + '"' +
+          ' data-qe-safe-area aria-pressed="' + (state.safeAreaVisible ? 'true' : 'false') + '">' +
+          'Safe Area' +
+        '</button>' +
       '</div>';
   }
 
@@ -1580,6 +1622,7 @@ var QuotationEditor = (function () {
         '<div class="qe-stage-shell" data-qe-stage-shell>' +
           '<div class="qe-stage-unit" data-qe-stage-unit>' +
             scenesBarHtml() +
+            viewportChromeHtml() +
             '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene>' +
               '<div class="qe-canvas__viewport" data-qe-canvas-viewport>' +
                 '<div class="qe-canvas__screen" data-qe-canvas-screen>' +
@@ -1649,8 +1692,9 @@ var QuotationEditor = (function () {
     var availW = vp.width;
     var availH = vp.height;
 
-    var natW = CANVAS_DESIGN_W;
-    var natCanvasH = CANVAS_DESIGN_H;
+    var vpSize = activeViewportSize();
+    var natW = vpSize.width;
+    var natCanvasH = vpSize.height;
 
     /* 1) Natural size — unlock scale, lock design pixels. */
     unit.style.transform = 'none';
@@ -1674,10 +1718,15 @@ var QuotationEditor = (function () {
     syncDesignIdentity();
 
     var scenes = unit.querySelector('.qe-scenes');
+    var vpChrome = unit.querySelector('[data-qe-viewport-bar]');
     var dock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
     if (scenes) {
       scenes.style.width = natW + 'px';
       scenes.style.flex = '0 0 auto';
+    }
+    if (vpChrome) {
+      vpChrome.style.width = natW + 'px';
+      vpChrome.style.flex = '0 0 auto';
     }
     if (dock) {
       /* V7.2.58 — compact pill: never stretch to canvas width. */
@@ -1698,6 +1747,11 @@ var QuotationEditor = (function () {
       scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0,
       STAGE_SCENES_MIN_H
     );
+    var vpChromeH = vpChrome
+      ? Math.ceil(vpChrome.getBoundingClientRect().height) : 0;
+    var vpChromeMb = vpChrome
+      ? (parseFloat(window.getComputedStyle(vpChrome).marginBottom) || 0)
+      : 0;
     var dockH = Math.max(
       dock ? Math.ceil(dock.getBoundingClientRect().height) : 0,
       STAGE_DOCK_MIN_H
@@ -1714,7 +1768,10 @@ var QuotationEditor = (function () {
 
     var natH = Math.max(
       1,
-      Math.ceil(scenesH + scenesMb + natCanvasH + dockMt + dockH + dockMb)
+      Math.ceil(
+        scenesH + scenesMb + vpChromeH + vpChromeMb +
+        natCanvasH + dockMt + dockH + dockMb
+      )
     );
     unit.style.height = natH + 'px';
     unit.style.visibility = '';
@@ -1739,25 +1796,49 @@ var QuotationEditor = (function () {
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
 
     unit.style.transform = 'scale(' + scale + ')';
+    refreshSafeAreaGuide();
   }
 
-  /** Design pixels == stage pixels; outer Stage scale is the only zoom. */
+  /** Design pixels == active viewport; outer Stage scale is the only zoom. */
   function syncDesignIdentity() {
     if (!rootEl) return;
+    var size = activeViewportSize();
     var viewport = rootEl.querySelector('[data-qe-canvas-viewport]');
     var screen = rootEl.querySelector('[data-qe-canvas-screen]');
     var design = rootEl.querySelector('[data-qe-canvas-design]');
     if (viewport) viewport.style.padding = '0';
     if (screen) {
-      screen.style.width = CANVAS_DESIGN_W + 'px';
-      screen.style.height = CANVAS_DESIGN_H + 'px';
+      screen.style.width = size.width + 'px';
+      screen.style.height = size.height + 'px';
     }
     if (design) {
-      design.style.width = CANVAS_DESIGN_W + 'px';
-      design.style.height = CANVAS_DESIGN_H + 'px';
+      design.style.width = size.width + 'px';
+      design.style.height = size.height + 'px';
       design.style.transform = 'none';
       design.style.transformOrigin = 'top left';
     }
+  }
+
+  function refreshSafeAreaGuide() {
+    if (!rootEl || typeof HeroRenderer === 'undefined') return;
+    var design = rootEl.querySelector('[data-qe-canvas-design]');
+    if (!design) return;
+    if (!state.safeAreaVisible) {
+      HeroRenderer.setSafeAreaGuide(design, null, { visible: false });
+      return;
+    }
+    var size = activeViewportSize();
+    var mediaHost = design.querySelector('[data-hero-renderer], .qe-scene-media, .qe-canvas__runtime-host');
+    var mediaEl = HeroRenderer.mediaElement(mediaHost) ||
+      (mediaHost && mediaHost.querySelector('img, video'));
+    var nat = HeroRenderer.readNaturalSize(mediaEl, 16, 9);
+    var box = HeroRenderer.safeAreaViewportPercent(
+      nat.width, nat.height, size.width, size.height
+    );
+    HeroRenderer.setSafeAreaGuide(design, box, {
+      visible: true,
+      label: 'Área garantizada'
+    });
   }
 
   function fitCanvasDesign() {
@@ -3410,6 +3491,34 @@ var QuotationEditor = (function () {
       }
       if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
+
+      editor.querySelectorAll('[data-qe-viewport]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var next = btn.getAttribute('data-qe-viewport') || 'desktop';
+          if (state.viewportPreset === next) return;
+          state.viewportPreset = next;
+          rerender();
+        });
+      });
+      var safeBtn = editor.querySelector('[data-qe-safe-area]');
+      if (safeBtn) {
+        safeBtn.addEventListener('click', function () {
+          state.safeAreaVisible = !state.safeAreaVisible;
+          rerender();
+        });
+      }
+      /* Refresh Safe Area once media natural size is known. */
+      editor.querySelectorAll('.qe-canvas__design img, .qe-canvas__design video').forEach(function (mediaEl) {
+        if (mediaEl.dataset.qeSafeBound) return;
+        mediaEl.dataset.qeSafeBound = '1';
+        var bump = function () { refreshSafeAreaGuide(); };
+        mediaEl.addEventListener('load', bump);
+        mediaEl.addEventListener('loadedmetadata', bump);
+        if ((mediaEl.tagName === 'IMG' && mediaEl.complete) ||
+            (mediaEl.tagName === 'VIDEO' && mediaEl.readyState >= 1)) {
+          bump();
+        }
+      });
 
       /* Legacy dock toggles kept for template menus if present */
       editor.querySelectorAll('[data-qe-dock]').forEach(function (btn) {
