@@ -1850,6 +1850,17 @@
   padding: 0 7px;
 }
 
+.qe-content__select-trigger-trash {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  background: currentColor;
+  opacity: 0.88;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 .qe-content__select-trigger-box {
   width: 11px;
   height: 11px;
@@ -1921,6 +1932,56 @@
   margin-right: 2px;
   opacity: 1;
   overflow: visible;
+}
+
+.qe-lib__select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  padding: 4px 2px 4px 0;
+  cursor: pointer;
+  user-select: none;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.qe-lib__select-all .qe-lib__check-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.qe-lib__select-all .qe-lib__check-box {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.qe-lib__select-all .qe-lib__check-input:checked + .qe-lib__check-box {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 2px rgba(12, 12, 14, 0.92);
+}
+
+.qe-lib__select-all-label {
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.qe-lib__item.is-lib-reorder-before {
+  box-shadow: inset 0 2px 0 0 rgba(255, 255, 255, 0.72);
+}
+
+.qe-lib__item.is-lib-reorder-after {
+  box-shadow: inset 0 -2px 0 0 rgba(255, 255, 255, 0.72);
 }
 
 .qe-lib__check-input {

@@ -581,6 +581,7 @@ var QuotationEditor = (function () {
       libraryStatusOpen: false,
       librarySelectModeGroup: null,
       librarySelectedIds: {},
+      librarySelectAnchorId: null,
       renamingFolderId: null,
       renamingContentId: null,
       openFolders: {},
@@ -1471,7 +1472,97 @@ var QuotationEditor = (function () {
   function clearLibrarySelectionMode() {
     state.librarySelectModeGroup = null;
     state.librarySelectedIds = {};
+    state.librarySelectAnchorId = null;
     closeLibrarySelectPopoverOnly();
+  }
+
+  function ensureLibrarySelectMode(groupId) {
+    if (!groupId || groupId === 'audio' || groupId === 'models') return false;
+    if (isLibrarySelectMode(groupId)) return true;
+    closeAllLibMenus();
+    state.librarySelectModeGroup = groupId;
+    state.librarySelectedIds = {};
+    state.librarySelectAnchorId = null;
+    state.openGroups[groupId] = true;
+    return true;
+  }
+
+  function folderScopeKey(folderId) {
+    return folderId ? String(folderId) : '';
+  }
+
+  function visibleContentIdsInScope(groupId, folderId) {
+    var list = folderId
+      ? contentInFolder(folderId)
+      : rootContentInGroup(groupId);
+    return list.filter(matchesLibrarySearch).map(function (c) { return String(c.id); });
+  }
+
+  function clearLibrarySelectionInGroup(groupId) {
+    var map = state.librarySelectedIds || {};
+    Object.keys(map).forEach(function (id) {
+      if (!map[id]) return;
+      var c = contentById(id);
+      if (c && String(c.group || '') === String(groupId || '')) {
+        delete map[id];
+      }
+    });
+  }
+
+  function selectLibraryRange(groupId, folderId, fromId, toId) {
+    var ids = visibleContentIdsInScope(groupId, folderId);
+    var a = ids.indexOf(String(fromId));
+    var b = ids.indexOf(String(toId));
+    if (a < 0 || b < 0) return;
+    var lo = Math.min(a, b);
+    var hi = Math.max(a, b);
+    var i;
+    for (i = lo; i <= hi; i++) {
+      state.librarySelectedIds[ids[i]] = true;
+    }
+  }
+
+  function setLibrarySelectionAllInScope(groupId, folderId, on) {
+    var ids = visibleContentIdsInScope(groupId, folderId);
+    ids.forEach(function (id) {
+      if (on) state.librarySelectedIds[id] = true;
+      else delete state.librarySelectedIds[id];
+    });
+  }
+
+  function isLibraryScopeFullySelected(groupId, folderId) {
+    var ids = visibleContentIdsInScope(groupId, folderId);
+    if (!ids.length) return false;
+    return ids.every(function (id) { return isLibraryItemSelected(id); });
+  }
+
+  function librarySelectAllRowHtml(groupId, folderId) {
+    if (!isLibrarySelectMode(groupId)) return '';
+    var ids = visibleContentIdsInScope(groupId, folderId);
+    if (!ids.length) return '';
+    var allOn = isLibraryScopeFullySelected(groupId, folderId);
+    var scope = folderId ? String(folderId) : '';
+    return '' +
+      '<label class="qe-lib__select-all" data-qe-lib-select-all="' + escapeHtml(groupId) + '"' +
+        ' data-qe-lib-select-all-folder="' + escapeHtml(scope) + '">' +
+        '<input type="checkbox" class="qe-lib__check-input" data-qe-lib-select-all-input' +
+          (allOn ? ' checked' : '') +
+          ' aria-label="Seleccionar todos">' +
+        '<span class="qe-lib__check-box" aria-hidden="true"></span>' +
+        '<span class="qe-lib__select-all-label">Todos</span>' +
+      '</label>';
+  }
+
+  function contextActionContentIds(primaryId) {
+    var item = contentById(primaryId);
+    if (!item) return [];
+    if (isLibraryItemSelected(primaryId) && librarySelectedCountInGroup(item.group) > 1) {
+      return Object.keys(state.librarySelectedIds || {}).filter(function (id) {
+        return state.librarySelectedIds[id] && contentById(id) &&
+          String(contentById(id).group) === String(item.group);
+      });
+    }
+    return [String(primaryId)];
   }
 
   function closeLibrarySelectPopoverOnly() {
@@ -1493,10 +1584,9 @@ var QuotationEditor = (function () {
     var selectOn = isLibrarySelectMode(group.id);
     var n = librarySelectedCountInGroup(group.id);
     var hasCount = selectOn && n > 0;
-    var inner = hasCount
-      ? ('<span class="qe-content__select-trigger-mark" aria-hidden="true">✓</span>' +
-         '<span class="qe-content__select-trigger-n">' + n + '</span>')
-      : '<span class="qe-content__select-trigger-box" aria-hidden="true"></span>';
+    var inner = '' +
+      '<span class="qe-content__select-trigger-trash" aria-hidden="true"></span>' +
+      (hasCount ? '<span class="qe-content__select-trigger-n">' + n + '</span>' : '');
     return '' +
       '<button type="button" class="qe-content__select-trigger' +
         (selectOn ? ' is-active' : '') +
@@ -1504,10 +1594,10 @@ var QuotationEditor = (function () {
         ' data-qe-lib-select-mode="' + escapeHtml(group.id) + '"' +
         ' title="' + (selectOn
           ? (hasCount ? 'Acciones de selección' : 'Salir de selección')
-          : 'Seleccionar recursos') + '"' +
+          : 'Selección múltiple') + '"' +
         ' aria-label="' + (selectOn
           ? (hasCount ? n + ' seleccionados' : 'Salir de selección')
-          : 'Seleccionar recursos') + '"' +
+          : 'Selección múltiple') + '"' +
         ' aria-pressed="' + (selectOn ? 'true' : 'false') + '"' +
         ' aria-haspopup="menu" aria-expanded="false">' +
         inner +
@@ -1570,10 +1660,7 @@ var QuotationEditor = (function () {
     }
 
     if (!isLibrarySelectMode(groupId)) {
-      closeAllLibMenus();
-      state.librarySelectModeGroup = groupId;
-      state.librarySelectedIds = {};
-      state.openGroups[groupId] = true;
+      ensureLibrarySelectMode(groupId);
       rerender();
       return;
     }
@@ -1587,23 +1674,61 @@ var QuotationEditor = (function () {
     openLibrarySelectPopover(btn, groupId);
   }
 
-  function toggleLibraryItemSelected(id) {
+  function toggleLibraryItemSelected(id, opts) {
     if (!id) return;
     var key = String(id);
+    var item = contentById(id);
     if (!state.librarySelectedIds) state.librarySelectedIds = {};
     if (state.librarySelectedIds[key]) delete state.librarySelectedIds[key];
     else state.librarySelectedIds[key] = true;
-    if (state.librarySelectModeGroup &&
-        librarySelectedCountInGroup(state.librarySelectModeGroup) <= 0 &&
-        !Object.keys(state.librarySelectedIds).some(function (k) {
-          return state.librarySelectedIds[k];
-        })) {
-      /* Keep mode on with empty selection — button returns to □ icon only.
-         Auto-exit only when user clears via outside/ESC is separate.
-         Spec: counter returns to initial icon when count is 0. */
+    if (!opts || opts.anchor !== false) {
+      state.librarySelectAnchorId = key;
+    }
+    if (item && !isLibrarySelectMode(item.group)) {
+      ensureLibrarySelectMode(item.group);
+      state.librarySelectedIds[key] = true;
     }
     closeLibrarySelectPopoverOnly();
     rerender();
+  }
+
+  function handleLibraryItemSelectClick(id, e) {
+    var item = contentById(id);
+    if (!item) return false;
+    var groupId = item.group;
+    var folderId = item.folderId || null;
+    var ctrl = !!(e && (e.ctrlKey || e.metaKey));
+    var shift = !!(e && e.shiftKey);
+
+    if (shift) {
+      ensureLibrarySelectMode(groupId);
+      var anchor = state.librarySelectAnchorId;
+      var anchorItem = anchor ? contentById(anchor) : null;
+      if (!anchorItem ||
+          String(anchorItem.group) !== String(groupId) ||
+          folderScopeKey(anchorItem.folderId) !== folderScopeKey(folderId)) {
+        anchor = id;
+      }
+      clearLibrarySelectionInGroup(groupId);
+      selectLibraryRange(groupId, folderId, anchor, id);
+      state.librarySelectAnchorId = String(anchor);
+      closeLibrarySelectPopoverOnly();
+      rerender();
+      return true;
+    }
+
+    if (ctrl) {
+      ensureLibrarySelectMode(groupId);
+      toggleLibraryItemSelected(id);
+      return true;
+    }
+
+    if (isLibrarySelectMode(groupId)) {
+      toggleLibraryItemSelected(id);
+      return true;
+    }
+
+    return false;
   }
 
   function contentItemRowHtml(item, nested) {
@@ -1641,7 +1766,8 @@ var QuotationEditor = (function () {
         (selectMode ? ' is-select-mode' : '') + '"' +
         ' role="button" tabindex="0"' +
         ' data-qe-content="' + escapeHtml(item.id) + '"' +
-        ' draggable="' + (renaming || uploading || selectMode ? 'false' : 'true') + '"' +
+        ' data-qe-lib-folder="' + escapeHtml(item.folderId || '') + '"' +
+        ' draggable="' + (renaming || uploading ? 'false' : 'true') + '"' +
         ' data-qe-drag-lib="' + escapeHtml(item.id) + '"' +
         ' data-qe-lib-group="' + escapeHtml(item.group || '') + '"' +
         (canAssign && !uploading && !failed && !selectMode
@@ -1736,6 +1862,7 @@ var QuotationEditor = (function () {
         '</div>' +
         (open
           ? ('<div class="qe-folder__body">' +
+              librarySelectAllRowHtml(group.id, folder.id) +
               (kids.length
                 ? ('<div class="qe-content__items">' +
                     kids.map(function (item) { return contentItemRowHtml(item, true); }).join('') +
@@ -1771,11 +1898,13 @@ var QuotationEditor = (function () {
 
     var rootItems = rootContentInGroup(group.id).filter(matchesLibrarySearch);
     var folders = foldersInGroup(group.id);
-    var rootHtml = rootItems.length
-      ? ('<div class="qe-content__items">' +
-          rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
-        '</div>')
-      : '';
+    var rootHtml = '' +
+      librarySelectAllRowHtml(group.id, null) +
+      (rootItems.length
+        ? ('<div class="qe-content__items">' +
+            rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
+          '</div>')
+        : '');
     var foldersHtml = folders.map(function (f) { return folderBlockHtml(f, group); }).join('');
     var tree = rootHtml + foldersHtml;
     var actions;
@@ -3191,6 +3320,129 @@ var QuotationEditor = (function () {
     panel.style.left = Math.round(left) + 'px';
   }
 
+  function positionLibMenuAtPoint(panel, x, y) {
+    if (!panel) return;
+    var width = Math.max(168, panel.offsetWidth || 168);
+    var height = panel.offsetHeight || 0;
+    var left = Number(x) || 0;
+    var top = Number(y) || 0;
+    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    if (left < 8) left = 8;
+    if (height && top + height > window.innerHeight - 8) {
+      top = Math.max(8, top - height);
+    }
+    panel.style.top = Math.round(top) + 'px';
+    panel.style.left = Math.round(left) + 'px';
+  }
+
+  function libMenuFolderOnlyOptionsHtml(id) {
+    var item = contentById(id);
+    if (!item) return '';
+    var groupId = item.group;
+    var rows = '' +
+      '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+        ' data-qe-lib-menu-move-folder="">Raíz del grupo</button>';
+    foldersInGroup(groupId).forEach(function (f) {
+      if (!f) return;
+      rows += '' +
+        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+          ' data-qe-lib-menu-move-folder="' + escapeHtml(f.id) + '">' +
+          escapeHtml(f.name || 'Carpeta') +
+        '</button>';
+    });
+    return rows;
+  }
+
+  function buildContentContextMenuHtml(id) {
+    var ids = contextActionContentIds(id);
+    var n = ids.length;
+    var delLabel = n > 1 ? ('Eliminar (' + n + ')') : 'Eliminar';
+    return '' +
+      '<div class="qe-lib-menu__main" data-qe-lib-menu-main>' +
+        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+          ' data-qe-lib-menu-action="move-folder">Mover de carpeta</button>' +
+        '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+        '<button type="button" class="boxies-workspace-menu__item qe-lib-menu__danger" role="menuitem"' +
+          ' data-qe-lib-menu-action="delete">' + escapeHtml(delLabel) + '</button>' +
+      '</div>' +
+      '<div class="qe-lib-menu__move" data-qe-lib-menu-move hidden>' +
+        '<button type="button" class="boxies-workspace-menu__item" role="menuitem"' +
+          ' data-qe-lib-menu-action="move-back">← Volver</button>' +
+        '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+        '<p class="qe-lib-menu__hint">Mover a</p>' +
+        libMenuFolderOnlyOptionsHtml(id) +
+      '</div>';
+  }
+
+  function openContentContextMenu(contentId, clientX, clientY) {
+    if (!contentById(contentId)) return;
+    closeAllLibMenus();
+    var portal = ensureLibMenuPortal();
+    portal.setAttribute('aria-hidden', 'false');
+    var panel = document.createElement('div');
+    panel.className = 'boxies-workspace-menu__panel qe-lib-menu-panel qe-lib-context-menu';
+    panel.setAttribute('role', 'menu');
+    panel.setAttribute('data-qe-lib-menu-panel', '1');
+    panel.setAttribute('data-qe-lib-context-menu', '1');
+    panel.setAttribute('data-qe-lib-menu-kind', 'content');
+    panel.setAttribute('data-qe-lib-menu-target', contentId);
+    panel.innerHTML = buildContentContextMenuHtml(contentId);
+    portal.appendChild(panel);
+    positionLibMenuAtPoint(panel, clientX, clientY);
+    bindContentContextMenuPanel(panel, contentId, clientX, clientY);
+  }
+
+  function bindContentContextMenuPanel(panel, contentId, clientX, clientY) {
+    if (!panel) return;
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    panel.querySelectorAll('[data-qe-lib-menu-action]').forEach(function (actionBtn) {
+      actionBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var action = actionBtn.getAttribute('data-qe-lib-menu-action');
+        if (action === 'move-folder') {
+          var main = panel.querySelector('[data-qe-lib-menu-main]');
+          var move = panel.querySelector('[data-qe-lib-menu-move]');
+          if (main) main.hidden = true;
+          if (move) move.hidden = false;
+          positionLibMenuAtPoint(panel, clientX, clientY);
+          return;
+        }
+        if (action === 'move-back') {
+          var mainBack = panel.querySelector('[data-qe-lib-menu-main]');
+          var moveBack = panel.querySelector('[data-qe-lib-menu-move]');
+          if (mainBack) mainBack.hidden = false;
+          if (moveBack) moveBack.hidden = true;
+          positionLibMenuAtPoint(panel, clientX, clientY);
+          return;
+        }
+        if (action === 'delete') {
+          closeAllLibMenus();
+          var ids = contextActionContentIds(contentId);
+          var item = contentById(contentId);
+          if (ids.length > 1 && item) {
+            ensureLibrarySelectMode(item.group);
+            ids.forEach(function (id) { state.librarySelectedIds[id] = true; });
+            removeSelectedLibraryResources(item.group);
+          } else {
+            removeLibraryResource(contentId);
+          }
+        }
+      });
+    });
+
+    panel.querySelectorAll('[data-qe-lib-menu-move-folder]').forEach(function (moveBtn) {
+      moveBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var folderId = moveBtn.getAttribute('data-qe-lib-menu-move-folder');
+        closeAllLibMenus();
+        moveLibraryItemsToFolder(contextActionContentIds(contentId), folderId || null);
+      });
+    });
+  }
+
   function libMenuMoveOptionsHtml(kind, id) {
     if (kind === 'folder') {
       var folder = folderById(id);
@@ -3382,8 +3634,10 @@ var QuotationEditor = (function () {
             t.closest('[data-qe-lib-select-mode]') ||
             t.closest('[data-qe-lib-check]') ||
             t.closest('[data-qe-lib-check-wrap]') ||
+            t.closest('[data-qe-lib-select-all]') ||
             t.closest('.qe-lib__item.is-select-mode') ||
             t.closest('[data-qe-lib-select-panel]') ||
+            t.closest('[data-qe-lib-context-menu]') ||
             t.closest('#qeLibMenuPortal') ||
             t.closest('.qe-content__group.is-selecting')
           );
@@ -5031,7 +5285,7 @@ var QuotationEditor = (function () {
   }
 
   /* Same-category only: mutate folderId, never item.group / media / URLs. */
-  function moveLibraryItemToFolder(contentId, targetFolderId) {
+  function moveLibraryItemToFolder(contentId, targetFolderId, opts) {
     var item = contentById(contentId);
     if (!item) return false;
     var nextFolderId = targetFolderId ? String(targetFolderId) : null;
@@ -5042,9 +5296,75 @@ var QuotationEditor = (function () {
     var cur = item.folderId ? String(item.folderId) : null;
     if (cur === nextFolderId) return false;
     item.folderId = nextFolderId;
+    if (!opts || !opts.silent) {
+      markDirtyLocal();
+      rerender();
+    }
+    return true;
+  }
+
+  function moveLibraryItemsToFolder(ids, targetFolderId) {
+    var list = Array.isArray(ids) ? ids : [];
+    var changed = false;
+    list.forEach(function (id) {
+      if (moveLibraryItemToFolder(id, targetFolderId, { silent: true })) changed = true;
+    });
+    if (!changed) return false;
     markDirtyLocal();
     rerender();
     return true;
+  }
+
+  function sameContentScope(a, b) {
+    if (!a || !b) return false;
+    return String(a.group || '') === String(b.group || '') &&
+      folderScopeKey(a.folderId) === folderScopeKey(b.folderId);
+  }
+
+  function reorderLibraryItems(movedIds, targetId, placeAfter) {
+    var target = contentById(targetId);
+    if (!target || !movedIds || !movedIds.length) return false;
+    var moveSet = {};
+    var orderedMove = [];
+    movedIds.forEach(function (id) {
+      var key = String(id);
+      if (moveSet[key]) return;
+      var item = contentById(key);
+      if (!item || !sameContentScope(item, target)) return;
+      moveSet[key] = true;
+      orderedMove.push(key);
+    });
+    if (!orderedMove.length) return false;
+    if (moveSet[String(targetId)]) return false;
+
+    var siblingIds = [];
+    state.content.forEach(function (c) {
+      if (c && sameContentScope(c, target)) siblingIds.push(String(c.id));
+    });
+    var rest = siblingIds.filter(function (id) { return !moveSet[id]; });
+    var targetIdx = rest.indexOf(String(targetId));
+    if (targetIdx < 0) return false;
+    var insertAt = placeAfter ? targetIdx + 1 : targetIdx;
+    var newOrder = rest.slice(0, insertAt).concat(orderedMove).concat(rest.slice(insertAt));
+    var byId = {};
+    state.content.forEach(function (c) {
+      if (c) byId[String(c.id)] = c;
+    });
+    var queue = newOrder.map(function (id) { return byId[id]; }).filter(Boolean);
+    var qi = 0;
+    state.content = state.content.map(function (c) {
+      if (c && sameContentScope(c, target)) return queue[qi++];
+      return c;
+    });
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
+  function clearLibReorderIndicators() {
+    qAll('.qe-lib__item.is-lib-reorder-before, .qe-lib__item.is-lib-reorder-after').forEach(function (el) {
+      el.classList.remove('is-lib-reorder-before', 'is-lib-reorder-after');
+    });
   }
 
   function markDirtyLocal() {
@@ -5377,7 +5697,10 @@ var QuotationEditor = (function () {
         el.addEventListener('dragstart', function (e) {
           if (e.target && e.target.closest && (
             e.target.closest('[data-qe-lib-menu]') ||
-            e.target.closest('[data-qe-content-rename]')
+            e.target.closest('[data-qe-content-rename]') ||
+            e.target.closest('[data-qe-lib-check]') ||
+            e.target.closest('[data-qe-lib-check-wrap]') ||
+            e.target.closest('[data-qe-lib-select-all]')
           )) {
             e.preventDefault();
             return;
@@ -5386,9 +5709,22 @@ var QuotationEditor = (function () {
           var sceneId = el.getAttribute('data-qe-drag-resource');
           var group = el.getAttribute('data-qe-lib-group') || '';
           if (!libId || !e.dataTransfer) return;
+          var dragItem = contentById(libId);
+          var moveIds = [String(libId)];
+          if (dragItem && isLibraryItemSelected(libId) &&
+              librarySelectedCountInGroup(dragItem.group) > 1) {
+            moveIds = Object.keys(state.librarySelectedIds || {}).filter(function (id) {
+              if (!state.librarySelectedIds[id]) return false;
+              var c = contentById(id);
+              return !!(c && sameContentScope(c, dragItem));
+            });
+            if (!moveIds.length) moveIds = [String(libId)];
+          }
           e.dataTransfer.setData('text/qe-lib-move', libId);
+          e.dataTransfer.setData('text/qe-lib-move-ids', JSON.stringify(moveIds));
           e.dataTransfer.setData('text/qe-lib-group', group);
-          if (sceneId) {
+          e.dataTransfer.setData('text/qe-lib-folder', el.getAttribute('data-qe-lib-folder') || '');
+          if (sceneId && moveIds.length === 1) {
             e.dataTransfer.setData('text/qe-resource', sceneId);
             e.dataTransfer.setData('text/plain', sceneId);
             e.dataTransfer.effectAllowed = 'copyMove';
@@ -5397,63 +5733,105 @@ var QuotationEditor = (function () {
             e.dataTransfer.effectAllowed = 'move';
           }
           el.classList.add('is-dragging');
+          moveIds.forEach(function (id) {
+            var row = document.querySelector('[data-qe-content="' + id + '"]');
+            if (row) row.classList.add('is-dragging');
+          });
         });
         el.addEventListener('dragend', function () {
-          el.classList.remove('is-dragging');
+          qAll('.qe-lib__item.is-dragging').forEach(function (row) {
+            row.classList.remove('is-dragging');
+          });
+          clearLibReorderIndicators();
           qAll('.is-lib-drop-target').forEach(function (z) {
             z.classList.remove('is-lib-drop-target');
           });
         });
       });
 
-      function libDropGroupOf(zone) {
-        return zone.getAttribute('data-qe-lib-drop-group') || '';
-      }
-
-      qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
-        zone.addEventListener('dragover', function (e) {
+      /* Reorder within the same folder / root — not for changing folders. */
+      qAll('[data-qe-content][data-qe-drag-lib]').forEach(function (row) {
+        row.addEventListener('dragover', function (e) {
           if (document.querySelector('.qe-folder.is-dragging') ||
               (e.dataTransfer && e.dataTransfer.types &&
                 Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
             return;
           }
           var dragEl = document.querySelector('.qe-lib__item.is-dragging');
-          var dragGroup = dragEl
-            ? (dragEl.getAttribute('data-qe-lib-group') || '')
-            : '';
-          var dropGroup = libDropGroupOf(zone);
-          if (!dragGroup || !dropGroup || dragGroup !== dropGroup) {
+          if (!dragEl) return;
+          var dragGroup = dragEl.getAttribute('data-qe-lib-group') || '';
+          var dragFolder = dragEl.getAttribute('data-qe-lib-folder') || '';
+          var dropGroup = row.getAttribute('data-qe-lib-group') || '';
+          var dropFolder = row.getAttribute('data-qe-lib-folder') || '';
+          if (!dragGroup || dragGroup !== dropGroup || dragFolder !== dropFolder) {
             if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
-            zone.classList.remove('is-lib-drop-target');
             return;
           }
+          if (dragEl === row) return;
           e.preventDefault();
           e.stopPropagation();
-          zone.classList.add('is-lib-drop-target');
+          var rect = row.getBoundingClientRect();
+          var after = e.clientY > rect.top + rect.height / 2;
+          clearLibReorderIndicators();
+          row.classList.add(after ? 'is-lib-reorder-after' : 'is-lib-reorder-before');
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         });
-        zone.addEventListener('dragleave', function (e) {
-          if (e.relatedTarget && zone.contains(e.relatedTarget)) return;
-          zone.classList.remove('is-lib-drop-target');
+        row.addEventListener('dragleave', function (e) {
+          if (e.relatedTarget && row.contains(e.relatedTarget)) return;
+          row.classList.remove('is-lib-reorder-before', 'is-lib-reorder-after');
         });
-        zone.addEventListener('drop', function (e) {
+        row.addEventListener('drop', function (e) {
           if (document.querySelector('.qe-folder.is-dragging') ||
               (e.dataTransfer && e.dataTransfer.getData('text/qe-folder'))) {
             return;
           }
           e.preventDefault();
           e.stopPropagation();
-          zone.classList.remove('is-lib-drop-target');
-          var id = (e.dataTransfer && (
-            e.dataTransfer.getData('text/qe-lib-move') ||
-            e.dataTransfer.getData('text/plain')
-          )) || '';
-          if (!id) return;
-          var item = contentById(id);
-          var dropGroup = libDropGroupOf(zone);
-          if (!item || String(item.group) !== String(dropGroup)) return;
-          var folderId = zone.getAttribute('data-qe-lib-drop-folder') || null;
-          moveLibraryItemToFolder(id, folderId);
+          var after = row.classList.contains('is-lib-reorder-after');
+          clearLibReorderIndicators();
+          var targetId = row.getAttribute('data-qe-content');
+          var rawIds = (e.dataTransfer && e.dataTransfer.getData('text/qe-lib-move-ids')) || '';
+          var ids = [];
+          try { ids = JSON.parse(rawIds); } catch (errParse) { ids = []; }
+          if (!Array.isArray(ids) || !ids.length) {
+            var one = (e.dataTransfer && (
+              e.dataTransfer.getData('text/qe-lib-move') ||
+              e.dataTransfer.getData('text/plain')
+            )) || '';
+            if (one) ids = [one];
+          }
+          if (!targetId || !ids.length) return;
+          reorderLibraryItems(ids, targetId, after);
+        });
+      });
+
+      /* Folder/root drops no longer move files — use right-click "Mover de carpeta". */
+      qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
+        zone.addEventListener('dragover', function (e) {
+          if (document.querySelector('.qe-lib__item.is-dragging') ||
+              (e.dataTransfer && e.dataTransfer.types &&
+                Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-lib-move') >= 0)) {
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+            zone.classList.remove('is-lib-drop-target');
+            return;
+          }
+          if (document.querySelector('.qe-folder.is-dragging') ||
+              (e.dataTransfer && e.dataTransfer.types &&
+                Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
+            return;
+          }
+        });
+        zone.addEventListener('drop', function (e) {
+          if (document.querySelector('.qe-lib__item.is-dragging') ||
+              (e.dataTransfer && (
+                e.dataTransfer.getData('text/qe-lib-move') ||
+                e.dataTransfer.getData('text/qe-lib-move-ids')
+              ))) {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('is-lib-drop-target');
+            return;
+          }
         });
       });
 
@@ -5767,6 +6145,26 @@ var QuotationEditor = (function () {
       });
     });
 
+    qAll('[data-qe-lib-select-all]').forEach(function (label) {
+      var input = label.querySelector('[data-qe-lib-select-all-input]');
+      if (!input) return;
+      input.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+      input.addEventListener('change', function (e) {
+        e.stopPropagation();
+        var groupId = label.getAttribute('data-qe-lib-select-all');
+        var folderAttr = label.getAttribute('data-qe-lib-select-all-folder');
+        var folderId = folderAttr ? folderAttr : null;
+        if (!groupId) return;
+        ensureLibrarySelectMode(groupId);
+        setLibrarySelectionAllInScope(groupId, folderId, !!input.checked);
+        state.librarySelectAnchorId = null;
+        closeLibrarySelectPopoverOnly();
+        rerender();
+      });
+    });
+
     qAll('[data-qe-folder-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         toggleFolder(btn.getAttribute('data-qe-folder-toggle'));
@@ -5779,26 +6177,29 @@ var QuotationEditor = (function () {
           e.target.closest('[data-qe-lib-menu]') ||
           e.target.closest('[data-qe-content-rename]') ||
           e.target.closest('[data-qe-lib-check]') ||
-          e.target.closest('[data-qe-lib-check-wrap]')
+          e.target.closest('[data-qe-lib-check-wrap]') ||
+          e.target.closest('[data-qe-lib-select-all]')
         )) return;
         var id = el.getAttribute('data-qe-content');
-        var item = contentById(id);
-        if (item && isLibrarySelectMode(item.group)) {
-          toggleLibraryItemSelected(id);
-          return;
-        }
+        if (handleLibraryItemSelectClick(id, e)) return;
         selectContent(id);
+      });
+      el.addEventListener('contextmenu', function (e) {
+        if (e.target && e.target.closest && (
+          e.target.closest('[data-qe-content-rename]') ||
+          e.target.closest('[data-qe-lib-menu]')
+        )) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var id = el.getAttribute('data-qe-content');
+        openContentContextMenu(id, e.clientX, e.clientY);
       });
       el.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         if (e.target && e.target.closest && e.target.closest('[data-qe-content-rename]')) return;
         e.preventDefault();
         var id = el.getAttribute('data-qe-content');
-        var item = contentById(id);
-        if (item && isLibrarySelectMode(item.group)) {
-          toggleLibraryItemSelected(id);
-          return;
-        }
+        if (handleLibraryItemSelectClick(id, e)) return;
         selectContent(id);
       });
     });
