@@ -1,6 +1,6 @@
 /**
  * QuotationGuides — rulers + scene guides (%) for Quotation Editor.
- * rulersVisible is session-only; guides[] persist on each scene.
+ * rulersVisible / guidesVisible are session-only; guides[] persist on each scene.
  */
 var QuotationGuides = (function () {
   var RULER_THICK = 15;
@@ -10,6 +10,7 @@ var QuotationGuides = (function () {
   var api = null;
   var rootEl = null;
   var rulersVisible = false;
+  var guidesVisible = true;
   var ghost = null;
   var dragGuide = null;
   var boundDoc = false;
@@ -250,7 +251,7 @@ var QuotationGuides = (function () {
   function renderGuides() {
     var layer = ensureGuideLayer();
     if (!layer) return;
-    if (isPreview()) {
+    if (isPreview() || !guidesVisible) {
       layer.innerHTML = '';
       layer.hidden = true;
       return;
@@ -331,6 +332,7 @@ var QuotationGuides = (function () {
   function addGuide(type, positionPct) {
     var scene = activeScene();
     if (!scene) return null;
+    if (!guidesVisible) setGuidesVisible(true);
     var guides = ensureGuidesArray(scene);
     var g = {
       id: nextGuideId(),
@@ -361,6 +363,7 @@ var QuotationGuides = (function () {
   }
 
   function startGhost(type, clientX, clientY) {
+    if (!guidesVisible) setGuidesVisible(true);
     ghost = { type: type };
     var el = ensureGhostHost();
     if (el) {
@@ -505,6 +508,10 @@ var QuotationGuides = (function () {
           label: rulersVisible ? 'Ocultar reglas' : 'Mostrar reglas'
         },
         {
+          id: 'toggle-guides',
+          label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías'
+        },
+        {
           id: 'guide-h',
           label: 'Crear guía horizontal',
           separatorBefore: true,
@@ -519,6 +526,10 @@ var QuotationGuides = (function () {
       onSelect: function (id) {
         if (id === 'toggle-rulers') {
           setRulersVisible(!rulersVisible);
+          return;
+        }
+        if (id === 'toggle-guides') {
+          setGuidesVisible(!guidesVisible);
           return;
         }
         if (!pct) return;
@@ -553,6 +564,14 @@ var QuotationGuides = (function () {
     }
   }
 
+  function setGuidesVisible(on) {
+    guidesVisible = !!on;
+    renderGuides();
+    if (api && typeof api.onGuidesVisibleChange === 'function') {
+      api.onGuidesVisibleChange(guidesVisible);
+    }
+  }
+
   function sync(nextRoot, nextApi) {
     rootEl = nextRoot || rootEl;
     api = nextApi || api;
@@ -584,6 +603,8 @@ var QuotationGuides = (function () {
     refresh: function () { sync(rootEl, api); },
     setRulersVisible: setRulersVisible,
     isRulersVisible: function () { return rulersVisible; },
+    setGuidesVisible: setGuidesVisible,
+    isGuidesVisible: function () { return guidesVisible; },
     addGuide: addGuide,
     removeGuide: removeGuide,
     ensureGuidesArray: ensureGuidesArray,

@@ -566,6 +566,7 @@ var QuotationEditor = (function () {
       safeAreaVisible: false,
       /* Session-only — not persisted with the document. */
       rulersVisible: false,
+      guidesVisible: true,
       expEditMode: 'buttons',
       expHasSelection: false,
       openGroups: {
@@ -3335,10 +3336,15 @@ var QuotationEditor = (function () {
       getDesignSize: function () { return designLienzoSize(); },
       isPreviewMode: function () { return !!state.canvasPreviewMode; },
       onChange: function () { markDirtyLocal(); },
-      onRulersChange: function (on) { state.rulersVisible = !!on; }
+      onRulersChange: function (on) { state.rulersVisible = !!on; },
+      onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; }
     });
     if (QuotationGuides.isRulersVisible() !== !!state.rulersVisible) {
       QuotationGuides.setRulersVisible(!!state.rulersVisible);
+    }
+    if (QuotationGuides.isGuidesVisible && QuotationGuides.setGuidesVisible &&
+        QuotationGuides.isGuidesVisible() !== !!state.guidesVisible) {
+      QuotationGuides.setGuidesVisible(!!state.guidesVisible);
     }
   }
 
