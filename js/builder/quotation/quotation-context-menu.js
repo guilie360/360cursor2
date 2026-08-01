@@ -77,12 +77,33 @@ var QuotationContextMenu = (function () {
     }, true);
   }
 
+  function findItem(items, id) {
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] && items[i].id === id) return items[i];
+    }
+    return null;
+  }
+
+  function submitInput(panel, items, opts, inputEl) {
+    if (!inputEl) return;
+    var id = inputEl.getAttribute('data-qe-ctx-input');
+    var item = findItem(items, id);
+    var raw = inputEl.value;
+    close();
+    if (item && typeof item.onSubmit === 'function') {
+      item.onSubmit(raw, item);
+    }
+    if (typeof opts.onSelect === 'function') {
+      opts.onSelect(id, item, raw);
+    }
+  }
+
   /**
    * @param {object} opts
    * @param {number} opts.x
    * @param {number} opts.y
-   * @param {Array<{id:string,label:string,disabled?:boolean,danger?:boolean,separatorBefore?:boolean}>} opts.items
-   * @param {function(string, object):void} [opts.onSelect]
+   * @param {Array<object>} opts.items
+   * @param {function(string, object, *=):void} [opts.onSelect]
    * @param {string} [opts.ariaLabel]
    */
   function open(opts) {
@@ -100,6 +121,7 @@ var QuotationContextMenu = (function () {
     panel.setAttribute('data-qe-context-menu', '1');
 
     var html = '';
+    var focusInputId = null;
     items.forEach(function (item) {
       if (!item) return;
       if (item.separatorBefore) {
@@ -107,6 +129,24 @@ var QuotationContextMenu = (function () {
       }
       if (item.type === 'label') {
         html += '<p class="qe-context-menu__title">' + escapeHtml(item.label || '') + '</p>';
+        return;
+      }
+      if (item.type === 'input') {
+        if (!focusInputId) focusInputId = item.id;
+        html +=
+          '<label class="qe-context-menu__field" data-qe-ctx-field="' + escapeHtml(item.id) + '">' +
+            '<span class="qe-context-menu__field-label">' + escapeHtml(item.label || '') + '</span>' +
+            '<input class="qe-context-menu__input" type="number" inputmode="numeric" ' +
+              'data-qe-ctx-input="' + escapeHtml(item.id) + '" ' +
+              'value="' + escapeHtml(item.value != null ? item.value : '') + '" ' +
+              (item.min != null ? 'min="' + escapeHtml(item.min) + '" ' : '') +
+              (item.max != null ? 'max="' + escapeHtml(item.max) + '" ' : '') +
+              'step="' + escapeHtml(item.step != null ? item.step : 1) + '" ' +
+              'aria-label="' + escapeHtml(item.ariaLabel || item.label || 'Valor') + '">' +
+            (item.suffix
+              ? '<span class="qe-context-menu__field-suffix">' + escapeHtml(item.suffix) + '</span>'
+              : '') +
+          '</label>';
         return;
       }
       var disabled = !!item.disabled;
@@ -129,16 +169,41 @@ var QuotationContextMenu = (function () {
       var btn = e.target && e.target.closest ? e.target.closest('[data-qe-ctx-id]') : null;
       if (!btn || btn.disabled) return;
       var id = btn.getAttribute('data-qe-ctx-id');
-      var item = null;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i] && items[i].id === id) { item = items[i]; break; }
-      }
+      var item = findItem(items, id);
       close();
       if (typeof opts.onSelect === 'function') opts.onSelect(id, item);
       if (item && typeof item.onSelect === 'function') item.onSelect(item);
     });
 
+    panel.addEventListener('keydown', function (e) {
+      var input = e.target && e.target.closest ? e.target.closest('[data-qe-ctx-input]') : null;
+      if (!input) return;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        submitInput(panel, items, opts, input);
+      }
+    });
+
+    panel.addEventListener('mousedown', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-qe-ctx-input]')) {
+        e.stopPropagation();
+      }
+    });
+
     positionAt(panel, opts.x, opts.y);
+
+    if (focusInputId) {
+      var focusEl = panel.querySelector('[data-qe-ctx-input="' + focusInputId + '"]');
+      if (focusEl) {
+        requestAnimationFrame(function () {
+          try {
+            focusEl.focus();
+            focusEl.select();
+          } catch (errFocus) { /* ignore */ }
+        });
+      }
+    }
     return panel;
   }
 

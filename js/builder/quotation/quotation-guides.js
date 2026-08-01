@@ -307,18 +307,61 @@ var QuotationGuides = (function () {
     layer.innerHTML = html;
   }
 
+  function guidePositionPx(g) {
+    if (!g) return 0;
+    var design = designSize();
+    var max = g.type === 'horizontal' ? design.height : design.width;
+    return Math.round((clampPct(g.position) / 100) * max);
+  }
+
+  function setGuidePositionPx(guideId, pxValue) {
+    var g = findGuide(guideId);
+    if (!g || g.locked) return false;
+    var design = designSize();
+    var max = g.type === 'horizontal' ? design.height : design.width;
+    var n = Math.round(Number(String(pxValue).replace(/[^\d.-]/g, '')));
+    if (isNaN(n)) return false;
+    if (n < 0) n = 0;
+    if (n > max) n = max;
+    g.position = clampPct(max > 0 ? (n / max) * 100 : 0);
+    renderGuides();
+    markDirty();
+    return true;
+  }
+
   function openGuideMenu(clientX, clientY, guideId) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     if (!guideId) return;
+    var g = findGuide(guideId);
+    if (!g) return;
+    var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
+    var axis = type === 'horizontal' ? 'Y' : 'X';
+    var design = designSize();
+    var max = type === 'horizontal' ? design.height : design.width;
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
       ariaLabel: 'Menú de guía',
       items: [
         {
+          type: 'input',
+          id: 'guide-pos',
+          label: axis,
+          value: guidePositionPx(g),
+          suffix: 'px',
+          min: 0,
+          max: max,
+          step: 1,
+          ariaLabel: 'Posición ' + axis + ' en píxeles',
+          onSubmit: function (raw) {
+            setGuidePositionPx(guideId, raw);
+          }
+        },
+        {
           id: 'delete-guide',
           label: 'Eliminar',
-          danger: true
+          danger: true,
+          separatorBefore: true
         }
       ],
       onSelect: function (id) {
