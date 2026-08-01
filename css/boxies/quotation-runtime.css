@@ -81,29 +81,34 @@ body.qr-host .pa-fab,
   min-height: 100dvh;
   margin: 0 auto;
   padding:
-    clamp(56px, 12vh, 120px)
+    clamp(48px, 10vh, 96px)
     clamp(24px, 5vw, 48px)
     0;
   text-align: center;
   animation: none;
   box-sizing: border-box;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
+/* Pull logo + copy + CTA into one flex column (logo sits with SHOWROOM). */
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-content::before {
+  content: '';
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: clamp(32px, 8vh, 72px);
+  width: 100%;
+  order: -1;
+  pointer-events: none;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-row {
+  display: contents;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-copy {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  flex: 1 1 auto;
-  justify-content: center;
+  flex: 0 0 auto;
+  justify-content: flex-start;
   gap: 0;
+  order: 1;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
   display: flex;
@@ -111,6 +116,7 @@ body.qr-host .pa-fab,
   align-items: center;
   justify-content: flex-end;
   width: 100%;
+  order: 2;
   margin-top: auto;
   padding-top: clamp(48px, 10vh, 96px);
   padding-bottom: clamp(56px, 9vh, 88px);
@@ -125,7 +131,8 @@ body.qr-host .pa-fab,
   width: clamp(56px, 8vw, 72px);
   max-width: 72px;
   height: auto;
-  margin: 0 0 12px;
+  order: 0;
+  margin: 0 0 4px;
   background: transparent !important;
   mix-blend-mode: normal;
   filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.12));
@@ -248,7 +255,7 @@ body.qr-host .pa-fab,
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
     width: clamp(48px, 14vw, 60px);
     max-width: 60px;
-    margin-bottom: 10px;
+    margin-bottom: 3px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow {
     font-size: clamp(0.62rem, 2.8vw, 0.74rem);

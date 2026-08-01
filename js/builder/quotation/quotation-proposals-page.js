@@ -1,31 +1,21 @@
 /**
- * QuotationProposalsPage — full-page proposals picker (V7.2.78).
- * Replaces popup flow for TAROA-style landings.
+ * QuotationProposalsPage — full-page proposals picker (V7.2.81).
+ * Cinematic cards matching TAROA landing identity.
  */
 var QuotationProposalsPage = (function () {
   var PROPOSALS = [
-    {
-      id: 'proposal-1',
-      title: 'Propuesta 1',
-      tag: 'Propuesta',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.',
-      cta: 'Ver propuesta',
-      imageUrl: '',
-      imageLabel: 'P1'
-    },
-    {
-      id: 'proposal-2',
-      title: 'Propuesta 2',
-      tag: 'Propuesta',
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud.',
-      cta: 'Ver propuesta',
-      imageUrl: '',
-      imageLabel: 'P2'
-    }
+    { id: 'proposal-1', title: 'Propuesta 1' },
+    { id: 'proposal-2', title: 'Propuesta 2' }
   ];
 
   function qs(sel, root) {
     return (root || document).querySelector(sel);
+  }
+
+  function escapeHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function readParams() {
@@ -43,36 +33,29 @@ var QuotationProposalsPage = (function () {
     window.location.href = url;
   }
 
-  function playEntrance(grid) {
-    if (!grid) return;
-    var cards = grid.querySelectorAll('.unit-card');
-    cards.forEach(function (card, index) {
-      card.classList.remove('unit-card--enter');
-      card.style.removeProperty('--unit-enter-delay');
-      card.style.setProperty('--unit-enter-delay', Math.min(index * 160, 960) + 'ms');
-      void card.offsetWidth;
-      card.classList.add('unit-card--enter');
-      function onEnd(ev) {
-        if (ev && ev.animationName && ev.animationName !== 'unitCardAppleEnter') return;
-        card.classList.remove('unit-card--enter');
-        card.style.removeProperty('--unit-enter-delay');
-        card.removeEventListener('animationend', onEnd);
-      }
-      card.addEventListener('animationend', onEnd);
+  function buildCard(proposal) {
+    proposal = proposal || {};
+    var title = String(proposal.title || 'Propuesta');
+    var card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'qpp__card';
+    card.setAttribute('data-proposal', String(proposal.id || ''));
+    card.setAttribute('aria-label', title);
+    card.innerHTML =
+      '<span class="qpp__card-title">' + escapeHtml(title) + '</span>';
+    card.addEventListener('click', function (e) {
+      e.preventDefault();
+      /* Temporary: selection shell only — wire destinations later. */
     });
+    return card;
   }
 
   function render(root) {
     var grid = qs('[data-qpp-grid]', root);
     if (!grid) return;
     grid.innerHTML = '';
-    if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.buildProposalCard) {
-      PROPOSALS.forEach(function (p) {
-        grid.appendChild(QuotationProposalsModal.buildProposalCard(p));
-      });
-    }
-    requestAnimationFrame(function () {
-      playEntrance(grid);
+    PROPOSALS.forEach(function (p) {
+      grid.appendChild(buildCard(p));
     });
   }
 
@@ -93,9 +76,7 @@ var QuotationProposalsPage = (function () {
         compare.classList.toggle('is-active', on);
         compare.setAttribute('aria-pressed', on ? 'true' : 'false');
         if (hint) {
-          hint.textContent = on
-            ? 'Modo comparar activo'
-            : '';
+          hint.textContent = on ? 'Modo comparar activo' : '';
         }
       });
     }

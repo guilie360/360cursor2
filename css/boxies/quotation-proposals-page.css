@@ -1,20 +1,23 @@
-/* Quotation Proposals page — full-page picker (not modal). */
+/* Quotation Proposals page — cinematic identity (TAROA landing). */
 
 html, body.qr-proposals-page {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
   background: #050505;
   color: #fff;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  overflow: hidden;
 }
 
 .qpp {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .qpp::before {
@@ -24,8 +27,8 @@ html, body.qr-proposals-page {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(255, 255, 255, 0.055), transparent 62%),
-    radial-gradient(ellipse 120% 80% at 50% 120%, rgba(0, 0, 0, 0.72), transparent 55%),
+    radial-gradient(ellipse 58% 42% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 68%),
+    radial-gradient(ellipse 100% 70% at 50% 115%, rgba(0, 0, 0, 0.55), transparent 58%),
     #050505;
 }
 
@@ -35,23 +38,24 @@ html, body.qr-proposals-page {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
   mix-blend-mode: overlay;
 }
 
 .qpp__chrome {
   position: relative;
   z-index: 2;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding:
-    max(18px, env(safe-area-inset-top))
-    max(18px, env(safe-area-inset-right))
-    12px
-    max(18px, env(safe-area-inset-left));
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    8px
+    max(16px, env(safe-area-inset-left));
 }
 
 .qpp__icon-btn {
@@ -66,7 +70,7 @@ html, body.qr-proposals-page {
   color: #fff;
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease;
+  transition: background 250ms ease, border-color 250ms ease, transform 250ms ease, box-shadow 250ms ease;
 }
 .qpp__icon-btn svg {
   width: 18px;
@@ -79,7 +83,10 @@ html, body.qr-proposals-page {
 }
 .qpp__icon-btn:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 28px rgba(0, 0, 0, 0.32);
   transform: translateY(-1px);
 }
 .qpp__icon-btn.is-active {
@@ -91,98 +98,197 @@ html, body.qr-proposals-page {
   position: relative;
   z-index: 1;
   flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 12px 20px max(28px, env(safe-area-inset-bottom));
+  justify-content: flex-start;
+  padding:
+    4px
+    clamp(20px, 4vw, 40px)
+    max(20px, env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
 .qpp__eyebrow {
-  margin: 0 0 8px;
+  flex: 0 0 auto;
+  margin: 0 0 6px;
   font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55);
+  animation: qpp-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 
 .qpp__title {
-  margin: 0 0 28px;
-  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  flex: 0 0 auto;
+  margin: 0 0 clamp(18px, 3.5vh, 32px);
+  font-size: clamp(0.95rem, 2.2vw, 1.2rem);
   font-weight: 600;
-  letter-spacing: 0.22em;
-  text-indent: 0.22em;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
   text-transform: uppercase;
   text-align: center;
+  color: #fff;
+  animation: qpp-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
 }
 
 .qpp__cards-host {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   width: min(920px, 100%);
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  overflow: visible;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
 }
 
-.qpp__grid,
-.qpp .qr-proposals-grid {
+.qpp__grid {
   width: 100%;
   max-width: 760px;
+  height: 100%;
+  min-height: 0;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(16px, 2.5vw, 28px);
+  align-content: stretch;
 }
 
-/* Keep previous modal card look; host provides .units-viviendas-popup scope. */
-.qpp__cards-host.units-viviendas-popup {
-  --unit-card-text: #fff;
-  --unit-card-text-soft: rgba(255, 255, 255, 0.78);
-  --unit-card-text-muted: rgba(255, 255, 255, 0.58);
-  --unit-card-border: rgba(255, 255, 255, 0.08);
-  --unit-card-border-hover: rgba(255, 255, 255, 0.18);
-  --unit-card-surface: rgba(255, 255, 255, 0.04);
+.qpp__card {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  max-height: min(62vh, 560px);
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 28px 20px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
   color: #fff;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background 250ms ease,
+    border-color 250ms ease,
+    box-shadow 250ms ease,
+    transform 250ms ease;
+  animation: qpp-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--qpp-enter-delay, 0ms);
+}
+.qpp__card:nth-child(1) { --qpp-enter-delay: 0.28s; }
+.qpp__card:nth-child(2) { --qpp-enter-delay: 0.42s; }
+
+.qpp__card:hover,
+.qpp__card:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
 }
 
-.qpp.is-compare-mode .qpp__grid .unit-card {
-  outline: 1px solid rgba(255, 255, 255, 0.28);
+.qpp__card-title {
+  margin: 0;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.qpp.is-compare-mode .qpp__card {
+  border-color: rgba(255, 255, 255, 0.42);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
 .qpp__hint {
-  margin: 22px 0 0;
-  min-height: 1.2em;
-  font-size: 0.72rem;
+  flex: 0 0 auto;
+  margin: 14px 0 0;
+  min-height: 1.1em;
+  font-size: 0.68rem;
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.4);
   text-align: center;
 }
 
+@keyframes qpp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile: both cards stacked and fully visible in one viewport */
 @media (max-width: 700px) {
-  .qpp__grid,
-  .qpp .qr-proposals-grid {
-    grid-template-columns: 1fr;
-    gap: 18px;
-    max-width: 360px;
+  .qpp__chrome {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      14px
+      4px;
+  }
+  .qpp__icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .qpp__main {
+    padding:
+      2px
+      18px
+      max(16px, env(safe-area-inset-bottom));
+  }
+  .qpp__eyebrow {
+    font-size: 0.58rem;
+    letter-spacing: 0.26em;
+    text-indent: 0.26em;
+    margin-bottom: 4px;
   }
   .qpp__title {
-    margin-bottom: 20px;
-    font-size: 0.95rem;
+    margin-bottom: 12px;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-indent: 0.14em;
   }
-  .qpp.is-compare-mode .qpp__grid,
-  .qpp.is-compare-mode .qr-proposals-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    max-width: 100%;
+  .qpp__grid {
+    max-width: min(360px, 100%);
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    height: 100%;
   }
-  .qpp.is-compare-mode .qpp__grid .unit-card .unit-typo-price-block,
-  .qpp.is-compare-mode .qpp__grid .unit-card .unit-typo-btn-stack {
-    display: none;
+  .qpp__card {
+    max-height: none;
+    margin: 0;
+    padding: 18px 16px;
+    border-radius: 3px;
+  }
+  .qpp__card:hover,
+  .qpp__card:focus-visible {
+    transform: none;
+  }
+  .qpp__card-title {
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+  }
+  .qpp__hint {
+    margin-top: 10px;
+    font-size: 0.6rem;
   }
 }
