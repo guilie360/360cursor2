@@ -29,7 +29,7 @@ var QuotationProposalsPage = (function () {
     { label: 'Identidad visual inicial (logo)', still: '—', motion: '✓' },
     { label: 'Presentación en tablets y celulares', still: '—', motion: '✓' },
     { label: 'Moodboard de materiales', still: '—', motion: '✓' },
-    { label: 'Renders exteriores (cantidad aproximada)', still: '3–5', motion: '10–12' }
+    { label: 'Renders exteriores (cantidad aproximada)', still: '4–6', motion: '10–12' }
   ];
 
   var COMPARE_SHARED = [
