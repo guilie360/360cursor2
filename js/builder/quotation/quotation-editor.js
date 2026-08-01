@@ -579,6 +579,8 @@ var QuotationEditor = (function () {
       libraryAvailableOnly: false,
       libraryView: 'list',
       libraryStatusOpen: false,
+      librarySelectModeGroup: null,
+      librarySelectedIds: {},
       renamingFolderId: null,
       renamingContentId: null,
       openFolders: {},
@@ -1443,6 +1445,87 @@ var QuotationEditor = (function () {
         ' aria-haspopup="menu" aria-expanded="false" title="Opciones">⋮</button>';
   }
 
+  function isLibrarySelectMode(groupId) {
+    return String(state.librarySelectModeGroup || '') === String(groupId || '');
+  }
+
+  function librarySelectedCount() {
+    var n = 0;
+    var map = state.librarySelectedIds || {};
+    Object.keys(map).forEach(function (id) {
+      if (map[id]) n += 1;
+    });
+    return n;
+  }
+
+  function isLibraryItemSelected(id) {
+    return !!(state.librarySelectedIds && state.librarySelectedIds[String(id)]);
+  }
+
+  function clearLibrarySelectionMode() {
+    state.librarySelectModeGroup = null;
+    state.librarySelectedIds = {};
+  }
+
+  function enterLibrarySelectMode(groupId) {
+    if (!groupId || groupId === 'audio' || groupId === 'models') return;
+    if (isLibrarySelectMode(groupId)) {
+      clearLibrarySelectionMode();
+      rerender();
+      return;
+    }
+    state.librarySelectModeGroup = groupId;
+    state.librarySelectedIds = {};
+    state.openGroups[groupId] = true;
+    rerender();
+  }
+
+  function toggleLibraryItemSelected(id) {
+    if (!id) return;
+    var key = String(id);
+    if (!state.librarySelectedIds) state.librarySelectedIds = {};
+    if (state.librarySelectedIds[key]) delete state.librarySelectedIds[key];
+    else state.librarySelectedIds[key] = true;
+    rerender();
+  }
+
+  function setLibraryGroupSelection(groupId, on) {
+    if (!groupId) return;
+    if (!state.librarySelectedIds) state.librarySelectedIds = {};
+    contentInGroup(groupId).filter(matchesLibrarySearch).forEach(function (c) {
+      if (!c || !c.id) return;
+      if (on) state.librarySelectedIds[String(c.id)] = true;
+      else delete state.librarySelectedIds[String(c.id)];
+    });
+    rerender();
+  }
+
+  function librarySelectBarHtml(group) {
+    if (!group || !isLibrarySelectMode(group.id)) return '';
+    var ids = contentInGroup(group.id).filter(matchesLibrarySearch).map(function (c) {
+      return c && c.id;
+    }).filter(Boolean);
+    var selected = 0;
+    ids.forEach(function (id) {
+      if (isLibraryItemSelected(id)) selected += 1;
+    });
+    var allOn = ids.length > 0 && selected === ids.length;
+    return '' +
+      '<div class="qe-content__select-bar" data-qe-lib-select-bar="' + escapeHtml(group.id) + '">' +
+        '<label class="qe-lib-select-all">' +
+          '<input type="checkbox" data-qe-lib-select-all="' + escapeHtml(group.id) + '"' +
+            (allOn ? ' checked' : '') +
+            (ids.length ? '' : ' disabled') + '>' +
+          '<span>Todos</span>' +
+        '</label>' +
+        '<span class="qe-content__select-count">' + selected + ' / ' + ids.length + '</span>' +
+        '<button type="button" class="qe-content__select-btn qe-content__select-btn--danger"' +
+          ' data-qe-lib-select-delete="' + escapeHtml(group.id) + '"' +
+          (selected ? '' : ' disabled') + '>Eliminar</button>' +
+        '<button type="button" class="qe-content__select-btn" data-qe-lib-select-cancel>Cancelar</button>' +
+      '</div>';
+  }
+
   function contentItemRowHtml(item, nested) {
     var on = item.id === state.selectedContentId;
     var renaming = String(state.renamingContentId || '') === String(item.id);
@@ -1452,6 +1535,8 @@ var QuotationEditor = (function () {
     var uploading = libraryItemIsUploading(item);
     var pending = libraryItemThumbPending(item);
     var failed = item.uploadStatus === 'failed';
+    var selectMode = isLibrarySelectMode(item.group);
+    var checked = selectMode && isLibraryItemSelected(item.id);
     /* Never paint blob preview during upload — it flashes then reloads from CDN. */
     var thumbUrl = (!pending && !failed) ? (publicUrlOf(item) || '') : '';
     var nameHtml = renaming
@@ -1459,17 +1544,31 @@ var QuotationEditor = (function () {
           escapeHtml(item.id) + '" value="' + escapeHtml(item.name || '') + '"' +
           ' maxlength="120" autocomplete="off" spellcheck="false">')
       : ('<span class="qe-lib__name">' + escapeHtml(item.name || 'Sin nombre') + '</span>');
+    var checkHtml = selectMode
+      ? ('<label class="qe-lib__check" data-qe-lib-check-wrap="' + escapeHtml(item.id) + '">' +
+          '<input type="checkbox" class="qe-lib__check-input" data-qe-lib-check="' +
+            escapeHtml(item.id) + '"' + (checked ? ' checked' : '') +
+            ' aria-label="Seleccionar ' + escapeHtml(item.name || 'recurso') + '">' +
+          '<span class="qe-lib__check-box" aria-hidden="true"></span>' +
+        '</label>')
+      : '';
     return '' +
       '<div class="qe-lib__item' + (nested ? ' qe-lib__item--nested' : '') +
-        (on ? ' is-selected' : '') + (renaming ? ' is-renaming' : '') +
-        (pending ? ' is-thumb-loading' : '') + (failed ? ' is-thumb-failed' : '') + '"' +
+        (on && !selectMode ? ' is-selected' : '') +
+        (checked ? ' is-checked' : '') +
+        (renaming ? ' is-renaming' : '') +
+        (pending ? ' is-thumb-loading' : '') + (failed ? ' is-thumb-failed' : '') +
+        (selectMode ? ' is-select-mode' : '') + '"' +
         ' role="button" tabindex="0"' +
         ' data-qe-content="' + escapeHtml(item.id) + '"' +
-        ' draggable="' + (renaming || uploading ? 'false' : 'true') + '"' +
+        ' draggable="' + (renaming || uploading || selectMode ? 'false' : 'true') + '"' +
         ' data-qe-drag-lib="' + escapeHtml(item.id) + '"' +
         ' data-qe-lib-group="' + escapeHtml(item.group || '') + '"' +
-        (canAssign && !uploading && !failed ? ' data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') +
+        (canAssign && !uploading && !failed && !selectMode
+          ? ' data-qe-drag-resource="' + escapeHtml(item.id) + '"'
+          : '') +
         (pending ? ' aria-busy="true"' : '') + '>' +
+        checkHtml +
         '<span class="qe-lib__thumb-wrap' +
           (pending ? ' is-loading' : '') +
           (failed ? ' is-failed' : '') + '">' +
@@ -1491,7 +1590,7 @@ var QuotationEditor = (function () {
             escapeHtml(failed ? 'Error' : (uploading ? 'Subiendo…' : sub)) +
           '</span>' +
         '</span>' +
-        libMenuTriggerHtml('content', item.id, 'Opciones del recurso') +
+        (selectMode ? '' : libMenuTriggerHtml('content', item.id, 'Opciones del recurso')) +
       '</div>';
   }
 
@@ -1697,16 +1796,32 @@ var QuotationEditor = (function () {
       if (!groupVisibleInLibrary(group)) return '';
       var open = state.openGroups[group.id] !== false;
       var count = contentInGroup(group.id).length;
+      var selectOn = isLibrarySelectMode(group.id);
+      var canSelect = !group.prepared && count > 0;
       return '' +
-        '<section class="qe-content__group' + (open ? ' is-open' : '') + '"' +
+        '<section class="qe-content__group' + (open ? ' is-open' : '') +
+          (selectOn ? ' is-selecting' : '') + '"' +
           ' data-qe-group="' + escapeHtml(group.id) + '"' +
           (group.linkMode ? ' data-qe-tour-dropzone' : '') + '>' +
-          '<button type="button" class="qe-content__toggle" data-qe-toggle="' +
-            escapeHtml(group.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-            '<span class="qe-content__chevron" aria-hidden="true"></span>' +
-            '<span class="qe-content__group-label">' + escapeHtml(group.label) + '</span>' +
-            '<span class="qe-content__count">' + (group.prepared ? '—' : count) + '</span>' +
-          '</button>' +
+          '<div class="qe-content__group-head">' +
+            '<button type="button" class="qe-content__toggle" data-qe-toggle="' +
+              escapeHtml(group.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+              '<span class="qe-content__chevron" aria-hidden="true"></span>' +
+              '<span class="qe-content__group-label">' + escapeHtml(group.label) + '</span>' +
+              '<span class="qe-content__count">' + (group.prepared ? '—' : count) + '</span>' +
+            '</button>' +
+            (canSelect || selectOn
+              ? ('<button type="button" class="qe-content__select-trigger' +
+                  (selectOn ? ' is-active' : '') + '"' +
+                  ' data-qe-lib-select-mode="' + escapeHtml(group.id) + '"' +
+                  ' title="' + (selectOn ? 'Salir de selección' : 'Seleccionar recursos') + '"' +
+                  ' aria-label="' + (selectOn ? 'Salir de selección' : 'Seleccionar recursos') + '"' +
+                  ' aria-pressed="' + (selectOn ? 'true' : 'false') + '">' +
+                  '<span class="qe-content__select-trigger-box" aria-hidden="true"></span>' +
+                '</button>')
+              : '') +
+          '</div>' +
+          (selectOn ? librarySelectBarHtml(group) : '') +
           (open ? groupBodyHtml(group) : '') +
         '</section>';
     }).join('');
@@ -3669,6 +3784,16 @@ var QuotationEditor = (function () {
     });
     if (!ok) return;
 
+    await purgeLibraryItem(item);
+    markDirtyLocal();
+    notifyLibraryCapacityChanged();
+    rerender();
+    await autosaveAfterLibraryChange();
+  }
+
+  /** Remove one library item from state + Bunny/archivos (no confirm, no save). */
+  async function purgeLibraryItem(item) {
+    if (!item) return;
     var urls = collectItemUrls(item);
     var projectId = resolveProjectId();
     var slug = resolveShowroomSlug();
@@ -3696,6 +3821,9 @@ var QuotationEditor = (function () {
     if (state.items && state.items[item.id]) {
       try { delete state.items[item.id]; } catch (eItems) {}
     }
+    if (state.librarySelectedIds) {
+      try { delete state.librarySelectedIds[String(item.id)]; } catch (eSel) {}
+    }
 
     if ((archivoId || storagePath) && projectId &&
         typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.remove) {
@@ -3709,11 +3837,49 @@ var QuotationEditor = (function () {
         console.warn('[QuotationEditor] Bunny remove', eBunny);
       }
     }
+  }
 
+  async function removeSelectedLibraryResources(groupId) {
+    var ids = Object.keys(state.librarySelectedIds || {}).filter(function (id) {
+      return state.librarySelectedIds[id] && contentById(id) &&
+        (!groupId || String(contentById(id).group) === String(groupId));
+    });
+    if (!ids.length) return;
+
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.confirm !== 'function') {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('No se pudo abrir el diálogo de confirmación.');
+      }
+      return;
+    }
+
+    var ok = await AdminUI.confirm({
+      title: 'Eliminar recursos',
+      confirmLabel: 'Eliminar ' + ids.length,
+      cancelLabel: 'Cancelar',
+      bodyHtml:
+        '<p class="admin-modal-copy">¿Eliminar ' + ids.length +
+          ' recurso' + (ids.length === 1 ? '' : 's') + ' de la biblioteca?</p>' +
+        '<p class="admin-modal-copy admin-modal-copy--muted">' +
+          'Se borrarán de Bunny Storage y de cualquier escena que los use.' +
+        '</p>' +
+        '<p class="admin-modal-copy admin-modal-copy--muted">Esta acción no puede deshacerse.</p>'
+    });
+    if (!ok) return;
+
+    var i;
+    for (i = 0; i < ids.length; i++) {
+      await purgeLibraryItem(contentById(ids[i]));
+    }
+    clearLibrarySelectionMode();
     markDirtyLocal();
     notifyLibraryCapacityChanged();
     rerender();
     await autosaveAfterLibraryChange();
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success(ids.length + ' recurso' + (ids.length === 1 ? '' : 's') + ' eliminado' +
+        (ids.length === 1 ? '' : 's') + '.');
+    }
   }
 
   function openResourcePicker() {
@@ -5483,6 +5649,48 @@ var QuotationEditor = (function () {
       });
     });
 
+    qAll('[data-qe-lib-select-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        enterLibrarySelectMode(btn.getAttribute('data-qe-lib-select-mode'));
+      });
+    });
+
+    qAll('[data-qe-lib-select-cancel]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        clearLibrarySelectionMode();
+        rerender();
+      });
+    });
+
+    qAll('[data-qe-lib-select-all]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        setLibraryGroupSelection(
+          input.getAttribute('data-qe-lib-select-all'),
+          !!input.checked
+        );
+      });
+    });
+
+    qAll('[data-qe-lib-select-delete]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        removeSelectedLibraryResources(btn.getAttribute('data-qe-lib-select-delete'));
+      });
+    });
+
+    qAll('[data-qe-lib-check]').forEach(function (input) {
+      input.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+      input.addEventListener('change', function (e) {
+        e.stopPropagation();
+        toggleLibraryItemSelected(input.getAttribute('data-qe-lib-check'));
+      });
+    });
+
     qAll('[data-qe-folder-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         toggleFolder(btn.getAttribute('data-qe-folder-toggle'));
@@ -5493,15 +5701,29 @@ var QuotationEditor = (function () {
       el.addEventListener('click', function (e) {
         if (e.target && e.target.closest && (
           e.target.closest('[data-qe-lib-menu]') ||
-          e.target.closest('[data-qe-content-rename]')
+          e.target.closest('[data-qe-content-rename]') ||
+          e.target.closest('[data-qe-lib-check]') ||
+          e.target.closest('[data-qe-lib-check-wrap]')
         )) return;
-        selectContent(el.getAttribute('data-qe-content'));
+        var id = el.getAttribute('data-qe-content');
+        var item = contentById(id);
+        if (item && isLibrarySelectMode(item.group)) {
+          toggleLibraryItemSelected(id);
+          return;
+        }
+        selectContent(id);
       });
       el.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         if (e.target && e.target.closest && e.target.closest('[data-qe-content-rename]')) return;
         e.preventDefault();
-        selectContent(el.getAttribute('data-qe-content'));
+        var id = el.getAttribute('data-qe-content');
+        var item = contentById(id);
+        if (item && isLibrarySelectMode(item.group)) {
+          toggleLibraryItemSelected(id);
+          return;
+        }
+        selectContent(id);
       });
     });
 
