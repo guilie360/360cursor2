@@ -1351,14 +1351,15 @@
   line-height: 1;
 }
 
-/* Scene delete confirm — BOXIES chrome */
+/* Scene delete confirm — above canvas / experiencia overlays */
 .qe-confirm {
   position: absolute;
   inset: 0;
-  z-index: 60;
+  z-index: 12000;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
 }
 
 .qe-confirm__backdrop {

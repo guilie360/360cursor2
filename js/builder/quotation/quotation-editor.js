@@ -1375,13 +1375,10 @@ var QuotationEditor = (function () {
     return null;
   }
 
+  /** Only the pinned cover at index 0 — never match by type alone (blocks deleting other scenes). */
   function isHeroScene(sc) {
-    if (!sc) return false;
-    if (sc.type === 'hero' || sc.templateId === 'hero-default') return true;
-    if (Array.isArray(state.scenes) && state.scenes[0] && state.scenes[0].id === sc.id) {
-      return true;
-    }
-    return false;
+    if (!sc || !Array.isArray(state.scenes) || !state.scenes[0]) return false;
+    return state.scenes[0].id === sc.id;
   }
 
   function heroScene() {
@@ -1434,9 +1431,46 @@ var QuotationEditor = (function () {
     if (!state.activeSceneId) state.activeSceneId = hero.id;
   }
 
+  /** Drop live QuotationHero media so ensureHeroCoverModel / save cannot rehydrate it. */
+  function clearQuotationHeroMedia() {
+    if (typeof QuotationHero === 'undefined' || !QuotationHero.getState) return;
+    try {
+      var hs = QuotationHero.getState();
+      if (!hs) return;
+      hs.imageUrl = null;
+      hs.videoUrl = null;
+      hs.heroImage = null;
+      hs.heroVideo = null;
+    } catch (eClrHero) { /* ignore */ }
+  }
+
+  function emptyHeroCoverModel() {
+    var model = (typeof ProjectCover !== 'undefined' && ProjectCover.blankModel)
+      ? ProjectCover.blankModel()
+      : {
+        nombre: '',
+        eslogan: '',
+        botonIzquierdo: 'Explorar',
+        botonDerecho: 'Iniciar',
+        imageUrl: null,
+        videoUrl: null,
+        logoUrl: '',
+        showLogo: false
+      };
+    model.imageUrl = null;
+    model.videoUrl = null;
+    model.logoUrl = '';
+    model.showLogo = false;
+    if (editorProjectCtx) {
+      model.nombre = editorProjectCtx.name || editorProjectCtx.nombre || model.nombre || '';
+    }
+    return model;
+  }
+
   function clearHeroSceneContent(scene) {
     if (!scene) return;
     destroyExperienciaOverlay();
+    clearQuotationHeroMedia();
     scene.resourceId = null;
     scene.mediaUrl = null;
     scene.publicUrl = null;
@@ -1444,6 +1478,7 @@ var QuotationEditor = (function () {
     scene.storagePath = null;
     scene.archivoId = null;
     scene.provider = null;
+    scene.thumbnailUrl = null;
     scene.elements = [];
     scene.interactions = [];
     scene.buttons = [];
@@ -1451,14 +1486,8 @@ var QuotationEditor = (function () {
     scene.type = 'hero';
     scene.templateId = 'hero-default';
     scene.name = 'HERO';
-    if (scene.coverModel && typeof scene.coverModel === 'object') {
-      scene.coverModel.imageUrl = null;
-      scene.coverModel.videoUrl = null;
-      scene.coverModel.logoUrl = '';
-      scene.coverModel.showLogo = false;
-    } else {
-      scene.coverModel = null;
-    }
+    /* Keep an empty cover shell — null coverModel lets ensureHeroCoverModel rebuild media. */
+    scene.coverModel = emptyHeroCoverModel();
     ensureSceneOverlays(scene);
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -2420,6 +2449,12 @@ var QuotationEditor = (function () {
     var res = sceneResource(scene);
     if (res && publicUrlOf(res)) return true;
     if (scene && scene.mediaUrl && String(scene.mediaUrl).indexOf('blob:') !== 0) return true;
+    if (scene && scene.publicUrl && String(scene.publicUrl).indexOf('blob:') !== 0) return true;
+    if (scene && scene.coverModel) {
+      var cm = scene.coverModel;
+      if (cm.videoUrl && String(cm.videoUrl).indexOf('blob:') !== 0) return true;
+      if (cm.imageUrl && String(cm.imageUrl).indexOf('blob:') !== 0) return true;
+    }
     return !!(res && (res.previewUrl || res.remoteUrl || res.publicUrl));
   }
 
@@ -2725,7 +2760,7 @@ var QuotationEditor = (function () {
       var delBtn = state.canvasPreviewMode
         ? ''
         : (
-          '<button type="button" class="qe-scenes__thumb-del"' +
+          '<button type="button" class="qe-scenes__thumb-del" draggable="false"' +
             ' data-qe-scene-delete="' + escapeHtml(sc.id) + '"' +
             ' aria-label="' + (hero ? 'Vaciar HERO' : 'Eliminar escena') + '"' +
             ' title="' + (hero
@@ -3759,6 +3794,12 @@ var QuotationEditor = (function () {
 
     track.querySelectorAll('[data-qe-scene-drag]').forEach(function (wrap) {
       wrap.addEventListener('dragstart', function (e) {
+        /* Delete × lives inside the draggable wrap — don't start a drag from it. */
+        var t = e.target;
+        if (t && t.closest && t.closest('[data-qe-scene-delete]')) {
+          e.preventDefault();
+          return;
+        }
         dragId = wrap.getAttribute('data-qe-scene-drag');
         dropHint = null;
         wrap.classList.add('is-dragging');
@@ -4545,18 +4586,20 @@ var QuotationEditor = (function () {
     if (idx < 0) return;
 
     /* HERO is the permanent cover — clear contents, never remove the scene. */
-    if (isHeroScene(state.scenes[idx])) {
-      clearHeroSceneContent(state.scenes[idx]);
-      state.activeSceneId = state.scenes[idx].id;
+    if (idx === 0 || isHeroScene(state.scenes[idx])) {
+      clearHeroSceneContent(state.scenes[0]);
+      state.activeSceneId = state.scenes[0].id;
       state.sceneMenuOpen = false;
       state.dockOpen = false;
       state.resourcePickerOpen = false;
+      try { destroyBuilderRuntimeScene(); } catch (eClrRt) { /* ignore */ }
       markDirtyLocal();
       rerender();
       return;
     }
 
     destroyExperienciaOverlay();
+    try { destroyBuilderRuntimeScene(); } catch (eDelRt) { /* ignore */ }
     state.scenes.splice(idx, 1);
     ensureHeroSceneContract();
 
@@ -4913,8 +4956,14 @@ var QuotationEditor = (function () {
     if (!scene) return null;
     if (!scene.coverModel) {
       var payload = buildHeroDefaultScenePayload(editorProjectCtx);
-      scene.coverModel = payload.coverModel;
-      if (!scene.elements || !scene.elements.length) scene.elements = payload.elements;
+      scene.coverModel = payload.coverModel || emptyHeroCoverModel();
+      /*
+       * Editor SSOT for media is scene.resourceId / mediaUrl / assignResource.
+       * Never import QuotationHero image/video here — that refilled HERO after Vaciar.
+       */
+      scene.coverModel.imageUrl = null;
+      scene.coverModel.videoUrl = null;
+      if (!scene.elements || !scene.elements.length) scene.elements = payload.elements || [];
     }
     return scene.coverModel;
   }
@@ -6655,6 +6704,13 @@ var QuotationEditor = (function () {
       });
 
       editor.querySelectorAll('[data-qe-scene-delete]').forEach(function (btn) {
+        btn.setAttribute('draggable', 'false');
+        btn.addEventListener('pointerdown', function (e) {
+          e.stopPropagation();
+        });
+        btn.addEventListener('mousedown', function (e) {
+          e.stopPropagation();
+        });
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
@@ -6665,6 +6721,7 @@ var QuotationEditor = (function () {
       editor.querySelectorAll('[data-qe-scene-confirm-cancel]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           cancelDeleteScene();
         });
       });
@@ -6672,6 +6729,7 @@ var QuotationEditor = (function () {
       if (confirmOk) {
         confirmOk.addEventListener('click', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           confirmDeleteScene();
         });
       }
