@@ -526,7 +526,8 @@ var QuotationGuides = (function () {
         },
         {
           id: 'toggle-guides',
-          label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías'
+          label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías',
+          separatorBefore: true
         },
         {
           id: 'guide-h',
