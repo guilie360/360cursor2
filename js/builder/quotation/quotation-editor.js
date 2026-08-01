@@ -2752,7 +2752,6 @@ var QuotationEditor = (function () {
     var thumbs = state.scenes.map(function (sc) {
       var on = sc.id === state.activeSceneId;
       var hero = isHeroScene(sc);
-      var label = hero ? 'HERO' : String(sc.name || 'Escena').toLowerCase();
       var thumbUrl = sceneDisplayUrl(sc) || null;
       var bg = thumbUrl
         ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
@@ -2767,7 +2766,8 @@ var QuotationEditor = (function () {
               ? 'Vaciar contenido (la portada HERO no se elimina)'
               : 'Eliminar escena') + '">×</button>'
         );
-      /* Drag lives on the thumb only — never on the wrap (× must stay clickable). */
+      var nameLabel = hero ? 'H E R O' : String(sc.name || 'Escena').toLowerCase();
+      /* Name sits outside the thumb button so dblclick rename is valid HTML. */
       return '' +
         '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') + '"' +
           ' data-qe-drop-scene data-qe-drop-scene-id="' +
@@ -2777,12 +2777,14 @@ var QuotationEditor = (function () {
             (hero ? ' is-hero' : '') + '"' +
             ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
             (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') +
-            ' title="' + escapeHtml(hero ? 'HERO' : (sc.name || 'Escena')) + '">' +
+            ' title="' + escapeHtml(hero ? 'H E R O' : (sc.name || 'Escena')) + '">' +
             '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
-            '<span class="qe-scenes__thumb-name"' +
-              (hero ? ' data-qe-scene-name-locked="1"' : ' data-qe-scene-name="' + escapeHtml(sc.id) + '"') +
-              '>' + escapeHtml(label) + '</span>' +
           '</button>' +
+          '<span class="qe-scenes__thumb-name' + (hero ? ' is-hero-label' : '') + '"' +
+            (hero
+              ? ' data-qe-scene-name-locked="1"'
+              : ' data-qe-scene-name="' + escapeHtml(sc.id) + '" title="Doble clic para renombrar"') +
+            '>' + escapeHtml(nameLabel) + '</span>' +
           delBtn +
         '</div>';
     }).join('');
@@ -2793,8 +2795,8 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
             ' title="Nueva escena" aria-label="Nueva escena">' +
             '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
-            '<span class="qe-scenes__thumb-name">nueva</span>' +
           '</button>' +
+          '<span class="qe-scenes__thumb-name">nueva</span>' +
         '</div>';
     }
 
@@ -3749,17 +3751,30 @@ var QuotationEditor = (function () {
 
   function bindSceneNameEditing(editor) {
     if (!editor) return;
-    editor.querySelectorAll('[data-qe-scene-name]').forEach(function (span) {
+    editor.querySelectorAll('.qe-scenes__thumb-name').forEach(function (span) {
+      var locked = span.getAttribute('data-qe-scene-name-locked') === '1';
+      var id = span.getAttribute('data-qe-scene-name');
+
+      span.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var wrap = span.closest('[data-qe-drop-scene-id]');
+        var sid = (wrap && wrap.getAttribute('data-qe-drop-scene-id')) || id;
+        if (sid) selectScene(sid);
+      });
+
+      if (locked || !id) return;
+
       span.addEventListener('dblclick', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var id = span.getAttribute('data-qe-scene-name');
         var sc = sceneById(id);
         if (!sc || isHeroScene(sc)) return;
         var input = document.createElement('input');
         input.type = 'text';
         input.className = 'qe-scenes__thumb-name-input';
         input.value = sc.name || '';
+        input.setAttribute('aria-label', 'Nombre de escena');
         var done = false;
         function finish(save) {
           if (done) return;
@@ -3782,6 +3797,10 @@ var QuotationEditor = (function () {
           ev.stopPropagation();
         });
         input.addEventListener('mousedown', function (ev) {
+          ev.stopPropagation();
+        });
+        input.addEventListener('dblclick', function (ev) {
+          ev.preventDefault();
           ev.stopPropagation();
         });
         span.replaceWith(input);

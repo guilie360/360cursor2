@@ -999,6 +999,10 @@
   position: relative;
   flex: 0 0 auto;
   width: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .qe-scenes__thumb-wrap.is-scene-reorder-before::before,
@@ -1034,10 +1038,7 @@
   color: rgba(255, 255, 255, 0.42);
   font: inherit;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
+  display: block;
 }
 
 .qe-scenes__thumb-frame {
@@ -1061,6 +1062,30 @@
   letter-spacing: 0.06em;
   text-transform: lowercase;
   text-align: center;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  user-select: none;
+}
+
+.qe-scenes__thumb-name[data-qe-scene-name] {
+  cursor: text;
+}
+
+.qe-scenes__thumb-name.is-hero-label,
+.qe-scenes__thumb-name[data-qe-scene-name-locked] {
+  text-transform: none;
+  letter-spacing: 0.22em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: default;
+}
+
+.qe-scenes__thumb-wrap:has(.qe-scenes__thumb.is-active) .qe-scenes__thumb-name {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.qe-scenes__thumb-wrap:has(.qe-scenes__thumb.is-active) .qe-scenes__thumb-name.is-hero-label {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .qe-scenes__thumb-name-input {
