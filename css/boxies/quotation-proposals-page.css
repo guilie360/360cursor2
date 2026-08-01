@@ -118,6 +118,9 @@ body.qr-proposals-page .qpp {
 .qpp__chrome-compare-label {
   display: none;
 }
+
+/* Music note — filled silhouette (same chrome as other icon buttons). */
+.qpp__chrome-music .qpp__music-note {
   width: 16px;
   height: 16px;
   fill: currentColor;
