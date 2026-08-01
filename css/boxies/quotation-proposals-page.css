@@ -180,7 +180,7 @@ body.qr-proposals-page .qpp {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   padding: 28px 20px;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -210,16 +210,45 @@ body.qr-proposals-page .qpp {
   transform: translateY(-2px);
 }
 
+.qpp__card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0;
+}
+
 .qpp__card-title {
   margin: 0;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: 0.62rem;
+  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
   font-weight: 500;
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
   text-transform: uppercase;
   line-height: 1.2;
-  color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
+.qpp__card-rule {
+  display: block;
+  width: 28px;
+  height: 1px;
+  margin: 14px auto 12px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+}
+
+.qpp__card-desc {
+  margin: 0;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+  text-transform: none;
 }
 
 .qpp.is-compare-mode .qpp__card {
@@ -235,6 +264,16 @@ body.qr-proposals-page .qpp {
   letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.4);
   text-align: center;
+}
+
+/* Hidden below desktop — mobile/tablet keep top-right compare icon. */
+.qpp__chrome-fs,
+.qpp__compare-cta {
+  display: none;
+}
+
+.qpp__fs-icon[hidden] {
+  display: none !important;
 }
 
 @keyframes qpp-fade-up {
@@ -296,12 +335,86 @@ body.qr-proposals-page .qpp {
     transform: none;
   }
   .qpp__card-title {
-    font-size: 0.55rem;
-    letter-spacing: 0.22em;
-    text-indent: 0.22em;
+    font-size: 0.78rem;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+  }
+  .qpp__card-rule {
+    width: 22px;
+    margin: 10px auto 8px;
+  }
+  .qpp__card-desc {
+    font-size: 0.62rem;
   }
   .qpp__hint {
     margin-top: 10px;
     font-size: 0.6rem;
+  }
+}
+
+/*
+ * Desktop only (>=1024px):
+ * - Top-right compare icon removed
+ * - Fullscreen icon in its place
+ * - COMPARAR text CTA centered under cards
+ * Tablet/mobile chrome untouched.
+ */
+@media (min-width: 1024px) {
+  .qpp__chrome-compare {
+    display: none !important;
+  }
+
+  .qpp__chrome-fs {
+    display: inline-flex;
+  }
+
+  .qpp__compare-cta {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    margin-top: clamp(22px, 3.5vh, 36px);
+    min-height: 52px;
+    min-width: min(220px, 40vw);
+    padding: 0 36px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: transparent;
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background 250ms ease,
+      border-color 250ms ease,
+      box-shadow 250ms ease,
+      transform 250ms ease;
+    animation: qpp-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+  }
+
+  .qpp__compare-cta:hover,
+  .qpp__compare-cta:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.55);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      0 10px 28px rgba(0, 0, 0, 0.32);
+    transform: translateY(-1px);
+    outline: none;
+  }
+
+  .qpp__compare-cta.is-active {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.65);
+  }
+
+  .qpp__hint {
+    margin-top: 10px;
   }
 }
