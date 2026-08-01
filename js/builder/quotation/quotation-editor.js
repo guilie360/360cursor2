@@ -343,6 +343,13 @@ var QuotationEditor = (function () {
     item.previewUrl = pub;
     item.provider = 'bunny';
     item.archivoId = (result.archivo && result.archivo.id) || item.archivoId || null;
+    var bytes = 0;
+    if (result.asset && result.asset.size != null) bytes = Number(result.asset.size) || 0;
+    if (!bytes && result.archivo && result.archivo.peso_mb != null) {
+      bytes = Math.round(Number(result.archivo.peso_mb) * 1048576) || 0;
+    }
+    if (!bytes && item.file && item.file.size != null) bytes = Number(item.file.size) || 0;
+    if (bytes > 0) item.sizeBytes = bytes;
     item.file = null;
     item.uploadStatus = 'synced';
     item.projectId = resolveProjectId() || item.projectId || null;
@@ -761,46 +768,173 @@ var QuotationEditor = (function () {
     return true;
   }
 
-  function toggleProjectStatusPanel() {
-    var modal = document.getElementById('estadoModal');
-    if (!modal) {
-      var menuItem = document.getElementById('menuEstado');
-      if (menuItem && typeof menuItem.click === 'function') menuItem.click();
-      return;
+  function itemByteSize(item) {
+    if (!item) return 0;
+    var n = Number(item.sizeBytes);
+    if (!isNaN(n) && n > 0) return n;
+    if (item.file && item.file.size != null) {
+      var fs = Number(item.file.size);
+      if (!isNaN(fs) && fs > 0) return fs;
     }
-    var open = modal.classList.contains('active');
-    if (open) {
-      modal.classList.remove('active');
-      state.libraryStatusOpen = false;
-    } else {
-      modal.classList.add('active');
-      state.libraryStatusOpen = true;
-      try {
-        if (typeof buildProgressList === 'function') buildProgressList();
-        if (typeof animateProgressBars === 'function') animateProgressBars();
-      } catch (eStatus) {}
-    }
-    var statusBtn = document.querySelector('[data-qe-lib-status]');
-    if (statusBtn) {
-      statusBtn.classList.toggle('is-active', !!state.libraryStatusOpen);
-      statusBtn.setAttribute('aria-pressed', state.libraryStatusOpen ? 'true' : 'false');
-    }
+    return 0;
   }
 
-  function ensureEstadoModalCloseBound() {
-    var closeBtn = document.getElementById('estadoModalClose');
-    if (!closeBtn || closeBtn.getAttribute('data-qe-lib-status-bound')) return;
-    closeBtn.setAttribute('data-qe-lib-status-bound', '1');
-    closeBtn.addEventListener('click', function () {
-      var modal = document.getElementById('estadoModal');
-      if (modal) modal.classList.remove('active');
-      state.libraryStatusOpen = false;
-      var statusBtn = document.querySelector('[data-qe-lib-status]');
-      if (statusBtn) {
-        statusBtn.classList.remove('is-active');
-        statusBtn.setAttribute('aria-pressed', 'false');
-      }
+  function libraryCapacityBytes() {
+    var total = 0;
+    (state.content || []).forEach(function (c) {
+      total += itemByteSize(c);
     });
+    return total;
+  }
+
+  function contentUsedInShowroom(item) {
+    if (!item) return false;
+    var urls = collectItemUrls(item);
+    var used = false;
+    (state.scenes || []).forEach(function (sc) {
+      if (!sc) return;
+      if (sceneUsesLibraryItem(sc, item, urls)) used = true;
+      (sc.elements || []).forEach(function (el) {
+        if (!el || !el.props) return;
+        var p = el.props;
+        if (p.resourceId && String(p.resourceId) === String(item.id)) used = true;
+        if (urlInList(p.src, urls) || urlInList(p.url, urls) ||
+            urlInList(p.imageUrl, urls) || urlInList(p.mediaUrl, urls)) {
+          used = true;
+        }
+      });
+    });
+    if (typeof QuotationHero !== 'undefined' && QuotationHero.getState) {
+      var hs = QuotationHero.getState();
+      if (hs) {
+        function mediaHit(media) {
+          if (!media) return false;
+          return urlInList(media.uploadedUrl, urls) ||
+            urlInList(media.previewUrl, urls) ||
+            (item.archivoId && media.archivoId && String(media.archivoId) === String(item.archivoId)) ||
+            (item.storagePath && media.storagePath &&
+              String(media.storagePath) === String(item.storagePath));
+        }
+        if (urlInList(hs.imageUrl, urls) || mediaHit(hs.heroImage)) used = true;
+        if (urlInList(hs.videoUrl, urls) || mediaHit(hs.heroVideo)) used = true;
+      }
+    }
+    return used;
+  }
+
+  function libraryUsageStats() {
+    var total = (state.content || []).length;
+    var used = 0;
+    (state.content || []).forEach(function (c) {
+      if (contentUsedInShowroom(c)) used += 1;
+    });
+    return {
+      used: used,
+      total: total,
+      bytes: libraryCapacityBytes()
+    };
+  }
+
+  function formatLibraryGb(bytes) {
+    var gb = Number(bytes || 0) / (1024 * 1024 * 1024);
+    if (!isFinite(gb) || gb <= 0) return '0 GB';
+    var rounded = Math.round(gb * 10) / 10;
+    var s = String(rounded);
+    if (s.indexOf('.') === -1) s += '.0';
+    return s + ' GB';
+  }
+
+  var LIBRARY_CAP_BYTES = 10 * 1024 * 1024 * 1024;
+
+  function buildLibraryStatusPanelHtml() {
+    var stats = libraryUsageStats();
+    var pct = Math.min(100, Math.round((stats.bytes / LIBRARY_CAP_BYTES) * 100));
+    if (stats.bytes > 0 && pct < 1) pct = 1;
+    var over = stats.bytes > LIBRARY_CAP_BYTES;
+    if (over) pct = 100;
+    return '' +
+      '<p class="qe-lib-status__title">Estado del proyecto</p>' +
+      '<div class="qe-lib-status__bar" aria-hidden="true">' +
+        '<div class="qe-lib-status__fill" style="width:' + pct + '%"></div>' +
+      '</div>' +
+      '<p class="qe-lib-status__cap">' +
+        escapeHtml(formatLibraryGb(stats.bytes)) + ' / 10 GB' +
+      '</p>' +
+      (over ? '<p class="qe-lib-status__over">Límite excedido</p>' : '') +
+      '<p class="qe-lib-status__usage">' +
+        stats.used + ' / ' + stats.total + ' recursos utilizados' +
+      '</p>';
+  }
+
+  function openLibraryStatusPopover(btn) {
+    if (!btn) return;
+    var portal = document.getElementById('qeLibMenuPortal');
+    var openPanel = portal && portal.querySelector('[data-qe-lib-status-panel]');
+    var wasOpen = !!openPanel || btn.getAttribute('aria-expanded') === 'true';
+    closeAllLibMenus();
+    if (wasOpen) {
+      state.libraryStatusOpen = false;
+      return;
+    }
+    portal = ensureLibMenuPortal();
+    portal.setAttribute('aria-hidden', 'false');
+    var panel = document.createElement('div');
+    panel.className = 'boxies-workspace-menu__panel qe-lib-menu-panel qe-lib-status-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Estado del proyecto');
+    panel.setAttribute('data-qe-lib-status-panel', '1');
+    panel.setAttribute('data-qe-lib-menu-panel', '1');
+    panel.innerHTML = buildLibraryStatusPanelHtml();
+    portal.appendChild(panel);
+    btn.setAttribute('aria-expanded', 'true');
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-pressed', 'true');
+    state.libraryStatusOpen = true;
+    positionLibMenuPanel(btn, panel);
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    enrichLibrarySizesThenRefreshStatus(panel, btn);
+  }
+
+  async function enrichLibrarySizesThenRefreshStatus(panel, btn) {
+    var projectId = resolveProjectId();
+    if (!projectId || typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.list) return;
+    try {
+      var items = await BunnyMediaApi.list(projectId);
+      var mapId = {};
+      var mapPath = {};
+      (items || []).forEach(function (row) {
+        if (!row) return;
+        var bytes = 0;
+        if (row.peso_mb != null) bytes = Math.round(Number(row.peso_mb) * 1048576) || 0;
+        if (row.size != null) bytes = Number(row.size) || bytes;
+        if (row.id != null) mapId[String(row.id)] = bytes;
+        if (row.storage_path) mapPath[String(row.storage_path)] = bytes;
+      });
+      var changed = false;
+      (state.content || []).forEach(function (c) {
+        if (!c) return;
+        var b = 0;
+        if (c.archivoId && mapId[String(c.archivoId)] != null) b = mapId[String(c.archivoId)];
+        else if (c.storagePath && mapPath[String(c.storagePath)] != null) {
+          b = mapPath[String(c.storagePath)];
+        }
+        if (b > 0 && Number(c.sizeBytes || 0) !== b) {
+          c.sizeBytes = b;
+          changed = true;
+        }
+      });
+      if (changed && panel && panel.isConnected &&
+          document.getElementById('qeLibMenuPortal') &&
+          document.getElementById('qeLibMenuPortal').contains(panel)) {
+        panel.innerHTML = buildLibraryStatusPanelHtml();
+        if (btn) positionLibMenuPanel(btn, panel);
+        persistDraft();
+      }
+    } catch (eEnrich) { /* ignore */ }
+  }
+
+  function toggleProjectStatusPanel(btn) {
+    openLibraryStatusPopover(btn || document.querySelector('[data-qe-lib-status]'));
   }
 
   function persistDraft() {
@@ -1312,8 +1446,6 @@ var QuotationEditor = (function () {
   function libraryChromeHtml() {
     var collapsed = !!state.libraryGroupsCollapsed;
     var view = state.libraryView === 'grid' ? 'grid' : 'list';
-    var modal = document.getElementById('estadoModal');
-    if (modal) state.libraryStatusOpen = modal.classList.contains('active');
     var statusOpen = !!state.libraryStatusOpen;
     var availableOn = !!state.libraryAvailableOnly;
     var q = String(state.librarySearchQuery || '');
@@ -1339,7 +1471,9 @@ var QuotationEditor = (function () {
             '</label>' +
             '<button type="button" class="qe-lib-toolbtn' + (statusOpen ? ' is-active' : '') + '"' +
               ' data-qe-lib-status title="Estado del proyecto"' +
-              ' aria-label="Estado del proyecto" aria-pressed="' + (statusOpen ? 'true' : 'false') + '">' +
+              ' aria-label="Estado del proyecto" aria-haspopup="dialog"' +
+              ' aria-expanded="' + (statusOpen ? 'true' : 'false') + '"' +
+              ' aria-pressed="' + (statusOpen ? 'true' : 'false') + '">' +
               libraryIcon('chart') +
             '</button>' +
           '</div>' +
@@ -2659,6 +2793,12 @@ var QuotationEditor = (function () {
     document.querySelectorAll('[data-qe-lib-menu]').forEach(function (btn) {
       btn.setAttribute('aria-expanded', 'false');
     });
+    document.querySelectorAll('[data-qe-lib-status]').forEach(function (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-pressed', 'false');
+      btn.classList.remove('is-active');
+    });
+    state.libraryStatusOpen = false;
   }
 
   function positionLibMenuPanel(btn, panel) {
@@ -2854,6 +2994,7 @@ var QuotationEditor = (function () {
         if (e.target && e.target.closest && (
           e.target.closest('[data-qe-lib-menu]') ||
           e.target.closest('[data-qe-lib-menu-panel]') ||
+          e.target.closest('[data-qe-lib-status]') ||
           e.target.closest('#qeLibMenuPortal')
         )) return;
         closeAllLibMenus();
@@ -2934,6 +3075,7 @@ var QuotationEditor = (function () {
       archivoId: null,
       projectId: item.projectId || resolveProjectId() || null,
       uploadStatus: item.uploadStatus || (item.publicUrl || item.remoteUrl ? 'ready' : null),
+      sizeBytes: itemByteSize(item) || 0,
       file: null
     };
     state.content.push(copy);
@@ -4467,6 +4609,7 @@ var QuotationEditor = (function () {
         archivoId: null,
         projectId: resolveProjectId() || null,
         uploadStatus: 'pending',
+        sizeBytes: file && file.size != null ? (Number(file.size) || 0) : 0,
         file: file
       };
       state.content.push(item);
@@ -4521,7 +4664,8 @@ var QuotationEditor = (function () {
         name: nameFromUrl(url),
         media: 'link',
         previewUrl: null,
-        remoteUrl: url
+        remoteUrl: url,
+        sizeBytes: 0
       };
       state.content.push(item);
       ensureItems(item.id);
@@ -4952,8 +5096,6 @@ var QuotationEditor = (function () {
       });
     }
 
-    ensureEstadoModalCloseBound();
-
     var libSearch = qOne('[data-qe-lib-search]');
     if (libSearch) {
       libSearch.addEventListener('input', function () {
@@ -4977,7 +5119,11 @@ var QuotationEditor = (function () {
     if (statusBtn) {
       statusBtn.addEventListener('click', function (e) {
         e.preventDefault();
-        toggleProjectStatusPanel();
+        e.stopPropagation();
+        toggleProjectStatusPanel(statusBtn);
+      });
+      statusBtn.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
       });
     }
 
@@ -5320,7 +5466,8 @@ var QuotationEditor = (function () {
           archivoId: c.archivoId || null,
           provider: c.provider || null,
           projectId: c.projectId || resolveProjectId() || null,
-          uploadStatus: libraryItemUploadStatus(c)
+          uploadStatus: libraryItemUploadStatus(c),
+          sizeBytes: itemByteSize(c) || 0
         };
       }).filter(Boolean),
       folders: (state.folders || []).map(function (f) {
@@ -5453,6 +5600,7 @@ var QuotationEditor = (function () {
           provider: c.provider || null,
           projectId: c.projectId || resolveProjectId() || null,
           uploadStatus: c.uploadStatus || null,
+          sizeBytes: c.sizeBytes != null ? (Number(c.sizeBytes) || 0) : 0,
           file: null
         };
         row.uploadStatus = libraryItemUploadStatus(row);

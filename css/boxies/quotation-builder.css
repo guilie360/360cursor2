@@ -2125,6 +2125,56 @@
   background: rgba(255, 80, 80, 0.08) !important;
 }
 
+.qe-lib-status-panel {
+  min-width: 200px;
+  max-width: 240px;
+  padding: 12px !important;
+  gap: 8px !important;
+}
+
+.qe-lib-status__title {
+  margin: 0 0 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.qe-lib-status__bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.qe-lib-status__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  transition: width 0.2s ease;
+}
+
+.qe-lib-status__cap,
+.qe-lib-status__usage,
+.qe-lib-status__over {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.35;
+}
+
+.qe-lib-status__over {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.qe-lib-status__usage {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+}
+
 .qe-folder__body {
   padding: 2px 0 6px 12px;
   display: flex;
