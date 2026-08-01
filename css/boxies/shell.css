@@ -62,26 +62,7 @@ body.boxies-has-dock.boxies-shell {
   justify-self: start;
 }
 
-.boxies-header__project {
-  min-width: 0;
-  max-width: min(42vw, 320px);
-}
-
-.boxies-header__project[hidden] {
-  display: none !important;
-}
-
-.boxies-header__project-name {
-  display: block;
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.88);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* Project name lives in the footer center (see .boxies-dock__project). */
 
 /* V7.2.17 — Main BOXIES menu (Hall / Proyectos / Builder) */
 .boxies-workspace-menu {
@@ -790,9 +771,36 @@ body.boxies-shell .admin-toast--error {
 }
 
 .boxies-dock__leading,
-.boxies-dock__spacer,
-.boxies-dock__project {
+.boxies-dock__spacer {
   display: none !important;
+}
+
+/* Project name — true geometric center of the footer */
+.boxies-dock__project {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  max-width: min(42vw, 360px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.boxies-dock__project[hidden] {
+  display: none !important;
+}
+
+.boxies-dock__project-name {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .boxies-dock__tools {

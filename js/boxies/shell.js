@@ -51,6 +51,9 @@ var BoxiesShell = (function () {
               '<span class="boxies-dock__logout-label">Salir</span>' +
             '</button>' +
           '</div>' +
+          '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
+            '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
+          '</div>' +
           '<div class="boxies-dock__center is-empty" id="boxiesDockCenter" aria-hidden="true"></div>' +
           '<div class="boxies-dock__actions is-empty" id="boxiesDockActions" aria-hidden="true">' +
             '<button type="button" class="boxies-btn-secondary boxies-btn-secondary--icon boxies-dock__preview"' +
@@ -90,9 +93,6 @@ var BoxiesShell = (function () {
         '<header class="boxies-header">' +
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
             mainMenuHtml() +
-            '<div class="boxies-header__project" id="boxiesHeaderProject" hidden>' +
-              '<strong class="boxies-header__project-name" id="boxiesHeaderProjectName"></strong>' +
-            '</div>' +
           '</div>' +
           brandTitleHtml() +
           '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
@@ -413,6 +413,28 @@ var BoxiesShell = (function () {
     chip.setAttribute('data-tooltip', name + ' · ' + roleLabel);
   }
 
+  function syncDockProjectLabel() {
+    var wrap = document.getElementById('boxiesDockProject');
+    var nameEl = document.getElementById('boxiesDockProjectName');
+    var center = document.getElementById('boxiesDockCenter');
+    if (!wrap || !nameEl) return;
+
+    var hasProject = !!(projectCtx.slug || projectCtx.name || projectCtx.id);
+    var label = projectCtx.name || projectCtx.slug ||
+      (projectCtx.experienceType === 'quotation' ? 'Cotización' : 'Showroom');
+    /* Hide when footer center hosts a page CTA (e.g. + Nuevo Showroom). */
+    var hasLeading = !!(center && !center.classList.contains('is-empty') &&
+      center.querySelector('[data-boxies-page-leading], .boxies-btn-secondary--create'));
+
+    if (!hasProject || hasLeading) {
+      wrap.hidden = true;
+      if (!hasProject) nameEl.textContent = '';
+      return;
+    }
+    nameEl.textContent = label;
+    wrap.hidden = false;
+  }
+
   function setProjectContext(ctx) {
     ctx = ctx || {};
     var expType = String(ctx.experienceType || ctx.experience_type || '').trim().toLowerCase();
@@ -426,23 +448,10 @@ var BoxiesShell = (function () {
       experienceType: expType
     };
 
-    var headerWrap = document.getElementById('boxiesHeaderProject');
-    var headerName = document.getElementById('boxiesHeaderProjectName');
     var previewBtn = document.getElementById('boxiesPreviewBtn');
-
     var hasProject = !!(projectCtx.slug || projectCtx.name || projectCtx.id);
-    var label = projectCtx.name || projectCtx.slug ||
-      (projectCtx.experienceType === 'quotation' ? 'Cotización' : 'Showroom');
 
-    if (headerWrap && headerName) {
-      if (!hasProject) {
-        headerWrap.hidden = true;
-        headerName.textContent = '';
-      } else {
-        headerName.textContent = label;
-        headerWrap.hidden = false;
-      }
-    }
+    syncDockProjectLabel();
 
     if (previewBtn) {
       previewBtn.disabled = !projectCtx.slug;
@@ -497,7 +506,10 @@ var BoxiesShell = (function () {
       }
     }
 
-    if (!actions) return;
+    if (!actions) {
+      syncDockProjectLabel();
+      return;
+    }
 
     actions.querySelectorAll('[data-boxies-page-action]').forEach(function (el) {
       el.remove();
@@ -509,6 +521,7 @@ var BoxiesShell = (function () {
     }
 
     syncActionsVisibility();
+    syncDockProjectLabel();
   }
 
   function clearPageActions() {
