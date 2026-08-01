@@ -53,10 +53,10 @@ body.qr-host .pa-fab,
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(255, 255, 255, 0.055), transparent 62%),
-    radial-gradient(ellipse 120% 80% at 50% 120%, rgba(0, 0, 0, 0.72), transparent 55%),
+    radial-gradient(ellipse 58% 42% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 68%),
+    radial-gradient(ellipse 100% 70% at 50% 115%, rgba(0, 0, 0, 0.55), transparent 58%),
     #050505;
-  animation: qr-cine-bg 1.4s ease both;
+  animation: qr-cine-bg 1.35s ease both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic::after {
   content: '';
@@ -64,9 +64,9 @@ body.qr-host .pa-fab,
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
   mix-blend-mode: overlay;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-content {
@@ -75,16 +75,15 @@ body.qr-host .pa-fab,
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
   width: 100%;
-  max-width: 920px;
+  max-width: 880px;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
   padding:
-    clamp(48px, 10vh, 96px)
-    clamp(20px, 5vw, 48px)
-    max(40px, env(safe-area-inset-bottom, 0px));
+    clamp(56px, 12vh, 120px)
+    clamp(24px, 5vw, 48px)
+    0;
   text-align: center;
   animation: none;
   box-sizing: border-box;
@@ -104,102 +103,89 @@ body.qr-host .pa-fab,
   width: 100%;
   flex: 1 1 auto;
   justify-content: center;
+  gap: 0;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   width: 100%;
-  gap: 14px;
   margin-top: auto;
-  padding-top: 48px;
-  padding-bottom: clamp(28px, 7vh, 64px);
+  padding-top: clamp(48px, 10vh, 96px);
+  padding-bottom: clamp(56px, 9vh, 88px);
+  animation: qr-cine-fade 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-slot {
   display: contents;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
-  order: 1;
-}
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
-  order: 2;
-}
 
+/* Logo + SHOWROOM as one tight brand block */
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
-  width: clamp(72px, 12vw, 96px);
-  max-width: 96px;
+  width: clamp(56px, 8vw, 72px);
+  max-width: 72px;
   height: auto;
-  margin: 0 0 36px;
+  margin: 0 0 12px;
   background: transparent !important;
   mix-blend-mode: normal;
-  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.16));
-  animation: qr-cine-logo 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.12));
+  animation: qr-cine-logo 1s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow {
-  margin: 0 0 18px;
-  color: #fff;
-  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(0.95rem, 1.7vw, 1.25rem);
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-indent: 0.34em;
-  text-transform: uppercase;
-  line-height: 1.2;
-  animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
-}
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin: 0 0 10px;
-  color: rgba(255, 255, 255, 0.62);
-  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-  font-size: clamp(0.78rem, 1.2vw, 0.92rem);
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: 0.12em;
-  text-transform: none;
-  animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
-}
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::before,
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::after {
-  content: '';
-  width: clamp(28px, 6vw, 56px);
-  height: 1px;
-  background: rgba(255, 255, 255, 0.28);
-}
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
   margin: 0;
   color: #fff;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+  font-size: clamp(0.72rem, 1.15vw, 0.88rem);
   font-weight: 600;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
-  line-height: 1.1;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
   text-transform: uppercase;
-  text-shadow: 0 0 28px rgba(255, 255, 255, 0.1);
-  animation: qr-cine-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
+  line-height: 1.2;
+  animation: qr-cine-fade 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+/* Short fine divider — no "Proyecto" label */
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow::after {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 1px;
+  margin: 22px auto 0;
+  background: rgba(255, 255, 255, 0.22);
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker {
+  display: none !important;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
+  margin: 22px 0 0;
+  color: #fff;
+  font-family: 'Cormorant Garamond', 'Bodoni Moda', 'Times New Roman', serif;
+  font-size: clamp(1.85rem, 3.8vw, 2.55rem);
+  font-weight: 300;
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: none;
+  animation: qr-cine-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.48s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-tagline[hidden],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-tagline:empty {
   display: none !important;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
-  animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both;
+
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
+  display: none !important;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
-  min-height: 44px;
-  min-width: min(220px, 72vw);
-  padding: 0 28px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn[data-pc-slot="explore"] {
+  min-height: 52px;
+  min-width: min(240px, 74vw);
+  padding: 0 32px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   background: transparent;
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
@@ -210,29 +196,25 @@ body.qr-host .pa-fab,
   text-transform: uppercase;
   transition: background 250ms ease, border-color 250ms ease, box-shadow 250ms ease, transform 250ms ease;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
-  border-color: rgba(255, 255, 255, 0.18);
-}
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn .menu-btn-icon {
   display: none !important;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"]:hover,
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn:hover {
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"]:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.55);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 10px 28px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 28px rgba(0, 0, 0, 0.32);
   transform: translateY(-1px);
   color: #fff;
 }
 
 .qr-cover-host .project-cover.is-cover-project.is-cover-cinematic .project-cover-name,
 .qr-cover-host .project-cover.is-cover-project .project-cover-name {
-  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-weight: 600;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
+  font-family: 'Cormorant Garamond', 'Bodoni Moda', 'Times New Roman', serif;
+  font-weight: 300;
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
 }
 
 .qr-cover-host .project-cover.is-start-only .project-cover-buttons {
@@ -244,7 +226,7 @@ body.qr-host .pa-fab,
   to { opacity: 1; }
 }
 @keyframes qr-cine-logo {
-  from { opacity: 0; transform: scale(0.95); }
+  from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
 }
 @keyframes qr-cine-fade {
@@ -252,61 +234,46 @@ body.qr-host .pa-fab,
   to { opacity: 1; }
 }
 @keyframes qr-cine-up {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 600px) {
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-content {
     padding:
-      max(36px, env(safe-area-inset-top))
-      22px
-      max(20px, env(safe-area-inset-bottom));
+      max(48px, calc(env(safe-area-inset-top) + 28px))
+      24px
+      0;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
-    width: clamp(64px, 18vw, 80px);
-    max-width: 80px;
-    margin-bottom: 28px;
+    width: clamp(48px, 14vw, 60px);
+    max-width: 60px;
+    margin-bottom: 10px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow {
-    margin-bottom: 14px;
-    font-size: clamp(0.78rem, 3.6vw, 0.95rem);
-    font-weight: 500;
-    letter-spacing: 0.26em;
-    text-indent: 0.26em;
+    font-size: clamp(0.62rem, 2.8vw, 0.74rem);
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
   }
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker {
-    margin-bottom: 8px;
-    gap: 10px;
-    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-    font-style: normal;
-    font-weight: 300;
-    font-size: 0.68rem;
-    letter-spacing: 0.18em;
-    color: rgba(255, 255, 255, 0.55);
-  }
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::before,
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::after {
-    width: 22px;
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow::after {
+    width: 28px;
+    margin-top: 18px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
-    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-    font-size: clamp(1.35rem, 6.8vw, 1.7rem);
-    font-weight: 600;
-    letter-spacing: 0.36em;
-    text-indent: 0.36em;
-    text-shadow: none;
+    margin-top: 18px;
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
-    gap: 12px;
-    padding-top: 56px;
-    padding-bottom: max(52px, 11vh, env(safe-area-inset-bottom));
+    padding-top: 64px;
+    padding-bottom: max(96px, calc(env(safe-area-inset-bottom) + 88px));
   }
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
-  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
-    min-height: 42px;
-    padding: 0 24px;
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
+    min-height: 50px;
+    min-width: min(230px, 78vw);
+    padding: 0 28px;
+    border-radius: 17px;
     font-size: 0.58rem;
     letter-spacing: 0.2em;
   }
