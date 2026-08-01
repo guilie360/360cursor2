@@ -169,30 +169,64 @@ var QuotationProposalsPage = (function () {
           '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
         '</div>' +
         '<div class="qpp__card-face qpp__card-face--back">' +
-          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-          '<span class="qpp__card-price">' + escapeHtml(price) + '</span>' +
-          '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
-          '<button type="button" class="qpp__card-select" data-proposal-select="' +
-            escapeHtml(proposal.id || '') + '">Seleccionar</button>' +
+          '<div class="qpp__card-panel qpp__card-panel--detail" data-qpp-panel="detail">' +
+            '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+            '<span class="qpp__card-price">' + escapeHtml(price) + '</span>' +
+            '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
+            '<button type="button" class="qpp__card-select" data-proposal-select="' +
+              escapeHtml(proposal.id || '') + '">Seleccionar</button>' +
+          '</div>' +
+          '<div class="qpp__card-panel qpp__card-panel--confirm" data-qpp-panel="confirm" hidden>' +
+            '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+            '<ul class="qpp__card-terms">' +
+              '<li>Anticipo del 50%</li>' +
+              '<li>Tiempo estimado: 2 a 3 semanas</li>' +
+              '<li>Saldo contra entrega</li>' +
+            '</ul>' +
+            '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
+              escapeHtml(proposal.id || '') + '">Voy con esta</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
+
+    var detailPanel = card.querySelector('[data-qpp-panel="detail"]');
+    var confirmPanel = card.querySelector('[data-qpp-panel="confirm"]');
+
+    function showDetail() {
+      card.classList.remove('is-confirming');
+      if (detailPanel) detailPanel.hidden = false;
+      if (confirmPanel) confirmPanel.hidden = true;
+    }
+
+    function showConfirm() {
+      card.classList.add('is-confirming');
+      if (detailPanel) detailPanel.hidden = true;
+      if (confirmPanel) confirmPanel.hidden = false;
+    }
+
+    function isCardAction(target) {
+      return !!(
+        target &&
+        target.closest &&
+        target.closest('[data-proposal-select], [data-proposal-confirm]')
+      );
+    }
 
     function flip() {
       var on = card.classList.toggle('is-flipped');
       card.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (!on) showDetail();
     }
 
     card.addEventListener('click', function (e) {
-      if (e.target && e.target.closest && e.target.closest('[data-proposal-select]')) {
-        return;
-      }
+      if (isCardAction(e.target)) return;
       e.preventDefault();
       flip();
     });
 
     card.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      if (e.target && e.target.closest && e.target.closest('[data-proposal-select]')) return;
+      if (isCardAction(e.target)) return;
       e.preventDefault();
       flip();
     });
@@ -200,6 +234,15 @@ var QuotationProposalsPage = (function () {
     var selectBtn = card.querySelector('[data-proposal-select]');
     if (selectBtn) {
       selectBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showConfirm();
+      });
+    }
+
+    var confirmBtn = card.querySelector('[data-proposal-confirm]');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         openWhatsApp(waMessage);
