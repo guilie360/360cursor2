@@ -230,16 +230,19 @@ body.admin-modal-open { overflow: hidden; }
   line-height: 1.6;
 }
 
-/* Toasts */
+/* Toasts — always bottom-right above footer/dock (never under header) */
 .admin-toast-stack {
   position: fixed;
-  top: 18px;
+  top: auto;
+  bottom: 18px;
   right: 18px;
-  z-index: 1100;
+  left: auto;
+  z-index: 10050;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   gap: 10px;
   max-width: min(360px, calc(100vw - 36px));
+  pointer-events: none;
 }
 
 .admin-toast {
@@ -251,8 +254,9 @@ body.admin-modal-open { overflow: hidden; }
   font-size: 14px;
   line-height: 1.5;
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(10px);
   transition: opacity 0.25s, transform 0.25s;
+  pointer-events: auto;
 }
 
 .admin-toast.is-visible {

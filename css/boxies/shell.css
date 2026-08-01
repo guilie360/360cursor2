@@ -620,6 +620,62 @@ a.boxies-action-btn {
   border-top: 1px solid var(--boxies-dock-border);
 }
 
+/* Toasts always sit above the footer dock, never under the header. */
+body.boxies-host .admin-toast-stack,
+body.boxies-shell .admin-toast-stack {
+  position: fixed;
+  top: auto !important;
+  bottom: calc(var(--boxies-dock-h, 56px) + var(--boxies-dock-safe, 0px) + 14px) !important;
+  right: 16px !important;
+  left: auto !important;
+  z-index: 10050;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+body.boxies-host .admin-toast,
+body.boxies-shell .admin-toast {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 6, 6, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px) saturate(130%);
+  -webkit-backdrop-filter: blur(20px) saturate(130%);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: auto;
+}
+
+body.boxies-host .admin-toast.is-visible,
+body.boxies-shell .admin-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body.boxies-host .admin-toast--success,
+body.boxies-host .admin-toast--error,
+body.boxies-host .admin-toast--info,
+body.boxies-shell .admin-toast--success,
+body.boxies-shell .admin-toast--error,
+body.boxies-shell .admin-toast--info {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+body.boxies-host .admin-toast--error,
+body.boxies-shell .admin-toast--error {
+  border-color: rgba(255, 138, 138, 0.4);
+}
+
 .boxies-dock__inner {
   position: relative;
   height: var(--boxies-dock-h);

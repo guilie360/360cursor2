@@ -2963,16 +2963,22 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
 
 /* Buttons: owned by css/hall ? do not restyle .btn-primary / .btn-ghost here */
 
-/* Builder toasts ? bottom-right above dock */
-body.builder-has-dock .admin-toast-stack {
+/* Builder toasts — bottom-right above dock (never under header) */
+body.builder-has-dock .admin-toast-stack,
+body.boxies-has-dock .admin-toast-stack {
   top: auto;
-  bottom: calc(var(--builder-dock-height) + var(--builder-dock-safe) + 14px);
+  bottom: calc(
+    var(--boxies-dock-h, var(--builder-dock-height, 56px)) +
+    var(--boxies-dock-safe, var(--builder-dock-safe, 0px)) +
+    14px
+  );
   right: 16px;
-  z-index: 10002;
+  z-index: 10050;
   flex-direction: column-reverse;
 }
 
-body.builder-has-dock .admin-toast {
+body.builder-has-dock .admin-toast,
+body.boxies-has-dock .admin-toast {
   padding: 11px 14px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2988,14 +2994,18 @@ body.builder-has-dock .admin-toast {
   transform: translateY(10px);
 }
 
-body.builder-has-dock .admin-toast.is-visible {
+body.builder-has-dock .admin-toast.is-visible,
+body.boxies-has-dock .admin-toast.is-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 body.builder-has-dock .admin-toast--success,
 body.builder-has-dock .admin-toast--error,
-body.builder-has-dock .admin-toast--info {
+body.builder-has-dock .admin-toast--info,
+body.boxies-has-dock .admin-toast--success,
+body.boxies-has-dock .admin-toast--error,
+body.boxies-has-dock .admin-toast--info {
   border-color: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.92);
 }
