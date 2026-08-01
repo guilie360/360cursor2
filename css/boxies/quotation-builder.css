@@ -1086,11 +1086,11 @@
   opacity: 0.42;
 }
 
-.qe-scenes__thumb-wrap[draggable="true"] {
+.qe-scenes__thumb[draggable="true"] {
   cursor: grab;
 }
 
-.qe-scenes__thumb-wrap[draggable="true"]:active {
+.qe-scenes__thumb[draggable="true"]:active {
   cursor: grabbing;
 }
 

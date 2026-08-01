@@ -2767,14 +2767,16 @@ var QuotationEditor = (function () {
               ? 'Vaciar contenido (la portada HERO no se elimina)'
               : 'Eliminar escena') + '">×</button>'
         );
+      /* Drag lives on the thumb only — never on the wrap (× must stay clickable). */
       return '' +
         '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') + '"' +
           ' data-qe-drop-scene data-qe-drop-scene-id="' +
           escapeHtml(sc.id) + '"' +
-          (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') + '>' +
+          (hero ? '' : ' data-qe-scene-drop="' + escapeHtml(sc.id) + '"') + '>' +
           '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') +
             (hero ? ' is-hero' : '') + '"' +
             ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
+            (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') +
             ' title="' + escapeHtml(hero ? 'HERO' : (sc.name || 'Escena')) + '">' +
             '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
             '<span class="qe-scenes__thumb-name"' +
@@ -3306,6 +3308,10 @@ var QuotationEditor = (function () {
       try { builderSceneApi.destroy(); } catch (eD) { /* ignore */ }
     }
     builderSceneApi = null;
+    if (rootEl && rootEl.querySelector) {
+      var host = rootEl.querySelector('[data-qe-viewport-window]');
+      if (host) host.innerHTML = '';
+    }
   }
 
   /**
@@ -3792,25 +3798,23 @@ var QuotationEditor = (function () {
     var dragId = null;
     var dropHint = null;
 
-    track.querySelectorAll('[data-qe-scene-drag]').forEach(function (wrap) {
-      wrap.addEventListener('dragstart', function (e) {
-        /* Delete × lives inside the draggable wrap — don't start a drag from it. */
-        var t = e.target;
-        if (t && t.closest && t.closest('[data-qe-scene-delete]')) {
-          e.preventDefault();
-          return;
-        }
-        dragId = wrap.getAttribute('data-qe-scene-drag');
+    track.querySelectorAll('[data-qe-scene-drag]').forEach(function (thumb) {
+      thumb.addEventListener('dragstart', function (e) {
+        dragId = thumb.getAttribute('data-qe-scene-drag');
         dropHint = null;
-        wrap.classList.add('is-dragging');
+        var wrap = thumb.closest('.qe-scenes__thumb-wrap');
+        if (wrap) wrap.classList.add('is-dragging');
+        thumb.classList.add('is-dragging');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
           try { e.dataTransfer.setData('text/qe-scene', dragId || ''); } catch (e1) {}
           e.dataTransfer.setData('text/plain', dragId || '');
         }
       });
-      wrap.addEventListener('dragend', function () {
-        wrap.classList.remove('is-dragging');
+      thumb.addEventListener('dragend', function () {
+        var wrap = thumb.closest('.qe-scenes__thumb-wrap');
+        if (wrap) wrap.classList.remove('is-dragging');
+        thumb.classList.remove('is-dragging');
         clearSceneReorderIndicators(track);
         track.querySelectorAll('.is-drop-target').forEach(function (el) {
           el.classList.remove('is-drop-target');
@@ -3818,9 +3822,12 @@ var QuotationEditor = (function () {
         dragId = null;
         dropHint = null;
       });
+    });
+
+    track.querySelectorAll('[data-qe-scene-drop]').forEach(function (wrap) {
       wrap.addEventListener('dragover', function (e) {
         if (!dragId) return;
-        var toId = wrap.getAttribute('data-qe-scene-drag');
+        var toId = wrap.getAttribute('data-qe-scene-drop');
         if (!toId || toId === dragId) return;
         e.preventDefault();
         e.stopPropagation();
@@ -3835,7 +3842,7 @@ var QuotationEditor = (function () {
         var related = e.relatedTarget;
         if (related && wrap.contains(related)) return;
         wrap.classList.remove('is-scene-reorder-before', 'is-scene-reorder-after');
-        if (dropHint && dropHint.toId === wrap.getAttribute('data-qe-scene-drag')) {
+        if (dropHint && dropHint.toId === wrap.getAttribute('data-qe-scene-drop')) {
           dropHint = null;
         }
       });
@@ -3849,7 +3856,7 @@ var QuotationEditor = (function () {
           try { from = e.dataTransfer.getData('text/qe-scene') || ''; } catch (e2) {}
           if (!from) from = e.dataTransfer.getData('text/plain') || '';
         }
-        var to = (dropHint && dropHint.toId) || wrap.getAttribute('data-qe-scene-drag');
+        var to = (dropHint && dropHint.toId) || wrap.getAttribute('data-qe-scene-drop');
         var after = !!(dropHint && dropHint.after);
         if (!dropHint) {
           var rect = wrap.getBoundingClientRect();
@@ -4552,9 +4559,33 @@ var QuotationEditor = (function () {
     });
   }
 
-  function requestDeleteScene(id) {
+  var sceneDeleteBusy = false;
+
+  async function requestDeleteScene(id) {
     var sid = String(id || '').trim();
-    if (!sid || !sceneById(sid)) return;
+    var scene = sceneById(sid);
+    if (!sid || !scene || sceneDeleteBusy) return;
+    var hero = isHeroScene(scene);
+
+    /* AdminUI modal mounts on document.body — not under the canvas/experiencia stack. */
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.confirm === 'function') {
+      sceneDeleteBusy = true;
+      try {
+        var ok = await AdminUI.confirm({
+          title: hero ? 'Vaciar portada HERO' : 'Eliminar escena',
+          confirmLabel: hero ? 'Vaciar' : 'Eliminar',
+          cancelLabel: 'Cancelar',
+          bodyHtml: hero
+            ? '<p class="admin-modal-copy">¿Vaciar la portada HERO? Se quita el contenido, pero la escena permanece.</p>'
+            : '<p class="admin-modal-copy">¿Deseas eliminar esta escena?</p>'
+        });
+        if (ok) deleteScene(sid);
+      } finally {
+        sceneDeleteBusy = false;
+      }
+      return;
+    }
+
     state.pendingSceneDeleteId = sid;
     rerender();
   }
@@ -6601,12 +6632,41 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  /** Capture-phase delete/confirm — survives thumb drag and canvas overlays. */
+  function bindSceneDeleteDelegation(panel) {
+    if (!panel || panel.dataset.qeSceneDeleteBound === '1') return;
+    panel.dataset.qeSceneDeleteBound = '1';
+    panel.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var del = t.closest('[data-qe-scene-delete]');
+      if (del && panel.contains(del)) {
+        e.preventDefault();
+        e.stopPropagation();
+        requestDeleteScene(del.getAttribute('data-qe-scene-delete'));
+        return;
+      }
+      if (t.closest('[data-qe-scene-confirm-ok]') && panel.contains(t.closest('[data-qe-scene-confirm]'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        confirmDeleteScene();
+        return;
+      }
+      if (t.closest('[data-qe-scene-confirm-cancel]') && panel.contains(t.closest('[data-qe-scene-confirm]'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelDeleteScene();
+      }
+    }, true);
+  }
+
   function bind(panel, ctx) {
     rootEl = panel;
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     hydrateEditorProjectCtxSlug();
     bindFocusEsc();
     bindInspectorChrome();
+    bindSceneDeleteDelegation(panel);
     syncRightPanel();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
@@ -6703,36 +6763,7 @@ var QuotationEditor = (function () {
         });
       });
 
-      editor.querySelectorAll('[data-qe-scene-delete]').forEach(function (btn) {
-        btn.setAttribute('draggable', 'false');
-        btn.addEventListener('pointerdown', function (e) {
-          e.stopPropagation();
-        });
-        btn.addEventListener('mousedown', function (e) {
-          e.stopPropagation();
-        });
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          requestDeleteScene(btn.getAttribute('data-qe-scene-delete'));
-        });
-      });
-
-      editor.querySelectorAll('[data-qe-scene-confirm-cancel]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          cancelDeleteScene();
-        });
-      });
-      var confirmOk = editor.querySelector('[data-qe-scene-confirm-ok]');
-      if (confirmOk) {
-        confirmOk.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          confirmDeleteScene();
-        });
-      }
+      /* Scene delete / confirm: bindSceneDeleteDelegation (capture on panel). */
 
       var sceneAdd = editor.querySelector('[data-qe-scene-add]');
       if (sceneAdd) {
