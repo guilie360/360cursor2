@@ -2132,13 +2132,23 @@
   cursor: grabbing;
 }
 
-.qe-lib__item[draggable="true"] {
+.qe-lib__item[draggable="true"],
+.qe-lib__item[data-qe-drag-lib] {
   cursor: grab;
-  -webkit-user-drag: element;
+  -webkit-user-drag: none;
+  user-select: none;
+  touch-action: none;
 }
 
-.qe-lib__item[draggable="true"]:active {
+.qe-lib__item[data-qe-drag-lib]:active,
+.qe-lib__item.is-dragging {
   cursor: grabbing;
+}
+
+body.is-qe-lib-pointer-dragging,
+body.is-qe-lib-pointer-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
 }
 
 .qe-content__add {
