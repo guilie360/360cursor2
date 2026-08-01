@@ -525,18 +525,9 @@ body.qr-proposals-page .qpp {
     grid-row: 1;
   }
 
-  /* Panel opens upward above the bottom bar. */
+  /* Mobile: no volume panel — note toggles play/pause only. */
   .qpp__audio-panel {
-    right: 0;
-    left: auto;
-    top: auto;
-    bottom: calc(100% + 12px);
-    transform: translateY(8px);
-  }
-
-  .qpp__audio-wrap.is-audio-open .qpp__audio-panel,
-  .qpp__audio-panel:not([hidden]) {
-    transform: translateY(0);
+    display: none !important;
   }
 
   .qpp__main {

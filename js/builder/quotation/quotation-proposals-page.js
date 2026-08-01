@@ -273,6 +273,21 @@ var QuotationProposalsPage = (function () {
     return true;
   }
 
+  function isMobileAudioChrome() {
+    try {
+      return window.matchMedia && window.matchMedia('(max-width: 1023px)').matches;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function toggleAmbientPlayback(audio, root) {
+    if (!audio) return;
+    if (audio.paused) playAmbient(audio, root);
+    else audio.pause();
+    syncAudioUi(root);
+  }
+
   function bindAudio(root) {
     var audio = qs('[data-qpp-audio]', root);
     var musicBtn = qs('[data-qpp-music]', root);
@@ -290,6 +305,12 @@ var QuotationProposalsPage = (function () {
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
+      /* Mobile: note button only play/pause. Desktop: open volume panel. */
+      if (isMobileAudioChrome()) {
+        setAudioPanelOpen(root, false);
+        toggleAmbientPlayback(audio, root);
+        return;
+      }
       var panel = qs('[data-qpp-audio-panel]', root);
       var open = !(panel && !panel.hidden);
       setAudioPanelOpen(root, open);
@@ -299,12 +320,7 @@ var QuotationProposalsPage = (function () {
       toggle.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (audio.paused) {
-          playAmbient(audio, root);
-        } else {
-          audio.pause();
-        }
-        syncAudioUi(root);
+        toggleAmbientPlayback(audio, root);
       });
     }
 
