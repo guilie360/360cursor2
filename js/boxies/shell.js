@@ -241,10 +241,36 @@ var BoxiesShell = (function () {
   function openActivePreview() {
     var type = String(projectCtx.experienceType || '').toLowerCase();
     if (type === 'quotation') {
-      var qUrl = resolveQuotationPreviewUrl({
-        id: projectCtx.id,
-        slug: projectCtx.slug
-      });
+      /* Flush Editor → live envelope so Visualizar matches the canvas (incl. unsaved). */
+      try {
+        if (typeof QuotationPreview !== 'undefined' && QuotationPreview.prepareLiveDocument) {
+          QuotationPreview.prepareLiveDocument({
+            id: projectCtx.id,
+            projectId: projectCtx.id,
+            slug: projectCtx.slug,
+            name: projectCtx.name,
+            nombre: projectCtx.name
+          });
+        } else if (typeof QuotationEditor !== 'undefined' && QuotationEditor.prepareLivePreview) {
+          QuotationEditor.prepareLivePreview(projectCtx);
+        }
+      } catch (eLive) {
+        console.warn('[BoxiesShell] prepareLivePreview', eLive);
+      }
+      var qUrl = null;
+      if (typeof QuotationPreview !== 'undefined' && QuotationPreview.resolveRuntimeUrl) {
+        qUrl = QuotationPreview.resolveRuntimeUrl({
+          id: projectCtx.id,
+          projectId: projectCtx.id,
+          slug: projectCtx.slug
+        });
+      }
+      if (!qUrl) {
+        qUrl = resolveQuotationPreviewUrl({
+          id: projectCtx.id,
+          slug: projectCtx.slug
+        });
+      }
       if (!qUrl) return;
       window.open(qUrl, '_blank', 'noopener,noreferrer');
       return;

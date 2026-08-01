@@ -198,17 +198,39 @@ var QuotationRuntime = (function () {
     return null;
   }
 
-  /** First scene Preview/Web must show: active with media, else first media scene. */
+  /** Landing scene for Preview/Web — prefer entry/hero; live honors Editor selection. */
   function pickStartupScene(bundle) {
     var doc = canvasDoc(bundle);
-    var scenes = listScenes(bundle);
     var preferred = null;
     if (doc && doc.activeSceneId) {
       preferred = sceneById(bundle, doc.activeSceneId);
     }
+
+    /*
+     * Live/preview from the Editor: show the scene they had selected.
+     * Public publish: always land on entry/hero — never jump to another
+     * media scene (that also injected an automatic «Volver»).
+     */
+    if ((liveMode || previewMode) && preferred) {
+      if (sceneIsMediaScene(preferred) || resolveSceneMedia(preferred, bundle)) {
+        return preferred;
+      }
+      if (sceneHasCoverChrome(preferred)) return null;
+    }
+
+    var entry = entryScene(bundle);
+    if (entry) {
+      if (sceneIsMediaScene(entry) || resolveSceneMedia(entry, bundle)) {
+        return entry;
+      }
+      /* Cover-only entry → paintHero keeps ProjectCover (no goToScene). */
+      return null;
+    }
+
     if (preferred && (sceneIsMediaScene(preferred) || resolveSceneMedia(preferred, bundle))) {
       return preferred;
     }
+    var scenes = listScenes(bundle);
     var i;
     for (i = 0; i < scenes.length; i++) {
       if (!scenes[i]) continue;
