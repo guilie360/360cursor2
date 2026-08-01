@@ -28,6 +28,7 @@ var QuotationProposalsPage = (function () {
     { label: 'Vista aérea del proyecto', still: '—', motion: '✓' },
     { label: 'Identidad visual inicial (logo)', still: '—', motion: '✓' },
     { label: 'Presentación en tablets y celulares', still: '—', motion: '✓' },
+    { label: 'Moodboard de materiales', still: '—', motion: '✓' },
     { label: 'Renders exteriores (cantidad aproximada)', still: '3–5', motion: '10–12' }
   ];
 
@@ -35,7 +36,6 @@ var QuotationProposalsPage = (function () {
     { label: 'Diseño de fachada (2 tipologías)', still: '✓', motion: '✓' },
     { label: 'Modelado 3D', still: '✓', motion: '✓' },
     { label: 'Implantación conceptual', still: '✓', motion: '✓' },
-    { label: 'Moodboard de materiales', still: '✓', motion: '✓' },
     { label: 'Plantas amobladas (4)', still: '✓', motion: '✓' },
     { label: 'Mini brochure ejecutivo', still: '✓', motion: '✓' },
     { label: 'Link personalizado', still: '✓', motion: '✓' },
