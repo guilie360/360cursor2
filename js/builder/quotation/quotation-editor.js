@@ -14,15 +14,15 @@ var QuotationEditor = (function () {
     if (typeof HeroRenderer !== 'undefined' && HeroRenderer.getViewport) {
       return HeroRenderer.getViewport(id);
     }
-    return { id: 'desktop', label: 'Desktop', width: 1280, height: 720 };
+    return { id: 'desktop', label: 'Desktop', width: 1920, height: 1080 };
   }
 
-  /** Simulated device window size — not the design lienzo. */
+  /** Simulated device window — Desktop matches design lienzo 1920×1080. */
   function activeViewportSize() {
     var vp = activeViewport();
     return {
-      width: Math.max(1, Number(vp.width) || 1280),
-      height: Math.max(1, Number(vp.height) || 720)
+      width: Math.max(1, Number(vp.width) || 1920),
+      height: Math.max(1, Number(vp.height) || 1080)
     };
   }
 

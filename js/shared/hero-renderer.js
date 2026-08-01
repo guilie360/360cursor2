@@ -9,7 +9,7 @@ var HeroRenderer = (function () {
   var DESIGN_W = 1920;
   var DESIGN_H = 1080;
   var VIEWPORTS = {
-    desktop: { id: 'desktop', label: 'Desktop', width: 1280, height: 720 },
+    desktop: { id: 'desktop', label: 'Desktop', width: 1920, height: 1080 },
     tablet: { id: 'tablet', label: 'Tablet', width: 768, height: 1024 },
     mobile: { id: 'mobile', label: 'Mobile', width: 390, height: 844 }
   };

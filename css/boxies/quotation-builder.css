@@ -647,8 +647,8 @@
 
 .qe-stage-unit .qe-canvas__stage {
   flex: 0 0 auto;
-  width: 1280px;
-  height: 720px;
+  width: 1920px;
+  height: 1080px;
   min-height: 0;
   max-height: none;
   aspect-ratio: auto;
