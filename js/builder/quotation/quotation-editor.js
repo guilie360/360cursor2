@@ -603,6 +603,8 @@ var QuotationEditor = (function () {
   var sessionEpoch = 0;
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
+  /** Active library-item drag (reorder). Avoids relying only on dataTransfer MIME types. */
+  var libItemDrag = null;
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
@@ -1845,11 +1847,11 @@ var QuotationEditor = (function () {
     return '' +
       '<div class="qe-folder' + (open ? ' is-open' : '') + '" data-qe-folder-block="' +
         escapeHtml(folder.id) + '"' +
-        ' data-qe-folder-drag="' + escapeHtml(folder.id) + '"' +
         ' data-qe-lib-drop-folder="' + escapeHtml(folder.id) + '"' +
-        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '"' +
-        ' draggable="' + (renaming ? 'false' : 'true') + '">' +
-        '<div class="qe-folder__head">' +
+        ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
+        '<div class="qe-folder__head"' +
+          ' data-qe-folder-drag="' + escapeHtml(folder.id) + '"' +
+          ' draggable="' + (renaming ? 'false' : 'true') + '">' +
           '<button type="button" class="qe-folder__toggle" data-qe-folder-toggle="' +
             escapeHtml(folder.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
             '<span class="qe-folder__chevron" aria-hidden="true"></span>' +
@@ -3816,25 +3818,27 @@ var QuotationEditor = (function () {
     var dragGroup = null;
 
     function clearFolderDropMarks() {
-      document.querySelectorAll('.qe-folder').forEach(function (el) {
+      document.querySelectorAll('.qe-folder, .qe-folder__head').forEach(function (el) {
         el.classList.remove('is-drop-before', 'is-drop-after');
       });
     }
 
     document.querySelectorAll('[data-qe-folder-drag]').forEach(function (el) {
       el.addEventListener('dragstart', function (e) {
+        /* Never cancel a resource drag — items must remain independently draggable. */
         if (e.target && e.target.closest && (
+          e.target.closest('.qe-lib__item') ||
           e.target.closest('[data-qe-lib-menu]') ||
           e.target.closest('[data-qe-folder-rename]') ||
-          e.target.closest('[data-qe-content-rename]') ||
-          e.target.closest('.qe-lib__item')
+          e.target.closest('[data-qe-content-rename]')
         )) {
-          e.preventDefault();
           return;
         }
         dragId = el.getAttribute('data-qe-folder-drag');
         var folder = folderById(dragId);
         dragGroup = folder ? folder.group : null;
+        var block = el.closest('[data-qe-folder-block]') || el;
+        block.classList.add('is-dragging');
         el.classList.add('is-dragging');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
@@ -3844,13 +3848,16 @@ var QuotationEditor = (function () {
       });
 
       el.addEventListener('dragend', function () {
-        el.classList.remove('is-dragging');
+        document.querySelectorAll('.qe-folder.is-dragging, .qe-folder__head.is-dragging').forEach(function (node) {
+          node.classList.remove('is-dragging');
+        });
         clearFolderDropMarks();
         dragId = null;
         dragGroup = null;
       });
 
       el.addEventListener('dragover', function (e) {
+        if (libItemDrag) return;
         if (!dragId || !dragGroup) return;
         var toId = el.getAttribute('data-qe-folder-drag');
         var toFolder = folderById(toId);
@@ -3871,6 +3878,7 @@ var QuotationEditor = (function () {
       });
 
       el.addEventListener('drop', function (e) {
+        if (libItemDrag) return;
         e.preventDefault();
         e.stopPropagation();
         var after = el.classList.contains('is-drop-after');
@@ -5335,17 +5343,52 @@ var QuotationEditor = (function () {
       orderedMove.push(key);
     });
     if (!orderedMove.length) return false;
-    if (moveSet[String(targetId)]) return false;
 
     var siblingIds = [];
     state.content.forEach(function (c) {
       if (c && sameContentScope(c, target)) siblingIds.push(String(c.id));
     });
+
+    /* If dropping onto one of the dragged items, use the nearest non-dragged neighbor. */
+    var dropTargetId = String(targetId);
+    if (moveSet[dropTargetId]) {
+      var tIdx = siblingIds.indexOf(dropTargetId);
+      var neighbor = null;
+      var n;
+      if (placeAfter) {
+        for (n = tIdx + 1; n < siblingIds.length; n++) {
+          if (!moveSet[siblingIds[n]]) { neighbor = siblingIds[n]; placeAfter = false; break; }
+        }
+        if (!neighbor) {
+          for (n = tIdx - 1; n >= 0; n--) {
+            if (!moveSet[siblingIds[n]]) { neighbor = siblingIds[n]; placeAfter = true; break; }
+          }
+        }
+      } else {
+        for (n = tIdx - 1; n >= 0; n--) {
+          if (!moveSet[siblingIds[n]]) { neighbor = siblingIds[n]; placeAfter = true; break; }
+        }
+        if (!neighbor) {
+          for (n = tIdx + 1; n < siblingIds.length; n++) {
+            if (!moveSet[siblingIds[n]]) { neighbor = siblingIds[n]; placeAfter = false; break; }
+          }
+        }
+      }
+      if (!neighbor) return false;
+      dropTargetId = neighbor;
+    }
+
     var rest = siblingIds.filter(function (id) { return !moveSet[id]; });
-    var targetIdx = rest.indexOf(String(targetId));
+    var targetIdx = rest.indexOf(dropTargetId);
     if (targetIdx < 0) return false;
     var insertAt = placeAfter ? targetIdx + 1 : targetIdx;
     var newOrder = rest.slice(0, insertAt).concat(orderedMove).concat(rest.slice(insertAt));
+
+    if (newOrder.length === siblingIds.length &&
+        newOrder.every(function (id, i) { return id === siblingIds[i]; })) {
+      return false;
+    }
+
     var byId = {};
     state.content.forEach(function (c) {
       if (c) byId[String(c.id)] = c;
@@ -5365,6 +5408,13 @@ var QuotationEditor = (function () {
     qAll('.qe-lib__item.is-lib-reorder-before, .qe-lib__item.is-lib-reorder-after').forEach(function (el) {
       el.classList.remove('is-lib-reorder-before', 'is-lib-reorder-after');
     });
+  }
+
+  function resolveLibDragIds(fallbackId) {
+    if (libItemDrag && libItemDrag.ids && libItemDrag.ids.length) {
+      return libItemDrag.ids.slice();
+    }
+    return fallbackId ? [String(fallbackId)] : [];
   }
 
   function markDirtyLocal() {
@@ -5705,9 +5755,11 @@ var QuotationEditor = (function () {
             e.preventDefault();
             return;
           }
+          e.stopPropagation();
           var libId = el.getAttribute('data-qe-drag-lib') || el.getAttribute('data-qe-drag-resource');
           var sceneId = el.getAttribute('data-qe-drag-resource');
           var group = el.getAttribute('data-qe-lib-group') || '';
+          var folder = el.getAttribute('data-qe-lib-folder') || '';
           if (!libId || !e.dataTransfer) return;
           var dragItem = contentById(libId);
           var moveIds = [String(libId)];
@@ -5720,10 +5772,16 @@ var QuotationEditor = (function () {
             });
             if (!moveIds.length) moveIds = [String(libId)];
           }
+          libItemDrag = {
+            primaryId: String(libId),
+            ids: moveIds,
+            group: group,
+            folder: folder
+          };
           e.dataTransfer.setData('text/qe-lib-move', libId);
           e.dataTransfer.setData('text/qe-lib-move-ids', JSON.stringify(moveIds));
           e.dataTransfer.setData('text/qe-lib-group', group);
-          e.dataTransfer.setData('text/qe-lib-folder', el.getAttribute('data-qe-lib-folder') || '');
+          e.dataTransfer.setData('text/qe-lib-folder', folder);
           if (sceneId && moveIds.length === 1) {
             e.dataTransfer.setData('text/qe-resource', sceneId);
             e.dataTransfer.setData('text/plain', sceneId);
@@ -5739,6 +5797,7 @@ var QuotationEditor = (function () {
           });
         });
         el.addEventListener('dragend', function () {
+          libItemDrag = null;
           qAll('.qe-lib__item.is-dragging').forEach(function (row) {
             row.classList.remove('is-dragging');
           });
@@ -5752,22 +5811,25 @@ var QuotationEditor = (function () {
       /* Reorder within the same folder / root — not for changing folders. */
       qAll('[data-qe-content][data-qe-drag-lib]').forEach(function (row) {
         row.addEventListener('dragover', function (e) {
+          if (!libItemDrag) return;
           if (document.querySelector('.qe-folder.is-dragging') ||
               (e.dataTransfer && e.dataTransfer.types &&
                 Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
             return;
           }
-          var dragEl = document.querySelector('.qe-lib__item.is-dragging');
-          if (!dragEl) return;
-          var dragGroup = dragEl.getAttribute('data-qe-lib-group') || '';
-          var dragFolder = dragEl.getAttribute('data-qe-lib-folder') || '';
+          var dragGroup = libItemDrag.group || '';
+          var dragFolder = libItemDrag.folder || '';
           var dropGroup = row.getAttribute('data-qe-lib-group') || '';
           var dropFolder = row.getAttribute('data-qe-lib-folder') || '';
           if (!dragGroup || dragGroup !== dropGroup || dragFolder !== dropFolder) {
             if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
             return;
           }
-          if (dragEl === row) return;
+          var rowId = row.getAttribute('data-qe-content') || '';
+          if (libItemDrag.ids.length === 1 && String(libItemDrag.primaryId) === String(rowId)) {
+            clearLibReorderIndicators();
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
           var rect = row.getBoundingClientRect();
@@ -5781,6 +5843,9 @@ var QuotationEditor = (function () {
           row.classList.remove('is-lib-reorder-before', 'is-lib-reorder-after');
         });
         row.addEventListener('drop', function (e) {
+          if (!libItemDrag && !(e.dataTransfer && e.dataTransfer.getData('text/qe-lib-move'))) {
+            return;
+          }
           if (document.querySelector('.qe-folder.is-dragging') ||
               (e.dataTransfer && e.dataTransfer.getData('text/qe-folder'))) {
             return;
@@ -5788,18 +5853,24 @@ var QuotationEditor = (function () {
           e.preventDefault();
           e.stopPropagation();
           var after = row.classList.contains('is-lib-reorder-after');
+          if (!row.classList.contains('is-lib-reorder-before') &&
+              !row.classList.contains('is-lib-reorder-after')) {
+            var rect = row.getBoundingClientRect();
+            after = e.clientY > rect.top + rect.height / 2;
+          }
           clearLibReorderIndicators();
           var targetId = row.getAttribute('data-qe-content');
-          var rawIds = (e.dataTransfer && e.dataTransfer.getData('text/qe-lib-move-ids')) || '';
-          var ids = [];
-          try { ids = JSON.parse(rawIds); } catch (errParse) { ids = []; }
-          if (!Array.isArray(ids) || !ids.length) {
-            var one = (e.dataTransfer && (
-              e.dataTransfer.getData('text/qe-lib-move') ||
-              e.dataTransfer.getData('text/plain')
-            )) || '';
-            if (one) ids = [one];
+          var ids = resolveLibDragIds();
+          if (!ids.length && e.dataTransfer) {
+            var rawIds = e.dataTransfer.getData('text/qe-lib-move-ids') || '';
+            try { ids = JSON.parse(rawIds); } catch (errParse) { ids = []; }
+            if (!Array.isArray(ids) || !ids.length) {
+              var one = e.dataTransfer.getData('text/qe-lib-move') ||
+                e.dataTransfer.getData('text/plain') || '';
+              if (one) ids = [one];
+            }
           }
+          libItemDrag = null;
           if (!targetId || !ids.length) return;
           reorderLibraryItems(ids, targetId, after);
         });
@@ -5808,10 +5879,11 @@ var QuotationEditor = (function () {
       /* Folder/root drops no longer move files — use right-click "Mover de carpeta". */
       qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
-          if (document.querySelector('.qe-lib__item.is-dragging') ||
+          if (libItemDrag ||
+              document.querySelector('.qe-lib__item.is-dragging') ||
               (e.dataTransfer && e.dataTransfer.types &&
                 Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-lib-move') >= 0)) {
-            if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+            /* Allow bubbling item reorder targets to own the drop; do not force none. */
             zone.classList.remove('is-lib-drop-target');
             return;
           }
@@ -5822,13 +5894,13 @@ var QuotationEditor = (function () {
           }
         });
         zone.addEventListener('drop', function (e) {
-          if (document.querySelector('.qe-lib__item.is-dragging') ||
+          if (libItemDrag ||
+              document.querySelector('.qe-lib__item.is-dragging') ||
               (e.dataTransfer && (
                 e.dataTransfer.getData('text/qe-lib-move') ||
                 e.dataTransfer.getData('text/qe-lib-move-ids')
               ))) {
-            e.preventDefault();
-            e.stopPropagation();
+            /* Item reorder handled on rows; ignore folder/root zone drops. */
             zone.classList.remove('is-lib-drop-target');
             return;
           }
