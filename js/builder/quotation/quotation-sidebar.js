@@ -1,8 +1,7 @@
-/* Quotation Builder — V7.2.66 icon-only step rail (Config / Hero / Editor). */
+/* Quotation Builder — V7.2.103 icon-only step rail (Config / Editor). */
 var QuotationSidebar = (function () {
   var STEPS = [
     { id: 'config', label: 'Config', icon: 'settings', checkable: true },
-    { id: 'hero', label: 'Hero', icon: 'image', checkable: true },
     { id: 'editor', label: 'Editor', icon: 'pen-tool', checkable: true }
   ];
 

@@ -3,14 +3,13 @@ var QuotationRouter = (function () {
   var DEFAULT_STEP = 'config';
   var ALLOWED = {
     config: 1,
-    hero: 1,
     editor: 1
   };
 
   function normalize(stepId) {
     var id = String(stepId || '').trim().toLowerCase();
-    /* Legacy ?step=preview → Editor (canvas preview mode is separate). */
-    if (id === 'preview') return 'editor';
+    /* Legacy ?step=preview|hero → Editor (Hero panel removed from rail). */
+    if (id === 'preview' || id === 'hero') return 'editor';
     return ALLOWED[id] ? id : DEFAULT_STEP;
   }
 
