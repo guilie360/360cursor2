@@ -208,8 +208,7 @@ var QuotationRuntime = (function () {
 
     /*
      * Live/preview from the Editor: show the scene they had selected.
-     * Public publish: always land on entry/hero — never jump to another
-     * media scene (that also injected an automatic «Volver»).
+     * Public publish: always land on entry/hero — never jump to another media scene.
      */
     if ((liveMode || previewMode) && preferred) {
       if (sceneIsMediaScene(preferred) || resolveSceneMedia(preferred, bundle)) {
@@ -740,19 +739,7 @@ var QuotationRuntime = (function () {
       mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
     });
     void sceneApi;
-    /* Volver only when a distinct cover chrome exists to return to. */
-    var entry = entryScene(bundle);
-    var canReturnToCover = !!(entry && sceneHasCoverChrome(entry) &&
-      String(entry.id) !== String(scene.id));
-    if (canReturnToCover) {
-      var back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'project-cover-btn qr-stage__back';
-      back.textContent = 'Volver';
-      back.addEventListener('click', leaveStage);
-      /* Outside the transformed lienzo — fixed to the viewport window. */
-      stageEl.appendChild(back);
-    }
+    /* No automatic chrome (e.g. «Volver») — only author-placed interactions. */
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
