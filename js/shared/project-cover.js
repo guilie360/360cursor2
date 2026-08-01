@@ -62,6 +62,8 @@ var ProjectCover = (function () {
       buttonTextColor: 'light',
       nombre: '',
       eslogan: '',
+      eyebrow: '',
+      kicker: '',
       botonIzquierdo: 'Explorar',
       botonDerecho: 'Iniciar',
       logoUrl: '',
@@ -158,6 +160,8 @@ var ProjectCover = (function () {
     var p = options.idPrefix || '';
     var coverId = uid(p, 'projectCover');
     var logoId = uid(p, 'projectCoverLogo');
+    var eyebrowId = uid(p, 'projectCoverEyebrow');
+    var kickerId = uid(p, 'projectCoverKicker');
     var nameId = uid(p, 'projectCoverName');
     var taglineId = uid(p, 'projectCoverTagline');
     var exploreId = uid(p, 'mainMenuOpenBtn');
@@ -184,6 +188,8 @@ var ProjectCover = (function () {
           '<img class="project-cover-logo" id="' + escapeHtml(logoId) + '" src="" alt="" style="display:none">' +
           '<div class="project-cover-hero-row">' +
             '<div class="project-cover-hero-copy">' +
+              '<div class="project-cover-eyebrow" id="' + escapeHtml(eyebrowId) + '" hidden></div>' +
+              '<div class="project-cover-kicker" id="' + escapeHtml(kickerId) + '" hidden></div>' +
               '<div class="project-cover-name" id="' + escapeHtml(nameId) + '"></div>' +
               '<div class="project-cover-tagline" id="' + escapeHtml(taglineId) + '"></div>' +
             '</div>' +
@@ -291,11 +297,47 @@ var ProjectCover = (function () {
       }
     }
 
+    var eyebrowEl = q(root, '.project-cover-eyebrow');
+    if (eyebrowEl) {
+      var eyebrow = String(model.eyebrow || '').trim();
+      eyebrowEl.textContent = eyebrow;
+      if (eyebrow) {
+        eyebrowEl.hidden = false;
+        eyebrowEl.removeAttribute('hidden');
+      } else {
+        eyebrowEl.hidden = true;
+        eyebrowEl.setAttribute('hidden', '');
+      }
+    }
+
+    var kickerEl = q(root, '.project-cover-kicker');
+    if (kickerEl) {
+      var kicker = String(model.kicker || '').trim();
+      kickerEl.textContent = kicker;
+      if (kicker) {
+        kickerEl.hidden = false;
+        kickerEl.removeAttribute('hidden');
+      } else {
+        kickerEl.hidden = true;
+        kickerEl.setAttribute('hidden', '');
+      }
+    }
+
     var nameEl = q(root, '.project-cover-name');
     if (nameEl) nameEl.textContent = model.nombre || '';
 
     var tagEl = q(root, '.project-cover-tagline');
-    if (tagEl) tagEl.textContent = model.eslogan || '';
+    if (tagEl) {
+      var tagline = model.eslogan || '';
+      tagEl.textContent = tagline;
+      if (tagline) {
+        tagEl.hidden = false;
+        tagEl.removeAttribute('hidden');
+      } else {
+        tagEl.hidden = true;
+        tagEl.setAttribute('hidden', '');
+      }
+    }
 
     var explore = q(root, '[data-pc-slot="explore"]');
     var exploreSlot = explore && explore.closest
@@ -369,6 +411,7 @@ var ProjectCover = (function () {
       cover.classList.toggle('is-start-only', model.showExplore === false && model.showStart !== false);
       cover.classList.toggle('is-cover-intro', model.variant === 'intro');
       cover.classList.toggle('is-cover-project', model.variant === 'project');
+      cover.classList.toggle('is-cover-cinematic', model.variant === 'cinematic');
     }
 
     var back = q(root, '.project-back-btn');
@@ -531,6 +574,8 @@ var ProjectCover = (function () {
     base.buttonTextColor = raw.buttonTextColor === 'dark' ? 'dark' : 'light';
     base.nombre = String(raw.nombre || '').trim();
     base.eslogan = String(raw.eslogan || '').trim();
+    base.eyebrow = String(raw.eyebrow || '').trim();
+    base.kicker = String(raw.kicker || '').trim();
     base.botonIzquierdo = String(raw.botonIzquierdo || 'Explorar').trim() || 'Explorar';
     base.botonDerecho = String(raw.botonDerecho || 'Iniciar').trim() || 'Iniciar';
     base.logoUrl = String(raw.logoUrl || '').trim();
