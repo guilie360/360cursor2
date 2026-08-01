@@ -404,31 +404,22 @@ body.qr-proposals-page .qpp {
 .qpp__card-terms {
   margin: 0;
   padding: 0;
-  list-style: none;
   max-width: 18em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
   font-size: clamp(0.7rem, 1.25vw, 0.82rem);
   font-weight: 400;
   letter-spacing: 0.04em;
-  line-height: 1.55;
+  line-height: 1.45;
   color: rgba(255, 255, 255, 0.72);
-  text-align: left;
+  text-align: center;
 }
 
-.qpp__card-terms li {
-  position: relative;
-  padding-left: 1.1em;
-}
-
-.qpp__card-terms li + li {
-  margin-top: 0.45em;
-}
-
-.qpp__card-terms li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: rgba(255, 255, 255, 0.55);
+.qpp__card-terms span {
+  display: block;
 }
 
 .qpp__card:hover .qpp__card-face,
@@ -546,9 +537,31 @@ body.qr-proposals-page .qpp {
   }
 }
 
+@keyframes qpp-compare-glow {
+  0%, 100% {
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 0 0 rgba(255, 255, 255, 0),
+      0 0 14px rgba(255, 255, 255, 0.06);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.52);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 0 28px rgba(255, 255, 255, 0.24);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .qpp__card-inner {
     transition-duration: 1ms !important;
+  }
+
+  .qpp__compare-cta,
+  .qpp__chrome-compare {
+    animation: none !important;
   }
 }
 
@@ -619,6 +632,13 @@ body.qr-proposals-page .qpp {
     border-radius: 999px;
     gap: 0;
     box-sizing: border-box;
+    animation: qpp-compare-glow 2.8s ease-in-out 1.2s infinite;
+  }
+
+  .qpp__chrome-compare:hover,
+  .qpp__chrome-compare:focus-visible,
+  .qpp__chrome-compare.is-active {
+    animation: none;
   }
 
   .qpp__chrome-compare svg {
@@ -793,7 +813,9 @@ body.qr-proposals-page .qpp {
       border-color 250ms ease,
       box-shadow 250ms ease,
       transform 250ms ease;
-    animation: qpp-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+    animation:
+      qpp-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both,
+      qpp-compare-glow 2.8s ease-in-out 1.4s infinite;
   }
 
   .qpp__compare-cta:hover,
@@ -802,14 +824,18 @@ body.qr-proposals-page .qpp {
     border-color: rgba(255, 255, 255, 0.55);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      0 0 0 1px rgba(255, 255, 255, 0.16),
+      0 0 34px rgba(255, 255, 255, 0.28),
       0 10px 28px rgba(0, 0, 0, 0.32);
     transform: translateY(-1px);
     outline: none;
+    animation: none;
   }
 
   .qpp__compare-cta.is-active {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.65);
+    animation: none;
   }
 
   .qpp__hint {

@@ -178,11 +178,12 @@ var QuotationProposalsPage = (function () {
           '</div>' +
           '<div class="qpp__card-panel qpp__card-panel--confirm" data-qpp-panel="confirm" hidden>' +
             '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-            '<ul class="qpp__card-terms">' +
-              '<li>Anticipo del 50%</li>' +
-              '<li>Tiempo estimado: 2 a 3 semanas</li>' +
-              '<li>Saldo contra entrega</li>' +
-            '</ul>' +
+            '<div class="qpp__card-terms">' +
+              '<span>Anticipo del 50%</span>' +
+              '<span>Tiempo estimado</span>' +
+              '<span>2 a 3 semanas</span>' +
+              '<span>Saldo contra entrega</span>' +
+            '</div>' +
             '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
               escapeHtml(proposal.id || '') + '">Voy con esta</button>' +
           '</div>' +
