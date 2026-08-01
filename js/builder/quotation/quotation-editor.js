@@ -145,11 +145,26 @@ var QuotationEditor = (function () {
   }
 
   function resolveProjectId() {
-    return String(
+    var id = String(
       loadedProjectId ||
       (editorProjectCtx && editorProjectCtx.id) ||
       ''
     ).trim();
+    if (id) return id;
+    try {
+      if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.getProjectIdentity) {
+        var idn = QuotationBuilderView.getProjectIdentity();
+        if (idn && idn.id) {
+          id = String(idn.id).trim();
+          if (!editorProjectCtx || typeof editorProjectCtx !== 'object') {
+            editorProjectCtx = { id: '', slug: '', name: '' };
+          }
+          editorProjectCtx.id = id;
+          if (!loadedProjectId) loadedProjectId = id;
+        }
+      }
+    } catch (ePid) {}
+    return id;
   }
 
   /**
@@ -343,16 +358,32 @@ var QuotationEditor = (function () {
     item.previewUrl = pub;
     item.provider = 'bunny';
     item.archivoId = (result.archivo && result.archivo.id) || item.archivoId || null;
-    var bytes = 0;
-    if (result.asset && result.asset.size != null) bytes = Number(result.asset.size) || 0;
-    if (!bytes && result.archivo && result.archivo.peso_mb != null) {
-      bytes = Math.round(Number(result.archivo.peso_mb) * 1048576) || 0;
+    var bytes = Number(item.sizeBytes) || 0;
+    if (item.file && item.file.size != null) {
+      bytes = Math.max(bytes, Number(item.file.size) || 0);
     }
-    if (!bytes && item.file && item.file.size != null) bytes = Number(item.file.size) || 0;
+    if (result.asset && result.asset.size != null) {
+      bytes = Math.max(bytes, Number(result.asset.size) || 0);
+    }
+    if (result.archivo && result.archivo.peso_mb != null) {
+      bytes = Math.max(bytes, bytesFromPesoMb(result.archivo.peso_mb));
+    }
     if (bytes > 0) item.sizeBytes = bytes;
     item.file = null;
     item.uploadStatus = 'synced';
     item.projectId = resolveProjectId() || item.projectId || null;
+    invalidateLibraryBytesCache();
+  }
+
+  function bytesFromPesoMb(pesoMb) {
+    var n = Number(pesoMb);
+    if (!isFinite(n) || n <= 0) return 0;
+    return Math.round(n * 1048576);
+  }
+
+  function invalidateLibraryBytesCache() {
+    state._libraryBytesCache = null;
+    state._libraryBytesAt = 0;
   }
 
   /** Rewrite scene media that still pointed at a blob for this resource. */
@@ -776,15 +807,35 @@ var QuotationEditor = (function () {
       var fs = Number(item.file.size);
       if (!isNaN(fs) && fs > 0) return fs;
     }
+    if (item.peso_mb != null) return bytesFromPesoMb(item.peso_mb);
     return 0;
   }
 
   function libraryCapacityBytes() {
-    var total = 0;
+    var local = 0;
     (state.content || []).forEach(function (c) {
-      total += itemByteSize(c);
+      local += itemByteSize(c);
     });
-    return total;
+    var cached = state._libraryBytesCache;
+    if (cached != null && Number(cached) > local) return Number(cached) || 0;
+    return local;
+  }
+
+  function refreshLibraryStatusPanelIfOpen() {
+    var portal = document.getElementById('qeLibMenuPortal');
+    var panel = portal && portal.querySelector('[data-qe-lib-status-panel]');
+    if (!panel || !panel.isConnected) return;
+    var btn = document.querySelector('[data-qe-lib-status]');
+    panel.innerHTML = buildLibraryStatusPanelHtml();
+    if (btn) positionLibMenuPanel(btn, panel);
+  }
+
+  function notifyLibraryCapacityChanged() {
+    invalidateLibraryBytesCache();
+    refreshLibraryStatusPanelIfOpen();
+    syncLibrarySizesFromArchivos().then(function () {
+      refreshLibraryStatusPanelIfOpen();
+    }).catch(function () { /* ignore */ });
   }
 
   function contentUsedInShowroom(item) {
@@ -837,25 +888,22 @@ var QuotationEditor = (function () {
 
   function formatLibraryGb(bytes) {
     var gb = Number(bytes || 0) / (1024 * 1024 * 1024);
-    if (!isFinite(gb) || gb <= 0) return '0 GB';
-    var rounded = Math.round(gb * 10) / 10;
-    var s = String(rounded);
-    if (s.indexOf('.') === -1) s += '.0';
-    return s + ' GB';
+    if (!isFinite(gb) || gb < 0) gb = 0;
+    return gb.toFixed(2) + ' GB';
   }
 
   var LIBRARY_CAP_BYTES = 10 * 1024 * 1024 * 1024;
 
   function buildLibraryStatusPanelHtml() {
     var stats = libraryUsageStats();
-    var pct = Math.min(100, Math.round((stats.bytes / LIBRARY_CAP_BYTES) * 100));
-    if (stats.bytes > 0 && pct < 1) pct = 1;
+    var pct = Math.min(100, (stats.bytes / LIBRARY_CAP_BYTES) * 100);
+    if (stats.bytes > 0 && pct < 0.5) pct = 0.5;
     var over = stats.bytes > LIBRARY_CAP_BYTES;
     if (over) pct = 100;
     return '' +
       '<p class="qe-lib-status__title">Estado del proyecto</p>' +
       '<div class="qe-lib-status__bar" aria-hidden="true">' +
-        '<div class="qe-lib-status__fill" style="width:' + pct + '%"></div>' +
+        '<div class="qe-lib-status__fill" style="width:' + pct.toFixed(2) + '%"></div>' +
       '</div>' +
       '<p class="qe-lib-status__cap">' +
         escapeHtml(formatLibraryGb(stats.bytes)) + ' / 10 GB' +
@@ -892,45 +940,110 @@ var QuotationEditor = (function () {
     state.libraryStatusOpen = true;
     positionLibMenuPanel(btn, panel);
     panel.addEventListener('click', function (e) { e.stopPropagation(); });
-    enrichLibrarySizesThenRefreshStatus(panel, btn);
+    syncLibrarySizesFromArchivos().then(function () {
+      if (!panel.isConnected) return;
+      var host = document.getElementById('qeLibMenuPortal');
+      if (!host || !host.contains(panel)) return;
+      panel.innerHTML = buildLibraryStatusPanelHtml();
+      positionLibMenuPanel(btn, panel);
+    }).catch(function () { /* ignore */ });
   }
 
-  async function enrichLibrarySizesThenRefreshStatus(panel, btn) {
+  function normalizeAssetUrl(u) {
+    return String(u || '')
+      .split('?')[0]
+      .replace(/\/+$/, '')
+      .toLowerCase();
+  }
+
+  async function syncLibrarySizesFromArchivos() {
     var projectId = resolveProjectId();
-    if (!projectId || typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.list) return;
-    try {
-      var items = await BunnyMediaApi.list(projectId);
-      var mapId = {};
-      var mapPath = {};
-      (items || []).forEach(function (row) {
-        if (!row) return;
-        var bytes = 0;
-        if (row.peso_mb != null) bytes = Math.round(Number(row.peso_mb) * 1048576) || 0;
-        if (row.size != null) bytes = Number(row.size) || bytes;
-        if (row.id != null) mapId[String(row.id)] = bytes;
-        if (row.storage_path) mapPath[String(row.storage_path)] = bytes;
-      });
-      var changed = false;
-      (state.content || []).forEach(function (c) {
-        if (!c) return;
-        var b = 0;
-        if (c.archivoId && mapId[String(c.archivoId)] != null) b = mapId[String(c.archivoId)];
-        else if (c.storagePath && mapPath[String(c.storagePath)] != null) {
-          b = mapPath[String(c.storagePath)];
-        }
-        if (b > 0 && Number(c.sizeBytes || 0) !== b) {
-          c.sizeBytes = b;
-          changed = true;
-        }
-      });
-      if (changed && panel && panel.isConnected &&
-          document.getElementById('qeLibMenuPortal') &&
-          document.getElementById('qeLibMenuPortal').contains(panel)) {
-        panel.innerHTML = buildLibraryStatusPanelHtml();
-        if (btn) positionLibMenuPanel(btn, panel);
-        persistDraft();
+    if (!projectId || typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.list) {
+      var localOnly = 0;
+      (state.content || []).forEach(function (c) { localOnly += itemByteSize(c); });
+      state._libraryBytesCache = localOnly;
+      return localOnly;
+    }
+    var items = await BunnyMediaApi.list(projectId);
+    var byId = {};
+    var byPath = {};
+    var byUrl = {};
+    var byName = {};
+    var projectTotal = 0;
+    var libraryPathTotal = 0;
+    (items || []).forEach(function (row) {
+      if (!row) return;
+      var bytes = bytesFromPesoMb(row.peso_mb);
+      if (row.size != null && Number(row.size) > 0) bytes = Number(row.size) || bytes;
+      projectTotal += bytes;
+      var path = String(row.storage_path || '');
+      if (path.indexOf('qe-library') !== -1 || path.indexOf('/media/') !== -1 ||
+          path.indexOf('/hero/') !== -1) {
+        libraryPathTotal += bytes;
       }
-    } catch (eEnrich) { /* ignore */ }
+      if (!bytes) return;
+      if (row.id != null) byId[String(row.id)] = bytes;
+      if (row.storage_path) byPath[String(row.storage_path)] = bytes;
+      if (row.url) byUrl[normalizeAssetUrl(row.url)] = bytes;
+      if (row.nombre) byName[String(row.nombre).toLowerCase()] = bytes;
+    });
+
+    var matched = 0;
+    var unresolved = 0;
+    (state.content || []).forEach(function (c) {
+      if (!c) return;
+      /* Tours/links have no storage weight. */
+      if (c.media === 'link' || c.group === 'tours360') {
+        matched += itemByteSize(c);
+        return;
+      }
+      var b = itemByteSize(c);
+      var fromDb = 0;
+      if (c.archivoId && byId[String(c.archivoId)] != null) {
+        fromDb = byId[String(c.archivoId)];
+      }
+      if (!fromDb && c.storagePath && byPath[String(c.storagePath)] != null) {
+        fromDb = byPath[String(c.storagePath)];
+      }
+      var url = publicUrlOf(c) || c.remoteUrl || c.publicUrl || c.previewUrl || '';
+      var nurl = normalizeAssetUrl(url);
+      if (!fromDb && nurl && byUrl[nurl] != null) fromDb = byUrl[nurl];
+      if (!fromDb && c.name && byName[String(c.name).toLowerCase()] != null) {
+        fromDb = byName[String(c.name).toLowerCase()];
+      }
+      if (fromDb > b) b = fromDb;
+      if (b > 0) c.sizeBytes = b;
+      else unresolved += 1;
+
+      if (!c.archivoId || !c.storagePath) {
+        (items || []).some(function (row) {
+          if (!row) return false;
+          var rowUrl = normalizeAssetUrl(row.url);
+          if ((nurl && rowUrl === nurl) ||
+              (c.storagePath && String(row.storage_path) === String(c.storagePath)) ||
+              (c.name && String(row.nombre || '').toLowerCase() === String(c.name).toLowerCase())) {
+            c.archivoId = row.id || c.archivoId;
+            c.storagePath = row.storage_path || c.storagePath;
+            return true;
+          }
+          return false;
+        });
+      }
+      matched += b;
+    });
+
+    var total = matched;
+    var contentCount = (state.content || []).filter(function (c) {
+      return c && c.media !== 'link' && c.group !== 'tours360';
+    }).length;
+    if (contentCount > 0 && (total <= 0 || unresolved > 0)) {
+      var fallback = libraryPathTotal > 0 ? libraryPathTotal : projectTotal;
+      if (fallback > total) total = fallback;
+    }
+    state._libraryBytesCache = total;
+    state._libraryBytesAt = Date.now();
+    persistDraft();
+    return total;
   }
 
   function toggleProjectStatusPanel(btn) {
@@ -3524,6 +3637,7 @@ var QuotationEditor = (function () {
     }
 
     markDirtyLocal();
+    notifyLibraryCapacityChanged();
     rerender();
     await autosaveAfterLibraryChange();
   }
@@ -4625,6 +4739,7 @@ var QuotationEditor = (function () {
     state.openGroups[groupId === 'hero-video' ? 'hero' : groupId] = true;
     if (folderId) state.openFolders[folderId] = true;
     markDirtyLocal();
+    notifyLibraryCapacityChanged();
     rerender();
     qeLibAudit('1-select-file:after-rerender');
 
@@ -4635,6 +4750,7 @@ var QuotationEditor = (function () {
         chain = chain.then(function () {
           return uploadLibraryItem(item).then(function () {
             markDirtyLocal();
+            notifyLibraryCapacityChanged();
             rerender();
             qeLibAudit('2-after-uploadLibraryItem', item);
           });
@@ -4646,6 +4762,7 @@ var QuotationEditor = (function () {
           AdminNotify.error((err && err.message) || 'No se pudo subir el archivo a Storage.');
         }
         qeLibAudit('2-upload-FAILED');
+        notifyLibraryCapacityChanged();
         rerender();
       });
     })(created);
@@ -5600,7 +5717,11 @@ var QuotationEditor = (function () {
           provider: c.provider || null,
           projectId: c.projectId || resolveProjectId() || null,
           uploadStatus: c.uploadStatus || null,
-          sizeBytes: c.sizeBytes != null ? (Number(c.sizeBytes) || 0) : 0,
+          sizeBytes: (function () {
+            var sb = c.sizeBytes != null ? (Number(c.sizeBytes) || 0) : 0;
+            if (!sb && c.peso_mb != null) sb = bytesFromPesoMb(c.peso_mb);
+            return sb;
+          })(),
           file: null
         };
         row.uploadStatus = libraryItemUploadStatus(row);
@@ -5758,6 +5879,7 @@ var QuotationEditor = (function () {
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
+        syncLibrarySizesFromArchivos().catch(function () { /* ignore */ });
         return hq;
       })
       .catch(function () {
@@ -5770,6 +5892,7 @@ var QuotationEditor = (function () {
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
+        syncLibrarySizesFromArchivos().catch(function () { /* ignore */ });
         return null;
       });
     return loadPromise;

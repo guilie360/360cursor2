@@ -763,7 +763,10 @@ async function handleUpload(req: Request) {
 
   const publicUrl = `${cdnBase}/${storagePath}`;
   const tipo = resolveTipo(category, contentType, safeName);
-  const pesoMb = Math.round((fileEntry.size / (1024 * 1024)) * 1000) / 1000;
+  /* Keep real byte weight; avoid rounding tiny files to 0.000 MB. */
+  const pesoMb = fileEntry.size > 0
+    ? Math.max(fileEntry.size / (1024 * 1024), 0.000001)
+    : 0;
 
   /* Tras auth + acceso a proyecto, insertar con service role evita fallos RLS
    * (usuario puede leer proyecto pero no tener policy de INSERT en archivos). */
