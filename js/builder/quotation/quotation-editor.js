@@ -778,6 +778,44 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function groupFoldersAnyOpen(groupId) {
+    var folders = foldersInGroup(groupId);
+    if (!folders.length) return false;
+    return folders.some(function (f) {
+      return state.openFolders[f.id] !== false;
+    });
+  }
+
+  /** Expand/collapse folders inside one library section only. */
+  function toggleGroupFolders(groupId) {
+    if (!groupId) return;
+    var folders = foldersInGroup(groupId);
+    if (!folders.length) return;
+    var anyOpen = groupFoldersAnyOpen(groupId);
+    folders.forEach(function (f) {
+      if (!f) return;
+      state.openFolders[f.id] = !anyOpen;
+    });
+    rerender();
+  }
+
+  function libraryGroupFoldersFoldHtml(group) {
+    if (!group || group.prepared) return '';
+    var folders = foldersInGroup(group.id);
+    if (!folders.length) return '';
+    var anyOpen = groupFoldersAnyOpen(group.id);
+    var collapsed = !anyOpen;
+    return '' +
+      '<button type="button" class="qe-content__fold-folders' +
+        (collapsed ? ' is-collapsed' : '') + '"' +
+        ' data-qe-fold-group-folders="' + escapeHtml(group.id) + '"' +
+        ' title="' + (collapsed ? 'Desplegar carpetas de la sección' : 'Contraer carpetas de la sección') + '"' +
+        ' aria-label="' + (collapsed ? 'Desplegar carpetas de la sección' : 'Contraer carpetas de la sección') + '"' +
+        ' aria-expanded="' + (anyOpen ? 'true' : 'false') + '">' +
+        libraryIcon('fold') +
+      '</button>';
+  }
+
   function libraryIcon(name) {
     var S = 'xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
     if (name === 'search') {
@@ -2173,6 +2211,7 @@ var QuotationEditor = (function () {
               '<span class="qe-content__group-label">' + escapeHtml(group.label) + '</span>' +
               '<span class="qe-content__count">' + (group.prepared ? '—' : count) + '</span>' +
             '</button>' +
+            libraryGroupFoldersFoldHtml(group) +
             (canSelect || selectOn ? librarySelectTriggerHtml(group) : '') +
           '</div>' +
           (open ? groupBodyHtml(group) : '') +
@@ -6337,6 +6376,17 @@ var QuotationEditor = (function () {
         toggleAllLibraryGroups();
       });
     }
+
+    qAll('[data-qe-fold-group-folders]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleGroupFolders(btn.getAttribute('data-qe-fold-group-folders'));
+      });
+      btn.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
+      });
+    });
 
     var libSearch = qOne('[data-qe-lib-search]');
     if (libSearch) {

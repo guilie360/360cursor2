@@ -1832,6 +1832,41 @@
     padding 0.16s ease;
 }
 
+.qe-content__fold-folders {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 31.36px;
+  height: 31.36px;
+  min-width: 31.36px;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.62);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.qe-content__fold-folders:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.qe-content__fold-folders svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
 .qe-content__select-trigger:hover {
   border-color: rgba(255, 255, 255, 0.24);
   color: rgba(255, 255, 255, 0.92);
