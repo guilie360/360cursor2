@@ -14,6 +14,8 @@ var QuotationBuilderView = (function () {
     og_image: '',
     og_title: '',
     og_description: '',
+    favicon_url: '',
+    page_title: '',
     published: false
   };
   var sectionChecks = {};
@@ -334,6 +336,8 @@ var QuotationBuilderView = (function () {
         projectCtx.og_image = meta.og_image || '';
         projectCtx.og_title = meta.og_title || '';
         projectCtx.og_description = meta.og_description || '';
+        if (meta.favicon_url != null) projectCtx.favicon_url = meta.favicon_url || '';
+        if (meta.page_title != null) projectCtx.page_title = meta.page_title || '';
       }
     };
   }
@@ -601,6 +605,8 @@ var QuotationBuilderView = (function () {
       og_image: '',
       og_title: '',
       og_description: '',
+      favicon_url: '',
+      page_title: '',
       published: false
     };
     try {
@@ -652,6 +658,8 @@ var QuotationBuilderView = (function () {
         projectCtx.og_image = share.og_image || '';
         projectCtx.og_title = share.og_title || '';
         projectCtx.og_description = share.og_description || '';
+        projectCtx.favicon_url = share.favicon_url || '';
+        projectCtx.page_title = share.page_title || '';
       } catch (eShare) {}
     }
 
@@ -740,7 +748,8 @@ var QuotationBuilderView = (function () {
     sectionChecks = {};
     projectCtx = {
       id: '', name: '', slug: '', constructora_id: null,
-      og_image: '', og_title: '', og_description: '', published: false
+      og_image: '', og_title: '', og_description: '',
+      favicon_url: '', page_title: '', published: false
     };
   }
 

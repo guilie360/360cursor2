@@ -62,7 +62,9 @@ function applyPublicShareMeta(project) {
   if (Array.isArray(cfg)) cfg = cfg[0] || {};
   cfg = cfg || {};
 
-  var title = String(cfg.og_title || project.nombre || project.slug || '360Preventa').trim();
+  var title = String(
+    cfg.page_title || cfg.og_title || project.nombre || project.slug || '360Preventa'
+  ).trim();
   var description = String(cfg.og_description || project.descripcion || '').trim();
   var image = String(cfg.og_image || '').trim();
   var url = '';
@@ -190,7 +192,16 @@ function handoffQuotationPublicExperience(project) {
   }
 
   try {
-    document.title = (project.nombre || project.slug || 'Cotización');
+    document.title = String(
+      (project.proyecto_config && (
+        Array.isArray(project.proyecto_config)
+          ? (project.proyecto_config[0] && project.proyecto_config[0].page_title)
+          : project.proyecto_config.page_title
+      )) ||
+      project.nombre ||
+      project.slug ||
+      'Cotización'
+    ).trim();
     try {
       applyPublicShareMeta(project);
     } catch (_eShare) {}

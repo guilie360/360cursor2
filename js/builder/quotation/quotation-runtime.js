@@ -41,6 +41,41 @@ var QuotationRuntime = (function () {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /** Public tab chrome: document.title + favicon from proyecto_config share meta. */
+  function applyBrowserChrome(bundle) {
+    bundle = bundle || {};
+    var share = bundle.share || {};
+    var project = bundle.project || {};
+    var title = String(share.page_title || project.nombre || project.slug || 'Cotización').trim();
+    if (title) document.title = title;
+
+    var href = String(share.favicon_url || '').trim();
+    if (!href) return;
+    if (href.indexOf('http') !== 0 && href.indexOf('//') !== 0) {
+      try { href = new URL(href, window.location.origin).href; } catch (eAbs) {}
+    }
+    if (href.indexOf('?') < 0) href += '?v=ws7334';
+
+    var stale = document.head.querySelectorAll(
+      'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'
+    );
+    Array.prototype.forEach.call(stale, function (node) {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    });
+
+    function addLink(rel, sizes) {
+      var link = document.createElement('link');
+      link.rel = rel;
+      link.type = /\.svg(\?|$)/i.test(href) ? 'image/svg+xml' : 'image/png';
+      if (sizes) link.setAttribute('sizes', sizes);
+      link.href = href;
+      document.head.appendChild(link);
+    }
+    addLink('icon', '32x32');
+    addLink('icon', '192x192');
+    addLink('apple-touch-icon', '180x180');
+  }
+
   function readQuery() {
     var params;
     try {
@@ -903,7 +938,7 @@ var QuotationRuntime = (function () {
 
     var configResult = await client
       .from('proyecto_config')
-      .select('hero_quotation, og_image, og_title, og_description')
+      .select('hero_quotation, og_image, og_title, og_description, favicon_url, page_title')
       .eq('proyecto_id', projectId)
       .maybeSingle();
 
@@ -920,7 +955,9 @@ var QuotationRuntime = (function () {
       share: {
         og_image: config.og_image || '',
         og_title: config.og_title || '',
-        og_description: config.og_description || ''
+        og_description: config.og_description || '',
+        favicon_url: config.favicon_url || '',
+        page_title: config.page_title || ''
       }
     };
   }
@@ -939,7 +976,7 @@ var QuotationRuntime = (function () {
     return {
       project: { id: '', nombre: '', slug: '' },
       hero: null,
-      share: { og_image: '', og_title: '', og_description: '' }
+      share: { og_image: '', og_title: '', og_description: '', favicon_url: '', page_title: '' }
     };
   }
 
@@ -1461,10 +1498,14 @@ var QuotationRuntime = (function () {
             : null;
         }
         paintHero(host, loaded);
-        document.title = (loaded.project && loaded.project.nombre
-          ? loaded.project.nombre
-          : 'Cotización') +
+        var pageTitle = (loaded.share && loaded.share.page_title) ||
+          (loaded.project && loaded.project.nombre) ||
+          'Cotización';
+        document.title = pageTitle +
           (canvasMode ? ' · Canvas' : (previewMode ? ' · Preview' : (editorMode ? ' · Editor' : '')));
+        if (!canvasMode && !previewMode && !editorMode) {
+          applyBrowserChrome(loaded);
+        }
         if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onRuntimeBoot) {
           QuotationPersistAudit.onRuntimeBoot({
             projectId: q.projectId || (loaded.project && loaded.project.id) || null,

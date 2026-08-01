@@ -394,7 +394,9 @@ var AiProjectBuilderView = (function () {
         slug: info.slug || '',
         og_image: share.og_image || '',
         og_title: share.og_title || '',
-        og_description: share.og_description || ''
+        og_description: share.og_description || '',
+        favicon_url: share.favicon_url || '',
+        page_title: share.page_title || ''
       });
     }
     return '<p class="builder-step-desc">Configuración no disponible.</p>';
@@ -5191,7 +5193,9 @@ var AiProjectBuilderView = (function () {
             state.shareMeta = Object.assign({}, state.shareMeta || {}, {
               og_image: meta.og_image || '',
               og_title: meta.og_title || '',
-              og_description: meta.og_description || ''
+              og_description: meta.og_description || '',
+              favicon_url: meta.favicon_url || '',
+              page_title: meta.page_title || ''
             });
             /* Dirty is marked by BuilderConfig; avoid saveState re-entry marking twice. */
           },
@@ -7329,7 +7333,7 @@ var AiProjectBuilderView = (function () {
             state.shareMeta = await ProyectosApi.fetchShareMeta(pid);
           } catch (eShare) {
             state.shareMeta = state.shareMeta || {
-              og_image: '', og_title: '', og_description: ''
+              og_image: '', og_title: '', og_description: '', favicon_url: '', page_title: ''
             };
           }
         }

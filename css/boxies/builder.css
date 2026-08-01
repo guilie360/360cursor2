@@ -1867,6 +1867,61 @@ body.boxies-props-rail-collapsed #boxiesPropsRailFloatBtn svg {
   color: rgba(255, 255, 255, 0.38);
 }
 
+.builder-config-identity__divider {
+  height: 1px;
+  margin: 4px 0 18px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.builder-config-favicon__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.builder-config-favicon__preview {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.builder-config-favicon__preview:hover,
+.builder-config-favicon__preview:focus-visible {
+  border-color: rgba(255, 255, 255, 0.22);
+  outline: none;
+}
+
+.builder-config-favicon__img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+
+.builder-config-favicon__void {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  background: transparent;
+}
+
+.builder-config-favicon__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .builder-config-identity__actions {
   display: flex;
   align-items: center;

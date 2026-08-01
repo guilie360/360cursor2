@@ -51,7 +51,7 @@ var BuilderConfig = (function () {
   }
 
   /**
-   * @param {object} identity — { nombre, slug, og_image?, og_title?, og_description? }
+   * @param {object} identity — { nombre, slug, og_*, favicon_url?, page_title? }
    * @returns {string} HTML (builder-step-content wrapper included)
    */
   function render(identity) {
@@ -62,9 +62,12 @@ var BuilderConfig = (function () {
     var ogImage = identity.og_image || '';
     var ogTitle = identity.og_title || '';
     var ogDescription = identity.og_description || '';
+    var faviconUrl = identity.favicon_url || '';
+    var pageTitle = identity.page_title || '';
     var hostLabel = mockHostFromSlug(slug);
 
     var hasImage = !!ogImage;
+    var hasFavicon = !!faviconUrl;
     var mockImg = hasImage
       ? ('<div class="builder-share-mock__media" style="background-image:url(\'' +
           escapeHtml(ogImage) + '\')"></div>')
@@ -73,6 +76,10 @@ var BuilderConfig = (function () {
       ? ('<img class="builder-hero-image-preview" id="builderOgImagePreview" src="' +
           escapeHtml(ogImage) + '" alt="Vista previa Open Graph">')
       : '<div class="builder-hero-media-card__void" aria-hidden="true"></div>';
+    var faviconPreview = hasFavicon
+      ? ('<img class="builder-config-favicon__img" id="builderFaviconPreview" src="' +
+          escapeHtml(faviconUrl) + '" alt="Icono de pestaña">')
+      : '<div class="builder-config-favicon__void" id="builderFaviconPreview" aria-hidden="true"></div>';
 
     return '<div class="builder-step-content builder-config-workspace">' +
       '<div class="builder-config-col builder-config-col--identity">' +
@@ -100,6 +107,31 @@ var BuilderConfig = (function () {
             '<p class="builder-config-identity__slug-check" id="showroomSlugCheck" aria-live="polite"></p>' +
           '</div>' +
           '<p class="builder-config-identity__hint">Si cambias el slug, la URL anterior dejará de funcionar.</p>' +
+          '<div class="builder-config-identity__divider" aria-hidden="true"></div>' +
+          '<div class="builder-field">' +
+            '<label for="builderPageTitle">Nombre de la pestaña</label>' +
+            '<input type="text" id="builderPageTitle" maxlength="80" value="' +
+              escapeHtml(pageTitle) + '" placeholder="' + escapeHtml(nombre || 'BOXIES') +
+              '" autocomplete="off">' +
+            '<p class="builder-config-identity__slug-hint">Texto que aparece en la pestaña del navegador.</p>' +
+          '</div>' +
+          '<div class="builder-field builder-config-favicon">' +
+            '<label>Icono de pestaña</label>' +
+            '<div class="builder-config-favicon__row">' +
+              '<div class="builder-config-favicon__preview' + (hasFavicon ? ' has-media' : '') +
+                '" id="builderFaviconStage" role="button" tabindex="0" aria-label="Subir icono de pestaña">' +
+                faviconPreview +
+              '</div>' +
+              '<div class="builder-config-favicon__actions">' +
+                '<button type="button" class="builder-header-action-btn" id="builderFaviconBtn">Subir icono</button>' +
+                '<button type="button" class="builder-header-action-btn is-danger" id="builderFaviconClear"' +
+                  (hasFavicon ? '' : ' hidden') + '>Quitar</button>' +
+                '<input type="file" id="builderFaviconInput" accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,.png,.ico,.svg" hidden>' +
+                '<input type="hidden" id="builderFaviconUrl" value="' + escapeHtml(faviconUrl) + '">' +
+              '</div>' +
+            '</div>' +
+            '<p class="builder-config-identity__slug-hint">PNG, ICO o SVG. Ideal 32×32 o 64×64.</p>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="builder-config-col builder-config-col--share" data-builder-share>' +
@@ -165,19 +197,31 @@ var BuilderConfig = (function () {
   }
 
   var pendingOgImageFile = null;
+  var pendingFaviconFile = null;
 
   function readShareFromDom(rootEl) {
     if (!rootEl) {
-      return { og_image: '', og_title: '', og_description: '' };
+      return {
+        og_image: '',
+        og_title: '',
+        og_description: '',
+        favicon_url: '',
+        page_title: ''
+      };
     }
     var img = rootEl.querySelector('#builderOgImageUrl');
     var title = rootEl.querySelector('#builderOgTitle');
     var desc = rootEl.querySelector('#builderOgDescription');
+    var favicon = rootEl.querySelector('#builderFaviconUrl');
+    var pageTitle = rootEl.querySelector('#builderPageTitle');
     return {
       og_image: img ? String(img.value || '').trim() : '',
       og_title: title ? String(title.value || '').trim() : '',
       og_description: desc ? String(desc.value || '').trim() : '',
-      _pendingFile: pendingOgImageFile
+      favicon_url: favicon ? String(favicon.value || '').trim() : '',
+      page_title: pageTitle ? String(pageTitle.value || '').trim() : '',
+      _pendingFile: pendingOgImageFile,
+      _pendingFavicon: pendingFaviconFile
     };
   }
 
@@ -241,11 +285,112 @@ var BuilderConfig = (function () {
     if (clearBtn) {
       clearBtn.hidden = !share.og_image;
     }
+
+    var favStage = rootEl.querySelector('#builderFaviconStage');
+    var favClear = rootEl.querySelector('#builderFaviconClear');
+    var pageTitleInput = rootEl.querySelector('#builderPageTitle');
+    if (pageTitleInput && !pageTitleInput.getAttribute('placeholder')) {
+      pageTitleInput.setAttribute('placeholder', fallbackTitle || 'BOXIES');
+    } else if (pageTitleInput && fallbackTitle) {
+      pageTitleInput.placeholder = fallbackTitle || 'BOXIES';
+    }
+    if (favStage) {
+      favStage.classList.toggle('has-media', !!share.favicon_url);
+      if (share.favicon_url) {
+        favStage.innerHTML = '<img class="builder-config-favicon__img" id="builderFaviconPreview" src="' +
+          escapeHtml(share.favicon_url) + '" alt="Icono de pestaña">';
+      } else {
+        favStage.innerHTML = '<div class="builder-config-favicon__void" id="builderFaviconPreview" aria-hidden="true"></div>';
+      }
+    }
+    if (favClear) {
+      favClear.hidden = !share.favicon_url;
+    }
   }
 
   function markDirty() {
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
       BuilderDirtyState.mark();
+    }
+  }
+
+  function isFaviconFile(file) {
+    if (!file) return false;
+    var type = String(file.type || '').toLowerCase();
+    var name = String(file.name || '').toLowerCase();
+    if (type === 'image/png' || type === 'image/svg+xml' ||
+        type === 'image/x-icon' || type === 'image/vnd.microsoft.icon' ||
+        type === 'image/ico') {
+      return true;
+    }
+    return /\.(png|ico|svg)$/.test(name);
+  }
+
+  function bindFaviconChrome(rootEl, adapter) {
+    if (!rootEl) return;
+    pendingFaviconFile = null;
+    var fileBtn = rootEl.querySelector('#builderFaviconBtn');
+    var fileInput = rootEl.querySelector('#builderFaviconInput');
+    var clearBtn = rootEl.querySelector('#builderFaviconClear');
+    var stage = rootEl.querySelector('#builderFaviconStage');
+    var hiddenUrl = rootEl.querySelector('#builderFaviconUrl');
+    var pageTitleInput = rootEl.querySelector('#builderPageTitle');
+
+    function onChromeChange() {
+      syncShareMock(rootEl);
+      markDirty();
+      if (typeof adapter.onShareChange === 'function') {
+        adapter.onShareChange(readShareFromDom(rootEl));
+      }
+    }
+
+    function applyFavicon(file) {
+      if (!file) return;
+      if (!isFaviconFile(file)) {
+        if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+          AdminNotify.error('Solo se admiten PNG, ICO o SVG.');
+        }
+        return;
+      }
+      pendingFaviconFile = file;
+      if (hiddenUrl && hiddenUrl.value && String(hiddenUrl.value).indexOf('blob:') === 0) {
+        try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev) {}
+      }
+      var preview = URL.createObjectURL(file);
+      if (hiddenUrl) hiddenUrl.value = preview;
+      onChromeChange();
+    }
+
+    if (fileBtn && fileInput) {
+      fileBtn.addEventListener('click', function () { fileInput.click(); });
+      fileInput.addEventListener('change', function () {
+        applyFavicon(fileInput.files && fileInput.files[0]);
+        fileInput.value = '';
+      });
+    }
+    if (stage && fileInput) {
+      stage.addEventListener('click', function () { fileInput.click(); });
+      stage.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          fileInput.click();
+        }
+      });
+    }
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        pendingFaviconFile = null;
+        if (hiddenUrl) {
+          if (hiddenUrl.value && String(hiddenUrl.value).indexOf('blob:') === 0) {
+            try { URL.revokeObjectURL(hiddenUrl.value); } catch (eRev2) {}
+          }
+          hiddenUrl.value = '';
+        }
+        onChromeChange();
+      });
+    }
+    if (pageTitleInput) {
+      pageTitleInput.addEventListener('input', onChromeChange);
     }
   }
 
@@ -333,20 +478,22 @@ var BuilderConfig = (function () {
   }
 
   /**
-   * Persist og_* fields to proyecto_config. Uploads pending image when possible.
+   * Persist og_* + browser chrome (favicon / page_title) to proyecto_config.
    */
   async function saveShareMeta(adapter, rootEl) {
     var projectId = adapter && adapter.getProjectId ? adapter.getProjectId() : null;
     if (!projectId) throw new Error('No hay proyecto vinculado.');
     var share = readShareFromDom(rootEl || document);
     var ogImage = share.og_image || '';
+    var faviconUrl = share.favicon_url || '';
+
+    var constructoraId =
+      (adapter.resolveConstructoraId && adapter.resolveConstructoraId()) ||
+      (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
+        ? AdminState.getConstructoraId()
+        : null);
 
     if (share._pendingFile && typeof StorageApi !== 'undefined' && StorageApi.upload) {
-      var constructoraId =
-        (adapter.resolveConstructoraId && adapter.resolveConstructoraId()) ||
-        (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
-          ? AdminState.getConstructoraId()
-          : null);
       if (constructoraId) {
         var uploaded = await StorageApi.upload(
           constructoraId,
@@ -363,10 +510,37 @@ var BuilderConfig = (function () {
       }
     }
 
+    if (share._pendingFavicon && typeof StorageApi !== 'undefined' && StorageApi.upload) {
+      if (constructoraId) {
+        var uploadedFav = await StorageApi.upload(
+          constructoraId,
+          projectId,
+          'favicon',
+          share._pendingFavicon
+        );
+        faviconUrl = (uploadedFav && uploadedFav.publicUrl) || faviconUrl;
+        pendingFaviconFile = null;
+        if (rootEl) {
+          var favHidden = rootEl.querySelector('#builderFaviconUrl');
+          if (favHidden) favHidden.value = faviconUrl;
+        }
+      }
+    }
+
+    /* Drop blob previews that never uploaded. */
+    if (faviconUrl && String(faviconUrl).indexOf('blob:') === 0) {
+      faviconUrl = '';
+    }
+    if (ogImage && String(ogImage).indexOf('blob:') === 0) {
+      ogImage = '';
+    }
+
     var meta = {
       og_image: ogImage || null,
       og_title: share.og_title || null,
-      og_description: share.og_description || null
+      og_description: share.og_description || null,
+      favicon_url: faviconUrl || null,
+      page_title: share.page_title || null
     };
 
     if (typeof ProyectosApi !== 'undefined' && ProyectosApi.updateShareMeta) {
@@ -392,6 +566,7 @@ var BuilderConfig = (function () {
   function bind(rootEl, adapter) {
     if (!rootEl || !adapter) return;
     bindShare(rootEl, adapter);
+    bindFaviconChrome(rootEl, adapter);
     var nameInput = rootEl.querySelector('#showroomNameInput');
     var slugInput = rootEl.querySelector('#showroomSlugInput');
     var urlPreviewEl = rootEl.querySelector('#showroomPublicUrlPreview');

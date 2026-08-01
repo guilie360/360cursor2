@@ -555,6 +555,12 @@ var ProyectosApi = (function () {
       og_title: meta.og_title || null,
       og_description: meta.og_description || null
     };
+    if (Object.prototype.hasOwnProperty.call(meta, 'favicon_url')) {
+      payload.favicon_url = meta.favicon_url || null;
+    }
+    if (Object.prototype.hasOwnProperty.call(meta, 'page_title')) {
+      payload.page_title = meta.page_title || null;
+    }
     var client = dbClient();
     var existing = await client
       .from('proyecto_config')
@@ -564,18 +570,19 @@ var ProyectosApi = (function () {
     if (existing.error) throw mapDbError(existing.error, 'Error leyendo configuración del proyecto');
 
     var result;
+    var selectCols = 'og_image, og_title, og_description, favicon_url, page_title';
     if (existing.data && existing.data.proyecto_id) {
       result = await client
         .from('proyecto_config')
         .update(payload)
         .eq('proyecto_id', proyectoId)
-        .select('og_image, og_title, og_description')
+        .select(selectCols)
         .maybeSingle();
     } else {
       result = await client
         .from('proyecto_config')
         .insert(Object.assign({ proyecto_id: proyectoId }, payload))
-        .select('og_image, og_title, og_description')
+        .select(selectCols)
         .maybeSingle();
     }
     if (result.error) throw mapDbError(result.error, 'Error guardando vista previa social');
@@ -583,10 +590,18 @@ var ProyectosApi = (function () {
   }
 
   async function fetchShareMeta(proyectoId) {
-    if (!proyectoId) return { og_image: '', og_title: '', og_description: '' };
+    if (!proyectoId) {
+      return {
+        og_image: '',
+        og_title: '',
+        og_description: '',
+        favicon_url: '',
+        page_title: ''
+      };
+    }
     var result = await dbClient()
       .from('proyecto_config')
-      .select('og_image, og_title, og_description')
+      .select('og_image, og_title, og_description, favicon_url, page_title')
       .eq('proyecto_id', proyectoId)
       .maybeSingle();
     if (result.error) throw mapDbError(result.error, 'Error cargando vista previa social');
@@ -594,7 +609,9 @@ var ProyectosApi = (function () {
     return {
       og_image: row.og_image || '',
       og_title: row.og_title || '',
-      og_description: row.og_description || ''
+      og_description: row.og_description || '',
+      favicon_url: row.favicon_url || '',
+      page_title: row.page_title || ''
     };
   }
 
