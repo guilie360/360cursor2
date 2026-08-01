@@ -2748,8 +2748,10 @@ var QuotationEditor = (function () {
         '</button>';
     }).join('');
     return '' +
-      '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
-        btns +
+      '<div class="qe-canvas-chrome-top" data-qe-chrome-top>' +
+        '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
+          btns +
+        '</div>' +
       '</div>';
   }
 
@@ -2974,8 +2976,11 @@ var QuotationEditor = (function () {
     var fitStack = unit.querySelector('[data-qe-canvas-fit-stack]');
     var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
     var stage = unit.querySelector('[data-qe-canvas]');
+    var toolChrome = unit.querySelector('[data-qe-chrome-top]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
+
+    placeScenesFoldButton();
 
     if (scenesHost) {
       scenesHost.classList.toggle('is-collapsed', !!state.scenesCollapsed);
@@ -2996,8 +3001,16 @@ var QuotationEditor = (function () {
       ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height) : 0;
     var scenesMb = (scenesMeasureEl && !state.scenesCollapsed)
       ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0) : 0;
-    /* Viewport / Dock sit on the canvas stack — not stage chrome. */
-    var TOOL_PAD = 44;
+    /*
+     * Top clearance above the device frame:
+     * - always room for viewport bar
+     * - when scenes collapsed, also room for fold tab + gap (never overlap responsive)
+     */
+    var vpBarH = 30;
+    var topChrome =
+      vpBarH + 8 +
+      (state.scenesCollapsed ? (STAGE_SCENES_FOLD_H + STAGE_SCENES_FOLD_GAP) : 0);
+    var TOOL_PAD = Math.max(44, topChrome);
     var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
     var slotH = Math.max(1, availH - chromeH);
@@ -3047,12 +3060,19 @@ var QuotationEditor = (function () {
       fitFrame.style.flex = '0 0 auto';
       fitFrame.style.overflow = 'hidden';
     }
+    if (toolChrome) {
+      toolChrome.style.position = 'absolute';
+      toolChrome.style.left = '50%';
+      toolChrome.style.top = '0';
+      toolChrome.style.transform = 'translate(-50%, calc(-100% - 8px))';
+      toolChrome.style.zIndex = '6';
+    }
     if (toolVp) {
-      toolVp.style.position = 'absolute';
-      toolVp.style.left = '50%';
-      toolVp.style.top = '0';
-      toolVp.style.transform = 'translate(-50%, calc(-100% - 8px))';
-      toolVp.style.zIndex = '6';
+      toolVp.style.position = '';
+      toolVp.style.left = '';
+      toolVp.style.top = '';
+      toolVp.style.transform = '';
+      toolVp.style.zIndex = '';
     }
     if (toolDock) {
       toolDock.style.position = 'absolute';
@@ -3083,8 +3103,31 @@ var QuotationEditor = (function () {
     syncDesignIdentity();
   }
 
+  var STAGE_SCENES_FOLD_H = 16;
+  var STAGE_SCENES_FOLD_GAP = 12;
+
+  /**
+   * Expanded: fold hangs under the scenes strip.
+   * Collapsed: fold sits in chrome-top above responsive, with a fixed gap (never touch).
+   */
+  function placeScenesFoldButton() {
+    if (!rootEl) return;
+    var fold = rootEl.querySelector('[data-qe-scenes-fold]');
+    var host = rootEl.querySelector('[data-qe-scenes-host]');
+    var chrome = rootEl.querySelector('[data-qe-chrome-top]');
+    if (!fold || !host || !chrome) return;
+    if (state.scenesCollapsed) {
+      if (fold.parentNode !== chrome) {
+        chrome.insertBefore(fold, chrome.firstChild);
+      }
+    } else if (fold.parentNode !== host) {
+      host.appendChild(fold);
+    }
+  }
+
   function syncScenesFoldButton() {
     if (!rootEl) return;
+    placeScenesFoldButton();
     var btn = rootEl.querySelector('[data-qe-scenes-fold]');
     if (!btn) return;
     var collapsed = !!state.scenesCollapsed;

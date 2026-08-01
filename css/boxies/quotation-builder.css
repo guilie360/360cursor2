@@ -831,7 +831,8 @@
   position: relative;
   flex: 0 0 auto;
   width: 100%;
-  margin: 0 0 18px;
+  /* Fold hangs below strip: height(16) + gap(12) before work/responsive */
+  margin: 0 0 calc(var(--builder-float-w, 16px) + 12px);
   min-height: 0;
   z-index: 8;
 }
@@ -852,6 +853,7 @@
   height: 0;
   min-height: 0;
   overflow: visible;
+  pointer-events: none;
 }
 
 .qe-scenes.is-collapsed,
@@ -865,9 +867,21 @@
   pointer-events: none !important;
 }
 
-/* Hang from bottom edge of scenes strip — gap above responsive, not stacked on it */
-.qe-scenes-host > .quotation-panel-float--scenes,
-.quotation-panel-float--scenes {
+/* Chrome above canvas: fold (when collapsed) + responsive — fixed gap, never touch */
+.qe-canvas-chrome-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.qe-canvas-chrome-top > * {
+  pointer-events: auto;
+}
+
+/* Hang from bottom edge of scenes strip (expanded) */
+.qe-scenes-host > .quotation-panel-float--scenes {
   position: absolute !important;
   left: 50% !important;
   right: auto !important;
@@ -886,13 +900,27 @@
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  margin: 0 !important;
 }
 
-.qe-scenes-host.is-collapsed > .quotation-panel-float--scenes {
-  /* Host height is 0 — keep tab at the top of the work area */
+/* Collapsed: fold lives in chrome-top above responsive (gap from flex) */
+.qe-canvas-chrome-top > .quotation-panel-float--scenes {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
   bottom: auto !important;
-  top: 0 !important;
-  transform: translate(-50%, 0) !important;
+  transform: none !important;
+  width: var(--builder-float-h, 72px) !important;
+  height: var(--builder-float-w, 16px) !important;
+  border-radius: 7px;
+  border: 1px solid var(--builder-float-border, rgba(255, 255, 255, 0.07));
+  cursor: ns-resize;
+  box-shadow: none;
+  z-index: 7 !important;
+  display: inline-flex !important;
+  margin: 0 !important;
+  flex: 0 0 auto;
 }
 
 /* Expanded: chevron up (fold). Collapsed: chevron down (restore). */
