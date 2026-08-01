@@ -3,7 +3,7 @@
  * rulersVisible is session-only; guides[] persist on each scene.
  */
 var QuotationGuides = (function () {
-  var RULER_THICK = 18;
+  var RULER_THICK = 15;
   var DESIGN_W = 1920;
   var DESIGN_H = 1080;
 
@@ -13,6 +13,7 @@ var QuotationGuides = (function () {
   var ghost = null;
   var dragGuide = null;
   var boundDoc = false;
+  var readoutEl = null;
 
   function nextGuideId() {
     return 'g_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
@@ -69,6 +70,8 @@ var QuotationGuides = (function () {
     return {
       x: clampPct(((clientX - rect.left) / rect.width) * 100),
       y: clampPct(((clientY - rect.top) / rect.height) * 100),
+      pxX: Math.round(((clientX - rect.left) / rect.width) * designSize().width),
+      pxY: Math.round(((clientY - rect.top) / rect.height) * designSize().height),
       inBounds:
         clientX >= rect.left && clientX <= rect.right &&
         clientY >= rect.top && clientY <= rect.bottom
@@ -77,6 +80,48 @@ var QuotationGuides = (function () {
 
   function isPreview() {
     return !!(api && api.isPreviewMode && api.isPreviewMode());
+  }
+
+  function setDragCursor(type) {
+    var axis = type === 'horizontal' ? 'h' : 'v';
+    document.body.setAttribute('data-qe-guide-drag', axis);
+    document.body.classList.add('is-qe-guide-dragging');
+  }
+
+  function clearDragCursor() {
+    document.body.classList.remove('is-qe-guide-dragging');
+    document.body.removeAttribute('data-qe-guide-drag');
+  }
+
+  function ensureReadout() {
+    if (readoutEl && readoutEl.isConnected) return readoutEl;
+    readoutEl = document.getElementById('qeGuideReadout');
+    if (!readoutEl) {
+      readoutEl = document.createElement('div');
+      readoutEl.id = 'qeGuideReadout';
+      readoutEl.className = 'qe-guide-readout';
+      readoutEl.hidden = true;
+      document.body.appendChild(readoutEl);
+    }
+    return readoutEl;
+  }
+
+  function showReadout(clientX, clientY, type, pct) {
+    var el = ensureReadout();
+    if (!el || !pct) return;
+    var design = designSize();
+    var px = type === 'horizontal'
+      ? Math.round((pct.y / 100) * design.height)
+      : Math.round((pct.x / 100) * design.width);
+    el.textContent = type === 'horizontal' ? ('Y: ' + px + 'px') : ('X: ' + px + 'px');
+    el.hidden = false;
+    var pad = 14;
+    el.style.left = Math.round(clientX + pad) + 'px';
+    el.style.top = Math.round(clientY + pad) + 'px';
+  }
+
+  function hideReadout() {
+    if (readoutEl) readoutEl.hidden = true;
   }
 
   /* ── Rulers ───────────────────────────────────────────── */
@@ -91,8 +136,9 @@ var QuotationGuides = (function () {
       chrome.setAttribute('data-qe-guides-chrome', '1');
       chrome.innerHTML =
         '<div class="qe-ruler-corner" data-qe-ruler-corner aria-hidden="true"></div>' +
-        '<div class="qe-ruler qe-ruler--h" data-qe-ruler="h" role="presentation"></div>' +
-        '<div class="qe-ruler qe-ruler--v" data-qe-ruler="v" role="presentation"></div>';
+        /* V first, H on top so the top strip always creates a vertical guide. */
+        '<div class="qe-ruler qe-ruler--v" data-qe-ruler="v" role="presentation"></div>' +
+        '<div class="qe-ruler qe-ruler--h" data-qe-ruler="h" role="presentation"></div>';
       frame.insertBefore(chrome, frame.firstChild);
       bindRulerDrag(chrome);
     }
@@ -152,6 +198,7 @@ var QuotationGuides = (function () {
       var frame = chrome.parentElement;
       var frameRect = frame ? frame.getBoundingClientRect() : null;
       if (frameRect) {
+        chrome.style.setProperty('--qe-ruler-thick', RULER_THICK + 'px');
         chrome.style.setProperty('--qe-ruler-stage-left', (rect.left - frameRect.left) + 'px');
         chrome.style.setProperty('--qe-ruler-stage-top', (rect.top - frameRect.top) + 'px');
         chrome.style.setProperty('--qe-ruler-stage-w', rect.width + 'px');
@@ -172,7 +219,10 @@ var QuotationGuides = (function () {
         e.preventDefault();
         e.stopPropagation();
         var axis = ruler.getAttribute('data-qe-ruler');
-        /* H ruler → vertical guide; V ruler → horizontal guide */
+        /*
+         * Top (horizontal) ruler → VERTICAL guide (follows X).
+         * Left (vertical) ruler → HORIZONTAL guide (follows Y).
+         */
         var type = axis === 'h' ? 'vertical' : 'horizontal';
         startGhost(type, e.clientX, e.clientY);
       });
@@ -189,9 +239,10 @@ var QuotationGuides = (function () {
       layer = document.createElement('div');
       layer.className = 'qe-guide-layer';
       layer.setAttribute('data-qe-guide-layer', '1');
-      var edit = canvas.querySelector('[data-qe-edit-layer]');
-      if (edit) canvas.insertBefore(layer, edit);
-      else canvas.appendChild(layer);
+      /* Above edit/experiencia so guides receive drag hits. */
+      canvas.appendChild(layer);
+    } else if (layer.parentNode === canvas) {
+      canvas.appendChild(layer);
     }
     return layer;
   }
@@ -253,7 +304,8 @@ var QuotationGuides = (function () {
         type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
         el: el
       };
-      document.body.classList.add('is-qe-guide-dragging');
+      setDragCursor(dragGuide.type);
+      showReadout(e.clientX, e.clientY, dragGuide.type, clientToDesignPct(e.clientX, e.clientY));
     });
   }
 
@@ -314,9 +366,13 @@ var QuotationGuides = (function () {
     if (el) {
       el.hidden = false;
       el.className = 'qe-guide-line qe-guide-line--ghost qe-guide-line--' + type;
+      el.style.top = '';
+      el.style.left = '';
+      el.style.right = '';
+      el.style.bottom = '';
       updateGhost(clientX, clientY);
     }
-    document.body.classList.add('is-qe-guide-dragging');
+    setDragCursor(type);
   }
 
   function updateGhost(clientX, clientY) {
@@ -327,18 +383,36 @@ var QuotationGuides = (function () {
     if (ghost.type === 'horizontal') {
       el.style.top = pct.y + '%';
       el.style.left = '0';
+      el.style.right = '0';
+      el.style.bottom = 'auto';
+      el.style.width = 'auto';
+      el.style.height = '1px';
     } else {
       el.style.left = pct.x + '%';
       el.style.top = '0';
+      el.style.bottom = '0';
+      el.style.right = 'auto';
+      el.style.width = '1px';
+      el.style.height = 'auto';
     }
+    showReadout(clientX, clientY, ghost.type, pct);
   }
 
   function endGhost(clientX, clientY, cancelled) {
     var type = ghost && ghost.type;
     ghost = null;
     var el = rootEl && rootEl.querySelector('[data-qe-guide-ghost]');
-    if (el) el.hidden = true;
-    document.body.classList.remove('is-qe-guide-dragging');
+    if (el) {
+      el.hidden = true;
+      el.style.top = '';
+      el.style.left = '';
+      el.style.right = '';
+      el.style.bottom = '';
+      el.style.width = '';
+      el.style.height = '';
+    }
+    clearDragCursor();
+    hideReadout();
     if (cancelled || !type) return;
     var pct = clientToDesignPct(clientX, clientY);
     if (!pct || !pct.inBounds) return;
@@ -359,6 +433,7 @@ var QuotationGuides = (function () {
     if (!g) return;
     if (!pct.inBounds) {
       if (dragGuide.el) dragGuide.el.classList.add('is-removing');
+      hideReadout();
       return;
     }
     if (dragGuide.el) dragGuide.el.classList.remove('is-removing');
@@ -371,6 +446,7 @@ var QuotationGuides = (function () {
         dragGuide.el.style.left = g.position + '%';
       }
     }
+    showReadout(e.clientX, e.clientY, dragGuide.type, pct);
   }
 
   function onDocUp(e) {
@@ -382,7 +458,8 @@ var QuotationGuides = (function () {
     var pct = clientToDesignPct(e.clientX, e.clientY);
     var id = dragGuide.id;
     dragGuide = null;
-    document.body.classList.remove('is-qe-guide-dragging');
+    clearDragCursor();
+    hideReadout();
     if (!pct || !pct.inBounds) {
       removeGuide(id);
       return;
@@ -494,7 +571,8 @@ var QuotationGuides = (function () {
   function destroy() {
     ghost = null;
     dragGuide = null;
-    document.body.classList.remove('is-qe-guide-dragging');
+    clearDragCursor();
+    hideReadout();
     if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
       QuotationContextMenu.close();
     }
