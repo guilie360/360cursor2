@@ -3365,7 +3365,7 @@ var QuotationEditor = (function () {
     markDirtyLocal();
   }
 
-  function reorderScene(fromId, toId) {
+  function reorderScene(fromId, toId, placeAfter) {
     ensureScenes();
     var from = String(fromId || '');
     var to = String(toId || '');
@@ -3380,10 +3380,28 @@ var QuotationEditor = (function () {
     }
     if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
     var moved = state.scenes.splice(fromIdx, 1)[0];
-    /* After splice, toIdx may shift if from was before to. */
-    if (fromIdx < toIdx) toIdx -= 1;
-    state.scenes.splice(toIdx, 0, moved);
+    var insertAt = -1;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i] && state.scenes[i].id === to) {
+        insertAt = placeAfter ? i + 1 : i;
+        break;
+      }
+    }
+    if (insertAt < 0) {
+      state.scenes.splice(fromIdx, 0, moved);
+      return;
+    }
+    state.scenes.splice(insertAt, 0, moved);
     markDirtyLocal();
+  }
+
+  function clearSceneReorderIndicators(root) {
+    var scope = root || document;
+    scope.querySelectorAll(
+      '.qe-scenes__thumb-wrap.is-scene-reorder-before, .qe-scenes__thumb-wrap.is-scene-reorder-after'
+    ).forEach(function (el) {
+      el.classList.remove('is-scene-reorder-before', 'is-scene-reorder-after');
+    });
   }
 
   function bindSceneNameEditing(editor) {
@@ -3435,9 +3453,12 @@ var QuotationEditor = (function () {
     var track = editor.querySelector('[data-qe-scenes-track]');
     if (!track) return;
     var dragId = null;
+    var dropHint = null;
+
     track.querySelectorAll('[data-qe-scene-drag]').forEach(function (wrap) {
       wrap.addEventListener('dragstart', function (e) {
         dragId = wrap.getAttribute('data-qe-scene-drag');
+        dropHint = null;
         wrap.classList.add('is-dragging');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
@@ -3447,10 +3468,12 @@ var QuotationEditor = (function () {
       });
       wrap.addEventListener('dragend', function () {
         wrap.classList.remove('is-dragging');
+        clearSceneReorderIndicators(track);
         track.querySelectorAll('.is-drop-target').forEach(function (el) {
           el.classList.remove('is-drop-target');
         });
         dragId = null;
+        dropHint = null;
       });
       wrap.addEventListener('dragover', function (e) {
         if (!dragId) return;
@@ -3459,23 +3482,39 @@ var QuotationEditor = (function () {
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-        wrap.classList.add('is-drop-target');
+        clearSceneReorderIndicators(track);
+        var rect = wrap.getBoundingClientRect();
+        var after = e.clientX > rect.left + rect.width / 2;
+        wrap.classList.add(after ? 'is-scene-reorder-after' : 'is-scene-reorder-before');
+        dropHint = { toId: toId, after: after };
       });
-      wrap.addEventListener('dragleave', function () {
-        wrap.classList.remove('is-drop-target');
+      wrap.addEventListener('dragleave', function (e) {
+        var related = e.relatedTarget;
+        if (related && wrap.contains(related)) return;
+        wrap.classList.remove('is-scene-reorder-before', 'is-scene-reorder-after');
+        if (dropHint && dropHint.toId === wrap.getAttribute('data-qe-scene-drag')) {
+          dropHint = null;
+        }
       });
       wrap.addEventListener('drop', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        clearSceneReorderIndicators(track);
         wrap.classList.remove('is-drop-target');
         var from = dragId || '';
         if (!from && e.dataTransfer) {
           try { from = e.dataTransfer.getData('text/qe-scene') || ''; } catch (e2) {}
           if (!from) from = e.dataTransfer.getData('text/plain') || '';
         }
-        var to = wrap.getAttribute('data-qe-scene-drag');
+        var to = (dropHint && dropHint.toId) || wrap.getAttribute('data-qe-scene-drag');
+        var after = !!(dropHint && dropHint.after);
+        if (!dropHint) {
+          var rect = wrap.getBoundingClientRect();
+          after = e.clientX > rect.left + rect.width / 2;
+        }
+        dropHint = null;
         if (from && to && from !== to) {
-          reorderScene(from, to);
+          reorderScene(from, to, after);
           rerender();
         }
       });

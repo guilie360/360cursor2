@@ -868,6 +868,28 @@
   width: 168px;
 }
 
+.qe-scenes__thumb-wrap.is-scene-reorder-before::before,
+.qe-scenes__thumb-wrap.is-scene-reorder-after::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 94px;
+  width: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 6;
+}
+
+.qe-scenes__thumb-wrap.is-scene-reorder-before::before {
+  left: -8px;
+}
+
+.qe-scenes__thumb-wrap.is-scene-reorder-after::after {
+  right: -8px;
+}
+
 .qe-scenes__thumb {
   appearance: none;
   flex: 0 0 auto;
