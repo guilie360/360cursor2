@@ -2660,16 +2660,19 @@ var QuotationEditor = (function () {
     }
 
     return '' +
-      '<div class="qe-scenes' +
-        (state.canvasPreviewMode ? ' is-preview' : '') +
-        (state.scenesCollapsed ? ' is-collapsed' : '') +
-        '" data-qe-scenes' +
-        (state.scenesCollapsed ? ' hidden' : '') + '>' +
-        '<button type="button" class="qe-scenes__nav" data-qe-scenes-prev aria-label="Escenas anteriores">←</button>' +
-        '<div class="qe-scenes__track-wrap">' +
-          '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
+      '<div class="qe-scenes-host' + (state.scenesCollapsed ? ' is-collapsed' : '') +
+        '" data-qe-scenes-host>' +
+        '<div class="qe-scenes' +
+          (state.canvasPreviewMode ? ' is-preview' : '') +
+          (state.scenesCollapsed ? ' is-collapsed' : '') +
+          '" data-qe-scenes>' +
+          '<button type="button" class="qe-scenes__nav" data-qe-scenes-prev aria-label="Escenas anteriores">←</button>' +
+          '<div class="qe-scenes__track-wrap">' +
+            '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
+          '</div>' +
+          '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
         '</div>' +
-        '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
+        scenesFoldBtnHtml() +
       '</div>';
   }
 
@@ -2745,11 +2748,8 @@ var QuotationEditor = (function () {
         '</button>';
     }).join('');
     return '' +
-      '<div class="qe-canvas-chrome-top" data-qe-chrome-top>' +
-        scenesFoldBtnHtml() +
-        '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
-          btns +
-        '</div>' +
+      '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
+        btns +
       '</div>';
   }
 
@@ -2968,33 +2968,34 @@ var QuotationEditor = (function () {
     unit.style.alignItems = 'stretch';
     unit.style.boxSizing = 'border-box';
 
+    var scenesHost = unit.querySelector('[data-qe-scenes-host]');
     var scenes = unit.querySelector('.qe-scenes');
     var fitSlot = unit.querySelector('[data-qe-canvas-fit]');
     var fitStack = unit.querySelector('[data-qe-canvas-fit-stack]');
     var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
     var stage = unit.querySelector('[data-qe-canvas]');
-    var toolChrome = unit.querySelector('[data-qe-chrome-top]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
 
+    if (scenesHost) {
+      scenesHost.classList.toggle('is-collapsed', !!state.scenesCollapsed);
+      scenesHost.style.width = '';
+      scenesHost.style.flex = '0 0 auto';
+    }
     if (scenes) {
       scenes.style.width = '';
       scenes.style.flex = '0 0 auto';
       scenes.classList.toggle('is-collapsed', !!state.scenesCollapsed);
-      if (state.scenesCollapsed) {
-        scenes.setAttribute('hidden', '');
-      } else {
-        scenes.removeAttribute('hidden');
-      }
     }
     unit.classList.toggle('is-scenes-collapsed', !!state.scenesCollapsed);
 
     void unit.offsetHeight;
 
-    var scenesH = (scenes && !state.scenesCollapsed)
-      ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
-    var scenesMb = (scenes && !state.scenesCollapsed)
-      ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0) : 0;
+    var scenesMeasureEl = scenesHost || scenes;
+    var scenesH = (scenesMeasureEl && !state.scenesCollapsed)
+      ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height) : 0;
+    var scenesMb = (scenesMeasureEl && !state.scenesCollapsed)
+      ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0) : 0;
     /* Viewport / Dock sit on the canvas stack — not stage chrome. */
     var TOOL_PAD = 44;
     var chromeH = Math.ceil(scenesH + scenesMb);
@@ -3046,19 +3047,12 @@ var QuotationEditor = (function () {
       fitFrame.style.flex = '0 0 auto';
       fitFrame.style.overflow = 'hidden';
     }
-    if (toolChrome) {
-      toolChrome.style.position = 'absolute';
-      toolChrome.style.left = '50%';
-      toolChrome.style.top = '0';
-      toolChrome.style.transform = 'translate(-50%, calc(-100% - 8px))';
-      toolChrome.style.zIndex = '6';
-    }
     if (toolVp) {
-      toolVp.style.position = '';
-      toolVp.style.left = '';
-      toolVp.style.top = '';
-      toolVp.style.transform = '';
-      toolVp.style.zIndex = '';
+      toolVp.style.position = 'absolute';
+      toolVp.style.left = '50%';
+      toolVp.style.top = '0';
+      toolVp.style.transform = 'translate(-50%, calc(-100% - 8px))';
+      toolVp.style.zIndex = '6';
     }
     if (toolDock) {
       toolDock.style.position = 'absolute';
@@ -3103,13 +3097,11 @@ var QuotationEditor = (function () {
   function applyScenesCollapsed(collapsed) {
     state.scenesCollapsed = !!collapsed;
     if (!rootEl) return;
+    var host = rootEl.querySelector('[data-qe-scenes-host]');
     var scenes = rootEl.querySelector('[data-qe-scenes]');
     var unit = rootEl.querySelector('[data-qe-stage-unit]');
-    if (scenes) {
-      scenes.classList.toggle('is-collapsed', state.scenesCollapsed);
-      if (state.scenesCollapsed) scenes.setAttribute('hidden', '');
-      else scenes.removeAttribute('hidden');
-    }
+    if (host) host.classList.toggle('is-collapsed', state.scenesCollapsed);
+    if (scenes) scenes.classList.toggle('is-collapsed', state.scenesCollapsed);
     if (unit) unit.classList.toggle('is-scenes-collapsed', state.scenesCollapsed);
     syncScenesFoldButton();
     try { fitStageWorkspace(); } catch (eFit) {}
