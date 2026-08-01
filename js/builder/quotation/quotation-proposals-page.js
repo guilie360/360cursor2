@@ -23,23 +23,26 @@ var QuotationProposalsPage = (function () {
     }
   ];
 
-  var COMPARE_ROWS = [
+  var COMPARE_DIFFS = [
+    { label: 'Videos y animaciones', still: '—', motion: '✓' },
+    { label: 'Vista aérea del proyecto', still: '—', motion: '✓' },
+    { label: 'Renders de detalles arquitectónicos', still: '—', motion: '✓' },
+    { label: 'Identidad visual inicial', still: '—', motion: '✓' },
+    { label: 'Renders exteriores (cantidad aproximada)', still: '3–5', motion: '10–12' }
+  ];
+
+  var COMPARE_SHARED = [
     { label: 'Diseño de fachada (2 tipologías)', still: '✓', motion: '✓' },
     { label: 'Modelado 3D', still: '✓', motion: '✓' },
     { label: 'Implantación conceptual', still: '✓', motion: '✓' },
     { label: 'Moodboard de materiales', still: '✓', motion: '✓' },
     { label: 'Plantas amobladas (4)', still: '✓', motion: '✓' },
-    { label: 'Renders exteriores', still: '3–5', motion: '10–12' },
     { label: 'Mini brochure ejecutivo', still: '✓', motion: '✓' },
     { label: 'Link personalizado', still: '✓', motion: '✓' },
     { label: 'Música ambiental', still: '✓', motion: '✓' },
     { label: 'Presentación en PC', still: '✓', motion: '✓' },
-    { label: 'Presentación interactiva por imágenes', still: '✓', motion: '✓' },
-    { label: 'Presentación interactiva por videos y animaciones', still: '—', motion: '✓' },
-    { label: 'Presentación en tablets y celulares', still: '✓', motion: '✓' },
-    { label: 'Vista aérea del proyecto', still: '—', motion: '✓' },
-    { label: 'Renders de detalles arquitectónicos', still: '—', motion: '✓' },
-    { label: 'Propuesta inicial de identidad del proyecto', still: '—', motion: '✓' }
+    { label: 'Presentación por imágenes', still: '✓', motion: '✓' },
+    { label: 'Presentación en tablets y celulares', still: '✓', motion: '✓' }
   ];
 
   function qs(sel, root) {
@@ -275,13 +278,11 @@ var QuotationProposalsPage = (function () {
     return 'qpp-cmp__val qpp-cmp__val--text';
   }
 
-  function renderCompare(root) {
-    var board = qs('[data-qpp-compare-board]', root);
-    if (!board) return;
-    var rowsHtml = COMPARE_ROWS.map(function (row, index) {
-      var delay = 120 + index * 30;
+  function buildCompareRows(rows, delayStart, tone) {
+    return rows.map(function (row, index) {
+      var delay = delayStart + index * 30;
       return '' +
-        '<div class="qpp-cmp__row" style="--qpp-cmp-delay:' + delay + 'ms">' +
+        '<div class="qpp-cmp__row qpp-cmp__row--' + tone + '" style="--qpp-cmp-delay:' + delay + 'ms">' +
           '<div class="qpp-cmp__feature">' + escapeHtml(row.label) + '</div>' +
           '<div class="' + cellClass(row.still) + '" data-col="still">' +
             '<span class="qpp-cmp__col-label">Still</span>' +
@@ -293,14 +294,38 @@ var QuotationProposalsPage = (function () {
           '</div>' +
         '</div>';
     }).join('');
+  }
+
+  function renderCompare(root) {
+    var board = qs('[data-qpp-compare-board]', root);
+    if (!board) return;
+
+    var diffsHtml = buildCompareRows(COMPARE_DIFFS, 280, 'diff');
+    var sharedHtml = buildCompareRows(COMPARE_SHARED, 280 + COMPARE_DIFFS.length * 30 + 180, 'shared');
 
     board.innerHTML =
       '<div class="qpp-cmp__head">' +
-        '<div class="qpp-cmp__hcell qpp-cmp__hcell--feature">Característica</div>' +
+        '<div class="qpp-cmp__hcell qpp-cmp__hcell--feature">Alcance</div>' +
         '<div class="qpp-cmp__hcell">Still</div>' +
-        '<div class="qpp-cmp__hcell">Motion</div>' +
+        '<div class="qpp-cmp__hcell qpp-cmp__hcell--motion">' +
+          '<span class="qpp-cmp__h-title">Motion</span>' +
+          '<span class="qpp-cmp__h-sub">Mayor impacto visual</span>' +
+        '</div>' +
       '</div>' +
-      '<div class="qpp-cmp__body">' + rowsHtml + '</div>';
+      '<section class="qpp-cmp__block qpp-cmp__block--diff" style="--qpp-cmp-block-delay:220ms">' +
+        '<h2 class="qpp-cmp__block-title">Diferencias principales</h2>' +
+        '<div class="qpp-cmp__body">' + diffsHtml + '</div>' +
+      '</section>' +
+      '<section class="qpp-cmp__block qpp-cmp__block--shared" style="--qpp-cmp-block-delay:' +
+        (280 + COMPARE_DIFFS.length * 30 + 80) + 'ms">' +
+        '<h2 class="qpp-cmp__block-title">Incluido en ambas propuestas</h2>' +
+        '<div class="qpp-cmp__body">' + sharedHtml + '</div>' +
+      '</section>' +
+      '<p class="qpp-cmp__note" style="--qpp-cmp-delay:' +
+        (280 + COMPARE_DIFFS.length * 30 + COMPARE_SHARED.length * 30 + 220) + 'ms">' +
+        'Ambas propuestas están diseñadas para presentar el proyecto ante inversionistas. ' +
+        'La diferencia está en el nivel de impacto y producción audiovisual.' +
+      '</p>';
   }
 
   function setQppView(root, view) {
