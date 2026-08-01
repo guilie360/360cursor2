@@ -449,10 +449,10 @@ body.qr-proposals-page .qpp {
 .qpp__card-title::after {
   content: '';
   display: block;
-  width: 100%;
+  width: 72%;
   height: 1px;
-  margin-top: 0.55em;
-  background: rgba(255, 255, 255, 0.32);
+  margin: 0.55em auto 0;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .qpp__card-price {
