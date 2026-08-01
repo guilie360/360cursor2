@@ -1390,7 +1390,9 @@ async function handleSyncAllShowrooms(req: Request) {
           ? config.mediaAmenityNames.filter((x: unknown) => typeof x === "string" && String(x).trim())
           : []);
 
-      /* e. V5.9.88 one-shot: purge auto amenity Media folders; keep Hero + tipologías */
+      /* e. V5.9.88 one-shot: purge auto amenity Media folders; keep Hero + tipologías.
+       * Reserved platform nodes (quotation Biblioteca) are NEVER purged. */
+      const RESERVED_MEDIA_SLUGS = new Set(["quotation"]);
       if (!alreadyMigrated) {
         const purgedFolders: string[] = [];
         let mediaChildren: BunnyDirItem[] = [];
@@ -1404,7 +1406,8 @@ async function handleSyncAllShowrooms(req: Request) {
           const folderSlug = sanitizeSlug(child.name);
           if (!folderSlug) continue;
           if (tipologiaSlugs.has(folderSlug)) continue;
-          /* One-shot: Media must end as Hero + tipologías only */
+          if (RESERVED_MEDIA_SLUGS.has(folderSlug)) continue;
+          /* One-shot: Media must end as Hero + tipologías + reserved platform nodes */
           const dirPath = `projects/${slug}/media/${folderSlug}`;
           try {
             const files = await bunnyWalkFiles(hostname, zone, accessKey, dirPath);

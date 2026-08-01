@@ -620,11 +620,27 @@ var ProyectosApi = (function () {
     };
   }
 
+  var BUNNY_CDN_BASE = 'https://boxies.b-cdn.net';
+
+  function libraryPublicUrlFromPath(storagePath) {
+    var path = heroText(storagePath).replace(/^\/+/, '');
+    if (!path) return null;
+    return BUNNY_CDN_BASE + '/' + path;
+  }
+
+  function libraryContentLength(lib) {
+    return lib && Array.isArray(lib.content) ? lib.content.length : 0;
+  }
+
+  /**
+   * Persistable library item gate — aligned with QuotationEditor.
+   * Keep rows that still point at Bunny/archivos even if publicUrl was lost.
+   */
   function sanitizeLibrary(lib) {
     if (!lib || typeof lib !== 'object') return null;
     var content = Array.isArray(lib.content) ? lib.content : [];
     var folders = Array.isArray(lib.folders) ? lib.folders : [];
-    console.log('[QE-LIB V7.2.37] sanitizeLibrary:IN', {
+    console.log('[QE-LIB V7.2.74] sanitizeLibrary:IN', {
       contentLength: content.length,
       content: content.map(function (c) {
         if (!c) return null;
@@ -642,14 +658,19 @@ var ProyectosApi = (function () {
       if (!c || typeof c !== 'object') return null;
       var id = heroText(c.id);
       if (!id) return null;
-      var pub = heroText(c.publicUrl) || heroText(c.remoteUrl) || heroText(c.previewUrl) || null;
-      if (!pub || pub.indexOf('blob:') === 0) {
-        console.log('[QE-LIB V7.2.37] sanitizeLibrary:DROP item (no publicUrl)', {
+      var storagePath = heroText(c.storagePath) || null;
+      var archivoId = heroText(c.archivoId) || null;
+      var pub = heroText(c.publicUrl) || heroText(c.remoteUrl) || null;
+      if (pub && pub.indexOf('blob:') === 0) pub = null;
+      var preview = heroText(c.previewUrl) || null;
+      if (preview && preview.indexOf('blob:') === 0) preview = null;
+      if (!pub) pub = preview;
+      if (!pub && storagePath) pub = libraryPublicUrlFromPath(storagePath);
+      /* Durable identity: archivoId / storagePath survive even without URL. */
+      if (!pub && !archivoId && !storagePath) {
+        console.log('[QE-LIB V7.2.74] sanitizeLibrary:DROP item (no durable ref)', {
           id: id,
-          archivoId: c.archivoId || null,
-          storagePath: c.storagePath || null,
-          provider: c.provider || null,
-          publicUrl: pub
+          provider: c.provider || null
         });
         return null;
       }
@@ -663,10 +684,11 @@ var ProyectosApi = (function () {
         publicUrl: pub,
         remoteUrl: pub,
         previewUrl: pub,
-        storagePath: heroText(c.storagePath) || null,
-        archivoId: heroText(c.archivoId) || null,
-        provider: heroText(c.provider) || 'bunny',
-        projectId: heroText(c.projectId) || null
+        storagePath: storagePath,
+        archivoId: archivoId,
+        provider: heroText(c.provider) || (pub || storagePath || archivoId ? 'bunny' : null),
+        projectId: heroText(c.projectId) || null,
+        sizeBytes: c.sizeBytes != null ? (Number(c.sizeBytes) || 0) : 0
       };
     }).filter(Boolean);
     var outFolders = folders.map(function (f) {
@@ -676,7 +698,8 @@ var ProyectosApi = (function () {
       return {
         id: id,
         group: heroText(f.group) || null,
-        name: heroText(f.name) || 'Carpeta'
+        name: heroText(f.name) || 'Carpeta',
+        order: f.order != null ? Number(f.order) || 0 : 0
       };
     }).filter(Boolean);
     var out = {
@@ -684,11 +707,60 @@ var ProyectosApi = (function () {
       content: outContent,
       folders: outFolders
     };
-    console.log('[QE-LIB V7.2.37] sanitizeLibrary:OUT', {
+    console.log('[QE-LIB V7.2.74] sanitizeLibrary:OUT', {
       contentLength: outContent.length,
       library: out
     });
     return out;
+  }
+
+  /** Merge partial hero_quotation writes without wiping sibling namespaces. */
+  function mergeHeroQuotationPayload(prev, payload) {
+    prev = prev && typeof prev === 'object' ? prev : {};
+    payload = payload && typeof payload === 'object' ? payload : {};
+    var merged = Object.assign({}, prev, payload);
+    if (!Object.prototype.hasOwnProperty.call(payload, 'canvas') && prev.canvas) {
+      merged.canvas = prev.canvas;
+    }
+    if (!Object.prototype.hasOwnProperty.call(payload, 'library') && prev.library) {
+      merged.library = prev.library;
+    }
+    merged.heroContent = Object.assign({}, prev.heroContent || {}, payload.heroContent || {});
+    merged.branding = Object.assign({}, prev.branding || {}, payload.branding || {});
+    if (!Object.prototype.hasOwnProperty.call(payload, 'video_url') && prev.video_url != null) {
+      merged.video_url = prev.video_url;
+    }
+    if (!Object.prototype.hasOwnProperty.call(payload, 'image_url') && prev.image_url != null) {
+      merged.image_url = prev.image_url;
+    }
+    return merged;
+  }
+
+  /**
+   * Never replace a non-empty library SSOT with an accidental empty write.
+   * Intentional clear-all requires libraryExplicitEmpty=true and empty content.
+   */
+  function protectLibraryOverwrite(prev, payload, sanitizedLibrary) {
+    var prevLib = prev && prev.library;
+    var prevLen = libraryContentLength(prevLib);
+    var nextLen = libraryContentLength(sanitizedLibrary);
+    var rawLen = libraryContentLength(payload && payload.library);
+    var explicitEmpty = !!(payload && payload.libraryExplicitEmpty);
+
+    if (nextLen > 0) return sanitizedLibrary;
+    if (prevLen <= 0) return sanitizedLibrary || prevLib || null;
+
+    if (explicitEmpty && rawLen === 0) {
+      return sanitizedLibrary || { version: 1, content: [], folders: [] };
+    }
+
+    console.warn('[QE-LIB V7.2.74] blocked empty library overwrite of non-empty SSOT', {
+      prevLen: prevLen,
+      rawLen: rawLen,
+      nextLen: nextLen,
+      explicitEmpty: explicitEmpty
+    });
+    return sanitizeLibrary(prevLib) || prevLib;
   }
 
   function sanitizeHeroQuotation(payload) {
@@ -767,17 +839,16 @@ var ProyectosApi = (function () {
     if (existing.error) throw mapDbError(existing.error, 'Error leyendo configuración del proyecto');
 
     var prev = existing.data && existing.data.hero_quotation;
-    var merged = Object.assign({}, payload || {});
-    if (!merged.canvas && prev && typeof prev === 'object' && prev.canvas) {
-      merged.canvas = prev.canvas;
-    }
-    if (!merged.library && prev && typeof prev === 'object' && prev.library) {
-      merged.library = prev.library;
-    }
-    console.log('[QE-LIB V7.2.37] updateHeroQuotation:merged.library BEFORE sanitize');
+    var merged = mergeHeroQuotationPayload(prev, payload);
+    console.log('[QE-LIB V7.2.74] updateHeroQuotation:merged.library BEFORE sanitize');
     console.log(JSON.stringify(merged.library, null, 2));
     var data = sanitizeHeroQuotation(merged);
-    console.log('[QE-LIB V7.2.37] updateHeroQuotation:data.library AFTER sanitize (written to DB)');
+    if (Object.prototype.hasOwnProperty.call(payload || {}, 'library') || data.library) {
+      data.library = protectLibraryOverwrite(prev, payload, data.library);
+    } else if (prev && prev.library) {
+      data.library = sanitizeLibrary(prev.library) || prev.library;
+    }
+    console.log('[QE-LIB V7.2.74] updateHeroQuotation:data.library AFTER protect (written to DB)');
     console.log(JSON.stringify(data.library, null, 2));
 
     var result;
@@ -797,7 +868,7 @@ var ProyectosApi = (function () {
     }
     if (result.error) throw mapDbError(result.error, 'Error guardando el hero de la cotización');
     var saved = result.data && result.data.hero_quotation;
-    console.log('[QE-LIB V7.2.37] updateHeroQuotation:RAW DB response hero_quotation.library');
+    console.log('[QE-LIB V7.2.74] updateHeroQuotation:RAW DB response hero_quotation.library');
     console.log(JSON.stringify(saved && saved.library, null, 2));
     return saved && typeof saved === 'object' ? sanitizeHeroQuotation(saved) : data;
   }

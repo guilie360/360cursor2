@@ -296,14 +296,14 @@ var QuotationEditor = (function () {
   }
 
   /**
-   * Library persistence gate — publicUrl is optional.
+   * Library persistence gate — durable Bunny/archivos refs OR public URL.
    * previewUrl / blob-only local files are NOT persistable.
+   * Bare provider without archivoId/storagePath/URL is NOT enough.
    */
   function libraryItemIsPersistable(item) {
     if (!item || !item.id) return false;
     if (item.archivoId) return true;
     if (item.storagePath) return true;
-    if (item.provider) return true;
     var pub = item.publicUrl || item.remoteUrl || null;
     if (pub && String(pub).indexOf('blob:') !== 0) return true;
     return false;
@@ -5698,6 +5698,9 @@ var QuotationEditor = (function () {
         if (!libraryItemIsPersistable(c)) return null;
         var pub = c.publicUrl || c.remoteUrl || null;
         if (pub && String(pub).indexOf('blob:') === 0) pub = null;
+        if (!pub && c.storagePath) {
+          pub = 'https://boxies.b-cdn.net/' + String(c.storagePath).replace(/^\/+/, '');
+        }
         var preview = pub || null;
         if (!preview && c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
           preview = c.previewUrl;
@@ -5728,6 +5731,95 @@ var QuotationEditor = (function () {
         return row;
       }).filter(Boolean);
     }
+  }
+
+  /**
+   * archivos (Bunny) is the durable store for quotation library bytes.
+   * hero_quotation.library is the UX index — heal it from orphans under
+   * projects/{slug}/media/quotation/ so wiped JSON never hides real files.
+   */
+  async function reconcileLibraryFromArchivos() {
+    var projectId = resolveProjectId();
+    if (!projectId || typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.list) {
+      return 0;
+    }
+    var items;
+    try {
+      items = await BunnyMediaApi.list(projectId);
+    } catch (eList) {
+      console.warn('[QE-LIB V7.2.74] reconcileLibraryFromArchivos list failed', eList);
+      return 0;
+    }
+    var known = {};
+    (state.content || []).forEach(function (c) {
+      if (!c) return;
+      if (c.archivoId) known['id:' + String(c.archivoId)] = true;
+      if (c.storagePath) known['path:' + String(c.storagePath)] = true;
+      var u = publicUrlOf(c);
+      if (u) known['url:' + String(u)] = true;
+    });
+    var added = 0;
+    (items || []).forEach(function (row) {
+      if (!row) return;
+      var path = String(row.storage_path || '');
+      if (path.indexOf('/media/quotation/') === -1) return;
+      if (row.id != null && known['id:' + String(row.id)]) return;
+      if (path && known['path:' + path]) return;
+      if (row.url && known['url:' + String(row.url)]) return;
+
+      var group = 'renders';
+      var media = 'image';
+      var tipo = String(row.tipo || '').toLowerCase();
+      if (path.indexOf('/videos/') !== -1 || tipo === 'video') {
+        group = 'videos';
+        media = 'video';
+      } else if (path.indexOf('/documents/') !== -1 || tipo === 'pdf' || tipo === 'brochure') {
+        group = 'pdf';
+        media = 'pdf';
+      }
+      var url = row.url || ('https://boxies.b-cdn.net/' + path.replace(/^\/+/, ''));
+      var name = String(row.nombre || 'Archivo').replace(/^\d+-/, '');
+      var item = {
+        id: nextId('ct'),
+        group: group,
+        folderId: null,
+        name: name || 'Archivo',
+        media: media,
+        mime: null,
+        publicUrl: url,
+        remoteUrl: url,
+        previewUrl: url,
+        storagePath: path || null,
+        archivoId: row.id || null,
+        provider: 'bunny',
+        projectId: projectId,
+        uploadStatus: 'synced',
+        sizeBytes: bytesFromPesoMb(row.peso_mb),
+        file: null
+      };
+      state.content.push(item);
+      ensureItems(item.id);
+      known['id:' + String(item.archivoId || '')] = true;
+      known['path:' + path] = true;
+      known['url:' + url] = true;
+      added += 1;
+    });
+
+    if (added > 0) {
+      console.log('[QE-LIB V7.2.74] reconcileLibraryFromArchivos restored', added);
+      persistDraft();
+      try {
+        if (typeof ProyectosApi !== 'undefined' && ProyectosApi.updateHeroQuotation) {
+          await ProyectosApi.updateHeroQuotation(projectId, {
+            library: serializeLibrary()
+          });
+        }
+      } catch (eHeal) {
+        console.warn('[QE-LIB V7.2.74] heal library index failed', eHeal);
+      }
+      if (rootEl) rerender();
+    }
+    return added;
   }
 
   function hydrateFromHeroQuotation(hq, ctx) {
@@ -5879,8 +5971,12 @@ var QuotationEditor = (function () {
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
-        syncLibrarySizesFromArchivos().catch(function () { /* ignore */ });
-        return hq;
+        return reconcileLibraryFromArchivos()
+          .then(function () {
+            return syncLibrarySizesFromArchivos();
+          })
+          .catch(function () { /* ignore */ })
+          .then(function () { return hq; });
       })
       .catch(function () {
         if (documentReady && loadedProjectId === id) return null;
@@ -5892,8 +5988,12 @@ var QuotationEditor = (function () {
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
-        syncLibrarySizesFromArchivos().catch(function () { /* ignore */ });
-        return null;
+        return reconcileLibraryFromArchivos()
+          .then(function () {
+            return syncLibrarySizesFromArchivos();
+          })
+          .catch(function () { /* ignore */ })
+          .then(function () { return null; });
       });
     return loadPromise;
   }
@@ -5976,8 +6076,13 @@ var QuotationEditor = (function () {
         canvas: doc
       };
     payload.library = library;
+    /* Intentional clear-all only when in-memory library is also empty. */
+    if ((!library.content || !library.content.length) &&
+        (!state.content || !state.content.length)) {
+      payload.libraryExplicitEmpty = true;
+    }
 
-    console.log('[QE-LIB V7.2.37] 5-commit:payload.library before updateHeroQuotation');
+    console.log('[QE-LIB V7.2.74] 5-commit:payload.library before updateHeroQuotation');
     console.log(JSON.stringify(payload.library, null, 2));
 
     var saved = await ProyectosApi.updateHeroQuotation(projectId, payload);
