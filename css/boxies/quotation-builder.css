@@ -1,4 +1,4 @@
-/* V7.1.05 — Quotation Builder content (chrome = shared builder-tokens + builder.css) */
+/* V7.1.05 ? Quotation Builder content (chrome = shared builder-tokens + builder.css) */
 
 .quotation-builder-host,
 #boxiesContent.quotation-builder-host {
@@ -38,7 +38,7 @@
   box-sizing: border-box;
 }
 
-/* V7.1.10 — Hero framed identically to Showroom (column scrolls, non-scrolling frame) */
+/* V7.1.10 ? Hero framed identically to Showroom (column scrolls, non-scrolling frame) */
 .quotation-workspace.is-hero,
 #boxiesContent:has(.builder-step-content--hero) .quotation-workspace {
   flex: 1 1 0%;
@@ -92,7 +92,7 @@
   font-size: 13px;
 }
 
-/* ── V7.1.01 — Quotation Editor prototype (3 columns) ── */
+/* ?? V7.1.01 ? Quotation Editor prototype (3 columns) ?? */
 
 .quotation-workspace.is-editor {
   display: flex;
@@ -226,7 +226,7 @@
   overflow: hidden;
 }
 
-/* V7.2.63 — Stage shell: chrome locked 1:1; only device canvas scales */
+/* V7.2.63 ? Stage shell: chrome locked 1:1; only device canvas scales */
 .qe-stage-shell {
   position: relative;
   flex: 0 0 auto;
@@ -303,7 +303,7 @@
   overflow: hidden;
 }
 
-/* V7.2.66 — Capas + Propiedades right rail */
+/* V7.2.66 ? Capas + Propiedades right rail */
 .quotation-props {
   position: relative;
   flex: 0 0 var(--quotation-props-w, 220px);
@@ -668,6 +668,10 @@
   border-radius: 8px;
 }
 
+.qe-canvas-fit__frame:has(.qe-guides-chrome.is-rulers-on) {
+  overflow: visible;
+}
+
 .qe-stage-unit .qe-canvas__stage {
   flex: 0 0 auto;
   width: 1920px;
@@ -716,7 +720,7 @@
   cursor: grab;
 }
 
-/* V7.2.59 — Viewport presets + Safe Area (Builder chrome only) */
+/* V7.2.59 ? Viewport presets + Safe Area (Builder chrome only) */
 .qe-viewport {
   flex: 0 0 auto;
   display: flex;
@@ -832,7 +836,7 @@
   visibility: hidden;
 }
 
-/* ── V7.2.09 / V7.2.25 — Scene thumbnail strip (natural sizes, fit scales) ── */
+/* ?? V7.2.09 / V7.2.25 ? Scene thumbnail strip (natural sizes, fit scales) ?? */
 
 .qe-scenes-host {
   position: relative;
@@ -915,7 +919,7 @@
 
 /*
  * Collapsed: flush under BOXIES header on the canvas column edge
- * (same “peeled from chrome” language as side floats — zero gap).
+ * (same ?peeled from chrome? language as side floats ? zero gap).
  */
 .qe-col--canvas > .quotation-panel-float--scenes.is-header-docked {
   position: absolute !important;
@@ -1258,7 +1262,7 @@
   color: var(--hall-text-faint, rgba(255, 255, 255, 0.34));
 }
 
-/* ── V7.2.54–V7.2.58 — Unified pill dock (create ↔ actions) ── */
+/* ?? V7.2.54?V7.2.58 ? Unified pill dock (create ? actions) ?? */
 
 .qe-dock {
   flex: 0 0 auto;
@@ -1371,7 +1375,7 @@
   line-height: 1;
 }
 
-/* Scene delete confirm — above canvas / experiencia overlays */
+/* Scene delete confirm ? above canvas / experiencia overlays */
 .qe-confirm {
   position: absolute;
   inset: 0;
@@ -1595,7 +1599,7 @@
   border-color: var(--hall-border-subtle-hover, rgba(255, 255, 255, 0.14));
 }
 
-/* Hero Default clone: stage containment only — styles come from components.css */
+/* Hero Default clone: stage containment only ? styles come from components.css */
 .qe-scene-comp {
   position: absolute;
   inset: 0;
@@ -1693,7 +1697,7 @@
   touch-action: none;
 }
 
-/* ── Showroom Experiencia overlay on Quotation Canvas (V7.2.13 / V7.2.64) ─── */
+/* ?? Showroom Experiencia overlay on Quotation Canvas (V7.2.13 / V7.2.64) ??? */
 .qe-canvas__design .qe-exp-overlay,
 .qe-canvas__design .qe-exp-overlay .builder-exp-stage,
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-stage,
@@ -1733,8 +1737,8 @@
   background: transparent;
 }
 
-/* Design frame is the coordinate space — media underneath provides the image.
-   V7.2.59 — ghost must use cover (same as HeroRenderer), never fill. */
+/* Design frame is the coordinate space ? media underneath provides the image.
+   V7.2.59 ? ghost must use cover (same as HeroRenderer), never fill. */
 .qe-canvas__design .qe-exp-overlay .builder-exp-buttons-img,
 .qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-img,
 .hero-canvas .qe-exp-overlay .builder-exp-buttons-img,
@@ -1912,7 +1916,7 @@
   opacity: var(--text-secondary-opacity, 0.78);
 }
 
-/* V7.1.03 — Contenido por grupos */
+/* V7.1.03 ? Contenido por grupos */
 .qe-content__list {
   flex: 1 1 auto;
   min-height: 0;
@@ -2312,7 +2316,7 @@
   display: none !important;
 }
 
-/* Never display:none the drag source — that cancels HTML5 drag. */
+/* Never display:none the drag source ? that cancels HTML5 drag. */
 .qe-content__folders.is-reordering .qe-folder.is-dragging {
   opacity: 0.45;
   pointer-events: none;
@@ -3031,7 +3035,7 @@ body.is-qe-lib-pointer-dragging * {
   font-size: 13px;
 }
 
-/* V7.2.11 / V7.2.25 — Empty scene (single minimal line) */
+/* V7.2.11 / V7.2.25 ? Empty scene (single minimal line) */
 .qe-scene-empty {
   position: absolute;
   inset: 0;
@@ -3515,11 +3519,11 @@ body > .ws-select__list {
   accent-color: rgba(255, 255, 255, 0.7);
 }
 
-/* Builder is desktop-only — never reflow chrome via breakpoints. */
+/* Builder is desktop-only ? never reflow chrome via breakpoints. */
 
-/* ═══════════════════════════════════════════════════════════
-   V7.2.21 — Icon rail + Recursos + symmetric panel floats
-   ═══════════════════════════════════════════════════════════ */
+/* ???????????????????????????????????????????????????????????
+   V7.2.21 ? Icon rail + Recursos + symmetric panel floats
+   ??????????????????????????????????????????????????????????? */
 
 body.quotation-canvas-first,
 html.quotation-canvas-first {
@@ -3573,7 +3577,7 @@ body.quotation-canvas-first .builder-workspace,
   display: none !important;
 }
 
-/* Header step pills — next to hamburger */
+/* Header step pills ? next to hamburger */
 .quotation-header-steps {
   display: flex;
   align-items: center;
@@ -3627,12 +3631,12 @@ body.quotation-canvas-first .builder-workspace,
   display: block;
 }
 
-/* Legacy rail selectors — keep inert if old markup appears */
+/* Legacy rail selectors ? keep inert if old markup appears */
 .quotation-icon-rail {
   display: none !important;
 }
 
-/* V7.2.65 — canvas Vista Previa: hide leftover edit chrome */
+/* V7.2.65 ? canvas Vista Previa: hide leftover edit chrome */
 .qe-editor.is-canvas-preview .qe-dock,
 .qe-editor.is-canvas-preview .qe-layers,
 .qe-col--canvas.is-canvas-preview .qe-dock,
@@ -3650,7 +3654,7 @@ body.quotation-canvas-first .builder-workspace,
   min-height: 0;
 }
 
-/* Recursos — collapses independently; float stays on its edge */
+/* Recursos ? collapses independently; float stays on its edge */
 .quotation-recursos {
   position: relative;
   flex: 0 0 var(--quotation-recursos-w, 220px);
@@ -3688,7 +3692,7 @@ body.quotation-canvas-first .builder-workspace,
   border: none !important;
 }
 
-/* Float uses display:!important elsewhere — kill it on Config. */
+/* Float uses display:!important elsewhere ? kill it on Config. */
 .quotation-workspace.is-recursos-hidden #quotationLeftFloatBtn,
 .quotation-workspace.is-recursos-hidden .quotation-panel-float--left,
 .quotation-recursos[hidden] > .quotation-panel-float,
@@ -3745,7 +3749,7 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /*
- * Panel floats — MUST stay absolute children of their panels (never fixed).
+ * Panel floats ? MUST stay absolute children of their panels (never fixed).
  * Overrides .boxies-sidebar-float-toggle fixed rules from builder.css.
  */
 #quotationLeftFloatBtn.quotation-panel-float,
@@ -3884,7 +3888,7 @@ body.quotation-canvas-first .builder-workspace,
   gap: 12px;
 }
 
-/* V7.2.68 — Biblioteca chrome + toolbar */
+/* V7.2.68 ? Biblioteca chrome + toolbar */
 .qe-lib-chrome {
   flex: 0 0 auto;
   display: flex;
@@ -4291,7 +4295,7 @@ body.quotation-canvas-first .builder-workspace,
   opacity: 1;
 }
 
-/* Folder ⋮ stays list-style in both views — only file cards change. */
+/* Folder ? stays list-style in both views ? only file cards change. */
 .qe-content__list.is-view-grid .qe-folder__head > .qe-lib-menu-btn {
   position: static;
   top: auto;
@@ -4373,3 +4377,225 @@ body.quotation-canvas-first .builder-workspace,
   outline-offset: 2px;
 }
 
+
+/* -----------------------------------------------------------
+   V7.2.119 ? Guides / rulers / context menu
+   ----------------------------------------------------------- */
+
+.qe-context-menu-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 12050;
+  pointer-events: none;
+}
+
+.qe-context-menu-portal .qe-context-menu {
+  pointer-events: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 200px;
+  max-width: 260px;
+  z-index: 12051;
+}
+
+.qe-context-menu__title {
+  margin: 0 0 2px;
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.qe-context-menu .boxies-workspace-menu__item.is-disabled,
+.qe-context-menu .boxies-workspace-menu__item:disabled {
+  opacity: 0.38;
+  cursor: default;
+  pointer-events: none;
+}
+
+.qe-guides-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.qe-guides-chrome[hidden],
+.qe-guides-chrome:not(.is-rulers-on) {
+  display: none !important;
+}
+
+.qe-ruler-corner {
+  position: absolute;
+  left: var(--qe-ruler-stage-left, 0);
+  top: var(--qe-ruler-stage-top, 0);
+  width: 18px;
+  height: 18px;
+  background: #050505;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.qe-ruler {
+  position: absolute;
+  background: #050505;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  overflow: hidden;
+  pointer-events: auto;
+  user-select: none;
+  cursor: crosshair;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.qe-ruler--h {
+  left: var(--qe-ruler-stage-left, 0);
+  top: var(--qe-ruler-stage-top, 0);
+  width: var(--qe-ruler-stage-w, 100%);
+  height: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qe-ruler--v {
+  left: var(--qe-ruler-stage-left, 0);
+  top: var(--qe-ruler-stage-top, 0);
+  width: 18px;
+  height: var(--qe-ruler-stage-h, 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qe-ruler__tick {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.qe-ruler--h .qe-ruler__tick {
+  top: 10px;
+  width: 1px;
+  height: 6px;
+  transform: translateX(-0.5px);
+}
+
+.qe-ruler--h .qe-ruler__tick.is-major {
+  top: 4px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.qe-ruler--v .qe-ruler__tick {
+  left: 10px;
+  width: 6px;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.qe-ruler--v .qe-ruler__tick.is-major {
+  left: 4px;
+  width: 12px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.qe-ruler__label {
+  position: absolute;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.qe-ruler--h .qe-ruler__label {
+  top: 1px;
+  transform: translateX(3px);
+}
+
+.qe-ruler--v .qe-ruler__label {
+  left: 2px;
+  transform: translateY(3px) rotate(-90deg);
+  transform-origin: left top;
+}
+
+.qe-guide-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.qe-guide-line {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 5;
+  background: rgba(80, 180, 255, 0.85);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.qe-guide-line--vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  cursor: col-resize;
+  transform: translateX(-0.5px);
+}
+
+.qe-guide-line--vertical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 9px;
+}
+
+.qe-guide-line--horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+  cursor: row-resize;
+  transform: translateY(-0.5px);
+}
+
+.qe-guide-line--horizontal::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 9px;
+}
+
+.qe-guide-line--ghost {
+  background: rgba(80, 180, 255, 0.55);
+  pointer-events: none !important;
+  z-index: 9;
+}
+
+.qe-guide-line.is-removing {
+  background: rgba(255, 90, 90, 0.85);
+  opacity: 0.7;
+}
+
+.qe-guide-line.is-locked {
+  cursor: default;
+  opacity: 0.55;
+}
+
+body.is-qe-guide-dragging {
+  cursor: crosshair !important;
+  user-select: none !important;
+}
+
+body.is-qe-guide-dragging iframe {
+  pointer-events: none !important;
+}

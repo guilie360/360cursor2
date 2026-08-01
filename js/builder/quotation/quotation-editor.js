@@ -541,7 +541,8 @@ var QuotationEditor = (function () {
       elements: [],
       interactions: [],
       buttons: [],
-      hotspots: []
+      hotspots: [],
+      guides: []
     };
     return {
       content: [],
@@ -563,6 +564,8 @@ var QuotationEditor = (function () {
       pendingSceneDeleteId: null,
       viewportPreset: 'desktop',
       safeAreaVisible: false,
+      /* Session-only — not persisted with the document. */
+      rulersVisible: false,
       expEditMode: 'buttons',
       expHasSelection: false,
       openGroups: {
@@ -1415,7 +1418,8 @@ var QuotationEditor = (function () {
         elements: [],
         interactions: [],
         buttons: [],
-        hotspots: []
+        hotspots: [],
+        guides: []
       });
       heroIdx = 0;
     } else if (heroIdx > 0) {
@@ -1483,6 +1487,7 @@ var QuotationEditor = (function () {
     scene.interactions = [];
     scene.buttons = [];
     scene.hotspots = [];
+    scene.guides = [];
     scene.type = 'hero';
     scene.templateId = 'hero-default';
     scene.name = 'HERO';
@@ -1669,7 +1674,7 @@ var QuotationEditor = (function () {
 
   /** Scene overlays — Showroom interactions[] SSOT (V7.2.13). */
   function ensureSceneOverlays(scene) {
-    if (!scene) return { interactions: [], buttons: [], hotspots: [] };
+    if (!scene) return { interactions: [], buttons: [], hotspots: [], guides: [] };
     if (typeof QuotationExperienciaBridge !== 'undefined' &&
         QuotationExperienciaBridge.ensureSceneInteractions) {
       QuotationExperienciaBridge.ensureSceneInteractions(scene);
@@ -1678,6 +1683,7 @@ var QuotationEditor = (function () {
       if (!Array.isArray(scene.buttons)) scene.buttons = [];
       if (!Array.isArray(scene.hotspots)) scene.hotspots = [];
     }
+    if (!Array.isArray(scene.guides)) scene.guides = [];
     return scene;
   }
 
@@ -3245,6 +3251,9 @@ var QuotationEditor = (function () {
     canvasFitScale = scale;
 
     syncDesignIdentity();
+    if (typeof QuotationGuides !== 'undefined' && QuotationGuides.refresh) {
+      try { QuotationGuides.refresh(); } catch (eGuidesFit) { /* ignore */ }
+    }
   }
 
   var STAGE_SCENES_FOLD_H = 16;
@@ -3305,6 +3314,9 @@ var QuotationEditor = (function () {
   var builderSceneApi = null;
 
   function destroyBuilderRuntimeScene() {
+    if (typeof QuotationGuides !== 'undefined' && QuotationGuides.destroy) {
+      try { QuotationGuides.destroy(); } catch (eG) { /* ignore */ }
+    }
     destroyExperienciaOverlay();
     if (builderSceneApi && typeof builderSceneApi.destroy === 'function') {
       try { builderSceneApi.destroy(); } catch (eD) { /* ignore */ }
@@ -3313,6 +3325,20 @@ var QuotationEditor = (function () {
     if (rootEl && rootEl.querySelector) {
       var host = rootEl.querySelector('[data-qe-viewport-window]');
       if (host) host.innerHTML = '';
+    }
+  }
+
+  function syncGuidesSystem() {
+    if (typeof QuotationGuides === 'undefined' || !QuotationGuides.sync || !rootEl) return;
+    QuotationGuides.sync(rootEl, {
+      getActiveScene: function () { return activeScene(); },
+      getDesignSize: function () { return designLienzoSize(); },
+      isPreviewMode: function () { return !!state.canvasPreviewMode; },
+      onChange: function () { markDirtyLocal(); },
+      onRulersChange: function (on) { state.rulersVisible = !!on; }
+    });
+    if (QuotationGuides.isRulersVisible() !== !!state.rulersVisible) {
+      QuotationGuides.setRulersVisible(!!state.rulersVisible);
     }
   }
 
@@ -3385,6 +3411,7 @@ var QuotationEditor = (function () {
     }
 
     mountExperienciaOverlay();
+    syncGuidesSystem();
   }
 
   function fitCanvasDesign() {
@@ -4717,7 +4744,8 @@ var QuotationEditor = (function () {
       elements: [],
       interactions: [],
       buttons: [],
-      hotspots: []
+      hotspots: [],
+      guides: []
     };
     state.scenes.push(scene);
     state.activeSceneId = scene.id;
@@ -5325,6 +5353,9 @@ var QuotationEditor = (function () {
 
   function detachUi() {
     try { persistDraft(); } catch (eDraft) { /* ignore */ }
+    if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
+      try { QuotationContextMenu.close(); } catch (eCtx) { /* ignore */ }
+    }
     try { destroyExperienciaOverlay(); } catch (eOx) { /* ignore */ }
     try { destroyBuilderRuntimeScene(); } catch (eRt) { /* ignore */ }
     try {
@@ -7431,7 +7462,16 @@ var QuotationEditor = (function () {
             (cover && cover.videoUrl ? 'video'
               : (cover && cover.imageUrl ? 'image' : null)),
           elements: Array.isArray(sc.elements) ? sc.elements : [],
-          interactions: Array.isArray(sc.interactions) ? sc.interactions : []
+          interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
+          guides: Array.isArray(sc.guides) ? sc.guides.map(function (g) {
+            if (!g || !g.id) return null;
+            return {
+              id: String(g.id),
+              type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
+              position: Math.max(0, Math.min(100, Number(g.position) || 0)),
+              locked: !!g.locked
+            };
+          }).filter(Boolean) : []
         };
       })
     };
@@ -7654,7 +7694,8 @@ var QuotationEditor = (function () {
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
-          hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : []
+          hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : [],
+          guides: Array.isArray(sc.guides) ? sc.guides : []
         };
         /* Resolve media from persisted library if scene URL missing. */
         if (!scene.mediaUrl && scene.resourceId) {
@@ -7687,7 +7728,8 @@ var QuotationEditor = (function () {
       elements: [],
       interactions: [],
       buttons: [],
-      hotspots: []
+      hotspots: [],
+      guides: []
     };
     /* If legacy hero_quotation has media URLs, keep coverModel for Runtime but do not invent library links. */
     var model = typeof ProjectCover !== 'undefined' && ProjectCover.fromQuotationHero
