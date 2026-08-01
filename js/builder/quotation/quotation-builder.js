@@ -289,10 +289,21 @@ var QuotationBuilderView = (function () {
             : null);
       },
       onSaved: function (payload) {
+        var previousSlug = projectCtx.slug || '';
         projectCtx.id = payload.id;
         projectCtx.name = payload.nombre;
         projectCtx.slug = payload.slug;
         projectCtx.constructora_id = payload.constructora_id || projectCtx.constructora_id;
+        if (typeof QuotationEditor !== 'undefined' && QuotationEditor.applyProjectIdentity) {
+          try {
+            QuotationEditor.applyProjectIdentity({
+              id: projectCtx.id,
+              slug: projectCtx.slug,
+              name: projectCtx.name,
+              previousSlug: payload.previousSlug || previousSlug
+            });
+          } catch (eApply) {}
+        }
       },
       onShareSaved: function (meta) {
         projectCtx.og_image = meta.og_image || '';

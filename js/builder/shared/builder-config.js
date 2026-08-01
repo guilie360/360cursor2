@@ -656,6 +656,9 @@ var BuilderConfig = (function () {
         );
       }
 
+      var previousSlug = result && result.previousSlug
+        ? normalizeSlug(result.previousSlug)
+        : normalizeSlug(identity.slug || '');
       var payload = {
         id: updated.id,
         nombre: verify.nombre || updated.nombre,
@@ -663,6 +666,8 @@ var BuilderConfig = (function () {
         constructora_id: updated.constructora_id || identity.constructora_id || null,
         project: updated,
         verify: verify,
+        previousSlug: previousSlug,
+        mediaMigration: result && result.mediaMigration ? result.mediaMigration : null,
         url: typeof PlatformBuilderBridge !== 'undefined'
           ? PlatformBuilderBridge.showroomUrl(verify.slug || updated.slug)
           : publicUrlDisplay(verify.slug || updated.slug)
@@ -670,6 +675,23 @@ var BuilderConfig = (function () {
 
       if (typeof adapter.onSaved === 'function') {
         await adapter.onSaved(payload);
+      }
+
+      if (
+        previousSlug &&
+        payload.slug &&
+        previousSlug !== payload.slug &&
+        typeof QuotationEditor !== 'undefined' &&
+        QuotationEditor.applyProjectIdentity
+      ) {
+        try {
+          QuotationEditor.applyProjectIdentity({
+            id: payload.id,
+            slug: payload.slug,
+            name: payload.nombre,
+            previousSlug: previousSlug
+          });
+        } catch (eApplyId) {}
       }
 
       try {
@@ -706,7 +728,12 @@ var BuilderConfig = (function () {
 
       if (statusEl) statusEl.textContent = 'Identidad guardada.';
       if (!silent && typeof AdminNotify !== 'undefined' && AdminNotify.success) {
-        AdminNotify.success('Identidad guardada en la base: /' + payload.slug);
+        var slugMsg = 'Identidad guardada: /' + payload.slug;
+        if (previousSlug && previousSlug !== payload.slug) {
+          slugMsg = 'Slug actualizado: /' + previousSlug + ' → /' + payload.slug +
+            ' (medios migrados, URL anterior desvinculada)';
+        }
+        AdminNotify.success(slugMsg);
       }
 
       if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {

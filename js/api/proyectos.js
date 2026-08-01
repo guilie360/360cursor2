@@ -233,6 +233,89 @@ var ProyectosApi = (function () {
    * Patch only identity fields (nombre + slug) by UUID, then confirm with SELECT.
    * Returns { project, verify }.
    */
+  /**
+   * Rewrite projects/{oldSlug}/… → projects/{newSlug}/… inside config + archivos.
+   * Used when Bunny rename already ran, or as a DB-only fallback.
+   */
+  async function rewriteSlugMediaPaths(proyectoId, oldSlug, newSlug) {
+    if (!proyectoId) throw new Error('Falta el ID del proyecto.');
+    var from = normalizeIdentitySlug(oldSlug);
+    var to = normalizeIdentitySlug(newSlug);
+    if (!from || !to || from === to) {
+      return { archivosUpdated: 0, configUpdated: false };
+    }
+    var oldPrefix = 'projects/' + from + '/';
+    var newPrefix = 'projects/' + to + '/';
+    var client = dbClient();
+    var archivosUpdated = 0;
+    var configUpdated = false;
+
+    var files = await client
+      .from('archivos')
+      .select('id, storage_path, url')
+      .eq('proyecto_id', proyectoId)
+      .like('storage_path', oldPrefix + '%');
+    if (files.error) throw mapDbError(files.error, 'Error reescribiendo rutas de archivos');
+    var rows = files.data || [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var oldPath = String(row.storage_path || '');
+      if (oldPath.indexOf(oldPrefix) !== 0) continue;
+      var newPath = newPrefix + oldPath.slice(oldPrefix.length);
+      var newUrl = row.url ? String(row.url).split(oldPrefix).join(newPrefix) : row.url;
+      var upd = await client
+        .from('archivos')
+        .update({ storage_path: newPath, url: newUrl })
+        .eq('id', row.id);
+      if (!upd.error) archivosUpdated++;
+    }
+
+    var cfg = await client
+      .from('proyecto_config')
+      .select('hero_quotation, logo_url, imagen_hero_url, video_hero_url, og_image')
+      .eq('proyecto_id', proyectoId)
+      .maybeSingle();
+    if (cfg.error) throw mapDbError(cfg.error, 'Error leyendo config para reescritura de slug');
+    if (cfg.data) {
+      function rewriteValue(value) {
+        if (value == null) return { next: value, changed: false };
+        if (typeof value === 'string') {
+          var nextStr = value.split(oldPrefix).join(newPrefix);
+          return { next: nextStr, changed: nextStr !== value };
+        }
+        try {
+          var raw = JSON.stringify(value);
+          var nextRaw = raw.split(oldPrefix).join(newPrefix);
+          if (nextRaw === raw) return { next: value, changed: false };
+          return { next: JSON.parse(nextRaw), changed: true };
+        } catch (_e) {
+          return { next: value, changed: false };
+        }
+      }
+      var patch = {};
+      var hq = rewriteValue(cfg.data.hero_quotation);
+      if (hq.changed) patch.hero_quotation = hq.next;
+      var logo = rewriteValue(cfg.data.logo_url);
+      if (logo.changed) patch.logo_url = logo.next;
+      var img = rewriteValue(cfg.data.imagen_hero_url);
+      if (img.changed) patch.imagen_hero_url = img.next;
+      var vid = rewriteValue(cfg.data.video_hero_url);
+      if (vid.changed) patch.video_hero_url = vid.next;
+      var og = rewriteValue(cfg.data.og_image);
+      if (og.changed) patch.og_image = og.next;
+      if (Object.keys(patch).length) {
+        var updCfg = await client
+          .from('proyecto_config')
+          .update(patch)
+          .eq('proyecto_id', proyectoId);
+        if (updCfg.error) throw mapDbError(updCfg.error, 'Error reescribiendo config de slug');
+        configUpdated = true;
+      }
+    }
+
+    return { archivosUpdated: archivosUpdated, configUpdated: configUpdated };
+  }
+
   async function updateIdentity(id, payload) {
     if (!id) throw new Error('Falta el ID del showroom.');
     var nombre = AdminUI.normalizeOptionalText(payload && payload.nombre);
@@ -249,6 +332,37 @@ var ProyectosApi = (function () {
     }
 
     var client = dbClient();
+    var before = await client
+      .from('proyectos')
+      .select('id, nombre, slug')
+      .eq('id', id)
+      .maybeSingle();
+    if (before.error) throw mapDbError(before.error, 'Error leyendo identidad actual');
+    if (!before.data) {
+      throw new Error('No se pudo guardar la identidad (ID no encontrado o sin permisos).');
+    }
+    var previousSlug = normalizeIdentitySlug(before.data.slug);
+    var mediaMigration = null;
+    var bunnyMoved = false;
+
+    /* Move Bunny tree BEFORE changing the public slug so old paths still resolve. */
+    if (previousSlug && previousSlug !== slug) {
+      try {
+        if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.renameShowroom) {
+          mediaMigration = await BunnyMediaApi.renameShowroom(id, previousSlug, slug);
+          bunnyMoved = !!(mediaMigration && mediaMigration.ok !== false);
+        }
+      } catch (eBunny) {
+        console.warn('[ProyectosApi] renameShowroom failed — keeping media paths on old slug', eBunny);
+        mediaMigration = {
+          ok: false,
+          previousSlug: previousSlug,
+          nextSlug: slug,
+          error: (eBunny && eBunny.message) || String(eBunny)
+        };
+      }
+    }
+
     var result = await client
       .from('proyectos')
       .update({ nombre: nombre, slug: slug })
@@ -279,9 +393,24 @@ var ProyectosApi = (function () {
       );
     }
 
+    /* Only rewrite DB URLs after Bunny confirmed the move (avoid broken CDN links). */
+    if (bunnyMoved && previousSlug && previousSlug !== slug) {
+      try {
+        var rewritten = await rewriteSlugMediaPaths(id, previousSlug, slug);
+        mediaMigration = Object.assign({}, mediaMigration || {}, rewritten, {
+          previousSlug: previousSlug,
+          nextSlug: slug
+        });
+      } catch (eRewrite) {
+        console.warn('[ProyectosApi] rewriteSlugMediaPaths failed', eRewrite);
+      }
+    }
+
     return {
       project: result.data,
-      verify: verify.data
+      verify: verify.data,
+      previousSlug: previousSlug,
+      mediaMigration: mediaMigration
     };
   }
 
@@ -799,6 +928,21 @@ var ProyectosApi = (function () {
       image_url: heroText(payload.image_url) || null
     };
 
+    /* Preserve quotation cinematic / opt-in cover flags when present. */
+    if (hc.eyebrow != null) out.heroContent.eyebrow = heroText(hc.eyebrow);
+    if (hc.kicker != null) out.heroContent.kicker = heroText(hc.kicker);
+    if (hc.variant != null) out.heroContent.variant = heroText(hc.variant);
+    if (hc.exploreAction != null) out.heroContent.exploreAction = heroText(hc.exploreAction);
+    if (hc.startAction != null) out.heroContent.startAction = heroText(hc.startAction);
+    if (hc.startTargetSceneId != null) {
+      out.heroContent.startTargetSceneId = heroText(hc.startTargetSceneId);
+    }
+    if (hc.showExplore != null) out.heroContent.showExplore = !!hc.showExplore;
+    if (hc.showStart != null) out.heroContent.showStart = !!hc.showStart;
+    if (hc.showBack != null) out.heroContent.showBack = !!hc.showBack;
+    if (hc.showAssistant != null) out.heroContent.showAssistant = !!hc.showAssistant;
+    if (hc.showLogo != null) out.heroContent.showLogo = !!hc.showLogo;
+
     var canvas = sanitizeCanvasDocument(payload.canvas);
     if (canvas) out.canvas = canvas;
     else if (payload.canvas === null) out.canvas = { version: 1, activeSceneId: null, scenes: [] };
@@ -880,6 +1024,7 @@ var ProyectosApi = (function () {
     create: create,
     update: update,
     updateIdentity: updateIdentity,
+    rewriteSlugMediaPaths: rewriteSlugMediaPaths,
     updateShareMeta: updateShareMeta,
     fetchShareMeta: fetchShareMeta,
     fetchHeroQuotation: fetchHeroQuotation,

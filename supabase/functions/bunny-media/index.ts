@@ -32,6 +32,7 @@
  *   POST JSON: { action: "list_folder", project_id, showroom_slug, path }
  *   POST JSON: { action: "delete_folder", project_id, showroom_slug, path, recursive }
  *   POST JSON: { action: "rename_folder", project_id, showroom_slug, from, to }
+ *   POST JSON: { action: "rename_showroom", project_id, old_slug, new_slug }
  *   POST JSON: { action: "sync_all_showrooms" }                       → full DB→Bunny mirror (auth only, no body)
  *   GET  /?project_id=...   : list bunny assets for project (DB-backed)
  *   GET  /?probe=bunny      : Bunny connectivity check
@@ -1198,6 +1199,167 @@ async function handleRenameFolder(req: Request) {
 }
 
 /**
+ * Rename the whole showroom storage root:
+ *   projects/{old_slug}/… → projects/{new_slug}/…
+ * Updates archivos + proyecto_config URL/path fields so nothing stays orphaned
+ * under the previous public slug.
+ */
+async function handleRenameShowroom(req: Request) {
+  // deno-lint-ignore no-explicit-any
+  const body: any = await req.json().catch(() => ({}));
+  const ctxBody = Object.assign({}, body, {
+    showroom_slug: String(body.old_slug || body.showroom_slug || "").trim(),
+  });
+  const ctx = await resolveFolderOpContext(req, ctxBody);
+  if (ctx.errorResponse) return ctx.errorResponse;
+  const { accessKey, zone, hostname, projectId } = ctx;
+
+  const oldSlug = sanitizeSlug(String(body.old_slug || ""));
+  const newSlug = sanitizeSlug(String(body.new_slug || ""));
+  if (!oldSlug || !newSlug) {
+    return json(400, {
+      ok: false,
+      error: "old_slug y new_slug requeridos",
+      code: "INVALID_SLUG",
+    });
+  }
+  if (oldSlug === newSlug) {
+    return json(200, {
+      ok: true,
+      old_slug: oldSlug,
+      new_slug: newSlug,
+      filesMoved: 0,
+      archivosUpdated: 0,
+      configUpdated: false,
+    });
+  }
+
+  const fromDir = `projects/${oldSlug}`;
+  const toDir = `projects/${newSlug}`;
+
+  let files: { relPath: string; size: number }[] = [];
+  try {
+    files = await bunnyWalkFiles(hostname!, zone!, accessKey!, fromDir);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    /* Empty / missing old tree is OK — still rewrite DB refs. */
+    if (!/404|not found|empty/i.test(message)) {
+      console.error("[bunny-media] rename_showroom list", message);
+    }
+    files = [];
+  }
+
+  let filesMoved = 0;
+  try {
+    for (const f of files) {
+      const srcPath = `${fromDir}/${f.relPath}`;
+      const dstPath = `${toDir}/${f.relPath}`;
+      const obj = await bunnyGetObject(hostname!, zone!, accessKey!, srcPath);
+      await bunnyPut(hostname!, zone!, accessKey!, dstPath, obj.bytes, obj.contentType);
+      filesMoved++;
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return json(502, {
+      ok: false,
+      error: message,
+      code: "RENAME_SHOWROOM_COPY_FAILED",
+      filesMoved,
+      totalFiles: files.length,
+    });
+  }
+
+  if (filesMoved > 0) {
+    try {
+      await bunnyDeleteDirRecursive(hostname!, zone!, accessKey!, fromDir);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error("[bunny-media] rename_showroom cleanup failed", message);
+    }
+  }
+
+  let archivosUpdated = 0;
+  let configUpdated = false;
+  const db = createServiceClient();
+  if (db) {
+    const oldPrefix = `${fromDir}/`;
+    const newPrefix = `${toDir}/`;
+    const q = await db
+      .from("archivos")
+      .select("id, storage_path, url")
+      .eq("proyecto_id", projectId)
+      .like("storage_path", `${oldPrefix}%`);
+    if (!q.error && q.data) {
+      for (const row of q.data) {
+        const oldPath = String(row.storage_path || "");
+        if (!oldPath.startsWith(oldPrefix)) continue;
+        const newStoragePath = newPrefix + oldPath.slice(oldPrefix.length);
+        const newUrl = row.url
+          ? String(row.url).split(oldPrefix).join(newPrefix)
+          : row.url;
+        const upd = await db
+          .from("archivos")
+          .update({ storage_path: newStoragePath, url: newUrl })
+          .eq("id", row.id);
+        if (!upd.error) archivosUpdated++;
+      }
+    }
+
+    const cfg = await db
+      .from("proyecto_config")
+      .select(
+        "proyecto_id, hero_quotation, logo_url, imagen_hero_url, video_hero_url, og_image",
+      )
+      .eq("proyecto_id", projectId)
+      .maybeSingle();
+    if (!cfg.error && cfg.data) {
+      const rewrite = (value: unknown) => {
+        if (value == null) return { next: value, changed: false };
+        if (typeof value === "string") {
+          const next = value.split(oldPrefix).join(newPrefix);
+          return { next, changed: next !== value };
+        }
+        try {
+          const raw = JSON.stringify(value);
+          const nextRaw = raw.split(oldPrefix).join(newPrefix);
+          if (nextRaw === raw) return { next: value, changed: false };
+          return { next: JSON.parse(nextRaw), changed: true };
+        } catch (_e) {
+          return { next: value, changed: false };
+        }
+      };
+      const patch: Record<string, unknown> = {};
+      const hq = rewrite(cfg.data.hero_quotation);
+      if (hq.changed) patch.hero_quotation = hq.next;
+      const logo = rewrite(cfg.data.logo_url);
+      if (logo.changed) patch.logo_url = logo.next;
+      const img = rewrite(cfg.data.imagen_hero_url);
+      if (img.changed) patch.imagen_hero_url = img.next;
+      const vid = rewrite(cfg.data.video_hero_url);
+      if (vid.changed) patch.video_hero_url = vid.next;
+      const og = rewrite(cfg.data.og_image);
+      if (og.changed) patch.og_image = og.next;
+      if (Object.keys(patch).length) {
+        const updCfg = await db
+          .from("proyecto_config")
+          .update(patch)
+          .eq("proyecto_id", projectId);
+        configUpdated = !updCfg.error;
+      }
+    }
+  }
+
+  return json(200, {
+    ok: true,
+    old_slug: oldSlug,
+    new_slug: newSlug,
+    filesMoved,
+    archivosUpdated,
+    configUpdated,
+  });
+}
+
+/**
  * V5.9.87 / V5.9.88 — sync_all_showrooms
  * Full DB→Bunny mirror: reads every non-template showroom from `proyectos`
  * (no hardcoded names), ensures its Bunny folder skeleton (hero + media +
@@ -1551,13 +1713,16 @@ Deno.serve(async (req: Request) => {
       if (peek && peek.action === "rename_folder") {
         return await handleRenameFolder(req);
       }
+      if (peek && peek.action === "rename_showroom") {
+        return await handleRenameShowroom(req);
+      }
       if (peek && peek.action === "sync_all_showrooms") {
         return await handleSyncAllShowrooms(req);
       }
       return json(400, {
         ok: false,
         error:
-          'Usa multipart upload o JSON { action: "delete"|"probe"|"ensure_folders"|"list_folder"|"delete_folder"|"rename_folder"|"sync_all_showrooms", ... }',
+          'Usa multipart upload o JSON { action: "delete"|"probe"|"ensure_folders"|"list_folder"|"delete_folder"|"rename_folder"|"rename_showroom"|"sync_all_showrooms", ... }',
         contentType: ct || null,
       });
     }

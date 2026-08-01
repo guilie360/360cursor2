@@ -596,6 +596,8 @@ var QuotationEditor = (function () {
   var loadPromise = null;
   /** True after first successful hydrate/draft restore for loadedProjectId. */
   var documentReady = false;
+  /** Bumps on every project switch / detach — aborts in-flight load/commit. */
+  var sessionEpoch = 0;
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
 
@@ -3994,9 +3996,60 @@ var QuotationEditor = (function () {
   }
 
   /** Detach editor chrome without resetting the document SSOT. */
+  function resetEditorSession(reason) {
+    sessionEpoch += 1;
+    try { destroyBuilderRuntimeScene(); } catch (eDes) { /* ignore */ }
+    state = createEmptyState();
+    documentReady = false;
+    loadPromise = null;
+    bunnyStructureReady = false;
+    try {
+      console.log('[QuotationEditor] resetEditorSession', reason || '', 'epoch', sessionEpoch);
+    } catch (eLog) { /* ignore */ }
+  }
+
+  function rewriteStateSlugPaths(oldSlug, newSlug) {
+    var from = String(oldSlug || '').trim().toLowerCase();
+    var to = String(newSlug || '').trim().toLowerCase();
+    if (!from || !to || from === to) return;
+    var oldPrefix = 'projects/' + from + '/';
+    var newPrefix = 'projects/' + to + '/';
+    try {
+      var raw = JSON.stringify(state);
+      var next = raw.split(oldPrefix).join(newPrefix);
+      if (next === raw) return;
+      var parsed = JSON.parse(next);
+      if (parsed && typeof parsed === 'object') {
+        state = parsed;
+      }
+    } catch (eRw) {
+      console.warn('[QuotationEditor] rewriteStateSlugPaths failed', eRw);
+    }
+  }
+
+  function applyProjectIdentity(identity) {
+    identity = identity || {};
+    var id = String(identity.id || identity.projectId || '').trim();
+    var slug = String(identity.slug || '').trim();
+    var name = String(identity.name || identity.nombre || '').trim();
+    var previousSlug = String(identity.previousSlug || '').trim();
+    if (!editorProjectCtx || typeof editorProjectCtx !== 'object') {
+      editorProjectCtx = { id: '', slug: '', name: '' };
+    }
+    if (id) editorProjectCtx.id = id;
+    if (slug) editorProjectCtx.slug = slug;
+    if (name) editorProjectCtx.name = name;
+    if (id && loadedProjectId && String(loadedProjectId) === id && previousSlug && slug) {
+      rewriteStateSlugPaths(previousSlug, slug);
+      try { persistDraft(); } catch (eDraft) { /* ignore */ }
+    }
+  }
+
   function detachUi() {
-    destroyBuilderRuntimeScene();
-    persistDraft();
+    try { persistDraft(); } catch (eDraft) { /* ignore */ }
+    resetEditorSession('detach');
+    loadedProjectId = null;
+    editorProjectCtx = { id: '', slug: '', name: '' };
     rootEl = null;
     var rightBody = document.getElementById('quotationRightBody');
     if (rightBody) rightBody.innerHTML = '';
@@ -6020,18 +6073,34 @@ var QuotationEditor = (function () {
       return loadPromise;
     }
 
-    /* Live document already bound — workspace remounts must not rebuild it. */
+    /* Same project already hydrated — remounts reuse the live document. */
     if (documentReady && loadedProjectId === id) {
       return loadPromise || Promise.resolve(null);
     }
 
+    /* Same project still fetching — share the in-flight promise. */
     if (loadPromise && loadedProjectId === id && !documentReady) {
       return loadPromise;
     }
 
+    /* Switching projects: flush previous draft, drop in-memory canvas. */
+    if (loadedProjectId && loadedProjectId !== id) {
+      try { persistDraft(); } catch (eFlush) { /* ignore */ }
+      resetEditorSession('switch:' + loadedProjectId + '→' + id);
+    } else if (!loadedProjectId) {
+      resetEditorSession('open:' + id);
+    }
+
+    var epoch = sessionEpoch;
     loadedProjectId = id;
     bunnyStructureReady = false;
-    if (!id || typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
+    if (!editorProjectCtx || typeof editorProjectCtx !== 'object') {
+      editorProjectCtx = { id: id, slug: '', name: '' };
+    } else {
+      editorProjectCtx.id = id;
+    }
+
+    if (typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
       if (restoreDraft(id)) {
         documentReady = true;
         persistDraft();
@@ -6046,7 +6115,10 @@ var QuotationEditor = (function () {
 
     loadPromise = ProyectosApi.fetchHeroQuotation(id)
       .then(function (hq) {
-        if (documentReady && loadedProjectId === id) return hq;
+        if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) {
+          console.warn('[QuotationEditor] ignore stale load result', id);
+          return null;
+        }
         console.log('[QE-LIB V7.2.37] 8-load:fetchHeroQuotation.library BEFORE hydrate');
         console.log(JSON.stringify(hq && hq.library, null, 2));
         qeLibAudit('8-load:before-hydrate');
@@ -6058,6 +6130,7 @@ var QuotationEditor = (function () {
         qeLibAudit('9-load:after-hydrateFromHeroQuotation');
         console.log('[QE-LIB V7.2.37] 9-load:state.content.length after hydrate',
           state.content ? state.content.length : 0);
+        if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
@@ -6069,12 +6142,13 @@ var QuotationEditor = (function () {
           .then(function () { return hq; });
       })
       .catch(function () {
-        if (documentReady && loadedProjectId === id) return null;
+        if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         console.log('[QE-LIB V7.2.37] 8-load:fetch FAILED → draft/empty');
         if (!restoreDraft(id)) {
           hydrateFromHeroQuotation(null, editorProjectCtx);
         }
         qeLibAudit('9-load:after-catch-hydrate');
+        if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
         persistDraft();
@@ -6098,6 +6172,14 @@ var QuotationEditor = (function () {
       (editorProjectCtx && editorProjectCtx.id) ||
       loadedProjectId;
     if (!projectId) return null;
+    projectId = String(projectId).trim();
+    var epoch = sessionEpoch;
+
+    if (loadedProjectId && String(loadedProjectId) !== projectId) {
+      console.warn('[QuotationEditor] abort commit: target', projectId,
+        '!= loaded', loadedProjectId);
+      return null;
+    }
 
     if (typeof ProyectosApi === 'undefined' || !ProyectosApi.updateHeroQuotation) {
       throw new Error('API de cotización no disponible.');
@@ -6110,6 +6192,10 @@ var QuotationEditor = (function () {
 
     /* Ensure every library File is in Storage before serializing. */
     await ensureLibraryUploaded();
+    if (epoch !== sessionEpoch || (loadedProjectId && String(loadedProjectId) !== projectId)) {
+      console.warn('[QuotationEditor] abort commit after upload (project switched)');
+      return null;
+    }
     qeLibAudit('3-commit:after-ensureLibraryUploaded');
 
     var doc = serializeDocument();
@@ -6175,7 +6261,16 @@ var QuotationEditor = (function () {
     console.log('[QE-LIB V7.2.74] 5-commit:payload.library before updateHeroQuotation');
     console.log(JSON.stringify(payload.library, null, 2));
 
+    if (epoch !== sessionEpoch || (loadedProjectId && String(loadedProjectId) !== projectId)) {
+      console.warn('[QuotationEditor] abort commit before write (project switched)');
+      return null;
+    }
+
     var saved = await ProyectosApi.updateHeroQuotation(projectId, payload);
+    if (epoch !== sessionEpoch || (loadedProjectId && String(loadedProjectId) !== projectId)) {
+      console.warn('[QuotationEditor] discard commit result after switch', projectId);
+      return null;
+    }
     console.log('[QE-LIB V7.2.37] 6-commit:updateHeroQuotation returned library');
     console.log(JSON.stringify(saved && saved.library, null, 2));
 
@@ -6235,6 +6330,7 @@ var QuotationEditor = (function () {
     load: load,
     commit: commit,
     detachUi: detachUi,
+    applyProjectIdentity: applyProjectIdentity,
     serializeDocument: serializeDocument,
     prepareLivePreview: prepareLivePreview,
     syncCoverFromHeroPayload: syncCoverFromHeroPayload,
@@ -6243,11 +6339,9 @@ var QuotationEditor = (function () {
     isCanvasPreviewMode: isCanvasPreviewMode,
     _getState: function () { return state; },
     _resetDemo: function () {
-      destroyExperienciaOverlay();
-      state = createEmptyState();
+      resetEditorSession('demo');
       loadedProjectId = null;
-      loadPromise = null;
-      documentReady = false;
+      editorProjectCtx = { id: '', slug: '', name: '' };
       clearDraft();
     }
   };

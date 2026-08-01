@@ -317,6 +317,35 @@ var BunnyMediaApi = (function () {
     });
   }
 
+  /** Move projects/{oldSlug}/… → projects/{newSlug}/… and rewrite DB paths. */
+  async function renameShowroom(projectId, oldSlug, newSlug) {
+    var from = slugifyLocal(oldSlug);
+    var to = slugifyLocal(newSlug);
+    if (!projectId || !from || !to) {
+      throw new Error('project_id, old_slug y new_slug son requeridos');
+    }
+    if (from === to) {
+      return {
+        ok: true,
+        old_slug: from,
+        new_slug: to,
+        filesMoved: 0,
+        archivosUpdated: 0,
+        configUpdated: false
+      };
+    }
+    logUpload('✔ rename_showroom', from, '→', to);
+    var data = await invokeJson({
+      action: 'rename_showroom',
+      project_id: projectId,
+      showroom_slug: from,
+      old_slug: from,
+      new_slug: to
+    });
+    logUpload('✔ rename_showroom done', data);
+    return data;
+  }
+
   async function syncAllShowrooms() {
     logUpload('✔ sync_all_showrooms…');
     var data = await invokeJson({ action: 'sync_all_showrooms' });
@@ -581,6 +610,7 @@ var BunnyMediaApi = (function () {
     listFolder: listFolder,
     deleteFolder: deleteFolder,
     renameFolder: renameFolder,
+    renameShowroom: renameShowroom,
     syncStructure: syncStructure,
     reconcileStructure: reconcileStructure,
     ensureNodeStructure: ensureNodeStructure,
