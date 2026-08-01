@@ -480,24 +480,41 @@ var QuotationGuides = (function () {
 
   /* ── Context menu ─────────────────────────────────────── */
 
-  function isEmptyCanvasTarget(t) {
-    if (!t || !t.closest) return false;
-    if (t.closest('.qe-guide-line')) return false;
-    if (t.closest('.builder-exp-btn, .builder-exp-hotspot, [data-exp-ix], [data-interaction-id]')) {
-      return false;
-    }
-    if (t.closest('[data-qe-ruler], [data-qe-ruler-corner]')) return false;
+  function isBlockedContextTarget(t) {
+    if (!t || !t.closest) return true;
     return !!(
+      t.closest('.qe-guide-line') ||
+      t.closest('.builder-exp-btn, .builder-exp-hotspot, [data-exp-ix], [data-interaction-id]') ||
+      t.closest('[data-qe-ruler], [data-qe-ruler-corner]') ||
+      t.closest('.qe-dock, [data-qe-dock]') ||
+      t.closest('[data-qe-viewport-bar], .qe-canvas-tool') ||
+      t.closest('.qe-scenes, [data-qe-scenes]') ||
+      t.closest('.qe-layers, .quotation-props') ||
+      t.closest('.quotation-panel-float') ||
+      t.closest('button, a, input, textarea, select, label, [role="button"], [role="menuitem"]')
+    );
+  }
+
+  function isCanvasContextTarget(t) {
+    if (!t || !t.closest) return false;
+    if (isBlockedContextTarget(t)) return false;
+    /* Canvas + gutter around the design (fit/frame/stack), not only the lienzo. */
+    return !!(
+      t.closest('[data-qe-canvas-fit]') ||
+      t.closest('[data-qe-canvas-fit-frame]') ||
+      t.closest('[data-qe-canvas-fit-stack]') ||
       t.closest('[data-qe-edit-layer]') ||
       t.closest('[data-qe-guide-layer]') ||
       t.closest('[data-hero-canvas]') ||
-      t.closest('[data-qe-viewport-window]')
+      t.closest('[data-qe-viewport-window]') ||
+      t.closest('[data-qe-guides-chrome]')
     );
   }
 
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     var pct = clientToDesignPct(clientX, clientY);
+    var canPlace = !!(pct && pct.inBounds);
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -515,12 +532,12 @@ var QuotationGuides = (function () {
           id: 'guide-h',
           label: 'Crear guía horizontal',
           separatorBefore: true,
-          disabled: !pct
+          disabled: !canPlace
         },
         {
           id: 'guide-v',
           label: 'Crear guía vertical',
-          disabled: !pct
+          disabled: !canPlace
         }
       ],
       onSelect: function (id) {
@@ -532,7 +549,7 @@ var QuotationGuides = (function () {
           setGuidesVisible(!guidesVisible);
           return;
         }
-        if (!pct) return;
+        if (!canPlace) return;
         if (id === 'guide-h') addGuide('horizontal', pct.y);
         if (id === 'guide-v') addGuide('vertical', pct.x);
       }
@@ -541,17 +558,17 @@ var QuotationGuides = (function () {
 
   function onContextMenu(e) {
     if (isPreview()) return;
-    if (!isEmptyCanvasTarget(e.target)) return;
+    if (!isCanvasContextTarget(e.target)) return;
     e.preventDefault();
     e.stopPropagation();
     openCanvasMenu(e.clientX, e.clientY);
   }
 
   function bindContextMenu() {
-    var stage = stageEl();
-    if (!stage || stage.dataset.qeGuideCtx === '1') return;
-    stage.dataset.qeGuideCtx = '1';
-    stage.addEventListener('contextmenu', onContextMenu);
+    var host = (rootEl && rootEl.querySelector('[data-qe-canvas-fit]')) || stageEl();
+    if (!host || host.dataset.qeGuideCtx === '1') return;
+    host.dataset.qeGuideCtx = '1';
+    host.addEventListener('contextmenu', onContextMenu);
   }
 
   /* ── Public API ───────────────────────────────────────── */
