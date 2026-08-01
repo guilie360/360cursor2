@@ -70,11 +70,15 @@ var ProjectCover = (function () {
       videoUrl: null,
       imageUrl: null,
       showExplore: true,
+      showStart: true,
       showBack: true,
       backLabel: 'Demos',
       showShare: true,
       showFullscreen: true,
-      showAssistant: true
+      showAssistant: true,
+      variant: '',
+      startAction: '',
+      startTargetSceneId: ''
     };
   }
 
@@ -330,8 +334,42 @@ var ProjectCover = (function () {
     }
 
     var start = q(root, '[data-pc-slot="start"]');
-    if (start) start.textContent = model.botonDerecho || 'Iniciar';
-    if (cover) cover.classList.toggle('is-start-only', model.showExplore === false);
+    var startSlot = start && start.closest
+      ? start.closest('.project-cover-slot--end')
+      : null;
+    if (start) {
+      if (model.showStart === false) {
+        start.hidden = true;
+        start.setAttribute('hidden', '');
+        start.setAttribute('aria-hidden', 'true');
+        start.style.display = 'none';
+        start.classList.add('is-pc-hidden');
+        if (startSlot) {
+          startSlot.hidden = true;
+          startSlot.setAttribute('hidden', '');
+          startSlot.style.display = 'none';
+          startSlot.classList.add('is-pc-hidden');
+        }
+      } else {
+        start.hidden = false;
+        start.removeAttribute('hidden');
+        start.setAttribute('aria-hidden', 'false');
+        start.style.removeProperty('display');
+        start.classList.remove('is-pc-hidden');
+        if (startSlot) {
+          startSlot.hidden = false;
+          startSlot.removeAttribute('hidden');
+          startSlot.style.removeProperty('display');
+          startSlot.classList.remove('is-pc-hidden');
+        }
+        start.textContent = model.botonDerecho || 'Iniciar';
+      }
+    }
+    if (cover) {
+      cover.classList.toggle('is-start-only', model.showExplore === false && model.showStart !== false);
+      cover.classList.toggle('is-cover-intro', model.variant === 'intro');
+      cover.classList.toggle('is-cover-project', model.variant === 'project');
+    }
 
     var back = q(root, '.project-back-btn');
     if (back) {
@@ -501,11 +539,15 @@ var ProjectCover = (function () {
     base.videoUrl = String(raw.videoUrl || '').trim() || null;
     base.imageUrl = String(raw.imageUrl || '').trim() || null;
     base.showExplore = raw.showExplore !== false;
+    base.showStart = raw.showStart !== false;
     base.showBack = raw.showBack !== false;
     base.backLabel = String(raw.backLabel || 'Demos').trim() || 'Demos';
     base.showShare = raw.showShare !== false;
     base.showFullscreen = raw.showFullscreen !== false;
     base.showAssistant = raw.showAssistant !== false;
+    base.variant = String(raw.variant || '').trim();
+    base.startAction = String(raw.startAction || '').trim();
+    base.startTargetSceneId = String(raw.startTargetSceneId || '').trim();
     return base;
   }
 

@@ -20,6 +20,57 @@ html, body.qr-host {
   display: none !important;
 }
 
+/*
+ * TEMP (TAROA / quotation mobile): hide unused bottom-right Product Assistant FAB.
+ * Restore when requested — delete this block.
+ */
+body.qr-host .pa-fab,
+.qr-cover-host .pa-fab {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Entrance + two-scene cover landing */
+.qr-cover-host .project-cover-content {
+  animation: qr-cover-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.qr-cover-host .project-cover-buttons {
+  animation: qr-cover-enter 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+@keyframes qr-cover-enter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.qr-cover-host .project-cover-tagline {
+  white-space: pre-line;
+}
+
+.qr-cover-host .project-cover.is-cover-intro .project-cover-logo {
+  width: min(120px, 28vw);
+  max-width: 120px;
+  margin-bottom: 28px;
+}
+.qr-cover-host .project-cover.is-cover-intro .project-cover-tagline {
+  margin: 0 auto 2.2rem;
+  max-width: 18rem;
+  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+  letter-spacing: 0.14em;
+  line-height: 1.65;
+  text-transform: none;
+  font-weight: 500;
+  opacity: 0.9;
+}
+.qr-cover-host .project-cover.is-cover-project .project-cover-name {
+  letter-spacing: 0.42em;
+  font-size: clamp(1.35rem, 4.5vw, 1.85rem);
+  margin-bottom: 1.8rem;
+}
+.qr-cover-host .project-cover.is-start-only .project-cover-buttons {
+  justify-content: center;
+}
+
 .qr-loading,
 .qr-error {
   display: grid;

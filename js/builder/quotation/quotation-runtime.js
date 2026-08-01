@@ -278,6 +278,12 @@ var QuotationRuntime = (function () {
     }
     if (action === 'close' || action === 'back') {
       leaveStage();
+      return;
+    }
+    if (action === 'open-proposals' || action === 'proposals') {
+      if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
+        QuotationProposalsModal.open();
+      }
     }
   }
 
@@ -594,8 +600,18 @@ var QuotationRuntime = (function () {
      */
     var paintAsMedia = sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle);
     if (!paintAsMedia && sceneHasCoverChrome(scene) && coverHostEl) {
-      leaveStage();
-      paintInteractionLayer(coverHostEl, scene, interactionsInteractive());
+      /* Cover→cover: remount ProjectCover so logo/title/CTAs match this scene. */
+      if (scene.coverModel && typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel) {
+        liveModel = ProjectCover.sanitizeModel(scene.coverModel);
+      }
+      if (heroCanvasApi && heroCanvasApi.destroy) {
+        try { heroCanvasApi.destroy(); } catch (eHc) { /* ignore */ }
+        heroCanvasApi = null;
+      }
+      if (stageEl) stageEl.innerHTML = '';
+      sceneMediaEl = null;
+      enterCoverMode();
+      remountCover(bundle);
       return;
     }
 
@@ -963,18 +979,36 @@ var QuotationRuntime = (function () {
         }
         enterStage();
       };
-      opts.onStart = function () { enterStage(); };
+      opts.onStart = function () {
+        var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
+        var cm = focus && focus.coverModel ? focus.coverModel : null;
+        var startAction = cm && cm.startAction ? String(cm.startAction).toLowerCase() : '';
+        if (startAction === 'open-proposals' || startAction === 'proposals') {
+          if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
+            QuotationProposalsModal.open();
+          }
+          return;
+        }
+        if (cm && cm.startTargetSceneId) {
+          goToScene(cm.startTargetSceneId);
+          return;
+        }
+        enterStage();
+      };
     }
 
     ProjectCover.mount(coverHostEl, model, opts);
     if (editorMode) postBoxes();
 
-    /* Visitor + Builder Preview: paint hero-scene interactions over the cover. */
+    /* Visitor + Builder Preview: paint interactions for the active cover scene. */
     if (!(editorMode && canvasMode)) {
-      var entry = entryScene(bundle || loaded);
-      if (entry) {
-        activeSceneId = String(entry.id);
-        paintInteractionLayer(coverHostEl, entry, interactionsInteractive());
+      var focusScene = sceneById(bundle || loaded, activeSceneId);
+      if (!focusScene || !sceneHasCoverChrome(focusScene)) {
+        focusScene = entryScene(bundle || loaded);
+      }
+      if (focusScene) {
+        activeSceneId = String(focusScene.id);
+        paintInteractionLayer(coverHostEl, focusScene, interactionsInteractive());
       }
     }
   }
