@@ -11,8 +11,8 @@
   <link rel="stylesheet" href="../../css/variables.css">
   <link rel="stylesheet" href="../../css/components.css?v=ws7259">
   <link rel="stylesheet" href="../../css/hall/hall.css">
-  <link rel="stylesheet" href="../../css/boxies/quotation-runtime.css?v=ws7278">
-  <link rel="stylesheet" href="../../css/boxies/quotation-proposals-page.css?v=ws7278">
+  <link rel="stylesheet" href="../../css/boxies/quotation-runtime.css?v=ws7279">
+  <link rel="stylesheet" href="../../css/boxies/quotation-proposals-page.css?v=ws7279">
 </head>
 <body class="qr-proposals-page">
   <div class="qpp" id="qrProposalsPage">
@@ -33,12 +33,15 @@
     <main class="qpp__main">
       <p class="qpp__eyebrow">Showroom digital</p>
       <h1 class="qpp__title">Selecciona una propuesta</h1>
-      <div class="units-grid units-viviendas-grid qpp__grid" data-qpp-grid></div>
+      <!-- Same chrome scope as QuotationProposalsModal (.units-viviendas-popup .unit-card) -->
+      <div class="units-popup units-viviendas-popup qpp__cards-host">
+        <div class="units-grid units-viviendas-grid qr-proposals-grid qpp__grid" data-qpp-grid></div>
+      </div>
       <p class="qpp__hint" data-qpp-hint></p>
     </main>
   </div>
 
-  <script src="../../js/builder/quotation/quotation-proposals-modal.js?v=ws7224"></script>
-  <script src="../../js/builder/quotation/quotation-proposals-page.js?v=ws7278"></script>
+  <script src="../../js/builder/quotation/quotation-proposals-modal.js?v=ws7279"></script>
+  <script src="../../js/builder/quotation/quotation-proposals-page.js?v=ws7279"></script>
 </body>
 </html>

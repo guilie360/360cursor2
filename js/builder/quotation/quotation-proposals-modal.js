@@ -89,8 +89,8 @@ var QuotationProposalsModal = (function () {
       cta.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        /* Temporary: confirm flow only — real navigation comes later. */
-        close();
+        /* Temporary: in modal close; on full page keep selection visible. */
+        if (document.getElementById(POPUP_ID) && openState) close();
       });
     }
 
