@@ -2980,7 +2980,7 @@ var QuotationEditor = (function () {
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
 
-    placeScenesFoldButton();
+    syncScenesFoldButton();
 
     if (scenesHost) {
       scenesHost.classList.toggle('is-collapsed', !!state.scenesCollapsed);
@@ -3002,15 +3002,10 @@ var QuotationEditor = (function () {
     var scenesMb = (scenesMeasureEl && !state.scenesCollapsed)
       ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0) : 0;
     /*
-     * Top clearance above the device frame:
-     * - always room for viewport bar
-     * - when scenes collapsed, also room for fold tab + gap (never overlap responsive)
+     * Top clearance above the device frame for the viewport bar only.
+     * Collapsed fold sits under the app header — not above the responsive.
      */
-    var vpBarH = 30;
-    var topChrome =
-      vpBarH + 8 +
-      (state.scenesCollapsed ? (STAGE_SCENES_FOLD_H + STAGE_SCENES_FOLD_GAP) : 0);
-    var TOOL_PAD = Math.max(44, topChrome);
+    var TOOL_PAD = 44;
     var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
     var slotH = Math.max(1, availH - chromeH);
@@ -3106,28 +3101,14 @@ var QuotationEditor = (function () {
   var STAGE_SCENES_FOLD_H = 16;
   var STAGE_SCENES_FOLD_GAP = 12;
 
-  /**
-   * Expanded: fold hangs under the scenes strip.
-   * Collapsed: fold sits in chrome-top above responsive, with a fixed gap (never touch).
-   */
-  function placeScenesFoldButton() {
+  function syncScenesFoldButton() {
     if (!rootEl) return;
     var fold = rootEl.querySelector('[data-qe-scenes-fold]');
     var host = rootEl.querySelector('[data-qe-scenes-host]');
-    var chrome = rootEl.querySelector('[data-qe-chrome-top]');
-    if (!fold || !host || !chrome) return;
-    if (state.scenesCollapsed) {
-      if (fold.parentNode !== chrome) {
-        chrome.insertBefore(fold, chrome.firstChild);
-      }
-    } else if (fold.parentNode !== host) {
+    /* Fold always lives on the scenes host — never stacked on the responsive bar. */
+    if (fold && host && fold.parentNode !== host) {
       host.appendChild(fold);
     }
-  }
-
-  function syncScenesFoldButton() {
-    if (!rootEl) return;
-    placeScenesFoldButton();
     var btn = rootEl.querySelector('[data-qe-scenes-fold]');
     if (!btn) return;
     var collapsed = !!state.scenesCollapsed;
