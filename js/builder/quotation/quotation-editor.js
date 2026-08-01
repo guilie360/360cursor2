@@ -3299,6 +3299,10 @@ var QuotationEditor = (function () {
     syncScenesFoldButton();
     try { fitStageWorkspace(); } catch (eFit) {}
     try { window.dispatchEvent(new Event('resize')); } catch (eR) {}
+    if (typeof QuotationBuilderView !== 'undefined' &&
+        typeof QuotationBuilderView.syncChromeFoldButton === 'function') {
+      try { QuotationBuilderView.syncChromeFoldButton(); } catch (eFold) { /* ignore */ }
+    }
   }
 
   /** Design pixels == official 1920×1080 lienzo; viewport window is separate. */
@@ -8074,6 +8078,8 @@ var QuotationEditor = (function () {
     setCanvasPreviewMode: setCanvasPreviewMode,
     toggleCanvasPreviewMode: toggleCanvasPreviewMode,
     isCanvasPreviewMode: isCanvasPreviewMode,
+    applyScenesCollapsed: applyScenesCollapsed,
+    isScenesCollapsed: function () { return !!state.scenesCollapsed; },
     _getState: function () { return state; },
     _resetDemo: function () {
       resetEditorSession('demo');

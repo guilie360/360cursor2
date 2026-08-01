@@ -158,6 +158,54 @@ var QuotationBuilderView = (function () {
     btn.innerHTML = iconHtml('chevron-right');
   }
 
+  var chromeFoldBatch = false;
+
+  function scenesCollapsedNow() {
+    return typeof QuotationEditor !== 'undefined' &&
+      typeof QuotationEditor.isScenesCollapsed === 'function' &&
+      !!QuotationEditor.isScenesCollapsed();
+  }
+
+  function isChromeCollapsed() {
+    return !!(leftCollapsed && rightCollapsed && scenesCollapsedNow());
+  }
+
+  function syncChromeFoldButton() {
+    var btn = document.getElementById('builderChromeFoldBtn');
+    if (!btn) return;
+    var onEditor = currentStep === 'editor' && !!rootEl;
+    btn.hidden = !onEditor;
+    if (!onEditor) return;
+    var collapsed = isChromeCollapsed();
+    btn.classList.toggle('is-active', collapsed);
+    btn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+    btn.setAttribute(
+      'aria-label',
+      collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas'
+    );
+    btn.setAttribute(
+      'data-tooltip',
+      collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas'
+    );
+  }
+
+  function setChromeCollapsed(on) {
+    var next = !!on;
+    chromeFoldBatch = true;
+    applyLeftCollapsed(next);
+    applyRightCollapsed(next);
+    if (typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.applyScenesCollapsed === 'function') {
+      QuotationEditor.applyScenesCollapsed(next);
+    }
+    chromeFoldBatch = false;
+    syncChromeFoldButton();
+  }
+
+  function toggleChromeCollapsed() {
+    setChromeCollapsed(!isChromeCollapsed());
+  }
+
   function applyLeftCollapsed(collapsed) {
     leftCollapsed = !!collapsed;
     if (!rootEl) return;
@@ -175,6 +223,7 @@ var QuotationBuilderView = (function () {
     try {
       window.dispatchEvent(new Event('resize'));
     } catch (eR) {}
+    if (!chromeFoldBatch) syncChromeFoldButton();
   }
 
   function applyRightCollapsed(collapsed) {
@@ -194,6 +243,7 @@ var QuotationBuilderView = (function () {
     try {
       window.dispatchEvent(new Event('resize'));
     } catch (eR) {}
+    if (!chromeFoldBatch) syncChromeFoldButton();
   }
 
   function setPropsPanelVisible(on) {
@@ -510,6 +560,7 @@ var QuotationBuilderView = (function () {
       bindSectionCheck(panel);
     }
     refreshSidebar();
+    syncChromeFoldButton();
   }
 
   function showStepLoader() {
@@ -588,6 +639,7 @@ var QuotationBuilderView = (function () {
     applyRightCollapsed(rightCollapsed);
     setRecursosVisible(currentStep === 'editor');
     setPropsPanelVisible(currentStep === 'editor');
+    syncChromeFoldButton();
   }
 
   function deactivateSharedChrome() {
@@ -751,6 +803,8 @@ var QuotationBuilderView = (function () {
       BoxiesShell.clearProjectContext();
     }
     rootEl = null;
+    currentStep = '';
+    syncChromeFoldButton();
     sectionChecks = {};
     projectCtx = {
       id: '', name: '', slug: '', constructora_id: null,
@@ -764,7 +818,12 @@ var QuotationBuilderView = (function () {
     onLeave: onLeave,
     goToStep: goToStep,
     refreshSidebar: refreshSidebar,
+    applyLeftCollapsed: applyLeftCollapsed,
     applyRightCollapsed: applyRightCollapsed,
+    setChromeCollapsed: setChromeCollapsed,
+    toggleChromeCollapsed: toggleChromeCollapsed,
+    syncChromeFoldButton: syncChromeFoldButton,
+    isChromeCollapsed: isChromeCollapsed,
     setPropsPanelVisible: setPropsPanelVisible,
     setRecursosVisible: setRecursosVisible,
     expandPropsPanel: function () { applyRightCollapsed(false); },

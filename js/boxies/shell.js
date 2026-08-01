@@ -97,6 +97,9 @@ var BoxiesShell = (function () {
           '</div>' +
           brandTitleHtml() +
           '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
+            '<button type="button" class="boxies-header__fs boxies-header__chrome-fold" id="builderChromeFoldBtn" hidden aria-label="Ocultar paneles" data-tooltip="Ocultar paneles" aria-pressed="false">' +
+              iconHtml('panels-top-left') +
+            '</button>' +
             '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter">' +
               iconHtml('maximize') +
             '</button>' +
@@ -161,10 +164,25 @@ var BoxiesShell = (function () {
     }
   }
 
+  function bindChromeFold() {
+    var btn = document.getElementById('builderChromeFoldBtn');
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof QuotationBuilderView !== 'undefined' &&
+          typeof QuotationBuilderView.toggleChromeCollapsed === 'function') {
+        QuotationBuilderView.toggleChromeCollapsed();
+      }
+    });
+  }
+
   function bindFullscreen() {
     if (fullscreenBound) return;
     var root = document.getElementById('boxiesAppRoot') || document.getElementById('boxiesHeaderActions');
     if (!root) return;
+    bindChromeFold();
     if (typeof BuilderDock !== 'undefined' && typeof BuilderDock.bindFullscreen === 'function') {
       BuilderDock.bindFullscreen(root);
       fullscreenBound = true;

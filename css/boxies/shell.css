@@ -240,6 +240,15 @@ body.boxies-has-dock.boxies-shell {
   outline-offset: 2px;
 }
 
+.boxies-header__chrome-fold.is-active {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.boxies-header__chrome-fold[hidden] {
+  display: none !important;
+}
+
 /* Secondary actions — Guardar / Republicar / Visualizar */
 .boxies-btn-secondary {
   flex-shrink: 0;
