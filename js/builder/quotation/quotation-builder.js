@@ -198,6 +198,30 @@ var QuotationBuilderView = (function () {
     }
   }
 
+  /** Config has only the icon rail — no recursos column or fold button. */
+  function setRecursosVisible(on) {
+    if (!rootEl) return;
+    var recursos = rootEl.querySelector('#quotationRecursosPanel');
+    var workspace = rootEl.querySelector('.quotation-workspace');
+    var floatBtn = rootEl.querySelector('#' + FLOAT_BTN_ID);
+    if (workspace) {
+      workspace.classList.toggle('is-recursos-hidden', !on);
+    }
+    if (!recursos) return;
+    if (on) {
+      recursos.hidden = false;
+      if (floatBtn) floatBtn.hidden = false;
+      applyLeftCollapsed(leftCollapsed);
+      ensureFloatButton();
+    } else {
+      recursos.hidden = true;
+      if (floatBtn) floatBtn.hidden = true;
+      try {
+        document.documentElement.style.setProperty('--quotation-recursos-w', '0px');
+      } catch (eW) {}
+    }
+  }
+
   function ensureFloatButton() {
     if (!rootEl) return null;
     var btn = rootEl.querySelector('#' + FLOAT_BTN_ID);
@@ -325,16 +349,23 @@ var QuotationBuilderView = (function () {
     setDockState('saving');
     try {
       var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
-      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
+      /* Only persist identity/OG when Config DOM is mounted — never wipe from Editor. */
+      var configMounted = !!(panel && panel.querySelector('#showroomNameInput'));
+      if (configMounted && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
         await BuilderConfig.commitAll(configAdapter(), panel, { silent: true });
-      } else if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
-        await BuilderConfig.saveShareMeta(configAdapter(), panel);
       }
-      /* Hero may upload media; Editor commit LAST so ProjectDocument (canvas) is SSOT. */
-      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
+      /* Hero only when its panel was opened this session (avoid blank overwrite). */
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit &&
+          (typeof QuotationHero.isMounted !== 'function' || QuotationHero.isMounted())) {
         await QuotationHero.commit(configAdapter());
       }
-      if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
+      /* Editor commit LAST — only if SSOT is loaded (never wipe canvas from Config-only save). */
+      var editorReady =
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.isDocumentReady === 'function' &&
+        projectCtx && projectCtx.id &&
+        QuotationEditor.isDocumentReady(projectCtx.id);
+      if (editorReady && QuotationEditor.commit) {
         await QuotationEditor.commit(configAdapter());
       }
       if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
@@ -363,15 +394,24 @@ var QuotationBuilderView = (function () {
     setDockState('publishing');
     try {
       var panel = rootEl && rootEl.querySelector('[data-quotation-panel]');
-      if (panel && typeof BuilderConfig !== 'undefined' && BuilderConfig.saveShareMeta) {
-        try { await BuilderConfig.saveShareMeta(configAdapter(), panel); } catch (eShare) {}
+      var configMounted = !!(panel && panel.querySelector('#showroomNameInput'));
+      if (configMounted && typeof BuilderConfig !== 'undefined' && BuilderConfig.commitAll) {
+        try {
+          await BuilderConfig.commitAll(configAdapter(), panel, { silent: true });
+        } catch (eShare) {}
       }
-      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit) {
+      if (typeof QuotationHero !== 'undefined' && QuotationHero.commit &&
+          (typeof QuotationHero.isMounted !== 'function' || QuotationHero.isMounted())) {
         try { await QuotationHero.commit(configAdapter()); } catch (eHero) {}
       }
-      /* Editor LAST — published Runtime must match Editor ProjectDocument. */
+      /* Editor LAST — load SSOT if needed so publish does not skip canvas write. */
       if (typeof QuotationEditor !== 'undefined' && QuotationEditor.commit) {
-        try { await QuotationEditor.commit(configAdapter()); } catch (eEditor) {}
+        try {
+          if (typeof QuotationEditor.ensureLoaded === 'function' && projectCtx.id) {
+            await QuotationEditor.ensureLoaded(projectCtx);
+          }
+          await QuotationEditor.commit(configAdapter());
+        } catch (eEditor) {}
       }
       if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onPublish) {
         var pubDoc = null;
@@ -437,8 +477,10 @@ var QuotationBuilderView = (function () {
     clearLeftBody();
     clearRightBody();
     setPropsPanelVisible(currentStep === 'editor');
+    setRecursosVisible(currentStep === 'editor');
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
+      workspace.classList.toggle('is-config', currentStep === 'config');
       workspace.classList.toggle('is-hero', currentStep === 'hero');
       workspace.classList.toggle('is-left-collapsed', leftCollapsed);
       workspace.classList.toggle('is-right-collapsed', rightCollapsed);
@@ -533,6 +575,8 @@ var QuotationBuilderView = (function () {
     ensureRightFloatButton();
     applyLeftCollapsed(leftCollapsed);
     applyRightCollapsed(rightCollapsed);
+    setRecursosVisible(currentStep === 'editor');
+    setPropsPanelVisible(currentStep === 'editor');
   }
 
   function deactivateSharedChrome() {
@@ -707,6 +751,7 @@ var QuotationBuilderView = (function () {
     refreshSidebar: refreshSidebar,
     applyRightCollapsed: applyRightCollapsed,
     setPropsPanelVisible: setPropsPanelVisible,
+    setRecursosVisible: setRecursosVisible,
     expandPropsPanel: function () { applyRightCollapsed(false); },
     save: handleSave,
     getProjectLabel: function () {

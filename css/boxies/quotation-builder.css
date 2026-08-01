@@ -3548,6 +3548,31 @@ body.quotation-canvas-first .builder-workspace,
   max-width: 0;
 }
 
+/* Config (and any non-editor step): no recursos column / fold control */
+.quotation-workspace.is-recursos-hidden .quotation-recursos,
+.quotation-recursos[hidden] {
+  display: none !important;
+  flex-basis: 0 !important;
+  width: 0 !important;
+  max-width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  border: none !important;
+}
+
+/* Float uses display:!important elsewhere — kill it on Config. */
+.quotation-workspace.is-recursos-hidden #quotationLeftFloatBtn,
+.quotation-workspace.is-recursos-hidden .quotation-panel-float--left,
+.quotation-recursos[hidden] > .quotation-panel-float,
+.quotation-recursos[hidden] #quotationLeftFloatBtn {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+
 .quotation-recursos.is-collapsed .quotation-left-body,
 .quotation-workspace.is-left-collapsed .quotation-recursos .quotation-left-body {
   opacity: 0;

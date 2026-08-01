@@ -856,6 +856,16 @@ var ProyectosApi = (function () {
     }
     merged.heroContent = Object.assign({}, prev.heroContent || {}, payload.heroContent || {});
     merged.branding = Object.assign({}, prev.branding || {}, payload.branding || {});
+    /* Null logo in a partial write must not erase a stored logo. */
+    if (
+      payload.branding &&
+      Object.prototype.hasOwnProperty.call(payload.branding, 'logo') &&
+      payload.branding.logo == null &&
+      prev.branding &&
+      prev.branding.logo
+    ) {
+      merged.branding.logo = prev.branding.logo;
+    }
     if (!Object.prototype.hasOwnProperty.call(payload, 'video_url') && prev.video_url != null) {
       merged.video_url = prev.video_url;
     }

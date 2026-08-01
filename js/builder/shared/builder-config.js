@@ -550,13 +550,15 @@ var BuilderConfig = (function () {
     opts = opts || {};
     var nameInput = rootEl && rootEl.querySelector('#showroomNameInput');
     var slugInput = rootEl && rootEl.querySelector('#showroomSlugInput');
+    var hasShareDom = !!(rootEl && rootEl.querySelector('#builderOgImageUrl'));
     if (nameInput || slugInput) {
       await saveIdentity(adapter, rootEl, nameInput, slugInput, null, null, {
         silent: !!opts.silent
       });
-    } else if (rootEl) {
+    } else if (hasShareDom) {
       await saveShareMeta(adapter, rootEl);
     }
+    /* No config/share DOM → skip (e.g. Editor panel). Never wipe OG with empty reads. */
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
       BuilderDirtyState.clear();
     }

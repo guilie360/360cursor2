@@ -7504,17 +7504,17 @@ var QuotationEditor = (function () {
           showShare: cover.showShare !== false,
           showFullscreen: cover.showFullscreen !== false
         },
-        branding: {
-          showHeroLogo: !!cover.showLogo,
-          logoStyle: cover.logoStyle || 'flat',
-          logo: cover.logoUrl
-            ? { name: 'Logo', uploadedUrl: cover.logoUrl, size: 0 }
-            : null
-        },
         video_url: cover.videoUrl || null,
         image_url: cover.imageUrl || null,
         canvas: doc
       };
+    if (cover && cover.logoUrl) {
+      payload.branding = {
+        showHeroLogo: !!cover.showLogo,
+        logoStyle: cover.logoStyle || 'flat',
+        logo: { name: 'Logo', uploadedUrl: cover.logoUrl, size: 0 }
+      };
+    }
     payload.library = library;
     /* Intentional clear-all only when in-memory library is also empty. */
     if ((!library.content || !library.content.length) &&

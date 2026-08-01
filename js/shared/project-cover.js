@@ -652,10 +652,7 @@ var ProjectCover = (function () {
         eslogan: model.eslogan,
         botonIzquierdo: model.botonIzquierdo,
         botonDerecho: model.botonDerecho,
-        whatsappLink: '',
-        whatsappMessage: '',
-        shareUrl: '',
-        showWhatsapp: false,
+        /* WhatsApp / share URL live in QuotationHero — omit so Editor merge keeps them. */
         showExplore: model.showExplore !== false,
         showBack: model.showBack !== false,
         backLabel: model.backLabel || 'Demos',
@@ -663,16 +660,17 @@ var ProjectCover = (function () {
         showFullscreen: model.showFullscreen !== false,
         showAssistant: model.showAssistant !== false
       },
-      branding: {
-        showHeroLogo: model.showLogo !== false,
-        logoStyle: model.logoStyle === 'avatar' ? 'avatar' : 'flat',
-        logo: model.logoUrl
-          ? { name: 'Logo', uploadedUrl: model.logoUrl, size: 0 }
-          : null
-      },
       video_url: model.videoUrl || null,
       image_url: model.imageUrl || null
     };
+    /* Only touch branding when cover owns a logo — never null-out hero branding. */
+    if (model.logoUrl) {
+      payload.branding = {
+        showHeroLogo: model.showLogo !== false,
+        logoStyle: model.logoStyle === 'avatar' ? 'avatar' : 'flat',
+        logo: { name: 'Logo', uploadedUrl: model.logoUrl, size: 0 }
+      };
+    }
     if (canvasDoc && typeof canvasDoc === 'object') {
       payload.canvas = canvasDoc;
     }

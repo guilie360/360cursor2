@@ -414,6 +414,7 @@ var QuotationHero = (function () {
     commit: commit,
     load: load,
     reset: reset,
+    isMounted: function () { return !!mountedRoot; },
     getState: function () { return heroState; }
   };
 })();
