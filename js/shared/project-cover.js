@@ -80,7 +80,8 @@ var ProjectCover = (function () {
       showAssistant: true,
       variant: '',
       startAction: '',
-      startTargetSceneId: ''
+      startTargetSceneId: '',
+      exploreAction: ''
     };
   }
 
@@ -369,8 +370,14 @@ var ProjectCover = (function () {
           exploreSlot.classList.remove('is-pc-hidden');
         }
         var exploreLabel = model.botonIzquierdo || 'Explorar';
-        explore.innerHTML =
-          '<span class="menu-btn-icon" aria-hidden="true">☰</span>' + escapeHtml(exploreLabel);
+        if (model.variant === 'cinematic') {
+          explore.classList.remove('with-icon');
+          explore.textContent = exploreLabel;
+        } else {
+          explore.classList.add('with-icon');
+          explore.innerHTML =
+            '<span class="menu-btn-icon" aria-hidden="true">☰</span>' + escapeHtml(exploreLabel);
+        }
         explore.setAttribute('aria-label', exploreLabel);
       }
     }
@@ -593,6 +600,7 @@ var ProjectCover = (function () {
     base.variant = String(raw.variant || '').trim();
     base.startAction = String(raw.startAction || '').trim();
     base.startTargetSceneId = String(raw.startTargetSceneId || '').trim();
+    base.exploreAction = String(raw.exploreAction || '').trim();
     return base;
   }
 

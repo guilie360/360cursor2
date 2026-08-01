@@ -1,0 +1,169 @@
+/* Quotation Proposals page — full-page picker (not modal). */
+
+html, body.qr-proposals-page {
+  margin: 0;
+  min-height: 100%;
+  background: #050505;
+  color: #fff;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+.qpp {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.qpp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(255, 255, 255, 0.055), transparent 62%),
+    radial-gradient(ellipse 120% 80% at 50% 120%, rgba(0, 0, 0, 0.72), transparent 55%),
+    #050505;
+}
+
+.qpp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+.qpp__chrome {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right))
+    12px
+    max(18px, env(safe-area-inset-left));
+}
+
+.qpp__icon-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease;
+}
+.qpp__icon-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.qpp__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+.qpp__icon-btn.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
+.qpp__main {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px max(28px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.qpp__eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.qpp__title {
+  margin: 0 0 28px;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.qpp__grid {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.qpp__grid .unit-card {
+  opacity: 0;
+}
+.qpp__grid .unit-card.unit-card--enter {
+  opacity: 1;
+}
+
+.qpp.is-compare-mode .qpp__grid .unit-card {
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.qpp__hint {
+  margin: 22px 0 0;
+  min-height: 1.2em;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .qpp__grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: min(420px, 100%);
+  }
+  .qpp__title {
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+  }
+  .qpp.is-compare-mode .qpp__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+  .qpp.is-compare-mode .qpp__grid .unit-card .unit-typo-price-block,
+  .qpp.is-compare-mode .qpp__grid .unit-card .unit-typo-btn-stack {
+    display: none;
+  }
+}

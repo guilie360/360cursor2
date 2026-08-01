@@ -281,10 +281,38 @@ var QuotationRuntime = (function () {
       return;
     }
     if (action === 'open-proposals' || action === 'proposals') {
-      if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
-        QuotationProposalsModal.open();
-      }
+      openProposalsPage();
+      return;
     }
+    if (action === 'open-proposals-page' || action === 'proposals-page') {
+      openProposalsPage();
+    }
+  }
+
+  function openProposalsPage() {
+    var project = loaded && loaded.project ? loaded.project : null;
+    var id = project && project.id ? String(project.id) : '';
+    var slug = project && project.slug ? String(project.slug) : '';
+    var q = readQuery();
+    if (!id && q && q.projectId) id = String(q.projectId);
+    var url = '/quotation/propuestas/';
+    try {
+      var u = new URL(url, window.location.origin);
+      if (id) u.searchParams.set('projectId', id);
+      if (slug) u.searchParams.set('slug', slug);
+      url = u.pathname + u.search;
+    } catch (eUrl) {
+      url = '/quotation/propuestas/' +
+        (id ? ('?projectId=' + encodeURIComponent(id)) : '') +
+        (slug ? ((id ? '&' : '?') + 'slug=' + encodeURIComponent(slug)) : '');
+    }
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = url;
+        return;
+      }
+    } catch (eTop) { /* cross-origin — fall through */ }
+    window.location.href = url;
   }
 
   function paintInteractionLayer(parentEl, scene, interactive, opts) {
@@ -971,8 +999,19 @@ var QuotationRuntime = (function () {
     };
 
     if (!editorMode) {
-      /* Left CTA (Cotización / Explorar): proposals picker — no longer opens menu or jumps scene. */
       opts.onExplore = function () {
+        var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
+        var cm = focus && focus.coverModel ? focus.coverModel : null;
+        var exploreAction = cm && cm.exploreAction ? String(cm.exploreAction).toLowerCase() : '';
+        if (
+          exploreAction === 'open-proposals-page' ||
+          exploreAction === 'proposals-page' ||
+          exploreAction === 'open-proposals' ||
+          exploreAction === 'proposals'
+        ) {
+          openProposalsPage();
+          return;
+        }
         if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
           QuotationProposalsModal.open();
           return;
@@ -983,10 +1022,13 @@ var QuotationRuntime = (function () {
         var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var startAction = cm && cm.startAction ? String(cm.startAction).toLowerCase() : '';
-        if (startAction === 'open-proposals' || startAction === 'proposals') {
-          if (typeof QuotationProposalsModal !== 'undefined' && QuotationProposalsModal.open) {
-            QuotationProposalsModal.open();
-          }
+        if (
+          startAction === 'open-proposals' ||
+          startAction === 'proposals' ||
+          startAction === 'open-proposals-page' ||
+          startAction === 'proposals-page'
+        ) {
+          openProposalsPage();
           return;
         }
         if (cm && cm.startTargetSceneId) {

@@ -75,24 +75,54 @@ body.qr-host .pa-fab,
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
   max-width: 920px;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: clamp(32px, 6vh, 64px) clamp(20px, 5vw, 48px);
+  padding:
+    clamp(48px, 10vh, 96px)
+    clamp(20px, 5vw, 48px)
+    max(40px, env(safe-area-inset-bottom, 0px));
   text-align: center;
   animation: none;
+  box-sizing: border-box;
 }
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-row,
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-copy,
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1 1 auto;
+  justify-content: center;
+}
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 48px;
+  padding-bottom: clamp(28px, 7vh, 64px);
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-slot {
   display: contents;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
+  order: 1;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
+  order: 2;
 }
 
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
@@ -140,14 +170,14 @@ body.qr-host .pa-fab,
   background: rgba(255, 255, 255, 0.28);
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
-  margin: 0 0 36px;
+  margin: 0;
   color: #fff;
-  font-family: 'Playfair Display', 'Times New Roman', serif;
-  font-size: clamp(2rem, 4.6vw, 2.85rem);
-  font-weight: 400;
-  letter-spacing: 0.48em;
-  text-indent: 0.48em;
-  line-height: 1;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+  line-height: 1.1;
   text-transform: uppercase;
   text-shadow: 0 0 28px rgba(255, 255, 255, 0.1);
   animation: qr-cine-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
@@ -157,13 +187,13 @@ body.qr-host .pa-fab,
   display: none !important;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
-  margin: 0;
-  gap: 0;
   animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
   min-height: 44px;
+  min-width: min(220px, 72vw);
   padding: 0 28px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.32);
@@ -180,6 +210,12 @@ body.qr-host .pa-fab,
   text-transform: uppercase;
   transition: background 250ms ease, border-color 250ms ease, box-shadow 250ms ease, transform 250ms ease;
 }
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn .menu-btn-icon {
+  display: none !important;
+}
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"]:hover,
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -193,10 +229,10 @@ body.qr-host .pa-fab,
 
 .qr-cover-host .project-cover.is-cover-project.is-cover-cinematic .project-cover-name,
 .qr-cover-host .project-cover.is-cover-project .project-cover-name {
-  font-family: 'Playfair Display', 'Times New Roman', serif;
-  font-weight: 400;
-  letter-spacing: 0.48em;
-  text-indent: 0.48em;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
 }
 
 .qr-cover-host .project-cover.is-start-only .project-cover-buttons {
@@ -222,7 +258,10 @@ body.qr-host .pa-fab,
 
 @media (max-width: 600px) {
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-content {
-    padding: max(28px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+    padding:
+      max(36px, env(safe-area-inset-top))
+      22px
+      max(20px, env(safe-area-inset-bottom));
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
     width: clamp(64px, 18vw, 80px);
@@ -251,15 +290,20 @@ body.qr-host .pa-fab,
     width: 22px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
-    margin-bottom: 28px;
     font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-    font-size: clamp(1.45rem, 7.5vw, 1.85rem);
-    font-weight: 300;
-    letter-spacing: 0.42em;
-    text-indent: 0.42em;
+    font-size: clamp(1.35rem, 6.8vw, 1.7rem);
+    font-weight: 600;
+    letter-spacing: 0.36em;
+    text-indent: 0.36em;
     text-shadow: none;
   }
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
+    gap: 12px;
+    padding-top: 56px;
+    padding-bottom: max(52px, 11vh, env(safe-area-inset-bottom));
+  }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
     min-height: 42px;
     padding: 0 24px;
