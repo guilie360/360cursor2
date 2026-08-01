@@ -96,57 +96,60 @@ body.qr-host .pa-fab,
 }
 
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
-  width: clamp(90px, 18vw, 120px);
-  max-width: 120px;
+  width: clamp(72px, 12vw, 96px);
+  max-width: 96px;
   height: auto;
-  margin: 0 0 48px;
-  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.18));
+  margin: 0 0 36px;
+  background: transparent !important;
+  mix-blend-mode: normal;
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.16));
   animation: qr-cine-logo 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow {
-  margin: 0 0 24px;
+  margin: 0 0 18px;
   color: #fff;
-  font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: clamp(0.95rem, 1.7vw, 1.25rem);
   font-weight: 600;
-  letter-spacing: 0.28em;
-  text-indent: 0.28em;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
   text-transform: uppercase;
-  line-height: 1.15;
+  line-height: 1.2;
   animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin: 0 0 12px;
-  color: #B8B8B8;
-  font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(0.72rem, 1.4vw, 0.85rem);
-  font-weight: 300;
-  letter-spacing: 0.22em;
+  gap: 12px;
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  font-size: clamp(0.78rem, 1.2vw, 0.92rem);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.12em;
   text-transform: none;
   animation: qr-cine-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::before,
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::after {
   content: '';
-  width: clamp(36px, 8vw, 72px);
+  width: clamp(28px, 6vw, 56px);
   height: 1px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.28);
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
-  margin: 0 0 48px;
+  margin: 0 0 36px;
   color: #fff;
-  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-  font-size: clamp(3.4rem, 9vw, 5.4rem);
-  font-weight: 300;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
+  font-family: 'Playfair Display', 'Times New Roman', serif;
+  font-size: clamp(2rem, 4.6vw, 2.85rem);
+  font-weight: 400;
+  letter-spacing: 0.48em;
+  text-indent: 0.48em;
   line-height: 1;
   text-transform: uppercase;
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 28px rgba(255, 255, 255, 0.1);
   animation: qr-cine-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-tagline[hidden],
@@ -160,19 +163,19 @@ body.qr-host .pa-fab,
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
-  min-height: 52px;
-  padding: 0 34px;
-  border-radius: 17px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  min-height: 44px;
+  padding: 0 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
   background: transparent;
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: 0.72rem;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.62rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-indent: 0.08em;
   text-transform: uppercase;
   transition: background 250ms ease, border-color 250ms ease, box-shadow 250ms ease, transform 250ms ease;
@@ -190,10 +193,10 @@ body.qr-host .pa-fab,
 
 .qr-cover-host .project-cover.is-cover-project.is-cover-cinematic .project-cover-name,
 .qr-cover-host .project-cover.is-cover-project .project-cover-name {
-  font-family: 'Cormorant Garamond', 'Times New Roman', serif;
-  font-weight: 300;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
+  font-family: 'Playfair Display', 'Times New Roman', serif;
+  font-weight: 400;
+  letter-spacing: 0.48em;
+  text-indent: 0.48em;
 }
 
 .qr-cover-host .project-cover.is-start-only .project-cover-buttons {
@@ -218,19 +221,50 @@ body.qr-host .pa-fab,
 }
 
 @media (max-width: 600px) {
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-content {
+    padding: max(28px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+  }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-logo {
-    margin-bottom: 40px;
+    width: clamp(64px, 18vw, 80px);
+    max-width: 80px;
+    margin-bottom: 28px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-eyebrow {
-    letter-spacing: 0.2em;
-    text-indent: 0.2em;
-    font-size: clamp(1.35rem, 7vw, 1.85rem);
+    margin-bottom: 14px;
+    font-size: clamp(0.78rem, 3.6vw, 0.95rem);
+    font-weight: 500;
+    letter-spacing: 0.26em;
+    text-indent: 0.26em;
+  }
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker {
+    margin-bottom: 8px;
+    gap: 10px;
+    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+    font-style: normal;
+    font-weight: 300;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::before,
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-kicker::after {
+    width: 22px;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-name {
-    font-size: clamp(2.8rem, 14vw, 3.8rem);
-    letter-spacing: 0.28em;
-    text-indent: 0.28em;
-    margin-bottom: 40px;
+    margin-bottom: 28px;
+    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+    font-size: clamp(1.45rem, 7.5vw, 1.85rem);
+    font-weight: 300;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    text-shadow: none;
+  }
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"],
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn {
+    min-height: 42px;
+    padding: 0 24px;
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
   }
 }
 
