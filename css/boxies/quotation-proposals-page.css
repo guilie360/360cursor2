@@ -62,13 +62,21 @@ body.qr-proposals-page .qpp {
   z-index: 2;
   flex: 0 0 auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding:
     max(16px, env(safe-area-inset-top))
     max(16px, env(safe-area-inset-right))
     8px
     max(16px, env(safe-area-inset-left));
+}
+
+.qpp__chrome-end {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .qpp__icon-btn {
@@ -105,6 +113,140 @@ body.qr-proposals-page .qpp {
 .qpp__icon-btn.is-active {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.65);
+}
+
+/* Music note — filled silhouette (same chrome as other icon buttons). */
+.qpp__chrome-music .qpp__music-note {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  stroke: none;
+}
+
+.qpp__audio-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qpp__audio-panel {
+  position: absolute;
+  right: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(5, 5, 5, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 12px 28px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    visibility 0s linear 220ms;
+  z-index: 5;
+}
+
+.qpp__audio-wrap.is-audio-open .qpp__audio-panel,
+.qpp__audio-panel:not([hidden]) {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(-50%) translateX(0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    visibility 0s linear 0s;
+}
+
+.qpp__audio-panel[hidden] {
+  display: flex !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.qpp__audio-play {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: background 220ms ease, border-color 220ms ease;
+}
+.qpp__audio-play:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.qpp__audio-play svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  stroke: none;
+}
+.qpp__audio-icon[hidden] {
+  display: none !important;
+}
+
+.qpp__audio-vol {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  min-width: 96px;
+}
+
+.qpp__audio-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 96px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  outline: none;
+  cursor: pointer;
+}
+.qpp__audio-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+.qpp__audio-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+}
+.qpp__audio-range:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.qpp__audio-range::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .qpp__main {
@@ -366,6 +508,10 @@ body.qr-proposals-page .qpp {
 
   .qpp__chrome-fs {
     display: inline-flex;
+  }
+
+  .qpp__chrome-end {
+    gap: 12px;
   }
 
   .qpp__compare-cta {

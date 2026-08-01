@@ -1,8 +1,9 @@
 /**
- * QuotationProposalsPage — proposals picker as an in-document section (V7.2.84).
+ * QuotationProposalsPage — proposals picker as an in-document section (V7.2.85).
  * Mounted once beside the hero; shown/hidden via presentation state (no route change).
  */
 var QuotationProposalsPage = (function () {
+  var AUDIO_SRC = '../assets/taroa/mujer-conforme.mp3';
   var PROPOSALS = [
     {
       id: 'still',
@@ -37,28 +38,53 @@ var QuotationProposalsPage = (function () {
           '<button type="button" class="qpp__icon-btn" data-qpp-back aria-label="Volver">' +
             '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' +
           '</button>' +
-          /* Mobile/tablet: compare stays top-right. Desktop: hidden via CSS (>=1024px). */
-          '<button type="button" class="qpp__icon-btn qpp__chrome-compare" data-qpp-compare aria-label="Comparar" aria-pressed="false">' +
-            '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-              '<rect x="3" y="4" width="7" height="16" rx="1.5"/>' +
-              '<rect x="14" y="4" width="7" height="16" rx="1.5"/>' +
-            '</svg>' +
-          '</button>' +
-          /* Desktop only: fullscreen replaces compare in the top-right. */
-          '<button type="button" class="qpp__icon-btn qpp__chrome-fs" data-qpp-fullscreen aria-label="Pantalla completa" aria-pressed="false">' +
-            '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" aria-hidden="true">' +
-              '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
-              '<path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
-              '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/>' +
-              '<path d="M16 21h3a2 2 0 0 0 2-2v-3"/>' +
-            '</svg>' +
-            '<svg class="qpp__fs-icon qpp__fs-icon--exit" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
-              '<path d="M8 3v3a2 2 0 0 1-2 2H3"/>' +
-              '<path d="M21 8h-3a2 2 0 0 1-2-2V3"/>' +
-              '<path d="M3 16h3a2 2 0 0 1 2 2v3"/>' +
-              '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
-            '</svg>' +
-          '</button>' +
+          '<div class="qpp__chrome-end">' +
+            /* Mobile/tablet: compare. Desktop: hidden via CSS (>=1024px). */
+            '<button type="button" class="qpp__icon-btn qpp__chrome-compare" data-qpp-compare aria-label="Comparar" aria-pressed="false">' +
+              '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+                '<rect x="3" y="4" width="7" height="16" rx="1.5"/>' +
+                '<rect x="14" y="4" width="7" height="16" rx="1.5"/>' +
+              '</svg>' +
+            '</button>' +
+            /* Desktop only: fullscreen. */
+            '<button type="button" class="qpp__icon-btn qpp__chrome-fs" data-qpp-fullscreen aria-label="Pantalla completa" aria-pressed="false">' +
+              '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" aria-hidden="true">' +
+                '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
+                '<path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
+                '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/>' +
+                '<path d="M16 21h3a2 2 0 0 0 2-2v-3"/>' +
+              '</svg>' +
+              '<svg class="qpp__fs-icon qpp__fs-icon--exit" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+                '<path d="M8 3v3a2 2 0 0 1-2 2H3"/>' +
+                '<path d="M21 8h-3a2 2 0 0 1-2-2V3"/>' +
+                '<path d="M3 16h3a2 2 0 0 1 2 2v3"/>' +
+                '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
+              '</svg>' +
+            '</button>' +
+            /* Music note + volume popover (below fullscreen on desktop). */
+            '<div class="qpp__audio-wrap" data-qpp-audio-wrap>' +
+              '<button type="button" class="qpp__icon-btn qpp__chrome-music" data-qpp-music aria-label="Música" aria-expanded="false" aria-controls="qppAudioPanel">' +
+                '<svg class="qpp__music-note" viewBox="0 0 24 24" aria-hidden="true">' +
+                  '<path d="M9.2 18.6c0 1.55-1.35 2.7-2.95 2.7S3.3 20.15 3.3 18.6s1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V5.2l11.2-2.05v12.7c0 1.55-1.35 2.7-2.95 2.7s-2.95-1.15-2.95-2.7 1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V6.35L9.2 8.15v10.45z"/>' +
+                '</svg>' +
+              '</button>' +
+              '<div class="qpp__audio-panel" id="qppAudioPanel" data-qpp-audio-panel hidden>' +
+                '<button type="button" class="qpp__audio-play" data-qpp-audio-toggle aria-label="Reproducir">' +
+                  '<svg class="qpp__audio-icon qpp__audio-icon--play" viewBox="0 0 24 24" aria-hidden="true">' +
+                    '<path d="M8 5.5v13l11-6.5z"/>' +
+                  '</svg>' +
+                  '<svg class="qpp__audio-icon qpp__audio-icon--pause" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+                    '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' +
+                  '</svg>' +
+                '</button>' +
+                '<label class="qpp__audio-vol" aria-label="Volumen">' +
+                  '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="70" step="1">' +
+                '</label>' +
+              '</div>' +
+              '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
+                escapeHtml(AUDIO_SRC) + '"></audio>' +
+            '</div>' +
+          '</div>' +
         '</header>' +
         '<main class="qpp__main">' +
           '<p class="qpp__eyebrow">Showroom digital</p>' +
@@ -66,7 +92,6 @@ var QuotationProposalsPage = (function () {
           '<div class="qpp__cards-host">' +
             '<div class="qpp__grid" data-qpp-grid></div>' +
           '</div>' +
-          /* Desktop only: COMPARAR centered under cards. */
           '<button type="button" class="qpp__compare-cta" data-qpp-compare-cta aria-pressed="false">' +
             'Comparar' +
           '</button>' +
@@ -171,6 +196,99 @@ var QuotationProposalsPage = (function () {
     if (hint) hint.textContent = on ? 'Modo comparar activo' : '';
   }
 
+  function syncAudioUi(root) {
+    var audio = qs('[data-qpp-audio]', root);
+    var toggle = qs('[data-qpp-audio-toggle]', root);
+    var musicBtn = qs('[data-qpp-music]', root);
+    if (!audio || !toggle) return;
+    var playing = !audio.paused;
+    toggle.classList.toggle('is-playing', playing);
+    toggle.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+    if (musicBtn) musicBtn.classList.toggle('is-active', playing);
+    var playIcon = qs('.qpp__audio-icon--play', toggle);
+    var pauseIcon = qs('.qpp__audio-icon--pause', toggle);
+    if (playIcon) {
+      if (playing) playIcon.setAttribute('hidden', '');
+      else playIcon.removeAttribute('hidden');
+    }
+    if (pauseIcon) {
+      if (playing) pauseIcon.removeAttribute('hidden');
+      else pauseIcon.setAttribute('hidden', '');
+    }
+  }
+
+  function setAudioPanelOpen(root, open) {
+    var panel = qs('[data-qpp-audio-panel]', root);
+    var musicBtn = qs('[data-qpp-music]', root);
+    var wrap = qs('[data-qpp-audio-wrap]', root);
+    if (!panel || !musicBtn) return;
+    if (open) {
+      panel.hidden = false;
+      panel.removeAttribute('hidden');
+      musicBtn.setAttribute('aria-expanded', 'true');
+      if (wrap) wrap.classList.add('is-audio-open');
+    } else {
+      panel.hidden = true;
+      panel.setAttribute('hidden', '');
+      musicBtn.setAttribute('aria-expanded', 'false');
+      if (wrap) wrap.classList.remove('is-audio-open');
+    }
+  }
+
+  function bindAudio(root) {
+    var audio = qs('[data-qpp-audio]', root);
+    var musicBtn = qs('[data-qpp-music]', root);
+    var toggle = qs('[data-qpp-audio-toggle]', root);
+    var volume = qs('[data-qpp-volume]', root);
+    var wrap = qs('[data-qpp-audio-wrap]', root);
+    if (!audio || !musicBtn) return;
+
+    audio.volume = volume ? Number(volume.value) / 100 : 0.7;
+
+    musicBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var panel = qs('[data-qpp-audio-panel]', root);
+      var open = !(panel && !panel.hidden);
+      setAudioPanelOpen(root, open);
+    });
+
+    if (toggle) {
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (audio.paused) {
+          var playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function () { /* autoplay blocked */ });
+          }
+        } else {
+          audio.pause();
+        }
+        syncAudioUi(root);
+      });
+    }
+
+    if (volume) {
+      volume.addEventListener('input', function () {
+        audio.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+      });
+      volume.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    audio.addEventListener('play', function () { syncAudioUi(root); });
+    audio.addEventListener('pause', function () { syncAudioUi(root); });
+    syncAudioUi(root);
+
+    document.addEventListener('click', function (e) {
+      if (!wrap || !wrap.classList.contains('is-audio-open')) return;
+      if (wrap.contains(e.target)) return;
+      setAudioPanelOpen(root, false);
+    });
+  }
+
   function bind(root, opts) {
     opts = opts || {};
     var back = qs('[data-qpp-back]', root);
@@ -205,14 +323,11 @@ var QuotationProposalsPage = (function () {
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
     syncFullscreenUi(root);
+    bindAudio(root);
 
-    /* silence unused hint when compare off */
     if (hint && !hint.textContent) hint.textContent = '';
   }
 
-  /**
-   * Mount proposals UI into an existing host (pre-rendered for instant transitions).
-   */
   function mount(host, opts) {
     if (!host) return null;
     opts = opts || {};
@@ -225,7 +340,6 @@ var QuotationProposalsPage = (function () {
     };
   }
 
-  /* Standalone /quotation/propuestas/ — keep for bookmarks; prefer in-runtime section. */
   function boot() {
     var root = document.getElementById('qrProposalsPage');
     if (!root) return;
