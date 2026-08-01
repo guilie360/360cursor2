@@ -238,52 +238,53 @@ var BoxiesShell = (function () {
     return resolveShowroomPreviewUrl(slugOrOpts);
   }
 
+  function resolveActiveProjectSlug() {
+    var slug = projectCtx && projectCtx.slug ? String(projectCtx.slug).trim() : '';
+    try {
+      if (typeof QuotationBuilderView !== 'undefined') {
+        if (QuotationBuilderView.getProjectIdentity) {
+          var idn = QuotationBuilderView.getProjectIdentity();
+          if (idn && idn.slug) slug = String(idn.slug).trim();
+        } else if (QuotationBuilderView.getProjectLabel && !slug) {
+          /* no-op — label is display name, not slug */
+        }
+      }
+    } catch (eId) { /* ignore */ }
+    if (!slug) {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        slug = String(
+          params.get('project') ||
+          params.get('proyecto') ||
+          params.get('slug') ||
+          ''
+        ).trim();
+      } catch (eUrl) { /* ignore */ }
+    }
+    return slug;
+  }
+
   function openActivePreview() {
     var type = String(projectCtx.experienceType || '').toLowerCase();
     if (type === 'quotation') {
-      /* Flush Editor → live envelope so Visualizar matches the canvas (incl. unsaved). */
-      try {
-        if (typeof QuotationPreview !== 'undefined' && QuotationPreview.prepareLiveDocument) {
-          QuotationPreview.prepareLiveDocument({
-            id: projectCtx.id,
-            projectId: projectCtx.id,
-            slug: projectCtx.slug,
-            name: projectCtx.name,
-            nombre: projectCtx.name
-          });
-        } else if (typeof QuotationEditor !== 'undefined' && QuotationEditor.prepareLivePreview) {
-          QuotationEditor.prepareLivePreview(projectCtx);
-        }
-      } catch (eLive) {
-        console.warn('[BoxiesShell] prepareLivePreview', eLive);
-      }
-      var qUrl = null;
-      if (typeof QuotationPreview !== 'undefined' && QuotationPreview.resolveRuntimeUrl) {
-        qUrl = QuotationPreview.resolveRuntimeUrl({
-          id: projectCtx.id,
-          projectId: projectCtx.id,
-          slug: projectCtx.slug
-        });
-      }
-      if (!qUrl) {
-        qUrl = resolveQuotationPreviewUrl({
-          id: projectCtx.id,
-          slug: projectCtx.slug
-        });
-      }
+      /*
+       * Always open the public client URL /{slug} (e.g. /editor) — same link as Config.
+       * Never open /quotation/?projectId=… (internal Runtime URL).
+       */
+      var slug = resolveActiveProjectSlug();
+      if (!slug) return;
+      projectCtx.slug = slug;
+      var qUrl = resolveQuotationPreviewUrl({
+        id: projectCtx.id,
+        slug: slug
+      });
       if (!qUrl) return;
       window.open(qUrl, '_blank', 'noopener,noreferrer');
       return;
     }
-    var slug = projectCtx.slug;
-    if (!slug) {
-      try {
-        slug = new URLSearchParams(window.location.search || '').get('project')
-          || new URLSearchParams(window.location.search || '').get('proyecto');
-      } catch (e) {}
-    }
-    if (!slug) return;
-    window.open(resolveShowroomPreviewUrl(slug), '_blank', 'noopener,noreferrer');
+    var showroomSlug = resolveActiveProjectSlug();
+    if (!showroomSlug) return;
+    window.open(resolveShowroomPreviewUrl(showroomSlug), '_blank', 'noopener,noreferrer');
   }
 
   function syncActionsVisibility() {
