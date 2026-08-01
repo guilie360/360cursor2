@@ -372,7 +372,9 @@ var QuotationEditor = (function () {
     item.file = null;
     item.uploadStatus = 'synced';
     item.projectId = resolveProjectId() || item.projectId || null;
+    item.thumbReady = false;
     invalidateLibraryBytesCache();
+    preloadLibraryThumb(item);
   }
 
   function bytesFromPesoMb(pesoMb) {
@@ -1375,6 +1377,52 @@ var QuotationEditor = (function () {
     return 'qe-lib__thumb qe-lib__thumb--' + kind;
   }
 
+  function libraryItemIsUploading(item) {
+    if (!item) return false;
+    var st = item.uploadStatus || libraryItemUploadStatus(item);
+    if (st === 'pending' || st === 'uploading' || st === 'local') return true;
+    if (item.file && !publicUrlOf(item)) return true;
+    return false;
+  }
+
+  function libraryItemThumbPending(item) {
+    if (!item) return false;
+    if (item.uploadStatus === 'failed') return false;
+    if (libraryItemIsUploading(item)) return true;
+    if (item.thumbReady === false) return true;
+    return false;
+  }
+
+  /** Wait until CDN bytes are decoded before painting the thumb (avoids progressive gray bar). */
+  function preloadLibraryThumb(item) {
+    if (!item) return;
+    var url = publicUrlOf(item);
+    if (!url) {
+      item.thumbReady = false;
+      return;
+    }
+    if (item.media === 'pdf' || item.group === 'pdf' || item.media === 'link' ||
+        item.group === 'tours360') {
+      item.thumbReady = true;
+      return;
+    }
+    item.thumbReady = false;
+    var token = String(url);
+    item._thumbPreloadToken = token;
+    var img = new Image();
+    img.onload = function () {
+      if (item._thumbPreloadToken !== token) return;
+      item.thumbReady = true;
+      if (rootEl) rerender();
+    };
+    img.onerror = function () {
+      if (item._thumbPreloadToken !== token) return;
+      item.thumbReady = true;
+      if (rootEl) rerender();
+    };
+    img.src = url;
+  }
+
   function contentTypeLabel(item) {
     if (!item) return 'Archivo';
     if (item.group === 'tours360') return 'Enlace';
@@ -1399,7 +1447,11 @@ var QuotationEditor = (function () {
     var sub = contentTypeLabel(item);
     var canAssign = item.media === 'image' || item.media === 'video' ||
       item.group === 'renders' || item.group === 'videos' || item.group === 'hero';
-    var thumbUrl = displayUrlOf(item) || item.previewUrl || '';
+    var uploading = libraryItemIsUploading(item);
+    var pending = libraryItemThumbPending(item);
+    var failed = item.uploadStatus === 'failed';
+    /* Never paint blob preview during upload — it flashes then reloads from CDN. */
+    var thumbUrl = (!pending && !failed) ? (publicUrlOf(item) || '') : '';
     var nameHtml = renaming
       ? ('<input type="text" class="qe-lib__rename" data-qe-content-rename="' +
           escapeHtml(item.id) + '" value="' + escapeHtml(item.name || '') + '"' +
@@ -1407,23 +1459,35 @@ var QuotationEditor = (function () {
       : ('<span class="qe-lib__name">' + escapeHtml(item.name || 'Sin nombre') + '</span>');
     return '' +
       '<div class="qe-lib__item' + (nested ? ' qe-lib__item--nested' : '') +
-        (on ? ' is-selected' : '') + (renaming ? ' is-renaming' : '') + '"' +
+        (on ? ' is-selected' : '') + (renaming ? ' is-renaming' : '') +
+        (pending ? ' is-thumb-loading' : '') + (failed ? ' is-thumb-failed' : '') + '"' +
         ' role="button" tabindex="0"' +
         ' data-qe-content="' + escapeHtml(item.id) + '"' +
-        ' draggable="' + (renaming ? 'false' : 'true') + '"' +
+        ' draggable="' + (renaming || uploading ? 'false' : 'true') + '"' +
         ' data-qe-drag-lib="' + escapeHtml(item.id) + '"' +
         ' data-qe-lib-group="' + escapeHtml(item.group || '') + '"' +
-        (canAssign ? ' data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') + '>' +
-        '<span class="qe-lib__thumb-wrap">' +
+        (canAssign && !uploading && !failed ? ' data-qe-drag-resource="' + escapeHtml(item.id) + '"' : '') +
+        (pending ? ' aria-busy="true"' : '') + '>' +
+        '<span class="qe-lib__thumb-wrap' +
+          (pending ? ' is-loading' : '') +
+          (failed ? ' is-failed' : '') + '">' +
           '<span class="' + thumbClass(item) + '" aria-hidden="true"' +
             (thumbUrl
               ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
               : '') +
           '></span>' +
+          (pending
+            ? '<span class="qe-lib__thumb-loader" aria-hidden="true"></span>'
+            : '') +
+          (failed
+            ? '<span class="qe-lib__thumb-failed" title="Error al subir">!</span>'
+            : '') +
         '</span>' +
         '<span class="qe-lib__meta">' +
           nameHtml +
-          '<span class="qe-lib__type">' + escapeHtml(sub) + '</span>' +
+          '<span class="qe-lib__type">' +
+            escapeHtml(failed ? 'Error' : (uploading ? 'Subiendo…' : sub)) +
+          '</span>' +
         '</span>' +
         libMenuTriggerHtml('content', item.id, 'Opciones del recurso') +
       '</div>';
@@ -4747,6 +4811,7 @@ var QuotationEditor = (function () {
         archivoId: null,
         projectId: resolveProjectId() || null,
         uploadStatus: 'pending',
+        thumbReady: false,
         sizeBytes: file && file.size != null ? (Number(file.size) || 0) : 0,
         file: file
       };
@@ -5752,6 +5817,7 @@ var QuotationEditor = (function () {
           file: null
         };
         row.uploadStatus = libraryItemUploadStatus(row);
+        row.thumbReady = !!pub;
         return row;
       }).filter(Boolean);
     }
