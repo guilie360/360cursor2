@@ -172,10 +172,18 @@ function fetchPublishedProject() {
     if (String(project.experience_type || '').toLowerCase() === 'quotation' && project.id) {
       return handoffQuotationPublicExperience(project);
     }
+    try {
+      document.documentElement.classList.remove('slug-boot-pending');
+    } catch (_eReady) {}
     if (typeof BootDebug !== 'undefined') {
       BootDebug.log('proyecto cargado', { id: project.id, slug: project.slug, nombre: project.nombre });
     }
     return project;
+  }).catch(function (err) {
+    try {
+      document.documentElement.classList.remove('slug-boot-pending');
+    } catch (_eFail) {}
+    throw err;
   });
 }
 

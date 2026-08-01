@@ -4,6 +4,44 @@
 <meta charset="UTF-8">
 <title>360•</title>
 <script>
+/* Hide showroom chrome until slug fetch decides quotation handoff vs showroom paint.
+ * Otherwise /{slug} flashes #projectCover + share/fullscreen/menu before Runtime mounts. */
+(function () {
+  try {
+    var seg = String(location.pathname || '/')
+      .split('/')
+      .filter(Boolean)[0] || '';
+    if (!seg) return;
+    if (/^(auth|boxies|landing|login|quotation|admin|admin2|css|js|supabase|assets|images)$/i.test(seg)) {
+      return;
+    }
+    document.documentElement.classList.add('slug-boot-pending');
+  } catch (_e) {}
+})();
+</script>
+<style>
+html.slug-boot-pending,
+html.slug-boot-pending body {
+  background: #000 !important;
+}
+html.slug-boot-pending body > .vignette-overlay,
+html.slug-boot-pending #projectCover,
+html.slug-boot-pending .project-back-btn,
+html.slug-boot-pending .share-float,
+html.slug-boot-pending .whatsapp-float,
+html.slug-boot-pending .global-menu-tools,
+html.slug-boot-pending .global-action-stack,
+html.slug-boot-pending .pa-fab,
+html.slug-boot-pending .main-menu-backdrop,
+html.slug-boot-pending .main-menu,
+html.slug-boot-pending [data-pa-root],
+html.slug-boot-pending #productAssistantRoot {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+</style>
+<script>
 window.__BUILD_STAMP__ = 'develop-test-002';
 /* Bandera interna: banner de desarrollo solo si DEV_MODE=true, ?dev=1 o localStorage DEV_MODE=1 */
 window.DEV_MODE = window.DEV_MODE === true ||
@@ -1066,7 +1104,7 @@ if (typeof BootDebug !== 'undefined') {
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/shared/formatters.js');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/supabase-client.js?v=fetch1');</script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("BEGIN js/supabase-client.js?v=fetch1");</script>
-<script src="js/supabase-client.js?v=ws7227"></script>
+<script src="js/supabase-client.js?v=ws7273"></script>
 <script>typeof BootDebug !== 'undefined' && BootDebug.log("END js/supabase-client.js?v=fetch1");</script>
   <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX AFTER: js/supabase-client.js?v=fetch1');</script>
     <script>typeof BootDebug !== 'undefined' && BootDebug.log('INDEX BEFORE: js/auth/client.js');</script>

@@ -14,6 +14,12 @@ html, body.qr-host {
   overflow: hidden;
 }
 
+.project-cover .is-pc-hidden,
+.project-cover-slot.is-pc-hidden,
+.project-cover-btn.is-pc-hidden {
+  display: none !important;
+}
+
 .qr-loading,
 .qr-error {
   display: grid;

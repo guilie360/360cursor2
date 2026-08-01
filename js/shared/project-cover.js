@@ -202,19 +202,19 @@ var ProjectCover = (function () {
         BACK_SVG +
         '<span class="project-back-btn__label" id="' + escapeHtml(backLabelId) + '">Demos</span>' +
       '</a>' +
-      '<button class="share-float" id="' + escapeHtml(shareId) + '" type="button" aria-label="Compartir proyecto">' +
+      '<button class="share-float" id="' + escapeHtml(shareId) + '" type="button" hidden aria-hidden="true" aria-label="Compartir proyecto">' +
         SHARE_SVG +
       '</button>' +
-      '<div class="global-action-stack is-visible is-hero-only" id="' + escapeHtml(stackId) + '">' +
+      '<div class="global-action-stack is-hero-only" id="' + escapeHtml(stackId) + '" hidden aria-hidden="true">' +
         '<button type="button" class="global-close-btn" id="' + escapeHtml(closeId) + '"' +
           ' aria-label="Cerrar" hidden>&times;</button>' +
-        '<button type="button" class="global-fullscreen-btn is-visible" id="' + escapeHtml(fsId) + '"' +
-          ' aria-label="Pantalla completa" aria-pressed="false">' +
+        '<button type="button" class="global-fullscreen-btn" id="' + escapeHtml(fsId) + '"' +
+          ' aria-label="Pantalla completa" aria-pressed="false" hidden aria-hidden="true">' +
           '<span class="global-fullscreen-icon" aria-hidden="true">⛶</span>' +
         '</button>' +
       '</div>' +
       '<button type="button" class="pa-fab" id="' + escapeHtml(assistId) + '"' +
-        ' aria-expanded="false" aria-label="Abrir asistente">' +
+        ' aria-expanded="false" aria-label="Abrir asistente" hidden aria-hidden="true">' +
         '<span class="pa-fab__mark" aria-hidden="true"></span>' +
       '</button>';
   }
@@ -302,17 +302,25 @@ var ProjectCover = (function () {
         explore.hidden = true;
         explore.setAttribute('hidden', '');
         explore.setAttribute('aria-hidden', 'true');
+        explore.style.display = 'none';
+        explore.classList.add('is-pc-hidden');
         if (exploreSlot) {
           exploreSlot.hidden = true;
           exploreSlot.setAttribute('hidden', '');
+          exploreSlot.style.display = 'none';
+          exploreSlot.classList.add('is-pc-hidden');
         }
       } else {
         explore.hidden = false;
         explore.removeAttribute('hidden');
         explore.setAttribute('aria-hidden', 'false');
+        explore.style.removeProperty('display');
+        explore.classList.remove('is-pc-hidden');
         if (exploreSlot) {
           exploreSlot.hidden = false;
           exploreSlot.removeAttribute('hidden');
+          exploreSlot.style.removeProperty('display');
+          exploreSlot.classList.remove('is-pc-hidden');
         }
         var exploreLabel = model.botonIzquierdo || 'Explorar';
         explore.innerHTML =
@@ -361,6 +369,10 @@ var ProjectCover = (function () {
       if (stack) {
         stack.classList.toggle('is-visible', showFs);
         stack.classList.add('is-hero-only');
+        stack.hidden = !showFs;
+        stack.setAttribute('aria-hidden', showFs ? 'false' : 'true');
+        if (showFs) stack.removeAttribute('hidden');
+        else stack.setAttribute('hidden', '');
       }
     }
 
