@@ -533,9 +533,9 @@ var QuotationEditor = (function () {
   function createEmptyState() {
     var heroScene = {
       id: nextId('sc'),
-      name: 'Hero',
+      name: 'HERO',
       type: 'hero',
-      templateId: null,
+      templateId: 'hero-default',
       resourceId: null,
       coverModel: null,
       elements: [],
@@ -1375,6 +1375,96 @@ var QuotationEditor = (function () {
     return null;
   }
 
+  function isHeroScene(sc) {
+    if (!sc) return false;
+    if (sc.type === 'hero' || sc.templateId === 'hero-default') return true;
+    if (Array.isArray(state.scenes) && state.scenes[0] && state.scenes[0].id === sc.id) {
+      return true;
+    }
+    return false;
+  }
+
+  function heroScene() {
+    ensureScenes();
+    return (state.scenes && state.scenes[0]) || null;
+  }
+
+  /**
+   * First scene is always the HERO cover: fixed name, type, and index 0.
+   * Never removed — only cleared.
+   */
+  function ensureHeroSceneContract() {
+    if (!Array.isArray(state.scenes)) state.scenes = [];
+
+    var heroIdx = -1;
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (!state.scenes[i]) continue;
+      if (state.scenes[i].type === 'hero' || state.scenes[i].templateId === 'hero-default') {
+        heroIdx = i;
+        break;
+      }
+    }
+    if (heroIdx < 0 && state.scenes.length) heroIdx = 0;
+
+    if (heroIdx < 0) {
+      state.scenes.unshift({
+        id: nextId('sc'),
+        name: 'HERO',
+        type: 'hero',
+        templateId: 'hero-default',
+        resourceId: null,
+        coverModel: null,
+        elements: [],
+        interactions: [],
+        buttons: [],
+        hotspots: []
+      });
+      heroIdx = 0;
+    } else if (heroIdx > 0) {
+      state.scenes.unshift(state.scenes.splice(heroIdx, 1)[0]);
+      heroIdx = 0;
+    }
+
+    var hero = state.scenes[0];
+    hero.type = 'hero';
+    hero.templateId = hero.templateId || 'hero-default';
+    hero.name = 'HERO';
+    ensureSceneOverlays(hero);
+    if (!state.activeSceneId) state.activeSceneId = hero.id;
+  }
+
+  function clearHeroSceneContent(scene) {
+    if (!scene) return;
+    destroyExperienciaOverlay();
+    scene.resourceId = null;
+    scene.mediaUrl = null;
+    scene.publicUrl = null;
+    scene.mediaType = null;
+    scene.storagePath = null;
+    scene.archivoId = null;
+    scene.provider = null;
+    scene.elements = [];
+    scene.interactions = [];
+    scene.buttons = [];
+    scene.hotspots = [];
+    scene.type = 'hero';
+    scene.templateId = 'hero-default';
+    scene.name = 'HERO';
+    if (scene.coverModel && typeof scene.coverModel === 'object') {
+      scene.coverModel.imageUrl = null;
+      scene.coverModel.videoUrl = null;
+      scene.coverModel.logoUrl = '';
+      scene.coverModel.showLogo = false;
+    } else {
+      scene.coverModel = null;
+    }
+    ensureSceneOverlays(scene);
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expHasSelection = false;
+  }
+
   function activeScene() {
     ensureScenes();
     return sceneById(state.activeSceneId) || state.scenes[0] || null;
@@ -1382,6 +1472,7 @@ var QuotationEditor = (function () {
 
   function ensureScenes() {
     if (!Array.isArray(state.scenes)) state.scenes = [];
+    ensureHeroSceneContract();
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
     if (!state.scenes.length) {
       state.activeSceneId = null;
@@ -2484,7 +2575,7 @@ var QuotationEditor = (function () {
   function layerTypeLabel(type) {
     var t = String(type || '').toUpperCase().replace(/[\s-]+/g, '_');
     var MAP = {
-      HERO: 'Hero',
+      HERO: 'HERO',
       BUTTON: 'Botón',
       HOTSPOT: 'Hotspot',
       TEXT: 'Texto',
@@ -2510,13 +2601,17 @@ var QuotationEditor = (function () {
     var scene = activeScene();
     if (scene) ensureSceneOverlays(scene);
     var ixs = (scene && Array.isArray(scene.interactions)) ? scene.interactions.slice() : [];
+    var heroActive = !!(scene && isHeroScene(scene));
     var rows = '' +
-      '<li class="qe-layers__item is-hero" data-qe-layer="hero" data-qe-layer-type="HERO">' +
-        '<button type="button" class="qe-layers__vis" data-qe-layer-vis="hero" title="Hero" disabled aria-label="Hero">👁</button>' +
-        '<button type="button" class="qe-layers__sel is-active" data-qe-layer-sel="hero">' +
+      '<li class="qe-layers__item is-hero' + (heroActive ? ' is-selected' : '') + '"' +
+        ' data-qe-layer="hero" data-qe-layer-type="HERO">' +
+        '<button type="button" class="qe-layers__vis" data-qe-layer-vis="hero" title="HERO" disabled aria-label="HERO">👁</button>' +
+        '<button type="button" class="qe-layers__sel' + (heroActive ? ' is-active' : '') + '"' +
+          ' data-qe-layer-sel="hero" title="Ir a escena HERO">' +
           '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel('HERO')) + '</span>' +
         '</button>' +
-        '<span class="qe-layers__lock" title="Fijo">🔒</span>' +
+        '<button type="button" class="qe-layers__clear" data-qe-layer-clear="hero"' +
+          ' title="Vaciar HERO (no elimina la portada)" aria-label="Vaciar HERO">🗑</button>' +
       '</li>';
     ixs.forEach(function (ix) {
       if (!ix || !ix.id) return;
@@ -2621,7 +2716,8 @@ var QuotationEditor = (function () {
     ensureScenes();
     var thumbs = state.scenes.map(function (sc) {
       var on = sc.id === state.activeSceneId;
-      var label = String(sc.name || 'Escena').toLowerCase();
+      var hero = isHeroScene(sc);
+      var label = hero ? 'HERO' : String(sc.name || 'Escena').toLowerCase();
       var thumbUrl = sceneDisplayUrl(sc) || null;
       var bg = thumbUrl
         ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
@@ -2631,18 +2727,24 @@ var QuotationEditor = (function () {
         : (
           '<button type="button" class="qe-scenes__thumb-del"' +
             ' data-qe-scene-delete="' + escapeHtml(sc.id) + '"' +
-            ' aria-label="Eliminar escena" title="Eliminar escena">×</button>'
+            ' aria-label="' + (hero ? 'Vaciar HERO' : 'Eliminar escena') + '"' +
+            ' title="' + (hero
+              ? 'Vaciar contenido (la portada HERO no se elimina)'
+              : 'Eliminar escena') + '">×</button>'
         );
       return '' +
-        '<div class="qe-scenes__thumb-wrap" data-qe-drop-scene data-qe-drop-scene-id="' +
+        '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') + '"' +
+          ' data-qe-drop-scene data-qe-drop-scene-id="' +
           escapeHtml(sc.id) + '"' +
-          ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '">' +
-          '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') + '"' +
+          (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') + '>' +
+          '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') +
+            (hero ? ' is-hero' : '') + '"' +
             ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
-            ' title="' + escapeHtml(sc.name || 'Escena') + '">' +
+            ' title="' + escapeHtml(hero ? 'HERO' : (sc.name || 'Escena')) + '">' +
             '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
-            '<span class="qe-scenes__thumb-name" data-qe-scene-name="' +
-              escapeHtml(sc.id) + '">' + escapeHtml(label) + '</span>' +
+            '<span class="qe-scenes__thumb-name"' +
+              (hero ? ' data-qe-scene-name-locked="1"' : ' data-qe-scene-name="' + escapeHtml(sc.id) + '"') +
+              '>' + escapeHtml(label) + '</span>' +
           '</button>' +
           delBtn +
         '</div>';
@@ -2847,15 +2949,23 @@ var QuotationEditor = (function () {
 
   function sceneConfirmHtml() {
     if (!state.pendingSceneDeleteId) return '';
+    var pending = sceneById(state.pendingSceneDeleteId);
+    var hero = isHeroScene(pending);
+    var title = hero
+      ? '¿Vaciar la portada HERO? Se quita el contenido, pero la escena permanece.'
+      : '¿Deseas eliminar esta escena?';
+    var okLabel = hero ? 'Vaciar' : 'Eliminar';
     return '' +
       '<div class="qe-confirm" data-qe-scene-confirm role="dialog" aria-modal="true"' +
         ' aria-labelledby="qeSceneConfirmTitle">' +
         '<div class="qe-confirm__backdrop" data-qe-scene-confirm-cancel tabindex="-1"></div>' +
         '<div class="qe-confirm__panel">' +
-          '<p class="qe-confirm__title" id="qeSceneConfirmTitle">¿Deseas eliminar esta escena?</p>' +
+          '<p class="qe-confirm__title" id="qeSceneConfirmTitle">' + escapeHtml(title) + '</p>' +
           '<div class="qe-confirm__actions">' +
             '<button type="button" class="qe-confirm__btn" data-qe-scene-confirm-cancel>Cancelar</button>' +
-            '<button type="button" class="qe-confirm__btn qe-confirm__btn--danger" data-qe-scene-confirm-ok>Eliminar</button>' +
+            '<button type="button" class="qe-confirm__btn qe-confirm__btn--danger" data-qe-scene-confirm-ok">' +
+              escapeHtml(okLabel) +
+            '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -3543,7 +3653,7 @@ var QuotationEditor = (function () {
 
   function renameScene(id, name) {
     var sc = sceneById(id);
-    if (!sc) return;
+    if (!sc || isHeroScene(sc)) return;
     var next = String(name == null ? '' : name).trim();
     if (!next || sc.name === next) return;
     sc.name = next;
@@ -3555,6 +3665,11 @@ var QuotationEditor = (function () {
     var from = String(fromId || '');
     var to = String(toId || '');
     if (!from || !to || from === to) return;
+    var fromSc = sceneById(from);
+    var toSc = sceneById(to);
+    /* HERO stays pinned at index 0 — cannot drag it or drop before it. */
+    if (isHeroScene(fromSc)) return;
+    if (!placeAfter && isHeroScene(toSc)) return;
     var fromIdx = -1;
     var toIdx = -1;
     var i;
@@ -3576,7 +3691,9 @@ var QuotationEditor = (function () {
       state.scenes.splice(fromIdx, 0, moved);
       return;
     }
+    if (insertAt < 1) insertAt = 1;
     state.scenes.splice(insertAt, 0, moved);
+    ensureHeroSceneContract();
     markDirtyLocal();
   }
 
@@ -3597,7 +3714,7 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         var id = span.getAttribute('data-qe-scene-name');
         var sc = sceneById(id);
-        if (!sc) return;
+        if (!sc || isHeroScene(sc)) return;
         var input = document.createElement('input');
         input.type = 'text';
         input.className = 'qe-scenes__thumb-name-input';
@@ -4427,11 +4544,24 @@ var QuotationEditor = (function () {
     }
     if (idx < 0) return;
 
+    /* HERO is the permanent cover — clear contents, never remove the scene. */
+    if (isHeroScene(state.scenes[idx])) {
+      clearHeroSceneContent(state.scenes[idx]);
+      state.activeSceneId = state.scenes[idx].id;
+      state.sceneMenuOpen = false;
+      state.dockOpen = false;
+      state.resourcePickerOpen = false;
+      markDirtyLocal();
+      rerender();
+      return;
+    }
+
     destroyExperienciaOverlay();
     state.scenes.splice(idx, 1);
+    ensureHeroSceneContract();
 
     if (state.activeSceneId === sid) {
-      var next = state.scenes[idx] || state.scenes[idx - 1] || null;
+      var next = state.scenes[idx] || state.scenes[idx - 1] || state.scenes[0] || null;
       state.activeSceneId = next ? next.id : null;
     } else if (state.activeSceneId && !sceneById(state.activeSceneId)) {
       state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
@@ -5109,6 +5239,15 @@ var QuotationEditor = (function () {
       var sel = t.closest('[data-qe-layer-sel]');
       var up = t.closest('[data-qe-layer-up]');
       var down = t.closest('[data-qe-layer-down]');
+      var clearHero = t.closest('[data-qe-layer-clear="hero"], [data-qe-layer-clear]');
+
+      if (clearHero && clearHero.getAttribute('data-qe-layer-clear') === 'hero') {
+        ev.preventDefault();
+        var hsClear = heroScene();
+        if (!hsClear) return;
+        requestDeleteScene(hsClear.id);
+        return;
+      }
 
       if (vis) {
         var vid = vis.getAttribute('data-qe-layer-vis');
@@ -5191,9 +5330,20 @@ var QuotationEditor = (function () {
 
       if (sel) {
         var sid = sel.getAttribute('data-qe-layer-sel');
-        if (!sid || sid === 'hero') {
-          if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
-          refreshLayersPanel();
+        if (!sid) return;
+        if (sid === 'hero') {
+          var hs = heroScene();
+          if (hs) {
+            if (state.activeSceneId !== hs.id) {
+              selectScene(hs.id);
+              return;
+            }
+            if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
+            state.selectedElementId = null;
+            state.expHasSelection = false;
+            refreshLayersPanel();
+            refreshDockOnly();
+          }
           return;
         }
         if (expOverlay && expOverlay.selectOverlayItem) {
@@ -7036,13 +7186,9 @@ var QuotationEditor = (function () {
 
   function entryCoverScene() {
     ensureScenes();
+    var hero = heroScene();
+    if (hero) return hero;
     var i;
-    for (i = 0; i < state.scenes.length; i++) {
-      if (state.scenes[i] && state.scenes[i].coverModel &&
-          (state.scenes[i].templateId === 'hero-default' || state.scenes[i].type === 'hero')) {
-        return state.scenes[i];
-      }
-    }
     for (i = 0; i < state.scenes.length; i++) {
       if (state.scenes[i] && state.scenes[i].coverModel) return state.scenes[i];
     }
@@ -7346,6 +7492,7 @@ var QuotationEditor = (function () {
       if (!hq.canvas.scenes.length) {
         state.scenes = [];
         state.activeSceneId = null;
+        ensureHeroSceneContract();
         return;
       }
       state.scenes = hq.canvas.scenes.map(function (sc) {
@@ -7384,13 +7531,14 @@ var QuotationEditor = (function () {
       if (!sceneById(state.activeSceneId)) {
         state.activeSceneId = state.scenes[0].id;
       }
+      ensureHeroSceneContract();
       return;
     }
 
-    /* Legacy projects: seed one empty Hero scene — media must be assigned explicitly. */
+    /* Legacy projects: seed one empty HERO scene — media must be assigned explicitly. */
     var scene = {
       id: nextId('sc'),
-      name: 'Hero',
+      name: 'HERO',
       type: 'hero',
       templateId: 'hero-default',
       resourceId: null,

@@ -604,6 +604,7 @@
 
 .qe-layers__vis,
 .qe-layers__lock,
+.qe-layers__clear,
 .qe-layers__ord,
 .qe-layers__sel {
   appearance: none;
@@ -618,6 +619,7 @@
 
 .qe-layers__vis,
 .qe-layers__lock,
+.qe-layers__clear,
 .qe-layers__ord {
   width: 22px;
   height: 22px;
@@ -625,6 +627,16 @@
   line-height: 22px;
   text-align: center;
   opacity: 0.7;
+}
+
+.qe-layers__clear:hover {
+  opacity: 1;
+  color: rgba(255, 160, 160, 0.95);
+}
+
+.qe-layers__item.is-hero .qe-layers__type {
+  letter-spacing: 0.06em;
+  font-weight: 650;
 }
 
 .qe-layers__vis.is-off,
