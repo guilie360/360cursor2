@@ -39,12 +39,13 @@ var QuotationProposalsPage = (function () {
             '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' +
           '</button>' +
           '<div class="qpp__chrome-end">' +
-            /* Mobile/tablet: compare. Desktop: hidden via CSS (>=1024px). */
+            /* Mobile/tablet: compare text. Desktop: hidden via CSS (>=1024px). */
             '<button type="button" class="qpp__icon-btn qpp__chrome-compare" data-qpp-compare aria-label="Comparar" aria-pressed="false">' +
               '<svg viewBox="0 0 24 24" aria-hidden="true">' +
                 '<rect x="3" y="4" width="7" height="16" rx="1.5"/>' +
                 '<rect x="14" y="4" width="7" height="16" rx="1.5"/>' +
               '</svg>' +
+              '<span class="qpp__chrome-compare-label">Comparar</span>' +
             '</button>' +
             /* Desktop only: fullscreen. */
             '<button type="button" class="qpp__icon-btn qpp__chrome-fs" data-qpp-fullscreen aria-label="Pantalla completa" aria-pressed="false">' +

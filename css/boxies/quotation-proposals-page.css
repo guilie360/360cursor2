@@ -115,8 +115,9 @@ body.qr-proposals-page .qpp {
   border-color: rgba(255, 255, 255, 0.65);
 }
 
-/* Music note — filled silhouette (same chrome as other icon buttons). */
-.qpp__chrome-music .qpp__music-note {
+.qpp__chrome-compare-label {
+  display: none;
+}
   width: 16px;
   height: 16px;
   fill: currentColor;
@@ -486,6 +487,29 @@ body.qr-proposals-page .qpp {
     justify-self: center;
     grid-column: 2;
     grid-row: 1;
+    width: auto;
+    min-width: 0;
+    height: 44px;
+    padding: 0 18px;
+    border-radius: 18px;
+    gap: 0;
+  }
+
+  .qpp__chrome-compare svg {
+    display: none !important;
+  }
+
+  .qpp__chrome-compare-label {
+    display: inline;
+    font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+    text-transform: uppercase;
+    color: #fff;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .qpp__audio-wrap {
@@ -526,6 +550,16 @@ body.qr-proposals-page .qpp {
   .qpp__icon-btn {
     width: 40px;
     height: 40px;
+  }
+  .qpp__chrome-compare {
+    height: 40px;
+    padding: 0 16px;
+    border-radius: 17px;
+  }
+  .qpp__chrome-compare-label {
+    font-size: 0.54rem;
+    letter-spacing: 0.18em;
+    text-indent: 0.18em;
   }
   .qpp__main {
     padding:
