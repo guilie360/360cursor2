@@ -121,7 +121,7 @@
   max-height: 100%;
   display: grid;
   grid-template-columns:
-    var(--qe-library-w, 200px)
+    var(--qe-library-w, 220px)
     minmax(0, 1fr)
     var(--qe-inspector-w, 0px);
   gap: 0;
@@ -3525,7 +3525,7 @@ body.quotation-canvas-first,
 html.quotation-canvas-first {
   --builder-rail-width: 0px;
   --quotation-icon-rail-w: 0px;
-  --quotation-recursos-w: 200px;
+  --quotation-recursos-w: 220px;
   --quotation-props-w: 220px;
   --qe-inspector-w: 0px;
 }
@@ -3653,9 +3653,9 @@ body.quotation-canvas-first .builder-workspace,
 /* Recursos — collapses independently; float stays on its edge */
 .quotation-recursos {
   position: relative;
-  flex: 0 0 var(--quotation-recursos-w, 200px);
-  width: var(--quotation-recursos-w, 200px);
-  max-width: var(--quotation-recursos-w, 200px);
+  flex: 0 0 var(--quotation-recursos-w, 220px);
+  width: var(--quotation-recursos-w, 220px);
+  max-width: var(--quotation-recursos-w, 220px);
   min-width: 0;
   min-height: 0;
   display: flex;
