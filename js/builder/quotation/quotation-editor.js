@@ -420,6 +420,14 @@ var QuotationEditor = (function () {
       qeLibAudit('uploadLibraryItem:no-file', item);
       return item;
     }
+    if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.assertFileWithinUploadLimit) {
+      try {
+        BunnyMediaApi.assertFileWithinUploadLimit(item.file);
+      } catch (eSize) {
+        item.uploadStatus = 'failed';
+        throw eSize;
+      }
+    }
     var projectId = resolveProjectId();
     var slug = resolveShowroomSlug();
     if (!projectId) {
@@ -4705,6 +4713,21 @@ var QuotationEditor = (function () {
       } else if (file.type && file.type.indexOf('image/') !== 0 &&
           !/\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i.test(name)) {
         return;
+      }
+      /* Client-side size gate — same limit as bunny-media (before any network wait). */
+      if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.assertFileWithinUploadLimit) {
+        try {
+          BunnyMediaApi.assertFileWithinUploadLimit(file);
+        } catch (eTooBig) {
+          if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+            AdminNotify.error(
+              (eTooBig && eTooBig.message) ||
+              (BunnyMediaApi.uploadLimitMessage && BunnyMediaApi.uploadLimitMessage()) ||
+              'Archivo demasiado grande'
+            );
+          }
+          return;
+        }
       }
       /* Temporary blob preview only until Storage upload finishes — never serialized. */
       var tempBlob = isPdf ? null : URL.createObjectURL(file);

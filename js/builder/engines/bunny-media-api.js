@@ -1,5 +1,25 @@
 /* BOXIES V5.9.86 — Bunny Media client (slug paths; structure sync; no Access Key in browser) */
 var BunnyMediaApi = (function () {
+  /* Must match supabase/functions/bunny-media MAX_BYTES (Fase 1). */
+  var MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+  var MAX_UPLOAD_MB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+
+  function uploadLimitMessage() {
+    return 'Archivo demasiado grande (máx ' + MAX_UPLOAD_MB + ' MB en Fase 1)';
+  }
+
+  function assertFileWithinUploadLimit(file) {
+    if (!file) throw new Error('Archivo requerido');
+    var size = Number(file.size);
+    if (!isFinite(size) || size <= 0) throw new Error('Archivo vacío');
+    if (size > MAX_UPLOAD_BYTES) {
+      var err = new Error(uploadLimitMessage());
+      err.code = 'FILE_TOO_LARGE';
+      err.maxBytes = MAX_UPLOAD_BYTES;
+      throw err;
+    }
+  }
+
   function categoriesFromNodes() {
     if (typeof MediaNodesEngine === 'undefined') return {};
     var map = {};
@@ -387,6 +407,8 @@ var BunnyMediaApi = (function () {
     var meta = getCategories()[key];
     if (!meta || meta.mode !== 'upload') throw new Error('Categoría no admite upload a Bunny');
     if (!file) throw new Error('Archivo requerido');
+    /* Reject before network — avoid waiting for a full multipart round-trip. */
+    assertFileWithinUploadLimit(file);
     if (!opts.nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
 
     var showroomSlug = slugifyLocal(opts.showroomSlug || '');
@@ -517,6 +539,10 @@ var BunnyMediaApi = (function () {
 
   return {
     get CATEGORIES() { return getCategories(); },
+    MAX_UPLOAD_BYTES: MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_MB: MAX_UPLOAD_MB,
+    uploadLimitMessage: uploadLimitMessage,
+    assertFileWithinUploadLimit: assertFileWithinUploadLimit,
     list: list,
     remove: remove,
     uploadAndSync: uploadAndSync,
