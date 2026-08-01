@@ -816,6 +816,7 @@ var QuotationRuntime = (function () {
 
   function showError(host, err) {
     if (!host) return;
+    host.removeAttribute('aria-busy');
     host.innerHTML =
       '<div class="qr-error" role="alert">' +
         '<h1 class="qr-error__title">No se pudo abrir la Cotización</h1>' +
@@ -1028,6 +1029,7 @@ var QuotationRuntime = (function () {
 
   function paintHero(host, bundle) {
     host.innerHTML = '';
+    host.removeAttribute('aria-busy');
     coverHostEl = document.createElement('div');
     coverHostEl.className = 'qr-cover-host';
     host.appendChild(coverHostEl);
@@ -1258,7 +1260,9 @@ var QuotationRuntime = (function () {
       throw err;
     }
 
-    host.innerHTML = '<p class="qr-loading">Cargando cotización…</p>';
+    /* Keep the host black/empty while the bundle loads — no loader copy. */
+    host.innerHTML = '';
+    host.setAttribute('aria-busy', 'true');
 
     try {
       var liveEnv = null;

@@ -69,6 +69,7 @@ var ProjectCover = (function () {
       showLogo: false,
       videoUrl: null,
       imageUrl: null,
+      showExplore: true,
       showBack: true,
       backLabel: 'Demos',
       showShare: true,
@@ -93,8 +94,12 @@ var ProjectCover = (function () {
     model.eslogan = hc.eslogan || '';
     model.botonIzquierdo = hc.botonIzquierdo || 'Explorar';
     model.botonDerecho = hc.botonDerecho || 'Iniciar';
+    model.showExplore = hc.showExplore !== false;
+    model.showBack = hc.showBack !== false;
+    model.backLabel = hc.backLabel || model.backLabel;
     model.showShare = hc.showShare !== false;
     model.showFullscreen = hc.showFullscreen !== false;
+    model.showAssistant = hc.showAssistant !== false;
     model.logoStyle = br.logoStyle === 'avatar' ? 'avatar' : 'flat';
     model.logoUrl = br.logo && br.logo.uploadedUrl ? br.logo.uploadedUrl : '';
     model.showLogo = br.showHeroLogo !== false && !!model.logoUrl;
@@ -120,8 +125,12 @@ var ProjectCover = (function () {
     model.eslogan = String(hc.eslogan || '').trim();
     model.botonIzquierdo = String(hc.botonIzquierdo || 'Explorar').trim() || 'Explorar';
     model.botonDerecho = String(hc.botonDerecho || 'Iniciar').trim() || 'Iniciar';
+    model.showExplore = hc.showExplore !== false;
+    model.showBack = hc.showBack !== false;
+    model.backLabel = String(hc.backLabel || model.backLabel || 'Demos').trim() || 'Demos';
     model.showShare = hc.showShare !== false;
     model.showFullscreen = hc.showFullscreen !== false;
+    model.showAssistant = hc.showAssistant !== false;
     model.logoStyle = br.logoStyle === 'avatar' ? 'avatar' : 'flat';
     model.logoUrl = (logo && (logo.uploadedUrl || logo.previewUrl)) || '';
     model.showLogo = br.showHeroLogo !== false && !!model.logoUrl;
@@ -285,15 +294,36 @@ var ProjectCover = (function () {
     if (tagEl) tagEl.textContent = model.eslogan || '';
 
     var explore = q(root, '[data-pc-slot="explore"]');
+    var exploreSlot = explore && explore.closest
+      ? explore.closest('.project-cover-slot--start')
+      : null;
     if (explore) {
-      var exploreLabel = model.botonIzquierdo || 'Explorar';
-      explore.innerHTML =
-        '<span class="menu-btn-icon" aria-hidden="true">☰</span>' + escapeHtml(exploreLabel);
-      explore.setAttribute('aria-label', exploreLabel);
+      if (model.showExplore === false) {
+        explore.hidden = true;
+        explore.setAttribute('hidden', '');
+        explore.setAttribute('aria-hidden', 'true');
+        if (exploreSlot) {
+          exploreSlot.hidden = true;
+          exploreSlot.setAttribute('hidden', '');
+        }
+      } else {
+        explore.hidden = false;
+        explore.removeAttribute('hidden');
+        explore.setAttribute('aria-hidden', 'false');
+        if (exploreSlot) {
+          exploreSlot.hidden = false;
+          exploreSlot.removeAttribute('hidden');
+        }
+        var exploreLabel = model.botonIzquierdo || 'Explorar';
+        explore.innerHTML =
+          '<span class="menu-btn-icon" aria-hidden="true">☰</span>' + escapeHtml(exploreLabel);
+        explore.setAttribute('aria-label', exploreLabel);
+      }
     }
 
     var start = q(root, '[data-pc-slot="start"]');
     if (start) start.textContent = model.botonDerecho || 'Iniciar';
+    if (cover) cover.classList.toggle('is-start-only', model.showExplore === false);
 
     var back = q(root, '.project-back-btn');
     if (back) {
@@ -458,6 +488,7 @@ var ProjectCover = (function () {
     base.showLogo = raw.showLogo !== false && !!base.logoUrl;
     base.videoUrl = String(raw.videoUrl || '').trim() || null;
     base.imageUrl = String(raw.imageUrl || '').trim() || null;
+    base.showExplore = raw.showExplore !== false;
     base.showBack = raw.showBack !== false;
     base.backLabel = String(raw.backLabel || 'Demos').trim() || 'Demos';
     base.showShare = raw.showShare !== false;
@@ -518,8 +549,12 @@ var ProjectCover = (function () {
         whatsappMessage: '',
         shareUrl: '',
         showWhatsapp: false,
+        showExplore: model.showExplore !== false,
+        showBack: model.showBack !== false,
+        backLabel: model.backLabel || 'Demos',
         showShare: model.showShare !== false,
-        showFullscreen: model.showFullscreen !== false
+        showFullscreen: model.showFullscreen !== false,
+        showAssistant: model.showAssistant !== false
       },
       branding: {
         showHeroLogo: model.showLogo !== false,
