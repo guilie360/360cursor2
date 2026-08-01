@@ -26,8 +26,8 @@ var QuotationProposalsPage = (function () {
   var COMPARE_DIFFS = [
     { label: 'Videos y animaciones', still: '—', motion: '✓' },
     { label: 'Vista aérea del proyecto', still: '—', motion: '✓' },
-    { label: 'Renders de detalles arquitectónicos', still: '—', motion: '✓' },
-    { label: 'Identidad visual inicial', still: '—', motion: '✓' },
+    { label: 'Identidad visual inicial (logo)', still: '—', motion: '✓' },
+    { label: 'Presentación en tablets y celulares', still: '—', motion: '✓' },
     { label: 'Renders exteriores (cantidad aproximada)', still: '3–5', motion: '10–12' }
   ];
 
@@ -41,8 +41,7 @@ var QuotationProposalsPage = (function () {
     { label: 'Link personalizado', still: '✓', motion: '✓' },
     { label: 'Música ambiental', still: '✓', motion: '✓' },
     { label: 'Presentación en PC', still: '✓', motion: '✓' },
-    { label: 'Presentación por imágenes', still: '✓', motion: '✓' },
-    { label: 'Presentación en tablets y celulares', still: '✓', motion: '✓' }
+    { label: 'Presentación por imágenes', still: '✓', motion: '✓' }
   ];
 
   function qs(sel, root) {
