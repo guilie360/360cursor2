@@ -39,6 +39,7 @@ html, body.qr-host {
   z-index: 2;
   opacity: 1;
   transform: translate3d(0, 0, 0);
+  pointer-events: auto;
   transition:
     opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -48,12 +49,18 @@ html, body.qr-host {
   z-index: 1;
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
+  pointer-events: none !important;
   transform: translate3d(0, 28px, 0);
   transition:
     opacity 520ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s linear 560ms;
+}
+
+/* Idle: fully remove from hit-testing (iOS ignores opacity/pointer-events alone). */
+#quotationRuntimeRoot.qr-presentation[data-qr-view="hero"] > .qr-proposals-section,
+#quotationRuntimeRoot.qr-presentation:not([data-qr-view="proposalSelection"]) > .qr-proposals-section {
+  display: none;
 }
 
 #quotationRuntimeRoot.qr-presentation[data-qr-view="proposalSelection"] > .qr-cover-host {
@@ -64,10 +71,11 @@ html, body.qr-host {
 }
 
 #quotationRuntimeRoot.qr-presentation[data-qr-view="proposalSelection"] > .qr-proposals-section {
+  display: block;
   z-index: 3;
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
+  pointer-events: auto !important;
   transform: translate3d(0, 0, 0);
   transition:
     opacity 520ms cubic-bezier(0.22, 1, 0.36, 1) 60ms,
@@ -158,17 +166,22 @@ body.qr-host .pa-fab,
   animation: none;
   box-sizing: border-box;
 }
-/* Pull logo + copy + CTA into one flex column (logo sits with SHOWROOM). */
-.qr-cover-host .project-cover.is-cover-cinematic .project-cover-content::before {
+/* Bottom safe spacer — keeps CTA above home indicator without display:contents. */
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-content::after {
   content: '';
-  flex: 1 1 auto;
-  min-height: clamp(32px, 8vh, 72px);
+  flex: 0 0 auto;
+  height: clamp(56px, 9vh, 88px);
   width: 100%;
-  order: -1;
+  order: 3;
   pointer-events: none;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-row {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 0 0 auto;
+  order: 1;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-hero-copy {
   display: flex;
@@ -178,22 +191,29 @@ body.qr-host .pa-fab,
   flex: 0 0 auto;
   justify-content: flex-start;
   gap: 0;
-  order: 1;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
+  position: relative;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   width: 100%;
-  order: 2;
-  margin-top: auto;
-  padding-top: clamp(48px, 10vh, 96px);
-  padding-bottom: clamp(56px, 9vh, 88px);
+  margin-top: clamp(48px, 10vh, 96px);
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: auto;
   animation: qr-cine-fade 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-slot {
-  display: contents;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  pointer-events: auto;
+}
+.qr-cover-host .project-cover.is-cover-cinematic .project-cover-slot--end {
+  display: none;
 }
 
 /* Logo + SHOWROOM as one tight brand block */
@@ -202,7 +222,7 @@ body.qr-host .pa-fab,
   max-width: 72px;
   height: auto;
   order: 0;
-  margin: 0 0 4px;
+  margin: auto 0 4px;
   background: transparent !important;
   mix-blend-mode: normal;
   filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.12));
@@ -255,6 +275,8 @@ body.qr-host .pa-fab,
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn[data-pc-slot="explore"] {
+  position: relative;
+  z-index: 6;
   min-height: 52px;
   min-width: min(240px, 74vw);
   padding: 0 32px;
@@ -271,6 +293,10 @@ body.qr-host .pa-fab,
   letter-spacing: 0.24em;
   text-indent: 0.08em;
   text-transform: uppercase;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
   transition: background 250ms ease, border-color 250ms ease, box-shadow 250ms ease, transform 250ms ease;
 }
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn .menu-btn-icon {
@@ -343,8 +369,12 @@ body.qr-host .pa-fab,
     text-indent: 0.42em;
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons {
-    padding-top: 64px;
-    padding-bottom: max(96px, calc(env(safe-area-inset-bottom) + 88px));
+    margin-top: 64px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .qr-cover-host .project-cover.is-cover-cinematic .project-cover-content::after {
+    height: max(96px, calc(env(safe-area-inset-bottom) + 88px));
   }
   .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
     min-height: 50px;
@@ -547,7 +577,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .qr-ix-hs {

@@ -350,10 +350,19 @@ var QuotationRuntime = (function () {
   }
 
   function openProposalsPage() {
+    if (presentationView === 'proposalSelection') return;
     ensureProposalsSection(presentationRootEl || document.getElementById('quotationRuntimeRoot'));
-    /* Double rAF so first paint of the section is ready, then swap view. */
+    /* Reveal section first (display:none → block), then animate in. */
+    if (proposalsHostEl) {
+      proposalsHostEl.style.display = 'block';
+      proposalsHostEl.style.opacity = '0';
+    }
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
+        if (proposalsHostEl) {
+          proposalsHostEl.style.removeProperty('display');
+          proposalsHostEl.style.removeProperty('opacity');
+        }
         setPresentationView('proposalSelection');
       });
     });
@@ -405,7 +414,8 @@ var QuotationRuntime = (function () {
       }
       svg.appendChild(path);
     });
-    ixLayerEl.appendChild(svg);
+    /* Never mount an empty full-bleed SVG — it steals taps on iOS/WebKit. */
+    if (hotspots.length) ixLayerEl.appendChild(svg);
 
     var btnsHost = document.createElement('div');
     btnsHost.className = 'qr-ix-buttons';
@@ -1043,7 +1053,11 @@ var QuotationRuntime = (function () {
     };
 
     if (!editorMode) {
-      opts.onExplore = function () {
+      opts.onExplore = function (ev) {
+        if (ev) {
+          try { ev.preventDefault(); } catch (ePrev) { /* ignore */ }
+          try { ev.stopPropagation(); } catch (eStop) { /* ignore */ }
+        }
         var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var exploreAction = cm && cm.exploreAction ? String(cm.exploreAction).toLowerCase() : '';
@@ -1062,7 +1076,10 @@ var QuotationRuntime = (function () {
         }
         enterStage();
       };
-      opts.onStart = function () {
+      opts.onStart = function (ev) {
+        if (ev) {
+          try { ev.preventDefault(); } catch (ePrev2) { /* ignore */ }
+        }
         var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var startAction = cm && cm.startAction ? String(cm.startAction).toLowerCase() : '';
