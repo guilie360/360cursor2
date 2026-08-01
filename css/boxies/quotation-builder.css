@@ -4051,7 +4051,7 @@ body.quotation-canvas-first .builder-workspace,
   background: rgba(0, 0, 0, 0.55);
 }
 
-.qe-content__list.is-view-grid .qe-lib-menu-btn {
+.qe-content__list.is-view-grid .qe-lib__item > .qe-lib-menu-btn {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -4061,10 +4061,27 @@ body.quotation-canvas-first .builder-workspace,
   color: rgba(255, 255, 255, 0.85);
 }
 
-.qe-content__list.is-view-grid .qe-lib__item:hover .qe-lib-menu-btn,
-.qe-content__list.is-view-grid .qe-lib__item:focus-within .qe-lib-menu-btn,
-.qe-content__list.is-view-grid .qe-lib-menu-btn[aria-expanded="true"] {
+.qe-content__list.is-view-grid .qe-lib__item:hover > .qe-lib-menu-btn,
+.qe-content__list.is-view-grid .qe-lib__item:focus-within > .qe-lib-menu-btn,
+.qe-content__list.is-view-grid .qe-lib__item > .qe-lib-menu-btn[aria-expanded="true"] {
   opacity: 1;
+}
+
+/* Folder ⋮ stays list-style in both views — only file cards change. */
+.qe-content__list.is-view-grid .qe-folder__head > .qe-lib-menu-btn {
+  position: static;
+  top: auto;
+  right: auto;
+  z-index: auto;
+  opacity: 1;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.qe-content__list.is-view-grid .qe-folder__head > .qe-lib-menu-btn:hover,
+.qe-content__list.is-view-grid .qe-folder__head > .qe-lib-menu-btn[aria-expanded="true"] {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .builder-exp-stage-text {
