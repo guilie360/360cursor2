@@ -2667,6 +2667,32 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function viewportIconSvg(id) {
+    var common =
+      ' class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 16 16" fill="none"' +
+      ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true"';
+    if (id === 'desktop') {
+      return '<svg' + common + '>' +
+        '<rect x="1.5" y="2.5" width="13" height="8.5" rx="1.2"/>' +
+        '<path d="M6 13.5h4M8 11v2.5"/>' +
+      '</svg>';
+    }
+    if (id === 'tablet') {
+      return '<svg' + common + '>' +
+        '<rect x="3.2" y="1.5" width="9.6" height="13" rx="1.4"/>' +
+        '<path d="M7.2 12.2h1.6"/>' +
+      '</svg>';
+    }
+    if (id === 'mobile') {
+      return '<svg' + common + '>' +
+        '<rect x="4.5" y="1.5" width="7" height="13" rx="1.6"/>' +
+        '<path d="M7 12.3h2"/>' +
+      '</svg>';
+    }
+    return '';
+  }
+
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
     var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
@@ -2677,11 +2703,15 @@ var QuotationEditor = (function () {
         { id: 'mobile', label: 'Mobile' }
       ];
     var btns = list.map(function (vp) {
+      var label = vp.label || vp.id;
+      var icon = viewportIconSvg(vp.id) || escapeHtml(label);
       return '' +
         '<button type="button" class="qe-canvas-tool__btn' +
           (preset === vp.id ? ' is-active' : '') + '"' +
-          ' data-qe-viewport="' + escapeHtml(vp.id) + '">' +
-          escapeHtml(vp.label) +
+          ' data-qe-viewport="' + escapeHtml(vp.id) + '"' +
+          ' title="' + escapeHtml(label) + '"' +
+          ' aria-label="' + escapeHtml(label) + '">' +
+          icon +
         '</button>';
     }).join('');
     return '' +

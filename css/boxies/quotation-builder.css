@@ -469,8 +469,24 @@
 }
 
 .qe-canvas-tool--viewport {
-  padding: 3px;
+  height: 30px;
+  padding: 2px;
   gap: 0;
+}
+
+.qe-canvas-tool--viewport .qe-canvas-tool__btn {
+  width: 28px;
+  min-width: 28px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qe-canvas-tool--viewport .qe-canvas-tool__ico {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .qe-canvas-tool__btn {
