@@ -17,6 +17,10 @@ var QuotationRuntime = (function () {
   var loaded = null;
   var coverHostEl = null;
   var stageEl = null;
+  var proposalsHostEl = null;
+  var presentationRootEl = null;
+  /** @type {'hero'|'proposalSelection'|'comparison'|'proposalDetail'} */
+  var presentationView = 'hero';
   var editorMode = false;
   var canvasMode = false;
   var previewMode = false;
@@ -289,30 +293,70 @@ var QuotationRuntime = (function () {
     }
   }
 
-  function openProposalsPage() {
-    var project = loaded && loaded.project ? loaded.project : null;
-    var id = project && project.id ? String(project.id) : '';
-    var slug = project && project.slug ? String(project.slug) : '';
-    var q = readQuery();
-    if (!id && q && q.projectId) id = String(q.projectId);
-    var url = '/quotation/propuestas/';
-    try {
-      var u = new URL(url, window.location.origin);
-      if (id) u.searchParams.set('projectId', id);
-      if (slug) u.searchParams.set('slug', slug);
-      url = u.pathname + u.search;
-    } catch (eUrl) {
-      url = '/quotation/propuestas/' +
-        (id ? ('?projectId=' + encodeURIComponent(id)) : '') +
-        (slug ? ((id ? '&' : '?') + 'slug=' + encodeURIComponent(slug)) : '');
+  /**
+   * In-page presentation: hero → proposalSelection (no URL change, no remount).
+   * Sections are pre-mounted; only opacity/transform animate.
+   */
+  function setPresentationView(view) {
+    var next = String(view || 'hero');
+    if (
+      next !== 'hero' &&
+      next !== 'proposalSelection' &&
+      next !== 'comparison' &&
+      next !== 'proposalDetail'
+    ) {
+      next = 'hero';
     }
-    try {
-      if (window.top && window.top !== window) {
-        window.top.location.href = url;
-        return;
+    presentationView = next;
+    var root = presentationRootEl || document.getElementById('quotationRuntimeRoot');
+    if (root) {
+      root.setAttribute('data-qr-view', next);
+      root.classList.toggle('is-qr-proposals', next === 'proposalSelection');
+    }
+    if (coverHostEl) {
+      coverHostEl.setAttribute('aria-hidden', next === 'hero' ? 'false' : 'true');
+      if (next === 'hero') {
+        coverHostEl.removeAttribute('inert');
+      } else {
+        coverHostEl.setAttribute('inert', '');
       }
-    } catch (eTop) { /* cross-origin — fall through */ }
-    window.location.href = url;
+    }
+    if (proposalsHostEl) {
+      proposalsHostEl.setAttribute('aria-hidden', next === 'proposalSelection' ? 'false' : 'true');
+      if (next === 'proposalSelection') {
+        proposalsHostEl.removeAttribute('inert');
+      } else {
+        proposalsHostEl.setAttribute('inert', '');
+      }
+    }
+  }
+
+  function ensureProposalsSection(host) {
+    if (!host || editorMode) return;
+    if (proposalsHostEl && proposalsHostEl.parentNode === host) return;
+    proposalsHostEl = document.createElement('section');
+    proposalsHostEl.className = 'qr-proposals-section';
+    proposalsHostEl.setAttribute('data-qr-proposals', '');
+    proposalsHostEl.setAttribute('aria-hidden', 'true');
+    proposalsHostEl.setAttribute('inert', '');
+    host.appendChild(proposalsHostEl);
+    if (typeof QuotationProposalsPage !== 'undefined' && QuotationProposalsPage.mount) {
+      QuotationProposalsPage.mount(proposalsHostEl, {
+        onBack: function () {
+          setPresentationView('hero');
+        }
+      });
+    }
+  }
+
+  function openProposalsPage() {
+    ensureProposalsSection(presentationRootEl || document.getElementById('quotationRuntimeRoot'));
+    /* Double rAF so first paint of the section is ready, then swap view. */
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        setPresentationView('proposalSelection');
+      });
+    });
   }
 
   function paintInteractionLayer(parentEl, scene, interactive, opts) {
@@ -1106,9 +1150,27 @@ var QuotationRuntime = (function () {
   function paintHero(host, bundle) {
     host.innerHTML = '';
     host.removeAttribute('aria-busy');
+    presentationRootEl = host;
+    proposalsHostEl = null;
+    presentationView = 'hero';
+
+    var usePresentation = !editorMode;
+    if (usePresentation) {
+      host.classList.add('qr-presentation');
+      host.setAttribute('data-qr-view', 'hero');
+      host.classList.remove('is-qr-proposals');
+    } else {
+      host.classList.remove('qr-presentation', 'is-qr-proposals');
+      host.removeAttribute('data-qr-view');
+    }
+
     coverHostEl = document.createElement('div');
     coverHostEl.className = 'qr-cover-host';
+    coverHostEl.setAttribute('aria-hidden', 'false');
     host.appendChild(coverHostEl);
+
+    /* Pre-mount proposals so VER PROPUESTAS is an instant in-page transition. */
+    if (usePresentation) ensureProposalsSection(host);
 
     stageEl = document.createElement('section');
     stageEl.className = 'qr-stage';
@@ -1116,6 +1178,7 @@ var QuotationRuntime = (function () {
     host.appendChild(stageEl);
     /* Default: COVER mode until a media scene takes over. */
     enterCoverMode();
+    if (usePresentation) setPresentationView('hero');
 
     /*
      * V7.2.40 — Editor is SSOT. Preview/Web paint the active media scene immediately.

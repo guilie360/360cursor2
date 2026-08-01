@@ -1,4 +1,4 @@
-/* Quotation Proposals page — cinematic identity (TAROA landing). */
+/* Quotation Proposals — cinematic identity (in-page section + standalone). */
 
 html, body.qr-proposals-page {
   margin: 0;
@@ -9,15 +9,28 @@ html, body.qr-proposals-page {
   overflow: hidden;
 }
 
+.qr-proposals-section,
+.qr-proposals-section .qpp,
+body.qr-proposals-page .qpp {
+  color: #fff;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
 .qpp {
   position: relative;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+body.qr-proposals-page .qpp {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
 }
 
 .qpp::before {

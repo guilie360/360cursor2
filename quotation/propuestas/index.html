@@ -5,37 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Propuestas</title>
   <meta name="theme-color" content="#050505">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../css/boxies/quotation-proposals-page.css?v=ws7281">
+  <!-- Legacy route: proposals now live in-page inside /quotation/. Redirect home. -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(window.location.search || '');
+        var slug = String(p.get('slug') || '').trim();
+        if (slug) {
+          window.location.replace('/' + encodeURIComponent(slug));
+          return;
+        }
+        var id = String(p.get('projectId') || p.get('proyectoId') || '').trim();
+        if (id) {
+          window.location.replace('/quotation/?projectId=' + encodeURIComponent(id));
+          return;
+        }
+        window.location.replace('/');
+      } catch (e) {
+        window.location.replace('/');
+      }
+    })();
+  </script>
 </head>
-<body class="qr-proposals-page">
-  <div class="qpp" id="qrProposalsPage">
-    <header class="qpp__chrome">
-      <button type="button" class="qpp__icon-btn" data-qpp-back aria-label="Volver">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
-      </button>
-      <button type="button" class="qpp__icon-btn" data-qpp-compare aria-label="Comparar" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="3" y="4" width="7" height="16" rx="1.5"/>
-          <rect x="14" y="4" width="7" height="16" rx="1.5"/>
-        </svg>
-      </button>
-    </header>
-
-    <main class="qpp__main">
-      <p class="qpp__eyebrow">Showroom digital</p>
-      <h1 class="qpp__title">Selecciona una propuesta</h1>
-      <div class="qpp__cards-host">
-        <div class="qpp__grid" data-qpp-grid></div>
-      </div>
-      <p class="qpp__hint" data-qpp-hint></p>
-    </main>
-  </div>
-
-  <script src="../../js/builder/quotation/quotation-proposals-page.js?v=ws7281"></script>
-</body>
+<body class="qr-proposals-page"></body>
 </html>
