@@ -235,6 +235,43 @@ var QuotationProposalsPage = (function () {
     }
   }
 
+  var ambientUnlockBound = false;
+
+  function playAmbient(audio, root) {
+    if (!audio) return;
+    var p = audio.play();
+    if (p && typeof p.then === 'function') {
+      p.then(function () {
+        syncAudioUi(root);
+      }).catch(function () {
+        /* Browsers block unmuted autoplay — unlock on first gesture. */
+        if (ambientUnlockBound) return;
+        ambientUnlockBound = true;
+        var unlock = function () {
+          audio.play().then(function () {
+            syncAudioUi(root);
+          }).catch(function () { /* ignore */ });
+          document.removeEventListener('pointerdown', unlock, true);
+          document.removeEventListener('touchstart', unlock, true);
+          document.removeEventListener('keydown', unlock, true);
+        };
+        document.addEventListener('pointerdown', unlock, true);
+        document.addEventListener('touchstart', unlock, true);
+        document.addEventListener('keydown', unlock, true);
+      });
+    }
+  }
+
+  function startAmbientAudio(host) {
+    var root = host || document.querySelector('[data-qpp-root]') ||
+      document.querySelector('[data-qr-proposals]');
+    if (!root) return false;
+    var audio = qs('[data-qpp-audio]', root);
+    if (!audio) return false;
+    playAmbient(audio, root);
+    return true;
+  }
+
   function bindAudio(root) {
     var audio = qs('[data-qpp-audio]', root);
     var musicBtn = qs('[data-qpp-music]', root);
@@ -244,6 +281,10 @@ var QuotationProposalsPage = (function () {
     if (!audio || !musicBtn) return;
 
     audio.volume = volume ? Number(volume.value) / 100 : 0.7;
+    audio.setAttribute('preload', 'auto');
+
+    /* Autoplay as soon as the experience mounts. */
+    playAmbient(audio, root);
 
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
@@ -258,10 +299,7 @@ var QuotationProposalsPage = (function () {
         e.preventDefault();
         e.stopPropagation();
         if (audio.paused) {
-          var playPromise = audio.play();
-          if (playPromise && typeof playPromise.catch === 'function') {
-            playPromise.catch(function () { /* autoplay blocked */ });
-          }
+          playAmbient(audio, root);
         } else {
           audio.pause();
         }
@@ -354,7 +392,11 @@ var QuotationProposalsPage = (function () {
     });
   }
 
-  return { mount: mount, boot: boot };
+  return {
+    mount: mount,
+    boot: boot,
+    startAmbientAudio: startAmbientAudio
+  };
 })();
 
 (function () {

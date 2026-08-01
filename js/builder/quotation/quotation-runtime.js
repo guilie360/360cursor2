@@ -346,6 +346,10 @@ var QuotationRuntime = (function () {
           setPresentationView('hero');
         }
       });
+      /* Ambient track starts when the public experience boots (not only on propuestas). */
+      if (typeof QuotationProposalsPage.startAmbientAudio === 'function') {
+        QuotationProposalsPage.startAmbientAudio(proposalsHostEl);
+      }
     }
   }
 
