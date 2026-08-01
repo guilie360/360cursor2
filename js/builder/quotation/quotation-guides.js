@@ -232,6 +232,10 @@ var QuotationGuides = (function () {
 
   /* ── Guide layer ──────────────────────────────────────── */
 
+  function isGuideDragActive() {
+    return !!(ghost || dragGuide);
+  }
+
   function ensureGuideLayer() {
     var canvas = designCanvasEl();
     if (!canvas) return null;
@@ -240,17 +244,42 @@ var QuotationGuides = (function () {
       layer = document.createElement('div');
       layer.className = 'qe-guide-layer';
       layer.setAttribute('data-qe-guide-layer', '1');
-      /* Above edit/experiencia so guides receive drag hits. */
       canvas.appendChild(layer);
+      bindGuideLayer(layer);
     } else if (layer.parentNode === canvas) {
+      /* Keep above edit/experiencia overlays after remounts. */
       canvas.appendChild(layer);
     }
     return layer;
   }
 
+  function guideElById(id) {
+    if (id == null) return null;
+    var layer = ensureGuideLayer();
+    if (!layer) return null;
+    return layer.querySelector('[data-qe-guide-id="' + String(id).replace(/"/g, '') + '"]');
+  }
+
+  function applyGuideElPosition(el, type, positionPct) {
+    if (!el) return;
+    var pos = clampPct(positionPct);
+    if (type === 'horizontal') {
+      el.style.top = pos + '%';
+      el.style.left = '';
+    } else {
+      el.style.left = pos + '%';
+      el.style.top = '';
+    }
+  }
+
   function renderGuides() {
     var layer = ensureGuideLayer();
     if (!layer) return;
+    /* Never wipe DOM mid-drag — fit/refresh was freezing guides in place. */
+    if (isGuideDragActive()) {
+      layer.hidden = !guidesVisible || isPreview();
+      return;
+    }
     if (isPreview() || !guidesVisible) {
       layer.innerHTML = '';
       layer.hidden = true;
@@ -276,9 +305,6 @@ var QuotationGuides = (function () {
           ' title="Arrastra para mover · Clic derecho para eliminar"></div>';
     });
     layer.innerHTML = html;
-    layer.querySelectorAll('[data-qe-guide-id]').forEach(function (el) {
-      bindGuideLine(el);
-    });
   }
 
   function openGuideMenu(clientX, clientY, guideId) {
@@ -301,35 +327,47 @@ var QuotationGuides = (function () {
     });
   }
 
-  function bindGuideLine(el) {
-    el.addEventListener('contextmenu', function (e) {
+  function beginGuideDrag(id, el, clientX, clientY, pointerId) {
+    var g = findGuide(id);
+    if (!g || g.locked) return false;
+    if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
+      QuotationContextMenu.close();
+    }
+    dragGuide = {
+      id: String(id),
+      type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
+      el: el || guideElById(id),
+      pointerId: pointerId
+    };
+    if (dragGuide.el && pointerId != null && dragGuide.el.setPointerCapture) {
+      try { dragGuide.el.setPointerCapture(pointerId); } catch (errCap) { /* ignore */ }
+    }
+    setDragCursor(dragGuide.type);
+    showReadout(clientX, clientY, dragGuide.type, clientToDesignPct(clientX, clientY));
+    return true;
+  }
+
+  function bindGuideLayer(layer) {
+    if (!layer || layer.dataset.qeGuideLayerBound === '1') return;
+    layer.dataset.qeGuideLayerBound = '1';
+
+    layer.addEventListener('contextmenu', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-qe-guide-id]') : null;
+      if (!el || !layer.contains(el)) return;
       e.preventDefault();
       e.stopPropagation();
       if (isPreview()) return;
       openGuideMenu(e.clientX, e.clientY, el.getAttribute('data-qe-guide-id'));
     });
-    el.addEventListener('mousedown', function (e) {
+
+    layer.addEventListener('pointerdown', function (e) {
       if (e.button !== 0 || isPreview()) return;
-      var scene = activeScene();
-      var guides = ensureGuidesArray(scene);
+      var el = e.target && e.target.closest ? e.target.closest('[data-qe-guide-id]') : null;
+      if (!el || !layer.contains(el)) return;
       var id = el.getAttribute('data-qe-guide-id');
-      var g = null;
-      for (var i = 0; i < guides.length; i++) {
-        if (guides[i] && String(guides[i].id) === String(id)) { g = guides[i]; break; }
-      }
-      if (!g || g.locked) return;
+      if (!beginGuideDrag(id, el, e.clientX, e.clientY, e.pointerId)) return;
       e.preventDefault();
       e.stopPropagation();
-      if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
-        QuotationContextMenu.close();
-      }
-      dragGuide = {
-        id: id,
-        type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
-        el: el
-      };
-      setDragCursor(dragGuide.type);
-      showReadout(e.clientX, e.clientY, dragGuide.type, clientToDesignPct(e.clientX, e.clientY));
     });
   }
 
@@ -457,21 +495,19 @@ var QuotationGuides = (function () {
     if (!pct) return;
     var g = findGuide(dragGuide.id);
     if (!g) return;
+    var el = (dragGuide.el && dragGuide.el.isConnected)
+      ? dragGuide.el
+      : guideElById(dragGuide.id);
+    dragGuide.el = el;
     if (!pct.inBounds) {
-      if (dragGuide.el) dragGuide.el.classList.add('is-removing');
+      if (el) el.classList.add('is-removing');
       hideReadout();
       return;
     }
-    if (dragGuide.el) dragGuide.el.classList.remove('is-removing');
+    if (el) el.classList.remove('is-removing');
     var pos = dragGuide.type === 'horizontal' ? pct.y : pct.x;
     g.position = clampPct(pos);
-    if (dragGuide.el) {
-      if (dragGuide.type === 'horizontal') {
-        dragGuide.el.style.top = g.position + '%';
-      } else {
-        dragGuide.el.style.left = g.position + '%';
-      }
-    }
+    applyGuideElPosition(el, dragGuide.type, g.position);
     showReadout(e.clientX, e.clientY, dragGuide.type, pct);
   }
 
@@ -483,7 +519,12 @@ var QuotationGuides = (function () {
     if (!dragGuide) return;
     var pct = clientToDesignPct(e.clientX, e.clientY);
     var id = dragGuide.id;
+    var el = dragGuide.el;
+    var pointerId = dragGuide.pointerId;
     dragGuide = null;
+    if (el && pointerId != null && el.releasePointerCapture) {
+      try { el.releasePointerCapture(pointerId); } catch (errRel) { /* ignore */ }
+    }
     clearDragCursor();
     hideReadout();
     if (!pct || !pct.inBounds) {
@@ -497,8 +538,12 @@ var QuotationGuides = (function () {
   function bindDoc() {
     if (boundDoc) return;
     boundDoc = true;
-    document.addEventListener('mousemove', onDocMove);
-    document.addEventListener('mouseup', onDocUp);
+    /* Capture phase so editor overlays cannot swallow the drag stream. */
+    document.addEventListener('pointermove', onDocMove, true);
+    document.addEventListener('pointerup', onDocUp, true);
+    document.addEventListener('pointercancel', onDocUp, true);
+    document.addEventListener('mousemove', onDocMove, true);
+    document.addEventListener('mouseup', onDocUp, true);
   }
 
   /* ── Context menu ─────────────────────────────────────── */
@@ -607,6 +652,7 @@ var QuotationGuides = (function () {
     ensureChrome();
     bindContextMenu();
     refreshRulers();
+    ensureGuideLayer();
     renderGuides();
   }
 

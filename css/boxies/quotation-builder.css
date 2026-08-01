@@ -4556,17 +4556,19 @@ body.quotation-canvas-first .builder-workspace,
   --qe-guide-color-ghost: rgba(179, 58, 58, 0.62);
   position: absolute;
   inset: 0;
-  z-index: 7;
+  z-index: 30;
   pointer-events: none;
   overflow: visible;
+  touch-action: none;
 }
 
 .qe-guide-line {
   position: absolute;
   pointer-events: auto;
-  z-index: 7;
+  z-index: 30;
   background: var(--qe-guide-color, #b33a3a);
   box-shadow: none;
+  touch-action: none;
 }
 
 .qe-guide-line--vertical {
