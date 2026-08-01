@@ -1,21 +1,38 @@
 /* BOXIES V5.9.86 — Bunny Media client (slug paths; structure sync; no Access Key in browser) */
 var BunnyMediaApi = (function () {
-  /* Must match supabase/functions/bunny-media MAX_BYTES (Fase 1). */
-  var MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+  /* Must match supabase/functions/bunny-media limits. */
+  var IMAGE_MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+  var VIDEO_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+  /* Back-compat alias — image limit is the default for library uploads. */
+  var MAX_UPLOAD_BYTES = IMAGE_MAX_UPLOAD_BYTES;
   var MAX_UPLOAD_MB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
 
-  function uploadLimitMessage() {
-    return 'Archivo demasiado grande (máx ' + MAX_UPLOAD_MB + ' MB en Fase 1)';
+  function isVideoUpload(file, category) {
+    var key = String(category || '').toLowerCase();
+    if (key === 'videos' || key === 'animations') return true;
+    if (!file) return false;
+    if (file.type && String(file.type).indexOf('video/') === 0) return true;
+    return /\.(mp4|webm|mov|m4v|ogg)$/i.test(String(file.name || ''));
   }
 
-  function assertFileWithinUploadLimit(file) {
+  function maxBytesForUpload(file, category) {
+    return isVideoUpload(file, category) ? VIDEO_MAX_UPLOAD_BYTES : IMAGE_MAX_UPLOAD_BYTES;
+  }
+
+  function uploadLimitMessage(file, category) {
+    var maxMb = Math.round(maxBytesForUpload(file, category) / (1024 * 1024));
+    return 'Archivo demasiado grande (máx ' + maxMb + ' MB)';
+  }
+
+  function assertFileWithinUploadLimit(file, category) {
     if (!file) throw new Error('Archivo requerido');
     var size = Number(file.size);
     if (!isFinite(size) || size <= 0) throw new Error('Archivo vacío');
-    if (size > MAX_UPLOAD_BYTES) {
-      var err = new Error(uploadLimitMessage());
+    var maxBytes = maxBytesForUpload(file, category);
+    if (size > maxBytes) {
+      var err = new Error(uploadLimitMessage(file, category));
       err.code = 'FILE_TOO_LARGE';
-      err.maxBytes = MAX_UPLOAD_BYTES;
+      err.maxBytes = maxBytes;
       throw err;
     }
   }
@@ -408,7 +425,7 @@ var BunnyMediaApi = (function () {
     if (!meta || meta.mode !== 'upload') throw new Error('Categoría no admite upload a Bunny');
     if (!file) throw new Error('Archivo requerido');
     /* Reject before network — avoid waiting for a full multipart round-trip. */
-    assertFileWithinUploadLimit(file);
+    assertFileWithinUploadLimit(file, key);
     if (!opts.nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
 
     var showroomSlug = slugifyLocal(opts.showroomSlug || '');
@@ -541,7 +558,10 @@ var BunnyMediaApi = (function () {
     get CATEGORIES() { return getCategories(); },
     MAX_UPLOAD_BYTES: MAX_UPLOAD_BYTES,
     MAX_UPLOAD_MB: MAX_UPLOAD_MB,
+    IMAGE_MAX_UPLOAD_BYTES: IMAGE_MAX_UPLOAD_BYTES,
+    VIDEO_MAX_UPLOAD_BYTES: VIDEO_MAX_UPLOAD_BYTES,
     uploadLimitMessage: uploadLimitMessage,
+    maxBytesForUpload: maxBytesForUpload,
     assertFileWithinUploadLimit: assertFileWithinUploadLimit,
     list: list,
     remove: remove,

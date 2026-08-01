@@ -422,7 +422,7 @@ var QuotationEditor = (function () {
     }
     if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.assertFileWithinUploadLimit) {
       try {
-        BunnyMediaApi.assertFileWithinUploadLimit(item.file);
+        BunnyMediaApi.assertFileWithinUploadLimit(item.file, bunnyCategoryForItem(item));
       } catch (eSize) {
         item.uploadStatus = 'failed';
         throw eSize;
@@ -4716,13 +4716,14 @@ var QuotationEditor = (function () {
       }
       /* Client-side size gate — same limit as bunny-media (before any network wait). */
       if (typeof BunnyMediaApi !== 'undefined' && BunnyMediaApi.assertFileWithinUploadLimit) {
+        var sizeCat = isPdf ? 'documents' : (isVideo ? 'videos' : 'images');
         try {
-          BunnyMediaApi.assertFileWithinUploadLimit(file);
+          BunnyMediaApi.assertFileWithinUploadLimit(file, sizeCat);
         } catch (eTooBig) {
           if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
             AdminNotify.error(
               (eTooBig && eTooBig.message) ||
-              (BunnyMediaApi.uploadLimitMessage && BunnyMediaApi.uploadLimitMessage()) ||
+              (BunnyMediaApi.uploadLimitMessage && BunnyMediaApi.uploadLimitMessage(file, sizeCat)) ||
               'Archivo demasiado grande'
             );
           }

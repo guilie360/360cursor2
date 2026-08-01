@@ -57,7 +57,14 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-const MAX_BYTES = 20 * 1024 * 1024; // 20MB - aligns with MediaEngine image limit
+const IMAGE_MAX_BYTES = 50 * 1024 * 1024; // 50MB images / docs / plans
+const VIDEO_MAX_BYTES = 200 * 1024 * 1024; // 200MB videos
+
+function maxBytesForCategory(category: string): number {
+  const key = String(category || "").trim().toLowerCase();
+  if (key === "videos" || key === "animations") return VIDEO_MAX_BYTES;
+  return IMAGE_MAX_BYTES;
+}
 
 const CATEGORIES: Record<
   string,
@@ -677,10 +684,14 @@ async function handleUpload(req: Request) {
     });
   }
   if (fileEntry.size <= 0) return json(400, { ok: false, error: "Archivo vacío" });
-  if (fileEntry.size > MAX_BYTES) {
+  const maxBytes = maxBytesForCategory(category);
+  if (fileEntry.size > maxBytes) {
+    const maxMb = Math.round(maxBytes / (1024 * 1024));
     return json(400, {
       ok: false,
-      error: `Archivo demasiado grande (máx ${MAX_BYTES / (1024 * 1024)} MB en Fase 1)`,
+      error: `Archivo demasiado grande (máx ${maxMb} MB)`,
+      code: "FILE_TOO_LARGE",
+      maxBytes,
     });
   }
 

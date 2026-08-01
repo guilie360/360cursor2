@@ -3,7 +3,7 @@ var MediaEngine = (function () {
   var ACCEPT = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm';
   var IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif';
   var MAX_BYTES = 200 * 1024 * 1024;
-  var IMAGE_MAX_BYTES = 20 * 1024 * 1024;
+  var IMAGE_MAX_BYTES = 50 * 1024 * 1024;
 
   function validateVideo(file) {
     if (!file) return 'Selecciona un video.';
@@ -60,7 +60,7 @@ var MediaEngine = (function () {
       name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') ||
       name.endsWith('.webp') || name.endsWith('.gif');
     if (!ok) return 'Formato no soportado. Usa JPG, PNG, WebP o GIF.';
-    if (file.size > IMAGE_MAX_BYTES) return 'La imagen supera el límite de 20 MB.';
+    if (file.size > IMAGE_MAX_BYTES) return 'La imagen supera el límite de 50 MB.';
     return '';
   }
 
