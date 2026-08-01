@@ -1449,13 +1449,19 @@ var QuotationEditor = (function () {
     return String(state.librarySelectModeGroup || '') === String(groupId || '');
   }
 
-  function librarySelectedCount() {
+  function librarySelectedCountInGroup(groupId) {
     var n = 0;
     var map = state.librarySelectedIds || {};
     Object.keys(map).forEach(function (id) {
-      if (map[id]) n += 1;
+      if (!map[id]) return;
+      var c = contentById(id);
+      if (c && String(c.group || '') === String(groupId || '')) n += 1;
     });
     return n;
+  }
+
+  function librarySelectedCount() {
+    return librarySelectedCountInGroup(state.librarySelectModeGroup);
   }
 
   function isLibraryItemSelected(id) {
@@ -1465,19 +1471,120 @@ var QuotationEditor = (function () {
   function clearLibrarySelectionMode() {
     state.librarySelectModeGroup = null;
     state.librarySelectedIds = {};
+    closeLibrarySelectPopoverOnly();
   }
 
-  function enterLibrarySelectMode(groupId) {
+  function closeLibrarySelectPopoverOnly() {
+    var portal = document.getElementById('qeLibMenuPortal');
+    if (!portal) return;
+    var panel = portal.querySelector('[data-qe-lib-select-panel]');
+    if (!panel) return;
+    if (panel.parentNode) panel.parentNode.removeChild(panel);
+    if (!portal.querySelector('[data-qe-lib-menu-panel],[data-qe-lib-status-panel]')) {
+      portal.setAttribute('aria-hidden', 'true');
+    }
+    document.querySelectorAll('[data-qe-lib-select-mode]').forEach(function (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function librarySelectTriggerHtml(group) {
+    if (!group) return '';
+    var selectOn = isLibrarySelectMode(group.id);
+    var n = librarySelectedCountInGroup(group.id);
+    var hasCount = selectOn && n > 0;
+    var inner = hasCount
+      ? ('<span class="qe-content__select-trigger-mark" aria-hidden="true">✓</span>' +
+         '<span class="qe-content__select-trigger-n">' + n + '</span>')
+      : '<span class="qe-content__select-trigger-box" aria-hidden="true"></span>';
+    return '' +
+      '<button type="button" class="qe-content__select-trigger' +
+        (selectOn ? ' is-active' : '') +
+        (hasCount ? ' has-count' : '') + '"' +
+        ' data-qe-lib-select-mode="' + escapeHtml(group.id) + '"' +
+        ' title="' + (selectOn
+          ? (hasCount ? 'Acciones de selección' : 'Salir de selección')
+          : 'Seleccionar recursos') + '"' +
+        ' aria-label="' + (selectOn
+          ? (hasCount ? n + ' seleccionados' : 'Salir de selección')
+          : 'Seleccionar recursos') + '"' +
+        ' aria-pressed="' + (selectOn ? 'true' : 'false') + '"' +
+        ' aria-haspopup="menu" aria-expanded="false">' +
+        inner +
+      '</button>';
+  }
+
+  function buildLibrarySelectPanelHtml(groupId) {
+    var n = librarySelectedCountInGroup(groupId);
+    return '' +
+      '<p class="qe-lib-select-menu__count">' + n + ' seleccionado' + (n === 1 ? '' : 's') + '</p>' +
+      '<div class="boxies-workspace-menu__sep" role="separator"></div>' +
+      '<button type="button" class="boxies-workspace-menu__item qe-lib-menu__danger" role="menuitem"' +
+        ' data-qe-lib-select-delete="' + escapeHtml(groupId) + '">' +
+        '<span class="qe-lib-select-menu__trash" aria-hidden="true"></span>' +
+        'Eliminar (' + n + ')' +
+      '</button>';
+  }
+
+  function openLibrarySelectPopover(btn, groupId) {
+    if (!btn || !groupId) return;
+    var n = librarySelectedCountInGroup(groupId);
+    if (n <= 0) return;
+    closeAllLibMenus();
+    var portal = ensureLibMenuPortal();
+    portal.setAttribute('aria-hidden', 'false');
+    var panel = document.createElement('div');
+    panel.className = 'boxies-workspace-menu__panel qe-lib-menu-panel qe-lib-select-menu';
+    panel.setAttribute('role', 'menu');
+    panel.setAttribute('data-qe-lib-menu-panel', '1');
+    panel.setAttribute('data-qe-lib-select-panel', '1');
+    panel.setAttribute('data-qe-lib-select-group', groupId);
+    panel.innerHTML = buildLibrarySelectPanelHtml(groupId);
+    portal.appendChild(panel);
+    btn.setAttribute('aria-expanded', 'true');
+    positionLibMenuPanel(btn, panel);
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    var del = panel.querySelector('[data-qe-lib-select-delete]');
+    if (del) {
+      del.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAllLibMenus();
+        removeSelectedLibraryResources(groupId);
+      });
+    }
+  }
+
+  function onLibrarySelectTriggerClick(btn) {
+    if (!btn) return;
+    var groupId = btn.getAttribute('data-qe-lib-select-mode');
     if (!groupId || groupId === 'audio' || groupId === 'models') return;
-    if (isLibrarySelectMode(groupId)) {
+
+    var portal = document.getElementById('qeLibMenuPortal');
+    var openPanel = portal && portal.querySelector('[data-qe-lib-select-panel]');
+    if (openPanel) {
+      closeAllLibMenus();
       clearLibrarySelectionMode();
       rerender();
       return;
     }
-    state.librarySelectModeGroup = groupId;
-    state.librarySelectedIds = {};
-    state.openGroups[groupId] = true;
-    rerender();
+
+    if (!isLibrarySelectMode(groupId)) {
+      closeAllLibMenus();
+      state.librarySelectModeGroup = groupId;
+      state.librarySelectedIds = {};
+      state.openGroups[groupId] = true;
+      rerender();
+      return;
+    }
+
+    var n = librarySelectedCountInGroup(groupId);
+    if (n <= 0) {
+      clearLibrarySelectionMode();
+      rerender();
+      return;
+    }
+    openLibrarySelectPopover(btn, groupId);
   }
 
   function toggleLibraryItemSelected(id) {
@@ -1486,44 +1593,17 @@ var QuotationEditor = (function () {
     if (!state.librarySelectedIds) state.librarySelectedIds = {};
     if (state.librarySelectedIds[key]) delete state.librarySelectedIds[key];
     else state.librarySelectedIds[key] = true;
+    if (state.librarySelectModeGroup &&
+        librarySelectedCountInGroup(state.librarySelectModeGroup) <= 0 &&
+        !Object.keys(state.librarySelectedIds).some(function (k) {
+          return state.librarySelectedIds[k];
+        })) {
+      /* Keep mode on with empty selection — button returns to □ icon only.
+         Auto-exit only when user clears via outside/ESC is separate.
+         Spec: counter returns to initial icon when count is 0. */
+    }
+    closeLibrarySelectPopoverOnly();
     rerender();
-  }
-
-  function setLibraryGroupSelection(groupId, on) {
-    if (!groupId) return;
-    if (!state.librarySelectedIds) state.librarySelectedIds = {};
-    contentInGroup(groupId).filter(matchesLibrarySearch).forEach(function (c) {
-      if (!c || !c.id) return;
-      if (on) state.librarySelectedIds[String(c.id)] = true;
-      else delete state.librarySelectedIds[String(c.id)];
-    });
-    rerender();
-  }
-
-  function librarySelectBarHtml(group) {
-    if (!group || !isLibrarySelectMode(group.id)) return '';
-    var ids = contentInGroup(group.id).filter(matchesLibrarySearch).map(function (c) {
-      return c && c.id;
-    }).filter(Boolean);
-    var selected = 0;
-    ids.forEach(function (id) {
-      if (isLibraryItemSelected(id)) selected += 1;
-    });
-    var allOn = ids.length > 0 && selected === ids.length;
-    return '' +
-      '<div class="qe-content__select-bar" data-qe-lib-select-bar="' + escapeHtml(group.id) + '">' +
-        '<label class="qe-lib-select-all">' +
-          '<input type="checkbox" data-qe-lib-select-all="' + escapeHtml(group.id) + '"' +
-            (allOn ? ' checked' : '') +
-            (ids.length ? '' : ' disabled') + '>' +
-          '<span>Todos</span>' +
-        '</label>' +
-        '<span class="qe-content__select-count">' + selected + ' / ' + ids.length + '</span>' +
-        '<button type="button" class="qe-content__select-btn qe-content__select-btn--danger"' +
-          ' data-qe-lib-select-delete="' + escapeHtml(group.id) + '"' +
-          (selected ? '' : ' disabled') + '>Eliminar</button>' +
-        '<button type="button" class="qe-content__select-btn" data-qe-lib-select-cancel>Cancelar</button>' +
-      '</div>';
   }
 
   function contentItemRowHtml(item, nested) {
@@ -1810,18 +1890,8 @@ var QuotationEditor = (function () {
               '<span class="qe-content__group-label">' + escapeHtml(group.label) + '</span>' +
               '<span class="qe-content__count">' + (group.prepared ? '—' : count) + '</span>' +
             '</button>' +
-            (canSelect || selectOn
-              ? ('<button type="button" class="qe-content__select-trigger' +
-                  (selectOn ? ' is-active' : '') + '"' +
-                  ' data-qe-lib-select-mode="' + escapeHtml(group.id) + '"' +
-                  ' title="' + (selectOn ? 'Salir de selección' : 'Seleccionar recursos') + '"' +
-                  ' aria-label="' + (selectOn ? 'Salir de selección' : 'Seleccionar recursos') + '"' +
-                  ' aria-pressed="' + (selectOn ? 'true' : 'false') + '">' +
-                  '<span class="qe-content__select-trigger-box" aria-hidden="true"></span>' +
-                '</button>')
-              : '') +
+            (canSelect || selectOn ? librarySelectTriggerHtml(group) : '') +
           '</div>' +
-          (selectOn ? librarySelectBarHtml(group) : '') +
           (open ? groupBodyHtml(group) : '') +
         '</section>';
     }).join('');
@@ -3095,6 +3165,9 @@ var QuotationEditor = (function () {
     document.querySelectorAll('[data-qe-lib-menu]').forEach(function (btn) {
       btn.setAttribute('aria-expanded', 'false');
     });
+    document.querySelectorAll('[data-qe-lib-select-mode]').forEach(function (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+    });
     document.querySelectorAll('[data-qe-lib-status]').forEach(function (btn) {
       btn.setAttribute('aria-expanded', 'false');
       btn.setAttribute('aria-pressed', 'false');
@@ -3293,16 +3366,40 @@ var QuotationEditor = (function () {
     if (!bindLibMenus._docBound) {
       bindLibMenus._docBound = true;
       document.addEventListener('click', function (e) {
-        if (e.target && e.target.closest && (
-          e.target.closest('[data-qe-lib-menu]') ||
-          e.target.closest('[data-qe-lib-menu-panel]') ||
-          e.target.closest('[data-qe-lib-status]') ||
-          e.target.closest('#qeLibMenuPortal')
-        )) return;
-        closeAllLibMenus();
+        var t = e.target;
+        var inMenu = t && t.closest && (
+          t.closest('[data-qe-lib-menu]') ||
+          t.closest('[data-qe-lib-menu-panel]') ||
+          t.closest('[data-qe-lib-status]') ||
+          t.closest('[data-qe-lib-select-mode]') ||
+          t.closest('[data-qe-lib-select-panel]') ||
+          t.closest('#qeLibMenuPortal')
+        );
+        if (!inMenu) closeAllLibMenus();
+
+        if (state.librarySelectModeGroup) {
+          var inSelectUi = t && t.closest && (
+            t.closest('[data-qe-lib-select-mode]') ||
+            t.closest('[data-qe-lib-check]') ||
+            t.closest('[data-qe-lib-check-wrap]') ||
+            t.closest('.qe-lib__item.is-select-mode') ||
+            t.closest('[data-qe-lib-select-panel]') ||
+            t.closest('#qeLibMenuPortal') ||
+            t.closest('.qe-content__group.is-selecting')
+          );
+          if (!inSelectUi) {
+            clearLibrarySelectionMode();
+            rerender();
+          }
+        }
       });
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeAllLibMenus();
+        if (e.key !== 'Escape') return;
+        closeAllLibMenus();
+        if (state.librarySelectModeGroup) {
+          clearLibrarySelectionMode();
+          rerender();
+        }
       });
       window.addEventListener('resize', closeAllLibMenus);
       window.addEventListener('scroll', closeAllLibMenus, true);
@@ -5653,31 +5750,10 @@ var QuotationEditor = (function () {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        enterLibrarySelectMode(btn.getAttribute('data-qe-lib-select-mode'));
+        onLibrarySelectTriggerClick(btn);
       });
-    });
-
-    qAll('[data-qe-lib-select-cancel]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        clearLibrarySelectionMode();
-        rerender();
-      });
-    });
-
-    qAll('[data-qe-lib-select-all]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        setLibraryGroupSelection(
-          input.getAttribute('data-qe-lib-select-all'),
-          !!input.checked
-        );
-      });
-    });
-
-    qAll('[data-qe-lib-select-delete]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        removeSelectedLibraryResources(btn.getAttribute('data-qe-lib-select-delete'));
+      btn.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
       });
     });
 
