@@ -3105,17 +3105,27 @@ var QuotationEditor = (function () {
     if (!rootEl) return;
     var fold = rootEl.querySelector('[data-qe-scenes-fold]');
     var host = rootEl.querySelector('[data-qe-scenes-host]');
-    /* Fold always lives on the scenes host — never stacked on the responsive bar. */
-    if (fold && host && fold.parentNode !== host) {
-      host.appendChild(fold);
+    var canvasCol = rootEl.querySelector('.qe-col--canvas');
+    if (!fold || !host) return;
+
+    /*
+     * Expanded → hang from scenes strip.
+     * Collapsed → dock flush under app header on the canvas column
+     * (never on the centered stage / responsive chrome).
+     */
+    if (state.scenesCollapsed && canvasCol) {
+      if (fold.parentNode !== canvasCol) canvasCol.appendChild(fold);
+      fold.classList.add('is-header-docked');
+    } else {
+      fold.classList.remove('is-header-docked');
+      if (fold.parentNode !== host) host.appendChild(fold);
     }
-    var btn = rootEl.querySelector('[data-qe-scenes-fold]');
-    if (!btn) return;
+
     var collapsed = !!state.scenesCollapsed;
-    btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
-    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    btn.setAttribute('aria-label', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
-    btn.setAttribute('title', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
+    fold.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    fold.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    fold.setAttribute('aria-label', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
+    fold.setAttribute('title', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
   }
 
   function applyScenesCollapsed(collapsed) {
