@@ -8,12 +8,14 @@ var QuotationProposalsPage = (function () {
     {
       id: 'still',
       title: 'Still',
-      description: 'Imágenes.'
+      price: '$3.500.000',
+      blurb: 'Presentación interactiva\nbasada en imágenes.'
     },
     {
       id: 'motion',
       title: 'Motion',
-      description: 'Imágenes, video y animación.'
+      price: '$5.000.000',
+      blurb: 'Presentación interactiva\ncon videos y animaciones.'
     }
   ];
 
@@ -104,24 +106,63 @@ var QuotationProposalsPage = (function () {
   function buildCard(proposal) {
     proposal = proposal || {};
     var title = String(proposal.title || 'Propuesta');
-    var description = String(proposal.description || '');
-    var card = document.createElement('button');
-    card.type = 'button';
+    var price = String(proposal.price || '');
+    var blurbHtml = String(proposal.blurb || '')
+      .split('\n')
+      .map(function (line) { return escapeHtml(line); })
+      .join('<br>');
+
+    var card = document.createElement('div');
     card.className = 'qpp__card';
     card.setAttribute('data-proposal', String(proposal.id || ''));
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', title);
+    card.setAttribute('aria-pressed', 'false');
+
     card.innerHTML =
-      '<span class="qpp__card-body">' +
-        '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-        '<span class="qpp__card-rule" aria-hidden="true"></span>' +
-        (description
-          ? '<span class="qpp__card-desc">' + escapeHtml(description) + '</span>'
-          : '') +
-      '</span>';
+      '<div class="qpp__card-inner">' +
+        '<div class="qpp__card-face qpp__card-face--front">' +
+          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+        '</div>' +
+        '<div class="qpp__card-face qpp__card-face--back">' +
+          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+          '<span class="qpp__card-price">' + escapeHtml(price) + '</span>' +
+          '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
+          '<button type="button" class="qpp__card-select" data-proposal-select="' +
+            escapeHtml(proposal.id || '') + '">Seleccionar</button>' +
+        '</div>' +
+      '</div>';
+
+    function flip() {
+      var on = card.classList.toggle('is-flipped');
+      card.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+
     card.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-proposal-select]')) {
+        return;
+      }
       e.preventDefault();
-      /* Temporary: selection shell only — wire proposalDetail later. */
+      flip();
     });
+
+    card.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target && e.target.closest && e.target.closest('[data-proposal-select]')) return;
+      e.preventDefault();
+      flip();
+    });
+
+    var selectBtn = card.querySelector('[data-proposal-select]');
+    if (selectBtn) {
+      selectBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        /* Temporary: selection only — wire proposalDetail later. */
+      });
+    }
+
     return card;
   }
 

@@ -323,81 +323,138 @@ body.qr-proposals-page .qpp {
   height: 100%;
   max-height: min(62vh, 560px);
   margin: auto 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 28px 20px;
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.35);
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #fff;
   cursor: pointer;
   outline: none;
-  transition:
-    background 250ms ease,
-    border-color 250ms ease,
-    box-shadow 250ms ease,
-    transform 250ms ease;
+  perspective: 1400px;
+  -webkit-perspective: 1400px;
   animation: qpp-fade-up 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--qpp-enter-delay, 0ms);
 }
 .qpp__card:nth-child(1) { --qpp-enter-delay: 0.28s; }
 .qpp__card:nth-child(2) { --qpp-enter-delay: 0.42s; }
 
-.qpp__card:hover,
-.qpp__card:focus-visible {
+.qpp__card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.qpp__card.is-flipped .qpp__card-inner {
+  transform: rotateY(180deg);
+}
+
+.qpp__card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: clamp(20px, 3vh, 36px) clamp(16px, 2.5vw, 28px);
+  box-sizing: border-box;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: border-color 250ms ease, box-shadow 250ms ease, background 250ms ease;
+}
+
+.qpp__card-face--back {
+  transform: rotateY(180deg);
+  gap: clamp(10px, 1.6vh, 16px);
+}
+
+.qpp__card:hover .qpp__card-face,
+.qpp__card:focus-visible .qpp__card-face {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.5);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     0 18px 40px rgba(0, 0, 0, 0.35);
-  transform: translateY(-2px);
-}
-
-.qpp__card-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 0;
 }
 
 .qpp__card-title {
   margin: 0;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
   font-weight: 500;
-  letter-spacing: 0.42em;
-  text-indent: 0.42em;
+  letter-spacing: 0.48em;
+  text-indent: 0.48em;
   text-transform: uppercase;
-  line-height: 1.2;
+  line-height: 1.15;
   color: #fff;
 }
 
-.qpp__card-rule {
-  display: block;
-  width: 28px;
-  height: 1px;
-  margin: 14px auto 12px;
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+.qpp__card-price {
+  margin: 0;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  color: #fff;
 }
 
 .qpp__card-desc {
   margin: 0;
+  max-width: 16em;
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: 0.72rem;
+  font-size: clamp(0.68rem, 1.2vw, 0.78rem);
   font-weight: 400;
   letter-spacing: 0.04em;
-  line-height: 1.35;
-  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.62);
   text-transform: none;
 }
 
-.qpp.is-compare-mode .qpp__card {
+.qpp__card-select {
+  appearance: none;
+  margin-top: clamp(6px, 1.2vh, 12px);
+  min-height: 44px;
+  min-width: min(180px, 70%);
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 250ms ease,
+    border-color 250ms ease,
+    box-shadow 250ms ease,
+    transform 250ms ease;
+}
+
+.qpp__card-select:hover,
+.qpp__card-select:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 28px rgba(0, 0, 0, 0.32);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.qpp.is-compare-mode .qpp__card-face {
   border-color: rgba(255, 255, 255, 0.42);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.35);
 }
@@ -430,6 +487,12 @@ body.qr-proposals-page .qpp {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qpp__card-inner {
+    transition-duration: 1ms !important;
   }
 }
 
@@ -591,24 +654,35 @@ body.qr-proposals-page .qpp {
   .qpp__card {
     max-height: none;
     margin: 0;
-    padding: 18px 16px;
+  }
+  .qpp__card-inner {
+    min-height: 0;
+  }
+  .qpp__card-face {
+    padding: 16px 14px;
     border-radius: 3px;
   }
-  .qpp__card:hover,
-  .qpp__card:focus-visible {
-    transform: none;
+  .qpp__card:hover .qpp__card-face,
+  .qpp__card:focus-visible .qpp__card-face {
+    background: rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: none;
   }
   .qpp__card-title {
-    font-size: 0.78rem;
-    letter-spacing: 0.32em;
-    text-indent: 0.32em;
+    font-size: 0.9rem;
+    letter-spacing: 0.36em;
+    text-indent: 0.36em;
   }
-  .qpp__card-rule {
-    width: 22px;
-    margin: 10px auto 8px;
+  .qpp__card-price {
+    font-size: 1.25rem;
   }
   .qpp__card-desc {
     font-size: 0.62rem;
+  }
+  .qpp__card-select {
+    min-height: 40px;
+    font-size: 0.52rem;
+    padding: 0 18px;
   }
   .qpp__hint {
     margin-top: 10px;
