@@ -786,11 +786,26 @@ var QuotationEditor = (function () {
     });
   }
 
-  /** Expand/collapse folders inside one library section only. */
+  /** Expand/collapse folders inside one library section only.
+   *  If the section is closed: open it and expand all its folders.
+   *  If open: only toggle folders — never collapse the section itself. */
   function toggleGroupFolders(groupId) {
     if (!groupId) return;
     var folders = foldersInGroup(groupId);
     if (!folders.length) return;
+    var sectionOpen = state.openGroups[groupId] !== false;
+
+    if (!sectionOpen) {
+      state.openGroups[groupId] = true;
+      state.libraryGroupsCollapsed = false;
+      folders.forEach(function (f) {
+        if (!f) return;
+        state.openFolders[f.id] = true;
+      });
+      rerender();
+      return;
+    }
+
     var anyOpen = groupFoldersAnyOpen(groupId);
     folders.forEach(function (f) {
       if (!f) return;
@@ -803,15 +818,20 @@ var QuotationEditor = (function () {
     if (!group || group.prepared) return '';
     var folders = foldersInGroup(group.id);
     if (!folders.length) return '';
+    var sectionOpen = state.openGroups[group.id] !== false;
     var anyOpen = groupFoldersAnyOpen(group.id);
-    var collapsed = !anyOpen;
+    /* Closed section always reads as “expand” — click opens section + folders. */
+    var showExpand = !sectionOpen || !anyOpen;
+    var title = !sectionOpen
+      ? 'Abrir sección y desplegar carpetas'
+      : (showExpand ? 'Desplegar carpetas de la sección' : 'Contraer carpetas de la sección');
     return '' +
       '<button type="button" class="qe-content__fold-folders' +
-        (collapsed ? ' is-collapsed' : '') + '"' +
+        (showExpand ? ' is-collapsed' : '') + '"' +
         ' data-qe-fold-group-folders="' + escapeHtml(group.id) + '"' +
-        ' title="' + (collapsed ? 'Desplegar carpetas de la sección' : 'Contraer carpetas de la sección') + '"' +
-        ' aria-label="' + (collapsed ? 'Desplegar carpetas de la sección' : 'Contraer carpetas de la sección') + '"' +
-        ' aria-expanded="' + (anyOpen ? 'true' : 'false') + '">' +
+        ' title="' + title + '"' +
+        ' aria-label="' + title + '"' +
+        ' aria-expanded="' + (!showExpand ? 'true' : 'false') + '">' +
         libraryIcon('fold') +
       '</button>';
   }
