@@ -51,13 +51,25 @@ var QuotationBuilderView = (function () {
     return null;
   }
 
-  function iconRailHtml(stepId) {
-    if (typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) return '';
-    return (
-      '<nav class="quotation-icon-rail" id="quotationStepsBar" aria-label="Pasos del Builder">' +
-        QuotationSidebar.renderHtml(stepId, sectionChecks) +
-      '</nav>'
-    );
+  function mountHeaderSteps(stepId) {
+    var host = document.getElementById('boxiesHeaderBuilderSteps');
+    if (!host || typeof QuotationSidebar === 'undefined' || !QuotationSidebar.renderHtml) {
+      return null;
+    }
+    host.innerHTML =
+      '<nav class="quotation-header-steps" id="quotationStepsBar" aria-label="Pasos del Builder">' +
+        QuotationSidebar.renderHtml(stepId || currentStep, sectionChecks) +
+      '</nav>';
+    host.hidden = false;
+    if (QuotationSidebar.bind) QuotationSidebar.bind(host, goToStep);
+    return host;
+  }
+
+  function clearHeaderSteps() {
+    var host = document.getElementById('boxiesHeaderBuilderSteps');
+    if (!host) return;
+    host.innerHTML = '';
+    host.hidden = true;
   }
 
   function leftFloatHtml() {
@@ -106,7 +118,6 @@ var QuotationBuilderView = (function () {
           (leftCollapsed ? ' is-left-collapsed' : '') +
           (rightCollapsed ? ' is-right-collapsed' : '') + '">' +
           '<div class="quotation-left-block" id="quotationLeftBlock">' +
-            iconRailHtml(stepId) +
             '<aside class="quotation-recursos' + (leftCollapsed ? ' is-collapsed' : '') + '"' +
               ' id="quotationRecursosPanel" aria-label="Recursos">' +
               leftFloatHtml() +
@@ -200,15 +211,17 @@ var QuotationBuilderView = (function () {
     }
   }
 
-  /** Config has only the icon rail — no recursos column or fold button. */
+  /** Config: no recursos column or fold button. */
   function setRecursosVisible(on) {
     if (!rootEl) return;
     var recursos = rootEl.querySelector('#quotationRecursosPanel');
+    var leftBlock = rootEl.querySelector('#quotationLeftBlock');
     var workspace = rootEl.querySelector('.quotation-workspace');
     var floatBtn = rootEl.querySelector('#' + FLOAT_BTN_ID);
     if (workspace) {
       workspace.classList.toggle('is-recursos-hidden', !on);
     }
+    if (leftBlock) leftBlock.hidden = !on;
     if (!recursos) return;
     if (on) {
       recursos.hidden = false;
@@ -269,13 +282,7 @@ var QuotationBuilderView = (function () {
   }
 
   function refreshSidebar() {
-    if (!rootEl) return;
-    var bar = rootEl.querySelector('#quotationStepsBar');
-    if (!bar) return;
-    if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.setActive) {
-      QuotationSidebar.setActive(bar, currentStep, sectionChecks);
-      QuotationSidebar.bind(bar, goToStep);
-    }
+    mountHeaderSteps(currentStep);
   }
 
   function clearLeftBody() {
@@ -703,9 +710,7 @@ var QuotationBuilderView = (function () {
     }
 
     host.innerHTML = shellHtml(currentStep);
-    if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {
-      QuotationSidebar.bind(host.querySelector('#quotationStepsBar'), goToStep);
-    }
+    mountHeaderSteps(currentStep);
     activateSharedChrome();
     mountDockActions(host);
     renderStep(currentStep);
@@ -735,6 +740,7 @@ var QuotationBuilderView = (function () {
       try { BuilderDockActions.restore(); } catch (eDock) {}
     }
     deactivateSharedChrome();
+    clearHeaderSteps();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eL) {}
     }

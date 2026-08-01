@@ -563,11 +563,6 @@
   visibility: visible !important;
 }
 
-.quotation-icon-rail__item.is-auxiliary,
-.quotation-icon-rail__item.is-preview-on {
-  display: none !important;
-}
-
 .qe-layers__head {
   flex: 0 0 auto;
   padding: 10px 12px;
@@ -3529,7 +3524,7 @@ body > .ws-select__list {
 body.quotation-canvas-first,
 html.quotation-canvas-first {
   --builder-rail-width: 0px;
-  --quotation-icon-rail-w: 52px;
+  --quotation-icon-rail-w: 0px;
   --quotation-recursos-w: 200px;
   --quotation-props-w: 220px;
   --qe-inspector-w: 0px;
@@ -3558,7 +3553,7 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
-/* Left visual block: icon rail + recursos */
+/* Left block: recursos only (Config/Editar live in the BOXIES header). */
 .quotation-left-block {
   flex: 0 0 auto;
   display: flex;
@@ -3574,37 +3569,30 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 3;
 }
 
-.quotation-icon-rail {
-  flex: 0 0 var(--quotation-icon-rail-w, 52px);
-  width: var(--quotation-icon-rail-w, 52px);
-  min-width: var(--quotation-icon-rail-w, 52px);
-  max-width: var(--quotation-icon-rail-w, 52px);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  box-sizing: border-box;
-  padding: 10px 0;
-  border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  background: rgba(0, 0, 0, 0.22);
+.quotation-left-block[hidden] {
+  display: none !important;
 }
 
-.quotation-icon-rail__list {
+/* Header step pills — next to hamburger */
+.quotation-header-steps {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  width: 100%;
-  padding: 0 6px;
-  box-sizing: border-box;
 }
 
-.quotation-icon-rail__item {
+.quotation-header-steps__list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+}
+
+.quotation-header-steps__item {
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -3615,24 +3603,33 @@ body.quotation-canvas-first .builder-workspace,
   transition: color 0.12s ease, background 0.12s ease;
 }
 
-.quotation-icon-rail__item:hover {
+.quotation-header-steps__item:hover {
   color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.04);
 }
 
-.quotation-icon-rail__item.is-current {
+.quotation-header-steps__item.is-current {
   color: rgba(255, 255, 255, 0.96);
   background: rgba(255, 255, 255, 0.08);
 }
 
-.quotation-icon-rail__item.is-auxiliary {
-  margin-top: 8px;
+.quotation-header-steps__icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
 }
 
-.quotation-icon-rail__item.is-preview-on {
-  color: rgba(255, 255, 255, 0.96);
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+.quotation-header-steps__icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Legacy rail selectors — keep inert if old markup appears */
+.quotation-icon-rail {
+  display: none !important;
 }
 
 /* V7.2.65 — canvas Vista Previa: hide leftover edit chrome */
@@ -3651,19 +3648,6 @@ body.quotation-canvas-first .builder-workspace,
 
 .quotation-workspace.is-canvas-preview #quotationLeftBody:empty {
   min-height: 0;
-}
-
-.quotation-icon-rail__icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  color: inherit;
-}
-
-.quotation-icon-rail__icon svg {
-  width: 18px;
-  height: 18px;
-  display: block;
 }
 
 /* Recursos — collapses independently; float stays on its edge */

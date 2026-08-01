@@ -2,7 +2,7 @@
 var QuotationSidebar = (function () {
   var STEPS = [
     { id: 'config', label: 'Config', icon: 'settings', checkable: true },
-    { id: 'editor', label: 'Editor', icon: 'pen-tool', checkable: true }
+    { id: 'editor', label: 'Editar', icon: 'pen-tool', checkable: true }
   ];
 
   function escapeHtml(v) {
@@ -32,11 +32,11 @@ var QuotationSidebar = (function () {
 
   function renderHtml(activeId, sectionChecks) {
     sectionChecks = sectionChecks || {};
-    var html = '<div class="quotation-icon-rail__list" data-builder-rail-list aria-label="Pasos del Builder">';
+    var html = '<div class="quotation-header-steps__list" data-builder-rail-list aria-label="Pasos del Builder">';
     html += STEPS.map(function (step) {
       var active = step.id === activeId;
       var done = isDone(sectionChecks, step);
-      var cls = 'quotation-icon-rail__item';
+      var cls = 'quotation-header-steps__item';
       cls += done ? ' is-done' : ' is-pending';
       if (active) cls += ' is-current';
 
@@ -46,7 +46,7 @@ var QuotationSidebar = (function () {
           ' aria-current="' + (active ? 'page' : 'false') + '"' +
           ' aria-label="' + escapeHtml(step.label) + '"' +
           ' data-tooltip="' + escapeHtml(step.label) + '" title="' + escapeHtml(step.label) + '">' +
-          '<span class="quotation-icon-rail__icon" aria-hidden="true">' +
+          '<span class="quotation-header-steps__icon" aria-hidden="true">' +
             iconHtml(step.icon) +
           '</span>' +
         '</button>'
@@ -59,6 +59,8 @@ var QuotationSidebar = (function () {
   function bind(rootEl, onNavigate) {
     if (!rootEl) return;
     rootEl.querySelectorAll('[data-quotation-step]').forEach(function (btn) {
+      if (btn.dataset.qeStepBound === '1') return;
+      btn.dataset.qeStepBound = '1';
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         var id = btn.getAttribute('data-quotation-step');

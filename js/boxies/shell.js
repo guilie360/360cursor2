@@ -93,6 +93,7 @@ var BoxiesShell = (function () {
         '<header class="boxies-header">' +
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
             mainMenuHtml() +
+            '<div class="boxies-header__builder-steps" id="boxiesHeaderBuilderSteps" hidden></div>' +
           '</div>' +
           brandTitleHtml() +
           '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
