@@ -53,6 +53,61 @@ function supabaseFetch(path) {
 }
 
 /**
+ * Apply Open Graph / document meta from proyecto_config for public slug pages.
+ * Crawlers (WhatsApp) still need og-preview.php; this keeps in-browser meta aligned.
+ */
+function applyPublicShareMeta(project) {
+  project = project || {};
+  var cfg = project.proyecto_config;
+  if (Array.isArray(cfg)) cfg = cfg[0] || {};
+  cfg = cfg || {};
+
+  var title = String(cfg.og_title || project.nombre || project.slug || '360Preventa').trim();
+  var description = String(cfg.og_description || project.descripcion || '').trim();
+  var image = String(cfg.og_image || '').trim();
+  var url = '';
+  try {
+    url = window.location.origin + '/' + encodeURIComponent(String(project.slug || '').trim());
+  } catch (_eUrl) {
+    url = '';
+  }
+
+  function upsertMeta(attr, key, content) {
+    if (!content) return;
+    var sel = 'meta[' + attr + '="' + key + '"]';
+    var el = document.head.querySelector(sel);
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute(attr, key);
+      document.head.appendChild(el);
+    }
+    el.setAttribute('content', content);
+  }
+
+  if (title) {
+    document.title = title;
+    upsertMeta('property', 'og:title', title);
+    upsertMeta('name', 'twitter:title', title);
+  }
+  if (description) {
+    upsertMeta('name', 'description', description);
+    upsertMeta('property', 'og:description', description);
+    upsertMeta('name', 'twitter:description', description);
+  }
+  if (image) {
+    upsertMeta('property', 'og:image', image);
+    upsertMeta('property', 'og:image:secure_url', image);
+    upsertMeta('name', 'twitter:image', image);
+    upsertMeta('name', 'twitter:card', 'summary_large_image');
+  }
+  if (url) {
+    upsertMeta('property', 'og:url', url);
+  }
+  upsertMeta('property', 'og:type', 'website');
+  upsertMeta('property', 'og:site_name', '360Preventa');
+}
+
+/**
  * Keep the public /{slug} address bar; paint Quotation Runtime full-viewport.
  * Runtime still loads by projectId internally (iframe) — visitor never sees that URL.
  */
@@ -97,6 +152,9 @@ function handoffQuotationPublicExperience(project) {
 
   try {
     document.title = (project.nombre || project.slug || 'Cotización');
+    try {
+      applyPublicShareMeta(project);
+    } catch (_eShare) {}
   } catch (eTitle) {}
 
   try {
@@ -175,6 +233,9 @@ function fetchPublishedProject() {
     try {
       document.documentElement.classList.remove('slug-boot-pending');
     } catch (_eReady) {}
+    try {
+      applyPublicShareMeta(project);
+    } catch (_eShare2) {}
     if (typeof BootDebug !== 'undefined') {
       BootDebug.log('proyecto cargado', { id: project.id, slug: project.slug, nombre: project.nombre });
     }

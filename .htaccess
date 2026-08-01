@@ -21,6 +21,10 @@
   # App folders that are not project slugs
   RewriteRule ^(auth|boxies|landing|login|css|js|supabase|assets|images)(/|$) - [L]
 
+  # Social crawlers need server-rendered Open Graph meta per slug (WhatsApp, etc.)
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|Facebot|FacebookBot|WhatsApp|Twitterbot|LinkedInBot|Slackbot|Discordbot|TelegramBot|Applebot|Googlebot|bingbot) [NC]
+  RewriteRule ^([A-Za-z0-9_-]+)/?$ og-preview.php?slug=$1 [L,QSA]
+
   # /demo, /proyecto1, … → index.html (internal rewrite, browser URL unchanged)
   RewriteRule ^([A-Za-z0-9_-]+)/?$ index.html [L]
 </IfModule>
