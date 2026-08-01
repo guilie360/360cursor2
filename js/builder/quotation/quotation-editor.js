@@ -603,6 +603,10 @@ var QuotationEditor = (function () {
   var sessionEpoch = 0;
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
+  var AUTOSAVE_DEBOUNCE_MS = 4000;
+  var autosaveTimer = null;
+  var autosaveInFlight = false;
+  var autosaveQueued = false;
   /** Active library-item drag (reorder / move). */
   var libItemDrag = null;
   /** Active folder drag (reorder within the same group). */
@@ -1094,7 +1098,10 @@ var QuotationEditor = (function () {
         selectedContentId: state.selectedContentId,
         expEditMode: state.expEditMode
       };
-      sessionStorage.setItem(draftStorageKey(id), JSON.stringify(payload));
+      var raw = JSON.stringify(payload);
+      var key = draftStorageKey(id);
+      try { sessionStorage.setItem(key, raw); } catch (eSs) { /* ignore */ }
+      try { localStorage.setItem(key, raw); } catch (eLs) { /* quota / private mode */ }
       /* Keep live Preview envelope in sync with Editor SSOT. */
       try {
         prepareLivePreview({
@@ -1103,69 +1110,201 @@ var QuotationEditor = (function () {
           slug: (editorProjectCtx && editorProjectCtx.slug) || ''
         });
       } catch (eLiveSync) {}
-    } catch (eDraft) { /* quota / private mode */ }
+    } catch (eDraft) { /* ignore */ }
+  }
+
+  function readDraftRaw(projectId) {
+    var id = String(projectId || '').trim();
+    if (!id) return null;
+    var key = draftStorageKey(id);
+    var candidates = [];
+    try {
+      var ss = sessionStorage.getItem(key);
+      if (ss) candidates.push(JSON.parse(ss));
+    } catch (eSs) { /* ignore */ }
+    try {
+      var ls = localStorage.getItem(key);
+      if (ls) candidates.push(JSON.parse(ls));
+    } catch (eLs) { /* ignore */ }
+    var best = null;
+    candidates.forEach(function (d) {
+      if (!d || !Array.isArray(d.scenes)) return;
+      if (!best || Number(d.at || 0) > Number(best.at || 0)) best = d;
+    });
+    return best;
+  }
+
+  function applyDraftToState(draft) {
+    if (!draft || !Array.isArray(draft.scenes)) return false;
+    /* Keep persistable library entries; drop blob-only local (not persistable). */
+    state.content = (Array.isArray(draft.content) ? draft.content : []).map(function (c) {
+      if (!c) return null;
+      if (!libraryItemIsPersistable(c)) return null;
+      var pub = c.publicUrl || c.remoteUrl || null;
+      if (pub && String(pub).indexOf('blob:') === 0) pub = null;
+      var preview = pub || null;
+      if (!preview && c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
+        preview = c.previewUrl;
+      }
+      c.publicUrl = pub;
+      c.remoteUrl = pub;
+      c.previewUrl = preview;
+      c.storagePath = c.storagePath || null;
+      c.archivoId = c.archivoId || null;
+      c.provider = c.provider || null;
+      c.file = null;
+      c.uploadStatus = libraryItemUploadStatus(c);
+      return c;
+    }).filter(Boolean);
+    state.folders = Array.isArray(draft.folders) ? draft.folders : [];
+    ensureFolderOrders();
+    state.scenes = draft.scenes.map(function (sc) {
+      if (!sc) return sc;
+      if (sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0) {
+        var res = null;
+        var i;
+        for (i = 0; i < state.content.length; i++) {
+          if (state.content[i].id === sc.resourceId) { res = state.content[i]; break; }
+        }
+        sc.mediaUrl = res ? (res.publicUrl || res.remoteUrl || null) : null;
+      }
+      return sc;
+    });
+    state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+    state.activeSceneId = draft.activeSceneId ||
+      (state.scenes[0] && state.scenes[0].id) ||
+      null;
+    if (state.activeSceneId && !sceneById(state.activeSceneId)) {
+      state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
+    }
+    if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
+    if (draft.expEditMode) state.expEditMode = draft.expEditMode;
+    return true;
   }
 
   function restoreDraft(projectId) {
-    var id = String(projectId || '').trim();
-    if (!id) return false;
+    var draft = readDraftRaw(projectId);
+    if (!draft) return false;
     try {
-      var raw = sessionStorage.getItem(draftStorageKey(id));
-      if (!raw) return false;
-      var draft = JSON.parse(raw);
-      if (!draft || !Array.isArray(draft.scenes)) return false;
-      /* Keep persistable library entries; drop blob-only local (not persistable). */
-      state.content = (Array.isArray(draft.content) ? draft.content : []).map(function (c) {
-        if (!libraryItemIsPersistable(c)) return null;
-        var pub = c.publicUrl || c.remoteUrl || null;
-        if (pub && String(pub).indexOf('blob:') === 0) pub = null;
-        var preview = pub || null;
-        if (!preview && c.previewUrl && String(c.previewUrl).indexOf('blob:') !== 0) {
-          preview = c.previewUrl;
-        }
-        c.publicUrl = pub;
-        c.remoteUrl = pub;
-        c.previewUrl = preview;
-        c.storagePath = c.storagePath || null;
-        c.archivoId = c.archivoId || null;
-        c.provider = c.provider || null;
-        c.file = null;
-        c.uploadStatus = libraryItemUploadStatus(c);
-        return c;
-      }).filter(Boolean);
-      state.folders = Array.isArray(draft.folders) ? draft.folders : [];
-      ensureFolderOrders();
-      state.scenes = draft.scenes.map(function (sc) {
-        if (!sc) return sc;
-        if (sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0) {
-          var res = null;
-          var i;
-          for (i = 0; i < state.content.length; i++) {
-            if (state.content[i].id === sc.resourceId) { res = state.content[i]; break; }
-          }
-          sc.mediaUrl = res ? (res.publicUrl || res.remoteUrl || null) : null;
-        }
-        return sc;
-      });
-      state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
-      state.activeSceneId = draft.activeSceneId ||
-        (state.scenes[0] && state.scenes[0].id) ||
-        null;
-      if (state.activeSceneId && !sceneById(state.activeSceneId)) {
-        state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
-      }
-      if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
-      if (draft.expEditMode) state.expEditMode = draft.expEditMode;
-      return true;
+      return applyDraftToState(draft);
     } catch (eRest) {
       return false;
     }
   }
 
+  function serverSceneCount(hq) {
+    var canvas = hq && hq.canvas;
+    if (!canvas || !Array.isArray(canvas.scenes)) return 0;
+    return canvas.scenes.length;
+  }
+
+  function serverFolderCount(hq) {
+    var lib = hq && hq.library;
+    if (!lib || !Array.isArray(lib.folders)) return 0;
+    return lib.folders.length;
+  }
+
+  function serverContentCount(hq) {
+    var lib = hq && hq.library;
+    if (!lib || !Array.isArray(lib.content)) return 0;
+    return lib.content.length;
+  }
+
+  /** Prefer local draft when it has more recent editor work than the server snapshot. */
+  function shouldPreferDraftOverServer(hq, draft) {
+    if (!draft || !Array.isArray(draft.scenes)) return false;
+    var draftScenes = draft.scenes.length;
+    var draftFolders = Array.isArray(draft.folders) ? draft.folders.length : 0;
+    var draftContent = Array.isArray(draft.content) ? draft.content.length : 0;
+    var srvScenes = serverSceneCount(hq);
+    var srvFolders = serverFolderCount(hq);
+    var srvContent = serverContentCount(hq);
+    if (draftScenes > srvScenes) return true;
+    if (draftFolders > srvFolders) return true;
+    if (draftContent > srvContent) return true;
+    /* Same shape but draft is fresh (< 24h) and has real local structure. */
+    var age = Date.now() - Number(draft.at || 0);
+    if (age >= 0 && age < 24 * 60 * 60 * 1000) {
+      if (draftScenes > 1 || draftFolders > 0 || draftContent > 0) {
+        if (srvScenes <= 1 && srvFolders === 0 && srvContent === 0) return true;
+      }
+    }
+    return false;
+  }
+
   function clearDraft(projectId) {
     var id = String(projectId || loadedProjectId || '').trim();
     if (!id) return;
-    try { sessionStorage.removeItem(draftStorageKey(id)); } catch (eClr) {}
+    var key = draftStorageKey(id);
+    try { sessionStorage.removeItem(key); } catch (eClr) {}
+    try { localStorage.removeItem(key); } catch (eClr2) {}
+  }
+
+  function scheduleAutosave(reason) {
+    if (!documentReady || !loadedProjectId) return;
+    if (autosaveTimer) {
+      try { clearTimeout(autosaveTimer); } catch (eT) {}
+    }
+    autosaveTimer = setTimeout(function () {
+      autosaveTimer = null;
+      runDebouncedAutosave(reason || 'debounce');
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }
+
+  function cancelScheduledAutosave() {
+    if (autosaveTimer) {
+      try { clearTimeout(autosaveTimer); } catch (eT) {}
+      autosaveTimer = null;
+    }
+    autosaveQueued = false;
+  }
+
+  async function runDebouncedAutosave(reason) {
+    if (!documentReady || !loadedProjectId) return;
+    if (autosaveInFlight) {
+      autosaveQueued = true;
+      return;
+    }
+    autosaveInFlight = true;
+    try {
+      persistDraft();
+      await autosaveToServer({ notify: false, reason: reason || 'debounce' });
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
+      }
+      persistDraft();
+    } catch (eAuto) {
+      console.warn('[QuotationEditor] debounced autosave', reason, eAuto);
+    } finally {
+      autosaveInFlight = false;
+      if (autosaveQueued) {
+        autosaveQueued = false;
+        scheduleAutosave('queued');
+      }
+    }
+  }
+
+  async function autosaveToServer(opts) {
+    opts = opts || {};
+    try {
+      if (typeof QuotationBuilderView !== 'undefined' && typeof QuotationBuilderView.save === 'function') {
+        await QuotationBuilderView.save();
+        return;
+      }
+      var projectId = resolveProjectId();
+      if (!projectId) return;
+      await commit({
+        getProjectId: function () { return projectId; }
+      });
+    } catch (eSave) {
+      console.warn('[QuotationEditor] autosave', opts.reason || '', eSave);
+      if (opts.notify && typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error(
+          (eSave && eSave.message) || 'No se pudieron guardar los cambios automáticamente.'
+        );
+      }
+      throw eSave;
+    }
   }
 
   function sceneById(id) {
@@ -4175,20 +4314,13 @@ var QuotationEditor = (function () {
 
   async function autosaveAfterLibraryChange() {
     try {
-      if (typeof QuotationBuilderView !== 'undefined' && typeof QuotationBuilderView.save === 'function') {
-        await QuotationBuilderView.save();
-        return;
+      await autosaveToServer({ notify: true, reason: 'library-change' });
+      if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+        BuilderDirtyState.clear();
       }
-      var projectId = resolveProjectId();
-      if (!projectId) return;
-      await commit({
-        getProjectId: function () { return projectId; }
-      });
+      persistDraft();
     } catch (eSave) {
-      console.warn('[QuotationEditor] autosave after library change', eSave);
-      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-        AdminNotify.error((eSave && eSave.message) || 'No se pudo guardar tras eliminar el recurso.');
-      }
+      /* autosaveToServer already logged / notified when notify:true */
     }
   }
 
@@ -4596,6 +4728,7 @@ var QuotationEditor = (function () {
 
   /** Detach editor chrome without resetting the document SSOT. */
   function resetEditorSession(reason) {
+    cancelScheduledAutosave();
     sessionEpoch += 1;
     try { destroyBuilderRuntimeScene(); } catch (eDes) { /* ignore */ }
     state = createEmptyState();
@@ -5720,6 +5853,7 @@ var QuotationEditor = (function () {
       BuilderDirtyState.mark();
     }
     persistDraft();
+    scheduleAutosave('dirty');
   }
 
   function setHeroFromFile(file, media) {
@@ -7045,10 +7179,16 @@ var QuotationEditor = (function () {
         console.log(JSON.stringify(hq && hq.library, null, 2));
         qeLibAudit('8-load:before-hydrate');
         /*
-         * V7.2.28 — DB is SSOT after save (canvas + library with publicUrl).
-         * Do not prefer session draft over network: drafts held dead blob: URLs.
+         * DB is SSOT after a successful save. If a newer local draft has more
+         * editor work (scenes/folders/library) than the server snapshot, restore
+         * it so a deploy/hard-refresh does not wipe unsaved progress.
          */
         hydrateFromHeroQuotation(hq, editorProjectCtx);
+        var draft = readDraftRaw(id);
+        if (draft && shouldPreferDraftOverServer(hq, draft)) {
+          console.log('[QuotationEditor] restoring newer local draft over server snapshot');
+          applyDraftToState(draft);
+        }
         qeLibAudit('9-load:after-hydrateFromHeroQuotation');
         console.log('[QE-LIB V7.2.37] 9-load:state.content.length after hydrate',
           state.content ? state.content.length : 0);
@@ -7209,6 +7349,9 @@ var QuotationEditor = (function () {
     loadedProjectId = String(projectId);
     documentReady = true;
     persistDraft();
+    if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.clear) {
+      BuilderDirtyState.clear();
+    }
 
     if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onSavePayload) {
       QuotationPersistAudit.onSavePayload(
