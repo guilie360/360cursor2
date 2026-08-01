@@ -4389,24 +4389,41 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: none;
 }
 
-.qe-context-menu-portal .qe-context-menu {
+.qe-context-menu-portal .qe-context-menu,
+.qe-context-menu-portal .qe-context-menu.qe-lib-status-panel {
   pointer-events: auto;
   position: fixed;
   top: 0;
   left: 0;
-  min-width: 200px;
-  max-width: 260px;
+  min-width: 140px !important;
+  max-width: 200px !important;
+  width: max-content;
+  padding: 3px !important;
+  gap: 1px !important;
   z-index: 12051;
 }
 
 .qe-context-menu__title {
-  margin: 0 0 2px;
-  padding: 4px 12px 2px;
+  margin: 0;
+  padding: 2px 8px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.42);
+}
+
+.qe-context-menu .boxies-workspace-menu__item {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 1.2;
+  border-radius: 6px;
+}
+
+.qe-context-menu .boxies-workspace-menu__sep {
+  margin: 2px 6px;
 }
 
 .qe-context-menu .boxies-workspace-menu__item.is-disabled,

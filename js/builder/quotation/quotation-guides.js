@@ -273,7 +273,7 @@ var QuotationGuides = (function () {
           ' data-qe-guide-id="' + String(g.id).replace(/"/g, '') + '"' +
           ' data-qe-guide-type="' + type + '"' +
           ' style="' + style + '"' +
-          ' title="Arrastra para mover · Doble clic para eliminar"></div>';
+          ' title="Arrastra para mover · Clic derecho para eliminar"></div>';
     });
     layer.innerHTML = html;
     layer.querySelectorAll('[data-qe-guide-id]').forEach(function (el) {
@@ -281,12 +281,32 @@ var QuotationGuides = (function () {
     });
   }
 
+  function openGuideMenu(clientX, clientY, guideId) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    if (!guideId) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Menú de guía',
+      items: [
+        {
+          id: 'delete-guide',
+          label: 'Eliminar',
+          danger: true
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'delete-guide') removeGuide(guideId);
+      }
+    });
+  }
+
   function bindGuideLine(el) {
-    el.addEventListener('dblclick', function (e) {
+    el.addEventListener('contextmenu', function (e) {
       e.preventDefault();
       e.stopPropagation();
       if (isPreview()) return;
-      removeGuide(el.getAttribute('data-qe-guide-id'));
+      openGuideMenu(e.clientX, e.clientY, el.getAttribute('data-qe-guide-id'));
     });
     el.addEventListener('mousedown', function (e) {
       if (e.button !== 0 || isPreview()) return;
@@ -300,6 +320,9 @@ var QuotationGuides = (function () {
       if (!g || g.locked) return;
       e.preventDefault();
       e.stopPropagation();
+      if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
+        QuotationContextMenu.close();
+      }
       dragGuide = {
         id: id,
         type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
@@ -513,8 +536,6 @@ var QuotationGuides = (function () {
 
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
-    var pct = clientToDesignPct(clientX, clientY);
-    var canPlace = !!(pct && pct.inBounds);
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -526,19 +547,7 @@ var QuotationGuides = (function () {
         },
         {
           id: 'toggle-guides',
-          label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías',
-          separatorBefore: true
-        },
-        {
-          id: 'guide-h',
-          label: 'Crear guía horizontal',
-          separatorBefore: true,
-          disabled: !canPlace
-        },
-        {
-          id: 'guide-v',
-          label: 'Crear guía vertical',
-          disabled: !canPlace
+          label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías'
         }
       ],
       onSelect: function (id) {
@@ -548,11 +557,7 @@ var QuotationGuides = (function () {
         }
         if (id === 'toggle-guides') {
           setGuidesVisible(!guidesVisible);
-          return;
         }
-        if (!canPlace) return;
-        if (id === 'guide-h') addGuide('horizontal', pct.y);
-        if (id === 'guide-v') addGuide('vertical', pct.x);
       }
     });
   }

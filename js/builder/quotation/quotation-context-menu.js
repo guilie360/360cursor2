@@ -94,7 +94,7 @@ var QuotationContextMenu = (function () {
     var portal = ensurePortal();
     portal.setAttribute('aria-hidden', 'false');
     var panel = document.createElement('div');
-    panel.className = 'boxies-workspace-menu__panel qe-context-menu qe-lib-status-panel';
+    panel.className = 'boxies-workspace-menu__panel qe-context-menu';
     panel.setAttribute('role', 'menu');
     panel.setAttribute('aria-label', opts.ariaLabel || 'Menú contextual');
     panel.setAttribute('data-qe-context-menu', '1');
