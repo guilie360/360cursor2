@@ -605,6 +605,9 @@ var QuotationEditor = (function () {
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
   /** Active library-item drag (reorder). Avoids relying only on dataTransfer MIME types. */
   var libItemDrag = null;
+  /** Active folder drag (reorder within the same group). */
+  var folderDrag = null;
+  var suppressFolderToggleUntil = 0;
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
@@ -1851,13 +1854,14 @@ var QuotationEditor = (function () {
         ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
         '<div class="qe-folder__head"' +
           ' data-qe-folder-drag="' + escapeHtml(folder.id) + '"' +
-          ' draggable="' + (renaming ? 'false' : 'true') + '">' +
-          '<button type="button" class="qe-folder__toggle" data-qe-folder-toggle="' +
+          ' draggable="' + (renaming ? 'false' : 'true') + '"' +
+          ' title="Arrastrar para reordenar">' +
+          '<div class="qe-folder__toggle" role="button" tabindex="0" data-qe-folder-toggle="' +
             escapeHtml(folder.id) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
             '<span class="qe-folder__chevron" aria-hidden="true"></span>' +
             '<span class="qe-folder__icon" aria-hidden="true"></span>' +
             (renaming ? '' : nameHtml) +
-          '</button>' +
+          '</div>' +
           (renaming ? nameHtml : '') +
           '<span class="qe-content__count">' + kids.length + '</span>' +
           libMenuTriggerHtml('folder', folder.id, 'Opciones de carpeta') +
@@ -1900,43 +1904,50 @@ var QuotationEditor = (function () {
 
     var rootItems = rootContentInGroup(group.id).filter(matchesLibrarySearch);
     var folders = foldersInGroup(group.id);
-    var rootHtml = '' +
-      librarySelectAllRowHtml(group.id, null) +
-      (rootItems.length
-        ? ('<div class="qe-content__items">' +
-            rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
-          '</div>')
-        : '');
-    var foldersHtml = folders.map(function (f) { return folderBlockHtml(f, group); }).join('');
-    var tree = rootHtml + foldersHtml;
-    var actions;
     var searching = !!String(state.librarySearchQuery || '').trim();
+    var actions;
 
+    /* Order: +Agregar → +Nueva carpeta → carpetas → imágenes sueltas. */
     if (group.linkMode) {
       actions = '' +
+        '<button type="button" class="qe-content__add" data-qe-tour-add data-qe-folder="">+ Agregar enlace</button>' +
+        tourComposerHtml(null) +
         '<button type="button" class="qe-content__add" data-qe-folder-new="' +
           escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
-        folderComposerHtml(group.id) +
-        '<button type="button" class="qe-content__add" data-qe-tour-add data-qe-folder="">+ Agregar enlace</button>' +
-        tourComposerHtml(null);
+        folderComposerHtml(group.id);
     } else {
       actions = '' +
-        '<button type="button" class="qe-content__add" data-qe-folder-new="' +
-          escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
-        folderComposerHtml(group.id) +
         '<button type="button" class="qe-content__add" data-qe-file-add="' +
           escapeHtml(group.id) + '" data-qe-folder="">' +
           escapeHtml(group.addLabel || '+ Agregar') + '</button>' +
         '<input type="file" accept="' + escapeHtml(group.accept || 'image/*') + '" hidden' +
-          ' data-qe-file-input="' + escapeHtml(group.id) + '" multiple>';
+          ' data-qe-file-input="' + escapeHtml(group.id) + '" multiple>' +
+        '<button type="button" class="qe-content__add" data-qe-folder-new="' +
+          escapeHtml(group.id) + '">+ Nueva carpeta</button>' +
+        folderComposerHtml(group.id);
     }
+
+    var foldersHtml = folders.length
+      ? ('<div class="qe-content__folders" data-qe-folder-list="' + escapeHtml(group.id) + '">' +
+          folders.map(function (f) { return folderBlockHtml(f, group); }).join('') +
+        '</div>')
+      : '';
+
+    var rootHtml = '' +
+      librarySelectAllRowHtml(group.id, null) +
+      (rootItems.length
+        ? ('<div class="qe-content__items qe-content__items--root">' +
+            rootItems.map(function (item) { return contentItemRowHtml(item, false); }).join('') +
+          '</div>')
+        : '');
 
     return '' +
       '<div class="qe-content__body"' +
         ' data-qe-lib-drop-root' +
         ' data-qe-lib-drop-group="' + escapeHtml(group.id) + '">' +
-        tree +
-        (searching ? '' : ('<div class="qe-content__actions">' + actions + '</div>')) +
+        (searching ? '' : ('<div class="qe-content__actions qe-content__actions--top">' + actions + '</div>')) +
+        foldersHtml +
+        rootHtml +
       '</div>';
   }
 
@@ -3814,81 +3825,91 @@ var QuotationEditor = (function () {
   }
 
   function bindFolderDragReorder() {
-    var dragId = null;
-    var dragGroup = null;
-
     function clearFolderDropMarks() {
       document.querySelectorAll('.qe-folder, .qe-folder__head').forEach(function (el) {
         el.classList.remove('is-drop-before', 'is-drop-after');
       });
     }
 
-    document.querySelectorAll('[data-qe-folder-drag]').forEach(function (el) {
-      el.addEventListener('dragstart', function (e) {
-        /* Never cancel a resource drag — items must remain independently draggable. */
+    document.querySelectorAll('[data-qe-folder-drag]').forEach(function (head) {
+      head.addEventListener('dragstart', function (e) {
         if (e.target && e.target.closest && (
-          e.target.closest('.qe-lib__item') ||
           e.target.closest('[data-qe-lib-menu]') ||
           e.target.closest('[data-qe-folder-rename]') ||
-          e.target.closest('[data-qe-content-rename]')
+          e.target.closest('.qe-lib__item')
         )) {
           return;
         }
-        dragId = el.getAttribute('data-qe-folder-drag');
-        var folder = folderById(dragId);
-        dragGroup = folder ? folder.group : null;
-        var block = el.closest('[data-qe-folder-block]') || el;
+        e.stopPropagation();
+        var id = head.getAttribute('data-qe-folder-drag');
+        var folder = folderById(id);
+        if (!id || !folder) return;
+        folderDrag = { id: String(id), group: folder.group || null };
+        var block = head.closest('[data-qe-folder-block]') || head;
         block.classList.add('is-dragging');
-        el.classList.add('is-dragging');
+        head.classList.add('is-dragging');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
-          try { e.dataTransfer.setData('text/qe-folder', dragId || ''); } catch (e1) {}
-          e.dataTransfer.setData('text/plain', dragId || '');
+          try { e.dataTransfer.setData('text/qe-folder', id); } catch (e1) {}
+          e.dataTransfer.setData('text/plain', id);
         }
       });
 
-      el.addEventListener('dragend', function () {
+      head.addEventListener('dragend', function () {
+        folderDrag = null;
+        suppressFolderToggleUntil = Date.now() + 350;
         document.querySelectorAll('.qe-folder.is-dragging, .qe-folder__head.is-dragging').forEach(function (node) {
           node.classList.remove('is-dragging');
         });
         clearFolderDropMarks();
-        dragId = null;
-        dragGroup = null;
       });
+    });
 
-      el.addEventListener('dragover', function (e) {
-        if (libItemDrag) return;
-        if (!dragId || !dragGroup) return;
-        var toId = el.getAttribute('data-qe-folder-drag');
+    document.querySelectorAll('[data-qe-folder-block]').forEach(function (block) {
+      block.addEventListener('dragover', function (e) {
+        if (libItemDrag || !folderDrag || !folderDrag.group) return;
+        var toId = block.getAttribute('data-qe-folder-block');
         var toFolder = folderById(toId);
-        if (!toId || toId === dragId || !toFolder || String(toFolder.group) !== String(dragGroup)) {
+        if (!toId || String(toId) === String(folderDrag.id) || !toFolder ||
+            String(toFolder.group) !== String(folderDrag.group)) {
           return;
         }
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         clearFolderDropMarks();
-        var rect = el.getBoundingClientRect();
+        var rect = block.getBoundingClientRect();
         var after = (e.clientY - rect.top) > rect.height / 2;
-        el.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+        block.classList.add(after ? 'is-drop-after' : 'is-drop-before');
       });
 
-      el.addEventListener('dragleave', function () {
-        el.classList.remove('is-drop-before', 'is-drop-after');
+      block.addEventListener('dragleave', function (e) {
+        if (e.relatedTarget && block.contains(e.relatedTarget)) return;
+        block.classList.remove('is-drop-before', 'is-drop-after');
       });
 
-      el.addEventListener('drop', function (e) {
+      block.addEventListener('drop', function (e) {
         if (libItemDrag) return;
+        if (!folderDrag && !(e.dataTransfer && e.dataTransfer.types &&
+            Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
-        var after = el.classList.contains('is-drop-after');
+        var after = block.classList.contains('is-drop-after');
+        if (!block.classList.contains('is-drop-before') &&
+            !block.classList.contains('is-drop-after')) {
+          var rect = block.getBoundingClientRect();
+          after = (e.clientY - rect.top) > rect.height / 2;
+        }
         clearFolderDropMarks();
-        var from = dragId || '';
+        var from = (folderDrag && folderDrag.id) || '';
         if (!from && e.dataTransfer) {
           try { from = e.dataTransfer.getData('text/qe-folder') || ''; } catch (e2) {}
           if (!from) from = e.dataTransfer.getData('text/plain') || '';
         }
-        var to = el.getAttribute('data-qe-folder-drag');
+        var to = block.getAttribute('data-qe-folder-block');
+        folderDrag = null;
         if (from && to && from !== to) {
           reorderFolder(from, to, after);
           rerender();
@@ -6238,7 +6259,17 @@ var QuotationEditor = (function () {
     });
 
     qAll('[data-qe-folder-toggle]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        if (Date.now() < suppressFolderToggleUntil) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        toggleFolder(btn.getAttribute('data-qe-folder-toggle'));
+      });
+      btn.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
         toggleFolder(btn.getAttribute('data-qe-folder-toggle'));
       });
     });

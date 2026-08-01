@@ -2086,6 +2086,30 @@
   gap: 4px;
 }
 
+.qe-content__actions--top {
+  margin: 0 0 10px;
+}
+
+.qe-content__folders {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+}
+
+.qe-content__items--root {
+  margin-top: 2px;
+}
+
+.qe-folder__head[draggable="true"] {
+  cursor: grab;
+}
+
+.qe-folder__head[draggable="true"]:active,
+.qe-folder__head.is-dragging {
+  cursor: grabbing;
+}
+
 .qe-content__add {
   appearance: none;
   margin: 0;
