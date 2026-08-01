@@ -84,6 +84,38 @@ function applyPublicShareMeta(project) {
     el.setAttribute('content', content);
   }
 
+  function applyFavicon(href) {
+    if (!href) return;
+    var absolute = String(href).trim();
+    if (!absolute) return;
+    if (absolute.indexOf('http') !== 0 && absolute.indexOf('//') !== 0) {
+      try {
+        absolute = new URL(absolute, window.location.origin).href;
+      } catch (_eAbs) {}
+    }
+    if (absolute.indexOf('?') < 0) absolute += '?v=ws7300';
+
+    var stale = document.head.querySelectorAll(
+      'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'
+    );
+    Array.prototype.forEach.call(stale, function (node) {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    });
+
+    function addLink(rel, sizes) {
+      var link = document.createElement('link');
+      link.rel = rel;
+      link.type = 'image/png';
+      if (sizes) link.setAttribute('sizes', sizes);
+      link.href = absolute;
+      document.head.appendChild(link);
+    }
+
+    addLink('icon', '32x32');
+    addLink('icon', '192x192');
+    addLink('apple-touch-icon', '180x180');
+  }
+
   if (title) {
     document.title = title;
     upsertMeta('property', 'og:title', title);
@@ -105,6 +137,13 @@ function applyPublicShareMeta(project) {
   }
   upsertMeta('property', 'og:type', 'website');
   upsertMeta('property', 'og:site_name', '360Preventa');
+
+  var favicon = String(cfg.favicon_url || cfg.logo_url || '').trim();
+  var slug = String(project.slug || '').toLowerCase();
+  if (!favicon && (slug === 'taroa' || slug === 'taroa-propuesta' || slug.indexOf('taroa') === 0)) {
+    favicon = '/assets/taroa/favicon.png';
+  }
+  applyFavicon(favicon);
 }
 
 /**
