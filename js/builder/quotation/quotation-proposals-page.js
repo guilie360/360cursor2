@@ -23,6 +23,25 @@ var QuotationProposalsPage = (function () {
     }
   ];
 
+  var COMPARE_ROWS = [
+    { label: 'Diseño de fachada (2 tipologías)', still: '✓', motion: '✓' },
+    { label: 'Modelado 3D', still: '✓', motion: '✓' },
+    { label: 'Implantación conceptual', still: '✓', motion: '✓' },
+    { label: 'Moodboard de materiales', still: '✓', motion: '✓' },
+    { label: 'Plantas amobladas (4)', still: '✓', motion: '✓' },
+    { label: 'Renders exteriores', still: '3–5', motion: '10–12' },
+    { label: 'Mini brochure ejecutivo', still: '✓', motion: '✓' },
+    { label: 'Link personalizado', still: '✓', motion: '✓' },
+    { label: 'Música ambiental', still: '✓', motion: '✓' },
+    { label: 'Presentación en PC', still: '✓', motion: '✓' },
+    { label: 'Presentación interactiva por imágenes', still: '✓', motion: '✓' },
+    { label: 'Presentación interactiva por videos y animaciones', still: '—', motion: '✓' },
+    { label: 'Presentación en tablets y celulares', still: '✓', motion: '✓' },
+    { label: 'Vista aérea del proyecto', still: '—', motion: '✓' },
+    { label: 'Renders de detalles arquitectónicos', still: '—', motion: '✓' },
+    { label: 'Propuesta inicial de identidad del proyecto', still: '—', motion: '✓' }
+  ];
+
   function qs(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -93,7 +112,7 @@ var QuotationProposalsPage = (function () {
             '</div>' +
           '</div>' +
         '</header>' +
-        '<main class="qpp__main">' +
+        '<main class="qpp__main" data-qpp-selection>' +
           '<p class="qpp__eyebrow">Showroom digital</p>' +
           '<h1 class="qpp__title">Selecciona una propuesta</h1>' +
           '<div class="qpp__cards-host">' +
@@ -104,6 +123,11 @@ var QuotationProposalsPage = (function () {
           '</button>' +
           '<p class="qpp__hint" data-qpp-hint></p>' +
         '</main>' +
+        '<section class="qpp__compare" data-qpp-compare-view aria-hidden="true">' +
+          '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
+          '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
+          '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+        '</section>' +
       '</div>';
   }
 
@@ -244,15 +268,72 @@ var QuotationProposalsPage = (function () {
     syncFullscreenUi(root);
   }
 
-  function setCompareMode(root, on) {
+  function cellClass(value) {
+    var v = String(value || '').trim();
+    if (v === '✓') return 'qpp-cmp__val qpp-cmp__val--yes';
+    if (v === '—' || v === '-') return 'qpp-cmp__val qpp-cmp__val--no';
+    return 'qpp-cmp__val qpp-cmp__val--text';
+  }
+
+  function renderCompare(root) {
+    var board = qs('[data-qpp-compare-board]', root);
+    if (!board) return;
+    var rowsHtml = COMPARE_ROWS.map(function (row, index) {
+      var delay = 120 + index * 30;
+      return '' +
+        '<div class="qpp-cmp__row" style="--qpp-cmp-delay:' + delay + 'ms">' +
+          '<div class="qpp-cmp__feature">' + escapeHtml(row.label) + '</div>' +
+          '<div class="' + cellClass(row.still) + '" data-col="still">' +
+            '<span class="qpp-cmp__col-label">Still</span>' +
+            '<span class="qpp-cmp__mark">' + escapeHtml(row.still) + '</span>' +
+          '</div>' +
+          '<div class="' + cellClass(row.motion) + '" data-col="motion">' +
+            '<span class="qpp-cmp__col-label">Motion</span>' +
+            '<span class="qpp-cmp__mark">' + escapeHtml(row.motion) + '</span>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    board.innerHTML =
+      '<div class="qpp-cmp__head">' +
+        '<div class="qpp-cmp__hcell qpp-cmp__hcell--feature">Característica</div>' +
+        '<div class="qpp-cmp__hcell">Still</div>' +
+        '<div class="qpp-cmp__hcell">Motion</div>' +
+      '</div>' +
+      '<div class="qpp-cmp__body">' + rowsHtml + '</div>';
+  }
+
+  function setQppView(root, view) {
     var shell = qs('[data-qpp-root]', root) || root;
-    shell.classList.toggle('is-compare-mode', !!on);
+    var next = view === 'comparison' ? 'comparison' : 'selection';
+    shell.setAttribute('data-qpp-view', next);
+    shell.classList.toggle('is-compare-view', next === 'comparison');
+    shell.classList.remove('is-compare-mode');
+
+    var compareView = qs('[data-qpp-compare-view]', root);
+    var selection = qs('[data-qpp-selection]', root);
+    if (selection) {
+      selection.setAttribute('aria-hidden', next === 'comparison' ? 'true' : 'false');
+    }
+    if (compareView) {
+      compareView.setAttribute('aria-hidden', next === 'comparison' ? 'false' : 'true');
+    }
+
     qsa('[data-qpp-compare], [data-qpp-compare-cta]', root).forEach(function (btn) {
-      btn.classList.toggle('is-active', !!on);
+      var on = next === 'comparison';
+      btn.classList.toggle('is-active', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    var hint = qs('[data-qpp-hint]', root);
-    if (hint) hint.textContent = on ? 'Modo comparar activo' : '';
+
+    if (next === 'comparison') {
+      renderCompare(root);
+      /* Retrigger row entrance animations */
+      requestAnimationFrame(function () {
+        shell.classList.remove('is-cmp-animate');
+        void shell.offsetWidth;
+        shell.classList.add('is-cmp-animate');
+      });
+    }
   }
 
   function syncAudioUi(root) {
@@ -404,13 +485,21 @@ var QuotationProposalsPage = (function () {
 
   function bind(root, opts) {
     opts = opts || {};
+    var shell = qs('[data-qpp-root]', root) || root;
     var back = qs('[data-qpp-back]', root);
     var hint = qs('[data-qpp-hint]', root);
     var fsBtn = qs('[data-qpp-fullscreen]', root);
 
+    shell.setAttribute('data-qpp-view', 'selection');
+
     if (back) {
       back.addEventListener('click', function (e) {
         e.preventDefault();
+        var view = shell.getAttribute('data-qpp-view') || 'selection';
+        if (view === 'comparison') {
+          setQppView(root, 'selection');
+          return;
+        }
         if (typeof opts.onBack === 'function') opts.onBack();
       });
     }
@@ -418,8 +507,7 @@ var QuotationProposalsPage = (function () {
     qsa('[data-qpp-compare], [data-qpp-compare-cta]', root).forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
-        var shell = qs('[data-qpp-root]', root) || root;
-        setCompareMode(root, !shell.classList.contains('is-compare-mode'));
+        setQppView(root, 'comparison');
       });
     });
 
@@ -437,6 +525,7 @@ var QuotationProposalsPage = (function () {
     document.addEventListener('webkitfullscreenchange', onFsChange);
     syncFullscreenUi(root);
     bindAudio(root);
+    renderCompare(root);
 
     if (hint && !hint.textContent) hint.textContent = '';
   }
