@@ -614,6 +614,7 @@ var QuotationEditor = (function () {
   var suppressFolderToggleUntil = 0;
   var suppressLibItemClickUntil = 0;
   var libPointerDrag = null;
+  var thumbRerenderQueued = false;
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
@@ -1622,12 +1623,12 @@ var QuotationEditor = (function () {
     img.onload = function () {
       if (item._thumbPreloadToken !== token) return;
       item.thumbReady = true;
-      if (rootEl) rerender();
+      requestThumbReadyRerender();
     };
     img.onerror = function () {
       if (item._thumbPreloadToken !== token) return;
       item.thumbReady = true;
-      if (rootEl) rerender();
+      requestThumbReadyRerender();
     };
     img.src = url;
   }
@@ -3307,6 +3308,56 @@ var QuotationEditor = (function () {
     return cls;
   }
 
+  function captureUiScroll() {
+    var out = {};
+    var list = document.querySelector('[data-qe-content-list]');
+    if (list) {
+      out.libTop = list.scrollTop;
+      out.libLeft = list.scrollLeft;
+    }
+    var track = document.querySelector('[data-qe-scenes-track]');
+    if (track) out.scenesLeft = track.scrollLeft;
+    return out;
+  }
+
+  function restoreUiScroll(saved) {
+    if (!saved) return;
+    function apply() {
+      var list = document.querySelector('[data-qe-content-list]');
+      if (list && saved.libTop != null) {
+        list.scrollTop = saved.libTop;
+        list.scrollLeft = saved.libLeft || 0;
+      }
+      var track = document.querySelector('[data-qe-scenes-track]');
+      if (track && saved.scenesLeft != null) {
+        track.scrollLeft = saved.scenesLeft;
+      }
+    }
+    apply();
+    requestAnimationFrame(function () {
+      apply();
+      requestAnimationFrame(apply);
+    });
+  }
+
+  function isLibraryPointerBusy() {
+    return !!(libPointerDrag || libItemDrag || folderDrag);
+  }
+
+  function requestThumbReadyRerender() {
+    if (isLibraryPointerBusy()) {
+      thumbRerenderQueued = true;
+      return;
+    }
+    if (rootEl) rerender();
+  }
+
+  function flushQueuedThumbRerender() {
+    if (!thumbRerenderQueued) return;
+    thumbRerenderQueued = false;
+    if (rootEl && !isLibraryPointerBusy()) rerender();
+  }
+
   function render(ctx) {
     if (ctx && typeof ctx === 'object') editorProjectCtx = ctx;
     hydrateEditorProjectCtxSlug();
@@ -3330,12 +3381,14 @@ var QuotationEditor = (function () {
 
   function rerender() {
     if (!rootEl) return;
+    var uiScroll = captureUiScroll();
     var host = rootEl.closest
       ? (rootEl.matches('[data-quotation-panel]') ? rootEl : rootEl.closest('[data-quotation-panel]'))
       : null;
     var panel = host || rootEl;
     panel.innerHTML = render();
     bind(panel);
+    restoreUiScroll(uiScroll);
   }
 
   function selectContent(id) {
@@ -4195,6 +4248,7 @@ var QuotationEditor = (function () {
           node.classList.remove('is-dragging');
         });
         clearFolderDropMarks();
+        flushQueuedThumbRerender();
       });
     });
 
@@ -5934,7 +5988,10 @@ var QuotationEditor = (function () {
     libPointerDrag = null;
     libItemDrag = null;
     if (committed) {
-      /* reorder/move already rerender */
+      /* reorder/move already rerender — drop queued thumb refresh */
+      thumbRerenderQueued = false;
+    } else {
+      flushQueuedThumbRerender();
     }
   }
 
