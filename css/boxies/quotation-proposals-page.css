@@ -509,6 +509,7 @@ body.qr-proposals-page .qpp {
   }
 
   .qpp__main {
+    padding-top: max(28px, calc(env(safe-area-inset-top) + 12px));
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 }
@@ -528,7 +529,7 @@ body.qr-proposals-page .qpp {
   }
   .qpp__main {
     padding:
-      2px
+      max(32px, calc(env(safe-area-inset-top) + 14px))
       18px
       calc(78px + env(safe-area-inset-bottom));
   }
