@@ -220,10 +220,10 @@ var QuotationGuides = (function () {
         e.stopPropagation();
         var axis = ruler.getAttribute('data-qe-ruler');
         /*
-         * Top (horizontal) ruler → VERTICAL guide (follows X).
-         * Left (vertical) ruler → HORIZONTAL guide (follows Y).
+         * Top (horizontal) ruler → HORIZONTAL guide (follows Y).
+         * Left (vertical) ruler → VERTICAL guide (follows X).
          */
-        var type = axis === 'h' ? 'vertical' : 'horizontal';
+        var type = axis === 'h' ? 'horizontal' : 'vertical';
         startGhost(type, e.clientX, e.clientY);
       });
     });
