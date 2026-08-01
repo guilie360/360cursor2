@@ -487,15 +487,19 @@ body.qr-proposals-page .qpp {
 
   .qpp__chrome-compare {
     display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
     justify-self: center;
     grid-column: 2;
     grid-row: 1;
-    width: auto;
-    min-width: 0;
+    width: auto !important;
+    min-width: fit-content;
+    max-width: none;
     height: 44px;
-    padding: 0 18px;
-    border-radius: 18px;
+    padding: 0 22px;
+    border-radius: 999px;
     gap: 0;
+    box-sizing: border-box;
   }
 
   .qpp__chrome-compare svg {
@@ -503,12 +507,12 @@ body.qr-proposals-page .qpp {
   }
 
   .qpp__chrome-compare-label {
-    display: inline;
+    display: inline-block;
     font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
     font-size: 0.58rem;
     font-weight: 500;
-    letter-spacing: 0.22em;
-    text-indent: 0.22em;
+    letter-spacing: 0.2em;
+    text-indent: 0.2em;
     text-transform: uppercase;
     color: #fff;
     line-height: 1;
@@ -554,10 +558,14 @@ body.qr-proposals-page .qpp {
     width: 40px;
     height: 40px;
   }
+  .qpp__icon-btn.qpp__chrome-compare,
   .qpp__chrome-compare {
+    width: auto !important;
+    min-width: fit-content;
+    max-width: none;
     height: 40px;
-    padding: 0 16px;
-    border-radius: 17px;
+    padding: 0 20px;
+    border-radius: 999px;
   }
   .qpp__chrome-compare-label {
     font-size: 0.54rem;
