@@ -180,7 +180,6 @@ var QuotationProposalsPage = (function () {
             '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
             '<div class="qpp__card-terms">' +
               '<span>Anticipo del 50%</span>' +
-              '<span>Tiempo estimado</span>' +
               '<span>2 a 3 semanas</span>' +
               '<span>Saldo contra entrega</span>' +
             '</div>' +
