@@ -183,11 +183,17 @@ var AdminUI = (function () {
   /* Global viewport busy overlay — survives SPA page unmount (create → builder). */
   var globalBusyEl = null;
 
-  function showGlobalBusy(message) {
-    var label = message || 'Procesando…';
+  function showGlobalBusy(message, opts) {
+    opts = opts || {};
+    var hasLabel = !(message === '' || message === false || message == null);
+    var label = hasLabel ? String(message) : 'Cargando';
     if (globalBusyEl) {
       var labelEl = globalBusyEl.querySelector('.boxies-global-busy__label');
-      if (labelEl) labelEl.textContent = label;
+      if (labelEl) {
+        labelEl.textContent = hasLabel ? label : '';
+        labelEl.hidden = !hasLabel;
+      }
+      globalBusyEl.classList.toggle('is-opaque', !!opts.opaque);
       globalBusyEl.setAttribute('aria-label', label);
       document.body.classList.add('boxies-is-global-busy');
       document.body.setAttribute('aria-busy', 'true');
@@ -195,7 +201,7 @@ var AdminUI = (function () {
     }
     globalBusyEl = document.createElement('div');
     globalBusyEl.id = 'boxiesGlobalBusy';
-    globalBusyEl.className = 'boxies-global-busy';
+    globalBusyEl.className = 'boxies-global-busy' + (opts.opaque ? ' is-opaque' : '');
     globalBusyEl.setAttribute('role', 'alertdialog');
     globalBusyEl.setAttribute('aria-modal', 'true');
     globalBusyEl.setAttribute('aria-busy', 'true');
@@ -204,9 +210,10 @@ var AdminUI = (function () {
       '<div class="boxies-global-busy__backdrop" aria-hidden="true"></div>' +
       '<div class="boxies-global-busy__panel" role="status">' +
         '<div class="boxies-global-busy__spinner" aria-hidden="true"></div>' +
-        '<p class="boxies-global-busy__label"></p>' +
+        '<p class="boxies-global-busy__label"' + (hasLabel ? '' : ' hidden') + '></p>' +
       '</div>';
-    globalBusyEl.querySelector('.boxies-global-busy__label').textContent = label;
+    var labelNode = globalBusyEl.querySelector('.boxies-global-busy__label');
+    if (labelNode && hasLabel) labelNode.textContent = label;
     document.body.appendChild(globalBusyEl);
     document.body.classList.add('boxies-is-global-busy');
     document.body.setAttribute('aria-busy', 'true');

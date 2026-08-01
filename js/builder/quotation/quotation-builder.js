@@ -459,7 +459,23 @@ var QuotationBuilderView = (function () {
   }
 
   function goToStep(stepId) {
-    renderStep(stepId);
+    var next = stepId;
+    if (typeof QuotationRouter !== 'undefined') {
+      next = QuotationRouter.writeToUrl(stepId) || stepId;
+    }
+    if (next === 'editor' &&
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.ensureLoaded === 'function' &&
+        projectCtx && projectCtx.id) {
+      QuotationEditor.ensureLoaded(projectCtx).then(function () {
+        renderStep(next);
+      }).catch(function (eLoad) {
+        console.warn('[QuotationBuilderView] goToStep ensureLoaded', eLoad);
+        renderStep(next);
+      });
+      return;
+    }
+    renderStep(next);
   }
 
   function activateSharedChrome() {
@@ -590,6 +606,18 @@ var QuotationBuilderView = (function () {
     currentStep = typeof QuotationRouter !== 'undefined'
       ? QuotationRouter.readFromUrl()
       : 'config';
+
+    /* Hydrate editor SSOT before first paint — avoids empty library/scenes flash. */
+    if (currentStep === 'editor' &&
+        typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.ensureLoaded === 'function' &&
+        projectCtx && projectCtx.id) {
+      try {
+        await QuotationEditor.ensureLoaded(projectCtx);
+      } catch (eLoad) {
+        console.warn('[QuotationBuilderView] ensureLoaded', eLoad);
+      }
+    }
 
     host.innerHTML = shellHtml(currentStep);
     if (typeof QuotationSidebar !== 'undefined' && QuotationSidebar.bind) {

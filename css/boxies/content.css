@@ -1082,6 +1082,18 @@ body[data-theme="signaturered"] #boxiesContent .boxies-public-toggle.on .toggle-
   background: rgba(0, 0, 0, 0.42);
 }
 
+.boxies-global-busy.is-opaque .boxies-global-busy__backdrop {
+  background: #050505;
+}
+
+.boxies-global-busy.is-opaque .boxies-global-busy__spinner {
+  width: 28px;
+  height: 28px;
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.9);
+}
+
 .boxies-global-busy__panel {
   position: relative;
   z-index: 1;

@@ -7585,10 +7585,24 @@ var QuotationEditor = (function () {
     });
   }
 
+  function ensureLoaded(ctx) {
+    if (ctx && typeof ctx === 'object') {
+      editorProjectCtx = {
+        id: String(ctx.id || ctx.projectId || (editorProjectCtx && editorProjectCtx.id) || '').trim(),
+        slug: String(ctx.slug || ctx.project || (editorProjectCtx && editorProjectCtx.slug) || '').trim(),
+        name: String(ctx.name || ctx.nombre || (editorProjectCtx && editorProjectCtx.name) || '').trim()
+      };
+    }
+    var id = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
+    if (!id) return Promise.resolve(null);
+    return load(id);
+  }
+
   return {
     render: render,
     bind: bind,
     load: load,
+    ensureLoaded: ensureLoaded,
     commit: commit,
     detachUi: detachUi,
     applyProjectIdentity: applyProjectIdentity,

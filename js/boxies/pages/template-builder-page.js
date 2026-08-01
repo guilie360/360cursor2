@@ -63,58 +63,23 @@ var BoxiesTemplateBuilderPage = (function () {
     return 'Creando Plantilla';
   }
 
-  function busyLabelOpen() {
-    if (typeof BoxiesExperienceTypes !== 'undefined' && BoxiesExperienceTypes.getOpenBusyLabel) {
-      return BoxiesExperienceTypes.getOpenBusyLabel('template');
-    }
-    return 'Cargando Plantilla';
+  function showBootLoader(pendingCreate) {
+    document.body.classList.toggle('boxies-is-creating-showroom', !!pendingCreate);
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.showGlobalBusy !== 'function') return;
+    AdminUI.showGlobalBusy(pendingCreate ? busyLabelCreate() : '', { opaque: true });
   }
 
-  function ensureCreateBusyVisible() {
-    if (!hasPendingCreate()) return;
-    document.body.classList.add('boxies-is-creating-showroom');
-    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
-      AdminUI.showGlobalBusy(busyLabelCreate());
-    }
-  }
-
-  function ensureOpenBusyVisible() {
-    if (!hasPendingOpen()) return;
-    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
-      AdminUI.showGlobalBusy(busyLabelOpen());
-    }
-  }
-
-  function releaseCreateBusy() {
-    clearPendingCreate();
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
-          AdminUI.hideGlobalBusy();
-        }
-        document.body.classList.remove('boxies-is-creating-showroom');
-      });
-    });
-  }
-
-  function releaseOpenBusy() {
-    clearPendingOpen();
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
-          AdminUI.hideGlobalBusy();
-        }
-      });
-    });
-  }
-
-  function failBusy(message) {
+  function hideBootLoader() {
     clearPendingCreate();
     clearPendingOpen();
+    document.body.classList.remove('boxies-is-creating-showroom');
     if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
       AdminUI.hideGlobalBusy();
     }
-    document.body.classList.remove('boxies-is-creating-showroom');
+  }
+
+  function failBusy(message) {
+    hideBootLoader();
     if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
       AdminNotify.error(message || 'No se pudo abrir el Template Builder.');
     }
@@ -144,9 +109,10 @@ var BoxiesTemplateBuilderPage = (function () {
     var projectId = (ctx.projectId || '').trim();
     var slug = (ctx.project || ctx.proyecto || ctx.slug || '').trim();
     var pendingCreate = hasPendingCreate();
-    var pendingOpen = !pendingCreate && hasPendingOpen();
-    if (pendingCreate) ensureCreateBusyVisible();
-    else if (pendingOpen) ensureOpenBusyVisible();
+
+    host.classList.add('boxies-builder-embed', 'quotation-builder-host', 'template-builder-host');
+    host.innerHTML = '';
+    showBootLoader(pendingCreate);
 
     if (!projectId && !slug) {
       failBusy('Faltan datos para abrir la Plantilla.');
@@ -158,13 +124,6 @@ var BoxiesTemplateBuilderPage = (function () {
       failBusy('QuotationBuilderView no está disponible.');
       showError(host, new Error('QuotationBuilderView no está disponible para Template Builder.'));
       return;
-    }
-
-    host.classList.add('boxies-builder-embed', 'quotation-builder-host', 'template-builder-host');
-    if (!pendingCreate && !pendingOpen) {
-      host.innerHTML = '<p class="boxies-page__desc" style="padding:8px 0">Cargando Template Builder…</p>';
-    } else {
-      host.innerHTML = '';
     }
 
     try {
@@ -188,8 +147,9 @@ var BoxiesTemplateBuilderPage = (function () {
         experienceType: 'template'
       });
 
-      if (pendingCreate) releaseCreateBusy();
-      else if (pendingOpen) releaseOpenBusy();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(hideBootLoader);
+      });
     } catch (err) {
       console.error('[boxies:template-builder-page]', err);
       failBusy((err && err.message) || 'No se pudo abrir el Template Builder.');
@@ -205,6 +165,7 @@ var BoxiesTemplateBuilderPage = (function () {
     } catch (e) {
       console.warn('[boxies:template-builder-page] onLeave', e);
     }
+    hideBootLoader();
     if (typeof BoxiesShell !== 'undefined' && BoxiesShell.clearProjectContext) {
       BoxiesShell.clearProjectContext();
     }
