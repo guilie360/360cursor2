@@ -3573,6 +3573,12 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 3;
 }
 
+/* Collapsed: drop the full-height edge stripe (border + panel fill). */
+.quotation-workspace.is-left-collapsed .quotation-left-block {
+  border-right: none;
+  background: transparent;
+}
+
 .quotation-left-block[hidden] {
   display: none !important;
 }
@@ -3772,7 +3778,7 @@ body.quotation-canvas-first .builder-workspace,
   color: var(--builder-float-color, rgba(255, 255, 255, 0.38));
   cursor: ew-resize;
   box-sizing: border-box;
-  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
