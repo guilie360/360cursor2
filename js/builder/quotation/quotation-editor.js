@@ -3682,6 +3682,7 @@ var QuotationEditor = (function () {
 
   function selectScene(id) {
     if (!sceneById(id)) return;
+    var same = state.activeSceneId === id;
     state.activeSceneId = id;
     state.selectedElementId = null;
     state.expHasSelection = false;
@@ -3691,6 +3692,8 @@ var QuotationEditor = (function () {
     try {
       document.documentElement.style.setProperty('--qe-inspector-w', '0px');
     } catch (eW) {}
+    /* Same scene: skip rerender so dblclick-to-rename is not destroyed. */
+    if (same) return;
     rerender();
   }
 
@@ -3701,6 +3704,55 @@ var QuotationEditor = (function () {
     if (!next || sc.name === next) return;
     sc.name = next;
     markDirtyLocal();
+  }
+
+  function beginSceneRename(id) {
+    var sid = String(id || '').trim();
+    var sc = sceneById(sid);
+    if (!sc || isHeroScene(sc) || !rootEl) return false;
+    var span = null;
+    rootEl.querySelectorAll('[data-qe-scene-name]').forEach(function (el) {
+      if (!span && el.getAttribute('data-qe-scene-name') === sid) span = el;
+    });
+    if (!span) return false;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'qe-scenes__thumb-name-input';
+    input.value = sc.name || '';
+    input.setAttribute('aria-label', 'Nombre de escena');
+    input.setAttribute('data-qe-scene-name-input', sid);
+    var done = false;
+    function finish(save) {
+      if (done) return;
+      done = true;
+      if (save) renameScene(sid, input.value);
+      rerender();
+    }
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        finish(true);
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        finish(false);
+      }
+    });
+    input.addEventListener('blur', function () { finish(true); });
+    input.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+    input.addEventListener('mousedown', function (ev) {
+      ev.stopPropagation();
+    });
+    input.addEventListener('dblclick', function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
+    span.replaceWith(input);
+    input.focus();
+    input.select();
+    return true;
   }
 
   function reorderScene(fromId, toId, placeAfter) {
@@ -3751,6 +3803,7 @@ var QuotationEditor = (function () {
 
   function bindSceneNameEditing(editor) {
     if (!editor) return;
+    var clickTimer = null;
     editor.querySelectorAll('.qe-scenes__thumb-name').forEach(function (span) {
       var locked = span.getAttribute('data-qe-scene-name-locked') === '1';
       var id = span.getAttribute('data-qe-scene-name');
@@ -3760,7 +3813,20 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         var wrap = span.closest('[data-qe-drop-scene-id]');
         var sid = (wrap && wrap.getAttribute('data-qe-drop-scene-id')) || id;
-        if (sid) selectScene(sid);
+        if (!sid) return;
+        /* Delay select so a dblclick can open rename without a mid-flight rerender. */
+        if (clickTimer) {
+          try { clearTimeout(clickTimer); } catch (eT) {}
+          clickTimer = null;
+        }
+        if (locked || !id) {
+          selectScene(sid);
+          return;
+        }
+        clickTimer = setTimeout(function () {
+          clickTimer = null;
+          selectScene(sid);
+        }, 280);
       });
 
       if (locked || !id) return;
@@ -3768,44 +3834,11 @@ var QuotationEditor = (function () {
       span.addEventListener('dblclick', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var sc = sceneById(id);
-        if (!sc || isHeroScene(sc)) return;
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'qe-scenes__thumb-name-input';
-        input.value = sc.name || '';
-        input.setAttribute('aria-label', 'Nombre de escena');
-        var done = false;
-        function finish(save) {
-          if (done) return;
-          done = true;
-          if (save) renameScene(id, input.value);
-          rerender();
+        if (clickTimer) {
+          try { clearTimeout(clickTimer); } catch (eT2) {}
+          clickTimer = null;
         }
-        input.addEventListener('keydown', function (ev) {
-          if (ev.key === 'Enter') {
-            ev.preventDefault();
-            finish(true);
-          } else if (ev.key === 'Escape') {
-            ev.preventDefault();
-            finish(false);
-          }
-        });
-        input.addEventListener('blur', function () { finish(true); });
-        input.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-        });
-        input.addEventListener('mousedown', function (ev) {
-          ev.stopPropagation();
-        });
-        input.addEventListener('dblclick', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-        });
-        span.replaceWith(input);
-        input.focus();
-        input.select();
+        beginSceneRename(id);
       });
     });
   }
