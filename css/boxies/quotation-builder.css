@@ -2102,8 +2102,10 @@
   display: none !important;
 }
 
+/* Never display:none the drag source — that cancels HTML5 drag. */
 .qe-content__folders.is-reordering .qe-folder.is-dragging {
-  display: none;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .qe-folder-insert {
@@ -2122,10 +2124,20 @@
 
 .qe-folder__head[draggable="true"] {
   cursor: grab;
+  -webkit-user-drag: element;
 }
 
 .qe-folder__head[draggable="true"]:active,
 .qe-folder__head.is-dragging {
+  cursor: grabbing;
+}
+
+.qe-lib__item[draggable="true"] {
+  cursor: grab;
+  -webkit-user-drag: element;
+}
+
+.qe-lib__item[draggable="true"]:active {
   cursor: grabbing;
 }
 
@@ -2992,10 +3004,6 @@
   margin-top: 2px;
   font-size: 10px;
   color: rgba(255, 255, 255, 0.4);
-}
-
-.qe-lib__item[draggable="true"] {
-  cursor: grab;
 }
 
 .qe-canvas__mock {

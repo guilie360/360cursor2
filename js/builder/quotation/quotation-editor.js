@@ -3890,6 +3890,7 @@ var QuotationEditor = (function () {
           return;
         }
         e.stopPropagation();
+        libItemDrag = null;
         var id = head.getAttribute('data-qe-folder-drag');
         var folder = folderById(id);
         if (!id || !folder) return;
@@ -3903,7 +3904,14 @@ var QuotationEditor = (function () {
         var block = head.closest('[data-qe-folder-block]') || head;
         block.classList.add('is-dragging');
         head.classList.add('is-dragging');
-        if (list) list.classList.add('is-reordering');
+        /* Defer compact mode so the drag source is not mutated in the same turn. */
+        if (list) {
+          requestAnimationFrame(function () {
+            if (folderDrag && folderDrag.id === String(id) && list.isConnected) {
+              list.classList.add('is-reordering');
+            }
+          });
+        }
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
           try { e.dataTransfer.setData('text/qe-folder', id); } catch (e1) {}
@@ -5837,6 +5845,7 @@ var QuotationEditor = (function () {
             return;
           }
           e.stopPropagation();
+          folderDrag = null;
           var libId = el.getAttribute('data-qe-drag-lib') || el.getAttribute('data-qe-drag-resource');
           var sceneId = el.getAttribute('data-qe-drag-resource');
           var group = el.getAttribute('data-qe-lib-group') || '';
@@ -5957,34 +5966,93 @@ var QuotationEditor = (function () {
         });
       });
 
-      /* Folder/root drops no longer move files — use right-click "Mover de carpeta". */
+      /* Drop onto folder / root: move resources. Sibling item rows handle reorder. */
       qAll('[data-qe-lib-drop-folder], [data-qe-lib-drop-root]').forEach(function (zone) {
+        function zoneTargetFolderId() {
+          if (zone.hasAttribute('data-qe-lib-drop-folder')) {
+            return zone.getAttribute('data-qe-lib-drop-folder') || null;
+          }
+          return null;
+        }
+
         zone.addEventListener('dragover', function (e) {
-          if (libItemDrag ||
-              document.querySelector('.qe-lib__item.is-dragging') ||
-              (e.dataTransfer && e.dataTransfer.types &&
-                Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-lib-move') >= 0)) {
-            /* Allow bubbling item reorder targets to own the drop; do not force none. */
+          if (folderDrag || document.querySelector('.qe-folder.is-dragging')) return;
+          if (!libItemDrag) return;
+
+          var overItem = e.target && e.target.closest &&
+            e.target.closest('[data-qe-content][data-qe-drag-lib]');
+          if (overItem) {
+            var overFolder = overItem.getAttribute('data-qe-lib-folder') || '';
+            var overGroup = overItem.getAttribute('data-qe-lib-group') || '';
+            if (overGroup === (libItemDrag.group || '') &&
+                overFolder === (libItemDrag.folder || '')) {
+              zone.classList.remove('is-lib-drop-target');
+              return;
+            }
+          }
+
+          var dropGroup = zone.getAttribute('data-qe-lib-drop-group') || '';
+          if (!libItemDrag.group || !dropGroup || libItemDrag.group !== dropGroup) {
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
             zone.classList.remove('is-lib-drop-target');
             return;
           }
-          if (document.querySelector('.qe-folder.is-dragging') ||
-              (e.dataTransfer && e.dataTransfer.types &&
-                Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
+
+          var nextKey = zone.hasAttribute('data-qe-lib-drop-folder')
+            ? String(zoneTargetFolderId() || '')
+            : '';
+          var curKey = libItemDrag.folder || '';
+          if (curKey === nextKey) {
+            zone.classList.remove('is-lib-drop-target');
             return;
           }
+
+          e.preventDefault();
+          e.stopPropagation();
+          zone.classList.add('is-lib-drop-target');
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+          clearLibReorderIndicators();
         });
+
+        zone.addEventListener('dragleave', function (e) {
+          if (e.relatedTarget && zone.contains(e.relatedTarget)) return;
+          zone.classList.remove('is-lib-drop-target');
+        });
+
         zone.addEventListener('drop', function (e) {
-          if (libItemDrag ||
-              document.querySelector('.qe-lib__item.is-dragging') ||
-              (e.dataTransfer && (
-                e.dataTransfer.getData('text/qe-lib-move') ||
-                e.dataTransfer.getData('text/qe-lib-move-ids')
-              ))) {
-            /* Item reorder handled on rows; ignore folder/root zone drops. */
-            zone.classList.remove('is-lib-drop-target');
-            return;
+          if (folderDrag || document.querySelector('.qe-folder.is-dragging')) return;
+          if (!libItemDrag) return;
+
+          var overItem = e.target && e.target.closest &&
+            e.target.closest('[data-qe-content][data-qe-drag-lib]');
+          if (overItem) {
+            var overFolder = overItem.getAttribute('data-qe-lib-folder') || '';
+            var overGroup = overItem.getAttribute('data-qe-lib-group') || '';
+            if (overGroup === (libItemDrag.group || '') &&
+                overFolder === (libItemDrag.folder || '')) {
+              return;
+            }
           }
+
+          var dropGroup = zone.getAttribute('data-qe-lib-drop-group') || '';
+          if (!libItemDrag.group || libItemDrag.group !== dropGroup) return;
+
+          var nextKey = zone.hasAttribute('data-qe-lib-drop-folder')
+            ? String(zoneTargetFolderId() || '')
+            : '';
+          var curKey = libItemDrag.folder || '';
+          if (curKey === nextKey) return;
+
+          e.preventDefault();
+          e.stopPropagation();
+          zone.classList.remove('is-lib-drop-target');
+          var ids = resolveLibDragIds();
+          var folderId = zone.hasAttribute('data-qe-lib-drop-folder')
+            ? zoneTargetFolderId()
+            : null;
+          libItemDrag = null;
+          if (!ids.length) return;
+          moveLibraryItemsToFolder(ids, folderId);
         });
       });
 
