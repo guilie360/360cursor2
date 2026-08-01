@@ -4961,9 +4961,15 @@ var QuotationEditor = (function () {
 
   function detachUi() {
     try { persistDraft(); } catch (eDraft) { /* ignore */ }
-    resetEditorSession('detach');
-    loadedProjectId = null;
-    editorProjectCtx = { id: '', slug: '', name: '' };
+    try { destroyExperienciaOverlay(); } catch (eOx) { /* ignore */ }
+    try { destroyBuilderRuntimeScene(); } catch (eRt) { /* ignore */ }
+    try {
+      document.body.classList.remove('is-qe-lib-pointer-dragging');
+    } catch (eBody) { /* ignore */ }
+    libPointerDrag = null;
+    libItemDrag = null;
+    folderDrag = null;
+    /* Keep documentReady / loadedProjectId / state — only tear down chrome. */
     rootEl = null;
     var rightBody = document.getElementById('quotationRightBody');
     if (rightBody) rightBody.innerHTML = '';
@@ -7585,6 +7591,11 @@ var QuotationEditor = (function () {
     });
   }
 
+  function isDocumentReady(projectId) {
+    var id = String(projectId || (editorProjectCtx && editorProjectCtx.id) || '').trim();
+    return !!(documentReady && id && String(loadedProjectId || '') === id);
+  }
+
   function ensureLoaded(ctx) {
     if (ctx && typeof ctx === 'object') {
       editorProjectCtx = {
@@ -7603,6 +7614,7 @@ var QuotationEditor = (function () {
     bind: bind,
     load: load,
     ensureLoaded: ensureLoaded,
+    isDocumentReady: isDocumentReady,
     commit: commit,
     detachUi: detachUi,
     applyProjectIdentity: applyProjectIdentity,

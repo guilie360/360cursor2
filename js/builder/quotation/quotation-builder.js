@@ -5,6 +5,7 @@
 var QuotationBuilderView = (function () {
   var rootEl = null;
   var currentStep = 'config';
+  var stepNavToken = 0;
   var projectCtx = {
     id: '',
     name: '',
@@ -458,23 +459,53 @@ var QuotationBuilderView = (function () {
     refreshSidebar();
   }
 
-  function goToStep(stepId) {
-    var next = stepId;
-    if (typeof QuotationRouter !== 'undefined') {
-      next = QuotationRouter.writeToUrl(stepId) || stepId;
+  function showStepLoader() {
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.showGlobalBusy === 'function') {
+      AdminUI.showGlobalBusy('', { opaque: true });
     }
+  }
+
+  function hideStepLoader() {
+    if (typeof AdminUI !== 'undefined' && typeof AdminUI.hideGlobalBusy === 'function') {
+      AdminUI.hideGlobalBusy();
+    }
+  }
+
+  function goToStep(stepId) {
+    var next = typeof QuotationRouter !== 'undefined'
+      ? QuotationRouter.normalize(stepId)
+      : String(stepId || '').trim().toLowerCase();
+    if (!next) return;
+    /* Same step: ignore — remounting editor wiped UX and felt frozen. */
+    if (next === currentStep) return;
+
+    var token = ++stepNavToken;
+
     if (next === 'editor' &&
         typeof QuotationEditor !== 'undefined' &&
         typeof QuotationEditor.ensureLoaded === 'function' &&
         projectCtx && projectCtx.id) {
+      var alreadyReady = typeof QuotationEditor.isDocumentReady === 'function' &&
+        QuotationEditor.isDocumentReady(projectCtx.id);
+      if (!alreadyReady) showStepLoader();
       QuotationEditor.ensureLoaded(projectCtx).then(function () {
+        if (token !== stepNavToken) return;
         renderStep(next);
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (token === stepNavToken) hideStepLoader();
+          });
+        });
       }).catch(function (eLoad) {
         console.warn('[QuotationBuilderView] goToStep ensureLoaded', eLoad);
+        if (token !== stepNavToken) return;
         renderStep(next);
+        hideStepLoader();
       });
       return;
     }
+
+    hideStepLoader();
     renderStep(next);
   }
 
