@@ -4,18 +4,22 @@
  */
 var QuotationProposalsPage = (function () {
   var AUDIO_SRC = '../assets/taroa/mujer-conforme.mp3';
+  /* TAROA public WhatsApp (CO). Digits only with country code. */
+  var WHATSAPP_NUMBER = '573226834084';
   var PROPOSALS = [
     {
       id: 'still',
       title: 'Still',
       price: '$3.500.000',
-      blurb: 'Presentación interactiva\nbasada en imágenes.'
+      blurb: 'Presentación interactiva\nbasada en imágenes.',
+      waMessage: 'Primo, me voy por STILL'
     },
     {
       id: 'motion',
       title: 'Motion',
       price: '$5.000.000',
-      blurb: 'Presentación interactiva\ncon videos y animaciones.'
+      blurb: 'Presentación interactiva basada en imágenes videos y animaciones.',
+      waMessage: 'Primo, me voy por MOTION'
     }
   ];
 
@@ -103,10 +107,23 @@ var QuotationProposalsPage = (function () {
       '</div>';
   }
 
+  function openWhatsApp(message) {
+    var phone = String(WHATSAPP_NUMBER || '').replace(/\D/g, '');
+    if (!phone) return;
+    var text = encodeURIComponent(String(message || '').trim());
+    var url = 'https://wa.me/' + phone + (text ? ('?text=' + text) : '');
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (eOpen) {
+      window.location.href = url;
+    }
+  }
+
   function buildCard(proposal) {
     proposal = proposal || {};
     var title = String(proposal.title || 'Propuesta');
     var price = String(proposal.price || '');
+    var waMessage = String(proposal.waMessage || ('Primo, me voy por ' + title.toUpperCase()));
     var blurbHtml = String(proposal.blurb || '')
       .split('\n')
       .map(function (line) { return escapeHtml(line); })
@@ -159,7 +176,7 @@ var QuotationProposalsPage = (function () {
       selectBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        /* Temporary: selection only — wire proposalDetail later. */
+        openWhatsApp(waMessage);
       });
     }
 
