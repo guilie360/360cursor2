@@ -556,6 +556,7 @@ var QuotationEditor = (function () {
       canvasPreviewMode: false,
       libraryCollapsed: false,
       inspectorCollapsed: true,
+      scenesCollapsed: false,
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
@@ -2659,13 +2660,41 @@ var QuotationEditor = (function () {
     }
 
     return '' +
-      '<div class="qe-scenes' + (state.canvasPreviewMode ? ' is-preview' : '') + '" data-qe-scenes>' +
+      '<div class="qe-scenes' +
+        (state.canvasPreviewMode ? ' is-preview' : '') +
+        (state.scenesCollapsed ? ' is-collapsed' : '') +
+        '" data-qe-scenes' +
+        (state.scenesCollapsed ? ' hidden' : '') + '>' +
         '<button type="button" class="qe-scenes__nav" data-qe-scenes-prev aria-label="Escenas anteriores">←</button>' +
         '<div class="qe-scenes__track-wrap">' +
           '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
         '</div>' +
         '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
       '</div>';
+  }
+
+  function scenesFoldChevronSvg() {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render('chevron-down');
+    }
+    return '' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+        ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="m6 9 6 6 6-6"/>' +
+      '</svg>';
+  }
+
+  function scenesFoldBtnHtml() {
+    var collapsed = !!state.scenesCollapsed;
+    return '' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--scenes"' +
+        ' data-qe-scenes-fold' +
+        ' data-collapsed="' + (collapsed ? '1' : '0') + '"' +
+        ' aria-expanded="' + (collapsed ? 'false' : 'true') + '"' +
+        ' aria-label="' + (collapsed ? 'Mostrar escenas' : 'Ocultar escenas') + '"' +
+        ' title="' + (collapsed ? 'Mostrar escenas' : 'Ocultar escenas') + '">' +
+        scenesFoldChevronSvg() +
+      '</button>';
   }
 
   function viewportIconSvg(id) {
@@ -2716,8 +2745,11 @@ var QuotationEditor = (function () {
         '</button>';
     }).join('');
     return '' +
-      '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
-        btns +
+      '<div class="qe-canvas-chrome-top" data-qe-chrome-top>' +
+        scenesFoldBtnHtml() +
+        '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
+          btns +
+        '</div>' +
       '</div>';
   }
 
@@ -2832,7 +2864,8 @@ var QuotationEditor = (function () {
     return '' +
       '<section class="qe-col qe-col--canvas" aria-label="Canvas">' +
         '<div class="qe-stage-shell" data-qe-stage-shell>' +
-          '<div class="qe-stage-unit" data-qe-stage-unit>' +
+          '<div class="qe-stage-unit' + (state.scenesCollapsed ? ' is-scenes-collapsed' : '') +
+            '" data-qe-stage-unit>' +
             scenesBarHtml() +
             '<div class="qe-stage-work" data-qe-stage-work>' +
               '<div class="qe-canvas-fit" data-qe-canvas-fit>' +
@@ -2940,18 +2973,27 @@ var QuotationEditor = (function () {
     var fitStack = unit.querySelector('[data-qe-canvas-fit-stack]');
     var fitFrame = unit.querySelector('[data-qe-canvas-fit-frame]');
     var stage = unit.querySelector('[data-qe-canvas]');
+    var toolChrome = unit.querySelector('[data-qe-chrome-top]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
 
     if (scenes) {
       scenes.style.width = '';
       scenes.style.flex = '0 0 auto';
+      scenes.classList.toggle('is-collapsed', !!state.scenesCollapsed);
+      if (state.scenesCollapsed) {
+        scenes.setAttribute('hidden', '');
+      } else {
+        scenes.removeAttribute('hidden');
+      }
     }
+    unit.classList.toggle('is-scenes-collapsed', !!state.scenesCollapsed);
 
     void unit.offsetHeight;
 
-    var scenesH = scenes ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
-    var scenesMb = scenes
+    var scenesH = (scenes && !state.scenesCollapsed)
+      ? Math.ceil(scenes.getBoundingClientRect().height) : 0;
+    var scenesMb = (scenes && !state.scenesCollapsed)
       ? (parseFloat(window.getComputedStyle(scenes).marginBottom) || 0) : 0;
     /* Viewport / Dock sit on the canvas stack — not stage chrome. */
     var TOOL_PAD = 44;
@@ -3004,12 +3046,19 @@ var QuotationEditor = (function () {
       fitFrame.style.flex = '0 0 auto';
       fitFrame.style.overflow = 'hidden';
     }
+    if (toolChrome) {
+      toolChrome.style.position = 'absolute';
+      toolChrome.style.left = '50%';
+      toolChrome.style.top = '0';
+      toolChrome.style.transform = 'translate(-50%, calc(-100% - 8px))';
+      toolChrome.style.zIndex = '6';
+    }
     if (toolVp) {
-      toolVp.style.position = 'absolute';
-      toolVp.style.left = '50%';
-      toolVp.style.top = '0';
-      toolVp.style.transform = 'translate(-50%, calc(-100% - 8px))';
-      toolVp.style.zIndex = '6';
+      toolVp.style.position = '';
+      toolVp.style.left = '';
+      toolVp.style.top = '';
+      toolVp.style.transform = '';
+      toolVp.style.zIndex = '';
     }
     if (toolDock) {
       toolDock.style.position = 'absolute';
@@ -3038,6 +3087,33 @@ var QuotationEditor = (function () {
     canvasFitScale = scale;
 
     syncDesignIdentity();
+  }
+
+  function syncScenesFoldButton() {
+    if (!rootEl) return;
+    var btn = rootEl.querySelector('[data-qe-scenes-fold]');
+    if (!btn) return;
+    var collapsed = !!state.scenesCollapsed;
+    btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    btn.setAttribute('aria-label', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
+    btn.setAttribute('title', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
+  }
+
+  function applyScenesCollapsed(collapsed) {
+    state.scenesCollapsed = !!collapsed;
+    if (!rootEl) return;
+    var scenes = rootEl.querySelector('[data-qe-scenes]');
+    var unit = rootEl.querySelector('[data-qe-stage-unit]');
+    if (scenes) {
+      scenes.classList.toggle('is-collapsed', state.scenesCollapsed);
+      if (state.scenesCollapsed) scenes.setAttribute('hidden', '');
+      else scenes.removeAttribute('hidden');
+    }
+    if (unit) unit.classList.toggle('is-scenes-collapsed', state.scenesCollapsed);
+    syncScenesFoldButton();
+    try { fitStageWorkspace(); } catch (eFit) {}
+    try { window.dispatchEvent(new Event('resize')); } catch (eR) {}
   }
 
   /** Design pixels == official 1920×1080 lienzo; viewport window is separate. */
@@ -6457,6 +6533,17 @@ var QuotationEditor = (function () {
           rerender();
         });
       });
+
+      var scenesFold = editor.querySelector('[data-qe-scenes-fold]');
+      if (scenesFold && !scenesFold.dataset.bound) {
+        scenesFold.dataset.bound = '1';
+        scenesFold.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          applyScenesCollapsed(!state.scenesCollapsed);
+        });
+      }
+      syncScenesFoldButton();
 
       /* Legacy dock toggles kept for template menus if present */
       editor.querySelectorAll('[data-qe-dock]').forEach(function (btn) {
