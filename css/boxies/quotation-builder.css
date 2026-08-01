@@ -2095,6 +2095,25 @@
   flex-direction: column;
   gap: 2px;
   margin: 0 0 8px;
+  position: relative;
+}
+
+.qe-content__folders.is-reordering .qe-folder__body {
+  display: none !important;
+}
+
+.qe-content__folders.is-reordering .qe-folder.is-dragging {
+  display: none;
+}
+
+.qe-folder-insert {
+  flex: 0 0 auto;
+  height: 0;
+  margin: 3px 4px;
+  border-top: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
 
 .qe-content__items--root {

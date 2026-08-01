@@ -3829,6 +3829,55 @@ var QuotationEditor = (function () {
       document.querySelectorAll('.qe-folder, .qe-folder__head').forEach(function (el) {
         el.classList.remove('is-drop-before', 'is-drop-after');
       });
+      document.querySelectorAll('.qe-folder-insert').forEach(function (el) {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+      document.querySelectorAll('.qe-content__folders.is-reordering').forEach(function (el) {
+        el.classList.remove('is-reordering');
+      });
+    }
+
+    function folderBlocksInList(list) {
+      if (!list) return [];
+      return Array.prototype.slice.call(list.children).filter(function (el) {
+        return el && el.getAttribute && el.getAttribute('data-qe-folder-block');
+      });
+    }
+
+    /**
+     * Insert index among folders excluding the dragged one, based on pointer Y
+     * vs each folder HEAD (not the open body).
+     */
+    function folderInsertIndexAtY(list, clientY, dragId) {
+      var blocks = folderBlocksInList(list).filter(function (block) {
+        return String(block.getAttribute('data-qe-folder-block')) !== String(dragId);
+      });
+      var i;
+      for (i = 0; i < blocks.length; i++) {
+        var head = blocks[i].querySelector('[data-qe-folder-drag]') || blocks[i];
+        var rect = head.getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return i;
+      }
+      return blocks.length;
+    }
+
+    function paintFolderInsertMarker(list, insertAt, dragId) {
+      document.querySelectorAll('.qe-folder-insert').forEach(function (el) {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      });
+      var marker = document.createElement('div');
+      marker.className = 'qe-folder-insert';
+      marker.setAttribute('aria-hidden', 'true');
+      var blocks = folderBlocksInList(list).filter(function (block) {
+        return String(block.getAttribute('data-qe-folder-block')) !== String(dragId);
+      });
+      if (insertAt <= 0 || !blocks.length) {
+        list.insertBefore(marker, list.firstChild);
+      } else if (insertAt >= blocks.length) {
+        list.appendChild(marker);
+      } else {
+        list.insertBefore(marker, blocks[insertAt]);
+      }
     }
 
     document.querySelectorAll('[data-qe-folder-drag]').forEach(function (head) {
@@ -3844,10 +3893,17 @@ var QuotationEditor = (function () {
         var id = head.getAttribute('data-qe-folder-drag');
         var folder = folderById(id);
         if (!id || !folder) return;
-        folderDrag = { id: String(id), group: folder.group || null };
+        var list = head.closest('[data-qe-folder-list]');
+        folderDrag = {
+          id: String(id),
+          group: folder.group || null,
+          insertAt: null,
+          list: list || null
+        };
         var block = head.closest('[data-qe-folder-block]') || head;
         block.classList.add('is-dragging');
         head.classList.add('is-dragging');
+        if (list) list.classList.add('is-reordering');
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
           try { e.dataTransfer.setData('text/qe-folder', id); } catch (e1) {}
@@ -3865,53 +3921,40 @@ var QuotationEditor = (function () {
       });
     });
 
-    document.querySelectorAll('[data-qe-folder-block]').forEach(function (block) {
-      block.addEventListener('dragover', function (e) {
+    document.querySelectorAll('[data-qe-folder-list]').forEach(function (list) {
+      var groupId = list.getAttribute('data-qe-folder-list');
+
+      list.addEventListener('dragover', function (e) {
         if (libItemDrag || !folderDrag || !folderDrag.group) return;
-        var toId = block.getAttribute('data-qe-folder-block');
-        var toFolder = folderById(toId);
-        if (!toId || String(toId) === String(folderDrag.id) || !toFolder ||
-            String(toFolder.group) !== String(folderDrag.group)) {
-          return;
-        }
+        if (String(folderDrag.group) !== String(groupId)) return;
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-        clearFolderDropMarks();
-        var rect = block.getBoundingClientRect();
-        var after = (e.clientY - rect.top) > rect.height / 2;
-        block.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+        if (!list.classList.contains('is-reordering')) list.classList.add('is-reordering');
+        var insertAt = folderInsertIndexAtY(list, e.clientY, folderDrag.id);
+        folderDrag.insertAt = insertAt;
+        folderDrag.list = list;
+        paintFolderInsertMarker(list, insertAt, folderDrag.id);
       });
 
-      block.addEventListener('dragleave', function (e) {
-        if (e.relatedTarget && block.contains(e.relatedTarget)) return;
-        block.classList.remove('is-drop-before', 'is-drop-after');
+      list.addEventListener('dragleave', function (e) {
+        if (e.relatedTarget && list.contains(e.relatedTarget)) return;
+        document.querySelectorAll('.qe-folder-insert').forEach(function (el) {
+          if (el.parentNode === list) el.parentNode.removeChild(el);
+        });
       });
 
-      block.addEventListener('drop', function (e) {
+      list.addEventListener('drop', function (e) {
         if (libItemDrag) return;
-        if (!folderDrag && !(e.dataTransfer && e.dataTransfer.types &&
-            Array.prototype.indexOf.call(e.dataTransfer.types, 'text/qe-folder') >= 0)) {
-          return;
-        }
+        if (!folderDrag || String(folderDrag.group) !== String(groupId)) return;
         e.preventDefault();
         e.stopPropagation();
-        var after = block.classList.contains('is-drop-after');
-        if (!block.classList.contains('is-drop-before') &&
-            !block.classList.contains('is-drop-after')) {
-          var rect = block.getBoundingClientRect();
-          after = (e.clientY - rect.top) > rect.height / 2;
-        }
-        clearFolderDropMarks();
-        var from = (folderDrag && folderDrag.id) || '';
-        if (!from && e.dataTransfer) {
-          try { from = e.dataTransfer.getData('text/qe-folder') || ''; } catch (e2) {}
-          if (!from) from = e.dataTransfer.getData('text/plain') || '';
-        }
-        var to = block.getAttribute('data-qe-folder-block');
+        var from = folderDrag.id;
+        var insertAt = folderDrag.insertAt;
+        if (insertAt == null) insertAt = folderInsertIndexAtY(list, e.clientY, from);
         folderDrag = null;
-        if (from && to && from !== to) {
-          reorderFolder(from, to, after);
+        clearFolderDropMarks();
+        if (from && reorderFolderToIndex(from, insertAt)) {
           rerender();
         }
       });
@@ -5295,8 +5338,7 @@ var QuotationEditor = (function () {
     if (String(from.group) !== String(to.group)) return;
     if (String(fromId) === String(toId)) return;
     ensureFolderOrders();
-    var groupId = from.group;
-    var ordered = foldersInGroup(groupId).filter(function (f) {
+    var ordered = foldersInGroup(from.group).filter(function (f) {
       return String(f.id) !== String(fromId);
     });
     var toIdx = -1;
@@ -5307,10 +5349,28 @@ var QuotationEditor = (function () {
       }
     }
     if (toIdx < 0) return;
-    var insertAt = placeAfter ? toIdx + 1 : toIdx;
-    ordered.splice(insertAt, 0, from);
-    ordered.forEach(function (f, idx) { f.order = idx; });
+    reorderFolderToIndex(fromId, placeAfter ? toIdx + 1 : toIdx);
+  }
+
+  /** insertAt = index among siblings after removing the dragged folder (0..length). */
+  function reorderFolderToIndex(fromId, insertAt) {
+    var from = folderById(fromId);
+    if (!from) return false;
+    ensureFolderOrders();
+    var original = foldersInGroup(from.group);
+    var ordered = original.filter(function (f) {
+      return String(f.id) !== String(fromId);
+    });
+    var idx = Number(insertAt);
+    if (isNaN(idx)) idx = ordered.length;
+    idx = Math.max(0, Math.min(idx, ordered.length));
+    ordered.splice(idx, 0, from);
+    var same = ordered.length === original.length &&
+      ordered.every(function (f, i) { return String(f.id) === String(original[i].id); });
+    if (same) return false;
+    ordered.forEach(function (f, i) { f.order = i; });
     markDirtyLocal();
+    return true;
   }
 
   /* Same-category only: mutate folderId, never item.group / media / URLs. */
