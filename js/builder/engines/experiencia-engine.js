@@ -527,6 +527,41 @@ var ExperienciaEngine = (function () {
     return g;
   }
 
+  /** Recompute group frame from composed member worlds without shifting children visually. */
+  function syncOverlayGroupFrameFromMembers(n, g, layerW, layerH) {
+    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    var worlds = {};
+    g.memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      worlds[String(id)] = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+    });
+    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    if (bounds) {
+      g.x = bounds.cx;
+      g.y = bounds.cy;
+      g.width = bounds.w;
+      g.height = bounds.h;
+      if (g._baseWidth == null) g._baseWidth = bounds.w;
+      if (g._baseHeight == null) g._baseHeight = bounds.h;
+    }
+    g.memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      var world = worlds[String(id)];
+      if (!ix || !world) return;
+      var loc = worldPointToLocal(g, world.x, world.y, layerW, layerH);
+      ix.localX = loc.x;
+      ix.localY = loc.y;
+      ix.localRotation = world.rotation - (Number(g.rotation) || 0);
+      ix.groupId = g.id;
+    });
+    g._transformV = 2;
+    return g;
+  }
+
   function overlayWorldLayoutAbsolute(ix, layerW, layerH) {
     if (!ix) return null;
     var layout = resolveButtonLayout(ix, layerW, layerH);
@@ -6637,6 +6672,8 @@ var ExperienciaEngine = (function () {
     overlayWorldLayoutRaw: overlayWorldLayoutRaw,
     migrateGroupedChildLocals: migrateGroupedChildLocals,
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
+    syncOverlayGroupFrameFromMembers: syncOverlayGroupFrameFromMembers,
+    reconcileOverlayGroupTransform: reconcileOverlayGroupTransform,
     isHotspotsEditableNode: isHotspotsEditableNode,
     isSceneHotspotMask: isSceneHotspotMask,
     listSceneHotspotMasks: listSceneHotspotMasks,

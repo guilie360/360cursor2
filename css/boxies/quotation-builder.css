@@ -4617,6 +4617,18 @@ body.quotation-canvas-first .builder-workspace,
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
 }
 
+/* Group edit mode — faint group frame while editing a child (Figma-style). */
+.builder-exp-buttons-layer.is-group-edit-mode .builder-exp-group-edit-frame {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 2px;
+  box-sizing: border-box;
+  transform: rotate(var(--btn-rot, 0deg));
+  transform-origin: center center;
+  z-index: 0;
+}
+
 /* Hover only — dashed outline; leaves when pointer exits */
 .builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
   outline: 1.5px dashed rgba(255, 255, 255, 0.9);

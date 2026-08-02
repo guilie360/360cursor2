@@ -6942,6 +6942,14 @@ var QuotationEditor = (function () {
           e.stopPropagation();
           return;
         }
+        if (expOverlay && expOverlay.isInGroupEditMode && expOverlay.isInGroupEditMode()) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (expOverlay.exitGroupEditMode) {
+            expOverlay.exitGroupEditMode({ reselectGroup: true, persist: true });
+          }
+          return;
+        }
         if (hasOverlaySelection()) {
           e.preventDefault();
           e.stopPropagation();
