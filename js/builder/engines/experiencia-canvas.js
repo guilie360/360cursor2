@@ -4054,11 +4054,93 @@ var ExperienciaCanvas = (function () {
       }, 16);
     }
 
+    /**
+     * During drag/resize, update existing nodes in place.
+     * Full innerHTML remount drops pointer capture and freezes the gesture.
+     */
+    function paintButtonsStageLive() {
+      if (!buttonsLayer) return false;
+      var n = ExperienciaEngine.getNode(state, canvas().selectedId);
+      if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) return false;
+      var layerW = buttonsLayer.clientWidth || 1000;
+      var layerH = buttonsLayer.clientHeight || 1000;
+      var buttons = ExperienciaEngine.listSceneButtons(state, n) || [];
+      var moved = false;
+      buttons.forEach(function (b) {
+        if (!b || !b.id) return;
+        var layout = (b._ix && ExperienciaEngine.resolveButtonLayout)
+          ? ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH)
+          : { x: Number(b.x) || 50, y: Number(b.y) || 50 };
+        var el = buttonsLayer.querySelector(
+          '[data-exp-stage-btn="' + String(b.id).replace(/"/g, '') + '"]'
+        );
+        if (!el) return;
+        moved = true;
+        var t = String(b.type || 'BUTTON').toUpperCase();
+        var rot = Number(b.rotation) || 0;
+        el.style.left = Number(layout.x) + '%';
+        el.style.top = Number(layout.y) + '%';
+        el.style.setProperty('--btn-rot', rot + 'deg');
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+          el.style.width = (Number(b.width) || 12) + '%';
+          el.style.height = (Number(b.height) || 8) + '%';
+        } else if (t === 'BUTTON') {
+          if (b.boxW != null) el.style.width = Number(b.boxW) + '%';
+          if (b.boxH != null) el.style.height = Number(b.boxH) + '%';
+        }
+      });
+      var gizmo = buttonsLayer.querySelector('[data-exp-gizmo]');
+      if (gizmo) {
+        var gid = gizmo.getAttribute('data-gizmo-id');
+        var gb = null;
+        for (var i = 0; i < buttons.length; i++) {
+          if (buttons[i] && String(buttons[i].id) === String(gid)) {
+            gb = buttons[i];
+            break;
+          }
+        }
+        if (gb) {
+          var gl = (gb._ix && ExperienciaEngine.resolveButtonLayout)
+            ? ExperienciaEngine.resolveButtonLayout(gb._ix, layerW, layerH)
+            : { x: Number(gb.x) || 50, y: Number(gb.y) || 50 };
+          var gst = String(gb.type || 'BUTTON').toUpperCase();
+          var gw = gst === 'BUTTON'
+            ? (gb.boxW != null ? Number(gb.boxW) : 14)
+            : (gst === 'SHAPE_RECT' || gst === 'SHAPE_CIRCLE'
+              ? (Number(gb.width) || 12)
+              : Math.max(8, Math.min(40, (String(gb.label || 'Texto').length) * 1.2)));
+          var gh = gst === 'BUTTON'
+            ? (gb.boxH != null ? Number(gb.boxH) : 4.5)
+            : (gst === 'SHAPE_RECT' || gst === 'SHAPE_CIRCLE'
+              ? (Number(gb.height) || 8)
+              : Math.max(3, ((Number(gb.fontSize) || 28) / layerH) * 100 * 1.4));
+          gizmo.style.left = Number(gl.x) + '%';
+          gizmo.style.top = Number(gl.y) + '%';
+          gizmo.style.width = gw + '%';
+          gizmo.style.height = gh + '%';
+          gizmo.style.setProperty('--btn-rot', (Number(gb.rotation) || 0) + 'deg');
+          var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+          if (sizeEl) {
+            sizeEl.textContent =
+              Math.max(1, Math.round((gw / 100) * layerW)) + ' × ' +
+              Math.max(1, Math.round((gh / 100) * layerH));
+          }
+          moved = true;
+        }
+      }
+      return moved;
+    }
+
     function paintButtonsStage() {
       if (!buttonsStage || !buttonsLayer || !buttonsImg) return;
       /* V7.2.64 — paint free overlays whenever overlay is mounted (not mode-gated). */
       if (!overlayMode && canvas().editMode !== 'buttons') return;
       if (textEditEl && document.activeElement === textEditEl) return;
+      /* Live path while dragging — never remount under an active pointer. */
+      if ((buttonDrag && buttonDrag.live && !buttonDrag.nudge) ||
+          (transformDrag && transformDrag.live)) {
+        if (paintButtonsStageLive()) return;
+      }
       var n = ExperienciaEngine.getNode(state, canvas().selectedId);
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) {
         if (buttonsEmpty) buttonsEmpty.hidden = false;
@@ -5329,6 +5411,103 @@ var ExperienciaCanvas = (function () {
     }
 
     if (buttonsLayer) {
+      var overlayDocBound = false;
+
+      function unbindOverlayPointerDocs() {
+        if (!overlayDocBound) return;
+        document.removeEventListener('pointermove', onOverlayDocPointerMove, true);
+        document.removeEventListener('pointerup', onOverlayDocPointerUp, true);
+        document.removeEventListener('pointercancel', onOverlayDocPointerUp, true);
+        overlayDocBound = false;
+      }
+
+      function bindOverlayPointerDocs() {
+        if (overlayDocBound) return;
+        document.addEventListener('pointermove', onOverlayDocPointerMove, true);
+        document.addEventListener('pointerup', onOverlayDocPointerUp, true);
+        document.addEventListener('pointercancel', onOverlayDocPointerUp, true);
+        overlayDocBound = true;
+      }
+
+      function onOverlayDocPointerMove(ev) {
+        if (transformDrag && ev.pointerId === transformDrag.pointerId) {
+          ev.preventDefault();
+          var pctT = percentFromPointer(ev);
+          if (!transformDrag.historyPushed) {
+            pushButtonHistory(transformDrag.sceneId);
+            transformDrag.historyPushed = true;
+          }
+          var mode = transformDrag.mode;
+          if (mode === 'rotate') {
+            var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
+            var deg = Math.round((ang * 180) / Math.PI) + 90;
+            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
+              rotation: deg
+            });
+          } else {
+            var dx = pctT.x - transformDrag.startPx;
+            var dy = pctT.y - transformDrag.startPy;
+            var nw = transformDrag.startW;
+            var nh = transformDrag.startH;
+            var nx = transformDrag.startX;
+            var ny = transformDrag.startY;
+            if (mode.indexOf('e') >= 0) { nw = transformDrag.startW + dx; nx = transformDrag.startX + dx / 2; }
+            if (mode.indexOf('w') >= 0) { nw = transformDrag.startW - dx; nx = transformDrag.startX + dx / 2; }
+            if (mode.indexOf('s') >= 0) { nh = transformDrag.startH + dy; ny = transformDrag.startY + dy / 2; }
+            if (mode.indexOf('n') >= 0) { nh = transformDrag.startH - dy; ny = transformDrag.startY + dy / 2; }
+            if (transformDrag.keepRatio && transformDrag.startW > 0) {
+              var ratio = transformDrag.startH / transformDrag.startW;
+              if (mode === 'n' || mode === 's') {
+                nw = nh / ratio;
+              } else {
+                nh = nw * ratio;
+              }
+            }
+            nw = Math.max(1.5, Math.min(90, nw));
+            nh = Math.max(1.5, Math.min(90, nh));
+            nx = Math.max(0, Math.min(100, nx));
+            ny = Math.max(0, Math.min(100, ny));
+            var patchT = { x: nx, y: ny };
+            if (transformDrag.type === 'BUTTON') {
+              patchT.boxW = nw;
+              patchT.boxH = nh;
+            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE') {
+              patchT.width = nw;
+              patchT.height = nh;
+            }
+            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
+          }
+          paintButtonsStage();
+          return;
+        }
+        if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId || buttonDrag.nudge) return;
+        ev.preventDefault();
+        var pct = percentFromPointer(ev);
+        if (!buttonDrag.historyPushed) {
+          pushButtonHistory(buttonDrag.sceneId);
+          buttonDrag.historyPushed = true;
+        }
+        var rawX = buttonDrag.originX != null
+          ? buttonDrag.originX + (pct.x - buttonDrag.startPx)
+          : pct.x;
+        var rawY = buttonDrag.originY != null
+          ? buttonDrag.originY + (pct.y - buttonDrag.startPy)
+          : pct.y;
+        var snapped = computeButtonGuides(
+          buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY
+        );
+        buttonDrag.guides = snapped.guides;
+        ExperienciaEngine.setSceneButtonPosition(
+          state, buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
+        );
+        clearPendingMove(buttonDrag.buttonId);
+        paintButtonsStage();
+      }
+
+      function onOverlayDocPointerUp(ev) {
+        endButtonDrag(ev);
+      }
+
       function beginOverlayMove(ev, bid, sceneId, btn) {
         if (btn && btn.locked) {
           paintButtonsStage();
@@ -5342,6 +5521,8 @@ var ExperienciaCanvas = (function () {
         var oy = btn
           ? (btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50)
           : 50;
+        /* Full paint BEFORE arming drag so the gizmo mounts without live-path skip. */
+        paintButtonsStage();
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
@@ -5353,13 +5534,15 @@ var ExperienciaCanvas = (function () {
           startX: ox,
           startY: oy,
           guides: null,
-          historyPushed: false
+          historyPushed: false,
+          live: true
         };
-        /* Capture on the layer (survives remount). Capturing the hit node
-           then calling paintButtonsStage() drops capture → pointercancel → frozen. */
-        paintButtonsStage();
-        paintInspector();
+        bindOverlayPointerDocs();
         try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
+        /* Defer inspector — opening props rail fires resize and can interrupt the gesture. */
+        requestAnimationFrame(function () {
+          if (buttonDrag && buttonDrag.buttonId === bid) paintInspector();
+        });
       }
 
       buttonsLayer.addEventListener('pointerdown', function (ev) {
@@ -5394,13 +5577,15 @@ var ExperienciaCanvas = (function () {
             startPx: pct0.x,
             startPy: pct0.y,
             keepRatio: !!ev.shiftKey,
-            historyPushed: false
+            historyPushed: false,
+            live: true
           };
+          bindOverlayPointerDocs();
           try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
           return;
         }
 
-        /* Gizmo body → move (Figma-style; layer survives remount) */
+        /* Gizmo body → move (Figma-style) */
         var moveSurface = ev.target.closest && ev.target.closest('[data-exp-sel-move]');
         if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
@@ -5449,83 +5634,11 @@ var ExperienciaCanvas = (function () {
         );
         beginOverlayMove(ev, bid, sceneId, btn);
       });
-      buttonsLayer.addEventListener('pointermove', function (ev) {
-        if (transformDrag && ev.pointerId === transformDrag.pointerId) {
-          var pctT = percentFromPointer(ev);
-          if (!transformDrag.historyPushed) {
-            pushButtonHistory(transformDrag.sceneId);
-            transformDrag.historyPushed = true;
-          }
-          var mode = transformDrag.mode;
-          if (mode === 'rotate') {
-            var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
-            var deg = Math.round((ang * 180) / Math.PI) + 90;
-            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
-              rotation: deg
-            });
-          } else {
-            var dx = pctT.x - transformDrag.startPx;
-            var dy = pctT.y - transformDrag.startPy;
-            var nw = transformDrag.startW;
-            var nh = transformDrag.startH;
-            var nx = transformDrag.startX;
-            var ny = transformDrag.startY;
-            if (mode.indexOf('e') >= 0) { nw = transformDrag.startW + dx; nx = transformDrag.startX + dx / 2; }
-            if (mode.indexOf('w') >= 0) { nw = transformDrag.startW - dx; nx = transformDrag.startX + dx / 2; }
-            if (mode.indexOf('s') >= 0) { nh = transformDrag.startH + dy; ny = transformDrag.startY + dy / 2; }
-            if (mode.indexOf('n') >= 0) { nh = transformDrag.startH - dy; ny = transformDrag.startY + dy / 2; }
-            if (transformDrag.keepRatio && transformDrag.startW > 0) {
-              var ratio = transformDrag.startH / transformDrag.startW;
-              if (mode === 'n' || mode === 's') {
-                nw = nh / ratio;
-                nx = transformDrag.startX + (mode === 'e' || mode.indexOf('e') >= 0 ? (nw - transformDrag.startW) / 2 : 0);
-              } else {
-                nh = nw * ratio;
-              }
-            }
-            nw = Math.max(1.5, Math.min(90, nw));
-            nh = Math.max(1.5, Math.min(90, nh));
-            nx = Math.max(0, Math.min(100, nx));
-            ny = Math.max(0, Math.min(100, ny));
-            var patchT = { x: nx, y: ny };
-            if (transformDrag.type === 'BUTTON') {
-              patchT.boxW = nw;
-              patchT.boxH = nh;
-            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE') {
-              patchT.width = nw;
-              patchT.height = nh;
-            }
-            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
-          }
-          paintButtonsStage();
-          return;
-        }
-        if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId) return;
-        var pct = percentFromPointer(ev);
-        if (!buttonDrag.historyPushed) {
-          pushButtonHistory(buttonDrag.sceneId);
-          buttonDrag.historyPushed = true;
-        }
-        var rawX = buttonDrag.originX != null
-          ? buttonDrag.originX + (pct.x - buttonDrag.startPx)
-          : pct.x;
-        var rawY = buttonDrag.originY != null
-          ? buttonDrag.originY + (pct.y - buttonDrag.startPy)
-          : pct.y;
-        var snapped = computeButtonGuides(
-          buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY
-        );
-        buttonDrag.guides = snapped.guides;
-        ExperienciaEngine.setSceneButtonPosition(
-          state, buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
-        );
-        clearPendingMove(buttonDrag.buttonId);
-        paintButtonsStage();
-      });
       function endButtonDrag(ev) {
         if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
           var movedT = transformDrag.historyPushed;
           transformDrag = null;
+          unbindOverlayPointerDocs();
           paintButtonsStage();
           paintInspector();
           if (movedT) persist();
@@ -5534,6 +5647,7 @@ var ExperienciaCanvas = (function () {
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
         var moved = buttonDrag.historyPushed;
         buttonDrag = null;
+        unbindOverlayPointerDocs();
         paintButtonsStage();
         paintInspector();
         if (moved) persist();
@@ -5632,6 +5746,8 @@ var ExperienciaCanvas = (function () {
     if (buttonsFrame) {
       buttonsFrame.addEventListener('pointerdown', function (ev) {
         if (ev.target.closest('[data-exp-stage-btn]')) return;
+        if (ev.target.closest('[data-exp-gizmo]')) return;
+        if (buttonDrag || transformDrag) return;
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
         paintButtonsStage();
