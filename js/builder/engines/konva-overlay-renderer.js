@@ -160,6 +160,28 @@ var KonvaOverlayRenderer = (function () {
       return { w: DESIGN_W, h: DESIGN_H };
     }
 
+    function fitStageToHost() {
+      if (!stage || !konvaHost) return;
+      var rect = konvaHost.getBoundingClientRect();
+      var sw = Math.max(1, Math.round(rect.width));
+      var sh = Math.max(1, Math.round(rect.height));
+      var sx = sw / DESIGN_W;
+      var sy = sh / DESIGN_H;
+      stage.width(sw);
+      stage.height(sh);
+      stage.scale({ x: sx, y: sy });
+    }
+
+    function syncTransformer() {
+      if (!transformer || !layer) return;
+      var nodes = transformer.nodes();
+      var active = !!(nodes && nodes.length);
+      transformer.listening(active);
+      transformer.visible(active);
+      if (active) transformer.moveToTop();
+      layer.batchDraw();
+    }
+
     function isVisible(ix) {
       return ix && ix.enabled !== false;
     }
@@ -287,13 +309,21 @@ var KonvaOverlayRenderer = (function () {
       }
       transformer = new Konva.Transformer({
         rotateEnabled: true,
+        enabledAnchors: [
+          'top-left', 'top-center', 'top-right',
+          'middle-left', 'middle-right',
+          'bottom-left', 'bottom-center', 'bottom-right'
+        ],
         borderStroke: '#ffffff',
         anchorStroke: '#ffffff',
         anchorFill: '#111111',
         anchorSize: 10,
+        anchorCornerRadius: 2,
+        rotateAnchorOffset: 28,
         padding: 4,
         keepRatio: false,
-        ignoreStroke: true
+        ignoreStroke: true,
+        shouldOverdrawWholeArea: false
       });
       groupOutline = new Konva.Rect({
         stroke: 'rgba(255,255,255,0.35)',
@@ -335,6 +365,7 @@ var KonvaOverlayRenderer = (function () {
         stage.width(sz.w);
         stage.height(sz.h);
       }
+      fitStageToHost();
     }
 
     function createShapeNode(vm, opts) {
@@ -386,6 +417,7 @@ var KonvaOverlayRenderer = (function () {
       }
 
       node.listening(true);
+      node.hitStrokeWidth(12);
       node.setAttr('interactionId', String(vm.id || ix.id));
       var gid = opts.groupId || vm.groupId || ix.groupId;
       if (gid) node.setAttr('parentGroupId', String(gid));
@@ -481,6 +513,7 @@ var KonvaOverlayRenderer = (function () {
       layer.batchDraw();
       lastLayerW = sz.w;
       lastLayerH = sz.h;
+      fitStageToHost();
       if (resizeObs && konvaHost) {
         try { resizeObs.observe(konvaHost); } catch (eObs) { /* ignore */ }
       }
@@ -495,6 +528,7 @@ var KonvaOverlayRenderer = (function () {
       if (!selectedIds.length) {
         transformer.nodes([]);
         groupOutline.visible(false);
+        syncTransformer();
         return;
       }
       var id = selectedIds[0];
@@ -503,6 +537,7 @@ var KonvaOverlayRenderer = (function () {
         if (childNode && !childNode.getAttr('isLocked')) {
           transformer.nodes([childNode]);
           showGroupOutline(deepSelect.groupId);
+          syncTransformer();
           return;
         }
       }
@@ -514,12 +549,14 @@ var KonvaOverlayRenderer = (function () {
           : null;
         transformer.nodes(gix && gix.locked ? [] : members);
         groupOutline.visible(false);
+        syncTransformer();
         return;
       }
       var selNode = nodeMap[String(id)];
       if (selNode) {
         transformer.nodes(selNode.getAttr('isLocked') ? [] : [selNode]);
         groupOutline.visible(false);
+        syncTransformer();
       }
     }
 
@@ -562,9 +599,10 @@ var KonvaOverlayRenderer = (function () {
       if (members.length && !(gix && gix.locked)) {
         transformer.nodes(members);
         groupOutline.visible(false);
-        layer.batchDraw();
+        syncTransformer();
       } else {
         transformer.nodes([]);
+        syncTransformer();
       }
       notifySelection();
       updateDebug('select-group');
@@ -577,9 +615,10 @@ var KonvaOverlayRenderer = (function () {
       if (child && !child.getAttr('isLocked')) {
         transformer.nodes([child]);
         showGroupOutline(groupId);
-        layer.batchDraw();
+        syncTransformer();
       } else {
         transformer.nodes([]);
+        syncTransformer();
       }
       notifySelection();
       updateDebug('deep-select');
@@ -599,9 +638,10 @@ var KonvaOverlayRenderer = (function () {
       if (node && !node.getAttr('isLocked')) {
         transformer.nodes([node]);
         groupOutline.visible(false);
-        layer.batchDraw();
+        syncTransformer();
       } else {
         transformer.nodes([]);
+        syncTransformer();
       }
       notifySelection();
       updateDebug('select-shape');
@@ -741,7 +781,7 @@ var KonvaOverlayRenderer = (function () {
           deepSelect = null;
           transformer.nodes([]);
           groupOutline.visible(false);
-          layer.batchDraw();
+          syncTransformer();
           notifySelection();
           updateDebug('clear');
           return;
@@ -783,13 +823,8 @@ var KonvaOverlayRenderer = (function () {
         resizeTimer = setTimeout(function () {
           resizeTimer = null;
           if (!stage || syncing) return;
-          var sz = layerSize();
-          if (Math.abs(sz.w - lastLayerW) < 1 && Math.abs(sz.h - lastLayerH) < 1) {
-            return;
-          }
-          stage.width(sz.w);
-          stage.height(sz.h);
-          rebuildFromEngine();
+          fitStageToHost();
+          layer.batchDraw();
         }, 80);
       });
       resizeObs.observe(konvaHost);
@@ -807,6 +842,10 @@ var KonvaOverlayRenderer = (function () {
       shim: shim,
       refresh: function () {
         rebuildFromEngine();
+      },
+      fitStage: function () {
+        fitStageToHost();
+        syncTransformer();
       },
       pull: function () {
         pullToScenes();
@@ -927,7 +966,7 @@ var KonvaOverlayRenderer = (function () {
         deepSelect = null;
         transformer.nodes([]);
         groupOutline.visible(false);
-        layer.batchDraw();
+        syncTransformer();
         notifySelection();
         return true;
       },

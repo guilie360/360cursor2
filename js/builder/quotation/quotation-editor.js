@@ -3825,8 +3825,11 @@ var QuotationEditor = (function () {
     shell.setAttribute('data-qe-chrome-locked', '1');
     canvasFitScale = scale;
 
-    if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
-      try { expOverlay.refresh(); } catch (eKonvaFit) { /* ignore */ }
+    if (expOverlay && expOverlay.isKonvaPoc) {
+      try {
+        if (expOverlay.fitStage) expOverlay.fitStage();
+        else if (expOverlay.refresh) expOverlay.refresh();
+      } catch (eKonvaFit) { /* ignore */ }
     }
 
     syncDesignIdentity();
@@ -3994,10 +3997,12 @@ var QuotationEditor = (function () {
     }
 
     var preview = !!state.canvasPreviewMode;
+    var konvaEdit = typeof KonvaOverlayRenderer !== 'undefined' &&
+      KonvaOverlayRenderer.isEnabled({ projectId: resolveProjectId() });
     builderSceneApi = QuotationRuntime.paintScene(host, scene, null, {
       mode: preview ? 'preview' : 'builder',
       interactive: preview,
-      enablePan: true,
+      enablePan: preview ? true : !konvaEdit,
       disableHint: true,
       paintInteractions: preview,
       onAction: preview

@@ -290,7 +290,10 @@ var HeroCanvas = (function () {
         ' .builder-exp-sel-rotate, .builder-exp-sel-gizmo,' +
         ' [data-exp-hs-poly], [data-exp-hs-vertex], [data-exp-stage-btn],' +
         ' .builder-exp-buttons-layer button, .builder-exp-hotspots-layer path,' +
-        ' .builder-exp-hotspots-layer polygon, .builder-exp-hotspots-layer circle'
+        ' .builder-exp-hotspots-layer polygon, .builder-exp-hotspots-layer circle,' +
+        /* Quotation Konva POC + Experiencia edit layer — never steal pointer for pan. */
+        ' [data-qe-edit-layer], [data-konva-poc-active], [data-konva-host],' +
+        ' .konva-overlay-host, .konvajs-content, canvas'
       );
     }
 

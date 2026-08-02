@@ -319,6 +319,9 @@ var QuotationExperienciaBridge = (function () {
       refresh: function () {
         if (handle.refresh) handle.refresh();
       },
+      fitStage: function () {
+        if (handle.fitStage) handle.fitStage();
+      },
       setEditMode: function (mode) {
         if (handle.setEditMode) handle.setEditMode(mode);
       },
