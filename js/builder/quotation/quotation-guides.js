@@ -260,14 +260,41 @@ var QuotationGuides = (function () {
     return layer.querySelector('[data-qe-guide-id="' + String(id).replace(/"/g, '') + '"]');
   }
 
+  function stageScale() {
+    var shell = rootEl && rootEl.querySelector('[data-qe-stage-shell]');
+    var s = shell ? parseFloat(shell.getAttribute('data-qe-stage-scale')) : NaN;
+    if (s > 0.01) return s;
+    var canvas = designCanvasEl();
+    var design = designSize();
+    var rect = canvas && canvas.getBoundingClientRect();
+    if (rect && design.width) return rect.width / design.width;
+    return 1;
+  }
+
+  function syncGuideHairScale(layer) {
+    var el = layer || ensureGuideLayer();
+    if (!el) return;
+    el.style.setProperty('--qe-stage-scale', String(stageScale()));
+  }
+
+  /** Snap to whole design px so hairlines don't land on blurry half-pixels. */
+  function guideDesignPx(type, positionPct) {
+    var design = designSize();
+    var max = type === 'horizontal' ? design.height : design.width;
+    var px = Math.round((clampPct(positionPct) / 100) * max);
+    if (px < 0) px = 0;
+    if (px > max) px = max;
+    return px;
+  }
+
   function applyGuideElPosition(el, type, positionPct) {
     if (!el) return;
-    var pos = clampPct(positionPct);
+    var px = guideDesignPx(type, positionPct);
     if (type === 'horizontal') {
-      el.style.top = pos + '%';
+      el.style.top = px + 'px';
       el.style.left = '';
     } else {
-      el.style.left = pos + '%';
+      el.style.left = px + 'px';
       el.style.top = '';
     }
   }
@@ -275,6 +302,7 @@ var QuotationGuides = (function () {
   function renderGuides() {
     var layer = ensureGuideLayer();
     if (!layer) return;
+    syncGuideHairScale(layer);
     /* Never wipe DOM mid-drag — fit/refresh was freezing guides in place. */
     if (isGuideDragActive()) {
       layer.hidden = !guidesVisible || isPreview();
@@ -292,10 +320,10 @@ var QuotationGuides = (function () {
     guides.forEach(function (g) {
       if (!g || !g.id) return;
       var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
-      var pos = clampPct(g.position);
+      var px = guideDesignPx(type, g.position);
       var style = type === 'horizontal'
-        ? 'top:' + pos + '%;'
-        : 'left:' + pos + '%;';
+        ? 'top:' + px + 'px;'
+        : 'left:' + px + 'px;';
       html +=
         '<div class="qe-guide-line qe-guide-line--' + type +
           (g.locked ? ' is-locked' : '') + '"' +
@@ -487,19 +515,20 @@ var QuotationGuides = (function () {
     var el = ensureGhostHost();
     var pct = clientToDesignPct(clientX, clientY);
     if (!el || !pct) return;
+    syncGuideHairScale(el.parentElement);
     if (ghost.type === 'horizontal') {
-      el.style.top = pct.y + '%';
+      el.style.top = guideDesignPx('horizontal', pct.y) + 'px';
       el.style.left = '0';
       el.style.right = '0';
       el.style.bottom = 'auto';
       el.style.width = 'auto';
-      el.style.height = '1px';
+      el.style.height = '';
     } else {
-      el.style.left = pct.x + '%';
+      el.style.left = guideDesignPx('vertical', pct.x) + 'px';
       el.style.top = '0';
       el.style.bottom = '0';
       el.style.right = 'auto';
-      el.style.width = '1px';
+      el.style.width = '';
       el.style.height = 'auto';
     }
     showReadout(clientX, clientY, ghost.type, pct);
@@ -696,6 +725,7 @@ var QuotationGuides = (function () {
     bindContextMenu();
     refreshRulers();
     ensureGuideLayer();
+    syncGuideHairScale();
     renderGuides();
   }
 
