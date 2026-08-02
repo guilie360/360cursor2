@@ -104,6 +104,62 @@ var QuotationEditor = (function () {
     return prefix + '-' + uid;
   }
 
+  function rememberId(id) {
+    var m = String(id || '').match(/-(\d+)$/);
+    if (!m) return;
+    var n = parseInt(m[1], 10);
+    if (!isNaN(n) && n > uid) uid = n;
+  }
+
+  /** Keep nextId ahead of every persisted id so reloads never collide (sc-3 twice, etc.). */
+  function syncUidFromState() {
+    function walk(arr) {
+      if (!Array.isArray(arr)) return;
+      var i;
+      for (i = 0; i < arr.length; i++) {
+        var item = arr[i];
+        if (!item) continue;
+        rememberId(item.id);
+        walk(item.elements);
+        walk(item.interactions);
+        walk(item.buttons);
+        walk(item.hotspots);
+        walk(item.guides);
+      }
+    }
+    walk(state && state.scenes);
+    walk(state && state.content);
+    walk(state && state.folders);
+  }
+
+  /** Heal duplicate scene ids in-place (keeps first occurrence). */
+  function ensureUniqueSceneIds() {
+    if (!state || !Array.isArray(state.scenes)) return false;
+    var seen = Object.create(null);
+    var changed = false;
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      var sc = state.scenes[i];
+      if (!sc) continue;
+      var id = String(sc.id || '');
+      if (!id || seen[id]) {
+        var prev = id;
+        sc.id = nextId('sc');
+        changed = true;
+        if (state.activeSceneId && String(state.activeSceneId) === prev && !seen[prev]) {
+          /* First keeper already claimed prev; active stays on first match. */
+        }
+        id = sc.id;
+      }
+      seen[id] = true;
+      rememberId(id);
+    }
+    if (changed && state.activeSceneId && !sceneById(state.activeSceneId)) {
+      state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
+    }
+    return changed;
+  }
+
   function escapeHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -1243,6 +1299,8 @@ var QuotationEditor = (function () {
     }
     if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
     if (draft.expEditMode) state.expEditMode = draft.expEditMode;
+    syncUidFromState();
+    if (ensureUniqueSceneIds()) markDirtyLocal();
     return true;
   }
 
@@ -3743,14 +3801,16 @@ var QuotationEditor = (function () {
     markDirtyLocal();
   }
 
-  function beginSceneRename(id) {
+  function beginSceneRename(id, spanEl) {
     var sid = String(id || '').trim();
     var sc = sceneById(sid);
     if (!sc || isHeroScene(sc) || !rootEl) return false;
-    var span = null;
-    rootEl.querySelectorAll('[data-qe-scene-name]').forEach(function (el) {
-      if (!span && el.getAttribute('data-qe-scene-name') === sid) span = el;
-    });
+    var span = (spanEl && spanEl.isConnected) ? spanEl : null;
+    if (!span) {
+      rootEl.querySelectorAll('[data-qe-scene-name]').forEach(function (el) {
+        if (!span && el.getAttribute('data-qe-scene-name') === sid) span = el;
+      });
+    }
     if (!span) return false;
     var input = document.createElement('input');
     input.type = 'text';
@@ -3807,8 +3867,8 @@ var QuotationEditor = (function () {
     var i;
     for (i = 0; i < state.scenes.length; i++) {
       if (!state.scenes[i]) continue;
-      if (state.scenes[i].id === from) fromIdx = i;
-      if (state.scenes[i].id === to) toIdx = i;
+      if (fromIdx < 0 && state.scenes[i].id === from) fromIdx = i;
+      if (toIdx < 0 && state.scenes[i].id === to) toIdx = i;
     }
     if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
     var moved = state.scenes.splice(fromIdx, 1)[0];
@@ -3863,7 +3923,7 @@ var QuotationEditor = (function () {
         clickTimer = setTimeout(function () {
           clickTimer = null;
           selectScene(sid);
-        }, 280);
+        }, 520);
       });
 
       if (locked || !id) return;
@@ -3875,7 +3935,7 @@ var QuotationEditor = (function () {
           try { clearTimeout(clickTimer); } catch (eT2) {}
           clickTimer = null;
         }
-        beginSceneRename(id);
+        beginSceneRename(id, span);
       });
     });
   }
@@ -3897,7 +3957,8 @@ var QuotationEditor = (function () {
         if (e.dataTransfer) {
           e.dataTransfer.effectAllowed = 'move';
           try { e.dataTransfer.setData('text/qe-scene', dragId || ''); } catch (e1) {}
-          e.dataTransfer.setData('text/plain', dragId || '');
+          /* Avoid text/plain = scene id (library drop zones would treat it as a resource). */
+          try { e.dataTransfer.setData('text/plain', 'qe-scene'); } catch (ePlain) {}
         }
       });
       thumb.addEventListener('dragend', function () {
@@ -3930,10 +3991,8 @@ var QuotationEditor = (function () {
       wrap.addEventListener('dragleave', function (e) {
         var related = e.relatedTarget;
         if (related && wrap.contains(related)) return;
+        /* Keep dropHint — relatedTarget is often null over the drag ghost. */
         wrap.classList.remove('is-scene-reorder-before', 'is-scene-reorder-after');
-        if (dropHint && dropHint.toId === wrap.getAttribute('data-qe-scene-drop')) {
-          dropHint = null;
-        }
       });
       wrap.addEventListener('drop', function (e) {
         e.preventDefault();
@@ -3943,7 +4002,6 @@ var QuotationEditor = (function () {
         var from = dragId || '';
         if (!from && e.dataTransfer) {
           try { from = e.dataTransfer.getData('text/qe-scene') || ''; } catch (e2) {}
-          if (!from) from = e.dataTransfer.getData('text/plain') || '';
         }
         var to = (dropHint && dropHint.toId) || wrap.getAttribute('data-qe-scene-drop');
         var after = !!(dropHint && dropHint.after);
@@ -3952,12 +4010,25 @@ var QuotationEditor = (function () {
           after = e.clientX > rect.left + rect.width / 2;
         }
         dropHint = null;
-        if (from && to && from !== to) {
+        if (from && to && from !== to && from !== 'qe-scene') {
           reorderScene(from, to, after);
           rerender();
         }
       });
     });
+  }
+
+  function isSceneReorderDragActive(e) {
+    if (document.querySelector('.qe-scenes__thumb.is-dragging, .qe-scenes__thumb-wrap.is-dragging')) {
+      return true;
+    }
+    var types = e && e.dataTransfer && e.dataTransfer.types;
+    if (!types) return false;
+    var i;
+    for (i = 0; i < types.length; i++) {
+      if (String(types[i]).toLowerCase() === 'text/qe-scene') return true;
+    }
+    return false;
   }
 
   function closeAllFolderMenus() {
@@ -6824,6 +6895,10 @@ var QuotationEditor = (function () {
       bindLibraryItemPointerDnD();
       qAll('[data-qe-drop-scene]').forEach(function (zone) {
         zone.addEventListener('dragover', function (e) {
+          if (isSceneReorderDragActive(e)) {
+            zone.classList.remove('is-drop-target');
+            return;
+          }
           var dragEl = document.querySelector('.qe-lib__item.is-dragging');
           if (dragEl && !dragEl.getAttribute('data-qe-drag-resource')) {
             if (e.dataTransfer) e.dataTransfer.dropEffect = 'none';
@@ -6838,13 +6913,23 @@ var QuotationEditor = (function () {
           zone.classList.remove('is-drop-target');
         });
         zone.addEventListener('drop', function (e) {
+          if (isSceneReorderDragActive(e)) {
+            zone.classList.remove('is-drop-target');
+            return;
+          }
           e.preventDefault();
           e.stopPropagation();
           zone.classList.remove('is-drop-target');
-          var id = (e.dataTransfer && (
-            e.dataTransfer.getData('text/qe-resource') ||
-            e.dataTransfer.getData('text/plain')
-          )) || '';
+          var id = '';
+          if (e.dataTransfer) {
+            try { id = e.dataTransfer.getData('text/qe-resource') || ''; } catch (eRes) {}
+            if (!id) {
+              var plain = e.dataTransfer.getData('text/plain') || '';
+              if (plain && plain !== 'qe-scene' && String(plain).indexOf('sc-') !== 0) {
+                id = plain;
+              }
+            }
+          }
           var sceneId = zone.getAttribute('data-qe-drop-scene-id') || null;
           if (id) assignResourceToScene(id, sceneId || undefined);
         });
@@ -7723,6 +7808,8 @@ var QuotationEditor = (function () {
       if (!sceneById(state.activeSceneId)) {
         state.activeSceneId = state.scenes[0].id;
       }
+      syncUidFromState();
+      if (ensureUniqueSceneIds()) markDirtyLocal();
       ensureHeroSceneContract();
       return;
     }
@@ -7776,6 +7863,7 @@ var QuotationEditor = (function () {
     }
     state.scenes = [scene];
     state.activeSceneId = scene.id;
+    syncUidFromState();
   }
 
   function load(projectId) {
