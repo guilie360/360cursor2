@@ -4888,7 +4888,26 @@ body.boxies-host .admin-modal.qe-guides-delete-modal {
   background: rgba(255, 255, 255, 0.04);
 }
 
-body.boxies-host .admin-modal-footer .btn-danger:disabled {
+body.boxies-host .admin-modal-footer .btn-danger:disabled,
+body.boxies-host .admin-modal-footer .btn-primary:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+body.boxies-host .admin-modal-footer .btn-primary {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  background: #fff;
+  color: #0a0a0a;
+  font-size: 0.72rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+body.boxies-host .admin-modal-footer .btn-primary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.92);
 }

@@ -1,6 +1,6 @@
 /**
  * QuotationGuides — rulers + scene guides (%) for Quotation Editor.
- * v7.2.157 — Eliminar guías… dialog (current scene default).
+ * v7.2.158 — Pegar guías opens scene picker (same UX as Eliminar).
  * rulersVisible / guidesVisible are session-only; guides[] persist on each scene.
  *
  * Coordinate space = active viewport window (Desktop / Tablet / Mobile), not the
@@ -473,26 +473,14 @@ var QuotationGuides = (function () {
     return removed;
   }
 
-  function openDeleteGuidesDialog() {
-    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+  /** Scene checkboxes: current scene first + checked; others (incl. Hero) unchecked. */
+  function buildGuidesScenePickerRowsHtml() {
     var active = activeScene();
     var activeId = active ? String(active.id) : '';
     var scenes = allScenes().filter(Boolean);
-    if (!scenes.length) return;
-
-    var typeRow = function (type, label) {
-      return '' +
-        '<label class="qe-guides-delete__check">' +
-          '<input type="checkbox" data-qe-gd-type="' + type + '" checked>' +
-          '<span class="qe-guides-delete__check-main">' + label +
-            ' (<span data-qe-gd-type-count="' + type + '">0</span>)</span>' +
-        '</label>';
-    };
-
-    var sceneRows = '';
-    /* Current scene first — selected by default. */
+    var html = '';
     if (active) {
-      sceneRows += '' +
+      html += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
           '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(activeId) + '" checked>' +
           '<span class="qe-guides-delete__check-stack">' +
@@ -505,7 +493,7 @@ var QuotationGuides = (function () {
     }
     scenes.forEach(function (sc) {
       if (!sc || String(sc.id) === activeId) return;
-      sceneRows += '' +
+      html += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
           '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(String(sc.id)) + '">' +
           '<span class="qe-guides-delete__check-main">' +
@@ -513,23 +501,80 @@ var QuotationGuides = (function () {
           '</span>' +
         '</label>';
     });
+    return html;
+  }
+
+  function selectedGuideSceneIds(root) {
+    var ids = [];
+    if (!root) return ids;
+    root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+      if (input.checked) ids.push(input.getAttribute('data-qe-gd-scene'));
+    });
+    return ids;
+  }
+
+  function bindGuidesScenePickerControls(root, onChange) {
+    root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+      input.addEventListener('change', onChange);
+    });
+    var selectAll = root.querySelector('[data-qe-gd-select-all]');
+    var deselectAll = root.querySelector('[data-qe-gd-deselect-all]');
+    if (selectAll) {
+      selectAll.addEventListener('click', function () {
+        root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+          input.checked = true;
+        });
+        onChange();
+      });
+    }
+    if (deselectAll) {
+      deselectAll.addEventListener('click', function () {
+        root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+          input.checked = false;
+        });
+        onChange();
+      });
+    }
+  }
+
+  function guidesScenePickerBodyHtml(extraBefore) {
+    return '' +
+      '<div class="qe-guides-delete" data-qe-guides-picker>' +
+        (extraBefore || '') +
+        '<p class="qe-guides-delete__section">Escenas</p>' +
+        '<div class="qe-guides-delete__scenes" data-qe-gd-scenes>' +
+          buildGuidesScenePickerRowsHtml() +
+        '</div>' +
+        '<div class="qe-guides-delete__bulk">' +
+          '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-select-all>' +
+            'Seleccionar todo</button>' +
+          '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-deselect-all>' +
+            'Deseleccionar todo</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function openDeleteGuidesDialog() {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+    if (!allScenes().filter(Boolean).length) return;
+
+    var typeRow = function (type, label) {
+      return '' +
+        '<label class="qe-guides-delete__check">' +
+          '<input type="checkbox" data-qe-gd-type="' + type + '" checked>' +
+          '<span class="qe-guides-delete__check-main">' + label +
+            ' (<span data-qe-gd-type-count="' + type + '">0</span>)</span>' +
+        '</label>';
+    };
+
+    var typeBlock =
+      '<p class="qe-guides-delete__section">Tipo</p>' +
+      typeRow('horizontal', 'Horizontales') +
+      typeRow('vertical', 'Verticales');
 
     AdminUI.openModal({
       title: 'Eliminar guías',
-      bodyHtml:
-        '<div class="qe-guides-delete" data-qe-guides-delete>' +
-          '<p class="qe-guides-delete__section">Tipo</p>' +
-          typeRow('horizontal', 'Horizontales') +
-          typeRow('vertical', 'Verticales') +
-          '<p class="qe-guides-delete__section">Escenas</p>' +
-          '<div class="qe-guides-delete__scenes" data-qe-gd-scenes>' + sceneRows + '</div>' +
-          '<div class="qe-guides-delete__bulk">' +
-            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-select-all>' +
-              'Seleccionar todo</button>' +
-            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-deselect-all>' +
-              'Deseleccionar todo</button>' +
-          '</div>' +
-        '</div>',
+      bodyHtml: guidesScenePickerBodyHtml(typeBlock),
       footerHtml:
         '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
         '<button type="button" class="btn-danger" data-modal-action="confirm" data-qe-gd-confirm>' +
@@ -540,9 +585,7 @@ var QuotationGuides = (function () {
 
         function selectedSceneSet() {
           var set = {};
-          root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
-            if (input.checked) set[String(input.getAttribute('data-qe-gd-scene'))] = true;
-          });
+          selectedGuideSceneIds(root).forEach(function (id) { set[String(id)] = true; });
           return set;
         }
 
@@ -567,28 +610,10 @@ var QuotationGuides = (function () {
           }
         }
 
-        root.querySelectorAll('[data-qe-gd-type], [data-qe-gd-scene]').forEach(function (input) {
+        root.querySelectorAll('[data-qe-gd-type]').forEach(function (input) {
           input.addEventListener('change', refreshCounts);
         });
-
-        var selectAll = root.querySelector('[data-qe-gd-select-all]');
-        var deselectAll = root.querySelector('[data-qe-gd-deselect-all]');
-        if (selectAll) {
-          selectAll.addEventListener('click', function () {
-            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
-              input.checked = true;
-            });
-            refreshCounts();
-          });
-        }
-        if (deselectAll) {
-          deselectAll.addEventListener('click', function () {
-            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
-              input.checked = false;
-            });
-            refreshCounts();
-          });
-        }
+        bindGuidesScenePickerControls(root, refreshCounts);
 
         var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
         var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
@@ -599,12 +624,67 @@ var QuotationGuides = (function () {
           confirmBtn.addEventListener('click', function () {
             if (confirmBtn.disabled) return;
             var flags = typeFlags();
-            var ids = [];
-            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
-              if (input.checked) ids.push(input.getAttribute('data-qe-gd-scene'));
-            });
+            var ids = selectedGuideSceneIds(root);
             AdminUI.closeModal();
             applyDeleteGuides(ids, flags.h, flags.v);
+          });
+        }
+
+        refreshCounts();
+      },
+      onClose: function () {
+        var modal = document.querySelector('.admin-modal.qe-guides-delete-modal');
+        if (modal) modal.classList.remove('qe-guides-delete-modal');
+      }
+    });
+  }
+
+  function openPasteGuidesDialog() {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+    if (!hasGuidesClipboard()) return;
+    if (!allScenes().filter(Boolean).length) return;
+
+    var clipCount = guidesClipboard.length;
+
+    AdminUI.openModal({
+      title: 'Pegar guías',
+      bodyHtml: guidesScenePickerBodyHtml(
+        '<p class="admin-modal-copy admin-modal-copy--muted">' +
+          'Se pegarán ' + clipCount + (clipCount === 1 ? ' guía' : ' guías') +
+          ' en las escenas seleccionadas.' +
+        '</p>'
+      ),
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-primary" data-modal-action="confirm" data-qe-gd-confirm>' +
+          'Pegar (0)</button>',
+      onMount: function (root) {
+        var modal = root.querySelector('.admin-modal');
+        if (modal) modal.classList.add('qe-guides-delete-modal');
+
+        function refreshCounts() {
+          var ids = selectedGuideSceneIds(root);
+          var total = clipCount * ids.length;
+          var btn = root.querySelector('[data-qe-gd-confirm]');
+          if (btn) {
+            btn.textContent = 'Pegar (' + total + ')';
+            btn.disabled = total <= 0 || !hasGuidesClipboard();
+          }
+        }
+
+        bindGuidesScenePickerControls(root, refreshCounts);
+
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            if (confirmBtn.disabled) return;
+            var ids = selectedGuideSceneIds(root);
+            AdminUI.closeModal();
+            applyPasteGuides(ids);
           });
         }
 
@@ -798,37 +878,29 @@ var QuotationGuides = (function () {
     return true;
   }
 
-  /** One-shot paste into the active scene, then clears the clipboard. */
-  function pasteGuides() {
-    if (!guidesClipboard || !guidesClipboard.length) return false;
-    var scene = activeScene();
-    if (!scene) return false;
-    if (!guidesVisible) setGuidesVisible(true);
-    var guides = ensureGuidesArray(scene);
-    materializeClipboardGuides().forEach(function (g) { guides.push(g); });
-    clearGuidesClipboard();
-    renderGuides();
-    markDirty();
-    return true;
-  }
-
   /**
-   * One-shot paste into every scene (same % positions), then clears the clipboard.
-   * Replaces each scene's guides so the copied layout is exact everywhere.
+   * One-shot paste into the given scenes (same % positions), then clears clipboard.
+   * Appends cloned guides so existing guides on the target are kept.
    */
-  function pasteGuidesToAllScenes() {
-    if (!guidesClipboard || !guidesClipboard.length) return false;
-    var scenes = allScenes();
-    if (!scenes.length) return false;
+  function applyPasteGuides(sceneIds) {
+    if (!guidesClipboard || !guidesClipboard.length) return 0;
+    if (!sceneIds || !sceneIds.length) return 0;
     if (!guidesVisible) setGuidesVisible(true);
-    scenes.forEach(function (scene) {
-      if (!scene) return;
-      scene.guides = materializeClipboardGuides();
+    var idSet = {};
+    sceneIds.forEach(function (id) { idSet[String(id)] = true; });
+    var added = 0;
+    allScenes().forEach(function (sc) {
+      if (!sc || !idSet[String(sc.id)]) return;
+      var guides = ensureGuidesArray(sc);
+      materializeClipboardGuides().forEach(function (g) {
+        guides.push(g);
+        added += 1;
+      });
     });
     clearGuidesClipboard();
     renderGuides();
     markDirty();
-    return true;
+    return added;
   }
 
   function hasGuidesClipboard() {
@@ -1027,11 +1099,6 @@ var QuotationGuides = (function () {
           id: 'paste-guides',
           label: 'Pegar guías',
           disabled: !canPaste
-        },
-        {
-          id: 'paste-guides-all',
-          label: 'Pegar guías en todas las escenas',
-          disabled: !canPaste
         }
       ],
       onSelect: function (id) {
@@ -1048,11 +1115,7 @@ var QuotationGuides = (function () {
           return;
         }
         if (id === 'paste-guides') {
-          pasteGuides();
-          return;
-        }
-        if (id === 'paste-guides-all') {
-          pasteGuidesToAllScenes();
+          openPasteGuidesDialog();
         }
       }
     });
@@ -1128,8 +1191,7 @@ var QuotationGuides = (function () {
     addGuide: addGuide,
     removeGuide: removeGuide,
     copyGuides: copyGuides,
-    pasteGuides: pasteGuides,
-    pasteGuidesToAllScenes: pasteGuidesToAllScenes,
+    pasteGuides: openPasteGuidesDialog,
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     RULER_THICK: RULER_THICK
