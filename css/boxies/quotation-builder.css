@@ -4635,15 +4635,24 @@ body.quotation-canvas-first .builder-workspace,
 .qe-guide-layer {
   --qe-guide-color: #b33a3a;
   --qe-guide-color-ghost: rgba(179, 58, 58, 0.62);
-  /* Compensates stage transform:scale so hairlines stay ~1 screen px. */
   --qe-stage-scale: 1;
-  --qe-guide-hair: max(1px, calc(1px / var(--qe-stage-scale, 1)));
+  --qe-guide-hair: 1px;
   position: absolute;
-  inset: 0;
-  z-index: 30;
+  inset: auto;
+  z-index: 6;
   pointer-events: none;
-  overflow: visible;
+  overflow: hidden;
   touch-action: none;
+  /* Own compositor layer ? avoids smear trails when dragging over scaled stage. */
+  transform: translateZ(0);
+  contain: strict;
+}
+
+/* Legacy: layer used to live inside the scaled stage */
+.qe-canvas__stage > .qe-guide-layer,
+[data-hero-canvas] > .qe-guide-layer,
+.hero-canvas > .qe-guide-layer {
+  display: none !important;
 }
 
 .qe-guide-line {
@@ -4653,8 +4662,11 @@ body.quotation-canvas-first .builder-workspace,
   background: var(--qe-guide-color, #b33a3a);
   box-shadow: none;
   touch-action: none;
-  /* No half-pixel translates ? they blur under canvas scale. */
   transform: none;
+}
+
+.qe-guide-line.is-dragging {
+  z-index: 40;
 }
 
 .qe-guide-line--vertical {

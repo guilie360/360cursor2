@@ -58,9 +58,13 @@ var QuotationGuides = (function () {
     return rootEl ? rootEl.querySelector('[data-qe-viewport-window]') : null;
   }
 
-  /** Active device frame — rulers + guides live here (not the 1920 lienzo). */
+  /** Active device frame — hit-testing / % space (not the 1920 lienzo). */
   function guideSpaceEl() {
     return stageEl();
+  }
+
+  function fitFrameEl() {
+    return rootEl ? rootEl.querySelector('[data-qe-canvas-fit-frame]') : null;
   }
 
   function designCanvasEl() {
@@ -72,13 +76,16 @@ var QuotationGuides = (function () {
       null;
   }
 
-  function stripLegacyGuideLayer() {
+  function stripLegacyGuideLayers() {
+    var stage = stageEl();
     var canvas = designCanvasEl();
-    if (!canvas) return;
-    var legacy = canvas.querySelector('[data-qe-guide-layer]');
-    if (legacy && legacy.parentNode === canvas) {
-      try { legacy.parentNode.removeChild(legacy); } catch (eL) { /* ignore */ }
-    }
+    [stage, canvas].forEach(function (host) {
+      if (!host) return;
+      var legacy = host.querySelector('[data-qe-guide-layer]');
+      if (legacy && legacy.parentNode === host) {
+        try { host.removeChild(legacy); } catch (eL) { /* ignore */ }
+      }
+    });
   }
 
   function clientToDesignPct(clientX, clientY) {
@@ -225,6 +232,7 @@ var QuotationGuides = (function () {
     }
     paintRulerTicks(h, 'h', design.width, scaleX);
     paintRulerTicks(v, 'v', design.height, scaleY);
+    syncGuideLayerGeometry();
   }
 
   function bindRulerDrag(chrome) {
@@ -253,24 +261,32 @@ var QuotationGuides = (function () {
     return !!(ghost || dragGuide);
   }
 
+  /**
+   * Guide layer sits on the fit frame (sibling of the scaled stage), not inside
+   * transform:scale — that scale was leaving GPU drag trails / ghost lines.
+   */
   function ensureGuideLayer() {
-    var host = guideSpaceEl();
-    if (!host) return null;
-    stripLegacyGuideLayer();
-    var layer = host.querySelector('[data-qe-guide-layer]');
+    var frame = fitFrameEl();
+    if (!frame) return null;
+    stripLegacyGuideLayers();
+    var layer = frame.querySelector('[data-qe-guide-layer]');
     if (!layer) {
       layer = document.createElement('div');
       layer.className = 'qe-guide-layer';
       layer.setAttribute('data-qe-guide-layer', '1');
-      host.appendChild(layer);
+      var stage = stageEl();
+      if (stage && stage.parentNode === frame) {
+        if (stage.nextSibling) frame.insertBefore(layer, stage.nextSibling);
+        else frame.appendChild(layer);
+      } else {
+        frame.appendChild(layer);
+      }
       bindGuideLayer(layer);
-    } else if (layer.parentNode !== host) {
-      host.appendChild(layer);
+    } else if (layer.parentNode !== frame) {
+      frame.appendChild(layer);
       bindGuideLayer(layer);
-    } else {
-      /* Keep above HeroCanvas / edit overlays after remounts. */
-      host.appendChild(layer);
     }
+    syncGuideLayerGeometry(layer);
     return layer;
   }
 
@@ -281,24 +297,24 @@ var QuotationGuides = (function () {
     return layer.querySelector('[data-qe-guide-id="' + String(id).replace(/"/g, '') + '"]');
   }
 
-  function stageScale() {
-    var shell = rootEl && rootEl.querySelector('[data-qe-stage-shell]');
-    var s = shell ? parseFloat(shell.getAttribute('data-qe-stage-scale')) : NaN;
-    if (s > 0.01) return s;
+  function syncGuideLayerGeometry(layer) {
+    var el = layer || (fitFrameEl() && fitFrameEl().querySelector('[data-qe-guide-layer]'));
+    var frame = fitFrameEl();
     var space = guideSpaceEl();
-    var design = designSize();
-    var rect = space && space.getBoundingClientRect();
-    if (rect && design.width) return rect.width / design.width;
-    return 1;
+    if (!el || !frame || !space) return;
+    var frameRect = frame.getBoundingClientRect();
+    var rect = space.getBoundingClientRect();
+    if (!frameRect.width || !rect.width) return;
+    el.style.left = (rect.left - frameRect.left) + 'px';
+    el.style.top = (rect.top - frameRect.top) + 'px';
+    el.style.width = rect.width + 'px';
+    el.style.height = rect.height + 'px';
+    /* Layer is outside stage scale → 1 screen px hairline, no compensation. */
+    el.style.setProperty('--qe-stage-scale', '1');
+    el.style.setProperty('--qe-guide-hair', '1px');
   }
 
-  function syncGuideHairScale(layer) {
-    var el = layer || ensureGuideLayer();
-    if (!el) return;
-    el.style.setProperty('--qe-stage-scale', String(stageScale()));
-  }
-
-  /** Snap to whole design px so hairlines don't land on blurry half-pixels. */
+  /** Snap to whole viewport px for readouts / keyboard edits. */
   function guideDesignPx(type, positionPct) {
     var design = designSize();
     var max = type === 'horizontal' ? design.height : design.width;
@@ -308,22 +324,31 @@ var QuotationGuides = (function () {
     return px;
   }
 
+  /** Position with % so geometry stays correct outside the scaled stage. */
   function applyGuideElPosition(el, type, positionPct) {
     if (!el) return;
-    var px = guideDesignPx(type, positionPct);
+    var pct = clampPct(positionPct);
     if (type === 'horizontal') {
-      el.style.top = px + 'px';
-      el.style.left = '';
+      el.style.top = pct + '%';
+      el.style.left = '0';
+      el.style.right = '0';
+      el.style.bottom = 'auto';
+      el.style.width = 'auto';
+      el.style.height = '';
     } else {
-      el.style.left = px + 'px';
-      el.style.top = '';
+      el.style.left = pct + '%';
+      el.style.top = '0';
+      el.style.bottom = '0';
+      el.style.right = 'auto';
+      el.style.width = '';
+      el.style.height = 'auto';
     }
   }
 
   function renderGuides() {
     var layer = ensureGuideLayer();
     if (!layer) return;
-    syncGuideHairScale(layer);
+    syncGuideLayerGeometry(layer);
     /* Never wipe DOM mid-drag — fit/refresh was freezing guides in place. */
     if (isGuideDragActive()) {
       layer.hidden = !guidesVisible || isPreview();
@@ -341,10 +366,10 @@ var QuotationGuides = (function () {
     guides.forEach(function (g) {
       if (!g || !g.id) return;
       var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
-      var px = guideDesignPx(type, g.position);
+      var pct = clampPct(g.position);
       var style = type === 'horizontal'
-        ? 'top:' + px + 'px;'
-        : 'left:' + px + 'px;';
+        ? 'top:' + pct + '%;left:0;right:0;'
+        : 'left:' + pct + '%;top:0;bottom:0;';
       html +=
         '<div class="qe-guide-line qe-guide-line--' + type +
           (g.locked ? ' is-locked' : '') + '"' +
@@ -431,8 +456,11 @@ var QuotationGuides = (function () {
       el: el || guideElById(id),
       pointerId: pointerId
     };
-    if (dragGuide.el && pointerId != null && dragGuide.el.setPointerCapture) {
-      try { dragGuide.el.setPointerCapture(pointerId); } catch (errCap) { /* ignore */ }
+    if (dragGuide.el) {
+      dragGuide.el.classList.add('is-dragging');
+      if (pointerId != null && dragGuide.el.setPointerCapture) {
+        try { dragGuide.el.setPointerCapture(pointerId); } catch (errCap) { /* ignore */ }
+      }
     }
     setDragCursor(dragGuide.type);
     showReadout(clientX, clientY, dragGuide.type, clientToDesignPct(clientX, clientY));
@@ -536,22 +564,12 @@ var QuotationGuides = (function () {
     var el = ensureGhostHost();
     var pct = clientToDesignPct(clientX, clientY);
     if (!el || !pct) return;
-    syncGuideHairScale(el.parentElement);
-    if (ghost.type === 'horizontal') {
-      el.style.top = guideDesignPx('horizontal', pct.y) + 'px';
-      el.style.left = '0';
-      el.style.right = '0';
-      el.style.bottom = 'auto';
-      el.style.width = 'auto';
-      el.style.height = '';
-    } else {
-      el.style.left = guideDesignPx('vertical', pct.x) + 'px';
-      el.style.top = '0';
-      el.style.bottom = '0';
-      el.style.right = 'auto';
-      el.style.width = '';
-      el.style.height = 'auto';
-    }
+    syncGuideLayerGeometry(el.parentElement);
+    applyGuideElPosition(
+      el,
+      ghost.type,
+      ghost.type === 'horizontal' ? pct.y : pct.x
+    );
     showReadout(clientX, clientY, ghost.type, pct);
   }
 
@@ -615,8 +633,11 @@ var QuotationGuides = (function () {
     var el = dragGuide.el;
     var pointerId = dragGuide.pointerId;
     dragGuide = null;
-    if (el && pointerId != null && el.releasePointerCapture) {
-      try { el.releasePointerCapture(pointerId); } catch (errRel) { /* ignore */ }
+    if (el) {
+      el.classList.remove('is-dragging');
+      if (pointerId != null && el.releasePointerCapture) {
+        try { el.releasePointerCapture(pointerId); } catch (errRel) { /* ignore */ }
+      }
     }
     clearDragCursor();
     hideReadout();
@@ -631,12 +652,10 @@ var QuotationGuides = (function () {
   function bindDoc() {
     if (boundDoc) return;
     boundDoc = true;
-    /* Capture phase so editor overlays cannot swallow the drag stream. */
+    /* Pointer only — mouse+pointer double-firing worsened drag trails. */
     document.addEventListener('pointermove', onDocMove, true);
     document.addEventListener('pointerup', onDocUp, true);
     document.addEventListener('pointercancel', onDocUp, true);
-    document.addEventListener('mousemove', onDocMove, true);
-    document.addEventListener('mouseup', onDocUp, true);
   }
 
   /* ── Context menu ─────────────────────────────────────── */
@@ -746,7 +765,6 @@ var QuotationGuides = (function () {
     bindContextMenu();
     refreshRulers();
     ensureGuideLayer();
-    syncGuideHairScale();
     renderGuides();
   }
 
