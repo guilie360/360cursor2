@@ -4747,22 +4747,23 @@ var ExperienciaCanvas = (function () {
       return snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, 1.45);
     }
 
-    /** Resize: snap moving edge only to canvas bounds + red guides (not peers/center). */
+    /** Resize: snap moving edge only; never move the opposite (anchored) edge. */
     function snapBoxToSceneGuides(cx, cy, w, h, mode, opts) {
       opts = opts || {};
       var GUIDE_SNAP = 0.9;
       if (!mode || mode === 'rotate') {
         return { x: cx, y: cy, w: w, h: h };
       }
-      var hw = w / 2;
-      var hh = h / 2;
-      var left = cx - hw;
-      var right = cx + hw;
-      var top = cy - hh;
-      var bottom = cy + hh;
       var m = String(mode || '');
+      var left = cx - w / 2;
+      var right = cx + w / 2;
+      var top = cy - h / 2;
+      var bottom = cy + h / 2;
+      var fixL = left;
+      var fixR = right;
+      var fixT = top;
+      var fixB = bottom;
 
-      /* Soft snap only — canvas edges + red guides. Peer snap made resize jumpy. */
       var linesX = [0, 100];
       var linesY = [0, 100];
       listSceneSnapGuides().forEach(function (g) {
@@ -4790,30 +4791,35 @@ var ExperienciaCanvas = (function () {
 
       if (m.indexOf('e') >= 0) {
         right = nearestLine(right, linesX);
-        w = Math.max(1.5, right - left);
-        cx = left + w / 2;
+        w = Math.max(1.5, right - fixL);
+        right = fixL + w;
+        left = fixL;
       }
       if (m.indexOf('w') >= 0) {
         left = nearestLine(left, linesX);
-        w = Math.max(1.5, right - left);
-        cx = left + w / 2;
+        w = Math.max(1.5, fixR - left);
+        left = fixR - w;
+        right = fixR;
       }
       if (m.indexOf('s') >= 0) {
         bottom = nearestLine(bottom, linesY);
-        h = Math.max(1.5, bottom - top);
-        cy = top + h / 2;
+        h = Math.max(1.5, bottom - fixT);
+        bottom = fixT + h;
+        top = fixT;
       }
       if (m.indexOf('n') >= 0) {
         top = nearestLine(top, linesY);
-        h = Math.max(1.5, bottom - top);
-        cy = top + h / 2;
+        h = Math.max(1.5, fixB - top);
+        top = fixB - h;
+        bottom = fixB;
       }
 
+      /* No center clamp / no rounding here — those slid the anchored edge. */
       return {
-        x: Math.max(0, Math.min(100, Math.round(cx * 10) / 10)),
-        y: Math.max(0, Math.min(100, Math.round(cy * 10) / 10)),
-        w: Math.max(1.5, Math.min(90, Math.round(w * 10) / 10)),
-        h: Math.max(1.5, Math.min(90, Math.round(h * 10) / 10))
+        x: (left + right) / 2,
+        y: (top + bottom) / 2,
+        w: Math.max(1.5, right - left),
+        h: Math.max(1.5, bottom - top)
       };
     }
 
@@ -5931,57 +5937,105 @@ var ExperienciaCanvas = (function () {
               pushButtonHistory(transformDrag.sceneId);
               transformDrag.historyPushed = true;
             }
-            var dx = pctT.x - transformDrag.startPx;
-            var dy = pctT.y - transformDrag.startPy;
-            var L = transformDrag.startX - transformDrag.startW / 2;
-            var R = transformDrag.startX + transformDrag.startW / 2;
-            var T = transformDrag.startY - transformDrag.startH / 2;
-            var B = transformDrag.startY + transformDrag.startH / 2;
-            if (mode.indexOf('e') >= 0) R = transformDrag.startX + transformDrag.startW / 2 + dx;
-            if (mode.indexOf('w') >= 0) L = transformDrag.startX - transformDrag.startW / 2 + dx;
-            if (mode.indexOf('s') >= 0) B = transformDrag.startY + transformDrag.startH / 2 + dy;
-            if (mode.indexOf('n') >= 0) T = transformDrag.startY - transformDrag.startH / 2 + dy;
-            var nw = Math.max(1.5, R - L);
-            var nh = Math.max(1.5, B - T);
+            /* Project pointer delta into object-local axes (handles rotate with the box). */
+            var layerW = buttonsLayer.clientWidth || 1000;
+            var layerH = buttonsLayer.clientHeight || 1000;
+            var dxPx = ((pctT.x - transformDrag.startPx) / 100) * layerW;
+            var dyPx = ((pctT.y - transformDrag.startPy) / 100) * layerH;
+            var rad = (Number(transformDrag.startRot) || 0) * Math.PI / 180;
+            var cosR = Math.cos(rad);
+            var sinR = Math.sin(rad);
+            var localDx = ((dxPx * cosR + dyPx * sinR) / layerW) * 100;
+            var localDy = ((-dxPx * sinR + dyPx * cosR) / layerH) * 100;
+
+            var startL = transformDrag.startL;
+            var startR = transformDrag.startR;
+            var startT = transformDrag.startT;
+            var startB = transformDrag.startB;
+            var L = startL;
+            var R = startR;
+            var T = startT;
+            var B = startB;
+            var minW = 1.5;
+            var minH = 1.5;
+            var maxW = 95;
+            var maxH = 95;
+            var moveE = mode.indexOf('e') >= 0;
+            var moveW = mode.indexOf('w') >= 0;
+            var moveS = mode.indexOf('s') >= 0;
+            var moveN = mode.indexOf('n') >= 0;
+
+            /* Only the active edge(s) move — opposite edge stays pinned. */
+            if (moveE) R = startR + localDx;
+            if (moveW) L = startL + localDx;
+            if (moveS) B = startB + localDy;
+            if (moveN) T = startT + localDy;
+
+            /* Min/max by pulling the moving edge back — never the anchored face. */
+            if (moveE && !moveW) {
+              R = Math.max(startL + minW, Math.min(startL + maxW, R));
+              L = startL;
+            } else if (moveW && !moveE) {
+              L = Math.min(startR - minW, Math.max(startR - maxW, L));
+              R = startR;
+            } else if (moveE && moveW) {
+              /* Both (shouldn't happen on normal handles) — keep center. */
+              var midX0 = (startL + startR) / 2;
+              var wBoth = Math.max(minW, Math.min(maxW, R - L));
+              L = midX0 - wBoth / 2;
+              R = midX0 + wBoth / 2;
+            }
+            if (moveS && !moveN) {
+              B = Math.max(startT + minH, Math.min(startT + maxH, B));
+              T = startT;
+            } else if (moveN && !moveS) {
+              T = Math.min(startB - minH, Math.max(startB - maxH, T));
+              B = startB;
+            } else if (moveS && moveN) {
+              var midY0 = (startT + startB) / 2;
+              var hBoth = Math.max(minH, Math.min(maxH, B - T));
+              T = midY0 - hBoth / 2;
+              B = midY0 + hBoth / 2;
+            }
+
+            var nw = R - L;
+            var nh = B - T;
+
             if (transformDrag.keepRatio && transformDrag.startW > 0) {
               var ratio = transformDrag.startH / transformDrag.startW;
-              /* Circles: lock to a pixel-square so % width/height stay circular on any aspect. */
               if (transformDrag.type === 'SHAPE_CIRCLE' && transformDrag.layerAspect > 0) {
                 ratio = transformDrag.layerAspect;
               }
-              var moveX = mode.indexOf('e') >= 0 || mode.indexOf('w') >= 0;
-              var moveY = mode.indexOf('n') >= 0 || mode.indexOf('s') >= 0;
-              if (moveX && !moveY) {
+              if ((moveE || moveW) && !(moveN || moveS)) {
                 nh = nw * ratio;
-              } else if (moveY && !moveX) {
-                nw = nh / ratio;
-              } else if (Math.abs(dx) * transformDrag.startH >= Math.abs(dy) * transformDrag.startW) {
-                nh = nw * ratio;
-              } else {
-                nw = nh / ratio;
-              }
-              /* Re-anchor opposite edges after ratio lock. */
-              if (mode.indexOf('w') >= 0 && mode.indexOf('e') < 0) R = L + nw;
-              else if (mode.indexOf('e') >= 0 && mode.indexOf('w') < 0) L = R - nw;
-              else {
-                var midX = (L + R) / 2;
-                L = midX - nw / 2;
-                R = midX + nw / 2;
-              }
-              if (mode.indexOf('n') >= 0 && mode.indexOf('s') < 0) B = T + nh;
-              else if (mode.indexOf('s') >= 0 && mode.indexOf('n') < 0) T = B - nh;
-              else {
-                var midY = (T + B) / 2;
+                /* Grow height from center of the fixed vertical span. */
+                var midY = (startT + startB) / 2;
                 T = midY - nh / 2;
                 B = midY + nh / 2;
+              } else if ((moveN || moveS) && !(moveE || moveW)) {
+                nw = nh / ratio;
+                var midX = (startL + startR) / 2;
+                L = midX - nw / 2;
+                R = midX + nw / 2;
+              } else {
+                /* Corner: drive by the dominant local axis, re-pin opposite corner. */
+                if (Math.abs(localDx) * transformDrag.startH >= Math.abs(localDy) * transformDrag.startW) {
+                  nh = nw * ratio;
+                } else {
+                  nw = nh / ratio;
+                }
+                if (moveW && !moveE) { R = startR; L = R - nw; }
+                else { L = startL; R = L + nw; }
+                if (moveN && !moveS) { B = startB; T = B - nh; }
+                else { T = startT; B = T + nh; }
               }
-              nw = Math.max(1.5, R - L);
-              nh = Math.max(1.5, B - T);
+              nw = R - L;
+              nh = B - T;
             }
-            nw = Math.max(1.5, Math.min(90, nw));
-            nh = Math.max(1.5, Math.min(90, nh));
-            var nx = Math.max(0, Math.min(100, (L + R) / 2));
-            var ny = Math.max(0, Math.min(100, (T + B) / 2));
+
+            var nx = (L + R) / 2;
+            var ny = (T + B) / 2;
+
             if (!ev.shiftKey && (transformDrag.type === 'BUTTON' ||
                 transformDrag.type === 'SHAPE_RECT' ||
                 transformDrag.type === 'SHAPE_CIRCLE')) {
@@ -5993,9 +6047,48 @@ var ExperienciaCanvas = (function () {
               ny = boxSnap.y;
               nw = boxSnap.w;
               nh = boxSnap.h;
+              /* Re-pin anchored faces after snap (snap may only move free edges). */
+              if (moveE && !moveW) {
+                L = startL;
+                R = L + nw;
+                nx = (L + R) / 2;
+              } else if (moveW && !moveE) {
+                R = startR;
+                L = R - nw;
+                nx = (L + R) / 2;
+              }
+              if (moveS && !moveN) {
+                T = startT;
+                B = T + nh;
+                ny = (T + B) / 2;
+              } else if (moveN && !moveS) {
+                B = startB;
+                T = B - nh;
+                ny = (T + B) / 2;
+              }
+              if ((moveE || moveW) && (moveN || moveS)) {
+                if (moveW && !moveE) { R = startR; L = R - nw; }
+                else { L = startL; R = L + nw; }
+                if (moveN && !moveS) { B = startB; T = B - nh; }
+                else { T = startT; B = T + nh; }
+                nx = (L + R) / 2;
+                ny = (T + B) / 2;
+              }
             }
             if (transformDrag.type === 'SHAPE_CIRCLE' && transformDrag.layerAspect > 0) {
               nh = nw * transformDrag.layerAspect;
+              if (moveN && !moveS) {
+                B = startB;
+                T = B - nh;
+              } else if (moveS && !moveN) {
+                T = startT;
+                B = T + nh;
+              } else {
+                var midYC = (T + B) / 2;
+                T = midYC - nh / 2;
+                B = midYC + nh / 2;
+              }
+              ny = (T + B) / 2;
             }
             var patchT = { x: nx, y: ny };
             if (transformDrag.type === 'BUTTON') {
@@ -6119,16 +6212,22 @@ var ExperienciaCanvas = (function () {
           if (gtype === 'SHAPE_CIRCLE') {
             startH0 = startW0 * layerAspect;
           }
+          var startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
+          var startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
           transformDrag = {
             mode: handleMode,
             buttonId: gid,
             sceneId: sceneIdG,
             type: gtype,
             pointerId: ev.pointerId,
-            startX: btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50,
-            startY: btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50,
+            startX: startX0,
+            startY: startY0,
             startW: startW0,
             startH: startH0,
+            startL: startX0 - startW0 / 2,
+            startR: startX0 + startW0 / 2,
+            startT: startY0 - startH0 / 2,
+            startB: startY0 + startH0 / 2,
             startRot: Number(btnG.rotation) || 0,
             startPx: pct0.x,
             startPy: pct0.y,
