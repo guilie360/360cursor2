@@ -900,8 +900,19 @@ var ExperienciaEngine = (function () {
       ix.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
     }
     if (patch.x != null || patch.y != null) {
-      if (patch.x != null) ix.x = clampPercent(patch.x, ix.x);
-      if (patch.y != null) ix.y = clampPercent(patch.y, ix.y);
+      if (patch.live) {
+        if (patch.x != null) {
+          var lx = Number(patch.x);
+          if (!isNaN(lx)) ix.x = Math.max(-20, Math.min(120, lx));
+        }
+        if (patch.y != null) {
+          var ly = Number(patch.y);
+          if (!isNaN(ly)) ix.y = Math.max(-20, Math.min(120, ly));
+        }
+      } else {
+        if (patch.x != null) ix.x = clampPercent(patch.x, ix.x);
+        if (patch.y != null) ix.y = clampPercent(patch.y, ix.y);
+      }
       ix.positionInitialized = true;
       if (patch.keepAnchor !== true) ix.positionMode = 'free';
     }
@@ -921,10 +932,20 @@ var ExperienciaEngine = (function () {
         ix.scaleUnit = patch.scaleUnit;
       }
       if (patch.boxW != null) {
-        ix.boxW = Math.max(1, Math.min(100, Number(patch.boxW) || 12));
+        var bw = Number(patch.boxW);
+        if (!isNaN(bw)) {
+          ix.boxW = patch.live
+            ? Math.max(1, Math.min(100, bw))
+            : Math.max(1, Math.min(100, Math.round(bw * 10) / 10));
+        }
       }
       if (patch.boxH != null) {
-        ix.boxH = Math.max(1, Math.min(100, Number(patch.boxH) || 4.5));
+        var bh = Number(patch.boxH);
+        if (!isNaN(bh)) {
+          ix.boxH = patch.live
+            ? Math.max(1, Math.min(100, bh))
+            : Math.max(1, Math.min(100, Math.round(bh * 10) / 10));
+        }
       }
       if (patch.locked != null) ix.locked = !!patch.locked;
       if (patch.bgColor !== undefined) {
@@ -1016,8 +1037,22 @@ var ExperienciaEngine = (function () {
     }
 
     if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
-      if (patch.width != null) ix.width = Math.max(1, Math.min(100, Number(patch.width) || 12));
-      if (patch.height != null) ix.height = Math.max(1, Math.min(100, Number(patch.height) || 8));
+      if (patch.width != null) {
+        var sw = Number(patch.width);
+        if (!isNaN(sw)) {
+          ix.width = patch.live
+            ? Math.max(1, Math.min(100, sw))
+            : Math.max(1, Math.min(100, Math.round(sw * 10) / 10));
+        }
+      }
+      if (patch.height != null) {
+        var sh = Number(patch.height);
+        if (!isNaN(sh)) {
+          ix.height = patch.live
+            ? Math.max(1, Math.min(100, sh))
+            : Math.max(1, Math.min(100, Math.round(sh * 10) / 10));
+        }
+      }
       if (patch.fill != null) ix.fill = String(patch.fill);
       if (patch.stroke != null) ix.stroke = String(patch.stroke);
       if (patch.strokeWidth != null) {

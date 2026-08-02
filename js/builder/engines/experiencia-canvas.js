@@ -6090,7 +6090,7 @@ var ExperienciaCanvas = (function () {
               }
               ny = (T + B) / 2;
             }
-            var patchT = { x: nx, y: ny };
+            var patchT = { x: nx, y: ny, live: true };
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
@@ -6295,12 +6295,34 @@ var ExperienciaCanvas = (function () {
           var movedT = transformDrag.historyPushed;
           var wasRotate = transformDrag.mode === 'rotate';
           var rotBtnId = transformDrag.buttonId;
+          var endScene = transformDrag.sceneId;
+          var endType = transformDrag.type;
           transformDrag = null;
           unbindOverlayPointerDocs();
           if (wasRotate && !movedT) {
             rotateTapArmed = { buttonId: rotBtnId, at: Date.now() };
           } else {
             rotateTapArmed = null;
+          }
+          /* Snap stored geometry to 0.1 after live resize (no rounding mid-drag). */
+          if (movedT && !wasRotate && endScene && rotBtnId) {
+            var endBtn = ExperienciaEngine.getSceneButton(
+              state, ExperienciaEngine.getNode(state, endScene), rotBtnId
+            );
+            if (endBtn) {
+              var finalize = {
+                x: endBtn.storedX != null ? endBtn.storedX : endBtn.x,
+                y: endBtn.storedY != null ? endBtn.storedY : endBtn.y
+              };
+              if (endType === 'BUTTON') {
+                finalize.boxW = endBtn.boxW;
+                finalize.boxH = endBtn.boxH;
+              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE') {
+                finalize.width = endBtn.width;
+                finalize.height = endBtn.height;
+              }
+              ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, finalize);
+            }
           }
           paintButtonsStage();
           paintInspector();
