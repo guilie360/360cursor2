@@ -201,6 +201,22 @@ var QuotationExperienciaBridge = (function () {
     };
   }
 
+  /** Push Quotation scene interactions[] into shim nodes (inverse of pullToScenes). */
+  function pushScenesToShim(shimState, scenes) {
+    if (!shimState || !shimState.experiencia || !scenes) return;
+    var byNodeId = {};
+    scenes.forEach(function (sc) {
+      if (sc && sc.id) byNodeId[nodeIdForScene(sc.id)] = sc;
+    });
+    (shimState.experiencia.nodes || []).forEach(function (n) {
+      if (!n || n.kind === 'hero') return;
+      var sc = byNodeId[n.id];
+      if (!sc) return;
+      if (!n.config) n.config = {};
+      n.config.interactions = cloneJson(sc.interactions || []);
+    });
+  }
+
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
   function pullToScenes(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
@@ -407,6 +423,10 @@ var QuotationExperienciaBridge = (function () {
       },
       pull: function () {
         pullToScenes(shim, scenes);
+      },
+      syncFromScenes: function () {
+        pushScenesToShim(shim, scenes);
+        if (handle.refresh) handle.refresh();
       }
     };
   }
@@ -416,6 +436,7 @@ var QuotationExperienciaBridge = (function () {
     ensureSceneInteractions: ensureSceneInteractions,
     buildState: buildState,
     pullToScenes: pullToScenes,
+    pushScenesToShim: pushScenesToShim,
     mount: mount
   };
 })();

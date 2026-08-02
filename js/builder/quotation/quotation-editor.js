@@ -3040,23 +3040,11 @@ var QuotationEditor = (function () {
     var scene = activeScene();
     if (scene) ensureSceneOverlays(scene);
     var ixs = (scene && Array.isArray(scene.interactions)) ? scene.interactions.slice() : [];
-    var heroActive = !!(scene && isHeroScene(scene));
     var selSet = {};
     (state.selectedOverlayIds || []).forEach(function (id) {
       selSet[String(id)] = true;
     });
-    var rows = '' +
-      '<li class="qe-layers__item is-hero' + (heroActive ? ' is-selected' : '') + '"' +
-        ' data-qe-layer="hero" data-qe-layer-type="HERO">' +
-        '<span class="qe-layers__fold-spacer" aria-hidden="true"></span>' +
-        '<button type="button" class="qe-layers__vis" data-qe-layer-vis="hero" title="HERO" disabled aria-label="HERO">👁</button>' +
-        '<button type="button" class="qe-layers__sel' + (heroActive ? ' is-active' : '') + '"' +
-          ' data-qe-layer-sel="hero" title="Ir a escena HERO">' +
-          '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel('HERO')) + '</span>' +
-        '</button>' +
-        '<button type="button" class="qe-layers__clear" data-qe-layer-clear="hero"' +
-          ' title="Vaciar HERO (no elimina la portada)" aria-label="Vaciar HERO">🗑</button>' +
-      '</li>';
+    var rows = '';
     function layerItemRow(ix, opts) {
       opts = opts || {};
       if (!ix || !ix.id) return '';
@@ -3172,14 +3160,41 @@ var QuotationEditor = (function () {
       ix.visible = !!flags.visible;
     }
     if (flags.locked != null) ix.locked = !!flags.locked;
-    if (expOverlay && expOverlay.setInteractionFlags) {
+    markDirtyLocal();
+    if (expOverlay && expOverlay.syncFromScenes) {
+      expOverlay.syncFromScenes();
+    } else if (expOverlay && expOverlay.setInteractionFlags) {
       expOverlay.setInteractionFlags(id, flags);
-      if (expOverlay.pull) expOverlay.pull();
     } else if (expOverlay && expOverlay.refresh) {
       expOverlay.refresh();
-      markDirtyLocal();
-      refreshLayersPanel();
     }
+    refreshLayersPanel();
+    return true;
+  }
+
+  function reorderSceneInteraction(id, dir) {
+    if (!id) return false;
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var list = scene.interactions;
+    var idx = -1;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(id)) { idx = i; break; }
+    }
+    if (idx < 0) return false;
+    var nextIdx = idx + (dir < 0 ? -1 : 1);
+    if (nextIdx < 0 || nextIdx >= list.length) return false;
+    var tmp = list[idx];
+    list[idx] = list[nextIdx];
+    list[nextIdx] = tmp;
+    markDirtyLocal();
+    if (expOverlay && expOverlay.syncFromScenes) {
+      expOverlay.syncFromScenes();
+    } else if (expOverlay && expOverlay.refresh) {
+      expOverlay.refresh();
+    }
+    refreshLayersPanel();
     return true;
   }
 
@@ -6572,7 +6587,6 @@ var QuotationEditor = (function () {
       var up = t.closest('[data-qe-layer-up]');
       var down = t.closest('[data-qe-layer-down]');
       var fold = t.closest('[data-qe-layer-fold]');
-      var clearHero = t.closest('[data-qe-layer-clear="hero"], [data-qe-layer-clear]');
 
       if (fold) {
         var fid = fold.getAttribute('data-qe-layer-fold');
@@ -6581,14 +6595,6 @@ var QuotationEditor = (function () {
           state.openOverlayGroups[fid] = !(state.openOverlayGroups[fid] !== false);
           refreshLayersPanel();
         }
-        return;
-      }
-
-      if (clearHero && clearHero.getAttribute('data-qe-layer-clear') === 'hero') {
-        ev.preventDefault();
-        var hsClear = heroScene();
-        if (!hsClear) return;
-        requestDeleteScene(hsClear.id);
         return;
       }
 
@@ -6625,49 +6631,18 @@ var QuotationEditor = (function () {
       }
 
       if (up || down) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var oid = (up || down).getAttribute(up ? 'data-qe-layer-up' : 'data-qe-layer-down');
         if (!oid) return;
-        if (expOverlay && expOverlay.reorderInteraction) {
-          expOverlay.reorderInteraction(oid, up ? -1 : 1);
-          if (expOverlay.pull) expOverlay.pull();
-        } else {
-          var sceneO = activeScene();
-          if (!sceneO || !Array.isArray(sceneO.interactions)) return;
-          var list = sceneO.interactions;
-          var idx = -1;
-          for (var k = 0; k < list.length; k++) {
-            if (String(list[k].id) === String(oid)) { idx = k; break; }
-          }
-          var nextIdx = idx + (up ? -1 : 1);
-          if (idx < 0 || nextIdx < 0 || nextIdx >= list.length) return;
-          var tmp = list[idx];
-          list[idx] = list[nextIdx];
-          list[nextIdx] = tmp;
-        }
-        markDirtyLocal();
-        refreshLayersPanel();
-        if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+        reorderSceneInteraction(oid, up ? -1 : 1);
         return;
       }
 
       if (sel) {
+        ev.preventDefault();
         var sid = sel.getAttribute('data-qe-layer-sel');
         if (!sid) return;
-        if (sid === 'hero') {
-          var hs = heroScene();
-          if (hs) {
-            if (state.activeSceneId !== hs.id) {
-              selectScene(hs.id);
-              return;
-            }
-            if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
-            state.selectedElementId = null;
-            state.expHasSelection = false;
-            refreshLayersPanel();
-            refreshDockOnly();
-          }
-          return;
-        }
         if (expOverlay && ev.shiftKey && expOverlay.toggleOverlayItemSelection) {
           expOverlay.toggleOverlayItemSelection(sid);
         } else if (expOverlay && expOverlay.selectOverlayItem) {

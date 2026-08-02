@@ -993,7 +993,27 @@ var KonvaOverlayRenderer = (function () {
         if (typeof onChange === 'function') onChange();
         return true;
       },
-      reorderInteraction: function () { return false; },
+      reorderInteraction: function (itemId, dir) {
+        if (!itemId || !overlayNodeId) return false;
+        var n = getSceneNode();
+        if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+        var list = n.config.interactions;
+        var idx = -1;
+        var i;
+        for (i = 0; i < list.length; i++) {
+          if (String(list[i].id) === String(itemId)) { idx = i; break; }
+        }
+        if (idx < 0) return false;
+        var next = idx + (dir < 0 ? -1 : 1);
+        if (next < 0 || next >= list.length) return false;
+        var tmp = list[idx];
+        list[idx] = list[next];
+        list[next] = tmp;
+        pullToScenes();
+        rebuildFromEngine();
+        if (typeof onChange === 'function') onChange();
+        return true;
+      },
       setInspectorBody: function () {},
       destroy: function () {
         pullToScenes();

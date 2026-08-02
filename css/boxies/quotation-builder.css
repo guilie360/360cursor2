@@ -681,6 +681,17 @@
   opacity: 0.28;
 }
 
+.qe-layers__lock.is-on {
+  opacity: 1;
+  color: rgba(255, 200, 120, 0.95);
+}
+
+.qe-layers__lock:hover,
+.qe-layers__ord:hover,
+.qe-layers__vis:hover {
+  opacity: 1;
+}
+
 .qe-layers__sel {
   text-align: left;
   font-size: 11px;
