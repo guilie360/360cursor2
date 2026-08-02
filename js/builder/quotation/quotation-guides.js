@@ -405,6 +405,217 @@ var QuotationGuides = (function () {
     return true;
   }
 
+  function escapeGuideHtml(v) {
+    if (typeof AdminUI !== 'undefined' && AdminUI.escapeHtml) return AdminUI.escapeHtml(v);
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function isHeroScene(sc) {
+    if (api && typeof api.isHeroScene === 'function') return !!api.isHeroScene(sc);
+    var scenes = allScenes();
+    return !!(sc && scenes[0] && String(scenes[0].id) === String(sc.id));
+  }
+
+  function sceneDisplayName(sc) {
+    if (!sc) return 'Escena';
+    if (isHeroScene(sc)) return String(sc.name || 'Hero');
+    return String(sc.name || 'Escena');
+  }
+
+  function countGuidesForSelection(sceneIdSet, wantH, wantV) {
+    var n = 0;
+    allScenes().forEach(function (sc) {
+      if (!sc || !sceneIdSet[String(sc.id)]) return;
+      ensureGuidesArray(sc).forEach(function (g) {
+        if (!g) return;
+        if (g.type === 'horizontal' && wantH) n += 1;
+        else if (g.type === 'vertical' && wantV) n += 1;
+      });
+    });
+    return n;
+  }
+
+  function countGuidesByTypeInScenes(sceneIdSet, type) {
+    var n = 0;
+    allScenes().forEach(function (sc) {
+      if (!sc || !sceneIdSet[String(sc.id)]) return;
+      ensureGuidesArray(sc).forEach(function (g) {
+        if (g && g.type === type) n += 1;
+      });
+    });
+    return n;
+  }
+
+  function applyDeleteGuides(sceneIds, wantH, wantV) {
+    if (!wantH && !wantV) return 0;
+    var idSet = {};
+    (sceneIds || []).forEach(function (id) { idSet[String(id)] = true; });
+    var removed = 0;
+    allScenes().forEach(function (sc) {
+      if (!sc || !idSet[String(sc.id)]) return;
+      var guides = ensureGuidesArray(sc);
+      var next = [];
+      guides.forEach(function (g) {
+        if (!g) return;
+        var drop =
+          (g.type === 'horizontal' && wantH) ||
+          (g.type === 'vertical' && wantV);
+        if (drop) removed += 1;
+        else next.push(g);
+      });
+      sc.guides = next;
+    });
+    renderGuides();
+    markDirty();
+    return removed;
+  }
+
+  function openDeleteGuidesDialog() {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+    var active = activeScene();
+    var activeId = active ? String(active.id) : '';
+    var scenes = allScenes().filter(Boolean);
+    if (!scenes.length) return;
+
+    var typeRow = function (type, label) {
+      return '' +
+        '<label class="qe-guides-delete__check">' +
+          '<input type="checkbox" data-qe-gd-type="' + type + '" checked>' +
+          '<span class="qe-guides-delete__check-main">' + label +
+            ' (<span data-qe-gd-type-count="' + type + '">0</span>)</span>' +
+        '</label>';
+    };
+
+    var sceneRows = '';
+    /* Current scene first — selected by default. */
+    if (active) {
+      sceneRows += '' +
+        '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
+          '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(activeId) + '" checked>' +
+          '<span class="qe-guides-delete__check-stack">' +
+            '<span class="qe-guides-delete__check-main">Escena actual</span>' +
+            '<span class="qe-guides-delete__check-sub">' +
+              escapeGuideHtml(sceneDisplayName(active)) +
+            '</span>' +
+          '</span>' +
+        '</label>';
+    }
+    scenes.forEach(function (sc) {
+      if (!sc || String(sc.id) === activeId) return;
+      sceneRows += '' +
+        '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
+          '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(String(sc.id)) + '">' +
+          '<span class="qe-guides-delete__check-main">' +
+            escapeGuideHtml(sceneDisplayName(sc)) +
+          '</span>' +
+        '</label>';
+    });
+
+    AdminUI.openModal({
+      title: 'Eliminar guías',
+      bodyHtml:
+        '<div class="qe-guides-delete" data-qe-guides-delete>' +
+          '<p class="qe-guides-delete__section">Tipo</p>' +
+          typeRow('horizontal', 'Horizontales') +
+          typeRow('vertical', 'Verticales') +
+          '<p class="qe-guides-delete__section">Escenas</p>' +
+          '<div class="qe-guides-delete__scenes" data-qe-gd-scenes>' + sceneRows + '</div>' +
+          '<div class="qe-guides-delete__bulk">' +
+            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-select-all>' +
+              'Seleccionar todo</button>' +
+            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-gd-deselect-all>' +
+              'Deseleccionar todo</button>' +
+          '</div>' +
+        '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-danger" data-modal-action="confirm" data-qe-gd-confirm>' +
+          'Eliminar (0)</button>',
+      onMount: function (root) {
+        var modal = root.querySelector('.admin-modal');
+        if (modal) modal.classList.add('qe-guides-delete-modal');
+
+        function selectedSceneSet() {
+          var set = {};
+          root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+            if (input.checked) set[String(input.getAttribute('data-qe-gd-scene'))] = true;
+          });
+          return set;
+        }
+
+        function typeFlags() {
+          var h = root.querySelector('[data-qe-gd-type="horizontal"]');
+          var v = root.querySelector('[data-qe-gd-type="vertical"]');
+          return { h: !!(h && h.checked), v: !!(v && v.checked) };
+        }
+
+        function refreshCounts() {
+          var scenesSet = selectedSceneSet();
+          var flags = typeFlags();
+          var hEl = root.querySelector('[data-qe-gd-type-count="horizontal"]');
+          var vEl = root.querySelector('[data-qe-gd-type-count="vertical"]');
+          if (hEl) hEl.textContent = String(countGuidesByTypeInScenes(scenesSet, 'horizontal'));
+          if (vEl) vEl.textContent = String(countGuidesByTypeInScenes(scenesSet, 'vertical'));
+          var total = countGuidesForSelection(scenesSet, flags.h, flags.v);
+          var btn = root.querySelector('[data-qe-gd-confirm]');
+          if (btn) {
+            btn.textContent = 'Eliminar (' + total + ')';
+            btn.disabled = total <= 0;
+          }
+        }
+
+        root.querySelectorAll('[data-qe-gd-type], [data-qe-gd-scene]').forEach(function (input) {
+          input.addEventListener('change', refreshCounts);
+        });
+
+        var selectAll = root.querySelector('[data-qe-gd-select-all]');
+        var deselectAll = root.querySelector('[data-qe-gd-deselect-all]');
+        if (selectAll) {
+          selectAll.addEventListener('click', function () {
+            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+              input.checked = true;
+            });
+            refreshCounts();
+          });
+        }
+        if (deselectAll) {
+          deselectAll.addEventListener('click', function () {
+            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+              input.checked = false;
+            });
+            refreshCounts();
+          });
+        }
+
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            if (confirmBtn.disabled) return;
+            var flags = typeFlags();
+            var ids = [];
+            root.querySelectorAll('[data-qe-gd-scene]').forEach(function (input) {
+              if (input.checked) ids.push(input.getAttribute('data-qe-gd-scene'));
+            });
+            AdminUI.closeModal();
+            applyDeleteGuides(ids, flags.h, flags.v);
+          });
+        }
+
+        refreshCounts();
+      },
+      onClose: function () {
+        var modal = document.querySelector('.admin-modal.qe-guides-delete-modal');
+        if (modal) modal.classList.remove('qe-guides-delete-modal');
+      }
+    });
+  }
+
   function openGuideMenu(clientX, clientY, guideId) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     if (!guideId) return;
@@ -434,13 +645,22 @@ var QuotationGuides = (function () {
           }
         },
         {
-          id: 'delete-guide',
-          label: 'Eliminar',
+          id: 'delete-guides-dialog',
+          label: 'Eliminar guías...',
           danger: true,
           separatorBefore: true
+        },
+        {
+          id: 'delete-guide',
+          label: 'Eliminar',
+          danger: true
         }
       ],
       onSelect: function (id) {
+        if (id === 'delete-guides-dialog') {
+          openDeleteGuidesDialog();
+          return;
+        }
         if (id === 'delete-guide') removeGuide(guideId);
       }
     });

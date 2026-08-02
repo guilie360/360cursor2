@@ -3529,6 +3529,7 @@ var QuotationEditor = (function () {
     QuotationGuides.sync(rootEl, {
       getActiveScene: function () { return activeScene(); },
       getScenes: function () { return Array.isArray(state.scenes) ? state.scenes : []; },
+      isHeroScene: function (sc) { return isHeroScene(sc); },
       /* Guides/rulers use the active device window so % maps across Desktop/Tablet/Mobile. */
       getDesignSize: function () { return activeViewportSize(); },
       isPreviewMode: function () { return !!state.canvasPreviewMode; },
