@@ -3910,11 +3910,29 @@ body.quotation-canvas-first .builder-workspace,
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+.quotation-panel-float.is-locked,
+.quotation-panel-float[data-locked="1"] {
+  color: rgba(255, 255, 255, 0.72);
+  cursor: default;
+}
+
+.quotation-panel-float.is-locked:hover,
+.quotation-panel-float[data-locked="1"]:hover {
+  color: rgba(255, 255, 255, 0.88);
+}
+
 .quotation-panel-float svg {
   width: 13px;
   height: 13px;
   display: block;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.quotation-panel-float.is-locked svg,
+.quotation-panel-float[data-locked="1"] svg {
+  transform: none !important;
+  width: 12px;
+  height: 12px;
 }
 
 /* Left float is a workspace sibling ? anchored to the recursos seam. */

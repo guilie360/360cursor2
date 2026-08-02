@@ -23,6 +23,8 @@ var QuotationBuilderView = (function () {
   var builderExperienceType = 'quotation';
   var leftCollapsed = false;
   var rightCollapsed = false;
+  var leftLocked = false;
+  var rightLocked = false;
   var RECURSOS_W = '220px';
   var PROPS_W = '220px';
   var FLOAT_BTN_ID = 'quotationLeftFloatBtn';
@@ -72,30 +74,67 @@ var QuotationBuilderView = (function () {
     host.hidden = true;
   }
 
+  function floatLockIcon() {
+    return iconHtml('lock');
+  }
+
+  function leftFloatLabel() {
+    if (leftLocked) return leftCollapsed ? 'Recursos bloqueados (ocultos)' : 'Recursos bloqueados';
+    return leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos';
+  }
+
+  function rightFloatLabel() {
+    if (rightLocked) return rightCollapsed ? 'Capas bloqueadas (ocultas)' : 'Capas bloqueadas';
+    return rightCollapsed ? 'Expandir capas' : 'Colapsar capas';
+  }
+
   function leftFloatHtml() {
     return (
-      '<button type="button" class="quotation-panel-float quotation-panel-float--left"' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--left' +
+        (leftLocked ? ' is-locked' : '') + '"' +
         ' id="' + FLOAT_BTN_ID + '"' +
         ' data-collapsed="' + (leftCollapsed ? '1' : '0') + '"' +
+        ' data-locked="' + (leftLocked ? '1' : '0') + '"' +
         ' aria-expanded="' + (leftCollapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '"' +
-        ' data-tooltip="' + (leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos') + '">' +
-        iconHtml('chevron-left') +
+        ' aria-label="' + leftFloatLabel() + '"' +
+        ' data-tooltip="' + leftFloatLabel() + '">' +
+        (leftLocked ? floatLockIcon() : iconHtml('chevron-left')) +
       '</button>'
     );
   }
 
   function rightFloatHtml() {
     return (
-      '<button type="button" class="quotation-panel-float quotation-panel-float--right"' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--right' +
+        (rightLocked ? ' is-locked' : '') + '"' +
         ' id="' + RIGHT_FLOAT_BTN_ID + '"' +
         ' data-collapsed="' + (rightCollapsed ? '1' : '0') + '"' +
+        ' data-locked="' + (rightLocked ? '1' : '0') + '"' +
         ' aria-expanded="' + (rightCollapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (rightCollapsed ? 'Expandir capas' : 'Colapsar capas') + '"' +
-        ' data-tooltip="' + (rightCollapsed ? 'Expandir capas' : 'Colapsar capas') + '">' +
-        iconHtml('chevron-right') +
+        ' aria-label="' + rightFloatLabel() + '"' +
+        ' data-tooltip="' + rightFloatLabel() + '">' +
+        (rightLocked ? floatLockIcon() : iconHtml('chevron-right')) +
       '</button>'
     );
+  }
+
+  function openPanelLockMenu(btn, locked, setLocked, clientX, clientY) {
+    if (!btn || typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Bloqueo de columna',
+      items: [
+        {
+          id: locked ? 'unlock' : 'lock',
+          label: locked ? 'Desbloquear' : 'Bloquear'
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'lock') setLocked(true);
+        else if (id === 'unlock') setLocked(false);
+      }
+    });
   }
 
   function shellHtml(stepId) {
@@ -142,10 +181,12 @@ var QuotationBuilderView = (function () {
       document.getElementById(FLOAT_BTN_ID);
     if (!btn) return;
     btn.setAttribute('data-collapsed', leftCollapsed ? '1' : '0');
+    btn.setAttribute('data-locked', leftLocked ? '1' : '0');
+    btn.classList.toggle('is-locked', leftLocked);
     btn.setAttribute('aria-expanded', leftCollapsed ? 'false' : 'true');
-    btn.setAttribute('aria-label', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
-    btn.setAttribute('data-tooltip', leftCollapsed ? 'Expandir recursos' : 'Colapsar recursos');
-    btn.innerHTML = iconHtml('chevron-left');
+    btn.setAttribute('aria-label', leftFloatLabel());
+    btn.setAttribute('data-tooltip', leftFloatLabel());
+    btn.innerHTML = leftLocked ? floatLockIcon() : iconHtml('chevron-left');
   }
 
   function syncRightFloatButton() {
@@ -153,10 +194,22 @@ var QuotationBuilderView = (function () {
       document.getElementById(RIGHT_FLOAT_BTN_ID);
     if (!btn) return;
     btn.setAttribute('data-collapsed', rightCollapsed ? '1' : '0');
+    btn.setAttribute('data-locked', rightLocked ? '1' : '0');
+    btn.classList.toggle('is-locked', rightLocked);
     btn.setAttribute('aria-expanded', rightCollapsed ? 'false' : 'true');
-    btn.setAttribute('aria-label', rightCollapsed ? 'Expandir capas' : 'Colapsar capas');
-    btn.setAttribute('data-tooltip', rightCollapsed ? 'Expandir capas' : 'Colapsar capas');
-    btn.innerHTML = iconHtml('chevron-right');
+    btn.setAttribute('aria-label', rightFloatLabel());
+    btn.setAttribute('data-tooltip', rightFloatLabel());
+    btn.innerHTML = rightLocked ? floatLockIcon() : iconHtml('chevron-right');
+  }
+
+  function setLeftLocked(on) {
+    leftLocked = !!on;
+    syncFloatButton();
+  }
+
+  function setRightLocked(on) {
+    rightLocked = !!on;
+    syncRightFloatButton();
   }
 
   var chromeFoldBatch = false;
@@ -193,8 +246,8 @@ var QuotationBuilderView = (function () {
   function setChromeCollapsed(on) {
     var next = !!on;
     chromeFoldBatch = true;
-    applyLeftCollapsed(next);
-    applyRightCollapsed(next);
+    if (!leftLocked) applyLeftCollapsed(next);
+    if (!rightLocked) applyRightCollapsed(next);
     if (typeof QuotationEditor !== 'undefined' &&
         typeof QuotationEditor.applyScenesCollapsed === 'function') {
       QuotationEditor.applyScenesCollapsed(next);
@@ -208,6 +261,7 @@ var QuotationBuilderView = (function () {
   }
 
   function applyLeftCollapsed(collapsed) {
+    if (leftLocked) return;
     leftCollapsed = !!collapsed;
     if (!rootEl) return;
     var workspace = rootEl.querySelector('.quotation-workspace');
@@ -228,6 +282,7 @@ var QuotationBuilderView = (function () {
   }
 
   function applyRightCollapsed(collapsed) {
+    if (rightLocked) return;
     rightCollapsed = !!collapsed;
     if (!rootEl) return;
     var workspace = rootEl.querySelector('.quotation-workspace');
@@ -301,7 +356,13 @@ var QuotationBuilderView = (function () {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (leftLocked) return;
         applyLeftCollapsed(!leftCollapsed);
+      });
+      btn.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPanelLockMenu(btn, leftLocked, setLeftLocked, e.clientX, e.clientY);
       });
     }
     syncFloatButton();
@@ -317,7 +378,13 @@ var QuotationBuilderView = (function () {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (rightLocked) return;
         applyRightCollapsed(!rightCollapsed);
+      });
+      btn.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPanelLockMenu(btn, rightLocked, setRightLocked, e.clientX, e.clientY);
       });
     }
     syncRightFloatButton();
@@ -873,6 +940,10 @@ var QuotationBuilderView = (function () {
     refreshSidebar: refreshSidebar,
     applyLeftCollapsed: applyLeftCollapsed,
     applyRightCollapsed: applyRightCollapsed,
+    setLeftLocked: setLeftLocked,
+    setRightLocked: setRightLocked,
+    isLeftLocked: function () { return !!leftLocked; },
+    isRightLocked: function () { return !!rightLocked; },
     setChromeCollapsed: setChromeCollapsed,
     toggleChromeCollapsed: toggleChromeCollapsed,
     syncChromeFoldButton: syncChromeFoldButton,

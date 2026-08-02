@@ -738,6 +738,7 @@ var QuotationEditor = (function () {
       libraryCollapsed: false,
       inspectorCollapsed: true,
       scenesCollapsed: false,
+      scenesLocked: false,
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
@@ -3084,7 +3085,15 @@ var QuotationEditor = (function () {
 
   function scenesFoldChevronSvg() {
     if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
-      return BuilderIcons.render('chevron-down');
+      return BuilderIcons.render(state.scenesLocked ? 'lock' : 'chevron-down');
+    }
+    if (state.scenesLocked) {
+      return '' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+          ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<rect width="18" height="11" x="3" y="11" rx="2"/>' +
+          '<path d="M7 11V7a5 5 0 0 1 10 0v4"/>' +
+        '</svg>';
     }
     return '' +
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
@@ -3093,17 +3102,52 @@ var QuotationEditor = (function () {
       '</svg>';
   }
 
+  function scenesFoldLabel() {
+    if (state.scenesLocked) {
+      return state.scenesCollapsed ? 'Escenas bloqueadas (ocultas)' : 'Escenas bloqueadas';
+    }
+    return state.scenesCollapsed ? 'Mostrar escenas' : 'Ocultar escenas';
+  }
+
   function scenesFoldBtnHtml() {
     var collapsed = !!state.scenesCollapsed;
+    var locked = !!state.scenesLocked;
     return '' +
-      '<button type="button" class="quotation-panel-float quotation-panel-float--scenes"' +
+      '<button type="button" class="quotation-panel-float quotation-panel-float--scenes' +
+        (locked ? ' is-locked' : '') + '"' +
         ' data-qe-scenes-fold' +
         ' data-collapsed="' + (collapsed ? '1' : '0') + '"' +
+        ' data-locked="' + (locked ? '1' : '0') + '"' +
         ' aria-expanded="' + (collapsed ? 'false' : 'true') + '"' +
-        ' aria-label="' + (collapsed ? 'Mostrar escenas' : 'Ocultar escenas') + '"' +
-        ' title="' + (collapsed ? 'Mostrar escenas' : 'Ocultar escenas') + '">' +
+        ' aria-label="' + scenesFoldLabel() + '"' +
+        ' title="' + scenesFoldLabel() + '">' +
         scenesFoldChevronSvg() +
       '</button>';
+  }
+
+  function setScenesLocked(on) {
+    state.scenesLocked = !!on;
+    syncScenesFoldButton();
+  }
+
+  function openScenesFoldLockMenu(clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var locked = !!state.scenesLocked;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Bloqueo de escenas',
+      items: [
+        {
+          id: locked ? 'unlock' : 'lock',
+          label: locked ? 'Desbloquear' : 'Bloquear'
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'lock') setScenesLocked(true);
+        else if (id === 'unlock') setScenesLocked(false);
+      }
+    });
   }
 
   function viewportIconSvg(id) {
@@ -3548,13 +3592,18 @@ var QuotationEditor = (function () {
     }
 
     var collapsed = !!state.scenesCollapsed;
+    var locked = !!state.scenesLocked;
     fold.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    fold.setAttribute('data-locked', locked ? '1' : '0');
+    fold.classList.toggle('is-locked', locked);
     fold.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    fold.setAttribute('aria-label', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
-    fold.setAttribute('title', collapsed ? 'Mostrar escenas' : 'Ocultar escenas');
+    fold.setAttribute('aria-label', scenesFoldLabel());
+    fold.setAttribute('title', scenesFoldLabel());
+    fold.innerHTML = scenesFoldChevronSvg();
   }
 
   function applyScenesCollapsed(collapsed) {
+    if (state.scenesLocked) return;
     state.scenesCollapsed = !!collapsed;
     if (!rootEl) return;
     var host = rootEl.querySelector('[data-qe-scenes-host]');
@@ -5510,10 +5559,11 @@ var QuotationEditor = (function () {
       var host = col.querySelector('[data-qe-scenes-host]');
       var strip = col.querySelector('[data-qe-scenes]');
 
-      /* Fold control: silence only. */
+      /* Fold control: lock / unlock column. */
       if (e.target.closest && e.target.closest('[data-qe-scenes-fold]')) {
         e.preventDefault();
         e.stopPropagation();
+        openScenesFoldLockMenu(e.clientX, e.clientY);
         return;
       }
 
@@ -7846,7 +7896,13 @@ var QuotationEditor = (function () {
         scenesFold.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
+          if (state.scenesLocked) return;
           applyScenesCollapsed(!state.scenesCollapsed);
+        });
+        scenesFold.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          openScenesFoldLockMenu(e.clientX, e.clientY);
         });
       }
       syncScenesFoldButton();
@@ -9027,6 +9083,8 @@ var QuotationEditor = (function () {
     isCanvasPreviewMode: isCanvasPreviewMode,
     applyScenesCollapsed: applyScenesCollapsed,
     isScenesCollapsed: function () { return !!state.scenesCollapsed; },
+    setScenesLocked: setScenesLocked,
+    isScenesLocked: function () { return !!state.scenesLocked; },
     _getState: function () { return state; },
     _resetDemo: function () {
       resetEditorSession('demo');

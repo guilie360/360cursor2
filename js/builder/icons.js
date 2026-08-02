@@ -18,6 +18,7 @@ var BuilderIcons = (function () {
     'chevron-left': '<svg ' + S + '><path d="m15 18-6-6 6-6"/></svg>',
     'chevron-right': '<svg ' + S + '><path d="m9 18 6-6-6-6"/></svg>',
     'chevron-down': '<svg ' + S + '><path d="m6 9 6 6 6-6"/></svg>',
+    lock: '<svg ' + S + '><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
     maximize: '<svg ' + S + '><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
     minimize: '<svg ' + S + '><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>',
     bot: '<svg ' + S + '><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>',
