@@ -1886,6 +1886,7 @@ var ExperienciaCanvas = (function () {
     var rotateTapArmed = null; /* { buttonId, at } */
     var groupEditTapArmed = null; /* legacy — kept for rotate tap parity */
     var groupEditPulse = null; /* { groupId, childId, at } */
+    var groupPointerGesture = null; /* deferred group drag / double-click */
     var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
@@ -5615,10 +5616,12 @@ var ExperienciaCanvas = (function () {
       }
       var now = Date.now();
       var dblEvent = ev && Number(ev.detail) >= 2;
+      var pulseAge = groupEditPulse ? (now - groupEditPulse.at) : Infinity;
       var dblPulse = groupEditPulse &&
         groupEditPulse.groupId === gid &&
         groupEditPulse.childId === cid &&
-        (now - groupEditPulse.at) < 520;
+        pulseAge >= 50 &&
+        pulseAge < 900;
       if (!dblEvent && !dblPulse) {
         groupEditPulse = { groupId: gid, childId: cid, at: now };
         return false;
@@ -5652,6 +5655,15 @@ var ExperienciaCanvas = (function () {
       if (gtype !== 'OVERLAY_GROUP' && gtype !== 'GROUP') return null;
       var groupId = gizmo.getAttribute('data-gizmo-id');
       var childId = pickGroupedChildAtClient(ev.clientX, ev.clientY, sceneId, groupId);
+      if (!childId) {
+        var nG = ExperienciaEngine.getNode(state, sceneId);
+        var gIx = nG && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(nG, groupId)
+          : null;
+        if (gIx && gIx.memberIds && gIx.memberIds.length) {
+          childId = String(gIx.memberIds[0]);
+        }
+      }
       if (!childId) return null;
       return { groupId: String(groupId), childId: String(childId) };
     }
@@ -6523,6 +6535,7 @@ var ExperienciaCanvas = (function () {
       var overlayDocBound = false;
 
       function cancelOverlayGestures() {
+        clearGroupPointerGesture();
         if (transformDrag) {
           transformDrag = null;
           unbindOverlayPointerDocs();
@@ -6566,7 +6579,54 @@ var ExperienciaCanvas = (function () {
         overlayDocBound = true;
       }
 
+      function clearGroupPointerGesture() {
+        groupPointerGesture = null;
+      }
+
+      function startGroupPointerGesture(ev, sceneId, groupId, childId) {
+        groupPointerGesture = {
+          sceneId: sceneId,
+          groupId: String(groupId),
+          childId: String(childId),
+          pointerId: ev.pointerId,
+          clientStartX: ev.clientX,
+          clientStartY: ev.clientY
+        };
+        bindOverlayPointerDocs();
+      }
+
+      function flushGroupPointerGestureToMove(ev) {
+        if (!groupPointerGesture) return false;
+        var g = groupPointerGesture;
+        clearGroupPointerGesture();
+        canvas().selectedButtonIds = [g.groupId];
+        canvas().selectedButtonId = g.groupId;
+        var btn = getOverlayItemVm(g.sceneId, g.groupId);
+        if (!btn) return false;
+        beginOverlayMove(ev, g.groupId, g.sceneId, btn, { groupEditChildId: g.childId });
+        return true;
+      }
+
+      function finishGroupPointerGesture(ev) {
+        if (!groupPointerGesture) return false;
+        if (ev && ev.pointerId !== groupPointerGesture.pointerId) return false;
+        var g = groupPointerGesture;
+        clearGroupPointerGesture();
+        unbindOverlayPointerDocs();
+        return attemptGroupChildEditEntry(g.groupId, g.childId, ev);
+      }
+
       function onOverlayDocPointerMove(ev) {
+        if (groupPointerGesture && ev.pointerId === groupPointerGesture.pointerId) {
+          var gDist = Math.hypot(
+            ev.clientX - groupPointerGesture.clientStartX,
+            ev.clientY - groupPointerGesture.clientStartY
+          );
+          if (gDist >= OVERLAY_DRAG_THRESHOLD_PX) {
+            flushGroupPointerGestureToMove(ev);
+          }
+          return;
+        }
         if (transformDrag && ev.pointerId === transformDrag.pointerId) {
           ev.preventDefault();
           var pctT = percentFromPointer(ev);
@@ -7092,9 +7152,43 @@ var ExperienciaCanvas = (function () {
         var childHitId = (hitIx && hitIx.groupId) ? String(bid) : null;
         if (hitIx && hitIx.groupId) {
           if (attemptGroupChildEditEntry(hitIx.groupId, bid, ev)) return;
-        } else {
-          groupEditPulse = null;
+          if (String(canvas().activeOverlayGroupEditId || '') === String(hitIx.groupId)) {
+            groupEditPulse = null;
+            ev.preventDefault();
+            ev.stopPropagation();
+            if (getSelectedOverlayIds().indexOf(String(bid)) < 0) {
+              canvas().selectedButtonIds = [String(bid)];
+              canvas().selectedButtonId = bid;
+            }
+            var btnEdit = getOverlayItemVm(sceneIdHit, bid);
+            beginOverlayMove(ev, bid, sceneIdHit, btnEdit);
+            return;
+          }
+          bid = resolveOverlayPickId(sceneIdHit, bid);
+          var curGrouped = getSelectedOverlayIds();
+          if (ev.shiftKey) {
+            canvas().activeOverlayGroupEditId = null;
+            var idxG = curGrouped.indexOf(String(bid));
+            if (idxG >= 0) curGrouped.splice(idxG, 1);
+            else curGrouped.push(String(bid));
+            canvas().selectedButtonIds = curGrouped;
+            canvas().selectedButtonId = curGrouped.length ? curGrouped[curGrouped.length - 1] : null;
+            paintButtonsStage();
+            paintInspector();
+            notifyOverlaySelection();
+            return;
+          }
+          if (curGrouped.indexOf(String(bid)) < 0 || curGrouped.length <= 1) {
+            canvas().selectedButtonIds = [String(bid)];
+            canvas().selectedButtonId = bid;
+          } else {
+            canvas().selectedButtonId = bid;
+          }
+          startGroupPointerGesture(ev, sceneIdHit, hitIx.groupId, childHitId);
+          paintButtonsStage();
+          return;
         }
+        groupEditPulse = null;
         ev.preventDefault();
         ev.stopPropagation();
         bid = resolveOverlayPickId(sceneIdHit, bid);
@@ -7135,6 +7229,13 @@ var ExperienciaCanvas = (function () {
         enterOverlayGroupEditMode(grouped.groupId, grouped.childId);
       }, true);
       function endButtonDrag(ev) {
+        if (groupPointerGesture && (!ev || ev.pointerId === groupPointerGesture.pointerId)) {
+          if (finishGroupPointerGesture(ev)) {
+            paintButtonsStage();
+            paintInspector();
+          }
+          return;
+        }
         if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
           var movedT = transformDrag.historyPushed;
           var wasRotate = transformDrag.mode === 'rotate';
@@ -7218,15 +7319,8 @@ var ExperienciaCanvas = (function () {
         var dragOrigins = buttonDrag.origins;
         var dragGroupIds = buttonDrag.groupIds;
         var dragIsGroup = buttonDrag.isOverlayGroup;
-        var dragGroupChild = buttonDrag.groupEditChildId;
         buttonDrag = null;
         unbindOverlayPointerDocs();
-        if (!moved && dragScene && dragIsGroup && dragGroupChild &&
-            attemptGroupChildEditEntry(dragBtn, dragGroupChild, ev)) {
-          paintButtonsStage();
-          paintInspector();
-          return;
-        }
         if (!moved && dragScene && dragOrigins) {
           restoreOverlayDragOrigins(dragScene, dragOrigins);
         } else if (!moved && dragScene && dragBtn != null &&
