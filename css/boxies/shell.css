@@ -17,9 +17,10 @@
   /*
    * Intentional edge fringe — same mechanics as the closed main-menu bleed:
    * an off-canvas slab casts glass shadow into the viewport (not a vignette).
+   * Tighter blur than the original 24/64 so the soft outer band is gone.
    */
-  --boxies-edge-fringe-w: 48px;
-  --boxies-edge-fringe-shadow: 24px 0 64px rgba(0, 0, 0, 0.55);
+  --boxies-edge-fringe-w: 32px;
+  --boxies-edge-fringe-shadow: 12px 0 28px rgba(0, 0, 0, 0.55);
 }
 
 html.boxies-has-dock,
@@ -48,9 +49,8 @@ body.boxies-shell::after {
   content: '';
   position: fixed;
   top: 0;
-  /* Stop above the dock — no fringe in the footer band. */
-  bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
-  width: var(--boxies-edge-fringe-w, 48px);
+  bottom: 0;
+  width: var(--boxies-edge-fringe-w, 32px);
   background: #050505;
   pointer-events: none;
   z-index: 1;
@@ -59,13 +59,13 @@ body.boxies-shell::after {
 body.boxies-shell::before {
   left: 0;
   transform: translateX(-100%);
-  box-shadow: var(--boxies-edge-fringe-shadow, 24px 0 64px rgba(0, 0, 0, 0.55));
+  box-shadow: var(--boxies-edge-fringe-shadow, 12px 0 28px rgba(0, 0, 0, 0.55));
 }
 
 body.boxies-shell::after {
   right: 0;
   transform: translateX(100%);
-  box-shadow: -24px 0 64px rgba(0, 0, 0, 0.55);
+  box-shadow: -12px 0 28px rgba(0, 0, 0, 0.55);
 }
 
 .boxies-app {
