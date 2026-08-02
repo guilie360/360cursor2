@@ -4044,6 +4044,52 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  /** Keep the active scene thumb visible inside the horizontal strip. */
+  function scrollActiveSceneThumbIntoView() {
+    var track = document.querySelector('[data-qe-scenes-track]');
+    if (!track) return;
+    var active = track.querySelector('.qe-scenes__thumb.is-active');
+    if (!active) return;
+    var wrap = active.closest('.qe-scenes__thumb-wrap') || active;
+    var trackRect = track.getBoundingClientRect();
+    var wrapRect = wrap.getBoundingClientRect();
+    var pad = 10;
+    var prev = track.style.scrollBehavior;
+    track.style.scrollBehavior = 'auto';
+    if (wrapRect.left < trackRect.left + pad) {
+      track.scrollLeft += wrapRect.left - trackRect.left - pad;
+    } else if (wrapRect.right > trackRect.right - pad) {
+      track.scrollLeft += wrapRect.right - trackRect.right + pad;
+    }
+    scenesTrackScrollLeft = track.scrollLeft;
+    track.style.scrollBehavior = prev || '';
+  }
+
+  /** ← / → scene navigation. Returns true when a different scene was selected. */
+  function navigateSceneByDelta(delta) {
+    ensureScenes();
+    if (!state.scenes || state.scenes.length < 2) return false;
+    var idx = -1;
+    var i;
+    for (i = 0; i < state.scenes.length; i++) {
+      if (state.scenes[i] && state.scenes[i].id === state.activeSceneId) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx < 0) idx = 0;
+    var next = idx + (delta < 0 ? -1 : 1);
+    if (next < 0 || next >= state.scenes.length) return false;
+    var sc = state.scenes[next];
+    if (!sc) return false;
+    selectScene(sc.id);
+    requestAnimationFrame(function () {
+      scrollActiveSceneThumbIntoView();
+      requestAnimationFrame(scrollActiveSceneThumbIntoView);
+    });
+    return true;
+  }
+
   function renameScene(id, name) {
     var sc = sceneById(id);
     if (!sc || isHeroScene(sc)) return;
@@ -6499,6 +6545,26 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         deleteOverlaySelection();
       } catch (eDelKey) { /* ignore */ }
+      return;
+    }
+
+    /* ← / → — navigate scenes (editor only, no modifiers / dialogs). */
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+      if (document.body.classList.contains('admin-modal-open')) return;
+      if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
+        /* Ignore while a context menu portal is open. */
+        var portal = document.getElementById('qeContextMenuPortal');
+        if (portal && portal.getAttribute('aria-hidden') === 'false' && portal.children.length) {
+          return;
+        }
+      }
+      try {
+        if (!navigateSceneByDelta(e.key === 'ArrowRight' ? 1 : -1)) return;
+        e.preventDefault();
+        e.stopPropagation();
+      } catch (eNav) { /* ignore */ }
     }
   }
 
