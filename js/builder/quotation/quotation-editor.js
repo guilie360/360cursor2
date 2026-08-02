@@ -6422,7 +6422,6 @@ var QuotationEditor = (function () {
           b.classList.remove('is-active');
         });
         sel.classList.add('is-active');
-        focusPropsPanel();
         refreshDockOnly();
       }
     });
@@ -6454,7 +6453,6 @@ var QuotationEditor = (function () {
         var prev = state.expHasSelection;
         state.expHasSelection = next;
         if (next) state.selectedElementId = null;
-        if (next) focusPropsPanel();
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
       }
