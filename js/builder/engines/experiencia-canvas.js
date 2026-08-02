@@ -4458,23 +4458,21 @@ var ExperienciaCanvas = (function () {
           var sizeWpx = Math.max(1, Math.round((gw / 100) * layerW));
           var sizeHpx = Math.max(1, Math.round((gh / 100) * layerH));
           var sizeLabel = sizeWpx + ' × ' + sizeHpx;
-          var rotIcon = (typeof BuilderIcons !== 'undefined' && BuilderIcons.render)
-            ? BuilderIcons.render('rotate-ccw')
-            : '↻';
+          var rotCorners = ['nw', 'ne', 'se', 'sw'];
           buttonsLayer.innerHTML +=
             '<div class="builder-exp-sel-gizmo" data-exp-gizmo="1" data-gizmo-id="' + esc(selBtn.id) + '"' +
               ' data-gizmo-type="' + esc(st) + '"' +
               ' style="left:' + gx + '%;top:' + gy + '%;width:' + gw + '%;height:' + gh + '%;' +
               '--btn-rot:' + grot + 'deg">' +
-              '<div class="builder-exp-sel-move" data-exp-sel-move="1" title="Mover"></div>' +
+              '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>' +
               '<div class="builder-exp-sel-box"></div>' +
+              rotCorners.map(function (c) {
+                return '<span class="builder-exp-sel-rot-zone" data-handle="rotate" data-rot-corner="' +
+                  c + '" aria-label="Rotar"></span>';
+              }).join('') +
               handles.map(function (h) {
                 return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
               }).join('') +
-              '<button type="button" class="builder-exp-sel-rotate" data-handle="rotate"' +
-                ' aria-label="Rotar" data-no-tooltip="1">' +
-                '<span class="builder-exp-sel-rotate__icon">' + rotIcon + '</span>' +
-              '</button>' +
               '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>' +
             '</div>';
         }

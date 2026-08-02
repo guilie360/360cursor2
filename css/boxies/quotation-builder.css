@@ -4527,7 +4527,7 @@ body.quotation-canvas-first .builder-workspace,
   text-shadow: var(--t-shadow, none) !important;
   opacity: var(--t-opacity, 1) !important;
   white-space: pre-wrap;
-  cursor: move;
+  cursor: default;
   z-index: 3;
 }
 .builder-exp-stage-text.is-selected {
@@ -4559,7 +4559,7 @@ body.quotation-canvas-first .builder-workspace,
   appearance: none;
   margin: 0;
   padding: 0;
-  cursor: move;
+  cursor: default;
   z-index: 2;
   /* Soft floor — hard 24px min fought live % resize and desynced model vs paint. */
   min-width: 8px;

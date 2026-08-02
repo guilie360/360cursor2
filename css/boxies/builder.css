@@ -7022,7 +7022,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   font-size: calc(var(--button-font-size, 12px) * var(--btn-scale, 1));
   font-weight: 600;
   white-space: nowrap;
-  cursor: grab;
+  cursor: default;
   backdrop-filter: blur(var(--btn-glass-blur, 6px));
   -webkit-backdrop-filter: blur(var(--btn-glass-blur, 6px));
   box-shadow: var(--btn-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
@@ -7098,11 +7098,11 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   border-color: var(--btn-pressed-color, #5aaa74) !important;
   background: color-mix(in srgb, var(--btn-pressed-color, #5aaa74) 40%, rgba(8, 8, 8, 0.78)) !important;
   transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg)) scale(var(--btn-pressed-scale, 0.96));
-  cursor: grabbing;
+  cursor: default;
 }
 
 .builder-exp-ui-btn:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .builder-exp-ui-btn.is-selected {
@@ -7145,7 +7145,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   position: absolute;
   inset: 0;
   pointer-events: auto;
-  cursor: move;
+  cursor: default;
   z-index: 1;
 }
 
@@ -7186,77 +7186,27 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .builder-exp-sel-handle[data-handle="sw"] { left: -6px; bottom: -6px; cursor: nesw-resize; }
 .builder-exp-sel-handle[data-handle="w"]  { left: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
 
-/* Canva-style rotate: below selection, visible icon, large hit area */
-.builder-exp-sel-rotate {
+/* Rotate by approaching corners (outside resize handles) — no visible button. */
+.builder-exp-sel-rot-zone {
   position: absolute;
-  left: 50%;
-  top: auto;
-  bottom: -48px;
-  width: 28px;
-  height: 28px;
-  margin-left: -14px;
-  padding: 0;
-  border-radius: 50%;
-  background: #fff;
-  border: 1.5px solid rgba(111, 191, 134, 1);
-  color: #1a1a1a;
+  width: 22px;
+  height: 22px;
   pointer-events: auto;
-  cursor: grab;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
-  /* Keep icon upright while the gizmo rotates with the object */
-  transform: rotate(calc(-1 * var(--btn-rot, 0deg)));
+  cursor: default;
+  z-index: 3;
+  background: transparent;
 }
-
-.builder-exp-sel-rotate:active {
-  cursor: grabbing;
-}
-
-.builder-exp-sel-rotate::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  width: 1.5px;
-  height: 12px;
-  margin-left: -0.75px;
-  background: rgba(111, 191, 134, 0.95);
-  /* Stem stays in gizmo space (undo icon counter-rotate) */
-  transform: rotate(var(--btn-rot, 0deg));
-  transform-origin: bottom center;
-}
-
-.builder-exp-sel-rotate::after {
-  content: '';
-  position: absolute;
-  inset: -12px;
-}
-
-.builder-exp-sel-rotate__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  pointer-events: none;
-  line-height: 0;
-}
-
-.builder-exp-sel-rotate__icon svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
+.builder-exp-sel-rot-zone[data-rot-corner="nw"] { left: -28px; top: -28px; }
+.builder-exp-sel-rot-zone[data-rot-corner="ne"] { right: -28px; top: -28px; }
+.builder-exp-sel-rot-zone[data-rot-corner="se"] { right: -28px; bottom: -28px; }
+.builder-exp-sel-rot-zone[data-rot-corner="sw"] { left: -28px; bottom: -28px; }
 
 .builder-exp-sel-size {
   position: absolute;
-  left: calc(50% + 22px);
-  bottom: -40px;
-  transform: rotate(calc(-1 * var(--btn-rot, 0deg)));
-  transform-origin: left center;
+  left: 50%;
+  bottom: -28px;
+  transform: translateX(-50%) rotate(calc(-1 * var(--btn-rot, 0deg)));
+  transform-origin: center top;
   pointer-events: none;
   z-index: 4;
   padding: 2px 7px;

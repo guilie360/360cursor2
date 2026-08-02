@@ -104,7 +104,7 @@ var BoxiesTooltip = (function () {
     if (!el || !host.contains(el)) return null;
     /* Selection gizmo handles — title tooltips break under CSS transforms (top-left ghost). */
     if (el.getAttribute('data-no-tooltip') === '1' ||
-        el.closest('[data-exp-gizmo], .builder-exp-sel-rotate, .builder-exp-sel-handle')) {
+        el.closest('[data-exp-gizmo], .builder-exp-sel-rot-zone, .builder-exp-sel-handle')) {
       return null;
     }
     /* V7.0.06 — platform icon sidebar never shows tooltips */
