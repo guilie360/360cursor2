@@ -336,6 +336,11 @@ var QuotationExperienciaBridge = (function () {
       selectOverlayItem: function (id) {
         return handle.selectOverlayItem ? handle.selectOverlayItem(id) : false;
       },
+      toggleOverlayItemSelection: function (id) {
+        return handle.toggleOverlayItemSelection
+          ? handle.toggleOverlayItemSelection(id)
+          : false;
+      },
       setInteractionFlags: function (id, flags) {
         return handle.setInteractionFlags ? handle.setInteractionFlags(id, flags) : false;
       },

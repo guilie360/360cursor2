@@ -6422,13 +6422,11 @@ var QuotationEditor = (function () {
           }
           return;
         }
-        if (expOverlay && expOverlay.selectOverlayItem) {
+        if (expOverlay && ev.shiftKey && expOverlay.toggleOverlayItemSelection) {
+          expOverlay.toggleOverlayItemSelection(sid);
+        } else if (expOverlay && expOverlay.selectOverlayItem) {
           expOverlay.selectOverlayItem(sid);
         }
-        panel.querySelectorAll('.qe-layers__sel.is-active').forEach(function (b) {
-          b.classList.remove('is-active');
-        });
-        sel.classList.add('is-active');
         refreshDockOnly();
       }
     });

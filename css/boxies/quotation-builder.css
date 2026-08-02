@@ -4576,6 +4576,15 @@ body.quotation-canvas-first .builder-workspace,
   outline: none;
 }
 
+/* Multi-select: box chrome on every selected overlay (handles only when alone). */
+.builder-exp-sel-gizmo.is-multi {
+  pointer-events: none;
+}
+.builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
+}
+
 /* Hover only — dashed outline; leaves when pointer exits */
 .builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
   outline: 1.5px dashed rgba(255, 255, 255, 0.9);

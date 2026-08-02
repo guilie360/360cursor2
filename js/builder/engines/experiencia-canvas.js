@@ -523,6 +523,66 @@ var ExperienciaCanvas = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
+  function overlaySelectionMetrics(btn, layerW, layerH) {
+    if (!btn) return null;
+    var st = String(btn.type || 'BUTTON').toUpperCase();
+    var gx = Number(btn.x) || 50;
+    var gy = Number(btn.y) || 50;
+    var grot = Number(btn.rotation) || 0;
+    var gw;
+    var gh;
+    if (st === 'BUTTON') {
+      gw = btn.boxW != null ? Number(btn.boxW) : 14;
+      gh = btn.boxH != null ? Number(btn.boxH) : 4.5;
+    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
+      gw = Number(btn.width) || 12;
+      gh = Number(btn.height) || 8;
+      if (st === 'SHAPE_CIRCLE') {
+        gh = gw * (layerW / Math.max(1, layerH));
+      }
+    } else {
+      gw = Math.max(8, Math.min(40, (String(btn.label || 'Texto').length) * 1.2));
+      gh = Math.max(3, ((Number(btn.fontSize) || 28) / layerH) * 100 * 1.4);
+    }
+    return { st: st, gx: gx, gy: gy, grot: grot, gw: gw, gh: gh };
+  }
+
+  /** Full gizmo (single) or box-only chrome (multi-select). */
+  function buildOverlaySelectionGizmoHtml(btn, layerW, layerH, opts) {
+    opts = opts || {};
+    if (!btn || btn.locked || btn.visible === false) return '';
+    var m = overlaySelectionMetrics(btn, layerW, layerH);
+    if (!m) return '';
+    var multi = !!opts.multi;
+    var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+    var rotCorners = ['nw', 'ne', 'se', 'sw'];
+    var sizeWpx = Math.max(1, Math.round((m.gw / 100) * layerW));
+    var sizeHpx = Math.max(1, Math.round((m.gh / 100) * layerH));
+    var sizeLabel = sizeWpx + ' × ' + sizeHpx;
+    var html =
+      '<div class="builder-exp-sel-gizmo' + (multi ? ' is-multi' : '') + '"' +
+        ' data-exp-gizmo="1" data-gizmo-id="' + esc(btn.id) + '"' +
+        ' data-gizmo-type="' + esc(m.st) + '"' +
+        ' style="left:' + m.gx + '%;top:' + m.gy + '%;width:' + m.gw + '%;height:' + m.gh + '%;' +
+        '--btn-rot:' + m.grot + 'deg">';
+    if (!multi) {
+      html += '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>';
+    }
+    html += '<div class="builder-exp-sel-box"></div>';
+    if (!multi) {
+      html += rotCorners.map(function (c) {
+        return '<span class="builder-exp-sel-rot-zone" data-handle="rotate" data-rot-corner="' +
+          c + '" aria-label="Rotar"></span>';
+      }).join('');
+      html += handles.map(function (h) {
+        return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
+      }).join('');
+      html += '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>';
+    }
+    html += '</div>';
+    return html;
+  }
+
   function buttonIconGlyph(icon) {
     if (icon === 'arrow') return '→';
     if (icon === 'rotate-left') return '↺';
@@ -4529,58 +4589,23 @@ var ExperienciaCanvas = (function () {
         '</button>';
       }).join('');
 
-      /* Selection gizmos: resize + rotate (single selection, unlocked) */
-      if (selIds.length === 1) {
-        var selBtn = null;
-        for (var gi = 0; gi < buttons.length; gi++) {
-          if (buttons[gi] && String(buttons[gi].id) === selIds[0]) {
-            selBtn = buttons[gi];
-            break;
-          }
-        }
-        if (selBtn && !selBtn.locked && selBtn.visible !== false) {
-          var st = String(selBtn.type || 'BUTTON').toUpperCase();
-          var gx = Number(selBtn.x) || 50;
-          var gy = Number(selBtn.y) || 50;
-          var grot = Number(selBtn.rotation) || 0;
-          var gw;
-          var gh;
-          if (st === 'BUTTON') {
-            gw = selBtn.boxW != null ? Number(selBtn.boxW) : 14;
-            gh = selBtn.boxH != null ? Number(selBtn.boxH) : 4.5;
-          } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
-            gw = Number(selBtn.width) || 12;
-            gh = Number(selBtn.height) || 8;
-            if (st === 'SHAPE_CIRCLE') {
-              gh = gw * (layerW / Math.max(1, layerH));
+      /* Selection gizmos — full chrome (1 item) or box on every selected item (multi). */
+      if (selIds.length) {
+        var multiSel = selIds.length > 1;
+        var gizmoHtml = '';
+        selIds.forEach(function (sid) {
+          var selBtn = null;
+          for (var gi = 0; gi < buttons.length; gi++) {
+            if (buttons[gi] && String(buttons[gi].id) === String(sid)) {
+              selBtn = buttons[gi];
+              break;
             }
-          } else {
-            /* TEXT: approximate box from font size for rotate-only + light resize */
-            gw = Math.max(8, Math.min(40, (String(selBtn.label || 'Texto').length) * 1.2));
-            gh = Math.max(3, ((Number(selBtn.fontSize) || 28) / layerH) * 100 * 1.4);
           }
-          var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-          var sizeWpx = Math.max(1, Math.round((gw / 100) * layerW));
-          var sizeHpx = Math.max(1, Math.round((gh / 100) * layerH));
-          var sizeLabel = sizeWpx + ' × ' + sizeHpx;
-          var rotCorners = ['nw', 'ne', 'se', 'sw'];
-          buttonsLayer.innerHTML +=
-            '<div class="builder-exp-sel-gizmo" data-exp-gizmo="1" data-gizmo-id="' + esc(selBtn.id) + '"' +
-              ' data-gizmo-type="' + esc(st) + '"' +
-              ' style="left:' + gx + '%;top:' + gy + '%;width:' + gw + '%;height:' + gh + '%;' +
-              '--btn-rot:' + grot + 'deg">' +
-              '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>' +
-              '<div class="builder-exp-sel-box"></div>' +
-              rotCorners.map(function (c) {
-                return '<span class="builder-exp-sel-rot-zone" data-handle="rotate" data-rot-corner="' +
-                  c + '" aria-label="Rotar"></span>';
-              }).join('') +
-              handles.map(function (h) {
-                return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
-              }).join('') +
-              '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>' +
-            '</div>';
-        }
+          gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, {
+            multi: multiSel
+          });
+        });
+        if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
       }
       requestAnimationFrame(syncButtonsLayerBounds);
     }
@@ -8280,6 +8305,42 @@ var ExperienciaCanvas = (function () {
           canvas().selectedButtonId = String(itemId);
           canvas().selectedButtonIds = [String(itemId)];
           canvas().selectedHotspotId = null;
+        }
+        paintButtonsStage();
+        paintHotspotsStage();
+        paintInspector();
+        notifyOverlaySelection();
+        return true;
+      },
+      toggleOverlayItemSelection: function (itemId) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !itemId) return false;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+        var ix = null;
+        for (var i = 0; i < n.config.interactions.length; i++) {
+          if (String(n.config.interactions[i].id) === String(itemId)) {
+            ix = n.config.interactions[i];
+            break;
+          }
+        }
+        if (!ix) return false;
+        var t = String(ix.type || '').toUpperCase();
+        if (t === 'HOTSPOT') {
+          canvas().editMode = 'hotspots';
+          var hsCur = canvas().selectedHotspotId ? String(canvas().selectedHotspotId) : null;
+          canvas().selectedHotspotId = hsCur === String(itemId) ? null : String(itemId);
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        } else {
+          canvas().editMode = 'buttons';
+          canvas().selectedHotspotId = null;
+          var cur = getSelectedOverlayIds();
+          var idx = cur.indexOf(String(itemId));
+          if (idx >= 0) cur.splice(idx, 1);
+          else cur.push(String(itemId));
+          canvas().selectedButtonIds = cur;
+          canvas().selectedButtonId = cur.length ? cur[cur.length - 1] : null;
         }
         paintButtonsStage();
         paintHotspotsStage();
