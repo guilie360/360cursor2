@@ -482,7 +482,9 @@ var QuotationGuides = (function () {
     if (active) {
       html += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
-          '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(activeId) + '" checked>' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-gd-scene="' +
+            escapeGuideHtml(activeId) + '" checked>' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
           '<span class="qe-guides-delete__check-stack">' +
             '<span class="qe-guides-delete__check-main">Escena actual</span>' +
             '<span class="qe-guides-delete__check-sub">' +
@@ -495,7 +497,9 @@ var QuotationGuides = (function () {
       if (!sc || String(sc.id) === activeId) return;
       html += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
-          '<input type="checkbox" data-qe-gd-scene="' + escapeGuideHtml(String(sc.id)) + '">' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-gd-scene="' +
+            escapeGuideHtml(String(sc.id)) + '">' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
           '<span class="qe-guides-delete__check-main">' +
             escapeGuideHtml(sceneDisplayName(sc)) +
           '</span>' +
@@ -561,7 +565,9 @@ var QuotationGuides = (function () {
     var typeRow = function (type, label) {
       return '' +
         '<label class="qe-guides-delete__check">' +
-          '<input type="checkbox" data-qe-gd-type="' + type + '" checked>' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-gd-type="' +
+            type + '" checked>' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
           '<span class="qe-guides-delete__check-main">' + label +
             ' (<span data-qe-gd-type-count="' + type + '">0</span>)</span>' +
         '</label>';
@@ -649,9 +655,8 @@ var QuotationGuides = (function () {
     AdminUI.openModal({
       title: 'Pegar guías',
       bodyHtml: guidesScenePickerBodyHtml(
-        '<p class="admin-modal-copy admin-modal-copy--muted">' +
-          'Se pegarán ' + clipCount + (clipCount === 1 ? ' guía' : ' guías') +
-          ' en las escenas seleccionadas.' +
+        '<p class="qe-guides-delete__hint">' +
+          clipCount + (clipCount === 1 ? ' guía' : ' guías') + ' en portapapeles' +
         '</p>'
       ),
       footerHtml:
