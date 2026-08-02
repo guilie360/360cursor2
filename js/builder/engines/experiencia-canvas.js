@@ -1814,6 +1814,8 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var buttonDrag = null;
     var transformDrag = null;
+    /** Min pointer travel (px) before move/resize counts as a drag — avoids snap on click. */
+    var OVERLAY_DRAG_THRESHOLD_PX = 4;
     /** Custom double-tap on rotate — native dblclick dies when gizmo remounts on pointerup. */
     var rotateTapArmed = null; /* { buttonId, at } */
     var textEditEl = null;
@@ -6220,6 +6222,30 @@ var ExperienciaCanvas = (function () {
     if (buttonsLayer) {
       var overlayDocBound = false;
 
+      function cancelOverlayGestures() {
+        if (transformDrag) {
+          transformDrag = null;
+          unbindOverlayPointerDocs();
+          try {
+            var gizmoCancel = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
+            if (gizmoCancel) gizmoCancel.classList.remove('is-sizing');
+          } catch (eGzCancel) { /* ignore */ }
+          paintButtonsStage();
+        }
+        if (buttonDrag) {
+          var pending = buttonDrag;
+          buttonDrag = null;
+          unbindOverlayPointerDocs();
+          if (!pending.historyPushed && pending.originX != null && pending.originY != null &&
+              pending.sceneId && pending.buttonId != null) {
+            ExperienciaEngine.setSceneButtonPosition(
+              state, pending.sceneId, pending.buttonId, pending.originX, pending.originY
+            );
+          }
+          paintButtonsStage();
+        }
+      }
+
       function unbindOverlayPointerDocs() {
         if (!overlayDocBound) return;
         document.removeEventListener('pointermove', onOverlayDocPointerMove, true);
@@ -6264,6 +6290,11 @@ var ExperienciaCanvas = (function () {
               rotation: deg
             });
           } else {
+            var resizeDistPx = Math.hypot(
+              ev.clientX - transformDrag.clientStartX,
+              ev.clientY - transformDrag.clientStartY
+            );
+            if (resizeDistPx < OVERLAY_DRAG_THRESHOLD_PX) return;
             if (!transformDrag.historyPushed) {
               pushButtonHistory(transformDrag.sceneId);
               transformDrag.historyPushed = true;
@@ -6443,6 +6474,11 @@ var ExperienciaCanvas = (function () {
           return;
         }
         if (!buttonDrag || ev.pointerId !== buttonDrag.pointerId || buttonDrag.nudge) return;
+        var dragDistPx = Math.hypot(
+          ev.clientX - buttonDrag.clientStartX,
+          ev.clientY - buttonDrag.clientStartY
+        );
+        if (dragDistPx < OVERLAY_DRAG_THRESHOLD_PX) return;
         ev.preventDefault();
         var pct = percentFromPointer(ev);
         if (!buttonDrag.historyPushed) {
@@ -6491,6 +6527,8 @@ var ExperienciaCanvas = (function () {
           buttonId: bid,
           sceneId: sceneId,
           pointerId: ev.pointerId,
+          clientStartX: ev.clientX,
+          clientStartY: ev.clientY,
           originX: ox,
           originY: oy,
           startPx: pctStart.x,
@@ -6564,6 +6602,8 @@ var ExperienciaCanvas = (function () {
             sceneId: sceneIdG,
             type: gtype,
             pointerId: ev.pointerId,
+            clientStartX: ev.clientX,
+            clientStartY: ev.clientY,
             startX: startX0,
             startY: startY0,
             startW: startW0,
@@ -6721,7 +6761,12 @@ var ExperienciaCanvas = (function () {
         var dragOriginY = buttonDrag.originY;
         buttonDrag = null;
         unbindOverlayPointerDocs();
-        if (moved && dragScene && dragBtn != null &&
+        if (!moved && dragScene && dragBtn != null &&
+            dragOriginX != null && dragOriginY != null) {
+          ExperienciaEngine.setSceneButtonPosition(
+            state, dragScene, dragBtn, dragOriginX, dragOriginY
+          );
+        } else if (moved && dragScene && dragBtn != null &&
             dragOriginX != null && dragOriginY != null) {
           var endBtn = ExperienciaEngine.getSceneButton(
             state, ExperienciaEngine.getNode(state, dragScene), dragBtn
@@ -6742,6 +6787,16 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+      window.addEventListener('blur', function () {
+        finishButtonNudge();
+        cancelOverlayGestures();
+      });
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          finishButtonNudge();
+          cancelOverlayGestures();
+        }
+      });
       /* Force hover color in Builder (theme tokens otherwise keep white). */
       buttonsLayer.addEventListener('mouseover', function (ev) {
         var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn.is-hover-on');
@@ -6974,10 +7029,6 @@ var ExperienciaCanvas = (function () {
       hotspotsLayer.addEventListener('pointerup', endHotspotDrag);
       hotspotsLayer.addEventListener('pointercancel', endHotspotDrag);
     }
-
-    window.addEventListener('blur', function () {
-      finishButtonNudge();
-    });
 
     var fsBtn = rootEl.querySelector('[data-exp-fullscreen]');
     if (fsBtn) {
