@@ -893,7 +893,7 @@
 .qe-canvas-chrome-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  align-items: end;
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -907,15 +907,16 @@
 .qe-canvas-chrome-top__title {
   grid-column: 1;
   justify-self: start;
+  align-self: end;
   min-width: 0;
   max-width: 100%;
   margin: 0;
   padding: 0 2px;
   color: rgba(255, 255, 255, 0.38);
-  font-size: clamp(10px, 1.35vw, 12px);
+  font-size: clamp(7px, 0.95vw, 8.4px);
   font-weight: 300;
   letter-spacing: 0.02em;
-  line-height: 1.2;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
