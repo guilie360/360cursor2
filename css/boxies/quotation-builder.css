@@ -3564,7 +3564,7 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Left block: recursos only (Config/Editar live in the BOXIES header).
- * No elevated z-index ? must never paint over scenes / HERO (edge fringe is body bg). */
+ * Keep z-index below scenes host ? never paint the collapsed rail over HERO/escenas. */
 .quotation-left-block {
   flex: 0 0 auto;
   display: flex;
@@ -3577,10 +3577,10 @@ body.quotation-canvas-first .builder-workspace,
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
   overflow: visible;
-  z-index: auto;
+  z-index: 0;
 }
 
-/* Collapsed: no column paint; float tab still peeks (own z-index on the button). */
+/* Collapsed: kill paint; float tab still peeks (own stacking on the button). */
 .quotation-workspace.is-left-collapsed .quotation-left-block {
   flex: 0 0 0;
   width: 0;
@@ -3591,7 +3591,7 @@ body.quotation-canvas-first .builder-workspace,
   border: none;
   background: transparent;
   overflow: visible;
-  z-index: auto;
+  z-index: 0;
 }
 
 .quotation-left-block[hidden] {
