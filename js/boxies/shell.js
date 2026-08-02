@@ -325,6 +325,21 @@ var BoxiesShell = (function () {
     actions.setAttribute('aria-hidden', show ? 'false' : 'true');
   }
 
+  var browserContextGuardBound = false;
+
+  /**
+   * Kill the browser/Opera context menu everywhere in BOXIES.
+   * Only preventDefault — do not stopPropagation, so BOXIES custom
+   * context menus (scenes, library, guides, canvas, …) still open.
+   */
+  function bindBrowserContextGuard() {
+    if (browserContextGuardBound) return;
+    browserContextGuardBound = true;
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    }, true);
+  }
+
   function bind() {
     var logoutBtn = document.getElementById('boxiesLogoutBtn');
     if (logoutBtn && !logoutBtn.dataset.bound) {
@@ -349,6 +364,7 @@ var BoxiesShell = (function () {
 
     bindMainMenu();
     bindFullscreen();
+    bindBrowserContextGuard();
   }
 
   function mount(root, handlers) {
