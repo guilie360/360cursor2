@@ -4617,7 +4617,14 @@ body.quotation-canvas-first .builder-workspace,
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
 }
 
-/* Group edit mode — faint group frame while editing a child (Figma-style). */
+.builder-exp-sel-gizmo.is-overlay-group {
+  pointer-events: none;
+}
+.builder-exp-sel-gizmo.is-overlay-group .builder-exp-sel-handle,
+.builder-exp-sel-gizmo.is-overlay-group .builder-exp-sel-rot-zone {
+  pointer-events: auto;
+}
+
 .builder-exp-buttons-layer.is-group-edit-mode .builder-exp-group-edit-frame {
   position: absolute;
   pointer-events: none;

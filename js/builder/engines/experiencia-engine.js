@@ -3539,7 +3539,8 @@ var ExperienciaEngine = (function () {
     }
     var list = (scene && scene.config && scene.config.interactions) || [];
     for (var i = 0; i < list.length; i++) {
-      if (list[i].id === interactionId || list[i].portId === interactionId) return list[i];
+      if (String(list[i].id) === String(interactionId) ||
+          String(list[i].portId) === String(interactionId)) return list[i];
     }
     return null;
   }
