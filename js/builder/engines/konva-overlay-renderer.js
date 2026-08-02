@@ -155,6 +155,7 @@ var KonvaOverlayRenderer = (function () {
     var resizeTimer = null;
     var lastLayerW = 0;
     var lastLayerH = 0;
+    var blockClickAfterDrag = false;
 
     function layerSize() {
       return { w: DESIGN_W, h: DESIGN_H };
@@ -368,6 +369,18 @@ var KonvaOverlayRenderer = (function () {
       fitStageToHost();
     }
 
+    function bindShapeDrag(node) {
+      if (!node || node.getAttr('isLocked')) return;
+      /* Konva Transformer scales/rotates; move requires draggable nodes. */
+      node.draggable(true);
+      if (typeof node.dragDistance === 'function') node.dragDistance(4);
+      node.off('dragend.konvaPoc');
+      node.on('dragend.konvaPoc', function () {
+        blockClickAfterDrag = true;
+        syncKonvaToEngine();
+      });
+    }
+
     function createShapeNode(vm, opts) {
       opts = opts || {};
       var sz = layerSize();
@@ -424,6 +437,8 @@ var KonvaOverlayRenderer = (function () {
       if (locked) {
         node.setAttr('isLocked', true);
         node.draggable(false);
+      } else {
+        bindShapeDrag(node);
       }
       return node;
     }
@@ -776,6 +791,10 @@ var KonvaOverlayRenderer = (function () {
 
     function bindStageEvents() {
       stage.on('click tap', function (e) {
+        if (blockClickAfterDrag) {
+          blockClickAfterDrag = false;
+          return;
+        }
         if (e.target === stage || e.target === layer) {
           selectedIds = [];
           deepSelect = null;
