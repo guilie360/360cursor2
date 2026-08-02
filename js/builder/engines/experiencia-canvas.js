@@ -6608,12 +6608,10 @@ var ExperienciaCanvas = (function () {
       }
 
       function finishGroupPointerGesture(ev) {
-        if (!groupPointerGesture) return false;
-        if (ev && ev.pointerId !== groupPointerGesture.pointerId) return false;
-        var g = groupPointerGesture;
+        if (!groupPointerGesture) return;
+        if (ev && ev.pointerId !== groupPointerGesture.pointerId) return;
         clearGroupPointerGesture();
         unbindOverlayPointerDocs();
-        return attemptGroupChildEditEntry(g.groupId, g.childId, ev);
       }
 
       function onOverlayDocPointerMove(ev) {
@@ -7168,6 +7166,7 @@ var ExperienciaCanvas = (function () {
           var curGrouped = getSelectedOverlayIds();
           if (ev.shiftKey) {
             canvas().activeOverlayGroupEditId = null;
+            if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
             var idxG = curGrouped.indexOf(String(bid));
             if (idxG >= 0) curGrouped.splice(idxG, 1);
             else curGrouped.push(String(bid));
@@ -7178,6 +7177,8 @@ var ExperienciaCanvas = (function () {
             notifyOverlaySelection();
             return;
           }
+          canvas().activeOverlayGroupEditId = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
           if (curGrouped.indexOf(String(bid)) < 0 || curGrouped.length <= 1) {
             canvas().selectedButtonIds = [String(bid)];
             canvas().selectedButtonId = bid;
@@ -7230,10 +7231,7 @@ var ExperienciaCanvas = (function () {
       }, true);
       function endButtonDrag(ev) {
         if (groupPointerGesture && (!ev || ev.pointerId === groupPointerGesture.pointerId)) {
-          if (finishGroupPointerGesture(ev)) {
-            paintButtonsStage();
-            paintInspector();
-          }
+          finishGroupPointerGesture(ev);
           return;
         }
         if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
@@ -8888,8 +8886,10 @@ var ExperienciaCanvas = (function () {
         } else if (ix.groupId) {
           canvas().editMode = 'buttons';
           canvas().selectedHotspotId = null;
-          enterOverlayGroupEditMode(ix.groupId, itemId);
-          return true;
+          canvas().activeOverlayGroupEditId = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
+          canvas().selectedButtonId = String(ix.groupId);
+          canvas().selectedButtonIds = [String(ix.groupId)];
         } else {
           canvas().editMode = 'buttons';
           canvas().activeOverlayGroupEditId = null;
