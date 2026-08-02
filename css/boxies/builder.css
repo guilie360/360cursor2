@@ -7578,23 +7578,24 @@ body > .ws-select__list {
   outline-offset: 1px;
 }
 
-/* Match guides while moving/resizing (visual only — red like Quotation guides). */
+/* Match guides: short red segments between nearest aligned vertices (not full-bleed). */
 .builder-exp-btn-guide--match {
   z-index: 6;
   pointer-events: none;
+  box-sizing: border-box;
 }
-.builder-exp-btn-guide--match.is-v {
-  top: 0;
-  bottom: 0;
+.builder-exp-btn-guide--match.is-v.is-seg {
+  right: auto;
+  bottom: auto;
   width: 0;
-  border-left: 1px solid #b33a3a;
+  border-left: 1.5px solid #b33a3a;
   box-shadow: 0 0 0 0.5px rgba(179, 58, 58, 0.35);
 }
-.builder-exp-btn-guide--match.is-h {
-  left: 0;
-  right: 0;
+.builder-exp-btn-guide--match.is-h.is-seg {
+  right: auto;
+  bottom: auto;
   height: 0;
-  border-top: 1px solid #b33a3a;
+  border-top: 1.5px solid #b33a3a;
   box-shadow: 0 0 0 0.5px rgba(179, 58, 58, 0.35);
 }
 

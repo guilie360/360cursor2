@@ -4194,63 +4194,81 @@ var ExperienciaCanvas = (function () {
       syncLiveOverlayGuides(buttonDrag && buttonDrag.guides);
     }
 
-    /** Peer edge/center matches — visual only (never snaps). */
+    /** Peer edge/center matches as SHORT segments between nearest vertices (not full canvas lines). */
     function collectPeerAlignMatches(selfBox, peers, thresh) {
       thresh = thresh != null ? thresh : 0.75;
       var matches = [];
-      var seenX = {};
-      var seenY = {};
-      function addX(pos) {
-        var p = Number(pos);
-        if (!isFinite(p)) return;
-        var key = Math.round(p * 20);
-        if (seenX[key]) return;
-        seenX[key] = true;
-        matches.push({ axis: 'x', pos: p });
-      }
-      function addY(pos) {
-        var p = Number(pos);
-        if (!isFinite(p)) return;
-        var key = Math.round(p * 20);
-        if (seenY[key]) return;
-        seenY[key] = true;
-        matches.push({ axis: 'y', pos: p });
-      }
       if (!selfBox) return matches;
-      var sx = [selfBox.L, selfBox.cx, selfBox.R];
-      var sy = [selfBox.T, selfBox.cy, selfBox.B];
-      (peers || []).forEach(function (p) {
-        if (!p) return;
-        var px = [p.L, p.cx, p.R];
-        var py = [p.T, p.cy, p.B];
-        sx.forEach(function (s) {
-          px.forEach(function (q) {
-            if (Math.abs(s - q) <= thresh) addX(q);
+
+      function nearestSpan(a0, a1, b0, b1) {
+        var best = null;
+        [a0, a1].forEach(function (a) {
+          [b0, b1].forEach(function (b) {
+            var d = Math.abs(a - b);
+            if (!best || d < best.d) {
+              best = { a: Math.min(a, b), b: Math.max(a, b), d: d };
+            }
           });
         });
-        sy.forEach(function (s) {
-          py.forEach(function (q) {
-            if (Math.abs(s - q) <= thresh) addY(q);
+        return best;
+      }
+
+      function pushSeg(axis, pos, span) {
+        if (!span || !(span.b > span.a + 0.05)) return;
+        matches.push({
+          axis: axis,
+          pos: pos,
+          a: span.a,
+          b: span.b
+        });
+      }
+
+      (peers || []).forEach(function (p) {
+        if (!p) return;
+        /* Horizontal match → short horizontal segment between nearest side vertices. */
+        [selfBox.T, selfBox.cy, selfBox.B].forEach(function (sy) {
+          [p.T, p.cy, p.B].forEach(function (py) {
+            if (Math.abs(sy - py) > thresh) return;
+            pushSeg('y', (sy + py) / 2, nearestSpan(selfBox.L, selfBox.R, p.L, p.R));
+          });
+        });
+        /* Vertical match → short vertical segment between nearest top/bottom vertices. */
+        [selfBox.L, selfBox.cx, selfBox.R].forEach(function (sx) {
+          [p.L, p.cx, p.R].forEach(function (px) {
+            if (Math.abs(sx - px) > thresh) return;
+            pushSeg('x', (sx + px) / 2, nearestSpan(selfBox.T, selfBox.B, p.T, p.B));
           });
         });
       });
-      return matches;
+
+      /* Dedupe near-identical segments. */
+      var seen = {};
+      return matches.filter(function (m) {
+        var key = m.axis + ':' + Math.round(m.pos * 20) + ':' +
+          Math.round(m.a * 10) + ':' + Math.round(m.b * 10);
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
     }
 
     function renderAlignGuidesHtml(align) {
       var html = '';
-      var seen = {};
       (align || []).forEach(function (m) {
-        if (!m || m.pos == null) return;
-        var key = String(m.axis) + ':' + Math.round(Number(m.pos) * 20);
-        if (seen[key]) return;
-        seen[key] = true;
+        if (!m || m.pos == null || m.a == null || m.b == null) return;
+        var a = Number(m.a);
+        var b = Number(m.b);
+        var pos = Number(m.pos);
+        if (!(b > a)) return;
+        var len = b - a;
         if (m.axis === 'x') {
-          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--match is-v"' +
-            ' data-exp-align-guide="1" style="left:' + Number(m.pos) + '%"></div>';
+          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--match is-v is-seg"' +
+            ' data-exp-align-guide="1" style="left:' + pos + '%;top:' + a +
+            '%;height:' + len + '%"></div>';
         } else {
-          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--match is-h"' +
-            ' data-exp-align-guide="1" style="top:' + Number(m.pos) + '%"></div>';
+          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--match is-h is-seg"' +
+            ' data-exp-align-guide="1" style="top:' + pos + '%;left:' + a +
+            '%;width:' + len + '%"></div>';
         }
       });
       return html;
@@ -4931,7 +4949,7 @@ var ExperienciaCanvas = (function () {
       var nx = x;
       var ny = y;
       var guides = { spacing: [], align: [] };
-      /* Shift: skip spacing labels too. Match guides still free-move (no snap). */
+      /* Hold Shift while moving to bypass all snap (peers + red guides). */
       if (opts.disableSnap) {
         return { x: nx, y: ny, guides: guides };
       }
@@ -4939,6 +4957,8 @@ var ExperienciaCanvas = (function () {
       var list = ExperienciaEngine.listSceneButtons(state, n) || [];
       var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
       var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
+      var SNAP = 1.15;
+      var SPACE_SNAP = 1.45;
       var selfBtn = ExperienciaEngine.getSceneButton(state, n, buttonId);
       var selfHalf = overlayHalfSizePct(selfBtn);
 
@@ -4963,70 +4983,233 @@ var ExperienciaCanvas = (function () {
         return Math.min(a1, b1) - Math.max(a0, b0);
       }
 
-      /* No magnetic snap — only visual match guides + spacing labels. */
+      /* Soft align snap */
+      if (Math.abs(x - 50) <= SNAP) nx = 50;
+      if (Math.abs(y - 50) <= SNAP) ny = 50;
+
       var peers = [];
       list.forEach(function (peer) {
         if (!peer || String(peer.id) === String(buttonId)) return;
         peers.push(boxAt(peer));
+        if (Math.abs(x - peer.x) <= SNAP) nx = peer.x;
+        if (Math.abs(y - peer.y) <= SNAP) ny = peer.y;
+        var mirror = Math.round((100 - peer.x) * 10) / 10;
+        if (Math.abs(x - mirror) <= SNAP) nx = mirror;
       });
 
-      var selfBox = boxAt(selfBtn, x, y);
-      guides.align = collectPeerAlignMatches(selfBox, peers, 0.75);
+      /* Align to canvas / peers / red guides first; equal-spacing may override below. */
+      var lines = collectOverlayAlignLines(sceneId, buttonId);
+      var alignSnap = snapMoveToAlignLines(nx, ny, selfHalf.w, selfHalf.h, lines.x, lines.y, 1.45);
+      nx = alignSnap.x;
+      ny = alignSnap.y;
 
-      /* Nearest edge-gap label (informational, does not move the object). */
-      var nearest = null;
-      peers.forEach(function (p) {
-        if (!p) return;
-        var ox = overlapLen(selfBox.L, selfBox.R, p.L, p.R);
-        var oy = overlapLen(selfBox.T, selfBox.B, p.T, p.B);
-        if (ox > 0.5) {
-          var gapY = null;
-          var posY = null;
-          if (selfBox.B <= p.T) {
-            gapY = p.T - selfBox.B;
-            posY = (selfBox.B + p.T) / 2;
-          } else if (p.B <= selfBox.T) {
-            gapY = selfBox.T - p.B;
-            posY = (p.B + selfBox.T) / 2;
+      /* Edge-to-edge gaps between other overlays (for equal-spacing snap). */
+      var knownGapsX = [];
+      var knownGapsY = [];
+      for (var i = 0; i < peers.length; i++) {
+        for (var j = i + 1; j < peers.length; j++) {
+          var a = peers[i];
+          var b = peers[j];
+          if (!a || !b) continue;
+          var ox = overlapLen(a.L, a.R, b.L, b.R);
+          var oy = overlapLen(a.T, a.B, b.T, b.B);
+          if (ox > 0.8) {
+            var topB = a.B <= b.T ? a : (b.B <= a.T ? b : null);
+            var botB = topB === a ? b : (topB === b ? a : null);
+            if (topB && botB) {
+              var gapY = botB.T - topB.B;
+              if (gapY > 0.2) {
+                knownGapsY.push({
+                  gap: gapY,
+                  x: (Math.max(a.L, b.L) + Math.min(a.R, b.R)) / 2,
+                  top: topB,
+                  bot: botB
+                });
+              }
+            }
           }
-          if (gapY != null && gapY > 0.15) {
-            var entryY = {
+          if (oy > 0.8) {
+            var leftB = a.R <= b.L ? a : (b.R <= a.L ? b : null);
+            var rightB = leftB === a ? b : (leftB === b ? a : null);
+            if (leftB && rightB) {
+              var gapX = rightB.L - leftB.R;
+              if (gapX > 0.2) {
+                knownGapsX.push({
+                  gap: gapX,
+                  y: (Math.max(a.T, b.T) + Math.min(a.B, b.B)) / 2,
+                  left: leftB,
+                  right: rightB
+                });
+              }
+            }
+          }
+        }
+      }
+
+      /* Snap to equal edge spacing (Canva-style), then label matching gaps. */
+      var equalSpaces = [];
+      var snappedSpace = null;
+      knownGapsY.forEach(function (kg) {
+        if (!(kg.gap > 0.2) || snappedSpace) return;
+        peers.forEach(function (p) {
+          if (snappedSpace) return;
+          var targetAbove = p.T - kg.gap - selfHalf.h;
+          var targetBelow = p.B + kg.gap + selfHalf.h;
+          var cross = (Math.max(p.L, nx - selfHalf.w) + Math.min(p.R, nx + selfHalf.w)) / 2;
+          if (overlapLen(nx - selfHalf.w, nx + selfHalf.w, p.L, p.R) < 0.5) return;
+          var px = Math.round(kg.gap / 100 * layerH);
+          if (Math.abs(ny - targetAbove) <= SPACE_SNAP) {
+            ny = Math.round(targetAbove * 10) / 10;
+            snappedSpace = { axis: 'y', gap: kg.gap, px: px };
+            equalSpaces.push({
               axis: 'y',
-              pos: posY,
-              cross: (Math.max(selfBox.L, p.L) + Math.min(selfBox.R, p.R)) / 2,
-              px: Math.round(gapY / 100 * layerH),
-              gapPct: gapY,
-              uniform: false
-            };
-            if (!nearest || entryY.gapPct < nearest.gapPct) nearest = entryY;
+              pos: (ny + selfHalf.h + p.T) / 2,
+              cross: cross,
+              px: px,
+              uniform: true
+            });
+            equalSpaces.push({
+              axis: 'y',
+              pos: (kg.top.B + kg.bot.T) / 2,
+              cross: kg.x,
+              px: px,
+              uniform: true
+            });
+          } else if (Math.abs(ny - targetBelow) <= SPACE_SNAP) {
+            ny = Math.round(targetBelow * 10) / 10;
+            snappedSpace = { axis: 'y', gap: kg.gap, px: px };
+            equalSpaces.push({
+              axis: 'y',
+              pos: (p.B + ny - selfHalf.h) / 2,
+              cross: cross,
+              px: px,
+              uniform: true
+            });
+            equalSpaces.push({
+              axis: 'y',
+              pos: (kg.top.B + kg.bot.T) / 2,
+              cross: kg.x,
+              px: px,
+              uniform: true
+            });
           }
-        }
-        if (oy > 0.5) {
-          var gapX = null;
-          var posX = null;
-          if (selfBox.R <= p.L) {
-            gapX = p.L - selfBox.R;
-            posX = (selfBox.R + p.L) / 2;
-          } else if (p.R <= selfBox.L) {
-            gapX = selfBox.L - p.R;
-            posX = (p.R + selfBox.L) / 2;
-          }
-          if (gapX != null && gapX > 0.15) {
-            var entryX = {
-              axis: 'x',
-              pos: posX,
-              cross: (Math.max(selfBox.T, p.T) + Math.min(selfBox.B, p.B)) / 2,
-              px: Math.round(gapX / 100 * layerW),
-              gapPct: gapX,
-              uniform: false
-            };
-            if (!nearest || entryX.gapPct < nearest.gapPct) nearest = entryX;
-          }
-        }
+        });
       });
-      if (nearest) guides.spacing = [nearest];
+      knownGapsX.forEach(function (kg) {
+        if (!(kg.gap > 0.2) || snappedSpace) return;
+        peers.forEach(function (p) {
+          if (snappedSpace) return;
+          var targetLeft = p.L - kg.gap - selfHalf.w;
+          var targetRight = p.R + kg.gap + selfHalf.w;
+          var cross = (Math.max(p.T, ny - selfHalf.h) + Math.min(p.B, ny + selfHalf.h)) / 2;
+          if (overlapLen(ny - selfHalf.h, ny + selfHalf.h, p.T, p.B) < 0.5) return;
+          var px = Math.round(kg.gap / 100 * layerW);
+          if (Math.abs(nx - targetLeft) <= SPACE_SNAP) {
+            nx = Math.round(targetLeft * 10) / 10;
+            snappedSpace = { axis: 'x', gap: kg.gap, px: px };
+            equalSpaces.push({
+              axis: 'x',
+              pos: (nx + selfHalf.w + p.L) / 2,
+              cross: cross,
+              px: px,
+              uniform: true
+            });
+            equalSpaces.push({
+              axis: 'x',
+              pos: (kg.left.R + kg.right.L) / 2,
+              cross: kg.y,
+              px: px,
+              uniform: true
+            });
+          } else if (Math.abs(nx - targetRight) <= SPACE_SNAP) {
+            nx = Math.round(targetRight * 10) / 10;
+            snappedSpace = { axis: 'x', gap: kg.gap, px: px };
+            equalSpaces.push({
+              axis: 'x',
+              pos: (p.R + nx - selfHalf.w) / 2,
+              cross: cross,
+              px: px,
+              uniform: true
+            });
+            equalSpaces.push({
+              axis: 'x',
+              pos: (kg.left.R + kg.right.L) / 2,
+              cross: kg.y,
+              px: px,
+              uniform: true
+            });
+          }
+        });
+      });
 
-      return { x: x, y: y, guides: guides };
+      if (equalSpaces.length) {
+        guides.spacing = equalSpaces;
+      } else {
+        /* Nearest edge-to-edge distance to a peer in the same column/row. */
+        var selfBox = {
+          L: nx - selfHalf.w,
+          R: nx + selfHalf.w,
+          T: ny - selfHalf.h,
+          B: ny + selfHalf.h,
+          cx: nx,
+          cy: ny
+        };
+        var nearest = null;
+        peers.forEach(function (p) {
+          var ox2 = overlapLen(selfBox.L, selfBox.R, p.L, p.R);
+          var oy2 = overlapLen(selfBox.T, selfBox.B, p.T, p.B);
+          if (ox2 > 0.5) {
+            var gapY2 = null;
+            var posY2 = null;
+            if (selfBox.B <= p.T) {
+              gapY2 = p.T - selfBox.B;
+              posY2 = (selfBox.B + p.T) / 2;
+            } else if (p.B <= selfBox.T) {
+              gapY2 = selfBox.T - p.B;
+              posY2 = (p.B + selfBox.T) / 2;
+            }
+            if (gapY2 != null && gapY2 > 0.15) {
+              var entryY2 = {
+                axis: 'y',
+                pos: posY2,
+                cross: (Math.max(selfBox.L, p.L) + Math.min(selfBox.R, p.R)) / 2,
+                px: Math.round(gapY2 / 100 * layerH),
+                gapPct: gapY2,
+                uniform: false
+              };
+              if (!nearest || entryY2.gapPct < nearest.gapPct) nearest = entryY2;
+            }
+          }
+          if (oy2 > 0.5) {
+            var gapX2 = null;
+            var posX2 = null;
+            if (selfBox.R <= p.L) {
+              gapX2 = p.L - selfBox.R;
+              posX2 = (selfBox.R + p.L) / 2;
+            } else if (p.R <= selfBox.L) {
+              gapX2 = selfBox.L - p.R;
+              posX2 = (p.R + selfBox.L) / 2;
+            }
+            if (gapX2 != null && gapX2 > 0.15) {
+              var entryX2 = {
+                axis: 'x',
+                pos: posX2,
+                cross: (Math.max(selfBox.T, p.T) + Math.min(selfBox.B, p.B)) / 2,
+                px: Math.round(gapX2 / 100 * layerW),
+                gapPct: gapX2,
+                uniform: false
+              };
+              if (!nearest || entryX2.gapPct < nearest.gapPct) nearest = entryX2;
+            }
+          }
+        });
+        if (nearest) guides.spacing = [nearest];
+      }
+
+      /* Short match segments between nearest vertices (visual; snap already applied above). */
+      guides.align = collectPeerAlignMatches(boxAt(selfBtn, nx, ny), peers, 0.85);
+
+      return { x: nx, y: ny, guides: guides };
     }
 
 
