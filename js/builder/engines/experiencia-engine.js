@@ -455,47 +455,80 @@ var ExperienciaEngine = (function () {
     }
     if (g._baseWidth == null) g._baseWidth = Number(g.width) || 20;
     if (g._baseHeight == null) g._baseHeight = Number(g.height) || 20;
+    if (g._transformV !== 2 && n && g.memberIds.length) {
+      reconcileOverlayGroupTransform(n, g, lw, lh);
+    }
     return g;
   }
 
-  function computeOverlayUnionBounds(n, memberIds, layerW, layerH) {
+  function computeOverlayUnionBounds(n, memberIds, layerW, layerH, opts) {
+    opts = opts || {};
     memberIds = (memberIds || []).map(String).filter(Boolean);
     if (!n || memberIds.length < 1) return null;
-    var minX = Infinity;
-    var minY = Infinity;
-    var maxX = -Infinity;
-    var maxY = -Infinity;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var minL = Infinity;
+    var minT = Infinity;
+    var maxR = -Infinity;
+    var maxB = -Infinity;
     memberIds.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
-      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+      var world = opts.useComposed
+        ? overlayWorldLayoutRaw(n, ix, layerW, layerH)
+        : overlayWorldLayoutAbsolute(ix, layerW, layerH);
       if (!world) return;
-      var corners = overlayRotatedCorners(world.x, world.y, world.width, world.height, world.rotation);
+      var cxPx = (world.x / 100) * layerW;
+      var cyPx = (world.y / 100) * layerH;
+      var wPx = (world.width / 100) * layerW;
+      var hPx = (world.height / 100) * layerH;
+      var corners = overlayRotatedCorners(cxPx, cyPx, wPx, hPx, world.rotation);
       corners.forEach(function (c) {
-        if (c.x < minX) minX = c.x;
-        if (c.y < minY) minY = c.y;
-        if (c.x > maxX) maxX = c.x;
-        if (c.y > maxY) maxY = c.y;
+        if (c.x < minL) minL = c.x;
+        if (c.y < minT) minT = c.y;
+        if (c.x > maxR) maxR = c.x;
+        if (c.y > maxB) maxB = c.y;
       });
     });
-    if (!isFinite(minX)) return null;
+    if (!isFinite(minL)) return null;
     return {
-      cx: (minX + maxX) / 2,
-      cy: (minY + maxY) / 2,
-      w: Math.max(0.5, maxX - minX),
-      h: Math.max(0.5, maxY - minY)
+      cx: (((minL + maxR) / 2) / layerW) * 100,
+      cy: (((minT + maxB) / 2) / layerH) * 100,
+      w: Math.max(0.5, ((maxR - minL) / layerW) * 100),
+      h: Math.max(0.5, ((maxB - minT) / layerH) * 100)
     };
   }
 
-  /** World layout without re-entering group compose (uses ix.x/y when ungrouped). */
-  function overlayWorldLayoutRaw(n, ix, layerW, layerH) {
-    if (!ix) return null;
-    if (ix.groupId && ix.localX != null && ix.localY != null) {
-      var g = getInteraction(n, ix.groupId);
-      if (g && isOverlayGroupInteraction(g)) {
-        return composeOverlayWorldLayout(g, ix, layerW, layerH);
-      }
+  function reconcileOverlayGroupTransform(n, g, layerW, layerH) {
+    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    g.memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      var world = overlayWorldLayoutAbsolute(ix, layerW, layerH);
+      if (!world) return;
+      var loc = worldPointToLocal(g, world.x, world.y, layerW, layerH);
+      ix.localX = loc.x;
+      ix.localY = loc.y;
+      ix.localRotation = world.rotation - (Number(g.rotation) || 0);
+      ix.groupId = g.id;
+    });
+    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    if (bounds) {
+      g.x = bounds.cx;
+      g.y = bounds.cy;
+      g.width = bounds.w;
+      g.height = bounds.h;
+      if (g._baseWidth == null) g._baseWidth = bounds.w;
+      if (g._baseHeight == null) g._baseHeight = bounds.h;
     }
+    g._transformV = 2;
+    return g;
+  }
+
+  function overlayWorldLayoutAbsolute(ix, layerW, layerH) {
+    if (!ix) return null;
     var layout = resolveButtonLayout(ix, layerW, layerH);
     var size = overlayItemSizePct(ix, layerW, layerH);
     return {
@@ -509,20 +542,33 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  /** World layout without re-entering group compose (uses ix.x/y when ungrouped). */
+  function overlayWorldLayoutRaw(n, ix, layerW, layerH) {
+    if (!ix) return null;
+    if (ix.groupId && ix.localX != null && ix.localY != null) {
+      var g = getInteraction(n, ix.groupId);
+      if (g && isOverlayGroupInteraction(g)) {
+        return composeOverlayWorldLayout(g, ix, layerW, layerH);
+      }
+    }
+    return overlayWorldLayoutAbsolute(ix, layerW, layerH);
+  }
+
   function composeOverlayWorldLayout(group, child, layerW, layerH) {
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(null, group, layerW, layerH);
     var gr = Number(group.rotation) || 0;
-    var lx = Number(child.localX) || 0;
-    var ly = Number(child.localY) || 0;
-    var r = rotatePoint2d(lx, ly, gr);
-    var wx = Number(group.x) + r.x;
-    var wy = Number(group.y) + r.y;
-    var wr = gr + (Number(child.localRotation) || 0);
+    var lxPx = (Number(child.localX) || 0) / 100 * layerW;
+    var lyPx = (Number(child.localY) || 0) / 100 * layerH;
+    var r = rotatePoint2d(lxPx, lyPx, gr);
+    var gxPx = (Number(group.x) / 100) * layerW;
+    var gyPx = (Number(group.y) / 100) * layerH;
     var size = overlayItemSizePct(child, layerW, layerH);
     return {
-      x: wx,
-      y: wy,
-      rotation: wr,
+      x: ((gxPx + r.x) / layerW) * 100,
+      y: ((gyPx + r.y) / layerH) * 100,
+      rotation: gr + (Number(child.localRotation) || 0),
       width: size.w,
       height: size.h,
       boxW: size.w,
@@ -530,17 +576,29 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  function worldPointToLocal(group, wx, wy) {
-    var dx = Number(wx) - Number(group.x);
-    var dy = Number(wy) - Number(group.y);
-    return rotatePoint2d(dx, dy, -(Number(group.rotation) || 0));
+  function worldPointToLocal(group, wxPct, wyPct, layerW, layerH) {
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var gxPx = (Number(group.x) / 100) * layerW;
+    var gyPx = (Number(group.y) / 100) * layerH;
+    var wxPx = (Number(wxPct) / 100) * layerW;
+    var wyPx = (Number(wyPct) / 100) * layerH;
+    var inv = rotatePoint2d(
+      wxPx - gxPx,
+      wyPx - gyPx,
+      -(Number(group.rotation) || 0)
+    );
+    return {
+      x: (inv.x / layerW) * 100,
+      y: (inv.y / layerH) * 100
+    };
   }
 
   function absoluteToLocalOverlay(group, child, layerW, layerH) {
     ensureOverlayGroupDefaults(null, group, layerW, layerH);
-    var world = overlayWorldLayoutRaw(null, child, layerW, layerH);
+    var world = overlayWorldLayoutAbsolute(child, layerW, layerH);
     if (!world) return null;
-    var inv = worldPointToLocal(group, world.x, world.y);
+    var inv = worldPointToLocal(group, world.x, world.y, layerW, layerH);
     return {
       localX: inv.x,
       localY: inv.y,
@@ -852,6 +910,7 @@ var ExperienciaEngine = (function () {
       }
       ix.groupId = groupId;
     });
+    reconcileOverlayGroupTransform(n, group, lw, lh);
     return group;
   }
 
@@ -1451,7 +1510,7 @@ var ExperienciaEngine = (function () {
             if (patch.x != null) tx = clampPercent(patch.x, curW.x);
             if (patch.y != null) ty = clampPercent(patch.y, curW.y);
           }
-          var locPt = worldPointToLocal(gPos, tx, ty);
+          var locPt = worldPointToLocal(gPos, tx, ty, 1000, 1000);
           ix.localX = locPt.x;
           ix.localY = locPt.y;
         }

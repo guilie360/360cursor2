@@ -4188,16 +4188,17 @@ var ExperienciaCanvas = (function () {
       var moved = false;
       buttons.forEach(function (b) {
         if (!b || !b.id) return;
-        var layout = (b._ix && ExperienciaEngine.resolveButtonLayout)
-          ? ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH)
-          : { x: Number(b.x) || 50, y: Number(b.y) || 50 };
+        var vm = (b._ix && ExperienciaEngine.buttonViewModel)
+          ? ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH)
+          : b;
+        var layout = { x: Number(vm.x) || 50, y: Number(vm.y) || 50 };
         var el = buttonsLayer.querySelector(
           '[data-exp-stage-btn="' + String(b.id).replace(/"/g, '') + '"]'
         );
         if (!el) return;
         moved = true;
         var t = String(b.type || 'BUTTON').toUpperCase();
-        var rot = Number(b.rotation) || 0;
+        var rot = Number(vm.rotation) || 0;
         el.style.left = Number(layout.x) + '%';
         el.style.top = Number(layout.y) + '%';
         el.style.setProperty('--btn-rot', rot + 'deg');
@@ -4445,13 +4446,8 @@ var ExperienciaCanvas = (function () {
       var layerW = buttonsLayer.clientWidth || (buttonsImg.naturalWidth || 1000);
       var layerH = buttonsLayer.clientHeight || (buttonsImg.naturalHeight || 1000);
       var buttons = (ExperienciaEngine.listSceneButtons(state, n) || []).map(function (b) {
-        if (!b || !b._ix || !ExperienciaEngine.resolveButtonLayout) return b;
-        var layout = ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH);
-        /* Keep all view-model fields (typography, size, hover…) — only refresh layout. */
-        return Object.assign({}, b, {
-          x: layout.x,
-          y: layout.y
-        });
+        if (!b || !b._ix || !ExperienciaEngine.buttonViewModel) return b;
+        return ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH);
       });
       var selIds = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
@@ -5652,9 +5648,10 @@ var ExperienciaCanvas = (function () {
       ids.forEach(function (id) {
         var b = ExperienciaEngine.getSceneButton(state, n, id);
         if (!b || !b._ix) return;
-        var layout = ExperienciaEngine.resolveButtonLayout
-          ? ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH)
-          : { x: b.x, y: b.y };
+        var vm = ExperienciaEngine.buttonViewModel
+          ? ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH)
+          : b;
+        var layout = { x: vm.x, y: vm.y };
         var snap;
         try {
           snap = JSON.parse(JSON.stringify(b._ix));
