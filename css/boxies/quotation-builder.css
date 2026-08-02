@@ -4561,11 +4561,15 @@ body.quotation-canvas-first .builder-workspace,
   padding: 0;
   cursor: move;
   z-index: 2;
-  min-width: 24px;
-  min-height: 24px;
+  /* Soft floor — hard 24px min fought live % resize and desynced model vs paint. */
+  min-width: 8px;
+  min-height: 8px;
   box-sizing: border-box;
   transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
   transform-origin: center center;
+}
+.builder-exp-stage-shape--circle {
+  border-radius: 50% !important;
 }
 .builder-exp-stage-shape.is-selected {
   outline: none;

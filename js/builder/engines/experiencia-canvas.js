@@ -1814,6 +1814,8 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var buttonDrag = null;
     var transformDrag = null;
+    /** Custom double-tap on rotate — native dblclick dies when gizmo remounts on pointerup. */
+    var rotateTapArmed = null; /* { buttonId, at } */
     var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
@@ -4092,8 +4094,13 @@ var ExperienciaCanvas = (function () {
         el.style.top = Number(layout.y) + '%';
         el.style.setProperty('--btn-rot', rot + 'deg');
         if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
-          el.style.width = (Number(b.width) || 12) + '%';
-          el.style.height = (Number(b.height) || 8) + '%';
+          var sw = Number(b.width) || 12;
+          var sh = Number(b.height) || 8;
+          if (t === 'SHAPE_CIRCLE') {
+            sh = sw * (layerW / Math.max(1, layerH));
+          }
+          el.style.width = sw + '%';
+          el.style.height = sh + '%';
         } else if (t === 'BUTTON') {
           if (b.boxW != null) el.style.width = Number(b.boxW) + '%';
           if (b.boxH != null) el.style.height = Number(b.boxH) + '%';
@@ -4124,6 +4131,9 @@ var ExperienciaCanvas = (function () {
             : (gst === 'SHAPE_RECT' || gst === 'SHAPE_CIRCLE'
               ? (Number(gb.height) || 8)
               : Math.max(3, ((Number(gb.fontSize) || 28) / layerH) * 100 * 1.4));
+          if (gst === 'SHAPE_CIRCLE') {
+            gh = gw * (layerW / Math.max(1, layerH));
+          }
           gizmo.style.left = Number(gl.x) + '%';
           gizmo.style.top = Number(gl.y) + '%';
           gizmo.style.width = gw + '%';
@@ -4341,8 +4351,13 @@ var ExperienciaCanvas = (function () {
           '</button>';
         }
         if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
-          styleBits += 'width:' + (Number(b.width) || 12) + '%;' +
-            'height:' + (Number(b.height) || 8) + '%;' +
+          var shapeW = Number(b.width) || 12;
+          var shapeH = Number(b.height) || 8;
+          if (t === 'SHAPE_CIRCLE') {
+            shapeH = shapeW * (layerW / Math.max(1, layerH));
+          }
+          styleBits += 'width:' + shapeW + '%;' +
+            'height:' + shapeH + '%;' +
             'background:' + (b.fill || 'rgba(255,255,255,0.14)') + ';' +
             'border:' + (Number(b.strokeWidth) != null && !isNaN(Number(b.strokeWidth))
               ? Number(b.strokeWidth) : 1) + 'px solid ' +
@@ -4431,6 +4446,9 @@ var ExperienciaCanvas = (function () {
           } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
             gw = Number(selBtn.width) || 12;
             gh = Number(selBtn.height) || 8;
+            if (st === 'SHAPE_CIRCLE') {
+              gh = gw * (layerW / Math.max(1, layerH));
+            }
           } else {
             /* TEXT: approximate box from font size for rotate-only + light resize */
             gw = Math.max(8, Math.min(40, (String(selBtn.label || 'Texto').length) * 1.2));
@@ -4731,10 +4749,10 @@ var ExperienciaCanvas = (function () {
       return snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, 1.45);
     }
 
-    /** Resize: snap moving edge(s) to canvas / peers / red guides; keep opposite fixed. */
+    /** Resize: snap moving edge only to canvas bounds + red guides (not peers/center). */
     function snapBoxToSceneGuides(cx, cy, w, h, mode, opts) {
       opts = opts || {};
-      var GUIDE_SNAP = 1.45;
+      var GUIDE_SNAP = 0.9;
       if (!mode || mode === 'rotate') {
         return { x: cx, y: cy, w: w, h: h };
       }
@@ -4746,21 +4764,9 @@ var ExperienciaCanvas = (function () {
       var bottom = cy + hh;
       var m = String(mode || '');
 
-      var linesX = [0, 50, 100];
-      var linesY = [0, 50, 100];
-      if (opts.sceneId) {
-        var n = ExperienciaEngine.getNode(state, opts.sceneId);
-        var list = ExperienciaEngine.listSceneButtons(state, n) || [];
-        list.forEach(function (peer) {
-          if (!peer || String(peer.id) === String(opts.excludeId)) return;
-          var ph = overlayHalfSizePct(peer);
-          var px = Number(peer.x);
-          var py = Number(peer.y);
-          if (!isFinite(px) || !isFinite(py)) return;
-          linesX.push(px, px - ph.w, px + ph.w);
-          linesY.push(py, py - ph.h, py + ph.h);
-        });
-      }
+      /* Soft snap only — canvas edges + red guides. Peer snap made resize jumpy. */
+      var linesX = [0, 100];
+      var linesY = [0, 100];
       listSceneSnapGuides().forEach(function (g) {
         if (!g) return;
         var pos = Number(g.position);
@@ -5899,12 +5905,18 @@ var ExperienciaCanvas = (function () {
         if (transformDrag && ev.pointerId === transformDrag.pointerId) {
           ev.preventDefault();
           var pctT = percentFromPointer(ev);
-          if (!transformDrag.historyPushed) {
-            pushButtonHistory(transformDrag.sceneId);
-            transformDrag.historyPushed = true;
-          }
           var mode = transformDrag.mode;
           if (mode === 'rotate') {
+            var distR = Math.hypot(
+              pctT.x - transformDrag.startPx,
+              pctT.y - transformDrag.startPy
+            );
+            /* Ignore tiny jitter so a click can arm double-tap for the degree editor. */
+            if (distR < 1.25) return;
+            if (!transformDrag.historyPushed) {
+              pushButtonHistory(transformDrag.sceneId);
+              transformDrag.historyPushed = true;
+            }
             var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
             var deg = Math.round((ang * 180) / Math.PI) + 90;
             /* Hold Shift while rotating → snap to 45° increments. */
@@ -5917,31 +5929,64 @@ var ExperienciaCanvas = (function () {
               rotation: deg
             });
           } else {
+            if (!transformDrag.historyPushed) {
+              pushButtonHistory(transformDrag.sceneId);
+              transformDrag.historyPushed = true;
+            }
             var dx = pctT.x - transformDrag.startPx;
             var dy = pctT.y - transformDrag.startPy;
-            var nw = transformDrag.startW;
-            var nh = transformDrag.startH;
-            var nx = transformDrag.startX;
-            var ny = transformDrag.startY;
-            if (mode.indexOf('e') >= 0) { nw = transformDrag.startW + dx; nx = transformDrag.startX + dx / 2; }
-            if (mode.indexOf('w') >= 0) { nw = transformDrag.startW - dx; nx = transformDrag.startX + dx / 2; }
-            if (mode.indexOf('s') >= 0) { nh = transformDrag.startH + dy; ny = transformDrag.startY + dy / 2; }
-            if (mode.indexOf('n') >= 0) { nh = transformDrag.startH - dy; ny = transformDrag.startY + dy / 2; }
+            var L = transformDrag.startX - transformDrag.startW / 2;
+            var R = transformDrag.startX + transformDrag.startW / 2;
+            var T = transformDrag.startY - transformDrag.startH / 2;
+            var B = transformDrag.startY + transformDrag.startH / 2;
+            if (mode.indexOf('e') >= 0) R = transformDrag.startX + transformDrag.startW / 2 + dx;
+            if (mode.indexOf('w') >= 0) L = transformDrag.startX - transformDrag.startW / 2 + dx;
+            if (mode.indexOf('s') >= 0) B = transformDrag.startY + transformDrag.startH / 2 + dy;
+            if (mode.indexOf('n') >= 0) T = transformDrag.startY - transformDrag.startH / 2 + dy;
+            var nw = Math.max(1.5, R - L);
+            var nh = Math.max(1.5, B - T);
             if (transformDrag.keepRatio && transformDrag.startW > 0) {
               var ratio = transformDrag.startH / transformDrag.startW;
-              if (mode === 'n' || mode === 's') {
-                nw = nh / ratio;
-              } else {
-                nh = nw * ratio;
+              /* Circles: lock to a pixel-square so % width/height stay circular on any aspect. */
+              if (transformDrag.type === 'SHAPE_CIRCLE' && transformDrag.layerAspect > 0) {
+                ratio = transformDrag.layerAspect;
               }
+              var moveX = mode.indexOf('e') >= 0 || mode.indexOf('w') >= 0;
+              var moveY = mode.indexOf('n') >= 0 || mode.indexOf('s') >= 0;
+              if (moveX && !moveY) {
+                nh = nw * ratio;
+              } else if (moveY && !moveX) {
+                nw = nh / ratio;
+              } else if (Math.abs(dx) * transformDrag.startH >= Math.abs(dy) * transformDrag.startW) {
+                nh = nw * ratio;
+              } else {
+                nw = nh / ratio;
+              }
+              /* Re-anchor opposite edges after ratio lock. */
+              if (mode.indexOf('w') >= 0 && mode.indexOf('e') < 0) R = L + nw;
+              else if (mode.indexOf('e') >= 0 && mode.indexOf('w') < 0) L = R - nw;
+              else {
+                var midX = (L + R) / 2;
+                L = midX - nw / 2;
+                R = midX + nw / 2;
+              }
+              if (mode.indexOf('n') >= 0 && mode.indexOf('s') < 0) B = T + nh;
+              else if (mode.indexOf('s') >= 0 && mode.indexOf('n') < 0) T = B - nh;
+              else {
+                var midY = (T + B) / 2;
+                T = midY - nh / 2;
+                B = midY + nh / 2;
+              }
+              nw = Math.max(1.5, R - L);
+              nh = Math.max(1.5, B - T);
             }
             nw = Math.max(1.5, Math.min(90, nw));
             nh = Math.max(1.5, Math.min(90, nh));
-            nx = Math.max(0, Math.min(100, nx));
-            ny = Math.max(0, Math.min(100, ny));
-            if (transformDrag.type === 'BUTTON' ||
+            var nx = Math.max(0, Math.min(100, (L + R) / 2));
+            var ny = Math.max(0, Math.min(100, (T + B) / 2));
+            if (!ev.shiftKey && (transformDrag.type === 'BUTTON' ||
                 transformDrag.type === 'SHAPE_RECT' ||
-                transformDrag.type === 'SHAPE_CIRCLE') {
+                transformDrag.type === 'SHAPE_CIRCLE')) {
               var boxSnap = snapBoxToSceneGuides(nx, ny, nw, nh, mode, {
                 sceneId: transformDrag.sceneId,
                 excludeId: transformDrag.buttonId
@@ -5950,6 +5995,9 @@ var ExperienciaCanvas = (function () {
               ny = boxSnap.y;
               nw = boxSnap.w;
               nh = boxSnap.h;
+            }
+            if (transformDrag.type === 'SHAPE_CIRCLE' && transformDrag.layerAspect > 0) {
+              nh = nw * transformDrag.layerAspect;
             }
             var patchT = { x: nx, y: ny };
             if (transformDrag.type === 'BUTTON') {
@@ -6043,29 +6091,51 @@ var ExperienciaCanvas = (function () {
           if (!btnG || btnG.locked) return;
           ev.preventDefault();
           ev.stopPropagation();
-          /* Second click of double-click on rotate → wait for dblclick editor. */
-          if (handle.getAttribute('data-handle') === 'rotate' && ev.detail >= 2) {
-            return;
+          var handleMode = handle.getAttribute('data-handle');
+          /* Custom double-tap on rotate (gizmo remount kills native dblclick). */
+          if (handleMode === 'rotate') {
+            var nowTap = Date.now();
+            if (rotateTapArmed &&
+                String(rotateTapArmed.buttonId) === String(gid) &&
+                (nowTap - rotateTapArmed.at) < 480) {
+              rotateTapArmed = null;
+              openOverlayRotationEditor(
+                ev.clientX, ev.clientY, sceneIdG, gid, handle
+              );
+              return;
+            }
+          } else {
+            rotateTapArmed = null;
           }
           var pct0 = percentFromPointer(ev);
+          var layerW0 = buttonsLayer.clientWidth || 1000;
+          var layerH0 = buttonsLayer.clientHeight || 1000;
+          var startW0 = gtype === 'BUTTON'
+            ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
+            : (Number(btnG.width) || 12);
+          var startH0 = gtype === 'BUTTON'
+            ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
+            : (Number(btnG.height) || 8);
+          /* Circle: store height so the box is pixel-square at drag start. */
+          var layerAspect = layerW0 / Math.max(1, layerH0);
+          if (gtype === 'SHAPE_CIRCLE') {
+            startH0 = startW0 * layerAspect;
+          }
           transformDrag = {
-            mode: handle.getAttribute('data-handle'),
+            mode: handleMode,
             buttonId: gid,
             sceneId: sceneIdG,
             type: gtype,
             pointerId: ev.pointerId,
             startX: btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50,
             startY: btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50,
-            startW: gtype === 'BUTTON'
-              ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
-              : (Number(btnG.width) || 12),
-            startH: gtype === 'BUTTON'
-              ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
-              : (Number(btnG.height) || 8),
+            startW: startW0,
+            startH: startH0,
             startRot: Number(btnG.rotation) || 0,
             startPx: pct0.x,
             startPy: pct0.y,
-            keepRatio: !!ev.shiftKey,
+            keepRatio: !!ev.shiftKey || gtype === 'SHAPE_CIRCLE',
+            layerAspect: layerAspect,
             historyPushed: false,
             live: true
           };
@@ -6126,8 +6196,15 @@ var ExperienciaCanvas = (function () {
       function endButtonDrag(ev) {
         if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
           var movedT = transformDrag.historyPushed;
+          var wasRotate = transformDrag.mode === 'rotate';
+          var rotBtnId = transformDrag.buttonId;
           transformDrag = null;
           unbindOverlayPointerDocs();
+          if (wasRotate && !movedT) {
+            rotateTapArmed = { buttonId: rotBtnId, at: Date.now() };
+          } else {
+            rotateTapArmed = null;
+          }
           paintButtonsStage();
           paintInspector();
           if (movedT) persist();
@@ -6143,23 +6220,6 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
-      buttonsLayer.addEventListener('dblclick', function (ev) {
-        var rotHandle = ev.target && ev.target.closest
-          ? ev.target.closest('[data-handle="rotate"]')
-          : null;
-        if (!rotHandle || !rotHandle.closest('[data-exp-gizmo]')) return;
-        ev.preventDefault();
-        ev.stopPropagation();
-        if (transformDrag) {
-          transformDrag = null;
-          unbindOverlayPointerDocs();
-        }
-        var gizmo = rotHandle.closest('[data-exp-gizmo]');
-        var gid = gizmo && gizmo.getAttribute('data-gizmo-id');
-        openOverlayRotationEditor(
-          ev.clientX, ev.clientY, canvas().selectedId, gid, rotHandle
-        );
-      });
       /* Force hover color in Builder (theme tokens otherwise keep white). */
       buttonsLayer.addEventListener('mouseover', function (ev) {
         var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn.is-hover-on');
