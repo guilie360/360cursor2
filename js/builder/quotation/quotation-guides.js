@@ -1,6 +1,10 @@
 /**
  * QuotationGuides — rulers + scene guides (%) for Quotation Editor.
  * rulersVisible / guidesVisible are session-only; guides[] persist on each scene.
+ *
+ * Coordinate space = active viewport window (Desktop / Tablet / Mobile), not the
+ * 1920×1080 HeroCanvas lienzo. Guides are % of that window so they stay visible
+ * and proportional when switching responsive presets.
  */
 var QuotationGuides = (function () {
   var RULER_THICK = 15;
@@ -54,6 +58,11 @@ var QuotationGuides = (function () {
     return rootEl ? rootEl.querySelector('[data-qe-viewport-window]') : null;
   }
 
+  /** Active device frame — rulers + guides live here (not the 1920 lienzo). */
+  function guideSpaceEl() {
+    return stageEl();
+  }
+
   function designCanvasEl() {
     var stage = stageEl();
     if (!stage) return null;
@@ -63,10 +72,19 @@ var QuotationGuides = (function () {
       null;
   }
 
-  function clientToDesignPct(clientX, clientY) {
+  function stripLegacyGuideLayer() {
     var canvas = designCanvasEl();
-    if (!canvas) return null;
-    var rect = canvas.getBoundingClientRect();
+    if (!canvas) return;
+    var legacy = canvas.querySelector('[data-qe-guide-layer]');
+    if (legacy && legacy.parentNode === canvas) {
+      try { legacy.parentNode.removeChild(legacy); } catch (eL) { /* ignore */ }
+    }
+  }
+
+  function clientToDesignPct(clientX, clientY) {
+    var space = guideSpaceEl();
+    if (!space) return null;
+    var rect = space.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
     return {
       x: clampPct(((clientX - rect.left) / rect.width) * 100),
@@ -186,16 +204,15 @@ var QuotationGuides = (function () {
     chrome.hidden = !on;
     if (!on) return;
 
-    var canvas = designCanvasEl() || stageEl();
-    var rect = canvas ? canvas.getBoundingClientRect() : null;
+    var space = guideSpaceEl();
+    var rect = space ? space.getBoundingClientRect() : null;
     var design = designSize();
     var scaleX = rect && design.width ? rect.width / design.width : 1;
     var scaleY = rect && design.height ? rect.height / design.height : 1;
 
     var h = chrome.querySelector('[data-qe-ruler="h"]');
     var v = chrome.querySelector('[data-qe-ruler="v"]');
-    var stage = stageEl();
-    if (stage && rect) {
+    if (space && rect) {
       var frame = chrome.parentElement;
       var frameRect = frame ? frame.getBoundingClientRect() : null;
       if (frameRect) {
@@ -237,18 +254,22 @@ var QuotationGuides = (function () {
   }
 
   function ensureGuideLayer() {
-    var canvas = designCanvasEl();
-    if (!canvas) return null;
-    var layer = canvas.querySelector('[data-qe-guide-layer]');
+    var host = guideSpaceEl();
+    if (!host) return null;
+    stripLegacyGuideLayer();
+    var layer = host.querySelector('[data-qe-guide-layer]');
     if (!layer) {
       layer = document.createElement('div');
       layer.className = 'qe-guide-layer';
       layer.setAttribute('data-qe-guide-layer', '1');
-      canvas.appendChild(layer);
+      host.appendChild(layer);
       bindGuideLayer(layer);
-    } else if (layer.parentNode === canvas) {
-      /* Keep above edit/experiencia overlays after remounts. */
-      canvas.appendChild(layer);
+    } else if (layer.parentNode !== host) {
+      host.appendChild(layer);
+      bindGuideLayer(layer);
+    } else {
+      /* Keep above HeroCanvas / edit overlays after remounts. */
+      host.appendChild(layer);
     }
     return layer;
   }
@@ -264,9 +285,9 @@ var QuotationGuides = (function () {
     var shell = rootEl && rootEl.querySelector('[data-qe-stage-shell]');
     var s = shell ? parseFloat(shell.getAttribute('data-qe-stage-scale')) : NaN;
     if (s > 0.01) return s;
-    var canvas = designCanvasEl();
+    var space = guideSpaceEl();
     var design = designSize();
-    var rect = canvas && canvas.getBoundingClientRect();
+    var rect = space && space.getBoundingClientRect();
     if (rect && design.width) return rect.width / design.width;
     return 1;
   }

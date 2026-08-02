@@ -3519,7 +3519,8 @@ var QuotationEditor = (function () {
     if (typeof QuotationGuides === 'undefined' || !QuotationGuides.sync || !rootEl) return;
     QuotationGuides.sync(rootEl, {
       getActiveScene: function () { return activeScene(); },
-      getDesignSize: function () { return designLienzoSize(); },
+      /* Guides/rulers use the active device window so % maps across Desktop/Tablet/Mobile. */
+      getDesignSize: function () { return activeViewportSize(); },
       isPreviewMode: function () { return !!state.canvasPreviewMode; },
       onChange: function () { markDirtyLocal(); },
       onRulersChange: function (on) { state.rulersVisible = !!on; },
