@@ -4907,10 +4907,70 @@ var ExperienciaCanvas = (function () {
       return snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, 1.45);
     }
 
+    /** Snap only the moving box edges (px) to align lines in %. Opposite edge stays pinned. */
+    function snapResizeEdgesPx(Lpx, Rpx, Tpx, Bpx, mode, linesX, linesY, layerW, layerH, opts) {
+      opts = opts || {};
+      var snapPx = opts.snapPx != null ? opts.snapPx : 14;
+      var minWpx = opts.minWpx != null ? opts.minWpx : 8;
+      var minHpx = opts.minHpx != null ? opts.minHpx : 8;
+      var m = String(mode || '');
+      var moveE = m.indexOf('e') >= 0;
+      var moveW = m.indexOf('w') >= 0;
+      var moveS = m.indexOf('s') >= 0;
+      var moveN = m.indexOf('n') >= 0;
+      var fixL = opts.fixL != null ? opts.fixL : Lpx;
+      var fixR = opts.fixR != null ? opts.fixR : Rpx;
+      var fixT = opts.fixT != null ? opts.fixT : Tpx;
+      var fixB = opts.fixB != null ? opts.fixB : Bpx;
+
+      function snapEdgePx(edgePx, linesPct, dim) {
+        var best = snapPx + 1;
+        var hit = edgePx;
+        (linesPct || []).forEach(function (p) {
+          var linePx = (Number(p) / 100) * dim;
+          if (!isFinite(linePx)) return;
+          var d = Math.abs(edgePx - linePx);
+          if (d <= snapPx && d < best) {
+            best = d;
+            hit = Math.round(linePx);
+          }
+        });
+        return hit;
+      }
+
+      if (moveE && !moveW) {
+        Rpx = snapEdgePx(Rpx, linesX, layerW);
+        Rpx = Math.max(fixL + minWpx, Rpx);
+        Lpx = fixL;
+      } else if (moveW && !moveE) {
+        Lpx = snapEdgePx(Lpx, linesX, layerW);
+        Lpx = Math.min(fixR - minWpx, Lpx);
+        Rpx = fixR;
+      } else {
+        if (moveE) Rpx = Math.max(Lpx + minWpx, snapEdgePx(Rpx, linesX, layerW));
+        if (moveW) Lpx = Math.min(Rpx - minWpx, snapEdgePx(Lpx, linesX, layerW));
+      }
+
+      if (moveS && !moveN) {
+        Bpx = snapEdgePx(Bpx, linesY, layerH);
+        Bpx = Math.max(fixT + minHpx, Bpx);
+        Tpx = fixT;
+      } else if (moveN && !moveS) {
+        Tpx = snapEdgePx(Tpx, linesY, layerH);
+        Tpx = Math.min(fixB - minHpx, Tpx);
+        Bpx = fixB;
+      } else {
+        if (moveS) Bpx = Math.max(Tpx + minHpx, snapEdgePx(Bpx, linesY, layerH));
+        if (moveN) Tpx = Math.min(Bpx - minHpx, snapEdgePx(Tpx, linesY, layerH));
+      }
+
+      return { Lpx: Lpx, Rpx: Rpx, Tpx: Tpx, Bpx: Bpx };
+    }
+
     /** Resize: snap moving edge only; never move the opposite (anchored) edge. */
     function snapBoxToSceneGuides(cx, cy, w, h, mode, opts) {
       opts = opts || {};
-      var GUIDE_SNAP = 0.9;
+      var GUIDE_SNAP = opts.snapDist != null ? opts.snapDist : 1.2;
       if (!mode || mode === 'rotate') {
         return { x: cx, y: cy, w: w, h: h };
       }
@@ -4924,8 +4984,14 @@ var ExperienciaCanvas = (function () {
       var fixT = top;
       var fixB = bottom;
 
-      var linesX = [0, 100];
-      var linesY = [0, 100];
+      var linesX = [0, 50, 100];
+      var linesY = [0, 50, 100];
+      if (opts.linesX && opts.linesX.length) {
+        linesX = linesX.concat(opts.linesX);
+      }
+      if (opts.linesY && opts.linesY.length) {
+        linesY = linesY.concat(opts.linesY);
+      }
       listSceneSnapGuides().forEach(function (g) {
         if (!g) return;
         var pos = Number(g.position);
@@ -6290,12 +6356,71 @@ var ExperienciaCanvas = (function () {
               hPx = Bpx - Tpx;
             }
 
+            /* Snap moving edges to red guides + nearby peer edges (Shift bypasses). */
+            if (!ev.shiftKey) {
+              var Lpct = (Lpx / layerW) * 100;
+              var Rpct = (Rpx / layerW) * 100;
+              var Tpct = (Tpx / layerH) * 100;
+              var Bpct = (Bpx / layerH) * 100;
+              var resizeLines = collectOverlayAlignLines(
+                transformDrag.sceneId,
+                transformDrag.buttonId,
+                {
+                  L: Lpct,
+                  R: Rpct,
+                  T: Tpct,
+                  B: Bpct,
+                  cx: (Lpct + Rpct) / 2,
+                  cy: (Tpct + Bpct) / 2
+                }
+              );
+              var snappedPx = snapResizeEdgesPx(
+                Lpx, Rpx, Tpx, Bpx, mode,
+                resizeLines.x, resizeLines.y,
+                layerW, layerH,
+                {
+                  snapPx: 14,
+                  minWpx: minWpx,
+                  minHpx: minHpx,
+                  fixL: startLpx,
+                  fixR: startRpx,
+                  fixT: startTpx,
+                  fixB: startBpx
+                }
+              );
+              Lpx = snappedPx.Lpx;
+              Rpx = snappedPx.Rpx;
+              Tpx = snappedPx.Tpx;
+              Bpx = snappedPx.Bpx;
+              wPx = Rpx - Lpx;
+              hPx = Bpx - Tpx;
+              if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
+                var ratioSnap = transformDrag.type === 'SHAPE_CIRCLE'
+                  ? 1
+                  : (transformDrag.startHpx / transformDrag.startWpx);
+                if ((moveE || moveW) && !(moveN || moveS)) {
+                  hPx = wPx * ratioSnap;
+                  var midYpx2 = (startTpx + startBpx) / 2;
+                  Tpx = midYpx2 - hPx / 2;
+                  Bpx = midYpx2 + hPx / 2;
+                  if (moveE && !moveW) { Lpx = startLpx; Rpx = Lpx + wPx; }
+                  if (moveW && !moveE) { Rpx = startRpx; Lpx = Rpx - wPx; }
+                } else if ((moveN || moveS) && !(moveE || moveW)) {
+                  wPx = hPx / ratioSnap;
+                  var midXpx2 = (startLpx + startRpx) / 2;
+                  Lpx = midXpx2 - wPx / 2;
+                  Rpx = midXpx2 + wPx / 2;
+                  if (moveS && !moveN) { Tpx = startTpx; Bpx = Tpx + hPx; }
+                  if (moveN && !moveS) { Bpx = startBpx; Tpx = Bpx - hPx; }
+                }
+              }
+            }
+
             var nw = (wPx / layerW) * 100;
             var nh = (hPx / layerH) * 100;
             var nx = (((Lpx + Rpx) / 2) / layerW) * 100;
             var ny = (((Tpx + Bpx) / 2) / layerH) * 100;
 
-            /* No live snap — snap made the box vibrate near guides/edges. */
             var patchT = { x: nx, y: ny, live: true };
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
@@ -6524,6 +6649,7 @@ var ExperienciaCanvas = (function () {
         if (transformDrag && (!ev || ev.pointerId === transformDrag.pointerId)) {
           var movedT = transformDrag.historyPushed;
           var wasRotate = transformDrag.mode === 'rotate';
+          var endMode = transformDrag.mode;
           var rotBtnId = transformDrag.buttonId;
           var endScene = transformDrag.sceneId;
           var endType = transformDrag.type;
@@ -6534,26 +6660,54 @@ var ExperienciaCanvas = (function () {
           } else {
             rotateTapArmed = null;
           }
-          /* Snap stored geometry to 0.1 after live resize (no rounding mid-drag). */
+          /* Final snap + round stored geometry after live resize. */
           if (movedT && !wasRotate && endScene && rotBtnId) {
             var endBtn = ExperienciaEngine.getSceneButton(
               state, ExperienciaEngine.getNode(state, endScene), rotBtnId
             );
             if (endBtn) {
-              var finalize = {
-                x: endBtn.storedX != null ? endBtn.storedX : endBtn.x,
-                y: endBtn.storedY != null ? endBtn.storedY : endBtn.y
-              };
+              var cx = endBtn.storedX != null ? Number(endBtn.storedX) : Number(endBtn.x);
+              var cy = endBtn.storedY != null ? Number(endBtn.storedY) : Number(endBtn.y);
+              var ew = endType === 'BUTTON'
+                ? (endBtn.boxW != null ? Number(endBtn.boxW) : 14)
+                : (Number(endBtn.width) || 12);
+              var eh = endType === 'BUTTON'
+                ? (endBtn.boxH != null ? Number(endBtn.boxH) : 4.5)
+                : (Number(endBtn.height) || 8);
+              if (!(ev && ev.shiftKey)) {
+                var resizeLinesF = collectOverlayAlignLines(endScene, rotBtnId, {
+                  L: cx - ew / 2,
+                  R: cx + ew / 2,
+                  T: cy - eh / 2,
+                  B: cy + eh / 2,
+                  cx: cx,
+                  cy: cy
+                });
+                var snappedF = snapBoxToSceneGuides(cx, cy, ew, eh, endMode, {
+                  linesX: resizeLinesF.x,
+                  linesY: resizeLinesF.y,
+                  snapDist: 1.25
+                });
+                cx = snappedF.x;
+                cy = snappedF.y;
+                ew = snappedF.w;
+                eh = snappedF.h;
+              }
+              var finalize = { x: cx, y: cy };
               if (endType === 'BUTTON') {
-                finalize.boxW = endBtn.boxW;
-                finalize.boxH = endBtn.boxH;
+                finalize.boxW = ew;
+                finalize.boxH = eh;
               } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE') {
-                finalize.width = endBtn.width;
-                finalize.height = endBtn.height;
+                finalize.width = ew;
+                finalize.height = eh;
               }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, finalize);
             }
           }
+          try {
+            var gizmoEnd = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
+            if (gizmoEnd) gizmoEnd.classList.remove('is-sizing');
+          } catch (eGz) { /* ignore */ }
           paintButtonsStage();
           paintInspector();
           if (movedT) persist();
