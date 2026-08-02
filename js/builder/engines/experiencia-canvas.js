@@ -4182,6 +4182,7 @@ var ExperienciaCanvas = (function () {
         gizmo.style.top = topPx + 'px';
         gizmo.style.width = wPx + 'px';
         gizmo.style.height = hPx + 'px';
+        gizmo.classList.add('is-sizing');
         var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
         if (sizeEl) {
           var label = Math.max(1, Math.round(wPx)) + ' × ' + Math.max(1, Math.round(hPx));
@@ -6362,6 +6363,9 @@ var ExperienciaCanvas = (function () {
             historyPushed: false,
             live: true
           };
+          if (handleMode !== 'rotate') {
+            try { gizmo.classList.add('is-sizing'); } catch (eSz) { /* ignore */ }
+          }
           bindOverlayPointerDocs();
           try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
           return;

@@ -4533,7 +4533,7 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-text.is-selected {
   border: none;
   box-shadow: none;
-  outline: 1px solid rgba(111, 191, 134, 0.9);
+  outline: 1px solid #000;
   outline-offset: 3px;
 }
 .builder-exp-stage-text.is-invisible {
@@ -4573,6 +4573,12 @@ body.quotation-canvas-first .builder-workspace,
 }
 .builder-exp-stage-shape.is-selected {
   outline: none;
+}
+
+/* Hover only — dashed outline; leaves when pointer exits */
+.builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
 }
 
 
