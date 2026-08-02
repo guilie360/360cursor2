@@ -4731,6 +4731,50 @@ var ExperienciaCanvas = (function () {
      * Snap overlay center so left/center/right (and top/center/bottom) align to target lines.
      * Targets: canvas edges, peer edges/centers, red guides.
      */
+    /** Snap so edges touch (0 gap): my left↔peer right, my right↔peer left, etc. */
+    function snapPeerAdjacentEdges(x, y, halfW, halfH, peers, snapDist) {
+      var SNAP = snapDist != null ? snapDist : 2.5;
+      var hw = Math.max(0, Number(halfW) || 0);
+      var hh = Math.max(0, Number(halfH) || 0);
+      var bestX = null;
+      var bestY = null;
+      (peers || []).forEach(function (p) {
+        if (!p) return;
+        var oy = Math.min(y + hh, p.B) - Math.max(y - hh, p.T);
+        if (oy > 0.15) {
+          var touchRight = p.R + hw;
+          var touchLeft = p.L - hw;
+          var dR = Math.abs(x - touchRight);
+          var dL = Math.abs(x - touchLeft);
+          if (dR <= SNAP && (!bestX || dR < bestX.d)) {
+            bestX = { d: dR, x: Math.round(touchRight * 10) / 10 };
+          }
+          if (dL <= SNAP && (!bestX || dL < bestX.d)) {
+            bestX = { d: dL, x: Math.round(touchLeft * 10) / 10 };
+          }
+        }
+        var ox = Math.min(x + hw, p.R) - Math.max(x - hw, p.L);
+        if (ox > 0.15) {
+          var touchBelow = p.B + hh;
+          var touchAbove = p.T - hh;
+          var dB = Math.abs(y - touchBelow);
+          var dA = Math.abs(y - touchAbove);
+          if (dB <= SNAP && (!bestY || dB < bestY.d)) {
+            bestY = { d: dB, y: Math.round(touchBelow * 10) / 10 };
+          }
+          if (dA <= SNAP && (!bestY || dA < bestY.d)) {
+            bestY = { d: dA, y: Math.round(touchAbove * 10) / 10 };
+          }
+        }
+      });
+      return {
+        x: bestX ? bestX.x : x,
+        y: bestY ? bestY.y : y,
+        snappedX: !!bestX,
+        snappedY: !!bestY
+      };
+    }
+
     function snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, snapDist) {
       var SNAP = snapDist != null ? snapDist : 1.45;
       var hw = Math.max(0, Number(halfW) || 0);
@@ -5161,32 +5205,46 @@ var ExperienciaCanvas = (function () {
         equalSpaces = bestSpace.pills || [];
       }
 
-      /* Peer center / edge snap AFTER equal-spacing (nearby peers only). */
-      if (!snappedSpace) {
+      /* Flush edge contact (0 gap) — wins over equal-spacing when closer to pointer. */
+      var adjSnap = snapPeerAdjacentEdges(x, y, selfHalf.w, selfHalf.h, peers, 2.5);
+      if (adjSnap.snappedX) {
+        var spaceDx = snappedSpace ? Math.abs(x - nx) : Infinity;
+        if (Math.abs(x - adjSnap.x) <= spaceDx) nx = adjSnap.x;
+      }
+      if (adjSnap.snappedY) {
+        var spaceDy = snappedSpace ? Math.abs(y - ny) : Infinity;
+        if (Math.abs(y - adjSnap.y) <= spaceDy) ny = adjSnap.y;
+      }
+
+      /* Peer center align — skip axes already flush-snapped to an edge. */
+      if (!adjSnap.snappedX || !adjSnap.snappedY) {
         peers.forEach(function (pb) {
-          if (peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(nx - pb.cx) <= SNAP) {
+          if (!adjSnap.snappedX &&
+              peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(nx - pb.cx) <= SNAP) {
             nx = pb.cx;
           }
-          if (peerNearOnAxis(selfProbe, pb, 'y', NEAR_PEER) && Math.abs(ny - pb.cy) <= SNAP) {
+          if (!adjSnap.snappedY &&
+              peerNearOnAxis(selfProbe, pb, 'y', NEAR_PEER) && Math.abs(ny - pb.cy) <= SNAP) {
             ny = pb.cy;
           }
           var mirror = Math.round((100 - pb.cx) * 10) / 10;
-          if (peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(nx - mirror) <= SNAP) {
+          if (!adjSnap.snappedX &&
+              peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(nx - mirror) <= SNAP) {
             nx = mirror;
           }
         });
-        var lines = collectOverlayAlignLines(sceneId, buttonId, {
-          L: nx - selfHalf.w,
-          R: nx + selfHalf.w,
-          T: ny - selfHalf.h,
-          B: ny + selfHalf.h,
-          cx: nx,
-          cy: ny
-        });
-        var alignSnap = snapMoveToAlignLines(nx, ny, selfHalf.w, selfHalf.h, lines.x, lines.y, 1.45);
-        nx = alignSnap.x;
-        ny = alignSnap.y;
       }
+      var lines = collectOverlayAlignLines(sceneId, buttonId, {
+        L: nx - selfHalf.w,
+        R: nx + selfHalf.w,
+        T: ny - selfHalf.h,
+        B: ny + selfHalf.h,
+        cx: nx,
+        cy: ny
+      });
+      var alignSnap = snapMoveToAlignLines(nx, ny, selfHalf.w, selfHalf.h, lines.x, lines.y, 2.0);
+      if (alignSnap.snappedX && !adjSnap.snappedX) nx = alignSnap.x;
+      if (alignSnap.snappedY && !adjSnap.snappedY) ny = alignSnap.y;
 
       if (equalSpaces.length) {
         guides.spacing = equalSpaces;
