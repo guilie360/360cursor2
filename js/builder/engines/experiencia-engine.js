@@ -415,6 +415,8 @@ var ExperienciaEngine = (function () {
       if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.55)';
       if (ix.strokeWidth == null) ix.strokeWidth = 1;
       if (ix.borderRadius == null) ix.borderRadius = t === 'SHAPE_CIRCLE' ? 999 : 0;
+      if (ix.locked == null) ix.locked = false;
+      else ix.locked = !!ix.locked;
     }
     return ix;
   }
@@ -708,9 +710,19 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonHalfSizePx(ix, imageW, imageH) {
-    ensureButtonVisualDefaults(ix);
+    var t = ix ? String(ix.type || '').toUpperCase() : '';
+    if (t === 'BUTTON') ensureButtonVisualDefaults(ix);
+    else if (t === 'TEXT' || t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      ensureFreeOverlayDefaults(ix);
+    }
     var w = Math.max(1, Number(imageW) || 1000);
     var h = Math.max(1, Number(imageH) || 1000);
+    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      return {
+        w: Math.max(4, ((Number(ix.width) || 12) / 100) * w / 2),
+        h: Math.max(4, ((Number(ix.height) || 8) / 100) * h / 2)
+      };
+    }
     if (ix && ix.boxW != null && ix.boxH != null) {
       return {
         w: Math.max(4, (Number(ix.boxW) / 100) * w / 2),
@@ -727,7 +739,11 @@ var ExperienciaEngine = (function () {
    * Anchor margins always push inward. Half-size keeps the control fully visible.
    */
   function resolveButtonLayout(ix, imageW, imageH) {
-    ensureButtonVisualDefaults(ix);
+    var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
+    if (tLayout === 'BUTTON') ensureButtonVisualDefaults(ix);
+    else if (tLayout === 'TEXT' || tLayout === 'SHAPE_RECT' || tLayout === 'SHAPE_CIRCLE') {
+      ensureFreeOverlayDefaults(ix);
+    }
     var w = Math.max(1, Number(imageW) || 1);
     var h = Math.max(1, Number(imageH) || 1);
     var half = buttonHalfSizePx(ix, w, h);
@@ -1005,6 +1021,7 @@ var ExperienciaEngine = (function () {
       if (patch.borderRadius != null && t === 'SHAPE_RECT') {
         ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
       }
+      if (patch.locked != null) ix.locked = !!patch.locked;
       ix.positionMode = 'free';
     }
 

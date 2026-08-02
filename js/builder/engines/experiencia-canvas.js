@@ -4264,6 +4264,7 @@ var ExperienciaCanvas = (function () {
               ' data-gizmo-type="' + esc(st) + '"' +
               ' style="left:' + gx + '%;top:' + gy + '%;width:' + gw + '%;height:' + gh + '%;' +
               '--btn-rot:' + grot + 'deg">' +
+              '<div class="builder-exp-sel-move" data-exp-sel-move="1" title="Mover"></div>' +
               '<div class="builder-exp-sel-box"></div>' +
               handles.map(function (h) {
                 return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
@@ -5328,6 +5329,39 @@ var ExperienciaCanvas = (function () {
     }
 
     if (buttonsLayer) {
+      function beginOverlayMove(ev, bid, sceneId, btn) {
+        if (btn && btn.locked) {
+          paintButtonsStage();
+          paintInspector();
+          return;
+        }
+        var pctStart = percentFromPointer(ev);
+        var ox = btn
+          ? (btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50)
+          : 50;
+        var oy = btn
+          ? (btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50)
+          : 50;
+        buttonDrag = {
+          buttonId: bid,
+          sceneId: sceneId,
+          pointerId: ev.pointerId,
+          originX: ox,
+          originY: oy,
+          startPx: pctStart.x,
+          startPy: pctStart.y,
+          startX: ox,
+          startY: oy,
+          guides: null,
+          historyPushed: false
+        };
+        /* Capture on the layer (survives remount). Capturing the hit node
+           then calling paintButtonsStage() drops capture → pointercancel → frozen. */
+        paintButtonsStage();
+        paintInspector();
+        try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
+      }
+
       buttonsLayer.addEventListener('pointerdown', function (ev) {
         /* Gizmo resize / rotate */
         var handle = ev.target.closest && ev.target.closest('[data-handle]');
@@ -5366,6 +5400,23 @@ var ExperienciaCanvas = (function () {
           return;
         }
 
+        /* Gizmo body → move (Figma-style; layer survives remount) */
+        var moveSurface = ev.target.closest && ev.target.closest('[data-exp-sel-move]');
+        if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
+          var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
+          var moveId = gizmoMove.getAttribute('data-gizmo-id');
+          var sceneIdMove = canvas().selectedId;
+          var btnMove = ExperienciaEngine.getSceneButton(state,
+            ExperienciaEngine.getNode(state, sceneIdMove), moveId);
+          if (!btnMove) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          canvas().selectedButtonIds = [String(moveId)];
+          canvas().selectedButtonId = moveId;
+          beginOverlayMove(ev, moveId, sceneIdMove, btnMove);
+          return;
+        }
+
         var hit = ev.target.closest('[data-exp-stage-btn]');
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
@@ -5396,23 +5447,7 @@ var ExperienciaCanvas = (function () {
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid
         );
-        if (btn && btn.locked) {
-          paintButtonsStage();
-          paintInspector();
-          return;
-        }
-        buttonDrag = {
-          buttonId: bid,
-          sceneId: sceneId,
-          pointerId: ev.pointerId,
-          startX: btn ? (btn.storedX != null ? btn.storedX : btn.x) : 50,
-          startY: btn ? (btn.storedY != null ? btn.storedY : btn.y) : 50,
-          guides: null,
-          historyPushed: false
-        };
-        try { hit.setPointerCapture(ev.pointerId); } catch (eCap) {}
-        paintButtonsStage();
-        paintInspector();
+        beginOverlayMove(ev, bid, sceneId, btn);
       });
       buttonsLayer.addEventListener('pointermove', function (ev) {
         if (transformDrag && ev.pointerId === transformDrag.pointerId) {
@@ -5471,8 +5506,14 @@ var ExperienciaCanvas = (function () {
           pushButtonHistory(buttonDrag.sceneId);
           buttonDrag.historyPushed = true;
         }
+        var rawX = buttonDrag.originX != null
+          ? buttonDrag.originX + (pct.x - buttonDrag.startPx)
+          : pct.x;
+        var rawY = buttonDrag.originY != null
+          ? buttonDrag.originY + (pct.y - buttonDrag.startPy)
+          : pct.y;
         var snapped = computeButtonGuides(
-          buttonDrag.sceneId, buttonDrag.buttonId, pct.x, pct.y
+          buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY
         );
         buttonDrag.guides = snapped.guides;
         ExperienciaEngine.setSceneButtonPosition(

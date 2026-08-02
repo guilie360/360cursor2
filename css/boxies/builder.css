@@ -7140,6 +7140,14 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   box-sizing: border-box;
 }
 
+.builder-exp-sel-move {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: move;
+  z-index: 1;
+}
+
 .builder-exp-sel-box {
   position: absolute;
   inset: -2px;
