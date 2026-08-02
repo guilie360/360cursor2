@@ -4648,7 +4648,15 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    function computeButtonGuides(sceneId, buttonId, x, y) {
+    function computeButtonGuides(sceneId, buttonId, x, y, opts) {
+      opts = opts || {};
+      var nx = x;
+      var ny = y;
+      var guides = { spacing: [] };
+      /* Hold Shift while moving to bypass all snap (peers + red guides). */
+      if (opts.disableSnap) {
+        return { x: nx, y: ny, guides: guides };
+      }
       var n = ExperienciaEngine.getNode(state, sceneId);
       var list = ExperienciaEngine.listSceneButtons(state, n) || [];
       var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
@@ -4656,9 +4664,6 @@ var ExperienciaCanvas = (function () {
       var SNAP = 1.15;
       var SPACE_SNAP = 1.35;
       var ALIGN = 2.2;
-      var guides = { spacing: [] };
-      var nx = x;
-      var ny = y;
 
       /* Soft align snap (silent — no guide chrome) */
       if (Math.abs(x - 50) <= SNAP) nx = 50;
@@ -5639,7 +5644,8 @@ var ExperienciaCanvas = (function () {
           ? buttonDrag.originY + (pct.y - buttonDrag.startPy)
           : pct.y;
         var snapped = computeButtonGuides(
-          buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY
+          buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY,
+          { disableSnap: !!ev.shiftKey }
         );
         buttonDrag.guides = snapped.guides;
         ExperienciaEngine.setSceneButtonPosition(

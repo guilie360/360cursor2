@@ -1473,6 +1473,15 @@ var QuotationEditor = (function () {
     return n;
   }
 
+  function countInteractionsInScenes(scenes) {
+    var n = 0;
+    if (!Array.isArray(scenes)) return 0;
+    scenes.forEach(function (sc) {
+      if (sc && Array.isArray(sc.interactions)) n += sc.interactions.length;
+    });
+    return n;
+  }
+
   /** Prefer local draft when it has more recent editor work than the server snapshot. */
   function shouldPreferDraftOverServer(hq, draft) {
     if (!draft || !Array.isArray(draft.scenes)) return false;
@@ -1480,20 +1489,25 @@ var QuotationEditor = (function () {
     var draftFolders = Array.isArray(draft.folders) ? draft.folders.length : 0;
     var draftContent = Array.isArray(draft.content) ? draft.content.length : 0;
     var draftGuides = countGuidesInScenes(draft.scenes);
+    var draftIx = countInteractionsInScenes(draft.scenes);
     var srvScenes = serverSceneCount(hq);
     var srvFolders = serverFolderCount(hq);
     var srvContent = serverContentCount(hq);
     var srvGuides = countGuidesInScenes(hq && hq.canvas && hq.canvas.scenes);
+    var srvIx = countInteractionsInScenes(hq && hq.canvas && hq.canvas.scenes);
     if (draftScenes > srvScenes) return true;
     if (draftFolders > srvFolders) return true;
     if (draftContent > srvContent) return true;
-    /* Guides were stripped from DB sanitize historically — keep local if richer. */
+    /* Guides / overlays were stripped from DB sanitize historically — keep local if richer. */
     if (draftGuides > srvGuides) return true;
+    if (draftIx > srvIx) return true;
     /* Same shape but draft is fresh (< 24h) and has real local structure. */
     var age = Date.now() - Number(draft.at || 0);
     if (age >= 0 && age < 24 * 60 * 60 * 1000) {
-      if (draftScenes > 1 || draftFolders > 0 || draftContent > 0 || draftGuides > 0) {
-        if (srvScenes <= 1 && srvFolders === 0 && srvContent === 0 && srvGuides === 0) {
+      if (draftScenes > 1 || draftFolders > 0 || draftContent > 0 ||
+          draftGuides > 0 || draftIx > 0) {
+        if (srvScenes <= 1 && srvFolders === 0 && srvContent === 0 &&
+            srvGuides === 0 && srvIx === 0) {
           return true;
         }
       }
@@ -3659,6 +3673,11 @@ var QuotationEditor = (function () {
       /* Guides/rulers use the active device window so % maps across Desktop/Tablet/Mobile. */
       getDesignSize: function () { return activeViewportSize(); },
       isPreviewMode: function () { return !!state.canvasPreviewMode; },
+      pullOverlays: function () {
+        if (expOverlay && typeof expOverlay.pull === 'function') {
+          try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
+        }
+      },
       onChange: function () { markDirtyLocal(); },
       onRulersChange: function (on) { state.rulersVisible = !!on; },
       onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; }

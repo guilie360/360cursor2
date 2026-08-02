@@ -46,6 +46,72 @@ var QuotationGuides = (function () {
     return clampPct((px / max) * 100);
   }
 
+  var OVERLAY_GUIDE_SNAP = 1.45;
+
+  function pullOverlaysIntoScene() {
+    if (api && typeof api.pullOverlays === 'function') {
+      try { api.pullOverlays(); } catch (ePull) { /* ignore */ }
+    }
+  }
+
+  /** Center + edges of free overlays (buttons / text / shapes) for guide snap. */
+  function listOverlaySnapTargets(type) {
+    pullOverlaysIntoScene();
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return [];
+    var targets = [];
+    var axis = type === 'horizontal' ? 'horizontal' : 'vertical';
+    scene.interactions.forEach(function (ix) {
+      if (!ix) return;
+      var t = String(ix.type || '').toUpperCase();
+      if (t !== 'BUTTON' && t !== 'TEXT' && t !== 'SHAPE_RECT' && t !== 'SHAPE_CIRCLE') {
+        return;
+      }
+      var x = Number(ix.x);
+      var y = Number(ix.y);
+      if (!isFinite(x) || !isFinite(y)) return;
+      var hw = 4;
+      var hh = 2;
+      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+        hw = Math.max(0.5, (Number(ix.width) || 12) / 2);
+        hh = Math.max(0.5, (Number(ix.height) || (t === 'SHAPE_CIRCLE' ? 12 : 8)) / 2);
+      } else if (t === 'BUTTON') {
+        hw = Math.max(0.5, (ix.boxW != null ? Number(ix.boxW) : 14) / 2);
+        hh = Math.max(0.5, (ix.boxH != null ? Number(ix.boxH) : 4.5) / 2);
+      }
+      if (axis === 'vertical') {
+        targets.push(x, x - hw, x + hw);
+      } else {
+        targets.push(y, y - hh, y + hh);
+      }
+    });
+    return targets;
+  }
+
+  /**
+   * Guide position: optional snap to overlay edges/centers, then design-px snap.
+   * Hold Shift to skip overlay snap.
+   */
+  function resolveGuidePosition(type, pct, disableSnap) {
+    var raw = clampPct(pct);
+    if (!disableSnap) {
+      var targets = listOverlaySnapTargets(type);
+      var best = OVERLAY_GUIDE_SNAP + 1;
+      var snapped = raw;
+      targets.forEach(function (cand) {
+        var c = Number(cand);
+        if (!isFinite(c)) return;
+        var d = Math.abs(raw - c);
+        if (d <= OVERLAY_GUIDE_SNAP && d < best) {
+          best = d;
+          snapped = c;
+        }
+      });
+      if (best <= OVERLAY_GUIDE_SNAP) raw = snapped;
+    }
+    return snapGuidePct(type, raw);
+  }
+
   function clampGuideDesignPx(type, pxValue) {
     var design = designSize();
     var max = type === 'horizontal' ? design.height : design.width;
@@ -178,6 +244,8 @@ var QuotationGuides = (function () {
     var rawY = ((clientY - rect.top) / rect.height) * 100;
     var design = designSize();
     return {
+      rawX: clampPct(rawX),
+      rawY: clampPct(rawY),
       x: snapGuidePct('vertical', rawX),
       y: snapGuidePct('horizontal', rawY),
       pxX: clampGuideDesignPx('vertical', (rawX / 100) * design.width),
@@ -1065,21 +1133,22 @@ var QuotationGuides = (function () {
     setDragCursor(type);
   }
 
-  function updateGhost(clientX, clientY) {
+  function updateGhost(clientX, clientY, disableSnap) {
     if (!ghost) return;
     var el = ensureGhostHost();
     var pct = clientToDesignPct(clientX, clientY);
     if (!el || !pct) return;
     syncGuideLayerGeometry(el.parentElement);
-    applyGuideElPosition(
-      el,
+    var pos = resolveGuidePosition(
       ghost.type,
-      ghost.type === 'horizontal' ? pct.y : pct.x
+      ghost.type === 'horizontal' ? pct.rawY : pct.rawX,
+      !!disableSnap
     );
+    applyGuideElPosition(el, ghost.type, pos);
     showReadout(clientX, clientY, ghost.type, pct);
   }
 
-  function endGhost(clientX, clientY, cancelled) {
+  function endGhost(clientX, clientY, cancelled, disableSnap) {
     var type = ghost && ghost.type;
     ghost = null;
     var el = rootEl && rootEl.querySelector('[data-qe-guide-ghost]');
@@ -1097,15 +1166,22 @@ var QuotationGuides = (function () {
     if (cancelled || !type) return;
     var pct = clientToDesignPct(clientX, clientY);
     if (!pct) return;
-    /* Place even if pointer is past the edge — snaps to canvas bounds. */
-    addGuide(type, type === 'horizontal' ? pct.y : pct.x);
+    /* Place even if pointer is past the edge — snaps to canvas bounds / overlays. */
+    addGuide(
+      type,
+      resolveGuidePosition(
+        type,
+        type === 'horizontal' ? pct.rawY : pct.rawX,
+        !!disableSnap
+      )
+    );
   }
 
   /* ── Document pointer for drag ────────────────────────── */
 
   function onDocMove(e) {
     if (ghost) {
-      updateGhost(e.clientX, e.clientY);
+      updateGhost(e.clientX, e.clientY, !!e.shiftKey);
       return;
     }
     if (!dragGuide) return;
@@ -1118,15 +1194,19 @@ var QuotationGuides = (function () {
       : guideElById(dragGuide.id);
     dragGuide.el = el;
     if (el) el.classList.remove('is-removing');
-    var pos = dragGuide.type === 'horizontal' ? pct.y : pct.x;
-    g.position = snapGuidePct(dragGuide.type, pos);
+    var pos = resolveGuidePosition(
+      dragGuide.type,
+      dragGuide.type === 'horizontal' ? pct.rawY : pct.rawX,
+      !!e.shiftKey
+    );
+    g.position = pos;
     applyGuideElPosition(el, dragGuide.type, g.position);
     showReadout(e.clientX, e.clientY, dragGuide.type, pct);
   }
 
   function onDocUp(e) {
     if (ghost) {
-      endGhost(e.clientX, e.clientY, false);
+      endGhost(e.clientX, e.clientY, false, !!e.shiftKey);
       return;
     }
     if (!dragGuide) return;
@@ -1146,7 +1226,11 @@ var QuotationGuides = (function () {
     clearDragCursor();
     hideReadout();
     if (g && pct) {
-      g.position = snapGuidePct(type, type === 'horizontal' ? pct.y : pct.x);
+      g.position = resolveGuidePosition(
+        type,
+        type === 'horizontal' ? pct.rawY : pct.rawX,
+        !!(e && e.shiftKey)
+      );
     }
     markDirty();
     renderGuides();

@@ -665,22 +665,29 @@ var ProyectosApi = (function () {
   }
 
   /**
-   * V7.2.14 — Persist Showroom interactions[] (BUTTON / HOTSPOT) for Runtime.
-   * Keep fields the visitor needs; drop ephemeral editor-only junk.
+   * Persist Showroom interactions[] for Runtime + Quotation Editor overlays.
+   * BUTTON / HOTSPOT / TEXT / SHAPE_* — drop ephemeral editor-only junk.
    */
   function sanitizeCanvasInteractions(list) {
     if (!Array.isArray(list)) return [];
     return list.map(function (ix) {
       if (!ix || typeof ix !== 'object') return null;
       var type = String(ix.type || '').toUpperCase();
-      if (type !== 'BUTTON' && type !== 'HOTSPOT') return null;
+      if (type !== 'BUTTON' && type !== 'HOTSPOT' && type !== 'TEXT' &&
+          type !== 'SHAPE_RECT' && type !== 'SHAPE_CIRCLE') {
+        return null;
+      }
       var id = heroText(ix.id);
       if (!id) return null;
+      var defaultLabel = type === 'HOTSPOT' ? 'Hotspot'
+        : (type === 'TEXT' ? 'Texto'
+          : (type === 'SHAPE_CIRCLE' ? 'Círculo'
+            : (type === 'SHAPE_RECT' ? 'Rectángulo' : 'Botón')));
       var out = {
         id: id,
         portId: heroText(ix.portId) || id,
         type: type,
-        label: heroText(ix.label) || (type === 'HOTSPOT' ? 'Hotspot' : 'Botón'),
+        label: heroText(ix.label) || defaultLabel,
         enabled: ix.enabled !== false
       };
       if (type === 'BUTTON') {
@@ -700,7 +707,12 @@ var ProyectosApi = (function () {
         out.targetSceneId = heroText(ix.targetSceneId) || null;
         out.url = heroText(ix.url) || null;
         out.downloadUrl = heroText(ix.downloadUrl) || null;
-      } else {
+        var boxW = Number(ix.boxW);
+        var boxH = Number(ix.boxH);
+        if (isFinite(boxW)) out.boxW = Math.max(1, Math.min(100, boxW));
+        if (isFinite(boxH)) out.boxH = Math.max(1, Math.min(100, boxH));
+        if (ix.locked != null) out.locked = !!ix.locked;
+      } else if (type === 'HOTSPOT') {
         out.shape = heroText(ix.shape) || 'polygon';
         out.name = heroText(ix.name) || out.label;
         out.hotspotKind = heroText(ix.hotspotKind) || 'highlight';
@@ -726,6 +738,50 @@ var ProyectosApi = (function () {
           }).filter(Boolean)
           : [];
         if (out.polygon.length < 3 && out.shape === 'polygon') return null;
+      } else if (type === 'TEXT') {
+        out.x = Number(ix.x);
+        out.y = Number(ix.y);
+        if (!isFinite(out.x)) out.x = 50;
+        if (!isFinite(out.y)) out.y = 50;
+        out.rotation = Number(ix.rotation) || 0;
+        out.positionMode = 'free';
+        out.positionInitialized = ix.positionInitialized !== false;
+        out.fontSize = Math.max(8, Math.min(200, Number(ix.fontSize) || 28));
+        out.fontSizeUnit = 'px';
+        out.color = heroText(ix.color) || '#ffffff';
+        out.fontFamily = heroText(ix.fontFamily) || 'system-ui, sans-serif';
+        out.fontWeight = heroText(ix.fontWeight) || '400';
+        out.fontStyle = heroText(ix.fontStyle) || 'normal';
+        out.textDecoration = heroText(ix.textDecoration) || 'none';
+        out.textAlign = heroText(ix.textAlign) || 'center';
+        out.lineHeight = Number(ix.lineHeight);
+        if (!isFinite(out.lineHeight)) out.lineHeight = 1.3;
+        out.letterSpacing = Number(ix.letterSpacing);
+        if (!isFinite(out.letterSpacing)) out.letterSpacing = 0;
+        out.textTransform = heroText(ix.textTransform) || 'none';
+        out.textShadow = heroText(ix.textShadow) || 'none';
+        out.opacity = Number(ix.opacity);
+        if (!isFinite(out.opacity)) out.opacity = 1;
+        out.locked = !!ix.locked;
+      } else {
+        /* SHAPE_RECT / SHAPE_CIRCLE */
+        out.x = Number(ix.x);
+        out.y = Number(ix.y);
+        if (!isFinite(out.x)) out.x = 50;
+        if (!isFinite(out.y)) out.y = 50;
+        out.width = Math.max(1, Math.min(100, Number(ix.width) || 12));
+        out.height = Math.max(1, Math.min(100,
+          Number(ix.height) || (type === 'SHAPE_CIRCLE' ? 12 : 8)));
+        out.fill = heroText(ix.fill) || 'rgba(255,255,255,0.14)';
+        out.stroke = heroText(ix.stroke) || 'rgba(255,255,255,0.55)';
+        out.strokeWidth = Math.max(0, Math.min(20, Number(ix.strokeWidth) || 0));
+        out.borderRadius = type === 'SHAPE_CIRCLE'
+          ? 999
+          : Math.max(0, Math.min(999, Number(ix.borderRadius) || 0));
+        out.rotation = Number(ix.rotation) || 0;
+        out.positionMode = 'free';
+        out.positionInitialized = ix.positionInitialized !== false;
+        out.locked = !!ix.locked;
       }
       return out;
     }).filter(Boolean);
