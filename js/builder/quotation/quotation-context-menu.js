@@ -60,12 +60,15 @@ var QuotationContextMenu = (function () {
   function bindDismiss() {
     if (bound) return;
     bound = true;
-    document.addEventListener('mousedown', function (e) {
+    function onOutsidePointer(e) {
       if (!openPanel) return;
       var t = e.target;
-      if (t && t.closest && t.closest('#' + PORTAL_ID)) return;
+      if (t && t.closest && t.closest('[data-qe-context-menu]')) return;
+      if (t && t.closest && t.closest('[data-qe-ctx-backdrop]')) return;
       close();
-    }, true);
+    }
+    document.addEventListener('pointerdown', onOutsidePointer, true);
+    document.addEventListener('mousedown', onOutsidePointer, true);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && openPanel) close();
     }, true);
@@ -175,6 +178,22 @@ var QuotationContextMenu = (function () {
         '</button>';
     });
     panel.innerHTML = html;
+
+    var backdrop = document.createElement('div');
+    backdrop.className = 'qe-context-menu-backdrop';
+    backdrop.setAttribute('data-qe-ctx-backdrop', '1');
+    backdrop.setAttribute('aria-hidden', 'true');
+    function dismissMenu(ev) {
+      if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+      close();
+    }
+    backdrop.addEventListener('pointerdown', dismissMenu);
+    backdrop.addEventListener('mousedown', dismissMenu);
+
+    portal.appendChild(backdrop);
     portal.appendChild(panel);
     openPanel = panel;
 

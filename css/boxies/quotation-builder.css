@@ -4591,7 +4591,15 @@ body.quotation-canvas-first .builder-workspace,
   position: fixed;
   inset: 0;
   z-index: 12050;
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+.qe-context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+  background: transparent;
 }
 
 .qe-context-menu-portal .qe-context-menu,
@@ -4600,6 +4608,7 @@ body.quotation-canvas-first .builder-workspace,
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 1;
   min-width: 140px !important;
   max-width: 200px !important;
   width: max-content;
