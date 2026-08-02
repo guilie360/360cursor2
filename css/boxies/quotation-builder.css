@@ -315,14 +315,15 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  overflow: visible;
+  overflow: hidden;
   background: #0a0a0a;
   border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   z-index: 5;
   transition:
-    flex-basis var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    max-width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1));
+    flex-basis var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    max-width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qe-panel-fade-duration, 0.28s) ease;
 }
 
 .quotation-props[hidden] {
@@ -335,13 +336,14 @@
   width: 0;
   max-width: 0;
   min-width: 0;
-  overflow: visible;
-  border: 0;
+  overflow: hidden;
+  border-left-color: transparent;
 }
 
 .quotation-props.is-collapsed .quotation-props-body,
 .quotation-workspace.is-right-collapsed .quotation-props .quotation-props-body {
   opacity: 0;
+  transform: translate3d(16px, 0, 0);
   pointer-events: none;
   overflow: hidden;
 }
@@ -354,6 +356,12 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  transition:
+    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  will-change: transform, opacity;
 }
 
 .qe-props-panel {
@@ -847,8 +855,18 @@
   /* Fold hangs below strip: height(16) + gap(12) before work/responsive */
   margin: 0 0 calc(var(--builder-float-w, 16px) + 12px);
   min-height: 0;
+  max-height: 220px;
+  overflow: hidden;
   /* Above ambient edge fringe (body::before/::after z-index 1). */
   z-index: 5;
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition:
+    max-height var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    margin var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  will-change: max-height, transform, opacity;
 }
 
 .qe-scenes {
@@ -865,15 +883,23 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   background: #0a0a0a;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  transition:
+    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .qe-scenes-host.is-collapsed,
 .qe-stage-unit.is-scenes-collapsed > .qe-scenes-host {
   position: relative;
   margin: 0;
-  height: 0;
+  max-height: 0;
   min-height: 0;
+  height: auto;
   overflow: hidden;
+  opacity: 0;
+  transform: translate3d(0, -18px, 0);
   pointer-events: none;
   z-index: 0;
 }
@@ -881,12 +907,11 @@
 .qe-scenes.is-collapsed,
 .qe-scenes-host.is-collapsed > .qe-scenes,
 .qe-stage-unit.is-scenes-collapsed .qe-scenes {
-  display: none !important;
-  margin: 0 !important;
-  min-height: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
+  /* Keep in layout for slide; host clips and fades. */
+  margin: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, -10px, 0);
 }
 
 /* Chrome above canvas: scene name (left) + viewport presets (center) */
@@ -3588,6 +3613,11 @@ html.quotation-canvas-first {
   --quotation-recursos-w: 220px;
   --quotation-props-w: 220px;
   --qe-inspector-w: 0px;
+  --qe-panel-slide-duration: 0.44s;
+  --qe-panel-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --qe-panel-fade-duration: 0.28s;
+  --builder-rail-collapse-duration: 0.44s;
+  --builder-rail-collapse-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body.quotation-canvas-first .builder-progress-sidebar,
@@ -3625,19 +3655,29 @@ body.quotation-canvas-first .builder-workspace,
   min-height: 0;
   height: 100%;
   max-height: 100%;
+  width: var(--quotation-recursos-w, 220px);
+  max-width: var(--quotation-recursos-w, 220px);
   background: #0a0a0a;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
   overflow: hidden;
   z-index: 5;
+  transition:
+    width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    max-width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qe-panel-fade-duration, 0.28s) ease;
 }
 
 /*
- * Collapsed: remove the rail from layout entirely.
- * Expand float is a workspace sibling, so this kills the left shadow column.
+ * Collapsed: slide width to 0 (never display:none — that kills the animation).
+ * Expand float is a workspace sibling, so no leftover shadow column.
  */
 .quotation-workspace.is-left-collapsed .quotation-left-block {
-  display: none !important;
+  width: 0;
+  max-width: 0;
+  min-width: 0;
+  border-right-color: transparent;
+  pointer-events: none;
 }
 
 .quotation-left-block[hidden] {
@@ -3732,11 +3772,11 @@ body.quotation-canvas-first .builder-workspace,
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  overflow: visible;
+  overflow: hidden;
   transition:
-    flex-basis var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    max-width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1));
+    flex-basis var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    max-width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 /* Config (and any non-editor step): no recursos column / fold control */
@@ -3765,16 +3805,10 @@ body.quotation-canvas-first .builder-workspace,
 
 .quotation-recursos.is-collapsed .quotation-left-body,
 .quotation-workspace.is-left-collapsed .quotation-recursos .quotation-left-body {
-  display: none !important;
   opacity: 0;
+  transform: translate3d(-16px, 0, 0);
   pointer-events: none;
   overflow: hidden;
-  width: 0;
-  max-width: 0;
-  min-width: 0;
-  padding: 0;
-  margin: 0;
-  border: none;
 }
 
 .quotation-left-body {
@@ -3785,6 +3819,12 @@ body.quotation-canvas-first .builder-workspace,
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+  transition:
+    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  will-change: transform, opacity;
 }
 
 .quotation-left-body .qe-col--library {
@@ -3847,7 +3887,8 @@ body.quotation-canvas-first .builder-workspace,
     color 0.18s ease,
     background 0.18s ease,
     border-color 0.18s ease,
-    left 0.18s ease;
+    left var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .quotation-panel-float:hover {
