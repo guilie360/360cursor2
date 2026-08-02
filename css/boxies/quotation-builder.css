@@ -856,7 +856,8 @@
   margin: 0 0 calc(var(--builder-float-w, 16px) + 12px);
   min-height: 0;
   max-height: 220px;
-  overflow: hidden;
+  /* The fold button hangs below the strip; don't clip it while expanded. */
+  overflow: visible;
   /* Above ambient edge fringe (body::before/::after z-index 1). */
   z-index: 5;
   opacity: 1;
