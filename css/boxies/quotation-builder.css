@@ -4591,6 +4591,10 @@ body.quotation-canvas-first .builder-workspace,
   position: fixed;
   inset: 0;
   z-index: 12050;
+  pointer-events: none;
+}
+
+.qe-context-menu-portal[aria-hidden="false"] {
   pointer-events: auto;
 }
 

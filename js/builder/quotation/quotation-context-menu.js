@@ -27,9 +27,8 @@ var QuotationContextMenu = (function () {
 
   function close() {
     var portal = document.getElementById(PORTAL_ID);
-    if (portal) {
-      portal.innerHTML = '';
-      portal.setAttribute('aria-hidden', 'true');
+    if (portal && portal.parentNode) {
+      portal.parentNode.removeChild(portal);
     }
     openPanel = null;
   }
@@ -64,7 +63,6 @@ var QuotationContextMenu = (function () {
       if (!openPanel) return;
       var t = e.target;
       if (t && t.closest && t.closest('[data-qe-context-menu]')) return;
-      if (t && t.closest && t.closest('[data-qe-ctx-backdrop]')) return;
       close();
     }
     document.addEventListener('pointerdown', onOutsidePointer, true);
@@ -183,11 +181,7 @@ var QuotationContextMenu = (function () {
     backdrop.className = 'qe-context-menu-backdrop';
     backdrop.setAttribute('data-qe-ctx-backdrop', '1');
     backdrop.setAttribute('aria-hidden', 'true');
-    function dismissMenu(ev) {
-      if (ev) {
-        ev.preventDefault();
-        ev.stopPropagation();
-      }
+    function dismissMenu() {
       close();
     }
     backdrop.addEventListener('pointerdown', dismissMenu);
