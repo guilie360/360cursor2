@@ -4195,8 +4195,29 @@ var ExperienciaCanvas = (function () {
     }
 
     /** Peer edge/center matches as SHORT segments between nearest vertices (not full canvas lines). */
+    function boxGapXY(a, b) {
+      var gapX = 0;
+      if (a.R < b.L) gapX = b.L - a.R;
+      else if (b.R < a.L) gapX = a.L - b.R;
+      var gapY = 0;
+      if (a.B < b.T) gapY = b.T - a.B;
+      else if (b.B < a.T) gapY = a.T - b.B;
+      return { x: gapX, y: gapY };
+    }
+
+    /** Peers far away must not contribute align/snap on that axis. */
+    function peerNearOnAxis(selfBox, peerBox, axis, maxGap) {
+      maxGap = maxGap != null ? maxGap : 10;
+      if (!selfBox || !peerBox) return false;
+      var g = boxGapXY(selfBox, peerBox);
+      /* Vertical lines (same X): only if vertically nearby. Horizontal lines: only if horizontally nearby. */
+      return axis === 'x' ? g.y <= maxGap : g.x <= maxGap;
+    }
+
     function collectPeerAlignMatches(selfBox, peers, thresh) {
       thresh = thresh != null ? thresh : 0.75;
+      /* Cap segment length so distant centers never draw a long force-line. */
+      var MAX_SEG = 10;
       var matches = [];
       if (!selfBox) return matches;
 
@@ -4215,6 +4236,7 @@ var ExperienciaCanvas = (function () {
 
       function pushSeg(axis, pos, span) {
         if (!span || !(span.b > span.a + 0.05)) return;
+        if (span.d > MAX_SEG) return;
         matches.push({
           axis: axis,
           pos: pos,
@@ -4225,23 +4247,26 @@ var ExperienciaCanvas = (function () {
 
       (peers || []).forEach(function (p) {
         if (!p) return;
-        /* Horizontal match → short horizontal segment between nearest side vertices. */
-        [selfBox.T, selfBox.cy, selfBox.B].forEach(function (sy) {
-          [p.T, p.cy, p.B].forEach(function (py) {
-            if (Math.abs(sy - py) > thresh) return;
-            pushSeg('y', (sy + py) / 2, nearestSpan(selfBox.L, selfBox.R, p.L, p.R));
+        /* Horizontal match → short horizontal segment (only if peers are side-near). */
+        if (peerNearOnAxis(selfBox, p, 'y', MAX_SEG)) {
+          [selfBox.T, selfBox.cy, selfBox.B].forEach(function (sy) {
+            [p.T, p.cy, p.B].forEach(function (py) {
+              if (Math.abs(sy - py) > thresh) return;
+              pushSeg('y', (sy + py) / 2, nearestSpan(selfBox.L, selfBox.R, p.L, p.R));
+            });
           });
-        });
-        /* Vertical match → short vertical segment between nearest top/bottom vertices. */
-        [selfBox.L, selfBox.cx, selfBox.R].forEach(function (sx) {
-          [p.L, p.cx, p.R].forEach(function (px) {
-            if (Math.abs(sx - px) > thresh) return;
-            pushSeg('x', (sx + px) / 2, nearestSpan(selfBox.T, selfBox.B, p.T, p.B));
+        }
+        /* Vertical match → short vertical segment (only if peers are stack-near). */
+        if (peerNearOnAxis(selfBox, p, 'x', MAX_SEG)) {
+          [selfBox.L, selfBox.cx, selfBox.R].forEach(function (sx) {
+            [p.L, p.cx, p.R].forEach(function (px) {
+              if (Math.abs(sx - px) > thresh) return;
+              pushSeg('x', (sx + px) / 2, nearestSpan(selfBox.T, selfBox.B, p.T, p.B));
+            });
           });
-        });
+        }
       });
 
-      /* Dedupe near-identical segments. */
       var seen = {};
       return matches.filter(function (m) {
         var key = m.axis + ':' + Math.round(m.pos * 20) + ':' +
@@ -4829,10 +4854,11 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    /** Collect vertical/horizontal align lines: canvas, peers, red guides. */
-    function collectOverlayAlignLines(sceneId, excludeId) {
+    /** Collect vertical/horizontal align lines: canvas, nearby peers, red guides. */
+    function collectOverlayAlignLines(sceneId, excludeId, selfBox) {
       var linesX = [0, 50, 100];
       var linesY = [0, 50, 100];
+      var NEAR = 10;
       var n = ExperienciaEngine.getNode(state, sceneId);
       var list = ExperienciaEngine.listSceneButtons(state, n) || [];
       list.forEach(function (peer) {
@@ -4841,8 +4867,20 @@ var ExperienciaCanvas = (function () {
         var px = Number(peer.x);
         var py = Number(peer.y);
         if (!isFinite(px) || !isFinite(py)) return;
-        linesX.push(px, px - ph.w, px + ph.w);
-        linesY.push(py, py - ph.h, py + ph.h);
+        var peerBox = {
+          L: px - ph.w, R: px + ph.w, T: py - ph.h, B: py + ph.h, cx: px, cy: py
+        };
+        if (selfBox) {
+          if (peerNearOnAxis(selfBox, peerBox, 'x', NEAR)) {
+            linesX.push(px, px - ph.w, px + ph.w);
+          }
+          if (peerNearOnAxis(selfBox, peerBox, 'y', NEAR)) {
+            linesY.push(py, py - ph.h, py + ph.h);
+          }
+        } else {
+          linesX.push(px, px - ph.w, px + ph.w);
+          linesY.push(py, py - ph.h, py + ph.h);
+        }
       });
       listSceneSnapGuides().forEach(function (g) {
         if (!g) return;
@@ -4983,22 +5021,38 @@ var ExperienciaCanvas = (function () {
         return Math.min(a1, b1) - Math.max(a0, b0);
       }
 
-      /* Soft align snap */
+      /* Soft align snap — peers only when nearby (avoids distant center pull). */
       if (Math.abs(x - 50) <= SNAP) nx = 50;
       if (Math.abs(y - 50) <= SNAP) ny = 50;
 
+      var selfProbe = {
+        L: x - selfHalf.w,
+        R: x + selfHalf.w,
+        T: y - selfHalf.h,
+        B: y + selfHalf.h,
+        cx: x,
+        cy: y
+      };
       var peers = [];
+      var NEAR_PEER = 10;
       list.forEach(function (peer) {
         if (!peer || String(peer.id) === String(buttonId)) return;
-        peers.push(boxAt(peer));
-        if (Math.abs(x - peer.x) <= SNAP) nx = peer.x;
-        if (Math.abs(y - peer.y) <= SNAP) ny = peer.y;
+        var pb = boxAt(peer);
+        peers.push(pb);
+        if (peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(x - peer.x) <= SNAP) {
+          nx = peer.x;
+        }
+        if (peerNearOnAxis(selfProbe, pb, 'y', NEAR_PEER) && Math.abs(y - peer.y) <= SNAP) {
+          ny = peer.y;
+        }
         var mirror = Math.round((100 - peer.x) * 10) / 10;
-        if (Math.abs(x - mirror) <= SNAP) nx = mirror;
+        if (peerNearOnAxis(selfProbe, pb, 'x', NEAR_PEER) && Math.abs(x - mirror) <= SNAP) {
+          nx = mirror;
+        }
       });
 
-      /* Align to canvas / peers / red guides first; equal-spacing may override below. */
-      var lines = collectOverlayAlignLines(sceneId, buttonId);
+      /* Align to canvas / nearby peers / red guides first; equal-spacing may override below. */
+      var lines = collectOverlayAlignLines(sceneId, buttonId, selfProbe);
       var alignSnap = snapMoveToAlignLines(nx, ny, selfHalf.w, selfHalf.h, lines.x, lines.y, 1.45);
       nx = alignSnap.x;
       ny = alignSnap.y;
