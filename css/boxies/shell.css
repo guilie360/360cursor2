@@ -14,6 +14,13 @@
   --boxies-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
   --boxies-dock-bg: rgba(5, 5, 5, 0.82);
   --boxies-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  /*
+   * Intentional edge fringe — same cast recipe as .main-menu::before glass
+   * shadow (the former “bug” fringe), not a vignette gradient.
+   */
+  --boxies-edge-fringe-x: 24px;
+  --boxies-edge-fringe-blur: 64px;
+  --boxies-edge-fringe-color: color-mix(in srgb, var(--bg-main, #0a0a0a) 28%, transparent);
 }
 
 html.boxies-has-dock,
@@ -30,8 +37,39 @@ body.boxies-has-dock.boxies-shell {
   color: var(--hall-text, rgba(255, 255, 255, 0.86));
 }
 
+/*
+ * Ambient L/R fringe: zero-width fixed edges that only cast the glass shadow.
+ * z-index 0 + .boxies-app z-index 1 → always behind chrome, panels, canvas.
+ * pointer-events: none → never a mask / never steals clicks.
+ */
+body.boxies-shell::before,
+body.boxies-shell::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.boxies-shell::before {
+  left: 0;
+  box-shadow:
+    var(--boxies-edge-fringe-x, 24px) 0 var(--boxies-edge-fringe-blur, 64px)
+      var(--boxies-edge-fringe-color);
+}
+
+body.boxies-shell::after {
+  right: 0;
+  box-shadow:
+    calc(var(--boxies-edge-fringe-x, 24px) * -1) 0 var(--boxies-edge-fringe-blur, 64px)
+      var(--boxies-edge-fringe-color);
+}
+
 .boxies-app {
   position: relative;
+  z-index: 1;
   min-height: 100vh;
 }
 
