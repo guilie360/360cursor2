@@ -1,5 +1,6 @@
 /**
  * QuotationGuides — rulers + scene guides (%) for Quotation Editor.
+ * v7.2.157 — Eliminar guías… dialog (current scene default).
  * rulersVisible / guidesVisible are session-only; guides[] persist on each scene.
  *
  * Coordinate space = active viewport window (Desktop / Tablet / Mobile), not the
