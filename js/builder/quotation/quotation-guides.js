@@ -536,7 +536,7 @@ var QuotationGuides = (function () {
           (g.locked ? ' is-locked' : '') + '"' +
           ' data-qe-guide-id="' + String(g.id).replace(/"/g, '') + '"' +
           ' data-qe-guide-type="' + type + '"' +
-          ' title="Arrastra para mover · Clic derecho para eliminar"></div>';
+          ' title="Arrastra · Doble clic para posición · Clic derecho para menú"></div>';
     });
     layer.innerHTML = html;
     guides.forEach(function (g) {
@@ -955,10 +955,40 @@ var QuotationGuides = (function () {
       openGuideMenu(e.clientX, e.clientY, el.getAttribute('data-qe-guide-id'));
     });
 
+    layer.addEventListener('dblclick', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-qe-guide-id]') : null;
+      if (!el || !layer.contains(el)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (isPreview()) return;
+      /* Cancel any drag that started on the second click of the double-click. */
+      if (dragGuide) {
+        var dragEl = dragGuide.el;
+        var pointerId = dragGuide.pointerId;
+        dragGuide = null;
+        if (dragEl) {
+          dragEl.classList.remove('is-dragging');
+          dragEl.classList.remove('is-removing');
+          if (pointerId != null && dragEl.releasePointerCapture) {
+            try { dragEl.releasePointerCapture(pointerId); } catch (errRel) { /* ignore */ }
+          }
+        }
+        clearDragCursor();
+        hideReadout();
+      }
+      openGuideMenu(e.clientX, e.clientY, el.getAttribute('data-qe-guide-id'));
+    });
+
     layer.addEventListener('pointerdown', function (e) {
       if (e.button !== 0 || isPreview()) return;
       var el = e.target && e.target.closest ? e.target.closest('[data-qe-guide-id]') : null;
       if (!el || !layer.contains(el)) return;
+      /* Second press of a double-click — wait for dblclick to open the px editor. */
+      if (e.detail >= 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       var id = el.getAttribute('data-qe-guide-id');
       if (!beginGuideDrag(id, el, e.clientX, e.clientY, e.pointerId)) return;
       e.preventDefault();
