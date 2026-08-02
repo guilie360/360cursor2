@@ -4138,7 +4138,80 @@ var ExperienciaCanvas = (function () {
           moved = true;
         }
       }
+      /* Live spacing pills (nearest / equal) — full remount skips these while dragging. */
+      syncLiveSpacingGuides();
       return moved;
+    }
+
+    function syncLiveSpacingGuides() {
+      if (!buttonsLayer) return;
+      var old = buttonsLayer.querySelectorAll('[data-exp-space-guide]');
+      for (var i = 0; i < old.length; i++) {
+        try { old[i].parentNode.removeChild(old[i]); } catch (eR) { /* ignore */ }
+      }
+      if (!buttonDrag || !buttonDrag.guides) return;
+      var spacing = buttonDrag.guides.spacing || [];
+      if (!spacing.length) return;
+      var seenSpace = {};
+      var html = '';
+      spacing.forEach(function (s) {
+        if (!s || s.px == null) return;
+        var key = String(s.axis) + ':' + Math.round(Number(s.pos) * 10) + ':' +
+          Math.round(Number(s.cross) * 10) + ':' + s.px;
+        if (seenSpace[key]) return;
+        seenSpace[key] = true;
+        var label = String(s.px);
+        var extra = s.uniform ? ' is-uniform' : ' is-near';
+        if (s.axis === 'x') {
+          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x' + extra +
+            '" data-exp-space-guide="1" style="left:' + Number(s.pos) + '%;top:' +
+            Number(s.cross) + '%"><span>' + esc(label) + '</span></div>';
+        } else {
+          html += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y' + extra +
+            '" data-exp-space-guide="1" style="left:' + Number(s.cross) + '%;top:' +
+            Number(s.pos) + '%"><span>' + esc(label) + '</span></div>';
+        }
+      });
+      if (html) buttonsLayer.insertAdjacentHTML('afterbegin', html);
+    }
+
+    /** Double-click rotate handle → type exact degrees (same popover as guide px). */
+    function openOverlayRotationEditor(clientX, clientY, sceneId, buttonId) {
+      if (!sceneId || !buttonId) return;
+      if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+      var btn = ExperienciaEngine.getSceneButton(
+        state, ExperienciaEngine.getNode(state, sceneId), buttonId
+      );
+      if (!btn || btn.locked) return;
+      var rot = Math.round(Number(btn.rotation) || 0);
+      QuotationContextMenu.open({
+        x: clientX,
+        y: clientY,
+        ariaLabel: 'Rotación',
+        items: [
+          {
+            type: 'input',
+            id: 'overlay-rot',
+            label: '',
+            value: rot,
+            suffix: '°',
+            min: -360,
+            max: 360,
+            step: 1,
+            ariaLabel: 'Rotación en grados',
+            onSubmit: function (raw) {
+              var n = Number(String(raw == null ? '' : raw).replace(/[^\d.-]/g, ''));
+              if (!isFinite(n)) return;
+              n = Math.max(-360, Math.min(360, Math.round(n)));
+              pushButtonHistory(sceneId);
+              ExperienciaEngine.updateSceneButton(state, sceneId, buttonId, { rotation: n });
+              paintButtonsStage();
+              paintInspector();
+              persist();
+            }
+          }
+        ]
+      });
     }
 
     function paintButtonsStage() {
@@ -4211,10 +4284,12 @@ var ExperienciaCanvas = (function () {
           var label = String(s.px);
           var extra = s.uniform ? ' is-uniform' : ' is-near';
           if (s.axis === 'x') {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x' + extra + '" style="left:' +
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-x' + extra +
+              '" data-exp-space-guide="1" style="left:' +
               Number(s.pos) + '%;top:' + Number(s.cross) + '%"><span>' + esc(label) + '</span></div>';
           } else {
-            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y' + extra + '" style="left:' +
+            guidesHtml += '<div class="builder-exp-btn-guide builder-exp-btn-guide--spacing is-y' + extra +
+              '" data-exp-space-guide="1" style="left:' +
               Number(s.cross) + '%;top:' + Number(s.pos) + '%"><span>' + esc(label) + '</span></div>';
           }
         });
@@ -5782,6 +5857,12 @@ var ExperienciaCanvas = (function () {
           if (mode === 'rotate') {
             var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
             var deg = Math.round((ang * 180) / Math.PI) + 90;
+            /* Hold Shift while rotating → snap to 45° increments. */
+            if (ev.shiftKey) {
+              deg = Math.round(deg / 45) * 45;
+            }
+            if (deg > 360) deg = deg % 360;
+            if (deg < -360) deg = -((-deg) % 360);
             ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
               rotation: deg
             });
@@ -5912,6 +5993,10 @@ var ExperienciaCanvas = (function () {
           if (!btnG || btnG.locked) return;
           ev.preventDefault();
           ev.stopPropagation();
+          /* Second click of double-click on rotate → wait for dblclick editor. */
+          if (handle.getAttribute('data-handle') === 'rotate' && ev.detail >= 2) {
+            return;
+          }
           var pct0 = percentFromPointer(ev);
           transformDrag = {
             mode: handle.getAttribute('data-handle'),
@@ -6008,6 +6093,21 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+      buttonsLayer.addEventListener('dblclick', function (ev) {
+        var rotHandle = ev.target && ev.target.closest
+          ? ev.target.closest('[data-handle="rotate"]')
+          : null;
+        if (!rotHandle || !rotHandle.closest('[data-exp-gizmo]')) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (transformDrag) {
+          transformDrag = null;
+          unbindOverlayPointerDocs();
+        }
+        var gizmo = rotHandle.closest('[data-exp-gizmo]');
+        var gid = gizmo && gizmo.getAttribute('data-gizmo-id');
+        openOverlayRotationEditor(ev.clientX, ev.clientY, canvas().selectedId, gid);
+      });
       /* Force hover color in Builder (theme tokens otherwise keep white). */
       buttonsLayer.addEventListener('mouseover', function (ev) {
         var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn.is-hover-on');
