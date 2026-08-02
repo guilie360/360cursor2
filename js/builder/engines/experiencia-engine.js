@@ -411,10 +411,10 @@ var ExperienciaEngine = (function () {
       if (ix.label == null) ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo' : 'Rectángulo';
       if (ix.width == null) ix.width = 12;
       if (ix.height == null) ix.height = t === 'SHAPE_CIRCLE' ? 12 : 8;
-      if (ix.fill == null) ix.fill = 'rgba(255,255,255,0.18)';
-      if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.65)';
-      if (ix.strokeWidth == null) ix.strokeWidth = 2;
-      if (ix.borderRadius == null) ix.borderRadius = t === 'SHAPE_CIRCLE' ? 999 : 8;
+      if (ix.fill == null) ix.fill = 'rgba(255,255,255,0.14)';
+      if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.55)';
+      if (ix.strokeWidth == null) ix.strokeWidth = 1;
+      if (ix.borderRadius == null) ix.borderRadius = t === 'SHAPE_CIRCLE' ? 999 : 0;
     }
     return ix;
   }

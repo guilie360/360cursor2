@@ -4162,10 +4162,11 @@ var ExperienciaCanvas = (function () {
         if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
           styleBits += 'width:' + (Number(b.width) || 12) + '%;' +
             'height:' + (Number(b.height) || 8) + '%;' +
-            'background:' + (b.fill || 'rgba(255,255,255,0.18)') + ';' +
-            'border:' + (Number(b.strokeWidth) || 2) + 'px solid ' +
-              (b.stroke || 'rgba(255,255,255,0.65)') + ';' +
-            'border-radius:' + (b.borderRadius != null ? Number(b.borderRadius) : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px;';
+            'background:' + (b.fill || 'rgba(255,255,255,0.14)') + ';' +
+            'border:' + (Number(b.strokeWidth) != null && !isNaN(Number(b.strokeWidth))
+              ? Number(b.strokeWidth) : 1) + 'px solid ' +
+              (b.stroke || 'rgba(255,255,255,0.55)') + ';' +
+            'border-radius:' + (b.borderRadius != null ? Number(b.borderRadius) : (t === 'SHAPE_CIRCLE' ? 999 : 0)) + 'px;';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
@@ -4255,6 +4256,9 @@ var ExperienciaCanvas = (function () {
             gh = Math.max(3, ((Number(selBtn.fontSize) || 28) / layerH) * 100 * 1.4);
           }
           var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+          var sizeWpx = Math.max(1, Math.round((gw / 100) * layerW));
+          var sizeHpx = Math.max(1, Math.round((gh / 100) * layerH));
+          var sizeLabel = sizeWpx + ' × ' + sizeHpx;
           buttonsLayer.innerHTML +=
             '<div class="builder-exp-sel-gizmo" data-exp-gizmo="1" data-gizmo-id="' + esc(selBtn.id) + '"' +
               ' data-gizmo-type="' + esc(st) + '"' +
@@ -4265,6 +4269,7 @@ var ExperienciaCanvas = (function () {
                 return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
               }).join('') +
               '<span class="builder-exp-sel-rotate" data-handle="rotate" title="Rotar"></span>' +
+              '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>' +
             '</div>';
         }
       }

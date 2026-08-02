@@ -4530,10 +4530,12 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 2;
   min-width: 24px;
   min-height: 24px;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
+  transform-origin: center center;
 }
 .builder-exp-stage-shape.is-selected {
-  outline: 2px solid #6fbf86;
-  outline-offset: 2px;
+  outline: none;
 }
 
 

@@ -7195,6 +7195,26 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   background: rgba(111, 191, 134, 0.9);
 }
 
+.builder-exp-sel-size {
+  position: absolute;
+  left: 50%;
+  bottom: -26px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 4;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(111, 191, 134, 0.95);
+  color: #0a0a0a;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
 .builder-exp-block {
   margin: 0 0 12px;
   padding: 0 0 10px;

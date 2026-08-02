@@ -3245,7 +3245,7 @@ var QuotationEditor = (function () {
       dockSegHtml('data-qe-add-text', 'plus', 'Texto') +
       dockSegHtml('data-qe-add-hotspot', 'plus', 'Hotspot') +
       dockSegHtml('data-qe-add-image', 'plus', 'Imagen') +
-      dockSegHtml('data-qe-add-shape="SHAPE_RECT"', 'plus', 'Forma');
+      dockSegHtml('data-qe-add-shape', 'plus', 'Forma');
   }
 
   function stageDockHtml() {
@@ -6069,8 +6069,24 @@ var QuotationEditor = (function () {
     var addImg = editor.querySelector('[data-qe-add-image]');
     if (addImg) addImg.addEventListener('click', function () { openResourcePicker(); });
     editor.querySelectorAll('[data-qe-add-shape]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        addShapeElement(btn.getAttribute('data-qe-add-shape') || 'SHAPE_RECT');
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) {
+          addShapeElement('SHAPE_RECT');
+          return;
+        }
+        QuotationContextMenu.open({
+          x: e.clientX,
+          y: e.clientY,
+          ariaLabel: 'Forma',
+          items: [
+            { id: 'rect', label: 'Rectángulo' }
+          ],
+          onSelect: function (id) {
+            if (id === 'rect') addShapeElement('SHAPE_RECT');
+          }
+        });
       });
     });
     var edit = editor.querySelector('[data-qe-dock-edit]');
