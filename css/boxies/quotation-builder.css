@@ -1846,6 +1846,7 @@
   top: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  overflow: visible !important;
 }
 
 /* Buttons/shapes must sit above the hotspots hit layer in edit mode. */
@@ -1853,6 +1854,7 @@
 .hero-canvas .qe-exp-overlay .builder-exp-buttons-stage,
 [data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-stage {
   z-index: 7;
+  overflow: visible !important;
 }
 
 .qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage,
