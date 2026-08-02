@@ -12,7 +12,7 @@
   --boxies-dock-h: 56px;
   --boxies-dock-safe: env(safe-area-inset-bottom, 0px);
   --boxies-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
-  --boxies-dock-bg: rgba(5, 5, 5, 0.82);
+  --boxies-dock-bg: #050505;
   --boxies-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   /*
    * Intentional edge fringe — same mechanics as the closed main-menu bleed:
@@ -39,7 +39,9 @@ body.boxies-has-dock.boxies-shell {
 /*
  * Ambient L/R fringe — recreate the closed-menu bleed:
  * slab parked just off-canvas, glass shadow falls into the viewport.
- * z-index below header/dock/menu; pointer-events: none.
+ *
+ * z-index 1 → above bare canvas gutters, BELOW columns / escenas / chrome
+ * (those use z-index ≥ 5 + opaque surfaces so the fringe cannot paint over them).
  */
 body.boxies-shell::before,
 body.boxies-shell::after {
@@ -50,7 +52,7 @@ body.boxies-shell::after {
   width: var(--boxies-edge-fringe-w, 48px);
   background: #050505;
   pointer-events: none;
-  z-index: 900;
+  z-index: 1;
 }
 
 body.boxies-shell::before {
@@ -82,9 +84,7 @@ body.boxies-shell::after {
   gap: 12px;
   height: var(--boxies-header-h);
   padding: 0 14px;
-  background: rgba(5, 5, 5, 0.72);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  background: #050505;
   border-bottom: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
 }

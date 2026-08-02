@@ -303,7 +303,8 @@
   overflow: hidden;
 }
 
-/* V7.2.66 ? Capas + Propiedades right rail */
+/* V7.2.66 ? Capas + Propiedades right rail.
+ * Opaque + z-index above ambient edge fringe. */
 .quotation-props {
   position: relative;
   flex: 0 0 var(--quotation-props-w, 220px);
@@ -315,8 +316,9 @@
   flex-direction: column;
   box-sizing: border-box;
   overflow: visible;
-  background: rgba(8, 8, 8, 0.42);
+  background: #0a0a0a;
   border-left: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
+  z-index: 5;
   transition:
     flex-basis var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
     width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1)),
@@ -845,7 +847,8 @@
   /* Fold hangs below strip: height(16) + gap(12) before work/responsive */
   margin: 0 0 calc(var(--builder-float-w, 16px) + 12px);
   min-height: 0;
-  z-index: 8;
+  /* Above ambient edge fringe (body::before/::after z-index 1). */
+  z-index: 5;
 }
 
 .qe-scenes {
@@ -858,10 +861,10 @@
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
-  /* Same surface language as Biblioteca / Capas / Propiedades. */
+  /* Opaque so edge fringe cannot show through the strip. */
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  background: rgba(8, 8, 8, 0.72);
+  background: #0a0a0a;
 }
 
 .qe-scenes-host.is-collapsed,
@@ -3564,8 +3567,10 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
-/* Left block: recursos only (Config/Editar live in the BOXIES header). */
+/* Left block: recursos only (Config/Editar live in the BOXIES header).
+ * Opaque + z-index above ambient edge fringe (body::before/::after at z-index 1). */
 .quotation-left-block {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -3573,11 +3578,11 @@ body.quotation-canvas-first .builder-workspace,
   min-height: 0;
   height: 100%;
   max-height: 100%;
-  background: rgba(8, 8, 8, 0.42);
+  background: #0a0a0a;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
   overflow: hidden;
-  z-index: 1;
+  z-index: 5;
 }
 
 /*
