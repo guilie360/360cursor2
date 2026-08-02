@@ -5428,6 +5428,40 @@ var ExperienciaCanvas = (function () {
       return canvas().editMode === 'buttons' || !!overlayMode;
     }
 
+    function getSelectedOverlayIds() {
+      var ids = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.map(String)
+        : [];
+      if (!ids.length && canvas().selectedButtonId) {
+        ids = [String(canvas().selectedButtonId)];
+      }
+      return ids;
+    }
+
+    function buildOverlayDragOrigins(sceneId, ids) {
+      var origins = {};
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n || !ids || !ids.length) return origins;
+      ids.forEach(function (id) {
+        var b = ExperienciaEngine.getSceneButton(state, n, id);
+        if (!b || b.locked) return;
+        origins[String(id)] = {
+          x: b.storedX != null ? Number(b.storedX) : Number(b.x) || 50,
+          y: b.storedY != null ? Number(b.storedY) : Number(b.y) || 50
+        };
+      });
+      return origins;
+    }
+
+    function restoreOverlayDragOrigins(sceneId, origins) {
+      if (!sceneId || !origins) return;
+      Object.keys(origins).forEach(function (id) {
+        var o = origins[id];
+        if (!o) return;
+        ExperienciaEngine.setSceneButtonPosition(state, sceneId, id, o.x, o.y);
+      });
+    }
+
     function nudgeSelectedButtons(dxPx, dyPx) {
       if (!overlaysEditable()) return false;
       var sceneId = canvas().selectedId;
@@ -6236,11 +6270,15 @@ var ExperienciaCanvas = (function () {
           var pending = buttonDrag;
           buttonDrag = null;
           unbindOverlayPointerDocs();
-          if (!pending.historyPushed && pending.originX != null && pending.originY != null &&
-              pending.sceneId && pending.buttonId != null) {
-            ExperienciaEngine.setSceneButtonPosition(
-              state, pending.sceneId, pending.buttonId, pending.originX, pending.originY
-            );
+          if (!pending.historyPushed && pending.sceneId) {
+            if (pending.origins) {
+              restoreOverlayDragOrigins(pending.sceneId, pending.origins);
+            } else if (pending.originX != null && pending.originY != null &&
+                pending.buttonId != null) {
+              ExperienciaEngine.setSceneButtonPosition(
+                state, pending.sceneId, pending.buttonId, pending.originX, pending.originY
+              );
+            }
           }
           paintButtonsStage();
         }
@@ -6485,11 +6523,29 @@ var ExperienciaCanvas = (function () {
           pushButtonHistory(buttonDrag.sceneId);
           buttonDrag.historyPushed = true;
         }
+        var groupIds = (buttonDrag.groupIds && buttonDrag.groupIds.length)
+          ? buttonDrag.groupIds
+          : [buttonDrag.buttonId];
+        var ddx = pct.x - buttonDrag.startPx;
+        var ddy = pct.y - buttonDrag.startPy;
+        if (groupIds.length > 1) {
+          groupIds.forEach(function (id) {
+            var orig = buttonDrag.origins && buttonDrag.origins[String(id)];
+            if (!orig) return;
+            ExperienciaEngine.setSceneButtonPosition(
+              state, buttonDrag.sceneId, id, orig.x + ddx, orig.y + ddy
+            );
+            clearPendingMove(id);
+          });
+          buttonDrag.guides = { spacing: [] };
+          paintButtonsStage();
+          return;
+        }
         var rawX = buttonDrag.originX != null
-          ? buttonDrag.originX + (pct.x - buttonDrag.startPx)
+          ? buttonDrag.originX + ddx
           : pct.x;
         var rawY = buttonDrag.originY != null
-          ? buttonDrag.originY + (pct.y - buttonDrag.startPy)
+          ? buttonDrag.originY + ddy
           : pct.y;
         var snapped = computeButtonGuides(
           buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY,
@@ -6507,12 +6563,26 @@ var ExperienciaCanvas = (function () {
         endButtonDrag(ev);
       }
 
-      function beginOverlayMove(ev, bid, sceneId, btn) {
+      function beginOverlayMove(ev, bid, sceneId, btn, opts) {
+        opts = opts || {};
         if (btn && btn.locked) {
           paintButtonsStage();
           paintInspector();
           return;
         }
+        var groupIds = (opts.groupIds && opts.groupIds.length)
+          ? opts.groupIds.map(String)
+          : getSelectedOverlayIds();
+        if (groupIds.indexOf(String(bid)) < 0) {
+          groupIds = [String(bid)];
+        }
+        groupIds = groupIds.filter(function (id) {
+          var b = ExperienciaEngine.getSceneButton(
+            state, ExperienciaEngine.getNode(state, sceneId), id
+          );
+          return !!(b && !b.locked);
+        });
+        if (!groupIds.length) groupIds = [String(bid)];
         var pctStart = percentFromPointer(ev);
         var ox = btn
           ? (btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50)
@@ -6520,12 +6590,15 @@ var ExperienciaCanvas = (function () {
         var oy = btn
           ? (btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50)
           : 50;
+        var origins = buildOverlayDragOrigins(sceneId, groupIds);
         /* Full paint BEFORE arming drag so the gizmo mounts without live-path skip. */
         clearPendingMove(bid);
         paintButtonsStage();
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
+          groupIds: groupIds,
+          origins: origins,
           pointerId: ev.pointerId,
           clientStartX: ev.clientX,
           clientStartY: ev.clientY,
@@ -6665,18 +6738,22 @@ var ExperienciaCanvas = (function () {
         ev.preventDefault();
         ev.stopPropagation();
         var bid = hit.getAttribute('data-exp-stage-btn');
-        var cur = Array.isArray(canvas().selectedButtonIds)
-          ? canvas().selectedButtonIds.map(String)
-          : [];
-        if (!cur.length && canvas().selectedButtonId) cur = [String(canvas().selectedButtonId)];
-        if (ev.shiftKey || ev.metaKey || ev.ctrlKey) {
+        var cur = getSelectedOverlayIds();
+        if (ev.shiftKey) {
           var idx = cur.indexOf(String(bid));
           if (idx >= 0) cur.splice(idx, 1);
           else cur.push(String(bid));
           canvas().selectedButtonIds = cur;
+          canvas().selectedButtonId = cur.length ? cur[cur.length - 1] : null;
+          paintButtonsStage();
+          paintInspector();
+          notifyOverlaySelection();
+          return;
+        }
+        if (cur.indexOf(String(bid)) < 0 || cur.length <= 1) {
+          canvas().selectedButtonIds = [String(bid)];
           canvas().selectedButtonId = bid;
         } else {
-          canvas().selectedButtonIds = [String(bid)];
           canvas().selectedButtonId = bid;
         }
         var sceneId = canvas().selectedId;
@@ -6759,13 +6836,37 @@ var ExperienciaCanvas = (function () {
         var dragBtn = buttonDrag.buttonId;
         var dragOriginX = buttonDrag.originX;
         var dragOriginY = buttonDrag.originY;
+        var dragOrigins = buttonDrag.origins;
+        var dragGroupIds = buttonDrag.groupIds;
         buttonDrag = null;
         unbindOverlayPointerDocs();
-        if (!moved && dragScene && dragBtn != null &&
+        if (!moved && dragScene && dragOrigins) {
+          restoreOverlayDragOrigins(dragScene, dragOrigins);
+        } else if (!moved && dragScene && dragBtn != null &&
             dragOriginX != null && dragOriginY != null) {
           ExperienciaEngine.setSceneButtonPosition(
             state, dragScene, dragBtn, dragOriginX, dragOriginY
           );
+        } else if (moved && dragScene && dragOrigins && dragGroupIds && dragGroupIds.length > 1) {
+          var allNear = true;
+          dragGroupIds.forEach(function (id) {
+            var orig = dragOrigins[String(id)];
+            if (!orig) return;
+            var endBtn = ExperienciaEngine.getSceneButton(
+              state, ExperienciaEngine.getNode(state, dragScene), id
+            );
+            if (!endBtn) return;
+            var endX = endBtn.storedX != null ? Number(endBtn.storedX) : Number(endBtn.x);
+            var endY = endBtn.storedY != null ? Number(endBtn.storedY) : Number(endBtn.y);
+            if (Math.abs(endX - orig.x) >= 0.05 || Math.abs(endY - orig.y) >= 0.05) {
+              allNear = false;
+            }
+          });
+          if (allNear && buttonHistory.past.length) {
+            buttonHistory.past.pop();
+            moved = false;
+            restoreOverlayDragOrigins(dragScene, dragOrigins);
+          }
         } else if (moved && dragScene && dragBtn != null &&
             dragOriginX != null && dragOriginY != null) {
           var endBtn = ExperienciaEngine.getSceneButton(

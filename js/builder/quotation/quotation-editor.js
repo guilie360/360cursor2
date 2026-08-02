@@ -751,6 +751,7 @@ var QuotationEditor = (function () {
       guidesVisible: true,
       expEditMode: 'buttons',
       expHasSelection: false,
+      selectedOverlayIds: [],
       openGroups: {
         renders: true,
         videos: true,
@@ -2913,6 +2914,10 @@ var QuotationEditor = (function () {
     if (scene) ensureSceneOverlays(scene);
     var ixs = (scene && Array.isArray(scene.interactions)) ? scene.interactions.slice() : [];
     var heroActive = !!(scene && isHeroScene(scene));
+    var selSet = {};
+    (state.selectedOverlayIds || []).forEach(function (id) {
+      selSet[String(id)] = true;
+    });
     var rows = '' +
       '<li class="qe-layers__item is-hero' + (heroActive ? ' is-selected' : '') + '"' +
         ' data-qe-layer="hero" data-qe-layer-type="HERO">' +
@@ -2933,12 +2938,14 @@ var QuotationEditor = (function () {
       var vis = ix.visible !== false && ix.enabled !== false;
       var locked = !!ix.locked;
       rows += '' +
-        '<li class="qe-layers__item" data-qe-layer="' + escapeHtml(ix.id) + '"' +
+        '<li class="qe-layers__item' + (selSet[String(ix.id)] ? ' is-selected' : '') + '"' +
+          ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
           ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '">' +
           '<button type="button" class="qe-layers__vis' + (vis ? '' : ' is-off') + '"' +
             ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
             ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
-          '<button type="button" class="qe-layers__sel" data-qe-layer-sel="' +
+          '<button type="button" class="qe-layers__sel' + (selSet[String(ix.id)] ? ' is-active' : '') + '"' +
+            ' data-qe-layer-sel="' +
             escapeHtml(ix.id) + '">' +
             '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel(t)) + '</span>' +
             '<span class="qe-layers__name">' + escapeHtml(label) + '</span>' +
@@ -6446,6 +6453,8 @@ var QuotationEditor = (function () {
         refreshLayersPanel();
       },
       onSelectionChange: function (sel) {
+        var ids = (sel && Array.isArray(sel.buttonIds)) ? sel.buttonIds.map(String) : [];
+        state.selectedOverlayIds = ids;
         var next = !!(sel && sel.hasSelection);
         if (state.expHasSelection === next && !state.selectedElementId) {
           /* still refresh dock when switching between create/context */
