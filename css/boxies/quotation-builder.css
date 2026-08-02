@@ -5255,6 +5255,25 @@ body.boxies-host .admin-modal.qe-guides-delete-modal .admin-modal-footer .btn-pr
 }
 
 /* ── Konva POC (Fase 0) — auto on EDITOR sandbox ── */
+/* Edit layer: passthrough — only Konva host receives pointer events. */
+.qe-canvas__edit-layer.is-konva-poc,
+.qe-canvas__edit-layer[data-konva-poc-active="1"] {
+  pointer-events: none !important;
+  touch-action: auto;
+}
+.is-konva-poc .konva-poc-shell {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.is-konva-poc .konva-overlay-host {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
 .is-konva-poc .konva-poc-badge {
   position: absolute;
   top: 8px;
@@ -5268,17 +5287,6 @@ body.boxies-host .admin-modal.qe-guides-delete-modal .admin-modal-footer .btn-pr
   font: 600 10px/1.2 ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.12em;
   pointer-events: none;
-}
-.is-konva-poc .konva-overlay-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: auto;
-}
-.is-konva-poc .konva-overlay-host {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
 }
 .is-konva-poc .konva-poc-debug {
   position: absolute;

@@ -73,12 +73,13 @@ var KonvaOverlayRenderer = (function () {
     var onSelectionChange = options.onSelectionChange;
     var pullToScenes = options.pullToScenes || function () {};
 
-    var shellHtml = (typeof ExperienciaCanvas !== 'undefined' && ExperienciaCanvas.overlayShellHtml)
-      ? ExperienciaCanvas.overlayShellHtml()
-      : '<div data-exp-buttons-stage><div data-exp-buttons-frame>' +
-        '<img data-exp-buttons-img alt=""><div data-exp-buttons-layer></div></div></div>';
+    var shellHtml =
+      '<div class="konva-poc-shell" data-konva-poc-shell="1">' +
+        '<div class="konva-overlay-host" data-konva-host="1"></div>' +
+      '</div>';
     hostEl.innerHTML = shellHtml;
     hostEl.classList.add('is-konva-poc');
+    hostEl.setAttribute('data-konva-poc-active', '1');
 
     var badge = document.createElement('div');
     badge.className = 'konva-poc-badge';
@@ -91,19 +92,8 @@ var KonvaOverlayRenderer = (function () {
       console.info('[KonvaOverlayRenderer] mounted — shapes via Konva Stage');
     } catch (eLog) { /* ignore */ }
 
-    var buttonsStage = hostEl.querySelector('[data-exp-buttons-stage]');
-    var buttonsFrame = hostEl.querySelector('[data-exp-buttons-frame]');
-    var buttonsImg = hostEl.querySelector('[data-exp-buttons-img]');
-    var buttonsLayer = hostEl.querySelector('[data-exp-buttons-layer]');
-    if (!buttonsLayer) return null;
-
-    buttonsLayer.innerHTML = '';
-    buttonsLayer.classList.add('konva-overlay-layer');
-
-    var konvaHost = document.createElement('div');
-    konvaHost.className = 'konva-overlay-host';
-    konvaHost.setAttribute('data-konva-host', '1');
-    buttonsLayer.appendChild(konvaHost);
+    var konvaHost = hostEl.querySelector('[data-konva-host]');
+    if (!konvaHost) return null;
 
     var debugEl = document.createElement('pre');
     debugEl.className = 'konva-poc-debug';
@@ -121,11 +111,21 @@ var KonvaOverlayRenderer = (function () {
     var selectedIds = [];
     var syncing = false;
     var resizeObs = null;
+    var resizeTimer = null;
+    var lastLayerW = 0;
+    var lastLayerH = 0;
 
     function layerSize() {
+      var hostW = konvaHost.clientWidth;
+      var hostH = konvaHost.clientHeight;
+      if (hostW < 2 || hostH < 2) {
+        var parent = hostEl.getBoundingClientRect();
+        hostW = parent.width || hostW;
+        hostH = parent.height || hostH;
+      }
       return {
-        w: Math.max(1, konvaHost.clientWidth || buttonsFrame.clientWidth || 1000),
-        h: Math.max(1, konvaHost.clientHeight || buttonsFrame.clientHeight || 1000)
+        w: Math.max(1, hostW || 1000),
+        h: Math.max(1, hostH || 1000)
       };
     }
 
@@ -312,6 +312,11 @@ var KonvaOverlayRenderer = (function () {
       if (!n) return;
 
       syncing = true;
+      if (resizeObs) {
+        try { resizeObs.disconnect(); } catch (eDisc) { /* ignore */ }
+      }
+      if (transformer) transformer.remove();
+      if (groupOutline) groupOutline.remove();
       transformer.nodes([]);
       nodeMap = {};
       groupMap = {};
@@ -372,6 +377,11 @@ var KonvaOverlayRenderer = (function () {
       transformer.moveToTop();
       layer.batchDraw();
       syncing = false;
+      lastLayerW = sz.w;
+      lastLayerH = sz.h;
+      if (resizeObs && konvaHost) {
+        try { resizeObs.observe(konvaHost); } catch (eObs) { /* ignore */ }
+      }
       restoreSelectionVisual();
       updateDebug('rebuild');
     }
@@ -601,45 +611,37 @@ var KonvaOverlayRenderer = (function () {
       });
     }
 
-    function paintBackground() {
-      var n = getSceneNode();
-      if (!n || !buttonsImg) return;
-      var media = ExperienciaEngine.resolveSceneMedia
-        ? ExperienciaEngine.resolveSceneMedia(shim, n)
-        : null;
-      var url = (media && (media.publicUrl || media.thumbnailUrl)) || '';
-      if (url) {
-        buttonsImg.onload = function () { rebuildFromEngine(); };
-        if (buttonsImg.getAttribute('src') !== url) buttonsImg.src = url;
-        buttonsImg.hidden = false;
-      } else {
-        buttonsImg.removeAttribute('src');
-        buttonsImg.hidden = true;
-      }
-      if (buttonsStage) buttonsStage.hidden = false;
-    }
-
     function bindResize() {
       if (typeof ResizeObserver === 'undefined') return;
       resizeObs = new ResizeObserver(function () {
-        if (!stage) return;
-        var sz = layerSize();
-        stage.width(sz.w);
-        stage.height(sz.h);
-        rebuildFromEngine();
+        if (!stage || syncing) return;
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          resizeTimer = null;
+          if (!stage || syncing) return;
+          var sz = layerSize();
+          if (Math.abs(sz.w - lastLayerW) < 1 && Math.abs(sz.h - lastLayerH) < 1) {
+            return;
+          }
+          stage.width(sz.w);
+          stage.height(sz.h);
+          rebuildFromEngine();
+        }, 80);
       });
       resizeObs.observe(konvaHost);
     }
 
-    paintBackground();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        rebuildFromEngine();
+      });
+    });
     bindResize();
-    rebuildFromEngine();
 
     return {
       isKonvaPoc: true,
       shim: shim,
       refresh: function () {
-        paintBackground();
         rebuildFromEngine();
       },
       pull: function () {
@@ -652,8 +654,13 @@ var KonvaOverlayRenderer = (function () {
       addShape: function (kind) {
         if (!ExperienciaEngine.addSceneShape) return null;
         var res = ExperienciaEngine.addSceneShape(shim, overlayNodeId, kind || 'SHAPE_RECT');
+        if (res && res.id) {
+          deepSelect = null;
+          selectedIds = [String(res.id)];
+        }
         pullToScenes();
         rebuildFromEngine();
+        notifySelection();
         if (typeof onChange === 'function') onChange();
         return res;
       },
