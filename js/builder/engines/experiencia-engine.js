@@ -506,7 +506,7 @@ var ExperienciaEngine = (function () {
     g.memberIds.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
-      var world = overlayWorldLayoutAbsolute(ix, layerW, layerH);
+      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
       if (!world) return;
       var loc = worldPointToLocal(g, world.x, world.y, layerW, layerH);
       ix.localX = loc.x;
@@ -676,20 +676,27 @@ var ExperienciaEngine = (function () {
   }
 
   function overlayGroupViewModel(state, n, g, layerW, layerH) {
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH);
     migrateGroupedChildLocals(n, g, layerW, layerH);
+    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    var vx = bounds ? bounds.cx : (Number(g.x) || 50);
+    var vy = bounds ? bounds.cy : (Number(g.y) || 50);
+    var vw = bounds ? bounds.w : (Number(g.width) || 20);
+    var vh = bounds ? bounds.h : (Number(g.height) || 20);
     return {
       id: g.id,
       portId: g.portId || g.id,
       type: 'OVERLAY_GROUP',
       label: g.label != null ? String(g.label) : 'Grupo',
-      x: Number(g.x) || 50,
-      y: Number(g.y) || 50,
-      storedX: g.x,
-      storedY: g.y,
+      x: vx,
+      y: vy,
+      storedX: vx,
+      storedY: vy,
       rotation: Number(g.rotation) || 0,
-      width: Number(g.width) || 20,
-      height: Number(g.height) || 20,
+      width: vw,
+      height: vh,
       memberIds: (g.memberIds || []).slice(),
       visible: g.enabled !== false,
       enabled: g.enabled !== false,
@@ -740,6 +747,13 @@ var ExperienciaEngine = (function () {
       if (!isNaN(newW) && !isNaN(newH) && baseW > 0 && baseH > 0) {
         var sx = newW / baseW;
         var sy = newH / baseH;
+        if (patch.keepRatio) {
+          var uniform = Math.max(Math.abs(sx), Math.abs(sy));
+          sx = uniform;
+          sy = uniform;
+          newW = baseW * sx;
+          newH = baseH * sy;
+        }
         var snap = patch.memberSnapshots;
         (g.memberIds || []).forEach(function (mid) {
           var c = getInteraction(n, mid);
@@ -765,7 +779,18 @@ var ExperienciaEngine = (function () {
         g.height = newH;
       }
     }
+    if (patch.syncBounds) {
+      syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+    }
     return overlayGroupViewModel(state, n, g, layerW, layerH);
+  }
+
+  function commitOverlayGroupBounds(n, g, layerW, layerH) {
+    if (!n || !g) return g;
+    syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+    g._baseWidth = Number(g.width) || g._baseWidth;
+    g._baseHeight = Number(g.height) || g._baseHeight;
+    return g;
   }
 
   function snapshotOverlayGroupLocals(n, g) {
@@ -6673,6 +6698,7 @@ var ExperienciaEngine = (function () {
     migrateGroupedChildLocals: migrateGroupedChildLocals,
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
     syncOverlayGroupFrameFromMembers: syncOverlayGroupFrameFromMembers,
+    commitOverlayGroupBounds: commitOverlayGroupBounds,
     reconcileOverlayGroupTransform: reconcileOverlayGroupTransform,
     isHotspotsEditableNode: isHotspotsEditableNode,
     isSceneHotspotMask: isSceneHotspotMask,
