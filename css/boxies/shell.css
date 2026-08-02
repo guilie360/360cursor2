@@ -48,7 +48,8 @@ body.boxies-shell::after {
   content: '';
   position: fixed;
   top: 0;
-  bottom: 0;
+  /* Stop above the dock — no fringe in the footer band. */
+  bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
   width: var(--boxies-edge-fringe-w, 48px);
   background: #050505;
   pointer-events: none;
