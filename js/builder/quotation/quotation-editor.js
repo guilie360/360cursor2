@@ -3092,6 +3092,8 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-layers__lock' + (locked ? ' is-on' : '') + '"' +
             ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
             ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '">🔒</button>' +
+          '<button type="button" class="qe-layers__clear" data-qe-layer-del="' +
+            escapeHtml(ix.id) + '" title="Eliminar" aria-label="Eliminar">🗑</button>' +
           '<button type="button" class="qe-layers__ord" data-qe-layer-up="' +
             escapeHtml(ix.id) + '" title="Subir">↑</button>' +
           '<button type="button" class="qe-layers__ord" data-qe-layer-down="' +
@@ -3149,6 +3151,68 @@ var QuotationEditor = (function () {
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
+    bindLayersPanel();
+  }
+
+  function findSceneInteraction(id) {
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions) || !id) return null;
+    for (var i = 0; i < scene.interactions.length; i++) {
+      if (String(scene.interactions[i].id) === String(id)) return scene.interactions[i];
+    }
+    return null;
+  }
+
+  function patchSceneInteractionFlags(id, flags) {
+    var ix = findSceneInteraction(id);
+    if (!ix) return false;
+    flags = flags || {};
+    if (flags.visible != null) {
+      ix.enabled = !!flags.visible;
+      ix.visible = !!flags.visible;
+    }
+    if (flags.locked != null) ix.locked = !!flags.locked;
+    if (expOverlay && expOverlay.setInteractionFlags) {
+      expOverlay.setInteractionFlags(id, flags);
+      if (expOverlay.pull) expOverlay.pull();
+    } else if (expOverlay && expOverlay.refresh) {
+      expOverlay.refresh();
+      markDirtyLocal();
+      refreshLayersPanel();
+    }
+    return true;
+  }
+
+  function deleteSceneOverlayById(id) {
+    if (!id) return false;
+    if (expOverlay && expOverlay.removeOverlayById) {
+      if (!expOverlay.removeOverlayById(id)) return false;
+      if (expOverlay.pull) expOverlay.pull();
+    } else {
+      var scene = activeScene();
+      if (!scene || !Array.isArray(scene.interactions)) return false;
+      var iid = String(id);
+      var ix = findSceneInteraction(iid);
+      if (!ix) return false;
+      var t = String(ix.type || '').toUpperCase();
+      if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+        (ix.memberIds || []).forEach(function (mid) {
+          scene.interactions = scene.interactions.filter(function (item) {
+            return String(item.id) !== String(mid);
+          });
+        });
+      }
+      scene.interactions = scene.interactions.filter(function (item) {
+        return String(item.id) !== iid;
+      });
+      if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+    }
+    state.expHasSelection = false;
+    state.selectedOverlayIds = [];
+    markDirtyLocal();
+    refreshLayersPanel();
+    refreshDockOnly();
+    return true;
   }
 
   function layersPanelHtml() {
@@ -3745,6 +3809,10 @@ var QuotationEditor = (function () {
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
     shell.setAttribute('data-qe-chrome-locked', '1');
     canvasFitScale = scale;
+
+    if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
+      try { expOverlay.refresh(); } catch (eKonvaFit) { /* ignore */ }
+    }
 
     syncDesignIdentity();
     if (typeof QuotationGuides !== 'undefined' && QuotationGuides.refresh) {
@@ -6490,15 +6558,16 @@ var QuotationEditor = (function () {
   }
 
   function bindLayersPanel() {
-    var panel = document.querySelector('[data-qe-layers]');
-    if (!panel || panel.dataset.qeLayersBound === '1') return;
-    panel.dataset.qeLayersBound = '1';
+    var body = document.getElementById('quotationRightBody');
+    if (!body || body.dataset.qeLayersBound === '1') return;
+    body.dataset.qeLayersBound = '1';
 
-    panel.addEventListener('click', function (ev) {
+    body.addEventListener('click', function (ev) {
       var t = ev.target;
-      if (!t || !t.closest) return;
+      if (!t || !t.closest || !t.closest('[data-qe-layers]')) return;
       var vis = t.closest('[data-qe-layer-vis]');
       var lock = t.closest('[data-qe-layer-lock]');
+      var del = t.closest('[data-qe-layer-del]');
       var sel = t.closest('[data-qe-layer-sel]');
       var up = t.closest('[data-qe-layer-up]');
       var down = t.closest('[data-qe-layer-down]');
@@ -6524,55 +6593,34 @@ var QuotationEditor = (function () {
       }
 
       if (vis) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var vid = vis.getAttribute('data-qe-layer-vis');
         if (!vid || vid === 'hero') return;
-        var scene = activeScene();
-        var ix = null;
-        if (scene && Array.isArray(scene.interactions)) {
-          for (var i = 0; i < scene.interactions.length; i++) {
-            if (String(scene.interactions[i].id) === String(vid)) {
-              ix = scene.interactions[i];
-              break;
-            }
-          }
-        }
-        if (!ix) return;
-        var nextVis = !(ix.visible !== false && ix.enabled !== false);
-        if (expOverlay && expOverlay.setInteractionFlags) {
-          expOverlay.setInteractionFlags(vid, { visible: nextVis });
-          if (expOverlay.pull) expOverlay.pull();
-        } else {
-          ix.visible = nextVis;
-          ix.enabled = nextVis;
-        }
-        markDirtyLocal();
-        refreshLayersPanel();
+        var ixVis = findSceneInteraction(vid);
+        if (!ixVis) return;
+        var nextVis = !(ixVis.visible !== false && ixVis.enabled !== false);
+        patchSceneInteractionFlags(vid, { visible: nextVis });
         return;
       }
 
       if (lock) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var lid = lock.getAttribute('data-qe-layer-lock');
         if (!lid) return;
-        var sceneL = activeScene();
-        var ixL = null;
-        if (sceneL && Array.isArray(sceneL.interactions)) {
-          for (var j = 0; j < sceneL.interactions.length; j++) {
-            if (String(sceneL.interactions[j].id) === String(lid)) {
-              ixL = sceneL.interactions[j];
-              break;
-            }
-          }
-        }
-        if (!ixL) return;
-        var nextLock = !ixL.locked;
-        if (expOverlay && expOverlay.setInteractionFlags) {
-          expOverlay.setInteractionFlags(lid, { locked: nextLock });
-          if (expOverlay.pull) expOverlay.pull();
-        } else {
-          ixL.locked = nextLock;
-        }
-        markDirtyLocal();
-        refreshLayersPanel();
+        var ixLock = findSceneInteraction(lid);
+        if (!ixLock) return;
+        patchSceneInteractionFlags(lid, { locked: !ixLock.locked });
+        return;
+      }
+
+      if (del) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var did = del.getAttribute('data-qe-layer-del');
+        if (!did) return;
+        deleteSceneOverlayById(did);
         return;
       }
 
@@ -6625,6 +6673,7 @@ var QuotationEditor = (function () {
         } else if (expOverlay && expOverlay.selectOverlayItem) {
           expOverlay.selectOverlayItem(sid);
         }
+        refreshLayersPanel();
         refreshDockOnly();
       }
     });
@@ -6666,6 +6715,12 @@ var QuotationEditor = (function () {
         openOverlaySelectionContextMenu(clientX, clientY);
       }
     });
+
+    if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
+      requestAnimationFrame(function () {
+        if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+      });
+    }
 
     /* Keep library → scene DnD working above the overlay. */
     layer.addEventListener('dragover', function (e) {

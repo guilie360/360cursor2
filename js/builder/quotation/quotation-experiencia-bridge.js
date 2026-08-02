@@ -391,6 +391,9 @@ var QuotationExperienciaBridge = (function () {
       setInteractionFlags: function (id, flags) {
         return handle.setInteractionFlags ? handle.setInteractionFlags(id, flags) : false;
       },
+      removeOverlayById: function (id) {
+        return handle.removeOverlayById ? handle.removeOverlayById(id) : false;
+      },
       reorderInteraction: function (id, dir) {
         return handle.reorderInteraction ? handle.reorderInteraction(id, dir) : false;
       },
