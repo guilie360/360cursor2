@@ -144,16 +144,18 @@ var QuotationConfig = (function () {
 
   function leftNavHtml() {
     return '' +
-      '<nav class="qe-config-nav" data-qe-config-nav aria-label="Secciones de configuración">' +
+      '<nav class="qe-config-nav" aria-label="Secciones de configuración">' +
         NAV.map(function (item) {
           var on = item.id === _activeSection;
           return '' +
-            '<button type="button" class="boxies-workspace-menu__item' +
+            '<button type="button" class="qe-content__toggle qe-config-nav__item' +
               (on ? ' is-current' : '') + '"' +
-              ' role="menuitem"' +
               ' data-qe-config-nav="' + escapeHtml(item.id) + '"' +
               ' aria-current="' + (on ? 'page' : 'false') + '">' +
-              escapeHtml(item.label) +
+              '<span class="qe-config-nav__dot" aria-hidden="true"></span>' +
+              '<span class="qe-content__group-label">' +
+                escapeHtml(item.label) +
+              '</span>' +
             '</button>';
         }).join('') +
       '</nav>';

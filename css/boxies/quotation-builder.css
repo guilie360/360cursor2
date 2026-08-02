@@ -3981,13 +3981,34 @@ body.quotation-canvas-first .builder-workspace,
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 4px 8px 14px;
+  padding: 2px 6px 14px;
   box-sizing: border-box;
 }
 
-.qe-config-nav .boxies-workspace-menu__item {
+.qe-config-nav__item {
   width: 100%;
   box-sizing: border-box;
+}
+
+.qe-config-nav__item.is-current {
+  background: var(--hall-surface-hover, rgba(255, 255, 255, 0.055));
+}
+
+.qe-config-nav__item.is-current .qe-content__group-label {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.qe-config-nav__dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  margin: 0 1px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.qe-config-nav__item.is-current .qe-config-nav__dot {
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .quotation-config-section.is-empty {
