@@ -731,6 +731,26 @@ var ProyectosApi = (function () {
     }).filter(Boolean);
   }
 
+  /** Persist scene guides (%) — must survive sanitize on save/load. */
+  function sanitizeCanvasGuides(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (g) {
+      if (!g || typeof g !== 'object') return null;
+      var id = heroText(g.id);
+      if (!id) return null;
+      var position = Number(g.position);
+      if (!isFinite(position)) position = 0;
+      if (position < 0) position = 0;
+      if (position > 100) position = 100;
+      return {
+        id: id,
+        type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
+        position: Math.round(position * 1000) / 1000,
+        locked: !!g.locked
+      };
+    }).filter(Boolean);
+  }
+
   function sanitizeCanvasDocument(doc) {
     if (!doc || typeof doc !== 'object') return null;
     var scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
@@ -755,7 +775,8 @@ var ProyectosApi = (function () {
         mediaUrl: mediaUrl,
         mediaType: mediaType,
         elements: sanitizeCanvasElements(sc.elements),
-        interactions: sanitizeCanvasInteractions(sc.interactions)
+        interactions: sanitizeCanvasInteractions(sc.interactions),
+        guides: sanitizeCanvasGuides(sc.guides)
       };
     }).filter(function (sc) { return sc && sc.id; });
     /* Allow empty ProjectDocument (0 scenes) — Editor is SSOT. */
