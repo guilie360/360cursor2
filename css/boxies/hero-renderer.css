@@ -11,7 +11,7 @@
   overflow: hidden;
   background: #050505;
   touch-action: none;
-  cursor: grab;
+  cursor: default;
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
@@ -28,7 +28,7 @@
 }
 
 .hero-canvas-host.is-panning {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .hero-canvas-host,

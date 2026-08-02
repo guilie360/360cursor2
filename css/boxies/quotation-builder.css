@@ -727,7 +727,7 @@
 }
 
 .hero-canvas-host.is-pan-ready {
-  cursor: grab;
+  cursor: default;
 }
 
 /* V7.2.59 ? Viewport presets + Safe Area (Builder chrome only) */
