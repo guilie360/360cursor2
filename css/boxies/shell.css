@@ -15,12 +15,11 @@
   --boxies-dock-bg: rgba(5, 5, 5, 0.82);
   --boxies-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   /*
-   * Intentional edge fringe — same cast recipe as .main-menu::before glass
-   * shadow (the former “bug” fringe), not a vignette gradient.
+   * Intentional edge fringe — same mechanics as the closed main-menu bleed:
+   * an off-canvas slab casts glass shadow into the viewport (not a vignette).
    */
-  --boxies-edge-fringe-x: 24px;
-  --boxies-edge-fringe-blur: 64px;
-  --boxies-edge-fringe-color: color-mix(in srgb, var(--bg-main, #050505) 28%, transparent);
+  --boxies-edge-fringe-w: 48px;
+  --boxies-edge-fringe-shadow: 24px 0 64px rgba(0, 0, 0, 0.55);
 }
 
 html.boxies-has-dock,
@@ -38,12 +37,9 @@ body.boxies-has-dock.boxies-shell {
 }
 
 /*
- * Ambient L/R fringe: zero-width fixed edges that only cast the glass shadow
- * (same recipe that used to bleed from the closed hamburger menu).
- *
- * Must paint ABOVE the opaque workspace (or it is invisible) and BELOW
- * header (10001), dock (10000) and main-menu (997). pointer-events: none
- * so it never steals clicks / never acts as a mask.
+ * Ambient L/R fringe — recreate the closed-menu bleed:
+ * slab parked just off-canvas, glass shadow falls into the viewport.
+ * z-index below header/dock/menu; pointer-events: none.
  */
 body.boxies-shell::before,
 body.boxies-shell::after {
@@ -51,23 +47,22 @@ body.boxies-shell::after {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 0;
+  width: var(--boxies-edge-fringe-w, 48px);
+  background: #050505;
   pointer-events: none;
-  z-index: 90;
+  z-index: 900;
 }
 
 body.boxies-shell::before {
   left: 0;
-  box-shadow:
-    var(--boxies-edge-fringe-x, 24px) 0 var(--boxies-edge-fringe-blur, 64px)
-      var(--boxies-edge-fringe-color, rgba(0, 0, 0, 0.45));
+  transform: translateX(-100%);
+  box-shadow: var(--boxies-edge-fringe-shadow, 24px 0 64px rgba(0, 0, 0, 0.55));
 }
 
 body.boxies-shell::after {
   right: 0;
-  box-shadow:
-    calc(var(--boxies-edge-fringe-x, 24px) * -1) 0 var(--boxies-edge-fringe-blur, 64px)
-      var(--boxies-edge-fringe-color, rgba(0, 0, 0, 0.45));
+  transform: translateX(100%);
+  box-shadow: -24px 0 64px rgba(0, 0, 0, 0.55);
 }
 
 .boxies-app {
