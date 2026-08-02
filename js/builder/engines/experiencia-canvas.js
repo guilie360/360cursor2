@@ -4555,53 +4555,92 @@ var ExperienciaCanvas = (function () {
       try { return QuotationGuides.listActiveGuides() || []; } catch (eG) { return []; }
     }
 
-    /** Snap center/edges of a free overlay to Quotation red guides. */
-    function snapPointToSceneGuides(x, y, halfW, halfH) {
-      var GUIDE_SNAP = 1.45;
-      var sceneGuides = listSceneSnapGuides();
-      if (!sceneGuides.length) return { x: x, y: y, snappedX: false, snappedY: false };
+    /**
+     * Snap overlay center so left/center/right (and top/center/bottom) align to target lines.
+     * Targets: canvas edges, peer edges/centers, red guides.
+     */
+    function snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, snapDist) {
+      var SNAP = snapDist != null ? snapDist : 1.45;
       var hw = Math.max(0, Number(halfW) || 0);
       var hh = Math.max(0, Number(halfH) || 0);
-      var bestDx = GUIDE_SNAP + 1;
-      var bestDy = GUIDE_SNAP + 1;
+      var bestDx = SNAP + 1;
+      var bestDy = SNAP + 1;
       var sx = x;
       var sy = y;
-      sceneGuides.forEach(function (g) {
-        if (!g) return;
-        var pos = Number(g.position);
-        if (isNaN(pos)) return;
-        var axis = g.type === 'horizontal' ? 'horizontal' : 'vertical';
-        if (axis === 'vertical') {
-          [pos, pos + hw, pos - hw].forEach(function (cand) {
-            var d = Math.abs(x - cand);
-            if (d <= GUIDE_SNAP && d < bestDx) {
-              bestDx = d;
-              sx = Math.round(cand * 10) / 10;
-            }
-          });
-        } else {
-          [pos, pos + hh, pos - hh].forEach(function (cand) {
-            var d = Math.abs(y - cand);
-            if (d <= GUIDE_SNAP && d < bestDy) {
-              bestDy = d;
-              sy = Math.round(cand * 10) / 10;
-            }
-          });
-        }
+      (linesX || []).forEach(function (pos) {
+        var p = Number(pos);
+        if (!isFinite(p)) return;
+        [p, p + hw, p - hw].forEach(function (cand) {
+          var d = Math.abs(x - cand);
+          if (d <= SNAP && d < bestDx) {
+            bestDx = d;
+            sx = Math.round(cand * 10) / 10;
+          }
+        });
+      });
+      (linesY || []).forEach(function (pos) {
+        var p = Number(pos);
+        if (!isFinite(p)) return;
+        [p, p + hh, p - hh].forEach(function (cand) {
+          var d = Math.abs(y - cand);
+          if (d <= SNAP && d < bestDy) {
+            bestDy = d;
+            sy = Math.round(cand * 10) / 10;
+          }
+        });
       });
       return {
-        x: bestDx <= GUIDE_SNAP ? sx : x,
-        y: bestDy <= GUIDE_SNAP ? sy : y,
-        snappedX: bestDx <= GUIDE_SNAP,
-        snappedY: bestDy <= GUIDE_SNAP
+        x: bestDx <= SNAP ? sx : x,
+        y: bestDy <= SNAP ? sy : y,
+        snappedX: bestDx <= SNAP,
+        snappedY: bestDy <= SNAP
       };
     }
 
-    /** Resize: snap the moving edge(s) to scene guides; keep opposite edge fixed. */
-    function snapBoxToSceneGuides(cx, cy, w, h, mode) {
+    /** Collect vertical/horizontal align lines: canvas, peers, red guides. */
+    function collectOverlayAlignLines(sceneId, excludeId) {
+      var linesX = [0, 50, 100];
+      var linesY = [0, 50, 100];
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var list = ExperienciaEngine.listSceneButtons(state, n) || [];
+      list.forEach(function (peer) {
+        if (!peer || String(peer.id) === String(excludeId)) return;
+        var ph = overlayHalfSizePct(peer);
+        var px = Number(peer.x);
+        var py = Number(peer.y);
+        if (!isFinite(px) || !isFinite(py)) return;
+        linesX.push(px, px - ph.w, px + ph.w);
+        linesY.push(py, py - ph.h, py + ph.h);
+      });
+      listSceneSnapGuides().forEach(function (g) {
+        if (!g) return;
+        var pos = Number(g.position);
+        if (!isFinite(pos)) return;
+        if (g.type === 'horizontal') linesY.push(pos);
+        else linesX.push(pos);
+      });
+      return { x: linesX, y: linesY };
+    }
+
+    /** Snap center/edges of a free overlay to Quotation red guides. */
+    function snapPointToSceneGuides(x, y, halfW, halfH) {
+      var linesX = [];
+      var linesY = [];
+      listSceneSnapGuides().forEach(function (g) {
+        if (!g) return;
+        var pos = Number(g.position);
+        if (!isFinite(pos)) return;
+        if (g.type === 'horizontal') linesY.push(pos);
+        else linesX.push(pos);
+      });
+      return snapMoveToAlignLines(x, y, halfW, halfH, linesX, linesY, 1.45);
+    }
+
+    /** Resize: snap moving edge(s) to canvas / peers / red guides; keep opposite fixed. */
+    function snapBoxToSceneGuides(cx, cy, w, h, mode, opts) {
+      opts = opts || {};
       var GUIDE_SNAP = 1.45;
-      var sceneGuides = listSceneSnapGuides();
-      if (!sceneGuides.length || !mode || mode === 'rotate') {
+      if (!mode || mode === 'rotate') {
         return { x: cx, y: cy, w: w, h: h };
       }
       var hw = w / 2;
@@ -4612,34 +4651,65 @@ var ExperienciaCanvas = (function () {
       var bottom = cy + hh;
       var m = String(mode || '');
 
-      sceneGuides.forEach(function (g) {
+      var linesX = [0, 50, 100];
+      var linesY = [0, 50, 100];
+      if (opts.sceneId) {
+        var n = ExperienciaEngine.getNode(state, opts.sceneId);
+        var list = ExperienciaEngine.listSceneButtons(state, n) || [];
+        list.forEach(function (peer) {
+          if (!peer || String(peer.id) === String(opts.excludeId)) return;
+          var ph = overlayHalfSizePct(peer);
+          var px = Number(peer.x);
+          var py = Number(peer.y);
+          if (!isFinite(px) || !isFinite(py)) return;
+          linesX.push(px, px - ph.w, px + ph.w);
+          linesY.push(py, py - ph.h, py + ph.h);
+        });
+      }
+      listSceneSnapGuides().forEach(function (g) {
         if (!g) return;
         var pos = Number(g.position);
-        if (isNaN(pos)) return;
-        if (g.type !== 'horizontal') {
-          if (m.indexOf('e') >= 0 && Math.abs(right - pos) <= GUIDE_SNAP) {
-            right = pos;
-            w = Math.max(1.5, right - left);
-            cx = left + w / 2;
-          }
-          if (m.indexOf('w') >= 0 && Math.abs(left - pos) <= GUIDE_SNAP) {
-            left = pos;
-            w = Math.max(1.5, right - left);
-            cx = left + w / 2;
-          }
-        } else {
-          if (m.indexOf('s') >= 0 && Math.abs(bottom - pos) <= GUIDE_SNAP) {
-            bottom = pos;
-            h = Math.max(1.5, bottom - top);
-            cy = top + h / 2;
-          }
-          if (m.indexOf('n') >= 0 && Math.abs(top - pos) <= GUIDE_SNAP) {
-            top = pos;
-            h = Math.max(1.5, bottom - top);
-            cy = top + h / 2;
-          }
-        }
+        if (!isFinite(pos)) return;
+        if (g.type === 'horizontal') linesY.push(pos);
+        else linesX.push(pos);
       });
+
+      function nearestLine(value, lines) {
+        var best = GUIDE_SNAP + 1;
+        var hit = value;
+        (lines || []).forEach(function (pos) {
+          var p = Number(pos);
+          if (!isFinite(p)) return;
+          var d = Math.abs(value - p);
+          if (d <= GUIDE_SNAP && d < best) {
+            best = d;
+            hit = p;
+          }
+        });
+        return best <= GUIDE_SNAP ? hit : value;
+      }
+
+      if (m.indexOf('e') >= 0) {
+        right = nearestLine(right, linesX);
+        w = Math.max(1.5, right - left);
+        cx = left + w / 2;
+      }
+      if (m.indexOf('w') >= 0) {
+        left = nearestLine(left, linesX);
+        w = Math.max(1.5, right - left);
+        cx = left + w / 2;
+      }
+      if (m.indexOf('s') >= 0) {
+        bottom = nearestLine(bottom, linesY);
+        h = Math.max(1.5, bottom - top);
+        cy = top + h / 2;
+      }
+      if (m.indexOf('n') >= 0) {
+        top = nearestLine(top, linesY);
+        h = Math.max(1.5, bottom - top);
+        cy = top + h / 2;
+      }
+
       return {
         x: Math.max(0, Math.min(100, Math.round(cx * 10) / 10)),
         y: Math.max(0, Math.min(100, Math.round(cy * 10) / 10)),
@@ -4777,12 +4847,13 @@ var ExperienciaCanvas = (function () {
         guides.spacing = guides.spacing.slice(0, 2);
       }
 
-      /* Snap to Quotation scene guides (red lines) — center + edges. */
+      /* Snap to canvas edges, peer edges/centers, and red guides. */
       var selfBtn = ExperienciaEngine.getSceneButton(state, n, buttonId);
       var half = overlayHalfSizePct(selfBtn);
-      var guideSnap = snapPointToSceneGuides(nx, ny, half.w, half.h);
-      nx = guideSnap.x;
-      ny = guideSnap.y;
+      var lines = collectOverlayAlignLines(sceneId, buttonId);
+      var alignSnap = snapMoveToAlignLines(nx, ny, half.w, half.h, lines.x, lines.y, 1.45);
+      nx = alignSnap.x;
+      ny = alignSnap.y;
 
       return { x: nx, y: ny, guides: guides };
     }
@@ -5611,7 +5682,10 @@ var ExperienciaCanvas = (function () {
             if (transformDrag.type === 'BUTTON' ||
                 transformDrag.type === 'SHAPE_RECT' ||
                 transformDrag.type === 'SHAPE_CIRCLE') {
-              var boxSnap = snapBoxToSceneGuides(nx, ny, nw, nh, mode);
+              var boxSnap = snapBoxToSceneGuides(nx, ny, nw, nh, mode, {
+                sceneId: transformDrag.sceneId,
+                excludeId: transformDrag.buttonId
+              });
               nx = boxSnap.x;
               ny = boxSnap.y;
               nw = boxSnap.w;
