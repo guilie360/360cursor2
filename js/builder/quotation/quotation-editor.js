@@ -125,6 +125,11 @@ var QuotationEditor = (function () {
         walk(item.buttons);
         walk(item.hotspots);
         walk(item.guides);
+        if (item.guidesByViewport && typeof item.guidesByViewport === 'object') {
+          walk(item.guidesByViewport.desktop);
+          walk(item.guidesByViewport.tablet);
+          walk(item.guidesByViewport.mobile);
+        }
       }
     }
     walk(state && state.scenes);
@@ -1457,7 +1462,12 @@ var QuotationEditor = (function () {
     var n = 0;
     if (!Array.isArray(scenes)) return 0;
     scenes.forEach(function (sc) {
-      if (sc && Array.isArray(sc.guides)) n += sc.guides.length;
+      if (!sc) return;
+      ensureSceneGuideBuckets(sc);
+      ['desktop', 'tablet', 'mobile'].forEach(function (k) {
+        n += (sc.guidesByViewport[k] && sc.guidesByViewport[k].length) || 0;
+      });
+      if (Array.isArray(sc.guides)) n += sc.guides.length;
     });
     return n;
   }
@@ -1683,6 +1693,7 @@ var QuotationEditor = (function () {
     scene.buttons = [];
     scene.hotspots = [];
     scene.guides = [];
+    scene.guidesByViewport = { desktop: [], tablet: [], mobile: [] };
     scene.type = 'hero';
     scene.templateId = 'hero-default';
     scene.name = 'HERO';
@@ -1884,8 +1895,51 @@ var QuotationEditor = (function () {
       if (!Array.isArray(scene.buttons)) scene.buttons = [];
       if (!Array.isArray(scene.hotspots)) scene.hotspots = [];
     }
-    if (!Array.isArray(scene.guides)) scene.guides = [];
+    ensureSceneGuideBuckets(scene);
     return scene;
+  }
+
+  function ensureSceneGuideBuckets(scene) {
+    if (!scene) return null;
+    if (typeof QuotationGuides !== 'undefined' && QuotationGuides.ensureGuideBuckets) {
+      return QuotationGuides.ensureGuideBuckets(scene);
+    }
+    if (!scene.guidesByViewport || typeof scene.guidesByViewport !== 'object') {
+      scene.guidesByViewport = {};
+    }
+    ['desktop', 'tablet', 'mobile'].forEach(function (k) {
+      if (!Array.isArray(scene.guidesByViewport[k])) scene.guidesByViewport[k] = [];
+    });
+    if (Array.isArray(scene.guides) && scene.guides.length) {
+      if (!scene.guidesByViewport.desktop.length) {
+        scene.guidesByViewport.desktop = scene.guides.slice();
+      }
+      scene.guides = [];
+    } else if (!Array.isArray(scene.guides)) {
+      scene.guides = [];
+    }
+    return scene.guidesByViewport;
+  }
+
+  function serializeGuideList(list) {
+    return (Array.isArray(list) ? list : []).map(function (g) {
+      if (!g || !g.id) return null;
+      return {
+        id: String(g.id),
+        type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
+        position: Math.max(0, Math.min(100, Number(g.position) || 0)),
+        locked: !!g.locked
+      };
+    }).filter(Boolean);
+  }
+
+  function serializeSceneGuides(sc) {
+    ensureSceneGuideBuckets(sc);
+    return {
+      desktop: serializeGuideList(sc.guidesByViewport.desktop),
+      tablet: serializeGuideList(sc.guidesByViewport.tablet),
+      mobile: serializeGuideList(sc.guidesByViewport.mobile)
+    };
   }
 
   function selectedContent() {
@@ -3552,6 +3606,7 @@ var QuotationEditor = (function () {
       getActiveScene: function () { return activeScene(); },
       getScenes: function () { return Array.isArray(state.scenes) ? state.scenes : []; },
       isHeroScene: function (sc) { return isHeroScene(sc); },
+      getViewportPreset: function () { return state.viewportPreset || 'desktop'; },
       /* Guides/rulers use the active device window so % maps across Desktop/Tablet/Mobile. */
       getDesignSize: function () { return activeViewportSize(); },
       isPreviewMode: function () { return !!state.canvasPreviewMode; },
@@ -5072,7 +5127,13 @@ var QuotationEditor = (function () {
     clone.interactions = remapSceneEntityList(src.interactions, 'ix');
     clone.buttons = remapSceneEntityList(src.buttons, 'btn');
     clone.hotspots = remapSceneEntityList(src.hotspots, 'hs');
-    clone.guides = remapSceneEntityList(src.guides, 'g');
+    ensureSceneGuideBuckets(src);
+    clone.guidesByViewport = {
+      desktop: remapSceneEntityList(src.guidesByViewport.desktop, 'g'),
+      tablet: remapSceneEntityList(src.guidesByViewport.tablet, 'g'),
+      mobile: remapSceneEntityList(src.guidesByViewport.mobile, 'g')
+    };
+    clone.guides = [];
     if (fromHero) clone.coverModel = null;
     state.scenes.push(clone);
     state.activeSceneId = clone.id;
@@ -5317,7 +5378,8 @@ var QuotationEditor = (function () {
       interactions: [],
       buttons: [],
       hotspots: [],
-      guides: []
+      guides: [],
+      guidesByViewport: { desktop: [], tablet: [], mobile: [] }
     };
     state.scenes.push(scene);
     state.activeSceneId = scene.id;
@@ -8097,15 +8159,11 @@ var QuotationEditor = (function () {
               : (cover && cover.imageUrl ? 'image' : null)),
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
-          guides: Array.isArray(sc.guides) ? sc.guides.map(function (g) {
-            if (!g || !g.id) return null;
-            return {
-              id: String(g.id),
-              type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
-              position: Math.max(0, Math.min(100, Number(g.position) || 0)),
-              locked: !!g.locked
-            };
-          }).filter(Boolean) : []
+          guidesByViewport: serializeSceneGuides(sc),
+          /* Legacy alias = desktop bucket (older clients / drafts). */
+          guides: serializeGuideList(
+            (sc.guidesByViewport && sc.guidesByViewport.desktop) || sc.guides || []
+          )
         };
       })
     };
@@ -8329,8 +8387,10 @@ var QuotationEditor = (function () {
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
           hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : [],
-          guides: Array.isArray(sc.guides) ? sc.guides : []
+          guides: Array.isArray(sc.guides) ? sc.guides : [],
+          guidesByViewport: sc.guidesByViewport || null
         };
+        ensureSceneOverlays(scene);
         /* Resolve media from persisted library if scene URL missing. */
         if (!scene.mediaUrl && scene.resourceId) {
           var linked = contentById(scene.resourceId);
@@ -8340,7 +8400,6 @@ var QuotationEditor = (function () {
             scene.storagePath = (linked && linked.storagePath) || scene.storagePath;
           }
         }
-        ensureSceneOverlays(scene);
         return scene;
       });
       state.activeSceneId = hq.canvas.activeSceneId || state.scenes[0].id;

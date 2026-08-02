@@ -751,6 +751,19 @@ var ProyectosApi = (function () {
     }).filter(Boolean);
   }
 
+  function sanitizeCanvasGuidesByViewport(raw, legacyGuides) {
+    var src = raw && typeof raw === 'object' ? raw : {};
+    var out = {
+      desktop: sanitizeCanvasGuides(src.desktop),
+      tablet: sanitizeCanvasGuides(src.tablet),
+      mobile: sanitizeCanvasGuides(src.mobile)
+    };
+    /* Migrate legacy flat guides[] into desktop when buckets are empty. */
+    var legacy = sanitizeCanvasGuides(legacyGuides);
+    if (legacy.length && !out.desktop.length) out.desktop = legacy;
+    return out;
+  }
+
   function sanitizeCanvasDocument(doc) {
     if (!doc || typeof doc !== 'object') return null;
     var scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
@@ -761,6 +774,7 @@ var ProyectosApi = (function () {
       /* V7.2.28 — validate structure only; never destroy valid public mediaUrl. */
       var mediaUrl = heroText(sc.mediaUrl) || heroText(sc.publicUrl) || null;
       var cover = sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null;
+      var guidesByViewport = sanitizeCanvasGuidesByViewport(sc.guidesByViewport, sc.guides);
       return {
         id: heroText(sc.id) || null,
         name: heroText(sc.name) || 'Escena',
@@ -776,7 +790,8 @@ var ProyectosApi = (function () {
         mediaType: mediaType,
         elements: sanitizeCanvasElements(sc.elements),
         interactions: sanitizeCanvasInteractions(sc.interactions),
-        guides: sanitizeCanvasGuides(sc.guides)
+        guidesByViewport: guidesByViewport,
+        guides: guidesByViewport.desktop.slice()
       };
     }).filter(function (sc) { return sc && sc.id; });
     /* Allow empty ProjectDocument (0 scenes) — Editor is SSOT. */

@@ -1,16 +1,16 @@
 /**
  * QuotationGuides — rulers + scene guides (%) for Quotation Editor.
- * v7.2.158 — Pegar guías opens scene picker (same UX as Eliminar).
- * rulersVisible / guidesVisible are session-only; guides[] persist on each scene.
+ * v7.2.164 — Guides are per viewport (desktop / tablet / mobile).
+ * rulersVisible / guidesVisible are session-only; guidesByViewport persist on each scene.
  *
  * Coordinate space = active viewport window (Desktop / Tablet / Mobile), not the
- * 1920×1080 HeroCanvas lienzo. Guides are % of that window so they stay visible
- * and proportional when switching responsive presets.
+ * 1920×1080 HeroCanvas lienzo. Guides are % of that window.
  */
 var QuotationGuides = (function () {
   var RULER_THICK = 15;
   var DESIGN_W = 1920;
   var DESIGN_H = 1080;
+  var VIEWPORTS = ['desktop', 'tablet', 'mobile'];
 
   var api = null;
   var rootEl = null;
@@ -20,7 +20,7 @@ var QuotationGuides = (function () {
   var dragGuide = null;
   var boundDoc = false;
   var readoutEl = null;
-  /** Session clipboard: [{ type, position, locked }, ...] — positions are % of device window. */
+  /** Session clipboard: { viewport, items:[{ type, position, locked }] }. */
   var guidesClipboard = null;
 
   function nextGuideId() {
@@ -35,10 +35,54 @@ var QuotationGuides = (function () {
     return Math.round(v * 1000) / 1000;
   }
 
-  function ensureGuidesArray(scene) {
+  function normalizeViewportId(id) {
+    var v = String(id || '').toLowerCase();
+    if (v === 'tablet' || v === 'mobile') return v;
+    return 'desktop';
+  }
+
+  function activeViewportId() {
+    if (api && typeof api.getViewportPreset === 'function') {
+      return normalizeViewportId(api.getViewportPreset());
+    }
+    return 'desktop';
+  }
+
+  function viewportLabel(id) {
+    var v = normalizeViewportId(id);
+    if (v === 'tablet') return 'Tablet';
+    if (v === 'mobile') return 'Mobile';
+    return 'Desktop';
+  }
+
+  /** Migrate legacy scene.guides[] → guidesByViewport.desktop. */
+  function ensureGuideBuckets(scene) {
+    if (!scene) return null;
+    if (!scene.guidesByViewport || typeof scene.guidesByViewport !== 'object') {
+      scene.guidesByViewport = {};
+    }
+    var i;
+    for (i = 0; i < VIEWPORTS.length; i++) {
+      var key = VIEWPORTS[i];
+      if (!Array.isArray(scene.guidesByViewport[key])) scene.guidesByViewport[key] = [];
+    }
+    if (Array.isArray(scene.guides) && scene.guides.length) {
+      if (!scene.guidesByViewport.desktop.length) {
+        scene.guidesByViewport.desktop = scene.guides.slice();
+      }
+      scene.guides = [];
+    } else if (!Array.isArray(scene.guides)) {
+      scene.guides = [];
+    }
+    return scene.guidesByViewport;
+  }
+
+  function ensureGuidesArray(scene, viewport) {
     if (!scene) return [];
-    if (!Array.isArray(scene.guides)) scene.guides = [];
-    return scene.guides;
+    var buckets = ensureGuideBuckets(scene);
+    if (!buckets) return [];
+    var vp = normalizeViewportId(viewport || activeViewportId());
+    return buckets[vp];
   }
 
   function activeScene() {
@@ -561,6 +605,8 @@ var QuotationGuides = (function () {
   function openDeleteGuidesDialog() {
     if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
     if (!allScenes().filter(Boolean).length) return;
+    var vp = activeViewportId();
+    var vpLabel = viewportLabel(vp);
 
     var typeRow = function (type, label) {
       return '' +
@@ -574,12 +620,13 @@ var QuotationGuides = (function () {
     };
 
     var typeBlock =
+      '<p class="qe-guides-delete__hint">Solo afecta guías de ' + vpLabel + '.</p>' +
       '<p class="qe-guides-delete__section">Tipo</p>' +
       typeRow('horizontal', 'Horizontales') +
       typeRow('vertical', 'Verticales');
 
     AdminUI.openModal({
-      title: 'Eliminar guías',
+      title: 'Eliminar guías · ' + vpLabel,
       bodyHtml: guidesScenePickerBodyHtml(typeBlock),
       footerHtml:
         '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
@@ -650,13 +697,19 @@ var QuotationGuides = (function () {
     if (!hasGuidesClipboard()) return;
     if (!allScenes().filter(Boolean).length) return;
 
-    var clipCount = guidesClipboard.length;
+    var clipCount = Array.isArray(guidesClipboard.items)
+      ? guidesClipboard.items.length
+      : (Array.isArray(guidesClipboard) ? guidesClipboard.length : 0);
+    var vp = clipboardViewportId();
+    var vpLabel = viewportLabel(vp);
 
     AdminUI.openModal({
-      title: 'Pegar guías',
+      title: 'Pegar guías · ' + vpLabel,
       bodyHtml: guidesScenePickerBodyHtml(
         '<p class="qe-guides-delete__hint">' +
-          clipCount + (clipCount === 1 ? ' guía' : ' guías') + ' en portapapeles' +
+          clipCount + (clipCount === 1 ? ' guía' : ' guías') +
+          ' de ' + vpLabel +
+          ' · solo ese dispositivo' +
         '</p>'
       ),
       footerHtml:
@@ -847,8 +900,10 @@ var QuotationGuides = (function () {
   }
 
   function materializeClipboardGuides() {
-    if (!guidesClipboard || !guidesClipboard.length) return [];
-    return guidesClipboard.map(function (src) {
+    var items = guidesClipboard && Array.isArray(guidesClipboard.items)
+      ? guidesClipboard.items
+      : (Array.isArray(guidesClipboard) ? guidesClipboard : []);
+    return items.map(function (src) {
       return {
         id: nextGuideId(),
         type: src.type === 'horizontal' ? 'horizontal' : 'vertical',
@@ -874,29 +929,36 @@ var QuotationGuides = (function () {
   function copyGuides() {
     var scene = activeScene();
     if (!scene) return false;
-    var cloned = cloneGuidesForClipboard(ensureGuidesArray(scene));
+    var vp = activeViewportId();
+    var cloned = cloneGuidesForClipboard(ensureGuidesArray(scene, vp));
     if (!cloned.length) {
       clearGuidesClipboard();
       return false;
     }
-    guidesClipboard = cloned;
+    guidesClipboard = { viewport: vp, items: cloned };
     return true;
   }
 
   /**
-   * One-shot paste into the given scenes (same % positions), then clears clipboard.
-   * Appends cloned guides so existing guides on the target are kept.
+   * One-shot paste into the given scenes, into the clipboard's viewport bucket only
+   * (Desktop paste never touches Tablet/Mobile guides).
    */
   function applyPasteGuides(sceneIds) {
-    if (!guidesClipboard || !guidesClipboard.length) return 0;
+    var items = guidesClipboard && Array.isArray(guidesClipboard.items)
+      ? guidesClipboard.items
+      : (Array.isArray(guidesClipboard) ? guidesClipboard : null);
+    if (!items || !items.length) return 0;
     if (!sceneIds || !sceneIds.length) return 0;
+    var vp = normalizeViewportId(
+      (guidesClipboard && guidesClipboard.viewport) || activeViewportId()
+    );
     if (!guidesVisible) setGuidesVisible(true);
     var idSet = {};
     sceneIds.forEach(function (id) { idSet[String(id)] = true; });
     var added = 0;
     allScenes().forEach(function (sc) {
       if (!sc || !idSet[String(sc.id)]) return;
-      var guides = ensureGuidesArray(sc);
+      var guides = ensureGuidesArray(sc, vp);
       materializeClipboardGuides().forEach(function (g) {
         guides.push(g);
         added += 1;
@@ -909,7 +971,16 @@ var QuotationGuides = (function () {
   }
 
   function hasGuidesClipboard() {
-    return !!(guidesClipboard && guidesClipboard.length);
+    if (!guidesClipboard) return false;
+    if (Array.isArray(guidesClipboard.items)) return guidesClipboard.items.length > 0;
+    return Array.isArray(guidesClipboard) && guidesClipboard.length > 0;
+  }
+
+  function clipboardViewportId() {
+    if (guidesClipboard && guidesClipboard.viewport) {
+      return normalizeViewportId(guidesClipboard.viewport);
+    }
+    return activeViewportId();
   }
 
   /* ── Ghost from ruler ─────────────────────────────────── */
@@ -1078,7 +1149,9 @@ var QuotationGuides = (function () {
 
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
-    var sceneGuides = ensureGuidesArray(activeScene());
+    var vp = activeViewportId();
+    var vpLabel = viewportLabel(vp);
+    var sceneGuides = ensureGuidesArray(activeScene(), vp);
     var canCopy = sceneGuides.length > 0;
     var canPaste = hasGuidesClipboard();
     QuotationContextMenu.open({
@@ -1096,13 +1169,15 @@ var QuotationGuides = (function () {
         },
         {
           id: 'copy-guides',
-          label: 'Copiar guías',
+          label: 'Copiar guías · ' + vpLabel,
           separatorBefore: true,
           disabled: !canCopy
         },
         {
           id: 'paste-guides',
-          label: 'Pegar guías',
+          label: canPaste
+            ? ('Pegar guías · ' + viewportLabel(clipboardViewportId()))
+            : 'Pegar guías',
           disabled: !canPaste
         }
       ],
@@ -1199,6 +1274,8 @@ var QuotationGuides = (function () {
     pasteGuides: openPasteGuidesDialog,
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
+    ensureGuideBuckets: ensureGuideBuckets,
+    VIEWPORTS: VIEWPORTS,
     RULER_THICK: RULER_THICK
   };
 })();
