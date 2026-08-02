@@ -6724,6 +6724,27 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         QuotationBuilderView.toggleChromeCollapsed();
       } catch (eFold) { /* ignore */ }
+      return;
+    }
+
+    /* ↑ — toggle fullscreen (same as header fullscreen button). */
+    if (e.key === 'ArrowUp') {
+      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+      if (document.body.classList.contains('admin-modal-open')) return;
+      var ctxPortalFs = document.getElementById('qeContextMenuPortal');
+      if (ctxPortalFs && ctxPortalFs.getAttribute('aria-hidden') === 'false' && ctxPortalFs.children.length) {
+        return;
+      }
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        } else {
+          document.exitFullscreen().catch(function () {});
+        }
+      } catch (eFs) { /* ignore */ }
     }
   }
 
