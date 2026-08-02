@@ -3564,8 +3564,10 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Left block: recursos only (Config/Editar live in the BOXIES header).
- * Keep z-index below scenes host ? never paint the collapsed rail over HERO/escenas. */
+ * z-index above .quotation-main so the peek float (>) receives clicks.
+ * Collapsed: width 0 + transparent ? no shadow column over scenes. */
 .quotation-left-block {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -3577,10 +3579,10 @@ body.quotation-canvas-first .builder-workspace,
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
   overflow: visible;
-  z-index: 0;
+  z-index: 2;
 }
 
-/* Collapsed: kill paint; float tab still peeks (own stacking on the button). */
+/* Collapsed: kill paint; float tab still peeks and stays clickable. */
 .quotation-workspace.is-left-collapsed .quotation-left-block {
   flex: 0 0 0;
   width: 0;
@@ -3591,7 +3593,7 @@ body.quotation-canvas-first .builder-workspace,
   border: none;
   background: transparent;
   overflow: visible;
-  z-index: 0;
+  z-index: 2;
 }
 
 .quotation-left-block[hidden] {
@@ -3752,8 +3754,6 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .quotation-main {
-  position: relative;
-  z-index: 1;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
