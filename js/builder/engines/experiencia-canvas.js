@@ -4176,7 +4176,7 @@ var ExperienciaCanvas = (function () {
     }
 
     /** Double-click rotate handle → type exact degrees (same popover as guide px). */
-    function openOverlayRotationEditor(clientX, clientY, sceneId, buttonId) {
+    function openOverlayRotationEditor(clientX, clientY, sceneId, buttonId, anchorEl) {
       if (!sceneId || !buttonId) return;
       if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
       var btn = ExperienciaEngine.getSceneButton(
@@ -4184,17 +4184,30 @@ var ExperienciaCanvas = (function () {
       );
       if (!btn || btn.locked) return;
       var rot = Math.round(Number(btn.rotation) || 0);
+      var x = Number(clientX) || 0;
+      var y = Number(clientY) || 0;
+      /* Prefer handle box — client coords can be odd after gizmo CSS transforms. */
+      if (anchorEl && anchorEl.getBoundingClientRect) {
+        var r = anchorEl.getBoundingClientRect();
+        if (r && r.width > 2 && r.height > 2) {
+          x = r.left + r.width / 2;
+          y = r.bottom + 8;
+        }
+      }
+      if (typeof BoxiesTooltip !== 'undefined' && BoxiesTooltip.hide) {
+        try { BoxiesTooltip.hide(); } catch (eTip) { /* ignore */ }
+      }
       QuotationContextMenu.open({
-        x: clientX,
-        y: clientY,
+        x: x,
+        y: y,
         ariaLabel: 'Rotación',
         items: [
           {
             type: 'input',
             id: 'overlay-rot',
-            label: '',
+            label: '°',
             value: rot,
-            suffix: '°',
+            suffix: '',
             min: -360,
             max: 360,
             step: 1,
@@ -4440,7 +4453,8 @@ var ExperienciaCanvas = (function () {
               handles.map(function (h) {
                 return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
               }).join('') +
-              '<button type="button" class="builder-exp-sel-rotate" data-handle="rotate" title="Rotar" aria-label="Rotar">' +
+              '<button type="button" class="builder-exp-sel-rotate" data-handle="rotate"' +
+                ' aria-label="Rotar" data-no-tooltip="1">' +
                 '<span class="builder-exp-sel-rotate__icon">' + rotIcon + '</span>' +
               '</button>' +
               '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>' +
@@ -6142,7 +6156,9 @@ var ExperienciaCanvas = (function () {
         }
         var gizmo = rotHandle.closest('[data-exp-gizmo]');
         var gid = gizmo && gizmo.getAttribute('data-gizmo-id');
-        openOverlayRotationEditor(ev.clientX, ev.clientY, canvas().selectedId, gid);
+        openOverlayRotationEditor(
+          ev.clientX, ev.clientY, canvas().selectedId, gid, rotHandle
+        );
       });
       /* Force hover color in Builder (theme tokens otherwise keep white). */
       buttonsLayer.addEventListener('mouseover', function (ev) {

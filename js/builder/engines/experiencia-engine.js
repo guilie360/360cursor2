@@ -760,7 +760,12 @@ var ExperienciaEngine = (function () {
     }
 
     if (ix.positionMode !== 'anchor') {
-      return clampInside(Number(ix.x), Number(ix.y));
+      /* Free overlays: keep stored center. Do NOT inset-clamp by half-size —
+       * that fights live resize (growing box pulls the center every frame). */
+      return {
+        x: clampPercent(Number(ix.x), 50),
+        y: clampPercent(Number(ix.y), 50)
+      };
     }
 
     var base = BUTTON_ANCHORS[ix.anchor] || BUTTON_ANCHORS.center;

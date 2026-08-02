@@ -102,6 +102,11 @@ var BoxiesTooltip = (function () {
     if (from.closest('iframe')) return null;
     var el = from.closest(SOURCE_SEL);
     if (!el || !host.contains(el)) return null;
+    /* Selection gizmo handles — title tooltips break under CSS transforms (top-left ghost). */
+    if (el.getAttribute('data-no-tooltip') === '1' ||
+        el.closest('[data-exp-gizmo], .builder-exp-sel-rotate, .builder-exp-sel-handle')) {
+      return null;
+    }
     /* V7.0.06 — platform icon sidebar never shows tooltips */
     if (el.closest('#boxiesNav, #boxiesSidebar') && el.classList.contains('boxies-nav-item')) {
       return null;
