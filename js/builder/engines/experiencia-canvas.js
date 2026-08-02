@@ -3955,6 +3955,16 @@ var ExperienciaCanvas = (function () {
         hotspotsStage.hidden = false;
         hotspotsStage.setAttribute('aria-hidden', 'false');
       }
+      if (hotspotsLayer) {
+        /* Only capture empty-canvas clicks while actively drawing hotspots.
+           Otherwise the full-size layer sits above shapes and freezes drag. */
+        var hsDraw = mode === 'hotspots' || !!hotspotDraw;
+        hotspotsLayer.classList.toggle('is-draw-active', hsDraw);
+        hotspotsLayer.style.cursor = hsDraw ? 'crosshair' : '';
+      }
+      if (buttonsLayer) {
+        buttonsLayer.style.pointerEvents = mode === 'hotspots' && !overlayMode ? 'none' : 'auto';
+      }
       if (protoStage) {
         protoStage.hidden = mode !== 'prototype';
         protoStage.setAttribute('aria-hidden', mode === 'prototype' ? 'false' : 'true');

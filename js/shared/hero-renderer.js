@@ -284,9 +284,13 @@ var HeroCanvas = (function () {
       return !!t.closest(
         'button, a, input, textarea, select,' +
         ' [data-qr-ix-layer] .qr-ix-btn, .qr-ix-hs, .qr-stage__back,' +
-        ' .builder-exp-stage-btn, .builder-exp-hs, [data-exp-handle],' +
+        ' .builder-exp-stage-btn, .builder-exp-stage-shape, .builder-exp-stage-text,' +
+        ' .builder-exp-hs, [data-exp-handle], [data-handle],' +
+        ' [data-exp-gizmo], [data-exp-sel-move], .builder-exp-sel-handle,' +
+        ' .builder-exp-sel-rotate, .builder-exp-sel-gizmo,' +
         ' [data-exp-hs-poly], [data-exp-hs-vertex], [data-exp-stage-btn],' +
-        ' .builder-exp-buttons-layer button, .builder-exp-hotspots-layer path'
+        ' .builder-exp-buttons-layer button, .builder-exp-hotspots-layer path,' +
+        ' .builder-exp-hotspots-layer polygon, .builder-exp-hotspots-layer circle'
       );
     }
 

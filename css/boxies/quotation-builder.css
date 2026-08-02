@@ -1848,6 +1848,19 @@
   height: 100% !important;
 }
 
+/* Buttons/shapes must sit above the hotspots hit layer in edit mode. */
+.qe-canvas__design .qe-exp-overlay .builder-exp-buttons-stage,
+.hero-canvas .qe-exp-overlay .builder-exp-buttons-stage,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-buttons-stage {
+  z-index: 7;
+}
+
+.qe-canvas__design .qe-exp-overlay .builder-exp-hotspots-stage,
+.hero-canvas .qe-exp-overlay .builder-exp-hotspots-stage,
+[data-hero-canvas] .qe-exp-overlay .builder-exp-hotspots-stage {
+  z-index: 6;
+}
+
 .qe-insp__exp-host {
   min-height: 120px;
 }
