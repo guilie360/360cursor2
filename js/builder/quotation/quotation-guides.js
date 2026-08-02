@@ -85,6 +85,19 @@ var QuotationGuides = (function () {
     return buckets[vp];
   }
 
+  /** Replace guides for a viewport bucket (never write only to legacy scene.guides). */
+  function setGuidesArray(scene, next, viewport) {
+    if (!scene) return;
+    var buckets = ensureGuideBuckets(scene);
+    if (!buckets) return;
+    var vp = normalizeViewportId(viewport || activeViewportId());
+    var list = Array.isArray(next) ? next : [];
+    buckets[vp] = list;
+    /* Keep legacy alias in sync with desktop only. */
+    if (vp === 'desktop') scene.guides = list.slice();
+    else if (!Array.isArray(scene.guides)) scene.guides = [];
+  }
+
   function activeScene() {
     return api && typeof api.getActiveScene === 'function' ? api.getActiveScene() : null;
   }
@@ -497,10 +510,11 @@ var QuotationGuides = (function () {
     if (!wantH && !wantV) return 0;
     var idSet = {};
     (sceneIds || []).forEach(function (id) { idSet[String(id)] = true; });
+    var vp = activeViewportId();
     var removed = 0;
     allScenes().forEach(function (sc) {
       if (!sc || !idSet[String(sc.id)]) return;
-      var guides = ensureGuidesArray(sc);
+      var guides = ensureGuidesArray(sc, vp);
       var next = [];
       guides.forEach(function (g) {
         if (!g) return;
@@ -510,7 +524,7 @@ var QuotationGuides = (function () {
         if (drop) removed += 1;
         else next.push(g);
       });
-      sc.guides = next;
+      setGuidesArray(sc, next, vp);
     });
     renderGuides();
     markDirty();
@@ -862,11 +876,13 @@ var QuotationGuides = (function () {
 
   function removeGuide(id) {
     var scene = activeScene();
-    var guides = ensureGuidesArray(scene);
+    if (!scene) return;
+    var vp = activeViewportId();
+    var guides = ensureGuidesArray(scene, vp);
     var next = guides.filter(function (g) {
       return g && String(g.id) !== String(id);
     });
-    scene.guides = next;
+    setGuidesArray(scene, next, vp);
     renderGuides();
     markDirty();
   }
