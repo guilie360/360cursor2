@@ -163,14 +163,12 @@ var KonvaOverlayRenderer = (function () {
 
     function fitStageToHost() {
       if (!stage || !konvaHost) return;
-      var rect = konvaHost.getBoundingClientRect();
-      var sw = Math.max(1, Math.round(rect.width));
-      var sh = Math.max(1, Math.round(rect.height));
-      var sx = sw / DESIGN_W;
-      var sy = sh / DESIGN_H;
-      stage.width(sw);
-      stage.height(sh);
-      stage.scale({ x: sx, y: sy });
+      /* Keep stage at design resolution — never size from getBoundingClientRect()
+         inside CSS-scaled viewport (canvas would be smaller than 1920×1080 layout). */
+      stage.width(DESIGN_W);
+      stage.height(DESIGN_H);
+      stage.scale({ x: 1, y: 1 });
+      stage.position({ x: 0, y: 0 });
     }
 
     function syncTransformer() {

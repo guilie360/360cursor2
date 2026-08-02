@@ -5272,6 +5272,7 @@ body.boxies-host .admin-modal.qe-guides-delete-modal .admin-modal-footer .btn-pr
   pointer-events: auto !important;
   touch-action: none;
   z-index: 7;
+  overflow: visible;
 }
 .is-konva-poc .konva-poc-shell {
   position: absolute;
@@ -5279,6 +5280,7 @@ body.boxies-host .admin-modal.qe-guides-delete-modal .admin-modal-footer .btn-pr
   width: 100%;
   height: 100%;
   pointer-events: none;
+  overflow: visible;
 }
 .is-konva-poc .konva-overlay-host {
   position: absolute;
@@ -5288,6 +5290,7 @@ body.boxies-host .admin-modal.qe-guides-delete-modal .admin-modal-footer .btn-pr
   pointer-events: auto !important;
   touch-action: none;
   z-index: 1;
+  overflow: visible;
 }
 .is-konva-poc .konva-overlay-host canvas {
   pointer-events: auto !important;
