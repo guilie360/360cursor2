@@ -3058,6 +3058,8 @@ var QuotationEditor = (function () {
 
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
+    var sc = activeScene();
+    var sceneName = (sc && sc.name) ? String(sc.name) : 'Escena';
     var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
       ? HeroRenderer.listViewports()
       : [
@@ -3079,9 +3081,14 @@ var QuotationEditor = (function () {
     }).join('');
     return '' +
       '<div class="qe-canvas-chrome-top" data-qe-chrome-top>' +
+        '<div class="qe-canvas-chrome-top__title" data-qe-active-scene-name' +
+          ' title="' + escapeHtml(sceneName) + '">' +
+          escapeHtml(sceneName) +
+        '</div>' +
         '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
           btns +
         '</div>' +
+        '<div class="qe-canvas-chrome-top__spacer" aria-hidden="true"></div>' +
       '</div>';
   }
 
@@ -3395,9 +3402,11 @@ var QuotationEditor = (function () {
     }
     if (toolChrome) {
       toolChrome.style.position = 'absolute';
-      toolChrome.style.left = '50%';
+      toolChrome.style.left = '0';
+      toolChrome.style.right = '0';
+      toolChrome.style.width = '100%';
       toolChrome.style.top = '0';
-      toolChrome.style.transform = 'translate(-50%, calc(-100% - 8px))';
+      toolChrome.style.transform = 'translateY(calc(-100% - 8px))';
       toolChrome.style.zIndex = '6';
     }
     if (toolVp) {

@@ -889,17 +889,49 @@
   pointer-events: none !important;
 }
 
-/* Chrome above canvas: responsive only */
+/* Chrome above canvas: scene name (left) + viewport presets (center) */
 .qe-canvas-chrome-top {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 0;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
   pointer-events: none;
 }
 
 .qe-canvas-chrome-top > * {
   pointer-events: auto;
+}
+
+.qe-canvas-chrome-top__title {
+  grid-column: 1;
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 2px;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: clamp(10px, 1.35vw, 12px);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+}
+
+.qe-canvas-chrome-top .qe-canvas-tool--viewport {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.qe-canvas-chrome-top__spacer {
+  grid-column: 3;
+  min-width: 0;
+  pointer-events: none;
 }
 
 /* Hang from bottom edge of scenes strip (expanded) */
