@@ -540,32 +540,71 @@ var QuotationGuides = (function () {
     }).filter(Boolean);
   }
 
+  function materializeClipboardGuides() {
+    if (!guidesClipboard || !guidesClipboard.length) return [];
+    return guidesClipboard.map(function (src) {
+      return {
+        id: nextGuideId(),
+        type: src.type === 'horizontal' ? 'horizontal' : 'vertical',
+        position: clampPct(src.position),
+        locked: !!src.locked
+      };
+    });
+  }
+
+  function clearGuidesClipboard() {
+    guidesClipboard = null;
+  }
+
+  function allScenes() {
+    if (api && typeof api.getScenes === 'function') {
+      var list = api.getScenes();
+      if (Array.isArray(list)) return list;
+    }
+    var active = activeScene();
+    return active ? [active] : [];
+  }
+
   function copyGuides() {
     var scene = activeScene();
     if (!scene) return false;
     var cloned = cloneGuidesForClipboard(ensureGuidesArray(scene));
     if (!cloned.length) {
-      guidesClipboard = null;
+      clearGuidesClipboard();
       return false;
     }
     guidesClipboard = cloned;
     return true;
   }
 
+  /** One-shot paste into the active scene, then clears the clipboard. */
   function pasteGuides() {
     if (!guidesClipboard || !guidesClipboard.length) return false;
     var scene = activeScene();
     if (!scene) return false;
     if (!guidesVisible) setGuidesVisible(true);
     var guides = ensureGuidesArray(scene);
-    guidesClipboard.forEach(function (src) {
-      guides.push({
-        id: nextGuideId(),
-        type: src.type === 'horizontal' ? 'horizontal' : 'vertical',
-        position: clampPct(src.position),
-        locked: !!src.locked
-      });
+    materializeClipboardGuides().forEach(function (g) { guides.push(g); });
+    clearGuidesClipboard();
+    renderGuides();
+    markDirty();
+    return true;
+  }
+
+  /**
+   * One-shot paste into every scene (same % positions), then clears the clipboard.
+   * Replaces each scene's guides so the copied layout is exact everywhere.
+   */
+  function pasteGuidesToAllScenes() {
+    if (!guidesClipboard || !guidesClipboard.length) return false;
+    var scenes = allScenes();
+    if (!scenes.length) return false;
+    if (!guidesVisible) setGuidesVisible(true);
+    scenes.forEach(function (scene) {
+      if (!scene) return;
+      scene.guides = materializeClipboardGuides();
     });
+    clearGuidesClipboard();
     renderGuides();
     markDirty();
     return true;
@@ -767,6 +806,11 @@ var QuotationGuides = (function () {
           id: 'paste-guides',
           label: 'Pegar guías',
           disabled: !canPaste
+        },
+        {
+          id: 'paste-guides-all',
+          label: 'Pegar guías en todas las escenas',
+          disabled: !canPaste
         }
       ],
       onSelect: function (id) {
@@ -784,6 +828,10 @@ var QuotationGuides = (function () {
         }
         if (id === 'paste-guides') {
           pasteGuides();
+          return;
+        }
+        if (id === 'paste-guides-all') {
+          pasteGuidesToAllScenes();
         }
       }
     });
@@ -860,6 +908,7 @@ var QuotationGuides = (function () {
     removeGuide: removeGuide,
     copyGuides: copyGuides,
     pasteGuides: pasteGuides,
+    pasteGuidesToAllScenes: pasteGuidesToAllScenes,
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     RULER_THICK: RULER_THICK
