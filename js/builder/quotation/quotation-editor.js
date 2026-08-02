@@ -966,11 +966,14 @@ var QuotationEditor = (function () {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     if (!expOverlay || !expOverlay.getSelectionContext) return;
     var ctx = expOverlay.getSelectionContext();
-    if (!ctx || ctx.count < 2) return;
+    if (!ctx) return;
+    var multi = ctx.count >= 2;
+    var canUngroup = !!ctx.canUngroup;
+    if (!multi && !canUngroup) return;
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
-      ariaLabel: 'Selección múltiple',
+      ariaLabel: canUngroup && !multi ? 'Grupo' : 'Selección múltiple',
       items: [
         {
           id: 'group',
@@ -980,12 +983,13 @@ var QuotationEditor = (function () {
         {
           id: 'ungroup',
           label: 'Desagrupar',
-          disabled: !ctx.canUngroup
+          disabled: !canUngroup
         },
         {
           id: 'template',
           label: 'Convertir en plantilla',
-          separatorBefore: true
+          separatorBefore: true,
+          disabled: !multi
         },
         {
           id: 'delete',
@@ -1006,6 +1010,7 @@ var QuotationEditor = (function () {
           if (expOverlay.ungroupSelectedOverlays && expOverlay.ungroupSelectedOverlays()) {
             markDirtyLocal();
             refreshLayersPanel();
+            refreshDockOnly();
           }
           return;
         }
@@ -3853,6 +3858,15 @@ var QuotationEditor = (function () {
           return ctx && ctx.count ? ctx.count : 0;
         } catch (eCnt) {
           return 0;
+        }
+      },
+      shouldOpenOverlayContextMenu: function () {
+        if (!expOverlay || !expOverlay.getSelectionContext) return false;
+        try {
+          var ctx = expOverlay.getSelectionContext();
+          return !!(ctx && (ctx.count >= 2 || ctx.canUngroup));
+        } catch (eMenu) {
+          return false;
         }
       },
       openOverlaySelectionMenu: function (clientX, clientY) {

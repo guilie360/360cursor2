@@ -7090,7 +7090,13 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.addEventListener('contextmenu', function (ev) {
         if (!overlayMode) return;
         var ids = getSelectedOverlayIds();
-        if (ids.length < 2) return;
+        var sceneId = canvas().selectedId;
+        var canUngroup = false;
+        if (sceneId && ids.length && ExperienciaEngine.resolveOverlayGroupForSelection) {
+          var nCtx = ExperienciaEngine.getNode(state, sceneId);
+          canUngroup = !!(nCtx && ExperienciaEngine.resolveOverlayGroupForSelection(nCtx, ids));
+        }
+        if (ids.length < 2 && !canUngroup) return;
         ev.preventDefault();
         ev.stopPropagation();
         if (typeof api.onMultiSelectionContextMenu === 'function') {
