@@ -6807,6 +6807,9 @@ var QuotationEditor = (function () {
           if (okChord) {
             e.preventDefault();
             e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') {
+              e.stopImmediatePropagation();
+            }
           }
         } catch (eChord) { /* ignore */ }
         return;

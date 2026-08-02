@@ -1823,17 +1823,57 @@ var ExperienciaCanvas = (function () {
     var buttonClipboard = null; /* { sourceIds: string[] } */
     var pendingMoveIds = {}; /* id -> true while stacked on original after paste */
 
+    function snapshotHistoryKey(snap) {
+      if (!snap || !Array.isArray(snap.interactions)) return '';
+      return snap.interactions.map(function (ix) {
+        if (!ix) return '';
+        return [
+          ix.id,
+          ix.type,
+          ix.x,
+          ix.y,
+          ix.width,
+          ix.height,
+          ix.boxW,
+          ix.boxH,
+          ix.rotation,
+          ix.label,
+          ix.fill,
+          ix.stroke,
+          ix.strokeWidth,
+          ix.visible,
+          ix.locked
+        ].join('\u0001');
+      }).join('\u0002');
+    }
+
     function pushButtonHistory(sceneId) {
       if (!ExperienciaEngine.snapshotSceneButtons) return;
       var sid = sceneId || canvas().selectedId;
       if (!sid) return;
       var snap = ExperienciaEngine.snapshotSceneButtons(state, sid);
       if (!snap) return;
+      var key = snapshotHistoryKey(snap);
+      if (buttonHistory.past.length) {
+        var last = buttonHistory.past[buttonHistory.past.length - 1];
+        if (last && String(last.sceneId) === String(snap.sceneId) &&
+            snapshotHistoryKey(last) === key) {
+          return;
+        }
+      }
       buttonHistory.past.push(snap);
       if (buttonHistory.past.length > buttonHistory.max) {
         buttonHistory.past.shift();
       }
       buttonHistory.future = [];
+    }
+
+    function clearButtonGestureState() {
+      buttonOpArmed = false;
+      buttonNudgeDirty = false;
+      buttonDrag = null;
+      transformDrag = null;
+      pendingMoveIds = {};
     }
 
     function undoButtonEdit() {
@@ -1842,6 +1882,7 @@ var ExperienciaCanvas = (function () {
       var current = ExperienciaEngine.snapshotSceneButtons(state, prev.sceneId);
       if (current) buttonHistory.future.push(current);
       ExperienciaEngine.restoreSceneButtons(state, prev);
+      clearButtonGestureState();
       return true;
     }
 
@@ -1854,6 +1895,7 @@ var ExperienciaCanvas = (function () {
         if (buttonHistory.past.length > buttonHistory.max) buttonHistory.past.shift();
       }
       ExperienciaEngine.restoreSceneButtons(state, next);
+      clearButtonGestureState();
       return true;
     }
 
@@ -6519,8 +6561,27 @@ var ExperienciaCanvas = (function () {
         }
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
         var moved = buttonDrag.historyPushed;
+        var dragScene = buttonDrag.sceneId;
+        var dragBtn = buttonDrag.buttonId;
+        var dragOriginX = buttonDrag.originX;
+        var dragOriginY = buttonDrag.originY;
         buttonDrag = null;
         unbindOverlayPointerDocs();
+        if (moved && dragScene && dragBtn != null &&
+            dragOriginX != null && dragOriginY != null) {
+          var endBtn = ExperienciaEngine.getSceneButton(
+            state, ExperienciaEngine.getNode(state, dragScene), dragBtn
+          );
+          if (endBtn) {
+            var endX = endBtn.storedX != null ? Number(endBtn.storedX) : Number(endBtn.x);
+            var endY = endBtn.storedY != null ? Number(endBtn.storedY) : Number(endBtn.y);
+            if (Math.abs(endX - dragOriginX) < 0.05 && Math.abs(endY - dragOriginY) < 0.05 &&
+                buttonHistory.past.length) {
+              buttonHistory.past.pop();
+              moved = false;
+            }
+          }
+        }
         paintButtonsStage();
         paintInspector();
         if (moved) persist();
@@ -7165,6 +7226,8 @@ var ExperienciaCanvas = (function () {
         var key = String(ev.key || '').toLowerCase();
         if (key === 'z' || key === 'y') {
           if (isFormField(ev.target) || renameEdit) return;
+          /* Quotation overlay chrome owns undo/redo — avoid double-step on one chord. */
+          if (overlayMode) return;
           if (overlaysEditable()) {
             ev.preventDefault();
             var ok = false;

@@ -1791,9 +1791,9 @@ var ExperienciaEngine = (function () {
       portIds[String(ix.portId || ix.id)] = true;
     });
 
-    /* Keep non-BUTTON interactions; replace BUTTON set */
+    /* Keep hotspots / non-canvas overlays; replace entire free overlay set. */
     var others = (n.config.interactions || []).filter(function (ix) {
-      return !isSceneButtonInteraction(ix);
+      return !isSceneFreeOverlayInteraction(ix);
     });
     var restored = (snap.interactions || []).map(function (ix) {
       return JSON.parse(JSON.stringify(ix));
