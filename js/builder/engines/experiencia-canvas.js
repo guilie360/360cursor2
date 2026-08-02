@@ -4529,6 +4529,125 @@ var ExperienciaCanvas = (function () {
       persist();
     }
 
+    function overlayHalfSizePct(btn) {
+      if (!btn) return { w: 6, h: 4 };
+      var t = String(btn.type || 'BUTTON').toUpperCase();
+      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+        return {
+          w: Math.max(0.5, (Number(btn.width) || 12) / 2),
+          h: Math.max(0.5, (Number(btn.height) || 8) / 2)
+        };
+      }
+      if (t === 'BUTTON') {
+        return {
+          w: Math.max(0.5, (btn.boxW != null ? Number(btn.boxW) : 14) / 2),
+          h: Math.max(0.5, (btn.boxH != null ? Number(btn.boxH) : 4.5) / 2)
+        };
+      }
+      /* TEXT — loose box for edge snap */
+      return { w: 4, h: 2 };
+    }
+
+    function listSceneSnapGuides() {
+      if (typeof QuotationGuides === 'undefined' || !QuotationGuides.listActiveGuides) {
+        return [];
+      }
+      try { return QuotationGuides.listActiveGuides() || []; } catch (eG) { return []; }
+    }
+
+    /** Snap center/edges of a free overlay to Quotation red guides. */
+    function snapPointToSceneGuides(x, y, halfW, halfH) {
+      var GUIDE_SNAP = 1.45;
+      var sceneGuides = listSceneSnapGuides();
+      if (!sceneGuides.length) return { x: x, y: y, snappedX: false, snappedY: false };
+      var hw = Math.max(0, Number(halfW) || 0);
+      var hh = Math.max(0, Number(halfH) || 0);
+      var bestDx = GUIDE_SNAP + 1;
+      var bestDy = GUIDE_SNAP + 1;
+      var sx = x;
+      var sy = y;
+      sceneGuides.forEach(function (g) {
+        if (!g) return;
+        var pos = Number(g.position);
+        if (isNaN(pos)) return;
+        var axis = g.type === 'horizontal' ? 'horizontal' : 'vertical';
+        if (axis === 'vertical') {
+          [pos, pos + hw, pos - hw].forEach(function (cand) {
+            var d = Math.abs(x - cand);
+            if (d <= GUIDE_SNAP && d < bestDx) {
+              bestDx = d;
+              sx = Math.round(cand * 10) / 10;
+            }
+          });
+        } else {
+          [pos, pos + hh, pos - hh].forEach(function (cand) {
+            var d = Math.abs(y - cand);
+            if (d <= GUIDE_SNAP && d < bestDy) {
+              bestDy = d;
+              sy = Math.round(cand * 10) / 10;
+            }
+          });
+        }
+      });
+      return {
+        x: bestDx <= GUIDE_SNAP ? sx : x,
+        y: bestDy <= GUIDE_SNAP ? sy : y,
+        snappedX: bestDx <= GUIDE_SNAP,
+        snappedY: bestDy <= GUIDE_SNAP
+      };
+    }
+
+    /** Resize: snap the moving edge(s) to scene guides; keep opposite edge fixed. */
+    function snapBoxToSceneGuides(cx, cy, w, h, mode) {
+      var GUIDE_SNAP = 1.45;
+      var sceneGuides = listSceneSnapGuides();
+      if (!sceneGuides.length || !mode || mode === 'rotate') {
+        return { x: cx, y: cy, w: w, h: h };
+      }
+      var hw = w / 2;
+      var hh = h / 2;
+      var left = cx - hw;
+      var right = cx + hw;
+      var top = cy - hh;
+      var bottom = cy + hh;
+      var m = String(mode || '');
+
+      sceneGuides.forEach(function (g) {
+        if (!g) return;
+        var pos = Number(g.position);
+        if (isNaN(pos)) return;
+        if (g.type !== 'horizontal') {
+          if (m.indexOf('e') >= 0 && Math.abs(right - pos) <= GUIDE_SNAP) {
+            right = pos;
+            w = Math.max(1.5, right - left);
+            cx = left + w / 2;
+          }
+          if (m.indexOf('w') >= 0 && Math.abs(left - pos) <= GUIDE_SNAP) {
+            left = pos;
+            w = Math.max(1.5, right - left);
+            cx = left + w / 2;
+          }
+        } else {
+          if (m.indexOf('s') >= 0 && Math.abs(bottom - pos) <= GUIDE_SNAP) {
+            bottom = pos;
+            h = Math.max(1.5, bottom - top);
+            cy = top + h / 2;
+          }
+          if (m.indexOf('n') >= 0 && Math.abs(top - pos) <= GUIDE_SNAP) {
+            top = pos;
+            h = Math.max(1.5, bottom - top);
+            cy = top + h / 2;
+          }
+        }
+      });
+      return {
+        x: Math.max(0, Math.min(100, Math.round(cx * 10) / 10)),
+        y: Math.max(0, Math.min(100, Math.round(cy * 10) / 10)),
+        w: Math.max(1.5, Math.min(90, Math.round(w * 10) / 10)),
+        h: Math.max(1.5, Math.min(90, Math.round(h * 10) / 10))
+      };
+    }
+
     function computeButtonGuides(sceneId, buttonId, x, y) {
       var n = ExperienciaEngine.getNode(state, sceneId);
       var list = ExperienciaEngine.listSceneButtons(state, n) || [];
@@ -4652,6 +4771,13 @@ var ExperienciaCanvas = (function () {
         guides.spacing.sort(function (a, b) { return a.px - b.px; });
         guides.spacing = guides.spacing.slice(0, 2);
       }
+
+      /* Snap to Quotation scene guides (red lines) — center + edges. */
+      var selfBtn = ExperienciaEngine.getSceneButton(state, n, buttonId);
+      var half = overlayHalfSizePct(selfBtn);
+      var guideSnap = snapPointToSceneGuides(nx, ny, half.w, half.h);
+      nx = guideSnap.x;
+      ny = guideSnap.y;
 
       return { x: nx, y: ny, guides: guides };
     }
@@ -5477,6 +5603,15 @@ var ExperienciaCanvas = (function () {
             nh = Math.max(1.5, Math.min(90, nh));
             nx = Math.max(0, Math.min(100, nx));
             ny = Math.max(0, Math.min(100, ny));
+            if (transformDrag.type === 'BUTTON' ||
+                transformDrag.type === 'SHAPE_RECT' ||
+                transformDrag.type === 'SHAPE_CIRCLE') {
+              var boxSnap = snapBoxToSceneGuides(nx, ny, nw, nh, mode);
+              nx = boxSnap.x;
+              ny = boxSnap.y;
+              nw = boxSnap.w;
+              nh = boxSnap.h;
+            }
             var patchT = { x: nx, y: ny };
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;

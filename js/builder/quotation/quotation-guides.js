@@ -1307,6 +1307,14 @@ var QuotationGuides = (function () {
     }
   }
 
+  /** Active scene + viewport guides for overlay snap (empty if hidden/preview). */
+  function listActiveGuides() {
+    if (!guidesVisible || isPreview()) return [];
+    var scene = activeScene();
+    if (!scene) return [];
+    return (ensureGuidesArray(scene) || []).filter(Boolean);
+  }
+
   return {
     sync: sync,
     destroy: destroy,
@@ -1322,6 +1330,7 @@ var QuotationGuides = (function () {
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     ensureGuideBuckets: ensureGuideBuckets,
+    listActiveGuides: listActiveGuides,
     VIEWPORTS: VIEWPORTS,
     RULER_THICK: RULER_THICK
   };
