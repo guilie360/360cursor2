@@ -1518,7 +1518,7 @@ var ExperienciaEngine = (function () {
     if (!ix || ix.error) return null;
     ix.type = t;
     ix.x = 50;
-    ix.y = 58;
+    ix.y = 50;
     ix.positionInitialized = true;
     ix.positionMode = 'free';
     ensureFreeOverlayDefaults(ix);

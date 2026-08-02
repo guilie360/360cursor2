@@ -741,6 +741,7 @@ var QuotationEditor = (function () {
       scenesLocked: false,
       sceneMenuOpen: false,
       dockOpen: false,
+      dockCreateSubmenu: false,
       resourcePickerOpen: false,
       resourcePickerSceneId: null,
       pendingSceneDeleteId: null,
@@ -3546,6 +3547,11 @@ var QuotationEditor = (function () {
         dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
         dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
         dockSegHtml('data-qe-dock-del', 'del', 'Eliminar', 'qe-dock__seg--danger');
+    }
+    if (state.dockCreateSubmenu === 'shape') {
+      return '' +
+        dockSegHtml('data-qe-add-shape-rect', 'plus', 'Rectángulo') +
+        dockSegHtml('data-qe-add-shape-circle', 'plus', 'Círculo');
     }
     return '' +
       dockSegHtml('data-qe-add-button', 'plus', 'Botón') +
@@ -6358,12 +6364,14 @@ var QuotationEditor = (function () {
   var expOverlay = null;
   var pendingExpAction = null;
   var dockFadeTimer = null;
+  var dockSubmenuDocBound = false;
 
   function refreshDockOnly() {
     if (!rootEl) return;
     var bar = rootEl.querySelector('[data-qe-dock-bar]');
     if (!bar || !bar.parentNode) return;
     var nextMode = dockHasSelection() ? 'actions' : 'create';
+    if (nextMode === 'actions') state.dockCreateSubmenu = false;
     var curMode = bar.getAttribute('data-mode') || '';
     var rail = bar.querySelector('[data-qe-dock-rail]');
 
@@ -6408,6 +6416,16 @@ var QuotationEditor = (function () {
 
   function bindDockBar(editor) {
     if (!editor) return;
+    if (!dockSubmenuDocBound) {
+      dockSubmenuDocBound = true;
+      document.addEventListener('mousedown', function (e) {
+        if (state.dockCreateSubmenu !== 'shape') return;
+        var bar = rootEl && rootEl.querySelector('[data-qe-dock-bar]');
+        if (bar && bar.contains(e.target)) return;
+        state.dockCreateSubmenu = false;
+        refreshDockOnly();
+      });
+    }
     var addBtn = editor.querySelector('[data-qe-add-button]');
     if (addBtn) addBtn.addEventListener('click', function () { addButton(); });
     var addText = editor.querySelector('[data-qe-add-text]');
@@ -6416,30 +6434,33 @@ var QuotationEditor = (function () {
     if (addHs) addHs.addEventListener('click', function () { addHotspot(); });
     var addImg = editor.querySelector('[data-qe-add-image]');
     if (addImg) addImg.addEventListener('click', function () { openResourcePicker(); });
-    editor.querySelectorAll('[data-qe-add-shape]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
+    var addShape = editor.querySelector('[data-qe-add-shape]');
+    if (addShape) {
+      addShape.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) {
-          addShapeElement('SHAPE_RECT');
-          return;
-        }
-        var shapeItems = [{ id: 'rect', label: 'Rectángulo' }];
-        if (expOverlay && expOverlay.isKonvaPoc) {
-          shapeItems.push({ id: 'circle', label: 'Círculo' });
-        }
-        QuotationContextMenu.open({
-          x: e.clientX,
-          y: e.clientY,
-          ariaLabel: 'Forma',
-          items: shapeItems,
-          onSelect: function (id) {
-            if (id === 'rect') addShapeElement('SHAPE_RECT');
-            if (id === 'circle') addShapeElement('SHAPE_CIRCLE');
-          }
-        });
+        state.dockCreateSubmenu = state.dockCreateSubmenu === 'shape' ? false : 'shape';
+        refreshDockOnly();
       });
-    });
+    }
+    var addShapeRect = editor.querySelector('[data-qe-add-shape-rect]');
+    if (addShapeRect) {
+      addShapeRect.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.dockCreateSubmenu = false;
+        addShapeElement('SHAPE_RECT');
+      });
+    }
+    var addShapeCircle = editor.querySelector('[data-qe-add-shape-circle]');
+    if (addShapeCircle) {
+      addShapeCircle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.dockCreateSubmenu = false;
+        addShapeElement('SHAPE_CIRCLE');
+      });
+    }
     var edit = editor.querySelector('[data-qe-dock-edit]');
     if (edit) {
       edit.addEventListener('click', function (e) {
@@ -7975,6 +7996,7 @@ var QuotationEditor = (function () {
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
+    state.dockCreateSubmenu = false;
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
