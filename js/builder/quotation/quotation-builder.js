@@ -120,10 +120,11 @@ var QuotationBuilderView = (function () {
           '<div class="quotation-left-block" id="quotationLeftBlock">' +
             '<aside class="quotation-recursos' + (leftCollapsed ? ' is-collapsed' : '') + '"' +
               ' id="quotationRecursosPanel" aria-label="Recursos">' +
-              leftFloatHtml() +
               '<div class="quotation-left-body" id="quotationLeftBody"></div>' +
             '</aside>' +
           '</div>' +
+          /* Float is a workspace sibling — never inside the left rail (avoids shadow column). */
+          leftFloatHtml() +
           '<div class="quotation-main">' +
             '<section class="quotation-panel" id="quotationPanel" data-quotation-panel></section>' +
           '</div>' +

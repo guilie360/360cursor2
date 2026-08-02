@@ -3553,6 +3553,7 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .quotation-workspace {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -3563,11 +3564,8 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
-/* Left block: recursos only (Config/Editar live in the BOXIES header).
- * z-index above .quotation-main so the peek float (>) receives clicks.
- * Collapsed: width 0 + transparent ? no shadow column over scenes. */
+/* Left block: recursos only (Config/Editar live in the BOXIES header). */
 .quotation-left-block {
-  position: relative;
   flex: 0 0 auto;
   display: flex;
   flex-direction: row;
@@ -3578,22 +3576,16 @@ body.quotation-canvas-first .builder-workspace,
   background: rgba(8, 8, 8, 0.42);
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
-  overflow: visible;
-  z-index: 2;
+  overflow: hidden;
+  z-index: 1;
 }
 
-/* Collapsed: kill paint; float tab still peeks and stays clickable. */
+/*
+ * Collapsed: remove the rail from layout entirely.
+ * Expand float is a workspace sibling, so this kills the left shadow column.
+ */
 .quotation-workspace.is-left-collapsed .quotation-left-block {
-  flex: 0 0 0;
-  width: 0;
-  max-width: 0;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  overflow: visible;
-  z-index: 2;
+  display: none !important;
 }
 
 .quotation-left-block[hidden] {
@@ -3711,8 +3703,7 @@ body.quotation-canvas-first .builder-workspace,
 /* Float uses display:!important elsewhere ? kill it on Config. */
 .quotation-workspace.is-recursos-hidden #quotationLeftFloatBtn,
 .quotation-workspace.is-recursos-hidden .quotation-panel-float--left,
-.quotation-recursos[hidden] > .quotation-panel-float,
-.quotation-recursos[hidden] #quotationLeftFloatBtn {
+.quotation-workspace.is-recursos-hidden > .quotation-panel-float--left {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -3776,6 +3767,7 @@ body.quotation-canvas-first .builder-workspace,
  * Overrides .boxies-sidebar-float-toggle fixed rules from builder.css.
  */
 #quotationLeftFloatBtn.quotation-panel-float,
+.quotation-workspace > .quotation-panel-float--left,
 .quotation-recursos > .quotation-panel-float,
 .qe-col--inspector > .quotation-panel-float,
 .quotation-panel-float {
@@ -3802,7 +3794,8 @@ body.quotation-canvas-first .builder-workspace,
   transition:
     color 0.18s ease,
     background 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    left 0.18s ease;
 }
 
 .quotation-panel-float:hover {
@@ -3818,14 +3811,19 @@ body.quotation-canvas-first .builder-workspace,
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Left float is a workspace sibling ? anchored to the recursos seam. */
 #quotationLeftFloatBtn.quotation-panel-float--left,
-.quotation-recursos > .quotation-panel-float--left,
-.quotation-panel-float--left {
-  right: 0 !important;
-  left: auto !important;
-  transform: translate(100%, -50%) !important;
+.quotation-workspace > .quotation-panel-float--left {
+  right: auto !important;
+  left: var(--quotation-recursos-w, 220px) !important;
+  transform: translate(0, -50%) !important;
   border-left: none;
   border-radius: 0 7px 7px 0;
+}
+
+.quotation-workspace.is-left-collapsed > #quotationLeftFloatBtn.quotation-panel-float--left,
+.quotation-workspace.is-left-collapsed > .quotation-panel-float--left {
+  left: 0 !important;
 }
 
 .qe-col--inspector > .quotation-panel-float--right,
@@ -3843,7 +3841,7 @@ body.quotation-canvas-first .builder-workspace,
   transform: rotate(180deg);
 }
 
-/* Collapsed Recursos: true zero column; float peeks from the stage left edge */
+/* Collapsed Recursos: parent left-block is display:none; keep these as belt-and-suspenders. */
 .quotation-recursos.is-collapsed,
 .quotation-workspace.is-left-collapsed .quotation-recursos {
   flex: 0 0 0;
@@ -3853,19 +3851,9 @@ body.quotation-canvas-first .builder-workspace,
   min-width: 0;
   padding: 0;
   margin: 0;
-  overflow: visible;
+  overflow: hidden;
   border: 0;
   background: transparent;
-}
-
-.quotation-recursos.is-collapsed > .quotation-panel-float--left,
-.quotation-workspace.is-left-collapsed .quotation-recursos > .quotation-panel-float--left {
-  right: auto !important;
-  left: 0 !important;
-  transform: translate(0, -50%) !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
 }
 
 /* Editor grid without in-column library */
