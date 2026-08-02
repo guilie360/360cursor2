@@ -6771,65 +6771,126 @@ var QuotationEditor = (function () {
       return;
     }
 
-    /* ← / → — navigate scenes (editor only, no modifiers / dialogs). */
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
-      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
-      if (document.body.classList.contains('admin-modal-open')) return;
-      if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
-        /* Ignore while a context menu portal is open. */
-        var portal = document.getElementById('qeContextMenuPortal');
-        if (portal && portal.getAttribute('aria-hidden') === 'false' && portal.children.length) {
-          return;
-        }
-      }
-      try {
-        if (!navigateSceneByDelta(e.key === 'ArrowRight' ? 1 : -1)) return;
-        e.preventDefault();
-        e.stopPropagation();
-      } catch (eNav) { /* ignore */ }
-      return;
-    }
-
-    /* ↓ — toggle hide panels + scenes (same as header chrome-fold). */
-    if (e.key === 'ArrowDown') {
-      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
-      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
-      if (document.body.classList.contains('admin-modal-open')) return;
-      var ctxPortal = document.getElementById('qeContextMenuPortal');
-      if (ctxPortal && ctxPortal.getAttribute('aria-hidden') === 'false' && ctxPortal.children.length) {
+    /* Ctrl/Cmd — copy / cut / paste / undo / redo for canvas overlays. */
+    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+      var chord = String(e.key || '').toLowerCase();
+      if (chord === 'c' || chord === 'x' || chord === 'v' || chord === 'z' || chord === 'y') {
+        if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+        if (document.body.classList.contains('admin-modal-open')) return;
+        try {
+          var okChord = false;
+          if (chord === 'c') {
+            if (!hasOverlaySelection() || !expOverlay || !expOverlay.copySelected) return;
+            okChord = !!expOverlay.copySelected();
+          } else if (chord === 'x') {
+            if (!hasOverlaySelection() || !expOverlay || !expOverlay.cutSelected) return;
+            okChord = !!expOverlay.cutSelected();
+            if (okChord) {
+              state.expHasSelection = false;
+              state.selectedElementId = null;
+              refreshDockOnly();
+            }
+          } else if (chord === 'v') {
+            if (!expOverlay || !expOverlay.pasteSelected) return;
+            okChord = !!expOverlay.pasteSelected();
+            if (okChord) {
+              state.expHasSelection = true;
+              refreshDockOnly();
+            }
+          } else if (chord === 'y' || (chord === 'z' && e.shiftKey)) {
+            if (!expOverlay || !expOverlay.redoEdit) return;
+            okChord = !!expOverlay.redoEdit();
+          } else if (chord === 'z') {
+            if (!expOverlay || !expOverlay.undoEdit) return;
+            okChord = !!expOverlay.undoEdit();
+          }
+          if (okChord) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        } catch (eChord) { /* ignore */ }
         return;
       }
-      try {
-        if (typeof QuotationBuilderView === 'undefined' ||
-            typeof QuotationBuilderView.toggleChromeCollapsed !== 'function') {
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        QuotationBuilderView.toggleChromeCollapsed();
-      } catch (eFold) { /* ignore */ }
-      return;
     }
 
-    /* ↑ — toggle fullscreen (same as header fullscreen button). */
-    if (e.key === 'ArrowUp') {
-      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    /* ← / → / ↑ / ↓ — move selected overlay; otherwise scenes / panels / fullscreen. */
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+        e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (e.metaKey || e.ctrlKey) return;
       if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
       if (document.body.classList.contains('admin-modal-open')) return;
-      var ctxPortalFs = document.getElementById('qeContextMenuPortal');
-      if (ctxPortalFs && ctxPortalFs.getAttribute('aria-hidden') === 'false' && ctxPortalFs.children.length) {
+      var portalArrows = document.getElementById('qeContextMenuPortal');
+      if (portalArrows && portalArrows.getAttribute('aria-hidden') === 'false' &&
+          portalArrows.children.length) {
         return;
       }
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(function () {});
-        } else {
-          document.exitFullscreen().catch(function () {});
-        }
-      } catch (eFs) { /* ignore */ }
+
+      if (hasOverlaySelection() && expOverlay && expOverlay.nudgeSelected) {
+        if (e.altKey) { /* allow 0.5px nudge */ }
+        else if (e.shiftKey) { /* allow 10px nudge */ }
+        try {
+          var step = e.altKey ? 0.5 : (e.shiftKey ? 10 : 1);
+          var ndx = 0;
+          var ndy = 0;
+          if (e.key === 'ArrowLeft') ndx = -step;
+          else if (e.key === 'ArrowRight') ndx = step;
+          else if (e.key === 'ArrowUp') ndy = -step;
+          else if (e.key === 'ArrowDown') ndy = step;
+          if (expOverlay.nudgeSelected(ndx, ndy)) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        } catch (eNudge) { /* ignore */ }
+        return;
+      }
+
+      if (e.altKey || e.shiftKey) return;
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        try {
+          if (!navigateSceneByDelta(e.key === 'ArrowRight' ? 1 : -1)) return;
+          e.preventDefault();
+          e.stopPropagation();
+        } catch (eNav) { /* ignore */ }
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        try {
+          if (typeof QuotationBuilderView === 'undefined' ||
+              typeof QuotationBuilderView.toggleChromeCollapsed !== 'function') {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          QuotationBuilderView.toggleChromeCollapsed();
+        } catch (eFold) { /* ignore */ }
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(function () {});
+          } else {
+            document.exitFullscreen().catch(function () {});
+          }
+        } catch (eFs) { /* ignore */ }
+      }
+      return;
+    }
+  }
+
+  function onBuilderShortcutKeyUp(e) {
+    if (!rootEl) return;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+        e.key === 'Alt' || e.key === 'Shift') {
+      if (expOverlay && typeof expOverlay.finishNudge === 'function') {
+        try { expOverlay.finishNudge(); } catch (eFin) { /* ignore */ }
+      }
     }
   }
 
@@ -6848,6 +6909,7 @@ var QuotationEditor = (function () {
   function bindFocusEsc() {
     if (focusEscBound) return;
     document.addEventListener('keydown', onBuilderShortcut, true);
+    document.addEventListener('keyup', onBuilderShortcutKeyUp, true);
     focusEscBound = true;
   }
 

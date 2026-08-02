@@ -5062,8 +5062,12 @@ var ExperienciaCanvas = (function () {
       return { x: nx, y: ny, guides: guides };
     }
 
+    function overlaysEditable() {
+      return canvas().editMode === 'buttons' || !!overlayMode;
+    }
+
     function nudgeSelectedButtons(dxPx, dyPx) {
-      if (canvas().editMode !== 'buttons') return false;
+      if (!overlaysEditable()) return false;
       var sceneId = canvas().selectedId;
       if (!sceneId) return false;
       var ids = Array.isArray(canvas().selectedButtonIds)
@@ -5082,7 +5086,7 @@ var ExperienciaCanvas = (function () {
       ids.forEach(function (bid) {
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid);
-        if (!btn) return;
+        if (!btn || btn.locked) return;
         var x0 = btn.storedX != null ? Number(btn.storedX) : Number(btn.x);
         var y0 = btn.storedY != null ? Number(btn.storedY) : Number(btn.y);
         var nextX = x0 + dx;
@@ -5130,7 +5134,7 @@ var ExperienciaCanvas = (function () {
     }
 
     function copySelectedButtons() {
-      if (canvas().editMode !== 'buttons') return false;
+      if (!overlaysEditable()) return false;
       var sceneId = canvas().selectedId;
       if (!sceneId) return false;
       var ids = Array.isArray(canvas().selectedButtonIds)
@@ -5145,32 +5149,54 @@ var ExperienciaCanvas = (function () {
       ids.forEach(function (id) {
         var b = ExperienciaEngine.getSceneButton(state, n, id);
         if (!b || !b._ix) return;
-        /* Absolute on-screen geometry (not stored/anchor-derived after the fact) */
         var layout = ExperienciaEngine.resolveButtonLayout
           ? ExperienciaEngine.resolveButtonLayout(b._ix, layerW, layerH)
           : { x: b.x, y: b.y };
-        items.push({
-          label: b.label != null ? String(b.label) : '',
-          style: b.style || 'chip',
-          icon: b.icon || null,
-          rotation: b.rotation != null ? Number(b.rotation) : 0,
-          visible: b.visible !== false,
-          x: Number(layout.x),
-          y: Number(layout.y),
-          positionMode: b.positionMode === 'anchor' ? 'anchor' : 'free',
-          anchor: b.anchor || 'center',
-          marginX: b.marginX != null ? Number(b.marginX) : 32,
-          marginY: b.marginY != null ? Number(b.marginY) : 32,
-          targetNodeId: b.targetNodeId || null
-        });
+        var snap;
+        try {
+          snap = JSON.parse(JSON.stringify(b._ix));
+        } catch (eClone) {
+          return;
+        }
+        delete snap.id;
+        delete snap.portId;
+        snap.x = Number(layout.x);
+        snap.y = Number(layout.y);
+        snap.positionMode = 'free';
+        snap.positionInitialized = true;
+        snap.visible = b.visible !== false;
+        snap.type = String(b.type || snap.type || 'BUTTON').toUpperCase();
+        items.push(snap);
       });
       if (!items.length) return false;
-      buttonClipboard = { items: items };
+      buttonClipboard = { items: items, fromCut: false };
+      return true;
+    }
+
+    function cutSelectedButtons() {
+      if (!copySelectedButtons()) return false;
+      buttonClipboard.fromCut = true;
+      var sceneId = canvas().selectedId;
+      var ids = Array.isArray(canvas().selectedButtonIds)
+        ? canvas().selectedButtonIds.slice()
+        : [];
+      if (!ids.length && canvas().selectedButtonId) ids = [canvas().selectedButtonId];
+      if (!sceneId || !ids.length || !ExperienciaEngine.removeSceneButton) return false;
+      pushButtonHistory(sceneId);
+      ids.forEach(function (bid) {
+        ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+      });
+      canvas().selectedButtonId = null;
+      canvas().selectedButtonIds = [];
+      paintButtonsStage();
+      paintInspector();
+      persist();
+      notifyOverlaySelection();
       return true;
     }
 
     function pasteCopiedButtons() {
-      if (canvas().editMode !== 'buttons') return false;
+      if (!overlaysEditable()) return false;
       if (!buttonClipboard || !buttonClipboard.items || !buttonClipboard.items.length) {
         return false;
       }
@@ -5179,20 +5205,30 @@ var ExperienciaCanvas = (function () {
       if (!ExperienciaEngine.createSceneButtonFromSnapshot) return false;
       pushButtonHistory(sceneId);
       var pastedIds = [];
-      /* Paste in original order — each at exact absolute coords, no recenter */
+      var fromCut = !!buttonClipboard.fromCut;
+      var layerW = Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000);
+      var layerH = Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000);
+      var offsetX = fromCut ? 0 : (8 / layerW) * 100;
+      var offsetY = fromCut ? 0 : (8 / layerH) * 100;
       buttonClipboard.items.forEach(function (item) {
-        var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, item);
+        var snap = {};
+        try { snap = JSON.parse(JSON.stringify(item)); } catch (eS) { snap = item; }
+        snap.x = Number(snap.x) + offsetX;
+        snap.y = Number(snap.y) + offsetY;
+        var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, snap);
         if (copy && copy.id) {
           pastedIds.push(String(copy.id));
           markPendingMove(copy.id);
         }
       });
       if (!pastedIds.length) return false;
+      buttonClipboard.fromCut = false;
       canvas().selectedButtonIds = pastedIds.slice();
       canvas().selectedButtonId = pastedIds[pastedIds.length - 1];
       paintButtonsStage();
       paintInspector();
       persist();
+      notifyOverlaySelection();
       return true;
     }
 
@@ -6717,11 +6753,17 @@ var ExperienciaCanvas = (function () {
       if (ev.code === 'Space') {
         if (!isFormField(ev.target) && !renameEdit) spacePan = true;
       }
-      /* V6.1.05 — arrow nudge in BOTONES (1 / 10 / 0.5 px) */
-      if (canvas().editMode === 'buttons' && !isFormField(ev.target) && !renameEdit) {
+      /* V6.1.05 — arrow nudge overlays (1 / 10 / 0.5 px) */
+      if (overlaysEditable() && !isFormField(ev.target) && !renameEdit) {
         var arrow = ev.key;
         if (arrow === 'ArrowUp' || arrow === 'ArrowDown' ||
             arrow === 'ArrowLeft' || arrow === 'ArrowRight') {
+          /* Quotation chrome owns arrows when nothing selected — skip here in overlay. */
+          if (overlayMode) {
+            var hasSel = (Array.isArray(canvas().selectedButtonIds) &&
+              canvas().selectedButtonIds.length) || canvas().selectedButtonId;
+            if (!hasSel) return;
+          }
           var step = ev.altKey ? 0.5 : (ev.shiftKey ? 10 : 1);
           var ndx = 0;
           var ndy = 0;
@@ -6740,7 +6782,7 @@ var ExperienciaCanvas = (function () {
         var key = String(ev.key || '').toLowerCase();
         if (key === 'z' || key === 'y') {
           if (isFormField(ev.target) || renameEdit) return;
-          if (canvas().editMode === 'buttons') {
+          if (overlaysEditable()) {
             ev.preventDefault();
             var ok = false;
             if (key === 'y' || (key === 'z' && ev.shiftKey)) ok = redoButtonEdit();
@@ -6752,17 +6794,22 @@ var ExperienciaCanvas = (function () {
             return;
           }
         }
-        if (key === 'c' || key === 'v') {
+        if (key === 'c' || key === 'v' || key === 'x') {
           if (isFormField(ev.target) || renameEdit) return;
-          var inScope = viewport === document.activeElement ||
+          var inScope = overlayMode ||
+            viewport === document.activeElement ||
             rootEl.contains(document.activeElement) || rootEl.contains(ev.target) ||
             (stage && stage.contains(ev.target));
           if (!inScope && document.activeElement !== document.body) return;
 
-          /* V6.1.06 — button clipboard in BOTONES mode */
-          if (canvas().editMode === 'buttons') {
+          if (overlaysEditable()) {
             if (key === 'c') {
               if (!copySelectedButtons()) return;
+              ev.preventDefault();
+              return;
+            }
+            if (key === 'x') {
+              if (!cutSelectedButtons()) return;
               ev.preventDefault();
               return;
             }
@@ -7342,6 +7389,33 @@ var ExperienciaCanvas = (function () {
           hotspotId: canvas().selectedHotspotId || null,
           hasSelection: !!(ids.length || canvas().selectedHotspotId)
         };
+      },
+      nudgeSelected: function (dxPx, dyPx) {
+        return nudgeSelectedButtons(dxPx, dyPx);
+      },
+      finishNudge: function () {
+        finishButtonNudge();
+      },
+      copySelected: function () {
+        return copySelectedButtons();
+      },
+      cutSelected: function () {
+        return cutSelectedButtons();
+      },
+      pasteSelected: function () {
+        return pasteCopiedButtons();
+      },
+      undoEdit: function () {
+        if (!undoButtonEdit()) return false;
+        renderAll();
+        persist();
+        return true;
+      },
+      redoEdit: function () {
+        if (!redoButtonEdit()) return false;
+        renderAll();
+        persist();
+        return true;
       },
       duplicateSelected: function () {
         var sceneId = canvas().selectedId;

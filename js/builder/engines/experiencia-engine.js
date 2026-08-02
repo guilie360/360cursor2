@@ -1152,43 +1152,94 @@ var ExperienciaEngine = (function () {
   }
 
   /**
-   * Absolute 1:1 paste — places the button at exact free coords from the snapshot.
-   * Never recenters, never redistributes. Anchor/margins are preserved as metadata.
+   * Absolute 1:1 paste — places the overlay at exact free coords from the snapshot.
+   * Supports BUTTON / TEXT / SHAPE_*. Never recenters.
    */
   function createSceneButtonFromSnapshot(state, nodeId, snap) {
     snap = snap || {};
-    var created = addSceneButton(state, nodeId);
+    var t = String(snap.type || 'BUTTON').toUpperCase();
+    var created = null;
+    if (t === 'TEXT') {
+      created = addSceneText(state, nodeId);
+    } else if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      created = addSceneShape(state, nodeId, t);
+    } else {
+      t = 'BUTTON';
+      created = addSceneButton(state, nodeId);
+    }
     if (!created || !created.id) return null;
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, created.id);
     if (!ix) return null;
-    ensureButtonVisualDefaults(ix);
 
-    ix.label = snap.label != null ? String(snap.label) : '';
-    if (snap.style != null && BUTTON_STYLES[snap.style]) ix.style = snap.style;
+    ix.type = t;
+    ix.label = snap.label != null ? String(snap.label) : (ix.label || '');
     ix.rotation = clampRotation(snap.rotation != null ? snap.rotation : 0);
-    if (snap.icon === null || snap.icon === '' || snap.icon === 'none') {
-      ix.icon = null;
-    } else if (snap.icon && BUTTON_ICONS[snap.icon]) {
-      ix.icon = snap.icon;
-    }
-    ix.enabled = snap.visible !== false;
+    ix.enabled = snap.visible !== false && snap.enabled !== false;
+    ix.locked = !!snap.locked;
 
-    /* Preserve anchor metadata for later Anclas mode — geometry stays absolute free */
-    if (snap.anchor && BUTTON_ANCHORS[snap.anchor]) ix.anchor = snap.anchor;
-    ix.marginX = Math.max(0, Number(snap.marginX) || 0);
-    ix.marginY = Math.max(0, Number(snap.marginY) || 0);
+    if (t === 'BUTTON') {
+      ensureButtonVisualDefaults(ix);
+      if (snap.style != null && BUTTON_STYLES[snap.style]) ix.style = snap.style;
+      if (snap.icon === null || snap.icon === '' || snap.icon === 'none') {
+        ix.icon = null;
+      } else if (snap.icon && BUTTON_ICONS[snap.icon]) {
+        ix.icon = snap.icon;
+      }
+      if (snap.anchor && BUTTON_ANCHORS[snap.anchor]) ix.anchor = snap.anchor;
+      ix.marginX = Math.max(0, Number(snap.marginX) || 0);
+      ix.marginY = Math.max(0, Number(snap.marginY) || 0);
+      if (snap.boxW != null) ix.boxW = Math.max(1, Math.min(100, Number(snap.boxW) || 14));
+      if (snap.boxH != null) ix.boxH = Math.max(1, Math.min(100, Number(snap.boxH) || 4.5));
+      if (snap.bgColor != null) ix.bgColor = snap.bgColor;
+      if (snap.bgOpacity != null) ix.bgOpacity = Number(snap.bgOpacity);
+      if (snap.textColor != null) ix.textColor = snap.textColor;
+      if (snap.borderColor != null) ix.borderColor = snap.borderColor;
+      if (snap.borderWidth != null) ix.borderWidth = Number(snap.borderWidth);
+      if (snap.borderRadius != null) ix.borderRadius = Number(snap.borderRadius);
+      if (snap.hoverEnabled != null) ix.hoverEnabled = !!snap.hoverEnabled;
+      if (snap.hoverColor != null) ix.hoverColor = snap.hoverColor;
+      if (snap.hoverTextColor != null) ix.hoverTextColor = snap.hoverTextColor;
+      if (snap.hoverTransition != null) ix.hoverTransition = Number(snap.hoverTransition);
+      if (snap.pressedColor != null) ix.pressedColor = snap.pressedColor;
+      if (snap.pressedTextColor != null) ix.pressedTextColor = snap.pressedTextColor;
+      if (snap.pressedScale != null) ix.pressedScale = Number(snap.pressedScale);
+      if (snap.opacity != null) ix.opacity = Number(snap.opacity);
+      if (ix.color != null) delete ix.color;
+      if (snap.targetNodeId) {
+        setButtonTarget(state, nodeId, ix.id, snap.targetNodeId);
+      }
+    } else {
+      ensureFreeOverlayDefaults(ix);
+      if (t === 'TEXT') {
+        if (snap.fontSize != null) ix.fontSize = Number(snap.fontSize);
+        if (snap.color != null) ix.color = String(snap.color);
+        if (snap.fontFamily != null) ix.fontFamily = String(snap.fontFamily);
+        if (snap.fontWeight != null) ix.fontWeight = String(snap.fontWeight);
+        if (snap.fontStyle != null) ix.fontStyle = String(snap.fontStyle);
+        if (snap.textDecoration != null) ix.textDecoration = String(snap.textDecoration);
+        if (snap.textAlign != null) ix.textAlign = String(snap.textAlign);
+        if (snap.lineHeight != null) ix.lineHeight = Number(snap.lineHeight);
+        if (snap.letterSpacing != null) ix.letterSpacing = Number(snap.letterSpacing);
+        if (snap.textTransform != null) ix.textTransform = String(snap.textTransform);
+        if (snap.textShadow != null) ix.textShadow = String(snap.textShadow);
+        if (snap.opacity != null) ix.opacity = Number(snap.opacity);
+      } else {
+        if (snap.width != null) ix.width = Number(snap.width);
+        if (snap.height != null) ix.height = Number(snap.height);
+        if (snap.fill != null) ix.fill = String(snap.fill);
+        if (snap.stroke != null) ix.stroke = String(snap.stroke);
+        if (snap.strokeWidth != null) ix.strokeWidth = Number(snap.strokeWidth);
+        if (snap.borderRadius != null) ix.borderRadius = Number(snap.borderRadius);
+      }
+    }
 
     /* Absolute geometry — never recenter */
     ix.x = clampPercent(snap.x, 50);
     ix.y = clampPercent(snap.y, 50);
     ix.positionMode = 'free';
     ix.positionInitialized = true;
-    if (ix.color != null) delete ix.color;
-
-    if (snap.targetNodeId) {
-      setButtonTarget(state, nodeId, ix.id, snap.targetNodeId);
-    }
+    ensureFreeOverlayDefaults(ix);
     syncScenePorts(n);
     return buttonViewModel(state, n, ix);
   }
