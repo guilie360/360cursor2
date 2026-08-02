@@ -1364,6 +1364,17 @@ var QuotationGuides = (function () {
 
   function onContextMenu(e) {
     if (isPreview()) return;
+    if (api && typeof api.getOverlaySelectionCount === 'function') {
+      var selCount = api.getOverlaySelectionCount();
+      if (selCount >= 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof api.openOverlaySelectionMenu === 'function') {
+          api.openOverlaySelectionMenu(e.clientX, e.clientY);
+        }
+        return;
+      }
+    }
     if (!isCanvasContextTarget(e.target)) return;
     e.preventDefault();
     e.stopPropagation();

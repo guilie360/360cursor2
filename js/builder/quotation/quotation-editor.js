@@ -791,6 +791,7 @@ var QuotationEditor = (function () {
   var sessionEpoch = 0;
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
+  var OVERLAY_TEMPLATE_PREFIX = 'boxies_qe_overlay_templates_v1_';
   var AUTOSAVE_DEBOUNCE_MS = 4000;
   var autosaveTimer = null;
   var autosaveInFlight = false;
@@ -838,6 +839,36 @@ var QuotationEditor = (function () {
     try {
       localStorage.setItem(key, JSON.stringify(list || []));
     } catch (e) { /* quota */ }
+  }
+
+  function overlayTemplatesStorageKey(projectId) {
+    return OVERLAY_TEMPLATE_PREFIX + String(
+      projectId ||
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+  }
+
+  function listOverlayTemplates() {
+    var key = overlayTemplatesStorageKey();
+    if (!key || key === OVERLAY_TEMPLATE_PREFIX) return [];
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return [];
+      var list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch (eOt) {
+      return [];
+    }
+  }
+
+  function saveOverlayTemplates(list) {
+    var key = overlayTemplatesStorageKey();
+    if (!key || key === OVERLAY_TEMPLATE_PREFIX) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(list || []));
+    } catch (eSave) { /* quota */ }
   }
 
   function stripMediaFromInteraction(ix) {
@@ -903,6 +934,96 @@ var QuotationEditor = (function () {
       AdminNotify.success('Plantilla "' + name + '" guardada.');
     }
     rerender();
+  }
+
+  function createTemplateFromSelection() {
+    if (!expOverlay || !expOverlay.snapshotSelectedOverlays) return;
+    var snaps = expOverlay.snapshotSelectedOverlays();
+    if (!snaps || !snaps.length) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('No hay elementos seleccionados para guardar.');
+      }
+      return;
+    }
+    var name = window.prompt('Nombre de la plantilla', 'Selección');
+    if (name == null) return;
+    name = String(name).trim();
+    if (!name) return;
+    var list = listOverlayTemplates();
+    list.push({
+      id: nextId('otpl'),
+      name: name,
+      at: Date.now(),
+      overlays: snaps.map(stripMediaFromInteraction).filter(Boolean)
+    });
+    saveOverlayTemplates(list);
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success('Plantilla "' + name + '" guardada.');
+    }
+  }
+
+  function openOverlaySelectionContextMenu(clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    if (!expOverlay || !expOverlay.getSelectionContext) return;
+    var ctx = expOverlay.getSelectionContext();
+    if (!ctx || ctx.count < 2) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Selección múltiple',
+      items: [
+        {
+          id: 'group',
+          label: 'Agrupar',
+          disabled: !ctx.canGroup
+        },
+        {
+          id: 'ungroup',
+          label: 'Desagrupar',
+          disabled: !ctx.canUngroup
+        },
+        {
+          id: 'template',
+          label: 'Convertir en plantilla',
+          separatorBefore: true
+        },
+        {
+          id: 'delete',
+          label: 'Eliminar',
+          danger: true,
+          separatorBefore: true
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'group') {
+          if (expOverlay.groupSelectedOverlays && expOverlay.groupSelectedOverlays()) {
+            markDirtyLocal();
+            refreshLayersPanel();
+          }
+          return;
+        }
+        if (id === 'ungroup') {
+          if (expOverlay.ungroupSelectedOverlays && expOverlay.ungroupSelectedOverlays()) {
+            markDirtyLocal();
+            refreshLayersPanel();
+          }
+          return;
+        }
+        if (id === 'template') {
+          createTemplateFromSelection();
+          return;
+        }
+        if (id === 'delete') {
+          if (expOverlay.deleteSelected && expOverlay.deleteSelected()) {
+            state.expHasSelection = false;
+            state.selectedOverlayIds = [];
+            markDirtyLocal();
+            refreshLayersPanel();
+            refreshDockOnly();
+          }
+        }
+      }
+    });
   }
 
   function createSceneFromTemplate(templateId) {
@@ -2902,7 +3023,8 @@ var QuotationEditor = (function () {
       MODEL_3D: 'Modelo 3D',
       GALLERY: 'Galería',
       MAP: 'Mapa',
-      GROUP: 'Grupo'
+      GROUP: 'Grupo',
+      OVERLAY_GROUP: 'Grupo'
     };
     if (MAP[t]) return MAP[t];
     if (!t) return 'Capa';
@@ -2932,6 +3054,7 @@ var QuotationEditor = (function () {
     ixs.forEach(function (ix) {
       if (!ix || !ix.id) return;
       var t = String(ix.type || '').toUpperCase();
+      if (t === 'OVERLAY_GROUP') return;
       var label = (ix.label != null && String(ix.label).trim())
         ? String(ix.label)
         : layerTypeLabel(t);
@@ -3687,7 +3810,19 @@ var QuotationEditor = (function () {
       },
       onChange: function () { markDirtyLocal(); },
       onRulersChange: function (on) { state.rulersVisible = !!on; },
-      onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; }
+      onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; },
+      getOverlaySelectionCount: function () {
+        if (!expOverlay || !expOverlay.getSelectionContext) return 0;
+        try {
+          var ctx = expOverlay.getSelectionContext();
+          return ctx && ctx.count ? ctx.count : 0;
+        } catch (eCnt) {
+          return 0;
+        }
+      },
+      openOverlaySelectionMenu: function (clientX, clientY) {
+        openOverlaySelectionContextMenu(clientX, clientY);
+      }
     });
     if (QuotationGuides.isRulersVisible() !== !!state.rulersVisible) {
       QuotationGuides.setRulersVisible(!!state.rulersVisible);
@@ -6462,6 +6597,9 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
+      },
+      onMultiSelectionContextMenu: function (clientX, clientY) {
+        openOverlaySelectionContextMenu(clientX, clientY);
       }
     });
 

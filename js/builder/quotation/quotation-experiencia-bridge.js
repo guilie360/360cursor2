@@ -266,7 +266,8 @@ var QuotationExperienciaBridge = (function () {
         pullToScenes(shim, scenes);
         if (typeof options.onChange === 'function') options.onChange();
       },
-      onSelectionChange: options.onSelectionChange
+      onSelectionChange: options.onSelectionChange,
+      onMultiSelectionContextMenu: options.onMultiSelectionContextMenu
     });
     if (!handle) return null;
 
@@ -293,6 +294,20 @@ var QuotationExperienciaBridge = (function () {
       },
       getSelection: function () {
         return handle.getSelection ? handle.getSelection() : { hasSelection: false };
+      },
+      getSelectionContext: function () {
+        return handle.getSelectionContext
+          ? handle.getSelectionContext()
+          : { buttonIds: [], count: 0, canGroup: false, canUngroup: false };
+      },
+      groupSelectedOverlays: function () {
+        return handle.groupSelectedOverlays ? handle.groupSelectedOverlays() : false;
+      },
+      ungroupSelectedOverlays: function () {
+        return handle.ungroupSelectedOverlays ? handle.ungroupSelectedOverlays() : false;
+      },
+      snapshotSelectedOverlays: function () {
+        return handle.snapshotSelectedOverlays ? handle.snapshotSelectedOverlays() : [];
       },
       nudgeSelected: function (dxPx, dyPx) {
         return handle.nudgeSelected ? handle.nudgeSelected(dxPx, dyPx) : false;

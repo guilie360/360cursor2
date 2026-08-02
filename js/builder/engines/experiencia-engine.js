@@ -164,6 +164,7 @@ var ExperienciaEngine = (function () {
     TEXT: 'Texto',
     SHAPE_RECT: 'Rectángulo',
     SHAPE_CIRCLE: 'Círculo',
+    OVERLAY_GROUP: 'Grupo',
     SELECTOR: 'Selector',
     UNIT: 'Unidad',
     UNITS_FLOOR: 'Unidades',
@@ -374,6 +375,172 @@ var ExperienciaEngine = (function () {
     if (!ix) return false;
     var t = String(ix.type || '').toUpperCase();
     return t === 'BUTTON' || t === 'TEXT' || t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE';
+  }
+
+  function isOverlayGroupInteraction(ix) {
+    return !!(ix && String(ix.type || '').toUpperCase() === 'OVERLAY_GROUP');
+  }
+
+  function listOverlayGroupInteractions(n) {
+    if (!n || !n.config || !Array.isArray(n.config.interactions)) return [];
+    return n.config.interactions.filter(isOverlayGroupInteraction);
+  }
+
+  function findOverlayGroupByMembers(n, memberIds) {
+    if (!n || !memberIds || memberIds.length < 2) return null;
+    var want = {};
+    memberIds.forEach(function (id) { want[String(id)] = true; });
+    var groups = listOverlayGroupInteractions(n);
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      var mids = Array.isArray(g.memberIds) ? g.memberIds.map(String) : [];
+      if (mids.length !== memberIds.length) continue;
+      var ok = mids.every(function (id) { return want[id]; });
+      if (ok) return g;
+    }
+    return null;
+  }
+
+  function resolveOverlayGroupForSelection(n, selectedIds) {
+    if (!n || !selectedIds || !selectedIds.length) return null;
+    selectedIds = selectedIds.map(String).filter(Boolean);
+    if (selectedIds.length === 1) {
+      var one = getInteraction(n, selectedIds[0]);
+      if (one && isOverlayGroupInteraction(one)) return one;
+      return null;
+    }
+    var byMembers = findOverlayGroupByMembers(n, selectedIds);
+    if (byMembers) return byMembers;
+    var groupId = null;
+    selectedIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !ix.groupId) return;
+      if (!groupId) groupId = String(ix.groupId);
+      else if (String(ix.groupId) !== groupId) groupId = '__mixed__';
+    });
+    if (!groupId || groupId === '__mixed__') return null;
+    var g = getInteraction(n, groupId);
+    return (g && isOverlayGroupInteraction(g)) ? g : null;
+  }
+
+  function detachOverlayFromGroups(n, memberId) {
+    if (!n || !n.config || !memberId) return;
+    var mid = String(memberId);
+    listOverlayGroupInteractions(n).forEach(function (g) {
+      if (!g || !Array.isArray(g.memberIds)) return;
+      var idx = g.memberIds.map(String).indexOf(mid);
+      if (idx < 0) return;
+      g.memberIds.splice(idx, 1);
+      var ix = getInteraction(n, mid);
+      if (ix) delete ix.groupId;
+      if (g.memberIds.length < 2) {
+        g.memberIds.forEach(function (rid) {
+          var rx = getInteraction(n, rid);
+          if (rx) delete rx.groupId;
+        });
+        n.config.interactions = n.config.interactions.filter(function (item) {
+          return String(item.id) !== String(g.id);
+        });
+      }
+    });
+  }
+
+  function pruneOverlayGroupsAfterDelete(n, deletedIds) {
+    if (!n || !n.config || !deletedIds || !deletedIds.length) return;
+    var deleted = {};
+    deletedIds.forEach(function (id) { deleted[String(id)] = true; });
+    listOverlayGroupInteractions(n).slice().forEach(function (g) {
+      if (!g) return;
+      if (deleted[String(g.id)]) {
+        (g.memberIds || []).forEach(function (mid) {
+          var ix = getInteraction(n, mid);
+          if (ix) delete ix.groupId;
+        });
+        n.config.interactions = n.config.interactions.filter(function (item) {
+          return String(item.id) !== String(g.id);
+        });
+        return;
+      }
+      var mids = (g.memberIds || []).map(String).filter(function (id) {
+        return !deleted[id];
+      });
+      if (mids.length < 2) {
+        mids.forEach(function (id) {
+          var ix = getInteraction(n, id);
+          if (ix) delete ix.groupId;
+        });
+        n.config.interactions = n.config.interactions.filter(function (item) {
+          return String(item.id) !== String(g.id);
+        });
+      } else {
+        g.memberIds = mids;
+      }
+    });
+  }
+
+  function groupSceneOverlays(state, nodeId, memberIds) {
+    memberIds = (memberIds || []).map(String).filter(Boolean);
+    if (memberIds.length < 2) return null;
+    var n = getNode(state, nodeId);
+    if (!n || !n.config) return null;
+    if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+    var unique = [];
+    memberIds.forEach(function (id) {
+      if (unique.indexOf(id) >= 0) return;
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      detachOverlayFromGroups(n, id);
+      unique.push(id);
+    });
+    if (unique.length < 2) return null;
+    var existing = findOverlayGroupByMembers(n, unique);
+    if (existing) return existing;
+    var groupId = uid('grp');
+    var group = makeInteraction({
+      type: 'OVERLAY_GROUP',
+      id: groupId,
+      portId: groupId,
+      label: 'Grupo',
+      memberIds: unique.slice(),
+      enabled: true
+    });
+    n.config.interactions.push(group);
+    unique.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (ix) ix.groupId = groupId;
+    });
+    return group;
+  }
+
+  function ungroupSceneOverlay(state, nodeId, groupId) {
+    var n = getNode(state, nodeId);
+    if (!n || !groupId) return false;
+    var g = getInteraction(n, groupId);
+    if (!g || !isOverlayGroupInteraction(g)) return false;
+    (g.memberIds || []).forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (ix) delete ix.groupId;
+    });
+    n.config.interactions = (n.config.interactions || []).filter(function (item) {
+      return String(item.id) !== String(groupId);
+    });
+    return true;
+  }
+
+  function snapshotOverlayInteractions(state, nodeId, memberIds) {
+    var n = getNode(state, nodeId);
+    if (!n || !memberIds || !memberIds.length) return [];
+    return memberIds.map(String).filter(Boolean).map(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
+      try {
+        var copy = JSON.parse(JSON.stringify(ix));
+        delete copy.groupId;
+        return copy;
+      } catch (eSnap) {
+        return null;
+      }
+    }).filter(Boolean);
   }
 
   function ensureFreeOverlayDefaults(ix) {
@@ -1704,6 +1871,7 @@ var ExperienciaEngine = (function () {
     var nodeCount = (exp.nodes || []).length;
     var nodeIds = (exp.nodes || []).map(function (node) { return String(node.id); });
     var result = removeInteraction(state, nodeId, buttonId, { keepEdges: false });
+    if (result && n) pruneOverlayGroupsAfterDelete(n, [buttonId]);
     exp = ensureState(state);
     if ((exp.nodes || []).length !== nodeCount) {
       /* Rollback node list if somehow mutated */
@@ -5997,6 +6165,11 @@ var ExperienciaEngine = (function () {
     mirrorSceneButton: mirrorSceneButton,
     duplicateSceneButton: duplicateSceneButton,
     createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
+    isOverlayGroupInteraction: isOverlayGroupInteraction,
+    groupSceneOverlays: groupSceneOverlays,
+    ungroupSceneOverlay: ungroupSceneOverlay,
+    resolveOverlayGroupForSelection: resolveOverlayGroupForSelection,
+    snapshotOverlayInteractions: snapshotOverlayInteractions,
     isHotspotsEditableNode: isHotspotsEditableNode,
     isSceneHotspotMask: isSceneHotspotMask,
     listSceneHotspotMasks: listSceneHotspotMasks,

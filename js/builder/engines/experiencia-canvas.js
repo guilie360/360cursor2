@@ -6923,6 +6923,16 @@ var ExperienciaCanvas = (function () {
           cancelOverlayGestures();
         }
       });
+      buttonsLayer.addEventListener('contextmenu', function (ev) {
+        if (!overlayMode) return;
+        var ids = getSelectedOverlayIds();
+        if (ids.length < 2) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (typeof api.onMultiSelectionContextMenu === 'function') {
+          api.onMultiSelectionContextMenu(ev.clientX, ev.clientY, ids);
+        }
+      }, true);
       /* Force hover color in Builder (theme tokens otherwise keep white). */
       buttonsLayer.addEventListener('mouseover', function (ev) {
         var btn = ev.target && ev.target.closest && ev.target.closest('.builder-exp-ui-btn.is-hover-on');
@@ -8167,6 +8177,70 @@ var ExperienciaCanvas = (function () {
           hasSelection: !!(ids.length || canvas().selectedHotspotId)
         };
       },
+      getSelectionContext: function () {
+        var ids = getSelectedOverlayIds();
+        var sceneId = canvas().selectedId;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        var group = (n && ExperienciaEngine.resolveOverlayGroupForSelection)
+          ? ExperienciaEngine.resolveOverlayGroupForSelection(n, ids)
+          : null;
+        var canGroup = ids.length >= 2 && ids.every(function (id) {
+          var ix = n && ExperienciaEngine.getSceneButton
+            ? ExperienciaEngine.getSceneButton(state, n, id)
+            : null;
+          return !!ix;
+        });
+        var canUngroup = !!group;
+        return {
+          buttonIds: ids,
+          count: ids.length,
+          canGroup: canGroup,
+          canUngroup: canUngroup,
+          groupId: group ? group.id : null
+        };
+      },
+      groupSelectedOverlays: function () {
+        var sceneId = canvas().selectedId;
+        var ids = getSelectedOverlayIds();
+        if (!sceneId || ids.length < 2 || !ExperienciaEngine.groupSceneOverlays) return false;
+        pushButtonHistory(sceneId);
+        var group = ExperienciaEngine.groupSceneOverlays(state, sceneId, ids);
+        if (!group) return false;
+        canvas().selectedButtonIds = ids.slice();
+        canvas().selectedButtonId = ids[ids.length - 1] || null;
+        renderAll();
+        paintInspector();
+        persist();
+        notifyOverlaySelection();
+        return true;
+      },
+      ungroupSelectedOverlays: function () {
+        var sceneId = canvas().selectedId;
+        var ids = getSelectedOverlayIds();
+        if (!sceneId || !ExperienciaEngine.resolveOverlayGroupForSelection) return false;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        var group = ExperienciaEngine.resolveOverlayGroupForSelection(n, ids);
+        if (!group || !ExperienciaEngine.ungroupSceneOverlay) return false;
+        pushButtonHistory(sceneId);
+        var memberIds = (group.memberIds || []).map(String);
+        var ok = ExperienciaEngine.ungroupSceneOverlay(state, sceneId, group.id);
+        if (!ok) return false;
+        canvas().selectedButtonIds = memberIds.slice();
+        canvas().selectedButtonId = memberIds[memberIds.length - 1] || null;
+        renderAll();
+        paintInspector();
+        persist();
+        notifyOverlaySelection();
+        return true;
+      },
+      snapshotSelectedOverlays: function () {
+        var sceneId = canvas().selectedId;
+        var ids = getSelectedOverlayIds();
+        if (!sceneId || !ids.length || !ExperienciaEngine.snapshotOverlayInteractions) {
+          return [];
+        }
+        return ExperienciaEngine.snapshotOverlayInteractions(state, sceneId, ids);
+      },
       nudgeSelected: function (dxPx, dyPx) {
         return nudgeSelectedButtons(dxPx, dyPx);
       },
@@ -8465,6 +8539,7 @@ var ExperienciaCanvas = (function () {
       inspectorBody: options.inspectorBody || null,
       onChange: options.onChange,
       onSelectionChange: options.onSelectionChange,
+      onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
       saveState: options.saveState
     });
     if (handle) {
