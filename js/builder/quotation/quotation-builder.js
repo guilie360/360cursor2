@@ -220,8 +220,22 @@ var QuotationBuilderView = (function () {
       !!QuotationEditor.isScenesCollapsed();
   }
 
+  function scenesLockedNow() {
+    return typeof QuotationEditor !== 'undefined' &&
+      typeof QuotationEditor.isScenesLocked === 'function' &&
+      !!QuotationEditor.isScenesLocked();
+  }
+
+  /** True when every unlocked panel is collapsed (locked ones are ignored). */
   function isChromeCollapsed() {
-    return !!(leftCollapsed && rightCollapsed && scenesCollapsedNow());
+    var leftOk = leftLocked || leftCollapsed;
+    var rightOk = rightLocked || rightCollapsed;
+    var scenesOk = scenesLockedNow() || scenesCollapsedNow();
+    return !!(leftOk && rightOk && scenesOk);
+  }
+
+  function hasUnlockedChromePanels() {
+    return !leftLocked || !rightLocked || !scenesLockedNow();
   }
 
   function syncChromeFoldButton() {
@@ -231,19 +245,27 @@ var QuotationBuilderView = (function () {
     btn.hidden = !onEditor;
     if (!onEditor) return;
     var collapsed = isChromeCollapsed();
+    var canFold = hasUnlockedChromePanels();
     btn.classList.toggle('is-active', collapsed);
+    btn.classList.toggle('is-disabled', !canFold);
     btn.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+    btn.setAttribute('aria-disabled', canFold ? 'false' : 'true');
     btn.setAttribute(
       'aria-label',
-      collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas'
+      !canFold
+        ? 'Paneles bloqueados'
+        : (collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas')
     );
     btn.setAttribute(
       'data-tooltip',
-      collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas'
+      !canFold
+        ? 'Paneles bloqueados'
+        : (collapsed ? 'Mostrar paneles y escenas' : 'Ocultar paneles y escenas')
     );
   }
 
   function setChromeCollapsed(on) {
+    if (!hasUnlockedChromePanels()) return;
     var next = !!on;
     chromeFoldBatch = true;
     if (!leftLocked) applyLeftCollapsed(next);
@@ -257,6 +279,7 @@ var QuotationBuilderView = (function () {
   }
 
   function toggleChromeCollapsed() {
+    if (!hasUnlockedChromePanels()) return;
     setChromeCollapsed(!isChromeCollapsed());
   }
 
