@@ -3579,10 +3579,17 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 3;
 }
 
-/* Collapsed: drop the full-height edge stripe (border + panel fill). */
+/* Collapsed: kill the full-height ?shadow column? (width slot + edge paint). */
 .quotation-workspace.is-left-collapsed .quotation-left-block {
-  border-right: none;
+  flex: 0 0 0;
+  width: 0;
+  max-width: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
   background: transparent;
+  overflow: visible; /* float tab still peeks into the stage */
 }
 
 .quotation-left-block[hidden] {
@@ -3684,13 +3691,6 @@ body.quotation-canvas-first .builder-workspace,
     max-width var(--builder-rail-collapse-duration, 0.22s) var(--builder-rail-collapse-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-.quotation-recursos.is-collapsed,
-.quotation-workspace.is-left-collapsed .quotation-recursos {
-  flex-basis: 0;
-  width: 0;
-  max-width: 0;
-}
-
 /* Config (and any non-editor step): no recursos column / fold control */
 .quotation-workspace.is-recursos-hidden .quotation-recursos,
 .quotation-recursos[hidden] {
@@ -3718,9 +3718,16 @@ body.quotation-canvas-first .builder-workspace,
 
 .quotation-recursos.is-collapsed .quotation-left-body,
 .quotation-workspace.is-left-collapsed .quotation-recursos .quotation-left-body {
+  display: none !important;
   opacity: 0;
   pointer-events: none;
   overflow: hidden;
+  width: 0;
+  max-width: 0;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
 }
 
 .quotation-left-body {
@@ -3832,19 +3839,26 @@ body.quotation-canvas-first .builder-workspace,
   transform: rotate(180deg);
 }
 
-/* Collapsed Recursos keeps a 0-width slot; float stays on its right edge */
+/* Collapsed Recursos: true zero column; float peeks from the stage left edge */
 .quotation-recursos.is-collapsed,
 .quotation-workspace.is-left-collapsed .quotation-recursos {
+  flex: 0 0 0;
   flex-basis: 0;
   width: 0;
   max-width: 0;
   min-width: 0;
+  padding: 0;
+  margin: 0;
   overflow: visible;
   border: 0;
+  background: transparent;
 }
 
 .quotation-recursos.is-collapsed > .quotation-panel-float--left,
 .quotation-workspace.is-left-collapsed .quotation-recursos > .quotation-panel-float--left {
+  right: auto !important;
+  left: 0 !important;
+  transform: translate(0, -50%) !important;
   pointer-events: auto !important;
   opacity: 1 !important;
   visibility: visible !important;
