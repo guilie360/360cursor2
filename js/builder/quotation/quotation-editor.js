@@ -795,6 +795,8 @@ var QuotationEditor = (function () {
   var suppressLibItemClickUntil = 0;
   var libPointerDrag = null;
   var thumbRerenderQueued = false;
+  /** Survives full scenes-bar re-renders so selecting a scene does not jump left. */
+  var scenesTrackScrollLeft = 0;
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
@@ -2993,14 +2995,17 @@ var QuotationEditor = (function () {
         '</div>';
     }).join('');
 
+    var addThumb = '';
     if (!state.canvasPreviewMode) {
-      thumbs += '' +
-        '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add">' +
-          '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
-            ' title="Nueva escena" aria-label="Nueva escena">' +
-            '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
-          '</button>' +
-          '<span class="qe-scenes__thumb-name">nueva</span>' +
+      addThumb = '' +
+        '<div class="qe-scenes__add" data-qe-scenes-add>' +
+          '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add">' +
+            '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
+              ' title="Nueva escena" aria-label="Nueva escena">' +
+              '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
+            '</button>' +
+            '<span class="qe-scenes__thumb-name">nueva</span>' +
+          '</div>' +
         '</div>';
     }
 
@@ -3015,6 +3020,7 @@ var QuotationEditor = (function () {
           '<div class="qe-scenes__track-wrap">' +
             '<div class="qe-scenes__track" data-qe-scenes-track>' + thumbs + '</div>' +
           '</div>' +
+          addThumb +
           '<button type="button" class="qe-scenes__nav" data-qe-scenes-next aria-label="Escenas siguientes">→</button>' +
         '</div>' +
         scenesFoldBtnHtml() +
@@ -3817,27 +3823,59 @@ var QuotationEditor = (function () {
       out.libLeft = list.scrollLeft;
     }
     var track = document.querySelector('[data-qe-scenes-track]');
-    if (track) out.scenesLeft = track.scrollLeft;
+    if (track) {
+      scenesTrackScrollLeft = track.scrollLeft;
+      out.scenesLeft = scenesTrackScrollLeft;
+    } else {
+      out.scenesLeft = scenesTrackScrollLeft;
+    }
     return out;
   }
 
-  function restoreUiScroll(saved) {
-    if (!saved) return;
+  function restoreScenesTrackScroll(left) {
+    var target = left != null && isFinite(Number(left))
+      ? Math.max(0, Number(left))
+      : scenesTrackScrollLeft;
+    scenesTrackScrollLeft = target;
     function apply() {
+      var track = document.querySelector('[data-qe-scenes-track]');
+      if (!track) return null;
+      track.style.scrollBehavior = 'auto';
+      track.scrollLeft = target;
+      return track;
+    }
+    var track = apply();
+    requestAnimationFrame(function () {
+      apply();
+      requestAnimationFrame(function () {
+        var el = apply();
+        if (el) {
+          /* Re-enable CSS smooth only for arrow clicks (scrollBy). */
+          el.style.scrollBehavior = '';
+        }
+      });
+    });
+  }
+
+  function restoreUiScroll(saved) {
+    if (!saved) {
+      restoreScenesTrackScroll(scenesTrackScrollLeft);
+      return;
+    }
+    function applyLib() {
       var list = document.querySelector('[data-qe-content-list]');
       if (list && saved.libTop != null) {
         list.scrollTop = saved.libTop;
         list.scrollLeft = saved.libLeft || 0;
       }
-      var track = document.querySelector('[data-qe-scenes-track]');
-      if (track && saved.scenesLeft != null) {
-        track.scrollLeft = saved.scenesLeft;
-      }
     }
-    apply();
+    applyLib();
+    restoreScenesTrackScroll(
+      saved.scenesLeft != null ? saved.scenesLeft : scenesTrackScrollLeft
+    );
     requestAnimationFrame(function () {
-      apply();
-      requestAnimationFrame(apply);
+      applyLib();
+      requestAnimationFrame(applyLib);
     });
   }
 
@@ -3890,6 +3928,13 @@ var QuotationEditor = (function () {
     panel.innerHTML = render();
     bind(panel);
     restoreUiScroll(uiScroll);
+    /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
+    requestAnimationFrame(function () {
+      restoreScenesTrackScroll(uiScroll.scenesLeft);
+      requestAnimationFrame(function () {
+        restoreScenesTrackScroll(uiScroll.scenesLeft);
+      });
+    });
   }
 
   function selectContent(id) {
@@ -7105,6 +7150,10 @@ var QuotationEditor = (function () {
       });
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
+        /* Avoid focus-driven scrollIntoView jumping the scenes strip. */
+        btn.addEventListener('mousedown', function (e) {
+          if (e.button === 0) e.preventDefault();
+        });
         btn.addEventListener('click', function () {
           selectScene(btn.getAttribute('data-qe-scene'));
         });
@@ -7126,7 +7175,30 @@ var QuotationEditor = (function () {
       var scenesNext = editor.querySelector('[data-qe-scenes-next]');
       function scrollScenes(dir) {
         if (!scenesTrack) return;
-        scenesTrack.scrollBy({ left: dir * Math.max(200, scenesTrack.clientWidth * 0.6), behavior: 'smooth' });
+        scenesTrack.scrollBy({
+          left: dir * Math.max(200, scenesTrack.clientWidth * 0.6),
+          behavior: 'smooth'
+        });
+      }
+      if (scenesTrack) {
+        scenesTrack.addEventListener('scroll', function () {
+          scenesTrackScrollLeft = scenesTrack.scrollLeft;
+        }, { passive: true });
+        /* Prevent focused thumbs from auto-scrolling the strip on click/rerender. */
+        scenesTrack.addEventListener('focusin', function (e) {
+          var thumb = e.target && e.target.closest
+            ? e.target.closest('.qe-scenes__thumb')
+            : null;
+          if (!thumb || !scenesTrack.contains(thumb)) return;
+          var pinned = scenesTrackScrollLeft;
+          requestAnimationFrame(function () {
+            if (Math.abs(scenesTrack.scrollLeft - pinned) > 1) {
+              scenesTrack.style.scrollBehavior = 'auto';
+              scenesTrack.scrollLeft = pinned;
+              scenesTrackScrollLeft = pinned;
+            }
+          });
+        });
       }
       if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
