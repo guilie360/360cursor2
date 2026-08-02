@@ -369,7 +369,17 @@ var QuotationBuilderView = (function () {
   function fillConfigLeftBody() {
     var body = rootEl && rootEl.querySelector('#quotationLeftBody');
     if (!body) return;
-    body.innerHTML = configLeftChromeHtml();
+    var nav =
+      typeof QuotationConfig !== 'undefined' && QuotationConfig.leftNavHtml
+        ? QuotationConfig.leftNavHtml()
+        : '';
+    body.innerHTML = configLeftChromeHtml() + nav;
+    if (typeof QuotationConfig !== 'undefined' && QuotationConfig.bindLeftNav) {
+      QuotationConfig.bindLeftNav(
+        body,
+        rootEl.querySelector('[data-quotation-panel]')
+      );
+    }
   }
 
   function syncConfigLeftChrome() {

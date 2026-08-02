@@ -1,7 +1,16 @@
 /**
- * Quotation Config — V7.1.07 shared BuilderConfig + social share preview.
+ * Quotation Config — identity/share panels + left-rail section nav.
  */
 var QuotationConfig = (function () {
+  var NAV = [
+    { id: 'general', label: 'General' },
+    { id: 'compartir', label: 'Compartir' },
+    { id: 'publicar', label: 'Publicar' },
+    { id: 'seo', label: 'SEO' },
+    { id: 'config', label: 'Config..' }
+  ];
+
+  var _activeSection = 'config';
   var _ctx = {
     id: '',
     name: '',
@@ -15,6 +24,14 @@ var QuotationConfig = (function () {
     published: false
   };
   var _projectRef = null;
+
+  function escapeHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   function syncProjectRef() {
     if (!_projectRef) return;
@@ -53,6 +70,13 @@ var QuotationConfig = (function () {
     syncProjectRef();
   }
 
+  function notifyLeftChrome() {
+    if (typeof QuotationBuilderView !== 'undefined' &&
+        typeof QuotationBuilderView.syncConfigLeftChrome === 'function') {
+      QuotationBuilderView.syncConfigLeftChrome();
+    }
+  }
+
   function makeAdapter(panel) {
     return {
       getProjectId: function () {
@@ -73,10 +97,7 @@ var QuotationConfig = (function () {
         _ctx.slug = payload.slug;
         _ctx.constructora_id = payload.constructora_id || _ctx.constructora_id;
         syncProjectRef();
-        if (typeof QuotationBuilderView !== 'undefined' &&
-            typeof QuotationBuilderView.syncConfigLeftChrome === 'function') {
-          QuotationBuilderView.syncConfigLeftChrome();
-        }
+        notifyLeftChrome();
       },
       onShareChange: function (meta) {
         applyShareMeta(meta);
@@ -85,24 +106,17 @@ var QuotationConfig = (function () {
         if (draft.nombre != null) _ctx.name = String(draft.nombre);
         if (draft.slug != null) _ctx.slug = String(draft.slug);
         syncProjectRef();
-        if (typeof QuotationBuilderView !== 'undefined' &&
-            typeof QuotationBuilderView.syncConfigLeftChrome === 'function') {
-          QuotationBuilderView.syncConfigLeftChrome();
-        } else if (typeof QuotationBuilder !== 'undefined' &&
-            typeof QuotationBuilder.syncConfigLeftChrome === 'function') {
-          QuotationBuilder.syncConfigLeftChrome();
-        }
+        notifyLeftChrome();
       },
       onShareSaved: function (meta) {
         applyShareMeta(meta);
-        if (typeof QuotationBuilderView !== 'undefined' &&
-            typeof QuotationBuilderView.syncConfigLeftChrome === 'function') {
-          QuotationBuilderView.syncConfigLeftChrome();
-        }
+        notifyLeftChrome();
       },
       afterSave: function () {
         if (!panel || typeof BuilderConfig === 'undefined') return;
-        var host = panel.querySelector('.builder-step-content');
+        if (_activeSection !== 'config') return;
+        var host = panel.querySelector('[data-qe-config-body] .builder-step-content') ||
+          panel.querySelector('.builder-step-content');
         if (!host || !host.parentNode) return;
         var wrap = document.createElement('div');
         wrap.innerHTML = BuilderConfig.render(identityPayload());
@@ -110,12 +124,87 @@ var QuotationConfig = (function () {
         if (!next) return;
         host.parentNode.replaceChild(next, host);
         BuilderConfig.bind(panel, makeAdapter(panel));
-        if (typeof QuotationBuilderView !== 'undefined' &&
-            typeof QuotationBuilderView.syncConfigLeftChrome === 'function') {
-          QuotationBuilderView.syncConfigLeftChrome();
-        }
+        notifyLeftChrome();
       }
     };
+  }
+
+  function sectionBodyHtml(sectionId) {
+    var id = sectionId || _activeSection;
+    if (id === 'config') {
+      if (typeof BuilderConfig !== 'undefined' && BuilderConfig.render) {
+        return BuilderConfig.render(identityPayload());
+      }
+      return '<p class="builder-step-desc">Configuración no disponible.</p>';
+    }
+    return '' +
+      '<div class="builder-step-content quotation-config-section is-empty"' +
+        ' data-qe-config-section="' + escapeHtml(id) + '"></div>';
+  }
+
+  function leftNavHtml() {
+    return '' +
+      '<nav class="qe-config-nav" data-qe-config-nav aria-label="Secciones de configuración">' +
+        NAV.map(function (item) {
+          var on = item.id === _activeSection;
+          return '' +
+            '<button type="button" class="boxies-workspace-menu__item' +
+              (on ? ' is-current' : '') + '"' +
+              ' role="menuitem"' +
+              ' data-qe-config-nav="' + escapeHtml(item.id) + '"' +
+              ' aria-current="' + (on ? 'page' : 'false') + '">' +
+              escapeHtml(item.label) +
+            '</button>';
+        }).join('') +
+      '</nav>';
+  }
+
+  function syncNavActive(root) {
+    var scope = root || document;
+    scope.querySelectorAll('[data-qe-config-nav]').forEach(function (btn) {
+      var id = btn.getAttribute('data-qe-config-nav');
+      var on = id === _activeSection;
+      btn.classList.toggle('is-current', on);
+      btn.setAttribute('aria-current', on ? 'page' : 'false');
+    });
+  }
+
+  function mountSectionBody(panel) {
+    if (!panel) return;
+    var slot = panel.querySelector('[data-qe-config-body]');
+    if (!slot) return;
+    slot.innerHTML = sectionBodyHtml(_activeSection);
+    if (_activeSection === 'config' &&
+        typeof BuilderConfig !== 'undefined' && BuilderConfig.bind) {
+      BuilderConfig.bind(panel, makeAdapter(panel));
+    }
+  }
+
+  function setActiveSection(sectionId, panel) {
+    var next = String(sectionId || '').trim();
+    var found = false;
+    var i;
+    for (i = 0; i < NAV.length; i++) {
+      if (NAV[i].id === next) { found = true; break; }
+    }
+    if (!found) return;
+    _activeSection = next;
+    syncNavActive(document.getElementById('quotationLeftBody') || document);
+    if (panel) mountSectionBody(panel);
+  }
+
+  function bindLeftNav(root, panel) {
+    if (!root) return;
+    root.querySelectorAll('[data-qe-config-nav]').forEach(function (btn) {
+      if (btn.dataset.qeConfigNavBound === '1') return;
+      btn.dataset.qeConfigNavBound = '1';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id = btn.getAttribute('data-qe-config-nav');
+        if (!id || id === _activeSection) return;
+        setActiveSection(id, panel || document.querySelector('[data-quotation-panel]'));
+      });
+    });
   }
 
   function render(ctx, opts) {
@@ -133,6 +222,7 @@ var QuotationConfig = (function () {
       page_title: ctx.page_title || '',
       published: !!ctx.published
     };
+    if (!_activeSection) _activeSection = 'config';
 
     var header =
       typeof QuotationSidebar !== 'undefined' && QuotationSidebar.pageHeaderHtml
@@ -144,15 +234,12 @@ var QuotationConfig = (function () {
         )
         : '';
 
-    var body =
-      typeof BuilderConfig !== 'undefined' && BuilderConfig.render
-        ? BuilderConfig.render(identityPayload())
-        : '<p class="builder-step-desc">Configuración no disponible.</p>';
-
     return '' +
       '<div class="quotation-step quotation-step--config">' +
         header +
-        body +
+        '<div data-qe-config-body>' +
+          sectionBodyHtml(_activeSection) +
+        '</div>' +
       '</div>';
   }
 
@@ -172,10 +259,20 @@ var QuotationConfig = (function () {
         published: !!ctx.published
       };
     }
-    if (!panel || typeof BuilderConfig === 'undefined' || !BuilderConfig.bind) return;
-    BuilderConfig.bind(panel, makeAdapter(panel));
+    if (!panel) return;
+    if (_activeSection === 'config' &&
+        typeof BuilderConfig !== 'undefined' && BuilderConfig.bind) {
+      BuilderConfig.bind(panel, makeAdapter(panel));
+    }
   }
 
-  return { render: render, bind: bind };
+  return {
+    render: render,
+    bind: bind,
+    leftNavHtml: leftNavHtml,
+    bindLeftNav: bindLeftNav,
+    getActiveSection: function () { return _activeSection; },
+    setActiveSection: setActiveSection,
+    NAV: NAV
+  };
 })();
-

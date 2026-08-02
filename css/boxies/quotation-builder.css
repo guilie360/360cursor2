@@ -3977,6 +3977,23 @@ body.quotation-canvas-first .builder-workspace,
   word-break: break-word;
 }
 
+.qe-config-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px 14px;
+  box-sizing: border-box;
+}
+
+.qe-config-nav .boxies-workspace-menu__item {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quotation-config-section.is-empty {
+  min-height: 120px;
+}
+
 .qe-lib-chrome__head {
   text-align: center;
   padding: 2px 4px 0;
