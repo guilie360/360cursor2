@@ -294,6 +294,27 @@ var QuotationExperienciaBridge = (function () {
       getSelection: function () {
         return handle.getSelection ? handle.getSelection() : { hasSelection: false };
       },
+      nudgeSelected: function (dxPx, dyPx) {
+        return handle.nudgeSelected ? handle.nudgeSelected(dxPx, dyPx) : false;
+      },
+      finishNudge: function () {
+        if (handle.finishNudge) handle.finishNudge();
+      },
+      copySelected: function () {
+        return handle.copySelected ? handle.copySelected() : false;
+      },
+      cutSelected: function () {
+        return handle.cutSelected ? handle.cutSelected() : false;
+      },
+      pasteSelected: function () {
+        return handle.pasteSelected ? handle.pasteSelected() : false;
+      },
+      undoEdit: function () {
+        return handle.undoEdit ? handle.undoEdit() : false;
+      },
+      redoEdit: function () {
+        return handle.redoEdit ? handle.redoEdit() : false;
+      },
       duplicateSelected: function () {
         return handle.duplicateSelected ? handle.duplicateSelected() : null;
       },
