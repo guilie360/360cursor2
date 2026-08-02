@@ -7150,10 +7150,6 @@ var QuotationEditor = (function () {
       });
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
-        /* Avoid focus-driven scrollIntoView jumping the scenes strip. */
-        btn.addEventListener('mousedown', function (e) {
-          if (e.button === 0) e.preventDefault();
-        });
         btn.addEventListener('click', function () {
           selectScene(btn.getAttribute('data-qe-scene'));
         });
