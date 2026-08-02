@@ -18,12 +18,12 @@ var KonvaOverlayRenderer = (function () {
     try {
       var q = new URLSearchParams(window.location.search);
       var v = q.get('konva');
+      if (v === '0' || v === 'false') return false;
       if (v === '1' || v === 'true') return true;
-      if (v === 'editor') {
-        var pid = String(options.projectId || '').trim();
-        if (pid === EDITOR_PROJECT_ID) return true;
-      }
     } catch (e) { /* ignore */ }
+    /* Sandbox EDITOR — auto ON (opt-out with ?konva=0). */
+    var pid = String(options.projectId || '').trim();
+    if (pid === EDITOR_PROJECT_ID) return true;
     return false;
   }
 
@@ -79,6 +79,17 @@ var KonvaOverlayRenderer = (function () {
         '<img data-exp-buttons-img alt=""><div data-exp-buttons-layer></div></div></div>';
     hostEl.innerHTML = shellHtml;
     hostEl.classList.add('is-konva-poc');
+
+    var badge = document.createElement('div');
+    badge.className = 'konva-poc-badge';
+    badge.setAttribute('data-konva-poc-badge', '1');
+    badge.textContent = 'KONVA POC';
+    badge.title = 'Motor Konva activo (Fase 0). Opt-out: ?konva=0';
+    hostEl.appendChild(badge);
+
+    try {
+      console.info('[KonvaOverlayRenderer] mounted — shapes via Konva Stage');
+    } catch (eLog) { /* ignore */ }
 
     var buttonsStage = hostEl.querySelector('[data-exp-buttons-stage]');
     var buttonsFrame = hostEl.querySelector('[data-exp-buttons-frame]');

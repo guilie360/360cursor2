@@ -260,6 +260,9 @@ var QuotationExperienciaBridge = (function () {
       KonvaOverlayRenderer.isEnabled(options);
 
     if (useKonva) {
+      try {
+        console.info('[QuotationExperienciaBridge] Konva POC renderer active');
+      } catch (eLog) { /* ignore */ }
       handle = KonvaOverlayRenderer.mount(hostEl, {
         shim: shim,
         scenes: scenes,

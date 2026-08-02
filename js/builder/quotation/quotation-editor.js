@@ -6336,15 +6336,18 @@ var QuotationEditor = (function () {
           addShapeElement('SHAPE_RECT');
           return;
         }
+        var shapeItems = [{ id: 'rect', label: 'Rectángulo' }];
+        if (expOverlay && expOverlay.isKonvaPoc) {
+          shapeItems.push({ id: 'circle', label: 'Círculo' });
+        }
         QuotationContextMenu.open({
           x: e.clientX,
           y: e.clientY,
           ariaLabel: 'Forma',
-          items: [
-            { id: 'rect', label: 'Rectángulo' }
-          ],
+          items: shapeItems,
           onSelect: function (id) {
             if (id === 'rect') addShapeElement('SHAPE_RECT');
+            if (id === 'circle') addShapeElement('SHAPE_CIRCLE');
           }
         });
       });
