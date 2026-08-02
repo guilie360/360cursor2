@@ -262,7 +262,11 @@ var QuotationBuilderView = (function () {
     }
   }
 
-  /** Config: no recursos column or fold button. */
+  /** Left rail + fold: Editor (library) and Config (empty for now). Hero stays hidden. */
+  function stepShowsLeftRail(stepId) {
+    return stepId === 'editor' || stepId === 'config';
+  }
+
   function setRecursosVisible(on) {
     if (!rootEl) return;
     var recursos = rootEl.querySelector('#quotationRecursosPanel');
@@ -539,7 +543,7 @@ var QuotationBuilderView = (function () {
     clearLeftBody();
     clearRightBody();
     setPropsPanelVisible(currentStep === 'editor');
-    setRecursosVisible(currentStep === 'editor');
+    setRecursosVisible(stepShowsLeftRail(currentStep));
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
       workspace.classList.toggle('is-config', currentStep === 'config');
@@ -638,7 +642,7 @@ var QuotationBuilderView = (function () {
     ensureRightFloatButton();
     applyLeftCollapsed(leftCollapsed);
     applyRightCollapsed(rightCollapsed);
-    setRecursosVisible(currentStep === 'editor');
+    setRecursosVisible(stepShowsLeftRail(currentStep));
     setPropsPanelVisible(currentStep === 'editor');
     syncChromeFoldButton();
   }
