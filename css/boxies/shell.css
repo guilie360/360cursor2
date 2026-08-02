@@ -14,8 +14,6 @@
   --boxies-transition: var(--hall-duration, 0.28s) var(--hall-ease, cubic-bezier(0.22, 1, 0.36, 1));
   --boxies-dock-bg: rgba(5, 5, 5, 0.82);
   --boxies-dock-border: var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
-  /* Edge vignette width = chrome bar thickness (header). */
-  --boxies-edge-wash-w: var(--boxies-header-h, 52px);
 }
 
 html.boxies-has-dock,
@@ -28,27 +26,7 @@ body.boxies-has-dock.boxies-shell {
   padding-bottom: calc(var(--boxies-dock-h) + var(--boxies-dock-safe));
   margin: 0;
   min-height: 100vh;
-  /* Black edge vignette — background stack, always behind every element. */
-  background-color: var(--bg-primary, #0a0a0a);
-  background-image:
-    linear-gradient(
-      to right,
-      #000 0%,
-      rgba(0, 0, 0, 0.72) 36%,
-      transparent 100%
-    ),
-    linear-gradient(
-      to left,
-      #000 0%,
-      rgba(0, 0, 0, 0.72) 36%,
-      transparent 100%
-    );
-  background-repeat: no-repeat;
-  background-size:
-    var(--boxies-edge-wash-w) 100%,
-    var(--boxies-edge-wash-w) 100%;
-  background-position: left top, right top;
-  background-attachment: fixed;
+  background: var(--bg-primary, #0a0a0a);
   color: var(--hall-text, rgba(255, 255, 255, 0.86));
 }
 
