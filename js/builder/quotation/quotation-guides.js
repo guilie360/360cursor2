@@ -35,6 +35,27 @@ var QuotationGuides = (function () {
     return Math.round(v * 1000) / 1000;
   }
 
+  /** Snap % to whole design px and clamp inside the active viewport (0…W / 0…H). */
+  function snapGuidePct(type, pct) {
+    var design = designSize();
+    var max = type === 'horizontal' ? design.height : design.width;
+    if (!max || max < 1) return 0;
+    var px = Math.round((clampPct(pct) / 100) * max);
+    if (px < 0) px = 0;
+    if (px > max) px = max;
+    return clampPct((px / max) * 100);
+  }
+
+  function clampGuideDesignPx(type, pxValue) {
+    var design = designSize();
+    var max = type === 'horizontal' ? design.height : design.width;
+    var n = Math.round(Number(pxValue));
+    if (isNaN(n)) n = 0;
+    if (n < 0) n = 0;
+    if (n > max) n = max;
+    return n;
+  }
+
   function normalizeViewportId(id) {
     var v = String(id || '').toLowerCase();
     if (v === 'tablet' || v === 'mobile') return v;
@@ -153,11 +174,15 @@ var QuotationGuides = (function () {
     if (!space) return null;
     var rect = space.getBoundingClientRect();
     if (!rect.width || !rect.height) return null;
+    var rawX = ((clientX - rect.left) / rect.width) * 100;
+    var rawY = ((clientY - rect.top) / rect.height) * 100;
+    var design = designSize();
     return {
-      x: clampPct(((clientX - rect.left) / rect.width) * 100),
-      y: clampPct(((clientY - rect.top) / rect.height) * 100),
-      pxX: Math.round(((clientX - rect.left) / rect.width) * designSize().width),
-      pxY: Math.round(((clientY - rect.top) / rect.height) * designSize().height),
+      x: snapGuidePct('vertical', rawX),
+      y: snapGuidePct('horizontal', rawY),
+      pxX: clampGuideDesignPx('vertical', (rawX / 100) * design.width),
+      pxY: clampGuideDesignPx('horizontal', (rawY / 100) * design.height),
+      /* Soft hit: true when pointer is over the canvas; clamps still apply outside. */
       inBounds:
         clientX >= rect.left && clientX <= rect.right &&
         clientY >= rect.top && clientY <= rect.bottom
@@ -378,30 +403,40 @@ var QuotationGuides = (function () {
   function guideDesignPx(type, positionPct) {
     var design = designSize();
     var max = type === 'horizontal' ? design.height : design.width;
-    var px = Math.round((clampPct(positionPct) / 100) * max);
-    if (px < 0) px = 0;
-    if (px > max) px = max;
-    return px;
+    return clampGuideDesignPx(type, (clampPct(positionPct) / 100) * max);
   }
 
   /** Position with % so geometry stays correct outside the scaled stage. */
   function applyGuideElPosition(el, type, positionPct) {
     if (!el) return;
-    var pct = clampPct(positionPct);
+    var design = designSize();
+    var max = type === 'horizontal' ? design.height : design.width;
+    var px = clampGuideDesignPx(type, (snapGuidePct(type, positionPct) / 100) * max);
+    var atEnd = max > 0 && px >= max;
     if (type === 'horizontal') {
-      el.style.top = pct + '%';
       el.style.left = '0';
       el.style.right = '0';
-      el.style.bottom = 'auto';
       el.style.width = 'auto';
       el.style.height = '';
+      if (atEnd) {
+        el.style.top = 'auto';
+        el.style.bottom = '0';
+      } else {
+        el.style.top = (max > 0 ? (px / max) * 100 : 0) + '%';
+        el.style.bottom = 'auto';
+      }
     } else {
-      el.style.left = pct + '%';
       el.style.top = '0';
       el.style.bottom = '0';
-      el.style.right = 'auto';
-      el.style.width = '';
       el.style.height = 'auto';
+      el.style.width = '';
+      if (atEnd) {
+        el.style.left = 'auto';
+        el.style.right = '0';
+      } else {
+        el.style.left = (max > 0 ? (px / max) * 100 : 0) + '%';
+        el.style.right = 'auto';
+      }
     }
   }
 
@@ -426,26 +461,26 @@ var QuotationGuides = (function () {
     guides.forEach(function (g) {
       if (!g || !g.id) return;
       var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
-      var pct = clampPct(g.position);
-      var style = type === 'horizontal'
-        ? 'top:' + pct + '%;left:0;right:0;'
-        : 'left:' + pct + '%;top:0;bottom:0;';
+      var pct = snapGuidePct(type, g.position);
+      g.position = pct;
       html +=
         '<div class="qe-guide-line qe-guide-line--' + type +
           (g.locked ? ' is-locked' : '') + '"' +
           ' data-qe-guide-id="' + String(g.id).replace(/"/g, '') + '"' +
           ' data-qe-guide-type="' + type + '"' +
-          ' style="' + style + '"' +
           ' title="Arrastra para mover · Clic derecho para eliminar"></div>';
     });
     layer.innerHTML = html;
+    guides.forEach(function (g) {
+      if (!g || !g.id) return;
+      var el = layer.querySelector('[data-qe-guide-id="' + String(g.id).replace(/"/g, '') + '"]');
+      if (el) applyGuideElPosition(el, g.type === 'horizontal' ? 'horizontal' : 'vertical', g.position);
+    });
   }
 
   function guidePositionPx(g) {
     if (!g) return 0;
-    var design = designSize();
-    var max = g.type === 'horizontal' ? design.height : design.width;
-    return Math.round((clampPct(g.position) / 100) * max);
+    return guideDesignPx(g.type === 'horizontal' ? 'horizontal' : 'vertical', g.position);
   }
 
   function setGuidePositionPx(guideId, pxValue) {
@@ -453,11 +488,8 @@ var QuotationGuides = (function () {
     if (!g || g.locked) return false;
     var design = designSize();
     var max = g.type === 'horizontal' ? design.height : design.width;
-    var n = Math.round(Number(String(pxValue).replace(/[^\d.-]/g, '')));
-    if (isNaN(n)) return false;
-    if (n < 0) n = 0;
-    if (n > max) n = max;
-    g.position = clampPct(max > 0 ? (n / max) * 100 : 0);
+    var n = clampGuideDesignPx(g.type, String(pxValue).replace(/[^\d.-]/g, ''));
+    g.position = snapGuidePct(g.type, max > 0 ? (n / max) * 100 : 0);
     renderGuides();
     markDirty();
     return true;
@@ -892,10 +924,11 @@ var QuotationGuides = (function () {
     if (!scene) return null;
     if (!guidesVisible) setGuidesVisible(true);
     var guides = ensureGuidesArray(scene);
+    var axis = type === 'horizontal' ? 'horizontal' : 'vertical';
     var g = {
       id: nextGuideId(),
-      type: type === 'horizontal' ? 'horizontal' : 'vertical',
-      position: clampPct(positionPct),
+      type: axis,
+      position: snapGuidePct(axis, positionPct),
       locked: false
     };
     guides.push(g);
@@ -907,9 +940,10 @@ var QuotationGuides = (function () {
   function cloneGuidesForClipboard(guides) {
     return (Array.isArray(guides) ? guides : []).map(function (g) {
       if (!g) return null;
+      var axis = g.type === 'horizontal' ? 'horizontal' : 'vertical';
       return {
-        type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
-        position: clampPct(g.position),
+        type: axis,
+        position: snapGuidePct(axis, g.position),
         locked: !!g.locked
       };
     }).filter(Boolean);
@@ -1062,7 +1096,8 @@ var QuotationGuides = (function () {
     hideReadout();
     if (cancelled || !type) return;
     var pct = clientToDesignPct(clientX, clientY);
-    if (!pct || !pct.inBounds) return;
+    if (!pct) return;
+    /* Place even if pointer is past the edge — snaps to canvas bounds. */
     addGuide(type, type === 'horizontal' ? pct.y : pct.x);
   }
 
@@ -1082,14 +1117,9 @@ var QuotationGuides = (function () {
       ? dragGuide.el
       : guideElById(dragGuide.id);
     dragGuide.el = el;
-    if (!pct.inBounds) {
-      if (el) el.classList.add('is-removing');
-      hideReadout();
-      return;
-    }
     if (el) el.classList.remove('is-removing');
     var pos = dragGuide.type === 'horizontal' ? pct.y : pct.x;
-    g.position = clampPct(pos);
+    g.position = snapGuidePct(dragGuide.type, pos);
     applyGuideElPosition(el, dragGuide.type, g.position);
     showReadout(e.clientX, e.clientY, dragGuide.type, pct);
   }
@@ -1101,21 +1131,22 @@ var QuotationGuides = (function () {
     }
     if (!dragGuide) return;
     var pct = clientToDesignPct(e.clientX, e.clientY);
-    var id = dragGuide.id;
     var el = dragGuide.el;
     var pointerId = dragGuide.pointerId;
+    var type = dragGuide.type;
+    var g = findGuide(dragGuide.id);
     dragGuide = null;
     if (el) {
       el.classList.remove('is-dragging');
+      el.classList.remove('is-removing');
       if (pointerId != null && el.releasePointerCapture) {
         try { el.releasePointerCapture(pointerId); } catch (errRel) { /* ignore */ }
       }
     }
     clearDragCursor();
     hideReadout();
-    if (!pct || !pct.inBounds) {
-      removeGuide(id);
-      return;
+    if (g && pct) {
+      g.position = snapGuidePct(type, type === 'horizontal' ? pct.y : pct.x);
     }
     markDirty();
     renderGuides();
