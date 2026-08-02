@@ -133,16 +133,30 @@ var QuotationContextMenu = (function () {
       }
       if (item.type === 'input') {
         if (!focusInputId) focusInputId = item.id;
+        var inputKind = String(item.inputType || item.inputmode || 'number').toLowerCase();
+        var isText = inputKind === 'text' || inputKind === 'search';
+        var inputAttrs = isText
+          ? ('type="text" autocomplete="off" spellcheck="false" ' +
+            (item.placeholder
+              ? 'placeholder="' + escapeHtml(item.placeholder) + '" '
+              : ''))
+          : ('type="number" inputmode="numeric" ' +
+            (item.min != null ? 'min="' + escapeHtml(item.min) + '" ' : '') +
+            (item.max != null ? 'max="' + escapeHtml(item.max) + '" ' : '') +
+            'step="' + escapeHtml(item.step != null ? item.step : 1) + '" ');
         html +=
-          '<label class="qe-context-menu__field" data-qe-ctx-field="' + escapeHtml(item.id) + '">' +
-            '<span class="qe-context-menu__field-label">' + escapeHtml(item.label || '') + '</span>' +
-            '<input class="qe-context-menu__input" type="number" inputmode="numeric" ' +
+          '<label class="qe-context-menu__field' +
+            (isText ? ' qe-context-menu__field--text' : '') +
+            '" data-qe-ctx-field="' + escapeHtml(item.id) + '">' +
+            (item.label
+              ? '<span class="qe-context-menu__field-label">' + escapeHtml(item.label) + '</span>'
+              : '') +
+            '<input class="qe-context-menu__input' +
+              (isText ? ' qe-context-menu__input--text' : '') + '"' +
+              ' ' + inputAttrs +
               'data-qe-ctx-input="' + escapeHtml(item.id) + '" ' +
               'value="' + escapeHtml(item.value != null ? item.value : '') + '" ' +
-              (item.min != null ? 'min="' + escapeHtml(item.min) + '" ' : '') +
-              (item.max != null ? 'max="' + escapeHtml(item.max) + '" ' : '') +
-              'step="' + escapeHtml(item.step != null ? item.step : 1) + '" ' +
-              'aria-label="' + escapeHtml(item.ariaLabel || item.label || 'Valor') + '">' +
+              'aria-label="' + escapeHtml(item.ariaLabel || item.label || item.placeholder || 'Valor') + '">' +
             (item.suffix
               ? '<span class="qe-context-menu__field-suffix">' + escapeHtml(item.suffix) + '</span>'
               : '') +

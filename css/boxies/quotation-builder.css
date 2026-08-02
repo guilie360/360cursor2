@@ -4534,6 +4534,17 @@ body.quotation-canvas-first .builder-workspace,
   -moz-appearance: textfield;
 }
 
+.qe-context-menu__field--text {
+  min-width: 200px;
+  padding: 4px 8px;
+}
+
+.qe-context-menu__input--text {
+  width: 148px;
+  min-width: 120px;
+  font-variant-numeric: normal;
+}
+
 .qe-context-menu__input::-webkit-outer-spin-button,
 .qe-context-menu__input::-webkit-inner-spin-button {
   -webkit-appearance: none;

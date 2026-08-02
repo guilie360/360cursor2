@@ -5396,25 +5396,91 @@ var QuotationEditor = (function () {
       ariaLabel: 'Menú de escenas',
       items: [
         {
-          id: 'create-scene',
-          label: 'Crear nueva escena'
-        },
-        {
-          id: 'delete-scenes',
-          label: 'Eliminar escenas',
-          danger: true,
-          separatorBefore: true
+          id: 'search-scene',
+          label: 'Buscar por nombre'
         }
       ],
       onSelect: function (id) {
-        if (id === 'create-scene') {
-          createScene({});
-          return;
-        }
-        if (id === 'delete-scenes') {
-          openDeleteScenesDialog(state.activeSceneId);
+        if (id === 'search-scene') {
+          openSceneNameSearch(clientX, clientY);
         }
       }
+    });
+  }
+
+  function normalizeSceneSearchKey(v) {
+    return String(v == null ? '' : v)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /** Match scene by display name / name / numeric index (e.g. "01", "escena 02"). */
+  function findSceneByNameQuery(query) {
+    ensureScenes();
+    var q = normalizeSceneSearchKey(query);
+    if (!q) return null;
+    var scenes = Array.isArray(state.scenes) ? state.scenes.filter(Boolean) : [];
+    if (!scenes.length) return null;
+
+    function scoreScene(sc, index) {
+      var label = normalizeSceneSearchKey(sceneDisplayLabel(sc));
+      var name = normalizeSceneSearchKey(sc.name);
+      var num = String(index + 1);
+      var numPad = num.length < 2 ? ('0' + num) : num;
+      if (label === q || name === q) return 100;
+      if (q === num || q === numPad || q === 'escena ' + num || q === 'escena ' + numPad) return 90;
+      if (label.indexOf(q) === 0 || name.indexOf(q) === 0) return 80;
+      if (label.indexOf(q) >= 0 || name.indexOf(q) >= 0) return 60;
+      return 0;
+    }
+
+    var best = null;
+    var bestScore = 0;
+    var i;
+    for (i = 0; i < scenes.length; i++) {
+      var sc = scenes[i];
+      var score = scoreScene(sc, i);
+      if (score > bestScore) {
+        bestScore = score;
+        best = sc;
+      }
+    }
+    return bestScore > 0 ? best : null;
+  }
+
+  function goToSceneBySearch(query) {
+    var sc = findSceneByNameQuery(query);
+    if (!sc) return false;
+    selectScene(sc.id);
+    requestAnimationFrame(function () {
+      scrollActiveSceneThumbIntoView();
+      requestAnimationFrame(scrollActiveSceneThumbIntoView);
+    });
+    return true;
+  }
+
+  function openSceneNameSearch(clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Buscar escena por nombre',
+      items: [
+        {
+          id: 'scene-name-query',
+          type: 'input',
+          inputType: 'text',
+          label: 'Buscar',
+          placeholder: 'Nombre de escena',
+          ariaLabel: 'Buscar escena por nombre',
+          onSubmit: function (raw) {
+            goToSceneBySearch(raw);
+          }
+        }
+      ]
     });
   }
 
