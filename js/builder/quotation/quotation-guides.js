@@ -19,6 +19,8 @@ var QuotationGuides = (function () {
   var dragGuide = null;
   var boundDoc = false;
   var readoutEl = null;
+  /** Session clipboard: [{ type, position, locked }, ...] — positions are % of device window. */
+  var guidesClipboard = null;
 
   function nextGuideId() {
     return 'g_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
@@ -527,6 +529,52 @@ var QuotationGuides = (function () {
     return g;
   }
 
+  function cloneGuidesForClipboard(guides) {
+    return (Array.isArray(guides) ? guides : []).map(function (g) {
+      if (!g) return null;
+      return {
+        type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
+        position: clampPct(g.position),
+        locked: !!g.locked
+      };
+    }).filter(Boolean);
+  }
+
+  function copyGuides() {
+    var scene = activeScene();
+    if (!scene) return false;
+    var cloned = cloneGuidesForClipboard(ensureGuidesArray(scene));
+    if (!cloned.length) {
+      guidesClipboard = null;
+      return false;
+    }
+    guidesClipboard = cloned;
+    return true;
+  }
+
+  function pasteGuides() {
+    if (!guidesClipboard || !guidesClipboard.length) return false;
+    var scene = activeScene();
+    if (!scene) return false;
+    if (!guidesVisible) setGuidesVisible(true);
+    var guides = ensureGuidesArray(scene);
+    guidesClipboard.forEach(function (src) {
+      guides.push({
+        id: nextGuideId(),
+        type: src.type === 'horizontal' ? 'horizontal' : 'vertical',
+        position: clampPct(src.position),
+        locked: !!src.locked
+      });
+    });
+    renderGuides();
+    markDirty();
+    return true;
+  }
+
+  function hasGuidesClipboard() {
+    return !!(guidesClipboard && guidesClipboard.length);
+  }
+
   /* ── Ghost from ruler ─────────────────────────────────── */
 
   function ensureGhostHost() {
@@ -693,6 +741,9 @@ var QuotationGuides = (function () {
 
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var sceneGuides = ensureGuidesArray(activeScene());
+    var canCopy = sceneGuides.length > 0;
+    var canPaste = hasGuidesClipboard();
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -705,6 +756,17 @@ var QuotationGuides = (function () {
         {
           id: 'toggle-guides',
           label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías'
+        },
+        {
+          id: 'copy-guides',
+          label: 'Copiar guías',
+          separatorBefore: true,
+          disabled: !canCopy
+        },
+        {
+          id: 'paste-guides',
+          label: 'Pegar guías',
+          disabled: !canPaste
         }
       ],
       onSelect: function (id) {
@@ -714,6 +776,14 @@ var QuotationGuides = (function () {
         }
         if (id === 'toggle-guides') {
           setGuidesVisible(!guidesVisible);
+          return;
+        }
+        if (id === 'copy-guides') {
+          copyGuides();
+          return;
+        }
+        if (id === 'paste-guides') {
+          pasteGuides();
         }
       }
     });
@@ -788,6 +858,9 @@ var QuotationGuides = (function () {
     isGuidesVisible: function () { return guidesVisible; },
     addGuide: addGuide,
     removeGuide: removeGuide,
+    copyGuides: copyGuides,
+    pasteGuides: pasteGuides,
+    hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     RULER_THICK: RULER_THICK
   };
