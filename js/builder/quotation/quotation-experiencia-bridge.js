@@ -339,6 +339,12 @@ var QuotationExperienciaBridge = (function () {
       clearSelection: function () {
         return handle.clearSelection ? handle.clearSelection() : false;
       },
+      exitGroupEditMode: function (opts) {
+        return handle.exitGroupEditMode ? handle.exitGroupEditMode(opts) : false;
+      },
+      isInGroupEditMode: function () {
+        return handle.isInGroupEditMode ? handle.isInGroupEditMode() : false;
+      },
       cancelActiveTool: function () {
         return handle.cancelActiveTool ? handle.cancelActiveTool() : false;
       },

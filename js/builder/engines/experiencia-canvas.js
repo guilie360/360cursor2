@@ -5564,6 +5564,48 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
+    /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */
+    function pickGroupedChildAtClient(clientX, clientY, sceneId, groupId) {
+      if (!buttonsLayer || !sceneId || !groupId) return null;
+      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
+      var peRestore = [];
+      for (var gi = 0; gi < gizmos.length; gi++) {
+        peRestore.push(gizmos[gi].style.pointerEvents);
+        gizmos[gi].style.pointerEvents = 'none';
+      }
+      var under = document.elementFromPoint(clientX, clientY);
+      for (var gj = 0; gj < gizmos.length; gj++) {
+        gizmos[gj].style.pointerEvents = peRestore[gj] || '';
+      }
+      if (!under || !buttonsLayer.contains(under)) return null;
+      var hit = under.closest && under.closest('[data-exp-stage-btn]');
+      if (!hit) return null;
+      var bid = hit.getAttribute('data-exp-stage-btn');
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, bid)
+        : null;
+      if (!ix || String(ix.groupId || '') !== String(groupId)) return null;
+      return bid;
+    }
+
+    function tryEnterGroupEditFromPointer(ev, groupId, childId) {
+      if (!groupId || !childId) return false;
+      if (String(canvas().activeOverlayGroupEditId) === String(groupId)) return false;
+      var nowEnter = Date.now();
+      if (!(ev.detail >= 2 || (groupEditTapArmed &&
+          String(groupEditTapArmed.buttonId) === String(childId) &&
+          (nowEnter - groupEditTapArmed.at) < 600))) {
+        groupEditTapArmed = { buttonId: childId, at: nowEnter };
+        return false;
+      }
+      cancelOverlayGestures();
+      enterOverlayGroupEditMode(groupId, childId);
+      if (ev && ev.preventDefault) ev.preventDefault();
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      return true;
+    }
+
     function getOverlayItemVm(sceneId, itemId) {
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n || !itemId) return null;
@@ -6935,7 +6977,20 @@ var ExperienciaCanvas = (function () {
         if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
           var moveId = gizmoMove.getAttribute('data-gizmo-id');
+          var moveType = gizmoMove.getAttribute('data-gizmo-type') || 'BUTTON';
           var sceneIdMove = canvas().selectedId;
+          if ((moveType === 'OVERLAY_GROUP' || moveType === 'GROUP') &&
+              String(canvas().activeOverlayGroupEditId || '') !== String(moveId)) {
+            var childUnder = pickGroupedChildAtClient(
+              ev.clientX, ev.clientY, sceneIdMove, moveId
+            );
+            if (childUnder) {
+              if (tryEnterGroupEditFromPointer(ev, moveId, childUnder)) return;
+              ev.preventDefault();
+              ev.stopPropagation();
+              return;
+            }
+          }
           var btnMove = getOverlayItemVm(sceneIdMove, moveId);
           if (!btnMove) return;
           ev.preventDefault();
@@ -6959,8 +7014,6 @@ var ExperienciaCanvas = (function () {
           return;
         }
         if (hit.isContentEditable || hit.getAttribute('contenteditable') === 'true') return;
-        ev.preventDefault();
-        ev.stopPropagation();
         var bid = hit.getAttribute('data-exp-stage-btn');
         var sceneIdHit = canvas().selectedId;
         var nHit = ExperienciaEngine.getNode(state, sceneIdHit);
@@ -6973,20 +7026,15 @@ var ExperienciaCanvas = (function () {
             !isOverlayGroupId(sceneIdHit, bid)) {
           exitOverlayGroupEditMode({ reselectGroup: false, persist: true });
         }
+        /* Double-click / second tap on grouped child → edit that member (Figma-style). */
         if (hitIx && hitIx.groupId &&
             String(canvas().activeOverlayGroupEditId || '') !== String(hitIx.groupId)) {
-          var nowEnter = Date.now();
-          if (groupEditTapArmed &&
-              String(groupEditTapArmed.buttonId) === String(bid) &&
-              (nowEnter - groupEditTapArmed.at) < 480) {
-            cancelOverlayGestures();
-            enterOverlayGroupEditMode(hitIx.groupId, bid);
-            return;
-          }
-          groupEditTapArmed = { buttonId: bid, at: nowEnter };
+          if (tryEnterGroupEditFromPointer(ev, hitIx.groupId, bid)) return;
         } else {
           groupEditTapArmed = null;
         }
+        ev.preventDefault();
+        ev.stopPropagation();
         bid = resolveOverlayPickId(sceneIdHit, bid);
         var cur = getSelectedOverlayIds();
         if (ev.shiftKey) {
@@ -7015,11 +7063,23 @@ var ExperienciaCanvas = (function () {
         beginOverlayMove(ev, bid, sceneId, btn);
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
-        if (!overlayMode) return;
-        var hit = ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
-        if (!hit || hit.isContentEditable || hit.getAttribute('contenteditable') === 'true') return;
-        var bid = hit.getAttribute('data-exp-stage-btn');
         var sceneId = canvas().selectedId;
+        var bid = null;
+        var groupId = null;
+        var hit = ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
+        if (hit && !hit.isContentEditable && hit.getAttribute('contenteditable') !== 'true') {
+          bid = hit.getAttribute('data-exp-stage-btn');
+        } else {
+          var gizmo = ev.target.closest && ev.target.closest('[data-exp-gizmo]');
+          if (gizmo) {
+            var gtype = gizmo.getAttribute('data-gizmo-type') || '';
+            if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
+              groupId = gizmo.getAttribute('data-gizmo-id');
+              bid = pickGroupedChildAtClient(ev.clientX, ev.clientY, sceneId, groupId);
+            }
+          }
+        }
+        if (!bid || !sceneId) return;
         var n = ExperienciaEngine.getNode(state, sceneId);
         var ix = n && ExperienciaEngine.getInteraction
           ? ExperienciaEngine.getInteraction(n, bid)
@@ -7283,10 +7343,15 @@ var ExperienciaCanvas = (function () {
         if (ev.target.closest('[data-exp-stage-btn]')) return;
         if (ev.target.closest('[data-exp-gizmo]')) return;
         if (buttonDrag || transformDrag) return;
+        if (canvas().activeOverlayGroupEditId) {
+          exitOverlayGroupEditMode({ reselectGroup: true, persist: true });
+          return;
+        }
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
         paintButtonsStage();
         paintInspector();
+        notifyOverlaySelection();
       });
     }
 
@@ -8662,8 +8727,22 @@ var ExperienciaCanvas = (function () {
           canvas().selectedHotspotId = String(itemId);
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
+        } else if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+          canvas().editMode = 'buttons';
+          canvas().activeOverlayGroupEditId = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
+          canvas().selectedButtonId = String(itemId);
+          canvas().selectedButtonIds = [String(itemId)];
+          canvas().selectedHotspotId = null;
+        } else if (ix.groupId) {
+          canvas().editMode = 'buttons';
+          canvas().selectedHotspotId = null;
+          enterOverlayGroupEditMode(ix.groupId, itemId);
+          return true;
         } else {
           canvas().editMode = 'buttons';
+          canvas().activeOverlayGroupEditId = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
           canvas().selectedButtonId = String(itemId);
           canvas().selectedButtonIds = [String(itemId)];
           canvas().selectedHotspotId = null;
