@@ -649,6 +649,9 @@ async function handleUpload(req: Request) {
   const nodeIdRaw = String(form.get("node_id") || "").trim();
   const showroomSlugRaw = String(form.get("showroom_slug") || "").trim();
   const nodeSlugRaw = String(form.get("node_slug") || "").trim();
+  const libraryFolderRaw = String(
+    form.get("library_folder") || form.get("libraryFolder") || "",
+  ).trim();
   const scope = String(form.get("scope") || "media").trim().toLowerCase() === "hero"
     ? "hero"
     : "media";
@@ -660,6 +663,7 @@ async function handleUpload(req: Request) {
     nodeId: nodeIdRaw,
     showroomSlugRaw,
     nodeSlugRaw,
+    libraryFolderRaw,
     scope,
     fileType: fileEntry == null ? "null" : typeof fileEntry,
     isBlob: isUploadBlob(fileEntry),
@@ -736,9 +740,12 @@ async function handleUpload(req: Request) {
       : "upload.bin";
   const safeName = sanitizeFilename(originalName);
   const stamp = Date.now();
+  /* Quotation library folders: …/{category}/carpetas/{folderSlug}/{file} */
+  const libraryFolder = sanitizeSlug(libraryFolderRaw);
+  const librarySeg = libraryFolder ? `carpetas/${libraryFolder}/` : "";
   const storagePath = scope === "hero"
     ? `projects/${showroomSlug}/hero/${folder}/${stamp}-${safeName}`
-    : `projects/${showroomSlug}/media/${nodeSlug}/${folder}/${stamp}-${safeName}`;
+    : `projects/${showroomSlug}/media/${nodeSlug}/${folder}/${librarySeg}${stamp}-${safeName}`;
   const contentType = fileEntry.type || "application/octet-stream";
   const bytes = new Uint8Array(await fileEntry.arrayBuffer());
 

@@ -143,12 +143,8 @@ var QuotationEditor = (function () {
       if (!sc) continue;
       var id = String(sc.id || '');
       if (!id || seen[id]) {
-        var prev = id;
         sc.id = nextId('sc');
         changed = true;
-        if (state.activeSceneId && String(state.activeSceneId) === prev && !seen[prev]) {
-          /* First keeper already claimed prev; active stays on first match. */
-        }
         id = sc.id;
       }
       seen[id] = true;
@@ -158,6 +154,107 @@ var QuotationEditor = (function () {
       state.activeSceneId = (state.scenes[0] && state.scenes[0].id) || null;
     }
     return changed;
+  }
+
+  /**
+   * Heal duplicate folder/content ids. Same counter bug as scenes: after hydrate,
+   * creating "01" in Planos 2D could reuse fd-N from Imágenes → shared content.
+   */
+  function ensureUniqueLibraryIds() {
+    if (!state) return false;
+    var changed = false;
+    var keepers = Object.create(null);
+    var remappedByOld = Object.create(null);
+    var seenContent = Object.create(null);
+    var i;
+
+    if (Array.isArray(state.folders)) {
+      for (i = 0; i < state.folders.length; i++) {
+        var folder = state.folders[i];
+        if (!folder) continue;
+        var fid = String(folder.id || '');
+        if (!fid || keepers[fid]) {
+          var oldFid = fid;
+          folder.id = nextId('fd');
+          changed = true;
+          if (oldFid) {
+            if (!remappedByOld[oldFid]) remappedByOld[oldFid] = [];
+            remappedByOld[oldFid].push(folder);
+          }
+          fid = folder.id;
+        } else {
+          keepers[fid] = folder;
+        }
+        rememberId(fid);
+      }
+    }
+
+    if (Array.isArray(state.content)) {
+      for (i = 0; i < state.content.length; i++) {
+        var item = state.content[i];
+        if (!item) continue;
+        var cid = String(item.id || '');
+        if (!cid || seenContent[cid]) {
+          item.id = nextId('ct');
+          changed = true;
+          cid = item.id;
+        }
+        seenContent[cid] = true;
+        rememberId(cid);
+
+        if (!item.folderId) continue;
+        var foldId = String(item.folderId);
+        var keeper = keepers[foldId];
+        if (keeper && String(keeper.group || '') === String(item.group || '')) continue;
+
+        var alts = remappedByOld[foldId] || [];
+        var altMatch = null;
+        var ai;
+        for (ai = 0; ai < alts.length; ai++) {
+          if (alts[ai] && String(alts[ai].group || '') === String(item.group || '')) {
+            altMatch = alts[ai];
+            break;
+          }
+        }
+        if (altMatch) {
+          item.folderId = altMatch.id;
+          continue;
+        }
+        if (keeper) {
+          var sameName = null;
+          for (ai = 0; ai < (state.folders || []).length; ai++) {
+            var f = state.folders[ai];
+            if (!f) continue;
+            if (String(f.group || '') === String(item.group || '') &&
+                String(f.name || '') === String(keeper.name || '')) {
+              sameName = f;
+              break;
+            }
+          }
+          if (sameName) item.folderId = sameName.id;
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  function healLibraryIdentity() {
+    syncUidFromState();
+    var a = ensureUniqueSceneIds();
+    var b = ensureUniqueLibraryIds();
+    syncUidFromState();
+    return !!(a || b);
+  }
+
+  function folderNameTaken(groupId, name, exceptId) {
+    var key = String(name || '').trim().toLowerCase();
+    if (!key) return false;
+    return foldersInGroup(groupId).some(function (f) {
+      if (!f) return false;
+      if (exceptId && String(f.id) === String(exceptId)) return false;
+      return String(f.name || '').trim().toLowerCase() === key;
+    });
   }
 
   function escapeHtml(v) {
@@ -288,8 +385,28 @@ var QuotationEditor = (function () {
     if (!item) return 'images';
     if (item.group === 'videos' || item.media === 'video') return 'videos';
     if (item.group === 'pdf' || item.media === 'pdf') return 'documents';
+    if (item.group === 'plantas2d') return 'plans2d';
+    if (item.group === 'plantas3d') return 'plans3d';
     if (item.group === 'hero' && item.media === 'video') return 'videos';
     return 'images';
+  }
+
+  function bunnyLibraryFolderSlug(item) {
+    if (!item || !item.folderId) return '';
+    var folder = folderById(item.folderId);
+    if (!folder || String(folder.group || '') !== String(item.group || '')) return '';
+    var raw = String(folder.name || '').trim();
+    if (!raw) return '';
+    return raw
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s\-]+/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80);
   }
 
   async function ensureQuotationBunnyStructure() {
@@ -306,7 +423,7 @@ var QuotationEditor = (function () {
       projectId,
       slug,
       QE_BUNNY_NODE_SLUG,
-      ['images', 'videos', 'documents', 'ui']
+      ['images', 'videos', 'documents', 'ui', 'plans2d', 'plans3d']
     );
     bunnyStructureReady = true;
   }
@@ -505,6 +622,7 @@ var QuotationEditor = (function () {
       itemId: item.id,
       fileName: item.file && item.file.name
     });
+    var libraryFolder = bunnyLibraryFolderSlug(item);
     var result = await BunnyMediaApi.uploadAndSync(
       null,
       projectId,
@@ -514,7 +632,8 @@ var QuotationEditor = (function () {
         nodeId: QE_BUNNY_NODE_ID,
         nodeSlug: QE_BUNNY_NODE_SLUG,
         showroomSlug: slug,
-        scope: 'media'
+        scope: 'media',
+        libraryFolder: libraryFolder || undefined
       }
     );
     console.log('[QE-LIB V7.2.37] BunnyMediaApi.uploadAndSync:response', {
@@ -1299,8 +1418,7 @@ var QuotationEditor = (function () {
     }
     if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
     if (draft.expEditMode) state.expEditMode = draft.expEditMode;
-    syncUidFromState();
-    if (ensureUniqueSceneIds()) markDirtyLocal();
+    if (healLibraryIdentity()) markDirtyLocal();
     return true;
   }
 
@@ -1720,8 +1838,14 @@ var QuotationEditor = (function () {
     });
   }
 
-  function contentInFolder(folderId) {
-    return state.content.filter(function (c) { return c.folderId === folderId; });
+  function contentInFolder(folderId, groupId) {
+    return state.content.filter(function (c) {
+      if (!c || String(c.folderId || '') !== String(folderId || '')) return false;
+      if (groupId != null && groupId !== '') {
+        return String(c.group || '') === String(groupId);
+      }
+      return true;
+    });
   }
 
   function ensureItems(contentId) {
@@ -1884,7 +2008,7 @@ var QuotationEditor = (function () {
 
   function visibleContentIdsInScope(groupId, folderId) {
     var list = folderId
-      ? contentInFolder(folderId)
+      ? contentInFolder(folderId, groupId)
       : rootContentInGroup(groupId);
     return list.filter(matchesLibrarySearch).map(function (c) { return String(c.id); });
   }
@@ -2210,7 +2334,7 @@ var QuotationEditor = (function () {
 
   function folderBlockHtml(folder, group) {
     var open = state.openFolders[folder.id] !== false;
-    var kids = contentInFolder(folder.id).filter(matchesLibrarySearch);
+    var kids = contentInFolder(folder.id, group && group.id).filter(matchesLibrarySearch);
     var renaming = String(state.renamingFolderId || '') === String(folder.id);
     var addControls = '';
     if (group.linkMode) {
@@ -6000,6 +6124,12 @@ var QuotationEditor = (function () {
     if (!meta || groupId === 'hero' || meta.prepared) return;
     var label = String(name || '').trim();
     if (!label) return;
+    if (folderNameTaken(groupId, label)) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('Ya existe una carpeta "' + label + '" en ' + (meta.label || 'esta sección') + '.');
+      }
+      return;
+    }
     ensureFolderOrders();
     var folder = {
       id: nextId('fd'),
@@ -6037,6 +6167,13 @@ var QuotationEditor = (function () {
       rerender();
       return;
     }
+    if (folderNameTaken(folder.group, next, folder.id)) {
+      if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
+        AdminNotify.error('Ya existe una carpeta "' + next + '" en esta sección.');
+      }
+      rerender();
+      return;
+    }
     folder.name = next;
     markDirtyLocal();
     rerender();
@@ -6071,7 +6208,7 @@ var QuotationEditor = (function () {
       order: nextFolderOrder(src.group)
     };
     state.folders.push(newFolder);
-    contentInFolder(src.id).forEach(function (item) {
+    contentInFolder(src.id, src.group).forEach(function (item) {
       if (!item) return;
       var copy = {
         id: nextId('ct'),
@@ -6107,7 +6244,7 @@ var QuotationEditor = (function () {
     ensureFolderOrders();
     folder.group = targetGroupId;
     folder.order = nextFolderOrder(targetGroupId);
-    contentInFolder(folderId).forEach(function (item) {
+    contentInFolder(folderId, fromGroup).forEach(function (item) {
       if (!item) return;
       item.group = targetGroupId;
     });
@@ -6143,7 +6280,7 @@ var QuotationEditor = (function () {
     });
     if (!ok) return;
     var groupId = folder.group;
-    contentInFolder(folderId).forEach(function (item) {
+    contentInFolder(folderId, groupId).forEach(function (item) {
       if (item) item.folderId = null;
     });
     state.folders = state.folders.filter(function (f) {
@@ -6552,7 +6689,12 @@ var QuotationEditor = (function () {
   function addFilesToGroup(groupId, fileList, folderId, forceMedia) {
     var meta = groupMeta(groupId);
     if (!meta || meta.linkMode || meta.prepared) return;
-    if (folderId && !folderById(folderId)) folderId = null;
+    if (folderId) {
+      var targetFolder = folderById(folderId);
+      if (!targetFolder || String(targetFolder.group || '') !== String(groupId || '')) {
+        folderId = null;
+      }
+    }
     var files = Array.prototype.slice.call(fileList || []);
     if (!files.length) return;
     var lastId = null;
@@ -7808,8 +7950,7 @@ var QuotationEditor = (function () {
       if (!sceneById(state.activeSceneId)) {
         state.activeSceneId = state.scenes[0].id;
       }
-      syncUidFromState();
-      if (ensureUniqueSceneIds()) markDirtyLocal();
+      if (healLibraryIdentity()) markDirtyLocal();
       ensureHeroSceneContract();
       return;
     }
@@ -7863,7 +8004,7 @@ var QuotationEditor = (function () {
     }
     state.scenes = [scene];
     state.activeSceneId = scene.id;
-    syncUidFromState();
+    healLibraryIdentity();
   }
 
   function load(projectId) {

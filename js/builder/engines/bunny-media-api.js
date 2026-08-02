@@ -475,11 +475,21 @@ var BunnyMediaApi = (function () {
     form.append('showroom_slug', showroomSlug);
     form.append('node_slug', nodeSlug);
     form.append('scope', opts.scope || 'media');
+    var libraryFolder = String(opts.libraryFolder || opts.library_folder || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80);
+    if (libraryFolder) form.append('library_folder', libraryFolder);
     form.append('file', file, file.name || 'upload.bin');
 
     var folderHint = (meta && meta.folder) || bunnyCat;
     var expectedPathHint =
-      'projects/' + showroomSlug + '/media/' + nodeSlug + '/' + folderHint + '/' + (file.name || 'file');
+      'projects/' + showroomSlug + '/media/' + nodeSlug + '/' + folderHint +
+      (libraryFolder ? ('/carpetas/' + libraryFolder) : '') +
+      '/' + (file.name || 'file');
     logUpload('✔ Archivo recibido', file.name, file.size, file.type || '');
     logUpload('✔ Ruta generada (hint)', expectedPathHint);
 
