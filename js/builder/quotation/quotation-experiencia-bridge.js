@@ -3,7 +3,7 @@
  *
  * Does NOT reimplement buttons/hotspots editing.
  * Builds a minimal ExperienciaEngine state from Quotation scenes and mounts
- * ExperienciaCanvas.mountOverlay onto the design frame.
+ * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
   var NODE_PREFIX = 'qe-';
@@ -251,29 +251,52 @@ var QuotationExperienciaBridge = (function () {
    */
   function mount(hostEl, options) {
     options = options || {};
-    if (!hostEl || typeof ExperienciaCanvas === 'undefined' || !ExperienciaCanvas.mountOverlay) {
-      return null;
-    }
+    if (!hostEl) return null;
     var scenes = options.scenes || [];
     var activeId = options.activeSceneId || (scenes[0] && scenes[0].id);
     var shim = buildState(scenes, activeId, options.contentById);
-    var handle = ExperienciaCanvas.mountOverlay(hostEl, {
-      state: shim,
-      overlayNodeId: nodeIdForScene(activeId),
-      editMode: options.editMode || 'buttons',
-      inspectorBody: options.inspectorBody || null,
-      onChange: function () {
-        pullToScenes(shim, scenes);
-        if (typeof options.onChange === 'function') options.onChange();
-      },
-      onSelectionChange: options.onSelectionChange,
-      onMultiSelectionContextMenu: options.onMultiSelectionContextMenu
-    });
+    var handle = null;
+    var useKonva = typeof KonvaOverlayRenderer !== 'undefined' &&
+      KonvaOverlayRenderer.isEnabled(options);
+
+    if (useKonva) {
+      handle = KonvaOverlayRenderer.mount(hostEl, {
+        shim: shim,
+        scenes: scenes,
+        overlayNodeId: nodeIdForScene(activeId),
+        projectId: options.projectId || null,
+        onChange: function () {
+          pullToScenes(shim, scenes);
+          if (typeof options.onChange === 'function') options.onChange();
+        },
+        onSelectionChange: options.onSelectionChange,
+        pullToScenes: function () {
+          pullToScenes(shim, scenes);
+        }
+      });
+    } else {
+      if (typeof ExperienciaCanvas === 'undefined' || !ExperienciaCanvas.mountOverlay) {
+        return null;
+      }
+      handle = ExperienciaCanvas.mountOverlay(hostEl, {
+        state: shim,
+        overlayNodeId: nodeIdForScene(activeId),
+        editMode: options.editMode || 'buttons',
+        inspectorBody: options.inspectorBody || null,
+        onChange: function () {
+          pullToScenes(shim, scenes);
+          if (typeof options.onChange === 'function') options.onChange();
+        },
+        onSelectionChange: options.onSelectionChange,
+        onMultiSelectionContextMenu: options.onMultiSelectionContextMenu
+      });
+    }
     if (!handle) return null;
 
     return {
       shim: shim,
       handle: handle,
+      isKonvaPoc: !!handle.isKonvaPoc,
       refresh: function () {
         if (handle.refresh) handle.refresh();
       },

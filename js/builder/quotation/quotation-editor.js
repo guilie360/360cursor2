@@ -6639,6 +6639,7 @@ var QuotationEditor = (function () {
       scenes: state.scenes,
       activeSceneId: state.activeSceneId,
       contentById: contentById,
+      projectId: resolveProjectId(),
       inspectorBody: null,
       editMode: state.expEditMode === 'hotspots' ? 'hotspots' : 'buttons',
       onChange: function () {
