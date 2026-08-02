@@ -20,7 +20,7 @@
    */
   --boxies-edge-fringe-x: 24px;
   --boxies-edge-fringe-blur: 64px;
-  --boxies-edge-fringe-color: color-mix(in srgb, var(--bg-main, #0a0a0a) 28%, transparent);
+  --boxies-edge-fringe-color: color-mix(in srgb, var(--bg-main, #050505) 28%, transparent);
 }
 
 html.boxies-has-dock,
@@ -38,9 +38,12 @@ body.boxies-has-dock.boxies-shell {
 }
 
 /*
- * Ambient L/R fringe: zero-width fixed edges that only cast the glass shadow.
- * z-index 0 + .boxies-app z-index 1 → always behind chrome, panels, canvas.
- * pointer-events: none → never a mask / never steals clicks.
+ * Ambient L/R fringe: zero-width fixed edges that only cast the glass shadow
+ * (same recipe that used to bleed from the closed hamburger menu).
+ *
+ * Must paint ABOVE the opaque workspace (or it is invisible) and BELOW
+ * header (10001), dock (10000) and main-menu (997). pointer-events: none
+ * so it never steals clicks / never acts as a mask.
  */
 body.boxies-shell::before,
 body.boxies-shell::after {
@@ -50,26 +53,25 @@ body.boxies-shell::after {
   bottom: 0;
   width: 0;
   pointer-events: none;
-  z-index: 0;
+  z-index: 90;
 }
 
 body.boxies-shell::before {
   left: 0;
   box-shadow:
     var(--boxies-edge-fringe-x, 24px) 0 var(--boxies-edge-fringe-blur, 64px)
-      var(--boxies-edge-fringe-color);
+      var(--boxies-edge-fringe-color, rgba(0, 0, 0, 0.45));
 }
 
 body.boxies-shell::after {
   right: 0;
   box-shadow:
     calc(var(--boxies-edge-fringe-x, 24px) * -1) 0 var(--boxies-edge-fringe-blur, 64px)
-      var(--boxies-edge-fringe-color);
+      var(--boxies-edge-fringe-color, rgba(0, 0, 0, 0.45));
 }
 
 .boxies-app {
   position: relative;
-  z-index: 1;
   min-height: 100vh;
 }
 
