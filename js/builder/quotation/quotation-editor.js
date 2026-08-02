@@ -736,6 +736,7 @@ var QuotationEditor = (function () {
       sceneMenuOpen: false,
       dockOpen: false,
       resourcePickerOpen: false,
+      resourcePickerSceneId: null,
       pendingSceneDeleteId: null,
       viewportPreset: 'desktop',
       safeAreaVisible: false,
@@ -4958,10 +4959,11 @@ var QuotationEditor = (function () {
     else rerender();
   }
 
-  function deleteScene(id) {
+  function deleteScene(id, opts) {
+    opts = opts || {};
     ensureScenes();
     var sid = String(id || '').trim();
-    if (!sid) return;
+    if (!sid) return false;
     var idx = -1;
     var i;
     for (i = 0; i < state.scenes.length; i++) {
@@ -4970,7 +4972,7 @@ var QuotationEditor = (function () {
         break;
       }
     }
-    if (idx < 0) return;
+    if (idx < 0) return false;
 
     /* HERO is the permanent cover — clear contents, never remove the scene. */
     if (idx === 0 || isHeroScene(state.scenes[idx])) {
@@ -4979,10 +4981,13 @@ var QuotationEditor = (function () {
       state.sceneMenuOpen = false;
       state.dockOpen = false;
       state.resourcePickerOpen = false;
+      state.resourcePickerSceneId = null;
       try { destroyBuilderRuntimeScene(); } catch (eClrRt) { /* ignore */ }
-      markDirtyLocal();
-      rerender();
-      return;
+      if (!opts.silent) {
+        markDirtyLocal();
+        rerender();
+      }
+      return true;
     }
 
     destroyExperienciaOverlay();
@@ -5002,8 +5007,298 @@ var QuotationEditor = (function () {
     state.sceneMenuOpen = false;
     state.dockOpen = false;
     state.resourcePickerOpen = false;
+    state.resourcePickerSceneId = null;
+    if (!opts.silent) {
+      markDirtyLocal();
+      rerender();
+    }
+    return true;
+  }
+
+  function deleteScenesByIds(ids) {
+    var list = Array.isArray(ids) ? ids.slice() : [];
+    if (!list.length) return;
+    var idSet = {};
+    list.forEach(function (id) { idSet[String(id)] = true; });
+    var ordered = [];
+    var heroId = null;
+    state.scenes.forEach(function (sc, i) {
+      if (!sc || !idSet[String(sc.id)]) return;
+      if (i === 0 || isHeroScene(sc)) heroId = sc.id;
+      else ordered.push({ id: sc.id, idx: i });
+    });
+    ordered.sort(function (a, b) { return b.idx - a.idx; });
+    ordered.forEach(function (item) {
+      deleteScene(item.id, { silent: true });
+    });
+    if (heroId) deleteScene(heroId, { silent: true });
     markDirtyLocal();
     rerender();
+  }
+
+  function cloneJson(value) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (eClone) {
+      return null;
+    }
+  }
+
+  function remapSceneEntityList(list, prefix) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (item) {
+      if (!item) return null;
+      var copy = cloneJson(item);
+      if (!copy) return null;
+      copy.id = nextId(prefix);
+      if (copy.portId) copy.portId = copy.id;
+      return copy;
+    }).filter(Boolean);
+  }
+
+  function duplicateScene(id) {
+    var src = sceneById(id);
+    if (!src) return null;
+    var clone = cloneJson(src);
+    if (!clone) return null;
+    var fromHero = isHeroScene(src);
+    clone.id = nextId('sc');
+    clone.type = 'scene';
+    clone.templateId = null;
+    clone.name = fromHero
+      ? nextSceneName()
+      : (String(src.name || 'Escena').replace(/\s+copia$/i, '') + ' copia');
+    clone.elements = remapSceneEntityList(src.elements, 'el');
+    clone.interactions = remapSceneEntityList(src.interactions, 'ix');
+    clone.buttons = remapSceneEntityList(src.buttons, 'btn');
+    clone.hotspots = remapSceneEntityList(src.hotspots, 'hs');
+    clone.guides = remapSceneEntityList(src.guides, 'g');
+    if (fromHero) clone.coverModel = null;
+    state.scenes.push(clone);
+    state.activeSceneId = clone.id;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.sceneMenuOpen = false;
+    state.dockOpen = false;
+    markDirtyLocal();
+    rerender();
+    return clone;
+  }
+
+  function sceneDisplayLabel(sc) {
+    if (!sc) return 'Escena';
+    if (isHeroScene(sc)) return 'HERO';
+    return String(sc.name || 'Escena');
+  }
+
+  function openDeleteScenesDialog(focusSceneId) {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+    ensureScenes();
+    var focusId = String(focusSceneId || state.activeSceneId || '').trim();
+    var focus = sceneById(focusId) || activeScene();
+    focusId = focus ? String(focus.id) : '';
+    var scenes = Array.isArray(state.scenes) ? state.scenes.filter(Boolean) : [];
+    if (!scenes.length) return;
+
+    var rows = '';
+    if (focus) {
+      rows += '' +
+        '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-sd-scene="' +
+            escapeHtml(focusId) + '" checked>' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
+          '<span class="qe-guides-delete__check-stack">' +
+            '<span class="qe-guides-delete__check-main">Escena actual</span>' +
+            '<span class="qe-guides-delete__check-sub">' +
+              escapeHtml(sceneDisplayLabel(focus)) +
+            '</span>' +
+          '</span>' +
+        '</label>';
+    }
+    scenes.forEach(function (sc) {
+      if (!sc || String(sc.id) === focusId) return;
+      var hero = isHeroScene(sc);
+      rows += '' +
+        '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-sd-scene="' +
+            escapeHtml(String(sc.id)) + '">' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
+          '<span class="qe-guides-delete__check-stack">' +
+            '<span class="qe-guides-delete__check-main">' +
+              escapeHtml(sceneDisplayLabel(sc)) +
+            '</span>' +
+            (hero
+              ? '<span class="qe-guides-delete__check-sub">Se vacía, no se elimina</span>'
+              : '') +
+          '</span>' +
+        '</label>';
+    });
+
+    AdminUI.openModal({
+      title: 'Eliminar escenas',
+      bodyHtml:
+        '<div class="qe-guides-delete" data-qe-scenes-delete>' +
+          '<p class="qe-guides-delete__section">Escenas</p>' +
+          '<div class="qe-guides-delete__scenes">' + rows + '</div>' +
+          '<div class="qe-guides-delete__bulk">' +
+            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-sd-select-all>' +
+              'Seleccionar todo</button>' +
+            '<button type="button" class="qe-guides-delete__bulk-btn" data-qe-sd-deselect-all>' +
+              'Deseleccionar todo</button>' +
+          '</div>' +
+        '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-danger" data-modal-action="confirm" data-qe-sd-confirm>' +
+          'Eliminar (0)</button>',
+      onMount: function (root) {
+        var modal = root.querySelector('.admin-modal');
+        if (modal) modal.classList.add('qe-guides-delete-modal');
+
+        function selectedIds() {
+          var out = [];
+          root.querySelectorAll('[data-qe-sd-scene]').forEach(function (input) {
+            if (input.checked) out.push(input.getAttribute('data-qe-sd-scene'));
+          });
+          return out;
+        }
+
+        function refreshCount() {
+          var n = selectedIds().length;
+          var btn = root.querySelector('[data-qe-sd-confirm]');
+          if (btn) {
+            btn.textContent = 'Eliminar (' + n + ')';
+            btn.disabled = n <= 0;
+          }
+        }
+
+        root.querySelectorAll('[data-qe-sd-scene]').forEach(function (input) {
+          input.addEventListener('change', refreshCount);
+        });
+        var selectAll = root.querySelector('[data-qe-sd-select-all]');
+        var deselectAll = root.querySelector('[data-qe-sd-deselect-all]');
+        if (selectAll) {
+          selectAll.addEventListener('click', function () {
+            root.querySelectorAll('[data-qe-sd-scene]').forEach(function (input) {
+              input.checked = true;
+            });
+            refreshCount();
+          });
+        }
+        if (deselectAll) {
+          deselectAll.addEventListener('click', function () {
+            root.querySelectorAll('[data-qe-sd-scene]').forEach(function (input) {
+              input.checked = false;
+            });
+            refreshCount();
+          });
+        }
+
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        }
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            if (confirmBtn.disabled) return;
+            var ids = selectedIds();
+            AdminUI.closeModal();
+            deleteScenesByIds(ids);
+          });
+        }
+        refreshCount();
+      },
+      onClose: function () {
+        var modal = document.querySelector('.admin-modal.qe-guides-delete-modal');
+        if (modal) modal.classList.remove('qe-guides-delete-modal');
+      }
+    });
+  }
+
+  function openSceneContextMenu(sceneId, clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var sc = sceneById(sceneId);
+    if (!sc) return;
+    var hero = isHeroScene(sc);
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Menú de escena',
+      items: [
+        {
+          id: 'rename',
+          label: 'Cambiar nombre',
+          disabled: hero
+        },
+        {
+          id: 'replace-bg',
+          label: 'Reemplazar fondo'
+        },
+        {
+          id: 'duplicate',
+          label: 'Duplicar'
+        },
+        {
+          id: 'delete',
+          label: 'Eliminar',
+          danger: true,
+          separatorBefore: true
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'rename') {
+          if (hero) return;
+          if (state.activeSceneId === sceneId) {
+            beginSceneRename(sceneId);
+            return;
+          }
+          state.activeSceneId = sceneId;
+          state.selectedElementId = null;
+          state.expHasSelection = false;
+          state.sceneMenuOpen = false;
+          state.dockOpen = false;
+          rerender();
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              beginSceneRename(sceneId);
+            });
+          });
+          return;
+        }
+        if (id === 'replace-bg') {
+          openResourcePicker(sceneId);
+          return;
+        }
+        if (id === 'duplicate') {
+          duplicateScene(sceneId);
+          return;
+        }
+        if (id === 'delete') {
+          openDeleteScenesDialog(sceneId);
+        }
+      }
+    });
+  }
+
+  function bindSceneContextMenus(editor) {
+    if (!editor || state.canvasPreviewMode) return;
+    var track = editor.querySelector('[data-qe-scenes-track]');
+    if (!track || track.dataset.qeSceneCtx === '1') return;
+    track.dataset.qeSceneCtx = '1';
+    track.addEventListener('contextmenu', function (e) {
+      var wrap = e.target && e.target.closest
+        ? e.target.closest('.qe-scenes__thumb-wrap')
+        : null;
+      if (!wrap || !track.contains(wrap)) return;
+      if (wrap.classList.contains('qe-scenes__thumb-wrap--add')) return;
+      var btn = wrap.querySelector('[data-qe-scene]');
+      var id = btn && btn.getAttribute('data-qe-scene');
+      if (!id) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openSceneContextMenu(id, e.clientX, e.clientY);
+    });
   }
 
   function createScene(opts) {
@@ -5052,7 +5347,7 @@ var QuotationEditor = (function () {
 
   function assignResourceToScene(contentId, sceneId) {
     var res = contentById(contentId);
-    var targetId = sceneId || state.activeSceneId;
+    var targetId = sceneId || state.resourcePickerSceneId || state.activeSceneId;
     var scene = sceneById(targetId);
     if (!res || !scene) return;
     if (!(res.media === 'image' || res.media === 'video' ||
@@ -5082,6 +5377,7 @@ var QuotationEditor = (function () {
       scene.coverModel = null;
     }
     state.resourcePickerOpen = false;
+    state.resourcePickerSceneId = null;
     state.dockOpen = false;
     if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onSceneAssign) {
       QuotationPersistAudit.onSceneAssign(scene, res, serializeDocument(), {
@@ -5292,14 +5588,16 @@ var QuotationEditor = (function () {
     }
   }
 
-  function openResourcePicker() {
+  function openResourcePicker(sceneId) {
     state.resourcePickerOpen = true;
+    state.resourcePickerSceneId = sceneId || state.activeSceneId || null;
     state.dockOpen = false;
     rerender();
   }
 
   function closeResourcePicker() {
     state.resourcePickerOpen = false;
+    state.resourcePickerSceneId = null;
     rerender();
   }
 
@@ -7101,7 +7399,10 @@ var QuotationEditor = (function () {
       }
       qAll('[data-qe-pick-resource]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          assignResourceToScene(btn.getAttribute('data-qe-pick-resource'));
+          assignResourceToScene(
+            btn.getAttribute('data-qe-pick-resource'),
+            state.resourcePickerSceneId || undefined
+          );
         });
       });
 
@@ -7200,6 +7501,7 @@ var QuotationEditor = (function () {
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
       bindSceneNameEditing(editor);
       bindSceneDragReorder(editor);
+      bindSceneContextMenus(editor);
       bindFolderMenus();
       bindFolderRenameInputs();
       bindFolderDragReorder();
