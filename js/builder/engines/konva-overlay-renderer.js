@@ -23,9 +23,6 @@ var KonvaOverlayRenderer = (function () {
       if (v === '0' || v === 'false') return false;
       if (v === '1' || v === 'true') return true;
     } catch (e) { /* ignore */ }
-    /* Sandbox EDITOR — auto ON (opt-out with ?konva=0). */
-    var pid = String(options.projectId || '').trim();
-    if (pid === EDITOR_PROJECT_ID) return true;
     return false;
   }
 
@@ -116,7 +113,7 @@ var KonvaOverlayRenderer = (function () {
     badge.className = 'konva-poc-badge';
     badge.setAttribute('data-konva-poc-badge', '1');
     badge.textContent = 'KONVA POC';
-    badge.title = 'Motor Konva activo (Fase 0). Opt-out: ?konva=0';
+    badge.title = 'Motor Konva activo (Fase 0). Opt-in: ?konva=1';
     hostEl.appendChild(badge);
 
     try {

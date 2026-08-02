@@ -5596,45 +5596,6 @@ var ExperienciaCanvas = (function () {
       return bid;
     }
 
-    function attemptGroupChildEditEntry(groupId, childId, ev) {
-      if (!groupId || !childId) return false;
-      var gid = String(groupId);
-      var cid = String(childId);
-      var inEdit = String(canvas().activeOverlayGroupEditId || '') === gid;
-      if (inEdit) {
-        if (String(canvas().selectedButtonId || '') !== cid) {
-          canvas().selectedButtonIds = [cid];
-          canvas().selectedButtonId = cid;
-          paintButtonsStage();
-          paintInspector();
-          notifyOverlaySelection();
-          if (ev && ev.preventDefault) ev.preventDefault();
-          if (ev && ev.stopPropagation) ev.stopPropagation();
-          return true;
-        }
-        return false;
-      }
-      var now = Date.now();
-      var dblEvent = ev && Number(ev.detail) >= 2;
-      var pulseAge = groupEditPulse ? (now - groupEditPulse.at) : Infinity;
-      var dblPulse = groupEditPulse &&
-        groupEditPulse.groupId === gid &&
-        groupEditPulse.childId === cid &&
-        pulseAge >= 50 &&
-        pulseAge < 900;
-      if (!dblEvent && !dblPulse) {
-        groupEditPulse = { groupId: gid, childId: cid, at: now };
-        return false;
-      }
-      cancelOverlayGestures();
-      enterOverlayGroupEditMode(gid, cid);
-      groupEditPulse = null;
-      groupEditTapArmed = null;
-      if (ev && ev.preventDefault) ev.preventDefault();
-      if (ev && ev.stopPropagation) ev.stopPropagation();
-      return true;
-    }
-
     function resolveGroupedChildFromEvent(ev, sceneId) {
       if (!ev || !sceneId || !buttonsLayer) return null;
       var hit = ev.target && ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
@@ -7146,47 +7107,54 @@ var ExperienciaCanvas = (function () {
             !isOverlayGroupId(sceneIdHit, bid)) {
           exitOverlayGroupEditMode({ reselectGroup: false, persist: true });
         }
-        /* Double-click / second tap on grouped child → edit that member (Figma-style). */
+        /* Grouped child: 1 click → group; dblclick → deep-edit child (see dblclick below). */
         var childHitId = (hitIx && hitIx.groupId) ? String(bid) : null;
         if (hitIx && hitIx.groupId) {
-          if (attemptGroupChildEditEntry(hitIx.groupId, bid, ev)) return;
-          if (String(canvas().activeOverlayGroupEditId || '') === String(hitIx.groupId)) {
+          var gid = String(hitIx.groupId);
+          var cid = String(bid);
+          var inGroupEdit = String(canvas().activeOverlayGroupEditId || '') === gid;
+
+          if (inGroupEdit) {
             groupEditPulse = null;
             ev.preventDefault();
             ev.stopPropagation();
-            if (getSelectedOverlayIds().indexOf(String(bid)) < 0) {
-              canvas().selectedButtonIds = [String(bid)];
-              canvas().selectedButtonId = bid;
+            if (getSelectedOverlayIds().indexOf(cid) < 0) {
+              canvas().selectedButtonIds = [cid];
+              canvas().selectedButtonId = cid;
             }
-            var btnEdit = getOverlayItemVm(sceneIdHit, bid);
-            beginOverlayMove(ev, bid, sceneIdHit, btnEdit);
+            var btnEdit = getOverlayItemVm(sceneIdHit, cid);
+            beginOverlayMove(ev, cid, sceneIdHit, btnEdit);
             return;
           }
-          bid = resolveOverlayPickId(sceneIdHit, bid);
-          var curGrouped = getSelectedOverlayIds();
+
+          ev.preventDefault();
+          ev.stopPropagation();
+          groupEditPulse = null;
+          canvas().activeOverlayGroupEditId = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
+
           if (ev.shiftKey) {
-            canvas().activeOverlayGroupEditId = null;
-            if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-            var idxG = curGrouped.indexOf(String(bid));
+            var curGrouped = getSelectedOverlayIds();
+            var idxG = curGrouped.indexOf(gid);
             if (idxG >= 0) curGrouped.splice(idxG, 1);
-            else curGrouped.push(String(bid));
+            else curGrouped.push(gid);
             canvas().selectedButtonIds = curGrouped;
-            canvas().selectedButtonId = curGrouped.length ? curGrouped[curGrouped.length - 1] : null;
+            canvas().selectedButtonId = curGrouped.length
+              ? curGrouped[curGrouped.length - 1]
+              : null;
             paintButtonsStage();
             paintInspector();
             notifyOverlaySelection();
             return;
           }
-          canvas().activeOverlayGroupEditId = null;
-          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-          if (curGrouped.indexOf(String(bid)) < 0 || curGrouped.length <= 1) {
-            canvas().selectedButtonIds = [String(bid)];
-            canvas().selectedButtonId = bid;
-          } else {
-            canvas().selectedButtonId = bid;
-          }
-          startGroupPointerGesture(ev, sceneIdHit, hitIx.groupId, childHitId);
+
+          canvas().selectedButtonIds = [gid];
+          canvas().selectedButtonId = gid;
+          commitGroupBoundsIfNeeded(sceneIdHit, gid);
+          syncActiveGroupFrameFromMembers(gid, sceneIdHit);
+          startGroupPointerGesture(ev, sceneIdHit, gid, cid);
           paintButtonsStage();
+          notifyOverlaySelection();
           return;
         }
         groupEditPulse = null;
@@ -7227,6 +7195,8 @@ var ExperienciaCanvas = (function () {
         ev.stopPropagation();
         cancelOverlayGestures();
         groupEditPulse = null;
+        commitGroupBoundsIfNeeded(sceneId, grouped.groupId);
+        syncActiveGroupFrameFromMembers(grouped.groupId, sceneId);
         enterOverlayGroupEditMode(grouped.groupId, grouped.childId);
       }, true);
       function endButtonDrag(ev) {
