@@ -3043,6 +3043,7 @@ var QuotationEditor = (function () {
     var rows = '' +
       '<li class="qe-layers__item is-hero' + (heroActive ? ' is-selected' : '') + '"' +
         ' data-qe-layer="hero" data-qe-layer-type="HERO">' +
+        '<span class="qe-layers__fold-spacer" aria-hidden="true"></span>' +
         '<button type="button" class="qe-layers__vis" data-qe-layer-vis="hero" title="HERO" disabled aria-label="HERO">👁</button>' +
         '<button type="button" class="qe-layers__sel' + (heroActive ? ' is-active' : '') + '"' +
           ' data-qe-layer-sel="hero" title="Ir a escena HERO">' +
@@ -3051,25 +3052,35 @@ var QuotationEditor = (function () {
         '<button type="button" class="qe-layers__clear" data-qe-layer-clear="hero"' +
           ' title="Vaciar HERO (no elimina la portada)" aria-label="Vaciar HERO">🗑</button>' +
       '</li>';
-    ixs.forEach(function (ix) {
-      if (!ix || !ix.id) return;
+    function layerItemRow(ix, opts) {
+      opts = opts || {};
+      if (!ix || !ix.id) return '';
       var t = String(ix.type || '').toUpperCase();
-      if (t === 'OVERLAY_GROUP') return;
       var label = (ix.label != null && String(ix.label).trim())
         ? String(ix.label)
         : layerTypeLabel(t);
       var vis = ix.visible !== false && ix.enabled !== false;
       var locked = !!ix.locked;
-      rows += '' +
-        '<li class="qe-layers__item' + (selSet[String(ix.id)] ? ' is-selected' : '') + '"' +
+      var selected = selSet[String(ix.id)];
+      return '' +
+        '<li class="qe-layers__item' +
+          (selected ? ' is-selected' : '') +
+          (opts.nested ? ' is-nested' : '') +
+          (opts.isGroup ? ' is-group' : '') + '"' +
           ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
           ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '">' +
+          (opts.isGroup
+            ? ('<button type="button" class="qe-layers__fold' +
+              (opts.open ? ' is-open' : '') + '"' +
+              ' data-qe-layer-fold="' + escapeHtml(ix.id) + '"' +
+              ' title="' + (opts.open ? 'Contraer' : 'Expandir') + '" aria-label="Grupo">' +
+              (opts.open ? '▾' : '▸') + '</button>')
+            : '<span class="qe-layers__fold-spacer" aria-hidden="true"></span>') +
           '<button type="button" class="qe-layers__vis' + (vis ? '' : ' is-off') + '"' +
             ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
             ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
-          '<button type="button" class="qe-layers__sel' + (selSet[String(ix.id)] ? ' is-active' : '') + '"' +
-            ' data-qe-layer-sel="' +
-            escapeHtml(ix.id) + '">' +
+          '<button type="button" class="qe-layers__sel' + (selected ? ' is-active' : '') + '"' +
+            ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' +
             '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel(t)) + '</span>' +
             '<span class="qe-layers__name">' + escapeHtml(label) + '</span>' +
           '</button>' +
@@ -3081,6 +3092,30 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-layers__ord" data-qe-layer-down="' +
             escapeHtml(ix.id) + '" title="Bajar">↓</button>' +
         '</li>';
+    }
+    if (!state.openOverlayGroups || typeof state.openOverlayGroups !== 'object') {
+      state.openOverlayGroups = {};
+    }
+    var byId = {};
+    ixs.forEach(function (ix) {
+      if (ix && ix.id) byId[String(ix.id)] = ix;
+    });
+    ixs.forEach(function (ix) {
+      if (!ix || !ix.id) return;
+      var t = String(ix.type || '').toUpperCase();
+      if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+        var open = state.openOverlayGroups[ix.id] !== false;
+        rows += layerItemRow(ix, { isGroup: true, open: open });
+        if (open) {
+          (Array.isArray(ix.memberIds) ? ix.memberIds : []).forEach(function (mid) {
+            var child = byId[String(mid)];
+            if (child) rows += layerItemRow(child, { nested: true });
+          });
+        }
+        return;
+      }
+      if (ix.groupId) return;
+      rows += layerItemRow(ix, {});
     });
     return '<ul class="qe-layers__list" data-qe-layers-list>' + rows + '</ul>';
   }
@@ -6450,7 +6485,18 @@ var QuotationEditor = (function () {
       var sel = t.closest('[data-qe-layer-sel]');
       var up = t.closest('[data-qe-layer-up]');
       var down = t.closest('[data-qe-layer-down]');
+      var fold = t.closest('[data-qe-layer-fold]');
       var clearHero = t.closest('[data-qe-layer-clear="hero"], [data-qe-layer-clear]');
+
+      if (fold) {
+        var fid = fold.getAttribute('data-qe-layer-fold');
+        if (fid) {
+          if (!state.openOverlayGroups) state.openOverlayGroups = {};
+          state.openOverlayGroups[fid] = !(state.openOverlayGroups[fid] !== false);
+          refreshLayersPanel();
+        }
+        return;
+      }
 
       if (clearHero && clearHero.getAttribute('data-qe-layer-clear') === 'hero') {
         ev.preventDefault();

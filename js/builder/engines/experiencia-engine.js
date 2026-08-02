@@ -378,7 +378,320 @@ var ExperienciaEngine = (function () {
   }
 
   function isOverlayGroupInteraction(ix) {
-    return !!(ix && String(ix.type || '').toUpperCase() === 'OVERLAY_GROUP');
+    if (!ix) return false;
+    var t = String(ix.type || '').toUpperCase();
+    return t === 'OVERLAY_GROUP' || t === 'GROUP';
+  }
+
+  function degToRad(d) { return (Number(d) || 0) * Math.PI / 180; }
+
+  function rotatePoint2d(x, y, deg) {
+    var r = degToRad(deg);
+    var c = Math.cos(r);
+    var s = Math.sin(r);
+    return { x: x * c - y * s, y: x * s + y * c };
+  }
+
+  /** Width/height of a free overlay in scene % (matches canvas gizmo math). */
+  function overlayItemSizePct(ix, layerW, layerH) {
+    if (!ix) return { w: 12, h: 8 };
+    var t = String(ix.type || 'BUTTON').toUpperCase();
+    var w = layerW || 1000;
+    var h = layerH || 1000;
+    if (t === 'BUTTON') {
+      return {
+        w: ix.boxW != null ? Number(ix.boxW) : 14,
+        h: ix.boxH != null ? Number(ix.boxH) : 4.5
+      };
+    }
+    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      var gw = Number(ix.width) || 12;
+      var gh = Number(ix.height) || 8;
+      if (t === 'SHAPE_CIRCLE') gh = gw * (w / Math.max(1, h));
+      return { w: gw, h: gh };
+    }
+    return {
+      w: Math.max(8, Math.min(40, (String(ix.label || 'Texto').length) * 1.2)),
+      h: Math.max(3, ((Number(ix.fontSize) || 28) / h) * 100 * 1.4)
+    };
+  }
+
+  function overlayRotatedCorners(cx, cy, w, h, rotDeg) {
+    var hw = w / 2;
+    var hh = h / 2;
+    var pts = [
+      { x: -hw, y: -hh }, { x: hw, y: -hh },
+      { x: hw, y: hh }, { x: -hw, y: hh }
+    ];
+    return pts.map(function (p) {
+      var r = rotatePoint2d(p.x, p.y, rotDeg);
+      return { x: cx + r.x, y: cy + r.y };
+    });
+  }
+
+  function ensureOverlayGroupDefaults(n, g, layerW, layerH) {
+    if (!g || !isOverlayGroupInteraction(g)) return g;
+    if (g.rotation == null || isNaN(Number(g.rotation))) g.rotation = 0;
+    if (g.x == null || isNaN(Number(g.x))) g.x = 50;
+    if (g.y == null || isNaN(Number(g.y))) g.y = 50;
+    if (!Array.isArray(g.memberIds)) g.memberIds = [];
+    var lw = layerW || 1000;
+    var lh = layerH || 1000;
+    if (g.width == null || g.height == null || !g.memberIds.length) {
+      var bounds = computeOverlayUnionBounds(n, g.memberIds, lw, lh);
+      if (bounds) {
+        g.x = bounds.cx;
+        g.y = bounds.cy;
+        g.width = bounds.w;
+        g.height = bounds.h;
+        if (g._baseWidth == null) g._baseWidth = bounds.w;
+        if (g._baseHeight == null) g._baseHeight = bounds.h;
+      } else {
+        if (g.width == null) g.width = 20;
+        if (g.height == null) g.height = 20;
+        if (g._baseWidth == null) g._baseWidth = g.width;
+        if (g._baseHeight == null) g._baseHeight = g.height;
+      }
+    }
+    if (g._baseWidth == null) g._baseWidth = Number(g.width) || 20;
+    if (g._baseHeight == null) g._baseHeight = Number(g.height) || 20;
+    return g;
+  }
+
+  function computeOverlayUnionBounds(n, memberIds, layerW, layerH) {
+    memberIds = (memberIds || []).map(String).filter(Boolean);
+    if (!n || memberIds.length < 1) return null;
+    var minX = Infinity;
+    var minY = Infinity;
+    var maxX = -Infinity;
+    var maxY = -Infinity;
+    memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+      if (!world) return;
+      var corners = overlayRotatedCorners(world.x, world.y, world.width, world.height, world.rotation);
+      corners.forEach(function (c) {
+        if (c.x < minX) minX = c.x;
+        if (c.y < minY) minY = c.y;
+        if (c.x > maxX) maxX = c.x;
+        if (c.y > maxY) maxY = c.y;
+      });
+    });
+    if (!isFinite(minX)) return null;
+    return {
+      cx: (minX + maxX) / 2,
+      cy: (minY + maxY) / 2,
+      w: Math.max(0.5, maxX - minX),
+      h: Math.max(0.5, maxY - minY)
+    };
+  }
+
+  /** World layout without re-entering group compose (uses ix.x/y when ungrouped). */
+  function overlayWorldLayoutRaw(n, ix, layerW, layerH) {
+    if (!ix) return null;
+    if (ix.groupId && ix.localX != null && ix.localY != null) {
+      var g = getInteraction(n, ix.groupId);
+      if (g && isOverlayGroupInteraction(g)) {
+        return composeOverlayWorldLayout(g, ix, layerW, layerH);
+      }
+    }
+    var layout = resolveButtonLayout(ix, layerW, layerH);
+    var size = overlayItemSizePct(ix, layerW, layerH);
+    return {
+      x: layout.x,
+      y: layout.y,
+      rotation: Number(ix.rotation) || 0,
+      width: size.w,
+      height: size.h,
+      boxW: size.w,
+      boxH: size.h
+    };
+  }
+
+  function composeOverlayWorldLayout(group, child, layerW, layerH) {
+    ensureOverlayGroupDefaults(null, group, layerW, layerH);
+    var gr = Number(group.rotation) || 0;
+    var lx = Number(child.localX) || 0;
+    var ly = Number(child.localY) || 0;
+    var r = rotatePoint2d(lx, ly, gr);
+    var wx = Number(group.x) + r.x;
+    var wy = Number(group.y) + r.y;
+    var wr = gr + (Number(child.localRotation) || 0);
+    var size = overlayItemSizePct(child, layerW, layerH);
+    return {
+      x: wx,
+      y: wy,
+      rotation: wr,
+      width: size.w,
+      height: size.h,
+      boxW: size.w,
+      boxH: size.h
+    };
+  }
+
+  function worldPointToLocal(group, wx, wy) {
+    var dx = Number(wx) - Number(group.x);
+    var dy = Number(wy) - Number(group.y);
+    return rotatePoint2d(dx, dy, -(Number(group.rotation) || 0));
+  }
+
+  function absoluteToLocalOverlay(group, child, layerW, layerH) {
+    ensureOverlayGroupDefaults(null, group, layerW, layerH);
+    var world = overlayWorldLayoutRaw(null, child, layerW, layerH);
+    if (!world) return null;
+    var inv = worldPointToLocal(group, world.x, world.y);
+    return {
+      localX: inv.x,
+      localY: inv.y,
+      localRotation: world.rotation - (Number(group.rotation) || 0)
+    };
+  }
+
+  function bakeOverlayWorldToChild(group, child, layerW, layerH) {
+    var world = composeOverlayWorldLayout(group, child, layerW, layerH);
+    if (!world) return;
+    child.x = world.x;
+    child.y = world.y;
+    child.rotation = world.rotation;
+    var t = String(child.type || '').toUpperCase();
+    if (t === 'BUTTON') {
+      child.boxW = world.boxW;
+      child.boxH = world.boxH;
+    } else if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      child.width = world.width;
+      child.height = world.height;
+    }
+    delete child.localX;
+    delete child.localY;
+    delete child.localRotation;
+    delete child.groupId;
+  }
+
+  function migrateGroupedChildLocals(n, group, layerW, layerH) {
+    if (!n || !group || !Array.isArray(group.memberIds)) return;
+    group.memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      if (ix.localX != null && ix.localY != null) return;
+      var local = absoluteToLocalOverlay(group, ix, layerW, layerH);
+      if (!local) return;
+      ix.localX = local.localX;
+      ix.localY = local.localY;
+      ix.localRotation = local.localRotation;
+    });
+  }
+
+  function overlayGroupViewModel(state, n, g, layerW, layerH) {
+    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    migrateGroupedChildLocals(n, g, layerW, layerH);
+    return {
+      id: g.id,
+      portId: g.portId || g.id,
+      type: 'OVERLAY_GROUP',
+      label: g.label != null ? String(g.label) : 'Grupo',
+      x: Number(g.x) || 50,
+      y: Number(g.y) || 50,
+      storedX: g.x,
+      storedY: g.y,
+      rotation: Number(g.rotation) || 0,
+      width: Number(g.width) || 20,
+      height: Number(g.height) || 20,
+      memberIds: (g.memberIds || []).slice(),
+      visible: g.enabled !== false,
+      enabled: g.enabled !== false,
+      locked: !!g.locked,
+      _ix: g,
+      _isGroup: true
+    };
+  }
+
+  function getSceneOverlayItem(state, n, itemId, layerW, layerH) {
+    if (!n || !itemId) return null;
+    var ix = getInteraction(n, itemId);
+    if (!ix) return null;
+    if (isOverlayGroupInteraction(ix)) {
+      return overlayGroupViewModel(state, n, ix, layerW, layerH);
+    }
+    if (isSceneFreeOverlayInteraction(ix)) {
+      return buttonViewModel(state, n, ix, layerW, layerH);
+    }
+    return null;
+  }
+
+  function updateOverlayGroupTransform(state, nodeId, groupId, patch) {
+    var n = getNode(state, nodeId);
+    var g = getInteraction(n, groupId);
+    if (!n || !g || !isOverlayGroupInteraction(g)) return null;
+    patch = patch || {};
+    var layerW = patch.layerW || 1000;
+    var layerH = patch.layerH || 1000;
+    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    migrateGroupedChildLocals(n, g, layerW, layerH);
+
+    if (patch.x != null) {
+      var nx = Number(patch.x);
+      if (!isNaN(nx)) g.x = patch.live ? Math.max(-20, Math.min(120, nx)) : clampPercent(nx, g.x);
+    }
+    if (patch.y != null) {
+      var ny = Number(patch.y);
+      if (!isNaN(ny)) g.y = patch.live ? Math.max(-20, Math.min(120, ny)) : clampPercent(ny, g.y);
+    }
+    if (patch.rotation != null) g.rotation = clampRotation(patch.rotation);
+
+    if (patch.width != null || patch.height != null) {
+      var baseW = Number(g._baseWidth) || Number(g.width) || 20;
+      var baseH = Number(g._baseHeight) || Number(g.height) || 20;
+      var newW = patch.width != null ? Number(patch.width) : baseW;
+      var newH = patch.height != null ? Number(patch.height) : baseH;
+      if (!isNaN(newW) && !isNaN(newH) && baseW > 0 && baseH > 0) {
+        var sx = newW / baseW;
+        var sy = newH / baseH;
+        var snap = patch.memberSnapshots;
+        (g.memberIds || []).forEach(function (mid) {
+          var c = getInteraction(n, mid);
+          if (!c || !isSceneFreeOverlayInteraction(c)) return;
+          var s = snap && snap[mid] ? snap[mid] : null;
+          if (s) {
+            c.localX = Number(s.localX) * sx;
+            c.localY = Number(s.localY) * sy;
+            var ct = String(c.type || '').toUpperCase();
+            if (ct === 'BUTTON') {
+              if (s.boxW != null) c.boxW = Math.max(0.5, Number(s.boxW) * sx);
+              if (s.boxH != null) c.boxH = Math.max(0.5, Number(s.boxH) * sy);
+            } else if (ct === 'SHAPE_RECT' || ct === 'SHAPE_CIRCLE') {
+              if (s.width != null) c.width = Math.max(0.5, Number(s.width) * sx);
+              if (s.height != null) c.height = Math.max(0.5, Number(s.height) * sy);
+            }
+          } else {
+            if (c.localX != null) c.localX = Number(c.localX) * sx;
+            if (c.localY != null) c.localY = Number(c.localY) * sy;
+          }
+        });
+        g.width = newW;
+        g.height = newH;
+      }
+    }
+    return overlayGroupViewModel(state, n, g, layerW, layerH);
+  }
+
+  function snapshotOverlayGroupLocals(n, g) {
+    var out = {};
+    if (!n || !g || !Array.isArray(g.memberIds)) return out;
+    g.memberIds.forEach(function (id) {
+      var c = getInteraction(n, id);
+      if (!c) return;
+      out[String(id)] = {
+        localX: c.localX,
+        localY: c.localY,
+        localRotation: c.localRotation,
+        boxW: c.boxW,
+        boxH: c.boxH,
+        width: c.width,
+        height: c.height
+      };
+    });
+    return out;
   }
 
   function listOverlayGroupInteractions(n) {
@@ -423,20 +736,24 @@ var ExperienciaEngine = (function () {
     return (g && isOverlayGroupInteraction(g)) ? g : null;
   }
 
-  function detachOverlayFromGroups(n, memberId) {
+  function detachOverlayFromGroups(n, memberId, layerW, layerH) {
     if (!n || !n.config || !memberId) return;
     var mid = String(memberId);
+    var lw = layerW || 1000;
+    var lh = layerH || 1000;
     listOverlayGroupInteractions(n).forEach(function (g) {
       if (!g || !Array.isArray(g.memberIds)) return;
       var idx = g.memberIds.map(String).indexOf(mid);
       if (idx < 0) return;
-      g.memberIds.splice(idx, 1);
+      ensureOverlayGroupDefaults(n, g, lw, lh);
+      migrateGroupedChildLocals(n, g, lw, lh);
       var ix = getInteraction(n, mid);
-      if (ix) delete ix.groupId;
+      if (ix) bakeOverlayWorldToChild(g, ix, lw, lh);
+      g.memberIds.splice(idx, 1);
       if (g.memberIds.length < 2) {
         g.memberIds.forEach(function (rid) {
           var rx = getInteraction(n, rid);
-          if (rx) delete rx.groupId;
+          if (rx) bakeOverlayWorldToChild(g, rx, lw, lh);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -452,9 +769,11 @@ var ExperienciaEngine = (function () {
     listOverlayGroupInteractions(n).slice().forEach(function (g) {
       if (!g) return;
       if (deleted[String(g.id)]) {
+        ensureOverlayGroupDefaults(n, g, 1000, 1000);
+        migrateGroupedChildLocals(n, g, 1000, 1000);
         (g.memberIds || []).forEach(function (mid) {
           var ix = getInteraction(n, mid);
-          if (ix) delete ix.groupId;
+          if (ix) bakeOverlayWorldToChild(g, ix, 1000, 1000);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -465,9 +784,11 @@ var ExperienciaEngine = (function () {
         return !deleted[id];
       });
       if (mids.length < 2) {
+        ensureOverlayGroupDefaults(n, g, 1000, 1000);
+        migrateGroupedChildLocals(n, g, 1000, 1000);
         mids.forEach(function (id) {
           var ix = getInteraction(n, id);
-          if (ix) delete ix.groupId;
+          if (ix) bakeOverlayWorldToChild(g, ix, 1000, 1000);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -478,12 +799,14 @@ var ExperienciaEngine = (function () {
     });
   }
 
-  function groupSceneOverlays(state, nodeId, memberIds) {
+  function groupSceneOverlays(state, nodeId, memberIds, layerW, layerH) {
     memberIds = (memberIds || []).map(String).filter(Boolean);
     if (memberIds.length < 2) return null;
     var n = getNode(state, nodeId);
     if (!n || !n.config) return null;
     if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+    var lw = layerW || 1000;
+    var lh = layerH || 1000;
     var unique = [];
     memberIds.forEach(function (id) {
       if (unique.indexOf(id) >= 0) return;
@@ -494,7 +817,13 @@ var ExperienciaEngine = (function () {
     });
     if (unique.length < 2) return null;
     var existing = findOverlayGroupByMembers(n, unique);
-    if (existing) return existing;
+    if (existing) {
+      ensureOverlayGroupDefaults(n, existing, lw, lh);
+      migrateGroupedChildLocals(n, existing, lw, lh);
+      return existing;
+    }
+    var bounds = computeOverlayUnionBounds(n, unique, lw, lh);
+    if (!bounds) return null;
     var groupId = uid('grp');
     var group = makeInteraction({
       type: 'OVERLAY_GROUP',
@@ -502,24 +831,43 @@ var ExperienciaEngine = (function () {
       portId: groupId,
       label: 'Grupo',
       memberIds: unique.slice(),
+      x: bounds.cx,
+      y: bounds.cy,
+      width: bounds.w,
+      height: bounds.h,
+      rotation: 0,
+      _baseWidth: bounds.w,
+      _baseHeight: bounds.h,
       enabled: true
     });
     n.config.interactions.push(group);
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
-      if (ix) ix.groupId = groupId;
+      if (!ix) return;
+      var local = absoluteToLocalOverlay(group, ix, lw, lh);
+      if (local) {
+        ix.localX = local.localX;
+        ix.localY = local.localY;
+        ix.localRotation = local.localRotation;
+      }
+      ix.groupId = groupId;
     });
     return group;
   }
 
-  function ungroupSceneOverlay(state, nodeId, groupId) {
+  function ungroupSceneOverlay(state, nodeId, groupId, layerW, layerH) {
     var n = getNode(state, nodeId);
     if (!n || !groupId) return false;
     var g = getInteraction(n, groupId);
     if (!g || !isOverlayGroupInteraction(g)) return false;
+    var lw = layerW || 1000;
+    var lh = layerH || 1000;
+    ensureOverlayGroupDefaults(n, g, lw, lh);
+    migrateGroupedChildLocals(n, g, lw, lh);
     (g.memberIds || []).forEach(function (id) {
       var ix = getInteraction(n, id);
-      if (ix) delete ix.groupId;
+      if (!ix) return;
+      bakeOverlayWorldToChild(g, ix, lw, lh);
     });
     n.config.interactions = (n.config.interactions || []).filter(function (item) {
       return String(item.id) !== String(groupId);
@@ -769,6 +1117,10 @@ var ExperienciaEngine = (function () {
     }
     n.config.interactions.forEach(function (ix) {
       if (isSceneFreeOverlayInteraction(ix)) ensureFreeOverlayDefaults(ix);
+      if (isOverlayGroupInteraction(ix)) {
+        ensureOverlayGroupDefaults(n, ix, 1000, 1000);
+        migrateGroupedChildLocals(n, ix, 1000, 1000);
+      }
     });
     return listSceneButtonInteractions(n);
   }
@@ -812,9 +1164,15 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  function buttonViewModel(state, n, ix) {
+  function buttonViewModel(state, n, ix, layerW, layerH) {
     ensureFreeOverlayDefaults(ix);
-    var layout = resolveButtonLayout(ix, 1000, 1000);
+    var lw = layerW || 1000;
+    var lh = layerH || 1000;
+    var world = overlayWorldLayoutRaw(n, ix, lw, lh);
+    var layout = world
+      ? { x: world.x, y: world.y }
+      : resolveButtonLayout(ix, lw, lh);
+    var rot = world ? world.rotation : (ix.rotation != null ? Number(ix.rotation) : 0);
     return {
       id: ix.id,
       portId: ix.portId || ix.id,
@@ -822,11 +1180,12 @@ var ExperienciaEngine = (function () {
       label: ix.label != null ? String(ix.label) : '',
       x: layout.x,
       y: layout.y,
-      storedX: ix.x,
-      storedY: ix.y,
+      storedX: ix.groupId ? layout.x : ix.x,
+      storedY: ix.groupId ? layout.y : ix.y,
+      groupId: ix.groupId || null,
       style: ix.style || 'button',
       icon: ix.icon || null,
-      rotation: ix.rotation != null ? Number(ix.rotation) : 0,
+      rotation: rot,
       visible: ix.enabled !== false,
       enabled: ix.enabled !== false,
       locked: !!ix.locked,
@@ -1062,12 +1421,41 @@ var ExperienciaEngine = (function () {
       var on = patch.visible != null ? !!patch.visible : !!patch.enabled;
       ix.enabled = on;
     }
-    if (patch.rotation != null) ix.rotation = clampRotation(patch.rotation);
+    if (patch.rotation != null) {
+      if (ix.groupId) {
+        var gRot = getInteraction(n, ix.groupId);
+        if (gRot && isOverlayGroupInteraction(gRot)) {
+          ix.localRotation = clampRotation(patch.rotation) - (Number(gRot.rotation) || 0);
+        } else {
+          ix.rotation = clampRotation(patch.rotation);
+        }
+      } else {
+        ix.rotation = clampRotation(patch.rotation);
+      }
+    }
     if (patch.opacity != null) {
       ix.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
     }
     if (patch.x != null || patch.y != null) {
-      if (patch.live) {
+      if (ix.groupId) {
+        var gPos = getInteraction(n, ix.groupId);
+        if (gPos && isOverlayGroupInteraction(gPos)) {
+          migrateGroupedChildLocals(n, gPos, 1000, 1000);
+          var curW = composeOverlayWorldLayout(gPos, ix, 1000, 1000);
+          var tx = patch.x != null ? Number(patch.x) : curW.x;
+          var ty = patch.y != null ? Number(patch.y) : curW.y;
+          if (patch.live) {
+            if (!isNaN(tx)) tx = Math.max(-20, Math.min(120, tx));
+            if (!isNaN(ty)) ty = Math.max(-20, Math.min(120, ty));
+          } else {
+            if (patch.x != null) tx = clampPercent(patch.x, curW.x);
+            if (patch.y != null) ty = clampPercent(patch.y, curW.y);
+          }
+          var locPt = worldPointToLocal(gPos, tx, ty);
+          ix.localX = locPt.x;
+          ix.localY = locPt.y;
+        }
+      } else if (patch.live) {
         if (patch.x != null) {
           var lx = Number(patch.x);
           if (!isNaN(lx)) ix.x = Math.max(-20, Math.min(120, lx));
@@ -1080,8 +1468,10 @@ var ExperienciaEngine = (function () {
         if (patch.x != null) ix.x = clampPercent(patch.x, ix.x);
         if (patch.y != null) ix.y = clampPercent(patch.y, ix.y);
       }
-      ix.positionInitialized = true;
-      if (patch.keepAnchor !== true) ix.positionMode = 'free';
+      if (!ix.groupId) {
+        ix.positionInitialized = true;
+        if (patch.keepAnchor !== true) ix.positionMode = 'free';
+      }
     }
 
     if (t === 'BUTTON') {
@@ -1918,7 +2308,9 @@ var ExperienciaEngine = (function () {
     var n = getNode(state, sceneId);
     if (!n || !n.config) return null;
     var exp = ensureState(state);
-    var buttons = listSceneButtonInteractions(n).map(function (ix) {
+    var buttons = (n.config.interactions || []).filter(function (ix) {
+      return isSceneFreeOverlayInteraction(ix) || isOverlayGroupInteraction(ix);
+    }).map(function (ix) {
       return JSON.parse(JSON.stringify(ix));
     });
     var portIds = {};
@@ -2706,6 +3098,15 @@ var ExperienciaEngine = (function () {
       else if (cfg.borderRadius != null) ix.borderRadius = cfg.borderRadius;
       if (partial.fontSize != null) ix.fontSize = partial.fontSize;
       else if (cfg.fontSize != null) ix.fontSize = cfg.fontSize;
+      if (partial.memberIds != null && Array.isArray(partial.memberIds)) {
+        ix.memberIds = partial.memberIds.slice();
+      }
+      if (partial.groupId != null) ix.groupId = partial.groupId;
+      if (partial.localX != null) ix.localX = partial.localX;
+      if (partial.localY != null) ix.localY = partial.localY;
+      if (partial.localRotation != null) ix.localRotation = partial.localRotation;
+      if (partial._baseWidth != null) ix._baseWidth = partial._baseWidth;
+      if (partial._baseHeight != null) ix._baseHeight = partial._baseHeight;
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
@@ -6170,6 +6571,13 @@ var ExperienciaEngine = (function () {
     ungroupSceneOverlay: ungroupSceneOverlay,
     resolveOverlayGroupForSelection: resolveOverlayGroupForSelection,
     snapshotOverlayInteractions: snapshotOverlayInteractions,
+    snapshotOverlayGroupLocals: snapshotOverlayGroupLocals,
+    updateOverlayGroupTransform: updateOverlayGroupTransform,
+    getSceneOverlayItem: getSceneOverlayItem,
+    overlayGroupViewModel: overlayGroupViewModel,
+    overlayWorldLayoutRaw: overlayWorldLayoutRaw,
+    migrateGroupedChildLocals: migrateGroupedChildLocals,
+    ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
     isHotspotsEditableNode: isHotspotsEditableNode,
     isSceneHotspotMask: isSceneHotspotMask,
     listSceneHotspotMasks: listSceneHotspotMasks,

@@ -534,6 +534,9 @@ var ExperienciaCanvas = (function () {
     if (st === 'BUTTON') {
       gw = btn.boxW != null ? Number(btn.boxW) : 14;
       gh = btn.boxH != null ? Number(btn.boxH) : 4.5;
+    } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
+      gw = Number(btn.width) || 20;
+      gh = Number(btn.height) || 20;
     } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
       gw = Number(btn.width) || 12;
       gh = Number(btn.height) || 8;
@@ -1878,6 +1881,7 @@ var ExperienciaCanvas = (function () {
     var OVERLAY_DRAG_THRESHOLD_PX = 4;
     /** Custom double-tap on rotate — native dblclick dies when gizmo remounts on pointerup. */
     var rotateTapArmed = null; /* { buttonId, at } */
+    var groupEditTapArmed = null; /* { buttonId, at } */
     var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
@@ -4594,11 +4598,13 @@ var ExperienciaCanvas = (function () {
         var multiSel = selIds.length > 1;
         var gizmoHtml = '';
         selIds.forEach(function (sid) {
-          var selBtn = null;
-          for (var gi = 0; gi < buttons.length; gi++) {
-            if (buttons[gi] && String(buttons[gi].id) === String(sid)) {
-              selBtn = buttons[gi];
-              break;
+          var selBtn = getOverlayItemVm(canvas().selectedId, sid);
+          if (!selBtn) {
+            for (var gi = 0; gi < buttons.length; gi++) {
+              if (buttons[gi] && String(buttons[gi].id) === String(sid)) {
+                selBtn = buttons[gi];
+                break;
+              }
             }
           }
           gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, {
@@ -5463,11 +5469,70 @@ var ExperienciaCanvas = (function () {
       return ids;
     }
 
+    function overlayLayerSize() {
+      return {
+        w: Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000),
+        h: Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000)
+      };
+    }
+
+    function isOverlayGroupId(sceneId, id) {
+      if (!sceneId || !id) return false;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, id)
+        : null;
+      if (!ix && n && n.config && Array.isArray(n.config.interactions)) {
+        n.config.interactions.some(function (item) {
+          if (String(item.id) === String(id)) { ix = item; return true; }
+          return false;
+        });
+      }
+      return !!(ix && ExperienciaEngine.isOverlayGroupInteraction &&
+        ExperienciaEngine.isOverlayGroupInteraction(ix));
+    }
+
+    function resolveOverlayPickId(sceneId, hitId) {
+      if (!sceneId || !hitId) return hitId;
+      if (canvas().activeOverlayGroupEditId) return hitId;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n) return hitId;
+      var ix = null;
+      (n.config.interactions || []).some(function (item) {
+        if (String(item.id) === String(hitId)) { ix = item; return true; }
+        return false;
+      });
+      if (ix && ix.groupId &&
+          String(canvas().activeOverlayGroupEditId || '') !== String(ix.groupId)) {
+        return String(ix.groupId);
+      }
+      return hitId;
+    }
+
+    function getOverlayItemVm(sceneId, itemId) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n || !itemId) return null;
+      var sz = overlayLayerSize();
+      if (ExperienciaEngine.getSceneOverlayItem) {
+        return ExperienciaEngine.getSceneOverlayItem(state, n, itemId, sz.w, sz.h);
+      }
+      return ExperienciaEngine.getSceneButton(state, n, itemId);
+    }
+
     function buildOverlayDragOrigins(sceneId, ids) {
       var origins = {};
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n || !ids || !ids.length) return origins;
       ids.forEach(function (id) {
+        if (isOverlayGroupId(sceneId, id)) {
+          var gvm = getOverlayItemVm(sceneId, id);
+          if (!gvm || gvm.locked) return;
+          origins[String(id)] = {
+            x: gvm.storedX != null ? Number(gvm.storedX) : Number(gvm.x) || 50,
+            y: gvm.storedY != null ? Number(gvm.storedY) : Number(gvm.y) || 50
+          };
+          return;
+        }
         var b = ExperienciaEngine.getSceneButton(state, n, id);
         if (!b || b.locked) return;
         origins[String(id)] = {
@@ -5504,6 +5569,23 @@ var ExperienciaCanvas = (function () {
       armButtonOp(sceneId);
       buttonNudgeDirty = true;
       var single = ids.length === 1;
+      if (single && isOverlayGroupId(sceneId, ids[0]) &&
+          ExperienciaEngine.updateOverlayGroupTransform) {
+        var gNudge = getOverlayItemVm(sceneId, ids[0]);
+        if (!gNudge || gNudge.locked) return false;
+        var gx0 = gNudge.storedX != null ? Number(gNudge.storedX) : Number(gNudge.x);
+        var gy0 = gNudge.storedY != null ? Number(gNudge.storedY) : Number(gNudge.y);
+        ExperienciaEngine.updateOverlayGroupTransform(state, sceneId, ids[0], {
+          x: gx0 + dx,
+          y: gy0 + dy,
+          live: true,
+          layerW: layerW,
+          layerH: layerH
+        });
+        buttonDrag = { buttonId: ids[0], sceneId: sceneId, guides: { spacing: [] }, nudge: true };
+        paintButtonsStage();
+        return true;
+      }
       ids.forEach(function (bid) {
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid);
@@ -6349,9 +6431,18 @@ var ExperienciaCanvas = (function () {
             }
             if (deg > 360) deg = deg % 360;
             if (deg < -360) deg = -((-deg) % 360);
-            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
-              rotation: deg
-            });
+            if ((transformDrag.type === 'OVERLAY_GROUP' || transformDrag.type === 'GROUP') &&
+                ExperienciaEngine.updateOverlayGroupTransform) {
+              var szRot = overlayLayerSize();
+              ExperienciaEngine.updateOverlayGroupTransform(
+                state, transformDrag.sceneId, transformDrag.buttonId,
+                { rotation: deg, layerW: szRot.w, layerH: szRot.h }
+              );
+            } else {
+              ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
+                rotation: deg
+              });
+            }
           } else {
             var resizeDistPx = Math.hypot(
               ev.clientX - transformDrag.clientStartX,
@@ -6516,6 +6607,29 @@ var ExperienciaCanvas = (function () {
             var ny = (((Tpx + Bpx) / 2) / layerH) * 100;
 
             var patchT = { x: nx, y: ny, live: true };
+            if (transformDrag.type === 'OVERLAY_GROUP' || transformDrag.type === 'GROUP') {
+              patchT.width = nw;
+              patchT.height = nh;
+              if (ExperienciaEngine.updateOverlayGroupTransform) {
+                ExperienciaEngine.updateOverlayGroupTransform(
+                  state, transformDrag.sceneId, transformDrag.buttonId,
+                  {
+                    x: nx,
+                    y: ny,
+                    width: nw,
+                    height: nh,
+                    live: true,
+                    layerW: layerW,
+                    layerH: layerH,
+                    memberSnapshots: transformDrag.memberSnapshots
+                  }
+                );
+              }
+              paintButtonsStage();
+              transformDrag.guides = { spacing: [] };
+              syncLiveOverlayGuides(transformDrag.guides);
+              return;
+            }
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
@@ -6553,6 +6667,18 @@ var ExperienciaCanvas = (function () {
           : [buttonDrag.buttonId];
         var ddx = pct.x - buttonDrag.startPx;
         var ddy = pct.y - buttonDrag.startPy;
+        if (buttonDrag.isOverlayGroup && ExperienciaEngine.updateOverlayGroupTransform) {
+          var szG = overlayLayerSize();
+          var gx = buttonDrag.originX != null ? buttonDrag.originX + ddx : pct.x;
+          var gy = buttonDrag.originY != null ? buttonDrag.originY + ddy : pct.y;
+          ExperienciaEngine.updateOverlayGroupTransform(
+            state, buttonDrag.sceneId, buttonDrag.buttonId,
+            { x: gx, y: gy, live: true, layerW: szG.w, layerH: szG.h }
+          );
+          buttonDrag.guides = { spacing: [] };
+          paintButtonsStage();
+          return;
+        }
         if (groupIds.length > 1) {
           groupIds.forEach(function (id) {
             var orig = buttonDrag.origins && buttonDrag.origins[String(id)];
@@ -6609,20 +6735,22 @@ var ExperienciaCanvas = (function () {
         });
         if (!groupIds.length) groupIds = [String(bid)];
         var pctStart = percentFromPointer(ev);
+        var isGroupDrag = isOverlayGroupId(sceneId, bid);
         var ox = btn
           ? (btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50)
           : 50;
         var oy = btn
           ? (btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50)
           : 50;
-        var origins = buildOverlayDragOrigins(sceneId, groupIds);
+        var origins = isGroupDrag ? {} : buildOverlayDragOrigins(sceneId, groupIds);
         /* Full paint BEFORE arming drag so the gizmo mounts without live-path skip. */
         clearPendingMove(bid);
         paintButtonsStage();
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
-          groupIds: groupIds,
+          groupIds: isGroupDrag ? [String(bid)] : groupIds,
+          isOverlayGroup: isGroupDrag,
           origins: origins,
           pointerId: ev.pointerId,
           clientStartX: ev.clientX,
@@ -6653,8 +6781,7 @@ var ExperienciaCanvas = (function () {
           var gid = gizmo.getAttribute('data-gizmo-id');
           var gtype = gizmo.getAttribute('data-gizmo-type') || 'BUTTON';
           var sceneIdG = canvas().selectedId;
-          var btnG = ExperienciaEngine.getSceneButton(state,
-            ExperienciaEngine.getNode(state, sceneIdG), gid);
+          var btnG = getOverlayItemVm(sceneIdG, gid);
           if (!btnG || btnG.locked) return;
           ev.preventDefault();
           ev.stopPropagation();
@@ -6671,6 +6798,7 @@ var ExperienciaCanvas = (function () {
               );
               return;
             }
+            rotateTapArmed = { buttonId: gid, at: nowTap };
           } else {
             rotateTapArmed = null;
           }
@@ -6679,10 +6807,14 @@ var ExperienciaCanvas = (function () {
           var layerH0 = buttonsLayer.clientHeight || 1000;
           var startW0 = gtype === 'BUTTON'
             ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
-            : (Number(btnG.width) || 12);
+            : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
+              ? (Number(btnG.width) || 20)
+              : (Number(btnG.width) || 12);
           var startH0 = gtype === 'BUTTON'
             ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
-            : (Number(btnG.height) || 8);
+            : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
+              ? (Number(btnG.height) || 20)
+              : (Number(btnG.height) || 8);
           /* Circle: store height so the box is pixel-square at drag start. */
           var layerAspect = layerW0 / Math.max(1, layerH0);
           if (gtype === 'SHAPE_CIRCLE') {
@@ -6694,11 +6826,19 @@ var ExperienciaCanvas = (function () {
           var startR0 = startX0 + startW0 / 2;
           var startT0 = startY0 - startH0 / 2;
           var startB0 = startY0 + startH0 / 2;
+          var memberSnapshots = null;
+          if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
+              ExperienciaEngine.snapshotOverlayGroupLocals) {
+            var nG = ExperienciaEngine.getNode(state, sceneIdG);
+            var gIx = ExperienciaEngine.getInteraction(nG, gid);
+            memberSnapshots = ExperienciaEngine.snapshotOverlayGroupLocals(nG, gIx);
+          }
           transformDrag = {
             mode: handleMode,
             buttonId: gid,
             sceneId: sceneIdG,
             type: gtype,
+            memberSnapshots: memberSnapshots,
             pointerId: ev.pointerId,
             clientStartX: ev.clientX,
             clientStartY: ev.clientY,
@@ -6740,8 +6880,7 @@ var ExperienciaCanvas = (function () {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
           var moveId = gizmoMove.getAttribute('data-gizmo-id');
           var sceneIdMove = canvas().selectedId;
-          var btnMove = ExperienciaEngine.getSceneButton(state,
-            ExperienciaEngine.getNode(state, sceneIdMove), moveId);
+          var btnMove = getOverlayItemVm(sceneIdMove, moveId);
           if (!btnMove) return;
           ev.preventDefault();
           ev.stopPropagation();
@@ -6754,6 +6893,7 @@ var ExperienciaCanvas = (function () {
         var hit = ev.target.closest('[data-exp-stage-btn]');
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
+          canvas().activeOverlayGroupEditId = null;
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
           renderAll();
@@ -6763,8 +6903,34 @@ var ExperienciaCanvas = (function () {
         ev.preventDefault();
         ev.stopPropagation();
         var bid = hit.getAttribute('data-exp-stage-btn');
+        var sceneIdHit = canvas().selectedId;
+        var nHit = ExperienciaEngine.getNode(state, sceneIdHit);
+        var hitIx = nHit && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(nHit, bid)
+          : null;
+        if (hitIx && hitIx.groupId &&
+            String(canvas().activeOverlayGroupEditId || '') !== String(hitIx.groupId)) {
+          var nowEnter = Date.now();
+          if (groupEditTapArmed &&
+              String(groupEditTapArmed.buttonId) === String(bid) &&
+              (nowEnter - groupEditTapArmed.at) < 480) {
+            canvas().activeOverlayGroupEditId = String(hitIx.groupId);
+            groupEditTapArmed = null;
+            canvas().selectedButtonIds = [String(bid)];
+            canvas().selectedButtonId = bid;
+            paintButtonsStage();
+            paintInspector();
+            notifyOverlaySelection();
+            return;
+          }
+          groupEditTapArmed = { buttonId: bid, at: nowEnter };
+        } else {
+          groupEditTapArmed = null;
+        }
+        bid = resolveOverlayPickId(sceneIdHit, bid);
         var cur = getSelectedOverlayIds();
         if (ev.shiftKey) {
+          canvas().activeOverlayGroupEditId = null;
           var idx = cur.indexOf(String(bid));
           if (idx >= 0) cur.splice(idx, 1);
           else cur.push(String(bid));
@@ -6778,13 +6944,14 @@ var ExperienciaCanvas = (function () {
         if (cur.indexOf(String(bid)) < 0 || cur.length <= 1) {
           canvas().selectedButtonIds = [String(bid)];
           canvas().selectedButtonId = bid;
+          if (!isOverlayGroupId(sceneIdHit, bid)) {
+            canvas().activeOverlayGroupEditId = null;
+          }
         } else {
           canvas().selectedButtonId = bid;
         }
         var sceneId = canvas().selectedId;
-        var btn = ExperienciaEngine.getSceneButton(state,
-          ExperienciaEngine.getNode(state, sceneId), bid
-        );
+        var btn = getOverlayItemVm(sceneId, bid);
         beginOverlayMove(ev, bid, sceneId, btn);
       });
       function endButtonDrag(ev) {
@@ -8184,11 +8351,14 @@ var ExperienciaCanvas = (function () {
         var group = (n && ExperienciaEngine.resolveOverlayGroupForSelection)
           ? ExperienciaEngine.resolveOverlayGroupForSelection(n, ids)
           : null;
-        var canGroup = ids.length >= 2 && ids.every(function (id) {
-          var ix = n && ExperienciaEngine.getSceneButton
-            ? ExperienciaEngine.getSceneButton(state, n, id)
+        var canGroup = ids.length >= 2 && !group && ids.every(function (id) {
+          if (isOverlayGroupId(sceneId, id)) return false;
+          var ix = n && ExperienciaEngine.getInteraction
+            ? ExperienciaEngine.getInteraction(n, id)
             : null;
-          return !!ix;
+          if (!ix || !ix.type) return false;
+          var tt = String(ix.type).toUpperCase();
+          return tt === 'BUTTON' || tt === 'TEXT' || tt === 'SHAPE_RECT' || tt === 'SHAPE_CIRCLE';
         });
         var canUngroup = !!group;
         return {
@@ -8204,10 +8374,12 @@ var ExperienciaCanvas = (function () {
         var ids = getSelectedOverlayIds();
         if (!sceneId || ids.length < 2 || !ExperienciaEngine.groupSceneOverlays) return false;
         pushButtonHistory(sceneId);
-        var group = ExperienciaEngine.groupSceneOverlays(state, sceneId, ids);
+        var sz = overlayLayerSize();
+        var group = ExperienciaEngine.groupSceneOverlays(state, sceneId, ids, sz.w, sz.h);
         if (!group) return false;
-        canvas().selectedButtonIds = ids.slice();
-        canvas().selectedButtonId = ids[ids.length - 1] || null;
+        canvas().selectedButtonIds = [String(group.id)];
+        canvas().selectedButtonId = String(group.id);
+        canvas().activeOverlayGroupEditId = null;
         renderAll();
         paintInspector();
         persist();
@@ -8223,10 +8395,12 @@ var ExperienciaCanvas = (function () {
         if (!group || !ExperienciaEngine.ungroupSceneOverlay) return false;
         pushButtonHistory(sceneId);
         var memberIds = (group.memberIds || []).map(String);
-        var ok = ExperienciaEngine.ungroupSceneOverlay(state, sceneId, group.id);
+        var szU = overlayLayerSize();
+        var ok = ExperienciaEngine.ungroupSceneOverlay(state, sceneId, group.id, szU.w, szU.h);
         if (!ok) return false;
         canvas().selectedButtonIds = memberIds.slice();
         canvas().selectedButtonId = memberIds[memberIds.length - 1] || null;
+        canvas().activeOverlayGroupEditId = null;
         renderAll();
         paintInspector();
         persist();
@@ -8300,13 +8474,29 @@ var ExperienciaCanvas = (function () {
         if (hs && ExperienciaEngine.removeSceneHotspotMask) {
           ExperienciaEngine.removeSceneHotspotMask(state, sceneId, hs);
           canvas().selectedHotspotId = null;
-        } else if (ids.length && ExperienciaEngine.removeSceneButton) {
+        } else if (ids.length) {
           pushButtonHistory(sceneId);
           ids.forEach(function (bid) {
-            ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+            if (isOverlayGroupId(sceneId, bid)) {
+              var nDel = ExperienciaEngine.getNode(state, sceneId);
+              var gDel = nDel && ExperienciaEngine.getInteraction
+                ? ExperienciaEngine.getInteraction(nDel, bid)
+                : null;
+              (gDel && gDel.memberIds ? gDel.memberIds : []).forEach(function (mid) {
+                ExperienciaEngine.removeSceneButton(state, sceneId, mid);
+              });
+              if (nDel && nDel.config && Array.isArray(nDel.config.interactions)) {
+                nDel.config.interactions = nDel.config.interactions.filter(function (item) {
+                  return String(item.id) !== String(bid);
+                });
+              }
+            } else {
+              ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+            }
           });
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
+          canvas().activeOverlayGroupEditId = null;
         } else {
           return false;
         }
@@ -8319,6 +8509,7 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonId = null;
         canvas().selectedButtonIds = [];
         canvas().selectedHotspotId = null;
+        canvas().activeOverlayGroupEditId = null;
         renderAll();
         paintInspector();
         return true;

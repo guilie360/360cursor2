@@ -595,12 +595,44 @@
 
 .qe-layers__item {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 22px 18px 18px;
+  grid-template-columns: 18px 22px minmax(0, 1fr) 22px 18px 18px;
   align-items: center;
   gap: 2px;
   margin: 0 0 2px;
   padding: 2px;
   border-radius: 6px;
+}
+
+.qe-layers__fold,
+.qe-layers__fold-spacer {
+  width: 18px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.qe-layers__fold {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font: inherit;
+  font-size: 10px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.qe-layers__fold:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.qe-layers__item.is-nested .qe-layers__sel {
+  padding-left: 10px;
+}
+
+.qe-layers__item.is-group .qe-layers__type {
+  font-weight: 620;
 }
 
 .qe-layers__item:hover {
