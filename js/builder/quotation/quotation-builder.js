@@ -350,6 +350,42 @@ var QuotationBuilderView = (function () {
     if (body) body.innerHTML = '';
   }
 
+  /** Same chrome typography as Biblioteca / recursos del showroom. */
+  function configLeftChromeHtml() {
+    var title = String(projectCtx.name || projectCtx.slug || 'Proyecto').trim() || 'Proyecto';
+    var slug = String(projectCtx.slug || '').trim();
+    return '' +
+      '<div class="qe-lib-chrome qe-lib-chrome--config">' +
+        '<div class="qe-lib-chrome__head">' +
+          '<h2 class="qe-lib-chrome__title" data-qe-config-left-title' +
+            (slug ? ' title="/' + escapeHtml(slug) + '"' : '') + '>' +
+            escapeHtml(title) +
+          '</h2>' +
+          '<p class="qe-lib-chrome__sub">configuración del showroom</p>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function fillConfigLeftBody() {
+    var body = rootEl && rootEl.querySelector('#quotationLeftBody');
+    if (!body) return;
+    body.innerHTML = configLeftChromeHtml();
+  }
+
+  function syncConfigLeftChrome() {
+    if (currentStep !== 'config' || !rootEl) return;
+    var titleEl = rootEl.querySelector('[data-qe-config-left-title]');
+    if (!titleEl) {
+      fillConfigLeftBody();
+      return;
+    }
+    var title = String(projectCtx.name || projectCtx.slug || 'Proyecto').trim() || 'Proyecto';
+    var slug = String(projectCtx.slug || '').trim();
+    titleEl.textContent = title;
+    if (slug) titleEl.setAttribute('title', '/' + slug);
+    else titleEl.removeAttribute('title');
+  }
+
   function bindSectionCheck(panel) {
     if (!panel) return;
     var input = panel.querySelector('#builderSectionDoneCheck');
@@ -383,6 +419,7 @@ var QuotationBuilderView = (function () {
         projectCtx.name = payload.nombre;
         projectCtx.slug = payload.slug;
         projectCtx.constructora_id = payload.constructora_id || projectCtx.constructora_id;
+        syncConfigLeftChrome();
         if (typeof QuotationEditor !== 'undefined' && QuotationEditor.applyProjectIdentity) {
           try {
             QuotationEditor.applyProjectIdentity({
@@ -544,6 +581,7 @@ var QuotationBuilderView = (function () {
     clearRightBody();
     setPropsPanelVisible(currentStep === 'editor');
     setRecursosVisible(stepShowsLeftRail(currentStep));
+    if (currentStep === 'config') fillConfigLeftBody();
     if (workspace) {
       workspace.classList.toggle('is-editor', currentStep === 'editor');
       workspace.classList.toggle('is-config', currentStep === 'config');
@@ -831,6 +869,7 @@ var QuotationBuilderView = (function () {
     isChromeCollapsed: isChromeCollapsed,
     setPropsPanelVisible: setPropsPanelVisible,
     setRecursosVisible: setRecursosVisible,
+    syncConfigLeftChrome: syncConfigLeftChrome,
     expandPropsPanel: function () { applyRightCollapsed(false); },
     save: handleSave,
     getProjectLabel: function () {

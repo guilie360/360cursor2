@@ -3967,6 +3967,16 @@ body.quotation-canvas-first .builder-workspace,
   margin-bottom: 10px;
 }
 
+.qe-lib-chrome--config {
+  padding: 10px 8px 12px;
+  margin-bottom: 0;
+}
+
+.qe-lib-chrome--config .qe-lib-chrome__title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .qe-lib-chrome__head {
   text-align: center;
   padding: 2px 4px 0;
