@@ -5388,23 +5388,58 @@ var QuotationEditor = (function () {
     });
   }
 
+  function openScenesStripContextMenu(clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Menú de escenas',
+      items: [
+        {
+          id: 'create-scene',
+          label: 'Crear nueva escena'
+        },
+        {
+          id: 'delete-scenes',
+          label: 'Eliminar escenas',
+          danger: true,
+          separatorBefore: true
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'create-scene') {
+          createScene({});
+          return;
+        }
+        if (id === 'delete-scenes') {
+          openDeleteScenesDialog(state.activeSceneId);
+        }
+      }
+    });
+  }
+
   function bindSceneContextMenus(editor) {
     if (!editor || state.canvasPreviewMode) return;
-    var track = editor.querySelector('[data-qe-scenes-track]');
-    if (!track || track.dataset.qeSceneCtx === '1') return;
-    track.dataset.qeSceneCtx = '1';
-    track.addEventListener('contextmenu', function (e) {
-      var wrap = e.target && e.target.closest
-        ? e.target.closest('.qe-scenes__thumb-wrap')
-        : null;
-      if (!wrap || !track.contains(wrap)) return;
-      if (wrap.classList.contains('qe-scenes__thumb-wrap--add')) return;
-      var btn = wrap.querySelector('[data-qe-scene]');
-      var id = btn && btn.getAttribute('data-qe-scene');
-      if (!id) return;
+    var strip = editor.querySelector('[data-qe-scenes]');
+    if (!strip || strip.dataset.qeSceneCtx === '1') return;
+    strip.dataset.qeSceneCtx = '1';
+    strip.addEventListener('contextmenu', function (e) {
+      if (!e.target || !e.target.closest) return;
+      /* Keep fold / other chrome out of this menu. */
+      if (e.target.closest('[data-qe-scenes-fold]')) return;
       e.preventDefault();
       e.stopPropagation();
-      openSceneContextMenu(id, e.clientX, e.clientY);
+
+      var wrap = e.target.closest('.qe-scenes__thumb-wrap');
+      if (wrap && strip.contains(wrap) && !wrap.classList.contains('qe-scenes__thumb-wrap--add')) {
+        var btn = wrap.querySelector('[data-qe-scene]');
+        var id = btn && btn.getAttribute('data-qe-scene');
+        if (id) {
+          openSceneContextMenu(id, e.clientX, e.clientY);
+          return;
+        }
+      }
+      openScenesStripContextMenu(e.clientX, e.clientY);
     });
   }
 
