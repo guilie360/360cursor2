@@ -5418,17 +5418,54 @@ var QuotationEditor = (function () {
     });
   }
 
+  function isScenesStripChromeTarget(t) {
+    if (!t || !t.closest) return false;
+    /* Strip, host, track chrome, nav/add — not canvas/library. */
+    if (t.closest('[data-qe-scenes-host]')) return true;
+    if (t.closest('[data-qe-scenes]')) return true;
+    /* Column / stage gutters (padding around the strip). */
+    if (t.classList && t.classList.contains('qe-col--canvas')) return true;
+    if (t.matches && t.matches(
+      '[data-qe-stage-shell], [data-qe-stage-unit], .qe-scenes__track-wrap, .qe-scenes__track, .qe-scenes__add, .qe-scenes__nav'
+    )) return true;
+    return false;
+  }
+
   function bindSceneContextMenus(editor) {
     if (!editor || state.canvasPreviewMode) return;
-    var strip = editor.querySelector('[data-qe-scenes]');
-    if (!strip || strip.dataset.qeSceneCtx === '1') return;
-    strip.dataset.qeSceneCtx = '1';
-    strip.addEventListener('contextmenu', function (e) {
-      if (!e.target || !e.target.closest) return;
-      /* Keep fold / other chrome out of this menu. */
-      if (e.target.closest('[data-qe-scenes-fold]')) return;
+    var col = editor.querySelector('.qe-col--canvas');
+    if (!col || col.dataset.qeSceneCtx === '1') return;
+    col.dataset.qeSceneCtx = '1';
+
+    /* Capture: kill browser/Opera menu on strip + gutters before anything else. */
+    col.addEventListener('contextmenu', function (e) {
+      if (!e.target || !isScenesStripChromeTarget(e.target)) return;
+
+      var host = col.querySelector('[data-qe-scenes-host]');
+      var strip = col.querySelector('[data-qe-scenes]');
+
+      /* Fold control: silence only. */
+      if (e.target.closest && e.target.closest('[data-qe-scenes-fold]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      /* Bare column / stage padding: silence only (no Opera, no BOXIES menu). */
+      var onBareGutter =
+        e.target === col ||
+        (e.target.matches && e.target.matches('[data-qe-stage-shell], [data-qe-stage-unit]')) ||
+        (host && e.target === host);
+      if (onBareGutter) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
+
+      if (!strip || !(strip.contains(e.target) || e.target === strip)) return;
 
       var wrap = e.target.closest('.qe-scenes__thumb-wrap');
       if (wrap && strip.contains(wrap) && !wrap.classList.contains('qe-scenes__thumb-wrap--add')) {
@@ -5440,7 +5477,7 @@ var QuotationEditor = (function () {
         }
       }
       openScenesStripContextMenu(e.clientX, e.clientY);
-    });
+    }, true);
   }
 
   function createScene(opts) {
