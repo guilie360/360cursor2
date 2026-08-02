@@ -555,8 +555,16 @@ body.main-menu-open:has(#mainMenu.is-personalizar) #mainMenuBackdrop {
   flex-direction:column;
   padding:0;
   isolation:isolate;
+  /*
+   * Closed menu sits off-canvas (translateX -100%). Without clipping, the
+   * glass box-shadow still bleeds into the viewport as a left “shadow column”.
+   */
+  overflow:hidden;
 }
-.main-menu.active { transform:translateX(0); }
+.main-menu.active {
+  transform:translateX(0);
+  overflow:visible;
+}
 
 .main-menu::before {
   content:'';
@@ -574,6 +582,12 @@ body.main-menu-open:has(#mainMenu.is-personalizar) #mainMenuBackdrop {
     var(--glass-shadow, 24px 0 64px color-mix(in srgb, var(--bg-main) 28%, transparent)),
     inset 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
   z-index:-2;
+}
+
+/* Belt-and-suspenders: no cast shadow while the drawer is off-screen. */
+.main-menu:not(.active)::before,
+.main-menu:not(.active) .main-menu-glass-vignette {
+  box-shadow:none !important;
 }
 .main-menu::after {
   content:'';
