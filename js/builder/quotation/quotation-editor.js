@@ -6703,6 +6703,27 @@ var QuotationEditor = (function () {
         e.preventDefault();
         e.stopPropagation();
       } catch (eNav) { /* ignore */ }
+      return;
+    }
+
+    /* ↓ — toggle hide panels + scenes (same as header chrome-fold). */
+    if (e.key === 'ArrowDown') {
+      if (e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+      if (document.body.classList.contains('admin-modal-open')) return;
+      var ctxPortal = document.getElementById('qeContextMenuPortal');
+      if (ctxPortal && ctxPortal.getAttribute('aria-hidden') === 'false' && ctxPortal.children.length) {
+        return;
+      }
+      try {
+        if (typeof QuotationBuilderView === 'undefined' ||
+            typeof QuotationBuilderView.toggleChromeCollapsed !== 'function') {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        QuotationBuilderView.toggleChromeCollapsed();
+      } catch (eFold) { /* ignore */ }
     }
   }
 
