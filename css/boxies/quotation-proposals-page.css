@@ -978,10 +978,6 @@ body.qr-proposals-page .qpp {
   color: #fff;
 }
 
-.qpp-cmp-upgrade__intro-text--narrow {
-  display: none;
-}
-
 .qpp-cmp-upgrade__flow {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -1081,14 +1077,6 @@ body.qr-proposals-page .qpp {
 }
 
 @media (max-width: 700px) {
-  .qpp-cmp-upgrade__intro-text--wide {
-    display: none;
-  }
-
-  .qpp-cmp-upgrade__intro-text--narrow {
-    display: block;
-  }
-
   .qpp-cmp-upgrade__flow {
     width: min(340px, 100%);
     gap: 10px;
