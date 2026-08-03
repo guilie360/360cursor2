@@ -4713,7 +4713,7 @@ body.quotation-canvas-first .builder-workspace,
 }
 .builder-exp-stage-shape--line .builder-exp-stage-shape__hit {
   top: 50%;
-  height: 4px;
+  height: 12px;
   transform: translateY(-50%);
 }
 .builder-exp-stage-shape--circle {
@@ -4741,9 +4741,9 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow {
   opacity: 1;
   filter:
-    drop-shadow(0 0 2px rgba(255, 255, 255, 0.95))
-    drop-shadow(0 0 5px rgba(255, 255, 255, 0.55))
-    drop-shadow(0 0 10px rgba(255, 255, 255, 0.28));
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.76))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.44))
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
 }
 
 /* Line selection — endpoints only, no bounding box */
@@ -4774,7 +4774,7 @@ body.quotation-canvas-first .builder-workspace,
   right: 0;
   top: 50%;
   width: 100%;
-  height: 4px;
+  height: 12px;
   transform: translateY(-50%);
 }
 .builder-exp-sel-gizmo.is-line.is-multi {
