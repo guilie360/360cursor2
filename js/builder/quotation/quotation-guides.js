@@ -177,7 +177,7 @@ var QuotationGuides = (function () {
     var layer = fitFrameEl() && fitFrameEl().querySelector('[data-qe-guide-layer]');
     if (!layer) return;
     var color = getActiveGuideColor();
-    var glow = guideColorGlow(color, 0.42);
+    var glow = guideColorGlow(color, 0.22);
     layer.querySelectorAll('[data-qe-guide-id]').forEach(function (el) {
       var id = el.getAttribute('data-qe-guide-id');
       var on = selectedGuideId && String(id) === String(selectedGuideId);

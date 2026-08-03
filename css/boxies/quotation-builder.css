@@ -5013,9 +5013,9 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 34;
   background: var(--qe-guide-line-color, var(--qe-guide-color, #b33a3a));
   box-shadow:
-    0 0 0 1px var(--qe-guide-line-color, var(--qe-guide-color, #b33a3a)),
-    0 0 7px 1px var(--qe-guide-glow, rgba(179, 58, 58, 0.42)),
-    0 0 16px 3px var(--qe-guide-glow, rgba(179, 58, 58, 0.22));
+    0 0 0 1px color-mix(in srgb, var(--qe-guide-line-color, var(--qe-guide-color, #b33a3a)) 55%, transparent),
+    0 0 4px 0 var(--qe-guide-glow, rgba(179, 58, 58, 0.22)),
+    0 0 10px 1px var(--qe-guide-glow, rgba(179, 58, 58, 0.1));
 }
 
 .qe-guide-line--vertical {
