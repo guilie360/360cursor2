@@ -955,6 +955,14 @@ body.qr-proposals-page .qpp {
   opacity: 0;
 }
 
+.qpp-cmp-upgrade__heading-arrow {
+  display: inline-block;
+  margin: 0 0.12em;
+  letter-spacing: 0;
+  text-indent: 0;
+  font-weight: 400;
+}
+
 .qpp-cmp-upgrade__intro {
   width: min(36rem, 100%);
   margin: 0 0 clamp(28px, 5vh, 44px);

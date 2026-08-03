@@ -133,7 +133,7 @@ var QuotationProposalsPage = (function () {
               '<div class="qpp-cmp" data-qpp-compare-board></div>' +
             '</div>' +
             '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
-              '<h1 class="qpp__title qpp-cmp-upgrade__heading">Upgrade a Motion</h1>' +
+              '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> MOTION</h1>' +
               '<div class="qpp-cmp-upgrade__intro">' +
                 '<p class="qpp-cmp-upgrade__intro-text">' +
                   'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión STILL</strong>.' +
