@@ -793,6 +793,53 @@ var ExperienciaEngine = (function () {
     return g;
   }
 
+  /** Resolve group for a member — uses ix.groupId or memberIds[] fallback + repairs orphan refs. */
+  function findOverlayGroupForMember(n, memberId) {
+    if (!n || !memberId) return null;
+    var mid = String(memberId);
+    var ix = getInteraction(n, mid);
+    if (ix && ix.groupId) {
+      var linked = getInteraction(n, ix.groupId);
+      if (linked && isOverlayGroupInteraction(linked)) return linked;
+    }
+    var groups = listOverlayGroupInteractions(n);
+    for (var i = 0; i < groups.length; i++) {
+      var g = groups[i];
+      if (!g || !Array.isArray(g.memberIds)) continue;
+      if (g.memberIds.map(String).indexOf(mid) < 0) continue;
+      if (ix && !ix.groupId) ix.groupId = g.id;
+      return g;
+    }
+    return null;
+  }
+
+  /** Grow group frame only when composed members exceed the current axis-aligned box. */
+  function expandOverlayGroupBoundsIfMemberOverflow(n, g, layerW, layerH) {
+    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    var union = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    if (!union) return g;
+    var gx = Number(g.x) || 50;
+    var gy = Number(g.y) || 50;
+    var gw = Number(g.width) || 20;
+    var gh = Number(g.height) || 20;
+    var gL = gx - gw / 2;
+    var gR = gx + gw / 2;
+    var gT = gy - gh / 2;
+    var gB = gy + gh / 2;
+    var uL = union.cx - union.w / 2;
+    var uR = union.cx + union.w / 2;
+    var uT = union.cy - union.h / 2;
+    var uB = union.cy + union.h / 2;
+    var eps = 0.08;
+    if (uL >= gL - eps && uR <= gR + eps && uT >= gT - eps && uB <= gB + eps) {
+      return g;
+    }
+    return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+  }
+
   function snapshotOverlayGroupLocals(n, g) {
     var out = {};
     if (!n || !g || !Array.isArray(g.memberIds)) return out;
@@ -6703,6 +6750,8 @@ var ExperienciaEngine = (function () {
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
     syncOverlayGroupFrameFromMembers: syncOverlayGroupFrameFromMembers,
     commitOverlayGroupBounds: commitOverlayGroupBounds,
+    findOverlayGroupForMember: findOverlayGroupForMember,
+    expandOverlayGroupBoundsIfMemberOverflow: expandOverlayGroupBoundsIfMemberOverflow,
     reconcileOverlayGroupTransform: reconcileOverlayGroupTransform,
     isHotspotsEditableNode: isHotspotsEditableNode,
     isSceneHotspotMask: isSceneHotspotMask,
