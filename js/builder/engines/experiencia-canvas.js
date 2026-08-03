@@ -33,6 +33,142 @@ var ExperienciaCanvas = (function () {
     return false;
   }
 
+  /** Uniform tile scale + anchored gizmo — single SSOT with sceneShapeGizmoMetrics. */
+  function computeShapeResizeLive(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
+    if (!drag || !isShapeType(drag.type)) return null;
+    var kind = String(drag.type || '').toUpperCase();
+    var moveE = mode.indexOf('e') >= 0;
+    var moveW = mode.indexOf('w') >= 0;
+    var moveS = mode.indexOf('s') >= 0;
+    var moveN = mode.indexOf('n') >= 0;
+    var startGwPx = drag.startWpx;
+    var startGhPx = drag.startHpx;
+    var startLpx = drag.startLpx;
+    var startRpx = drag.startRpx;
+    var startTpx = drag.startTpx;
+    var startBpx = drag.startBpx;
+    var startTileW = drag.startTileW;
+    if (!startGwPx || !startTileW) return null;
+
+    var minGwPx = Math.max(6, (1.2 / 100) * layerW);
+    var candGw = startGwPx;
+    var candGh = startGhPx;
+
+    if (kind === 'SHAPE_LINE') {
+      if (moveE && !moveW) candGw = startRpx + dxPx - startLpx;
+      else if (moveW && !moveE) candGw = startRpx - (startLpx + dxPx);
+      else candGw = startGwPx + (moveE ? dxPx : 0) - (moveW ? dxPx : 0);
+      candGw = Math.max(minGwPx, candGw);
+      var lineScale = candGw / startGwPx;
+      var lineTileW = startTileW * lineScale;
+      var lineGxPx = moveW && !moveE
+        ? startRpx - candGw / 2
+        : startLpx + candGw / 2;
+      var lineGyPx = (startTpx + startBpx) / 2;
+      var lineNx = (lineGxPx / layerW) * 100;
+      var lineNy = (lineGyPx / layerH) * 100;
+      var lineTileWPct = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+        ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth((candGw / layerW) * 100, kind)
+        : (candGw / layerW) * 100;
+      var lineTileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+        ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+          lineNx, lineNy, lineTileWPct, kind, layerW, layerH
+        )
+        : { x: lineNx, y: lineNy };
+      var lineGm = ExperienciaEngine.sceneShapeGizmoMetrics
+        ? ExperienciaEngine.sceneShapeGizmoMetrics(
+          lineTileWPct, kind, layerW, layerH, lineTileCtr.x, lineTileCtr.y
+        )
+        : null;
+      if (!lineGm) return null;
+      return {
+        tileW: lineTileWPct,
+        tileCtr: lineTileCtr,
+        tileDisp: shapeDisplaySize(lineTileWPct, layerW, layerH),
+        gm: lineGm,
+        patch: {
+          x: lineTileCtr.x,
+          y: lineTileCtr.y,
+          width: lineTileWPct,
+          height: shapeDisplaySize(lineTileWPct, layerW, layerH).h
+        }
+      };
+    }
+
+    if (moveE) candGw = startRpx + dxPx - startLpx;
+    if (moveW) candGw = startRpx - (startLpx + dxPx);
+    if (moveS) candGh = startBpx + dyPx - startTpx;
+    if (moveN) candGh = startBpx - (startTpx + dyPx);
+    candGw = Math.max(minGwPx, candGw);
+    candGh = Math.max(6, candGh);
+
+    var scaleW = candGw / startGwPx;
+    var scaleH = candGh / startGhPx;
+    var scale = scaleW;
+    var isCorner = (moveE || moveW) && (moveN || moveS);
+    if (isCorner) {
+      scale = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
+        ? (Math.abs(dxPx) * startGhPx >= Math.abs(dyPx) * startGwPx ? scaleW : scaleH)
+        : (Math.abs(dxPx) >= Math.abs(dyPx) ? scaleW : scaleH);
+    } else if ((moveN || moveS) && !(moveE || moveW)) {
+      scale = scaleH;
+    }
+    scale = Math.max(0.06, Math.min(6, scale));
+
+    var newGwPx = startGwPx * scale;
+    var newGhPx = startGhPx * scale;
+    var newGxPx = (startLpx + startRpx) / 2;
+    var newGyPx = (startTpx + startBpx) / 2;
+
+    if (moveE && !moveW) newGxPx = startLpx + newGwPx / 2;
+    else if (moveW && !moveE) newGxPx = startRpx - newGwPx / 2;
+    if (moveS && !moveN) newGyPx = startTpx + newGhPx / 2;
+    else if (moveN && !moveS) newGyPx = startBpx - newGhPx / 2;
+    if (moveE && moveN) {
+      newGxPx = startLpx + newGwPx / 2;
+      newGyPx = startBpx - newGhPx / 2;
+    } else if (moveE && moveS) {
+      newGxPx = startLpx + newGwPx / 2;
+      newGyPx = startTpx + newGhPx / 2;
+    } else if (moveW && moveN) {
+      newGxPx = startRpx - newGwPx / 2;
+      newGyPx = startBpx - newGhPx / 2;
+    } else if (moveW && moveS) {
+      newGxPx = startRpx - newGwPx / 2;
+      newGyPx = startTpx + newGhPx / 2;
+    }
+
+    var nx = (newGxPx / layerW) * 100;
+    var ny = (newGyPx / layerH) * 100;
+    var tileWPct = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+      ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth((newGwPx / layerW) * 100, kind)
+      : (newGwPx / layerW) * 100;
+    var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+      ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+        nx, ny, tileWPct, kind, layerW, layerH
+      )
+      : { x: nx, y: ny };
+    var gm = ExperienciaEngine.sceneShapeGizmoMetrics
+      ? ExperienciaEngine.sceneShapeGizmoMetrics(
+        tileWPct, kind, layerW, layerH, tileCtr.x, tileCtr.y
+      )
+      : null;
+    if (!gm) return null;
+    var tileDisp = shapeDisplaySize(tileWPct, layerW, layerH);
+    return {
+      tileW: tileWPct,
+      tileCtr: tileCtr,
+      tileDisp: tileDisp,
+      gm: gm,
+      patch: {
+        x: tileCtr.x,
+        y: tileCtr.y,
+        width: tileWPct,
+        height: tileDisp.h
+      }
+    };
+  }
+
   function shapeDefaultSize(t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
       return ExperienciaEngine.sceneShapeDefaultSize(t);
@@ -4448,32 +4584,23 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    /** Shape resize — pixel-locked gizmo + tile; no % round-trip jitter. */
-    function applyLiveShapeResizePaint(buttonId, box, kind) {
-      if (!buttonsLayer || !buttonId || !box) return;
+    /** Paint shape tile + gizmo from engine metrics (tile center ≠ gizmo center). */
+    function paintShapeLiveMetrics(buttonId, kind, tileCtr, tileDisp, gm, layerW, layerH) {
+      if (!buttonsLayer || !buttonId || !tileCtr || !tileDisp || !gm) return;
       kind = String(kind || '').toUpperCase();
-      var layerW = Math.max(1, buttonsLayer.clientWidth || 1000);
-      var layerH = Math.max(1, buttonsLayer.clientHeight || 1000);
       var idSel = String(buttonId).replace(/"/g, '');
-      var Lpx = Number(box.lpx);
-      var Rpx = Number(box.rpx);
-      var Tpx = Number(box.tpx);
-      var Bpx = Number(box.bpx);
-      var cxPx = (Lpx + Rpx) * 0.5;
-      var cyPx = (Tpx + Bpx) * 0.5;
-      var gwPx = Math.max(1, Rpx - Lpx);
-      var ghPx = Math.max(1, Bpx - Tpx);
-      var nw = (gwPx / layerW) * 100;
-      var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
-        ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(nw, kind)
-        : nw;
-      var tileDisp = shapeDisplaySize(tileW, layerW, layerH);
+      var tileCxPx = (Number(tileCtr.x) / 100) * layerW;
+      var tileCyPx = (Number(tileCtr.y) / 100) * layerH;
       var tileWPx = (tileDisp.w / 100) * layerW;
       var tileHPx = (tileDisp.h / 100) * layerH;
+      var gizmoCxPx = (gm.gx / 100) * layerW;
+      var gizmoCyPx = (gm.gy / 100) * layerH;
+      var gizmoWPx = (gm.gw / 100) * layerW;
+      var gizmoHPx = (gm.gh / 100) * layerH;
       var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
       if (el) {
-        el.style.left = cxPx + 'px';
-        el.style.top = cyPx + 'px';
+        el.style.left = tileCxPx + 'px';
+        el.style.top = tileCyPx + 'px';
         el.style.width = tileWPx + 'px';
         el.style.height = tileHPx + 'px';
       }
@@ -4481,19 +4608,51 @@ var ExperienciaCanvas = (function () {
         '[data-exp-gizmo][data-gizmo-id="' + idSel + '"]'
       );
       if (gizmo) {
-        gizmo.style.left = cxPx + 'px';
-        gizmo.style.top = cyPx + 'px';
-        gizmo.style.width = gwPx + 'px';
-        gizmo.style.height = ghPx + 'px';
+        gizmo.style.left = gizmoCxPx + 'px';
+        gizmo.style.top = gizmoCyPx + 'px';
+        gizmo.style.width = gizmoWPx + 'px';
+        gizmo.style.height = gizmoHPx + 'px';
         gizmo.classList.add('is-sizing');
         var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
         if (sizeEl) {
           var label = kind === 'SHAPE_LINE'
-            ? Math.max(1, Math.round(gwPx)) + ' px'
-            : Math.max(1, Math.round(gwPx)) + ' × ' + Math.max(1, Math.round(ghPx));
+            ? Math.max(1, Math.round(gizmoWPx)) + ' px'
+            : Math.max(1, Math.round(gizmoWPx)) + ' × ' + Math.max(1, Math.round(gizmoHPx));
           if (sizeEl.textContent !== label) sizeEl.textContent = label;
         }
       }
+    }
+
+    /** @deprecated — use paintShapeLiveMetrics */
+    function applyLiveShapeResizePaint(buttonId, box, kind) {
+      if (!buttonsLayer || !buttonId || !box) return;
+      kind = String(kind || '').toUpperCase();
+      var layerW = Math.max(1, buttonsLayer.clientWidth || 1000);
+      var layerH = Math.max(1, buttonsLayer.clientHeight || 1000);
+      var Lpx = Number(box.lpx);
+      var Rpx = Number(box.rpx);
+      var Tpx = Number(box.tpx);
+      var Bpx = Number(box.bpx);
+      var nx = (((Lpx + Rpx) * 0.5) / layerW) * 100;
+      var ny = (((Tpx + Bpx) * 0.5) / layerH) * 100;
+      var nw = ((Rpx - Lpx) / layerW) * 100;
+      var tileWPct = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+        ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(nw, kind)
+        : nw;
+      var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+        ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+          nx, ny, tileWPct, kind, layerW, layerH
+        )
+        : { x: nx, y: ny };
+      var gm = ExperienciaEngine.sceneShapeGizmoMetrics
+        ? ExperienciaEngine.sceneShapeGizmoMetrics(
+          tileWPct, kind, layerW, layerH, tileCtr.x, tileCtr.y
+        )
+        : null;
+      if (!gm) return;
+      paintShapeLiveMetrics(
+        buttonId, kind, tileCtr, shapeDisplaySize(tileWPct, layerW, layerH), gm, layerW, layerH
+      );
     }
 
     function syncLiveSpacingGuides() {
@@ -7084,9 +7243,34 @@ var ExperienciaCanvas = (function () {
             var ptrLocal = clientToOverlayLocalPx(ev.clientX, ev.clientY);
             var dxPx = ptrLocal.x - transformDrag.startPtrX;
             var dyPx = ptrLocal.y - transformDrag.startPtrY;
+            var moveE = mode.indexOf('e') >= 0;
+            var moveW = mode.indexOf('w') >= 0;
+            var moveS = mode.indexOf('s') >= 0;
+            var moveN = mode.indexOf('n') >= 0;
+
+            if (shapeLiveResize) {
+              var shapeLive = computeShapeResizeLive(
+                transformDrag, dxPx, dyPx, layerW, layerH, mode, transformDrag.keepRatio
+              );
+              if (shapeLive) {
+                transformDrag.liveShapePatch = shapeLive.patch;
+                paintShapeLiveMetrics(
+                  transformDrag.buttonId,
+                  transformDrag.type,
+                  shapeLive.tileCtr,
+                  shapeLive.tileDisp,
+                  shapeLive.gm,
+                  layerW,
+                  layerH
+                );
+              }
+              transformDrag.guides = { spacing: [] };
+              syncLiveOverlayGuides(transformDrag.guides);
+              return;
+            }
+
             /* Shapes: screen-axis resize (rotation applied only visually, not to the box math). */
-            var rad = shapeLiveResize ? 0 :
-              (Number(transformDrag.startRot) || 0) * Math.PI / 180;
+            var rad = (Number(transformDrag.startRot) || 0) * Math.PI / 180;
             var cosR = Math.cos(rad);
             var sinR = Math.sin(rad);
             var localDxPx = dxPx * cosR + dyPx * sinR;
@@ -7107,10 +7291,6 @@ var ExperienciaCanvas = (function () {
             var minHpx = Math.max(8, (1.5 / 100) * layerH);
             var maxWpx = (95 / 100) * layerW;
             var maxHpx = (95 / 100) * layerH;
-            var moveE = mode.indexOf('e') >= 0;
-            var moveW = mode.indexOf('w') >= 0;
-            var moveS = mode.indexOf('s') >= 0;
-            var moveN = mode.indexOf('n') >= 0;
 
             if (moveE) Rpx = startRpx + localDxPx;
             if (moveW) Lpx = startLpx + localDxPx;
@@ -7272,31 +7452,11 @@ var ExperienciaCanvas = (function () {
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
-            } else if (isShapeType(transformDrag.type)) {
-              var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
-                ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(nw, transformDrag.type)
-                : nw;
-              var tileDisp = shapeDisplaySize(tileW, layerW, layerH);
-              var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
-                ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
-                  nx, ny, tileW, transformDrag.type, layerW, layerH
-                )
-                : { x: nx, y: ny };
-              transformDrag.liveShapePatch = {
-                x: tileCtr.x,
-                y: tileCtr.y,
-                width: tileW,
-                height: tileDisp.h
-              };
-              transformDrag.liveBox = { lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx };
-              applyLiveResizePaint(transformDrag.buttonId, transformDrag.liveBox, transformDrag.type);
             }
-            if (!isShapeType(transformDrag.type)) {
-              ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
-              applyLiveResizePaint(transformDrag.buttonId, {
-                lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
-              }, transformDrag.type);
-            }
+            ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
+            applyLiveResizePaint(transformDrag.buttonId, {
+              lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
+            }, transformDrag.type);
             /* No align mini-guides while resizing. */
             transformDrag.guides = { spacing: [] };
             syncLiveOverlayGuides(transformDrag.guides);
@@ -7600,6 +7760,9 @@ var ExperienciaCanvas = (function () {
             startPy: pct0.y,
             startPtrX: ptr0.x,
             startPtrY: ptr0.y,
+            startTileW: isShapeType(gtype)
+              ? (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12))
+              : null,
             keepRatio: isShapeType(gtype) ? !ev.shiftKey :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
