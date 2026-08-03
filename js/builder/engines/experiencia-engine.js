@@ -806,7 +806,12 @@ var ExperienciaEngine = (function () {
     for (var i = 0; i < groups.length; i++) {
       var g = groups[i];
       if (!g || !Array.isArray(g.memberIds)) continue;
-      if (g.memberIds.map(String).indexOf(mid) < 0) continue;
+      var inGroup = g.memberIds.some(function (rawId) {
+        if (String(rawId) === mid) return true;
+        var member = getInteraction(n, rawId);
+        return !!(member && String(member.portId || '') === mid);
+      });
+      if (!inGroup) continue;
       if (ix && !ix.groupId) ix.groupId = g.id;
       return g;
     }

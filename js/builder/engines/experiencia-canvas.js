@@ -1888,6 +1888,18 @@ var ExperienciaCanvas = (function () {
     var groupEditPulse = null; /* { groupId, childId, at } */
     var groupPointerGesture = null; /* deferred group drag / double-click */
     var groupEditFrozenFrame = null; /* frozen group AABB while deep-selecting a child */
+    var GROUP_DEBUG = false;
+    try {
+      GROUP_DEBUG = /(?:\?|&)groupDebug=1(?:&|$)/.test(String(window.location.search || ''));
+    } catch (eGd) { /* ignore */ }
+
+    function groupDebugLog() {
+      if (!GROUP_DEBUG) return;
+      try {
+        var args = ['[QE:group]'].concat(Array.prototype.slice.call(arguments));
+        console.log.apply(console, args);
+      } catch (eLog) { /* ignore */ }
+    }
     var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
@@ -5549,12 +5561,34 @@ var ExperienciaCanvas = (function () {
       if (!sceneId || !hitId) return null;
       if (isOverlayGroupId(sceneId, hitId)) return null;
       var n = ExperienciaEngine.getNode(state, sceneId);
-      if (!n) return null;
+      if (!n) {
+        groupDebugLog('resolveGroupedOverlayHit: no node', { sceneId: sceneId, hitId: hitId });
+        return null;
+      }
       var g = ExperienciaEngine.findOverlayGroupForMember
         ? ExperienciaEngine.findOverlayGroupForMember(n, hitId)
         : null;
-      if (!g) return null;
-      return { groupId: String(g.id), childId: String(hitId) };
+      if (!g) {
+        var ix = ExperienciaEngine.getInteraction ? ExperienciaEngine.getInteraction(n, hitId) : null;
+        var groupSummaries = [];
+        (n.config && n.config.interactions || []).forEach(function (item) {
+          if (!item || !ExperienciaEngine.isOverlayGroupInteraction ||
+              !ExperienciaEngine.isOverlayGroupInteraction(item)) return;
+          groupSummaries.push({
+            id: item.id,
+            memberIds: (item.memberIds || []).slice()
+          });
+        });
+        groupDebugLog('resolveGroupedOverlayHit: miss', {
+          hitId: hitId,
+          ixGroupId: ix && ix.groupId,
+          groups: groupSummaries
+        });
+        return null;
+      }
+      var hit = { groupId: String(g.id), childId: String(hitId) };
+      groupDebugLog('resolveGroupedOverlayHit: hit', hit);
+      return hit;
     }
 
     function captureGroupEditFrozenFrame(groupId, sceneId) {
@@ -5618,6 +5652,7 @@ var ExperienciaCanvas = (function () {
 
     function enterOverlayGroupEditMode(groupId, childId) {
       if (!groupId || !childId) return false;
+      groupDebugLog('enterOverlayGroupEditMode', { groupId: groupId, childId: childId });
       var sceneId = canvas().selectedId;
       if (sceneId && ExperienciaEngine.commitOverlayGroupBounds) {
         commitGroupBoundsIfNeeded(sceneId, groupId);
@@ -5639,6 +5674,7 @@ var ExperienciaCanvas = (function () {
       opts = opts || {};
       var groupId = canvas().activeOverlayGroupEditId;
       if (!groupId) return false;
+      groupDebugLog('exitOverlayGroupEditMode', { groupId: groupId, opts: opts });
       var sceneId = canvas().selectedId;
       canvas().activeOverlayGroupEditId = null;
       groupEditFrozenFrame = null;
@@ -7193,6 +7229,7 @@ var ExperienciaCanvas = (function () {
             groupEditPulse = null;
             ev.preventDefault();
             ev.stopPropagation();
+            groupDebugLog('pointerdown: deep-edit child move', { childId: cid, groupId: gid });
             if (getSelectedOverlayIds().indexOf(cid) < 0) {
               canvas().selectedButtonIds = [cid];
               canvas().selectedButtonId = cid;
@@ -7202,9 +7239,29 @@ var ExperienciaCanvas = (function () {
             return;
           }
 
+          var nowPulse = Date.now();
+          if (groupEditPulse &&
+              String(groupEditPulse.groupId) === gid &&
+              String(groupEditPulse.childId) === cid &&
+              (nowPulse - groupEditPulse.at) < 480) {
+            groupEditPulse = null;
+            ev.preventDefault();
+            ev.stopPropagation();
+            cancelOverlayGestures();
+            groupDebugLog('pointerdown: double-tap → enter deep-edit', { groupId: gid, childId: cid });
+            commitGroupBoundsIfNeeded(sceneIdHit, gid);
+            enterOverlayGroupEditMode(gid, cid);
+            return;
+          }
+
           ev.preventDefault();
           ev.stopPropagation();
-          groupEditPulse = null;
+          groupEditPulse = { groupId: gid, childId: cid, at: nowPulse };
+          groupDebugLog('pointerdown: single click → select group', {
+            groupId: gid,
+            childId: cid,
+            armedDoubleTap: true
+          });
           canvas().activeOverlayGroupEditId = null;
           groupEditFrozenFrame = null;
           if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
@@ -7235,6 +7292,11 @@ var ExperienciaCanvas = (function () {
         ev.preventDefault();
         ev.stopPropagation();
         bid = resolveOverlayPickId(sceneIdHit, bid);
+        groupDebugLog('pointerdown: ungrouped path', {
+          bid: bid,
+          resolvedFrom: hit.getAttribute('data-exp-stage-btn'),
+          editGroupId: canvas().activeOverlayGroupEditId || null
+        });
         var cur = getSelectedOverlayIds();
         if (ev.shiftKey) {
           canvas().activeOverlayGroupEditId = null;
@@ -7266,6 +7328,7 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.addEventListener('dblclick', function (ev) {
         var sceneId = canvas().selectedId;
         var grouped = resolveGroupedChildFromEvent(ev, sceneId);
+        groupDebugLog('dblclick (native fallback)', grouped);
         if (!grouped) return;
         ev.preventDefault();
         ev.stopPropagation();
@@ -7417,6 +7480,12 @@ var ExperienciaCanvas = (function () {
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
+      if (GROUP_DEBUG) {
+        groupDebugLog('instrumentation ready v7475', {
+          sceneId: canvas().selectedId,
+          overlayMode: overlayMode
+        });
+      }
       window.addEventListener('blur', function () {
         finishButtonNudge();
         cancelOverlayGestures();
@@ -8924,24 +8993,25 @@ var ExperienciaCanvas = (function () {
         } else if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
           canvas().editMode = 'buttons';
           canvas().activeOverlayGroupEditId = null;
+          groupEditFrozenFrame = null;
           if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
           canvas().selectedButtonId = String(itemId);
           canvas().selectedButtonIds = [String(itemId)];
           canvas().selectedHotspotId = null;
-        } else if (ix.groupId) {
-          canvas().editMode = 'buttons';
-          canvas().selectedHotspotId = null;
-          canvas().activeOverlayGroupEditId = null;
-          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-          canvas().selectedButtonId = String(ix.groupId);
-          canvas().selectedButtonIds = [String(ix.groupId)];
         } else {
+          var groupedSel = resolveGroupedOverlayHit(sceneId, itemId);
           canvas().editMode = 'buttons';
-          canvas().activeOverlayGroupEditId = null;
-          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-          canvas().selectedButtonId = String(itemId);
-          canvas().selectedButtonIds = [String(itemId)];
           canvas().selectedHotspotId = null;
+          canvas().activeOverlayGroupEditId = null;
+          groupEditFrozenFrame = null;
+          if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
+          if (groupedSel) {
+            canvas().selectedButtonId = groupedSel.groupId;
+            canvas().selectedButtonIds = [groupedSel.groupId];
+          } else {
+            canvas().selectedButtonId = String(itemId);
+            canvas().selectedButtonIds = [String(itemId)];
+          }
         }
         paintButtonsStage();
         paintHotspotsStage();
