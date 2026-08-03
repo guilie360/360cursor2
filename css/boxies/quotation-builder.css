@@ -4782,6 +4782,12 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Multi-select: box chrome on every selected overlay (handles only when alone). */
+.builder-exp-stage-shape.is-live-sizing {
+  overflow: hidden !important;
+}
+.builder-exp-stage-shape.is-live-sizing .builder-exp-stage-shape__svg {
+  overflow: hidden !important;
+}
 .builder-exp-stage-shape.is-live-moving {
   contain: layout style;
 }

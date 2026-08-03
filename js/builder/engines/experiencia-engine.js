@@ -2005,7 +2005,29 @@ var ExperienciaEngine = (function () {
     return buttonViewModel(state, n, ix);
   }
 
-  function addSceneShape(state, nodeId, kind) {
+  /** New shapes store gizmo box directly (not tile picker square). */
+  function seedShapeContentBox(ix, kind, layerW, layerH) {
+    if (!ix || !isSceneShapeType(kind || ix.type)) return ix;
+    kind = String(kind || ix.type).toUpperCase();
+    var lw = Math.max(1, Number(layerW) || 1920);
+    var lh = Math.max(1, Number(layerH) || 1080);
+    ensureFreeOverlayDefaults(ix);
+    var cx = Number(ix.x) || 50;
+    var cy = Number(ix.y) || 50;
+    var tileW = Number(ix.width) || sceneShapeDefaultSize(kind).w;
+    var st = shapeStretchFromIx(ix);
+    var gm = sceneShapeGizmoMetrics(
+      tileW, kind, lw, lh, cx, cy, st.sx, st.sy, ix.height, ix
+    );
+    ix.x = gm.gx;
+    ix.y = gm.gy;
+    ix.width = gm.gw;
+    ix.height = gm.gh;
+    ix.shapeContentBox = true;
+    return ix;
+  }
+
+  function addSceneShape(state, nodeId, kind, layerW, layerH) {
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var t = String(kind || 'SHAPE_RECT').toUpperCase();
@@ -2024,6 +2046,7 @@ var ExperienciaEngine = (function () {
     ix.positionInitialized = true;
     ix.positionMode = 'free';
     ensureFreeOverlayDefaults(ix);
+    seedShapeContentBox(ix, t, layerW, layerH);
     return buttonViewModel(state, n, ix);
   }
 
@@ -7268,6 +7291,7 @@ var ExperienciaEngine = (function () {
     shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
+    seedShapeContentBox: seedShapeContentBox,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,
     sceneShapeTileCenterFromGizmoCenter: sceneShapeTileCenterFromGizmoCenter,
     SCENE_SHAPE_TYPES: SCENE_SHAPE_TYPES,
