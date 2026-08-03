@@ -6,6 +6,8 @@ var QuotationContextMenu = (function () {
   var PORTAL_ID = 'qeContextMenuPortal';
   var openPanel = null;
   var bound = false;
+  /** Guide context menu — fixed trio so the panel stays compact. */
+  var GUIDE_MENU_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a'];
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)
@@ -202,7 +204,9 @@ var QuotationContextMenu = (function () {
       }
       if (item.type === 'color') {
         var colorVal = normalizeHexColor(item.value);
-        var presets = Array.isArray(item.presets) ? item.presets : [];
+        var presets = item.id === 'guide-color'
+          ? GUIDE_MENU_COLOR_PRESETS.slice()
+          : (Array.isArray(item.presets) ? item.presets : []);
         var swatches = presets.map(function (hex) {
           var c = normalizeHexColor(hex);
           return '' +
