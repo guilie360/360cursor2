@@ -260,8 +260,19 @@ var HeroCanvas = (function () {
   function applyTransform(state) {
     if (!state || !state.canvas) return;
     clampPan(state);
+    var z = state.zoom || 1;
     state.canvas.style.transform =
-      'translate(' + state.panX + 'px,' + state.panY + 'px) scale(' + state.zoom + ')';
+      'translate(' + state.panX + 'px,' + state.panY + 'px)';
+    /* CSS zoom re-layouts vectors sharply; transform scale bitmap-blurs DOM strokes. */
+    if (state.opts.allowZoom) {
+      state.canvas.style.zoom = String(z);
+    } else {
+      state.canvas.style.zoom = '';
+      if (Math.abs(z - 1) > 0.001) {
+        state.canvas.style.transform +=
+          ' scale(' + z + ')';
+      }
+    }
   }
 
   /**

@@ -523,6 +523,44 @@ var ExperienciaCanvas = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
+  /** Vector SVG fill/stroke — crisp edges when canvas content is zoomed. */
+  function shapeStrokeUnits(strokePx, sizePx) {
+    var sw = Number(strokePx);
+    if (isNaN(sw)) sw = 1;
+    var px = Math.max(1, Number(sizePx) || 1);
+    return Math.max(0.12, (sw / px) * 100);
+  }
+
+  function shapeStageSvgHtml(b, t, layerW, layerH) {
+    var shapeW = Number(b.width) || 12;
+    var shapeH = Number(b.height) || 8;
+    if (t === 'SHAPE_CIRCLE') {
+      shapeH = shapeW * (layerW / Math.max(1, layerH));
+    }
+    var wPx = Math.max(1, (shapeW / 100) * layerW);
+    var hPx = Math.max(1, (shapeH / 100) * layerH);
+    var refPx = Math.min(wPx, hPx);
+    var su = shapeStrokeUnits(b.strokeWidth, refPx);
+    var inset = Math.min(48, su / 2);
+    var fill = esc(b.fill || 'rgba(255,255,255,0.14)');
+    var stroke = esc(b.stroke || 'rgba(255,255,255,0.55)');
+    if (t === 'SHAPE_CIRCLE') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<ellipse cx="50" cy="50" rx="' + (50 - inset) + '" ry="' + (50 - inset) + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + su + '"' +
+        ' shape-rendering="geometricPrecision"/></svg>';
+    }
+    var br = b.borderRadius != null ? Number(b.borderRadius) : 0;
+    var rx = Math.max(0, Math.min(48, (br / refPx) * 100));
+    return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+      ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+      '<rect x="' + inset + '" y="' + inset + '" width="' + (100 - inset * 2) + '"' +
+      ' height="' + (100 - inset * 2) + '" rx="' + rx + '" fill="' + fill + '"' +
+      ' stroke="' + stroke + '" stroke-width="' + su + '"' +
+      ' shape-rendering="geometricPrecision"/></svg>';
+  }
+
   function overlaySelectionMetrics(btn, layerW, layerH) {
     if (!btn) return null;
     var st = String(btn.type || 'BUTTON').toUpperCase();
@@ -4528,11 +4566,7 @@ var ExperienciaCanvas = (function () {
           }
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
-            'background:' + (b.fill || 'rgba(255,255,255,0.14)') + ';' +
-            'border:' + (Number(b.strokeWidth) != null && !isNaN(Number(b.strokeWidth))
-              ? Number(b.strokeWidth) : 1) + 'px solid ' +
-              (b.stroke || 'rgba(255,255,255,0.55)') + ';' +
-            'border-radius:' + (b.borderRadius != null ? Number(b.borderRadius) : (t === 'SHAPE_CIRCLE' ? 999 : 0)) + 'px;';
+            'background:transparent;border:none;';
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
@@ -4541,7 +4575,9 @@ var ExperienciaCanvas = (function () {
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
             (b.locked ? ' data-locked="1"' : '') +
             ' aria-label="' + esc(b.label || t) + '"' +
-            ' style="' + styleBits + '"></button>';
+            ' style="' + styleBits + '">' +
+            shapeStageSvgHtml(b, t, layerW, layerH) +
+            '</button>';
         }
         var glyph = buttonIconGlyph(b.icon);
         var text = b.label != null ? String(b.label) : '';

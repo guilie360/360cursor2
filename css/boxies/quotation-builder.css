@@ -4611,9 +4611,20 @@ body.quotation-canvas-first .builder-workspace,
   box-sizing: border-box;
   transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
   transform-origin: center center;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+.builder-exp-stage-shape__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  shape-rendering: geometricPrecision;
 }
 .builder-exp-stage-shape--circle {
-  border-radius: 50% !important;
+  border-radius: 0 !important;
 }
 .builder-exp-stage-shape.is-selected {
   outline: none;

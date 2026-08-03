@@ -52,10 +52,11 @@
   width: 1920px;
   height: 1080px;
   transform-origin: 0 0;
-  will-change: transform;
+  will-change: transform, zoom;
   background: #050505;
   overflow: hidden;
   box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
 }
 
 .hero-canvas__media {
