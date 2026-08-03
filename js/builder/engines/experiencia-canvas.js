@@ -817,16 +817,32 @@ var ExperienciaCanvas = (function () {
     return shapeDisplaySize(w, layerW, layerH);
   }
 
+  /** Map screen px (getBoundingClientRect) → layer layout px (clientWidth space). */
+  function overlayLayerLocalScale(layerEl) {
+    if (!layerEl) return { sx: 1, sy: 1, layerW: 1000, layerH: 1000, rect: null };
+    var rect = layerEl.getBoundingClientRect();
+    var layerW = Math.max(1, layerEl.clientWidth || rect.width);
+    var layerH = Math.max(1, layerEl.clientHeight || rect.height);
+    return {
+      sx: layerW / Math.max(1, rect.width),
+      sy: layerH / Math.max(1, rect.height),
+      layerW: layerW,
+      layerH: layerH,
+      rect: rect
+    };
+  }
+
   function shapeGizmoPxFromDom(gizmoEl, layerEl) {
     if (!gizmoEl || !layerEl) return null;
     var gr = gizmoEl.getBoundingClientRect();
-    var lr = layerEl.getBoundingClientRect();
-    if (!gr.width || !gr.height) return null;
+    var sc = overlayLayerLocalScale(layerEl);
+    var lr = sc.rect;
+    if (!lr || !gr.width || !gr.height) return null;
     return {
-      w: gr.width,
-      h: gr.height,
-      cx: gr.left + gr.width / 2 - lr.left,
-      cy: gr.top + gr.height / 2 - lr.top
+      w: gr.width * sc.sx,
+      h: gr.height * sc.sy,
+      cx: (gr.left + gr.width / 2 - lr.left) * sc.sx,
+      cy: (gr.top + gr.height / 2 - lr.top) * sc.sy
     };
   }
 
@@ -4698,33 +4714,31 @@ var ExperienciaCanvas = (function () {
       if (!fin || !fin.gm || !liveRefs) return;
       var gm = fin.gm;
       var rot = (liveRefs.snap && liveRefs.snap.rot) || 0;
-      var cxPx = (gm.gx / 100) * layerW;
-      var cyPx = (gm.gy / 100) * layerH;
-      var wPx = Math.max(1, (gm.gw / 100) * layerW);
-      var hPx = Math.max(1, (gm.gh / 100) * layerH);
-      var liveKey = cxPx + '|' + cyPx + '|' + wPx + '|' + hPx + '|' +
+      var liveKey = gm.gx + '|' + gm.gy + '|' + gm.gw + '|' + gm.gh + '|' +
         fin.stretchX + '|' + fin.stretchY;
       if (liveRefs.lastLiveKey === liveKey) return;
       liveRefs.lastLiveKey = liveKey;
       var tf = 'translate(-50%, -50%) rotate(' + rot + 'deg)';
+      var wPx = Math.max(1, Math.round((gm.gw / 100) * (layerW || 1000)));
+      var hPx = Math.max(1, Math.round((gm.gh / 100) * (layerH || 1000)));
       if (liveRefs.el) {
         liveRefs.el.classList.add('is-live-sizing');
-        liveRefs.el.style.left = cxPx + 'px';
-        liveRefs.el.style.top = cyPx + 'px';
-        liveRefs.el.style.width = wPx + 'px';
-        liveRefs.el.style.height = hPx + 'px';
+        liveRefs.el.style.left = gm.gx + '%';
+        liveRefs.el.style.top = gm.gy + '%';
+        liveRefs.el.style.width = gm.gw + '%';
+        liveRefs.el.style.height = gm.gh + '%';
         liveRefs.el.style.transform = tf;
         patchShapeSvgLive(liveRefs.el, liveRefs.kind, liveRefs.paint, fin.stretchX, fin.stretchY);
       }
       if (liveRefs.gizmo) {
-        liveRefs.gizmo.style.left = cxPx + 'px';
-        liveRefs.gizmo.style.top = cyPx + 'px';
-        liveRefs.gizmo.style.width = wPx + 'px';
-        liveRefs.gizmo.style.height = hPx + 'px';
+        liveRefs.gizmo.style.left = gm.gx + '%';
+        liveRefs.gizmo.style.top = gm.gy + '%';
+        liveRefs.gizmo.style.width = gm.gw + '%';
+        liveRefs.gizmo.style.height = gm.gh + '%';
         liveRefs.gizmo.style.transform = tf;
         liveRefs.gizmo.classList.add('is-sizing');
         if (liveRefs.sizeEl) {
-          var label = Math.max(1, Math.round(wPx)) + ' × ' + Math.max(1, Math.round(hPx));
+          var label = wPx + ' × ' + hPx;
           if (liveRefs.sizeEl.textContent !== label) liveRefs.sizeEl.textContent = label;
         }
       }
@@ -7615,21 +7629,20 @@ var ExperienciaCanvas = (function () {
             var moveN = mode.indexOf('n') >= 0;
 
             if (shapeLiveResize) {
+              transformDrag.lastDxPx = dxPx;
+              transformDrag.lastDyPx = dyPx;
               scheduleShapeResizeFrame(
                 transformDrag, dxPx, dyPx, layerW, layerH, mode
               );
               return;
             }
 
-            /* Shapes: screen-axis resize (rotation applied only visually, not to the box math). */
             var rad = (Number(transformDrag.startRot) || 0) * Math.PI / 180;
             var cosR = Math.cos(rad);
             var sinR = Math.sin(rad);
             var localDxPx = dxPx * cosR + dyPx * sinR;
             var localDyPx = -dxPx * sinR + dyPx * cosR;
-            var clampEdge = shapeLiveResize
-              ? function (v) { return v; }
-              : function (v) { return Math.round(v); };
+            var clampEdge = function (v) { return Math.round(v); };
 
             var startLpx = transformDrag.startLpx;
             var startRpx = transformDrag.startRpx;
@@ -8070,24 +8083,26 @@ var ExperienciaCanvas = (function () {
           }
           var shapeDragDef = isShapeType(gtype) ? shapeDefaultSize(gtype) : null;
           var liveRefs = null;
+          var startW0;
+          var startH0;
+          var startX0;
+          var startY0;
           if (isShapeType(gtype)) {
             var idEsc = String(gid).replace(/"/g, '');
             var gizmoEl = gizmo;
             var gmSnap = shapeGizmoMetrics(btnG, layerW0, layerH0);
-            var domSnap = shapeGizmoPxFromDom(gizmoEl, buttonsLayer);
-            var snapGizmoCxPx = domSnap ? domSnap.cx : (gmSnap ? (gmSnap.gx / 100) * layerW0 : ((Number(btnG.x) || 50) / 100) * layerW0);
-            var snapGizmoCyPx = domSnap ? domSnap.cy : (gmSnap ? (gmSnap.gy / 100) * layerH0 : ((Number(btnG.y) || 50) / 100) * layerH0);
-            var snapGizmoWPx = domSnap ? domSnap.w : (gmSnap ? (gmSnap.gw / 100) * layerW0 : 0);
-            var snapGizmoHPx = domSnap ? domSnap.h : (gmSnap ? (gmSnap.gh / 100) * layerH0 : 0);
-            if (!snapGizmoWPx) {
-              var paintSnap = shapePaintSize(btnG, layerW0, layerH0);
-              snapGizmoWPx = (paintSnap.w / 100) * layerW0;
-              snapGizmoHPx = (paintSnap.h / 100) * layerH0;
+            /* Model metrics only — DOM rects lie under CSS stage scale. */
+            startW0 = gmSnap ? gmSnap.gw : (shapeDragDef ? shapeDragDef.w : 12);
+            startH0 = gmSnap ? gmSnap.gh : (shapeDragDef ? shapeDragDef.h : 12);
+            startX0 = gmSnap ? gmSnap.gx
+              : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
+            startY0 = gmSnap ? gmSnap.gy
+              : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
+            if (!gmSnap) {
+              var paintSnap0 = shapePaintSize(btnG, layerW0, layerH0);
+              startW0 = paintSnap0.w;
+              startH0 = paintSnap0.h;
             }
-            var snapTileCxPx = snapGizmoCxPx;
-            var snapTileCyPx = snapGizmoCyPx;
-            var snapTileWPx = snapGizmoWPx;
-            var snapTileHPx = snapGizmoHPx;
             var btnStretch = shapeStretchFromBtn(btnG);
             liveRefs = {
               el: buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]'),
@@ -8101,58 +8116,12 @@ var ExperienciaCanvas = (function () {
                 borderRadius: btnG.borderRadius
               },
               snap: {
-                tileCxPx: snapTileCxPx,
-                tileCyPx: snapTileCyPx,
-                tileWPx: snapTileWPx,
-                tileHPx: snapTileHPx,
-                gizmoCxPx: snapGizmoCxPx,
-                gizmoCyPx: snapGizmoCyPx,
-                gizmoWPx: snapGizmoWPx,
-                gizmoHPx: snapGizmoHPx,
-                offX: snapTileCxPx - snapGizmoCxPx,
-                offY: snapTileCyPx - snapGizmoCyPx,
+                rot: Number(btnG.rotation) || 0,
                 stretchX: btnStretch.sx,
-                stretchY: btnStretch.sy,
-                rot: Number(btnG.rotation) || 0
+                stretchY: btnStretch.sy
               }
             };
-            if (liveRefs.el) {
-              liveRefs.el.classList.add('is-live-sizing');
-              liveRefs.el.style.left = snapTileCxPx + 'px';
-              liveRefs.el.style.top = snapTileCyPx + 'px';
-              liveRefs.el.style.width = snapTileWPx + 'px';
-              liveRefs.el.style.height = snapTileHPx + 'px';
-            }
-            if (liveRefs.gizmo) {
-              liveRefs.gizmo.style.left = snapGizmoCxPx + 'px';
-              liveRefs.gizmo.style.top = snapGizmoCyPx + 'px';
-              liveRefs.gizmo.style.width = snapGizmoWPx + 'px';
-              liveRefs.gizmo.style.height = snapGizmoHPx + 'px';
-            }
-          }
-          var startW0;
-          var startH0;
-          var startX0;
-          var startY0;
-          if (isShapeType(gtype)) {
-            var gm0 = shapeGizmoMetrics(btnG, layerW0, layerH0);
-            var domG = shapeGizmoPxFromDom(gizmoEl, buttonsLayer);
-            if (domG) {
-              startW0 = (domG.w / layerW0) * 100;
-              startH0 = (domG.h / layerH0) * 100;
-              startX0 = (domG.cx / layerW0) * 100;
-              startY0 = (domG.cy / layerH0) * 100;
-            } else if (gm0) {
-              startW0 = gm0.gw;
-              startH0 = gm0.gh;
-              startX0 = gm0.gx;
-              startY0 = gm0.gy;
-            } else {
-              startW0 = shapeDragDef ? shapeDragDef.w : 12;
-              startH0 = shapeDragDef ? shapeDragDef.h : 12;
-              startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
-              startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
-            }
+            /* Do not mutate inline styles on pointerdown — first rAF paint handles it. */
           } else {
             startW0 = gtype === 'BUTTON'
               ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
@@ -8441,10 +8410,12 @@ var ExperienciaCanvas = (function () {
           unbindOverlayPointerDocs();
           if (endedDrag && isShapeType(endType) && !wasRotate) {
             flushShapeResizeFrame(endedDrag);
+            var endDx = endedDrag.lastShapeDx != null ? endedDrag.lastShapeDx : (endedDrag.lastDxPx || 0);
+            var endDy = endedDrag.lastShapeDy != null ? endedDrag.lastShapeDy : (endedDrag.lastDyPx || 0);
             var finLive = computeShapeResizeLive(
               endedDrag,
-              endedDrag.lastShapeDx || 0,
-              endedDrag.lastShapeDy || 0,
+              endDx,
+              endDy,
               endedDrag.layerW,
               endedDrag.layerH,
               endMode,
