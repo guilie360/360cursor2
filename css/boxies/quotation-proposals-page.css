@@ -1302,6 +1302,12 @@ body.qr-proposals-page .qpp {
     font-size: 0.66rem;
     padding: 16px;
   }
+
+  .qpp-cmp__upgrade {
+    min-height: 48px;
+    font-size: 0.56rem;
+    padding: 0 28px;
+  }
 }
 
 @media (max-width: 700px) {
@@ -1324,7 +1330,8 @@ body.qr-proposals-page .qpp {
   .qpp.is-cmp-animate .qpp-cmp__head,
   .qpp.is-cmp-animate .qpp-cmp__block,
   .qpp.is-cmp-animate .qpp-cmp__row,
-  .qpp.is-cmp-animate .qpp-cmp__note {
+  .qpp.is-cmp-animate .qpp-cmp__note,
+  .qpp.is-cmp-animate .qpp-cmp__upgrade-wrap {
     animation: none !important;
     transition-duration: 1ms !important;
     opacity: 1 !important;
