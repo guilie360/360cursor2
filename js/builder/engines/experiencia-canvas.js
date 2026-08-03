@@ -4556,6 +4556,10 @@ var ExperienciaCanvas = (function () {
       if (transformDrag && transformDrag.live && isShapeType(transformDrag.type)) {
         return true;
       }
+      /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
+      if (buttonDrag && buttonDrag.live && !buttonDrag.nudge && buttonDrag.moveLiveRefs) {
+        return true;
+      }
       var n = ExperienciaEngine.getNode(state, canvas().selectedId);
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) return false;
       var layerW = buttonsLayer.clientWidth || 1000;
@@ -4765,6 +4769,145 @@ var ExperienciaCanvas = (function () {
         gizmo.style.height = gizmoHPx + 'px';
         gizmo.classList.add('is-sizing');
       }
+    }
+
+    function clearShapeMoveLiveStyles(moveLiveRefs) {
+      if (!moveLiveRefs || !moveLiveRefs.items) return;
+      moveLiveRefs.items.forEach(function (item) {
+        if (item.el) {
+          item.el.classList.remove('is-live-moving');
+          item.el.style.removeProperty('transform');
+          item.el.style.removeProperty('left');
+          item.el.style.removeProperty('top');
+          item.el.style.removeProperty('width');
+          item.el.style.removeProperty('height');
+        }
+        if (item.gizmo) {
+          item.gizmo.style.removeProperty('transform');
+          item.gizmo.style.removeProperty('left');
+          item.gizmo.style.removeProperty('top');
+          item.gizmo.style.removeProperty('width');
+          item.gizmo.style.removeProperty('height');
+        }
+      });
+    }
+
+    function canUseShapeMoveFastPath(sceneId, groupIds) {
+      if (!groupIds || !groupIds.length) return false;
+      for (var i = 0; i < groupIds.length; i++) {
+        var vm = getOverlayItemVm(sceneId, groupIds[i]);
+        if (!vm || !isShapeType(vm.type)) return false;
+      }
+      return true;
+    }
+
+    function buildShapeMoveLiveRefs(sceneId, groupIds, layerW, layerH) {
+      var items = [];
+      groupIds.forEach(function (id) {
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm || !isShapeType(vm.type)) return;
+        var kind = String(vm.type || '').toUpperCase();
+        var idEsc = String(id).replace(/"/g, '');
+        var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        var gizmo = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+        if (!el) return;
+        var gm = shapeGizmoMetrics(vm, layerW, layerH);
+        var shapeDef = shapeDefaultSize(kind);
+        var tileWPct = Number(vm.width) || shapeDef.w;
+        var tileDisp = shapeDisplaySize(tileWPct, layerW, layerH);
+        var tileCxPx = ((Number(vm.x) || 50) / 100) * layerW;
+        var tileCyPx = ((Number(vm.y) || 50) / 100) * layerH;
+        var tileWPx = (tileDisp.w / 100) * layerW;
+        var tileHPx = (tileDisp.h / 100) * layerH;
+        var gizmoCxPx = gm ? (gm.gx / 100) * layerW : tileCxPx;
+        var gizmoCyPx = gm ? (gm.gy / 100) * layerH : tileCyPx;
+        var gizmoWPx = gm ? (gm.gw / 100) * layerW : tileWPx;
+        var gizmoHPx = gm ? (gm.gh / 100) * layerH : tileHPx;
+        el.classList.add('is-live-moving');
+        el.style.left = tileCxPx + 'px';
+        el.style.top = tileCyPx + 'px';
+        el.style.width = tileWPx + 'px';
+        el.style.height = tileHPx + 'px';
+        if (gizmo) {
+          gizmo.style.left = gizmoCxPx + 'px';
+          gizmo.style.top = gizmoCyPx + 'px';
+          gizmo.style.width = gizmoWPx + 'px';
+          gizmo.style.height = gizmoHPx + 'px';
+        }
+        items.push({
+          id: id,
+          el: el,
+          gizmo: gizmo,
+          snap: {
+            tileCxPx: tileCxPx,
+            tileCyPx: tileCyPx,
+            gizmoCxPx: gizmoCxPx,
+            gizmoCyPx: gizmoCyPx,
+            rot: Number(vm.rotation) || 0
+          }
+        });
+      });
+      return items.length ? { items: items, layerW: layerW, layerH: layerH } : null;
+    }
+
+    function paintShapeMoveFast(moveLiveRefs, ddxPct, ddyPct) {
+      if (!moveLiveRefs || !moveLiveRefs.items) return;
+      var layerW = moveLiveRefs.layerW;
+      var layerH = moveLiveRefs.layerH;
+      var dxPx = (ddxPct / 100) * layerW;
+      var dyPx = (ddyPct / 100) * layerH;
+      moveLiveRefs.items.forEach(function (item) {
+        var snap = item.snap;
+        var rot = snap.rot || 0;
+        var tileTf =
+          'translate3d(calc(-50% + ' + dxPx + 'px), calc(-50% + ' + dyPx + 'px), 0) ' +
+          'rotate(' + rot + 'deg)';
+        if (item.lastTf !== tileTf) {
+          item.lastTf = tileTf;
+          if (item.el) item.el.style.transform = tileTf;
+        }
+        if (item.gizmo) {
+          var gx = snap.gizmoCxPx + dxPx;
+          var gy = snap.gizmoCyPx + dyPx;
+          var gKey = gx + '|' + gy + '|' + rot;
+          if (item.lastGizmoKey !== gKey) {
+            item.lastGizmoKey = gKey;
+            item.gizmo.style.left = gx + 'px';
+            item.gizmo.style.top = gy + 'px';
+            item.gizmo.style.transform = 'translate(-50%, -50%) rotate(' + rot + 'deg)';
+          }
+        }
+      });
+    }
+
+    function flushShapeMoveFrame(drag) {
+      if (!drag || !drag.moveLiveRefs) return;
+      if (drag.moveRaf) {
+        cancelAnimationFrame(drag.moveRaf);
+        drag.moveRaf = 0;
+      }
+      if (drag.pendingMoveDdx == null || drag.pendingMoveDdy == null) return;
+      paintShapeMoveFast(drag.moveLiveRefs, drag.pendingMoveDdx, drag.pendingMoveDdy);
+      if (drag.guides) syncLiveOverlayGuides(drag.guides);
+    }
+
+    function scheduleShapeMoveFrame(drag) {
+      if (!drag || !drag.moveLiveRefs) return;
+      if (drag.moveRaf) return;
+      drag.moveRaf = requestAnimationFrame(function () {
+        drag.moveRaf = 0;
+        flushShapeMoveFrame(drag);
+      });
+    }
+
+    function pointerPctFromEvent(ev, ptrCache) {
+      if (ptrCache) {
+        return {
+          x: ((ev.clientX - ptrCache.left) / ptrCache.rectW) * 100,
+          y: ((ev.clientY - ptrCache.top) / ptrCache.rectH) * 100
+        };
+      }
+      return percentFromPointer(ev);
     }
 
     function clearShapeLiveSizingStyles(liveRefs) {
@@ -7273,6 +7416,8 @@ var ExperienciaCanvas = (function () {
           paintButtonsStage();
         }
         if (buttonDrag) {
+          if (buttonDrag.moveRaf) cancelAnimationFrame(buttonDrag.moveRaf);
+          if (buttonDrag.moveLiveRefs) clearShapeMoveLiveStyles(buttonDrag.moveLiveRefs);
           var pending = buttonDrag;
           buttonDrag = null;
           unbindOverlayPointerDocs();
@@ -7650,7 +7795,7 @@ var ExperienciaCanvas = (function () {
         );
         if (dragDistPx < OVERLAY_DRAG_THRESHOLD_PX) return;
         ev.preventDefault();
-        var pct = percentFromPointer(ev);
+        var pct = pointerPctFromEvent(ev, buttonDrag.ptrCache);
         if (!buttonDrag.historyPushed) {
           dragDebugLog('buttonDrag move start', {
             buttonId: buttonDrag.buttonId,
@@ -7707,6 +7852,12 @@ var ExperienciaCanvas = (function () {
             clearPendingMove(id);
           });
           buttonDrag.guides = { spacing: [] };
+          if (buttonDrag.moveLiveRefs) {
+            buttonDrag.pendingMoveDdx = ddx;
+            buttonDrag.pendingMoveDdy = ddy;
+            scheduleShapeMoveFrame(buttonDrag);
+            return;
+          }
           paintButtonsStage();
           return;
         }
@@ -7725,6 +7876,12 @@ var ExperienciaCanvas = (function () {
           buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
         );
         clearPendingMove(buttonDrag.buttonId);
+        if (buttonDrag.moveLiveRefs) {
+          buttonDrag.pendingMoveDdx = snapped.x - buttonDrag.originX;
+          buttonDrag.pendingMoveDdy = snapped.y - buttonDrag.originY;
+          scheduleShapeMoveFrame(buttonDrag);
+          return;
+        }
         paintButtonsStage();
       }
 
@@ -7808,8 +7965,19 @@ var ExperienciaCanvas = (function () {
           guides: null,
           axisLock: null,
           historyPushed: false,
-          live: true
+          live: true,
+          moveLiveRefs: null,
+          ptrCache: null,
+          moveRaf: 0
         };
+        if (!isGroupDrag && canUseShapeMoveFastPath(sceneId, groupIds)) {
+          var layerMoveW = buttonsLayer.clientWidth || 1000;
+          var layerMoveH = buttonsLayer.clientHeight || 1000;
+          buttonDrag.moveLiveRefs = buildShapeMoveLiveRefs(
+            sceneId, groupIds, layerMoveW, layerMoveH
+          );
+          buttonDrag.ptrCache = overlayPointerLayerCache();
+        }
         bindOverlayPointerDocs();
         try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
         dragDebugLog('beginOverlayMove armed buttonDrag', {
@@ -8322,8 +8490,12 @@ var ExperienciaCanvas = (function () {
         var dragOrigins = buttonDrag.origins;
         var dragGroupIds = buttonDrag.groupIds;
         var dragIsGroup = buttonDrag.isOverlayGroup;
+        var endedMoveLiveRefs = buttonDrag.moveLiveRefs;
+        if (buttonDrag.moveRaf) cancelAnimationFrame(buttonDrag.moveRaf);
+        flushShapeMoveFrame(buttonDrag);
         buttonDrag = null;
         unbindOverlayPointerDocs();
+        if (endedMoveLiveRefs) clearShapeMoveLiveStyles(endedMoveLiveRefs);
         var szUp = overlayLayerSize();
         if (!moved && dragScene && dragOrigins) {
           restoreOverlayDragOrigins(dragScene, dragOrigins);

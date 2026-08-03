@@ -4782,8 +4782,15 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Multi-select: box chrome on every selected overlay (handles only when alone). */
-.builder-exp-stage-shape.is-live-sizing {
+.builder-exp-stage-shape.is-live-moving {
   contain: layout style;
+}
+.builder-exp-stage-shape.is-live-moving .builder-exp-stage-shape__stroke-glow {
+  opacity: 0 !important;
+  filter: none !important;
+}
+.builder-exp-stage-shape.is-live-moving .builder-exp-stage-shape__body > * {
+  transition: none !important;
 }
 .builder-exp-stage-shape.is-live-sizing .builder-exp-stage-shape__stroke-glow {
   opacity: 0 !important;
