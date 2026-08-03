@@ -988,6 +988,15 @@ body.qr-proposals-page .qpp {
   opacity: 0;
 }
 
+.qpp-cmp-upgrade__tier-name:first-child {
+  align-self: center;
+  padding-top: 0.14em;
+}
+
+.qpp-cmp-upgrade__tier-name--motion {
+  align-self: center;
+}
+
 .qpp-cmp-upgrade__tier-name {
   font-size: clamp(0.95rem, 2.2vw, 1.2rem);
   font-weight: 600;
@@ -1005,10 +1014,15 @@ body.qr-proposals-page .qpp {
 }
 
 .qpp-cmp-upgrade__arrow {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
   width: 100%;
   min-width: 72px;
-  height: 12px;
+  max-width: 200px;
+  height: 16px;
+  margin: 0 auto;
   color: rgba(255, 255, 255, 0.85);
 }
 
@@ -1016,6 +1030,7 @@ body.qr-proposals-page .qpp {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 .qpp-cmp-upgrade__pricing {

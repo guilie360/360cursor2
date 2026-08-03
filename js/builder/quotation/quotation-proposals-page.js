@@ -142,8 +142,8 @@ var QuotationProposalsPage = (function () {
               '<div class="qpp-cmp-upgrade__flow">' +
                 '<span class="qpp-cmp-upgrade__tier-name">Still</span>' +
                 '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
-                  '<svg viewBox="0 0 120 12" preserveAspectRatio="none">' +
-                    '<path d="M0 6h98M98 6l-8-5M98 6l-8 5" fill="none" stroke="currentColor" stroke-width="1"/>' +
+                  '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
+                    '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
                   '</svg>' +
                 '</span>' +
                 '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
