@@ -133,13 +133,17 @@ var QuotationProposalsPage = (function () {
               '<div class="qpp-cmp" data-qpp-compare-board></div>' +
             '</div>' +
             '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
+              '<p class="qpp__eyebrow qpp-cmp__eyebrow qpp-cmp-upgrade__eyebrow">Upgrade a Motion</p>' +
+              '<h1 class="qpp__title qpp-cmp__title qpp-cmp-upgrade__title">Más impacto, mismo proyecto</h1>' +
               '<p class="qpp-cmp-upgrade__lead">' +
                 'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los 15 días posteriores a la entrega de la versión ' +
-                '<span class="qpp-cmp-upgrade__tier">S T I L L</span> podrás acceder al upgrade a ' +
-                '<span class="qpp-cmp-upgrade__tier">M O T I O N</span> por $1.500.000.' +
+                '<span class="qpp-cmp-upgrade__hi">S T I L L</span> podrás acceder al upgrade a ' +
+                '<span class="qpp-cmp-upgrade__hi">M O T I O N</span> por ' +
+                '<span class="qpp-cmp-upgrade__hi">$1.500.000</span>.' +
               '</p>' +
               '<p class="qpp-cmp-upgrade__lead qpp-cmp-upgrade__lead--second">' +
-                'Después de este periodo, el valor del upgrade será de $2.000.000.' +
+                'Después de este periodo, el valor del upgrade será de ' +
+                '<span class="qpp-cmp-upgrade__hi">$2.000.000</span>.' +
               '</p>' +
             '</div>' +
           '</div>' +
@@ -398,6 +402,16 @@ var QuotationProposalsPage = (function () {
     });
   }
 
+  function syncUpgradeBarUi(root) {
+    var shell = qs('[data-qpp-root]', root) || root;
+    var btn = qs('[data-qpp-upgrade]', root);
+    if (!btn) return;
+    var panel = shell.getAttribute('data-qpp-compare-panel') || 'table';
+    var isUpgrade = panel === 'upgrade';
+    btn.textContent = isUpgrade ? 'Volver' : 'Upgrade';
+    btn.setAttribute('aria-label', isUpgrade ? 'Volver a propuestas' : 'Upgrade');
+  }
+
   function setComparePanel(root, panel) {
     var shell = qs('[data-qpp-root]', root) || root;
     var next = panel === 'upgrade' ? 'upgrade' : 'table';
@@ -414,6 +428,8 @@ var QuotationProposalsPage = (function () {
       if (next === 'upgrade') upgradePanel.removeAttribute('hidden');
       else upgradePanel.setAttribute('hidden', '');
     }
+
+    syncUpgradeBarUi(root);
   }
 
   function setQppView(root, view) {
@@ -444,6 +460,7 @@ var QuotationProposalsPage = (function () {
       retriggerCmpAnimate(root);
     } else {
       shell.setAttribute('data-qpp-compare-panel', 'table');
+      syncUpgradeBarUi(root);
     }
   }
 
@@ -637,7 +654,10 @@ var QuotationProposalsPage = (function () {
         e.preventDefault();
         e.stopPropagation();
         var panel = shellEl.getAttribute('data-qpp-compare-panel') || 'table';
-        if (panel === 'upgrade') return;
+        if (panel === 'upgrade') {
+          setQppView(root, 'selection');
+          return;
+        }
         setComparePanel(root, 'upgrade');
         retriggerCmpAnimate(root);
       });
