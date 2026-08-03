@@ -320,6 +320,9 @@ var QuotationRuntime = (function () {
       var st = ExperienciaEngine.shapeStretchFromIx
         ? ExperienciaEngine.shapeStretchFromIx(sh)
         : { sx: Number(sh.shapeStretchX) || 1, sy: Number(sh.shapeStretchY) || 1 };
+      var par = ExperienciaEngine.shapePreserveAspect
+        ? ExperienciaEngine.shapePreserveAspect(st.sx, st.sy)
+        : ((st.sx !== 1 || st.sy !== 1) ? 'none' : 'meet');
       return ExperienciaEngine.buildSceneShapeSvg(t, {
         fill: sh.fill || 'rgba(255,255,255,0.16)',
         stroke: sh.stroke || 'rgba(255,255,255,0.62)',
@@ -327,18 +330,26 @@ var QuotationRuntime = (function () {
         borderRadius: sh.borderRadius,
         stretchX: st.sx,
         stretchY: st.sy,
-        preserveAspect: 'meet',
+        preserveAspect: par,
         inlineStyle: 'width:100%;height:100%;display:block;overflow:visible'
       });
     }
     return '';
   }
 
-  function runtimeShapeDisplaySize(widthPct, layerW, layerH) {
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {
-      return ExperienciaEngine.sceneShapeDisplaySize(widthPct, layerW, layerH);
+  function runtimeShapeDisplaySize(sh, layerW, layerH) {
+    var w = Number(sh && sh.width) || 12;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeUsesContentBox) {
+      var st = ExperienciaEngine.shapeStretchFromIx
+        ? ExperienciaEngine.shapeStretchFromIx(sh)
+        : { sx: Number(sh.shapeStretchX) || 1, sy: Number(sh.shapeStretchY) || 1 };
+      if (ExperienciaEngine.shapeUsesContentBox(st, w, sh.height, layerW, layerH)) {
+        return { w: w, h: Number(sh.height) };
+      }
     }
-    var w = Number(widthPct) || 12;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {
+      return ExperienciaEngine.sceneShapeDisplaySize(w, layerW, layerH);
+    }
     return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
@@ -578,7 +589,7 @@ var QuotationRuntime = (function () {
       var rot = Number(sh.rotation) || 0;
       var layerW = Math.max(1, parentEl.clientWidth || 1920);
       var layerH = Math.max(1, parentEl.clientHeight || 1080);
-      var shapeSize = runtimeShapeDisplaySize(Number(sh.width) || runtimeShapeDefaultSize(t).w, layerW, layerH);
+      var shapeSize = runtimeShapeDisplaySize(sh, layerW, layerH);
       el.style.left = Number(sh.x) + '%';
       el.style.top = Number(sh.y) + '%';
       el.style.width = shapeSize.w + '%';
