@@ -6364,12 +6364,13 @@ var ExperienciaCanvas = (function () {
       overlayMarqueeEl.style.height = Math.max(1, pMax.y - pMin.y) + 'px';
     }
 
-    function overlaysInOverlayMarquee(sceneId) {
-      if (!overlayMarquee || !sceneId) return [];
-      var x1 = Math.min(overlayMarquee.x0, overlayMarquee.x1);
-      var y1 = Math.min(overlayMarquee.y0, overlayMarquee.y1);
-      var x2 = Math.max(overlayMarquee.x0, overlayMarquee.x1);
-      var y2 = Math.max(overlayMarquee.y0, overlayMarquee.y1);
+    function overlaysInOverlayMarquee(sceneId, marqueeData) {
+      var mq = marqueeData || overlayMarquee;
+      if (!mq || !sceneId) return [];
+      var x1 = Math.min(mq.x0, mq.x1);
+      var y1 = Math.min(mq.y0, mq.y1);
+      var x2 = Math.max(mq.x0, mq.x1);
+      var y2 = Math.max(mq.y0, mq.y1);
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n) return [];
       var sz = overlayLayerSize();
@@ -6763,7 +6764,7 @@ var ExperienciaCanvas = (function () {
           if (buttonsLayer && ev) buttonsLayer.releasePointerCapture(ev.pointerId);
         } catch (eRelOm) { /* ignore */ }
         if (om.moved) {
-          var hitIds = overlaysInOverlayMarquee(om.sceneId);
+          var hitIds = overlaysInOverlayMarquee(om.sceneId, om);
           if (om.shift) {
             var merged = getSelectedOverlayIds().slice();
             hitIds.forEach(function (id) {
