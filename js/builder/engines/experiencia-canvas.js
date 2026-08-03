@@ -33,7 +33,7 @@ var ExperienciaCanvas = (function () {
     return false;
   }
 
-  /** Edge = axis stretch (fixed caps/radii); corner = uniform stretch. */
+  /** Edge = axis stretch (fixed caps/radii); corner = uniform stretch. All math in % layer space. */
   function resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
     if (!drag || !isShapeType(drag.type)) return null;
     var kind = String(drag.type || '').toUpperCase();
@@ -41,103 +41,125 @@ var ExperienciaCanvas = (function () {
     var moveW = mode.indexOf('w') >= 0;
     var moveS = mode.indexOf('s') >= 0;
     var moveN = mode.indexOf('n') >= 0;
-    var startGwPx = drag.startWpx;
-    var startGhPx = drag.startHpx;
-    var startLpx = drag.startLpx;
-    var startRpx = drag.startRpx;
-    var startTpx = drag.startTpx;
-    var startBpx = drag.startBpx;
+    layerW = Math.max(1, Number(layerW) || Number(drag.layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || Number(drag.layerH) || 1000);
+    var dxPct = (Number(dxPx) / layerW) * 100;
+    var dyPct = (Number(dyPx) / layerH) * 100;
+    var startL = Number(drag.startL);
+    var startR = Number(drag.startR);
+    var startT = Number(drag.startT);
+    var startB = Number(drag.startB);
+    var startGw = startR - startL;
+    var startGh = startB - startT;
     var startStretchX = drag.startStretchX || 1;
     var startStretchY = drag.startStretchY || 1;
-    if (!startGwPx) return null;
+    if (!startGw || startGw <= 0) return null;
 
-    var minGwPx = Math.max(6, (1.2 / 100) * layerW);
-    var minGhPx = Math.max(6, (1.2 / 100) * layerH);
-    var candGw = startGwPx;
-    var candGh = startGhPx;
+    var minGw = Math.max(0.06, 1.2);
+    var minGh = Math.max(0.06, 1.2);
+    var L = startL;
+    var R = startR;
+    var T = startT;
+    var B = startB;
 
     if (kind === 'SHAPE_LINE') {
-      if (moveE && !moveW) candGw = startRpx + dxPx - startLpx;
-      else if (moveW && !moveE) candGw = startRpx - (startLpx + dxPx);
-      else candGw = startGwPx + (moveE ? dxPx : 0) - (moveW ? dxPx : 0);
-      candGw = Math.max(minGwPx, candGw);
-      var lineScaleX = candGw / startGwPx;
+      if (moveE && !moveW) R = startR + dxPct;
+      else if (moveW && !moveE) L = startL + dxPct;
+      else {
+        if (moveE) R = startR + dxPct;
+        if (moveW) L = startL + dxPct;
+      }
+      var lineGw = Math.max(minGw, R - L);
+      if (moveW && !moveE) {
+        L = startR - lineGw;
+        R = startR;
+      } else if (moveE && !moveW) {
+        R = L + lineGw;
+      } else {
+        R = L + lineGw;
+      }
+      var lineScaleX = lineGw / startGw;
       return {
-        cx: moveW && !moveE ? startRpx - candGw / 2 : startLpx + candGw / 2,
-        cy: (startTpx + startBpx) / 2,
-        w: candGw,
-        h: startGhPx,
+        cx: (L + R) / 2,
+        cy: (T + B) / 2,
+        w: lineGw,
+        h: startGh,
         stretchX: startStretchX * lineScaleX,
         stretchY: startStretchY
       };
     }
 
-    if (moveE) candGw = startRpx + dxPx - startLpx;
-    if (moveW) candGw = startRpx - (startLpx + dxPx);
-    if (moveS) candGh = startBpx + dyPx - startTpx;
-    if (moveN) candGh = startBpx - (startTpx + dyPx);
-    candGw = Math.max(minGwPx, candGw);
-    candGh = Math.max(minGhPx, candGh);
+    if (moveE) R = startR + dxPct;
+    if (moveW) L = startL + dxPct;
+    if (moveS) B = startB + dyPct;
+    if (moveN) T = startT + dyPct;
 
-    var scaleW = candGw / startGwPx;
-    var scaleH = candGh / startGhPx;
+    var candGw = Math.max(minGw, R - L);
+    var candGh = Math.max(minGh, B - T);
+    if (moveE && !moveW) { L = startL; R = L + candGw; }
+    else if (moveW && !moveE) { R = startR; L = R - candGw; }
+    if (moveS && !moveN) { T = startT; B = T + candGh; }
+    else if (moveN && !moveS) { B = startB; T = B - candGh; }
+
+    var scaleW = candGw / startGw;
+    var scaleH = candGh / startGh;
     var isCorner = (moveE || moveW) && (moveN || moveS);
     var isEdgeX = (moveE || moveW) && !(moveN || moveS);
     var isEdgeY = (moveN || moveS) && !(moveE || moveW);
     var newStretchX = startStretchX;
     var newStretchY = startStretchY;
-    var newGwPx = startGwPx;
-    var newGhPx = startGhPx;
+    var newGw = startGw;
+    var newGh = startGh;
 
     if (isCorner) {
       var scale = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
-        ? (Math.abs(dxPx) * startGhPx >= Math.abs(dyPx) * startGwPx ? scaleW : scaleH)
-        : (Math.abs(dxPx) >= Math.abs(dyPx) ? scaleW : scaleH);
+        ? (Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleW : scaleH)
+        : (Math.abs(dxPct) >= Math.abs(dyPct) ? scaleW : scaleH);
       if (kind === 'SHAPE_CIRCLE') {
-        scale = Math.abs(dxPx) * startGhPx >= Math.abs(dyPx) * startGwPx ? scaleW : scaleH;
+        scale = Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleW : scaleH;
       }
       scale = Math.max(0.06, Math.min(6, scale));
       newStretchX = startStretchX * scale;
       newStretchY = startStretchY * scale;
-      newGwPx = startGwPx * scale;
-      newGhPx = startGhPx * scale;
+      newGw = startGw * scale;
+      newGh = startGh * scale;
     } else if (isEdgeX) {
       var sx = Math.max(0.06, Math.min(6, scaleW));
       newStretchX = startStretchX * sx;
-      newGwPx = candGw;
-      newGhPx = startGhPx;
+      newGw = candGw;
+      newGh = startGh;
     } else if (isEdgeY) {
       var sy = Math.max(0.06, Math.min(6, scaleH));
       newStretchY = startStretchY * sy;
-      newGwPx = startGwPx;
-      newGhPx = candGh;
+      newGw = startGw;
+      newGh = candGh;
     }
 
-    var newGxPx = (startLpx + startRpx) / 2;
-    var newGyPx = (startTpx + startBpx) / 2;
-    if (moveE && !moveW) newGxPx = startLpx + newGwPx / 2;
-    else if (moveW && !moveE) newGxPx = startRpx - newGwPx / 2;
-    if (moveS && !moveN) newGyPx = startTpx + newGhPx / 2;
-    else if (moveN && !moveS) newGyPx = startBpx - newGhPx / 2;
+    var newGx = (startL + startR) / 2;
+    var newGy = (startT + startB) / 2;
+    if (moveE && !moveW) newGx = startL + newGw / 2;
+    else if (moveW && !moveE) newGx = startR - newGw / 2;
+    if (moveS && !moveN) newGy = startT + newGh / 2;
+    else if (moveN && !moveS) newGy = startB - newGh / 2;
     if (moveE && moveN) {
-      newGxPx = startLpx + newGwPx / 2;
-      newGyPx = startBpx - newGhPx / 2;
+      newGx = startL + newGw / 2;
+      newGy = startB - newGh / 2;
     } else if (moveE && moveS) {
-      newGxPx = startLpx + newGwPx / 2;
-      newGyPx = startTpx + newGhPx / 2;
+      newGx = startL + newGw / 2;
+      newGy = startT + newGh / 2;
     } else if (moveW && moveN) {
-      newGxPx = startRpx - newGwPx / 2;
-      newGyPx = startBpx - newGhPx / 2;
+      newGx = startR - newGw / 2;
+      newGy = startB - newGh / 2;
     } else if (moveW && moveS) {
-      newGxPx = startRpx - newGwPx / 2;
-      newGyPx = startTpx + newGhPx / 2;
+      newGx = startR - newGw / 2;
+      newGy = startT + newGh / 2;
     }
 
     return {
-      cx: newGxPx,
-      cy: newGyPx,
-      w: newGwPx,
-      h: newGhPx,
+      cx: newGx,
+      cy: newGy,
+      w: newGw,
+      h: newGh,
       stretchX: newStretchX,
       stretchY: newStretchY
     };
@@ -149,24 +171,20 @@ var ExperienciaCanvas = (function () {
     var box = resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio);
     if (!box) return null;
 
-    var nx = (box.cx / layerW) * 100;
-    var ny = (box.cy / layerH) * 100;
-    var gwPct = (box.w / layerW) * 100;
-    var ghPct = (box.h / layerH) * 100;
     return {
       stretchX: box.stretchX,
       stretchY: box.stretchY,
       gm: {
-        gx: nx,
-        gy: ny,
-        gw: gwPct,
-        gh: ghPct
+        gx: box.cx,
+        gy: box.cy,
+        gw: box.w,
+        gh: box.h
       },
       patch: {
-        x: nx,
-        y: ny,
-        width: gwPct,
-        height: ghPct,
+        x: box.cx,
+        y: box.cy,
+        width: box.w,
+        height: box.h,
         shapeStretchX: box.stretchX,
         shapeStretchY: box.stretchY,
         shapeContentBox: true
@@ -4772,8 +4790,8 @@ var ExperienciaCanvas = (function () {
       if (!drag) return;
       drag.pendingShapeDx = dxPx;
       drag.pendingShapeDy = dyPx;
-      drag.pendingShapeLayerW = layerW;
-      drag.pendingShapeLayerH = layerH;
+      drag.pendingShapeLayerW = drag.layerW || layerW;
+      drag.pendingShapeLayerH = drag.layerH || layerH;
       drag.pendingShapeMode = mode;
       if (drag.shapeRaf) return;
       drag.shapeRaf = requestAnimationFrame(function () {
@@ -5191,7 +5209,17 @@ var ExperienciaCanvas = (function () {
         if (!b) return '';
         var t = String(b.type || 'BUTTON').toUpperCase();
         var rot = Number(b.rotation) || 0;
-        var styleBits = 'left:' + Number(b.x) + '%;top:' + Number(b.y) + '%;' +
+        var paintX = Number(b.x);
+        var paintY = Number(b.y);
+        var gmPaint = null;
+        if (isShapeType(t) && selSet[String(b.id)]) {
+          gmPaint = shapeGizmoMetrics(b, layerW, layerH);
+          if (gmPaint) {
+            paintX = gmPaint.gx;
+            paintY = gmPaint.gy;
+          }
+        }
+        var styleBits = 'left:' + paintX + '%;top:' + paintY + '%;' +
           '--btn-rot:' + rot + 'deg;';
         if (t === 'TEXT') {
           var tSize = Number(b.fontSize) || 28;
@@ -5226,6 +5254,10 @@ var ExperienciaCanvas = (function () {
           var paintSz = shapePaintSize(b, layerW, layerH);
           var shapeW = paintSz.w;
           var shapeH = paintSz.h;
+          if (gmPaint) {
+            shapeW = gmPaint.gw;
+            shapeH = gmPaint.gh;
+          }
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
@@ -7616,8 +7648,13 @@ var ExperienciaCanvas = (function () {
               pushButtonHistory(transformDrag.sceneId);
               transformDrag.historyPushed = true;
             }
-            var layerW = transformDrag.layerW || Math.max(1, buttonsLayer.clientWidth || 1000);
-            var layerH = transformDrag.layerH || Math.max(1, buttonsLayer.clientHeight || 1000);
+            var layerW = transformDrag.layerW;
+            var layerH = transformDrag.layerH;
+            if (!layerW || !layerH) {
+              var cache = transformDrag.ptrCache;
+              layerW = cache ? cache.layerW : Math.max(1, buttonsLayer.clientWidth || 1000);
+              layerH = cache ? cache.layerH : Math.max(1, buttonsLayer.clientHeight || 1000);
+            }
             var ptrLocal = clientToOverlayLocalPxCached(
               ev.clientX, ev.clientY, transformDrag.ptrCache
             );
@@ -7631,6 +7668,10 @@ var ExperienciaCanvas = (function () {
             if (shapeLiveResize) {
               transformDrag.lastDxPx = dxPx;
               transformDrag.lastDyPx = dyPx;
+              if (!transformDrag.shapeSnapDone) {
+                transformDrag.shapeSnapDone = true;
+                scheduleShapeResizeFrame(transformDrag, 0, 0, layerW, layerH, mode);
+              }
               scheduleShapeResizeFrame(
                 transformDrag, dxPx, dyPx, layerW, layerH, mode
               );
@@ -8074,13 +8115,16 @@ var ExperienciaCanvas = (function () {
             rotateTapArmed = null;
           }
           var pct0 = percentFromPointer(ev);
-          var layerW0 = buttonsLayer.clientWidth || 1000;
-          var layerH0 = buttonsLayer.clientHeight || 1000;
-          var ptr0 = clientToOverlayLocalPx(ev.clientX, ev.clientY);
           var ptrCache = overlayPointerLayerCache();
-          if (ptrCache) {
-            ptr0 = clientToOverlayLocalPxCached(ev.clientX, ev.clientY, ptrCache);
-          }
+          var layerW0 = ptrCache
+            ? ptrCache.layerW
+            : Math.max(1, buttonsLayer.clientWidth || 1000);
+          var layerH0 = ptrCache
+            ? ptrCache.layerH
+            : Math.max(1, buttonsLayer.clientHeight || 1000);
+          var ptr0 = ptrCache
+            ? clientToOverlayLocalPxCached(ev.clientX, ev.clientY, ptrCache)
+            : clientToOverlayLocalPx(ev.clientX, ev.clientY);
           var shapeDragDef = isShapeType(gtype) ? shapeDefaultSize(gtype) : null;
           var liveRefs = null;
           var startW0;
