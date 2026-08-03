@@ -4629,12 +4629,9 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-shape--line:hover:not(.is-selected):not(.is-locked) {
   outline: none;
 }
+/* Selected line — match shape gizmo border: 2px white + dark rim */
 .builder-exp-stage-shape--line.is-selected .builder-exp-stage-shape__svg line {
-  stroke: var(--shape-line-color, rgba(255, 255, 255, 0.85));
-  filter:
-    drop-shadow(0 0 2px var(--shape-line-glow, rgba(255, 255, 255, 0.45)))
-    drop-shadow(0 0 6px var(--shape-line-glow-soft, rgba(255, 255, 255, 0.18)))
-    drop-shadow(0 0 12px 1px var(--shape-line-glow-soft, rgba(255, 255, 255, 0.1)));
+  filter: drop-shadow(0 0 0 1px rgba(0, 0, 0, 0.42));
 }
 
 .builder-exp-stage-shape--circle {

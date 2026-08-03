@@ -550,7 +550,7 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Vector SVG — stroke stays constant px (non-scaling) when the shape is resized. */
-  function shapeStageSvgHtml(b, t, layerW, layerH) {
+  function shapeStageSvgHtml(b, t, layerW, layerH, isSelected) {
     var shapeW = Number(b.width) || 12;
     var shapeH = Number(b.height) || 8;
     if (t === 'SHAPE_CIRCLE') {
@@ -566,10 +566,16 @@ var ExperienciaCanvas = (function () {
     var stroke = esc(b.stroke || 'rgba(255,255,255,0.55)');
     var ve = ' vector-effect="non-scaling-stroke"';
     if (t === 'SHAPE_LINE') {
+      var lineStroke = stroke;
+      var lineSw = sw;
+      if (isSelected) {
+        lineStroke = '#ffffff';
+        lineSw = Math.max(sw, 2);
+      }
       return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
         ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
         '<line x1="0" y1="50" x2="100" y2="50" fill="none"' +
-        ' stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ' stroke="' + lineStroke + '" stroke-width="' + lineSw + '"' +
         ' stroke-linecap="round"' + ve +
         ' shape-rendering="geometricPrecision"/></svg>';
     }
@@ -4617,13 +4623,7 @@ var ExperienciaCanvas = (function () {
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
-          if (t === 'SHAPE_LINE' && selSet[String(b.id)]) {
-            var strokeRaw = b.stroke || 'rgba(255,255,255,0.55)';
-            styleBits +=
-              '--shape-line-color:' + cssToken(strokeRaw) + ';' +
-              '--shape-line-glow:' + shapeStrokeGlow(strokeRaw, 0.45) + ';' +
-              '--shape-line-glow-soft:' + shapeStrokeGlow(strokeRaw, 0.18) + ';';
-          }
+          var lineSelected = t === 'SHAPE_LINE' && !!selSet[String(b.id)];
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
@@ -4633,7 +4633,7 @@ var ExperienciaCanvas = (function () {
             (b.locked ? ' data-locked="1"' : '') +
             ' aria-label="' + esc(b.label || t) + '"' +
             ' style="' + styleBits + '">' +
-            shapeStageSvgHtml(b, t, layerW, layerH) +
+            shapeStageSvgHtml(b, t, layerW, layerH, lineSelected) +
             '</button>';
         }
         var glyph = buttonIconGlyph(b.icon);
