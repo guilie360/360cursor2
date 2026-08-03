@@ -998,6 +998,12 @@ body.qr-proposals-page .qpp {
   white-space: nowrap;
 }
 
+.qpp-cmp-upgrade__tier-name--motion {
+  font-size: clamp(1.12rem, 2.65vw, 1.42rem);
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+}
+
 .qpp-cmp-upgrade__arrow {
   display: block;
   width: 100%;
@@ -1086,6 +1092,12 @@ body.qr-proposals-page .qpp {
     font-size: 0.82rem;
     letter-spacing: 0.16em;
     text-indent: 0.16em;
+  }
+
+  .qpp-cmp-upgrade__tier-name--motion {
+    font-size: 0.98rem;
+    letter-spacing: 0.18em;
+    text-indent: 0.18em;
   }
 
   .qpp-cmp-upgrade__pricing {

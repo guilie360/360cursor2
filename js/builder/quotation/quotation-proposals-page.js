@@ -146,7 +146,7 @@ var QuotationProposalsPage = (function () {
                     '<path d="M0 6h98M98 6l-8-5M98 6l-8 5" fill="none" stroke="currentColor" stroke-width="1"/>' +
                   '</svg>' +
                 '</span>' +
-                '<span class="qpp-cmp-upgrade__tier-name">Motion</span>' +
+                '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
               '</div>' +
               '<div class="qpp-cmp-upgrade__pricing">' +
                 '<div class="qpp-cmp-upgrade__price-col">' +

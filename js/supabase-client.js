@@ -185,11 +185,11 @@ function handoffQuotationPublicExperience(project) {
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7321');
+    u.searchParams.set('build', 'ws7322');
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7321';
+      '&experience_type=quotation&build=ws7322';
   }
 
   try {
