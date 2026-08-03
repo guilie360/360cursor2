@@ -4636,17 +4636,6 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: auto;
 }
 
-.builder-exp-buttons-layer.is-group-edit-mode .builder-exp-group-edit-frame {
-  position: absolute;
-  pointer-events: none;
-  border: 1px dashed rgba(255, 255, 255, 0.28);
-  border-radius: 2px;
-  box-sizing: border-box;
-  /* Match .builder-exp-sel-gizmo: gx/gy are center coordinates. */
-  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
-  z-index: 0;
-}
-
 /* Hover only — dashed outline; leaves when pointer exits */
 .builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
   outline: 1.5px dashed rgba(255, 255, 255, 0.9);
