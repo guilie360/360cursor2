@@ -1415,9 +1415,8 @@ body.qr-proposals-page .qpp {
     transform: none !important;
   }
 
-  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__eyebrow,
-  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__title,
-  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__lead {
+  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__lead,
+  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__lead--second {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
