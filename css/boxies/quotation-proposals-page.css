@@ -1033,7 +1033,6 @@ body.qr-proposals-page .qpp {
   pointer-events: auto;
 }
 
-.qpp[data-qpp-view="comparison"] .qpp__chrome-compare,
 .qpp[data-qpp-view="comparison"] .qpp__compare-cta {
   display: none !important;
 }
@@ -1272,7 +1271,13 @@ body.qr-proposals-page .qpp {
 }
 
 .qpp[data-qpp-view="comparison"] .qpp-cmp__upgrade-bar {
-  display: flex;
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .qpp[data-qpp-view="comparison"] .qpp-cmp__upgrade-bar {
+    display: flex;
+  }
 }
 
 .qpp-cmp__upgrade {
@@ -1327,22 +1332,30 @@ body.qr-proposals-page .qpp {
     padding:
       max(28px, calc(env(safe-area-inset-top) + 14px))
       18px
-      20px;
+      calc(84px + env(safe-area-inset-bottom));
   }
 
   .qpp[data-qpp-view="comparison"] .qpp__chrome {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     z-index: 30;
     pointer-events: none;
   }
 
   .qpp[data-qpp-view="comparison"] .qpp__chrome > .qpp__icon-btn,
-  .qpp[data-qpp-view="comparison"] .qpp__chrome .qpp__audio-wrap {
+  .qpp[data-qpp-view="comparison"] .qpp__chrome .qpp__audio-wrap,
+  .qpp[data-qpp-view="comparison"] .qpp__chrome-compare {
     pointer-events: auto;
   }
 
-  .qpp[data-qpp-view="comparison"] .qpp__audio-wrap {
+  .qpp[data-qpp-view="comparison"] .qpp__chrome-compare {
+    display: inline-flex !important;
+    justify-self: center;
     grid-column: 2;
+    grid-row: 1;
+  }
+
+  .qpp[data-qpp-view="comparison"] .qpp__audio-wrap {
+    grid-column: 3;
   }
 
   .qpp-cmp__head {

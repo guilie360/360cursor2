@@ -402,14 +402,50 @@ var QuotationProposalsPage = (function () {
     });
   }
 
-  function syncUpgradeBarUi(root) {
+  function syncFlowCtaUi(root) {
     var shell = qs('[data-qpp-root]', root) || root;
-    var btn = qs('[data-qpp-upgrade]', root);
-    if (!btn) return;
+    var view = shell.getAttribute('data-qpp-view') || 'selection';
     var panel = shell.getAttribute('data-qpp-compare-panel') || 'table';
-    var isUpgrade = panel === 'upgrade';
-    btn.textContent = isUpgrade ? 'Volver' : 'Upgrade';
-    btn.setAttribute('aria-label', isUpgrade ? 'Volver a propuestas' : 'Upgrade');
+    var label = 'Comparar';
+    var ariaLabel = 'Comparar';
+
+    if (view === 'comparison') {
+      if (panel === 'upgrade') {
+        label = 'Volver';
+        ariaLabel = 'Volver a propuestas';
+      } else {
+        label = 'Upgrade';
+        ariaLabel = 'Upgrade';
+      }
+    }
+
+    var upgradeBtn = qs('[data-qpp-upgrade]', root);
+    if (upgradeBtn) {
+      upgradeBtn.textContent = label;
+      upgradeBtn.setAttribute('aria-label', ariaLabel);
+    }
+
+    var chromeLabel = qs('.qpp__chrome-compare-label', root);
+    var chromeCompare = qs('[data-qpp-compare]', root);
+    if (chromeLabel) chromeLabel.textContent = label;
+    if (chromeCompare) chromeCompare.setAttribute('aria-label', ariaLabel);
+  }
+
+  function handleFlowCta(root) {
+    var shell = qs('[data-qpp-root]', root) || root;
+    var view = shell.getAttribute('data-qpp-view') || 'selection';
+    var panel = shell.getAttribute('data-qpp-compare-panel') || 'table';
+
+    if (view === 'selection') {
+      setQppView(root, 'comparison');
+      return;
+    }
+    if (panel === 'upgrade') {
+      setQppView(root, 'selection');
+      return;
+    }
+    setComparePanel(root, 'upgrade');
+    retriggerCmpAnimate(root);
   }
 
   function setComparePanel(root, panel) {
@@ -429,7 +465,7 @@ var QuotationProposalsPage = (function () {
       else upgradePanel.setAttribute('hidden', '');
     }
 
-    syncUpgradeBarUi(root);
+    syncFlowCtaUi(root);
   }
 
   function setQppView(root, view) {
@@ -637,30 +673,14 @@ var QuotationProposalsPage = (function () {
       });
     }
 
-    qsa('[data-qpp-compare], [data-qpp-compare-cta]', root).forEach(function (btn) {
+    qsa('[data-qpp-compare], [data-qpp-compare-cta], [data-qpp-upgrade]', root).forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
-        setQppView(root, 'comparison');
+        handleFlowCta(root);
       });
     });
 
-    var shellEl = qs('[data-qpp-root]', root) || root;
-    if (shellEl && !shellEl.dataset.qppUpgradeBound) {
-      shellEl.dataset.qppUpgradeBound = '1';
-      shellEl.addEventListener('click', function (e) {
-        var upgradeBtn = e.target && e.target.closest && e.target.closest('[data-qpp-upgrade]');
-        if (!upgradeBtn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        var panel = shellEl.getAttribute('data-qpp-compare-panel') || 'table';
-        if (panel === 'upgrade') {
-          setQppView(root, 'selection');
-          return;
-        }
-        setComparePanel(root, 'upgrade');
-        retriggerCmpAnimate(root);
-      });
-    }
+    syncFlowCtaUi(root);
 
     if (fsBtn) {
       fsBtn.addEventListener('click', function (e) {
