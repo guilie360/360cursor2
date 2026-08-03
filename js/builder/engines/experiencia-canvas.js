@@ -23,6 +23,16 @@ var ExperienciaCanvas = (function () {
       : false;
   }
 
+  /** Shapes: edge handles resize one axis; corners keep ratio. Circle stays uniform. */
+  function shouldCoupleShapeResizeAxes(type, moveE, moveW, moveN, moveS, keepRatio) {
+    if (!keepRatio) return false;
+    type = String(type || '').toUpperCase();
+    if (!isShapeType(type)) return true;
+    if ((moveE || moveW) && (moveN || moveS)) return true;
+    if (type === 'SHAPE_CIRCLE') return true;
+    return false;
+  }
+
   function shapeDefaultSize(t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
       return ExperienciaEngine.sceneShapeDefaultSize(t);
@@ -4351,7 +4361,7 @@ var ExperienciaCanvas = (function () {
         el.style.setProperty('--btn-rot', rot + 'deg');
         if (isShapeType(t)) {
           var shapeDefLive = shapeDefaultSize(t);
-          var liveSz = shapeDisplaySize(Number(b.width) || shapeDefLive.w, layerW, layerH);
+          var liveSz = shapeDisplaySize(Number(vm.width) || shapeDefLive.w, layerW, layerH);
           var sw = liveSz.w;
           var sh = liveSz.h;
           el.style.width = sw + '%';
@@ -4396,6 +4406,10 @@ var ExperienciaCanvas = (function () {
     function applyLiveResizePaint(buttonId, box, type) {
       if (!buttonsLayer || !buttonId || !box) return;
       var t = String(type || '').toUpperCase();
+      if (isShapeType(t)) {
+        applyLiveShapeResizePaint(buttonId, box, t);
+        return;
+      }
       var idSel = String(buttonId).replace(/"/g, '');
       var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
       var leftPx = (Number(box.lpx) + Number(box.rpx)) / 2;
@@ -4425,6 +4439,57 @@ var ExperienciaCanvas = (function () {
           var label = t === 'SHAPE_LINE'
             ? Math.max(1, Math.round(wPx)) + ' px'
             : Math.max(1, Math.round(wPx)) + ' × ' + Math.max(1, Math.round(hPx));
+          if (sizeEl.textContent !== label) sizeEl.textContent = label;
+        }
+      }
+    }
+
+    /** Shape resize — gizmo box → square tile DOM; avoids model round-trip jitter. */
+    function applyLiveShapeResizePaint(buttonId, box, kind) {
+      if (!buttonsLayer || !buttonId || !box) return;
+      kind = String(kind || '').toUpperCase();
+      var layerW = Math.max(1, buttonsLayer.clientWidth || 1000);
+      var layerH = Math.max(1, buttonsLayer.clientHeight || 1000);
+      var idSel = String(buttonId).replace(/"/g, '');
+      var Lpx = Number(box.lpx);
+      var Rpx = Number(box.rpx);
+      var Tpx = Number(box.tpx);
+      var Bpx = Number(box.bpx);
+      var nw = ((Rpx - Lpx) / layerW) * 100;
+      var nh = ((Bpx - Tpx) / layerH) * 100;
+      var nx = (((Lpx + Rpx) / 2) / layerW) * 100;
+      var ny = (((Tpx + Bpx) / 2) / layerH) * 100;
+      var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+        ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(nw, kind)
+        : nw;
+      var tileDisp = shapeDisplaySize(tileW, layerW, layerH);
+      var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+        ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+          nx, ny, tileW, kind, layerW, layerH
+        )
+        : { x: nx, y: ny };
+      var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
+      if (el) {
+        el.style.left = tileCtr.x + '%';
+        el.style.top = tileCtr.y + '%';
+        el.style.width = tileDisp.w + '%';
+        el.style.height = tileDisp.h + '%';
+      }
+      var gizmo = buttonsLayer.querySelector(
+        '[data-exp-gizmo][data-gizmo-id="' + idSel + '"]'
+      );
+      if (gizmo) {
+        gizmo.style.left = nx + '%';
+        gizmo.style.top = ny + '%';
+        gizmo.style.width = nw + '%';
+        gizmo.style.height = nh + '%';
+        gizmo.classList.add('is-sizing');
+        var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+        if (sizeEl) {
+          var label = kind === 'SHAPE_LINE'
+            ? Math.max(1, Math.round((nw / 100) * layerW)) + ' px'
+            : Math.max(1, Math.round((nw / 100) * layerW)) + ' × ' +
+              Math.max(1, Math.round((nh / 100) * layerH));
           if (sizeEl.textContent !== label) sizeEl.textContent = label;
         }
       }
@@ -7063,7 +7128,10 @@ var ExperienciaCanvas = (function () {
             var wPx = Math.max(minWpx, Rpx - Lpx);
             var hPx = Math.max(minHpx, Bpx - Tpx);
 
-            if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
+            if (transformDrag.keepRatio && transformDrag.startWpx > 0 &&
+                shouldCoupleShapeResizeAxes(
+                  transformDrag.type, moveE, moveW, moveN, moveS, true
+                )) {
               var ratioPx = transformDrag.startHpx / transformDrag.startWpx;
               if (!isShapeType(transformDrag.type) && isSquareShapeType(transformDrag.type)) {
                 ratioPx = 1; /* square in pixels */
@@ -7137,7 +7205,10 @@ var ExperienciaCanvas = (function () {
               Bpx = snappedPx.Bpx;
               wPx = Rpx - Lpx;
               hPx = Bpx - Tpx;
-              if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
+              if (transformDrag.keepRatio && transformDrag.startWpx > 0 &&
+                shouldCoupleShapeResizeAxes(
+                  transformDrag.type, moveE, moveW, moveN, moveS, true
+                )) {
                 var ratioSnap = (!isShapeType(transformDrag.type) && isSquareShapeType(transformDrag.type))
                   ? 1
                   : (transformDrag.startHpx / Math.max(1, transformDrag.startWpx));
@@ -7209,13 +7280,9 @@ var ExperienciaCanvas = (function () {
               patchT.height = tileDisp.h;
             }
             ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
-            if (isShapeType(transformDrag.type)) {
-              paintButtonsStage();
-            } else {
-              applyLiveResizePaint(transformDrag.buttonId, {
-                lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
-              }, transformDrag.type);
-            }
+            applyLiveResizePaint(transformDrag.buttonId, {
+              lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
+            }, transformDrag.type);
             /* No align mini-guides while resizing. */
             transformDrag.guides = { spacing: [] };
             syncLiveOverlayGuides(transformDrag.guides);
