@@ -179,6 +179,64 @@ var HeroCanvas = (function () {
     else host._heroCanvasState = state;
   }
 
+  function clampZoom(state, z) {
+    var minZ = state.opts.zoomMin != null ? Number(state.opts.zoomMin) : 0.25;
+    var maxZ = state.opts.zoomMax != null ? Number(state.opts.zoomMax) : 4;
+    if (!isFinite(minZ) || minZ <= 0) minZ = 0.25;
+    if (!isFinite(maxZ) || maxZ < minZ) maxZ = 4;
+    return Math.max(minZ, Math.min(maxZ, z));
+  }
+
+  function hostPointerScale(host) {
+    var rect = host.getBoundingClientRect();
+    var sx = host.clientWidth > 0 ? rect.width / host.clientWidth : 1;
+    var sy = host.clientHeight > 0 ? rect.height / host.clientHeight : 1;
+    if (!isFinite(sx) || sx < 0.0001) sx = 1;
+    if (!isFinite(sy) || sy < 0.0001) sy = 1;
+    return { sx: sx, sy: sy, rect: rect };
+  }
+
+  function notifyCameraChange(state) {
+    if (state.opts.onCameraChange) {
+      state.opts.onCameraChange({
+        panX: state.panX,
+        panY: state.panY,
+        zoom: state.zoom
+      });
+    }
+  }
+
+  function zoomAtPoint(state, clientX, clientY, factor) {
+    if (!state || !state.host) return;
+    factor = Number(factor) || 1;
+    if (!isFinite(factor) || factor <= 0) return;
+    var hs = hostPointerScale(state.host);
+    var mx = (clientX - hs.rect.left) / hs.sx;
+    var my = (clientY - hs.rect.top) / hs.sy;
+    var oldZ = state.zoom || 1;
+    var newZ = clampZoom(state, oldZ * factor);
+    if (Math.abs(newZ - oldZ) < 0.0001) return;
+    var wx = (mx - state.panX) / oldZ;
+    var wy = (my - state.panY) / oldZ;
+    state.zoom = newZ;
+    state.panX = mx - wx * newZ;
+    state.panY = my - wy * newZ;
+    applyTransform(state);
+    notifyCameraChange(state);
+  }
+
+  function applyCamera(state, cam) {
+    cam = cam || {};
+    if (state.opts.allowZoom && cam.zoom != null) {
+      state.zoom = clampZoom(state, Number(cam.zoom));
+    } else if (!state.opts.allowZoom) {
+      state.zoom = 1;
+    }
+    if (cam.panX != null && !isNaN(Number(cam.panX))) state.panX = Number(cam.panX);
+    if (cam.panY != null && !isNaN(Number(cam.panY))) state.panY = Number(cam.panY);
+    applyTransform(state);
+  }
+
   function clampPan(state) {
     var hostW = state.host.clientWidth || 1;
     var hostH = state.host.clientHeight || 1;
@@ -314,20 +372,16 @@ var HeroCanvas = (function () {
     function onMove(ev) {
       if (!dragging) return;
       if (pointerId != null && ev.pointerId !== pointerId) return;
-      /* Compensate CSS scale on ancestors (Builder device-frame fit). */
-      var rect = host.getBoundingClientRect();
-      var sx = host.clientWidth > 0 ? rect.width / host.clientWidth : 1;
-      var sy = host.clientHeight > 0 ? rect.height / host.clientHeight : 1;
-      if (!isFinite(sx) || sx < 0.0001) sx = 1;
-      if (!isFinite(sy) || sy < 0.0001) sy = 1;
-      var dx = (ev.clientX - lastX) / sx;
-      var dy = (ev.clientY - lastY) / sy;
+      var hs = hostPointerScale(host);
+      var dx = (ev.clientX - lastX) / hs.sx;
+      var dy = (ev.clientY - lastY) / hs.sy;
       if (dx || dy) moved = true;
       lastX = ev.clientX;
       lastY = ev.clientY;
       state.panX += dx;
       state.panY += dy;
       applyTransform(state);
+      notifyCameraChange(state);
       ev.preventDefault();
     }
 
@@ -378,6 +432,68 @@ var HeroCanvas = (function () {
     };
   }
 
+  /** Middle-button pan — builder editor when content is zoomed in. */
+  function bindMiddleButtonPan(state) {
+    var host = state.host;
+    var dragging = false;
+    var lastX = 0;
+    var lastY = 0;
+    var pointerId = null;
+
+    function onDown(ev) {
+      if (ev.pointerType === 'mouse' && ev.button !== 1) return;
+      if ((state.zoom || 1) <= 1.001) return;
+      dragging = true;
+      pointerId = ev.pointerId;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      host.classList.add('is-middle-panning', 'is-panning');
+      try { host.setPointerCapture(ev.pointerId); } catch (eCap) { /* ignore */ }
+      ev.preventDefault();
+    }
+
+    function onMove(ev) {
+      if (!dragging) return;
+      if (pointerId != null && ev.pointerId !== pointerId) return;
+      var hs = hostPointerScale(host);
+      var dx = (ev.clientX - lastX) / hs.sx;
+      var dy = (ev.clientY - lastY) / hs.sy;
+      lastX = ev.clientX;
+      lastY = ev.clientY;
+      state.panX += dx;
+      state.panY += dy;
+      applyTransform(state);
+      notifyCameraChange(state);
+      ev.preventDefault();
+    }
+
+    function onUp(ev) {
+      if (!dragging) return;
+      if (pointerId != null && ev.pointerId !== pointerId) return;
+      dragging = false;
+      pointerId = null;
+      host.classList.remove('is-middle-panning', 'is-panning');
+      try { host.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
+    }
+
+    function onAuxClick(ev) {
+      if (ev.button === 1) ev.preventDefault();
+    }
+
+    host.addEventListener('pointerdown', onDown);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerup', onUp);
+    host.addEventListener('pointercancel', onUp);
+    host.addEventListener('auxclick', onAuxClick);
+    state._unbindMiddlePan = function () {
+      host.removeEventListener('pointerdown', onDown);
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerup', onUp);
+      host.removeEventListener('pointercancel', onUp);
+      host.removeEventListener('auxclick', onAuxClick);
+    };
+  }
+
   function ensureStructure(host) {
     host.classList.add('hero-canvas-host');
     host.setAttribute('data-hero-canvas-host', '1');
@@ -411,6 +527,9 @@ var HeroCanvas = (function () {
     if (prev && prev._unbindPan) {
       try { prev._unbindPan(); } catch (eU) { /* ignore */ }
     }
+    if (prev && prev._unbindMiddlePan) {
+      try { prev._unbindMiddlePan(); } catch (eUm) { /* ignore */ }
+    }
     if (prev && prev._ro) {
       try { prev._ro.disconnect(); } catch (eRo) { /* ignore */ }
     }
@@ -432,12 +551,21 @@ var HeroCanvas = (function () {
     }
 
     if (opts.enablePan !== false) bindPan(state);
+    if (opts.middleButtonPan) bindMiddleButtonPan(state);
 
-    centerAtFixedZoom(state);
+    if (opts.initialCamera) {
+      applyCamera(state, opts.initialCamera);
+    } else {
+      centerAtFixedZoom(state);
+    }
     showHintOnce(state);
 
     if (typeof ResizeObserver !== 'undefined') {
       state._ro = new ResizeObserver(function () {
+        if (state.opts.allowZoom) {
+          applyTransform(state);
+          return;
+        }
         /* Keep zoom=1; only re-center if we haven't panned yet, else clamp. */
         var z = state.zoom;
         state.zoom = 1;
@@ -474,12 +602,10 @@ var HeroCanvas = (function () {
         return state.mediaSlot;
       },
       setCamera: function (cam) {
-        cam = cam || {};
-        /* Zoom locked at 1 for maps philosophy — ignore external zoom changes. */
-        state.zoom = 1;
-        if (cam.panX != null) state.panX = Number(cam.panX);
-        if (cam.panY != null) state.panY = Number(cam.panY);
-        applyTransform(state);
+        applyCamera(state, cam);
+      },
+      zoomAtPoint: function (clientX, clientY, factor) {
+        zoomAtPoint(state, clientX, clientY, factor);
       },
       fitContain: function () { centerAtFixedZoom(state); },
       center: function () { centerAtFixedZoom(state); },
@@ -499,6 +625,7 @@ var HeroCanvas = (function () {
       destroy: function () {
         if (state._hintTimer) clearTimeout(state._hintTimer);
         if (state._unbindPan) state._unbindPan();
+        if (state._unbindMiddlePan) state._unbindMiddlePan();
         if (state._ro) state._ro.disconnect();
         if (state._onResize) window.removeEventListener('resize', state._onResize);
         setState(state.host, null);

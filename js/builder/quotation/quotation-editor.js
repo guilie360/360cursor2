@@ -751,6 +751,8 @@ var QuotationEditor = (function () {
       rulersVisible: false,
       guidesVisible: true,
       canvasUserZoom: 1,
+      canvasPanX: null,
+      canvasPanY: null,
       expEditMode: 'buttons',
       expHasSelection: false,
       selectedOverlayIds: [],
@@ -3750,14 +3752,9 @@ var QuotationEditor = (function () {
     var slotH = Math.max(1, availH - chromeH);
 
     /* Device window keeps logical pixels; only the fit frame scales visually. */
-    var baseScale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
-    if (!isFinite(baseScale) || baseScale <= 0) baseScale = 0.01;
-    if (baseScale > 1) baseScale = 1;
-    var userZoom = Number(state.canvasUserZoom) || 1;
-    if (userZoom < CANVAS_ZOOM_MIN) userZoom = CANVAS_ZOOM_MIN;
-    if (userZoom > CANVAS_ZOOM_MAX) userZoom = CANVAS_ZOOM_MAX;
-    state.canvasUserZoom = userZoom;
-    var scale = baseScale * userZoom;
+    var scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
+    if (!isFinite(scale) || scale <= 0) scale = 0.01;
+    if (scale > 1) scale = 1;
 
     var scaledW = Math.max(1, Math.floor(natW * scale));
     var scaledH = Math.max(1, Math.floor(natH * scale));
@@ -3837,7 +3834,6 @@ var QuotationEditor = (function () {
     }
 
     shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
-    shell.setAttribute('data-qe-stage-user-zoom', String(Math.round(userZoom * 1000) / 1000));
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
     shell.setAttribute('data-qe-chrome-locked', '1');
     canvasFitScale = scale;
@@ -3985,8 +3981,26 @@ var QuotationEditor = (function () {
     }
   }
 
+  function syncCanvasCameraFromState(cam) {
+    if (cam) {
+      if (cam.zoom != null) state.canvasUserZoom = cam.zoom;
+      if (cam.panX != null) state.canvasPanX = cam.panX;
+      if (cam.panY != null) state.canvasPanY = cam.panY;
+    }
+  }
+
+  function buildCanvasInitialCamera() {
+    var cam = { zoom: Number(state.canvasUserZoom) || 1 };
+    if (state.canvasPanX != null && !isNaN(Number(state.canvasPanX))) {
+      cam.panX = Number(state.canvasPanX);
+    }
+    if (state.canvasPanY != null && !isNaN(Number(state.canvasPanY))) {
+      cam.panY = Number(state.canvasPanY);
+    }
+    return cam;
+  }
+
   /**
-   * V7.2.65 — Same QuotationRuntime.paintScene for edit + canvas Vista Previa.
    * Edit: Experiencia owns overlays (paintInteractions:false).
    * Preview: Runtime paints + runs interactions; no edit layer / handles.
    */
@@ -4014,12 +4028,16 @@ var QuotationEditor = (function () {
     }
 
     var preview = !!state.canvasPreviewMode;
-    var konvaEdit = typeof KonvaOverlayRenderer !== 'undefined' &&
-      KonvaOverlayRenderer.isEnabled({ projectId: resolveProjectId() });
     builderSceneApi = QuotationRuntime.paintScene(host, scene, null, {
       mode: preview ? 'preview' : 'builder',
       interactive: preview,
-      enablePan: preview ? true : !konvaEdit,
+      enablePan: !!preview,
+      allowZoom: !preview,
+      middleButtonPan: !preview,
+      initialCamera: preview ? null : buildCanvasInitialCamera(),
+      onCameraChange: preview ? null : syncCanvasCameraFromState,
+      zoomMin: CANVAS_ZOOM_MIN,
+      zoomMax: CANVAS_ZOOM_MAX,
       disableHint: true,
       paintInteractions: preview,
       onAction: preview
@@ -4037,7 +4055,11 @@ var QuotationEditor = (function () {
         : null
     });
 
-    if (prevCam && builderSceneApi && builderSceneApi.setCamera) {
+    if (!preview && builderSceneApi && builderSceneApi.setCamera) {
+      var camApply = prevCam || buildCanvasInitialCamera();
+      builderSceneApi.setCamera(camApply);
+      syncCanvasCameraFromState(builderSceneApi.getCamera());
+    } else if (prevCam && builderSceneApi && builderSceneApi.setCamera) {
       builderSceneApi.setCamera(prevCam);
     }
 
@@ -4071,15 +4093,14 @@ var QuotationEditor = (function () {
     if (!ev || !(ev.ctrlKey || ev.metaKey)) return;
     var t = ev.target;
     if (!t || !t.closest || !rootEl) return;
-    if (!t.closest('[data-qe-canvas-fit]')) return;
+    if (!t.closest('[data-qe-canvas-fit-frame]')) return;
     ev.preventDefault();
     ev.stopPropagation();
+    var hc = builderSceneApi && builderSceneApi.heroCanvas;
+    if (!hc || !hc.zoomAtPoint) return;
     var factor = ev.deltaY > 0 ? (1 / CANVAS_ZOOM_WHEEL) : CANVAS_ZOOM_WHEEL;
-    var cur = Number(state.canvasUserZoom) || 1;
-    var next = Math.max(CANVAS_ZOOM_MIN, Math.min(CANVAS_ZOOM_MAX, cur * factor));
-    if (Math.abs(next - cur) < 0.0005) return;
-    state.canvasUserZoom = next;
-    fitStageWorkspace();
+    hc.zoomAtPoint(ev.clientX, ev.clientY, factor);
+    if (builderSceneApi.getCamera) syncCanvasCameraFromState(builderSceneApi.getCamera());
   }
 
   function bindCanvasFit() {
@@ -8272,6 +8293,8 @@ var QuotationEditor = (function () {
           if (state.viewportPreset === next) return;
           state.viewportPreset = next;
           state.canvasUserZoom = 1;
+          state.canvasPanX = null;
+          state.canvasPanY = null;
           destroyBuilderRuntimeScene();
           rerender();
         });

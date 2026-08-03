@@ -31,6 +31,14 @@
   cursor: default;
 }
 
+.hero-canvas-host.is-middle-panning {
+  cursor: grab;
+}
+
+.hero-canvas-host.is-middle-panning.is-panning {
+  cursor: grabbing;
+}
+
 .hero-canvas-host,
 .hero-canvas-host * {
   -webkit-user-drag: none;

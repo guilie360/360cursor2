@@ -607,7 +607,13 @@ var QuotationRuntime = (function () {
         mediaClass: media && media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
       },
       enablePan: enablePan,
-      disableHint: disableHint
+      disableHint: disableHint,
+      allowZoom: !!opts.allowZoom,
+      middleButtonPan: !!opts.middleButtonPan,
+      initialCamera: opts.initialCamera || null,
+      onCameraChange: typeof opts.onCameraChange === 'function' ? opts.onCameraChange : null,
+      zoomMin: opts.zoomMin,
+      zoomMax: opts.zoomMax
     });
 
     sceneMediaEl = heroCanvasApi.mediaSlot;
@@ -630,7 +636,13 @@ var QuotationRuntime = (function () {
     var paintIx = opts.paintInteractions !== false;
     var canvas = paintSceneMedia(hostEl, scene, bundle, {
       enablePan: opts.enablePan,
-      disableHint: opts.disableHint != null ? opts.disableHint : (opts.mode === 'builder')
+      disableHint: opts.disableHint != null ? opts.disableHint : (opts.mode === 'builder'),
+      allowZoom: opts.allowZoom,
+      middleButtonPan: opts.middleButtonPan,
+      initialCamera: opts.initialCamera,
+      onCameraChange: opts.onCameraChange,
+      zoomMin: opts.zoomMin,
+      zoomMax: opts.zoomMax
     });
     if (paintIx && canvas) {
       paintInteractionLayer(canvas, scene, interactive, {
