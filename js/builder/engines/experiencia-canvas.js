@@ -576,7 +576,8 @@ var ExperienciaCanvas = (function () {
     var left = bbox.cx - bbox.w / 2;
     var top = bbox.cy - bbox.h / 2;
     if (kind === 'SHAPE_LINE') {
-      return 'left:' + left + '%;width:' + bbox.w + '%;top:calc(50% - 7px);height:14px;';
+      /* Height via CSS — thin strip aligned to stroke, not the square tile. */
+      return 'left:' + left + '%;width:' + bbox.w + '%;';
     }
     return 'left:' + left + '%;top:' + top + '%;width:' + bbox.w + '%;height:' + bbox.h + '%;';
   }

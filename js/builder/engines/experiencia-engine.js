@@ -263,7 +263,7 @@ var ExperienciaEngine = (function () {
     var gw = tile.w * (bbox.w / 100);
     var gh = tile.w * (bbox.h / 100) * (lw / lh);
     if (kind === 'SHAPE_LINE') {
-      gh = Math.max(0.35, gh);
+      gh = Math.max(0.08, gh);
     }
     var offX = ((bbox.cx - 50) / 100) * tile.w;
     var offY = ((bbox.cy - 50) / 100) * tile.h;
