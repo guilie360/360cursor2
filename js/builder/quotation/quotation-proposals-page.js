@@ -484,12 +484,6 @@ var QuotationProposalsPage = (function () {
       compareView.setAttribute('aria-hidden', next === 'comparison' ? 'false' : 'true');
     }
 
-    qsa('[data-qpp-compare], [data-qpp-compare-cta]', root).forEach(function (btn) {
-      var on = next === 'comparison';
-      btn.classList.toggle('is-active', on);
-      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-
     if (next === 'comparison') {
       setComparePanel(root, 'table');
       renderCompare(root);
