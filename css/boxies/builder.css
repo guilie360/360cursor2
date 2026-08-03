@@ -7151,23 +7151,48 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-sel-box {
   position: absolute;
-  inset: -2px;
-  border: 1.5px solid #000;
-  border-radius: 4px;
+  inset: -3px;
+  border: 2px solid #fff;
+  border-radius: 2px;
   box-sizing: border-box;
   pointer-events: none;
+  /* Legible sobre fondos claros y oscuros */
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.42);
 }
 
 .builder-exp-sel-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
   background: #fff;
-  border: 1.5px solid #000;
-  border-radius: 2px;
+  border: none;
   pointer-events: auto;
   box-sizing: border-box;
   z-index: 4;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+/* Corner handles — circles (Figma-like) */
+.builder-exp-sel-handle[data-handle="nw"],
+.builder-exp-sel-handle[data-handle="ne"],
+.builder-exp-sel-handle[data-handle="se"],
+.builder-exp-sel-handle[data-handle="sw"] {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Edge handles — pills */
+.builder-exp-sel-handle[data-handle="n"],
+.builder-exp-sel-handle[data-handle="s"] {
+  width: 18px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.builder-exp-sel-handle[data-handle="e"],
+.builder-exp-sel-handle[data-handle="w"] {
+  width: 6px;
+  height: 18px;
+  border-radius: 999px;
 }
 
 /* Expanded hit target — easier to grab corners / edges (Canva-like) */
@@ -7177,14 +7202,14 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   inset: -10px;
 }
 
-.builder-exp-sel-handle[data-handle="nw"] { left: -6px; top: -6px; cursor: nwse-resize; }
-.builder-exp-sel-handle[data-handle="n"]  { left: 50%; top: -6px; margin-left: -5px; cursor: ns-resize; }
-.builder-exp-sel-handle[data-handle="ne"] { right: -6px; top: -6px; cursor: nesw-resize; }
-.builder-exp-sel-handle[data-handle="e"]  { right: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
-.builder-exp-sel-handle[data-handle="se"] { right: -6px; bottom: -6px; cursor: nwse-resize; }
-.builder-exp-sel-handle[data-handle="s"]  { left: 50%; bottom: -6px; margin-left: -5px; cursor: ns-resize; }
-.builder-exp-sel-handle[data-handle="sw"] { left: -6px; bottom: -6px; cursor: nesw-resize; }
-.builder-exp-sel-handle[data-handle="w"]  { left: -6px; top: 50%; margin-top: -5px; cursor: ew-resize; }
+.builder-exp-sel-handle[data-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="n"]  { left: 50%; top: -3px; margin-left: -9px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="e"]  { right: -3px; top: 50%; margin-top: -9px; cursor: ew-resize; }
+.builder-exp-sel-handle[data-handle="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="s"]  { left: 50%; bottom: -3px; margin-left: -9px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="w"]  { left: -3px; top: 50%; margin-top: -9px; cursor: ew-resize; }
 
 /* Rotate by approaching corners (outside resize handles) — no visible button. */
 .builder-exp-sel-rot-zone {
@@ -7210,17 +7235,17 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   pointer-events: none;
   z-index: 4;
   display: none;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: #000;
-  color: #fff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
   line-height: 1.3;
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.28);
 }
 
 /* Size label only while actively resizing / scaling */

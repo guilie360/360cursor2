@@ -4624,8 +4624,9 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: none;
 }
 .builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
-  border-color: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
+  border-color: #fff;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.42);
 }
 
 .builder-exp-sel-gizmo.is-overlay-group {
