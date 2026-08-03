@@ -5090,12 +5090,26 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    /** Shift while dragging = lock to H or V; axis re-picks when Shift is pressed again. */
+    function applyOverlayDragAxisLock(drag, ddx, ddy, shiftKey) {
+      if (!drag) return { ddx: ddx, ddy: ddy };
+      if (!shiftKey) {
+        drag.axisLock = null;
+        return { ddx: ddx, ddy: ddy };
+      }
+      if (!drag.axisLock) {
+        drag.axisLock = Math.abs(ddx) >= Math.abs(ddy) ? 'x' : 'y';
+      }
+      if (drag.axisLock === 'x') return { ddx: ddx, ddy: 0 };
+      return { ddx: 0, ddy: ddy };
+    }
+
     function computeButtonGuides(sceneId, buttonId, x, y, opts) {
       opts = opts || {};
       var nx = x;
       var ny = y;
       var guides = { spacing: [], align: [] };
-      /* Hold Shift while moving to bypass all snap (peers + red guides). */
+      /* Hold Alt while moving to bypass all snap (peers + red guides). */
       if (opts.disableSnap) {
         return { x: nx, y: ny, guides: guides };
       }
@@ -6958,13 +6972,16 @@ var ExperienciaCanvas = (function () {
           : [buttonDrag.buttonId];
         var ddx = pct.x - buttonDrag.startPx;
         var ddy = pct.y - buttonDrag.startPy;
+        var axis = applyOverlayDragAxisLock(buttonDrag, ddx, ddy, !!ev.shiftKey);
+        ddx = axis.ddx;
+        ddy = axis.ddy;
         if (buttonDrag.isOverlayGroup && ExperienciaEngine.updateOverlayGroupTransform) {
           var szG = overlayLayerSize();
           var rawCx = buttonDrag.originX != null ? buttonDrag.originX + ddx : pct.x;
           var rawCy = buttonDrag.originY != null ? buttonDrag.originY + ddy : pct.y;
           var snappedG = computeButtonGuides(
             buttonDrag.sceneId, buttonDrag.buttonId, rawCx, rawCy,
-            { disableSnap: !!ev.shiftKey }
+            { disableSnap: !!ev.altKey }
           );
           buttonDrag.guides = snappedG.guides;
           /* Snap against union center; apply the same delta to the compose pivot. */
@@ -7008,7 +7025,7 @@ var ExperienciaCanvas = (function () {
           : pct.y;
         var snapped = computeButtonGuides(
           buttonDrag.sceneId, buttonDrag.buttonId, rawX, rawY,
-          { disableSnap: !!ev.shiftKey }
+          { disableSnap: !!ev.altKey }
         );
         buttonDrag.guides = snapped.guides;
         setOverlayLivePosition(
@@ -7096,6 +7113,7 @@ var ExperienciaCanvas = (function () {
           startX: ox,
           startY: oy,
           guides: null,
+          axisLock: null,
           historyPushed: false,
           live: true
         };
