@@ -280,21 +280,52 @@ var ExperienciaEngine = (function () {
     return { cx: 50, cy: 50, w: base.w * st.sx, h: base.h * st.sy };
   }
 
+  /** SVG viewBox — expands when stretched content exceeds 0…100 (prevents meet shrink/clipping). */
+  function shapeSvgViewBox(kind, stretchX, stretchY) {
+    var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
+    if (st.sx === 1 && st.sy === 1) {
+      return { x: 0, y: 0, w: 100, h: 100 };
+    }
+    var bbox = shapeContentBBox(kind, st);
+    var margin = Math.max(2, Math.min(10, Math.min(bbox.w, bbox.h) * 0.08));
+    return {
+      x: bbox.cx - bbox.w / 2 - margin,
+      y: bbox.cy - bbox.h / 2 - margin,
+      w: bbox.w + margin * 2,
+      h: bbox.h + margin * 2
+    };
+  }
+
+  function shapeContentFrac(kind, stretchX, stretchY) {
+    var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
+    var bbox = shapeContentBBox(kind, st);
+    var vb = shapeSvgViewBox(kind, st.sx, st.sy);
+    return {
+      bbox: bbox,
+      vb: vb,
+      fracW: bbox.w / Math.max(1, vb.w),
+      fracH: bbox.h / Math.max(1, vb.h),
+      offX: bbox.cx - (vb.x + vb.w / 2),
+      offY: bbox.cy - (vb.y + vb.h / 2)
+    };
+  }
+
   /** Tight gizmo aligned to visible shape — tile stays square for picker parity. */
   function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY, stretchX, stretchY) {
     kind = String(kind || '').toUpperCase();
     var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
     var tile = sceneShapeDisplaySize(widthPct, layerW, layerH);
-    var bbox = shapeContentBBox(kind, st);
+    var cf = shapeContentFrac(kind, st.sx, st.sy);
+    var bbox = cf.bbox;
     var lw = Math.max(1, Number(layerW) || 1000);
     var lh = Math.max(1, Number(layerH) || 1000);
-    var gw = tile.w * (bbox.w / 100);
-    var gh = tile.w * (bbox.h / 100) * (lw / lh);
+    var gw = tile.w * cf.fracW;
+    var gh = tile.w * cf.fracH * (lw / lh);
     if (kind === 'SHAPE_LINE') {
       gh = Math.max(0.08, gh);
     }
-    var offX = ((bbox.cx - 50) / 100) * tile.w;
-    var offY = ((bbox.cy - 50) / 100) * tile.h;
+    var offX = (cf.offX / cf.vb.w) * tile.w;
+    var offY = (cf.offY / cf.vb.h) * tile.h;
     var gx = (posX != null && !isNaN(Number(posX)) ? Number(posX) : 50) + offX;
     var gy = (posY != null && !isNaN(Number(posY)) ? Number(posY) : 50) + offY;
     return {
@@ -311,18 +342,38 @@ var ExperienciaEngine = (function () {
   }
 
   function sceneShapeTileWidthFromContentWidth(contentWPct, kind, stretchX, stretchY) {
-    var bbox = shapeContentBBox(kind, shapeStretchXY({ stretchX: stretchX, stretchY: stretchY }));
-    var frac = bbox.w / 100;
+    var cf = shapeContentFrac(kind, stretchX, stretchY);
+    var frac = cf.fracW;
     if (!frac || frac <= 0) return contentWPct;
     return Number(contentWPct) / frac;
   }
 
   function sceneShapeTileCenterFromGizmoCenter(gx, gy, tileWPct, kind, layerW, layerH, stretchX, stretchY) {
     var tile = sceneShapeDisplaySize(tileWPct, layerW, layerH);
-    var bbox = shapeContentBBox(kind, shapeStretchXY({ stretchX: stretchX, stretchY: stretchY }));
-    var offX = ((bbox.cx - 50) / 100) * tile.w;
-    var offY = ((bbox.cy - 50) / 100) * tile.h;
+    var cf = shapeContentFrac(kind, stretchX, stretchY);
+    var offX = (cf.offX / cf.vb.w) * tile.w;
+    var offY = (cf.offY / cf.vb.h) * tile.h;
     return { x: Number(gx) - offX, y: Number(gy) - offY };
+  }
+
+  function shapeHitAreaCss(kind, stretchX, stretchY) {
+    kind = String(kind || '').toUpperCase();
+    var cf = shapeContentFrac(kind, stretchX, stretchY);
+    var bbox = cf.bbox;
+    var vb = cf.vb;
+    var scale = Math.min(100 / vb.w, 100 / vb.h);
+    var dispW = vb.w * scale;
+    var dispH = vb.h * scale;
+    var offX = (100 - dispW) / 2;
+    var offY = (100 - dispH) / 2;
+    var left = offX + ((bbox.cx - bbox.w / 2) - vb.x) / vb.w * dispW;
+    var top = offY + ((bbox.cy - bbox.h / 2) - vb.y) / vb.h * dispH;
+    var width = (bbox.w / vb.w) * dispW;
+    var height = (bbox.h / vb.h) * dispH;
+    if (kind === 'SHAPE_LINE') {
+      return 'left:' + left + '%;width:' + width + '%;';
+    }
+    return 'left:' + left + '%;top:' + top + '%;width:' + width + '%;height:' + height + '%;';
   }
 
   /** Picker tile → canvas: width % + height % that form a pixel square on the layer. */
@@ -459,10 +510,9 @@ var ExperienciaEngine = (function () {
     var svgClass = opts.svgClass ? ' class="' + shapeAttr(opts.svgClass) + '"' : '';
     var par = opts.preserveAspect === 'none' ? 'none' : 'xMidYMid meet';
     var inlineStyle = opts.inlineStyle ? ' style="' + shapeAttr(opts.inlineStyle) + '"' : '';
-    var open = '<svg' + svgClass + inlineStyle + ' viewBox="0 0 100 100" preserveAspectRatio="' + par + '"' +
-      ' aria-hidden="true" focusable="false">';
-    var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
     var stOpts = shapeStretchXY(opts);
+    var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
+    var vb = shapeSvgViewBox(kind, stOpts.sx, stOpts.sy);
     var paintBase = {
       fill: fill,
       stroke: stroke,
@@ -471,6 +521,10 @@ var ExperienciaEngine = (function () {
       stretchX: stOpts.sx,
       stretchY: stOpts.sy
     };
+    var open = '<svg' + svgClass + inlineStyle +
+      ' viewBox="' + vb.x + ' ' + vb.y + ' ' + vb.w + ' ' + vb.h + '"' +
+      ' preserveAspectRatio="' + par + '"' +
+      ' aria-hidden="true" focusable="false">';
     var html = open;
     if (opts.strokeGlowLayer) {
       html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
@@ -7150,6 +7204,7 @@ var ExperienciaEngine = (function () {
     sceneShapeDefaultSize: sceneShapeDefaultSize,
     sceneShapeDisplaySize: sceneShapeDisplaySize,
     shapeContentBBox: shapeContentBBox,
+    shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,

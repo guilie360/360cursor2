@@ -752,6 +752,9 @@ var ExperienciaCanvas = (function () {
   }
 
   function shapeHitAreaStyle(kind, stretchX, stretchY) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeHitAreaCss) {
+      return ExperienciaEngine.shapeHitAreaCss(kind, stretchX, stretchY);
+    }
     if (typeof ExperienciaEngine === 'undefined' || !ExperienciaEngine.shapeContentBBox) {
       return 'left:0;top:0;width:100%;height:100%;';
     }
