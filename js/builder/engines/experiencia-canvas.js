@@ -575,12 +575,48 @@ var ExperienciaCanvas = (function () {
     return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
+  function shapeGizmoMetrics(btn, layerW, layerH) {
+    if (!btn) return null;
+    var st = String(btn.type || 'BUTTON').toUpperCase();
+    var cx = btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50;
+    var cy = btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50;
+    var tileW = Number(btn.width) || shapeDefaultSize(st).w;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
+      var gm = ExperienciaEngine.sceneShapeGizmoMetrics(tileW, st, layerW, layerH, cx, cy);
+      return {
+        st: st,
+        gx: gm.gx,
+        gy: gm.gy,
+        gw: gm.gw,
+        gh: gm.gh,
+        grot: Number(btn.rotation) || 0,
+        tileW: gm.tileW,
+        tileH: gm.tileH
+      };
+    }
+    var shapeSz = shapeDisplaySize(tileW, layerW, layerH);
+    return {
+      st: st,
+      gx: cx,
+      gy: cy,
+      gw: shapeSz.w,
+      gh: shapeSz.h,
+      grot: Number(btn.rotation) || 0,
+      tileW: shapeSz.w,
+      tileH: shapeSz.h
+    };
+  }
+
   function overlaySelectionMetrics(btn, layerW, layerH) {
     if (!btn) return null;
     var st = String(btn.type || 'BUTTON').toUpperCase();
+    var grot = Number(btn.rotation) || 0;
+    if (isShapeType(st)) {
+      var gm = shapeGizmoMetrics(btn, layerW, layerH);
+      if (gm) return gm;
+    }
     var gx = Number(btn.x) || 50;
     var gy = Number(btn.y) || 50;
-    var grot = Number(btn.rotation) || 0;
     var gw;
     var gh;
     if (st === 'BUTTON') {
@@ -589,11 +625,6 @@ var ExperienciaCanvas = (function () {
     } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
       gw = Number(btn.width) || 20;
       gh = Number(btn.height) || 20;
-    } else if (isShapeType(st)) {
-      var shapeDef = shapeDefaultSize(st);
-      var shapeSz = shapeDisplaySize(Number(btn.width) || shapeDef.w, layerW, layerH);
-      gw = shapeSz.w;
-      gh = shapeSz.h;
     } else {
       gw = Math.max(8, Math.min(40, (String(btn.label || 'Texto').length) * 1.2));
       gh = Math.max(3, ((Number(btn.fontSize) || 28) / layerH) * 100 * 1.4);
@@ -4865,11 +4896,13 @@ var ExperienciaCanvas = (function () {
       }
       if (isShapeType(t)) {
         var szAlign = overlayLayerSize();
-        var shapeSzAlign = shapeDisplaySize(Number(btn.width) || shapeDefaultSize(t).w, szAlign.w, szAlign.h);
-        return {
-          w: Math.max(0.5, shapeSzAlign.w / 2),
-          h: Math.max(0.5, shapeSzAlign.h / 2)
-        };
+        var gmAlign = shapeGizmoMetrics(btn, szAlign.w, szAlign.h);
+        if (gmAlign) {
+          return {
+            w: Math.max(0.5, gmAlign.gw / 2),
+            h: Math.max(0.25, gmAlign.gh / 2)
+          };
+        }
       }
       if (t === 'BUTTON') {
         return {
@@ -7015,7 +7048,7 @@ var ExperienciaCanvas = (function () {
 
             if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
               var ratioPx = transformDrag.startHpx / transformDrag.startWpx;
-              if (isSquareShapeType(transformDrag.type)) {
+              if (!isShapeType(transformDrag.type) && isSquareShapeType(transformDrag.type)) {
                 ratioPx = 1; /* square in pixels */
               }
               if ((moveE || moveW) && !(moveN || moveS)) {
@@ -7088,9 +7121,9 @@ var ExperienciaCanvas = (function () {
               wPx = Rpx - Lpx;
               hPx = Bpx - Tpx;
               if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
-                var ratioSnap = isSquareShapeType(transformDrag.type)
+                var ratioSnap = (!isShapeType(transformDrag.type) && isSquareShapeType(transformDrag.type))
                   ? 1
-                  : (transformDrag.startHpx / transformDrag.startWpx);
+                  : (transformDrag.startHpx / Math.max(1, transformDrag.startWpx));
                 if ((moveE || moveW) && !(moveN || moveS)) {
                   hPx = wPx * ratioSnap;
                   var midYpx2 = (startTpx + startBpx) / 2;
@@ -7144,14 +7177,28 @@ var ExperienciaCanvas = (function () {
               patchT.boxW = nw;
               patchT.boxH = nh;
             } else if (isShapeType(transformDrag.type)) {
-              patchT.width = nw;
-              patchT.height = nh;
+              var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+                ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(nw, transformDrag.type)
+                : nw;
+              var tileDisp = shapeDisplaySize(tileW, layerW, layerH);
+              var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+                ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+                  nx, ny, tileW, transformDrag.type, layerW, layerH
+                )
+                : { x: nx, y: ny };
+              patchT.x = tileCtr.x;
+              patchT.y = tileCtr.y;
+              patchT.width = tileW;
+              patchT.height = tileDisp.h;
             }
             ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
-            /* Paint only this box in px — skip full live paint (avoids jitter). */
-            applyLiveResizePaint(transformDrag.buttonId, {
-              lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
-            }, transformDrag.type);
+            if (isShapeType(transformDrag.type)) {
+              paintButtonsStage();
+            } else {
+              applyLiveResizePaint(transformDrag.buttonId, {
+                lpx: Lpx, rpx: Rpx, tpx: Tpx, bpx: Bpx
+              }, transformDrag.type);
+            }
             /* No align mini-guides while resizing. */
             transformDrag.guides = { spacing: [] };
             syncLiveOverlayGuides(transformDrag.guides);
@@ -7384,23 +7431,35 @@ var ExperienciaCanvas = (function () {
           var layerW0 = buttonsLayer.clientWidth || 1000;
           var layerH0 = buttonsLayer.clientHeight || 1000;
           var shapeDragDef = isShapeType(gtype) ? shapeDefaultSize(gtype) : null;
-          var startW0 = gtype === 'BUTTON'
-            ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
-            : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
-              ? (Number(btnG.width) || 20)
-              : (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12));
-          var startH0 = gtype === 'BUTTON'
-            ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
-            : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
-              ? (Number(btnG.height) || 20)
-              : (Number(btnG.height) || (shapeDragDef ? shapeDragDef.h : 8));
+          var startW0;
+          var startH0;
+          var startX0;
+          var startY0;
+          if (isShapeType(gtype)) {
+            var gm0 = shapeGizmoMetrics(btnG, layerW0, layerH0);
+            startW0 = gm0 ? gm0.gw : (shapeDragDef ? shapeDragDef.w : 12);
+            startH0 = gm0 ? gm0.gh : (shapeDragDef ? shapeDragDef.h : 12);
+            startX0 = gm0 ? gm0.gx : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
+            startY0 = gm0 ? gm0.gy : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
+          } else {
+            startW0 = gtype === 'BUTTON'
+              ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
+              : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
+                ? (Number(btnG.width) || 20)
+                : 12;
+            startH0 = gtype === 'BUTTON'
+              ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
+              : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
+                ? (Number(btnG.height) || 20)
+                : 8;
+            startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
+            startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
+          }
           /* Circle: store height so the box is pixel-square at drag start. */
           var layerAspect = layerW0 / Math.max(1, layerH0);
-          if (isSquareShapeType(gtype)) {
+          if (!isShapeType(gtype) && isSquareShapeType(gtype)) {
             startH0 = startW0 * layerAspect;
           }
-          var startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
-          var startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
           var startL0 = startX0 - startW0 / 2;
           var startR0 = startX0 + startW0 / 2;
           var startT0 = startY0 - startH0 / 2;
@@ -7440,8 +7499,9 @@ var ExperienciaCanvas = (function () {
             startRot: Number(btnG.rotation) || 0,
             startPx: pct0.x,
             startPy: pct0.y,
-            keepRatio: isSquareShapeType(gtype) ||
-              ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey),
+            keepRatio: isShapeType(gtype) ? !ev.shiftKey :
+              (isSquareShapeType(gtype) ||
+              ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
             layerAspect: layerAspect,
             historyPushed: false,
             live: true
@@ -7667,6 +7727,7 @@ var ExperienciaCanvas = (function () {
               state, ExperienciaEngine.getNode(state, endScene), rotBtnId
             );
             if (endBtn) {
+              var szShapeFin = overlayLayerSize();
               var cx = endBtn.storedX != null ? Number(endBtn.storedX) : Number(endBtn.x);
               var cy = endBtn.storedY != null ? Number(endBtn.storedY) : Number(endBtn.y);
               var ew = endType === 'BUTTON'
@@ -7675,6 +7736,15 @@ var ExperienciaCanvas = (function () {
               var eh = endType === 'BUTTON'
                 ? (endBtn.boxH != null ? Number(endBtn.boxH) : 4.5)
                 : (Number(endBtn.height) || 8);
+              if (isShapeType(endType)) {
+                var gmFin = shapeGizmoMetrics(endBtn, szShapeFin.w, szShapeFin.h);
+                if (gmFin) {
+                  cx = gmFin.gx;
+                  cy = gmFin.gy;
+                  ew = gmFin.gw;
+                  eh = gmFin.gh;
+                }
+              }
               if (!(ev && ev.shiftKey)) {
                 var resizeLinesF = collectOverlayAlignLines(endScene, rotBtnId, {
                   L: cx - ew / 2,
@@ -7699,9 +7769,19 @@ var ExperienciaCanvas = (function () {
                 finalize.boxW = ew;
                 finalize.boxH = eh;
               } else if (isShapeType(endType)) {
-                finalize.width = ew;
-                var szShapeFin = overlayLayerSize();
-                finalize.height = ew * (szShapeFin.w / Math.max(1, szShapeFin.h));
+                var tileWFin = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
+                  ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(ew, endType)
+                  : ew;
+                var tileDispFin = shapeDisplaySize(tileWFin, szShapeFin.w, szShapeFin.h);
+                var tileCtrFin = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
+                  ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+                    cx, cy, tileWFin, endType, szShapeFin.w, szShapeFin.h
+                  )
+                  : { x: cx, y: cy };
+                finalize.x = tileCtrFin.x;
+                finalize.y = tileCtrFin.y;
+                finalize.width = tileWFin;
+                finalize.height = tileDispFin.h;
               }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, finalize);
             }

@@ -4742,9 +4742,10 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: none;
 }
 .builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
-  border-color: #fff;
-  border-width: 2px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.42);
+  border-color: rgba(255, 255, 255, 0.92);
+  border-width: 1.5px;
+  border-style: dashed;
+  box-shadow: none;
 }
 
 .builder-exp-sel-gizmo.is-overlay-group {
@@ -4755,10 +4756,9 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: auto;
 }
 
-/* Hover only — dashed outline; leaves when pointer exits */
+/* Hover — no selection chrome; click to select (referente). */
 .builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
-  outline: 1.5px dashed rgba(255, 255, 255, 0.9);
-  outline-offset: 2px;
+  outline: none;
 }
 
 

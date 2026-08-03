@@ -7185,13 +7185,13 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-sel-box {
   position: absolute;
-  inset: -3px;
-  border: 2px solid #fff;
-  border-radius: 2px;
+  inset: 0;
+  border: 1.5px dashed rgba(255, 255, 255, 0.92);
+  border-radius: 0;
   box-sizing: border-box;
   pointer-events: none;
-  /* Legible sobre fondos claros y oscuros */
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.42);
+  background: transparent;
+  box-shadow: none;
 }
 
 .builder-exp-sel-handle {

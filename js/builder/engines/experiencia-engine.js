@@ -212,6 +212,89 @@ var ExperienciaEngine = (function () {
     return isSceneShapeType(t);
   }
 
+  /** Content AABB inside the 100×100 viewBox (same artboard as buildSceneShapeSvg). */
+  function shapeContentBBox(kind) {
+    kind = String(kind || '').toUpperCase();
+    var u = shapeUnit52;
+    if (kind === 'SHAPE_LINE') {
+      var lx1 = u(8);
+      var lx2 = u(44);
+      return { cx: 50, cy: 50, w: lx2 - lx1, h: 2 };
+    }
+    if (kind === 'SHAPE_CIRCLE') {
+      var cd = u(17) * 2;
+      return { cx: 50, cy: 50, w: cd, h: cd };
+    }
+    if (kind === 'SHAPE_TRIANGLE') {
+      var tx1 = u(10);
+      var tx2 = u(42);
+      var ty1 = u(10);
+      var ty2 = u(40);
+      return { cx: (tx1 + tx2) / 2, cy: (ty1 + ty2) / 2, w: tx2 - tx1, h: ty2 - ty1 };
+    }
+    if (kind === 'SHAPE_ARROW') {
+      var ax1 = u(6);
+      var ax2 = u(48);
+      var ay1 = u(14);
+      var ay2 = u(38);
+      return { cx: (ax1 + ax2) / 2, cy: (ay1 + ay2) / 2, w: ax2 - ax1, h: ay2 - ay1 };
+    }
+    if (kind === 'SHAPE_DONUT') {
+      var dd = u(20) * 2;
+      return { cx: 50, cy: 50, w: dd, h: dd };
+    }
+    if (kind === 'SHAPE_CAPSULE') {
+      return { cx: 50, cy: 50, w: u(36), h: u(16) };
+    }
+    if (kind === 'SHAPE_ROUND_RECT') {
+      return { cx: 50, cy: 50, w: u(30), h: u(30) };
+    }
+    /* SHAPE_RECT */
+    return { cx: 50, cy: 50, w: u(30), h: u(24) };
+  }
+
+  /** Tight gizmo aligned to visible shape — tile stays square for picker parity. */
+  function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY) {
+    kind = String(kind || '').toUpperCase();
+    var tile = sceneShapeDisplaySize(widthPct, layerW, layerH);
+    var bbox = shapeContentBBox(kind);
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var lh = Math.max(1, Number(layerH) || 1000);
+    var gw = tile.w * (bbox.w / 100);
+    var gh = tile.w * (bbox.h / 100) * (lw / lh);
+    if (kind === 'SHAPE_LINE') {
+      gh = Math.max(0.35, gh);
+    }
+    var offX = ((bbox.cx - 50) / 100) * tile.w;
+    var offY = ((bbox.cy - 50) / 100) * tile.h;
+    var gx = (posX != null && !isNaN(Number(posX)) ? Number(posX) : 50) + offX;
+    var gy = (posY != null && !isNaN(Number(posY)) ? Number(posY) : 50) + offY;
+    return {
+      gx: gx,
+      gy: gy,
+      gw: gw,
+      gh: gh,
+      tileW: tile.w,
+      tileH: tile.h,
+      bbox: bbox
+    };
+  }
+
+  function sceneShapeTileWidthFromContentWidth(contentWPct, kind) {
+    var bbox = shapeContentBBox(kind);
+    var frac = bbox.w / 100;
+    if (!frac || frac <= 0) return contentWPct;
+    return Number(contentWPct) / frac;
+  }
+
+  function sceneShapeTileCenterFromGizmoCenter(gx, gy, tileWPct, kind, layerW, layerH) {
+    var tile = sceneShapeDisplaySize(tileWPct, layerW, layerH);
+    var bbox = shapeContentBBox(kind);
+    var offX = ((bbox.cx - 50) / 100) * tile.w;
+    var offY = ((bbox.cy - 50) / 100) * tile.h;
+    return { x: Number(gx) - offX, y: Number(gy) - offY };
+  }
+
   /** Picker tile → canvas: width % + height % that form a pixel square on the layer. */
   function sceneShapeDisplaySize(widthPct, layerW, layerH) {
     var w = Number(widthPct);
@@ -6976,6 +7059,10 @@ var ExperienciaEngine = (function () {
     sceneShapeDefaultLabel: sceneShapeDefaultLabel,
     sceneShapeDefaultSize: sceneShapeDefaultSize,
     sceneShapeDisplaySize: sceneShapeDisplaySize,
+    shapeContentBBox: shapeContentBBox,
+    sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
+    sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,
+    sceneShapeTileCenterFromGizmoCenter: sceneShapeTileCenterFromGizmoCenter,
     SCENE_SHAPE_TYPES: SCENE_SHAPE_TYPES,
     clearSelection: clearSelection,
     setSelection: setSelection,
