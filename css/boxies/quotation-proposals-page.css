@@ -894,15 +894,10 @@ body.qr-proposals-page .qpp {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   box-sizing: border-box;
-  padding:
-    max(72px, calc(env(safe-area-inset-top) + 56px))
-    clamp(20px, 4vw, 48px)
-    calc(96px + env(safe-area-inset-bottom));
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  overflow: hidden;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -911,6 +906,23 @@ body.qr-proposals-page .qpp {
     opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s linear 520ms;
+}
+
+.qpp__compare-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding:
+    max(72px, calc(env(safe-area-inset-top) + 56px))
+    clamp(20px, 4vw, 48px)
+    28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .qpp[data-qpp-view="comparison"] .qpp__main {
@@ -1162,35 +1174,29 @@ body.qr-proposals-page .qpp {
 }
 
 .qpp-cmp__upgrade-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 4;
-  display: flex;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 6;
+  display: none;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  margin-top: -56px;
   padding:
-    18px
+    40px
     clamp(20px, 4vw, 48px)
     max(20px, env(safe-area-inset-bottom));
   pointer-events: none;
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 0.72) 42%,
-    rgba(0, 0, 0, 0.92) 100%
+    rgba(0, 0, 0, 0.78) 38%,
+    rgba(0, 0, 0, 0.96) 100%
   );
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 360ms ease, visibility 0s linear 360ms;
 }
 
 .qpp[data-qpp-view="comparison"] .qpp-cmp__upgrade-bar {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: none;
-  transition: opacity 420ms ease 120ms, visibility 0s linear 0s;
+  display: flex;
 }
 
 .qpp-cmp__upgrade {
@@ -1241,11 +1247,11 @@ body.qr-proposals-page .qpp {
 }
 
 @media (max-width: 1023px) {
-  .qpp__compare {
+  .qpp__compare-scroll {
     padding:
       max(28px, calc(env(safe-area-inset-top) + 14px))
       18px
-      calc(96px + env(safe-area-inset-bottom));
+      20px;
   }
 
   .qpp[data-qpp-view="comparison"] .qpp__chrome {
@@ -1359,8 +1365,4 @@ body.qr-proposals-page .qpp {
     transform: none !important;
   }
 
-  .qpp[data-qpp-view="comparison"] .qpp-cmp__upgrade-bar {
-    opacity: 1 !important;
-    visibility: visible !important;
-  }
 }

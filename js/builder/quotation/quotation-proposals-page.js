@@ -126,9 +126,11 @@ var QuotationProposalsPage = (function () {
           '<p class="qpp__hint" data-qpp-hint></p>' +
         '</main>' +
         '<section class="qpp__compare" data-qpp-compare-view aria-hidden="true">' +
-          '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
-          '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
-          '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+          '<div class="qpp__compare-scroll">' +
+            '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
+            '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
+            '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+          '</div>' +
           '<div class="qpp-cmp__upgrade-bar">' +
             '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
               'Upgrade' +
@@ -591,10 +593,12 @@ var QuotationProposalsPage = (function () {
         if (!upgradeBtn) return;
         e.preventDefault();
         e.stopPropagation();
-        var motion = PROPOSALS.filter(function (p) { return p.id === 'motion'; })[0];
-        openWhatsApp(motion && motion.waMessage
-          ? motion.waMessage
-          : 'Primo, me voy por MOTION');
+        /* Placeholder: vacía el cuadro; más adelante cargará otra matriz. */
+        var board = qs('[data-qpp-compare-board]', root);
+        if (board) {
+          shellEl.classList.remove('is-cmp-animate');
+          board.innerHTML = '';
+        }
       });
     }
 
