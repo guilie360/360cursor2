@@ -4268,6 +4268,21 @@ var ExperienciaCanvas = (function () {
       if (buttonDrag && buttonDrag.live && !buttonDrag.nudge) {
         syncLiveSpacingGuides();
       }
+      /* Deep-edit: keep frozen group frame pinned while child moves live. */
+      var editGidLive = canvas().activeOverlayGroupEditId;
+      if (editGidLive && groupEditFrozenFrame &&
+          String(groupEditFrozenFrame.groupId) === String(editGidLive)) {
+        var frameLive = buttonsLayer.querySelector('.builder-exp-group-edit-frame');
+        if (frameLive) {
+          var fr = groupEditFrozenFrame;
+          frameLive.style.left = fr.gx + '%';
+          frameLive.style.top = fr.gy + '%';
+          frameLive.style.width = fr.gw + '%';
+          frameLive.style.height = fr.gh + '%';
+          frameLive.style.setProperty('--btn-rot', fr.grot + 'deg');
+          moved = true;
+        }
+      }
       return moved;
     }
 
@@ -5525,6 +5540,13 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function setOverlayLivePosition(sceneId, buttonId, x, y) {
+      var sz = overlayLayerSize();
+      return ExperienciaEngine.setSceneButtonPosition(
+        state, sceneId, buttonId, x, y, sz.w, sz.h
+      );
+    }
+
     function isOverlayGroupId(sceneId, id) {
       if (!sceneId || !id) return false;
       var n = ExperienciaEngine.getNode(state, sceneId);
@@ -5601,12 +5623,33 @@ var ExperienciaCanvas = (function () {
         groupEditFrozenFrame = null;
         return;
       }
+      var sz = overlayLayerSize();
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (n && g && ExperienciaEngine.computeOverlayUnionBounds &&
+          Array.isArray(g.memberIds) && g.memberIds.length) {
+        var union = ExperienciaEngine.computeOverlayUnionBounds(
+          n, g.memberIds, sz.w, sz.h, { useComposed: true }
+        );
+        if (union) {
+          groupEditFrozenFrame = {
+            groupId: String(groupId),
+            gx: union.cx,
+            gy: union.cy,
+            gw: union.w,
+            gh: union.h,
+            grot: Number(g.rotation) || 0
+          };
+          return;
+        }
+      }
       var gEdit = getOverlayItemVm(sceneId, groupId);
       if (!gEdit) {
         groupEditFrozenFrame = null;
         return;
       }
-      var sz = overlayLayerSize();
       var gm = overlaySelectionMetrics(gEdit, sz.w, sz.h);
       if (!gm) {
         groupEditFrozenFrame = null;
@@ -5630,8 +5673,10 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!n || !g) return;
       var sz = overlayLayerSize();
-      /* Grow stored group bounds if child overflows — visual frame stays frozen. */
-      ExperienciaEngine.expandOverlayGroupBoundsIfMemberOverflow(n, g, sz.w, sz.h);
+      /* Grow stored group bounds if child overflows — keep pivot fixed (no relocalize jump). */
+      ExperienciaEngine.expandOverlayGroupBoundsIfMemberOverflow(
+        n, g, sz.w, sz.h, { keepPivot: true }
+      );
     }
 
     function syncActiveGroupFrameFromMembers(groupId, sceneId) {
@@ -5802,10 +5847,13 @@ var ExperienciaCanvas = (function () {
 
     function restoreOverlayDragOrigins(sceneId, origins) {
       if (!sceneId || !origins) return;
+      var sz = overlayLayerSize();
       Object.keys(origins).forEach(function (id) {
         var o = origins[id];
         if (!o) return;
-        ExperienciaEngine.setSceneButtonPosition(state, sceneId, id, o.x, o.y);
+        ExperienciaEngine.setSceneButtonPosition(
+          state, sceneId, id, o.x, o.y, sz.w, sz.h
+        );
       });
     }
 
@@ -5870,7 +5918,7 @@ var ExperienciaCanvas = (function () {
           };
         }
         ExperienciaEngine.setSceneButtonPosition(
-          state, sceneId, bid, nextX, nextY
+          state, sceneId, bid, nextX, nextY, layerW, layerH
         );
         clearPendingMove(bid);
       });
@@ -7023,11 +7071,13 @@ var ExperienciaCanvas = (function () {
           return;
         }
         if (groupIds.length > 1) {
+          var szM = overlayLayerSize();
           groupIds.forEach(function (id) {
             var orig = buttonDrag.origins && buttonDrag.origins[String(id)];
             if (!orig) return;
             ExperienciaEngine.setSceneButtonPosition(
-              state, buttonDrag.sceneId, id, orig.x + ddx, orig.y + ddy
+              state, buttonDrag.sceneId, id, orig.x + ddx, orig.y + ddy,
+              szM.w, szM.h
             );
             clearPendingMove(id);
           });
@@ -7046,8 +7096,8 @@ var ExperienciaCanvas = (function () {
           { disableSnap: !!ev.shiftKey }
         );
         buttonDrag.guides = snapped.guides;
-        ExperienciaEngine.setSceneButtonPosition(
-          state, buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
+        setOverlayLivePosition(
+          buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
         );
         clearPendingMove(buttonDrag.buttonId);
         paintButtonsStage();
@@ -7515,12 +7565,13 @@ var ExperienciaCanvas = (function () {
         var dragIsGroup = buttonDrag.isOverlayGroup;
         buttonDrag = null;
         unbindOverlayPointerDocs();
+        var szUp = overlayLayerSize();
         if (!moved && dragScene && dragOrigins) {
           restoreOverlayDragOrigins(dragScene, dragOrigins);
         } else if (!moved && dragScene && dragBtn != null &&
             dragOriginX != null && dragOriginY != null) {
           ExperienciaEngine.setSceneButtonPosition(
-            state, dragScene, dragBtn, dragOriginX, dragOriginY
+            state, dragScene, dragBtn, dragOriginX, dragOriginY, szUp.w, szUp.h
           );
         } else if (moved && dragScene && dragOrigins && dragGroupIds && dragGroupIds.length > 1) {
           var allNear = true;

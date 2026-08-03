@@ -819,7 +819,8 @@ var ExperienciaEngine = (function () {
   }
 
   /** Grow group frame only when composed members exceed the current axis-aligned box. */
-  function expandOverlayGroupBoundsIfMemberOverflow(n, g, layerW, layerH) {
+  function expandOverlayGroupBoundsIfMemberOverflow(n, g, layerW, layerH, opts) {
+    opts = opts || {};
     if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
@@ -840,6 +841,13 @@ var ExperienciaEngine = (function () {
     var uB = union.cy + union.h / 2;
     var eps = 0.08;
     if (uL >= gL - eps && uR <= gR + eps && uT >= gT - eps && uB <= gB + eps) {
+      return g;
+    }
+    if (opts.keepPivot) {
+      var halfW = Math.max(gw / 2, gx - uL, uR - gx);
+      var halfH = Math.max(gh / 2, gy - uT, uB - gy);
+      g.width = Math.max(0.5, halfW * 2);
+      g.height = Math.max(0.5, halfH * 2);
       return g;
     }
     return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
@@ -1611,8 +1619,10 @@ var ExperienciaEngine = (function () {
       if (ix.groupId) {
         var gPos = getInteraction(n, ix.groupId);
         if (gPos && isOverlayGroupInteraction(gPos)) {
-          migrateGroupedChildLocals(n, gPos, 1000, 1000);
-          var curW = composeOverlayWorldLayout(gPos, ix, 1000, 1000);
+          var lwPos = Math.max(1, Number(patch.layerW) || 1000);
+          var lhPos = Math.max(1, Number(patch.layerH) || 1000);
+          migrateGroupedChildLocals(n, gPos, lwPos, lhPos);
+          var curW = composeOverlayWorldLayout(gPos, ix, lwPos, lhPos);
           var tx = patch.x != null ? Number(patch.x) : curW.x;
           var ty = patch.y != null ? Number(patch.y) : curW.y;
           if (patch.live) {
@@ -1622,7 +1632,7 @@ var ExperienciaEngine = (function () {
             if (patch.x != null) tx = clampPercent(patch.x, curW.x);
             if (patch.y != null) ty = clampPercent(patch.y, curW.y);
           }
-          var locPt = worldPointToLocal(gPos, tx, ty, 1000, 1000);
+          var locPt = worldPointToLocal(gPos, tx, ty, lwPos, lhPos);
           ix.localX = locPt.x;
           ix.localY = locPt.y;
         }
@@ -1798,11 +1808,17 @@ var ExperienciaEngine = (function () {
     return buttonViewModel(state, n, ix);
   }
 
-  function setSceneButtonPosition(state, nodeId, buttonId, x, y) {
+  function setSceneButtonPosition(state, nodeId, buttonId, x, y, layerW, layerH) {
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
     if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
-    return updateSceneButton(state, nodeId, buttonId, { x: x, y: y, live: true });
+    return updateSceneButton(state, nodeId, buttonId, {
+      x: x,
+      y: y,
+      live: true,
+      layerW: layerW,
+      layerH: layerH
+    });
   }
 
   function mirrorSceneButton(state, nodeId, buttonId) {
@@ -6745,6 +6761,7 @@ var ExperienciaEngine = (function () {
     migrateGroupedChildLocals: migrateGroupedChildLocals,
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
     syncOverlayGroupFrameFromMembers: syncOverlayGroupFrameFromMembers,
+    computeOverlayUnionBounds: computeOverlayUnionBounds,
     commitOverlayGroupBounds: commitOverlayGroupBounds,
     findOverlayGroupForMember: findOverlayGroupForMember,
     expandOverlayGroupBoundsIfMemberOverflow: expandOverlayGroupBoundsIfMemberOverflow,
