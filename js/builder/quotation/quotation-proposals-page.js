@@ -133,18 +133,37 @@ var QuotationProposalsPage = (function () {
               '<div class="qpp-cmp" data-qpp-compare-board></div>' +
             '</div>' +
             '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
-              '<p class="qpp__eyebrow qpp-cmp__eyebrow qpp-cmp-upgrade__eyebrow">Upgrade a Motion</p>' +
-              '<h1 class="qpp__title qpp-cmp__title qpp-cmp-upgrade__title">Más impacto, mismo proyecto</h1>' +
-              '<p class="qpp-cmp-upgrade__lead">' +
-                'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los 15 días posteriores a la entrega de la versión ' +
-                '<span class="qpp-cmp-upgrade__hi">S T I L L</span> podrás acceder al upgrade a ' +
-                '<span class="qpp-cmp-upgrade__hi">M O T I O N</span> por ' +
-                '<span class="qpp-cmp-upgrade__hi">$1.500.000</span>.' +
-              '</p>' +
-              '<p class="qpp-cmp-upgrade__lead qpp-cmp-upgrade__lead--second">' +
-                'Después de este periodo, el valor del upgrade será de ' +
-                '<span class="qpp-cmp-upgrade__hi">$2.000.000</span>.' +
-              '</p>' +
+              '<h1 class="qpp__title qpp-cmp-upgrade__heading">Upgrade a Motion</h1>' +
+              '<div class="qpp-cmp-upgrade__intro">' +
+                '<p class="qpp-cmp-upgrade__intro-text qpp-cmp-upgrade__intro-text--wide">' +
+                  'Si tu proyecto ya cuenta con la versión <strong>STILL</strong>, puedes actualizarlo a la versión <strong>MOTION</strong>.' +
+                '</p>' +
+                '<p class="qpp-cmp-upgrade__intro-text qpp-cmp-upgrade__intro-text--narrow">' +
+                  'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión STILL</strong>.' +
+                '</p>' +
+              '</div>' +
+              '<div class="qpp-cmp-upgrade__flow">' +
+                '<span class="qpp-cmp-upgrade__tier-name">Still</span>' +
+                '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
+                  '<svg viewBox="0 0 120 12" preserveAspectRatio="none">' +
+                    '<path d="M0 6h98M98 6l-8-5M98 6l-8 5" fill="none" stroke="currentColor" stroke-width="1"/>' +
+                  '</svg>' +
+                '</span>' +
+                '<span class="qpp-cmp-upgrade__tier-name">Motion</span>' +
+              '</div>' +
+              '<div class="qpp-cmp-upgrade__pricing">' +
+                '<div class="qpp-cmp-upgrade__price-col">' +
+                  '<span class="qpp-cmp-upgrade__price-label">Dentro de 15 días</span>' +
+                  '<span class="qpp-cmp-upgrade__price">$1.500.000</span>' +
+                  '<span class="qpp-cmp-upgrade__price-rule"></span>' +
+                '</div>' +
+                '<div class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></div>' +
+                '<div class="qpp-cmp-upgrade__price-col">' +
+                  '<span class="qpp-cmp-upgrade__price-label">Después de 15 días</span>' +
+                  '<span class="qpp-cmp-upgrade__price">$2.000.000</span>' +
+                  '<span class="qpp-cmp-upgrade__price-rule"></span>' +
+                '</div>' +
+              '</div>' +
             '</div>' +
           '</div>' +
           '<div class="qpp-cmp__upgrade-bar">' +
