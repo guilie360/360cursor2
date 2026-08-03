@@ -280,8 +280,12 @@ var ExperienciaEngine = (function () {
     return { cx: 50, cy: 50, w: base.w * st.sx, h: base.h * st.sy };
   }
 
+  function shapeIsStretched(st) {
+    return !!(st && (st.sx !== 1 || st.sy !== 1));
+  }
+
   function shapeUsesContentBox(st, widthPct, heightPct, layerW, layerH) {
-    if (!st || (st.sx === 1 && st.sy === 1)) return false;
+    if (shapeIsStretched(st)) return true;
     var h = Number(heightPct);
     if (isNaN(h) || h <= 0) return false;
     var w = Number(widthPct) || 0;
@@ -303,12 +307,11 @@ var ExperienciaEngine = (function () {
       return { x: 0, y: 0, w: 100, h: 100 };
     }
     var bbox = shapeContentBBox(kind, st);
-    var margin = Math.max(2, Math.min(10, Math.min(bbox.w, bbox.h) * 0.08));
     return {
-      x: bbox.cx - bbox.w / 2 - margin,
-      y: bbox.cy - bbox.h / 2 - margin,
-      w: bbox.w + margin * 2,
-      h: bbox.h + margin * 2
+      x: bbox.cx - bbox.w / 2,
+      y: bbox.cy - bbox.h / 2,
+      w: bbox.w,
+      h: bbox.h
     };
   }
 
@@ -355,15 +358,20 @@ var ExperienciaEngine = (function () {
     var lw = Math.max(1, Number(layerW) || 1000);
     var lh = Math.max(1, Number(layerH) || 1000);
     if (shapeUsesContentBox(st, widthPct, heightPct, layerW, layerH)) {
-      var gw = Number(widthPct);
-      var gh = Number(heightPct);
+      var gwBox = Number(widthPct);
+      var ghBox = Number(heightPct);
+      if (shapeIsStretched(st) && (isNaN(ghBox) || ghBox <= 0)) {
+        var tile0 = sceneShapeDisplaySize(widthPct, layerW, layerH);
+        var cf0 = shapeContentFrac(kind, st.sx, st.sy);
+        ghBox = tile0.w * cf0.dispH * (lw / lh);
+      }
       return {
         gx: posX != null && !isNaN(Number(posX)) ? Number(posX) : 50,
         gy: posY != null && !isNaN(Number(posY)) ? Number(posY) : 50,
-        gw: gw,
-        gh: gh,
-        tileW: gw,
-        tileH: gh,
+        gw: gwBox,
+        gh: ghBox,
+        tileW: gwBox,
+        tileH: ghBox,
         bbox: shapeContentBBox(kind, st),
         stretchX: st.sx,
         stretchY: st.sy
@@ -7257,6 +7265,7 @@ var ExperienciaEngine = (function () {
     sceneShapeDefaultSize: sceneShapeDefaultSize,
     sceneShapeDisplaySize: sceneShapeDisplaySize,
     shapeContentBBox: shapeContentBBox,
+    shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
     shapePreserveAspect: shapePreserveAspect,
     shapeHitAreaCss: shapeHitAreaCss,

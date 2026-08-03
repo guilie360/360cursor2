@@ -344,7 +344,8 @@ var QuotationRuntime = (function () {
         ? ExperienciaEngine.shapeStretchFromIx(sh)
         : { sx: Number(sh.shapeStretchX) || 1, sy: Number(sh.shapeStretchY) || 1 };
       if (ExperienciaEngine.shapeUsesContentBox(st, w, sh.height, layerW, layerH)) {
-        return { w: w, h: Number(sh.height) };
+        var h = Number(sh.height);
+        if (!isNaN(h) && h > 0) return { w: w, h: h };
       }
     }
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {

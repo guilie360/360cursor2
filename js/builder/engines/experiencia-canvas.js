@@ -145,9 +145,7 @@ var ExperienciaCanvas = (function () {
 
   function computeShapeResizeLive(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
     if (!drag || !isShapeType(drag.type)) return null;
-    var kind = String(drag.type || '').toUpperCase();
-    var startTileW = drag.startTileW;
-    if (!startTileW) return null;
+    if (!drag.startTileW) return null;
     var box = resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio);
     if (!box) return null;
 
@@ -155,59 +153,20 @@ var ExperienciaCanvas = (function () {
     var ny = (box.cy / layerH) * 100;
     var gwPct = (box.w / layerW) * 100;
     var ghPct = (box.h / layerH) * 100;
-    var st = { sx: box.stretchX, sy: box.stretchY };
-    var useContentBox = st.sx !== 1 || st.sy !== 1;
-
-    if (useContentBox) {
-      return {
-        stretchX: box.stretchX,
-        stretchY: box.stretchY,
-        gm: {
-          gx: nx,
-          gy: ny,
-          gw: gwPct,
-          gh: ghPct
-        },
-        patch: {
-          x: nx,
-          y: ny,
-          width: gwPct,
-          height: ghPct,
-          shapeStretchX: box.stretchX,
-          shapeStretchY: box.stretchY
-        }
-      };
-    }
-
-    var tileWPct = ExperienciaEngine.sceneShapeTileWidthFromContentWidth
-      ? ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
-        gwPct, kind, box.stretchX, box.stretchY
-      )
-      : gwPct;
-    var tileCtr = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter
-      ? ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
-        nx, ny, tileWPct, kind, layerW, layerH, box.stretchX, box.stretchY
-      )
-      : { x: nx, y: ny };
-    var gm = ExperienciaEngine.sceneShapeGizmoMetrics
-      ? ExperienciaEngine.sceneShapeGizmoMetrics(
-        tileWPct, kind, layerW, layerH, tileCtr.x, tileCtr.y, box.stretchX, box.stretchY
-      )
-      : null;
-    if (!gm) return null;
-    var tileDisp = shapeDisplaySize(tileWPct, layerW, layerH);
     return {
-      tileW: tileWPct,
-      tileCtr: tileCtr,
-      tileDisp: tileDisp,
-      gm: gm,
       stretchX: box.stretchX,
       stretchY: box.stretchY,
+      gm: {
+        gx: nx,
+        gy: ny,
+        gw: gwPct,
+        gh: ghPct
+      },
       patch: {
-        x: tileCtr.x,
-        y: tileCtr.y,
-        width: tileWPct,
-        height: tileDisp.h,
+        x: nx,
+        y: ny,
+        width: gwPct,
+        height: ghPct,
         shapeStretchX: box.stretchX,
         shapeStretchY: box.stretchY
       }
@@ -844,17 +803,39 @@ var ExperienciaCanvas = (function () {
     return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
-  /** Canvas paint size — rectangular content box when stretched (Genially-style). */
+  /** Canvas paint size — rectangular content box when stretched or after resize. */
   function shapePaintSize(btn, layerW, layerH) {
     if (!btn) return shapeDisplaySize(12, layerW, layerH);
     var st = shapeStretchFromBtn(btn);
     var w = Number(btn.width) || shapeDefaultSize(btn.type).w;
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeUsesContentBox) {
       if (ExperienciaEngine.shapeUsesContentBox(st, w, btn.height, layerW, layerH)) {
-        return { w: w, h: Number(btn.height) };
+        var h = Number(btn.height);
+        if (ExperienciaEngine.shapeIsStretched && ExperienciaEngine.shapeIsStretched(st) &&
+            (isNaN(h) || h <= 0) && ExperienciaEngine.sceneShapeGizmoMetrics) {
+          var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
+            w, String(btn.type || '').toUpperCase(), layerW, layerH,
+            btn.x, btn.y, st.sx, st.sy, btn.height
+          );
+          if (gm) return { w: gm.gw, h: gm.gh };
+        }
+        if (!isNaN(h) && h > 0) return { w: w, h: h };
       }
     }
     return shapeDisplaySize(w, layerW, layerH);
+  }
+
+  function shapeGizmoPxFromDom(gizmoEl, layerEl) {
+    if (!gizmoEl || !layerEl) return null;
+    var gr = gizmoEl.getBoundingClientRect();
+    var lr = layerEl.getBoundingClientRect();
+    if (!gr.width || !gr.height) return null;
+    return {
+      w: gr.width,
+      h: gr.height,
+      cx: gr.left + gr.width / 2 - lr.left,
+      cy: gr.top + gr.height / 2 - lr.top
+    };
   }
 
   function shapeBoxMode(btn, layerW, layerH) {
@@ -4637,7 +4618,7 @@ var ExperienciaCanvas = (function () {
         el.style.setProperty('--btn-rot', rot + 'deg');
         if (isShapeType(t)) {
           var shapeDefLive = shapeDefaultSize(t);
-          var liveSz = shapeDisplaySize(Number(vm.width) || shapeDefLive.w, layerW, layerH);
+          var liveSz = shapePaintSize(vm, layerW, layerH);
           var sw = liveSz.w;
           var sh = liveSz.h;
           el.style.width = sw + '%';
@@ -8101,11 +8082,16 @@ var ExperienciaCanvas = (function () {
             var idEsc = String(gid).replace(/"/g, '');
             var gizmoEl = gizmo;
             var gmSnap = shapeGizmoMetrics(btnG, layerW0, layerH0);
-            var paintSnap = shapePaintSize(btnG, layerW0, layerH0);
-            var snapGizmoCxPx = gmSnap ? (gmSnap.gx / 100) * layerW0 : ((Number(btnG.x) || 50) / 100) * layerW0;
-            var snapGizmoCyPx = gmSnap ? (gmSnap.gy / 100) * layerH0 : ((Number(btnG.y) || 50) / 100) * layerH0;
-            var snapGizmoWPx = gmSnap ? (gmSnap.gw / 100) * layerW0 : (paintSnap.w / 100) * layerW0;
-            var snapGizmoHPx = gmSnap ? (gmSnap.gh / 100) * layerH0 : (paintSnap.h / 100) * layerH0;
+            var domSnap = shapeGizmoPxFromDom(gizmoEl, buttonsLayer);
+            var snapGizmoCxPx = domSnap ? domSnap.cx : (gmSnap ? (gmSnap.gx / 100) * layerW0 : ((Number(btnG.x) || 50) / 100) * layerW0);
+            var snapGizmoCyPx = domSnap ? domSnap.cy : (gmSnap ? (gmSnap.gy / 100) * layerH0 : ((Number(btnG.y) || 50) / 100) * layerH0);
+            var snapGizmoWPx = domSnap ? domSnap.w : (gmSnap ? (gmSnap.gw / 100) * layerW0 : 0);
+            var snapGizmoHPx = domSnap ? domSnap.h : (gmSnap ? (gmSnap.gh / 100) * layerH0 : 0);
+            if (!snapGizmoWPx) {
+              var paintSnap = shapePaintSize(btnG, layerW0, layerH0);
+              snapGizmoWPx = (paintSnap.w / 100) * layerW0;
+              snapGizmoHPx = (paintSnap.h / 100) * layerH0;
+            }
             var snapTileCxPx = snapGizmoCxPx;
             var snapTileCyPx = snapGizmoCyPx;
             var snapTileWPx = snapGizmoWPx;
@@ -8158,10 +8144,23 @@ var ExperienciaCanvas = (function () {
           var startY0;
           if (isShapeType(gtype)) {
             var gm0 = shapeGizmoMetrics(btnG, layerW0, layerH0);
-            startW0 = gm0 ? gm0.gw : (shapeDragDef ? shapeDragDef.w : 12);
-            startH0 = gm0 ? gm0.gh : (shapeDragDef ? shapeDragDef.h : 12);
-            startX0 = gm0 ? gm0.gx : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
-            startY0 = gm0 ? gm0.gy : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
+            var domG = shapeGizmoPxFromDom(gizmoEl, buttonsLayer);
+            if (domG) {
+              startW0 = (domG.w / layerW0) * 100;
+              startH0 = (domG.h / layerH0) * 100;
+              startX0 = (domG.cx / layerW0) * 100;
+              startY0 = (domG.cy / layerH0) * 100;
+            } else if (gm0) {
+              startW0 = gm0.gw;
+              startH0 = gm0.gh;
+              startX0 = gm0.gx;
+              startY0 = gm0.gy;
+            } else {
+              startW0 = shapeDragDef ? shapeDragDef.w : 12;
+              startH0 = shapeDragDef ? shapeDragDef.h : 12;
+              startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
+              startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
+            }
           } else {
             startW0 = gtype === 'BUTTON'
               ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
@@ -8229,7 +8228,9 @@ var ExperienciaCanvas = (function () {
               : null,
             startStretchX: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sx : 1,
             startStretchY: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sy : 1,
-            keepRatio: isShapeType(gtype) ? !ev.shiftKey :
+            var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
+              handleMode === 'se' || handleMode === 'sw';
+            keepRatio: isShapeType(gtype) ? (shapeCornerHandle && !ev.shiftKey) :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
             layerAspect: layerAspect,
