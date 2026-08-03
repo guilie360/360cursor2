@@ -4684,6 +4684,19 @@ body.quotation-canvas-first .builder-workspace,
   border: none;
   background: transparent;
   overflow: visible;
+  pointer-events: none;
+}
+.builder-exp-stage-shape__hit {
+  position: absolute;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  pointer-events: auto;
+  cursor: default;
+  z-index: 2;
+  box-sizing: border-box;
 }
 .builder-exp-stage-shape__svg {
   display: block;
@@ -4692,6 +4705,8 @@ body.quotation-canvas-first .builder-workspace,
   overflow: visible;
   pointer-events: none;
   shape-rendering: geometricPrecision;
+  position: relative;
+  z-index: 1;
 }
 .builder-exp-stage-shape--line {
   min-height: 4px;

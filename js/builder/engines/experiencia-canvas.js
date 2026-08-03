@@ -567,6 +567,20 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
+  function shapeHitAreaStyle(kind) {
+    if (typeof ExperienciaEngine === 'undefined' || !ExperienciaEngine.shapeContentBBox) {
+      return 'left:0;top:0;width:100%;height:100%;';
+    }
+    kind = String(kind || '').toUpperCase();
+    var bbox = ExperienciaEngine.shapeContentBBox(kind);
+    var left = bbox.cx - bbox.w / 2;
+    var top = bbox.cy - bbox.h / 2;
+    if (kind === 'SHAPE_LINE') {
+      return 'left:' + left + '%;width:' + bbox.w + '%;top:calc(50% - 7px);height:14px;';
+    }
+    return 'left:' + left + '%;top:' + top + '%;width:' + bbox.w + '%;height:' + bbox.h + '%;';
+  }
+
   function shapeDisplaySize(widthPct, layerW, layerH) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {
       return ExperienciaEngine.sceneShapeDisplaySize(widthPct, layerW, layerH);
@@ -4647,6 +4661,8 @@ var ExperienciaCanvas = (function () {
             (b.locked ? ' data-locked="1"' : '') +
             ' aria-label="' + esc(b.label || t) + '"' +
             ' style="' + styleBits + '">' +
+            '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
+              shapeHitAreaStyle(t) + '"></span>' +
             shapeStageSvgHtml(b, t, layerW, layerH, lineSelected) +
             '</button>';
         }
