@@ -5749,6 +5749,23 @@ var ExperienciaCanvas = (function () {
       ExperienciaEngine.commitOverlayGroupBounds(n, g, sz.w, sz.h);
     }
 
+    /** After a live group translate — refresh frame size only; skip sync (relocalize jumps snap). */
+    function finalizeOverlayGroupMoveFrame(sceneId, groupId) {
+      if (!sceneId || !groupId || !ExperienciaEngine.getSceneOverlayItem) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (!n || !g) return;
+      var sz = overlayLayerSize();
+      var vm = ExperienciaEngine.getSceneOverlayItem(state, n, groupId, sz.w, sz.h);
+      if (!vm) return;
+      g.width = Number(vm.width) || g.width;
+      g.height = Number(vm.height) || g.height;
+      g._baseWidth = g.width;
+      g._baseHeight = g.height;
+    }
+
     function getOverlayItemVm(sceneId, itemId) {
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n || !itemId) return null;
@@ -6980,16 +6997,27 @@ var ExperienciaCanvas = (function () {
         var ddy = pct.y - buttonDrag.startPy;
         if (buttonDrag.isOverlayGroup && ExperienciaEngine.updateOverlayGroupTransform) {
           var szG = overlayLayerSize();
-          var gx = buttonDrag.originX != null ? buttonDrag.originX + ddx : pct.x;
-          var gy = buttonDrag.originY != null ? buttonDrag.originY + ddy : pct.y;
+          var rawCx = buttonDrag.originX != null ? buttonDrag.originX + ddx : pct.x;
+          var rawCy = buttonDrag.originY != null ? buttonDrag.originY + ddy : pct.y;
           var snappedG = computeButtonGuides(
-            buttonDrag.sceneId, buttonDrag.buttonId, gx, gy,
+            buttonDrag.sceneId, buttonDrag.buttonId, rawCx, rawCy,
             { disableSnap: !!ev.shiftKey }
           );
           buttonDrag.guides = snappedG.guides;
+          /* Snap against union center; apply the same delta to the compose pivot. */
+          var snapDx = snappedG.x - rawCx;
+          var snapDy = snappedG.y - rawCy;
+          var pivotOx = buttonDrag.pivotOriginX != null
+            ? buttonDrag.pivotOriginX
+            : buttonDrag.originX;
+          var pivotOy = buttonDrag.pivotOriginY != null
+            ? buttonDrag.pivotOriginY
+            : buttonDrag.originY;
+          var nextGx = (pivotOx != null ? pivotOx : rawCx) + ddx + snapDx;
+          var nextGy = (pivotOy != null ? pivotOy : rawCy) + ddy + snapDy;
           ExperienciaEngine.updateOverlayGroupTransform(
             state, buttonDrag.sceneId, buttonDrag.buttonId,
-            { x: snappedG.x, y: snappedG.y, live: true, layerW: szG.w, layerH: szG.h }
+            { x: nextGx, y: nextGy, live: true, layerW: szG.w, layerH: szG.h }
           );
           paintButtonsStage();
           return;
@@ -7068,6 +7096,20 @@ var ExperienciaCanvas = (function () {
         var oy = btnFresh
           ? (btnFresh.storedY != null ? Number(btnFresh.storedY) : Number(btnFresh.y) || 50)
           : 50;
+        var pivotOx = ox;
+        var pivotOy = oy;
+        if (isGroupDrag) {
+          var nPivot = ExperienciaEngine.getNode(state, sceneId);
+          var gPivot = nPivot && ExperienciaEngine.getInteraction
+            ? ExperienciaEngine.getInteraction(nPivot, bid)
+            : null;
+          if (gPivot) {
+            pivotOx = Number(gPivot.x);
+            if (isNaN(pivotOx)) pivotOx = ox;
+            pivotOy = Number(gPivot.y);
+            if (isNaN(pivotOy)) pivotOy = oy;
+          }
+        }
         var origins = isGroupDrag ? {} : buildOverlayDragOrigins(sceneId, groupIds);
         clearPendingMove(bid);
         buttonDrag = {
@@ -7082,6 +7124,8 @@ var ExperienciaCanvas = (function () {
           clientStartY: ev.clientY,
           originX: ox,
           originY: oy,
+          pivotOriginX: pivotOx,
+          pivotOriginY: pivotOy,
           startPx: pctStart.x,
           startPy: pctStart.y,
           startX: ox,
@@ -7516,7 +7560,7 @@ var ExperienciaCanvas = (function () {
         if (moved && dragScene && canvas().activeOverlayGroupEditId) {
           maybeExpandGroupBoundsDuringEdit(canvas().activeOverlayGroupEditId, dragScene);
         } else if (moved && dragScene && dragIsGroup) {
-          commitGroupBoundsIfNeeded(dragScene, dragBtn);
+          finalizeOverlayGroupMoveFrame(dragScene, dragBtn);
         }
         paintButtonsStage();
         paintInspector();
