@@ -367,7 +367,13 @@ var QuotationProposalsPage = (function () {
         (280 + COMPARE_DIFFS.length * 30 + COMPARE_SHARED.length * 30 + 220) + 'ms">' +
         'Ambas propuestas están diseñadas para presentar el proyecto ante inversionistas. ' +
         'La diferencia está en el nivel de impacto y producción audiovisual.' +
-      '</p>';
+      '</p>' +
+      '<div class="qpp-cmp__upgrade-wrap" style="--qpp-cmp-delay:' +
+        (280 + COMPARE_DIFFS.length * 30 + COMPARE_SHARED.length * 30 + 320) + 'ms">' +
+        '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
+          'Upgrade' +
+        '</button>' +
+      '</div>';
   }
 
   function setQppView(root, view) {
@@ -577,6 +583,21 @@ var QuotationProposalsPage = (function () {
         setQppView(root, 'comparison');
       });
     });
+
+    var shellEl = qs('[data-qpp-root]', root) || root;
+    if (shellEl && !shellEl.dataset.qppUpgradeBound) {
+      shellEl.dataset.qppUpgradeBound = '1';
+      shellEl.addEventListener('click', function (e) {
+        var upgradeBtn = e.target && e.target.closest && e.target.closest('[data-qpp-upgrade]');
+        if (!upgradeBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var motion = PROPOSALS.filter(function (p) { return p.id === 'motion'; })[0];
+        openWhatsApp(motion && motion.waMessage
+          ? motion.waMessage
+          : 'Primo, me voy por MOTION');
+      });
+    }
 
     if (fsBtn) {
       fsBtn.addEventListener('click', function (e) {
