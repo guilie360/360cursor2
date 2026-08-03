@@ -4,6 +4,16 @@ var ExperienciaCanvas = (function () {
   var MAX_ZOOM = 1.8;
   var CANVAS_MODE_KEY = 'experienciaCanvasMode';
 
+  /** Temporary — ?shapeDebug=0 disables. Logs shape vs gizmo divergence. */
+  function shapeResizeDebugEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_SHAPE_RESIZE_DEBUG__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('shapeDebug') === '0') return false;
+    } catch (eDbg) { /* ignore */ }
+    return true;
+  }
+
   function esc(v) {
     if (typeof AdminUI !== 'undefined' && AdminUI.escapeHtml) return AdminUI.escapeHtml(v);
     return String(v == null ? '' : v)
@@ -735,11 +745,14 @@ var ExperienciaCanvas = (function () {
     };
   }
 
-  function shapeStageSvgHtml(b, t, layerW, layerH) {
+  function shapeStageSvgHtml(b, t, layerW, layerH, paintOpts) {
     t = String(t || '').toUpperCase();
+    paintOpts = paintOpts || {};
     var st = shapeStretchFromBtn(b);
     var par = 'meet';
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapePreserveAspect) {
+    if (paintOpts.gizmoBox) {
+      par = 'none';
+    } else if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapePreserveAspect) {
       par = ExperienciaEngine.shapePreserveAspect(st.sx, st.sy);
     } else if (st.sx !== 1 || st.sy !== 1) {
       par = 'none';
@@ -760,8 +773,35 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
-  function shapeHitAreaStyle(kind, stretchX, stretchY, btn, layerW, layerH) {
-    var boxMode = btn && layerW && layerH && shapeBoxMode(btn, layerW, layerH);
+  /** Unified stage paint box — always matches gizmo (tile model is storage-only). */
+  function shapeStagePaintMetrics(btn, layerW, layerH) {
+    if (!btn) return null;
+    var gm = shapeGizmoMetrics(btn, layerW, layerH);
+    if (gm) {
+      return {
+        x: gm.gx,
+        y: gm.gy,
+        w: gm.gw,
+        h: gm.gh,
+        gizmoBox: true,
+        tileW: gm.tileW,
+        tileH: gm.tileH
+      };
+    }
+    var ps = shapePaintSize(btn, layerW, layerH);
+    return {
+      x: Number(btn.x) || 50,
+      y: Number(btn.y) || 50,
+      w: ps.w,
+      h: ps.h,
+      gizmoBox: false,
+      tileW: ps.w,
+      tileH: ps.h
+    };
+  }
+
+  function shapeHitAreaStyle(kind, stretchX, stretchY, btn, layerW, layerH, forceBoxMode) {
+    var boxMode = forceBoxMode || (btn && layerW && layerH && shapeBoxMode(btn, layerW, layerH));
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeHitAreaCss) {
       return ExperienciaEngine.shapeHitAreaCss(kind, stretchX, stretchY, boxMode);
     }
@@ -787,9 +827,7 @@ var ExperienciaCanvas = (function () {
     }
     kind = String(kind || '').toUpperCase();
     paint = paint || {};
-    var par = ExperienciaEngine.shapePreserveAspect
-      ? ExperienciaEngine.shapePreserveAspect(stretchX, stretchY)
-      : ((stretchX !== 1 || stretchY !== 1) ? 'none' : 'meet');
+    var par = 'none';
     var html = ExperienciaEngine.buildSceneShapeSvg(kind, {
       fill: paint.fill != null ? paint.fill : 'rgba(255,255,255,0.16)',
       stroke: paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.62)',
@@ -801,7 +839,7 @@ var ExperienciaCanvas = (function () {
       svgClass: 'builder-exp-stage-shape__svg',
       preserveAspect: par
     });
-    var boxMode = (Number(stretchX) || 1) !== 1 || (Number(stretchY) || 1) !== 1;
+    var boxMode = true;
     var hit = el.querySelector('.builder-exp-stage-shape__hit');
     if (hit && typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeHitAreaCss) {
       hit.style.cssText = ExperienciaEngine.shapeHitAreaCss(kind, stretchX, stretchY, boxMode);
@@ -861,6 +899,27 @@ var ExperienciaCanvas = (function () {
       h: gr.height * sc.sy,
       cx: (gr.left + gr.width / 2 - lr.left) * sc.sx,
       cy: (gr.top + gr.height / 2 - lr.top) * sc.sy
+    };
+  }
+
+  /** DOM getBoundingClientRect → layer-local center + size in %. */
+  function domBoxPctFromEl(el, layerEl) {
+    if (!el || !layerEl) return null;
+    var r = el.getBoundingClientRect();
+    var sc = overlayLayerLocalScale(layerEl);
+    var lr = sc.rect;
+    if (!lr || !r.width || !r.height) return null;
+    var wPx = r.width * sc.sx;
+    var hPx = r.height * sc.sy;
+    var cxPx = (r.left + r.width / 2 - lr.left) * sc.sx;
+    var cyPx = (r.top + r.height / 2 - lr.top) * sc.sy;
+    return {
+      gx: (cxPx / sc.layerW) * 100,
+      gy: (cyPx / sc.layerH) * 100,
+      gw: (wPx / sc.layerW) * 100,
+      gh: (hPx / sc.layerH) * 100,
+      wPx: Math.round(wPx),
+      hPx: Math.round(hPx)
     };
   }
 
@@ -4783,6 +4842,13 @@ var ExperienciaCanvas = (function () {
         drag.lastShapeDy = drag.pendingShapeDy;
         paintShapeLiveFast(fin, drag.liveRefs, drag.pendingShapeLayerW, drag.pendingShapeLayerH);
         if (fin.patch) drag.liveShapePatch = fin.patch;
+        if (shapeResizeDebugEnabled() && drag.buttonId) {
+          logShapeVsGizmo('dragmove', drag.buttonId, {
+            liveGm: fin.gm,
+            stretch: { x: fin.stretchX, y: fin.stretchY },
+            patch: fin.patch
+          });
+        }
       }
     }
 
@@ -5212,11 +5278,11 @@ var ExperienciaCanvas = (function () {
         var paintX = Number(b.x);
         var paintY = Number(b.y);
         var gmPaint = null;
-        if (isShapeType(t) && selSet[String(b.id)]) {
-          gmPaint = shapeGizmoMetrics(b, layerW, layerH);
+        if (isShapeType(t)) {
+          gmPaint = shapeStagePaintMetrics(b, layerW, layerH);
           if (gmPaint) {
-            paintX = gmPaint.gx;
-            paintY = gmPaint.gy;
+            paintX = gmPaint.x;
+            paintY = gmPaint.y;
           }
         }
         var styleBits = 'left:' + paintX + '%;top:' + paintY + '%;' +
@@ -5252,12 +5318,9 @@ var ExperienciaCanvas = (function () {
         if (isShapeType(t)) {
           var shapeDefPaint = shapeDefaultSize(t);
           var paintSz = shapePaintSize(b, layerW, layerH);
-          var shapeW = paintSz.w;
-          var shapeH = paintSz.h;
-          if (gmPaint) {
-            shapeW = gmPaint.gw;
-            shapeH = gmPaint.gh;
-          }
+          var shapeW = gmPaint ? gmPaint.w : paintSz.w;
+          var shapeH = gmPaint ? gmPaint.h : paintSz.h;
+          var shapeGizmoBox = !!(gmPaint && gmPaint.gizmoBox);
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
@@ -5272,8 +5335,8 @@ var ExperienciaCanvas = (function () {
             ' aria-label="' + esc(b.label || t) + '"' +
             ' style="' + styleBits + '">' +
             '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
-              shapeHitAreaStyle(t, b.shapeStretchX, b.shapeStretchY, b, layerW, layerH) + '"></span>' +
-            shapeStageSvgHtml(b, t, layerW, layerH) +
+              shapeHitAreaStyle(t, b.shapeStretchX, b.shapeStretchY, b, layerW, layerH, shapeGizmoBox) + '"></span>' +
+            shapeStageSvgHtml(b, t, layerW, layerH, { gizmoBox: shapeGizmoBox }) +
             '</button>';
         }
         var glyph = buttonIconGlyph(b.icon);
@@ -5349,6 +5412,16 @@ var ExperienciaCanvas = (function () {
         if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
       }
       requestAnimationFrame(syncButtonsLayerBounds);
+      if (shapeResizeDebugEnabled() && !buttonDrag && !transformDrag) {
+        var debugIds = selIds.slice();
+        var debugPhase = debugIds.length ? 'selection/paint' : 'paint/unselected';
+        if (!debugIds.length) {
+          buttons.forEach(function (b) {
+            if (b && isShapeType(b.type)) debugIds.push(String(b.id));
+          });
+        }
+        scheduleShapeDebugLog(debugPhase, debugIds);
+      }
     }
 
     function syncHotspotsLayerBounds() {
@@ -6497,6 +6570,88 @@ var ExperienciaCanvas = (function () {
         return ExperienciaEngine.getSceneOverlayItem(state, n, itemId, sz.w, sz.h);
       }
       return ExperienciaEngine.getSceneButton(state, n, itemId);
+    }
+
+    /** Temporary — compare model tile vs gizmo vs DOM for shape resize bug. */
+    function logShapeVsGizmo(phase, btnId, extra) {
+      if (!shapeResizeDebugEnabled() || !buttonsLayer || !btnId) return;
+      var sceneId = canvas().selectedId;
+      var vm = getOverlayItemVm(sceneId, btnId);
+      if (!vm || !isShapeType(vm.type)) return;
+      var layerW = overlayLayerSize().w;
+      var layerH = overlayLayerSize().h;
+      var idEsc = String(btnId).replace(/"/g, '');
+      var shapeEl = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+      var gizmoEl = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+      var tilePaint = shapePaintSize(vm, layerW, layerH);
+      var gizmo = shapeGizmoMetrics(vm, layerW, layerH);
+      var stagePaint = shapeStagePaintMetrics(vm, layerW, layerH);
+      var domShape = domBoxPctFromEl(shapeEl, buttonsLayer);
+      var domGizmo = domBoxPctFromEl(gizmoEl, buttonsLayer);
+      var delta = null;
+      if (domShape && domGizmo) {
+        delta = {
+          dGx: +(domShape.gx - domGizmo.gx).toFixed(4),
+          dGy: +(domShape.gy - domGizmo.gy).toFixed(4),
+          dGw: +(domShape.gw - domGizmo.gw).toFixed(4),
+          dGh: +(domShape.gh - domGizmo.gh).toFixed(4)
+        };
+      }
+      var ix = vm._ix || vm;
+      console.log(
+        '%c[SHAPE-DEBUG] ' + phase,
+        'color:#6cf;font-weight:bold',
+        {
+          btnId: String(btnId),
+          type: String(vm.type || '').toUpperCase(),
+          layer: { w: layerW, h: layerH },
+          model: {
+            tileCenter: {
+              x: Number(vm.x),
+              y: Number(vm.y),
+              storedX: vm.storedX,
+              storedY: vm.storedY
+            },
+            width: vm.width,
+            height: vm.height,
+            shapeContentBox: !!ix.shapeContentBox,
+            stretch: shapeStretchFromBtn(vm),
+            tilePaint: tilePaint,
+            gizmoMetrics: gizmo,
+            stagePaint: stagePaint
+          },
+          dom: {
+            shape: domShape,
+            gizmo: domGizmo,
+            shapeInline: shapeEl ? {
+              left: shapeEl.style.left,
+              top: shapeEl.style.top,
+              width: shapeEl.style.width,
+              height: shapeEl.style.height,
+              transform: shapeEl.style.transform
+            } : null,
+            gizmoInline: gizmoEl ? {
+              left: gizmoEl.style.left,
+              top: gizmoEl.style.top,
+              width: gizmoEl.style.width,
+              height: gizmoEl.style.height
+            } : null,
+            deltaShapeMinusGizmo: delta
+          },
+          extra: extra || null
+        }
+      );
+    }
+
+    function scheduleShapeDebugLog(phase, btnIds, extra) {
+      if (!shapeResizeDebugEnabled() || !btnIds || !btnIds.length) return;
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          btnIds.forEach(function (id) {
+            logShapeVsGizmo(phase, id, extra);
+          });
+        });
+      });
     }
 
     function buildOverlayDragOrigins(sceneId, ids) {
@@ -8553,6 +8708,13 @@ var ExperienciaCanvas = (function () {
           /* Deep-edit: never sync/recenter group bounds on child transform release. */
           paintButtonsStage();
           paintInspector();
+          if (isShapeType(endType) && rotBtnId) {
+            scheduleShapeDebugLog('dragend', [String(rotBtnId)], {
+              moved: movedT,
+              wasRotate: wasRotate,
+              liveShapePatch: liveShapePatch || null
+            });
+          }
           if (movedT) persist();
           return;
         }
@@ -8621,6 +8783,12 @@ var ExperienciaCanvas = (function () {
         }
         paintButtonsStage();
         paintInspector();
+        if (!moved && dragBtn != null) {
+          var upVm = getOverlayItemVm(dragScene, dragBtn);
+          if (upVm && isShapeType(upVm.type)) {
+            scheduleShapeDebugLog('selection/click', [String(dragBtn)]);
+          }
+        }
         if (moved) persist();
       }
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
