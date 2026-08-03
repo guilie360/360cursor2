@@ -4716,19 +4716,28 @@ body.quotation-canvas-first .builder-workspace,
   height: 4px;
   transform: translateY(-50%);
 }
-.builder-exp-stage-shape--line:hover:not(.is-selected):not(.is-locked) {
-  outline: none;
-}
-/* Selected line — match shape gizmo border: 2px white + dark rim */
-.builder-exp-stage-shape--line.is-selected .builder-exp-stage-shape__svg line {
-  filter: drop-shadow(0 0 0 1px rgba(0, 0, 0, 0.42));
-}
-
 .builder-exp-stage-shape--circle {
   border-radius: 0 !important;
 }
 .builder-exp-stage-shape.is-selected {
   outline: none;
+}
+
+/* Shape stroke glow — same language as .qe-guide-line.is-selected */
+.qe-canvas-fit__frame,
+[data-qe-canvas-fit-frame] {
+  --qe-shape-glow: rgba(179, 58, 58, 0.22);
+  --qe-shape-glow-soft: rgba(179, 58, 58, 0.1);
+}
+.builder-exp-stage-shape__svg > * {
+  transition: filter 0.16s ease;
+}
+.builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__svg > *,
+.builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__svg > * {
+  filter:
+    drop-shadow(0 0 1px color-mix(in srgb, var(--qe-guide-color, #b33a3a) 55%, transparent))
+    drop-shadow(0 0 4px var(--qe-shape-glow, rgba(179, 58, 58, 0.22)))
+    drop-shadow(0 0 10px var(--qe-shape-glow-soft, rgba(179, 58, 58, 0.1)));
 }
 
 /* Line selection — endpoints only, no bounding box */
@@ -4785,8 +4794,8 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: auto;
 }
 
-/* Hover — no selection chrome; click to select (referente). */
-.builder-exp-stage-shape:hover:not(.is-selected):not(.is-locked) {
+/* Hover — stroke glow only (no box chrome); click to select. */
+.builder-exp-stage-shape:hover:not(.is-locked) {
   outline: none;
 }
 
