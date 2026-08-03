@@ -300,13 +300,35 @@ var ExperienciaEngine = (function () {
     var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
     var bbox = shapeContentBBox(kind, st);
     var vb = shapeSvgViewBox(kind, st.sx, st.sy);
+    /* Single meet scale — SVG uses preserveAspectRatio meet in a square tile. */
+    var meet = 1 / Math.max(vb.w, vb.h);
     return {
       bbox: bbox,
       vb: vb,
-      fracW: bbox.w / Math.max(1, vb.w),
-      fracH: bbox.h / Math.max(1, vb.h),
+      meet: meet,
+      dispW: bbox.w * meet,
+      dispH: bbox.h * meet,
       offX: bbox.cx - (vb.x + vb.w / 2),
       offY: bbox.cy - (vb.y + vb.h / 2)
+    };
+  }
+
+  function shapeTileContentOffsetPct(tileWPct, kind, layerW, layerH, stretchX, stretchY) {
+    var cf = shapeContentFrac(kind, stretchX, stretchY);
+    var tile = sceneShapeDisplaySize(tileWPct, layerW, layerH);
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var lh = Math.max(1, Number(layerH) || 1000);
+    var tilePx = (tile.w / 100) * lw;
+    var meetScale = tilePx / Math.max(cf.vb.w, cf.vb.h);
+    var svgDispW = cf.vb.w * meetScale;
+    var svgDispH = cf.vb.h * meetScale;
+    var svgOffX = (tilePx - svgDispW) / 2;
+    var svgOffY = (tilePx - svgDispH) / 2;
+    var contentCxPx = svgOffX + ((cf.bbox.cx - cf.vb.x) / cf.vb.w) * svgDispW;
+    var contentCyPx = svgOffY + ((cf.bbox.cy - cf.vb.y) / cf.vb.h) * svgDispH;
+    return {
+      offX: ((contentCxPx - tilePx / 2) / lw) * 100,
+      offY: ((contentCyPx - tilePx / 2) / lh) * 100
     };
   }
 
@@ -319,15 +341,14 @@ var ExperienciaEngine = (function () {
     var bbox = cf.bbox;
     var lw = Math.max(1, Number(layerW) || 1000);
     var lh = Math.max(1, Number(layerH) || 1000);
-    var gw = tile.w * cf.fracW;
-    var gh = tile.w * cf.fracH * (lw / lh);
+    var gw = tile.w * cf.dispW;
+    var gh = tile.w * cf.dispH * (lw / lh);
     if (kind === 'SHAPE_LINE') {
       gh = Math.max(0.08, gh);
     }
-    var offX = (cf.offX / cf.vb.w) * tile.w;
-    var offY = (cf.offY / cf.vb.h) * tile.h;
-    var gx = (posX != null && !isNaN(Number(posX)) ? Number(posX) : 50) + offX;
-    var gy = (posY != null && !isNaN(Number(posY)) ? Number(posY) : 50) + offY;
+    var contentOff = shapeTileContentOffsetPct(widthPct, kind, layerW, layerH, st.sx, st.sy);
+    var gx = (posX != null && !isNaN(Number(posX)) ? Number(posX) : 50) + contentOff.offX;
+    var gy = (posY != null && !isNaN(Number(posY)) ? Number(posY) : 50) + contentOff.offY;
     return {
       gx: gx,
       gy: gy,
@@ -343,33 +364,28 @@ var ExperienciaEngine = (function () {
 
   function sceneShapeTileWidthFromContentWidth(contentWPct, kind, stretchX, stretchY) {
     var cf = shapeContentFrac(kind, stretchX, stretchY);
-    var frac = cf.fracW;
+    var frac = cf.dispW;
     if (!frac || frac <= 0) return contentWPct;
     return Number(contentWPct) / frac;
   }
 
   function sceneShapeTileCenterFromGizmoCenter(gx, gy, tileWPct, kind, layerW, layerH, stretchX, stretchY) {
-    var tile = sceneShapeDisplaySize(tileWPct, layerW, layerH);
-    var cf = shapeContentFrac(kind, stretchX, stretchY);
-    var offX = (cf.offX / cf.vb.w) * tile.w;
-    var offY = (cf.offY / cf.vb.h) * tile.h;
-    return { x: Number(gx) - offX, y: Number(gy) - offY };
+    var contentOff = shapeTileContentOffsetPct(tileWPct, kind, layerW, layerH, stretchX, stretchY);
+    return { x: Number(gx) - contentOff.offX, y: Number(gy) - contentOff.offY };
   }
 
   function shapeHitAreaCss(kind, stretchX, stretchY) {
     kind = String(kind || '').toUpperCase();
     var cf = shapeContentFrac(kind, stretchX, stretchY);
     var bbox = cf.bbox;
-    var vb = cf.vb;
-    var scale = Math.min(100 / vb.w, 100 / vb.h);
-    var dispW = vb.w * scale;
-    var dispH = vb.h * scale;
+    var dispW = cf.vb.w * cf.meet * 100;
+    var dispH = cf.vb.h * cf.meet * 100;
     var offX = (100 - dispW) / 2;
     var offY = (100 - dispH) / 2;
-    var left = offX + ((bbox.cx - bbox.w / 2) - vb.x) / vb.w * dispW;
-    var top = offY + ((bbox.cy - bbox.h / 2) - vb.y) / vb.h * dispH;
-    var width = (bbox.w / vb.w) * dispW;
-    var height = (bbox.h / vb.h) * dispH;
+    var left = offX + ((bbox.cx - bbox.w / 2) - cf.vb.x) / cf.vb.w * dispW;
+    var top = offY + ((bbox.cy - bbox.h / 2) - cf.vb.y) / cf.vb.h * dispH;
+    var width = cf.dispW * 100;
+    var height = cf.dispH * 100;
     if (kind === 'SHAPE_LINE') {
       return 'left:' + left + '%;width:' + width + '%;';
     }
