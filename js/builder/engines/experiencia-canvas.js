@@ -512,6 +512,31 @@ var ExperienciaCanvas = (function () {
       .replace(/'/g, '');
   }
 
+  function shapeStrokeGlow(color, alpha) {
+    var c = String(color || '').trim();
+    var r;
+    var g;
+    var b;
+    if (/^#[0-9a-f]{6}$/i.test(c)) {
+      r = parseInt(c.slice(1, 3), 16);
+      g = parseInt(c.slice(3, 5), 16);
+      b = parseInt(c.slice(5, 7), 16);
+    } else {
+      var m = c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
+      if (m) {
+        r = Number(m[1]);
+        g = Number(m[2]);
+        b = Number(m[3]);
+      } else {
+        return 'rgba(255,255,255,' + (Number(alpha) || 0.35) + ')';
+      }
+    }
+    var a = Number(alpha);
+    if (isNaN(a)) a = 0.35;
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 'rgba(255,255,255,' + a + ')';
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+
   function buttonPreviewClass(btn) {
     var t = String((btn && btn.type) || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'builder-exp-stage-text';
@@ -606,13 +631,26 @@ var ExperienciaCanvas = (function () {
       ? Math.max(1, Math.round((m.gw / 100) * layerW)) + ' px'
       : (sizeWpx + ' × ' + sizeHpx);
     var isGroupGizmo = m.st === 'OVERLAY_GROUP' || m.st === 'GROUP';
+    var isLineGizmo = m.st === 'SHAPE_LINE';
     var html =
       '<div class="builder-exp-sel-gizmo' + (multi ? ' is-multi' : '') +
-        (isGroupGizmo ? ' is-overlay-group' : '') + '"' +
+        (isGroupGizmo ? ' is-overlay-group' : '') +
+        (isLineGizmo ? ' is-line' : '') + '"' +
         ' data-exp-gizmo="1" data-gizmo-id="' + esc(btn.id) + '"' +
         ' data-gizmo-type="' + esc(m.st) + '"' +
         ' style="left:' + m.gx + '%;top:' + m.gy + '%;width:' + m.gw + '%;height:' + m.gh + '%;' +
         '--btn-rot:' + m.grot + 'deg">';
+    /* Line: endpoint handles only — no box, no rotate zones. */
+    if (isLineGizmo) {
+      if (!multi) {
+        html += '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>';
+        html += '<span class="builder-exp-sel-handle" data-handle="w"></span>';
+        html += '<span class="builder-exp-sel-handle" data-handle="e"></span>';
+        html += '<span class="builder-exp-sel-size" data-exp-sel-size>' + esc(sizeLabel) + '</span>';
+      }
+      html += '</div>';
+      return html;
+    }
     /* Group: no move surface — clicks pass through to children (double-click to edit). */
     if (!multi && !isGroupGizmo) {
       html += '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>';
@@ -4302,9 +4340,10 @@ var ExperienciaCanvas = (function () {
             gizmo.style.setProperty('--btn-rot', gm.grot + 'deg');
             var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
             if (sizeEl) {
-              sizeEl.textContent =
-                Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' × ' +
-                Math.max(1, Math.round((gm.gh / 100) * layerH));
+              sizeEl.textContent = gm.st === 'SHAPE_LINE'
+                ? Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' px'
+                : Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' × ' +
+                  Math.max(1, Math.round((gm.gh / 100) * layerH));
             }
             moved = true;
           }
@@ -4347,7 +4386,9 @@ var ExperienciaCanvas = (function () {
         gizmo.classList.add('is-sizing');
         var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
         if (sizeEl) {
-          var label = Math.max(1, Math.round(wPx)) + ' × ' + Math.max(1, Math.round(hPx));
+          var label = t === 'SHAPE_LINE'
+            ? Math.max(1, Math.round(wPx)) + ' px'
+            : Math.max(1, Math.round(wPx)) + ' × ' + Math.max(1, Math.round(hPx));
           if (sizeEl.textContent !== label) sizeEl.textContent = label;
         }
       }
@@ -4576,6 +4617,13 @@ var ExperienciaCanvas = (function () {
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
+          if (t === 'SHAPE_LINE' && selSet[String(b.id)]) {
+            var strokeRaw = b.stroke || 'rgba(255,255,255,0.55)';
+            styleBits +=
+              '--shape-line-color:' + cssToken(strokeRaw) + ';' +
+              '--shape-line-glow:' + shapeStrokeGlow(strokeRaw, 0.45) + ';' +
+              '--shape-line-glow-soft:' + shapeStrokeGlow(strokeRaw, 0.18) + ';';
+          }
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
