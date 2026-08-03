@@ -130,6 +130,10 @@ var ExperienciaEngine = (function () {
         { id: 'el-shape-circle', label: 'Forma · Círculo', kind: '_embed', interactionType: 'SHAPE_CIRCLE', defaultLabel: 'Círculo', group: 'controls' },
         { id: 'el-shape-line', label: 'Forma · Línea', kind: '_embed', interactionType: 'SHAPE_LINE', defaultLabel: 'Línea', group: 'controls' },
         { id: 'el-shape-triangle', label: 'Forma · Triángulo', kind: '_embed', interactionType: 'SHAPE_TRIANGLE', defaultLabel: 'Triángulo', group: 'controls' },
+        { id: 'el-shape-arrow', label: 'Forma · Flecha', kind: '_embed', interactionType: 'SHAPE_ARROW', defaultLabel: 'Flecha', group: 'controls' },
+        { id: 'el-shape-donut', label: 'Forma · Donut', kind: '_embed', interactionType: 'SHAPE_DONUT', defaultLabel: 'Donut', group: 'controls' },
+        { id: 'el-shape-capsule', label: 'Forma · Cápsula', kind: '_embed', interactionType: 'SHAPE_CAPSULE', defaultLabel: 'Cápsula', group: 'controls' },
+        { id: 'el-shape-round-rect', label: 'Forma · Cuadrado redondeado', kind: '_embed', interactionType: 'SHAPE_ROUND_RECT', defaultLabel: 'Cuadrado redondeado', group: 'controls' },
         { id: 'el-info', label: 'Información / detalles', kind: '_embed', interactionType: 'CUSTOM', actionType: 'show-info', defaultLabel: 'Información', group: 'controls' }
       ]
     },
@@ -168,6 +172,10 @@ var ExperienciaEngine = (function () {
     SHAPE_CIRCLE: 'Círculo',
     SHAPE_LINE: 'Línea',
     SHAPE_TRIANGLE: 'Triángulo',
+    SHAPE_ARROW: 'Flecha',
+    SHAPE_DONUT: 'Donut',
+    SHAPE_CAPSULE: 'Cápsula',
+    SHAPE_ROUND_RECT: 'Cuadrado redondeado',
     OVERLAY_GROUP: 'Grupo',
     SELECTOR: 'Selector',
     UNIT: 'Unidad',
@@ -178,6 +186,45 @@ var ExperienciaEngine = (function () {
     PANEL_TRIGGER: 'Panel',
     CUSTOM: 'Info'
   };
+
+  var SCENE_SHAPE_TYPES = [
+    'SHAPE_RECT', 'SHAPE_CIRCLE', 'SHAPE_LINE', 'SHAPE_TRIANGLE',
+    'SHAPE_ARROW', 'SHAPE_DONUT', 'SHAPE_CAPSULE', 'SHAPE_ROUND_RECT'
+  ];
+
+  var SCENE_SHAPE_MENU_ID = {
+    SHAPE_RECT: 'el-shape-rect',
+    SHAPE_CIRCLE: 'el-shape-circle',
+    SHAPE_LINE: 'el-shape-line',
+    SHAPE_TRIANGLE: 'el-shape-triangle',
+    SHAPE_ARROW: 'el-shape-arrow',
+    SHAPE_DONUT: 'el-shape-donut',
+    SHAPE_CAPSULE: 'el-shape-capsule',
+    SHAPE_ROUND_RECT: 'el-shape-round-rect'
+  };
+
+  function isSceneShapeType(t) {
+    return SCENE_SHAPE_TYPES.indexOf(String(t || '').toUpperCase()) >= 0;
+  }
+
+  function isSquareSceneShapeType(t) {
+    t = String(t || '').toUpperCase();
+    return t === 'SHAPE_CIRCLE' || t === 'SHAPE_DONUT';
+  }
+
+  function sceneShapeDefaultSize(t) {
+    t = String(t || '').toUpperCase();
+    if (t === 'SHAPE_LINE') return { w: 28, h: 1.5 };
+    if (t === 'SHAPE_CAPSULE') return { w: 20, h: 8 };
+    if (t === 'SHAPE_ARROW') return { w: 24, h: 10 };
+    if (isSquareSceneShapeType(t)) return { w: 12, h: 12 };
+    if (t === 'SHAPE_ROUND_RECT') return { w: 12, h: 12 };
+    return { w: 12, h: 8 };
+  }
+
+  function sceneShapeDefaultLabel(t) {
+    return INTERACTION_TYPE_LABEL[String(t || '').toUpperCase()] || 'Forma';
+  }
 
   /** Global showroom controls — configured on Hero, not per-scene elements */
   var GLOBAL_SHOWROOM_ACTIONS = {
@@ -378,7 +425,7 @@ var ExperienciaEngine = (function () {
   function isSceneFreeOverlayInteraction(ix) {
     if (!ix) return false;
     var t = String(ix.type || '').toUpperCase();
-    return t === 'BUTTON' || t === 'TEXT' || t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE';
+    return t === 'BUTTON' || t === 'TEXT' || isSceneShapeType(t);
   }
 
   function isOverlayGroupInteraction(ix) {
@@ -408,10 +455,10 @@ var ExperienciaEngine = (function () {
         h: ix.boxH != null ? Number(ix.boxH) : 4.5
       };
     }
-    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
-      var gw = Number(ix.width) || (t === 'SHAPE_LINE' ? 28 : 12);
-      var gh = Number(ix.height) || (t === 'SHAPE_LINE' ? 1.5 : 8);
-      if (t === 'SHAPE_CIRCLE') gh = gw * (w / Math.max(1, h));
+    if (isSceneShapeType(t)) {
+      var gw = Number(ix.width) || sceneShapeDefaultSize(t).w;
+      var gh = Number(ix.height) || sceneShapeDefaultSize(t).h;
+      if (isSquareSceneShapeType(t)) gh = gw * (w / Math.max(1, h));
       return { w: gw, h: gh };
     }
     return {
@@ -653,7 +700,7 @@ var ExperienciaEngine = (function () {
     if (t === 'BUTTON') {
       child.boxW = world.boxW;
       child.boxH = world.boxH;
-    } else if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+    } else if (isSceneShapeType(t)) {
       child.width = world.width;
       child.height = world.height;
     }
@@ -770,7 +817,7 @@ var ExperienciaEngine = (function () {
             if (ct === 'BUTTON') {
               if (s.boxW != null) c.boxW = Math.max(0.5, Number(s.boxW) * sx);
               if (s.boxH != null) c.boxH = Math.max(0.5, Number(s.boxH) * sy);
-            } else if (ct === 'SHAPE_RECT' || ct === 'SHAPE_CIRCLE' || ct === 'SHAPE_LINE' || ct === 'SHAPE_TRIANGLE') {
+            } else if (isSceneShapeType(ct)) {
               if (s.width != null) c.width = Math.max(0.5, Number(s.width) * sx);
               if (s.height != null) c.height = Math.max(0.5, Number(s.height) * sy);
             }
@@ -1107,18 +1154,19 @@ var ExperienciaEngine = (function () {
       if (ix.locked == null) ix.locked = false;
       else ix.locked = !!ix.locked;
     }
-    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
-      if (ix.label == null) {
-        ix.label = t === 'SHAPE_CIRCLE' ? 'Círculo'
-          : (t === 'SHAPE_LINE' ? 'Línea'
-          : (t === 'SHAPE_TRIANGLE' ? 'Triángulo' : 'Rectángulo'));
-      }
-      if (ix.width == null) ix.width = t === 'SHAPE_LINE' ? 28 : 12;
-      if (ix.height == null) ix.height = t === 'SHAPE_LINE' ? 1.5 : (t === 'SHAPE_CIRCLE' ? 12 : 8);
+    if (isSceneShapeType(t)) {
+      var shapeSize = sceneShapeDefaultSize(t);
+      if (ix.label == null) ix.label = sceneShapeDefaultLabel(t);
+      if (ix.width == null) ix.width = shapeSize.w;
+      if (ix.height == null) ix.height = shapeSize.h;
       if (ix.fill == null) ix.fill = t === 'SHAPE_LINE' ? 'none' : 'rgba(255,255,255,0.14)';
       if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.55)';
       if (ix.strokeWidth == null) ix.strokeWidth = t === 'SHAPE_LINE' ? 2 : 1;
-      if (ix.borderRadius == null) ix.borderRadius = t === 'SHAPE_CIRCLE' ? 999 : 0;
+      if (ix.borderRadius == null) {
+        if (t === 'SHAPE_CIRCLE') ix.borderRadius = 999;
+        else if (t === 'SHAPE_ROUND_RECT') ix.borderRadius = 16;
+        else ix.borderRadius = 0;
+      }
       if (ix.locked == null) ix.locked = false;
       else ix.locked = !!ix.locked;
     }
@@ -1427,15 +1475,16 @@ var ExperienciaEngine = (function () {
   function buttonHalfSizePx(ix, imageW, imageH) {
     var t = ix ? String(ix.type || '').toUpperCase() : '';
     if (t === 'BUTTON') ensureButtonVisualDefaults(ix);
-    else if (t === 'TEXT' || t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+    else if (t === 'TEXT' || isSceneShapeType(t)) {
       ensureFreeOverlayDefaults(ix);
     }
     var w = Math.max(1, Number(imageW) || 1000);
     var h = Math.max(1, Number(imageH) || 1000);
-    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+    if (isSceneShapeType(t)) {
+      var sz = sceneShapeDefaultSize(t);
       return {
-        w: Math.max(4, ((Number(ix.width) || (t === 'SHAPE_LINE' ? 28 : 12)) / 100) * w / 2),
-        h: Math.max(2, ((Number(ix.height) || (t === 'SHAPE_LINE' ? 1.5 : 8)) / 100) * h / 2)
+        w: Math.max(4, ((Number(ix.width) || sz.w) / 100) * w / 2),
+        h: Math.max(2, ((Number(ix.height) || sz.h) / 100) * h / 2)
       };
     }
     if (ix && ix.boxW != null && ix.boxH != null) {
@@ -1456,7 +1505,7 @@ var ExperienciaEngine = (function () {
   function resolveButtonLayout(ix, imageW, imageH) {
     var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
     if (tLayout === 'BUTTON') ensureButtonVisualDefaults(ix);
-    else if (tLayout === 'TEXT' || tLayout === 'SHAPE_RECT' || tLayout === 'SHAPE_CIRCLE' || tLayout === 'SHAPE_LINE' || tLayout === 'SHAPE_TRIANGLE') {
+    else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
       ensureFreeOverlayDefaults(ix);
     }
     var w = Math.max(1, Number(imageW) || 1);
@@ -1577,15 +1626,11 @@ var ExperienciaEngine = (function () {
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var t = String(kind || 'SHAPE_RECT').toUpperCase();
-    if (t !== 'SHAPE_RECT' && t !== 'SHAPE_CIRCLE' && t !== 'SHAPE_LINE' && t !== 'SHAPE_TRIANGLE') t = 'SHAPE_RECT';
-    var menuId = t === 'SHAPE_CIRCLE' ? 'el-shape-circle'
-      : (t === 'SHAPE_LINE' ? 'el-shape-line'
-      : (t === 'SHAPE_TRIANGLE' ? 'el-shape-triangle' : 'el-shape-rect'));
+    if (!isSceneShapeType(t)) t = 'SHAPE_RECT';
+    var menuId = SCENE_SHAPE_MENU_ID[t] || 'el-shape-rect';
     var menuItem = findAddElementItem(menuId) || {
       interactionType: t,
-      defaultLabel: t === 'SHAPE_CIRCLE' ? 'Círculo'
-        : (t === 'SHAPE_LINE' ? 'Línea'
-        : (t === 'SHAPE_TRIANGLE' ? 'Triángulo' : 'Rectángulo')),
+      defaultLabel: sceneShapeDefaultLabel(t),
       group: 'controls'
     };
     var ix = addElementFromMenu(state, nodeId, menuItem);
@@ -1788,7 +1833,7 @@ var ExperienciaEngine = (function () {
       ix.positionMode = 'free';
     }
 
-    if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+    if (isSceneShapeType(t)) {
       if (patch.width != null) {
         var sw = Number(patch.width);
         if (!isNaN(sw)) {
@@ -1811,7 +1856,7 @@ var ExperienciaEngine = (function () {
       if (patch.strokeWidth != null) {
         ix.strokeWidth = Math.max(0, Math.min(20, Number(patch.strokeWidth) || 0));
       }
-      if (patch.borderRadius != null && t === 'SHAPE_RECT') {
+      if (patch.borderRadius != null && (t === 'SHAPE_RECT' || t === 'SHAPE_ROUND_RECT')) {
         ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
       }
       if (patch.locked != null) ix.locked = !!patch.locked;
@@ -1951,7 +1996,7 @@ var ExperienciaEngine = (function () {
     var created = null;
     if (t === 'TEXT') {
       created = addSceneText(state, nodeId);
-    } else if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+    } else if (isSceneShapeType(t)) {
       created = addSceneShape(state, nodeId, t);
     } else {
       t = 'BUTTON';
@@ -6817,6 +6862,11 @@ var ExperienciaEngine = (function () {
     setHubVisualMode: setHubVisualMode,
     upsertHubFloor: upsertHubFloor,
     findHubFloor: findHubFloor,
+    isSceneShapeType: isSceneShapeType,
+    isSquareSceneShapeType: isSquareSceneShapeType,
+    sceneShapeDefaultLabel: sceneShapeDefaultLabel,
+    sceneShapeDefaultSize: sceneShapeDefaultSize,
+    SCENE_SHAPE_TYPES: SCENE_SHAPE_TYPES,
     clearSelection: clearSelection,
     setSelection: setSelection,
     toggleSelectionId: toggleSelectionId

@@ -71,7 +71,9 @@ var QuotationGuides = (function () {
     scene.interactions.forEach(function (ix) {
       if (!ix) return;
       var t = String(ix.type || '').toUpperCase();
-      if (t !== 'BUTTON' && t !== 'TEXT' && t !== 'SHAPE_RECT' && t !== 'SHAPE_CIRCLE' && t !== 'SHAPE_LINE' && t !== 'SHAPE_TRIANGLE') {
+      if (t !== 'BUTTON' && t !== 'TEXT' &&
+          !(typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSceneShapeType &&
+            ExperienciaEngine.isSceneShapeType(t))) {
         return;
       }
       var x = Number(ix.x);
@@ -79,9 +81,13 @@ var QuotationGuides = (function () {
       if (!isFinite(x) || !isFinite(y)) return;
       var hw = 4;
       var hh = 2;
-      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
-        hw = Math.max(0.5, (Number(ix.width) || (t === 'SHAPE_LINE' ? 28 : 12)) / 2);
-        hh = Math.max(0.25, (Number(ix.height) || (t === 'SHAPE_LINE' ? 1.5 : (t === 'SHAPE_CIRCLE' ? 12 : 8))) / 2);
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSceneShapeType &&
+          ExperienciaEngine.isSceneShapeType(t)) {
+        var szGuide = ExperienciaEngine.sceneShapeDefaultSize
+          ? ExperienciaEngine.sceneShapeDefaultSize(t)
+          : { w: 12, h: 8 };
+        hw = Math.max(0.5, (Number(ix.width) || szGuide.w) / 2);
+        hh = Math.max(0.25, (Number(ix.height) || szGuide.h) / 2);
       } else if (t === 'BUTTON') {
         hw = Math.max(0.5, (ix.boxW != null ? Number(ix.boxW) : 14) / 2);
         hh = Math.max(0.5, (ix.boxH != null ? Number(ix.boxH) : 4.5) / 2);

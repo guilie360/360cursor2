@@ -11,6 +11,25 @@ var ExperienciaCanvas = (function () {
       .replace(/"/g, '&quot;');
   }
 
+  function isShapeType(t) {
+    return typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSceneShapeType
+      ? ExperienciaEngine.isSceneShapeType(t)
+      : false;
+  }
+
+  function isSquareShapeType(t) {
+    return typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSquareSceneShapeType
+      ? ExperienciaEngine.isSquareSceneShapeType(t)
+      : false;
+  }
+
+  function shapeDefaultSize(t) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
+      return ExperienciaEngine.sceneShapeDefaultSize(t);
+    }
+    return { w: 12, h: 8 };
+  }
+
   function isCanvasMode() {
     if (typeof BoxiesPrefs !== 'undefined' && BoxiesPrefs.load) {
       return !!BoxiesPrefs.load()[CANVAS_MODE_KEY];
@@ -519,6 +538,10 @@ var ExperienciaCanvas = (function () {
     if (t === 'SHAPE_CIRCLE') return 'builder-exp-stage-shape builder-exp-stage-shape--circle';
     if (t === 'SHAPE_LINE') return 'builder-exp-stage-shape builder-exp-stage-shape--line';
     if (t === 'SHAPE_TRIANGLE') return 'builder-exp-stage-shape builder-exp-stage-shape--triangle';
+    if (t === 'SHAPE_ARROW') return 'builder-exp-stage-shape builder-exp-stage-shape--arrow';
+    if (t === 'SHAPE_DONUT') return 'builder-exp-stage-shape builder-exp-stage-shape--donut';
+    if (t === 'SHAPE_CAPSULE') return 'builder-exp-stage-shape builder-exp-stage-shape--capsule';
+    if (t === 'SHAPE_ROUND_RECT') return 'builder-exp-stage-shape builder-exp-stage-shape--round-rect';
     var style = (btn && btn.style) || 'button';
     if (style === 'chip') style = 'button';
     return 'builder-exp-ui-btn is-style-' + style +
@@ -530,6 +553,9 @@ var ExperienciaCanvas = (function () {
     var shapeW = Number(b.width) || 12;
     var shapeH = Number(b.height) || 8;
     if (t === 'SHAPE_CIRCLE') {
+      shapeH = shapeW * (layerW / Math.max(1, layerH));
+    }
+    if (t === 'SHAPE_DONUT') {
       shapeH = shapeW * (layerW / Math.max(1, layerH));
     }
     var wPx = Math.max(1, (shapeW / 100) * layerW);
@@ -569,6 +595,36 @@ var ExperienciaCanvas = (function () {
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
         ve + ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
     }
+    if (t === 'SHAPE_ARROW') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<polygon points="0,36 58,36 58,22 100,50 58,78 58,64 0,64"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ve + ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
+    }
+    if (t === 'SHAPE_DONUT') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<path fill-rule="evenodd" d="M50,4 A46,46 0 1,1 49.6,4 Z M50,32 A18,18 0 1,0 50,68 A18,18 0 1,0 50,32 Z"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ve + ' shape-rendering="geometricPrecision"/></svg>';
+    }
+    if (t === 'SHAPE_CAPSULE') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<rect x="0" y="0" width="100" height="100" rx="50"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ve + ' shape-rendering="geometricPrecision"/></svg>';
+    }
+    if (t === 'SHAPE_ROUND_RECT') {
+      var brR = b.borderRadius != null ? Number(b.borderRadius) : 16;
+      var rxR = Math.max(0, Math.min(48, (brR / refPx) * 100));
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<rect x="0" y="0" width="100" height="100" rx="' + rxR + '" fill="' + fill + '"' +
+        ' stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ve + ' shape-rendering="geometricPrecision"/></svg>';
+    }
     var br = b.borderRadius != null ? Number(b.borderRadius) : 0;
     var rx = Math.max(0, Math.min(48, (br / refPx) * 100));
     return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
@@ -592,10 +648,11 @@ var ExperienciaCanvas = (function () {
     } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
       gw = Number(btn.width) || 20;
       gh = Number(btn.height) || 20;
-    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE' || st === 'SHAPE_LINE' || st === 'SHAPE_TRIANGLE') {
-      gw = Number(btn.width) || (st === 'SHAPE_LINE' ? 28 : 12);
-      gh = Number(btn.height) || (st === 'SHAPE_LINE' ? 1.5 : 8);
-      if (st === 'SHAPE_CIRCLE') {
+    } else if (isShapeType(st)) {
+      var shapeDef = shapeDefaultSize(st);
+      gw = Number(btn.width) || shapeDef.w;
+      gh = Number(btn.height) || shapeDef.h;
+      if (isSquareShapeType(st)) {
         gh = gw * (layerW / Math.max(1, layerH));
       }
     } else {
@@ -670,8 +727,10 @@ var ExperienciaCanvas = (function () {
   function overlayTypeLabel(t) {
     t = String(t || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'Texto';
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultLabel && isShapeType(t)) {
+      return ExperienciaEngine.sceneShapeDefaultLabel(t);
+    }
     if (t === 'SHAPE_LINE') return 'Línea';
-    if (t === 'SHAPE_TRIANGLE') return 'Triángulo';
     if (t === 'SHAPE_RECT') return 'Rectángulo';
     if (t === 'SHAPE_CIRCLE') return 'Círculo';
     return 'Botón';
@@ -911,11 +970,11 @@ var ExperienciaCanvas = (function () {
         '<input type="number" data-exp-shape-sw min="0" max="20" step="1" value="' +
           esc(String(selected.strokeWidth != null ? selected.strokeWidth : 2)) + '">' +
       '</div>' +
-      (t === 'SHAPE_RECT'
+      (t === 'SHAPE_RECT' || t === 'SHAPE_ROUND_RECT'
         ? ('<div class="builder-field builder-exp-inspector__field">' +
             '<label>Radio</label>' +
             '<input type="number" data-exp-shape-radius min="0" max="999" step="1" value="' +
-              esc(String(selected.borderRadius != null ? selected.borderRadius : 8)) + '">' +
+              esc(String(selected.borderRadius != null ? selected.borderRadius : (t === 'SHAPE_ROUND_RECT' ? 16 : 8))) + '">' +
           '</div>')
         : '') +
       '<div class="builder-field builder-exp-inspector__field">' +
@@ -965,7 +1024,7 @@ var ExperienciaCanvas = (function () {
 
     var selType = String(selected.type || 'BUTTON').toUpperCase();
     var kindTitle = selType === 'TEXT' ? 'Texto'
-      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' || selType === 'SHAPE_TRIANGLE' ? 'Forma'
+      : (isShapeType(selType) ? 'Forma'
         : (selType === 'IMAGE' ? 'Imagen' : 'Botón'));
 
     var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
@@ -984,7 +1043,7 @@ var ExperienciaCanvas = (function () {
 
     if (selType === 'TEXT') {
       html += textInspectorFieldsHtml(selected);
-    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' || selType === 'SHAPE_TRIANGLE') {
+    } else if (isShapeType(selType)) {
       html += shapeInspectorFieldsHtml(selected);
     } else {
       html += buttonInspectorFieldsHtml(selected, destOpts);
@@ -4302,10 +4361,11 @@ var ExperienciaCanvas = (function () {
         el.style.left = Number(layout.x) + '%';
         el.style.top = Number(layout.y) + '%';
         el.style.setProperty('--btn-rot', rot + 'deg');
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
-          var sw = Number(b.width) || 12;
-          var sh = Number(b.height) || 8;
-          if (t === 'SHAPE_CIRCLE') {
+        if (isShapeType(t)) {
+          var shapeDefLive = shapeDefaultSize(t);
+          var sw = Number(b.width) || shapeDefLive.w;
+          var sh = Number(b.height) || shapeDefLive.h;
+          if (isSquareShapeType(t)) {
             sh = sw * (layerW / Math.max(1, layerH));
           }
           el.style.width = sw + '%';
@@ -4356,11 +4416,11 @@ var ExperienciaCanvas = (function () {
       var topPx = (Number(box.tpx) + Number(box.bpx)) / 2;
       var wPx = Math.max(1, Number(box.rpx) - Number(box.lpx));
       var hPx = Math.max(1, Number(box.bpx) - Number(box.tpx));
-      if (t === 'SHAPE_CIRCLE') hPx = wPx;
+      if (isSquareShapeType(t)) hPx = wPx;
       if (el) {
         el.style.left = leftPx + 'px';
         el.style.top = topPx + 'px';
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE' || t === 'BUTTON') {
+        if (isShapeType(t) || t === 'BUTTON') {
           el.style.width = wPx + 'px';
           el.style.height = hPx + 'px';
         }
@@ -4598,10 +4658,11 @@ var ExperienciaCanvas = (function () {
             esc(b.label != null ? String(b.label) : 'Texto') +
           '</button>';
         }
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
-          var shapeW = Number(b.width) || (t === 'SHAPE_LINE' ? 28 : 12);
-          var shapeH = Number(b.height) || (t === 'SHAPE_LINE' ? 1.5 : 8);
-          if (t === 'SHAPE_CIRCLE') {
+        if (isShapeType(t)) {
+          var shapeDefPaint = shapeDefaultSize(t);
+          var shapeW = Number(b.width) || shapeDefPaint.w;
+          var shapeH = Number(b.height) || shapeDefPaint.h;
+          if (isSquareShapeType(t)) {
             shapeH = shapeW * (layerW / Math.max(1, layerH));
           }
           styleBits += 'width:' + shapeW + '%;' +
@@ -4864,10 +4925,11 @@ var ExperienciaCanvas = (function () {
           h: Math.max(0.5, (Number(btn.height) || 20) / 2)
         };
       }
-      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
+      if (isShapeType(t)) {
+        var shapeDefAlign = shapeDefaultSize(t);
         return {
-          w: Math.max(0.5, (Number(btn.width) || (t === 'SHAPE_LINE' ? 28 : 12)) / 2),
-          h: Math.max(0.25, (Number(btn.height) || (t === 'SHAPE_LINE' ? 1.5 : 8)) / 2)
+          w: Math.max(0.5, (Number(btn.width) || shapeDefAlign.w) / 2),
+          h: Math.max(0.25, (Number(btn.height) || shapeDefAlign.h) / 2)
         };
       }
       if (t === 'BUTTON') {
@@ -6882,7 +6944,7 @@ var ExperienciaCanvas = (function () {
 
             if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
               var ratioPx = transformDrag.startHpx / transformDrag.startWpx;
-              if (transformDrag.type === 'SHAPE_CIRCLE') {
+              if (isSquareShapeType(transformDrag.type)) {
                 ratioPx = 1; /* square in pixels */
               }
               if ((moveE || moveW) && !(moveN || moveS)) {
@@ -6955,7 +7017,7 @@ var ExperienciaCanvas = (function () {
               wPx = Rpx - Lpx;
               hPx = Bpx - Tpx;
               if (transformDrag.keepRatio && transformDrag.startWpx > 0) {
-                var ratioSnap = transformDrag.type === 'SHAPE_CIRCLE'
+                var ratioSnap = isSquareShapeType(transformDrag.type)
                   ? 1
                   : (transformDrag.startHpx / transformDrag.startWpx);
                 if ((moveE || moveW) && !(moveN || moveS)) {
@@ -7010,8 +7072,7 @@ var ExperienciaCanvas = (function () {
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
-            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE' ||
-                transformDrag.type === 'SHAPE_LINE' || transformDrag.type === 'SHAPE_TRIANGLE') {
+            } else if (isShapeType(transformDrag.type)) {
               patchT.width = nw;
               patchT.height = nh;
             }
@@ -7251,19 +7312,20 @@ var ExperienciaCanvas = (function () {
           var pct0 = percentFromPointer(ev);
           var layerW0 = buttonsLayer.clientWidth || 1000;
           var layerH0 = buttonsLayer.clientHeight || 1000;
+          var shapeDragDef = isShapeType(gtype) ? shapeDefaultSize(gtype) : null;
           var startW0 = gtype === 'BUTTON'
             ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
             : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
               ? (Number(btnG.width) || 20)
-              : (Number(btnG.width) || (gtype === 'SHAPE_LINE' ? 28 : 12));
+              : (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12));
           var startH0 = gtype === 'BUTTON'
             ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
             : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
               ? (Number(btnG.height) || 20)
-              : (Number(btnG.height) || (gtype === 'SHAPE_LINE' ? 1.5 : 8));
+              : (Number(btnG.height) || (shapeDragDef ? shapeDragDef.h : 8));
           /* Circle: store height so the box is pixel-square at drag start. */
           var layerAspect = layerW0 / Math.max(1, layerH0);
-          if (gtype === 'SHAPE_CIRCLE') {
+          if (isSquareShapeType(gtype)) {
             startH0 = startW0 * layerAspect;
           }
           var startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
@@ -7307,7 +7369,7 @@ var ExperienciaCanvas = (function () {
             startRot: Number(btnG.rotation) || 0,
             startPx: pct0.x,
             startPy: pct0.y,
-            keepRatio: gtype === 'SHAPE_CIRCLE' ||
+            keepRatio: isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey),
             layerAspect: layerAspect,
             historyPushed: false,
@@ -7540,7 +7602,7 @@ var ExperienciaCanvas = (function () {
               if (endType === 'BUTTON') {
                 finalize.boxW = ew;
                 finalize.boxH = eh;
-              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE' || endType === 'SHAPE_LINE' || endType === 'SHAPE_TRIANGLE') {
+              } else if (isShapeType(endType)) {
                 finalize.width = ew;
                 finalize.height = eh;
               }
@@ -8927,8 +8989,7 @@ var ExperienciaCanvas = (function () {
             : null;
           if (!ix || !ix.type) return false;
           var tt = String(ix.type).toUpperCase();
-          return tt === 'BUTTON' || tt === 'TEXT' || tt === 'SHAPE_RECT' || tt === 'SHAPE_CIRCLE' ||
-            tt === 'SHAPE_LINE' || tt === 'SHAPE_TRIANGLE';
+          return tt === 'BUTTON' || tt === 'TEXT' || isShapeType(tt);
         });
         var canUngroup = !!group;
         return {

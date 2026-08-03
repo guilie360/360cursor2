@@ -296,7 +296,69 @@ var QuotationRuntime = (function () {
   function isShapeIx(ix) {
     if (!ix || ix.enabled === false) return false;
     var t = String(ix.type || '').toUpperCase();
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSceneShapeType) {
+      return ExperienciaEngine.isSceneShapeType(t);
+    }
     return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE';
+  }
+
+  function runtimeShapeDefaultSize(t) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
+      return ExperienciaEngine.sceneShapeDefaultSize(t);
+    }
+    return { w: 12, h: 8 };
+  }
+
+  function isRuntimeSquareShape(t) {
+    return typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.isSquareSceneShapeType
+      ? ExperienciaEngine.isSquareSceneShapeType(t)
+      : false;
+  }
+
+  function runtimeShapeSvgHtml(sh, t) {
+    var fill = sh.fill || 'rgba(255,255,255,0.18)';
+    var stroke = sh.stroke || 'rgba(255,255,255,0.65)';
+    var sw = Number(sh.strokeWidth) || (t === 'SHAPE_LINE' ? 2 : 1);
+    var svgOpen = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
+      ' style="width:100%;height:100%;display:block;overflow:visible">';
+    if (t === 'SHAPE_LINE') {
+      return svgOpen +
+        '<line x1="0" y1="50" x2="100" y2="50" fill="none" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>';
+    }
+    if (t === 'SHAPE_CIRCLE') {
+      return svgOpen +
+        '<ellipse cx="50" cy="50" rx="50" ry="50" fill="' + fill + '" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
+    }
+    if (t === 'SHAPE_TRIANGLE') {
+      return svgOpen +
+        '<polygon points="50,4 96,96 4,96" fill="' + fill + '" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
+    }
+    if (t === 'SHAPE_ARROW') {
+      return svgOpen +
+        '<polygon points="0,36 58,36 58,22 100,50 58,78 58,64 0,64" fill="' + fill + '" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
+    }
+    if (t === 'SHAPE_DONUT') {
+      return svgOpen +
+        '<path fill-rule="evenodd" d="M50,4 A46,46 0 1,1 49.6,4 Z M50,32 A18,18 0 1,0 50,68 A18,18 0 1,0 50,32 Z"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
+    }
+    if (t === 'SHAPE_CAPSULE') {
+      return svgOpen +
+        '<rect x="0" y="0" width="100" height="100" rx="50" fill="' + fill + '" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
+    }
+    if (t === 'SHAPE_ROUND_RECT') {
+      return svgOpen +
+        '<rect x="0" y="0" width="100" height="100" rx="22" fill="' + fill + '" stroke="' + stroke + '"' +
+        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
+    }
+    return svgOpen +
+      '<rect x="0" y="0" width="100" height="100" fill="' + fill + '" stroke="' + stroke + '"' +
+      ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
   }
 
   function ixIsVisible(ix) {
@@ -530,49 +592,19 @@ var QuotationRuntime = (function () {
     shapes.forEach(function (sh) {
       var t = String(sh.type || '').toUpperCase();
       var el = document.createElement('div');
-      var shapeClass = t === 'SHAPE_CIRCLE' ? ' qr-ix-shape--circle'
-        : (t === 'SHAPE_LINE' ? ' qr-ix-shape--line'
-        : (t === 'SHAPE_TRIANGLE' ? ' qr-ix-shape--triangle' : ' qr-ix-shape--rect'));
-      el.className = 'qr-ix-shape' + shapeClass;
+      el.className = 'qr-ix-shape qr-ix-shape--vector';
       if (sh.id) el.setAttribute('data-qr-ix-id', String(sh.id));
       var rot = Number(sh.rotation) || 0;
+      var shapeSize = runtimeShapeDefaultSize(t);
       el.style.left = Number(sh.x) + '%';
       el.style.top = Number(sh.y) + '%';
-      el.style.width = (Number(sh.width) || (t === 'SHAPE_LINE' ? 28 : 12)) + '%';
-      el.style.height = (Number(sh.height) || (t === 'SHAPE_LINE' ? 1.5 : (t === 'SHAPE_CIRCLE' ? 12 : 8))) + '%';
+      el.style.width = (Number(sh.width) || shapeSize.w) + '%';
+      el.style.height = (Number(sh.height) || shapeSize.h) + '%';
       el.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
       el.style.pointerEvents = interactive ? 'auto' : 'none';
-      if (t === 'SHAPE_LINE') {
-        el.style.background = 'transparent';
-        el.style.border = 'none';
-        var sw = Number(sh.strokeWidth) || 2;
-        var stroke = sh.stroke || 'rgba(255,255,255,0.65)';
-        el.innerHTML =
-          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
-          ' style="width:100%;height:100%;display:block;overflow:visible">' +
-          '<line x1="0" y1="50" x2="100" y2="50" fill="none" stroke="' + stroke + '"' +
-          ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"' +
-          ' stroke-linecap="round"/></svg>';
-      } else if (t === 'SHAPE_TRIANGLE') {
-        el.style.background = 'transparent';
-        el.style.border = 'none';
-        var swTri = Number(sh.strokeWidth) || 1;
-        var strokeTri = sh.stroke || 'rgba(255,255,255,0.65)';
-        var fillTri = sh.fill || 'rgba(255,255,255,0.18)';
-        el.innerHTML =
-          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
-          ' style="width:100%;height:100%;display:block;overflow:visible">' +
-          '<polygon points="50,4 96,96 4,96" fill="' + fillTri + '" stroke="' + strokeTri + '"' +
-          ' stroke-width="' + swTri + '" vector-effect="non-scaling-stroke"' +
-          ' stroke-linejoin="round"/></svg>';
-      } else {
-        el.style.background = sh.fill || 'rgba(255,255,255,0.18)';
-        el.style.border = (Number(sh.strokeWidth) || 2) + 'px solid ' +
-          (sh.stroke || 'rgba(255,255,255,0.65)');
-        el.style.borderRadius = (sh.borderRadius != null
-          ? Number(sh.borderRadius)
-          : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px';
-      }
+      el.style.background = 'transparent';
+      el.style.border = 'none';
+      el.innerHTML = runtimeShapeSvgHtml(sh, t);
       if (interactive) {
         el.style.cursor = 'pointer';
         el.addEventListener('click', function (ev) {

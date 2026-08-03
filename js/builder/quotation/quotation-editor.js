@@ -2956,6 +2956,35 @@ var QuotationEditor = (function () {
             ' stroke-linejoin="round"/>' +
         '</svg>';
     }
+    if (kind === 'SHAPE_ARROW') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<polygon points="6,20 34,20 34,14 48,26 34,38 34,32 6,32"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
+            ' stroke-linejoin="round"/>' +
+        '</svg>';
+    }
+    if (kind === 'SHAPE_DONUT') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<path fill-rule="evenodd" d="M26,6 A20,20 0 1,1 25.8,6 Z M26,18 A8,8 0 1,0 26,34 A8,8 0 1,0 26,18 Z"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+        '</svg>';
+    }
+    if (kind === 'SHAPE_CAPSULE') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<rect x="8" y="18" width="36" height="16" rx="8"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+        '</svg>';
+    }
+    if (kind === 'SHAPE_ROUND_RECT') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<rect x="11" y="11" width="30" height="30" rx="9"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+        '</svg>';
+    }
     return '' +
       '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
         '<rect x="11" y="14" width="30" height="24" rx="2"' +
@@ -2967,7 +2996,11 @@ var QuotationEditor = (function () {
     { kind: 'SHAPE_RECT', label: 'Rectángulo' },
     { kind: 'SHAPE_CIRCLE', label: 'Círculo' },
     { kind: 'SHAPE_LINE', label: 'Línea' },
-    { kind: 'SHAPE_TRIANGLE', label: 'Triángulo' }
+    { kind: 'SHAPE_TRIANGLE', label: 'Triángulo' },
+    { kind: 'SHAPE_ARROW', label: 'Flecha' },
+    { kind: 'SHAPE_DONUT', label: 'Donut' },
+    { kind: 'SHAPE_CAPSULE', label: 'Cápsula' },
+    { kind: 'SHAPE_ROUND_RECT', label: 'Cuadrado redondeado' }
   ];
 
   function shapePickerHtml() {
@@ -3095,6 +3128,10 @@ var QuotationEditor = (function () {
       SHAPE_CIRCLE: 'Círculo',
       SHAPE_LINE: 'Línea',
       SHAPE_TRIANGLE: 'Triángulo',
+      SHAPE_ARROW: 'Flecha',
+      SHAPE_DONUT: 'Donut',
+      SHAPE_CAPSULE: 'Cápsula',
+      SHAPE_ROUND_RECT: 'Cuadrado redondeado',
       SHAPE: 'Forma',
       IMAGE: 'Imagen',
       VIDEO: 'Video',
