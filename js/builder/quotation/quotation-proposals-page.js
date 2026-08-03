@@ -147,13 +147,13 @@ var QuotationProposalsPage = (function () {
                   '</svg>' +
                 '</span>' +
                 '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
-                '<span class="qpp-cmp-upgrade__price-label">Dentro de 15 días</span>' +
+                '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--still">Dentro de 15 días</span>' +
                 '<span class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></span>' +
-                '<span class="qpp-cmp-upgrade__price-label">Después de 15 días</span>' +
-                '<span class="qpp-cmp-upgrade__price">$1.500.000</span>' +
+                '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--motion">Después de 15 días</span>' +
+                '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--still">$1.500.000</span>' +
                 '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--motion">$2.000.000</span>' +
-                '<span class="qpp-cmp-upgrade__price-rule"></span>' +
-                '<span class="qpp-cmp-upgrade__price-rule"></span>' +
+                '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--still"></span>' +
+                '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--motion"></span>' +
               '</div>' +
             '</div>' +
           '</div>' +

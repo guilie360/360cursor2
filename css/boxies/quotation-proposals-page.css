@@ -1022,7 +1022,7 @@ body.qr-proposals-page .qpp {
   margin-bottom: clamp(12px, 2.2vh, 20px);
 }
 
-.qpp-cmp-upgrade__price-label:nth-of-type(1) {
+.qpp-cmp-upgrade__price-label--still {
   grid-column: 1;
   grid-row: 2;
 }
@@ -1037,12 +1037,12 @@ body.qr-proposals-page .qpp {
   background: rgba(255, 255, 255, 0.18);
 }
 
-.qpp-cmp-upgrade__price-label:nth-of-type(2) {
+.qpp-cmp-upgrade__price-label--motion {
   grid-column: 3;
   grid-row: 2;
 }
 
-.qpp-cmp-upgrade__price:nth-of-type(1) {
+.qpp-cmp-upgrade__price--still {
   grid-column: 1;
   grid-row: 3;
 }
@@ -1052,12 +1052,12 @@ body.qr-proposals-page .qpp {
   grid-row: 3;
 }
 
-.qpp-cmp-upgrade__price-rule:nth-of-type(1) {
+.qpp-cmp-upgrade__price-rule--still {
   grid-column: 1;
   grid-row: 4;
 }
 
-.qpp-cmp-upgrade__price-rule:nth-of-type(2) {
+.qpp-cmp-upgrade__price-rule--motion {
   grid-column: 3;
   grid-row: 4;
 }
