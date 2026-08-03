@@ -1,0 +1,15 @@
+---
+description: Tras cambios de código, siempre commit + push a develop
+alwaysApply: true
+---
+
+# Git — siempre push
+
+Cuando el usuario pida implementar, arreglar o cambiar algo en este repo:
+
+1. **Al terminar el trabajo**, haz commit con mensaje claro (a menos que el usuario diga explícitamente que no commitees).
+2. **Siempre push** a `origin/develop` (o la rama activa del feature) inmediatamente después del commit.
+3. Si tocas JS/CSS del builder, **bump cache bust** en `boxies/index.html` (`?v=ws####`) en el mismo commit.
+4. No dejes cambios locales sin pushear salvo que el usuario lo pida explícitamente.
+
+El usuario espera ver los cambios en remoto sin tener que pedir push cada vez.
