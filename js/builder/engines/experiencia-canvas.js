@@ -8191,6 +8191,8 @@ var ExperienciaCanvas = (function () {
             var gIx = ExperienciaEngine.getInteraction(nG, gid);
             memberSnapshots = ExperienciaEngine.snapshotOverlayGroupLocals(nG, gIx);
           }
+          var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
+            handleMode === 'se' || handleMode === 'sw';
           transformDrag = {
             mode: handleMode,
             buttonId: gid,
@@ -8228,8 +8230,6 @@ var ExperienciaCanvas = (function () {
               : null,
             startStretchX: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sx : 1,
             startStretchY: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sy : 1,
-            var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
-              handleMode === 'se' || handleMode === 'sw';
             keepRatio: isShapeType(gtype) ? (shapeCornerHandle && !ev.shiftKey) :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),

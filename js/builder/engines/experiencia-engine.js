@@ -285,7 +285,6 @@ var ExperienciaEngine = (function () {
   }
 
   function shapeUsesContentBox(st, widthPct, heightPct, layerW, layerH) {
-    if (shapeIsStretched(st)) return true;
     var h = Number(heightPct);
     if (isNaN(h) || h <= 0) return false;
     var w = Number(widthPct) || 0;
