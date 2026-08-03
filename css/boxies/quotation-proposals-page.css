@@ -942,19 +942,6 @@ body.qr-proposals-page .qpp {
   padding: clamp(12px, 3vh, 32px) 0;
 }
 
-.qpp-cmp-upgrade__title {
-  margin-bottom: clamp(28px, 5vh, 44px);
-}
-
-.qpp-cmp-upgrade__title::after {
-  content: '';
-  display: block;
-  width: 42px;
-  height: 1px;
-  margin: 14px auto 0;
-  background: rgba(122, 75, 75, 0.85);
-}
-
 .qpp-cmp-upgrade__lead {
   margin: 0;
   max-width: 36rem;
@@ -966,20 +953,25 @@ body.qr-proposals-page .qpp {
   opacity: 0;
 }
 
-.qpp-cmp-upgrade__hi {
-  color: #b86a6a;
-  font-weight: 500;
+.qpp-cmp-upgrade__lead--second {
+  margin-top: clamp(18px, 3vh, 28px);
 }
 
-.qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__eyebrow {
-  animation: qpp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
-}
-
-.qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__title {
-  animation: qpp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+.qpp-cmp-upgrade__tier {
+  display: inline-block;
+  font-size: clamp(0.88rem, 1.9vw, 1.08rem);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  color: #fff;
+  vertical-align: baseline;
 }
 
 .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__lead {
+  animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__lead--second {
   animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
 }
 

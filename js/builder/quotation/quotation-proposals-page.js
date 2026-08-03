@@ -133,13 +133,13 @@ var QuotationProposalsPage = (function () {
               '<div class="qpp-cmp" data-qpp-compare-board></div>' +
             '</div>' +
             '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
-              '<p class="qpp__eyebrow qpp-cmp__eyebrow qpp-cmp-upgrade__eyebrow">Upgrade a Motion</p>' +
-              '<h1 class="qpp__title qpp-cmp__title qpp-cmp-upgrade__title">Más impacto, mismo proyecto</h1>' +
               '<p class="qpp-cmp-upgrade__lead">' +
-                'Si después de entregar los stills decides hacer el upgrade a Motion, tienes ' +
-                '<span class="qpp-cmp-upgrade__hi">15 días</span> para hacerlo pagando solo la diferencia ' +
-                '(<span class="qpp-cmp-upgrade__hi">$1.500.000</span>). Después de ese plazo, el Motion queda en ' +
-                '<span class="qpp-cmp-upgrade__hi">$2.000.000</span>.' +
+                'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los 15 días posteriores a la entrega de la versión ' +
+                '<span class="qpp-cmp-upgrade__tier">S T I L L</span> podrás acceder al upgrade a ' +
+                '<span class="qpp-cmp-upgrade__tier">M O T I O N</span> por $1.500.000.' +
+              '</p>' +
+              '<p class="qpp-cmp-upgrade__lead qpp-cmp-upgrade__lead--second">' +
+                'Después de este periodo, el valor del upgrade será de $2.000.000.' +
               '</p>' +
             '</div>' +
           '</div>' +
