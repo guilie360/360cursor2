@@ -750,6 +750,7 @@ var QuotationEditor = (function () {
       /* Session-only — not persisted with the document. */
       rulersVisible: false,
       guidesVisible: true,
+      canvasUserZoom: 1,
       expEditMode: 'buttons',
       expHasSelection: false,
       selectedOverlayIds: [],
@@ -3630,6 +3631,10 @@ var QuotationEditor = (function () {
   var STAGE_DOCK_MIN_H = 64;
   /** Visual scale of the device canvas frame only (chrome stays 1). */
   var canvasFitScale = 1;
+  var canvasWheelBound = false;
+  var CANVAS_ZOOM_MIN = 0.25;
+  var CANVAS_ZOOM_MAX = 4;
+  var CANVAS_ZOOM_WHEEL = 1.08;
 
   /**
    * Visible rectangle for the Stage — clamped by header + fixed BOXIES footer.
@@ -3745,9 +3750,14 @@ var QuotationEditor = (function () {
     var slotH = Math.max(1, availH - chromeH);
 
     /* Device window keeps logical pixels; only the fit frame scales visually. */
-    var scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
-    if (!isFinite(scale) || scale <= 0) scale = 0.01;
-    if (scale > 1) scale = 1;
+    var baseScale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
+    if (!isFinite(baseScale) || baseScale <= 0) baseScale = 0.01;
+    if (baseScale > 1) baseScale = 1;
+    var userZoom = Number(state.canvasUserZoom) || 1;
+    if (userZoom < CANVAS_ZOOM_MIN) userZoom = CANVAS_ZOOM_MIN;
+    if (userZoom > CANVAS_ZOOM_MAX) userZoom = CANVAS_ZOOM_MAX;
+    state.canvasUserZoom = userZoom;
+    var scale = baseScale * userZoom;
 
     var scaledW = Math.max(1, Math.floor(natW * scale));
     var scaledH = Math.max(1, Math.floor(natH * scale));
@@ -3827,6 +3837,7 @@ var QuotationEditor = (function () {
     }
 
     shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
+    shell.setAttribute('data-qe-stage-user-zoom', String(Math.round(userZoom * 1000) / 1000));
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
     shell.setAttribute('data-qe-chrome-locked', '1');
     canvasFitScale = scale;
@@ -4056,6 +4067,21 @@ var QuotationEditor = (function () {
     fitStageWorkspace();
   }
 
+  function onCanvasWheelZoom(ev) {
+    if (!ev || !(ev.ctrlKey || ev.metaKey)) return;
+    var t = ev.target;
+    if (!t || !t.closest || !rootEl) return;
+    if (!t.closest('[data-qe-canvas-fit]')) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    var factor = ev.deltaY > 0 ? (1 / CANVAS_ZOOM_WHEEL) : CANVAS_ZOOM_WHEEL;
+    var cur = Number(state.canvasUserZoom) || 1;
+    var next = Math.max(CANVAS_ZOOM_MIN, Math.min(CANVAS_ZOOM_MAX, cur * factor));
+    if (Math.abs(next - cur) < 0.0005) return;
+    state.canvasUserZoom = next;
+    fitStageWorkspace();
+  }
+
   function bindCanvasFit() {
     fitStageWorkspace();
     requestAnimationFrame(function () {
@@ -4084,6 +4110,10 @@ var QuotationEditor = (function () {
       window.addEventListener('resize', onStageFitSignal);
       document.addEventListener('fullscreenchange', onStageFitSignal);
       document.addEventListener('webkitfullscreenchange', onStageFitSignal);
+    }
+    if (!canvasWheelBound && rootEl) {
+      canvasWheelBound = true;
+      rootEl.addEventListener('wheel', onCanvasWheelZoom, { passive: false, capture: true });
     }
   }
 
@@ -8241,6 +8271,7 @@ var QuotationEditor = (function () {
           var next = btn.getAttribute('data-qe-viewport') || 'desktop';
           if (state.viewportPreset === next) return;
           state.viewportPreset = next;
+          state.canvasUserZoom = 1;
           destroyBuilderRuntimeScene();
           rerender();
         });
