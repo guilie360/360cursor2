@@ -4793,7 +4793,7 @@ body.quotation-canvas-first .builder-workspace,
   transition: none !important;
 }
 .builder-exp-sel-gizmo.is-sizing .builder-exp-sel-size {
-  visibility: hidden;
+  display: block;
 }
 .builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
   border-color: rgba(255, 255, 255, 0.92);

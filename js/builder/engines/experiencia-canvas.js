@@ -4663,12 +4663,10 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    /** Compositor-only: transform from frozen px snap + gizmo box (no layout, no engine). */
+    /** Shape = compositor scale; gizmo = real px box (handles stay fixed size). */
     function paintShapeLiveFast(gizmoBox, liveRefs) {
       if (!gizmoBox || !liveRefs || !liveRefs.snap) return;
       var snap = liveRefs.snap;
-      var gdx = gizmoBox.cx - snap.gizmoCxPx;
-      var gdy = gizmoBox.cy - snap.gizmoCyPx;
       var gsx = snap.gizmoWPx > 0 ? gizmoBox.w / snap.gizmoWPx : 1;
       var gsy = snap.gizmoHPx > 0 ? gizmoBox.h / snap.gizmoHPx : 1;
       var rot = snap.rot || 0;
@@ -4676,19 +4674,27 @@ var ExperienciaCanvas = (function () {
       var tileCy = gizmoBox.cy + snap.offY * gsy;
       var tileDx = tileCx - snap.tileCxPx;
       var tileDy = tileCy - snap.tileCyPx;
-      var gizmoTf =
-        'translate3d(calc(-50% + ' + gdx + 'px), calc(-50% + ' + gdy + 'px), 0) ' +
-        'rotate(' + rot + 'deg) scale(' + gsx + ',' + gsy + ')';
       var tileTf =
         'translate3d(calc(-50% + ' + tileDx + 'px), calc(-50% + ' + tileDy + 'px), 0) ' +
         'rotate(' + rot + 'deg) scale(' + gsx + ',' + gsy + ')';
-      if (liveRefs.lastTileTf === tileTf && liveRefs.lastGizmoTf === gizmoTf) return;
-      liveRefs.lastTileTf = tileTf;
-      liveRefs.lastGizmoTf = gizmoTf;
-      if (liveRefs.el) liveRefs.el.style.transform = tileTf;
-      if (liveRefs.gizmo) {
-        liveRefs.gizmo.style.transform = gizmoTf;
+      var gizmoKey = gizmoBox.cx + '|' + gizmoBox.cy + '|' + gizmoBox.w + '|' + gizmoBox.h;
+      if (liveRefs.lastTileTf !== tileTf) {
+        liveRefs.lastTileTf = tileTf;
+        if (liveRefs.el) liveRefs.el.style.transform = tileTf;
+      }
+      if (liveRefs.lastGizmoKey !== gizmoKey && liveRefs.gizmo) {
+        liveRefs.lastGizmoKey = gizmoKey;
+        liveRefs.gizmo.style.left = gizmoBox.cx + 'px';
+        liveRefs.gizmo.style.top = gizmoBox.cy + 'px';
+        liveRefs.gizmo.style.width = Math.max(1, gizmoBox.w) + 'px';
+        liveRefs.gizmo.style.height = Math.max(1, gizmoBox.h) + 'px';
+        liveRefs.gizmo.style.transform = 'translate(-50%, -50%) rotate(' + rot + 'deg)';
         liveRefs.gizmo.classList.add('is-sizing');
+        if (liveRefs.sizeEl) {
+          var label = Math.max(1, Math.round(gizmoBox.w)) + ' × ' +
+            Math.max(1, Math.round(gizmoBox.h));
+          if (liveRefs.sizeEl.textContent !== label) liveRefs.sizeEl.textContent = label;
+        }
       }
     }
 
