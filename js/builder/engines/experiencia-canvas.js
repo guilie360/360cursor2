@@ -512,31 +512,6 @@ var ExperienciaCanvas = (function () {
       .replace(/'/g, '');
   }
 
-  function shapeStrokeGlow(color, alpha) {
-    var c = String(color || '').trim();
-    var r;
-    var g;
-    var b;
-    if (/^#[0-9a-f]{6}$/i.test(c)) {
-      r = parseInt(c.slice(1, 3), 16);
-      g = parseInt(c.slice(3, 5), 16);
-      b = parseInt(c.slice(5, 7), 16);
-    } else {
-      var m = c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/);
-      if (m) {
-        r = Number(m[1]);
-        g = Number(m[2]);
-        b = Number(m[3]);
-      } else {
-        return 'rgba(255,255,255,' + (Number(alpha) || 0.35) + ')';
-      }
-    }
-    var a = Number(alpha);
-    if (isNaN(a)) a = 0.35;
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return 'rgba(255,255,255,' + a + ')';
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
-  }
-
   function buttonPreviewClass(btn) {
     var t = String((btn && btn.type) || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'builder-exp-stage-text';
