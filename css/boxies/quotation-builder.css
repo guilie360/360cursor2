@@ -4844,7 +4844,7 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .qe-context-menu-portal .qe-context-menu:has(.qe-context-menu__color) {
-  max-width: 240px !important;
+  max-width: 188px !important;
 }
 
 .qe-context-menu .boxies-workspace-menu__item.is-disabled,

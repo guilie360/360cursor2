@@ -12,16 +12,7 @@ var QuotationGuides = (function () {
   var DESIGN_H = 1080;
   var VIEWPORTS = ['desktop', 'tablet', 'mobile'];
   var DEFAULT_GUIDE_COLOR = '#b33a3a';
-  var GUIDE_COLOR_PRESETS = [
-    '#b33a3a',
-    '#00d4ff',
-    '#ffe14d',
-    '#ffffff',
-    '#ff44cc',
-    '#5dff6a',
-    '#4d8dff',
-    '#050505'
-  ];
+  var GUIDE_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a'];
 
   var api = null;
   var rootEl = null;
