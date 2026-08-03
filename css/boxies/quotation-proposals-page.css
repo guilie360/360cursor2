@@ -930,6 +930,14 @@ body.qr-proposals-page .qpp {
   margin: 0 auto;
 }
 
+.qpp-cmp-table .qpp__eyebrow,
+.qpp-cmp-table .qpp-cmp__eyebrow,
+.qpp-cmp-table .qpp__title,
+.qpp-cmp-table .qpp-cmp__title {
+  width: 100%;
+  text-align: center;
+}
+
 .qpp-cmp-upgrade {
   width: min(920px, 100%);
   margin: auto;
