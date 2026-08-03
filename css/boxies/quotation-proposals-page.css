@@ -989,33 +989,77 @@ body.qr-proposals-page .qpp {
 .qpp-cmp-upgrade__matrix {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(16px, 4vw, 32px);
+  grid-template-rows: auto auto auto auto;
+  column-gap: clamp(16px, 4vw, 32px);
+  row-gap: 10px;
   width: min(560px, 100%);
+  justify-items: center;
+  align-items: center;
   opacity: 0;
 }
 
-.qpp-cmp-upgrade__side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.qpp-cmp-upgrade__side .qpp-cmp-upgrade__tier-name {
+.qpp-cmp-upgrade__tier-name--still {
+  grid-column: 1;
+  grid-row: 1;
   margin-bottom: clamp(12px, 2.2vh, 20px);
 }
 
-.qpp-cmp-upgrade__axis {
+.qpp-cmp-upgrade__arrow {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   width: min(168px, 28vw);
-  gap: clamp(18px, 3vh, 28px);
-  padding-top: 0.14em;
+  height: 16px;
+  margin-bottom: clamp(12px, 2.2vh, 20px);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.qpp-cmp-upgrade__tier-name--motion {
+  grid-column: 3;
+  grid-row: 1;
+  margin-bottom: clamp(12px, 2.2vh, 20px);
+}
+
+.qpp-cmp-upgrade__price-label:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.qpp-cmp-upgrade__price-divider {
+  grid-column: 2;
+  grid-row: 2 / 5;
+  width: 1px;
+  justify-self: center;
+  align-self: stretch;
+  min-height: 72px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.qpp-cmp-upgrade__price-label:nth-of-type(2) {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.qpp-cmp-upgrade__price:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.qpp-cmp-upgrade__price--motion {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+.qpp-cmp-upgrade__price-rule:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.qpp-cmp-upgrade__price-rule:nth-of-type(2) {
+  grid-column: 3;
+  grid-row: 4;
 }
 
 .qpp-cmp-upgrade__tier-name {
@@ -1026,21 +1070,13 @@ body.qr-proposals-page .qpp {
   text-transform: uppercase;
   color: #fff;
   white-space: nowrap;
+  text-align: center;
 }
 
 .qpp-cmp-upgrade__tier-name--motion {
-  font-size: clamp(1.12rem, 2.65vw, 1.42rem);
+  font-size: clamp(1.344rem, 3.18vw, 1.704rem);
   letter-spacing: 0.22em;
   text-indent: 0.22em;
-}
-
-.qpp-cmp-upgrade__arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 16px;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .qpp-cmp-upgrade__arrow svg {
@@ -1057,6 +1093,7 @@ body.qr-proposals-page .qpp {
   text-indent: 0.22em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.72);
+  text-align: center;
 }
 
 .qpp-cmp-upgrade__price {
@@ -1065,6 +1102,7 @@ body.qr-proposals-page .qpp {
   letter-spacing: 0.04em;
   line-height: 1.1;
   color: #6f8f73;
+  text-align: center;
 }
 
 .qpp-cmp-upgrade__price-rule {
@@ -1073,14 +1111,6 @@ body.qr-proposals-page .qpp {
   height: 1px;
   margin-top: 4px;
   background: rgba(255, 255, 255, 0.22);
-}
-
-.qpp-cmp-upgrade__price-divider {
-  width: 1px;
-  flex: 1 1 auto;
-  align-self: stretch;
-  min-height: 72px;
-  background: rgba(255, 255, 255, 0.18);
 }
 
 .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__heading {
@@ -1098,12 +1128,11 @@ body.qr-proposals-page .qpp {
 @media (max-width: 700px) {
   .qpp-cmp-upgrade__matrix {
     width: min(360px, 100%);
-    gap: 12px;
+    column-gap: 12px;
   }
 
-  .qpp-cmp-upgrade__axis {
+  .qpp-cmp-upgrade__arrow {
     width: min(120px, 22vw);
-    gap: 16px;
   }
 
   .qpp-cmp-upgrade__tier-name {
@@ -1113,7 +1142,7 @@ body.qr-proposals-page .qpp {
   }
 
   .qpp-cmp-upgrade__tier-name--motion {
-    font-size: 0.98rem;
+    font-size: 1.176rem;
     letter-spacing: 0.18em;
     text-indent: 0.18em;
   }
