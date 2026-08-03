@@ -284,14 +284,9 @@ var ExperienciaEngine = (function () {
     return !!(st && (st.sx !== 1 || st.sy !== 1));
   }
 
-  function shapeUsesContentBox(st, widthPct, heightPct, layerW, layerH) {
-    var h = Number(heightPct);
-    if (isNaN(h) || h <= 0) return false;
-    var w = Number(widthPct) || 0;
-    var lw = Math.max(1, Number(layerW) || 1000);
-    var lh = Math.max(1, Number(layerH) || 1000);
-    var sqH = w * (lw / lh);
-    return Math.abs(h - sqH) > 0.12;
+  function shapeUsesContentBox(ix, widthPct, heightPct, layerW, layerH) {
+    if (ix && ix.shapeContentBox) return true;
+    return false;
   }
 
   function shapePreserveAspect(stretchX, stretchY) {
@@ -351,15 +346,15 @@ var ExperienciaEngine = (function () {
   }
 
   /** Tight gizmo — stretch=1 uses square picker tile; stretched shapes use stored gw×gh box. */
-  function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY, stretchX, stretchY, heightPct) {
+  function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY, stretchX, stretchY, heightPct, ix) {
     kind = String(kind || '').toUpperCase();
     var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
     var lw = Math.max(1, Number(layerW) || 1000);
     var lh = Math.max(1, Number(layerH) || 1000);
-    if (shapeUsesContentBox(st, widthPct, heightPct, layerW, layerH)) {
+    if (shapeUsesContentBox(ix, widthPct, heightPct, layerW, layerH)) {
       var gwBox = Number(widthPct);
       var ghBox = Number(heightPct);
-      if (shapeIsStretched(st) && (isNaN(ghBox) || ghBox <= 0)) {
+      if (isNaN(ghBox) || ghBox <= 0) {
         var tile0 = sceneShapeDisplaySize(widthPct, layerW, layerH);
         var cf0 = shapeContentFrac(kind, st.sx, st.sy);
         ghBox = tile0.w * cf0.dispH * (lw / lh);
@@ -1539,7 +1534,7 @@ var ExperienciaEngine = (function () {
       var shapeSize = sceneShapeDefaultSize(t);
       if (ix.label == null) ix.label = sceneShapeDefaultLabel(t);
       if (ix.width == null) ix.width = shapeSize.w;
-      if (ix.height == null) ix.height = shapeSize.h;
+      if (!ix.shapeContentBox) ix.height = null;
       if (ix.fill == null) ix.fill = t === 'SHAPE_LINE' ? 'none' : 'rgba(255,255,255,0.16)';
       if (ix.stroke == null) ix.stroke = 'rgba(255,255,255,0.62)';
       if (ix.strokeWidth == null) ix.strokeWidth = 2;
@@ -1825,6 +1820,7 @@ var ExperienciaEngine = (function () {
       borderRadius: ix.borderRadius != null ? Number(ix.borderRadius) : null,
       shapeStretchX: ix.shapeStretchX != null ? Number(ix.shapeStretchX) : 1,
       shapeStretchY: ix.shapeStretchY != null ? Number(ix.shapeStretchY) : 1,
+      shapeContentBox: !!ix.shapeContentBox,
       fontSize: ix.fontSize != null ? Number(ix.fontSize) : null,
       fontSizeUnit: ix.fontSizeUnit === '%' ? '%' : 'px',
       color: ix.color || null,
@@ -2252,6 +2248,7 @@ var ExperienciaEngine = (function () {
       if (patch.shapeStretchY != null) {
         ix.shapeStretchY = Math.max(0.06, Math.min(8, Number(patch.shapeStretchY) || 1));
       }
+      if (patch.shapeContentBox != null) ix.shapeContentBox = !!patch.shapeContentBox;
       if (patch.locked != null) ix.locked = !!patch.locked;
       ix.positionMode = 'free';
     }
@@ -2360,6 +2357,7 @@ var ExperienciaEngine = (function () {
     copy.borderRadius = ix.borderRadius;
     copy.shapeStretchX = ix.shapeStretchX;
     copy.shapeStretchY = ix.shapeStretchY;
+    copy.shapeContentBox = ix.shapeContentBox;
     if (exact) {
       copy.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
       copy.label = ix.label != null ? String(ix.label) : '';

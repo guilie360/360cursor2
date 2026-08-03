@@ -340,10 +340,7 @@ var QuotationRuntime = (function () {
   function runtimeShapeDisplaySize(sh, layerW, layerH) {
     var w = Number(sh && sh.width) || 12;
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeUsesContentBox) {
-      var st = ExperienciaEngine.shapeStretchFromIx
-        ? ExperienciaEngine.shapeStretchFromIx(sh)
-        : { sx: Number(sh.shapeStretchX) || 1, sy: Number(sh.shapeStretchY) || 1 };
-      if (ExperienciaEngine.shapeUsesContentBox(st, w, sh.height, layerW, layerH)) {
+      if (ExperienciaEngine.shapeUsesContentBox(sh, w, sh.height, layerW, layerH)) {
         var h = Number(sh.height);
         if (!isNaN(h) && h > 0) return { w: w, h: h };
       }

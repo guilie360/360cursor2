@@ -168,7 +168,8 @@ var ExperienciaCanvas = (function () {
         width: gwPct,
         height: ghPct,
         shapeStretchX: box.stretchX,
-        shapeStretchY: box.stretchY
+        shapeStretchY: box.stretchY,
+        shapeContentBox: true
       }
     };
   }
@@ -803,24 +804,15 @@ var ExperienciaCanvas = (function () {
     return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
-  /** Canvas paint size — rectangular content box when stretched or after resize. */
+  /** Canvas paint size — rectangular box only after explicit resize (shapeContentBox). */
   function shapePaintSize(btn, layerW, layerH) {
     if (!btn) return shapeDisplaySize(12, layerW, layerH);
-    var st = shapeStretchFromBtn(btn);
     var w = Number(btn.width) || shapeDefaultSize(btn.type).w;
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeUsesContentBox) {
-      if (ExperienciaEngine.shapeUsesContentBox(st, w, btn.height, layerW, layerH)) {
-        var h = Number(btn.height);
-        if (ExperienciaEngine.shapeIsStretched && ExperienciaEngine.shapeIsStretched(st) &&
-            (isNaN(h) || h <= 0) && ExperienciaEngine.sceneShapeGizmoMetrics) {
-          var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
-            w, String(btn.type || '').toUpperCase(), layerW, layerH,
-            btn.x, btn.y, st.sx, st.sy, btn.height
-          );
-          if (gm) return { w: gm.gw, h: gm.gh };
-        }
-        if (!isNaN(h) && h > 0) return { w: w, h: h };
-      }
+    var ix = btn._ix || btn;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeUsesContentBox &&
+        ExperienciaEngine.shapeUsesContentBox(ix, w, btn.height, layerW, layerH)) {
+      var h = Number(btn.height);
+      if (!isNaN(h) && h > 0) return { w: w, h: h };
     }
     return shapeDisplaySize(w, layerW, layerH);
   }
@@ -842,8 +834,8 @@ var ExperienciaCanvas = (function () {
     if (!btn || typeof ExperienciaEngine === 'undefined' || !ExperienciaEngine.shapeUsesContentBox) {
       return false;
     }
-    var st = shapeStretchFromBtn(btn);
-    return ExperienciaEngine.shapeUsesContentBox(st, btn.width, btn.height, layerW, layerH);
+    var ix = btn._ix || btn;
+    return ExperienciaEngine.shapeUsesContentBox(ix, btn.width, btn.height, layerW, layerH);
   }
 
   function shapeGizmoMetrics(btn, layerW, layerH) {
@@ -855,7 +847,7 @@ var ExperienciaCanvas = (function () {
     var stretch = shapeStretchFromBtn(btn);
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
       var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
-        tileW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, btn.height
+        tileW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, btn.height, btn._ix || btn
       );
       return {
         st: st,
