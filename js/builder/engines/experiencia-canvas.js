@@ -6330,25 +6330,38 @@ var ExperienciaCanvas = (function () {
       }).map(function (n) { return n.id; });
     }
 
+    function clientToOverlayLocalPx(clientX, clientY) {
+      var layer = buttonsLayer || buttonsFrame;
+      if (!layer) return { x: 0, y: 0 };
+      var rect = layer.getBoundingClientRect();
+      var localW = Math.max(1, layer.clientWidth || rect.width);
+      var localH = Math.max(1, layer.clientHeight || rect.height);
+      return {
+        x: ((clientX - rect.left) / Math.max(1, rect.width)) * localW,
+        y: ((clientY - rect.top) / Math.max(1, rect.height)) * localH
+      };
+    }
+
     function updateOverlayMarqueeVisual() {
       if (!overlayMarqueeEl || !overlayMarquee || !buttonsLayer) {
         if (overlayMarqueeEl) overlayMarqueeEl.hidden = true;
         return;
       }
-      var rect = buttonsLayer.getBoundingClientRect();
       var cx0 = overlayMarquee.clientX0;
       var cy0 = overlayMarquee.clientY0;
       var cx1 = overlayMarquee.clientX1 != null ? overlayMarquee.clientX1 : cx0;
       var cy1 = overlayMarquee.clientY1 != null ? overlayMarquee.clientY1 : cy0;
-      var x1 = Math.min(cx0, cx1) - rect.left;
-      var y1 = Math.min(cy0, cy1) - rect.top;
-      var x2 = Math.max(cx0, cx1) - rect.left;
-      var y2 = Math.max(cy0, cy1) - rect.top;
+      var pMin = clientToOverlayLocalPx(Math.min(cx0, cx1), Math.min(cy0, cy1));
+      var pMax = clientToOverlayLocalPx(Math.max(cx0, cx1), Math.max(cy0, cy1));
+      var offL = buttonsFrame && buttonsFrame !== buttonsLayer
+        ? (buttonsLayer.offsetLeft || 0) : 0;
+      var offT = buttonsFrame && buttonsFrame !== buttonsLayer
+        ? (buttonsLayer.offsetTop || 0) : 0;
       overlayMarqueeEl.hidden = false;
-      overlayMarqueeEl.style.left = x1 + 'px';
-      overlayMarqueeEl.style.top = y1 + 'px';
-      overlayMarqueeEl.style.width = Math.max(1, x2 - x1) + 'px';
-      overlayMarqueeEl.style.height = Math.max(1, y2 - y1) + 'px';
+      overlayMarqueeEl.style.left = (offL + pMin.x) + 'px';
+      overlayMarqueeEl.style.top = (offT + pMin.y) + 'px';
+      overlayMarqueeEl.style.width = Math.max(1, pMax.x - pMin.x) + 'px';
+      overlayMarqueeEl.style.height = Math.max(1, pMax.y - pMin.y) + 'px';
     }
 
     function overlaysInOverlayMarquee(sceneId) {
