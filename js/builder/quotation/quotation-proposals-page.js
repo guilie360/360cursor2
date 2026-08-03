@@ -459,8 +459,7 @@ var QuotationProposalsPage = (function () {
       renderCompare(root);
       retriggerCmpAnimate(root);
     } else {
-      shell.setAttribute('data-qpp-compare-panel', 'table');
-      syncUpgradeBarUi(root);
+      setComparePanel(root, 'table');
     }
   }
 
