@@ -548,90 +548,21 @@ var ExperienciaCanvas = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
-  /** Vector SVG — stroke stays constant px (non-scaling) when the shape is resized. */
+  /** Vector SVG — shared geometry with shape picker (inset artboard, constant stroke). */
   function shapeStageSvgHtml(b, t, layerW, layerH, isSelected) {
-    var shapeW = Number(b.width) || 12;
-    var shapeH = Number(b.height) || 8;
-    if (t === 'SHAPE_CIRCLE') {
-      shapeH = shapeW * (layerW / Math.max(1, layerH));
+    t = String(t || '').toUpperCase();
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      return ExperienciaEngine.buildSceneShapeSvg(t, {
+        fill: b.fill || 'rgba(255,255,255,0.14)',
+        stroke: b.stroke || 'rgba(255,255,255,0.55)',
+        strokeWidth: b.strokeWidth != null ? b.strokeWidth : 2,
+        borderRadius: b.borderRadius,
+        isSelected: isSelected,
+        svgClass: 'builder-exp-stage-shape__svg',
+        preserveAspect: 'none'
+      });
     }
-    if (t === 'SHAPE_DONUT') {
-      shapeH = shapeW * (layerW / Math.max(1, layerH));
-    }
-    var wPx = Math.max(1, (shapeW / 100) * layerW);
-    var hPx = Math.max(1, (shapeH / 100) * layerH);
-    var refPx = Math.min(wPx, hPx);
-    var sw = Number(b.strokeWidth);
-    if (isNaN(sw)) sw = 1;
-    sw = Math.max(0.5, Math.min(20, sw));
-    var fill = esc(b.fill || 'rgba(255,255,255,0.14)');
-    var stroke = esc(b.stroke || 'rgba(255,255,255,0.55)');
-    var ve = ' vector-effect="non-scaling-stroke"';
-    if (t === 'SHAPE_LINE') {
-      var lineStroke = stroke;
-      var lineSw = sw;
-      if (isSelected) {
-        lineStroke = '#ffffff';
-        lineSw = Math.max(sw, 2);
-      }
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<line x1="0" y1="50" x2="100" y2="50" fill="none"' +
-        ' stroke="' + lineStroke + '" stroke-width="' + lineSw + '"' +
-        ' stroke-linecap="round"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_CIRCLE') {
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<ellipse cx="50" cy="50" rx="50" ry="50"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_TRIANGLE') {
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<polygon points="50,4 96,96 4,96"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_ARROW') {
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<polygon points="0,36 58,36 58,22 100,50 58,78 58,64 0,64"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_DONUT') {
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<path fill-rule="evenodd" d="M50,4 A46,46 0 1,1 49.6,4 Z M50,32 A18,18 0 1,0 50,68 A18,18 0 1,0 50,32 Z"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_CAPSULE') {
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<rect x="0" y="0" width="100" height="100" rx="50"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (t === 'SHAPE_ROUND_RECT') {
-      var brR = b.borderRadius != null ? Number(b.borderRadius) : 16;
-      var rxR = Math.max(0, Math.min(48, (brR / refPx) * 100));
-      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-        '<rect x="0" y="0" width="100" height="100" rx="' + rxR + '" fill="' + fill + '"' +
-        ' stroke="' + stroke + '" stroke-width="' + sw + '"' +
-        ve + ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    var br = b.borderRadius != null ? Number(b.borderRadius) : 0;
-    var rx = Math.max(0, Math.min(48, (br / refPx) * 100));
-    return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
-      ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
-      '<rect x="0" y="0" width="100" height="100" rx="' + rx + '" fill="' + fill + '"' +
-      ' stroke="' + stroke + '" stroke-width="' + sw + '"' +
-      ve + ' shape-rendering="geometricPrecision"/></svg>';
+    return '';
   }
 
   function overlaySelectionMetrics(btn, layerW, layerH) {

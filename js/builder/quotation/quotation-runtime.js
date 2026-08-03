@@ -316,49 +316,17 @@ var QuotationRuntime = (function () {
   }
 
   function runtimeShapeSvgHtml(sh, t) {
-    var fill = sh.fill || 'rgba(255,255,255,0.18)';
-    var stroke = sh.stroke || 'rgba(255,255,255,0.65)';
-    var sw = Number(sh.strokeWidth) || (t === 'SHAPE_LINE' ? 2 : 1);
-    var svgOpen = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
-      ' style="width:100%;height:100%;display:block;overflow:visible">';
-    if (t === 'SHAPE_LINE') {
-      return svgOpen +
-        '<line x1="0" y1="50" x2="100" y2="50" fill="none" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>';
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      return ExperienciaEngine.buildSceneShapeSvg(t, {
+        fill: sh.fill || 'rgba(255,255,255,0.18)',
+        stroke: sh.stroke || 'rgba(255,255,255,0.65)',
+        strokeWidth: sh.strokeWidth != null ? sh.strokeWidth : 2,
+        borderRadius: sh.borderRadius,
+        preserveAspect: 'none',
+        inlineStyle: 'width:100%;height:100%;display:block;overflow:visible'
+      });
     }
-    if (t === 'SHAPE_CIRCLE') {
-      return svgOpen +
-        '<ellipse cx="50" cy="50" rx="50" ry="50" fill="' + fill + '" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
-    }
-    if (t === 'SHAPE_TRIANGLE') {
-      return svgOpen +
-        '<polygon points="50,4 96,96 4,96" fill="' + fill + '" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
-    }
-    if (t === 'SHAPE_ARROW') {
-      return svgOpen +
-        '<polygon points="0,36 58,36 58,22 100,50 58,78 58,64 0,64" fill="' + fill + '" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
-    }
-    if (t === 'SHAPE_DONUT') {
-      return svgOpen +
-        '<path fill-rule="evenodd" d="M50,4 A46,46 0 1,1 49.6,4 Z M50,32 A18,18 0 1,0 50,68 A18,18 0 1,0 50,32 Z"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
-    }
-    if (t === 'SHAPE_CAPSULE') {
-      return svgOpen +
-        '<rect x="0" y="0" width="100" height="100" rx="50" fill="' + fill + '" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
-    }
-    if (t === 'SHAPE_ROUND_RECT') {
-      return svgOpen +
-        '<rect x="0" y="0" width="100" height="100" rx="22" fill="' + fill + '" stroke="' + stroke + '"' +
-        ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
-    }
-    return svgOpen +
-      '<rect x="0" y="0" width="100" height="100" fill="' + fill + '" stroke="' + stroke + '"' +
-      ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"/></svg>';
+    return '';
   }
 
   function ixIsVisible(ix) {

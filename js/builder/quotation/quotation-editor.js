@@ -2932,64 +2932,16 @@ var QuotationEditor = (function () {
   }
 
   function shapePickerThumbSvg(kind) {
-    var fill = 'rgba(255,255,255,0.16)';
-    var stroke = 'rgba(255,255,255,0.62)';
-    if (kind === 'SHAPE_LINE') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<line x1="8" y1="26" x2="44" y2="26" stroke="' + stroke + '"' +
-            ' stroke-width="2.5" stroke-linecap="round"/>' +
-        '</svg>';
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      return ExperienciaEngine.buildSceneShapeSvg(kind, {
+        fill: 'rgba(255,255,255,0.16)',
+        stroke: 'rgba(255,255,255,0.62)',
+        strokeWidth: 2,
+        borderRadius: 16,
+        preserveAspect: 'meet'
+      });
     }
-    if (kind === 'SHAPE_CIRCLE') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<ellipse cx="26" cy="26" rx="17" ry="17"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
-        '</svg>';
-    }
-    if (kind === 'SHAPE_TRIANGLE') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<polygon points="26,10 42,40 10,40"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
-            ' stroke-linejoin="round"/>' +
-        '</svg>';
-    }
-    if (kind === 'SHAPE_ARROW') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<polygon points="6,20 34,20 34,14 48,26 34,38 34,32 6,32"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
-            ' stroke-linejoin="round"/>' +
-        '</svg>';
-    }
-    if (kind === 'SHAPE_DONUT') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<path fill-rule="evenodd" d="M26,6 A20,20 0 1,1 25.8,6 Z M26,18 A8,8 0 1,0 26,34 A8,8 0 1,0 26,18 Z"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
-        '</svg>';
-    }
-    if (kind === 'SHAPE_CAPSULE') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<rect x="8" y="18" width="36" height="16" rx="8"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
-        '</svg>';
-    }
-    if (kind === 'SHAPE_ROUND_RECT') {
-      return '' +
-        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-          '<rect x="11" y="11" width="30" height="30" rx="9"' +
-            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
-        '</svg>';
-    }
-    return '' +
-      '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
-        '<rect x="11" y="14" width="30" height="24" rx="2"' +
-          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
-      '</svg>';
+    return '';
   }
 
   var SHAPE_PICKER_ITEMS = [
