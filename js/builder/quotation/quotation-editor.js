@@ -741,7 +741,7 @@ var QuotationEditor = (function () {
       scenesLocked: false,
       sceneMenuOpen: false,
       dockOpen: false,
-      dockCreateSubmenu: false,
+      shapePickerOpen: false,
       resourcePickerOpen: false,
       resourcePickerSceneId: null,
       pendingSceneDeleteId: null,
@@ -2931,6 +2931,63 @@ var QuotationEditor = (function () {
     });
   }
 
+  function shapePickerThumbSvg(kind) {
+    var fill = 'rgba(255,255,255,0.16)';
+    var stroke = 'rgba(255,255,255,0.62)';
+    if (kind === 'SHAPE_LINE') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<line x1="8" y1="26" x2="44" y2="26" stroke="' + stroke + '"' +
+            ' stroke-width="2.5" stroke-linecap="round"/>' +
+        '</svg>';
+    }
+    if (kind === 'SHAPE_CIRCLE') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<ellipse cx="26" cy="26" rx="17" ry="17"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+        '</svg>';
+    }
+    if (kind === 'SHAPE_TRIANGLE') {
+      return '' +
+        '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+          '<polygon points="26,10 42,40 10,40"' +
+            ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
+            ' stroke-linejoin="round"/>' +
+        '</svg>';
+    }
+    return '' +
+      '<svg viewBox="0 0 52 52" aria-hidden="true" focusable="false">' +
+        '<rect x="11" y="14" width="30" height="24" rx="2"' +
+          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"/>' +
+      '</svg>';
+  }
+
+  var SHAPE_PICKER_ITEMS = [
+    { kind: 'SHAPE_RECT', label: 'Rectángulo' },
+    { kind: 'SHAPE_CIRCLE', label: 'Círculo' },
+    { kind: 'SHAPE_LINE', label: 'Línea' },
+    { kind: 'SHAPE_TRIANGLE', label: 'Triángulo' }
+  ];
+
+  function shapePickerHtml() {
+    if (!state.shapePickerOpen) return '';
+    var grid = SHAPE_PICKER_ITEMS.map(function (item) {
+      return '' +
+        '<button type="button" class="qe-shape-picker__item" data-qe-pick-shape="' +
+          escapeHtml(item.kind) + '" aria-label="' + escapeHtml(item.label) + '">' +
+          shapePickerThumbSvg(item.kind) +
+        '</button>';
+    }).join('');
+    return '' +
+      '<div class="qe-shape-picker" data-qe-shape-picker role="dialog" aria-label="Formas">' +
+        '<div class="qe-shape-picker__backdrop" data-qe-close-shape-picker tabindex="-1"></div>' +
+        '<div class="qe-shape-picker__panel">' +
+          '<div class="qe-shape-picker__grid">' + grid + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
   function resourcePickerHtml() {
     if (!state.resourcePickerOpen) return '';
     var items = libraryMediaItems();
@@ -3566,13 +3623,6 @@ var QuotationEditor = (function () {
         dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
         dockSegHtml('data-qe-dock-del', 'del', 'Eliminar', 'qe-dock__seg--danger');
     }
-    if (state.dockCreateSubmenu === 'shape') {
-      return '' +
-        dockSegHtml('data-qe-add-shape-rect', 'plus', 'Rectángulo') +
-        dockSegHtml('data-qe-add-shape-circle', 'plus', 'Círculo') +
-        dockSegHtml('data-qe-add-shape-line', 'plus', 'Línea') +
-        dockSegHtml('data-qe-add-shape-triangle', 'plus', 'Triángulo');
-    }
     return '' +
       dockSegHtml('data-qe-add-button', 'plus', 'Botón') +
       dockSegHtml('data-qe-add-text', 'plus', 'Texto') +
@@ -3638,6 +3688,7 @@ var QuotationEditor = (function () {
           '</div>' +
         '</div>' +
         resourcePickerHtml() +
+        shapePickerHtml() +
         sceneConfirmHtml() +
       '</section>';
   }
@@ -6276,6 +6327,24 @@ var QuotationEditor = (function () {
     }
   }
 
+  function openShapePicker() {
+    state.shapePickerOpen = true;
+    state.dockOpen = false;
+    rerender();
+  }
+
+  function closeShapePicker() {
+    if (!state.shapePickerOpen) return;
+    state.shapePickerOpen = false;
+    rerender();
+  }
+
+  function pickShape(kind) {
+    state.shapePickerOpen = false;
+    addShapeElement(kind);
+    rerender();
+  }
+
   function openResourcePicker(sceneId) {
     state.resourcePickerOpen = true;
     state.resourcePickerSceneId = sceneId || state.activeSceneId || null;
@@ -6452,14 +6521,13 @@ var QuotationEditor = (function () {
   var expOverlay = null;
   var pendingExpAction = null;
   var dockFadeTimer = null;
-  var dockSubmenuDocBound = false;
 
   function refreshDockOnly() {
     if (!rootEl) return;
     var bar = rootEl.querySelector('[data-qe-dock-bar]');
     if (!bar || !bar.parentNode) return;
     var nextMode = dockHasSelection() ? 'actions' : 'create';
-    if (nextMode === 'actions') state.dockCreateSubmenu = false;
+    if (nextMode === 'actions') state.shapePickerOpen = false;
     var curMode = bar.getAttribute('data-mode') || '';
     var rail = bar.querySelector('[data-qe-dock-rail]');
 
@@ -6504,16 +6572,6 @@ var QuotationEditor = (function () {
 
   function bindDockBar(editor) {
     if (!editor) return;
-    if (!dockSubmenuDocBound) {
-      dockSubmenuDocBound = true;
-      document.addEventListener('mousedown', function (e) {
-        if (state.dockCreateSubmenu !== 'shape') return;
-        var bar = rootEl && rootEl.querySelector('[data-qe-dock-bar]');
-        if (bar && bar.contains(e.target)) return;
-        state.dockCreateSubmenu = false;
-        refreshDockOnly();
-      });
-    }
     var addBtn = editor.querySelector('[data-qe-add-button]');
     if (addBtn) addBtn.addEventListener('click', function () { addButton(); });
     var addText = editor.querySelector('[data-qe-add-text]');
@@ -6527,44 +6585,7 @@ var QuotationEditor = (function () {
       addShape.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        state.dockCreateSubmenu = state.dockCreateSubmenu === 'shape' ? false : 'shape';
-        refreshDockOnly();
-      });
-    }
-    var addShapeRect = editor.querySelector('[data-qe-add-shape-rect]');
-    if (addShapeRect) {
-      addShapeRect.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        state.dockCreateSubmenu = false;
-        addShapeElement('SHAPE_RECT');
-      });
-    }
-    var addShapeCircle = editor.querySelector('[data-qe-add-shape-circle]');
-    if (addShapeCircle) {
-      addShapeCircle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        state.dockCreateSubmenu = false;
-        addShapeElement('SHAPE_CIRCLE');
-      });
-    }
-    var addShapeLine = editor.querySelector('[data-qe-add-shape-line]');
-    if (addShapeLine) {
-      addShapeLine.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        state.dockCreateSubmenu = false;
-        addShapeElement('SHAPE_LINE');
-      });
-    }
-    var addShapeTriangle = editor.querySelector('[data-qe-add-shape-triangle]');
-    if (addShapeTriangle) {
-      addShapeTriangle.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        state.dockCreateSubmenu = false;
-        addShapeElement('SHAPE_TRIANGLE');
+        openShapePicker();
       });
     }
     var edit = editor.querySelector('[data-qe-dock-edit]');
@@ -7097,10 +7118,11 @@ var QuotationEditor = (function () {
           cancelDeleteScene();
           return;
         }
-        if (state.resourcePickerOpen) {
+        if (state.resourcePickerOpen || state.shapePickerOpen) {
           e.preventDefault();
           e.stopPropagation();
-          closeResourcePicker();
+          if (state.resourcePickerOpen) closeResourcePicker();
+          if (state.shapePickerOpen) closeShapePicker();
           return;
         }
         if (expOverlay && expOverlay.cancelActiveTool && expOverlay.cancelActiveTool()) {
@@ -7166,7 +7188,7 @@ var QuotationEditor = (function () {
     if ((e.ctrlKey || e.metaKey) && !e.altKey) {
       var chord = String(e.key || '').toLowerCase();
       if (chord === 'c' || chord === 'x' || chord === 'v' || chord === 'z' || chord === 'y') {
-        if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+        if (state.resourcePickerOpen || state.shapePickerOpen || state.pendingSceneDeleteId) return;
         if (document.body.classList.contains('admin-modal-open')) return;
         try {
           var okChord = false;
@@ -7211,7 +7233,7 @@ var QuotationEditor = (function () {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
         e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       if (e.metaKey || e.ctrlKey) return;
-      if (state.resourcePickerOpen || state.pendingSceneDeleteId) return;
+      if (state.resourcePickerOpen || state.shapePickerOpen || state.pendingSceneDeleteId) return;
       if (document.body.classList.contains('admin-modal-open')) return;
       var portalArrows = document.getElementById('qeContextMenuPortal');
       if (portalArrows && portalArrows.getAttribute('aria-hidden') === 'false' &&
@@ -8116,7 +8138,7 @@ var QuotationEditor = (function () {
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
-    state.dockCreateSubmenu = false;
+    state.shapePickerOpen = false;
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
@@ -8247,6 +8269,24 @@ var QuotationEditor = (function () {
           if (e.target === picker) closeResourcePicker();
         });
       }
+      qAll('[data-qe-close-shape-picker]').forEach(function (btn) {
+        btn.addEventListener('click', function () { closeShapePicker(); });
+      });
+      var shapePicker = qOne('[data-qe-shape-picker]');
+      if (shapePicker) {
+        shapePicker.addEventListener('click', function (e) {
+          if (e.target === shapePicker || e.target.hasAttribute('data-qe-close-shape-picker')) {
+            closeShapePicker();
+          }
+        });
+      }
+      qAll('[data-qe-pick-shape]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          pickShape(btn.getAttribute('data-qe-pick-shape'));
+        });
+      });
       qAll('[data-qe-pick-resource]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           assignResourceToScene(
