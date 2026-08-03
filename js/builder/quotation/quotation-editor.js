@@ -3963,6 +3963,10 @@ var QuotationEditor = (function () {
       onChange: function () { markDirtyLocal(); },
       onRulersChange: function (on) { state.rulersVisible = !!on; },
       onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; },
+      onGuideSelect: function () {
+        deselectOverlay();
+      },
+      onGuideDeselect: function () { /* no-op */ },
       getOverlaySelectionCount: function () {
         if (!expOverlay || !expOverlay.getSelectionContext) return 0;
         try {
@@ -7090,6 +7094,13 @@ var QuotationEditor = (function () {
           }
           return;
         }
+        if (typeof QuotationGuides !== 'undefined' &&
+            QuotationGuides.hasSelectedGuide && QuotationGuides.hasSelectedGuide()) {
+          e.preventDefault();
+          e.stopPropagation();
+          QuotationGuides.deselectGuide();
+          return;
+        }
         if (hasOverlaySelection()) {
           e.preventDefault();
           e.stopPropagation();
@@ -7114,6 +7125,13 @@ var QuotationEditor = (function () {
     /* DELETE / SUPR — immediate delete of selection (not Backspace). */
     if (e.key === 'Delete') {
       try {
+        if (typeof QuotationGuides !== 'undefined' &&
+            QuotationGuides.deleteSelectedGuide &&
+            QuotationGuides.deleteSelectedGuide()) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (!hasOverlaySelection()) return;
         e.preventDefault();
         e.stopPropagation();

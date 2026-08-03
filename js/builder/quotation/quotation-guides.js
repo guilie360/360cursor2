@@ -20,6 +20,9 @@ var QuotationGuides = (function () {
   var guidesVisible = true;
   /** Temporary hide while canvas zoom > 100% — user preference unchanged. */
   var guidesZoomSuppressed = false;
+  var selectedGuideId = null;
+  var pendingGuidePointer = null;
+  var GUIDE_DRAG_THRESHOLD = 4;
   var ghost = null;
   var dragGuide = null;
   var boundDoc = false;
@@ -156,13 +159,79 @@ var QuotationGuides = (function () {
     return null;
   }
 
-  function guideColorGhost(hex) {
+  function guideColorGlow(hex, alpha) {
     var c = normalizeGuideColor(hex) || DEFAULT_GUIDE_COLOR;
     var r = parseInt(c.slice(1, 3), 16);
     var g = parseInt(c.slice(3, 5), 16);
     var b = parseInt(c.slice(5, 7), 16);
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return 'rgba(179, 58, 58, 0.62)';
-    return 'rgba(' + r + ',' + g + ',' + b + ',0.62)';
+    var a = Number(alpha);
+    if (isNaN(a)) a = 0.45;
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 'rgba(179, 58, 58, 0.45)';
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function guideColorGhost(hex) {
+    return guideColorGlow(hex, 0.62);
+  }
+
+  function syncGuideSelectionDom() {
+    var layer = fitFrameEl() && fitFrameEl().querySelector('[data-qe-guide-layer]');
+    if (!layer) return;
+    var color = getActiveGuideColor();
+    var glow = guideColorGlow(color, 0.42);
+    layer.querySelectorAll('[data-qe-guide-id]').forEach(function (el) {
+      var id = el.getAttribute('data-qe-guide-id');
+      var on = selectedGuideId && String(id) === String(selectedGuideId);
+      el.classList.toggle('is-selected', !!on);
+      if (on) {
+        el.style.setProperty('--qe-guide-line-color', color);
+        el.style.setProperty('--qe-guide-glow', glow);
+      } else {
+        el.style.removeProperty('--qe-guide-line-color');
+        el.style.removeProperty('--qe-guide-glow');
+      }
+    });
+  }
+
+  function selectGuide(id, opts) {
+    opts = opts || {};
+    if (id == null || id === '') {
+      deselectGuide(opts);
+      return false;
+    }
+    var g = findGuide(id);
+    if (!g) return false;
+    selectedGuideId = String(id);
+    syncGuideSelectionDom();
+    if (!opts.skipNotify && api && typeof api.onGuideSelect === 'function') {
+      api.onGuideSelect(selectedGuideId);
+    }
+    return true;
+  }
+
+  function deselectGuide(opts) {
+    opts = opts || {};
+    if (!selectedGuideId) return false;
+    selectedGuideId = null;
+    syncGuideSelectionDom();
+    if (!opts.skipNotify && api && typeof api.onGuideDeselect === 'function') {
+      api.onGuideDeselect();
+    }
+    return true;
+  }
+
+  function hasSelectedGuide() {
+    return !!selectedGuideId && !!findGuide(selectedGuideId);
+  }
+
+  function deleteSelectedGuide() {
+    if (!selectedGuideId) return false;
+    var g = findGuide(selectedGuideId);
+    if (!g || g.locked) return false;
+    var id = selectedGuideId;
+    selectedGuideId = null;
+    removeGuide(id);
+    if (api && typeof api.onGuideDeselect === 'function') api.onGuideDeselect();
+    return true;
   }
 
   function ensureGuideColorBuckets(scene) {
@@ -196,6 +265,7 @@ var QuotationGuides = (function () {
     ensureGuideColorBuckets(scene);
     scene.guideColorByViewport[vp] = color;
     applyGuideLayerColors();
+    syncGuideSelectionDom();
     markDirty();
   }
 
@@ -618,6 +688,7 @@ var QuotationGuides = (function () {
       var el = layer.querySelector('[data-qe-guide-id="' + String(g.id).replace(/"/g, '') + '"]');
       if (el) applyGuideElPosition(el, g.type === 'horizontal' ? 'horizontal' : 'vertical', g.position);
     });
+    syncGuideSelectionDom();
   }
 
   function guidePositionPx(g) {
@@ -946,6 +1017,7 @@ var QuotationGuides = (function () {
   function openGuideMenu(clientX, clientY, guideId) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     if (!guideId) return;
+    selectGuide(guideId, { skipNotify: false });
     var g = findGuide(guideId);
     if (!g) return;
     var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
@@ -1006,6 +1078,8 @@ var QuotationGuides = (function () {
   function beginGuideDrag(id, el, clientX, clientY, pointerId) {
     var g = findGuide(id);
     if (!g || g.locked) return false;
+    pendingGuidePointer = null;
+    selectGuide(id, { skipNotify: true });
     if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
       QuotationContextMenu.close();
     }
@@ -1074,7 +1148,14 @@ var QuotationGuides = (function () {
         return;
       }
       var id = el.getAttribute('data-qe-guide-id');
-      if (!beginGuideDrag(id, el, e.clientX, e.clientY, e.pointerId)) return;
+      selectGuide(id);
+      pendingGuidePointer = {
+        id: String(id),
+        el: el,
+        startX: e.clientX,
+        startY: e.clientY,
+        pointerId: e.pointerId
+      };
       e.preventDefault();
       e.stopPropagation();
     });
@@ -1091,6 +1172,9 @@ var QuotationGuides = (function () {
   function removeGuide(id) {
     var scene = activeScene();
     if (!scene) return;
+    if (selectedGuideId && String(selectedGuideId) === String(id)) {
+      selectedGuideId = null;
+    }
     var vp = activeViewportId();
     var guides = ensureGuidesArray(scene, vp);
     var next = guides.filter(function (g) {
@@ -1293,7 +1377,22 @@ var QuotationGuides = (function () {
 
   /* ── Document pointer for drag ────────────────────────── */
 
+  function tryStartPendingGuideDrag(clientX, clientY) {
+    if (!pendingGuidePointer || dragGuide) return false;
+    var dx = clientX - pendingGuidePointer.startX;
+    var dy = clientY - pendingGuidePointer.startY;
+    if (Math.abs(dx) < GUIDE_DRAG_THRESHOLD && Math.abs(dy) < GUIDE_DRAG_THRESHOLD) {
+      return false;
+    }
+    var p = pendingGuidePointer;
+    pendingGuidePointer = null;
+    return beginGuideDrag(p.id, p.el, clientX, clientY, p.pointerId);
+  }
+
   function onDocMove(e) {
+    if (pendingGuidePointer) {
+      tryStartPendingGuideDrag(e.clientX, e.clientY);
+    }
     if (ghost) {
       updateGhost(e.clientX, e.clientY, !!e.shiftKey);
       return;
@@ -1322,6 +1421,9 @@ var QuotationGuides = (function () {
     if (ghost) {
       endGhost(e.clientX, e.clientY, false, !!e.shiftKey);
       return;
+    }
+    if (pendingGuidePointer) {
+      pendingGuidePointer = null;
     }
     if (!dragGuide) return;
     var pct = clientToDesignPct(e.clientX, e.clientY);
@@ -1479,6 +1581,15 @@ var QuotationGuides = (function () {
     if (!host || host.dataset.qeGuideCtx === '1') return;
     host.dataset.qeGuideCtx = '1';
     host.addEventListener('contextmenu', onContextMenu);
+    host.addEventListener('pointerdown', function (e) {
+      if (isPreview() || isGuideDragActive()) return;
+      if (e.button !== 0) return;
+      if (e.target && e.target.closest &&
+          e.target.closest('[data-qe-guide-id], [data-qe-ruler], [data-qe-ruler-corner]')) {
+        return;
+      }
+      if (selectedGuideId) deselectGuide();
+    }, true);
   }
 
   /* ── Public API ───────────────────────────────────────── */
@@ -1525,6 +1636,8 @@ var QuotationGuides = (function () {
   function destroy() {
     ghost = null;
     dragGuide = null;
+    pendingGuidePointer = null;
+    selectedGuideId = null;
     clearDragCursor();
     hideReadout();
     if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
@@ -1552,6 +1665,11 @@ var QuotationGuides = (function () {
     isGuidesZoomSuppressed: function () { return guidesZoomSuppressed; },
     addGuide: addGuide,
     removeGuide: removeGuide,
+    selectGuide: selectGuide,
+    deselectGuide: deselectGuide,
+    hasSelectedGuide: hasSelectedGuide,
+    deleteSelectedGuide: deleteSelectedGuide,
+    getSelectedGuideId: function () { return selectedGuideId; },
     copyGuides: copyGuides,
     pasteGuides: openPasteGuidesDialog,
     hasGuidesClipboard: hasGuidesClipboard,
