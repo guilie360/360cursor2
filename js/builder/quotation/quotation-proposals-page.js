@@ -129,6 +129,11 @@ var QuotationProposalsPage = (function () {
           '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
           '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
           '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+          '<div class="qpp-cmp__upgrade-bar">' +
+            '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
+              'Upgrade' +
+            '</button>' +
+          '</div>' +
         '</section>' +
       '</div>';
   }
@@ -367,13 +372,7 @@ var QuotationProposalsPage = (function () {
         (280 + COMPARE_DIFFS.length * 30 + COMPARE_SHARED.length * 30 + 220) + 'ms">' +
         'Ambas propuestas están diseñadas para presentar el proyecto ante inversionistas. ' +
         'La diferencia está en el nivel de impacto y producción audiovisual.' +
-      '</p>' +
-      '<div class="qpp-cmp__upgrade-wrap" style="--qpp-cmp-delay:' +
-        (280 + COMPARE_DIFFS.length * 30 + COMPARE_SHARED.length * 30 + 320) + 'ms">' +
-        '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
-          'Upgrade' +
-        '</button>' +
-      '</div>';
+      '</p>';
   }
 
   function setQppView(root, view) {
