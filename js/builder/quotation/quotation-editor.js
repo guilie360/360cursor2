@@ -3992,6 +3992,13 @@ var QuotationEditor = (function () {
         QuotationGuides.isGuidesVisible() !== !!state.guidesVisible) {
       QuotationGuides.setGuidesVisible(!!state.guidesVisible);
     }
+    syncGuidesZoomVisibility();
+  }
+
+  function syncGuidesZoomVisibility() {
+    if (typeof QuotationGuides === 'undefined' || !QuotationGuides.setGuidesZoomSuppressed) return;
+    var z = Number(state.canvasUserZoom) || 1;
+    QuotationGuides.setGuidesZoomSuppressed(z > 1.0001);
   }
 
   function syncCanvasCameraFromState(cam) {
@@ -4005,6 +4012,7 @@ var QuotationEditor = (function () {
         if (cam.panY != null) state.canvasPanY = cam.panY;
       }
     }
+    syncGuidesZoomVisibility();
   }
 
   function buildCanvasInitialCamera() {

@@ -27,6 +27,8 @@ var QuotationGuides = (function () {
   var rootEl = null;
   var rulersVisible = false;
   var guidesVisible = true;
+  /** Temporary hide while canvas zoom > 100% — user preference unchanged. */
+  var guidesZoomSuppressed = false;
   var ghost = null;
   var dragGuide = null;
   var boundDoc = false;
@@ -584,16 +586,20 @@ var QuotationGuides = (function () {
     }
   }
 
+  function guidesShown() {
+    return guidesVisible && !guidesZoomSuppressed && !isPreview();
+  }
+
   function renderGuides() {
     var layer = ensureGuideLayer();
     if (!layer) return;
     syncGuideLayerGeometry(layer);
     /* Never wipe DOM mid-drag — fit/refresh was freezing guides in place. */
     if (isGuideDragActive()) {
-      layer.hidden = !guidesVisible || isPreview();
+      layer.hidden = !guidesShown();
       return;
     }
-    if (isPreview() || !guidesVisible) {
+    if (!guidesShown()) {
       layer.innerHTML = '';
       layer.hidden = true;
       return;
@@ -1502,6 +1508,13 @@ var QuotationGuides = (function () {
     }
   }
 
+  function setGuidesZoomSuppressed(on) {
+    var next = !!on;
+    if (guidesZoomSuppressed === next) return;
+    guidesZoomSuppressed = next;
+    renderGuides();
+  }
+
   function sync(nextRoot, nextApi) {
     rootEl = nextRoot || rootEl;
     api = nextApi || api;
@@ -1530,7 +1543,7 @@ var QuotationGuides = (function () {
 
   /** Active scene + viewport guides for overlay snap (empty if hidden/preview). */
   function listActiveGuides() {
-    if (!guidesVisible || isPreview()) return [];
+    if (!guidesShown()) return [];
     var scene = activeScene();
     if (!scene) return [];
     return (ensureGuidesArray(scene) || []).filter(Boolean);
@@ -1543,7 +1556,9 @@ var QuotationGuides = (function () {
     setRulersVisible: setRulersVisible,
     isRulersVisible: function () { return rulersVisible; },
     setGuidesVisible: setGuidesVisible,
+    setGuidesZoomSuppressed: setGuidesZoomSuppressed,
     isGuidesVisible: function () { return guidesVisible; },
+    isGuidesZoomSuppressed: function () { return guidesZoomSuppressed; },
     addGuide: addGuide,
     removeGuide: removeGuide,
     copyGuides: copyGuides,
