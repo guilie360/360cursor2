@@ -99,6 +99,7 @@ var ExperienciaCanvas = (function () {
             '<div class="builder-exp-buttons-frame" data-exp-buttons-frame>' +
               '<img class="builder-exp-buttons-img" data-exp-buttons-img alt="" draggable="false">' +
               '<div class="builder-exp-buttons-layer" data-exp-buttons-layer></div>' +
+              '<div class="builder-exp-marquee builder-exp-overlay-marquee" data-exp-overlay-marquee hidden></div>' +
             '</div>' +
           '</div>' +
           '<div class="builder-exp-hotspots-stage" data-exp-hotspots-stage hidden>' +
@@ -165,6 +166,7 @@ var ExperienciaCanvas = (function () {
               '<div class="builder-exp-buttons-frame" data-exp-buttons-frame>' +
                 '<img class="builder-exp-buttons-img" data-exp-buttons-img alt="" draggable="false">' +
                 '<div class="builder-exp-buttons-layer" data-exp-buttons-layer></div>' +
+                '<div class="builder-exp-marquee builder-exp-overlay-marquee" data-exp-overlay-marquee hidden></div>' +
               '</div>' +
             '</div>' +
             '<div class="builder-exp-hotspots-stage" data-exp-hotspots-stage hidden>' +
@@ -1945,6 +1947,7 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var buttonDrag = null;
     var transformDrag = null;
+    var overlayMarquee = null;
     /** Min pointer travel (px) before move/resize counts as a drag — avoids snap on click. */
     var OVERLAY_DRAG_THRESHOLD_PX = 4;
     /** Custom double-tap on rotate — native dblclick dies when gizmo remounts on pointerup. */
@@ -2071,6 +2074,8 @@ var ExperienciaCanvas = (function () {
     var pendingCreate = null;
     var ctxMode = null; /* 'create' | 'node' | 'edge' | null */
     var marqueeEl = rootEl.querySelector('[data-exp-marquee]');
+    var overlayMarqueeEl = rootEl.querySelector('[data-exp-overlay-marquee]');
+    var OVERLAY_MARQUEE_THRESHOLD_PX = 3;
     var hoverCutEdgeId = null;
     var renameEdit = null; /* { nodeId, original, input } */
 
@@ -5591,6 +5596,18 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function percentFromPointer(ev) {
+      var el = buttonsLayer || buttonsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      var x = ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+      var y = ((ev.clientY - rect.top) / Math.max(1, rect.height)) * 100;
+      return {
+        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
+        y: Math.max(0, Math.min(100, Math.round(y * 10) / 10))
+      };
+    }
+
     function setOverlayLivePosition(sceneId, buttonId, x, y) {
       var sz = overlayLayerSize();
       return ExperienciaEngine.setSceneButtonPosition(
@@ -6313,6 +6330,72 @@ var ExperienciaCanvas = (function () {
       }).map(function (n) { return n.id; });
     }
 
+    function updateOverlayMarqueeVisual() {
+      if (!overlayMarqueeEl || !overlayMarquee || !buttonsLayer) {
+        if (overlayMarqueeEl) overlayMarqueeEl.hidden = true;
+        return;
+      }
+      var rect = buttonsLayer.getBoundingClientRect();
+      var cx0 = overlayMarquee.clientX0;
+      var cy0 = overlayMarquee.clientY0;
+      var cx1 = overlayMarquee.clientX1 != null ? overlayMarquee.clientX1 : cx0;
+      var cy1 = overlayMarquee.clientY1 != null ? overlayMarquee.clientY1 : cy0;
+      var x1 = Math.min(cx0, cx1) - rect.left;
+      var y1 = Math.min(cy0, cy1) - rect.top;
+      var x2 = Math.max(cx0, cx1) - rect.left;
+      var y2 = Math.max(cy0, cy1) - rect.top;
+      overlayMarqueeEl.hidden = false;
+      overlayMarqueeEl.style.left = x1 + 'px';
+      overlayMarqueeEl.style.top = y1 + 'px';
+      overlayMarqueeEl.style.width = Math.max(1, x2 - x1) + 'px';
+      overlayMarqueeEl.style.height = Math.max(1, y2 - y1) + 'px';
+    }
+
+    function overlaysInOverlayMarquee(sceneId) {
+      if (!overlayMarquee || !sceneId) return [];
+      var x1 = Math.min(overlayMarquee.x0, overlayMarquee.x1);
+      var y1 = Math.min(overlayMarquee.y0, overlayMarquee.y1);
+      var x2 = Math.max(overlayMarquee.x0, overlayMarquee.x1);
+      var y2 = Math.max(overlayMarquee.y0, overlayMarquee.y1);
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n) return [];
+      var sz = overlayLayerSize();
+      var layerW = sz.w;
+      var layerH = sz.h;
+      var editGroupId = canvas().activeOverlayGroupEditId;
+      var hitSet = {};
+      var hitIds = [];
+      (ExperienciaEngine.listSceneButtons(state, n) || []).forEach(function (b) {
+        if (!b || b.locked || b.visible === false) return;
+        var ix = b._ix || b;
+        var vm = ExperienciaEngine.buttonViewModel
+          ? ExperienciaEngine.buttonViewModel(state, n, ix, layerW, layerH)
+          : b;
+        if (!vm) return;
+        if (editGroupId) {
+          var gid = String(editGroupId);
+          if (isOverlayGroupId(sceneId, vm.id)) {
+            if (String(vm.id) !== gid) return;
+          } else if (String(vm.groupId || '') !== gid) {
+            return;
+          }
+        }
+        var m = overlaySelectionMetrics(vm, layerW, layerH);
+        if (!m) return;
+        var bL = m.gx - m.gw / 2;
+        var bR = m.gx + m.gw / 2;
+        var bT = m.gy - m.gh / 2;
+        var bB = m.gy + m.gh / 2;
+        if (bL < x2 && bR > x1 && bT < y2 && bB > y1) {
+          var pickId = resolveOverlayPickId(sceneId, vm.id);
+          if (!pickId || hitSet[pickId]) return;
+          hitSet[pickId] = true;
+          hitIds.push(String(pickId));
+        }
+      });
+      return hitIds;
+    }
+
     function deleteSelection() {
       if (canvas().selectedEdgeId || (canvas().selectedEdgeIds || []).length) {
         var eids = (canvas().selectedEdgeIds || []).slice();
@@ -6653,23 +6736,50 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    function percentFromPointer(ev) {
-      var el = buttonsLayer || buttonsFrame;
-      if (!el) return { x: 50, y: 50 };
-      var rect = el.getBoundingClientRect();
-      var x = ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100;
-      var y = ((ev.clientY - rect.top) / Math.max(1, rect.height)) * 100;
-      return {
-        x: Math.max(0, Math.min(100, Math.round(x * 10) / 10)),
-        y: Math.max(0, Math.min(100, Math.round(y * 10) / 10))
-      };
-    }
-
     if (buttonsLayer) {
       var overlayDocBound = false;
 
+      function finishOverlayMarquee(ev) {
+        if (!overlayMarquee) return false;
+        if (ev && ev.pointerId !== overlayMarquee.pointerId) return false;
+        var om = overlayMarquee;
+        overlayMarquee = null;
+        unbindOverlayPointerDocs();
+        updateOverlayMarqueeVisual();
+        try {
+          if (buttonsLayer && ev) buttonsLayer.releasePointerCapture(ev.pointerId);
+        } catch (eRelOm) { /* ignore */ }
+        if (om.moved) {
+          var hitIds = overlaysInOverlayMarquee(om.sceneId);
+          if (om.shift) {
+            var merged = getSelectedOverlayIds().slice();
+            hitIds.forEach(function (id) {
+              if (merged.indexOf(id) < 0) merged.push(id);
+            });
+            canvas().selectedButtonIds = merged;
+            canvas().selectedButtonId = merged[0] || null;
+          } else {
+            canvas().selectedButtonIds = hitIds;
+            canvas().selectedButtonId = hitIds[0] || null;
+          }
+          if (hitIds.length) openPropertiesRail();
+        } else if (!om.shift) {
+          canvas().selectedButtonId = null;
+          canvas().selectedButtonIds = [];
+        }
+        paintButtonsStage();
+        paintInspector();
+        notifyOverlaySelection();
+        return true;
+      }
+
       function cancelOverlayGestures() {
         clearGroupPointerGesture();
+        if (overlayMarquee) {
+          overlayMarquee = null;
+          updateOverlayMarqueeVisual();
+          unbindOverlayPointerDocs();
+        }
         if (transformDrag) {
           transformDrag = null;
           unbindOverlayPointerDocs();
@@ -6756,6 +6866,19 @@ var ExperienciaCanvas = (function () {
       }
 
       function onOverlayDocPointerMove(ev) {
+        if (overlayMarquee && ev.pointerId === overlayMarquee.pointerId) {
+          var pctMv = percentFromPointer(ev);
+          overlayMarquee.x1 = pctMv.x;
+          overlayMarquee.y1 = pctMv.y;
+          overlayMarquee.clientX1 = ev.clientX;
+          overlayMarquee.clientY1 = ev.clientY;
+          if (Math.abs(ev.clientX - overlayMarquee.clientX0) > OVERLAY_MARQUEE_THRESHOLD_PX ||
+              Math.abs(ev.clientY - overlayMarquee.clientY0) > OVERLAY_MARQUEE_THRESHOLD_PX) {
+            overlayMarquee.moved = true;
+          }
+          updateOverlayMarqueeVisual();
+          return;
+        }
         if (groupPointerGesture && ev.pointerId === groupPointerGesture.pointerId) {
           var gDist = Math.hypot(
             ev.clientX - groupPointerGesture.clientStartX,
@@ -7341,9 +7464,33 @@ var ExperienciaCanvas = (function () {
             exitOverlayGroupEditMode({ reselectGroup: true, persist: true });
             return;
           }
-          canvas().selectedButtonId = null;
-          canvas().selectedButtonIds = [];
-          renderAll();
+          if (ev.button !== 0) return;
+          if (!overlaysEditable()) {
+            canvas().selectedButtonId = null;
+            canvas().selectedButtonIds = [];
+            renderAll();
+            return;
+          }
+          ev.preventDefault();
+          ev.stopPropagation();
+          var pctM = percentFromPointer(ev);
+          overlayMarquee = {
+            x0: pctM.x,
+            y0: pctM.y,
+            x1: pctM.x,
+            y1: pctM.y,
+            clientX0: ev.clientX,
+            clientY0: ev.clientY,
+            clientX1: ev.clientX,
+            clientY1: ev.clientY,
+            shift: !!ev.shiftKey,
+            pointerId: ev.pointerId,
+            moved: false,
+            sceneId: canvas().selectedId
+          };
+          updateOverlayMarqueeVisual();
+          bindOverlayPointerDocs();
+          try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eOm) { /* ignore */ }
           return;
         }
         if (hit.isContentEditable || hit.getAttribute('contenteditable') === 'true') return;
@@ -7475,6 +7622,7 @@ var ExperienciaCanvas = (function () {
         enterOverlayGroupEditMode(grouped.groupId, grouped.childId);
       }, true);
       function endButtonDrag(ev) {
+        if (finishOverlayMarquee(ev)) return;
         if (groupPointerGesture && (!ev || ev.pointerId === groupPointerGesture.pointerId)) {
           finishGroupPointerGesture(ev);
           return;
@@ -7742,7 +7890,8 @@ var ExperienciaCanvas = (function () {
       buttonsFrame.addEventListener('pointerdown', function (ev) {
         if (ev.target.closest('[data-exp-stage-btn]')) return;
         if (ev.target.closest('[data-exp-gizmo]')) return;
-        if (buttonDrag || transformDrag) return;
+        if (ev.target.closest('[data-exp-buttons-layer]')) return;
+        if (buttonDrag || transformDrag || overlayMarquee) return;
         if (canvas().activeOverlayGroupEditId) {
           exitOverlayGroupEditMode({ reselectGroup: true, persist: true });
           return;
