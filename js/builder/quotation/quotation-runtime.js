@@ -318,15 +318,23 @@ var QuotationRuntime = (function () {
   function runtimeShapeSvgHtml(sh, t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
       return ExperienciaEngine.buildSceneShapeSvg(t, {
-        fill: sh.fill || 'rgba(255,255,255,0.18)',
-        stroke: sh.stroke || 'rgba(255,255,255,0.65)',
+        fill: sh.fill || 'rgba(255,255,255,0.16)',
+        stroke: sh.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: sh.strokeWidth != null ? sh.strokeWidth : 2,
         borderRadius: sh.borderRadius,
-        preserveAspect: 'none',
+        preserveAspect: 'meet',
         inlineStyle: 'width:100%;height:100%;display:block;overflow:visible'
       });
     }
     return '';
+  }
+
+  function runtimeShapeDisplaySize(widthPct, layerW, layerH) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {
+      return ExperienciaEngine.sceneShapeDisplaySize(widthPct, layerW, layerH);
+    }
+    var w = Number(widthPct) || 12;
+    return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
   function ixIsVisible(ix) {
@@ -563,11 +571,13 @@ var QuotationRuntime = (function () {
       el.className = 'qr-ix-shape qr-ix-shape--vector';
       if (sh.id) el.setAttribute('data-qr-ix-id', String(sh.id));
       var rot = Number(sh.rotation) || 0;
-      var shapeSize = runtimeShapeDefaultSize(t);
+      var layerW = Math.max(1, parentEl.clientWidth || 1920);
+      var layerH = Math.max(1, parentEl.clientHeight || 1080);
+      var shapeSize = runtimeShapeDisplaySize(Number(sh.width) || runtimeShapeDefaultSize(t).w, layerW, layerH);
       el.style.left = Number(sh.x) + '%';
       el.style.top = Number(sh.y) + '%';
-      el.style.width = (Number(sh.width) || shapeSize.w) + '%';
-      el.style.height = (Number(sh.height) || shapeSize.h) + '%';
+      el.style.width = shapeSize.w + '%';
+      el.style.height = shapeSize.h + '%';
       el.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
       el.style.pointerEvents = interactive ? 'auto' : 'none';
       el.style.background = 'transparent';

@@ -550,21 +550,29 @@ var ExperienciaCanvas = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
-  /** Vector SVG — shared geometry with shape picker (inset artboard, constant stroke). */
+  /** Vector SVG — same tile model as shape picker (square cell + meet). */
   function shapeStageSvgHtml(b, t, layerW, layerH, isSelected) {
     t = String(t || '').toUpperCase();
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
       return ExperienciaEngine.buildSceneShapeSvg(t, {
-        fill: b.fill || 'rgba(255,255,255,0.14)',
-        stroke: b.stroke || 'rgba(255,255,255,0.55)',
+        fill: b.fill || 'rgba(255,255,255,0.16)',
+        stroke: b.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: b.strokeWidth != null ? b.strokeWidth : 2,
         borderRadius: b.borderRadius,
         isSelected: isSelected,
         svgClass: 'builder-exp-stage-shape__svg',
-        preserveAspect: 'none'
+        preserveAspect: 'meet'
       });
     }
     return '';
+  }
+
+  function shapeDisplaySize(widthPct, layerW, layerH) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDisplaySize) {
+      return ExperienciaEngine.sceneShapeDisplaySize(widthPct, layerW, layerH);
+    }
+    var w = Number(widthPct) || 12;
+    return { w: w, h: w * (Math.max(1, layerW) / Math.max(1, layerH)) };
   }
 
   function overlaySelectionMetrics(btn, layerW, layerH) {
@@ -583,11 +591,9 @@ var ExperienciaCanvas = (function () {
       gh = Number(btn.height) || 20;
     } else if (isShapeType(st)) {
       var shapeDef = shapeDefaultSize(st);
-      gw = Number(btn.width) || shapeDef.w;
-      gh = Number(btn.height) || shapeDef.h;
-      if (isSquareShapeType(st)) {
-        gh = gw * (layerW / Math.max(1, layerH));
-      }
+      var shapeSz = shapeDisplaySize(Number(btn.width) || shapeDef.w, layerW, layerH);
+      gw = shapeSz.w;
+      gh = shapeSz.h;
     } else {
       gw = Math.max(8, Math.min(40, (String(btn.label || 'Texto').length) * 1.2));
       gh = Math.max(3, ((Number(btn.fontSize) || 28) / layerH) * 100 * 1.4);
@@ -4299,11 +4305,9 @@ var ExperienciaCanvas = (function () {
         el.style.setProperty('--btn-rot', rot + 'deg');
         if (isShapeType(t)) {
           var shapeDefLive = shapeDefaultSize(t);
-          var sw = Number(b.width) || shapeDefLive.w;
-          var sh = Number(b.height) || shapeDefLive.h;
-          if (isSquareShapeType(t)) {
-            sh = sw * (layerW / Math.max(1, layerH));
-          }
+          var liveSz = shapeDisplaySize(Number(b.width) || shapeDefLive.w, layerW, layerH);
+          var sw = liveSz.w;
+          var sh = liveSz.h;
           el.style.width = sw + '%';
           el.style.height = sh + '%';
         } else if (t === 'BUTTON') {
@@ -4596,11 +4600,9 @@ var ExperienciaCanvas = (function () {
         }
         if (isShapeType(t)) {
           var shapeDefPaint = shapeDefaultSize(t);
-          var shapeW = Number(b.width) || shapeDefPaint.w;
-          var shapeH = Number(b.height) || shapeDefPaint.h;
-          if (isSquareShapeType(t)) {
-            shapeH = shapeW * (layerW / Math.max(1, layerH));
-          }
+          var paintSz = shapeDisplaySize(Number(b.width) || shapeDefPaint.w, layerW, layerH);
+          var shapeW = paintSz.w;
+          var shapeH = paintSz.h;
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
@@ -4862,10 +4864,11 @@ var ExperienciaCanvas = (function () {
         };
       }
       if (isShapeType(t)) {
-        var shapeDefAlign = shapeDefaultSize(t);
+        var szAlign = overlayLayerSize();
+        var shapeSzAlign = shapeDisplaySize(Number(btn.width) || shapeDefaultSize(t).w, szAlign.w, szAlign.h);
         return {
-          w: Math.max(0.5, (Number(btn.width) || shapeDefAlign.w) / 2),
-          h: Math.max(0.25, (Number(btn.height) || shapeDefAlign.h) / 2)
+          w: Math.max(0.5, shapeSzAlign.w / 2),
+          h: Math.max(0.5, shapeSzAlign.h / 2)
         };
       }
       if (t === 'BUTTON') {
@@ -7697,7 +7700,8 @@ var ExperienciaCanvas = (function () {
                 finalize.boxH = eh;
               } else if (isShapeType(endType)) {
                 finalize.width = ew;
-                finalize.height = eh;
+                var szShapeFin = overlayLayerSize();
+                finalize.height = ew * (szShapeFin.w / Math.max(1, szShapeFin.h));
               }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, finalize);
             }
