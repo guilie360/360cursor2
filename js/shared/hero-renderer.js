@@ -216,11 +216,19 @@ var HeroCanvas = (function () {
     var oldZ = state.zoom || 1;
     var newZ = clampZoom(state, oldZ * factor);
     if (Math.abs(newZ - oldZ) < 0.0001) return;
-    var wx = (mx - state.panX) / oldZ;
-    var wy = (my - state.panY) / oldZ;
+    var minZ = state.opts.zoomMin != null ? Number(state.opts.zoomMin) : 0.25;
+    if (!isFinite(minZ) || minZ <= 0) minZ = 0.25;
     state.zoom = newZ;
-    state.panX = mx - wx * newZ;
-    state.panY = my - wy * newZ;
+    /* At 100% (builder floor) snap back to the home frame — no zoom-out past fit. */
+    if (state.opts.allowZoom && newZ <= minZ + 0.0001) {
+      state.panX = 0;
+      state.panY = 0;
+    } else {
+      var wx = (mx - state.panX) / oldZ;
+      var wy = (my - state.panY) / oldZ;
+      state.panX = mx - wx * newZ;
+      state.panY = my - wy * newZ;
+    }
     applyTransform(state);
     notifyCameraChange(state);
   }
@@ -244,8 +252,13 @@ var HeroCanvas = (function () {
     var contentW = DESIGN_W * z;
     var contentH = DESIGN_H * z;
 
-    /* Builder zoom — only clamp when content exceeds the viewport; never re-center (breaks zoom-to-cursor). */
+    /* Builder zoom — only clamp when content exceeds the viewport; at 100% lock home pan. */
     if (state.opts.allowZoom) {
+      if (z <= 1.0001) {
+        state.panX = 0;
+        state.panY = 0;
+        return;
+      }
       if (contentW > hostW + 0.5) {
         state.panX = Math.min(0, Math.max(hostW - contentW, state.panX));
       }

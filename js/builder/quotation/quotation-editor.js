@@ -3634,7 +3634,7 @@ var QuotationEditor = (function () {
   /** Visual scale of the device canvas frame only (chrome stays 1). */
   var canvasFitScale = 1;
   var canvasWheelBound = false;
-  var CANVAS_ZOOM_MIN = 0.25;
+  var CANVAS_ZOOM_MIN = 1;
   var CANVAS_ZOOM_MAX = 4;
   var CANVAS_ZOOM_WHEEL = 1.08;
 
@@ -3984,18 +3984,25 @@ var QuotationEditor = (function () {
   function syncCanvasCameraFromState(cam) {
     if (cam) {
       if (cam.zoom != null) state.canvasUserZoom = cam.zoom;
-      if (cam.panX != null) state.canvasPanX = cam.panX;
-      if (cam.panY != null) state.canvasPanY = cam.panY;
+      if (Number(cam.zoom) <= 1.0001) {
+        state.canvasPanX = null;
+        state.canvasPanY = null;
+      } else {
+        if (cam.panX != null) state.canvasPanX = cam.panX;
+        if (cam.panY != null) state.canvasPanY = cam.panY;
+      }
     }
   }
 
   function buildCanvasInitialCamera() {
     var cam = { zoom: Number(state.canvasUserZoom) || 1 };
-    if (state.canvasPanX != null && !isNaN(Number(state.canvasPanX))) {
-      cam.panX = Number(state.canvasPanX);
-    }
-    if (state.canvasPanY != null && !isNaN(Number(state.canvasPanY))) {
-      cam.panY = Number(state.canvasPanY);
+    if (cam.zoom > 1.0001) {
+      if (state.canvasPanX != null && !isNaN(Number(state.canvasPanX))) {
+        cam.panX = Number(state.canvasPanX);
+      }
+      if (state.canvasPanY != null && !isNaN(Number(state.canvasPanY))) {
+        cam.panY = Number(state.canvasPanY);
+      }
     }
     return cam;
   }
