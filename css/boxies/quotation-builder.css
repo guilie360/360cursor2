@@ -4783,10 +4783,7 @@ body.quotation-canvas-first .builder-workspace,
 
 /* Multi-select: box chrome on every selected overlay (handles only when alone). */
 .builder-exp-stage-shape.is-live-sizing {
-  will-change: left, top, width, height;
-}
-.builder-exp-sel-gizmo.is-sizing {
-  will-change: left, top, width, height;
+  contain: layout style;
 }
 .builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
   border-color: rgba(255, 255, 255, 0.92);
