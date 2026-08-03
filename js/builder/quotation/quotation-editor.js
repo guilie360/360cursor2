@@ -3037,6 +3037,7 @@ var QuotationEditor = (function () {
       SHAPE_RECT: 'Rectángulo',
       SHAPE_CIRCLE: 'Círculo',
       SHAPE_LINE: 'Línea',
+      SHAPE_TRIANGLE: 'Triángulo',
       SHAPE: 'Forma',
       IMAGE: 'Imagen',
       VIDEO: 'Video',
@@ -3569,7 +3570,8 @@ var QuotationEditor = (function () {
       return '' +
         dockSegHtml('data-qe-add-shape-rect', 'plus', 'Rectángulo') +
         dockSegHtml('data-qe-add-shape-circle', 'plus', 'Círculo') +
-        dockSegHtml('data-qe-add-shape-line', 'plus', 'Línea');
+        dockSegHtml('data-qe-add-shape-line', 'plus', 'Línea') +
+        dockSegHtml('data-qe-add-shape-triangle', 'plus', 'Triángulo');
     }
     return '' +
       dockSegHtml('data-qe-add-button', 'plus', 'Botón') +
@@ -6554,6 +6556,15 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         state.dockCreateSubmenu = false;
         addShapeElement('SHAPE_LINE');
+      });
+    }
+    var addShapeTriangle = editor.querySelector('[data-qe-add-shape-triangle]');
+    if (addShapeTriangle) {
+      addShapeTriangle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        state.dockCreateSubmenu = false;
+        addShapeElement('SHAPE_TRIANGLE');
       });
     }
     var edit = editor.querySelector('[data-qe-dock-edit]');

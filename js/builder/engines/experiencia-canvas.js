@@ -518,6 +518,7 @@ var ExperienciaCanvas = (function () {
     if (t === 'SHAPE_RECT') return 'builder-exp-stage-shape builder-exp-stage-shape--rect';
     if (t === 'SHAPE_CIRCLE') return 'builder-exp-stage-shape builder-exp-stage-shape--circle';
     if (t === 'SHAPE_LINE') return 'builder-exp-stage-shape builder-exp-stage-shape--line';
+    if (t === 'SHAPE_TRIANGLE') return 'builder-exp-stage-shape builder-exp-stage-shape--triangle';
     var style = (btn && btn.style) || 'button';
     if (style === 'chip') style = 'button';
     return 'builder-exp-ui-btn is-style-' + style +
@@ -561,6 +562,13 @@ var ExperienciaCanvas = (function () {
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
         ve + ' shape-rendering="geometricPrecision"/></svg>';
     }
+    if (t === 'SHAPE_TRIANGLE') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<polygon points="50,4 96,96 4,96"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ve + ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
+    }
     var br = b.borderRadius != null ? Number(b.borderRadius) : 0;
     var rx = Math.max(0, Math.min(48, (br / refPx) * 100));
     return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
@@ -584,7 +592,7 @@ var ExperienciaCanvas = (function () {
     } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
       gw = Number(btn.width) || 20;
       gh = Number(btn.height) || 20;
-    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE' || st === 'SHAPE_LINE') {
+    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE' || st === 'SHAPE_LINE' || st === 'SHAPE_TRIANGLE') {
       gw = Number(btn.width) || (st === 'SHAPE_LINE' ? 28 : 12);
       gh = Number(btn.height) || (st === 'SHAPE_LINE' ? 1.5 : 8);
       if (st === 'SHAPE_CIRCLE') {
@@ -663,6 +671,7 @@ var ExperienciaCanvas = (function () {
     t = String(t || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'Texto';
     if (t === 'SHAPE_LINE') return 'Línea';
+    if (t === 'SHAPE_TRIANGLE') return 'Triángulo';
     if (t === 'SHAPE_RECT') return 'Rectángulo';
     if (t === 'SHAPE_CIRCLE') return 'Círculo';
     return 'Botón';
@@ -956,7 +965,7 @@ var ExperienciaCanvas = (function () {
 
     var selType = String(selected.type || 'BUTTON').toUpperCase();
     var kindTitle = selType === 'TEXT' ? 'Texto'
-      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' ? 'Forma'
+      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' || selType === 'SHAPE_TRIANGLE' ? 'Forma'
         : (selType === 'IMAGE' ? 'Imagen' : 'Botón'));
 
     var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
@@ -975,7 +984,7 @@ var ExperienciaCanvas = (function () {
 
     if (selType === 'TEXT') {
       html += textInspectorFieldsHtml(selected);
-    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE') {
+    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' || selType === 'SHAPE_TRIANGLE') {
       html += shapeInspectorFieldsHtml(selected);
     } else {
       html += buttonInspectorFieldsHtml(selected, destOpts);
@@ -4293,7 +4302,7 @@ var ExperienciaCanvas = (function () {
         el.style.left = Number(layout.x) + '%';
         el.style.top = Number(layout.y) + '%';
         el.style.setProperty('--btn-rot', rot + 'deg');
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
           var sw = Number(b.width) || 12;
           var sh = Number(b.height) || 8;
           if (t === 'SHAPE_CIRCLE') {
@@ -4351,7 +4360,7 @@ var ExperienciaCanvas = (function () {
       if (el) {
         el.style.left = leftPx + 'px';
         el.style.top = topPx + 'px';
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'BUTTON') {
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE' || t === 'BUTTON') {
           el.style.width = wPx + 'px';
           el.style.height = hPx + 'px';
         }
@@ -4589,7 +4598,7 @@ var ExperienciaCanvas = (function () {
             esc(b.label != null ? String(b.label) : 'Texto') +
           '</button>';
         }
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
           var shapeW = Number(b.width) || (t === 'SHAPE_LINE' ? 28 : 12);
           var shapeH = Number(b.height) || (t === 'SHAPE_LINE' ? 1.5 : 8);
           if (t === 'SHAPE_CIRCLE') {
@@ -4855,7 +4864,7 @@ var ExperienciaCanvas = (function () {
           h: Math.max(0.5, (Number(btn.height) || 20) / 2)
         };
       }
-      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
+      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE') {
         return {
           w: Math.max(0.5, (Number(btn.width) || (t === 'SHAPE_LINE' ? 28 : 12)) / 2),
           h: Math.max(0.25, (Number(btn.height) || (t === 'SHAPE_LINE' ? 1.5 : 8)) / 2)
@@ -7002,7 +7011,7 @@ var ExperienciaCanvas = (function () {
               patchT.boxW = nw;
               patchT.boxH = nh;
             } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE' ||
-                transformDrag.type === 'SHAPE_LINE') {
+                transformDrag.type === 'SHAPE_LINE' || transformDrag.type === 'SHAPE_TRIANGLE') {
               patchT.width = nw;
               patchT.height = nh;
             }
@@ -7531,7 +7540,7 @@ var ExperienciaCanvas = (function () {
               if (endType === 'BUTTON') {
                 finalize.boxW = ew;
                 finalize.boxH = eh;
-              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE' || endType === 'SHAPE_LINE') {
+              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE' || endType === 'SHAPE_LINE' || endType === 'SHAPE_TRIANGLE') {
                 finalize.width = ew;
                 finalize.height = eh;
               }
@@ -8919,7 +8928,7 @@ var ExperienciaCanvas = (function () {
           if (!ix || !ix.type) return false;
           var tt = String(ix.type).toUpperCase();
           return tt === 'BUTTON' || tt === 'TEXT' || tt === 'SHAPE_RECT' || tt === 'SHAPE_CIRCLE' ||
-            tt === 'SHAPE_LINE';
+            tt === 'SHAPE_LINE' || tt === 'SHAPE_TRIANGLE';
         });
         var canUngroup = !!group;
         return {

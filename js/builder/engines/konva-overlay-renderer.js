@@ -215,7 +215,7 @@ var KonvaOverlayRenderer = (function () {
 
     function isShapeType(ix) {
       var t = normalizeShapeType(ix);
-      return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE';
+      return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE';
     }
 
     function getOverlayVm(n, ix, layerW, layerH) {

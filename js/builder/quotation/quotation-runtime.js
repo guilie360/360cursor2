@@ -296,7 +296,7 @@ var QuotationRuntime = (function () {
   function isShapeIx(ix) {
     if (!ix || ix.enabled === false) return false;
     var t = String(ix.type || '').toUpperCase();
-    return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE';
+    return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE';
   }
 
   function ixIsVisible(ix) {
@@ -531,7 +531,8 @@ var QuotationRuntime = (function () {
       var t = String(sh.type || '').toUpperCase();
       var el = document.createElement('div');
       var shapeClass = t === 'SHAPE_CIRCLE' ? ' qr-ix-shape--circle'
-        : (t === 'SHAPE_LINE' ? ' qr-ix-shape--line' : ' qr-ix-shape--rect');
+        : (t === 'SHAPE_LINE' ? ' qr-ix-shape--line'
+        : (t === 'SHAPE_TRIANGLE' ? ' qr-ix-shape--triangle' : ' qr-ix-shape--rect'));
       el.className = 'qr-ix-shape' + shapeClass;
       if (sh.id) el.setAttribute('data-qr-ix-id', String(sh.id));
       var rot = Number(sh.rotation) || 0;
@@ -552,6 +553,18 @@ var QuotationRuntime = (function () {
           '<line x1="0" y1="50" x2="100" y2="50" fill="none" stroke="' + stroke + '"' +
           ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"' +
           ' stroke-linecap="round"/></svg>';
+      } else if (t === 'SHAPE_TRIANGLE') {
+        el.style.background = 'transparent';
+        el.style.border = 'none';
+        var swTri = Number(sh.strokeWidth) || 1;
+        var strokeTri = sh.stroke || 'rgba(255,255,255,0.65)';
+        var fillTri = sh.fill || 'rgba(255,255,255,0.18)';
+        el.innerHTML =
+          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
+          ' style="width:100%;height:100%;display:block;overflow:visible">' +
+          '<polygon points="50,4 96,96 4,96" fill="' + fillTri + '" stroke="' + strokeTri + '"' +
+          ' stroke-width="' + swTri + '" vector-effect="non-scaling-stroke"' +
+          ' stroke-linejoin="round"/></svg>';
       } else {
         el.style.background = sh.fill || 'rgba(255,255,255,0.18)';
         el.style.border = (Number(sh.strokeWidth) || 2) + 'px solid ' +
