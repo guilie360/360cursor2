@@ -169,6 +169,85 @@ var ExperienciaCanvas = (function () {
     };
   }
 
+  /** Px-only gizmo box for live transform paint — no engine round-trips per frame. */
+  function computeShapeGizmoBoxLive(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
+    if (!drag || !isShapeType(drag.type)) return null;
+    var kind = String(drag.type || '').toUpperCase();
+    var moveE = mode.indexOf('e') >= 0;
+    var moveW = mode.indexOf('w') >= 0;
+    var moveS = mode.indexOf('s') >= 0;
+    var moveN = mode.indexOf('n') >= 0;
+    var startGwPx = drag.startWpx;
+    var startGhPx = drag.startHpx;
+    var startLpx = drag.startLpx;
+    var startRpx = drag.startRpx;
+    var startTpx = drag.startTpx;
+    var startBpx = drag.startBpx;
+    if (!startGwPx) return null;
+
+    var minGwPx = Math.max(6, (1.2 / 100) * layerW);
+    var candGw = startGwPx;
+    var candGh = startGhPx;
+
+    if (kind === 'SHAPE_LINE') {
+      if (moveE && !moveW) candGw = startRpx + dxPx - startLpx;
+      else if (moveW && !moveE) candGw = startRpx - (startLpx + dxPx);
+      else candGw = startGwPx + (moveE ? dxPx : 0) - (moveW ? dxPx : 0);
+      candGw = Math.max(minGwPx, candGw);
+      return {
+        cx: moveW && !moveE ? startRpx - candGw / 2 : startLpx + candGw / 2,
+        cy: (startTpx + startBpx) / 2,
+        w: candGw,
+        h: startGhPx
+      };
+    }
+
+    if (moveE) candGw = startRpx + dxPx - startLpx;
+    if (moveW) candGw = startRpx - (startLpx + dxPx);
+    if (moveS) candGh = startBpx + dyPx - startTpx;
+    if (moveN) candGh = startBpx - (startTpx + dyPx);
+    candGw = Math.max(minGwPx, candGw);
+    candGh = Math.max(6, candGh);
+
+    var scaleW = candGw / startGwPx;
+    var scaleH = candGh / startGhPx;
+    var scale = scaleW;
+    var isCorner = (moveE || moveW) && (moveN || moveS);
+    if (isCorner) {
+      scale = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
+        ? (Math.abs(dxPx) * startGhPx >= Math.abs(dyPx) * startGwPx ? scaleW : scaleH)
+        : (Math.abs(dxPx) >= Math.abs(dyPx) ? scaleW : scaleH);
+    } else if ((moveN || moveS) && !(moveE || moveW)) {
+      scale = scaleH;
+    }
+    scale = Math.max(0.06, Math.min(6, scale));
+
+    var newGwPx = startGwPx * scale;
+    var newGhPx = startGhPx * scale;
+    var newGxPx = (startLpx + startRpx) / 2;
+    var newGyPx = (startTpx + startBpx) / 2;
+
+    if (moveE && !moveW) newGxPx = startLpx + newGwPx / 2;
+    else if (moveW && !moveE) newGxPx = startRpx - newGwPx / 2;
+    if (moveS && !moveN) newGyPx = startTpx + newGhPx / 2;
+    else if (moveN && !moveS) newGyPx = startBpx - newGhPx / 2;
+    if (moveE && moveN) {
+      newGxPx = startLpx + newGwPx / 2;
+      newGyPx = startBpx - newGhPx / 2;
+    } else if (moveE && moveS) {
+      newGxPx = startLpx + newGwPx / 2;
+      newGyPx = startTpx + newGhPx / 2;
+    } else if (moveW && moveN) {
+      newGxPx = startRpx - newGwPx / 2;
+      newGyPx = startBpx - newGhPx / 2;
+    } else if (moveW && moveS) {
+      newGxPx = startRpx - newGwPx / 2;
+      newGyPx = startTpx + newGhPx / 2;
+    }
+
+    return { cx: newGxPx, cy: newGyPx, w: newGwPx, h: newGhPx };
+  }
+
   function shapeDefaultSize(t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
       return ExperienciaEngine.sceneShapeDefaultSize(t);
@@ -4584,7 +4663,73 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    /** Compositor-only live paint — frozen px box + transform (no layout reflow per frame). */
+    /** Compositor-only: transform from frozen px snap + gizmo box (no layout, no engine). */
+    function paintShapeLiveFast(gizmoBox, liveRefs) {
+      if (!gizmoBox || !liveRefs || !liveRefs.snap) return;
+      var snap = liveRefs.snap;
+      var gdx = gizmoBox.cx - snap.gizmoCxPx;
+      var gdy = gizmoBox.cy - snap.gizmoCyPx;
+      var gsx = snap.gizmoWPx > 0 ? gizmoBox.w / snap.gizmoWPx : 1;
+      var gsy = snap.gizmoHPx > 0 ? gizmoBox.h / snap.gizmoHPx : 1;
+      var rot = snap.rot || 0;
+      var tileCx = gizmoBox.cx + snap.offX * gsx;
+      var tileCy = gizmoBox.cy + snap.offY * gsy;
+      var tileDx = tileCx - snap.tileCxPx;
+      var tileDy = tileCy - snap.tileCyPx;
+      var gizmoTf =
+        'translate3d(calc(-50% + ' + gdx + 'px), calc(-50% + ' + gdy + 'px), 0) ' +
+        'rotate(' + rot + 'deg) scale(' + gsx + ',' + gsy + ')';
+      var tileTf =
+        'translate3d(calc(-50% + ' + tileDx + 'px), calc(-50% + ' + tileDy + 'px), 0) ' +
+        'rotate(' + rot + 'deg) scale(' + gsx + ',' + gsy + ')';
+      if (liveRefs.lastTileTf === tileTf && liveRefs.lastGizmoTf === gizmoTf) return;
+      liveRefs.lastTileTf = tileTf;
+      liveRefs.lastGizmoTf = gizmoTf;
+      if (liveRefs.el) liveRefs.el.style.transform = tileTf;
+      if (liveRefs.gizmo) {
+        liveRefs.gizmo.style.transform = gizmoTf;
+        liveRefs.gizmo.classList.add('is-sizing');
+      }
+    }
+
+    function flushShapeResizeFrame(drag) {
+      if (!drag || !isShapeType(drag.type)) return;
+      if (drag.shapeRaf) {
+        cancelAnimationFrame(drag.shapeRaf);
+        drag.shapeRaf = 0;
+      }
+      if (drag.pendingShapeDx == null || drag.pendingShapeDy == null) return;
+      var box = computeShapeGizmoBoxLive(
+        drag,
+        drag.pendingShapeDx,
+        drag.pendingShapeDy,
+        drag.pendingShapeLayerW,
+        drag.pendingShapeLayerH,
+        drag.pendingShapeMode,
+        drag.keepRatio
+      );
+      if (box) {
+        drag.lastShapeDx = drag.pendingShapeDx;
+        drag.lastShapeDy = drag.pendingShapeDy;
+        paintShapeLiveFast(box, drag.liveRefs);
+      }
+    }
+
+    function scheduleShapeResizeFrame(drag, dxPx, dyPx, layerW, layerH, mode) {
+      if (!drag) return;
+      drag.pendingShapeDx = dxPx;
+      drag.pendingShapeDy = dyPx;
+      drag.pendingShapeLayerW = layerW;
+      drag.pendingShapeLayerH = layerH;
+      drag.pendingShapeMode = mode;
+      if (drag.shapeRaf) return;
+      drag.shapeRaf = requestAnimationFrame(function () {
+        drag.shapeRaf = 0;
+        flushShapeResizeFrame(drag);
+      });
+    }
+
+    /** Fallback px paint for deprecated applyLiveShapeResizePaint path. */
     function paintShapeLiveMetrics(buttonId, kind, tileCtr, tileDisp, gm, layerW, layerH, liveRefs) {
       if (!buttonsLayer || !buttonId || !tileCtr || !tileDisp || !gm) return;
       kind = String(kind || '').toUpperCase();
@@ -4601,46 +4746,18 @@ var ExperienciaCanvas = (function () {
         buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
       var gizmo = (liveRefs && liveRefs.gizmo) ||
         buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idSel + '"]');
-      var snap = liveRefs && liveRefs.snap;
-      if (snap && el) {
-        var dx = tileCxPx - snap.tileCxPx;
-        var dy = tileCyPx - snap.tileCyPx;
-        var sx = snap.tileWPx > 0 ? tileWPx / snap.tileWPx : 1;
-        var sy = snap.tileHPx > 0 ? tileHPx / snap.tileHPx : 1;
-        var rot = snap.rot || 0;
-        el.style.transform =
-          'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) ' +
-          'rotate(' + rot + 'deg) scale(' + sx + ',' + sy + ')';
-      } else if (el) {
+      if (el) {
         el.style.left = tileCxPx + 'px';
         el.style.top = tileCyPx + 'px';
         el.style.width = tileWPx + 'px';
         el.style.height = tileHPx + 'px';
       }
       if (gizmo) {
-        if (snap) {
-          var gdx = gizmoCxPx - snap.gizmoCxPx;
-          var gdy = gizmoCyPx - snap.gizmoCyPx;
-          var gsx = snap.gizmoWPx > 0 ? gizmoWPx / snap.gizmoWPx : 1;
-          var gsy = snap.gizmoHPx > 0 ? gizmoHPx / snap.gizmoHPx : 1;
-          gizmo.style.transform =
-            'translate(calc(-50% + ' + gdx + 'px), calc(-50% + ' + gdy + 'px)) ' +
-            'rotate(' + (snap.rot || 0) + 'deg) scale(' + gsx + ',' + gsy + ')';
-        } else {
-          gizmo.style.left = gizmoCxPx + 'px';
-          gizmo.style.top = gizmoCyPx + 'px';
-          gizmo.style.width = gizmoWPx + 'px';
-          gizmo.style.height = gizmoHPx + 'px';
-        }
+        gizmo.style.left = gizmoCxPx + 'px';
+        gizmo.style.top = gizmoCyPx + 'px';
+        gizmo.style.width = gizmoWPx + 'px';
+        gizmo.style.height = gizmoHPx + 'px';
         gizmo.classList.add('is-sizing');
-        var sizeEl = (liveRefs && liveRefs.sizeEl) ||
-          gizmo.querySelector('[data-exp-sel-size]');
-        if (sizeEl) {
-          var label = kind === 'SHAPE_LINE'
-            ? Math.max(1, Math.round(gizmoWPx)) + ' px'
-            : Math.max(1, Math.round(gizmoWPx)) + ' × ' + Math.max(1, Math.round(gizmoHPx));
-          if (sizeEl.textContent !== label) sizeEl.textContent = label;
-        }
       }
     }
 
@@ -7139,6 +7256,8 @@ var ExperienciaCanvas = (function () {
           unbindOverlayPointerDocs();
         }
         if (transformDrag) {
+          if (transformDrag.shapeRaf) cancelAnimationFrame(transformDrag.shapeRaf);
+          if (transformDrag.liveRefs) clearShapeLiveSizingStyles(transformDrag.liveRefs);
           transformDrag = null;
           unbindOverlayPointerDocs();
           try {
@@ -7250,9 +7369,9 @@ var ExperienciaCanvas = (function () {
         }
         if (transformDrag && ev.pointerId === transformDrag.pointerId) {
           ev.preventDefault();
-          var pctT = percentFromPointer(ev);
           var mode = transformDrag.mode;
           if (mode === 'rotate') {
+            var pctT = percentFromPointer(ev);
             var distR = Math.hypot(
               pctT.x - transformDrag.startPx,
               pctT.y - transformDrag.startPy
@@ -7316,22 +7435,9 @@ var ExperienciaCanvas = (function () {
             var moveN = mode.indexOf('n') >= 0;
 
             if (shapeLiveResize) {
-              var shapeLive = computeShapeResizeLive(
-                transformDrag, dxPx, dyPx, layerW, layerH, mode, transformDrag.keepRatio
+              scheduleShapeResizeFrame(
+                transformDrag, dxPx, dyPx, layerW, layerH, mode
               );
-              if (shapeLive) {
-                transformDrag.liveShapePatch = shapeLive.patch;
-                paintShapeLiveMetrics(
-                  transformDrag.buttonId,
-                  transformDrag.type,
-                  shapeLive.tileCtr,
-                  shapeLive.tileDisp,
-                  shapeLive.gm,
-                  layerW,
-                  layerH,
-                  transformDrag.liveRefs
-                );
-              }
               return;
             }
 
@@ -7788,6 +7894,8 @@ var ExperienciaCanvas = (function () {
                 gizmoCyPx: snapGizmoCyPx,
                 gizmoWPx: snapGizmoWPx,
                 gizmoHPx: snapGizmoHPx,
+                offX: snapTileCxPx - snapGizmoCxPx,
+                offY: snapTileCyPx - snapGizmoCyPx,
                 rot: Number(btnG.rotation) || 0
               }
             };
@@ -8094,8 +8202,22 @@ var ExperienciaCanvas = (function () {
           var endType = transformDrag.type;
           var liveShapePatch = transformDrag.liveShapePatch;
           var endedLiveRefs = transformDrag.liveRefs;
+          var endedDrag = transformDrag;
           transformDrag = null;
           unbindOverlayPointerDocs();
+          if (endedDrag && isShapeType(endType) && !wasRotate) {
+            flushShapeResizeFrame(endedDrag);
+            var finLive = computeShapeResizeLive(
+              endedDrag,
+              endedDrag.lastShapeDx || 0,
+              endedDrag.lastShapeDy || 0,
+              endedDrag.layerW,
+              endedDrag.layerH,
+              endMode,
+              endedDrag.keepRatio
+            );
+            if (finLive && finLive.patch) liveShapePatch = finLive.patch;
+          }
           if (endedLiveRefs) clearShapeLiveSizingStyles(endedLiveRefs);
           if (wasRotate && !movedT) {
             rotateTapArmed = { buttonId: rotBtnId, at: Date.now() };

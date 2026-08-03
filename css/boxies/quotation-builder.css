@@ -4785,6 +4785,16 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-shape.is-live-sizing {
   contain: layout style;
 }
+.builder-exp-stage-shape.is-live-sizing .builder-exp-stage-shape__stroke-glow {
+  opacity: 0 !important;
+  filter: none !important;
+}
+.builder-exp-stage-shape.is-live-sizing .builder-exp-stage-shape__body > * {
+  transition: none !important;
+}
+.builder-exp-sel-gizmo.is-sizing .builder-exp-sel-size {
+  visibility: hidden;
+}
 .builder-exp-sel-gizmo.is-multi .builder-exp-sel-box {
   border-color: rgba(255, 255, 255, 0.92);
   border-width: 1.5px;
