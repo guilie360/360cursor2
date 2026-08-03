@@ -3464,14 +3464,27 @@ var QuotationEditor = (function () {
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
-      ariaLabel: 'Bloqueo de escenas',
+      ariaLabel: 'Escenas',
       items: [
         {
+          id: 'inspect',
+          label: 'Inspeccionar página'
+        },
+        {
           id: locked ? 'unlock' : 'lock',
-          label: locked ? 'Desbloquear' : 'Bloquear'
+          label: locked ? 'Desbloquear escenas' : 'Bloquear escenas',
+          separatorBefore: true
         }
       ],
       onSelect: function (id) {
+        if (id === 'inspect') {
+          if (typeof BoxiesShell !== 'undefined' && BoxiesShell.openPageForInspect) {
+            BoxiesShell.openPageForInspect();
+          } else {
+            window.open(window.location.href, '_blank', 'noopener,noreferrer');
+          }
+          return;
+        }
         if (id === 'lock') setScenesLocked(true);
         else if (id === 'unlock') setScenesLocked(false);
       }
@@ -8397,6 +8410,30 @@ var QuotationEditor = (function () {
           rerender();
         });
       });
+
+      var viewportBar = editor.querySelector('[data-qe-viewport-bar]');
+      if (viewportBar && !viewportBar.dataset.inspectCtx) {
+        viewportBar.dataset.inspectCtx = '1';
+        viewportBar.addEventListener('contextmenu', function (e) {
+          if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+          e.preventDefault();
+          e.stopPropagation();
+          QuotationContextMenu.open({
+            x: e.clientX,
+            y: e.clientY,
+            ariaLabel: 'Herramientas',
+            items: [{ id: 'inspect', label: 'Inspeccionar página' }],
+            onSelect: function (id) {
+              if (id !== 'inspect') return;
+              if (typeof BoxiesShell !== 'undefined' && BoxiesShell.openPageForInspect) {
+                BoxiesShell.openPageForInspect();
+              } else {
+                window.open(window.location.href, '_blank', 'noopener,noreferrer');
+              }
+            }
+          });
+        });
+      }
 
       var scenesFold = editor.querySelector('[data-qe-scenes-fold]');
       if (scenesFold && !scenesFold.dataset.bound) {

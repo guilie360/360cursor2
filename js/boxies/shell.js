@@ -90,7 +90,7 @@ var BoxiesShell = (function () {
     defaultActionsHtml = '';
     return (
       '<div class="boxies-app" id="boxiesAppRoot">' +
-        '<header class="boxies-header">' +
+        '<header class="boxies-header" id="boxiesHeader">' +
           '<div class="boxies-header__left" id="boxiesHeaderLeft">' +
             mainMenuHtml() +
             '<div class="boxies-header__builder-steps" id="boxiesHeaderBuilderSteps" hidden></div>' +
@@ -327,8 +327,39 @@ var BoxiesShell = (function () {
 
   var browserContextGuardBound = false;
 
+  /** Zones where the native browser menu (Inspect, etc.) must stay available. */
+  function isNativeContextMenuZone(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest(
+      '.boxies-header, #boxiesHeader, .boxies-dock, #boxiesDock,' +
+      ' [data-qe-viewport-bar], [data-qe-scenes-fold], [data-boxies-devtools-anchor]'
+    );
+  }
+
+  /** Open app URL in a new tab — DevTools work in a normal browser tab. */
+  function openPageForInspect() {
+    var url = String(window.location.href || '');
+    if (!url) return;
+    var opened = null;
+    try {
+      opened = window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (eOpen) { /* ignore */ }
+    if (!opened) {
+      try {
+        var link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (eLink) { /* ignore */ }
+    }
+  }
+
   /**
-   * Kill the browser/Opera context menu everywhere in BOXIES.
+   * Kill the browser/Opera context menu everywhere in BOXIES — except dev zones.
    * Only preventDefault — do not stopPropagation, so BOXIES custom
    * context menus (scenes, library, guides, canvas, …) still open.
    */
@@ -336,6 +367,7 @@ var BoxiesShell = (function () {
     if (browserContextGuardBound) return;
     browserContextGuardBound = true;
     document.addEventListener('contextmenu', function (e) {
+      if (isNativeContextMenuZone(e.target)) return;
       e.preventDefault();
     }, true);
   }
@@ -583,6 +615,8 @@ var BoxiesShell = (function () {
     resolvePreviewUrl: resolvePreviewUrl,
     resolveShowroomPreviewUrl: resolveShowroomPreviewUrl,
     resolveQuotationPreviewUrl: resolveQuotationPreviewUrl,
-    openActivePreview: openActivePreview
+    openActivePreview: openActivePreview,
+    openPageForInspect: openPageForInspect,
+    isNativeContextMenuZone: isNativeContextMenuZone
   };
 })();
