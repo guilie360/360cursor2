@@ -1109,9 +1109,14 @@ body.qr-proposals-page .qpp {
 }
 
 @media (max-width: 700px) {
-  .qpp-cmp-upgrade__flow {
+  .qpp-cmp-upgrade__matrix {
     width: min(360px, 100%);
     gap: 12px;
+  }
+
+  .qpp-cmp-upgrade__axis {
+    width: min(120px, 22vw);
+    gap: 16px;
   }
 
   .qpp-cmp-upgrade__tier-name {
@@ -1124,11 +1129,6 @@ body.qr-proposals-page .qpp {
     font-size: 0.98rem;
     letter-spacing: 0.18em;
     text-indent: 0.18em;
-  }
-
-  .qpp-cmp-upgrade__pricing {
-    width: min(360px, 100%);
-    gap: 12px;
   }
 
   .qpp-cmp-upgrade__price {
@@ -1604,8 +1604,7 @@ body.qr-proposals-page .qpp {
 
   .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__heading,
   .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__intro,
-  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__flow,
-  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__pricing {
+  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__matrix {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

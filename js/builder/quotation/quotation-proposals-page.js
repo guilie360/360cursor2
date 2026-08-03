@@ -139,23 +139,23 @@ var QuotationProposalsPage = (function () {
                   'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión STILL</strong>.' +
                 '</p>' +
               '</div>' +
-              '<div class="qpp-cmp-upgrade__flow">' +
-                '<span class="qpp-cmp-upgrade__tier-name">Still</span>' +
-                '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
-                  '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
-                    '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
-                  '</svg>' +
-                '</span>' +
-                '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
-              '</div>' +
-              '<div class="qpp-cmp-upgrade__pricing">' +
-                '<div class="qpp-cmp-upgrade__price-col">' +
+              '<div class="qpp-cmp-upgrade__matrix">' +
+                '<div class="qpp-cmp-upgrade__side">' +
+                  '<span class="qpp-cmp-upgrade__tier-name">Still</span>' +
                   '<span class="qpp-cmp-upgrade__price-label">Dentro de 15 días</span>' +
                   '<span class="qpp-cmp-upgrade__price">$1.500.000</span>' +
                   '<span class="qpp-cmp-upgrade__price-rule"></span>' +
                 '</div>' +
-                '<div class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></div>' +
-                '<div class="qpp-cmp-upgrade__price-col">' +
+                '<div class="qpp-cmp-upgrade__axis" aria-hidden="true">' +
+                  '<span class="qpp-cmp-upgrade__arrow">' +
+                    '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
+                      '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '</svg>' +
+                  '</span>' +
+                  '<span class="qpp-cmp-upgrade__price-divider"></span>' +
+                '</div>' +
+                '<div class="qpp-cmp-upgrade__side">' +
+                  '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
                   '<span class="qpp-cmp-upgrade__price-label">Después de 15 días</span>' +
                   '<span class="qpp-cmp-upgrade__price">$2.000.000</span>' +
                   '<span class="qpp-cmp-upgrade__price-rule"></span>' +
