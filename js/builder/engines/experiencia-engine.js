@@ -324,6 +324,73 @@ var ExperienciaEngine = (function () {
     return Math.max(0.5, Math.min(20, sw));
   }
 
+  /** One painted primitive for picker / canvas / runtime. */
+  function sceneShapeGeometry(kind, paint) {
+    paint = paint || {};
+    kind = String(kind || '').toUpperCase();
+    var fill = shapeAttr(paint.fill != null ? paint.fill : 'rgba(255,255,255,0.14)');
+    var stroke = shapeAttr(paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.55)');
+    var sw = shapeStrokeWidth(paint);
+    var ve = paint.noVectorEffect ? '' : ' vector-effect="non-scaling-stroke"';
+    var cls = paint.className ? ' class="' + shapeAttr(paint.className) + '"' : '';
+    var brR = paint.borderRadius != null ? Number(paint.borderRadius) : 16;
+    var sr = ' shape-rendering="geometricPrecision"';
+
+    if (kind === 'SHAPE_LINE') {
+      return '<line' + cls + ' x1="' + shapeUnit52(8) + '" y1="50" x2="' + shapeUnit52(44) + '" y2="50"' +
+        ' fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"' + ve + sr + '/>';
+    }
+    if (kind === 'SHAPE_CIRCLE') {
+      return '<ellipse' + cls + ' cx="50" cy="50" rx="' + shapeUnit52(17) + '" ry="' + shapeUnit52(17) + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+    }
+    if (kind === 'SHAPE_TRIANGLE') {
+      return '<polygon' + cls + ' points="' + shapeUnit52(26) + ',' + shapeUnit52(10) + ' ' +
+        shapeUnit52(42) + ',' + shapeUnit52(40) + ' ' +
+        shapeUnit52(10) + ',' + shapeUnit52(40) + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
+        ' stroke-linejoin="round"' + sr + '/>';
+    }
+    if (kind === 'SHAPE_ARROW') {
+      return '<polygon' + cls + ' points="' +
+        shapeUnit52(6) + ',' + shapeUnit52(20) + ' ' +
+        shapeUnit52(34) + ',' + shapeUnit52(20) + ' ' +
+        shapeUnit52(34) + ',' + shapeUnit52(14) + ' ' +
+        shapeUnit52(48) + ',' + shapeUnit52(26) + ' ' +
+        shapeUnit52(34) + ',' + shapeUnit52(38) + ' ' +
+        shapeUnit52(34) + ',' + shapeUnit52(32) + ' ' +
+        shapeUnit52(6) + ',' + shapeUnit52(32) + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
+        ' stroke-linejoin="round"' + sr + '/>';
+    }
+    if (kind === 'SHAPE_DONUT') {
+      return '<path' + cls + ' fill-rule="evenodd"' +
+        ' d="M50,' + shapeUnit52(6) + ' A' + shapeUnit52(20) + ',' + shapeUnit52(20) +
+        ' 0 1,1 49.6,' + shapeUnit52(6) + ' Z M50,' + shapeUnit52(18) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
+        ' 0 1,0 50,' + shapeUnit52(34) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
+        ' 0 1,0 50,' + shapeUnit52(18) + ' Z"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+    }
+    if (kind === 'SHAPE_CAPSULE') {
+      return '<rect' + cls + ' x="' + shapeUnit52(8) + '" y="' + shapeUnit52(18) + '"' +
+        ' width="' + shapeUnit52(36) + '" height="' + shapeUnit52(16) + '"' +
+        ' rx="' + shapeUnit52(8) + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+    }
+    if (kind === 'SHAPE_ROUND_RECT') {
+      var rxPct = Math.max(0, Math.min(50, (brR / 12) * shapeUnit52(9)));
+      return '<rect' + cls + ' x="' + shapeUnit52(11) + '" y="' + shapeUnit52(11) + '"' +
+        ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(30) + '"' +
+        ' rx="' + rxPct + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+    }
+    /* SHAPE_RECT default */
+    return '<rect' + cls + ' x="' + shapeUnit52(11) + '" y="' + shapeUnit52(14) + '"' +
+      ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(24) + '"' +
+      ' rx="' + shapeUnit52(2) + '"' +
+      ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+  }
+
   /**
    * Single SVG source for picker thumbs + canvas + runtime.
    * Geometry matches picker miniatures (inset in 100×100, same stroke weight).
@@ -331,88 +398,37 @@ var ExperienciaEngine = (function () {
   function buildSceneShapeSvg(kind, opts) {
     opts = opts || {};
     kind = String(kind || '').toUpperCase();
-    var fill = shapeAttr(opts.fill != null ? opts.fill : 'rgba(255,255,255,0.14)');
-    var stroke = shapeAttr(opts.stroke != null ? opts.stroke : 'rgba(255,255,255,0.55)');
+    var fill = opts.fill != null ? opts.fill : 'rgba(255,255,255,0.14)';
+    var stroke = opts.stroke != null ? opts.stroke : 'rgba(255,255,255,0.55)';
     var sw = shapeStrokeWidth(opts);
-    if (opts.isSelected && kind === 'SHAPE_LINE') {
-      stroke = '#ffffff';
-      sw = Math.max(sw, 2);
-    }
-    var ve = ' vector-effect="non-scaling-stroke"';
     var svgClass = opts.svgClass ? ' class="' + shapeAttr(opts.svgClass) + '"' : '';
     var par = opts.preserveAspect === 'none' ? 'none' : 'xMidYMid meet';
     var inlineStyle = opts.inlineStyle ? ' style="' + shapeAttr(opts.inlineStyle) + '"' : '';
     var open = '<svg' + svgClass + inlineStyle + ' viewBox="0 0 100 100" preserveAspectRatio="' + par + '"' +
       ' aria-hidden="true" focusable="false">';
     var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
-
-    if (kind === 'SHAPE_LINE') {
-      return open +
-        '<line x1="' + shapeUnit52(8) + '" y1="50" x2="' + shapeUnit52(44) + '" y2="50" fill="none"' +
-        ' stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
+    var paintBase = {
+      fill: fill,
+      stroke: stroke,
+      strokeWidth: sw,
+      borderRadius: brR
+    };
+    var html = open;
+    if (opts.strokeGlowLayer) {
+      html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
+        className: 'builder-exp-stage-shape__body'
+      }));
+      html += sceneShapeGeometry(kind, {
+        fill: 'none',
+        stroke: stroke,
+        strokeWidth: sw + 2,
+        borderRadius: brR,
+        className: 'builder-exp-stage-shape__stroke-glow'
+      });
+    } else {
+      html += sceneShapeGeometry(kind, paintBase);
     }
-    if (kind === 'SHAPE_CIRCLE') {
-      return open +
-        '<ellipse cx="50" cy="50" rx="' + shapeUnit52(17) + '" ry="' + shapeUnit52(17) + '"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (kind === 'SHAPE_TRIANGLE') {
-      return open +
-        '<polygon points="' + shapeUnit52(26) + ',' + shapeUnit52(10) + ' ' +
-          shapeUnit52(42) + ',' + shapeUnit52(40) + ' ' +
-          shapeUnit52(10) + ',' + shapeUnit52(40) + '"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (kind === 'SHAPE_ARROW') {
-      return open +
-        '<polygon points="' +
-          shapeUnit52(6) + ',' + shapeUnit52(20) + ' ' +
-          shapeUnit52(34) + ',' + shapeUnit52(20) + ' ' +
-          shapeUnit52(34) + ',' + shapeUnit52(14) + ' ' +
-          shapeUnit52(48) + ',' + shapeUnit52(26) + ' ' +
-          shapeUnit52(34) + ',' + shapeUnit52(38) + ' ' +
-          shapeUnit52(34) + ',' + shapeUnit52(32) + ' ' +
-          shapeUnit52(6) + ',' + shapeUnit52(32) + '"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (kind === 'SHAPE_DONUT') {
-      return open +
-        '<path fill-rule="evenodd"' +
-        ' d="M50,' + shapeUnit52(6) + ' A' + shapeUnit52(20) + ',' + shapeUnit52(20) +
-        ' 0 1,1 49.6,' + shapeUnit52(6) + ' Z M50,' + shapeUnit52(18) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
-        ' 0 1,0 50,' + shapeUnit52(34) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
-        ' 0 1,0 50,' + shapeUnit52(18) + ' Z"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (kind === 'SHAPE_CAPSULE') {
-      return open +
-        '<rect x="' + shapeUnit52(8) + '" y="' + shapeUnit52(18) + '"' +
-        ' width="' + shapeUnit52(36) + '" height="' + shapeUnit52(16) + '"' +
-        ' rx="' + shapeUnit52(8) + '"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    if (kind === 'SHAPE_ROUND_RECT') {
-      var rxPct = Math.max(0, Math.min(50, (brR / 12) * shapeUnit52(9)));
-      return open +
-        '<rect x="' + shapeUnit52(11) + '" y="' + shapeUnit52(11) + '"' +
-        ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(30) + '"' +
-        ' rx="' + rxPct + '"' +
-        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-        ' shape-rendering="geometricPrecision"/></svg>';
-    }
-    /* SHAPE_RECT default */
-    return open +
-      '<rect x="' + shapeUnit52(11) + '" y="' + shapeUnit52(14) + '"' +
-      ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(24) + '"' +
-      ' rx="' + shapeUnit52(2) + '"' +
-      ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
-      ' shape-rendering="geometricPrecision"/></svg>';
+    return html + '</svg>';
   }
 
   function sceneShapeDefaultSize(t) {

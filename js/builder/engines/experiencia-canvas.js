@@ -551,7 +551,7 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Vector SVG — same tile model as shape picker (square cell + meet). */
-  function shapeStageSvgHtml(b, t, layerW, layerH, isSelected) {
+  function shapeStageSvgHtml(b, t, layerW, layerH) {
     t = String(t || '').toUpperCase();
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
       return ExperienciaEngine.buildSceneShapeSvg(t, {
@@ -559,7 +559,7 @@ var ExperienciaCanvas = (function () {
         stroke: b.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: b.strokeWidth != null ? b.strokeWidth : 2,
         borderRadius: b.borderRadius,
-        isSelected: isSelected,
+        strokeGlowLayer: true,
         svgClass: 'builder-exp-stage-shape__svg',
         preserveAspect: 'meet'
       });
@@ -4652,7 +4652,7 @@ var ExperienciaCanvas = (function () {
           styleBits += 'width:' + shapeW + '%;' +
             'height:' + shapeH + '%;' +
             'background:transparent;border:none;';
-          var lineSelected = t === 'SHAPE_LINE' && !!selSet[String(b.id)];
+
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
@@ -4664,7 +4664,7 @@ var ExperienciaCanvas = (function () {
             ' style="' + styleBits + '">' +
             '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
               shapeHitAreaStyle(t) + '"></span>' +
-            shapeStageSvgHtml(b, t, layerW, layerH, lineSelected) +
+            shapeStageSvgHtml(b, t, layerW, layerH) +
             '</button>';
         }
         var glyph = buttonIconGlyph(b.icon);

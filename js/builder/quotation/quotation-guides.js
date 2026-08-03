@@ -278,18 +278,10 @@ var QuotationGuides = (function () {
   function applyGuideLayerColors(layer) {
     var color = getActiveGuideColor();
     var ghost = guideColorGhost(color);
-    var glow = guideColorGlow(color, 0.22);
-    var glowSoft = guideColorGlow(color, 0.1);
     var el = layer || (fitFrameEl() && fitFrameEl().querySelector('[data-qe-guide-layer]'));
-    var frame = fitFrameEl();
     if (el) {
       el.style.setProperty('--qe-guide-color', color);
       el.style.setProperty('--qe-guide-color-ghost', ghost);
-    }
-    if (frame) {
-      frame.style.setProperty('--qe-guide-color', color);
-      frame.style.setProperty('--qe-shape-glow', glow);
-      frame.style.setProperty('--qe-shape-glow-soft', glowSoft);
     }
   }
 

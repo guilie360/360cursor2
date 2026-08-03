@@ -4723,21 +4723,27 @@ body.quotation-canvas-first .builder-workspace,
   outline: none;
 }
 
-/* Shape stroke glow — same language as .qe-guide-line.is-selected */
-.qe-canvas-fit__frame,
-[data-qe-canvas-fit-frame] {
-  --qe-shape-glow: rgba(179, 58, 58, 0.22);
-  --qe-shape-glow-soft: rgba(179, 58, 58, 0.1);
+/* Hover / selection — thicker white stroke + stroke-only glow layer */
+.builder-exp-stage-shape__body > * {
+  transition: stroke 0.16s ease, stroke-width 0.16s ease;
 }
-.builder-exp-stage-shape__svg > * {
-  transition: filter 0.16s ease;
+.builder-exp-stage-shape__stroke-glow {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, filter 0.16s ease;
 }
-.builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__svg > *,
-.builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__svg > * {
+.builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > *,
+.builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > * {
+  stroke: #ffffff !important;
+  stroke-width: 3px !important;
+}
+.builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow,
+.builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow {
+  opacity: 1;
   filter:
-    drop-shadow(0 0 1px color-mix(in srgb, var(--qe-guide-color, #b33a3a) 55%, transparent))
-    drop-shadow(0 0 4px var(--qe-shape-glow, rgba(179, 58, 58, 0.22)))
-    drop-shadow(0 0 10px var(--qe-shape-glow-soft, rgba(179, 58, 58, 0.1)));
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.95))
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.55))
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.28));
 }
 
 /* Line selection — endpoints only, no bounding box */
