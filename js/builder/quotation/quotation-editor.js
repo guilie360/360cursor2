@@ -2067,6 +2067,19 @@ var QuotationEditor = (function () {
     return scene.guidesByViewport;
   }
 
+  function serializeGuideColors(sc) {
+    ensureSceneGuideBuckets(sc);
+    var src = sc.guideColorByViewport;
+    if (!src || typeof src !== 'object') {
+      return { desktop: '#b33a3a', tablet: '#b33a3a', mobile: '#b33a3a' };
+    }
+    function pick(key) {
+      var c = String(src[key] || '').trim();
+      return /^#[0-9a-fA-F]{6}$/.test(c) ? c.toLowerCase() : '#b33a3a';
+    }
+    return { desktop: pick('desktop'), tablet: pick('tablet'), mobile: pick('mobile') };
+  }
+
   function serializeGuideList(list) {
     return (Array.isArray(list) ? list : []).map(function (g) {
       if (!g || !g.id) return null;
@@ -5590,6 +5603,7 @@ var QuotationEditor = (function () {
       tablet: remapSceneEntityList(src.guidesByViewport.tablet, 'g'),
       mobile: remapSceneEntityList(src.guidesByViewport.mobile, 'g')
     };
+    clone.guideColorByViewport = serializeGuideColors(src);
     clone.guides = [];
     if (fromHero) clone.coverModel = null;
     state.scenes.push(clone);
@@ -8895,6 +8909,7 @@ var QuotationEditor = (function () {
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           guidesByViewport: serializeSceneGuides(sc),
+          guideColorByViewport: serializeGuideColors(sc),
           /* Legacy alias = desktop bucket (older clients / drafts). */
           guides: serializeGuideList(
             (sc.guidesByViewport && sc.guidesByViewport.desktop) || sc.guides || []
@@ -9123,7 +9138,8 @@ var QuotationEditor = (function () {
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],
           hotspots: Array.isArray(sc.hotspots) ? sc.hotspots : [],
           guides: Array.isArray(sc.guides) ? sc.guides : [],
-          guidesByViewport: sc.guidesByViewport || null
+          guidesByViewport: sc.guidesByViewport || null,
+          guideColorByViewport: sc.guideColorByViewport || null
         };
         ensureSceneOverlays(scene);
         /* Resolve media from persisted library if scene URL missing. */

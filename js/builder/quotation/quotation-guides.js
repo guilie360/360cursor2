@@ -11,6 +11,17 @@ var QuotationGuides = (function () {
   var DESIGN_W = 1920;
   var DESIGN_H = 1080;
   var VIEWPORTS = ['desktop', 'tablet', 'mobile'];
+  var DEFAULT_GUIDE_COLOR = '#b33a3a';
+  var GUIDE_COLOR_PRESETS = [
+    '#b33a3a',
+    '#00d4ff',
+    '#ffe14d',
+    '#ffffff',
+    '#ff44cc',
+    '#5dff6a',
+    '#4d8dff',
+    '#050505'
+  ];
 
   var api = null;
   var rootEl = null;
@@ -142,6 +153,69 @@ var QuotationGuides = (function () {
     return 'Desktop';
   }
 
+  function normalizeGuideColor(raw) {
+    var s = String(raw == null ? '' : raw).trim();
+    if (!s) return null;
+    if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+      return ('#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]).toLowerCase();
+    }
+    return null;
+  }
+
+  function guideColorGhost(hex) {
+    var c = normalizeGuideColor(hex) || DEFAULT_GUIDE_COLOR;
+    var r = parseInt(c.slice(1, 3), 16);
+    var g = parseInt(c.slice(3, 5), 16);
+    var b = parseInt(c.slice(5, 7), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 'rgba(179, 58, 58, 0.62)';
+    return 'rgba(' + r + ',' + g + ',' + b + ',0.62)';
+  }
+
+  function ensureGuideColorBuckets(scene) {
+    if (!scene) return null;
+    if (!scene.guideColorByViewport || typeof scene.guideColorByViewport !== 'object') {
+      scene.guideColorByViewport = {};
+    }
+    var i;
+    for (i = 0; i < VIEWPORTS.length; i++) {
+      var key = VIEWPORTS[i];
+      var c = normalizeGuideColor(scene.guideColorByViewport[key]);
+      scene.guideColorByViewport[key] = c || DEFAULT_GUIDE_COLOR;
+    }
+    return scene.guideColorByViewport;
+  }
+
+  function getActiveGuideColor() {
+    var scene = activeScene();
+    if (!scene) return DEFAULT_GUIDE_COLOR;
+    var buckets = ensureGuideColorBuckets(scene);
+    var vp = activeViewportId();
+    return (buckets && buckets[vp]) || DEFAULT_GUIDE_COLOR;
+  }
+
+  function setGuideColor(hex) {
+    var scene = activeScene();
+    if (!scene) return;
+    var color = normalizeGuideColor(hex);
+    if (!color) return;
+    var vp = activeViewportId();
+    ensureGuideColorBuckets(scene);
+    scene.guideColorByViewport[vp] = color;
+    applyGuideLayerColors();
+    markDirty();
+  }
+
+  function applyGuideLayerColors(layer) {
+    var color = getActiveGuideColor();
+    var ghost = guideColorGhost(color);
+    var el = layer || (fitFrameEl() && fitFrameEl().querySelector('[data-qe-guide-layer]'));
+    if (el) {
+      el.style.setProperty('--qe-guide-color', color);
+      el.style.setProperty('--qe-guide-color-ghost', ghost);
+    }
+  }
+
   /** Migrate legacy scene.guides[] → guidesByViewport.desktop. */
   function ensureGuideBuckets(scene) {
     if (!scene) return null;
@@ -161,6 +235,7 @@ var QuotationGuides = (function () {
     } else if (!Array.isArray(scene.guides)) {
       scene.guides = [];
     }
+    ensureGuideColorBuckets(scene);
     return scene.guidesByViewport;
   }
 
@@ -440,6 +515,7 @@ var QuotationGuides = (function () {
       bindGuideLayer(layer);
     }
     syncGuideLayerGeometry(layer);
+    applyGuideLayerColors(layer);
     return layer;
   }
 
@@ -523,6 +599,7 @@ var QuotationGuides = (function () {
       return;
     }
     layer.hidden = false;
+    applyGuideLayerColors(layer);
     var scene = activeScene();
     var guides = ensureGuidesArray(scene);
     var html = '';
@@ -895,6 +972,16 @@ var QuotationGuides = (function () {
           ariaLabel: 'Posición ' + axis + ' en píxeles',
           onSubmit: function (raw) {
             setGuidePositionPx(guideId, raw);
+          }
+        },
+        {
+          type: 'color',
+          id: 'guide-color',
+          label: 'Color',
+          value: getActiveGuideColor(),
+          presets: GUIDE_COLOR_PRESETS,
+          onChange: function (hex) {
+            setGuideColor(hex);
           }
         },
         {
@@ -1464,6 +1551,7 @@ var QuotationGuides = (function () {
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     ensureGuideBuckets: ensureGuideBuckets,
+    ensureGuideColorBuckets: ensureGuideColorBuckets,
     listActiveGuides: listActiveGuides,
     VIEWPORTS: VIEWPORTS,
     RULER_THICK: RULER_THICK

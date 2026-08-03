@@ -85,6 +85,42 @@ var QuotationContextMenu = (function () {
     return null;
   }
 
+  function normalizeHexColor(raw) {
+    var s = String(raw == null ? '' : raw).trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(s)) {
+      return ('#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]).toLowerCase();
+    }
+    return '#b33a3a';
+  }
+
+  function bindColorFields(panel, items) {
+    panel.querySelectorAll('[data-qe-ctx-color-input]').forEach(function (input) {
+      input.addEventListener('input', function (e) {
+        e.stopPropagation();
+        var id = input.getAttribute('data-qe-ctx-color-input');
+        var item = findItem(items, id);
+        if (item && typeof item.onChange === 'function') {
+          item.onChange(normalizeHexColor(input.value), item);
+        }
+      });
+      input.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      input.addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+    panel.querySelectorAll('[data-qe-ctx-swatch]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var fieldId = btn.getAttribute('data-qe-ctx-color-field');
+        var hex = normalizeHexColor(btn.getAttribute('data-qe-ctx-swatch'));
+        var input = panel.querySelector('[data-qe-ctx-color-input="' + fieldId + '"]');
+        if (input) input.value = hex;
+        var item = findItem(items, fieldId);
+        if (item && typeof item.onChange === 'function') item.onChange(hex, item);
+      });
+    });
+  }
+
   function submitInput(panel, items, opts, inputEl) {
     if (!inputEl) return;
     var id = inputEl.getAttribute('data-qe-ctx-input');
@@ -164,6 +200,35 @@ var QuotationContextMenu = (function () {
           '</label>';
         return;
       }
+      if (item.type === 'color') {
+        var colorVal = normalizeHexColor(item.value);
+        var presets = Array.isArray(item.presets) ? item.presets : [];
+        var swatches = presets.map(function (hex) {
+          var c = normalizeHexColor(hex);
+          return '' +
+            '<button type="button" class="qe-context-menu__swatch"' +
+              ' data-qe-ctx-swatch="' + escapeHtml(c) + '"' +
+              ' data-qe-ctx-color-field="' + escapeHtml(item.id) + '"' +
+              ' style="--qe-swatch:' + escapeHtml(c) + '"' +
+              ' title="' + escapeHtml(c) + '" aria-label="' + escapeHtml(c) + '"></button>';
+        }).join('');
+        html +=
+          '<div class="qe-context-menu__color" data-qe-ctx-color="' + escapeHtml(item.id) + '">' +
+            (item.label
+              ? '<span class="qe-context-menu__field-label">' + escapeHtml(item.label) + '</span>'
+              : '') +
+            '<div class="qe-context-menu__color-row">' +
+              '<input type="color" class="qe-context-menu__color-input"' +
+                ' data-qe-ctx-color-input="' + escapeHtml(item.id) + '"' +
+                ' value="' + escapeHtml(colorVal) + '"' +
+                ' aria-label="' + escapeHtml(item.ariaLabel || item.label || 'Color de guía') + '">' +
+              (swatches
+                ? '<div class="qe-context-menu__swatches" role="list">' + swatches + '</div>'
+                : '') +
+            '</div>' +
+          '</div>';
+        return;
+      }
       var disabled = !!item.disabled;
       html +=
         '<button type="button" class="boxies-workspace-menu__item' +
@@ -176,6 +241,8 @@ var QuotationContextMenu = (function () {
         '</button>';
     });
     panel.innerHTML = html;
+
+    bindColorFields(panel, items);
 
     var backdrop = document.createElement('div');
     backdrop.className = 'qe-context-menu-backdrop';
@@ -213,7 +280,8 @@ var QuotationContextMenu = (function () {
     });
 
     panel.addEventListener('mousedown', function (e) {
-      if (e.target && e.target.closest && e.target.closest('[data-qe-ctx-input]')) {
+      if (e.target && e.target.closest &&
+          e.target.closest('[data-qe-ctx-input], [data-qe-ctx-color-input], [data-qe-ctx-swatch], .qe-context-menu__color')) {
         e.stopPropagation();
       }
     });
