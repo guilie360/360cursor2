@@ -240,18 +240,32 @@ var HeroCanvas = (function () {
   function clampPan(state) {
     var hostW = state.host.clientWidth || 1;
     var hostH = state.host.clientHeight || 1;
-    var z = state.zoom;
+    var z = state.zoom || 1;
+    var contentW = DESIGN_W * z;
+    var contentH = DESIGN_H * z;
+
+    /* Builder zoom — only clamp when content exceeds the viewport; never re-center (breaks zoom-to-cursor). */
+    if (state.opts.allowZoom) {
+      if (contentW > hostW + 0.5) {
+        state.panX = Math.min(0, Math.max(hostW - contentW, state.panX));
+      }
+      if (contentH > hostH + 0.5) {
+        state.panY = Math.min(0, Math.max(hostH - contentH, state.panY));
+      }
+      return;
+    }
+
     var maxPanX = 0;
     var maxPanY = 0;
-    var minPanX = hostW - DESIGN_W * z;
-    var minPanY = hostH - DESIGN_H * z;
+    var minPanX = hostW - contentW;
+    var minPanY = hostH - contentH;
     if (minPanX > maxPanX) {
-      state.panX = (hostW - DESIGN_W * z) / 2;
+      state.panX = (hostW - contentW) / 2;
     } else {
       state.panX = Math.min(maxPanX, Math.max(minPanX, state.panX));
     }
     if (minPanY > maxPanY) {
-      state.panY = (hostH - DESIGN_H * z) / 2;
+      state.panY = (hostH - contentH) / 2;
     } else {
       state.panY = Math.min(maxPanY, Math.max(minPanY, state.panY));
     }
@@ -261,18 +275,10 @@ var HeroCanvas = (function () {
     if (!state || !state.canvas) return;
     clampPan(state);
     var z = state.zoom || 1;
+    state.canvas.style.zoom = '';
+    state.canvas.style.transformOrigin = '0 0';
     state.canvas.style.transform =
-      'translate(' + state.panX + 'px,' + state.panY + 'px)';
-    /* CSS zoom re-layouts vectors sharply; transform scale bitmap-blurs DOM strokes. */
-    if (state.opts.allowZoom) {
-      state.canvas.style.zoom = String(z);
-    } else {
-      state.canvas.style.zoom = '';
-      if (Math.abs(z - 1) > 0.001) {
-        state.canvas.style.transform +=
-          ' scale(' + z + ')';
-      }
-    }
+      'translate(' + state.panX + 'px,' + state.panY + 'px) scale(' + z + ')';
   }
 
   /**

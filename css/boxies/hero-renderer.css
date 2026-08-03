@@ -52,7 +52,7 @@
   width: 1920px;
   height: 1080px;
   transform-origin: 0 0;
-  will-change: transform, zoom;
+  will-change: transform;
   background: #050505;
   overflow: hidden;
   box-sizing: border-box;
