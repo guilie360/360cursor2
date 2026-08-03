@@ -429,7 +429,26 @@ var ExperienciaEngine = (function () {
     });
   }
 
-  function ensureOverlayGroupDefaults(n, g, layerW, layerH) {
+  function resolveOverlayGroupMemberIds(n, g, opts) {
+    opts = opts || {};
+    if (!g) return [];
+    var ids = {};
+    (g.memberIds || []).forEach(function (id) {
+      if (id) ids[String(id)] = true;
+    });
+    if (n && n.config && Array.isArray(n.config.interactions)) {
+      n.config.interactions.forEach(function (ix) {
+        if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+        if (String(ix.groupId || '') === String(g.id)) ids[String(ix.id)] = true;
+      });
+    }
+    var out = Object.keys(ids);
+    if (opts.repair && out.length) g.memberIds = out.slice();
+    return out;
+  }
+
+  function ensureOverlayGroupDefaults(n, g, layerW, layerH, opts) {
+    opts = opts || {};
     if (!g || !isOverlayGroupInteraction(g)) return g;
     if (g.rotation == null || isNaN(Number(g.rotation))) g.rotation = 0;
     if (g.x == null || isNaN(Number(g.x))) g.x = 50;
@@ -437,15 +456,16 @@ var ExperienciaEngine = (function () {
     if (!Array.isArray(g.memberIds)) g.memberIds = [];
     var lw = layerW || 1000;
     var lh = layerH || 1000;
-    if (g.width == null || g.height == null || !g.memberIds.length) {
-      var bounds = computeOverlayUnionBounds(n, g.memberIds, lw, lh);
-      if (bounds) {
-        g.x = bounds.cx;
-        g.y = bounds.cy;
-        g.width = bounds.w;
-        g.height = bounds.h;
-        if (g._baseWidth == null) g._baseWidth = bounds.w;
-        if (g._baseHeight == null) g._baseHeight = bounds.h;
+    var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    if (g.width == null || g.height == null || !memberIds.length) {
+      var bounds0 = computeOverlayUnionBounds(n, memberIds, lw, lh, { useComposed: true });
+      if (bounds0) {
+        g.x = bounds0.cx;
+        g.y = bounds0.cy;
+        g.width = bounds0.w;
+        g.height = bounds0.h;
+        if (g._baseWidth == null) g._baseWidth = bounds0.w;
+        if (g._baseHeight == null) g._baseHeight = bounds0.h;
       } else {
         if (g.width == null) g.width = 20;
         if (g.height == null) g.height = 20;
@@ -455,8 +475,8 @@ var ExperienciaEngine = (function () {
     }
     if (g._baseWidth == null) g._baseWidth = Number(g.width) || 20;
     if (g._baseHeight == null) g._baseHeight = Number(g.height) || 20;
-    if (g._transformV !== 2 && n && g.memberIds.length) {
-      reconcileOverlayGroupTransform(n, g, lw, lh);
+    if (!opts.skipSync && g._transformV !== 2 && n && memberIds.length) {
+      syncOverlayGroupFrameFromMembers(n, g, lw, lh);
     }
     return g;
   }
@@ -500,46 +520,24 @@ var ExperienciaEngine = (function () {
   }
 
   function reconcileOverlayGroupTransform(n, g, layerW, layerH) {
-    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
-    layerW = Math.max(1, Number(layerW) || 1000);
-    layerH = Math.max(1, Number(layerH) || 1000);
-    g.memberIds.forEach(function (id) {
-      var ix = getInteraction(n, id);
-      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
-      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
-      if (!world) return;
-      var loc = worldPointToLocal(g, world.x, world.y, layerW, layerH);
-      ix.localX = loc.x;
-      ix.localY = loc.y;
-      ix.localRotation = world.rotation - (Number(g.rotation) || 0);
-      ix.groupId = g.id;
-    });
-    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
-    if (bounds) {
-      g.x = bounds.cx;
-      g.y = bounds.cy;
-      g.width = bounds.w;
-      g.height = bounds.h;
-      if (g._baseWidth == null) g._baseWidth = bounds.w;
-      if (g._baseHeight == null) g._baseHeight = bounds.h;
-    }
-    g._transformV = 2;
-    return g;
+    return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
   }
 
   /** Recompute group frame from composed member worlds without shifting children visually. */
   function syncOverlayGroupFrameFromMembers(n, g, layerW, layerH) {
-    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
+    if (!n || !g || !isOverlayGroupInteraction(g)) return g;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
-    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
+    var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    if (!memberIds.length) return g;
     var worlds = {};
-    g.memberIds.forEach(function (id) {
+    memberIds.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
       worlds[String(id)] = overlayWorldLayoutRaw(n, ix, layerW, layerH);
     });
-    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    var bounds = computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
     if (bounds) {
       g.x = bounds.cx;
       g.y = bounds.cy;
@@ -548,7 +546,7 @@ var ExperienciaEngine = (function () {
       if (g._baseWidth == null) g._baseWidth = bounds.w;
       if (g._baseHeight == null) g._baseHeight = bounds.h;
     }
-    g.memberIds.forEach(function (id) {
+    memberIds.forEach(function (id) {
       var ix = getInteraction(n, id);
       var world = worlds[String(id)];
       if (!ix || !world) return;
@@ -583,16 +581,16 @@ var ExperienciaEngine = (function () {
     if (ix.groupId && ix.localX != null && ix.localY != null) {
       var g = getInteraction(n, ix.groupId);
       if (g && isOverlayGroupInteraction(g)) {
-        return composeOverlayWorldLayout(g, ix, layerW, layerH);
+        return composeOverlayWorldLayout(g, ix, layerW, layerH, n);
       }
     }
     return overlayWorldLayoutAbsolute(ix, layerW, layerH);
   }
 
-  function composeOverlayWorldLayout(group, child, layerW, layerH) {
+  function composeOverlayWorldLayout(group, child, layerW, layerH, n) {
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
-    ensureOverlayGroupDefaults(null, group, layerW, layerH);
+    ensureOverlayGroupDefaults(n, group, layerW, layerH, { skipSync: true });
     var gr = Number(group.rotation) || 0;
     var lxPx = (Number(child.localX) || 0) / 100 * layerW;
     var lyPx = (Number(child.localY) || 0) / 100 * layerH;
@@ -629,8 +627,8 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  function absoluteToLocalOverlay(group, child, layerW, layerH) {
-    ensureOverlayGroupDefaults(null, group, layerW, layerH);
+  function absoluteToLocalOverlay(n, group, child, layerW, layerH) {
+    ensureOverlayGroupDefaults(n, group, layerW, layerH, { skipSync: true });
     var world = overlayWorldLayoutAbsolute(child, layerW, layerH);
     if (!world) return null;
     var inv = worldPointToLocal(group, world.x, world.y, layerW, layerH);
@@ -641,8 +639,8 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  function bakeOverlayWorldToChild(group, child, layerW, layerH) {
-    var world = composeOverlayWorldLayout(group, child, layerW, layerH);
+  function bakeOverlayWorldToChild(n, group, child, layerW, layerH) {
+    var world = composeOverlayWorldLayout(group, child, layerW, layerH, n);
     if (!world) return;
     child.x = world.x;
     child.y = world.y;
@@ -662,12 +660,13 @@ var ExperienciaEngine = (function () {
   }
 
   function migrateGroupedChildLocals(n, group, layerW, layerH) {
-    if (!n || !group || !Array.isArray(group.memberIds)) return;
-    group.memberIds.forEach(function (id) {
+    if (!n || !group || !isOverlayGroupInteraction(group)) return;
+    resolveOverlayGroupMemberIds(n, group, { repair: true });
+    (group.memberIds || []).forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
       if (ix.localX != null && ix.localY != null) return;
-      var local = absoluteToLocalOverlay(group, ix, layerW, layerH);
+      var local = absoluteToLocalOverlay(n, group, ix, layerW, layerH);
       if (!local) return;
       ix.localX = local.localX;
       ix.localY = local.localY;
@@ -680,7 +679,8 @@ var ExperienciaEngine = (function () {
     layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH);
     migrateGroupedChildLocals(n, g, layerW, layerH);
-    var bounds = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    var bounds = computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
     var vx = bounds ? bounds.cx : (Number(g.x) || 50);
     var vy = bounds ? bounds.cy : (Number(g.y) || 50);
     var vw = bounds ? bounds.w : (Number(g.width) || 20);
@@ -697,7 +697,7 @@ var ExperienciaEngine = (function () {
       rotation: Number(g.rotation) || 0,
       width: vw,
       height: vh,
-      memberIds: (g.memberIds || []).slice(),
+      memberIds: memberIds.slice(),
       visible: g.enabled !== false,
       enabled: g.enabled !== false,
       locked: !!g.locked,
@@ -821,11 +821,13 @@ var ExperienciaEngine = (function () {
   /** Grow group frame only when composed members exceed the current axis-aligned box. */
   function expandOverlayGroupBoundsIfMemberOverflow(n, g, layerW, layerH, opts) {
     opts = opts || {};
-    if (!n || !g || !Array.isArray(g.memberIds) || !g.memberIds.length) return g;
+    if (!n || !g || !isOverlayGroupInteraction(g)) return g;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
-    ensureOverlayGroupDefaults(n, g, layerW, layerH);
-    var union = computeOverlayUnionBounds(n, g.memberIds, layerW, layerH, { useComposed: true });
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
+    var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    if (!memberIds.length) return g;
+    var union = computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
     if (!union) return g;
     var gx = Number(g.x) || 50;
     var gy = Number(g.y) || 50;
@@ -926,12 +928,12 @@ var ExperienciaEngine = (function () {
       ensureOverlayGroupDefaults(n, g, lw, lh);
       migrateGroupedChildLocals(n, g, lw, lh);
       var ix = getInteraction(n, mid);
-      if (ix) bakeOverlayWorldToChild(g, ix, lw, lh);
+      if (ix) bakeOverlayWorldToChild(n, g, ix, lw, lh);
       g.memberIds.splice(idx, 1);
       if (g.memberIds.length < 2) {
         g.memberIds.forEach(function (rid) {
           var rx = getInteraction(n, rid);
-          if (rx) bakeOverlayWorldToChild(g, rx, lw, lh);
+          if (rx) bakeOverlayWorldToChild(n, g, rx, lw, lh);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -951,7 +953,7 @@ var ExperienciaEngine = (function () {
         migrateGroupedChildLocals(n, g, 1000, 1000);
         (g.memberIds || []).forEach(function (mid) {
           var ix = getInteraction(n, mid);
-          if (ix) bakeOverlayWorldToChild(g, ix, 1000, 1000);
+          if (ix) bakeOverlayWorldToChild(n, g, ix, 1000, 1000);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -966,7 +968,7 @@ var ExperienciaEngine = (function () {
         migrateGroupedChildLocals(n, g, 1000, 1000);
         mids.forEach(function (id) {
           var ix = getInteraction(n, id);
-          if (ix) bakeOverlayWorldToChild(g, ix, 1000, 1000);
+          if (ix) bakeOverlayWorldToChild(n, g, ix, 1000, 1000);
         });
         n.config.interactions = n.config.interactions.filter(function (item) {
           return String(item.id) !== String(g.id);
@@ -1022,7 +1024,7 @@ var ExperienciaEngine = (function () {
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
-      var local = absoluteToLocalOverlay(group, ix, lw, lh);
+      var local = absoluteToLocalOverlay(n, group, ix, lw, lh);
       if (local) {
         ix.localX = local.localX;
         ix.localY = local.localY;
@@ -1046,7 +1048,7 @@ var ExperienciaEngine = (function () {
     (g.memberIds || []).forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
-      bakeOverlayWorldToChild(g, ix, lw, lh);
+      bakeOverlayWorldToChild(n, g, ix, lw, lh);
     });
     n.config.interactions = (n.config.interactions || []).filter(function (item) {
       return String(item.id) !== String(groupId);
@@ -1622,7 +1624,7 @@ var ExperienciaEngine = (function () {
           var lwPos = Math.max(1, Number(patch.layerW) || 1000);
           var lhPos = Math.max(1, Number(patch.layerH) || 1000);
           migrateGroupedChildLocals(n, gPos, lwPos, lhPos);
-          var curW = composeOverlayWorldLayout(gPos, ix, lwPos, lhPos);
+          var curW = composeOverlayWorldLayout(gPos, ix, lwPos, lhPos, n);
           var tx = patch.x != null ? Number(patch.x) : curW.x;
           var ty = patch.y != null ? Number(patch.y) : curW.y;
           if (patch.live) {
@@ -6761,6 +6763,7 @@ var ExperienciaEngine = (function () {
     migrateGroupedChildLocals: migrateGroupedChildLocals,
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
     syncOverlayGroupFrameFromMembers: syncOverlayGroupFrameFromMembers,
+    resolveOverlayGroupMemberIds: resolveOverlayGroupMemberIds,
     computeOverlayUnionBounds: computeOverlayUnionBounds,
     commitOverlayGroupBounds: commitOverlayGroupBounds,
     findOverlayGroupForMember: findOverlayGroupForMember,

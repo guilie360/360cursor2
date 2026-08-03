@@ -4465,8 +4465,8 @@ var ExperienciaCanvas = (function () {
         buttonsImg.alt = '';
       }
 
-      var layerW = buttonsLayer.clientWidth || (buttonsImg.naturalWidth || 1000);
-      var layerH = buttonsLayer.clientHeight || (buttonsImg.naturalHeight || 1000);
+      var layerW = overlayLayerSize().w;
+      var layerH = overlayLayerSize().h;
       var buttons = (ExperienciaEngine.listSceneButtons(state, n) || []).map(function (b) {
         if (!b || !b._ix || !ExperienciaEngine.buttonViewModel) return b;
         return ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH);
@@ -4637,6 +4637,10 @@ var ExperienciaCanvas = (function () {
             String(groupEditFrozenFrame.groupId) === String(editGid))
           ? groupEditFrozenFrame
           : null;
+        if (!frameRef) {
+          captureGroupEditFrozenFrame(editGid, canvas().selectedId);
+          frameRef = groupEditFrozenFrame;
+        }
         if (!frameRef) {
           var gEdit = getOverlayItemVm(canvas().selectedId, editGid);
           if (gEdit) {
@@ -5161,6 +5165,19 @@ var ExperienciaCanvas = (function () {
         selfBtn.memberIds.forEach(function (mid) {
           groupMemberSkip[String(mid)] = true;
         });
+      } else if (selfBtn && selfBtn.groupId && canvas().activeOverlayGroupEditId &&
+          String(selfBtn.groupId) === String(canvas().activeOverlayGroupEditId)) {
+        var nEdit = ExperienciaEngine.getNode(state, sceneId);
+        var gEdit = nEdit && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(nEdit, selfBtn.groupId)
+          : null;
+        if (gEdit && ExperienciaEngine.resolveOverlayGroupMemberIds) {
+          groupMemberSkip = {};
+          ExperienciaEngine.resolveOverlayGroupMemberIds(nEdit, gEdit, { repair: false })
+            .forEach(function (mid) {
+              if (String(mid) !== String(buttonId)) groupMemberSkip[String(mid)] = true;
+            });
+        }
       }
 
       function boxAt(btn, cx, cy) {
@@ -5628,21 +5645,24 @@ var ExperienciaCanvas = (function () {
       var g = n && ExperienciaEngine.getInteraction
         ? ExperienciaEngine.getInteraction(n, groupId)
         : null;
-      if (n && g && ExperienciaEngine.computeOverlayUnionBounds &&
-          Array.isArray(g.memberIds) && g.memberIds.length) {
-        var union = ExperienciaEngine.computeOverlayUnionBounds(
-          n, g.memberIds, sz.w, sz.h, { useComposed: true }
-        );
-        if (union) {
-          groupEditFrozenFrame = {
-            groupId: String(groupId),
-            gx: union.cx,
-            gy: union.cy,
-            gw: union.w,
-            gh: union.h,
-            grot: Number(g.rotation) || 0
-          };
-          return;
+      if (n && g && ExperienciaEngine.resolveOverlayGroupMemberIds &&
+          ExperienciaEngine.computeOverlayUnionBounds) {
+        var memberIds = ExperienciaEngine.resolveOverlayGroupMemberIds(n, g, { repair: true });
+        if (memberIds.length) {
+          var union = ExperienciaEngine.computeOverlayUnionBounds(
+            n, memberIds, sz.w, sz.h, { useComposed: true }
+          );
+          if (union) {
+            groupEditFrozenFrame = {
+              groupId: String(groupId),
+              gx: union.cx,
+              gy: union.cy,
+              gw: union.w,
+              gh: union.h,
+              grot: Number(g.rotation) || 0
+            };
+            return;
+          }
         }
       }
       var gEdit = getOverlayItemVm(sceneId, groupId);
@@ -5694,9 +5714,7 @@ var ExperienciaCanvas = (function () {
       if (!groupId || !childId) return false;
       groupDebugLog('enterOverlayGroupEditMode', { groupId: groupId, childId: childId });
       var sceneId = canvas().selectedId;
-      if (sceneId && ExperienciaEngine.commitOverlayGroupBounds) {
-        commitGroupBoundsIfNeeded(sceneId, groupId);
-      }
+      /* Freeze frame from current composed layout — do not sync/recenter pivot on enter. */
       captureGroupEditFrozenFrame(groupId, sceneId);
       canvas().activeOverlayGroupEditId = String(groupId);
       canvas().selectedButtonIds = [String(childId)];
@@ -5721,7 +5739,7 @@ var ExperienciaCanvas = (function () {
       groupEditTapArmed = null;
       groupEditPulse = null;
       if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-      if (opts.sync !== false) syncActiveGroupFrameFromMembers(groupId, sceneId);
+      if (opts.sync !== false) maybeExpandGroupBoundsDuringEdit(groupId, sceneId);
       if (opts.reselectGroup !== false) {
         canvas().selectedButtonIds = [String(groupId)];
         canvas().selectedButtonId = String(groupId);
@@ -7383,7 +7401,6 @@ var ExperienciaCanvas = (function () {
             ev.stopPropagation();
             cancelOverlayGestures();
             groupDebugLog('pointerdown: double-tap → enter deep-edit', { groupId: gid, childId: cid });
-            commitGroupBoundsIfNeeded(sceneIdHit, gid);
             enterOverlayGroupEditMode(gid, cid);
             return;
           }
@@ -7472,7 +7489,6 @@ var ExperienciaCanvas = (function () {
         ev.stopPropagation();
         cancelOverlayGestures();
         groupEditPulse = null;
-        commitGroupBoundsIfNeeded(sceneId, grouped.groupId);
         enterOverlayGroupEditMode(grouped.groupId, grouped.childId);
       }, true);
       function endButtonDrag(ev) {
@@ -7546,9 +7562,7 @@ var ExperienciaCanvas = (function () {
             var gizmoEnd = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
             if (gizmoEnd) gizmoEnd.classList.remove('is-sizing');
           } catch (eGz) { /* ignore */ }
-          if (movedT && endScene && canvas().activeOverlayGroupEditId) {
-            maybeExpandGroupBoundsDuringEdit(canvas().activeOverlayGroupEditId, endScene);
-          }
+          /* Deep-edit: never sync/recenter group bounds on child transform release. */
           paintButtonsStage();
           paintInspector();
           if (movedT) persist();
@@ -7609,7 +7623,7 @@ var ExperienciaCanvas = (function () {
           }
         }
         if (moved && dragScene && canvas().activeOverlayGroupEditId) {
-          maybeExpandGroupBoundsDuringEdit(canvas().activeOverlayGroupEditId, dragScene);
+          /* Child edit: locals already updated live — never sync/recenter group on release. */
         } else if (moved && dragScene && dragIsGroup) {
           finalizeOverlayGroupMoveFrame(dragScene, dragBtn);
         }
