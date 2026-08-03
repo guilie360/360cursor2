@@ -4642,8 +4642,8 @@ body.quotation-canvas-first .builder-workspace,
   border: 1px dashed rgba(255, 255, 255, 0.28);
   border-radius: 2px;
   box-sizing: border-box;
-  transform: rotate(var(--btn-rot, 0deg));
-  transform-origin: center center;
+  /* Match .builder-exp-sel-gizmo: gx/gy are center coordinates. */
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg));
   z-index: 0;
 }
 

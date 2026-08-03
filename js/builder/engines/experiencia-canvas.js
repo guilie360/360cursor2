@@ -5622,12 +5622,6 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    function refreshGroupEditFrozenFrameIfExpanded(groupId, sceneId) {
-      if (!groupEditFrozenFrame ||
-          String(groupEditFrozenFrame.groupId) !== String(groupId)) return;
-      captureGroupEditFrozenFrame(groupId, sceneId);
-    }
-
     function maybeExpandGroupBoundsDuringEdit(groupId, sceneId) {
       if (!groupId || !sceneId || !ExperienciaEngine.expandOverlayGroupBoundsIfMemberOverflow) return;
       var n = ExperienciaEngine.getNode(state, sceneId);
@@ -5636,12 +5630,8 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!n || !g) return;
       var sz = overlayLayerSize();
-      var beforeW = Number(g.width) || 0;
-      var beforeH = Number(g.height) || 0;
+      /* Grow stored group bounds if child overflows — visual frame stays frozen. */
       ExperienciaEngine.expandOverlayGroupBoundsIfMemberOverflow(n, g, sz.w, sz.h);
-      if (Number(g.width) !== beforeW || Number(g.height) !== beforeH) {
-        refreshGroupEditFrozenFrameIfExpanded(groupId, sceneId);
-      }
     }
 
     function syncActiveGroupFrameFromMembers(groupId, sceneId) {
