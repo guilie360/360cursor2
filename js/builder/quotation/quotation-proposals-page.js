@@ -127,9 +127,21 @@ var QuotationProposalsPage = (function () {
         '</main>' +
         '<section class="qpp__compare" data-qpp-compare-view aria-hidden="true">' +
           '<div class="qpp__compare-scroll">' +
-            '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
-            '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
-            '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+            '<div class="qpp-cmp-table" data-qpp-compare-table-panel>' +
+              '<p class="qpp__eyebrow qpp-cmp__eyebrow">Showroom digital</p>' +
+              '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
+              '<div class="qpp-cmp" data-qpp-compare-board></div>' +
+            '</div>' +
+            '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
+              '<p class="qpp__eyebrow qpp-cmp__eyebrow qpp-cmp-upgrade__eyebrow">Upgrade a Motion</p>' +
+              '<h1 class="qpp__title qpp-cmp__title qpp-cmp-upgrade__title">Más impacto, mismo proyecto</h1>' +
+              '<p class="qpp-cmp-upgrade__lead">' +
+                'Si después de entregar los stills decides hacer el upgrade a Motion, tienes ' +
+                '<span class="qpp-cmp-upgrade__hi">15 días</span> para hacerlo pagando solo la diferencia ' +
+                '(<span class="qpp-cmp-upgrade__hi">$1.500.000</span>). Después de ese plazo, el Motion queda en ' +
+                '<span class="qpp-cmp-upgrade__hi">$2.000.000</span>.' +
+              '</p>' +
+            '</div>' +
           '</div>' +
           '<div class="qpp-cmp__upgrade-bar">' +
             '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
@@ -377,6 +389,33 @@ var QuotationProposalsPage = (function () {
       '</p>';
   }
 
+  function retriggerCmpAnimate(root) {
+    var shell = qs('[data-qpp-root]', root) || root;
+    requestAnimationFrame(function () {
+      shell.classList.remove('is-cmp-animate');
+      void shell.offsetWidth;
+      shell.classList.add('is-cmp-animate');
+    });
+  }
+
+  function setComparePanel(root, panel) {
+    var shell = qs('[data-qpp-root]', root) || root;
+    var next = panel === 'upgrade' ? 'upgrade' : 'table';
+    var tablePanel = qs('[data-qpp-compare-table-panel]', root);
+    var upgradePanel = qs('[data-qpp-upgrade-panel]', root);
+
+    shell.setAttribute('data-qpp-compare-panel', next);
+
+    if (tablePanel) {
+      if (next === 'upgrade') tablePanel.setAttribute('hidden', '');
+      else tablePanel.removeAttribute('hidden');
+    }
+    if (upgradePanel) {
+      if (next === 'upgrade') upgradePanel.removeAttribute('hidden');
+      else upgradePanel.setAttribute('hidden', '');
+    }
+  }
+
   function setQppView(root, view) {
     var shell = qs('[data-qpp-root]', root) || root;
     var next = view === 'comparison' ? 'comparison' : 'selection';
@@ -400,13 +439,11 @@ var QuotationProposalsPage = (function () {
     });
 
     if (next === 'comparison') {
+      setComparePanel(root, 'table');
       renderCompare(root);
-      /* Retrigger row entrance animations */
-      requestAnimationFrame(function () {
-        shell.classList.remove('is-cmp-animate');
-        void shell.offsetWidth;
-        shell.classList.add('is-cmp-animate');
-      });
+      retriggerCmpAnimate(root);
+    } else {
+      shell.setAttribute('data-qpp-compare-panel', 'table');
     }
   }
 
@@ -571,6 +608,12 @@ var QuotationProposalsPage = (function () {
         e.preventDefault();
         var view = shell.getAttribute('data-qpp-view') || 'selection';
         if (view === 'comparison') {
+          var panel = shell.getAttribute('data-qpp-compare-panel') || 'table';
+          if (panel === 'upgrade') {
+            setComparePanel(root, 'table');
+            retriggerCmpAnimate(root);
+            return;
+          }
           setQppView(root, 'selection');
           return;
         }
@@ -593,12 +636,10 @@ var QuotationProposalsPage = (function () {
         if (!upgradeBtn) return;
         e.preventDefault();
         e.stopPropagation();
-        /* Placeholder: vacía el cuadro; más adelante cargará otra matriz. */
-        var board = qs('[data-qpp-compare-board]', root);
-        if (board) {
-          shellEl.classList.remove('is-cmp-animate');
-          board.innerHTML = '';
-        }
+        var panel = shellEl.getAttribute('data-qpp-compare-panel') || 'table';
+        if (panel === 'upgrade') return;
+        setComparePanel(root, 'upgrade');
+        retriggerCmpAnimate(root);
       });
     }
 
