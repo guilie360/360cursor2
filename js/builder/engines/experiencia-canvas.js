@@ -1900,6 +1900,14 @@ var ExperienciaCanvas = (function () {
         console.log.apply(console, args);
       } catch (eLog) { /* ignore */ }
     }
+
+    function dragDebugLog() {
+      if (!GROUP_DEBUG) return;
+      try {
+        var args = ['[QE:drag]'].concat(Array.prototype.slice.call(arguments));
+        console.log.apply(console, args);
+      } catch (eLog) { /* ignore */ }
+    }
     var textEditEl = null;
     var buttonHistory = { past: [], future: [], max: 100 };
     var buttonOpArmed = false;
@@ -6677,7 +6685,14 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonIds = [g.groupId];
         canvas().selectedButtonId = g.groupId;
         var btn = getOverlayItemVm(g.sceneId, g.groupId);
-        if (!btn) return false;
+        if (!btn) {
+          dragDebugLog('flushGroupPointerGestureToMove: no group vm', g);
+          return false;
+        }
+        dragDebugLog('flushGroupPointerGestureToMove → beginOverlayMove', {
+          groupId: g.groupId,
+          sceneId: g.sceneId
+        });
         beginOverlayMove(ev, g.groupId, g.sceneId, btn, { groupEditChildId: g.childId });
         return true;
       }
@@ -6696,6 +6711,7 @@ var ExperienciaCanvas = (function () {
             ev.clientY - groupPointerGesture.clientStartY
           );
           if (gDist >= OVERLAY_DRAG_THRESHOLD_PX) {
+            dragDebugLog('groupPointerGesture threshold crossed', { dist: gDist });
             flushGroupPointerGestureToMove(ev);
           }
           return;
@@ -6712,6 +6728,10 @@ var ExperienciaCanvas = (function () {
             /* Ignore tiny jitter so a click can arm double-tap for the degree editor. */
             if (distR < 1.25) return;
             if (!transformDrag.historyPushed) {
+              dragDebugLog('transformDrag rotate start', {
+                buttonId: transformDrag.buttonId,
+                type: transformDrag.type
+              });
               pushButtonHistory(transformDrag.sceneId);
               transformDrag.historyPushed = true;
             }
@@ -6742,6 +6762,11 @@ var ExperienciaCanvas = (function () {
             );
             if (resizeDistPx < OVERLAY_DRAG_THRESHOLD_PX) return;
             if (!transformDrag.historyPushed) {
+              dragDebugLog('transformDrag resize start', {
+                buttonId: transformDrag.buttonId,
+                type: transformDrag.type,
+                mode: mode
+              });
               pushButtonHistory(transformDrag.sceneId);
               transformDrag.historyPushed = true;
             }
@@ -6953,6 +6978,11 @@ var ExperienciaCanvas = (function () {
         ev.preventDefault();
         var pct = percentFromPointer(ev);
         if (!buttonDrag.historyPushed) {
+          dragDebugLog('buttonDrag move start', {
+            buttonId: buttonDrag.buttonId,
+            isOverlayGroup: buttonDrag.isOverlayGroup,
+            groupEditChildId: buttonDrag.groupEditChildId
+          });
           pushButtonHistory(buttonDrag.sceneId);
           buttonDrag.historyPushed = true;
         }
@@ -7010,7 +7040,14 @@ var ExperienciaCanvas = (function () {
 
       function beginOverlayMove(ev, bid, sceneId, btn, opts) {
         opts = opts || {};
+        dragDebugLog('beginOverlayMove called', {
+          bid: bid,
+          sceneId: sceneId,
+          locked: !!(btn && btn.locked),
+          opts: opts
+        });
         if (btn && btn.locked) {
+          dragDebugLog('beginOverlayMove blocked: locked');
           paintButtonsStage();
           paintInspector();
           return;
@@ -7041,9 +7078,7 @@ var ExperienciaCanvas = (function () {
           ? (btnFresh.storedY != null ? Number(btnFresh.storedY) : Number(btnFresh.y) || 50)
           : 50;
         var origins = isGroupDrag ? {} : buildOverlayDragOrigins(sceneId, groupIds);
-        /* Full paint BEFORE arming drag so the gizmo mounts without live-path skip. */
         clearPendingMove(bid);
-        paintButtonsStage();
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
@@ -7066,7 +7101,13 @@ var ExperienciaCanvas = (function () {
         };
         bindOverlayPointerDocs();
         try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
-        /* Defer inspector — opening props rail fires resize and can interrupt the gesture. */
+        dragDebugLog('beginOverlayMove armed buttonDrag', {
+          buttonId: buttonDrag.buttonId,
+          isOverlayGroup: buttonDrag.isOverlayGroup,
+          pointerId: buttonDrag.pointerId
+        });
+        /* Paint after arming drag — live path skips remount while pointer is down. */
+        paintButtonsStage();
         requestAnimationFrame(function () {
           if (buttonDrag && buttonDrag.buttonId === bid) paintInspector();
         });
@@ -7090,6 +7131,11 @@ var ExperienciaCanvas = (function () {
           ev.preventDefault();
           ev.stopPropagation();
           var handleMode = handle.getAttribute('data-handle');
+          dragDebugLog('pointerdown: gizmo handle', {
+            gizmoId: gid,
+            gtype: gtype,
+            handle: handleMode
+          });
           /* Custom double-tap on rotate (gizmo remount kills native dblclick). */
           if (handleMode === 'rotate') {
             var nowTap = Date.now();
@@ -7176,10 +7222,13 @@ var ExperienciaCanvas = (function () {
           }
           bindOverlayPointerDocs();
           try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
+          dragDebugLog('transformDrag armed', {
+            buttonId: gid,
+            type: gtype,
+            mode: handleMode
+          });
           return;
         }
-
-        /* Gizmo body → move (Figma-style) — groups omit move surface; children receive clicks. */
         var moveSurface = ev.target.closest && ev.target.closest('[data-exp-sel-move]');
         if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
@@ -7283,8 +7332,12 @@ var ExperienciaCanvas = (function () {
 
           canvas().selectedButtonIds = [gid];
           canvas().selectedButtonId = gid;
-          startGroupPointerGesture(ev, sceneIdHit, gid, cid);
-          paintButtonsStage();
+          var btnGroup = getOverlayItemVm(sceneIdHit, gid);
+          dragDebugLog('pointerdown: grouped → beginOverlayMove(group)', {
+            groupId: gid,
+            childId: cid
+          });
+          beginOverlayMove(ev, gid, sceneIdHit, btnGroup);
           notifyOverlaySelection();
           return;
         }
@@ -7481,10 +7534,11 @@ var ExperienciaCanvas = (function () {
       buttonsLayer.addEventListener('pointerup', endButtonDrag);
       buttonsLayer.addEventListener('pointercancel', endButtonDrag);
       if (GROUP_DEBUG) {
-        groupDebugLog('instrumentation ready v7475', {
+        groupDebugLog('instrumentation ready v7476', {
           sceneId: canvas().selectedId,
           overlayMode: overlayMode
         });
+        dragDebugLog('drag trace enabled — filter [QE:drag]');
       }
       window.addEventListener('blur', function () {
         finishButtonNudge();

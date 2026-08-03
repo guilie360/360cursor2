@@ -1802,16 +1802,7 @@ var ExperienciaEngine = (function () {
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
     if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
-    if (isSceneButtonInteraction(ix)) {
-      return updateSceneButton(state, nodeId, buttonId, { x: x, y: y });
-    }
-    ix.x = clampPercent(x, ix.x);
-    ix.y = clampPercent(y, ix.y);
-    ix.positionInitialized = true;
-    ix.positionMode = 'free';
-    ensureFreeOverlayDefaults(ix);
-    syncScenePorts(n);
-    return buttonViewModel(state, n, ix);
+    return updateSceneButton(state, nodeId, buttonId, { x: x, y: y, live: true });
   }
 
   function mirrorSceneButton(state, nodeId, buttonId) {
