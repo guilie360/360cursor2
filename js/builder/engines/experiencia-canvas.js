@@ -4244,43 +4244,24 @@ var ExperienciaCanvas = (function () {
       var gizmo = buttonsLayer.querySelector('[data-exp-gizmo]');
       if (gizmo) {
         var gid = gizmo.getAttribute('data-gizmo-id');
-        var gb = null;
-        for (var i = 0; i < buttons.length; i++) {
-          if (buttons[i] && String(buttons[i].id) === String(gid)) {
-            gb = buttons[i];
-            break;
+        var sceneIdLive = canvas().selectedId;
+        var gvm = sceneIdLive && gid ? getOverlayItemVm(sceneIdLive, gid) : null;
+        if (gvm) {
+          var gm = overlaySelectionMetrics(gvm, layerW, layerH);
+          if (gm) {
+            gizmo.style.left = gm.gx + '%';
+            gizmo.style.top = gm.gy + '%';
+            gizmo.style.width = gm.gw + '%';
+            gizmo.style.height = gm.gh + '%';
+            gizmo.style.setProperty('--btn-rot', gm.grot + 'deg');
+            var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+            if (sizeEl) {
+              sizeEl.textContent =
+                Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' × ' +
+                Math.max(1, Math.round((gm.gh / 100) * layerH));
+            }
+            moved = true;
           }
-        }
-        if (gb) {
-          var gl = (gb._ix && ExperienciaEngine.resolveButtonLayout)
-            ? ExperienciaEngine.resolveButtonLayout(gb._ix, layerW, layerH)
-            : { x: Number(gb.x) || 50, y: Number(gb.y) || 50 };
-          var gst = String(gb.type || 'BUTTON').toUpperCase();
-          var gw = gst === 'BUTTON'
-            ? (gb.boxW != null ? Number(gb.boxW) : 14)
-            : (gst === 'SHAPE_RECT' || gst === 'SHAPE_CIRCLE'
-              ? (Number(gb.width) || 12)
-              : Math.max(8, Math.min(40, (String(gb.label || 'Texto').length) * 1.2)));
-          var gh = gst === 'BUTTON'
-            ? (gb.boxH != null ? Number(gb.boxH) : 4.5)
-            : (gst === 'SHAPE_RECT' || gst === 'SHAPE_CIRCLE'
-              ? (Number(gb.height) || 8)
-              : Math.max(3, ((Number(gb.fontSize) || 28) / layerH) * 100 * 1.4));
-          if (gst === 'SHAPE_CIRCLE') {
-            gh = gw * (layerW / Math.max(1, layerH));
-          }
-          gizmo.style.left = Number(gl.x) + '%';
-          gizmo.style.top = Number(gl.y) + '%';
-          gizmo.style.width = gw + '%';
-          gizmo.style.height = gh + '%';
-          gizmo.style.setProperty('--btn-rot', (Number(gb.rotation) || 0) + 'deg');
-          var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
-          if (sizeEl) {
-            sizeEl.textContent =
-              Math.max(1, Math.round((gw / 100) * layerW)) + ' × ' +
-              Math.max(1, Math.round((gh / 100) * layerH));
-          }
-          moved = true;
         }
       }
       /* Live spacing pills — only while moving (not resizing; DOM churn causes jitter). */
@@ -4831,6 +4812,12 @@ var ExperienciaCanvas = (function () {
     function overlayHalfSizePct(btn) {
       if (!btn) return { w: 6, h: 4 };
       var t = String(btn.type || 'BUTTON').toUpperCase();
+      if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+        return {
+          w: Math.max(0.5, (Number(btn.width) || 20) / 2),
+          h: Math.max(0.5, (Number(btn.height) || 20) / 2)
+        };
+      }
       if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
         return {
           w: Math.max(0.5, (Number(btn.width) || 12) / 2),
@@ -5149,8 +5136,17 @@ var ExperienciaCanvas = (function () {
       var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
       var SNAP = 1.15;
       var SPACE_SNAP = 1.45;
-      var selfBtn = ExperienciaEngine.getSceneButton(state, n, buttonId);
+      var selfBtn = getOverlayItemVm(sceneId, buttonId) ||
+        ExperienciaEngine.getSceneButton(state, n, buttonId);
       var selfHalf = overlayHalfSizePct(selfBtn);
+      var groupMemberSkip = null;
+      if (selfBtn && (String(selfBtn.type || '').toUpperCase() === 'OVERLAY_GROUP' ||
+          selfBtn._isGroup) && Array.isArray(selfBtn.memberIds)) {
+        groupMemberSkip = {};
+        selfBtn.memberIds.forEach(function (mid) {
+          groupMemberSkip[String(mid)] = true;
+        });
+      }
 
       function boxAt(btn, cx, cy) {
         var half = overlayHalfSizePct(btn);
@@ -5190,6 +5186,7 @@ var ExperienciaCanvas = (function () {
       var NEAR_PEER = 10;
       list.forEach(function (peer) {
         if (!peer || String(peer.id) === String(buttonId)) return;
+        if (groupMemberSkip && groupMemberSkip[String(peer.id)]) return;
         peers.push(boxAt(peer));
       });
 
@@ -6995,11 +6992,15 @@ var ExperienciaCanvas = (function () {
           var szG = overlayLayerSize();
           var gx = buttonDrag.originX != null ? buttonDrag.originX + ddx : pct.x;
           var gy = buttonDrag.originY != null ? buttonDrag.originY + ddy : pct.y;
+          var snappedG = computeButtonGuides(
+            buttonDrag.sceneId, buttonDrag.buttonId, gx, gy,
+            { disableSnap: !!ev.shiftKey }
+          );
+          buttonDrag.guides = snappedG.guides;
           ExperienciaEngine.updateOverlayGroupTransform(
             state, buttonDrag.sceneId, buttonDrag.buttonId,
-            { x: gx, y: gy, live: true, layerW: szG.w, layerH: szG.h }
+            { x: snappedG.x, y: snappedG.y, live: true, layerW: szG.w, layerH: szG.h }
           );
-          buttonDrag.guides = { spacing: [] };
           paintButtonsStage();
           return;
         }
