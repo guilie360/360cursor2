@@ -4346,29 +4346,29 @@ var ExperienciaCanvas = (function () {
           if (b.boxH != null) el.style.height = Number(b.boxH) + '%';
         }
       });
-      var gizmo = buttonsLayer.querySelector('[data-exp-gizmo]');
-      if (gizmo) {
-        var gid = gizmo.getAttribute('data-gizmo-id');
+      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
+      if (gizmos && gizmos.length) {
         var sceneIdLive = canvas().selectedId;
-        var gvm = sceneIdLive && gid ? getOverlayItemVm(sceneIdLive, gid) : null;
-        if (gvm) {
+        gizmos.forEach(function (gizmo) {
+          var gid = gizmo.getAttribute('data-gizmo-id');
+          var gvm = sceneIdLive && gid ? getOverlayItemVm(sceneIdLive, gid) : null;
+          if (!gvm) return;
           var gm = overlaySelectionMetrics(gvm, layerW, layerH);
-          if (gm) {
-            gizmo.style.left = gm.gx + '%';
-            gizmo.style.top = gm.gy + '%';
-            gizmo.style.width = gm.gw + '%';
-            gizmo.style.height = gm.gh + '%';
-            gizmo.style.setProperty('--btn-rot', gm.grot + 'deg');
-            var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
-            if (sizeEl) {
-              sizeEl.textContent = gm.st === 'SHAPE_LINE'
-                ? Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' px'
-                : Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' × ' +
-                  Math.max(1, Math.round((gm.gh / 100) * layerH));
-            }
-            moved = true;
+          if (!gm) return;
+          gizmo.style.left = gm.gx + '%';
+          gizmo.style.top = gm.gy + '%';
+          gizmo.style.width = gm.gw + '%';
+          gizmo.style.height = gm.gh + '%';
+          gizmo.style.setProperty('--btn-rot', gm.grot + 'deg');
+          var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+          if (sizeEl) {
+            sizeEl.textContent = gm.st === 'SHAPE_LINE'
+              ? Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' px'
+              : Math.max(1, Math.round((gm.gw / 100) * layerW)) + ' × ' +
+                Math.max(1, Math.round((gm.gh / 100) * layerH));
           }
-        }
+          moved = true;
+        });
       }
       /* Live spacing pills — only while moving (not resizing; DOM churn causes jitter). */
       if (buttonDrag && buttonDrag.live && !buttonDrag.nudge) {
