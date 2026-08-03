@@ -517,6 +517,7 @@ var ExperienciaCanvas = (function () {
     if (t === 'TEXT') return 'builder-exp-stage-text';
     if (t === 'SHAPE_RECT') return 'builder-exp-stage-shape builder-exp-stage-shape--rect';
     if (t === 'SHAPE_CIRCLE') return 'builder-exp-stage-shape builder-exp-stage-shape--circle';
+    if (t === 'SHAPE_LINE') return 'builder-exp-stage-shape builder-exp-stage-shape--line';
     var style = (btn && btn.style) || 'button';
     if (style === 'chip') style = 'button';
     return 'builder-exp-ui-btn is-style-' + style +
@@ -539,6 +540,14 @@ var ExperienciaCanvas = (function () {
     var fill = esc(b.fill || 'rgba(255,255,255,0.14)');
     var stroke = esc(b.stroke || 'rgba(255,255,255,0.55)');
     var ve = ' vector-effect="non-scaling-stroke"';
+    if (t === 'SHAPE_LINE') {
+      return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
+        ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
+        '<line x1="0" y1="50" x2="100" y2="50" fill="none"' +
+        ' stroke="' + stroke + '" stroke-width="' + sw + '"' +
+        ' stroke-linecap="round"' + ve +
+        ' shape-rendering="geometricPrecision"/></svg>';
+    }
     if (t === 'SHAPE_CIRCLE') {
       return '<svg class="builder-exp-stage-shape__svg" viewBox="0 0 100 100"' +
         ' preserveAspectRatio="none" aria-hidden="true" focusable="false">' +
@@ -569,9 +578,9 @@ var ExperienciaCanvas = (function () {
     } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
       gw = Number(btn.width) || 20;
       gh = Number(btn.height) || 20;
-    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE') {
-      gw = Number(btn.width) || 12;
-      gh = Number(btn.height) || 8;
+    } else if (st === 'SHAPE_RECT' || st === 'SHAPE_CIRCLE' || st === 'SHAPE_LINE') {
+      gw = Number(btn.width) || (st === 'SHAPE_LINE' ? 28 : 12);
+      gh = Number(btn.height) || (st === 'SHAPE_LINE' ? 1.5 : 8);
       if (st === 'SHAPE_CIRCLE') {
         gh = gw * (layerW / Math.max(1, layerH));
       }
@@ -593,7 +602,9 @@ var ExperienciaCanvas = (function () {
     var rotCorners = ['nw', 'ne', 'se', 'sw'];
     var sizeWpx = Math.max(1, Math.round((m.gw / 100) * layerW));
     var sizeHpx = Math.max(1, Math.round((m.gh / 100) * layerH));
-    var sizeLabel = sizeWpx + ' × ' + sizeHpx;
+    var sizeLabel = m.st === 'SHAPE_LINE'
+      ? Math.max(1, Math.round((m.gw / 100) * layerW)) + ' px'
+      : (sizeWpx + ' × ' + sizeHpx);
     var isGroupGizmo = m.st === 'OVERLAY_GROUP' || m.st === 'GROUP';
     var html =
       '<div class="builder-exp-sel-gizmo' + (multi ? ' is-multi' : '') +
@@ -632,6 +643,7 @@ var ExperienciaCanvas = (function () {
   function overlayTypeLabel(t) {
     t = String(t || 'BUTTON').toUpperCase();
     if (t === 'TEXT') return 'Texto';
+    if (t === 'SHAPE_LINE') return 'Línea';
     if (t === 'SHAPE_RECT') return 'Rectángulo';
     if (t === 'SHAPE_CIRCLE') return 'Círculo';
     return 'Botón';
@@ -837,6 +849,7 @@ var ExperienciaCanvas = (function () {
 
   function shapeInspectorFieldsHtml(selected) {
     var t = String(selected.type || '').toUpperCase();
+    var isLine = t === 'SHAPE_LINE';
     var rot = selected.rotation != null ? Number(selected.rotation) : 0;
     return '' +
       '<div class="builder-exp-inspector__section">Forma</div>' +
@@ -846,19 +859,21 @@ var ExperienciaCanvas = (function () {
           esc(selected.label != null ? selected.label : '') + '">' +
       '</div>' +
       '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Ancho %</label>' +
+        '<label>' + (isLine ? 'Largo %' : 'Ancho %') + '</label>' +
         '<input type="number" data-exp-shape-w min="1" max="100" step="0.5" value="' +
-          esc(String(selected.width != null ? selected.width : 12)) + '">' +
+          esc(String(selected.width != null ? selected.width : (isLine ? 28 : 12))) + '">' +
       '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Alto %</label>' +
-        '<input type="number" data-exp-shape-h min="1" max="100" step="0.5" value="' +
-          esc(String(selected.height != null ? selected.height : 8)) + '">' +
-      '</div>' +
-      '<div class="builder-field builder-exp-inspector__field">' +
-        '<label>Relleno</label>' +
-        '<input type="text" data-exp-shape-fill value="' + esc(selected.fill || '') + '">' +
-      '</div>' +
+      (isLine ? '' :
+        ('<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Alto %</label>' +
+          '<input type="number" data-exp-shape-h min="1" max="100" step="0.5" value="' +
+            esc(String(selected.height != null ? selected.height : 8)) + '">' +
+        '</div>')) +
+      (isLine ? '' :
+        ('<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Relleno</label>' +
+          '<input type="text" data-exp-shape-fill value="' + esc(selected.fill || '') + '">' +
+        '</div>')) +
       '<div class="builder-field builder-exp-inspector__field">' +
         '<label>Borde</label>' +
         '<input type="text" data-exp-shape-stroke value="' + esc(selected.stroke || '') + '">' +
@@ -922,7 +937,7 @@ var ExperienciaCanvas = (function () {
 
     var selType = String(selected.type || 'BUTTON').toUpperCase();
     var kindTitle = selType === 'TEXT' ? 'Texto'
-      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' ? 'Forma'
+      : (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE' ? 'Forma'
         : (selType === 'IMAGE' ? 'Imagen' : 'Botón'));
 
     var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
@@ -941,7 +956,7 @@ var ExperienciaCanvas = (function () {
 
     if (selType === 'TEXT') {
       html += textInspectorFieldsHtml(selected);
-    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE') {
+    } else if (selType === 'SHAPE_RECT' || selType === 'SHAPE_CIRCLE' || selType === 'SHAPE_LINE') {
       html += shapeInspectorFieldsHtml(selected);
     } else {
       html += buttonInspectorFieldsHtml(selected, destOpts);
@@ -4259,7 +4274,7 @@ var ExperienciaCanvas = (function () {
         el.style.left = Number(layout.x) + '%';
         el.style.top = Number(layout.y) + '%';
         el.style.setProperty('--btn-rot', rot + 'deg');
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
           var sw = Number(b.width) || 12;
           var sh = Number(b.height) || 8;
           if (t === 'SHAPE_CIRCLE') {
@@ -4316,7 +4331,7 @@ var ExperienciaCanvas = (function () {
       if (el) {
         el.style.left = leftPx + 'px';
         el.style.top = topPx + 'px';
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'BUTTON') {
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'BUTTON') {
           el.style.width = wPx + 'px';
           el.style.height = hPx + 'px';
         }
@@ -4552,9 +4567,9 @@ var ExperienciaCanvas = (function () {
             esc(b.label != null ? String(b.label) : 'Texto') +
           '</button>';
         }
-        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
-          var shapeW = Number(b.width) || 12;
-          var shapeH = Number(b.height) || 8;
+        if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
+          var shapeW = Number(b.width) || (t === 'SHAPE_LINE' ? 28 : 12);
+          var shapeH = Number(b.height) || (t === 'SHAPE_LINE' ? 1.5 : 8);
           if (t === 'SHAPE_CIRCLE') {
             shapeH = shapeW * (layerW / Math.max(1, layerH));
           }
@@ -4817,10 +4832,10 @@ var ExperienciaCanvas = (function () {
           h: Math.max(0.5, (Number(btn.height) || 20) / 2)
         };
       }
-      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE') {
+      if (t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE') {
         return {
-          w: Math.max(0.5, (Number(btn.width) || 12) / 2),
-          h: Math.max(0.5, (Number(btn.height) || 8) / 2)
+          w: Math.max(0.5, (Number(btn.width) || (t === 'SHAPE_LINE' ? 28 : 12)) / 2),
+          h: Math.max(0.25, (Number(btn.height) || (t === 'SHAPE_LINE' ? 1.5 : 8)) / 2)
         };
       }
       if (t === 'BUTTON') {
@@ -6963,7 +6978,8 @@ var ExperienciaCanvas = (function () {
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
-            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE') {
+            } else if (transformDrag.type === 'SHAPE_RECT' || transformDrag.type === 'SHAPE_CIRCLE' ||
+                transformDrag.type === 'SHAPE_LINE') {
               patchT.width = nw;
               patchT.height = nh;
             }
@@ -7207,12 +7223,12 @@ var ExperienciaCanvas = (function () {
             ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
             : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
               ? (Number(btnG.width) || 20)
-              : (Number(btnG.width) || 12);
+              : (Number(btnG.width) || (gtype === 'SHAPE_LINE' ? 28 : 12));
           var startH0 = gtype === 'BUTTON'
             ? (btnG.boxH != null ? Number(btnG.boxH) : 4.5)
             : (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')
               ? (Number(btnG.height) || 20)
-              : (Number(btnG.height) || 8);
+              : (Number(btnG.height) || (gtype === 'SHAPE_LINE' ? 1.5 : 8));
           /* Circle: store height so the box is pixel-square at drag start. */
           var layerAspect = layerW0 / Math.max(1, layerH0);
           if (gtype === 'SHAPE_CIRCLE') {
@@ -7492,7 +7508,7 @@ var ExperienciaCanvas = (function () {
               if (endType === 'BUTTON') {
                 finalize.boxW = ew;
                 finalize.boxH = eh;
-              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE') {
+              } else if (endType === 'SHAPE_RECT' || endType === 'SHAPE_CIRCLE' || endType === 'SHAPE_LINE') {
                 finalize.width = ew;
                 finalize.height = eh;
               }
@@ -8879,7 +8895,8 @@ var ExperienciaCanvas = (function () {
             : null;
           if (!ix || !ix.type) return false;
           var tt = String(ix.type).toUpperCase();
-          return tt === 'BUTTON' || tt === 'TEXT' || tt === 'SHAPE_RECT' || tt === 'SHAPE_CIRCLE';
+          return tt === 'BUTTON' || tt === 'TEXT' || tt === 'SHAPE_RECT' || tt === 'SHAPE_CIRCLE' ||
+            tt === 'SHAPE_LINE';
         });
         var canUngroup = !!group;
         return {

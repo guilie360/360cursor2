@@ -4623,6 +4623,10 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: none;
   shape-rendering: geometricPrecision;
 }
+.builder-exp-stage-shape--line {
+  min-height: 4px;
+}
+
 .builder-exp-stage-shape--circle {
   border-radius: 0 !important;
 }

@@ -296,7 +296,7 @@ var QuotationRuntime = (function () {
   function isShapeIx(ix) {
     if (!ix || ix.enabled === false) return false;
     var t = String(ix.type || '').toUpperCase();
-    return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE';
+    return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE';
   }
 
   function ixIsVisible(ix) {
@@ -530,21 +530,36 @@ var QuotationRuntime = (function () {
     shapes.forEach(function (sh) {
       var t = String(sh.type || '').toUpperCase();
       var el = document.createElement('div');
-      el.className = 'qr-ix-shape' + (t === 'SHAPE_CIRCLE' ? ' qr-ix-shape--circle' : ' qr-ix-shape--rect');
+      var shapeClass = t === 'SHAPE_CIRCLE' ? ' qr-ix-shape--circle'
+        : (t === 'SHAPE_LINE' ? ' qr-ix-shape--line' : ' qr-ix-shape--rect');
+      el.className = 'qr-ix-shape' + shapeClass;
       if (sh.id) el.setAttribute('data-qr-ix-id', String(sh.id));
       var rot = Number(sh.rotation) || 0;
       el.style.left = Number(sh.x) + '%';
       el.style.top = Number(sh.y) + '%';
-      el.style.width = (Number(sh.width) || 12) + '%';
-      el.style.height = (Number(sh.height) || (t === 'SHAPE_CIRCLE' ? 12 : 8)) + '%';
+      el.style.width = (Number(sh.width) || (t === 'SHAPE_LINE' ? 28 : 12)) + '%';
+      el.style.height = (Number(sh.height) || (t === 'SHAPE_LINE' ? 1.5 : (t === 'SHAPE_CIRCLE' ? 12 : 8))) + '%';
       el.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
-      el.style.background = sh.fill || 'rgba(255,255,255,0.18)';
-      el.style.border = (Number(sh.strokeWidth) || 2) + 'px solid ' +
-        (sh.stroke || 'rgba(255,255,255,0.65)');
-      el.style.borderRadius = (sh.borderRadius != null
-        ? Number(sh.borderRadius)
-        : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px';
       el.style.pointerEvents = interactive ? 'auto' : 'none';
+      if (t === 'SHAPE_LINE') {
+        el.style.background = 'transparent';
+        el.style.border = 'none';
+        var sw = Number(sh.strokeWidth) || 2;
+        var stroke = sh.stroke || 'rgba(255,255,255,0.65)';
+        el.innerHTML =
+          '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"' +
+          ' style="width:100%;height:100%;display:block;overflow:visible">' +
+          '<line x1="0" y1="50" x2="100" y2="50" fill="none" stroke="' + stroke + '"' +
+          ' stroke-width="' + sw + '" vector-effect="non-scaling-stroke"' +
+          ' stroke-linecap="round"/></svg>';
+      } else {
+        el.style.background = sh.fill || 'rgba(255,255,255,0.18)';
+        el.style.border = (Number(sh.strokeWidth) || 2) + 'px solid ' +
+          (sh.stroke || 'rgba(255,255,255,0.65)');
+        el.style.borderRadius = (sh.borderRadius != null
+          ? Number(sh.borderRadius)
+          : (t === 'SHAPE_CIRCLE' ? 999 : 8)) + 'px';
+      }
       if (interactive) {
         el.style.cursor = 'pointer';
         el.addEventListener('click', function (ev) {
