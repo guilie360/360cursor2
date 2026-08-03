@@ -317,11 +317,16 @@ var QuotationRuntime = (function () {
 
   function runtimeShapeSvgHtml(sh, t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      var st = ExperienciaEngine.shapeStretchFromIx
+        ? ExperienciaEngine.shapeStretchFromIx(sh)
+        : { sx: Number(sh.shapeStretchX) || 1, sy: Number(sh.shapeStretchY) || 1 };
       return ExperienciaEngine.buildSceneShapeSvg(t, {
         fill: sh.fill || 'rgba(255,255,255,0.16)',
         stroke: sh.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: sh.strokeWidth != null ? sh.strokeWidth : 2,
         borderRadius: sh.borderRadius,
+        stretchX: st.sx,
+        stretchY: st.sy,
         preserveAspect: 'meet',
         inlineStyle: 'width:100%;height:100%;display:block;overflow:visible'
       });

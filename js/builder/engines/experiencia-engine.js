@@ -212,8 +212,25 @@ var ExperienciaEngine = (function () {
     return isSceneShapeType(t);
   }
 
-  /** Content AABB inside the 100×100 viewBox (same artboard as buildSceneShapeSvg). */
-  function shapeContentBBox(kind) {
+  /** Clamp stretch multipliers — 1 = picker default geometry. */
+  function shapeStretchXY(opts) {
+    opts = opts || {};
+    return {
+      sx: Math.max(0.06, Math.min(8, Number(opts.stretchX != null ? opts.stretchX : 1) || 1)),
+      sy: Math.max(0.06, Math.min(8, Number(opts.stretchY != null ? opts.stretchY : 1) || 1))
+    };
+  }
+
+  function shapeStretchFromIx(ix) {
+    if (!ix) return { sx: 1, sy: 1 };
+    return shapeStretchXY({
+      stretchX: ix.shapeStretchX,
+      stretchY: ix.shapeStretchY
+    });
+  }
+
+  /** Content AABB at stretch 1 — picker / default artboard. */
+  function shapeContentBBoxBase(kind) {
     kind = String(kind || '').toUpperCase();
     var u = shapeUnit52;
     if (kind === 'SHAPE_LINE') {
@@ -230,14 +247,14 @@ var ExperienciaEngine = (function () {
       var tx2 = u(42);
       var ty1 = u(10);
       var ty2 = u(40);
-      return { cx: (tx1 + tx2) / 2, cy: (ty1 + ty2) / 2, w: tx2 - tx1, h: ty2 - ty1 };
+      return { cx: 50, cy: (ty1 + ty2) / 2, w: tx2 - tx1, h: ty2 - ty1 };
     }
     if (kind === 'SHAPE_ARROW') {
       var ax1 = u(6);
       var ax2 = u(48);
       var ay1 = u(14);
       var ay2 = u(38);
-      return { cx: (ax1 + ax2) / 2, cy: (ay1 + ay2) / 2, w: ax2 - ax1, h: ay2 - ay1 };
+      return { cx: 50, cy: (ay1 + ay2) / 2, w: ax2 - ax1, h: ay2 - ay1 };
     }
     if (kind === 'SHAPE_DONUT') {
       var dd = u(20) * 2;
@@ -249,15 +266,26 @@ var ExperienciaEngine = (function () {
     if (kind === 'SHAPE_ROUND_RECT') {
       return { cx: 50, cy: 50, w: u(30), h: u(30) };
     }
-    /* SHAPE_RECT */
     return { cx: 50, cy: 50, w: u(30), h: u(24) };
   }
 
-  /** Tight gizmo aligned to visible shape — tile stays square for picker parity. */
-  function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY) {
+  /** Content AABB inside the 100×100 viewBox — respects axis stretch. */
+  function shapeContentBBox(kind, opts) {
     kind = String(kind || '').toUpperCase();
+    var st = shapeStretchXY(opts);
+    var base = shapeContentBBoxBase(kind);
+    if (kind === 'SHAPE_LINE') {
+      return { cx: 50, cy: 50, w: base.w * st.sx, h: base.h };
+    }
+    return { cx: 50, cy: 50, w: base.w * st.sx, h: base.h * st.sy };
+  }
+
+  /** Tight gizmo aligned to visible shape — tile stays square for picker parity. */
+  function sceneShapeGizmoMetrics(widthPct, kind, layerW, layerH, posX, posY, stretchX, stretchY) {
+    kind = String(kind || '').toUpperCase();
+    var st = shapeStretchXY({ stretchX: stretchX, stretchY: stretchY });
     var tile = sceneShapeDisplaySize(widthPct, layerW, layerH);
-    var bbox = shapeContentBBox(kind);
+    var bbox = shapeContentBBox(kind, st);
     var lw = Math.max(1, Number(layerW) || 1000);
     var lh = Math.max(1, Number(layerH) || 1000);
     var gw = tile.w * (bbox.w / 100);
@@ -276,20 +304,22 @@ var ExperienciaEngine = (function () {
       gh: gh,
       tileW: tile.w,
       tileH: tile.h,
-      bbox: bbox
+      bbox: bbox,
+      stretchX: st.sx,
+      stretchY: st.sy
     };
   }
 
-  function sceneShapeTileWidthFromContentWidth(contentWPct, kind) {
-    var bbox = shapeContentBBox(kind);
+  function sceneShapeTileWidthFromContentWidth(contentWPct, kind, stretchX, stretchY) {
+    var bbox = shapeContentBBox(kind, shapeStretchXY({ stretchX: stretchX, stretchY: stretchY }));
     var frac = bbox.w / 100;
     if (!frac || frac <= 0) return contentWPct;
     return Number(contentWPct) / frac;
   }
 
-  function sceneShapeTileCenterFromGizmoCenter(gx, gy, tileWPct, kind, layerW, layerH) {
+  function sceneShapeTileCenterFromGizmoCenter(gx, gy, tileWPct, kind, layerW, layerH, stretchX, stretchY) {
     var tile = sceneShapeDisplaySize(tileWPct, layerW, layerH);
-    var bbox = shapeContentBBox(kind);
+    var bbox = shapeContentBBox(kind, shapeStretchXY({ stretchX: stretchX, stretchY: stretchY }));
     var offX = ((bbox.cx - 50) / 100) * tile.w;
     var offY = ((bbox.cy - 50) / 100) * tile.h;
     return { x: Number(gx) - offX, y: Number(gy) - offY };
@@ -324,10 +354,15 @@ var ExperienciaEngine = (function () {
     return Math.max(0.5, Math.min(20, sw));
   }
 
-  /** One painted primitive for picker / canvas / runtime. */
+  /** One painted primitive — cap / 9-slice stretch via stretchX/stretchY (fixed radii & head size). */
   function sceneShapeGeometry(kind, paint) {
     paint = paint || {};
     kind = String(kind || '').toUpperCase();
+    var st = shapeStretchXY(paint);
+    var sx = st.sx;
+    var sy = st.sy;
+    var u = shapeUnit52;
+    var base = shapeContentBBoxBase(kind);
     var fill = shapeAttr(paint.fill != null ? paint.fill : 'rgba(255,255,255,0.14)');
     var stroke = shapeAttr(paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.55)');
     var sw = shapeStrokeWidth(paint);
@@ -335,59 +370,79 @@ var ExperienciaEngine = (function () {
     var cls = paint.className ? ' class="' + shapeAttr(paint.className) + '"' : '';
     var brR = paint.borderRadius != null ? Number(paint.borderRadius) : 16;
     var sr = ' shape-rendering="geometricPrecision"';
+    var w = base.w * sx;
+    var h = base.h * sy;
 
     if (kind === 'SHAPE_LINE') {
-      return '<line' + cls + ' x1="' + shapeUnit52(8) + '" y1="50" x2="' + shapeUnit52(44) + '" y2="50"' +
+      var lx1 = 50 - w / 2;
+      var lx2 = 50 + w / 2;
+      return '<line' + cls + ' x1="' + lx1 + '" y1="50" x2="' + lx2 + '" y2="50"' +
         ' fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_CIRCLE') {
-      return '<ellipse' + cls + ' cx="50" cy="50" rx="' + shapeUnit52(17) + '" ry="' + shapeUnit52(17) + '"' +
+      return '<ellipse' + cls + ' cx="50" cy="50" rx="' + (u(17) * sx) + '" ry="' + (u(17) * sy) + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_TRIANGLE') {
-      return '<polygon' + cls + ' points="' + shapeUnit52(26) + ',' + shapeUnit52(10) + ' ' +
-        shapeUnit52(42) + ',' + shapeUnit52(40) + ' ' +
-        shapeUnit52(10) + ',' + shapeUnit52(40) + '"' +
+      var apexY = 50 - h / 2;
+      var baseY = 50 + h / 2;
+      return '<polygon' + cls + ' points="50,' + apexY + ' ' +
+        (50 + w / 2) + ',' + baseY + ' ' +
+        (50 - w / 2) + ',' + baseY + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
         ' stroke-linejoin="round"' + sr + '/>';
     }
     if (kind === 'SHAPE_ARROW') {
+      var headW = u(14);
+      var right = 50 + w / 2;
+      var left = 50 - w / 2;
+      var headBase = right - headW;
+      var halfH = h / 2;
+      var shaftHalf = Math.min(u(6), halfH * 0.5);
       return '<polygon' + cls + ' points="' +
-        shapeUnit52(6) + ',' + shapeUnit52(20) + ' ' +
-        shapeUnit52(34) + ',' + shapeUnit52(20) + ' ' +
-        shapeUnit52(34) + ',' + shapeUnit52(14) + ' ' +
-        shapeUnit52(48) + ',' + shapeUnit52(26) + ' ' +
-        shapeUnit52(34) + ',' + shapeUnit52(38) + ' ' +
-        shapeUnit52(34) + ',' + shapeUnit52(32) + ' ' +
-        shapeUnit52(6) + ',' + shapeUnit52(32) + '"' +
+        left + ',' + (50 - shaftHalf) + ' ' +
+        headBase + ',' + (50 - shaftHalf) + ' ' +
+        headBase + ',' + (50 - halfH) + ' ' +
+        right + ',50 ' +
+        headBase + ',' + (50 + halfH) + ' ' +
+        headBase + ',' + (50 + shaftHalf) + ' ' +
+        left + ',' + (50 + shaftHalf) + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
         ' stroke-linejoin="round"' + sr + '/>';
     }
     if (kind === 'SHAPE_DONUT') {
+      var orx = u(20) * sx;
+      var ory = u(20) * sy;
+      var irx = u(8) * sx;
+      var iry = u(8) * sy;
       return '<path' + cls + ' fill-rule="evenodd"' +
-        ' d="M50,' + shapeUnit52(6) + ' A' + shapeUnit52(20) + ',' + shapeUnit52(20) +
-        ' 0 1,1 49.6,' + shapeUnit52(6) + ' Z M50,' + shapeUnit52(18) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
-        ' 0 1,0 50,' + shapeUnit52(34) + ' A' + shapeUnit52(8) + ',' + shapeUnit52(8) +
-        ' 0 1,0 50,' + shapeUnit52(18) + ' Z"' +
+        ' d="M50,' + (50 - ory) + ' A' + orx + ',' + ory +
+        ' 0 1,1 49.99,' + (50 - ory) + ' Z M50,' + (50 - iry) + ' A' + irx + ',' + iry +
+        ' 0 1,0 50,' + (50 + iry) + ' A' + irx + ',' + iry +
+        ' 0 1,0 50,' + (50 - iry) + ' Z"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_CAPSULE') {
-      return '<rect' + cls + ' x="' + shapeUnit52(8) + '" y="' + shapeUnit52(18) + '"' +
-        ' width="' + shapeUnit52(36) + '" height="' + shapeUnit52(16) + '"' +
-        ' rx="' + shapeUnit52(8) + '"' +
+      var capRx = u(8);
+      var rx = Math.min(capRx, w / 2, h / 2);
+      return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
+        ' width="' + w + '" height="' + h + '"' +
+        ' rx="' + rx + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_ROUND_RECT') {
-      var rxPct = Math.max(0, Math.min(50, (brR / 12) * shapeUnit52(9)));
-      return '<rect' + cls + ' x="' + shapeUnit52(11) + '" y="' + shapeUnit52(11) + '"' +
-        ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(30) + '"' +
-        ' rx="' + rxPct + '"' +
+      var rxFixed = Math.max(0, Math.min(50, (brR / 12) * u(9)));
+      var rr = Math.min(rxFixed, w / 2, h / 2);
+      return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
+        ' width="' + w + '" height="' + h + '"' +
+        ' rx="' + rr + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
-    /* SHAPE_RECT default */
-    return '<rect' + cls + ' x="' + shapeUnit52(11) + '" y="' + shapeUnit52(14) + '"' +
-      ' width="' + shapeUnit52(30) + '" height="' + shapeUnit52(24) + '"' +
-      ' rx="' + shapeUnit52(2) + '"' +
+    /* SHAPE_RECT — small fixed corner radius, body stretches */
+    var rectRx = Math.min(u(2), w / 2, h / 2);
+    return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
+      ' width="' + w + '" height="' + h + '"' +
+      ' rx="' + rectRx + '"' +
       ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
   }
 
@@ -407,11 +462,14 @@ var ExperienciaEngine = (function () {
     var open = '<svg' + svgClass + inlineStyle + ' viewBox="0 0 100 100" preserveAspectRatio="' + par + '"' +
       ' aria-hidden="true" focusable="false">';
     var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
+    var stOpts = shapeStretchXY(opts);
     var paintBase = {
       fill: fill,
       stroke: stroke,
       strokeWidth: sw,
-      borderRadius: brR
+      borderRadius: brR,
+      stretchX: stOpts.sx,
+      stretchY: stOpts.sy
     };
     var html = open;
     if (opts.strokeGlowLayer) {
@@ -423,6 +481,8 @@ var ExperienciaEngine = (function () {
         stroke: stroke,
         strokeWidth: sw + 2,
         borderRadius: brR,
+        stretchX: stOpts.sx,
+        stretchY: stOpts.sy,
         className: 'builder-exp-stage-shape__stroke-glow'
       });
     } else {
@@ -1374,6 +1434,10 @@ var ExperienciaEngine = (function () {
         else if (t === 'SHAPE_ROUND_RECT') ix.borderRadius = 16;
         else ix.borderRadius = 0;
       }
+      if (ix.shapeStretchX == null || isNaN(Number(ix.shapeStretchX))) ix.shapeStretchX = 1;
+      else ix.shapeStretchX = Math.max(0.06, Math.min(8, Number(ix.shapeStretchX)));
+      if (ix.shapeStretchY == null || isNaN(Number(ix.shapeStretchY))) ix.shapeStretchY = 1;
+      else ix.shapeStretchY = Math.max(0.06, Math.min(8, Number(ix.shapeStretchY)));
       if (ix.locked == null) ix.locked = false;
       else ix.locked = !!ix.locked;
     }
@@ -1645,6 +1709,8 @@ var ExperienciaEngine = (function () {
       stroke: ix.stroke || null,
       strokeWidth: ix.strokeWidth != null ? Number(ix.strokeWidth) : null,
       borderRadius: ix.borderRadius != null ? Number(ix.borderRadius) : null,
+      shapeStretchX: ix.shapeStretchX != null ? Number(ix.shapeStretchX) : 1,
+      shapeStretchY: ix.shapeStretchY != null ? Number(ix.shapeStretchY) : 1,
       fontSize: ix.fontSize != null ? Number(ix.fontSize) : null,
       fontSizeUnit: ix.fontSizeUnit === '%' ? '%' : 'px',
       color: ix.color || null,
@@ -2066,6 +2132,12 @@ var ExperienciaEngine = (function () {
       if (patch.borderRadius != null && (t === 'SHAPE_RECT' || t === 'SHAPE_ROUND_RECT')) {
         ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
       }
+      if (patch.shapeStretchX != null) {
+        ix.shapeStretchX = Math.max(0.06, Math.min(8, Number(patch.shapeStretchX) || 1));
+      }
+      if (patch.shapeStretchY != null) {
+        ix.shapeStretchY = Math.max(0.06, Math.min(8, Number(patch.shapeStretchY) || 1));
+      }
       if (patch.locked != null) ix.locked = !!patch.locked;
       ix.positionMode = 'free';
     }
@@ -2172,6 +2244,8 @@ var ExperienciaEngine = (function () {
     copy.stroke = ix.stroke;
     copy.strokeWidth = ix.strokeWidth;
     copy.borderRadius = ix.borderRadius;
+    copy.shapeStretchX = ix.shapeStretchX;
+    copy.shapeStretchY = ix.shapeStretchY;
     if (exact) {
       copy.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
       copy.label = ix.label != null ? String(ix.label) : '';
@@ -7076,6 +7150,7 @@ var ExperienciaEngine = (function () {
     sceneShapeDefaultSize: sceneShapeDefaultSize,
     sceneShapeDisplaySize: sceneShapeDisplaySize,
     shapeContentBBox: shapeContentBBox,
+    shapeStretchFromIx: shapeStretchFromIx,
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,
     sceneShapeTileCenterFromGizmoCenter: sceneShapeTileCenterFromGizmoCenter,
