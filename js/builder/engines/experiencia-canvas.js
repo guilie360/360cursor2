@@ -4585,7 +4585,7 @@ var ExperienciaCanvas = (function () {
     }
 
     /** Paint shape tile + gizmo from engine metrics (tile center ≠ gizmo center). */
-    function paintShapeLiveMetrics(buttonId, kind, tileCtr, tileDisp, gm, layerW, layerH) {
+    function paintShapeLiveMetrics(buttonId, kind, tileCtr, tileDisp, gm, layerW, layerH, liveRefs) {
       if (!buttonsLayer || !buttonId || !tileCtr || !tileDisp || !gm) return;
       kind = String(kind || '').toUpperCase();
       var idSel = String(buttonId).replace(/"/g, '');
@@ -4597,23 +4597,24 @@ var ExperienciaCanvas = (function () {
       var gizmoCyPx = (gm.gy / 100) * layerH;
       var gizmoWPx = (gm.gw / 100) * layerW;
       var gizmoHPx = (gm.gh / 100) * layerH;
-      var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
+      var el = (liveRefs && liveRefs.el) ||
+        buttonsLayer.querySelector('[data-exp-stage-btn="' + idSel + '"]');
       if (el) {
         el.style.left = tileCxPx + 'px';
         el.style.top = tileCyPx + 'px';
         el.style.width = tileWPx + 'px';
         el.style.height = tileHPx + 'px';
       }
-      var gizmo = buttonsLayer.querySelector(
-        '[data-exp-gizmo][data-gizmo-id="' + idSel + '"]'
-      );
+      var gizmo = (liveRefs && liveRefs.gizmo) ||
+        buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idSel + '"]');
       if (gizmo) {
         gizmo.style.left = gizmoCxPx + 'px';
         gizmo.style.top = gizmoCyPx + 'px';
         gizmo.style.width = gizmoWPx + 'px';
         gizmo.style.height = gizmoHPx + 'px';
         gizmo.classList.add('is-sizing');
-        var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+        var sizeEl = (liveRefs && liveRefs.sizeEl) ||
+          gizmo.querySelector('[data-exp-sel-size]');
         if (sizeEl) {
           var label = kind === 'SHAPE_LINE'
             ? Math.max(1, Math.round(gizmoWPx)) + ' px'
@@ -6620,6 +6621,29 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    /** Frozen at pointerdown — avoid getBoundingClientRect() during live resize (layout feedback lag). */
+    function overlayPointerLayerCache() {
+      var layer = buttonsLayer || buttonsFrame;
+      if (!layer) return null;
+      var rect = layer.getBoundingClientRect();
+      return {
+        left: rect.left,
+        top: rect.top,
+        rectW: Math.max(1, rect.width),
+        rectH: Math.max(1, rect.height),
+        layerW: Math.max(1, layer.clientWidth || rect.width),
+        layerH: Math.max(1, layer.clientHeight || rect.height)
+      };
+    }
+
+    function clientToOverlayLocalPxCached(clientX, clientY, cache) {
+      if (!cache) return clientToOverlayLocalPx(clientX, clientY);
+      return {
+        x: ((clientX - cache.left) / cache.rectW) * cache.layerW,
+        y: ((clientY - cache.top) / cache.rectH) * cache.layerH
+      };
+    }
+
     function updateOverlayMarqueeVisual() {
       if (!overlayMarqueeEl || !overlayMarquee || !buttonsLayer) {
         if (overlayMarqueeEl) overlayMarqueeEl.hidden = true;
@@ -7227,20 +7251,25 @@ var ExperienciaCanvas = (function () {
               ev.clientY - transformDrag.clientStartY
             );
             var shapeLiveResize = isShapeType(transformDrag.type);
-            if (resizeDistPx < (shapeLiveResize ? 2 : OVERLAY_DRAG_THRESHOLD_PX)) return;
+            if (!shapeLiveResize && resizeDistPx < OVERLAY_DRAG_THRESHOLD_PX) return;
             if (!transformDrag.historyPushed) {
-              dragDebugLog('transformDrag resize start', {
-                buttonId: transformDrag.buttonId,
-                type: transformDrag.type,
-                mode: mode
-              });
-              pushButtonHistory(transformDrag.sceneId);
-              transformDrag.historyPushed = true;
+              if (!shapeLiveResize || resizeDistPx >= 1) {
+                dragDebugLog('transformDrag resize start', {
+                  buttonId: transformDrag.buttonId,
+                  type: transformDrag.type,
+                  mode: mode
+                });
+                pushButtonHistory(transformDrag.sceneId);
+                transformDrag.historyPushed = true;
+              } else {
+                return;
+              }
             }
-            /* Layer-local px — avoids rounded % and CSS scale desync. */
-            var layerW = Math.max(1, buttonsLayer.clientWidth || transformDrag.layerW || 1000);
-            var layerH = Math.max(1, buttonsLayer.clientHeight || transformDrag.layerH || 1000);
-            var ptrLocal = clientToOverlayLocalPx(ev.clientX, ev.clientY);
+            var layerW = transformDrag.layerW || Math.max(1, buttonsLayer.clientWidth || 1000);
+            var layerH = transformDrag.layerH || Math.max(1, buttonsLayer.clientHeight || 1000);
+            var ptrLocal = clientToOverlayLocalPxCached(
+              ev.clientX, ev.clientY, transformDrag.ptrCache
+            );
             var dxPx = ptrLocal.x - transformDrag.startPtrX;
             var dyPx = ptrLocal.y - transformDrag.startPtrY;
             var moveE = mode.indexOf('e') >= 0;
@@ -7261,11 +7290,10 @@ var ExperienciaCanvas = (function () {
                   shapeLive.tileDisp,
                   shapeLive.gm,
                   layerW,
-                  layerH
+                  layerH,
+                  transformDrag.liveRefs
                 );
               }
-              transformDrag.guides = { spacing: [] };
-              syncLiveOverlayGuides(transformDrag.guides);
               return;
             }
 
@@ -7689,6 +7717,21 @@ var ExperienciaCanvas = (function () {
           var layerW0 = buttonsLayer.clientWidth || 1000;
           var layerH0 = buttonsLayer.clientHeight || 1000;
           var ptr0 = clientToOverlayLocalPx(ev.clientX, ev.clientY);
+          var ptrCache = overlayPointerLayerCache();
+          if (ptrCache) {
+            ptr0 = clientToOverlayLocalPxCached(ev.clientX, ev.clientY, ptrCache);
+          }
+          var liveRefs = null;
+          if (isShapeType(gtype)) {
+            var idEsc = String(gid).replace(/"/g, '');
+            var gizmoEl = gizmo;
+            liveRefs = {
+              el: buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]'),
+              gizmo: gizmoEl,
+              sizeEl: gizmoEl ? gizmoEl.querySelector('[data-exp-sel-size]') : null
+            };
+            if (liveRefs.el) liveRefs.el.classList.add('is-live-sizing');
+          }
           var shapeDragDef = isShapeType(gtype) ? shapeDefaultSize(gtype) : null;
           var startW0;
           var startH0;
@@ -7760,6 +7803,8 @@ var ExperienciaCanvas = (function () {
             startPy: pct0.y,
             startPtrX: ptr0.x,
             startPtrY: ptr0.y,
+            ptrCache: ptrCache,
+            liveRefs: liveRefs,
             startTileW: isShapeType(gtype)
               ? (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12))
               : null,
@@ -8057,6 +8102,9 @@ var ExperienciaCanvas = (function () {
           try {
             var gizmoEnd = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
             if (gizmoEnd) gizmoEnd.classList.remove('is-sizing');
+            var liveShapeEl = buttonsLayer &&
+              buttonsLayer.querySelector('.builder-exp-stage-shape.is-live-sizing');
+            if (liveShapeEl) liveShapeEl.classList.remove('is-live-sizing');
           } catch (eGz) { /* ignore */ }
           /* Deep-edit: never sync/recenter group bounds on child transform release. */
           paintButtonsStage();
