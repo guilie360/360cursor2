@@ -7905,37 +7905,73 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
-    /** Hit-test stage overlays — SVG visiblePainted geometry, topmost in z-order (Figma-style). */
-    function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
-      opts = opts || {};
-      if (!buttonsLayer) return null;
-      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
-      var peRestore = [];
-      var gi;
-      if (!opts.includeGizmos) {
-        for (gi = 0; gi < gizmos.length; gi++) {
-          peRestore.push(gizmos[gi].style.pointerEvents);
-          gizmos[gi].style.pointerEvents = 'none';
-        }
+    function overlayPickPctFromClient(clientX, clientY) {
+      var el = buttonsLayer || buttonsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      return {
+        x: ((clientX - rect.left) / Math.max(1, rect.width)) * 100,
+        y: ((clientY - rect.top) / Math.max(1, rect.height)) * 100
+      };
+    }
+
+    function overlayShapeSilhouetteHit(vm, pxPct, pyPct, layerW, layerH) {
+      if (!vm || !ExperienciaEngine.shapeSilhouetteHitTest) return false;
+      var box = getShapeBox(vm, layerW, layerH);
+      if (!box) return false;
+      var ix = vm._ix || vm;
+      return ExperienciaEngine.shapeSilhouetteHitTest(
+        ix, pxPct, pyPct,
+        { cx: box.cx, cy: box.cy, w: box.w, h: box.h, rot: box.rot },
+        layerW, layerH
+      );
+    }
+
+    function overlayRectSelectionHit(vm, pxPct, pyPct, layerW, layerH) {
+      if (!vm) return false;
+      var m = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!m) return false;
+      if (ExperienciaEngine.pointInRotatedRectPct) {
+        return ExperienciaEngine.pointInRotatedRectPct(
+          pxPct, pyPct, m.gx, m.gy, m.gw, m.gh, m.grot, layerW, layerH
+        );
       }
-      var stack;
-      try {
-        stack = document.elementsFromPoint(clientX, clientY);
-      } catch (eStack) {
-        stack = [];
-      }
-      if (!opts.includeGizmos) {
-        for (gi = 0; gi < gizmos.length; gi++) {
-          gizmos[gi].style.pointerEvents = peRestore[gi] || '';
-        }
-      }
-      if (!stack || !stack.length) return null;
-      for (var si = 0; si < stack.length; si++) {
-        var el = stack[si];
-        if (!el || !buttonsLayer.contains(el)) continue;
-        if (!opts.includeGizmos && el.closest && el.closest('[data-exp-gizmo]')) continue;
-        var btn = el.closest && el.closest('[data-exp-stage-btn]');
-        if (btn) return btn;
+      var bL = m.gx - m.gw / 2;
+      var bR = m.gx + m.gw / 2;
+      var bT = m.gy - m.gh / 2;
+      var bB = m.gy + m.gh / 2;
+      return pxPct >= bL && pxPct <= bR && pyPct >= bT && pyPct <= bB;
+    }
+
+    function overlayPickPassesEditFilter(sceneId, vm) {
+      if (!vm) return false;
+      var editGroupId = canvas().activeOverlayGroupEditId;
+      if (!editGroupId) return true;
+      var gid = String(editGroupId);
+      if (isOverlayGroupId(sceneId, vm.id)) return String(vm.id) === gid;
+      return String(vm.groupId || '') === gid;
+    }
+
+    /** Silhouette hit-test — topmost overlay in z-order; shapes use geometry, not bbox. */
+    function pickOverlayStageBtnFromPoint(clientX, clientY, sceneId) {
+      if (!buttonsLayer || !sceneId) return null;
+      var pct = overlayPickPctFromClient(clientX, clientY);
+      var sz = overlayLayerSize();
+      var layerW = sz.w;
+      var layerH = sz.h;
+      var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn]');
+      for (var i = nodes.length - 1; i >= 0; i--) {
+        var el = nodes[i];
+        var id = el.getAttribute('data-exp-stage-btn');
+        if (!id) continue;
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm || vm.locked || vm.visible === false) continue;
+        if (!overlayPickPassesEditFilter(sceneId, vm)) continue;
+        var t = String(vm.type || 'BUTTON').toUpperCase();
+        var hit = isShapeType(t)
+          ? overlayShapeSilhouetteHit(vm, pct.x, pct.y, layerW, layerH)
+          : overlayRectSelectionHit(vm, pct.x, pct.y, layerW, layerH);
+        if (hit) return el;
       }
       return null;
     }
@@ -7943,7 +7979,7 @@ var ExperienciaCanvas = (function () {
     /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */
     function pickGroupedChildAtClient(clientX, clientY, sceneId, groupId) {
       if (!buttonsLayer || !sceneId || !groupId) return null;
-      var hit = pickOverlayStageBtnFromPoint(clientX, clientY);
+      var hit = pickOverlayStageBtnFromPoint(clientX, clientY, sceneId);
       if (!hit) return null;
       var bid = hit.getAttribute('data-exp-stage-btn');
       var grouped = resolveGroupedOverlayHit(sceneId, bid);
@@ -7953,7 +7989,7 @@ var ExperienciaCanvas = (function () {
 
     function resolveGroupedChildFromEvent(ev, sceneId) {
       if (!ev || !sceneId || !buttonsLayer) return null;
-      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
+      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY, sceneId);
       if (hit) {
         var bid = hit.getAttribute('data-exp-stage-btn');
         return resolveGroupedOverlayHit(sceneId, bid);
@@ -10066,7 +10102,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
 
-        var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
+      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY, canvas().selectedId);
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
           if (canvas().activeOverlayGroupEditId) {
