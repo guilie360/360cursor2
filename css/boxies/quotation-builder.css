@@ -511,6 +511,33 @@
   background: #111111 !important;
 }
 
+.qe-editor.is-backpack-mode .qr-scene-media,
+.qe-editor.is-backpack-mode .hero-renderer,
+.qe-editor.is-backpack-mode [data-hero-canvas-media],
+.qe-editor.is-backpack-mode .hero-canvas__media {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Deposit mode — only the backpack toggle stays on the canvas chrome */
+.qe-editor.is-backpack-mode .qe-canvas-chrome-top,
+.qe-editor.is-backpack-mode .qe-dock,
+.qe-editor.is-backpack-mode [data-qe-dock-bar],
+.qe-editor.is-backpack-mode .qe-scenes-host,
+.qe-editor.is-backpack-mode .qe-guides-chrome,
+.qe-editor.is-backpack-mode .qe-canvas-tools-host {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.qe-editor.is-backpack-mode .qe-backpack-fab {
+  display: inline-flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
 .qe-canvas-tool {
   appearance: none;
   display: inline-flex;

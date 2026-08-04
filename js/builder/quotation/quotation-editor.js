@@ -3638,6 +3638,9 @@ var QuotationEditor = (function () {
     if (expOverlay && typeof expOverlay.pull === 'function') {
       try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
     }
+    if (typeof QuotationCanvasTools !== 'undefined' && QuotationCanvasTools.close) {
+      try { QuotationCanvasTools.close(); } catch (eTools) { /* ignore */ }
+    }
     state.backpackReturnSceneId = state.activeSceneId;
     state.backpackMode = true;
     destroyBuilderRuntimeScene();
@@ -4325,7 +4328,7 @@ var QuotationEditor = (function () {
     var host = rootEl.querySelector('[data-qe-viewport-window]');
     if (!host) return;
 
-    var scene = activeScene();
+    var scene = state.backpackMode ? getBackpackSceneRef() : activeScene();
     if (scene) ensureSceneOverlays(scene);
 
     var prevCam = null;

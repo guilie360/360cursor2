@@ -197,6 +197,9 @@ var QuotationRuntime = (function () {
       console.log('[QR V7.2.41] resolveSceneMedia → null: scene es null/undefined');
       return null;
     }
+    if (scene.type === 'backpack' || scene.id === '__qe_backpack__') {
+      return null;
+    }
     var url = scene.mediaUrl || scene.publicUrl || null;
     if (url && String(url).indexOf('blob:') !== 0) {
       return {
