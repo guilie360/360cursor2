@@ -550,10 +550,32 @@ var ExperienciaEngine = (function () {
     return { w: (wPx / hPx) * 100, h: 100 };
   }
 
-  /** Shapes that redraw SVG from box dims (line edge-to-edge, rect fixed corners). */
+  /** Shapes that redraw SVG from box dims (line edge-to-edge, rect fixed corners, arrow 9-slice). */
   function shapeUsesContentBoxPaint(kind) {
     kind = String(kind || '').toUpperCase();
-    return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE';
+    return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE' || kind === 'SHAPE_ARROW';
+  }
+
+  /** Arrow content-box: fixed head (ratio of height), shaft grows with box width. */
+  function shapeArrowContentBoxPoints(contentW, contentH) {
+    var cw = Math.max(0.001, Number(contentW));
+    var ch = Math.max(0.001, Number(contentH));
+    var midY = ch / 2;
+    var halfH = ch / 2;
+    /* Artboard ratios from 52-unit picker (headW=u(14), bodyH=u(24), shaft=u(6)). */
+    var headW = ch * (14 / 24);
+    var shaftHalf = Math.min(ch * (6 / 24), halfH * 0.5);
+    headW = Math.min(headW, cw * 0.85);
+    var left = 0;
+    var right = cw;
+    var headBase = Math.max(left, right - headW);
+    return left + ',' + (midY - shaftHalf) + ' ' +
+      headBase + ',' + (midY - shaftHalf) + ' ' +
+      headBase + ',' + (midY - halfH) + ' ' +
+      right + ',' + midY + ' ' +
+      headBase + ',' + (midY + halfH) + ' ' +
+      headBase + ',' + (midY + shaftHalf) + ' ' +
+      left + ',' + (midY + shaftHalf);
   }
 
   /** @deprecated use shapeUsesContentBoxPaint */
@@ -618,6 +640,12 @@ var ExperienciaEngine = (function () {
         ' stroke-linejoin="round"' + sr + '/>';
     }
     if (kind === 'SHAPE_ARROW') {
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        return '<polygon' + cls + ' points="' +
+          shapeArrowContentBoxPoints(paint.contentW, paint.contentH) + '"' +
+          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve +
+          ' stroke-linejoin="round"' + sr + '/>';
+      }
       var headW = u(14);
       var right = 50 + w / 2;
       var left = 50 - w / 2;
