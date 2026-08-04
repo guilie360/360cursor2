@@ -14,6 +14,57 @@ var ExperienciaCanvas = (function () {
     return true;
   }
 
+  /** Temporary — 7-stage resize trace (?shapeTrace=1 or shapeDebug on). */
+  function shapeResizeTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_SHAPE_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('shapeTrace') === '0') return false;
+      if (q.get('shapeTrace') === '1') return true;
+    } catch (eTr) { /* ignore */ }
+    return shapeResizeDebugEnabled();
+  }
+
+  function shapeModelFields(src) {
+    if (!src) return null;
+    var ix = src._ix || src;
+    return {
+      width: ix.width != null ? Number(ix.width) : (src.width != null ? Number(src.width) : null),
+      height: ix.height != null ? Number(ix.height) : (src.height != null ? Number(src.height) : null),
+      x: ix.x != null ? Number(ix.x) : (src.storedX != null ? Number(src.storedX) : Number(src.x)),
+      y: ix.y != null ? Number(ix.y) : (src.storedY != null ? Number(src.storedY) : Number(src.y)),
+      scaleX: ix.shapeStretchX != null ? Number(ix.shapeStretchX)
+        : (src.shapeStretchX != null ? Number(src.shapeStretchX) : 1),
+      scaleY: ix.shapeStretchY != null ? Number(ix.shapeStretchY)
+        : (src.shapeStretchY != null ? Number(src.shapeStretchY) : 1),
+      shapeContentBox: !!(ix.shapeContentBox || src.shapeContentBox)
+    };
+  }
+
+  function patchModelFields(patch) {
+    if (!patch) return null;
+    return {
+      width: patch.width != null ? Number(patch.width) : null,
+      height: patch.height != null ? Number(patch.height) : null,
+      x: patch.x != null ? Number(patch.x) : null,
+      y: patch.y != null ? Number(patch.y) : null,
+      scaleX: patch.shapeStretchX != null ? Number(patch.shapeStretchX) : null,
+      scaleY: patch.shapeStretchY != null ? Number(patch.shapeStretchY) : null,
+      shapeContentBox: patch.shapeContentBox != null ? !!patch.shapeContentBox : null
+    };
+  }
+
+  function shapeResizeTrace(stage, payload) {
+    if (!shapeResizeTraceEnabled()) return;
+    console.log(
+      '%c[SHAPE-TRACE] ' + stage,
+      'color:#ff9900;font-weight:bold;font-size:12px',
+      payload || {}
+    );
+  }
+
+  var _shapeResizeTraceCtx = null;
+
   /** Quotation sandbox — ShapeBox v2 POC (Fases 1–3). */
   var EDITOR_PROJECT_ID = '5a70961a-a97a-4082-abd2-33a633b779e8';
   var _shapeBoxV2Active = false;
@@ -3208,11 +3259,34 @@ var ExperienciaCanvas = (function () {
     }
 
     function persist() {
+      if (_shapeResizeTraceCtx && shapeResizeTraceEnabled()) {
+        shapeResizeTrace('5b.model-after-persist()', {
+          btnId: _shapeResizeTraceCtx.btnId,
+          sceneId: _shapeResizeTraceCtx.sceneId,
+          model: readShapeTraceModel(_shapeResizeTraceCtx.sceneId, _shapeResizeTraceCtx.btnId)
+        });
+      }
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state);
       }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
+    }
+
+    function readShapeTraceModel(sceneId, btnId) {
+      if (!sceneId || !btnId) return null;
+      var vm = getOverlayItemVm(sceneId, btnId);
+      if (vm) return shapeModelFields(vm);
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction && ExperienciaEngine.getInteraction(n, btnId);
+      return shapeModelFields(ix);
+    }
+
+    function readShapeTraceIxRaw(sceneId, btnId) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n || !ExperienciaEngine.getInteraction) return null;
+      var ix = ExperienciaEngine.getInteraction(n, btnId);
+      return ix ? shapeModelFields(ix) : null;
     }
 
     function notifyOverlaySelection() {
@@ -5772,6 +5846,16 @@ var ExperienciaCanvas = (function () {
 
     function paintButtonsStage() {
       if (!buttonsStage || !buttonsLayer || !buttonsImg) return;
+      var traceCtx = _shapeResizeTraceCtx;
+      if (traceCtx && shapeResizeTraceEnabled()) {
+        shapeResizeTrace('6.model-before-repaint(paintButtonsStage)', {
+          btnId: traceCtx.btnId,
+          sceneId: traceCtx.sceneId,
+          path: 'paintButtonsStage',
+          modelVm: readShapeTraceModel(traceCtx.sceneId, traceCtx.btnId),
+          modelIx: readShapeTraceIxRaw(traceCtx.sceneId, traceCtx.btnId)
+        });
+      }
       /* V7.2.64 — paint free overlays whenever overlay is mounted (not mode-gated). */
       if (!overlayMode && canvas().editMode !== 'buttons') return;
       if (textEditEl && document.activeElement === textEditEl) return;
@@ -6003,6 +6087,16 @@ var ExperienciaCanvas = (function () {
         });
       }
       requestAnimationFrame(syncButtonsLayerBounds);
+      if (traceCtx && shapeResizeTraceEnabled()) {
+        shapeResizeTrace('7.model-after-repaint(paintButtonsStage)', {
+          btnId: traceCtx.btnId,
+          sceneId: traceCtx.sceneId,
+          path: 'paintButtonsStage',
+          modelVm: readShapeTraceModel(traceCtx.sceneId, traceCtx.btnId),
+          modelIx: readShapeTraceIxRaw(traceCtx.sceneId, traceCtx.btnId)
+        });
+        _shapeResizeTraceCtx = null;
+      }
       if (shapeResizeDebugEnabled() && !buttonDrag && !transformDrag) {
         var debugIds = selIds.slice();
         var debugPhase = debugIds.length ? 'selection/paint' : 'paint/unselected';
@@ -6056,6 +6150,30 @@ var ExperienciaCanvas = (function () {
     /** Sync one shape node from model — no innerHTML remount (Genially-style stable box). */
     function syncOverlayShapeFromModel(sceneId, buttonId) {
       if (!buttonsLayer || !sceneId || !buttonId) return false;
+      var traceSync = _shapeResizeTraceCtx &&
+        String(_shapeResizeTraceCtx.btnId) === String(buttonId) &&
+        String(_shapeResizeTraceCtx.sceneId) === String(sceneId);
+      if (traceSync && shapeResizeTraceEnabled()) {
+        shapeResizeTrace('6.model-before-repaint(syncOverlayShapeFromModel)', {
+          btnId: buttonId,
+          sceneId: sceneId,
+          path: 'syncOverlayShapeFromModel',
+          modelVm: readShapeTraceModel(sceneId, buttonId),
+          modelIx: readShapeTraceIxRaw(sceneId, buttonId)
+        });
+      }
+      function traceSyncAfterRepaint(boxUsed) {
+        if (!traceSync || !shapeResizeTraceEnabled()) return;
+        shapeResizeTrace('7.model-after-repaint(syncOverlayShapeFromModel)', {
+          btnId: buttonId,
+          sceneId: sceneId,
+          path: 'syncOverlayShapeFromModel',
+          boxUsed: boxUsed || null,
+          modelVm: readShapeTraceModel(sceneId, buttonId),
+          modelIx: readShapeTraceIxRaw(sceneId, buttonId)
+        });
+        _shapeResizeTraceCtx = null;
+      }
       var vm = getOverlayItemVm(sceneId, buttonId);
       if (!vm || !isShapeType(vm.type)) return false;
       var layerW = overlayLayerSize().w;
@@ -6067,6 +6185,10 @@ var ExperienciaCanvas = (function () {
         var boxSync = getShapeBox(vm, layerW, layerH);
         if (!boxSync) return false;
         paintShapeNodeEl(el, boxSync, vm, layerW, layerH);
+        traceSyncAfterRepaint({
+          cx: boxSync.cx, cy: boxSync.cy, w: boxSync.w, h: boxSync.h,
+          scaleX: vm.shapeStretchX, scaleY: vm.shapeStretchY
+        });
         return true;
       }
       var paint = shapeStagePaintMetrics(vm, layerW, layerH);
@@ -6094,6 +6216,10 @@ var ExperienciaCanvas = (function () {
           borderRadius: vm.borderRadius
         }, vm.shapeStretchX, vm.shapeStretchY);
       }
+      traceSyncAfterRepaint({
+        cx: paint.x, cy: paint.y, w: paint.w, h: paint.h,
+        scaleX: vm.shapeStretchX, scaleY: vm.shapeStretchY
+      });
       return true;
     }
 
@@ -9091,6 +9217,20 @@ var ExperienciaCanvas = (function () {
             historyPushed: false,
             live: true
           };
+          if (isShapeType(gtype) && handleMode !== 'rotate' && shapeResizeTraceEnabled()) {
+            shapeResizeTrace('1.startBox(transformstart)', {
+              btnId: gid,
+              sceneId: sceneIdG,
+              type: gtype,
+              startBox: transformDrag.startBox,
+              modelVm: shapeModelFields(btnG),
+              modelIx: readShapeTraceIxRaw(sceneIdG, gid),
+              stretch: {
+                scaleX: transformDrag.startStretchX,
+                scaleY: transformDrag.startStretchY
+              }
+            });
+          }
           if (handleMode !== 'rotate') {
             try { gizmo.classList.add('is-sizing'); } catch (eSz) { /* ignore */ }
           }
@@ -9305,11 +9445,12 @@ var ExperienciaCanvas = (function () {
           transformDrag = null;
           unbindOverlayPointerDocs();
           var liveShapePatch = dragShapePatch;
+          var finLive = null;
           if (endedDrag && isShapeType(endType) && !wasRotate) {
             flushShapeResizeFrame(endedDrag);
             var endDx = endedDrag.lastShapeDx != null ? endedDrag.lastShapeDx : (endedDrag.lastDxPx || 0);
             var endDy = endedDrag.lastShapeDy != null ? endedDrag.lastShapeDy : (endedDrag.lastDyPx || 0);
-            var finLive = computeShapeResizeLive(
+            finLive = computeShapeResizeLive(
               endedDrag,
               endDx,
               endDy,
@@ -9323,6 +9464,31 @@ var ExperienciaCanvas = (function () {
               finLive && finLive.patch,
               dragShapePatch || endedDrag.liveShapePatch
             );
+            if (shapeResizeTraceEnabled()) {
+              shapeResizeTrace('2.finalBox(transformend)', {
+                btnId: rotBtnId,
+                sceneId: endScene,
+                endDx: endDx,
+                endDy: endDy,
+                finBox: finLive && finLive.box ? {
+                  cx: finLive.box.cx,
+                  cy: finLive.box.cy,
+                  w: finLive.box.w,
+                  h: finLive.box.h,
+                  scaleX: finLive.stretchX,
+                  scaleY: finLive.stretchY
+                } : null,
+                finGm: finLive && finLive.gm ? finLive.gm : null
+              });
+              shapeResizeTrace('3.finalPatch(transformend)', {
+                btnId: rotBtnId,
+                sceneId: endScene,
+                liveShapePatch: patchModelFields(liveShapePatch),
+                dragShapePatch: patchModelFields(dragShapePatch),
+                finPatch: patchModelFields(finLive && finLive.patch),
+                startBox: endedDrag.startBox || null
+              });
+            }
           }
           if (wasRotate && !movedT) {
             rotateTapArmed = { buttonId: rotBtnId, at: Date.now() };
@@ -9342,9 +9508,40 @@ var ExperienciaCanvas = (function () {
           );
           if (!wasRotate && endScene && rotBtnId) {
             if (isShapeType(endType) && liveShapePatch && shapePatchChanged) {
+              if (shapeResizeTraceEnabled()) {
+                _shapeResizeTraceCtx = { sceneId: endScene, btnId: rotBtnId };
+                shapeResizeTrace('4.updateSceneButton(call)', {
+                  btnId: rotBtnId,
+                  sceneId: endScene,
+                  patch: patchModelFields(liveShapePatch),
+                  modelBeforeVm: readShapeTraceModel(endScene, rotBtnId),
+                  modelBeforeIx: readShapeTraceIxRaw(endScene, rotBtnId)
+                });
+              }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, liveShapePatch);
               committedShapeResize = true;
+              if (shapeResizeTraceEnabled()) {
+                shapeResizeTrace('5.model-after-updateSceneButton(return)', {
+                  btnId: rotBtnId,
+                  sceneId: endScene,
+                  modelVm: readShapeTraceModel(endScene, rotBtnId),
+                  modelIx: readShapeTraceIxRaw(endScene, rotBtnId)
+                });
+              }
               persist();
+            } else if (isShapeType(endType) && shapeResizeTraceEnabled()) {
+              shapeResizeTrace('4.updateSceneButton(SKIPPED)', {
+                btnId: rotBtnId,
+                sceneId: endScene,
+                reason: !liveShapePatch ? 'no-liveShapePatch'
+                  : !shapePatchChanged ? 'patch-unchanged-vs-startBox' : 'unknown',
+                liveShapePatch: patchModelFields(liveShapePatch),
+                shapePatchChanged: shapePatchChanged,
+                shapeResizeMoved: shapeResizeMoved,
+                movedT: movedT,
+                modelVm: readShapeTraceModel(endScene, rotBtnId),
+                modelIx: readShapeTraceIxRaw(endScene, rotBtnId)
+              });
             } else if (movedT && !isShapeType(endType)) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 commitGroupBoundsIfNeeded(endScene, rotBtnId);
@@ -9399,6 +9596,10 @@ var ExperienciaCanvas = (function () {
           } catch (eGz) { /* ignore */ }
           var shapeResizeSettled = isShapeType(endType) && rotBtnId && !wasRotate &&
             committedShapeResize;
+          if (isShapeType(endType) && rotBtnId && !wasRotate && shapeResizeTraceEnabled() &&
+              !committedShapeResize) {
+            _shapeResizeTraceCtx = { sceneId: endScene, btnId: rotBtnId };
+          }
           if (shapeResizeSettled) {
             if (!syncOverlayShapeFromModel(endScene, rotBtnId)) {
               paintButtonsStage();
@@ -11225,6 +11426,7 @@ var ExperienciaCanvas = (function () {
     shapeBoxV2Enabled: shapeBoxV2Enabled,
     isShapeBoxV2Active: isShapeBoxV2Active,
     shapeBoxV2DebugSnapshot: shapeBoxV2DebugSnapshot,
+    shapeResizeTraceEnabled: shapeResizeTraceEnabled,
     EDITOR_PROJECT_ID: EDITOR_PROJECT_ID
   };
 })();

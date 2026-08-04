@@ -18,6 +18,53 @@ var ExperienciaEngine = (function () {
   var _clipboard = null;
   var _pasteGen = 0;
 
+  /** Temporary — mirrors ExperienciaCanvas shape resize trace. */
+  function shapeResizeTraceEngineEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_SHAPE_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('shapeTrace') === '0') return false;
+      if (q.get('shapeTrace') === '1') return true;
+      if (q.get('shapeDebug') === '0') return false;
+    } catch (eTr) { return false; }
+    return true;
+  }
+
+  function shapeModelFieldsEngine(ix) {
+    if (!ix) return null;
+    return {
+      width: ix.width != null ? Number(ix.width) : null,
+      height: ix.height != null ? Number(ix.height) : null,
+      x: ix.x != null ? Number(ix.x) : null,
+      y: ix.y != null ? Number(ix.y) : null,
+      scaleX: ix.shapeStretchX != null ? Number(ix.shapeStretchX) : 1,
+      scaleY: ix.shapeStretchY != null ? Number(ix.shapeStretchY) : 1,
+      shapeContentBox: !!ix.shapeContentBox
+    };
+  }
+
+  function patchModelFieldsEngine(patch) {
+    if (!patch) return null;
+    return {
+      width: patch.width != null ? Number(patch.width) : null,
+      height: patch.height != null ? Number(patch.height) : null,
+      x: patch.x != null ? Number(patch.x) : null,
+      y: patch.y != null ? Number(patch.y) : null,
+      scaleX: patch.shapeStretchX != null ? Number(patch.shapeStretchX) : null,
+      scaleY: patch.shapeStretchY != null ? Number(patch.shapeStretchY) : null,
+      shapeContentBox: patch.shapeContentBox != null ? !!patch.shapeContentBox : null
+    };
+  }
+
+  function shapeResizeTraceEngine(stage, payload) {
+    if (!shapeResizeTraceEngineEnabled()) return;
+    console.log(
+      '%c[SHAPE-TRACE] ' + stage,
+      'color:#ff9900;font-weight:bold;font-size:12px',
+      payload || {}
+    );
+  }
+
   var FLOW_TEMPLATE_IDS = {
     simple: 'simple',
     components: 'components',
@@ -2066,7 +2113,19 @@ var ExperienciaEngine = (function () {
     if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
     patch = patch || {};
     var t = String(ix.type || 'BUTTON').toUpperCase();
+    var traceShape = isSceneShapeType(t) && shapeResizeTraceEngineEnabled() &&
+      (patch.width != null || patch.height != null || patch.x != null || patch.y != null ||
+        patch.shapeStretchX != null || patch.shapeStretchY != null);
     ensureFreeOverlayDefaults(ix);
+    if (traceShape) {
+      shapeResizeTraceEngine('4.updateSceneButton(enter)', {
+        nodeId: nodeId,
+        buttonId: buttonId,
+        type: t,
+        patch: patchModelFieldsEngine(patch),
+        modelBefore: shapeModelFieldsEngine(ix)
+      });
+    }
 
     if (patch.label != null) {
       updateInteraction(state, nodeId, ix.id, { label: String(patch.label) });
@@ -2127,6 +2186,13 @@ var ExperienciaEngine = (function () {
       if (!ix.groupId) {
         ix.positionInitialized = true;
         if (patch.keepAnchor !== true) ix.positionMode = 'free';
+      }
+      if (traceShape && (patch.x != null || patch.y != null)) {
+        shapeResizeTraceEngine('4.updateSceneButton(after-xy-fields)', {
+          nodeId: nodeId,
+          buttonId: buttonId,
+          modelAfterXy: shapeModelFieldsEngine(ix)
+        });
       }
     }
 
@@ -2284,10 +2350,31 @@ var ExperienciaEngine = (function () {
       if (patch.shapeContentBox != null) ix.shapeContentBox = !!patch.shapeContentBox;
       if (patch.locked != null) ix.locked = !!patch.locked;
       ix.positionMode = 'free';
+      if (traceShape) {
+        shapeResizeTraceEngine('4.updateSceneButton(after-shape-fields)', {
+          nodeId: nodeId,
+          buttonId: buttonId,
+          modelMid: shapeModelFieldsEngine(ix)
+        });
+      }
     }
 
     ensureFreeOverlayDefaults(ix);
+    if (traceShape) {
+      shapeResizeTraceEngine('4.updateSceneButton(after-ensureFreeOverlayDefaults)', {
+        nodeId: nodeId,
+        buttonId: buttonId,
+        modelAfterDefaults: shapeModelFieldsEngine(ix)
+      });
+    }
     syncScenePorts(n);
+    if (traceShape) {
+      shapeResizeTraceEngine('4.updateSceneButton(exit)', {
+        nodeId: nodeId,
+        buttonId: buttonId,
+        modelExit: shapeModelFieldsEngine(ix)
+      });
+    }
     return buttonViewModel(state, n, ix);
   }
 
