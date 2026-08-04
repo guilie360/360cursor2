@@ -1689,6 +1689,89 @@ var ExperienciaEngine = (function () {
     return out;
   }
 
+  /** World metrics for multi-select scale (no formal group). */
+  function snapshotOverlaySelectionWorlds(n, memberIds, layerW, layerH) {
+    var out = {};
+    if (!n || !memberIds || !memberIds.length) return out;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    memberIds.forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+      if (!world) return;
+      var rect = overlayMemberUnionRect(ix, world, layerW, layerH);
+      if (!rect) return;
+      var t = String(ix.type || 'BUTTON').toUpperCase();
+      out[String(id)] = {
+        cx: rect.cx,
+        cy: rect.cy,
+        w: rect.w,
+        h: rect.h,
+        rotation: rect.rotation,
+        type: t,
+        fontSize: ix.fontSize
+      };
+    });
+    return out;
+  }
+
+  /** Proportional scale for multi-selected overlays (Genially-style, no group entity). */
+  function scaleOverlaySelectionTransform(state, nodeId, memberIds, patch) {
+    var n = getNode(state, nodeId);
+    if (!n || !memberIds || !memberIds.length) return null;
+    patch = patch || {};
+    var layerW = Math.max(1, Number(patch.layerW) || 1000);
+    var layerH = Math.max(1, Number(patch.layerH) || 1000);
+    var baseW = Number(patch.baseWidth) || 20;
+    var baseH = Number(patch.baseHeight) || 20;
+    var newW = patch.width != null ? Number(patch.width) : baseW;
+    var newH = patch.height != null ? Number(patch.height) : baseH;
+    if (isNaN(newW) || isNaN(newH) || baseW <= 0 || baseH <= 0) return null;
+    var sx = newW / baseW;
+    var sy = newH / baseH;
+    if (patch.keepRatio) {
+      var uniform = Math.max(Math.abs(sx), Math.abs(sy));
+      sx = uniform;
+      sy = uniform;
+    }
+    var ax = Number(patch.anchorX);
+    var ay = Number(patch.anchorY);
+    var worldSnap = patch.memberWorldSnapshots;
+    if (!worldSnap || typeof worldSnap !== 'object' || isNaN(ax) || isNaN(ay)) return null;
+    memberIds.forEach(function (mid) {
+      var ix = getInteraction(n, mid);
+      var sw = worldSnap[String(mid)];
+      if (!ix || !sw || !isSceneFreeOverlayInteraction(ix)) return;
+      var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
+      var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
+      var nwM = Math.max(0.5, (Number(sw.w) || 0.5) * sx);
+      var nhM = Math.max(0.5, (Number(sw.h) || 0.5) * sy);
+      var t = String(sw.type || ix.type || 'BUTTON').toUpperCase();
+      var memberPatch = {
+        x: ncx,
+        y: ncy,
+        live: !!patch.live,
+        layerW: layerW,
+        layerH: layerH
+      };
+      if (sw.rotation != null) memberPatch.rotation = sw.rotation;
+      if (t === 'BUTTON') {
+        memberPatch.boxW = nwM;
+        memberPatch.boxH = nhM;
+      } else if (isSceneShapeType(t)) {
+        memberPatch.width = nwM;
+        memberPatch.height = nhM;
+      } else if (t === 'TEXT') {
+        var fs0 = sw.fontSize != null ? Number(sw.fontSize) : (Number(ix.fontSize) || 28);
+        var fsScale = patch.keepRatio ? sx : Math.max(Math.abs(sx), Math.abs(sy));
+        memberPatch.fontSize = Math.max(8, Math.round(fs0 * fsScale));
+      }
+      updateSceneButton(state, nodeId, mid, memberPatch);
+    });
+    return { sx: sx, sy: sy };
+  }
+
   function listOverlayGroupInteractions(n) {
     if (!n || !n.config || !Array.isArray(n.config.interactions)) return [];
     return n.config.interactions.filter(isOverlayGroupInteraction);
@@ -7681,6 +7764,8 @@ var ExperienciaEngine = (function () {
     snapshotOverlayInteractions: snapshotOverlayInteractions,
     snapshotOverlayGroupLocals: snapshotOverlayGroupLocals,
     snapshotOverlayGroupMemberWorlds: snapshotOverlayGroupMemberWorlds,
+    snapshotOverlaySelectionWorlds: snapshotOverlaySelectionWorlds,
+    scaleOverlaySelectionTransform: scaleOverlaySelectionTransform,
     updateOverlayGroupTransform: updateOverlayGroupTransform,
     getSceneOverlayItem: getSceneOverlayItem,
     buttonViewModel: buttonViewModel,

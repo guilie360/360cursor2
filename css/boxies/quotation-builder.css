@@ -4945,6 +4945,23 @@ body.quotation-canvas-first .builder-workspace,
   border-style: dashed;
   box-shadow: none;
 }
+.builder-exp-sel-gizmo.is-multi {
+  pointer-events: none;
+}
+.builder-exp-sel-gizmo.is-multi-union {
+  pointer-events: none;
+  z-index: 6;
+}
+.builder-exp-sel-gizmo.is-multi-union .builder-exp-sel-box {
+  border-color: rgba(255, 255, 255, 0.95);
+  border-width: 1.5px;
+  border-style: solid;
+  box-shadow: none;
+}
+.builder-exp-sel-gizmo.is-multi-union .builder-exp-sel-handle,
+.builder-exp-sel-gizmo.is-multi-union .builder-exp-sel-move {
+  pointer-events: auto;
+}
 
 .builder-exp-sel-gizmo.is-overlay-group {
   pointer-events: none;

@@ -1680,6 +1680,7 @@ var ExperienciaCanvas = (function () {
     var m = (opts.metrics) ? opts.metrics : overlaySelectionMetrics(btn, layerW, layerH);
     if (!m) return '';
     var multi = !!opts.multi;
+    var multiUnion = !!opts.multiUnion;
     var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     var rotCorners = ['nw', 'ne', 'se', 'sw'];
     var sizeWpx = Math.max(1, Math.round((m.gw / 100) * layerW));
@@ -1688,9 +1689,11 @@ var ExperienciaCanvas = (function () {
       ? Math.max(1, Math.round((m.gw / 100) * layerW)) + ' px'
       : (sizeWpx + ' × ' + sizeHpx);
     var isGroupGizmo = m.st === 'OVERLAY_GROUP' || m.st === 'GROUP';
+    var isMultiSelectGizmo = m.st === 'MULTI_SELECT';
     var isLineGizmo = m.st === 'SHAPE_LINE';
     var html =
       '<div class="builder-exp-sel-gizmo' + (multi ? ' is-multi' : '') +
+        (multiUnion ? ' is-multi-union' : '') +
         (isGroupGizmo ? ' is-overlay-group' : '') +
         (isLineGizmo ? ' is-line' : '') + '"' +
         ' data-exp-gizmo="1" data-gizmo-id="' + esc(btn.id) + '"' +
@@ -1713,11 +1716,13 @@ var ExperienciaCanvas = (function () {
       html += '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>';
     }
     html += '<div class="builder-exp-sel-box"></div>';
-    if (!multi) {
+    if (!multi && !isMultiSelectGizmo) {
       html += rotCorners.map(function (c) {
         return '<span class="builder-exp-sel-rot-zone" data-handle="rotate" data-rot-corner="' +
           c + '" aria-label="Rotar"></span>';
       }).join('');
+    }
+    if (!multi) {
       html += handles.map(function (h) {
         return '<span class="builder-exp-sel-handle" data-handle="' + h + '"></span>';
       }).join('');
@@ -1725,6 +1730,30 @@ var ExperienciaCanvas = (function () {
     }
     html += '</div>';
     return html;
+  }
+
+  var MULTI_SELECT_GIZMO_ID = '__multi_select__';
+
+  function buildMultiSelectionUnionGizmoHtml(union, layerW, layerH) {
+    if (!union) return '';
+    var fakeBtn = {
+      id: MULTI_SELECT_GIZMO_ID,
+      type: 'MULTI_SELECT',
+      locked: false,
+      visible: true
+    };
+    return buildOverlaySelectionGizmoHtml(fakeBtn, layerW, layerH, {
+      multi: false,
+      multiUnion: true,
+      metrics: {
+        st: 'MULTI_SELECT',
+        gx: union.cx,
+        gy: union.cy,
+        gw: union.w,
+        gh: union.h,
+        grot: 0
+      }
+    });
   }
 
   function buttonIconGlyph(icon) {
@@ -6269,6 +6298,12 @@ var ExperienciaCanvas = (function () {
             metrics: gizmoMetrics
           });
         });
+        if (multiSel) {
+          var unionG = computeMultiSelectionUnion(canvas().selectedId, selIds, layerW, layerH);
+          if (unionG) {
+            gizmoHtml += buildMultiSelectionUnionGizmoHtml(unionG, layerW, layerH);
+          }
+        }
         if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
       }
       if (selIds.length && !isShapeBoxV2Active()) {
@@ -6339,6 +6374,12 @@ var ExperienciaCanvas = (function () {
           metrics: gizmoMetrics
         });
       });
+      if (multiSel) {
+        var unionMount = computeMultiSelectionUnion(sceneId, selIds, layerW, layerH);
+        if (unionMount) {
+          gizmoHtml += buildMultiSelectionUnionGizmoHtml(unionMount, layerW, layerH);
+        }
+      }
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
       requestAnimationFrame(syncButtonsLayerBounds);
     }
@@ -7328,6 +7369,25 @@ var ExperienciaCanvas = (function () {
         ids = [String(canvas().selectedButtonId)];
       }
       return ids;
+    }
+
+    function filterMultiScaleOverlayIds(sceneId, ids) {
+      return (ids || []).map(String).filter(function (id) {
+        if (!id || id === MULTI_SELECT_GIZMO_ID) return false;
+        if (isOverlayGroupId(sceneId, id)) return false;
+        var vm = getOverlayItemVm(sceneId, id);
+        return !!(vm && !vm.locked && vm.visible !== false);
+      });
+    }
+
+    function computeMultiSelectionUnion(sceneId, ids, layerW, layerH) {
+      var scaleIds = filterMultiScaleOverlayIds(sceneId, ids);
+      if (scaleIds.length < 2) return null;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n || !ExperienciaEngine.computeOverlayUnionBounds) return null;
+      return ExperienciaEngine.computeOverlayUnionBounds(
+        n, scaleIds, layerW, layerH, { useComposed: true }
+      );
     }
 
     function overlayLayerSize() {
@@ -9062,6 +9122,39 @@ var ExperienciaCanvas = (function () {
               syncLiveOverlayGuides(transformDrag.guides);
               return;
             }
+            if (transformDrag.type === 'MULTI_SELECT' &&
+                ExperienciaEngine.scaleOverlaySelectionTransform &&
+                transformDrag.memberIds && transformDrag.memberIds.length) {
+              var anchorMulti = groupResizeAnchorPct(
+                mode,
+                transformDrag.startL,
+                transformDrag.startR,
+                transformDrag.startT,
+                transformDrag.startB,
+                transformDrag.startX,
+                transformDrag.startY
+              );
+              ExperienciaEngine.scaleOverlaySelectionTransform(
+                state, transformDrag.sceneId, transformDrag.memberIds,
+                {
+                  width: nw,
+                  height: nh,
+                  baseWidth: transformDrag.startW,
+                  baseHeight: transformDrag.startH,
+                  keepRatio: transformDrag.keepRatio,
+                  anchorX: anchorMulti.x,
+                  anchorY: anchorMulti.y,
+                  memberWorldSnapshots: transformDrag.memberWorldSnapshots,
+                  layerW: layerW,
+                  layerH: layerH,
+                  live: true
+                }
+              );
+              paintButtonsStage();
+              transformDrag.guides = { spacing: [] };
+              syncLiveOverlayGuides(transformDrag.guides);
+              return;
+            }
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
               patchT.boxH = nh;
@@ -9307,8 +9400,16 @@ var ExperienciaCanvas = (function () {
           var gid = gizmo.getAttribute('data-gizmo-id');
           var gtype = gizmo.getAttribute('data-gizmo-type') || 'BUTTON';
           var sceneIdG = canvas().selectedId;
-          var btnG = getOverlayItemVm(sceneIdG, gid);
-          if (!btnG || btnG.locked) return;
+          var btnG = null;
+          var multiScaleIds = null;
+          if (gtype === 'MULTI_SELECT') {
+            multiScaleIds = filterMultiScaleOverlayIds(sceneIdG, getSelectedOverlayIds());
+            if (multiScaleIds.length < 2) return;
+            btnG = { id: MULTI_SELECT_GIZMO_ID, type: 'MULTI_SELECT', locked: false, rotation: 0 };
+          } else {
+            btnG = getOverlayItemVm(sceneIdG, gid);
+            if (!btnG || btnG.locked) return;
+          }
           if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.commitOverlayGroupBounds) {
             commitGroupBoundsIfNeeded(sceneIdG, gid);
@@ -9355,7 +9456,19 @@ var ExperienciaCanvas = (function () {
           var startH0;
           var startX0;
           var startY0;
-          if (isShapeType(gtype)) {
+          if (gtype === 'MULTI_SELECT') {
+            var nMultiStart = ExperienciaEngine.getNode(state, sceneIdG);
+            var unionStart = nMultiStart && ExperienciaEngine.computeOverlayUnionBounds
+              ? ExperienciaEngine.computeOverlayUnionBounds(
+                nMultiStart, multiScaleIds, layerW0, layerH0, { useComposed: true }
+              )
+              : null;
+            if (!unionStart) return;
+            startW0 = unionStart.w;
+            startH0 = unionStart.h;
+            startX0 = unionStart.cx;
+            startY0 = unionStart.cy;
+          } else if (isShapeType(gtype)) {
             var idEsc = String(gid).replace(/"/g, '');
             var gizmoEl = gizmo;
             var btnStretch = shapeStretchFromBtn(btnG);
@@ -9431,7 +9544,14 @@ var ExperienciaCanvas = (function () {
           var startB0 = startY0 + startH0 / 2;
           var memberSnapshots = null;
           var memberWorldSnapshots = null;
-          if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
+          var transformMemberIds = null;
+          if (gtype === 'MULTI_SELECT' && ExperienciaEngine.snapshotOverlaySelectionWorlds) {
+            transformMemberIds = multiScaleIds.slice();
+            var nMultiSnap = ExperienciaEngine.getNode(state, sceneIdG);
+            memberWorldSnapshots = ExperienciaEngine.snapshotOverlaySelectionWorlds(
+              nMultiSnap, multiScaleIds, layerW0, layerH0
+            );
+          } else if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.snapshotOverlayGroupLocals) {
             var nG = ExperienciaEngine.getNode(state, sceneIdG);
             var gIx = ExperienciaEngine.getInteraction(nG, gid);
@@ -9464,6 +9584,7 @@ var ExperienciaCanvas = (function () {
             type: gtype,
             memberSnapshots: memberSnapshots,
             memberWorldSnapshots: memberWorldSnapshots,
+            memberIds: transformMemberIds,
             pointerId: ev.pointerId,
             clientStartX: ev.clientX,
             clientStartY: ev.clientY,
@@ -9499,7 +9620,8 @@ var ExperienciaCanvas = (function () {
               (btnG._ix && btnG._ix.shapeContentBox))),
             shapeBoxV2: shapeV2Drag,
             startBox: shapeV2Drag ? { cx: startX0, cy: startY0, w: startW0, h: startH0 } : null,
-            keepRatio: isShapeType(gtype) ? (shapeCornerHandle &&
+            keepRatio: gtype === 'MULTI_SELECT' ? !ev.shiftKey :
+              isShapeType(gtype) ? (shapeCornerHandle &&
               shapeCornerKeepRatioDefault(gtype, !!ev.shiftKey)) :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
@@ -9540,7 +9662,18 @@ var ExperienciaCanvas = (function () {
         if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
           var moveId = gizmoMove.getAttribute('data-gizmo-id');
+          var moveGtype = gizmoMove.getAttribute('data-gizmo-type') || 'BUTTON';
           var sceneIdMove = canvas().selectedId;
+          if (moveGtype === 'MULTI_SELECT' || moveId === MULTI_SELECT_GIZMO_ID) {
+            var moveIds = filterMultiScaleOverlayIds(sceneIdMove, getSelectedOverlayIds());
+            if (moveIds.length < 2) return;
+            var btnMoveMulti = getOverlayItemVm(sceneIdMove, moveIds[0]);
+            if (!btnMoveMulti) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            beginOverlayMove(ev, moveIds[0], sceneIdMove, btnMoveMulti, { groupIds: moveIds });
+            return;
+          }
           commitGroupBoundsIfNeeded(sceneIdMove, moveId);
           var btnMove = getOverlayItemVm(sceneIdMove, moveId);
           if (!btnMove) return;
@@ -9854,6 +9987,8 @@ var ExperienciaCanvas = (function () {
             } else if (movedT && !isShapeType(endType)) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 finalizeGroupResizeBounds(endScene, rotBtnId);
+              } else if (endType === 'MULTI_SELECT') {
+                /* live scale already applied to each selected overlay */
               } else {
             var endBtn = ExperienciaEngine.getSceneButton(
               state, ExperienciaEngine.getNode(state, endScene), rotBtnId
