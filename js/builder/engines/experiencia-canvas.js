@@ -838,19 +838,87 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
-  /** Unified stage paint box — always matches gizmo (tile model is storage-only). */
+  /** Visible gw×gh — tight SVG content, not square picker tile (~12%). */
+  function shapeVisibleBoundsMetrics(btn, layerW, layerH) {
+    if (!btn) return null;
+    var st = String(btn.type || 'BUTTON').toUpperCase();
+    var defW = shapeDefaultSize(st).w;
+    var w = Number(btn.width);
+    if (isNaN(w) || w <= 0) w = defW;
+    var h = btn.height != null ? Number(btn.height) : null;
+    var ix = btn._ix || btn;
+    var cx = btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50;
+    var cy = btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50;
+    var stretch = shapeStretchFromBtn(btn);
+    var grot = Number(btn.rotation) || 0;
+    var isPickerTile = Math.abs(w - defW) < 0.08 &&
+      Math.abs(stretch.sx - 1) < 0.001 &&
+      Math.abs(stretch.sy - 1) < 0.001;
+    var hasExplicitBox = !!(ix && ix.shapeContentBox && h != null && h > 0);
+
+    /* User-resized / seeded tight box — not still on default picker tile width. */
+    if (hasExplicitBox && !isPickerTile) {
+      return {
+        st: st, grot: grot,
+        gx: cx, gy: cy, gw: w, gh: h,
+        x: cx, y: cy, w: w, h: h
+      };
+    }
+
+    /* Default shape: hug visible art inside picker tile (Genially-style). */
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
+      var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
+        defW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, null,
+        { shapeContentBox: false }
+      );
+      return {
+        st: st, grot: grot,
+        gx: gm.gx, gy: gm.gy, gw: gm.gw, gh: gm.gh,
+        x: gm.gx, y: gm.gy, w: gm.gw, h: gm.gh
+      };
+    }
+
+    /* Engine helper missing — derive tight bounds from content fraction. */
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeContentFrac &&
+        ExperienciaEngine.sceneShapeDisplaySize &&
+        ExperienciaEngine.shapeTileContentOffsetPct) {
+      var tile = ExperienciaEngine.sceneShapeDisplaySize(defW, layerW, layerH);
+      var cf = ExperienciaEngine.shapeContentFrac(st, stretch.sx, stretch.sy);
+      var lw = Math.max(1, Number(layerW) || 1000);
+      var lh = Math.max(1, Number(layerH) || 1000);
+      var gwT = tile.w * cf.dispW;
+      var ghT = tile.w * cf.dispH * (lw / lh);
+      var off = ExperienciaEngine.shapeTileContentOffsetPct(
+        defW, st, layerW, layerH, stretch.sx, stretch.sy
+      );
+      return {
+        st: st, grot: grot,
+        gx: cx + off.offX, gy: cy + off.offY, gw: gwT, gh: ghT,
+        x: cx + off.offX, y: cy + off.offY, w: gwT, h: ghT
+      };
+    }
+
+    var shapeSz = shapeDisplaySize(defW, layerW, layerH);
+    return {
+      st: st, grot: grot,
+      gx: cx, gy: cy, gw: shapeSz.w, gh: shapeSz.h,
+      x: cx, y: cy, w: shapeSz.w, h: shapeSz.h
+    };
+  }
+
+  /** Unified stage paint box — always matches visible bounds (not picker tile). */
   function shapeStagePaintMetrics(btn, layerW, layerH) {
     if (!btn) return null;
-    var gm = shapeGizmoMetrics(btn, layerW, layerH);
-    if (gm) {
+    var vb = shapeVisibleBoundsMetrics(btn, layerW, layerH);
+    if (vb) {
       return {
-        x: gm.gx,
-        y: gm.gy,
-        w: gm.gw,
-        h: gm.gh,
+        x: vb.x,
+        y: vb.y,
+        w: vb.w,
+        h: vb.h,
         gizmoBox: true,
-        tileW: gm.tileW,
-        tileH: gm.tileH
+        tileW: vb.w,
+        tileH: vb.h
       };
     }
     var ps = shapePaintSize(btn, layerW, layerH);
@@ -1032,47 +1100,21 @@ var ExperienciaCanvas = (function () {
   }
 
   /**
-   * Selection gizmo only — tight visible content bounds (Genially-style).
-   * Picker tile is square (~12%); default art sits inside at ~58% — frame must hug that, not the tile.
+   * Selection gizmo — same visible bounds as stage paint (Genially-style, no tile padding).
    */
   function shapeSelectionGizmoMetrics(btn, layerW, layerH) {
-    if (!btn) return null;
-    var st = String(btn.type || 'BUTTON').toUpperCase();
-    var grot = Number(btn.rotation) || 0;
-    var defW = shapeDefaultSize(st).w;
-    var w = Number(btn.width);
-    if (isNaN(w) || w <= 0) w = defW;
-    var h = btn.height != null ? Number(btn.height) : null;
-    var ix = btn._ix || btn;
-    var isDefaultTile = Math.abs(w - defW) < 0.08;
-
-    /* After explicit resize/seed: stored gw×gh already equals visible box. */
-    if (ix && ix.shapeContentBox && h != null && h > 0 && !isDefaultTile) {
-      var gmStored = shapeGizmoMetrics(btn, layerW, layerH);
-      if (gmStored) return gmStored;
-    }
-
-    var cx = btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50;
-    var cy = btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50;
-    var tileW = isDefaultTile ? defW : w;
-    var stretch = shapeStretchFromBtn(btn);
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
-      var ixTight = ix ? Object.assign({}, ix, { shapeContentBox: false }) : { shapeContentBox: false };
-      var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
-        tileW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, btn.height, ixTight
-      );
-      return {
-        st: st,
-        gx: gm.gx,
-        gy: gm.gy,
-        gw: gm.gw,
-        gh: gm.gh,
-        grot: grot,
-        tileW: gm.tileW,
-        tileH: gm.tileH
-      };
-    }
-    return shapeGizmoMetrics(btn, layerW, layerH);
+    var vb = shapeVisibleBoundsMetrics(btn, layerW, layerH);
+    if (!vb) return null;
+    return {
+      st: vb.st,
+      gx: vb.gx,
+      gy: vb.gy,
+      gw: vb.gw,
+      gh: vb.gh,
+      grot: vb.grot,
+      tileW: vb.w,
+      tileH: vb.h
+    };
   }
 
   function overlaySelectionMetrics(btn, layerW, layerH) {
