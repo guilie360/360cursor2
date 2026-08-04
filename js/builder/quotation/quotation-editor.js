@@ -4029,10 +4029,12 @@ var QuotationEditor = (function () {
     void unit.offsetHeight;
 
     var scenesMeasureEl = scenesHost || scenes;
-    var scenesH = (scenesMeasureEl && !state.scenesCollapsed)
-      ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height) : 0;
-    var scenesMb = (scenesMeasureEl && !state.scenesCollapsed)
-      ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0) : 0;
+    var scenesH = scenesMeasureEl
+      ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height)
+      : 0;
+    var scenesMb = scenesMeasureEl
+      ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0)
+      : 0;
     var TOOL_PAD = 44;
     var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
@@ -4206,6 +4208,14 @@ var QuotationEditor = (function () {
     if (unit) unit.classList.toggle('is-scenes-collapsed', state.scenesCollapsed);
     syncScenesFoldButton();
     try { fitStageWorkspace(); } catch (eFit) {}
+    if (host && typeof host.addEventListener === 'function') {
+      var onEnd = function (ev) {
+        if (ev.propertyName !== 'max-height' && ev.propertyName !== 'margin') return;
+        host.removeEventListener('transitionend', onEnd);
+        try { fitStageWorkspace(); } catch (eFit2) { /* ignore */ }
+      };
+      host.addEventListener('transitionend', onEnd);
+    }
     try { window.dispatchEvent(new Event('resize')); } catch (eR) {}
     if (typeof QuotationBuilderView !== 'undefined' &&
         typeof QuotationBuilderView.syncChromeFoldButton === 'function') {
