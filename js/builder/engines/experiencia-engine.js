@@ -511,9 +511,34 @@ var ExperienciaEngine = (function () {
     return (Number(n) / 52) * 100;
   }
 
-  /** Fixed corner radius for SHAPE_RECT — constant in viewBox units (Genially-style). */
+  /** Picker artboard corner radius (viewBox units) — legacy tile paint. */
   function shapeRectFixedCornerRx() {
     return shapeUnit52(2);
+  }
+
+  /** Screen-pixel corner radius at default insert size (Genially-style 9-slice). */
+  function shapeRectFixedCornerPx(layerW, layerH) {
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var defW = sceneShapeDefaultSize('SHAPE_RECT').w;
+    var tilePx = (defW / 100) * lw;
+    var base = shapeContentBBoxBase('SHAPE_RECT');
+    var cf = shapeContentFrac('SHAPE_RECT', 1, 1);
+    var shapePxH = tilePx * cf.dispH;
+    return (shapeRectFixedCornerRx() / base.h) * shapePxH;
+  }
+
+  /** Map fixed px radius → viewBox rx for current box (uniform scale, aspect-matched vb). */
+  function shapeRectCornerRxViewBox(boxWPct, boxHPct, layerW, layerH, vbW, vbH) {
+    var hPx = (Number(boxHPct) / 100) * Math.max(1, Number(layerH) || 1080);
+    var vbHNum = Math.max(0.001, Number(vbH) || 100);
+    var vbWNum = Math.max(0.001, Number(vbW) || 100);
+    if (!hPx || hPx <= 0) {
+      return Math.min(shapeRectFixedCornerRx(), vbWNum / 2, vbHNum / 2);
+    }
+    var fixedPx = shapeRectFixedCornerPx(layerW, layerH);
+    var scale = hPx / vbHNum;
+    var rxVb = fixedPx / Math.max(0.001, scale);
+    return Math.min(rxVb, vbWNum / 2, vbHNum / 2);
   }
 
   /** ViewBox aspect = box pixel aspect so preserveAspectRatio none maps uniformly. */
@@ -625,11 +650,13 @@ var ExperienciaEngine = (function () {
         ' rx="' + rr + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
-    /* SHAPE_RECT — content-box paint: viewBox matches box aspect, rx stays fixed */
+    /* SHAPE_RECT — content-box paint: viewBox matches box aspect, rx fixed in px */
     if (paint.contentW > 0 && paint.contentH > 0) {
       var cw = Number(paint.contentW);
       var ch = Number(paint.contentH);
-      var rectRxFixed = Math.min(shapeRectFixedCornerRx(), cw / 2, ch / 2);
+      var rectRxFixed = paint.contentRx != null && !isNaN(Number(paint.contentRx))
+        ? Number(paint.contentRx)
+        : Math.min(shapeRectFixedCornerRx(), cw / 2, ch / 2);
       return '<rect' + cls + ' x="0" y="0"' +
         ' width="' + cw + '" height="' + ch + '"' +
         ' rx="' + rectRxFixed + '"' +
@@ -668,7 +695,14 @@ var ExperienciaEngine = (function () {
           opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH
         );
         vb = { x: 0, y: 0, w: normVb.w, h: normVb.h };
-        contentPaint = { contentW: normVb.w, contentH: normVb.h };
+        contentPaint = {
+          contentW: normVb.w,
+          contentH: normVb.h,
+          contentRx: shapeRectCornerRxViewBox(
+            opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH,
+            normVb.w, normVb.h
+          )
+        };
       } else {
         var tightBb = shapeContentBBox(kind, stOpts);
         vb = {
@@ -690,6 +724,7 @@ var ExperienciaEngine = (function () {
     if (contentPaint) {
       paintBase.contentW = contentPaint.contentW;
       paintBase.contentH = contentPaint.contentH;
+      if (contentPaint.contentRx != null) paintBase.contentRx = contentPaint.contentRx;
     }
     var open = '<svg' + svgClass + inlineStyle +
       ' viewBox="' + vb.x + ' ' + vb.y + ' ' + vb.w + ' ' + vb.h + '"' +
@@ -7456,6 +7491,8 @@ var ExperienciaEngine = (function () {
     shapeUsesFixedCornerContentPaint: shapeUsesFixedCornerContentPaint,
     shapeContentBoxViewBoxNorm: shapeContentBoxViewBoxNorm,
     shapeRectFixedCornerRx: shapeRectFixedCornerRx,
+    shapeRectFixedCornerPx: shapeRectFixedCornerPx,
+    shapeRectCornerRxViewBox: shapeRectCornerRxViewBox,
     shapePreserveAspect: shapePreserveAspect,
     shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,
