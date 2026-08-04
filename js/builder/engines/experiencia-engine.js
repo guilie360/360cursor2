@@ -541,6 +541,37 @@ var ExperienciaEngine = (function () {
     return Math.min(rxVb, vbWNum / 2, vbHNum / 2);
   }
 
+  /** Round-rect viewBox rx at default picker scale (borderRadius slider). */
+  function shapeRoundRectFixedCornerRx(borderRadius) {
+    var brR = borderRadius != null && !isNaN(Number(borderRadius)) ? Number(borderRadius) : 16;
+    return Math.max(0, Math.min(50, (brR / 12) * shapeUnit52(9)));
+  }
+
+  /** Screen-pixel corner radius for round rect at insert size. */
+  function shapeRoundRectFixedCornerPx(layerW, layerH, borderRadius) {
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var defW = sceneShapeDefaultSize('SHAPE_ROUND_RECT').w;
+    var tilePx = (defW / 100) * lw;
+    var base = shapeContentBBoxBase('SHAPE_ROUND_RECT');
+    var cf = shapeContentFrac('SHAPE_ROUND_RECT', 1, 1);
+    var shapePxH = tilePx * cf.dispH;
+    return (shapeRoundRectFixedCornerRx(borderRadius) / base.h) * shapePxH;
+  }
+
+  function shapeRoundRectCornerRxViewBox(boxWPct, boxHPct, layerW, layerH, vbW, vbH, borderRadius) {
+    var hPx = (Number(boxHPct) / 100) * Math.max(1, Number(layerH) || 1080);
+    var vbHNum = Math.max(0.001, Number(vbH) || 100);
+    var vbWNum = Math.max(0.001, Number(vbW) || 100);
+    var baseRx = shapeRoundRectFixedCornerRx(borderRadius);
+    if (!hPx || hPx <= 0) {
+      return Math.min(baseRx, vbWNum / 2, vbHNum / 2);
+    }
+    var fixedPx = shapeRoundRectFixedCornerPx(layerW, layerH, borderRadius);
+    var scale = hPx / vbHNum;
+    var rxVb = fixedPx / Math.max(0.001, scale);
+    return Math.min(rxVb, vbWNum / 2, vbHNum / 2);
+  }
+
   /** ViewBox aspect = box pixel aspect so preserveAspectRatio none maps uniformly. */
   function shapeContentBoxViewBoxNorm(boxWPct, boxHPct, layerW, layerH) {
     var wPx = (Number(boxWPct) / 100) * Math.max(1, Number(layerW) || 1000);
@@ -554,7 +585,7 @@ var ExperienciaEngine = (function () {
   function shapeUsesContentBoxPaint(kind) {
     kind = String(kind || '').toUpperCase();
     return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE' || kind === 'SHAPE_ARROW' ||
-      kind === 'SHAPE_CAPSULE';
+      kind === 'SHAPE_CAPSULE' || kind === 'SHAPE_ROUND_RECT';
   }
 
   /** Arrow content-box: fixed head (ratio of height), shaft grows with box width. */
@@ -695,6 +726,17 @@ var ExperienciaEngine = (function () {
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_ROUND_RECT') {
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        var rrcw = Number(paint.contentW);
+        var rrch = Number(paint.contentH);
+        var rrrx = paint.contentRx != null && !isNaN(Number(paint.contentRx))
+          ? Number(paint.contentRx)
+          : Math.min(shapeRoundRectFixedCornerRx(brR), rrcw / 2, rrch / 2);
+        return '<rect' + cls + ' x="0" y="0"' +
+          ' width="' + rrcw + '" height="' + rrch + '"' +
+          ' rx="' + rrrx + '"' +
+          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+      }
       var rxFixed = Math.max(0, Math.min(50, (brR / 12) * u(9)));
       var rr = Math.min(rxFixed, w / 2, h / 2);
       return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
@@ -755,6 +797,11 @@ var ExperienciaEngine = (function () {
           contentPaint.contentRx = shapeRectCornerRxViewBox(
             opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH,
             normVb.w, normVb.h
+          );
+        } else if (kind === 'SHAPE_ROUND_RECT') {
+          contentPaint.contentRx = shapeRoundRectCornerRxViewBox(
+            opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH,
+            normVb.w, normVb.h, brR
           );
         }
       } else {
@@ -7566,6 +7613,9 @@ var ExperienciaEngine = (function () {
     shapeRectFixedCornerRx: shapeRectFixedCornerRx,
     shapeRectFixedCornerPx: shapeRectFixedCornerPx,
     shapeRectCornerRxViewBox: shapeRectCornerRxViewBox,
+    shapeRoundRectFixedCornerRx: shapeRoundRectFixedCornerRx,
+    shapeRoundRectFixedCornerPx: shapeRoundRectFixedCornerPx,
+    shapeRoundRectCornerRxViewBox: shapeRoundRectCornerRxViewBox,
     shapePreserveAspect: shapePreserveAspect,
     shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,
