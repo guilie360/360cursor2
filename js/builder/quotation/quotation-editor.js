@@ -3842,17 +3842,14 @@ var QuotationEditor = (function () {
   function backpackIconSvg() {
     return '' +
       '<svg class="qe-backpack-fab__ico" width="14" height="14" viewBox="0 0 24 24"' +
-        ' aria-hidden="true">' +
-        '<ellipse cx="12" cy="15.6" rx="5.4" ry="5.1" fill="currentColor"' +
-          ' fill-opacity="0.22" stroke="currentColor" stroke-width="1.25"/>' +
-        '<path fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"' +
-          ' stroke-linejoin="round" d="M8 9.2c.6-1.6 2-2.6 4-2.6s3.4 1 4 2.6"/>' +
-        '<path fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"' +
-          ' d="M7.3 7.8c1-1.4 2.6-2.2 4.7-2.2s3.7.8 4.7 2.2"/>' +
-        '<path fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"' +
-          ' d="M6.4 9.6h11.2"/>' +
-        '<path fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"' +
-          ' d="M11.4 9.6v1.55M12.6 9.6v1.55"/>' +
+        ' fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"' +
+        ' stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M10.2 5.2a1.8 1.8 0 0 1 3.6 0"/>' +
+        '<rect x="7.5" y="7" width="9" height="12.5" rx="2.2"/>' +
+        '<path d="M7.5 11h9"/>' +
+        '<path d="M12 11v1.6"/>' +
+        '<path d="M5.6 13.2c-1 0-1.6.8-1.6 1.7v2c0 .9.6 1.6 1.6 1.6"/>' +
+        '<path d="M18.4 13.2c1 0 1.6.8 1.6 1.7v2c0 .9-.6 1.6-1.6 1.6"/>' +
       '</svg>';
   }
 
