@@ -4790,6 +4790,10 @@ body.quotation-canvas-first .builder-workspace,
 }
 .builder-exp-stage-shape.is-live-moving {
   contain: layout style;
+  will-change: transform;
+}
+.builder-exp-sel-gizmo.is-live-moving {
+  will-change: transform;
 }
 .builder-exp-stage-shape.is-live-moving .builder-exp-stage-shape__stroke-glow {
   opacity: 0 !important;

@@ -5696,17 +5696,10 @@ var ExperienciaCanvas = (function () {
         if (item.el) {
           item.el.classList.remove('is-live-moving');
           item.el.style.removeProperty('transform');
-          item.el.style.removeProperty('left');
-          item.el.style.removeProperty('top');
-          item.el.style.removeProperty('width');
-          item.el.style.removeProperty('height');
         }
         if (item.gizmo) {
+          item.gizmo.classList.remove('is-live-moving');
           item.gizmo.style.removeProperty('transform');
-          item.gizmo.style.removeProperty('left');
-          item.gizmo.style.removeProperty('top');
-          item.gizmo.style.removeProperty('width');
-          item.gizmo.style.removeProperty('height');
         }
       });
     }
@@ -5722,6 +5715,7 @@ var ExperienciaCanvas = (function () {
 
     function buildShapeMoveLiveRefs(sceneId, groupIds, layerW, layerH) {
       var items = [];
+      if (!buttonsLayer) return null;
       groupIds.forEach(function (id) {
         var vm = getOverlayItemVm(sceneId, id);
         if (!vm || !isShapeType(vm.type)) return;
@@ -5729,23 +5723,12 @@ var ExperienciaCanvas = (function () {
         var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
         var gizmo = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
         if (!el) return;
-        var paint = shapeStagePaintMetrics(vm, layerW, layerH);
-        if (!paint) return;
-        var boxCxPx = (paint.x / 100) * layerW;
-        var boxCyPx = (paint.y / 100) * layerH;
-        var boxWPx = (paint.w / 100) * layerW;
-        var boxHPx = (paint.h / 100) * layerH;
+        var dom = domBoxPctFromEl(el, buttonsLayer);
+        if (!dom) return;
+        var boxCxPx = (dom.gx / 100) * layerW;
+        var boxCyPx = (dom.gy / 100) * layerH;
         el.classList.add('is-live-moving');
-        el.style.left = boxCxPx + 'px';
-        el.style.top = boxCyPx + 'px';
-        el.style.width = boxWPx + 'px';
-        el.style.height = boxHPx + 'px';
-        if (gizmo) {
-          gizmo.style.left = boxCxPx + 'px';
-          gizmo.style.top = boxCyPx + 'px';
-          gizmo.style.width = boxWPx + 'px';
-          gizmo.style.height = boxHPx + 'px';
-        }
+        if (gizmo) gizmo.classList.add('is-live-moving');
         items.push({
           id: id,
           el: el,
@@ -5762,15 +5745,40 @@ var ExperienciaCanvas = (function () {
 
     /** Arm compositor fast-path only after drag threshold — not on selection click. */
     function ensureShapeMoveLiveRefs(drag) {
-      if (!drag || drag.moveLiveRefs || drag.isOverlayGroup || !drag.shapeMoveFastPath) return;
-      var groupIds = (drag.groupIds && drag.groupIds.length)
-        ? drag.groupIds
-        : [drag.buttonId];
+      if (!drag || drag.moveLiveRefs || !drag.shapeMoveFastPath) return;
+      var groupIds = drag.isOverlayGroup
+        ? (drag.groupMemberIds || [])
+        : ((drag.groupIds && drag.groupIds.length) ? drag.groupIds : [drag.buttonId]);
+      if (!groupIds.length) return;
       if (!canUseShapeMoveFastPath(drag.sceneId, groupIds)) return;
       var layerW = buttonsLayer ? (buttonsLayer.clientWidth || 1000) : 1000;
       var layerH = buttonsLayer ? (buttonsLayer.clientHeight || 1000) : 1000;
       if (!drag.ptrCache) drag.ptrCache = overlayPointerLayerCache();
       drag.moveLiveRefs = buildShapeMoveLiveRefs(drag.sceneId, groupIds, layerW, layerH);
+    }
+
+    function commitShapeMoveLiveDrag(drag) {
+      if (!drag || drag.pendingMoveDdx == null) return;
+      if (drag.isOverlayGroup) return;
+      var ddx = drag.pendingMoveDdx;
+      var ddy = drag.pendingMoveDdy != null ? drag.pendingMoveDdy : 0;
+      var sz = overlayLayerSize();
+      if (drag.origins && drag.groupIds && drag.groupIds.length > 1) {
+        drag.groupIds.forEach(function (id) {
+          var orig = drag.origins[String(id)];
+          if (!orig) return;
+          ExperienciaEngine.setSceneButtonPosition(
+            state, drag.sceneId, id, orig.x + ddx, orig.y + ddy, sz.w, sz.h
+          );
+        });
+        return;
+      }
+      if (drag.buttonId != null && drag.originX != null && drag.originY != null) {
+        ExperienciaEngine.setSceneButtonPosition(
+          state, drag.sceneId, drag.buttonId,
+          drag.originX + ddx, drag.originY + ddy, sz.w, sz.h
+        );
+      }
     }
 
     function paintShapeMoveFast(moveLiveRefs, ddxPct, ddyPct) {
@@ -5790,14 +5798,12 @@ var ExperienciaCanvas = (function () {
           if (item.el) item.el.style.transform = boxTf;
         }
         if (item.gizmo) {
-          var gx = snap.boxCxPx + dxPx;
-          var gy = snap.boxCyPx + dyPx;
-          var gKey = gx + '|' + gy + '|' + rot;
-          if (item.lastGizmoKey !== gKey) {
-            item.lastGizmoKey = gKey;
-            item.gizmo.style.left = gx + 'px';
-            item.gizmo.style.top = gy + 'px';
-            item.gizmo.style.transform = 'translate(-50%, -50%) rotate(' + rot + 'deg)';
+          var gTf =
+            'translate3d(calc(-50% + ' + dxPx + 'px), calc(-50% + ' + dyPx + 'px), 0) ' +
+            'rotate(' + rot + 'deg)';
+          if (item.lastGizmoTf !== gTf) {
+            item.lastGizmoTf = gTf;
+            item.gizmo.style.transform = gTf;
           }
         }
       });
@@ -9048,10 +9054,23 @@ var ExperienciaCanvas = (function () {
             state, buttonDrag.sceneId, buttonDrag.buttonId,
             { x: nextGx, y: nextGy, live: true, layerW: szG.w, layerH: szG.h }
           );
+          if (buttonDrag.moveLiveRefs) {
+            buttonDrag.pendingMoveDdx = ddx + snapDx;
+            buttonDrag.pendingMoveDdy = ddy + snapDy;
+            scheduleShapeMoveFrame(buttonDrag);
+            return;
+          }
           paintButtonsStage();
           return;
         }
         if (groupIds.length > 1) {
+          buttonDrag.guides = { spacing: [] };
+          if (buttonDrag.moveLiveRefs) {
+            buttonDrag.pendingMoveDdx = ddx;
+            buttonDrag.pendingMoveDdy = ddy;
+            scheduleShapeMoveFrame(buttonDrag);
+            return;
+          }
           var szM = overlayLayerSize();
           groupIds.forEach(function (id) {
             var orig = buttonDrag.origins && buttonDrag.origins[String(id)];
@@ -9062,13 +9081,6 @@ var ExperienciaCanvas = (function () {
             );
             clearPendingMove(id);
           });
-          buttonDrag.guides = { spacing: [] };
-          if (buttonDrag.moveLiveRefs) {
-            buttonDrag.pendingMoveDdx = ddx;
-            buttonDrag.pendingMoveDdy = ddy;
-            scheduleShapeMoveFrame(buttonDrag);
-            return;
-          }
           paintButtonsStage();
           return;
         }
@@ -9083,16 +9095,16 @@ var ExperienciaCanvas = (function () {
           { disableSnap: !!ev.altKey }
         );
         buttonDrag.guides = snapped.guides;
-        setOverlayLivePosition(
-          buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
-        );
-        clearPendingMove(buttonDrag.buttonId);
         if (buttonDrag.moveLiveRefs) {
           buttonDrag.pendingMoveDdx = snapped.x - buttonDrag.originX;
           buttonDrag.pendingMoveDdy = snapped.y - buttonDrag.originY;
           scheduleShapeMoveFrame(buttonDrag);
           return;
         }
+        setOverlayLivePosition(
+          buttonDrag.sceneId, buttonDrag.buttonId, snapped.x, snapped.y
+        );
+        clearPendingMove(buttonDrag.buttonId);
         paintButtonsStage();
       }
 
@@ -9154,11 +9166,24 @@ var ExperienciaCanvas = (function () {
           }
         }
         var origins = isGroupDrag ? {} : buildOverlayDragOrigins(sceneId, groupIds);
+        var groupMemberIds = [];
+        if (isGroupDrag && ExperienciaEngine.resolveOverlayGroupMemberIds) {
+          var nMem = ExperienciaEngine.getNode(state, sceneId);
+          var gMem = nMem && ExperienciaEngine.getInteraction
+            ? ExperienciaEngine.getInteraction(nMem, bid)
+            : null;
+          if (gMem) {
+            groupMemberIds = ExperienciaEngine.resolveOverlayGroupMemberIds(
+              nMem, gMem, { repair: true }
+            ) || [];
+          }
+        }
         clearPendingMove(bid);
         buttonDrag = {
           buttonId: bid,
           sceneId: sceneId,
           groupIds: isGroupDrag ? [String(bid)] : groupIds,
+          groupMemberIds: groupMemberIds,
           isOverlayGroup: isGroupDrag,
           groupEditChildId: opts.groupEditChildId || null,
           origins: origins,
@@ -9183,8 +9208,10 @@ var ExperienciaCanvas = (function () {
           ptrCache: overlayPointerLayerCache(),
           moveRaf: 0
         };
-        buttonDrag.shapeMoveFastPath = !isGroupDrag &&
-          canUseShapeMoveFastPath(sceneId, groupIds);
+        buttonDrag.shapeMoveFastPath = isGroupDrag
+          ? (groupMemberIds.length > 0 &&
+            canUseShapeMoveFastPath(sceneId, groupMemberIds))
+          : canUseShapeMoveFastPath(sceneId, groupIds);
         bindOverlayPointerDocs();
         try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) {}
         dragDebugLog('beginOverlayMove armed buttonDrag', {
@@ -9829,6 +9856,7 @@ var ExperienciaCanvas = (function () {
         var selectionPaintNeeded = buttonDrag.selectionPaintNeeded;
         if (buttonDrag.moveRaf) cancelAnimationFrame(buttonDrag.moveRaf);
         flushShapeMoveFrame(buttonDrag);
+        if (moved && endedMoveLiveRefs) commitShapeMoveLiveDrag(buttonDrag);
         buttonDrag = null;
         unbindOverlayPointerDocs();
         if (endedMoveLiveRefs) clearShapeMoveLiveStyles(endedMoveLiveRefs);
