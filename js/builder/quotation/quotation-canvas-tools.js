@@ -88,7 +88,7 @@ var QuotationCanvasTools = (function () {
       '7', '8', '9', '×',
       '4', '5', '6', '−',
       '1', '2', '3', '+',
-      '0', '.', '=', '='
+      '0', '.', '='
     ];
     var btns = keys.map(function (k, i) {
       var wide = k === '0' && i === keys.length - 3;
