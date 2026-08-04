@@ -7383,11 +7383,151 @@ var ExperienciaCanvas = (function () {
     function computeMultiSelectionUnion(sceneId, ids, layerW, layerH) {
       var scaleIds = filterMultiScaleOverlayIds(sceneId, ids);
       if (scaleIds.length < 2) return null;
-      var n = ExperienciaEngine.getNode(state, sceneId);
-      if (!n || !ExperienciaEngine.computeOverlayUnionBounds) return null;
-      return ExperienciaEngine.computeOverlayUnionBounds(
-        n, scaleIds, layerW, layerH, { useComposed: true }
-      );
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var minL = Infinity;
+      var minT = Infinity;
+      var maxR = -Infinity;
+      var maxB = -Infinity;
+      scaleIds.forEach(function (id) {
+        var box = memberBoxForMultiSelect(sceneId, id, layerW, layerH);
+        if (!box) return;
+        var cxPx = (box.cx / 100) * layerW;
+        var cyPx = (box.cy / 100) * layerH;
+        var wPx = (box.w / 100) * layerW;
+        var hPx = (box.h / 100) * layerH;
+        var corners = overlayRotatedCornersPx(cxPx, cyPx, wPx, hPx, box.rot || 0);
+        corners.forEach(function (c) {
+          if (c.x < minL) minL = c.x;
+          if (c.y < minT) minT = c.y;
+          if (c.x > maxR) maxR = c.x;
+          if (c.y > maxB) maxB = c.y;
+        });
+      });
+      if (!isFinite(minL)) return null;
+      return {
+        cx: (((minL + maxR) / 2) / layerW) * 100,
+        cy: (((minT + maxB) / 2) / layerH) * 100,
+        w: Math.max(0.5, ((maxR - minL) / layerW) * 100),
+        h: Math.max(0.5, ((maxB - minT) / layerH) * 100)
+      };
+    }
+
+    function overlayRotatedCornersPx(cx, cy, w, h, rotDeg) {
+      var hw = w / 2;
+      var hh = h / 2;
+      var rad = (Number(rotDeg) || 0) * Math.PI / 180;
+      var c = Math.cos(rad);
+      var s = Math.sin(rad);
+      var pts = [
+        { x: -hw, y: -hh }, { x: hw, y: -hh },
+        { x: hw, y: hh }, { x: -hw, y: hh }
+      ];
+      return pts.map(function (p) {
+        return {
+          x: cx + p.x * c - p.y * s,
+          y: cy + p.x * s + p.y * c
+        };
+      });
+    }
+
+    /** Same visible box as stage paint + individual multi gizmo. */
+    function memberBoxForMultiSelect(sceneId, id, layerW, layerH) {
+      var vm = getOverlayItemVm(sceneId, id);
+      if (!vm) return null;
+      var t = String(vm.type || 'BUTTON').toUpperCase();
+      if (isShapeType(t)) {
+        var box = getShapeBox(vm, layerW, layerH);
+        if (!box) return null;
+        return { cx: box.cx, cy: box.cy, w: box.w, h: box.h, rot: box.rot || 0, type: t };
+      }
+      var m = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!m) return null;
+      return { cx: m.gx, cy: m.gy, w: m.gw, h: m.gh, rot: m.grot || 0, type: t };
+    }
+
+    function snapshotMultiSelectMembers(sceneId, ids, layerW, layerH) {
+      var out = {};
+      (ids || []).forEach(function (id) {
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm) return;
+        var box = memberBoxForMultiSelect(sceneId, id, layerW, layerH);
+        if (!box) return;
+        var ix = vm._ix || vm;
+        var st = shapeStretchFromBtn(vm);
+        out[String(id)] = {
+          cx: box.cx,
+          cy: box.cy,
+          w: box.w,
+          h: box.h,
+          rotation: box.rot,
+          type: box.type,
+          fontSize: vm.fontSize,
+          shapeContentBox: !!(ix.shapeContentBox || vm.shapeContentBox),
+          stretchX: st.sx,
+          stretchY: st.sy
+        };
+      });
+      return out;
+    }
+
+    function applyMultiSelectScale(sceneId, memberIds, snap, sx, sy, anchorX, anchorY, layerW, layerH) {
+      if (!sceneId || !memberIds || !memberIds.length || !snap) return;
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      memberIds.forEach(function (mid) {
+        var s = snap[String(mid)];
+        if (!s) return;
+        var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * sx;
+        var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * sy;
+        var nw = Math.max(0.5, (Number(s.w) || 0.5) * sx);
+        var nh = Math.max(0.5, (Number(s.h) || 0.5) * sy);
+        var t = String(s.type || 'BUTTON').toUpperCase();
+        var patch = { live: true, layerW: layerW, layerH: layerH };
+        if (s.rotation != null) patch.rotation = s.rotation;
+        if (isShapeType(t)) {
+          if (s.shapeContentBox || isShapeBoxV2Active()) {
+            patch.x = ncx;
+            patch.y = ncy;
+            patch.width = nw;
+            patch.height = nh;
+            patch.shapeContentBox = true;
+            if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
+            if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
+          } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
+              ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
+            var newStretchX = Math.max(0.06, Math.min(8, (s.stretchX || 1) * sx));
+            var newStretchY = Math.max(0.06, Math.min(8, (s.stretchY || 1) * sy));
+            var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
+              nw, t, newStretchX, newStretchY
+            );
+            var center = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+              ncx, ncy, tileW, t, layerW, layerH, newStretchX, newStretchY
+            );
+            patch.x = center.x;
+            patch.y = center.y;
+            patch.width = tileW;
+            patch.shapeStretchX = newStretchX;
+            patch.shapeStretchY = newStretchY;
+          } else {
+            patch.x = ncx;
+            patch.y = ncy;
+            patch.width = nw;
+            patch.height = nh;
+          }
+        } else if (t === 'BUTTON') {
+          patch.x = ncx;
+          patch.y = ncy;
+          patch.boxW = nw;
+          patch.boxH = nh;
+        } else if (t === 'TEXT') {
+          patch.x = ncx;
+          patch.y = ncy;
+          var fsScale = Math.max(Math.abs(sx), Math.abs(sy));
+          patch.fontSize = Math.max(8, Math.round((Number(s.fontSize) || 28) * fsScale));
+        }
+        ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
+      });
     }
 
     function overlayLayerSize() {
@@ -9123,8 +9263,8 @@ var ExperienciaCanvas = (function () {
               return;
             }
             if (transformDrag.type === 'MULTI_SELECT' &&
-                ExperienciaEngine.scaleOverlaySelectionTransform &&
-                transformDrag.memberIds && transformDrag.memberIds.length) {
+                transformDrag.memberIds && transformDrag.memberIds.length &&
+                transformDrag.memberWorldSnapshots) {
               var anchorMulti = groupResizeAnchorPct(
                 mode,
                 transformDrag.startL,
@@ -9134,21 +9274,25 @@ var ExperienciaCanvas = (function () {
                 transformDrag.startX,
                 transformDrag.startY
               );
-              ExperienciaEngine.scaleOverlaySelectionTransform(
-                state, transformDrag.sceneId, transformDrag.memberIds,
-                {
-                  width: nw,
-                  height: nh,
-                  baseWidth: transformDrag.startW,
-                  baseHeight: transformDrag.startH,
-                  keepRatio: transformDrag.keepRatio,
-                  anchorX: anchorMulti.x,
-                  anchorY: anchorMulti.y,
-                  memberWorldSnapshots: transformDrag.memberWorldSnapshots,
-                  layerW: layerW,
-                  layerH: layerH,
-                  live: true
-                }
+              var baseWMulti = Number(transformDrag.startW) || 20;
+              var baseHMulti = Number(transformDrag.startH) || 20;
+              var sxMulti = nw / baseWMulti;
+              var syMulti = nh / baseHMulti;
+              if (transformDrag.keepRatio) {
+                var uniMulti = Math.max(Math.abs(sxMulti), Math.abs(syMulti));
+                sxMulti = uniMulti;
+                syMulti = uniMulti;
+              }
+              applyMultiSelectScale(
+                transformDrag.sceneId,
+                transformDrag.memberIds,
+                transformDrag.memberWorldSnapshots,
+                sxMulti,
+                syMulti,
+                anchorMulti.x,
+                anchorMulti.y,
+                layerW,
+                layerH
               );
               paintButtonsStage();
               transformDrag.guides = { spacing: [] };
@@ -9458,11 +9602,7 @@ var ExperienciaCanvas = (function () {
           var startY0;
           if (gtype === 'MULTI_SELECT') {
             var nMultiStart = ExperienciaEngine.getNode(state, sceneIdG);
-            var unionStart = nMultiStart && ExperienciaEngine.computeOverlayUnionBounds
-              ? ExperienciaEngine.computeOverlayUnionBounds(
-                nMultiStart, multiScaleIds, layerW0, layerH0, { useComposed: true }
-              )
-              : null;
+            var unionStart = computeMultiSelectionUnion(sceneIdG, multiScaleIds, layerW0, layerH0);
             if (!unionStart) return;
             startW0 = unionStart.w;
             startH0 = unionStart.h;
@@ -9545,11 +9685,10 @@ var ExperienciaCanvas = (function () {
           var memberSnapshots = null;
           var memberWorldSnapshots = null;
           var transformMemberIds = null;
-          if (gtype === 'MULTI_SELECT' && ExperienciaEngine.snapshotOverlaySelectionWorlds) {
+          if (gtype === 'MULTI_SELECT') {
             transformMemberIds = multiScaleIds.slice();
-            var nMultiSnap = ExperienciaEngine.getNode(state, sceneIdG);
-            memberWorldSnapshots = ExperienciaEngine.snapshotOverlaySelectionWorlds(
-              nMultiSnap, multiScaleIds, layerW0, layerH0
+            memberWorldSnapshots = snapshotMultiSelectMembers(
+              sceneIdG, multiScaleIds, layerW0, layerH0
             );
           } else if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.snapshotOverlayGroupLocals) {

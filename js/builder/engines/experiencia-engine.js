@@ -1760,8 +1760,13 @@ var ExperienciaEngine = (function () {
         memberPatch.boxW = nwM;
         memberPatch.boxH = nhM;
       } else if (isSceneShapeType(t)) {
+        memberPatch.x = ncx;
+        memberPatch.y = ncy;
         memberPatch.width = nwM;
         memberPatch.height = nhM;
+        memberPatch.shapeContentBox = true;
+        if (sw.stretchX != null) memberPatch.shapeStretchX = sw.stretchX;
+        if (sw.stretchY != null) memberPatch.shapeStretchY = sw.stretchY;
       } else if (t === 'TEXT') {
         var fs0 = sw.fontSize != null ? Number(sw.fontSize) : (Number(ix.fontSize) || 28);
         var fsScale = patch.keepRatio ? sx : Math.max(Math.abs(sx), Math.abs(sy));
