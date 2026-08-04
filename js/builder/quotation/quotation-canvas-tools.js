@@ -4,6 +4,7 @@
 var QuotationCanvasTools = (function () {
   var HOST_ID = 'qeCanvasToolsHost';
   var NOTES_KEY = 'boxies_qe_canvas_notes_v1';
+  var CHECKLIST_KEY = 'boxies_qe_canvas_checklist_v1';
   var activeTool = null;
   var pomodoroTimer = null;
   var pomodoroLeft = 25 * 60;
@@ -167,6 +168,148 @@ var QuotationCanvasTools = (function () {
     activeTool = 'notes';
   }
 
+  function nextChecklistId() {
+    return 'cl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function loadChecklistItems() {
+    try {
+      var raw = localStorage.getItem(CHECKLIST_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          return parsed.map(function (it) {
+            return {
+              id: String(it.id || nextChecklistId()),
+              text: it.text != null ? String(it.text) : '',
+              checked: !!it.checked
+            };
+          });
+        }
+      }
+    } catch (eLoad) { /* ignore */ }
+    return [{ id: nextChecklistId(), text: '', checked: false }];
+  }
+
+  function saveChecklistItems(items) {
+    try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify(items)); } catch (eSave) { /* ignore */ }
+  }
+
+  function checklistRowHtml(item) {
+    var checked = !!item.checked;
+    return '' +
+      '<div class="qe-checklist__row' + (checked ? ' is-checked' : '') + '"' +
+        ' data-qe-check-row="' + escapeHtml(item.id) + '">' +
+        '<button type="button" class="qe-checklist__box"' +
+          ' data-qe-check-toggle="' + escapeHtml(item.id) + '"' +
+          ' aria-pressed="' + (checked ? 'true' : 'false') + '"' +
+          ' aria-label="Marcar tarea"></button>' +
+        '<input type="text" class="qe-checklist__text"' +
+          ' data-qe-check-text="' + escapeHtml(item.id) + '"' +
+          ' value="' + escapeHtml(item.text || '') + '"' +
+          ' placeholder="Tarea" spellcheck="true" autocomplete="off">' +
+      '</div>';
+  }
+
+  function bindChecklistList(host, items) {
+    var list = host.querySelector('[data-qe-checklist-list]');
+    if (!list) return;
+
+    function itemById(id) {
+      id = String(id || '');
+      for (var i = 0; i < items.length; i++) {
+        if (String(items[i].id) === id) return items[i];
+      }
+      return null;
+    }
+
+    function itemIndexById(id) {
+      id = String(id || '');
+      for (var i = 0; i < items.length; i++) {
+        if (String(items[i].id) === id) return i;
+      }
+      return -1;
+    }
+
+    function syncRowUi(row, checked) {
+      if (!row) return;
+      row.classList.toggle('is-checked', !!checked);
+      var btn = row.querySelector('[data-qe-check-toggle]');
+      if (btn) btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
+    }
+
+    list.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('[data-qe-check-toggle]') : null;
+      if (!btn || !list.contains(btn)) return;
+      e.preventDefault();
+      var id = btn.getAttribute('data-qe-check-toggle');
+      var item = itemById(id);
+      if (!item) return;
+      item.checked = !item.checked;
+      saveChecklistItems(items);
+      syncRowUi(btn.closest('[data-qe-check-row]'), item.checked);
+    });
+
+    list.addEventListener('input', function (e) {
+      var input = e.target && e.target.closest ? e.target.closest('[data-qe-check-text]') : null;
+      if (!input || !list.contains(input)) return;
+      var item = itemById(input.getAttribute('data-qe-check-text'));
+      if (!item) return;
+      item.text = input.value;
+      saveChecklistItems(items);
+    });
+
+    list.addEventListener('keydown', function (e) {
+      var input = e.target && e.target.closest ? e.target.closest('[data-qe-check-text]') : null;
+      if (!input || !list.contains(input) || e.key !== 'Enter') return;
+      e.preventDefault();
+      var idx = itemIndexById(input.getAttribute('data-qe-check-text'));
+      if (idx < 0) idx = items.length - 1;
+      var currentRow = input.closest('[data-qe-check-row]');
+      var newItem = { id: nextChecklistId(), text: '', checked: false };
+      items.splice(idx + 1, 0, newItem);
+      saveChecklistItems(items);
+      var wrap = document.createElement('div');
+      wrap.innerHTML = checklistRowHtml(newItem);
+      var newRow = wrap.firstElementChild;
+      if (currentRow && currentRow.nextSibling) list.insertBefore(newRow, currentRow.nextSibling);
+      else if (currentRow) list.appendChild(newRow);
+      else list.appendChild(newRow);
+      var nextInput = newRow.querySelector('[data-qe-check-text]');
+      if (nextInput) {
+        requestAnimationFrame(function () {
+          try { nextInput.focus(); } catch (eF) { /* ignore */ }
+        });
+      }
+    });
+
+    requestAnimationFrame(function () {
+      var inputs = list.querySelectorAll('[data-qe-check-text]');
+      if (!inputs.length) return;
+      var focusEl = inputs[inputs.length - 1];
+      for (var i = 0; i < inputs.length; i++) {
+        if (!String(inputs[i].value || '').trim()) {
+          focusEl = inputs[i];
+          break;
+        }
+      }
+      try { focusEl.focus(); } catch (eFocus) { /* ignore */ }
+    });
+  }
+
+  function openChecklist() {
+    var items = loadChecklistItems();
+    var host = ensureHost();
+    host.innerHTML = shellHtml('Checklist',
+      '<div class="qe-checklist" data-qe-checklist-list>' +
+        items.map(checklistRowHtml).join('') +
+      '</div>',
+      'checklist');
+    bindClose(host);
+    bindChecklistList(host, items);
+    activeTool = 'checklist';
+  }
+
   function openColorPicker() {
     var host = ensureHost();
     host.innerHTML = shellHtml('Color picker',
@@ -293,6 +436,7 @@ var QuotationCanvasTools = (function () {
     var id = String(toolId || '').toLowerCase();
     if (id === 'tool-calculator' || id === 'calculator') return openCalculator();
     if (id === 'tool-notes' || id === 'notes') return openNotes();
+    if (id === 'tool-checklist' || id === 'checklist') return openChecklist();
     if (id === 'tool-color-picker' || id === 'color-picker' || id === 'colorpicker') {
       return openColorPicker();
     }

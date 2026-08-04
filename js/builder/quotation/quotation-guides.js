@@ -1659,6 +1659,10 @@ var QuotationGuides = (function () {
           label: 'Notas'
         },
         {
+          id: 'tool-checklist',
+          label: 'Checklist'
+        },
+        {
           id: 'tool-color-picker',
           label: 'Color picker'
         },
