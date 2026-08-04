@@ -1026,6 +1026,11 @@ var QuotationGuides = (function () {
     selectGuide(guideId, { skipNotify: false });
     var g = findGuide(guideId);
     if (!g) return;
+    var vp = activeViewportId();
+    var vpLabel = viewportLabel(vp);
+    var sceneGuides = ensureGuidesArray(activeScene(), vp);
+    var canCopy = sceneGuides.length > 0;
+    var canPaste = hasGuidesClipboard();
     var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
     var axis = type === 'horizontal' ? 'Y' : 'X';
     var design = designSize();
@@ -1060,6 +1065,19 @@ var QuotationGuides = (function () {
           }
         },
         {
+          id: 'copy-guides',
+          label: 'Copiar guías · ' + vpLabel,
+          separatorBefore: true,
+          disabled: !canCopy
+        },
+        {
+          id: 'paste-guides',
+          label: canPaste
+            ? ('Pegar guías · ' + viewportLabel(clipboardViewportId()))
+            : 'Pegar guías',
+          disabled: !canPaste
+        },
+        {
           id: 'delete-guides-dialog',
           label: 'Eliminar guías...',
           danger: true,
@@ -1072,6 +1090,14 @@ var QuotationGuides = (function () {
         }
       ],
       onSelect: function (id) {
+        if (id === 'copy-guides') {
+          copyGuides();
+          return;
+        }
+        if (id === 'paste-guides') {
+          openPasteGuidesDialog();
+          return;
+        }
         if (id === 'delete-guides-dialog') {
           openDeleteGuidesDialog();
           return;
@@ -1502,11 +1528,6 @@ var QuotationGuides = (function () {
 
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
-    var vp = activeViewportId();
-    var vpLabel = viewportLabel(vp);
-    var sceneGuides = ensureGuidesArray(activeScene(), vp);
-    var canCopy = sceneGuides.length > 0;
-    var canPaste = hasGuidesClipboard();
     var snapOn = api && api.getOverlaySnapEnabled ? !!api.getOverlaySnapEnabled() : true;
     QuotationContextMenu.open({
       x: clientX,
@@ -1524,19 +1545,6 @@ var QuotationGuides = (function () {
         {
           id: 'toggle-snap',
           label: snapOn ? 'Desactivar imanes' : 'Activar imanes'
-        },
-        {
-          id: 'copy-guides',
-          label: 'Copiar guías · ' + vpLabel,
-          separatorBefore: true,
-          disabled: !canCopy
-        },
-        {
-          id: 'paste-guides',
-          label: canPaste
-            ? ('Pegar guías · ' + viewportLabel(clipboardViewportId()))
-            : 'Pegar guías',
-          disabled: !canPaste
         }
       ],
       onSelect: function (id) {
@@ -1552,14 +1560,6 @@ var QuotationGuides = (function () {
           if (api && api.setOverlaySnapEnabled) {
             api.setOverlaySnapEnabled(!snapOn);
           }
-          return;
-        }
-        if (id === 'copy-guides') {
-          copyGuides();
-          return;
-        }
-        if (id === 'paste-guides') {
-          openPasteGuidesDialog();
         }
       }
     });
