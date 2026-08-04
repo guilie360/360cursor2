@@ -96,6 +96,19 @@ var QuotationContextMenu = (function () {
     return '#b33a3a';
   }
 
+  function guideColorScopeIconHtml(active) {
+    var S = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"' +
+      ' fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true"';
+    if (active) {
+      return '<svg ' + S + '><rect x="6" y="4" width="12" height="16" rx="2"/></svg>';
+    }
+    return '<svg ' + S + '>' +
+      '<rect x="3" y="8" width="12" height="12" rx="1.5" opacity="0.55"/>' +
+      '<rect x="9" y="4" width="12" height="12" rx="1.5"/>' +
+      '</svg>';
+  }
+
   function bindColorFields(panel, items) {
     panel.querySelectorAll('[data-qe-ctx-color-input]').forEach(function (input) {
       input.addEventListener('input', function (e) {
@@ -119,6 +132,25 @@ var QuotationContextMenu = (function () {
         if (input) input.value = hex;
         var item = findItem(items, fieldId);
         if (item && typeof item.onChange === 'function') item.onChange(hex, item);
+      });
+    });
+    panel.querySelectorAll('[data-qe-ctx-color-scope]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var fieldId = btn.getAttribute('data-qe-ctx-color-field');
+        var item = findItem(items, fieldId);
+        if (!item || !item.scopeToggle) return;
+        var next = !btn.classList.contains('is-active');
+        btn.classList.toggle('is-active', next);
+        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        var titles = item.scopeToggle;
+        btn.setAttribute(
+          'title',
+          next ? (titles.titleActive || 'Solo escena actual') : (titles.titleInactive || 'Todas las escenas')
+        );
+        btn.innerHTML = guideColorScopeIconHtml(next);
+        if (typeof item.scopeToggle.onToggle === 'function') item.scopeToggle.onToggle(next);
       });
     });
   }
@@ -216,6 +248,26 @@ var QuotationContextMenu = (function () {
               ' style="--qe-swatch:' + escapeHtml(c) + '"' +
               ' title="' + escapeHtml(c) + '" aria-label="' + escapeHtml(c) + '"></button>';
         }).join('');
+        var scopeToggle = item.scopeToggle || null;
+        var scopeBtn = scopeToggle
+          ? ('<button type="button" class="qe-context-menu__color-scope' +
+              (scopeToggle.active ? ' is-active' : '') + '"' +
+              ' data-qe-ctx-color-scope="1"' +
+              ' data-qe-ctx-color-field="' + escapeHtml(item.id) + '"' +
+              ' aria-pressed="' + (scopeToggle.active ? 'true' : 'false') + '"' +
+              ' title="' + escapeHtml(
+                scopeToggle.active
+                  ? (scopeToggle.titleActive || 'Solo escena actual')
+                  : (scopeToggle.titleInactive || 'Todas las escenas')
+              ) + '"' +
+              ' aria-label="' + escapeHtml(
+                scopeToggle.active
+                  ? (scopeToggle.titleActive || 'Solo escena actual')
+                  : (scopeToggle.titleInactive || 'Todas las escenas')
+              ) + '">' +
+              guideColorScopeIconHtml(!!scopeToggle.active) +
+            '</button>')
+          : '';
         html +=
           '<div class="qe-context-menu__color" data-qe-ctx-color="' + escapeHtml(item.id) + '">' +
             (item.label
@@ -226,8 +278,8 @@ var QuotationContextMenu = (function () {
                 ' data-qe-ctx-color-input="' + escapeHtml(item.id) + '"' +
                 ' value="' + escapeHtml(colorVal) + '"' +
                 ' aria-label="' + escapeHtml(item.ariaLabel || item.label || 'Color de guía') + '">' +
-              (swatches
-                ? '<div class="qe-context-menu__swatches" role="list">' + swatches + '</div>'
+              (swatches || scopeBtn
+                ? '<div class="qe-context-menu__swatches" role="list">' + swatches + scopeBtn + '</div>'
                 : '') +
             '</div>' +
           '</div>';
@@ -285,7 +337,7 @@ var QuotationContextMenu = (function () {
 
     panel.addEventListener('mousedown', function (e) {
       if (e.target && e.target.closest &&
-          e.target.closest('[data-qe-ctx-input], [data-qe-ctx-color-input], [data-qe-ctx-swatch], .qe-context-menu__color')) {
+          e.target.closest('[data-qe-ctx-input], [data-qe-ctx-color-input], [data-qe-ctx-swatch], [data-qe-ctx-color-scope], .qe-context-menu__color')) {
         e.stopPropagation();
       }
     });

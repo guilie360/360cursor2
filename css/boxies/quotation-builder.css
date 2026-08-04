@@ -5148,8 +5148,36 @@ body.quotation-canvas-first .builder-workspace,
   transform: scale(1.08);
 }
 
+.qe-context-menu__color-scope {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.qe-context-menu__color-scope.is-active {
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.qe-context-menu__color-scope:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .qe-context-menu-portal .qe-context-menu:has(.qe-context-menu__color) {
-  max-width: 188px !important;
+  max-width: 204px !important;
 }
 
 .qe-context-menu .boxies-workspace-menu__item.is-disabled,

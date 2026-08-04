@@ -27,8 +27,8 @@ var QuotationGuides = (function () {
   var dragGuide = null;
   var boundDoc = false;
   var readoutEl = null;
-  /** Session clipboard: { viewport, items:[{ type, position, locked }] }. */
-  var guidesClipboard = null;
+  /** Session-only: when true, guide color applies to active scene only. */
+  var guideColorSceneOnly = false;
 
   function nextGuideId() {
     return 'g_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
@@ -262,14 +262,30 @@ var QuotationGuides = (function () {
     return (buckets && buckets[vp]) || DEFAULT_GUIDE_COLOR;
   }
 
+  function isGuideColorSceneOnly() {
+    return !!guideColorSceneOnly;
+  }
+
+  function setGuideColorSceneOnly(on) {
+    guideColorSceneOnly = !!on;
+  }
+
   function setGuideColor(hex) {
-    var scene = activeScene();
-    if (!scene) return;
     var color = normalizeGuideColor(hex);
     if (!color) return;
     var vp = activeViewportId();
-    ensureGuideColorBuckets(scene);
-    scene.guideColorByViewport[vp] = color;
+    if (guideColorSceneOnly) {
+      var scene = activeScene();
+      if (!scene) return;
+      ensureGuideColorBuckets(scene);
+      scene.guideColorByViewport[vp] = color;
+    } else {
+      allScenes().forEach(function (sc) {
+        if (!sc) return;
+        ensureGuideColorBuckets(sc);
+        sc.guideColorByViewport[vp] = color;
+      });
+    }
     applyGuideLayerColors();
     syncGuideSelectionDom();
     markDirty();
@@ -1059,6 +1075,14 @@ var QuotationGuides = (function () {
           label: 'Color',
           value: getActiveGuideColor(),
           presets: GUIDE_COLOR_PRESETS,
+          scopeToggle: {
+            active: isGuideColorSceneOnly(),
+            titleActive: 'Solo escena actual',
+            titleInactive: 'Todas las escenas',
+            onToggle: function (active) {
+              setGuideColorSceneOnly(active);
+            }
+          },
           onChange: function (hex) {
             setGuideColor(hex);
           }
