@@ -4040,18 +4040,14 @@ var QuotationEditor = (function () {
 
     var natW = device.width;
     var natH = device.height;
-    var scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
-    if (!isFinite(scale) || scale <= 0) scale = 0.01;
-    if (scale > 1) scale = 1;
-    var scaledW = Math.max(1, Math.floor(natW * scale));
-    var scaledH = Math.max(1, Math.floor(natH * scale));
 
     if (fitSlot) {
       fitSlot.style.flex = '1 1 auto';
       fitSlot.style.minHeight = '0';
       fitSlot.style.minWidth = '0';
-      fitSlot.style.width = '';
-      fitSlot.style.height = slotH + 'px';
+      fitSlot.style.width = '100%';
+      fitSlot.style.height = '';
+      fitSlot.style.maxHeight = '';
       fitSlot.style.display = 'flex';
       fitSlot.style.alignItems = 'center';
       fitSlot.style.justifyContent = 'center';
@@ -4064,7 +4060,8 @@ var QuotationEditor = (function () {
     if (work) {
       work.style.flex = '1 1 auto';
       work.style.minHeight = '0';
-      work.style.height = slotH + 'px';
+      work.style.maxHeight = '';
+      work.style.height = '';
       work.style.display = 'flex';
       work.style.flexDirection = 'row';
       work.style.alignItems = 'stretch';
@@ -4073,6 +4070,19 @@ var QuotationEditor = (function () {
       work.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
       work.style.position = 'relative';
     }
+
+    void unit.offsetHeight;
+    var workMeasure = unit.querySelector('[data-qe-stage-work]');
+    var measuredSlotH = workMeasure
+      ? Math.max(1, Math.floor(workMeasure.getBoundingClientRect().height))
+      : slotH;
+
+    var scale = Math.min(slotW / natW, (measuredSlotH - TOOL_PAD * 2) / natH);
+    if (!isFinite(scale) || scale <= 0) scale = 0.01;
+    if (scale > 1) scale = 1;
+    var scaledW = Math.max(1, Math.floor(natW * scale));
+    var scaledH = Math.max(1, Math.floor(natH * scale));
+
     if (fitStack) {
       fitStack.style.width = scaledW + 'px';
       fitStack.style.height = scaledH + 'px';
@@ -4760,7 +4770,14 @@ var QuotationEditor = (function () {
 
   function selectScene(id) {
     if (!sceneById(id)) return;
-    if (state.backpackMode) exitBackpackMode(false);
+    var wasBackpack = !!state.backpackMode;
+    if (wasBackpack) {
+      if (expOverlay && typeof expOverlay.pull === 'function') {
+        try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
+      }
+      state.backpackMode = false;
+      state.backpackReturnSceneId = null;
+    }
     var same = state.activeSceneId === id;
     state.activeSceneId = id;
     state.selectedElementId = null;
@@ -4771,8 +4788,8 @@ var QuotationEditor = (function () {
     try {
       document.documentElement.style.setProperty('--qe-inspector-w', '0px');
     } catch (eW) {}
-    /* Same scene: skip rerender so dblclick-to-rename is not destroyed. */
-    if (same) return;
+    /* Same scene: skip rerender unless leaving backpack (restore chrome). */
+    if (same && !wasBackpack) return;
     rerender();
   }
 
