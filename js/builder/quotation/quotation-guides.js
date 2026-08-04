@@ -1458,7 +1458,7 @@ var QuotationGuides = (function () {
     var p = pendingGuidePointer;
     pendingGuidePointer = null;
     return beginGuideDrag(p.id, p.el, clientX, clientY, p.pointerId, {
-      duplicate: !shiftKey
+      duplicate: !!shiftKey
     });
   }
 
