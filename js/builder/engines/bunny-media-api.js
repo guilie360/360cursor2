@@ -444,37 +444,61 @@ var BunnyMediaApi = (function () {
     return ensureFolders(projectId, slug, folders);
   }
 
+  /* Matches bunny-media HERO_FOLDERS — logos is edge-only, not in MEDIA_CATEGORIES. */
+  var HERO_UPLOAD_CATEGORIES = {
+    images: { folder: 'images' },
+    logos: { folder: 'logos' },
+    videos: { folder: 'videos' }
+  };
+
   async function invokeUpload(projectId, category, file, opts) {
     opts = opts || {};
     if (!projectId) throw new Error('project_id requerido');
-    var key = (typeof MediaNodesEngine !== 'undefined')
-      ? MediaNodesEngine.normalizeCategoryKey(category)
-      : category;
-    var meta = getCategories()[key];
-    if (!meta || meta.mode !== 'upload') throw new Error('Categoría no admite upload a Bunny');
+    var scope = String(opts.scope || 'media').trim().toLowerCase() === 'hero'
+      ? 'hero'
+      : 'media';
+    var key = String(category || '').trim().toLowerCase();
+    if (scope !== 'hero' && typeof MediaNodesEngine !== 'undefined') {
+      key = MediaNodesEngine.normalizeCategoryKey(category);
+    }
+    var meta = scope === 'hero'
+      ? HERO_UPLOAD_CATEGORIES[key]
+      : getCategories()[key];
+    if (scope === 'hero') {
+      if (!meta) {
+        throw new Error('category inválida para scope=hero (usa images|logos|videos)');
+      }
+    } else if (!meta || meta.mode !== 'upload') {
+      throw new Error('Categoría no admite upload a Bunny');
+    }
     if (!file) throw new Error('Archivo requerido');
     /* Reject before network — avoid waiting for a full multipart round-trip. */
     assertFileWithinUploadLimit(file, key);
-    if (!opts.nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
 
     var showroomSlug = slugifyLocal(opts.showroomSlug || '');
     if (!showroomSlug) throw new Error('Slug del showroom requerido para Bunny');
-    var nodeSlug = slugifyLocal(opts.nodeSlug || '');
-    if (!nodeSlug && opts.state) {
-      nodeSlug = typeof MediaNodesEngine !== 'undefined'
-        ? MediaNodesEngine.getNodeBunnySlug(opts.state, opts.nodeId)
-        : slugifyLocal(opts.nodeId);
+
+    var nodeSlug = '';
+    var nodeId = opts.nodeId || '';
+    if (scope === 'media') {
+      if (!nodeId) throw new Error('Selecciona un nodo del Canvas para subir el archivo');
+      nodeSlug = slugifyLocal(opts.nodeSlug || '');
+      if (!nodeSlug && opts.state) {
+        nodeSlug = typeof MediaNodesEngine !== 'undefined'
+          ? MediaNodesEngine.getNodeBunnySlug(opts.state, opts.nodeId)
+          : slugifyLocal(opts.nodeId);
+      }
+      if (!nodeSlug) throw new Error('Slug del nodo requerido para Bunny');
     }
-    if (!nodeSlug) throw new Error('Slug del nodo requerido para Bunny');
 
     var bunnyCat = key;
     var form = new FormData();
     form.append('project_id', projectId);
     form.append('category', bunnyCat);
-    form.append('node_id', opts.nodeId);
     form.append('showroom_slug', showroomSlug);
-    form.append('node_slug', nodeSlug);
-    form.append('scope', opts.scope || 'media');
+    form.append('scope', scope);
+    if (nodeId) form.append('node_id', nodeId);
+    if (nodeSlug) form.append('node_slug', nodeSlug);
     var libraryFolder = String(opts.libraryFolder || opts.library_folder || '')
       .trim()
       .toLowerCase()
@@ -482,14 +506,15 @@ var BunnyMediaApi = (function () {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
       .slice(0, 80);
-    if (libraryFolder) form.append('library_folder', libraryFolder);
+    if (libraryFolder && scope === 'media') form.append('library_folder', libraryFolder);
     form.append('file', file, file.name || 'upload.bin');
 
     var folderHint = (meta && meta.folder) || bunnyCat;
-    var expectedPathHint =
-      'projects/' + showroomSlug + '/media/' + nodeSlug + '/' + folderHint +
-      (libraryFolder ? ('/carpetas/' + libraryFolder) : '') +
-      '/' + (file.name || 'file');
+    var expectedPathHint = scope === 'hero'
+      ? ('projects/' + showroomSlug + '/hero/' + folderHint + '/' + (file.name || 'file'))
+      : ('projects/' + showroomSlug + '/media/' + nodeSlug + '/' + folderHint +
+        (libraryFolder ? ('/carpetas/' + libraryFolder) : '') +
+        '/' + (file.name || 'file'));
     logUpload('✔ Archivo recibido', file.name, file.size, file.type || '');
     logUpload('✔ Ruta generada (hint)', expectedPathHint);
 
@@ -556,6 +581,34 @@ var BunnyMediaApi = (function () {
     });
   }
 
+  /**
+   * Project-level asset (no Canvas node): projects/{slug}/hero/{images|logos|videos}/…
+   * Used for Config OG/WhatsApp preview and favicon.
+   */
+  async function uploadHeroAsset(projectId, category, file, opts) {
+    opts = opts || {};
+    var key = String(category || '').trim().toLowerCase();
+    if (!HERO_UPLOAD_CATEGORIES[key]) {
+      throw new Error('category inválida para scope=hero (usa images|logos|videos)');
+    }
+    if (!projectId) throw new Error('project_id requerido');
+    var showroomSlug = slugifyLocal(opts.showroomSlug || '');
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var data = await invokeUpload(projectId, key, file, {
+      showroomSlug: showroomSlug,
+      scope: 'hero'
+    });
+    return {
+      archivo: data.archivo || null,
+      publicUrl: data.publicUrl || null,
+      storagePath: data.storagePath || null,
+      category: key,
+      scope: 'hero'
+    };
+  }
+
   async function uploadAndSync(state, projectId, category, file, opts) {
     opts = opts || {};
     opts.state = state;
@@ -604,6 +657,7 @@ var BunnyMediaApi = (function () {
     assertFileWithinUploadLimit: assertFileWithinUploadLimit,
     list: list,
     remove: remove,
+    uploadHeroAsset: uploadHeroAsset,
     uploadAndSync: uploadAndSync,
     refreshProjectAssets: refreshProjectAssets,
     syncArchivosToProjectAssets: syncArchivosToProjectAssets,

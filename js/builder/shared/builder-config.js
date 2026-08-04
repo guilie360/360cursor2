@@ -477,8 +477,17 @@ var BuilderConfig = (function () {
     syncShareMock(rootEl);
   }
 
+  function resolveShowroomSlug(adapter, rootEl) {
+    var slugInput = rootEl && rootEl.querySelector('#showroomSlugInput');
+    var fromDom = normalizeSlug(slugInput ? slugInput.value : '');
+    if (fromDom) return fromDom;
+    var identity = adapter && adapter.getIdentity ? adapter.getIdentity() : null;
+    return normalizeSlug((identity && identity.slug) || '');
+  }
+
   /**
    * Persist og_* + browser chrome (favicon / page_title) to proyecto_config.
+   * Media binaries go to Bunny (hero scope); only public URLs are stored in Postgres.
    */
   async function saveShareMeta(adapter, rootEl) {
     var projectId = adapter && adapter.getProjectId ? adapter.getProjectId() : null;
@@ -487,19 +496,21 @@ var BuilderConfig = (function () {
     var ogImage = share.og_image || '';
     var faviconUrl = share.favicon_url || '';
 
-    var constructoraId =
-      (adapter.resolveConstructoraId && adapter.resolveConstructoraId()) ||
-      (typeof AdminState !== 'undefined' && AdminState.getConstructoraId
-        ? AdminState.getConstructoraId()
-        : null);
+    if (share._pendingFile || share._pendingFavicon) {
+      if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadHeroAsset) {
+        throw new Error('BunnyMediaApi no disponible: no se pueden subir imágenes de compartir.');
+      }
+      var showroomSlug = resolveShowroomSlug(adapter, rootEl);
+      if (!showroomSlug) {
+        throw new Error('Define el slug del proyecto antes de subir la imagen de WhatsApp / favicon.');
+      }
 
-    if (share._pendingFile && typeof StorageApi !== 'undefined' && StorageApi.upload) {
-      if (constructoraId) {
-        var uploaded = await StorageApi.upload(
-          constructoraId,
+      if (share._pendingFile) {
+        var uploaded = await BunnyMediaApi.uploadHeroAsset(
           projectId,
-          'share',
-          share._pendingFile
+          'images',
+          share._pendingFile,
+          { showroomSlug: showroomSlug }
         );
         ogImage = (uploaded && uploaded.publicUrl) || ogImage;
         pendingOgImageFile = null;
@@ -508,15 +519,13 @@ var BuilderConfig = (function () {
           if (hidden) hidden.value = ogImage;
         }
       }
-    }
 
-    if (share._pendingFavicon && typeof StorageApi !== 'undefined' && StorageApi.upload) {
-      if (constructoraId) {
-        var uploadedFav = await StorageApi.upload(
-          constructoraId,
+      if (share._pendingFavicon) {
+        var uploadedFav = await BunnyMediaApi.uploadHeroAsset(
           projectId,
-          'favicon',
-          share._pendingFavicon
+          'logos',
+          share._pendingFavicon,
+          { showroomSlug: showroomSlug }
         );
         faviconUrl = (uploadedFav && uploadedFav.publicUrl) || faviconUrl;
         pendingFaviconFile = null;
