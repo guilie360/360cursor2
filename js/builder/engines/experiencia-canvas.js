@@ -7905,21 +7905,45 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
+    /** Hit-test stage overlays — SVG visiblePainted geometry, topmost in z-order (Figma-style). */
+    function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
+      opts = opts || {};
+      if (!buttonsLayer) return null;
+      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
+      var peRestore = [];
+      var gi;
+      if (!opts.includeGizmos) {
+        for (gi = 0; gi < gizmos.length; gi++) {
+          peRestore.push(gizmos[gi].style.pointerEvents);
+          gizmos[gi].style.pointerEvents = 'none';
+        }
+      }
+      var stack;
+      try {
+        stack = document.elementsFromPoint(clientX, clientY);
+      } catch (eStack) {
+        stack = [];
+      }
+      if (!opts.includeGizmos) {
+        for (gi = 0; gi < gizmos.length; gi++) {
+          gizmos[gi].style.pointerEvents = peRestore[gi] || '';
+        }
+      }
+      if (!stack || !stack.length) return null;
+      for (var si = 0; si < stack.length; si++) {
+        var el = stack[si];
+        if (!el || !buttonsLayer.contains(el)) continue;
+        if (!opts.includeGizmos && el.closest && el.closest('[data-exp-gizmo]')) continue;
+        var btn = el.closest && el.closest('[data-exp-stage-btn]');
+        if (btn) return btn;
+      }
+      return null;
+    }
+
     /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */
     function pickGroupedChildAtClient(clientX, clientY, sceneId, groupId) {
       if (!buttonsLayer || !sceneId || !groupId) return null;
-      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
-      var peRestore = [];
-      for (var gi = 0; gi < gizmos.length; gi++) {
-        peRestore.push(gizmos[gi].style.pointerEvents);
-        gizmos[gi].style.pointerEvents = 'none';
-      }
-      var under = document.elementFromPoint(clientX, clientY);
-      for (var gj = 0; gj < gizmos.length; gj++) {
-        gizmos[gj].style.pointerEvents = peRestore[gj] || '';
-      }
-      if (!under || !buttonsLayer.contains(under)) return null;
-      var hit = under.closest && under.closest('[data-exp-stage-btn]');
+      var hit = pickOverlayStageBtnFromPoint(clientX, clientY);
       if (!hit) return null;
       var bid = hit.getAttribute('data-exp-stage-btn');
       var grouped = resolveGroupedOverlayHit(sceneId, bid);
@@ -7929,7 +7953,7 @@ var ExperienciaCanvas = (function () {
 
     function resolveGroupedChildFromEvent(ev, sceneId) {
       if (!ev || !sceneId || !buttonsLayer) return null;
-      var hit = ev.target && ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
+      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
       if (hit) {
         var bid = hit.getAttribute('data-exp-stage-btn');
         return resolveGroupedOverlayHit(sceneId, bid);
@@ -10042,7 +10066,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
 
-        var hit = ev.target.closest('[data-exp-stage-btn]');
+        var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
           if (canvas().activeOverlayGroupEditId) {
