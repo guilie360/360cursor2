@@ -3744,6 +3744,7 @@ var QuotationEditor = (function () {
         '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
           btns +
           snapBtn +
+          backpackToolbarBtnHtml() +
         '</div>' +
         '<div class="qe-canvas-chrome-top__spacer" aria-hidden="true"></div>' +
       '</div>';
@@ -3840,23 +3841,22 @@ var QuotationEditor = (function () {
   }
 
   function backpackIconSvg() {
-    return '' +
-      '<svg class="qe-backpack-fab__ico" width="14" height="14" viewBox="0 0 24 24"' +
-        ' fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"' +
-        ' stroke-linejoin="round" aria-hidden="true">' +
-        '<path d="M10.2 5.2a1.8 1.8 0 0 1 3.6 0"/>' +
-        '<rect x="7.5" y="7" width="9" height="12.5" rx="2.2"/>' +
-        '<path d="M7.5 11h9"/>' +
-        '<path d="M12 11v1.6"/>' +
-        '<path d="M5.6 13.2c-1 0-1.6.8-1.6 1.7v2c0 .9.6 1.6 1.6 1.6"/>' +
-        '<path d="M18.4 13.2c1 0 1.6.8 1.6 1.7v2c0 .9-.6 1.6-1.6 1.6"/>' +
+    return '<svg class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 16 16" fill="none"' +
+      ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M6.3 4.1a1.7 1.7 0 0 1 3.4 0"/>' +
+      '<rect x="5.2" y="4.8" width="5.6" height="8.4" rx="1.3"/>' +
+      '<path d="M5.2 7.2h5.6"/>' +
+      '<path d="M3.6 8.8v2.1a1.2 1.2 0 0 0 1.2 1.2"/>' +
+      '<path d="M12.4 8.8v2.1a1.2 1.2 0 0 1-1.2 1.2"/>' +
       '</svg>';
   }
 
-  function backpackFabHtml() {
+  function backpackToolbarBtnHtml() {
     var on = !!state.backpackMode;
     return '' +
-      '<button type="button" class="qe-backpack-fab' + (on ? ' is-active' : '') + '"' +
+      '<button type="button" class="qe-canvas-tool__btn qe-canvas-tool__btn--backpack' +
+        (on ? ' is-active' : '') + '"' +
         ' data-qe-toggle-backpack' +
         ' title="' + escapeHtml(on ? 'Salir del backpack' : 'Backpack') + '"' +
         ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
@@ -3906,7 +3906,6 @@ var QuotationEditor = (function () {
                       ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
                   '</div>' +
                   stageDockHtml() +
-                  backpackFabHtml() +
                 '</div>' +
               '</div>' +
             '</div>' +

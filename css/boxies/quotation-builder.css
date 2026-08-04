@@ -455,54 +455,6 @@
   flex: 0 0 auto;
 }
 
-.qe-backpack-fab {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  z-index: 20;
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 999px;
-  background: rgba(16, 16, 16, 0.94);
-  color: rgba(255, 255, 255, 0.55);
-  cursor: pointer;
-  box-sizing: border-box;
-  /* Same row as dock — moves with the canvas stack */
-  transform: translate(0, calc(100% + 12px));
-  transition:
-    color 0.15s ease,
-    background 0.15s ease;
-}
-
-.qe-backpack-fab:hover:not(.is-active) {
-  color: rgba(255, 255, 255, 0.96);
-}
-
-.qe-backpack-fab.is-active {
-  color: rgba(255, 255, 255, 0.96);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.qe-backpack-fab:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.35);
-  outline-offset: 2px;
-}
-
-.qe-backpack-fab__ico {
-  display: block;
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-}
-
 .qe-editor.is-backpack-mode .qe-col--canvas,
 .qe-editor.is-backpack-mode .qe-stage-shell,
 .qe-editor.is-backpack-mode .qe-stage-unit,
@@ -546,8 +498,13 @@
   pointer-events: none !important;
 }
 
-/* Deposit mode — hide canvas chrome, keep scenes strip visible */
-.qe-editor.is-backpack-mode .qe-canvas-chrome-top,
+/* Deposit mode — hide canvas chrome except backpack toggle in viewport bar */
+.qe-editor.is-backpack-mode .qe-canvas-chrome-top__title,
+.qe-editor.is-backpack-mode .qe-canvas-chrome-top__spacer {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .qe-editor.is-backpack-mode .qe-dock,
 .qe-editor.is-backpack-mode [data-qe-dock-bar],
 .qe-editor.is-backpack-mode .qe-guides-chrome,
@@ -556,7 +513,11 @@
   pointer-events: none !important;
 }
 
-.qe-editor.is-backpack-mode .qe-backpack-fab {
+.qe-editor.is-backpack-mode [data-qe-viewport-bar] .qe-canvas-tool__btn:not([data-qe-toggle-backpack]) {
+  display: none !important;
+}
+
+.qe-editor.is-backpack-mode [data-qe-toggle-backpack] {
   display: inline-flex !important;
   visibility: visible !important;
   pointer-events: auto !important;
@@ -1150,6 +1111,12 @@
   padding-left: 7px;
   padding-right: 7px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.qe-canvas-tool--viewport .qe-canvas-tool__btn--backpack {
+  margin-left: 2px;
+  padding-left: 7px;
+  padding-right: 7px;
 }
 
 .qe-canvas-chrome-top__spacer {
@@ -4028,10 +3995,10 @@ body.quotation-canvas-first .builder-workspace,
 
 /* V7.2.65 ? canvas Vista Previa: hide leftover edit chrome */
 .qe-editor.is-canvas-preview .qe-dock,
-.qe-editor.is-canvas-preview .qe-backpack-fab,
+.qe-editor.is-canvas-preview [data-qe-toggle-backpack],
 .qe-editor.is-canvas-preview .qe-layers,
 .qe-col--canvas.is-canvas-preview .qe-dock,
-.qe-col--canvas.is-canvas-preview .qe-backpack-fab,
+.qe-col--canvas.is-canvas-preview [data-qe-toggle-backpack],
 .qe-col--canvas.is-canvas-preview .qe-layers {
   display: none !important;
 }
