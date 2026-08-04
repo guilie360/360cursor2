@@ -208,6 +208,9 @@ var QuotationCanvasTools = (function () {
           ' data-qe-check-text="' + escapeHtml(item.id) + '"' +
           ' value="' + escapeHtml(item.text || '') + '"' +
           ' placeholder="Tarea" spellcheck="true" autocomplete="off">' +
+        '<button type="button" class="qe-checklist__del"' +
+          ' data-qe-check-delete="' + escapeHtml(item.id) + '"' +
+          ' aria-label="Eliminar tarea">&times;</button>' +
       '</div>';
   }
 
@@ -239,6 +242,31 @@ var QuotationCanvasTools = (function () {
     }
 
     list.addEventListener('click', function (e) {
+      var delBtn = e.target && e.target.closest ? e.target.closest('[data-qe-check-delete]') : null;
+      if (delBtn && list.contains(delBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        var delId = delBtn.getAttribute('data-qe-check-delete');
+        var delIdx = itemIndexById(delId);
+        if (delIdx < 0) return;
+        var delRow = delBtn.closest('[data-qe-check-row]');
+        items.splice(delIdx, 1);
+        if (!items.length) {
+          items.push({ id: nextChecklistId(), text: '', checked: false });
+          saveChecklistItems(items);
+          list.innerHTML = items.map(checklistRowHtml).join('');
+          var freshInput = list.querySelector('[data-qe-check-text]');
+          if (freshInput) {
+            requestAnimationFrame(function () {
+              try { freshInput.focus(); } catch (eF) { /* ignore */ }
+            });
+          }
+        } else {
+          saveChecklistItems(items);
+          if (delRow) delRow.remove();
+        }
+        return;
+      }
       var btn = e.target && e.target.closest ? e.target.closest('[data-qe-check-toggle]') : null;
       if (!btn || !list.contains(btn)) return;
       e.preventDefault();
