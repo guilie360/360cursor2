@@ -1526,10 +1526,13 @@ var QuotationGuides = (function () {
     );
   }
 
+  var lastCanvasMenuPos = { x: 0, y: 0 };
+
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    lastCanvasMenuPos.x = Number(clientX) || 0;
+    lastCanvasMenuPos.y = Number(clientY) || 0;
     var snapOn = api && api.getOverlaySnapEnabled ? !!api.getOverlaySnapEnabled() : true;
-    var toolsOpen = api && api.getToolsPanelOpen ? !!api.getToolsPanelOpen() : false;
     var backpackOpen = api && api.getBackpackPanelOpen ? !!api.getBackpackPanelOpen() : false;
     QuotationContextMenu.open({
       x: clientX,
@@ -1549,8 +1552,8 @@ var QuotationGuides = (function () {
           label: snapOn ? 'Desactivar imanes' : 'Activar imanes'
         },
         {
-          id: 'toggle-tools',
-          label: toolsOpen ? 'Ocultar herramientas' : 'Herramientas',
+          id: 'open-tools',
+          label: 'Herramientas',
           separatorBefore: true
         },
         {
@@ -1577,8 +1580,8 @@ var QuotationGuides = (function () {
           }
           return;
         }
-        if (id === 'toggle-tools') {
-          if (api && api.toggleToolsPanel) api.toggleToolsPanel();
+        if (id === 'open-tools') {
+          openCanvasToolsMenu(lastCanvasMenuPos.x, lastCanvasMenuPos.y);
           return;
         }
         if (id === 'open-background') {
@@ -1588,6 +1591,47 @@ var QuotationGuides = (function () {
         if (id === 'toggle-backpack') {
           if (api && api.toggleBackpackPanel) api.toggleBackpackPanel();
         }
+      }
+    });
+  }
+
+  function openCanvasToolsMenu(clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    lastCanvasMenuPos.x = Number(clientX) || 0;
+    lastCanvasMenuPos.y = Number(clientY) || 0;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Herramientas',
+      items: [
+        {
+          id: 'tools-back',
+          label: '← Canvas'
+        },
+        {
+          id: 'tool-calculator',
+          label: 'Calculadora',
+          separatorBefore: true
+        },
+        {
+          id: 'tool-notes',
+          label: 'Notas'
+        },
+        {
+          id: 'tool-color-picker',
+          label: 'Color picker'
+        },
+        {
+          id: 'tool-pomodoro',
+          label: 'Pomodoro'
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'tools-back') {
+          openCanvasMenu(lastCanvasMenuPos.x, lastCanvasMenuPos.y);
+          return;
+        }
+        if (api && api.openCanvasTool) api.openCanvasTool(id);
       }
     });
   }

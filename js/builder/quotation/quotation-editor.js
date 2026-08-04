@@ -3588,6 +3588,11 @@ var QuotationEditor = (function () {
     openResourcePicker(state.activeSceneId || null);
   }
 
+  function openCanvasTool(toolId) {
+    if (typeof QuotationCanvasTools === 'undefined' || !QuotationCanvasTools.open) return;
+    QuotationCanvasTools.open(toolId);
+  }
+
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
     var sc = activeScene();
@@ -4107,6 +4112,7 @@ var QuotationEditor = (function () {
       toggleToolsPanel: function () { toggleToolsPanel(); },
       toggleBackpackPanel: function () { toggleBackpackPanel(); },
       openSceneBackgroundPicker: function () { openSceneBackgroundPicker(); },
+      openCanvasTool: function (toolId) { openCanvasTool(toolId); },
       onGuideSelect: function () {
         deselectOverlay();
       },
