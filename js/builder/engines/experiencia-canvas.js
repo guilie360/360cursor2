@@ -173,6 +173,27 @@ var ExperienciaCanvas = (function () {
     return kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
   }
 
+  /** Pointer delta → shape-local px (respect gizmo rotation). */
+  function shapeResizePointerLocalPx(drag, dxPx, dyPx) {
+    var rad = (Number(drag && drag.startRot) || 0) * Math.PI / 180;
+    dxPx = Number(dxPx) || 0;
+    dyPx = Number(dyPx) || 0;
+    if (Math.abs(rad) < 1e-6) return { dx: dxPx, dy: dyPx };
+    var cosR = Math.cos(rad);
+    var sinR = Math.sin(rad);
+    return {
+      dx: dxPx * cosR + dyPx * sinR,
+      dy: -dxPx * sinR + dyPx * cosR
+    };
+  }
+
+  /** Default corner keep-ratio: round shapes; rect-like shapes free unless Shift. */
+  function shapeCornerKeepRatioDefault(kind, shiftKey) {
+    kind = String(kind || '').toUpperCase();
+    if (shapeUsesPixelSquareCornerResize(kind)) return !shiftKey;
+    return !!shiftKey;
+  }
+
   /** Shapes: edge handles resize one axis; corners keep ratio. Circle stays uniform. */
   function shouldCoupleShapeResizeAxes(type, moveE, moveW, moveN, moveS, keepRatio) {
     if (!keepRatio) return false;
@@ -206,6 +227,9 @@ var ExperienciaCanvas = (function () {
     var moveN = mode.indexOf('n') >= 0;
     layerW = Math.max(1, Number(layerW) || Number(drag.layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || Number(drag.layerH) || 1000);
+    var localPtr = shapeResizePointerLocalPx(drag, dxPx, dyPx);
+    dxPx = localPtr.dx;
+    dyPx = localPtr.dy;
     var dxPct = (Number(dxPx) / layerW) * 100;
     var dyPct = (Number(dyPx) / layerH) * 100;
     var startL = Number(drag.startL);
@@ -293,16 +317,21 @@ var ExperienciaCanvas = (function () {
           var newPxSize = Math.max((minGw / 100) * layerW, startPxSize * scalePx);
           outGw = (newPxSize / layerW) * 100;
           outGh = (newPxSize / layerH) * 100;
-        } else {
-          var scaleBox = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
-            ? (Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH)
-            : (Math.abs(dxPct) >= Math.abs(dyPct) ? scaleBoxW : scaleBoxH);
+        } else if (keepRatio) {
+          var startPxW = (startGw / 100) * layerW;
+          var startPxH = (startGh / 100) * layerH;
+          var scaleBox = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
+            ? scaleBoxW : scaleBoxH;
           if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
-            scaleBox = Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH;
+            scaleBox = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
+              ? scaleBoxW : scaleBoxH;
           }
           scaleBox = Math.max(0.06, Math.min(6, scaleBox));
           outGw = startGw * scaleBox;
           outGh = startGh * scaleBox;
+        } else {
+          outGw = boxGw;
+          outGh = boxGh;
         }
       } else if (isEdgeXBox) {
         outGw = boxGw;
@@ -9297,7 +9326,8 @@ var ExperienciaCanvas = (function () {
               (btnG._ix && btnG._ix.shapeContentBox))),
             shapeBoxV2: shapeV2Drag,
             startBox: shapeV2Drag ? { cx: startX0, cy: startY0, w: startW0, h: startH0 } : null,
-            keepRatio: isShapeType(gtype) ? (shapeCornerHandle && !ev.shiftKey) :
+            keepRatio: isShapeType(gtype) ? (shapeCornerHandle &&
+              shapeCornerKeepRatioDefault(gtype, !!ev.shiftKey)) :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
             layerAspect: layerAspect,
