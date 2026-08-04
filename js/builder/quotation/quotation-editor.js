@@ -3839,12 +3839,19 @@ var QuotationEditor = (function () {
   function backpackIconSvg() {
     return '' +
       '<svg class="qe-backpack-fab__ico" width="14" height="14" viewBox="0 0 24 24"' +
-        ' fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"' +
+        ' fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
         ' stroke-linejoin="round" aria-hidden="true">' +
-        '<path d="M8 8V6.5a4 4 0 0 1 8 0V8"/>' +
-        '<path d="M5 8h14l-1.2 12.5H6.2L5 8z"/>' +
-        '<path d="M9.5 8a2.5 2.5 0 0 0 5 0"/>' +
-        '<path d="M12 8v2.5"/>' +
+        '<rect x="3.5" y="2.8" width="17" height="3.4" rx="1.7"/>' +
+        '<path d="M6.2 12.8c-1.3 0-2 1-2 2.2v1.6c0 1.2.7 2 2 2"/>' +
+        '<path d="M17.8 12.8c1.3 0 2 1 2 2.2v1.6c0 1.2-.7 2-2 2"/>' +
+        '<rect x="6.2" y="6.2" width="11.6" height="14.2" rx="2.2"/>' +
+        '<path d="M9.2 5.5V10"/>' +
+        '<path d="M14.8 5.5V10"/>' +
+        '<rect x="8.4" y="9.6" width="1.6" height="1.6" rx="0.25"/>' +
+        '<rect x="14" y="9.6" width="1.6" height="1.6" rx="0.25"/>' +
+        '<rect x="9.2" y="14.2" width="5.6" height="4.6" rx="1"/>' +
+        '<path d="M9.2 15.4h5.6"/>' +
+        '<path d="M12 17v1.6"/>' +
       '</svg>';
   }
 
