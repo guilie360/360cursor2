@@ -260,25 +260,33 @@ var ExperienciaCanvas = (function () {
     var B = startB;
 
     if (kind === 'SHAPE_LINE') {
-      if (moveE && !moveW) R = startR + dxPct;
-      else if (moveW && !moveE) L = startL + dxPct;
-      else {
-        if (moveE) R = startR + dxPct;
-        if (moveW) L = startL + dxPct;
-      }
-      var lineGw = Math.max(minGw, R - L);
-      if (moveW && !moveE) {
-        L = startR - lineGw;
-        R = startR;
-      } else if (moveE && !moveW) {
-        R = L + lineGw;
-      } else {
-        R = L + lineGw;
+      var LpxL = Number(drag.startLpx);
+      var RpxL = Number(drag.startRpx);
+      if (moveE) RpxL = drag.startRpx + dxPx;
+      if (moveW) LpxL = drag.startLpx + dxPx;
+      if (moveE && !moveW) LpxL = drag.startLpx;
+      else if (moveW && !moveE) RpxL = drag.startRpx;
+      var minWpxL = (minGw / 100) * layerW;
+      var wPxL = Math.max(minWpxL, RpxL - LpxL);
+      if (moveW && !moveE) LpxL = RpxL - wPxL;
+      else if (moveE && !moveW) RpxL = LpxL + wPxL;
+      var lineGw = (wPxL / layerW) * 100;
+      var lineCx = ((LpxL + RpxL) / 2 / layerW) * 100;
+      var lineCy = (startT + startB) / 2;
+      if (drag.shapeContentBox || drag.shapeBoxV2) {
+        return {
+          cx: lineCx,
+          cy: lineCy,
+          w: lineGw,
+          h: startGh,
+          stretchX: 1,
+          stretchY: 1
+        };
       }
       var lineScaleX = lineGw / startGw;
       return {
-        cx: (L + R) / 2,
-        cy: (T + B) / 2,
+        cx: lineCx,
+        cy: lineCy,
         w: lineGw,
         h: startGh,
         stretchX: startStretchX * lineScaleX,
@@ -1317,15 +1325,23 @@ var ExperienciaCanvas = (function () {
     /* Live resize: scale container only — except fixed-corner shapes regen SVG each frame. */
     var regenSvg = !opts.liveSizing ||
       (typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.shapeUsesFixedCornerContentPaint &&
-        ExperienciaEngine.shapeUsesFixedCornerContentPaint(box.kind));
+        ExperienciaEngine.shapeUsesContentBoxPaint &&
+        ExperienciaEngine.shapeUsesContentBoxPaint(box.kind));
+    var paintSx = vm.shapeStretchX;
+    var paintSy = vm.shapeStretchY;
+    if (typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.shapeUsesContentBoxPaint &&
+        ExperienciaEngine.shapeUsesContentBoxPaint(box.kind)) {
+      paintSx = 1;
+      paintSy = 1;
+    }
     if (regenSvg) {
       patchShapeSvgLive(el, box.kind, {
         fill: vm.fill,
         stroke: vm.stroke,
         strokeWidth: vm.strokeWidth,
         borderRadius: vm.borderRadius
-      }, vm.shapeStretchX, vm.shapeStretchY, {
+      }, paintSx, paintSy, {
         contentBoxWPct: box.w,
         contentBoxHPct: box.h,
         layerW: layerW,

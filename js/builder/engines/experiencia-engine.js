@@ -550,9 +550,15 @@ var ExperienciaEngine = (function () {
     return { w: (wPx / hPx) * 100, h: 100 };
   }
 
-  /** Shapes that redraw SVG from box dims so fixed corners are not CSS-stretched. */
+  /** Shapes that redraw SVG from box dims (line edge-to-edge, rect fixed corners). */
+  function shapeUsesContentBoxPaint(kind) {
+    kind = String(kind || '').toUpperCase();
+    return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE';
+  }
+
+  /** @deprecated use shapeUsesContentBoxPaint */
   function shapeUsesFixedCornerContentPaint(kind) {
-    return String(kind || '').toUpperCase() === 'SHAPE_RECT';
+    return shapeUsesContentBoxPaint(kind);
   }
 
   function shapeAttr(v) {
@@ -586,6 +592,13 @@ var ExperienciaEngine = (function () {
     var h = base.h * sy;
 
     if (kind === 'SHAPE_LINE') {
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        var lcw = Number(paint.contentW);
+        var lch = Number(paint.contentH);
+        var lmidY = lch / 2;
+        return '<line' + cls + ' x1="0" y1="' + lmidY + '" x2="' + lcw + '" y2="' + lmidY + '"' +
+          ' fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"' + ve + sr + '/>';
+      }
       var lx1 = 50 - w / 2;
       var lx2 = 50 + w / 2;
       return '<line' + cls + ' x1="' + lx1 + '" y1="50" x2="' + lx2 + '" y2="50"' +
@@ -689,7 +702,7 @@ var ExperienciaEngine = (function () {
     var contentPaint = null;
     /* Gizmo box paint: tight viewBox so geometry fills the element edge-to-edge (Genially-style). */
     if (opts.tightViewBox) {
-      if (shapeUsesFixedCornerContentPaint(kind) &&
+      if (shapeUsesContentBoxPaint(kind) &&
           opts.contentBoxWPct != null && opts.contentBoxHPct != null) {
         var normVb = shapeContentBoxViewBoxNorm(
           opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH
@@ -7506,6 +7519,7 @@ var ExperienciaEngine = (function () {
     shapeContentBBox: shapeContentBBox,
     shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
+    shapeUsesContentBoxPaint: shapeUsesContentBoxPaint,
     shapeUsesFixedCornerContentPaint: shapeUsesFixedCornerContentPaint,
     shapeContentBoxViewBoxNorm: shapeContentBoxViewBoxNorm,
     shapeRectFixedCornerRx: shapeRectFixedCornerRx,
