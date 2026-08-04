@@ -754,7 +754,6 @@ var QuotationEditor = (function () {
       backpackMode: false,
       backpackReturnSceneId: null,
       backpackInteractions: [],
-      backpackFabAnchor: null,
       canvasUserZoom: 1,
       canvasPanX: null,
       canvasPanY: null,
@@ -1575,7 +1574,6 @@ var QuotationEditor = (function () {
     }
     state.backpackMode = false;
     state.backpackReturnSceneId = null;
-    state.backpackFabAnchor = null;
     if (healLibraryIdentity()) markDirtyLocal();
     return true;
   }
@@ -3621,37 +3619,6 @@ var QuotationEditor = (function () {
     btn.title = on ? 'Salir del backpack' : 'Backpack';
   }
 
-  function measureBackpackFabAnchor() {
-    if (!rootEl) return null;
-    var col = rootEl.querySelector('.qe-col--canvas');
-    var stack = rootEl.querySelector('[data-qe-canvas-fit-stack]');
-    if (!col || !stack) return null;
-    var colRect = col.getBoundingClientRect();
-    var stackRect = stack.getBoundingClientRect();
-    var DOCK_ROW = 12;
-    return {
-      left: stackRect.left - colRect.left,
-      top: stackRect.bottom - colRect.top + DOCK_ROW
-    };
-  }
-
-  function applyBackpackFabAnchor() {
-    if (!rootEl) return;
-    var fab = rootEl.querySelector('[data-qe-toggle-backpack]');
-    if (!fab) return;
-    var anchor = (state.backpackMode && state.backpackFabAnchor)
-      ? state.backpackFabAnchor
-      : measureBackpackFabAnchor();
-    if (!anchor) return;
-    fab.style.position = 'absolute';
-    fab.style.left = Math.round(anchor.left) + 'px';
-    fab.style.top = Math.round(anchor.top) + 'px';
-    fab.style.bottom = 'auto';
-    fab.style.right = 'auto';
-    fab.style.transform = 'none';
-    fab.style.zIndex = '20';
-  }
-
   function syncBackpackChromeUi() {
     if (!rootEl) return;
     var editor = rootEl.querySelector('[data-qe-editor]');
@@ -3676,13 +3643,11 @@ var QuotationEditor = (function () {
       try { QuotationCanvasTools.close(); } catch (eTools) { /* ignore */ }
     }
     state.backpackReturnSceneId = state.activeSceneId;
-    state.backpackFabAnchor = measureBackpackFabAnchor();
     state.backpackMode = true;
     destroyBuilderRuntimeScene();
     mountBuilderRuntimeScene();
     syncBackpackChromeUi();
     fitStageWorkspace();
-    applyBackpackFabAnchor();
   }
 
   function exitBackpackMode(restoreScene) {
@@ -3691,7 +3656,6 @@ var QuotationEditor = (function () {
       try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
     }
     state.backpackMode = false;
-    state.backpackFabAnchor = null;
     if (restoreScene !== false && state.backpackReturnSceneId && sceneById(state.backpackReturnSceneId)) {
       state.activeSceneId = state.backpackReturnSceneId;
     }
@@ -3700,7 +3664,6 @@ var QuotationEditor = (function () {
     mountBuilderRuntimeScene();
     syncBackpackChromeUi();
     fitStageWorkspace();
-    applyBackpackFabAnchor();
   }
 
   function toggleBackpackMode() {
@@ -3946,12 +3909,12 @@ var QuotationEditor = (function () {
                       ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
                   '</div>' +
                   stageDockHtml() +
+                  backpackFabHtml() +
                 '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
-        backpackFabHtml() +
         resourcePickerHtml() +
         shapePickerHtml() +
         sceneConfirmHtml() +
@@ -4073,44 +4036,30 @@ var QuotationEditor = (function () {
       ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height) : 0;
     var scenesMb = (scenesMeasureEl && !state.scenesCollapsed)
       ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0) : 0;
-    var TOOL_PAD = state.backpackMode ? 0 : 44;
-    var chromeH = state.backpackMode ? 0 : Math.ceil(scenesH + scenesMb);
+    var TOOL_PAD = 44;
+    var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
     var slotH = Math.max(1, availH - chromeH);
 
-    var scale;
-    var scaledW;
-    var scaledH;
-    var natW;
-    var natH;
-
-    if (state.backpackMode) {
-      natW = Math.max(1, slotW);
-      natH = Math.max(1, slotH);
-      scale = 1;
-      scaledW = natW;
-      scaledH = natH;
-    } else {
-      natW = device.width;
-      natH = device.height;
-      scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
-      if (!isFinite(scale) || scale <= 0) scale = 0.01;
-      if (scale > 1) scale = 1;
-      scaledW = Math.max(1, Math.floor(natW * scale));
-      scaledH = Math.max(1, Math.floor(natH * scale));
-    }
+    var natW = device.width;
+    var natH = device.height;
+    var scale = Math.min(slotW / natW, (slotH - TOOL_PAD * 2) / natH);
+    if (!isFinite(scale) || scale <= 0) scale = 0.01;
+    if (scale > 1) scale = 1;
+    var scaledW = Math.max(1, Math.floor(natW * scale));
+    var scaledH = Math.max(1, Math.floor(natH * scale));
 
     if (fitSlot) {
       fitSlot.style.flex = '1 1 auto';
       fitSlot.style.minHeight = '0';
       fitSlot.style.minWidth = '0';
-      fitSlot.style.width = state.backpackMode ? '100%' : '';
+      fitSlot.style.width = '';
       fitSlot.style.height = slotH + 'px';
       fitSlot.style.display = 'flex';
-      fitSlot.style.alignItems = state.backpackMode ? 'stretch' : 'center';
-      fitSlot.style.justifyContent = state.backpackMode ? 'stretch' : 'center';
+      fitSlot.style.alignItems = 'center';
+      fitSlot.style.justifyContent = 'center';
       fitSlot.style.overflow = state.backpackMode ? 'hidden' : 'visible';
-      fitSlot.style.padding = state.backpackMode ? '0' : (TOOL_PAD + 'px 0');
+      fitSlot.style.padding = TOOL_PAD + 'px 0';
       fitSlot.style.boxSizing = 'border-box';
       fitSlot.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     }
@@ -4128,16 +4077,16 @@ var QuotationEditor = (function () {
       work.style.position = 'relative';
     }
     if (fitStack) {
-      fitStack.style.width = state.backpackMode ? '100%' : (scaledW + 'px');
-      fitStack.style.height = state.backpackMode ? '100%' : (scaledH + 'px');
+      fitStack.style.width = scaledW + 'px';
+      fitStack.style.height = scaledH + 'px';
       fitStack.style.position = 'relative';
-      fitStack.style.flex = state.backpackMode ? '1 1 auto' : '0 0 auto';
+      fitStack.style.flex = '0 0 auto';
     }
     if (fitFrame) {
-      fitFrame.style.width = state.backpackMode ? '100%' : (scaledW + 'px');
-      fitFrame.style.height = state.backpackMode ? '100%' : (scaledH + 'px');
+      fitFrame.style.width = scaledW + 'px';
+      fitFrame.style.height = scaledH + 'px';
       fitFrame.style.position = 'relative';
-      fitFrame.style.flex = state.backpackMode ? '1 1 auto' : '0 0 auto';
+      fitFrame.style.flex = '0 0 auto';
       fitFrame.style.overflow = 'hidden';
       fitFrame.style.border = state.backpackMode ? 'none' : '';
       fitFrame.style.borderRadius = state.backpackMode ? '0' : '';
@@ -4170,13 +4119,13 @@ var QuotationEditor = (function () {
     if (stage) {
       stage.style.width = natW + 'px';
       stage.style.height = natH + 'px';
-      stage.style.minHeight = state.backpackMode ? '100%' : (natH + 'px');
-      stage.style.maxHeight = state.backpackMode ? 'none' : (natH + 'px');
-      stage.style.flex = state.backpackMode ? '1 1 auto' : '0 0 auto';
-      stage.style.position = state.backpackMode ? 'relative' : 'absolute';
-      stage.style.top = state.backpackMode ? '' : '0';
-      stage.style.left = state.backpackMode ? '' : '0';
-      stage.style.transform = state.backpackMode ? 'none' : ('scale(' + scale + ')');
+      stage.style.minHeight = natH + 'px';
+      stage.style.maxHeight = natH + 'px';
+      stage.style.flex = '0 0 auto';
+      stage.style.position = 'absolute';
+      stage.style.top = '0';
+      stage.style.left = '0';
+      stage.style.transform = 'scale(' + scale + ')';
       stage.style.transformOrigin = 'top left';
       stage.style.border = state.backpackMode ? 'none' : '';
       stage.style.borderRadius = state.backpackMode ? '0' : '';
@@ -4185,13 +4134,11 @@ var QuotationEditor = (function () {
 
     shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
-    shell.setAttribute('data-qe-chrome-locked', state.backpackMode ? '0' : '1');
+    shell.setAttribute('data-qe-chrome-locked', '1');
     shell.setAttribute('data-qe-backpack-mode', state.backpackMode ? '1' : '0');
     shell.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     unit.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     canvasFitScale = scale;
-
-    applyBackpackFabAnchor();
 
     if (expOverlay && expOverlay.isKonvaPoc) {
       try {
@@ -9596,7 +9543,6 @@ var QuotationEditor = (function () {
       state._backpackSceneRef = null;
       state.backpackMode = false;
       state.backpackReturnSceneId = null;
-      state.backpackFabAnchor = null;
       if (healLibraryIdentity()) markDirtyLocal();
       ensureHeroSceneContract();
       return;

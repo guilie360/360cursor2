@@ -456,6 +456,10 @@
 }
 
 .qe-backpack-fab {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -471,6 +475,8 @@
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   box-sizing: border-box;
+  /* Same row as dock — moves with the canvas stack */
+  transform: translate(0, calc(100% + 12px));
   transition:
     color 0.15s ease,
     background 0.15s ease;
@@ -540,16 +546,19 @@
   pointer-events: none !important;
 }
 
-/* Deposit mode — only the backpack toggle stays on the canvas chrome */
+/* Deposit mode — hide chrome but keep scenes strip layout space */
 .qe-editor.is-backpack-mode .qe-canvas-chrome-top,
 .qe-editor.is-backpack-mode .qe-dock,
 .qe-editor.is-backpack-mode [data-qe-dock-bar],
-.qe-editor.is-backpack-mode .qe-scenes-host,
 .qe-editor.is-backpack-mode .qe-guides-chrome,
 .qe-editor.is-backpack-mode .qe-canvas-tools-host {
-  display: none !important;
-  pointer-events: none !important;
   visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.qe-editor.is-backpack-mode .qe-scenes-host {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .qe-editor.is-backpack-mode .qe-backpack-fab {
