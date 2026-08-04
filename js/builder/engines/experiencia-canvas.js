@@ -318,23 +318,50 @@ var ExperienciaCanvas = (function () {
         } else if (keepRatio) {
           var startPxW = (startGw / 100) * layerW;
           var startPxH = (startGh / 100) * layerH;
-          var scaleBox = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
-            ? scaleBoxW : scaleBoxH;
-          if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
-            scaleBox = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
-              ? scaleBoxW : scaleBoxH;
+          var targetPxW = (boxGw / 100) * layerW;
+          var targetPxH = (boxGh / 100) * layerH;
+          var scale;
+          if (shapeUsesPixelSquareCornerResize(kind)) {
+            scale = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
+              ? (targetPxW / Math.max(startPxW, 0.001))
+              : (targetPxH / Math.max(startPxH, 0.001));
+          } else {
+            /* Diagonal scale from fixed opposite corner — handle tracks cursor naturally. */
+            var startDiag = Math.max(Math.sqrt(startPxW * startPxW + startPxH * startPxH), 0.001);
+            var targetDiag = Math.sqrt(targetPxW * targetPxW + targetPxH * targetPxH);
+            scale = targetDiag / startDiag;
           }
-          scaleBox = Math.max(0.06, Math.min(6, scaleBox));
-          outGw = startGw * scaleBox;
-          outGh = startGh * scaleBox;
+          scale = Math.max(0.06, Math.min(6, scale));
+          outGw = startGw * scale;
+          outGh = startGh * scale;
         } else {
           outGw = boxGw;
           outGh = boxGh;
         }
       } else if (isEdgeXBox) {
-        outGw = boxGw;
+        var LpxE = Number(drag.startLpx);
+        var RpxE = Number(drag.startRpx);
+        if (moveE) RpxE = drag.startRpx + dxPx;
+        if (moveW) LpxE = drag.startLpx + dxPx;
+        if (moveE && !moveW) LpxE = drag.startLpx;
+        else if (moveW && !moveE) RpxE = drag.startRpx;
+        var minWpxE = (minGw / 100) * layerW;
+        var wPxE = Math.max(minWpxE, RpxE - LpxE);
+        if (moveW && !moveE) LpxE = RpxE - wPxE;
+        else if (moveE && !moveW) RpxE = LpxE + wPxE;
+        outGw = (wPxE / layerW) * 100;
       } else if (isEdgeYBox) {
-        outGh = boxGh;
+        var TpxE = Number(drag.startTpx);
+        var BpxE = Number(drag.startBpx);
+        if (moveS) BpxE = drag.startBpx + dyPx;
+        if (moveN) TpxE = drag.startTpx + dyPx;
+        if (moveS && !moveN) TpxE = drag.startTpx;
+        else if (moveN && !moveS) BpxE = drag.startBpx;
+        var minHpxE = (minGh / 100) * layerH;
+        var hPxE = Math.max(minHpxE, BpxE - TpxE);
+        if (moveN && !moveS) TpxE = BpxE - hPxE;
+        else if (moveS && !moveN) BpxE = TpxE + hPxE;
+        outGh = (hPxE / layerH) * 100;
       }
       var outGx = (startL + startR) / 2;
       var outGy = (startT + startB) / 2;
@@ -1218,8 +1245,11 @@ var ExperienciaCanvas = (function () {
     var cx = vm.storedX != null ? Number(vm.storedX) : Number(vm.x) || 50;
     var cy = vm.storedY != null ? Number(vm.storedY) : Number(vm.y) || 50;
     if (ix.shapeContentBox || vm.shapeContentBox) {
-      var w = Number(vm.width);
-      var h = Number(vm.height);
+      var w = Number(vm.width != null && !isNaN(Number(vm.width)) ? vm.width : ix.width);
+      var h = Number(vm.height != null && !isNaN(Number(vm.height)) ? vm.height : ix.height);
+      if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+        return { cx: cx, cy: cy, w: w, h: h, rot: rot, kind: kind, gizmoBox: true };
+      }
       if (!isNaN(w) && w > 0) {
         var sq = shapePixelSquareDims(w, h, layerW, layerH);
         if (sq) {
