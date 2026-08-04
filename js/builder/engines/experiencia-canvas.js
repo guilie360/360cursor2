@@ -14,7 +14,7 @@ var ExperienciaCanvas = (function () {
     return true;
   }
 
-  /** Quotation sandbox — ShapeBox v2 POC (Fases 1–2). */
+  /** Quotation sandbox — ShapeBox v2 POC (Fases 1–3). */
   var EDITOR_PROJECT_ID = '5a70961a-a97a-4082-abd2-33a633b779e8';
   var _shapeBoxV2Active = false;
   var _shapeBoxV2ProjectId = null;
@@ -125,8 +125,8 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    /* Content-box shapes: resize gw×gh; stretch stays fixed (no SVG bleed). */
-    if (drag.shapeContentBox) {
+    /* Content-box / ShapeBox v2: resize gw×gh; stretch stays fixed (no SVG bleed). */
+    if (drag.shapeContentBox || drag.shapeBoxV2) {
       if (moveE) R = startR + dxPct;
       if (moveW) L = startL + dxPct;
       if (moveS) B = startB + dyPct;
@@ -268,7 +268,7 @@ var ExperienciaCanvas = (function () {
 
   function computeShapeResizeLive(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
     if (!drag || !isShapeType(drag.type)) return null;
-    if (!drag.startTileW) return null;
+    if (!drag.startTileW && !drag.shapeBoxV2) return null;
     var box = resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio);
     if (!box) return null;
 
@@ -289,6 +289,15 @@ var ExperienciaCanvas = (function () {
         shapeStretchX: box.stretchX,
         shapeStretchY: box.stretchY,
         shapeContentBox: true
+      },
+      box: {
+        cx: box.cx,
+        cy: box.cy,
+        w: box.w,
+        h: box.h,
+        rot: Number(drag.startRot) || 0,
+        kind: String(drag.type || '').toUpperCase(),
+        gizmoBox: true
       }
     };
   }
@@ -1032,9 +1041,15 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Unified shape node paint — same box for stage, selection, and live sync. */
-  function paintShapeNodeEl(el, box, vm, layerW, layerH) {
+  function paintShapeNodeEl(el, box, vm, layerW, layerH, opts) {
     if (!el || !box || !vm) return;
-    el.classList.remove('is-live-sizing', 'is-live-moving');
+    opts = opts || {};
+    el.classList.remove('is-live-moving');
+    if (opts.liveSizing) {
+      el.classList.add('is-live-sizing');
+    } else {
+      el.classList.remove('is-live-sizing');
+    }
     el.style.removeProperty('overflow');
     el.style.removeProperty('transform');
     el.style.left = box.cx + '%';
@@ -2676,7 +2691,7 @@ var ExperienciaCanvas = (function () {
     _shapeBoxV2Active = api.shapeBoxV2 === true || shapeBoxV2Enabled(_shapeBoxV2ProjectId);
     if (_shapeBoxV2Active) {
       try {
-        console.info('[ExperienciaCanvas] ShapeBox v2 — unified shape paint (Fase 1–2 POC)');
+        console.info('[ExperienciaCanvas] ShapeBox v2 — unified shape paint + resize (Fase 1–3 POC)');
       } catch (eSbLog) { /* ignore */ }
     }
 
@@ -5192,11 +5207,37 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    /** Live resize — tile = gizmo box (Genially-style); SVG fills tile exactly. */
+    /** Live resize — unified ShapeBox v2 paint, or legacy tile/gizmo split. */
     function paintShapeLiveFast(fin, liveRefs, layerW, layerH) {
       if (!fin || !fin.gm || !liveRefs) return;
       var gm = fin.gm;
       var rot = (liveRefs.snap && liveRefs.snap.rot) || 0;
+
+      if (isShapeBoxV2Active() && fin.box) {
+        var boxV2 = fin.box;
+        boxV2.rot = rot;
+        var liveKeyV2 = boxV2.cx + '|' + boxV2.cy + '|' + boxV2.w + '|' + boxV2.h;
+        if (liveRefs.lastLiveKey === liveKeyV2) return;
+        liveRefs.lastLiveKey = liveKeyV2;
+        var vmLive = {
+          type: liveRefs.kind,
+          fill: liveRefs.paint && liveRefs.paint.fill,
+          stroke: liveRefs.paint && liveRefs.paint.stroke,
+          strokeWidth: liveRefs.paint && liveRefs.paint.strokeWidth,
+          borderRadius: liveRefs.paint && liveRefs.paint.borderRadius,
+          shapeStretchX: fin.stretchX,
+          shapeStretchY: fin.stretchY
+        };
+        if (liveRefs.el) {
+          paintShapeNodeEl(liveRefs.el, boxV2, vmLive, layerW, layerH, { liveSizing: true });
+        }
+        if (liveRefs.gizmo) {
+          liveRefs.gizmo.classList.add('is-sizing');
+          paintShapeGizmoEl(liveRefs.gizmo, boxV2, layerW, layerH);
+        }
+        return;
+      }
+
       var liveKey = gm.gx + '|' + gm.gy + '|' + gm.gw + '|' + gm.gh + '|' +
         fin.stretchX + '|' + fin.stretchY;
       if (liveRefs.lastLiveKey === liveKey) return;
@@ -8797,20 +8838,36 @@ var ExperienciaCanvas = (function () {
           if (isShapeType(gtype)) {
             var idEsc = String(gid).replace(/"/g, '');
             var gizmoEl = gizmo;
-            var gmSnap = shapeGizmoMetrics(btnG, layerW0, layerH0);
-            /* Model metrics only — DOM rects lie under CSS stage scale. */
-            startW0 = gmSnap ? gmSnap.gw : (shapeDragDef ? shapeDragDef.w : 12);
-            startH0 = gmSnap ? gmSnap.gh : (shapeDragDef ? shapeDragDef.h : 12);
-            startX0 = gmSnap ? gmSnap.gx
-              : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
-            startY0 = gmSnap ? gmSnap.gy
-              : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
-            if (!gmSnap) {
-              var paintSnap0 = shapePaintSize(btnG, layerW0, layerH0);
-              startW0 = paintSnap0.w;
-              startH0 = paintSnap0.h;
-            }
             var btnStretch = shapeStretchFromBtn(btnG);
+            var shapeBoxV2Drag = isShapeBoxV2Active();
+            if (shapeBoxV2Drag) {
+              var startBoxSnap = getShapeBox(btnG, layerW0, layerH0);
+              if (startBoxSnap) {
+                startX0 = startBoxSnap.cx;
+                startY0 = startBoxSnap.cy;
+                startW0 = startBoxSnap.w;
+                startH0 = startBoxSnap.h;
+              } else {
+                startX0 = btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50;
+                startY0 = btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50;
+                startW0 = shapeDragDef ? shapeDragDef.w : 12;
+                startH0 = shapeDragDef ? shapeDragDef.h : 12;
+              }
+            } else {
+              var gmSnap = shapeGizmoMetrics(btnG, layerW0, layerH0);
+              /* Model metrics only — DOM rects lie under CSS stage scale. */
+              startW0 = gmSnap ? gmSnap.gw : (shapeDragDef ? shapeDragDef.w : 12);
+              startH0 = gmSnap ? gmSnap.gh : (shapeDragDef ? shapeDragDef.h : 12);
+              startX0 = gmSnap ? gmSnap.gx
+                : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
+              startY0 = gmSnap ? gmSnap.gy
+                : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
+              if (!gmSnap) {
+                var paintSnap0 = shapePaintSize(btnG, layerW0, layerH0);
+                startW0 = paintSnap0.w;
+                startH0 = paintSnap0.h;
+              }
+            }
             liveRefs = {
               el: buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]'),
               gizmo: gizmoEl,
@@ -8861,6 +8918,7 @@ var ExperienciaCanvas = (function () {
           }
           var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
             handleMode === 'se' || handleMode === 'sw';
+          var shapeV2Drag = isShapeType(gtype) && isShapeBoxV2Active();
           transformDrag = {
             mode: handleMode,
             buttonId: gid,
@@ -8894,12 +8952,14 @@ var ExperienciaCanvas = (function () {
             ptrCache: ptrCache,
             liveRefs: liveRefs,
             startTileW: isShapeType(gtype)
-              ? (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12))
+              ? (shapeV2Drag ? startW0 : (Number(btnG.width) || (shapeDragDef ? shapeDragDef.w : 12)))
               : null,
             startStretchX: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sx : 1,
             startStretchY: isShapeType(gtype) ? shapeStretchFromBtn(btnG).sy : 1,
-            shapeContentBox: isShapeType(gtype) && !!(btnG.shapeContentBox ||
-              (btnG._ix && btnG._ix.shapeContentBox)),
+            shapeContentBox: isShapeType(gtype) && (shapeV2Drag || !!(btnG.shapeContentBox ||
+              (btnG._ix && btnG._ix.shapeContentBox))),
+            shapeBoxV2: shapeV2Drag,
+            startBox: shapeV2Drag ? { cx: startX0, cy: startY0, w: startW0, h: startH0 } : null,
             keepRatio: isShapeType(gtype) ? (shapeCornerHandle && !ev.shiftKey) :
               (isSquareShapeType(gtype) ||
               ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') ? !ev.shiftKey : !!ev.shiftKey)),
@@ -9146,7 +9206,7 @@ var ExperienciaCanvas = (function () {
           /* Final snap + round stored geometry after live resize. */
           var committedShapeResize = false;
           if (!wasRotate && endScene && rotBtnId) {
-            if (isShapeType(endType) && liveShapePatch) {
+            if (isShapeType(endType) && liveShapePatch && movedT) {
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, liveShapePatch);
               committedShapeResize = true;
             } else if (movedT && !isShapeType(endType)) {
