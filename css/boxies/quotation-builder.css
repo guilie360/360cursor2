@@ -4840,8 +4840,8 @@ body.quotation-canvas-first .builder-workspace,
   cursor: default;
 }
 .builder-exp-stage-shape__pick {
-  pointer-events: visibleFill;
-  fill: rgba(0, 0, 0, 0.001);
+  pointer-events: all !important;
+  fill: rgba(0, 0, 0, 0.01);
   stroke: none;
   cursor: default;
 }
@@ -4877,8 +4877,11 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: none;
   transition: opacity 0.16s ease, filter 0.16s ease;
 }
+.builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body,
 .builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > *,
+.builder-exp-stage-shape.is-canvas-hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body,
 .builder-exp-stage-shape.is-canvas-hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > *,
+.builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body,
 .builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > * {
   stroke: #ffffff !important;
   stroke-width: 3px !important;

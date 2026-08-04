@@ -8022,20 +8022,23 @@ var ExperienciaCanvas = (function () {
       return btn;
     }
 
-    /** Hit-test stage overlays — silhouette pick layer + z-order; selected pass-through. */
+    /** Hit-test stage overlays — SVG scan first, then DOM stack; selected pass-through. */
     function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
       opts = opts || {};
       if (!buttonsLayer) return null;
+      var selectedSet = {};
+      getSelectedOverlayIds().forEach(function (id) {
+        selectedSet[String(id)] = true;
+      });
+      var svgSkip = overlayPickFromSvgPoint(clientX, clientY, selectedSet, { skipSelected: true });
+      if (svgSkip) return svgSkip;
+
       var stack;
       try {
         stack = document.elementsFromPoint(clientX, clientY);
       } catch (eStack) {
         stack = [];
       }
-      var selectedSet = {};
-      getSelectedOverlayIds().forEach(function (id) {
-        selectedSet[String(id)] = true;
-      });
       var firstAny = null;
       var firstUnselected = null;
       var seen = {};
@@ -8051,10 +8054,9 @@ var ExperienciaCanvas = (function () {
         }
       }
       if (firstUnselected) return firstUnselected;
-      if (firstAny && !opts.forHover) return firstAny;
-      return overlayPickFromSvgPoint(clientX, clientY, selectedSet, {
-        skipSelected: opts.forHover !== false
-      }) || firstAny;
+      var svgAny = overlayPickFromSvgPoint(clientX, clientY, selectedSet, { skipSelected: false });
+      if (svgAny) return svgAny;
+      return firstAny;
     }
 
     /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */

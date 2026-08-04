@@ -634,7 +634,8 @@ var ExperienciaEngine = (function () {
     var stroke = shapeAttr(paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.55)');
     var sw = paint.pickLayer ? 0 : shapeStrokeWidth(paint);
     var ve = paint.noVectorEffect ? '' : ' vector-effect="non-scaling-stroke"';
-    var cls = paint.className ? ' class="' + shapeAttr(paint.className) + '"' : '';
+    var peAttr = paint.pickLayer ? ' pointer-events="all"' : '';
+    var cls = (paint.className ? ' class="' + shapeAttr(paint.className) + '"' : '') + peAttr;
     var brR = paint.borderRadius != null ? Number(paint.borderRadius) : 16;
     var sr = ' shape-rendering="geometricPrecision"';
     var w = base.w * sx;
@@ -834,7 +835,7 @@ var ExperienciaEngine = (function () {
       /* Invisible fill — full silhouette hit target (stroke-only shapes have no interior otherwise). */
       if (kind !== 'SHAPE_LINE') {
         html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
-          fill: 'rgba(0,0,0,0.001)',
+          fill: 'rgba(0,0,0,0.01)',
           stroke: 'none',
           strokeWidth: 0,
           pickLayer: true,
