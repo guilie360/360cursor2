@@ -3555,6 +3555,39 @@ var QuotationEditor = (function () {
     syncOverlaySnapUi();
   }
 
+  function isBackpackPanelOpen() {
+    var ws = document.querySelector('.quotation-workspace');
+    if (!ws || ws.classList.contains('is-recursos-hidden')) return false;
+    return !ws.classList.contains('is-left-collapsed');
+  }
+
+  function isToolsPanelOpen() {
+    var props = document.getElementById('quotationPropsPanel');
+    if (props && props.hidden) return false;
+    var ws = document.querySelector('.quotation-workspace');
+    if (!ws) return false;
+    return !ws.classList.contains('is-right-collapsed');
+  }
+
+  function toggleBackpackPanel() {
+    if (typeof QuotationBuilderView === 'undefined' || !QuotationBuilderView.applyLeftCollapsed) return;
+    QuotationBuilderView.applyLeftCollapsed(isBackpackPanelOpen());
+  }
+
+  function toggleToolsPanel() {
+    if (typeof QuotationBuilderView === 'undefined' || !QuotationBuilderView.applyRightCollapsed) return;
+    if (QuotationBuilderView.setPropsPanelVisible) {
+      QuotationBuilderView.setPropsPanelVisible(true);
+    }
+    state.inspectorCollapsed = isToolsPanelOpen();
+    QuotationBuilderView.applyRightCollapsed(isToolsPanelOpen());
+  }
+
+  function openSceneBackgroundPicker() {
+    if (state.canvasPreviewMode) return;
+    openResourcePicker(state.activeSceneId || null);
+  }
+
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
     var sc = activeScene();
@@ -4069,6 +4102,11 @@ var QuotationEditor = (function () {
       onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; },
       getOverlaySnapEnabled: function () { return !!state.overlaySnapEnabled; },
       setOverlaySnapEnabled: function (on) { setOverlaySnapEnabled(on); },
+      getToolsPanelOpen: function () { return isToolsPanelOpen(); },
+      getBackpackPanelOpen: function () { return isBackpackPanelOpen(); },
+      toggleToolsPanel: function () { toggleToolsPanel(); },
+      toggleBackpackPanel: function () { toggleBackpackPanel(); },
+      openSceneBackgroundPicker: function () { openSceneBackgroundPicker(); },
       onGuideSelect: function () {
         deselectOverlay();
       },

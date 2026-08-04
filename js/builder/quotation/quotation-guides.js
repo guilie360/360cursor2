@@ -1529,6 +1529,8 @@ var QuotationGuides = (function () {
   function openCanvasMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     var snapOn = api && api.getOverlaySnapEnabled ? !!api.getOverlaySnapEnabled() : true;
+    var toolsOpen = api && api.getToolsPanelOpen ? !!api.getToolsPanelOpen() : false;
+    var backpackOpen = api && api.getBackpackPanelOpen ? !!api.getBackpackPanelOpen() : false;
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -1545,6 +1547,19 @@ var QuotationGuides = (function () {
         {
           id: 'toggle-snap',
           label: snapOn ? 'Desactivar imanes' : 'Activar imanes'
+        },
+        {
+          id: 'toggle-tools',
+          label: toolsOpen ? 'Ocultar herramientas' : 'Herramientas',
+          separatorBefore: true
+        },
+        {
+          id: 'open-background',
+          label: 'Fondo'
+        },
+        {
+          id: 'toggle-backpack',
+          label: backpackOpen ? 'Ocultar backpack' : 'Backpack'
         }
       ],
       onSelect: function (id) {
@@ -1560,6 +1575,18 @@ var QuotationGuides = (function () {
           if (api && api.setOverlaySnapEnabled) {
             api.setOverlaySnapEnabled(!snapOn);
           }
+          return;
+        }
+        if (id === 'toggle-tools') {
+          if (api && api.toggleToolsPanel) api.toggleToolsPanel();
+          return;
+        }
+        if (id === 'open-background') {
+          if (api && api.openSceneBackgroundPicker) api.openSceneBackgroundPicker();
+          return;
+        }
+        if (id === 'toggle-backpack') {
+          if (api && api.toggleBackpackPanel) api.toggleBackpackPanel();
         }
       }
     });
