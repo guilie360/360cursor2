@@ -5704,6 +5704,10 @@ var ExperienciaCanvas = (function () {
           item.gizmo.style.removeProperty('transform');
         }
       });
+      if (moveLiveRefs.groupGizmo) {
+        moveLiveRefs.groupGizmo.classList.remove('is-live-moving');
+        moveLiveRefs.groupGizmo.style.removeProperty('transform');
+      }
     }
 
     function canUseShapeMoveFastPath(sceneId, groupIds) {
@@ -5745,6 +5749,25 @@ var ExperienciaCanvas = (function () {
       return items.length ? { items: items, layerW: layerW, layerH: layerH } : null;
     }
 
+    function attachGroupGizmoToMoveLiveRefs(drag) {
+      if (!drag || !drag.isOverlayGroup || !drag.moveLiveRefs || !drag.buttonId) return;
+      if (!buttonsLayer) return;
+      var idEsc = String(drag.buttonId).replace(/"/g, '');
+      var groupGizmo = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+      if (!groupGizmo) return;
+      var vm = getOverlayItemVm(drag.sceneId, drag.buttonId);
+      if (!vm) return;
+      var layerW = drag.moveLiveRefs.layerW;
+      var layerH = drag.moveLiveRefs.layerH;
+      var gm = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!gm) return;
+      groupGizmo.classList.add('is-live-moving');
+      drag.moveLiveRefs.groupGizmo = groupGizmo;
+      drag.moveLiveRefs.groupGizmoSnap = {
+        rot: Number(gm.grot) || 0
+      };
+    }
+
     /** Arm compositor fast-path only after drag threshold — not on selection click. */
     function ensureShapeMoveLiveRefs(drag) {
       if (!drag || drag.moveLiveRefs || !drag.shapeMoveFastPath) return;
@@ -5757,6 +5780,7 @@ var ExperienciaCanvas = (function () {
       var layerH = buttonsLayer ? (buttonsLayer.clientHeight || 1000) : 1000;
       if (!drag.ptrCache) drag.ptrCache = overlayPointerLayerCache();
       drag.moveLiveRefs = buildShapeMoveLiveRefs(drag.sceneId, groupIds, layerW, layerH);
+      if (drag.isOverlayGroup) attachGroupGizmoToMoveLiveRefs(drag);
     }
 
     function commitShapeMoveLiveDrag(drag) {
@@ -5809,6 +5833,16 @@ var ExperienciaCanvas = (function () {
           }
         }
       });
+      if (moveLiveRefs.groupGizmo && moveLiveRefs.groupGizmoSnap) {
+        var rotG = moveLiveRefs.groupGizmoSnap.rot || 0;
+        var groupTf =
+          'translate3d(calc(-50% + ' + dxPx + 'px), calc(-50% + ' + dyPx + 'px), 0) ' +
+          'rotate(' + rotG + 'deg)';
+        if (moveLiveRefs.lastGroupGizmoTf !== groupTf) {
+          moveLiveRefs.lastGroupGizmoTf = groupTf;
+          moveLiveRefs.groupGizmo.style.transform = groupTf;
+        }
+      }
     }
 
     function flushShapeMoveFrame(drag) {
