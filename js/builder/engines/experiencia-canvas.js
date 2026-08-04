@@ -6202,6 +6202,7 @@ var ExperienciaCanvas = (function () {
           }
         });
       }
+      clearOverlayCanvasHover();
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
         var t = String(b.type || 'BUTTON').toUpperCase();
@@ -7908,8 +7909,106 @@ var ExperienciaCanvas = (function () {
     /** True when pointer hit is on painted shape geometry (not the square stage wrapper). */
     function isShapeSilhouettePickEl(el) {
       if (!el) return false;
-      if (el.classList && el.classList.contains('builder-exp-stage-shape__body')) return true;
-      return !!(el.closest && el.closest('.builder-exp-stage-shape__body'));
+      if (el.classList) {
+        if (el.classList.contains('builder-exp-stage-shape__body')) return true;
+        if (el.classList.contains('builder-exp-stage-shape__pick')) return true;
+      }
+      return !!(el.closest && (
+        el.closest('.builder-exp-stage-shape__body') ||
+        el.closest('.builder-exp-stage-shape__pick')
+      ));
+    }
+
+    function overlayShapeSvgPointHit(shapeEl, clientX, clientY) {
+      if (!shapeEl) return false;
+      var pick = shapeEl.querySelector('.builder-exp-stage-shape__pick');
+      var body = shapeEl.querySelector('.builder-exp-stage-shape__body');
+      var targets = pick ? [pick] : [];
+      if (body) targets.push(body);
+      if (!targets.length) return false;
+      for (var ti = 0; ti < targets.length; ti++) {
+        var target = targets[ti];
+        var svg = target.ownerSVGElement;
+        if (!svg || typeof svg.createSVGPoint !== 'function') continue;
+        try {
+          var pt = svg.createSVGPoint();
+          pt.x = clientX;
+          pt.y = clientY;
+          var ctm = target.getScreenCTM();
+          if (!ctm) continue;
+          var local = pt.matrixTransform(ctm.inverse());
+          if (typeof target.isPointInFill === 'function' && target.isPointInFill(local)) return true;
+          if (target === body && typeof target.isPointInStroke === 'function' &&
+              target.isPointInStroke(local)) return true;
+        } catch (eHit) { /* ignore */ }
+      }
+      return false;
+    }
+
+    function overlayPickFromSvgPoint(clientX, clientY, selectedSet, opts) {
+      opts = opts || {};
+      if (!buttonsLayer) return null;
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return null;
+      selectedSet = selectedSet || {};
+      var skipSelected = opts.skipSelected !== false;
+      var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn].builder-exp-stage-shape');
+
+      function scan(skipSel) {
+        for (var i = nodes.length - 1; i >= 0; i--) {
+          var el = nodes[i];
+          var id = el.getAttribute('data-exp-stage-btn');
+          if (!id) continue;
+          if (skipSel && selectedSet[String(id)]) continue;
+          var vm = getOverlayItemVm(sceneId, id);
+          if (!vm || vm.locked || vm.visible === false) continue;
+          if (overlayShapeSvgPointHit(el, clientX, clientY)) return el;
+        }
+        return null;
+      }
+
+      var found = scan(skipSelected);
+      if (!found && skipSelected) found = scan(false);
+      return found;
+    }
+
+    var overlayCanvasHoverId = null;
+    var overlayCanvasHoverRaf = 0;
+
+    function clearOverlayCanvasHover() {
+      overlayCanvasHoverId = null;
+      if (!buttonsLayer) return;
+      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
+        el.classList.remove('is-canvas-hover');
+      });
+    }
+
+    function syncOverlayCanvasHover(clientX, clientY) {
+      if (!buttonsLayer || buttonDrag || transformDrag || overlayMarquee) {
+        clearOverlayCanvasHover();
+        return;
+      }
+      if (canvas().editMode !== 'buttons' && !overlayMode) {
+        clearOverlayCanvasHover();
+        return;
+      }
+      var hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
+      var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
+        ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
+      if (nextId === String(overlayCanvasHoverId || '')) return;
+      clearOverlayCanvasHover();
+      overlayCanvasHoverId = nextId || null;
+      if (hit && hit.classList.contains('builder-exp-stage-shape')) {
+        hit.classList.add('is-canvas-hover');
+      }
+    }
+
+    function scheduleOverlayCanvasHover(clientX, clientY) {
+      if (overlayCanvasHoverRaf) return;
+      overlayCanvasHoverRaf = requestAnimationFrame(function () {
+        overlayCanvasHoverRaf = 0;
+        syncOverlayCanvasHover(clientX, clientY);
+      });
     }
 
     function overlayStageBtnFromStackEl(el) {
@@ -7923,7 +8022,7 @@ var ExperienciaCanvas = (function () {
       return btn;
     }
 
-    /** Hit-test stage overlays — SVG silhouette + z-order; gizmo bbox never blocks. */
+    /** Hit-test stage overlays — silhouette pick layer + z-order; selected pass-through. */
     function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
       opts = opts || {};
       if (!buttonsLayer) return null;
@@ -7933,12 +8032,29 @@ var ExperienciaCanvas = (function () {
       } catch (eStack) {
         stack = [];
       }
-      if (!stack || !stack.length) return null;
-      for (var si = 0; si < stack.length; si++) {
-        var btn = overlayStageBtnFromStackEl(stack[si]);
-        if (btn) return btn;
+      var selectedSet = {};
+      getSelectedOverlayIds().forEach(function (id) {
+        selectedSet[String(id)] = true;
+      });
+      var firstAny = null;
+      var firstUnselected = null;
+      var seen = {};
+      if (stack && stack.length) {
+        for (var si = 0; si < stack.length; si++) {
+          var btn = overlayStageBtnFromStackEl(stack[si]);
+          if (!btn) continue;
+          var bid = String(btn.getAttribute('data-exp-stage-btn') || '');
+          if (!bid || seen[bid]) continue;
+          seen[bid] = true;
+          if (!firstAny) firstAny = btn;
+          if (!selectedSet[bid] && !firstUnselected) firstUnselected = btn;
+        }
       }
-      return null;
+      if (firstUnselected) return firstUnselected;
+      if (firstAny && !opts.forHover) return firstAny;
+      return overlayPickFromSvgPoint(clientX, clientY, selectedSet, {
+        skipSelected: opts.forHover !== false
+      }) || firstAny;
     }
 
     /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */
@@ -10617,6 +10733,13 @@ var ExperienciaCanvas = (function () {
         btn.style.removeProperty('color');
         btn.style.removeProperty('border-color');
         btn.style.removeProperty('background');
+      });
+      buttonsLayer.addEventListener('pointermove', function (ev) {
+        if (canvas().editMode !== 'buttons' && !overlayMode) return;
+        scheduleOverlayCanvasHover(ev.clientX, ev.clientY);
+      });
+      buttonsLayer.addEventListener('pointerleave', function () {
+        clearOverlayCanvasHover();
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
         if (canvas().editMode !== 'buttons') return;

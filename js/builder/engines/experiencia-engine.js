@@ -632,7 +632,7 @@ var ExperienciaEngine = (function () {
     var base = shapeContentBBoxBase(kind);
     var fill = shapeAttr(paint.fill != null ? paint.fill : 'rgba(255,255,255,0.14)');
     var stroke = shapeAttr(paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.55)');
-    var sw = shapeStrokeWidth(paint);
+    var sw = paint.pickLayer ? 0 : shapeStrokeWidth(paint);
     var ve = paint.noVectorEffect ? '' : ' vector-effect="non-scaling-stroke"';
     var cls = paint.className ? ' class="' + shapeAttr(paint.className) + '"' : '';
     var brR = paint.borderRadius != null ? Number(paint.borderRadius) : 16;
@@ -831,6 +831,16 @@ var ExperienciaEngine = (function () {
       html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
         className: 'builder-exp-stage-shape__body'
       }));
+      /* Invisible fill — full silhouette hit target (stroke-only shapes have no interior otherwise). */
+      if (kind !== 'SHAPE_LINE') {
+        html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
+          fill: 'rgba(0,0,0,0.001)',
+          stroke: 'none',
+          strokeWidth: 0,
+          pickLayer: true,
+          className: 'builder-exp-stage-shape__pick'
+        }, contentPaint || {}));
+      }
       html += sceneShapeGeometry(kind, Object.assign({
         fill: 'none',
         stroke: stroke,

@@ -4839,6 +4839,12 @@ body.quotation-canvas-first .builder-workspace,
   pointer-events: visiblePainted;
   cursor: default;
 }
+.builder-exp-stage-shape__pick {
+  pointer-events: visibleFill;
+  fill: rgba(0, 0, 0, 0.001);
+  stroke: none;
+  cursor: default;
+}
 .builder-exp-stage-shape__stroke-glow {
   pointer-events: none !important;
 }
@@ -4856,6 +4862,11 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-stage-shape.is-selected {
   outline: none;
 }
+.builder-exp-stage-shape.is-selected .builder-exp-stage-shape__body,
+.builder-exp-stage-shape.is-selected .builder-exp-stage-shape__pick,
+.builder-exp-stage-shape.is-selected .builder-exp-stage-shape__stroke-glow {
+  pointer-events: none !important;
+}
 
 /* Hover / selection — thicker white stroke + stroke-only glow layer */
 .builder-exp-stage-shape__body > * {
@@ -4867,11 +4878,13 @@ body.quotation-canvas-first .builder-workspace,
   transition: opacity 0.16s ease, filter 0.16s ease;
 }
 .builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > *,
+.builder-exp-stage-shape.is-canvas-hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > *,
 .builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__body > * {
   stroke: #ffffff !important;
   stroke-width: 3px !important;
 }
 .builder-exp-stage-shape:hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow,
+.builder-exp-stage-shape.is-canvas-hover:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow,
 .builder-exp-stage-shape.is-selected:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow {
   opacity: 1;
   filter:
@@ -4983,7 +4996,8 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Hover — stroke glow only (no box chrome); click to select. */
-.builder-exp-stage-shape:hover:not(.is-locked) {
+.builder-exp-stage-shape:hover:not(.is-locked),
+.builder-exp-stage-shape.is-canvas-hover:not(.is-locked) {
   outline: none;
 }
 
