@@ -1031,13 +1031,57 @@ var ExperienciaCanvas = (function () {
     };
   }
 
+  /**
+   * Selection gizmo only — tight visible content bounds (Genially-style).
+   * Picker tile is square (~12%); default art sits inside at ~58% — frame must hug that, not the tile.
+   */
+  function shapeSelectionGizmoMetrics(btn, layerW, layerH) {
+    if (!btn) return null;
+    var st = String(btn.type || 'BUTTON').toUpperCase();
+    var grot = Number(btn.rotation) || 0;
+    var defW = shapeDefaultSize(st).w;
+    var w = Number(btn.width);
+    if (isNaN(w) || w <= 0) w = defW;
+    var h = btn.height != null ? Number(btn.height) : null;
+    var ix = btn._ix || btn;
+    var isDefaultTile = Math.abs(w - defW) < 0.08;
+
+    /* After explicit resize/seed: stored gw×gh already equals visible box. */
+    if (ix && ix.shapeContentBox && h != null && h > 0 && !isDefaultTile) {
+      var gmStored = shapeGizmoMetrics(btn, layerW, layerH);
+      if (gmStored) return gmStored;
+    }
+
+    var cx = btn.storedX != null ? Number(btn.storedX) : Number(btn.x) || 50;
+    var cy = btn.storedY != null ? Number(btn.storedY) : Number(btn.y) || 50;
+    var tileW = isDefaultTile ? defW : w;
+    var stretch = shapeStretchFromBtn(btn);
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
+      var ixTight = ix ? Object.assign({}, ix, { shapeContentBox: false }) : { shapeContentBox: false };
+      var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
+        tileW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, btn.height, ixTight
+      );
+      return {
+        st: st,
+        gx: gm.gx,
+        gy: gm.gy,
+        gw: gm.gw,
+        gh: gm.gh,
+        grot: grot,
+        tileW: gm.tileW,
+        tileH: gm.tileH
+      };
+    }
+    return shapeGizmoMetrics(btn, layerW, layerH);
+  }
+
   function overlaySelectionMetrics(btn, layerW, layerH) {
     if (!btn) return null;
     var st = String(btn.type || 'BUTTON').toUpperCase();
     var grot = Number(btn.rotation) || 0;
     if (isShapeType(st)) {
-      var gm = shapeGizmoMetrics(btn, layerW, layerH);
-      if (gm) return gm;
+      var gmSel = shapeSelectionGizmoMetrics(btn, layerW, layerH);
+      if (gmSel) return gmSel;
     }
     var gx = Number(btn.x) || 50;
     var gy = Number(btn.y) || 50;
