@@ -1379,16 +1379,34 @@ var ExperienciaEngine = (function () {
   function bakeOverlayWorldToChild(n, group, child, layerW, layerH) {
     var world = composeOverlayWorldLayout(group, child, layerW, layerH, n);
     if (!world) return;
-    child.x = world.x;
-    child.y = world.y;
-    child.rotation = world.rotation;
     var t = String(child.type || '').toUpperCase();
-    if (t === 'BUTTON') {
-      child.boxW = world.boxW;
-      child.boxH = world.boxH;
-    } else if (isSceneShapeType(t)) {
-      child.width = world.width;
-      child.height = world.height;
+    if (isSceneShapeType(t)) {
+      /* Use tight gizmo bounds — overlayItemSizePct ignores shapeContentBox height and stretch. */
+      var union = overlayMemberUnionRect(child, world, layerW, layerH);
+      if (union) {
+        child.x = union.cx;
+        child.y = union.cy;
+        child.rotation = union.rotation;
+        child.width = union.w;
+        child.height = union.h;
+        child.shapeStretchX = 1;
+        child.shapeStretchY = 1;
+        child.shapeContentBox = true;
+      } else {
+        child.x = world.x;
+        child.y = world.y;
+        child.rotation = world.rotation;
+        child.width = world.width;
+        child.height = world.height;
+      }
+    } else {
+      child.x = world.x;
+      child.y = world.y;
+      child.rotation = world.rotation;
+      if (t === 'BUTTON') {
+        child.boxW = world.boxW;
+        child.boxH = world.boxH;
+      }
     }
     delete child.localX;
     delete child.localY;
