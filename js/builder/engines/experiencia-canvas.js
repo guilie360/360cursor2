@@ -5437,6 +5437,10 @@ var ExperienciaCanvas = (function () {
       if (transformDrag && transformDrag.live && isShapeType(transformDrag.type)) {
         return true;
       }
+      /* Multi-select resize — DOM painted in flushMultiSelectResizeFrame. */
+      if (transformDrag && transformDrag.live && transformDrag.type === 'MULTI_SELECT') {
+        return true;
+      }
       /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
       if (buttonDrag && buttonDrag.live && !buttonDrag.nudge && buttonDrag.moveLiveRefs) {
         return true;
@@ -7530,6 +7534,166 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    function buildMultiSelectResizeLiveRefs(sceneId, memberIds, layerW, layerH) {
+      if (!buttonsLayer || !memberIds || !memberIds.length) return null;
+      var items = [];
+      memberIds.forEach(function (id) {
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm) return;
+        var idEsc = String(id).replace(/"/g, '');
+        var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        var gizmo = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+        var st = shapeStretchFromBtn(vm);
+        items.push({
+          id: String(id),
+          el: el,
+          gizmo: gizmo,
+          vm: vm,
+          kind: String(vm.type || 'BUTTON').toUpperCase(),
+          paint: {
+            fill: vm.fill,
+            stroke: vm.stroke,
+            strokeWidth: vm.strokeWidth,
+            borderRadius: vm.borderRadius
+          },
+          stretchX: st.sx,
+          stretchY: st.sy
+        });
+      });
+      if (!items.length) return null;
+      var unionGizmo = buttonsLayer.querySelector(
+        '[data-exp-gizmo][data-gizmo-id="' + MULTI_SELECT_GIZMO_ID + '"]'
+      );
+      return { items: items, unionGizmo: unionGizmo };
+    }
+
+    function computeMultiSelectLiveBoxes(snap, sx, sy, anchorX, anchorY, outer) {
+      var members = {};
+      if (snap) {
+        Object.keys(snap).forEach(function (id) {
+          var s = snap[id];
+          if (!s) return;
+          members[id] = {
+            cx: anchorX + ((Number(s.cx) || 0) - anchorX) * sx,
+            cy: anchorY + ((Number(s.cy) || 0) - anchorY) * sy,
+            w: Math.max(0.5, (Number(s.w) || 0.5) * sx),
+            h: Math.max(0.5, (Number(s.h) || 0.5) * sy),
+            rot: Number(s.rotation) || 0,
+            kind: String(s.type || 'BUTTON').toUpperCase(),
+            stretchX: s.stretchX,
+            stretchY: s.stretchY
+          };
+        });
+      }
+      return {
+        members: members,
+        union: outer ? {
+          cx: outer.cx,
+          cy: outer.cy,
+          w: outer.w,
+          h: outer.h,
+          rot: 0,
+          kind: 'MULTI_SELECT'
+        } : null
+      };
+    }
+
+    function paintMultiSelectLiveFast(liveRefs, boxes, layerW, layerH) {
+      if (!liveRefs || !boxes) return;
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      (liveRefs.items || []).forEach(function (item) {
+        var b = boxes.members[String(item.id)];
+        if (!b || !item.el) return;
+        var box = {
+          cx: b.cx,
+          cy: b.cy,
+          w: b.w,
+          h: b.h,
+          rot: b.rot,
+          kind: item.kind,
+          gizmoBox: true
+        };
+        if (isShapeType(item.kind)) {
+          var vmPaint = {
+            type: item.kind,
+            fill: item.paint && item.paint.fill,
+            stroke: item.paint && item.paint.stroke,
+            strokeWidth: item.paint && item.paint.strokeWidth,
+            borderRadius: item.paint && item.paint.borderRadius,
+            shapeStretchX: b.stretchX != null ? b.stretchX : item.stretchX,
+            shapeStretchY: b.stretchY != null ? b.stretchY : item.stretchY
+          };
+          paintShapeNodeEl(item.el, box, vmPaint, layerW, layerH, { liveSizing: true });
+        } else {
+          item.el.style.left = b.cx + '%';
+          item.el.style.top = b.cy + '%';
+          if (item.kind === 'BUTTON') {
+            item.el.style.width = b.w + '%';
+            item.el.style.height = b.h + '%';
+          }
+        }
+        if (item.gizmo) {
+          if (isShapeType(item.kind)) {
+            paintShapeGizmoEl(item.gizmo, box, layerW, layerH);
+          } else {
+            item.gizmo.style.left = b.cx + '%';
+            item.gizmo.style.top = b.cy + '%';
+            item.gizmo.style.width = b.w + '%';
+            item.gizmo.style.height = b.h + '%';
+            item.gizmo.style.setProperty('--btn-rot', b.rot + 'deg');
+          }
+          item.gizmo.classList.add('is-sizing');
+        }
+      });
+      if (liveRefs.unionGizmo && boxes.union) {
+        paintShapeGizmoEl(liveRefs.unionGizmo, boxes.union, layerW, layerH);
+        liveRefs.unionGizmo.classList.add('is-sizing');
+      }
+    }
+
+    function flushMultiSelectResizeFrame(drag) {
+      if (!drag || drag.type !== 'MULTI_SELECT' || !drag.liveRefs) return;
+      if (drag.pendingMultiSx == null || !drag.memberWorldSnapshots) return;
+      var anchor = drag.pendingMultiAnchor || { x: 0, y: 0 };
+      var boxes = computeMultiSelectLiveBoxes(
+        drag.memberWorldSnapshots,
+        drag.pendingMultiSx,
+        drag.pendingMultiSy,
+        anchor.x,
+        anchor.y,
+        drag.pendingMultiOuter
+      );
+      var liveKey = drag.pendingMultiSx + '|' + drag.pendingMultiSy + '|' +
+        (drag.pendingMultiOuter ? drag.pendingMultiOuter.w : 0);
+      if (drag.lastMultiLiveKey === liveKey) return;
+      drag.lastMultiLiveKey = liveKey;
+      paintMultiSelectLiveFast(
+        drag.liveRefs,
+        boxes,
+        drag.layerW,
+        drag.layerH
+      );
+    }
+
+    function scheduleMultiSelectResizeFrame(drag) {
+      if (!drag || drag.type !== 'MULTI_SELECT') return;
+      if (drag.multiRaf) return;
+      drag.multiRaf = requestAnimationFrame(function () {
+        drag.multiRaf = 0;
+        flushMultiSelectResizeFrame(drag);
+      });
+    }
+
+    function clearMultiSelectLiveStyles(liveRefs) {
+      if (!liveRefs) return;
+      (liveRefs.items || []).forEach(function (item) {
+        if (item.el) item.el.classList.remove('is-live-sizing');
+        if (item.gizmo) item.gizmo.classList.remove('is-sizing');
+      });
+      if (liveRefs.unionGizmo) liveRefs.unionGizmo.classList.remove('is-sizing');
+    }
+
     function overlayLayerSize() {
       return {
         w: Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000),
@@ -8872,7 +9036,14 @@ var ExperienciaCanvas = (function () {
         }
         if (transformDrag) {
           if (transformDrag.shapeRaf) cancelAnimationFrame(transformDrag.shapeRaf);
-          if (transformDrag.liveRefs) clearShapeLiveSizingStyles(transformDrag.liveRefs);
+          if (transformDrag.multiRaf) cancelAnimationFrame(transformDrag.multiRaf);
+          if (transformDrag.liveRefs) {
+            if (transformDrag.type === 'MULTI_SELECT') {
+              clearMultiSelectLiveStyles(transformDrag.liveRefs);
+            } else {
+              clearShapeLiveSizingStyles(transformDrag.liveRefs);
+            }
+          }
           transformDrag = null;
           unbindOverlayPointerDocs();
           try {
@@ -9029,7 +9200,8 @@ var ExperienciaCanvas = (function () {
               ev.clientY - transformDrag.clientStartY
             );
             var shapeLiveResize = isShapeType(transformDrag.type);
-            if (resizeDistPx < (shapeLiveResize ? 2 : OVERLAY_DRAG_THRESHOLD_PX)) return;
+            var multiLiveResize = transformDrag.type === 'MULTI_SELECT';
+            if (resizeDistPx < ((shapeLiveResize || multiLiveResize) ? 2 : OVERLAY_DRAG_THRESHOLD_PX)) return;
             if (!transformDrag.historyPushed) {
               dragDebugLog('transformDrag resize start', {
                 buttonId: transformDrag.buttonId,
@@ -9283,18 +9455,13 @@ var ExperienciaCanvas = (function () {
                 sxMulti = uniMulti;
                 syMulti = uniMulti;
               }
-              applyMultiSelectScale(
-                transformDrag.sceneId,
-                transformDrag.memberIds,
-                transformDrag.memberWorldSnapshots,
-                sxMulti,
-                syMulti,
-                anchorMulti.x,
-                anchorMulti.y,
-                layerW,
-                layerH
-              );
-              paintButtonsStage();
+              transformDrag.pendingMultiSx = sxMulti;
+              transformDrag.pendingMultiSy = syMulti;
+              transformDrag.pendingMultiAnchor = anchorMulti;
+              transformDrag.pendingMultiOuter = { cx: nx, cy: ny, w: nw, h: nh };
+              transformDrag.lastDxPx = dxPx;
+              transformDrag.lastDyPx = dyPx;
+              scheduleMultiSelectResizeFrame(transformDrag);
               transformDrag.guides = { spacing: [] };
               syncLiveOverlayGuides(transformDrag.guides);
               return;
@@ -9601,13 +9768,13 @@ var ExperienciaCanvas = (function () {
           var startX0;
           var startY0;
           if (gtype === 'MULTI_SELECT') {
-            var nMultiStart = ExperienciaEngine.getNode(state, sceneIdG);
             var unionStart = computeMultiSelectionUnion(sceneIdG, multiScaleIds, layerW0, layerH0);
             if (!unionStart) return;
             startW0 = unionStart.w;
             startH0 = unionStart.h;
             startX0 = unionStart.cx;
             startY0 = unionStart.cy;
+            liveRefs = buildMultiSelectResizeLiveRefs(sceneIdG, multiScaleIds, layerW0, layerH0);
           } else if (isShapeType(gtype)) {
             var idEsc = String(gid).replace(/"/g, '');
             var gizmoEl = gizmo;
@@ -10074,6 +10241,7 @@ var ExperienciaCanvas = (function () {
           }
           /* Final snap + round stored geometry after live resize. */
           var committedShapeResize = false;
+          var committedMultiResize = false;
           var shapeDragPx = endedDrag ? Math.hypot(
             Number(endedDrag.lastDxPx) || 0,
             Number(endedDrag.lastDyPx) || 0
@@ -10127,7 +10295,24 @@ var ExperienciaCanvas = (function () {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 finalizeGroupResizeBounds(endScene, rotBtnId);
               } else if (endType === 'MULTI_SELECT') {
-                /* live scale already applied to each selected overlay */
+                if (endedDrag.multiRaf) cancelAnimationFrame(endedDrag.multiRaf);
+                flushMultiSelectResizeFrame(endedDrag);
+                if (movedT && endedDrag.pendingMultiSx != null &&
+                    endedDrag.memberIds && endedDrag.memberWorldSnapshots) {
+                  var anchorFin = endedDrag.pendingMultiAnchor || { x: 0, y: 0 };
+                  applyMultiSelectScale(
+                    endScene,
+                    endedDrag.memberIds,
+                    endedDrag.memberWorldSnapshots,
+                    endedDrag.pendingMultiSx,
+                    endedDrag.pendingMultiSy,
+                    anchorFin.x,
+                    anchorFin.y,
+                    endedDrag.layerW,
+                    endedDrag.layerH
+                  );
+                  committedMultiResize = true;
+                }
               } else {
             var endBtn = ExperienciaEngine.getSceneButton(
               state, ExperienciaEngine.getNode(state, endScene), rotBtnId
@@ -10189,8 +10374,14 @@ var ExperienciaCanvas = (function () {
             }
             mountOverlaySelectionGizmos(getSelectedOverlayIds());
           } else {
-            if (endedLiveRefs) clearShapeLiveSizingStyles(endedLiveRefs);
+            if (endedLiveRefs) {
+              if (endType === 'MULTI_SELECT') clearMultiSelectLiveStyles(endedLiveRefs);
+              else clearShapeLiveSizingStyles(endedLiveRefs);
+            }
             paintButtonsStage();
+            if (endType === 'MULTI_SELECT') {
+              mountOverlaySelectionGizmos(getSelectedOverlayIds());
+            }
           }
           paintInspector();
           if (isShapeType(endType) && rotBtnId) {
