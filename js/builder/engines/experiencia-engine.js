@@ -2177,7 +2177,8 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  function addSceneShape(state, nodeId, kind, layerW, layerH) {
+  function addSceneShape(state, nodeId, kind, layerW, layerH, opts) {
+    opts = opts || {};
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var t = String(kind || 'SHAPE_RECT').toUpperCase();
@@ -2196,7 +2197,9 @@ var ExperienciaEngine = (function () {
     ix.positionInitialized = true;
     ix.positionMode = 'free';
     ensureFreeOverlayDefaults(ix);
-    seedShapeContentBox(ix, t, layerW, layerH);
+    if (!opts.skipSeed) {
+      seedShapeContentBox(ix, t, layerW, layerH);
+    }
     return buttonViewModel(state, n, ix);
   }
 
@@ -2608,7 +2611,7 @@ var ExperienciaEngine = (function () {
     if (t === 'TEXT') {
       created = addSceneText(state, nodeId);
     } else if (isSceneShapeType(t)) {
-      created = addSceneShape(state, nodeId, t);
+      created = addSceneShape(state, nodeId, t, null, null, { skipSeed: true });
     } else {
       t = 'BUTTON';
       created = addSceneButton(state, nodeId);
@@ -2670,6 +2673,21 @@ var ExperienciaEngine = (function () {
         if (snap.textTransform != null) ix.textTransform = String(snap.textTransform);
         if (snap.textShadow != null) ix.textShadow = String(snap.textShadow);
         if (snap.opacity != null) ix.opacity = Number(snap.opacity);
+      } else if (isSceneShapeType(t)) {
+        if (snap.width != null) ix.width = Number(snap.width);
+        if (snap.height != null) ix.height = Number(snap.height);
+        if (snap.shapeContentBox != null) ix.shapeContentBox = !!snap.shapeContentBox;
+        else if (snap.height != null && Number(snap.height) > 0) ix.shapeContentBox = true;
+        if (snap.shapeStretchX != null) {
+          ix.shapeStretchX = Math.max(0.06, Math.min(8, Number(snap.shapeStretchX) || 1));
+        }
+        if (snap.shapeStretchY != null) {
+          ix.shapeStretchY = Math.max(0.06, Math.min(8, Number(snap.shapeStretchY) || 1));
+        }
+        if (snap.fill != null) ix.fill = String(snap.fill);
+        if (snap.stroke != null) ix.stroke = String(snap.stroke);
+        if (snap.strokeWidth != null) ix.strokeWidth = Number(snap.strokeWidth);
+        if (snap.borderRadius != null) ix.borderRadius = Number(snap.borderRadius);
       } else {
         if (snap.width != null) ix.width = Number(snap.width);
         if (snap.height != null) ix.height = Number(snap.height);
