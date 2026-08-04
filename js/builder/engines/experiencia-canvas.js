@@ -69,6 +69,19 @@ var ExperienciaCanvas = (function () {
     return false;
   }
 
+  /** Layer % w×h → pixel-square gw×gh (16:9-safe). */
+  function shapePixelSquareDims(wPct, hPct, layerW, layerH) {
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var w = Number(wPct);
+    var h = Number(hPct);
+    if (isNaN(w) || w <= 0) return null;
+    if (isNaN(h) || h <= 0) {
+      h = w * (layerW / layerH);
+    }
+    return { w: w, h: h };
+  }
+
   /** Edge = axis stretch (fixed caps/radii); corner = uniform stretch. All math in % layer space. */
   function resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio) {
     if (!drag || !isShapeType(drag.type)) return null;
@@ -147,15 +160,36 @@ var ExperienciaCanvas = (function () {
       var outGw = startGw;
       var outGh = startGh;
       if (isCornerBox) {
-        var scaleBox = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
-          ? (Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH)
-          : (Math.abs(dxPct) >= Math.abs(dyPct) ? scaleBoxW : scaleBoxH);
-        if (kind === 'SHAPE_CIRCLE') {
-          scaleBox = Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH;
+        if (drag.shapeBoxV2 && keepRatio && isSquareShapeType(kind)) {
+          /* Pixel-space uniform scale — keeps circles/donuts round on 16:9 layers. */
+          var startPxW = (startGw / 100) * layerW;
+          var startPxH = (startGh / 100) * layerH;
+          var startPxSize = Math.max(startPxW, startPxH, 1);
+          var candPxW = (boxGw / 100) * layerW;
+          var candPxH = (boxGh / 100) * layerH;
+          var scalePx = Math.abs(dxPx) >= Math.abs(dyPx)
+            ? candPxW / Math.max(startPxW, 0.001)
+            : candPxH / Math.max(startPxH, 0.001);
+          if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
+            scalePx = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
+              ? candPxW / Math.max(startPxW, 0.001)
+              : candPxH / Math.max(startPxH, 0.001);
+          }
+          scalePx = Math.max(0.06, Math.min(6, scalePx));
+          var newPxSize = Math.max((minGw / 100) * layerW, startPxSize * scalePx);
+          outGw = (newPxSize / layerW) * 100;
+          outGh = (newPxSize / layerH) * 100;
+        } else {
+          var scaleBox = keepRatio && shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)
+            ? (Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH)
+            : (Math.abs(dxPct) >= Math.abs(dyPct) ? scaleBoxW : scaleBoxH);
+          if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
+            scaleBox = Math.abs(dxPct) * startGh >= Math.abs(dyPct) * startGw ? scaleBoxW : scaleBoxH;
+          }
+          scaleBox = Math.max(0.06, Math.min(6, scaleBox));
+          outGw = startGw * scaleBox;
+          outGh = startGh * scaleBox;
         }
-        scaleBox = Math.max(0.06, Math.min(6, scaleBox));
-        outGw = startGw * scaleBox;
-        outGh = startGh * scaleBox;
       } else if (isEdgeXBox) {
         outGw = boxGw;
       } else if (isEdgeYBox) {
@@ -1009,8 +1043,11 @@ var ExperienciaCanvas = (function () {
     if (ix.shapeContentBox || vm.shapeContentBox) {
       var w = Number(vm.width);
       var h = Number(vm.height);
-      if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
-        return { cx: cx, cy: cy, w: w, h: h, rot: rot, kind: kind, gizmoBox: true };
+      if (!isNaN(w) && w > 0) {
+        var sq = shapePixelSquareDims(w, h, layerW, layerH);
+        if (sq) {
+          return { cx: cx, cy: cy, w: sq.w, h: sq.h, rot: rot, kind: kind, gizmoBox: true };
+        }
       }
     }
     var vb = shapeVisibleBoundsMetrics(vm, layerW, layerH);
@@ -1063,12 +1100,15 @@ var ExperienciaCanvas = (function () {
         box.kind, vm.shapeStretchX, vm.shapeStretchY, vm, layerW, layerH, true
       );
     }
-    patchShapeSvgLive(el, box.kind, {
-      fill: vm.fill,
-      stroke: vm.stroke,
-      strokeWidth: vm.strokeWidth,
-      borderRadius: vm.borderRadius
-    }, vm.shapeStretchX, vm.shapeStretchY);
+    /* Live resize: scale container only — SVG fills via CSS; regen on commit avoids distortion. */
+    if (!opts.liveSizing) {
+      patchShapeSvgLive(el, box.kind, {
+        fill: vm.fill,
+        stroke: vm.stroke,
+        strokeWidth: vm.strokeWidth,
+        borderRadius: vm.borderRadius
+      }, vm.shapeStretchX, vm.shapeStretchY);
+    }
   }
 
   function paintShapeGizmoEl(gizmoEl, box, layerW, layerH) {
@@ -5285,16 +5325,22 @@ var ExperienciaCanvas = (function () {
         drag.pendingShapeMode,
         drag.keepRatio
       );
-      if (fin) {
+        if (fin) {
         drag.lastShapeDx = drag.pendingShapeDx;
         drag.lastShapeDy = drag.pendingShapeDy;
         paintShapeLiveFast(fin, drag.liveRefs, drag.pendingShapeLayerW, drag.pendingShapeLayerH);
         if (fin.patch) drag.liveShapePatch = fin.patch;
         if (shapeResizeDebugEnabled() && drag.buttonId) {
           logShapeVsGizmo('dragmove', drag.buttonId, {
+            mode: drag.pendingShapeMode || drag.mode,
+            shapeBoxV2: !!drag.shapeBoxV2,
             liveGm: fin.gm,
+            liveBox: fin.box,
             stretch: { x: fin.stretchX, y: fin.stretchY },
-            patch: fin.patch
+            patch: fin.patch,
+            startBox: drag.startBox || null,
+            dxPx: drag.pendingShapeDx,
+            dyPx: drag.pendingShapeDy
           });
         }
       }
@@ -7139,6 +7185,7 @@ var ExperienciaCanvas = (function () {
       var tilePaint = shapePaintSize(vm, layerW, layerH);
       var gizmo = shapeGizmoMetrics(vm, layerW, layerH);
       var stagePaint = shapeStagePaintMetrics(vm, layerW, layerH);
+      var shapeBox = isShapeBoxV2Active() ? getShapeBox(vm, layerW, layerH) : null;
       var domShape = domBoxPctFromEl(shapeEl, buttonsLayer);
       var domGizmo = domBoxPctFromEl(gizmoEl, buttonsLayer);
       var delta = null;
@@ -7171,7 +7218,8 @@ var ExperienciaCanvas = (function () {
             stretch: shapeStretchFromBtn(vm),
             tilePaint: tilePaint,
             gizmoMetrics: gizmo,
-            stagePaint: stagePaint
+            stagePaint: stagePaint,
+            shapeBoxV2: shapeBox
           },
           dom: {
             shape: domShape,
@@ -9205,8 +9253,15 @@ var ExperienciaCanvas = (function () {
           }
           /* Final snap + round stored geometry after live resize. */
           var committedShapeResize = false;
+          var shapeDragPx = endedDrag ? Math.hypot(
+            Number(endedDrag.lastDxPx) || 0,
+            Number(endedDrag.lastDyPx) || 0
+          ) : 0;
+          var shapeResizeMoved = movedT || (
+            endedDrag && endedDrag.shapeBoxV2 && isShapeType(endType) && shapeDragPx > 1.5
+          );
           if (!wasRotate && endScene && rotBtnId) {
-            if (isShapeType(endType) && liveShapePatch && movedT) {
+            if (isShapeType(endType) && liveShapePatch && shapeResizeMoved) {
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, liveShapePatch);
               committedShapeResize = true;
             } else if (movedT && !isShapeType(endType)) {
@@ -9274,9 +9329,13 @@ var ExperienciaCanvas = (function () {
           if (isShapeType(endType) && rotBtnId) {
             scheduleShapeDebugLog('dragend', [String(rotBtnId)], {
               moved: movedT,
+              shapeResizeMoved: shapeResizeMoved,
+              shapeDragPx: +shapeDragPx.toFixed(2),
               committedShapeResize: committedShapeResize,
               wasRotate: wasRotate,
-              liveShapePatch: liveShapePatch || null
+              mode: endMode,
+              liveShapePatch: liveShapePatch || null,
+              startBox: endedDrag ? endedDrag.startBox : null
             });
           }
           if (movedT || committedShapeResize) persist();
