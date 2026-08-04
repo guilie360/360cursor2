@@ -1,8 +1,6 @@
 try{if(typeof BootDebug!=='undefined')BootDebug.log('ENTER file-eval js/platform/admin-hero-api.js');}catch(_e){}
 /* Platform admin API — hero config read/write from showroom */
 var AdminHeroApi = (function () {
-  var BUCKET = 'proyectos-media';
-  var PUBLIC_MARKER = '/storage/v1/object/public/' + BUCKET + '/';
   var CONFIG_SELECT =
     'proyecto_id, titulo_hero, texto_hero, boton_hero_1, boton_hero_2, ' +
     'hero_text_color, hero_button_text_color, ' +
@@ -42,14 +40,29 @@ var AdminHeroApi = (function () {
     };
   }
 
-  function getPublicUrl(path) {
-    return getClient().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  function sanitizeSlug(name) {
+    return String(name || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80);
   }
 
-  function extensionFromFile(file) {
-    var parts = String(file.name || '').split('.');
-    if (parts.length < 2) return 'jpg';
-    return parts.pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  async function resolveShowroomSlug(proyectoId) {
+    var fromData = window.PROJECT_DATA && window.PROJECT_DATA.slug
+      ? sanitizeSlug(window.PROJECT_DATA.slug)
+      : '';
+    if (fromData) return fromData;
+    var row = await getClient()
+      .from('proyectos')
+      .select('slug')
+      .eq('id', proyectoId)
+      .maybeSingle();
+    if (row.error) throw new Error(row.error.message || 'No se pudo leer el slug del proyecto.');
+    return sanitizeSlug(row.data && row.data.slug);
   }
 
   async function uploadHeroImage(constructoraId, proyectoId, file) {
@@ -66,23 +79,41 @@ var AdminHeroApi = (function () {
       throw new Error('La imagen no puede superar 10 MB.');
     }
 
-    var ext = extensionFromFile(file);
-    var fileName = 'hero-' + Date.now() + '.' + ext;
-    var path = constructoraId + '/' + proyectoId + '/hero/image/' + fileName;
+    var showroomSlug = await resolveShowroomSlug(proyectoId);
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir la imagen del hero.');
+    }
 
-    var result = await getClient().storage.from(BUCKET).upload(path, file, {
-      cacheControl: '3600',
-      upsert: true,
-      contentType: file.type || 'image/jpeg'
+    var client = getClient();
+    var session = await client.auth.getSession();
+    var token = session && session.data && session.data.session && session.data.session.access_token;
+    if (!token) throw new Error('Sesión requerida para subir a Bunny.');
+
+    var form = new FormData();
+    form.append('project_id', proyectoId);
+    form.append('category', 'images');
+    form.append('showroom_slug', showroomSlug);
+    form.append('scope', 'hero');
+    form.append('file', file, file.name || 'hero.png');
+
+    var base = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
+      '/functions/v1/bunny-media';
+    var res = await fetch(base, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token,
+        apikey: typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : ''
+      },
+      body: form
     });
-
-    if (result.error) {
-      throw new Error(result.error.message || 'No se pudo subir la imagen.');
+    var body = await res.json().catch(function () { return {}; });
+    if (!res.ok || body.ok === false) {
+      throw new Error((body && body.error) || ('No se pudo subir la imagen (HTTP ' + res.status + ').'));
     }
 
     return {
-      path: path,
-      publicUrl: getPublicUrl(path)
+      path: body.storagePath || null,
+      publicUrl: body.publicUrl || null
     };
   }
 
@@ -94,7 +125,7 @@ var AdminHeroApi = (function () {
     var proyectoId = window.PROJECT_DATA.id;
     var result = await getClient()
       .from('proyectos')
-      .select('id, nombre, ciudad, estado, constructora_id, proyecto_config(' + CONFIG_SELECT + ')')
+      .select('id, nombre, slug, ciudad, estado, constructora_id, proyecto_config(' + CONFIG_SELECT + ')')
       .eq('id', proyectoId)
       .maybeSingle();
 
@@ -110,6 +141,7 @@ var AdminHeroApi = (function () {
       project: {
         id: project.id,
         nombre: project.nombre,
+        slug: project.slug || (window.PROJECT_DATA && window.PROJECT_DATA.slug) || '',
         ciudad: project.ciudad,
         estado: project.estado,
         constructora_id: project.constructora_id

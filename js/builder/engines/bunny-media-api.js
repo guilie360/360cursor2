@@ -451,6 +451,20 @@ var BunnyMediaApi = (function () {
     videos: { folder: 'videos' }
   };
 
+  /* Project-level media under reserved Canvas-less node `showroom`. */
+  var SHOWROOM_NODE_ID = 'showroom';
+  var SHOWROOM_NODE_SLUG = 'showroom';
+  var SHOWROOM_UPLOAD_CATEGORIES = {
+    images: { folder: 'images', mode: 'upload' },
+    videos: { folder: 'videos', mode: 'upload' },
+    plans2d: { folder: 'plans2d', mode: 'upload' },
+    plans3d: { folder: 'plans3d', mode: 'upload' },
+    documents: { folder: 'documents', mode: 'upload' },
+    ui: { folder: 'ui', mode: 'upload' },
+    tours360: { folder: 'tours360', mode: 'upload' },
+    logos: { folder: 'logos', mode: 'upload' }
+  };
+
   async function invokeUpload(projectId, category, file, opts) {
     opts = opts || {};
     if (!projectId) throw new Error('project_id requerido');
@@ -461,9 +475,12 @@ var BunnyMediaApi = (function () {
     if (scope !== 'hero' && typeof MediaNodesEngine !== 'undefined') {
       key = MediaNodesEngine.normalizeCategoryKey(category);
     }
+    var fromNodes = scope === 'hero' ? null : getCategories()[key];
     var meta = scope === 'hero'
       ? HERO_UPLOAD_CATEGORIES[key]
-      : getCategories()[key];
+      : ((fromNodes && fromNodes.mode === 'upload')
+        ? fromNodes
+        : SHOWROOM_UPLOAD_CATEGORIES[key]);
     if (scope === 'hero') {
       if (!meta) {
         throw new Error('category inválida para scope=hero (usa images|logos|videos)');
@@ -583,7 +600,7 @@ var BunnyMediaApi = (function () {
 
   /**
    * Project-level asset (no Canvas node): projects/{slug}/hero/{images|logos|videos}/…
-   * Used for Config OG/WhatsApp preview and favicon.
+   * Used for Config OG/WhatsApp preview, favicon, and showroom hero media.
    */
   async function uploadHeroAsset(projectId, category, file, opts) {
     opts = opts || {};
@@ -606,6 +623,42 @@ var BunnyMediaApi = (function () {
       storagePath: data.storagePath || null,
       category: key,
       scope: 'hero'
+    };
+  }
+
+  /**
+   * Showroom-level media (gallery, plans, 360, downloads) under reserved node `showroom`:
+   * projects/{slug}/media/showroom/{category}/[carpetas/{folder}/]{file}
+   */
+  async function uploadShowroomAsset(projectId, category, file, opts) {
+    opts = opts || {};
+    var key = String(category || '').trim().toLowerCase();
+    if (typeof MediaNodesEngine !== 'undefined') {
+      key = MediaNodesEngine.normalizeCategoryKey(category);
+    }
+    if (!SHOWROOM_UPLOAD_CATEGORIES[key]) {
+      throw new Error('category inválida para showroom media');
+    }
+    if (!projectId) throw new Error('project_id requerido');
+    var showroomSlug = slugifyLocal(opts.showroomSlug || '');
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var data = await invokeUpload(projectId, key, file, {
+      showroomSlug: showroomSlug,
+      nodeId: SHOWROOM_NODE_ID,
+      nodeSlug: SHOWROOM_NODE_SLUG,
+      scope: 'media',
+      libraryFolder: opts.libraryFolder || opts.library_folder || null
+    });
+    return {
+      archivo: data.archivo || null,
+      publicUrl: data.publicUrl || null,
+      storagePath: data.storagePath || null,
+      category: key,
+      scope: 'media',
+      nodeId: SHOWROOM_NODE_ID,
+      nodeSlug: SHOWROOM_NODE_SLUG
     };
   }
 
@@ -658,6 +711,9 @@ var BunnyMediaApi = (function () {
     list: list,
     remove: remove,
     uploadHeroAsset: uploadHeroAsset,
+    uploadShowroomAsset: uploadShowroomAsset,
+    SHOWROOM_NODE_ID: SHOWROOM_NODE_ID,
+    SHOWROOM_NODE_SLUG: SHOWROOM_NODE_SLUG,
     uploadAndSync: uploadAndSync,
     refreshProjectAssets: refreshProjectAssets,
     syncArchivosToProjectAssets: syncArchivosToProjectAssets,

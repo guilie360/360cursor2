@@ -17,10 +17,37 @@ var PublishingEngine = (function () {
       .slice(0, 60) || 'proyecto';
   }
 
-  async function uploadFile(constructoraId, proyectoId, folder, file) {
+  async function uploadHeroFile(proyectoId, showroomSlug, folder, file) {
     if (!file) return null;
-    var result = await StorageApi.upload(constructoraId, proyectoId, folder, file);
-    return result.publicUrl;
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadHeroAsset) {
+      throw new Error('BunnyMediaApi no disponible: no se pueden subir archivos del hero.');
+    }
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var f = String(folder || '').toLowerCase();
+    var category = f.indexOf('video') !== -1
+      ? 'videos'
+      : (f.indexOf('logo') !== -1 ? 'logos' : 'images');
+    var result = await BunnyMediaApi.uploadHeroAsset(proyectoId, category, file, {
+      showroomSlug: showroomSlug
+    });
+    return (result && result.publicUrl) || null;
+  }
+
+  async function uploadShowroomFile(proyectoId, showroomSlug, category, file, libraryFolder) {
+    if (!file) return null;
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadShowroomAsset) {
+      throw new Error('BunnyMediaApi no disponible: no se pueden subir archivos del showroom.');
+    }
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var result = await BunnyMediaApi.uploadShowroomAsset(proyectoId, category, file, {
+      showroomSlug: showroomSlug,
+      libraryFolder: libraryFolder || null
+    });
+    return (result && result.publicUrl) || null;
   }
 
   async function insertArchivo(proyectoId, data) {
@@ -152,15 +179,33 @@ var PublishingEngine = (function () {
     var logoStyle = branding.logoStyle === 'avatar' ? 'avatar' : 'flat';
     if (branding.logo && branding.logo.logoStyle === 'avatar') logoStyle = 'avatar';
 
+    var showroomSlug = String(
+      (project && project.slug) ||
+      (state.projectInfo && state.projectInfo.slug) ||
+      (linkedProject && linkedProject.slug) ||
+      ''
+    ).trim();
+
     if (state.branding && state.branding.logo && state.branding.logo.file) {
-      themeConfig.logo_url = await uploadFile(constructoraId, proyectoId, 'hero/logo', state.branding.logo.file);
+      themeConfig.logo_url = await uploadHeroFile(
+        proyectoId,
+        showroomSlug,
+        'hero/logo',
+        state.branding.logo.file
+      );
     } else if (branding.logo && branding.logo.uploadedUrl) {
       themeConfig.logo_url = branding.logo.uploadedUrl;
     } else if (existingConfig && existingConfig.logo_url) {
       themeConfig.logo_url = existingConfig.logo_url;
     }
 
-    var media = await HeroSyncEngine.syncHeroMedia(state, constructoraId, proyectoId, existingConfig || {});
+    var media = await HeroSyncEngine.syncHeroMedia(
+      state,
+      constructoraId,
+      proyectoId,
+      existingConfig || {},
+      showroomSlug
+    );
 
     var hero = state.heroContent || {};
     var heroTitle = (hero.nombre || '').trim();
@@ -204,7 +249,13 @@ var PublishingEngine = (function () {
     for (var gi = 0; gi < (state.gallery || []).length; gi++) {
       var gItem = state.gallery[gi];
       if (!gItem.file) continue;
-      var gUrl = await uploadFile(constructoraId, proyectoId, 'gallery/' + gItem.category, gItem.file);
+      var gUrl = await uploadShowroomFile(
+        proyectoId,
+        showroomSlug,
+        'images',
+        gItem.file,
+        gItem.category || null
+      );
       await insertArchivo(proyectoId, {
         nombre: gItem.name.replace(/\.[^.]+$/, ''),
         extension: gItem.name.split('.').pop(),
@@ -218,7 +269,13 @@ var PublishingEngine = (function () {
     for (var pi = 0; pi < (state.panoramas || []).length; pi++) {
       var pItem = state.panoramas[pi];
       if (!pItem.file) continue;
-      var pUrl = await uploadFile(constructoraId, proyectoId, '360/' + pItem.spaceId, pItem.file);
+      var pUrl = await uploadShowroomFile(
+        proyectoId,
+        showroomSlug,
+        'tours360',
+        pItem.file,
+        pItem.spaceId || null
+      );
       await insertArchivo(proyectoId, {
         nombre: pItem.spaceLabel || pItem.name.replace(/\.[^.]+$/, ''),
         extension: pItem.name.split('.').pop(),
@@ -232,7 +289,13 @@ var PublishingEngine = (function () {
     for (var pli = 0; pli < (state.plans || []).length; pli++) {
       var plItem = state.plans[pli];
       if (!plItem.file) continue;
-      var plUrl = await uploadFile(constructoraId, proyectoId, 'plans', plItem.file);
+      var plUrl = await uploadShowroomFile(
+        proyectoId,
+        showroomSlug,
+        'plans2d',
+        plItem.file,
+        null
+      );
       await insertArchivo(proyectoId, {
         nombre: plItem.meta.nombre || plItem.name.replace(/\.[^.]+$/, ''),
         extension: plItem.name.split('.').pop(),
@@ -246,7 +309,13 @@ var PublishingEngine = (function () {
     for (var di = 0; di < (state.downloads || []).length; di++) {
       var dItem = state.downloads[di];
       if (!dItem.file) continue;
-      var dUrl = await uploadFile(constructoraId, proyectoId, 'downloads', dItem.file);
+      var dUrl = await uploadShowroomFile(
+        proyectoId,
+        showroomSlug,
+        'documents',
+        dItem.file,
+        null
+      );
       var tipo = dItem.docType === 'brochure' ? 'brochure' : (dItem.docType === 'plano' ? 'plano' : 'pdf');
       await insertArchivo(proyectoId, {
         nombre: dItem.meta.nombre || dItem.name.replace(/\.[^.]+$/, ''),

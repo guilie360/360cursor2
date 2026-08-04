@@ -352,15 +352,25 @@ var ViviendasSyncEngine = (function () {
   async function syncMediaForItem(client, project, item, constructoraId) {
     if (!item.id) return item;
 
-    /* Planos */
+    /* Planos → Bunny under reserved showroom node */
     if (item.planosModo === 'file') {
       var file = getPendingPlanFile(item.localId);
-      if (file && typeof StorageApi !== 'undefined') {
-        var uploaded = await StorageApi.upload(
-          constructoraId,
+      if (file) {
+        if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadShowroomAsset) {
+          throw new Error('BunnyMediaApi no disponible: no se pueden subir planos.');
+        }
+        var showroomSlug = String((project && project.slug) || '').trim();
+        if (!showroomSlug) {
+          throw new Error('Define el slug del proyecto antes de subir planos a Bunny.');
+        }
+        var uploaded = await BunnyMediaApi.uploadShowroomAsset(
           project.id,
-          'viviendas/' + item.id + '/planos',
-          file
+          'plans2d',
+          file,
+          {
+            showroomSlug: showroomSlug,
+            libraryFolder: 'vivienda-' + item.id
+          }
         );
         await deleteArchivosByTipo(client, item.id, 'plano');
         var planInsert = await client.from('archivos').insert({

@@ -44,10 +44,39 @@ var HeroSyncEngine = (function () {
     return raw;
   }
 
-  async function uploadFile(constructoraId, proyectoId, folder, file) {
+  function resolveShowroomSlug(state, project, explicitSlug) {
+    var slug = String(explicitSlug || '').trim();
+    if (!slug && project && project.slug) slug = String(project.slug).trim();
+    if (!slug && state && state.projectInfo && state.projectInfo.slug) {
+      slug = String(state.projectInfo.slug).trim();
+    }
+    if (!slug) slug = String(getSlugFromUrl() || '').trim();
+    return slug;
+  }
+
+  /** Map legacy StorageApi folders → Bunny hero categories. */
+  function heroCategoryForFolder(folder) {
+    var f = String(folder || '').toLowerCase();
+    if (f.indexOf('video') !== -1) return 'videos';
+    if (f.indexOf('logo') !== -1) return 'logos';
+    return 'images';
+  }
+
+  async function uploadFile(proyectoId, showroomSlug, folder, file) {
     if (!file) return null;
-    var result = await StorageApi.upload(constructoraId, proyectoId, folder, file);
-    return result.publicUrl;
+    if (typeof BunnyMediaApi === 'undefined' || !BunnyMediaApi.uploadHeroAsset) {
+      throw new Error('BunnyMediaApi no disponible: no se pueden subir archivos del hero.');
+    }
+    if (!showroomSlug) {
+      throw new Error('Define el slug del proyecto antes de subir archivos a Bunny.');
+    }
+    var result = await BunnyMediaApi.uploadHeroAsset(
+      proyectoId,
+      heroCategoryForFolder(folder),
+      file,
+      { showroomSlug: showroomSlug }
+    );
+    return (result && result.publicUrl) || null;
   }
 
   async function fetchProjectBySlug(slug) {
@@ -279,8 +308,9 @@ var HeroSyncEngine = (function () {
     return state;
   }
 
-  async function syncHeroMedia(state, constructoraId, proyectoId, existingConfig) {
+  async function syncHeroMedia(state, constructoraId, proyectoId, existingConfig, showroomSlug) {
     existingConfig = existingConfig || {};
+    var slug = resolveShowroomSlug(state, null, showroomSlug);
 
     if (state.heroMediaCleared) {
       return {
@@ -294,15 +324,15 @@ var HeroSyncEngine = (function () {
     var imageUrl = existingConfig.imagen_hero_url || null;
 
     if (state.heroVideo && state.heroVideo.file) {
-      videoUrl = await uploadFile(constructoraId, proyectoId, 'hero/video', state.heroVideo.file);
+      videoUrl = await uploadFile(proyectoId, slug, 'hero/video', state.heroVideo.file);
       state.heroVideo.uploadedUrl = videoUrl;
       state.heroVideo.status = 'synced';
       if (state.heroVideo.thumbnailBlob) {
         var thumbFile = new File([state.heroVideo.thumbnailBlob], 'hero-thumb.jpg', { type: 'image/jpeg' });
-        imageUrl = await uploadFile(constructoraId, proyectoId, 'hero/image', thumbFile);
+        imageUrl = await uploadFile(proyectoId, slug, 'hero/image', thumbFile);
       }
     } else if (state.heroImage && state.heroImage.file) {
-      imageUrl = await uploadFile(constructoraId, proyectoId, 'hero/image', state.heroImage.file);
+      imageUrl = await uploadFile(proyectoId, slug, 'hero/image', state.heroImage.file);
       videoUrl = null;
       state.heroImage.uploadedUrl = imageUrl;
       state.heroImage.status = 'synced';
@@ -371,7 +401,8 @@ var HeroSyncEngine = (function () {
     if (!constructoraId) throw new Error('No se pudo determinar la constructora.');
 
     var existingConfig = normalizeConfig(project.proyecto_config) || {};
-    var media = await syncHeroMedia(state, constructoraId, project.id, existingConfig);
+    var showroomSlug = resolveShowroomSlug(state, project, null);
+    var media = await syncHeroMedia(state, constructoraId, project.id, existingConfig, showroomSlug);
 
     var ai = state.aiContent || {};
     var hero = state.heroContent || {};
@@ -380,7 +411,7 @@ var HeroSyncEngine = (function () {
     if (state.branding && state.branding.logoCleared) {
       themeConfig.logo_url = null;
     } else if (state.branding && state.branding.logo && state.branding.logo.file) {
-      themeConfig.logo_url = await uploadFile(constructoraId, project.id, 'hero/logo', state.branding.logo.file);
+      themeConfig.logo_url = await uploadFile(project.id, showroomSlug, 'hero/logo', state.branding.logo.file);
       state.branding.logo.uploadedUrl = themeConfig.logo_url;
       state.branding.logoCleared = false;
     } else if (state.branding && state.branding.logo && state.branding.logo.uploadedUrl) {
