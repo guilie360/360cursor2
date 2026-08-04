@@ -550,10 +550,11 @@ var ExperienciaEngine = (function () {
     return { w: (wPx / hPx) * 100, h: 100 };
   }
 
-  /** Shapes that redraw SVG from box dims (line edge-to-edge, rect fixed corners, arrow 9-slice). */
+  /** Shapes that redraw SVG from box dims (line, rect, arrow, capsule 9-slice). */
   function shapeUsesContentBoxPaint(kind) {
     kind = String(kind || '').toUpperCase();
-    return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE' || kind === 'SHAPE_ARROW';
+    return kind === 'SHAPE_RECT' || kind === 'SHAPE_LINE' || kind === 'SHAPE_ARROW' ||
+      kind === 'SHAPE_CAPSULE';
   }
 
   /** Arrow content-box: fixed head (ratio of height), shaft grows with box width. */
@@ -676,8 +677,18 @@ var ExperienciaEngine = (function () {
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_CAPSULE') {
-      var capRx = u(8);
-      var rx = Math.min(capRx, w / 2, h / 2);
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        var capCw = Number(paint.contentW);
+        var capCh = Number(paint.contentH);
+        /* Stadium ends: semicircles (rx = half height), body grows horizontally. */
+        var capRx = Math.min(capCw / 2, capCh / 2);
+        return '<rect' + cls + ' x="0" y="0"' +
+          ' width="' + capCw + '" height="' + capCh + '"' +
+          ' rx="' + capRx + '"' +
+          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+      }
+      var capRxLegacy = u(8);
+      var rx = Math.min(capRxLegacy, w / 2, h / 2);
       return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
         ' width="' + w + '" height="' + h + '"' +
         ' rx="' + rx + '"' +
@@ -738,12 +749,14 @@ var ExperienciaEngine = (function () {
         vb = { x: 0, y: 0, w: normVb.w, h: normVb.h };
         contentPaint = {
           contentW: normVb.w,
-          contentH: normVb.h,
-          contentRx: shapeRectCornerRxViewBox(
+          contentH: normVb.h
+        };
+        if (kind === 'SHAPE_RECT') {
+          contentPaint.contentRx = shapeRectCornerRxViewBox(
             opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH,
             normVb.w, normVb.h
-          )
-        };
+          );
+        }
       } else {
         var tightBb = shapeContentBBox(kind, stOpts);
         vb = {
