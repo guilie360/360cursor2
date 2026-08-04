@@ -519,8 +519,14 @@
 
 .qe-editor.is-backpack-mode [data-qe-toggle-backpack] {
   display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   visibility: visible !important;
   pointer-events: auto !important;
+  margin: 0;
+  padding: 0;
+  width: 28px;
+  min-width: 28px;
 }
 
 .qe-canvas-tool {
@@ -999,7 +1005,8 @@
   opacity: 1;
   transition:
     opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    padding var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .qe-scenes-host.is-scenes-animating {
@@ -1024,9 +1031,19 @@
     margin var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
+.qe-scenes-host.is-collapsed.is-scenes-animating > .qe-scenes {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: none;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, -10px, 0);
+}
+
 .qe-scenes.is-collapsed,
-.qe-scenes-host.is-collapsed > .qe-scenes,
-.qe-stage-unit.is-scenes-collapsed .qe-scenes {
+.qe-scenes-host.is-collapsed:not(.is-scenes-animating) > .qe-scenes,
+.qe-stage-unit.is-scenes-collapsed:not(.is-scenes-animating) .qe-scenes {
   margin: 0;
   padding: 0;
   max-height: 0;
@@ -1087,10 +1104,23 @@
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.qe-stage-unit.is-scenes-collapsed.is-scenes-animating > .qe-scenes-host {
+  overflow: hidden;
+}
+
 .qe-canvas-tool--viewport .qe-canvas-tool__btn--backpack {
   margin-left: 2px;
-  padding-left: 7px;
-  padding-right: 7px;
+  padding: 0;
+  width: 28px;
+  min-width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qe-canvas-tool--viewport .qe-canvas-tool__btn--backpack .qe-canvas-tool__ico {
+  display: block;
+  margin: 0 auto;
 }
 
 .qe-canvas-chrome-top__spacer {

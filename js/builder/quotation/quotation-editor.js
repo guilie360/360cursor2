@@ -3844,11 +3844,11 @@ var QuotationEditor = (function () {
     return '<svg class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 16 16" fill="none"' +
       ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
       ' stroke-linejoin="round" aria-hidden="true">' +
-      '<path d="M6.3 4.1a1.7 1.7 0 0 1 3.4 0"/>' +
-      '<rect x="5.2" y="4.8" width="5.6" height="8.4" rx="1.3"/>' +
-      '<path d="M5.2 7.2h5.6"/>' +
-      '<path d="M3.6 8.8v2.1a1.2 1.2 0 0 0 1.2 1.2"/>' +
-      '<path d="M12.4 8.8v2.1a1.2 1.2 0 0 1-1.2 1.2"/>' +
+      '<path d="M6 5.1a2 2 0 0 1 4 0"/>' +
+      '<rect x="5" y="5.7" width="6" height="8.1" rx="1.2"/>' +
+      '<path d="M5 8.1h6"/>' +
+      '<path d="M3.7 9.1v1.9a1.05 1.05 0 0 0 1.05 1.05"/>' +
+      '<path d="M12.3 9.1v1.9a1.05 1.05 0 0 1-1.05 1.05"/>' +
       '</svg>';
   }
 
@@ -4021,7 +4021,7 @@ var QuotationEditor = (function () {
     if (scenes) {
       scenes.style.width = '';
       scenes.style.flex = '0 0 auto';
-      scenes.classList.toggle('is-collapsed', !!state.scenesCollapsed);
+      scenes.classList.toggle('is-collapsed', !!state.scenesCollapsed && !scenesHostAnimating());
     }
     unit.classList.toggle('is-scenes-collapsed', !!state.scenesCollapsed);
 
@@ -4166,6 +4166,24 @@ var QuotationEditor = (function () {
   var STAGE_SCENES_SLIDE_MS = 440;
   var scenesFitRaf = null;
 
+  function scenesHostAnimating() {
+    if (!rootEl) return false;
+    var host = rootEl.querySelector('[data-qe-scenes-host]');
+    return !!(host && host.classList.contains('is-scenes-animating'));
+  }
+
+  function finishScenesTransition(host) {
+    if (!host) return;
+    host.classList.remove('is-scenes-animating');
+    if (!rootEl) return;
+    var unit = rootEl.querySelector('[data-qe-stage-unit]');
+    var scenes = rootEl.querySelector('[data-qe-scenes]');
+    if (unit) unit.classList.remove('is-scenes-animating');
+    if (state.scenesCollapsed && scenes) scenes.classList.add('is-collapsed');
+    syncScenesFoldButton();
+    try { fitStageWorkspace(); } catch (eFit) { /* ignore */ }
+  }
+
   function runScenesFitDuringTransition(host) {
     if (scenesFitRaf) {
       try { cancelAnimationFrame(scenesFitRaf); } catch (eCancel) { /* ignore */ }
@@ -4185,12 +4203,11 @@ var QuotationEditor = (function () {
     var onEnd = function (ev) {
       if (ev.propertyName !== 'max-height' && ev.propertyName !== 'margin') return;
       host.removeEventListener('transitionend', onEnd);
-      host.classList.remove('is-scenes-animating');
       if (scenesFitRaf) {
         try { cancelAnimationFrame(scenesFitRaf); } catch (eCancel2) { /* ignore */ }
         scenesFitRaf = null;
       }
-      try { fitStageWorkspace(); } catch (eFit2) { /* ignore */ }
+      finishScenesTransition(host);
     };
     host.addEventListener('transitionend', onEnd);
   }
@@ -4207,7 +4224,7 @@ var QuotationEditor = (function () {
      * Collapsed → dock flush under app header on the canvas column
      * (never on the centered stage / responsive chrome).
      */
-    if (state.scenesCollapsed && canvasCol) {
+    if (state.scenesCollapsed && canvasCol && !host.classList.contains('is-scenes-animating')) {
       if (fold.parentNode !== canvasCol) canvasCol.appendChild(fold);
       fold.classList.add('is-header-docked');
     } else {
@@ -4234,9 +4251,10 @@ var QuotationEditor = (function () {
     var scenes = rootEl.querySelector('[data-qe-scenes]');
     var unit = rootEl.querySelector('[data-qe-stage-unit]');
     if (host) host.classList.toggle('is-collapsed', state.scenesCollapsed);
-    if (scenes) scenes.classList.toggle('is-collapsed', state.scenesCollapsed);
+    if (scenes) scenes.classList.remove('is-collapsed');
     if (unit) unit.classList.toggle('is-scenes-collapsed', state.scenesCollapsed);
-    if (host) host.classList.toggle('is-scenes-animating', true);
+    if (host) host.classList.add('is-scenes-animating');
+    if (unit) unit.classList.add('is-scenes-animating');
     syncScenesFoldButton();
     try { fitStageWorkspace(); } catch (eFit) {}
     runScenesFitDuringTransition(host);
