@@ -7,7 +7,7 @@ var QuotationContextMenu = (function () {
   var openPanel = null;
   var bound = false;
   /** Guide context menu — fixed trio so the panel stays compact. */
-  var GUIDE_MENU_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a'];
+  var GUIDE_MENU_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a', '#ffffff'];
 
   function escapeHtml(v) {
     return String(v == null ? '' : v)

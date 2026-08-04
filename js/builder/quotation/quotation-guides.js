@@ -12,7 +12,7 @@ var QuotationGuides = (function () {
   var DESIGN_H = 1080;
   var VIEWPORTS = ['desktop', 'tablet', 'mobile'];
   var DEFAULT_GUIDE_COLOR = '#b33a3a';
-  var GUIDE_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a'];
+  var GUIDE_COLOR_PRESETS = ['#b33a3a', '#050505', '#5dff6a', '#ffffff'];
 
   var api = null;
   var rootEl = null;
@@ -957,10 +957,10 @@ var QuotationGuides = (function () {
     });
   }
 
-  function openPasteGuidesDialog() {
+  function openDuplicateGuidesDialog() {
     if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
-    if (!hasGuidesClipboard()) return;
     if (!allScenes().filter(Boolean).length) return;
+    if (!copyGuides()) return;
 
     var clipCount = Array.isArray(guidesClipboard.items)
       ? guidesClipboard.items.length
@@ -969,18 +969,18 @@ var QuotationGuides = (function () {
     var vpLabel = viewportLabel(vp);
 
     AdminUI.openModal({
-      title: 'Pegar guías · ' + vpLabel,
+      title: 'Duplicar guías · ' + vpLabel,
       bodyHtml: guidesScenePickerBodyHtml(
         '<p class="qe-guides-delete__hint">' +
           clipCount + (clipCount === 1 ? ' guía' : ' guías') +
           ' de ' + vpLabel +
-          ' · solo ese dispositivo' +
+          ' · selecciona escenas destino' +
         '</p>'
       ),
       footerHtml:
         '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
         '<button type="button" class="btn-primary" data-modal-action="confirm" data-qe-gd-confirm>' +
-          'Pegar (0)</button>',
+          'Duplicar (0)</button>',
       onMount: function (root) {
         var modal = root.querySelector('.admin-modal');
         if (modal) modal.classList.add('qe-guides-delete-modal');
@@ -990,7 +990,7 @@ var QuotationGuides = (function () {
           var total = clipCount * ids.length;
           var btn = root.querySelector('[data-qe-gd-confirm]');
           if (btn) {
-            btn.textContent = 'Pegar (' + total + ')';
+            btn.textContent = 'Duplicar (' + total + ')';
             btn.disabled = total <= 0 || !hasGuidesClipboard();
           }
         }
@@ -1029,8 +1029,7 @@ var QuotationGuides = (function () {
     var vp = activeViewportId();
     var vpLabel = viewportLabel(vp);
     var sceneGuides = ensureGuidesArray(activeScene(), vp);
-    var canCopy = sceneGuides.length > 0;
-    var canPaste = hasGuidesClipboard();
+    var canDuplicate = sceneGuides.length > 0;
     var type = g.type === 'horizontal' ? 'horizontal' : 'vertical';
     var axis = type === 'horizontal' ? 'Y' : 'X';
     var design = designSize();
@@ -1065,17 +1064,10 @@ var QuotationGuides = (function () {
           }
         },
         {
-          id: 'copy-guides',
-          label: 'Copiar guías · ' + vpLabel,
+          id: 'duplicate-guides',
+          label: 'Duplicar guías · ' + vpLabel,
           separatorBefore: true,
-          disabled: !canCopy
-        },
-        {
-          id: 'paste-guides',
-          label: canPaste
-            ? ('Pegar guías · ' + viewportLabel(clipboardViewportId()))
-            : 'Pegar guías',
-          disabled: !canPaste
+          disabled: !canDuplicate
         },
         {
           id: 'delete-guides-dialog',
@@ -1090,12 +1082,8 @@ var QuotationGuides = (function () {
         }
       ],
       onSelect: function (id) {
-        if (id === 'copy-guides') {
-          copyGuides();
-          return;
-        }
-        if (id === 'paste-guides') {
-          openPasteGuidesDialog();
+        if (id === 'duplicate-guides') {
+          openDuplicateGuidesDialog();
           return;
         }
         if (id === 'delete-guides-dialog') {
@@ -1759,7 +1747,7 @@ var QuotationGuides = (function () {
     deleteSelectedGuide: deleteSelectedGuide,
     getSelectedGuideId: function () { return selectedGuideId; },
     copyGuides: copyGuides,
-    pasteGuides: openPasteGuidesDialog,
+    duplicateGuides: openDuplicateGuidesDialog,
     hasGuidesClipboard: hasGuidesClipboard,
     ensureGuidesArray: ensureGuidesArray,
     ensureGuideBuckets: ensureGuideBuckets,
