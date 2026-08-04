@@ -800,6 +800,7 @@ var QuotationEditor = (function () {
   var DRAFT_PREFIX = 'boxies_qe_draft_v1_';
   var TEMPLATE_PREFIX = 'boxies_qe_scene_templates_v1_';
   var OVERLAY_TEMPLATE_PREFIX = 'boxies_qe_overlay_templates_v1_';
+  var LIBRARY_UI_PREFIX = 'boxies_qe_library_ui_v1_';
   var AUTOSAVE_DEBOUNCE_MS = 4000;
   var autosaveTimer = null;
   var autosaveInFlight = false;
@@ -817,6 +818,64 @@ var QuotationEditor = (function () {
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
+  }
+
+  function libraryUiStorageKey(projectId) {
+    return LIBRARY_UI_PREFIX + String(
+      projectId ||
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+  }
+
+  function serializeLibraryUi() {
+    return {
+      v: 1,
+      at: Date.now(),
+      libraryGroupsCollapsed: !!state.libraryGroupsCollapsed,
+      openGroups: Object.assign({}, state.openGroups || {}),
+      openFolders: Object.assign({}, state.openFolders || {})
+    };
+  }
+
+  function applyLibraryUiSnapshot(snapshot) {
+    if (!snapshot || snapshot.v !== 1) return;
+    if (typeof snapshot.libraryGroupsCollapsed === 'boolean') {
+      state.libraryGroupsCollapsed = snapshot.libraryGroupsCollapsed;
+    }
+    if (snapshot.openGroups && typeof snapshot.openGroups === 'object') {
+      state.openGroups = Object.assign({}, state.openGroups, snapshot.openGroups);
+    }
+    if (snapshot.openFolders && typeof snapshot.openFolders === 'object') {
+      state.openFolders = Object.assign({}, snapshot.openFolders);
+    }
+  }
+
+  function persistLibraryUi() {
+    var id = String(
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+    if (!id) return;
+    var key = libraryUiStorageKey(id);
+    if (!key || key === LIBRARY_UI_PREFIX) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(serializeLibraryUi()));
+    } catch (eUi) { /* quota / private mode */ }
+  }
+
+  function restoreLibraryUi(projectId) {
+    var id = String(projectId || loadedProjectId || '').trim();
+    if (!id) return;
+    var key = libraryUiStorageKey(id);
+    if (!key || key === LIBRARY_UI_PREFIX) return;
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return;
+      applyLibraryUiSnapshot(JSON.parse(raw));
+    } catch (eRestore) { /* ignore corrupt snapshot */ }
   }
 
   function templatesStorageKey(projectId) {
@@ -1100,6 +1159,7 @@ var QuotationEditor = (function () {
       if (!g) return;
       state.openGroups[g.id] = !collapse;
     });
+    persistLibraryUi();
     rerender();
   }
 
@@ -1127,6 +1187,7 @@ var QuotationEditor = (function () {
         if (!f) return;
         state.openFolders[f.id] = true;
       });
+      persistLibraryUi();
       rerender();
       return;
     }
@@ -1136,6 +1197,7 @@ var QuotationEditor = (function () {
       if (!f) return;
       state.openFolders[f.id] = !anyOpen;
     });
+    persistLibraryUi();
     rerender();
   }
 
@@ -1482,7 +1544,8 @@ var QuotationEditor = (function () {
         expEditMode: state.expEditMode,
         editorBackpack: {
           interactions: ensureBackpackInteractions()
-        }
+        },
+        editorLibraryUi: serializeLibraryUi()
       };
       var raw = JSON.stringify(payload);
       var key = draftStorageKey(id);
@@ -1574,6 +1637,7 @@ var QuotationEditor = (function () {
     }
     state.backpackMode = false;
     state.backpackReturnSceneId = null;
+    if (draft.editorLibraryUi) applyLibraryUiSnapshot(draft.editorLibraryUi);
     if (healLibraryIdentity()) markDirtyLocal();
     return true;
   }
@@ -7665,11 +7729,13 @@ var QuotationEditor = (function () {
 
   function toggleGroup(groupId) {
     state.openGroups[groupId] = !(state.openGroups[groupId] !== false);
+    persistLibraryUi();
     rerender();
   }
 
   function toggleFolder(folderId) {
     state.openFolders[folderId] = !(state.openFolders[folderId] !== false);
+    persistLibraryUi();
     rerender();
   }
 
@@ -9703,12 +9769,13 @@ var QuotationEditor = (function () {
     if (typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
       if (restoreDraft(id)) {
         documentReady = true;
-        persistDraft();
       } else {
         hydrateFromHeroQuotation(null, editorProjectCtx);
         documentReady = true;
-        persistDraft();
       }
+      restoreLibraryUi(id);
+      persistLibraryUi();
+      persistDraft();
       loadPromise = Promise.resolve(null);
       return loadPromise;
     }
@@ -9739,6 +9806,8 @@ var QuotationEditor = (function () {
         if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
+        restoreLibraryUi(id);
+        persistLibraryUi();
         persistDraft();
         return reconcileLibraryFromArchivos()
           .then(function () {
@@ -9757,6 +9826,8 @@ var QuotationEditor = (function () {
         if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
+        restoreLibraryUi(id);
+        persistLibraryUi();
         persistDraft();
         return reconcileLibraryFromArchivos()
           .then(function () {
