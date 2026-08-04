@@ -308,7 +308,8 @@ var QuotationExperienciaBridge = (function () {
           if (typeof options.onChange === 'function') options.onChange();
         },
         onSelectionChange: options.onSelectionChange,
-        onMultiSelectionContextMenu: options.onMultiSelectionContextMenu
+        onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
+        overlaySnapEnabled: options.overlaySnapEnabled
       });
     }
     if (!handle) return null;
@@ -419,6 +420,12 @@ var QuotationExperienciaBridge = (function () {
       },
       setInspectorBody: function (el) {
         if (handle.setInspectorBody) handle.setInspectorBody(el);
+      },
+      setOverlaySnapEnabled: function (on) {
+        if (handle.setOverlaySnapEnabled) handle.setOverlaySnapEnabled(on);
+      },
+      isOverlaySnapEnabled: function () {
+        return handle.isOverlaySnapEnabled ? handle.isOverlaySnapEnabled() : true;
       },
       destroy: function () {
         pullToScenes(shim, scenes);

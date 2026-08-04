@@ -750,6 +750,7 @@ var QuotationEditor = (function () {
       /* Session-only — not persisted with the document. */
       rulersVisible: false,
       guidesVisible: true,
+      overlaySnapEnabled: true,
       canvasUserZoom: 1,
       canvasPanX: null,
       canvasPanY: null,
@@ -3517,6 +3518,43 @@ var QuotationEditor = (function () {
     return '';
   }
 
+  function snapToggleIconSvg() {
+    return '<svg class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 16 16" fill="none"' +
+      ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M5.2 2.5h5.6a2.2 2.2 0 0 1 2.2 2.2v2.4a2.8 2.8 0 0 1-2.8 2.8H8"/>' +
+      '<path d="M10.8 13.5H5.2a2.2 2.2 0 0 1-2.2-2.2V8.9a2.8 2.8 0 0 1 2.8-2.8H8"/>' +
+      '</svg>';
+  }
+
+  function overlaySnapToggleTitle() {
+    return state.overlaySnapEnabled
+      ? 'Imanes activos (Alt = desactivar temporalmente)'
+      : 'Imanes desactivados';
+  }
+
+  function syncOverlaySnapUi() {
+    if (expOverlay && expOverlay.setOverlaySnapEnabled) {
+      expOverlay.setOverlaySnapEnabled(!!state.overlaySnapEnabled);
+    }
+    if (!rootEl || !rootEl.querySelector) return;
+    var btn = rootEl.querySelector('[data-qe-toggle-snap]');
+    if (!btn) return;
+    btn.classList.toggle('is-active', !!state.overlaySnapEnabled);
+    btn.setAttribute('aria-pressed', state.overlaySnapEnabled ? 'true' : 'false');
+    btn.title = overlaySnapToggleTitle();
+  }
+
+  function setOverlaySnapEnabled(on) {
+    var next = !!on;
+    if (state.overlaySnapEnabled === next) {
+      syncOverlaySnapUi();
+      return;
+    }
+    state.overlaySnapEnabled = next;
+    syncOverlaySnapUi();
+  }
+
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
     var sc = activeScene();
@@ -3540,6 +3578,14 @@ var QuotationEditor = (function () {
           icon +
         '</button>';
     }).join('');
+    var snapBtn =
+      '<button type="button" class="qe-canvas-tool__btn qe-canvas-tool__btn--snap' +
+        (state.overlaySnapEnabled ? ' is-active' : '') + '"' +
+        ' data-qe-toggle-snap title="' + escapeHtml(overlaySnapToggleTitle()) + '"' +
+        ' aria-pressed="' + (state.overlaySnapEnabled ? 'true' : 'false') + '"' +
+        ' aria-label="Imanes">' +
+        snapToggleIconSvg() +
+      '</button>';
     return '' +
       '<div class="qe-canvas-chrome-top" data-qe-chrome-top>' +
         '<div class="qe-canvas-chrome-top__title" data-qe-active-scene-name' +
@@ -3548,6 +3594,7 @@ var QuotationEditor = (function () {
         '</div>' +
         '<div class="qe-canvas-tool qe-canvas-tool--viewport" data-qe-viewport-bar role="group" aria-label="Viewport">' +
           btns +
+          snapBtn +
         '</div>' +
         '<div class="qe-canvas-chrome-top__spacer" aria-hidden="true"></div>' +
       '</div>';
@@ -4020,6 +4067,8 @@ var QuotationEditor = (function () {
       onChange: function () { markDirtyLocal(); },
       onRulersChange: function (on) { state.rulersVisible = !!on; },
       onGuidesVisibleChange: function (on) { state.guidesVisible = !!on; },
+      getOverlaySnapEnabled: function () { return !!state.overlaySnapEnabled; },
+      setOverlaySnapEnabled: function (on) { setOverlaySnapEnabled(on); },
       onGuideSelect: function () {
         deselectOverlay();
       },
@@ -6824,6 +6873,7 @@ var QuotationEditor = (function () {
       projectId: resolveProjectId(),
       inspectorBody: null,
       editMode: state.expEditMode === 'hotspots' ? 'hotspots' : 'buttons',
+      overlaySnapEnabled: state.overlaySnapEnabled,
       onChange: function () {
         markDirtyLocal();
         refreshLayersPanel();
@@ -6845,6 +6895,8 @@ var QuotationEditor = (function () {
         openOverlaySelectionContextMenu(clientX, clientY);
       }
     });
+
+    syncOverlaySnapUi();
 
     if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
       requestAnimationFrame(function () {
@@ -8410,6 +8462,14 @@ var QuotationEditor = (function () {
           rerender();
         });
       });
+
+      var snapToggle = editor.querySelector('[data-qe-toggle-snap]');
+      if (snapToggle && !snapToggle.dataset.bound) {
+        snapToggle.dataset.bound = '1';
+        snapToggle.addEventListener('click', function () {
+          setOverlaySnapEnabled(!state.overlaySnapEnabled);
+        });
+      }
 
       var viewportBar = editor.querySelector('[data-qe-viewport-bar]');
       if (viewportBar && !viewportBar.dataset.inspectCtx) {

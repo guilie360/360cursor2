@@ -998,6 +998,13 @@
   justify-self: center;
 }
 
+.qe-canvas-tool--viewport .qe-canvas-tool__btn--snap {
+  margin-left: 4px;
+  padding-left: 7px;
+  padding-right: 7px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .qe-canvas-chrome-top__spacer {
   grid-column: 3;
   min-width: 0;

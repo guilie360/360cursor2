@@ -3058,6 +3058,8 @@ var ExperienciaCanvas = (function () {
     try {
       GROUP_DEBUG = /(?:\?|&)groupDebug=1(?:&|$)/.test(String(window.location.search || ''));
     } catch (eGd) { /* ignore */ }
+    /** Session toggle — Alt still bypasses snap while dragging. */
+    var overlaySnapEnabled = api.overlaySnapEnabled !== false;
 
     function groupDebugLog() {
       if (!GROUP_DEBUG) return;
@@ -6890,7 +6892,7 @@ var ExperienciaCanvas = (function () {
       var ny = y;
       var guides = { spacing: [], align: [] };
       /* Hold Alt while moving to bypass all snap (peers + red guides). */
-      if (opts.disableSnap) {
+      if (opts.disableSnap || !overlaySnapEnabled) {
         return { x: nx, y: ny, guides: guides };
       }
       var n = ExperienciaEngine.getNode(state, sceneId);
@@ -8895,7 +8897,7 @@ var ExperienciaCanvas = (function () {
             }
 
             /* Snap — shapes skip live snap (causes bounce); commit on pointerup. */
-            if (!ev.shiftKey && !shapeLiveResize) {
+            if (overlaySnapEnabled && !ev.shiftKey && !(ev && ev.altKey) && !shapeLiveResize) {
               var Lpct = (Lpx / layerW) * 100;
               var Rpct = (Rpx / layerW) * 100;
               var Tpct = (Tpx / layerH) * 100;
@@ -9775,7 +9777,7 @@ var ExperienciaCanvas = (function () {
               var eh = endType === 'BUTTON'
                 ? (endBtn.boxH != null ? Number(endBtn.boxH) : 4.5)
                 : (Number(endBtn.height) || 8);
-              if (!(ev && ev.shiftKey)) {
+              if (overlaySnapEnabled && !(ev && ev.altKey) && !(ev && ev.shiftKey)) {
                 var resizeLinesF = collectOverlayAlignLines(endScene, rotBtnId, {
                   L: cx - ew / 2,
                   R: cx + ew / 2,
@@ -11145,6 +11147,12 @@ var ExperienciaCanvas = (function () {
         paintInspector();
         requestAnimationFrame(recomputeOverlayLayout);
       },
+      setOverlaySnapEnabled: function (on) {
+        overlaySnapEnabled = !!on;
+      },
+      isOverlaySnapEnabled: function () {
+        return !!overlaySnapEnabled;
+      },
       addButton: function () {
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
@@ -11622,6 +11630,7 @@ var ExperienciaCanvas = (function () {
       onChange: options.onChange,
       onSelectionChange: options.onSelectionChange,
       onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
+      overlaySnapEnabled: options.overlaySnapEnabled,
       saveState: options.saveState
     });
     if (handle) {

@@ -1507,6 +1507,7 @@ var QuotationGuides = (function () {
     var sceneGuides = ensureGuidesArray(activeScene(), vp);
     var canCopy = sceneGuides.length > 0;
     var canPaste = hasGuidesClipboard();
+    var snapOn = api && api.getOverlaySnapEnabled ? !!api.getOverlaySnapEnabled() : true;
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -1519,6 +1520,10 @@ var QuotationGuides = (function () {
         {
           id: 'toggle-guides',
           label: guidesVisible ? 'Ocultar guías' : 'Mostrar guías'
+        },
+        {
+          id: 'toggle-snap',
+          label: snapOn ? 'Desactivar imanes' : 'Activar imanes'
         },
         {
           id: 'copy-guides',
@@ -1541,6 +1546,12 @@ var QuotationGuides = (function () {
         }
         if (id === 'toggle-guides') {
           setGuidesVisible(!guidesVisible);
+          return;
+        }
+        if (id === 'toggle-snap') {
+          if (api && api.setOverlaySnapEnabled) {
+            api.setOverlaySnapEnabled(!snapOn);
+          }
           return;
         }
         if (id === 'copy-guides') {
