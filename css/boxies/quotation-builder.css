@@ -456,10 +456,6 @@
 }
 
 .qe-backpack-fab {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  z-index: 6;
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -475,8 +471,6 @@
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   box-sizing: border-box;
-  /* Same row as dock; vertically centered against 36px dock pill */
-  transform: translate(0, calc(100% + 8px + 4px));
   transition:
     color 0.15s ease,
     background 0.15s ease;
@@ -503,12 +497,38 @@
   height: 14px;
 }
 
+.qe-editor.is-backpack-mode .qe-col--canvas,
+.qe-editor.is-backpack-mode .qe-stage-shell,
+.qe-editor.is-backpack-mode .qe-stage-unit,
 .qe-editor.is-backpack-mode .qe-stage-work,
 .qe-editor.is-backpack-mode .qe-canvas-fit,
+.qe-editor.is-backpack-mode .qe-canvas-fit__stack,
 .qe-editor.is-backpack-mode .qe-canvas-fit__frame,
 .qe-editor.is-backpack-mode [data-qe-viewport-window],
-.qe-editor.is-backpack-mode .qe-canvas__stage {
+.qe-editor.is-backpack-mode .qe-canvas__stage,
+.qe-editor.is-backpack-mode [data-hero-canvas],
+.qe-editor.is-backpack-mode .hero-canvas__lienzo {
   background: #111111 !important;
+}
+
+.qe-editor.is-backpack-mode .hero-canvas,
+.qe-editor.is-backpack-mode .qe-canvas__lienzo,
+.qe-editor.is-backpack-mode .qe-canvas__design {
+  background: #111111 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.qe-editor.is-backpack-mode .qe-canvas-fit__frame,
+.qe-editor.is-backpack-mode .qe-canvas__stage,
+.qe-editor.is-backpack-mode [data-hero-canvas] {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.qe-editor.is-backpack-mode .qe-canvas-fit {
+  padding: 0 !important;
 }
 
 .qe-editor.is-backpack-mode .qr-scene-media,
