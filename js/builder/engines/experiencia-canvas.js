@@ -7905,36 +7905,37 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
-    /** Hit-test stage overlays — SVG visiblePainted geometry, topmost in z-order (Figma-style). */
+    /** True when pointer hit is on painted shape geometry (not the square stage wrapper). */
+    function isShapeSilhouettePickEl(el) {
+      if (!el) return false;
+      if (el.classList && el.classList.contains('builder-exp-stage-shape__body')) return true;
+      return !!(el.closest && el.closest('.builder-exp-stage-shape__body'));
+    }
+
+    function overlayStageBtnFromStackEl(el) {
+      if (!el || !buttonsLayer || !buttonsLayer.contains(el)) return null;
+      if (el.closest && el.closest('[data-exp-gizmo]')) return null;
+      var btn = el.closest && el.closest('[data-exp-stage-btn]');
+      if (!btn) return null;
+      if (btn.classList.contains('builder-exp-stage-shape') && !isShapeSilhouettePickEl(el)) {
+        return null;
+      }
+      return btn;
+    }
+
+    /** Hit-test stage overlays — SVG silhouette + z-order; gizmo bbox never blocks. */
     function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
       opts = opts || {};
       if (!buttonsLayer) return null;
-      var gizmos = buttonsLayer.querySelectorAll('[data-exp-gizmo]');
-      var peRestore = [];
-      var gi;
-      if (!opts.includeGizmos) {
-        for (gi = 0; gi < gizmos.length; gi++) {
-          peRestore.push(gizmos[gi].style.pointerEvents);
-          gizmos[gi].style.pointerEvents = 'none';
-        }
-      }
       var stack;
       try {
         stack = document.elementsFromPoint(clientX, clientY);
       } catch (eStack) {
         stack = [];
       }
-      if (!opts.includeGizmos) {
-        for (gi = 0; gi < gizmos.length; gi++) {
-          gizmos[gi].style.pointerEvents = peRestore[gi] || '';
-        }
-      }
       if (!stack || !stack.length) return null;
       for (var si = 0; si < stack.length; si++) {
-        var el = stack[si];
-        if (!el || !buttonsLayer.contains(el)) continue;
-        if (!opts.includeGizmos && el.closest && el.closest('[data-exp-gizmo]')) continue;
-        var btn = el.closest && el.closest('[data-exp-stage-btn]');
+        var btn = overlayStageBtnFromStackEl(stack[si]);
         if (btn) return btn;
       }
       return null;
