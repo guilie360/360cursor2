@@ -7540,6 +7540,32 @@ var ExperienciaCanvas = (function () {
       return { groupId: String(groupId), childId: String(childId) };
     }
 
+    function finalizeGroupResizeBounds(sceneId, groupId) {
+      if (!sceneId || !groupId) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (!g) return;
+      g._baseWidth = Number(g.width) || g._baseWidth;
+      g._baseHeight = Number(g.height) || g._baseHeight;
+      g._transformV = 2;
+    }
+
+    function groupResizeAnchorPct(mode, startL, startR, startT, startB, startX, startY) {
+      var moveE = String(mode || '').indexOf('e') >= 0;
+      var moveW = String(mode || '').indexOf('w') >= 0;
+      var moveS = String(mode || '').indexOf('s') >= 0;
+      var moveN = String(mode || '').indexOf('n') >= 0;
+      var ax = startX;
+      var ay = startY;
+      if (moveE && !moveW) ax = startL;
+      else if (moveW && !moveE) ax = startR;
+      if (moveS && !moveN) ay = startT;
+      else if (moveN && !moveS) ay = startB;
+      return { x: ax, y: ay };
+    }
+
     function commitGroupBoundsIfNeeded(sceneId, groupId) {
       if (!sceneId || !groupId || !ExperienciaEngine.commitOverlayGroupBounds) return;
       var n = ExperienciaEngine.getNode(state, sceneId);
@@ -9004,6 +9030,15 @@ var ExperienciaCanvas = (function () {
               patchT.height = nh;
               patchT.keepRatio = transformDrag.keepRatio;
               if (ExperienciaEngine.updateOverlayGroupTransform) {
+                var anchorG = groupResizeAnchorPct(
+                  mode,
+                  transformDrag.startL,
+                  transformDrag.startR,
+                  transformDrag.startT,
+                  transformDrag.startB,
+                  transformDrag.startX,
+                  transformDrag.startY
+                );
                 ExperienciaEngine.updateOverlayGroupTransform(
                   state, transformDrag.sceneId, transformDrag.buttonId,
                   {
@@ -9015,7 +9050,10 @@ var ExperienciaCanvas = (function () {
                     live: true,
                     layerW: layerW,
                     layerH: layerH,
-                    memberSnapshots: transformDrag.memberSnapshots
+                    memberSnapshots: transformDrag.memberSnapshots,
+                    memberWorldSnapshots: transformDrag.memberWorldSnapshots,
+                    anchorX: anchorG.x,
+                    anchorY: anchorG.y
                   }
                 );
               }
@@ -9392,11 +9430,29 @@ var ExperienciaCanvas = (function () {
           var startT0 = startY0 - startH0 / 2;
           var startB0 = startY0 + startH0 / 2;
           var memberSnapshots = null;
+          var memberWorldSnapshots = null;
           if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.snapshotOverlayGroupLocals) {
             var nG = ExperienciaEngine.getNode(state, sceneIdG);
             var gIx = ExperienciaEngine.getInteraction(nG, gid);
             memberSnapshots = ExperienciaEngine.snapshotOverlayGroupLocals(nG, gIx);
+            if (ExperienciaEngine.snapshotOverlayGroupMemberWorlds && gIx) {
+              memberWorldSnapshots = ExperienciaEngine.snapshotOverlayGroupMemberWorlds(
+                nG, gIx, layerW0, layerH0
+              );
+            }
+            if (gIx) {
+              gIx._baseWidth = Number(gIx.width) || gIx._baseWidth || 20;
+              gIx._baseHeight = Number(gIx.height) || gIx._baseHeight || 20;
+              startW0 = Number(gIx.width) || startW0;
+              startH0 = Number(gIx.height) || startH0;
+              startX0 = Number(gIx.x) || startX0;
+              startY0 = Number(gIx.y) || startY0;
+              startL0 = startX0 - startW0 / 2;
+              startR0 = startX0 + startW0 / 2;
+              startT0 = startY0 - startH0 / 2;
+              startB0 = startY0 + startH0 / 2;
+            }
           }
           var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
             handleMode === 'se' || handleMode === 'sw';
@@ -9407,6 +9463,7 @@ var ExperienciaCanvas = (function () {
             sceneId: sceneIdG,
             type: gtype,
             memberSnapshots: memberSnapshots,
+            memberWorldSnapshots: memberWorldSnapshots,
             pointerId: ev.pointerId,
             clientStartX: ev.clientX,
             clientStartY: ev.clientY,
@@ -9796,7 +9853,7 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && !isShapeType(endType)) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
-                commitGroupBoundsIfNeeded(endScene, rotBtnId);
+                finalizeGroupResizeBounds(endScene, rotBtnId);
               } else {
             var endBtn = ExperienciaEngine.getSceneButton(
               state, ExperienciaEngine.getNode(state, endScene), rotBtnId

@@ -1417,11 +1417,23 @@ var ExperienciaEngine = (function () {
     ensureOverlayGroupDefaults(n, g, layerW, layerH);
     migrateGroupedChildLocals(n, g, layerW, layerH);
     var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
-    var bounds = computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
-    var vx = bounds ? bounds.cx : (Number(g.x) || 50);
-    var vy = bounds ? bounds.cy : (Number(g.y) || 50);
-    var vw = bounds ? bounds.w : (Number(g.width) || 20);
-    var vh = bounds ? bounds.h : (Number(g.height) || 20);
+    var useStoredFrame = Number(g._transformV) >= 2 &&
+      g.width != null && g.height != null;
+    var bounds = useStoredFrame
+      ? null
+      : computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
+    var vx = useStoredFrame
+      ? (Number(g.x) || 50)
+      : (bounds ? bounds.cx : (Number(g.x) || 50));
+    var vy = useStoredFrame
+      ? (Number(g.y) || 50)
+      : (bounds ? bounds.cy : (Number(g.y) || 50));
+    var vw = useStoredFrame
+      ? (Number(g.width) || 20)
+      : (bounds ? bounds.w : (Number(g.width) || 20));
+    var vh = useStoredFrame
+      ? (Number(g.height) || 20)
+      : (bounds ? bounds.h : (Number(g.height) || 20));
     return {
       id: g.id,
       portId: g.portId || g.id,
@@ -1454,6 +1466,23 @@ var ExperienciaEngine = (function () {
       return buttonViewModel(state, n, ix, layerW, layerH);
     }
     return null;
+  }
+
+  function applyOverlayMemberWorldToGroupLocal(n, g, child, cx, cy, w, h, rot, layerW, layerH) {
+    if (!g || !child) return;
+    var loc = worldPointToLocal(g, cx, cy, layerW, layerH);
+    child.localX = loc.x;
+    child.localY = loc.y;
+    child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+    child.groupId = g.id;
+    var ct = String(child.type || '').toUpperCase();
+    if (ct === 'BUTTON') {
+      child.boxW = Math.max(0.5, Number(w) || 0.5);
+      child.boxH = Math.max(0.5, Number(h) || 0.5);
+    } else if (isSceneShapeType(ct)) {
+      child.width = Math.max(0.5, Number(w) || 0.5);
+      child.height = Math.max(0.5, Number(h) || 0.5);
+    }
   }
 
   function updateOverlayGroupTransform(state, nodeId, groupId, patch) {
@@ -1491,29 +1520,49 @@ var ExperienciaEngine = (function () {
           newW = baseW * sx;
           newH = baseH * sy;
         }
-        var snap = patch.memberSnapshots;
-        (g.memberIds || []).forEach(function (mid) {
-          var c = getInteraction(n, mid);
-          if (!c || !isSceneFreeOverlayInteraction(c)) return;
-          var s = snap && snap[mid] ? snap[mid] : null;
-          if (s) {
-            c.localX = Number(s.localX) * sx;
-            c.localY = Number(s.localY) * sy;
-            var ct = String(c.type || '').toUpperCase();
-            if (ct === 'BUTTON') {
-              if (s.boxW != null) c.boxW = Math.max(0.5, Number(s.boxW) * sx);
-              if (s.boxH != null) c.boxH = Math.max(0.5, Number(s.boxH) * sy);
-            } else if (isSceneShapeType(ct)) {
-              if (s.width != null) c.width = Math.max(0.5, Number(s.width) * sx);
-              if (s.height != null) c.height = Math.max(0.5, Number(s.height) * sy);
-            }
-          } else {
-            if (c.localX != null) c.localX = Number(c.localX) * sx;
-            if (c.localY != null) c.localY = Number(c.localY) * sy;
-          }
-        });
         g.width = newW;
         g.height = newH;
+        var worldSnap = patch.memberWorldSnapshots;
+        var useWorldScale = worldSnap && typeof worldSnap === 'object' &&
+          patch.anchorX != null && patch.anchorY != null;
+        if (useWorldScale) {
+          var ax = Number(patch.anchorX);
+          var ay = Number(patch.anchorY);
+          resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (mid) {
+            var c = getInteraction(n, mid);
+            var sw = worldSnap[String(mid)];
+            if (!c || !sw || !isSceneFreeOverlayInteraction(c)) return;
+            var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
+            var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
+            var nwM = Math.max(0.5, (Number(sw.w) || 0.5) * sx);
+            var nhM = Math.max(0.5, (Number(sw.h) || 0.5) * sy);
+            applyOverlayMemberWorldToGroupLocal(
+              n, g, c, ncx, ncy, nwM, nhM, sw.rotation, layerW, layerH
+            );
+          });
+        } else {
+          var snap = patch.memberSnapshots;
+          (g.memberIds || []).forEach(function (mid) {
+            var c = getInteraction(n, mid);
+            if (!c || !isSceneFreeOverlayInteraction(c)) return;
+            var s = snap && snap[mid] ? snap[mid] : null;
+            if (s) {
+              c.localX = Number(s.localX) * sx;
+              c.localY = Number(s.localY) * sy;
+              var ct = String(c.type || '').toUpperCase();
+              if (ct === 'BUTTON') {
+                if (s.boxW != null) c.boxW = Math.max(0.5, Number(s.boxW) * sx);
+                if (s.boxH != null) c.boxH = Math.max(0.5, Number(s.boxH) * sy);
+              } else if (isSceneShapeType(ct)) {
+                if (s.width != null) c.width = Math.max(0.5, Number(s.width) * sx);
+                if (s.height != null) c.height = Math.max(0.5, Number(s.height) * sy);
+              }
+            } else {
+              if (c.localX != null) c.localX = Number(c.localX) * sx;
+              if (c.localY != null) c.localY = Number(c.localY) * sy;
+            }
+          });
+        }
       }
     }
     if (patch.syncBounds) {
@@ -1524,6 +1573,11 @@ var ExperienciaEngine = (function () {
 
   function commitOverlayGroupBounds(n, g, layerW, layerH) {
     if (!n || !g) return g;
+    if (Number(g._transformV) >= 2) {
+      g._baseWidth = Number(g.width) || g._baseWidth;
+      g._baseHeight = Number(g.height) || g._baseHeight;
+      return g;
+    }
     syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
     g._baseWidth = Number(g.width) || g._baseWidth;
     g._baseHeight = Number(g.height) || g._baseHeight;
@@ -1606,6 +1660,30 @@ var ExperienciaEngine = (function () {
         boxH: c.boxH,
         width: c.width,
         height: c.height
+      };
+    });
+    return out;
+  }
+
+  /** Visible world metrics per member — used for proportional group resize. */
+  function snapshotOverlayGroupMemberWorlds(n, g, layerW, layerH) {
+    var out = {};
+    if (!n || !g) return out;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+      if (!world) return;
+      var rect = overlayMemberUnionRect(ix, world, layerW, layerH);
+      if (!rect) return;
+      out[String(id)] = {
+        cx: rect.cx,
+        cy: rect.cy,
+        w: rect.w,
+        h: rect.h,
+        rotation: rect.rotation
       };
     });
     return out;
@@ -7602,6 +7680,7 @@ var ExperienciaEngine = (function () {
     resolveOverlayGroupForSelection: resolveOverlayGroupForSelection,
     snapshotOverlayInteractions: snapshotOverlayInteractions,
     snapshotOverlayGroupLocals: snapshotOverlayGroupLocals,
+    snapshotOverlayGroupMemberWorlds: snapshotOverlayGroupMemberWorlds,
     updateOverlayGroupTransform: updateOverlayGroupTransform,
     getSceneOverlayItem: getSceneOverlayItem,
     buttonViewModel: buttonViewModel,
