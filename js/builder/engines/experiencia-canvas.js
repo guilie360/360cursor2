@@ -19,11 +19,19 @@ var ExperienciaCanvas = (function () {
   var _shapeBoxV2Active = false;
   var _shapeBoxV2ProjectId = null;
 
+  function shapeBoxProjectIdFromUrl() {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      return String(q.get('projectId') || q.get('proyectoId') || '').trim();
+    } catch (eUrl) { /* ignore */ }
+    return '';
+  }
+
   /**
    * ShapeBox v2 flag:
    *   ?shapeBox=1  → force ON (any project)
    *   ?shapeBox=0  → force OFF (legacy on EDITOR)
-   *   default ON   → EDITOR project only
+   *   default ON   → EDITOR project only (mount projectId or URL ?projectId=)
    */
   function shapeBoxV2Enabled(projectId) {
     try {
@@ -32,8 +40,25 @@ var ExperienciaCanvas = (function () {
       if (v === '0' || v === 'false') return false;
       if (v === '1' || v === 'true') return true;
     } catch (eFlag) { /* ignore */ }
-    var pid = projectId != null ? projectId : _shapeBoxV2ProjectId;
-    return !!(pid && String(pid) === EDITOR_PROJECT_ID);
+    var pid = projectId != null && String(projectId).trim() !== ''
+      ? String(projectId).trim()
+      : String(_shapeBoxV2ProjectId || shapeBoxProjectIdFromUrl() || '').trim();
+    return !!(pid && pid === EDITOR_PROJECT_ID);
+  }
+
+  function shapeBoxV2DebugSnapshot() {
+    var urlPid = shapeBoxProjectIdFromUrl();
+    var urlShapeBox = null;
+    try { urlShapeBox = new URLSearchParams(window.location.search).get('shapeBox'); } catch (eQ) { /* ignore */ }
+    return {
+      active: !!_shapeBoxV2Active,
+      mountProjectId: _shapeBoxV2ProjectId,
+      urlProjectId: urlPid,
+      urlShapeBox: urlShapeBox,
+      editorProjectId: EDITOR_PROJECT_ID,
+      enabledForMountId: shapeBoxV2Enabled(_shapeBoxV2ProjectId),
+      enabledForUrlId: shapeBoxV2Enabled(urlPid)
+    };
   }
 
   function isShapeBoxV2Active() {
@@ -2727,12 +2752,25 @@ var ExperienciaCanvas = (function () {
     api = api || {};
     var overlayMode = !!api.overlayMode;
 
-    _shapeBoxV2ProjectId = api.projectId || null;
+    _shapeBoxV2ProjectId = api.projectId || shapeBoxProjectIdFromUrl() || null;
     _shapeBoxV2Active = api.shapeBoxV2 === true || shapeBoxV2Enabled(_shapeBoxV2ProjectId);
     if (_shapeBoxV2Active) {
       try {
-        console.info('[ExperienciaCanvas] ShapeBox v2 — unified shape paint + resize (Fase 1–3 POC)');
+        console.info('[ExperienciaCanvas] ShapeBox v2 — unified shape paint + resize (Fase 1–3 POC)', {
+          projectId: _shapeBoxV2ProjectId
+        });
       } catch (eSbLog) { /* ignore */ }
+    } else {
+      try {
+        var sbDbg = shapeBoxV2DebugSnapshot();
+        if (sbDbg.enabledForUrlId || sbDbg.urlShapeBox === '1') {
+          console.warn(
+            '[ExperienciaCanvas] ShapeBox v2 INACTIVO — overlay montado sin flag v2. ' +
+            'Añade ?shapeBox=1 y recarga, o remonta el editor.',
+            sbDbg
+          );
+        }
+      } catch (eSbWarn) { /* ignore */ }
     }
 
     ExperienciaEngine.ensureFlow(state);
@@ -7185,7 +7223,8 @@ var ExperienciaCanvas = (function () {
       var tilePaint = shapePaintSize(vm, layerW, layerH);
       var gizmo = shapeGizmoMetrics(vm, layerW, layerH);
       var stagePaint = shapeStagePaintMetrics(vm, layerW, layerH);
-      var shapeBox = isShapeBoxV2Active() ? getShapeBox(vm, layerW, layerH) : null;
+      var shapeBoxV2On = isShapeBoxV2Active();
+      var shapeBox = shapeBoxV2On ? getShapeBox(vm, layerW, layerH) : null;
       var domShape = domBoxPctFromEl(shapeEl, buttonsLayer);
       var domGizmo = domBoxPctFromEl(gizmoEl, buttonsLayer);
       var delta = null;
@@ -7219,7 +7258,8 @@ var ExperienciaCanvas = (function () {
             tilePaint: tilePaint,
             gizmoMetrics: gizmo,
             stagePaint: stagePaint,
-            shapeBoxV2: shapeBox
+            shapeBoxV2Active: shapeBoxV2On,
+            shapeBox: shapeBox
           },
           dom: {
             shape: domShape,
@@ -11139,6 +11179,7 @@ var ExperienciaCanvas = (function () {
     setCanvasMode: setCanvasMode,
     shapeBoxV2Enabled: shapeBoxV2Enabled,
     isShapeBoxV2Active: isShapeBoxV2Active,
+    shapeBoxV2DebugSnapshot: shapeBoxV2DebugSnapshot,
     EDITOR_PROJECT_ID: EDITOR_PROJECT_ID
   };
 })();
