@@ -511,20 +511,19 @@ var ExperienciaEngine = (function () {
     return (Number(n) / 52) * 100;
   }
 
+  /** Fixed screen-pixel corner radii (9-slice — constant while box stretches). */
+  var SHAPE_RECT_CORNER_PX = 3;
+  var SHAPE_ROUND_RECT_CORNER_PX = 33;
+  var SHAPE_ROUND_RECT_CORNER_SLIDER_DEFAULT = 16;
+
   /** Picker artboard corner radius (viewBox units) — legacy tile paint. */
   function shapeRectFixedCornerRx() {
     return shapeUnit52(2);
   }
 
-  /** Screen-pixel corner radius at default insert size (Genially-style 9-slice). */
+  /** Screen-pixel corner radius (Genially-style 9-slice). */
   function shapeRectFixedCornerPx(layerW, layerH) {
-    var lw = Math.max(1, Number(layerW) || 1000);
-    var defW = sceneShapeDefaultSize('SHAPE_RECT').w;
-    var tilePx = (defW / 100) * lw;
-    var base = shapeContentBBoxBase('SHAPE_RECT');
-    var cf = shapeContentFrac('SHAPE_RECT', 1, 1);
-    var shapePxH = tilePx * cf.dispH;
-    return (shapeRectFixedCornerRx() / base.h) * shapePxH;
+    return SHAPE_RECT_CORNER_PX;
   }
 
   /** Map fixed px radius → viewBox rx for current box (uniform scale, aspect-matched vb). */
@@ -547,15 +546,11 @@ var ExperienciaEngine = (function () {
     return Math.max(0, Math.min(50, (brR / 12) * shapeUnit52(9)));
   }
 
-  /** Screen-pixel corner radius for round rect at insert size. */
+  /** Screen-pixel corner radius; slider 16 = 33px baseline. */
   function shapeRoundRectFixedCornerPx(layerW, layerH, borderRadius) {
-    var lw = Math.max(1, Number(layerW) || 1000);
-    var defW = sceneShapeDefaultSize('SHAPE_ROUND_RECT').w;
-    var tilePx = (defW / 100) * lw;
-    var base = shapeContentBBoxBase('SHAPE_ROUND_RECT');
-    var cf = shapeContentFrac('SHAPE_ROUND_RECT', 1, 1);
-    var shapePxH = tilePx * cf.dispH;
-    return (shapeRoundRectFixedCornerRx(borderRadius) / base.h) * shapePxH;
+    var brR = borderRadius != null && !isNaN(Number(borderRadius))
+      ? Number(borderRadius) : SHAPE_ROUND_RECT_CORNER_SLIDER_DEFAULT;
+    return SHAPE_ROUND_RECT_CORNER_PX * (brR / SHAPE_ROUND_RECT_CORNER_SLIDER_DEFAULT);
   }
 
   function shapeRoundRectCornerRxViewBox(boxWPct, boxHPct, layerW, layerH, vbW, vbH, borderRadius) {
