@@ -167,6 +167,12 @@ var ExperienciaCanvas = (function () {
       : false;
   }
 
+  /** Circle/donut corner drag: pixel-square uniform scale on 16:9 layers. */
+  function shapeUsesPixelSquareCornerResize(kind) {
+    kind = String(kind || '').toUpperCase();
+    return kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
+  }
+
   /** Shapes: edge handles resize one axis; corners keep ratio. Circle stays uniform. */
   function shouldCoupleShapeResizeAxes(type, moveE, moveW, moveN, moveS, keepRatio) {
     if (!keepRatio) return false;
@@ -268,7 +274,7 @@ var ExperienciaCanvas = (function () {
       var outGw = startGw;
       var outGh = startGh;
       if (isCornerBox) {
-        if (drag.shapeBoxV2 && keepRatio && isSquareShapeType(kind)) {
+        if (drag.shapeBoxV2 && keepRatio && shapeUsesPixelSquareCornerResize(kind)) {
           /* Pixel-space uniform scale — keeps circles/donuts round on 16:9 layers. */
           var startPxW = (startGw / 100) * layerW;
           var startPxH = (startGh / 100) * layerH;
@@ -8707,7 +8713,9 @@ var ExperienciaCanvas = (function () {
               transformDrag.lastDyPx = dyPx;
               if (!transformDrag.shapeSnapDone) {
                 transformDrag.shapeSnapDone = true;
-                scheduleShapeResizeFrame(transformDrag, 0, 0, layerW, layerH, mode);
+                if (shapeUsesPixelSquareCornerResize(transformDrag.type)) {
+                  scheduleShapeResizeFrame(transformDrag, 0, 0, layerW, layerH, mode);
+                }
               }
               scheduleShapeResizeFrame(
                 transformDrag, dxPx, dyPx, layerW, layerH, mode
