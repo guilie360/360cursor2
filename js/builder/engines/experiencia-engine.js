@@ -1129,6 +1129,41 @@ var ExperienciaEngine = (function () {
     });
   }
 
+  /** Tight axis-aligned rect for union bounds — matches canvas shape gizmo, not picker tile. */
+  function overlayMemberUnionRect(ix, world, layerW, layerH) {
+    if (!ix || !world) return null;
+    var t = String(ix.type || 'BUTTON').toUpperCase();
+    if (isSceneShapeType(t)) {
+      var wPct = ix.width != null ? Number(ix.width) : sceneShapeDefaultSize(t).w;
+      var hPct = ix.height != null ? Number(ix.height) : null;
+      var st = shapeStretchXY({
+        stretchX: ix.shapeStretchX,
+        stretchY: ix.shapeStretchY
+      });
+      var gm = sceneShapeGizmoMetrics(
+        wPct, t, layerW, layerH,
+        world.x, world.y,
+        st.sx, st.sy, hPct, ix
+      );
+      if (gm) {
+        return {
+          cx: gm.gx,
+          cy: gm.gy,
+          w: gm.gw,
+          h: gm.gh,
+          rotation: world.rotation
+        };
+      }
+    }
+    return {
+      cx: world.x,
+      cy: world.y,
+      w: world.width,
+      h: world.height,
+      rotation: world.rotation
+    };
+  }
+
   function resolveOverlayGroupMemberIds(n, g, opts) {
     opts = opts || {};
     if (!g) return [];
@@ -1198,11 +1233,13 @@ var ExperienciaEngine = (function () {
         ? overlayWorldLayoutRaw(n, ix, layerW, layerH)
         : overlayWorldLayoutAbsolute(ix, layerW, layerH);
       if (!world) return;
-      var cxPx = (world.x / 100) * layerW;
-      var cyPx = (world.y / 100) * layerH;
-      var wPx = (world.width / 100) * layerW;
-      var hPx = (world.height / 100) * layerH;
-      var corners = overlayRotatedCorners(cxPx, cyPx, wPx, hPx, world.rotation);
+      var rect = overlayMemberUnionRect(ix, world, layerW, layerH);
+      if (!rect) return;
+      var cxPx = (rect.cx / 100) * layerW;
+      var cyPx = (rect.cy / 100) * layerH;
+      var wPx = (rect.w / 100) * layerW;
+      var hPx = (rect.h / 100) * layerH;
+      var corners = overlayRotatedCorners(cxPx, cyPx, wPx, hPx, rect.rotation);
       corners.forEach(function (c) {
         if (c.x < minL) minL = c.x;
         if (c.y < minT) minT = c.y;
