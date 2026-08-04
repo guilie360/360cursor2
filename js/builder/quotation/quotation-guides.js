@@ -1077,10 +1077,10 @@ var QuotationGuides = (function () {
           presets: GUIDE_COLOR_PRESETS,
           scopeToggle: {
             active: isGuideColorSceneOnly(),
-            titleActive: 'Solo escena actual',
-            titleInactive: 'Todas las escenas',
-            onToggle: function (active) {
-              setGuideColorSceneOnly(active);
+            titleLocked: 'Solo esta escena · Desktop',
+            titleUnlocked: 'Todas las escenas · Desktop',
+            onToggle: function (locked) {
+              setGuideColorSceneOnly(locked);
             }
           },
           onChange: function (hex) {

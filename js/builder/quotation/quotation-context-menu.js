@@ -96,16 +96,19 @@ var QuotationContextMenu = (function () {
     return '#b33a3a';
   }
 
-  function guideColorScopeIconHtml(active) {
+  function guideColorScopeIconHtml(sceneLocked) {
     var S = 'xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"' +
       ' fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"' +
       ' stroke-linejoin="round" aria-hidden="true"';
-    if (active) {
-      return '<svg ' + S + '><rect x="6" y="4" width="12" height="16" rx="2"/></svg>';
+    if (sceneLocked) {
+      return '<svg ' + S + '>' +
+        '<rect x="5" y="11" width="14" height="10" rx="2"/>' +
+        '<path d="M8 11V8a4 4 0 0 1 8 0v3"/>' +
+        '</svg>';
     }
     return '<svg ' + S + '>' +
-      '<rect x="3" y="8" width="12" height="12" rx="1.5" opacity="0.55"/>' +
-      '<rect x="9" y="4" width="12" height="12" rx="1.5"/>' +
+      '<rect x="5" y="11" width="14" height="10" rx="2"/>' +
+      '<path d="M8 11V8a4 4 0 0 1 7.8-4"/>' +
       '</svg>';
   }
 
@@ -141,16 +144,18 @@ var QuotationContextMenu = (function () {
         var fieldId = btn.getAttribute('data-qe-ctx-color-field');
         var item = findItem(items, fieldId);
         if (!item || !item.scopeToggle) return;
-        var next = !btn.classList.contains('is-active');
-        btn.classList.toggle('is-active', next);
-        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        var nextLocked = !btn.classList.contains('is-locked');
+        btn.classList.toggle('is-locked', nextLocked);
+        btn.setAttribute('aria-pressed', nextLocked ? 'true' : 'false');
         var titles = item.scopeToggle;
         btn.setAttribute(
           'title',
-          next ? (titles.titleActive || 'Solo escena actual') : (titles.titleInactive || 'Todas las escenas')
+          nextLocked
+            ? (titles.titleLocked || 'Solo esta escena')
+            : (titles.titleUnlocked || 'Todas las escenas · Desktop')
         );
-        btn.innerHTML = guideColorScopeIconHtml(next);
-        if (typeof item.scopeToggle.onToggle === 'function') item.scopeToggle.onToggle(next);
+        btn.innerHTML = guideColorScopeIconHtml(nextLocked);
+        if (typeof item.scopeToggle.onToggle === 'function') item.scopeToggle.onToggle(nextLocked);
       });
     });
   }
@@ -249,23 +254,24 @@ var QuotationContextMenu = (function () {
               ' title="' + escapeHtml(c) + '" aria-label="' + escapeHtml(c) + '"></button>';
         }).join('');
         var scopeToggle = item.scopeToggle || null;
+        var sceneLocked = !!(scopeToggle && scopeToggle.active);
         var scopeBtn = scopeToggle
           ? ('<button type="button" class="qe-context-menu__color-scope' +
-              (scopeToggle.active ? ' is-active' : '') + '"' +
+              (sceneLocked ? ' is-locked' : '') + '"' +
               ' data-qe-ctx-color-scope="1"' +
               ' data-qe-ctx-color-field="' + escapeHtml(item.id) + '"' +
-              ' aria-pressed="' + (scopeToggle.active ? 'true' : 'false') + '"' +
+              ' aria-pressed="' + (sceneLocked ? 'true' : 'false') + '"' +
               ' title="' + escapeHtml(
-                scopeToggle.active
-                  ? (scopeToggle.titleActive || 'Solo escena actual')
-                  : (scopeToggle.titleInactive || 'Todas las escenas')
+                sceneLocked
+                  ? (scopeToggle.titleLocked || 'Solo esta escena')
+                  : (scopeToggle.titleUnlocked || 'Todas las escenas · Desktop')
               ) + '"' +
               ' aria-label="' + escapeHtml(
-                scopeToggle.active
-                  ? (scopeToggle.titleActive || 'Solo escena actual')
-                  : (scopeToggle.titleInactive || 'Todas las escenas')
+                sceneLocked
+                  ? (scopeToggle.titleLocked || 'Solo esta escena')
+                  : (scopeToggle.titleUnlocked || 'Todas las escenas · Desktop')
               ) + '">' +
-              guideColorScopeIconHtml(!!scopeToggle.active) +
+              guideColorScopeIconHtml(sceneLocked) +
             '</button>')
           : '';
         html +=
