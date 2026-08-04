@@ -1072,6 +1072,39 @@
   transform: translate3d(0, -10px, 0);
 }
 
+/*
+ * Virtual-columns rule — both side rails collapsed + scenes strip open.
+ * Stage width matches the deployed-rails budget; scenes height is instant
+ * (no max-height slide) so canvas fit does not stutter mid-animation.
+ */
+.quotation-workspace.is-scenes-virtual-columns .qe-col--canvas {
+  align-items: center;
+}
+
+.qe-stage-unit.is-scenes-virtual-columns > .qe-scenes-host:not(.is-collapsed) {
+  max-height: 220px !important;
+  height: auto;
+  margin: 0 0 calc(var(--builder-float-w, 16px) + 12px);
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  overflow: visible;
+  transition:
+    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.qe-stage-unit.is-scenes-virtual-columns > .qe-scenes-host:not(.is-collapsed) > .qe-scenes {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: none;
+  overflow: visible;
+  pointer-events: auto;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
 /* Chrome above canvas: scene name (left) + viewport presets (center) */
 .qe-canvas-chrome-top {
   display: grid;

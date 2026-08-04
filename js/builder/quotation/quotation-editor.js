@@ -3975,6 +3975,11 @@ var QuotationEditor = (function () {
     var vp = measureStageViewport(col);
     var availW = Math.max(1, vp.width);
     var availH = Math.max(1, vp.height);
+    var virtualCols = scenesUsesVirtualColumns();
+    syncScenesVirtualColumnsClass();
+    if (virtualCols) {
+      availW = Math.max(1, availW - STAGE_VIRTUAL_COL_W * 2);
+    }
     var device = activeViewportSize();
 
     shell.style.boxSizing = 'border-box';
@@ -4029,12 +4034,19 @@ var QuotationEditor = (function () {
     void unit.offsetHeight;
 
     var scenesMeasureEl = scenesHost || scenes;
-    var scenesH = scenesMeasureEl
-      ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height)
-      : 0;
-    var scenesMb = scenesMeasureEl
-      ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0)
-      : 0;
+    var scenesH;
+    var scenesMb;
+    if (virtualCols) {
+      scenesH = STAGE_SCENES_EXPANDED_H;
+      scenesMb = STAGE_SCENES_FOLD_H + STAGE_SCENES_FOLD_GAP;
+    } else {
+      scenesH = scenesMeasureEl
+        ? Math.ceil(scenesMeasureEl.getBoundingClientRect().height)
+        : 0;
+      scenesMb = scenesMeasureEl
+        ? (parseFloat(window.getComputedStyle(scenesMeasureEl).marginBottom) || 0)
+        : 0;
+    }
     var TOOL_PAD = 44;
     var chromeH = Math.ceil(scenesH + scenesMb);
     var slotW = Math.max(1, availW);
@@ -4164,6 +4176,41 @@ var QuotationEditor = (function () {
 
   var STAGE_SCENES_FOLD_H = 16;
   var STAGE_SCENES_FOLD_GAP = 12;
+  /** Matches quotation-recursos-w / quotation-props-w (220px each). */
+  var STAGE_VIRTUAL_COL_W = 220;
+  /** Stable scenes strip height — thumb + label + paddings (no live measure during toggle). */
+  var STAGE_SCENES_EXPANDED_H = 148;
+
+  function getQuotationWorkspace() {
+    if (rootEl) {
+      var ws = rootEl.closest('.quotation-workspace');
+      if (ws) return ws;
+    }
+    return document.querySelector('.quotation-workspace');
+  }
+
+  function workspaceBothColumnsCollapsed() {
+    var ws = getQuotationWorkspace();
+    return !!(ws &&
+      ws.classList.contains('is-left-collapsed') &&
+      ws.classList.contains('is-right-collapsed'));
+  }
+
+  /**
+   * Virtual-columns rule: both side rails hidden + scenes strip open → layout
+   * uses the same width/height budget as when rails are deployed (stable fit).
+   */
+  function scenesUsesVirtualColumns() {
+    return workspaceBothColumnsCollapsed() && !state.scenesCollapsed;
+  }
+
+  function syncScenesVirtualColumnsClass() {
+    var ws = getQuotationWorkspace();
+    var unit = rootEl && rootEl.querySelector('[data-qe-stage-unit]');
+    var on = scenesUsesVirtualColumns();
+    if (ws) ws.classList.toggle('is-scenes-virtual-columns', on);
+    if (unit) unit.classList.toggle('is-scenes-virtual-columns', on);
+  }
 
   function syncScenesFoldButton() {
     if (!rootEl) return;
@@ -4206,9 +4253,10 @@ var QuotationEditor = (function () {
     if (host) host.classList.toggle('is-collapsed', state.scenesCollapsed);
     if (scenes) scenes.classList.toggle('is-collapsed', state.scenesCollapsed);
     if (unit) unit.classList.toggle('is-scenes-collapsed', state.scenesCollapsed);
+    syncScenesVirtualColumnsClass();
     syncScenesFoldButton();
     try { fitStageWorkspace(); } catch (eFit) {}
-    if (host && typeof host.addEventListener === 'function') {
+    if (!scenesUsesVirtualColumns() && host && typeof host.addEventListener === 'function') {
       var onEnd = function (ev) {
         if (ev.propertyName !== 'max-height' && ev.propertyName !== 'margin') return;
         host.removeEventListener('transitionend', onEnd);
