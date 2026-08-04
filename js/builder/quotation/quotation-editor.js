@@ -3573,6 +3573,7 @@ var QuotationEditor = (function () {
   }
 
   var BACKPACK_SCENE_ID = '__qe_backpack__';
+  var BACKPACK_STORAGE_BG = '#0a0a0a';
 
   function ensureBackpackInteractions() {
     if (!Array.isArray(state.backpackInteractions)) state.backpackInteractions = [];
@@ -3878,19 +3879,17 @@ var QuotationEditor = (function () {
   function backpackIconSvg() {
     return '' +
       '<svg class="qe-backpack-fab__ico" width="14" height="14" viewBox="0 0 24 24"' +
-        ' fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
-        ' stroke-linejoin="round" aria-hidden="true">' +
-        '<rect x="3.5" y="2.8" width="17" height="3.4" rx="1.7"/>' +
-        '<path d="M6.2 12.8c-1.3 0-2 1-2 2.2v1.6c0 1.2.7 2 2 2"/>' +
-        '<path d="M17.8 12.8c1.3 0 2 1 2 2.2v1.6c0 1.2-.7 2-2 2"/>' +
-        '<rect x="6.2" y="6.2" width="11.6" height="14.2" rx="2.2"/>' +
-        '<path d="M9.2 5.5V10"/>' +
-        '<path d="M14.8 5.5V10"/>' +
-        '<rect x="8.4" y="9.6" width="1.6" height="1.6" rx="0.25"/>' +
-        '<rect x="14" y="9.6" width="1.6" height="1.6" rx="0.25"/>' +
-        '<rect x="9.2" y="14.2" width="5.6" height="4.6" rx="1"/>' +
-        '<path d="M9.2 15.4h5.6"/>' +
-        '<path d="M12 17v1.6"/>' +
+        ' aria-hidden="true">' +
+        '<ellipse cx="12" cy="15.6" rx="5.4" ry="5.1" fill="currentColor"' +
+          ' fill-opacity="0.22" stroke="currentColor" stroke-width="1.25"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"' +
+          ' stroke-linejoin="round" d="M8 9.2c.6-1.6 2-2.6 4-2.6s3.4 1 4 2.6"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"' +
+          ' d="M7.3 7.8c1-1.4 2.6-2.2 4.7-2.2s3.7.8 4.7 2.2"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"' +
+          ' d="M6.4 9.6h11.2"/>' +
+        '<path fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"' +
+          ' d="M11.4 9.6v1.55M12.6 9.6v1.55"/>' +
       '</svg>';
   }
 
@@ -4113,7 +4112,7 @@ var QuotationEditor = (function () {
       fitSlot.style.overflow = state.backpackMode ? 'hidden' : 'visible';
       fitSlot.style.padding = state.backpackMode ? '0' : (TOOL_PAD + 'px 0');
       fitSlot.style.boxSizing = 'border-box';
-      fitSlot.style.background = state.backpackMode ? '#111111' : '';
+      fitSlot.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     }
     var work = unit.querySelector('[data-qe-stage-work]');
     if (work) {
@@ -4125,7 +4124,7 @@ var QuotationEditor = (function () {
       work.style.alignItems = 'stretch';
       work.style.gap = '0';
       work.style.overflow = state.backpackMode ? 'hidden' : 'visible';
-      work.style.background = state.backpackMode ? '#111111' : '';
+      work.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
       work.style.position = 'relative';
     }
     if (fitStack) {
@@ -4142,7 +4141,7 @@ var QuotationEditor = (function () {
       fitFrame.style.overflow = 'hidden';
       fitFrame.style.border = state.backpackMode ? 'none' : '';
       fitFrame.style.borderRadius = state.backpackMode ? '0' : '';
-      fitFrame.style.background = state.backpackMode ? '#111111' : '';
+      fitFrame.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     }
     if (toolChrome) {
       toolChrome.style.position = 'absolute';
@@ -4181,15 +4180,15 @@ var QuotationEditor = (function () {
       stage.style.transformOrigin = 'top left';
       stage.style.border = state.backpackMode ? 'none' : '';
       stage.style.borderRadius = state.backpackMode ? '0' : '';
-      stage.style.background = state.backpackMode ? '#111111' : '';
+      stage.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     }
 
     shell.setAttribute('data-qe-stage-scale', String(Math.round(scale * 1000) / 1000));
     shell.setAttribute('data-qe-stage-nat', natW + 'x' + natH);
     shell.setAttribute('data-qe-chrome-locked', state.backpackMode ? '0' : '1');
     shell.setAttribute('data-qe-backpack-mode', state.backpackMode ? '1' : '0');
-    shell.style.background = state.backpackMode ? '#111111' : '';
-    unit.style.background = state.backpackMode ? '#111111' : '';
+    shell.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
+    unit.style.background = state.backpackMode ? BACKPACK_STORAGE_BG : '';
     canvasFitScale = scale;
 
     applyBackpackFabAnchor();

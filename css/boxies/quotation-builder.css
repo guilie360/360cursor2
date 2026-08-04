@@ -508,13 +508,13 @@
 .qe-editor.is-backpack-mode .qe-canvas__stage,
 .qe-editor.is-backpack-mode [data-hero-canvas],
 .qe-editor.is-backpack-mode .hero-canvas__lienzo {
-  background: #111111 !important;
+  background: #0a0a0a !important;
 }
 
 .qe-editor.is-backpack-mode .hero-canvas,
 .qe-editor.is-backpack-mode .qe-canvas__lienzo,
 .qe-editor.is-backpack-mode .qe-canvas__design {
-  background: #111111 !important;
+  background: #0a0a0a !important;
   border: none !important;
   border-radius: 0 !important;
 }
