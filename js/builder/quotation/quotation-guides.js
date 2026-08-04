@@ -1119,19 +1119,46 @@ var QuotationGuides = (function () {
     });
   }
 
-  function beginGuideDrag(id, el, clientX, clientY, pointerId) {
-    var g = findGuide(id);
+  function duplicateGuideForDrag(sourceId) {
+    var src = findGuide(sourceId);
+    if (!src || src.locked) return null;
+    var scene = activeScene();
+    if (!scene) return null;
+    var axis = src.type === 'horizontal' ? 'horizontal' : 'vertical';
+    var copy = {
+      id: nextGuideId(),
+      type: axis,
+      position: snapGuidePct(axis, src.position),
+      locked: false
+    };
+    ensureGuidesArray(scene).push(copy);
+    renderGuides();
+    markDirty();
+    return copy;
+  }
+
+  function beginGuideDrag(id, el, clientX, clientY, pointerId, opts) {
+    opts = opts || {};
+    var dragId = String(id);
+    if (opts.duplicate) {
+      var dup = duplicateGuideForDrag(dragId);
+      if (!dup) return false;
+      dragId = String(dup.id);
+      el = guideElById(dragId);
+    }
+    var g = findGuide(dragId);
     if (!g || g.locked) return false;
     pendingGuidePointer = null;
-    selectGuide(id, { skipNotify: true });
+    selectGuide(dragId, { skipNotify: true });
     if (typeof QuotationContextMenu !== 'undefined' && QuotationContextMenu.close) {
       QuotationContextMenu.close();
     }
     dragGuide = {
-      id: String(id),
+      id: dragId,
       type: g.type === 'horizontal' ? 'horizontal' : 'vertical',
-      el: el || guideElById(id),
-      pointerId: pointerId
+      el: el || guideElById(dragId),
+      pointerId: pointerId,
+      duplicate: !!opts.duplicate
     };
     if (dragGuide.el) {
       dragGuide.el.classList.add('is-dragging');
@@ -1421,7 +1448,7 @@ var QuotationGuides = (function () {
 
   /* ── Document pointer for drag ────────────────────────── */
 
-  function tryStartPendingGuideDrag(clientX, clientY) {
+  function tryStartPendingGuideDrag(clientX, clientY, shiftKey) {
     if (!pendingGuidePointer || dragGuide) return false;
     var dx = clientX - pendingGuidePointer.startX;
     var dy = clientY - pendingGuidePointer.startY;
@@ -1430,12 +1457,14 @@ var QuotationGuides = (function () {
     }
     var p = pendingGuidePointer;
     pendingGuidePointer = null;
-    return beginGuideDrag(p.id, p.el, clientX, clientY, p.pointerId);
+    return beginGuideDrag(p.id, p.el, clientX, clientY, p.pointerId, {
+      duplicate: !shiftKey
+    });
   }
 
   function onDocMove(e) {
     if (pendingGuidePointer) {
-      tryStartPendingGuideDrag(e.clientX, e.clientY);
+      tryStartPendingGuideDrag(e.clientX, e.clientY, e.shiftKey);
     }
     if (ghost) {
       updateGhost(e.clientX, e.clientY, !!e.shiftKey);
