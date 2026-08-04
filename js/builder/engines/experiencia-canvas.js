@@ -366,6 +366,35 @@ var ExperienciaCanvas = (function () {
     return resolveShapeStretchResize(drag, dxPx, dyPx, layerW, layerH, mode, keepRatio);
   }
 
+  function shapeResizePatchDelta(startBox, patch) {
+    if (!startBox || !patch) return 0;
+    return Math.max(
+      Math.abs(Number(patch.width) - Number(startBox.w)),
+      Math.abs(Number(patch.height) - Number(startBox.h)),
+      Math.abs(Number(patch.x) - Number(startBox.cx)),
+      Math.abs(Number(patch.y) - Number(startBox.cy))
+    );
+  }
+
+  function shapeResizePatchChanged(startBox, patch) {
+    return shapeResizePatchDelta(startBox, patch) > 0.05;
+  }
+
+  /** Prefer the drag patch when pointerup recomputes stale start geometry. */
+  function resolveShapeResizeCommitPatch(drag, finPatch, dragPatch) {
+    if (!dragPatch && !finPatch) return null;
+    if (!dragPatch) return finPatch;
+    if (!finPatch) return dragPatch;
+    if (!drag || !drag.startBox) {
+      return shapeResizePatchDelta(null, finPatch) >= shapeResizePatchDelta(null, dragPatch)
+        ? finPatch : dragPatch;
+    }
+    var finD = shapeResizePatchDelta(drag.startBox, finPatch);
+    var dragD = shapeResizePatchDelta(drag.startBox, dragPatch);
+    if (dragD > finD + 0.05) return dragPatch;
+    return finPatch;
+  }
+
   function shapeDefaultSize(t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
       return ExperienciaEngine.sceneShapeDefaultSize(t);
@@ -5353,7 +5382,14 @@ var ExperienciaCanvas = (function () {
         cancelAnimationFrame(drag.shapeRaf);
         drag.shapeRaf = 0;
       }
-      if (drag.pendingShapeDx == null || drag.pendingShapeDy == null) return;
+      if (drag.pendingShapeDx == null || drag.pendingShapeDy == null) {
+        if (drag.lastShapeDx == null || drag.lastShapeDy == null) return;
+        drag.pendingShapeDx = drag.lastShapeDx;
+        drag.pendingShapeDy = drag.lastShapeDy;
+        drag.pendingShapeLayerW = drag.layerW;
+        drag.pendingShapeLayerH = drag.layerH;
+        drag.pendingShapeMode = drag.mode;
+      }
       var fin = computeShapeResizeLive(
         drag,
         drag.pendingShapeDx,
@@ -9263,11 +9299,12 @@ var ExperienciaCanvas = (function () {
           var rotBtnId = transformDrag.buttonId;
           var endScene = transformDrag.sceneId;
           var endType = transformDrag.type;
-          var liveShapePatch = transformDrag.liveShapePatch;
+          var dragShapePatch = transformDrag.liveShapePatch;
           var endedLiveRefs = transformDrag.liveRefs;
           var endedDrag = transformDrag;
           transformDrag = null;
           unbindOverlayPointerDocs();
+          var liveShapePatch = dragShapePatch;
           if (endedDrag && isShapeType(endType) && !wasRotate) {
             flushShapeResizeFrame(endedDrag);
             var endDx = endedDrag.lastShapeDx != null ? endedDrag.lastShapeDx : (endedDrag.lastDxPx || 0);
@@ -9281,10 +9318,11 @@ var ExperienciaCanvas = (function () {
               endMode,
               endedDrag.keepRatio
             );
-            if (finLive && finLive.patch) liveShapePatch = finLive.patch;
-            else if (!liveShapePatch && endedDrag.liveShapePatch) {
-              liveShapePatch = endedDrag.liveShapePatch;
-            }
+            liveShapePatch = resolveShapeResizeCommitPatch(
+              endedDrag,
+              finLive && finLive.patch,
+              dragShapePatch || endedDrag.liveShapePatch
+            );
           }
           if (wasRotate && !movedT) {
             rotateTapArmed = { buttonId: rotBtnId, at: Date.now() };
@@ -9297,13 +9335,16 @@ var ExperienciaCanvas = (function () {
             Number(endedDrag.lastDxPx) || 0,
             Number(endedDrag.lastDyPx) || 0
           ) : 0;
+          var shapePatchChanged = endedDrag && endedDrag.startBox &&
+            shapeResizePatchChanged(endedDrag.startBox, liveShapePatch);
           var shapeResizeMoved = movedT || (
             endedDrag && endedDrag.shapeBoxV2 && isShapeType(endType) && shapeDragPx > 1.5
           );
           if (!wasRotate && endScene && rotBtnId) {
-            if (isShapeType(endType) && liveShapePatch && shapeResizeMoved) {
+            if (isShapeType(endType) && liveShapePatch && shapePatchChanged) {
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, liveShapePatch);
               committedShapeResize = true;
+              persist();
             } else if (movedT && !isShapeType(endType)) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 commitGroupBoundsIfNeeded(endScene, rotBtnId);
@@ -9359,7 +9400,9 @@ var ExperienciaCanvas = (function () {
           var shapeResizeSettled = isShapeType(endType) && rotBtnId && !wasRotate &&
             committedShapeResize;
           if (shapeResizeSettled) {
-            syncOverlayShapeFromModel(endScene, rotBtnId);
+            if (!syncOverlayShapeFromModel(endScene, rotBtnId)) {
+              paintButtonsStage();
+            }
             mountOverlaySelectionGizmos(getSelectedOverlayIds());
           } else {
             if (endedLiveRefs) clearShapeLiveSizingStyles(endedLiveRefs);
@@ -9370,15 +9413,17 @@ var ExperienciaCanvas = (function () {
             scheduleShapeDebugLog('dragend', [String(rotBtnId)], {
               moved: movedT,
               shapeResizeMoved: shapeResizeMoved,
+              shapePatchChanged: shapePatchChanged,
               shapeDragPx: +shapeDragPx.toFixed(2),
               committedShapeResize: committedShapeResize,
               wasRotate: wasRotate,
               mode: endMode,
               liveShapePatch: liveShapePatch || null,
+              dragShapePatch: dragShapePatch || null,
               startBox: endedDrag ? endedDrag.startBox : null
             });
           }
-          if (movedT || committedShapeResize) persist();
+          if (movedT && !committedShapeResize) persist();
           return;
         }
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
