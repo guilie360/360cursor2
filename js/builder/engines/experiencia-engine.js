@@ -65,6 +65,21 @@ var ExperienciaEngine = (function () {
     );
   }
 
+  function shapeTraceNumEngine(stage, fields, extra) {
+    if (!shapeResizeTraceEngineEnabled()) return;
+    var f = fields || {};
+    var line = '[SHAPE-TRACE-NUM] ' + stage +
+      ' | w=' + (f.width != null ? +Number(f.width).toFixed(3) : 'null') +
+      ' h=' + (f.height != null ? +Number(f.height).toFixed(3) : 'null') +
+      ' x=' + (f.x != null ? +Number(f.x).toFixed(3) : 'null') +
+      ' y=' + (f.y != null ? +Number(f.y).toFixed(3) : 'null') +
+      ' scaleX=' + (f.scaleX != null ? +Number(f.scaleX).toFixed(4) : 'null') +
+      ' scaleY=' + (f.scaleY != null ? +Number(f.scaleY).toFixed(4) : 'null') +
+      ' scb=' + (f.shapeContentBox != null ? !!f.shapeContentBox : 'null');
+    if (extra) line += ' | ' + extra;
+    console.log('%c' + line, 'color:#0ff;font-family:monospace;font-size:11px');
+  }
+
   var FLOW_TEMPLATE_IDS = {
     simple: 'simple',
     components: 'components',
@@ -2125,6 +2140,8 @@ var ExperienciaEngine = (function () {
         patch: patchModelFieldsEngine(patch),
         modelBefore: shapeModelFieldsEngine(ix)
       });
+      shapeTraceNumEngine('4.enter.modelBefore', shapeModelFieldsEngine(ix), 'engine ix');
+      shapeTraceNumEngine('4.enter.patch', patchModelFieldsEngine(patch), 'incoming patch');
     }
 
     if (patch.label != null) {
@@ -2356,6 +2373,7 @@ var ExperienciaEngine = (function () {
           buttonId: buttonId,
           modelMid: shapeModelFieldsEngine(ix)
         });
+        shapeTraceNumEngine('4.afterShapeFields.modelIx', shapeModelFieldsEngine(ix), 'width/height applied');
       }
     }
 
@@ -2366,6 +2384,7 @@ var ExperienciaEngine = (function () {
         buttonId: buttonId,
         modelAfterDefaults: shapeModelFieldsEngine(ix)
       });
+      shapeTraceNumEngine('4.afterDefaults.modelIx', shapeModelFieldsEngine(ix), 'ensureFreeOverlayDefaults');
     }
     syncScenePorts(n);
     if (traceShape) {
@@ -2374,6 +2393,7 @@ var ExperienciaEngine = (function () {
         buttonId: buttonId,
         modelExit: shapeModelFieldsEngine(ix)
       });
+      shapeTraceNumEngine('4.exit.modelIx', shapeModelFieldsEngine(ix), 'FINAL ix in engine');
     }
     return buttonViewModel(state, n, ix);
   }

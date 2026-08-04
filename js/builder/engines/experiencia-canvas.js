@@ -63,6 +63,38 @@ var ExperienciaCanvas = (function () {
     );
   }
 
+  /** One-line numeric dump — copy/paste friendly (filter: SHAPE-TRACE-NUM). */
+  function shapeTraceNum(stage, fields, extra) {
+    if (!shapeResizeTraceEnabled()) return;
+    var f = fields || {};
+    var line = '[SHAPE-TRACE-NUM] ' + stage +
+      ' | w=' + (f.width != null ? +Number(f.width).toFixed(3) : 'null') +
+      ' h=' + (f.height != null ? +Number(f.height).toFixed(3) : 'null') +
+      ' x=' + (f.x != null ? +Number(f.x).toFixed(3) : 'null') +
+      ' y=' + (f.y != null ? +Number(f.y).toFixed(3) : 'null') +
+      ' scaleX=' + (f.scaleX != null ? +Number(f.scaleX).toFixed(4) : 'null') +
+      ' scaleY=' + (f.scaleY != null ? +Number(f.scaleY).toFixed(4) : 'null') +
+      ' scb=' + (f.shapeContentBox != null ? !!f.shapeContentBox : 'null');
+    if (extra) line += ' | ' + extra;
+    console.log('%c' + line, 'color:#0ff;font-family:monospace;font-size:11px');
+  }
+
+  function shapeTraceNumBox(stage, box, extra) {
+    if (!box) {
+      shapeTraceNum(stage, null, extra || 'box=null');
+      return;
+    }
+    shapeTraceNum(stage, {
+      width: box.w != null ? box.w : box.width,
+      height: box.h != null ? box.h : box.height,
+      x: box.cx != null ? box.cx : box.x,
+      y: box.cy != null ? box.cy : box.y,
+      scaleX: box.scaleX,
+      scaleY: box.scaleY,
+      shapeContentBox: box.shapeContentBox
+    }, extra);
+  }
+
   var _shapeResizeTraceCtx = null;
 
   /** Quotation sandbox — ShapeBox v2 POC (Fases 1–3). */
@@ -3265,6 +3297,9 @@ var ExperienciaCanvas = (function () {
           sceneId: _shapeResizeTraceCtx.sceneId,
           model: readShapeTraceModel(_shapeResizeTraceCtx.sceneId, _shapeResizeTraceCtx.btnId)
         });
+        shapeTraceNum('5b.afterPersist.modelIx',
+          readShapeTraceIxRaw(_shapeResizeTraceCtx.sceneId, _shapeResizeTraceCtx.btnId),
+          'post-persist/onChange');
       }
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state);
@@ -6161,6 +6196,7 @@ var ExperienciaCanvas = (function () {
           modelVm: readShapeTraceModel(sceneId, buttonId),
           modelIx: readShapeTraceIxRaw(sceneId, buttonId)
         });
+        shapeTraceNum('6.beforeRepaint.modelIx', readShapeTraceIxRaw(sceneId, buttonId), 'pre-sync');
       }
       function traceSyncAfterRepaint(boxUsed) {
         if (!traceSync || !shapeResizeTraceEnabled()) return;
@@ -6172,6 +6208,8 @@ var ExperienciaCanvas = (function () {
           modelVm: readShapeTraceModel(sceneId, buttonId),
           modelIx: readShapeTraceIxRaw(sceneId, buttonId)
         });
+        shapeTraceNumBox('7.boxUsed.getShapeBox', boxUsed, 'painted→DOM');
+        shapeTraceNum('7.afterRepaint.modelIx', readShapeTraceIxRaw(sceneId, buttonId), 'post-sync');
         _shapeResizeTraceCtx = null;
       }
       var vm = getOverlayItemVm(sceneId, buttonId);
@@ -6183,6 +6221,9 @@ var ExperienciaCanvas = (function () {
       if (!el) return false;
       if (isShapeBoxV2Active()) {
         var boxSync = getShapeBox(vm, layerW, layerH);
+        if (traceSync && shapeResizeTraceEnabled()) {
+          shapeTraceNumBox('6.getShapeBox.preview', boxSync, 'will paint this');
+        }
         if (!boxSync) return false;
         paintShapeNodeEl(el, boxSync, vm, layerW, layerH);
         traceSyncAfterRepaint({
@@ -9230,6 +9271,9 @@ var ExperienciaCanvas = (function () {
                 scaleY: transformDrag.startStretchY
               }
             });
+            shapeTraceNumBox('1.startBox', transformDrag.startBox, 'src=getShapeBox');
+            shapeTraceNum('1.modelIx', readShapeTraceIxRaw(sceneIdG, gid), 'src=ix');
+            shapeTraceNum('1.modelVm', shapeModelFields(btnG), 'src=vm');
           }
           if (handleMode !== 'rotate') {
             try { gizmo.classList.add('is-sizing'); } catch (eSz) { /* ignore */ }
@@ -9488,6 +9532,18 @@ var ExperienciaCanvas = (function () {
                 finPatch: patchModelFields(finLive && finLive.patch),
                 startBox: endedDrag.startBox || null
               });
+              if (finLive && finLive.box) {
+                shapeTraceNumBox('2.finalBox', {
+                  cx: finLive.box.cx, cy: finLive.box.cy,
+                  w: finLive.box.w, h: finLive.box.h,
+                  scaleX: finLive.stretchX, scaleY: finLive.stretchY,
+                  shapeContentBox: true
+                }, 'endDx=' + (+endDx).toFixed(1) + ' endDy=' + (+endDy).toFixed(1));
+              }
+              shapeTraceNum('3.patch.liveShapePatch', patchModelFields(liveShapePatch), 'COMMIT');
+              shapeTraceNum('3.patch.dragShapePatch', patchModelFields(dragShapePatch), 'drag');
+              shapeTraceNum('3.patch.finPatch', patchModelFields(finLive && finLive.patch), 'finLive');
+              shapeTraceNumBox('3.startBox', endedDrag.startBox, 'ref');
             }
           }
           if (wasRotate && !movedT) {
@@ -9517,6 +9573,8 @@ var ExperienciaCanvas = (function () {
                   modelBeforeVm: readShapeTraceModel(endScene, rotBtnId),
                   modelBeforeIx: readShapeTraceIxRaw(endScene, rotBtnId)
                 });
+                shapeTraceNum('4.beforeCommit.modelIx', readShapeTraceIxRaw(endScene, rotBtnId), 'pre-update');
+                shapeTraceNum('4.beforeCommit.patch', patchModelFields(liveShapePatch), 'patch→updateSceneButton');
               }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, liveShapePatch);
               committedShapeResize = true;
@@ -9527,6 +9585,8 @@ var ExperienciaCanvas = (function () {
                   modelVm: readShapeTraceModel(endScene, rotBtnId),
                   modelIx: readShapeTraceIxRaw(endScene, rotBtnId)
                 });
+                shapeTraceNum('5.afterUpdate.modelIx', readShapeTraceIxRaw(endScene, rotBtnId), 'post-updateSceneButton');
+                shapeTraceNum('5.afterUpdate.modelVm', readShapeTraceModel(endScene, rotBtnId), 'post-updateSceneButton');
               }
               persist();
             } else if (isShapeType(endType) && shapeResizeTraceEnabled()) {
