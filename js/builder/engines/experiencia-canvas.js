@@ -187,11 +187,9 @@ var ExperienciaCanvas = (function () {
     };
   }
 
-  /** Default corner keep-ratio: round shapes; rect-like shapes free unless Shift. */
+  /** Corner resize: proportional by default; Shift = free aspect stretch. */
   function shapeCornerKeepRatioDefault(kind, shiftKey) {
-    kind = String(kind || '').toUpperCase();
-    if (shapeUsesPixelSquareCornerResize(kind)) return !shiftKey;
-    return !!shiftKey;
+    return !shiftKey;
   }
 
   /** Shapes: edge handles resize one axis; corners keep ratio. Circle stays uniform. */
