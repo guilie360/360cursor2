@@ -815,6 +815,7 @@ var QuotationEditor = (function () {
   var thumbRerenderQueued = false;
   /** Survives full scenes-bar re-renders so selecting a scene does not jump left. */
   var scenesTrackScrollLeft = 0;
+  var libraryUiSaveTimer = null;
 
   function draftStorageKey(projectId) {
     return DRAFT_PREFIX + String(projectId || '').trim();
@@ -829,27 +830,95 @@ var QuotationEditor = (function () {
     ).trim();
   }
 
+  function buildExplicitOpenGroups() {
+    var out = {};
+    CONTENT_GROUPS.forEach(function (g) {
+      if (!g) return;
+      out[g.id] = state.openGroups[g.id] !== false;
+    });
+    return out;
+  }
+
+  function buildExplicitOpenFolders() {
+    var out = {};
+    (state.folders || []).forEach(function (f) {
+      if (!f || !f.id) return;
+      out[f.id] = state.openFolders[f.id] !== false;
+    });
+    return out;
+  }
+
+  function syncLibraryGroupsCollapsedFromState() {
+    var anyOpen = CONTENT_GROUPS.some(function (g) {
+      return g && state.openGroups[g.id] !== false;
+    });
+    state.libraryGroupsCollapsed = !anyOpen;
+  }
+
   function serializeLibraryUi() {
     return {
-      v: 1,
+      v: 2,
       at: Date.now(),
       libraryGroupsCollapsed: !!state.libraryGroupsCollapsed,
-      openGroups: Object.assign({}, state.openGroups || {}),
-      openFolders: Object.assign({}, state.openFolders || {})
+      libraryView: state.libraryView === 'grid' ? 'grid' : 'list',
+      libraryAvailableOnly: !!state.libraryAvailableOnly,
+      librarySearchQuery: String(state.librarySearchQuery || ''),
+      libraryStatusOpen: !!state.libraryStatusOpen,
+      openGroups: buildExplicitOpenGroups(),
+      openFolders: buildExplicitOpenFolders()
     };
   }
 
   function applyLibraryUiSnapshot(snapshot) {
-    if (!snapshot || snapshot.v !== 1) return;
+    if (!snapshot || (snapshot.v !== 1 && snapshot.v !== 2)) return;
     if (typeof snapshot.libraryGroupsCollapsed === 'boolean') {
       state.libraryGroupsCollapsed = snapshot.libraryGroupsCollapsed;
     }
+    if (snapshot.v >= 2) {
+      if (snapshot.libraryView === 'grid' || snapshot.libraryView === 'list') {
+        state.libraryView = snapshot.libraryView;
+      }
+      if (typeof snapshot.libraryAvailableOnly === 'boolean') {
+        state.libraryAvailableOnly = snapshot.libraryAvailableOnly;
+      }
+      if (typeof snapshot.librarySearchQuery === 'string') {
+        state.librarySearchQuery = snapshot.librarySearchQuery;
+      }
+      if (typeof snapshot.libraryStatusOpen === 'boolean') {
+        state.libraryStatusOpen = snapshot.libraryStatusOpen;
+      }
+    }
     if (snapshot.openGroups && typeof snapshot.openGroups === 'object') {
-      state.openGroups = Object.assign({}, state.openGroups, snapshot.openGroups);
+      if (snapshot.v >= 2) {
+        state.openGroups = {};
+        CONTENT_GROUPS.forEach(function (g) {
+          if (!g) return;
+          if (Object.prototype.hasOwnProperty.call(snapshot.openGroups, g.id)) {
+            state.openGroups[g.id] = !!snapshot.openGroups[g.id];
+          } else {
+            state.openGroups[g.id] = false;
+          }
+        });
+      } else {
+        state.openGroups = Object.assign({}, state.openGroups, snapshot.openGroups);
+      }
     }
     if (snapshot.openFolders && typeof snapshot.openFolders === 'object') {
-      state.openFolders = Object.assign({}, snapshot.openFolders);
+      if (snapshot.v >= 2) {
+        state.openFolders = {};
+        (state.folders || []).forEach(function (f) {
+          if (!f || !f.id) return;
+          if (Object.prototype.hasOwnProperty.call(snapshot.openFolders, f.id)) {
+            state.openFolders[f.id] = !!snapshot.openFolders[f.id];
+          } else {
+            state.openFolders[f.id] = state.openGroups[f.group] !== false;
+          }
+        });
+      } else {
+        state.openFolders = Object.assign({}, snapshot.openFolders);
+      }
     }
+    syncLibraryGroupsCollapsedFromState();
   }
 
   function persistLibraryUi() {
@@ -866,16 +935,31 @@ var QuotationEditor = (function () {
     } catch (eUi) { /* quota / private mode */ }
   }
 
-  function restoreLibraryUi(projectId) {
+  function schedulePersistLibraryUi() {
+    if (libraryUiSaveTimer) clearTimeout(libraryUiSaveTimer);
+    libraryUiSaveTimer = setTimeout(function () {
+      libraryUiSaveTimer = null;
+      persistLibraryUi();
+    }, 280);
+  }
+
+  function restoreLibraryUi(projectId, draftUi) {
     var id = String(projectId || loadedProjectId || '').trim();
     if (!id) return;
     var key = libraryUiStorageKey(id);
     if (!key || key === LIBRARY_UI_PREFIX) return;
+    var localSnap = null;
     try {
       var raw = localStorage.getItem(key);
-      if (!raw) return;
-      applyLibraryUiSnapshot(JSON.parse(raw));
-    } catch (eRestore) { /* ignore corrupt snapshot */ }
+      if (raw) localSnap = JSON.parse(raw);
+    } catch (eLocal) { /* ignore */ }
+    var pick = null;
+    if (localSnap && draftUi) {
+      pick = Number(localSnap.at || 0) >= Number(draftUi.at || 0) ? localSnap : draftUi;
+    } else {
+      pick = localSnap || draftUi || null;
+    }
+    if (pick) applyLibraryUiSnapshot(pick);
   }
 
   function templatesStorageKey(projectId) {
@@ -1159,6 +1243,7 @@ var QuotationEditor = (function () {
       if (!g) return;
       state.openGroups[g.id] = !collapse;
     });
+    state.libraryGroupsCollapsed = collapse;
     persistLibraryUi();
     rerender();
   }
@@ -1393,6 +1478,7 @@ var QuotationEditor = (function () {
     closeAllLibMenus();
     if (wasOpen) {
       state.libraryStatusOpen = false;
+      persistLibraryUi();
       return;
     }
     portal = ensureLibMenuPortal();
@@ -1409,6 +1495,7 @@ var QuotationEditor = (function () {
     btn.classList.add('is-active');
     btn.setAttribute('aria-pressed', 'true');
     state.libraryStatusOpen = true;
+    persistLibraryUi();
     positionLibMenuPanel(btn, panel);
     panel.addEventListener('click', function (e) { e.stopPropagation(); });
     syncLibrarySizesFromArchivos().then(function () {
@@ -1532,6 +1619,7 @@ var QuotationEditor = (function () {
       if (expOverlay && typeof expOverlay.pull === 'function') {
         try { expOverlay.pull(); } catch (ePull) {}
       }
+      persistLibraryUi();
       var payload = {
         v: 1,
         at: Date.now(),
@@ -1637,7 +1725,6 @@ var QuotationEditor = (function () {
     }
     state.backpackMode = false;
     state.backpackReturnSceneId = null;
-    if (draft.editorLibraryUi) applyLibraryUiSnapshot(draft.editorLibraryUi);
     if (healLibraryIdentity()) markDirtyLocal();
     return true;
   }
@@ -7729,6 +7816,7 @@ var QuotationEditor = (function () {
 
   function toggleGroup(groupId) {
     state.openGroups[groupId] = !(state.openGroups[groupId] !== false);
+    syncLibraryGroupsCollapsedFromState();
     persistLibraryUi();
     rerender();
   }
@@ -8933,6 +9021,7 @@ var QuotationEditor = (function () {
         state.librarySearchQuery = String(libSearch.value || '');
         state._libSearchCaret = libSearch.selectionStart;
         state._restoreLibSearch = true;
+        schedulePersistLibraryUi();
         rerender();
       });
       libSearch.addEventListener('keydown', function (e) {
@@ -8941,6 +9030,7 @@ var QuotationEditor = (function () {
           state.librarySearchQuery = '';
           state._restoreLibSearch = true;
           state._libSearchCaret = 0;
+          persistLibraryUi();
           rerender();
         }
       });
@@ -8963,6 +9053,7 @@ var QuotationEditor = (function () {
       availableBtn.addEventListener('click', function (e) {
         e.preventDefault();
         state.libraryAvailableOnly = !state.libraryAvailableOnly;
+        persistLibraryUi();
         rerender();
       });
     }
@@ -8973,6 +9064,7 @@ var QuotationEditor = (function () {
         var next = btn.getAttribute('data-qe-lib-view') === 'grid' ? 'grid' : 'list';
         if (state.libraryView === next) return;
         state.libraryView = next;
+        persistLibraryUi();
         rerender();
       });
     });
@@ -9767,13 +9859,14 @@ var QuotationEditor = (function () {
     }
 
     if (typeof ProyectosApi === 'undefined' || !ProyectosApi.fetchHeroQuotation) {
-      if (restoreDraft(id)) {
+      var offlineDraft = readDraftRaw(id);
+      if (offlineDraft && applyDraftToState(offlineDraft)) {
         documentReady = true;
       } else {
         hydrateFromHeroQuotation(null, editorProjectCtx);
         documentReady = true;
       }
-      restoreLibraryUi(id);
+      restoreLibraryUi(id, offlineDraft && offlineDraft.editorLibraryUi);
       persistLibraryUi();
       persistDraft();
       loadPromise = Promise.resolve(null);
@@ -9806,7 +9899,7 @@ var QuotationEditor = (function () {
         if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
-        restoreLibraryUi(id);
+        restoreLibraryUi(id, draft && draft.editorLibraryUi);
         persistLibraryUi();
         persistDraft();
         return reconcileLibraryFromArchivos()
@@ -9819,14 +9912,15 @@ var QuotationEditor = (function () {
       .catch(function () {
         if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         console.log('[QE-LIB V7.2.37] 8-load:fetch FAILED → draft/empty');
-        if (!restoreDraft(id)) {
+        var failDraft = readDraftRaw(id);
+        if (!(failDraft && applyDraftToState(failDraft))) {
           hydrateFromHeroQuotation(null, editorProjectCtx);
         }
         qeLibAudit('9-load:after-catch-hydrate');
         if (epoch !== sessionEpoch || String(loadedProjectId || '') !== id) return null;
         documentReady = true;
         loadedProjectId = id;
-        restoreLibraryUi(id);
+        restoreLibraryUi(id, failDraft && failDraft.editorLibraryUi);
         persistLibraryUi();
         persistDraft();
         return reconcileLibraryFromArchivos()
