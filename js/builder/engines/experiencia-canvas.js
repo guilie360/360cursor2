@@ -1029,7 +1029,7 @@ var ExperienciaCanvas = (function () {
       par = 'none';
     }
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
-      return ExperienciaEngine.buildSceneShapeSvg(t, {
+      var buildOpts = {
         fill: b.fill || 'rgba(255,255,255,0.16)',
         stroke: b.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: b.strokeWidth != null ? b.strokeWidth : 2,
@@ -1040,7 +1040,14 @@ var ExperienciaCanvas = (function () {
         svgClass: 'builder-exp-stage-shape__svg',
         preserveAspect: par,
         tightViewBox: !!(paintOpts && paintOpts.gizmoBox)
-      });
+      };
+      if (paintOpts.gizmoBox && paintOpts.shapeW != null && paintOpts.shapeH != null) {
+        buildOpts.contentBoxWPct = paintOpts.shapeW;
+        buildOpts.contentBoxHPct = paintOpts.shapeH;
+        buildOpts.layerW = layerW;
+        buildOpts.layerH = layerH;
+      }
+      return ExperienciaEngine.buildSceneShapeSvg(t, buildOpts);
     }
     return '';
   }
@@ -1237,14 +1244,23 @@ var ExperienciaCanvas = (function () {
         box.kind, vm.shapeStretchX, vm.shapeStretchY, vm, layerW, layerH, true
       );
     }
-    /* Live resize: scale container only — SVG fills via CSS; regen on commit avoids distortion. */
-    if (!opts.liveSizing) {
+    /* Live resize: scale container only — except fixed-corner shapes regen SVG each frame. */
+    var regenSvg = !opts.liveSizing ||
+      (typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.shapeUsesFixedCornerContentPaint &&
+        ExperienciaEngine.shapeUsesFixedCornerContentPaint(box.kind));
+    if (regenSvg) {
       patchShapeSvgLive(el, box.kind, {
         fill: vm.fill,
         stroke: vm.stroke,
         strokeWidth: vm.strokeWidth,
         borderRadius: vm.borderRadius
-      }, vm.shapeStretchX, vm.shapeStretchY);
+      }, vm.shapeStretchX, vm.shapeStretchY, {
+        contentBoxWPct: box.w,
+        contentBoxHPct: box.h,
+        layerW: layerW,
+        layerH: layerH
+      });
     }
   }
 
@@ -1288,14 +1304,15 @@ var ExperienciaCanvas = (function () {
     return 'left:' + left + '%;top:' + top + '%;width:' + bbox.w + '%;height:' + bbox.h + '%;';
   }
 
-  function patchShapeSvgLive(el, kind, paint, stretchX, stretchY) {
+  function patchShapeSvgLive(el, kind, paint, stretchX, stretchY, boxOpts) {
     if (!el || !kind || typeof ExperienciaEngine === 'undefined' || !ExperienciaEngine.buildSceneShapeSvg) {
       return;
     }
     kind = String(kind || '').toUpperCase();
     paint = paint || {};
+    boxOpts = boxOpts || {};
     var par = 'none';
-    var html = ExperienciaEngine.buildSceneShapeSvg(kind, {
+    var buildOpts = {
       fill: paint.fill != null ? paint.fill : 'rgba(255,255,255,0.16)',
       stroke: paint.stroke != null ? paint.stroke : 'rgba(255,255,255,0.62)',
       strokeWidth: paint.strokeWidth != null ? paint.strokeWidth : 2,
@@ -1306,7 +1323,14 @@ var ExperienciaCanvas = (function () {
       svgClass: 'builder-exp-stage-shape__svg',
       preserveAspect: par,
       tightViewBox: true
-    });
+    };
+    if (boxOpts.contentBoxWPct != null && boxOpts.contentBoxHPct != null) {
+      buildOpts.contentBoxWPct = boxOpts.contentBoxWPct;
+      buildOpts.contentBoxHPct = boxOpts.contentBoxHPct;
+      buildOpts.layerW = boxOpts.layerW;
+      buildOpts.layerH = boxOpts.layerH;
+    }
+    var html = ExperienciaEngine.buildSceneShapeSvg(kind, buildOpts);
     var boxMode = true;
     var hit = el.querySelector('.builder-exp-stage-shape__hit');
     if (hit && typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeHitAreaCss) {
@@ -1414,7 +1438,12 @@ var ExperienciaCanvas = (function () {
       stroke: vm.stroke,
       strokeWidth: vm.strokeWidth,
       borderRadius: vm.borderRadius
-    }, vm.shapeStretchX, vm.shapeStretchY);
+    }, vm.shapeStretchX, vm.shapeStretchY, {
+      contentBoxWPct: dom.gw,
+      contentBoxHPct: dom.gh,
+      layerW: layerW,
+      layerH: layerH
+    });
     return {
       st: t,
       gx: dom.gx,
@@ -6028,7 +6057,11 @@ var ExperienciaCanvas = (function () {
             ' style="' + styleBits + '">' +
             '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
               shapeHitAreaStyle(t, b.shapeStretchX, b.shapeStretchY, b, layerW, layerH, shapeGizmoBox) + '"></span>' +
-            shapeStageSvgHtml(b, t, layerW, layerH, { gizmoBox: shapeGizmoBox }) +
+            shapeStageSvgHtml(b, t, layerW, layerH, {
+              gizmoBox: shapeGizmoBox,
+              shapeW: shapeW,
+              shapeH: shapeH
+            }) +
             '</button>';
         }
         var glyph = buttonIconGlyph(b.icon);
@@ -6255,7 +6288,12 @@ var ExperienciaCanvas = (function () {
           stroke: vm.stroke,
           strokeWidth: vm.strokeWidth,
           borderRadius: vm.borderRadius
-        }, vm.shapeStretchX, vm.shapeStretchY);
+        }, vm.shapeStretchX, vm.shapeStretchY, {
+          contentBoxWPct: paint.w,
+          contentBoxHPct: paint.h,
+          layerW: layerW,
+          layerH: layerH
+        });
       }
       traceSyncAfterRepaint({
         cx: paint.x, cy: paint.y, w: paint.w, h: paint.h,

@@ -511,6 +511,25 @@ var ExperienciaEngine = (function () {
     return (Number(n) / 52) * 100;
   }
 
+  /** Fixed corner radius for SHAPE_RECT — constant in viewBox units (Genially-style). */
+  function shapeRectFixedCornerRx() {
+    return shapeUnit52(2);
+  }
+
+  /** ViewBox aspect = box pixel aspect so preserveAspectRatio none maps uniformly. */
+  function shapeContentBoxViewBoxNorm(boxWPct, boxHPct, layerW, layerH) {
+    var wPx = (Number(boxWPct) / 100) * Math.max(1, Number(layerW) || 1000);
+    var hPx = (Number(boxHPct) / 100) * Math.max(1, Number(layerH) || 1080);
+    if (!wPx || !hPx || wPx <= 0 || hPx <= 0) return { w: 100, h: 100 };
+    if (wPx >= hPx) return { w: 100, h: (hPx / wPx) * 100 };
+    return { w: (wPx / hPx) * 100, h: 100 };
+  }
+
+  /** Shapes that redraw SVG from box dims so fixed corners are not CSS-stretched. */
+  function shapeUsesFixedCornerContentPaint(kind) {
+    return String(kind || '').toUpperCase() === 'SHAPE_RECT';
+  }
+
   function shapeAttr(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -606,8 +625,18 @@ var ExperienciaEngine = (function () {
         ' rx="' + rr + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
-    /* SHAPE_RECT — small fixed corner radius, body stretches */
-    var rectRx = Math.min(u(2), w / 2, h / 2);
+    /* SHAPE_RECT — content-box paint: viewBox matches box aspect, rx stays fixed */
+    if (paint.contentW > 0 && paint.contentH > 0) {
+      var cw = Number(paint.contentW);
+      var ch = Number(paint.contentH);
+      var rectRxFixed = Math.min(shapeRectFixedCornerRx(), cw / 2, ch / 2);
+      return '<rect' + cls + ' x="0" y="0"' +
+        ' width="' + cw + '" height="' + ch + '"' +
+        ' rx="' + rectRxFixed + '"' +
+        ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+    }
+    /* SHAPE_RECT — picker / stretch tile: small fixed corner radius, body stretches */
+    var rectRx = Math.min(shapeRectFixedCornerRx(), w / 2, h / 2);
     return '<rect' + cls + ' x="' + (50 - w / 2) + '" y="' + (50 - h / 2) + '"' +
       ' width="' + w + '" height="' + h + '"' +
       ' rx="' + rectRx + '"' +
@@ -630,15 +659,25 @@ var ExperienciaEngine = (function () {
     var stOpts = shapeStretchXY(opts);
     var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
     var vb = shapeSvgViewBox(kind, stOpts.sx, stOpts.sy);
+    var contentPaint = null;
     /* Gizmo box paint: tight viewBox so geometry fills the element edge-to-edge (Genially-style). */
     if (opts.tightViewBox) {
-      var tightBb = shapeContentBBox(kind, stOpts);
-      vb = {
-        x: tightBb.cx - tightBb.w / 2,
-        y: tightBb.cy - tightBb.h / 2,
-        w: tightBb.w,
-        h: tightBb.h
-      };
+      if (shapeUsesFixedCornerContentPaint(kind) &&
+          opts.contentBoxWPct != null && opts.contentBoxHPct != null) {
+        var normVb = shapeContentBoxViewBoxNorm(
+          opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH
+        );
+        vb = { x: 0, y: 0, w: normVb.w, h: normVb.h };
+        contentPaint = { contentW: normVb.w, contentH: normVb.h };
+      } else {
+        var tightBb = shapeContentBBox(kind, stOpts);
+        vb = {
+          x: tightBb.cx - tightBb.w / 2,
+          y: tightBb.cy - tightBb.h / 2,
+          w: tightBb.w,
+          h: tightBb.h
+        };
+      }
     }
     var paintBase = {
       fill: fill,
@@ -648,6 +687,10 @@ var ExperienciaEngine = (function () {
       stretchX: stOpts.sx,
       stretchY: stOpts.sy
     };
+    if (contentPaint) {
+      paintBase.contentW = contentPaint.contentW;
+      paintBase.contentH = contentPaint.contentH;
+    }
     var open = '<svg' + svgClass + inlineStyle +
       ' viewBox="' + vb.x + ' ' + vb.y + ' ' + vb.w + ' ' + vb.h + '"' +
       ' preserveAspectRatio="' + par + '"' +
@@ -657,7 +700,7 @@ var ExperienciaEngine = (function () {
       html += sceneShapeGeometry(kind, Object.assign({}, paintBase, {
         className: 'builder-exp-stage-shape__body'
       }));
-      html += sceneShapeGeometry(kind, {
+      html += sceneShapeGeometry(kind, Object.assign({
         fill: 'none',
         stroke: stroke,
         strokeWidth: sw + 2,
@@ -665,7 +708,7 @@ var ExperienciaEngine = (function () {
         stretchX: stOpts.sx,
         stretchY: stOpts.sy,
         className: 'builder-exp-stage-shape__stroke-glow'
-      });
+      }, contentPaint || {}));
     } else {
       html += sceneShapeGeometry(kind, paintBase);
     }
@@ -7410,6 +7453,9 @@ var ExperienciaEngine = (function () {
     shapeContentBBox: shapeContentBBox,
     shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
+    shapeUsesFixedCornerContentPaint: shapeUsesFixedCornerContentPaint,
+    shapeContentBoxViewBoxNorm: shapeContentBoxViewBoxNorm,
+    shapeRectFixedCornerRx: shapeRectFixedCornerRx,
     shapePreserveAspect: shapePreserveAspect,
     shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,

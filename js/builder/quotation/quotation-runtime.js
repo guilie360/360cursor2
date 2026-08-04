@@ -315,7 +315,7 @@ var QuotationRuntime = (function () {
       : false;
   }
 
-  function runtimeShapeSvgHtml(sh, t) {
+  function runtimeShapeSvgHtml(sh, t, layerW, layerH) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
       var st = ExperienciaEngine.shapeStretchFromIx
         ? ExperienciaEngine.shapeStretchFromIx(sh)
@@ -323,7 +323,7 @@ var QuotationRuntime = (function () {
       var par = ExperienciaEngine.shapePreserveAspect
         ? ExperienciaEngine.shapePreserveAspect(st.sx, st.sy)
         : ((st.sx !== 1 || st.sy !== 1) ? 'none' : 'meet');
-      return ExperienciaEngine.buildSceneShapeSvg(t, {
+      var buildOpts = {
         fill: sh.fill || 'rgba(255,255,255,0.16)',
         stroke: sh.stroke || 'rgba(255,255,255,0.62)',
         strokeWidth: sh.strokeWidth != null ? sh.strokeWidth : 2,
@@ -332,7 +332,17 @@ var QuotationRuntime = (function () {
         stretchY: st.sy,
         preserveAspect: par,
         inlineStyle: 'width:100%;height:100%;display:block;overflow:visible'
-      });
+      };
+      if (ExperienciaEngine.shapeUsesContentBox &&
+          ExperienciaEngine.shapeUsesContentBox(sh, sh.width, sh.height, layerW, layerH)) {
+        buildOpts.preserveAspect = 'none';
+        buildOpts.tightViewBox = true;
+        buildOpts.contentBoxWPct = sh.width;
+        buildOpts.contentBoxHPct = sh.height;
+        buildOpts.layerW = layerW;
+        buildOpts.layerH = layerH;
+      }
+      return ExperienciaEngine.buildSceneShapeSvg(t, buildOpts);
     }
     return '';
   }
@@ -596,7 +606,7 @@ var QuotationRuntime = (function () {
       el.style.pointerEvents = interactive ? 'auto' : 'none';
       el.style.background = 'transparent';
       el.style.border = 'none';
-      el.innerHTML = runtimeShapeSvgHtml(sh, t);
+      el.innerHTML = runtimeShapeSvgHtml(sh, t, layerW, layerH);
       if (interactive) {
         el.style.cursor = 'pointer';
         el.addEventListener('click', function (ev) {
