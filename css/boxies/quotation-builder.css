@@ -498,7 +498,7 @@
   pointer-events: none !important;
 }
 
-/* Deposit mode — hide canvas chrome except backpack toggle in viewport bar */
+/* Deposit mode — hide canvas chrome except Box toggle in viewport bar */
 .qe-editor.is-backpack-mode .qe-canvas-chrome-top__title,
 .qe-editor.is-backpack-mode .qe-canvas-chrome-top__spacer {
   visibility: hidden !important;

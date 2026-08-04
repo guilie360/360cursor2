@@ -3723,6 +3723,11 @@ var QuotationEditor = (function () {
 
   var BACKPACK_SCENE_ID = '__qe_backpack__';
   var BACKPACK_STORAGE_BG = '#0a0a0a';
+  var BOX_UI_LABEL = 'Box';
+
+  function boxModeTitle(active) {
+    return active ? ('Salir de ' + BOX_UI_LABEL) : BOX_UI_LABEL;
+  }
 
   function ensureBackpackInteractions() {
     if (!Array.isArray(state.backpackInteractions)) state.backpackInteractions = [];
@@ -3734,7 +3739,7 @@ var QuotationEditor = (function () {
     if (!state._backpackSceneRef) {
       state._backpackSceneRef = {
         id: BACKPACK_SCENE_ID,
-        name: 'Backpack',
+        name: BOX_UI_LABEL,
         type: 'backpack',
         mediaUrl: null,
         mediaType: null,
@@ -3767,7 +3772,8 @@ var QuotationEditor = (function () {
     var on = isBackpackMode();
     btn.classList.toggle('is-active', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.title = on ? 'Salir del backpack' : 'Backpack';
+    btn.title = boxModeTitle(on);
+    btn.setAttribute('aria-label', boxModeTitle(on));
   }
 
   function syncBackpackChromeUi() {
@@ -3777,7 +3783,7 @@ var QuotationEditor = (function () {
     var title = rootEl.querySelector('[data-qe-active-scene-name]');
     if (title) {
       var name = isBackpackMode()
-        ? 'Backpack'
+        ? BOX_UI_LABEL
         : ((activeScene() && activeScene().name) ? String(activeScene().name) : 'Escena');
       title.textContent = name;
       title.title = name;
@@ -3857,7 +3863,7 @@ var QuotationEditor = (function () {
     var preset = state.viewportPreset || 'desktop';
     var sc = activeScene();
     var sceneName = state.backpackMode
-      ? 'Backpack'
+      ? BOX_UI_LABEL
       : ((sc && sc.name) ? String(sc.name) : 'Escena');
     var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
       ? HeroRenderer.listViewports()
@@ -3992,26 +3998,25 @@ var QuotationEditor = (function () {
   }
 
   function backpackIconSvg() {
-    return '<svg class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 16 16" fill="none"' +
-      ' stroke="currentColor" stroke-width="1.35" stroke-linecap="round"' +
+    return '<svg class="qe-canvas-tool__ico" width="14" height="14" viewBox="0 0 24 24" fill="none"' +
+      ' stroke="currentColor" stroke-width="1.65" stroke-linecap="round"' +
       ' stroke-linejoin="round" aria-hidden="true">' +
-      '<path d="M6 5.1a2 2 0 0 1 4 0"/>' +
-      '<rect x="5" y="5.7" width="6" height="8.1" rx="1.2"/>' +
-      '<path d="M5 8.1h6"/>' +
-      '<path d="M3.7 9.1v1.9a1.05 1.05 0 0 0 1.05 1.05"/>' +
-      '<path d="M12.3 9.1v1.9a1.05 1.05 0 0 1-1.05 1.05"/>' +
+      '<path d="M12 4.5 18.75 8.25 12 12 5.25 8.25 12 4.5z"/>' +
+      '<path d="M5.25 8.25 12 12v9.75L5.25 18V8.25z"/>' +
+      '<path d="M18.75 8.25 12 12v9.75l6.75-3.75V8.25z"/>' +
       '</svg>';
   }
 
   function backpackToolbarBtnHtml() {
     var on = !!state.backpackMode;
+    var label = boxModeTitle(on);
     return '' +
       '<button type="button" class="qe-canvas-tool__btn qe-canvas-tool__btn--backpack' +
         (on ? ' is-active' : '') + '"' +
         ' data-qe-toggle-backpack' +
-        ' title="' + escapeHtml(on ? 'Salir del backpack' : 'Backpack') + '"' +
+        ' title="' + escapeHtml(label) + '"' +
         ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
-        ' aria-label="Backpack">' +
+        ' aria-label="' + escapeHtml(label) + '">' +
         backpackIconSvg() +
       '</button>';
   }

@@ -1574,7 +1574,7 @@ var QuotationGuides = (function () {
     lastCanvasMenuPos.x = Number(clientX) || 0;
     lastCanvasMenuPos.y = Number(clientY) || 0;
     var snapOn = api && api.getOverlaySnapEnabled ? !!api.getOverlaySnapEnabled() : true;
-    var backpackOpen = api && api.getBackpackPanelOpen ? !!api.getBackpackPanelOpen() : false;
+    var boxOpen = api && api.getBackpackPanelOpen ? !!api.getBackpackPanelOpen() : false;
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -1603,7 +1603,7 @@ var QuotationGuides = (function () {
         },
         {
           id: 'toggle-backpack',
-          label: backpackOpen ? 'Salir del backpack' : 'Backpack'
+          label: boxOpen ? 'Salir de Box' : 'Box'
         }
       ],
       onSelect: function (id) {
