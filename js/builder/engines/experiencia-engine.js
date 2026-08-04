@@ -568,6 +568,16 @@ var ExperienciaEngine = (function () {
     var stOpts = shapeStretchXY(opts);
     var brR = opts.borderRadius != null ? Number(opts.borderRadius) : 16;
     var vb = shapeSvgViewBox(kind, stOpts.sx, stOpts.sy);
+    /* Gizmo box paint: tight viewBox so geometry fills the element edge-to-edge (Genially-style). */
+    if (opts.tightViewBox) {
+      var tightBb = shapeContentBBox(kind, stOpts);
+      vb = {
+        x: tightBb.cx - tightBb.w / 2,
+        y: tightBb.cy - tightBb.h / 2,
+        w: tightBb.w,
+        h: tightBb.h
+      };
+    }
     var paintBase = {
       fill: fill,
       stroke: stroke,

@@ -858,7 +858,8 @@ var ExperienciaCanvas = (function () {
         stretchY: st.sy,
         strokeGlowLayer: true,
         svgClass: 'builder-exp-stage-shape__svg',
-        preserveAspect: par
+        preserveAspect: par,
+        tightViewBox: !!(paintOpts && paintOpts.gizmoBox)
       });
     }
     return '';
@@ -1111,7 +1112,8 @@ var ExperienciaCanvas = (function () {
       stretchY: stretchY != null ? stretchY : 1,
       strokeGlowLayer: true,
       svgClass: 'builder-exp-stage-shape__svg',
-      preserveAspect: par
+      preserveAspect: par,
+      tightViewBox: true
     });
     var boxMode = true;
     var hit = el.querySelector('.builder-exp-stage-shape__hit');
