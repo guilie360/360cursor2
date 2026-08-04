@@ -168,9 +168,21 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Circle/donut corner drag: pixel-square uniform scale on 16:9 layers. */
-  function shapeUsesPixelSquareCornerResize(kind) {
+  /** True when gw×gh is ~square in layer pixels (round circle on 16:9). */
+  function shapeBoxIsPixelSquare(gwPct, ghPct, layerW, layerH, tolerance) {
+    tolerance = tolerance != null ? tolerance : 0.025;
+    var pxW = (Number(gwPct) / 100) * Math.max(1, Number(layerW) || 1000);
+    var pxH = (Number(ghPct) / 100) * Math.max(1, Number(layerH) || 1000);
+    if (pxW <= 0 || pxH <= 0) return true;
+    return Math.abs(pxW / pxH - 1) <= tolerance;
+  }
+
+  /** Circle/donut corners stay round only while the box is still pixel-square. */
+  function shapeUsesPixelSquareCornerResize(kind, gwPct, ghPct, layerW, layerH) {
     kind = String(kind || '').toUpperCase();
-    return kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
+    if (kind !== 'SHAPE_CIRCLE' && kind !== 'SHAPE_DONUT') return false;
+    if (gwPct == null || ghPct == null) return true;
+    return shapeBoxIsPixelSquare(gwPct, ghPct, layerW, layerH);
   }
 
   /** Pointer delta → shape-local px (respect gizmo rotation). */
@@ -296,7 +308,8 @@ var ExperienciaCanvas = (function () {
       var outGw = startGw;
       var outGh = startGh;
       if (isCornerBox) {
-        if (drag.shapeBoxV2 && keepRatio && shapeUsesPixelSquareCornerResize(kind)) {
+        if (drag.shapeBoxV2 && keepRatio &&
+            shapeUsesPixelSquareCornerResize(kind, startGw, startGh, layerW, layerH)) {
           /* Pixel-space uniform scale — keeps circles/donuts round on 16:9 layers. */
           var startPxW = (startGw / 100) * layerW;
           var startPxH = (startGh / 100) * layerH;
@@ -321,16 +334,10 @@ var ExperienciaCanvas = (function () {
           var targetPxW = (boxGw / 100) * layerW;
           var targetPxH = (boxGh / 100) * layerH;
           var scale;
-          if (shapeUsesPixelSquareCornerResize(kind)) {
-            scale = Math.abs(dxPx) * startPxH >= Math.abs(dyPx) * startPxW
-              ? (targetPxW / Math.max(startPxW, 0.001))
-              : (targetPxH / Math.max(startPxH, 0.001));
-          } else {
-            /* Diagonal scale from fixed opposite corner — handle tracks cursor naturally. */
-            var startDiag = Math.max(Math.sqrt(startPxW * startPxW + startPxH * startPxH), 0.001);
-            var targetDiag = Math.sqrt(targetPxW * targetPxW + targetPxH * targetPxH);
-            scale = targetDiag / startDiag;
-          }
+          /* Deformed ellipse — diagonal scale preserves current aspect. */
+          var startDiag = Math.max(Math.sqrt(startPxW * startPxW + startPxH * startPxH), 0.001);
+          var targetDiag = Math.sqrt(targetPxW * targetPxW + targetPxH * targetPxH);
+          scale = targetDiag / startDiag;
           scale = Math.max(0.06, Math.min(6, scale));
           outGw = startGw * scale;
           outGh = startGh * scale;
@@ -8770,7 +8777,9 @@ var ExperienciaCanvas = (function () {
               transformDrag.lastDyPx = dyPx;
               if (!transformDrag.shapeSnapDone) {
                 transformDrag.shapeSnapDone = true;
-                if (shapeUsesPixelSquareCornerResize(transformDrag.type)) {
+                if (shapeUsesPixelSquareCornerResize(
+                  transformDrag.type, transformDrag.startW, transformDrag.startH, layerW, layerH
+                )) {
                   scheduleShapeResizeFrame(transformDrag, 0, 0, layerW, layerH, mode);
                 }
               }
