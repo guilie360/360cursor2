@@ -302,6 +302,7 @@ var QuotationExperienciaBridge = (function () {
         overlayNodeId: nodeIdForScene(activeId),
         editMode: options.editMode || 'buttons',
         inspectorBody: options.inspectorBody || null,
+        projectId: options.projectId || null,
         onChange: function () {
           pullToScenes(shim, scenes);
           if (typeof options.onChange === 'function') options.onChange();

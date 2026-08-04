@@ -14,6 +14,32 @@ var ExperienciaCanvas = (function () {
     return true;
   }
 
+  /** Quotation sandbox — ShapeBox v2 POC (Fases 1–2). */
+  var EDITOR_PROJECT_ID = '5a70961a-a97a-4082-abd2-33a633b779e8';
+  var _shapeBoxV2Active = false;
+  var _shapeBoxV2ProjectId = null;
+
+  /**
+   * ShapeBox v2 flag:
+   *   ?shapeBox=1  → force ON (any project)
+   *   ?shapeBox=0  → force OFF (legacy on EDITOR)
+   *   default ON   → EDITOR project only
+   */
+  function shapeBoxV2Enabled(projectId) {
+    try {
+      var q = new URLSearchParams(window.location.search);
+      var v = q.get('shapeBox');
+      if (v === '0' || v === 'false') return false;
+      if (v === '1' || v === 'true') return true;
+    } catch (eFlag) { /* ignore */ }
+    var pid = projectId != null ? projectId : _shapeBoxV2ProjectId;
+    return !!(pid && String(pid) === EDITOR_PROJECT_ID);
+  }
+
+  function isShapeBoxV2Active() {
+    return !!_shapeBoxV2Active;
+  }
+
   function esc(v) {
     if (typeof AdminUI !== 'undefined' && AdminUI.escapeHtml) return AdminUI.escapeHtml(v);
     return String(v == null ? '' : v)
@@ -919,6 +945,20 @@ var ExperienciaCanvas = (function () {
 
   /** Unified stage paint box — always matches visible bounds (not picker tile). */
   function shapeStagePaintMetrics(btn, layerW, layerH) {
+    if (isShapeBoxV2Active()) {
+      var boxV2 = getShapeBox(btn, layerW, layerH);
+      if (boxV2) {
+        return {
+          x: boxV2.cx,
+          y: boxV2.cy,
+          w: boxV2.w,
+          h: boxV2.h,
+          gizmoBox: true,
+          tileW: boxV2.w,
+          tileH: boxV2.h
+        };
+      }
+    }
     if (!btn) return null;
     var vb = shapeVisibleBoundsMetrics(btn, layerW, layerH);
     if (vb) {
@@ -942,6 +982,96 @@ var ExperienciaCanvas = (function () {
       tileW: ps.w,
       tileH: ps.h
     };
+  }
+
+  /**
+   * ShapeBox v2 — single coordinate contract for stage + gizmo (% layer space).
+   * { cx, cy, w, h, rot, kind, gizmoBox }
+   */
+  function getShapeBox(vm, layerW, layerH) {
+    if (!vm) return null;
+    var kind = String(vm.type || '').toUpperCase();
+    if (!isShapeType(kind)) return null;
+    var rot = Number(vm.rotation) || 0;
+    var ix = vm._ix || vm;
+    var cx = vm.storedX != null ? Number(vm.storedX) : Number(vm.x) || 50;
+    var cy = vm.storedY != null ? Number(vm.storedY) : Number(vm.y) || 50;
+    if (ix.shapeContentBox || vm.shapeContentBox) {
+      var w = Number(vm.width);
+      var h = Number(vm.height);
+      if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+        return { cx: cx, cy: cy, w: w, h: h, rot: rot, kind: kind, gizmoBox: true };
+      }
+    }
+    var vb = shapeVisibleBoundsMetrics(vm, layerW, layerH);
+    if (!vb) return null;
+    return {
+      cx: vb.gx,
+      cy: vb.gy,
+      w: vb.gw,
+      h: vb.gh,
+      rot: rot,
+      kind: kind,
+      gizmoBox: true
+    };
+  }
+
+  function shapeBoxToSelectionMetrics(box) {
+    if (!box) return null;
+    return {
+      st: box.kind,
+      gx: box.cx,
+      gy: box.cy,
+      gw: box.w,
+      gh: box.h,
+      grot: box.rot,
+      tileW: box.w,
+      tileH: box.h
+    };
+  }
+
+  /** Unified shape node paint — same box for stage, selection, and live sync. */
+  function paintShapeNodeEl(el, box, vm, layerW, layerH) {
+    if (!el || !box || !vm) return;
+    el.classList.remove('is-live-sizing', 'is-live-moving');
+    el.style.removeProperty('overflow');
+    el.style.removeProperty('transform');
+    el.style.left = box.cx + '%';
+    el.style.top = box.cy + '%';
+    el.style.width = box.w + '%';
+    el.style.height = box.h + '%';
+    el.style.setProperty('--btn-rot', box.rot + 'deg');
+    var hit = el.querySelector('.builder-exp-stage-shape__hit');
+    if (hit) {
+      hit.style.cssText = shapeHitAreaStyle(
+        box.kind, vm.shapeStretchX, vm.shapeStretchY, vm, layerW, layerH, true
+      );
+    }
+    patchShapeSvgLive(el, box.kind, {
+      fill: vm.fill,
+      stroke: vm.stroke,
+      strokeWidth: vm.strokeWidth,
+      borderRadius: vm.borderRadius
+    }, vm.shapeStretchX, vm.shapeStretchY);
+  }
+
+  function paintShapeGizmoEl(gizmoEl, box, layerW, layerH) {
+    if (!gizmoEl || !box) return;
+    gizmoEl.classList.remove('is-sizing');
+    gizmoEl.style.removeProperty('transform');
+    gizmoEl.style.left = box.cx + '%';
+    gizmoEl.style.top = box.cy + '%';
+    gizmoEl.style.width = box.w + '%';
+    gizmoEl.style.height = box.h + '%';
+    gizmoEl.style.setProperty('--btn-rot', box.rot + 'deg');
+    var sizeEl = gizmoEl.querySelector('[data-exp-sel-size]');
+    if (sizeEl && layerW && layerH) {
+      var sizeWpx = Math.max(1, Math.round((box.w / 100) * layerW));
+      var sizeHpx = Math.max(1, Math.round((box.h / 100) * layerH));
+      sizeEl.textContent = box.kind === 'SHAPE_LINE'
+        ? sizeWpx + ' px'
+        : sizeWpx + ' × ' + sizeHpx;
+    }
   }
 
   function shapeHitAreaStyle(kind, stretchX, stretchY, btn, layerW, layerH, forceBoxMode) {
@@ -1210,6 +1340,10 @@ var ExperienciaCanvas = (function () {
     var st = String(btn.type || 'BUTTON').toUpperCase();
     var grot = Number(btn.rotation) || 0;
     if (isShapeType(st)) {
+      if (isShapeBoxV2Active()) {
+        var boxSel = getShapeBox(btn, layerW, layerH);
+        if (boxSel) return shapeBoxToSelectionMetrics(boxSel);
+      }
       var gmSel = shapeSelectionGizmoMetrics(btn, layerW, layerH);
       if (gmSel) return gmSel;
     }
@@ -2535,6 +2669,14 @@ var ExperienciaCanvas = (function () {
   function mount(rootEl, state, api) {
     api = api || {};
     var overlayMode = !!api.overlayMode;
+
+    _shapeBoxV2ProjectId = api.projectId || null;
+    _shapeBoxV2Active = api.shapeBoxV2 === true || shapeBoxV2Enabled(_shapeBoxV2ProjectId);
+    if (_shapeBoxV2Active) {
+      try {
+        console.info('[ExperienciaCanvas] ShapeBox v2 — unified shape paint (Fase 1–2 POC)');
+      } catch (eSbLog) { /* ignore */ }
+    }
 
     ExperienciaEngine.ensureFlow(state);
 
@@ -4940,15 +5082,23 @@ var ExperienciaCanvas = (function () {
         var rot = Number(vm.rotation) || 0;
         el.style.setProperty('--btn-rot', rot + 'deg');
         if (isShapeType(t)) {
-          var gmLive = shapeStagePaintMetrics(vm, layerW, layerH);
-          if (gmLive) {
-            el.style.left = gmLive.x + '%';
-            el.style.top = gmLive.y + '%';
-            el.style.width = gmLive.w + '%';
-            el.style.height = gmLive.h + '%';
+          if (isShapeBoxV2Active()) {
+            var boxLive = getShapeBox(vm, layerW, layerH);
+            if (boxLive) {
+              paintShapeNodeEl(el, boxLive, vm, layerW, layerH);
+              moved = true;
+            }
           } else {
-            el.style.left = (Number(vm.x) || 50) + '%';
-            el.style.top = (Number(vm.y) || 50) + '%';
+            var gmLive = shapeStagePaintMetrics(vm, layerW, layerH);
+            if (gmLive) {
+              el.style.left = gmLive.x + '%';
+              el.style.top = gmLive.y + '%';
+              el.style.width = gmLive.w + '%';
+              el.style.height = gmLive.h + '%';
+            } else {
+              el.style.left = (Number(vm.x) || 50) + '%';
+              el.style.top = (Number(vm.y) || 50) + '%';
+            }
           }
         } else {
           el.style.left = (Number(vm.x) || 50) + '%';
@@ -4966,6 +5116,14 @@ var ExperienciaCanvas = (function () {
           var gid = gizmo.getAttribute('data-gizmo-id');
           var gvm = sceneIdLive && gid ? getOverlayItemVm(sceneIdLive, gid) : null;
           if (!gvm) return;
+          if (isShapeBoxV2Active() && isShapeType(gvm.type)) {
+            var boxGizmoLive = getShapeBox(gvm, layerW, layerH);
+            if (boxGizmoLive) {
+              paintShapeGizmoEl(gizmo, boxGizmoLive, layerW, layerH);
+              moved = true;
+              return;
+            }
+          }
           var gm = overlaySelectionMetrics(gvm, layerW, layerH);
           if (!gm) return;
           gizmo.style.left = gm.gx + '%';
@@ -5657,13 +5815,20 @@ var ExperienciaCanvas = (function () {
               }
             }
           }
+          var gizmoMetrics = null;
+          if (isShapeBoxV2Active() && selBtn && isShapeType(selBtn.type)) {
+            gizmoMetrics = shapeBoxToSelectionMetrics(
+              getShapeBox(selBtn, layerW, layerH)
+            );
+          }
           gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, {
-            multi: multiSel
+            multi: multiSel,
+            metrics: gizmoMetrics
           });
         });
         if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
       }
-      if (selIds.length) {
+      if (selIds.length && !isShapeBoxV2Active()) {
         requestAnimationFrame(function () {
           if (!buttonsLayer) return;
           selIds.forEach(function (sid) {
@@ -5708,13 +5873,17 @@ var ExperienciaCanvas = (function () {
       selIds.forEach(function (sid) {
         var selBtn = getOverlayItemVm(sceneId, sid);
         if (!selBtn) return;
-        var domM = null;
-        if (isShapeType(selBtn.type)) {
-          domM = applyShapeVisibleDomBox(sid, buttonsLayer, selBtn, layerW, layerH);
+        var gizmoMetrics = null;
+        if (isShapeBoxV2Active() && isShapeType(selBtn.type)) {
+          gizmoMetrics = shapeBoxToSelectionMetrics(
+            getShapeBox(selBtn, layerW, layerH)
+          );
+        } else if (isShapeType(selBtn.type)) {
+          gizmoMetrics = applyShapeVisibleDomBox(sid, buttonsLayer, selBtn, layerW, layerH);
         }
         gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, {
           multi: multiSel,
-          metrics: domM
+          metrics: gizmoMetrics
         });
       });
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
@@ -5731,6 +5900,12 @@ var ExperienciaCanvas = (function () {
       var idEsc = String(buttonId).replace(/"/g, '');
       var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
       if (!el) return false;
+      if (isShapeBoxV2Active()) {
+        var boxSync = getShapeBox(vm, layerW, layerH);
+        if (!boxSync) return false;
+        paintShapeNodeEl(el, boxSync, vm, layerW, layerH);
+        return true;
+      }
       var paint = shapeStagePaintMetrics(vm, layerW, layerH);
       if (!paint) return false;
       var t = String(vm.type).toUpperCase();
@@ -10773,6 +10948,8 @@ var ExperienciaCanvas = (function () {
         paintInspector();
       },
       destroy: function () {
+        _shapeBoxV2Active = false;
+        _shapeBoxV2ProjectId = null;
         window.removeEventListener('boxies:props-rail-toggle', onPropsRailToggle);
         document.removeEventListener('fullscreenchange', onFullscreenChange);
         document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
@@ -10816,6 +10993,8 @@ var ExperienciaCanvas = (function () {
       overlayNodeId: options.overlayNodeId || null,
       editMode: options.editMode || 'buttons',
       inspectorBody: options.inspectorBody || null,
+      projectId: options.projectId || null,
+      shapeBoxV2: options.shapeBoxV2,
       onChange: options.onChange,
       onSelectionChange: options.onSelectionChange,
       onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
@@ -10836,6 +11015,9 @@ var ExperienciaCanvas = (function () {
     mount: mount,
     mountOverlay: mountOverlay,
     isCanvasMode: isCanvasMode,
-    setCanvasMode: setCanvasMode
+    setCanvasMode: setCanvasMode,
+    shapeBoxV2Enabled: shapeBoxV2Enabled,
+    isShapeBoxV2Active: isShapeBoxV2Active,
+    EDITOR_PROJECT_ID: EDITOR_PROJECT_ID
   };
 })();
