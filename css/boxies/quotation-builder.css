@@ -546,17 +546,12 @@
   pointer-events: none !important;
 }
 
-/* Deposit mode — hide chrome but keep scenes strip layout space */
+/* Deposit mode — hide canvas chrome, keep scenes strip visible */
 .qe-editor.is-backpack-mode .qe-canvas-chrome-top,
 .qe-editor.is-backpack-mode .qe-dock,
 .qe-editor.is-backpack-mode [data-qe-dock-bar],
 .qe-editor.is-backpack-mode .qe-guides-chrome,
 .qe-editor.is-backpack-mode .qe-canvas-tools-host {
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-.qe-editor.is-backpack-mode .qe-scenes-host {
   visibility: hidden !important;
   pointer-events: none !important;
 }
