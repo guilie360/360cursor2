@@ -6202,6 +6202,7 @@ var ExperienciaCanvas = (function () {
           }
         });
       }
+      clearOverlayCanvasHover();
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
         var t = String(b.type || 'BUTTON').toUpperCase();
@@ -7905,46 +7906,139 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
-    /** True when pointer hit is on painted shape geometry (not the square stage wrapper). */
-    function isShapeSilhouettePickEl(el) {
-      if (!el) return false;
-      if (el.classList && el.classList.contains('builder-exp-stage-shape__body')) return true;
-      return !!(el.closest && el.closest('.builder-exp-stage-shape__body'));
+    /** Geometric silhouette hit — used for pick/hover (DOM stack alone is not enough). */
+    function overlayShapeSilhouetteHit(vm, pxPct, pyPct, layerW, layerH) {
+      if (!vm || !ExperienciaEngine.shapeSilhouetteHitTest) return false;
+      var box = getShapeBox(vm, layerW, layerH);
+      if (!box) return false;
+      var ix = vm._ix || vm;
+      return ExperienciaEngine.shapeSilhouetteHitTest(
+        ix, pxPct, pyPct,
+        { cx: box.cx, cy: box.cy, w: box.w, h: box.h, rot: box.rot },
+        layerW, layerH
+      );
     }
 
-    function overlayStageBtnFromStackEl(el) {
-      if (!el || !buttonsLayer || !buttonsLayer.contains(el)) return null;
-      if (el.closest && el.closest('[data-exp-gizmo]')) return null;
-      var btn = el.closest && el.closest('[data-exp-stage-btn]');
-      if (!btn) return null;
-      if (btn.classList.contains('builder-exp-stage-shape') && !isShapeSilhouettePickEl(el)) {
+    function overlayRectSelectionHit(vm, pxPct, pyPct, layerW, layerH) {
+      if (!vm) return false;
+      var m = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!m) return false;
+      if (ExperienciaEngine.pointInRotatedRectPct) {
+        return ExperienciaEngine.pointInRotatedRectPct(
+          pxPct, pyPct, m.gx, m.gy, m.gw, m.gh, m.grot, layerW, layerH
+        );
+      }
+      return pxPct >= (m.gx - m.gw / 2) && pxPct <= (m.gx + m.gw / 2) &&
+        pyPct >= (m.gy - m.gh / 2) && pyPct <= (m.gy + m.gh / 2);
+    }
+
+    function overlayPickPctFromClient(clientX, clientY) {
+      var el = buttonsLayer || buttonsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      return {
+        x: ((clientX - rect.left) / Math.max(1, rect.width)) * 100,
+        y: ((clientY - rect.top) / Math.max(1, rect.height)) * 100
+      };
+    }
+
+    function overlayPickPassesEditFilter(sceneId, vm) {
+      if (!vm) return false;
+      var editGroupId = canvas().activeOverlayGroupEditId;
+      if (!editGroupId) return true;
+      var gid = String(editGroupId);
+      if (isOverlayGroupId(sceneId, vm.id)) return String(vm.id) === gid;
+      return String(vm.groupId || '') === gid;
+    }
+
+    var overlayCanvasHoverId = null;
+    var overlayCanvasHoverRaf = 0;
+
+    function clearOverlayCanvasHover() {
+      overlayCanvasHoverId = null;
+      if (!buttonsLayer) return;
+      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
+        el.classList.remove('is-canvas-hover');
+      });
+    }
+
+    function syncOverlayCanvasHover(clientX, clientY) {
+      if (!buttonsLayer || buttonDrag || transformDrag || overlayMarquee) {
+        clearOverlayCanvasHover();
+        return;
+      }
+      if (canvas().editMode !== 'buttons' && !overlayMode) {
+        clearOverlayCanvasHover();
+        return;
+      }
+      var sceneId = canvas().selectedId;
+      if (!sceneId) {
+        clearOverlayCanvasHover();
+        return;
+      }
+      var hit = pickOverlayStageBtnFromPoint(clientX, clientY, sceneId, { skipSelected: true });
+      var nextId = hit ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
+      if (nextId === String(overlayCanvasHoverId || '')) return;
+      clearOverlayCanvasHover();
+      overlayCanvasHoverId = nextId || null;
+      if (hit && hit.classList.contains('builder-exp-stage-shape')) {
+        hit.classList.add('is-canvas-hover');
+      }
+    }
+
+    function scheduleOverlayCanvasHover(clientX, clientY) {
+      if (overlayCanvasHoverRaf) return;
+      overlayCanvasHoverRaf = requestAnimationFrame(function () {
+        overlayCanvasHoverRaf = 0;
+        syncOverlayCanvasHover(clientX, clientY);
+      });
+    }
+
+    /**
+     * Pick overlay under pointer — geometric silhouette, top-down in DOM z-order.
+     * skipSelected (default true): reach shapes under the current selection bbox/silhouette.
+     */
+    function pickOverlayStageBtnFromPoint(clientX, clientY, sceneId, opts) {
+      opts = opts || {};
+      if (!buttonsLayer || !sceneId) return null;
+      var pct = overlayPickPctFromClient(clientX, clientY);
+      var sz = overlayLayerSize();
+      var layerW = sz.w;
+      var layerH = sz.h;
+      var selectedSet = {};
+      getSelectedOverlayIds().forEach(function (id) {
+        selectedSet[String(id)] = true;
+      });
+      var skipSelected = opts.skipSelected !== false;
+
+      function scan(skipSel) {
+        var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn]');
+        for (var i = nodes.length - 1; i >= 0; i--) {
+          var el = nodes[i];
+          var id = el.getAttribute('data-exp-stage-btn');
+          if (!id) continue;
+          if (skipSel && selectedSet[String(id)]) continue;
+          var vm = getOverlayItemVm(sceneId, id);
+          if (!vm || vm.locked || vm.visible === false) continue;
+          if (!overlayPickPassesEditFilter(sceneId, vm)) continue;
+          var t = String(vm.type || 'BUTTON').toUpperCase();
+          var geomHit = isShapeType(t)
+            ? overlayShapeSilhouetteHit(vm, pct.x, pct.y, layerW, layerH)
+            : overlayRectSelectionHit(vm, pct.x, pct.y, layerW, layerH);
+          if (geomHit) return el;
+        }
         return null;
       }
-      return btn;
-    }
 
-    /** Hit-test stage overlays — SVG silhouette + z-order; gizmo bbox never blocks. */
-    function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
-      opts = opts || {};
-      if (!buttonsLayer) return null;
-      var stack;
-      try {
-        stack = document.elementsFromPoint(clientX, clientY);
-      } catch (eStack) {
-        stack = [];
-      }
-      if (!stack || !stack.length) return null;
-      for (var si = 0; si < stack.length; si++) {
-        var btn = overlayStageBtnFromStackEl(stack[si]);
-        if (btn) return btn;
-      }
-      return null;
+      var found = scan(skipSelected);
+      if (!found && skipSelected) found = scan(false);
+      return found;
     }
 
     /** Hit-test stage child under pointer, ignoring gizmo chrome (group edit entry). */
     function pickGroupedChildAtClient(clientX, clientY, sceneId, groupId) {
       if (!buttonsLayer || !sceneId || !groupId) return null;
-      var hit = pickOverlayStageBtnFromPoint(clientX, clientY);
+      var hit = pickOverlayStageBtnFromPoint(clientX, clientY, sceneId);
       if (!hit) return null;
       var bid = hit.getAttribute('data-exp-stage-btn');
       var grouped = resolveGroupedOverlayHit(sceneId, bid);
@@ -7954,7 +8048,7 @@ var ExperienciaCanvas = (function () {
 
     function resolveGroupedChildFromEvent(ev, sceneId) {
       if (!ev || !sceneId || !buttonsLayer) return null;
-      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
+      var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY, sceneId);
       if (hit) {
         var bid = hit.getAttribute('data-exp-stage-btn');
         return resolveGroupedOverlayHit(sceneId, bid);
@@ -10067,7 +10161,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
 
-        var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
+        var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY, canvas().selectedId);
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
           if (canvas().activeOverlayGroupEditId) {
@@ -10617,6 +10711,13 @@ var ExperienciaCanvas = (function () {
         btn.style.removeProperty('color');
         btn.style.removeProperty('border-color');
         btn.style.removeProperty('background');
+      });
+      buttonsLayer.addEventListener('pointermove', function (ev) {
+        if (canvas().editMode !== 'buttons' && !overlayMode) return;
+        scheduleOverlayCanvasHover(ev.clientX, ev.clientY);
+      });
+      buttonsLayer.addEventListener('pointerleave', function () {
+        clearOverlayCanvasHover();
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
         if (canvas().editMode !== 'buttons') return;
