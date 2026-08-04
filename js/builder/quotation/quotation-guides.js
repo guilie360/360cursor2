@@ -1562,7 +1562,7 @@ var QuotationGuides = (function () {
         },
         {
           id: 'toggle-backpack',
-          label: backpackOpen ? 'Ocultar backpack' : 'Backpack'
+          label: backpackOpen ? 'Salir del backpack' : 'Backpack'
         }
       ],
       onSelect: function (id) {

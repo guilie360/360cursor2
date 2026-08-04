@@ -751,6 +751,9 @@ var QuotationEditor = (function () {
       rulersVisible: false,
       guidesVisible: true,
       overlaySnapEnabled: true,
+      backpackMode: false,
+      backpackReturnSceneId: null,
+      backpackInteractions: [],
       canvasUserZoom: 1,
       canvasPanX: null,
       canvasPanY: null,
@@ -1476,7 +1479,10 @@ var QuotationEditor = (function () {
         scenes: state.scenes,
         activeSceneId: state.activeSceneId,
         selectedContentId: state.selectedContentId,
-        expEditMode: state.expEditMode
+        expEditMode: state.expEditMode,
+        editorBackpack: {
+          interactions: ensureBackpackInteractions()
+        }
       };
       var raw = JSON.stringify(payload);
       var key = draftStorageKey(id);
@@ -1559,6 +1565,15 @@ var QuotationEditor = (function () {
     }
     if (draft.selectedContentId) state.selectedContentId = draft.selectedContentId;
     if (draft.expEditMode) state.expEditMode = draft.expEditMode;
+    if (draft.editorBackpack && Array.isArray(draft.editorBackpack.interactions)) {
+      state.backpackInteractions = draft.editorBackpack.interactions.slice();
+      state._backpackSceneRef = null;
+    } else {
+      state.backpackInteractions = [];
+      state._backpackSceneRef = null;
+    }
+    state.backpackMode = false;
+    state.backpackReturnSceneId = null;
     if (healLibraryIdentity()) markDirtyLocal();
     return true;
   }
@@ -3555,10 +3570,103 @@ var QuotationEditor = (function () {
     syncOverlaySnapUi();
   }
 
+  var BACKPACK_SCENE_ID = '__qe_backpack__';
+
+  function ensureBackpackInteractions() {
+    if (!Array.isArray(state.backpackInteractions)) state.backpackInteractions = [];
+    return state.backpackInteractions;
+  }
+
+  function getBackpackSceneRef() {
+    ensureBackpackInteractions();
+    if (!state._backpackSceneRef) {
+      state._backpackSceneRef = {
+        id: BACKPACK_SCENE_ID,
+        name: 'Backpack',
+        type: 'backpack',
+        mediaUrl: null,
+        mediaType: null,
+        resourceId: null,
+        coverModel: null,
+        elements: [],
+        interactions: state.backpackInteractions,
+        buttons: [],
+        hotspots: [],
+        guides: []
+      };
+    }
+    state._backpackSceneRef.interactions = state.backpackInteractions;
+    ensureSceneOverlays(state._backpackSceneRef);
+    return state._backpackSceneRef;
+  }
+
+  function isBackpackMode() {
+    return !!state.backpackMode;
+  }
+
   function isBackpackPanelOpen() {
-    var ws = document.querySelector('.quotation-workspace');
-    if (!ws || ws.classList.contains('is-recursos-hidden')) return false;
-    return !ws.classList.contains('is-left-collapsed');
+    return isBackpackMode();
+  }
+
+  function syncBackpackFabUi() {
+    if (!rootEl) return;
+    var btn = rootEl.querySelector('[data-qe-toggle-backpack]');
+    if (!btn) return;
+    var on = isBackpackMode();
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.title = on ? 'Salir del backpack' : 'Backpack';
+  }
+
+  function syncBackpackChromeUi() {
+    if (!rootEl) return;
+    var editor = rootEl.querySelector('[data-qe-editor]');
+    if (editor) editor.classList.toggle('is-backpack-mode', isBackpackMode());
+    var title = rootEl.querySelector('[data-qe-active-scene-name]');
+    if (title) {
+      var name = isBackpackMode()
+        ? 'Backpack'
+        : ((activeScene() && activeScene().name) ? String(activeScene().name) : 'Escena');
+      title.textContent = name;
+      title.title = name;
+    }
+    syncBackpackFabUi();
+  }
+
+  function enterBackpackMode() {
+    if (state.backpackMode || state.canvasPreviewMode) return;
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
+    }
+    state.backpackReturnSceneId = state.activeSceneId;
+    state.backpackMode = true;
+    destroyBuilderRuntimeScene();
+    mountBuilderRuntimeScene();
+    syncBackpackChromeUi();
+  }
+
+  function exitBackpackMode(restoreScene) {
+    if (!state.backpackMode) return;
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePull) { /* ignore */ }
+    }
+    state.backpackMode = false;
+    if (restoreScene !== false && state.backpackReturnSceneId && sceneById(state.backpackReturnSceneId)) {
+      state.activeSceneId = state.backpackReturnSceneId;
+    }
+    state.backpackReturnSceneId = null;
+    destroyBuilderRuntimeScene();
+    mountBuilderRuntimeScene();
+    syncBackpackChromeUi();
+  }
+
+  function toggleBackpackMode() {
+    if (state.backpackMode) exitBackpackMode();
+    else enterBackpackMode();
+  }
+
+  function toggleBackpackPanel() {
+    toggleBackpackMode();
   }
 
   function isToolsPanelOpen() {
@@ -3567,11 +3675,6 @@ var QuotationEditor = (function () {
     var ws = document.querySelector('.quotation-workspace');
     if (!ws) return false;
     return !ws.classList.contains('is-right-collapsed');
-  }
-
-  function toggleBackpackPanel() {
-    if (typeof QuotationBuilderView === 'undefined' || !QuotationBuilderView.applyLeftCollapsed) return;
-    QuotationBuilderView.applyLeftCollapsed(isBackpackPanelOpen());
   }
 
   function toggleToolsPanel() {
@@ -3596,7 +3699,9 @@ var QuotationEditor = (function () {
   function viewportChromeHtml() {
     var preset = state.viewportPreset || 'desktop';
     var sc = activeScene();
-    var sceneName = (sc && sc.name) ? String(sc.name) : 'Escena';
+    var sceneName = state.backpackMode
+      ? 'Backpack'
+      : ((sc && sc.name) ? String(sc.name) : 'Escena');
     var list = (typeof HeroRenderer !== 'undefined' && HeroRenderer.listViewports)
       ? HeroRenderer.listViewports()
       : [
@@ -3728,6 +3833,30 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function backpackIconSvg() {
+    return '' +
+      '<svg class="qe-backpack-fab__ico" width="20" height="20" viewBox="0 0 24 24"' +
+        ' fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"' +
+        ' stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M8 8V6.5a4 4 0 0 1 8 0V8"/>' +
+        '<path d="M5 8h14l-1.2 12.5H6.2L5 8z"/>' +
+        '<path d="M9.5 8a2.5 2.5 0 0 0 5 0"/>' +
+        '<path d="M12 8v2.5"/>' +
+      '</svg>';
+  }
+
+  function backpackFabHtml() {
+    var on = !!state.backpackMode;
+    return '' +
+      '<button type="button" class="qe-backpack-fab' + (on ? ' is-active' : '') + '"' +
+        ' data-qe-toggle-backpack' +
+        ' title="' + escapeHtml(on ? 'Salir del backpack' : 'Backpack') + '"' +
+        ' aria-pressed="' + (on ? 'true' : 'false') + '"' +
+        ' aria-label="Backpack">' +
+        backpackIconSvg() +
+      '</button>';
+  }
+
   function sceneConfirmHtml() {
     if (!state.pendingSceneDeleteId) return '';
     var pending = sceneById(state.pendingSceneDeleteId);
@@ -3769,6 +3898,7 @@ var QuotationEditor = (function () {
                       ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
                   '</div>' +
                   stageDockHtml() +
+                  backpackFabHtml() +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -3875,6 +4005,7 @@ var QuotationEditor = (function () {
     var toolChrome = unit.querySelector('[data-qe-chrome-top]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
+    var toolBackpack = unit.querySelector('[data-qe-toggle-backpack]');
 
     syncScenesFoldButton();
 
@@ -3974,6 +4105,14 @@ var QuotationEditor = (function () {
       toolDock.style.transform = 'translate(-50%, calc(100% + 8px))';
       toolDock.style.zIndex = '6';
       toolDock.style.margin = '0';
+    }
+    if (toolBackpack) {
+      toolBackpack.style.position = 'absolute';
+      toolBackpack.style.left = '0';
+      toolBackpack.style.bottom = '0';
+      toolBackpack.style.transform = 'translate(calc(-100% - 12px), calc(100% + 8px))';
+      toolBackpack.style.zIndex = '6';
+      toolBackpack.style.margin = '0';
     }
     if (stage) {
       stage.style.width = natW + 'px';
@@ -4452,6 +4591,7 @@ var QuotationEditor = (function () {
   function editorLayoutClass() {
     var cls = 'quotation-step quotation-step--editor qe-editor';
     if (state.focusMode) cls += ' is-focus';
+    if (state.backpackMode) cls += ' is-backpack-mode';
     if (document.getElementById('quotationLeftBody')) cls += ' qe-editor--external-library';
     cls += ' qe-editor--canvas-only';
     return cls;
@@ -4615,6 +4755,7 @@ var QuotationEditor = (function () {
 
   function selectScene(id) {
     if (!sceneById(id)) return;
+    if (state.backpackMode) exitBackpackMode(false);
     var same = state.activeSceneId === id;
     state.activeSceneId = id;
     state.selectedElementId = null;
@@ -6911,8 +7052,8 @@ var QuotationEditor = (function () {
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
 
     expOverlay = QuotationExperienciaBridge.mount(layer, {
-      scenes: state.scenes,
-      activeSceneId: state.activeSceneId,
+      scenes: state.backpackMode ? [getBackpackSceneRef()] : state.scenes,
+      activeSceneId: state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
       contentById: contentById,
       projectId: resolveProjectId(),
       inspectorBody: null,
@@ -8515,6 +8656,14 @@ var QuotationEditor = (function () {
         });
       }
 
+      var backpackToggle = editor.querySelector('[data-qe-toggle-backpack]');
+      if (backpackToggle && !backpackToggle.dataset.bound) {
+        backpackToggle.dataset.bound = '1';
+        backpackToggle.addEventListener('click', function () {
+          toggleBackpackMode();
+        });
+      }
+
       var viewportBar = editor.querySelector('[data-qe-viewport-bar]');
       if (viewportBar && !viewportBar.dataset.inspectCtx) {
         viewportBar.dataset.inspectCtx = '1';
@@ -9336,7 +9485,9 @@ var QuotationEditor = (function () {
         ensureHeroSceneContract();
         return;
       }
-      state.scenes = hq.canvas.scenes.map(function (sc) {
+      state.scenes = hq.canvas.scenes.filter(function (sc) {
+        return sc && sc.id !== BACKPACK_SCENE_ID;
+      }).map(function (sc) {
         var mediaUrl = sc.mediaUrl || sc.publicUrl || null;
         if (mediaUrl && String(mediaUrl).indexOf('blob:') === 0) mediaUrl = null;
         var scene = {
@@ -9375,6 +9526,15 @@ var QuotationEditor = (function () {
       if (!sceneById(state.activeSceneId)) {
         state.activeSceneId = state.scenes[0].id;
       }
+      var bpSrc = (hq && hq.editorBackpack) ||
+        (hq && hq.canvas && hq.canvas.editorBackpack) ||
+        null;
+      state.backpackInteractions = (bpSrc && Array.isArray(bpSrc.interactions))
+        ? bpSrc.interactions.slice()
+        : [];
+      state._backpackSceneRef = null;
+      state.backpackMode = false;
+      state.backpackReturnSceneId = null;
       if (healLibraryIdentity()) markDirtyLocal();
       ensureHeroSceneContract();
       return;
@@ -9624,6 +9784,9 @@ var QuotationEditor = (function () {
       };
     }
     payload.library = library;
+    payload.editorBackpack = {
+      interactions: ensureBackpackInteractions()
+    };
     /* Intentional clear-all only when in-memory library is also empty. */
     if ((!library.content || !library.content.length) &&
         (!state.content || !state.content.length)) {

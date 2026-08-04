@@ -455,6 +455,54 @@
   flex: 0 0 auto;
 }
 
+.qe-backpack-fab {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(16, 16, 16, 0.94);
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  z-index: 6;
+  box-sizing: border-box;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.qe-backpack-fab:hover {
+  color: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.qe-backpack-fab.is-active {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(32, 32, 32, 0.98);
+}
+
+.qe-backpack-fab:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 2px;
+}
+
+.qe-backpack-fab__ico {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.qe-editor.is-backpack-mode [data-qe-viewport-window],
+.qe-editor.is-backpack-mode .qe-canvas__stage {
+  background: #000 !important;
+}
+
 .qe-canvas-tool {
   appearance: none;
   display: inline-flex;
@@ -3881,8 +3929,10 @@ body.quotation-canvas-first .builder-workspace,
 
 /* V7.2.65 ? canvas Vista Previa: hide leftover edit chrome */
 .qe-editor.is-canvas-preview .qe-dock,
+.qe-editor.is-canvas-preview .qe-backpack-fab,
 .qe-editor.is-canvas-preview .qe-layers,
 .qe-col--canvas.is-canvas-preview .qe-dock,
+.qe-col--canvas.is-canvas-preview .qe-backpack-fab,
 .qe-col--canvas.is-canvas-preview .qe-layers {
   display: none !important;
 }
