@@ -3859,6 +3859,12 @@ var ExperienciaEngine = (function () {
       else if (cfg.width != null) ix.width = cfg.width;
       if (partial.height != null) ix.height = partial.height;
       else if (cfg.height != null) ix.height = cfg.height;
+      if (partial.shapeContentBox != null) ix.shapeContentBox = !!partial.shapeContentBox;
+      else if (cfg.shapeContentBox != null) ix.shapeContentBox = !!cfg.shapeContentBox;
+      if (partial.shapeStretchX != null) ix.shapeStretchX = Number(partial.shapeStretchX);
+      else if (cfg.shapeStretchX != null) ix.shapeStretchX = Number(cfg.shapeStretchX);
+      if (partial.shapeStretchY != null) ix.shapeStretchY = Number(partial.shapeStretchY);
+      else if (cfg.shapeStretchY != null) ix.shapeStretchY = Number(cfg.shapeStretchY);
       if (partial.fill != null) ix.fill = partial.fill;
       else if (cfg.fill != null) ix.fill = cfg.fill;
       if (partial.stroke != null) ix.stroke = partial.stroke;
