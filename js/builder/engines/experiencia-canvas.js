@@ -855,49 +855,60 @@ var ExperienciaCanvas = (function () {
       Math.abs(stretch.sx - 1) < 0.001 &&
       Math.abs(stretch.sy - 1) < 0.001;
     var hasExplicitBox = !!(ix && ix.shapeContentBox && h != null && h > 0);
-
-    /* User-resized / seeded tight box — not still on default picker tile width. */
-    if (hasExplicitBox && !isPickerTile) {
-      return {
-        st: st, grot: grot,
-        gx: cx, gy: cy, gw: w, gh: h,
-        x: cx, y: cy, w: w, h: h
-      };
-    }
+    var tightGm = null;
 
     /* Default shape: hug visible art inside picker tile (Genially-style). */
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeGizmoMetrics) {
-      var gm = ExperienciaEngine.sceneShapeGizmoMetrics(
+      tightGm = ExperienciaEngine.sceneShapeGizmoMetrics(
         defW, st, layerW, layerH, cx, cy, stretch.sx, stretch.sy, null,
         { shapeContentBox: false }
       );
+    } else if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeContentBBox &&
+        ExperienciaEngine.sceneShapeDisplaySize) {
+      var tileF = ExperienciaEngine.sceneShapeDisplaySize(defW, layerW, layerH);
+      var bb = ExperienciaEngine.shapeContentBBox(st, {
+        stretchX: stretch.sx,
+        stretchY: stretch.sy
+      });
+      var lwF = Math.max(1, Number(layerW) || 1000);
+      var lhF = Math.max(1, Number(layerH) || 1000);
+      var meet = 1 / 100;
+      var dispW = bb.w * meet;
+      var dispH = bb.h * meet;
+      var gwF = tileF.w * dispW;
+      var ghF = tileF.w * dispH * (lwF / lhF);
+      var offXF = ((bb.cx - 50) / 100) * tileF.w;
+      var offYF = ((bb.cy - 50) / 100) * tileF.w * (lwF / lhF);
+      tightGm = { gx: cx + offXF, gy: cy + offYF, gw: gwF, gh: ghF };
+    }
+
+    if (tightGm) {
+      /* Only trust stored gw×gh after a real user resize — not picker tile leftovers. */
+      if (hasExplicitBox && !isPickerTile) {
+        var dw = Math.abs(w - tightGm.gw);
+        var dh = Math.abs(h - tightGm.gh);
+        if (dw > 0.15 || dh > 0.15) {
+          return {
+            st: st, grot: grot,
+            gx: cx, gy: cy, gw: w, gh: h,
+            x: cx, y: cy, w: w, h: h
+          };
+        }
+        /* Seeded content-box — x/y already at visible center. */
+        return {
+          st: st, grot: grot,
+          gx: cx, gy: cy, gw: w, gh: h,
+          x: cx, y: cy, w: w, h: h
+        };
+      }
       return {
         st: st, grot: grot,
-        gx: gm.gx, gy: gm.gy, gw: gm.gw, gh: gm.gh,
-        x: gm.gx, y: gm.gy, w: gm.gw, h: gm.gh
+        gx: tightGm.gx, gy: tightGm.gy, gw: tightGm.gw, gh: tightGm.gh,
+        x: tightGm.gx, y: tightGm.gy, w: tightGm.gw, h: tightGm.gh
       };
     }
 
-    /* Engine helper missing — derive tight bounds from content fraction. */
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.shapeContentFrac &&
-        ExperienciaEngine.sceneShapeDisplaySize &&
-        ExperienciaEngine.shapeTileContentOffsetPct) {
-      var tile = ExperienciaEngine.sceneShapeDisplaySize(defW, layerW, layerH);
-      var cf = ExperienciaEngine.shapeContentFrac(st, stretch.sx, stretch.sy);
-      var lw = Math.max(1, Number(layerW) || 1000);
-      var lh = Math.max(1, Number(layerH) || 1000);
-      var gwT = tile.w * cf.dispW;
-      var ghT = tile.w * cf.dispH * (lw / lh);
-      var off = ExperienciaEngine.shapeTileContentOffsetPct(
-        defW, st, layerW, layerH, stretch.sx, stretch.sy
-      );
-      return {
-        st: st, grot: grot,
-        gx: cx + off.offX, gy: cy + off.offY, gw: gwT, gh: ghT,
-        x: cx + off.offX, y: cy + off.offY, w: gwT, h: ghT
-      };
-    }
-
+    /* Engine helper missing — last-resort tile (avoid if possible). */
     var shapeSz = shapeDisplaySize(defW, layerW, layerH);
     return {
       st: st, grot: grot,
@@ -1035,6 +1046,83 @@ var ExperienciaCanvas = (function () {
     };
   }
 
+  /** Measure painted SVG geometry — tight visible art, not picker tile wrapper. */
+  function measureShapeVisibleDomPct(buttonId, layerEl) {
+    if (!layerEl || buttonId == null) return null;
+    var idEsc = String(buttonId).replace(/"/g, '');
+    var el = layerEl.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+    if (!el) return null;
+    var geom = el.querySelector(
+      '.builder-exp-stage-shape__body rect,' +
+      '.builder-exp-stage-shape__body ellipse,' +
+      '.builder-exp-stage-shape__body polygon,' +
+      '.builder-exp-stage-shape__body line,' +
+      '.builder-exp-stage-shape__body path'
+    );
+    if (!geom) return domBoxPctFromEl(el, layerEl);
+    return domBoxPctFromEl(geom, layerEl);
+  }
+
+  /** Resize stage node + return gizmo metrics that hug visible SVG bounds. */
+  function applyShapeVisibleDomBox(buttonId, layerEl, vm, layerW, layerH) {
+    var dom = measureShapeVisibleDomPct(buttonId, layerEl);
+    if (!dom || !vm || !layerEl) return null;
+    var idEsc = String(buttonId).replace(/"/g, '');
+    var el = layerEl.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+    if (!el) return null;
+    var t = String(vm.type || '').toUpperCase();
+    el.classList.remove('is-live-sizing', 'is-live-moving');
+    el.style.removeProperty('overflow');
+    el.style.removeProperty('transform');
+    el.style.left = dom.gx + '%';
+    el.style.top = dom.gy + '%';
+    el.style.width = dom.gw + '%';
+    el.style.height = dom.gh + '%';
+    el.style.setProperty('--btn-rot', (Number(vm.rotation) || 0) + 'deg');
+    var hit = el.querySelector('.builder-exp-stage-shape__hit');
+    if (hit) {
+      hit.style.cssText = shapeHitAreaStyle(
+        t, vm.shapeStretchX, vm.shapeStretchY, vm, layerW, layerH, true
+      );
+    }
+    patchShapeSvgLive(el, t, {
+      fill: vm.fill,
+      stroke: vm.stroke,
+      strokeWidth: vm.strokeWidth,
+      borderRadius: vm.borderRadius
+    }, vm.shapeStretchX, vm.shapeStretchY);
+    return {
+      st: t,
+      gx: dom.gx,
+      gy: dom.gy,
+      gw: dom.gw,
+      gh: dom.gh,
+      grot: Number(vm.rotation) || 0
+    };
+  }
+
+  function updateGizmoBoxPct(buttonId, layerEl, m) {
+    if (!layerEl || !m || buttonId == null) return;
+    var idEsc = String(buttonId).replace(/"/g, '');
+    var gizmo = layerEl.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+    if (!gizmo) return;
+    gizmo.style.left = m.gx + '%';
+    gizmo.style.top = m.gy + '%';
+    gizmo.style.width = m.gw + '%';
+    gizmo.style.height = m.gh + '%';
+    gizmo.style.setProperty('--btn-rot', (Number(m.grot) || 0) + 'deg');
+    var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
+    if (sizeEl && layerEl) {
+      var layerW = Math.max(1, layerEl.clientWidth || 1000);
+      var layerH = Math.max(1, layerEl.clientHeight || 1000);
+      var sizeWpx = Math.max(1, Math.round((m.gw / 100) * layerW));
+      var sizeHpx = Math.max(1, Math.round((m.gh / 100) * layerH));
+      sizeEl.textContent = m.st === 'SHAPE_LINE'
+        ? Math.max(1, sizeWpx) + ' px'
+        : sizeWpx + ' × ' + sizeHpx;
+    }
+  }
+
   /** DOM getBoundingClientRect → layer-local center + size in %. */
   function domBoxPctFromEl(el, layerEl) {
     if (!el || !layerEl) return null;
@@ -1146,7 +1234,7 @@ var ExperienciaCanvas = (function () {
   function buildOverlaySelectionGizmoHtml(btn, layerW, layerH, opts) {
     opts = opts || {};
     if (!btn || btn.locked || btn.visible === false) return '';
-    var m = overlaySelectionMetrics(btn, layerW, layerH);
+    var m = (opts.metrics) ? opts.metrics : overlaySelectionMetrics(btn, layerW, layerH);
     if (!m) return '';
     var multi = !!opts.multi;
     var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -5575,6 +5663,17 @@ var ExperienciaCanvas = (function () {
         });
         if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
       }
+      if (selIds.length) {
+        requestAnimationFrame(function () {
+          if (!buttonsLayer) return;
+          selIds.forEach(function (sid) {
+            var vmFit = getOverlayItemVm(canvas().selectedId, sid);
+            if (!vmFit || !isShapeType(vmFit.type)) return;
+            var domFit = applyShapeVisibleDomBox(sid, buttonsLayer, vmFit, layerW, layerH);
+            if (domFit) updateGizmoBoxPct(sid, buttonsLayer, domFit);
+          });
+        });
+      }
       requestAnimationFrame(syncButtonsLayerBounds);
       if (shapeResizeDebugEnabled() && !buttonDrag && !transformDrag) {
         var debugIds = selIds.slice();
@@ -5607,10 +5706,16 @@ var ExperienciaCanvas = (function () {
       var multiSel = selIds.length > 1;
       var gizmoHtml = '';
       selIds.forEach(function (sid) {
-        syncOverlayShapeFromModel(sceneId, sid);
         var selBtn = getOverlayItemVm(sceneId, sid);
         if (!selBtn) return;
-        gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, { multi: multiSel });
+        var domM = null;
+        if (isShapeType(selBtn.type)) {
+          domM = applyShapeVisibleDomBox(sid, buttonsLayer, selBtn, layerW, layerH);
+        }
+        gizmoHtml += buildOverlaySelectionGizmoHtml(selBtn, layerW, layerH, {
+          multi: multiSel,
+          metrics: domM
+        });
       });
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
       requestAnimationFrame(syncButtonsLayerBounds);
