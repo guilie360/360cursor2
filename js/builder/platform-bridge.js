@@ -133,31 +133,19 @@ var PlatformBuilderBridge = (function () {
 
   function createStorageApi() {
     var BUCKET = 'proyectos-media';
-    var PUBLIC_MARKER = '/storage/v1/object/public/' + BUCKET + '/';
 
     function getPublicUrl(path) {
       return getClient().storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
     }
 
-    function extensionFromFile(file) {
-      var parts = String(file.name || '').split('.');
-      if (parts.length < 2) return 'bin';
-      return parts.pop().toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-    }
-
     return {
-      upload: async function (constructoraId, proyectoId, folder, file) {
-        var ext = extensionFromFile(file);
-        var fileName = folder + '-' + Date.now() + '.' + ext;
-        var path = constructoraId + '/' + proyectoId + '/' + folder + '/' + fileName;
-        var result = await getClient().storage.from(BUCKET).upload(path, file, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type
-        });
-        if (result.error) throw new Error(result.error.message || 'Error subiendo archivo');
-        return { path: path, publicUrl: getPublicUrl(path) };
-      }
+      /* Hard rule: media binaries go to Bunny only. Supabase holds text/meta + legacy public URLs. */
+      upload: async function () {
+        throw new Error(
+          'StorageApi deshabilitado: las imágenes/videos se suben solo a Bunny (BunnyMediaApi).'
+        );
+      },
+      getPublicUrl: getPublicUrl
     };
   }
 
