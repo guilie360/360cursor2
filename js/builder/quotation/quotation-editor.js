@@ -3835,8 +3835,8 @@ var QuotationEditor = (function () {
 
   function backpackIconSvg() {
     return '' +
-      '<svg class="qe-backpack-fab__ico" width="20" height="20" viewBox="0 0 24 24"' +
-        ' fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"' +
+      '<svg class="qe-backpack-fab__ico" width="14" height="14" viewBox="0 0 24 24"' +
+        ' fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round"' +
         ' stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M8 8V6.5a4 4 0 0 1 8 0V8"/>' +
         '<path d="M5 8h14l-1.2 12.5H6.2L5 8z"/>' +
@@ -4005,7 +4005,6 @@ var QuotationEditor = (function () {
     var toolChrome = unit.querySelector('[data-qe-chrome-top]');
     var toolVp = unit.querySelector('[data-qe-viewport-bar]');
     var toolDock = unit.querySelector('[data-qe-dock-bar], .qe-dock');
-    var toolBackpack = unit.querySelector('[data-qe-toggle-backpack]');
 
     syncScenesFoldButton();
 
@@ -4105,14 +4104,6 @@ var QuotationEditor = (function () {
       toolDock.style.transform = 'translate(-50%, calc(100% + 8px))';
       toolDock.style.zIndex = '6';
       toolDock.style.margin = '0';
-    }
-    if (toolBackpack) {
-      toolBackpack.style.position = 'absolute';
-      toolBackpack.style.left = '0';
-      toolBackpack.style.bottom = '0';
-      toolBackpack.style.transform = 'translate(calc(-100% - 12px), calc(100% + 8px))';
-      toolBackpack.style.zIndex = '6';
-      toolBackpack.style.margin = '0';
     }
     if (stage) {
       stage.style.width = natW + 'px';
