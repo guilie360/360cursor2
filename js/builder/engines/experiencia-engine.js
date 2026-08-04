@@ -851,6 +851,33 @@ var ExperienciaEngine = (function () {
     return { w: 12, h: 12 };
   }
 
+  /** Shared insert height (% layer) — matches circle at legacy 12% tile. */
+  function shapeDefaultTargetGhPct(layerW, layerH) {
+    var tileW = sceneShapeDefaultSize().w;
+    var cf = shapeContentFrac('SHAPE_CIRCLE', 1, 1);
+    var lw = Math.max(1, Number(layerW) || 1920);
+    var lh = Math.max(1, Number(layerH) || 1080);
+    return tileW * cf.dispH * (lw / lh);
+  }
+
+  /** Default gw×gh per kind — uniform height, width from artboard aspect. */
+  function shapeDefaultContentBoxMetrics(kind, layerW, layerH) {
+    kind = String(kind || '').toUpperCase();
+    var base = shapeContentBBoxBase(kind);
+    var bh = Math.max(0.001, Number(base.h) || 1);
+    var bw = Math.max(0.001, Number(base.w) || 1);
+    var lw = Math.max(1, Number(layerW) || 1920);
+    var lh = Math.max(1, Number(layerH) || 1080);
+    var gh = shapeDefaultTargetGhPct(layerW, layerH);
+    var gw = gh * (bw / bh) * (lh / lw);
+    if (kind === 'SHAPE_LINE') {
+      gw = Math.min(95, Math.max(28, gw));
+    }
+    gh = Math.max(0.08, Math.min(95, gh));
+    gw = Math.max(0.5, Math.min(95, gw));
+    return { gw: gw, gh: gh };
+  }
+
   /** Global showroom controls — configured on Hero, not per-scene elements */
   var GLOBAL_SHOWROOM_ACTIONS = {
     whatsapp: true,
@@ -2260,15 +2287,11 @@ var ExperienciaEngine = (function () {
     ensureFreeOverlayDefaults(ix);
     var cx = Number(ix.x) || 50;
     var cy = Number(ix.y) || 50;
-    var tileW = Number(ix.width) || sceneShapeDefaultSize(kind).w;
-    var st = shapeStretchFromIx(ix);
-    var gm = sceneShapeGizmoMetrics(
-      tileW, kind, lw, lh, cx, cy, st.sx, st.sy, ix.height, ix
-    );
-    ix.x = gm.gx;
-    ix.y = gm.gy;
-    ix.width = gm.gw;
-    ix.height = gm.gh;
+    var box = shapeDefaultContentBoxMetrics(kind, lw, lh);
+    ix.x = cx;
+    ix.y = cy;
+    ix.width = box.gw;
+    ix.height = box.gh;
     ix.shapeContentBox = true;
     return ix;
   }
@@ -7615,6 +7638,8 @@ var ExperienciaEngine = (function () {
     shapeHitAreaCss: shapeHitAreaCss,
     shapeStretchFromIx: shapeStretchFromIx,
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
+    shapeDefaultContentBoxMetrics: shapeDefaultContentBoxMetrics,
+    shapeDefaultTargetGhPct: shapeDefaultTargetGhPct,
     seedShapeContentBox: seedShapeContentBox,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,
     sceneShapeTileCenterFromGizmoCenter: sceneShapeTileCenterFromGizmoCenter,
