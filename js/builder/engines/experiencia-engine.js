@@ -1765,17 +1765,54 @@ var ExperienciaEngine = (function () {
     }, 1, 1, cx, cy, layerW, layerH);
   }
 
+  /** Keep circles/donuts round when group/multi scale hits per-axis min clamps. */
+  function overlayMemberScaledSize(sw, sx, sy, layerW, layerH, type) {
+    type = String(type || (sw && sw.type) || '').toUpperCase();
+    sx = Number(sx) || 1;
+    sy = Number(sy) || 1;
+    if (type === 'SHAPE_CIRCLE' || type === 'SHAPE_DONUT') {
+      var uni = Math.max(Math.abs(sx), Math.abs(sy));
+      sx = uni;
+      sy = uni;
+    }
+    var minPct = 0.5;
+    var rawW = (Number(sw.w) || 0.5) * sx;
+    var rawH = (Number(sw.h) || 0.5) * sy;
+    if (type === 'SHAPE_CIRCLE' || type === 'SHAPE_DONUT') {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var pxW = (rawW / 100) * layerW;
+      var pxH = (rawH / 100) * layerH;
+      var minPx = Math.max((minPct / 100) * layerW, (minPct / 100) * layerH);
+      var pxSize = Math.max(pxW, pxH, minPx);
+      return {
+        w: (pxSize / layerW) * 100,
+        h: (pxSize / layerH) * 100
+      };
+    }
+    return {
+      w: Math.max(minPct, rawW),
+      h: Math.max(minPct, rawH)
+    };
+  }
+
   /** Proportional world-space scale for one grouped member (matches multi-select contract). */
   function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH) {
     if (!g || !child || !sw) return;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
+    var ct = String(sw.type || child.type || 'BUTTON').toUpperCase();
+    if (ct === 'SHAPE_CIRCLE' || ct === 'SHAPE_DONUT') {
+      var uniScale = Math.max(Math.abs(Number(sx) || 1), Math.abs(Number(sy) || 1));
+      sx = uniScale;
+      sy = uniScale;
+    }
     var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
     var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
-    var nw = Math.max(0.5, (Number(sw.w) || 0.5) * sx);
-    var nh = Math.max(0.5, (Number(sw.h) || 0.5) * sy);
+    var sized = overlayMemberScaledSize(sw, sx, sy, layerW, layerH, ct);
+    var nw = sized.w;
+    var nh = sized.h;
     var rot = sw.rotation;
-    var ct = String(sw.type || child.type || 'BUTTON').toUpperCase();
     child.groupId = g.id;
 
     if (ct === 'TEXT') {
@@ -8192,6 +8229,7 @@ var ExperienciaEngine = (function () {
     shapeContentBBox: shapeContentBBox,
     shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
+    overlayMemberScaledSize: overlayMemberScaledSize,
     shapeUsesContentBoxPaint: shapeUsesContentBoxPaint,
     shapeUsesFixedCornerContentPaint: shapeUsesFixedCornerContentPaint,
     shapeContentBoxViewBoxNorm: shapeContentBoxViewBoxNorm,

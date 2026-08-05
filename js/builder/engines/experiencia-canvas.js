@@ -7528,6 +7528,16 @@ var ExperienciaCanvas = (function () {
       return out;
     }
 
+    function scaleMemberLiveBox(s, sx, sy, layerW, layerH) {
+      if (ExperienciaEngine.overlayMemberScaledSize) {
+        return ExperienciaEngine.overlayMemberScaledSize(s, sx, sy, layerW, layerH, s.type);
+      }
+      return {
+        w: Math.max(0.5, (Number(s.w) || 0.5) * sx),
+        h: Math.max(0.5, (Number(s.h) || 0.5) * sy)
+      };
+    }
+
     function applyMultiSelectScale(sceneId, memberIds, snap, sx, sy, anchorX, anchorY, layerW, layerH) {
       if (!sceneId || !memberIds || !memberIds.length || !snap) return;
       layerW = Math.max(1, Number(layerW) || 1000);
@@ -7535,11 +7545,19 @@ var ExperienciaCanvas = (function () {
       memberIds.forEach(function (mid) {
         var s = snap[String(mid)];
         if (!s) return;
-        var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * sx;
-        var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * sy;
-        var nw = Math.max(0.5, (Number(s.w) || 0.5) * sx);
-        var nh = Math.max(0.5, (Number(s.h) || 0.5) * sy);
         var t = String(s.type || 'BUTTON').toUpperCase();
+        var msx = sx;
+        var msy = sy;
+        if (t === 'SHAPE_CIRCLE' || t === 'SHAPE_DONUT') {
+          var uniM = Math.max(Math.abs(Number(sx) || 1), Math.abs(Number(sy) || 1));
+          msx = uniM;
+          msy = uniM;
+        }
+        var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * msx;
+        var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * msy;
+        var sized = scaleMemberLiveBox(s, msx, msy, layerW, layerH);
+        var nw = sized.w;
+        var nh = sized.h;
         var patch = { live: true, layerW: layerW, layerH: layerH };
         if (s.rotation != null) patch.rotation = s.rotation;
         if (isShapeType(t)) {
@@ -7553,8 +7571,8 @@ var ExperienciaCanvas = (function () {
             if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
           } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
               ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
-            var newStretchX = Math.max(0.06, Math.min(8, (s.stretchX || 1) * sx));
-            var newStretchY = Math.max(0.06, Math.min(8, (s.stretchY || 1) * sy));
+            var newStretchX = Math.max(0.06, Math.min(8, (s.stretchX || 1) * msx));
+            var newStretchY = Math.max(0.06, Math.min(8, (s.stretchY || 1) * msy));
             var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
               nw, t, newStretchX, newStretchY
             );
@@ -7620,19 +7638,30 @@ var ExperienciaCanvas = (function () {
       return { items: items, unionGizmo: unionGizmo };
     }
 
-    function computeMultiSelectLiveBoxes(snap, sx, sy, anchorX, anchorY, outer) {
+    function computeMultiSelectLiveBoxes(snap, sx, sy, anchorX, anchorY, outer, layerW, layerH) {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
       var members = {};
       if (snap) {
         Object.keys(snap).forEach(function (id) {
           var s = snap[id];
           if (!s) return;
+          var t = String(s.type || 'BUTTON').toUpperCase();
+          var msx = sx;
+          var msy = sy;
+          if (t === 'SHAPE_CIRCLE' || t === 'SHAPE_DONUT') {
+            var uniL = Math.max(Math.abs(Number(sx) || 1), Math.abs(Number(sy) || 1));
+            msx = uniL;
+            msy = uniL;
+          }
+          var sized = scaleMemberLiveBox(s, msx, msy, layerW, layerH);
           members[id] = {
-            cx: anchorX + ((Number(s.cx) || 0) - anchorX) * sx,
-            cy: anchorY + ((Number(s.cy) || 0) - anchorY) * sy,
-            w: Math.max(0.5, (Number(s.w) || 0.5) * sx),
-            h: Math.max(0.5, (Number(s.h) || 0.5) * sy),
+            cx: anchorX + ((Number(s.cx) || 0) - anchorX) * msx,
+            cy: anchorY + ((Number(s.cy) || 0) - anchorY) * msy,
+            w: sized.w,
+            h: sized.h,
             rot: Number(s.rotation) || 0,
-            kind: String(s.type || 'BUTTON').toUpperCase(),
+            kind: t,
             stretchX: s.stretchX,
             stretchY: s.stretchY
           };
@@ -7765,7 +7794,9 @@ var ExperienciaCanvas = (function () {
         drag.pendingMultiSy,
         anchor.x,
         anchor.y,
-        drag.pendingMultiOuter
+        drag.pendingMultiOuter,
+        drag.layerW,
+        drag.layerH
       );
       var liveKey = drag.pendingMultiSx + '|' + drag.pendingMultiSy + '|' +
         (drag.pendingMultiOuter ? drag.pendingMultiOuter.w : 0);
