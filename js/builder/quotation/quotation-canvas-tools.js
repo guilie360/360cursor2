@@ -270,10 +270,11 @@ var QuotationCanvasTools = (function () {
           ' data-qe-check-toggle="' + esc(item.id) + '"' +
           ' aria-pressed="' + (checked ? 'true' : 'false') + '"' +
           ' aria-label="Marcar tarea"></button>' +
-        '<input type="text" class="qe-checklist__text"' +
+        '<textarea class="qe-checklist__text" rows="1"' +
           ' data-qe-check-text="' + esc(item.id) + '"' +
-          ' value="' + esc(item.text || '') + '"' +
           ' placeholder="Tarea" spellcheck="true" autocomplete="off">' +
+          esc(item.text || '') +
+        '</textarea>' +
         '<button type="button" class="qe-checklist__del"' +
           ' data-qe-check-delete="' + esc(item.id) + '"' +
           ' aria-label="Eliminar tarea">&times;</button>' +
@@ -364,6 +365,18 @@ var QuotationCanvasTools = (function () {
       if (btn) btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
     }
 
+    function autoResizeChecklistField(field) {
+      if (!field) return;
+      field.style.height = 'auto';
+      field.style.height = Math.max(22, field.scrollHeight) + 'px';
+    }
+
+    function syncChecklistFields() {
+      list.querySelectorAll('[data-qe-check-text]').forEach(function (field) {
+        autoResizeChecklistField(field);
+      });
+    }
+
     list.addEventListener('click', function (e) {
       var delBtn = e.target && e.target.closest ? e.target.closest('[data-qe-check-delete]') : null;
       if (delBtn && list.contains(delBtn)) {
@@ -378,6 +391,7 @@ var QuotationCanvasTools = (function () {
           items.push({ id: nextChecklistId(), text: '', checked: false });
           persist();
           list.innerHTML = items.map(checklistRowHtml).join('');
+          syncChecklistFields();
           var freshInput = list.querySelector('[data-qe-check-text]');
           if (freshInput) {
             requestAnimationFrame(function () {
@@ -408,11 +422,12 @@ var QuotationCanvasTools = (function () {
       if (!item) return;
       item.text = input.value;
       persist();
+      autoResizeChecklistField(input);
     });
 
     list.addEventListener('keydown', function (e) {
       var input = e.target && e.target.closest ? e.target.closest('[data-qe-check-text]') : null;
-      if (!input || !list.contains(input) || e.key !== 'Enter') return;
+      if (!input || !list.contains(input) || e.key !== 'Enter' || e.shiftKey) return;
       e.preventDefault();
       var idx = itemIndexById(input.getAttribute('data-qe-check-text'));
       if (idx < 0) idx = items.length - 1;
@@ -428,11 +443,23 @@ var QuotationCanvasTools = (function () {
       else list.appendChild(newRow);
       var nextInput = newRow.querySelector('[data-qe-check-text]');
       if (nextInput) {
+        autoResizeChecklistField(nextInput);
         requestAnimationFrame(function () {
           try { nextInput.focus(); } catch (eF) { /* ignore */ }
         });
       }
     });
+
+    syncChecklistFields();
+    if (typeof ResizeObserver !== 'undefined') {
+      if (list.__qeChecklistRo) {
+        try { list.__qeChecklistRo.disconnect(); } catch (eRo) { /* ignore */ }
+      }
+      list.__qeChecklistRo = new ResizeObserver(function () {
+        syncChecklistFields();
+      });
+      list.__qeChecklistRo.observe(list);
+    }
 
     requestAnimationFrame(function () {
       var inputs = list.querySelectorAll('[data-qe-check-text]');

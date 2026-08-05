@@ -5574,7 +5574,7 @@ body.quotation-canvas-first .builder-workspace,
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
@@ -5585,7 +5585,6 @@ body.quotation-canvas-first .builder-workspace,
 
 .qe-checklist::-webkit-scrollbar {
   width: 5px;
-  height: 5px;
 }
 
 .qe-checklist::-webkit-scrollbar-track {
@@ -5643,16 +5642,22 @@ body.quotation-canvas-first .builder-workspace,
 .qe-checklist__text {
   flex: 1 1 auto;
   min-width: 0;
-  width: 100%;
+  width: 0;
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.52);
+  font-family: inherit;
   font-size: 13px;
   line-height: 1.35;
   padding: 1px 0;
+  margin: 0;
   outline: none;
+  resize: none;
+  overflow: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
+  white-space: pre-wrap;
+  field-sizing: content;
 }
 
 .qe-checklist__text::placeholder {
@@ -5670,8 +5675,9 @@ body.quotation-canvas-first .builder-workspace,
   flex: 0 0 18px;
   width: 18px;
   height: 18px;
-  margin: 0 -2px 0 auto;
+  margin: 1px 0 0 auto;
   padding: 0;
+  align-self: flex-start;
   border: 0;
   border-radius: 4px;
   background: transparent;
