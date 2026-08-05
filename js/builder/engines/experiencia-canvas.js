@@ -7532,6 +7532,15 @@ var ExperienciaCanvas = (function () {
       return { cx: m.gx, cy: m.gy, w: m.gw, h: m.gh, rot: m.grot || 0, type: t };
     }
 
+    /** Proportional group scale: content-box kinds + explicit shapeContentBox use w/h only. */
+    function multiSelectMemberUsesContentBox(s, kind) {
+      if (!s) return false;
+      if (s.shapeContentBox) return true;
+      return !!(typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.shapeUsesContentBoxPaint &&
+        ExperienciaEngine.shapeUsesContentBoxPaint(kind));
+    }
+
     function snapshotMultiSelectMembers(sceneId, ids, layerW, layerH) {
       var out = {};
       (ids || []).forEach(function (id) {
@@ -7672,21 +7681,14 @@ var ExperienciaCanvas = (function () {
         var vmBefore = (opts.commit && multiScaleTraceEnabled())
           ? getOverlayItemVm(sceneId, mid) : null;
         if (isShapeType(t)) {
-          /* Gizmo-space commit — same contract as paintMultiSelectLiveFast (not tile center). */
+          /* Gizmo-space — stretch preserved from drag snapshot (never * sx). */
           patch.x = ncx;
           patch.y = ncy;
           patch.width = nw;
           patch.height = nh;
-          patch.shapeContentBox = true;
-          if (s.shapeContentBox) {
-            if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
-            if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
-          } else {
-            var rawStretchX = (s.stretchX != null ? Number(s.stretchX) : 1) * sx;
-            var rawStretchY = (s.stretchY != null ? Number(s.stretchY) : 1) * sy;
-            patch.shapeStretchX = Math.max(0.06, Math.min(8, rawStretchX));
-            patch.shapeStretchY = Math.max(0.06, Math.min(8, rawStretchY));
-          }
+          if (multiSelectMemberUsesContentBox(s, t)) patch.shapeContentBox = true;
+          if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
+          if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
         } else if (t === 'BUTTON') {
           patch.x = ncx;
           patch.y = ncy;
@@ -7714,6 +7716,10 @@ var ExperienciaCanvas = (function () {
             afterY: vmAfter ? +Number(vmAfter.y).toFixed(4) : null,
             beforeW: vmBefore && vmBefore.width != null ? +Number(vmBefore.width).toFixed(4) : null,
             afterW: vmAfter && vmAfter.width != null ? +Number(vmAfter.width).toFixed(4) : null,
+            snapStretchX: s.stretchX != null ? +Number(s.stretchX).toFixed(4) : null,
+            snapStretchY: s.stretchY != null ? +Number(s.stretchY).toFixed(4) : null,
+            patchStretchX: patch.shapeStretchX != null ? +Number(patch.shapeStretchX).toFixed(4) : null,
+            patchStretchY: patch.shapeStretchY != null ? +Number(patch.shapeStretchY).toFixed(4) : null,
             patchX: patch.x != null ? +Number(patch.x).toFixed(4) : null,
             patchY: patch.y != null ? +Number(patch.y).toFixed(4) : null,
             shapeContentBox: !!patch.shapeContentBox
@@ -7765,7 +7771,6 @@ var ExperienciaCanvas = (function () {
           if (!s) return;
           var t = String(s.type || 'BUTTON').toUpperCase();
           var sized = scaleMemberLiveBox(s, sx, sy, layerW, layerH);
-          var useContentBox = !!s.shapeContentBox;
           var baseSx = s.stretchX != null ? Number(s.stretchX) : 1;
           var baseSy = s.stretchY != null ? Number(s.stretchY) : 1;
           members[id] = {
@@ -7775,8 +7780,8 @@ var ExperienciaCanvas = (function () {
             h: sized.h,
             rot: Number(s.rotation) || 0,
             kind: t,
-            stretchX: useContentBox ? baseSx : baseSx * sx,
-            stretchY: useContentBox ? baseSy : baseSy * sy
+            stretchX: baseSx,
+            stretchY: baseSy
           };
         });
       }
@@ -7816,8 +7821,8 @@ var ExperienciaCanvas = (function () {
             stroke: item.paint && item.paint.stroke,
             strokeWidth: item.paint && item.paint.strokeWidth,
             borderRadius: item.paint && item.paint.borderRadius,
-            shapeStretchX: b.stretchX != null ? b.stretchX : item.stretchX,
-            shapeStretchY: b.stretchY != null ? b.stretchY : item.stretchY
+            shapeStretchX: item.stretchX,
+            shapeStretchY: item.stretchY
           };
           paintShapeNodeEl(item.el, box, vmPaint, layerW, layerH, { liveSizing: true });
         } else {
@@ -7915,6 +7920,20 @@ var ExperienciaCanvas = (function () {
         (drag.pendingMultiOuter ? drag.pendingMultiOuter.w : 0);
       if (drag.lastMultiLiveKey === liveKey) return;
       drag.lastMultiLiveKey = liveKey;
+      if (multiScaleTraceEnabled()) {
+        var sampleId = drag.memberIds && drag.memberIds[0];
+        if (sampleId && boxes.members[String(sampleId)]) {
+          var sb = boxes.members[String(sampleId)];
+          multiScaleTrace('member.live', {
+            id: String(sampleId),
+            sx: +Number(drag.pendingMultiSx).toFixed(6),
+            w: +Number(sb.w).toFixed(4),
+            h: +Number(sb.h).toFixed(4),
+            stretchX: +Number(sb.stretchX).toFixed(4),
+            stretchY: +Number(sb.stretchY).toFixed(4)
+          });
+        }
+      }
       paintMultiSelectLiveFast(
         drag.liveRefs,
         boxes,

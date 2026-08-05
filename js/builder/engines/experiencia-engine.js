@@ -1852,6 +1852,13 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  /** Proportional group scale: content-box kinds + explicit shapeContentBox use w/h only. */
+  function overlayMemberScaleUsesContentBox(sw, kind) {
+    if (!sw) return false;
+    if (sw.shapeContentBox) return true;
+    return shapeUsesContentBoxPaint(kind);
+  }
+
   /** Proportional world-space scale for one grouped member (matches multi-select contract). */
   function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH) {
     if (!g || !child || !sw) return;
@@ -1881,22 +1888,15 @@ var ExperienciaEngine = (function () {
       var st = shapeStretchFromIx(child);
       var snapSx = sw.stretchX != null ? Number(sw.stretchX) : st.sx;
       var snapSy = sw.stretchY != null ? Number(sw.stretchY) : st.sy;
-      var useContentBox = !!(sw.shapeContentBox || child.shapeContentBox);
       var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
       child.localX = locBox.x;
       child.localY = locBox.y;
       child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
       child.width = nw;
       child.height = nh;
-      child.shapeContentBox = true;
-      if (useContentBox) {
-        child.shapeStretchX = snapSx;
-        child.shapeStretchY = snapSy;
-      } else {
-        var stClamp = shapeStretchXY({ stretchX: snapSx * sx, stretchY: snapSy * sy });
-        child.shapeStretchX = stClamp.sx;
-        child.shapeStretchY = stClamp.sy;
-      }
+      if (overlayMemberScaleUsesContentBox(sw, ct)) child.shapeContentBox = true;
+      child.shapeStretchX = snapSx;
+      child.shapeStretchY = snapSy;
       return;
     }
 
@@ -2216,7 +2216,7 @@ var ExperienciaEngine = (function () {
         memberPatch.y = ncy;
         memberPatch.width = nwM;
         memberPatch.height = nhM;
-        memberPatch.shapeContentBox = true;
+        if (overlayMemberScaleUsesContentBox(sw, t)) memberPatch.shapeContentBox = true;
         if (sw.stretchX != null) memberPatch.shapeStretchX = sw.stretchX;
         if (sw.stretchY != null) memberPatch.shapeStretchY = sw.stretchY;
       } else if (t === 'TEXT') {
