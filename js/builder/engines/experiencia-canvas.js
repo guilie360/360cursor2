@@ -7653,6 +7653,8 @@ var ExperienciaCanvas = (function () {
         commit: !!opts.commit,
         sxIn: +Number(sx0).toFixed(6),
         sxOut: +Number(sx).toFixed(6),
+        anchorX: +Number(anchorX).toFixed(4),
+        anchorY: +Number(anchorY).toFixed(4),
         members: memberIds.length,
         snapKeys: Object.keys(snap || {}).length
       });
@@ -7667,37 +7669,23 @@ var ExperienciaCanvas = (function () {
         var nh = sized.h;
         var patch = { live: !opts.commit, layerW: layerW, layerH: layerH };
         if (s.rotation != null) patch.rotation = s.rotation;
+        var vmBefore = (opts.commit && multiScaleTraceEnabled())
+          ? getOverlayItemVm(sceneId, mid) : null;
         if (isShapeType(t)) {
+          /* Gizmo-space commit — same contract as paintMultiSelectLiveFast (not tile center). */
+          patch.x = ncx;
+          patch.y = ncy;
+          patch.width = nw;
+          patch.height = nh;
+          patch.shapeContentBox = true;
           if (s.shapeContentBox) {
-            patch.x = ncx;
-            patch.y = ncy;
-            patch.width = nw;
-            patch.height = nh;
-            patch.shapeContentBox = true;
             if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
             if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
-          } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
-              ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
+          } else {
             var rawStretchX = (s.stretchX != null ? Number(s.stretchX) : 1) * sx;
             var rawStretchY = (s.stretchY != null ? Number(s.stretchY) : 1) * sy;
-            var newStretchX = Math.max(0.06, Math.min(8, rawStretchX));
-            var newStretchY = Math.max(0.06, Math.min(8, rawStretchY));
-            var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
-              nw, t, newStretchX, newStretchY
-            );
-            var center = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
-              ncx, ncy, tileW, t, layerW, layerH, newStretchX, newStretchY
-            );
-            patch.x = center.x;
-            patch.y = center.y;
-            patch.width = tileW;
-            patch.shapeStretchX = newStretchX;
-            patch.shapeStretchY = newStretchY;
-          } else {
-            patch.x = ncx;
-            patch.y = ncy;
-            patch.width = nw;
-            patch.height = nh;
+            patch.shapeStretchX = Math.max(0.06, Math.min(8, rawStretchX));
+            patch.shapeStretchY = Math.max(0.06, Math.min(8, rawStretchY));
           }
         } else if (t === 'BUTTON') {
           patch.x = ncx;
@@ -7711,6 +7699,26 @@ var ExperienciaCanvas = (function () {
           patch.fontSize = Math.max(8, Math.round((Number(s.fontSize) || 28) * fsScale));
         }
         ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
+        if (vmBefore && multiScaleTraceEnabled()) {
+          var vmAfter = getOverlayItemVm(sceneId, mid);
+          multiScaleTrace('member.commit', {
+            id: String(mid),
+            type: t,
+            snapCx: +Number(s.cx).toFixed(4),
+            snapCy: +Number(s.cy).toFixed(4),
+            ncx: +Number(ncx).toFixed(4),
+            ncy: +Number(ncy).toFixed(4),
+            beforeX: vmBefore ? +Number(vmBefore.x).toFixed(4) : null,
+            beforeY: vmBefore ? +Number(vmBefore.y).toFixed(4) : null,
+            afterX: vmAfter ? +Number(vmAfter.x).toFixed(4) : null,
+            afterY: vmAfter ? +Number(vmAfter.y).toFixed(4) : null,
+            beforeW: vmBefore && vmBefore.width != null ? +Number(vmBefore.width).toFixed(4) : null,
+            afterW: vmAfter && vmAfter.width != null ? +Number(vmAfter.width).toFixed(4) : null,
+            patchX: patch.x != null ? +Number(patch.x).toFixed(4) : null,
+            patchY: patch.y != null ? +Number(patch.y).toFixed(4) : null,
+            shapeContentBox: !!patch.shapeContentBox
+          });
+        }
       });
     }
 

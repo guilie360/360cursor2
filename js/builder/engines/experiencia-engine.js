@@ -1882,36 +1882,20 @@ var ExperienciaEngine = (function () {
       var snapSx = sw.stretchX != null ? Number(sw.stretchX) : st.sx;
       var snapSy = sw.stretchY != null ? Number(sw.stretchY) : st.sy;
       var useContentBox = !!(sw.shapeContentBox || child.shapeContentBox);
+      var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
+      child.localX = locBox.x;
+      child.localY = locBox.y;
+      child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+      child.width = nw;
+      child.height = nh;
+      child.shapeContentBox = true;
       if (useContentBox) {
-        var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
-        child.localX = locBox.x;
-        child.localY = locBox.y;
-        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-        child.width = nw;
-        child.height = nh;
-        child.shapeContentBox = true;
         child.shapeStretchX = snapSx;
         child.shapeStretchY = snapSy;
       } else {
-        var newStretchX = snapSx * sx;
-        var newStretchY = snapSy * sy;
-        var stClamp = shapeStretchXY({ stretchX: newStretchX, stretchY: newStretchY });
-        newStretchX = stClamp.sx;
-        newStretchY = stClamp.sy;
-        var tileW = sceneShapeTileWidthFromContentWidth(nw, ct, newStretchX, newStretchY);
-        if (!isFinite(tileW) || tileW <= 0) {
-          tileW = Math.max((OVERLAY_MEMBER_MIN_PX / layerW) * 100, nw);
-        }
-        var center = sceneShapeTileCenterFromGizmoCenter(
-          ncx, ncy, tileW, ct, layerW, layerH, newStretchX, newStretchY
-        );
-        var locTile = worldPointToLocal(g, center.x, center.y, layerW, layerH);
-        child.localX = locTile.x;
-        child.localY = locTile.y;
-        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-        child.width = tileW;
-        child.shapeStretchX = newStretchX;
-        child.shapeStretchY = newStretchY;
+        var stClamp = shapeStretchXY({ stretchX: snapSx * sx, stretchY: snapSy * sy });
+        child.shapeStretchX = stClamp.sx;
+        child.shapeStretchY = stClamp.sy;
       }
       return;
     }
