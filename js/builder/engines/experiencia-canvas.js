@@ -7653,6 +7653,8 @@ var ExperienciaCanvas = (function () {
         commit: !!opts.commit,
         sxIn: +Number(sx0).toFixed(6),
         sxOut: +Number(sx).toFixed(6),
+        syOut: +Number(sy).toFixed(6),
+        sxSyMatch: Math.abs(Number(sx) - Number(sy)) < 1e-9,
         anchorX: +Number(anchorX).toFixed(4),
         anchorY: +Number(anchorY).toFixed(4),
         members: memberIds.length,
@@ -7694,19 +7696,39 @@ var ExperienciaCanvas = (function () {
         ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
         if (vmBefore && multiScaleTraceEnabled()) {
           var vmAfter = getOverlayItemVm(sceneId, mid);
+          var snapW = Number(s.w) || 0;
+          var snapH = Number(s.h) || 0;
+          var scaleWx = snapW > 0 ? nw / snapW : null;
+          var scaleHy = snapH > 0 ? nh / snapH : null;
           multiScaleTrace('member.commit', {
             id: String(mid),
             type: t,
+            sx: +Number(sx).toFixed(6),
+            sy: +Number(sy).toFixed(6),
             snapCx: +Number(s.cx).toFixed(4),
             snapCy: +Number(s.cy).toFixed(4),
+            snapW: snapW > 0 ? +snapW.toFixed(4) : null,
+            snapH: snapH > 0 ? +snapH.toFixed(4) : null,
             ncx: +Number(ncx).toFixed(4),
             ncy: +Number(ncy).toFixed(4),
+            patchW: +Number(nw).toFixed(4),
+            patchH: +Number(nh).toFixed(4),
+            scaleWx: scaleWx != null ? +scaleWx.toFixed(6) : null,
+            scaleHy: scaleHy != null ? +scaleHy.toFixed(6) : null,
+            scaleWxHyDelta: (scaleWx != null && scaleHy != null)
+              ? +Math.abs(scaleWx - scaleHy).toFixed(6) : null,
             beforeX: vmBefore ? +Number(vmBefore.x).toFixed(4) : null,
             beforeY: vmBefore ? +Number(vmBefore.y).toFixed(4) : null,
             afterX: vmAfter ? +Number(vmAfter.x).toFixed(4) : null,
             afterY: vmAfter ? +Number(vmAfter.y).toFixed(4) : null,
             beforeW: vmBefore && vmBefore.width != null ? +Number(vmBefore.width).toFixed(4) : null,
+            beforeH: vmBefore && vmBefore.height != null ? +Number(vmBefore.height).toFixed(4) : null,
             afterW: vmAfter && vmAfter.width != null ? +Number(vmAfter.width).toFixed(4) : null,
+            afterH: vmAfter && vmAfter.height != null ? +Number(vmAfter.height).toFixed(4) : null,
+            patchRoundWDelta: (patch.width != null && vmAfter && vmAfter.width != null)
+              ? +Math.abs(Number(patch.width) - Number(vmAfter.width)).toFixed(4) : null,
+            patchRoundHDelta: (patch.height != null && vmAfter && vmAfter.height != null)
+              ? +Math.abs(Number(patch.height) - Number(vmAfter.height)).toFixed(4) : null,
             snapStretchX: s.stretchX != null ? +Number(s.stretchX).toFixed(4) : null,
             snapStretchY: s.stretchY != null ? +Number(s.stretchY).toFixed(4) : null,
             patchStretchX: patch.shapeStretchX != null ? +Number(patch.shapeStretchX).toFixed(4) : null,
