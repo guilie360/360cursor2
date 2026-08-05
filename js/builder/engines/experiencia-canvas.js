@@ -6270,7 +6270,7 @@ var ExperienciaCanvas = (function () {
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
             (b.locked ? ' is-locked' : '') +
-            (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
+            overlayPendingMoveClass('TEXT', b.id) +
             (isBold ? ' is-text-bold' : '') + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
             ' data-exp-stage-text="1"' +
@@ -6293,7 +6293,7 @@ var ExperienciaCanvas = (function () {
             (selSet[String(b.id)] ? ' is-selected' : '') +
             (b.visible === false ? ' is-invisible' : '') +
             (b.locked ? ' is-locked' : '') +
-            (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') + '"' +
+            overlayPendingMoveClass(t, b.id) + '"' +
             ' data-exp-stage-btn="' + esc(b.id) + '"' +
             (b.locked ? ' data-locked="1"' : '') +
             ' aria-label="' + esc(b.label || t) + '"' +
@@ -6345,7 +6345,7 @@ var ExperienciaCanvas = (function () {
           (selSet[String(b.id)] ? ' is-selected' : '') +
           (b.visible === false ? ' is-invisible' : '') +
           (b.locked ? ' is-locked' : '') +
-          (pendingMoveIds[String(b.id)] ? ' is-pending-move' : '') +
+          overlayPendingMoveClass('BUTTON', b.id) +
           (hoverOn ? ' is-hover-on' : ' is-hover-off') +
           (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null
             ? ' has-local-look' : '') + '"' +
@@ -8707,6 +8707,13 @@ var ExperienciaCanvas = (function () {
       pendingMoveIds[String(buttonId)] = true;
     }
 
+    /** Pending-move chrome (red frame) — buttons only; shapes/text paste clean. */
+    function overlayPendingMoveClass(type, id) {
+      if (!id || !pendingMoveIds[String(id)]) return '';
+      var t = String(type || 'BUTTON').toUpperCase();
+      return t === 'BUTTON' ? ' is-pending-move' : '';
+    }
+
     function copySelectedButtons() {
       if (!overlaysEditable()) return false;
       var sceneId = canvas().selectedId;
@@ -8788,7 +8795,9 @@ var ExperienciaCanvas = (function () {
         var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, snap);
         if (copy && copy.id) {
           pastedIds.push(String(copy.id));
-          markPendingMove(copy.id);
+          if (String(snap.type || 'BUTTON').toUpperCase() === 'BUTTON') {
+            markPendingMove(copy.id);
+          }
         }
       });
       if (!pastedIds.length) return false;
