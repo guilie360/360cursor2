@@ -128,6 +128,94 @@ var QuotationWindowManager = (function () {
     }
   }
 
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (eMotion) {
+      return false;
+    }
+  }
+
+  function getToolsIconRect() {
+    var btn = document.getElementById('builderToolsMenuBtn');
+    if (!btn || btn.offsetParent === null) return null;
+    return btn.getBoundingClientRect();
+  }
+
+  function pulseToolsIcon() {
+    if (typeof BoxiesShell !== 'undefined' && typeof BoxiesShell.pulseToolsIcon === 'function') {
+      try { BoxiesShell.pulseToolsIcon(); } catch (ePulse) { /* ignore */ }
+    }
+  }
+
+  function playMinimizeAbsorb(win, done) {
+    var el = win && win.el;
+    var finish = typeof done === 'function' ? done : function () {};
+    if (!el || prefersReducedMotion()) {
+      finish();
+      return;
+    }
+    var from = el.getBoundingClientRect();
+    var target = getToolsIconRect();
+    if (!target || from.width < 8 || from.height < 8) {
+      finish();
+      return;
+    }
+
+    var fromCx = from.left + from.width * 0.5;
+    var fromCy = from.top + from.height * 0.5;
+    var targetCx = target.left + target.width * 0.5;
+    var targetCy = target.top + target.height * 0.5;
+    var tx = targetCx - fromCx;
+    var ty = targetCy - fromCy;
+    var scale = Math.max(0.05, Math.min(
+      (target.width * 0.85) / from.width,
+      (target.height * 0.85) / from.height
+    ));
+
+    el.classList.add('is-minimizing');
+    el.style.transformOrigin = 'center center';
+    el.style.willChange = 'transform, opacity';
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        el.style.transform =
+          'translate3d(' + tx + 'px, ' + ty + 'px, 0) scale(' + scale + ')';
+        el.style.opacity = '0';
+      });
+    });
+
+    var finished = false;
+    function cleanup() {
+      if (finished) return;
+      finished = true;
+      el.removeEventListener('transitionend', onEnd);
+      el.classList.remove('is-minimizing');
+      el.style.transform = '';
+      el.style.opacity = '';
+      el.style.willChange = '';
+      pulseToolsIcon();
+      finish();
+    }
+
+    function onEnd(e) {
+      if (e.target !== el) return;
+      if (e.propertyName !== 'transform' && e.propertyName !== 'opacity') return;
+      cleanup();
+    }
+
+    el.addEventListener('transitionend', onEnd);
+    window.setTimeout(cleanup, 280);
+  }
+
+  function finalizeMinimize(win) {
+    if (!win) return;
+    win.minimizing = false;
+    win.state = 'minimized';
+    setVisible(win, false);
+    notifyChange();
+  }
+
   function bindDrag(win) {
     var head = win.el.querySelector('[data-qe-window-drag]');
     if (!head || head.dataset.qeDragBound) return;
@@ -252,10 +340,11 @@ var QuotationWindowManager = (function () {
   function minimize(id) {
     id = String(id || '');
     var win = windows[id];
-    if (!win || win.state !== 'visible') return;
-    win.state = 'minimized';
-    setVisible(win, false);
-    notifyChange();
+    if (!win || win.state !== 'visible' || win.minimizing) return;
+    win.minimizing = true;
+    playMinimizeAbsorb(win, function () {
+      finalizeMinimize(win);
+    });
   }
 
   function restore(id) {

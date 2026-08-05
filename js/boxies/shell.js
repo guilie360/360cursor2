@@ -222,6 +222,17 @@ var BoxiesShell = (function () {
     });
   }
 
+  function pulseToolsIcon() {
+    var btn = document.getElementById('builderToolsMenuBtn');
+    if (!btn) return;
+    btn.classList.remove('is-absorbing');
+    void btn.offsetWidth;
+    btn.classList.add('is-absorbing');
+    window.setTimeout(function () {
+      btn.classList.remove('is-absorbing');
+    }, 340);
+  }
+
   function bindToolsMenu() {
     var btn = document.getElementById('builderToolsMenuBtn');
     var panel = document.getElementById('builderToolsMenuPanel');
@@ -706,6 +717,7 @@ var BoxiesShell = (function () {
     openPageForInspect: openPageForInspect,
     isNativeContextMenuZone: isNativeContextMenuZone,
     syncToolsMenu: syncToolsMenu,
-    closeToolsMenu: closeToolsMenu
+    closeToolsMenu: closeToolsMenu,
+    pulseToolsIcon: pulseToolsIcon
   };
 })();
