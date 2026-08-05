@@ -3953,6 +3953,20 @@ var QuotationEditor = (function () {
         '<path d="M5.2 5l.6 7.2h4.4L10.8 5"/>' +
       '</svg>';
     }
+    if (kind === 'animate') {
+      return '<svg' + common + '>' +
+        '<path d="M4.2 4.5v7l5.8-3.5-5.8-3.5z"/>' +
+        '<path d="M12.2 5.2v5.6"/>' +
+        '<path d="M14.6 7v2"/>' +
+      '</svg>';
+    }
+    if (kind === 'interact') {
+      return '<svg' + common + '>' +
+        '<path d="M4.2 4.2 7.6 11.6 6.1 10.1 4.2 13.1 4.2 4.2z"/>' +
+        '<circle cx="12.4" cy="10.8" r="2.1"/>' +
+        '<path d="M14 9.2l1.6-1.6"/>' +
+      '</svg>';
+    }
     return '';
   }
 
@@ -3974,6 +3988,8 @@ var QuotationEditor = (function () {
           'Editar',
           ''
         ) +
+        dockSegHtml('data-qe-dock-animate', 'animate', 'Animar') +
+        dockSegHtml('data-qe-dock-interact', 'interact', 'Interactividad') +
         dockSegHtml('data-qe-dock-dup', 'dup', 'Duplicar') +
         dockSegHtml('data-qe-dock-lock', 'lock', 'Bloquear') +
         dockSegHtml('data-qe-dock-front', 'front', 'Traer al frente') +
@@ -7065,6 +7081,22 @@ var QuotationEditor = (function () {
         focusPropsPanel();
       });
     }
+    var animate = editor.querySelector('[data-qe-dock-animate]');
+    if (animate) {
+      animate.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dockSelectionAction('animate');
+      });
+    }
+    var interact = editor.querySelector('[data-qe-dock-interact]');
+    if (interact) {
+      interact.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dockSelectionAction('interactivity');
+      });
+    }
     var dup = editor.querySelector('[data-qe-dock-dup]');
     if (dup) {
       dup.addEventListener('click', function () {
@@ -8612,6 +8644,14 @@ var QuotationEditor = (function () {
     if (!activeScene()) return;
     try {
       console.log('[QuotationEditor] dock tool pending:', kind);
+    } catch (eLog) { /* ignore */ }
+  }
+
+  /** Selection dock — Animar / Interactividad (pending implementation). */
+  function dockSelectionAction(kind) {
+    if (!dockHasSelection()) return;
+    try {
+      console.log('[QuotationEditor] dock selection action pending:', kind);
     } catch (eLog) { /* ignore */ }
   }
 
