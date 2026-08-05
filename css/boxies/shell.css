@@ -295,6 +295,19 @@ body.boxies-shell::after {
   display: none !important;
 }
 
+.boxies-header__tools-btn.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 14px rgba(255, 255, 255, 0.22),
+    0 0 28px rgba(255, 255, 255, 0.1);
+}
+
+.boxies-header__tools-btn.is-active svg {
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
+}
+
 .boxies-header__tools-panel {
   position: absolute;
   top: calc(100% + 8px);

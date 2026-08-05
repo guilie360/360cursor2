@@ -97,11 +97,8 @@ var BoxiesShell = (function () {
           '</div>' +
           brandTitleHtml() +
           '<div class="boxies-header__actions" id="boxiesHeaderActions">' +
-            '<button type="button" class="boxies-header__fs boxies-header__chrome-fold" id="builderChromeFoldBtn" hidden aria-label="Ocultar paneles" data-tooltip="Ocultar paneles" aria-pressed="false">' +
-              iconHtml('panels-top-left') +
-            '</button>' +
             '<div class="boxies-header__tools-wrap" id="builderToolsWrap" hidden>' +
-              '<button type="button" class="boxies-header__fs" id="builderToolsMenuBtn"' +
+              '<button type="button" class="boxies-header__fs boxies-header__tools-btn" id="builderToolsMenuBtn"' +
                 ' aria-label="Herramientas" aria-haspopup="menu" aria-expanded="false"' +
                 ' data-tooltip="Herramientas">' +
                 iconHtml('square-tool') +
@@ -111,6 +108,9 @@ var BoxiesShell = (function () {
                 '<div class="boxies-header__tools-list" id="builderToolsMenuList"></div>' +
               '</div>' +
             '</div>' +
+            '<button type="button" class="boxies-header__fs boxies-header__chrome-fold" id="builderChromeFoldBtn" hidden aria-label="Ocultar paneles" data-tooltip="Ocultar paneles" aria-pressed="false">' +
+              iconHtml('panels-top-left') +
+            '</button>' +
             '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter">' +
               iconHtml('maximize') +
             '</button>' +
@@ -186,13 +186,20 @@ var BoxiesShell = (function () {
     items = items || [];
     var wrap = document.getElementById('builderToolsWrap');
     var list = document.getElementById('builderToolsMenuList');
+    var btn = document.getElementById('builderToolsMenuBtn');
     if (!wrap || !list) return;
     var show = items.length > 0;
     wrap.hidden = !show;
     if (!show) {
       closeToolsMenu();
       list.innerHTML = '';
+      if (btn) btn.classList.remove('is-active');
       return;
+    }
+    var hasVisible = items.some(function (item) { return item.state === 'visible'; });
+    if (btn) {
+      btn.classList.toggle('is-active', hasVisible);
+      btn.setAttribute('aria-pressed', hasVisible ? 'true' : 'false');
     }
     list.innerHTML = items.map(function (item) {
       var mark = item.state === 'visible' ? '\u2713 ' : '';
