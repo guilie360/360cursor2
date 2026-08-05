@@ -1765,13 +1765,68 @@ var ExperienciaEngine = (function () {
     }, 1, 1, cx, cy, layerW, layerH);
   }
 
-  /** Proportional w/h from snapshot — linear only (group scale must round-trip). */
-  function overlayMemberScaledSize(sw, sx, sy) {
+  /** Minimum member size during group/multi proportional scale (~6px). */
+  var OVERLAY_MEMBER_MIN_PX = 6;
+
+  /** Proportional w/h from snapshot — linear; NaN-safe. */
+  function overlayMemberScaledSize(sw, sx, sy, layerW, layerH) {
     sx = Number(sx) || 1;
     sy = Number(sy) || 1;
+    if (!isFinite(sx)) sx = 1;
+    if (!isFinite(sy)) sy = 1;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var minWPct = (OVERLAY_MEMBER_MIN_PX / layerW) * 100;
+    var minHPct = (OVERLAY_MEMBER_MIN_PX / layerH) * 100;
+    var w = (Number(sw.w) || 0.5) * sx;
+    var h = (Number(sw.h) || 0.5) * sy;
+    if (!isFinite(w) || w <= 0) w = minWPct;
+    if (!isFinite(h) || h <= 0) h = minHPct;
+    return { w: w, h: h };
+  }
+
+  function overlayGroupScaleFloor(snap, sx, sy, layerW, layerH, minPx) {
+    minPx = Math.max(3, Number(minPx) || OVERLAY_MEMBER_MIN_PX);
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var minPctW = (minPx / layerW) * 100;
+    var minPctH = (minPx / layerH) * 100;
+    var stretchMin = 0.06;
+    var floorSx = 0;
+    var floorSy = 0;
+    Object.keys(snap || {}).forEach(function (id) {
+      var s = snap[id];
+      if (!s) return;
+      var mw = Math.max(1e-6, Number(s.w) || 0.5);
+      var mh = Math.max(1e-6, Number(s.h) || 0.5);
+      floorSx = Math.max(floorSx, minPctW / mw);
+      floorSy = Math.max(floorSy, minPctH / mh);
+      var stx = s.stretchX != null ? Math.abs(Number(s.stretchX)) : 1;
+      var sty = s.stretchY != null ? Math.abs(Number(s.stretchY)) : 1;
+      if (stx > 1e-6) floorSx = Math.max(floorSx, stretchMin / stx);
+      if (sty > 1e-6) floorSy = Math.max(floorSy, stretchMin / sty);
+    });
+    var csx = Number(sx);
+    var csy = Number(sy);
+    if (!isFinite(csx)) csx = 1;
+    if (!isFinite(csy)) csy = 1;
+    var signX = csx < 0 ? -1 : 1;
+    var signY = csy < 0 ? -1 : 1;
+    csx = signX * Math.max(Math.abs(csx), floorSx);
+    csy = signY * Math.max(Math.abs(csy), floorSy);
+    return { sx: csx, sy: csy };
+  }
+
+  function overlayGroupOuterFromScale(anchorX, anchorY, startCx, startCy, startW, startH, sx, sy) {
+    sx = Number(sx) || 1;
+    sy = Number(sy) || 1;
+    startW = Number(startW) || 20;
+    startH = Number(startH) || 20;
     return {
-      w: (Number(sw.w) || 0.5) * sx,
-      h: (Number(sw.h) || 0.5) * sy
+      cx: Number(anchorX) + ((Number(startCx) || 50) - Number(anchorX)) * sx,
+      cy: Number(anchorY) + ((Number(startCy) || 50) - Number(anchorY)) * sy,
+      w: startW * sx,
+      h: startH * sy
     };
   }
 
@@ -1782,7 +1837,7 @@ var ExperienciaEngine = (function () {
     layerH = Math.max(1, Number(layerH) || 1000);
     var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
     var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
-    var sized = overlayMemberScaledSize(sw, sx, sy);
+    var sized = overlayMemberScaledSize(sw, sx, sy, layerW, layerH);
     var nw = sized.w;
     var nh = sized.h;
     var rot = sw.rotation;
@@ -1818,7 +1873,13 @@ var ExperienciaEngine = (function () {
       } else {
         var newStretchX = snapSx * sx;
         var newStretchY = snapSy * sy;
+        var stClamp = shapeStretchXY({ stretchX: newStretchX, stretchY: newStretchY });
+        newStretchX = stClamp.sx;
+        newStretchY = stClamp.sy;
         var tileW = sceneShapeTileWidthFromContentWidth(nw, ct, newStretchX, newStretchY);
+        if (!isFinite(tileW) || tileW <= 0) {
+          tileW = Math.max((OVERLAY_MEMBER_MIN_PX / layerW) * 100, nw);
+        }
         var center = sceneShapeTileCenterFromGizmoCenter(
           ncx, ncy, tileW, ct, layerW, layerH, newStretchX, newStretchY
         );
@@ -1889,6 +1950,18 @@ var ExperienciaEngine = (function () {
         if (useWorldScale) {
           var ax = Number(patch.anchorX);
           var ay = Number(patch.anchorY);
+          var floored = overlayGroupScaleFloor(worldSnap, sx, sy, layerW, layerH);
+          sx = floored.sx;
+          sy = floored.sy;
+          if (patch.keepRatio) {
+            var uniF = Math.max(Math.abs(sx), Math.abs(sy));
+            sx = uniF;
+            sy = uniF;
+            newW = baseW * sx;
+            newH = baseH * sy;
+            g.width = newW;
+            g.height = newH;
+          }
           resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (mid) {
             var c = getInteraction(n, mid);
             var sw = worldSnap[String(mid)];
@@ -2117,7 +2190,7 @@ var ExperienciaEngine = (function () {
       if (!ix || !sw || !isSceneFreeOverlayInteraction(ix)) return;
       var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
       var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
-      var sized = overlayMemberScaledSize(sw, sx, sy);
+      var sized = overlayMemberScaledSize(sw, sx, sy, layerW, layerH);
       var nwM = sized.w;
       var nhM = sized.h;
       var t = String(sw.type || ix.type || 'BUTTON').toUpperCase();
@@ -8205,6 +8278,9 @@ var ExperienciaEngine = (function () {
     shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
     overlayMemberScaledSize: overlayMemberScaledSize,
+    overlayGroupScaleFloor: overlayGroupScaleFloor,
+    overlayGroupOuterFromScale: overlayGroupOuterFromScale,
+    OVERLAY_MEMBER_MIN_PX: OVERLAY_MEMBER_MIN_PX,
     shapeUsesContentBoxPaint: shapeUsesContentBoxPaint,
     shapeUsesFixedCornerContentPaint: shapeUsesFixedCornerContentPaint,
     shapeContentBoxViewBoxNorm: shapeContentBoxViewBoxNorm,

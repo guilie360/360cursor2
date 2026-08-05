@@ -7528,9 +7528,9 @@ var ExperienciaCanvas = (function () {
       return out;
     }
 
-    function scaleMemberLiveBox(s, sx, sy) {
+    function scaleMemberLiveBox(s, sx, sy, layerW, layerH) {
       if (ExperienciaEngine.overlayMemberScaledSize) {
-        return ExperienciaEngine.overlayMemberScaledSize(s, sx, sy);
+        return ExperienciaEngine.overlayMemberScaledSize(s, sx, sy, layerW, layerH);
       }
       return {
         w: (Number(s.w) || 0.5) * sx,
@@ -7538,17 +7538,69 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function clampMultiResizeScale(drag, sx, sy, layerW, layerH) {
+      if (!drag || !drag.memberWorldSnapshots || !ExperienciaEngine.overlayGroupScaleFloor) {
+        return { sx: sx, sy: sy };
+      }
+      var fl = ExperienciaEngine.overlayGroupScaleFloor(
+        drag.memberWorldSnapshots, sx, sy, layerW, layerH
+      );
+      sx = fl.sx;
+      sy = fl.sy;
+      if (drag.keepRatio) {
+        var uni = Math.max(Math.abs(sx), Math.abs(sy));
+        sx = uni;
+        sy = uni;
+      }
+      return { sx: sx, sy: sy };
+    }
+
+    function multiResizeOuterFromScale(drag, sx, sy) {
+      var anchor = groupResizeAnchorPct(
+        drag.mode,
+        drag.startL,
+        drag.startR,
+        drag.startT,
+        drag.startB,
+        drag.startX,
+        drag.startY
+      );
+      if (ExperienciaEngine.overlayGroupOuterFromScale) {
+        return ExperienciaEngine.overlayGroupOuterFromScale(
+          anchor.x,
+          anchor.y,
+          drag.startX,
+          drag.startY,
+          Number(drag.startW) || 20,
+          Number(drag.startH) || 20,
+          sx,
+          sy
+        );
+      }
+      return {
+        cx: drag.startX,
+        cy: drag.startY,
+        w: (Number(drag.startW) || 20) * sx,
+        h: (Number(drag.startH) || 20) * sy
+      };
+    }
+
     function applyMultiSelectScale(sceneId, memberIds, snap, sx, sy, anchorX, anchorY, layerW, layerH) {
       if (!sceneId || !memberIds || !memberIds.length || !snap) return;
       layerW = Math.max(1, Number(layerW) || 1000);
       layerH = Math.max(1, Number(layerH) || 1000);
+      if (ExperienciaEngine.overlayGroupScaleFloor) {
+        var fl0 = ExperienciaEngine.overlayGroupScaleFloor(snap, sx, sy, layerW, layerH);
+        sx = fl0.sx;
+        sy = fl0.sy;
+      }
       memberIds.forEach(function (mid) {
         var s = snap[String(mid)];
         if (!s) return;
         var t = String(s.type || 'BUTTON').toUpperCase();
         var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * sx;
         var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * sy;
-        var sized = scaleMemberLiveBox(s, sx, sy);
+        var sized = scaleMemberLiveBox(s, sx, sy, layerW, layerH);
         var nw = sized.w;
         var nh = sized.h;
         var patch = { live: true, layerW: layerW, layerH: layerH };
@@ -7564,8 +7616,10 @@ var ExperienciaCanvas = (function () {
             if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
           } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
               ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
-            var newStretchX = (s.stretchX != null ? Number(s.stretchX) : 1) * sx;
-            var newStretchY = (s.stretchY != null ? Number(s.stretchY) : 1) * sy;
+            var rawStretchX = (s.stretchX != null ? Number(s.stretchX) : 1) * sx;
+            var rawStretchY = (s.stretchY != null ? Number(s.stretchY) : 1) * sy;
+            var newStretchX = Math.max(0.06, Math.min(8, rawStretchX));
+            var newStretchY = Math.max(0.06, Math.min(8, rawStretchY));
             var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
               nw, t, newStretchX, newStretchY
             );
@@ -7640,7 +7694,7 @@ var ExperienciaCanvas = (function () {
           var s = snap[id];
           if (!s) return;
           var t = String(s.type || 'BUTTON').toUpperCase();
-          var sized = scaleMemberLiveBox(s, sx, sy);
+          var sized = scaleMemberLiveBox(s, sx, sy, layerW, layerH);
           var useContentBox = !!s.shapeContentBox;
           var baseSx = s.stretchX != null ? Number(s.stretchX) : 1;
           var baseSy = s.stretchY != null ? Number(s.stretchY) : 1;
@@ -9800,10 +9854,14 @@ var ExperienciaCanvas = (function () {
                 sxG = uniG;
                 syG = uniG;
               }
+              var clampedG = clampMultiResizeScale(transformDrag, sxG, syG, layerW, layerH);
+              sxG = clampedG.sx;
+              syG = clampedG.sy;
+              var outerG = multiResizeOuterFromScale(transformDrag, sxG, syG);
               transformDrag.pendingMultiSx = sxG;
               transformDrag.pendingMultiSy = syG;
               transformDrag.pendingMultiAnchor = anchorG;
-              transformDrag.pendingMultiOuter = { cx: nx, cy: ny, w: nw, h: nh };
+              transformDrag.pendingMultiOuter = outerG;
               transformDrag.lastDxPx = dxPx;
               transformDrag.lastDyPx = dyPx;
               scheduleMultiSelectResizeFrame(transformDrag);
@@ -9832,10 +9890,14 @@ var ExperienciaCanvas = (function () {
                 sxMulti = uniMulti;
                 syMulti = uniMulti;
               }
+              var clampedM = clampMultiResizeScale(transformDrag, sxMulti, syMulti, layerW, layerH);
+              sxMulti = clampedM.sx;
+              syMulti = clampedM.sy;
+              var outerM = multiResizeOuterFromScale(transformDrag, sxMulti, syMulti);
               transformDrag.pendingMultiSx = sxMulti;
               transformDrag.pendingMultiSy = syMulti;
               transformDrag.pendingMultiAnchor = anchorMulti;
-              transformDrag.pendingMultiOuter = { cx: nx, cy: ny, w: nw, h: nh };
+              transformDrag.pendingMultiOuter = outerM;
               transformDrag.lastDxPx = dxPx;
               transformDrag.lastDyPx = dyPx;
               scheduleMultiSelectResizeFrame(transformDrag);
@@ -10686,7 +10748,14 @@ var ExperienciaCanvas = (function () {
                     endedDrag.memberWorldSnapshots &&
                     ExperienciaEngine.updateOverlayGroupTransform) {
                   var anchorFinG = endedDrag.pendingMultiAnchor || { x: 0, y: 0 };
-                  var outerFinG = endedDrag.pendingMultiOuter || {};
+                  var sxFinG = endedDrag.pendingMultiSx;
+                  var syFinG = endedDrag.pendingMultiSy;
+                  var clampedFinG = clampMultiResizeScale(
+                    endedDrag, sxFinG, syFinG, endedDrag.layerW, endedDrag.layerH
+                  );
+                  sxFinG = clampedFinG.sx;
+                  syFinG = clampedFinG.sy;
+                  var outerFinG = multiResizeOuterFromScale(endedDrag, sxFinG, syFinG);
                   ExperienciaEngine.updateOverlayGroupTransform(
                     state, endScene, rotBtnId,
                     {
@@ -10694,8 +10763,8 @@ var ExperienciaCanvas = (function () {
                       y: outerFinG.cy != null ? outerFinG.cy : endedDrag.startY,
                       width: outerFinG.w != null ? outerFinG.w : endedDrag.startW,
                       height: outerFinG.h != null ? outerFinG.h : endedDrag.startH,
-                      scaleX: endedDrag.pendingMultiSx,
-                      scaleY: endedDrag.pendingMultiSy,
+                      scaleX: sxFinG,
+                      scaleY: syFinG,
                       keepRatio: endedDrag.keepRatio,
                       layerW: endedDrag.layerW,
                       layerH: endedDrag.layerH,
@@ -10715,12 +10784,17 @@ var ExperienciaCanvas = (function () {
                 if (movedT && endedDrag.pendingMultiSx != null &&
                     endedDrag.memberIds && endedDrag.memberWorldSnapshots) {
                   var anchorFin = endedDrag.pendingMultiAnchor || { x: 0, y: 0 };
+                  var sxFinM = endedDrag.pendingMultiSx;
+                  var syFinM = endedDrag.pendingMultiSy;
+                  var clampedFinM = clampMultiResizeScale(
+                    endedDrag, sxFinM, syFinM, endedDrag.layerW, endedDrag.layerH
+                  );
                   applyMultiSelectScale(
                     endScene,
                     endedDrag.memberIds,
                     endedDrag.memberWorldSnapshots,
-                    endedDrag.pendingMultiSx,
-                    endedDrag.pendingMultiSy,
+                    clampedFinM.sx,
+                    clampedFinM.sy,
                     anchorFin.x,
                     anchorFin.y,
                     endedDrag.layerW,
