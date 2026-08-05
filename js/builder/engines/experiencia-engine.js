@@ -1792,22 +1792,40 @@ var ExperienciaEngine = (function () {
     return shapeUsesContentBoxPaint(kind);
   }
 
+  function overlayMemberMinPct(layerW, layerH) {
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    return {
+      w: (OVERLAY_MEMBER_MIN_PX / layerW) * 100,
+      h: (OVERLAY_MEMBER_MIN_PX / layerH) * 100
+    };
+  }
+
   function overlayMemberCoupledCommitDims(nw, nh, snapW, snapH, kind, layerW, layerH) {
     nw = Number(nw);
     nh = Number(nh);
+    kind = String(kind || '').toUpperCase();
     if (!overlayMemberNeedsCoupledRound(kind) || !isFinite(nw) || !isFinite(nh)) {
       return { w: nw, h: nh, coupled: false };
     }
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
+    var minPct = overlayMemberMinPct(layerW, layerH);
     var snapWn = Number(snapW);
     var snapHn = Number(snapH);
-    var ratio = (snapWn > 0 && snapHn > 0 && isFinite(snapHn / snapWn))
-      ? snapHn / snapWn
-      : layerW / layerH;
-    var rw = Math.max(1, Math.min(100, Math.round(nw * 10) / 10));
-    var minH = kind === 'SHAPE_LINE' ? 0.5 : 1;
-    var rh = Math.max(minH, Math.min(100, Math.round(rw * ratio * 10) / 10));
+    var isPixelSquare = kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
+    var ratio = isPixelSquare
+      ? layerW / layerH
+      : ((snapWn > 0 && snapHn > 0 && isFinite(snapHn / snapWn))
+        ? snapHn / snapWn
+        : layerW / layerH);
+    /* Round width once; derive height — use pixel min (~6px), not 1% hard floor. */
+    var rw = Math.min(100, Math.round(nw * 10) / 10);
+    var rh = Math.min(100, Math.round(rw * ratio * 10) / 10);
+    var floorH = kind === 'SHAPE_LINE' ? 0.5 : minPct.h;
+    if (rw < minPct.w) rw = Math.round(minPct.w * 10) / 10;
+    rh = Math.min(100, Math.round(rw * ratio * 10) / 10);
+    if (rh < floorH) rh = Math.round(floorH * 10) / 10;
     return { w: rw, h: rh, coupled: true };
   }
 
@@ -3220,11 +3238,15 @@ var ExperienciaEngine = (function () {
     }
 
     if (isSceneShapeType(t)) {
+      var minPctShape = overlayMemberMinPct(
+        patch.layerW || 1000,
+        patch.layerH || 1000
+      );
       if (patch.width != null) {
         var sw = Number(patch.width);
         if (!isNaN(sw)) {
           if (!patch.live && patch.shapeCoupledCommit && patch.height != null) {
-            ix.width = Math.max(1, Math.min(100, sw));
+            ix.width = Math.max(minPctShape.w, Math.min(100, sw));
           } else {
             ix.width = patch.live
               ? Math.max(1, Math.min(100, sw))
@@ -3234,7 +3256,7 @@ var ExperienciaEngine = (function () {
       }
       if (patch.height != null) {
         var sh = Number(patch.height);
-        var minH = t === 'SHAPE_LINE' ? 0.5 : 1;
+        var minH = t === 'SHAPE_LINE' ? 0.5 : minPctShape.h;
         if (!isNaN(sh)) {
           if (!patch.live && patch.shapeCoupledCommit) {
             ix.height = Math.max(minH, Math.min(100, sh));
