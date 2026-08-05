@@ -1785,10 +1785,11 @@ var ExperienciaEngine = (function () {
     return { w: w, h: h };
   }
 
-  /** Circle/donut (pixel-square gizmo): round width, derive height from snap aspect. */
+  /** Shapes whose commit w/h must preserve snap aspect (avoid independent round drift). */
   function overlayMemberNeedsCoupledRound(kind) {
     kind = String(kind || '').toUpperCase();
-    return kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
+    if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') return true;
+    return shapeUsesContentBoxPaint(kind);
   }
 
   function overlayMemberCoupledCommitDims(nw, nh, snapW, snapH, kind, layerW, layerH) {
@@ -1823,14 +1824,17 @@ var ExperienciaEngine = (function () {
     snapKeys.forEach(function (id) {
       var s = snap[id];
       if (!s) return;
+      var kind = String(s.type || 'BUTTON').toUpperCase();
+      var isLine = kind === 'SHAPE_LINE';
       var mw = Math.max(1e-6, Number(s.w) || 0.5);
       var mh = Math.max(1e-6, Number(s.h) || 0.5);
       floorSx = Math.max(floorSx, minPctW / mw);
-      floorSy = Math.max(floorSy, minPctH / mh);
+      /* Line gizmo height is stroke-thin — must not inflate group floorSy / keepRatio. */
+      if (!isLine) floorSy = Math.max(floorSy, minPctH / mh);
       var stx = s.stretchX != null ? Math.abs(Number(s.stretchX)) : 1;
       var sty = s.stretchY != null ? Math.abs(Number(s.stretchY)) : 1;
       if (stx > 1e-6) floorSx = Math.max(floorSx, stretchMin / stx);
-      if (sty > 1e-6) floorSy = Math.max(floorSy, stretchMin / sty);
+      if (!isLine && sty > 1e-6) floorSy = Math.max(floorSy, stretchMin / sty);
     });
     var csx = Number(sx);
     var csy = Number(sy);
@@ -1878,7 +1882,8 @@ var ExperienciaEngine = (function () {
   }
 
   /** Proportional world-space scale for one grouped member (matches multi-select contract). */
-  function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH) {
+  function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH, opts) {
+    opts = opts || {};
     if (!g || !child || !sw) return;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
@@ -1910,9 +1915,14 @@ var ExperienciaEngine = (function () {
       child.localX = locBox.x;
       child.localY = locBox.y;
       child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-      var coupled = overlayMemberCoupledCommitDims(nw, nh, sw.w, sw.h, ct, layerW, layerH);
-      child.width = coupled.w;
-      child.height = coupled.h;
+      if (opts.commit) {
+        var coupledG = overlayMemberCoupledCommitDims(nw, nh, sw.w, sw.h, ct, layerW, layerH);
+        child.width = coupledG.w;
+        child.height = coupledG.h;
+      } else {
+        child.width = nw;
+        child.height = nh;
+      }
       child.shapeContentBox = true;
       child.shapeStretchX = snapSx;
       child.shapeStretchY = snapSy;
@@ -1992,7 +2002,8 @@ var ExperienciaEngine = (function () {
             var sw = worldSnap[String(mid)];
             if (!c || !sw || !isSceneFreeOverlayInteraction(c)) return;
             applyOverlayMemberWorldScale(
-              n, g, c, sw, sx, sy, ax, ay, layerW, layerH
+              n, g, c, sw, sx, sy, ax, ay, layerW, layerH,
+              { commit: !patch.live }
             );
           });
         } else {
