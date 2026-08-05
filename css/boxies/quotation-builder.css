@@ -508,7 +508,8 @@
 .qe-editor.is-backpack-mode .qe-dock,
 .qe-editor.is-backpack-mode [data-qe-dock-bar],
 .qe-editor.is-backpack-mode .qe-guides-chrome,
-.qe-editor.is-backpack-mode .qe-canvas-tools-host {
+.qe-editor.is-backpack-mode .qe-canvas-tools-host,
+.qe-editor.is-backpack-mode .qe-window-stack-host {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -5235,15 +5236,18 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* ── Canvas floating tools (Herramientas submenu) ── */
-.qe-canvas-tools-host {
+.qe-canvas-tools-host,
+.qe-window-stack-host {
   position: fixed;
-  right: max(16px, env(safe-area-inset-right, 0px));
-  bottom: max(72px, calc(var(--boxies-dock-h, 56px) + 12px));
+  inset: 0;
   z-index: 12050;
   pointer-events: none;
 }
 
 .qe-canvas-tool-float {
+  position: fixed;
+  left: 0;
+  top: 0;
   width: min(280px, calc(100vw - 32px));
   pointer-events: auto;
   border-radius: 22px;
@@ -5254,6 +5258,10 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
+.qe-canvas-tool-float.is-minimized {
+  display: none !important;
+}
+
 .qe-canvas-tool-float__head {
   display: flex;
   align-items: center;
@@ -5261,6 +5269,20 @@ body.quotation-canvas-first .builder-workspace,
   gap: 8px;
   padding: 10px 12px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.qe-canvas-tool-float__head.is-dragging {
+  cursor: grabbing;
+}
+
+.qe-canvas-tool-float__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .qe-canvas-tool-float__title {
@@ -5269,8 +5291,13 @@ body.quotation-canvas-first .builder-workspace,
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.72);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.qe-canvas-tool-float__min,
 .qe-canvas-tool-float__close {
   border: 0;
   background: transparent;
@@ -5282,6 +5309,12 @@ body.quotation-canvas-first .builder-workspace,
   cursor: pointer;
 }
 
+.qe-canvas-tool-float__min {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.qe-canvas-tool-float__min:hover,
 .qe-canvas-tool-float__close:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.08);

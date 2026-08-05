@@ -100,6 +100,17 @@ var BoxiesShell = (function () {
             '<button type="button" class="boxies-header__fs boxies-header__chrome-fold" id="builderChromeFoldBtn" hidden aria-label="Ocultar paneles" data-tooltip="Ocultar paneles" aria-pressed="false">' +
               iconHtml('panels-top-left') +
             '</button>' +
+            '<div class="boxies-header__tools-wrap" id="builderToolsWrap" hidden>' +
+              '<button type="button" class="boxies-header__fs" id="builderToolsMenuBtn"' +
+                ' aria-label="Herramientas" aria-haspopup="menu" aria-expanded="false"' +
+                ' data-tooltip="Herramientas">' +
+                iconHtml('square-tool') +
+              '</button>' +
+              '<div class="boxies-header__tools-panel" id="builderToolsMenuPanel" role="menu" hidden>' +
+                '<div class="boxies-header__tools-title">Herramientas</div>' +
+                '<div class="boxies-header__tools-list" id="builderToolsMenuList"></div>' +
+              '</div>' +
+            '</div>' +
             '<button type="button" class="boxies-header__fs" id="builderFullscreenBtn" aria-label="Pantalla completa" data-tooltip="Pantalla completa" data-fullscreen="enter">' +
               iconHtml('maximize') +
             '</button>' +
@@ -160,6 +171,73 @@ var BoxiesShell = (function () {
       });
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeMainMenu();
+      });
+    }
+  }
+
+  function closeToolsMenu() {
+    var btn = document.getElementById('builderToolsMenuBtn');
+    var panel = document.getElementById('builderToolsMenuPanel');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (panel) panel.hidden = true;
+  }
+
+  function syncToolsMenu(items) {
+    items = items || [];
+    var wrap = document.getElementById('builderToolsWrap');
+    var list = document.getElementById('builderToolsMenuList');
+    if (!wrap || !list) return;
+    var show = items.length > 0;
+    wrap.hidden = !show;
+    if (!show) {
+      closeToolsMenu();
+      list.innerHTML = '';
+      return;
+    }
+    list.innerHTML = items.map(function (item) {
+      var mark = item.state === 'visible' ? '\u2713 ' : '';
+      return '<button type="button" class="boxies-workspace-menu__item boxies-header__tools-item"' +
+        ' role="menuitem" data-qe-restore-tool="' + escapeHtml(item.id) + '">' +
+        mark + escapeHtml(item.title) +
+      '</button>';
+    }).join('');
+    list.querySelectorAll('[data-qe-restore-tool]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = btn.getAttribute('data-qe-restore-tool');
+        if (typeof QuotationWindowManager !== 'undefined') {
+          if (QuotationWindowManager.focus) QuotationWindowManager.focus(id);
+          else if (QuotationWindowManager.restore) QuotationWindowManager.restore(id);
+        }
+        closeToolsMenu();
+      });
+    });
+  }
+
+  function bindToolsMenu() {
+    var btn = document.getElementById('builderToolsMenuBtn');
+    var panel = document.getElementById('builderToolsMenuPanel');
+    if (!btn || !panel || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = panel.hidden;
+      closeMainMenu();
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    if (!document.body.dataset.boxiesToolsMenuDismiss) {
+      document.body.dataset.boxiesToolsMenuDismiss = '1';
+      document.addEventListener('click', function (e) {
+        var wrap = document.getElementById('builderToolsWrap');
+        if (!wrap || wrap.hidden) return;
+        if (e.target.closest && e.target.closest('#builderToolsWrap')) return;
+        closeToolsMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeToolsMenu();
       });
     }
   }
@@ -395,6 +473,7 @@ var BoxiesShell = (function () {
     }
 
     bindMainMenu();
+    bindToolsMenu();
     bindFullscreen();
     bindBrowserContextGuard();
   }
@@ -423,6 +502,7 @@ var BoxiesShell = (function () {
     clearPageActions();
     clearProjectContext();
     closeMainMenu();
+    closeToolsMenu();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
     }
@@ -617,6 +697,8 @@ var BoxiesShell = (function () {
     resolveQuotationPreviewUrl: resolveQuotationPreviewUrl,
     openActivePreview: openActivePreview,
     openPageForInspect: openPageForInspect,
-    isNativeContextMenuZone: isNativeContextMenuZone
+    isNativeContextMenuZone: isNativeContextMenuZone,
+    syncToolsMenu: syncToolsMenu,
+    closeToolsMenu: closeToolsMenu
   };
 })();

@@ -1,42 +1,27 @@
 /**
  * QuotationCanvasTools — floating editor utilities (calculator, notes, color picker, pomodoro).
+ * Window chrome + lifecycle: QuotationWindowManager.
  */
 var QuotationCanvasTools = (function () {
-  var HOST_ID = 'qeCanvasToolsHost';
   var NOTES_KEY = 'boxies_qe_canvas_notes_v1';
   var CHECKLIST_KEY = 'boxies_qe_canvas_checklist_v1';
-  var activeTool = null;
   var pomodoroTimer = null;
   var pomodoroLeft = 25 * 60;
 
-  function escapeHtml(v) {
-    return String(v == null ? '' : v)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  function wm() {
+    return typeof QuotationWindowManager !== 'undefined' ? QuotationWindowManager : null;
   }
 
-  function ensureHost() {
-    var host = document.getElementById(HOST_ID);
-    if (!host) {
-      host = document.createElement('div');
-      host.id = HOST_ID;
-      host.className = 'qe-canvas-tools-host';
-      host.setAttribute('aria-live', 'polite');
-      document.body.appendChild(host);
-    }
-    return host;
-  }
-
-  function shellHtml(title, bodyHtml, toolId) {
-    return '' +
-      '<div class="qe-canvas-tool-float" data-qe-canvas-tool="' + escapeHtml(toolId) + '">' +
-        '<div class="qe-canvas-tool-float__head">' +
-          '<span class="qe-canvas-tool-float__title">' + escapeHtml(title) + '</span>' +
-          '<button type="button" class="qe-canvas-tool-float__close" data-qe-canvas-tool-close' +
-            ' aria-label="Cerrar">&times;</button>' +
-        '</div>' +
-        '<div class="qe-canvas-tool-float__body">' + bodyHtml + '</div>' +
-      '</div>';
+  function openWindow(id, title, toolId, mount, onClose) {
+    var mgr = wm();
+    if (!mgr) return null;
+    return mgr.open({
+      id: id,
+      title: title,
+      toolId: toolId,
+      mount: mount,
+      onClose: onClose
+    });
   }
 
   function close() {
@@ -44,20 +29,15 @@ var QuotationCanvasTools = (function () {
       clearInterval(pomodoroTimer);
       pomodoroTimer = null;
     }
-    activeTool = null;
-    var host = document.getElementById(HOST_ID);
-    if (host) host.innerHTML = '';
+    var mgr = wm();
+    if (mgr) mgr.closeAll();
   }
 
-  function bindClose(host) {
-    if (!host) return;
-    host.querySelectorAll('[data-qe-canvas-tool-close]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-      });
-    });
+  function closePomodoroTimer() {
+    if (pomodoroTimer) {
+      clearInterval(pomodoroTimer);
+      pomodoroTimer = null;
+    }
   }
 
   function normalizeHex(raw) {
@@ -84,88 +64,84 @@ var QuotationCanvasTools = (function () {
   }
 
   function openCalculator() {
-    var keys = [
-      'C', '±', '%', '÷',
-      '7', '8', '9', '×',
-      '4', '5', '6', '−',
-      '1', '2', '3', '+',
-      '0', '.', '='
-    ];
-    var btns = keys.map(function (k, i) {
-      var wide = k === '0' && i === keys.length - 3;
-      return '<button type="button" class="qe-calc__key' +
-        (wide ? ' qe-calc__key--wide' : '') +
-        (k === '=' ? ' qe-calc__key--eq' : '') +
-        '" data-qe-calc-key="' + escapeHtml(k) + '">' + escapeHtml(k) + '</button>';
-    }).join('');
-    var host = ensureHost();
-    host.innerHTML = shellHtml('Calculadora',
-      '<div class="qe-calc">' +
-        '<output class="qe-calc__display" data-qe-calc-display>0</output>' +
-        '<div class="qe-calc__keys">' + btns + '</div>' +
-      '</div>',
-      'calculator');
-    bindClose(host);
-    var display = host.querySelector('[data-qe-calc-display]');
-    var expr = '0';
-    function renderDisplay() {
-      if (display) display.textContent = expr;
-    }
-    function mapOp(k) {
-      if (k === '÷') return '/';
-      if (k === '×') return '*';
-      if (k === '−') return '-';
-      return k;
-    }
-    host.querySelectorAll('[data-qe-calc-key]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var k = btn.getAttribute('data-qe-calc-key') || '';
-        if (k === 'C') {
-          expr = '0';
+    openWindow('tool-calculator', 'Calculadora', 'calculator', function (bodyEl) {
+      var keys = [
+        'C', '±', '%', '÷',
+        '7', '8', '9', '×',
+        '4', '5', '6', '−',
+        '1', '2', '3', '+',
+        '0', '.', '='
+      ];
+      var btns = keys.map(function (k, i) {
+        var wide = k === '0' && i === keys.length - 3;
+        return '<button type="button" class="qe-calc__key' +
+          (wide ? ' qe-calc__key--wide' : '') +
+          (k === '=' ? ' qe-calc__key--eq' : '') +
+          '" data-qe-calc-key="' + k + '">' + k + '</button>';
+      }).join('');
+      bodyEl.innerHTML =
+        '<div class="qe-calc">' +
+          '<output class="qe-calc__display" data-qe-calc-display>0</output>' +
+          '<div class="qe-calc__keys">' + btns + '</div>' +
+        '</div>';
+      var display = bodyEl.querySelector('[data-qe-calc-display]');
+      var expr = '0';
+      function renderDisplay() {
+        if (display) display.textContent = expr;
+      }
+      function mapOp(k) {
+        if (k === '÷') return '/';
+        if (k === '×') return '*';
+        if (k === '−') return '-';
+        return k;
+      }
+      bodyEl.querySelectorAll('[data-qe-calc-key]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var k = btn.getAttribute('data-qe-calc-key') || '';
+          if (k === 'C') {
+            expr = '0';
+            renderDisplay();
+            return;
+          }
+          if (k === '±') {
+            if (expr.charAt(0) === '-') expr = expr.slice(1);
+            else if (expr !== '0') expr = '-' + expr;
+            renderDisplay();
+            return;
+          }
+          if (k === '=') {
+            expr = calcEvaluate(expr);
+            renderDisplay();
+            return;
+          }
+          var op = mapOp(k);
+          if (expr === '0' && op !== '.') expr = '';
+          if (expr === 'Error') expr = '';
+          expr += op;
           renderDisplay();
-          return;
-        }
-        if (k === '±') {
-          if (expr.charAt(0) === '-') expr = expr.slice(1);
-          else if (expr !== '0') expr = '-' + expr;
-          renderDisplay();
-          return;
-        }
-        if (k === '=') {
-          expr = calcEvaluate(expr);
-          renderDisplay();
-          return;
-        }
-        var op = mapOp(k);
-        if (expr === '0' && op !== '.') expr = '';
-        if (expr === 'Error') expr = '';
-        expr += op;
-        renderDisplay();
+        });
       });
     });
-    activeTool = 'calculator';
   }
 
   function openNotes() {
-    var saved = '';
-    try { saved = localStorage.getItem(NOTES_KEY) || ''; } catch (eLs) { /* ignore */ }
-    var host = ensureHost();
-    host.innerHTML = shellHtml('Notas',
-      '<textarea class="qe-notes__area" data-qe-notes-input rows="8"' +
-        ' placeholder="Apuntes de sesión…" spellcheck="true"></textarea>',
-      'notes');
-    bindClose(host);
-    var area = host.querySelector('[data-qe-notes-input]');
-    if (area) {
-      area.value = saved;
-      area.addEventListener('input', function () {
-        try { localStorage.setItem(NOTES_KEY, area.value); } catch (eSave) { /* ignore */ }
-      });
-      requestAnimationFrame(function () {
-        try { area.focus(); } catch (eF) { /* ignore */ }
-      });
-    }
-    activeTool = 'notes';
+    openWindow('tool-notes', 'Notas', 'notes', function (bodyEl) {
+      var saved = '';
+      try { saved = localStorage.getItem(NOTES_KEY) || ''; } catch (eLs) { /* ignore */ }
+      bodyEl.innerHTML =
+        '<textarea class="qe-notes__area" data-qe-notes-input rows="8"' +
+          ' placeholder="Apuntes de sesión…" spellcheck="true"></textarea>';
+      var area = bodyEl.querySelector('[data-qe-notes-input]');
+      if (area) {
+        area.value = saved;
+        area.addEventListener('input', function () {
+          try { localStorage.setItem(NOTES_KEY, area.value); } catch (eSave) { /* ignore */ }
+        });
+        requestAnimationFrame(function () {
+          try { area.focus(); } catch (eF) { /* ignore */ }
+        });
+      }
+    });
   }
 
   function nextChecklistId() {
@@ -197,19 +173,24 @@ var QuotationCanvasTools = (function () {
 
   function checklistRowHtml(item) {
     var checked = !!item.checked;
+    var esc = function (v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
     return '' +
       '<div class="qe-checklist__row' + (checked ? ' is-checked' : '') + '"' +
-        ' data-qe-check-row="' + escapeHtml(item.id) + '">' +
+        ' data-qe-check-row="' + esc(item.id) + '">' +
         '<button type="button" class="qe-checklist__box"' +
-          ' data-qe-check-toggle="' + escapeHtml(item.id) + '"' +
+          ' data-qe-check-toggle="' + esc(item.id) + '"' +
           ' aria-pressed="' + (checked ? 'true' : 'false') + '"' +
           ' aria-label="Marcar tarea"></button>' +
         '<input type="text" class="qe-checklist__text"' +
-          ' data-qe-check-text="' + escapeHtml(item.id) + '"' +
-          ' value="' + escapeHtml(item.text || '') + '"' +
+          ' data-qe-check-text="' + esc(item.id) + '"' +
+          ' value="' + esc(item.text || '') + '"' +
           ' placeholder="Tarea" spellcheck="true" autocomplete="off">' +
         '<button type="button" class="qe-checklist__del"' +
-          ' data-qe-check-delete="' + escapeHtml(item.id) + '"' +
+          ' data-qe-check-delete="' + esc(item.id) + '"' +
           ' aria-label="Eliminar tarea">&times;</button>' +
       '</div>';
   }
@@ -326,58 +307,54 @@ var QuotationCanvasTools = (function () {
   }
 
   function openChecklist() {
-    var items = loadChecklistItems();
-    var host = ensureHost();
-    host.innerHTML = shellHtml('Checklist',
-      '<div class="qe-checklist" data-qe-checklist-list>' +
-        items.map(checklistRowHtml).join('') +
-      '</div>',
-      'checklist');
-    bindClose(host);
-    bindChecklistList(host, items);
-    activeTool = 'checklist';
+    openWindow('tool-checklist', 'Checklist', 'checklist', function (bodyEl) {
+      var items = loadChecklistItems();
+      bodyEl.innerHTML =
+        '<div class="qe-checklist" data-qe-checklist-list>' +
+          items.map(checklistRowHtml).join('') +
+        '</div>';
+      bindChecklistList(bodyEl, items);
+    });
   }
 
   function openColorPicker() {
-    var host = ensureHost();
-    host.innerHTML = shellHtml('Color picker',
-      '<div class="qe-colorpick">' +
-        '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#ffffff">' +
-        '<input type="text" class="qe-colorpick__hex" data-qe-color-hex value="#ffffff" spellcheck="false">' +
-        '<button type="button" class="qe-colorpick__copy" data-qe-color-copy>Copiar HEX</button>' +
-        '<p class="qe-colorpick__hint">Úsalo para guías, formas o referencias rápidas.</p>' +
-      '</div>',
-      'color-picker');
-    bindClose(host);
-    var native = host.querySelector('[data-qe-color-native]');
-    var hex = host.querySelector('[data-qe-color-hex]');
-    var copyBtn = host.querySelector('[data-qe-color-copy]');
-    function syncFromNative() {
-      if (!native || !hex) return;
-      hex.value = normalizeHex(native.value);
-    }
-    function syncFromHex() {
-      if (!native || !hex) return;
-      native.value = normalizeHex(hex.value);
-      hex.value = native.value;
-    }
-    if (native) native.addEventListener('input', syncFromNative);
-    if (hex) {
-      hex.addEventListener('change', syncFromHex);
-      hex.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') syncFromHex();
-      });
-    }
-    if (copyBtn && hex) {
-      copyBtn.addEventListener('click', function () {
-        var val = normalizeHex(hex.value);
-        hex.value = val;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(val).catch(function () {});
-        }
-      });
-    }
-    activeTool = 'color-picker';
+    openWindow('tool-color-picker', 'Color picker', 'color-picker', function (bodyEl) {
+      bodyEl.innerHTML =
+        '<div class="qe-colorpick">' +
+          '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#ffffff">' +
+          '<input type="text" class="qe-colorpick__hex" data-qe-color-hex value="#ffffff" spellcheck="false">' +
+          '<button type="button" class="qe-colorpick__copy" data-qe-color-copy>Copiar HEX</button>' +
+          '<p class="qe-colorpick__hint">Úsalo para guías, formas o referencias rápidas.</p>' +
+        '</div>';
+      var native = bodyEl.querySelector('[data-qe-color-native]');
+      var hex = bodyEl.querySelector('[data-qe-color-hex]');
+      var copyBtn = bodyEl.querySelector('[data-qe-color-copy]');
+      function syncFromNative() {
+        if (!native || !hex) return;
+        hex.value = normalizeHex(native.value);
+      }
+      function syncFromHex() {
+        if (!native || !hex) return;
+        native.value = normalizeHex(hex.value);
+        hex.value = native.value;
+      }
+      if (native) native.addEventListener('input', syncFromNative);
+      if (hex) {
+        hex.addEventListener('change', syncFromHex);
+        hex.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') syncFromHex();
+        });
+      }
+      if (copyBtn && hex) {
+        copyBtn.addEventListener('click', function () {
+          var val = normalizeHex(hex.value);
+          hex.value = val;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(val).catch(function () {});
+          }
+        });
+      }
+    });
   }
 
   function formatPomodoro(secs) {
@@ -387,77 +364,71 @@ var QuotationCanvasTools = (function () {
   }
 
   function openPomodoro() {
-    if (pomodoroTimer) {
-      clearInterval(pomodoroTimer);
-      pomodoroTimer = null;
-    }
     if (!pomodoroLeft || pomodoroLeft < 1) pomodoroLeft = 25 * 60;
-    var host = ensureHost();
-    host.innerHTML = shellHtml('Pomodoro',
-      '<div class="qe-pomo">' +
-        '<div class="qe-pomo__time" data-qe-pomo-display>' + formatPomodoro(pomodoroLeft) + '</div>' +
-        '<div class="qe-pomo__actions">' +
-          '<button type="button" class="qe-pomo__btn" data-qe-pomo-toggle>Iniciar</button>' +
-          '<button type="button" class="qe-pomo__btn qe-pomo__btn--muted" data-qe-pomo-reset>Reiniciar</button>' +
-        '</div>' +
-      '</div>',
-      'pomodoro');
-    bindClose(host);
-    var display = host.querySelector('[data-qe-pomo-display]');
-    var toggle = host.querySelector('[data-qe-pomo-toggle]');
-    var reset = host.querySelector('[data-qe-pomo-reset]');
-    var running = false;
+    openWindow('tool-pomodoro', 'Pomodoro', 'pomodoro', function (bodyEl) {
+      bodyEl.innerHTML =
+        '<div class="qe-pomo">' +
+          '<div class="qe-pomo__time" data-qe-pomo-display>' + formatPomodoro(pomodoroLeft) + '</div>' +
+          '<div class="qe-pomo__actions">' +
+            '<button type="button" class="qe-pomo__btn" data-qe-pomo-toggle>Iniciar</button>' +
+            '<button type="button" class="qe-pomo__btn qe-pomo__btn--muted" data-qe-pomo-reset>Reiniciar</button>' +
+          '</div>' +
+        '</div>';
+      var display = bodyEl.querySelector('[data-qe-pomo-display]');
+      var toggle = bodyEl.querySelector('[data-qe-pomo-toggle]');
+      var reset = bodyEl.querySelector('[data-qe-pomo-reset]');
+      var running = false;
 
-    function paint() {
-      if (display) display.textContent = formatPomodoro(pomodoroLeft);
-      if (toggle) toggle.textContent = running ? 'Pausar' : 'Iniciar';
-    }
-
-    function tick() {
-      if (pomodoroLeft > 0) {
-        pomodoroLeft -= 1;
-        paint();
-        return;
+      function paint() {
+        if (display) display.textContent = formatPomodoro(pomodoroLeft);
+        if (toggle) toggle.textContent = running ? 'Pausar' : 'Iniciar';
       }
-      clearInterval(pomodoroTimer);
-      pomodoroTimer = null;
-      running = false;
-      paint();
-      try {
-        if (typeof AdminNotify !== 'undefined' && AdminNotify.info) {
-          AdminNotify.info('Pomodoro — tiempo completado');
-        }
-      } catch (eN) { /* ignore */ }
-    }
 
-    if (toggle) {
-      toggle.addEventListener('click', function () {
-        if (running) {
+      function tick() {
+        if (pomodoroLeft > 0) {
+          pomodoroLeft -= 1;
+          paint();
+          return;
+        }
+        clearInterval(pomodoroTimer);
+        pomodoroTimer = null;
+        running = false;
+        paint();
+        try {
+          if (typeof AdminNotify !== 'undefined' && AdminNotify.info) {
+            AdminNotify.info('Pomodoro — tiempo completado');
+          }
+        } catch (eN) { /* ignore */ }
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          if (running) {
+            running = false;
+            if (pomodoroTimer) {
+              clearInterval(pomodoroTimer);
+              pomodoroTimer = null;
+            }
+            paint();
+            return;
+          }
+          running = true;
+          pomodoroTimer = setInterval(tick, 1000);
+          paint();
+        });
+      }
+      if (reset) {
+        reset.addEventListener('click', function () {
           running = false;
           if (pomodoroTimer) {
             clearInterval(pomodoroTimer);
             pomodoroTimer = null;
           }
+          pomodoroLeft = 25 * 60;
           paint();
-          return;
-        }
-        running = true;
-        pomodoroTimer = setInterval(tick, 1000);
-        paint();
-      });
-    }
-    if (reset) {
-      reset.addEventListener('click', function () {
-        running = false;
-        if (pomodoroTimer) {
-          clearInterval(pomodoroTimer);
-          pomodoroTimer = null;
-        }
-        pomodoroLeft = 25 * 60;
-        paint();
-      });
-    }
-    activeTool = 'pomodoro';
+        });
+      }
+    }, closePomodoroTimer);
   }
 
   function open(toolId) {
@@ -472,9 +443,19 @@ var QuotationCanvasTools = (function () {
     return null;
   }
 
+  function getActiveTool() {
+    var mgr = wm();
+    if (!mgr) return null;
+    var items = mgr.listActive();
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].state === 'visible') return items[i].toolId || items[i].id;
+    }
+    return items.length ? (items[0].toolId || items[0].id) : null;
+  }
+
   return {
     open: open,
     close: close,
-    getActiveTool: function () { return activeTool; }
+    getActiveTool: getActiveTool
   };
 })();

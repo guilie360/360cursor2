@@ -285,6 +285,54 @@ body.boxies-shell::after {
   display: none !important;
 }
 
+.boxies-header__tools-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.boxies-header__tools-wrap[hidden] {
+  display: none !important;
+}
+
+.boxies-header__tools-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 12, 12, 0.96);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 20000;
+}
+
+.boxies-header__tools-panel[hidden] {
+  display: none !important;
+}
+
+.boxies-header__tools-title {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.boxies-header__tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.boxies-header__tools-item {
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+}
+
 /* Secondary actions — Guardar / Republicar / Visualizar */
 .boxies-btn-secondary {
   flex-shrink: 0;
