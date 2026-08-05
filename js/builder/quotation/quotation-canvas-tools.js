@@ -12,15 +12,17 @@ var QuotationCanvasTools = (function () {
     return typeof QuotationWindowManager !== 'undefined' ? QuotationWindowManager : null;
   }
 
-  function openWindow(id, title, toolId, mount, onClose) {
+  function openWindow(id, title, toolId, mount, onClose, windowOpts) {
     var mgr = wm();
     if (!mgr) return null;
+    windowOpts = windowOpts || {};
     return mgr.open({
       id: id,
       title: title,
       toolId: toolId,
       mount: mount,
-      onClose: onClose
+      onClose: onClose,
+      resize: windowOpts.resize || null
     });
   }
 
@@ -235,19 +237,22 @@ var QuotationCanvasTools = (function () {
     };
     var tabs = state.pages.map(function (page) {
       var active = page.id === state.activePageId;
-      return '<button type="button" class="qe-checklist-pages__tab' +
+      return '<button type="button" class="qe-checklist-tabs__tab' +
         (active ? ' is-active' : '') + '"' +
         ' data-qe-check-page="' + esc(page.id) + '"' +
-        ' aria-pressed="' + (active ? 'true' : 'false') + '"' +
+        ' role="tab"' +
+        ' aria-selected="' + (active ? 'true' : 'false') + '"' +
         ' title="' + esc(page.title) + '">' +
-        esc(page.title) +
+        '<span class="qe-checklist-tabs__tab-label">' + esc(page.title) + '</span>' +
       '</button>';
     }).join('');
     return '' +
-      '<div class="qe-checklist-pages">' +
-        '<div class="qe-checklist-pages__tabs" data-qe-checklist-pages>' + tabs + '</div>' +
-        '<button type="button" class="qe-checklist-pages__add" data-qe-check-add-page' +
-          ' aria-label="Agregar página" title="Agregar página">+</button>' +
+      '<div class="qe-checklist-tabs" role="tablist" aria-label="Páginas del checklist">' +
+        '<div class="qe-checklist-tabs__strip">' +
+          '<div class="qe-checklist-tabs__scroll" data-qe-checklist-pages>' + tabs + '</div>' +
+          '<button type="button" class="qe-checklist-tabs__new" data-qe-check-add-page' +
+            ' aria-label="Agregar página" title="Agregar página">+</button>' +
+        '</div>' +
       '</div>';
   }
 
@@ -447,6 +452,14 @@ var QuotationCanvasTools = (function () {
     openWindow('tool-checklist', 'Checklist', 'checklist', function (bodyEl) {
       var state = loadChecklistState();
       renderChecklistBody(bodyEl, state);
+    }, null, {
+      resize: {
+        minW: 220,
+        maxW: 300,
+        defaultW: 280,
+        defaultH: 400,
+        maxHMargin: 20
+      }
     });
   }
 

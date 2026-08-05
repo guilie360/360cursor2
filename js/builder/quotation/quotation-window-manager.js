@@ -5,6 +5,7 @@
 var QuotationWindowManager = (function () {
   var HOST_ID = 'qeCanvasToolsHost';
   var POS_STORAGE_KEY = 'boxies_qe_tool_window_positions_v1';
+  var SIZE_STORAGE_KEY = 'boxies_qe_tool_window_sizes_v1';
   var windows = Object.create(null);
   var zBase = 12050;
   var zCounter = zBase;
@@ -43,6 +44,86 @@ var QuotationWindowManager = (function () {
     var all = loadAllPositions();
     all[String(id)] = { left: Math.round(pos.left), top: Math.round(pos.top) };
     saveAllPositions(all);
+  }
+
+  function loadAllSizes() {
+    try {
+      var raw = localStorage.getItem(SIZE_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (eLoad) { /* ignore */ }
+    return {};
+  }
+
+  function saveAllSizes(map) {
+    try { localStorage.setItem(SIZE_STORAGE_KEY, JSON.stringify(map || {})); } catch (eSave) { /* ignore */ }
+  }
+
+  function loadSize(id) {
+    var all = loadAllSizes();
+    var size = all[String(id || '')];
+    if (!size || typeof size.width !== 'number' || typeof size.height !== 'number') return null;
+    return { width: size.width, height: size.height };
+  }
+
+  function saveSize(id, size) {
+    if (!id || !size) return;
+    var all = loadAllSizes();
+    all[String(id)] = {
+      width: Math.round(size.width),
+      height: Math.round(size.height)
+    };
+    saveAllSizes(all);
+  }
+
+  function computeMaxWindowHeight(marginPx) {
+    var margin = marginPx == null ? 20 : Number(marginPx);
+    if (!isFinite(margin) || margin < 0) margin = 20;
+    var headerEl = document.getElementById('boxiesHeader');
+    var dockEl = document.getElementById('boxiesDock');
+    var headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : margin;
+    var dockTop = dockEl
+      ? dockEl.getBoundingClientRect().top
+      : (window.innerHeight || document.documentElement.clientHeight || 720);
+    return Math.max(160, Math.floor(dockTop - headerBottom - margin * 2));
+  }
+
+  function normalizeResizeOpts(opts) {
+    if (!opts) return null;
+    var minW = Number(opts.minW) || 220;
+    var maxW = Number(opts.maxW) || 300;
+    var defaultW = Number(opts.defaultW) || 280;
+    var defaultH = Number(opts.defaultH) || 400;
+    var minH = Number(opts.minH) || defaultH;
+    var maxH = opts.maxH != null ? Number(opts.maxH) : computeMaxWindowHeight(opts.maxHMargin);
+    if (!isFinite(maxH)) maxH = computeMaxWindowHeight(opts.maxHMargin);
+    return {
+      minW: minW,
+      maxW: maxW,
+      defaultW: Math.min(maxW, Math.max(minW, defaultW)),
+      defaultH: defaultH,
+      minH: defaultH,
+      maxH: Math.max(defaultH, maxH),
+      maxHMargin: opts.maxHMargin == null ? 20 : Number(opts.maxHMargin)
+    };
+  }
+
+  function clampSize(width, height, resize) {
+    if (!resize) return { width: width, height: height };
+    return {
+      width: Math.min(resize.maxW, Math.max(resize.minW, Math.round(width))),
+      height: Math.min(resize.maxH, Math.max(resize.minH, Math.round(height)))
+    };
+  }
+
+  function applySize(el, size, resize) {
+    if (!el || !size) return;
+    var next = clampSize(size.width, size.height, resize);
+    el.style.width = next.width + 'px';
+    el.style.height = next.height + 'px';
+    return next;
   }
 
   function ensureHost() {
@@ -96,9 +177,10 @@ var QuotationWindowManager = (function () {
     el.style.top = clamped.top + 'px';
   }
 
-  function shellHtml(title, toolId) {
+  function shellHtml(title, toolId, resizable) {
     return '' +
-      '<div class="qe-canvas-tool-float" data-qe-window-id="' + escapeHtml(toolId) + '">' +
+      '<div class="qe-canvas-tool-float' + (resizable ? ' is-resizable' : '') + '"' +
+        ' data-qe-window-id="' + escapeHtml(toolId) + '">' +
         '<div class="qe-canvas-tool-float__head" data-qe-window-drag>' +
           '<span class="qe-canvas-tool-float__title">' + escapeHtml(title) + '</span>' +
           '<div class="qe-canvas-tool-float__actions">' +
@@ -109,6 +191,9 @@ var QuotationWindowManager = (function () {
           '</div>' +
         '</div>' +
         '<div class="qe-canvas-tool-float__body"></div>' +
+        (resizable
+          ? '<div class="qe-canvas-tool-float__resize" data-qe-window-resize aria-hidden="true"></div>'
+          : '') +
       '</div>';
   }
 
@@ -261,10 +346,83 @@ var QuotationWindowManager = (function () {
     head.addEventListener('pointercancel', endDrag);
   }
 
+  function bindResize(win) {
+    if (!win || !win.el || !win.resize) return;
+    var handle = win.el.querySelector('[data-qe-window-resize]');
+    if (!handle || handle.dataset.qeResizeBound) return;
+    handle.dataset.qeResizeBound = '1';
+    var resizing = false;
+    var startX = 0;
+    var startY = 0;
+    var startW = 0;
+    var startH = 0;
+
+    function refreshMaxH() {
+      win.resize.maxH = computeMaxWindowHeight(win.resize.maxHMargin);
+      if (win.resize.maxH < win.resize.minH) win.resize.maxH = win.resize.minH;
+    }
+
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      bringToFront(win.id);
+      refreshMaxH();
+      resizing = true;
+      var rect = win.el.getBoundingClientRect();
+      startX = e.clientX;
+      startY = e.clientY;
+      startW = rect.width;
+      startH = rect.height;
+      handle.setPointerCapture(e.pointerId);
+      win.el.classList.add('is-resizing');
+    });
+
+    handle.addEventListener('pointermove', function (e) {
+      if (!resizing) return;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+      var next = applySize(win.el, { width: startW + dx, height: startH + dy }, win.resize);
+      if (next) {
+        var rect = win.el.getBoundingClientRect();
+        var clamped = clampPosition(rect.left, rect.top, win.el);
+        win.el.style.left = clamped.left + 'px';
+        win.el.style.top = clamped.top + 'px';
+      }
+    });
+
+    function endResize(e) {
+      if (!resizing) return;
+      resizing = false;
+      win.el.classList.remove('is-resizing');
+      try { handle.releasePointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
+      var rect = win.el.getBoundingClientRect();
+      saveSize(win.id, { width: rect.width, height: rect.height });
+      savePosition(win.id, { left: rect.left, top: rect.top });
+    }
+
+    handle.addEventListener('pointerup', endResize);
+    handle.addEventListener('pointercancel', endResize);
+
+    if (!window.__qeToolWindowResizeBound) {
+      window.__qeToolWindowResizeBound = true;
+      window.addEventListener('resize', function () {
+        Object.keys(windows).forEach(function (id) {
+          var w = windows[id];
+          if (!w || !w.resize || w.state !== 'visible') return;
+          w.resize.maxH = computeMaxWindowHeight(w.resize.maxHMargin);
+          var rect = w.el.getBoundingClientRect();
+          applySize(w.el, { width: rect.width, height: rect.height }, w.resize);
+        });
+      });
+    }
+  }
+
   function bindChrome(win) {
     if (!win || !win.el || win.el.dataset.qeChromeBound) return;
     win.el.dataset.qeChromeBound = '1';
     bindDrag(win);
+    bindResize(win);
     var minBtn = win.el.querySelector('[data-qe-window-min]');
     if (minBtn) {
       minBtn.addEventListener('click', function (e) {
@@ -292,12 +450,20 @@ var QuotationWindowManager = (function () {
 
   function createWindow(opts) {
     var host = ensureHost();
+    var resize = normalizeResizeOpts(opts.resize);
     var wrap = document.createElement('div');
-    wrap.innerHTML = shellHtml(opts.title, opts.toolId || opts.id);
+    wrap.innerHTML = shellHtml(opts.title, opts.toolId || opts.id, !!resize);
     var el = wrap.firstElementChild;
     host.appendChild(el);
     var pos = loadPosition(opts.id) || defaultPosition(Object.keys(windows).length);
     applyPosition(el, pos);
+    if (resize) {
+      var savedSize = loadSize(opts.id);
+      applySize(el, savedSize || {
+        width: resize.defaultW,
+        height: resize.defaultH
+      }, resize);
+    }
     var win = {
       id: opts.id,
       title: opts.title,
@@ -306,6 +472,7 @@ var QuotationWindowManager = (function () {
       el: el,
       bodyEl: el.querySelector('.qe-canvas-tool-float__body'),
       mounted: false,
+      resize: resize,
       onClose: typeof opts.onClose === 'function' ? opts.onClose : null
     };
     windows[opts.id] = win;
