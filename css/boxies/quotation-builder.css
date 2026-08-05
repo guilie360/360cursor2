@@ -1245,6 +1245,175 @@
   margin: 0;
 }
 
+.qe-scenes__add-split {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.qe-scenes__thumb-wrap--add-scene,
+.qe-scenes__thumb-wrap--add-group {
+  width: 80px;
+}
+
+.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb,
+.qe-scenes__thumb-wrap--add-group .qe-scenes__thumb,
+.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-frame,
+.qe-scenes__thumb-wrap--add-group .qe-scenes__group-frame {
+  width: 80px;
+}
+
+.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-frame {
+  height: 80px;
+  font-size: 28px;
+}
+
+.qe-scenes__thumb-wrap--add-group .qe-scenes__group-frame {
+  height: 80px;
+}
+
+.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-name,
+.qe-scenes__thumb-wrap--add-group .qe-scenes__thumb-name {
+  max-width: 80px;
+  font-size: 10px;
+}
+
+.qe-scenes__group-block {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.qe-scenes__group-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.qe-scenes__group-wrap.is-drop-target .qe-scenes__group-frame {
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 2px rgba(255, 255, 255, 0.14);
+}
+
+.qe-scenes__group {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 168px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+}
+
+.qe-scenes__group-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  height: 94px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #080808;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.qe-scenes__group-frame--add {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.qe-scenes__group:hover .qe-scenes__group-frame,
+.qe-scenes__thumb--group:hover .qe-scenes__group-frame--add {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: #0c0c0c;
+}
+
+.qe-scenes__group-name {
+  cursor: text;
+}
+
+.qe-scenes__group-rename {
+  display: block;
+  width: 100%;
+  max-width: 168px;
+  margin: 0 auto;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  background: rgba(8, 8, 8, 0.95);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: lowercase;
+  box-sizing: border-box;
+}
+
+.qe-scenes__group-children {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-start;
+  gap: 14px;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  transition:
+    max-width 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease,
+    margin 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.qe-scenes__group-block.is-expanded .qe-scenes__group-children {
+  max-width: 4000px;
+  opacity: 1;
+  margin-left: 14px;
+  pointer-events: auto;
+}
+
+.qe-scenes__group-block .qe-scenes__group-block {
+  margin-top: 0;
+}
+
+.qe-scenes__thumb-wrap.is-selected .qe-scenes__thumb-frame {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 0 0 2px rgba(255, 255, 255, 0.38);
+}
+
+.qe-scenes__thumb-wrap.is-in-group {
+  width: 148px;
+}
+
+.qe-scenes__thumb-wrap.is-in-group .qe-scenes__thumb,
+.qe-scenes__thumb-wrap.is-in-group .qe-scenes__thumb-frame {
+  width: 148px;
+}
+
+.qe-scenes__thumb-wrap.is-in-group .qe-scenes__thumb-frame {
+  height: 84px;
+}
+
+.qe-scenes__thumb-wrap.is-in-group .qe-scenes__thumb-name {
+  max-width: 148px;
+}
+
 .qe-scenes__thumb-wrap {
   position: relative;
   flex: 0 0 auto;

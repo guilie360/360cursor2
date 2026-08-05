@@ -135,6 +135,11 @@ var QuotationEditor = (function () {
     walk(state && state.scenes);
     walk(state && state.content);
     walk(state && state.folders);
+    if (state && Array.isArray(state.sceneGroups)) {
+      state.sceneGroups.forEach(function (g) {
+        if (g) rememberId(g.id);
+      });
+    }
   }
 
   /** Heal duplicate scene ids in-place (keeps first occurrence). */
@@ -728,6 +733,9 @@ var QuotationEditor = (function () {
       content: [],
       folders: [],
       scenes: [heroScene],
+      sceneGroups: [],
+      sceneTrack: [],
+      sceneSelectedIds: {},
       activeSceneId: heroScene.id,
       selectedContentId: null,
       selectedItem: null,
@@ -1226,6 +1234,8 @@ var QuotationEditor = (function () {
       hotspots: []
     };
     state.scenes.push(scene);
+    ensureSceneGroups();
+    state.sceneTrack.push(scene.id);
     state.activeSceneId = scene.id;
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -1627,6 +1637,8 @@ var QuotationEditor = (function () {
         content: state.content,
         folders: state.folders,
         scenes: state.scenes,
+        sceneGroups: state.sceneGroups,
+        sceneTrack: state.sceneTrack,
         activeSceneId: state.activeSceneId,
         selectedContentId: state.selectedContentId,
         expEditMode: state.expEditMode,
@@ -1695,6 +1707,20 @@ var QuotationEditor = (function () {
     }).filter(Boolean);
     state.folders = Array.isArray(draft.folders) ? draft.folders : [];
     ensureFolderOrders();
+    state.sceneGroups = Array.isArray(draft.sceneGroups)
+      ? draft.sceneGroups.map(function (g) {
+        if (!g) return null;
+        return {
+          id: g.id,
+          name: g.name || 'Grupo',
+          collapsed: g.collapsed !== false,
+          parentGroupId: g.parentGroupId || null,
+          sceneIds: Array.isArray(g.sceneIds) ? g.sceneIds.slice() : [],
+          childGroupIds: Array.isArray(g.childGroupIds) ? g.childGroupIds.slice() : []
+        };
+      }).filter(Boolean)
+      : [];
+    state.sceneTrack = Array.isArray(draft.sceneTrack) ? draft.sceneTrack.slice() : [];
     state.scenes = draft.scenes.map(function (sc) {
       if (!sc) return sc;
       if (sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0) {
@@ -1708,6 +1734,7 @@ var QuotationEditor = (function () {
       return sc;
     });
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+    ensureSceneGroups();
     state.activeSceneId = draft.activeSceneId ||
       (state.scenes[0] && state.scenes[0].id) ||
       null;
@@ -2027,6 +2054,7 @@ var QuotationEditor = (function () {
     if (!Array.isArray(state.scenes)) state.scenes = [];
     ensureHeroSceneContract();
     state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+    ensureSceneGroups();
     if (!state.scenes.length) {
       state.activeSceneId = null;
       return;
@@ -2034,6 +2062,395 @@ var QuotationEditor = (function () {
     if (!sceneById(state.activeSceneId)) {
       state.activeSceneId = state.scenes[0].id;
     }
+  }
+
+  function ensureSceneGroups() {
+    if (!Array.isArray(state.sceneGroups)) state.sceneGroups = [];
+    if (!Array.isArray(state.sceneTrack)) state.sceneTrack = [];
+    if (!state.sceneSelectedIds || typeof state.sceneSelectedIds !== 'object') {
+      state.sceneSelectedIds = {};
+    }
+    healSceneGroups();
+    if (!state.sceneTrack.length) {
+      var i;
+      for (i = 1; i < state.scenes.length; i++) {
+        var sc = state.scenes[i];
+        if (!sc || isHeroScene(sc)) continue;
+        if (!findGroupContainingScene(sc.id)) state.sceneTrack.push(sc.id);
+      }
+    }
+  }
+
+  function sceneGroupById(id) {
+    id = String(id || '');
+    if (!id || !Array.isArray(state.sceneGroups)) return null;
+    var i;
+    for (i = 0; i < state.sceneGroups.length; i++) {
+      if (state.sceneGroups[i] && String(state.sceneGroups[i].id) === id) {
+        return state.sceneGroups[i];
+      }
+    }
+    return null;
+  }
+
+  function findGroupContainingScene(sceneId) {
+    sceneId = String(sceneId || '');
+    if (!sceneId || !Array.isArray(state.sceneGroups)) return null;
+    var i;
+    for (i = 0; i < state.sceneGroups.length; i++) {
+      var grp = state.sceneGroups[i];
+      if (!grp || !Array.isArray(grp.sceneIds)) continue;
+      if (grp.sceneIds.indexOf(sceneId) >= 0) return grp;
+    }
+    return null;
+  }
+
+  function isSceneGroupId(id) {
+    return !!sceneGroupById(id);
+  }
+
+  function healSceneGroups() {
+    if (!Array.isArray(state.sceneGroups)) state.sceneGroups = [];
+    if (!Array.isArray(state.sceneTrack)) state.sceneTrack = [];
+    var hero = heroScene();
+    var heroId = hero ? String(hero.id) : '';
+    var validGroups = Object.create(null);
+    var validScenes = Object.create(null);
+    state.sceneGroups = state.sceneGroups.filter(function (grp) {
+      if (!grp || !grp.id) return false;
+      grp.id = String(grp.id);
+      grp.name = String(grp.name || 'Grupo').trim() || 'Grupo';
+      grp.collapsed = grp.collapsed !== false;
+      grp.parentGroupId = grp.parentGroupId ? String(grp.parentGroupId) : null;
+      grp.sceneIds = Array.isArray(grp.sceneIds)
+        ? grp.sceneIds.map(String).filter(function (sid) {
+          if (!sid || sid === heroId || !sceneById(sid) || isHeroScene(sceneById(sid))) return false;
+          return true;
+        })
+        : [];
+      grp.childGroupIds = Array.isArray(grp.childGroupIds)
+        ? grp.childGroupIds.map(String).filter(Boolean)
+        : [];
+      validGroups[grp.id] = grp;
+      grp.sceneIds.forEach(function (sid) { validScenes[sid] = true; });
+      rememberId(grp.id);
+      return true;
+    });
+    state.sceneGroups.forEach(function (grp) {
+      grp.childGroupIds = grp.childGroupIds.filter(function (cid) {
+        return !!validGroups[cid] && cid !== grp.id;
+      });
+      if (grp.parentGroupId && !validGroups[grp.parentGroupId]) grp.parentGroupId = null;
+    });
+    state.sceneTrack = state.sceneTrack.map(String).filter(function (tid) {
+      if (!tid || tid === heroId) return false;
+      if (validGroups[tid]) return !validGroups[tid].parentGroupId;
+      if (sceneById(tid) && !validScenes[tid]) return true;
+      return false;
+    });
+    var seenTrack = Object.create(null);
+    state.sceneTrack = state.sceneTrack.filter(function (tid) {
+      if (seenTrack[tid]) return false;
+      seenTrack[tid] = true;
+      return true;
+    });
+  }
+
+  function nextGroupName() {
+    var n = 1;
+    (state.sceneGroups || []).forEach(function (grp) {
+      var m = String(grp.name || '').match(/^Grupo\s+(\d+)/i);
+      if (m) {
+        var num = parseInt(m[1], 10);
+        if (num >= n) n = num + 1;
+      }
+    });
+    return 'Grupo ' + n;
+  }
+
+  function removeSceneFromGroups(sceneId) {
+    sceneId = String(sceneId || '');
+    if (!sceneId) return;
+    (state.sceneGroups || []).forEach(function (grp) {
+      if (!grp || !Array.isArray(grp.sceneIds)) return;
+      grp.sceneIds = grp.sceneIds.filter(function (sid) { return String(sid) !== sceneId; });
+    });
+    state.sceneTrack = (state.sceneTrack || []).filter(function (tid) {
+      return String(tid) !== sceneId;
+    });
+    if (state.sceneSelectedIds) delete state.sceneSelectedIds[sceneId];
+  }
+
+  function removeGroupFromParent(grp) {
+    if (!grp) return;
+    if (grp.parentGroupId) {
+      var parent = sceneGroupById(grp.parentGroupId);
+      if (parent && Array.isArray(parent.childGroupIds)) {
+        parent.childGroupIds = parent.childGroupIds.filter(function (cid) {
+          return String(cid) !== String(grp.id);
+        });
+      }
+    } else {
+      state.sceneTrack = (state.sceneTrack || []).filter(function (tid) {
+        return String(tid) !== String(grp.id);
+      });
+    }
+  }
+
+  function insertTrackItemsAt(index, ids) {
+    var track = state.sceneTrack || [];
+    var clean = track.filter(function (tid) {
+      return ids.indexOf(String(tid)) < 0;
+    });
+    var at = Math.max(0, Math.min(index, clean.length));
+    state.sceneTrack = clean.slice(0, at).concat(ids).concat(clean.slice(at));
+  }
+
+  function trackIndexOf(id) {
+    id = String(id || '');
+    var track = state.sceneTrack || [];
+    var i;
+    for (i = 0; i < track.length; i++) {
+      if (String(track[i]) === id) return i;
+    }
+    return -1;
+  }
+
+  function createSceneGroup(opts) {
+    opts = opts || {};
+    ensureSceneGroups();
+    var parentId = opts.parentGroupId ? String(opts.parentGroupId) : null;
+    if (parentId && !sceneGroupById(parentId)) parentId = null;
+    var grp = {
+      id: nextId('sg'),
+      name: nextGroupName(),
+      collapsed: true,
+      parentGroupId: parentId,
+      sceneIds: [],
+      childGroupIds: []
+    };
+    state.sceneGroups.push(grp);
+    if (parentId) {
+      var parent = sceneGroupById(parentId);
+      if (parent) parent.childGroupIds.push(grp.id);
+    } else {
+      state.sceneTrack.push(grp.id);
+    }
+    markDirtyLocal();
+    return grp;
+  }
+
+  function addScenesToGroup(groupId, sceneIds, opts) {
+    opts = opts || {};
+    ensureSceneGroups();
+    var grp = sceneGroupById(groupId);
+    if (!grp || !Array.isArray(sceneIds) || !sceneIds.length) return false;
+    var hero = heroScene();
+    var heroId = hero ? String(hero.id) : '';
+    var ids = sceneIds.map(String).filter(function (sid) {
+      var sc = sceneById(sid);
+      return sid && sid !== heroId && sc && !isHeroScene(sc);
+    });
+    if (!ids.length) return false;
+    ids.forEach(function (sid) {
+      var prev = findGroupContainingScene(sid);
+      if (prev && prev.id !== grp.id) {
+        prev.sceneIds = prev.sceneIds.filter(function (x) { return String(x) !== sid; });
+      }
+      removeSceneFromGroups(sid);
+      if (grp.sceneIds.indexOf(sid) < 0) grp.sceneIds.push(sid);
+    });
+    if (opts.expand) grp.collapsed = false;
+    markDirtyLocal();
+    return true;
+  }
+
+  function releaseGroupContentsToTrack(grp, insertAt) {
+    if (!grp) return;
+    var ids = [];
+    (grp.sceneIds || []).forEach(function (sid) { ids.push(String(sid)); });
+    (grp.childGroupIds || []).forEach(function (cid) {
+      var child = sceneGroupById(cid);
+      if (child) {
+        child.parentGroupId = null;
+        ids.push(String(cid));
+      }
+    });
+    grp.sceneIds = [];
+    grp.childGroupIds = [];
+    removeGroupFromParent(grp);
+    if (typeof insertAt === 'number' && insertAt >= 0) {
+      insertTrackItemsAt(insertAt, ids);
+    } else {
+      ids.forEach(function (tid) {
+        if (state.sceneTrack.indexOf(tid) < 0) state.sceneTrack.push(tid);
+      });
+    }
+  }
+
+  function deleteSceneGroupOnly(groupId) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return false;
+    var idx = grp.parentGroupId
+      ? -1
+      : trackIndexOf(grp.id);
+    releaseGroupContentsToTrack(grp, idx >= 0 ? idx : state.sceneTrack.length);
+    state.sceneGroups = state.sceneGroups.filter(function (g) {
+      return g && String(g.id) !== String(groupId);
+    });
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
+  function collectGroupSceneIds(grp, out) {
+    if (!grp) return;
+    (grp.sceneIds || []).forEach(function (sid) { out.push(String(sid)); });
+    (grp.childGroupIds || []).forEach(function (cid) {
+      collectGroupSceneIds(sceneGroupById(cid), out);
+    });
+  }
+
+  function deleteSceneGroupWithContent(groupId) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return false;
+    var sceneIds = [];
+    collectGroupSceneIds(grp, sceneIds);
+    var childGroups = [];
+    function walkChildren(g) {
+      if (!g) return;
+      (g.childGroupIds || []).forEach(function (cid) {
+        var c = sceneGroupById(cid);
+        if (c) {
+          childGroups.push(String(cid));
+          walkChildren(c);
+        }
+      });
+    }
+    walkChildren(grp);
+    removeGroupFromParent(grp);
+    state.sceneGroups = state.sceneGroups.filter(function (g) {
+      if (!g) return false;
+      if (String(g.id) === String(groupId)) return false;
+      return childGroups.indexOf(String(g.id)) < 0;
+    });
+    deleteScenesByIds(sceneIds);
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
+  function toggleSceneGroupCollapsed(groupId) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return;
+    grp.collapsed = !grp.collapsed;
+    markDirtyLocal();
+    rerender();
+  }
+
+  function renameSceneGroup(groupId, name) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return false;
+    var next = String(name || '').trim();
+    if (!next) return false;
+    grp.name = next;
+    markDirtyLocal();
+    rerender();
+    return true;
+  }
+
+  function toggleSceneSelection(sceneId) {
+    sceneId = String(sceneId || '');
+    if (!sceneId || isHeroScene(sceneById(sceneId))) return;
+    if (!state.sceneSelectedIds) state.sceneSelectedIds = {};
+    if (state.sceneSelectedIds[sceneId]) delete state.sceneSelectedIds[sceneId];
+    else state.sceneSelectedIds[sceneId] = true;
+    rerender();
+  }
+
+  function selectedSceneIdsForDrag(primaryId) {
+    var ids = [];
+    var sel = state.sceneSelectedIds || {};
+    Object.keys(sel).forEach(function (sid) {
+      if (sel[sid]) ids.push(String(sid));
+    });
+    primaryId = String(primaryId || '');
+    if (primaryId && ids.indexOf(primaryId) < 0) ids.unshift(primaryId);
+    if (!ids.length && primaryId) ids = [primaryId];
+    return ids.filter(function (sid) {
+      var sc = sceneById(sid);
+      return sc && !isHeroScene(sc);
+    });
+  }
+
+  function clearSceneSelection() {
+    state.sceneSelectedIds = {};
+  }
+
+  function reorderSceneTrack(fromId, toId, placeAfter) {
+    ensureSceneGroups();
+    fromId = String(fromId || '');
+    toId = String(toId || '');
+    if (!fromId || !toId || fromId === toId) return;
+    if (isHeroScene(sceneById(fromId)) || isHeroScene(sceneById(toId))) return;
+    var fromInGroup = findGroupContainingScene(fromId);
+    var toInGroup = findGroupContainingScene(toId);
+    if (fromInGroup && toInGroup && fromInGroup.id === toInGroup.id) {
+      var list = fromInGroup.sceneIds.slice();
+      var fi = list.indexOf(fromId);
+      var ti = list.indexOf(toId);
+      if (fi < 0 || ti < 0) return;
+      list.splice(fi, 1);
+      ti = list.indexOf(toId);
+      list.splice(placeAfter ? ti + 1 : ti, 0, fromId);
+      fromInGroup.sceneIds = list;
+      markDirtyLocal();
+      return;
+    }
+    if (fromInGroup || toInGroup) return;
+    var track = state.sceneTrack.slice();
+    var fromIdx = track.indexOf(fromId);
+    var toIdx = track.indexOf(toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    track.splice(fromIdx, 1);
+    toIdx = track.indexOf(toId);
+    track.splice(placeAfter ? toIdx + 1 : toIdx, 0, fromId);
+    state.sceneTrack = track;
+    markDirtyLocal();
+  }
+
+  function setGroupScenes(groupId, sceneIds) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return false;
+    var nextSet = Object.create(null);
+    var next = (sceneIds || []).map(String).filter(function (sid) {
+      var sc = sceneById(sid);
+      if (!sid || !sc || isHeroScene(sc)) return false;
+      if (nextSet[sid]) return false;
+      nextSet[sid] = true;
+      return true;
+    });
+    var prev = (grp.sceneIds || []).slice();
+    var trackIdx = grp.parentGroupId ? -1 : trackIndexOf(groupId);
+    prev.forEach(function (sid) {
+      if (nextSet[sid]) return;
+      grp.sceneIds = grp.sceneIds.filter(function (x) { return String(x) !== sid; });
+      if (state.sceneTrack.indexOf(sid) < 0) {
+        insertTrackItemsAt(trackIdx >= 0 ? trackIdx + 1 : state.sceneTrack.length, [sid]);
+      }
+    });
+    addScenesToGroup(groupId, next, { expand: true });
+    return true;
+  }
+
+  function listTopLevelSceneGroups() {
+    return (state.sceneGroups || []).filter(function (grp) {
+      return grp && !grp.parentGroupId;
+    });
+  }
+
+  function listAllSceneGroupsFlat() {
+    return (state.sceneGroups || []).slice();
   }
 
   function nextSceneName() {
@@ -3504,58 +3921,131 @@ var QuotationEditor = (function () {
     return '';
   }
 
+  function sceneFolderIconSvg() {
+    return '' +
+      '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+        '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"' +
+          ' fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.28)" stroke-width="1.2"/>' +
+      '</svg>';
+  }
+
+  function sceneThumbWrapHtml(sc, opts) {
+    opts = opts || {};
+    if (!sc) return '';
+    var on = sc.id === state.activeSceneId;
+    var hero = isHeroScene(sc);
+    var selected = !!(state.sceneSelectedIds && state.sceneSelectedIds[sc.id]);
+    var thumbUrl = sceneDisplayUrl(sc) || null;
+    var bg = thumbUrl
+      ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
+      : '';
+    var delBtn = state.canvasPreviewMode
+      ? ''
+      : (
+        '<button type="button" class="qe-scenes__thumb-del" draggable="false"' +
+          ' data-qe-scene-delete="' + escapeHtml(sc.id) + '"' +
+          ' aria-label="' + (hero ? 'Vaciar HERO' : 'Eliminar escena') + '"' +
+          ' title="' + (hero
+            ? 'Vaciar contenido (la portada HERO no se elimina)'
+            : 'Eliminar escena') + '">×</button>'
+      );
+    var nameLabel = hero ? 'H E R O' : String(sc.name || 'Escena').toLowerCase();
+    return '' +
+      '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') +
+        (selected ? ' is-selected' : '') +
+        (opts.inGroup ? ' is-in-group' : '') + '"' +
+        ' data-qe-drop-scene data-qe-drop-scene-id="' + escapeHtml(sc.id) + '"' +
+        (hero ? '' : ' data-qe-scene-drop="' + escapeHtml(sc.id) + '"') + '>' +
+        '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') +
+          (hero ? ' is-hero' : '') + '"' +
+          ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
+          (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') +
+          ' title="' + escapeHtml(hero ? 'H E R O' : (sc.name || 'Escena')) + '">' +
+          '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
+        '</button>' +
+        '<span class="qe-scenes__thumb-name' + (hero ? ' is-hero-label' : '') + '"' +
+          (hero
+            ? ' data-qe-scene-name-locked="1"'
+            : ' data-qe-scene-name="' + escapeHtml(sc.id) + '" title="Doble clic para renombrar"') +
+          '>' + escapeHtml(nameLabel) + '</span>' +
+        delBtn +
+      '</div>';
+  }
+
+  function sceneGroupBlockHtml(grp) {
+    if (!grp) return '';
+    var expanded = grp.collapsed === false;
+    var inner = '';
+    (grp.childGroupIds || []).forEach(function (cid) {
+      inner += sceneGroupBlockHtml(sceneGroupById(cid));
+    });
+    (grp.sceneIds || []).forEach(function (sid) {
+      inner += sceneThumbWrapHtml(sceneById(sid), { inGroup: true });
+    });
+    var count = (grp.sceneIds || []).length;
+    (grp.childGroupIds || []).forEach(function (cid) {
+      var child = sceneGroupById(cid);
+      if (child) count += (child.sceneIds || []).length;
+    });
+    return '' +
+      '<div class="qe-scenes__group-block' + (expanded ? ' is-expanded' : '') + '"' +
+        ' data-qe-scene-group-block="' + escapeHtml(grp.id) + '">' +
+        '<div class="qe-scenes__group-wrap"' +
+          ' data-qe-scene-group-drop="' + escapeHtml(grp.id) + '">' +
+          '<button type="button" class="qe-scenes__group"' +
+            ' data-qe-scene-group-toggle="' + escapeHtml(grp.id) + '"' +
+            ' title="' + escapeHtml(grp.name || 'Grupo') + ' (' + count + ')"' +
+            ' aria-expanded="' + (expanded ? 'true' : 'false') + '">' +
+            '<span class="qe-scenes__group-frame" aria-hidden="true">' +
+              sceneFolderIconSvg() +
+            '</span>' +
+          '</button>' +
+          '<span class="qe-scenes__thumb-name qe-scenes__group-name"' +
+            ' data-qe-scene-group-name="' + escapeHtml(grp.id) + '"' +
+            ' title="Doble clic para renombrar">' +
+            escapeHtml(String(grp.name || 'Grupo').toLowerCase()) +
+          '</span>' +
+        '</div>' +
+        '<div class="qe-scenes__group-children" data-qe-scene-group-children="' +
+          escapeHtml(grp.id) + '">' + inner + '</div>' +
+      '</div>';
+  }
+
   function scenesBarHtml() {
     ensureScenes();
-    var thumbs = state.scenes.map(function (sc) {
-      var on = sc.id === state.activeSceneId;
-      var hero = isHeroScene(sc);
-      var thumbUrl = sceneDisplayUrl(sc) || null;
-      var bg = thumbUrl
-        ? ' style="background-image:url(\'' + escapeHtml(thumbUrl) + '\');background-size:cover;background-position:center"'
-        : '';
-      var delBtn = state.canvasPreviewMode
-        ? ''
-        : (
-          '<button type="button" class="qe-scenes__thumb-del" draggable="false"' +
-            ' data-qe-scene-delete="' + escapeHtml(sc.id) + '"' +
-            ' aria-label="' + (hero ? 'Vaciar HERO' : 'Eliminar escena') + '"' +
-            ' title="' + (hero
-              ? 'Vaciar contenido (la portada HERO no se elimina)'
-              : 'Eliminar escena') + '">×</button>'
-        );
-      var nameLabel = hero ? 'H E R O' : String(sc.name || 'Escena').toLowerCase();
-      /* Name sits outside the thumb button so dblclick rename is valid HTML. */
-      return '' +
-        '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') + '"' +
-          ' data-qe-drop-scene data-qe-drop-scene-id="' +
-          escapeHtml(sc.id) + '"' +
-          (hero ? '' : ' data-qe-scene-drop="' + escapeHtml(sc.id) + '"') + '>' +
-          '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') +
-            (hero ? ' is-hero' : '') + '"' +
-            ' data-qe-scene="' + escapeHtml(sc.id) + '"' +
-            (hero ? '' : ' draggable="true" data-qe-scene-drag="' + escapeHtml(sc.id) + '"') +
-            ' title="' + escapeHtml(hero ? 'H E R O' : (sc.name || 'Escena')) + '">' +
-            '<span class="qe-scenes__thumb-frame" aria-hidden="true"' + bg + '></span>' +
-          '</button>' +
-          '<span class="qe-scenes__thumb-name' + (hero ? ' is-hero-label' : '') + '"' +
-            (hero
-              ? ' data-qe-scene-name-locked="1"'
-              : ' data-qe-scene-name="' + escapeHtml(sc.id) + '" title="Doble clic para renombrar"') +
-            '>' + escapeHtml(nameLabel) + '</span>' +
-          delBtn +
-        '</div>';
-    }).join('');
+    ensureSceneGroups();
+    var thumbs = '';
+    if (state.scenes[0]) thumbs += sceneThumbWrapHtml(state.scenes[0]);
+    (state.sceneTrack || []).forEach(function (itemId) {
+      if (sceneGroupById(itemId)) {
+        thumbs += sceneGroupBlockHtml(sceneGroupById(itemId));
+      } else {
+        var sc = sceneById(itemId);
+        if (sc && !isHeroScene(sc)) thumbs += sceneThumbWrapHtml(sc);
+      }
+    });
 
     var addThumb = '';
     if (!state.canvasPreviewMode) {
       addThumb = '' +
         '<div class="qe-scenes__add" data-qe-scenes-add>' +
-          '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add">' +
-            '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
-              ' title="Nueva escena" aria-label="Nueva escena">' +
-              '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
-            '</button>' +
-            '<span class="qe-scenes__thumb-name">nueva</span>' +
+          '<div class="qe-scenes__add-split">' +
+            '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add qe-scenes__thumb-wrap--add-scene">' +
+              '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
+                ' title="Nueva escena" aria-label="Nueva escena">' +
+                '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
+              '</button>' +
+              '<span class="qe-scenes__thumb-name">escena</span>' +
+            '</div>' +
+            '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add qe-scenes__thumb-wrap--add-group">' +
+              '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add qe-scenes__thumb--group" data-qe-scene-group-add' +
+                ' title="Nuevo grupo" aria-label="Nuevo grupo">' +
+                '<span class="qe-scenes__group-frame qe-scenes__group-frame--add" aria-hidden="true">' +
+                  sceneFolderIconSvg() +
+                '</span>' +
+              '</button>' +
+              '<span class="qe-scenes__thumb-name">grupo</span>' +
+            '</div>' +
           '</div>' +
         '</div>';
     }
@@ -5283,9 +5773,47 @@ var QuotationEditor = (function () {
         }
         dropHint = null;
         if (from && to && from !== to && from !== 'qe-scene') {
-          reorderScene(from, to, after);
+          var ids = selectedSceneIdsForDrag(from);
+          if (ids.length > 1) {
+            ids.forEach(function (sid) {
+              reorderSceneTrack(sid, to, after);
+            });
+            clearSceneSelection();
+          } else {
+            reorderSceneTrack(from, to, after);
+          }
           rerender();
         }
+      });
+    });
+
+    track.querySelectorAll('[data-qe-scene-group-drop]').forEach(function (zone) {
+      zone.addEventListener('dragover', function (e) {
+        if (!dragId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        zone.classList.add('is-drop-target');
+      });
+      zone.addEventListener('dragleave', function (e) {
+        var related = e.relatedTarget;
+        if (related && zone.contains(related)) return;
+        zone.classList.remove('is-drop-target');
+      });
+      zone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('is-drop-target');
+        var from = dragId || '';
+        if (!from && e.dataTransfer) {
+          try { from = e.dataTransfer.getData('text/qe-scene') || ''; } catch (e2) {}
+        }
+        var groupId = zone.getAttribute('data-qe-scene-group-drop');
+        if (!from || !groupId) return;
+        var ids = selectedSceneIdsForDrag(from);
+        addScenesToGroup(groupId, ids, { expand: true });
+        clearSceneSelection();
+        rerender();
       });
     });
   }
@@ -6067,6 +6595,7 @@ var QuotationEditor = (function () {
 
     destroyExperienciaOverlay();
     try { destroyBuilderRuntimeScene(); } catch (eDelRt) { /* ignore */ }
+    removeSceneFromGroups(sid);
     state.scenes.splice(idx, 1);
     ensureHeroSceneContract();
 
@@ -6157,6 +6686,8 @@ var QuotationEditor = (function () {
     clone.guides = [];
     if (fromHero) clone.coverModel = null;
     state.scenes.push(clone);
+    ensureSceneGroups();
+    state.sceneTrack.push(clone.id);
     state.activeSceneId = clone.id;
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -6173,9 +6704,13 @@ var QuotationEditor = (function () {
     return String(sc.name || 'Escena');
   }
 
-  function openDeleteScenesDialog(focusSceneId) {
+  function openDeleteScenesDialog(focusSceneId, preselectedIds) {
     if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
     ensureScenes();
+    var preselected = Object.create(null);
+    if (Array.isArray(preselectedIds)) {
+      preselectedIds.forEach(function (id) { preselected[String(id)] = true; });
+    }
     var focusId = String(focusSceneId || state.activeSceneId || '').trim();
     var focus = sceneById(focusId) || activeScene();
     focusId = focus ? String(focus.id) : '';
@@ -6183,7 +6718,7 @@ var QuotationEditor = (function () {
     if (!scenes.length) return;
 
     var rows = '';
-    if (focus) {
+    if (focus && !preselectedIds) {
       rows += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
           '<input type="checkbox" class="qe-guides-delete__input" data-qe-sd-scene="' +
@@ -6198,12 +6733,15 @@ var QuotationEditor = (function () {
         '</label>';
     }
     scenes.forEach(function (sc) {
-      if (!sc || String(sc.id) === focusId) return;
+      if (!sc) return;
+      if (!preselectedIds && String(sc.id) === focusId) return;
       var hero = isHeroScene(sc);
+      var sid = String(sc.id);
+      var checked = preselected[sid] ? ' checked' : '';
       rows += '' +
         '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
           '<input type="checkbox" class="qe-guides-delete__input" data-qe-sd-scene="' +
-            escapeHtml(String(sc.id)) + '">' +
+            escapeHtml(sid) + '"' + checked + '>' +
           '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
           '<span class="qe-guides-delete__check-stack">' +
             '<span class="qe-guides-delete__check-main">' +
@@ -6298,36 +6836,259 @@ var QuotationEditor = (function () {
     });
   }
 
+  function openAddScenesToGroupDialog(groupId) {
+    if (typeof AdminUI === 'undefined' || typeof AdminUI.openModal !== 'function') return;
+    var grp = sceneGroupById(groupId);
+    if (!grp) return;
+    ensureScenes();
+    var inGroup = Object.create(null);
+    (grp.sceneIds || []).forEach(function (sid) { inGroup[String(sid)] = true; });
+    var rows = '';
+    var i;
+    for (i = 1; i < state.scenes.length; i++) {
+      var sc = state.scenes[i];
+      if (!sc || isHeroScene(sc)) continue;
+      var sid = String(sc.id);
+      rows += '' +
+        '<label class="qe-guides-delete__check qe-guides-delete__check--scene">' +
+          '<input type="checkbox" class="qe-guides-delete__input" data-qe-sg-add-scene="' +
+            escapeHtml(sid) + '"' + (inGroup[sid] ? ' checked' : '') + '>' +
+          '<span class="qe-guides-delete__box" aria-hidden="true"></span>' +
+          '<span class="qe-guides-delete__check-stack">' +
+            '<span class="qe-guides-delete__check-main">' +
+              escapeHtml(sceneDisplayLabel(sc)) +
+            '</span>' +
+          '</span>' +
+        '</label>';
+    }
+    if (!rows) {
+      rows = '<p class="qe-dock__menu-hint">No hay escenas disponibles.</p>';
+    }
+    AdminUI.openModal({
+      title: 'Agregar escenas — ' + (grp.name || 'Grupo'),
+      bodyHtml:
+        '<div class="qe-guides-delete" data-qe-scene-group-add-modal>' +
+          '<p class="qe-guides-delete__section">Selecciona escenas para esta carpeta</p>' +
+          '<div class="qe-guides-delete__scenes">' + rows + '</div>' +
+        '</div>',
+      footerHtml:
+        '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+        '<button type="button" class="btn-primary" data-modal-action="confirm" data-qe-sg-add-confirm>' +
+          'Agregar</button>',
+      onMount: function (root) {
+        var modal = root.querySelector('.admin-modal');
+        if (modal) modal.classList.add('qe-guides-delete-modal');
+        var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+        var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+        if (cancelBtn) cancelBtn.addEventListener('click', function () { AdminUI.closeModal(); });
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () {
+            var ids = [];
+            root.querySelectorAll('[data-qe-sg-add-scene]').forEach(function (input) {
+              if (input.checked) ids.push(input.getAttribute('data-qe-sg-add-scene'));
+            });
+            AdminUI.closeModal();
+            setGroupScenes(groupId, ids);
+            rerender();
+          });
+        }
+      }
+    });
+  }
+
+  function openSendScenesToGroupMenu(sceneIds, clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var groups = listAllSceneGroupsFlat();
+    if (!groups.length) return;
+    var items = groups.map(function (grp) {
+      return {
+        id: 'grp:' + grp.id,
+        label: grp.name || 'Grupo'
+      };
+    });
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Enviar a carpeta',
+      items: items,
+      onSelect: function (id) {
+        if (String(id).indexOf('grp:') !== 0) return;
+        var groupId = String(id).slice(4);
+        addScenesToGroup(groupId, sceneIds, { expand: true });
+        clearSceneSelection();
+        rerender();
+      }
+    });
+  }
+
+  function openSceneGroupContextMenu(groupId, clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var grp = sceneGroupById(groupId);
+    if (!grp) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Menú de carpeta',
+      items: [
+        { id: 'add-scenes', label: 'Agregar escena' },
+        { id: 'rename', label: 'Cambiar nombre' },
+        { id: 'subgroup', label: 'Nuevo subgrupo' },
+        { id: 'delete-folder', label: 'Eliminar solo carpeta', separatorBefore: true },
+        { id: 'delete-all', label: 'Eliminar carpeta y contenido', danger: true }
+      ],
+      onSelect: function (id) {
+        if (id === 'add-scenes') {
+          openAddScenesToGroupDialog(groupId);
+          return;
+        }
+        if (id === 'rename') {
+          beginGroupRename(groupId);
+          return;
+        }
+        if (id === 'subgroup') {
+          createSceneGroup({ parentGroupId: groupId });
+          grp.collapsed = false;
+          rerender();
+          return;
+        }
+        if (id === 'delete-folder') {
+          deleteSceneGroupOnly(groupId);
+          return;
+        }
+        if (id === 'delete-all') {
+          if (typeof AdminUI !== 'undefined' && typeof AdminUI.confirm === 'function') {
+            AdminUI.confirm({
+              title: 'Eliminar carpeta y contenido',
+              confirmLabel: 'Eliminar todo',
+              cancelLabel: 'Cancelar',
+              bodyHtml: '<p class="admin-modal-copy">Se eliminarán la carpeta "' +
+                escapeHtml(grp.name || 'Grupo') +
+                '" y todas las escenas que contiene. Esta acción no se puede deshacer.</p>'
+            }).then(function (ok) {
+              if (ok) deleteSceneGroupWithContent(groupId);
+            });
+          } else {
+            deleteSceneGroupWithContent(groupId);
+          }
+        }
+      }
+    });
+  }
+
+  function beginGroupRename(groupId, spanEl) {
+    var grp = sceneGroupById(groupId);
+    if (!grp) return false;
+    var span = spanEl;
+    if (!span) {
+      var root = rootEl || document;
+      span = root.querySelector('[data-qe-scene-group-name="' + groupId + '"]');
+    }
+    if (!span || span.querySelector('input')) return false;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'qe-scenes__group-rename';
+    input.value = grp.name || 'Grupo';
+    input.maxLength = 48;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    function finish(save) {
+      if (save) {
+        var next = String(input.value || '').trim();
+        if (next) grp.name = next;
+        markDirtyLocal();
+      }
+      rerender();
+    }
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', function () { finish(true); });
+    input.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    input.addEventListener('mousedown', function (ev) { ev.stopPropagation(); });
+    span.replaceWith(input);
+    input.focus();
+    input.select();
+    return true;
+  }
+
+  function bindSceneGroupEditing(editor) {
+    if (!editor) return;
+    editor.querySelectorAll('[data-qe-scene-group-name]').forEach(function (span) {
+      var gid = span.getAttribute('data-qe-scene-group-name');
+      if (!gid) return;
+      span.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        beginGroupRename(gid, span);
+      });
+    });
+  }
+
+  function bindSceneGroups(editor) {
+    if (!editor) return;
+    editor.querySelectorAll('[data-qe-scene-group-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSceneGroupCollapsed(btn.getAttribute('data-qe-scene-group-toggle'));
+      });
+    });
+    var groupAdd = editor.querySelector('[data-qe-scene-group-add]');
+    if (groupAdd) {
+      groupAdd.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        createSceneGroup({});
+        rerender();
+      });
+    }
+    bindSceneGroupEditing(editor);
+  }
+
   function openSceneContextMenu(sceneId, clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     var sc = sceneById(sceneId);
     if (!sc) return;
     var hero = isHeroScene(sc);
+    var batchIds = selectedSceneIdsForDrag(sceneId);
+    var hasGroups = listAllSceneGroupsFlat().length > 0;
+    var items = [
+      {
+        id: 'rename',
+        label: 'Cambiar nombre',
+        disabled: hero
+      },
+      {
+        id: 'replace-bg',
+        label: 'Reemplazar fondo',
+        disabled: batchIds.length > 1
+      },
+      {
+        id: 'duplicate',
+        label: 'Duplicar',
+        disabled: batchIds.length > 1
+      }
+    ];
+    if (!hero && hasGroups) {
+      items.push({
+        id: 'send-to-group',
+        label: batchIds.length > 1
+          ? ('Enviar ' + batchIds.length + ' escenas a carpeta…')
+          : 'Enviar a carpeta…'
+      });
+    }
+    items.push({
+      id: 'delete',
+      label: batchIds.length > 1 ? ('Eliminar (' + batchIds.length + ')') : 'Eliminar',
+      danger: true,
+      separatorBefore: true
+    });
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
       ariaLabel: 'Menú de escena',
-      items: [
-        {
-          id: 'rename',
-          label: 'Cambiar nombre',
-          disabled: hero
-        },
-        {
-          id: 'replace-bg',
-          label: 'Reemplazar fondo'
-        },
-        {
-          id: 'duplicate',
-          label: 'Duplicar'
-        },
-        {
-          id: 'delete',
-          label: 'Eliminar',
-          danger: true,
-          separatorBefore: true
-        }
-      ],
+      items: items,
       onSelect: function (id) {
         if (id === 'rename') {
           if (hero) return;
@@ -6356,8 +7117,13 @@ var QuotationEditor = (function () {
           duplicateScene(sceneId);
           return;
         }
+        if (id === 'send-to-group') {
+          openSendScenesToGroupMenu(batchIds, clientX, clientY);
+          return;
+        }
         if (id === 'delete') {
-          openDeleteScenesDialog(sceneId);
+          if (batchIds.length > 1) openDeleteScenesDialog(null, batchIds);
+          else openDeleteScenesDialog(sceneId);
         }
       }
     });
@@ -6509,9 +7275,18 @@ var QuotationEditor = (function () {
 
       if (!strip || !(strip.contains(e.target) || e.target === strip)) return;
 
-      var wrap = e.target.closest('.qe-scenes__thumb-wrap');
-      if (wrap && strip.contains(wrap) && !wrap.classList.contains('qe-scenes__thumb-wrap--add')) {
-        var btn = wrap.querySelector('[data-qe-scene]');
+      var wrap = e.target.closest('.qe-scenes__group-wrap');
+      if (wrap && strip.contains(wrap)) {
+        var gid = wrap.getAttribute('data-qe-scene-group-drop');
+        if (gid) {
+          openSceneGroupContextMenu(gid, e.clientX, e.clientY);
+          return;
+        }
+      }
+
+      var wrapScene = e.target.closest('.qe-scenes__thumb-wrap');
+      if (wrapScene && strip.contains(wrapScene) && !wrapScene.classList.contains('qe-scenes__thumb-wrap--add')) {
+        var btn = wrapScene.querySelector('[data-qe-scene]');
         var id = btn && btn.getAttribute('data-qe-scene');
         if (id) {
           openSceneContextMenu(id, e.clientX, e.clientY);
@@ -6542,6 +7317,8 @@ var QuotationEditor = (function () {
       guidesByViewport: { desktop: [], tablet: [], mobile: [] }
     };
     state.scenes.push(scene);
+    ensureSceneGroups();
+    state.sceneTrack.push(scene.id);
     state.activeSceneId = scene.id;
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -8880,8 +9657,16 @@ var QuotationEditor = (function () {
       });
 
       editor.querySelectorAll('[data-qe-scene]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          selectScene(btn.getAttribute('data-qe-scene'));
+        btn.addEventListener('click', function (e) {
+          var id = btn.getAttribute('data-qe-scene');
+          if (e.shiftKey && id && !isHeroScene(sceneById(id))) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSceneSelection(id);
+            return;
+          }
+          clearSceneSelection();
+          selectScene(id);
         });
       });
 
@@ -8931,6 +9716,7 @@ var QuotationEditor = (function () {
       bindSceneNameEditing(editor);
       bindSceneDragReorder(editor);
       bindSceneContextMenus(editor);
+      bindSceneGroups(editor);
       bindFolderMenus();
       bindFolderRenameInputs();
       bindFolderDragReorder();
@@ -9548,9 +10334,21 @@ var QuotationEditor = (function () {
 
   function serializeDocument() {
     ensureScenes();
+    ensureSceneGroups();
     return {
       version: 1,
       activeSceneId: state.activeSceneId || (state.scenes[0] && state.scenes[0].id) || null,
+      sceneGroups: (state.sceneGroups || []).map(function (grp) {
+        return {
+          id: grp.id,
+          name: grp.name || 'Grupo',
+          collapsed: grp.collapsed !== false,
+          parentGroupId: grp.parentGroupId || null,
+          sceneIds: Array.isArray(grp.sceneIds) ? grp.sceneIds.slice() : [],
+          childGroupIds: Array.isArray(grp.childGroupIds) ? grp.childGroupIds.slice() : []
+        };
+      }),
+      sceneTrack: Array.isArray(state.sceneTrack) ? state.sceneTrack.slice() : [],
       scenes: state.scenes.map(function (sc) {
         ensureSceneOverlays(sc);
         var res = sc.resourceId ? contentById(sc.resourceId) : null;
@@ -9830,6 +10628,21 @@ var QuotationEditor = (function () {
       if (!sceneById(state.activeSceneId)) {
         state.activeSceneId = state.scenes[0].id;
       }
+      state.sceneGroups = Array.isArray(hq.canvas.sceneGroups)
+        ? hq.canvas.sceneGroups.map(function (g) {
+          if (!g) return null;
+          return {
+            id: g.id,
+            name: g.name || 'Grupo',
+            collapsed: g.collapsed !== false,
+            parentGroupId: g.parentGroupId || null,
+            sceneIds: Array.isArray(g.sceneIds) ? g.sceneIds.slice() : [],
+            childGroupIds: Array.isArray(g.childGroupIds) ? g.childGroupIds.slice() : []
+          };
+        }).filter(Boolean)
+        : [];
+      state.sceneTrack = Array.isArray(hq.canvas.sceneTrack) ? hq.canvas.sceneTrack.slice() : [];
+      ensureSceneGroups();
       var bpSrc = (hq && hq.editorBackpack) ||
         (hq && hq.canvas && hq.canvas.editorBackpack) ||
         null;
