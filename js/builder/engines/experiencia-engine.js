@@ -705,7 +705,7 @@ var ExperienciaEngine = (function () {
       borderRadius: ix.borderRadius,
       strokeWidth: ix.strokeWidth
     };
-    if (ix.shapeContentBox && boxMetrics && boxMetrics.w && boxMetrics.h) {
+    if (boxMetrics && boxMetrics.w > 0 && boxMetrics.h > 0) {
       if (shapeUsesContentBoxPaint(kind)) {
         var norm = shapeContentBoxViewBoxNorm(boxMetrics.w, boxMetrics.h, layerW, layerH);
         paint.contentW = norm.w;

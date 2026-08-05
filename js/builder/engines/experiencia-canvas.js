@@ -8004,8 +8004,7 @@ var ExperienciaCanvas = (function () {
           if (!rootCtm) continue;
           var rootPt = pt.matrixTransform(rootCtm.inverse());
           if (typeof target.isPointInFill === 'function' && target.isPointInFill(rootPt)) return true;
-          if (target === body && typeof target.isPointInStroke === 'function' &&
-              target.isPointInStroke(rootPt)) return true;
+          if (typeof target.isPointInStroke === 'function' && target.isPointInStroke(rootPt)) return true;
         } catch (eHit) { /* ignore */ }
       }
       return false;
@@ -8127,24 +8126,19 @@ var ExperienciaCanvas = (function () {
       if (!buttonsLayer) return null;
       var sceneId = canvas().selectedId;
       if (!sceneId) return null;
-      var sz = overlayLayerSize();
-      var layerW = sz.w;
-      var layerH = sz.h;
-      var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn]');
+      var shapeHit = overlayPickFromSvgPoint(clientX, clientY, {}, { skipSelected: false });
+      if (shapeHit) return shapeHit;
+      var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn]:not(.builder-exp-stage-shape)');
       for (var i = nodes.length - 1; i >= 0; i--) {
         var el = nodes[i];
         var id = el.getAttribute('data-exp-stage-btn');
         if (!id) continue;
         var vm = getOverlayItemVm(sceneId, id);
         if (!vm || vm.locked || vm.visible === false) continue;
-        if (el.classList.contains('builder-exp-stage-shape')) {
-          if (overlayShapePointHit(el, vm, clientX, clientY, layerW, layerH)) return el;
-        } else {
-          var rect = el.getBoundingClientRect();
-          if (clientX >= rect.left && clientX <= rect.right &&
-              clientY >= rect.top && clientY <= rect.bottom) {
-            return el;
-          }
+        var rect = el.getBoundingClientRect();
+        if (clientX >= rect.left && clientX <= rect.right &&
+            clientY >= rect.top && clientY <= rect.bottom) {
+          return el;
         }
       }
       return null;
