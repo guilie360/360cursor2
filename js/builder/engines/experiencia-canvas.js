@@ -7554,13 +7554,35 @@ var ExperienciaCanvas = (function () {
         var patch = { live: true, layerW: layerW, layerH: layerH };
         if (s.rotation != null) patch.rotation = s.rotation;
         if (isShapeType(t)) {
-          patch.x = ncx;
-          patch.y = ncy;
-          patch.width = nw;
-          patch.height = nh;
-          patch.shapeContentBox = true;
-          if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
-          if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
+          if (s.shapeContentBox) {
+            patch.x = ncx;
+            patch.y = ncy;
+            patch.width = nw;
+            patch.height = nh;
+            patch.shapeContentBox = true;
+            if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
+            if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
+          } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
+              ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
+            var newStretchX = (s.stretchX != null ? Number(s.stretchX) : 1) * sx;
+            var newStretchY = (s.stretchY != null ? Number(s.stretchY) : 1) * sy;
+            var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
+              nw, t, newStretchX, newStretchY
+            );
+            var center = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
+              ncx, ncy, tileW, t, layerW, layerH, newStretchX, newStretchY
+            );
+            patch.x = center.x;
+            patch.y = center.y;
+            patch.width = tileW;
+            patch.shapeStretchX = newStretchX;
+            patch.shapeStretchY = newStretchY;
+          } else {
+            patch.x = ncx;
+            patch.y = ncy;
+            patch.width = nw;
+            patch.height = nh;
+          }
         } else if (t === 'BUTTON') {
           patch.x = ncx;
           patch.y = ncy;
@@ -7570,7 +7592,7 @@ var ExperienciaCanvas = (function () {
           patch.x = ncx;
           patch.y = ncy;
           var fsScale = Math.max(Math.abs(sx), Math.abs(sy));
-          patch.fontSize = Math.max(1, Math.round((Number(s.fontSize) || 28) * fsScale));
+          patch.fontSize = Math.max(8, Math.round((Number(s.fontSize) || 28) * fsScale));
         }
         ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
       });
@@ -7619,6 +7641,9 @@ var ExperienciaCanvas = (function () {
           if (!s) return;
           var t = String(s.type || 'BUTTON').toUpperCase();
           var sized = scaleMemberLiveBox(s, sx, sy);
+          var useContentBox = !!s.shapeContentBox;
+          var baseSx = s.stretchX != null ? Number(s.stretchX) : 1;
+          var baseSy = s.stretchY != null ? Number(s.stretchY) : 1;
           members[id] = {
             cx: anchorX + ((Number(s.cx) || 0) - anchorX) * sx,
             cy: anchorY + ((Number(s.cy) || 0) - anchorY) * sy,
@@ -7626,8 +7651,8 @@ var ExperienciaCanvas = (function () {
             h: sized.h,
             rot: Number(s.rotation) || 0,
             kind: t,
-            stretchX: s.stretchX,
-            stretchY: s.stretchY
+            stretchX: useContentBox ? baseSx : baseSx * sx,
+            stretchY: useContentBox ? baseSy : baseSy * sy
           };
         });
       }

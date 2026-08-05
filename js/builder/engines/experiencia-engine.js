@@ -1765,7 +1765,7 @@ var ExperienciaEngine = (function () {
     }, 1, 1, cx, cy, layerW, layerH);
   }
 
-  /** Proportional w/h from snapshot — no per-member clamps (group scale must round-trip). */
+  /** Proportional w/h from snapshot — linear only (group scale must round-trip). */
   function overlayMemberScaledSize(sw, sx, sy) {
     sx = Number(sx) || 1;
     sy = Number(sy) || 1;
@@ -1780,13 +1780,13 @@ var ExperienciaEngine = (function () {
     if (!g || !child || !sw) return;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
-    var ct = String(sw.type || child.type || 'BUTTON').toUpperCase();
     var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
     var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
     var sized = overlayMemberScaledSize(sw, sx, sy);
     var nw = sized.w;
     var nh = sized.h;
     var rot = sw.rotation;
+    var ct = String(sw.type || child.type || 'BUTTON').toUpperCase();
     child.groupId = g.id;
 
     if (ct === 'TEXT') {
@@ -1796,7 +1796,7 @@ var ExperienciaEngine = (function () {
       child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
       var fs0 = sw.fontSize != null ? Number(sw.fontSize) : (Number(child.fontSize) || 28);
       var fsScale = Math.max(Math.abs(sx), Math.abs(sy));
-      child.fontSize = Math.max(1, Math.round(fs0 * fsScale));
+      child.fontSize = Math.max(8, Math.round(fs0 * fsScale));
       return;
     }
 
@@ -1804,15 +1804,32 @@ var ExperienciaEngine = (function () {
       var st = shapeStretchFromIx(child);
       var snapSx = sw.stretchX != null ? Number(sw.stretchX) : st.sx;
       var snapSy = sw.stretchY != null ? Number(sw.stretchY) : st.sy;
-      var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
-      child.localX = locBox.x;
-      child.localY = locBox.y;
-      child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-      child.width = nw;
-      child.height = nh;
-      child.shapeContentBox = true;
-      child.shapeStretchX = snapSx;
-      child.shapeStretchY = snapSy;
+      var useContentBox = !!(sw.shapeContentBox || child.shapeContentBox);
+      if (useContentBox) {
+        var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
+        child.localX = locBox.x;
+        child.localY = locBox.y;
+        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+        child.width = nw;
+        child.height = nh;
+        child.shapeContentBox = true;
+        child.shapeStretchX = snapSx;
+        child.shapeStretchY = snapSy;
+      } else {
+        var newStretchX = snapSx * sx;
+        var newStretchY = snapSy * sy;
+        var tileW = sceneShapeTileWidthFromContentWidth(nw, ct, newStretchX, newStretchY);
+        var center = sceneShapeTileCenterFromGizmoCenter(
+          ncx, ncy, tileW, ct, layerW, layerH, newStretchX, newStretchY
+        );
+        var locTile = worldPointToLocal(g, center.x, center.y, layerW, layerH);
+        child.localX = locTile.x;
+        child.localY = locTile.y;
+        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+        child.width = tileW;
+        child.shapeStretchX = newStretchX;
+        child.shapeStretchY = newStretchY;
+      }
       return;
     }
 
@@ -2126,7 +2143,7 @@ var ExperienciaEngine = (function () {
       } else if (t === 'TEXT') {
         var fs0 = sw.fontSize != null ? Number(sw.fontSize) : (Number(ix.fontSize) || 28);
         var fsScale = patch.keepRatio ? sx : Math.max(Math.abs(sx), Math.abs(sy));
-        memberPatch.fontSize = Math.max(1, Math.round(fs0 * fsScale));
+        memberPatch.fontSize = Math.max(8, Math.round(fs0 * fsScale));
       }
       updateSceneButton(state, nodeId, mid, memberPatch);
     });
