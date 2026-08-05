@@ -5437,8 +5437,11 @@ var ExperienciaCanvas = (function () {
       if (transformDrag && transformDrag.live && isShapeType(transformDrag.type)) {
         return true;
       }
-      /* Multi-select resize — DOM painted in flushMultiSelectResizeFrame. */
-      if (transformDrag && transformDrag.live && transformDrag.type === 'MULTI_SELECT') {
+      /* Multi-select / group resize — DOM painted in flushMultiSelectResizeFrame. */
+      if (transformDrag && transformDrag.live &&
+          (transformDrag.type === 'MULTI_SELECT' ||
+           transformDrag.type === 'OVERLAY_GROUP' ||
+           transformDrag.type === 'GROUP')) {
         return true;
       }
       /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
@@ -7703,10 +7706,58 @@ var ExperienciaCanvas = (function () {
     }
 
     function flushMultiSelectResizeFrame(drag) {
-      if (!drag || !drag.liveRefs) return;
+      if (!drag) return;
       if (drag.type !== 'MULTI_SELECT' &&
           drag.type !== 'OVERLAY_GROUP' && drag.type !== 'GROUP') return;
       if (drag.pendingMultiSx == null || !drag.memberWorldSnapshots) return;
+      var isGroupResize = drag.type === 'OVERLAY_GROUP' || drag.type === 'GROUP';
+      if (!drag.liveRefs && isGroupResize &&
+          ExperienciaEngine.updateOverlayGroupTransform) {
+        var anchorModel = drag.pendingMultiAnchor || { x: 0, y: 0 };
+        var outerModel = drag.pendingMultiOuter || {};
+        ExperienciaEngine.updateOverlayGroupTransform(
+          state, drag.sceneId, drag.buttonId,
+          {
+            x: outerModel.cx,
+            y: outerModel.cy,
+            width: outerModel.w,
+            height: outerModel.h,
+            scaleX: drag.pendingMultiSx,
+            scaleY: drag.pendingMultiSy,
+            keepRatio: drag.keepRatio,
+            live: true,
+            layerW: drag.layerW,
+            layerH: drag.layerH,
+            memberWorldSnapshots: drag.memberWorldSnapshots,
+            anchorX: anchorModel.x,
+            anchorY: anchorModel.y
+          }
+        );
+        var unionGizmoEl = (drag.liveRefs && drag.liveRefs.unionGizmo) ||
+          (buttonsLayer && buttonsLayer.querySelector(
+            '[data-exp-gizmo][data-gizmo-id="' +
+            String(drag.buttonId).replace(/"/g, '') + '"]'
+          ));
+        if (unionGizmoEl && outerModel.w != null) {
+          paintShapeGizmoEl(
+            unionGizmoEl,
+            {
+              cx: outerModel.cx,
+              cy: outerModel.cy,
+              w: outerModel.w,
+              h: outerModel.h,
+              rot: Number(drag.startRot) || 0,
+              kind: drag.type,
+              gizmoBox: true
+            },
+            drag.layerW,
+            drag.layerH
+          );
+          unionGizmoEl.classList.add('is-sizing');
+        }
+        return;
+      }
+      if (!drag.liveRefs) return;
       var anchor = drag.pendingMultiAnchor || { x: 0, y: 0 };
       var boxes = computeMultiSelectLiveBoxes(
         drag.memberWorldSnapshots,
@@ -10114,9 +10165,9 @@ var ExperienciaCanvas = (function () {
               startT0 = startY0 - startH0 / 2;
               startB0 = startY0 + startH0 / 2;
             }
-            transformMemberIds = memberWorldSnapshots
-              ? Object.keys(memberWorldSnapshots)
-              : (gIx && gIx.memberIds ? gIx.memberIds.slice() : []);
+            transformMemberIds = ExperienciaEngine.resolveOverlayGroupMemberIds
+              ? ExperienciaEngine.resolveOverlayGroupMemberIds(nG, gIx, { repair: true })
+              : (memberWorldSnapshots ? Object.keys(memberWorldSnapshots) : []);
             liveRefs = buildMultiSelectResizeLiveRefs(
               sceneIdG, transformMemberIds, layerW0, layerH0
             );
@@ -10549,6 +10600,8 @@ var ExperienciaCanvas = (function () {
                       y: outerFinG.cy != null ? outerFinG.cy : endedDrag.startY,
                       width: outerFinG.w != null ? outerFinG.w : endedDrag.startW,
                       height: outerFinG.h != null ? outerFinG.h : endedDrag.startH,
+                      scaleX: endedDrag.pendingMultiSx,
+                      scaleY: endedDrag.pendingMultiSy,
                       keepRatio: endedDrag.keepRatio,
                       layerW: endedDrag.layerW,
                       layerH: endedDrag.layerH,

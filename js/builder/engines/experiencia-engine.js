@@ -1839,7 +1839,10 @@ var ExperienciaEngine = (function () {
     patch = patch || {};
     var layerW = patch.layerW || 1000;
     var layerH = patch.layerH || 1000;
-    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: !!patch.live });
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, {
+      skipSync: !!patch.live ||
+        (!!patch.memberWorldSnapshots && patch.anchorX != null && patch.anchorY != null)
+    });
     migrateGroupedChildLocals(n, g, layerW, layerH);
 
     if (patch.x != null) {
@@ -1858,8 +1861,8 @@ var ExperienciaEngine = (function () {
       var newW = patch.width != null ? Number(patch.width) : baseW;
       var newH = patch.height != null ? Number(patch.height) : baseH;
       if (!isNaN(newW) && !isNaN(newH) && baseW > 0 && baseH > 0) {
-        var sx = newW / baseW;
-        var sy = newH / baseH;
+        var sx = patch.scaleX != null ? Number(patch.scaleX) : (newW / baseW);
+        var sy = patch.scaleY != null ? Number(patch.scaleY) : (newH / baseH);
         if (patch.keepRatio) {
           var uniform = Math.max(Math.abs(sx), Math.abs(sy));
           sx = uniform;
@@ -2020,7 +2023,15 @@ var ExperienciaEngine = (function () {
       var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
       if (!world) return;
       var rect = overlayMemberUnionRect(ix, world, layerW, layerH);
-      if (!rect) return;
+      if (!rect) {
+        rect = {
+          cx: world.x,
+          cy: world.y,
+          w: Math.max(0.5, Number(world.width || world.boxW) || 0.5),
+          h: Math.max(0.5, Number(world.height || world.boxH) || 0.5),
+          rotation: world.rotation
+        };
+      }
       var t = String(ix.type || 'BUTTON').toUpperCase();
       var st = shapeStretchFromIx(ix);
       out[String(id)] = {
