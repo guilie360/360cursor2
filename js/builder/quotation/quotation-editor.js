@@ -2359,6 +2359,10 @@ var QuotationEditor = (function () {
     grp.collapsed = !grp.collapsed;
     markDirtyLocal();
     rerender();
+    requestAnimationFrame(function () {
+      syncExpandedGroupPanels();
+      requestAnimationFrame(syncExpandedGroupPanels);
+    });
   }
 
   function renameSceneGroup(groupId, name) {
@@ -7048,19 +7052,30 @@ var QuotationEditor = (function () {
     });
   }
 
+  function groupBlockDirectChild(block, className) {
+    if (!block || !block.children) return null;
+    var i;
+    for (i = 0; i < block.children.length; i++) {
+      var ch = block.children[i];
+      if (ch && ch.classList && ch.classList.contains(className)) return ch;
+    }
+    return null;
+  }
+
   function syncExpandedGroupPanels() {
-    if (!rootEl) return;
-    var blocks = rootEl.querySelectorAll(
+    var blocks = document.querySelectorAll(
       '.qe-scenes__group-block:not(.qe-scenes__group-block--nested)'
     );
+    if (!blocks.length) return;
     var canvasEl = document.querySelector('.qe-stage-work') ||
       document.querySelector('.qe-canvas-fit') ||
       document.querySelector('[data-qe-stage-shell]');
     var canvasTop = canvasEl ? canvasEl.getBoundingClientRect().top : 80;
     blocks.forEach(function (block) {
-      var panel = block.querySelector(':scope > .qe-scenes__group-panel');
-      var wrap = block.querySelector(':scope > .qe-scenes__group-wrap');
+      var panel = groupBlockDirectChild(block, 'qe-scenes__group-panel');
+      var wrap = groupBlockDirectChild(block, 'qe-scenes__group-wrap');
       if (!panel || !wrap) return;
+      var scroll = panel.querySelector('.qe-scenes__group-panel-scroll');
       if (!block.classList.contains('is-expanded')) {
         panel.style.position = '';
         panel.style.left = '';
@@ -7069,19 +7084,20 @@ var QuotationEditor = (function () {
         panel.style.top = '';
         panel.style.maxHeight = '';
         panel.style.zIndex = '';
+        if (scroll) scroll.style.maxHeight = '';
         return;
       }
       var anchor = wrap.querySelector('.qe-scenes__group') || wrap;
       var rect = anchor.getBoundingClientRect();
+      if (!rect.width && !rect.height) return;
       var maxH = Math.max(160, rect.top - canvasTop - 20);
       panel.style.position = 'fixed';
-      panel.style.left = rect.left + 'px';
+      panel.style.left = Math.max(8, rect.left) + 'px';
       panel.style.width = Math.max(148, rect.width) + 'px';
       panel.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
       panel.style.top = 'auto';
       panel.style.maxHeight = maxH + 'px';
-      panel.style.zIndex = '120';
-      var scroll = panel.querySelector('.qe-scenes__group-panel-scroll');
+      panel.style.zIndex = '500';
       if (scroll) scroll.style.maxHeight = Math.max(120, maxH - 4) + 'px';
     });
   }
@@ -9621,6 +9637,7 @@ var QuotationEditor = (function () {
     bindFocusEsc();
     bindInspectorChrome();
     bindSceneDeleteDelegation(panel);
+    bindSceneGroupDelegation(panel);
     syncRightPanel();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();

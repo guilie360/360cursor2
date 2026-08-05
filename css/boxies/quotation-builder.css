@@ -1450,10 +1450,15 @@
 }
 
 .qe-scenes__group-block.is-expanded > .qe-scenes__group-panel {
+  max-height: min(480px, 60vh);
   opacity: 1;
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
   overflow: visible;
+}
+
+.qe-scenes__group-block--nested.is-expanded > .qe-scenes__group-panel {
+  max-height: 240px;
 }
 
 .qe-scenes__group-panel-scroll {
