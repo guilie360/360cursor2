@@ -1931,7 +1931,12 @@ var QuotationEditor = (function () {
 
   function heroScene() {
     ensureScenes();
-    return (state.scenes && state.scenes[0]) || null;
+    return heroSceneRef();
+  }
+
+  /** Hero at index 0 — no ensureScenes (safe inside ensureSceneGroups / healSceneGroups). */
+  function heroSceneRef() {
+    return (Array.isArray(state.scenes) && state.scenes[0]) || null;
   }
 
   /**
@@ -2064,20 +2069,28 @@ var QuotationEditor = (function () {
     }
   }
 
+  var ensuringSceneGroups = false;
+
   function ensureSceneGroups() {
-    if (!Array.isArray(state.sceneGroups)) state.sceneGroups = [];
-    if (!Array.isArray(state.sceneTrack)) state.sceneTrack = [];
-    if (!state.sceneSelectedIds || typeof state.sceneSelectedIds !== 'object') {
-      state.sceneSelectedIds = {};
-    }
-    healSceneGroups();
-    if (!state.sceneTrack.length) {
-      var i;
-      for (i = 1; i < state.scenes.length; i++) {
-        var sc = state.scenes[i];
-        if (!sc || isHeroScene(sc)) continue;
-        if (!findGroupContainingScene(sc.id)) state.sceneTrack.push(sc.id);
+    if (ensuringSceneGroups) return;
+    ensuringSceneGroups = true;
+    try {
+      if (!Array.isArray(state.sceneGroups)) state.sceneGroups = [];
+      if (!Array.isArray(state.sceneTrack)) state.sceneTrack = [];
+      if (!state.sceneSelectedIds || typeof state.sceneSelectedIds !== 'object') {
+        state.sceneSelectedIds = {};
       }
+      healSceneGroups();
+      if (!state.sceneTrack.length) {
+        var i;
+        for (i = 1; i < state.scenes.length; i++) {
+          var sc = state.scenes[i];
+          if (!sc || isHeroScene(sc)) continue;
+          if (!findGroupContainingScene(sc.id)) state.sceneTrack.push(sc.id);
+        }
+      }
+    } finally {
+      ensuringSceneGroups = false;
     }
   }
 
@@ -2112,7 +2125,7 @@ var QuotationEditor = (function () {
   function healSceneGroups() {
     if (!Array.isArray(state.sceneGroups)) state.sceneGroups = [];
     if (!Array.isArray(state.sceneTrack)) state.sceneTrack = [];
-    var hero = heroScene();
+    var hero = heroSceneRef();
     var heroId = hero ? String(hero.id) : '';
     var validGroups = Object.create(null);
     var validScenes = Object.create(null);
@@ -2245,7 +2258,7 @@ var QuotationEditor = (function () {
     ensureSceneGroups();
     var grp = sceneGroupById(groupId);
     if (!grp || !Array.isArray(sceneIds) || !sceneIds.length) return false;
-    var hero = heroScene();
+    var hero = heroSceneRef();
     var heroId = hero ? String(hero.id) : '';
     var ids = sceneIds.map(String).filter(function (sid) {
       var sc = sceneById(sid);
