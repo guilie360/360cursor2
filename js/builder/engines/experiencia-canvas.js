@@ -8089,13 +8089,17 @@ var ExperienciaCanvas = (function () {
         clearOverlayCanvasHover();
         return;
       }
-      var hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
+      var hit = overlayPickTopmostAtPoint(clientX, clientY);
+      if (!hit) {
+        hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
+      }
       var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
         ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
       if (nextId === String(overlayCanvasHoverId || '')) return;
       clearOverlayCanvasHover();
       overlayCanvasHoverId = nextId || null;
-      if (hit && hit.classList.contains('builder-exp-stage-shape')) {
+      if (hit && hit.classList.contains('builder-exp-stage-shape') &&
+          !hit.classList.contains('is-selected')) {
         hit.classList.add('is-canvas-hover');
       }
     }
