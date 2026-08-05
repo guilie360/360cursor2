@@ -5354,7 +5354,8 @@ var QuotationEditor = (function () {
       out.libTop = list.scrollTop;
       out.libLeft = list.scrollLeft;
     }
-    var track = document.querySelector('[data-qe-scenes-track]');
+    var track = document.querySelector('.qe-scenes__track-wrap') ||
+      document.querySelector('[data-qe-scenes-track]');
     if (track) {
       scenesTrackScrollLeft = track.scrollLeft;
       out.scenesLeft = scenesTrackScrollLeft;
@@ -5370,7 +5371,8 @@ var QuotationEditor = (function () {
       : scenesTrackScrollLeft;
     scenesTrackScrollLeft = target;
     function apply() {
-      var track = document.querySelector('[data-qe-scenes-track]');
+      var track = document.querySelector('.qe-scenes__track-wrap') ||
+        document.querySelector('[data-qe-scenes-track]');
       if (!track) return null;
       track.style.scrollBehavior = 'auto';
       track.scrollLeft = target;
@@ -5463,8 +5465,10 @@ var QuotationEditor = (function () {
     /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
     requestAnimationFrame(function () {
       restoreScenesTrackScroll(uiScroll.scenesLeft);
+      syncExpandedGroupPanels();
       requestAnimationFrame(function () {
         restoreScenesTrackScroll(uiScroll.scenesLeft);
+        syncExpandedGroupPanels();
       });
     });
   }
@@ -7044,6 +7048,67 @@ var QuotationEditor = (function () {
     });
   }
 
+  function syncExpandedGroupPanels() {
+    if (!rootEl) return;
+    var blocks = rootEl.querySelectorAll(
+      '.qe-scenes__group-block:not(.qe-scenes__group-block--nested)'
+    );
+    var canvasEl = document.querySelector('.qe-stage-work') ||
+      document.querySelector('.qe-canvas-fit') ||
+      document.querySelector('[data-qe-stage-shell]');
+    var canvasTop = canvasEl ? canvasEl.getBoundingClientRect().top : 80;
+    blocks.forEach(function (block) {
+      var panel = block.querySelector(':scope > .qe-scenes__group-panel');
+      var wrap = block.querySelector(':scope > .qe-scenes__group-wrap');
+      if (!panel || !wrap) return;
+      if (!block.classList.contains('is-expanded')) {
+        panel.style.position = '';
+        panel.style.left = '';
+        panel.style.width = '';
+        panel.style.bottom = '';
+        panel.style.top = '';
+        panel.style.maxHeight = '';
+        panel.style.zIndex = '';
+        return;
+      }
+      var anchor = wrap.querySelector('.qe-scenes__group') || wrap;
+      var rect = anchor.getBoundingClientRect();
+      var maxH = Math.max(160, rect.top - canvasTop - 20);
+      panel.style.position = 'fixed';
+      panel.style.left = rect.left + 'px';
+      panel.style.width = Math.max(148, rect.width) + 'px';
+      panel.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+      panel.style.top = 'auto';
+      panel.style.maxHeight = maxH + 'px';
+      panel.style.zIndex = '120';
+      var scroll = panel.querySelector('.qe-scenes__group-panel-scroll');
+      if (scroll) scroll.style.maxHeight = Math.max(120, maxH - 4) + 'px';
+    });
+  }
+
+  function bindScenesStripScroll(editor) {
+    if (!editor) return;
+    var wrap = editor.querySelector('.qe-scenes__track-wrap');
+    if (!wrap) return;
+
+    wrap.addEventListener('scroll', function () {
+      scenesTrackScrollLeft = wrap.scrollLeft;
+      syncExpandedGroupPanels();
+    }, { passive: true });
+
+    wrap.addEventListener('wheel', function (e) {
+      if (e.target && e.target.closest && e.target.closest('.qe-scenes__group-panel-scroll')) {
+        return;
+      }
+      var delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (!delta) return;
+      e.preventDefault();
+      wrap.scrollLeft += delta;
+      scenesTrackScrollLeft = wrap.scrollLeft;
+      syncExpandedGroupPanels();
+    }, { passive: false });
+  }
+
   function bindSceneGroups(editor) {
     if (!editor) return;
     editor.querySelectorAll('[data-qe-scene-group-toggle]').forEach(function (btn) {
@@ -7063,6 +7128,12 @@ var QuotationEditor = (function () {
       });
     }
     bindSceneGroupEditing(editor);
+    bindScenesStripScroll(editor);
+    syncExpandedGroupPanels();
+    if (!document.documentElement.dataset.qeGroupPanelResize) {
+      document.documentElement.dataset.qeGroupPanelResize = '1';
+      window.addEventListener('resize', syncExpandedGroupPanels, { passive: true });
+    }
   }
 
   function openSceneContextMenu(sceneId, clientX, clientY) {
@@ -9700,20 +9771,19 @@ var QuotationEditor = (function () {
         });
       }
 
+      var scenesTrackWrap = editor.querySelector('.qe-scenes__track-wrap');
       var scenesTrack = editor.querySelector('[data-qe-scenes-track]');
       var scenesPrev = editor.querySelector('[data-qe-scenes-prev]');
       var scenesNext = editor.querySelector('[data-qe-scenes-next]');
       function scrollScenes(dir) {
-        if (!scenesTrack) return;
-        scenesTrack.scrollBy({
-          left: dir * Math.max(200, scenesTrack.clientWidth * 0.6),
+        var el = scenesTrackWrap || scenesTrack;
+        if (!el) return;
+        el.scrollBy({
+          left: dir * Math.max(200, el.clientWidth * 0.6),
           behavior: 'smooth'
         });
       }
       if (scenesTrack) {
-        scenesTrack.addEventListener('scroll', function () {
-          scenesTrackScrollLeft = scenesTrack.scrollLeft;
-        }, { passive: true });
         /* Prevent focused thumbs from auto-scrolling the strip on click/rerender. */
         scenesTrack.addEventListener('focusin', function (e) {
           var thumb = e.target && e.target.closest
@@ -9721,10 +9791,11 @@ var QuotationEditor = (function () {
             : null;
           if (!thumb || !scenesTrack.contains(thumb)) return;
           var pinned = scenesTrackScrollLeft;
+          var scrollEl = scenesTrackWrap || scenesTrack;
           requestAnimationFrame(function () {
-            if (Math.abs(scenesTrack.scrollLeft - pinned) > 1) {
-              scenesTrack.style.scrollBehavior = 'auto';
-              scenesTrack.scrollLeft = pinned;
+            if (Math.abs(scrollEl.scrollLeft - pinned) > 1) {
+              scrollEl.style.scrollBehavior = 'auto';
+              scrollEl.scrollLeft = pinned;
               scenesTrackScrollLeft = pinned;
             }
           });
