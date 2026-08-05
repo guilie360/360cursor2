@@ -1794,7 +1794,8 @@ var ExperienciaEngine = (function () {
     var stretchMin = 0.06;
     var floorSx = 0;
     var floorSy = 0;
-    Object.keys(snap || {}).forEach(function (id) {
+    var snapKeys = Object.keys(snap || {});
+    snapKeys.forEach(function (id) {
       var s = snap[id];
       if (!s) return;
       var mw = Math.max(1e-6, Number(s.w) || 0.5);
@@ -1812,9 +1813,30 @@ var ExperienciaEngine = (function () {
     if (!isFinite(csy)) csy = 1;
     var signX = csx < 0 ? -1 : 1;
     var signY = csy < 0 ? -1 : 1;
-    csx = signX * Math.max(Math.abs(csx), floorSx);
-    csy = signY * Math.max(Math.abs(csy), floorSy);
-    return { sx: csx, sy: csy };
+    var outSx = signX * Math.max(Math.abs(csx), floorSx);
+    var outSy = signY * Math.max(Math.abs(csy), floorSy);
+    if (typeof window !== 'undefined') {
+      try {
+        var q = new URLSearchParams(window.location.search);
+        if (q.get('multiScaleDebug') === '1' || q.get('shapeDebug') === '1' || q.get('shapeTrace') === '1') {
+          console.log(
+            '%c[MULTI-SCALE] engine.overlayGroupScaleFloor',
+            'color:#7af;font-weight:bold;font-size:12px',
+            {
+              sxIn: +csx.toFixed(6),
+              syIn: +csy.toFixed(6),
+              sxOut: +outSx.toFixed(6),
+              syOut: +outSy.toFixed(6),
+              floorSx: +floorSx.toFixed(6),
+              floorSy: +floorSy.toFixed(6),
+              snapMembers: snapKeys.length,
+              minPx: minPx
+            }
+          );
+        }
+      } catch (eTr) { /* ignore */ }
+    }
+    return { sx: outSx, sy: outSy, floorSx: floorSx, floorSy: floorSy };
   }
 
   function overlayGroupOuterFromScale(anchorX, anchorY, startCx, startCy, startW, startH, sx, sy) {
@@ -1957,11 +1979,11 @@ var ExperienciaEngine = (function () {
             var uniF = Math.max(Math.abs(sx), Math.abs(sy));
             sx = uniF;
             sy = uniF;
-            newW = baseW * sx;
-            newH = baseH * sy;
-            g.width = newW;
-            g.height = newH;
           }
+          newW = baseW * sx;
+          newH = baseH * sy;
+          g.width = newW;
+          g.height = newH;
           resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (mid) {
             var c = getInteraction(n, mid);
             var sw = worldSnap[String(mid)];

@@ -4,6 +4,28 @@ var ExperienciaCanvas = (function () {
   var MAX_ZOOM = 1.8;
   var CANVAS_MODE_KEY = 'experienciaCanvasMode';
 
+  /** Temporary — ?shapeDebug=1 or ?multiScaleDebug=1 for group/multi resize trace. */
+  function multiScaleTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_MULTI_SCALE_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('multiScaleDebug') === '0') return false;
+      if (q.get('multiScaleDebug') === '1') return true;
+      if (q.get('shapeDebug') === '1') return true;
+      if (q.get('shapeTrace') === '1') return true;
+    } catch (eMs) { /* ignore */ }
+    return false;
+  }
+
+  function multiScaleTrace(stage, payload) {
+    if (!multiScaleTraceEnabled()) return;
+    console.log(
+      '%c[MULTI-SCALE] ' + stage,
+      'color:#7af;font-weight:bold;font-size:12px',
+      payload || {}
+    );
+  }
+
   /** Temporary — ?shapeDebug=0 disables. Logs shape vs gizmo divergence. */
   function shapeResizeDebugEnabled() {
     if (typeof window !== 'undefined' && window.__QE_SHAPE_RESIZE_DEBUG__ === false) return false;
@@ -3028,6 +3050,13 @@ var ExperienciaCanvas = (function () {
         }
       } catch (eSbWarn) { /* ignore */ }
     }
+    multiScaleTrace('init', {
+      overlayGroupScaleFloor: !!(typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.overlayGroupScaleFloor),
+      overlayMemberMinPx: typeof ExperienciaEngine !== 'undefined'
+        ? ExperienciaEngine.OVERLAY_MEMBER_MIN_PX : null,
+      note: 'Verify BOTH experiencia-engine.js and experiencia-canvas.js share the same ?v= in Network'
+    });
 
     ExperienciaEngine.ensureFlow(state);
 
@@ -7538,13 +7567,27 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    function clampMultiResizeScale(drag, sx, sy, layerW, layerH) {
-      if (!drag || !drag.memberWorldSnapshots || !ExperienciaEngine.overlayGroupScaleFloor) {
+    function clampMultiResizeScale(drag, sx, sy, layerW, layerH, tag) {
+      tag = tag || 'clamp';
+      if (!drag || !drag.memberWorldSnapshots) {
+        multiScaleTrace(tag + '.skip', { reason: 'no-memberWorldSnapshots', sx: sx, sy: sy });
         return { sx: sx, sy: sy };
       }
+      if (!ExperienciaEngine.overlayGroupScaleFloor) {
+        multiScaleTrace(tag + '.skip', {
+          reason: 'overlayGroupScaleFloor-missing-on-ExperienciaEngine',
+          sx: sx,
+          sy: sy,
+          hint: 'Hard-refresh — verify experiencia-engine.js?v= matches canvas cache bust'
+        });
+        return { sx: sx, sy: sy };
+      }
+      var snapKeys = Object.keys(drag.memberWorldSnapshots || {});
       var fl = ExperienciaEngine.overlayGroupScaleFloor(
         drag.memberWorldSnapshots, sx, sy, layerW, layerH
       );
+      var sxIn = sx;
+      var syIn = sy;
       sx = fl.sx;
       sy = fl.sy;
       if (drag.keepRatio) {
@@ -7552,6 +7595,15 @@ var ExperienciaCanvas = (function () {
         sx = uni;
         sy = uni;
       }
+      multiScaleTrace(tag, {
+        sxIn: +Number(sxIn).toFixed(6),
+        syIn: +Number(syIn).toFixed(6),
+        sxOut: +Number(sx).toFixed(6),
+        syOut: +Number(sy).toFixed(6),
+        snapMembers: snapKeys.length,
+        keepRatio: !!drag.keepRatio,
+        type: drag.type
+      });
       return { sx: sx, sy: sy };
     }
 
@@ -7585,15 +7637,25 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    function applyMultiSelectScale(sceneId, memberIds, snap, sx, sy, anchorX, anchorY, layerW, layerH) {
+    function applyMultiSelectScale(sceneId, memberIds, snap, sx, sy, anchorX, anchorY, layerW, layerH, opts) {
+      opts = opts || {};
       if (!sceneId || !memberIds || !memberIds.length || !snap) return;
       layerW = Math.max(1, Number(layerW) || 1000);
       layerH = Math.max(1, Number(layerH) || 1000);
+      var sx0 = sx;
+      var sy0 = sy;
       if (ExperienciaEngine.overlayGroupScaleFloor) {
         var fl0 = ExperienciaEngine.overlayGroupScaleFloor(snap, sx, sy, layerW, layerH);
         sx = fl0.sx;
         sy = fl0.sy;
       }
+      multiScaleTrace('applyMultiSelectScale', {
+        commit: !!opts.commit,
+        sxIn: +Number(sx0).toFixed(6),
+        sxOut: +Number(sx).toFixed(6),
+        members: memberIds.length,
+        snapKeys: Object.keys(snap || {}).length
+      });
       memberIds.forEach(function (mid) {
         var s = snap[String(mid)];
         if (!s) return;
@@ -7603,7 +7665,7 @@ var ExperienciaCanvas = (function () {
         var sized = scaleMemberLiveBox(s, sx, sy, layerW, layerH);
         var nw = sized.w;
         var nh = sized.h;
-        var patch = { live: true, layerW: layerW, layerH: layerH };
+        var patch = { live: !opts.commit, layerW: layerW, layerH: layerH };
         if (s.rotation != null) patch.rotation = s.rotation;
         if (isShapeType(t)) {
           if (s.shapeContentBox) {
@@ -9854,7 +9916,7 @@ var ExperienciaCanvas = (function () {
                 sxG = uniG;
                 syG = uniG;
               }
-              var clampedG = clampMultiResizeScale(transformDrag, sxG, syG, layerW, layerH);
+              var clampedG = clampMultiResizeScale(transformDrag, sxG, syG, layerW, layerH, 'pointermove.group');
               sxG = clampedG.sx;
               syG = clampedG.sy;
               var outerG = multiResizeOuterFromScale(transformDrag, sxG, syG);
@@ -9890,7 +9952,7 @@ var ExperienciaCanvas = (function () {
                 sxMulti = uniMulti;
                 syMulti = uniMulti;
               }
-              var clampedM = clampMultiResizeScale(transformDrag, sxMulti, syMulti, layerW, layerH);
+              var clampedM = clampMultiResizeScale(transformDrag, sxMulti, syMulti, layerW, layerH, 'pointermove.multi');
               sxMulti = clampedM.sx;
               syMulti = clampedM.sy;
               var outerM = multiResizeOuterFromScale(transformDrag, sxMulti, syMulti);
@@ -10410,6 +10472,17 @@ var ExperienciaCanvas = (function () {
             type: gtype,
             mode: handleMode
           });
+          if (gtype === 'MULTI_SELECT' || gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
+            multiScaleTrace('transformstart', {
+              type: gtype,
+              mode: handleMode,
+              snapKeys: memberWorldSnapshots ? Object.keys(memberWorldSnapshots).length : 0,
+              memberIds: transformMemberIds ? transformMemberIds.length : 0,
+              startW: startW0,
+              startH: startH0,
+              hasScaleFloorFn: !!(ExperienciaEngine && ExperienciaEngine.overlayGroupScaleFloor)
+            });
+          }
           return;
         }
         var moveSurface = ev.target.closest && ev.target.closest('[data-exp-sel-move]');
@@ -10751,11 +10824,17 @@ var ExperienciaCanvas = (function () {
                   var sxFinG = endedDrag.pendingMultiSx;
                   var syFinG = endedDrag.pendingMultiSy;
                   var clampedFinG = clampMultiResizeScale(
-                    endedDrag, sxFinG, syFinG, endedDrag.layerW, endedDrag.layerH
+                    endedDrag, sxFinG, syFinG, endedDrag.layerW, endedDrag.layerH, 'pointerup.group'
                   );
                   sxFinG = clampedFinG.sx;
                   syFinG = clampedFinG.sy;
                   var outerFinG = multiResizeOuterFromScale(endedDrag, sxFinG, syFinG);
+                  multiScaleTrace('pointerup.group.commit', {
+                    sx: +Number(sxFinG).toFixed(6),
+                    outerW: outerFinG.w,
+                    outerH: outerFinG.h,
+                    snapKeys: Object.keys(endedDrag.memberWorldSnapshots || {}).length
+                  });
                   ExperienciaEngine.updateOverlayGroupTransform(
                     state, endScene, rotBtnId,
                     {
@@ -10774,6 +10853,14 @@ var ExperienciaCanvas = (function () {
                     }
                   );
                   persist();
+                } else {
+                  multiScaleTrace('pointerup.group.SKIPPED', {
+                    movedT: movedT,
+                    pendingMultiSx: endedDrag.pendingMultiSx,
+                    hasSnapshots: !!endedDrag.memberWorldSnapshots,
+                    snapKeys: endedDrag.memberWorldSnapshots
+                      ? Object.keys(endedDrag.memberWorldSnapshots).length : 0
+                  });
                 }
                 clearMultiSelectLiveStyles(endedDrag.liveRefs);
                 finalizeGroupResizeBounds(endScene, rotBtnId);
@@ -10787,7 +10874,7 @@ var ExperienciaCanvas = (function () {
                   var sxFinM = endedDrag.pendingMultiSx;
                   var syFinM = endedDrag.pendingMultiSy;
                   var clampedFinM = clampMultiResizeScale(
-                    endedDrag, sxFinM, syFinM, endedDrag.layerW, endedDrag.layerH
+                    endedDrag, sxFinM, syFinM, endedDrag.layerW, endedDrag.layerH, 'pointerup.multi'
                   );
                   applyMultiSelectScale(
                     endScene,
@@ -10798,9 +10885,19 @@ var ExperienciaCanvas = (function () {
                     anchorFin.x,
                     anchorFin.y,
                     endedDrag.layerW,
-                    endedDrag.layerH
+                    endedDrag.layerH,
+                    { commit: true }
                   );
                   committedMultiResize = true;
+                  persist();
+                } else {
+                  multiScaleTrace('pointerup.multi.SKIPPED', {
+                    movedT: movedT,
+                    pendingMultiSx: endedDrag.pendingMultiSx,
+                    memberIds: endedDrag.memberIds ? endedDrag.memberIds.length : 0,
+                    snapKeys: endedDrag.memberWorldSnapshots
+                      ? Object.keys(endedDrag.memberWorldSnapshots).length : 0
+                  });
                 }
               } else {
             var endBtn = ExperienciaEngine.getSceneButton(
