@@ -7665,9 +7665,7 @@ body > .ws-select__list {
 }
 
 /* V6.1.06 — pasted overlay pending-move state (red frame = needs reposition) */
-.builder-exp-ui-btn.is-pending-move,
-.builder-exp-stage-shape.is-pending-move,
-.builder-exp-stage-text.is-pending-move {
+.builder-exp-ui-btn.is-pending-move {
   outline: 2px solid #b33a3a;
   outline-offset: 2px;
   box-shadow:
@@ -7675,6 +7673,15 @@ body > .ws-select__list {
     0 0 18px rgba(179, 58, 58, 0.45),
     var(--btn-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
   animation: builderExpBtnPendingPulse 1.15s ease-in-out infinite;
+}
+
+/* Shapes/text: outline ring only — no btn drop-shadow on content-box containers. */
+.builder-exp-stage-shape.is-pending-move,
+.builder-exp-stage-text.is-pending-move {
+  outline: 2px solid #b33a3a;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgba(179, 58, 58, 0.28);
+  animation: builderExpShapePendingPulse 1.15s ease-in-out infinite;
 }
 
 @keyframes builderExpBtnPendingPulse {
@@ -7689,6 +7696,15 @@ body > .ws-select__list {
       0 0 0 4px rgba(179, 58, 58, 0.28),
       0 0 22px rgba(179, 58, 58, 0.55),
       var(--btn-shadow, 0 4px 16px rgba(0, 0, 0, 0.35));
+  }
+}
+
+@keyframes builderExpShapePendingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(179, 58, 58, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(179, 58, 58, 0.38);
   }
 }
 
