@@ -8714,6 +8714,104 @@ var ExperienciaCanvas = (function () {
       return t === 'BUTTON' ? ' is-pending-move' : '';
     }
 
+    function sanitizeOverlaySnapshot(snap) {
+      if (!snap) return snap;
+      delete snap.id;
+      delete snap.portId;
+      delete snap.groupId;
+      delete snap.localX;
+      delete snap.localY;
+      delete snap.localRotation;
+      delete snap.memberIds;
+      return snap;
+    }
+
+    function buildOverlaySnapshot(sceneId, memberId, layerW, layerH) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n) return null;
+      var b = ExperienciaEngine.getSceneButton(state, n, memberId);
+      if (!b || !b._ix) return null;
+      if (b.locked || b.visible === false) return null;
+      var vm = ExperienciaEngine.buttonViewModel
+        ? ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH)
+        : b;
+      var snap;
+      try {
+        snap = JSON.parse(JSON.stringify(b._ix));
+      } catch (eClone) {
+        return null;
+      }
+      sanitizeOverlaySnapshot(snap);
+      snap.x = Number(vm.x);
+      snap.y = Number(vm.y);
+      snap.positionMode = 'free';
+      snap.positionInitialized = true;
+      snap.visible = b.visible !== false;
+      snap.type = String(b.type || snap.type || 'BUTTON').toUpperCase();
+      return snap;
+    }
+
+    /** Expand group selection to member ids; multi-select → one cluster to regroup on paste. */
+    function resolveCopyClusters(sceneId, ids) {
+      ids = (ids || []).map(String).filter(Boolean);
+      if (!ids.length) return [];
+
+      if (ids.length === 1 && isOverlayGroupId(sceneId, ids[0])) {
+        var nGroup = ExperienciaEngine.getNode(state, sceneId);
+        var gOnly = nGroup && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(nGroup, ids[0])
+          : null;
+        var gMembers = (gOnly && gOnly.memberIds) ? gOnly.memberIds.map(String).filter(Boolean) : [];
+        if (gMembers.length) {
+          return [{ memberIds: gMembers, regroup: gMembers.length >= 2 }];
+        }
+        return [];
+      }
+
+      var memberIds = [];
+      ids.forEach(function (id) {
+        if (isOverlayGroupId(sceneId, id)) {
+          var n = ExperienciaEngine.getNode(state, sceneId);
+          var g = n && ExperienciaEngine.getInteraction
+            ? ExperienciaEngine.getInteraction(n, id)
+            : null;
+          (g && g.memberIds ? g.memberIds : []).forEach(function (mid) {
+            mid = String(mid);
+            if (memberIds.indexOf(mid) < 0) memberIds.push(mid);
+          });
+          return;
+        }
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm || vm.locked || vm.visible === false) return;
+        if (memberIds.indexOf(id) < 0) memberIds.push(id);
+      });
+
+      if (!memberIds.length) return [];
+      return [{
+        memberIds: memberIds,
+        regroup: memberIds.length >= 2
+      }];
+    }
+
+    function buildCopyClusters(sceneId, ids, layerW, layerH) {
+      var clusters = resolveCopyClusters(sceneId, ids);
+      var out = [];
+      clusters.forEach(function (cluster) {
+        var items = [];
+        (cluster.memberIds || []).forEach(function (memberId) {
+          var snap = buildOverlaySnapshot(sceneId, memberId, layerW, layerH);
+          if (snap) items.push(snap);
+        });
+        if (items.length) {
+          out.push({
+            items: items,
+            regroup: !!cluster.regroup && items.length >= 2
+          });
+        }
+      });
+      return out;
+    }
+
     function copySelectedButtons() {
       if (!overlaysEditable()) return false;
       var sceneId = canvas().selectedId;
@@ -8723,35 +8821,11 @@ var ExperienciaCanvas = (function () {
         : [];
       if (!ids.length && canvas().selectedButtonId) ids = [canvas().selectedButtonId];
       if (!ids.length) return false;
-      var n = ExperienciaEngine.getNode(state, sceneId);
       var layerW = Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000);
       var layerH = Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000);
-      var items = [];
-      ids.forEach(function (id) {
-        var b = ExperienciaEngine.getSceneButton(state, n, id);
-        if (!b || !b._ix) return;
-        var vm = ExperienciaEngine.buttonViewModel
-          ? ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH)
-          : b;
-        var layout = { x: vm.x, y: vm.y };
-        var snap;
-        try {
-          snap = JSON.parse(JSON.stringify(b._ix));
-        } catch (eClone) {
-          return;
-        }
-        delete snap.id;
-        delete snap.portId;
-        snap.x = Number(layout.x);
-        snap.y = Number(layout.y);
-        snap.positionMode = 'free';
-        snap.positionInitialized = true;
-        snap.visible = b.visible !== false;
-        snap.type = String(b.type || snap.type || 'BUTTON').toUpperCase();
-        items.push(snap);
-      });
-      if (!items.length) return false;
-      buttonClipboard = { items: items, fromCut: false };
+      var clusters = buildCopyClusters(sceneId, ids, layerW, layerH);
+      if (!clusters.length) return false;
+      buttonClipboard = { clusters: clusters, fromCut: false };
       return true;
     }
 
@@ -8777,33 +8851,64 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
-    function pasteCopiedButtons() {
+    function pasteCopiedButtons(opts) {
+      opts = opts || {};
       if (!overlaysEditable()) return false;
-      if (!buttonClipboard || !buttonClipboard.items || !buttonClipboard.items.length) {
-        return false;
+      if (!buttonClipboard || !ExperienciaEngine.createSceneButtonFromSnapshot) return false;
+      var clusters = buttonClipboard.clusters;
+      if (!clusters || !clusters.length) {
+        /* Legacy clipboard: flat items array */
+        if (!buttonClipboard.items || !buttonClipboard.items.length) return false;
+        clusters = [{ items: buttonClipboard.items, regroup: buttonClipboard.items.length >= 2 }];
       }
       var sceneId = canvas().selectedId;
       if (!sceneId) return false;
-      if (!ExperienciaEngine.createSceneButtonFromSnapshot) return false;
       pushButtonHistory(sceneId);
+      var layerW = Math.max(1, (buttonsLayer && buttonsLayer.clientWidth) || 1000);
+      var layerH = Math.max(1, (buttonsLayer && buttonsLayer.clientHeight) || 1000);
+      var offsetX = Number(opts.offsetX) || 0;
+      var offsetY = Number(opts.offsetY) || 0;
+      var dxPct = (offsetX / layerW) * 100;
+      var dyPct = (offsetY / layerH) * 100;
       var pastedIds = [];
-      buttonClipboard.items.forEach(function (item) {
-        var snap = {};
-        try { snap = JSON.parse(JSON.stringify(item)); } catch (eS) { snap = item; }
-        snap.x = Number(snap.x);
-        snap.y = Number(snap.y);
-        var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, snap);
-        if (copy && copy.id) {
-          pastedIds.push(String(copy.id));
-          if (String(snap.type || 'BUTTON').toUpperCase() === 'BUTTON') {
-            markPendingMove(copy.id);
+      var selectionIds = [];
+
+      clusters.forEach(function (cluster) {
+        var clusterPasted = [];
+        (cluster.items || []).forEach(function (item) {
+          var snap = {};
+          try { snap = JSON.parse(JSON.stringify(item)); } catch (eS) { snap = item; }
+          sanitizeOverlaySnapshot(snap);
+          snap.x = Number(snap.x) + dxPct;
+          snap.y = Number(snap.y) + dyPct;
+          var copy = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, snap);
+          if (copy && copy.id) {
+            var copyId = String(copy.id);
+            clusterPasted.push(copyId);
+            pastedIds.push(copyId);
+            if (String(snap.type || 'BUTTON').toUpperCase() === 'BUTTON') {
+              markPendingMove(copyId);
+            }
+          }
+        });
+        if (!clusterPasted.length) return;
+        if (cluster.regroup && clusterPasted.length >= 2 &&
+            ExperienciaEngine.groupSceneOverlays) {
+          var grouped = ExperienciaEngine.groupSceneOverlays(
+            state, sceneId, clusterPasted, layerW, layerH
+          );
+          if (grouped && grouped.id) {
+            selectionIds.push(String(grouped.id));
+            return;
           }
         }
+        selectionIds = selectionIds.concat(clusterPasted);
       });
+
       if (!pastedIds.length) return false;
       buttonClipboard.fromCut = false;
-      canvas().selectedButtonIds = pastedIds.slice();
-      canvas().selectedButtonId = pastedIds[pastedIds.length - 1];
+      canvas().selectedButtonIds = selectionIds.length ? selectionIds.slice() : pastedIds.slice();
+      canvas().selectedButtonId = canvas().selectedButtonIds[canvas().selectedButtonIds.length - 1];
       paintButtonsStage();
       paintInspector();
       persist();
@@ -12531,22 +12636,33 @@ var ExperienciaCanvas = (function () {
       },
       duplicateSelected: function () {
         var sceneId = canvas().selectedId;
-        var id = canvas().selectedButtonId;
-        if (!sceneId || !id || !ExperienciaEngine.duplicateSceneButton) return null;
+        if (!sceneId || !ExperienciaEngine.duplicateSceneButton) return null;
+        var ids = getSelectedOverlayIds();
+        if (!ids.length) return null;
         var layerW = (buttonsLayer && buttonsLayer.clientWidth) || 1000;
         var layerH = (buttonsLayer && buttonsLayer.clientHeight) || 1000;
-        var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId, id, {
-          imageW: layerW,
-          imageH: layerH
-        });
-        if (copy) {
-          canvas().selectedButtonId = copy.id;
-          canvas().selectedButtonIds = [String(copy.id)];
+        var isGroup = ids.length === 1 && isOverlayGroupId(sceneId, ids[0]);
+        var isMulti = ids.length > 1 || isGroup;
+        if (!isMulti) {
+          var copy = ExperienciaEngine.duplicateSceneButton(state, sceneId, ids[0], {
+            imageW: layerW,
+            imageH: layerH
+          });
+          if (copy) {
+            canvas().selectedButtonId = copy.id;
+            canvas().selectedButtonIds = [String(copy.id)];
+          }
+          renderAll();
+          paintInspector();
+          persist();
+          return copy;
         }
+        if (!copySelectedButtons()) return null;
+        if (!pasteCopiedButtons({ offsetY: 32 })) return null;
         renderAll();
         paintInspector();
         persist();
-        return copy;
+        return { id: canvas().selectedButtonId };
       },
       deleteSelected: function () {
         var sceneId = canvas().selectedId;
