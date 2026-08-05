@@ -7528,13 +7528,13 @@ var ExperienciaCanvas = (function () {
       return out;
     }
 
-    function scaleMemberLiveBox(s, sx, sy, layerW, layerH) {
+    function scaleMemberLiveBox(s, sx, sy) {
       if (ExperienciaEngine.overlayMemberScaledSize) {
-        return ExperienciaEngine.overlayMemberScaledSize(s, sx, sy, layerW, layerH, s.type);
+        return ExperienciaEngine.overlayMemberScaledSize(s, sx, sy);
       }
       return {
-        w: Math.max(0.5, (Number(s.w) || 0.5) * sx),
-        h: Math.max(0.5, (Number(s.h) || 0.5) * sy)
+        w: (Number(s.w) || 0.5) * sx,
+        h: (Number(s.h) || 0.5) * sy
       };
     }
 
@@ -7546,50 +7546,21 @@ var ExperienciaCanvas = (function () {
         var s = snap[String(mid)];
         if (!s) return;
         var t = String(s.type || 'BUTTON').toUpperCase();
-        var msx = sx;
-        var msy = sy;
-        if (t === 'SHAPE_CIRCLE' || t === 'SHAPE_DONUT') {
-          var uniM = Math.max(Math.abs(Number(sx) || 1), Math.abs(Number(sy) || 1));
-          msx = uniM;
-          msy = uniM;
-        }
-        var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * msx;
-        var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * msy;
-        var sized = scaleMemberLiveBox(s, msx, msy, layerW, layerH);
+        var ncx = anchorX + ((Number(s.cx) || 0) - anchorX) * sx;
+        var ncy = anchorY + ((Number(s.cy) || 0) - anchorY) * sy;
+        var sized = scaleMemberLiveBox(s, sx, sy);
         var nw = sized.w;
         var nh = sized.h;
         var patch = { live: true, layerW: layerW, layerH: layerH };
         if (s.rotation != null) patch.rotation = s.rotation;
         if (isShapeType(t)) {
-          if (s.shapeContentBox || isShapeBoxV2Active()) {
-            patch.x = ncx;
-            patch.y = ncy;
-            patch.width = nw;
-            patch.height = nh;
-            patch.shapeContentBox = true;
-            if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
-            if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
-          } else if (ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter &&
-              ExperienciaEngine.sceneShapeTileWidthFromContentWidth) {
-            var newStretchX = Math.max(0.06, Math.min(8, (s.stretchX || 1) * msx));
-            var newStretchY = Math.max(0.06, Math.min(8, (s.stretchY || 1) * msy));
-            var tileW = ExperienciaEngine.sceneShapeTileWidthFromContentWidth(
-              nw, t, newStretchX, newStretchY
-            );
-            var center = ExperienciaEngine.sceneShapeTileCenterFromGizmoCenter(
-              ncx, ncy, tileW, t, layerW, layerH, newStretchX, newStretchY
-            );
-            patch.x = center.x;
-            patch.y = center.y;
-            patch.width = tileW;
-            patch.shapeStretchX = newStretchX;
-            patch.shapeStretchY = newStretchY;
-          } else {
-            patch.x = ncx;
-            patch.y = ncy;
-            patch.width = nw;
-            patch.height = nh;
-          }
+          patch.x = ncx;
+          patch.y = ncy;
+          patch.width = nw;
+          patch.height = nh;
+          patch.shapeContentBox = true;
+          if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
+          if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
         } else if (t === 'BUTTON') {
           patch.x = ncx;
           patch.y = ncy;
@@ -7599,7 +7570,7 @@ var ExperienciaCanvas = (function () {
           patch.x = ncx;
           patch.y = ncy;
           var fsScale = Math.max(Math.abs(sx), Math.abs(sy));
-          patch.fontSize = Math.max(8, Math.round((Number(s.fontSize) || 28) * fsScale));
+          patch.fontSize = Math.max(1, Math.round((Number(s.fontSize) || 28) * fsScale));
         }
         ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
       });
@@ -7647,17 +7618,10 @@ var ExperienciaCanvas = (function () {
           var s = snap[id];
           if (!s) return;
           var t = String(s.type || 'BUTTON').toUpperCase();
-          var msx = sx;
-          var msy = sy;
-          if (t === 'SHAPE_CIRCLE' || t === 'SHAPE_DONUT') {
-            var uniL = Math.max(Math.abs(Number(sx) || 1), Math.abs(Number(sy) || 1));
-            msx = uniL;
-            msy = uniL;
-          }
-          var sized = scaleMemberLiveBox(s, msx, msy, layerW, layerH);
+          var sized = scaleMemberLiveBox(s, sx, sy);
           members[id] = {
-            cx: anchorX + ((Number(s.cx) || 0) - anchorX) * msx,
-            cy: anchorY + ((Number(s.cy) || 0) - anchorY) * msy,
+            cx: anchorX + ((Number(s.cx) || 0) - anchorX) * sx,
+            cy: anchorY + ((Number(s.cy) || 0) - anchorY) * sy,
             w: sized.w,
             h: sized.h,
             rot: Number(s.rotation) || 0,
