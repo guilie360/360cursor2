@@ -8119,10 +8119,60 @@ var ExperienciaCanvas = (function () {
       return btn;
     }
 
+    function overlayPickSelectedAtPoint(clientX, clientY) {
+      if (!buttonsLayer) return null;
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return null;
+      var selIds = getSelectedOverlayIds();
+      if (!selIds.length) return null;
+      var selSet = {};
+      selIds.forEach(function (id) { selSet[String(id)] = true; });
+
+      try {
+        var stack = document.elementsFromPoint(clientX, clientY);
+        for (var gi = 0; stack && gi < stack.length; gi++) {
+          var gizmo = stack[gi].closest && stack[gi].closest('[data-exp-gizmo]');
+          if (!gizmo || !buttonsLayer.contains(gizmo)) continue;
+          var gid = String(gizmo.getAttribute('data-gizmo-id') || '');
+          if (!gid || !selSet[gid] || isOverlayGroupId(sceneId, gid)) continue;
+          var idEsc = gid.replace(/"/g, '');
+          var ownerEl = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+          if (ownerEl) return ownerEl;
+        }
+      } catch (eGizmoPick) { /* ignore */ }
+
+      var sz = overlayLayerSize();
+      var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn]');
+      for (var i = nodes.length - 1; i >= 0; i--) {
+        var el = nodes[i];
+        var id = String(el.getAttribute('data-exp-stage-btn') || '');
+        if (!selSet[id]) continue;
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm || vm.locked || vm.visible === false) continue;
+        if (el.classList.contains('builder-exp-stage-shape')) {
+          if (overlayShapePointHit(el, vm, clientX, clientY, sz.w, sz.h)) return el;
+        } else {
+          var rect = el.getBoundingClientRect();
+          if (clientX >= rect.left && clientX <= rect.right &&
+              clientY >= rect.top && clientY <= rect.bottom) {
+            return el;
+          }
+        }
+      }
+      return null;
+    }
+
     /** Hit-test stage overlays — SVG scan first, then DOM stack; selected pass-through. */
     function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
       opts = opts || {};
       if (!buttonsLayer) return null;
+
+      /* Hover: pass through selection to highlight shapes below. Drag/click: keep selection. */
+      if (!opts.forHover) {
+        var selectedHit = overlayPickSelectedAtPoint(clientX, clientY);
+        if (selectedHit) return selectedHit;
+      }
+
       var selectedSet = {};
       getSelectedOverlayIds().forEach(function (id) {
         selectedSet[String(id)] = true;
