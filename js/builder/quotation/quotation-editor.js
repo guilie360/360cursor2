@@ -7102,6 +7102,21 @@ var QuotationEditor = (function () {
     });
   }
 
+  /** Capture-phase group toggle — survives strip rerenders. */
+  function bindSceneGroupDelegation(panel) {
+    if (!panel || panel.dataset.qeGroupToggleBound === '1') return;
+    panel.dataset.qeGroupToggleBound = '1';
+    panel.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest
+        ? e.target.closest('[data-qe-scene-group-toggle]')
+        : null;
+      if (!btn || !panel.contains(btn)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSceneGroupCollapsed(btn.getAttribute('data-qe-scene-group-toggle'));
+    });
+  }
+
   function bindScenesStripScroll(editor) {
     if (!editor) return;
     var wrap = editor.querySelector('.qe-scenes__track-wrap');
@@ -7127,13 +7142,6 @@ var QuotationEditor = (function () {
 
   function bindSceneGroups(editor) {
     if (!editor) return;
-    editor.querySelectorAll('[data-qe-scene-group-toggle]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleSceneGroupCollapsed(btn.getAttribute('data-qe-scene-group-toggle'));
-      });
-    });
     var groupAdd = editor.querySelector('[data-qe-scene-group-add]');
     if (groupAdd) {
       groupAdd.addEventListener('click', function (e) {
