@@ -7919,11 +7919,22 @@ var ExperienciaCanvas = (function () {
       ));
     }
 
-    function overlayShapeSvgPointHit(shapeEl, clientX, clientY) {
+    function overlayPickPctFromClient(clientX, clientY) {
+      var el = buttonsLayer || buttonsFrame;
+      if (!el) return { x: 50, y: 50 };
+      var rect = el.getBoundingClientRect();
+      return {
+        x: ((clientX - rect.left) / Math.max(1, rect.width)) * 100,
+        y: ((clientY - rect.top) / Math.max(1, rect.height)) * 100
+      };
+    }
+
+    function overlayShapeSvgDomHit(shapeEl, clientX, clientY) {
       if (!shapeEl) return false;
       var pick = shapeEl.querySelector('.builder-exp-stage-shape__pick');
       var body = shapeEl.querySelector('.builder-exp-stage-shape__body');
-      var targets = pick ? [pick] : [];
+      var targets = [];
+      if (pick) targets.push(pick);
       if (body) targets.push(body);
       if (!targets.length) return false;
       for (var ti = 0; ti < targets.length; ti++) {
@@ -7934,15 +7945,43 @@ var ExperienciaCanvas = (function () {
           var pt = svg.createSVGPoint();
           pt.x = clientX;
           pt.y = clientY;
-          var ctm = target.getScreenCTM();
-          if (!ctm) continue;
-          var local = pt.matrixTransform(ctm.inverse());
-          if (typeof target.isPointInFill === 'function' && target.isPointInFill(local)) return true;
+          var rootCtm = svg.getScreenCTM();
+          if (!rootCtm) continue;
+          var rootPt = pt.matrixTransform(rootCtm.inverse());
+          if (typeof target.isPointInFill === 'function' && target.isPointInFill(rootPt)) return true;
           if (target === body && typeof target.isPointInStroke === 'function' &&
-              target.isPointInStroke(local)) return true;
+              target.isPointInStroke(rootPt)) return true;
         } catch (eHit) { /* ignore */ }
       }
       return false;
+    }
+
+    function overlayShapeGeomHit(vm, clientX, clientY, layerW, layerH) {
+      if (!vm || !ExperienciaEngine.shapeSilhouetteHitTest) return false;
+      var box = getShapeBox(vm, layerW, layerH);
+      if (!box) return false;
+      var pct = overlayPickPctFromClient(clientX, clientY);
+      return ExperienciaEngine.shapeSilhouetteHitTest(
+        vm._ix || vm, pct.x, pct.y,
+        { cx: box.cx, cy: box.cy, w: box.w, h: box.h, rot: box.rot || 0 },
+        layerW, layerH
+      );
+    }
+
+    function overlayShapePointHit(shapeEl, vm, clientX, clientY, layerW, layerH) {
+      if (overlayShapeSvgDomHit(shapeEl, clientX, clientY)) return true;
+      return overlayShapeGeomHit(vm, clientX, clientY, layerW, layerH);
+    }
+
+    function overlayShapeSvgPointHit(shapeEl, clientX, clientY) {
+      if (!shapeEl) return false;
+      var sceneId = canvas().selectedId;
+      if (!sceneId) return false;
+      var id = shapeEl.getAttribute('data-exp-stage-btn');
+      var vm = id ? getOverlayItemVm(sceneId, id) : null;
+      if (!vm) return false;
+      var sz = overlayLayerSize();
+      return overlayShapePointHit(shapeEl, vm, clientX, clientY, sz.w, sz.h);
     }
 
     function overlayPickFromSvgPoint(clientX, clientY, selectedSet, opts) {
@@ -7953,6 +7992,9 @@ var ExperienciaCanvas = (function () {
       selectedSet = selectedSet || {};
       var skipSelected = opts.skipSelected !== false;
       var nodes = buttonsLayer.querySelectorAll('[data-exp-stage-btn].builder-exp-stage-shape');
+      var sz = overlayLayerSize();
+      var layerW = sz.w;
+      var layerH = sz.h;
 
       function scan(skipSel) {
         for (var i = nodes.length - 1; i >= 0; i--) {
@@ -7962,7 +8004,7 @@ var ExperienciaCanvas = (function () {
           if (skipSel && selectedSet[String(id)]) continue;
           var vm = getOverlayItemVm(sceneId, id);
           if (!vm || vm.locked || vm.visible === false) continue;
-          if (overlayShapeSvgPointHit(el, clientX, clientY)) return el;
+          if (overlayShapePointHit(el, vm, clientX, clientY, layerW, layerH)) return el;
         }
         return null;
       }
