@@ -2452,7 +2452,7 @@ var QuotationEditor = (function () {
         insertTrackItemsAt(trackIdx >= 0 ? trackIdx + 1 : state.sceneTrack.length, [sid]);
       }
     });
-    addScenesToGroup(groupId, next, { expand: true });
+    addScenesToGroup(groupId, next, {});
     return true;
   }
 
@@ -3966,7 +3966,8 @@ var QuotationEditor = (function () {
     return '' +
       '<div class="qe-scenes__thumb-wrap' + (hero ? ' is-hero-scene' : '') +
         (selected ? ' is-selected' : '') +
-        (opts.inGroup ? ' is-in-group' : '') + '"' +
+        (opts.inGroup ? ' is-in-group' : '') +
+        (opts.inPanel ? ' is-in-panel' : '') + '"' +
         ' data-qe-drop-scene data-qe-drop-scene-id="' + escapeHtml(sc.id) + '"' +
         (hero ? '' : ' data-qe-scene-drop="' + escapeHtml(sc.id) + '"') + '>' +
         '<button type="button" class="qe-scenes__thumb' + (on ? ' is-active' : '') +
@@ -3985,15 +3986,17 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  function sceneGroupBlockHtml(grp) {
+  function sceneGroupBlockHtml(grp, opts) {
+    opts = opts || {};
+    var inPanel = !!opts.inPanel;
     if (!grp) return '';
     var expanded = grp.collapsed === false;
     var inner = '';
     (grp.childGroupIds || []).forEach(function (cid) {
-      inner += sceneGroupBlockHtml(sceneGroupById(cid));
+      inner += sceneGroupBlockHtml(sceneGroupById(cid), { inPanel: true });
     });
     (grp.sceneIds || []).forEach(function (sid) {
-      inner += sceneThumbWrapHtml(sceneById(sid), { inGroup: true });
+      inner += sceneThumbWrapHtml(sceneById(sid), { inGroup: true, inPanel: inPanel });
     });
     var count = (grp.sceneIds || []).length;
     (grp.childGroupIds || []).forEach(function (cid) {
@@ -4001,7 +4004,8 @@ var QuotationEditor = (function () {
       if (child) count += (child.sceneIds || []).length;
     });
     return '' +
-      '<div class="qe-scenes__group-block' + (expanded ? ' is-expanded' : '') + '"' +
+      '<div class="qe-scenes__group-block' + (expanded ? ' is-expanded' : '') +
+        (inPanel ? ' qe-scenes__group-block--nested' : '') + '"' +
         ' data-qe-scene-group-block="' + escapeHtml(grp.id) + '">' +
         '<div class="qe-scenes__group-wrap"' +
           ' data-qe-scene-group-drop="' + escapeHtml(grp.id) + '">' +
@@ -4019,8 +4023,11 @@ var QuotationEditor = (function () {
             escapeHtml(String(grp.name || 'Grupo').toLowerCase()) +
           '</span>' +
         '</div>' +
-        '<div class="qe-scenes__group-children" data-qe-scene-group-children="' +
-          escapeHtml(grp.id) + '">' + inner + '</div>' +
+        '<div class="qe-scenes__group-panel" data-qe-scene-group-panel="' +
+          escapeHtml(grp.id) + '">' +
+          '<div class="qe-scenes__group-panel-scroll" data-qe-scene-group-children="' +
+            escapeHtml(grp.id) + '">' + inner + '</div>' +
+        '</div>' +
       '</div>';
   }
 
@@ -5824,7 +5831,7 @@ var QuotationEditor = (function () {
         var groupId = zone.getAttribute('data-qe-scene-group-drop');
         if (!from || !groupId) return;
         var ids = selectedSceneIdsForDrag(from);
-        addScenesToGroup(groupId, ids, { expand: true });
+        addScenesToGroup(groupId, ids, {});
         clearSceneSelection();
         rerender();
       });
@@ -6927,7 +6934,7 @@ var QuotationEditor = (function () {
       onSelect: function (id) {
         if (String(id).indexOf('grp:') !== 0) return;
         var groupId = String(id).slice(4);
-        addScenesToGroup(groupId, sceneIds, { expand: true });
+        addScenesToGroup(groupId, sceneIds, {});
         clearSceneSelection();
         rerender();
       }
@@ -6960,7 +6967,6 @@ var QuotationEditor = (function () {
         }
         if (id === 'subgroup') {
           createSceneGroup({ parentGroupId: groupId });
-          grp.collapsed = false;
           rerender();
           return;
         }
