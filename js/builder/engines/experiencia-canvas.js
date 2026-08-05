@@ -7703,7 +7703,9 @@ var ExperienciaCanvas = (function () {
     }
 
     function flushMultiSelectResizeFrame(drag) {
-      if (!drag || drag.type !== 'MULTI_SELECT' || !drag.liveRefs) return;
+      if (!drag || !drag.liveRefs) return;
+      if (drag.type !== 'MULTI_SELECT' &&
+          drag.type !== 'OVERLAY_GROUP' && drag.type !== 'GROUP') return;
       if (drag.pendingMultiSx == null || !drag.memberWorldSnapshots) return;
       var anchor = drag.pendingMultiAnchor || { x: 0, y: 0 };
       var boxes = computeMultiSelectLiveBoxes(
@@ -7727,7 +7729,9 @@ var ExperienciaCanvas = (function () {
     }
 
     function scheduleMultiSelectResizeFrame(drag) {
-      if (!drag || drag.type !== 'MULTI_SELECT') return;
+      if (!drag) return;
+      if (drag.type !== 'MULTI_SELECT' &&
+          drag.type !== 'OVERLAY_GROUP' && drag.type !== 'GROUP') return;
       if (drag.multiRaf) return;
       drag.multiRaf = requestAnimationFrame(function () {
         drag.multiRaf = 0;
@@ -9435,7 +9439,9 @@ var ExperienciaCanvas = (function () {
             );
             var shapeLiveResize = isShapeType(transformDrag.type);
             var multiLiveResize = transformDrag.type === 'MULTI_SELECT';
-            if (resizeDistPx < ((shapeLiveResize || multiLiveResize) ? 2 : OVERLAY_DRAG_THRESHOLD_PX)) return;
+            var groupLiveResize = transformDrag.type === 'OVERLAY_GROUP' ||
+              transformDrag.type === 'GROUP';
+            if (resizeDistPx < ((shapeLiveResize || multiLiveResize || groupLiveResize) ? 2 : OVERLAY_DRAG_THRESHOLD_PX)) return;
             if (!transformDrag.historyPushed) {
               dragDebugLog('transformDrag resize start', {
                 buttonId: transformDrag.buttonId,
@@ -9632,38 +9638,31 @@ var ExperienciaCanvas = (function () {
 
             var patchT = { x: nx, y: ny, live: true };
             if (transformDrag.type === 'OVERLAY_GROUP' || transformDrag.type === 'GROUP') {
-              patchT.width = nw;
-              patchT.height = nh;
-              patchT.keepRatio = transformDrag.keepRatio;
-              if (ExperienciaEngine.updateOverlayGroupTransform) {
-                var anchorG = groupResizeAnchorPct(
-                  mode,
-                  transformDrag.startL,
-                  transformDrag.startR,
-                  transformDrag.startT,
-                  transformDrag.startB,
-                  transformDrag.startX,
-                  transformDrag.startY
-                );
-                ExperienciaEngine.updateOverlayGroupTransform(
-                  state, transformDrag.sceneId, transformDrag.buttonId,
-                  {
-                    x: nx,
-                    y: ny,
-                    width: nw,
-                    height: nh,
-                    keepRatio: transformDrag.keepRatio,
-                    live: true,
-                    layerW: layerW,
-                    layerH: layerH,
-                    memberSnapshots: transformDrag.memberSnapshots,
-                    memberWorldSnapshots: transformDrag.memberWorldSnapshots,
-                    anchorX: anchorG.x,
-                    anchorY: anchorG.y
-                  }
-                );
+              var anchorG = groupResizeAnchorPct(
+                mode,
+                transformDrag.startL,
+                transformDrag.startR,
+                transformDrag.startT,
+                transformDrag.startB,
+                transformDrag.startX,
+                transformDrag.startY
+              );
+              var baseWG = Number(transformDrag.startW) || 20;
+              var baseHG = Number(transformDrag.startH) || 20;
+              var sxG = nw / baseWG;
+              var syG = nh / baseHG;
+              if (transformDrag.keepRatio) {
+                var uniG = Math.max(Math.abs(sxG), Math.abs(syG));
+                sxG = uniG;
+                syG = uniG;
               }
-              paintButtonsStage();
+              transformDrag.pendingMultiSx = sxG;
+              transformDrag.pendingMultiSy = syG;
+              transformDrag.pendingMultiAnchor = anchorG;
+              transformDrag.pendingMultiOuter = { cx: nx, cy: ny, w: nw, h: nh };
+              transformDrag.lastDxPx = dxPx;
+              transformDrag.lastDyPx = dyPx;
+              scheduleMultiSelectResizeFrame(transformDrag);
               transformDrag.guides = { spacing: [] };
               syncLiveOverlayGuides(transformDrag.guides);
               return;
@@ -10115,6 +10114,13 @@ var ExperienciaCanvas = (function () {
               startT0 = startY0 - startH0 / 2;
               startB0 = startY0 + startH0 / 2;
             }
+            transformMemberIds = memberWorldSnapshots
+              ? Object.keys(memberWorldSnapshots)
+              : (gIx && gIx.memberIds ? gIx.memberIds.slice() : []);
+            liveRefs = buildMultiSelectResizeLiveRefs(
+              sceneIdG, transformMemberIds, layerW0, layerH0
+            );
+            if (liveRefs) liveRefs.unionGizmo = gizmo;
           }
           var shapeCornerHandle = handleMode === 'nw' || handleMode === 'ne' ||
             handleMode === 'se' || handleMode === 'sw';
@@ -10529,7 +10535,33 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && !isShapeType(endType)) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
+                if (endedDrag.multiRaf) cancelAnimationFrame(endedDrag.multiRaf);
+                flushMultiSelectResizeFrame(endedDrag);
+                if (endedDrag.pendingMultiSx != null &&
+                    endedDrag.memberWorldSnapshots &&
+                    ExperienciaEngine.updateOverlayGroupTransform) {
+                  var anchorFinG = endedDrag.pendingMultiAnchor || { x: 0, y: 0 };
+                  var outerFinG = endedDrag.pendingMultiOuter || {};
+                  ExperienciaEngine.updateOverlayGroupTransform(
+                    state, endScene, rotBtnId,
+                    {
+                      x: outerFinG.cx != null ? outerFinG.cx : endedDrag.startX,
+                      y: outerFinG.cy != null ? outerFinG.cy : endedDrag.startY,
+                      width: outerFinG.w != null ? outerFinG.w : endedDrag.startW,
+                      height: outerFinG.h != null ? outerFinG.h : endedDrag.startH,
+                      keepRatio: endedDrag.keepRatio,
+                      layerW: endedDrag.layerW,
+                      layerH: endedDrag.layerH,
+                      memberWorldSnapshots: endedDrag.memberWorldSnapshots,
+                      anchorX: anchorFinG.x,
+                      anchorY: anchorFinG.y
+                    }
+                  );
+                  persist();
+                }
+                clearMultiSelectLiveStyles(endedDrag.liveRefs);
                 finalizeGroupResizeBounds(endScene, rotBtnId);
+                paintButtonsStage();
               } else if (endType === 'MULTI_SELECT') {
                 if (endedDrag.multiRaf) cancelAnimationFrame(endedDrag.multiRaf);
                 flushMultiSelectResizeFrame(endedDrag);

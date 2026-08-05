@@ -1755,19 +1755,80 @@ var ExperienciaEngine = (function () {
   }
 
   function applyOverlayMemberWorldToGroupLocal(n, g, child, cx, cy, w, h, rot, layerW, layerH) {
-    if (!g || !child) return;
-    var loc = worldPointToLocal(g, cx, cy, layerW, layerH);
+    applyOverlayMemberWorldScale(n, g, child, {
+      cx: cx, cy: cy, w: w, h: h, rotation: rot,
+      type: child.type,
+      fontSize: child.fontSize,
+      shapeContentBox: child.shapeContentBox,
+      stretchX: child.shapeStretchX,
+      stretchY: child.shapeStretchY
+    }, 1, 1, cx, cy, layerW, layerH);
+  }
+
+  /** Proportional world-space scale for one grouped member (matches multi-select contract). */
+  function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH) {
+    if (!g || !child || !sw) return;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
+    var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
+    var nw = Math.max(0.5, (Number(sw.w) || 0.5) * sx);
+    var nh = Math.max(0.5, (Number(sw.h) || 0.5) * sy);
+    var rot = sw.rotation;
+    var ct = String(sw.type || child.type || 'BUTTON').toUpperCase();
+    child.groupId = g.id;
+
+    if (ct === 'TEXT') {
+      var locText = worldPointToLocal(g, ncx, ncy, layerW, layerH);
+      child.localX = locText.x;
+      child.localY = locText.y;
+      child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+      var fs0 = sw.fontSize != null ? Number(sw.fontSize) : (Number(child.fontSize) || 28);
+      var fsScale = Math.max(Math.abs(sx), Math.abs(sy));
+      child.fontSize = Math.max(8, Math.round(fs0 * fsScale));
+      return;
+    }
+
+    if (isSceneShapeType(ct)) {
+      var st = shapeStretchFromIx(child);
+      var snapSx = sw.stretchX != null ? Number(sw.stretchX) : st.sx;
+      var snapSy = sw.stretchY != null ? Number(sw.stretchY) : st.sy;
+      var useContentBox = !!(sw.shapeContentBox || child.shapeContentBox);
+      if (useContentBox) {
+        var locBox = worldPointToLocal(g, ncx, ncy, layerW, layerH);
+        child.localX = locBox.x;
+        child.localY = locBox.y;
+        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+        child.width = nw;
+        child.height = nh;
+        child.shapeContentBox = true;
+        child.shapeStretchX = snapSx;
+        child.shapeStretchY = snapSy;
+      } else {
+        var newStretchX = Math.max(0.06, Math.min(8, snapSx * sx));
+        var newStretchY = Math.max(0.06, Math.min(8, snapSy * sy));
+        var tileW = sceneShapeTileWidthFromContentWidth(nw, ct, newStretchX, newStretchY);
+        var center = sceneShapeTileCenterFromGizmoCenter(
+          ncx, ncy, tileW, ct, layerW, layerH, newStretchX, newStretchY
+        );
+        var locTile = worldPointToLocal(g, center.x, center.y, layerW, layerH);
+        child.localX = locTile.x;
+        child.localY = locTile.y;
+        child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
+        child.width = tileW;
+        child.shapeStretchX = newStretchX;
+        child.shapeStretchY = newStretchY;
+      }
+      return;
+    }
+
+    var loc = worldPointToLocal(g, ncx, ncy, layerW, layerH);
     child.localX = loc.x;
     child.localY = loc.y;
     child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-    child.groupId = g.id;
-    var ct = String(child.type || '').toUpperCase();
     if (ct === 'BUTTON') {
-      child.boxW = Math.max(0.5, Number(w) || 0.5);
-      child.boxH = Math.max(0.5, Number(h) || 0.5);
-    } else if (isSceneShapeType(ct)) {
-      child.width = Math.max(0.5, Number(w) || 0.5);
-      child.height = Math.max(0.5, Number(h) || 0.5);
+      child.boxW = nw;
+      child.boxH = nh;
     }
   }
 
@@ -1778,7 +1839,7 @@ var ExperienciaEngine = (function () {
     patch = patch || {};
     var layerW = patch.layerW || 1000;
     var layerH = patch.layerH || 1000;
-    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: !!patch.live });
     migrateGroupedChildLocals(n, g, layerW, layerH);
 
     if (patch.x != null) {
@@ -1818,12 +1879,8 @@ var ExperienciaEngine = (function () {
             var c = getInteraction(n, mid);
             var sw = worldSnap[String(mid)];
             if (!c || !sw || !isSceneFreeOverlayInteraction(c)) return;
-            var ncx = ax + ((Number(sw.cx) || 0) - ax) * sx;
-            var ncy = ay + ((Number(sw.cy) || 0) - ay) * sy;
-            var nwM = Math.max(0.5, (Number(sw.w) || 0.5) * sx);
-            var nhM = Math.max(0.5, (Number(sw.h) || 0.5) * sy);
-            applyOverlayMemberWorldToGroupLocal(
-              n, g, c, ncx, ncy, nwM, nhM, sw.rotation, layerW, layerH
+            applyOverlayMemberWorldScale(
+              n, g, c, sw, sx, sy, ax, ay, layerW, layerH
             );
           });
         } else {
@@ -1964,12 +2021,19 @@ var ExperienciaEngine = (function () {
       if (!world) return;
       var rect = overlayMemberUnionRect(ix, world, layerW, layerH);
       if (!rect) return;
+      var t = String(ix.type || 'BUTTON').toUpperCase();
+      var st = shapeStretchFromIx(ix);
       out[String(id)] = {
         cx: rect.cx,
         cy: rect.cy,
         w: rect.w,
         h: rect.h,
-        rotation: rect.rotation
+        rotation: rect.rotation,
+        type: t,
+        fontSize: ix.fontSize,
+        shapeContentBox: !!ix.shapeContentBox,
+        stretchX: st.sx,
+        stretchY: st.sy
       };
     });
     return out;
