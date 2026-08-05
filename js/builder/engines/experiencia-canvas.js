@@ -9391,6 +9391,12 @@ var ExperienciaCanvas = (function () {
           clientStartY: ev.clientY
         };
         bindOverlayPointerDocs();
+        try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCap) { /* ignore */ }
+      }
+
+      function releaseGroupPointerCapture(ev) {
+        if (!ev || !buttonsLayer) return;
+        try { buttonsLayer.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
       }
 
       function flushGroupPointerGestureToMove(ev) {
@@ -9408,6 +9414,7 @@ var ExperienciaCanvas = (function () {
           groupId: g.groupId,
           sceneId: g.sceneId
         });
+        releaseGroupPointerCapture(ev);
         beginOverlayMove(ev, g.groupId, g.sceneId, btn, { groupEditChildId: g.childId });
         return true;
       }
@@ -9415,8 +9422,15 @@ var ExperienciaCanvas = (function () {
       function finishGroupPointerGesture(ev) {
         if (!groupPointerGesture) return;
         if (ev && ev.pointerId !== groupPointerGesture.pointerId) return;
+        var g = groupPointerGesture;
         clearGroupPointerGesture();
+        releaseGroupPointerCapture(ev);
         unbindOverlayPointerDocs();
+        canvas().selectedButtonIds = [g.groupId];
+        canvas().selectedButtonId = g.groupId;
+        mountOverlaySelectionGizmos([g.groupId]);
+        paintInspector();
+        notifyOverlaySelection();
       }
 
       function onOverlayDocPointerMove(ev) {
@@ -10393,13 +10407,14 @@ var ExperienciaCanvas = (function () {
 
           canvas().selectedButtonIds = [gid];
           canvas().selectedButtonId = gid;
-          var btnGroup = getOverlayItemVm(sceneIdHit, gid);
-          dragDebugLog('pointerdown: grouped → beginOverlayMove(group)', {
+          mountOverlaySelectionGizmos([gid]);
+          paintInspector();
+          notifyOverlaySelection();
+          dragDebugLog('pointerdown: grouped → startGroupPointerGesture', {
             groupId: gid,
             childId: cid
           });
-          beginOverlayMove(ev, gid, sceneIdHit, btnGroup);
-          notifyOverlaySelection();
+          startGroupPointerGesture(ev, sceneIdHit, gid, cid);
           return;
         }
         groupEditPulse = null;
