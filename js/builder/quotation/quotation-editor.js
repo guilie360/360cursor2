@@ -3980,11 +3980,12 @@ var QuotationEditor = (function () {
         dockSegHtml('data-qe-dock-del', 'del', 'Eliminar', 'qe-dock__seg--danger');
     }
     return '' +
-      dockSegHtml('data-qe-add-button', 'plus', 'Botón') +
+      dockSegHtml('data-qe-add-shape', 'plus', 'Forma') +
       dockSegHtml('data-qe-add-text', 'plus', 'Texto') +
-      dockSegHtml('data-qe-add-hotspot', 'plus', 'Hotspot') +
-      dockSegHtml('data-qe-add-image', 'plus', 'Imagen') +
-      dockSegHtml('data-qe-add-shape', 'plus', 'Forma');
+      dockSegHtml('data-qe-add-stroke', 'plus', 'Trazo') +
+      dockSegHtml('data-qe-add-container', 'plus', 'Contenedor') +
+      dockSegHtml('data-qe-add-component', 'plus', 'Componente') +
+      dockSegHtml('data-qe-add-advanced', 'plus', 'Avanzado');
   }
 
   function stageDockHtml() {
@@ -7038,14 +7039,6 @@ var QuotationEditor = (function () {
 
   function bindDockBar(editor) {
     if (!editor) return;
-    var addBtn = editor.querySelector('[data-qe-add-button]');
-    if (addBtn) addBtn.addEventListener('click', function () { addButton(); });
-    var addText = editor.querySelector('[data-qe-add-text]');
-    if (addText) addText.addEventListener('click', function () { addTextElement(); });
-    var addHs = editor.querySelector('[data-qe-add-hotspot]');
-    if (addHs) addHs.addEventListener('click', function () { addHotspot(); });
-    var addImg = editor.querySelector('[data-qe-add-image]');
-    if (addImg) addImg.addEventListener('click', function () { openResourcePicker(); });
     var addShape = editor.querySelector('[data-qe-add-shape]');
     if (addShape) {
       addShape.addEventListener('click', function (e) {
@@ -7054,6 +7047,16 @@ var QuotationEditor = (function () {
         openShapePicker();
       });
     }
+    var addText = editor.querySelector('[data-qe-add-text]');
+    if (addText) addText.addEventListener('click', function () { addTextElement(); });
+    var addStroke = editor.querySelector('[data-qe-add-stroke]');
+    if (addStroke) addStroke.addEventListener('click', function () { addStrokeElement(); });
+    var addContainer = editor.querySelector('[data-qe-add-container]');
+    if (addContainer) addContainer.addEventListener('click', function () { addContainerElement(); });
+    var addComponent = editor.querySelector('[data-qe-add-component]');
+    if (addComponent) addComponent.addEventListener('click', function () { addComponentElement(); });
+    var addAdvanced = editor.querySelector('[data-qe-add-advanced]');
+    if (addAdvanced) addAdvanced.addEventListener('click', function () { addAdvancedElement(); });
     var edit = editor.querySelector('[data-qe-dock-edit]');
     if (edit) {
       edit.addEventListener('click', function (e) {
@@ -8602,6 +8605,30 @@ var QuotationEditor = (function () {
     }
     pendingExpAction = { type: 'addText' };
     rerender();
+  }
+
+  /** BOXIES dock vNext — placeholders until tools ship. */
+  function dockPlaceholderAction(kind) {
+    if (!activeScene()) return;
+    try {
+      console.log('[QuotationEditor] dock tool pending:', kind);
+    } catch (eLog) { /* ignore */ }
+  }
+
+  function addStrokeElement() {
+    dockPlaceholderAction('stroke');
+  }
+
+  function addContainerElement() {
+    dockPlaceholderAction('container');
+  }
+
+  function addComponentElement() {
+    dockPlaceholderAction('component');
+  }
+
+  function addAdvancedElement() {
+    dockPlaceholderAction('advanced');
   }
 
   function addShapeElement(kind) {
