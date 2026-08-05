@@ -148,27 +148,107 @@ var QuotationCanvasTools = (function () {
     return 'cl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
   }
 
-  function loadChecklistItems() {
+  function nextChecklistPageId() {
+    return 'cp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function normalizeChecklistItem(it) {
+    return {
+      id: String(it.id || nextChecklistId()),
+      text: it.text != null ? String(it.text) : '',
+      checked: !!it.checked
+    };
+  }
+
+  function defaultChecklistItems() {
+    return [{ id: nextChecklistId(), text: '', checked: false }];
+  }
+
+  function normalizeChecklistState(raw) {
+    var state = raw && typeof raw === 'object' ? raw : {};
+    var pages = Array.isArray(state.pages) ? state.pages : [];
+    pages = pages.map(function (page, idx) {
+      var items = Array.isArray(page.items) ? page.items : [];
+      if (!items.length) items = defaultChecklistItems();
+      return {
+        id: String(page.id || nextChecklistPageId()),
+        title: page.title != null ? String(page.title) : ('Página ' + (idx + 1)),
+        items: items.map(normalizeChecklistItem)
+      };
+    });
+    if (!pages.length) {
+      var firstId = nextChecklistPageId();
+      pages = [{ id: firstId, title: 'Página 1', items: defaultChecklistItems() }];
+      state.activePageId = firstId;
+    }
+    var activePageId = String(state.activePageId || pages[0].id);
+    if (!pages.some(function (p) { return p.id === activePageId; })) {
+      activePageId = pages[0].id;
+    }
+    return { activePageId: activePageId, pages: pages };
+  }
+
+  function loadChecklistState() {
     try {
       var raw = localStorage.getItem(CHECKLIST_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.pages)) {
+          return normalizeChecklistState(parsed);
+        }
         if (Array.isArray(parsed) && parsed.length) {
-          return parsed.map(function (it) {
-            return {
-              id: String(it.id || nextChecklistId()),
-              text: it.text != null ? String(it.text) : '',
-              checked: !!it.checked
-            };
+          var legacyId = nextChecklistPageId();
+          return normalizeChecklistState({
+            activePageId: legacyId,
+            pages: [{
+              id: legacyId,
+              title: 'Página 1',
+              items: parsed.map(normalizeChecklistItem)
+            }]
           });
         }
       }
     } catch (eLoad) { /* ignore */ }
-    return [{ id: nextChecklistId(), text: '', checked: false }];
+    var id = nextChecklistPageId();
+    return normalizeChecklistState({
+      activePageId: id,
+      pages: [{ id: id, title: 'Página 1', items: defaultChecklistItems() }]
+    });
   }
 
-  function saveChecklistItems(items) {
-    try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify(items)); } catch (eSave) { /* ignore */ }
+  function saveChecklistState(state) {
+    try { localStorage.setItem(CHECKLIST_KEY, JSON.stringify(state)); } catch (eSave) { /* ignore */ }
+  }
+
+  function getActiveChecklistPage(state) {
+    for (var i = 0; i < state.pages.length; i++) {
+      if (state.pages[i].id === state.activePageId) return state.pages[i];
+    }
+    return state.pages[0] || null;
+  }
+
+  function checklistPagesHtml(state) {
+    var esc = function (v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+    var tabs = state.pages.map(function (page) {
+      var active = page.id === state.activePageId;
+      return '<button type="button" class="qe-checklist-pages__tab' +
+        (active ? ' is-active' : '') + '"' +
+        ' data-qe-check-page="' + esc(page.id) + '"' +
+        ' aria-pressed="' + (active ? 'true' : 'false') + '"' +
+        ' title="' + esc(page.title) + '">' +
+        esc(page.title) +
+      '</button>';
+    }).join('');
+    return '' +
+      '<div class="qe-checklist-pages">' +
+        '<div class="qe-checklist-pages__tabs" data-qe-checklist-pages>' + tabs + '</div>' +
+        '<button type="button" class="qe-checklist-pages__add" data-qe-check-add-page' +
+          ' aria-label="Agregar página" title="Agregar página">+</button>' +
+      '</div>';
   }
 
   function checklistRowHtml(item) {
@@ -195,7 +275,64 @@ var QuotationCanvasTools = (function () {
       '</div>';
   }
 
-  function bindChecklistList(host, items) {
+  function renderChecklistBody(bodyEl, state) {
+    var page = getActiveChecklistPage(state);
+    var items = page ? page.items : defaultChecklistItems();
+    bodyEl.innerHTML =
+      '<div class="qe-checklist-shell">' +
+        checklistPagesHtml(state) +
+        '<div class="qe-checklist" data-qe-checklist-list>' +
+          items.map(checklistRowHtml).join('') +
+        '</div>' +
+      '</div>';
+    bindChecklistShell(bodyEl, state);
+  }
+
+  function bindChecklistShell(host, state) {
+    var page = getActiveChecklistPage(state);
+    if (!page) return;
+
+    function persist() {
+      saveChecklistState(state);
+    }
+
+    function rerender() {
+      renderChecklistBody(host, state);
+    }
+
+    var addPageBtn = host.querySelector('[data-qe-check-add-page]');
+    if (addPageBtn) {
+      addPageBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var newId = nextChecklistPageId();
+        state.pages.push({
+          id: newId,
+          title: 'Página ' + (state.pages.length + 1),
+          items: defaultChecklistItems()
+        });
+        state.activePageId = newId;
+        persist();
+        rerender();
+      });
+    }
+
+    host.querySelectorAll('[data-qe-check-page]').forEach(function (tab) {
+      tab.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var pageId = tab.getAttribute('data-qe-check-page');
+        if (!pageId || pageId === state.activePageId) return;
+        state.activePageId = pageId;
+        persist();
+        rerender();
+      });
+    });
+
+    bindChecklistList(host, page.items, persist);
+  }
+
+  function bindChecklistList(host, items, persist) {
     var list = host.querySelector('[data-qe-checklist-list]');
     if (!list) return;
 
@@ -234,7 +371,7 @@ var QuotationCanvasTools = (function () {
         items.splice(delIdx, 1);
         if (!items.length) {
           items.push({ id: nextChecklistId(), text: '', checked: false });
-          saveChecklistItems(items);
+          persist();
           list.innerHTML = items.map(checklistRowHtml).join('');
           var freshInput = list.querySelector('[data-qe-check-text]');
           if (freshInput) {
@@ -243,7 +380,7 @@ var QuotationCanvasTools = (function () {
             });
           }
         } else {
-          saveChecklistItems(items);
+          persist();
           if (delRow) delRow.remove();
         }
         return;
@@ -255,7 +392,7 @@ var QuotationCanvasTools = (function () {
       var item = itemById(id);
       if (!item) return;
       item.checked = !item.checked;
-      saveChecklistItems(items);
+      persist();
       syncRowUi(btn.closest('[data-qe-check-row]'), item.checked);
     });
 
@@ -265,7 +402,7 @@ var QuotationCanvasTools = (function () {
       var item = itemById(input.getAttribute('data-qe-check-text'));
       if (!item) return;
       item.text = input.value;
-      saveChecklistItems(items);
+      persist();
     });
 
     list.addEventListener('keydown', function (e) {
@@ -277,7 +414,7 @@ var QuotationCanvasTools = (function () {
       var currentRow = input.closest('[data-qe-check-row]');
       var newItem = { id: nextChecklistId(), text: '', checked: false };
       items.splice(idx + 1, 0, newItem);
-      saveChecklistItems(items);
+      persist();
       var wrap = document.createElement('div');
       wrap.innerHTML = checklistRowHtml(newItem);
       var newRow = wrap.firstElementChild;
@@ -308,12 +445,8 @@ var QuotationCanvasTools = (function () {
 
   function openChecklist() {
     openWindow('tool-checklist', 'Checklist', 'checklist', function (bodyEl) {
-      var items = loadChecklistItems();
-      bodyEl.innerHTML =
-        '<div class="qe-checklist" data-qe-checklist-list>' +
-          items.map(checklistRowHtml).join('') +
-        '</div>';
-      bindChecklistList(bodyEl, items);
+      var state = loadChecklistState();
+      renderChecklistBody(bodyEl, state);
     });
   }
 

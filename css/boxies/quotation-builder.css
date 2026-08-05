@@ -5336,6 +5336,8 @@ body.quotation-canvas-first .builder-workspace,
 
 .qe-canvas-tool-float__body {
   padding: 12px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .qe-calc__display {
@@ -5403,21 +5405,107 @@ body.quotation-canvas-first .builder-workspace,
   border-color: rgba(255, 255, 255, 0.22);
 }
 
+.qe-checklist-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.qe-checklist-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.qe-checklist-pages__tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 1px;
+}
+
+.qe-checklist-pages__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.qe-checklist-pages__tab {
+  appearance: none;
+  flex: 0 0 auto;
+  max-width: 96px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 10px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.qe-checklist-pages__tab:hover {
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.qe-checklist-pages__tab.is-active {
+  color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qe-checklist-pages__add {
+  appearance: none;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qe-checklist-pages__add:hover {
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .qe-checklist {
   display: flex;
   flex-direction: column;
   gap: 10px;
   max-height: min(320px, calc(100vh - 220px));
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 2px 0;
-  margin: 0 -4px 0 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .qe-checklist__row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 22px;
+  min-width: 0;
+  width: 100%;
 }
 
 .qe-checklist__box {
@@ -5449,6 +5537,7 @@ body.quotation-canvas-first .builder-workspace,
 .qe-checklist__text {
   flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
   border: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.52);
@@ -5456,6 +5545,8 @@ body.quotation-canvas-first .builder-workspace,
   line-height: 1.35;
   padding: 1px 0;
   outline: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .qe-checklist__text::placeholder {
