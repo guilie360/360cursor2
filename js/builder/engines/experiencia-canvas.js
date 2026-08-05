@@ -7532,15 +7532,6 @@ var ExperienciaCanvas = (function () {
       return { cx: m.gx, cy: m.gy, w: m.gw, h: m.gh, rot: m.grot || 0, type: t };
     }
 
-    /** Proportional group scale: content-box kinds + explicit shapeContentBox use w/h only. */
-    function multiSelectMemberUsesContentBox(s, kind) {
-      if (!s) return false;
-      if (s.shapeContentBox) return true;
-      return !!(typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.shapeUsesContentBoxPaint &&
-        ExperienciaEngine.shapeUsesContentBoxPaint(kind));
-    }
-
     function snapshotMultiSelectMembers(sceneId, ids, layerW, layerH) {
       var out = {};
       (ids || []).forEach(function (id) {
@@ -7681,12 +7672,12 @@ var ExperienciaCanvas = (function () {
         var vmBefore = (opts.commit && multiScaleTraceEnabled())
           ? getOverlayItemVm(sceneId, mid) : null;
         if (isShapeType(t)) {
-          /* Gizmo-space — stretch preserved from drag snapshot (never * sx). */
+          /* Gizmo-space + content-box storage for every shape (tile kinds need scb for x/y). */
           patch.x = ncx;
           patch.y = ncy;
           patch.width = nw;
           patch.height = nh;
-          if (multiSelectMemberUsesContentBox(s, t)) patch.shapeContentBox = true;
+          patch.shapeContentBox = true;
           if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
           if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
         } else if (t === 'BUTTON') {

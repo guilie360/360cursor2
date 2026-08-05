@@ -1852,13 +1852,6 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  /** Proportional group scale: content-box kinds + explicit shapeContentBox use w/h only. */
-  function overlayMemberScaleUsesContentBox(sw, kind) {
-    if (!sw) return false;
-    if (sw.shapeContentBox) return true;
-    return shapeUsesContentBoxPaint(kind);
-  }
-
   /** Proportional world-space scale for one grouped member (matches multi-select contract). */
   function applyOverlayMemberWorldScale(n, g, child, sw, sx, sy, ax, ay, layerW, layerH) {
     if (!g || !child || !sw) return;
@@ -1894,7 +1887,7 @@ var ExperienciaEngine = (function () {
       child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
       child.width = nw;
       child.height = nh;
-      if (overlayMemberScaleUsesContentBox(sw, ct)) child.shapeContentBox = true;
+      child.shapeContentBox = true;
       child.shapeStretchX = snapSx;
       child.shapeStretchY = snapSy;
       return;
@@ -2216,7 +2209,7 @@ var ExperienciaEngine = (function () {
         memberPatch.y = ncy;
         memberPatch.width = nwM;
         memberPatch.height = nhM;
-        if (overlayMemberScaleUsesContentBox(sw, t)) memberPatch.shapeContentBox = true;
+        memberPatch.shapeContentBox = true;
         if (sw.stretchX != null) memberPatch.shapeStretchX = sw.stretchX;
         if (sw.stretchY != null) memberPatch.shapeStretchY = sw.stretchY;
       } else if (t === 'TEXT') {
