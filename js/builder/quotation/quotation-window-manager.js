@@ -78,27 +78,30 @@ var QuotationWindowManager = (function () {
     saveAllSizes(all);
   }
 
-  function computeMaxWindowHeight(marginPx) {
+  function computeMaxWindowHeight(marginPx, extraPx) {
     var margin = marginPx == null ? 20 : Number(marginPx);
     if (!isFinite(margin) || margin < 0) margin = 20;
+    var extra = Number(extraPx) || 0;
     var headerEl = document.getElementById('boxiesHeader');
     var dockEl = document.getElementById('boxiesDock');
     var headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : margin;
     var dockTop = dockEl
       ? dockEl.getBoundingClientRect().top
       : (window.innerHeight || document.documentElement.clientHeight || 720);
-    return Math.max(160, Math.floor(dockTop - headerBottom - margin * 2));
+    return Math.max(160, Math.floor(dockTop - headerBottom - margin * 2 + extra));
   }
 
   function normalizeResizeOpts(opts) {
     if (!opts) return null;
-    var minW = Number(opts.minW) || 220;
+    var minW = Number(opts.minW) || 200;
     var maxW = Number(opts.maxW) || 300;
     var defaultW = Number(opts.defaultW) || 280;
     var defaultH = Number(opts.defaultH) || 400;
-    var minH = Number(opts.minH) || defaultH;
-    var maxH = opts.maxH != null ? Number(opts.maxH) : computeMaxWindowHeight(opts.maxHMargin);
-    if (!isFinite(maxH)) maxH = computeMaxWindowHeight(opts.maxHMargin);
+    var maxHExtra = Number(opts.maxHExtra) || 0;
+    var maxH = opts.maxH != null
+      ? Number(opts.maxH)
+      : computeMaxWindowHeight(opts.maxHMargin, maxHExtra);
+    if (!isFinite(maxH)) maxH = computeMaxWindowHeight(opts.maxHMargin, maxHExtra);
     return {
       minW: minW,
       maxW: maxW,
@@ -106,7 +109,8 @@ var QuotationWindowManager = (function () {
       defaultH: defaultH,
       minH: defaultH,
       maxH: Math.max(defaultH, maxH),
-      maxHMargin: opts.maxHMargin == null ? 20 : Number(opts.maxHMargin)
+      maxHMargin: opts.maxHMargin == null ? 20 : Number(opts.maxHMargin),
+      maxHExtra: maxHExtra
     };
   }
 
@@ -358,7 +362,7 @@ var QuotationWindowManager = (function () {
     var startH = 0;
 
     function refreshMaxH() {
-      win.resize.maxH = computeMaxWindowHeight(win.resize.maxHMargin);
+      win.resize.maxH = computeMaxWindowHeight(win.resize.maxHMargin, win.resize.maxHExtra);
       if (win.resize.maxH < win.resize.minH) win.resize.maxH = win.resize.minH;
     }
 
@@ -410,7 +414,7 @@ var QuotationWindowManager = (function () {
         Object.keys(windows).forEach(function (id) {
           var w = windows[id];
           if (!w || !w.resize || w.state !== 'visible') return;
-          w.resize.maxH = computeMaxWindowHeight(w.resize.maxHMargin);
+          w.resize.maxH = computeMaxWindowHeight(w.resize.maxHMargin, w.resize.maxHExtra);
           var rect = w.el.getBoundingClientRect();
           applySize(w.el, { width: rect.width, height: rect.height }, w.resize);
         });

@@ -454,11 +454,12 @@ var QuotationCanvasTools = (function () {
       renderChecklistBody(bodyEl, state);
     }, null, {
       resize: {
-        minW: 220,
+        minW: 200,
         maxW: 300,
         defaultW: 280,
         defaultH: 400,
-        maxHMargin: 20
+        maxHMargin: 20,
+        maxHExtra: 30
       }
     });
   }
