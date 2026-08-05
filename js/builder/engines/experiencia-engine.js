@@ -1785,6 +1785,31 @@ var ExperienciaEngine = (function () {
     return { w: w, h: h };
   }
 
+  /** Circle/donut (pixel-square gizmo): round width, derive height from snap aspect. */
+  function overlayMemberNeedsCoupledRound(kind) {
+    kind = String(kind || '').toUpperCase();
+    return kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT';
+  }
+
+  function overlayMemberCoupledCommitDims(nw, nh, snapW, snapH, kind, layerW, layerH) {
+    nw = Number(nw);
+    nh = Number(nh);
+    if (!overlayMemberNeedsCoupledRound(kind) || !isFinite(nw) || !isFinite(nh)) {
+      return { w: nw, h: nh, coupled: false };
+    }
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    var snapWn = Number(snapW);
+    var snapHn = Number(snapH);
+    var ratio = (snapWn > 0 && snapHn > 0 && isFinite(snapHn / snapWn))
+      ? snapHn / snapWn
+      : layerW / layerH;
+    var rw = Math.max(1, Math.min(100, Math.round(nw * 10) / 10));
+    var minH = kind === 'SHAPE_LINE' ? 0.5 : 1;
+    var rh = Math.max(minH, Math.min(100, Math.round(rw * ratio * 10) / 10));
+    return { w: rw, h: rh, coupled: true };
+  }
+
   function overlayGroupScaleFloor(snap, sx, sy, layerW, layerH, minPx) {
     minPx = Math.max(3, Number(minPx) || OVERLAY_MEMBER_MIN_PX);
     layerW = Math.max(1, Number(layerW) || 1000);
@@ -1885,8 +1910,9 @@ var ExperienciaEngine = (function () {
       child.localX = locBox.x;
       child.localY = locBox.y;
       child.localRotation = (Number(rot) || 0) - (Number(g.rotation) || 0);
-      child.width = nw;
-      child.height = nh;
+      var coupled = overlayMemberCoupledCommitDims(nw, nh, sw.w, sw.h, ct, layerW, layerH);
+      child.width = coupled.w;
+      child.height = coupled.h;
       child.shapeContentBox = true;
       child.shapeStretchX = snapSx;
       child.shapeStretchY = snapSy;
@@ -2205,10 +2231,12 @@ var ExperienciaEngine = (function () {
         memberPatch.boxW = nwM;
         memberPatch.boxH = nhM;
       } else if (isSceneShapeType(t)) {
+        var coupledM = overlayMemberCoupledCommitDims(nwM, nhM, sw.w, sw.h, t, layerW, layerH);
         memberPatch.x = ncx;
         memberPatch.y = ncy;
-        memberPatch.width = nwM;
-        memberPatch.height = nhM;
+        memberPatch.width = coupledM.w;
+        memberPatch.height = coupledM.h;
+        if (coupledM.coupled) memberPatch.shapeCoupledCommit = true;
         memberPatch.shapeContentBox = true;
         if (sw.stretchX != null) memberPatch.shapeStretchX = sw.stretchX;
         if (sw.stretchY != null) memberPatch.shapeStretchY = sw.stretchY;
@@ -3184,18 +3212,26 @@ var ExperienciaEngine = (function () {
       if (patch.width != null) {
         var sw = Number(patch.width);
         if (!isNaN(sw)) {
-          ix.width = patch.live
-            ? Math.max(1, Math.min(100, sw))
-            : Math.max(1, Math.min(100, Math.round(sw * 10) / 10));
+          if (!patch.live && patch.shapeCoupledCommit && patch.height != null) {
+            ix.width = Math.max(1, Math.min(100, sw));
+          } else {
+            ix.width = patch.live
+              ? Math.max(1, Math.min(100, sw))
+              : Math.max(1, Math.min(100, Math.round(sw * 10) / 10));
+          }
         }
       }
       if (patch.height != null) {
         var sh = Number(patch.height);
         var minH = t === 'SHAPE_LINE' ? 0.5 : 1;
         if (!isNaN(sh)) {
-          ix.height = patch.live
-            ? Math.max(minH, Math.min(100, sh))
-            : Math.max(minH, Math.min(100, Math.round(sh * 10) / 10));
+          if (!patch.live && patch.shapeCoupledCommit) {
+            ix.height = Math.max(minH, Math.min(100, sh));
+          } else {
+            ix.height = patch.live
+              ? Math.max(minH, Math.min(100, sh))
+              : Math.max(minH, Math.min(100, Math.round(sh * 10) / 10));
+          }
         }
       }
       if (patch.fill != null) ix.fill = String(patch.fill);
@@ -8277,6 +8313,8 @@ var ExperienciaEngine = (function () {
     shapeIsStretched: shapeIsStretched,
     shapeUsesContentBox: shapeUsesContentBox,
     overlayMemberScaledSize: overlayMemberScaledSize,
+    overlayMemberCoupledCommitDims: overlayMemberCoupledCommitDims,
+    overlayMemberNeedsCoupledRound: overlayMemberNeedsCoupledRound,
     overlayGroupScaleFloor: overlayGroupScaleFloor,
     overlayGroupOuterFromScale: overlayGroupOuterFromScale,
     OVERLAY_MEMBER_MIN_PX: OVERLAY_MEMBER_MIN_PX,

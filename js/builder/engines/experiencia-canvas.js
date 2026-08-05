@@ -7677,8 +7677,14 @@ var ExperienciaCanvas = (function () {
           /* Gizmo-space + content-box storage for every shape (tile kinds need scb for x/y). */
           patch.x = ncx;
           patch.y = ncy;
-          patch.width = nw;
-          patch.height = nh;
+          var coupledC = (opts.commit && ExperienciaEngine.overlayMemberCoupledCommitDims)
+            ? ExperienciaEngine.overlayMemberCoupledCommitDims(
+              nw, nh, s.w, s.h, t, layerW, layerH
+            )
+            : { w: nw, h: nh, coupled: false };
+          patch.width = coupledC.w;
+          patch.height = coupledC.h;
+          if (coupledC.coupled) patch.shapeCoupledCommit = true;
           patch.shapeContentBox = true;
           if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
           if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
@@ -7698,8 +7704,10 @@ var ExperienciaCanvas = (function () {
           var vmAfter = getOverlayItemVm(sceneId, mid);
           var snapW = Number(s.w) || 0;
           var snapH = Number(s.h) || 0;
-          var scaleWx = snapW > 0 ? nw / snapW : null;
-          var scaleHy = snapH > 0 ? nh / snapH : null;
+          var logW = patch.width != null ? Number(patch.width) : nw;
+          var logH = patch.height != null ? Number(patch.height) : nh;
+          var scaleWx = snapW > 0 ? logW / snapW : null;
+          var scaleHy = snapH > 0 ? logH / snapH : null;
           multiScaleTrace('member.commit', {
             id: String(mid),
             type: t,
@@ -7711,8 +7719,9 @@ var ExperienciaCanvas = (function () {
             snapH: snapH > 0 ? +snapH.toFixed(4) : null,
             ncx: +Number(ncx).toFixed(4),
             ncy: +Number(ncy).toFixed(4),
-            patchW: +Number(nw).toFixed(4),
-            patchH: +Number(nh).toFixed(4),
+            patchW: +Number(logW).toFixed(4),
+            patchH: +Number(logH).toFixed(4),
+            shapeCoupledCommit: !!patch.shapeCoupledCommit,
             scaleWx: scaleWx != null ? +scaleWx.toFixed(6) : null,
             scaleHy: scaleHy != null ? +scaleHy.toFixed(6) : null,
             scaleWxHyDelta: (scaleWx != null && scaleHy != null)
