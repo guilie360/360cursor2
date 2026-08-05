@@ -4042,21 +4042,21 @@ var QuotationEditor = (function () {
     if (!state.canvasPreviewMode) {
       addThumb = '' +
         '<div class="qe-scenes__add" data-qe-scenes-add>' +
-          '<div class="qe-scenes__add-split">' +
-            '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add qe-scenes__thumb-wrap--add-scene">' +
-              '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add" data-qe-scene-add' +
-                ' title="Nueva escena" aria-label="Nueva escena">' +
-                '<span class="qe-scenes__thumb-frame qe-scenes__thumb-frame--add" aria-hidden="true">+</span>' +
+          '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add qe-scenes__thumb-wrap--add-duo">' +
+            '<div class="qe-scenes__add-duo" role="group" aria-label="Crear escena o grupo">' +
+              '<button type="button" class="qe-scenes__add-duo-btn qe-scenes__add-duo-btn--scene"' +
+                ' data-qe-scene-add title="Nueva escena" aria-label="Nueva escena">' +
+                '<span class="qe-scenes__add-duo-icon" aria-hidden="true">+</span>' +
               '</button>' +
-              '<span class="qe-scenes__thumb-name">escena</span>' +
-            '</div>' +
-            '<div class="qe-scenes__thumb-wrap qe-scenes__thumb-wrap--add qe-scenes__thumb-wrap--add-group">' +
-              '<button type="button" class="qe-scenes__thumb qe-scenes__thumb--add qe-scenes__thumb--group" data-qe-scene-group-add' +
-                ' title="Nuevo grupo" aria-label="Nuevo grupo">' +
-                '<span class="qe-scenes__group-frame qe-scenes__group-frame--add" aria-hidden="true">' +
+              '<button type="button" class="qe-scenes__add-duo-btn qe-scenes__add-duo-btn--group"' +
+                ' data-qe-scene-group-add title="Nuevo grupo" aria-label="Nuevo grupo">' +
+                '<span class="qe-scenes__add-duo-icon qe-scenes__add-duo-icon--folder" aria-hidden="true">' +
                   sceneFolderIconSvg() +
                 '</span>' +
               '</button>' +
+            '</div>' +
+            '<div class="qe-scenes__add-duo-names">' +
+              '<span class="qe-scenes__thumb-name">escena</span>' +
               '<span class="qe-scenes__thumb-name">grupo</span>' +
             '</div>' +
           '</div>' +

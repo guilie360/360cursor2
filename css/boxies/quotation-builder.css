@@ -1245,37 +1245,74 @@
   margin: 0;
 }
 
-.qe-scenes__add-split {
+/* One scene slot split in two: + escena | + grupo */
+.qe-scenes__thumb-wrap--add-duo {
+  width: 168px;
+}
+
+.qe-scenes__add-duo {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: stretch;
+  width: 168px;
+  height: 94px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.qe-scenes__thumb-wrap--add-scene,
-.qe-scenes__thumb-wrap--add-group {
-  width: 80px;
+.qe-scenes__add-duo-btn {
+  appearance: none;
+  flex: 1 1 50%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
-.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb,
-.qe-scenes__thumb-wrap--add-group .qe-scenes__thumb,
-.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-frame,
-.qe-scenes__thumb-wrap--add-group .qe-scenes__group-frame {
-  width: 80px;
+.qe-scenes__add-duo-btn + .qe-scenes__add-duo-btn {
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
-.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-frame {
-  height: 80px;
-  font-size: 28px;
+.qe-scenes__add-duo-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.qe-scenes__thumb-wrap--add-group .qe-scenes__group-frame {
-  height: 80px;
+.qe-scenes__add-duo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
 }
 
-.qe-scenes__thumb-wrap--add-scene .qe-scenes__thumb-name,
-.qe-scenes__thumb-wrap--add-group .qe-scenes__thumb-name {
-  max-width: 80px;
-  font-size: 10px;
+.qe-scenes__add-duo-icon--folder svg {
+  width: 24px;
+  height: 24px;
+}
+
+.qe-scenes__add-duo-names {
+  display: flex;
+  width: 168px;
+  gap: 0;
+}
+
+.qe-scenes__add-duo-names .qe-scenes__thumb-name {
+  flex: 1 1 50%;
+  min-width: 0;
+  max-width: none;
+  font-size: 11px;
 }
 
 .qe-scenes__group-block {
