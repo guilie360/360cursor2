@@ -6128,6 +6128,22 @@ var QuotationEditor = (function () {
     markDirtyLocal();
   }
 
+  function sceneReorderUsesVerticalAxis(wrap) {
+    if (!wrap || !wrap.classList) return false;
+    if (wrap.classList.contains('is-in-group') || wrap.classList.contains('is-in-panel')) {
+      return true;
+    }
+    return !!(wrap.closest && wrap.closest('.qe-scenes-group-float__scroll'));
+  }
+
+  function sceneReorderPlaceAfter(wrap, e) {
+    var rect = wrap.getBoundingClientRect();
+    if (sceneReorderUsesVerticalAxis(wrap)) {
+      return e.clientY > rect.top + rect.height / 2;
+    }
+    return e.clientX > rect.left + rect.width / 2;
+  }
+
   function clearSceneReorderIndicators(root) {
     var scope = root || document;
     scope.querySelectorAll(
@@ -6245,8 +6261,7 @@ var QuotationEditor = (function () {
         e.stopPropagation();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         clearReorderIndicators();
-        var rect = wrap.getBoundingClientRect();
-        var after = e.clientX > rect.left + rect.width / 2;
+        var after = sceneReorderPlaceAfter(wrap, e);
         wrap.classList.add(after ? 'is-scene-reorder-after' : 'is-scene-reorder-before');
         dropHint = { toId: toId, after: after };
       });
@@ -6268,8 +6283,7 @@ var QuotationEditor = (function () {
         var to = (dropHint && dropHint.toId) || wrap.getAttribute('data-qe-scene-drop');
         var after = !!(dropHint && dropHint.after);
         if (!dropHint) {
-          var rect = wrap.getBoundingClientRect();
-          after = e.clientX > rect.left + rect.width / 2;
+          after = sceneReorderPlaceAfter(wrap, e);
         }
         dropHint = null;
         if (from && to && from !== to && from !== 'qe-scene') {
