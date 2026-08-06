@@ -11,6 +11,7 @@ var BoxiesShell = (function () {
   var onLogout = null;
   var fullscreenBound = false;
   var menuBound = false;
+  var userMenuBound = false;
   var defaultActionsHtml = '';
   var projectCtx = { id: '', name: '', slug: '', experienceType: '' };
 
@@ -44,12 +45,20 @@ var BoxiesShell = (function () {
       '<footer class="boxies-dock" id="boxiesDock" role="contentinfo" aria-label="Pie de BOXIES">' +
         '<div class="boxies-dock__inner">' +
           '<div class="boxies-dock__user" id="boxiesDockUser">' +
-            '<div class="boxies-user" id="boxiesUserChip"></div>' +
-            '<button type="button" class="boxies-dock__logout" id="boxiesLogoutBtn"' +
-              ' aria-label="Salir" data-tooltip="Salir">' +
-              '<span class="boxies-dock__logout-icon" aria-hidden="true">' + iconHtml('log-out') + '</span>' +
-              '<span class="boxies-dock__logout-label">Salir</span>' +
-            '</button>' +
+            '<div class="boxies-user-menu" id="boxiesUserMenu">' +
+              '<button type="button" class="boxies-user-menu__trigger" id="boxiesUserMenuBtn"' +
+                ' aria-haspopup="menu" aria-expanded="false" aria-label="Cuenta">' +
+              '</button>' +
+              '<div class="boxies-user-menu__panel" id="boxiesUserMenuPanel" role="menu" hidden>' +
+                '<button type="button" class="boxies-user-menu__item" role="menuitem"' +
+                  ' data-user-menu-action="profile">Perfil</button>' +
+                '<button type="button" class="boxies-user-menu__item" role="menuitem"' +
+                  ' data-user-menu-action="plan">Plan y uso</button>' +
+                '<div class="boxies-user-menu__sep" aria-hidden="true"></div>' +
+                '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--exit" role="menuitem"' +
+                  ' data-user-menu-action="logout">Cerrar sesión</button>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
           '<div class="boxies-dock__project" id="boxiesDockProject" hidden>' +
             '<strong class="boxies-dock__project-name" id="boxiesDockProjectName"></strong>' +
@@ -133,6 +142,70 @@ var BoxiesShell = (function () {
     if (panel) panel.hidden = true;
   }
 
+  function closeUserMenu() {
+    var btn = document.getElementById('boxiesUserMenuBtn');
+    var panel = document.getElementById('boxiesUserMenuPanel');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (panel) panel.hidden = true;
+  }
+
+  function profileAccountUrl() {
+    try {
+      return new URL('../auth/cuenta.html', window.location.href).pathname;
+    } catch (eUrl) {
+      return '/auth/cuenta.html';
+    }
+  }
+
+  function bindUserMenu() {
+    var btn = document.getElementById('boxiesUserMenuBtn');
+    var panel = document.getElementById('boxiesUserMenuPanel');
+    if (!btn || !panel || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = panel.hidden;
+      closeMainMenu();
+      closeToolsMenu();
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    panel.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-user-menu-action]');
+      if (!item) return;
+      e.preventDefault();
+      var action = item.getAttribute('data-user-menu-action');
+      closeUserMenu();
+      if (action === 'profile') {
+        window.location.href = profileAccountUrl();
+        return;
+      }
+      if (action === 'plan') {
+        if (onNav) onNav('sistema');
+        return;
+      }
+      if (action === 'logout') {
+        btn.disabled = true;
+        Promise.resolve(onLogout ? onLogout() : null).finally(function () {
+          btn.disabled = false;
+        });
+      }
+    });
+    if (!userMenuBound) {
+      userMenuBound = true;
+      document.addEventListener('click', function (e) {
+        var menu = document.getElementById('boxiesUserMenu');
+        if (!menu) return;
+        if (e.target.closest && e.target.closest('#boxiesUserMenu')) return;
+        closeUserMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeUserMenu();
+      });
+    }
+  }
+
   function syncMainMenu(pageId) {
     var panel = document.getElementById('boxiesWorkspaceMenuPanel');
     if (!panel) return;
@@ -150,6 +223,8 @@ var BoxiesShell = (function () {
       e.preventDefault();
       e.stopPropagation();
       var open = panel.hidden;
+      closeUserMenu();
+      closeToolsMenu();
       panel.hidden = !open;
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
@@ -243,6 +318,7 @@ var BoxiesShell = (function () {
       e.stopPropagation();
       var open = panel.hidden;
       closeMainMenu();
+      closeUserMenu();
       panel.hidden = !open;
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
@@ -469,18 +545,7 @@ var BoxiesShell = (function () {
   }
 
   function bind() {
-    var logoutBtn = document.getElementById('boxiesLogoutBtn');
-    if (logoutBtn && !logoutBtn.dataset.bound) {
-      logoutBtn.dataset.bound = '1';
-      logoutBtn.addEventListener('click', async function () {
-        logoutBtn.disabled = true;
-        try {
-          if (onLogout) await onLogout();
-        } finally {
-          logoutBtn.disabled = false;
-        }
-      });
-    }
+    bindUserMenu();
 
     var previewBtn = document.getElementById('boxiesPreviewBtn');
     if (previewBtn && !previewBtn.dataset.bound) {
@@ -520,6 +585,7 @@ var BoxiesShell = (function () {
     clearPageActions();
     clearProjectContext();
     closeMainMenu();
+    closeUserMenu();
     closeToolsMenu();
     if (typeof BuilderProgressRail !== 'undefined' && BuilderProgressRail.destroyFloatButton) {
       try { BuilderProgressRail.destroyFloatButton(); } catch (eFloat) {}
@@ -556,26 +622,29 @@ var BoxiesShell = (function () {
   }
 
   function setUser(profile) {
-    var chip = document.getElementById('boxiesUserChip');
-    if (!chip) return;
+    var btn = document.getElementById('boxiesUserMenuBtn');
+    if (!btn) return;
     if (!profile) {
-      chip.innerHTML = '';
-      chip.removeAttribute('data-tooltip');
+      btn.innerHTML = '';
+      btn.removeAttribute('data-tooltip');
+      btn.disabled = true;
       return;
     }
+    btn.disabled = false;
     var name = profile.nombre || profile.email || 'Admin';
     var roleLabel =
       typeof PlatformRoles !== 'undefined'
         ? PlatformRoles.getRoleLabel(profile)
         : (profile.rol || 'Administrador');
-    chip.innerHTML =
+    btn.innerHTML =
       '<span class="boxies-user__avatar" aria-hidden="true">' + iconHtml('user') + '</span>' +
       '<span class="boxies-user__meta">' +
         '<strong class="boxies-user__name">' + escapeHtml(name) + '</strong>' +
         '<span class="boxies-user__sep" aria-hidden="true">·</span>' +
         '<span class="boxies-user__role">' + escapeHtml(roleLabel) + '</span>' +
       '</span>';
-    chip.setAttribute('data-tooltip', name + ' · ' + roleLabel);
+    btn.setAttribute('data-tooltip', name + ' · ' + roleLabel);
+    btn.setAttribute('aria-label', 'Cuenta · ' + name);
   }
 
   function syncDockProjectLabel() {
