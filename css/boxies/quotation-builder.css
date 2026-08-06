@@ -1530,6 +1530,27 @@
     0 0 0 2px rgba(255, 255, 255, 0.38);
 }
 
+.qe-scenes__thumb-wrap.is-strip-reveal .qe-scenes__thumb-frame,
+.qe-scenes__group-block.is-strip-reveal .qe-scenes__group-frame {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 0 2px rgba(255, 255, 255, 0.92),
+    0 0 22px rgba(255, 255, 255, 0.28);
+  animation: qe-scenes-strip-reveal 0.55s ease-in-out 2;
+}
+
+@keyframes qe-scenes-strip-reveal {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qe-scenes__thumb-wrap.is-strip-reveal .qe-scenes__thumb-frame,
+  .qe-scenes__group-block.is-strip-reveal .qe-scenes__group-frame {
+    animation: none;
+  }
+}
+
 .qe-scenes__thumb-wrap.is-in-group {
   width: 148px;
 }

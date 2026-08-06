@@ -825,6 +825,9 @@ var QuotationEditor = (function () {
   var scenesTrackScrollLeft = 0;
   /** After create: scroll strip to reveal this scene/group id on next rerender. */
   var pendingScenesStripRevealId = null;
+  /** Suppress focusin scroll-pin while reveal animation runs. */
+  var scenesStripRevealUntil = 0;
+  var scenesStripFlashTimer = null;
   var libraryUiSaveTimer = null;
 
   function draftStorageKey(projectId) {
@@ -5756,22 +5759,18 @@ var QuotationEditor = (function () {
   function rerender() {
     if (!rootEl) return;
     var revealId = pendingScenesStripRevealId;
-    var uiScroll = revealId ? null : captureUiScroll();
+    var uiScroll = captureUiScroll();
     var host = rootEl.closest
       ? (rootEl.matches('[data-quotation-panel]') ? rootEl : rootEl.closest('[data-quotation-panel]'))
       : null;
     var panel = host || rootEl;
     panel.innerHTML = render();
     bind(panel);
-    if (!revealId) restoreUiScroll(uiScroll);
+    restoreUiScroll(uiScroll);
     /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
     requestAnimationFrame(function () {
-      if (revealId) {
-        scrollScenesStripItemIntoView(revealId);
-        pendingScenesStripRevealId = null;
-      } else {
-        restoreScenesTrackScroll(uiScroll.scenesLeft);
-      }
+      restoreScenesTrackScroll(uiScroll.scenesLeft);
+      if (revealId) applyScenesStripReveal(revealId);
       syncSceneGroupStripOpenState();
       if (openSceneGroupFloatId) {
         var floatAnchor = sceneGroupFloatAnchorInStrip(openSceneGroupFloatId);
@@ -5779,13 +5778,8 @@ var QuotationEditor = (function () {
       }
       syncExpandedGroupPanels();
       requestAnimationFrame(function () {
-        if (revealId) {
-          scrollScenesStripItemIntoView(revealId);
-          var scrollEl = getScenesTrackScrollEl();
-          if (scrollEl) scenesTrackScrollLeft = scrollEl.scrollLeft;
-        } else {
-          restoreScenesTrackScroll(uiScroll.scenesLeft);
-        }
+        restoreScenesTrackScroll(uiScroll.scenesLeft);
+        if (revealId) applyScenesStripReveal(revealId);
         syncExpandedGroupPanels();
       });
     });
@@ -5863,6 +5857,7 @@ var QuotationEditor = (function () {
   function queueScenesStripReveal(itemId) {
     if (!itemId) return;
     pendingScenesStripRevealId = String(itemId);
+    scenesStripRevealUntil = Date.now() + 900;
   }
 
   function findScenesStripItemEl(itemId) {
@@ -5887,7 +5882,8 @@ var QuotationEditor = (function () {
   }
 
   /** Scroll strip so a scene thumb or group folder is visible (e.g. after create). */
-  function scrollScenesStripItemIntoView(itemId) {
+  function scrollScenesStripItemIntoView(itemId, opts) {
+    opts = opts || {};
     var scrollEl = getScenesTrackScrollEl();
     var itemEl = findScenesStripItemEl(itemId);
     if (!scrollEl || !itemEl) return false;
@@ -5895,15 +5891,41 @@ var QuotationEditor = (function () {
     var itemRect = itemEl.getBoundingClientRect();
     var pad = 12;
     var prev = scrollEl.style.scrollBehavior;
-    scrollEl.style.scrollBehavior = 'smooth';
+    scrollEl.style.scrollBehavior = opts.smooth === false ? 'auto' : 'smooth';
     if (itemRect.right > scrollRect.right - pad) {
       scrollEl.scrollLeft += itemRect.right - scrollRect.right + pad;
-    } else if (itemRect.left < scrollRect.left + pad) {
+    } else if (!opts.revealOnlyRight && itemRect.left < scrollRect.left + pad) {
       scrollEl.scrollLeft += itemRect.left - scrollRect.left - pad;
     }
     scenesTrackScrollLeft = scrollEl.scrollLeft;
     scrollEl.style.scrollBehavior = prev || '';
     return true;
+  }
+
+  function flashScenesStripItem(itemId) {
+    var itemEl = findScenesStripItemEl(itemId);
+    if (!itemEl) return;
+    var target = itemEl.classList.contains('qe-scenes__group-block')
+      ? itemEl
+      : (itemEl.closest('.qe-scenes__thumb-wrap') || itemEl);
+    target.classList.add('is-strip-reveal');
+    if (scenesStripFlashTimer) {
+      try { clearTimeout(scenesStripFlashTimer); } catch (eClr) { /* ignore */ }
+    }
+    scenesStripFlashTimer = setTimeout(function () {
+      target.classList.remove('is-strip-reveal');
+      scenesStripFlashTimer = null;
+    }, 1600);
+  }
+
+  function applyScenesStripReveal(itemId) {
+    if (!itemId) return;
+    scrollScenesStripItemIntoView(itemId, { revealOnlyRight: true });
+    flashScenesStripItem(itemId);
+    pendingScenesStripRevealId = null;
+    scenesStripRevealUntil = Date.now() + 900;
+    var scrollEl = getScenesTrackScrollEl();
+    if (scrollEl) scenesTrackScrollLeft = scrollEl.scrollLeft;
   }
 
   /** Keep the active scene thumb visible inside the horizontal strip. */
@@ -10160,6 +10182,7 @@ var QuotationEditor = (function () {
       if (scenesTrack) {
         /* Prevent focused thumbs from auto-scrolling the strip on click/rerender. */
         scenesTrack.addEventListener('focusin', function (e) {
+          if (Date.now() < scenesStripRevealUntil) return;
           var thumb = e.target && e.target.closest
             ? e.target.closest('.qe-scenes__thumb')
             : null;
