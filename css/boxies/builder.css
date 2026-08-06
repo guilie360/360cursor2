@@ -7273,7 +7273,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   pointer-events: auto;
-  cursor: grab;
+  cursor: default;
   box-sizing: border-box;
   outline: none;
   user-select: none;
@@ -7304,7 +7304,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-sel-rotate-btn:active,
 .builder-exp-sel-gizmo.is-rotating .builder-exp-sel-rotate-btn {
-  cursor: grabbing;
+  cursor: default;
   background: rgba(28, 28, 28, 0.88);
   border-color: rgba(255, 255, 255, 0.28);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 2px 10px rgba(0, 0, 0, 0.42);

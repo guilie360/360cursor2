@@ -1483,6 +1483,7 @@ var ExperienciaCanvas = (function () {
     gizmoEl.style.width = box.w + '%';
     gizmoEl.style.height = box.h + '%';
     gizmoEl.style.setProperty('--btn-rot', box.rot + 'deg');
+    syncSelectionGizmoHandleCursors(gizmoEl, Number(box.rot) || 0);
     var sizeEl = gizmoEl.querySelector('[data-exp-sel-size]');
     if (sizeEl && layerW && layerH) {
       var sizeWpx = Math.max(1, Math.round((box.w / 100) * layerW));
@@ -1674,6 +1675,7 @@ var ExperienciaCanvas = (function () {
     gizmo.style.width = m.gw + '%';
     gizmo.style.height = m.gh + '%';
     gizmo.style.setProperty('--btn-rot', (Number(m.grot) || 0) + 'deg');
+    syncSelectionGizmoHandleCursors(gizmo, Number(m.grot) || 0);
     var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
     if (sizeEl && layerEl) {
       var layerW = Math.max(1, layerEl.clientWidth || 1000);
@@ -1895,6 +1897,53 @@ var ExperienciaCanvas = (function () {
         '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>' +
         '<path d="M3 3v5h5"/>' +
       '</svg>';
+  }
+
+  /** Handle drag axis in shape-local space (0° = east, clockwise). */
+  var SELECTION_HANDLE_RESIZE_ANGLE = {
+    e: 0, se: 45, s: 90, sw: 135, w: 180, nw: 225, n: 270, ne: 315
+  };
+  var ROTATION_AWARE_RESIZE_CURSORS = [
+    'ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize',
+    'ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'
+  ];
+
+  /** Native resize cursor bucketed to 45° — follows object rotation. */
+  function selectionHandleResizeCursor(handle, rotDeg) {
+    handle = String(handle || '').toLowerCase();
+    if (!handle || handle === 'rotate') return 'default';
+    var base = SELECTION_HANDLE_RESIZE_ANGLE[handle];
+    if (base == null) return '';
+    var ang = ((base + (Number(rotDeg) || 0)) % 360 + 360) % 360;
+    return ROTATION_AWARE_RESIZE_CURSORS[Math.round(ang / 45) % 8];
+  }
+
+  function gizmoRotationDeg(gizmoEl) {
+    if (!gizmoEl) return 0;
+    var raw = gizmoEl.style.getPropertyValue('--btn-rot');
+    if (!raw && typeof getComputedStyle !== 'undefined') {
+      raw = getComputedStyle(gizmoEl).getPropertyValue('--btn-rot');
+    }
+    return parseFloat(String(raw || '0').replace('deg', '')) || 0;
+  }
+
+  function syncSelectionGizmoHandleCursors(gizmoEl, rotDeg) {
+    if (!gizmoEl) return;
+    rotDeg = rotDeg != null ? Number(rotDeg) || 0 : gizmoRotationDeg(gizmoEl);
+    gizmoEl.querySelectorAll('.builder-exp-sel-handle[data-handle]').forEach(function (h) {
+      var handleName = h.getAttribute('data-handle');
+      var cur = selectionHandleResizeCursor(handleName, rotDeg);
+      if (cur) h.style.cursor = cur;
+    });
+    var rotBtn = gizmoEl.querySelector('.builder-exp-sel-rotate-btn');
+    if (rotBtn) rotBtn.style.cursor = 'default';
+  }
+
+  function syncAllSelectionGizmoHandleCursors(layerEl) {
+    if (!layerEl) return;
+    layerEl.querySelectorAll('[data-exp-gizmo]').forEach(function (gizmo) {
+      syncSelectionGizmoHandleCursors(gizmo, gizmoRotationDeg(gizmo));
+    });
   }
 
   function buttonIconGlyph(icon) {
@@ -3223,6 +3272,27 @@ var ExperienciaCanvas = (function () {
     var dragging = null;
     var buttonDrag = null;
     var transformDrag = null;
+    var overlayTransformCursor = '';
+
+    function setOverlayTransformCursor(cursor) {
+      overlayTransformCursor = cursor || '';
+      if (typeof document !== 'undefined' && document.body) {
+        if (overlayTransformCursor) {
+          document.body.style.cursor = overlayTransformCursor;
+        } else {
+          document.body.style.removeProperty('cursor');
+        }
+      }
+    }
+
+    function clearOverlayTransformCursor() {
+      if (!overlayTransformCursor) return;
+      overlayTransformCursor = '';
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.style.removeProperty('cursor');
+      }
+    }
+
     var overlayMarquee = null;
     /** Min pointer travel (px) before move/resize counts as a drag — avoids snap on click. */
     var OVERLAY_DRAG_THRESHOLD_PX = 4;
@@ -3318,6 +3388,7 @@ var ExperienciaCanvas = (function () {
       buttonNudgeDirty = false;
       buttonDrag = null;
       transformDrag = null;
+      clearOverlayTransformCursor();
       pendingMoveIds = {};
     }
 
@@ -5673,6 +5744,7 @@ var ExperienciaCanvas = (function () {
           gizmo.style.width = gm.gw + '%';
           gizmo.style.height = gm.gh + '%';
           gizmo.style.setProperty('--btn-rot', gm.grot + 'deg');
+          syncSelectionGizmoHandleCursors(gizmo, Number(gm.grot) || 0);
           var sizeEl = gizmo.querySelector('[data-exp-sel-size]');
           if (sizeEl) {
             sizeEl.textContent = gm.st === 'SHAPE_LINE'
@@ -5798,6 +5870,7 @@ var ExperienciaCanvas = (function () {
             gizmoEl.style.width = gm.gw + '%';
             gizmoEl.style.height = gm.gh + '%';
             gizmoEl.style.setProperty('--btn-rot', gm.grot + 'deg');
+            syncSelectionGizmoHandleCursors(gizmoEl, Number(gm.grot) || 0);
           }
         }
       }
@@ -6643,6 +6716,7 @@ var ExperienciaCanvas = (function () {
           }
         }
         if (gizmoHtml) buttonsLayer.innerHTML += gizmoHtml;
+        syncAllSelectionGizmoHandleCursors(buttonsLayer);
       }
       if (selIds.length && !isShapeBoxV2Active()) {
         requestAnimationFrame(function () {
@@ -6719,6 +6793,7 @@ var ExperienciaCanvas = (function () {
         }
       }
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
+      syncAllSelectionGizmoHandleCursors(buttonsLayer);
       requestAnimationFrame(syncButtonsLayerBounds);
     }
 
@@ -9946,6 +10021,7 @@ var ExperienciaCanvas = (function () {
             }
           }
           transformDrag = null;
+          clearOverlayTransformCursor();
           unbindOverlayPointerDocs();
           try {
             var gizmoCancel = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
@@ -10895,6 +10971,12 @@ var ExperienciaCanvas = (function () {
           } else {
             try { gizmo.classList.add('is-rotating'); } catch (eRot) { /* ignore */ }
           }
+          if (handleMode === 'rotate') {
+            setOverlayTransformCursor('default');
+          } else {
+            var resizeDragCur = selectionHandleResizeCursor(handleMode, transformDrag.startRot);
+            if (resizeDragCur) setOverlayTransformCursor(resizeDragCur);
+          }
           bindOverlayPointerDocs();
           try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
           dragDebugLog('transformDrag armed', {
@@ -11132,6 +11214,7 @@ var ExperienciaCanvas = (function () {
             flushRotateLiveFrame();
           }
           transformDrag = null;
+          clearOverlayTransformCursor();
           unbindOverlayPointerDocs();
           var liveShapePatch = dragShapePatch;
           var finLive = null;
