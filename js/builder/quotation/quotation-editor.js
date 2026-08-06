@@ -2414,6 +2414,20 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function sceneGroupFloatCanvasBottom() {
+    var frame = rootEl && rootEl.querySelector('[data-qe-canvas-fit-frame]');
+    if (frame) {
+      var fr = frame.getBoundingClientRect();
+      if (fr.height > 0) return fr.bottom;
+    }
+    var stage = rootEl && rootEl.querySelector('[data-qe-canvas]');
+    if (stage) {
+      var sr = stage.getBoundingClientRect();
+      if (sr.height > 0) return sr.bottom;
+    }
+    return null;
+  }
+
   function positionSceneGroupFloat(floatEl, anchorEl) {
     if (!floatEl || !anchorEl) return;
     var rect = anchorEl.getBoundingClientRect();
@@ -2425,7 +2439,12 @@ var QuotationEditor = (function () {
     var vh = window.innerHeight || document.documentElement.clientHeight || 720;
     var left = Math.max(pad, Math.min(rect.left, vw - width - pad));
     var top = rect.bottom + gap;
-    var maxH = Math.max(160, vh - top - pad);
+    var viewportMaxH = Math.max(160, vh - top - pad);
+    var canvasBottom = sceneGroupFloatCanvasBottom();
+    var canvasMaxH = canvasBottom != null
+      ? Math.max(120, canvasBottom - top - pad)
+      : viewportMaxH;
+    var maxH = Math.min(viewportMaxH, canvasMaxH);
     floatEl.style.position = 'fixed';
     floatEl.style.left = left + 'px';
     floatEl.style.top = top + 'px';
@@ -2434,8 +2453,10 @@ var QuotationEditor = (function () {
     floatEl.style.height = 'auto';
     floatEl.style.bottom = 'auto';
     floatEl.style.zIndex = '12051';
+    var head = floatEl.querySelector('.qe-canvas-tool-float__head');
+    var headH = head ? Math.ceil(head.getBoundingClientRect().height) : 44;
     var scroll = floatEl.querySelector('[data-qe-scene-group-float-scroll]');
-    if (scroll) scroll.style.maxHeight = Math.max(120, maxH - 44) + 'px';
+    if (scroll) scroll.style.maxHeight = Math.max(80, maxH - headH) + 'px';
   }
 
   function syncSceneGroupStripOpenState() {
@@ -5096,6 +5117,7 @@ var QuotationEditor = (function () {
     if (typeof QuotationGuides !== 'undefined' && QuotationGuides.refresh) {
       try { QuotationGuides.refresh(); } catch (eGuidesFit) { /* ignore */ }
     }
+    if (openSceneGroupFloatId) sceneGroupFloatReposition();
   }
 
   var STAGE_SCENES_FOLD_H = 16;
