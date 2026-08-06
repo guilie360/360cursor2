@@ -14,6 +14,42 @@ var AdminUI = (function () {
       .replace(/'/g, '&#39;');
   }
 
+  function isModalTextInput(el) {
+    if (!el || !el.tagName) return false;
+    var tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (tag === 'INPUT') {
+      var type = String(el.type || 'text').toLowerCase();
+      return type !== 'button' && type !== 'submit' && type !== 'reset';
+    }
+    return !!el.isContentEditable;
+  }
+
+  var modalKeyHandler = null;
+
+  function bindModalKeyHandler() {
+    if (modalKeyHandler) return;
+    modalKeyHandler = function (event) {
+      if (!modalRoot || !modalRoot.classList.contains('is-open')) return;
+      if (event.key === 'Enter' && !event.defaultPrevented) {
+        if (isModalTextInput(event.target)) return;
+        var confirmBtn = modalRoot.querySelector('[data-modal-action="confirm"]');
+        if (confirmBtn && !confirmBtn.disabled) {
+          event.preventDefault();
+          confirmBtn.click();
+        }
+        return;
+      }
+    };
+    document.addEventListener('keydown', modalKeyHandler);
+  }
+
+  function unbindModalKeyHandler() {
+    if (!modalKeyHandler) return;
+    document.removeEventListener('keydown', modalKeyHandler);
+    modalKeyHandler = null;
+  }
+
   function ensureModalRoot() {
     if (modalRoot) return;
     modalRoot = document.createElement('div');
@@ -49,12 +85,14 @@ var AdminUI = (function () {
 
     modalRoot.classList.add('is-open');
     document.body.classList.add('admin-modal-open');
+    bindModalKeyHandler();
 
     if (options.onMount) options.onMount(modalRoot);
   }
 
   function closeModal() {
     if (!modalRoot) return;
+    unbindModalKeyHandler();
     modalRoot.classList.remove('is-open');
     document.body.classList.remove('admin-modal-open');
     if (modalOnClose) {
@@ -93,6 +131,7 @@ var AdminUI = (function () {
           }
           if (confirmBtn) {
             confirmBtn.addEventListener('click', function () { finish(true); });
+            try { confirmBtn.focus(); } catch (eFocus) { /* ignore */ }
           }
         },
         onClose: function () {

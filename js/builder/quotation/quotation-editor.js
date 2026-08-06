@@ -8927,6 +8927,13 @@ var QuotationEditor = (function () {
     if (!rootEl) return;
     if (isBuilderFormField(e.target)) return;
 
+    if (e.key === 'Enter' && state.pendingSceneDeleteId) {
+      e.preventDefault();
+      e.stopPropagation();
+      confirmDeleteScene();
+      return;
+    }
+
     if (e.key === 'Escape') {
       try {
         if (state.canvasPreviewMode) {
