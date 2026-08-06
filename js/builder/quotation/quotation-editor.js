@@ -823,6 +823,8 @@ var QuotationEditor = (function () {
   var thumbRerenderQueued = false;
   /** Survives full scenes-bar re-renders so selecting a scene does not jump left. */
   var scenesTrackScrollLeft = 0;
+  /** After create: scroll strip to reveal this scene/group id on next rerender. */
+  var pendingScenesStripRevealId = null;
   var libraryUiSaveTimer = null;
 
   function draftStorageKey(projectId) {
@@ -1243,6 +1245,7 @@ var QuotationEditor = (function () {
     state.dockOpen = false;
     state.resourcePickerOpen = false;
     markDirtyLocal();
+    queueScenesStripReveal(scene.id);
     rerender();
   }
 
@@ -2250,6 +2253,7 @@ var QuotationEditor = (function () {
       state.sceneTrack.push(grp.id);
     }
     markDirtyLocal();
+    if (!parentId) queueScenesStripReveal(grp.id);
     return grp;
   }
 
@@ -5730,17 +5734,23 @@ var QuotationEditor = (function () {
 
   function rerender() {
     if (!rootEl) return;
-    var uiScroll = captureUiScroll();
+    var revealId = pendingScenesStripRevealId;
+    var uiScroll = revealId ? null : captureUiScroll();
     var host = rootEl.closest
       ? (rootEl.matches('[data-quotation-panel]') ? rootEl : rootEl.closest('[data-quotation-panel]'))
       : null;
     var panel = host || rootEl;
     panel.innerHTML = render();
     bind(panel);
-    restoreUiScroll(uiScroll);
+    if (!revealId) restoreUiScroll(uiScroll);
     /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
     requestAnimationFrame(function () {
-      restoreScenesTrackScroll(uiScroll.scenesLeft);
+      if (revealId) {
+        scrollScenesStripItemIntoView(revealId);
+        pendingScenesStripRevealId = null;
+      } else {
+        restoreScenesTrackScroll(uiScroll.scenesLeft);
+      }
       syncSceneGroupStripOpenState();
       if (openSceneGroupFloatId) {
         var floatAnchor = sceneGroupFloatAnchorInStrip(openSceneGroupFloatId);
@@ -5748,7 +5758,13 @@ var QuotationEditor = (function () {
       }
       syncExpandedGroupPanels();
       requestAnimationFrame(function () {
-        restoreScenesTrackScroll(uiScroll.scenesLeft);
+        if (revealId) {
+          scrollScenesStripItemIntoView(revealId);
+          var scrollEl = getScenesTrackScrollEl();
+          if (scrollEl) scenesTrackScrollLeft = scrollEl.scrollLeft;
+        } else {
+          restoreScenesTrackScroll(uiScroll.scenesLeft);
+        }
         syncExpandedGroupPanels();
       });
     });
@@ -5813,25 +5829,82 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  /** Horizontal scroll container for the scenes strip (wrap, not inner track). */
+  function getScenesTrackScrollEl() {
+    if (rootEl) {
+      var wrap = rootEl.querySelector('.qe-scenes__track-wrap');
+      if (wrap) return wrap;
+    }
+    return document.querySelector('.qe-scenes__track-wrap') ||
+      document.querySelector('[data-qe-scenes-track]');
+  }
+
+  function queueScenesStripReveal(itemId) {
+    if (!itemId) return;
+    pendingScenesStripRevealId = String(itemId);
+  }
+
+  function findScenesStripItemEl(itemId) {
+    var scrollEl = getScenesTrackScrollEl();
+    if (!scrollEl || !itemId) return null;
+    var track = scrollEl.querySelector('[data-qe-scenes-track]') || scrollEl;
+    var sid = String(itemId);
+    var sceneBtns = track.querySelectorAll('[data-qe-scene]');
+    var i;
+    for (i = 0; i < sceneBtns.length; i++) {
+      if (sceneBtns[i].getAttribute('data-qe-scene') === sid) {
+        return sceneBtns[i].closest('.qe-scenes__thumb-wrap') || sceneBtns[i];
+      }
+    }
+    var blocks = track.querySelectorAll('[data-qe-scene-group-block]');
+    for (i = 0; i < blocks.length; i++) {
+      if (blocks[i].getAttribute('data-qe-scene-group-block') === sid) {
+        return blocks[i];
+      }
+    }
+    return null;
+  }
+
+  /** Scroll strip so a scene thumb or group folder is visible (e.g. after create). */
+  function scrollScenesStripItemIntoView(itemId) {
+    var scrollEl = getScenesTrackScrollEl();
+    var itemEl = findScenesStripItemEl(itemId);
+    if (!scrollEl || !itemEl) return false;
+    var scrollRect = scrollEl.getBoundingClientRect();
+    var itemRect = itemEl.getBoundingClientRect();
+    var pad = 12;
+    var prev = scrollEl.style.scrollBehavior;
+    scrollEl.style.scrollBehavior = 'smooth';
+    if (itemRect.right > scrollRect.right - pad) {
+      scrollEl.scrollLeft += itemRect.right - scrollRect.right + pad;
+    } else if (itemRect.left < scrollRect.left + pad) {
+      scrollEl.scrollLeft += itemRect.left - scrollRect.left - pad;
+    }
+    scenesTrackScrollLeft = scrollEl.scrollLeft;
+    scrollEl.style.scrollBehavior = prev || '';
+    return true;
+  }
+
   /** Keep the active scene thumb visible inside the horizontal strip. */
   function scrollActiveSceneThumbIntoView() {
-    var track = document.querySelector('[data-qe-scenes-track]');
-    if (!track) return;
+    var scrollEl = getScenesTrackScrollEl();
+    if (!scrollEl) return;
+    var track = scrollEl.querySelector('[data-qe-scenes-track]') || scrollEl;
     var active = track.querySelector('.qe-scenes__thumb.is-active');
     if (!active) return;
     var wrap = active.closest('.qe-scenes__thumb-wrap') || active;
-    var trackRect = track.getBoundingClientRect();
+    var scrollRect = scrollEl.getBoundingClientRect();
     var wrapRect = wrap.getBoundingClientRect();
     var pad = 10;
-    var prev = track.style.scrollBehavior;
-    track.style.scrollBehavior = 'auto';
-    if (wrapRect.left < trackRect.left + pad) {
-      track.scrollLeft += wrapRect.left - trackRect.left - pad;
-    } else if (wrapRect.right > trackRect.right - pad) {
-      track.scrollLeft += wrapRect.right - trackRect.right + pad;
+    var prev = scrollEl.style.scrollBehavior;
+    scrollEl.style.scrollBehavior = 'auto';
+    if (wrapRect.left < scrollRect.left + pad) {
+      scrollEl.scrollLeft += wrapRect.left - scrollRect.left - pad;
+    } else if (wrapRect.right > scrollRect.right - pad) {
+      scrollEl.scrollLeft += wrapRect.right - scrollRect.right + pad;
     }
-    scenesTrackScrollLeft = track.scrollLeft;
-    track.style.scrollBehavior = prev || '';
+    scenesTrackScrollLeft = scrollEl.scrollLeft;
+    scrollEl.style.scrollBehavior = prev || '';
   }
 
   /** ← / → scene navigation. Returns true when a different scene was selected. */
@@ -7035,6 +7108,7 @@ var QuotationEditor = (function () {
     state.sceneMenuOpen = false;
     state.dockOpen = false;
     markDirtyLocal();
+    queueScenesStripReveal(clone.id);
     rerender();
     return clone;
   }
@@ -7688,6 +7762,7 @@ var QuotationEditor = (function () {
     state.dockOpen = false;
     state.resourcePickerOpen = false;
     markDirtyLocal();
+    queueScenesStripReveal(scene.id);
     rerender();
   }
 
