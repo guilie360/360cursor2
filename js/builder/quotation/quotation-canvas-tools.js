@@ -3,8 +3,18 @@
  * Window chrome + lifecycle: QuotationWindowManager.
  */
 var QuotationCanvasTools = (function () {
-  var NOTES_KEY = 'boxies_qe_canvas_notes_v1';
+  var NOTES_KEY = 'boxies_qe_canvas_notes_v2';
+  var NOTES_KEY_LEGACY = 'boxies_qe_canvas_notes_v1';
   var CHECKLIST_KEY = 'boxies_qe_canvas_checklist_v1';
+  var PAGED_TOOL_RESIZE = {
+    minW: 205,
+    maxW: 300,
+    defaultW: 280,
+    defaultH: 400,
+    maxHMargin: 0,
+    maxHExtra: 0,
+    clampChrome: true
+  };
   var pomodoroTimer = null;
   var pomodoroLeft = 25 * 60;
 
@@ -128,22 +138,144 @@ var QuotationCanvasTools = (function () {
 
   function openNotes() {
     openWindow('tool-notes', 'Notas', 'notes', function (bodyEl) {
-      var saved = '';
-      try { saved = localStorage.getItem(NOTES_KEY) || ''; } catch (eLs) { /* ignore */ }
-      bodyEl.innerHTML =
-        '<textarea class="qe-notes__area" data-qe-notes-input rows="8"' +
-          ' placeholder="Apuntes de sesión…" spellcheck="true"></textarea>';
-      var area = bodyEl.querySelector('[data-qe-notes-input]');
-      if (area) {
-        area.value = saved;
-        area.addEventListener('input', function () {
-          try { localStorage.setItem(NOTES_KEY, area.value); } catch (eSave) { /* ignore */ }
-        });
-        requestAnimationFrame(function () {
-          try { area.focus(); } catch (eF) { /* ignore */ }
+      renderNotesBody(bodyEl, loadNotesState());
+    }, null, { resize: PAGED_TOOL_RESIZE });
+  }
+
+  function nextNotesPageId() {
+    return 'np_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function normalizeNotesState(raw) {
+    var state = raw && typeof raw === 'object' ? raw : {};
+    var pages = Array.isArray(state.pages) ? state.pages : [];
+    pages = pages.map(function (page, idx) {
+      return {
+        id: String(page.id || nextNotesPageId()),
+        title: page.title != null ? String(page.title) : ('Página ' + (idx + 1)),
+        content: page.content != null ? String(page.content) : ''
+      };
+    });
+    if (!pages.length) {
+      var firstId = nextNotesPageId();
+      pages = [{ id: firstId, title: 'Página 1', content: '' }];
+      state.activePageId = firstId;
+    }
+    var activePageId = String(state.activePageId || pages[0].id);
+    if (!pages.some(function (p) { return p.id === activePageId; })) {
+      activePageId = pages[0].id;
+    }
+    return { activePageId: activePageId, pages: pages };
+  }
+
+  function loadNotesState() {
+    try {
+      var raw = localStorage.getItem(NOTES_KEY);
+      if (raw) return normalizeNotesState(JSON.parse(raw));
+      var legacy = localStorage.getItem(NOTES_KEY_LEGACY);
+      if (legacy != null) {
+        var legacyId = nextNotesPageId();
+        return normalizeNotesState({
+          activePageId: legacyId,
+          pages: [{ id: legacyId, title: 'Página 1', content: String(legacy) }]
         });
       }
+    } catch (eLoad) { /* ignore */ }
+    var id = nextNotesPageId();
+    return normalizeNotesState({
+      activePageId: id,
+      pages: [{ id: id, title: 'Página 1', content: '' }]
     });
+  }
+
+  function saveNotesState(state) {
+    try { localStorage.setItem(NOTES_KEY, JSON.stringify(state)); } catch (eSave) { /* ignore */ }
+  }
+
+  function getActiveNotesPage(state) {
+    for (var i = 0; i < state.pages.length; i++) {
+      if (state.pages[i].id === state.activePageId) return state.pages[i];
+    }
+    return state.pages[0] || null;
+  }
+
+  function autoResizeNotesField(field) {
+    if (!field) return;
+    field.style.height = 'auto';
+    var shell = field.closest('.qe-notes-page');
+    var max = shell ? Math.max(80, shell.clientHeight - 4) : 9999;
+    field.style.height = Math.min(max, Math.max(80, field.scrollHeight)) + 'px';
+  }
+
+  function renderNotesBody(bodyEl, state) {
+    var page = getActiveNotesPage(state);
+    var esc = function (v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+    bodyEl.innerHTML =
+      '<div class="qe-checklist-shell">' +
+        toolPagesTabsHtml(state, {
+          pageAttr: 'data-qe-notes-page',
+          addPageAttr: 'data-qe-notes-add-page',
+          ariaLabel: 'Páginas de notas'
+        }) +
+        '<div class="qe-notes-page">' +
+          '<textarea class="qe-notes__area" data-qe-notes-input rows="1"' +
+            ' placeholder="Apuntes de sesión…" spellcheck="true">' +
+            esc(page ? page.content : '') +
+          '</textarea>' +
+        '</div>' +
+      '</div>';
+    bindNotesShell(bodyEl, state);
+  }
+
+  function bindNotesShell(host, state) {
+    var page = getActiveNotesPage(state);
+    if (!page) return;
+
+    function persist() {
+      saveNotesState(state);
+    }
+
+    function rerender() {
+      renderNotesBody(host, state);
+    }
+
+    bindToolPagesShell(host, state, {
+      pageAttr: 'data-qe-notes-page',
+      addPageAttr: 'data-qe-notes-add-page',
+      nextPageId: nextNotesPageId,
+      newPageFactory: function (newId, pageCount) {
+        return { id: newId, title: 'Página ' + pageCount, content: '' };
+      },
+      persist: persist,
+      rerender: rerender
+    });
+
+    var area = host.querySelector('[data-qe-notes-input]');
+    if (!area) return;
+    area.addEventListener('input', function () {
+      page.content = area.value;
+      persist();
+      autoResizeNotesField(area);
+    });
+    autoResizeNotesField(area);
+    requestAnimationFrame(function () {
+      autoResizeNotesField(area);
+      try { area.focus(); } catch (eF) { /* ignore */ }
+    });
+    var notesPage = host.querySelector('.qe-notes-page');
+    if (notesPage && typeof ResizeObserver !== 'undefined') {
+      if (notesPage.__qeNotesRo) {
+        try { notesPage.__qeNotesRo.disconnect(); } catch (eRo) { /* ignore */ }
+      }
+      notesPage.__qeNotesRo = new ResizeObserver(function () {
+        autoResizeNotesField(area);
+      });
+      notesPage.__qeNotesRo.observe(notesPage);
+    }
   }
 
   function nextChecklistId() {
@@ -229,7 +361,11 @@ var QuotationCanvasTools = (function () {
     return state.pages[0] || null;
   }
 
-  function checklistPagesHtml(state) {
+  function toolPagesTabsHtml(state, config) {
+    config = config || {};
+    var pageAttr = config.pageAttr || 'data-qe-check-page';
+    var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
+    var ariaLabel = config.ariaLabel || 'Páginas';
     var esc = function (v) {
       return String(v == null ? '' : v)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -239,7 +375,7 @@ var QuotationCanvasTools = (function () {
       var active = page.id === state.activePageId;
       return '<button type="button" class="qe-checklist-tabs__tab' +
         (active ? ' is-active' : '') + '"' +
-        ' data-qe-check-page="' + esc(page.id) + '"' +
+        ' ' + pageAttr + '="' + esc(page.id) + '"' +
         ' role="tab"' +
         ' aria-selected="' + (active ? 'true' : 'false') + '"' +
         ' title="' + esc(page.title) + '">' +
@@ -247,13 +383,124 @@ var QuotationCanvasTools = (function () {
       '</button>';
     }).join('');
     return '' +
-      '<div class="qe-checklist-tabs" role="tablist" aria-label="Páginas del checklist">' +
+      '<div class="qe-checklist-tabs" role="tablist" aria-label="' + esc(ariaLabel) + '">' +
         '<div class="qe-checklist-tabs__strip">' +
-          '<div class="qe-checklist-tabs__scroll" data-qe-checklist-pages>' + tabs + '</div>' +
-          '<button type="button" class="qe-checklist-tabs__new" data-qe-check-add-page' +
+          '<div class="qe-checklist-tabs__scroll">' + tabs + '</div>' +
+          '<button type="button" class="qe-checklist-tabs__new" ' + addPageAttr +
             ' aria-label="Agregar página" title="Agregar página">+</button>' +
         '</div>' +
       '</div>';
+  }
+
+  function bindToolPagesShell(host, state, config) {
+    config = config || {};
+    var pageAttr = config.pageAttr || 'data-qe-check-page';
+    var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
+    var persist = config.persist || function () {};
+    var rerender = config.rerender || function () {};
+    var nextPageId = config.nextPageId || nextChecklistPageId;
+    var newPageFactory = config.newPageFactory;
+
+    function pageById(pageId) {
+      pageId = String(pageId || '');
+      for (var pi = 0; pi < state.pages.length; pi++) {
+        if (state.pages[pi].id === pageId) return state.pages[pi];
+      }
+      return null;
+    }
+
+    var addPageBtn = host.querySelector('[' + addPageAttr + ']');
+    if (addPageBtn) {
+      addPageBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var newId = nextPageId();
+        var pageCount = state.pages.length + 1;
+        state.pages.push(newPageFactory(newId, pageCount));
+        state.activePageId = newId;
+        persist();
+        rerender();
+      });
+    }
+
+    var pageClickTimer = null;
+
+    function beginPageRename(tab) {
+      var pageId = tab.getAttribute(pageAttr);
+      var targetPage = pageById(pageId);
+      if (!targetPage || tab.dataset.renaming === '1') return;
+      var label = tab.querySelector('.qe-checklist-tabs__tab-label');
+      if (!label) return;
+      tab.dataset.renaming = '1';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'qe-checklist-tabs__tab-input';
+      input.value = targetPage.title || '';
+      input.maxLength = 48;
+      input.setAttribute('aria-label', 'Nombre de la página');
+      label.replaceWith(input);
+      input.focus();
+      input.select();
+      function finish(save) {
+        if (save) {
+          var next = String(input.value || '').trim();
+          if (next) targetPage.title = next;
+          persist();
+        }
+        tab.dataset.renaming = '0';
+        rerender();
+      }
+      input.addEventListener('blur', function () { finish(true); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finish(false);
+        }
+      });
+      input.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
+    host.querySelectorAll('[' + pageAttr + ']').forEach(function (tab) {
+      tab.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (tab.dataset.renaming === '1') return;
+        var pageId = tab.getAttribute(pageAttr);
+        if (pageClickTimer) {
+          try { clearTimeout(pageClickTimer); } catch (eT) { /* ignore */ }
+          pageClickTimer = null;
+        }
+        pageClickTimer = setTimeout(function () {
+          pageClickTimer = null;
+          if (!pageId || pageId === state.activePageId) return;
+          state.activePageId = pageId;
+          persist();
+          rerender();
+        }, 240);
+      });
+      tab.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pageClickTimer) {
+          try { clearTimeout(pageClickTimer); } catch (eT2) { /* ignore */ }
+          pageClickTimer = null;
+        }
+        beginPageRename(tab);
+      });
+    });
+  }
+
+  function checklistPagesHtml(state) {
+    return toolPagesTabsHtml(state, {
+      pageAttr: 'data-qe-check-page',
+      addPageAttr: 'data-qe-check-add-page',
+      ariaLabel: 'Páginas del checklist'
+    });
   }
 
   function checklistRowHtml(item) {
@@ -266,6 +513,8 @@ var QuotationCanvasTools = (function () {
     return '' +
       '<div class="qe-checklist__row' + (checked ? ' is-checked' : '') + '"' +
         ' data-qe-check-row="' + esc(item.id) + '">' +
+        '<span class="qe-checklist__drag" data-qe-check-drag="' + esc(item.id) + '"' +
+          ' aria-hidden="true" title="Arrastrar para reordenar"></span>' +
         '<button type="button" class="qe-checklist__box"' +
           ' data-qe-check-toggle="' + esc(item.id) + '"' +
           ' aria-pressed="' + (checked ? 'true' : 'false') + '"' +
@@ -306,103 +555,116 @@ var QuotationCanvasTools = (function () {
       renderChecklistBody(host, state);
     }
 
-    var addPageBtn = host.querySelector('[data-qe-check-add-page]');
-    if (addPageBtn) {
-      addPageBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var newId = nextChecklistPageId();
-        state.pages.push({
+    bindToolPagesShell(host, state, {
+      pageAttr: 'data-qe-check-page',
+      addPageAttr: 'data-qe-check-add-page',
+      nextPageId: nextChecklistPageId,
+      newPageFactory: function (newId, pageCount) {
+        return {
           id: newId,
-          title: 'Página ' + (state.pages.length + 1),
+          title: 'Página ' + pageCount,
           items: defaultChecklistItems()
-        });
-        state.activePageId = newId;
-        persist();
-        rerender();
+        };
+      },
+      persist: persist,
+      rerender: rerender
+    });
+
+    bindChecklistList(host, page.items, persist);
+  }
+
+  function bindChecklistDragReorder(list, items, persist, rebind) {
+    var draggingId = null;
+    var dropTargetId = null;
+    var dropPosition = null;
+
+    function clearDropMarkers() {
+      list.querySelectorAll('[data-qe-check-row]').forEach(function (row) {
+        row.classList.remove('is-drop-above', 'is-drop-below', 'is-dragging');
       });
+      dropTargetId = null;
+      dropPosition = null;
     }
 
-    var pageClickTimer = null;
-
-    function pageById(pageId) {
-      pageId = String(pageId || '');
-      for (var pi = 0; pi < state.pages.length; pi++) {
-        if (state.pages[pi].id === pageId) return state.pages[pi];
+    function rowDropAt(clientY) {
+      var rows = list.querySelectorAll('[data-qe-check-row]');
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var rect = row.getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) {
+          return { id: row.getAttribute('data-qe-check-row'), position: 'before' };
+        }
+      }
+      if (rows.length) {
+        var last = rows[rows.length - 1];
+        return { id: last.getAttribute('data-qe-check-row'), position: 'after' };
       }
       return null;
     }
 
-    function beginChecklistPageRename(tab) {
-      var pageId = tab.getAttribute('data-qe-check-page');
-      var targetPage = pageById(pageId);
-      if (!targetPage || tab.dataset.renaming === '1') return;
-      var label = tab.querySelector('.qe-checklist-tabs__tab-label');
-      if (!label) return;
-      tab.dataset.renaming = '1';
-      var input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'qe-checklist-tabs__tab-input';
-      input.value = targetPage.title || '';
-      input.maxLength = 48;
-      input.setAttribute('aria-label', 'Nombre de la página');
-      label.replaceWith(input);
-      input.focus();
-      input.select();
-      function finish(save) {
-        if (save) {
-          var next = String(input.value || '').trim();
-          if (next) targetPage.title = next;
-          persist();
-        }
-        tab.dataset.renaming = '0';
-        rerender();
-      }
-      input.addEventListener('blur', function () { finish(true); });
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          input.blur();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          finish(false);
-        }
-      });
-      input.addEventListener('click', function (e) {
-        e.stopPropagation();
-      });
+    function paintDropMarker(target) {
+      clearDropMarkers();
+      if (!target || !draggingId || target.id === draggingId) return;
+      dropTargetId = target.id;
+      dropPosition = target.position;
+      var row = list.querySelector('[data-qe-check-row="' + target.id + '"]');
+      if (row) row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
     }
 
-    host.querySelectorAll('[data-qe-check-page]').forEach(function (tab) {
-      tab.addEventListener('click', function (e) {
+    function commitReorder() {
+      if (!draggingId || !dropTargetId || draggingId === dropTargetId) {
+        clearDropMarkers();
+        draggingId = null;
+        return;
+      }
+      var fromIdx = -1;
+      var toIdx = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].id === draggingId) fromIdx = i;
+        if (items[i].id === dropTargetId) toIdx = i;
+      }
+      if (fromIdx < 0 || toIdx < 0) {
+        clearDropMarkers();
+        draggingId = null;
+        return;
+      }
+      var moved = items.splice(fromIdx, 1)[0];
+      var insertIdx = toIdx;
+      if (fromIdx < toIdx) insertIdx--;
+      if (dropPosition === 'after') insertIdx++;
+      items.splice(insertIdx, 0, moved);
+      persist();
+      clearDropMarkers();
+      draggingId = null;
+      if (typeof rebind === 'function') rebind();
+    }
+
+    list.querySelectorAll('[data-qe-check-drag]').forEach(function (handle) {
+      handle.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
-        if (tab.dataset.renaming === '1') return;
-        var pageId = tab.getAttribute('data-qe-check-page');
-        if (pageClickTimer) {
-          try { clearTimeout(pageClickTimer); } catch (eT) { /* ignore */ }
-          pageClickTimer = null;
+        var row = handle.closest('[data-qe-check-row]');
+        if (!row) return;
+        draggingId = row.getAttribute('data-qe-check-row');
+        row.classList.add('is-dragging');
+        try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
+
+        function onMove(ev) {
+          paintDropMarker(rowDropAt(ev.clientY));
         }
-        pageClickTimer = setTimeout(function () {
-          pageClickTimer = null;
-          if (!pageId || pageId === state.activePageId) return;
-          state.activePageId = pageId;
-          persist();
-          rerender();
-        }, 240);
-      });
-      tab.addEventListener('dblclick', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (pageClickTimer) {
-          try { clearTimeout(pageClickTimer); } catch (eT2) { /* ignore */ }
-          pageClickTimer = null;
+        function onUp(ev) {
+          handle.removeEventListener('pointermove', onMove);
+          handle.removeEventListener('pointerup', onUp);
+          handle.removeEventListener('pointercancel', onUp);
+          try { handle.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
+          commitReorder();
         }
-        beginChecklistPageRename(tab);
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
+        handle.addEventListener('pointercancel', onUp);
       });
     });
-
-    bindChecklistList(host, page.items, persist);
   }
 
   function bindChecklistList(host, items, persist) {
@@ -445,6 +707,14 @@ var QuotationCanvasTools = (function () {
       });
     }
 
+    function refreshChecklistRows() {
+      list.innerHTML = items.map(checklistRowHtml).join('');
+      syncChecklistFields();
+      bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
+    }
+
+    bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
+
     list.addEventListener('click', function (e) {
       var delBtn = e.target && e.target.closest ? e.target.closest('[data-qe-check-delete]') : null;
       if (delBtn && list.contains(delBtn)) {
@@ -460,6 +730,7 @@ var QuotationCanvasTools = (function () {
           persist();
           list.innerHTML = items.map(checklistRowHtml).join('');
           syncChecklistFields();
+          bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
           var freshInput = list.querySelector('[data-qe-check-text]');
           if (freshInput) {
             requestAnimationFrame(function () {
@@ -516,6 +787,7 @@ var QuotationCanvasTools = (function () {
           try { nextInput.focus(); } catch (eF) { /* ignore */ }
         });
       }
+      bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
     });
 
     syncChecklistFields();
@@ -550,17 +822,7 @@ var QuotationCanvasTools = (function () {
     openWindow('tool-checklist', 'Checklist', 'checklist', function (bodyEl) {
       var state = loadChecklistState();
       renderChecklistBody(bodyEl, state);
-    }, null, {
-      resize: {
-        minW: 205,
-        maxW: 300,
-        defaultW: 280,
-        defaultH: 400,
-        maxHMargin: 0,
-        maxHExtra: 0,
-        clampChrome: true
-      }
-    });
+    }, null, { resize: PAGED_TOOL_RESIZE });
   }
 
   function openColorPicker() {
