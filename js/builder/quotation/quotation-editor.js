@@ -2450,11 +2450,20 @@ var QuotationEditor = (function () {
 
   function sceneGroupFloatOpen(groupId, anchorEl) {
     groupId = String(groupId || '');
-    if (!groupId) return;
+    if (!groupId) {
+      sceneGroupFloatLog('[QE:scene-group-float] open aborted: no groupId');
+      return;
+    }
     var grp = sceneGroupById(groupId);
-    if (!grp || grp.parentGroupId) return;
+    if (!grp || grp.parentGroupId) {
+      sceneGroupFloatLog('[QE:scene-group-float] open aborted: group missing or nested', groupId, grp);
+      return;
+    }
     anchorEl = anchorEl || sceneGroupFloatAnchorInStrip(groupId);
-    if (!anchorEl) return;
+    if (!anchorEl) {
+      sceneGroupFloatLog('[QE:scene-group-float] open aborted: no anchor', groupId);
+      return;
+    }
 
     openSceneGroupFloatId = groupId;
     grp.collapsed = false;
@@ -2467,6 +2476,11 @@ var QuotationEditor = (function () {
     if (floatEl) positionSceneGroupFloat(floatEl, anchorEl);
 
     syncSceneGroupStripOpenState();
+
+    sceneGroupFloatLog('[QE:scene-group-float] opened', groupId, {
+      scenes: (grp.sceneIds || []).length,
+      host: SCENE_GROUP_FLOAT_HOST_ID
+    });
 
     if (rootEl) {
       bindSceneNameEditing(rootEl);
@@ -2506,22 +2520,65 @@ var QuotationEditor = (function () {
     if (floatEl && anchor) positionSceneGroupFloat(floatEl, anchor);
   }
 
+  var SCENE_GROUP_FLOAT_DEBUG = true;
+
+  function sceneGroupFloatLog() {
+    if (!SCENE_GROUP_FLOAT_DEBUG || typeof console === 'undefined' || !console.log) return;
+    try {
+      console.log.apply(console, arguments);
+    } catch (eLog) { /* ignore */ }
+  }
+
   function resolveStripGroupToggleTarget(e) {
     if (!e || !e.target || !e.target.closest) return null;
+    var toggleBtn = e.target.closest('[data-qe-scene-group-toggle]');
+    if (toggleBtn && toggleBtn.closest('[data-qe-scenes-track]')) {
+      return toggleBtn;
+    }
     var track = e.target.closest('[data-qe-scenes-track]');
     if (!track) return null;
     var wrap = e.target.closest('[data-qe-scene-group-wrap]');
     if (!wrap || !track.contains(wrap)) return null;
     if (e.target.closest('[data-qe-scene-group-name]') && (e.detail || 1) >= 2) return null;
-    return wrap.querySelector('[data-qe-scene-group-toggle]');
+    toggleBtn = wrap.querySelector('[data-qe-scene-group-toggle]');
+    return toggleBtn || null;
   }
 
   function initSceneGroupFloatUi() {
+    sceneGroupFloatLog('[QE:scene-group-float] initSceneGroupFloatUi()', {
+      alreadyBound: sceneGroupFloatUiBound
+    });
     if (sceneGroupFloatUiBound) return;
     sceneGroupFloatUiBound = true;
 
+    /* Capture: abrir/toggle antes que shell.js u otros handlers en bubble. */
+    document.addEventListener('click', function (e) {
+      var toggleBtn = resolveStripGroupToggleTarget(e);
+      if (!toggleBtn) return;
+      sceneGroupFloatLog('[QE:scene-group-float] capture click → toggle', {
+        groupId: toggleBtn.getAttribute('data-qe-scene-group-toggle'),
+        target: e.target && e.target.className
+      });
+      e.preventDefault();
+      e.stopPropagation();
+      ensureSceneGroups();
+      sceneGroupFloatToggle(
+        toggleBtn.getAttribute('data-qe-scene-group-toggle'),
+        toggleBtn
+      );
+      markDirtyLocal();
+    }, true);
+
     document.addEventListener('click', function (e) {
       if (!e.target || !e.target.closest) return;
+
+      var inStrip = !!(e.target.closest && e.target.closest('[data-qe-scenes-track]'));
+      if (inStrip) {
+        sceneGroupFloatLog('[QE:scene-group-float] bubble click (strip)', {
+          target: e.target.className || e.target.nodeName,
+          toggle: resolveStripGroupToggleTarget(e) ? 'yes' : 'no'
+        });
+      }
 
       if (e.target.closest('[data-qe-scene-group-float-close]')) {
         sceneGroupFloatClose();
@@ -2546,16 +2603,7 @@ var QuotationEditor = (function () {
         return;
       }
 
-      var toggleBtn = resolveStripGroupToggleTarget(e);
-      if (toggleBtn) {
-        ensureSceneGroups();
-        sceneGroupFloatToggle(
-          toggleBtn.getAttribute('data-qe-scene-group-toggle'),
-          toggleBtn
-        );
-        markDirtyLocal();
-        return;
-      }
+      if (resolveStripGroupToggleTarget(e)) return;
 
       if (!openSceneGroupFloatId) return;
       var stillOpen = openSceneGroupFloatId;
@@ -2570,6 +2618,8 @@ var QuotationEditor = (function () {
       document.documentElement.dataset.qeSceneGroupFloatResize = '1';
       window.addEventListener('resize', sceneGroupFloatReposition, { passive: true });
     }
+
+    sceneGroupFloatLog('[QE:scene-group-float] listeners registered');
   }
 
   function toggleSceneGroupCollapsed(groupId) {
@@ -11321,6 +11371,14 @@ var QuotationEditor = (function () {
     isScenesCollapsed: function () { return !!state.scenesCollapsed; },
     setScenesLocked: setScenesLocked,
     isScenesLocked: function () { return !!state.scenesLocked; },
+    getSceneGroupFloatDebug: function () {
+      return {
+        uiBound: sceneGroupFloatUiBound,
+        openGroupId: openSceneGroupFloatId,
+        hostId: SCENE_GROUP_FLOAT_HOST_ID,
+        hostInDom: !!document.getElementById(SCENE_GROUP_FLOAT_HOST_ID)
+      };
+    },
     _getState: function () { return state; },
     _resetDemo: function () {
       resetEditorSession('demo');
