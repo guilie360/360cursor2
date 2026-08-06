@@ -50,8 +50,11 @@ var BoxiesShell = (function () {
                 ' aria-haspopup="menu" aria-expanded="false" aria-label="Cuenta">' +
               '</button>' +
               '<div class="boxies-user-menu__panel" id="boxiesUserMenuPanel" role="menu" hidden>' +
-                '<button type="button" class="boxies-user-menu__item" role="menuitem"' +
-                  ' data-user-menu-action="profile">Perfil</button>' +
+                '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--profile" role="menuitem"' +
+                  ' data-user-menu-action="profile">' +
+                  '<span class="boxies-user-menu__item-text">Perfil</span>' +
+                  '<span class="boxies-user-menu__role" id="boxiesUserMenuRole"></span>' +
+                '</button>' +
                 '<button type="button" class="boxies-user-menu__item" role="menuitem"' +
                   ' data-user-menu-action="plan">Plan y uso</button>' +
                 '<div class="boxies-user-menu__label" role="presentation">Tema</div>' +
@@ -682,6 +685,8 @@ var BoxiesShell = (function () {
       btn.innerHTML = '';
       btn.removeAttribute('data-tooltip');
       btn.disabled = true;
+      var emptyRole = document.getElementById('boxiesUserMenuRole');
+      if (emptyRole) emptyRole.textContent = '';
       return;
     }
     btn.disabled = false;
@@ -694,10 +699,10 @@ var BoxiesShell = (function () {
       '<span class="boxies-user__avatar" aria-hidden="true">' + iconHtml('user') + '</span>' +
       '<span class="boxies-user__meta">' +
         '<strong class="boxies-user__name">' + escapeHtml(name) + '</strong>' +
-        '<span class="boxies-user__sep" aria-hidden="true">·</span>' +
-        '<span class="boxies-user__role">' + escapeHtml(roleLabel) + '</span>' +
       '</span>';
-    btn.setAttribute('data-tooltip', name + ' · ' + roleLabel);
+    var roleEl = document.getElementById('boxiesUserMenuRole');
+    if (roleEl) roleEl.textContent = roleLabel;
+    btn.setAttribute('data-tooltip', name);
     btn.setAttribute('aria-label', 'Cuenta · ' + name);
   }
 

@@ -914,6 +914,32 @@ body.boxies-shell .admin-toast--error {
   color: rgba(255, 255, 255, 0.96);
 }
 
+.boxies-user-menu__item--profile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.boxies-user-menu__item--profile .boxies-user-menu__item-text {
+  flex: 0 0 auto;
+}
+
+.boxies-user-menu__role {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.boxies-user-menu__item--profile:hover .boxies-user-menu__role {
+  color: rgba(255, 255, 255, 0.42);
+}
+
 .boxies-user-menu__item--exit {
   color: rgba(255, 255, 255, 0.48);
 }
