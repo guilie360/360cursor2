@@ -36,7 +36,8 @@ var QuotationCanvasTools = (function () {
       mount: mount,
       onClose: onClose,
       resize: windowOpts.resize || null,
-      fixedWidth: windowOpts.fixedWidth
+      fixedWidth: windowOpts.fixedWidth,
+      clampChrome: windowOpts.clampChrome !== false
     });
   }
 
@@ -152,46 +153,56 @@ var QuotationCanvasTools = (function () {
     return k;
   }
 
-  function bindCalcKeys(host, page, persist) {
+  function bindCalcKeys(host, state, persist) {
     var display = host.querySelector('[data-qe-calc-display]');
-    var expr = page.expr || '0';
 
-    function renderDisplay() {
-      page.expr = expr;
-      if (display) display.textContent = expr;
+    function activePage() {
+      return getActiveCalcPage(state);
+    }
+
+    function readExpr() {
+      var page = activePage();
+      return page ? String(page.expr || '0') : '0';
+    }
+
+    function writeExpr(nextExpr) {
+      var page = activePage();
+      if (!page) return;
+      page.expr = nextExpr;
+      if (display) display.textContent = nextExpr;
       persist();
     }
 
     function pressCalcKey(k) {
+      var expr = readExpr();
       k = String(k || '');
       if (k === 'C') {
-        expr = '0';
-        renderDisplay();
+        writeExpr('0');
         return;
       }
       if (k === '±') {
-        if (expr.charAt(0) === '-') expr = expr.slice(1);
-        else if (expr !== '0') expr = '-' + expr;
-        renderDisplay();
+        if (expr.charAt(0) === '-') writeExpr(expr.slice(1));
+        else if (expr !== '0') writeExpr('-' + expr);
         return;
       }
       if (k === '=') {
-        expr = calcEvaluate(expr);
-        renderDisplay();
+        writeExpr(calcEvaluate(expr));
         return;
       }
       if (k === 'Backspace') {
-        if (expr.length <= 1 || expr === 'Error') expr = '0';
-        else expr = expr.slice(0, -1);
-        renderDisplay();
+        if (expr.length <= 1 || expr === 'Error') writeExpr('0');
+        else writeExpr(expr.slice(0, -1));
         return;
       }
       var op = mapCalcOp(k);
       if (expr === '0' && op !== '.') expr = '';
       if (expr === 'Error') expr = '';
-      expr += op;
-      renderDisplay();
+      writeExpr(expr + op);
     }
+
+    host.__qeCalcSyncDisplay = function () {
+      if (display) display.textContent = readExpr();
+    };
 
     host.querySelectorAll('[data-qe-calc-key]').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -222,7 +233,7 @@ var QuotationCanvasTools = (function () {
       if (k === 'Backspace') { e.preventDefault(); pressCalcKey('Backspace'); return; }
     });
 
-    renderDisplay();
+    host.__qeCalcSyncDisplay();
     requestAnimationFrame(function () {
       try { host.focus(); } catch (eF) { /* ignore */ }
     });
@@ -245,8 +256,7 @@ var QuotationCanvasTools = (function () {
   }
 
   function bindCalcShell(host, state) {
-    var page = getActiveCalcPage(state);
-    if (!page) return;
+    if (!getActiveCalcPage(state)) return;
 
     function persist() {
       saveCalcState(state);
@@ -254,6 +264,10 @@ var QuotationCanvasTools = (function () {
 
     function rerender() {
       renderCalcBody(host, state);
+    }
+
+    function syncCalcPage() {
+      if (typeof host.__qeCalcSyncDisplay === 'function') host.__qeCalcSyncDisplay();
     }
 
     bindToolPagesShell(host, state, {
@@ -264,11 +278,17 @@ var QuotationCanvasTools = (function () {
         return { id: newId, title: 'Página ' + pageCount, expr: '0' };
       },
       persist: persist,
-      rerender: rerender
+      rerender: rerender,
+      onPageSwitch: syncCalcPage
     });
 
     var calcRoot = host.querySelector('[data-qe-calc-root]');
-    if (calcRoot) bindCalcKeys(calcRoot, page, persist);
+    if (calcRoot && !calcRoot.dataset.qeCalcBound) {
+      calcRoot.dataset.qeCalcBound = '1';
+      bindCalcKeys(calcRoot, state, persist);
+    } else {
+      syncCalcPage();
+    }
   }
 
   function openCalculator() {
@@ -373,8 +393,7 @@ var QuotationCanvasTools = (function () {
   }
 
   function bindNotesShell(host, state) {
-    var page = getActiveNotesPage(state);
-    if (!page) return;
+    if (!getActiveNotesPage(state)) return;
 
     function persist() {
       saveNotesState(state);
@@ -382,6 +401,20 @@ var QuotationCanvasTools = (function () {
 
     function rerender() {
       renderNotesBody(host, state);
+    }
+
+    function saveNotesDraft() {
+      var area = host.querySelector('[data-qe-notes-input]');
+      var page = getActiveNotesPage(state);
+      if (area && page) page.content = area.value;
+    }
+
+    function syncNotesPage() {
+      var area = host.querySelector('[data-qe-notes-input]');
+      var page = getActiveNotesPage(state);
+      if (!area || !page) return;
+      area.value = page.content || '';
+      autoResizeNotesField(area);
     }
 
     bindToolPagesShell(host, state, {
@@ -392,16 +425,23 @@ var QuotationCanvasTools = (function () {
         return { id: newId, title: 'Página ' + pageCount, content: '' };
       },
       persist: persist,
-      rerender: rerender
+      rerender: rerender,
+      saveBeforeSwitch: saveNotesDraft,
+      onPageSwitch: syncNotesPage
     });
 
     var area = host.querySelector('[data-qe-notes-input]');
     if (!area) return;
-    area.addEventListener('input', function () {
-      page.content = area.value;
-      persist();
-      autoResizeNotesField(area);
-    });
+    if (!area.dataset.qeNotesBound) {
+      area.dataset.qeNotesBound = '1';
+      area.addEventListener('input', function () {
+        var page = getActiveNotesPage(state);
+        if (!page) return;
+        page.content = area.value;
+        persist();
+        autoResizeNotesField(area);
+      });
+    }
     autoResizeNotesField(area);
     requestAnimationFrame(function () {
       autoResizeNotesField(area);
@@ -502,17 +542,15 @@ var QuotationCanvasTools = (function () {
     return state.pages[0] || null;
   }
 
-  function toolPagesTabsHtml(state, config) {
+  function toolPagesTabButtonsHtml(state, config) {
     config = config || {};
     var pageAttr = config.pageAttr || 'data-qe-check-page';
-    var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
-    var ariaLabel = config.ariaLabel || 'Páginas';
     var esc = function (v) {
       return String(v == null ? '' : v)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     };
-    var tabs = state.pages.map(function (page) {
+    return state.pages.map(function (page) {
       var active = page.id === state.activePageId;
       return '<button type="button" class="qe-checklist-tabs__tab' +
         (active ? ' is-active' : '') + '"' +
@@ -523,14 +561,92 @@ var QuotationCanvasTools = (function () {
         '<span class="qe-checklist-tabs__tab-label">' + esc(page.title) + '</span>' +
       '</button>';
     }).join('');
+  }
+
+  function toolPagesTabsHtml(state, config) {
+    config = config || {};
+    var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
+    var ariaLabel = config.ariaLabel || 'Páginas';
+    var esc = function (v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
     return '' +
       '<div class="qe-checklist-tabs" role="tablist" aria-label="' + esc(ariaLabel) + '">' +
         '<div class="qe-checklist-tabs__strip">' +
-          '<div class="qe-checklist-tabs__scroll">' + tabs + '</div>' +
+          '<div class="qe-checklist-tabs__scroll">' + toolPagesTabButtonsHtml(state, config) + '</div>' +
           '<button type="button" class="qe-checklist-tabs__new" ' + addPageAttr +
             ' aria-label="Agregar página" title="Agregar página">+</button>' +
         '</div>' +
       '</div>';
+  }
+
+  function syncToolPageTabs(host, state, config) {
+    var pageAttr = config.pageAttr || 'data-qe-check-page';
+    host.querySelectorAll('[' + pageAttr + ']').forEach(function (tab) {
+      var pageId = tab.getAttribute(pageAttr);
+      var active = pageId === state.activePageId;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  function refreshToolPageTabs(host, state, config) {
+    var scroll = host.querySelector('.qe-checklist-tabs__scroll');
+    if (scroll) scroll.innerHTML = toolPagesTabButtonsHtml(state, config);
+  }
+
+  function closeToolPageMenu() {
+    var existing = document.querySelector('[data-qe-tool-page-menu]');
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    if (window.__qeToolPageMenuClose) {
+      document.removeEventListener('pointerdown', window.__qeToolPageMenuClose, true);
+      document.removeEventListener('keydown', window.__qeToolPageMenuClose, true);
+      window.__qeToolPageMenuClose = null;
+    }
+  }
+
+  function showToolPageMenu(clientX, clientY, items, onPick) {
+    closeToolPageMenu();
+    var menu = document.createElement('div');
+    menu.className = 'qe-tool-page-menu';
+    menu.setAttribute('data-qe-tool-page-menu', '1');
+    menu.setAttribute('role', 'menu');
+    items.forEach(function (item) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'qe-tool-page-menu__item' + (item.danger ? ' is-danger' : '');
+      btn.setAttribute('role', 'menuitem');
+      btn.textContent = item.label;
+      if (item.disabled) {
+        btn.disabled = true;
+        btn.classList.add('is-disabled');
+      }
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeToolPageMenu();
+        if (!item.disabled && onPick) onPick(item.id);
+      });
+      menu.appendChild(btn);
+    });
+    document.body.appendChild(menu);
+    var vw = window.innerWidth || document.documentElement.clientWidth || 1280;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 720;
+    var rect = menu.getBoundingClientRect();
+    var left = Math.min(Math.max(8, clientX), vw - rect.width - 8);
+    var top = Math.min(Math.max(8, clientY), vh - rect.height - 8);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+
+    window.__qeToolPageMenuClose = function (e) {
+      if (e.type === 'keydown' && e.key !== 'Escape') return;
+      if (e.type === 'pointerdown' && menu.contains(e.target)) return;
+      closeToolPageMenu();
+    };
+    document.addEventListener('pointerdown', window.__qeToolPageMenuClose, true);
+    document.addEventListener('keydown', window.__qeToolPageMenuClose, true);
   }
 
   function bindToolPagesShell(host, state, config) {
@@ -539,8 +655,11 @@ var QuotationCanvasTools = (function () {
     var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
     var persist = config.persist || function () {};
     var rerender = config.rerender || function () {};
+    var onPageSwitch = config.onPageSwitch || null;
+    var saveBeforeSwitch = config.saveBeforeSwitch || null;
     var nextPageId = config.nextPageId || nextChecklistPageId;
     var newPageFactory = config.newPageFactory;
+    var bindKey = pageAttr + '|' + addPageAttr;
 
     function pageById(pageId) {
       pageId = String(pageId || '');
@@ -550,21 +669,36 @@ var QuotationCanvasTools = (function () {
       return null;
     }
 
-    var addPageBtn = host.querySelector('[' + addPageAttr + ']');
-    if (addPageBtn) {
-      addPageBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var newId = nextPageId();
-        var pageCount = state.pages.length + 1;
-        state.pages.push(newPageFactory(newId, pageCount));
-        state.activePageId = newId;
-        persist();
-        rerender();
-      });
+    function switchToPage(pageId) {
+      if (!pageId || pageId === state.activePageId) return;
+      if (saveBeforeSwitch) saveBeforeSwitch();
+      state.activePageId = pageId;
+      persist();
+      syncToolPageTabs(host, state, config);
+      if (onPageSwitch) onPageSwitch(pageId);
+      else rerender();
     }
 
-    var pageClickTimer = null;
+    function deletePage(pageId) {
+      if (state.pages.length <= 1) return;
+      pageId = String(pageId || '');
+      var idx = -1;
+      for (var i = 0; i < state.pages.length; i++) {
+        if (state.pages[i].id === pageId) idx = i;
+      }
+      if (idx < 0) return;
+      if (saveBeforeSwitch && pageId === state.activePageId) saveBeforeSwitch();
+      state.pages.splice(idx, 1);
+      if (state.activePageId === pageId) {
+        var nextIdx = Math.max(0, idx - 1);
+        state.activePageId = state.pages[nextIdx].id;
+      }
+      persist();
+      refreshToolPageTabs(host, state, config);
+      syncToolPageTabs(host, state, config);
+      if (onPageSwitch) onPageSwitch(state.activePageId);
+      else rerender();
+    }
 
     function beginPageRename(tab) {
       var pageId = tab.getAttribute(pageAttr);
@@ -589,7 +723,8 @@ var QuotationCanvasTools = (function () {
           persist();
         }
         tab.dataset.renaming = '0';
-        rerender();
+        refreshToolPageTabs(host, state, config);
+        syncToolPageTabs(host, state, config);
       }
       input.addEventListener('blur', function () { finish(true); });
       input.addEventListener('keydown', function (e) {
@@ -606,32 +741,51 @@ var QuotationCanvasTools = (function () {
       });
     }
 
-    host.querySelectorAll('[' + pageAttr + ']').forEach(function (tab) {
-      tab.addEventListener('click', function (e) {
+    if (host.dataset.qePagesBound === bindKey) return;
+    host.dataset.qePagesBound = bindKey;
+
+    host.addEventListener('click', function (e) {
+      var addBtn = e.target.closest('[' + addPageAttr + ']');
+      if (addBtn && host.contains(addBtn)) {
         e.preventDefault();
         e.stopPropagation();
-        if (tab.dataset.renaming === '1') return;
-        var pageId = tab.getAttribute(pageAttr);
-        if (pageClickTimer) {
-          try { clearTimeout(pageClickTimer); } catch (eT) { /* ignore */ }
-          pageClickTimer = null;
-        }
-        pageClickTimer = setTimeout(function () {
-          pageClickTimer = null;
-          if (!pageId || pageId === state.activePageId) return;
-          state.activePageId = pageId;
-          persist();
-          rerender();
-        }, 240);
-      });
-      tab.addEventListener('dblclick', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (pageClickTimer) {
-          try { clearTimeout(pageClickTimer); } catch (eT2) { /* ignore */ }
-          pageClickTimer = null;
-        }
-        beginPageRename(tab);
+        if (saveBeforeSwitch) saveBeforeSwitch();
+        var newId = nextPageId();
+        var pageCount = state.pages.length + 1;
+        state.pages.push(newPageFactory(newId, pageCount));
+        state.activePageId = newId;
+        persist();
+        rerender();
+        return;
+      }
+      var tab = e.target.closest('[' + pageAttr + ']');
+      if (!tab || !host.contains(tab)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (tab.dataset.renaming === '1') return;
+      switchToPage(tab.getAttribute(pageAttr));
+    });
+
+    host.addEventListener('dblclick', function (e) {
+      var tab = e.target.closest('[' + pageAttr + ']');
+      if (!tab || !host.contains(tab)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      beginPageRename(tab);
+    });
+
+    host.addEventListener('contextmenu', function (e) {
+      var tab = e.target.closest('[' + pageAttr + ']');
+      if (!tab || !host.contains(tab)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var pageId = tab.getAttribute(pageAttr);
+      showToolPageMenu(e.clientX, e.clientY, [
+        { id: 'rename', label: 'Cambiar nombre' },
+        { id: 'delete', label: 'Eliminar', danger: true, disabled: state.pages.length <= 1 }
+      ], function (action) {
+        if (action === 'rename') beginPageRename(tab);
+        else if (action === 'delete') deletePage(pageId);
       });
     });
   }
@@ -685,8 +839,7 @@ var QuotationCanvasTools = (function () {
   }
 
   function bindChecklistShell(host, state) {
-    var page = getActiveChecklistPage(state);
-    if (!page) return;
+    if (!getActiveChecklistPage(state)) return;
 
     function persist() {
       saveChecklistState(state);
@@ -694,6 +847,12 @@ var QuotationCanvasTools = (function () {
 
     function rerender() {
       renderChecklistBody(host, state);
+    }
+
+    function syncChecklistPage() {
+      if (typeof host.__qeChecklistRefreshList === 'function') {
+        host.__qeChecklistRefreshList();
+      }
     }
 
     bindToolPagesShell(host, state, {
@@ -708,10 +867,11 @@ var QuotationCanvasTools = (function () {
         };
       },
       persist: persist,
-      rerender: rerender
+      rerender: rerender,
+      onPageSwitch: syncChecklistPage
     });
 
-    bindChecklistList(host, page.items, persist);
+    bindChecklistList(host, state, persist);
   }
 
   function bindChecklistDragReorder(list, items, persist, rebind) {
@@ -808,12 +968,18 @@ var QuotationCanvasTools = (function () {
     });
   }
 
-  function bindChecklistList(host, items, persist) {
+  function bindChecklistList(host, state, persist) {
     var list = host.querySelector('[data-qe-checklist-list]');
     if (!list) return;
 
+    function activeItems() {
+      var page = getActiveChecklistPage(state);
+      return page ? page.items : [];
+    }
+
     function itemById(id) {
       id = String(id || '');
+      var items = activeItems();
       for (var i = 0; i < items.length; i++) {
         if (String(items[i].id) === id) return items[i];
       }
@@ -822,6 +988,7 @@ var QuotationCanvasTools = (function () {
 
     function itemIndexById(id) {
       id = String(id || '');
+      var items = activeItems();
       for (var i = 0; i < items.length; i++) {
         if (String(items[i].id) === id) return i;
       }
@@ -849,14 +1016,19 @@ var QuotationCanvasTools = (function () {
     }
 
     function refreshChecklistRows() {
+      var items = activeItems();
       list.innerHTML = items.map(checklistRowHtml).join('');
       syncChecklistFields();
       bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
     }
 
-    bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
+    host.__qeChecklistRefreshList = refreshChecklistRows;
 
-    list.addEventListener('click', function (e) {
+    if (!list.dataset.qeChecklistBound) {
+      list.dataset.qeChecklistBound = '1';
+      bindChecklistDragReorder(list, activeItems(), persist, refreshChecklistRows);
+
+      list.addEventListener('click', function (e) {
       var delBtn = e.target && e.target.closest ? e.target.closest('[data-qe-check-delete]') : null;
       if (delBtn && list.contains(delBtn)) {
         e.preventDefault();
@@ -864,6 +1036,7 @@ var QuotationCanvasTools = (function () {
         var delId = delBtn.getAttribute('data-qe-check-delete');
         var delIdx = itemIndexById(delId);
         if (delIdx < 0) return;
+        var items = activeItems();
         var delRow = delBtn.closest('[data-qe-check-row]');
         items.splice(delIdx, 1);
         if (!items.length) {
@@ -909,6 +1082,7 @@ var QuotationCanvasTools = (function () {
       var input = e.target && e.target.closest ? e.target.closest('[data-qe-check-text]') : null;
       if (!input || !list.contains(input) || e.key !== 'Enter' || e.shiftKey) return;
       e.preventDefault();
+      var items = activeItems();
       var idx = itemIndexById(input.getAttribute('data-qe-check-text'));
       if (idx < 0) idx = items.length - 1;
       var currentRow = input.closest('[data-qe-check-row]');
@@ -928,10 +1102,11 @@ var QuotationCanvasTools = (function () {
           try { nextInput.focus(); } catch (eF) { /* ignore */ }
         });
       }
-      bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
+      bindChecklistDragReorder(list, activeItems(), persist, refreshChecklistRows);
     });
+    }
 
-    syncChecklistFields();
+    refreshChecklistRows();
     requestAnimationFrame(function () {
       syncChecklistFields();
     });
@@ -970,22 +1145,39 @@ var QuotationCanvasTools = (function () {
     openWindow('tool-color-picker', 'Color picker', 'color-picker', function (bodyEl) {
       bodyEl.innerHTML =
         '<div class="qe-colorpick">' +
-          '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#000000">' +
+          '<button type="button" class="qe-colorpick__swatch" data-qe-color-swatch' +
+            ' aria-label="Elegir color" title="Elegir color"></button>' +
+          '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#000000"' +
+            ' tabindex="-1" aria-hidden="true">' +
           '<input type="text" class="qe-colorpick__hex" data-qe-color-hex value="#000000" spellcheck="false">' +
           '<button type="button" class="qe-colorpick__copy" data-qe-color-copy>Copiar HEX</button>' +
           '<p class="qe-colorpick__hint">Úsalo para guías, formas o referencias rápidas.</p>' +
         '</div>';
+      var swatch = bodyEl.querySelector('[data-qe-color-swatch]');
       var native = bodyEl.querySelector('[data-qe-color-native]');
       var hex = bodyEl.querySelector('[data-qe-color-hex]');
       var copyBtn = bodyEl.querySelector('[data-qe-color-copy]');
+      function paintSwatch(color) {
+        var val = normalizeHex(color);
+        if (swatch) swatch.style.backgroundColor = val;
+        if (native) native.value = val;
+        if (hex) hex.value = val;
+      }
       function syncFromNative() {
-        if (!native || !hex) return;
-        hex.value = normalizeHex(native.value);
+        if (!native) return;
+        paintSwatch(native.value);
       }
       function syncFromHex() {
-        if (!native || !hex) return;
-        native.value = normalizeHex(hex.value);
-        hex.value = native.value;
+        if (!hex) return;
+        paintSwatch(hex.value);
+      }
+      paintSwatch('#000000');
+      if (swatch && native) {
+        swatch.addEventListener('click', function () {
+          try { native.showPicker ? native.showPicker() : native.click(); } catch (ePick) {
+            try { native.click(); } catch (eClick) { /* ignore */ }
+          }
+        });
       }
       if (native) native.addEventListener('input', syncFromNative);
       if (hex) {
@@ -997,7 +1189,7 @@ var QuotationCanvasTools = (function () {
       if (copyBtn && hex) {
         copyBtn.addEventListener('click', function () {
           var val = normalizeHex(hex.value);
-          hex.value = val;
+          paintSwatch(val);
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(val).catch(function () {});
           }

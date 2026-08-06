@@ -193,7 +193,7 @@ var QuotationWindowManager = (function () {
     var pad = 8;
     var maxLeft = Math.max(pad, vw - w - pad);
     var win = winForEl(el);
-    if (win && win.resize && win.resize.clampChrome) {
+    if (win && win.clampChrome) {
       var chrome = getChromeVerticalBounds();
       var minTop = chrome.top;
       var maxTop = Math.max(minTop, chrome.bottom - h);
@@ -482,23 +482,26 @@ var QuotationWindowManager = (function () {
       handle.addEventListener('pointerup', endResize);
       handle.addEventListener('pointercancel', endResize);
     });
+  }
 
-    if (!window.__qeToolWindowResizeBound) {
-      window.__qeToolWindowResizeBound = true;
-      window.addEventListener('resize', function () {
-        Object.keys(windows).forEach(function (id) {
-          var w = windows[id];
-          if (!w || !w.resize || w.state !== 'visible') return;
+  function bindWindowResizeReclamp() {
+    if (window.__qeToolWindowResizeBound) return;
+    window.__qeToolWindowResizeBound = true;
+    window.addEventListener('resize', function () {
+      Object.keys(windows).forEach(function (id) {
+        var w = windows[id];
+        if (!w || w.state !== 'visible') return;
+        if (w.resize) {
           w.resize.maxH = computeMaxWindowHeight(w.resize.maxHMargin, w.resize.maxHExtra);
           var rect = w.el.getBoundingClientRect();
           applySize(w.el, { width: rect.width, height: rect.height }, w.resize);
-          if (w.resize.clampChrome) {
-            var next = w.el.getBoundingClientRect();
-            applyPosition(w.el, { left: next.left, top: next.top });
-          }
-        });
+        }
+        if (w.clampChrome) {
+          var next = w.el.getBoundingClientRect();
+          applyPosition(w.el, { left: next.left, top: next.top });
+        }
       });
-    }
+    });
   }
 
   function bindChrome(win) {
@@ -534,6 +537,8 @@ var QuotationWindowManager = (function () {
   function createWindow(opts) {
     var host = ensureHost();
     var resize = normalizeResizeOpts(opts.resize);
+    var clampChrome = opts.clampChrome !== false;
+    if (resize && resize.clampChrome) clampChrome = true;
     var wrap = document.createElement('div');
     wrap.innerHTML = shellHtml(opts.title, opts.toolId || opts.id, !!resize);
     var el = wrap.firstElementChild;
@@ -546,15 +551,15 @@ var QuotationWindowManager = (function () {
         width: resize.defaultW,
         height: resize.defaultH
       }, resize);
-      if (resize.clampChrome) {
-        var placed = el.getBoundingClientRect();
-        applyPosition(el, { left: placed.left, top: placed.top });
-      }
     } else if (opts.fixedWidth) {
       var fw = Math.max(160, Math.round(Number(opts.fixedWidth) || 205));
       el.style.width = fw + 'px';
       el.style.minWidth = fw + 'px';
       el.style.maxWidth = fw + 'px';
+    }
+    if (clampChrome) {
+      var placed = el.getBoundingClientRect();
+      applyPosition(el, { left: placed.left, top: placed.top });
     }
     var win = {
       id: opts.id,
@@ -565,10 +570,12 @@ var QuotationWindowManager = (function () {
       bodyEl: el.querySelector('.qe-canvas-tool-float__body'),
       mounted: false,
       resize: resize,
+      clampChrome: clampChrome,
       onClose: typeof opts.onClose === 'function' ? opts.onClose : null
     };
     windows[opts.id] = win;
     bindChrome(win);
+    bindWindowResizeReclamp();
     if (!win.mounted && typeof opts.mount === 'function') {
       opts.mount(win.bodyEl, win);
       win.mounted = true;
