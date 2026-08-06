@@ -556,6 +556,13 @@ var QuotationWindowManager = (function () {
       el.style.width = fw + 'px';
       el.style.minWidth = fw + 'px';
       el.style.maxWidth = fw + 'px';
+      if (opts.fixedHeight) {
+        var fh = Math.max(160, Math.round(Number(opts.fixedHeight) || 400));
+        el.classList.add('is-fixed-height');
+        el.style.height = fh + 'px';
+        el.style.minHeight = fh + 'px';
+        el.style.maxHeight = fh + 'px';
+      }
     }
     if (clampChrome) {
       var placed = el.getBoundingClientRect();

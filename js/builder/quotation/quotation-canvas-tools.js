@@ -8,12 +8,17 @@ var QuotationCanvasTools = (function () {
   var CHECKLIST_KEY = 'boxies_qe_canvas_checklist_v1';
   var CALC_KEY = 'boxies_qe_canvas_calc_v1';
   var TOOL_MIN_WIDTH = 205;
+  var PAGED_TOOL_MIN_HEIGHT = 400;
   var FIXED_TOOL_OPTS = { fixedWidth: TOOL_MIN_WIDTH };
+  var CALC_TOOL_OPTS = {
+    fixedWidth: TOOL_MIN_WIDTH,
+    fixedHeight: PAGED_TOOL_MIN_HEIGHT
+  };
   var PAGED_TOOL_RESIZE = {
     minW: TOOL_MIN_WIDTH,
     maxW: 300,
     defaultW: TOOL_MIN_WIDTH,
-    defaultH: 400,
+    defaultH: PAGED_TOOL_MIN_HEIGHT,
     maxHMargin: 0,
     maxHExtra: 0,
     clampChrome: true
@@ -37,6 +42,7 @@ var QuotationCanvasTools = (function () {
       onClose: onClose,
       resize: windowOpts.resize || null,
       fixedWidth: windowOpts.fixedWidth,
+      fixedHeight: windowOpts.fixedHeight,
       clampChrome: windowOpts.clampChrome !== false
     });
   }
@@ -267,8 +273,13 @@ var QuotationCanvasTools = (function () {
     }
 
     function syncCalcPage() {
-      if (typeof host.__qeCalcSyncDisplay === 'function') host.__qeCalcSyncDisplay();
+      var calcRoot = host.querySelector('[data-qe-calc-root]');
+      if (calcRoot && typeof calcRoot.__qeCalcSyncDisplay === 'function') {
+        calcRoot.__qeCalcSyncDisplay();
+      }
     }
+
+    host.__qeCalcState = state;
 
     bindToolPagesShell(host, state, {
       pageAttr: 'data-qe-calc-page',
@@ -294,7 +305,7 @@ var QuotationCanvasTools = (function () {
   function openCalculator() {
     openWindow('tool-calculator', 'Calculadora', 'calculator', function (bodyEl) {
       renderCalcBody(bodyEl, loadCalcState());
-    }, null, FIXED_TOOL_OPTS);
+    }, null, CALC_TOOL_OPTS);
   }
 
   function openNotes() {
