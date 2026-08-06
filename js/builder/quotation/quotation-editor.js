@@ -5695,25 +5695,40 @@ var QuotationEditor = (function () {
     });
   }
 
+  /** Sync pin — no deferred rAF (safe before strip reveal; avoids undoing scroll). */
+  function pinScenesTrackScrollSync(left) {
+    var target = left != null && isFinite(Number(left))
+      ? Math.max(0, Number(left))
+      : scenesTrackScrollLeft;
+    scenesTrackScrollLeft = target;
+    var track = getScenesTrackScrollEl();
+    if (!track) return;
+    track.style.scrollBehavior = 'auto';
+    track.scrollLeft = target;
+    track.style.scrollBehavior = '';
+  }
+
+  function restoreLibraryScroll(saved) {
+    if (!saved) return;
+    var list = document.querySelector('[data-qe-content-list]');
+    if (list && saved.libTop != null) {
+      list.scrollTop = saved.libTop;
+      list.scrollLeft = saved.libLeft || 0;
+    }
+  }
+
   function restoreUiScroll(saved) {
     if (!saved) {
       restoreScenesTrackScroll(scenesTrackScrollLeft);
       return;
     }
-    function applyLib() {
-      var list = document.querySelector('[data-qe-content-list]');
-      if (list && saved.libTop != null) {
-        list.scrollTop = saved.libTop;
-        list.scrollLeft = saved.libLeft || 0;
-      }
-    }
-    applyLib();
+    restoreLibraryScroll(saved);
     restoreScenesTrackScroll(
       saved.scenesLeft != null ? saved.scenesLeft : scenesTrackScrollLeft
     );
     requestAnimationFrame(function () {
-      applyLib();
-      requestAnimationFrame(applyLib);
+      restoreLibraryScroll(saved);
+      requestAnimationFrame(function () { restoreLibraryScroll(saved); });
     });
   }
 
@@ -5766,11 +5781,22 @@ var QuotationEditor = (function () {
     var panel = host || rootEl;
     panel.innerHTML = render();
     bind(panel);
-    restoreUiScroll(uiScroll);
+    restoreLibraryScroll(uiScroll);
+    if (revealId) {
+      pinScenesTrackScrollSync(uiScroll.scenesLeft);
+    } else {
+      restoreScenesTrackScroll(
+        uiScroll.scenesLeft != null ? uiScroll.scenesLeft : scenesTrackScrollLeft
+      );
+    }
     /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
     requestAnimationFrame(function () {
-      restoreScenesTrackScroll(uiScroll.scenesLeft);
-      if (revealId) applyScenesStripReveal(revealId);
+      if (revealId) {
+        pinScenesTrackScrollSync(uiScroll.scenesLeft);
+        applyScenesStripReveal(revealId);
+      } else {
+        restoreScenesTrackScroll(uiScroll.scenesLeft);
+      }
       syncSceneGroupStripOpenState();
       if (openSceneGroupFloatId) {
         var floatAnchor = sceneGroupFloatAnchorInStrip(openSceneGroupFloatId);
@@ -5778,8 +5804,11 @@ var QuotationEditor = (function () {
       }
       syncExpandedGroupPanels();
       requestAnimationFrame(function () {
-        restoreScenesTrackScroll(uiScroll.scenesLeft);
-        if (revealId) applyScenesStripReveal(revealId);
+        if (revealId) {
+          applyScenesStripReveal(revealId);
+        } else {
+          restoreScenesTrackScroll(uiScroll.scenesLeft);
+        }
         syncExpandedGroupPanels();
       });
     });
@@ -5881,20 +5910,47 @@ var QuotationEditor = (function () {
     return null;
   }
 
+  function sceneStripItemOffsetLeft(scrollEl, itemEl) {
+    var track = scrollEl.querySelector('[data-qe-scenes-track]') || scrollEl;
+    var left = 0;
+    var node = itemEl;
+    while (node && node !== track) {
+      left += node.offsetLeft || 0;
+      node = node.parentElement;
+    }
+    return left;
+  }
+
   /** Scroll strip so a scene thumb or group folder is visible (e.g. after create). */
   function scrollScenesStripItemIntoView(itemId, opts) {
     opts = opts || {};
     var scrollEl = getScenesTrackScrollEl();
     var itemEl = findScenesStripItemEl(itemId);
     if (!scrollEl || !itemEl) return false;
-    var scrollRect = scrollEl.getBoundingClientRect();
-    var itemRect = itemEl.getBoundingClientRect();
     var pad = 12;
     var prev = scrollEl.style.scrollBehavior;
+    var current = scrollEl.scrollLeft;
+    var maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+
+    if (opts.revealOnlyRight) {
+      var itemLeft = sceneStripItemOffsetLeft(scrollEl, itemEl);
+      var itemWidth = itemEl.offsetWidth || itemEl.getBoundingClientRect().width;
+      var needed = itemLeft + itemWidth - scrollEl.clientWidth + pad;
+      if (needed > current + 1) {
+        scrollEl.style.scrollBehavior = opts.smooth === false ? 'auto' : 'smooth';
+        scrollEl.scrollLeft = Math.min(needed, maxScroll);
+        scenesTrackScrollLeft = scrollEl.scrollLeft;
+      }
+      scrollEl.style.scrollBehavior = prev || '';
+      return true;
+    }
+
     scrollEl.style.scrollBehavior = opts.smooth === false ? 'auto' : 'smooth';
+    var scrollRect = scrollEl.getBoundingClientRect();
+    var itemRect = itemEl.getBoundingClientRect();
     if (itemRect.right > scrollRect.right - pad) {
       scrollEl.scrollLeft += itemRect.right - scrollRect.right + pad;
-    } else if (!opts.revealOnlyRight && itemRect.left < scrollRect.left + pad) {
+    } else if (itemRect.left < scrollRect.left + pad) {
       scrollEl.scrollLeft += itemRect.left - scrollRect.left - pad;
     }
     scenesTrackScrollLeft = scrollEl.scrollLeft;
