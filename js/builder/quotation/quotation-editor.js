@@ -4950,7 +4950,7 @@ var QuotationEditor = (function () {
    * Only the device canvas rectangle changes size/aspect; it may scale
    * down to fit the remaining slot — never the surrounding editor UI.
    */
-  function fitStageWorkspace() {
+  function fitStageWorkspaceNow() {
     if (!rootEl) return;
     var col = rootEl.querySelector('.qe-col--canvas');
     var shell = rootEl.querySelector('[data-qe-stage-shell]');
@@ -5148,10 +5148,33 @@ var QuotationEditor = (function () {
     if (openSceneGroupFloatId) sceneGroupFloatReposition();
   }
 
+  var stageFitSuspend = 0;
+  var stageFitPending = false;
+  var PANEL_SLIDE_MS = 260;
+
+  function suspendStageFit() {
+    stageFitSuspend++;
+  }
+
+  function resumeStageFit() {
+    stageFitSuspend = Math.max(0, stageFitSuspend - 1);
+    if (stageFitSuspend === 0) {
+      var pending = stageFitPending;
+      stageFitPending = false;
+      if (pending) fitStageWorkspaceNow();
+    }
+  }
+
+  function fitStageWorkspace() {
+    if (stageFitSuspend > 0) {
+      stageFitPending = true;
+      return;
+    }
+    fitStageWorkspaceNow();
+  }
+
   var STAGE_SCENES_FOLD_H = 16;
   var STAGE_SCENES_FOLD_GAP = 12;
-  var STAGE_SCENES_SLIDE_MS = 440;
-  var scenesFitRaf = null;
 
   function scenesHostAnimating() {
     if (!rootEl) return false;
@@ -5159,7 +5182,7 @@ var QuotationEditor = (function () {
     return !!(host && host.classList.contains('is-scenes-animating'));
   }
 
-  function finishScenesTransition(host) {
+  function finishScenesTransition(host, onDone) {
     if (!host) return;
     host.classList.remove('is-scenes-animating');
     if (!rootEl) return;
@@ -5168,35 +5191,33 @@ var QuotationEditor = (function () {
     if (unit) unit.classList.remove('is-scenes-animating');
     if (state.scenesCollapsed && scenes) scenes.classList.add('is-collapsed');
     syncScenesFoldButton();
-    try { fitStageWorkspace(); } catch (eFit) { /* ignore */ }
+    resumeStageFit();
+    try { window.dispatchEvent(new Event('resize')); } catch (eR) { /* ignore */ }
+    if (typeof onDone === 'function') onDone();
   }
 
-  function runScenesFitDuringTransition(host) {
-    if (scenesFitRaf) {
-      try { cancelAnimationFrame(scenesFitRaf); } catch (eCancel) { /* ignore */ }
-      scenesFitRaf = null;
+  function runScenesFitDuringTransition(host, onDone) {
+    suspendStageFit();
+    if (!host || typeof host.addEventListener !== 'function') {
+      window.setTimeout(function () {
+        finishScenesTransition(host, onDone);
+      }, PANEL_SLIDE_MS + 48);
+      return;
     }
-    var started = performance.now();
-    var tick = function (now) {
-      try { fitStageWorkspace(); } catch (eFit) { /* ignore */ }
-      if (now - started < STAGE_SCENES_SLIDE_MS + 60) {
-        scenesFitRaf = requestAnimationFrame(tick);
-      } else {
-        scenesFitRaf = null;
-      }
-    };
-    scenesFitRaf = requestAnimationFrame(tick);
-    if (!host || typeof host.addEventListener !== 'function') return;
-    var onEnd = function (ev) {
-      if (ev.propertyName !== 'max-height' && ev.propertyName !== 'margin') return;
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
       host.removeEventListener('transitionend', onEnd);
-      if (scenesFitRaf) {
-        try { cancelAnimationFrame(scenesFitRaf); } catch (eCancel2) { /* ignore */ }
-        scenesFitRaf = null;
-      }
-      finishScenesTransition(host);
-    };
+      finishScenesTransition(host, onDone);
+    }
+    function onEnd(ev) {
+      if (ev.target !== host) return;
+      if (ev.propertyName !== 'max-height' && ev.propertyName !== 'margin') return;
+      finish();
+    }
     host.addEventListener('transitionend', onEnd);
+    window.setTimeout(finish, PANEL_SLIDE_MS + 48);
   }
 
   function syncScenesFoldButton() {
@@ -5230,10 +5251,16 @@ var QuotationEditor = (function () {
     fold.innerHTML = scenesFoldChevronSvg();
   }
 
-  function applyScenesCollapsed(collapsed) {
-    if (state.scenesLocked) return;
+  function applyScenesCollapsed(collapsed, onDone) {
+    if (state.scenesLocked) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     state.scenesCollapsed = !!collapsed;
-    if (!rootEl) return;
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     var host = rootEl.querySelector('[data-qe-scenes-host]');
     var scenes = rootEl.querySelector('[data-qe-scenes]');
     var unit = rootEl.querySelector('[data-qe-stage-unit]');
@@ -5243,9 +5270,7 @@ var QuotationEditor = (function () {
     if (host) host.classList.add('is-scenes-animating');
     if (unit) unit.classList.add('is-scenes-animating');
     syncScenesFoldButton();
-    try { fitStageWorkspace(); } catch (eFit) {}
-    runScenesFitDuringTransition(host);
-    try { window.dispatchEvent(new Event('resize')); } catch (eR) {}
+    runScenesFitDuringTransition(host, onDone);
     if (typeof QuotationBuilderView !== 'undefined' &&
         typeof QuotationBuilderView.syncChromeFoldButton === 'function') {
       try { QuotationBuilderView.syncChromeFoldButton(); } catch (eFold) { /* ignore */ }
@@ -11586,6 +11611,8 @@ var QuotationEditor = (function () {
     toggleCanvasPreviewMode: toggleCanvasPreviewMode,
     isCanvasPreviewMode: isCanvasPreviewMode,
     applyScenesCollapsed: applyScenesCollapsed,
+    suspendStageFit: suspendStageFit,
+    resumeStageFit: resumeStageFit,
     isScenesCollapsed: function () { return !!state.scenesCollapsed; },
     setScenesLocked: setScenesLocked,
     isScenesLocked: function () { return !!state.scenesLocked; },

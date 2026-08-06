@@ -213,6 +213,44 @@ var QuotationBuilderView = (function () {
   }
 
   var chromeFoldBatch = false;
+  var PANEL_SLIDE_MS = 260;
+
+  function finishPanelTransition(onDone) {
+    if (typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.resumeStageFit === 'function') {
+      try { QuotationEditor.resumeStageFit(); } catch (eResume) { /* ignore */ }
+    }
+    try { window.dispatchEvent(new Event('resize')); } catch (eR) { /* ignore */ }
+    if (typeof onDone === 'function') onDone();
+  }
+
+  function trackPanelTransition(el, props, onDone) {
+    if (typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.suspendStageFit === 'function') {
+      try { QuotationEditor.suspendStageFit(); } catch (eSuspend) { /* ignore */ }
+    }
+    if (!el) {
+      finishPanelTransition(onDone);
+      return;
+    }
+    var finished = false;
+    var watch = props || ['width', 'max-width'];
+    function finish() {
+      if (finished) return;
+      finished = true;
+      el.removeEventListener('transitionend', onEnd);
+      el.classList.remove('is-panel-animating');
+      finishPanelTransition(onDone);
+    }
+    function onEnd(ev) {
+      if (ev.target !== el) return;
+      if (watch.indexOf(ev.propertyName) < 0) return;
+      finish();
+    }
+    el.classList.add('is-panel-animating');
+    el.addEventListener('transitionend', onEnd);
+    window.setTimeout(finish, PANEL_SLIDE_MS + 48);
+  }
 
   function scenesCollapsedNow() {
     return typeof QuotationEditor !== 'undefined' &&
@@ -268,14 +306,35 @@ var QuotationBuilderView = (function () {
     if (!hasUnlockedChromePanels()) return;
     var next = !!on;
     chromeFoldBatch = true;
-    if (!leftLocked) applyLeftCollapsed(next);
-    if (!rightLocked) applyRightCollapsed(next);
-    if (typeof QuotationEditor !== 'undefined' &&
-        typeof QuotationEditor.applyScenesCollapsed === 'function') {
-      QuotationEditor.applyScenesCollapsed(next);
+    var pending = 0;
+    function maybeDone() {
+      pending--;
+      if (pending <= 0) {
+        chromeFoldBatch = false;
+        syncChromeFoldButton();
+      }
     }
-    chromeFoldBatch = false;
-    syncChromeFoldButton();
+    if (!leftLocked) {
+      pending++;
+      applyLeftCollapsed(next, maybeDone);
+    }
+    if (!rightLocked) {
+      pending++;
+      applyRightCollapsed(next, maybeDone);
+    }
+    if (!scenesLockedNow()) {
+      pending++;
+      if (typeof QuotationEditor !== 'undefined' &&
+          typeof QuotationEditor.applyScenesCollapsed === 'function') {
+        QuotationEditor.applyScenesCollapsed(next, maybeDone);
+      } else {
+        maybeDone();
+      }
+    }
+    if (pending === 0) {
+      chromeFoldBatch = false;
+      syncChromeFoldButton();
+    }
   }
 
   function toggleChromeCollapsed() {
@@ -283,12 +342,19 @@ var QuotationBuilderView = (function () {
     setChromeCollapsed(!isChromeCollapsed());
   }
 
-  function applyLeftCollapsed(collapsed) {
-    if (leftLocked) return;
+  function applyLeftCollapsed(collapsed, onDone) {
+    if (leftLocked) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     leftCollapsed = !!collapsed;
-    if (!rootEl) return;
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     var workspace = rootEl.querySelector('.quotation-workspace');
     var recursos = rootEl.querySelector('#quotationRecursosPanel');
+    var leftBlock = rootEl.querySelector('.quotation-left-block');
     if (workspace) workspace.classList.toggle('is-left-collapsed', leftCollapsed);
     if (recursos) recursos.classList.toggle('is-collapsed', leftCollapsed);
     try {
@@ -296,18 +362,24 @@ var QuotationBuilderView = (function () {
         '--quotation-recursos-w',
         leftCollapsed ? '0px' : RECURSOS_W
       );
-    } catch (eW) {}
+    } catch (eW) { /* ignore */ }
     syncFloatButton();
-    try {
-      window.dispatchEvent(new Event('resize'));
-    } catch (eR) {}
-    if (!chromeFoldBatch) syncChromeFoldButton();
+    trackPanelTransition(leftBlock, ['width', 'max-width'], function () {
+      if (!chromeFoldBatch) syncChromeFoldButton();
+      if (typeof onDone === 'function') onDone();
+    });
   }
 
-  function applyRightCollapsed(collapsed) {
-    if (rightLocked) return;
+  function applyRightCollapsed(collapsed, onDone) {
+    if (rightLocked) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     rightCollapsed = !!collapsed;
-    if (!rootEl) return;
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     var workspace = rootEl.querySelector('.quotation-workspace');
     var props = rootEl.querySelector('#quotationPropsPanel');
     if (workspace) workspace.classList.toggle('is-right-collapsed', rightCollapsed);
@@ -317,12 +389,12 @@ var QuotationBuilderView = (function () {
         '--quotation-props-w',
         rightCollapsed ? '0px' : PROPS_W
       );
-    } catch (eW) {}
+    } catch (eW) { /* ignore */ }
     syncRightFloatButton();
-    try {
-      window.dispatchEvent(new Event('resize'));
-    } catch (eR) {}
-    if (!chromeFoldBatch) syncChromeFoldButton();
+    trackPanelTransition(props, ['width', 'max-width', 'flex-basis'], function () {
+      if (!chromeFoldBatch) syncChromeFoldButton();
+      if (typeof onDone === 'function') onDone();
+    });
   }
 
   function setPropsPanelVisible(on) {
