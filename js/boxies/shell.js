@@ -54,6 +54,17 @@ var BoxiesShell = (function () {
                   ' data-user-menu-action="profile">Perfil</button>' +
                 '<button type="button" class="boxies-user-menu__item" role="menuitem"' +
                   ' data-user-menu-action="plan">Plan y uso</button>' +
+                '<div class="boxies-user-menu__label" role="presentation">Tema</div>' +
+                '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--theme" role="menuitemradio"' +
+                  ' data-user-menu-action="theme" data-theme-id="classic" aria-checked="false">' +
+                  '<span class="boxies-user-menu__item-text">Clásico</span>' +
+                  '<span class="boxies-user-menu__check" aria-hidden="true"></span>' +
+                '</button>' +
+                '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--theme" role="menuitemradio"' +
+                  ' data-user-menu-action="theme" data-theme-id="premium" aria-checked="false">' +
+                  '<span class="boxies-user-menu__item-text">Premium</span>' +
+                  '<span class="boxies-user-menu__check" aria-hidden="true"></span>' +
+                '</button>' +
                 '<div class="boxies-user-menu__sep" aria-hidden="true"></div>' +
                 '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--exit" role="menuitem"' +
                   ' data-user-menu-action="logout">Cerrar sesión</button>' +
@@ -157,6 +168,35 @@ var BoxiesShell = (function () {
     }
   }
 
+  function getEditorThemeId() {
+    if (typeof EditorTheme !== 'undefined' && typeof EditorTheme.getTheme === 'function') {
+      return EditorTheme.getTheme();
+    }
+    if (typeof getTheme === 'function') return getTheme();
+    if (document.body && document.body.classList.contains('theme-premium')) return 'premium';
+    return 'classic';
+  }
+
+  function setEditorThemeId(id) {
+    if (typeof EditorTheme !== 'undefined' && typeof EditorTheme.setTheme === 'function') {
+      EditorTheme.setTheme(id);
+      return;
+    }
+    if (typeof setTheme === 'function') setTheme(id);
+  }
+
+  function syncUserMenuTheme() {
+    var panel = document.getElementById('boxiesUserMenuPanel');
+    if (!panel) return;
+    var current = getEditorThemeId();
+    panel.querySelectorAll('[data-theme-id]').forEach(function (btn) {
+      var id = btn.getAttribute('data-theme-id');
+      var active = id === current;
+      btn.classList.toggle('is-current', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+  }
+
   function bindUserMenu() {
     var btn = document.getElementById('boxiesUserMenuBtn');
     var panel = document.getElementById('boxiesUserMenuPanel');
@@ -170,12 +210,19 @@ var BoxiesShell = (function () {
       closeToolsMenu();
       panel.hidden = !open;
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) syncUserMenuTheme();
     });
     panel.addEventListener('click', function (e) {
       var item = e.target.closest('[data-user-menu-action]');
       if (!item) return;
       e.preventDefault();
       var action = item.getAttribute('data-user-menu-action');
+      if (action === 'theme') {
+        var themeId = item.getAttribute('data-theme-id');
+        if (themeId) setEditorThemeId(themeId);
+        syncUserMenuTheme();
+        return;
+      }
       closeUserMenu();
       if (action === 'profile') {
         window.location.href = profileAccountUrl();
@@ -203,6 +250,7 @@ var BoxiesShell = (function () {
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeUserMenu();
       });
+      window.addEventListener('boxies:editor-theme', syncUserMenuTheme);
     }
   }
 
