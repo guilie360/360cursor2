@@ -5668,9 +5668,14 @@ var ExperienciaCanvas = (function () {
       }
       /* Multi-select / group resize — DOM painted in flushMultiSelectResizeFrame. */
       if (transformDrag && transformDrag.live &&
+          transformDrag.mode !== 'rotate' &&
           (transformDrag.type === 'MULTI_SELECT' ||
            transformDrag.type === 'OVERLAY_GROUP' ||
            transformDrag.type === 'GROUP')) {
+        return true;
+      }
+      /* Cluster / group rotate — painted in flushRotateLiveFrame. */
+      if (transformDrag && transformDrag.live && transformDrag.mode === 'rotate') {
         return true;
       }
       /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
@@ -5839,36 +5844,33 @@ var ExperienciaCanvas = (function () {
       var sceneId = drag.sceneId;
       var layerW = drag.layerW || buttonsLayer.clientWidth || 1000;
       var layerH = drag.layerH || buttonsLayer.clientHeight || 1000;
+      var dragType = String(drag.type || '').toUpperCase();
       var refs = drag.rotateLiveRefs;
 
-      function paintOne(id, el, gizmoEl) {
-        var idEsc = String(id).replace(/"/g, '');
-        if (!el) {
-          el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
-        }
-        if (!gizmoEl) {
-          gizmoEl = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
-        }
-        var vm = getOverlayItemVm(sceneId, id);
+      function paintRotateVm(el, gizmoEl, vm) {
         if (!vm) return;
         var rot = Number(vm.rotation) || 0;
+        var t = String(vm.type || 'BUTTON').toUpperCase();
         if (el) {
           el.style.setProperty('--btn-rot', rot + 'deg');
-          if (isShapeType(vm.type) && isShapeBoxV2Active()) {
+          if (isShapeType(t) && isShapeBoxV2Active()) {
             var box = getShapeBox(vm, layerW, layerH);
             if (box) {
-              el.style.left = box.cx + '%';
-              el.style.top = box.cy + '%';
+              box.rot = rot;
+              paintShapeNodeEl(el, box, vm, layerW, layerH, { liveSizing: true });
             }
-          } else if (!isShapeType(vm.type)) {
+          } else if (!isShapeType(t)) {
             el.style.left = (Number(vm.x) || 50) + '%';
             el.style.top = (Number(vm.y) || 50) + '%';
           }
         }
-        if (!gizmoEl || String(id) !== String(drag.buttonId)) return;
-        if (isShapeType(vm.type) && isShapeBoxV2Active()) {
+        if (!gizmoEl) return;
+        if (isShapeType(t) && isShapeBoxV2Active()) {
           var boxG = getShapeBox(vm, layerW, layerH);
-          if (boxG) paintShapeGizmoEl(gizmoEl, boxG, layerW, layerH);
+          if (boxG) {
+            boxG.rot = rot;
+            paintShapeGizmoEl(gizmoEl, boxG, layerW, layerH);
+          }
         } else {
           var gm = overlaySelectionMetrics(vm, layerW, layerH);
           if (gm) {
@@ -5882,26 +5884,46 @@ var ExperienciaCanvas = (function () {
         }
       }
 
-      if (refs) {
-        if (String(type || '').toUpperCase() === 'MULTI_SELECT') {
-          var unionRot = Number(drag.pendingDeg);
-          if (isNaN(unionRot)) unionRot = 0;
-          if (refs.unionGizmo) {
-            refs.unionGizmo.classList.add('is-rotating');
-            refs.unionGizmo.style.setProperty('--btn-rot', unionRot + 'deg');
+      if (dragType === 'MULTI_SELECT' && drag.memberWorldSnapshots) {
+        var deltaMultiPaint = Number(drag.pendingDeg) - (Number(drag.startRot) || 0);
+        var rotBoxes = computeMultiSelectLiveRotateBoxes(
+          drag.memberWorldSnapshots,
+          drag.startX,
+          drag.startY,
+          deltaMultiPaint,
+          drag.pendingDeg,
+          layerW,
+          layerH
+        );
+        if (drag.liveRefs) {
+          paintMultiSelectLiveFast(drag.liveRefs, rotBoxes, layerW, layerH);
+          if (drag.liveRefs.unionGizmo) {
+            drag.liveRefs.unionGizmo.classList.remove('is-sizing');
+            drag.liveRefs.unionGizmo.classList.add('is-rotating');
           }
-          refs.members.forEach(function (m) {
-            paintOne(m.id, m.el, null);
+          (drag.liveRefs.items || []).forEach(function (item) {
+            if (item.gizmo) item.gizmo.classList.remove('is-sizing');
           });
-          return;
         }
-        paintOne(String(drag.buttonId), refs.el, refs.gizmo);
-        refs.members.forEach(function (m) {
-          paintOne(m.id, m.el, null);
-        });
         return;
       }
-      paintOne(String(drag.buttonId), null, null);
+
+      if (refs) {
+        paintRotateVm(refs.el, refs.gizmo, getOverlayItemVm(sceneId, drag.buttonId));
+        if (drag.liveRefs && drag.liveRefs.items) {
+          drag.liveRefs.items.forEach(function (item) {
+            paintRotateVm(item.el, item.gizmo, getOverlayItemVm(sceneId, item.id));
+            if (item.gizmo) item.gizmo.classList.add('is-rotating');
+          });
+        } else if (refs.members) {
+          refs.members.forEach(function (m) {
+            paintRotateVm(m.el, null, getOverlayItemVm(sceneId, m.id));
+          });
+        }
+        if (refs.gizmo) refs.gizmo.classList.add('is-rotating');
+        return;
+      }
+      paintRotateVm(null, null, getOverlayItemVm(sceneId, drag.buttonId));
     }
 
     function clearRotateLiveStyles(drag) {
@@ -5926,6 +5948,7 @@ var ExperienciaCanvas = (function () {
       var sceneId = transformDrag.sceneId;
       var buttonId = transformDrag.buttonId;
       var type = transformDrag.type;
+      var szRot = overlayLayerSize();
       if (type === 'MULTI_SELECT') {
         var deltaMulti = deg - (Number(transformDrag.startRot) || 0);
         applyMultiSelectRotation(
@@ -5941,7 +5964,6 @@ var ExperienciaCanvas = (function () {
         );
       } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
           ExperienciaEngine.updateOverlayGroupTransform) {
-        var szRot = overlayLayerSize();
         ExperienciaEngine.updateOverlayGroupTransform(
           state, sceneId, buttonId,
           { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
@@ -8116,6 +8138,73 @@ var ExperienciaCanvas = (function () {
       return deg;
     }
 
+    /** Rotate one member box around pivot — shared by model commit + live DOM paint. */
+    function multiSelectRotatedMemberBox(s, pivotX, pivotY, deltaDeg, layerW, layerH) {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var t = String(s.type || 'BUTTON').toUpperCase();
+      var cxPx = (Number(s.cx) / 100) * layerW;
+      var cyPx = (Number(s.cy) / 100) * layerH;
+      var pxPx = (Number(pivotX) / 100) * layerW;
+      var pyPx = (Number(pivotY) / 100) * layerH;
+      var rad = (Number(deltaDeg) || 0) * Math.PI / 180;
+      var cos = Math.cos(rad);
+      var sin = Math.sin(rad);
+      var dx = cxPx - pxPx;
+      var dy = cyPx - pyPx;
+      var nxPx = pxPx + dx * cos - dy * sin;
+      var nyPx = pyPx + dx * sin + dy * cos;
+      return {
+        cx: (nxPx / layerW) * 100,
+        cy: (nyPx / layerH) * 100,
+        w: Number(s.w) || 0.5,
+        h: Number(s.h) || 0.5,
+        rot: normalizeOverlayRotationDeg((Number(s.rotation) || 0) + deltaDeg),
+        kind: t,
+        stretchX: s.stretchX != null ? Number(s.stretchX) : 1,
+        stretchY: s.stretchY != null ? Number(s.stretchY) : 1,
+        shapeContentBox: s.shapeContentBox !== false
+      };
+    }
+
+    function computeMultiSelectLiveRotateBoxes(snap, pivotX, pivotY, deltaDeg, unionRotDeg, layerW, layerH) {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var members = {};
+      var minL = Infinity;
+      var minT = Infinity;
+      var maxR = -Infinity;
+      var maxB = -Infinity;
+      Object.keys(snap || {}).forEach(function (id) {
+        var s = snap[id];
+        if (!s) return;
+        var b = multiSelectRotatedMemberBox(s, pivotX, pivotY, deltaDeg, layerW, layerH);
+        members[id] = b;
+        var cxPx = (b.cx / 100) * layerW;
+        var cyPx = (b.cy / 100) * layerH;
+        var wPx = (b.w / 100) * layerW;
+        var hPx = (b.h / 100) * layerH;
+        overlayRotatedCornersPx(cxPx, cyPx, wPx, hPx, b.rot).forEach(function (c) {
+          if (c.x < minL) minL = c.x;
+          if (c.y < minT) minT = c.y;
+          if (c.x > maxR) maxR = c.x;
+          if (c.y > maxB) maxB = c.y;
+        });
+      });
+      var union = null;
+      if (isFinite(minL)) {
+        union = {
+          cx: (((minL + maxR) / 2) / layerW) * 100,
+          cy: (((minT + maxB) / 2) / layerH) * 100,
+          w: Math.max(0.5, ((maxR - minL) / layerW) * 100),
+          h: Math.max(0.5, ((maxB - minT) / layerH) * 100),
+          rot: Number(unionRotDeg) || 0,
+          kind: 'MULTI_SELECT'
+        };
+      }
+      return { members: members, union: union };
+    }
+
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
     function applyMultiSelectRotation(sceneId, memberIds, snap, pivotX, pivotY, deltaDeg, layerW, layerH, opts) {
       opts = opts || {};
@@ -8124,43 +8213,30 @@ var ExperienciaCanvas = (function () {
       layerH = Math.max(1, Number(layerH) || 1000);
       deltaDeg = Number(deltaDeg) || 0;
       if (Math.abs(deltaDeg) < 1e-9) return;
-      var rad = deltaDeg * Math.PI / 180;
-      var cos = Math.cos(rad);
-      var sin = Math.sin(rad);
-      var pxPx = (Number(pivotX) / 100) * layerW;
-      var pyPx = (Number(pivotY) / 100) * layerH;
       var live = opts.commit ? false : opts.live !== false;
 
       memberIds.forEach(function (mid) {
         var s = snap[String(mid)];
         if (!s) return;
         var t = String(s.type || 'BUTTON').toUpperCase();
-        var cxPx = (Number(s.cx) / 100) * layerW;
-        var cyPx = (Number(s.cy) / 100) * layerH;
-        var dx = cxPx - pxPx;
-        var dy = cyPx - pyPx;
-        var nxPx = pxPx + dx * cos - dy * sin;
-        var nyPx = pyPx + dx * sin + dy * cos;
-        var ncx = (nxPx / layerW) * 100;
-        var ncy = (nyPx / layerH) * 100;
-        var nrot = normalizeOverlayRotationDeg((Number(s.rotation) || 0) + deltaDeg);
-        var patch = { live: live, layerW: layerW, layerH: layerH, rotation: nrot };
+        var b = multiSelectRotatedMemberBox(s, pivotX, pivotY, deltaDeg, layerW, layerH);
+        var patch = { live: live, layerW: layerW, layerH: layerH, rotation: b.rot };
         if (isShapeType(t)) {
-          patch.x = ncx;
-          patch.y = ncy;
-          patch.width = Number(s.w) || 0.5;
-          patch.height = Number(s.h) || 0.5;
-          patch.shapeContentBox = s.shapeContentBox !== false;
+          patch.x = b.cx;
+          patch.y = b.cy;
+          patch.width = b.w;
+          patch.height = b.h;
+          patch.shapeContentBox = b.shapeContentBox !== false;
           if (s.stretchX != null) patch.shapeStretchX = s.stretchX;
           if (s.stretchY != null) patch.shapeStretchY = s.stretchY;
         } else if (t === 'BUTTON') {
-          patch.x = ncx;
-          patch.y = ncy;
-          patch.boxW = Number(s.w) || 0.5;
-          patch.boxH = Number(s.h) || 0.5;
+          patch.x = b.cx;
+          patch.y = b.cy;
+          patch.boxW = b.w;
+          patch.boxH = b.h;
         } else if (t === 'TEXT') {
-          patch.x = ncx;
-          patch.y = ncy;
+          patch.x = b.cx;
+          patch.y = b.cy;
           if (s.fontSize != null) patch.fontSize = s.fontSize;
         }
         ExperienciaEngine.updateSceneButton(state, sceneId, mid, patch);
