@@ -269,10 +269,11 @@ var ExperienciaCanvas = (function () {
 
     var newHalfW = halfWpx;
     var newHalfH = halfHpx;
-    if (moveE) newHalfW += localDxPx;
-    if (moveW) newHalfW -= localDxPx;
-    if (moveS) newHalfH += localDyPx;
-    if (moveN) newHalfH -= localDyPx;
+    /* halfW/halfH are semi-axes — edge motion is 2× half delta (matches unrotated L/R/T/B path). */
+    if (moveE) newHalfW += localDxPx / 2;
+    if (moveW) newHalfW -= localDxPx / 2;
+    if (moveS) newHalfH += localDyPx / 2;
+    if (moveN) newHalfH -= localDyPx / 2;
 
     var isCorner = (moveE || moveW) && (moveN || moveS);
     if (isCorner && keepRatio &&
