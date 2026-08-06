@@ -22,6 +22,84 @@
   min-height: inherit;
   height: 100%;
   box-sizing: border-box;
+  /* Scrollbars — match .qe-lib-chrome__fold-all (dark, thin) */
+  --qe-scrollbar-size: 3px;
+  --qe-scrollbar-thumb: rgba(255, 255, 255, 0.14);
+  --qe-scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+  --qe-scrollbar-track: transparent;
+}
+
+.quotation-builder-host,
+#quotationPanel,
+#quotationLeftBody,
+.quotation-left-body,
+.quotation-props-body,
+.quotation-recursos,
+.qe-scenes-group-portal,
+.qe-canvas-tools-host {
+  --qe-scrollbar-size: 3px;
+  --qe-scrollbar-thumb: rgba(255, 255, 255, 0.14);
+  --qe-scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+  --qe-scrollbar-track: transparent;
+}
+
+/* Editor scrollbars — override global 6px / lighter thumb inside quotation chrome */
+.quotation-builder *,
+.quotation-builder-host *,
+#quotationPanel *,
+#quotationLeftBody *,
+.quotation-left-body *,
+.quotation-props-body *,
+.qe-scenes-group-portal *,
+.qe-canvas-tools-host * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--qe-scrollbar-thumb) var(--qe-scrollbar-track);
+}
+
+.quotation-builder *::-webkit-scrollbar,
+.quotation-builder-host *::-webkit-scrollbar,
+#quotationPanel *::-webkit-scrollbar,
+#quotationLeftBody *::-webkit-scrollbar,
+.quotation-left-body *::-webkit-scrollbar,
+.quotation-props-body *::-webkit-scrollbar,
+.qe-scenes-group-portal *::-webkit-scrollbar,
+.qe-canvas-tools-host *::-webkit-scrollbar {
+  width: var(--qe-scrollbar-size);
+  height: var(--qe-scrollbar-size);
+}
+
+.quotation-builder *::-webkit-scrollbar-track,
+.quotation-builder-host *::-webkit-scrollbar-track,
+#quotationPanel *::-webkit-scrollbar-track,
+#quotationLeftBody *::-webkit-scrollbar-track,
+.quotation-left-body *::-webkit-scrollbar-track,
+.quotation-props-body *::-webkit-scrollbar-track,
+.qe-scenes-group-portal *::-webkit-scrollbar-track,
+.qe-canvas-tools-host *::-webkit-scrollbar-track {
+  background: var(--qe-scrollbar-track);
+}
+
+.quotation-builder *::-webkit-scrollbar-thumb,
+.quotation-builder-host *::-webkit-scrollbar-thumb,
+#quotationPanel *::-webkit-scrollbar-thumb,
+#quotationLeftBody *::-webkit-scrollbar-thumb,
+.quotation-left-body *::-webkit-scrollbar-thumb,
+.quotation-props-body *::-webkit-scrollbar-thumb,
+.qe-scenes-group-portal *::-webkit-scrollbar-thumb,
+.qe-canvas-tools-host *::-webkit-scrollbar-thumb {
+  background: var(--qe-scrollbar-thumb);
+  border-radius: 999px;
+}
+
+.quotation-builder *::-webkit-scrollbar-thumb:hover,
+.quotation-builder-host *::-webkit-scrollbar-thumb:hover,
+#quotationPanel *::-webkit-scrollbar-thumb:hover,
+#quotationLeftBody *::-webkit-scrollbar-thumb:hover,
+.quotation-left-body *::-webkit-scrollbar-thumb:hover,
+.quotation-props-body *::-webkit-scrollbar-thumb:hover,
+.qe-scenes-group-portal *::-webkit-scrollbar-thumb:hover,
+.qe-canvas-tools-host *::-webkit-scrollbar-thumb:hover {
+  background: var(--qe-scrollbar-thumb-hover);
 }
 
 /* Workspace offset comes from builder-embed (.builder-workspace + --builder-rail-width) */
@@ -1221,26 +1299,7 @@
   align-self: flex-start;
   overflow-x: auto;
   overflow-y: visible;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   padding-bottom: 4px;
-}
-
-.qe-scenes__track-wrap::-webkit-scrollbar {
-  height: 4px;
-}
-
-.qe-scenes__track-wrap::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.qe-scenes__track-wrap::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.qe-scenes__track-wrap::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
 }
 
 .qe-scenes__track {
@@ -1471,18 +1530,7 @@
   padding: 8px;
   flex: 1 1 auto;
   min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   box-sizing: border-box;
-}
-
-.qe-scenes-group-float__scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.qe-scenes-group-float__scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
 }
 
 .qe-scenes-group-float__scroll .qe-scenes__thumb-wrap.is-in-group,
@@ -2514,8 +2562,6 @@
   flex-direction: column;
   gap: 4px;
   padding-right: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .qe-content__group {
@@ -3343,8 +3389,6 @@ body.is-qe-lib-pointer-dragging * {
   flex-direction: column;
   gap: 6px;
   padding-right: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .qe-lib__item {
@@ -3984,8 +4028,6 @@ body.is-qe-lib-pointer-dragging * {
   flex-direction: column;
   gap: var(--hall-space-4, 16px);
   padding-right: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .qe-insp__block-head {
@@ -5800,26 +5842,7 @@ body.quotation-canvas-first .builder-workspace,
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   padding-bottom: 2px;
-}
-
-.qe-checklist-tabs__scroll::-webkit-scrollbar {
-  height: 5px;
-}
-
-.qe-checklist-tabs__scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.qe-checklist-tabs__scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.qe-checklist-tabs__scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
 }
 
 .qe-checklist-tabs__tab {
@@ -5899,28 +5922,9 @@ body.quotation-canvas-first .builder-workspace,
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   padding: 8px 0 2px;
   margin: 0;
   min-width: 0;
-}
-
-.qe-checklist::-webkit-scrollbar {
-  width: 5px;
-}
-
-.qe-checklist::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.qe-checklist::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.qe-checklist::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
 }
 
 .qe-canvas-tool-float.is-resizable .qe-checklist {
