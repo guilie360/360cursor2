@@ -1739,10 +1739,13 @@ var ExperienciaCanvas = (function () {
     html += '<div class="builder-exp-sel-box"></div>';
     if (!multi && !isMultiSelectGizmo && !isLineGizmo) {
       html += '' +
-        '<div class="builder-exp-sel-rotate" aria-hidden="false">' +
-          '<span class="builder-exp-sel-rotate-knob" data-handle="rotate"' +
-            ' aria-label="Rotar" title="Rotar"></span>' +
-          '<span class="builder-exp-sel-rotate-stem" aria-hidden="true"></span>' +
+        '<div class="builder-exp-sel-rotate">' +
+          '<button type="button" class="builder-exp-sel-rotate-btn" data-handle="rotate"' +
+            ' aria-label="Rotar" title="Rotar">' +
+            '<span class="builder-exp-sel-rotate-btn__icon">' +
+              selectionRotateBtnIconHtml() +
+            '</span>' +
+          '</button>' +
         '</div>';
     }
     if (!multi) {
@@ -1777,6 +1780,19 @@ var ExperienciaCanvas = (function () {
         grot: 0
       }
     });
+  }
+
+  function selectionRotateBtnIconHtml() {
+    if (typeof BuilderIcons !== 'undefined' && BuilderIcons.render) {
+      return BuilderIcons.render('rotate-ccw');
+    }
+    return '' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"' +
+        ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+        ' aria-hidden="true">' +
+        '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>' +
+        '<path d="M3 3v5h5"/>' +
+      '</svg>';
   }
 
   function buttonIconGlyph(icon) {
