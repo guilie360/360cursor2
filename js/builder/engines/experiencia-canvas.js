@@ -223,6 +223,7 @@ var ExperienciaCanvas = (function () {
 
   /**
    * ShapeBox v2 resize in shape-local space (required when rotation !== 0).
+   * Anchors the opposite edge/corner so only the dragged side moves.
    * localDxPx/localDyPx must already be in shape-local px (see shapeResizePointerLocalPx).
    */
   function resolveShapeStretchResizeRotatedBox(
@@ -251,50 +252,66 @@ var ExperienciaCanvas = (function () {
     var rad = rot * Math.PI / 180;
     var cosR = Math.cos(rad);
     var sinR = Math.sin(rad);
+    var cxPx = (cx0 / 100) * layerW;
+    var cyPx = (cy0 / 100) * layerH;
     var halfWpx = (w0 / 100) * layerW / 2;
     var halfHpx = (h0 / 100) * layerH / 2;
     var minHalfWpx = Math.max(4, ((1.2 / 100) * layerW) / 2);
     var minHalfHpx = Math.max(4, ((1.2 / 100) * layerH) / 2);
-    var shiftLocalX = 0;
-    var shiftLocalY = 0;
 
-    if (moveE) { halfWpx += localDxPx; shiftLocalX += localDxPx / 2; }
-    if (moveW) { halfWpx -= localDxPx; shiftLocalX -= localDxPx / 2; }
-    if (moveS) { halfHpx += localDyPx; shiftLocalY += localDyPx / 2; }
-    if (moveN) { halfHpx -= localDyPx; shiftLocalY -= localDyPx / 2; }
+    /* Anchor point on the OLD box (local px) — opposite edge/corner stays fixed. */
+    var anchorAx = 0;
+    var anchorAy = 0;
+    if (moveE && !moveW) anchorAx = -halfWpx;
+    else if (moveW && !moveE) anchorAx = halfWpx;
+    if (moveS && !moveN) anchorAy = -halfHpx;
+    else if (moveN && !moveS) anchorAy = halfHpx;
+
+    var newHalfW = halfWpx;
+    var newHalfH = halfHpx;
+    if (moveE) newHalfW += localDxPx;
+    if (moveW) newHalfW -= localDxPx;
+    if (moveS) newHalfH += localDyPx;
+    if (moveN) newHalfH -= localDyPx;
 
     var isCorner = (moveE || moveW) && (moveN || moveS);
     if (isCorner && keepRatio &&
         shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)) {
       var startPxW = Number(drag.startWpx) || halfWpx * 2;
       var startPxH = Number(drag.startHpx) || halfHpx * 2;
-      var newPxW = Math.max(minHalfWpx * 2, halfWpx * 2);
-      var newPxH = Math.max(minHalfHpx * 2, halfHpx * 2);
+      var candPxW = Math.max(minHalfWpx * 2, newHalfW * 2);
+      var candPxH = Math.max(minHalfHpx * 2, newHalfH * 2);
       if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
-        var uniPx = Math.max(newPxW, newPxH);
-        halfWpx = uniPx / 2;
-        halfHpx = uniPx / 2;
+        var uniPx = Math.max(candPxW, candPxH);
+        newHalfW = uniPx / 2;
+        newHalfH = uniPx / 2;
       } else {
         var ratioPx = startPxH / Math.max(startPxW, 0.001);
         if (Math.abs(localDxPx) * startPxH >= Math.abs(localDyPx) * startPxW) {
-          halfHpx = (newPxW * ratioPx) / 2;
+          newHalfH = (candPxW * ratioPx) / 2;
         } else {
-          halfWpx = (newPxH / ratioPx) / 2;
+          newHalfW = (candPxH / ratioPx) / 2;
         }
       }
     }
 
-    halfWpx = Math.max(minHalfWpx, halfWpx);
-    halfHpx = Math.max(minHalfHpx, halfHpx);
+    newHalfW = Math.max(minHalfWpx, newHalfW);
+    newHalfH = Math.max(minHalfHpx, newHalfH);
 
-    var cxPx = (cx0 / 100) * layerW + shiftLocalX * cosR - shiftLocalY * sinR;
-    var cyPx = (cy0 / 100) * layerH + shiftLocalX * sinR + shiftLocalY * cosR;
+    /* Same anchor feature on the NEW box dimensions. */
+    var anchorAx2 = anchorAx === 0 ? 0 : (anchorAx > 0 ? newHalfW : -newHalfW);
+    var anchorAy2 = anchorAy === 0 ? 0 : (anchorAy > 0 ? newHalfH : -newHalfH);
+
+    var anchorPx = cxPx + anchorAx * cosR - anchorAy * sinR;
+    var anchorPy = cyPx + anchorAx * sinR + anchorAy * cosR;
+    var newCxPx = anchorPx - (anchorAx2 * cosR - anchorAy2 * sinR);
+    var newCyPx = anchorPy - (anchorAx2 * sinR + anchorAy2 * cosR);
 
     return {
-      cx: (cxPx / layerW) * 100,
-      cy: (cyPx / layerH) * 100,
-      w: (halfWpx * 2 / layerW) * 100,
-      h: (halfHpx * 2 / layerH) * 100,
+      cx: (newCxPx / layerW) * 100,
+      cy: (newCyPx / layerH) * 100,
+      w: (newHalfW * 2 / layerW) * 100,
+      h: (newHalfH * 2 / layerH) * 100,
       stretchX: drag.startStretchX || 1,
       stretchY: drag.startStretchY || 1
     };
