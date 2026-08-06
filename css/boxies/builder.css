@@ -7178,7 +7178,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .builder-exp-sel-move {
   position: absolute;
   inset: 0;
-  pointer-events: auto;
+  pointer-events: none;
   cursor: default;
   z-index: 1;
 }

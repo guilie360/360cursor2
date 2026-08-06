@@ -8681,6 +8681,18 @@ var ExperienciaCanvas = (function () {
       return null;
     }
 
+    /** Silhouette hit on an unselected overlay — wins over gizmo chrome (handles / move surface). */
+    function overlayPickUnselectedShapeAtPoint(clientX, clientY) {
+      var hit = overlayPickTopmostAtPoint(clientX, clientY);
+      if (!hit || !hit.classList.contains('builder-exp-stage-shape')) return null;
+      var id = String(hit.getAttribute('data-exp-stage-btn') || '');
+      if (!id) return null;
+      var selSet = {};
+      getSelectedOverlayIds().forEach(function (sid) { selSet[String(sid)] = true; });
+      if (selSet[id]) return null;
+      return hit;
+    }
+
     /** Hit-test stage overlays — SVG scan first, then DOM stack; selected pass-through. */
     function pickOverlayStageBtnFromPoint(clientX, clientY, opts) {
       opts = opts || {};
@@ -8690,6 +8702,12 @@ var ExperienciaCanvas = (function () {
       if (!opts.forHover) {
         var topHit = overlayPickTopmostAtPoint(clientX, clientY);
         if (topHit) return topHit;
+        var selectedSetClick = {};
+        getSelectedOverlayIds().forEach(function (id) {
+          selectedSetClick[String(id)] = true;
+        });
+        var passHit = overlayPickFromSvgPoint(clientX, clientY, selectedSetClick, { skipSelected: true });
+        if (passHit) return passHit;
         var gizmoOwner = overlayPickSelectedGizmoOwnerAtPoint(clientX, clientY);
         if (gizmoOwner) return gizmoOwner;
         return null;
@@ -10698,9 +10716,12 @@ var ExperienciaCanvas = (function () {
       }
 
       buttonsLayer.addEventListener('pointerdown', function (ev) {
+        /* Silhouette on an unselected shape beats gizmo chrome (handles enlarged in ws7694). */
+        var preferShapeSelect = overlayPickUnselectedShapeAtPoint(ev.clientX, ev.clientY);
+
         /* Gizmo resize / rotate */
         var handle = ev.target.closest && ev.target.closest('[data-handle]');
-        if (handle && handle.closest('[data-exp-gizmo]')) {
+        if (!preferShapeSelect && handle && handle.closest('[data-exp-gizmo]')) {
           var gizmo = handle.closest('[data-exp-gizmo]');
           var gid = gizmo.getAttribute('data-gizmo-id');
           var gtype = gizmo.getAttribute('data-gizmo-type') || 'BUTTON';
@@ -10999,7 +11020,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
         var moveSurface = ev.target.closest && ev.target.closest('[data-exp-sel-move]');
-        if (moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
+        if (!preferShapeSelect && moveSurface && moveSurface.closest('[data-exp-gizmo]')) {
           var gizmoMove = moveSurface.closest('[data-exp-gizmo]');
           var moveId = gizmoMove.getAttribute('data-gizmo-id');
           var moveGtype = gizmoMove.getAttribute('data-gizmo-type') || 'BUTTON';
