@@ -5393,17 +5393,15 @@ body.quotation-canvas-first .builder-workspace,
 .builder-exp-sel-gizmo.is-multi-union .builder-exp-sel-handle {
   pointer-events: auto;
 }
-
-/* Selection gizmo — bbox is chrome only; never steal hover/clicks from shape silhouettes. */
-.builder-exp-sel-gizmo .builder-exp-sel-move {
-  pointer-events: none !important;
+.builder-exp-sel-gizmo.is-multi-union .builder-exp-sel-rotate-btn {
+  pointer-events: auto;
 }
 
-.builder-exp-sel-gizmo.is-overlay-group {
-  pointer-events: none;
-}
 .builder-exp-sel-gizmo.is-overlay-group .builder-exp-sel-handle,
 .builder-exp-sel-gizmo.is-overlay-group .builder-exp-sel-rot-zone {
+  pointer-events: auto;
+}
+.builder-exp-sel-gizmo.is-overlay-group .builder-exp-sel-rotate-btn {
   pointer-events: auto;
 }
 
