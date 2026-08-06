@@ -7209,23 +7209,23 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .builder-exp-sel-handle[data-handle="ne"],
 .builder-exp-sel-handle[data-handle="se"],
 .builder-exp-sel-handle[data-handle="sw"] {
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
 }
 
 /* Edge handles — pills */
 .builder-exp-sel-handle[data-handle="n"],
 .builder-exp-sel-handle[data-handle="s"] {
-  width: 18px;
-  height: 6px;
+  width: 36px;
+  height: 12px;
   border-radius: 999px;
 }
 
 .builder-exp-sel-handle[data-handle="e"],
 .builder-exp-sel-handle[data-handle="w"] {
-  width: 6px;
-  height: 18px;
+  width: 12px;
+  height: 36px;
   border-radius: 999px;
 }
 
@@ -7233,24 +7233,24 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .builder-exp-sel-handle::after {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -12px;
 }
 
-.builder-exp-sel-handle[data-handle="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
-.builder-exp-sel-handle[data-handle="n"]  { left: 50%; top: -3px; margin-left: -9px; cursor: ns-resize; }
-.builder-exp-sel-handle[data-handle="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
-.builder-exp-sel-handle[data-handle="e"]  { right: -3px; top: 50%; margin-top: -9px; cursor: ew-resize; }
-.builder-exp-sel-handle[data-handle="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
-.builder-exp-sel-handle[data-handle="s"]  { left: 50%; bottom: -3px; margin-left: -9px; cursor: ns-resize; }
-.builder-exp-sel-handle[data-handle="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
-.builder-exp-sel-handle[data-handle="w"]  { left: -3px; top: 50%; margin-top: -9px; cursor: ew-resize; }
+.builder-exp-sel-handle[data-handle="nw"] { left: -10px; top: -10px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="n"]  { left: 50%; top: -6px; margin-left: -18px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="ne"] { right: -10px; top: -10px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="e"]  { right: -6px; top: 50%; margin-top: -18px; cursor: ew-resize; }
+.builder-exp-sel-handle[data-handle="se"] { right: -10px; bottom: -10px; cursor: nwse-resize; }
+.builder-exp-sel-handle[data-handle="s"]  { left: 50%; bottom: -6px; margin-left: -18px; cursor: ns-resize; }
+.builder-exp-sel-handle[data-handle="sw"] { left: -10px; bottom: -10px; cursor: nesw-resize; }
+.builder-exp-sel-handle[data-handle="w"]  { left: -6px; top: 50%; margin-top: -18px; cursor: ew-resize; }
 
 /* Rotate — Genially-style pill below selection (semi-transparent circle + icon). */
 .builder-exp-sel-rotate {
   position: absolute;
   left: 50%;
   bottom: 0;
-  transform: translate(-50%, calc(100% + 10px));
+  transform: translate(-50%, calc(100% + 14px));
   pointer-events: none;
   z-index: 6;
 }
@@ -7261,8 +7261,8 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   margin: 0;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -7285,16 +7285,16 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 12px;
-  height: 12px;
+  width: 24px;
+  height: 24px;
   transform: rotate(calc(-1 * var(--btn-rot, 0deg)));
   pointer-events: none;
 }
 
 .builder-exp-sel-rotate-btn__icon svg {
   display: block;
-  width: 12px;
-  height: 12px;
+  width: 24px;
+  height: 24px;
 }
 
 .builder-exp-sel-rotate-btn:hover {
@@ -7313,7 +7313,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 .builder-exp-sel-rotate-btn::after {
   content: '';
   position: absolute;
-  inset: -8px;
+  inset: -10px;
 }
 
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-rotate {

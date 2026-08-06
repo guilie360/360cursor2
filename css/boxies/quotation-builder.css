@@ -5311,19 +5311,19 @@ body.quotation-canvas-first .builder-workspace,
   display: none !important;
 }
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-handle {
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   top: 50%;
-  margin-top: -5px;
+  margin-top: -10px;
 }
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-handle[data-handle="w"] {
-  left: -5px;
+  left: -10px;
   right: auto;
   cursor: ew-resize;
 }
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-handle[data-handle="e"] {
-  right: -5px;
+  right: -10px;
   left: auto;
   cursor: ew-resize;
 }
