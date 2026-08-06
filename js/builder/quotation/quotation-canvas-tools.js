@@ -822,6 +822,7 @@ var QuotationCanvasTools = (function () {
     };
   }
 
+  function bindToolPagesShell(host, state, config) {
     config = config || {};
     var pageAttr = config.pageAttr || 'data-qe-check-page';
     var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
