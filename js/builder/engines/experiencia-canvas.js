@@ -5473,14 +5473,14 @@ var ExperienciaCanvas = (function () {
       if (!buttonsLayer) return false;
       /* Shape resize paints via applyLiveShapeResizePaint — skip stale model sync. */
       if (transformDrag && transformDrag.live && isShapeType(transformDrag.type)) {
-        return true;
+        if (transformDrag.mode !== 'rotate') return true;
       }
       /* Multi-select / group resize — DOM painted in flushMultiSelectResizeFrame. */
       if (transformDrag && transformDrag.live &&
           (transformDrag.type === 'MULTI_SELECT' ||
            transformDrag.type === 'OVERLAY_GROUP' ||
            transformDrag.type === 'GROUP')) {
-        return true;
+        if (transformDrag.mode !== 'rotate') return true;
       }
       /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
       if (buttonDrag && buttonDrag.live && !buttonDrag.nudge && buttonDrag.moveLiveRefs) {
@@ -5612,6 +5612,126 @@ var ExperienciaCanvas = (function () {
           if (sizeEl.textContent !== label) sizeEl.textContent = label;
         }
       }
+    }
+
+    function buildRotateLiveRefs(sceneId, buttonId, type, memberIds) {
+      if (!buttonsLayer || buttonId == null) return null;
+      var idEsc = String(buttonId).replace(/"/g, '');
+      var refs = {
+        el: buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]'),
+        gizmo: buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]'),
+        members: []
+      };
+      var t = String(type || '').toUpperCase();
+      if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+        (memberIds || []).forEach(function (mid) {
+          if (mid == null) return;
+          var midEsc = String(mid).replace(/"/g, '');
+          refs.members.push({
+            id: String(mid),
+            el: buttonsLayer.querySelector('[data-exp-stage-btn="' + midEsc + '"]')
+          });
+        });
+      }
+      return refs;
+    }
+
+    /** In-place rotation paint — never remount gizmo (keeps pointer capture). */
+    function paintRotateLiveFromDrag(drag) {
+      if (!drag || !buttonsLayer) return;
+      var sceneId = drag.sceneId;
+      var layerW = drag.layerW || buttonsLayer.clientWidth || 1000;
+      var layerH = drag.layerH || buttonsLayer.clientHeight || 1000;
+      var refs = drag.rotateLiveRefs;
+
+      function paintOne(id, el, gizmoEl) {
+        var idEsc = String(id).replace(/"/g, '');
+        if (!el) {
+          el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        }
+        if (!gizmoEl) {
+          gizmoEl = buttonsLayer.querySelector('[data-exp-gizmo][data-gizmo-id="' + idEsc + '"]');
+        }
+        var vm = getOverlayItemVm(sceneId, id);
+        if (!vm) return;
+        var rot = Number(vm.rotation) || 0;
+        if (el) {
+          el.style.setProperty('--btn-rot', rot + 'deg');
+          if (isShapeType(vm.type) && isShapeBoxV2Active()) {
+            var box = getShapeBox(vm, layerW, layerH);
+            if (box) {
+              box.rot = rot;
+              paintShapeNodeEl(el, box, vm, layerW, layerH, { liveSizing: true });
+            }
+          } else if (!isShapeType(vm.type)) {
+            el.style.left = (Number(vm.x) || 50) + '%';
+            el.style.top = (Number(vm.y) || 50) + '%';
+          } else {
+            var gmLegacy = shapeStagePaintMetrics(vm, layerW, layerH);
+            if (gmLegacy) {
+              el.style.left = gmLegacy.x + '%';
+              el.style.top = gmLegacy.y + '%';
+            }
+          }
+        }
+        if (!gizmoEl) return;
+        if (isShapeType(vm.type) && isShapeBoxV2Active()) {
+          var boxG = getShapeBox(vm, layerW, layerH);
+          if (boxG) {
+            boxG.rot = rot;
+            paintShapeGizmoEl(gizmoEl, boxG, layerW, layerH);
+          }
+        } else {
+          var gm = overlaySelectionMetrics(vm, layerW, layerH);
+          if (gm) {
+            gizmoEl.style.left = gm.gx + '%';
+            gizmoEl.style.top = gm.gy + '%';
+            gizmoEl.style.width = gm.gw + '%';
+            gizmoEl.style.height = gm.gh + '%';
+            gizmoEl.style.setProperty('--btn-rot', gm.grot + 'deg');
+          }
+        }
+      }
+
+      if (refs) {
+        paintOne(String(drag.buttonId), refs.el, refs.gizmo);
+        refs.members.forEach(function (m) {
+          paintOne(m.id, m.el, null);
+        });
+        return;
+      }
+      paintOne(String(drag.buttonId), null, null);
+    }
+
+    function flushRotateLiveFrame() {
+      if (!transformDrag || transformDrag.mode !== 'rotate') return;
+      transformDrag.rotateRaf = null;
+      var deg = transformDrag.pendingDeg;
+      if (deg == null) return;
+      var sceneId = transformDrag.sceneId;
+      var buttonId = transformDrag.buttonId;
+      var type = transformDrag.type;
+      if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
+          ExperienciaEngine.updateOverlayGroupTransform) {
+        var szRot = overlayLayerSize();
+        ExperienciaEngine.updateOverlayGroupTransform(
+          state, sceneId, buttonId,
+          { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
+        );
+      } else {
+        ExperienciaEngine.updateSceneButton(state, sceneId, buttonId, {
+          rotation: deg,
+          live: true
+        });
+      }
+      paintRotateLiveFromDrag(transformDrag);
+    }
+
+    function scheduleRotateLiveFrame(drag, deg) {
+      if (!drag) return;
+      drag.pendingDeg = deg;
+      if (drag.rotateRaf) return;
+      drag.rotateRaf = requestAnimationFrame(flushRotateLiveFrame);
     }
 
     /** Live resize — unified ShapeBox v2 paint, or legacy tile/gizmo split. */
@@ -9693,6 +9813,8 @@ var ExperienciaCanvas = (function () {
         if (transformDrag) {
           if (transformDrag.shapeRaf) cancelAnimationFrame(transformDrag.shapeRaf);
           if (transformDrag.multiRaf) cancelAnimationFrame(transformDrag.multiRaf);
+          if (transformDrag.rotateRaf) cancelAnimationFrame(transformDrag.rotateRaf);
+          transformDrag.rotateRaf = null;
           if (transformDrag.liveRefs) {
             if (transformDrag.type === 'MULTI_SELECT') {
               clearMultiSelectLiveStyles(transformDrag.liveRefs);
@@ -9848,22 +9970,19 @@ var ExperienciaCanvas = (function () {
               transformDrag.historyPushed = true;
             }
             var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
-            var deg = Math.round((ang * 180) / Math.PI) + 90;
+            var startAng = transformDrag.startPointerAng != null
+              ? transformDrag.startPointerAng
+              : Math.atan2(transformDrag.startPy - transformDrag.startY,
+                transformDrag.startPx - transformDrag.startX);
+            var deg = Math.round(
+              (Number(transformDrag.startRot) || 0) +
+              ((ang - startAng) * 180) / Math.PI
+            );
             deg = overlayRotationSnapDeg(deg, ev);
             if (deg > 360) deg = deg % 360;
             if (deg < -360) deg = -((-deg) % 360);
-            if ((transformDrag.type === 'OVERLAY_GROUP' || transformDrag.type === 'GROUP') &&
-                ExperienciaEngine.updateOverlayGroupTransform) {
-              var szRot = overlayLayerSize();
-              ExperienciaEngine.updateOverlayGroupTransform(
-                state, transformDrag.sceneId, transformDrag.buttonId,
-                { rotation: deg, layerW: szRot.w, layerH: szRot.h }
-              );
-            } else {
-              ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, {
-                rotation: deg
-              });
-            }
+            scheduleRotateLiveFrame(transformDrag, deg);
+            return;
           } else {
             var resizeDistPx = Math.hypot(
               ev.clientX - transformDrag.clientStartX,
@@ -10593,6 +10712,9 @@ var ExperienciaCanvas = (function () {
             startWpx: (startW0 / 100) * layerW0,
             startHpx: (startH0 / 100) * layerH0,
             startRot: Number(btnG.rotation) || 0,
+            startPointerAng: handleMode === 'rotate'
+              ? Math.atan2(pct0.y - startY0, pct0.x - startX0)
+              : null,
             startPx: pct0.x,
             startPy: pct0.y,
             startPtrX: ptr0.x,
@@ -10617,6 +10739,14 @@ var ExperienciaCanvas = (function () {
             historyPushed: false,
             live: true
           };
+          if (handleMode === 'rotate') {
+            transformDrag.rotateLiveRefs = buildRotateLiveRefs(
+              sceneIdG,
+              gid,
+              gtype,
+              transformMemberIds
+            );
+          }
           if (isShapeType(gtype) && handleMode !== 'rotate' && shapeResizeTraceEnabled()) {
             shapeResizeTrace('1.startBox(transformstart)', {
               btnId: gid,
@@ -10870,6 +11000,11 @@ var ExperienciaCanvas = (function () {
           var dragShapePatch = transformDrag.liveShapePatch;
           var endedLiveRefs = transformDrag.liveRefs;
           var endedDrag = transformDrag;
+          if (endedDrag.rotateRaf) {
+            cancelAnimationFrame(endedDrag.rotateRaf);
+            endedDrag.rotateRaf = null;
+            flushRotateLiveFrame();
+          }
           transformDrag = null;
           unbindOverlayPointerDocs();
           var liveShapePatch = dragShapePatch;
