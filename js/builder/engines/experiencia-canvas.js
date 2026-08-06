@@ -221,6 +221,85 @@ var ExperienciaCanvas = (function () {
     };
   }
 
+  /**
+   * ShapeBox v2 resize in shape-local space (required when rotation !== 0).
+   * localDxPx/localDyPx must already be in shape-local px (see shapeResizePointerLocalPx).
+   */
+  function resolveShapeStretchResizeRotatedBox(
+    drag, localDxPx, localDyPx, layerW, layerH, mode, keepRatio
+  ) {
+    if (!drag) return null;
+    var kind = String(drag.type || '').toUpperCase();
+    var moveE = mode.indexOf('e') >= 0;
+    var moveW = mode.indexOf('w') >= 0;
+    var moveS = mode.indexOf('s') >= 0;
+    var moveN = mode.indexOf('n') >= 0;
+    var rot = Number(drag.startRot) || 0;
+    if (Math.abs(rot) < 0.01) return null;
+
+    layerW = Math.max(1, Number(layerW) || Number(drag.layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || Number(drag.layerH) || 1000);
+    localDxPx = Number(localDxPx) || 0;
+    localDyPx = Number(localDyPx) || 0;
+
+    var cx0 = Number(drag.startX);
+    var cy0 = Number(drag.startY);
+    var w0 = Number(drag.startW);
+    var h0 = Number(drag.startH);
+    if (!w0 || !h0 || isNaN(cx0) || isNaN(cy0)) return null;
+
+    var rad = rot * Math.PI / 180;
+    var cosR = Math.cos(rad);
+    var sinR = Math.sin(rad);
+    var halfWpx = (w0 / 100) * layerW / 2;
+    var halfHpx = (h0 / 100) * layerH / 2;
+    var minHalfWpx = Math.max(4, ((1.2 / 100) * layerW) / 2);
+    var minHalfHpx = Math.max(4, ((1.2 / 100) * layerH) / 2);
+    var shiftLocalX = 0;
+    var shiftLocalY = 0;
+
+    if (moveE) { halfWpx += localDxPx; shiftLocalX += localDxPx / 2; }
+    if (moveW) { halfWpx -= localDxPx; shiftLocalX -= localDxPx / 2; }
+    if (moveS) { halfHpx += localDyPx; shiftLocalY += localDyPx / 2; }
+    if (moveN) { halfHpx -= localDyPx; shiftLocalY -= localDyPx / 2; }
+
+    var isCorner = (moveE || moveW) && (moveN || moveS);
+    if (isCorner && keepRatio &&
+        shouldCoupleShapeResizeAxes(kind, moveE, moveW, moveN, moveS, true)) {
+      var startPxW = Number(drag.startWpx) || halfWpx * 2;
+      var startPxH = Number(drag.startHpx) || halfHpx * 2;
+      var newPxW = Math.max(minHalfWpx * 2, halfWpx * 2);
+      var newPxH = Math.max(minHalfHpx * 2, halfHpx * 2);
+      if (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') {
+        var uniPx = Math.max(newPxW, newPxH);
+        halfWpx = uniPx / 2;
+        halfHpx = uniPx / 2;
+      } else {
+        var ratioPx = startPxH / Math.max(startPxW, 0.001);
+        if (Math.abs(localDxPx) * startPxH >= Math.abs(localDyPx) * startPxW) {
+          halfHpx = (newPxW * ratioPx) / 2;
+        } else {
+          halfWpx = (newPxH / ratioPx) / 2;
+        }
+      }
+    }
+
+    halfWpx = Math.max(minHalfWpx, halfWpx);
+    halfHpx = Math.max(minHalfHpx, halfHpx);
+
+    var cxPx = (cx0 / 100) * layerW + shiftLocalX * cosR - shiftLocalY * sinR;
+    var cyPx = (cy0 / 100) * layerH + shiftLocalX * sinR + shiftLocalY * cosR;
+
+    return {
+      cx: (cxPx / layerW) * 100,
+      cy: (cyPx / layerH) * 100,
+      w: (halfWpx * 2 / layerW) * 100,
+      h: (halfHpx * 2 / layerH) * 100,
+      stretchX: drag.startStretchX || 1,
+      stretchY: drag.startStretchY || 1
+    };
+  }
+
   /** Corner resize: proportional by default; Shift = free aspect stretch. */
   function shapeCornerKeepRatioDefault(kind, shiftKey) {
     return !shiftKey;
@@ -318,6 +397,12 @@ var ExperienciaCanvas = (function () {
 
     /* Content-box / ShapeBox v2: resize gw×gh; stretch stays fixed (no SVG bleed). */
     if (drag.shapeContentBox || drag.shapeBoxV2) {
+      if (drag.shapeBoxV2 && Math.abs(Number(drag.startRot) || 0) > 0.01) {
+        var rotBox = resolveShapeStretchResizeRotatedBox(
+          drag, dxPx, dyPx, layerW, layerH, mode, keepRatio
+        );
+        if (rotBox) return rotBox;
+      }
       if (moveE) R = startR + dxPct;
       if (moveW) L = startL + dxPct;
       if (moveS) B = startB + dyPct;
@@ -1740,12 +1825,12 @@ var ExperienciaCanvas = (function () {
     if (!multi && !isMultiSelectGizmo && !isLineGizmo) {
       html += '' +
         '<div class="builder-exp-sel-rotate">' +
-          '<button type="button" class="builder-exp-sel-rotate-btn" data-handle="rotate"' +
-            ' aria-label="Rotar" title="Rotar">' +
+          '<span class="builder-exp-sel-rotate-btn" data-handle="rotate" role="button"' +
+            ' tabindex="-1" aria-label="Rotar" title="Rotar">' +
             '<span class="builder-exp-sel-rotate-btn__icon">' +
               selectionRotateBtnIconHtml() +
             '</span>' +
-          '</button>' +
+          '</span>' +
         '</div>';
     }
     if (!multi) {
@@ -5489,14 +5574,14 @@ var ExperienciaCanvas = (function () {
       if (!buttonsLayer) return false;
       /* Shape resize paints via applyLiveShapeResizePaint — skip stale model sync. */
       if (transformDrag && transformDrag.live && isShapeType(transformDrag.type)) {
-        if (transformDrag.mode !== 'rotate') return true;
+        return true;
       }
       /* Multi-select / group resize — DOM painted in flushMultiSelectResizeFrame. */
       if (transformDrag && transformDrag.live &&
           (transformDrag.type === 'MULTI_SELECT' ||
            transformDrag.type === 'OVERLAY_GROUP' ||
            transformDrag.type === 'GROUP')) {
-        if (transformDrag.mode !== 'rotate') return true;
+        return true;
       }
       /* Shape move — compositor translate only; skip % sync + guide DOM churn. */
       if (buttonDrag && buttonDrag.live && !buttonDrag.nudge && buttonDrag.moveLiveRefs) {
@@ -5652,7 +5737,7 @@ var ExperienciaCanvas = (function () {
       return refs;
     }
 
-    /** In-place rotation paint — never remount gizmo (keeps pointer capture). */
+    /** In-place rotation paint — CSS var only (no is-live-sizing; keeps resize stable). */
     function paintRotateLiveFromDrag(drag) {
       if (!drag || !buttonsLayer) return;
       var sceneId = drag.sceneId;
@@ -5676,27 +5761,18 @@ var ExperienciaCanvas = (function () {
           if (isShapeType(vm.type) && isShapeBoxV2Active()) {
             var box = getShapeBox(vm, layerW, layerH);
             if (box) {
-              box.rot = rot;
-              paintShapeNodeEl(el, box, vm, layerW, layerH, { liveSizing: true });
+              el.style.left = box.cx + '%';
+              el.style.top = box.cy + '%';
             }
           } else if (!isShapeType(vm.type)) {
             el.style.left = (Number(vm.x) || 50) + '%';
             el.style.top = (Number(vm.y) || 50) + '%';
-          } else {
-            var gmLegacy = shapeStagePaintMetrics(vm, layerW, layerH);
-            if (gmLegacy) {
-              el.style.left = gmLegacy.x + '%';
-              el.style.top = gmLegacy.y + '%';
-            }
           }
         }
-        if (!gizmoEl) return;
+        if (!gizmoEl || String(id) !== String(drag.buttonId)) return;
         if (isShapeType(vm.type) && isShapeBoxV2Active()) {
           var boxG = getShapeBox(vm, layerW, layerH);
-          if (boxG) {
-            boxG.rot = rot;
-            paintShapeGizmoEl(gizmoEl, boxG, layerW, layerH);
-          }
+          if (boxG) paintShapeGizmoEl(gizmoEl, boxG, layerW, layerH);
         } else {
           var gm = overlaySelectionMetrics(vm, layerW, layerH);
           if (gm) {
@@ -5717,6 +5793,20 @@ var ExperienciaCanvas = (function () {
         return;
       }
       paintOne(String(drag.buttonId), null, null);
+    }
+
+    function clearRotateLiveStyles(drag) {
+      if (!drag) return;
+      if (drag.liveRefs) clearShapeLiveSizingStyles(drag.liveRefs);
+      if (!drag.rotateLiveRefs) return;
+      var el = drag.rotateLiveRefs.el;
+      var gizmo = drag.rotateLiveRefs.gizmo;
+      if (el) {
+        el.classList.remove('is-live-sizing');
+        el.style.removeProperty('transform');
+        el.style.removeProperty('overflow');
+      }
+      if (gizmo) gizmo.classList.remove('is-rotating');
     }
 
     function flushRotateLiveFrame() {
@@ -10539,6 +10629,9 @@ var ExperienciaCanvas = (function () {
           ev.preventDefault();
           ev.stopPropagation();
           var handleMode = handle.getAttribute('data-handle');
+          if (handleMode === 'rotate' && handle.blur) {
+            try { handle.blur(); } catch (eBlur) { /* ignore */ }
+          }
           dragDebugLog('pointerdown: gizmo handle', {
             gizmoId: gid,
             gtype: gtype,
@@ -11086,6 +11179,9 @@ var ExperienciaCanvas = (function () {
           } else {
             rotateTapArmed = null;
           }
+          if (wasRotate) {
+            clearRotateLiveStyles(endedDrag);
+          }
           /* Final snap + round stored geometry after live resize. */
           var committedShapeResize = false;
           var committedMultiResize = false;
@@ -11288,12 +11384,12 @@ var ExperienciaCanvas = (function () {
             }
             mountOverlaySelectionGizmos(getSelectedOverlayIds());
           } else {
-            if (endedLiveRefs) {
+            if (endedLiveRefs && !wasRotate) {
               if (endType === 'MULTI_SELECT') clearMultiSelectLiveStyles(endedLiveRefs);
               else clearShapeLiveSizingStyles(endedLiveRefs);
             }
             paintButtonsStage();
-            if (endType === 'MULTI_SELECT') {
+            if (wasRotate || endType === 'MULTI_SELECT') {
               mountOverlaySelectionGizmos(getSelectedOverlayIds());
             }
           }

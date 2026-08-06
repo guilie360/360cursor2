@@ -7275,6 +7275,9 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   pointer-events: auto;
   cursor: grab;
   box-sizing: border-box;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
   transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
