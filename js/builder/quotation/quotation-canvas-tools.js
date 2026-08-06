@@ -323,15 +323,82 @@ var QuotationCanvasTools = (function () {
       });
     }
 
+    var pageClickTimer = null;
+
+    function pageById(pageId) {
+      pageId = String(pageId || '');
+      for (var pi = 0; pi < state.pages.length; pi++) {
+        if (state.pages[pi].id === pageId) return state.pages[pi];
+      }
+      return null;
+    }
+
+    function beginChecklistPageRename(tab) {
+      var pageId = tab.getAttribute('data-qe-check-page');
+      var targetPage = pageById(pageId);
+      if (!targetPage || tab.dataset.renaming === '1') return;
+      var label = tab.querySelector('.qe-checklist-tabs__tab-label');
+      if (!label) return;
+      tab.dataset.renaming = '1';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'qe-checklist-tabs__tab-input';
+      input.value = targetPage.title || '';
+      input.maxLength = 48;
+      input.setAttribute('aria-label', 'Nombre de la página');
+      label.replaceWith(input);
+      input.focus();
+      input.select();
+      function finish(save) {
+        if (save) {
+          var next = String(input.value || '').trim();
+          if (next) targetPage.title = next;
+          persist();
+        }
+        tab.dataset.renaming = '0';
+        rerender();
+      }
+      input.addEventListener('blur', function () { finish(true); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          finish(false);
+        }
+      });
+      input.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+
     host.querySelectorAll('[data-qe-check-page]').forEach(function (tab) {
       tab.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        if (tab.dataset.renaming === '1') return;
         var pageId = tab.getAttribute('data-qe-check-page');
-        if (!pageId || pageId === state.activePageId) return;
-        state.activePageId = pageId;
-        persist();
-        rerender();
+        if (pageClickTimer) {
+          try { clearTimeout(pageClickTimer); } catch (eT) { /* ignore */ }
+          pageClickTimer = null;
+        }
+        pageClickTimer = setTimeout(function () {
+          pageClickTimer = null;
+          if (!pageId || pageId === state.activePageId) return;
+          state.activePageId = pageId;
+          persist();
+          rerender();
+        }, 240);
+      });
+      tab.addEventListener('dblclick', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (pageClickTimer) {
+          try { clearTimeout(pageClickTimer); } catch (eT2) { /* ignore */ }
+          pageClickTimer = null;
+        }
+        beginChecklistPageRename(tab);
       });
     });
 
@@ -481,12 +548,13 @@ var QuotationCanvasTools = (function () {
       renderChecklistBody(bodyEl, state);
     }, null, {
       resize: {
-        minW: 200,
+        minW: 205,
         maxW: 300,
         defaultW: 280,
         defaultH: 400,
-        maxHMargin: 20,
-        maxHExtra: 30
+        maxHMargin: 0,
+        maxHExtra: 0,
+        clampChrome: true
       }
     });
   }

@@ -110,7 +110,8 @@ var QuotationWindowManager = (function () {
       minH: defaultH,
       maxH: Math.max(defaultH, maxH),
       maxHMargin: opts.maxHMargin == null ? 20 : Number(opts.maxHMargin),
-      maxHExtra: maxHExtra
+      maxHExtra: maxHExtra,
+      clampChrome: opts.clampChrome === true
     };
   }
 
@@ -159,6 +160,30 @@ var QuotationWindowManager = (function () {
     };
   }
 
+  function getChromeVerticalBounds() {
+    var headerEl = document.getElementById('boxiesHeader');
+    var dockEl = document.getElementById('boxiesDock');
+    var top = headerEl ? headerEl.getBoundingClientRect().bottom : 0;
+    var bottom = dockEl
+      ? dockEl.getBoundingClientRect().top
+      : (window.innerHeight || document.documentElement.clientHeight || 720);
+    if (bottom < top) bottom = top;
+    return { top: top, bottom: bottom };
+  }
+
+  function winForEl(el) {
+    if (!el || !el.getAttribute) return null;
+    var dataId = el.getAttribute('data-qe-window-id');
+    if (!dataId) return null;
+    if (windows[dataId]) return windows[dataId];
+    var keys = Object.keys(windows);
+    for (var i = 0; i < keys.length; i++) {
+      var win = windows[keys[i]];
+      if (win && (win.id === dataId || win.toolId === dataId)) return win;
+    }
+    return null;
+  }
+
   function clampPosition(left, top, el) {
     var vw = window.innerWidth || document.documentElement.clientWidth || 1280;
     var vh = window.innerHeight || document.documentElement.clientHeight || 720;
@@ -167,6 +192,16 @@ var QuotationWindowManager = (function () {
     var h = rect.height || 200;
     var pad = 8;
     var maxLeft = Math.max(pad, vw - w - pad);
+    var win = winForEl(el);
+    if (win && win.resize && win.resize.clampChrome) {
+      var chrome = getChromeVerticalBounds();
+      var minTop = chrome.top;
+      var maxTop = Math.max(minTop, chrome.bottom - h);
+      return {
+        left: Math.min(Math.max(pad, left), maxLeft),
+        top: Math.min(Math.max(minTop, top), maxTop)
+      };
+    }
     var maxTop = Math.max(pad, vh - h - pad);
     return {
       left: Math.min(Math.max(pad, left), maxLeft),
@@ -417,6 +452,10 @@ var QuotationWindowManager = (function () {
           w.resize.maxH = computeMaxWindowHeight(w.resize.maxHMargin, w.resize.maxHExtra);
           var rect = w.el.getBoundingClientRect();
           applySize(w.el, { width: rect.width, height: rect.height }, w.resize);
+          if (w.resize.clampChrome) {
+            var next = w.el.getBoundingClientRect();
+            applyPosition(w.el, { left: next.left, top: next.top });
+          }
         });
       });
     }
@@ -467,6 +506,10 @@ var QuotationWindowManager = (function () {
         width: resize.defaultW,
         height: resize.defaultH
       }, resize);
+      if (resize.clampChrome) {
+        var placed = el.getBoundingClientRect();
+        applyPosition(el, { left: placed.left, top: placed.top });
+      }
     }
     var win = {
       id: opts.id,
