@@ -568,7 +568,7 @@ var QuotationCanvasTools = (function () {
         ' ' + pageAttr + '="' + esc(page.id) + '"' +
         ' role="tab"' +
         ' aria-selected="' + (active ? 'true' : 'false') + '"' +
-        ' title="' + esc(page.title) + '">' +
+        ' title="Clic para abrir · arrastrar para reordenar · doble clic para renombrar">' +
         '<span class="qe-checklist-tabs__tab-label">' + esc(page.title) + '</span>' +
       '</button>';
     }).join('');
@@ -660,7 +660,168 @@ var QuotationCanvasTools = (function () {
     document.addEventListener('keydown', window.__qeToolPageMenuClose, true);
   }
 
-  function bindToolPagesShell(host, state, config) {
+  function scrollActiveToolPageTabIntoView(host, config) {
+    var scroll = host.querySelector('.qe-checklist-tabs__scroll');
+    if (!scroll) return;
+    var pageAttr = (config && config.pageAttr) || 'data-qe-check-page';
+    var active = scroll.querySelector('[' + pageAttr + '].is-active');
+    if (!active) return;
+    var pad = 8;
+    var scrollRect = scroll.getBoundingClientRect();
+    var tabRect = active.getBoundingClientRect();
+    if (tabRect.left < scrollRect.left + pad) {
+      scroll.scrollLeft -= (scrollRect.left + pad) - tabRect.left;
+    } else if (tabRect.right > scrollRect.right - pad) {
+      scroll.scrollLeft += tabRect.right - (scrollRect.right - pad);
+    }
+  }
+
+  function bindToolPageTabsScrollAndReorder(host, state, config) {
+    config = config || {};
+    var pageAttr = config.pageAttr || 'data-qe-check-page';
+    var scrollEl = host.querySelector('.qe-checklist-tabs__scroll');
+    if (!scrollEl) return;
+
+    var scrollBindKey = (config.pageAttr || 'page') + '|scroll-reorder';
+    if (scrollEl.dataset.qeTabsScrollBound === scrollBindKey) return;
+    scrollEl.dataset.qeTabsScrollBound = scrollBindKey;
+
+    var persist = config.persist || function () {};
+    var tabDrag = null;
+    var dropTargetId = null;
+    var dropPosition = null;
+    var suppressTabClickUntil = 0;
+
+    function clearTabDropMarkers() {
+      scrollEl.querySelectorAll('[' + pageAttr + ']').forEach(function (tab) {
+        tab.classList.remove('is-drop-before', 'is-drop-after', 'is-dragging');
+      });
+      dropTargetId = null;
+      dropPosition = null;
+    }
+
+    function tabDropAt(clientX) {
+      var tabs = scrollEl.querySelectorAll('[' + pageAttr + ']');
+      for (var i = 0; i < tabs.length; i++) {
+        var tab = tabs[i];
+        var rect = tab.getBoundingClientRect();
+        if (clientX < rect.left + rect.width / 2) {
+          return { id: tab.getAttribute(pageAttr), position: 'before' };
+        }
+      }
+      if (tabs.length) {
+        var last = tabs[tabs.length - 1];
+        return { id: last.getAttribute(pageAttr), position: 'after' };
+      }
+      return null;
+    }
+
+    function paintTabDropMarker(target) {
+      clearTabDropMarkers();
+      if (!target || !tabDrag || !tabDrag.dragging) return;
+      if (target.id === tabDrag.pageId) return;
+      dropTargetId = target.id;
+      dropPosition = target.position;
+      var tab = scrollEl.querySelector('[' + pageAttr + '="' + target.id + '"]');
+      if (tab) tab.classList.add(target.position === 'before' ? 'is-drop-before' : 'is-drop-after');
+      if (tabDrag.tab) tabDrag.tab.classList.add('is-dragging');
+    }
+
+    function reorderPages(fromId, toId, position) {
+      fromId = String(fromId || '');
+      toId = String(toId || '');
+      if (!fromId || !toId || fromId === toId) return;
+      var fromIdx = -1;
+      var toIdx = -1;
+      for (var i = 0; i < state.pages.length; i++) {
+        if (state.pages[i].id === fromId) fromIdx = i;
+        if (state.pages[i].id === toId) toIdx = i;
+      }
+      if (fromIdx < 0 || toIdx < 0) return;
+      var moved = state.pages.splice(fromIdx, 1)[0];
+      var insertIdx = toIdx;
+      if (fromIdx < toIdx) insertIdx--;
+      if (position === 'after') insertIdx++;
+      state.pages.splice(insertIdx, 0, moved);
+      persist();
+      refreshToolPageTabs(host, state, config);
+      syncToolPageTabs(host, state, config);
+      scrollActiveToolPageTabIntoView(host, config);
+    }
+
+    function autoScrollToolPageTabs(clientX) {
+      var rect = scrollEl.getBoundingClientRect();
+      var edge = 32;
+      var speed = 14;
+      if (clientX < rect.left + edge) scrollEl.scrollLeft -= speed;
+      else if (clientX > rect.right - edge) scrollEl.scrollLeft += speed;
+    }
+
+    scrollEl.addEventListener('wheel', function (e) {
+      if (scrollEl.scrollWidth <= scrollEl.clientWidth + 1) return;
+      var dy = e.deltaY;
+      var dx = e.deltaX;
+      if (Math.abs(dy) <= Math.abs(dx) && Math.abs(dx) > 0) return;
+      if (Math.abs(dy) < 1) return;
+      e.preventDefault();
+      scrollEl.scrollLeft += dy;
+    }, { passive: false });
+
+    scrollEl.addEventListener('pointerdown', function (e) {
+      var tab = e.target.closest('[' + pageAttr + ']');
+      if (!tab || tab.dataset.renaming === '1') return;
+      if (e.button !== 0) return;
+      tabDrag = {
+        pageId: tab.getAttribute(pageAttr),
+        startX: e.clientX,
+        startY: e.clientY,
+        pointerId: e.pointerId,
+        dragging: false,
+        tab: tab
+      };
+    });
+
+    scrollEl.addEventListener('pointermove', function (e) {
+      if (!tabDrag || e.pointerId !== tabDrag.pointerId) return;
+      var dist = Math.hypot(e.clientX - tabDrag.startX, e.clientY - tabDrag.startY);
+      if (!tabDrag.dragging) {
+        if (dist < 6) return;
+        tabDrag.dragging = true;
+        tabDrag.tab.classList.add('is-dragging');
+        try { scrollEl.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
+      }
+      e.preventDefault();
+      paintTabDropMarker(tabDropAt(e.clientX));
+      autoScrollToolPageTabs(e.clientX);
+    });
+
+    function finishTabPointer(e) {
+      if (!tabDrag || e.pointerId !== tabDrag.pointerId) return;
+      var wasDrag = tabDrag.dragging;
+      var pageId = tabDrag.pageId;
+      if (wasDrag) {
+        if (dropTargetId && dropTargetId !== pageId) {
+          reorderPages(pageId, dropTargetId, dropPosition);
+        }
+        suppressTabClickUntil = Date.now() + 320;
+      }
+      clearTabDropMarkers();
+      if (tabDrag.tab) tabDrag.tab.classList.remove('is-dragging');
+      tabDrag = null;
+      try { scrollEl.releasePointerCapture(e.pointerId); } catch (eRel) { /* ignore */ }
+      if (!wasDrag && pageId && config.switchToPage) {
+        config.switchToPage(pageId);
+      }
+    }
+
+    scrollEl.addEventListener('pointerup', finishTabPointer);
+    scrollEl.addEventListener('pointercancel', finishTabPointer);
+
+    host.__qeSuppressToolPageTabClick = function () {
+      return Date.now() < suppressTabClickUntil;
+    };
+  }
+
     config = config || {};
     var pageAttr = config.pageAttr || 'data-qe-check-page';
     var addPageAttr = config.addPageAttr || 'data-qe-check-add-page';
@@ -686,6 +847,7 @@ var QuotationCanvasTools = (function () {
       state.activePageId = pageId;
       persist();
       syncToolPageTabs(host, state, config);
+      scrollActiveToolPageTabIntoView(host, config);
       if (onPageSwitch) onPageSwitch(pageId);
       else rerender();
     }
@@ -707,6 +869,7 @@ var QuotationCanvasTools = (function () {
       persist();
       refreshToolPageTabs(host, state, config);
       syncToolPageTabs(host, state, config);
+      scrollActiveToolPageTabIntoView(host, config);
       if (onPageSwitch) onPageSwitch(state.activePageId);
       else rerender();
     }
@@ -752,53 +915,55 @@ var QuotationCanvasTools = (function () {
       });
     }
 
-    if (host.dataset.qePagesBound === bindKey) return;
-    host.dataset.qePagesBound = bindKey;
+    if (host.dataset.qePagesBound !== bindKey) {
+      host.dataset.qePagesBound = bindKey;
 
-    host.addEventListener('click', function (e) {
-      var addBtn = e.target.closest('[' + addPageAttr + ']');
-      if (addBtn && host.contains(addBtn)) {
+      host.addEventListener('click', function (e) {
+        var addBtn = e.target.closest('[' + addPageAttr + ']');
+        if (addBtn && host.contains(addBtn)) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (saveBeforeSwitch) saveBeforeSwitch();
+          var newId = nextPageId();
+          var pageCount = state.pages.length + 1;
+          state.pages.push(newPageFactory(newId, pageCount));
+          state.activePageId = newId;
+          persist();
+          rerender();
+          return;
+        }
+      });
+
+      host.addEventListener('dblclick', function (e) {
+        var tab = e.target.closest('[' + pageAttr + ']');
+        if (!tab || !host.contains(tab)) return;
         e.preventDefault();
         e.stopPropagation();
-        if (saveBeforeSwitch) saveBeforeSwitch();
-        var newId = nextPageId();
-        var pageCount = state.pages.length + 1;
-        state.pages.push(newPageFactory(newId, pageCount));
-        state.activePageId = newId;
-        persist();
-        rerender();
-        return;
-      }
-      var tab = e.target.closest('[' + pageAttr + ']');
-      if (!tab || !host.contains(tab)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (tab.dataset.renaming === '1') return;
-      switchToPage(tab.getAttribute(pageAttr));
-    });
-
-    host.addEventListener('dblclick', function (e) {
-      var tab = e.target.closest('[' + pageAttr + ']');
-      if (!tab || !host.contains(tab)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      beginPageRename(tab);
-    });
-
-    host.addEventListener('contextmenu', function (e) {
-      var tab = e.target.closest('[' + pageAttr + ']');
-      if (!tab || !host.contains(tab)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      var pageId = tab.getAttribute(pageAttr);
-      showToolPageMenu(e.clientX, e.clientY, [
-        { id: 'rename', label: 'Cambiar nombre' },
-        { id: 'delete', label: 'Eliminar', danger: true, disabled: state.pages.length <= 1 }
-      ], function (action) {
-        if (action === 'rename') beginPageRename(tab);
-        else if (action === 'delete') deletePage(pageId);
+        beginPageRename(tab);
       });
+
+      host.addEventListener('contextmenu', function (e) {
+        var tab = e.target.closest('[' + pageAttr + ']');
+        if (!tab || !host.contains(tab)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var pageId = tab.getAttribute(pageAttr);
+        showToolPageMenu(e.clientX, e.clientY, [
+          { id: 'rename', label: 'Cambiar nombre' },
+          { id: 'delete', label: 'Eliminar', danger: true, disabled: state.pages.length <= 1 }
+        ], function (action) {
+          if (action === 'rename') beginPageRename(tab);
+          else if (action === 'delete') deletePage(pageId);
+        });
+      });
+    }
+
+    bindToolPageTabsScrollAndReorder(host, state, {
+      pageAttr: pageAttr,
+      persist: persist,
+      switchToPage: switchToPage
     });
+    scrollActiveToolPageTabIntoView(host, config);
   }
 
   function checklistPagesHtml(state) {

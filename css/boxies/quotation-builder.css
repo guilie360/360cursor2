@@ -5967,6 +5967,24 @@ body.quotation-canvas-first .builder-workspace,
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+}
+
+.qe-checklist-tabs__scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.qe-checklist-tabs__scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.qe-checklist-tabs__scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .qe-checklist-tabs__tab {
@@ -5984,8 +6002,24 @@ body.quotation-canvas-first .builder-workspace,
   font-size: 11px;
   font-weight: 500;
   line-height: 1.2;
-  cursor: pointer;
-  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.qe-checklist-tabs__tab.is-dragging {
+  cursor: grabbing;
+  opacity: 0.46;
+}
+
+.qe-checklist-tabs__tab.is-drop-before {
+  box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.72);
+}
+
+.qe-checklist-tabs__tab.is-drop-after {
+  box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.72);
 }
 
 .qe-checklist-tabs__tab-label {
