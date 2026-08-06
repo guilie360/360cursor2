@@ -1787,6 +1787,24 @@ var QuotationEditor = (function () {
     return lib.content.length;
   }
 
+  function draftSceneGroupCount(draft) {
+    return draft && Array.isArray(draft.sceneGroups) ? draft.sceneGroups.length : 0;
+  }
+
+  function serverSceneGroupCount(hq) {
+    var canvas = hq && hq.canvas;
+    return canvas && Array.isArray(canvas.sceneGroups) ? canvas.sceneGroups.length : 0;
+  }
+
+  function draftSceneTrackCount(draft) {
+    return draft && Array.isArray(draft.sceneTrack) ? draft.sceneTrack.length : 0;
+  }
+
+  function serverSceneTrackCount(hq) {
+    var canvas = hq && hq.canvas;
+    return canvas && Array.isArray(canvas.sceneTrack) ? canvas.sceneTrack.length : 0;
+  }
+
   function countGuidesInScenes(scenes) {
     var n = 0;
     if (!Array.isArray(scenes)) return 0;
@@ -1829,6 +1847,9 @@ var QuotationEditor = (function () {
     /* Guides / overlays were stripped from DB sanitize historically — keep local if richer. */
     if (draftGuides > srvGuides) return true;
     if (draftIx > srvIx) return true;
+    if (draftSceneGroupCount(draft) > serverSceneGroupCount(hq)) return true;
+    if (draftSceneTrackCount(draft) > serverSceneTrackCount(hq)) return true;
+    if (draftSceneGroupCount(draft) > 0 && serverSceneGroupCount(hq) === 0) return true;
     /* Same shape but draft is fresh (< 24h) and has real local structure. */
     var age = Date.now() - Number(draft.at || 0);
     if (age >= 0 && age < 24 * 60 * 60 * 1000) {

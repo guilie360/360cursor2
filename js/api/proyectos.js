@@ -820,6 +820,49 @@ var ProyectosApi = (function () {
     return out;
   }
 
+  function sanitizeSceneGroups(rawGroups, sceneIdSet, heroIdSet) {
+    if (!Array.isArray(rawGroups)) return [];
+    return rawGroups.map(function (g) {
+      if (!g || typeof g !== 'object') return null;
+      var id = heroText(g.id);
+      if (!id) return null;
+      var sceneIds = Array.isArray(g.sceneIds)
+        ? g.sceneIds.map(function (sid) { return heroText(sid); }).filter(function (sid) {
+          return sid && sceneIdSet[sid] && !heroIdSet[sid];
+        })
+        : [];
+      var childGroupIds = Array.isArray(g.childGroupIds)
+        ? g.childGroupIds.map(function (cid) { return heroText(cid); }).filter(Boolean)
+        : [];
+      return {
+        id: id,
+        name: heroText(g.name) || 'Grupo',
+        collapsed: g.collapsed !== false,
+        parentGroupId: heroText(g.parentGroupId) || null,
+        sceneIds: sceneIds,
+        childGroupIds: childGroupIds
+      };
+    }).filter(Boolean);
+  }
+
+  function sanitizeSceneTrack(rawTrack, sceneIdSet, groupById, scenesInGroups) {
+    if (!Array.isArray(rawTrack)) return [];
+    var seen = Object.create(null);
+    return rawTrack.map(function (tid) { return heroText(tid); }).filter(function (tid) {
+      if (!tid || seen[tid]) return false;
+      if (groupById[tid]) {
+        if (groupById[tid].parentGroupId) return false;
+        seen[tid] = true;
+        return true;
+      }
+      if (sceneIdSet[tid] && !scenesInGroups[tid]) {
+        seen[tid] = true;
+        return true;
+      }
+      return false;
+    });
+  }
+
   function sanitizeCanvasDocument(doc) {
     if (!doc || typeof doc !== 'object') return null;
     var scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
@@ -850,12 +893,40 @@ var ProyectosApi = (function () {
         guides: guidesByViewport.desktop.slice()
       };
     }).filter(function (sc) { return sc && sc.id; });
+
+    var sceneIdSet = Object.create(null);
+    var heroIdSet = Object.create(null);
+    outScenes.forEach(function (sc) {
+      sceneIdSet[sc.id] = true;
+      if (sc.type === 'hero') heroIdSet[sc.id] = true;
+    });
+
+    var sceneGroups = sanitizeSceneGroups(doc.sceneGroups, sceneIdSet, heroIdSet);
+    var groupById = Object.create(null);
+    sceneGroups.forEach(function (grp) {
+      groupById[grp.id] = grp;
+    });
+    sceneGroups.forEach(function (grp) {
+      grp.childGroupIds = grp.childGroupIds.filter(function (cid) {
+        return !!groupById[cid] && cid !== grp.id;
+      });
+      if (grp.parentGroupId && !groupById[grp.parentGroupId]) grp.parentGroupId = null;
+    });
+    var scenesInGroups = Object.create(null);
+    sceneGroups.forEach(function (grp) {
+      grp.sceneIds.forEach(function (sid) { scenesInGroups[sid] = true; });
+    });
+    var sceneTrack = sanitizeSceneTrack(doc.sceneTrack, sceneIdSet, groupById, scenesInGroups);
+
     /* Allow empty ProjectDocument (0 scenes) — Editor is SSOT. */
-    return {
+    var out = {
       version: Number(doc.version) || 1,
       activeSceneId: heroText(doc.activeSceneId) || (outScenes[0] && outScenes[0].id) || null,
       scenes: outScenes
     };
+    if (sceneGroups.length) out.sceneGroups = sceneGroups;
+    if (sceneTrack.length) out.sceneTrack = sceneTrack;
+    return out;
   }
 
   var BUNNY_CDN_BASE = 'https://boxies.b-cdn.net';
