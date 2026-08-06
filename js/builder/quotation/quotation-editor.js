@@ -5217,7 +5217,7 @@ var QuotationEditor = (function () {
 
   function resumeStageFit() {
     stageFitSuspend = Math.max(0, stageFitSuspend - 1);
-    if (stageFitSuspend === 0 && stageFitPending) {
+    if (stageFitSuspend === 0) {
       stageFitPending = false;
       fitStageWorkspaceNow();
     }

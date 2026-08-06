@@ -213,7 +213,7 @@ var QuotationBuilderView = (function () {
   }
 
   var chromeFoldBatch = false;
-  var LIBRARY_PANEL_SLIDE_MS = 440;
+  var LIBRARY_PANEL_SLIDE_MS = 280;
 
   function whenLibraryPanelTransition(onDone) {
     if (!rootEl) {
@@ -225,6 +225,7 @@ var QuotationBuilderView = (function () {
       if (typeof onDone === 'function') onDone();
       return;
     }
+    leftBlock.classList.add('is-library-panel-sliding');
     if (typeof QuotationEditor !== 'undefined' &&
         typeof QuotationEditor.suspendStageFit === 'function') {
       try { QuotationEditor.suspendStageFit(); } catch (eSuspend) { /* ignore */ }
@@ -234,20 +235,20 @@ var QuotationBuilderView = (function () {
       if (finished) return;
       finished = true;
       leftBlock.removeEventListener('transitionend', onEnd);
+      leftBlock.classList.remove('is-library-panel-sliding');
       if (typeof QuotationEditor !== 'undefined' &&
           typeof QuotationEditor.resumeStageFit === 'function') {
         try { QuotationEditor.resumeStageFit(); } catch (eResume) { /* ignore */ }
       }
-      try { window.dispatchEvent(new Event('resize')); } catch (eR) { /* ignore */ }
       if (typeof onDone === 'function') onDone();
     }
     function onEnd(ev) {
       if (ev.target !== leftBlock) return;
-      if (ev.propertyName !== 'width' && ev.propertyName !== 'max-width') return;
+      if (ev.propertyName !== 'transform') return;
       finish();
     }
     leftBlock.addEventListener('transitionend', onEnd);
-    window.setTimeout(finish, LIBRARY_PANEL_SLIDE_MS + 48);
+    window.setTimeout(finish, LIBRARY_PANEL_SLIDE_MS + 32);
   }
 
   function scenesCollapsedNow() {

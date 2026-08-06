@@ -4314,40 +4314,55 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
-/* Left block: recursos only (Config/Editar live in the BOXIES header).
- * Opaque + z-index above ambient edge fringe (body::before/::after at z-index 1). */
+/* Left block: biblioteca — GPU slide (transform), sin animar width (evita reflow lag). */
 .quotation-left-block {
-  position: relative;
-  flex: 0 0 auto;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 220px;
+  max-width: 220px;
+  min-width: 220px;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   min-height: 0;
   height: 100%;
   max-height: 100%;
-  width: var(--quotation-recursos-w, 220px);
-  max-width: var(--quotation-recursos-w, 220px);
   background: #0a0a0a;
   border-right: 1px solid var(--hall-border-hairline, rgba(255, 255, 255, 0.04));
   box-sizing: border-box;
   overflow: hidden;
-  z-index: 5;
-  transition:
-    width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    max-width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    border-color var(--qe-panel-fade-duration, 0.28s) ease;
+  z-index: 6;
+  contain: strict;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/*
- * Collapsed: slide width to 0 (never display:none — that kills the animation).
- * Expand float is a workspace sibling, so no leftover shadow column.
- */
+.quotation-left-block.is-library-panel-sliding .quotation-left-body {
+  transition: none !important;
+}
+
 .quotation-workspace.is-left-collapsed .quotation-left-block {
-  width: 0;
-  max-width: 0;
-  min-width: 0;
-  border-right-color: transparent;
+  transform: translate3d(-100%, 0, 0);
   pointer-events: none;
+  border-right-color: transparent;
+}
+
+.quotation-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  margin-left: 220px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.quotation-workspace.is-left-collapsed .quotation-main {
+  margin-left: 0;
 }
 
 .quotation-left-block[hidden] {
@@ -4433,22 +4448,19 @@ body.quotation-canvas-first .builder-workspace,
   min-height: 0;
 }
 
-/* Recursos ? collapses independently; float stays on its edge */
+/* Recursos — fill the sliding left block; no width animation. */
 .quotation-recursos {
   position: relative;
-  flex: 0 0 var(--quotation-recursos-w, 220px);
-  width: var(--quotation-recursos-w, 220px);
-  max-width: var(--quotation-recursos-w, 220px);
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   overflow: hidden;
-  transition:
-    flex-basis var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    max-width var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 /* Config (and any non-editor step): no recursos column / fold control */
@@ -4475,10 +4487,8 @@ body.quotation-canvas-first .builder-workspace,
   transform: none !important;
 }
 
-.quotation-recursos.is-collapsed .quotation-left-body,
 .quotation-workspace.is-left-collapsed .quotation-recursos .quotation-left-body {
   opacity: 0;
-  transform: translate3d(-16px, 0, 0);
   pointer-events: none;
   overflow: hidden;
 }
@@ -4491,12 +4501,7 @@ body.quotation-canvas-first .builder-workspace,
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
-  transform: translate3d(0, 0, 0);
   opacity: 1;
-  transition:
-    opacity var(--qe-panel-fade-duration, 0.28s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
-    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
-  will-change: transform, opacity;
 }
 
 .quotation-left-body .qe-col--library {
@@ -4508,16 +4513,7 @@ body.quotation-canvas-first .builder-workspace,
   padding: 10px 8px 12px;
 }
 
-.quotation-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* quotation-main margin-left defined above with left-block slide */
 
 .quotation-main > .quotation-panel,
 .quotation-workspace .quotation-panel {
@@ -4624,19 +4620,10 @@ body.quotation-canvas-first .builder-workspace,
   transform: rotate(180deg);
 }
 
-/* Collapsed Recursos: parent left-block is display:none; keep these as belt-and-suspenders. */
+/* Collapsed: left block slides off-screen; recursos keeps full inner width. */
 .quotation-recursos.is-collapsed,
 .quotation-workspace.is-left-collapsed .quotation-recursos {
-  flex: 0 0 0;
-  flex-basis: 0;
-  width: 0;
-  max-width: 0;
-  min-width: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-  border: 0;
-  background: transparent;
+  pointer-events: none;
 }
 
 /* Editor grid without in-column library */
