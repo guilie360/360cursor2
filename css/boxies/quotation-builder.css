@@ -2660,6 +2660,10 @@
   transform: rotate(90deg);
 }
 
+.qe-content__group:not(.is-open) > .qe-content__body {
+  display: none;
+}
+
 .qe-content__select-trigger {
   appearance: none;
   flex: 0 0 auto;
@@ -3229,6 +3233,10 @@ body.is-qe-lib-pointer-dragging * {
 
 .qe-folder.is-open > .qe-folder__head .qe-folder__chevron {
   transform: rotate(90deg);
+}
+
+.qe-folder:not(.is-open) > .qe-folder__body {
+  display: none;
 }
 
 .qe-folder__icon {

@@ -213,6 +213,42 @@ var QuotationBuilderView = (function () {
   }
 
   var chromeFoldBatch = false;
+  var LIBRARY_PANEL_SLIDE_MS = 440;
+
+  function whenLibraryPanelTransition(onDone) {
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    var leftBlock = rootEl.querySelector('.quotation-left-block');
+    if (!leftBlock) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    if (typeof QuotationEditor !== 'undefined' &&
+        typeof QuotationEditor.suspendStageFit === 'function') {
+      try { QuotationEditor.suspendStageFit(); } catch (eSuspend) { /* ignore */ }
+    }
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      leftBlock.removeEventListener('transitionend', onEnd);
+      if (typeof QuotationEditor !== 'undefined' &&
+          typeof QuotationEditor.resumeStageFit === 'function') {
+        try { QuotationEditor.resumeStageFit(); } catch (eResume) { /* ignore */ }
+      }
+      try { window.dispatchEvent(new Event('resize')); } catch (eR) { /* ignore */ }
+      if (typeof onDone === 'function') onDone();
+    }
+    function onEnd(ev) {
+      if (ev.target !== leftBlock) return;
+      if (ev.propertyName !== 'width' && ev.propertyName !== 'max-width') return;
+      finish();
+    }
+    leftBlock.addEventListener('transitionend', onEnd);
+    window.setTimeout(finish, LIBRARY_PANEL_SLIDE_MS + 48);
+  }
 
   function scenesCollapsedNow() {
     return typeof QuotationEditor !== 'undefined' &&
@@ -283,10 +319,16 @@ var QuotationBuilderView = (function () {
     setChromeCollapsed(!isChromeCollapsed());
   }
 
-  function applyLeftCollapsed(collapsed) {
-    if (leftLocked) return;
+  function applyLeftCollapsed(collapsed, onDone) {
+    if (leftLocked) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     leftCollapsed = !!collapsed;
-    if (!rootEl) return;
+    if (!rootEl) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
     var workspace = rootEl.querySelector('.quotation-workspace');
     var recursos = rootEl.querySelector('#quotationRecursosPanel');
     if (workspace) workspace.classList.toggle('is-left-collapsed', leftCollapsed);
@@ -296,12 +338,12 @@ var QuotationBuilderView = (function () {
         '--quotation-recursos-w',
         leftCollapsed ? '0px' : RECURSOS_W
       );
-    } catch (eW) {}
+    } catch (eW) { /* ignore */ }
     syncFloatButton();
-    try {
-      window.dispatchEvent(new Event('resize'));
-    } catch (eR) {}
-    if (!chromeFoldBatch) syncChromeFoldButton();
+    whenLibraryPanelTransition(function () {
+      if (!chromeFoldBatch) syncChromeFoldButton();
+      if (typeof onDone === 'function') onDone();
+    });
   }
 
   function applyRightCollapsed(collapsed) {

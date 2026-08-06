@@ -1252,6 +1252,62 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function libraryScopeEl() {
+    var left = document.getElementById('quotationLeftBody');
+    if (left) return left;
+    if (rootEl) {
+      var col = rootEl.querySelector('.qe-col--library');
+      if (col) return col;
+    }
+    return rootEl;
+  }
+
+  function syncLibraryFoldAllButton() {
+    var scope = libraryScopeEl();
+    if (!scope) return;
+    var btn = scope.querySelector('[data-qe-toggle-all-groups]');
+    if (!btn) return;
+    var collapsed = !!state.libraryGroupsCollapsed;
+    var label = collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos';
+    btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    btn.setAttribute('title', label);
+    btn.setAttribute('aria-label', label);
+  }
+
+  function syncLibraryGroupOpen(groupId) {
+    var scope = libraryScopeEl();
+    if (!scope) return false;
+    groupId = String(groupId || '');
+    var section = scope.querySelector('[data-qe-group="' + groupId + '"]');
+    if (!section) return false;
+    var open = state.openGroups[groupId] !== false;
+    section.classList.toggle('is-open', open);
+    var btn = section.querySelector('[data-qe-toggle="' + groupId + '"]');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    return true;
+  }
+
+  function syncLibraryFolderOpen(folderId) {
+    var scope = libraryScopeEl();
+    if (!scope) return false;
+    folderId = String(folderId || '');
+    var block = scope.querySelector('[data-qe-folder-block="' + folderId + '"]');
+    if (!block) return false;
+    var open = state.openFolders[folderId] !== false;
+    block.classList.toggle('is-open', open);
+    var btn = block.querySelector('[data-qe-folder-toggle="' + folderId + '"]');
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    return true;
+  }
+
+  function syncAllLibraryGroupsOpen() {
+    CONTENT_GROUPS.forEach(function (g) {
+      if (!g) return;
+      syncLibraryGroupOpen(g.id);
+    });
+    syncLibraryFoldAllButton();
+  }
+
   function toggleAllLibraryGroups() {
     var collapse = !state.libraryGroupsCollapsed;
     state.libraryGroupsCollapsed = collapse;
@@ -1261,7 +1317,7 @@ var QuotationEditor = (function () {
     });
     state.libraryGroupsCollapsed = collapse;
     persistLibraryUi();
-    rerender();
+    syncAllLibraryGroupsOpen();
   }
 
   function groupFoldersAnyOpen(groupId) {
@@ -1289,7 +1345,11 @@ var QuotationEditor = (function () {
         state.openFolders[f.id] = true;
       });
       persistLibraryUi();
-      rerender();
+      syncLibraryGroupOpen(groupId);
+      folders.forEach(function (f) {
+        if (f) syncLibraryFolderOpen(f.id);
+      });
+      syncLibraryFoldAllButton();
       return;
     }
 
@@ -1299,7 +1359,9 @@ var QuotationEditor = (function () {
       state.openFolders[f.id] = !anyOpen;
     });
     persistLibraryUi();
-    rerender();
+    folders.forEach(function (f) {
+      if (f) syncLibraryFolderOpen(f.id);
+    });
   }
 
   function libraryGroupFoldersFoldHtml(group) {
@@ -3522,8 +3584,7 @@ var QuotationEditor = (function () {
           '<span class="qe-content__count">' + kids.length + '</span>' +
           libMenuTriggerHtml('folder', folder.id, 'Opciones de carpeta') +
         '</div>' +
-        (open
-          ? ('<div class="qe-folder__body">' +
+        '<div class="qe-folder__body">' +
               librarySelectAllRowHtml(group.id, folder.id) +
               (kids.length
                 ? ('<div class="qe-content__items">' +
@@ -3531,8 +3592,7 @@ var QuotationEditor = (function () {
                   '</div>')
                 : '') +
               '<div class="qe-content__actions">' + addControls + '</div>' +
-            '</div>')
-          : '') +
+            '</div>' +
       '</div>';
   }
 
@@ -3691,7 +3751,7 @@ var QuotationEditor = (function () {
             libraryGroupFoldersFoldHtml(group) +
             (canSelect || selectOn ? librarySelectTriggerHtml(group) : '') +
           '</div>' +
-          (open ? groupBodyHtml(group) : '') +
+          groupBodyHtml(group) +
         '</section>';
     }).join('');
 
@@ -4950,7 +5010,7 @@ var QuotationEditor = (function () {
    * Only the device canvas rectangle changes size/aspect; it may scale
    * down to fit the remaining slot — never the surrounding editor UI.
    */
-  function fitStageWorkspace() {
+  function fitStageWorkspaceNow() {
     if (!rootEl) return;
     var col = rootEl.querySelector('.qe-col--canvas');
     var shell = rootEl.querySelector('[data-qe-stage-shell]');
@@ -5146,6 +5206,29 @@ var QuotationEditor = (function () {
       try { QuotationGuides.refresh(); } catch (eGuidesFit) { /* ignore */ }
     }
     if (openSceneGroupFloatId) sceneGroupFloatReposition();
+  }
+
+  var stageFitSuspend = 0;
+  var stageFitPending = false;
+
+  function suspendStageFit() {
+    stageFitSuspend++;
+  }
+
+  function resumeStageFit() {
+    stageFitSuspend = Math.max(0, stageFitSuspend - 1);
+    if (stageFitSuspend === 0 && stageFitPending) {
+      stageFitPending = false;
+      fitStageWorkspaceNow();
+    }
+  }
+
+  function fitStageWorkspace() {
+    if (stageFitSuspend > 0) {
+      stageFitPending = true;
+      return;
+    }
+    fitStageWorkspaceNow();
   }
 
   var STAGE_SCENES_FOLD_H = 16;
@@ -9198,13 +9281,14 @@ var QuotationEditor = (function () {
     state.openGroups[groupId] = !(state.openGroups[groupId] !== false);
     syncLibraryGroupsCollapsedFromState();
     persistLibraryUi();
-    rerender();
+    if (!syncLibraryGroupOpen(groupId)) rerender();
+    else syncLibraryFoldAllButton();
   }
 
   function toggleFolder(folderId) {
     state.openFolders[folderId] = !(state.openFolders[folderId] !== false);
     persistLibraryUi();
-    rerender();
+    if (!syncLibraryFolderOpen(folderId)) rerender();
   }
 
   function createFolder(groupId, name) {
@@ -11586,6 +11670,8 @@ var QuotationEditor = (function () {
     toggleCanvasPreviewMode: toggleCanvasPreviewMode,
     isCanvasPreviewMode: isCanvasPreviewMode,
     applyScenesCollapsed: applyScenesCollapsed,
+    suspendStageFit: suspendStageFit,
+    resumeStageFit: resumeStageFit,
     isScenesCollapsed: function () { return !!state.scenesCollapsed; },
     setScenesLocked: setScenesLocked,
     isScenesLocked: function () { return !!state.scenesLocked; },
