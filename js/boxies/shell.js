@@ -65,6 +65,11 @@ var BoxiesShell = (function () {
                   '<span class="boxies-user-menu__item-text">Premium</span>' +
                   '<span class="boxies-user-menu__check" aria-hidden="true"></span>' +
                 '</button>' +
+                '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--theme" role="menuitemradio"' +
+                  ' data-user-menu-action="theme" data-theme-id="graphite" aria-checked="false">' +
+                  '<span class="boxies-user-menu__item-text">Graphite</span>' +
+                  '<span class="boxies-user-menu__check" aria-hidden="true"></span>' +
+                '</button>' +
                 '<div class="boxies-user-menu__sep" aria-hidden="true"></div>' +
                 '<button type="button" class="boxies-user-menu__item boxies-user-menu__item--exit" role="menuitem"' +
                   ' data-user-menu-action="logout">Cerrar sesión</button>' +
@@ -174,6 +179,7 @@ var BoxiesShell = (function () {
     }
     if (typeof getTheme === 'function') return getTheme();
     if (document.body && document.body.classList.contains('theme-premium')) return 'premium';
+    if (document.body && document.body.classList.contains('theme-graphite')) return 'graphite';
     return 'classic';
   }
 

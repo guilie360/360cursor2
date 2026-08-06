@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="../css/boxies/quotation-builder.css?v=ws7671">
   <link rel="stylesheet" href="../css/themes/theme-classic.css?v=ws7672">
   <link rel="stylesheet" href="../css/themes/theme-premium.css?v=ws7674">
+  <link rel="stylesheet" href="../css/themes/theme-graphite.css?v=ws7676">
   <link rel="stylesheet" href="../css/boxies/hero-renderer.css?v=ws7488">
   <link rel="stylesheet" href="../css/boxies/sistema.css?v=ws51">
 </head>
@@ -30,18 +31,18 @@
     /* Editor theme — apply stored preference before paint (Classic = default) */
     (function () {
       var KEY = 'boxies_editor_theme_v1';
-      var VALID = { classic: 1, premium: 1 };
+      var VALID = { classic: 1, premium: 1, graphite: 1 };
       var id = 'classic';
       try {
         id = String(localStorage.getItem(KEY) || 'classic').trim().toLowerCase();
       } catch (_) {}
       if (!VALID[id]) id = 'classic';
-      document.body.classList.remove('theme-classic', 'theme-premium');
+      document.body.classList.remove('theme-classic', 'theme-premium', 'theme-graphite');
       document.body.classList.add('theme-' + id);
       document.body.dataset.editorTheme = id;
     })();
   </script>
-  <script src="../js/boxies/editor-theme.js?v=ws7672"></script>
+  <script src="../js/boxies/editor-theme.js?v=ws7676"></script>
   <script>
     /* Identity debug probe — must exist before any builder click */
     window.__BOXIES_IDENTITY_PROBE__ = 'ws54i2';
@@ -320,7 +321,7 @@
 
   <!-- BOXIES Core -->
   <script src="../js/boxies/prefs.js?v=ws7006"></script>
-  <script src="../js/boxies/shell.js?v=ws7673"></script>
+  <script src="../js/boxies/shell.js?v=ws7676"></script>
   <script src="../js/boxies/pages.js?v=ws54"></script>
   <script src="../js/boxies/router.js?v=ws7200"></script>
   <script src="../js/boxies/auth-bridge.js?v=ws54"></script>

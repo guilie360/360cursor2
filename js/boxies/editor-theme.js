@@ -1,6 +1,6 @@
 /**
- * BOXIES Editor Theme System — Classic vs Premium chrome.
- * Switch with setTheme("classic") | setTheme("premium").
+ * BOXIES Editor Theme System — Classic, Premium, Graphite chrome.
+ * Switch with setTheme("classic") | setTheme("premium") | setTheme("graphite").
  * Independent from ThemeSystem (showroom visitor themes).
  */
 (function (global) {
@@ -9,7 +9,8 @@
   var STORAGE_KEY = 'boxies_editor_theme_v1';
   var CLASS_BY_ID = {
     classic: 'theme-classic',
-    premium: 'theme-premium'
+    premium: 'theme-premium',
+    graphite: 'theme-graphite'
   };
   var VALID = Object.keys(CLASS_BY_ID);
 
