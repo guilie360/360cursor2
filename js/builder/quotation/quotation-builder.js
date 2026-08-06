@@ -213,7 +213,7 @@ var QuotationBuilderView = (function () {
   }
 
   var chromeFoldBatch = false;
-  var LIBRARY_PANEL_SLIDE_MS = 280;
+  var LIBRARY_PANEL_SLIDE_MS = 440;
 
   function whenLibraryPanelTransition(onDone) {
     if (!rootEl) {
@@ -221,33 +221,35 @@ var QuotationBuilderView = (function () {
       return;
     }
     var leftBlock = rootEl.querySelector('.quotation-left-block');
+    var mainEl = rootEl.querySelector('.quotation-main');
     if (!leftBlock) {
       if (typeof onDone === 'function') onDone();
       return;
     }
     leftBlock.classList.add('is-library-panel-sliding');
-    if (typeof QuotationEditor !== 'undefined' &&
-        typeof QuotationEditor.suspendStageFit === 'function') {
-      try { QuotationEditor.suspendStageFit(); } catch (eSuspend) { /* ignore */ }
-    }
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eR) { /* ignore */ }
     var finished = false;
     function finish() {
       if (finished) return;
       finished = true;
       leftBlock.removeEventListener('transitionend', onEnd);
+      if (mainEl) mainEl.removeEventListener('transitionend', onEnd);
       leftBlock.classList.remove('is-library-panel-sliding');
-      if (typeof QuotationEditor !== 'undefined' &&
-          typeof QuotationEditor.resumeStageFit === 'function') {
-        try { QuotationEditor.resumeStageFit(); } catch (eResume) { /* ignore */ }
-      }
+      try {
+        window.dispatchEvent(new Event('resize'));
+      } catch (eR2) { /* ignore */ }
       if (typeof onDone === 'function') onDone();
     }
     function onEnd(ev) {
-      if (ev.target !== leftBlock) return;
-      if (ev.propertyName !== 'transform') return;
+      var t = ev.target;
+      if (t !== leftBlock && t !== mainEl) return;
+      if (ev.propertyName !== 'transform' && ev.propertyName !== 'margin-left') return;
       finish();
     }
     leftBlock.addEventListener('transitionend', onEnd);
+    if (mainEl) mainEl.addEventListener('transitionend', onEnd);
     window.setTimeout(finish, LIBRARY_PANEL_SLIDE_MS + 32);
   }
 
@@ -341,6 +343,9 @@ var QuotationBuilderView = (function () {
       );
     } catch (eW) { /* ignore */ }
     syncFloatButton();
+    try {
+      window.dispatchEvent(new Event('resize'));
+    } catch (eResize) { /* ignore */ }
     whenLibraryPanelTransition(function () {
       if (!chromeFoldBatch) syncChromeFoldButton();
       if (typeof onDone === 'function') onDone();

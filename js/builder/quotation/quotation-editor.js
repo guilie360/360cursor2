@@ -5580,7 +5580,11 @@ var QuotationEditor = (function () {
       if (col) stageRo.observe(col);
       var workspace = rootEl && (rootEl.closest('.quotation-workspace') ||
         document.querySelector('.quotation-workspace'));
-      if (workspace) stageRo.observe(workspace);
+      if (workspace) {
+        stageRo.observe(workspace);
+        var mainEl = workspace.querySelector('.quotation-main');
+        if (mainEl) stageRo.observe(mainEl);
+      }
       var dockEl = document.getElementById('boxiesDock');
       if (dockEl) stageRo.observe(dockEl);
     }

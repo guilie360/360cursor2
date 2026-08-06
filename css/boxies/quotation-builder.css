@@ -4314,7 +4314,7 @@ body.quotation-canvas-first .builder-workspace,
   overflow: hidden;
 }
 
-/* Left block: biblioteca — GPU slide (transform), sin animar width (evita reflow lag). */
+/* Left block: biblioteca — GPU slide + main margin animado (misma curva que props). */
 .quotation-left-block {
   position: absolute;
   left: 0;
@@ -4336,7 +4336,9 @@ body.quotation-canvas-first .builder-workspace,
   z-index: 6;
   contain: strict;
   transform: translate3d(0, 0, 0);
-  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    border-color var(--qe-panel-fade-duration, 0.28s) ease;
 }
 
 .quotation-left-block.is-library-panel-sliding .quotation-left-body {
@@ -4359,6 +4361,7 @@ body.quotation-canvas-first .builder-workspace,
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: margin-left var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .quotation-workspace.is-left-collapsed .quotation-main {
@@ -4594,10 +4597,11 @@ body.quotation-canvas-first .builder-workspace,
 #quotationLeftFloatBtn.quotation-panel-float--left,
 .quotation-workspace > .quotation-panel-float--left {
   right: auto !important;
-  left: var(--quotation-recursos-w, 220px) !important;
+  left: 220px !important;
   transform: translate(0, -50%) !important;
   border-left: none;
   border-radius: 0 7px 7px 0;
+  transition: left var(--qe-panel-slide-duration, 0.44s) var(--qe-panel-slide-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 .quotation-workspace.is-left-collapsed > #quotationLeftFloatBtn.quotation-panel-float--left,
