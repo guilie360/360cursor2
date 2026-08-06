@@ -5893,7 +5893,13 @@ var ExperienciaCanvas = (function () {
           deltaMultiPaint,
           drag.pendingDeg,
           layerW,
-          layerH
+          layerH,
+          {
+            cx: drag.startX,
+            cy: drag.startY,
+            w: drag.startW,
+            h: drag.startH
+          }
         );
         if (drag.liveRefs) {
           paintMultiSelectLiveFast(drag.liveRefs, rotBoxes, layerW, layerH);
@@ -5903,6 +5909,35 @@ var ExperienciaCanvas = (function () {
           }
           (drag.liveRefs.items || []).forEach(function (item) {
             if (item.gizmo) item.gizmo.classList.remove('is-sizing');
+          });
+        }
+        return;
+      }
+
+      if ((dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') && drag.mode === 'rotate') {
+        var groupUnionBox = {
+          cx: drag.startX,
+          cy: drag.startY,
+          w: drag.startW,
+          h: drag.startH,
+          rot: Number(drag.pendingDeg) || 0,
+          kind: dragType
+        };
+        if (refs && refs.gizmo) {
+          paintShapeGizmoEl(refs.gizmo, groupUnionBox, layerW, layerH);
+          refs.gizmo.classList.add('is-rotating');
+        }
+        if (drag.liveRefs && drag.liveRefs.items) {
+          drag.liveRefs.items.forEach(function (item) {
+            paintRotateVm(item.el, item.gizmo, getOverlayItemVm(sceneId, item.id));
+            if (item.gizmo) {
+              item.gizmo.classList.remove('is-sizing');
+              item.gizmo.classList.add('is-rotating');
+            }
+          });
+        } else if (refs && refs.members) {
+          refs.members.forEach(function (m) {
+            paintRotateVm(m.el, null, getOverlayItemVm(sceneId, m.id));
           });
         }
         return;
@@ -8167,37 +8202,23 @@ var ExperienciaCanvas = (function () {
       };
     }
 
-    function computeMultiSelectLiveRotateBoxes(snap, pivotX, pivotY, deltaDeg, unionRotDeg, layerW, layerH) {
+    function computeMultiSelectLiveRotateBoxes(snap, pivotX, pivotY, deltaDeg, unionRotDeg, layerW, layerH, unionFixed) {
       layerW = Math.max(1, Number(layerW) || 1000);
       layerH = Math.max(1, Number(layerH) || 1000);
       var members = {};
-      var minL = Infinity;
-      var minT = Infinity;
-      var maxR = -Infinity;
-      var maxB = -Infinity;
       Object.keys(snap || {}).forEach(function (id) {
         var s = snap[id];
         if (!s) return;
-        var b = multiSelectRotatedMemberBox(s, pivotX, pivotY, deltaDeg, layerW, layerH);
-        members[id] = b;
-        var cxPx = (b.cx / 100) * layerW;
-        var cyPx = (b.cy / 100) * layerH;
-        var wPx = (b.w / 100) * layerW;
-        var hPx = (b.h / 100) * layerH;
-        overlayRotatedCornersPx(cxPx, cyPx, wPx, hPx, b.rot).forEach(function (c) {
-          if (c.x < minL) minL = c.x;
-          if (c.y < minT) minT = c.y;
-          if (c.x > maxR) maxR = c.x;
-          if (c.y > maxB) maxB = c.y;
-        });
+        members[id] = multiSelectRotatedMemberBox(s, pivotX, pivotY, deltaDeg, layerW, layerH);
       });
       var union = null;
-      if (isFinite(minL)) {
+      if (unionFixed && unionFixed.w > 0 && unionFixed.h > 0) {
+        /* Live rotate — fixed start frame + CSS rot (no AABB expansion jitter). */
         union = {
-          cx: (((minL + maxR) / 2) / layerW) * 100,
-          cy: (((minT + maxB) / 2) / layerH) * 100,
-          w: Math.max(0.5, ((maxR - minL) / layerW) * 100),
-          h: Math.max(0.5, ((maxB - minT) / layerH) * 100),
+          cx: Number(unionFixed.cx) || 0,
+          cy: Number(unionFixed.cy) || 0,
+          w: Number(unionFixed.w) || 0.5,
+          h: Number(unionFixed.h) || 0.5,
           rot: Number(unionRotDeg) || 0,
           kind: 'MULTI_SELECT'
         };
