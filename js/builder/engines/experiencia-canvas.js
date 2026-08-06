@@ -1704,7 +1704,6 @@ var ExperienciaCanvas = (function () {
     var multi = !!opts.multi;
     var multiUnion = !!opts.multiUnion;
     var handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-    var rotCorners = ['nw', 'ne', 'se', 'sw'];
     var sizeWpx = Math.max(1, Math.round((m.gw / 100) * layerW));
     var sizeHpx = Math.max(1, Math.round((m.gh / 100) * layerH));
     var sizeLabel = m.st === 'SHAPE_LINE'
@@ -1738,11 +1737,13 @@ var ExperienciaCanvas = (function () {
       html += '<div class="builder-exp-sel-move" data-exp-sel-move="1"></div>';
     }
     html += '<div class="builder-exp-sel-box"></div>';
-    if (!multi && !isMultiSelectGizmo) {
-      html += rotCorners.map(function (c) {
-        return '<span class="builder-exp-sel-rot-zone" data-handle="rotate" data-rot-corner="' +
-          c + '" aria-label="Rotar"></span>';
-      }).join('');
+    if (!multi && !isMultiSelectGizmo && !isLineGizmo) {
+      html += '' +
+        '<div class="builder-exp-sel-rotate" aria-hidden="false">' +
+          '<span class="builder-exp-sel-rotate-knob" data-handle="rotate"' +
+            ' aria-label="Rotar" title="Rotar"></span>' +
+          '<span class="builder-exp-sel-rotate-stem" aria-hidden="true"></span>' +
+        '</div>';
     }
     if (!multi) {
       html += handles.map(function (h) {
@@ -3118,6 +3119,14 @@ var ExperienciaCanvas = (function () {
     } catch (eGd) { /* ignore */ }
     /** Session toggle — Alt still bypasses snap while dragging. */
     var overlaySnapEnabled = api.overlaySnapEnabled !== false;
+
+    /** Rotation snap: 45° when imanes on; free when off. Alt bypasses snap. */
+    function overlayRotationSnapDeg(deg, ev) {
+      if (overlaySnapEnabled && !(ev && ev.altKey)) {
+        return Math.round(deg / 45) * 45;
+      }
+      return deg;
+    }
 
     function groupDebugLog() {
       if (!GROUP_DEBUG) return;
@@ -9695,7 +9704,10 @@ var ExperienciaCanvas = (function () {
           unbindOverlayPointerDocs();
           try {
             var gizmoCancel = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
-            if (gizmoCancel) gizmoCancel.classList.remove('is-sizing');
+            if (gizmoCancel) {
+              gizmoCancel.classList.remove('is-sizing');
+              gizmoCancel.classList.remove('is-rotating');
+            }
           } catch (eGzCancel) { /* ignore */ }
           paintButtonsStage();
         }
@@ -9837,10 +9849,7 @@ var ExperienciaCanvas = (function () {
             }
             var ang = Math.atan2(pctT.y - transformDrag.startY, pctT.x - transformDrag.startX);
             var deg = Math.round((ang * 180) / Math.PI) + 90;
-            /* Hold Shift while rotating → snap to 45° increments. */
-            if (ev.shiftKey) {
-              deg = Math.round(deg / 45) * 45;
-            }
+            deg = overlayRotationSnapDeg(deg, ev);
             if (deg > 360) deg = deg % 360;
             if (deg < -360) deg = -((-deg) % 360);
             if ((transformDrag.type === 'OVERLAY_GROUP' || transformDrag.type === 'GROUP') &&
@@ -10627,6 +10636,8 @@ var ExperienciaCanvas = (function () {
           }
           if (handleMode !== 'rotate') {
             try { gizmo.classList.add('is-sizing'); } catch (eSz) { /* ignore */ }
+          } else {
+            try { gizmo.classList.add('is-rotating'); } catch (eRot) { /* ignore */ }
           }
           bindOverlayPointerDocs();
           try { buttonsLayer.setPointerCapture(ev.pointerId); } catch (eCapG) {}
@@ -11108,7 +11119,10 @@ var ExperienciaCanvas = (function () {
           try {
             if (!endedLiveRefs) {
               var gizmoEnd = buttonsLayer && buttonsLayer.querySelector('[data-exp-gizmo]');
-              if (gizmoEnd) gizmoEnd.classList.remove('is-sizing');
+              if (gizmoEnd) {
+                gizmoEnd.classList.remove('is-sizing');
+                gizmoEnd.classList.remove('is-rotating');
+              }
             }
           } catch (eGz) { /* ignore */ }
           var shapeResizeSettled = isShapeType(endType) && rotBtnId && !wasRotate &&
