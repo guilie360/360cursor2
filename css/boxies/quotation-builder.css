@@ -1508,6 +1508,8 @@
 
 .qe-scenes-group-float {
   width: 168px !important;
+  min-width: 168px !important;
+  max-width: 168px !important;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -5664,7 +5666,7 @@ body.quotation-canvas-first .builder-workspace,
   box-sizing: border-box;
 }
 
-.qe-canvas-tool-float:not(.is-resizable) {
+.qe-canvas-tool-float:not(.is-resizable):not(.qe-scenes-group-float) {
   width: 205px;
   min-width: 205px;
   max-width: min(205px, calc(100vw - 32px));
