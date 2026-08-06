@@ -2353,16 +2353,231 @@ var QuotationEditor = (function () {
     return true;
   }
 
-  function toggleSceneGroupCollapsed(groupId) {
-    var grp = sceneGroupById(groupId);
-    if (!grp) return;
-    grp.collapsed = !grp.collapsed;
-    markDirtyLocal();
-    rerender();
-    requestAnimationFrame(function () {
-      syncExpandedGroupPanels();
-      requestAnimationFrame(syncExpandedGroupPanels);
+  /* ── Scene group float (body portal — mismo modelo que Checklist / QuotationWindowManager) ── */
+  var SCENE_GROUP_FLOAT_HOST_ID = 'qeScenesGroupPortal';
+  var openSceneGroupFloatId = null;
+  var sceneGroupFloatUiBound = false;
+
+  function ensureSceneGroupFloatHost() {
+    var host = document.getElementById(SCENE_GROUP_FLOAT_HOST_ID);
+    if (!host) {
+      host = document.createElement('div');
+      host.id = SCENE_GROUP_FLOAT_HOST_ID;
+      host.className = 'qe-canvas-tools-host qe-scenes-group-portal';
+      host.setAttribute('aria-live', 'polite');
+      document.body.appendChild(host);
+    }
+    return host;
+  }
+
+  function sceneGroupFloatAnchorInStrip(groupId) {
+    var strip = document.querySelector('[data-qe-scenes-track]');
+    if (!strip) return null;
+    var anchor = null;
+    strip.querySelectorAll('[data-qe-scene-group-toggle]').forEach(function (btn) {
+      if (String(btn.getAttribute('data-qe-scene-group-toggle')) === String(groupId)) {
+        anchor = btn;
+      }
     });
+    return anchor;
+  }
+
+  function sceneGroupFloatScenesHtml(grp) {
+    if (!grp) return '<p class="qe-scenes-group-float__empty">Sin escenas</p>';
+    var html = '';
+    (grp.sceneIds || []).forEach(function (sid) {
+      var sc = sceneById(sid);
+      if (sc) html += sceneThumbWrapHtml(sc, { inGroup: true, inPanel: true });
+    });
+    return html || '<p class="qe-scenes-group-float__empty">Sin escenas en este grupo</p>';
+  }
+
+  function sceneGroupFloatShellHtml(grp) {
+    var gid = escapeHtml(String(grp.id));
+    var title = escapeHtml(String(grp.name || 'Grupo').toLowerCase());
+    return '' +
+      '<div class="qe-canvas-tool-float qe-scenes-group-float"' +
+        ' data-qe-scene-group-float="' + gid + '" role="dialog"' +
+        ' aria-label="Escenas del grupo">' +
+        '<div class="qe-canvas-tool-float__head">' +
+          '<span class="qe-canvas-tool-float__title">' + title + '</span>' +
+          '<div class="qe-canvas-tool-float__actions">' +
+            '<button type="button" class="qe-canvas-tool-float__close"' +
+              ' data-qe-scene-group-float-close aria-label="Cerrar">&times;</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="qe-canvas-tool-float__body qe-scenes-group-float__body">' +
+          '<div class="qe-scenes-group-float__scroll" data-qe-scene-group-float-scroll>' +
+            sceneGroupFloatScenesHtml(grp) +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function positionSceneGroupFloat(floatEl, anchorEl) {
+    if (!floatEl || !anchorEl) return;
+    var rect = anchorEl.getBoundingClientRect();
+    if (!rect.width && !rect.height) return;
+    var gap = 8;
+    var pad = 8;
+    var width = Math.max(168, Math.round(rect.width));
+    var vw = window.innerWidth || document.documentElement.clientWidth || 1280;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 720;
+    var left = Math.max(pad, Math.min(rect.left, vw - width - pad));
+    var top = rect.bottom + gap;
+    var maxH = Math.max(160, vh - top - pad);
+    floatEl.style.position = 'fixed';
+    floatEl.style.left = left + 'px';
+    floatEl.style.top = top + 'px';
+    floatEl.style.width = width + 'px';
+    floatEl.style.maxHeight = maxH + 'px';
+    floatEl.style.height = 'auto';
+    floatEl.style.bottom = 'auto';
+    floatEl.style.zIndex = '12051';
+    var scroll = floatEl.querySelector('[data-qe-scene-group-float-scroll]');
+    if (scroll) scroll.style.maxHeight = Math.max(120, maxH - 44) + 'px';
+  }
+
+  function syncSceneGroupStripOpenState() {
+    document.querySelectorAll('[data-qe-scenes-track] [data-qe-scene-group-block]').forEach(function (block) {
+      var bid = block.getAttribute('data-qe-scene-group-block');
+      var open = !!(bid && openSceneGroupFloatId && String(bid) === String(openSceneGroupFloatId));
+      block.classList.toggle('is-open-float', open);
+      var btn = block.querySelector('[data-qe-scene-group-toggle]');
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  function sceneGroupFloatOpen(groupId, anchorEl) {
+    groupId = String(groupId || '');
+    if (!groupId) return;
+    var grp = sceneGroupById(groupId);
+    if (!grp || grp.parentGroupId) return;
+    anchorEl = anchorEl || sceneGroupFloatAnchorInStrip(groupId);
+    if (!anchorEl) return;
+
+    openSceneGroupFloatId = groupId;
+    grp.collapsed = false;
+
+    var host = ensureSceneGroupFloatHost();
+    host.innerHTML = sceneGroupFloatShellHtml(grp);
+    host.setAttribute('aria-hidden', 'false');
+
+    var floatEl = host.querySelector('[data-qe-scene-group-float]');
+    if (floatEl) positionSceneGroupFloat(floatEl, anchorEl);
+
+    syncSceneGroupStripOpenState();
+
+    if (rootEl) {
+      bindSceneNameEditing(rootEl);
+      bindSceneDragReorder(rootEl);
+    }
+  }
+
+  function sceneGroupFloatClose() {
+    if (!openSceneGroupFloatId) return;
+    var grp = sceneGroupById(openSceneGroupFloatId);
+    if (grp) grp.collapsed = true;
+    openSceneGroupFloatId = null;
+    var host = document.getElementById(SCENE_GROUP_FLOAT_HOST_ID);
+    if (host) {
+      host.innerHTML = '';
+      host.setAttribute('aria-hidden', 'true');
+    }
+    syncSceneGroupStripOpenState();
+  }
+
+  function sceneGroupFloatToggle(groupId, anchorEl) {
+    ensureSceneGroups();
+    groupId = String(groupId || '');
+    if (!groupId) return;
+    if (openSceneGroupFloatId === groupId) {
+      sceneGroupFloatClose();
+      return;
+    }
+    sceneGroupFloatOpen(groupId, anchorEl);
+  }
+
+  function sceneGroupFloatReposition() {
+    if (!openSceneGroupFloatId) return;
+    var host = document.getElementById(SCENE_GROUP_FLOAT_HOST_ID);
+    var floatEl = host && host.querySelector('[data-qe-scene-group-float]');
+    var anchor = sceneGroupFloatAnchorInStrip(openSceneGroupFloatId);
+    if (floatEl && anchor) positionSceneGroupFloat(floatEl, anchor);
+  }
+
+  function resolveStripGroupToggleTarget(e) {
+    if (!e || !e.target || !e.target.closest) return null;
+    var track = e.target.closest('[data-qe-scenes-track]');
+    if (!track) return null;
+    var wrap = e.target.closest('[data-qe-scene-group-wrap]');
+    if (!wrap || !track.contains(wrap)) return null;
+    if (e.target.closest('[data-qe-scene-group-name]') && (e.detail || 1) >= 2) return null;
+    return wrap.querySelector('[data-qe-scene-group-toggle]');
+  }
+
+  function initSceneGroupFloatUi() {
+    if (sceneGroupFloatUiBound) return;
+    sceneGroupFloatUiBound = true;
+
+    document.addEventListener('click', function (e) {
+      if (!e.target || !e.target.closest) return;
+
+      if (e.target.closest('[data-qe-scene-group-float-close]')) {
+        sceneGroupFloatClose();
+        markDirtyLocal();
+        return;
+      }
+
+      var floatHost = document.getElementById(SCENE_GROUP_FLOAT_HOST_ID);
+      if (floatHost && floatHost.contains(e.target)) {
+        var sceneBtn = e.target.closest('[data-qe-scene]');
+        if (sceneBtn) {
+          var sid = sceneBtn.getAttribute('data-qe-scene');
+          if (sid) {
+            if (e.shiftKey && !isHeroScene(sceneById(sid))) {
+              toggleSceneSelection(sid);
+            } else {
+              clearSceneSelection();
+              selectScene(sid);
+            }
+          }
+        }
+        return;
+      }
+
+      var toggleBtn = resolveStripGroupToggleTarget(e);
+      if (toggleBtn) {
+        ensureSceneGroups();
+        sceneGroupFloatToggle(
+          toggleBtn.getAttribute('data-qe-scene-group-toggle'),
+          toggleBtn
+        );
+        markDirtyLocal();
+        return;
+      }
+
+      if (!openSceneGroupFloatId) return;
+      var stillOpen = openSceneGroupFloatId;
+      window.setTimeout(function () {
+        if (openSceneGroupFloatId !== stillOpen) return;
+        sceneGroupFloatClose();
+        markDirtyLocal();
+      }, 0);
+    });
+
+    if (!document.documentElement.dataset.qeSceneGroupFloatResize) {
+      document.documentElement.dataset.qeSceneGroupFloatResize = '1';
+      window.addEventListener('resize', sceneGroupFloatReposition, { passive: true });
+    }
+  }
+
+  function toggleSceneGroupCollapsed(groupId) {
+    sceneGroupFloatToggle(groupId, sceneGroupFloatAnchorInStrip(groupId));
+  }
+
+  function syncExpandedGroupPanels() {
+    sceneGroupFloatReposition();
   }
 
   function renameSceneGroup(groupId, name) {
@@ -3990,33 +4205,23 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
-  function sceneGroupBlockHtml(grp, opts) {
-    opts = opts || {};
-    var inPanel = !!opts.inPanel;
+  function sceneGroupBlockHtml(grp) {
     if (!grp) return '';
-    var expanded = grp.collapsed === false;
-    var inner = '';
-    (grp.childGroupIds || []).forEach(function (cid) {
-      inner += sceneGroupBlockHtml(sceneGroupById(cid), { inPanel: true });
-    });
-    (grp.sceneIds || []).forEach(function (sid) {
-      inner += sceneThumbWrapHtml(sceneById(sid), { inGroup: true, inPanel: inPanel });
-    });
+    var open = openSceneGroupFloatId === grp.id;
     var count = (grp.sceneIds || []).length;
     (grp.childGroupIds || []).forEach(function (cid) {
       var child = sceneGroupById(cid);
       if (child) count += (child.sceneIds || []).length;
     });
     return '' +
-      '<div class="qe-scenes__group-block' + (expanded ? ' is-expanded' : '') +
-        (inPanel ? ' qe-scenes__group-block--nested' : '') + '"' +
+      '<div class="qe-scenes__group-block' + (open ? ' is-open-float' : '') + '"' +
         ' data-qe-scene-group-block="' + escapeHtml(grp.id) + '">' +
         '<div class="qe-scenes__group-wrap"' +
           ' data-qe-scene-group-drop="' + escapeHtml(grp.id) + '">' +
           '<button type="button" class="qe-scenes__group"' +
             ' data-qe-scene-group-toggle="' + escapeHtml(grp.id) + '"' +
             ' title="' + escapeHtml(grp.name || 'Grupo') + ' (' + count + ')"' +
-            ' aria-expanded="' + (expanded ? 'true' : 'false') + '">' +
+            ' aria-expanded="' + (open ? 'true' : 'false') + '">' +
             '<span class="qe-scenes__group-frame" aria-hidden="true">' +
               sceneFolderIconSvg() +
             '</span>' +
@@ -4026,11 +4231,6 @@ var QuotationEditor = (function () {
             ' title="Doble clic para renombrar">' +
             escapeHtml(String(grp.name || 'Grupo').toLowerCase()) +
           '</span>' +
-        '</div>' +
-        '<div class="qe-scenes__group-panel" data-qe-scene-group-panel="' +
-          escapeHtml(grp.id) + '">' +
-          '<div class="qe-scenes__group-panel-scroll" data-qe-scene-group-children="' +
-            escapeHtml(grp.id) + '">' + inner + '</div>' +
         '</div>' +
       '</div>';
   }
@@ -5469,6 +5669,11 @@ var QuotationEditor = (function () {
     /* fitStageWorkspace reflows the strip — re-pin scroll after layout settles. */
     requestAnimationFrame(function () {
       restoreScenesTrackScroll(uiScroll.scenesLeft);
+      syncSceneGroupStripOpenState();
+      if (openSceneGroupFloatId) {
+        var floatAnchor = sceneGroupFloatAnchorInStrip(openSceneGroupFloatId);
+        if (floatAnchor) sceneGroupFloatOpen(openSceneGroupFloatId, floatAnchor);
+      }
       syncExpandedGroupPanels();
       requestAnimationFrame(function () {
         restoreScenesTrackScroll(uiScroll.scenesLeft);
@@ -5690,8 +5895,12 @@ var QuotationEditor = (function () {
 
   function bindSceneNameEditing(editor) {
     if (!editor) return;
+    var roots = [editor];
+    var portal = document.getElementById('qeScenesGroupPortal');
+    if (portal && portal.childElementCount) roots.push(portal);
     var clickTimer = null;
-    editor.querySelectorAll('.qe-scenes__thumb-name').forEach(function (span) {
+    roots.forEach(function (root) {
+    root.querySelectorAll('.qe-scenes__thumb-name').forEach(function (span) {
       var locked = span.getAttribute('data-qe-scene-name-locked') === '1';
       var id = span.getAttribute('data-qe-scene-name');
 
@@ -5728,16 +5937,28 @@ var QuotationEditor = (function () {
         beginSceneRename(id, span);
       });
     });
+    });
   }
 
   function bindSceneDragReorder(editor) {
     if (!editor) return;
     var track = editor.querySelector('[data-qe-scenes-track]');
     if (!track) return;
+    var portal = document.getElementById('qeScenesGroupPortal');
+    var containers = [track];
+    if (portal && portal.childElementCount) containers.push(portal);
     var dragId = null;
     var dropHint = null;
 
-    track.querySelectorAll('[data-qe-scene-drag]').forEach(function (thumb) {
+    function clearReorderIndicators() {
+      clearSceneReorderIndicators(track);
+      if (portal) clearSceneReorderIndicators(portal);
+    }
+
+    containers.forEach(function (container) {
+    container.querySelectorAll('[data-qe-scene-drag]').forEach(function (thumb) {
+      if (thumb.dataset.qeDragBound === '1') return;
+      thumb.dataset.qeDragBound = '1';
       thumb.addEventListener('dragstart', function (e) {
         dragId = thumb.getAttribute('data-qe-scene-drag');
         dropHint = null;
@@ -5755,16 +5976,23 @@ var QuotationEditor = (function () {
         var wrap = thumb.closest('.qe-scenes__thumb-wrap');
         if (wrap) wrap.classList.remove('is-dragging');
         thumb.classList.remove('is-dragging');
-        clearSceneReorderIndicators(track);
+        clearReorderIndicators();
         track.querySelectorAll('.is-drop-target').forEach(function (el) {
           el.classList.remove('is-drop-target');
         });
+        if (portal) {
+          portal.querySelectorAll('.is-drop-target').forEach(function (el) {
+            el.classList.remove('is-drop-target');
+          });
+        }
         dragId = null;
         dropHint = null;
       });
     });
 
-    track.querySelectorAll('[data-qe-scene-drop]').forEach(function (wrap) {
+    container.querySelectorAll('[data-qe-scene-drop]').forEach(function (wrap) {
+      if (wrap.dataset.qeDropBound === '1') return;
+      wrap.dataset.qeDropBound = '1';
       wrap.addEventListener('dragover', function (e) {
         if (!dragId) return;
         var toId = wrap.getAttribute('data-qe-scene-drop');
@@ -5772,7 +6000,7 @@ var QuotationEditor = (function () {
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-        clearSceneReorderIndicators(track);
+        clearReorderIndicators();
         var rect = wrap.getBoundingClientRect();
         var after = e.clientX > rect.left + rect.width / 2;
         wrap.classList.add(after ? 'is-scene-reorder-after' : 'is-scene-reorder-before');
@@ -5787,7 +6015,7 @@ var QuotationEditor = (function () {
       wrap.addEventListener('drop', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        clearSceneReorderIndicators(track);
+        clearReorderIndicators();
         wrap.classList.remove('is-drop-target');
         var from = dragId || '';
         if (!from && e.dataTransfer) {
@@ -5814,9 +6042,22 @@ var QuotationEditor = (function () {
         }
       });
     });
+    });
 
-    track.querySelectorAll('[data-qe-scene-group-drop]').forEach(function (zone) {
-      zone.addEventListener('dragover', function (e) {
+    var groupDropZones = track.querySelectorAll('[data-qe-scene-group-drop]');
+    if (portal) {
+      portal.querySelectorAll('[data-qe-scene-group-drop]').forEach(function (zone) {
+        bindGroupDropZone(zone);
+      });
+    }
+    groupDropZones.forEach(function (zone) {
+      bindGroupDropZone(zone);
+    });
+
+    function bindGroupDropZone(zone) {
+    if (zone.dataset.qeGroupDropBound === '1') return;
+    zone.dataset.qeGroupDropBound = '1';
+    zone.addEventListener('dragover', function (e) {
         if (!dragId) return;
         e.preventDefault();
         e.stopPropagation();
@@ -5843,7 +6084,7 @@ var QuotationEditor = (function () {
         clearSceneSelection();
         rerender();
       });
-    });
+    }
   }
 
   function isSceneReorderDragActive(e) {
@@ -7052,75 +7293,11 @@ var QuotationEditor = (function () {
     });
   }
 
-  function groupBlockDirectChild(block, className) {
-    if (!block || !block.children) return null;
-    var i;
-    for (i = 0; i < block.children.length; i++) {
-      var ch = block.children[i];
-      if (ch && ch.classList && ch.classList.contains(className)) return ch;
-    }
-    return null;
-  }
-
-  function syncExpandedGroupPanels() {
-    var blocks = document.querySelectorAll(
-      '.qe-scenes__group-block:not(.qe-scenes__group-block--nested)'
-    );
-    if (!blocks.length) return;
-    var canvasEl = document.querySelector('.qe-stage-work') ||
-      document.querySelector('.qe-canvas-fit') ||
-      document.querySelector('[data-qe-stage-shell]');
-    var canvasTop = canvasEl ? canvasEl.getBoundingClientRect().top : 80;
-    blocks.forEach(function (block) {
-      var panel = groupBlockDirectChild(block, 'qe-scenes__group-panel');
-      var wrap = groupBlockDirectChild(block, 'qe-scenes__group-wrap');
-      if (!panel || !wrap) return;
-      var scroll = panel.querySelector('.qe-scenes__group-panel-scroll');
-      if (!block.classList.contains('is-expanded')) {
-        panel.style.position = '';
-        panel.style.left = '';
-        panel.style.width = '';
-        panel.style.bottom = '';
-        panel.style.top = '';
-        panel.style.maxHeight = '';
-        panel.style.zIndex = '';
-        if (scroll) scroll.style.maxHeight = '';
-        return;
-      }
-      var anchor = wrap.querySelector('.qe-scenes__group') || wrap;
-      var rect = anchor.getBoundingClientRect();
-      if (!rect.width && !rect.height) return;
-      var maxH = Math.max(160, rect.top - canvasTop - 20);
-      panel.style.position = 'fixed';
-      panel.style.left = Math.max(8, rect.left) + 'px';
-      panel.style.width = Math.max(148, rect.width) + 'px';
-      panel.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      panel.style.top = 'auto';
-      panel.style.maxHeight = maxH + 'px';
-      panel.style.zIndex = '500';
-      if (scroll) scroll.style.maxHeight = Math.max(120, maxH - 4) + 'px';
-    });
-  }
-
-  /** Capture-phase group toggle — survives strip rerenders. */
-  function bindSceneGroupDelegation(panel) {
-    if (!panel || panel.dataset.qeGroupToggleBound === '1') return;
-    panel.dataset.qeGroupToggleBound = '1';
-    panel.addEventListener('click', function (e) {
-      var btn = e.target && e.target.closest
-        ? e.target.closest('[data-qe-scene-group-toggle]')
-        : null;
-      if (!btn || !panel.contains(btn)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      toggleSceneGroupCollapsed(btn.getAttribute('data-qe-scene-group-toggle'));
-    });
-  }
-
   function bindScenesStripScroll(editor) {
     if (!editor) return;
     var wrap = editor.querySelector('.qe-scenes__track-wrap');
-    if (!wrap) return;
+    if (!wrap || wrap.dataset.qeStripScrollBound === '1') return;
+    wrap.dataset.qeStripScrollBound = '1';
 
     wrap.addEventListener('scroll', function () {
       scenesTrackScrollLeft = wrap.scrollLeft;
@@ -7128,7 +7305,10 @@ var QuotationEditor = (function () {
     }, { passive: true });
 
     wrap.addEventListener('wheel', function (e) {
-      if (e.target && e.target.closest && e.target.closest('.qe-scenes__group-panel-scroll')) {
+      if (e.target && e.target.closest && (
+        e.target.closest('[data-qe-scene-group-float-scroll]') ||
+        e.target.closest('.qe-scenes-group-float__scroll')
+      )) {
         return;
       }
       var delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -7154,10 +7334,6 @@ var QuotationEditor = (function () {
     bindSceneGroupEditing(editor);
     bindScenesStripScroll(editor);
     syncExpandedGroupPanels();
-    if (!document.documentElement.dataset.qeGroupPanelResize) {
-      document.documentElement.dataset.qeGroupPanelResize = '1';
-      window.addEventListener('resize', syncExpandedGroupPanels, { passive: true });
-    }
   }
 
   function openSceneContextMenu(sceneId, clientX, clientY) {
@@ -8092,6 +8268,12 @@ var QuotationEditor = (function () {
     libPointerDrag = null;
     libItemDrag = null;
     folderDrag = null;
+    sceneGroupFloatClose();
+    var groupPortal = document.getElementById(SCENE_GROUP_FLOAT_HOST_ID);
+    if (groupPortal) {
+      groupPortal.innerHTML = '';
+      groupPortal.setAttribute('aria-hidden', 'true');
+    }
     /* Keep documentReady / loadedProjectId / state — only tear down chrome. */
     rootEl = null;
     var rightBody = document.getElementById('quotationRightBody');
@@ -9645,7 +9827,6 @@ var QuotationEditor = (function () {
     bindFocusEsc();
     bindInspectorChrome();
     bindSceneDeleteDelegation(panel);
-    bindSceneGroupDelegation(panel);
     syncRightPanel();
 
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
@@ -9828,10 +10009,10 @@ var QuotationEditor = (function () {
       }
       if (scenesPrev) scenesPrev.addEventListener('click', function () { scrollScenes(-1); });
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
-      bindSceneNameEditing(editor);
-      bindSceneDragReorder(editor);
       bindSceneContextMenus(editor);
       bindSceneGroups(editor);
+      bindSceneNameEditing(editor);
+      bindSceneDragReorder(editor);
       bindFolderMenus();
       bindFolderRenameInputs();
       bindFolderDragReorder();
@@ -11118,6 +11299,8 @@ var QuotationEditor = (function () {
     if (!id) return Promise.resolve(null);
     return load(id);
   }
+
+  initSceneGroupFloatUi();
 
   return {
     render: render,
