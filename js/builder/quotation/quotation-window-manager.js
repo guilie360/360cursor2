@@ -550,6 +550,11 @@ var QuotationWindowManager = (function () {
         var placed = el.getBoundingClientRect();
         applyPosition(el, { left: placed.left, top: placed.top });
       }
+    } else if (opts.fixedWidth) {
+      var fw = Math.max(160, Math.round(Number(opts.fixedWidth) || 205));
+      el.style.width = fw + 'px';
+      el.style.minWidth = fw + 'px';
+      el.style.maxWidth = fw + 'px';
     }
     var win = {
       id: opts.id,

@@ -5664,6 +5664,12 @@ body.quotation-canvas-first .builder-workspace,
   box-sizing: border-box;
 }
 
+.qe-canvas-tool-float:not(.is-resizable) {
+  width: 205px;
+  min-width: 205px;
+  max-width: min(205px, calc(100vw - 32px));
+}
+
 .qe-canvas-tool-float.is-minimized {
   display: none !important;
 }
@@ -5787,9 +5793,23 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .qe-calc__key--eq {
-  background: #fff;
-  color: #111;
-  border-color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.94);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.qe-calc__key--eq:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.qe-checklist-shell .qe-calc {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.qe-calc[tabindex],
+.qe-calc[data-qe-calc-root] {
+  outline: none;
 }
 
 .qe-notes__area {
@@ -6228,12 +6248,16 @@ body.quotation-canvas-first .builder-workspace,
   flex: 1;
   min-height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: #fff;
-  color: #111;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.qe-pomo__btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .qe-pomo__btn--muted {

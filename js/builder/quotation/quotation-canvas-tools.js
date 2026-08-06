@@ -6,10 +6,13 @@ var QuotationCanvasTools = (function () {
   var NOTES_KEY = 'boxies_qe_canvas_notes_v2';
   var NOTES_KEY_LEGACY = 'boxies_qe_canvas_notes_v1';
   var CHECKLIST_KEY = 'boxies_qe_canvas_checklist_v1';
+  var CALC_KEY = 'boxies_qe_canvas_calc_v1';
+  var TOOL_MIN_WIDTH = 205;
+  var FIXED_TOOL_OPTS = { fixedWidth: TOOL_MIN_WIDTH };
   var PAGED_TOOL_RESIZE = {
-    minW: 205,
+    minW: TOOL_MIN_WIDTH,
     maxW: 300,
-    defaultW: 280,
+    defaultW: TOOL_MIN_WIDTH,
     defaultH: 400,
     maxHMargin: 0,
     maxHExtra: 0,
@@ -32,7 +35,8 @@ var QuotationCanvasTools = (function () {
       toolId: toolId,
       mount: mount,
       onClose: onClose,
-      resize: windowOpts.resize || null
+      resize: windowOpts.resize || null,
+      fixedWidth: windowOpts.fixedWidth
     });
   }
 
@@ -58,7 +62,7 @@ var QuotationCanvasTools = (function () {
     if (/^#[0-9a-fA-F]{3}$/.test(s)) {
       return ('#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3]).toLowerCase();
     }
-    return '#ffffff';
+    return '#000000';
   }
 
   function calcEvaluate(expr) {
@@ -75,65 +79,202 @@ var QuotationCanvasTools = (function () {
     }
   }
 
-  function openCalculator() {
-    openWindow('tool-calculator', 'Calculadora', 'calculator', function (bodyEl) {
-      var keys = [
-        'C', '±', '%', '÷',
-        '7', '8', '9', '×',
-        '4', '5', '6', '−',
-        '1', '2', '3', '+',
-        '0', '.', '='
-      ];
-      var btns = keys.map(function (k, i) {
-        var wide = k === '0' && i === keys.length - 3;
-        return '<button type="button" class="qe-calc__key' +
-          (wide ? ' qe-calc__key--wide' : '') +
-          (k === '=' ? ' qe-calc__key--eq' : '') +
-          '" data-qe-calc-key="' + k + '">' + k + '</button>';
-      }).join('');
-      bodyEl.innerHTML =
-        '<div class="qe-calc">' +
-          '<output class="qe-calc__display" data-qe-calc-display>0</output>' +
-          '<div class="qe-calc__keys">' + btns + '</div>' +
-        '</div>';
-      var display = bodyEl.querySelector('[data-qe-calc-display]');
-      var expr = '0';
-      function renderDisplay() {
-        if (display) display.textContent = expr;
+  function nextCalcPageId() {
+    return 'ca_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+  }
+
+  function normalizeCalcState(raw) {
+    var state = raw && typeof raw === 'object' ? raw : {};
+    var pages = Array.isArray(state.pages) ? state.pages : [];
+    pages = pages.map(function (page, idx) {
+      return {
+        id: String(page.id || nextCalcPageId()),
+        title: page.title != null ? String(page.title) : ('Página ' + (idx + 1)),
+        expr: page.expr != null ? String(page.expr) : '0'
+      };
+    });
+    if (!pages.length) {
+      var firstId = nextCalcPageId();
+      pages = [{ id: firstId, title: 'Página 1', expr: '0' }];
+      state.activePageId = firstId;
+    }
+    var activePageId = String(state.activePageId || pages[0].id);
+    if (!pages.some(function (p) { return p.id === activePageId; })) {
+      activePageId = pages[0].id;
+    }
+    return { activePageId: activePageId, pages: pages };
+  }
+
+  function loadCalcState() {
+    try {
+      var raw = localStorage.getItem(CALC_KEY);
+      if (raw) return normalizeCalcState(JSON.parse(raw));
+    } catch (eLoad) { /* ignore */ }
+    var id = nextCalcPageId();
+    return normalizeCalcState({
+      activePageId: id,
+      pages: [{ id: id, title: 'Página 1', expr: '0' }]
+    });
+  }
+
+  function saveCalcState(state) {
+    try { localStorage.setItem(CALC_KEY, JSON.stringify(state)); } catch (eSave) { /* ignore */ }
+  }
+
+  function getActiveCalcPage(state) {
+    for (var i = 0; i < state.pages.length; i++) {
+      if (state.pages[i].id === state.activePageId) return state.pages[i];
+    }
+    return state.pages[0] || null;
+  }
+
+  function calcKeysHtml() {
+    var keys = [
+      'C', '±', '%', '÷',
+      '7', '8', '9', '×',
+      '4', '5', '6', '−',
+      '1', '2', '3', '+',
+      '0', '.', '='
+    ];
+    return keys.map(function (k, i) {
+      var wide = k === '0' && i === keys.length - 3;
+      return '<button type="button" class="qe-calc__key' +
+        (wide ? ' qe-calc__key--wide' : '') +
+        (k === '=' ? ' qe-calc__key--eq' : '') +
+        '" data-qe-calc-key="' + k + '">' + k + '</button>';
+    }).join('');
+  }
+
+  function mapCalcOp(k) {
+    if (k === '÷') return '/';
+    if (k === '×') return '*';
+    if (k === '−') return '-';
+    return k;
+  }
+
+  function bindCalcKeys(host, page, persist) {
+    var display = host.querySelector('[data-qe-calc-display]');
+    var expr = page.expr || '0';
+
+    function renderDisplay() {
+      page.expr = expr;
+      if (display) display.textContent = expr;
+      persist();
+    }
+
+    function pressCalcKey(k) {
+      k = String(k || '');
+      if (k === 'C') {
+        expr = '0';
+        renderDisplay();
+        return;
       }
-      function mapOp(k) {
-        if (k === '÷') return '/';
-        if (k === '×') return '*';
-        if (k === '−') return '-';
-        return k;
+      if (k === '±') {
+        if (expr.charAt(0) === '-') expr = expr.slice(1);
+        else if (expr !== '0') expr = '-' + expr;
+        renderDisplay();
+        return;
       }
-      bodyEl.querySelectorAll('[data-qe-calc-key]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var k = btn.getAttribute('data-qe-calc-key') || '';
-          if (k === 'C') {
-            expr = '0';
-            renderDisplay();
-            return;
-          }
-          if (k === '±') {
-            if (expr.charAt(0) === '-') expr = expr.slice(1);
-            else if (expr !== '0') expr = '-' + expr;
-            renderDisplay();
-            return;
-          }
-          if (k === '=') {
-            expr = calcEvaluate(expr);
-            renderDisplay();
-            return;
-          }
-          var op = mapOp(k);
-          if (expr === '0' && op !== '.') expr = '';
-          if (expr === 'Error') expr = '';
-          expr += op;
-          renderDisplay();
-        });
+      if (k === '=') {
+        expr = calcEvaluate(expr);
+        renderDisplay();
+        return;
+      }
+      if (k === 'Backspace') {
+        if (expr.length <= 1 || expr === 'Error') expr = '0';
+        else expr = expr.slice(0, -1);
+        renderDisplay();
+        return;
+      }
+      var op = mapCalcOp(k);
+      if (expr === '0' && op !== '.') expr = '';
+      if (expr === 'Error') expr = '';
+      expr += op;
+      renderDisplay();
+    }
+
+    host.querySelectorAll('[data-qe-calc-key]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        pressCalcKey(btn.getAttribute('data-qe-calc-key') || '');
       });
     });
+
+    host.setAttribute('tabindex', '-1');
+    host.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k >= '0' && k <= '9') {
+        e.preventDefault();
+        pressCalcKey(k);
+        return;
+      }
+      if (k === '.' || k === ',') {
+        e.preventDefault();
+        pressCalcKey('.');
+        return;
+      }
+      if (k === '+') { e.preventDefault(); pressCalcKey('+'); return; }
+      if (k === '-') { e.preventDefault(); pressCalcKey('−'); return; }
+      if (k === '*') { e.preventDefault(); pressCalcKey('×'); return; }
+      if (k === '/') { e.preventDefault(); pressCalcKey('÷'); return; }
+      if (k === '%') { e.preventDefault(); pressCalcKey('%'); return; }
+      if (k === 'Enter' || k === '=') { e.preventDefault(); pressCalcKey('='); return; }
+      if (k === 'Escape') { e.preventDefault(); pressCalcKey('C'); return; }
+      if (k === 'Backspace') { e.preventDefault(); pressCalcKey('Backspace'); return; }
+    });
+
+    renderDisplay();
+    requestAnimationFrame(function () {
+      try { host.focus(); } catch (eF) { /* ignore */ }
+    });
+  }
+
+  function renderCalcBody(bodyEl, state) {
+    bodyEl.innerHTML =
+      '<div class="qe-checklist-shell">' +
+        toolPagesTabsHtml(state, {
+          pageAttr: 'data-qe-calc-page',
+          addPageAttr: 'data-qe-calc-add-page',
+          ariaLabel: 'Páginas de calculadora'
+        }) +
+        '<div class="qe-calc" data-qe-calc-root tabindex="-1">' +
+          '<output class="qe-calc__display" data-qe-calc-display>0</output>' +
+          '<div class="qe-calc__keys">' + calcKeysHtml() + '</div>' +
+        '</div>' +
+      '</div>';
+    bindCalcShell(bodyEl, state);
+  }
+
+  function bindCalcShell(host, state) {
+    var page = getActiveCalcPage(state);
+    if (!page) return;
+
+    function persist() {
+      saveCalcState(state);
+    }
+
+    function rerender() {
+      renderCalcBody(host, state);
+    }
+
+    bindToolPagesShell(host, state, {
+      pageAttr: 'data-qe-calc-page',
+      addPageAttr: 'data-qe-calc-add-page',
+      nextPageId: nextCalcPageId,
+      newPageFactory: function (newId, pageCount) {
+        return { id: newId, title: 'Página ' + pageCount, expr: '0' };
+      },
+      persist: persist,
+      rerender: rerender
+    });
+
+    var calcRoot = host.querySelector('[data-qe-calc-root]');
+    if (calcRoot) bindCalcKeys(calcRoot, page, persist);
+  }
+
+  function openCalculator() {
+    openWindow('tool-calculator', 'Calculadora', 'calculator', function (bodyEl) {
+      renderCalcBody(bodyEl, loadCalcState());
+    }, null, FIXED_TOOL_OPTS);
   }
 
   function openNotes() {
@@ -829,8 +970,8 @@ var QuotationCanvasTools = (function () {
     openWindow('tool-color-picker', 'Color picker', 'color-picker', function (bodyEl) {
       bodyEl.innerHTML =
         '<div class="qe-colorpick">' +
-          '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#ffffff">' +
-          '<input type="text" class="qe-colorpick__hex" data-qe-color-hex value="#ffffff" spellcheck="false">' +
+          '<input type="color" class="qe-colorpick__native" data-qe-color-native value="#000000">' +
+          '<input type="text" class="qe-colorpick__hex" data-qe-color-hex value="#000000" spellcheck="false">' +
           '<button type="button" class="qe-colorpick__copy" data-qe-color-copy>Copiar HEX</button>' +
           '<p class="qe-colorpick__hint">Úsalo para guías, formas o referencias rápidas.</p>' +
         '</div>';
@@ -862,7 +1003,7 @@ var QuotationCanvasTools = (function () {
           }
         });
       }
-    });
+    }, null, FIXED_TOOL_OPTS);
   }
 
   function formatPomodoro(secs) {
@@ -936,7 +1077,7 @@ var QuotationCanvasTools = (function () {
           paint();
         });
       }
-    }, closePomodoroTimer);
+    }, closePomodoroTimer, FIXED_TOOL_OPTS);
   }
 
   function open(toolId) {
