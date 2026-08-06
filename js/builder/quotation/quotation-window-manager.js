@@ -231,7 +231,14 @@ var QuotationWindowManager = (function () {
         '</div>' +
         '<div class="qe-canvas-tool-float__body"></div>' +
         (resizable
-          ? '<div class="qe-canvas-tool-float__resize" data-qe-window-resize aria-hidden="true"></div>'
+          ? '<div class="qe-canvas-tool-float__resize qe-canvas-tool-float__resize--nw"' +
+              ' data-qe-window-resize="nw" aria-hidden="true"></div>' +
+            '<div class="qe-canvas-tool-float__resize qe-canvas-tool-float__resize--ne"' +
+              ' data-qe-window-resize="ne" aria-hidden="true"></div>' +
+            '<div class="qe-canvas-tool-float__resize qe-canvas-tool-float__resize--sw"' +
+              ' data-qe-window-resize="sw" aria-hidden="true"></div>' +
+            '<div class="qe-canvas-tool-float__resize qe-canvas-tool-float__resize--se"' +
+              ' data-qe-window-resize="se" aria-hidden="true"></div>'
           : '') +
       '</div>';
   }
@@ -387,61 +394,94 @@ var QuotationWindowManager = (function () {
 
   function bindResize(win) {
     if (!win || !win.el || !win.resize) return;
-    var handle = win.el.querySelector('[data-qe-window-resize]');
-    if (!handle || handle.dataset.qeResizeBound) return;
-    handle.dataset.qeResizeBound = '1';
-    var resizing = false;
-    var startX = 0;
-    var startY = 0;
-    var startW = 0;
-    var startH = 0;
+    var handles = win.el.querySelectorAll('[data-qe-window-resize]');
+    if (!handles.length) return;
 
     function refreshMaxH() {
       win.resize.maxH = computeMaxWindowHeight(win.resize.maxHMargin, win.resize.maxHExtra);
       if (win.resize.maxH < win.resize.minH) win.resize.maxH = win.resize.minH;
     }
 
-    handle.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      e.stopPropagation();
-      bringToFront(win.id);
-      refreshMaxH();
-      resizing = true;
-      var rect = win.el.getBoundingClientRect();
-      startX = e.clientX;
-      startY = e.clientY;
-      startW = rect.width;
-      startH = rect.height;
-      handle.setPointerCapture(e.pointerId);
-      win.el.classList.add('is-resizing');
-    });
-
-    handle.addEventListener('pointermove', function (e) {
-      if (!resizing) return;
-      var dx = e.clientX - startX;
-      var dy = e.clientY - startY;
-      var next = applySize(win.el, { width: startW + dx, height: startH + dy }, win.resize);
-      if (next) {
-        var rect = win.el.getBoundingClientRect();
-        var clamped = clampPosition(rect.left, rect.top, win.el);
-        win.el.style.left = clamped.left + 'px';
-        win.el.style.top = clamped.top + 'px';
+    function applyCornerResize(corner, start, dx, dy) {
+      var newW = start.w;
+      var newH = start.h;
+      var newLeft = start.left;
+      var newTop = start.top;
+      if (corner.indexOf('e') >= 0) newW = start.w + dx;
+      if (corner.indexOf('w') >= 0) {
+        newW = start.w - dx;
+        newLeft = start.left + dx;
       }
-    });
-
-    function endResize(e) {
-      if (!resizing) return;
-      resizing = false;
-      win.el.classList.remove('is-resizing');
-      try { handle.releasePointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
-      var rect = win.el.getBoundingClientRect();
-      saveSize(win.id, { width: rect.width, height: rect.height });
-      savePosition(win.id, { left: rect.left, top: rect.top });
+      if (corner.indexOf('s') >= 0) newH = start.h + dy;
+      if (corner.indexOf('n') >= 0) {
+        newH = start.h - dy;
+        newTop = start.top + dy;
+      }
+      var sized = applySize(win.el, { width: newW, height: newH }, win.resize);
+      if (corner.indexOf('w') >= 0) {
+        newLeft = start.left + start.w - sized.width;
+      }
+      if (corner.indexOf('n') >= 0) {
+        newTop = start.top + start.h - sized.height;
+      }
+      win.el.style.left = newLeft + 'px';
+      win.el.style.top = newTop + 'px';
+      var clamped = clampPosition(newLeft, newTop, win.el);
+      win.el.style.left = clamped.left + 'px';
+      win.el.style.top = clamped.top + 'px';
     }
 
-    handle.addEventListener('pointerup', endResize);
-    handle.addEventListener('pointercancel', endResize);
+    handles.forEach(function (handle) {
+      if (handle.dataset.qeResizeBound === '1') return;
+      handle.dataset.qeResizeBound = '1';
+      var corner = String(handle.getAttribute('data-qe-window-resize') || 'se').toLowerCase();
+      var resizing = false;
+      var start = null;
+
+      handle.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        bringToFront(win.id);
+        refreshMaxH();
+        resizing = true;
+        var rect = win.el.getBoundingClientRect();
+        start = {
+          x: e.clientX,
+          y: e.clientY,
+          left: rect.left,
+          top: rect.top,
+          w: rect.width,
+          h: rect.height
+        };
+        handle.setPointerCapture(e.pointerId);
+        win.el.classList.add('is-resizing');
+      });
+
+      handle.addEventListener('pointermove', function (e) {
+        if (!resizing || !start) return;
+        applyCornerResize(
+          corner,
+          start,
+          e.clientX - start.x,
+          e.clientY - start.y
+        );
+      });
+
+      function endResize(e) {
+        if (!resizing) return;
+        resizing = false;
+        start = null;
+        win.el.classList.remove('is-resizing');
+        try { handle.releasePointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
+        var rect = win.el.getBoundingClientRect();
+        saveSize(win.id, { width: rect.width, height: rect.height });
+        savePosition(win.id, { left: rect.left, top: rect.top });
+      }
+
+      handle.addEventListener('pointerup', endResize);
+      handle.addEventListener('pointercancel', endResize);
+    });
 
     if (!window.__qeToolWindowResizeBound) {
       window.__qeToolWindowResizeBound = true;

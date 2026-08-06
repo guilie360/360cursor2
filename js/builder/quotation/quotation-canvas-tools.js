@@ -435,7 +435,8 @@ var QuotationCanvasTools = (function () {
     function autoResizeChecklistField(field) {
       if (!field) return;
       field.style.height = 'auto';
-      field.style.height = Math.max(22, field.scrollHeight) + 'px';
+      var next = Math.max(22, field.scrollHeight);
+      field.style.height = next + 'px';
     }
 
     function syncChecklistFields() {
@@ -518,6 +519,9 @@ var QuotationCanvasTools = (function () {
     });
 
     syncChecklistFields();
+    requestAnimationFrame(function () {
+      syncChecklistFields();
+    });
     if (typeof ResizeObserver !== 'undefined') {
       if (list.__qeChecklistRo) {
         try { list.__qeChecklistRo.disconnect(); } catch (eRo) { /* ignore */ }
