@@ -1045,13 +1045,17 @@
   height: 22px;
   flex-shrink: 0;
   cursor: grab;
-  opacity: 0.35;
+  opacity: 0.34;
   touch-action: none;
   pointer-events: auto;
   position: relative;
   z-index: 1;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.2px) center / 4px 4px;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.5px);
+  background-size: 4px 4px;
+  background-position: 2px 3px, 2px 9px;
+  background-repeat: no-repeat;
 }
 
 body.is-qe-outliner-dragging {
