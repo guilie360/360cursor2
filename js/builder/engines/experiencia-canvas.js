@@ -5969,16 +5969,8 @@ var ExperienciaCanvas = (function () {
       }
 
       if ((dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') && drag.mode === 'rotate') {
-        /* EXPERIMENT ws7713 — live rotate: group gizmo from model B (getOverlayItemVm), not cache/drag snapshot. */
-        var groupVmB = getOverlayItemVm(sceneId, drag.buttonId);
-        var groupUnionBox = groupVmB ? {
-          cx: groupVmB.storedX != null ? Number(groupVmB.storedX) : Number(groupVmB.x) || 50,
-          cy: groupVmB.storedY != null ? Number(groupVmB.storedY) : Number(groupVmB.y) || 50,
-          w: Number(groupVmB.width) || 20,
-          h: Number(groupVmB.height) || 20,
-          rot: Number(drag.pendingDeg) != null ? Number(drag.pendingDeg) : (Number(groupVmB.rotation) || 0),
-          kind: dragType
-        } : {
+        /* Live rotate — frozen OBB from pointerdown (same contract as multi-select unionFixed). */
+        var groupUnionBox = {
           cx: drag.startX,
           cy: drag.startY,
           w: drag.startW,
@@ -5994,7 +5986,6 @@ var ExperienciaCanvas = (function () {
           paintShapeGizmoEl(refs.gizmo, groupUnionBox, layerW, layerH);
           refs.gizmo.classList.add('is-rotating');
         }
-        traceGroupRotateFrameCompare(sceneId, drag, groupVmB, layerW, layerH);
         if (drag.liveRefs && drag.liveRefs.items) {
           drag.liveRefs.items.forEach(function (item) {
             paintRotateVm(item.el, item.gizmo, getOverlayItemVm(sceneId, item.id));
@@ -8561,45 +8552,6 @@ var ExperienciaCanvas = (function () {
         drag.layerW,
         drag.layerH
       ));
-    }
-
-    /** Diagnostic — compare frame w/h sources once per degree during group live rotate. */
-    function traceGroupRotateFrameCompare(sceneId, drag, groupVm, layerW, layerH) {
-      if (!multiRotateTraceEnabled() || !drag) return;
-      var traceDeg = Math.round(Number(drag.pendingDeg) || 0);
-      if (drag.lastFrameCompareTraceDeg === traceDeg) return;
-      drag.lastFrameCompareTraceDeg = traceDeg;
-      var orientedUnion = getGroupUnionFrame(sceneId, drag.buttonId, layerW, layerH);
-      var unionBounds = null;
-      if (ExperienciaEngine.computeOverlayUnionBounds) {
-        var nCmp = ExperienciaEngine.getNode(state, sceneId);
-        var gCmp = nCmp && ExperienciaEngine.getInteraction
-          ? ExperienciaEngine.getInteraction(nCmp, drag.buttonId)
-          : null;
-        var memberIdsCmp = drag.memberIds;
-        if ((!memberIdsCmp || !memberIdsCmp.length) && gCmp &&
-            ExperienciaEngine.resolveOverlayGroupMemberIds) {
-          memberIdsCmp = ExperienciaEngine.resolveOverlayGroupMemberIds(nCmp, gCmp, { repair: true });
-        }
-        if (nCmp && memberIdsCmp && memberIdsCmp.length) {
-          unionBounds = ExperienciaEngine.computeOverlayUnionBounds(
-            nCmp, memberIdsCmp, layerW, layerH, { useComposed: true }
-          );
-        }
-      }
-      multiRotateTrace('live.group.frameCompare', {
-        deg: traceDeg,
-        'drag.startW': +(Number(drag.startW) || 0).toFixed(4),
-        'drag.startH': +(Number(drag.startH) || 0).toFixed(4),
-        'groupVm.width': groupVm ? +(Number(groupVm.width) || 0).toFixed(4) : null,
-        'groupVm.height': groupVm ? +(Number(groupVm.height) || 0).toFixed(4) : null,
-        'orientedUnion.w': orientedUnion ? +(Number(orientedUnion.w) || 0).toFixed(4) : null,
-        'orientedUnion.h': orientedUnion ? +(Number(orientedUnion.h) || 0).toFixed(4) : null,
-        'computeOverlayUnionBounds.w': unionBounds
-          ? +(Number(unionBounds.w) || 0).toFixed(4) : null,
-        'computeOverlayUnionBounds.h': unionBounds
-          ? +(Number(unionBounds.h) || 0).toFixed(4) : null
-      });
     }
 
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
