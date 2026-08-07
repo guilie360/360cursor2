@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7804';
+  var EXP_CANVAS_BUILD = 'ws7805';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -11737,6 +11737,42 @@ var ExperienciaCanvas = (function () {
       return !!(vm && vm.locked);
     }
 
+    /** One-shot lock diagnostic on first pointerdown hit (shim vs paint vs gate). */
+    function lockVerifyPointerdown(sceneId, itemId) {
+      if (!sceneId || !itemId) return false;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, itemId)
+        : null;
+      var rawLocked = ix ? !!ix.locked : 'missing';
+      var effectiveLocked = isOverlayEffectivelyLocked(sceneId, itemId);
+      var vm = getOverlayItemVm(sceneId, itemId);
+      var vmLocked = vm ? !!vm.locked : 'missing';
+      var domLocked = 'n/a';
+      if (buttonsLayer) {
+        var idEsc = String(itemId).replace(/"/g, '');
+        var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        if (el) {
+          domLocked = el.classList.contains('is-locked') || el.getAttribute('data-locked') === '1';
+        }
+      }
+      var source =
+        'gate=ExperienciaEngine.isOverlayEffectivelyLocked(state,shimNode,ix)' +
+        ' | shim=state.experiencia.nodes[' + String(sceneId) + '].config.interactions[' +
+        String(itemId) + '].locked=' + String(rawLocked) +
+        ' | buttonViewModel.locked=' + String(vmLocked) +
+        ' | domStage[data-locked|is-locked]=' + String(domLocked);
+      console.log(
+        '[LOCK VERIFY]\n' +
+        'itemId=' + String(itemId) + '\n' +
+        'sceneId=' + String(sceneId) + '\n' +
+        'locked(raw)=' + String(rawLocked) + '\n' +
+        'effectiveLocked=' + String(!!effectiveLocked) + '\n' +
+        'source=' + source
+      );
+      return !!effectiveLocked;
+    }
+
     function overlayStageHitIsEditorLocked(sceneId, el) {
       if (!el) return false;
       var id = el.getAttribute && el.getAttribute('data-exp-stage-btn');
@@ -13600,6 +13636,19 @@ var ExperienciaCanvas = (function () {
       }
 
       buttonsLayer.addEventListener('pointerdown', function (ev) {
+        var sceneIdVerify = canvas().selectedId;
+        var itemIdVerify = null;
+        var stageBtnVerify = ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
+        if (stageBtnVerify) {
+          itemIdVerify = stageBtnVerify.getAttribute('data-exp-stage-btn');
+        } else {
+          var gizmoVerify = ev.target.closest && ev.target.closest('[data-exp-gizmo]');
+          if (gizmoVerify) itemIdVerify = gizmoVerify.getAttribute('data-gizmo-id');
+        }
+        if (itemIdVerify && sceneIdVerify && lockVerifyPointerdown(sceneIdVerify, itemIdVerify)) {
+          return;
+        }
+
         /* Silhouette on an unselected shape beats gizmo chrome (handles enlarged in ws7694). */
         var preferShapeSelect = overlayPickUnselectedShapeAtPoint(ev.clientX, ev.clientY);
 
