@@ -66,6 +66,26 @@ var ExperienciaCanvas = (function () {
     );
   }
 
+  /** ?compareRotateBisect=1 — one-shot child transform pipeline bisect (starts at paintRotateVm). */
+  function compareRotateBisectEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_COMPARE_ROTATE_BISECT__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('compareRotateBisect') === '0') return false;
+      if (q.get('compareRotateBisect') === '1') return true;
+    } catch (eBi) { /* ignore */ }
+    return false;
+  }
+
+  function compareRotateBisectLog(payload) {
+    if (!compareRotateBisectEnabled()) return;
+    console.log(
+      '%c[COMPARE-ROTATE] compareRotate.bisect.child',
+      'color:#f6a;font-weight:bold;font-size:13px',
+      payload || {}
+    );
+  }
+
   /** Temporary — ?compareGroupCreate=1 traces overlay group creation only. */
   function compareGroupCreateEnabled() {
     if (typeof window !== 'undefined' && window.__QE_COMPARE_GROUP_CREATE__ === false) return false;
@@ -5921,6 +5941,151 @@ var ExperienciaCanvas = (function () {
     }
 
     /** In-place rotation paint — CSS var only (no is-live-sizing; keeps resize stable). */
+    function bisectNormalizeBox(box) {
+      if (!box) return null;
+      return {
+        cx: box.cx != null ? +(Number(box.cx)).toFixed(4) : null,
+        cy: box.cy != null ? +(Number(box.cy)).toFixed(4) : null,
+        w: box.w != null ? +(Number(box.w)).toFixed(4) : null,
+        h: box.h != null ? +(Number(box.h)).toFixed(4) : null,
+        rot: box.rot != null ? +(Number(box.rot)).toFixed(2) : null
+      };
+    }
+
+    function bisectBoxDelta(a, b) {
+      if (!a || !b) return { missing: true };
+      var out = {};
+      ['cx', 'cy', 'w', 'h', 'rot'].forEach(function (k) {
+        if (a[k] == null || b[k] == null) return;
+        out[k] = +((Number(b[k]) - Number(a[k]))).toFixed(k === 'rot' ? 2 : 4);
+      });
+      return out;
+    }
+
+    function bisectHasMismatch(delta) {
+      if (!delta || delta.missing) return true;
+      var eps = 0.02;
+      if (delta.cx != null && Math.abs(delta.cx) > eps) return true;
+      if (delta.cy != null && Math.abs(delta.cy) > eps) return true;
+      if (delta.w != null && Math.abs(delta.w) > eps) return true;
+      if (delta.h != null && Math.abs(delta.h) > eps) return true;
+      if (delta.rot != null && Math.abs(delta.rot) > 0.5) return true;
+      return false;
+    }
+
+    function bisectSuspectFn(prevStep, nextStep) {
+      var key = prevStep + ' → ' + nextStep;
+      var map = {
+        'overlayWorldLayoutRaw → paintRotateVm.vm': 'getOverlayItemVm → getSceneOverlayItem',
+        'paintRotateVm.vm → getShapeBox': 'getShapeBox',
+        'paintRotateVm.vm → overlaySelectionMetrics': 'overlaySelectionMetrics',
+        'getShapeBox → dom.beforePaint': '(external DOM write before paintRotateVm)',
+        'overlaySelectionMetrics → dom.beforePaint': '(external DOM write before paintRotateVm)',
+        'getShapeBox → dom.afterPaint': 'paintShapeNodeEl',
+        'overlaySelectionMetrics → dom.afterPaint': 'paintShapeNodeEl / style.left-top',
+        'dom.beforePaint → dom.afterPaint': 'paintShapeNodeEl / paintShapeGizmoEl'
+      };
+      return map[key] || key;
+    }
+
+    function bisectWorldLayoutBox(sceneId, memberId, layerW, layerH) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction(n, memberId);
+      var world = (ExperienciaEngine.overlayWorldLayoutRaw && ix)
+        ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+        : null;
+      if (!world) return null;
+      return bisectNormalizeBox({
+        cx: world.x,
+        cy: world.y,
+        w: world.width,
+        h: world.height,
+        rot: world.rotation
+      });
+    }
+
+    function bisectVmInputBox(vm) {
+      if (!vm) return null;
+      return bisectNormalizeBox({
+        cx: vm.storedX != null ? Number(vm.storedX) : Number(vm.x) || 50,
+        cy: vm.storedY != null ? Number(vm.storedY) : Number(vm.y) || 50,
+        w: vm.width != null ? Number(vm.width) : null,
+        h: vm.height != null ? Number(vm.height) : null,
+        rot: Number(vm.rotation) || 0
+      });
+    }
+
+    function bisectDerivedPaintBox(vm, layerW, layerH) {
+      if (!vm) return { step: 'getShapeBox', box: null };
+      var rot = Number(vm.rotation) || 0;
+      var t = String(vm.type || 'BUTTON').toUpperCase();
+      if (isShapeType(t) && isShapeBoxV2Active()) {
+        var box = getShapeBox(vm, layerW, layerH);
+        if (box) {
+          box.rot = rot;
+          return {
+            step: 'getShapeBox',
+            box: bisectNormalizeBox(box)
+          };
+        }
+      }
+      var gm = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!gm) return { step: 'overlaySelectionMetrics', box: null };
+      return {
+        step: 'overlaySelectionMetrics',
+        box: bisectNormalizeBox({
+          cx: gm.gx,
+          cy: gm.gy,
+          w: gm.gw,
+          h: gm.gh,
+          rot: gm.grot
+        })
+      };
+    }
+
+    function bisectDomBox(el) {
+      if (!el || !buttonsLayer) return null;
+      var dom = domBoxPctFromEl(el, buttonsLayer);
+      if (!dom) return null;
+      var rotStr = el.style.getPropertyValue('--btn-rot');
+      var rot = rotStr ? parseFloat(rotStr) : 0;
+      return bisectNormalizeBox({
+        cx: dom.gx,
+        cy: dom.gy,
+        w: dom.gw,
+        h: dom.gh,
+        rot: isFinite(rot) ? rot : 0
+      });
+    }
+
+    function emitPaintRotateVmBisect(sceneId, memberId, levels) {
+      var firstBreak = null;
+      var i;
+      for (i = 1; i < levels.length; i++) {
+        var delta = bisectBoxDelta(levels[i - 1].box, levels[i].box);
+        if (bisectHasMismatch(delta)) {
+          firstBreak = {
+            lastGood: levels[i - 1].step,
+            firstBad: levels[i].step,
+            suspectFn: bisectSuspectFn(levels[i - 1].step, levels[i].step),
+            delta: delta,
+            lastGoodBox: levels[i - 1].box,
+            firstBadBox: levels[i].box
+          };
+          break;
+        }
+      }
+      compareRotateBisectLog({
+        memberId: String(memberId),
+        sceneId: sceneId,
+        pipeline: levels,
+        firstBreak: firstBreak,
+        verdict: firstBreak
+          ? ('First mismatch after ' + firstBreak.lastGood + ' → suspect: ' + firstBreak.suspectFn)
+          : 'All pipeline levels match within epsilon'
+      });
+    }
+
     function paintRotateLiveFromDrag(drag) {
       if (!drag || !buttonsLayer) return;
       var sceneId = drag.sceneId;
@@ -5931,6 +6096,26 @@ var ExperienciaCanvas = (function () {
 
       function paintRotateVm(el, gizmoEl, vm) {
         if (!vm) return;
+        var bisectMemberId = el && el.getAttribute('data-exp-stage-btn');
+        var doBisect = compareRotateBisectEnabled() &&
+          (dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') &&
+          drag.mode === 'rotate' &&
+          !drag.firstBisectLogged &&
+          bisectMemberId && el;
+        var bisectLevels = null;
+        if (doBisect) {
+          drag.firstBisectLogged = true;
+          var derivedPre = bisectDerivedPaintBox(vm, layerW, layerH);
+          bisectLevels = [
+            {
+              step: 'overlayWorldLayoutRaw',
+              box: bisectWorldLayoutBox(sceneId, bisectMemberId, layerW, layerH)
+            },
+            { step: 'paintRotateVm.vm', box: bisectVmInputBox(vm) },
+            { step: derivedPre.step, box: derivedPre.box },
+            { step: 'dom.beforePaint', box: bisectDomBox(el) }
+          ];
+        }
         var rot = Number(vm.rotation) || 0;
         var t = String(vm.type || 'BUTTON').toUpperCase();
         if (el) {
@@ -5945,6 +6130,10 @@ var ExperienciaCanvas = (function () {
             el.style.left = (Number(vm.x) || 50) + '%';
             el.style.top = (Number(vm.y) || 50) + '%';
           }
+        }
+        if (bisectLevels) {
+          bisectLevels.push({ step: 'dom.afterPaint', box: bisectDomBox(el) });
+          emitPaintRotateVmBisect(sceneId, bisectMemberId, bisectLevels);
         }
         if (!gizmoEl) return;
         if (isShapeType(t) && isShapeBoxV2Active()) {
@@ -9359,6 +9548,7 @@ var ExperienciaCanvas = (function () {
       drag.firstRotateLiveUpdateLogged = false;
       drag.firstRotateLivePaintLogged = false;
       drag.firstUnionGizmoPaintDiagLogged = false;
+      drag.firstBisectLogged = false;
     }
 
     function traceFirstGroupRotatePointerdown(drag) {
