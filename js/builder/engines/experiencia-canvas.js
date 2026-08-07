@@ -6021,10 +6021,30 @@ var ExperienciaCanvas = (function () {
         };
         traceFirstGroupRotateLivePaint(drag, groupUnionBox, layerW, layerH, null);
         if (drag.liveRefs && drag.liveRefs.unionGizmo) {
+          traceUnionGizmoBeforePaintShapeGizmoEl({
+            unionBoxRaw: groupUnionBox,
+            groupUnionBox: groupUnionBox,
+            drag: drag,
+            layerW: layerW,
+            layerH: layerH,
+            sourceFile: 'experiencia-canvas.js',
+            sourceFunction: 'paintRotateLiveFromDrag',
+            sourceLine: '6024'
+          });
           paintShapeGizmoEl(drag.liveRefs.unionGizmo, groupUnionBox, layerW, layerH);
           drag.liveRefs.unionGizmo.classList.remove('is-sizing');
           drag.liveRefs.unionGizmo.classList.add('is-rotating');
         } else if (refs && refs.gizmo) {
+          traceUnionGizmoBeforePaintShapeGizmoEl({
+            unionBoxRaw: groupUnionBox,
+            groupUnionBox: groupUnionBox,
+            drag: drag,
+            layerW: layerW,
+            layerH: layerH,
+            sourceFile: 'experiencia-canvas.js',
+            sourceFunction: 'paintRotateLiveFromDrag',
+            sourceLine: '6028'
+          });
           paintShapeGizmoEl(refs.gizmo, groupUnionBox, layerW, layerH);
           refs.gizmo.classList.add('is-rotating');
         }
@@ -9094,6 +9114,68 @@ var ExperienciaCanvas = (function () {
       return byField;
     }
 
+    function cloneUnionBoxDiagnostic(box) {
+      if (!box) return null;
+      return {
+        cx: box.cx != null ? box.cx : null,
+        cy: box.cy != null ? box.cy : null,
+        w: box.w != null ? box.w : null,
+        h: box.h != null ? box.h : null,
+        rot: box.rot != null ? box.rot : null,
+        kind: box.kind != null ? box.kind : null,
+        gizmoBox: box.gizmoBox != null ? box.gizmoBox : null
+      };
+    }
+
+    function compactUnionGizmoDragDiagnostic(drag) {
+      if (!drag) return null;
+      return {
+        type: drag.type != null ? drag.type : null,
+        mode: drag.mode != null ? drag.mode : null,
+        sceneId: drag.sceneId != null ? drag.sceneId : null,
+        buttonId: drag.buttonId != null ? drag.buttonId : null,
+        startX: drag.startX != null ? drag.startX : null,
+        startY: drag.startY != null ? drag.startY : null,
+        startW: drag.startW != null ? drag.startW : null,
+        startH: drag.startH != null ? drag.startH : null,
+        startRot: drag.startRot != null ? drag.startRot : null,
+        pendingDeg: drag.pendingDeg != null ? drag.pendingDeg : null
+      };
+    }
+
+    function readCompareRotateOrientedCache(drag, layerW, layerH) {
+      if (!drag) return null;
+      var mode = String(drag.type || '').toUpperCase();
+      var oriented = null;
+      if (mode === 'MULTI_SELECT') {
+        oriented = getMultiSelectUnionFrame(drag.sceneId, drag.memberIds, layerW, layerH);
+      } else if (mode === 'OVERLAY_GROUP' || mode === 'GROUP') {
+        oriented = getGroupUnionFrame(drag.sceneId, drag.buttonId, layerW, layerH);
+      }
+      if (!oriented) return null;
+      return compareRotateUnionInputBox(
+        oriented.cx, oriented.cy, oriented.w, oriented.h, oriented.rot
+      );
+    }
+
+    function traceUnionGizmoBeforePaintShapeGizmoEl(opts) {
+      if (!compareRotateEnabled()) return;
+      var drag = opts.drag;
+      if (drag && drag.firstUnionGizmoPaintDiagLogged) return;
+      if (drag) drag.firstUnionGizmoPaintDiagLogged = true;
+      compareRotateLog('compareRotate.unionGizmo.beforePaintShapeGizmoEl', {
+        unionBoxRaw: cloneUnionBoxDiagnostic(opts.unionBoxRaw),
+        groupUnionBox: cloneUnionBoxDiagnostic(opts.groupUnionBox),
+        drag: compactUnionGizmoDragDiagnostic(drag),
+        orientedCache: opts.orientedCache != null
+          ? opts.orientedCache
+          : readCompareRotateOrientedCache(drag, opts.layerW, opts.layerH),
+        sourceFile: opts.sourceFile || null,
+        sourceFunction: opts.sourceFunction || null,
+        sourceLine: opts.sourceLine || null
+      });
+    }
+
     function buildCompareRotateUnionGizmoTrace(drag, unionBox, layerW, layerH) {
       if (!unionBox) {
         return {
@@ -9175,6 +9257,7 @@ var ExperienciaCanvas = (function () {
       if (!drag) return;
       drag.firstRotateLiveUpdateLogged = false;
       drag.firstRotateLivePaintLogged = false;
+      drag.firstUnionGizmoPaintDiagLogged = false;
     }
 
     function traceFirstGroupRotatePointerdown(drag) {
@@ -9462,6 +9545,18 @@ var ExperienciaCanvas = (function () {
         }
       });
       if (liveRefs.unionGizmo && boxes.union) {
+        if (compareRotateEnabled() && transformDrag && transformDrag.mode === 'rotate') {
+          traceUnionGizmoBeforePaintShapeGizmoEl({
+            unionBoxRaw: boxes.union,
+            groupUnionBox: null,
+            drag: transformDrag,
+            layerW: layerW,
+            layerH: layerH,
+            sourceFile: 'experiencia-canvas.js',
+            sourceFunction: 'paintMultiSelectLiveFast',
+            sourceLine: '9465'
+          });
+        }
         paintShapeGizmoEl(liveRefs.unionGizmo, boxes.union, layerW, layerH);
         liveRefs.unionGizmo.classList.add('is-sizing');
       }
