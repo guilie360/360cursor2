@@ -1883,7 +1883,7 @@ var ExperienciaCanvas = (function () {
         gy: union.cy,
         gw: union.w,
         gh: union.h,
-        grot: 0
+        grot: Number(union.rot) || 0
       }
     });
   }
@@ -6317,6 +6317,7 @@ var ExperienciaCanvas = (function () {
             state, drag.sceneId, id, orig.x + ddx, orig.y + ddy, sz.w, sz.h
           );
         });
+        translateMultiSelectUnionFrame(ddx, ddy);
         return;
       }
       if (drag.buttonId != null && drag.originX != null && drag.originY != null) {
@@ -6364,8 +6365,12 @@ var ExperienciaCanvas = (function () {
         }
       }
       if (moveLiveRefs.unionGizmo) {
+        var unionRot = 0;
+        var unionStored = canvas().multiSelectUnionFrame;
+        if (unionStored) unionRot = Number(unionStored.rot) || 0;
         var unionTf =
-          'translate3d(calc(-50% + ' + dxPx + 'px), calc(-50% + ' + dyPx + 'px), 0)';
+          'translate3d(calc(-50% + ' + dxPx + 'px), calc(-50% + ' + dyPx + 'px), 0) ' +
+          'rotate(' + unionRot + 'deg)';
         if (moveLiveRefs.lastUnionGizmoTf !== unionTf) {
           moveLiveRefs.lastUnionGizmoTf = unionTf;
           moveLiveRefs.unionGizmo.style.transform = unionTf;
@@ -6799,7 +6804,7 @@ var ExperienciaCanvas = (function () {
           });
         });
         if (multiSel) {
-          var unionG = computeMultiSelectionUnion(canvas().selectedId, selIds, layerW, layerH);
+          var unionG = getMultiSelectUnionFrame(canvas().selectedId, selIds, layerW, layerH);
           if (unionG) {
             gizmoHtml += buildMultiSelectionUnionGizmoHtml(unionG, layerW, layerH);
           }
@@ -6876,7 +6881,7 @@ var ExperienciaCanvas = (function () {
         });
       });
       if (multiSel) {
-        var unionMount = computeMultiSelectionUnion(sceneId, selIds, layerW, layerH);
+        var unionMount = getMultiSelectUnionFrame(sceneId, selIds, layerW, layerH);
         if (unionMount) {
           gizmoHtml += buildMultiSelectionUnionGizmoHtml(unionMount, layerW, layerH);
         }
@@ -7913,6 +7918,61 @@ var ExperienciaCanvas = (function () {
         w: Math.max(0.5, ((maxR - minL) / layerW) * 100),
         h: Math.max(0.5, ((maxB - minT) / layerH) * 100)
       };
+    }
+
+    function multiSelectMemberKey(sceneId, ids) {
+      return String(sceneId || '') + '::' +
+        filterMultiScaleOverlayIds(sceneId, ids).slice().sort().join('|');
+    }
+
+    function getStoredMultiSelectUnionFrame(sceneId, ids) {
+      var stored = canvas().multiSelectUnionFrame;
+      if (!stored) return null;
+      if (stored.memberKey !== multiSelectMemberKey(sceneId, ids)) return null;
+      if (!(Number(stored.w) > 0) || !(Number(stored.h) > 0)) return null;
+      return stored;
+    }
+
+    /** Oriented union frame when rotated; otherwise axis-aligned bbox. */
+    function getMultiSelectUnionFrame(sceneId, ids, layerW, layerH) {
+      var stored = getStoredMultiSelectUnionFrame(sceneId, ids);
+      if (stored) {
+        return {
+          cx: Number(stored.cx) || 0,
+          cy: Number(stored.cy) || 0,
+          w: Number(stored.w) || 0.5,
+          h: Number(stored.h) || 0.5,
+          rot: Number(stored.rot) || 0
+        };
+      }
+      var aabb = computeMultiSelectionUnion(sceneId, ids, layerW, layerH);
+      if (!aabb) return null;
+      return {
+        cx: aabb.cx,
+        cy: aabb.cy,
+        w: aabb.w,
+        h: aabb.h,
+        rot: 0
+      };
+    }
+
+    function setMultiSelectUnionFrame(sceneId, ids, frame) {
+      if (!frame) return;
+      canvas().multiSelectUnionFrame = {
+        cx: Number(frame.cx) || 0,
+        cy: Number(frame.cy) || 0,
+        w: Number(frame.w) || 0.5,
+        h: Number(frame.h) || 0.5,
+        rot: Number(frame.rot) || 0,
+        memberKey: multiSelectMemberKey(sceneId, ids)
+      };
+    }
+
+    function translateMultiSelectUnionFrame(ddx, ddy) {
+      var stored = canvas().multiSelectUnionFrame;
+      if (!stored) return;
+      stored.cx = (Number(stored.cx) || 0) + (Number(ddx) || 0);
+      stored.cy = (Number(stored.cy) || 0) + (Number(ddy) || 0);
     }
 
     function overlayRotatedCornersPx(cx, cy, w, h, rotDeg) {
@@ -10917,7 +10977,6 @@ var ExperienciaCanvas = (function () {
           if (gtype === 'MULTI_SELECT') {
             multiScaleIds = filterMultiScaleOverlayIds(sceneIdG, getSelectedOverlayIds());
             if (multiScaleIds.length < 2) return;
-            btnG = { id: MULTI_SELECT_GIZMO_ID, type: 'MULTI_SELECT', locked: false, rotation: 0 };
           } else {
             btnG = getOverlayItemVm(sceneIdG, gid);
             if (!btnG || btnG.locked) return;
@@ -10962,6 +11021,16 @@ var ExperienciaCanvas = (function () {
           var layerH0 = ptrCache
             ? ptrCache.layerH
             : Math.max(1, buttonsLayer.clientHeight || 1000);
+          if (gtype === 'MULTI_SELECT') {
+            var unionFrame0 = getMultiSelectUnionFrame(sceneIdG, multiScaleIds, layerW0, layerH0);
+            if (!unionFrame0) return;
+            btnG = {
+              id: MULTI_SELECT_GIZMO_ID,
+              type: 'MULTI_SELECT',
+              locked: false,
+              rotation: unionFrame0.rot || 0
+            };
+          }
           var ptr0 = ptrCache
             ? clientToOverlayLocalPxCached(ev.clientX, ev.clientY, ptrCache)
             : clientToOverlayLocalPx(ev.clientX, ev.clientY);
@@ -10972,7 +11041,7 @@ var ExperienciaCanvas = (function () {
           var startX0;
           var startY0;
           if (gtype === 'MULTI_SELECT') {
-            var unionStart = computeMultiSelectionUnion(sceneIdG, multiScaleIds, layerW0, layerH0);
+            var unionStart = getMultiSelectUnionFrame(sceneIdG, multiScaleIds, layerW0, layerH0);
             if (!unionStart) return;
             startW0 = unionStart.w;
             startH0 = unionStart.h;
@@ -11503,6 +11572,13 @@ var ExperienciaCanvas = (function () {
                 endedDrag.layerH,
                 { commit: true }
               );
+              setMultiSelectUnionFrame(endScene, endedDrag.memberIds, {
+                cx: endedDrag.startX,
+                cy: endedDrag.startY,
+                w: endedDrag.startW,
+                h: endedDrag.startH,
+                rot: endedDrag.pendingDeg
+              });
             }
           }
           /* Final snap + round stored geometry after live resize. */
@@ -11632,6 +11708,21 @@ var ExperienciaCanvas = (function () {
                     endedDrag.layerH,
                     { commit: true }
                   );
+                  var outerFinM = multiResizeOuterFromScale(
+                    endedDrag, clampedFinM.sx, clampedFinM.sy
+                  );
+                  var prevRotM = 0;
+                  var storedFrameM = getStoredMultiSelectUnionFrame(
+                    endScene, endedDrag.memberIds
+                  );
+                  if (storedFrameM) prevRotM = Number(storedFrameM.rot) || 0;
+                  setMultiSelectUnionFrame(endScene, endedDrag.memberIds, {
+                    cx: outerFinM.cx != null ? outerFinM.cx : endedDrag.startX,
+                    cy: outerFinM.cy != null ? outerFinM.cy : endedDrag.startY,
+                    w: outerFinM.w != null ? outerFinM.w : endedDrag.startW,
+                    h: outerFinM.h != null ? outerFinM.h : endedDrag.startH,
+                    rot: prevRotM
+                  });
                   committedMultiResize = true;
                   persist();
                 } else {
