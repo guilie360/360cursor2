@@ -4099,8 +4099,15 @@ var QuotationEditor = (function () {
   }
 
   function syncOutlinerPanelToCanvas(engineFn) {
+    var tid = lockTraceActiveId();
+    if (tid) lockTraceSceneItem('syncOutlinerPanelToCanvas:enter', tid);
     healOverlayGroupMembership(activeScene());
+    if (tid) lockTraceSceneItem('syncOutlinerPanelToCanvas:afterHealScene', tid);
     pushOutlinerScenesToShim();
+    if (tid) {
+      lockTraceSceneItem('syncOutlinerPanelToCanvas:afterPush:scene', tid);
+      lockTraceShimItem('syncOutlinerPanelToCanvas:afterPush:shim', tid);
+    }
     healShimOverlayGroupMembership();
     markDirtyLocal();
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
@@ -4113,8 +4120,13 @@ var QuotationEditor = (function () {
       if (n) engineFn(n, nodeId);
     }
     if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+    if (tid) {
+      lockTraceSceneItem('syncOutlinerPanelToCanvas:afterRefresh:scene', tid);
+      lockTraceShimItem('syncOutlinerPanelToCanvas:afterRefresh:shim', tid);
+    }
     healShimOverlayGroupMembership();
     healOverlayGroupMembership(activeScene());
+    if (tid) lockTraceSceneItem('syncOutlinerPanelToCanvas:exit', tid);
     refreshLayersPanel();
   }
 
@@ -4144,8 +4156,17 @@ var QuotationEditor = (function () {
     if (!expOverlay || !expOverlay.shim) return;
     if (typeof QuotationExperienciaBridge === 'undefined' ||
         !QuotationExperienciaBridge.pushScenesToShim) return;
+    var tid = lockTraceActiveId();
+    if (tid) {
+      lockTraceSceneItem('pushOutlinerScenesToShim:enter:scene', tid);
+      lockTraceShimItem('pushOutlinerScenesToShim:enter:shim', tid);
+    }
     var scenes = state.backpackMode ? [getBackpackSceneRef()] : state.scenes;
     QuotationExperienciaBridge.pushScenesToShim(expOverlay.shim, scenes);
+    if (tid) {
+      lockTraceSceneItem('pushOutlinerScenesToShim:exit:scene', tid);
+      lockTraceShimItem('pushOutlinerScenesToShim:exit:shim', tid);
+    }
   }
 
   function dissolveOverlayGroupById(groupId) {
@@ -5424,6 +5445,65 @@ var QuotationEditor = (function () {
     return createEmptyOverlayGroup();
   }
 
+  var lockTraceTargetId = null;
+
+  function setLockTraceTarget(id) {
+    lockTraceTargetId = id ? String(id) : null;
+    try { window.__QE_LOCK_TRACE_ID__ = lockTraceTargetId; } catch (eTrace) { /* ignore */ }
+  }
+
+  function lockTracePrevStore() {
+    try {
+      if (!window.__QE_LOCK_TRACE_PREV__) window.__QE_LOCK_TRACE_PREV__ = {};
+      return window.__QE_LOCK_TRACE_PREV__;
+    } catch (eStore) {
+      return {};
+    }
+  }
+
+  function lockTraceState(functionName, itemId, locked) {
+    if (!itemId) return;
+    var lid = String(itemId);
+    var lockedStr = locked === 'missing' ? 'missing' : String(!!locked);
+    console.log('[LOCK STATE] function=' + functionName + ' itemId=' + lid + ' locked=' + lockedStr);
+    if (locked === 'missing' || typeof locked === 'boolean') {
+      var prev = lockTracePrevStore();
+      if (prev[lid] === true && locked === false) {
+        console.log('[LOCK OVERWRITTEN] function=' + functionName + ' old=true new=false');
+      }
+      if (typeof locked === 'boolean') prev[lid] = locked;
+    }
+  }
+
+  function lockTraceActiveId() {
+    return lockTraceTargetId || (function () {
+      try { return window.__QE_LOCK_TRACE_ID__ || null; } catch (eId) { return null; }
+    })();
+  }
+
+  function lockTraceSceneItem(functionName, itemId) {
+    if (!itemId) return;
+    var ix = findSceneInteraction(itemId);
+    lockTraceState(functionName, itemId, ix ? !!ix.locked : 'missing');
+  }
+
+  function lockTraceShimItem(functionName, itemId) {
+    if (!itemId || !expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') return;
+    var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+    if (!n || !n.config || !Array.isArray(n.config.interactions)) {
+      lockTraceState(functionName, itemId, 'missing');
+      return;
+    }
+    var ix = null;
+    for (var li = 0; li < n.config.interactions.length; li++) {
+      if (String(n.config.interactions[li].id) === String(itemId)) {
+        ix = n.config.interactions[li];
+        break;
+      }
+    }
+    lockTraceState(functionName, itemId, ix ? !!ix.locked : 'missing');
+  }
+
   function findSceneInteraction(id) {
     var scene = activeScene();
     if (!scene || !Array.isArray(scene.interactions) || !id) return null;
@@ -5459,10 +5539,18 @@ var QuotationEditor = (function () {
 
   function toggleOutlinerLockFromPanel(id) {
     if (!id) return false;
+    setLockTraceTarget(id);
+    try { lockTracePrevStore()[String(id)] = undefined; } catch (eReset) { /* ignore */ }
     var ix = findSceneInteraction(id);
-    if (!ix) return false;
+    if (!ix) {
+      setLockTraceTarget(null);
+      return false;
+    }
     ix.locked = !outlinerItemSelfLocked(ix);
+    lockTraceSceneItem('toggleOutlinerLockFromPanel:afterToggle', id);
     syncOutlinerPanelToCanvas();
+    lockTraceSceneItem('toggleOutlinerLockFromPanel:afterSync', id);
+    setTimeout(function () { setLockTraceTarget(null); }, 2500);
     return true;
   }
 

@@ -22,6 +22,69 @@ var QuotationExperienciaBridge = (function () {
     try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
   }
 
+  function cloneJson(v) {
+    try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
+  }
+
+  function lockTraceId() {
+    try { return window.__QE_LOCK_TRACE_ID__ || null; } catch (eId) { return null; }
+  }
+
+  function lockTracePrevStore() {
+    try {
+      if (!window.__QE_LOCK_TRACE_PREV__) window.__QE_LOCK_TRACE_PREV__ = {};
+      return window.__QE_LOCK_TRACE_PREV__;
+    } catch (eStore) {
+      return {};
+    }
+  }
+
+  function lockTraceStateBridge(functionName, itemId, locked) {
+    if (!itemId) return;
+    var lid = String(itemId);
+    var lockedStr = locked === 'missing' ? 'missing' : String(!!locked);
+    console.log('[LOCK STATE] function=' + functionName + ' itemId=' + lid + ' locked=' + lockedStr);
+    if (locked === 'missing' || typeof locked === 'boolean') {
+      var prev = lockTracePrevStore();
+      if (prev[lid] === true && locked === false) {
+        console.log('[LOCK OVERWRITTEN] function=' + functionName + ' old=true new=false');
+      }
+      if (typeof locked === 'boolean') prev[lid] = locked;
+    }
+  }
+
+  function findIxLockedInScenes(itemId, scenes) {
+    if (!itemId || !scenes) return 'missing';
+    var found = null;
+    scenes.some(function (sc) {
+      if (!sc || !Array.isArray(sc.interactions)) return false;
+      return sc.interactions.some(function (ix) {
+        if (ix && String(ix.id) === String(itemId)) {
+          found = ix;
+          return true;
+        }
+        return false;
+      });
+    });
+    return found ? !!found.locked : 'missing';
+  }
+
+  function findIxLockedInShim(itemId, shimState) {
+    if (!itemId || !shimState || !shimState.experiencia) return 'missing';
+    var found = null;
+    (shimState.experiencia.nodes || []).some(function (n) {
+      if (!n || !n.config || !Array.isArray(n.config.interactions)) return false;
+      return n.config.interactions.some(function (ix) {
+        if (ix && String(ix.id) === String(itemId)) {
+          found = ix;
+          return true;
+        }
+        return false;
+      });
+    });
+    return found ? !!found.locked : 'missing';
+  }
+
   /** Migrate legacy flat buttons/hotspots → interactions[] (Showroom SSOT). */
   function ensureSceneInteractions(scene) {
     if (!scene) return [];
@@ -204,6 +267,11 @@ var QuotationExperienciaBridge = (function () {
   /** Push Quotation scene interactions[] into shim nodes (inverse of pullToScenes). */
   function pushScenesToShim(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
+    var tid = lockTraceId();
+    if (tid) {
+      lockTraceStateBridge('pushScenesToShim:enter:scene', tid, findIxLockedInScenes(tid, scenes));
+      lockTraceStateBridge('pushScenesToShim:enter:shim', tid, findIxLockedInShim(tid, shimState));
+    }
     var byNodeId = {};
     scenes.forEach(function (sc) {
       if (sc && sc.id) byNodeId[nodeIdForScene(sc.id)] = sc;
@@ -215,11 +283,20 @@ var QuotationExperienciaBridge = (function () {
       if (!n.config) n.config = {};
       n.config.interactions = cloneJson(sc.interactions || []);
     });
+    if (tid) {
+      lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
+      lockTraceStateBridge('pushScenesToShim:exit:shim', tid, findIxLockedInShim(tid, shimState));
+    }
   }
 
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
   function pullToScenes(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
+    var tid = lockTraceId();
+    if (tid) {
+      lockTraceStateBridge('pullToScenes:enter:scene', tid, findIxLockedInScenes(tid, scenes));
+      lockTraceStateBridge('pullToScenes:enter:shim', tid, findIxLockedInShim(tid, shimState));
+    }
     var exp = shimState.experiencia;
     var byId = {};
     scenes.forEach(function (sc) {
@@ -259,6 +336,10 @@ var QuotationExperienciaBridge = (function () {
         if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
       });
     });
+    if (tid) {
+      lockTraceStateBridge('pullToScenes:exit:scene', tid, findIxLockedInScenes(tid, scenes));
+      lockTraceStateBridge('pullToScenes:exit:shim', tid, findIxLockedInShim(tid, shimState));
+    }
   }
 
   /**
@@ -275,6 +356,24 @@ var QuotationExperienciaBridge = (function () {
     var useKonva = typeof KonvaOverlayRenderer !== 'undefined' &&
       KonvaOverlayRenderer.isEnabled(options);
 
+    function onCanvasChangePullToScenes() {
+      var tid = lockTraceId();
+      if (tid) {
+        lockTraceStateBridge('onChange:pullToScenes:enter:scene', tid,
+          findIxLockedInScenes(tid, scenes));
+        lockTraceStateBridge('onChange:pullToScenes:enter:shim', tid,
+          findIxLockedInShim(tid, shim));
+      }
+      pullToScenes(shim, scenes);
+      if (tid) {
+        lockTraceStateBridge('onChange:pullToScenes:exit:scene', tid,
+          findIxLockedInScenes(tid, scenes));
+        lockTraceStateBridge('onChange:pullToScenes:exit:shim', tid,
+          findIxLockedInShim(tid, shim));
+      }
+      if (typeof options.onChange === 'function') options.onChange();
+    }
+
     if (useKonva) {
       try {
         console.info('[QuotationExperienciaBridge] Konva POC renderer active');
@@ -284,10 +383,7 @@ var QuotationExperienciaBridge = (function () {
         scenes: scenes,
         overlayNodeId: nodeIdForScene(activeId),
         projectId: options.projectId || null,
-        onChange: function () {
-          pullToScenes(shim, scenes);
-          if (typeof options.onChange === 'function') options.onChange();
-        },
+        onChange: onCanvasChangePullToScenes,
         onSelectionChange: options.onSelectionChange,
         pullToScenes: function () {
           pullToScenes(shim, scenes);
@@ -303,10 +399,7 @@ var QuotationExperienciaBridge = (function () {
         editMode: options.editMode || 'buttons',
         inspectorBody: options.inspectorBody || null,
         projectId: options.projectId || null,
-        onChange: function () {
-          pullToScenes(shim, scenes);
-          if (typeof options.onChange === 'function') options.onChange();
-        },
+        onChange: onCanvasChangePullToScenes,
         onSelectionChange: options.onSelectionChange,
         onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
         overlaySnapEnabled: options.overlaySnapEnabled
@@ -444,7 +537,16 @@ var QuotationExperienciaBridge = (function () {
         hostEl.innerHTML = '';
       },
       pull: function () {
+        var tid = lockTraceId();
+        if (tid) {
+          lockTraceStateBridge('expOverlay.pull:enter:scene', tid,
+            findIxLockedInScenes(tid, scenes));
+        }
         pullToScenes(shim, scenes);
+        if (tid) {
+          lockTraceStateBridge('expOverlay.pull:exit:scene', tid,
+            findIxLockedInScenes(tid, scenes));
+        }
       },
       syncFromScenes: function () {
         pushScenesToShim(shim, scenes);
