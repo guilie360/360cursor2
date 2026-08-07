@@ -43,26 +43,112 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  /** Temporary — ?compareRotate=1 traces first g.width/g.height mutation during live group rotate. */
-  function compareRotateGroupSizeTraceEnabled() {
+  /** Temporary — ?compareRotate=1 traces groupModel replacements (full x/y/w/h/rot). */
+  function compareRotateGroupModelTraceEnabled() {
     if (typeof window !== 'undefined' && window.__QE_COMPARE_ROTATE__ === false) return false;
     try {
       var q = new URLSearchParams(window.location.search);
       if (q.get('compareRotate') === '0') return false;
       if (q.get('compareRotate') === '1') return true;
-    } catch (eCrGs) { /* ignore */ }
+    } catch (eCrGm) { /* ignore */ }
     return false;
   }
 
-  function groupSizeSnapEngine(g) {
+  function compareRotateGroupSizeTraceEnabled() {
+    return compareRotateGroupModelTraceEnabled();
+  }
+
+  function snapshotGroupModelTrace(g) {
+    if (!g) return null;
     return {
-      width: +(Number(g && g.width) || 0).toFixed(4),
-      height: +(Number(g && g.height) || 0).toFixed(4)
+      x: +(Number(g.x) || 0).toFixed(4),
+      y: +(Number(g.y) || 0).toFixed(4),
+      width: +(Number(g.width) || 0).toFixed(4),
+      height: +(Number(g.height) || 0).toFixed(4),
+      rotation: +(Number(g.rotation) || 0).toFixed(2),
+      _transformV: Number(g._transformV) || 0
     };
   }
 
+  function groupModelTraceFieldsChanged(before, after) {
+    var out = [];
+    if (!before || !after) return ['missing'];
+    if (before.x !== after.x) out.push('x');
+    if (before.y !== after.y) out.push('y');
+    if (before.width !== after.width) out.push('width');
+    if (before.height !== after.height) out.push('height');
+    if (before.rotation !== after.rotation) out.push('rotation');
+    if (before._transformV !== after._transformV) out.push('_transformV');
+    return out;
+  }
+
+  function groupModelTraceDeltaFull(before, after) {
+    if (!before || !after) return null;
+    return {
+      x: +((after.x - before.x)).toFixed(6),
+      y: +((after.y - before.y)).toFixed(6),
+      width: +((after.width - before.width)).toFixed(6),
+      height: +((after.height - before.height)).toFixed(6),
+      rotation: +((after.rotation - before.rotation)).toFixed(6)
+    };
+  }
+
+  function traceGroupModelReplace(meta) {
+    if (!compareRotateGroupModelTraceEnabled()) return;
+    if (typeof window === 'undefined') return;
+    var before = meta.before;
+    var after = meta.after;
+    if (!after) return;
+    var changed = before ? groupModelTraceFieldsChanged(before, after) : ['created'];
+    if (before && !changed.length) return;
+    var slot = window.__QE_GROUP_MODEL_TRACE__;
+    if (!slot) {
+      slot = { seq: 0 };
+      window.__QE_GROUP_MODEL_TRACE__ = slot;
+    }
+    slot.seq = (slot.seq || 0) + 1;
+    console.log(
+      '%c[COMPARE-ROTATE] compareRotate.groupModel.replace',
+      'color:#6cf;font-weight:bold;font-size:12px',
+      {
+        seq: slot.seq,
+        groupId: meta.groupId != null ? String(meta.groupId) : null,
+        kind: meta.kind || 'batchReplace',
+        changed: changed,
+        before: before,
+        after: after,
+        delta: before ? groupModelTraceDeltaFull(before, after) : null,
+        sourceFile: meta.sourceFile || 'experiencia-engine.js',
+        sourceFunction: meta.sourceFunction || null,
+        sourceLine: meta.sourceLine || null,
+        why: meta.why || null,
+        extra: meta.extra || null
+      }
+    );
+  }
+
+  function traceGroupModelIfChanged(g, groupId, before, sourceFunction, sourceLine, why, extra) {
+    if (!compareRotateGroupModelTraceEnabled() || !g || !before) return;
+    traceGroupModelReplace({
+      groupId: groupId || g.id,
+      before: before,
+      after: snapshotGroupModelTrace(g),
+      sourceFile: (extra && extra.sourceFile) || 'experiencia-engine.js',
+      sourceFunction: sourceFunction,
+      sourceLine: sourceLine,
+      why: why,
+      kind: (extra && extra.kind) || 'batchReplace',
+      extra: extra || null
+    });
+  }
+
+  function groupSizeSnapEngine(g) {
+    var m = snapshotGroupModelTrace(g);
+    return m ? { width: m.width, height: m.height } : { width: 0, height: 0 };
+  }
+
   function traceLiveGroupModelSizeWrite(meta) {
-    if (!compareRotateGroupSizeTraceEnabled()) return;
+    if (!compareRotateGroupModelTraceEnabled()) return;
     if (typeof window === 'undefined') return;
     var slot = window.__QE_LIVE_GROUP_SIZE_TRACE__;
     if (!slot || !slot.active) return;
@@ -98,11 +184,23 @@ var ExperienciaEngine = (function () {
 
   function traceLiveGroupSizeAfterAssign(g, groupId, before, sourceFunction, sourceLine, why, extra) {
     if (!g) return;
+    var beforeFull = before && before.width != null && before.height != null &&
+      before.x == null
+      ? {
+        x: +(Number(g.x) || 0).toFixed(4),
+        y: +(Number(g.y) || 0).toFixed(4),
+        width: before.width,
+        height: before.height,
+        rotation: +(Number(g.rotation) || 0).toFixed(2),
+        _transformV: Number(g._transformV) || 0
+      }
+      : (before && before.x != null ? before : snapshotGroupModelTrace(g));
+    traceGroupModelIfChanged(g, groupId, beforeFull, sourceFunction, sourceLine, why, extra);
     var after = groupSizeSnapEngine(g);
     traceLiveGroupModelSizeWrite({
       groupId: groupId,
-      beforeWidth: before.width,
-      beforeHeight: before.height,
+      beforeWidth: beforeFull ? beforeFull.width : after.width,
+      beforeHeight: beforeFull ? beforeFull.height : after.height,
       afterWidth: after.width,
       afterHeight: after.height,
       sourceFile: 'experiencia-engine.js',
@@ -116,7 +214,7 @@ var ExperienciaEngine = (function () {
 
   function traceLiveGroupSizeStep(g, groupId, before, sourceFunction, sourceLine, why, extra) {
     if (!g) return;
-    traceLiveGroupSizeAfterAssign(g, groupId, before, sourceFunction, sourceLine, why, extra);
+    traceGroupModelIfChanged(g, groupId, before, sourceFunction, sourceLine, why, extra);
   }
 
   function patchModelFieldsEngine(patch) {
@@ -1529,6 +1627,7 @@ var ExperienciaEngine = (function () {
   function ensureOverlayGroupDefaults(n, g, layerW, layerH, opts) {
     opts = opts || {};
     if (!g || !isOverlayGroupInteraction(g)) return g;
+    var __gmEnter = compareRotateGroupModelTraceEnabled() ? snapshotGroupModelTrace(g) : null;
     if (g.rotation == null || isNaN(Number(g.rotation))) g.rotation = 0;
     if (g.x == null || isNaN(Number(g.x))) g.x = 50;
     if (g.y == null || isNaN(Number(g.y))) g.y = 50;
@@ -1539,26 +1638,26 @@ var ExperienciaEngine = (function () {
     if (g.width == null || g.height == null || !memberIds.length) {
       var bounds0 = computeOverlayUnionBounds(n, memberIds, lw, lh, { useComposed: true });
       if (bounds0) {
+        var __gmB0 = snapshotGroupModelTrace(g);
         g.x = bounds0.cx;
         g.y = bounds0.cy;
-        var __wh0 = groupSizeSnapEngine(g);
         g.width = bounds0.w;
         g.height = bounds0.h;
-        traceLiveGroupSizeAfterAssign(
-          g, g.id, __wh0,
-          'ensureOverlayGroupDefaults', '1540-1541',
-          'computeOverlayUnionBounds(bounds0) → g.width/height',
+        traceGroupModelIfChanged(
+          g, g.id, __gmB0,
+          'ensureOverlayGroupDefaults', '1640-1644',
+          'computeOverlayUnionBounds(bounds0) → g.x/y/width/height',
           { bounds0: bounds0, skipSync: !!opts.skipSync }
         );
         if (g._baseWidth == null) g._baseWidth = bounds0.w;
         if (g._baseHeight == null) g._baseHeight = bounds0.h;
       } else {
-        var __wh1 = groupSizeSnapEngine(g);
+        var __gmB1 = snapshotGroupModelTrace(g);
         if (g.width == null) g.width = 20;
         if (g.height == null) g.height = 20;
-        traceLiveGroupSizeAfterAssign(
-          g, g.id, __wh1,
-          'ensureOverlayGroupDefaults', '1545-1546',
+        traceGroupModelIfChanged(
+          g, g.id, __gmB1,
+          'ensureOverlayGroupDefaults', '1655-1656',
           'fallback defaults → g.width/height=20',
           { skipSync: !!opts.skipSync }
         );
@@ -1570,6 +1669,14 @@ var ExperienciaEngine = (function () {
     if (g._baseHeight == null) g._baseHeight = Number(g.height) || 20;
     if (!opts.skipSync && Number(g._transformV) < 2 && n && memberIds.length) {
       syncOverlayGroupFrameFromMembers(n, g, lw, lh);
+    }
+    if (__gmEnter) {
+      traceGroupModelIfChanged(
+        g, g.id, __gmEnter,
+        'ensureOverlayGroupDefaults', 'exit',
+        'ensureOverlayGroupDefaults exit (includes optional syncOverlayGroupFrameFromMembers)',
+        { skipSync: !!opts.skipSync, _transformV: Number(g._transformV) || 0 }
+      );
     }
     return g;
   }
@@ -1622,6 +1729,7 @@ var ExperienciaEngine = (function () {
   function syncOverlayGroupFrameFromMembers(n, g, layerW, layerH) {
     if (!n || !g || !isOverlayGroupInteraction(g)) return g;
     if (Number(g._transformV) >= 2) return g;
+    var __gmEnter = compareRotateGroupModelTraceEnabled() ? snapshotGroupModelTrace(g) : null;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
@@ -1635,15 +1743,15 @@ var ExperienciaEngine = (function () {
     });
     var bounds = computeOverlayUnionBounds(n, memberIds, layerW, layerH, { useComposed: true });
     if (bounds) {
+      var __gmB = snapshotGroupModelTrace(g);
       g.x = bounds.cx;
       g.y = bounds.cy;
-      var __whSync = groupSizeSnapEngine(g);
       g.width = bounds.w;
       g.height = bounds.h;
-      traceLiveGroupSizeAfterAssign(
-        g, g.id, __whSync,
-        'syncOverlayGroupFrameFromMembers', '1622-1623',
-        'computeOverlayUnionBounds(bounds) → g.width/height',
+      traceGroupModelIfChanged(
+        g, g.id, __gmB,
+        'syncOverlayGroupFrameFromMembers', '1738-1742',
+        'computeOverlayUnionBounds(bounds) → g.x/y/width/height',
         { bounds: bounds, _transformV: Number(g._transformV) || 0 }
       );
       if (g._baseWidth == null) g._baseWidth = bounds.w;
@@ -1660,6 +1768,14 @@ var ExperienciaEngine = (function () {
       ix.groupId = g.id;
     });
     g._transformV = 2;
+    if (__gmEnter) {
+      traceGroupModelIfChanged(
+        g, g.id, __gmEnter,
+        'syncOverlayGroupFrameFromMembers', 'exit',
+        'syncOverlayGroupFrameFromMembers exit (relocalize members)',
+        { _transformV: Number(g._transformV) || 0 }
+      );
+    }
     return g;
   }
 
@@ -2085,42 +2201,51 @@ var ExperienciaEngine = (function () {
     patch = patch || {};
     var layerW = patch.layerW || 1000;
     var layerH = patch.layerH || 1000;
-    var __whEntry = groupSizeSnapEngine(g);
+    var __gmEntry = compareRotateGroupModelTraceEnabled() ? snapshotGroupModelTrace(g) : null;
     ensureOverlayGroupDefaults(n, g, layerW, layerH, {
       skipSync: !!patch.live ||
         (!!patch.memberWorldSnapshots && patch.anchorX != null && patch.anchorY != null)
     });
     traceLiveGroupSizeStep(
-      g, groupId, __whEntry,
-      'updateOverlayGroupTransform', '2063',
+      g, groupId, __gmEntry,
+      'updateOverlayGroupTransform', '2207',
       'after ensureOverlayGroupDefaults(skipSync=' + (!!patch.live ||
         (!!patch.memberWorldSnapshots && patch.anchorX != null && patch.anchorY != null)) + ')',
       { patchKeys: Object.keys(patch), live: !!patch.live }
     );
-    var __whAfterEnsure = groupSizeSnapEngine(g);
+    var __gmAfterEnsure = snapshotGroupModelTrace(g);
     migrateGroupedChildLocals(n, g, layerW, layerH);
     traceLiveGroupSizeStep(
-      g, groupId, __whAfterEnsure,
-      'updateOverlayGroupTransform', '2071',
+      g, groupId, __gmAfterEnsure,
+      'updateOverlayGroupTransform', '2216',
       'after migrateGroupedChildLocals',
       { patchKeys: Object.keys(patch), live: !!patch.live }
     );
 
-    if (patch.x != null) {
-      var nx = Number(patch.x);
-      if (!isNaN(nx)) g.x = patch.live ? Math.max(-20, Math.min(120, nx)) : clampPercent(nx, g.x);
-    }
-    if (patch.y != null) {
-      var ny = Number(patch.y);
-      if (!isNaN(ny)) g.y = patch.live ? Math.max(-20, Math.min(120, ny)) : clampPercent(ny, g.y);
+    if (patch.x != null || patch.y != null) {
+      var __gmBeforeXY = snapshotGroupModelTrace(g);
+      if (patch.x != null) {
+        var nx = Number(patch.x);
+        if (!isNaN(nx)) g.x = patch.live ? Math.max(-20, Math.min(120, nx)) : clampPercent(nx, g.x);
+      }
+      if (patch.y != null) {
+        var ny = Number(patch.y);
+        if (!isNaN(ny)) g.y = patch.live ? Math.max(-20, Math.min(120, ny)) : clampPercent(ny, g.y);
+      }
+      traceGroupModelIfChanged(
+        g, groupId, __gmBeforeXY,
+        'updateOverlayGroupTransform', '2223-2230',
+        'patch.x/y → g.x/y',
+        { patchX: patch.x, patchY: patch.y, live: !!patch.live }
+      );
     }
     if (patch.rotation != null) {
-      var __whBeforeRot = groupSizeSnapEngine(g);
+      var __gmBeforeRot = snapshotGroupModelTrace(g);
       g.rotation = clampRotation(patch.rotation);
-      traceLiveGroupSizeStep(
-        g, groupId, __whBeforeRot,
-        'updateOverlayGroupTransform', '2080',
-        'after g.rotation assign',
+      traceGroupModelIfChanged(
+        g, groupId, __gmBeforeRot,
+        'updateOverlayGroupTransform', '2233',
+        'patch.rotation → g.rotation',
         { rotation: Number(g.rotation) || 0, live: !!patch.live }
       );
     }
@@ -2140,12 +2265,12 @@ var ExperienciaEngine = (function () {
           newW = baseW * sx;
           newH = baseH * sy;
         }
-        var __whBeforePatch = groupSizeSnapEngine(g);
+        var __gmBeforePatch = snapshotGroupModelTrace(g);
         g.width = newW;
         g.height = newH;
-        traceLiveGroupSizeAfterAssign(
-          g, groupId, __whBeforePatch,
-          'updateOverlayGroupTransform', '2094-2095',
+        traceGroupModelIfChanged(
+          g, groupId, __gmBeforePatch,
+          'updateOverlayGroupTransform', '2258-2259',
           'patch.width/height scale → g.width/height',
           { newW: newW, newH: newH, sx: sx, sy: sy, live: !!patch.live }
         );
@@ -2165,12 +2290,12 @@ var ExperienciaEngine = (function () {
           }
           newW = baseW * sx;
           newH = baseH * sy;
-          var __whBeforeWorld = groupSizeSnapEngine(g);
+          var __gmBeforeWorld = snapshotGroupModelTrace(g);
           g.width = newW;
           g.height = newH;
-          traceLiveGroupSizeAfterAssign(
-            g, groupId, __whBeforeWorld,
-            'updateOverlayGroupTransform', '2112-2113',
+          traceGroupModelIfChanged(
+            g, groupId, __gmBeforeWorld,
+            'updateOverlayGroupTransform', '2283-2284',
             'memberWorldSnapshots scale floor → g.width/height',
             { newW: newW, newH: newH, sx: sx, sy: sy, live: !!patch.live }
           );
@@ -2209,13 +2334,21 @@ var ExperienciaEngine = (function () {
       }
     }
     if (patch.syncBounds) {
-      var __whBeforeSyncBounds = groupSizeSnapEngine(g);
+      var __gmBeforeSyncBounds = snapshotGroupModelTrace(g);
       syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
-      traceLiveGroupSizeStep(
-        g, groupId, __whBeforeSyncBounds,
-        'updateOverlayGroupTransform', '2149',
-        'after patch.syncBounds → syncOverlayGroupFrameFromMembers',
+      traceGroupModelIfChanged(
+        g, groupId, __gmBeforeSyncBounds,
+        'updateOverlayGroupTransform', '2336',
+        'patch.syncBounds → syncOverlayGroupFrameFromMembers',
         { live: !!patch.live }
+      );
+    }
+    if (__gmEntry) {
+      traceGroupModelIfChanged(
+        g, groupId, __gmEntry,
+        'updateOverlayGroupTransform', 'return',
+        'updateOverlayGroupTransform exit',
+        { patchKeys: Object.keys(patch), live: !!patch.live }
       );
     }
     return overlayGroupViewModel(state, n, g, layerW, layerH);
@@ -2223,14 +2356,31 @@ var ExperienciaEngine = (function () {
 
   function commitOverlayGroupBounds(n, g, layerW, layerH) {
     if (!n || !g) return g;
+    var __gmEnter = compareRotateGroupModelTraceEnabled() ? snapshotGroupModelTrace(g) : null;
     if (Number(g._transformV) >= 2) {
       g._baseWidth = Number(g.width) || g._baseWidth;
       g._baseHeight = Number(g.height) || g._baseHeight;
+      if (__gmEnter) {
+        traceGroupModelIfChanged(
+          g, g.id, __gmEnter,
+          'commitOverlayGroupBounds', '2350',
+          'commitOverlayGroupBounds early exit (_transformV>=2, baseWidth/Height only)',
+          { _transformV: Number(g._transformV) || 0 }
+        );
+      }
       return g;
     }
     syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
     g._baseWidth = Number(g.width) || g._baseWidth;
     g._baseHeight = Number(g.height) || g._baseHeight;
+    if (__gmEnter) {
+      traceGroupModelIfChanged(
+        g, g.id, __gmEnter,
+        'commitOverlayGroupBounds', 'exit',
+        'commitOverlayGroupBounds → syncOverlayGroupFrameFromMembers',
+        { _transformV: Number(g._transformV) || 0 }
+      );
+    }
     return g;
   }
 
@@ -2264,6 +2414,7 @@ var ExperienciaEngine = (function () {
     opts = opts || {};
     if (!n || !g || !isOverlayGroupInteraction(g)) return g;
     if (Number(g._transformV) >= 2) return g;
+    var __gmEnter = compareRotateGroupModelTraceEnabled() ? snapshotGroupModelTrace(g) : null;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
@@ -2290,18 +2441,42 @@ var ExperienciaEngine = (function () {
     if (opts.keepPivot) {
       var halfW = Math.max(gw / 2, gx - uL, uR - gx);
       var halfH = Math.max(gh / 2, gy - uT, uB - gy);
-      var __whExpand = groupSizeSnapEngine(g);
+      var __gmExpand = snapshotGroupModelTrace(g);
       g.width = Math.max(0.5, halfW * 2);
       g.height = Math.max(0.5, halfH * 2);
-      traceLiveGroupSizeAfterAssign(
-        g, g.id, __whExpand,
-        'expandOverlayGroupBoundsIfMemberOverflow', '2223-2224',
+      traceGroupModelIfChanged(
+        g, g.id, __gmExpand,
+        'expandOverlayGroupBoundsIfMemberOverflow', '2410-2411',
         'keepPivot overflow expand → g.width/height',
         { union: union, keepPivot: true }
       );
+      if (__gmEnter) {
+        traceGroupModelIfChanged(
+          g, g.id, __gmEnter,
+          'expandOverlayGroupBoundsIfMemberOverflow', 'exit',
+          'expandOverlayGroupBoundsIfMemberOverflow exit (keepPivot)',
+          { keepPivot: true }
+        );
+      }
       return g;
     }
-    return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+    var __gmBeforeSync = snapshotGroupModelTrace(g);
+    syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+    traceGroupModelIfChanged(
+      g, g.id, __gmBeforeSync,
+      'expandOverlayGroupBoundsIfMemberOverflow', '2420',
+      'overflow → syncOverlayGroupFrameFromMembers',
+      { union: union }
+    );
+    if (__gmEnter) {
+      traceGroupModelIfChanged(
+        g, g.id, __gmEnter,
+        'expandOverlayGroupBoundsIfMemberOverflow', 'exit',
+        'expandOverlayGroupBoundsIfMemberOverflow exit (sync)',
+        null
+      );
+    }
+    return g;
   }
 
   function snapshotOverlayGroupLocals(n, g) {
@@ -2578,8 +2753,19 @@ var ExperienciaEngine = (function () {
     if (unique.length < 2) return null;
     var existing = findOverlayGroupByMembers(n, unique);
     if (existing) {
+      var __gmExisting = compareRotateGroupModelTraceEnabled()
+        ? snapshotGroupModelTrace(existing)
+        : null;
       ensureOverlayGroupDefaults(n, existing, lw, lh);
       migrateGroupedChildLocals(n, existing, lw, lh);
+      if (__gmExisting) {
+        traceGroupModelIfChanged(
+          existing, existing.id, __gmExisting,
+          'groupSceneOverlays', 'existing',
+          'reuse existing group → ensureOverlayGroupDefaults + migrateGroupedChildLocals',
+          null
+        );
+      }
       return existing;
     }
     var bounds = computeOverlayUnionBounds(n, unique, lw, lh);
@@ -2619,6 +2805,17 @@ var ExperienciaEngine = (function () {
     });
     n.config.interactions.push(group);
     group._transformV = 2;
+    traceGroupModelReplace({
+      groupId: groupId,
+      before: null,
+      after: snapshotGroupModelTrace(group),
+      sourceFile: 'experiencia-engine.js',
+      sourceFunction: 'groupSceneOverlays',
+      sourceLine: '2735',
+      why: 'makeInteraction new OVERLAY_GROUP object created',
+      kind: 'objectCreated',
+      extra: { memberIds: unique.slice(), frame: { cx: frameCx, cy: frameCy, w: frameW, h: frameH, rot: frameRot } }
+    });
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
@@ -8491,6 +8688,8 @@ var ExperienciaEngine = (function () {
     resolveOverlayGroupMemberIds: resolveOverlayGroupMemberIds,
     computeOverlayUnionBounds: computeOverlayUnionBounds,
     commitOverlayGroupBounds: commitOverlayGroupBounds,
+    snapshotGroupModelTrace: snapshotGroupModelTrace,
+    traceCompareRotateGroupModelIfChanged: traceGroupModelIfChanged,
     findOverlayGroupForMember: findOverlayGroupForMember,
     expandOverlayGroupBoundsIfMemberOverflow: expandOverlayGroupBoundsIfMemberOverflow,
     reconcileOverlayGroupTransform: reconcileOverlayGroupTransform,

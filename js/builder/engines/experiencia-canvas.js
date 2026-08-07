@@ -7052,6 +7052,24 @@ var ExperienciaCanvas = (function () {
       }
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
       syncAllSelectionGizmoHandleCursors(buttonsLayer);
+      if (groupMountG && compareRotateEnabled()) {
+        var nMountGm = ExperienciaEngine.getNode(state, sceneId);
+        var gMountGm = nMountGm && ExperienciaEngine.getInteraction(nMountGm, groupMountG.groupId);
+        var unionMountGm = getGroupUnionFrame(sceneId, groupMountG.groupId, layerW, layerH);
+        var modelMountGm = ExperienciaEngine.snapshotGroupModelTrace
+          ? ExperienciaEngine.snapshotGroupModelTrace(gMountGm)
+          : snapshotCompareRotateGroupModel(gMountGm);
+        compareRotateLog('compareRotate.groupModel.mountGizmo', {
+          sceneId: sceneId,
+          groupId: String(groupMountG.groupId),
+          groupModel: modelMountGm,
+          groupUnionFrame: unionMountGm,
+          mismatch: unionMountGm && modelMountGm ? {
+            deltaW: +((modelMountGm.width - unionMountGm.w)).toFixed(4),
+            deltaH: +((modelMountGm.height - unionMountGm.h)).toFixed(4)
+          } : null
+        });
+      }
       requestAnimationFrame(syncButtonsLayerBounds);
     }
 
@@ -10357,6 +10375,21 @@ var ExperienciaCanvas = (function () {
         g._baseHeight = g.height;
         g._transformV = 2;
       }
+      if (traceCr && groupModelBefore && ExperienciaEngine.traceCompareRotateGroupModelIfChanged) {
+        ExperienciaEngine.traceCompareRotateGroupModelIfChanged(
+          g, groupId, groupModelBefore,
+          'finalizeGroupOrientedFrame',
+          rotationOnlyCommit ? 'rotationOnlyCommit' : 'fullFrameReplace',
+          rotationOnlyCommit
+            ? 'rotationOnlyCommit → g.rotation only; preserve g.x/y/width/height'
+            : 'fullFrameReplace → g.x/y/width/height from frame.cx/cy/w/h',
+          {
+            sourceFile: 'experiencia-canvas.js',
+            branch: rotationOnlyCommit ? 'rotationOnlyCommit' : 'fullFrameReplace',
+            frameIn: { w: frameW, h: frameH, rot: frame.rot }
+          }
+        );
+      }
       if (traceCr) {
         var groupModelAfter = snapshotCompareRotateGroupModel(g);
         compareRotateLog('compareRotate.finalizeGroupOrientedFrame.exit', {
@@ -10446,7 +10479,34 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!n || !g) return;
       var sz = overlayLayerSize();
+      var traceCr = compareRotateEnabled();
+      var gmBefore = traceCr && ExperienciaEngine.snapshotGroupModelTrace
+        ? ExperienciaEngine.snapshotGroupModelTrace(g)
+        : null;
+      var unionBefore = traceCr ? getGroupUnionFrame(sceneId, groupId, sz.w, sz.h) : null;
+      if (traceCr && gmBefore) {
+        compareRotateLog('compareRotate.groupModel.beforeCommitGroupBounds', {
+          sceneId: sceneId,
+          groupId: String(groupId),
+          groupModel: gmBefore,
+          groupUnionFrame: unionBefore,
+          _transformV: gmBefore._transformV
+        });
+      }
       ExperienciaEngine.commitOverlayGroupBounds(n, g, sz.w, sz.h);
+      if (traceCr && gmBefore && ExperienciaEngine.traceCompareRotateGroupModelIfChanged) {
+        var unionAfter = getGroupUnionFrame(sceneId, groupId, sz.w, sz.h);
+        ExperienciaEngine.traceCompareRotateGroupModelIfChanged(
+          g, groupId, gmBefore,
+          'commitGroupBoundsIfNeeded', 'afterCommit',
+          'commitOverlayGroupBounds finished',
+          {
+            sourceFile: 'experiencia-canvas.js',
+            groupUnionFrameBefore: unionBefore,
+            groupUnionFrameAfter: unionAfter
+          }
+        );
+      }
     }
 
     /** After a live group translate — refresh frame size only; skip sync (relocalize jumps snap). */
@@ -10463,6 +10523,14 @@ var ExperienciaCanvas = (function () {
       var __whMoveFin = snapshotCompareRotateGroupModel(g);
       g.width = Number(vm.width) || g.width;
       g.height = Number(vm.height) || g.height;
+      if (compareRotateEnabled() && ExperienciaEngine.traceCompareRotateGroupModelIfChanged) {
+        ExperienciaEngine.traceCompareRotateGroupModelIfChanged(
+          g, groupId, __whMoveFin,
+          'finalizeOverlayGroupMoveFrame', '10524-10525',
+          'vm.width/height → g.width/height after group move',
+          { sourceFile: 'experiencia-canvas.js', vmW: Number(vm.width), vmH: Number(vm.height) }
+        );
+      }
       if (compareRotateEnabled() && typeof window !== 'undefined' &&
           window.__QE_LIVE_GROUP_SIZE_TRACE__ &&
           window.__QE_LIVE_GROUP_SIZE_TRACE__.active) {
@@ -12404,6 +12472,26 @@ var ExperienciaCanvas = (function () {
           }
           if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.commitOverlayGroupBounds) {
+            if (compareRotateEnabled()) {
+              var szPreCommit = overlayLayerSize();
+              var nPreCommit = ExperienciaEngine.getNode(state, sceneIdG);
+              var gPreCommit = nPreCommit && ExperienciaEngine.getInteraction(nPreCommit, gid);
+              var unionPreCommit = getGroupUnionFrame(sceneIdG, gid, szPreCommit.w, szPreCommit.h);
+              var modelPreCommit = ExperienciaEngine.snapshotGroupModelTrace
+                ? ExperienciaEngine.snapshotGroupModelTrace(gPreCommit)
+                : snapshotCompareRotateGroupModel(gPreCommit);
+              compareRotateLog('compareRotate.groupModel.pointerdownPreCommit', {
+                sceneId: sceneIdG,
+                groupId: String(gid),
+                handle: handle.getAttribute('data-handle'),
+                groupModel: modelPreCommit,
+                groupUnionFrame: unionPreCommit,
+                mismatch: unionPreCommit && modelPreCommit ? {
+                  deltaW: +((modelPreCommit.width - unionPreCommit.w)).toFixed(4),
+                  deltaH: +((modelPreCommit.height - unionPreCommit.h)).toFixed(4)
+                } : null
+              });
+            }
             commitGroupBoundsIfNeeded(sceneIdG, gid);
             btnG = getOverlayItemVm(sceneIdG, gid);
           }
