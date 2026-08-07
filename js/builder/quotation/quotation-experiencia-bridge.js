@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7806';
+  var QE_BRIDGE_BUILD = 'ws7807';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -88,6 +88,85 @@ var QuotationExperienciaBridge = (function () {
       });
     });
     return found ? !!found.locked : 'missing';
+  }
+
+  function sceneLockedForActiveItem(itemId, scenes, activeSceneId) {
+    if (!itemId || !scenes || !activeSceneId) return 'missing';
+    var sc = null;
+    var i;
+    for (i = 0; i < scenes.length; i++) {
+      if (scenes[i] && String(scenes[i].id) === String(activeSceneId)) {
+        sc = scenes[i];
+        break;
+      }
+    }
+    if (!sc || !Array.isArray(sc.interactions)) return 'missing';
+    var j;
+    for (j = 0; j < sc.interactions.length; j++) {
+      if (sc.interactions[j] && String(sc.interactions[j].id) === String(itemId)) {
+        return !!sc.interactions[j].locked;
+      }
+    }
+    return 'missing';
+  }
+
+  /** Temporary — compare lock flag across scene / shim / vm / DOM / effective gate. */
+  function debugCompareLockState(itemId, ctx) {
+    ctx = ctx || {};
+    itemId = itemId ? String(itemId) : '';
+    if (!itemId) return;
+
+    var scenes = ctx.scenes;
+    var activeSceneId = ctx.activeSceneId;
+    var shim = ctx.shim;
+    var overlayNodeId = ctx.overlayNodeId;
+    var buttonsLayer = ctx.buttonsLayer;
+    var layerSize = ctx.layerSize || { w: 1000, h: 1000 };
+
+    var sceneLocked = sceneLockedForActiveItem(itemId, scenes, activeSceneId);
+    var shimLocked = findIxLockedInShim(itemId, shim);
+
+    var vmLocked = 'missing';
+    var effectiveLocked = 'missing';
+    if (shim && overlayNodeId && typeof ExperienciaEngine !== 'undefined') {
+      var n = ExperienciaEngine.getNode(shim, overlayNodeId);
+      var ix = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, itemId)
+        : null;
+      if (ix && ExperienciaEngine.buttonViewModel) {
+        var vm = ExperienciaEngine.buttonViewModel(
+          shim, n, ix, layerSize.w || 1000, layerSize.h || 1000
+        );
+        vmLocked = vm ? !!vm.locked : 'missing';
+      } else if (ix) {
+        vmLocked = !!ix.locked;
+      }
+      if (n && ExperienciaEngine.isOverlayEffectivelyLocked) {
+        effectiveLocked = !!ExperienciaEngine.isOverlayEffectivelyLocked(shim, n, itemId);
+      }
+    }
+
+    var domDataLocked = 'missing';
+    var domClassLocked = 'missing';
+    if (buttonsLayer) {
+      var idEsc = itemId.replace(/"/g, '');
+      var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+      if (el) {
+        domDataLocked = el.getAttribute('data-locked') === '1' ? 'true' : 'false';
+        domClassLocked = el.classList.contains('is-locked') ? 'true' : 'false';
+      }
+    }
+
+    var origin = ctx.origin ? ' origin=' + ctx.origin : '';
+    console.log(
+      '[LOCK COMPARE] itemId=' + itemId + origin + '\n' +
+      'SCENE:\nlocked=' + String(sceneLocked) + '\n' +
+      'SHIM:\nlocked=' + String(shimLocked) + '\n' +
+      'VIEWMODEL:\nlocked=' + String(vmLocked) + '\n' +
+      'DOM:\ndata-locked=' + String(domDataLocked) + '\n' +
+      'class=is-locked\n' + String(domClassLocked) + '\n' +
+      'EFFECTIVE:\nlocked=' + String(effectiveLocked)
+    );
   }
 
   /** Migrate legacy flat buttons/hotspots → interactions[] (Showroom SSOT). */
@@ -403,6 +482,23 @@ var QuotationExperienciaBridge = (function () {
       if (typeof options.onChange === 'function') options.onChange();
     }
 
+    function overlayDebugCompareLockState(itemId, origin) {
+      var layerEl = hostEl.querySelector('[data-exp-buttons-layer]');
+      var layerHost = layerEl && layerEl.parentElement ? layerEl.parentElement : hostEl;
+      debugCompareLockState(itemId, {
+        origin: origin || 'expOverlay',
+        scenes: scenes,
+        activeSceneId: activeId,
+        shim: shim,
+        overlayNodeId: nodeIdForScene(activeId),
+        buttonsLayer: layerEl,
+        layerSize: {
+          w: Math.max(1, (layerHost && layerHost.clientWidth) || 1000),
+          h: Math.max(1, (layerHost && layerHost.clientHeight) || 1000)
+        }
+      });
+    }
+
     if (useKonva) {
       try {
         console.info('[QuotationExperienciaBridge] Konva POC renderer active');
@@ -431,7 +527,8 @@ var QuotationExperienciaBridge = (function () {
         onChange: onCanvasChangePullToScenes,
         onSelectionChange: options.onSelectionChange,
         onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
-        overlaySnapEnabled: options.overlaySnapEnabled
+        overlaySnapEnabled: options.overlaySnapEnabled,
+        debugCompareLockState: overlayDebugCompareLockState
       });
     }
     if (!handle) return null;
@@ -439,6 +536,7 @@ var QuotationExperienciaBridge = (function () {
     return {
       shim: shim,
       handle: handle,
+      debugCompareLockState: overlayDebugCompareLockState,
       isKonvaPoc: !!handle.isKonvaPoc,
       refresh: function () {
         if (handle.refresh) handle.refresh();
@@ -590,6 +688,7 @@ var QuotationExperienciaBridge = (function () {
     buildState: buildState,
     pullToScenes: pullToScenes,
     pushScenesToShim: pushScenesToShim,
+    debugCompareLockState: debugCompareLockState,
     mount: mount
   };
 })();
