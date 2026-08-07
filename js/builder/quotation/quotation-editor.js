@@ -4268,6 +4268,46 @@ var QuotationEditor = (function () {
     return ok;
   }
 
+  function overlayPanelNodeId() {
+    var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
+    return (typeof QuotationExperienciaBridge !== 'undefined' &&
+      QuotationExperienciaBridge.nodeIdForScene)
+      ? QuotationExperienciaBridge.nodeIdForScene(sceneId)
+      : ('qe-' + sceneId);
+  }
+
+  /** Copy grouped/world layout fields from shim back into panel SSOT. */
+  function copyPanelInteractionFromShim(interactionId) {
+    if (!interactionId || !expOverlay || !expOverlay.shim ||
+        typeof ExperienciaEngine === 'undefined') {
+      return;
+    }
+    var panelIx = findSceneInteraction(interactionId);
+    if (!panelIx) return;
+    var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+    if (!n) return;
+    var shimIx = ExperienciaEngine.getInteraction(n, interactionId);
+    if (!shimIx) return;
+    if (shimIx.groupId) {
+      panelIx.groupId = shimIx.groupId;
+      panelIx.localX = shimIx.localX;
+      panelIx.localY = shimIx.localY;
+      panelIx.localRotation = shimIx.localRotation;
+    } else {
+      delete panelIx.groupId;
+      delete panelIx.localX;
+      delete panelIx.localY;
+      delete panelIx.localRotation;
+      panelIx.x = shimIx.x;
+      panelIx.y = shimIx.y;
+      panelIx.rotation = shimIx.rotation;
+      if (shimIx.width != null) panelIx.width = shimIx.width;
+      if (shimIx.height != null) panelIx.height = shimIx.height;
+      if (shimIx.boxW != null) panelIx.boxW = shimIx.boxW;
+      if (shimIx.boxH != null) panelIx.boxH = shimIx.boxH;
+    }
+  }
+
   function assignInteractionToGroup(memberId, groupId, beforeMemberId) {
     if (!memberId || !groupId || String(memberId) === String(groupId)) return false;
     var scene = activeScene();
@@ -4285,10 +4325,6 @@ var QuotationEditor = (function () {
         return String(id) !== String(memberId);
       });
     });
-    delete member.groupId;
-    delete member.localX;
-    delete member.localY;
-    delete member.localRotation;
     if (!Array.isArray(group.memberIds)) group.memberIds = [];
     if (beforeMemberId) {
       var idx = group.memberIds.map(String).indexOf(String(beforeMemberId));
@@ -4297,6 +4333,7 @@ var QuotationEditor = (function () {
     } else {
       group.memberIds.push(String(memberId));
     }
+    member.groupId = groupId;
     applyPanelSceneToOverlay(function (n) {
       var g = ExperienciaEngine.getInteraction(n, groupId);
       var m = ExperienciaEngine.getInteraction(n, memberId);
@@ -4312,15 +4349,28 @@ var QuotationEditor = (function () {
       }
       ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
     });
+    copyPanelInteractionFromShim(memberId);
+    markDirtyLocal();
     return true;
   }
 
   function removeInteractionFromGroup(memberId) {
     var member = findSceneInteraction(memberId);
     if (!member || !member.groupId) return false;
+    var groupId = member.groupId;
+    var group = findSceneInteraction(groupId);
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
+    if (group && Array.isArray(group.memberIds)) {
+      group.memberIds = group.memberIds.filter(function (id) {
+        return String(id) !== String(memberId);
+      });
+    }
+    delete member.groupId;
+    delete member.localX;
+    delete member.localY;
+    delete member.localRotation;
     applyPanelSceneToOverlay(function (n) {
       var m = ExperienciaEngine.getInteraction(n, memberId);
       if (!m || !m.groupId) return;
@@ -4347,6 +4397,8 @@ var QuotationEditor = (function () {
       delete m.localY;
       delete m.localRotation;
     });
+    copyPanelInteractionFromShim(memberId);
+    markDirtyLocal();
     return true;
   }
 
@@ -4504,21 +4556,30 @@ var QuotationEditor = (function () {
       return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
     }
 
+    if (!dragIsGroup && !dragGrouped && targetIsGroup) {
+      var tgtGroup = findSceneInteraction(drop.id);
+      var tgtMembers = (tgtGroup && tgtGroup.memberIds) || [];
+      if (drop.position === 'before' && tgtMembers.length) {
+        return assignInteractionToGroupAt(dragId, drop.id, tgtMembers[0], 'before');
+      }
+      return assignInteractionToGroup(dragId, drop.id, null);
+    }
+
     if (!dragIsGroup && dragGrouped) {
       if (!targetIsGroup && !targetGrouped) {
-        removeInteractionFromGroup(dragId);
+        if (!removeInteractionFromGroup(dragId)) return false;
         return reorderOverlayFreeItems(dragId, drop.id, drop.position);
       }
       if (targetGrouped && String(dragIx.groupId) === String(targetIx.groupId)) {
         return reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
       }
       if (targetIsGroup) {
-        if (drop.position === 'before') {
-          removeInteractionFromGroup(dragId);
-          return true;
+        var dropGroup = findSceneInteraction(drop.id);
+        var dropMembers = (dropGroup && dropGroup.memberIds) || [];
+        if (drop.position === 'before' && dropMembers.length) {
+          return assignInteractionToGroupAt(dragId, drop.id, dropMembers[0], 'before');
         }
-        assignInteractionToGroup(dragId, drop.id, null);
-        return true;
+        return assignInteractionToGroup(dragId, drop.id, null);
       }
       if (targetGrouped) {
         return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
@@ -4721,14 +4782,7 @@ var QuotationEditor = (function () {
       else if (clientY > rect.bottom - edge) list.scrollTop += speed;
     }
 
-    function finishDrag(ev, handle) {
-      if (handle) {
-        try {
-          if (ev && ev.pointerId != null && handle.releasePointerCapture) {
-            handle.releasePointerCapture(ev.pointerId);
-          }
-        } catch (eRel) { /* ignore */ }
-      }
+    function finishDrag(ev) {
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
 
       var ok = false;
@@ -4764,32 +4818,25 @@ var QuotationEditor = (function () {
       dropTarget = null;
 
       try { document.body.classList.add('is-qe-outliner-dragging'); } catch (eCls) { /* ignore */ }
-      try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
 
       function onMove(ev) {
         if (!draggingId) return;
+        ev.preventDefault();
         paintDropMarker(rowDropAt(ev.clientY, draggingId));
         autoScrollOutliner(ev.clientY);
       }
 
       function onUp(ev) {
-        handle.removeEventListener('pointermove', onMove);
-        handle.removeEventListener('pointerup', onUp);
-        handle.removeEventListener('pointercancel', onUp);
-        handle.removeEventListener('lostpointercapture', onLost);
+        window.removeEventListener('pointermove', onMove, true);
+        window.removeEventListener('pointerup', onUp, true);
+        window.removeEventListener('pointercancel', onUp, true);
         if (!draggingId) return;
-        finishDrag(ev, handle);
+        finishDrag(ev);
       }
 
-      function onLost(ev) {
-        if (!draggingId) return;
-        onUp(ev);
-      }
-
-      handle.addEventListener('pointermove', onMove);
-      handle.addEventListener('pointerup', onUp);
-      handle.addEventListener('pointercancel', onUp);
-      handle.addEventListener('lostpointercapture', onLost);
+      window.addEventListener('pointermove', onMove, true);
+      window.addEventListener('pointerup', onUp, true);
+      window.addEventListener('pointercancel', onUp, true);
 
       paintDropMarker(rowDropAt(e.clientY, draggingId));
     }, true);
@@ -12688,7 +12735,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7774'
+        editorBuild: 'ws7775'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
