@@ -46,6 +46,26 @@ var ExperienciaCanvas = (function () {
     );
   }
 
+  /** Temporary — ?compareRotate=1 logs multi-select vs group rotate pipeline side-by-side. */
+  function compareRotateEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_COMPARE_ROTATE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('compareRotate') === '0') return false;
+      if (q.get('compareRotate') === '1') return true;
+    } catch (eCr) { /* ignore */ }
+    return false;
+  }
+
+  function compareRotateLog(stage, payload) {
+    if (!compareRotateEnabled()) return;
+    console.log(
+      '%c[COMPARE-ROTATE] ' + stage,
+      'color:#6cf;font-weight:bold;font-size:12px',
+      payload || {}
+    );
+  }
+
   /** Temporary — ?shapeDebug=0 disables. Logs shape vs gizmo divergence. */
   function shapeResizeDebugEnabled() {
     if (typeof window !== 'undefined' && window.__QE_SHAPE_RESIZE_DEBUG__ === false) return false;
@@ -6083,6 +6103,9 @@ var ExperienciaCanvas = (function () {
           live: true
         });
       }
+      if (compareRotateEnabled() && transformDrag && transformDrag.mode === 'rotate') {
+        traceCompareRotateDuringDrag(transformDrag, deg);
+      }
       paintRotateLiveFromDrag(transformDrag);
     }
 
@@ -8641,6 +8664,203 @@ var ExperienciaCanvas = (function () {
       if (drag.lastChildModelTraceDeg === bucket) return;
       drag.lastChildModelTraceDeg = bucket;
       traceGroupChildModels('childModel.drag.deg' + bucket, drag);
+    }
+
+    function isClusterRotateDrag(drag) {
+      if (!drag || drag.mode !== 'rotate') return false;
+      var t = String(drag.type || '').toUpperCase();
+      return t === 'MULTI_SELECT' || t === 'OVERLAY_GROUP' || t === 'GROUP';
+    }
+
+    function compareRotatePoint2d(x, y, deg) {
+      var rad = (Number(deg) || 0) * Math.PI / 180;
+      var c = Math.cos(rad);
+      var s = Math.sin(rad);
+      return { x: x * c - y * s, y: x * s + y * c };
+    }
+
+    /** Read-only compose — mirrors composeOverlayWorldLayout, no engine mutate paths. */
+    function compareRotateGroupChildWorld(group, ix, layerW, layerH) {
+      if (!group || !ix) return null;
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var gr = Number(group.rotation) || 0;
+      var lxPx = (Number(ix.localX) || 0) / 100 * layerW;
+      var lyPx = (Number(ix.localY) || 0) / 100 * layerH;
+      var r = compareRotatePoint2d(lxPx, lyPx, gr);
+      var gxPx = (Number(group.x) / 100) * layerW;
+      var gyPx = (Number(group.y) / 100) * layerH;
+      return {
+        x: ((gxPx + r.x) / layerW) * 100,
+        y: ((gyPx + r.y) / layerH) * 100,
+        rotation: gr + (Number(ix.localRotation) || 0)
+      };
+    }
+
+    function compareRotateFrameBox(cx, cy, w, h, rot) {
+      return {
+        cx: +(Number(cx) || 0).toFixed(4),
+        cy: +(Number(cy) || 0).toFixed(4),
+        w: +(Number(w) || 0).toFixed(4),
+        h: +(Number(h) || 0).toFixed(4),
+        rot: +(Number(rot) || 0).toFixed(2)
+      };
+    }
+
+    function compareRotateMemberRows(members, baseline) {
+      return (members || []).map(function (m) {
+        var base = baseline && baseline[String(m.id)];
+        var row = {
+          id: String(m.id),
+          localX: m.localX != null ? +(Number(m.localX).toFixed(6)) : null,
+          localY: m.localY != null ? +(Number(m.localY).toFixed(6)) : null,
+          localRotation: m.localRotation != null ? +(Number(m.localRotation).toFixed(6)) : null,
+          'world.x': m.world ? +(Number(m.world.x).toFixed(6)) : null,
+          'world.y': m.world ? +(Number(m.world.y).toFixed(6)) : null,
+          'world.rotation': m.world ? +(Number(m.world.rotation).toFixed(6)) : null
+        };
+        if (base) {
+          if (m.localX != null && base.localX != null) {
+            row.deltaLocalX = +((Number(m.localX) - Number(base.localX)).toFixed(6));
+          }
+          if (m.localY != null && base.localY != null) {
+            row.deltaLocalY = +((Number(m.localY) - Number(base.localY)).toFixed(6));
+          }
+          if (m.localRotation != null && base.localRotation != null) {
+            row.deltaLocalRotation = +((Number(m.localRotation) - Number(base.localRotation)).toFixed(6));
+          }
+          if (m.world && base.world) {
+            row.deltaWorldX = +((Number(m.world.x) - Number(base.world.x)).toFixed(6));
+            row.deltaWorldY = +((Number(m.world.y) - Number(base.world.y)).toFixed(6));
+            row.deltaWorldRotation = +((Number(m.world.rotation) - Number(base.world.rotation)).toFixed(6));
+          }
+        }
+        return row;
+      });
+    }
+
+    function snapshotCompareRotateMembers(drag) {
+      var members = [];
+      var byId = {};
+      var n = ExperienciaEngine.getNode(state, drag.sceneId);
+      if (!n || !drag.memberIds || !drag.memberIds.length) return { list: members, byId: byId };
+      var mode = String(drag.type || '').toUpperCase();
+      var group = null;
+      if (mode === 'OVERLAY_GROUP' || mode === 'GROUP') {
+        group = ExperienciaEngine.getInteraction(n, drag.buttonId);
+      }
+      drag.memberIds.forEach(function (mid) {
+        var ix = ExperienciaEngine.getInteraction(n, mid);
+        if (!ix) return;
+        var entry;
+        if (mode === 'MULTI_SELECT') {
+          entry = {
+            id: String(mid),
+            localX: null,
+            localY: null,
+            localRotation: null,
+            world: {
+              x: Number(ix.x) || 0,
+              y: Number(ix.y) || 0,
+              rotation: Number(ix.rotation) || 0
+            }
+          };
+        } else if (group) {
+          var worldG = compareRotateGroupChildWorld(group, ix, drag.layerW, drag.layerH);
+          entry = {
+            id: String(mid),
+            localX: Number(ix.localX) || 0,
+            localY: Number(ix.localY) || 0,
+            localRotation: Number(ix.localRotation) || 0,
+            world: worldG || null
+          };
+        } else {
+          return;
+        }
+        members.push(entry);
+        byId[String(mid)] = entry;
+      });
+      return { list: members, byId: byId };
+    }
+
+    function buildCompareRotatePayload(stage, drag) {
+      var mode = String(drag.type || '').toUpperCase();
+      var snap = snapshotCompareRotateMembers(drag);
+      var orientedCache = null;
+      var groupModel = null;
+      if (mode === 'OVERLAY_GROUP' || mode === 'GROUP') {
+        var nG = ExperienciaEngine.getNode(state, drag.sceneId);
+        var gIx = nG && ExperienciaEngine.getInteraction(nG, drag.buttonId);
+        if (gIx) {
+          groupModel = {
+            x: +(Number(gIx.x) || 0).toFixed(4),
+            y: +(Number(gIx.y) || 0).toFixed(4),
+            rotation: +(Number(gIx.rotation) || 0).toFixed(2),
+            width: +(Number(gIx.width) || 0).toFixed(4),
+            height: +(Number(gIx.height) || 0).toFixed(4),
+            _transformV: Number(gIx._transformV) || 0
+          };
+        }
+        var oriented = getGroupUnionFrame(drag.sceneId, drag.buttonId, drag.layerW, drag.layerH);
+        if (oriented) {
+          orientedCache = compareRotateFrameBox(oriented.cx, oriented.cy, oriented.w, oriented.h, oriented.rot);
+        }
+      }
+      var pendingRot = drag.pendingDeg != null ? Number(drag.pendingDeg) : (Number(drag.startRot) || 0);
+      return {
+        stage: stage,
+        mode: mode,
+        pendingDeg: drag.pendingDeg != null ? +(Number(drag.pendingDeg)).toFixed(2) : null,
+        startRot: +(Number(drag.startRot) || 0).toFixed(2),
+        pipeline: mode === 'MULTI_SELECT' ? {
+          memberUpdate: 'applyMultiSelectRotation(memberWorldSnapshots, pivot=drag.startX/Y)',
+          unionLive: 'unionFixed: drag.startX/Y/W/H + pendingDeg'
+        } : {
+          memberUpdate: 'updateOverlayGroupTransform(rotation live) + composeOverlayWorldLayout(g.x/y)',
+          unionLive: 'unionFixed: drag.startX/Y/W/H + pendingDeg'
+        },
+        union: {
+          dragStart: compareRotateFrameBox(
+            drag.startX, drag.startY, drag.startW, drag.startH, drag.startRot
+          ),
+          livePaint: compareRotateFrameBox(
+            drag.startX, drag.startY, drag.startW, drag.startH, pendingRot
+          ),
+          orientedCache: orientedCache
+        },
+        pivot: {
+          dragStart: {
+            x: +(Number(drag.startX) || 0).toFixed(4),
+            y: +(Number(drag.startY) || 0).toFixed(4)
+          },
+          groupModel: groupModel ? { x: groupModel.x, y: groupModel.y } : null,
+          composePivot: groupModel
+            ? { x: groupModel.x, y: groupModel.y, source: 'g.x/g.y' }
+            : { x: +(Number(drag.startX) || 0).toFixed(4), y: +(Number(drag.startY) || 0).toFixed(4), source: 'drag.startX/Y' }
+        },
+        groupModel: groupModel,
+        members: compareRotateMemberRows(snap.list, drag.compareRotateBaseline)
+      };
+    }
+
+    function captureCompareRotateBaseline(drag) {
+      if (!compareRotateEnabled() || !isClusterRotateDrag(drag)) return;
+      var snap = snapshotCompareRotateMembers(drag);
+      drag.compareRotateBaseline = snap.byId;
+      drag.lastCompareRotateTraceDeg = null;
+    }
+
+    function traceCompareRotate(stage, drag) {
+      if (!compareRotateEnabled() || !isClusterRotateDrag(drag)) return;
+      compareRotateLog(stage, buildCompareRotatePayload(stage, drag));
+    }
+
+    function traceCompareRotateDuringDrag(drag, deg) {
+      if (!compareRotateEnabled() || !isClusterRotateDrag(drag)) return;
+      var bucket = Math.round(Number(deg) / 15) * 15;
+      if (drag.lastCompareRotateTraceDeg === bucket) return;
+      drag.lastCompareRotateTraceDeg = bucket;
+      traceCompareRotate('compareRotate.drag.deg' + bucket, drag);
     }
 
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
@@ -11717,7 +11937,11 @@ var ExperienciaCanvas = (function () {
               gtype,
               transformMemberIds
             );
-            if (multiRotateTraceEnabled()) {
+            if (compareRotateEnabled() &&
+                (gtype === 'MULTI_SELECT' || gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')) {
+              captureCompareRotateBaseline(transformDrag);
+              traceCompareRotate('compareRotate.pointerdown', transformDrag);
+            } else if (multiRotateTraceEnabled()) {
               if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
                 captureGroupChildModelBaseline(transformDrag);
                 traceGroupChildModels('childModel.pointerdown', transformDrag);
@@ -12057,7 +12281,11 @@ var ExperienciaCanvas = (function () {
             rotateTapArmed = null;
           }
           if (wasRotate) {
-            if (multiRotateTraceEnabled()) {
+            if (compareRotateEnabled()) {
+              if (endType === 'MULTI_SELECT' || endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
+                traceCompareRotate('compareRotate.pointerup.before', endedDrag);
+              }
+            } else if (multiRotateTraceEnabled()) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 traceGroupChildModels('childModel.pointerup.before', endedDrag);
               } else {
@@ -12106,7 +12334,11 @@ var ExperienciaCanvas = (function () {
               }
               persist();
             }
-            if (multiRotateTraceEnabled()) {
+            if (compareRotateEnabled()) {
+              if (endType === 'MULTI_SELECT' || endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
+                traceCompareRotate('compareRotate.pointerup.after', endedDrag);
+              }
+            } else if (multiRotateTraceEnabled()) {
               if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 traceGroupChildModels('childModel.pointerup.after', endedDrag);
               } else {
