@@ -924,6 +924,19 @@ var KonvaOverlayRenderer = (function () {
         if (typeof onChange === 'function') onChange();
         return true;
       },
+      createEmptyOverlayGroup: function () {
+        if (!ExperienciaEngine.createEmptyOverlayGroup) return null;
+        var group = ExperienciaEngine.createEmptyOverlayGroup(shim, overlayNodeId);
+        if (!group) return null;
+        pullToScenes();
+        deepSelect = null;
+        selectedIds = [String(group.id)];
+        rebuildFromEngine();
+        restoreSelectionVisual();
+        notifySelection();
+        if (typeof onChange === 'function') onChange();
+        return String(group.id);
+      },
       ungroupSelectedOverlays: function () {
         var ctx = this.getSelectionContext();
         if (!ctx.canUngroup || !ExperienciaEngine.resolveOverlayGroupForSelection) return false;

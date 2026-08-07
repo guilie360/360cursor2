@@ -1168,8 +1168,7 @@ var QuotationEditor = (function () {
       onSelect: function (id) {
         if (id === 'group') {
           if (expOverlay.groupSelectedOverlays && expOverlay.groupSelectedOverlays()) {
-            markDirtyLocal();
-            refreshLayersPanel();
+            afterOverlayGroupPanelRefresh();
           }
           return;
         }
@@ -4101,43 +4100,17 @@ var QuotationEditor = (function () {
     refreshLayersPanel();
   }
 
-  function nextOverlayGroupLabel() {
-    var scene = activeScene();
-    var max = 0;
-    (scene && scene.interactions || []).forEach(function (ix) {
-      if (!isOverlayGroupIx(ix)) return;
-      var m = String(ix.label || '').match(/Grupo\s+(\d+)/i);
-      if (m) max = Math.max(max, parseInt(m[1], 10) || 0);
-    });
-    return 'Grupo ' + (max + 1);
+  /** Same panel refresh as context menu Agrupar (after canvas group mutation). */
+  function afterOverlayGroupPanelRefresh() {
+    markDirtyLocal();
+    refreshLayersPanel();
   }
 
   function createEmptyOverlayGroup() {
-    var scene = activeScene();
-    if (!scene) return null;
-    ensureSceneOverlays(scene);
-    if (!Array.isArray(scene.interactions)) scene.interactions = [];
-    var groupId = nextId('grp');
-    var label = nextOverlayGroupLabel();
-    scene.interactions.unshift({
-      type: 'OVERLAY_GROUP',
-      id: groupId,
-      portId: groupId,
-      label: label,
-      memberIds: [],
-      x: 50,
-      y: 50,
-      width: 20,
-      height: 20,
-      rotation: 0,
-      _baseWidth: 20,
-      _baseHeight: 20,
-      _transformV: 2,
-      enabled: true
-    });
-    markDirtyLocal();
-    pushOutlinerScenesToShim();
-    refreshOutlinerPanel();
+    if (!expOverlay || !expOverlay.createEmptyOverlayGroup) return null;
+    var groupId = expOverlay.createEmptyOverlayGroup();
+    if (!groupId) return null;
+    afterOverlayGroupPanelRefresh();
     return groupId;
   }
 
@@ -4706,7 +4679,7 @@ var QuotationEditor = (function () {
     });
   }
 
-  /** Public entry — same path as debugCreateOverlayGroup / button click. */
+  /** Public entry — same path as context menu Agrupar completion + canvas createEmptyOverlayGroup. */
   function createOverlayGroupFromPanel(ev) {
     if (ev && ev.preventDefault) {
       ev.preventDefault();

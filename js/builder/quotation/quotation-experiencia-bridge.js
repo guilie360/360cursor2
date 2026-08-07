@@ -350,6 +350,9 @@ var QuotationExperienciaBridge = (function () {
       groupSelectedOverlays: function () {
         return handle.groupSelectedOverlays ? handle.groupSelectedOverlays() : false;
       },
+      createEmptyOverlayGroup: function () {
+        return handle.createEmptyOverlayGroup ? handle.createEmptyOverlayGroup() : null;
+      },
       ungroupSelectedOverlays: function () {
         return handle.ungroupSelectedOverlays ? handle.ungroupSelectedOverlays() : false;
       },

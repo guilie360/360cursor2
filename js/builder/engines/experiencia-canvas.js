@@ -15939,6 +15939,21 @@ var ExperienciaCanvas = (function () {
         notifyOverlaySelection();
         return true;
       },
+      createEmptyOverlayGroup: function () {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !ExperienciaEngine.createEmptyOverlayGroup) return null;
+        pushButtonHistory(sceneId);
+        var group = ExperienciaEngine.createEmptyOverlayGroup(state, sceneId);
+        if (!group) return null;
+        canvas().selectedButtonIds = [String(group.id)];
+        canvas().selectedButtonId = String(group.id);
+        canvas().activeOverlayGroupEditId = null;
+        renderAll();
+        paintInspector();
+        persist();
+        notifyOverlaySelection();
+        return String(group.id);
+      },
       ungroupSelectedOverlays: function () {
         var sceneId = canvas().selectedId;
         var ids = getSelectedOverlayIds();

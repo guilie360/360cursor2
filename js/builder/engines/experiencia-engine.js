@@ -2830,6 +2830,38 @@ var ExperienciaEngine = (function () {
     return group;
   }
 
+  /** Empty overlay group for panel "+ Crear grupo" (no members). */
+  function createEmptyOverlayGroup(state, nodeId) {
+    var n = getNode(state, nodeId);
+    if (!n || !n.config) return null;
+    if (!Array.isArray(n.config.interactions)) n.config.interactions = [];
+    var max = 0;
+    n.config.interactions.forEach(function (ix) {
+      if (!isOverlayGroupInteraction(ix)) return;
+      var m = String(ix.label || '').match(/Grupo\s+(\d+)/i);
+      if (m) max = Math.max(max, parseInt(m[1], 10) || 0);
+    });
+    var groupId = uid('grp');
+    var group = makeInteraction({
+      type: 'OVERLAY_GROUP',
+      id: groupId,
+      portId: groupId,
+      label: 'Grupo ' + (max + 1),
+      memberIds: [],
+      x: 50,
+      y: 50,
+      width: 20,
+      height: 20,
+      rotation: 0,
+      _baseWidth: 20,
+      _baseHeight: 20,
+      enabled: true
+    });
+    group._transformV = 2;
+    n.config.interactions.unshift(group);
+    return group;
+  }
+
   function ungroupSceneOverlay(state, nodeId, groupId, layerW, layerH) {
     var n = getNode(state, nodeId);
     if (!n || !groupId) return false;
@@ -8667,6 +8699,7 @@ var ExperienciaEngine = (function () {
     createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
     isOverlayGroupInteraction: isOverlayGroupInteraction,
     groupSceneOverlays: groupSceneOverlays,
+    createEmptyOverlayGroup: createEmptyOverlayGroup,
     ungroupSceneOverlay: ungroupSceneOverlay,
     resolveOverlayGroupForSelection: resolveOverlayGroupForSelection,
     snapshotOverlayInteractions: snapshotOverlayInteractions,
