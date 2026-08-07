@@ -1053,6 +1053,27 @@ var QuotationCanvasTools = (function () {
     bindChecklistList(host, state, persist);
   }
 
+  function restoreChecklistScroll(el, top) {
+    if (!el || top == null || !isFinite(top)) return;
+    el.scrollTop = top;
+    requestAnimationFrame(function () {
+      el.scrollTop = top;
+      requestAnimationFrame(function () {
+        el.scrollTop = top;
+      });
+    });
+  }
+
+  function moveChecklistRowDom(list, dragId, targetId, position) {
+    if (!list || !dragId || !targetId || dragId === targetId) return false;
+    var dragRow = list.querySelector('[data-qe-check-row="' + dragId + '"]');
+    var targetRow = list.querySelector('[data-qe-check-row="' + targetId + '"]');
+    if (!dragRow || !targetRow || dragRow === targetRow) return false;
+    if (position === 'before') list.insertBefore(dragRow, targetRow);
+    else list.insertBefore(dragRow, targetRow.nextSibling);
+    return true;
+  }
+
   function bindChecklistDragReorder(list, items, persist, rebind) {
     var draggingId = null;
     var dropTargetId = null;
@@ -1089,6 +1110,8 @@ var QuotationCanvasTools = (function () {
       dropPosition = target.position;
       var row = list.querySelector('[data-qe-check-row="' + target.id + '"]');
       if (row) row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
+      var dragRow = list.querySelector('[data-qe-check-row="' + draggingId + '"]');
+      if (dragRow) dragRow.classList.add('is-dragging');
     }
 
     function autoScrollChecklist(clientY) {
@@ -1121,10 +1144,16 @@ var QuotationCanvasTools = (function () {
       if (fromIdx < toIdx) insertIdx--;
       if (dropPosition === 'after') insertIdx++;
       items.splice(insertIdx, 0, moved);
+      var movedId = draggingId;
+      var targetId = dropTargetId;
+      var targetPos = dropPosition;
       persist();
       clearDropMarkers();
       draggingId = null;
-      if (typeof rebind === 'function') rebind();
+      if (!moveChecklistRowDom(list, movedId, targetId, targetPos) &&
+          typeof rebind === 'function') {
+        rebind();
+      }
     }
 
     list.querySelectorAll('[data-qe-check-drag]').forEach(function (handle) {
@@ -1207,7 +1236,7 @@ var QuotationCanvasTools = (function () {
       var items = activeItems();
       var savedTop = list.scrollTop;
       list.innerHTML = items.map(checklistRowHtml).join('');
-      list.scrollTop = savedTop;
+      restoreChecklistScroll(list, savedTop);
       syncChecklistFields();
       bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
     }
