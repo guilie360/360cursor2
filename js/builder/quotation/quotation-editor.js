@@ -4090,16 +4090,16 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
-      var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
-      var nodeId = 'qe-' + sceneId;
-      var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
-      if (n) engineFn(n, nodeId);
+      var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+      if (n) engineFn(n);
     }
   }
 
   function syncOutlinerPanelToCanvas(engineFn) {
+    healOverlayGroupMembership(activeScene());
     markDirtyLocal();
     pushOutlinerScenesToShim();
+    healShimOverlayGroupMembership();
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
       var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
       var nodeId = (typeof QuotationExperienciaBridge !== 'undefined' &&
@@ -4110,6 +4110,8 @@ var QuotationEditor = (function () {
       if (n) engineFn(n, nodeId);
     }
     if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+    healShimOverlayGroupMembership();
+    healOverlayGroupMembership(activeScene());
     refreshLayersPanel();
   }
 
@@ -4276,6 +4278,122 @@ var QuotationEditor = (function () {
       : ('qe-' + sceneId);
   }
 
+  /** Reconcile group.memberIds with interaction.groupId — single membership, no duplicates. */
+  function healOverlayGroupMembership(scene) {
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var byId = {};
+    var groups = [];
+    scene.interactions.forEach(function (ix) {
+      if (!ix || !ix.id) return;
+      byId[String(ix.id)] = ix;
+      if (isOverlayGroupIx(ix)) {
+        if (!Array.isArray(ix.memberIds)) ix.memberIds = [];
+        groups.push(ix);
+      }
+    });
+
+    var changed = false;
+
+    scene.interactions.forEach(function (ix) {
+      if (!ix || !ix.id || isOverlayGroupIx(ix)) return;
+      if (!ix.groupId) return;
+      var g = byId[String(ix.groupId)];
+      if (!g || !isOverlayGroupIx(g)) {
+        delete ix.groupId;
+        delete ix.localX;
+        delete ix.localY;
+        delete ix.localRotation;
+        changed = true;
+      }
+    });
+
+    groups.forEach(function (g) {
+      var gid = String(g.id);
+      var prev = (g.memberIds || []).map(String);
+      var next = [];
+      var seen = {};
+      prev.forEach(function (mid) {
+        var m = byId[mid];
+        if (m && String(m.groupId || '') === gid && !seen[mid]) {
+          next.push(mid);
+          seen[mid] = true;
+        }
+      });
+      scene.interactions.forEach(function (ix) {
+        if (!ix || !ix.id || isOverlayGroupIx(ix)) return;
+        var mid = String(ix.id);
+        if (String(ix.groupId || '') === gid && !seen[mid]) {
+          next.push(mid);
+          seen[mid] = true;
+        }
+      });
+      if (next.length !== prev.length ||
+          next.some(function (id, i) { return id !== prev[i]; })) {
+        g.memberIds = next;
+        changed = true;
+      }
+    });
+
+    return changed;
+  }
+
+  function healShimOverlayGroupMembership() {
+    if (!expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') return;
+    var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+    if (!n || !n.config || !Array.isArray(n.config.interactions)) return;
+    var byId = {};
+    var groups = [];
+    n.config.interactions.forEach(function (ix) {
+      if (!ix || !ix.id) return;
+      byId[String(ix.id)] = ix;
+      if (ExperienciaEngine.isOverlayGroupInteraction &&
+          ExperienciaEngine.isOverlayGroupInteraction(ix)) {
+        if (!Array.isArray(ix.memberIds)) ix.memberIds = [];
+        groups.push(ix);
+      }
+    });
+    n.config.interactions.forEach(function (ix) {
+      if (!ix || !ix.id) return;
+      if (ExperienciaEngine.isOverlayGroupInteraction &&
+          ExperienciaEngine.isOverlayGroupInteraction(ix)) {
+        return;
+      }
+      if (!ix.groupId) return;
+      if (!byId[String(ix.groupId)]) {
+        delete ix.groupId;
+        delete ix.localX;
+        delete ix.localY;
+        delete ix.localRotation;
+      }
+    });
+    groups.forEach(function (g) {
+      var gid = String(g.id);
+      var prev = (g.memberIds || []).map(String);
+      var next = [];
+      var seen = {};
+      prev.forEach(function (mid) {
+        var m = byId[mid];
+        if (m && String(m.groupId || '') === gid && !seen[mid]) {
+          next.push(mid);
+          seen[mid] = true;
+        }
+      });
+      n.config.interactions.forEach(function (ix) {
+        if (!ix || !ix.id) return;
+        if (ExperienciaEngine.isOverlayGroupInteraction &&
+            ExperienciaEngine.isOverlayGroupInteraction(ix)) {
+          return;
+        }
+        var mid = String(ix.id);
+        if (String(ix.groupId || '') === gid && !seen[mid]) {
+          next.push(mid);
+          seen[mid] = true;
+        }
+      });
+      g.memberIds = next;
+    });
+  }
+
   /** Copy grouped/world layout fields from shim back into panel SSOT. */
   function copyPanelInteractionFromShim(interactionId) {
     if (!interactionId || !expOverlay || !expOverlay.shim ||
@@ -4319,25 +4437,78 @@ var QuotationEditor = (function () {
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
+    var prevGroupId = member.groupId ? String(member.groupId) : null;
+    if (prevGroupId && prevGroupId === String(groupId)) prevGroupId = null;
+    var memberKey = String(memberId);
+    var worldSnap = null;
+
+    if (prevGroupId) {
+      applyPanelSceneToOverlay(function (n) {
+        var snapM = ExperienciaEngine.getInteraction(n, memberId);
+        if (snapM) {
+          worldSnap = ExperienciaEngine.overlayWorldLayoutRaw(n, snapM, lw, lh);
+        }
+      });
+    }
+
     (scene.interactions || []).forEach(function (ix) {
-      if (!isOverlayGroupIx(ix) || !Array.isArray(ix.memberIds)) return;
+      if (!isOverlayGroupIx(ix)) return;
+      if (!Array.isArray(ix.memberIds)) ix.memberIds = [];
       ix.memberIds = ix.memberIds.filter(function (id) {
-        return String(id) !== String(memberId);
+        return String(id) !== memberKey;
       });
     });
     if (!Array.isArray(group.memberIds)) group.memberIds = [];
     if (beforeMemberId) {
       var idx = group.memberIds.map(String).indexOf(String(beforeMemberId));
-      if (idx >= 0) group.memberIds.splice(idx, 0, String(memberId));
-      else group.memberIds.push(String(memberId));
-    } else {
-      group.memberIds.push(String(memberId));
+      if (idx >= 0) group.memberIds.splice(idx, 0, memberKey);
+      else if (group.memberIds.indexOf(memberKey) < 0) group.memberIds.push(memberKey);
+    } else if (group.memberIds.indexOf(memberKey) < 0) {
+      group.memberIds.push(memberKey);
     }
     member.groupId = groupId;
+    healOverlayGroupMembership(scene);
     applyPanelSceneToOverlay(function (n) {
+      (n.config.interactions || []).forEach(function (ix) {
+        if (!ExperienciaEngine.isOverlayGroupInteraction ||
+            !ExperienciaEngine.isOverlayGroupInteraction(ix)) {
+          return;
+        }
+        if (!Array.isArray(ix.memberIds)) ix.memberIds = [];
+        ix.memberIds = ix.memberIds.filter(function (id) {
+          return String(id) !== memberKey;
+        });
+      });
       var g = ExperienciaEngine.getInteraction(n, groupId);
       var m = ExperienciaEngine.getInteraction(n, memberId);
       if (!g || !m) return;
+      if (worldSnap) {
+        m.x = worldSnap.x;
+        m.y = worldSnap.y;
+        m.rotation = worldSnap.rotation;
+        if (worldSnap.width != null) m.width = worldSnap.width;
+        if (worldSnap.height != null) m.height = worldSnap.height;
+        if (worldSnap.boxW != null) m.boxW = worldSnap.boxW;
+        if (worldSnap.boxH != null) m.boxH = worldSnap.boxH;
+        delete m.groupId;
+        delete m.localX;
+        delete m.localY;
+        delete m.localRotation;
+      }
+      if (!Array.isArray(g.memberIds)) g.memberIds = [];
+      if (beforeMemberId) {
+        var shimIdx = g.memberIds.map(String).indexOf(String(beforeMemberId));
+        if (shimIdx >= 0) g.memberIds.splice(shimIdx, 0, memberKey);
+        else if (g.memberIds.indexOf(memberKey) < 0) g.memberIds.push(memberKey);
+      } else if (g.memberIds.indexOf(memberKey) < 0) {
+        g.memberIds.push(memberKey);
+      }
+      if (prevGroupId) {
+        var oldG = ExperienciaEngine.getInteraction(n, prevGroupId);
+        if (oldG) {
+          ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, oldG, lw, lh);
+        }
+      }
       ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh);
       ExperienciaEngine.migrateGroupedChildLocals(n, g, lw, lh);
       var local = ExperienciaEngine.absoluteToLocalOverlay(n, g, m, lw, lh);
@@ -4348,8 +4519,10 @@ var QuotationEditor = (function () {
         m.localRotation = local.localRotation;
       }
       ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
+      healShimOverlayGroupMembership();
     });
     copyPanelInteractionFromShim(memberId);
+    healOverlayGroupMembership(scene);
     markDirtyLocal();
     return true;
   }
@@ -4357,8 +4530,8 @@ var QuotationEditor = (function () {
   function removeInteractionFromGroup(memberId) {
     var member = findSceneInteraction(memberId);
     if (!member || !member.groupId) return false;
-    var groupId = member.groupId;
-    var group = findSceneInteraction(groupId);
+    var savedGroupId = String(member.groupId);
+    var group = findSceneInteraction(savedGroupId);
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
@@ -4371,11 +4544,13 @@ var QuotationEditor = (function () {
     delete member.localX;
     delete member.localY;
     delete member.localRotation;
+    healOverlayGroupMembership(activeScene());
     applyPanelSceneToOverlay(function (n) {
       var m = ExperienciaEngine.getInteraction(n, memberId);
-      if (!m || !m.groupId) return;
-      var g = ExperienciaEngine.getInteraction(n, m.groupId);
+      if (!m) return;
+      var g = ExperienciaEngine.getInteraction(n, savedGroupId);
       if (g) {
+        if (!m.groupId) m.groupId = savedGroupId;
         ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh);
         ExperienciaEngine.migrateGroupedChildLocals(n, g, lw, lh);
         var world = ExperienciaEngine.overlayWorldLayoutRaw(n, m, lw, lh);
@@ -4391,13 +4566,21 @@ var QuotationEditor = (function () {
         g.memberIds = (g.memberIds || []).filter(function (id) {
           return String(id) !== String(memberId);
         });
+        delete m.groupId;
+        delete m.localX;
+        delete m.localY;
+        delete m.localRotation;
+        ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
+      } else {
+        delete m.groupId;
+        delete m.localX;
+        delete m.localY;
+        delete m.localRotation;
       }
-      delete m.groupId;
-      delete m.localX;
-      delete m.localY;
-      delete m.localRotation;
+      healShimOverlayGroupMembership();
     });
     copyPanelInteractionFromShim(memberId);
+    healOverlayGroupMembership(activeScene());
     markDirtyLocal();
     return true;
   }
@@ -4912,6 +5095,7 @@ var QuotationEditor = (function () {
   function layersListHtml() {
     var scene = activeScene();
     if (scene) ensureSceneOverlays(scene);
+    healOverlayGroupMembership(scene);
     var ixs = (scene && Array.isArray(scene.interactions)) ? scene.interactions.slice() : [];
     var selSet = {};
     (state.selectedOverlayIds || []).forEach(function (id) {
@@ -4938,7 +5122,7 @@ var QuotationEditor = (function () {
       if (open) {
         (Array.isArray(ix.memberIds) ? ix.memberIds : []).forEach(function (mid) {
           var child = byId[String(mid)];
-          if (child) {
+          if (child && String(child.groupId || '') === String(ix.id)) {
             rows += outlinerItemRowHtml(child, { nested: true, selected: selSet[String(child.id)] });
           }
         });
@@ -12735,7 +12919,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7775'
+        editorBuild: 'ws7776'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
