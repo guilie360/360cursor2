@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  try { console.log('[QE BUILD BOOT] ws7782'); } catch (_boot) { /* ignore */ }
+  try { console.log('[QE BUILD BOOT] ws7783'); } catch (_boot) { /* ignore */ }
   /* Legacy iframe Runtime path stays off; Builder mounts QuotationRuntime.paintScene in-page. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
@@ -4822,6 +4822,18 @@ var QuotationEditor = (function () {
   }
 
   /** TEMP DnD debug — remove before final commit. */
+  function outlinerDnDebugOrder(label) {
+    var scene = activeScene();
+    if (!scene) return;
+    console.log(label, (scene.interactions || []).map(function (i) {
+      return {
+        id: i.id,
+        groupId: i.groupId != null ? i.groupId : null
+      };
+    }));
+  }
+
+  /** TEMP DnD debug — remove before final commit. */
   function outlinerDnDebugCommit(branch, result) {
     console.log('[COMMIT]', { branch: branch, result: result });
     outlinerDnDebugSnapshot('after');
@@ -4855,11 +4867,17 @@ var QuotationEditor = (function () {
     var targetGrouped = !!targetIx.groupId;
 
     if (dragIsGroup && targetIsGroup) {
-      return outlinerDnDebugCommit('group-group', reorderOverlayGroups(dragId, drop.id, drop.position));
+      outlinerDnDebugOrder('[ORDER BEFORE]');
+      var groupGroupOk = reorderOverlayGroups(dragId, drop.id, drop.position);
+      outlinerDnDebugOrder('[ORDER AFTER]');
+      return outlinerDnDebugCommit('group-group', groupGroupOk);
     }
 
     if (!dragIsGroup && !dragGrouped && !targetIsGroup && !targetGrouped) {
-      return outlinerDnDebugCommit('item-free-item-free', reorderOverlayFreeItems(dragId, drop.id, drop.position));
+      outlinerDnDebugOrder('[ORDER BEFORE]');
+      var freeFreeOk = reorderOverlayFreeItems(dragId, drop.id, drop.position);
+      outlinerDnDebugOrder('[ORDER AFTER]');
+      return outlinerDnDebugCommit('item-free-item-free', freeFreeOk);
     }
 
     if (!dragIsGroup && !dragGrouped && targetGrouped) {
@@ -4868,7 +4886,10 @@ var QuotationEditor = (function () {
 
     if (!dragIsGroup && dragGrouped && targetGrouped &&
         String(dragIx.groupId) === String(targetIx.groupId)) {
-      return outlinerDnDebugCommit('item-grouped-same-group', reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position));
+      outlinerDnDebugOrder('[ORDER BEFORE]');
+      var sameGroupOk = reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
+      outlinerDnDebugOrder('[ORDER AFTER]');
+      return outlinerDnDebugCommit('item-grouped-same-group', sameGroupOk);
     }
 
     if (!dragIsGroup && !dragGrouped && targetIsGroup) {
@@ -4889,9 +4910,15 @@ var QuotationEditor = (function () {
         var sameMembers = (sameGrp && sameGrp.memberIds) || [];
         if (!sameMembers.length) return outlinerDnDebugCommit('same-group-header-empty', false);
         if (drop.position === 'before') {
-          return outlinerDnDebugCommit('same-group-header-before', reorderGroupMembers(drop.id, dragId, sameMembers[0], 'before'));
+          outlinerDnDebugOrder('[ORDER BEFORE]');
+          var headerBeforeOk = reorderGroupMembers(drop.id, dragId, sameMembers[0], 'before');
+          outlinerDnDebugOrder('[ORDER AFTER]');
+          return outlinerDnDebugCommit('same-group-header-before', headerBeforeOk);
         }
-        return outlinerDnDebugCommit('same-group-header-after', reorderGroupMembers(drop.id, dragId, sameMembers[sameMembers.length - 1], 'after'));
+        outlinerDnDebugOrder('[ORDER BEFORE]');
+        var headerAfterOk = reorderGroupMembers(drop.id, dragId, sameMembers[sameMembers.length - 1], 'after');
+        outlinerDnDebugOrder('[ORDER AFTER]');
+        return outlinerDnDebugCommit('same-group-header-after', headerAfterOk);
       }
       if (targetIsGroup) {
         var dropGroup = findSceneInteraction(drop.id);
@@ -13111,7 +13138,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7782'
+        editorBuild: 'ws7783'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
