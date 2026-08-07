@@ -1531,6 +1531,7 @@ var ExperienciaEngine = (function () {
   /** Recompute group frame from composed member worlds without shifting children visually. */
   function syncOverlayGroupFrameFromMembers(n, g, layerW, layerH) {
     if (!n || !g || !isOverlayGroupInteraction(g)) return g;
+    if (Number(g._transformV) >= 2) return g;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
@@ -2097,6 +2098,7 @@ var ExperienciaEngine = (function () {
   function expandOverlayGroupBoundsIfMemberOverflow(n, g, layerW, layerH, opts) {
     opts = opts || {};
     if (!n || !g || !isOverlayGroupInteraction(g)) return g;
+    if (Number(g._transformV) >= 2) return g;
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
     ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
@@ -2426,6 +2428,7 @@ var ExperienciaEngine = (function () {
       enabled: true
     });
     n.config.interactions.push(group);
+    group._transformV = 2;
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
