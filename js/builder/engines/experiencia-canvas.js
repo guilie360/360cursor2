@@ -9353,14 +9353,90 @@ var ExperienciaCanvas = (function () {
         ? ExperienciaEngine.getInteraction(n, groupId)
         : null;
       if (!g) return;
-      g.x = Number(frame.cx) != null ? Number(frame.cx) : (Number(g.x) || 50);
-      g.y = Number(frame.cy) != null ? Number(frame.cy) : (Number(g.y) || 50);
-      g.width = Math.max(0.5, Number(frame.w) || Number(g.width) || 20);
-      g.height = Math.max(0.5, Number(frame.h) || Number(g.height) || 20);
-      if (frame.rot != null) g.rotation = Number(frame.rot) || 0;
-      g._baseWidth = g.width;
-      g._baseHeight = g.height;
-      g._transformV = 2;
+      var traceFinalize = multiRotateTraceEnabled();
+      var beforeG = traceFinalize ? {
+        x: Number(g.x),
+        y: Number(g.y),
+        rotation: Number(g.rotation) || 0,
+        width: Number(g.width),
+        height: Number(g.height)
+      } : null;
+      var frameW = Number(frame.w);
+      var frameH = Number(frame.h);
+      var curW = Number(g.width) || 20;
+      var curH = Number(g.height) || 20;
+      var sizeUnchanged = frame.w != null && frame.h != null &&
+        isFinite(frameW) && isFinite(frameH) &&
+        Math.abs(frameW - curW) < 1e-6 &&
+        Math.abs(frameH - curH) < 1e-6;
+      /* EXPERIMENT ws7710 — pure rotation: w/h unchanged → commit rot only, preserve g.x/y/w/h. */
+      var rotationOnlyCommit = frame.rot != null && sizeUnchanged;
+      if (rotationOnlyCommit) {
+        g.rotation = Number(frame.rot) || 0;
+        g._baseWidth = curW;
+        g._baseHeight = curH;
+        g._transformV = 2;
+      } else {
+        g.x = Number(frame.cx) != null ? Number(frame.cx) : (Number(g.x) || 50);
+        g.y = Number(frame.cy) != null ? Number(frame.cy) : (Number(g.y) || 50);
+        g.width = Math.max(0.5, Number(frame.w) || curW);
+        g.height = Math.max(0.5, Number(frame.h) || curH);
+        if (frame.rot != null) g.rotation = Number(frame.rot) || 0;
+        g._baseWidth = g.width;
+        g._baseHeight = g.height;
+        g._transformV = 2;
+      }
+      if (traceFinalize && beforeG) {
+        var afterG = {
+          x: Number(g.x),
+          y: Number(g.y),
+          rotation: Number(g.rotation) || 0,
+          width: Number(g.width),
+          height: Number(g.height)
+        };
+        var deltaG = {
+          x: +(afterG.x - beforeG.x).toFixed(6),
+          y: +(afterG.y - beforeG.y).toFixed(6),
+          rotation: +(afterG.rotation - beforeG.rotation).toFixed(6),
+          width: +(afterG.width - beforeG.width).toFixed(6),
+          height: +(afterG.height - beforeG.height).toFixed(6)
+        };
+        var changed = [];
+        if (Math.abs(deltaG.x) > 1e-9) changed.push('x');
+        if (Math.abs(deltaG.y) > 1e-9) changed.push('y');
+        if (Math.abs(deltaG.rotation) > 1e-9) changed.push('rotation');
+        if (Math.abs(deltaG.width) > 1e-9) changed.push('width');
+        if (Math.abs(deltaG.height) > 1e-9) changed.push('height');
+        multiRotateTrace('finalizeGroupOrientedFrame', {
+          sceneId: sceneId,
+          groupId: groupId,
+          frameIn: {
+            cx: Number(frame.cx),
+            cy: Number(frame.cy),
+            w: Number(frame.w),
+            h: Number(frame.h),
+            rot: frame.rot != null ? Number(frame.rot) : null
+          },
+          before: {
+            x: +beforeG.x.toFixed(6),
+            y: +beforeG.y.toFixed(6),
+            rotation: +beforeG.rotation.toFixed(6),
+            width: +beforeG.width.toFixed(6),
+            height: +beforeG.height.toFixed(6)
+          },
+          after: {
+            x: +afterG.x.toFixed(6),
+            y: +afterG.y.toFixed(6),
+            rotation: +afterG.rotation.toFixed(6),
+            width: +afterG.width.toFixed(6),
+            height: +afterG.height.toFixed(6)
+          },
+          delta: deltaG,
+          changed: changed,
+          pureRotationExpected: changed.length === 1 && changed[0] === 'rotation',
+          rotationOnlyCommit: rotationOnlyCommit
+        });
+      }
     }
 
     function groupResizeAnchorPct(mode, startL, startR, startT, startB, startX, startY) {
