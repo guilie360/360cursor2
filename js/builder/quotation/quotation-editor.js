@@ -9281,6 +9281,32 @@ var QuotationEditor = (function () {
     if (body.dataset.qeLayersBound === '1') return;
     body.dataset.qeLayersBound = '1';
 
+    body.addEventListener('pointerdown', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+
+      if (t.closest('[data-qe-outliner-create-group]')) return;
+      if (t.closest('[data-qe-outliner-rename]')) return;
+
+      var fold = t.closest('[data-qe-layer-fold]');
+      if (fold) return;
+
+      var row = t.closest('[data-qe-outliner-row]');
+      if (!row || !body.contains(row)) return;
+
+      var sid = row.getAttribute('data-qe-outliner-row');
+      if (!sid) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (ev.shiftKey) {
+        toggleOutlinerItemFromPanel(sid);
+      } else {
+        selectOutlinerItemFromPanel(sid);
+      }
+    });
+
     body.addEventListener('click', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
@@ -9317,13 +9343,9 @@ var QuotationEditor = (function () {
         return;
       }
 
+      /* Selection handled on pointerdown — ignore stray click after row select. */
       ev.preventDefault();
       ev.stopPropagation();
-      if (ev.shiftKey) {
-        toggleOutlinerItemFromPanel(sid);
-      } else {
-        selectOutlinerItemFromPanel(sid);
-      }
     });
 
     body.addEventListener('mousedown', function (ev) {
@@ -9923,6 +9945,8 @@ var QuotationEditor = (function () {
     if (!t || !t.closest) return false;
     return !!(
       t.closest('[data-qe-dock-bar]') ||
+      t.closest('[data-qe-outliner]') ||
+      t.closest('[data-qe-layers]') ||
       t.closest('[data-qe-context-menu]') ||
       t.closest('[data-qe-shape-picker]') ||
       t.closest('[data-qe-resource-picker]') ||
@@ -12429,7 +12453,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7765'
+        editorBuild: 'ws7766'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
