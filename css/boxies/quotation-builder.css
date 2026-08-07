@@ -5450,9 +5450,9 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 .qe-group-edit-toast {
-  position: fixed;
+  position: absolute;
+  top: 12px;
   left: 50%;
-  bottom: 72px;
   z-index: 14000;
   pointer-events: none;
   padding: 10px 14px;

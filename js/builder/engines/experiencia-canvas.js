@@ -10640,18 +10640,37 @@ var ExperienciaCanvas = (function () {
 
     var groupEditToastTimer = 0;
 
-    function showOverlayGroupEditToast() {
+    function overlayGroupEditToastHost() {
+      if (buttonsLayer) {
+        var canvasHost = buttonsLayer.closest('[data-qe-canvas]');
+        if (canvasHost) return canvasHost;
+      }
+      if (rootEl) {
+        var fromRoot = rootEl.closest('[data-qe-canvas]') ||
+          rootEl.querySelector('[data-qe-canvas]');
+        if (fromRoot) return fromRoot;
+      }
+      return document.body;
+    }
+
+    function hideOverlayGroupEditToast() {
       if (groupEditToastTimer) {
         clearTimeout(groupEditToastTimer);
         groupEditToastTimer = 0;
       }
-      var existing = document.querySelector('.qe-group-edit-toast');
+      var host = overlayGroupEditToastHost();
+      var existing = host.querySelector('.qe-group-edit-toast');
       if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
+    function showOverlayGroupEditToast() {
+      hideOverlayGroupEditToast();
+      var host = overlayGroupEditToastHost();
       var toast = document.createElement('div');
       toast.className = 'qe-group-edit-toast';
       toast.setAttribute('role', 'status');
       toast.textContent = 'Modo edición del grupo';
-      document.body.appendChild(toast);
+      host.appendChild(toast);
       requestAnimationFrame(function () { toast.classList.add('is-visible'); });
       groupEditToastTimer = window.setTimeout(function () {
         groupEditToastTimer = 0;
@@ -10706,6 +10725,7 @@ var ExperienciaCanvas = (function () {
       groupEditTapArmed = null;
       groupEditPulse = null;
       if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
+      hideOverlayGroupEditToast();
       if (opts.sync !== false) maybeExpandGroupBoundsDuringEdit(groupId, sceneId);
       if (opts.clearSelection) {
         canvas().selectedButtonIds = [];
