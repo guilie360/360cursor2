@@ -7706,6 +7706,7 @@ var ExperienciaCanvas = (function () {
         }
         scheduleShapeDebugLog(debugPhase, debugIds);
       }
+      syncOverlayPanelMemberGlow();
     }
 
     /** Mount gizmo chrome only — never remount shape nodes (avoids select flicker). */
@@ -7764,6 +7765,7 @@ var ExperienciaCanvas = (function () {
       }
       if (gizmoHtml) buttonsLayer.insertAdjacentHTML('beforeend', gizmoHtml);
       syncAllSelectionGizmoHandleCursors(buttonsLayer);
+      syncOverlayPanelMemberGlow();
       if (groupMountG && compareRotateEnabled()) {
         var nMountGm = ExperienciaEngine.getNode(state, sceneId);
         var gMountGm = nMountGm && ExperienciaEngine.getInteraction(nMountGm, groupMountG.groupId);
@@ -11042,6 +11044,75 @@ var ExperienciaCanvas = (function () {
     var overlayCanvasHoverId = null;
     var overlayCanvasHoverSiblingIds = null;
     var overlayCanvasHoverRaf = 0;
+    var overlayPanelPinnedMemberId = null;
+    var overlayPanelPreviewMemberId = null;
+
+    function activeOverlayPanelGlowMemberId() {
+      return overlayPanelPreviewMemberId || overlayPanelPinnedMemberId || null;
+    }
+
+    function paintOverlayGroupMemberGlow(memberId) {
+      if (!memberId || !buttonsLayer) return;
+      var sceneId = canvas().selectedId;
+      if (!sceneId || canvas().activeOverlayGroupEditId) return;
+      if (!resolveGroupedOverlayHit(sceneId, memberId)) return;
+
+      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
+        el.classList.remove('is-canvas-hover');
+      });
+      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover-sibling').forEach(function (el) {
+        el.classList.remove('is-canvas-hover-sibling');
+      });
+
+      var memberKey = String(memberId);
+      var siblingIds = overlayGroupHoverSiblingIds(sceneId, memberKey);
+      var isPreview = !!overlayPanelPreviewMemberId;
+      var idEsc = memberKey.replace(/"/g, '');
+      var memberEl = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+      if (memberEl && memberEl.classList.contains('builder-exp-stage-shape') &&
+          !memberEl.classList.contains('is-selected')) {
+        memberEl.classList.add('is-canvas-hover');
+      }
+      siblingIds.forEach(function (sid) {
+        var sidEsc = String(sid).replace(/"/g, '');
+        var sib = buttonsLayer.querySelector('[data-exp-stage-btn="' + sidEsc + '"]');
+        if (!sib || !sib.classList.contains('builder-exp-stage-shape')) return;
+        if (sib.classList.contains('is-selected')) return;
+        if (sib.classList.contains('is-canvas-hover')) return;
+        sib.classList.add('is-canvas-hover-sibling');
+      });
+      overlayCanvasHoverId = memberKey;
+      overlayCanvasHoverSiblingIds = siblingIds.length ? siblingIds.slice() : null;
+    }
+
+    function syncOverlayPanelMemberGlow() {
+      var id = activeOverlayPanelGlowMemberId();
+      if (id) paintOverlayGroupMemberGlow(id);
+    }
+
+    function pinOverlayGroupMemberGlow(memberId) {
+      overlayPanelPinnedMemberId = memberId ? String(memberId) : null;
+      overlayPanelPreviewMemberId = null;
+      if (overlayPanelPinnedMemberId) {
+        paintOverlayGroupMemberGlow(overlayPanelPinnedMemberId);
+      } else {
+        clearOverlayCanvasHover();
+      }
+    }
+
+    function previewOverlayGroupMember(memberId) {
+      if (!memberId) return false;
+      var sceneId = canvas().selectedId;
+      if (!sceneId || !resolveGroupedOverlayHit(sceneId, memberId)) return false;
+      overlayPanelPreviewMemberId = String(memberId);
+      paintOverlayGroupMemberGlow(overlayPanelPreviewMemberId);
+      return true;
+    }
+
+    function clearOverlayGroupMemberPreview() {
+      overlayPanelPreviewMemberId = null;
+      syncOverlayPanelMemberGlow();
+    }
 
     function clearOverlayCanvasHover() {
       overlayCanvasHoverId = null;
@@ -11106,8 +11177,14 @@ var ExperienciaCanvas = (function () {
         return;
       }
       clearOverlayCanvasHover();
-      overlayCanvasHoverId = nextId || null;
+      if (!nextId) {
+        syncOverlayPanelMemberGlow();
+        syncOverlayGroupCursor(clientX, clientY);
+        return;
+      }
+      overlayCanvasHoverId = nextId;
       overlayCanvasHoverSiblingIds = siblingIds.length ? siblingIds.slice() : null;
+      overlayPanelPreviewMemberId = null;
       if (hit && hit.classList.contains('builder-exp-stage-shape') &&
           !hit.classList.contains('is-selected')) {
         hit.classList.add('is-canvas-hover');
@@ -16091,6 +16168,8 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonIds = [];
         canvas().selectedHotspotId = null;
         canvas().activeOverlayGroupEditId = null;
+        overlayPanelPinnedMemberId = null;
+        overlayPanelPreviewMemberId = null;
         renderAll();
         paintInspector();
         notifyOverlaySelection();
@@ -16128,7 +16207,8 @@ var ExperienciaCanvas = (function () {
         return res;
       },
       /** V7.2.64 — select any overlay by id without hiding the other layer. */
-      selectOverlayItem: function (itemId) {
+      selectOverlayItem: function (itemId, opts) {
+        opts = opts || {};
         var sceneId = canvas().selectedId;
         if (!sceneId || !itemId) return false;
         var n = ExperienciaEngine.getNode(state, sceneId);
@@ -16143,11 +16223,13 @@ var ExperienciaCanvas = (function () {
         if (!ix) return false;
         var t = String(ix.type || '').toUpperCase();
         if (t === 'HOTSPOT') {
+          pinOverlayGroupMemberGlow(null);
           canvas().editMode = 'hotspots';
           canvas().selectedHotspotId = String(itemId);
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
         } else if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+          pinOverlayGroupMemberGlow(null);
           canvas().editMode = 'buttons';
           canvas().activeOverlayGroupEditId = null;
           if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
@@ -16160,10 +16242,16 @@ var ExperienciaCanvas = (function () {
           canvas().selectedHotspotId = null;
           canvas().activeOverlayGroupEditId = null;
           if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
-          if (groupedSel) {
+          if (groupedSel && opts.fromPanel) {
+            canvas().selectedButtonId = groupedSel.childId;
+            canvas().selectedButtonIds = [groupedSel.childId];
+            pinOverlayGroupMemberGlow(groupedSel.childId);
+          } else if (groupedSel) {
+            pinOverlayGroupMemberGlow(null);
             canvas().selectedButtonId = groupedSel.groupId;
             canvas().selectedButtonIds = [groupedSel.groupId];
           } else {
+            pinOverlayGroupMemberGlow(null);
             canvas().selectedButtonId = String(itemId);
             canvas().selectedButtonIds = [String(itemId)];
           }
@@ -16173,6 +16261,13 @@ var ExperienciaCanvas = (function () {
         mountOverlaySelectionGizmos(getSelectedOverlayIds());
         paintInspector();
         notifyOverlaySelection();
+        return true;
+      },
+      previewOverlayGroupMember: function (memberId) {
+        return previewOverlayGroupMember(memberId);
+      },
+      clearOverlayGroupMemberPreview: function () {
+        clearOverlayGroupMemberPreview();
         return true;
       },
       toggleOverlayItemSelection: function (itemId) {

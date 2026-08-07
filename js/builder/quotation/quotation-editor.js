@@ -4224,7 +4224,7 @@ var QuotationEditor = (function () {
       expOverlay.syncFromScenes();
     }
     if (!expOverlay || !expOverlay.selectOverlayItem) return false;
-    var ok = expOverlay.selectOverlayItem(id);
+    var ok = expOverlay.selectOverlayItem(id, { fromPanel: true });
     if (ok) {
       state.expHasSelection = true;
       refreshLayersPanel();
@@ -4665,6 +4665,7 @@ var QuotationEditor = (function () {
         ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
         ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '"' +
         (opts.isGroup ? ' data-qe-outliner-group="' + escapeHtml(ix.id) + '"' : '') +
+        (opts.nested ? ' data-qe-outliner-nested="1"' : '') +
         ' data-qe-outliner-kind="' + (opts.isGroup ? 'group' : 'item') + '">' +
         (opts.isGroup
           ? ('<button type="button" class="qe-outliner__fold' + (opts.open ? ' is-open' : '') + '"' +
@@ -9307,6 +9308,35 @@ var QuotationEditor = (function () {
       }
     });
 
+    body.addEventListener('mouseover', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
+      var row = t.closest('[data-qe-outliner-row][data-qe-outliner-nested="1"]');
+      if (!row || !body.contains(row)) return;
+      var sid = row.getAttribute('data-qe-outliner-row');
+      if (sid && expOverlay && expOverlay.previewOverlayGroupMember) {
+        expOverlay.previewOverlayGroupMember(sid);
+      }
+    });
+
+    body.addEventListener('mouseout', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var row = t.closest('[data-qe-outliner-row][data-qe-outliner-nested="1"]');
+      if (!row || !body.contains(row)) return;
+      var rel = ev.relatedTarget;
+      if (rel && row.contains(rel)) return;
+      if (rel && rel.closest &&
+          rel.closest('[data-qe-outliner-row][data-qe-outliner-nested="1"]') &&
+          body.contains(rel.closest('[data-qe-outliner-row][data-qe-outliner-nested="1"]'))) {
+        return;
+      }
+      if (expOverlay && expOverlay.clearOverlayGroupMemberPreview) {
+        expOverlay.clearOverlayGroupMemberPreview();
+      }
+    });
+
     body.addEventListener('click', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
@@ -12453,7 +12483,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7766'
+        editorBuild: 'ws7767'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */

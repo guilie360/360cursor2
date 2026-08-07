@@ -404,8 +404,16 @@ var QuotationExperienciaBridge = (function () {
       bringSelectedToFront: function () {
         return handle.bringSelectedToFront ? handle.bringSelectedToFront() : null;
       },
-      selectOverlayItem: function (id) {
-        return handle.selectOverlayItem ? handle.selectOverlayItem(id) : false;
+      selectOverlayItem: function (id, opts) {
+        return handle.selectOverlayItem ? handle.selectOverlayItem(id, opts) : false;
+      },
+      previewOverlayGroupMember: function (id) {
+        return handle.previewOverlayGroupMember ? handle.previewOverlayGroupMember(id) : false;
+      },
+      clearOverlayGroupMemberPreview: function () {
+        return handle.clearOverlayGroupMemberPreview
+          ? handle.clearOverlayGroupMemberPreview()
+          : false;
       },
       toggleOverlayItemSelection: function (id) {
         return handle.toggleOverlayItemSelection
