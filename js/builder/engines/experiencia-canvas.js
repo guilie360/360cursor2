@@ -9297,6 +9297,58 @@ var ExperienciaCanvas = (function () {
       traceCompareRotate('compareRotate.drag.deg' + bucket, drag);
     }
 
+    function buildCompareRotateGroupPointerupFinalizePayload(drag) {
+      var sceneId = drag.sceneId;
+      var groupId = drag.buttonId;
+      var layerW = Math.max(1, Number(drag.layerW) || 1000);
+      var layerH = Math.max(1, Number(drag.layerH) || 1000);
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction(n, groupId);
+      var stored = getStoredGroupOrientedFrame(sceneId, groupId);
+      var members = [];
+      (drag.memberIds || []).forEach(function (mid) {
+        var ix = n && ExperienciaEngine.getInteraction(n, mid);
+        var world = (ExperienciaEngine.overlayWorldLayoutRaw && ix)
+          ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+          : null;
+        members.push({
+          id: String(mid),
+          localX: ix ? +(Number(ix.localX) || 0).toFixed(6) : null,
+          localY: ix ? +(Number(ix.localY) || 0).toFixed(6) : null,
+          localRotation: ix ? +(Number(ix.localRotation) || 0).toFixed(2) : null,
+          overlayWorldLayoutRaw: world ? {
+            cx: +(Number(world.x) || 0).toFixed(4),
+            cy: +(Number(world.y) || 0).toFixed(4),
+            rot: +(Number(world.rotation) || 0).toFixed(2)
+          } : null
+        });
+      });
+      return {
+        groupModel: g ? {
+          x: +(Number(g.x) || 0).toFixed(4),
+          y: +(Number(g.y) || 0).toFixed(4),
+          width: +(Number(g.width) || 0).toFixed(4),
+          height: +(Number(g.height) || 0).toFixed(4),
+          rotation: +(Number(g.rotation) || 0).toFixed(2)
+        } : null,
+        groupUnionFrame: stored
+          ? compareRotateUnionInputBox(stored.cx, stored.cy, stored.w, stored.h, stored.rot)
+          : compareRotateUnionInputNull(),
+        members: members,
+        startX: drag.startX != null ? +(Number(drag.startX)).toFixed(4) : null,
+        startY: drag.startY != null ? +(Number(drag.startY)).toFixed(4) : null,
+        startW: drag.startW != null ? +(Number(drag.startW)).toFixed(4) : null,
+        startH: drag.startH != null ? +(Number(drag.startH)).toFixed(4) : null,
+        startRot: drag.startRot != null ? +(Number(drag.startRot)).toFixed(2) : null,
+        pendingDeg: drag.pendingDeg != null ? +(Number(drag.pendingDeg)).toFixed(2) : null
+      };
+    }
+
+    function traceCompareRotateGroupPointerupFinalize(stage, drag) {
+      if (!compareRotateEnabled() || !isGroupRotateDrag(drag)) return;
+      compareRotateLog(stage, buildCompareRotateGroupPointerupFinalizePayload(drag));
+    }
+
     function compareGroupCreateFrame(cx, cy, w, h, rot) {
       return {
         cx: +(Number(cx) || 0).toFixed(4),
@@ -12837,6 +12889,9 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && endedDrag.pendingDeg != null &&
                 (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
+              traceCompareRotateGroupPointerupFinalize(
+                'compareRotate.pointerup.beforeFinalize', endedDrag
+              );
               setGroupOrientedFrame(endScene, rotBtnId, {
                 cx: endedDrag.startX,
                 cy: endedDrag.startY,
@@ -12854,6 +12909,9 @@ var ExperienciaCanvas = (function () {
                 }
               }
               persist();
+              traceCompareRotateGroupPointerupFinalize(
+                'compareRotate.pointerup.afterFinalize', endedDrag
+              );
             }
             if (compareRotateEnabled()) {
               if (endType === 'MULTI_SELECT' || endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
