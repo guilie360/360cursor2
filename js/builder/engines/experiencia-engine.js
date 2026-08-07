@@ -2259,6 +2259,16 @@ var ExperienciaEngine = (function () {
 
     if (patch.x != null || patch.y != null) {
       var __gmBeforeXY = snapshotGroupModelTrace(g);
+      var lockedWorldSnaps = null;
+      resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (mid) {
+        var c = getInteraction(n, mid);
+        if (!c || !overlayInteractionSelfLocked(c)) return;
+        if (!lockedWorldSnaps) lockedWorldSnaps = {};
+        var world = composeOverlayWorldLayout(g, c, layerW, layerH, n);
+        if (world) {
+          lockedWorldSnaps[String(mid)] = { x: world.x, y: world.y };
+        }
+      });
       if (patch.x != null) {
         var nx = Number(patch.x);
         if (!isNaN(nx)) g.x = patch.live ? Math.max(-20, Math.min(120, nx)) : clampPercent(nx, g.x);
@@ -2266,6 +2276,16 @@ var ExperienciaEngine = (function () {
       if (patch.y != null) {
         var ny = Number(patch.y);
         if (!isNaN(ny)) g.y = patch.live ? Math.max(-20, Math.min(120, ny)) : clampPercent(ny, g.y);
+      }
+      if (lockedWorldSnaps) {
+        Object.keys(lockedWorldSnaps).forEach(function (mid) {
+          var c = getInteraction(n, mid);
+          var snap = lockedWorldSnaps[mid];
+          if (!c || !snap) return;
+          var inv = worldPointToLocal(g, snap.x, snap.y, layerW, layerH);
+          c.localX = inv.x;
+          c.localY = inv.y;
+        });
       }
       traceGroupModelIfChanged(
         g, groupId, __gmBeforeXY,
@@ -4428,6 +4448,7 @@ var ExperienciaEngine = (function () {
     if (!n || !n.config) return false;
     var ix = getInteraction(n, buttonId);
     if (!ix || !isSceneFreeOverlayInteraction(ix)) return false;
+    if (overlayInteractionSelfLocked(ix)) return false;
     /* Defensive: never allow button delete to remove canvas nodes */
     var exp = ensureState(state);
     var nodeCount = (exp.nodes || []).length;

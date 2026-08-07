@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7810';
+  var QE_EDITOR_BUILD = 'ws7811';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4470,6 +4470,7 @@ var QuotationEditor = (function () {
     if (!scene || !member || !group || !isOverlayGroupIx(group) || isOverlayGroupIx(member)) {
       return false;
     }
+    if (outlinerItemSelfLocked(member)) return false;
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
@@ -4566,6 +4567,7 @@ var QuotationEditor = (function () {
   function removeInteractionFromGroup(memberId) {
     var member = findSceneInteraction(memberId);
     if (!member || !member.groupId) return false;
+    if (outlinerItemSelfLocked(member)) return false;
     var savedGroupId = String(member.groupId);
     var group = findSceneInteraction(savedGroupId);
     var sz = overlayPanelLayerSize();
@@ -4721,6 +4723,8 @@ var QuotationEditor = (function () {
   function reorderOverlayFreeItems(dragId, targetId, position) {
     var scene = activeScene();
     if (!scene || !Array.isArray(scene.interactions)) return false;
+    var dragIx = findSceneInteraction(dragId);
+    if (dragIx && outlinerItemSelfLocked(dragIx)) return false;
 
     var groups = [];
     var free = [];
@@ -4766,6 +4770,8 @@ var QuotationEditor = (function () {
   function reorderGroupMembers(groupId, dragId, targetId, position) {
     var group = findSceneInteraction(groupId);
     if (!group) return false;
+    var dragIx = findSceneInteraction(dragId);
+    if (dragIx && outlinerItemSelfLocked(dragIx)) return false;
     if (!Array.isArray(group.memberIds)) group.memberIds = [];
 
     var scene = activeScene();
@@ -4841,6 +4847,7 @@ var QuotationEditor = (function () {
 
     var dragIx = findSceneInteraction(dragId);
     if (!dragIx) return false;
+    if (outlinerItemSelfLocked(dragIx)) return false;
     var dragIsGroup = isOverlayGroupIx(dragIx);
     var dragGrouped = !!dragIx.groupId;
 
@@ -5150,6 +5157,11 @@ var QuotationEditor = (function () {
 
       draggingId = row.getAttribute('data-qe-outliner-row');
       if (!draggingId) return;
+      var dragIx = findSceneInteraction(draggingId);
+      if (dragIx && outlinerItemSelfLocked(dragIx)) {
+        draggingId = null;
+        return;
+      }
 
       dropTarget = null;
 
@@ -5584,6 +5596,7 @@ var QuotationEditor = (function () {
     if (!id) return false;
     var ix = findSceneInteraction(id);
     if (!ix) return false;
+    if (outlinerItemSelfLocked(ix)) return false;
     if (isOverlayGroupIx(ix)) {
       return deleteOverlayGroupFromPanel(id);
     }
@@ -5640,6 +5653,8 @@ var QuotationEditor = (function () {
 
   function deleteSceneOverlayById(id) {
     if (!id) return false;
+    var ixGuard = findSceneInteraction(id);
+    if (ixGuard && outlinerItemSelfLocked(ixGuard)) return false;
     if (expOverlay && expOverlay.removeOverlayById) {
       if (!expOverlay.removeOverlayById(id)) return false;
       if (expOverlay.pull) expOverlay.pull();

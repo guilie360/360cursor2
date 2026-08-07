@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7808';
+  var EXP_CANVAS_BUILD = 'ws7811';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -7064,6 +7064,7 @@ var ExperienciaCanvas = (function () {
       var items = [];
       if (!buttonsLayer) return null;
       groupIds.forEach(function (id) {
+        if (isOverlayEffectivelyLocked(sceneId, id)) return;
         var vm = getOverlayItemVm(sceneId, id);
         if (!vm) return;
         var idEsc = String(id).replace(/"/g, '');
@@ -16228,24 +16229,22 @@ var ExperienciaCanvas = (function () {
           canvas().selectedHotspotId = null;
         } else if (ids.length) {
           pushButtonHistory(sceneId);
+          var deletedAny = false;
           ids.forEach(function (bid) {
+            if (isOverlayEffectivelyLocked(sceneId, bid)) return;
             if (isOverlayGroupId(sceneId, bid)) {
-              var nDel = ExperienciaEngine.getNode(state, sceneId);
-              var gDel = nDel && ExperienciaEngine.getInteraction
-                ? ExperienciaEngine.getInteraction(nDel, bid)
-                : null;
-              (gDel && gDel.memberIds ? gDel.memberIds : []).forEach(function (mid) {
-                ExperienciaEngine.removeSceneButton(state, sceneId, mid);
-              });
-              if (nDel && nDel.config && Array.isArray(nDel.config.interactions)) {
-                nDel.config.interactions = nDel.config.interactions.filter(function (item) {
-                  return String(item.id) !== String(bid);
-                });
+              var szUng = overlayLayerSize();
+              if (ExperienciaEngine.ungroupSceneOverlay &&
+                  ExperienciaEngine.ungroupSceneOverlay(
+                    state, sceneId, bid, szUng.w, szUng.h
+                  )) {
+                deletedAny = true;
               }
-            } else {
-              ExperienciaEngine.removeSceneButton(state, sceneId, bid);
+            } else if (ExperienciaEngine.removeSceneButton(state, sceneId, bid)) {
+              deletedAny = true;
             }
           });
+          if (!deletedAny) return false;
           canvas().selectedButtonId = null;
           canvas().selectedButtonIds = [];
           canvas().activeOverlayGroupEditId = null;
