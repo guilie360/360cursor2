@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7800';
+  var QE_EDITOR_BUILD = 'ws7801';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -10051,6 +10051,45 @@ var QuotationEditor = (function () {
     body.dataset.qeLayersBound = '1';
 
     bindOutlinerDnD(body);
+
+    function handleOutlinerActionPointer(ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return false;
+      if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return false;
+
+      var visBtn = t.closest('[data-qe-outliner-vis]');
+      if (visBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var vid = visBtn.getAttribute('data-qe-outliner-vis');
+        if (vid) toggleOutlinerVisibilityFromPanel(vid);
+        return true;
+      }
+
+      var lockBtn = t.closest('[data-qe-outliner-lock]');
+      if (lockBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var lid = lockBtn.getAttribute('data-qe-outliner-lock');
+        if (lid) toggleOutlinerLockFromPanel(lid);
+        return true;
+      }
+
+      var delBtn = t.closest('[data-qe-outliner-del]');
+      if (delBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var did = delBtn.getAttribute('data-qe-outliner-del');
+        if (did) deleteOutlinerItemFromPanel(did);
+        return true;
+      }
+
+      return false;
+    }
+
+    body.addEventListener('pointerdown', function (ev) {
+      if (handleOutlinerActionPointer(ev)) return;
+    }, true);
 
     body.addEventListener('pointerdown', function (ev) {
       var t = ev.target;
