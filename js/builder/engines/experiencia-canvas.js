@@ -12009,7 +12009,8 @@ var ExperienciaCanvas = (function () {
                 h: endedDrag.startH,
                 rot: endedDrag.pendingDeg
               });
-              if (ExperienciaEngine.relocalizeOverlayGroupMembers) {
+              /* EXPERIMENT ws7711 — skip relocalize on group rotateEnd (hypothesis test). */
+              if (false && ExperienciaEngine.relocalizeOverlayGroupMembers) {
                 var nRel = ExperienciaEngine.getNode(state, endScene);
                 var gRel = nRel && ExperienciaEngine.getInteraction(nRel, rotBtnId);
                 if (nRel && gRel) {
