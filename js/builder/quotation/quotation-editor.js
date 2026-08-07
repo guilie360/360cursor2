@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7809';
+  var QE_EDITOR_BUILD = 'ws7810';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -5221,23 +5221,19 @@ var QuotationEditor = (function () {
 
   /** Minimal padlock SVG — stroke-only, matches outliner action icon scale. */
   function outlinerLockIconHtml(locked) {
-    var svgOpen =
+    var body =
+      '<rect x="3.5" y="8" width="9" height="5" rx="2"' +
+        ' stroke="currentColor" stroke-width="1.8"/>';
+    var shackleClosed =
+      '<path d="M5.5 8V6.25A2.25 2.25 0 0 1 10.5 6.25V8"' +
+        ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
+    var shackleOpen =
+      '<path d="M5.5 8V6.25A2.25 2.25 0 0 1 8 4.25"' +
+        ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
+    var svg =
       '<svg class="qe-outliner__lock-icon" width="16" height="16" viewBox="0 0 16 16"' +
-        ' fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<path d="M6.25 7.25V5.35a1.85 1.85 0 0 1 3.7 0"' +
-          ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<rect x="4" y="7.25" width="8" height="5.75" rx="1.35"' +
-          ' stroke="currentColor" stroke-width="1.8"/>' +
-      '</svg>';
-    var svgClosed =
-      '<svg class="qe-outliner__lock-icon" width="16" height="16" viewBox="0 0 16 16"' +
-        ' fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-        '<path d="M5.75 7.25V5.35a2.25 2.25 0 0 1 4.5 0v1.9"' +
-          ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<rect x="4" y="7.25" width="8" height="5.75" rx="1.35"' +
-          ' stroke="currentColor" stroke-width="1.8"/>' +
-      '</svg>';
-    return locked ? svgClosed : svgOpen;
+        ' fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+    return svg + body + (locked ? shackleClosed : shackleOpen) + '</svg>';
   }
 
   function outlinerItemRowHtml(ix, opts) {
