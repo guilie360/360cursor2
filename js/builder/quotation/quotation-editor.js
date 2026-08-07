@@ -2,7 +2,6 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  try { console.log('[QE BUILD BOOT] ws7785'); } catch (_boot) { /* ignore */ }
   /* Legacy iframe Runtime path stays off; Builder mounts QuotationRuntime.paintScene in-page. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
@@ -1697,6 +1696,8 @@ var QuotationEditor = (function () {
     ).trim();
     if (!id || !documentReady) return;
     try {
+      /* Panel scenes are SSOT — push to shim before pull so draft/autosave never reverts fresh panel edits. */
+      pushOutlinerScenesToShim();
       if (expOverlay && typeof expOverlay.pull === 'function') {
         try { expOverlay.pull(); } catch (ePull) {}
       }
@@ -4096,31 +4097,11 @@ var QuotationEditor = (function () {
     }
   }
 
-  /** TEMP DnD debug — remove before final commit. */
-  function outlinerDnDebugLogGroupMembers(label, scene) {
-    if (!scene || !Array.isArray(scene.interactions)) {
-      console.log(label, 'no scene');
-      return;
-    }
-    var found = false;
-    scene.interactions.forEach(function (ix) {
-      if (!ix || !ix.id || !isOverlayGroupIx(ix)) return;
-      found = true;
-      console.log(label, {
-        groupId: ix.id,
-        memberIds: (ix.memberIds || []).slice()
-      });
-    });
-    if (!found) console.log(label, 'no groups');
-  }
-
   function syncOutlinerPanelToCanvas(engineFn) {
-    var syncScene = activeScene();
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE syncOutlinerPanelToCanvas]', syncScene);
     healOverlayGroupMembership(activeScene());
-    markDirtyLocal();
     pushOutlinerScenesToShim();
     healShimOverlayGroupMembership();
+    markDirtyLocal();
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
       var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
       var nodeId = (typeof QuotationExperienciaBridge !== 'undefined' &&
@@ -4134,7 +4115,6 @@ var QuotationEditor = (function () {
     healShimOverlayGroupMembership();
     healOverlayGroupMembership(activeScene());
     refreshLayersPanel();
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncOutlinerPanelToCanvas]', activeScene());
   }
 
   function syncOverlaySceneFromPanel(engineFn) {
@@ -4302,11 +4282,7 @@ var QuotationEditor = (function () {
 
   /** Reconcile group.memberIds with interaction.groupId — single membership, no duplicates. */
   function healOverlayGroupMembership(scene) {
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE healOverlayGroupMembership]', scene);
-    if (!scene || !Array.isArray(scene.interactions)) {
-      outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER healOverlayGroupMembership]', scene);
-      return false;
-    }
+    if (!scene || !Array.isArray(scene.interactions)) return false;
     var byId = {};
     var groups = [];
     scene.interactions.forEach(function (ix) {
@@ -4355,18 +4331,11 @@ var QuotationEditor = (function () {
       });
       if (next.length !== prev.length ||
           next.some(function (id, i) { return id !== prev[i]; })) {
-        console.log('[GROUP MEMBERS OVERWRITTEN]', {
-          function: 'healOverlayGroupMembership',
-          groupId: gid,
-          old: prev.slice(),
-          new: next.slice()
-        });
         g.memberIds = next;
         changed = true;
       }
     });
 
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER healOverlayGroupMembership]', scene);
     return changed;
   }
 
@@ -4765,11 +4734,6 @@ var QuotationEditor = (function () {
     if (!group) return false;
     if (!Array.isArray(group.memberIds)) group.memberIds = [];
 
-    console.log('[MEMBERS BEFORE]', {
-      groupId: groupId,
-      memberIds: (group.memberIds || []).slice()
-    });
-
     var scene = activeScene();
     var ids = [];
     var seen = {};
@@ -4808,25 +4772,12 @@ var QuotationEditor = (function () {
     if (insertAt > ids.length) insertAt = ids.length;
     ids.splice(insertAt, 0, moved);
 
-    var afterKey = ids.join('|');
-    if (beforeKey === afterKey) {
-      console.log('[MEMBERS AFTER]', {
-        groupId: groupId,
-        memberIds: (group.memberIds || []).slice(),
-        unchanged: true
-      });
-      return false;
-    }
+    if (beforeKey === ids.join('|')) return false;
 
     group.memberIds = ids.slice();
     ids.forEach(function (mid) {
       var m = findSceneInteraction(mid);
       if (m) m.groupId = groupId;
-    });
-
-    console.log('[MEMBERS AFTER]', {
-      groupId: groupId,
-      memberIds: group.memberIds.slice()
     });
 
     markDirtyLocal();
@@ -4850,147 +4801,79 @@ var QuotationEditor = (function () {
     return assignInteractionToGroup(memberId, groupId, beforeId);
   }
 
-  /** TEMP DnD debug — remove before final commit. */
-  function outlinerDnDebugKind(ix) {
-    if (!ix) return 'UNKNOWN';
-    return isOverlayGroupIx(ix) ? 'GROUP' : 'ITEM';
-  }
-
-  /** TEMP DnD debug — remove before final commit. */
-  function outlinerDnDebugSnapshot(label) {
-    var scene = activeScene();
-    if (!scene) {
-      console.log('[COMMIT STATE ' + label + ']', 'no scene');
-      return;
-    }
-    var interactions = (scene.interactions || []).map(function (i) {
-      return {
-        id: i.id,
-        groupId: i.groupId != null ? i.groupId : null,
-        type: i.type
-      };
-    });
-    var overlayGroups = (scene.interactions || []).filter(function (ix) {
-      return isOverlayGroupIx(ix);
-    }).map(function (g) {
-      return { id: g.id, members: (g.memberIds || []).slice() };
-    });
-    console.log('[COMMIT STATE ' + label + ']', interactions, overlayGroups);
-  }
-
-  /** TEMP DnD debug — remove before final commit. */
-  function outlinerDnDebugOrder(label) {
-    var scene = activeScene();
-    if (!scene) return;
-    console.log(label, (scene.interactions || []).map(function (i) {
-      return {
-        id: i.id,
-        groupId: i.groupId != null ? i.groupId : null
-      };
-    }));
-  }
-
-  /** TEMP DnD debug — remove before final commit. */
-  function outlinerDnDebugCommit(branch, result) {
-    console.log('[COMMIT]', { branch: branch, result: result });
-    outlinerDnDebugSnapshot('after');
-    return result;
-  }
-
   function commitOutlinerDrop(dragId, drop) {
-    outlinerDnDebugSnapshot('before');
-
-    if (!dragId || !drop || !drop.id) {
-      return outlinerDnDebugCommit('invalid-args', false);
-    }
-    if (String(dragId) === String(drop.id) && drop.action !== 'into') {
-      return outlinerDnDebugCommit('same-id', false);
-    }
+    if (!dragId || !drop || !drop.id) return false;
+    if (String(dragId) === String(drop.id) && drop.action !== 'into') return false;
 
     var dragIx = findSceneInteraction(dragId);
-    if (!dragIx) return outlinerDnDebugCommit('drag-not-found', false);
+    if (!dragIx) return false;
     var dragIsGroup = isOverlayGroupIx(dragIx);
     var dragGrouped = !!dragIx.groupId;
 
     if (drop.action === 'into') {
-      if (dragIsGroup) return outlinerDnDebugCommit('into-group-drag', false);
+      if (dragIsGroup) return false;
       assignInteractionToGroup(dragId, drop.id, null);
-      return outlinerDnDebugCommit('into-group', true);
+      return true;
     }
 
     var targetIx = findSceneInteraction(drop.id);
-    if (!targetIx) return outlinerDnDebugCommit('target-not-found', false);
+    if (!targetIx) return false;
     var targetIsGroup = isOverlayGroupIx(targetIx);
     var targetGrouped = !!targetIx.groupId;
 
     if (dragIsGroup && targetIsGroup) {
-      outlinerDnDebugOrder('[ORDER BEFORE]');
-      var groupGroupOk = reorderOverlayGroups(dragId, drop.id, drop.position);
-      outlinerDnDebugOrder('[ORDER AFTER]');
-      return outlinerDnDebugCommit('group-group', groupGroupOk);
+      return reorderOverlayGroups(dragId, drop.id, drop.position);
     }
 
     if (!dragIsGroup && !dragGrouped && !targetIsGroup && !targetGrouped) {
-      outlinerDnDebugOrder('[ORDER BEFORE]');
-      var freeFreeOk = reorderOverlayFreeItems(dragId, drop.id, drop.position);
-      outlinerDnDebugOrder('[ORDER AFTER]');
-      return outlinerDnDebugCommit('item-free-item-free', freeFreeOk);
+      return reorderOverlayFreeItems(dragId, drop.id, drop.position);
     }
 
     if (!dragIsGroup && !dragGrouped && targetGrouped) {
-      return outlinerDnDebugCommit('item-free-item-grouped', assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position));
+      return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
     }
 
     if (!dragIsGroup && dragGrouped && targetGrouped &&
         String(dragIx.groupId) === String(targetIx.groupId)) {
-      outlinerDnDebugOrder('[ORDER BEFORE]');
-      var sameGroupOk = reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
-      outlinerDnDebugOrder('[ORDER AFTER]');
-      return outlinerDnDebugCommit('item-grouped-same-group', sameGroupOk);
+      return reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
     }
 
     if (!dragIsGroup && !dragGrouped && targetIsGroup) {
       var tgtGroup = findSceneInteraction(drop.id);
       var tgtMembers = (tgtGroup && tgtGroup.memberIds) || [];
       if (drop.position === 'before' && tgtMembers.length) {
-        return outlinerDnDebugCommit('item-free-group-before', assignInteractionToGroupAt(dragId, drop.id, tgtMembers[0], 'before'));
+        return assignInteractionToGroupAt(dragId, drop.id, tgtMembers[0], 'before');
       }
-      return outlinerDnDebugCommit('item-free-group', assignInteractionToGroup(dragId, drop.id, null));
+      return assignInteractionToGroup(dragId, drop.id, null);
     }
 
     if (!dragIsGroup && dragGrouped) {
       if (!targetIsGroup && !targetGrouped) {
-        return outlinerDnDebugCommit('item-grouped-to-free', ungroupToFreeAt(dragId, drop.id, drop.position));
+        return ungroupToFreeAt(dragId, drop.id, drop.position);
       }
       if (targetIsGroup && String(dragIx.groupId) === String(drop.id)) {
         var sameGrp = findSceneInteraction(drop.id);
         var sameMembers = (sameGrp && sameGrp.memberIds) || [];
-        if (!sameMembers.length) return outlinerDnDebugCommit('same-group-header-empty', false);
+        if (!sameMembers.length) return false;
         if (drop.position === 'before') {
-          outlinerDnDebugOrder('[ORDER BEFORE]');
-          var headerBeforeOk = reorderGroupMembers(drop.id, dragId, sameMembers[0], 'before');
-          outlinerDnDebugOrder('[ORDER AFTER]');
-          return outlinerDnDebugCommit('same-group-header-before', headerBeforeOk);
+          return reorderGroupMembers(drop.id, dragId, sameMembers[0], 'before');
         }
-        outlinerDnDebugOrder('[ORDER BEFORE]');
-        var headerAfterOk = reorderGroupMembers(drop.id, dragId, sameMembers[sameMembers.length - 1], 'after');
-        outlinerDnDebugOrder('[ORDER AFTER]');
-        return outlinerDnDebugCommit('same-group-header-after', headerAfterOk);
+        return reorderGroupMembers(drop.id, dragId, sameMembers[sameMembers.length - 1], 'after');
       }
       if (targetIsGroup) {
         var dropGroup = findSceneInteraction(drop.id);
         var dropMembers = (dropGroup && dropGroup.memberIds) || [];
         if (drop.position === 'before' && dropMembers.length) {
-          return outlinerDnDebugCommit('item-grouped-other-group-before', assignInteractionToGroupAt(dragId, drop.id, dropMembers[0], 'before'));
+          return assignInteractionToGroupAt(dragId, drop.id, dropMembers[0], 'before');
         }
-        return outlinerDnDebugCommit('item-grouped-other-group', assignInteractionToGroup(dragId, drop.id, null));
+        return assignInteractionToGroup(dragId, drop.id, null);
       }
       if (targetGrouped) {
-        return outlinerDnDebugCommit('item-grouped-other-member', assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position));
+        return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
       }
     }
 
-    return outlinerDnDebugCommit('no-match', false);
+    return false;
   }
 
   /** Outliner visual order → interactions[] paint order (top of panel = front). */
@@ -5130,19 +5013,6 @@ var QuotationEditor = (function () {
       var dragIsGroup = dragIx && isOverlayGroupIx(dragIx);
       var rows = list.querySelectorAll('[data-qe-outliner-row]');
       var i;
-
-      function logRowDrop(result) {
-        if (!result) return result;
-        var targetIx = findSceneInteraction(result.id);
-        console.log('[ROW DROP]', {
-          targetId: result.id,
-          targetKind: outlinerDnDebugKind(targetIx),
-          position: result.position || null,
-          action: result.action || null
-        });
-        return result;
-      }
-
       for (i = 0; i < rows.length; i++) {
         var row = rows[i];
         var rect = row.getBoundingClientRect();
@@ -5157,18 +5027,18 @@ var QuotationEditor = (function () {
             if (!dragInGroup) {
               var relY = clientY - rect.top;
               if (relY > h * 0.28 && relY < h * 0.72) {
-                return logRowDrop({ id: rid, action: 'into' });
+                return { id: rid, action: 'into' };
               }
             }
           }
-          return logRowDrop({ id: rid, position: 'before' });
+          return { id: rid, position: 'before' };
         }
       }
       for (i = rows.length - 1; i >= 0; i--) {
         var lastRow = rows[i];
         var lastId = lastRow.getAttribute('data-qe-outliner-row');
         if (lastId && String(lastId) !== String(dragId)) {
-          return logRowDrop({ id: lastId, position: 'after' });
+          return { id: lastId, position: 'after' };
         }
       }
       return null;
@@ -5204,44 +5074,23 @@ var QuotationEditor = (function () {
     }
 
     function finishDrag(ev) {
-      console.log('[FINISH] enter finishDrag', {
-        draggingId: draggingId,
-        hasEv: !!ev,
-        clientY: ev && ev.clientY != null ? ev.clientY : null
-      });
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
 
       var ok = false;
       var drop = dropTarget;
-      var lastDropTarget = dropTarget;
       if (draggingId && ev && ev.clientY != null) {
         var atRelease = rowDropAt(ev.clientY, draggingId);
         if (atRelease) drop = atRelease;
       }
-      console.log('[FINISH] drop=', drop);
-      console.log('[FINISH] lastDropTarget=', lastDropTarget);
       if (draggingId && drop) {
-        console.log('[FINISH] calling commitOutlinerDrop', {
-          dragId: draggingId,
-          drop: drop
-        });
         ok = commitOutlinerDrop(draggingId, drop);
-        console.log('[FINISH] commit returned', { ok: ok, drop: drop });
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
              dropTarget.position !== drop.position ||
              dropTarget.action !== drop.action)) {
-          console.log('[FINISH] calling commitOutlinerDrop fallback', {
-            dragId: draggingId,
-            drop: dropTarget
-          });
           ok = commitOutlinerDrop(draggingId, dropTarget);
-          console.log('[FINISH] commit returned (fallback)', { ok: ok, drop: dropTarget });
           if (ok) drop = dropTarget;
         }
-      } else {
-        if (!draggingId) console.log('[FINISH] early return: no-draggingId');
-        else if (!drop) console.log('[FINISH] early return: no-drop');
       }
       if (ok) {
         var list = listEl();
@@ -5269,12 +5118,6 @@ var QuotationEditor = (function () {
       if (!draggingId) return;
 
       dropTarget = null;
-
-      var dragStartIx = findSceneInteraction(draggingId);
-      console.log('[DRAG START]', {
-        dragId: draggingId,
-        dragKind: outlinerDnDebugKind(dragStartIx)
-      });
 
       try { document.body.classList.add('is-qe-outliner-dragging'); } catch (eCls) { /* ignore */ }
 
@@ -5449,25 +5292,18 @@ var QuotationEditor = (function () {
 
   /** Repaint Elementos panel (same role as rerender() for the scenes strip). */
   function refreshOutlinerPanel() {
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE refreshOutlinerPanel]', activeScene());
     syncRightPanel();
     bindOutlinerGroups(document.getElementById('quotationRightBody'));
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER refreshOutlinerPanel]', activeScene());
   }
 
   function syncRightPanel() {
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE syncRightPanel]', activeScene());
     var body = document.getElementById('quotationRightBody');
-    if (!body) {
-      outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncRightPanel]', activeScene());
-      return;
-    }
+    if (!body) return;
     body.innerHTML = rightPanelHtml();
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
     bindLayersPanel();
-    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncRightPanel]', activeScene());
   }
 
   /** Same pattern as bindSceneGroups: fresh listener on the new button each paint. */
@@ -13202,7 +13038,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7785'
+        editorBuild: 'ws7786'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
