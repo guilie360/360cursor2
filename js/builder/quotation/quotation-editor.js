@@ -4217,7 +4217,36 @@ var QuotationEditor = (function () {
     });
   }
 
-  function assignInteractionToGroup(memberId, groupId, beforeMemberId) {
+  /** Panel Elementos → canvas selection (single source for row click). */
+  function selectOutlinerItemFromPanel(id) {
+    if (!id) return false;
+    if (expOverlay && expOverlay.syncFromScenes) {
+      expOverlay.syncFromScenes();
+    }
+    if (!expOverlay || !expOverlay.selectOverlayItem) return false;
+    var ok = expOverlay.selectOverlayItem(id);
+    if (ok) {
+      state.expHasSelection = true;
+      refreshLayersPanel();
+      refreshDockOnly();
+    }
+    return ok;
+  }
+
+  function toggleOutlinerItemFromPanel(id) {
+    if (!id) return false;
+    if (expOverlay && expOverlay.syncFromScenes) {
+      expOverlay.syncFromScenes();
+    }
+    if (!expOverlay || !expOverlay.toggleOverlayItemSelection) return false;
+    var ok = expOverlay.toggleOverlayItemSelection(id);
+    if (ok) {
+      state.expHasSelection = true;
+      refreshLayersPanel();
+      refreshDockOnly();
+    }
+    return ok;
+  }
     if (!memberId || !groupId || String(memberId) === String(groupId)) return false;
     var scene = activeScene();
     var member = findSceneInteraction(memberId);
@@ -9258,9 +9287,9 @@ var QuotationEditor = (function () {
 
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
-      var sel = t.closest('[data-qe-layer-sel]');
-      var fold = t.closest('[data-qe-layer-fold]');
+      if (t.closest('[data-qe-outliner-rename]')) return;
 
+      var fold = t.closest('[data-qe-layer-fold]');
       if (fold) {
         ev.preventDefault();
         ev.stopPropagation();
@@ -9273,23 +9302,25 @@ var QuotationEditor = (function () {
         return;
       }
 
-      if (sel) {
-        var sid = sel.getAttribute('data-qe-layer-sel');
-        if (!sid) return;
-        if (ev.detail >= 2) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          startOutlinerLabelEdit(sid);
-          return;
-        }
+      var row = t.closest('[data-qe-outliner-row]');
+      if (!row) return;
+
+      var sid = row.getAttribute('data-qe-outliner-row');
+      if (!sid) return;
+
+      if (ev.detail >= 2 && t.closest('[data-qe-outliner-name], [data-qe-layer-sel]')) {
         ev.preventDefault();
-        if (ev.shiftKey && expOverlay && expOverlay.toggleOverlayItemSelection) {
-          expOverlay.toggleOverlayItemSelection(sid);
-        } else if (expOverlay && expOverlay.selectOverlayItem) {
-          expOverlay.selectOverlayItem(sid);
-        }
-        refreshLayersPanel();
-        refreshDockOnly();
+        ev.stopPropagation();
+        startOutlinerLabelEdit(sid);
+        return;
+      }
+
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (ev.shiftKey) {
+        toggleOutlinerItemFromPanel(sid);
+      } else {
+        selectOutlinerItemFromPanel(sid);
       }
     });
 
@@ -12396,7 +12427,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7763'
+        editorBuild: 'ws7764'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */

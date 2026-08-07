@@ -16170,6 +16170,7 @@ var ExperienciaCanvas = (function () {
         }
         paintButtonsStage();
         paintHotspotsStage();
+        mountOverlaySelectionGizmos(getSelectedOverlayIds());
         paintInspector();
         notifyOverlaySelection();
         return true;
