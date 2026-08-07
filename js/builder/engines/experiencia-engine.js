@@ -2858,7 +2858,18 @@ var ExperienciaEngine = (function () {
       enabled: true
     });
     group._transformV = 2;
-    n.config.interactions.unshift(group);
+    var lastGroupIdx = -1;
+    var gi;
+    for (gi = 0; gi < n.config.interactions.length; gi++) {
+      if (isOverlayGroupInteraction(n.config.interactions[gi])) {
+        lastGroupIdx = gi;
+      }
+    }
+    if (lastGroupIdx >= 0) {
+      n.config.interactions.splice(lastGroupIdx + 1, 0, group);
+    } else {
+      n.config.interactions.unshift(group);
+    }
     return group;
   }
 

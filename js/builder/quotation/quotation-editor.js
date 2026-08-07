@@ -9337,6 +9337,32 @@ var QuotationEditor = (function () {
       }
     });
 
+    body.addEventListener('dblclick', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+
+      if (t.closest('[data-qe-outliner-create-group]')) return;
+      if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
+      if (t.closest('[data-qe-outliner-rename]')) return;
+      if (t.closest('[data-qe-layer-fold]')) return;
+
+      var row = t.closest('[data-qe-outliner-row]');
+      if (!row || !body.contains(row)) return;
+
+      var sid = row.getAttribute('data-qe-outliner-row');
+      if (!sid) return;
+
+      var kind = row.getAttribute('data-qe-outliner-kind');
+      if (kind !== 'group' &&
+          !t.closest('[data-qe-outliner-name], [data-qe-layer-sel]')) {
+        return;
+      }
+
+      ev.preventDefault();
+      ev.stopPropagation();
+      startOutlinerLabelEdit(sid);
+    });
+
     body.addEventListener('click', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
@@ -9366,14 +9392,7 @@ var QuotationEditor = (function () {
       var sid = row.getAttribute('data-qe-outliner-row');
       if (!sid) return;
 
-      if (ev.detail >= 2 && t.closest('[data-qe-outliner-name], [data-qe-layer-sel]')) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        startOutlinerLabelEdit(sid);
-        return;
-      }
-
-      /* Selection handled on pointerdown — ignore stray click after row select. */
+      /* Rename handled on dblclick — ignore stray click after row select. */
       ev.preventDefault();
       ev.stopPropagation();
     });
@@ -12483,7 +12502,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7767'
+        editorBuild: 'ws7768'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
