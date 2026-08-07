@@ -5994,19 +5994,7 @@ var ExperienciaCanvas = (function () {
           paintShapeGizmoEl(refs.gizmo, groupUnionBox, layerW, layerH);
           refs.gizmo.classList.add('is-rotating');
         }
-        if (multiRotateTraceEnabled()) {
-          var traceDegGp = Math.round(Number(drag.pendingDeg) || 0);
-          if (drag.lastRotatePaintTraceDeg !== traceDegGp) {
-            drag.lastRotatePaintTraceDeg = traceDegGp;
-            multiRotateTrace('live.group.paint', {
-              pendingDeg: traceDegGp,
-              unionPaint: groupUnionBox,
-              membersVm: snapshotRotateContext(
-                sceneId, drag.buttonId, dragType, drag, layerW, layerH
-              ).members
-            });
-          }
-        }
+        traceGroupRotateFrameCompare(sceneId, drag, groupVmB, layerW, layerH);
         if (drag.liveRefs && drag.liveRefs.items) {
           drag.liveRefs.items.forEach(function (item) {
             paintRotateVm(item.el, item.gizmo, getOverlayItemVm(sceneId, item.id));
@@ -8573,6 +8561,45 @@ var ExperienciaCanvas = (function () {
         drag.layerW,
         drag.layerH
       ));
+    }
+
+    /** Diagnostic — compare frame w/h sources once per degree during group live rotate. */
+    function traceGroupRotateFrameCompare(sceneId, drag, groupVm, layerW, layerH) {
+      if (!multiRotateTraceEnabled() || !drag) return;
+      var traceDeg = Math.round(Number(drag.pendingDeg) || 0);
+      if (drag.lastFrameCompareTraceDeg === traceDeg) return;
+      drag.lastFrameCompareTraceDeg = traceDeg;
+      var orientedUnion = getGroupUnionFrame(sceneId, drag.buttonId, layerW, layerH);
+      var unionBounds = null;
+      if (ExperienciaEngine.computeOverlayUnionBounds) {
+        var nCmp = ExperienciaEngine.getNode(state, sceneId);
+        var gCmp = nCmp && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(nCmp, drag.buttonId)
+          : null;
+        var memberIdsCmp = drag.memberIds;
+        if ((!memberIdsCmp || !memberIdsCmp.length) && gCmp &&
+            ExperienciaEngine.resolveOverlayGroupMemberIds) {
+          memberIdsCmp = ExperienciaEngine.resolveOverlayGroupMemberIds(nCmp, gCmp, { repair: true });
+        }
+        if (nCmp && memberIdsCmp && memberIdsCmp.length) {
+          unionBounds = ExperienciaEngine.computeOverlayUnionBounds(
+            nCmp, memberIdsCmp, layerW, layerH, { useComposed: true }
+          );
+        }
+      }
+      multiRotateTrace('live.group.frameCompare', {
+        deg: traceDeg,
+        'drag.startW': +(Number(drag.startW) || 0).toFixed(4),
+        'drag.startH': +(Number(drag.startH) || 0).toFixed(4),
+        'groupVm.width': groupVm ? +(Number(groupVm.width) || 0).toFixed(4) : null,
+        'groupVm.height': groupVm ? +(Number(groupVm.height) || 0).toFixed(4) : null,
+        'orientedUnion.w': orientedUnion ? +(Number(orientedUnion.w) || 0).toFixed(4) : null,
+        'orientedUnion.h': orientedUnion ? +(Number(orientedUnion.h) || 0).toFixed(4) : null,
+        'computeOverlayUnionBounds.w': unionBounds
+          ? +(Number(unionBounds.w) || 0).toFixed(4) : null,
+        'computeOverlayUnionBounds.h': unionBounds
+          ? +(Number(unionBounds.h) || 0).toFixed(4) : null
+      });
     }
 
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
