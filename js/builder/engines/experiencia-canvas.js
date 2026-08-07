@@ -7716,6 +7716,9 @@ var ExperienciaCanvas = (function () {
       if (!buttonsLayer || !selIds || !selIds.length) return;
       var sceneId = canvas().selectedId;
       if (!sceneId) return;
+      var gizmoIds = (selIds || []).map(String).filter(function (id) {
+        return id && !isOverlayEffectivelyLocked(sceneId, id);
+      });
       var layerW = overlayLayerSize().w;
       var layerH = overlayLayerSize().h;
       var selSet = buildOverlayVisualSelSet(sceneId, selIds);
@@ -7735,13 +7738,13 @@ var ExperienciaCanvas = (function () {
         if (editMemberSetMount[String(id)]) el.classList.add('is-group-edit-member');
         else el.classList.remove('is-group-edit-member');
       });
-      var multiSel = selIds.length > 1;
+      var multiSel = gizmoIds.length > 1;
       var gizmoHtml = '';
-      var groupMountG = !multiSel ? resolveOverlayGroupGizmoMount(sceneId, selIds) : null;
+      var groupMountG = !multiSel ? resolveOverlayGroupGizmoMount(sceneId, gizmoIds) : null;
       if (groupMountG) {
         gizmoHtml = mountGroupSelectionGizmoHtml(sceneId, groupMountG, layerW, layerH);
       } else {
-        selIds.forEach(function (sid) {
+        gizmoIds.forEach(function (sid) {
           if (isOverlayGroupId(sceneId, sid) && !canvas().activeOverlayGroupEditId) return;
           var selBtn = getOverlayItemVm(sceneId, sid);
           if (!selBtn) return;
@@ -7759,7 +7762,7 @@ var ExperienciaCanvas = (function () {
           });
         });
         if (multiSel) {
-          var unionMount = getMultiSelectUnionFrame(sceneId, selIds, layerW, layerH);
+          var unionMount = getMultiSelectUnionFrame(sceneId, gizmoIds, layerW, layerH);
           if (unionMount) {
             gizmoHtml += buildMultiSelectionUnionGizmoHtml(unionMount, layerW, layerH);
           }
@@ -10889,6 +10892,8 @@ var ExperienciaCanvas = (function () {
       if (!groupId || !childId) return false;
       groupDebugLog('enterOverlayGroupEditMode', { groupId: groupId, childId: childId });
       var sceneId = canvas().selectedId;
+      if (isOverlayEffectivelyLocked(sceneId, childId)) return false;
+      if (isOverlayEffectivelyLocked(sceneId, groupId)) return false;
       groupPointerGesture = null;
       canvas().activeOverlayGroupEditId = String(groupId);
       canvas().selectedButtonIds = [String(childId)];
@@ -10924,8 +10929,10 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonIds = [];
         canvas().selectedButtonId = null;
       } else if (opts.reselectGroup !== false) {
-        canvas().selectedButtonIds = [String(groupId)];
-        canvas().selectedButtonId = String(groupId);
+        if (!isOverlayEffectivelyLocked(sceneId, groupId)) {
+          canvas().selectedButtonIds = [String(groupId)];
+          canvas().selectedButtonId = String(groupId);
+        }
       }
       if (opts.paint !== false) {
         paintButtonsStage();
@@ -11106,7 +11113,8 @@ var ExperienciaCanvas = (function () {
     function previewOverlayGroupMember(memberId) {
       if (!memberId) return false;
       var sceneId = canvas().selectedId;
-      if (!sceneId || !resolveGroupedOverlayHit(sceneId, memberId)) return false;
+      if (!sceneId || isOverlayEffectivelyLocked(sceneId, memberId)) return false;
+      if (!resolveGroupedOverlayHit(sceneId, memberId)) return false;
       overlayPanelPreviewMemberId = String(memberId);
       paintOverlayGroupMemberGlow(overlayPanelPreviewMemberId);
       return true;
@@ -11244,7 +11252,17 @@ var ExperienciaCanvas = (function () {
         hitCur = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
       }
       var bidCur = hitCur && hitCur.getAttribute('data-exp-stage-btn');
-      if (bidCur && resolveGroupedOverlayHit(sceneIdCur, bidCur)) {
+      if (bidCur && isOverlayEffectivelyLocked(sceneIdCur, bidCur)) {
+        if (!buttonDrag) clearOverlayTransformCursor();
+        return;
+      }
+      var groupedCur = bidCur ? resolveGroupedOverlayHit(sceneIdCur, bidCur) : null;
+      if (groupedCur) {
+        if (isOverlayEffectivelyLocked(sceneIdCur, groupedCur.childId) ||
+            isOverlayEffectivelyLocked(sceneIdCur, groupedCur.groupId)) {
+          if (!buttonDrag) clearOverlayTransformCursor();
+          return;
+        }
         setOverlayTransformCursor('grab');
         return;
       }
@@ -12877,9 +12895,13 @@ var ExperienciaCanvas = (function () {
           if (buttonsLayer && ev) buttonsLayer.releasePointerCapture(ev.pointerId);
         } catch (eRelOm) { /* ignore */ }
         if (om.moved) {
-          var hitIds = overlaysInOverlayMarquee(om.sceneId, om);
+          var hitIds = overlaysInOverlayMarquee(om.sceneId, om).filter(function (id) {
+            return !isOverlayEffectivelyLocked(om.sceneId, id);
+          });
           if (om.shift) {
-            var merged = getSelectedOverlayIds().slice();
+            var merged = getSelectedOverlayIds().slice().filter(function (id) {
+              return !isOverlayEffectivelyLocked(om.sceneId, id);
+            });
             hitIds.forEach(function (id) {
               if (merged.indexOf(id) < 0) merged.push(id);
             });
@@ -12993,6 +13015,13 @@ var ExperienciaCanvas = (function () {
       function flushGroupPointerGestureToMove(ev) {
         if (!groupPointerGesture) return false;
         var g = groupPointerGesture;
+        if (isOverlayEffectivelyLocked(g.sceneId, g.childId) ||
+            isOverlayEffectivelyLocked(g.sceneId, g.groupId)) {
+          clearGroupPointerGesture();
+          releaseGroupPointerCapture(ev);
+          unbindOverlayPointerDocs();
+          return false;
+        }
         clearGroupPointerGesture();
         canvas().selectedButtonIds = [g.groupId];
         canvas().selectedButtonId = g.groupId;
@@ -13018,6 +13047,10 @@ var ExperienciaCanvas = (function () {
         releaseGroupPointerCapture(ev);
         unbindOverlayPointerDocs();
         if (canvas().activeOverlayGroupEditId) return;
+        if (isOverlayEffectivelyLocked(g.sceneId, g.childId) ||
+            isOverlayEffectivelyLocked(g.sceneId, g.groupId)) {
+          return;
+        }
         canvas().selectedButtonIds = [g.groupId];
         canvas().selectedButtonId = g.groupId;
         paintButtonsStage();
@@ -14030,6 +14063,7 @@ var ExperienciaCanvas = (function () {
           var inGroupEdit = String(canvas().activeOverlayGroupEditId || '') === gid;
 
           if (inGroupEdit) {
+            if (isOverlayEffectivelyLocked(sceneIdHit, cid)) return;
             groupEditPulse = null;
             ev.preventDefault();
             ev.stopPropagation();
