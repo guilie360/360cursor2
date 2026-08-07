@@ -4143,16 +4143,34 @@ var QuotationEditor = (function () {
   }
 
   function renameSceneInteractionLabel(id, nextLabel) {
-    var ix = findSceneInteraction(id);
-    if (!ix) return false;
-    ix.label = String(nextLabel || '').trim() || layerTypeLabel(ix.type);
+    if (!id) return false;
+    var trimmed = String(nextLabel || '').trim();
+    var ixLocal = findSceneInteraction(id);
+    var fallback = ixLocal ? layerTypeLabel(ixLocal.type) : 'Grupo';
+    var finalLabel = trimmed || fallback;
+
     markDirtyLocal();
-    if (expOverlay && expOverlay.syncFromScenes) {
-      expOverlay.syncFromScenes();
+
+    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.updateInteraction) {
+      var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
+      var nodeId = (typeof QuotationExperienciaBridge !== 'undefined' &&
+        QuotationExperienciaBridge.nodeIdForScene)
+        ? QuotationExperienciaBridge.nodeIdForScene(sceneId)
+        : ('qe-' + sceneId);
+      var updated = ExperienciaEngine.updateInteraction(
+        expOverlay.shim, nodeId, id, { label: finalLabel }
+      );
+      if (!updated) return false;
+      if (expOverlay.pull) expOverlay.pull();
       if (expOverlay.refresh) expOverlay.refresh();
-    } else {
+    } else if (ixLocal) {
+      ixLocal.label = finalLabel;
       pushOutlinerScenesToShim();
+    } else {
+      return false;
     }
+
     refreshLayersPanel();
     return true;
   }
@@ -9272,12 +9290,16 @@ var QuotationEditor = (function () {
     });
 
     body.addEventListener('dblclick', function (ev) {
-      var nameEl = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-name]') : null;
-      if (!nameEl || !body.contains(nameEl)) return;
+      if (!body.contains(ev.target)) return;
+      var nameEl = ev.target.closest('[data-qe-outliner-name]');
+      var selBtn = ev.target.closest('[data-qe-layer-sel]');
+      var rid = nameEl
+        ? nameEl.getAttribute('data-qe-outliner-name')
+        : (selBtn ? selBtn.getAttribute('data-qe-layer-sel') : null);
+      if (!rid) return;
       ev.preventDefault();
       ev.stopPropagation();
-      var rid = nameEl.getAttribute('data-qe-outliner-name');
-      if (rid) startOutlinerLabelEdit(rid);
+      startOutlinerLabelEdit(rid);
     });
 
     body.addEventListener('contextmenu', function (ev) {
@@ -9297,7 +9319,10 @@ var QuotationEditor = (function () {
       if (!inp || !body.contains(inp)) return;
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        inp.blur();
+        var id = inp.getAttribute('data-qe-outliner-rename');
+        var nextLabel = inp.value;
+        state.editingElementLabelId = null;
+        renameSceneInteractionLabel(id, nextLabel);
       } else if (ev.key === 'Escape') {
         ev.preventDefault();
         state.editingElementLabelId = null;
@@ -9309,10 +9334,9 @@ var QuotationEditor = (function () {
       var inp = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-rename]') : null;
       if (!inp || !body.contains(inp)) return;
       var id = inp.getAttribute('data-qe-outliner-rename');
+      if (String(state.editingElementLabelId || '') !== String(id)) return;
       var nextLabel = inp.value;
-      if (String(state.editingElementLabelId || '') === String(id)) {
-        state.editingElementLabelId = null;
-      }
+      state.editingElementLabelId = null;
       renameSceneInteractionLabel(id, nextLabel);
     });
   }
