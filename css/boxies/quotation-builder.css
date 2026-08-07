@@ -1226,6 +1226,16 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   pointer-events: auto;
   position: relative;
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qe-outliner__lock-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .qe-outliner__vis:hover,
@@ -1239,13 +1249,8 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   opacity: 0.28;
 }
 
-.qe-outliner__lock.is-off {
-  opacity: 0.72;
-  color: rgba(255, 255, 255, 0.62);
-}
-
 .qe-outliner__lock.is-on {
-  color: rgba(255, 255, 255, 0.88);
+  color: #fff;
   opacity: 1;
 }
 

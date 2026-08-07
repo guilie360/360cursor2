@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7808';
+  var QE_EDITOR_BUILD = 'ws7809';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -5219,6 +5219,27 @@ var QuotationEditor = (function () {
     return !!(ix && ix.locked);
   }
 
+  /** Minimal padlock SVG — stroke-only, matches outliner action icon scale. */
+  function outlinerLockIconHtml(locked) {
+    var svgOpen =
+      '<svg class="qe-outliner__lock-icon" width="16" height="16" viewBox="0 0 16 16"' +
+        ' fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<path d="M6.25 7.25V5.35a1.85 1.85 0 0 1 3.7 0"' +
+          ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<rect x="4" y="7.25" width="8" height="5.75" rx="1.35"' +
+          ' stroke="currentColor" stroke-width="1.8"/>' +
+      '</svg>';
+    var svgClosed =
+      '<svg class="qe-outliner__lock-icon" width="16" height="16" viewBox="0 0 16 16"' +
+        ' fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<path d="M5.75 7.25V5.35a2.25 2.25 0 0 1 4.5 0v1.9"' +
+          ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<rect x="4" y="7.25" width="8" height="5.75" rx="1.35"' +
+          ' stroke="currentColor" stroke-width="1.8"/>' +
+      '</svg>';
+    return locked ? svgClosed : svgOpen;
+  }
+
   function outlinerItemRowHtml(ix, opts) {
     opts = opts || {};
     if (!ix || !ix.id) return '';
@@ -5260,7 +5281,7 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : ' is-off') + '"' +
             ' data-qe-outliner-lock="' + escapeHtml(ix.id) + '"' +
             ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="Bloqueo">' +
-            (locked ? '🔒' : '🔓') + '</button>' +
+            outlinerLockIconHtml(locked) + '</button>' +
           '<button type="button" class="qe-outliner__del" data-qe-outliner-del="' + escapeHtml(ix.id) + '"' +
             ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '" aria-label="Eliminar">✕</button>' +
         '</span>' +
