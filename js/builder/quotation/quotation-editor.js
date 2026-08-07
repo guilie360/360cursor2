@@ -97,6 +97,7 @@ var QuotationEditor = (function () {
 
   var focusEscBound = false;
   var inspectorChromeBound = false;
+  var canvasOutsideDeselectBound = false;
 
   var uid = 1;
   function nextId(prefix) {
@@ -9253,6 +9254,77 @@ var QuotationEditor = (function () {
     closeInspectorIfOpen();
   }
 
+  function isCanvasPointerTarget(t) {
+    if (!t || !t.closest) return false;
+    return !!(
+      t.closest('[data-qe-canvas-fit]') ||
+      t.closest('[data-qe-canvas-fit-frame]') ||
+      t.closest('[data-qe-canvas-fit-stack]') ||
+      t.closest('[data-qe-edit-layer]') ||
+      t.closest('[data-qe-guide-layer]') ||
+      t.closest('[data-hero-canvas]') ||
+      t.closest('[data-qe-viewport-window]') ||
+      t.closest('[data-qe-guides-chrome]')
+    );
+  }
+
+  function isOverlaySelectionChromeTarget(t) {
+    if (!t || !t.closest) return false;
+    return !!(
+      t.closest('.qe-col--inspector') ||
+      t.closest('[data-qe-dock-edit]') ||
+      t.closest('[data-qe-context-menu]') ||
+      t.closest('[data-qe-shape-picker]') ||
+      t.closest('[data-qe-resource-picker]') ||
+      t.closest('[data-qe-scene-confirm]') ||
+      t.closest('[data-qe-lib-status-panel]') ||
+      t.closest('[data-qe-lib-menu-panel]') ||
+      t.closest('[data-qe-scene-group-float]')
+    );
+  }
+
+  function onCanvasOutsidePointer(e) {
+    if (!rootEl) return;
+    if (state.canvasPreviewMode) return;
+    if (state.pendingSceneDeleteId) return;
+    if (state.resourcePickerOpen || state.shapePickerOpen) return;
+    if (typeof QuotationContextMenu !== 'undefined' &&
+        QuotationContextMenu.isOpen && QuotationContextMenu.isOpen()) return;
+
+    var t = e.target;
+    if (!t || !t.closest) return;
+
+    var leftBody = document.getElementById('quotationLeftBody');
+    var inEditor = rootEl.contains(t);
+    var inLeft = leftBody && leftBody.contains(t);
+    if (!inEditor && !inLeft) return;
+
+    if (isCanvasPointerTarget(t)) return;
+    if (isOverlaySelectionChromeTarget(t)) return;
+    if (isBuilderFormField(t)) return;
+
+    if (expOverlay && expOverlay.isInGroupEditMode && expOverlay.isInGroupEditMode()) {
+      if (expOverlay.exitGroupEditMode) {
+        expOverlay.exitGroupEditMode({ persist: true });
+      }
+      return;
+    }
+    if (typeof QuotationGuides !== 'undefined' &&
+        QuotationGuides.hasSelectedGuide && QuotationGuides.hasSelectedGuide()) {
+      QuotationGuides.deselectGuide();
+      return;
+    }
+    if (hasOverlaySelection()) {
+      deselectOverlay();
+    }
+  }
+
+  function bindCanvasOutsideDeselect() {
+    if (canvasOutsideDeselectBound) return;
+    document.addEventListener('pointerdown', onCanvasOutsidePointer, true);
+    canvasOutsideDeselectBound = true;
+  }
+
   function bindFocusEsc() {
     if (focusEscBound) return;
     document.addEventListener('keydown', onBuilderShortcut, true);
@@ -10181,6 +10253,7 @@ var QuotationEditor = (function () {
     hydrateEditorProjectCtxSlug();
     bindFocusEsc();
     bindInspectorChrome();
+    bindCanvasOutsideDeselect();
     bindSceneDeleteDelegation(panel);
     syncRightPanel();
 
