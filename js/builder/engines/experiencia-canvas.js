@@ -6919,7 +6919,8 @@ var ExperienciaCanvas = (function () {
         drag.keepRatio
       );
         if (fin) {
-        if (fin.gm && !drag.snapBypass) {
+        if (fin.gm && !drag.snapBypass &&
+            Math.abs(Number(drag.startRot) || 0) < 0.01) {
           var snappedGm = applyOverlayResizeSnapToGm(
             drag,
             fin.gm,
@@ -8435,7 +8436,49 @@ var ExperienciaCanvas = (function () {
       var ratioSnap = (!isShapeType(drag.type) && isSquareShapeType(drag.type))
         ? 1
         : (drag.startHpx / Math.max(1, drag.startWpx));
-      if ((moveE || moveW) && !(moveN || moveS)) {
+      var isCorner = (moveE || moveW) && (moveN || moveS);
+      if (isCorner) {
+        /* Corner + snap can decouple axes — restore aspect from the pinned corner. */
+        var startPxW = Math.max(1, Number(drag.startWpx) || 1);
+        var startPxH = Math.max(1, Number(drag.startHpx) || 1);
+        var kind = String(drag.type || '').toUpperCase();
+        var scale;
+        if (isShapeType(kind) && (kind === 'SHAPE_CIRCLE' || kind === 'SHAPE_DONUT') &&
+            shapeUsesPixelSquareCornerResize(
+              kind, drag.startW, drag.startH, layerW, layerH
+            )) {
+          var candPxW = wPx;
+          var candPxH = hPx;
+          scale = Math.abs(candPxW - startPxW) * startPxH >=
+            Math.abs(candPxH - startPxH) * startPxW
+            ? candPxW / startPxW
+            : candPxH / startPxH;
+          scale = Math.max(0.06, Math.min(6, scale));
+          wPx = startPxW * scale;
+          hPx = startPxH * scale;
+        } else {
+          var targetDiag = Math.sqrt(wPx * wPx + hPx * hPx);
+          var startDiag = Math.sqrt(startPxW * startPxW + startPxH * startPxH);
+          scale = targetDiag / Math.max(startDiag, 0.001);
+          scale = Math.max(0.06, Math.min(6, scale));
+          wPx = startPxW * scale;
+          hPx = startPxH * scale;
+        }
+        if (moveE && !moveW) {
+          Lpx = startLpx;
+          Rpx = Lpx + wPx;
+        } else if (moveW && !moveE) {
+          Rpx = startRpx;
+          Lpx = Rpx - wPx;
+        }
+        if (moveS && !moveN) {
+          Tpx = startTpx;
+          Bpx = Tpx + hPx;
+        } else if (moveN && !moveS) {
+          Bpx = startBpx;
+          Tpx = Bpx - hPx;
+        }
+      } else if ((moveE || moveW) && !(moveN || moveS)) {
         hPx = wPx * ratioSnap;
         var midYpx = (startTpx + startBpx) / 2;
         Tpx = midYpx - hPx / 2;
@@ -8455,6 +8498,7 @@ var ExperienciaCanvas = (function () {
 
     function applyOverlayResizeSnapToGm(drag, gm, mode, layerW, layerH) {
       if (!gm || !drag) return gm;
+      if (Math.abs(Number(drag.startRot) || 0) > 0.01) return gm;
       var boxPx = overlayGmToPxBox(gm, layerW, layerH);
       var snapped = applyOverlayResizeSnapPx(
         drag, boxPx.Lpx, boxPx.Rpx, boxPx.Tpx, boxPx.Bpx, mode, layerW, layerH
