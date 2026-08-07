@@ -12303,6 +12303,38 @@ var QuotationEditor = (function () {
         hostInDom: !!document.getElementById(SCENE_GROUP_FLOAT_HOST_ID)
       };
     },
+    /** Console diagnostics for panel Elementos → Crear grupo. */
+    getOutlinerDebug: function () {
+      var body = document.getElementById('quotationRightBody');
+      var btn = body && body.querySelector('[data-qe-outliner-create-group]');
+      var sc = activeScene();
+      var ixs = (sc && Array.isArray(sc.interactions)) ? sc.interactions : [];
+      var groups = ixs.filter(isOverlayGroupIx);
+      var free = ixs.filter(function (ix) {
+        return ix && !isOverlayGroupIx(ix) && !ix.groupId;
+      });
+      return {
+        bodyInDom: !!body,
+        buttonInDom: !!btn,
+        layersBound: !!(body && body.dataset.qeLayersBound === '1'),
+        activeSceneId: sc && sc.id,
+        overlayGroupCount: groups.length,
+        freeItemCount: free.length,
+        groupLabels: groups.map(function (g) { return g.label || g.id; }),
+        expOverlayMounted: !!expOverlay,
+        editorScriptHint: (function () {
+          var el = document.querySelector('script[src*="quotation-editor.js"]');
+          return el ? el.getAttribute('src') : null;
+        })()
+      };
+    },
+    /** Bypass button — test createEmptyOverlayGroup from console. */
+    debugCreateOverlayGroup: function () {
+      var before = this.getOutlinerDebug();
+      var id = createEmptyOverlayGroup();
+      var after = this.getOutlinerDebug();
+      return { createdId: id, before: before, after: after };
+    },
     _getState: function () { return state; },
     _resetDemo: function () {
       resetEditorSession('demo');
