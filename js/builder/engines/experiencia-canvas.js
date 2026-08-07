@@ -11702,27 +11702,23 @@ var ExperienciaCanvas = (function () {
       return ExperienciaEngine.getSceneButton(state, n, itemId);
     }
 
-    /** Single editor gate — self lock OR ancestor group lock. */
+    /** Single editor gate — self lock OR ancestor group lock (silent; no diagnostics). */
     function isOverlayEffectivelyLocked(sceneId, itemId) {
       if (!sceneId || !itemId) return false;
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n) return false;
-      var effectiveLocked = false;
       if (typeof ExperienciaEngine.isOverlayEffectivelyLocked === 'function') {
-        effectiveLocked = ExperienciaEngine.isOverlayEffectivelyLocked(state, n, itemId);
-      } else {
-        var vm = getOverlayItemVm(sceneId, itemId);
-        effectiveLocked = !!(vm && vm.locked);
+        return ExperienciaEngine.isOverlayEffectivelyLocked(state, n, itemId);
       }
-      console.log('[LOCK CHECK] itemId=' + itemId + ' effectiveLocked=' + effectiveLocked);
-      return effectiveLocked;
+      var vm = getOverlayItemVm(sceneId, itemId);
+      return !!(vm && vm.locked);
     }
 
-    function logLockBypass(fnName, sceneId, itemId) {
-      if (!fnName || !sceneId || !itemId) return;
-      if (isOverlayEffectivelyLocked(sceneId, itemId)) {
-        console.log('[LOCK BYPASS] function=' + fnName + ' itemId=' + itemId);
-      }
+    /** One log per user edit attempt — call only at interaction decision points. */
+    function logLockCheckInteraction(sceneId, itemId) {
+      var effectiveLocked = isOverlayEffectivelyLocked(sceneId, itemId);
+      console.log('[LOCK CHECK] itemId=' + itemId + ' effectiveLocked=' + effectiveLocked);
+      return effectiveLocked;
     }
 
     function overlayStageHitIsEditorLocked(sceneId, el) {
@@ -12882,6 +12878,7 @@ var ExperienciaCanvas = (function () {
         } catch (eRelOm) { /* ignore */ }
         if (om.moved) {
           var hitIds = overlaysInOverlayMarquee(om.sceneId, om);
+          if (hitIds.length) logLockCheckInteraction(om.sceneId, hitIds[0]);
           if (om.shift) {
             var merged = getSelectedOverlayIds().slice();
             hitIds.forEach(function (id) {
@@ -13465,7 +13462,6 @@ var ExperienciaCanvas = (function () {
           paintInspector();
           return;
         }
-        if (!btn) logLockBypass('beginOverlayMove:no-btn', sceneId, bid);
         var groupIds = (opts.groupIds && opts.groupIds.length)
           ? opts.groupIds.map(String)
           : getSelectedOverlayIds();
@@ -13475,11 +13471,7 @@ var ExperienciaCanvas = (function () {
         groupIds = groupIds.filter(function (id) {
           return !isOverlayEffectivelyLocked(sceneId, id);
         });
-        if (!groupIds.length) {
-          logLockBypass('beginOverlayMove:groupIds-fallback', sceneId, bid);
-          groupIds = [String(bid)];
-        }
-        logLockBypass('beginOverlayMove', sceneId, bid);
+        if (!groupIds.length) groupIds = [String(bid)];
         var pctStart = percentFromPointer(ev);
         var isGroupDrag = isOverlayGroupId(sceneId, bid);
         if (isGroupDrag) commitGroupBoundsIfNeeded(sceneId, bid);
@@ -13583,11 +13575,11 @@ var ExperienciaCanvas = (function () {
           if (gtype === 'MULTI_SELECT') {
             multiScaleIds = filterMultiScaleOverlayIds(sceneIdG, getSelectedOverlayIds());
             if (multiScaleIds.length < 2) return;
+            if (logLockCheckInteraction(sceneIdG, multiScaleIds[0])) return;
           } else {
             btnG = getOverlayItemVm(sceneIdG, gid);
             if (!btnG) return;
-            logLockBypass('pointerdown:gizmo-handle', sceneIdG, gid);
-            if (btnG.locked) return;
+            if (logLockCheckInteraction(sceneIdG, gid)) return;
           }
           if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.commitOverlayGroupBounds) {
@@ -13962,6 +13954,7 @@ var ExperienciaCanvas = (function () {
             if (moveIds.length < 2) return;
             var btnMoveMulti = getOverlayItemVm(sceneIdMove, moveIds[0]);
             if (!btnMoveMulti) return;
+            if (logLockCheckInteraction(sceneIdMove, moveIds[0])) return;
             ev.preventDefault();
             ev.stopPropagation();
             beginOverlayMove(ev, moveIds[0], sceneIdMove, btnMoveMulti, { groupIds: moveIds });
@@ -13970,7 +13963,7 @@ var ExperienciaCanvas = (function () {
           commitGroupBoundsIfNeeded(sceneIdMove, moveId);
           var btnMove = getOverlayItemVm(sceneIdMove, moveId);
           if (!btnMove) return;
-          logLockBypass('pointerdown:gizmo-move', sceneIdMove, moveId);
+          if (logLockCheckInteraction(sceneIdMove, moveId)) return;
           ev.preventDefault();
           ev.stopPropagation();
           canvas().selectedButtonIds = [String(moveId)];
@@ -13981,8 +13974,11 @@ var ExperienciaCanvas = (function () {
 
         var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
         var sceneIdHit = canvas().selectedId;
-        if (hit && overlayStageHitIsEditorLocked(sceneIdHit, hit)) {
-          hit = null;
+        if (hit) {
+          var bidProbe = hit.getAttribute('data-exp-stage-btn');
+          if (bidProbe && logLockCheckInteraction(sceneIdHit, bidProbe)) {
+            hit = null;
+          }
         }
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
@@ -14093,7 +14089,6 @@ var ExperienciaCanvas = (function () {
             return;
           }
 
-          logLockBypass('pointerdown:grouped-select', sceneIdHit, gid);
           canvas().selectedButtonIds = [gid];
           canvas().selectedButtonId = gid;
           paintButtonsStage();
@@ -14130,7 +14125,6 @@ var ExperienciaCanvas = (function () {
           notifyOverlaySelection();
           return;
         }
-        logLockBypass('pointerdown:ungrouped-select', sceneIdHit, bid);
         if (cur.indexOf(String(bid)) < 0 || cur.length <= 1) {
           canvas().selectedButtonIds = [String(bid)];
           canvas().selectedButtonId = bid;
@@ -14143,7 +14137,6 @@ var ExperienciaCanvas = (function () {
         var sceneId = canvas().selectedId;
         var btn = getOverlayItemVm(sceneId, bid);
         var alreadyOnlySelected = cur.length === 1 && String(cur[0]) === String(bid);
-        logLockBypass('pointerdown:ungrouped-move', sceneId, bid);
         beginOverlayMove(ev, bid, sceneId, btn, {
           selectionPaintNeeded: !alreadyOnlySelected
         });
@@ -14153,8 +14146,7 @@ var ExperienciaCanvas = (function () {
         var grouped = resolveGroupedChildFromEvent(ev, sceneId);
         groupDebugLog('dblclick (native fallback)', grouped);
         if (!grouped) return;
-        if (isOverlayEffectivelyLocked(sceneId, grouped.groupId) ||
-            isOverlayEffectivelyLocked(sceneId, grouped.childId)) return;
+        if (logLockCheckInteraction(sceneId, grouped.childId)) return;
         ev.preventDefault();
         ev.stopPropagation();
         cancelOverlayGestures();
@@ -14783,7 +14775,7 @@ var ExperienciaCanvas = (function () {
           ExperienciaEngine.getNode(state, sceneId), bid
         );
         if (!btn || String(btn.type || '').toUpperCase() !== 'TEXT') return;
-        if (btn.locked) return;
+        if (logLockCheckInteraction(sceneId, bid)) return;
         canvas().selectedButtonIds = [String(bid)];
         canvas().selectedButtonId = bid;
         if (textEditEl && textEditEl !== hit) {
