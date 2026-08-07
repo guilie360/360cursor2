@@ -123,7 +123,47 @@ var ExperienciaCanvas = (function () {
     );
   }
 
-  /** ?paintShapeTrace=1 — one log: paintRotateVm delivers vs paintShapeNodeEl receives vs DOM style */
+  /** Rotate pipeline bisect — ?disablePostRotatePipeline=1|2, ?disableFirstRotatePaint=1 */
+  function rotatePipelineBisectMode() {
+    try {
+      var v = new URLSearchParams(window.location.search || '').get('disablePostRotatePipeline');
+      if (v === '1' || v === '2') return v;
+    } catch (eRpb) { /* ignore */ }
+    return null;
+  }
+
+  function disableFirstRotatePaintEnabled() {
+    try {
+      return new URLSearchParams(window.location.search || '').get('disableFirstRotatePaint') === '1';
+    } catch (eDrp) { /* ignore */ }
+    return false;
+  }
+
+  function rotateFirstLivePaintDone() {
+    return typeof window !== 'undefined' && !!window.__QE_FIRST_ROTATE_LIVE_PAINT_DONE__;
+  }
+
+  function rotatePostPipelineBlocked() {
+    return rotatePipelineBisectMode() === '1' && rotateFirstLivePaintDone();
+  }
+
+  function rotateFinalizeRelocalizeBlocked() {
+    var mode = rotatePipelineBisectMode();
+    return (mode === '1' && rotateFirstLivePaintDone()) || mode === '2';
+  }
+
+  function markRotateFirstLivePaintDone() {
+    if (typeof window !== 'undefined') {
+      window.__QE_FIRST_ROTATE_LIVE_PAINT_DONE__ = true;
+    }
+  }
+
+  function resetRotatePipelineBisectFlags() {
+    if (typeof window !== 'undefined') {
+      window.__QE_FIRST_ROTATE_LIVE_PAINT_DONE__ = false;
+    }
+  }
+
   function paintShapeTraceEnabled() {
     if (typeof window !== 'undefined') {
       if (window.__QE_PAINT_SHAPE_TRACE__ === false) return false;
@@ -6715,6 +6755,7 @@ var ExperienciaCanvas = (function () {
 
     function flushRotateLiveFrame() {
       if (!transformDrag || transformDrag.mode !== 'rotate') return;
+      if (rotatePostPipelineBlocked()) return;
       transformDrag.rotateRaf = null;
       var deg = transformDrag.pendingDeg;
       if (deg == null) return;
@@ -6776,11 +6817,21 @@ var ExperienciaCanvas = (function () {
       if (compareRotateEnabled() && transformDrag && transformDrag.mode === 'rotate') {
         traceCompareRotateDuringDrag(transformDrag, deg);
       }
-      paintRotateLiveFromDrag(transformDrag);
+      var skipFirstPaint = disableFirstRotatePaintEnabled() && !rotateFirstLivePaintDone();
+      if (!skipFirstPaint) {
+        paintRotateLiveFromDrag(transformDrag);
+      }
+      if (rotatePipelineBisectMode() === '1' && !skipFirstPaint) {
+        markRotateFirstLivePaintDone();
+      }
+      if (disableFirstRotatePaintEnabled() && skipFirstPaint) {
+        markRotateFirstLivePaintDone();
+      }
     }
 
     function scheduleRotateLiveFrame(drag, deg) {
       if (!drag) return;
+      if (rotatePostPipelineBlocked()) return;
       drag.pendingDeg = deg;
       if (drag.rotateRaf) return;
       drag.rotateRaf = requestAnimationFrame(flushRotateLiveFrame);
@@ -13353,6 +13404,7 @@ var ExperienciaCanvas = (function () {
             live: true
           };
           if (handleMode === 'rotate') {
+            resetRotatePipelineBisectFlags();
             transformDrag.rotateLiveRefs = buildRotateLiveRefs(
               sceneIdG,
               gid,
@@ -13663,7 +13715,9 @@ var ExperienciaCanvas = (function () {
           if (endedDrag.rotateRaf) {
             cancelAnimationFrame(endedDrag.rotateRaf);
             endedDrag.rotateRaf = null;
-            flushRotateLiveFrame();
+            if (!rotatePostPipelineBlocked()) {
+              flushRotateLiveFrame();
+            }
           }
           transformDrag = null;
           clearOverlayTransformCursor();
@@ -13744,8 +13798,11 @@ var ExperienciaCanvas = (function () {
                 traceRotateDragStage('pointerup.before', endedDrag);
               }
             }
-            clearRotateLiveStyles(endedDrag);
-            if (endType === 'MULTI_SELECT' && movedT && endedDrag.memberIds &&
+            if (!rotatePostPipelineBlocked()) {
+              clearRotateLiveStyles(endedDrag);
+            }
+            if (!rotateFinalizeRelocalizeBlocked() &&
+                endType === 'MULTI_SELECT' && movedT && endedDrag.memberIds &&
                 endedDrag.memberWorldSnapshots && endedDrag.pendingDeg != null) {
               var deltaRotFin = endedDrag.pendingDeg - (Number(endedDrag.startRot) || 0);
               applyMultiSelectRotation(
