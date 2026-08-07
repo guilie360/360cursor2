@@ -5969,7 +5969,16 @@ var ExperienciaCanvas = (function () {
       }
 
       if ((dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') && drag.mode === 'rotate') {
-        var groupUnionBox = {
+        /* EXPERIMENT ws7713 — live rotate: group gizmo from model B (getOverlayItemVm), not cache/drag snapshot. */
+        var groupVmB = getOverlayItemVm(sceneId, drag.buttonId);
+        var groupUnionBox = groupVmB ? {
+          cx: groupVmB.storedX != null ? Number(groupVmB.storedX) : Number(groupVmB.x) || 50,
+          cy: groupVmB.storedY != null ? Number(groupVmB.storedY) : Number(groupVmB.y) || 50,
+          w: Number(groupVmB.width) || 20,
+          h: Number(groupVmB.height) || 20,
+          rot: Number(drag.pendingDeg) != null ? Number(drag.pendingDeg) : (Number(groupVmB.rotation) || 0),
+          kind: dragType
+        } : {
           cx: drag.startX,
           cy: drag.startY,
           w: drag.startW,
