@@ -4137,13 +4137,11 @@ var QuotationEditor = (function () {
     if (!state.openOverlayGroups) state.openOverlayGroups = {};
     state.openOverlayGroups[groupId] = true;
     state.editingElementLabelId = groupId;
-    syncOverlaySceneFromPanel(function (n) {
-      var g = ExperienciaEngine.getInteraction(n, groupId);
-      if (g && ExperienciaEngine.ensureOverlayGroupDefaults) {
-        var sz = overlayPanelLayerSize();
-        ExperienciaEngine.ensureOverlayGroupDefaults(n, g, sz.w, sz.h);
-      }
-    });
+    markDirtyLocal();
+    if (expOverlay && expOverlay.syncFromScenes) {
+      try { expOverlay.syncFromScenes(); } catch (eSync) { /* ignore */ }
+    }
+    refreshLayersPanel();
     return groupId;
   }
 
@@ -4412,15 +4410,15 @@ var QuotationEditor = (function () {
     return true;
   }
 
-  function bindOutlinerDnD(outlinerRoot) {
-    if (!outlinerRoot || outlinerRoot.dataset.qeOutlinerDndBound === '1') return;
-    outlinerRoot.dataset.qeOutlinerDndBound = '1';
+  function bindOutlinerDnD(body) {
+    if (!body || body.dataset.qeOutlinerDndBound === '1') return;
+    body.dataset.qeOutlinerDndBound = '1';
 
     var draggingId = null;
     var dropTarget = null;
 
     function listEl() {
-      return outlinerRoot.querySelector('[data-qe-outliner-list]');
+      return body.querySelector('[data-qe-outliner-list]');
     }
 
     function clearDropMarkers() {
@@ -4490,43 +4488,43 @@ var QuotationEditor = (function () {
       else if (clientY > rect.bottom - edge) list.scrollTop += speed;
     }
 
-    function commitDrop() {
-      if (!draggingId || !dropTarget) {
-        clearDropMarkers();
-        draggingId = null;
-        return;
+    function finishDrag() {
+      document.removeEventListener('pointermove', onDocMove);
+      document.removeEventListener('pointerup', onDocUp);
+      document.removeEventListener('pointercancel', onDocUp);
+      try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
+      if (draggingId && dropTarget) {
+        commitOutlinerDrop(draggingId, dropTarget);
       }
-      commitOutlinerDrop(draggingId, dropTarget);
       clearDropMarkers();
       draggingId = null;
     }
 
-    outlinerRoot.addEventListener('pointerdown', function (e) {
+    function onDocMove(ev) {
+      if (!draggingId) return;
+      paintDropMarker(rowDropAt(ev.clientY, draggingId));
+      autoScrollOutliner(ev.clientY);
+    }
+
+    function onDocUp(ev) {
+      if (ev && draggingId) finishDrag();
+    }
+
+    body.addEventListener('pointerdown', function (e) {
       var handle = e.target && e.target.closest ? e.target.closest('[data-qe-outliner-drag]') : null;
-      if (!handle || !outlinerRoot.contains(handle)) return;
+      if (!handle || !body.contains(handle)) return;
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
       var row = handle.closest('[data-qe-outliner-row]');
       if (!row) return;
       draggingId = row.getAttribute('data-qe-outliner-row');
+      dropTarget = null;
       row.classList.add('is-dragging');
-      try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
-
-      function onMove(ev) {
-        paintDropMarker(rowDropAt(ev.clientY, draggingId));
-        autoScrollOutliner(ev.clientY);
-      }
-      function onUp(ev) {
-        handle.removeEventListener('pointermove', onMove);
-        handle.removeEventListener('pointerup', onUp);
-        handle.removeEventListener('pointercancel', onUp);
-        try { handle.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
-        commitDrop();
-      }
-      handle.addEventListener('pointermove', onMove);
-      handle.addEventListener('pointerup', onUp);
-      handle.addEventListener('pointercancel', onUp);
+      try { document.body.classList.add('is-qe-outliner-dragging'); } catch (eCls) { /* ignore */ }
+      document.addEventListener('pointermove', onDocMove);
+      document.addEventListener('pointerup', onDocUp);
+      document.addEventListener('pointercancel', onDocUp);
     });
   }
 
@@ -4600,14 +4598,19 @@ var QuotationEditor = (function () {
         layerTypeIconHtml(t) +
         '<button type="button" class="qe-outliner__sel' + (selected ? ' is-active' : '') + '"' +
           ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' + nameHtml + '</button>' +
-        '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
-          ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
-          ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad"></button>' +
-        '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : '') + '"' +
-          ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
-          ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="Bloqueo"></button>' +
-        '<button type="button" class="qe-outliner__del" data-qe-layer-del="' + escapeHtml(ix.id) + '"' +
-          ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '" aria-label="Eliminar"></button>' +
+        '<span class="qe-outliner__actions">' +
+          '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
+            ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="' +
+            (vis ? 'Ocultar' : 'Mostrar') + '">👁</button>' +
+          '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : '') + '"' +
+            ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="' +
+            (locked ? 'Desbloquear' : 'Bloquear') + '">' + (locked ? '🔒' : '🔓') + '</button>' +
+          '<button type="button" class="qe-outliner__del" data-qe-layer-del="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '"' +
+            ' aria-label="Eliminar">🗑</button>' +
+        '</span>' +
       '</li>';
   }
 
@@ -4662,12 +4665,7 @@ var QuotationEditor = (function () {
   function elementsOutlinerShellHtml() {
     return '' +
       '<div class="qe-outliner" data-qe-outliner data-qe-layers aria-label="Elementos">' +
-        '<div class="qe-outliner__tabs" role="tablist" aria-label="Panel derecho">' +
-          '<button type="button" class="qe-outliner__tab is-active" role="tab"' +
-            ' aria-selected="true" data-qe-outliner-tab="elements">Elementos</button>' +
-          '<button type="button" class="qe-outliner__tab is-disabled" role="tab"' +
-            ' aria-selected="false" data-qe-outliner-tab="layers" disabled>Capas</button>' +
-        '</div>' +
+        '<div class="qe-outliner__head">Elementos</div>' +
         '<div class="qe-outliner__toolbar">' +
           '<button type="button" class="qe-outliner__create-group" data-qe-outliner-create-group>' +
             '+ Crear grupo</button>' +
@@ -9168,7 +9166,6 @@ var QuotationEditor = (function () {
       syncRightPanel();
       return;
     }
-    bindOutlinerDnD(host);
     restoreOutlinerScroll(
       host.querySelector('[data-qe-outliner-list], [data-qe-layers-list]'),
       savedTop
@@ -9190,11 +9187,10 @@ var QuotationEditor = (function () {
     var body = document.getElementById('quotationRightBody');
     if (!body) return;
 
-    var outliner = body.querySelector('[data-qe-outliner]');
-    if (outliner) bindOutlinerDnD(outliner);
-
     if (body.dataset.qeLayersBound === '1') return;
     body.dataset.qeLayersBound = '1';
+
+    bindOutlinerDnD(body);
 
     body.addEventListener('click', function (ev) {
       var t = ev.target;

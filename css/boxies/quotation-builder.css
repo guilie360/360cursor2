@@ -881,38 +881,15 @@
   background: transparent;
 }
 
-.qe-outliner__tabs {
+.qe-outliner__head {
   flex: 0 0 auto;
-  display: flex;
-  gap: 4px;
-  padding: 8px 10px 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.qe-outliner__tab {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.42);
-  font: inherit;
+  padding: 10px 12px 8px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.qe-outliner__tab.is-active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.qe-outliner__tab.is-disabled,
-.qe-outliner__tab:disabled {
-  opacity: 0.35;
-  cursor: default;
+  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .qe-outliner__toolbar {
@@ -953,6 +930,7 @@
   list-style: none;
   margin: 0;
   padding: 4px 6px 8px;
+  overflow-x: hidden;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
@@ -960,7 +938,7 @@
 
 .qe-outliner__row {
   display: grid;
-  grid-template-columns: 16px 14px 16px minmax(0, 1fr) 20px 20px 18px;
+  grid-template-columns: 16px 14px 16px minmax(0, 1fr) auto;
   align-items: center;
   gap: 2px;
   margin: 0 0 1px;
@@ -1040,8 +1018,13 @@
   flex-shrink: 0;
   cursor: grab;
   opacity: 0.35;
+  touch-action: none;
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.2px) center / 4px 4px;
+}
+
+body.is-qe-outliner-dragging .qe-outliner__drag {
+  cursor: grabbing;
 }
 
 .qe-outliner__row:hover .qe-outliner__drag {
@@ -1114,22 +1097,30 @@
   outline: none;
 }
 
+.qe-outliner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
 .qe-outliner__vis,
 .qe-outliner__lock,
 .qe-outliner__del {
   appearance: none;
   border: 0;
   background: transparent;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.55);
   font: inherit;
   cursor: pointer;
   padding: 0;
-  width: 20px;
+  width: 22px;
   height: 22px;
   font-size: 11px;
   line-height: 22px;
   text-align: center;
-  opacity: 0.65;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 .qe-outliner__vis:hover,
@@ -1149,8 +1140,8 @@
 }
 
 .qe-outliner__del {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 12px;
+  line-height: 22px;
 }
 
 .qe-outliner__divider {
