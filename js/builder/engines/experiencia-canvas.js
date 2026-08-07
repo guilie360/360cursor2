@@ -15894,6 +15894,7 @@ var ExperienciaCanvas = (function () {
         canvas().activeOverlayGroupEditId = null;
         renderAll();
         paintInspector();
+        notifyOverlaySelection();
         return true;
       },
       cancelActiveTool: function () {

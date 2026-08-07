@@ -9256,23 +9256,30 @@ var QuotationEditor = (function () {
 
   function isCanvasPointerTarget(t) {
     if (!t || !t.closest) return false;
+    /* Solo el lienzo de diseño y capas montadas encima — no márgenes, dock ni escenas. */
     return !!(
-      t.closest('[data-qe-canvas-fit]') ||
-      t.closest('[data-qe-canvas-fit-frame]') ||
-      t.closest('[data-qe-canvas-fit-stack]') ||
+      t.closest('[data-qe-canvas]') ||
       t.closest('[data-qe-edit-layer]') ||
       t.closest('[data-qe-guide-layer]') ||
-      t.closest('[data-hero-canvas]') ||
-      t.closest('[data-qe-viewport-window]') ||
-      t.closest('[data-qe-guides-chrome]')
+      t.closest('[data-exp-gizmo]') ||
+      t.closest('[data-exp-stage-btn]')
     );
+  }
+
+  function isQuotationBuilderSurface(t) {
+    if (!t || !t.closest) return false;
+    if (rootEl && rootEl.contains(t)) return true;
+    var leftBody = document.getElementById('quotationLeftBody');
+    if (leftBody && leftBody.contains(t)) return true;
+    var rightBody = document.getElementById('quotationRightBody');
+    if (rightBody && rightBody.contains(t)) return true;
+    return !!t.closest('.quotation-workspace');
   }
 
   function isOverlaySelectionChromeTarget(t) {
     if (!t || !t.closest) return false;
     return !!(
-      t.closest('.qe-col--inspector') ||
-      t.closest('[data-qe-dock-edit]') ||
+      t.closest('[data-qe-dock-bar]') ||
       t.closest('[data-qe-context-menu]') ||
       t.closest('[data-qe-shape-picker]') ||
       t.closest('[data-qe-resource-picker]') ||
@@ -9293,12 +9300,7 @@ var QuotationEditor = (function () {
 
     var t = e.target;
     if (!t || !t.closest) return;
-
-    var leftBody = document.getElementById('quotationLeftBody');
-    var inEditor = rootEl.contains(t);
-    var inLeft = leftBody && leftBody.contains(t);
-    if (!inEditor && !inLeft) return;
-
+    if (!isQuotationBuilderSurface(t)) return;
     if (isCanvasPointerTarget(t)) return;
     if (isOverlaySelectionChromeTarget(t)) return;
     if (isBuilderFormField(t)) return;
