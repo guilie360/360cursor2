@@ -789,6 +789,8 @@ var QuotationEditor = (function () {
       librarySelectAnchorId: null,
       renamingFolderId: null,
       renamingContentId: null,
+      editingElementLabelId: null,
+      openOverlayGroups: {},
       openFolders: {},
       folderComposerGroup: null,
       tourComposer: { open: false, folderId: null },
@@ -4045,6 +4047,489 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function isOverlayGroupIx(ix) {
+    var t = String((ix && ix.type) || '').toUpperCase();
+    return t === 'OVERLAY_GROUP' || t === 'GROUP';
+  }
+
+  function elementDisplayName(ix) {
+    if (!ix) return 'Elemento';
+    if (ix.label != null && String(ix.label).trim()) return String(ix.label).trim();
+    return layerTypeLabel(ix.type);
+  }
+
+  function layerTypeIconHtml(type) {
+    var t = String(type || '').toUpperCase();
+    if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
+      return '<span class="qe-outliner__ico qe-outliner__ico--group" aria-hidden="true"></span>';
+    }
+    if (t === 'TEXT') {
+      return '<span class="qe-outliner__ico qe-outliner__ico--text" aria-hidden="true">T</span>';
+    }
+    if (t === 'BUTTON') {
+      return '<span class="qe-outliner__ico qe-outliner__ico--btn" aria-hidden="true"></span>';
+    }
+    if (t.indexOf('SHAPE_') === 0 || t === 'SHAPE') {
+      return '<span class="qe-outliner__ico qe-outliner__ico--shape" aria-hidden="true"></span>';
+    }
+    if (t === 'HOTSPOT') {
+      return '<span class="qe-outliner__ico qe-outliner__ico--hotspot" aria-hidden="true"></span>';
+    }
+    return '<span class="qe-outliner__ico qe-outliner__ico--generic" aria-hidden="true"></span>';
+  }
+
+  function overlayPanelLayerSize() {
+    var stage = rootEl && rootEl.querySelector('[data-qe-canvas]');
+    if (!stage) return { w: 1000, h: 1000 };
+    return {
+      w: Math.max(1, stage.clientWidth || 1000),
+      h: Math.max(1, stage.clientHeight || 1000)
+    };
+  }
+
+  function syncOverlaySceneFromPanel(engineFn) {
+    markDirtyLocal();
+    if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
+    if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
+      var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
+      var nodeId = 'qe-' + sceneId;
+      var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
+      if (n) engineFn(n, nodeId);
+    }
+    if (expOverlay && expOverlay.pull) expOverlay.pull();
+    if (expOverlay && expOverlay.refresh) expOverlay.refresh();
+    refreshLayersPanel();
+  }
+
+  function nextOverlayGroupLabel() {
+    var scene = activeScene();
+    var max = 0;
+    (scene && scene.interactions || []).forEach(function (ix) {
+      if (!isOverlayGroupIx(ix)) return;
+      var m = String(ix.label || '').match(/Grupo\s+(\d+)/i);
+      if (m) max = Math.max(max, parseInt(m[1], 10) || 0);
+    });
+    return 'Grupo ' + (max + 1);
+  }
+
+  function createEmptyOverlayGroup() {
+    var scene = activeScene();
+    if (!scene) return null;
+    ensureSceneOverlays(scene);
+    var groupId = nextId('grp');
+    var label = nextOverlayGroupLabel();
+    scene.interactions.unshift({
+      type: 'OVERLAY_GROUP',
+      id: groupId,
+      portId: groupId,
+      label: label,
+      memberIds: [],
+      x: 50,
+      y: 50,
+      width: 20,
+      height: 20,
+      rotation: 0,
+      _baseWidth: 20,
+      _baseHeight: 20,
+      _transformV: 2,
+      enabled: true
+    });
+    if (!state.openOverlayGroups) state.openOverlayGroups = {};
+    state.openOverlayGroups[groupId] = true;
+    state.editingElementLabelId = groupId;
+    syncOverlaySceneFromPanel(function (n) {
+      var g = ExperienciaEngine.getInteraction(n, groupId);
+      if (g && ExperienciaEngine.ensureOverlayGroupDefaults) {
+        var sz = overlayPanelLayerSize();
+        ExperienciaEngine.ensureOverlayGroupDefaults(n, g, sz.w, sz.h);
+      }
+    });
+    return groupId;
+  }
+
+  function dissolveOverlayGroupById(groupId) {
+    if (!groupId) return false;
+    var sz = overlayPanelLayerSize();
+    syncOverlaySceneFromPanel(function (n, nodeId) {
+      if (ExperienciaEngine.ungroupSceneOverlay) {
+        ExperienciaEngine.ungroupSceneOverlay(expOverlay.shim, nodeId, groupId, sz.w, sz.h);
+      }
+    });
+    return true;
+  }
+
+  function renameSceneInteractionLabel(id, nextLabel) {
+    var ix = findSceneInteraction(id);
+    if (!ix) return false;
+    ix.label = String(nextLabel || '').trim() || layerTypeLabel(ix.type);
+    syncOverlaySceneFromPanel();
+    return true;
+  }
+
+  function assignInteractionToGroup(memberId, groupId, beforeMemberId) {
+    if (!memberId || !groupId || String(memberId) === String(groupId)) return false;
+    var scene = activeScene();
+    var member = findSceneInteraction(memberId);
+    var group = findSceneInteraction(groupId);
+    if (!scene || !member || !group || !isOverlayGroupIx(group) || isOverlayGroupIx(member)) {
+      return false;
+    }
+    var sz = overlayPanelLayerSize();
+    var lw = sz.w;
+    var lh = sz.h;
+    (scene.interactions || []).forEach(function (ix) {
+      if (!isOverlayGroupIx(ix) || !Array.isArray(ix.memberIds)) return;
+      ix.memberIds = ix.memberIds.filter(function (id) {
+        return String(id) !== String(memberId);
+      });
+    });
+    delete member.groupId;
+    delete member.localX;
+    delete member.localY;
+    delete member.localRotation;
+    if (!Array.isArray(group.memberIds)) group.memberIds = [];
+    if (beforeMemberId) {
+      var idx = group.memberIds.map(String).indexOf(String(beforeMemberId));
+      if (idx >= 0) group.memberIds.splice(idx, 0, String(memberId));
+      else group.memberIds.push(String(memberId));
+    } else {
+      group.memberIds.push(String(memberId));
+    }
+    syncOverlaySceneFromPanel(function (n) {
+      var g = ExperienciaEngine.getInteraction(n, groupId);
+      var m = ExperienciaEngine.getInteraction(n, memberId);
+      if (!g || !m) return;
+      ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh);
+      ExperienciaEngine.migrateGroupedChildLocals(n, g, lw, lh);
+      var local = ExperienciaEngine.absoluteToLocalOverlay(n, g, m, lw, lh);
+      if (local) {
+        m.groupId = groupId;
+        m.localX = local.localX;
+        m.localY = local.localY;
+        m.localRotation = local.localRotation;
+      }
+      ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
+    });
+    return true;
+  }
+
+  function removeInteractionFromGroup(memberId) {
+    var member = findSceneInteraction(memberId);
+    if (!member || !member.groupId) return false;
+    var sz = overlayPanelLayerSize();
+    var lw = sz.w;
+    var lh = sz.h;
+    syncOverlaySceneFromPanel(function (n) {
+      var m = ExperienciaEngine.getInteraction(n, memberId);
+      if (!m || !m.groupId) return;
+      var g = ExperienciaEngine.getInteraction(n, m.groupId);
+      if (g) {
+        ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh);
+        ExperienciaEngine.migrateGroupedChildLocals(n, g, lw, lh);
+        var world = ExperienciaEngine.overlayWorldLayoutRaw(n, m, lw, lh);
+        if (world) {
+          m.x = world.x;
+          m.y = world.y;
+          m.rotation = world.rotation;
+          if (world.width != null) m.width = world.width;
+          if (world.height != null) m.height = world.height;
+          if (world.boxW != null) m.boxW = world.boxW;
+          if (world.boxH != null) m.boxH = world.boxH;
+        }
+        g.memberIds = (g.memberIds || []).filter(function (id) {
+          return String(id) !== String(memberId);
+        });
+      }
+      delete m.groupId;
+      delete m.localX;
+      delete m.localY;
+      delete m.localRotation;
+    });
+    return true;
+  }
+
+  function reorderInteractionsInList(list, dragId, targetId, position, filterFn) {
+    if (!list || !dragId || !targetId || String(dragId) === String(targetId)) return false;
+    var dragIdx = -1;
+    var targetIdx = -1;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (String(list[i].id) === String(dragId) && filterFn(list[i])) dragIdx = i;
+      if (String(list[i].id) === String(targetId) && filterFn(list[i])) targetIdx = i;
+    }
+    if (dragIdx < 0 || targetIdx < 0) return false;
+    var moved = list.splice(dragIdx, 1)[0];
+    var insertAt = targetIdx;
+    if (dragIdx < targetIdx) insertAt--;
+    if (position === 'after') insertAt++;
+    list.splice(insertAt, 0, moved);
+    return true;
+  }
+
+  function reorderOverlayGroups(dragId, targetId, position) {
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var ok = reorderInteractionsInList(scene.interactions, dragId, targetId, position, isOverlayGroupIx);
+    if (ok) syncOverlaySceneFromPanel();
+    return ok;
+  }
+
+  function reorderOverlayFreeItems(dragId, targetId, position) {
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var ok = reorderInteractionsInList(scene.interactions, dragId, targetId, position, function (ix) {
+      return ix && !isOverlayGroupIx(ix) && !ix.groupId;
+    });
+    if (ok) syncOverlaySceneFromPanel();
+    return ok;
+  }
+
+  function reorderGroupMembers(groupId, dragId, targetId, position) {
+    var group = findSceneInteraction(groupId);
+    if (!group || !Array.isArray(group.memberIds)) return false;
+    var ids = group.memberIds.slice();
+    var from = -1;
+    var to = -1;
+    var i;
+    for (i = 0; i < ids.length; i++) {
+      if (String(ids[i]) === String(dragId)) from = i;
+      if (String(ids[i]) === String(targetId)) to = i;
+    }
+    if (from < 0 || to < 0) return false;
+    var moved = ids.splice(from, 1)[0];
+    var insertAt = to;
+    if (from < to) insertAt--;
+    if (position === 'after') insertAt++;
+    ids.splice(insertAt, 0, moved);
+    group.memberIds = ids;
+    syncOverlaySceneFromPanel();
+    return true;
+  }
+
+  function assignInteractionToGroupAt(memberId, groupId, targetMemberId, position) {
+    var beforeId = null;
+    if (position === 'before') {
+      beforeId = targetMemberId;
+    } else {
+      var g = findSceneInteraction(groupId);
+      var ids = (g && g.memberIds) || [];
+      var idx = -1;
+      var i;
+      for (i = 0; i < ids.length; i++) {
+        if (String(ids[i]) === String(targetMemberId)) { idx = i; break; }
+      }
+      if (idx >= 0 && idx < ids.length - 1) beforeId = ids[idx + 1];
+    }
+    return assignInteractionToGroup(memberId, groupId, beforeId);
+  }
+
+  function commitOutlinerDrop(dragId, drop) {
+    if (!dragId || !drop || !drop.id) return false;
+    if (String(dragId) === String(drop.id) && drop.action !== 'into') return false;
+
+    var dragIx = findSceneInteraction(dragId);
+    if (!dragIx) return false;
+    var dragIsGroup = isOverlayGroupIx(dragIx);
+    var dragGrouped = !!dragIx.groupId;
+
+    if (drop.action === 'into') {
+      if (dragIsGroup) return false;
+      assignInteractionToGroup(dragId, drop.id, null);
+      return true;
+    }
+
+    var targetIx = findSceneInteraction(drop.id);
+    if (!targetIx) return false;
+    var targetIsGroup = isOverlayGroupIx(targetIx);
+    var targetGrouped = !!targetIx.groupId;
+
+    if (dragIsGroup && targetIsGroup) {
+      return reorderOverlayGroups(dragId, drop.id, drop.position);
+    }
+
+    if (!dragIsGroup && !dragGrouped && !targetIsGroup && !targetGrouped) {
+      return reorderOverlayFreeItems(dragId, drop.id, drop.position);
+    }
+
+    if (!dragIsGroup && !dragGrouped && targetGrouped) {
+      return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
+    }
+
+    if (!dragIsGroup && dragGrouped) {
+      if (!targetIsGroup && !targetGrouped) {
+        removeInteractionFromGroup(dragId);
+        return reorderOverlayFreeItems(dragId, drop.id, drop.position);
+      }
+      if (targetGrouped && String(dragIx.groupId) === String(targetIx.groupId)) {
+        return reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
+      }
+      if (targetIsGroup) {
+        if (drop.position === 'before') {
+          removeInteractionFromGroup(dragId);
+          return true;
+        }
+        assignInteractionToGroup(dragId, drop.id, null);
+        return true;
+      }
+      if (targetGrouped) {
+        return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
+      }
+    }
+
+    return false;
+  }
+
+  function restoreOutlinerScroll(el, top) {
+    if (!el || top == null || !isFinite(top)) return;
+    el.scrollTop = top;
+    requestAnimationFrame(function () {
+      el.scrollTop = top;
+    });
+  }
+
+  function moveOutlinerRowDom(list, dragId, targetId, position, dropInto) {
+    if (!list || !dragId || !targetId || dragId === targetId) return false;
+    var dragRow = list.querySelector('[data-qe-outliner-row="' + dragId + '"]');
+    var targetRow = list.querySelector('[data-qe-outliner-row="' + targetId + '"]');
+    if (!dragRow || !targetRow || dragRow === targetRow) return false;
+    if (dropInto) {
+      var groupId = targetRow.getAttribute('data-qe-outliner-group');
+      if (!groupId) return false;
+      var insertAfter = targetRow;
+      var next = insertAfter.nextElementSibling;
+      while (next && next.classList.contains('is-nested')) {
+        insertAfter = next;
+        next = next.nextElementSibling;
+      }
+      list.insertBefore(dragRow, insertAfter.nextSibling);
+      dragRow.classList.add('is-nested');
+      return true;
+    }
+    if (position === 'before') list.insertBefore(dragRow, targetRow);
+    else list.insertBefore(dragRow, targetRow.nextSibling);
+    if (targetRow.classList.contains('is-nested')) dragRow.classList.add('is-nested');
+    else dragRow.classList.remove('is-nested');
+    return true;
+  }
+
+  function bindOutlinerDnD(outlinerRoot) {
+    if (!outlinerRoot || outlinerRoot.dataset.qeOutlinerDndBound === '1') return;
+    outlinerRoot.dataset.qeOutlinerDndBound = '1';
+
+    var draggingId = null;
+    var dropTarget = null;
+
+    function listEl() {
+      return outlinerRoot.querySelector('[data-qe-outliner-list]');
+    }
+
+    function clearDropMarkers() {
+      var list = listEl();
+      if (!list) return;
+      list.querySelectorAll('[data-qe-outliner-row]').forEach(function (row) {
+        row.classList.remove('is-drop-above', 'is-drop-below', 'is-drop-into', 'is-dragging');
+      });
+      dropTarget = null;
+    }
+
+    function rowDropAt(clientY, dragId) {
+      var list = listEl();
+      if (!list) return null;
+      var dragIx = findSceneInteraction(dragId);
+      var dragIsGroup = dragIx && isOverlayGroupIx(dragIx);
+      var rows = list.querySelectorAll('[data-qe-outliner-row]');
+      var i;
+      for (i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var rect = row.getBoundingClientRect();
+        var rid = row.getAttribute('data-qe-outliner-row');
+        if (!rid || rid === dragId) continue;
+        var h = rect.height || 1;
+        if (clientY < rect.top + h / 2) {
+          var isGroup = row.getAttribute('data-qe-outliner-kind') === 'group';
+          if (isGroup && !dragIsGroup && clientY >= rect.top) {
+            var relY = clientY - rect.top;
+            if (relY > h * 0.28 && relY < h * 0.72) {
+              return { id: rid, action: 'into' };
+            }
+          }
+          return { id: rid, position: 'before' };
+        }
+      }
+      for (i = rows.length - 1; i >= 0; i--) {
+        var lastRow = rows[i];
+        var lastId = lastRow.getAttribute('data-qe-outliner-row');
+        if (lastId && lastId !== dragId) {
+          return { id: lastId, position: 'after' };
+        }
+      }
+      return null;
+    }
+
+    function paintDropMarker(target) {
+      clearDropMarkers();
+      if (!target || !draggingId || target.id === draggingId) return;
+      dropTarget = target;
+      var list = listEl();
+      if (!list) return;
+      var row = list.querySelector('[data-qe-outliner-row="' + target.id + '"]');
+      if (!row) return;
+      if (target.action === 'into') row.classList.add('is-drop-into');
+      else row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
+      var dragRow = list.querySelector('[data-qe-outliner-row="' + draggingId + '"]');
+      if (dragRow) dragRow.classList.add('is-dragging');
+    }
+
+    function autoScrollOutliner(clientY) {
+      var list = listEl();
+      if (!list) return;
+      var rect = list.getBoundingClientRect();
+      var edge = 28;
+      var speed = 12;
+      if (clientY < rect.top + edge) list.scrollTop -= speed;
+      else if (clientY > rect.bottom - edge) list.scrollTop += speed;
+    }
+
+    function commitDrop() {
+      if (!draggingId || !dropTarget) {
+        clearDropMarkers();
+        draggingId = null;
+        return;
+      }
+      commitOutlinerDrop(draggingId, dropTarget);
+      clearDropMarkers();
+      draggingId = null;
+    }
+
+    outlinerRoot.addEventListener('pointerdown', function (e) {
+      var handle = e.target && e.target.closest ? e.target.closest('[data-qe-outliner-drag]') : null;
+      if (!handle || !outlinerRoot.contains(handle)) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      var row = handle.closest('[data-qe-outliner-row]');
+      if (!row) return;
+      draggingId = row.getAttribute('data-qe-outliner-row');
+      row.classList.add('is-dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
+
+      function onMove(ev) {
+        paintDropMarker(rowDropAt(ev.clientY, draggingId));
+        autoScrollOutliner(ev.clientY);
+      }
+      function onUp(ev) {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        try { handle.releasePointerCapture(ev.pointerId); } catch (eRel) { /* ignore */ }
+        commitDrop();
+      }
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    });
+  }
+
   function layerTypeLabel(type) {
     var t = String(type || '').toUpperCase().replace(/[\s-]+/g, '_');
     var MAP = {
@@ -4077,6 +4562,55 @@ var QuotationEditor = (function () {
     return t.charAt(0) + t.slice(1).toLowerCase().replace(/_/g, ' ');
   }
 
+  function outlinerItemRowHtml(ix, opts) {
+    opts = opts || {};
+    if (!ix || !ix.id) return '';
+    var t = String(ix.type || '').toUpperCase();
+    var label = elementDisplayName(ix);
+    var vis = ix.visible !== false && ix.enabled !== false;
+    var locked = !!ix.locked;
+    var selected = !!opts.selected;
+    var editing = String(state.editingElementLabelId || '') === String(ix.id);
+    var nameHtml = editing
+      ? ('<input type="text" class="qe-outliner__rename" data-qe-outliner-rename="' +
+          escapeHtml(ix.id) + '" value="' + escapeHtml(label) + '" spellcheck="false">')
+      : ('<span class="qe-outliner__name" data-qe-outliner-name="' + escapeHtml(ix.id) + '">' +
+          escapeHtml(label) + '</span>');
+    return '' +
+      '<li class="qe-outliner__row' +
+        (selected ? ' is-selected' : '') +
+        (opts.nested ? ' is-nested' : '') +
+        (opts.isGroup ? ' is-group' : '') +
+        (opts.isDropInto ? ' is-drop-into' : '') +
+        (opts.dropAbove ? ' is-drop-above' : '') +
+        (opts.dropBelow ? ' is-drop-below' : '') + '"' +
+        ' data-qe-outliner-row="' + escapeHtml(ix.id) + '"' +
+        ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
+        ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '"' +
+        (opts.isGroup ? ' data-qe-outliner-group="' + escapeHtml(ix.id) + '"' : '') +
+        ' data-qe-outliner-kind="' + (opts.isGroup ? 'group' : 'item') + '">' +
+        (opts.isGroup
+          ? ('<button type="button" class="qe-outliner__fold' + (opts.open ? ' is-open' : '') + '"' +
+            ' data-qe-layer-fold="' + escapeHtml(ix.id) + '"' +
+            ' aria-label="' + (opts.open ? 'Contraer grupo' : 'Expandir grupo') + '">' +
+            (opts.open ? '▾' : '▸') + '</button>')
+          : '<span class="qe-outliner__fold-spacer" aria-hidden="true"></span>') +
+        '<span class="qe-outliner__drag" data-qe-outliner-drag="' + escapeHtml(ix.id) + '"' +
+          ' aria-hidden="true" title="Arrastrar"></span>' +
+        layerTypeIconHtml(t) +
+        '<button type="button" class="qe-outliner__sel' + (selected ? ' is-active' : '') + '"' +
+          ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' + nameHtml + '</button>' +
+        '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
+          ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
+          ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad"></button>' +
+        '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : '') + '"' +
+          ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
+          ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="Bloqueo"></button>' +
+        '<button type="button" class="qe-outliner__del" data-qe-layer-del="' + escapeHtml(ix.id) + '"' +
+          ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '" aria-label="Eliminar"></button>' +
+      '</li>';
+  }
+
   function layersListHtml() {
     var scene = activeScene();
     if (scene) ensureSceneOverlays(scene);
@@ -4085,50 +4619,6 @@ var QuotationEditor = (function () {
     (state.selectedOverlayIds || []).forEach(function (id) {
       selSet[String(id)] = true;
     });
-    var rows = '';
-    function layerItemRow(ix, opts) {
-      opts = opts || {};
-      if (!ix || !ix.id) return '';
-      var t = String(ix.type || '').toUpperCase();
-      var label = (ix.label != null && String(ix.label).trim())
-        ? String(ix.label)
-        : layerTypeLabel(t);
-      var vis = ix.visible !== false && ix.enabled !== false;
-      var locked = !!ix.locked;
-      var selected = selSet[String(ix.id)];
-      return '' +
-        '<li class="qe-layers__item' +
-          (selected ? ' is-selected' : '') +
-          (opts.nested ? ' is-nested' : '') +
-          (opts.isGroup ? ' is-group' : '') + '"' +
-          ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
-          ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '">' +
-          (opts.isGroup
-            ? ('<button type="button" class="qe-layers__fold' +
-              (opts.open ? ' is-open' : '') + '"' +
-              ' data-qe-layer-fold="' + escapeHtml(ix.id) + '"' +
-              ' title="' + (opts.open ? 'Contraer' : 'Expandir') + '" aria-label="Grupo">' +
-              (opts.open ? '▾' : '▸') + '</button>')
-            : '<span class="qe-layers__fold-spacer" aria-hidden="true"></span>') +
-          '<button type="button" class="qe-layers__vis' + (vis ? '' : ' is-off') + '"' +
-            ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
-            ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
-          '<button type="button" class="qe-layers__sel' + (selected ? ' is-active' : '') + '"' +
-            ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' +
-            '<span class="qe-layers__type">' + escapeHtml(layerTypeLabel(t)) + '</span>' +
-            '<span class="qe-layers__name">' + escapeHtml(label) + '</span>' +
-          '</button>' +
-          '<button type="button" class="qe-layers__lock' + (locked ? ' is-on' : '') + '"' +
-            ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
-            ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '">🔒</button>' +
-          '<button type="button" class="qe-layers__clear" data-qe-layer-del="' +
-            escapeHtml(ix.id) + '" title="Eliminar" aria-label="Eliminar">🗑</button>' +
-          '<button type="button" class="qe-layers__ord" data-qe-layer-up="' +
-            escapeHtml(ix.id) + '" title="Subir">↑</button>' +
-          '<button type="button" class="qe-layers__ord" data-qe-layer-down="' +
-            escapeHtml(ix.id) + '" title="Bajar">↓</button>' +
-        '</li>';
-    }
     if (!state.openOverlayGroups || typeof state.openOverlayGroups !== 'object') {
       state.openOverlayGroups = {};
     }
@@ -4136,33 +4626,64 @@ var QuotationEditor = (function () {
     ixs.forEach(function (ix) {
       if (ix && ix.id) byId[String(ix.id)] = ix;
     });
+    var groups = [];
+    var free = [];
     ixs.forEach(function (ix) {
       if (!ix || !ix.id) return;
-      var t = String(ix.type || '').toUpperCase();
-      if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
-        var open = state.openOverlayGroups[ix.id] !== false;
-        rows += layerItemRow(ix, { isGroup: true, open: open });
-        if (open) {
-          (Array.isArray(ix.memberIds) ? ix.memberIds : []).forEach(function (mid) {
-            var child = byId[String(mid)];
-            if (child) rows += layerItemRow(child, { nested: true });
-          });
-        }
-        return;
-      }
-      if (ix.groupId) return;
-      rows += layerItemRow(ix, {});
+      if (isOverlayGroupIx(ix)) groups.push(ix);
+      else if (!ix.groupId) free.push(ix);
     });
-    return '<ul class="qe-layers__list" data-qe-layers-list>' + rows + '</ul>';
+    var rows = '';
+    groups.forEach(function (ix) {
+      var open = state.openOverlayGroups[ix.id] !== false;
+      rows += outlinerItemRowHtml(ix, { isGroup: true, open: open, selected: selSet[String(ix.id)] });
+      if (open) {
+        (Array.isArray(ix.memberIds) ? ix.memberIds : []).forEach(function (mid) {
+          var child = byId[String(mid)];
+          if (child) {
+            rows += outlinerItemRowHtml(child, { nested: true, selected: selSet[String(child.id)] });
+          }
+        });
+      }
+    });
+    if (groups.length && free.length) {
+      rows += '<li class="qe-outliner__divider" aria-hidden="true"></li>';
+    }
+    free.forEach(function (ix) {
+      rows += outlinerItemRowHtml(ix, { selected: selSet[String(ix.id)] });
+    });
+    if (!rows) {
+      rows = '<li class="qe-outliner__empty">Sin elementos en esta escena</li>';
+    }
+    return '<ul class="qe-outliner__list qe-layers__list" data-qe-outliner-list data-qe-layers-list>' +
+      rows + '</ul>';
   }
 
-  /** Right rail: Capas (top) + Propiedades host (bottom). */
+  function elementsOutlinerShellHtml() {
+    return '' +
+      '<div class="qe-outliner" data-qe-outliner data-qe-layers aria-label="Elementos">' +
+        '<div class="qe-outliner__tabs" role="tablist" aria-label="Panel derecho">' +
+          '<button type="button" class="qe-outliner__tab is-active" role="tab"' +
+            ' aria-selected="true" data-qe-outliner-tab="elements">Elementos</button>' +
+          '<button type="button" class="qe-outliner__tab is-disabled" role="tab"' +
+            ' aria-selected="false" data-qe-outliner-tab="layers" disabled>Capas</button>' +
+        '</div>' +
+        '<div class="qe-outliner__toolbar">' +
+          '<button type="button" class="qe-outliner__create-group" data-qe-outliner-create-group>' +
+            '+ Crear grupo</button>' +
+        '</div>' +
+        '<div class="qe-outliner__scroll">' +
+          layersListHtml() +
+        '</div>' +
+      '</div>';
+  }
+
+  /** Right rail: Elementos (top) + Propiedades host (bottom). */
   function rightPanelHtml() {
     return '' +
-      '<div class="qe-props-panel" data-qe-props-panel aria-label="Capas y propiedades">' +
-        '<section class="qe-props-panel__layers" data-qe-layers aria-label="Capas">' +
-          '<div class="qe-props-panel__head">Capas</div>' +
-          layersListHtml() +
+      '<div class="qe-props-panel" data-qe-props-panel aria-label="Elementos y propiedades">' +
+        '<section class="qe-props-panel__layers qe-props-panel__elements">' +
+          elementsOutlinerShellHtml() +
         '</section>' +
         '<section class="qe-props-panel__props" aria-label="Propiedades">' +
           '<div class="qe-props-panel__head">Propiedades</div>' +
@@ -4252,15 +4773,12 @@ var QuotationEditor = (function () {
       if (!ix) return false;
       var t = String(ix.type || '').toUpperCase();
       if (t === 'OVERLAY_GROUP' || t === 'GROUP') {
-        (ix.memberIds || []).forEach(function (mid) {
-          scene.interactions = scene.interactions.filter(function (item) {
-            return String(item.id) !== String(mid);
-          });
+        dissolveOverlayGroupById(iid);
+      } else {
+        scene.interactions = scene.interactions.filter(function (item) {
+          return String(item.id) !== iid;
         });
       }
-      scene.interactions = scene.interactions.filter(function (item) {
-        return String(item.id) !== iid;
-      });
       if (expOverlay && expOverlay.refresh) expOverlay.refresh();
     }
     state.expHasSelection = false;
@@ -8629,38 +9147,72 @@ var QuotationEditor = (function () {
   }
 
   function refreshLayersPanel() {
-    var host = document.querySelector('[data-qe-layers]');
+    var host = document.querySelector('[data-qe-outliner], [data-qe-layers]');
     if (!host) {
       syncRightPanel();
-      host = document.querySelector('[data-qe-layers]');
+      host = document.querySelector('[data-qe-outliner], [data-qe-layers]');
     }
     if (!host) return;
-    var list = host.querySelector('[data-qe-layers-list], .qe-layers__list');
+    var scroll = host.querySelector('.qe-outliner__scroll');
+    var list = host.querySelector('[data-qe-outliner-list], [data-qe-layers-list], .qe-layers__list');
+    var savedTop = list ? list.scrollTop : 0;
+    var editingId = state.editingElementLabelId;
     if (list) {
       var wrap = document.createElement('div');
       wrap.innerHTML = layersListHtml();
       var next = wrap.firstElementChild;
       if (next) list.replaceWith(next);
+    } else if (scroll) {
+      scroll.innerHTML = layersListHtml();
     } else {
       syncRightPanel();
+      return;
     }
-    bindLayersPanel();
+    bindOutlinerDnD(host);
+    restoreOutlinerScroll(
+      host.querySelector('[data-qe-outliner-list], [data-qe-layers-list]'),
+      savedTop
+    );
+    if (editingId) {
+      var inp = host.querySelector('[data-qe-outliner-rename="' + editingId + '"]');
+      if (inp) {
+        requestAnimationFrame(function () {
+          try {
+            inp.focus();
+            inp.select();
+          } catch (eF) { /* ignore */ }
+        });
+      }
+    }
   }
 
   function bindLayersPanel() {
     var body = document.getElementById('quotationRightBody');
-    if (!body || body.dataset.qeLayersBound === '1') return;
+    if (!body) return;
+
+    var outliner = body.querySelector('[data-qe-outliner]');
+    if (outliner) bindOutlinerDnD(outliner);
+
+    if (body.dataset.qeLayersBound === '1') return;
     body.dataset.qeLayersBound = '1';
 
     body.addEventListener('click', function (ev) {
       var t = ev.target;
-      if (!t || !t.closest || !t.closest('[data-qe-layers]')) return;
+      if (!t || !t.closest) return;
+
+      var createGroup = t.closest('[data-qe-outliner-create-group]');
+      if (createGroup) {
+        ev.preventDefault();
+        createEmptyOverlayGroup();
+        return;
+      }
+
+      if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
+
       var vis = t.closest('[data-qe-layer-vis]');
       var lock = t.closest('[data-qe-layer-lock]');
       var del = t.closest('[data-qe-layer-del]');
       var sel = t.closest('[data-qe-layer-sel]');
-      var up = t.closest('[data-qe-layer-up]');
-      var down = t.closest('[data-qe-layer-down]');
       var fold = t.closest('[data-qe-layer-fold]');
 
       if (fold) {
@@ -8701,16 +9253,12 @@ var QuotationEditor = (function () {
         ev.stopPropagation();
         var did = del.getAttribute('data-qe-layer-del');
         if (!did) return;
-        deleteSceneOverlayById(did);
-        return;
-      }
-
-      if (up || down) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var oid = (up || down).getAttribute(up ? 'data-qe-layer-up' : 'data-qe-layer-down');
-        if (!oid) return;
-        reorderSceneInteraction(oid, up ? -1 : 1);
+        var ixDel = findSceneInteraction(did);
+        if (ixDel && isOverlayGroupIx(ixDel)) {
+          dissolveOverlayGroupById(did);
+        } else {
+          deleteSceneOverlayById(did);
+        }
         return;
       }
 
@@ -8718,7 +9266,7 @@ var QuotationEditor = (function () {
         ev.preventDefault();
         var sid = sel.getAttribute('data-qe-layer-sel');
         if (!sid) return;
-        if (expOverlay && ev.shiftKey && expOverlay.toggleOverlayItemSelection) {
+        if (ev.shiftKey && expOverlay && expOverlay.toggleOverlayItemSelection) {
           expOverlay.toggleOverlayItemSelection(sid);
         } else if (expOverlay && expOverlay.selectOverlayItem) {
           expOverlay.selectOverlayItem(sid);
@@ -8726,6 +9274,38 @@ var QuotationEditor = (function () {
         refreshLayersPanel();
         refreshDockOnly();
       }
+    });
+
+    body.addEventListener('dblclick', function (ev) {
+      var nameEl = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-name]') : null;
+      if (!nameEl || !body.contains(nameEl)) return;
+      ev.preventDefault();
+      var rid = nameEl.getAttribute('data-qe-outliner-name');
+      if (rid) {
+        state.editingElementLabelId = rid;
+        refreshLayersPanel();
+      }
+    });
+
+    body.addEventListener('keydown', function (ev) {
+      var inp = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-rename]') : null;
+      if (!inp || !body.contains(inp)) return;
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        inp.blur();
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        state.editingElementLabelId = null;
+        refreshLayersPanel();
+      }
+    });
+
+    body.addEventListener('focusout', function (ev) {
+      var inp = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-rename]') : null;
+      if (!inp || !body.contains(inp)) return;
+      var id = inp.getAttribute('data-qe-outliner-rename');
+      state.editingElementLabelId = null;
+      renameSceneInteractionLabel(id, inp.value);
     });
   }
 
