@@ -6075,6 +6075,7 @@ var ExperienciaCanvas = (function () {
             transformDrag.lastRotateTraceDeg = traceDegG;
             traceRotateDragStage('live.group.model', transformDrag);
           }
+          traceGroupChildModelsDuringDrag(transformDrag, deg);
         }
       } else {
         ExperienciaEngine.updateSceneButton(state, sceneId, buttonId, {
@@ -8552,6 +8553,94 @@ var ExperienciaCanvas = (function () {
         drag.layerW,
         drag.layerH
       ));
+    }
+
+    function isGroupRotateDrag(drag) {
+      if (!drag || drag.mode !== 'rotate') return false;
+      var t = String(drag.type || '').toUpperCase();
+      return t === 'OVERLAY_GROUP' || t === 'GROUP';
+    }
+
+    /** Read child ix locals + composed world — no VM side effects. */
+    function snapshotGroupChildModels(sceneId, memberIds, layerW, layerH) {
+      var out = {};
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n || !memberIds || !memberIds.length) return out;
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      memberIds.forEach(function (mid) {
+        var ix = ExperienciaEngine.getInteraction(n, mid);
+        if (!ix) return;
+        var world = ExperienciaEngine.overlayWorldLayoutRaw
+          ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+          : null;
+        out[String(mid)] = {
+          id: String(mid),
+          localX: Number(ix.localX) || 0,
+          localY: Number(ix.localY) || 0,
+          localRotation: Number(ix.localRotation) || 0,
+          world: world ? {
+            x: Number(world.x) || 0,
+            y: Number(world.y) || 0,
+            rotation: Number(world.rotation) || 0
+          } : null
+        };
+      });
+      return out;
+    }
+
+    function groupChildModelTraceRows(current, baseline) {
+      var rows = [];
+      Object.keys(current || {}).forEach(function (id) {
+        var cur = current[id];
+        if (!cur) return;
+        var base = baseline && baseline[id];
+        var row = {
+          id: cur.id,
+          localX: +(cur.localX.toFixed(6)),
+          localY: +(cur.localY.toFixed(6)),
+          localRotation: +(cur.localRotation.toFixed(6)),
+          'world.x': cur.world ? +(cur.world.x.toFixed(6)) : null,
+          'world.y': cur.world ? +(cur.world.y.toFixed(6)) : null,
+          'world.rotation': cur.world ? +(cur.world.rotation.toFixed(6)) : null
+        };
+        if (base) {
+          row.deltaLocalX = +((cur.localX - base.localX).toFixed(6));
+          row.deltaLocalY = +((cur.localY - base.localY).toFixed(6));
+          row.deltaLocalRotation = +((cur.localRotation - base.localRotation).toFixed(6));
+        }
+        rows.push(row);
+      });
+      return rows;
+    }
+
+    function captureGroupChildModelBaseline(drag) {
+      if (!multiRotateTraceEnabled() || !isGroupRotateDrag(drag)) return;
+      drag.childModelBaseline = snapshotGroupChildModels(
+        drag.sceneId, drag.memberIds, drag.layerW, drag.layerH
+      );
+      drag.lastChildModelTraceDeg = null;
+    }
+
+    function traceGroupChildModels(stage, drag) {
+      if (!multiRotateTraceEnabled() || !isGroupRotateDrag(drag)) return;
+      var current = snapshotGroupChildModels(
+        drag.sceneId, drag.memberIds, drag.layerW, drag.layerH
+      );
+      multiRotateTrace(stage, {
+        groupId: String(drag.buttonId || ''),
+        pendingDeg: drag.pendingDeg != null ? +(Number(drag.pendingDeg)).toFixed(2) : null,
+        startRot: +(Number(drag.startRot) || 0).toFixed(2),
+        children: groupChildModelTraceRows(current, drag.childModelBaseline)
+      });
+    }
+
+    function traceGroupChildModelsDuringDrag(drag, deg) {
+      if (!multiRotateTraceEnabled() || !isGroupRotateDrag(drag)) return;
+      var bucket = Math.round(Number(deg) / 15) * 15;
+      if (drag.lastChildModelTraceDeg === bucket) return;
+      drag.lastChildModelTraceDeg = bucket;
+      traceGroupChildModels('childModel.drag.deg' + bucket, drag);
     }
 
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
@@ -11629,7 +11718,12 @@ var ExperienciaCanvas = (function () {
               transformMemberIds
             );
             if (multiRotateTraceEnabled()) {
-              traceRotateDragStage('transformstart', transformDrag);
+              if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
+                captureGroupChildModelBaseline(transformDrag);
+                traceGroupChildModels('childModel.pointerdown', transformDrag);
+              } else {
+                traceRotateDragStage('transformstart', transformDrag);
+              }
             }
           }
           if (isShapeType(gtype) && handleMode !== 'rotate' && shapeResizeTraceEnabled()) {
@@ -11964,7 +12058,11 @@ var ExperienciaCanvas = (function () {
           }
           if (wasRotate) {
             if (multiRotateTraceEnabled()) {
-              traceRotateDragStage('pointerup.before', endedDrag);
+              if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
+                traceGroupChildModels('childModel.pointerup.before', endedDrag);
+              } else {
+                traceRotateDragStage('pointerup.before', endedDrag);
+              }
             }
             clearRotateLiveStyles(endedDrag);
             if (endType === 'MULTI_SELECT' && movedT && endedDrag.memberIds &&
@@ -12009,7 +12107,11 @@ var ExperienciaCanvas = (function () {
               persist();
             }
             if (multiRotateTraceEnabled()) {
-              traceRotateDragStage('pointerup.after', endedDrag);
+              if (endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
+                traceGroupChildModels('childModel.pointerup.after', endedDrag);
+              } else {
+                traceRotateDragStage('pointerup.after', endedDrag);
+              }
             }
           }
           /* Final snap + round stored geometry after live resize. */
