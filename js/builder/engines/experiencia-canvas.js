@@ -10460,8 +10460,36 @@ var ExperienciaCanvas = (function () {
       var sz = overlayLayerSize();
       var vm = ExperienciaEngine.getSceneOverlayItem(state, n, groupId, sz.w, sz.h);
       if (!vm) return;
+      var __whMoveFin = snapshotCompareRotateGroupModel(g);
       g.width = Number(vm.width) || g.width;
       g.height = Number(vm.height) || g.height;
+      if (compareRotateEnabled() && typeof window !== 'undefined' &&
+          window.__QE_LIVE_GROUP_SIZE_TRACE__ &&
+          window.__QE_LIVE_GROUP_SIZE_TRACE__.active) {
+        var __afterMoveFin = snapshotCompareRotateGroupModel(g);
+        if (__whMoveFin && __afterMoveFin &&
+            (__whMoveFin.width !== __afterMoveFin.width ||
+             __whMoveFin.height !== __afterMoveFin.height)) {
+          console.log(
+            '%c[COMPARE-ROTATE] compareRotate.groupSize.firstMutation',
+            'color:#6cf;font-weight:bold;font-size:12px',
+            {
+              baseline: window.__QE_LIVE_GROUP_SIZE_TRACE__.baseline || null,
+              before: { width: __whMoveFin.width, height: __whMoveFin.height },
+              after: { width: __afterMoveFin.width, height: __afterMoveFin.height },
+              delta: {
+                width: +(__afterMoveFin.width - __whMoveFin.width).toFixed(4),
+                height: +(__afterMoveFin.height - __whMoveFin.height).toFixed(4)
+              },
+              sourceFile: 'experiencia-canvas.js',
+              sourceFunction: 'finalizeOverlayGroupMoveFrame',
+              sourceLine: '10463-10464',
+              why: 'vm.width/height → g.width/height after group move'
+            }
+          );
+          window.__QE_LIVE_GROUP_SIZE_TRACE__.firstLogged = true;
+        }
+      }
       g._baseWidth = g.width;
       g._baseHeight = g.height;
       var prevRotM = 0;
@@ -12629,6 +12657,31 @@ var ExperienciaCanvas = (function () {
               if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
                 captureCompareRotateBaseline(transformDrag);
                 traceFirstGroupRotatePointerdown(transformDrag);
+                var nGs = ExperienciaEngine.getNode(state, sceneIdG);
+                var gGs = nGs && ExperienciaEngine.getInteraction(nGs, gid);
+                var baselineGs = snapshotCompareRotateGroupModel(gGs);
+                window.__QE_LIVE_GROUP_SIZE_TRACE__ = {
+                  active: true,
+                  sceneId: sceneIdG,
+                  groupId: String(gid),
+                  baseline: baselineGs ? {
+                    width: baselineGs.width,
+                    height: baselineGs.height
+                  } : null,
+                  firstLogged: false
+                };
+                compareRotateLog('compareRotate.groupSize.baseline', {
+                  sceneId: sceneIdG,
+                  groupId: String(gid),
+                  groupModel: baselineGs,
+                  dragFrame: {
+                    startX: transformDrag.startX,
+                    startY: transformDrag.startY,
+                    startW: transformDrag.startW,
+                    startH: transformDrag.startH,
+                    startRot: transformDrag.startRot
+                  }
+                });
               } else if (gtype === 'MULTI_SELECT') {
                 captureCompareRotateBaseline(transformDrag);
                 traceCompareRotate('compareRotate.pointerdown', transformDrag);
@@ -12974,6 +13027,7 @@ var ExperienciaCanvas = (function () {
           }
           if (wasRotate) {
             if (compareRotateEnabled()) {
+              window.__QE_LIVE_GROUP_SIZE_TRACE__ = null;
               if (endType === 'MULTI_SELECT' || endType === 'OVERLAY_GROUP' || endType === 'GROUP') {
                 traceCompareRotate('compareRotate.pointerup.before', endedDrag);
               }

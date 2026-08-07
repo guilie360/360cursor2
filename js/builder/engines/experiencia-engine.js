@@ -43,6 +43,82 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  /** Temporary — ?compareRotate=1 traces first g.width/g.height mutation during live group rotate. */
+  function compareRotateGroupSizeTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_COMPARE_ROTATE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('compareRotate') === '0') return false;
+      if (q.get('compareRotate') === '1') return true;
+    } catch (eCrGs) { /* ignore */ }
+    return false;
+  }
+
+  function groupSizeSnapEngine(g) {
+    return {
+      width: +(Number(g && g.width) || 0).toFixed(4),
+      height: +(Number(g && g.height) || 0).toFixed(4)
+    };
+  }
+
+  function traceLiveGroupModelSizeWrite(meta) {
+    if (!compareRotateGroupSizeTraceEnabled()) return;
+    if (typeof window === 'undefined') return;
+    var slot = window.__QE_LIVE_GROUP_SIZE_TRACE__;
+    if (!slot || !slot.active) return;
+    if (slot.groupId && meta.groupId && String(slot.groupId) !== String(meta.groupId)) return;
+    if (slot.firstLogged) return;
+    var beforeW = meta.beforeWidth;
+    var beforeH = meta.beforeHeight;
+    var afterW = meta.afterWidth;
+    var afterH = meta.afterHeight;
+    if (beforeW === afterW && beforeH === afterH) return;
+    slot.firstLogged = true;
+    window.__QE_LIVE_GROUP_SIZE_TRACE__ = slot;
+    console.log(
+      '%c[COMPARE-ROTATE] compareRotate.groupSize.firstMutation',
+      'color:#6cf;font-weight:bold;font-size:12px',
+      {
+        baseline: slot.baseline || null,
+        before: { width: beforeW, height: beforeH },
+        after: { width: afterW, height: afterH },
+        delta: {
+          width: +((afterW - beforeW)).toFixed(4),
+          height: +((afterH - beforeH)).toFixed(4)
+        },
+        sourceFile: meta.sourceFile || 'experiencia-engine.js',
+        sourceFunction: meta.sourceFunction || null,
+        sourceLine: meta.sourceLine || null,
+        why: meta.why || null,
+        patch: meta.patch || null,
+        _transformV: meta._transformV != null ? meta._transformV : null
+      }
+    );
+  }
+
+  function traceLiveGroupSizeAfterAssign(g, groupId, before, sourceFunction, sourceLine, why, extra) {
+    if (!g) return;
+    var after = groupSizeSnapEngine(g);
+    traceLiveGroupModelSizeWrite({
+      groupId: groupId,
+      beforeWidth: before.width,
+      beforeHeight: before.height,
+      afterWidth: after.width,
+      afterHeight: after.height,
+      sourceFile: 'experiencia-engine.js',
+      sourceFunction: sourceFunction,
+      sourceLine: sourceLine,
+      why: why,
+      patch: extra || null,
+      _transformV: Number(g._transformV) || 0
+    });
+  }
+
+  function traceLiveGroupSizeStep(g, groupId, before, sourceFunction, sourceLine, why, extra) {
+    if (!g) return;
+    traceLiveGroupSizeAfterAssign(g, groupId, before, sourceFunction, sourceLine, why, extra);
+  }
+
   function patchModelFieldsEngine(patch) {
     if (!patch) return null;
     return {
@@ -1465,13 +1541,27 @@ var ExperienciaEngine = (function () {
       if (bounds0) {
         g.x = bounds0.cx;
         g.y = bounds0.cy;
+        var __wh0 = groupSizeSnapEngine(g);
         g.width = bounds0.w;
         g.height = bounds0.h;
+        traceLiveGroupSizeAfterAssign(
+          g, g.id, __wh0,
+          'ensureOverlayGroupDefaults', '1540-1541',
+          'computeOverlayUnionBounds(bounds0) → g.width/height',
+          { bounds0: bounds0, skipSync: !!opts.skipSync }
+        );
         if (g._baseWidth == null) g._baseWidth = bounds0.w;
         if (g._baseHeight == null) g._baseHeight = bounds0.h;
       } else {
+        var __wh1 = groupSizeSnapEngine(g);
         if (g.width == null) g.width = 20;
         if (g.height == null) g.height = 20;
+        traceLiveGroupSizeAfterAssign(
+          g, g.id, __wh1,
+          'ensureOverlayGroupDefaults', '1545-1546',
+          'fallback defaults → g.width/height=20',
+          { skipSync: !!opts.skipSync }
+        );
         if (g._baseWidth == null) g._baseWidth = g.width;
         if (g._baseHeight == null) g._baseHeight = g.height;
       }
@@ -1547,8 +1637,15 @@ var ExperienciaEngine = (function () {
     if (bounds) {
       g.x = bounds.cx;
       g.y = bounds.cy;
+      var __whSync = groupSizeSnapEngine(g);
       g.width = bounds.w;
       g.height = bounds.h;
+      traceLiveGroupSizeAfterAssign(
+        g, g.id, __whSync,
+        'syncOverlayGroupFrameFromMembers', '1622-1623',
+        'computeOverlayUnionBounds(bounds) → g.width/height',
+        { bounds: bounds, _transformV: Number(g._transformV) || 0 }
+      );
       if (g._baseWidth == null) g._baseWidth = bounds.w;
       if (g._baseHeight == null) g._baseHeight = bounds.h;
     }
@@ -1988,11 +2085,26 @@ var ExperienciaEngine = (function () {
     patch = patch || {};
     var layerW = patch.layerW || 1000;
     var layerH = patch.layerH || 1000;
+    var __whEntry = groupSizeSnapEngine(g);
     ensureOverlayGroupDefaults(n, g, layerW, layerH, {
       skipSync: !!patch.live ||
         (!!patch.memberWorldSnapshots && patch.anchorX != null && patch.anchorY != null)
     });
+    traceLiveGroupSizeStep(
+      g, groupId, __whEntry,
+      'updateOverlayGroupTransform', '2063',
+      'after ensureOverlayGroupDefaults(skipSync=' + (!!patch.live ||
+        (!!patch.memberWorldSnapshots && patch.anchorX != null && patch.anchorY != null)) + ')',
+      { patchKeys: Object.keys(patch), live: !!patch.live }
+    );
+    var __whAfterEnsure = groupSizeSnapEngine(g);
     migrateGroupedChildLocals(n, g, layerW, layerH);
+    traceLiveGroupSizeStep(
+      g, groupId, __whAfterEnsure,
+      'updateOverlayGroupTransform', '2071',
+      'after migrateGroupedChildLocals',
+      { patchKeys: Object.keys(patch), live: !!patch.live }
+    );
 
     if (patch.x != null) {
       var nx = Number(patch.x);
@@ -2002,7 +2114,16 @@ var ExperienciaEngine = (function () {
       var ny = Number(patch.y);
       if (!isNaN(ny)) g.y = patch.live ? Math.max(-20, Math.min(120, ny)) : clampPercent(ny, g.y);
     }
-    if (patch.rotation != null) g.rotation = clampRotation(patch.rotation);
+    if (patch.rotation != null) {
+      var __whBeforeRot = groupSizeSnapEngine(g);
+      g.rotation = clampRotation(patch.rotation);
+      traceLiveGroupSizeStep(
+        g, groupId, __whBeforeRot,
+        'updateOverlayGroupTransform', '2080',
+        'after g.rotation assign',
+        { rotation: Number(g.rotation) || 0, live: !!patch.live }
+      );
+    }
 
     if (patch.width != null || patch.height != null) {
       var baseW = Number(g._baseWidth) || Number(g.width) || 20;
@@ -2019,8 +2140,15 @@ var ExperienciaEngine = (function () {
           newW = baseW * sx;
           newH = baseH * sy;
         }
+        var __whBeforePatch = groupSizeSnapEngine(g);
         g.width = newW;
         g.height = newH;
+        traceLiveGroupSizeAfterAssign(
+          g, groupId, __whBeforePatch,
+          'updateOverlayGroupTransform', '2094-2095',
+          'patch.width/height scale → g.width/height',
+          { newW: newW, newH: newH, sx: sx, sy: sy, live: !!patch.live }
+        );
         var worldSnap = patch.memberWorldSnapshots;
         var useWorldScale = worldSnap && typeof worldSnap === 'object' &&
           patch.anchorX != null && patch.anchorY != null;
@@ -2037,8 +2165,15 @@ var ExperienciaEngine = (function () {
           }
           newW = baseW * sx;
           newH = baseH * sy;
+          var __whBeforeWorld = groupSizeSnapEngine(g);
           g.width = newW;
           g.height = newH;
+          traceLiveGroupSizeAfterAssign(
+            g, groupId, __whBeforeWorld,
+            'updateOverlayGroupTransform', '2112-2113',
+            'memberWorldSnapshots scale floor → g.width/height',
+            { newW: newW, newH: newH, sx: sx, sy: sy, live: !!patch.live }
+          );
           resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (mid) {
             var c = getInteraction(n, mid);
             var sw = worldSnap[String(mid)];
@@ -2074,7 +2209,14 @@ var ExperienciaEngine = (function () {
       }
     }
     if (patch.syncBounds) {
+      var __whBeforeSyncBounds = groupSizeSnapEngine(g);
       syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
+      traceLiveGroupSizeStep(
+        g, groupId, __whBeforeSyncBounds,
+        'updateOverlayGroupTransform', '2149',
+        'after patch.syncBounds → syncOverlayGroupFrameFromMembers',
+        { live: !!patch.live }
+      );
     }
     return overlayGroupViewModel(state, n, g, layerW, layerH);
   }
@@ -2148,8 +2290,15 @@ var ExperienciaEngine = (function () {
     if (opts.keepPivot) {
       var halfW = Math.max(gw / 2, gx - uL, uR - gx);
       var halfH = Math.max(gh / 2, gy - uT, uB - gy);
+      var __whExpand = groupSizeSnapEngine(g);
       g.width = Math.max(0.5, halfW * 2);
       g.height = Math.max(0.5, halfH * 2);
+      traceLiveGroupSizeAfterAssign(
+        g, g.id, __whExpand,
+        'expandOverlayGroupBoundsIfMemberOverflow', '2223-2224',
+        'keepPivot overflow expand → g.width/height',
+        { union: union, keepPivot: true }
+      );
       return g;
     }
     return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
