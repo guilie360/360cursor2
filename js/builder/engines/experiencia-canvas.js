@@ -10658,14 +10658,26 @@ var ExperienciaCanvas = (function () {
         toast.classList.remove('is-visible');
         window.setTimeout(function () {
           if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 200);
+        }, 150);
       }, 1500);
+    }
+
+    function exitOverlayGroupEditFromUser(opts) {
+      opts = opts || {};
+      return exitOverlayGroupEditMode({
+        reselectGroup: false,
+        clearSelection: true,
+        persist: opts.persist !== false,
+        sync: opts.sync,
+        paint: opts.paint
+      });
     }
 
     function enterOverlayGroupEditMode(groupId, childId) {
       if (!groupId || !childId) return false;
       groupDebugLog('enterOverlayGroupEditMode', { groupId: groupId, childId: childId });
       var sceneId = canvas().selectedId;
+      groupPointerGesture = null;
       canvas().activeOverlayGroupEditId = String(groupId);
       canvas().selectedButtonIds = [String(childId)];
       canvas().selectedButtonId = String(childId);
@@ -10674,6 +10686,11 @@ var ExperienciaCanvas = (function () {
       if (buttonsLayer) buttonsLayer.classList.add('is-group-edit-mode');
       showOverlayGroupEditToast();
       paintButtonsStage();
+      requestAnimationFrame(function () {
+        if (String(canvas().activeOverlayGroupEditId || '') !== String(groupId)) return;
+        if (String(canvas().selectedButtonId || '') !== String(childId)) return;
+        mountOverlaySelectionGizmos([String(childId)]);
+      });
       paintInspector();
       notifyOverlaySelection();
       return true;
@@ -10827,10 +10844,12 @@ var ExperienciaCanvas = (function () {
     function syncOverlayCanvasHover(clientX, clientY) {
       if (!buttonsLayer || buttonDrag || transformDrag || overlayMarquee) {
         clearOverlayCanvasHover();
+        syncOverlayGroupCursor(clientX, clientY);
         return;
       }
       if (canvas().editMode !== 'buttons' && !overlayMode) {
         clearOverlayCanvasHover();
+        syncOverlayGroupCursor(clientX, clientY);
         return;
       }
       var hit = overlayPickTopmostAtPoint(clientX, clientY);
@@ -10839,13 +10858,60 @@ var ExperienciaCanvas = (function () {
       }
       var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
         ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
-      if (nextId === String(overlayCanvasHoverId || '')) return;
+      if (nextId === String(overlayCanvasHoverId || '')) {
+        syncOverlayGroupCursor(clientX, clientY);
+        return;
+      }
       clearOverlayCanvasHover();
       overlayCanvasHoverId = nextId || null;
       if (hit && hit.classList.contains('builder-exp-stage-shape') &&
           !hit.classList.contains('is-selected')) {
         hit.classList.add('is-canvas-hover');
       }
+      syncOverlayGroupCursor(clientX, clientY);
+    }
+
+    function syncOverlayGroupCursor(clientX, clientY) {
+      if (transformDrag) return;
+      if (buttonDrag && buttonDrag.isOverlayGroup) {
+        var distG = Math.hypot(
+          (clientX != null ? clientX : buttonDrag.clientStartX) - buttonDrag.clientStartX,
+          (clientY != null ? clientY : buttonDrag.clientStartY) - buttonDrag.clientStartY
+        );
+        setOverlayTransformCursor(
+          (buttonDrag.historyPushed || distG >= OVERLAY_DRAG_THRESHOLD_PX)
+            ? 'grabbing'
+            : 'grab'
+        );
+        return;
+      }
+      if (canvas().activeOverlayGroupEditId) {
+        if (!buttonDrag) clearOverlayTransformCursor();
+        return;
+      }
+      if (groupPointerGesture) {
+        setOverlayTransformCursor('grab');
+        return;
+      }
+      if (canvas().editMode !== 'buttons' && !overlayMode) {
+        if (!buttonDrag) clearOverlayTransformCursor();
+        return;
+      }
+      var sceneIdCur = canvas().selectedId;
+      if (!sceneIdCur || !buttonsLayer) {
+        if (!buttonDrag) clearOverlayTransformCursor();
+        return;
+      }
+      var hitCur = overlayPickTopmostAtPoint(clientX, clientY);
+      if (!hitCur) {
+        hitCur = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
+      }
+      var bidCur = hitCur && hitCur.getAttribute('data-exp-stage-btn');
+      if (bidCur && resolveGroupedOverlayHit(sceneIdCur, bidCur)) {
+        setOverlayTransformCursor('grab');
+        return;
+      }
+      if (!buttonDrag) clearOverlayTransformCursor();
     }
 
     function scheduleOverlayCanvasHover(clientX, clientY) {
@@ -12586,6 +12652,7 @@ var ExperienciaCanvas = (function () {
         clearGroupPointerGesture();
         releaseGroupPointerCapture(ev);
         unbindOverlayPointerDocs();
+        if (canvas().activeOverlayGroupEditId) return;
         canvas().selectedButtonIds = [g.groupId];
         canvas().selectedButtonId = g.groupId;
         paintButtonsStage();
@@ -13579,7 +13646,7 @@ var ExperienciaCanvas = (function () {
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
           if (canvas().activeOverlayGroupEditId) {
-            exitOverlayGroupEditMode({ reselectGroup: false, clearSelection: true, persist: true });
+            exitOverlayGroupEditFromUser({ persist: true });
             return;
           }
           if (ev.button !== 0) return;
@@ -14189,6 +14256,7 @@ var ExperienciaCanvas = (function () {
         if (moved && endedMoveLiveRefs) commitShapeMoveLiveDrag(buttonDrag);
         buttonDrag = null;
         unbindOverlayPointerDocs();
+        if (dragIsGroup) clearOverlayTransformCursor();
         if (endedMoveLiveRefs) clearShapeMoveLiveStyles(endedMoveLiveRefs);
         var szUp = overlayLayerSize();
         if (!moved && endedMoveLiveRefs && dragScene && dragOrigins) {
@@ -14320,6 +14388,7 @@ var ExperienciaCanvas = (function () {
       });
       buttonsLayer.addEventListener('pointerleave', function () {
         clearOverlayCanvasHover();
+        if (!buttonDrag && !transformDrag) clearOverlayTransformCursor();
       });
       buttonsLayer.addEventListener('dblclick', function (ev) {
         if (canvas().editMode !== 'buttons') return;
@@ -14390,7 +14459,7 @@ var ExperienciaCanvas = (function () {
         if (ev.target.closest('[data-exp-buttons-layer]')) return;
         if (buttonDrag || transformDrag || overlayMarquee) return;
         if (canvas().activeOverlayGroupEditId) {
-          exitOverlayGroupEditMode({ reselectGroup: false, clearSelection: true, persist: true });
+          exitOverlayGroupEditFromUser({ persist: true });
           return;
         }
         canvas().selectedButtonId = null;
@@ -15554,7 +15623,7 @@ var ExperienciaCanvas = (function () {
         };
       },
       exitGroupEditMode: function (opts) {
-        return exitOverlayGroupEditMode(opts || { reselectGroup: true, persist: true });
+        return exitOverlayGroupEditFromUser(opts);
       },
       isInGroupEditMode: function () {
         return !!canvas().activeOverlayGroupEditId;

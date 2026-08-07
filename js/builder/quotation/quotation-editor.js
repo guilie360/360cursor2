@@ -9065,7 +9065,7 @@ var QuotationEditor = (function () {
           e.preventDefault();
           e.stopPropagation();
           if (expOverlay.exitGroupEditMode) {
-            expOverlay.exitGroupEditMode({ reselectGroup: true, persist: true });
+            expOverlay.exitGroupEditMode({ persist: true });
           }
           return;
         }
