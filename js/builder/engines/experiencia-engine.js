@@ -5285,6 +5285,10 @@ var ExperienciaEngine = (function () {
       if (partial.localRotation != null) ix.localRotation = partial.localRotation;
       if (partial._baseWidth != null) ix._baseWidth = partial._baseWidth;
       if (partial._baseHeight != null) ix._baseHeight = partial._baseHeight;
+      if (partial.locked != null) ix.locked = !!partial.locked;
+      else if (cfg.locked != null) ix.locked = !!cfg.locked;
+      if (partial.visible != null) ix.visible = !!partial.visible;
+      else if (cfg.visible != null) ix.visible = !!cfg.visible;
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {

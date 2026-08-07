@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7807';
+  var QE_BRIDGE_BUILD = 'ws7808';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -21,10 +21,6 @@ var QuotationExperienciaBridge = (function () {
     var s = String(nodeId || '');
     if (s.indexOf(NODE_PREFIX) === 0) return s.slice(NODE_PREFIX.length);
     return s;
-  }
-
-  function cloneJson(v) {
-    try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
   }
 
   function cloneJson(v) {
@@ -365,7 +361,17 @@ var QuotationExperienciaBridge = (function () {
       var sc = byNodeId[n.id];
       if (!sc) return;
       if (!n.config) n.config = {};
-      n.config.interactions = cloneJson(sc.interactions || []);
+      var srcList = sc.interactions || [];
+      var srcById = {};
+      srcList.forEach(function (ix) {
+        if (ix && ix.id) srcById[String(ix.id)] = ix;
+      });
+      var cloned = cloneJson(srcList);
+      cloned.forEach(function (ix) {
+        if (!ix || !ix.id) return;
+        mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
+      });
+      n.config.interactions = cloned;
     });
     if (tid) {
       lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
@@ -387,6 +393,20 @@ var QuotationExperienciaBridge = (function () {
     if (!Object.prototype.hasOwnProperty.call(nextIx, 'enabled') &&
         Object.prototype.hasOwnProperty.call(prevIx, 'enabled')) {
       nextIx.enabled = !!prevIx.enabled;
+    }
+  }
+
+  /** Push panel flags scene → shim (inverse of mergePanelInteractionFlags). */
+  function mergeSceneInteractionFlagsToShim(srcIx, destIx) {
+    if (!srcIx || !destIx) return;
+    if (Object.prototype.hasOwnProperty.call(srcIx, 'locked')) {
+      destIx.locked = !!srcIx.locked;
+    }
+    if (Object.prototype.hasOwnProperty.call(srcIx, 'visible')) {
+      destIx.visible = !!srcIx.visible;
+    }
+    if (Object.prototype.hasOwnProperty.call(srcIx, 'enabled')) {
+      destIx.enabled = !!srcIx.enabled;
     }
   }
 
