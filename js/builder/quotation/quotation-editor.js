@@ -5176,11 +5176,17 @@ var QuotationEditor = (function () {
     return t.charAt(0) + t.slice(1).toLowerCase().replace(/_/g, ' ');
   }
 
+  function outlinerItemSelfVisible(ix) {
+    if (!ix) return true;
+    return ix.visible !== false && ix.enabled !== false;
+  }
+
   function outlinerItemRowHtml(ix, opts) {
     opts = opts || {};
     if (!ix || !ix.id) return '';
     var t = String(ix.type || '').toUpperCase();
     var label = elementDisplayName(ix);
+    var vis = outlinerItemSelfVisible(ix);
     var selected = !!opts.selected;
     var editing = String(state.editingElementLabelId || '') === String(ix.id);
     var nameHtml = editing
@@ -5208,6 +5214,13 @@ var QuotationEditor = (function () {
           : '') +
         '<button type="button" class="qe-outliner__sel' + (selected ? ' is-active' : '') + '"' +
           ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' + nameHtml + '</button>' +
+        '<span class="qe-outliner__actions">' +
+          '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
+            ' data-qe-outliner-vis="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
+          '<button type="button" class="qe-outliner__del" data-qe-outliner-del="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '" aria-label="Eliminar">✕</button>' +
+        '</span>' +
       '</li>';
   }
 
@@ -5344,15 +5357,50 @@ var QuotationEditor = (function () {
       ix.visible = !!flags.visible;
     }
     if (flags.locked != null) ix.locked = !!flags.locked;
-    markDirtyLocal();
-    if (expOverlay && expOverlay.syncFromScenes) {
-      expOverlay.syncFromScenes();
-    } else if (expOverlay && expOverlay.setInteractionFlags) {
-      expOverlay.setInteractionFlags(id, flags);
-    } else if (expOverlay && expOverlay.refresh) {
-      expOverlay.refresh();
+    syncOutlinerPanelToCanvas();
+    return true;
+  }
+
+  function toggleOutlinerVisibilityFromPanel(id) {
+    if (!id) return false;
+    var ix = findSceneInteraction(id);
+    if (!ix) return false;
+    var nextVisible = !outlinerItemSelfVisible(ix);
+    ix.enabled = nextVisible;
+    ix.visible = nextVisible;
+    syncOutlinerPanelToCanvas();
+    return true;
+  }
+
+  function deleteOutlinerItemFromPanel(id) {
+    if (!id) return false;
+    var ix = findSceneInteraction(id);
+    if (!ix) return false;
+    if (isOverlayGroupIx(ix)) {
+      return deleteOverlayGroupFromPanel(id);
     }
-    refreshLayersPanel();
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var iid = String(id);
+    scene.interactions.forEach(function (item) {
+      if (isOverlayGroupIx(item) && Array.isArray(item.memberIds)) {
+        item.memberIds = item.memberIds.filter(function (mid) {
+          return String(mid) !== iid;
+        });
+      }
+    });
+    scene.interactions = scene.interactions.filter(function (item) {
+      return String(item.id) !== iid;
+    });
+    state.selectedOverlayIds = (state.selectedOverlayIds || []).filter(function (sid) {
+      return String(sid) !== iid;
+    });
+    if (!(state.selectedOverlayIds || []).length) {
+      state.expHasSelection = false;
+    }
+    if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
+    syncOutlinerPanelToCanvas();
+    refreshDockOnly();
     return true;
   }
 
@@ -9824,6 +9872,8 @@ var QuotationEditor = (function () {
       if (t.closest('[data-qe-outliner-create-group]')) return;
       if (t.closest('[data-qe-outliner-rename]')) return;
       if (t.closest('[data-qe-outliner-drag]')) return;
+      if (t.closest('[data-qe-outliner-vis]')) return;
+      if (t.closest('[data-qe-outliner-del]')) return;
 
       var fold = t.closest('[data-qe-layer-fold]');
       if (fold) return;
@@ -9908,6 +9958,24 @@ var QuotationEditor = (function () {
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
       if (t.closest('[data-qe-outliner-rename]')) return;
+
+      var visBtn = t.closest('[data-qe-outliner-vis]');
+      if (visBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var vid = visBtn.getAttribute('data-qe-outliner-vis');
+        if (vid) toggleOutlinerVisibilityFromPanel(vid);
+        return;
+      }
+
+      var delBtn = t.closest('[data-qe-outliner-del]');
+      if (delBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var did = delBtn.getAttribute('data-qe-outliner-del');
+        if (did) deleteOutlinerItemFromPanel(did);
+        return;
+      }
 
       var fold = t.closest('[data-qe-layer-fold]');
       if (fold) {

@@ -179,7 +179,13 @@ var KonvaOverlayRenderer = (function () {
     }
 
     function isVisible(ix) {
-      return ix && ix.enabled !== false;
+      if (!ix || ix.enabled === false) return false;
+      if (!ix.groupId) return true;
+      var n = getSceneNode();
+      if (n && ExperienciaEngine.overlayEffectiveVisible) {
+        return ExperienciaEngine.overlayEffectiveVisible(n, ix);
+      }
+      return true;
     }
 
     function prepareSceneGraph(n, layerW, layerH) {

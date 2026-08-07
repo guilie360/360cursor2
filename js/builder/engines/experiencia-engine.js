@@ -1528,6 +1528,20 @@ var ExperienciaEngine = (function () {
     return t === 'OVERLAY_GROUP' || t === 'GROUP';
   }
 
+  /** Stored visibility on the interaction itself (ignores parent group). */
+  function overlayInteractionSelfVisible(ix) {
+    return !!(ix && ix.enabled !== false);
+  }
+
+  /** Effective canvas visibility — self flag plus ancestor overlay group chain. */
+  function overlayEffectiveVisible(n, ix) {
+    if (!overlayInteractionSelfVisible(ix)) return false;
+    if (!n || !ix || !ix.groupId) return true;
+    var g = getInteraction(n, ix.groupId);
+    if (!g || !isOverlayGroupInteraction(g)) return true;
+    return overlayInteractionSelfVisible(g);
+  }
+
   function degToRad(d) { return (Number(d) || 0) * Math.PI / 180; }
 
   function rotatePoint2d(x, y, deg) {
@@ -3200,6 +3214,7 @@ var ExperienciaEngine = (function () {
       ? { x: world.x, y: world.y }
       : resolveButtonLayout(ix, lw, lh);
     var rot = world ? world.rotation : (ix.rotation != null ? Number(ix.rotation) : 0);
+    var effectiveOn = overlayEffectiveVisible(n, ix);
     return {
       id: ix.id,
       portId: ix.portId || ix.id,
@@ -3213,8 +3228,8 @@ var ExperienciaEngine = (function () {
       style: ix.style || 'button',
       icon: ix.icon || null,
       rotation: rot,
-      visible: ix.enabled !== false,
-      enabled: ix.enabled !== false,
+      visible: effectiveOn,
+      enabled: effectiveOn,
       locked: !!ix.locked,
       targetNodeId: isSceneButtonInteraction(ix) ? resolveButtonTarget(state, n.id, ix) : null,
       positionMode: ix.positionMode || 'free',
@@ -8709,6 +8724,8 @@ var ExperienciaEngine = (function () {
     duplicateSceneButton: duplicateSceneButton,
     createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
     isOverlayGroupInteraction: isOverlayGroupInteraction,
+    overlayInteractionSelfVisible: overlayInteractionSelfVisible,
+    overlayEffectiveVisible: overlayEffectiveVisible,
     groupSceneOverlays: groupSceneOverlays,
     createEmptyOverlayGroup: createEmptyOverlayGroup,
     ungroupSceneOverlay: ungroupSceneOverlay,

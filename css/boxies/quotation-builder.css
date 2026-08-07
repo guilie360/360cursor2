@@ -943,7 +943,7 @@
 
 .qe-outliner__row {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr);
+  grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
   gap: 4px;
   margin: 0 0 1px;
@@ -995,7 +995,7 @@
 
 /* Group header — drag + fold chevron + name */
 .qe-outliner__row.is-group {
-  grid-template-columns: 14px 16px minmax(0, 1fr);
+  grid-template-columns: 14px 16px minmax(0, 1fr) auto;
   margin: 0 0 1px;
   padding: 2px 4px;
   border: 0;

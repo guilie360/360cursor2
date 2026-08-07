@@ -7502,6 +7502,7 @@ var ExperienciaCanvas = (function () {
       clearOverlayCanvasHover();
       buttonsLayer.innerHTML = guidesHtml + buttons.map(function (b) {
         if (!b) return '';
+        if (b.visible === false) return '';
         var t = String(b.type || 'BUTTON').toUpperCase();
         var rot = Number(b.rotation) || 0;
         var paintX = Number(b.x);
