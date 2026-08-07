@@ -1,5 +1,10 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
+  var EXP_CANVAS_BUILD = 'ws7804';
+  try {
+    window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
+    console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
+  } catch (eCanvasBuild) { /* ignore */ }
   var MIN_ZOOM = 0.35;
   var MAX_ZOOM = 1.8;
   var CANVAS_MODE_KEY = 'experienciaCanvasMode';
