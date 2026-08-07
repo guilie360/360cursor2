@@ -4097,6 +4097,7 @@ var QuotationEditor = (function () {
 
   function syncOutlinerPanelToCanvas(engineFn) {
     healOverlayGroupMembership(activeScene());
+    syncInteractionPaintOrderFromOutliner();
     markDirtyLocal();
     pushOutlinerScenesToShim();
     healShimOverlayGroupMembership();
@@ -4671,22 +4672,37 @@ var QuotationEditor = (function () {
 
   function reorderGroupMembers(groupId, dragId, targetId, position) {
     var group = findSceneInteraction(groupId);
-    if (!group || !Array.isArray(group.memberIds)) return false;
-    var ids = group.memberIds.slice();
-    var from = -1;
-    var to = -1;
-    var i;
-    for (i = 0; i < ids.length; i++) {
-      if (String(ids[i]) === String(dragId)) from = i;
-      if (String(ids[i]) === String(targetId)) to = i;
-    }
+    if (!group) return false;
+    if (!Array.isArray(group.memberIds)) group.memberIds = [];
+    var ids = [];
+    var seen = {};
+    group.memberIds.forEach(function (id) {
+      var key = String(id);
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      ids.push(key);
+    });
+    var dragKey = String(dragId);
+    var targetKey = String(targetId);
+    var from = ids.indexOf(dragKey);
+    var to = ids.indexOf(targetKey);
     if (from < 0 || to < 0) return false;
     var moved = ids.splice(from, 1)[0];
     var insertAt = to;
     if (from < to) insertAt--;
     if (position === 'after') insertAt++;
+    if (insertAt < 0) insertAt = 0;
+    if (insertAt > ids.length) insertAt = ids.length;
     ids.splice(insertAt, 0, moved);
+    if (ids.join('|') === group.memberIds.map(String).join('|')) return false;
     group.memberIds = ids;
+    ids.forEach(function (mid) {
+      var m = findSceneInteraction(mid);
+      if (m) m.groupId = groupId;
+    });
+    healOverlayGroupMembership(activeScene());
+    syncInteractionPaintOrderFromOutliner();
+    markDirtyLocal();
     return true;
   }
 
@@ -4739,6 +4755,11 @@ var QuotationEditor = (function () {
       return assignInteractionToGroupAt(dragId, targetIx.groupId, drop.id, drop.position);
     }
 
+    if (!dragIsGroup && dragGrouped && targetGrouped &&
+        String(dragIx.groupId) === String(targetIx.groupId)) {
+      return reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
+    }
+
     if (!dragIsGroup && !dragGrouped && targetIsGroup) {
       var tgtGroup = findSceneInteraction(drop.id);
       var tgtMembers = (tgtGroup && tgtGroup.memberIds) || [];
@@ -4753,8 +4774,14 @@ var QuotationEditor = (function () {
         if (!removeInteractionFromGroup(dragId)) return false;
         return reorderOverlayFreeItems(dragId, drop.id, drop.position);
       }
-      if (targetGrouped && String(dragIx.groupId) === String(targetIx.groupId)) {
-        return reorderGroupMembers(dragIx.groupId, dragId, drop.id, drop.position);
+      if (targetIsGroup && String(dragIx.groupId) === String(drop.id)) {
+        var sameGrp = findSceneInteraction(drop.id);
+        var sameMembers = (sameGrp && sameGrp.memberIds) || [];
+        if (!sameMembers.length) return false;
+        if (drop.position === 'before') {
+          return reorderGroupMembers(drop.id, dragId, sameMembers[0], 'before');
+        }
+        return reorderGroupMembers(drop.id, dragId, sameMembers[sameMembers.length - 1], 'after');
       }
       if (targetIsGroup) {
         var dropGroup = findSceneInteraction(drop.id);
@@ -4918,12 +4945,19 @@ var QuotationEditor = (function () {
         if (clientY < rect.top + h / 2) {
           var isGroup = row.getAttribute('data-qe-outliner-kind') === 'group';
           if (isGroup && !dragIsGroup && clientY >= rect.top) {
-            var relY = clientY - rect.top;
-            if (relY > h * 0.28 && relY < h * 0.72) {
-              return { id: rid, action: 'into' };
+            var dragInGroup = dragIx && dragIx.groupId &&
+              String(dragIx.groupId) === String(rid);
+            if (!dragInGroup) {
+              var relY = clientY - rect.top;
+              if (relY > h * 0.28 && relY < h * 0.72) {
+                return { id: rid, action: 'into' };
+              }
             }
           }
           return { id: rid, position: 'before' };
+        }
+        if (clientY < rect.bottom) {
+          return { id: rid, position: 'after' };
         }
       }
       for (i = rows.length - 1; i >= 0; i--) {
@@ -4978,6 +5012,10 @@ var QuotationEditor = (function () {
         ok = commitOutlinerDrop(draggingId, drop);
       }
       if (ok) {
+        var list = listEl();
+        if (list && drop && drop.action !== 'into') {
+          moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
+        }
         syncOutlinerPanelToCanvas();
       }
 
@@ -12919,7 +12957,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7776'
+        editorBuild: 'ws7777'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
