@@ -4682,6 +4682,7 @@ var QuotationEditor = (function () {
   /** Repaint Elementos panel (same role as rerender() for the scenes strip). */
   function refreshOutlinerPanel() {
     syncRightPanel();
+    bindOutlinerGroups(document.getElementById('quotationRightBody'));
   }
 
   function syncRightPanel() {
@@ -4691,7 +4692,6 @@ var QuotationEditor = (function () {
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
-    bindOutlinerGroups(body);
     bindLayersPanel();
   }
 
@@ -4702,10 +4702,17 @@ var QuotationEditor = (function () {
     var groupAdd = scope.querySelector('[data-qe-outliner-create-group]');
     if (!groupAdd) return;
     groupAdd.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      createEmptyOverlayGroup();
+      createOverlayGroupFromPanel(e);
     });
+  }
+
+  /** Public entry — same path as debugCreateOverlayGroup / button click. */
+  function createOverlayGroupFromPanel(ev) {
+    if (ev && ev.preventDefault) {
+      ev.preventDefault();
+      if (ev.stopPropagation) ev.stopPropagation();
+    }
+    return createEmptyOverlayGroup();
   }
 
   function findSceneInteraction(id) {
@@ -10983,6 +10990,7 @@ var QuotationEditor = (function () {
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
       bindSceneContextMenus(editor);
       bindSceneGroups(editor);
+      bindOutlinerGroups(document.getElementById('quotationRightBody'));
       bindSceneNameEditing(editor);
       bindSceneDragReorder(editor);
       bindFolderMenus();
@@ -12328,10 +12336,12 @@ var QuotationEditor = (function () {
         })()
       };
     },
+    /** Same as clicking "+ Crear grupo" — used by button and debug. */
+    createOverlayGroupFromPanel: createOverlayGroupFromPanel,
     /** Bypass button — test createEmptyOverlayGroup from console. */
     debugCreateOverlayGroup: function () {
       var before = this.getOutlinerDebug();
-      var id = createEmptyOverlayGroup();
+      var id = createOverlayGroupFromPanel();
       var after = this.getOutlinerDebug();
       return { createdId: id, before: before, after: after };
     },
