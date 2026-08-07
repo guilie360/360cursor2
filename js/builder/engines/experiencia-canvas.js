@@ -11707,11 +11707,22 @@ var ExperienciaCanvas = (function () {
       if (!sceneId || !itemId) return false;
       var n = ExperienciaEngine.getNode(state, sceneId);
       if (!n) return false;
+      var effectiveLocked = false;
       if (typeof ExperienciaEngine.isOverlayEffectivelyLocked === 'function') {
-        return ExperienciaEngine.isOverlayEffectivelyLocked(state, n, itemId);
+        effectiveLocked = ExperienciaEngine.isOverlayEffectivelyLocked(state, n, itemId);
+      } else {
+        var vm = getOverlayItemVm(sceneId, itemId);
+        effectiveLocked = !!(vm && vm.locked);
       }
-      var vm = getOverlayItemVm(sceneId, itemId);
-      return !!(vm && vm.locked);
+      console.log('[LOCK CHECK] itemId=' + itemId + ' effectiveLocked=' + effectiveLocked);
+      return effectiveLocked;
+    }
+
+    function logLockBypass(fnName, sceneId, itemId) {
+      if (!fnName || !sceneId || !itemId) return;
+      if (isOverlayEffectivelyLocked(sceneId, itemId)) {
+        console.log('[LOCK BYPASS] function=' + fnName + ' itemId=' + itemId);
+      }
     }
 
     function overlayStageHitIsEditorLocked(sceneId, el) {
@@ -13454,6 +13465,7 @@ var ExperienciaCanvas = (function () {
           paintInspector();
           return;
         }
+        if (!btn) logLockBypass('beginOverlayMove:no-btn', sceneId, bid);
         var groupIds = (opts.groupIds && opts.groupIds.length)
           ? opts.groupIds.map(String)
           : getSelectedOverlayIds();
@@ -13463,7 +13475,11 @@ var ExperienciaCanvas = (function () {
         groupIds = groupIds.filter(function (id) {
           return !isOverlayEffectivelyLocked(sceneId, id);
         });
-        if (!groupIds.length) groupIds = [String(bid)];
+        if (!groupIds.length) {
+          logLockBypass('beginOverlayMove:groupIds-fallback', sceneId, bid);
+          groupIds = [String(bid)];
+        }
+        logLockBypass('beginOverlayMove', sceneId, bid);
         var pctStart = percentFromPointer(ev);
         var isGroupDrag = isOverlayGroupId(sceneId, bid);
         if (isGroupDrag) commitGroupBoundsIfNeeded(sceneId, bid);
@@ -13569,7 +13585,9 @@ var ExperienciaCanvas = (function () {
             if (multiScaleIds.length < 2) return;
           } else {
             btnG = getOverlayItemVm(sceneIdG, gid);
-            if (!btnG || btnG.locked) return;
+            if (!btnG) return;
+            logLockBypass('pointerdown:gizmo-handle', sceneIdG, gid);
+            if (btnG.locked) return;
           }
           if ((gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') &&
               ExperienciaEngine.commitOverlayGroupBounds) {
@@ -13952,6 +13970,7 @@ var ExperienciaCanvas = (function () {
           commitGroupBoundsIfNeeded(sceneIdMove, moveId);
           var btnMove = getOverlayItemVm(sceneIdMove, moveId);
           if (!btnMove) return;
+          logLockBypass('pointerdown:gizmo-move', sceneIdMove, moveId);
           ev.preventDefault();
           ev.stopPropagation();
           canvas().selectedButtonIds = [String(moveId)];
@@ -14074,6 +14093,7 @@ var ExperienciaCanvas = (function () {
             return;
           }
 
+          logLockBypass('pointerdown:grouped-select', sceneIdHit, gid);
           canvas().selectedButtonIds = [gid];
           canvas().selectedButtonId = gid;
           paintButtonsStage();
@@ -14110,6 +14130,7 @@ var ExperienciaCanvas = (function () {
           notifyOverlaySelection();
           return;
         }
+        logLockBypass('pointerdown:ungrouped-select', sceneIdHit, bid);
         if (cur.indexOf(String(bid)) < 0 || cur.length <= 1) {
           canvas().selectedButtonIds = [String(bid)];
           canvas().selectedButtonId = bid;
@@ -14122,6 +14143,7 @@ var ExperienciaCanvas = (function () {
         var sceneId = canvas().selectedId;
         var btn = getOverlayItemVm(sceneId, bid);
         var alreadyOnlySelected = cur.length === 1 && String(cur[0]) === String(bid);
+        logLockBypass('pointerdown:ungrouped-move', sceneId, bid);
         beginOverlayMove(ev, bid, sceneId, btn, {
           selectionPaintNeeded: !alreadyOnlySelected
         });
