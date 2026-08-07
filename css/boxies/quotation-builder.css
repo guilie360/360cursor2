@@ -5307,7 +5307,7 @@ body.quotation-canvas-first .builder-workspace,
 
 /* Group mode — sibling members echo hover glow at ~20% intensity. */
 .builder-exp-stage-shape.is-canvas-hover-sibling:not(.is-locked):not(.is-invisible) .builder-exp-stage-shape__stroke-glow {
-  opacity: 0.2;
+  opacity: 0.5;
   filter:
     drop-shadow(0 0 2px rgba(255, 255, 255, 0.76))
     drop-shadow(0 0 4px rgba(255, 255, 255, 0.44))
