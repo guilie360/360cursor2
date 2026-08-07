@@ -98,6 +98,7 @@ var QuotationEditor = (function () {
   var focusEscBound = false;
   var inspectorChromeBound = false;
   var canvasOutsideDeselectBound = false;
+  var outlinerPanelEventsBound = false;
 
   var uid = 1;
   function nextId(prefix) {
@@ -4116,6 +4117,7 @@ var QuotationEditor = (function () {
     var scene = activeScene();
     if (!scene) return null;
     ensureSceneOverlays(scene);
+    if (!Array.isArray(scene.interactions)) scene.interactions = [];
     var groupId = nextId('grp');
     var label = nextOverlayGroupLabel();
     scene.interactions.unshift({
@@ -4134,12 +4136,13 @@ var QuotationEditor = (function () {
       _transformV: 2,
       enabled: true
     });
-    if (!state.openOverlayGroups) state.openOverlayGroups = {};
-    state.openOverlayGroups[groupId] = true;
-    state.editingElementLabelId = groupId;
     markDirtyLocal();
     pushOutlinerScenesToShim();
     refreshLayersPanel();
+    var body = document.getElementById('quotationRightBody');
+    if (body && !body.querySelector('[data-qe-outliner-row="' + groupId + '"]')) {
+      syncRightPanel();
+    }
     return groupId;
   }
 
@@ -4688,6 +4691,25 @@ var QuotationEditor = (function () {
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
+    ensureOutlinerPanelEvents();
+  }
+
+  function ensureOutlinerPanelEvents() {
+    if (outlinerPanelEventsBound) return;
+    outlinerPanelEventsBound = true;
+
+    document.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (!t || !t.closest) return;
+      var createGroup = t.closest('[data-qe-outliner-create-group]');
+      if (!createGroup) return;
+      var body = document.getElementById('quotationRightBody');
+      if (!body || !body.contains(createGroup)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      createEmptyOverlayGroup();
+    }, true);
+
     bindLayersPanel();
   }
 
@@ -9134,12 +9156,13 @@ var QuotationEditor = (function () {
   }
 
   function refreshLayersPanel() {
-    var host = document.querySelector('[data-qe-outliner], [data-qe-layers]');
+    var body = document.getElementById('quotationRightBody');
+    if (!body) return;
+    var host = body.querySelector('[data-qe-outliner], [data-qe-layers]');
     if (!host) {
       syncRightPanel();
-      host = document.querySelector('[data-qe-outliner], [data-qe-layers]');
+      return;
     }
-    if (!host) return;
     var scroll = host.querySelector('.qe-outliner__scroll');
     var list = host.querySelector('[data-qe-outliner-list], [data-qe-layers-list], .qe-layers__list');
     var savedTop = list ? list.scrollTop : 0;
@@ -9184,12 +9207,7 @@ var QuotationEditor = (function () {
       if (!t || !t.closest) return;
 
       var createGroup = t.closest('[data-qe-outliner-create-group]');
-      if (createGroup) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        createEmptyOverlayGroup();
-        return;
-      }
+      if (createGroup) return;
 
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
@@ -9342,7 +9360,7 @@ var QuotationEditor = (function () {
         expOverlay.startHotspotDraw();
       }
     }
-    bindLayersPanel();
+    ensureOutlinerPanelEvents();
   }
 
   function onRuntimeBridgeMessage(ev) {
