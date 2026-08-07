@@ -4148,14 +4148,18 @@ var QuotationEditor = (function () {
   }
 
   function dissolveOverlayGroupById(groupId) {
-    if (!groupId) return false;
+    if (!groupId || !expOverlay || !expOverlay.shim) return false;
     var sz = overlayPanelLayerSize();
-    syncOverlaySceneFromPanel(function (n, nodeId) {
+    var nodeId = overlayPanelNodeId();
+    var dissolved = false;
+    syncOverlaySceneFromPanel(function () {
       if (ExperienciaEngine.ungroupSceneOverlay) {
-        ExperienciaEngine.ungroupSceneOverlay(expOverlay.shim, nodeId, groupId, sz.w, sz.h);
+        dissolved = ExperienciaEngine.ungroupSceneOverlay(
+          expOverlay.shim, nodeId, groupId, sz.w, sz.h
+        );
       }
     });
-    return true;
+    return dissolved;
   }
 
   /** Enter inline rename for an outliner row (double-click + context menu share this). */
@@ -4200,6 +4204,7 @@ var QuotationEditor = (function () {
   function deleteOverlayGroupFromPanel(groupId) {
     if (!groupId || !isOverlayGroupIx(findSceneInteraction(groupId))) return false;
     if (!dissolveOverlayGroupById(groupId)) return false;
+    if (state.openOverlayGroups) delete state.openOverlayGroups[groupId];
     state.selectedOverlayIds = (state.selectedOverlayIds || []).filter(function (sid) {
       return String(sid) !== String(groupId);
     });
@@ -4208,6 +4213,7 @@ var QuotationEditor = (function () {
     }
     if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
     markDirtyLocal();
+    refreshLayersPanel();
     refreshDockOnly();
     return true;
   }
