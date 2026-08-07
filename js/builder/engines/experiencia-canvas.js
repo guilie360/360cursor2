@@ -8969,24 +8969,64 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function compareRotateChildPaintRotateVm(vm, paintBox, layerW, layerH) {
+      if (paintBox) {
+        return {
+          cx: +(Number(paintBox.cx) || 0).toFixed(4),
+          cy: +(Number(paintBox.cy) || 0).toFixed(4),
+          w: +(Number(paintBox.w) || 0).toFixed(4),
+          h: +(Number(paintBox.h) || 0).toFixed(4),
+          rot: +(Number(paintBox.rot) || 0).toFixed(2)
+        };
+      }
+      var payload = buildPaintRotateVmPayload(vm, layerW, layerH);
+      if (!payload) {
+        return { cx: null, cy: null, w: null, h: null, rot: null };
+      }
+      return {
+        cx: payload.cx != null ? payload.cx : null,
+        cy: payload.cy != null ? payload.cy : null,
+        w: payload.w != null ? payload.w : null,
+        h: payload.h != null ? payload.h : null,
+        rot: payload.rot != null ? payload.rot : null
+      };
+    }
+
+    function compareRotateChildWorldLayout(sceneId, mid, layerW, layerH) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction(n, mid);
+      var world = (ExperienciaEngine.overlayWorldLayoutRaw && ix)
+        ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+        : null;
+      if (!world) {
+        return { cx: null, cy: null, rot: null };
+      }
+      return {
+        cx: +(Number(world.x) || 0).toFixed(4),
+        cy: +(Number(world.y) || 0).toFixed(4),
+        rot: +(Number(world.rotation) || 0).toFixed(2)
+      };
+    }
+
     function buildFirstRotateLivePaintRender(drag, unionBox, memberPaintBoxes, layerW, layerH) {
       var sceneId = drag.sceneId;
       var children = [];
       (drag.memberIds || []).forEach(function (mid) {
         var vm = getOverlayItemVm(sceneId, mid);
         var paintBox = memberPaintBoxes && memberPaintBoxes[String(mid)];
-        var paintRotateVm = paintBox ? {
-          via: isShapeType(paintBox.kind) ? 'paintShapeGizmoEl' : 'percentStyle',
-          cx: +(Number(paintBox.cx) || 0).toFixed(4),
-          cy: +(Number(paintBox.cy) || 0).toFixed(4),
-          w: +(Number(paintBox.w) || 0).toFixed(4),
-          h: +(Number(paintBox.h) || 0).toFixed(4),
-          rot: +(Number(paintBox.rot) || 0).toFixed(2)
-        } : buildPaintRotateVmPayload(vm, layerW, layerH);
         children.push({
           id: String(mid),
-          model: compactMemberVmFields(vm),
-          paintRotateVm: paintRotateVm
+          model: vm ? compactMemberVmFields(vm) : {
+            x: null,
+            y: null,
+            width: null,
+            height: null,
+            rotation: null,
+            storedX: null,
+            storedY: null
+          },
+          paintRotateVm: compareRotateChildPaintRotateVm(vm, paintBox, layerW, layerH),
+          worldLayout: compareRotateChildWorldLayout(sceneId, mid, layerW, layerH)
         });
       });
       return {
