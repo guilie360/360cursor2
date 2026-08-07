@@ -1047,6 +1047,9 @@
   cursor: grab;
   opacity: 0.35;
   touch-action: none;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.2px) center / 4px 4px;
 }

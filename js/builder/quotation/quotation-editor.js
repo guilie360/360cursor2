@@ -4086,7 +4086,7 @@ var QuotationEditor = (function () {
     };
   }
 
-  function syncOverlaySceneFromPanel(engineFn) {
+  function applyPanelSceneToOverlay(engineFn) {
     markDirtyLocal();
     if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
@@ -4095,6 +4095,10 @@ var QuotationEditor = (function () {
       var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
       if (n) engineFn(n, nodeId);
     }
+  }
+
+  function syncOverlaySceneFromPanel(engineFn) {
+    applyPanelSceneToOverlay(engineFn);
     if (expOverlay && expOverlay.pull) expOverlay.pull();
     if (expOverlay && expOverlay.refresh) expOverlay.refresh();
     refreshLayersPanel();
@@ -4277,7 +4281,7 @@ var QuotationEditor = (function () {
     } else {
       group.memberIds.push(String(memberId));
     }
-    syncOverlaySceneFromPanel(function (n) {
+    applyPanelSceneToOverlay(function (n) {
       var g = ExperienciaEngine.getInteraction(n, groupId);
       var m = ExperienciaEngine.getInteraction(n, memberId);
       if (!g || !m) return;
@@ -4301,7 +4305,7 @@ var QuotationEditor = (function () {
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
-    syncOverlaySceneFromPanel(function (n) {
+    applyPanelSceneToOverlay(function (n) {
       var m = ExperienciaEngine.getInteraction(n, memberId);
       if (!m || !m.groupId) return;
       var g = ExperienciaEngine.getInteraction(n, m.groupId);
@@ -4351,19 +4355,75 @@ var QuotationEditor = (function () {
   function reorderOverlayGroups(dragId, targetId, position) {
     var scene = activeScene();
     if (!scene || !Array.isArray(scene.interactions)) return false;
-    var ok = reorderInteractionsInList(scene.interactions, dragId, targetId, position, isOverlayGroupIx);
-    if (ok) syncOverlaySceneFromPanel();
-    return ok;
+
+    var groups = [];
+    var others = [];
+    (scene.interactions || []).forEach(function (ix) {
+      if (!ix) return;
+      if (isOverlayGroupIx(ix)) groups.push(ix);
+      else others.push(ix);
+    });
+
+    var from = -1;
+    var to = -1;
+    var i;
+    for (i = 0; i < groups.length; i++) {
+      if (String(groups[i].id) === String(dragId)) from = i;
+      if (String(groups[i].id) === String(targetId)) to = i;
+    }
+    if (from < 0 || to < 0) return false;
+
+    var moved = groups.splice(from, 1)[0];
+    var insertAt = to;
+    if (from < to) insertAt--;
+    if (position === 'after') insertAt++;
+    groups.splice(insertAt, 0, moved);
+
+    scene.interactions = groups.concat(others);
+    return true;
   }
 
   function reorderOverlayFreeItems(dragId, targetId, position) {
     var scene = activeScene();
     if (!scene || !Array.isArray(scene.interactions)) return false;
-    var ok = reorderInteractionsInList(scene.interactions, dragId, targetId, position, function (ix) {
-      return ix && !isOverlayGroupIx(ix) && !ix.groupId;
+
+    var prefix = [];
+    var free = [];
+    var suffix = [];
+    var inFree = false;
+    (scene.interactions || []).forEach(function (ix) {
+      if (!ix) return;
+      var isFree = !isOverlayGroupIx(ix) && !ix.groupId;
+      if (isFree) {
+        inFree = true;
+        free.push(ix);
+        return;
+      }
+      if (!inFree) prefix.push(ix);
+      else suffix.push(ix);
     });
-    if (ok) syncOverlaySceneFromPanel();
-    return ok;
+
+    var from = -1;
+    var to = -1;
+    var j;
+    for (j = 0; j < free.length; j++) {
+      if (String(free[j].id) === String(dragId)) from = j;
+      if (String(free[j].id) === String(targetId)) to = j;
+    }
+    if (from < 0 || to < 0) {
+      return reorderInteractionsInList(scene.interactions, dragId, targetId, position, function (ix) {
+        return ix && !isOverlayGroupIx(ix) && !ix.groupId;
+      });
+    }
+
+    var movedFree = free.splice(from, 1)[0];
+    var insertAt = to;
+    if (from < to) insertAt--;
+    if (position === 'after') insertAt++;
+    free.splice(insertAt, 0, movedFree);
+
+    scene.interactions = prefix.concat(free, suffix);
+    return true;
   }
 
   function reorderGroupMembers(groupId, dragId, targetId, position) {
@@ -4384,7 +4444,6 @@ var QuotationEditor = (function () {
     if (position === 'after') insertAt++;
     ids.splice(insertAt, 0, moved);
     group.memberIds = ids;
-    syncOverlaySceneFromPanel();
     return true;
   }
 
@@ -4560,6 +4619,8 @@ var QuotationEditor = (function () {
 
     var draggingId = null;
     var dropTarget = null;
+    var dragPointerId = null;
+    var dragHandleEl = null;
 
     function listEl() {
       return body.querySelector('[data-qe-outliner-list]');
@@ -4632,20 +4693,30 @@ var QuotationEditor = (function () {
       else if (clientY > rect.bottom - edge) list.scrollTop += speed;
     }
 
-    function finishDrag() {
+    function finishDrag(ev) {
       document.removeEventListener('pointermove', onDocMove);
       document.removeEventListener('pointerup', onDocUp);
       document.removeEventListener('pointercancel', onDocUp);
+      if (dragHandleEl && dragPointerId != null) {
+        try {
+          if (dragHandleEl.hasPointerCapture && dragHandleEl.hasPointerCapture(dragPointerId)) {
+            dragHandleEl.releasePointerCapture(dragPointerId);
+          }
+        } catch (eRel) { /* ignore */ }
+      }
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
+      var ok = false;
       if (draggingId && dropTarget) {
-        var ok = commitOutlinerDrop(draggingId, dropTarget);
-        if (ok) {
-          syncInteractionPaintOrderFromOutliner();
-          syncOverlaySceneFromPanel();
-        }
+        ok = commitOutlinerDrop(draggingId, dropTarget);
+      }
+      if (ok) {
+        syncOverlaySceneFromPanel();
       }
       clearDropMarkers();
       draggingId = null;
+      dropTarget = null;
+      dragPointerId = null;
+      dragHandleEl = null;
     }
 
     function onDocMove(ev) {
@@ -4668,12 +4739,15 @@ var QuotationEditor = (function () {
       if (!row) return;
       draggingId = row.getAttribute('data-qe-outliner-row');
       dropTarget = null;
+      dragPointerId = e.pointerId;
+      dragHandleEl = handle;
       row.classList.add('is-dragging');
       try { document.body.classList.add('is-qe-outliner-dragging'); } catch (eCls) { /* ignore */ }
+      try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
       document.addEventListener('pointermove', onDocMove);
       document.addEventListener('pointerup', onDocUp);
       document.addEventListener('pointercancel', onDocUp);
-    });
+    }, true);
   }
 
   function layerTypeLabel(type) {
@@ -12569,7 +12643,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7770'
+        editorBuild: 'ws7771'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
