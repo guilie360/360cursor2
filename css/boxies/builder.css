@@ -7149,6 +7149,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
 
 .builder-exp-ui-btn.is-locked {
   cursor: default;
+  pointer-events: none;
 }
 
 .builder-exp-ui-btn.is-style-button {

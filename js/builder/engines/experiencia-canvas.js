@@ -7046,7 +7046,7 @@ var ExperienciaCanvas = (function () {
       if (!groupIds || groupIds.length < 2 || !buttonsLayer) return false;
       for (var i = 0; i < groupIds.length; i++) {
         var vm = getOverlayItemVm(sceneId, groupIds[i]);
-        if (!vm || vm.locked) return false;
+        if (!vm || isOverlayEffectivelyLocked(sceneId, groupIds[i])) return false;
         var idEsc = String(groupIds[i]).replace(/"/g, '');
         var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
         if (!el) return false;
@@ -7641,6 +7641,7 @@ var ExperienciaCanvas = (function () {
           );
         } else {
           selIds.forEach(function (sid) {
+            if (isOverlayEffectivelyLocked(canvas().selectedId, sid)) return;
             if (isOverlayGroupId(canvas().selectedId, sid) &&
                 !canvas().activeOverlayGroupEditId) {
               return;
@@ -8943,7 +8944,7 @@ var ExperienciaCanvas = (function () {
         if (!id || id === MULTI_SELECT_GIZMO_ID) return false;
         if (isOverlayGroupId(sceneId, id)) return false;
         var vm = getOverlayItemVm(sceneId, id);
-        return !!(vm && !vm.locked && vm.visible !== false);
+        return !!(vm && !isOverlayEffectivelyLocked(sceneId, id) && vm.visible !== false);
       });
     }
 
@@ -9203,14 +9204,14 @@ var ExperienciaCanvas = (function () {
       (selIds || []).forEach(function (id) {
         id = String(id);
         if (editGid) {
-          set[id] = true;
+          if (!isOverlayEffectivelyLocked(sceneId, id)) set[id] = true;
           return;
         }
         if (isOverlayGroupId(sceneId, id)) {
           overlayGroupMemberIdList(sceneId, id).forEach(function (mid) {
-            set[String(mid)] = true;
+            if (!isOverlayEffectivelyLocked(sceneId, mid)) set[String(mid)] = true;
           });
-        } else {
+        } else if (!isOverlayEffectivelyLocked(sceneId, id)) {
           set[id] = true;
         }
       });
@@ -11031,7 +11032,7 @@ var ExperienciaCanvas = (function () {
           if (!id) continue;
           if (skipSel && selectedSet[String(id)]) continue;
           var vm = getOverlayItemVm(sceneId, id);
-          if (!vm || vm.locked || vm.visible === false) continue;
+          if (!vm || isOverlayEffectivelyLocked(sceneId, id) || vm.visible === false) continue;
           if (overlayShapePointHit(el, vm, clientX, clientY, layerW, layerH)) return el;
         }
         return null;
@@ -11056,6 +11057,7 @@ var ExperienciaCanvas = (function () {
       if (!memberId || !buttonsLayer) return;
       var sceneId = canvas().selectedId;
       if (!sceneId || canvas().activeOverlayGroupEditId) return;
+      if (isOverlayEffectivelyLocked(sceneId, memberId)) return;
       if (!resolveGroupedOverlayHit(sceneId, memberId)) return;
 
       buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
@@ -11170,6 +11172,11 @@ var ExperienciaCanvas = (function () {
         return;
       }
       var hitId = hit ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
+      if (hitId && isOverlayEffectivelyLocked(sceneIdHover, hitId)) {
+        clearOverlayCanvasHover();
+        syncOverlayGroupCursor(clientX, clientY);
+        return;
+      }
       var nextId = hit && hit.classList.contains('builder-exp-stage-shape') ? hitId : '';
       var siblingIds = hitId ? overlayGroupHoverSiblingIds(sceneIdHover, hitId) : [];
       if (nextId === String(overlayCanvasHoverId || '') &&
@@ -11275,7 +11282,7 @@ var ExperienciaCanvas = (function () {
         var id = el.getAttribute('data-exp-stage-btn');
         if (!id) continue;
         var vm = getOverlayItemVm(sceneId, id);
-        if (!vm || vm.locked || vm.visible === false) continue;
+        if (!vm || isOverlayEffectivelyLocked(sceneId, id) || vm.visible === false) continue;
         var rect = el.getBoundingClientRect();
         if (clientX >= rect.left && clientX <= rect.right &&
             clientY >= rect.top && clientY <= rect.bottom) {
@@ -11301,6 +11308,7 @@ var ExperienciaCanvas = (function () {
           if (!gizmo || !buttonsLayer.contains(gizmo)) continue;
           var gid = String(gizmo.getAttribute('data-gizmo-id') || '');
           if (!gid || !selSet[gid] || isOverlayGroupId(sceneId, gid)) continue;
+          if (isOverlayEffectivelyLocked(sceneId, gid)) continue;
           var idEsc = gid.replace(/"/g, '');
           var ownerEl = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
           if (ownerEl) return ownerEl;
@@ -11363,6 +11371,7 @@ var ExperienciaCanvas = (function () {
           if (!btn) continue;
           var bid = String(btn.getAttribute('data-exp-stage-btn') || '');
           if (!bid || seen[bid]) continue;
+          if (isOverlayEffectivelyLocked(canvas().selectedId, bid)) continue;
           seen[bid] = true;
           if (!firstAny) firstAny = btn;
           if (!selectedSet[bid] && !firstUnselected) firstUnselected = btn;
@@ -11693,6 +11702,24 @@ var ExperienciaCanvas = (function () {
       return ExperienciaEngine.getSceneButton(state, n, itemId);
     }
 
+    /** Single editor gate — self lock OR ancestor group lock. */
+    function isOverlayEffectivelyLocked(sceneId, itemId) {
+      if (!sceneId || !itemId) return false;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n) return false;
+      if (typeof ExperienciaEngine.isOverlayEffectivelyLocked === 'function') {
+        return ExperienciaEngine.isOverlayEffectivelyLocked(state, n, itemId);
+      }
+      var vm = getOverlayItemVm(sceneId, itemId);
+      return !!(vm && vm.locked);
+    }
+
+    function overlayStageHitIsEditorLocked(sceneId, el) {
+      if (!el) return false;
+      var id = el.getAttribute && el.getAttribute('data-exp-stage-btn');
+      return id ? isOverlayEffectivelyLocked(sceneId, id) : false;
+    }
+
     /** Temporary — compare model tile vs gizmo vs DOM for shape resize bug. */
     function logShapeVsGizmo(phase, btnId, extra) {
       if (!shapeResizeDebugEnabled() || !buttonsLayer || !btnId) return;
@@ -11786,7 +11813,7 @@ var ExperienciaCanvas = (function () {
       ids.forEach(function (id) {
         if (isOverlayGroupId(sceneId, id)) {
           var gvm = getOverlayItemVm(sceneId, id);
-          if (!gvm || gvm.locked) return;
+          if (!gvm || isOverlayEffectivelyLocked(sceneId, id)) return;
           origins[String(id)] = {
             x: gvm.storedX != null ? Number(gvm.storedX) : Number(gvm.x) || 50,
             y: gvm.storedY != null ? Number(gvm.storedY) : Number(gvm.y) || 50
@@ -11794,7 +11821,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
         var b = ExperienciaEngine.getSceneButton(state, n, id);
-        if (!b || b.locked) return;
+        if (!b || isOverlayEffectivelyLocked(sceneId, id)) return;
         origins[String(id)] = {
           x: b.storedX != null ? Number(b.storedX) : Number(b.x) || 50,
           y: b.storedY != null ? Number(b.storedY) : Number(b.y) || 50
@@ -11835,7 +11862,7 @@ var ExperienciaCanvas = (function () {
       if (single && isOverlayGroupId(sceneId, ids[0]) &&
           ExperienciaEngine.updateOverlayGroupTransform) {
         var gNudge = getOverlayItemVm(sceneId, ids[0]);
-        if (!gNudge || gNudge.locked) return false;
+        if (!gNudge || isOverlayEffectivelyLocked(sceneId, ids[0])) return false;
         var gx0 = gNudge.storedX != null ? Number(gNudge.storedX) : Number(gNudge.x);
         var gy0 = gNudge.storedY != null ? Number(gNudge.storedY) : Number(gNudge.y);
         ExperienciaEngine.updateOverlayGroupTransform(state, sceneId, ids[0], {
@@ -11852,7 +11879,7 @@ var ExperienciaCanvas = (function () {
       ids.forEach(function (bid) {
         var btn = ExperienciaEngine.getSceneButton(state,
           ExperienciaEngine.getNode(state, sceneId), bid);
-        if (!btn || btn.locked) return;
+        if (!btn || isOverlayEffectivelyLocked(sceneId, bid)) return;
         var x0 = btn.storedX != null ? Number(btn.storedX) : Number(btn.x);
         var y0 = btn.storedY != null ? Number(btn.storedY) : Number(btn.y);
         var nextX = x0 + dx;
@@ -11974,7 +12001,7 @@ var ExperienciaCanvas = (function () {
           return;
         }
         var vm = getOverlayItemVm(sceneId, id);
-        if (!vm || vm.locked || vm.visible === false) return;
+        if (!vm || isOverlayEffectivelyLocked(sceneId, id) || vm.visible === false) return;
         if (memberIds.indexOf(id) < 0) memberIds.push(id);
       });
 
@@ -12459,7 +12486,7 @@ var ExperienciaCanvas = (function () {
       var hitSet = {};
       var hitIds = [];
       (ExperienciaEngine.listSceneButtons(state, n) || []).forEach(function (b) {
-        if (!b || b.locked || b.visible === false) return;
+        if (!b || isOverlayEffectivelyLocked(sceneId, b.id) || b.visible === false) return;
         var ix = b._ix || b;
         var vm = ExperienciaEngine.buttonViewModel
           ? ExperienciaEngine.buttonViewModel(state, n, ix, layerW, layerH)
@@ -12938,6 +12965,7 @@ var ExperienciaCanvas = (function () {
       }
 
       function startGroupPointerGesture(ev, sceneId, groupId, childId) {
+        if (isOverlayEffectivelyLocked(sceneId, groupId)) return;
         groupPointerGesture = {
           sceneId: sceneId,
           groupId: String(groupId),
@@ -13420,7 +13448,7 @@ var ExperienciaCanvas = (function () {
           locked: !!(btn && btn.locked),
           opts: opts
         });
-        if (btn && btn.locked) {
+        if (btn && isOverlayEffectivelyLocked(sceneId, bid)) {
           dragDebugLog('beginOverlayMove blocked: locked');
           paintButtonsStage();
           paintInspector();
@@ -13433,12 +13461,7 @@ var ExperienciaCanvas = (function () {
           groupIds = [String(bid)];
         }
         groupIds = groupIds.filter(function (id) {
-          var b = getOverlayItemVm(sceneId, id);
-          if (b) return !b.locked;
-          var legacy = ExperienciaEngine.getSceneButton(
-            state, ExperienciaEngine.getNode(state, sceneId), id
-          );
-          return !!(legacy && !legacy.locked);
+          return !isOverlayEffectivelyLocked(sceneId, id);
         });
         if (!groupIds.length) groupIds = [String(bid)];
         var pctStart = percentFromPointer(ev);
@@ -13938,6 +13961,10 @@ var ExperienciaCanvas = (function () {
         }
 
         var hit = pickOverlayStageBtnFromPoint(ev.clientX, ev.clientY);
+        var sceneIdHit = canvas().selectedId;
+        if (hit && overlayStageHitIsEditorLocked(sceneIdHit, hit)) {
+          hit = null;
+        }
         if (!hit) {
           if (ev.target.closest('[data-exp-gizmo]')) return;
           if (canvas().activeOverlayGroupEditId) {
@@ -13975,7 +14002,6 @@ var ExperienciaCanvas = (function () {
         }
         if (hit.isContentEditable || hit.getAttribute('contenteditable') === 'true') return;
         var bid = hit.getAttribute('data-exp-stage-btn');
-        var sceneIdHit = canvas().selectedId;
         var groupedHit = resolveGroupedOverlayHit(sceneIdHit, bid);
         var editGroupId = canvas().activeOverlayGroupEditId;
         if (editGroupId && groupedHit &&
@@ -13986,11 +14012,13 @@ var ExperienciaCanvas = (function () {
         }
         /* Grouped child: 1 click → group; dblclick → deep-edit child (see dblclick below). */
         if (groupedHit) {
+          if (isOverlayEffectivelyLocked(sceneIdHit, groupedHit.groupId)) return;
           var gid = groupedHit.groupId;
           var cid = groupedHit.childId;
           var inGroupEdit = String(canvas().activeOverlayGroupEditId || '') === gid;
 
           if (inGroupEdit) {
+            if (isOverlayEffectivelyLocked(sceneIdHit, cid)) return;
             groupEditPulse = null;
             ev.preventDefault();
             ev.stopPropagation();
@@ -14010,6 +14038,8 @@ var ExperienciaCanvas = (function () {
               String(groupEditPulse.childId) === cid &&
               (nowPulse - groupEditPulse.at) < 480) {
             groupEditPulse = null;
+            if (isOverlayEffectivelyLocked(sceneIdHit, gid) ||
+                isOverlayEffectivelyLocked(sceneIdHit, cid)) return;
             ev.preventDefault();
             ev.stopPropagation();
             cancelOverlayGestures();
@@ -14068,9 +14098,11 @@ var ExperienciaCanvas = (function () {
         var cur = getSelectedOverlayIds();
         if (ev.shiftKey) {
           canvas().activeOverlayGroupEditId = null;
-          var idx = cur.indexOf(String(bid));
-          if (idx >= 0) cur.splice(idx, 1);
-          else cur.push(String(bid));
+          if (!isOverlayEffectivelyLocked(sceneIdHit, bid)) {
+            var idx = cur.indexOf(String(bid));
+            if (idx >= 0) cur.splice(idx, 1);
+            else cur.push(String(bid));
+          }
           canvas().selectedButtonIds = cur;
           canvas().selectedButtonId = cur.length ? cur[cur.length - 1] : null;
           paintButtonsStage();
@@ -14099,6 +14131,8 @@ var ExperienciaCanvas = (function () {
         var grouped = resolveGroupedChildFromEvent(ev, sceneId);
         groupDebugLog('dblclick (native fallback)', grouped);
         if (!grouped) return;
+        if (isOverlayEffectivelyLocked(sceneId, grouped.groupId) ||
+            isOverlayEffectivelyLocked(sceneId, grouped.childId)) return;
         ev.preventDefault();
         ev.stopPropagation();
         cancelOverlayGestures();
@@ -16222,6 +16256,10 @@ var ExperienciaCanvas = (function () {
           }
         }
         if (!ix) return false;
+        if (!opts.fromPanel && ExperienciaEngine.isOverlayEffectivelyLocked &&
+            ExperienciaEngine.isOverlayEffectivelyLocked(state, n, ix)) {
+          return false;
+        }
         var t = String(ix.type || '').toUpperCase();
         if (t === 'HOTSPOT') {
           pinOverlayGroupMemberGlow(null);
@@ -16296,6 +16334,10 @@ var ExperienciaCanvas = (function () {
           canvas().selectedHotspotId = null;
           var cur = getSelectedOverlayIds();
           var idx = cur.indexOf(String(itemId));
+          if (idx < 0 && ExperienciaEngine.isOverlayEffectivelyLocked &&
+              ExperienciaEngine.isOverlayEffectivelyLocked(state, n, ix)) {
+            return false;
+          }
           if (idx >= 0) cur.splice(idx, 1);
           else cur.push(String(itemId));
           canvas().selectedButtonIds = cur;

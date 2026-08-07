@@ -1556,6 +1556,13 @@ var ExperienciaEngine = (function () {
     return overlayInteractionSelfLocked(g);
   }
 
+  /** Canonical editor lock gate — pass node + interaction id or ix object. */
+  function isOverlayEffectivelyLocked(state, n, ixOrId) {
+    if (!n) return false;
+    var ix = typeof ixOrId === 'string' ? getInteraction(n, ixOrId) : ixOrId;
+    return overlayEffectiveLocked(n, ix);
+  }
+
   function degToRad(d) { return (Number(d) || 0) * Math.PI / 180; }
 
   function rotatePoint2d(x, y, deg) {
@@ -8743,6 +8750,7 @@ var ExperienciaEngine = (function () {
     overlayEffectiveVisible: overlayEffectiveVisible,
     overlayInteractionSelfLocked: overlayInteractionSelfLocked,
     overlayEffectiveLocked: overlayEffectiveLocked,
+    isOverlayEffectivelyLocked: isOverlayEffectivelyLocked,
     groupSceneOverlays: groupSceneOverlays,
     createEmptyOverlayGroup: createEmptyOverlayGroup,
     ungroupSceneOverlay: ungroupSceneOverlay,

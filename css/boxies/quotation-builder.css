@@ -5803,6 +5803,10 @@ body.quotation-canvas-first .builder-workspace,
 }
 
 /* Hover — stroke glow only (no box chrome); click to select. */
+.builder-exp-stage-shape.is-locked {
+  pointer-events: none;
+}
+
 .builder-exp-stage-shape:hover:not(.is-locked),
 .builder-exp-stage-shape.is-canvas-hover:not(.is-locked) {
   outline: none;

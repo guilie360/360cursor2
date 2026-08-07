@@ -237,6 +237,18 @@ var KonvaOverlayRenderer = (function () {
       return ix;
     }
 
+    function isKonvaEffectivelyLocked(ixOrId) {
+      var n = getSceneNode();
+      if (!n) return false;
+      if (ExperienciaEngine.isOverlayEffectivelyLocked) {
+        return ExperienciaEngine.isOverlayEffectivelyLocked(shim, n, ixOrId);
+      }
+      var ix = typeof ixOrId === 'string'
+        ? (ExperienciaEngine.getInteraction ? ExperienciaEngine.getInteraction(n, ixOrId) : null)
+        : ixOrId;
+      return !!(ix && ix.locked);
+    }
+
     function memberNodesForGroup(groupId) {
       var n = getSceneNode();
       var gix = n && ExperienciaEngine.getInteraction
@@ -400,7 +412,7 @@ var KonvaOverlayRenderer = (function () {
       );
       var colors = shapeColors(vm, ix);
       var node;
-      var locked = !!(vm && vm.locked) || !!(ix && ix.locked);
+      var locked = isKonvaEffectivelyLocked(vm && vm.id ? vm.id : ix);
 
       if (t === 'SHAPE_CIRCLE') {
         var r = Math.min(geom.width, geom.height) / 2;
@@ -440,6 +452,7 @@ var KonvaOverlayRenderer = (function () {
       if (locked) {
         node.setAttr('isLocked', true);
         node.draggable(false);
+        node.listening(false);
       } else {
         bindShapeDrag(node);
       }
@@ -565,7 +578,7 @@ var KonvaOverlayRenderer = (function () {
         var gix = gn && ExperienciaEngine.getInteraction
           ? ExperienciaEngine.getInteraction(gn, id)
           : null;
-        transformer.nodes(gix && gix.locked ? [] : members);
+        transformer.nodes(isKonvaEffectivelyLocked(id) ? [] : members);
         groupOutline.visible(false);
         syncTransformer();
         return;
@@ -614,7 +627,7 @@ var KonvaOverlayRenderer = (function () {
       var gix = gn && ExperienciaEngine.getInteraction
         ? ExperienciaEngine.getInteraction(gn, groupId)
         : null;
-      if (members.length && !(gix && gix.locked)) {
+      if (members.length && !isKonvaEffectivelyLocked(groupId)) {
         transformer.nodes(members);
         groupOutline.visible(false);
         syncTransformer();
@@ -810,6 +823,7 @@ var KonvaOverlayRenderer = (function () {
         }
         var meta = resolveClickTarget(e.target);
         if (!meta) return;
+        if (isKonvaEffectivelyLocked(meta.interactionId)) return;
 
         if (deepSelect && meta.parentGroupId === deepSelect.groupId) {
           enterDeepSelect(deepSelect.groupId, meta.interactionId);
@@ -817,10 +831,12 @@ var KonvaOverlayRenderer = (function () {
         }
 
         if (meta.parentGroupId) {
+          if (isKonvaEffectivelyLocked(meta.parentGroupId)) return;
           selectGroup(meta.parentGroupId);
           return;
         }
         if (meta.groupId) {
+          if (isKonvaEffectivelyLocked(meta.groupId)) return;
           selectGroup(meta.groupId);
           return;
         }
@@ -830,7 +846,9 @@ var KonvaOverlayRenderer = (function () {
       stage.on('dblclick dbltap', function (e) {
         var meta = resolveClickTarget(e.target);
         if (!meta) return;
+        if (isKonvaEffectivelyLocked(meta.interactionId)) return;
         if (meta.parentGroupId) {
+          if (isKonvaEffectivelyLocked(meta.parentGroupId)) return;
           e.evt && e.evt.preventDefault && e.evt.preventDefault();
           enterDeepSelect(meta.parentGroupId, meta.interactionId);
         }
