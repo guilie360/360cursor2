@@ -791,6 +791,7 @@ var QuotationEditor = (function () {
       renamingContentId: null,
       editingElementLabelId: null,
       openOverlayGroups: {},
+      outlinerGroupsCollapsed: false,
       openFolders: {},
       folderComposerGroup: null,
       tourComposer: { open: false, folderId: null },
@@ -5279,13 +5280,74 @@ var QuotationEditor = (function () {
       rows + '</ul>';
   }
 
+  function overlayGroupsInScene() {
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return [];
+    return scene.interactions.filter(isOverlayGroupIx);
+  }
+
+  function syncOutlinerGroupsCollapsedFromState() {
+    var groups = overlayGroupsInScene();
+    if (!groups.length) {
+      state.outlinerGroupsCollapsed = false;
+      return;
+    }
+    var anyOpen = groups.some(function (g) {
+      return state.openOverlayGroups[g.id] !== false;
+    });
+    state.outlinerGroupsCollapsed = !anyOpen;
+  }
+
+  function syncOutlinerFoldAllButton(scope) {
+    if (!scope) scope = document.getElementById('quotationRightBody');
+    if (!scope) return;
+    var btn = scope.querySelector('[data-qe-outliner-toggle-all-groups]');
+    if (!btn) return;
+    syncOutlinerGroupsCollapsedFromState();
+    var collapsed = !!state.outlinerGroupsCollapsed;
+    var label = collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos';
+    btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    btn.setAttribute('title', label);
+    btn.setAttribute('aria-label', label);
+  }
+
+  function toggleAllOutlinerGroups(ev) {
+    if (ev && ev.preventDefault) {
+      ev.preventDefault();
+      if (ev.stopPropagation) ev.stopPropagation();
+    }
+    var groups = overlayGroupsInScene();
+    if (!groups.length) return false;
+    if (!state.openOverlayGroups) state.openOverlayGroups = {};
+    var collapse = !state.outlinerGroupsCollapsed;
+    groups.forEach(function (g) {
+      if (!g || !g.id) return;
+      state.openOverlayGroups[g.id] = !collapse;
+    });
+    state.outlinerGroupsCollapsed = collapse;
+    refreshLayersPanel();
+    syncOutlinerFoldAllButton();
+    return true;
+  }
+
   function elementsOutlinerShellHtml() {
+    syncOutlinerGroupsCollapsedFromState();
+    var collapsed = !!state.outlinerGroupsCollapsed;
+    var foldLabel = collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos';
     return '' +
       '<div class="qe-outliner" data-qe-outliner data-qe-layers aria-label="Elementos">' +
         '<div class="qe-outliner__head">Elementos</div>' +
         '<div class="qe-outliner__toolbar">' +
-          '<button type="button" class="qe-outliner__create-group" data-qe-outliner-create-group>' +
-            '+ Crear grupo</button>' +
+          '<div class="qe-outliner__toolbar-duo" role="group" aria-label="Crear grupo y plegar grupos">' +
+            '<button type="button" class="qe-outliner__toolbar-duo-btn qe-outliner__toolbar-duo-btn--create"' +
+              ' data-qe-outliner-create-group>+ Crear grupo</button>' +
+            '<button type="button" class="qe-outliner__toolbar-duo-btn qe-outliner__toolbar-duo-btn--fold"' +
+              ' data-qe-outliner-toggle-all-groups' +
+              ' data-collapsed="' + (collapsed ? '1' : '0') + '"' +
+              ' title="' + foldLabel + '" aria-label="' + foldLabel + '">' +
+              libraryIcon('fold') +
+            '</button>' +
+          '</div>' +
         '</div>' +
         '<div class="qe-outliner__scroll">' +
           layersListHtml() +
@@ -5330,10 +5392,18 @@ var QuotationEditor = (function () {
     if (!scope) scope = document.getElementById('quotationRightBody');
     if (!scope) return;
     var groupAdd = scope.querySelector('[data-qe-outliner-create-group]');
-    if (!groupAdd) return;
-    groupAdd.addEventListener('click', function (e) {
-      createOverlayGroupFromPanel(e);
-    });
+    if (groupAdd) {
+      groupAdd.addEventListener('click', function (e) {
+        createOverlayGroupFromPanel(e);
+      });
+    }
+    var foldAll = scope.querySelector('[data-qe-outliner-toggle-all-groups]');
+    if (foldAll) {
+      foldAll.addEventListener('click', function (e) {
+        toggleAllOutlinerGroups(e);
+      });
+    }
+    syncOutlinerFoldAllButton(scope);
   }
 
   /** Public entry — same path as context menu Agrupar completion + canvas createEmptyOverlayGroup. */
@@ -9876,6 +9946,7 @@ var QuotationEditor = (function () {
       if (!t || !t.closest) return;
 
       if (t.closest('[data-qe-outliner-create-group]')) return;
+      if (t.closest('[data-qe-outliner-toggle-all-groups]')) return;
       if (t.closest('[data-qe-outliner-rename]')) return;
       if (t.closest('[data-qe-outliner-drag]')) return;
       if (t.closest('[data-qe-outliner-vis]')) return;
@@ -9934,6 +10005,7 @@ var QuotationEditor = (function () {
       if (!t || !t.closest) return;
 
       if (t.closest('[data-qe-outliner-create-group]')) return;
+      if (t.closest('[data-qe-outliner-toggle-all-groups]')) return;
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
       if (t.closest('[data-qe-outliner-rename]')) return;
       if (t.closest('[data-qe-layer-fold]')) return;
@@ -9960,6 +10032,7 @@ var QuotationEditor = (function () {
       if (!t || !t.closest) return;
 
       if (t.closest('[data-qe-outliner-create-group]')) return;
+      if (t.closest('[data-qe-outliner-toggle-all-groups]')) return;
 
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
@@ -9992,6 +10065,7 @@ var QuotationEditor = (function () {
           if (!state.openOverlayGroups) state.openOverlayGroups = {};
           state.openOverlayGroups[fid] = !(state.openOverlayGroups[fid] !== false);
           refreshLayersPanel();
+          syncOutlinerFoldAllButton(body);
         }
         return;
       }

@@ -898,6 +898,57 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.qe-outliner__toolbar-duo {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.qe-outliner__toolbar-duo-btn {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.qe-outliner__toolbar-duo-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.qe-outliner__toolbar-duo-btn--create {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.qe-outliner__toolbar-duo-btn--fold {
+  flex: 0 0 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
+}
+
+.qe-outliner__toolbar-duo-btn--fold svg {
+  width: 16px;
+  height: 16px;
+}
+
 .qe-outliner__create-group {
   appearance: none;
   width: 100%;
