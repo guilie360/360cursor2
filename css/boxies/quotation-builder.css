@@ -1041,8 +1041,10 @@
 }
 
 .qe-outliner__drag {
-  width: 14px;
-  height: 22px;
+  width: 12px;
+  height: 18px;
+  align-self: center;
+  justify-self: center;
   flex-shrink: 0;
   cursor: grab;
   opacity: 0.34;
@@ -1054,7 +1056,7 @@
     radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.5px),
     radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.5px);
   background-size: 4px 4px;
-  background-position: 2px 3px, 2px 9px;
+  background-position: 2px calc(50% - 3px), 2px calc(50% + 3px);
   background-repeat: no-repeat;
 }
 
