@@ -5188,12 +5188,17 @@ var QuotationEditor = (function () {
     return ix.visible !== false && ix.enabled !== false;
   }
 
+  function outlinerItemSelfLocked(ix) {
+    return !!(ix && ix.locked);
+  }
+
   function outlinerItemRowHtml(ix, opts) {
     opts = opts || {};
     if (!ix || !ix.id) return '';
     var t = String(ix.type || '').toUpperCase();
     var label = elementDisplayName(ix);
     var vis = outlinerItemSelfVisible(ix);
+    var locked = outlinerItemSelfLocked(ix);
     var selected = !!opts.selected;
     var editing = String(state.editingElementLabelId || '') === String(ix.id);
     var nameHtml = editing
@@ -5225,6 +5230,10 @@ var QuotationEditor = (function () {
           '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
             ' data-qe-outliner-vis="' + escapeHtml(ix.id) + '"' +
             ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="Visibilidad">👁</button>' +
+          '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : ' is-off') + '"' +
+            ' data-qe-outliner-lock="' + escapeHtml(ix.id) + '"' +
+            ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="Bloqueo">' +
+            (locked ? '🔒' : '🔓') + '</button>' +
           '<button type="button" class="qe-outliner__del" data-qe-outliner-del="' + escapeHtml(ix.id) + '"' +
             ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '" aria-label="Eliminar">✕</button>' +
         '</span>' +
@@ -5444,6 +5453,15 @@ var QuotationEditor = (function () {
     var nextVisible = !outlinerItemSelfVisible(ix);
     ix.enabled = nextVisible;
     ix.visible = nextVisible;
+    syncOutlinerPanelToCanvas();
+    return true;
+  }
+
+  function toggleOutlinerLockFromPanel(id) {
+    if (!id) return false;
+    var ix = findSceneInteraction(id);
+    if (!ix) return false;
+    ix.locked = !outlinerItemSelfLocked(ix);
     syncOutlinerPanelToCanvas();
     return true;
   }
@@ -9950,6 +9968,7 @@ var QuotationEditor = (function () {
       if (t.closest('[data-qe-outliner-rename]')) return;
       if (t.closest('[data-qe-outliner-drag]')) return;
       if (t.closest('[data-qe-outliner-vis]')) return;
+      if (t.closest('[data-qe-outliner-lock]')) return;
       if (t.closest('[data-qe-outliner-del]')) return;
 
       var fold = t.closest('[data-qe-layer-fold]');
@@ -10044,6 +10063,15 @@ var QuotationEditor = (function () {
         ev.stopPropagation();
         var vid = visBtn.getAttribute('data-qe-outliner-vis');
         if (vid) toggleOutlinerVisibilityFromPanel(vid);
+        return;
+      }
+
+      var lockBtn = t.closest('[data-qe-outliner-lock]');
+      if (lockBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        var lid = lockBtn.getAttribute('data-qe-outliner-lock');
+        if (lid) toggleOutlinerLockFromPanel(lid);
         return;
       }
 

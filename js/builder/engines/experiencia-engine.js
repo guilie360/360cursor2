@@ -1542,6 +1542,20 @@ var ExperienciaEngine = (function () {
     return overlayInteractionSelfVisible(g);
   }
 
+  /** Stored lock on the interaction itself (ignores parent group). */
+  function overlayInteractionSelfLocked(ix) {
+    return !!(ix && ix.locked);
+  }
+
+  /** Effective editor lock — self flag or ancestor overlay group lock. */
+  function overlayEffectiveLocked(n, ix) {
+    if (overlayInteractionSelfLocked(ix)) return true;
+    if (!n || !ix || !ix.groupId) return false;
+    var g = getInteraction(n, ix.groupId);
+    if (!g || !isOverlayGroupInteraction(g)) return false;
+    return overlayInteractionSelfLocked(g);
+  }
+
   function degToRad(d) { return (Number(d) || 0) * Math.PI / 180; }
 
   function rotatePoint2d(x, y, deg) {
@@ -3215,6 +3229,7 @@ var ExperienciaEngine = (function () {
       : resolveButtonLayout(ix, lw, lh);
     var rot = world ? world.rotation : (ix.rotation != null ? Number(ix.rotation) : 0);
     var effectiveOn = overlayEffectiveVisible(n, ix);
+    var effectiveLocked = overlayEffectiveLocked(n, ix);
     return {
       id: ix.id,
       portId: ix.portId || ix.id,
@@ -3230,7 +3245,7 @@ var ExperienciaEngine = (function () {
       rotation: rot,
       visible: effectiveOn,
       enabled: effectiveOn,
-      locked: !!ix.locked,
+      locked: effectiveLocked,
       targetNodeId: isSceneButtonInteraction(ix) ? resolveButtonTarget(state, n.id, ix) : null,
       positionMode: ix.positionMode || 'free',
       anchor: ix.anchor || 'center',
@@ -8726,6 +8741,8 @@ var ExperienciaEngine = (function () {
     isOverlayGroupInteraction: isOverlayGroupInteraction,
     overlayInteractionSelfVisible: overlayInteractionSelfVisible,
     overlayEffectiveVisible: overlayEffectiveVisible,
+    overlayInteractionSelfLocked: overlayInteractionSelfLocked,
+    overlayEffectiveLocked: overlayEffectiveLocked,
     groupSceneOverlays: groupSceneOverlays,
     createEmptyOverlayGroup: createEmptyOverlayGroup,
     ungroupSceneOverlay: ungroupSceneOverlay,
