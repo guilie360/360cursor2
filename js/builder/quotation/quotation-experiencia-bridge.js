@@ -6,6 +6,11 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
+  var QE_BRIDGE_BUILD = 'ws7800';
+  try {
+    window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
+    console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
+  } catch (eBridgeBuild) { /* ignore */ }
   var NODE_PREFIX = 'qe-';
 
   function nodeIdForScene(sceneId) {

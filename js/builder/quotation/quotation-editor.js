@@ -2,6 +2,11 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
+  var QE_EDITOR_BUILD = 'ws7800';
+  try {
+    window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
+    console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
+  } catch (eBuild) { /* ignore */ }
   /* Legacy iframe Runtime path stays off; Builder mounts QuotationRuntime.paintScene in-page. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
@@ -13302,7 +13307,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7786'
+        editorBuild: QE_EDITOR_BUILD
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
