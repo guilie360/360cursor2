@@ -5969,16 +5969,8 @@ var ExperienciaCanvas = (function () {
       }
 
       if ((dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') && drag.mode === 'rotate') {
-        /* ws7713 — live rotate: group gizmo from model B (getOverlayItemVm), not cache/drag snapshot. */
-        var groupVmB = getOverlayItemVm(sceneId, drag.buttonId);
-        var groupUnionBox = groupVmB ? {
-          cx: groupVmB.storedX != null ? Number(groupVmB.storedX) : Number(groupVmB.x) || 50,
-          cy: groupVmB.storedY != null ? Number(groupVmB.storedY) : Number(groupVmB.y) || 50,
-          w: Number(groupVmB.width) || 20,
-          h: Number(groupVmB.height) || 20,
-          rot: Number(drag.pendingDeg) != null ? Number(drag.pendingDeg) : (Number(groupVmB.rotation) || 0),
-          kind: dragType
-        } : {
+        /* Live rotate — frozen OBB from pointerdown (same contract as multi-select unionFixed). */
+        var groupUnionBox = {
           cx: drag.startX,
           cy: drag.startY,
           w: drag.startW,
@@ -8569,45 +8561,19 @@ var ExperienciaCanvas = (function () {
       return t === 'OVERLAY_GROUP' || t === 'GROUP';
     }
 
-    /** Pure 2d rotate — trace-only; no engine calls. */
-    function traceRotatePoint2d(x, y, deg) {
-      var rad = (Number(deg) || 0) * Math.PI / 180;
-      var c = Math.cos(rad);
-      var s = Math.sin(rad);
-      return { x: x * c - y * s, y: x * s + y * c };
-    }
-
-    /** Mirrors composeOverlayWorldLayout — read-only, no ensureOverlayGroupDefaults. */
-    function readGroupChildWorldPure(group, ix, layerW, layerH) {
-      if (!group || !ix) return null;
-      layerW = Math.max(1, Number(layerW) || 1000);
-      layerH = Math.max(1, Number(layerH) || 1000);
-      var gr = Number(group.rotation) || 0;
-      var lxPx = (Number(ix.localX) || 0) / 100 * layerW;
-      var lyPx = (Number(ix.localY) || 0) / 100 * layerH;
-      var r = traceRotatePoint2d(lxPx, lyPx, gr);
-      var gxPx = (Number(group.x) / 100) * layerW;
-      var gyPx = (Number(group.y) / 100) * layerH;
-      return {
-        x: ((gxPx + r.x) / layerW) * 100,
-        y: ((gyPx + r.y) / layerH) * 100,
-        rotation: gr + (Number(ix.localRotation) || 0)
-      };
-    }
-
-    /** Read child ix locals + composed world — read-only, no VM/engine mutate paths. */
-    function snapshotGroupChildModels(sceneId, groupId, memberIds, layerW, layerH) {
+    /** Read child ix locals + composed world — no VM side effects. */
+    function snapshotGroupChildModels(sceneId, memberIds, layerW, layerH) {
       var out = {};
       var n = ExperienciaEngine.getNode(state, sceneId);
-      if (!n || !groupId || !memberIds || !memberIds.length) return out;
-      var group = ExperienciaEngine.getInteraction(n, groupId);
-      if (!group) return out;
+      if (!n || !memberIds || !memberIds.length) return out;
       layerW = Math.max(1, Number(layerW) || 1000);
       layerH = Math.max(1, Number(layerH) || 1000);
       memberIds.forEach(function (mid) {
         var ix = ExperienciaEngine.getInteraction(n, mid);
         if (!ix) return;
-        var world = readGroupChildWorldPure(group, ix, layerW, layerH);
+        var world = ExperienciaEngine.overlayWorldLayoutRaw
+          ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+          : null;
         out[String(mid)] = {
           id: String(mid),
           localX: Number(ix.localX) || 0,
@@ -8651,7 +8617,7 @@ var ExperienciaCanvas = (function () {
     function captureGroupChildModelBaseline(drag) {
       if (!multiRotateTraceEnabled() || !isGroupRotateDrag(drag)) return;
       drag.childModelBaseline = snapshotGroupChildModels(
-        drag.sceneId, drag.buttonId, drag.memberIds, drag.layerW, drag.layerH
+        drag.sceneId, drag.memberIds, drag.layerW, drag.layerH
       );
       drag.lastChildModelTraceDeg = null;
     }
@@ -8659,7 +8625,7 @@ var ExperienciaCanvas = (function () {
     function traceGroupChildModels(stage, drag) {
       if (!multiRotateTraceEnabled() || !isGroupRotateDrag(drag)) return;
       var current = snapshotGroupChildModels(
-        drag.sceneId, drag.buttonId, drag.memberIds, drag.layerW, drag.layerH
+        drag.sceneId, drag.memberIds, drag.layerW, drag.layerH
       );
       multiRotateTrace(stage, {
         groupId: String(drag.buttonId || ''),
