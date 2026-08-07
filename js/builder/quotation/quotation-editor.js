@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  try { console.log('[QE BUILD BOOT] ws7784'); } catch (_boot) { /* ignore */ }
+  try { console.log('[QE BUILD BOOT] ws7785'); } catch (_boot) { /* ignore */ }
   /* Legacy iframe Runtime path stays off; Builder mounts QuotationRuntime.paintScene in-page. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
@@ -4096,7 +4096,27 @@ var QuotationEditor = (function () {
     }
   }
 
+  /** TEMP DnD debug — remove before final commit. */
+  function outlinerDnDebugLogGroupMembers(label, scene) {
+    if (!scene || !Array.isArray(scene.interactions)) {
+      console.log(label, 'no scene');
+      return;
+    }
+    var found = false;
+    scene.interactions.forEach(function (ix) {
+      if (!ix || !ix.id || !isOverlayGroupIx(ix)) return;
+      found = true;
+      console.log(label, {
+        groupId: ix.id,
+        memberIds: (ix.memberIds || []).slice()
+      });
+    });
+    if (!found) console.log(label, 'no groups');
+  }
+
   function syncOutlinerPanelToCanvas(engineFn) {
+    var syncScene = activeScene();
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE syncOutlinerPanelToCanvas]', syncScene);
     healOverlayGroupMembership(activeScene());
     markDirtyLocal();
     pushOutlinerScenesToShim();
@@ -4114,6 +4134,7 @@ var QuotationEditor = (function () {
     healShimOverlayGroupMembership();
     healOverlayGroupMembership(activeScene());
     refreshLayersPanel();
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncOutlinerPanelToCanvas]', activeScene());
   }
 
   function syncOverlaySceneFromPanel(engineFn) {
@@ -4281,7 +4302,11 @@ var QuotationEditor = (function () {
 
   /** Reconcile group.memberIds with interaction.groupId — single membership, no duplicates. */
   function healOverlayGroupMembership(scene) {
-    if (!scene || !Array.isArray(scene.interactions)) return false;
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE healOverlayGroupMembership]', scene);
+    if (!scene || !Array.isArray(scene.interactions)) {
+      outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER healOverlayGroupMembership]', scene);
+      return false;
+    }
     var byId = {};
     var groups = [];
     scene.interactions.forEach(function (ix) {
@@ -4330,11 +4355,18 @@ var QuotationEditor = (function () {
       });
       if (next.length !== prev.length ||
           next.some(function (id, i) { return id !== prev[i]; })) {
+        console.log('[GROUP MEMBERS OVERWRITTEN]', {
+          function: 'healOverlayGroupMembership',
+          groupId: gid,
+          old: prev.slice(),
+          new: next.slice()
+        });
         g.memberIds = next;
         changed = true;
       }
     });
 
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER healOverlayGroupMembership]', scene);
     return changed;
   }
 
@@ -5417,18 +5449,25 @@ var QuotationEditor = (function () {
 
   /** Repaint Elementos panel (same role as rerender() for the scenes strip). */
   function refreshOutlinerPanel() {
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE refreshOutlinerPanel]', activeScene());
     syncRightPanel();
     bindOutlinerGroups(document.getElementById('quotationRightBody'));
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER refreshOutlinerPanel]', activeScene());
   }
 
   function syncRightPanel() {
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS BEFORE syncRightPanel]', activeScene());
     var body = document.getElementById('quotationRightBody');
-    if (!body) return;
+    if (!body) {
+      outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncRightPanel]', activeScene());
+      return;
+    }
     body.innerHTML = rightPanelHtml();
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
     bindLayersPanel();
+    outlinerDnDebugLogGroupMembers('[GROUP MEMBERS AFTER syncRightPanel]', activeScene());
   }
 
   /** Same pattern as bindSceneGroups: fresh listener on the new button each paint. */
@@ -13163,7 +13202,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7784'
+        editorBuild: 'ws7785'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
