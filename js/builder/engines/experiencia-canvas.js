@@ -9041,6 +9041,24 @@ var ExperienciaCanvas = (function () {
       g._transformV = 2;
     }
 
+    /** Lock group gizmo frame after rotate — prevents AABB resync from squaring the container. */
+    function finalizeGroupOrientedFrame(sceneId, groupId, frame) {
+      if (!sceneId || !groupId || !frame) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (!g) return;
+      g.x = Number(frame.cx) != null ? Number(frame.cx) : (Number(g.x) || 50);
+      g.y = Number(frame.cy) != null ? Number(frame.cy) : (Number(g.y) || 50);
+      g.width = Math.max(0.5, Number(frame.w) || Number(g.width) || 20);
+      g.height = Math.max(0.5, Number(frame.h) || Number(g.height) || 20);
+      if (frame.rot != null) g.rotation = Number(frame.rot) || 0;
+      g._baseWidth = g.width;
+      g._baseHeight = g.height;
+      g._transformV = 2;
+    }
+
     function groupResizeAnchorPct(mode, startL, startR, startT, startB, startX, startY) {
       var moveE = String(mode || '').indexOf('e') >= 0;
       var moveW = String(mode || '').indexOf('w') >= 0;
@@ -11573,6 +11591,15 @@ var ExperienciaCanvas = (function () {
                 { commit: true }
               );
               setMultiSelectUnionFrame(endScene, endedDrag.memberIds, {
+                cx: endedDrag.startX,
+                cy: endedDrag.startY,
+                w: endedDrag.startW,
+                h: endedDrag.startH,
+                rot: endedDrag.pendingDeg
+              });
+            } else if (movedT && endedDrag.pendingDeg != null &&
+                (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
+              finalizeGroupOrientedFrame(endScene, rotBtnId, {
                 cx: endedDrag.startX,
                 cy: endedDrag.startY,
                 w: endedDrag.startW,
