@@ -10831,14 +10831,39 @@ var ExperienciaCanvas = (function () {
     }
 
     var overlayCanvasHoverId = null;
+    var overlayCanvasHoverSiblingIds = null;
     var overlayCanvasHoverRaf = 0;
 
     function clearOverlayCanvasHover() {
       overlayCanvasHoverId = null;
+      overlayCanvasHoverSiblingIds = null;
       if (!buttonsLayer) return;
       buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
         el.classList.remove('is-canvas-hover');
       });
+      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover-sibling').forEach(function (el) {
+        el.classList.remove('is-canvas-hover-sibling');
+      });
+    }
+
+    function overlayGroupHoverSiblingIds(sceneId, hitId) {
+      if (!sceneId || !hitId || canvas().activeOverlayGroupEditId) return [];
+      var grouped = resolveGroupedOverlayHit(sceneId, hitId);
+      if (!grouped) return [];
+      var hitKey = String(hitId);
+      return overlayGroupMemberIdList(sceneId, grouped.groupId).filter(function (mid) {
+        return String(mid) !== hitKey;
+      });
+    }
+
+    function overlayHoverSiblingSetsEqual(a, b) {
+      a = (a || []).map(String).sort();
+      b = (b || []).map(String).sort();
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
     }
 
     function syncOverlayCanvasHover(clientX, clientY) {
@@ -10852,6 +10877,7 @@ var ExperienciaCanvas = (function () {
         syncOverlayGroupCursor(clientX, clientY);
         return;
       }
+      var sceneIdHover = canvas().selectedId;
       var hit = overlayPickTopmostAtPoint(clientX, clientY);
       if (!hit) {
         hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
@@ -10862,18 +10888,29 @@ var ExperienciaCanvas = (function () {
         syncOverlayGroupCursor(clientX, clientY);
         return;
       }
-      var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
-        ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
-      if (nextId === String(overlayCanvasHoverId || '')) {
+      var hitId = hit ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
+      var nextId = hit && hit.classList.contains('builder-exp-stage-shape') ? hitId : '';
+      var siblingIds = hitId ? overlayGroupHoverSiblingIds(sceneIdHover, hitId) : [];
+      if (nextId === String(overlayCanvasHoverId || '') &&
+          overlayHoverSiblingSetsEqual(siblingIds, overlayCanvasHoverSiblingIds)) {
         syncOverlayGroupCursor(clientX, clientY);
         return;
       }
       clearOverlayCanvasHover();
       overlayCanvasHoverId = nextId || null;
+      overlayCanvasHoverSiblingIds = siblingIds.length ? siblingIds.slice() : null;
       if (hit && hit.classList.contains('builder-exp-stage-shape') &&
           !hit.classList.contains('is-selected')) {
         hit.classList.add('is-canvas-hover');
       }
+      siblingIds.forEach(function (sid) {
+        var idEsc = String(sid).replace(/"/g, '');
+        var sib = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        if (!sib || !sib.classList.contains('builder-exp-stage-shape')) return;
+        if (sib.classList.contains('is-selected')) return;
+        if (sib.classList.contains('is-canvas-hover')) return;
+        sib.classList.add('is-canvas-hover-sibling');
+      });
       syncOverlayGroupCursor(clientX, clientY);
     }
 
