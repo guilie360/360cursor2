@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7801';
+  var QE_EDITOR_BUILD = 'ws7802';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -1694,7 +1694,8 @@ var QuotationEditor = (function () {
     openLibraryStatusPopover(btn || document.querySelector('[data-qe-lib-status]'));
   }
 
-  function persistDraft() {
+  function persistDraft(opts) {
+    opts = opts || {};
     var id = String(
       loadedProjectId ||
       (editorProjectCtx && editorProjectCtx.id) ||
@@ -1704,7 +1705,7 @@ var QuotationEditor = (function () {
     try {
       /* Panel scenes are SSOT — push to shim before pull so draft/autosave never reverts fresh panel edits. */
       pushOutlinerScenesToShim();
-      if (expOverlay && typeof expOverlay.pull === 'function') {
+      if (!opts.skipPull && expOverlay && typeof expOverlay.pull === 'function') {
         try { expOverlay.pull(); } catch (ePull) {}
       }
       persistLibraryUi();
@@ -4114,7 +4115,7 @@ var QuotationEditor = (function () {
       lockTraceShimItem('syncOutlinerPanelToCanvas:afterPush:shim', tid);
     }
     healShimOverlayGroupMembership();
-    markDirtyLocal();
+    markDirtyLocal({ skipPull: true });
     if (engineFn && expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
       var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
       var nodeId = (typeof QuotationExperienciaBridge !== 'undefined' &&
@@ -11482,11 +11483,11 @@ var QuotationEditor = (function () {
     });
   }
 
-  function markDirtyLocal() {
+  function markDirtyLocal(opts) {
     if (typeof BuilderDirtyState !== 'undefined' && BuilderDirtyState.mark) {
       BuilderDirtyState.mark();
     }
-    persistDraft();
+    persistDraft(opts);
     scheduleAutosave('dirty');
   }
 

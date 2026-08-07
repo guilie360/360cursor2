@@ -1240,7 +1240,8 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
 }
 
 .qe-outliner__lock.is-off {
-  opacity: 0.28;
+  opacity: 0.72;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .qe-outliner__lock.is-on {

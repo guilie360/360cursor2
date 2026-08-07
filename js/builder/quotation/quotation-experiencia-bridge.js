@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7800';
+  var QE_BRIDGE_BUILD = 'ws7802';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -295,6 +295,22 @@ var QuotationExperienciaBridge = (function () {
   }
 
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
+  function mergePanelInteractionFlags(prevIx, nextIx) {
+    if (!prevIx || !nextIx) return;
+    if (!Object.prototype.hasOwnProperty.call(nextIx, 'locked') &&
+        Object.prototype.hasOwnProperty.call(prevIx, 'locked')) {
+      nextIx.locked = !!prevIx.locked;
+    }
+    if (!Object.prototype.hasOwnProperty.call(nextIx, 'visible') &&
+        Object.prototype.hasOwnProperty.call(prevIx, 'visible')) {
+      nextIx.visible = !!prevIx.visible;
+    }
+    if (!Object.prototype.hasOwnProperty.call(nextIx, 'enabled') &&
+        Object.prototype.hasOwnProperty.call(prevIx, 'enabled')) {
+      nextIx.enabled = !!prevIx.enabled;
+    }
+  }
+
   function pullToScenes(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
     var tid = lockTraceId();
@@ -312,7 +328,15 @@ var QuotationExperienciaBridge = (function () {
       if (!n || n.kind === 'hero') return;
       var sc = byId[n.id];
       if (!sc) return;
+      var prevById = {};
+      (sc.interactions || []).forEach(function (ix) {
+        if (ix && ix.id) prevById[String(ix.id)] = ix;
+      });
       sc.interactions = cloneJson((n.config && n.config.interactions) || []);
+      sc.interactions.forEach(function (ix) {
+        if (!ix || !ix.id) return;
+        mergePanelInteractionFlags(prevById[String(ix.id)], ix);
+      });
       sc.buttons = [];
       sc.hotspots = [];
       sc.interactions.forEach(function (ix) {
