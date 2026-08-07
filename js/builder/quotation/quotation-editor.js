@@ -98,7 +98,6 @@ var QuotationEditor = (function () {
   var focusEscBound = false;
   var inspectorChromeBound = false;
   var canvasOutsideDeselectBound = false;
-  var outlinerPanelEventsBound = false;
 
   var uid = 1;
   function nextId(prefix) {
@@ -4138,11 +4137,7 @@ var QuotationEditor = (function () {
     });
     markDirtyLocal();
     pushOutlinerScenesToShim();
-    refreshLayersPanel();
-    var body = document.getElementById('quotationRightBody');
-    if (body && !body.querySelector('[data-qe-outliner-row="' + groupId + '"]')) {
-      syncRightPanel();
-    }
+    refreshOutlinerPanel();
     return groupId;
   }
 
@@ -4684,6 +4679,11 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  /** Repaint Elementos panel (same role as rerender() for the scenes strip). */
+  function refreshOutlinerPanel() {
+    syncRightPanel();
+  }
+
   function syncRightPanel() {
     var body = document.getElementById('quotationRightBody');
     if (!body) return;
@@ -4691,26 +4691,21 @@ var QuotationEditor = (function () {
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
-    ensureOutlinerPanelEvents();
+    bindOutlinerGroups(body);
+    bindLayersPanel();
   }
 
-  function ensureOutlinerPanelEvents() {
-    if (outlinerPanelEventsBound) return;
-    outlinerPanelEventsBound = true;
-
-    document.addEventListener('click', function (ev) {
-      var t = ev.target;
-      if (!t || !t.closest) return;
-      var createGroup = t.closest('[data-qe-outliner-create-group]');
-      if (!createGroup) return;
-      var body = document.getElementById('quotationRightBody');
-      if (!body || !body.contains(createGroup)) return;
-      ev.preventDefault();
-      ev.stopPropagation();
+  /** Same pattern as bindSceneGroups: fresh listener on the new button each paint. */
+  function bindOutlinerGroups(scope) {
+    if (!scope) scope = document.getElementById('quotationRightBody');
+    if (!scope) return;
+    var groupAdd = scope.querySelector('[data-qe-outliner-create-group]');
+    if (!groupAdd) return;
+    groupAdd.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
       createEmptyOverlayGroup();
-    }, true);
-
-    bindLayersPanel();
+    });
   }
 
   function findSceneInteraction(id) {
@@ -9206,8 +9201,7 @@ var QuotationEditor = (function () {
       var t = ev.target;
       if (!t || !t.closest) return;
 
-      var createGroup = t.closest('[data-qe-outliner-create-group]');
-      if (createGroup) return;
+      if (t.closest('[data-qe-outliner-create-group]')) return;
 
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
@@ -9360,7 +9354,7 @@ var QuotationEditor = (function () {
         expOverlay.startHotspotDraw();
       }
     }
-    ensureOutlinerPanelEvents();
+    bindLayersPanel();
   }
 
   function onRuntimeBridgeMessage(ev) {
