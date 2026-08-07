@@ -2386,7 +2386,8 @@ var ExperienciaEngine = (function () {
     });
   }
 
-  function groupSceneOverlays(state, nodeId, memberIds, layerW, layerH) {
+  function groupSceneOverlays(state, nodeId, memberIds, layerW, layerH, opts) {
+    opts = opts || {};
     memberIds = (memberIds || []).map(String).filter(Boolean);
     if (memberIds.length < 2) return null;
     var n = getNode(state, nodeId);
@@ -2411,6 +2412,23 @@ var ExperienciaEngine = (function () {
     }
     var bounds = computeOverlayUnionBounds(n, unique, lw, lh);
     if (!bounds) return null;
+    var seedFrame = opts.seedFrame;
+    var frameCx = bounds.cx;
+    var frameCy = bounds.cy;
+    var frameW = bounds.w;
+    var frameH = bounds.h;
+    var frameRot = 0;
+    if (seedFrame && Number(seedFrame.w) > 0 && Number(seedFrame.h) > 0) {
+      frameCx = Number(seedFrame.cx);
+      if (isNaN(frameCx)) frameCx = bounds.cx;
+      frameCy = Number(seedFrame.cy);
+      if (isNaN(frameCy)) frameCy = bounds.cy;
+      frameW = Number(seedFrame.w);
+      if (isNaN(frameW) || frameW <= 0) frameW = bounds.w;
+      frameH = Number(seedFrame.h);
+      if (isNaN(frameH) || frameH <= 0) frameH = bounds.h;
+      frameRot = Number(seedFrame.rot) || 0;
+    }
     var groupId = uid('grp');
     var group = makeInteraction({
       type: 'OVERLAY_GROUP',
@@ -2418,13 +2436,13 @@ var ExperienciaEngine = (function () {
       portId: groupId,
       label: 'Grupo',
       memberIds: unique.slice(),
-      x: bounds.cx,
-      y: bounds.cy,
-      width: bounds.w,
-      height: bounds.h,
-      rotation: 0,
-      _baseWidth: bounds.w,
-      _baseHeight: bounds.h,
+      x: frameCx,
+      y: frameCy,
+      width: frameW,
+      height: frameH,
+      rotation: frameRot,
+      _baseWidth: frameW,
+      _baseHeight: frameH,
       enabled: true
     });
     n.config.interactions.push(group);
