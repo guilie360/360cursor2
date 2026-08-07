@@ -7442,8 +7442,14 @@ var ExperienciaCanvas = (function () {
       if (!selIds.length && canvas().selectedButtonId) {
         selIds = [String(canvas().selectedButtonId)];
       }
-      var selSet = {};
-      selIds.forEach(function (id) { selSet[id] = true; });
+      var selSet = buildOverlayVisualSelSet(canvas().selectedId, selIds);
+      var editGroupId = canvas().activeOverlayGroupEditId;
+      var editMemberSet = {};
+      if (editGroupId) {
+        overlayGroupMemberIdList(canvas().selectedId, editGroupId).forEach(function (mid) {
+          editMemberSet[String(mid)] = true;
+        });
+      }
       var guidesHtml = '';
       if (buttonDrag && buttonDrag.guides) {
         var g = buttonDrag.guides;
@@ -7501,6 +7507,7 @@ var ExperienciaCanvas = (function () {
           return '<button type="button" class="' + buttonPreviewClass(b) +
             ' is-stage-text' +
             (selSet[String(b.id)] ? ' is-selected' : '') +
+            (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
             (b.visible === false ? ' is-invisible' : '') +
             (b.locked ? ' is-locked' : '') +
             overlayPendingMoveClass('TEXT', b.id) +
@@ -7524,6 +7531,7 @@ var ExperienciaCanvas = (function () {
 
           return '<button type="button" class="' + buttonPreviewClass(b) +
             (selSet[String(b.id)] ? ' is-selected' : '') +
+            (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
             (b.visible === false ? ' is-invisible' : '') +
             (b.locked ? ' is-locked' : '') +
             overlayPendingMoveClass(t, b.id) + '"' +
@@ -7576,6 +7584,7 @@ var ExperienciaCanvas = (function () {
         return '<button type="button" class="' + buttonPreviewClass(b) +
           ' is-box' +
           (selSet[String(b.id)] ? ' is-selected' : '') +
+          (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
           (b.visible === false ? ' is-invisible' : '') +
           (b.locked ? ' is-locked' : '') +
           overlayPendingMoveClass('BUTTON', b.id) +
@@ -7605,6 +7614,10 @@ var ExperienciaCanvas = (function () {
           );
         } else {
           selIds.forEach(function (sid) {
+            if (isOverlayGroupId(canvas().selectedId, sid) &&
+                !canvas().activeOverlayGroupEditId) {
+              return;
+            }
             var selBtn = getOverlayItemVm(canvas().selectedId, sid);
             if (!selBtn) {
               for (var gi = 0; gi < buttons.length; gi++) {
@@ -7676,14 +7689,22 @@ var ExperienciaCanvas = (function () {
       if (!sceneId) return;
       var layerW = overlayLayerSize().w;
       var layerH = overlayLayerSize().h;
-      var selSet = {};
-      selIds.forEach(function (id) { selSet[String(id)] = true; });
+      var selSet = buildOverlayVisualSelSet(sceneId, selIds);
+      var editGroupIdMount = canvas().activeOverlayGroupEditId;
+      var editMemberSetMount = {};
+      if (editGroupIdMount) {
+        overlayGroupMemberIdList(sceneId, editGroupIdMount).forEach(function (mid) {
+          editMemberSetMount[String(mid)] = true;
+        });
+      }
       buttonsLayer.querySelectorAll('[data-exp-gizmo]').forEach(function (g) { g.remove(); });
       buttonsLayer.querySelectorAll('[data-exp-stage-btn]').forEach(function (el) {
         var id = el.getAttribute('data-exp-stage-btn');
         if (!id) return;
         if (selSet[String(id)]) el.classList.add('is-selected');
         else el.classList.remove('is-selected');
+        if (editMemberSetMount[String(id)]) el.classList.add('is-group-edit-member');
+        else el.classList.remove('is-group-edit-member');
       });
       var multiSel = selIds.length > 1;
       var gizmoHtml = '';
@@ -7692,6 +7713,7 @@ var ExperienciaCanvas = (function () {
         gizmoHtml = mountGroupSelectionGizmoHtml(sceneId, groupMountG, layerW, layerH);
       } else {
         selIds.forEach(function (sid) {
+          if (isOverlayGroupId(sceneId, sid) && !canvas().activeOverlayGroupEditId) return;
           var selBtn = getOverlayItemVm(sceneId, sid);
           if (!selBtn) return;
           var gizmoMetrics = null;
@@ -8966,45 +8988,66 @@ var ExperienciaCanvas = (function () {
       canvas().multiSelectUnionFrame = null;
     }
 
+    /** Groups are move-only — no union bbox / rotate / scale gizmo outside edit mode. */
     function resolveOverlayGroupGizmoMount(sceneId, selIds) {
-      if (!selIds || selIds.length !== 1 || !sceneId) return null;
-      var gid = String(selIds[0]);
+      return null;
+    }
+
+    function overlayGroupMemberIdList(sceneId, groupId) {
+      if (!sceneId || !groupId) return [];
       var n = ExperienciaEngine.getNode(state, sceneId);
-      if (!n) return null;
-      var g = ExperienciaEngine.getInteraction(n, gid);
-      if (!g) return null;
-      var gt = String(g.type || '').toUpperCase();
-      if (gt !== 'OVERLAY_GROUP' && gt !== 'GROUP') return null;
-      var memberIds = ExperienciaEngine.resolveOverlayGroupMemberIds
+      if (!n) return [];
+      var g = ExperienciaEngine.getInteraction(n, groupId);
+      if (!g) return [];
+      return ExperienciaEngine.resolveOverlayGroupMemberIds
         ? ExperienciaEngine.resolveOverlayGroupMemberIds(n, g, { repair: true })
         : (g.memberIds || []).map(String);
-      if (!memberIds || !memberIds.length) return null;
-      return { groupId: gid, memberIds: memberIds };
+    }
+
+    /** When a group is selected, highlight all members on stage (not the group id). */
+    function buildOverlayVisualSelSet(sceneId, selIds) {
+      var set = {};
+      var editGid = canvas().activeOverlayGroupEditId;
+      (selIds || []).forEach(function (id) {
+        id = String(id);
+        if (editGid) {
+          set[id] = true;
+          return;
+        }
+        if (isOverlayGroupId(sceneId, id)) {
+          overlayGroupMemberIdList(sceneId, id).forEach(function (mid) {
+            set[String(mid)] = true;
+          });
+        } else {
+          set[id] = true;
+        }
+      });
+      return set;
+    }
+
+    function overlayCanvasHoverIdSet(sceneId, hitId) {
+      if (!hitId) return [];
+      if (canvas().activeOverlayGroupEditId) return [String(hitId)];
+      if (isOverlayGroupId(sceneId, hitId)) {
+        return overlayGroupMemberIdList(sceneId, hitId).map(String);
+      }
+      var grouped = resolveGroupedOverlayHit(sceneId, hitId);
+      if (grouped) return overlayGroupMemberIdList(sceneId, grouped.groupId).map(String);
+      return [String(hitId)];
+    }
+
+    function overlayHoverIdSetsEqual(a, b) {
+      a = (a || []).map(String).sort();
+      b = (b || []).map(String).sort();
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+      }
+      return true;
     }
 
     function mountGroupSelectionGizmoHtml(sceneId, groupMount, layerW, layerH) {
-      var html = '';
-      groupMount.memberIds.forEach(function (mid) {
-        var mvm = getOverlayItemVm(sceneId, mid);
-        if (!mvm) return;
-        var gizmoMetrics = null;
-        if (isShapeBoxV2Active() && isShapeType(mvm.type)) {
-          gizmoMetrics = shapeBoxToSelectionMetrics(
-            getShapeBox(mvm, layerW, layerH)
-          );
-        } else if (isShapeType(mvm.type) && buttonsLayer) {
-          gizmoMetrics = applyShapeVisibleDomBox(mid, buttonsLayer, mvm, layerW, layerH);
-        }
-        html += buildOverlaySelectionGizmoHtml(mvm, layerW, layerH, {
-          multi: true,
-          metrics: gizmoMetrics
-        });
-      });
-      var unionG = getGroupUnionFrame(sceneId, groupMount.groupId, layerW, layerH);
-      if (unionG) {
-        html += buildGroupUnionGizmoHtml(groupMount.groupId, unionG, layerW, layerH);
-      }
-      return html;
+      return '';
     }
 
     function overlayRotatedCornersPx(cx, cy, w, h, rotDeg) {
@@ -10763,13 +10806,13 @@ var ExperienciaCanvas = (function () {
       return found;
     }
 
-    var overlayCanvasHoverId = null;
+    var overlayCanvasHoverIds = null;
     var overlayCanvasHoverRaf = 0;
 
     function clearOverlayCanvasHover() {
-      overlayCanvasHoverId = null;
+      overlayCanvasHoverIds = null;
       if (!buttonsLayer) return;
-      buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
+      buttonsLayer.querySelectorAll('.is-canvas-hover').forEach(function (el) {
         el.classList.remove('is-canvas-hover');
       });
     }
@@ -10783,19 +10826,31 @@ var ExperienciaCanvas = (function () {
         clearOverlayCanvasHover();
         return;
       }
+      var sceneIdHover = canvas().selectedId;
       var hit = overlayPickTopmostAtPoint(clientX, clientY);
       if (!hit) {
         hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
       }
       var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
-        ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
-      if (nextId === String(overlayCanvasHoverId || '')) return;
-      clearOverlayCanvasHover();
-      overlayCanvasHoverId = nextId || null;
-      if (hit && hit.classList.contains('builder-exp-stage-shape') &&
-          !hit.classList.contains('is-selected')) {
-        hit.classList.add('is-canvas-hover');
+        ? String(hit.getAttribute('data-exp-stage-btn') || '')
+        : (hit ? String(hit.getAttribute('data-exp-stage-btn') || '') : '');
+      if (!nextId && hit && hit.getAttribute('data-exp-stage-btn')) {
+        nextId = String(hit.getAttribute('data-exp-stage-btn') || '');
       }
+      var hoverIds = nextId && sceneIdHover
+        ? overlayCanvasHoverIdSet(sceneIdHover, nextId)
+        : [];
+      if (overlayHoverIdSetsEqual(hoverIds, overlayCanvasHoverIds)) return;
+      clearOverlayCanvasHover();
+      overlayCanvasHoverIds = hoverIds.length ? hoverIds.slice() : null;
+      if (!hoverIds.length) return;
+      var visualSel = buildOverlayVisualSelSet(sceneIdHover, getSelectedOverlayIds());
+      hoverIds.forEach(function (hid) {
+        if (visualSel[String(hid)]) return;
+        var idEsc = String(hid).replace(/"/g, '');
+        var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        if (el) el.classList.add('is-canvas-hover');
+      });
     }
 
     function scheduleOverlayCanvasHover(clientX, clientY) {
@@ -13125,6 +13180,7 @@ var ExperienciaCanvas = (function () {
           var gizmo = handle.closest('[data-exp-gizmo]');
           var gid = gizmo.getAttribute('data-gizmo-id');
           var gtype = gizmo.getAttribute('data-gizmo-type') || 'BUTTON';
+          if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') return;
           var sceneIdG = canvas().selectedId;
           var btnG = null;
           var multiScaleIds = null;
@@ -14084,7 +14140,7 @@ var ExperienciaCanvas = (function () {
               !committedShapeResize) {
             _shapeResizeTraceCtx = { sceneId: endScene, btnId: rotBtnId };
           }
-          var blockRotatePostRefresh = wasRotate && rotatePostPipelineBlocked();
+          var blockRotatePostRefresh = wasRotate && rotatePointerupPostPipelineBlocked();
           if (shapeResizeSettled) {
             if (!syncOverlayShapeFromModel(endScene, rotBtnId)) {
               paintButtonsStage();

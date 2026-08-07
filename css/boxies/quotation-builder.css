@@ -5411,6 +5411,12 @@ body.quotation-canvas-first .builder-workspace,
   outline: none;
 }
 
+/* Edit Group — siblings stay identifiable without blocking individual gizmos. */
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn].is-group-edit-member:not(.is-selected) {
+  outline: 1px dashed rgba(255, 255, 255, 0.24);
+  outline-offset: 3px;
+}
+
 
 /* -----------------------------------------------------------
    V7.2.119 ? Guides / rulers / context menu
