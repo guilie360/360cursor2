@@ -6072,10 +6072,22 @@ var ExperienciaCanvas = (function () {
           }
         }
       } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
-          ExperienciaEngine.updateOverlayGroupTransform) {
+          transformDrag.memberWorldSnapshots && transformDrag.memberIds) {
         ExperienciaEngine.updateOverlayGroupTransform(
           state, sceneId, buttonId,
           { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
+        );
+        var deltaGroupLive = deg - (Number(transformDrag.startRot) || 0);
+        applyMultiSelectRotation(
+          sceneId,
+          transformDrag.memberIds,
+          transformDrag.memberWorldSnapshots,
+          transformDrag.startX,
+          transformDrag.startY,
+          deltaGroupLive,
+          szRot.w,
+          szRot.h,
+          { live: true }
         );
         if (multiRotateTraceEnabled()) {
           var traceDegG = Math.round(Number(deg) || 0);
@@ -6084,6 +6096,12 @@ var ExperienciaCanvas = (function () {
             traceRotateDragStage('live.group.model', transformDrag);
           }
         }
+      } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
+          ExperienciaEngine.updateOverlayGroupTransform) {
+        ExperienciaEngine.updateOverlayGroupTransform(
+          state, sceneId, buttonId,
+          { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
+        );
       } else {
         ExperienciaEngine.updateSceneButton(state, sceneId, buttonId, {
           rotation: deg,
@@ -11907,6 +11925,20 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && endedDrag.pendingDeg != null &&
                 (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
+              if (endedDrag.memberWorldSnapshots && endedDrag.memberIds) {
+                var deltaRotFinG = endedDrag.pendingDeg - (Number(endedDrag.startRot) || 0);
+                applyMultiSelectRotation(
+                  endScene,
+                  endedDrag.memberIds,
+                  endedDrag.memberWorldSnapshots,
+                  endedDrag.startX,
+                  endedDrag.startY,
+                  deltaRotFinG,
+                  endedDrag.layerW,
+                  endedDrag.layerH,
+                  { commit: true }
+                );
+              }
               setGroupOrientedFrame(endScene, rotBtnId, {
                 cx: endedDrag.startX,
                 cy: endedDrag.startY,
@@ -11914,6 +11946,7 @@ var ExperienciaCanvas = (function () {
                 h: endedDrag.startH,
                 rot: endedDrag.pendingDeg
               });
+              persist();
             }
             if (multiRotateTraceEnabled()) {
               traceRotateDragStage('pointerup.after', endedDrag);
