@@ -66,6 +66,26 @@ var ExperienciaCanvas = (function () {
     );
   }
 
+  /** Temporary — ?compareGroupCreate=1 traces overlay group creation only. */
+  function compareGroupCreateEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_COMPARE_GROUP_CREATE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('compareGroupCreate') === '0') return false;
+      if (q.get('compareGroupCreate') === '1') return true;
+    } catch (eGc) { /* ignore */ }
+    return false;
+  }
+
+  function compareGroupCreateLog(stage, payload) {
+    if (!compareGroupCreateEnabled()) return;
+    console.log(
+      '%c[COMPARE-GROUP-CREATE] ' + stage,
+      'color:#9f6;font-weight:bold;font-size:12px',
+      payload || {}
+    );
+  }
+
   /** Temporary — ?shapeDebug=0 disables. Logs shape vs gizmo divergence. */
   function shapeResizeDebugEnabled() {
     if (typeof window !== 'undefined' && window.__QE_SHAPE_RESIZE_DEBUG__ === false) return false;
@@ -8863,6 +8883,77 @@ var ExperienciaCanvas = (function () {
       traceCompareRotate('compareRotate.drag.deg' + bucket, drag);
     }
 
+    function compareGroupCreateFrame(cx, cy, w, h, rot) {
+      return {
+        cx: +(Number(cx) || 0).toFixed(4),
+        cy: +(Number(cy) || 0).toFixed(4),
+        w: +(Number(w) || 0).toFixed(4),
+        h: +(Number(h) || 0).toFixed(4),
+        rot: rot != null ? +(Number(rot) || 0).toFixed(2) : null
+      };
+    }
+
+    function traceGroupCreateBefore(sceneId, memberIds, layerW, layerH, seedFrame) {
+      if (!compareGroupCreateEnabled()) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var unionBounds = null;
+      if (n && ExperienciaEngine.computeOverlayUnionBounds) {
+        unionBounds = ExperienciaEngine.computeOverlayUnionBounds(
+          n, memberIds, layerW, layerH
+        );
+      }
+      var dragStart = seedFrame && Number(seedFrame.w) > 0
+        ? compareGroupCreateFrame(seedFrame.cx, seedFrame.cy, seedFrame.w, seedFrame.h, seedFrame.rot)
+        : null;
+      compareGroupCreateLog('before', {
+        sceneId: sceneId,
+        memberIds: (memberIds || []).slice(),
+        computeOverlayUnionBounds: unionBounds
+          ? compareGroupCreateFrame(unionBounds.cx, unionBounds.cy, unionBounds.w, unionBounds.h, 0)
+          : null,
+        seedFrame: dragStart,
+        dragStart: dragStart
+      });
+    }
+
+    function traceGroupCreateAfter(sceneId, groupId, layerW, layerH, seedFrame) {
+      if (!compareGroupCreateEnabled()) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      var stored = getStoredGroupOrientedFrame(sceneId, groupId);
+      var vm = getOverlayItemVm(sceneId, groupId);
+      var dragStart = seedFrame && Number(seedFrame.w) > 0
+        ? compareGroupCreateFrame(seedFrame.cx, seedFrame.cy, seedFrame.w, seedFrame.h, seedFrame.rot)
+        : null;
+      compareGroupCreateLog('after', {
+        sceneId: sceneId,
+        groupId: String(groupId || ''),
+        g: g ? {
+          x: +(Number(g.x) || 0).toFixed(4),
+          y: +(Number(g.y) || 0).toFixed(4),
+          width: +(Number(g.width) || 0).toFixed(4),
+          height: +(Number(g.height) || 0).toFixed(4),
+          rotation: +(Number(g.rotation) || 0).toFixed(2),
+          _transformV: Number(g._transformV) || 0
+        } : null,
+        groupOrientedFrame: stored
+          ? compareGroupCreateFrame(stored.cx, stored.cy, stored.w, stored.h, stored.rot)
+          : null,
+        storedX: vm && vm.storedX != null ? +(Number(vm.storedX)).toFixed(4) : null,
+        storedY: vm && vm.storedY != null ? +(Number(vm.storedY)).toFixed(4) : null,
+        vm: vm ? {
+          x: +(Number(vm.x) || 0).toFixed(4),
+          y: +(Number(vm.y) || 0).toFixed(4),
+          width: +(Number(vm.width) || 0).toFixed(4),
+          height: +(Number(vm.height) || 0).toFixed(4),
+          rotation: +(Number(vm.rotation) || 0).toFixed(2)
+        } : null,
+        dragStart: dragStart
+      });
+    }
+
     /** Rotate every multi-selected member around a shared pivot (Genially-style cluster rotate). */
     function applyMultiSelectRotation(sceneId, memberIds, snap, pivotX, pivotY, deltaDeg, layerW, layerH, opts) {
       opts = opts || {};
@@ -14025,16 +14116,18 @@ var ExperienciaCanvas = (function () {
         pushButtonHistory(sceneId);
         var sz = overlayLayerSize();
         var inheritedFrame = getStoredMultiSelectUnionFrame(sceneId, ids);
+        var seedFrameOpt = inheritedFrame
+          ? {
+            cx: inheritedFrame.cx,
+            cy: inheritedFrame.cy,
+            w: inheritedFrame.w,
+            h: inheritedFrame.h,
+            rot: inheritedFrame.rot
+          }
+          : null;
+        traceGroupCreateBefore(sceneId, ids, sz.w, sz.h, seedFrameOpt);
         var group = ExperienciaEngine.groupSceneOverlays(state, sceneId, ids, sz.w, sz.h, {
-          seedFrame: inheritedFrame
-            ? {
-              cx: inheritedFrame.cx,
-              cy: inheritedFrame.cy,
-              w: inheritedFrame.w,
-              h: inheritedFrame.h,
-              rot: inheritedFrame.rot
-            }
-            : null
+          seedFrame: seedFrameOpt
         });
         if (!group) return false;
         clearMultiSelectUnionFrame();
@@ -14045,6 +14138,7 @@ var ExperienciaCanvas = (function () {
           h: Number(group.height) || 20,
           rot: Number(group.rotation) || 0
         });
+        traceGroupCreateAfter(sceneId, String(group.id), sz.w, sz.h, seedFrameOpt);
         canvas().selectedButtonIds = [String(group.id)];
         canvas().selectedButtonId = String(group.id);
         canvas().activeOverlayGroupEditId = null;
