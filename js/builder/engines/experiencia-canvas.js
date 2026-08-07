@@ -9008,6 +9008,110 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function compareRotateUnionInputBox(cx, cy, w, h, rot) {
+      return {
+        cx: cx != null ? +(Number(cx)).toFixed(4) : null,
+        cy: cy != null ? +(Number(cy)).toFixed(4) : null,
+        w: w != null ? +(Number(w)).toFixed(4) : null,
+        h: h != null ? +(Number(h)).toFixed(4) : null,
+        rot: rot != null ? +(Number(rot)).toFixed(2) : null
+      };
+    }
+
+    function compareRotateUnionInputNull() {
+      return { cx: null, cy: null, w: null, h: null, rot: null };
+    }
+
+    function buildCompareRotateUnionInputs(drag, layerW, layerH) {
+      var sceneId = drag.sceneId;
+      var groupId = drag.buttonId;
+      var mode = String(drag.type || '').toUpperCase();
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var unionBounds = null;
+      if (n && ExperienciaEngine.computeOverlayUnionBounds && drag.memberIds && drag.memberIds.length) {
+        unionBounds = ExperienciaEngine.computeOverlayUnionBounds(
+          n, drag.memberIds, layerW, layerH, { useComposed: true }
+        );
+      }
+      var oriented = null;
+      if (mode === 'MULTI_SELECT') {
+        oriented = getMultiSelectUnionFrame(sceneId, drag.memberIds, layerW, layerH);
+      } else if (mode === 'OVERLAY_GROUP' || mode === 'GROUP') {
+        oriented = getGroupUnionFrame(sceneId, groupId, layerW, layerH);
+      }
+      var g = (mode === 'OVERLAY_GROUP' || mode === 'GROUP') && n
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      var vm = (mode === 'OVERLAY_GROUP' || mode === 'GROUP')
+        ? getOverlayItemVm(sceneId, groupId)
+        : null;
+      return {
+        dragStart: compareRotateUnionInputBox(
+          drag.startX, drag.startY, drag.startW, drag.startH, drag.startRot
+        ),
+        orientedCache: oriented
+          ? compareRotateUnionInputBox(oriented.cx, oriented.cy, oriented.w, oriented.h, oriented.rot)
+          : compareRotateUnionInputNull(),
+        groupModel: g
+          ? compareRotateUnionInputBox(g.x, g.y, g.width, g.height, g.rotation)
+          : compareRotateUnionInputNull(),
+        getOverlayItemVm: vm
+          ? compareRotateUnionInputBox(vm.x, vm.y, vm.width, vm.height, vm.rotation)
+          : compareRotateUnionInputNull(),
+        computeOverlayUnionBounds: unionBounds
+          ? compareRotateUnionInputBox(
+            unionBounds.cx, unionBounds.cy, unionBounds.w, unionBounds.h, 0
+          )
+          : compareRotateUnionInputNull()
+      };
+    }
+
+    function resolveUnionGizmoSource(union, inputs) {
+      if (!union || !inputs) return null;
+      var keys = [
+        'dragStart',
+        'orientedCache',
+        'groupModel',
+        'getOverlayItemVm',
+        'computeOverlayUnionBounds'
+      ];
+      var fields = ['cx', 'cy', 'w', 'h', 'rot'];
+      var byField = {};
+      var matchedKeys = {};
+      fields.forEach(function (field) {
+        var uVal = union[field];
+        var found = null;
+        keys.forEach(function (key) {
+          var inp = inputs[key];
+          if (!inp || inp[field] == null || uVal == null) return;
+          if (Number(inp[field]) === Number(uVal)) found = key;
+        });
+        byField[field] = found;
+        if (found) matchedKeys[found] = true;
+      });
+      var unique = Object.keys(matchedKeys);
+      if (unique.length === 1) return unique[0];
+      return byField;
+    }
+
+    function buildCompareRotateUnionGizmoTrace(drag, unionBox, layerW, layerH) {
+      if (!unionBox) {
+        return {
+          unionGizmo: null,
+          unionInputs: buildCompareRotateUnionInputs(drag, layerW, layerH)
+        };
+      }
+      var unionGizmo = compareRotateUnionInputBox(
+        unionBox.cx, unionBox.cy, unionBox.w, unionBox.h, unionBox.rot
+      );
+      var unionInputs = buildCompareRotateUnionInputs(drag, layerW, layerH);
+      unionGizmo.source = resolveUnionGizmoSource(unionGizmo, unionInputs);
+      return {
+        unionGizmo: unionGizmo,
+        unionInputs: unionInputs
+      };
+    }
+
     function buildFirstRotateLivePaintRender(drag, unionBox, memberPaintBoxes, layerW, layerH) {
       var sceneId = drag.sceneId;
       var children = [];
@@ -9029,15 +9133,10 @@ var ExperienciaCanvas = (function () {
           worldLayout: compareRotateChildWorldLayout(sceneId, mid, layerW, layerH)
         });
       });
+      var unionTrace = buildCompareRotateUnionGizmoTrace(drag, unionBox, layerW, layerH);
       return {
-        unionGizmo: unionBox ? {
-          via: 'paintShapeGizmoEl',
-          cx: +(Number(unionBox.cx) || 0).toFixed(4),
-          cy: +(Number(unionBox.cy) || 0).toFixed(4),
-          w: +(Number(unionBox.w) || 0).toFixed(4),
-          h: +(Number(unionBox.h) || 0).toFixed(4),
-          rot: +(Number(unionBox.rot) || 0).toFixed(2)
-        } : null,
+        unionGizmo: unionTrace.unionGizmo,
+        unionInputs: unionTrace.unionInputs,
         children: children
       };
     }
