@@ -5119,6 +5119,11 @@ var QuotationEditor = (function () {
     }
 
     function finishDrag(ev) {
+      console.log('[FINISH] enter finishDrag', {
+        draggingId: draggingId,
+        hasEv: !!ev,
+        clientY: ev && ev.clientY != null ? ev.clientY : null
+      });
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
 
       var ok = false;
@@ -5128,16 +5133,30 @@ var QuotationEditor = (function () {
         var atRelease = rowDropAt(ev.clientY, draggingId);
         if (atRelease) drop = atRelease;
       }
-      console.log('[FINISH DRAG]', { drop: drop, lastDropTarget: lastDropTarget });
+      console.log('[FINISH] drop=', drop);
+      console.log('[FINISH] lastDropTarget=', lastDropTarget);
       if (draggingId && drop) {
+        console.log('[FINISH] calling commitOutlinerDrop', {
+          dragId: draggingId,
+          drop: drop
+        });
         ok = commitOutlinerDrop(draggingId, drop);
+        console.log('[FINISH] commit returned', { ok: ok, drop: drop });
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
              dropTarget.position !== drop.position ||
              dropTarget.action !== drop.action)) {
+          console.log('[FINISH] calling commitOutlinerDrop fallback', {
+            dragId: draggingId,
+            drop: dropTarget
+          });
           ok = commitOutlinerDrop(draggingId, dropTarget);
+          console.log('[FINISH] commit returned (fallback)', { ok: ok, drop: dropTarget });
           if (ok) drop = dropTarget;
         }
+      } else {
+        if (!draggingId) console.log('[FINISH] early return: no-draggingId');
+        else if (!drop) console.log('[FINISH] early return: no-drop');
       }
       if (ok) {
         var list = listEl();
@@ -13091,7 +13110,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7780'
+        editorBuild: 'ws7781'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
