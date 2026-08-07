@@ -86,6 +86,43 @@ var ExperienciaCanvas = (function () {
     );
   }
 
+  /** ?getShapeBoxTrace=1 — step trace inside getShapeBox only (first call per page). */
+  function getShapeBoxTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_GET_SHAPE_BOX_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('getShapeBoxTrace') === '0') return false;
+      if (q.get('getShapeBoxTrace') === '1') return true;
+    } catch (eGsbt) { /* ignore */ }
+    return false;
+  }
+
+  function getShapeBoxTraceGeo(cx, cy, w, h) {
+    return {
+      cx: cx != null && isFinite(Number(cx)) ? +(Number(cx)).toFixed(4) : null,
+      cy: cy != null && isFinite(Number(cy)) ? +(Number(cy)).toFixed(4) : null,
+      w: w != null && isFinite(Number(w)) ? +(Number(w)).toFixed(4) : null,
+      h: h != null && isFinite(Number(h)) ? +(Number(h)).toFixed(4) : null
+    };
+  }
+
+  function getShapeBoxTraceEmit(input, steps, ret, returnBranch) {
+    console.log(
+      '%c[GET-SHAPE-BOX] getShapeBox.trace',
+      'color:#fc6;font-weight:bold;font-size:13px',
+      {
+        input: input,
+        steps: steps,
+        return: ret,
+        returnBranch: returnBranch,
+        vmToReturnDelta: ret && input && input.vmWidth != null && ret.w != null
+          ? { w: +((ret.w - input.vmWidth)).toFixed(4), h: ret.h != null && input.vmHeight != null
+            ? +((ret.h - input.vmHeight)).toFixed(4) : null }
+          : null
+      }
+    );
+  }
+
   /** Temporary — ?compareGroupCreate=1 traces overlay group creation only. */
   function compareGroupCreateEnabled() {
     if (typeof window !== 'undefined' && window.__QE_COMPARE_GROUP_CREATE__ === false) return false;
@@ -1457,37 +1494,175 @@ var ExperienciaCanvas = (function () {
    * { cx, cy, w, h, rot, kind, gizmoBox }
    */
   function getShapeBox(vm, layerW, layerH) {
-    if (!vm) return null;
+    var traceOn = getShapeBoxTraceEnabled() &&
+      typeof window !== 'undefined' &&
+      !window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__;
+    var steps = traceOn ? [] : null;
+    function traceStep(sourceLine, branch, geo, extra) {
+      if (!traceOn) return;
+      var row = {
+        sourceLine: sourceLine,
+        branch: branch,
+        geo: getShapeBoxTraceGeo(geo.cx, geo.cy, geo.w, geo.h)
+      };
+      if (extra) {
+        Object.keys(extra).forEach(function (k) { row[k] = extra[k]; });
+      }
+      steps.push(row);
+    }
+
+    if (!vm) {
+      if (traceOn) {
+        window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+        getShapeBoxTraceEmit(
+          { vm: null, layerW: layerW, layerH: layerH },
+          [{ sourceLine: '1514', branch: 'earlyReturn !vm', geo: getShapeBoxTraceGeo(null, null, null, null) }],
+          null,
+          'earlyReturn !vm'
+        );
+      }
+      return null;
+    }
+
     var kind = String(vm.type || '').toUpperCase();
-    if (!isShapeType(kind)) return null;
+    if (!isShapeType(kind)) {
+      if (traceOn) {
+        window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+        getShapeBoxTraceEmit(
+          { vmType: kind, layerW: layerW, layerH: layerH },
+          [{ sourceLine: '1528', branch: 'earlyReturn !isShapeType', geo: getShapeBoxTraceGeo(null, null, null, null) }],
+          null,
+          'earlyReturn !isShapeType'
+        );
+      }
+      return null;
+    }
+
     var rot = Number(vm.rotation) || 0;
     var ix = vm._ix || vm;
+    var traceInput = traceOn ? {
+      vmType: kind,
+      vmX: vm.x != null ? +(Number(vm.x)).toFixed(4) : null,
+      vmY: vm.y != null ? +(Number(vm.y)).toFixed(4) : null,
+      vmStoredX: vm.storedX != null ? +(Number(vm.storedX)).toFixed(4) : null,
+      vmStoredY: vm.storedY != null ? +(Number(vm.storedY)).toFixed(4) : null,
+      vmWidth: vm.width != null ? +(Number(vm.width)).toFixed(4) : null,
+      vmHeight: vm.height != null ? +(Number(vm.height)).toFixed(4) : null,
+      ixWidth: ix.width != null ? +(Number(ix.width)).toFixed(4) : null,
+      ixHeight: ix.height != null ? +(Number(ix.height)).toFixed(4) : null,
+      shapeContentBox: !!(ix.shapeContentBox || vm.shapeContentBox),
+      rotation: +(rot).toFixed(2),
+      layerW: layerW,
+      layerH: layerH
+    } : null;
+
     var cx = vm.storedX != null ? Number(vm.storedX) : Number(vm.x) || 50;
     var cy = vm.storedY != null ? Number(vm.storedY) : Number(vm.y) || 50;
+    traceStep('1559-1560', 'assign cx/cy from storedX|storedY or x|y', {
+      cx: cx, cy: cy, w: vm.width, h: vm.height
+    }, {
+      usedStoredX: vm.storedX != null,
+      usedStoredY: vm.storedY != null
+    });
+
     if (ix.shapeContentBox || vm.shapeContentBox) {
+      traceStep('1568', 'branch: shapeContentBox=true', { cx: cx, cy: cy, w: null, h: null }, {
+        ixShapeContentBox: !!ix.shapeContentBox,
+        vmShapeContentBox: !!vm.shapeContentBox
+      });
       var w = Number(vm.width != null && !isNaN(Number(vm.width)) ? vm.width : ix.width);
       var h = Number(vm.height != null && !isNaN(Number(vm.height)) ? vm.height : ix.height);
+      traceStep('1573-1574', 'assign w/h from vm.width|ix.width and vm.height|ix.height', {
+        cx: cx, cy: cy, w: w, h: h
+      }, {
+        wSource: vm.width != null && !isNaN(Number(vm.width)) ? 'vm.width' : 'ix.width',
+        hSource: vm.height != null && !isNaN(Number(vm.height)) ? 'vm.height' : 'ix.height'
+      });
       if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
-        return { cx: cx, cy: cy, w: w, h: h, rot: rot, kind: kind, gizmoBox: true };
+        var retDirect = { cx: cx, cy: cy, w: w, h: h, rot: rot, kind: kind, gizmoBox: true };
+        if (traceOn) {
+          window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+          traceStep('1581-1590', 'return contentBox.direct (w/h unchanged)', {
+            cx: cx, cy: cy, w: w, h: h
+          });
+          getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(cx, cy, w, h), 'contentBox.direct');
+        }
+        return retDirect;
       }
       if (!isNaN(w) && w > 0) {
+        traceStep('1592', 'branch: w>0 but h invalid → shapePixelSquareDims', {
+          cx: cx, cy: cy, w: w, h: h
+        }, { wIn: w, hIn: h });
         var sq = shapePixelSquareDims(w, h, layerW, layerH);
         if (sq) {
-          return { cx: cx, cy: cy, w: sq.w, h: sq.h, rot: rot, kind: kind, gizmoBox: true };
+          traceStep('1598-1601', 'assign w/h from shapePixelSquareDims result', {
+            cx: cx, cy: cy, w: sq.w, h: sq.h
+          }, { sqW: sq.w, sqH: sq.h, deltaW: +((sq.w - w)).toFixed(4) });
+          var retSq = { cx: cx, cy: cy, w: sq.w, h: sq.h, rot: rot, kind: kind, gizmoBox: true };
+          if (traceOn) {
+            window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+            getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(cx, cy, sq.w, sq.h), 'contentBox.shapePixelSquareDims');
+          }
+          return retSq;
         }
+        traceStep('1608', 'shapePixelSquareDims returned null — fall through', {
+          cx: cx, cy: cy, w: w, h: h
+        });
+      } else {
+        traceStep('1612', 'branch: shapeContentBox but w/h not both valid — fall through', {
+          cx: cx, cy: cy, w: w, h: h
+        });
       }
+    } else {
+      traceStep('1617', 'branch: shapeContentBox=false → shapeVisibleBoundsMetrics path', {
+        cx: cx, cy: cy, w: vm.width, h: vm.height
+      });
     }
+
     var vb = shapeVisibleBoundsMetrics(vm, layerW, layerH);
-    if (!vb) return null;
-    return {
-      cx: vb.gx,
-      cy: vb.gy,
-      w: vb.gw,
-      h: vb.gh,
+    if (!vb) {
+      if (traceOn) {
+        window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+        traceStep('1623', 'earlyReturn shapeVisibleBoundsMetrics=null', {
+          cx: cx, cy: cy, w: null, h: null
+        });
+        getShapeBoxTraceEmit(traceInput, steps, null, 'earlyReturn vb=null');
+      }
+      return null;
+    }
+    traceStep('1633', 'shapeVisibleBoundsMetrics returned vb', {
+      cx: cx, cy: cy, w: vm.width, h: vm.height
+    }, {
+      vbGx: vb.gx, vbGy: vb.gy, vbGw: vb.gw, vbGh: vb.gh
+    });
+    var retCx = vb.gx;
+    var retCy = vb.gy;
+    var retW = vb.gw;
+    var retH = vb.gh;
+    traceStep('1638-1641', 'assign cx/cy/w/h from vb.gx/gy/gw/gh', {
+      cx: retCx, cy: retCy, w: retW, h: retH
+    }, {
+      deltaFromVm: traceInput ? {
+        cx: +((retCx - (traceInput.vmStoredX != null ? traceInput.vmStoredX : traceInput.vmX))).toFixed(4),
+        cy: +((retCy - (traceInput.vmStoredY != null ? traceInput.vmStoredY : traceInput.vmY))).toFixed(4),
+        w: traceInput.vmWidth != null ? +((retW - traceInput.vmWidth)).toFixed(4) : null,
+        h: traceInput.vmHeight != null ? +((retH - traceInput.vmHeight)).toFixed(4) : null
+      } : null
+    });
+    var retVb = {
+      cx: retCx,
+      cy: retCy,
+      w: retW,
+      h: retH,
       rot: rot,
       kind: kind,
       gizmoBox: true
     };
+    if (traceOn) {
+      window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
+      getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(retCx, retCy, retW, retH), 'shapeVisibleBoundsMetrics');
+    }
+    return retVb;
   }
 
   function shapeBoxToSelectionMetrics(box) {
