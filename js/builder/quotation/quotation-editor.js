@@ -4737,8 +4737,7 @@ var QuotationEditor = (function () {
             ' data-qe-layer-fold="' + escapeHtml(ix.id) + '"' +
             ' aria-label="' + (opts.open ? 'Contraer grupo' : 'Expandir grupo') + '">' +
             (opts.open ? '▾' : '▸') + '</button>')
-          : '<span class="qe-outliner__fold-spacer" aria-hidden="true"></span>') +
-        layerTypeIconHtml(t) +
+          : '') +
         '<button type="button" class="qe-outliner__sel' + (selected ? ' is-active' : '') + '"' +
           ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' + nameHtml + '</button>' +
       '</li>';
@@ -12570,7 +12569,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7769'
+        editorBuild: 'ws7770'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */

@@ -943,7 +943,7 @@
 
 .qe-outliner__row {
   display: grid;
-  grid-template-columns: 14px 16px 16px minmax(0, 1fr);
+  grid-template-columns: 14px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   margin: 0 0 1px;
@@ -953,7 +953,7 @@
 }
 
 .qe-outliner__row.is-nested {
-  padding-left: 8px;
+  padding-left: 20px;
 }
 
 .qe-outliner__row:hover {
@@ -993,12 +993,9 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Group header rows — same grid/hit area as item rows (only fold + type icon differ). */
+/* Group header — drag + fold chevron + name */
 .qe-outliner__row.is-group {
-  display: grid;
-  grid-template-columns: 16px 16px minmax(0, 1fr);
-  align-items: center;
-  gap: 4px;
+  grid-template-columns: 14px 16px minmax(0, 1fr);
   margin: 0 0 1px;
   padding: 2px 4px;
   border: 0;
