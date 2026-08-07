@@ -11077,7 +11077,7 @@ var ExperienciaCanvas = (function () {
         var sidEsc = String(sid).replace(/"/g, '');
         var sib = buttonsLayer.querySelector('[data-exp-stage-btn="' + sidEsc + '"]');
         if (!sib || !sib.classList.contains('builder-exp-stage-shape')) return;
-        if (sib.classList.contains('is-selected')) return;
+        if (!isPreview && sib.classList.contains('is-selected')) return;
         if (sib.classList.contains('is-canvas-hover')) return;
         sib.classList.add('is-canvas-hover-sibling');
       });
