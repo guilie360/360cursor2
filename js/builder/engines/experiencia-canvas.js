@@ -6018,6 +6018,7 @@ var ExperienciaCanvas = (function () {
           rot: Number(drag.pendingDeg) || 0,
           kind: dragType
         };
+        traceFirstGroupRotateLivePaint(drag, groupUnionBox, layerW, layerH);
         if (drag.liveRefs && drag.liveRefs.unionGizmo) {
           paintShapeGizmoEl(drag.liveRefs.unionGizmo, groupUnionBox, layerW, layerH);
           drag.liveRefs.unionGizmo.classList.remove('is-sizing');
@@ -6109,6 +6110,7 @@ var ExperienciaCanvas = (function () {
           state, sceneId, buttonId,
           { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
         );
+        traceFirstGroupRotateAfterLiveUpdate(transformDrag, deg);
         if (multiRotateTraceEnabled()) {
           var traceDegG = Math.round(Number(deg) || 0);
           if (transformDrag.lastRotateTraceDeg !== traceDegG) {
@@ -8873,6 +8875,145 @@ var ExperienciaCanvas = (function () {
     function traceCompareRotate(stage, drag) {
       if (!compareRotateEnabled() || !isClusterRotateDrag(drag)) return;
       compareRotateLog(stage, buildCompareRotatePayload(stage, drag));
+    }
+
+    function compactGroupModelFields(sceneId, groupId) {
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction(n, groupId);
+      var vm = getOverlayItemVm(sceneId, groupId);
+      return {
+        x: g ? +(Number(g.x) || 0).toFixed(4) : null,
+        y: g ? +(Number(g.y) || 0).toFixed(4) : null,
+        width: g ? +(Number(g.width) || 0).toFixed(4) : null,
+        height: g ? +(Number(g.height) || 0).toFixed(4) : null,
+        rotation: g ? +(Number(g.rotation) || 0).toFixed(2) : null,
+        storedX: vm && vm.storedX != null ? +(Number(vm.storedX)).toFixed(4)
+          : (vm ? +(Number(vm.x) || 0).toFixed(4) : null),
+        storedY: vm && vm.storedY != null ? +(Number(vm.storedY)).toFixed(4)
+          : (vm ? +(Number(vm.y) || 0).toFixed(4) : null),
+        _transformV: g ? (Number(g._transformV) || 0) : null
+      };
+    }
+
+    function compactMemberVmFields(vm) {
+      if (!vm) return null;
+      return {
+        x: +(Number(vm.x) || 0).toFixed(4),
+        y: +(Number(vm.y) || 0).toFixed(4),
+        width: vm.width != null ? +(Number(vm.width)).toFixed(4) : null,
+        height: vm.height != null ? +(Number(vm.height)).toFixed(4) : null,
+        rotation: +(Number(vm.rotation) || 0).toFixed(2),
+        storedX: vm.storedX != null ? +(Number(vm.storedX)).toFixed(4) : null,
+        storedY: vm.storedY != null ? +(Number(vm.storedY)).toFixed(4) : null
+      };
+    }
+
+    /** Exact paint payload paintRotateVm would apply (shapeBox or metrics). */
+    function buildPaintRotateVmPayload(vm, layerW, layerH) {
+      if (!vm) return null;
+      var rot = Number(vm.rotation) || 0;
+      var t = String(vm.type || 'BUTTON').toUpperCase();
+      if (isShapeType(t) && isShapeBoxV2Active()) {
+        var boxShape = getShapeBox(vm, layerW, layerH);
+        if (boxShape) {
+          return {
+            via: 'paintShapeGizmoEl',
+            cx: +(Number(boxShape.cx) || 0).toFixed(4),
+            cy: +(Number(boxShape.cy) || 0).toFixed(4),
+            w: +(Number(boxShape.w) || 0).toFixed(4),
+            h: +(Number(boxShape.h) || 0).toFixed(4),
+            rot: +(rot).toFixed(2)
+          };
+        }
+      }
+      var gm = overlaySelectionMetrics(vm, layerW, layerH);
+      if (!gm) return null;
+      return {
+        via: 'overlaySelectionMetrics',
+        cx: +(Number(gm.gx) || 0).toFixed(4),
+        cy: +(Number(gm.gy) || 0).toFixed(4),
+        w: +(Number(gm.gw) || 0).toFixed(4),
+        h: +(Number(gm.gh) || 0).toFixed(4),
+        rot: +(Number(gm.grot) || 0).toFixed(2)
+      };
+    }
+
+    function traceFirstGroupRotatePipeline(stage, drag, extra) {
+      if (!compareRotateEnabled() || !isGroupRotateDrag(drag)) return;
+      var payload = {
+        pendingDeg: drag.pendingDeg != null ? +(Number(drag.pendingDeg)).toFixed(2) : null,
+        startRot: +(Number(drag.startRot) || 0).toFixed(2),
+        x: null,
+        y: null,
+        width: null,
+        height: null,
+        rotation: null,
+        storedX: null,
+        storedY: null,
+        _transformV: null
+      };
+      var model = compactGroupModelFields(drag.sceneId, drag.buttonId);
+      Object.keys(model).forEach(function (k) {
+        payload[k] = model[k];
+      });
+      if (extra) {
+        Object.keys(extra).forEach(function (k) {
+          payload[k] = extra[k];
+        });
+      }
+      compareRotateLog(stage, payload);
+    }
+
+    function resetFirstGroupRotatePipelineFlags(drag) {
+      if (!drag) return;
+      drag.firstRotateLiveUpdateLogged = false;
+      drag.firstRotateLivePaintLogged = false;
+    }
+
+    function traceFirstGroupRotatePointerdown(drag) {
+      if (!compareRotateEnabled() || !isGroupRotateDrag(drag)) return;
+      resetFirstGroupRotatePipelineFlags(drag);
+      traceFirstGroupRotatePipeline('compareRotate.pointerdown', drag);
+    }
+
+    function traceFirstGroupRotateAfterLiveUpdate(drag, deg) {
+      if (!compareRotateEnabled() || !isGroupRotateDrag(drag)) return;
+      if (drag.firstRotateLiveUpdateLogged) return;
+      drag.firstRotateLiveUpdateLogged = true;
+      traceFirstGroupRotatePipeline('compareRotate.firstLiveUpdate', drag, {
+        step: 'updateOverlayGroupTransform(rotation,live:true)',
+        appliedDeg: +(Number(deg) || 0).toFixed(2)
+      });
+    }
+
+    function traceFirstGroupRotateLivePaint(drag, groupUnionBox, layerW, layerH) {
+      if (!compareRotateEnabled() || !isGroupRotateDrag(drag)) return;
+      if (drag.firstRotateLivePaintLogged) return;
+      drag.firstRotateLivePaintLogged = true;
+      var sceneId = drag.sceneId;
+      var children = [];
+      (drag.memberIds || []).forEach(function (mid) {
+        var vm = getOverlayItemVm(sceneId, mid);
+        children.push({
+          id: String(mid),
+          model: compactMemberVmFields(vm),
+          paintRotateVm: buildPaintRotateVmPayload(vm, layerW, layerH)
+        });
+      });
+      traceFirstGroupRotatePipeline('compareRotate.firstLivePaint', drag, {
+        step: 'paintRotateLiveFromDrag',
+        render: {
+          unionGizmo: groupUnionBox ? {
+            via: 'paintShapeGizmoEl',
+            cx: +(Number(groupUnionBox.cx) || 0).toFixed(4),
+            cy: +(Number(groupUnionBox.cy) || 0).toFixed(4),
+            w: +(Number(groupUnionBox.w) || 0).toFixed(4),
+            h: +(Number(groupUnionBox.h) || 0).toFixed(4),
+            rot: +(Number(groupUnionBox.rot) || 0).toFixed(2)
+          } : null,
+          children: children
+        }
+      });
     }
 
     function traceCompareRotateDuringDrag(drag, deg) {
@@ -12028,10 +12169,14 @@ var ExperienciaCanvas = (function () {
               gtype,
               transformMemberIds
             );
-            if (compareRotateEnabled() &&
-                (gtype === 'MULTI_SELECT' || gtype === 'OVERLAY_GROUP' || gtype === 'GROUP')) {
-              captureCompareRotateBaseline(transformDrag);
-              traceCompareRotate('compareRotate.pointerdown', transformDrag);
+            if (compareRotateEnabled()) {
+              if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
+                captureCompareRotateBaseline(transformDrag);
+                traceFirstGroupRotatePointerdown(transformDrag);
+              } else if (gtype === 'MULTI_SELECT') {
+                captureCompareRotateBaseline(transformDrag);
+                traceCompareRotate('compareRotate.pointerdown', transformDrag);
+              }
             } else if (multiRotateTraceEnabled()) {
               if (gtype === 'OVERLAY_GROUP' || gtype === 'GROUP') {
                 captureGroupChildModelBaseline(transformDrag);
