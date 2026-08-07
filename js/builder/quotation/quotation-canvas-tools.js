@@ -605,7 +605,10 @@ var QuotationCanvasTools = (function () {
 
   function refreshToolPageTabs(host, state, config) {
     var scroll = host.querySelector('.qe-checklist-tabs__scroll');
-    if (scroll) scroll.innerHTML = toolPagesTabButtonsHtml(state, config);
+    if (!scroll) return;
+    var savedLeft = scroll.scrollLeft;
+    scroll.innerHTML = toolPagesTabButtonsHtml(state, config);
+    scroll.scrollLeft = savedLeft;
   }
 
   function closeToolPageMenu() {
@@ -746,7 +749,6 @@ var QuotationCanvasTools = (function () {
       persist();
       refreshToolPageTabs(host, state, config);
       syncToolPageTabs(host, state, config);
-      scrollActiveToolPageTabIntoView(host, config);
     }
 
     function autoScrollToolPageTabs(clientX) {
@@ -1089,6 +1091,14 @@ var QuotationCanvasTools = (function () {
       if (row) row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
     }
 
+    function autoScrollChecklist(clientY) {
+      var rect = list.getBoundingClientRect();
+      var edge = 28;
+      var speed = 12;
+      if (clientY < rect.top + edge) list.scrollTop -= speed;
+      else if (clientY > rect.bottom - edge) list.scrollTop += speed;
+    }
+
     function commitReorder() {
       if (!draggingId || !dropTargetId || draggingId === dropTargetId) {
         clearDropMarkers();
@@ -1130,6 +1140,7 @@ var QuotationCanvasTools = (function () {
 
         function onMove(ev) {
           paintDropMarker(rowDropAt(ev.clientY));
+          autoScrollChecklist(ev.clientY);
         }
         function onUp(ev) {
           handle.removeEventListener('pointermove', onMove);
@@ -1194,7 +1205,9 @@ var QuotationCanvasTools = (function () {
 
     function refreshChecklistRows() {
       var items = activeItems();
+      var savedTop = list.scrollTop;
       list.innerHTML = items.map(checklistRowHtml).join('');
+      list.scrollTop = savedTop;
       syncChecklistFields();
       bindChecklistDragReorder(list, items, persist, refreshChecklistRows);
     }

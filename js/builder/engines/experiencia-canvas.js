@@ -6919,6 +6919,31 @@ var ExperienciaCanvas = (function () {
         drag.keepRatio
       );
         if (fin) {
+        if (fin.gm && !drag.snapBypass) {
+          var snappedGm = applyOverlayResizeSnapToGm(
+            drag,
+            fin.gm,
+            drag.pendingShapeMode || drag.mode,
+            drag.pendingShapeLayerW,
+            drag.pendingShapeLayerH
+          );
+          fin.gm.gx = snappedGm.gx;
+          fin.gm.gy = snappedGm.gy;
+          fin.gm.gw = snappedGm.gw;
+          fin.gm.gh = snappedGm.gh;
+          if (fin.patch) {
+            fin.patch.x = snappedGm.gx;
+            fin.patch.y = snappedGm.gy;
+            fin.patch.width = snappedGm.gw;
+            fin.patch.height = snappedGm.gh;
+          }
+          if (fin.box) {
+            fin.box.cx = snappedGm.gx;
+            fin.box.cy = snappedGm.gy;
+            fin.box.w = snappedGm.gw;
+            fin.box.h = snappedGm.gh;
+          }
+        }
         drag.lastShapeDx = drag.pendingShapeDx;
         drag.lastShapeDy = drag.pendingShapeDy;
         paintShapeLiveFast(fin, drag.liveRefs, drag.pendingShapeLayerW, drag.pendingShapeLayerH);
@@ -8320,6 +8345,126 @@ var ExperienciaCanvas = (function () {
         w: Math.max(1.5, right - left),
         h: Math.max(1.5, bottom - top)
       };
+    }
+
+    function overlayGmToPxBox(gm, layerW, layerH) {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var gx = Number(gm.gx);
+      var gy = Number(gm.gy);
+      var gw = Number(gm.gw);
+      var gh = Number(gm.gh);
+      return {
+        Lpx: ((gx - gw / 2) / 100) * layerW,
+        Rpx: ((gx + gw / 2) / 100) * layerW,
+        Tpx: ((gy - gh / 2) / 100) * layerH,
+        Bpx: ((gy + gh / 2) / 100) * layerH
+      };
+    }
+
+    function overlayPxBoxToGm(Lpx, Rpx, Tpx, Bpx, layerW, layerH) {
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var wPx = Math.max(1, Rpx - Lpx);
+      var hPx = Math.max(1, Bpx - Tpx);
+      return {
+        gx: (((Lpx + Rpx) / 2) / layerW) * 100,
+        gy: (((Tpx + Bpx) / 2) / layerH) * 100,
+        gw: (wPx / layerW) * 100,
+        gh: (hPx / layerH) * 100
+      };
+    }
+
+    function applyOverlayResizeSnapPx(drag, Lpx, Rpx, Tpx, Bpx, mode, layerW, layerH) {
+      if (!overlaySnapEnabled || !drag) {
+        return { Lpx: Lpx, Rpx: Rpx, Tpx: Tpx, Bpx: Bpx };
+      }
+      layerW = Math.max(1, Number(layerW) || 1000);
+      layerH = Math.max(1, Number(layerH) || 1000);
+      var minWpx = Math.max(8, (1.5 / 100) * layerW);
+      var minHpx = Math.max(8, (1.5 / 100) * layerH);
+      var Lpct = (Lpx / layerW) * 100;
+      var Rpct = (Rpx / layerW) * 100;
+      var Tpct = (Tpx / layerH) * 100;
+      var Bpct = (Bpx / layerH) * 100;
+      var resizeLines = collectOverlayAlignLines(
+        drag.sceneId,
+        drag.buttonId,
+        {
+          L: Lpct,
+          R: Rpct,
+          T: Tpct,
+          B: Bpct,
+          cx: (Lpct + Rpct) / 2,
+          cy: (Tpct + Bpct) / 2
+        }
+      );
+      return snapResizeEdgesPx(
+        Lpx, Rpx, Tpx, Bpx, mode,
+        resizeLines.x, resizeLines.y,
+        layerW, layerH,
+        {
+          snapPx: 14,
+          minWpx: minWpx,
+          minHpx: minHpx,
+          fixL: drag.startLpx,
+          fixR: drag.startRpx,
+          fixT: drag.startTpx,
+          fixB: drag.startBpx
+        }
+      );
+    }
+
+    function reapplyOverlayResizeKeepRatioPx(drag, Lpx, Rpx, Tpx, Bpx, mode, layerW, layerH) {
+      if (!drag || !drag.keepRatio) {
+        return { Lpx: Lpx, Rpx: Rpx, Tpx: Tpx, Bpx: Bpx };
+      }
+      var moveE = mode.indexOf('e') >= 0;
+      var moveW = mode.indexOf('w') >= 0;
+      var moveS = mode.indexOf('s') >= 0;
+      var moveN = mode.indexOf('n') >= 0;
+      if (!shouldCoupleShapeResizeAxes(drag.type, moveE, moveW, moveN, moveS, true)) {
+        return { Lpx: Lpx, Rpx: Rpx, Tpx: Tpx, Bpx: Bpx };
+      }
+      var startLpx = drag.startLpx;
+      var startRpx = drag.startRpx;
+      var startTpx = drag.startTpx;
+      var startBpx = drag.startBpx;
+      var wPx = Math.max(1, Rpx - Lpx);
+      var hPx = Math.max(1, Bpx - Tpx);
+      var ratioSnap = (!isShapeType(drag.type) && isSquareShapeType(drag.type))
+        ? 1
+        : (drag.startHpx / Math.max(1, drag.startWpx));
+      if ((moveE || moveW) && !(moveN || moveS)) {
+        hPx = wPx * ratioSnap;
+        var midYpx = (startTpx + startBpx) / 2;
+        Tpx = midYpx - hPx / 2;
+        Bpx = midYpx + hPx / 2;
+        if (moveE && !moveW) { Lpx = startLpx; Rpx = Lpx + wPx; }
+        if (moveW && !moveE) { Rpx = startRpx; Lpx = Rpx - wPx; }
+      } else if ((moveN || moveS) && !(moveE || moveW)) {
+        wPx = hPx / ratioSnap;
+        var midXpx = (startLpx + startRpx) / 2;
+        Lpx = midXpx - wPx / 2;
+        Rpx = midXpx + wPx / 2;
+        if (moveS && !moveN) { Tpx = startTpx; Bpx = Tpx + hPx; }
+        if (moveN && !moveS) { Bpx = startBpx; Tpx = Bpx - hPx; }
+      }
+      return { Lpx: Lpx, Rpx: Rpx, Tpx: Tpx, Bpx: Bpx };
+    }
+
+    function applyOverlayResizeSnapToGm(drag, gm, mode, layerW, layerH) {
+      if (!gm || !drag) return gm;
+      var boxPx = overlayGmToPxBox(gm, layerW, layerH);
+      var snapped = applyOverlayResizeSnapPx(
+        drag, boxPx.Lpx, boxPx.Rpx, boxPx.Tpx, boxPx.Bpx, mode, layerW, layerH
+      );
+      snapped = reapplyOverlayResizeKeepRatioPx(
+        drag, snapped.Lpx, snapped.Rpx, snapped.Tpx, snapped.Bpx, mode, layerW, layerH
+      );
+      return overlayPxBoxToGm(
+        snapped.Lpx, snapped.Rpx, snapped.Tpx, snapped.Bpx, layerW, layerH
+      );
     }
 
     /** Shift while dragging = lock to H or V; axis re-picks when Shift is pressed again. */
@@ -12818,6 +12963,7 @@ var ExperienciaCanvas = (function () {
             var moveN = mode.indexOf('n') >= 0;
 
             if (shapeLiveResize) {
+              transformDrag.snapBypass = !!(ev.shiftKey || ev.altKey);
               transformDrag.lastDxPx = dxPx;
               transformDrag.lastDyPx = dyPx;
               if (!transformDrag.shapeSnapDone) {
@@ -12917,37 +13063,10 @@ var ExperienciaCanvas = (function () {
               hPx = Bpx - Tpx;
             }
 
-            /* Snap — shapes skip live snap (causes bounce); commit on pointerup. */
-            if (overlaySnapEnabled && !ev.shiftKey && !(ev && ev.altKey) && !shapeLiveResize) {
-              var Lpct = (Lpx / layerW) * 100;
-              var Rpct = (Rpx / layerW) * 100;
-              var Tpct = (Tpx / layerH) * 100;
-              var Bpct = (Bpx / layerH) * 100;
-              var resizeLines = collectOverlayAlignLines(
-                transformDrag.sceneId,
-                transformDrag.buttonId,
-                {
-                  L: Lpct,
-                  R: Rpct,
-                  T: Tpct,
-                  B: Bpct,
-                  cx: (Lpct + Rpct) / 2,
-                  cy: (Tpct + Bpct) / 2
-                }
-              );
-              var snappedPx = snapResizeEdgesPx(
-                Lpx, Rpx, Tpx, Bpx, mode,
-                resizeLines.x, resizeLines.y,
-                layerW, layerH,
-                {
-                  snapPx: 14,
-                  minWpx: minWpx,
-                  minHpx: minHpx,
-                  fixL: startLpx,
-                  fixR: startRpx,
-                  fixT: startTpx,
-                  fixB: startBpx
-                }
+            /* Snap resize edges to peer centers/edges + guides (same targets as move). */
+            if (overlaySnapEnabled && !ev.shiftKey && !(ev && ev.altKey)) {
+              var snappedPx = applyOverlayResizeSnapPx(
+                transformDrag, Lpx, Rpx, Tpx, Bpx, mode, layerW, layerH
               );
               Lpx = snappedPx.Lpx;
               Rpx = snappedPx.Rpx;
@@ -12959,24 +13078,15 @@ var ExperienciaCanvas = (function () {
                 shouldCoupleShapeResizeAxes(
                   transformDrag.type, moveE, moveW, moveN, moveS, true
                 )) {
-                var ratioSnap = (!isShapeType(transformDrag.type) && isSquareShapeType(transformDrag.type))
-                  ? 1
-                  : (transformDrag.startHpx / Math.max(1, transformDrag.startWpx));
-                if ((moveE || moveW) && !(moveN || moveS)) {
-                  hPx = wPx * ratioSnap;
-                  var midYpx2 = (startTpx + startBpx) / 2;
-                  Tpx = midYpx2 - hPx / 2;
-                  Bpx = midYpx2 + hPx / 2;
-                  if (moveE && !moveW) { Lpx = startLpx; Rpx = Lpx + wPx; }
-                  if (moveW && !moveE) { Rpx = startRpx; Lpx = Rpx - wPx; }
-                } else if ((moveN || moveS) && !(moveE || moveW)) {
-                  wPx = hPx / ratioSnap;
-                  var midXpx2 = (startLpx + startRpx) / 2;
-                  Lpx = midXpx2 - wPx / 2;
-                  Rpx = midXpx2 + wPx / 2;
-                  if (moveS && !moveN) { Tpx = startTpx; Bpx = Tpx + hPx; }
-                  if (moveN && !moveS) { Bpx = startBpx; Tpx = Bpx - hPx; }
-                }
+                var ratioKeep = reapplyOverlayResizeKeepRatioPx(
+                  transformDrag, Lpx, Rpx, Tpx, Bpx, mode, layerW, layerH
+                );
+                Lpx = ratioKeep.Lpx;
+                Rpx = ratioKeep.Rpx;
+                Tpx = ratioKeep.Tpx;
+                Bpx = ratioKeep.Bpx;
+                wPx = Rpx - Lpx;
+                hPx = Bpx - Tpx;
               }
             }
 
@@ -14051,6 +14161,36 @@ var ExperienciaCanvas = (function () {
           );
           if (!wasRotate && endScene && rotBtnId) {
             if (isShapeType(endType) && liveShapePatch && shapePatchChanged) {
+              if (overlaySnapEnabled && !(ev && ev.altKey) && !(ev && ev.shiftKey)) {
+                var shapeCx = Number(liveShapePatch.x);
+                var shapeCy = Number(liveShapePatch.y);
+                var shapeEw = Number(liveShapePatch.width);
+                var shapeEh = Number(liveShapePatch.height);
+                if (isFinite(shapeCx) && isFinite(shapeCy) &&
+                    isFinite(shapeEw) && isFinite(shapeEh)) {
+                  var shapeLinesF = collectOverlayAlignLines(endScene, rotBtnId, {
+                    L: shapeCx - shapeEw / 2,
+                    R: shapeCx + shapeEw / 2,
+                    T: shapeCy - shapeEh / 2,
+                    B: shapeCy + shapeEh / 2,
+                    cx: shapeCx,
+                    cy: shapeCy
+                  });
+                  var shapeSnappedF = snapBoxToSceneGuides(
+                    shapeCx, shapeCy, shapeEw, shapeEh, endMode, {
+                      linesX: shapeLinesF.x,
+                      linesY: shapeLinesF.y,
+                      snapDist: 1.25
+                    }
+                  );
+                  liveShapePatch = Object.assign({}, liveShapePatch, {
+                    x: shapeSnappedF.x,
+                    y: shapeSnappedF.y,
+                    width: shapeSnappedF.w,
+                    height: shapeSnappedF.h
+                  });
+                }
+              }
               if (shapeResizeTraceEnabled()) {
                 _shapeResizeTraceCtx = { sceneId: endScene, btnId: rotBtnId };
                 shapeResizeTrace('4.updateSceneButton(call)', {
