@@ -4134,14 +4134,71 @@ var QuotationEditor = (function () {
     return true;
   }
 
+  /** Enter inline rename for an outliner row (double-click + context menu share this). */
+  function startOutlinerLabelEdit(id) {
+    if (!id || !findSceneInteraction(id)) return false;
+    state.editingElementLabelId = String(id);
+    refreshLayersPanel();
+    return true;
+  }
+
   function renameSceneInteractionLabel(id, nextLabel) {
     var ix = findSceneInteraction(id);
     if (!ix) return false;
     ix.label = String(nextLabel || '').trim() || layerTypeLabel(ix.type);
     markDirtyLocal();
-    pushOutlinerScenesToShim();
+    if (expOverlay && expOverlay.syncFromScenes) {
+      expOverlay.syncFromScenes();
+      if (expOverlay.refresh) expOverlay.refresh();
+    } else {
+      pushOutlinerScenesToShim();
+    }
     refreshLayersPanel();
     return true;
+  }
+
+  function deleteOverlayGroupFromPanel(groupId) {
+    if (!groupId || !isOverlayGroupIx(findSceneInteraction(groupId))) return false;
+    if (!dissolveOverlayGroupById(groupId)) return false;
+    state.selectedOverlayIds = (state.selectedOverlayIds || []).filter(function (sid) {
+      return String(sid) !== String(groupId);
+    });
+    if (state.expHasSelection && !(state.selectedOverlayIds || []).length) {
+      state.expHasSelection = false;
+    }
+    if (expOverlay && expOverlay.clearSelection) expOverlay.clearSelection();
+    markDirtyLocal();
+    refreshDockOnly();
+    return true;
+  }
+
+  function openOutlinerGroupContextMenu(groupId, clientX, clientY) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    var ix = findSceneInteraction(groupId);
+    if (!ix || !isOverlayGroupIx(ix)) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: elementDisplayName(ix),
+      items: [
+        { id: 'rename', label: 'Cambiar nombre' },
+        {
+          id: 'delete',
+          label: 'Eliminar grupo',
+          danger: true,
+          separatorBefore: true
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'rename') {
+          startOutlinerLabelEdit(groupId);
+          return;
+        }
+        if (id === 'delete') {
+          deleteOverlayGroupFromPanel(groupId);
+        }
+      }
+    });
   }
 
   function assignInteractionToGroup(memberId, groupId, beforeMemberId) {
@@ -9218,11 +9275,21 @@ var QuotationEditor = (function () {
       var nameEl = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-name]') : null;
       if (!nameEl || !body.contains(nameEl)) return;
       ev.preventDefault();
+      ev.stopPropagation();
       var rid = nameEl.getAttribute('data-qe-outliner-name');
-      if (rid) {
-        state.editingElementLabelId = rid;
-        refreshLayersPanel();
-      }
+      if (rid) startOutlinerLabelEdit(rid);
+    });
+
+    body.addEventListener('contextmenu', function (ev) {
+      var row = ev.target && ev.target.closest
+        ? ev.target.closest('[data-qe-outliner-row][data-qe-outliner-kind="group"]')
+        : null;
+      if (!row || !body.contains(row)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var groupId = row.getAttribute('data-qe-outliner-group') ||
+        row.getAttribute('data-qe-outliner-row');
+      if (groupId) openOutlinerGroupContextMenu(groupId, ev.clientX, ev.clientY);
     });
 
     body.addEventListener('keydown', function (ev) {
