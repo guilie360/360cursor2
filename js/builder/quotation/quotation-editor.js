@@ -4138,11 +4138,18 @@ var QuotationEditor = (function () {
     state.openOverlayGroups[groupId] = true;
     state.editingElementLabelId = groupId;
     markDirtyLocal();
-    if (expOverlay && expOverlay.syncFromScenes) {
-      try { expOverlay.syncFromScenes(); } catch (eSync) { /* ignore */ }
-    }
+    pushOutlinerScenesToShim();
     refreshLayersPanel();
     return groupId;
+  }
+
+  /** Push scene SSOT to shim without canvas refresh (avoids pull wiping new groups). */
+  function pushOutlinerScenesToShim() {
+    if (!expOverlay || !expOverlay.shim) return;
+    if (typeof QuotationExperienciaBridge === 'undefined' ||
+        !QuotationExperienciaBridge.pushScenesToShim) return;
+    var scenes = state.backpackMode ? [getBackpackSceneRef()] : state.scenes;
+    QuotationExperienciaBridge.pushScenesToShim(expOverlay.shim, scenes);
   }
 
   function dissolveOverlayGroupById(groupId) {
@@ -4160,7 +4167,9 @@ var QuotationEditor = (function () {
     var ix = findSceneInteraction(id);
     if (!ix) return false;
     ix.label = String(nextLabel || '').trim() || layerTypeLabel(ix.type);
-    syncOverlaySceneFromPanel();
+    markDirtyLocal();
+    pushOutlinerScenesToShim();
+    refreshLayersPanel();
     return true;
   }
 
@@ -4565,8 +4574,6 @@ var QuotationEditor = (function () {
     if (!ix || !ix.id) return '';
     var t = String(ix.type || '').toUpperCase();
     var label = elementDisplayName(ix);
-    var vis = ix.visible !== false && ix.enabled !== false;
-    var locked = !!ix.locked;
     var selected = !!opts.selected;
     var editing = String(state.editingElementLabelId || '') === String(ix.id);
     var nameHtml = editing
@@ -4578,10 +4585,7 @@ var QuotationEditor = (function () {
       '<li class="qe-outliner__row' +
         (selected ? ' is-selected' : '') +
         (opts.nested ? ' is-nested' : '') +
-        (opts.isGroup ? ' is-group' : '') +
-        (opts.isDropInto ? ' is-drop-into' : '') +
-        (opts.dropAbove ? ' is-drop-above' : '') +
-        (opts.dropBelow ? ' is-drop-below' : '') + '"' +
+        (opts.isGroup ? ' is-group' : '') + '"' +
         ' data-qe-outliner-row="' + escapeHtml(ix.id) + '"' +
         ' data-qe-layer="' + escapeHtml(ix.id) + '"' +
         ' data-qe-layer-type="' + escapeHtml(t || 'UNKNOWN') + '"' +
@@ -4593,24 +4597,9 @@ var QuotationEditor = (function () {
             ' aria-label="' + (opts.open ? 'Contraer grupo' : 'Expandir grupo') + '">' +
             (opts.open ? '▾' : '▸') + '</button>')
           : '<span class="qe-outliner__fold-spacer" aria-hidden="true"></span>') +
-        '<span class="qe-outliner__drag" data-qe-outliner-drag="' + escapeHtml(ix.id) + '"' +
-          ' aria-hidden="true" title="Arrastrar"></span>' +
         layerTypeIconHtml(t) +
         '<button type="button" class="qe-outliner__sel' + (selected ? ' is-active' : '') + '"' +
           ' data-qe-layer-sel="' + escapeHtml(ix.id) + '">' + nameHtml + '</button>' +
-        '<span class="qe-outliner__actions">' +
-          '<button type="button" class="qe-outliner__vis' + (vis ? '' : ' is-off') + '"' +
-            ' data-qe-layer-vis="' + escapeHtml(ix.id) + '"' +
-            ' title="' + (vis ? 'Ocultar' : 'Mostrar') + '" aria-label="' +
-            (vis ? 'Ocultar' : 'Mostrar') + '">👁</button>' +
-          '<button type="button" class="qe-outliner__lock' + (locked ? ' is-on' : '') + '"' +
-            ' data-qe-layer-lock="' + escapeHtml(ix.id) + '"' +
-            ' title="' + (locked ? 'Desbloquear' : 'Bloquear') + '" aria-label="' +
-            (locked ? 'Desbloquear' : 'Bloquear') + '">' + (locked ? '🔒' : '🔓') + '</button>' +
-          '<button type="button" class="qe-outliner__del" data-qe-layer-del="' + escapeHtml(ix.id) + '"' +
-            ' title="' + (opts.isGroup ? 'Eliminar grupo' : 'Eliminar') + '"' +
-            ' aria-label="Eliminar">🗑</button>' +
-        '</span>' +
       '</li>';
   }
 
@@ -9190,8 +9179,6 @@ var QuotationEditor = (function () {
     if (body.dataset.qeLayersBound === '1') return;
     body.dataset.qeLayersBound = '1';
 
-    bindOutlinerDnD(body);
-
     body.addEventListener('click', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
@@ -9199,61 +9186,24 @@ var QuotationEditor = (function () {
       var createGroup = t.closest('[data-qe-outliner-create-group]');
       if (createGroup) {
         ev.preventDefault();
+        ev.stopPropagation();
         createEmptyOverlayGroup();
         return;
       }
 
       if (!t.closest('[data-qe-layers], [data-qe-outliner]')) return;
 
-      var vis = t.closest('[data-qe-layer-vis]');
-      var lock = t.closest('[data-qe-layer-lock]');
-      var del = t.closest('[data-qe-layer-del]');
       var sel = t.closest('[data-qe-layer-sel]');
       var fold = t.closest('[data-qe-layer-fold]');
 
       if (fold) {
+        ev.preventDefault();
+        ev.stopPropagation();
         var fid = fold.getAttribute('data-qe-layer-fold');
         if (fid) {
           if (!state.openOverlayGroups) state.openOverlayGroups = {};
           state.openOverlayGroups[fid] = !(state.openOverlayGroups[fid] !== false);
           refreshLayersPanel();
-        }
-        return;
-      }
-
-      if (vis) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var vid = vis.getAttribute('data-qe-layer-vis');
-        if (!vid || vid === 'hero') return;
-        var ixVis = findSceneInteraction(vid);
-        if (!ixVis) return;
-        var nextVis = !(ixVis.visible !== false && ixVis.enabled !== false);
-        patchSceneInteractionFlags(vid, { visible: nextVis });
-        return;
-      }
-
-      if (lock) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var lid = lock.getAttribute('data-qe-layer-lock');
-        if (!lid) return;
-        var ixLock = findSceneInteraction(lid);
-        if (!ixLock) return;
-        patchSceneInteractionFlags(lid, { locked: !ixLock.locked });
-        return;
-      }
-
-      if (del) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        var did = del.getAttribute('data-qe-layer-del');
-        if (!did) return;
-        var ixDel = findSceneInteraction(did);
-        if (ixDel && isOverlayGroupIx(ixDel)) {
-          dissolveOverlayGroupById(did);
-        } else {
-          deleteSceneOverlayById(did);
         }
         return;
       }
@@ -9300,8 +9250,11 @@ var QuotationEditor = (function () {
       var inp = ev.target && ev.target.closest ? ev.target.closest('[data-qe-outliner-rename]') : null;
       if (!inp || !body.contains(inp)) return;
       var id = inp.getAttribute('data-qe-outliner-rename');
-      state.editingElementLabelId = null;
-      renameSceneInteractionLabel(id, inp.value);
+      var nextLabel = inp.value;
+      if (String(state.editingElementLabelId || '') === String(id)) {
+        state.editingElementLabelId = null;
+      }
+      renameSceneInteractionLabel(id, nextLabel);
     });
   }
 

@@ -938,11 +938,11 @@
 
 .qe-outliner__row {
   display: grid;
-  grid-template-columns: 16px 14px 16px minmax(0, 1fr) auto;
+  grid-template-columns: 16px 16px minmax(0, 1fr);
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin: 0 0 1px;
-  padding: 1px 2px;
+  padding: 2px 4px;
   border-radius: 6px;
   position: relative;
 }
