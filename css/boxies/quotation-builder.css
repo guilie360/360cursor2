@@ -936,6 +936,11 @@
   min-height: 0;
 }
 
+/* Outliner wins over legacy Capas list when both classes are present. */
+.qe-outliner .qe-outliner__list.qe-layers__list {
+  padding: 4px 6px 8px;
+}
+
 .qe-outliner__row {
   display: grid;
   grid-template-columns: 16px 16px minmax(0, 1fr);
@@ -988,11 +993,38 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Group header rows — same grid/hit area as item rows (only fold + type icon differ). */
+.qe-outliner__row.is-group {
+  display: grid;
+  grid-template-columns: 16px 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 1px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  overflow: visible;
+  pointer-events: auto;
+  min-height: 0;
+  height: auto;
+}
+
 .qe-outliner__fold,
 .qe-outliner__fold-spacer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 16px;
+  min-width: 16px;
+  max-width: 16px;
   height: 22px;
   flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: auto;
 }
 
 .qe-outliner__fold {
@@ -1002,10 +1034,9 @@
   color: rgba(255, 255, 255, 0.45);
   font: inherit;
   font-size: 10px;
-  line-height: 22px;
+  line-height: 1;
   text-align: center;
   cursor: pointer;
-  padding: 0;
 }
 
 .qe-outliner__fold:hover {
@@ -1046,9 +1077,9 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
 }
 
 .qe-outliner__ico--group {
-  border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .qe-outliner__ico--shape {
