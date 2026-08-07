@@ -123,7 +123,106 @@ var ExperienciaCanvas = (function () {
     );
   }
 
-  /** ?vmPipelineTrace=1 — one log: overlayWorldLayoutRaw vs getOverlayItemVm vs paintRotateVm.vm */
+  /** ?paintShapeTrace=1 — one log: paintRotateVm delivers vs paintShapeNodeEl receives vs DOM style */
+  function paintShapeTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_PAINT_SHAPE_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('paintShapeTrace') === '0') return false;
+      if (q.get('paintShapeTrace') === '1') return true;
+    } catch (ePst) { /* ignore */ }
+    return false;
+  }
+
+  function paintShapeTraceBox(box) {
+    if (!box) return null;
+    return {
+      cx: box.cx != null ? +(Number(box.cx)).toFixed(4) : null,
+      cy: box.cy != null ? +(Number(box.cy)).toFixed(4) : null,
+      w: box.w != null ? +(Number(box.w)).toFixed(4) : null,
+      h: box.h != null ? +(Number(box.h)).toFixed(4) : null,
+      rot: box.rot != null ? +(Number(box.rot)).toFixed(2) : null
+    };
+  }
+
+  function paintShapeTraceReadDom(el) {
+    if (!el) return { parsed: null, raw: null };
+    var rotStr = el.style.getPropertyValue('--btn-rot');
+    var rot = rotStr ? parseFloat(rotStr) : 0;
+    return {
+      parsed: {
+        cx: el.style.left ? +(parseFloat(el.style.left)).toFixed(4) : null,
+        cy: el.style.top ? +(parseFloat(el.style.top)).toFixed(4) : null,
+        w: el.style.width ? +(parseFloat(el.style.width)).toFixed(4) : null,
+        h: el.style.height ? +(parseFloat(el.style.height)).toFixed(4) : null,
+        rot: isFinite(rot) ? +(rot).toFixed(2) : null
+      },
+      raw: {
+        left: el.style.left || null,
+        top: el.style.top || null,
+        width: el.style.width || null,
+        height: el.style.height || null,
+        btnRot: rotStr || null,
+        transform: el.style.transform || null,
+        overflow: el.style.overflow || null
+      }
+    };
+  }
+
+  function paintShapeTraceEmit(slot, received, dom) {
+    var levels = [
+      { step: 'paintRotateVm.delivers', geo: slot.delivered },
+      { step: 'paintShapeNodeEl.receives', geo: received },
+      { step: 'dom.styleWritten', geo: dom.parsed, style: dom.raw }
+    ];
+    var eps = 0.02;
+    function delta(a, b) {
+      var d = {};
+      ['cx', 'cy', 'w', 'h', 'rot'].forEach(function (k) {
+        if (!a || !b || a[k] == null || b[k] == null) return;
+        d[k] = +((Number(b[k]) - Number(a[k]))).toFixed(k === 'rot' ? 2 : 4);
+      });
+      return d;
+    }
+    function mismatch(d) {
+      if (!d || !Object.keys(d).length) return false;
+      if (d.cx != null && Math.abs(d.cx) > eps) return true;
+      if (d.cy != null && Math.abs(d.cy) > eps) return true;
+      if (d.w != null && Math.abs(d.w) > eps) return true;
+      if (d.h != null && Math.abs(d.h) > eps) return true;
+      if (d.rot != null && Math.abs(d.rot) > 0.5) return true;
+      return false;
+    }
+    var firstBreak = null;
+    var i;
+    for (i = 1; i < levels.length; i++) {
+      var d = delta(levels[i - 1].geo, levels[i].geo);
+      if (mismatch(d)) {
+        firstBreak = {
+          lastGood: levels[i - 1].step,
+          firstBad: levels[i].step,
+          delta: d,
+          lastGoodBox: levels[i - 1].geo,
+          firstBadBox: levels[i].geo
+        };
+        break;
+      }
+    }
+    console.log(
+      '%c[PAINT-SHAPE] paintShape.trace',
+      'color:#f9f;font-weight:bold;font-size:13px',
+      {
+        memberId: slot.memberId || null,
+        sceneId: slot.sceneId || null,
+        levels: levels,
+        firstBreak: firstBreak,
+        verdict: firstBreak
+          ? ('First mismatch after ' + firstBreak.lastGood + ' → check ' + firstBreak.firstBad)
+          : 'paintRotateVm, paintShapeNodeEl and DOM style all match — suspect post-paint mutation'
+      }
+    );
+  }
+
   function vmPipelineTraceEnabled() {
     if (typeof window !== 'undefined' && window.__QE_VM_PIPELINE_TRACE__ === false) return false;
     try {
@@ -1693,6 +1792,13 @@ var ExperienciaCanvas = (function () {
   function paintShapeNodeEl(el, box, vm, layerW, layerH, opts) {
     if (!el || !box || !vm) return;
     opts = opts || {};
+    var traceSlot = paintShapeTraceEnabled() &&
+      typeof window !== 'undefined' &&
+      window.__QE_PAINT_SHAPE_TRACE_SLOT__ &&
+      window.__QE_PAINT_SHAPE_TRACE_SLOT__.active
+      ? window.__QE_PAINT_SHAPE_TRACE_SLOT__
+      : null;
+    var traceReceived = traceSlot ? paintShapeTraceBox(box) : null;
     el.classList.remove('is-live-moving');
     if (opts.liveSizing) {
       el.classList.add('is-live-sizing');
@@ -1706,6 +1812,11 @@ var ExperienciaCanvas = (function () {
     el.style.width = box.w + '%';
     el.style.height = box.h + '%';
     el.style.setProperty('--btn-rot', box.rot + 'deg');
+    if (traceSlot) {
+      window.__QE_PAINT_SHAPE_TRACE_EMITTED__ = true;
+      window.__QE_PAINT_SHAPE_TRACE_SLOT__.active = false;
+      paintShapeTraceEmit(traceSlot, traceReceived, paintShapeTraceReadDom(el));
+    }
     var hit = el.querySelector('.builder-exp-stage-shape__hit');
     if (hit) {
       hit.style.cssText = shapeHitAreaStyle(
