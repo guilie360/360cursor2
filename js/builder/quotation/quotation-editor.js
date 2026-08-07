@@ -4097,7 +4097,6 @@ var QuotationEditor = (function () {
 
   function syncOutlinerPanelToCanvas(engineFn) {
     healOverlayGroupMembership(activeScene());
-    syncInteractionPaintOrderFromOutliner();
     markDirtyLocal();
     pushOutlinerScenesToShim();
     healShimOverlayGroupMembership();
@@ -4632,6 +4631,7 @@ var QuotationEditor = (function () {
     groups.splice(insertAt, 0, moved);
 
     scene.interactions = groups.concat(others);
+    markDirtyLocal();
     return true;
   }
 
@@ -4710,7 +4710,6 @@ var QuotationEditor = (function () {
     }
     if (from < 0 || to < 0) return false;
 
-    var prevOrder = free.map(function (ix) { return String(ix.id); }).join('|');
     var movedFree = free.splice(from, 1)[0];
     var insertAt = to;
     if (from < to) insertAt--;
@@ -4719,15 +4718,11 @@ var QuotationEditor = (function () {
     if (insertAt > free.length) insertAt = free.length;
     free.splice(insertAt, 0, movedFree);
 
-    var nextOrder = free.map(function (ix) { return String(ix.id); }).join('|');
-    if (prevOrder === nextOrder) return false;
-
     var grouped = (scene.interactions || []).filter(function (ix) {
       return ix && !isOverlayGroupIx(ix) && !!ix.groupId;
     });
 
     scene.interactions = groups.concat(grouped, free);
-    syncInteractionPaintOrderFromOutliner();
     markDirtyLocal();
     return true;
   }
@@ -4770,14 +4765,12 @@ var QuotationEditor = (function () {
     if (insertAt < 0) insertAt = 0;
     if (insertAt > ids.length) insertAt = ids.length;
     ids.splice(insertAt, 0, moved);
-    if (ids.join('|') === group.memberIds.map(String).join('|')) return false;
     group.memberIds = ids;
     ids.forEach(function (mid) {
       var m = findSceneInteraction(mid);
       if (m) m.groupId = groupId;
     });
     healOverlayGroupMembership(activeScene());
-    syncInteractionPaintOrderFromOutliner();
     markDirtyLocal();
     return true;
   }
@@ -13036,7 +13029,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7778'
+        editorBuild: 'ws7779'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
