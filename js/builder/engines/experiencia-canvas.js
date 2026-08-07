@@ -123,7 +123,17 @@ var ExperienciaCanvas = (function () {
     );
   }
 
-  /** Temporary — ?compareGroupCreate=1 traces overlay group creation only. */
+  /** ?vmPipelineTrace=1 — one log: overlayWorldLayoutRaw vs getOverlayItemVm vs paintRotateVm.vm */
+  function vmPipelineTraceEnabled() {
+    if (typeof window !== 'undefined' && window.__QE_VM_PIPELINE_TRACE__ === false) return false;
+    try {
+      var q = new URLSearchParams(window.location.search);
+      if (q.get('vmPipelineTrace') === '0') return false;
+      if (q.get('vmPipelineTrace') === '1') return true;
+    } catch (eVpt) { /* ignore */ }
+    return false;
+  }
+
   function compareGroupCreateEnabled() {
     if (typeof window !== 'undefined' && window.__QE_COMPARE_GROUP_CREATE__ === false) return false;
     try {
@@ -6261,6 +6271,113 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    function emitVmPipelineTrace(sceneId, memberId, vmPaint, layerW, layerH) {
+      function boxFromWorld() {
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        var ix = n && ExperienciaEngine.getInteraction(n, memberId);
+        var world = (ExperienciaEngine.overlayWorldLayoutRaw && ix)
+          ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+          : null;
+        if (!world) return null;
+        return {
+          step: 'overlayWorldLayoutRaw',
+          cx: world.x,
+          cy: world.y,
+          w: world.width,
+          h: world.height,
+          rot: world.rotation
+        };
+      }
+      function boxFromVm(step, vm) {
+        if (!vm) {
+          return { step: step, cx: null, cy: null, w: null, h: null, rot: null };
+        }
+        return {
+          step: step,
+          cx: vm.storedX != null ? Number(vm.storedX) : Number(vm.x) || 50,
+          cy: vm.storedY != null ? Number(vm.storedY) : Number(vm.y) || 50,
+          w: vm.width != null ? Number(vm.width) : null,
+          h: vm.height != null ? Number(vm.height) : null,
+          rot: Number(vm.rotation) || 0
+        };
+      }
+      function normalizeBox(b) {
+        if (!b) return null;
+        return {
+          step: b.step,
+          cx: b.cx != null && isFinite(Number(b.cx)) ? +(Number(b.cx)).toFixed(4) : null,
+          cy: b.cy != null && isFinite(Number(b.cy)) ? +(Number(b.cy)).toFixed(4) : null,
+          w: b.w != null && isFinite(Number(b.w)) ? +(Number(b.w)).toFixed(4) : null,
+          h: b.h != null && isFinite(Number(b.h)) ? +(Number(b.h)).toFixed(4) : null,
+          rot: b.rot != null && isFinite(Number(b.rot)) ? +(Number(b.rot)).toFixed(2) : null
+        };
+      }
+      function boxDelta(a, b) {
+        var d = {};
+        ['cx', 'cy', 'w', 'h', 'rot'].forEach(function (k) {
+          if (!a || !b || a[k] == null || b[k] == null) return;
+          d[k] = +((Number(b[k]) - Number(a[k]))).toFixed(k === 'rot' ? 2 : 4);
+        });
+        return d;
+      }
+      function hasMismatch(delta) {
+        if (!delta || !Object.keys(delta).length) return false;
+        var eps = 0.02;
+        if (delta.cx != null && Math.abs(delta.cx) > eps) return true;
+        if (delta.cy != null && Math.abs(delta.cy) > eps) return true;
+        if (delta.w != null && Math.abs(delta.w) > eps) return true;
+        if (delta.h != null && Math.abs(delta.h) > eps) return true;
+        if (delta.rot != null && Math.abs(delta.rot) > 0.5) return true;
+        return false;
+      }
+      function suspectBetween(prevStep, nextStep) {
+        var key = prevStep + ' → ' + nextStep;
+        var map = {
+          'overlayWorldLayoutRaw → getOverlayItemVm': 'getOverlayItemVm → getSceneOverlayItem',
+          'getOverlayItemVm → paintRotateVm.vm': 'paintRotateLiveFromDrag (vm arg vs fresh getOverlayItemVm)'
+        };
+        return map[key] || key;
+      }
+
+      var vmFetched = getOverlayItemVm(sceneId, memberId);
+      var rawLevels = [
+        boxFromWorld(),
+        boxFromVm('getOverlayItemVm', vmFetched),
+        boxFromVm('paintRotateVm.vm', vmPaint)
+      ];
+      var levels = rawLevels.map(normalizeBox);
+      var firstBreak = null;
+      var i;
+      for (i = 1; i < levels.length; i++) {
+        if (!levels[i - 1] || !levels[i]) continue;
+        var delta = boxDelta(levels[i - 1], levels[i]);
+        if (hasMismatch(delta)) {
+          firstBreak = {
+            lastGood: levels[i - 1].step,
+            firstBad: levels[i].step,
+            suspectFn: suspectBetween(levels[i - 1].step, levels[i].step),
+            delta: delta,
+            lastGoodBox: levels[i - 1],
+            firstBadBox: levels[i]
+          };
+          break;
+        }
+      }
+      console.log(
+        '%c[VM-PIPELINE] vmPipeline.trace',
+        'color:#6f6;font-weight:bold;font-size:13px',
+        {
+          memberId: String(memberId),
+          sceneId: sceneId,
+          levels: levels,
+          firstBreak: firstBreak,
+          verdict: firstBreak
+            ? ('First mismatch after ' + firstBreak.lastGood + ' → suspect: ' + firstBreak.suspectFn)
+            : 'All three levels match within epsilon'
+        }
+      );
+    }
+
     function paintRotateLiveFromDrag(drag) {
       if (!drag || !buttonsLayer) return;
       var sceneId = drag.sceneId;
@@ -6271,7 +6388,17 @@ var ExperienciaCanvas = (function () {
 
       function paintRotateVm(el, gizmoEl, vm) {
         if (!vm) return;
-        var bisectMemberId = el && el.getAttribute('data-exp-stage-btn');
+        var traceMemberId = el && el.getAttribute('data-exp-stage-btn');
+        if (vmPipelineTraceEnabled() &&
+            (dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') &&
+            drag.mode === 'rotate' &&
+            typeof window !== 'undefined' &&
+            !window.__QE_VM_PIPELINE_TRACE_EMITTED__ &&
+            traceMemberId) {
+          window.__QE_VM_PIPELINE_TRACE_EMITTED__ = true;
+          emitVmPipelineTrace(sceneId, traceMemberId, vm, layerW, layerH);
+        }
+        var bisectMemberId = traceMemberId;
         var doBisect = compareRotateBisectEnabled() &&
           (dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') &&
           drag.mode === 'rotate' &&
