@@ -5969,53 +5969,47 @@ var ExperienciaCanvas = (function () {
       }
 
       if ((dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') && drag.mode === 'rotate') {
-        var deltaGroupPaint = Number(drag.pendingDeg) - (Number(drag.startRot) || 0);
-        var rotBoxesG = computeMultiSelectLiveRotateBoxes(
-          drag.memberWorldSnapshots,
-          drag.startX,
-          drag.startY,
-          deltaGroupPaint,
-          drag.pendingDeg,
-          layerW,
-          layerH,
-          {
-            cx: drag.startX,
-            cy: drag.startY,
-            w: drag.startW,
-            h: drag.startH
-          }
-        );
-        if (drag.liveRefs) {
-          paintMultiSelectLiveFast(drag.liveRefs, rotBoxesG, layerW, layerH);
-          if (multiRotateTraceEnabled()) {
-            var traceDegGp = Math.round(Number(drag.pendingDeg) || 0);
-            if (drag.lastRotatePaintTraceDeg !== traceDegGp) {
-              drag.lastRotatePaintTraceDeg = traceDegGp;
-              multiRotateTrace('live.group.paint', {
-                pendingDeg: traceDegGp,
-                unionPaint: rotBoxesG.union,
-                members: rotBoxesG.members
-              });
-            }
-          }
-          if (drag.liveRefs.unionGizmo) {
-            drag.liveRefs.unionGizmo.classList.remove('is-sizing');
-            drag.liveRefs.unionGizmo.classList.add('is-rotating');
-          }
-          (drag.liveRefs.items || []).forEach(function (item) {
-            if (item.gizmo) item.gizmo.classList.remove('is-sizing');
-          });
+        var groupUnionBox = {
+          cx: drag.startX,
+          cy: drag.startY,
+          w: drag.startW,
+          h: drag.startH,
+          rot: Number(drag.pendingDeg) || 0,
+          kind: dragType
+        };
+        if (drag.liveRefs && drag.liveRefs.unionGizmo) {
+          paintShapeGizmoEl(drag.liveRefs.unionGizmo, groupUnionBox, layerW, layerH);
+          drag.liveRefs.unionGizmo.classList.remove('is-sizing');
+          drag.liveRefs.unionGizmo.classList.add('is-rotating');
         } else if (refs && refs.gizmo) {
-          var groupUnionBox = rotBoxesG.union || {
-            cx: drag.startX,
-            cy: drag.startY,
-            w: drag.startW,
-            h: drag.startH,
-            rot: Number(drag.pendingDeg) || 0,
-            kind: dragType
-          };
           paintShapeGizmoEl(refs.gizmo, groupUnionBox, layerW, layerH);
           refs.gizmo.classList.add('is-rotating');
+        }
+        if (multiRotateTraceEnabled()) {
+          var traceDegGp = Math.round(Number(drag.pendingDeg) || 0);
+          if (drag.lastRotatePaintTraceDeg !== traceDegGp) {
+            drag.lastRotatePaintTraceDeg = traceDegGp;
+            multiRotateTrace('live.group.paint', {
+              pendingDeg: traceDegGp,
+              unionPaint: groupUnionBox,
+              membersVm: snapshotRotateContext(
+                sceneId, drag.buttonId, dragType, drag, layerW, layerH
+              ).members
+            });
+          }
+        }
+        if (drag.liveRefs && drag.liveRefs.items) {
+          drag.liveRefs.items.forEach(function (item) {
+            paintRotateVm(item.el, item.gizmo, getOverlayItemVm(sceneId, item.id));
+            if (item.gizmo) {
+              item.gizmo.classList.remove('is-sizing');
+              item.gizmo.classList.add('is-rotating');
+            }
+          });
+        } else if (refs && refs.members) {
+          refs.members.forEach(function (m) {
+            paintRotateVm(m.el, null, getOverlayItemVm(sceneId, m.id));
+          });
         }
         return;
       }
@@ -6082,29 +6076,10 @@ var ExperienciaCanvas = (function () {
           }
         }
       } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
-          transformDrag.memberWorldSnapshots && transformDrag.memberIds) {
+          ExperienciaEngine.updateOverlayGroupTransform) {
         ExperienciaEngine.updateOverlayGroupTransform(
           state, sceneId, buttonId,
-          {
-            rotation: deg,
-            x: transformDrag.startX,
-            y: transformDrag.startY,
-            layerW: szRot.w,
-            layerH: szRot.h,
-            live: true
-          }
-        );
-        var deltaGroupLive = deg - (Number(transformDrag.startRot) || 0);
-        applyMultiSelectRotation(
-          sceneId,
-          transformDrag.memberIds,
-          transformDrag.memberWorldSnapshots,
-          transformDrag.startX,
-          transformDrag.startY,
-          deltaGroupLive,
-          szRot.w,
-          szRot.h,
-          { live: true }
+          { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
         );
         if (multiRotateTraceEnabled()) {
           var traceDegG = Math.round(Number(deg) || 0);
@@ -8837,6 +8812,10 @@ var ExperienciaCanvas = (function () {
         drag.layerW,
         drag.layerH
       );
+      if (isGroupResize && boxes.union) {
+        boxes.union.rot = Number(drag.startRot) || 0;
+        boxes.union.kind = drag.type || 'OVERLAY_GROUP';
+      }
       var liveKey = drag.pendingMultiSx + '|' + drag.pendingMultiSy + '|' +
         (drag.pendingMultiOuter ? drag.pendingMultiOuter.w : 0);
       if (drag.lastMultiLiveKey === liveKey) return;
@@ -11488,11 +11467,12 @@ var ExperienciaCanvas = (function () {
             var nG = ExperienciaEngine.getNode(state, sceneIdG);
             var gIx = ExperienciaEngine.getInteraction(nG, gid);
             memberSnapshots = ExperienciaEngine.snapshotOverlayGroupLocals(nG, gIx);
-            if (ExperienciaEngine.snapshotOverlayGroupMemberWorlds && gIx) {
-              memberWorldSnapshots = ExperienciaEngine.snapshotOverlayGroupMemberWorlds(
-                nG, gIx, layerW0, layerH0
-              );
-            }
+            transformMemberIds = ExperienciaEngine.resolveOverlayGroupMemberIds
+              ? ExperienciaEngine.resolveOverlayGroupMemberIds(nG, gIx, { repair: true })
+              : (gIx.memberIds || []).map(String);
+            memberWorldSnapshots = snapshotMultiSelectMembers(
+              sceneIdG, transformMemberIds, layerW0, layerH0
+            );
             if (gIx) {
               gIx._baseWidth = Number(gIx.width) || gIx._baseWidth || 20;
               gIx._baseHeight = Number(gIx.height) || gIx._baseHeight || 20;
@@ -11514,9 +11494,6 @@ var ExperienciaCanvas = (function () {
               startT0 = startY0 - startH0 / 2;
               startB0 = startY0 + startH0 / 2;
             }
-            transformMemberIds = ExperienciaEngine.resolveOverlayGroupMemberIds
-              ? ExperienciaEngine.resolveOverlayGroupMemberIds(nG, gIx, { repair: true })
-              : (memberWorldSnapshots ? Object.keys(memberWorldSnapshots) : []);
             liveRefs = buildMultiSelectResizeLiveRefs(
               sceneIdG, transformMemberIds, layerW0, layerH0
             );
@@ -11949,33 +11926,6 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && endedDrag.pendingDeg != null &&
                 (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
-              if (ExperienciaEngine.updateOverlayGroupTransform) {
-                ExperienciaEngine.updateOverlayGroupTransform(
-                  state, endScene, rotBtnId,
-                  {
-                    rotation: endedDrag.pendingDeg,
-                    x: endedDrag.startX,
-                    y: endedDrag.startY,
-                    layerW: endedDrag.layerW,
-                    layerH: endedDrag.layerH,
-                    live: false
-                  }
-                );
-              }
-              if (endedDrag.memberWorldSnapshots && endedDrag.memberIds) {
-                var deltaRotFinG = endedDrag.pendingDeg - (Number(endedDrag.startRot) || 0);
-                applyMultiSelectRotation(
-                  endScene,
-                  endedDrag.memberIds,
-                  endedDrag.memberWorldSnapshots,
-                  endedDrag.startX,
-                  endedDrag.startY,
-                  deltaRotFinG,
-                  endedDrag.layerW,
-                  endedDrag.layerH,
-                  { commit: true }
-                );
-              }
               setGroupOrientedFrame(endScene, rotBtnId, {
                 cx: endedDrag.startX,
                 cy: endedDrag.startY,
@@ -11983,6 +11933,15 @@ var ExperienciaCanvas = (function () {
                 h: endedDrag.startH,
                 rot: endedDrag.pendingDeg
               });
+              if (ExperienciaEngine.relocalizeOverlayGroupMembers) {
+                var nRel = ExperienciaEngine.getNode(state, endScene);
+                var gRel = nRel && ExperienciaEngine.getInteraction(nRel, rotBtnId);
+                if (nRel && gRel) {
+                  ExperienciaEngine.relocalizeOverlayGroupMembers(
+                    nRel, gRel, endedDrag.layerW, endedDrag.layerH
+                  );
+                }
+              }
               persist();
             }
             if (multiRotateTraceEnabled()) {

@@ -1635,7 +1635,10 @@ var ExperienciaEngine = (function () {
 
   function absoluteToLocalOverlay(n, group, child, layerW, layerH) {
     ensureOverlayGroupDefaults(n, group, layerW, layerH, { skipSync: true });
-    var world = overlayWorldLayoutAbsolute(child, layerW, layerH);
+    var world = overlayWorldLayoutRaw(n, child, layerW, layerH);
+    if (!world) {
+      world = overlayWorldLayoutAbsolute(child, layerW, layerH);
+    }
     if (!world) return null;
     var inv = worldPointToLocal(group, world.x, world.y, layerW, layerH);
     return {
@@ -1645,21 +1648,23 @@ var ExperienciaEngine = (function () {
     };
   }
 
-  /** Same visible center as snapshotOverlayGroupMemberWorlds / multi-select rotate. */
-  function localOverlayFromMemberWorld(n, group, child, layerW, layerH) {
-    ensureOverlayGroupDefaults(n, group, layerW, layerH, { skipSync: true });
-    var world = overlayWorldLayoutRaw(n, child, layerW, layerH);
-    if (!world) return null;
-    var rect = overlayMemberUnionRect(child, world, layerW, layerH);
-    var wx = rect ? rect.cx : world.x;
-    var wy = rect ? rect.cy : world.y;
-    var wrot = rect ? rect.rotation : world.rotation;
-    var inv = worldPointToLocal(group, wx, wy, layerW, layerH);
-    return {
-      localX: inv.x,
-      localY: inv.y,
-      localRotation: wrot - (Number(group.rotation) || 0)
-    };
+  /** Re-sync member locals from composed world (after group rotation, etc.). */
+  function relocalizeOverlayGroupMembers(n, g, layerW, layerH) {
+    if (!n || !g || !isOverlayGroupInteraction(g)) return g;
+    layerW = Math.max(1, Number(layerW) || 1000);
+    layerH = Math.max(1, Number(layerH) || 1000);
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: true });
+    resolveOverlayGroupMemberIds(n, g, { repair: true }).forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      var world = overlayWorldLayoutRaw(n, ix, layerW, layerH);
+      if (!world) return;
+      var inv = worldPointToLocal(g, world.x, world.y, layerW, layerH);
+      ix.localX = inv.x;
+      ix.localY = inv.y;
+      ix.localRotation = world.rotation - (Number(g.rotation) || 0);
+    });
+    return g;
   }
 
   function bakeOverlayWorldToChild(n, group, child, layerW, layerH) {
@@ -1707,7 +1712,7 @@ var ExperienciaEngine = (function () {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
       if (ix.localX != null && ix.localY != null) return;
-      var local = localOverlayFromMemberWorld(n, group, ix, layerW, layerH);
+      var local = absoluteToLocalOverlay(n, group, ix, layerW, layerH);
       if (!local) return;
       ix.localX = local.localX;
       ix.localY = local.localY;
@@ -2468,7 +2473,7 @@ var ExperienciaEngine = (function () {
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
-      var local = localOverlayFromMemberWorld(n, group, ix, lw, lh);
+      var local = absoluteToLocalOverlay(n, group, ix, lw, lh);
       if (local) {
         ix.localX = local.localX;
         ix.localY = local.localY;
@@ -8329,6 +8334,7 @@ var ExperienciaEngine = (function () {
     overlayGroupViewModel: overlayGroupViewModel,
     overlayWorldLayoutRaw: overlayWorldLayoutRaw,
     absoluteToLocalOverlay: absoluteToLocalOverlay,
+    relocalizeOverlayGroupMembers: relocalizeOverlayGroupMembers,
     ensureFreeOverlayDefaults: ensureFreeOverlayDefaults,
     migrateGroupedChildLocals: migrateGroupedChildLocals,
     ensureOverlayGroupDefaults: ensureOverlayGroupDefaults,
