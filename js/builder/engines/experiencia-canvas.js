@@ -143,13 +143,14 @@ var ExperienciaCanvas = (function () {
     return typeof window !== 'undefined' && !!window.__QE_FIRST_ROTATE_LIVE_PAINT_DONE__;
   }
 
-  function rotatePostPipelineBlocked() {
-    return rotatePipelineBisectMode() === '1' && rotateFirstLivePaintDone();
+  /** Mode 1 — skip pointerup post-pipeline only (live drag stays fully active). */
+  function rotatePointerupPostPipelineBlocked() {
+    return rotatePipelineBisectMode() === '1';
   }
 
   function rotateFinalizeRelocalizeBlocked() {
     var mode = rotatePipelineBisectMode();
-    return (mode === '1' && rotateFirstLivePaintDone()) || mode === '2';
+    return mode === '1' || mode === '2';
   }
 
   function markRotateFirstLivePaintDone() {
@@ -6755,7 +6756,6 @@ var ExperienciaCanvas = (function () {
 
     function flushRotateLiveFrame() {
       if (!transformDrag || transformDrag.mode !== 'rotate') return;
-      if (rotatePostPipelineBlocked()) return;
       transformDrag.rotateRaf = null;
       var deg = transformDrag.pendingDeg;
       if (deg == null) return;
@@ -6821,9 +6821,6 @@ var ExperienciaCanvas = (function () {
       if (!skipFirstPaint) {
         paintRotateLiveFromDrag(transformDrag);
       }
-      if (rotatePipelineBisectMode() === '1' && !skipFirstPaint) {
-        markRotateFirstLivePaintDone();
-      }
       if (disableFirstRotatePaintEnabled() && skipFirstPaint) {
         markRotateFirstLivePaintDone();
       }
@@ -6831,7 +6828,6 @@ var ExperienciaCanvas = (function () {
 
     function scheduleRotateLiveFrame(drag, deg) {
       if (!drag) return;
-      if (rotatePostPipelineBlocked()) return;
       drag.pendingDeg = deg;
       if (drag.rotateRaf) return;
       drag.rotateRaf = requestAnimationFrame(flushRotateLiveFrame);
@@ -13715,9 +13711,7 @@ var ExperienciaCanvas = (function () {
           if (endedDrag.rotateRaf) {
             cancelAnimationFrame(endedDrag.rotateRaf);
             endedDrag.rotateRaf = null;
-            if (!rotatePostPipelineBlocked()) {
-              flushRotateLiveFrame();
-            }
+            flushRotateLiveFrame();
           }
           transformDrag = null;
           clearOverlayTransformCursor();
@@ -13798,7 +13792,7 @@ var ExperienciaCanvas = (function () {
                 traceRotateDragStage('pointerup.before', endedDrag);
               }
             }
-            if (!rotatePostPipelineBlocked()) {
+            if (!rotatePointerupPostPipelineBlocked()) {
               clearRotateLiveStyles(endedDrag);
             }
             if (!rotateFinalizeRelocalizeBlocked() &&
@@ -13823,7 +13817,8 @@ var ExperienciaCanvas = (function () {
                 h: endedDrag.startH,
                 rot: endedDrag.pendingDeg
               });
-            } else if (movedT && endedDrag.pendingDeg != null &&
+            } else if (!rotateFinalizeRelocalizeBlocked() &&
+                movedT && endedDrag.pendingDeg != null &&
                 (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
               traceCompareRotateGroupPointerupFinalize(
                 'compareRotate.pointerup.beforeFinalize', endedDrag
@@ -14089,6 +14084,7 @@ var ExperienciaCanvas = (function () {
               !committedShapeResize) {
             _shapeResizeTraceCtx = { sceneId: endScene, btnId: rotBtnId };
           }
+          var blockRotatePostRefresh = wasRotate && rotatePostPipelineBlocked();
           if (shapeResizeSettled) {
             if (!syncOverlayShapeFromModel(endScene, rotBtnId)) {
               paintButtonsStage();
@@ -14099,12 +14095,16 @@ var ExperienciaCanvas = (function () {
               if (endType === 'MULTI_SELECT') clearMultiSelectLiveStyles(endedLiveRefs);
               else clearShapeLiveSizingStyles(endedLiveRefs);
             }
-            paintButtonsStage();
-            if (wasRotate || endType === 'MULTI_SELECT') {
-              mountOverlaySelectionGizmos(getSelectedOverlayIds());
+            if (!blockRotatePostRefresh) {
+              paintButtonsStage();
+              if (wasRotate || endType === 'MULTI_SELECT') {
+                mountOverlaySelectionGizmos(getSelectedOverlayIds());
+              }
             }
           }
-          paintInspector();
+          if (!blockRotatePostRefresh) {
+            paintInspector();
+          }
           if (isShapeType(endType) && rotBtnId) {
             scheduleShapeDebugLog('dragend', [String(rotBtnId)], {
               moved: movedT,
@@ -14119,7 +14119,7 @@ var ExperienciaCanvas = (function () {
               startBox: endedDrag ? endedDrag.startBox : null
             });
           }
-          if (movedT && !committedShapeResize) persist();
+          if (movedT && !committedShapeResize && !blockRotatePostRefresh) persist();
           return;
         }
         if (!buttonDrag || (ev && ev.pointerId !== buttonDrag.pointerId)) return;
