@@ -10856,6 +10856,12 @@ var ExperienciaCanvas = (function () {
       if (!hit) {
         hit = pickOverlayStageBtnFromPoint(clientX, clientY, { forHover: true });
       }
+      if (canvas().activeOverlayGroupEditId && hit &&
+          !hit.classList.contains('is-group-edit-member')) {
+        if (overlayCanvasHoverId) clearOverlayCanvasHover();
+        syncOverlayGroupCursor(clientX, clientY);
+        return;
+      }
       var nextId = hit && hit.classList.contains('builder-exp-stage-shape')
         ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
       if (nextId === String(overlayCanvasHoverId || '')) {

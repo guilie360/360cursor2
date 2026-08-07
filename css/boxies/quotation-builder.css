@@ -5411,6 +5411,29 @@ body.quotation-canvas-first .builder-workspace,
   outline: none;
 }
 
+/* Edit Group — focus: dim everything outside the active group (Figma-style). */
+.builder-exp-buttons-layer [data-exp-stage-btn] {
+  transition: opacity 150ms ease;
+}
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member) {
+  opacity: 0.4 !important;
+  pointer-events: none;
+}
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn].is-group-edit-member {
+  opacity: 1 !important;
+}
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member) .builder-exp-stage-shape__stroke-glow {
+  opacity: 0 !important;
+  filter: none !important;
+}
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member).is-canvas-hover .builder-exp-stage-shape__body,
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member).is-canvas-hover .builder-exp-stage-shape__body > *,
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member):hover .builder-exp-stage-shape__body,
+.builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn]:not(.is-group-edit-member):hover .builder-exp-stage-shape__body > * {
+  stroke: inherit !important;
+  stroke-width: inherit !important;
+}
+
 /* Edit Group — siblings stay identifiable without blocking individual gizmos. */
 .builder-exp-buttons-layer.is-group-edit-mode [data-exp-stage-btn].is-group-edit-member:not(.is-selected) {
   outline: 1px dashed rgba(255, 255, 255, 0.24);
