@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  try { console.log('[QE BUILD BOOT] ws7783'); } catch (_boot) { /* ignore */ }
+  try { console.log('[QE BUILD BOOT] ws7784'); } catch (_boot) { /* ignore */ }
   /* Legacy iframe Runtime path stays off; Builder mounts QuotationRuntime.paintScene in-page. */
   var DISABLE_RUNTIME_FOR_EDITOR = true;
 
@@ -4732,33 +4732,42 @@ var QuotationEditor = (function () {
     var group = findSceneInteraction(groupId);
     if (!group) return false;
     if (!Array.isArray(group.memberIds)) group.memberIds = [];
+
+    console.log('[MEMBERS BEFORE]', {
+      groupId: groupId,
+      memberIds: (group.memberIds || []).slice()
+    });
+
+    var scene = activeScene();
     var ids = [];
     var seen = {};
     group.memberIds.forEach(function (id) {
       var key = String(id);
       if (!key || seen[key]) return;
-      seen[key] = true;
-      ids.push(key);
+      var m = findSceneInteraction(key);
+      if (m && String(m.groupId || '') === String(groupId)) {
+        seen[key] = true;
+        ids.push(key);
+      }
     });
+    if (scene && Array.isArray(scene.interactions)) {
+      scene.interactions.forEach(function (ix) {
+        if (!ix || !ix.id || isOverlayGroupIx(ix)) return;
+        var key = String(ix.id);
+        if (String(ix.groupId || '') === String(groupId) && !seen[key]) {
+          seen[key] = true;
+          ids.push(key);
+        }
+      });
+    }
+
     var dragKey = String(dragId);
     var targetKey = String(targetId);
     var from = ids.indexOf(dragKey);
     var to = ids.indexOf(targetKey);
-    if (from < 0) {
-      var dragMember = findSceneInteraction(dragKey);
-      if (dragMember && String(dragMember.groupId || '') === String(groupId)) {
-        ids.push(dragKey);
-        from = ids.length - 1;
-      }
-    }
-    if (to < 0) {
-      var targetMember = findSceneInteraction(targetKey);
-      if (targetMember && String(targetMember.groupId || '') === String(groupId)) {
-        if (ids.indexOf(targetKey) < 0) ids.push(targetKey);
-        to = ids.indexOf(targetKey);
-      }
-    }
     if (from < 0 || to < 0) return false;
+
+    var beforeKey = ids.join('|');
     var moved = ids.splice(from, 1)[0];
     var insertAt = to;
     if (from < to) insertAt--;
@@ -4766,12 +4775,28 @@ var QuotationEditor = (function () {
     if (insertAt < 0) insertAt = 0;
     if (insertAt > ids.length) insertAt = ids.length;
     ids.splice(insertAt, 0, moved);
-    group.memberIds = ids;
+
+    var afterKey = ids.join('|');
+    if (beforeKey === afterKey) {
+      console.log('[MEMBERS AFTER]', {
+        groupId: groupId,
+        memberIds: (group.memberIds || []).slice(),
+        unchanged: true
+      });
+      return false;
+    }
+
+    group.memberIds = ids.slice();
     ids.forEach(function (mid) {
       var m = findSceneInteraction(mid);
       if (m) m.groupId = groupId;
     });
-    healOverlayGroupMembership(activeScene());
+
+    console.log('[MEMBERS AFTER]', {
+      groupId: groupId,
+      memberIds: group.memberIds.slice()
+    });
+
     markDirtyLocal();
     return true;
   }
@@ -13138,7 +13163,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7783'
+        editorBuild: 'ws7784'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
