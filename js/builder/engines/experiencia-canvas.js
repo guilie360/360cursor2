@@ -125,9 +125,12 @@ var ExperienciaCanvas = (function () {
 
   /** ?paintShapeTrace=1 — one log: paintRotateVm delivers vs paintShapeNodeEl receives vs DOM style */
   function paintShapeTraceEnabled() {
-    if (typeof window !== 'undefined' && window.__QE_PAINT_SHAPE_TRACE__ === false) return false;
+    if (typeof window !== 'undefined') {
+      if (window.__QE_PAINT_SHAPE_TRACE__ === false) return false;
+      if (window.__QE_PAINT_SHAPE_TRACE__ === true) return true;
+    }
     try {
-      var q = new URLSearchParams(window.location.search);
+      var q = new URLSearchParams(window.location.search || '');
       if (q.get('paintShapeTrace') === '0') return false;
       if (q.get('paintShapeTrace') === '1') return true;
     } catch (ePst) { /* ignore */ }
@@ -1812,10 +1815,18 @@ var ExperienciaCanvas = (function () {
     el.style.width = box.w + '%';
     el.style.height = box.h + '%';
     el.style.setProperty('--btn-rot', box.rot + 'deg');
-    if (traceSlot) {
+    if (paintShapeTraceEnabled() &&
+        opts.liveSizing &&
+        typeof window !== 'undefined' &&
+        !window.__QE_PAINT_SHAPE_TRACE_EMITTED__) {
       window.__QE_PAINT_SHAPE_TRACE_EMITTED__ = true;
-      window.__QE_PAINT_SHAPE_TRACE_SLOT__.active = false;
-      paintShapeTraceEmit(traceSlot, traceReceived, paintShapeTraceReadDom(el));
+      var traceSlot = window.__QE_PAINT_SHAPE_TRACE_SLOT__ || {};
+      paintShapeTraceEmit({
+        memberId: (el.getAttribute && el.getAttribute('data-exp-stage-btn')) ||
+          traceSlot.memberId || null,
+        sceneId: traceSlot.sceneId || null,
+        delivered: traceSlot.delivered || traceReceived
+      }, traceReceived, paintShapeTraceReadDom(el));
     }
     var hit = el.querySelector('.builder-exp-stage-shape__hit');
     if (hit) {
@@ -6537,6 +6548,18 @@ var ExperienciaCanvas = (function () {
             var box = getShapeBox(vm, layerW, layerH);
             if (box) {
               box.rot = rot;
+              if (paintShapeTraceEnabled() &&
+                  (dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') &&
+                  drag.mode === 'rotate' &&
+                  typeof window !== 'undefined' &&
+                  !window.__QE_PAINT_SHAPE_TRACE_EMITTED__) {
+                window.__QE_PAINT_SHAPE_TRACE_SLOT__ = {
+                  active: true,
+                  memberId: traceMemberId ? String(traceMemberId) : null,
+                  sceneId: sceneId,
+                  delivered: paintShapeTraceBox(box)
+                };
+              }
               paintShapeNodeEl(el, box, vm, layerW, layerH, { liveSizing: true });
             }
           } else if (!isShapeType(t)) {
