@@ -1645,6 +1645,23 @@ var ExperienciaEngine = (function () {
     };
   }
 
+  /** Same visible center as snapshotOverlayGroupMemberWorlds / multi-select rotate. */
+  function localOverlayFromMemberWorld(n, group, child, layerW, layerH) {
+    ensureOverlayGroupDefaults(n, group, layerW, layerH, { skipSync: true });
+    var world = overlayWorldLayoutRaw(n, child, layerW, layerH);
+    if (!world) return null;
+    var rect = overlayMemberUnionRect(child, world, layerW, layerH);
+    var wx = rect ? rect.cx : world.x;
+    var wy = rect ? rect.cy : world.y;
+    var wrot = rect ? rect.rotation : world.rotation;
+    var inv = worldPointToLocal(group, wx, wy, layerW, layerH);
+    return {
+      localX: inv.x,
+      localY: inv.y,
+      localRotation: wrot - (Number(group.rotation) || 0)
+    };
+  }
+
   function bakeOverlayWorldToChild(n, group, child, layerW, layerH) {
     var world = composeOverlayWorldLayout(group, child, layerW, layerH, n);
     if (!world) return;
@@ -1690,7 +1707,7 @@ var ExperienciaEngine = (function () {
       var ix = getInteraction(n, id);
       if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
       if (ix.localX != null && ix.localY != null) return;
-      var local = absoluteToLocalOverlay(n, group, ix, layerW, layerH);
+      var local = localOverlayFromMemberWorld(n, group, ix, layerW, layerH);
       if (!local) return;
       ix.localX = local.localX;
       ix.localY = local.localY;
@@ -2451,7 +2468,7 @@ var ExperienciaEngine = (function () {
     unique.forEach(function (id) {
       var ix = getInteraction(n, id);
       if (!ix) return;
-      var local = absoluteToLocalOverlay(n, group, ix, lw, lh);
+      var local = localOverlayFromMemberWorld(n, group, ix, lw, lh);
       if (local) {
         ix.localX = local.localX;
         ix.localY = local.localY;
@@ -2459,7 +2476,6 @@ var ExperienciaEngine = (function () {
       }
       ix.groupId = groupId;
     });
-    reconcileOverlayGroupTransform(n, group, lw, lh);
     return group;
   }
 
