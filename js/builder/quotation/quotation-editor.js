@@ -4247,6 +4247,8 @@ var QuotationEditor = (function () {
     }
     return ok;
   }
+
+  function assignInteractionToGroup(memberId, groupId, beforeMemberId) {
     if (!memberId || !groupId || String(memberId) === String(groupId)) return false;
     var scene = activeScene();
     var member = findSceneInteraction(memberId);
@@ -12427,7 +12429,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7764'
+        editorBuild: 'ws7765'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
