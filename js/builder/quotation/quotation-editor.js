@@ -4461,6 +4461,66 @@ var QuotationEditor = (function () {
     return false;
   }
 
+  /** Outliner visual order → interactions[] paint order (top of panel = front). */
+  function syncInteractionPaintOrderFromOutliner() {
+    var scene = activeScene();
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var ixs = scene.interactions;
+    var byId = {};
+    ixs.forEach(function (ix) {
+      if (ix && ix.id) byId[String(ix.id)] = ix;
+    });
+
+    var groups = [];
+    var free = [];
+    ixs.forEach(function (ix) {
+      if (!ix || !ix.id) return;
+      if (isOverlayGroupIx(ix)) groups.push(ix);
+      else if (!ix.groupId) free.push(ix);
+    });
+
+    var stack = [];
+    var fi;
+    for (fi = free.length - 1; fi >= 0; fi--) {
+      stack.push(free[fi]);
+    }
+    var gi;
+    for (gi = groups.length - 1; gi >= 0; gi--) {
+      var g = groups[gi];
+      var mids = Array.isArray(g.memberIds) ? g.memberIds : [];
+      var mi;
+      for (mi = mids.length - 1; mi >= 0; mi--) {
+        var m = byId[String(mids[mi])];
+        if (m) stack.push(m);
+      }
+      stack.push(g);
+    }
+
+    var stackIds = {};
+    stack.forEach(function (ix) {
+      stackIds[String(ix.id)] = true;
+    });
+    var remainder = ixs.filter(function (ix) {
+      if (!ix || !ix.id) return false;
+      return !stackIds[String(ix.id)];
+    });
+
+    var next = remainder.concat(stack);
+    if (next.length !== ixs.length) return false;
+
+    var changed = false;
+    var i;
+    for (i = 0; i < next.length; i++) {
+      if (next[i] !== ixs[i]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return false;
+    scene.interactions = next;
+    return true;
+  }
+
   function restoreOutlinerScroll(el, top) {
     if (!el || top == null || !isFinite(top)) return;
     el.scrollTop = top;
@@ -4578,7 +4638,11 @@ var QuotationEditor = (function () {
       document.removeEventListener('pointercancel', onDocUp);
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
       if (draggingId && dropTarget) {
-        commitOutlinerDrop(draggingId, dropTarget);
+        var ok = commitOutlinerDrop(draggingId, dropTarget);
+        if (ok) {
+          syncInteractionPaintOrderFromOutliner();
+          syncOverlaySceneFromPanel();
+        }
       }
       clearDropMarkers();
       draggingId = null;
@@ -4667,6 +4731,7 @@ var QuotationEditor = (function () {
         (opts.isGroup ? ' data-qe-outliner-group="' + escapeHtml(ix.id) + '"' : '') +
         (opts.nested ? ' data-qe-outliner-nested="1"' : '') +
         ' data-qe-outliner-kind="' + (opts.isGroup ? 'group' : 'item') + '">' +
+        '<span class="qe-outliner__drag" data-qe-outliner-drag aria-hidden="true" title="Arrastrar"></span>' +
         (opts.isGroup
           ? ('<button type="button" class="qe-outliner__fold' + (opts.open ? ' is-open' : '') + '"' +
             ' data-qe-layer-fold="' + escapeHtml(ix.id) + '"' +
@@ -9282,12 +9347,15 @@ var QuotationEditor = (function () {
     if (body.dataset.qeLayersBound === '1') return;
     body.dataset.qeLayersBound = '1';
 
+    bindOutlinerDnD(body);
+
     body.addEventListener('pointerdown', function (ev) {
       var t = ev.target;
       if (!t || !t.closest) return;
 
       if (t.closest('[data-qe-outliner-create-group]')) return;
       if (t.closest('[data-qe-outliner-rename]')) return;
+      if (t.closest('[data-qe-outliner-drag]')) return;
 
       var fold = t.closest('[data-qe-layer-fold]');
       if (fold) return;
@@ -12502,7 +12570,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7768'
+        editorBuild: 'ws7769'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
