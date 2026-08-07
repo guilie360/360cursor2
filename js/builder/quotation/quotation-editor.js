@@ -4635,6 +4635,53 @@ var QuotationEditor = (function () {
     return true;
   }
 
+  function purgeMemberFromAllGroups(memberId) {
+    var scene = activeScene();
+    if (!scene) return;
+    var key = String(memberId);
+    (scene.interactions || []).forEach(function (ix) {
+      if (!isOverlayGroupIx(ix) || !Array.isArray(ix.memberIds)) return;
+      ix.memberIds = ix.memberIds.filter(function (id) {
+        return String(id) !== key;
+      });
+    });
+  }
+
+  function findGroupIdForMember(memberId) {
+    var member = findSceneInteraction(memberId);
+    if (member && member.groupId) return String(member.groupId);
+    var scene = activeScene();
+    if (!scene) return null;
+    var found = null;
+    (scene.interactions || []).forEach(function (ix) {
+      if (!isOverlayGroupIx(ix) || !Array.isArray(ix.memberIds)) return;
+      ix.memberIds.forEach(function (id) {
+        if (String(id) === String(memberId)) found = String(ix.id);
+      });
+    });
+    return found;
+  }
+
+  function ungroupToFreeAt(memberId, targetFreeId, position) {
+    var member = findSceneInteraction(memberId);
+    if (!member || isOverlayGroupIx(member)) return false;
+    var gid = findGroupIdForMember(memberId);
+    if (gid) {
+      if (!removeInteractionFromGroup(memberId)) {
+        purgeMemberFromAllGroups(memberId);
+        delete member.groupId;
+        delete member.localX;
+        delete member.localY;
+        delete member.localRotation;
+        healOverlayGroupMembership(activeScene());
+        markDirtyLocal();
+      }
+    } else {
+      purgeMemberFromAllGroups(memberId);
+    }
+    return reorderOverlayFreeItems(memberId, targetFreeId, position);
+  }
+
   function reorderOverlayFreeItems(dragId, targetId, position) {
     var scene = activeScene();
     if (!scene || !Array.isArray(scene.interactions)) return false;
@@ -4654,19 +4701,34 @@ var QuotationEditor = (function () {
       if (String(free[j].id) === String(dragId)) from = j;
       if (String(free[j].id) === String(targetId)) to = j;
     }
+    if (from < 0) {
+      var dragIx = findSceneInteraction(dragId);
+      if (dragIx && !isOverlayGroupIx(dragIx) && !dragIx.groupId) {
+        free.push(dragIx);
+        from = free.length - 1;
+      }
+    }
     if (from < 0 || to < 0) return false;
 
+    var prevOrder = free.map(function (ix) { return String(ix.id); }).join('|');
     var movedFree = free.splice(from, 1)[0];
     var insertAt = to;
     if (from < to) insertAt--;
     if (position === 'after') insertAt++;
+    if (insertAt < 0) insertAt = 0;
+    if (insertAt > free.length) insertAt = free.length;
     free.splice(insertAt, 0, movedFree);
+
+    var nextOrder = free.map(function (ix) { return String(ix.id); }).join('|');
+    if (prevOrder === nextOrder) return false;
 
     var grouped = (scene.interactions || []).filter(function (ix) {
       return ix && !isOverlayGroupIx(ix) && !!ix.groupId;
     });
 
     scene.interactions = groups.concat(grouped, free);
+    syncInteractionPaintOrderFromOutliner();
+    markDirtyLocal();
     return true;
   }
 
@@ -4686,6 +4748,20 @@ var QuotationEditor = (function () {
     var targetKey = String(targetId);
     var from = ids.indexOf(dragKey);
     var to = ids.indexOf(targetKey);
+    if (from < 0) {
+      var dragMember = findSceneInteraction(dragKey);
+      if (dragMember && String(dragMember.groupId || '') === String(groupId)) {
+        ids.push(dragKey);
+        from = ids.length - 1;
+      }
+    }
+    if (to < 0) {
+      var targetMember = findSceneInteraction(targetKey);
+      if (targetMember && String(targetMember.groupId || '') === String(groupId)) {
+        if (ids.indexOf(targetKey) < 0) ids.push(targetKey);
+        to = ids.indexOf(targetKey);
+      }
+    }
     if (from < 0 || to < 0) return false;
     var moved = ids.splice(from, 1)[0];
     var insertAt = to;
@@ -4771,8 +4847,7 @@ var QuotationEditor = (function () {
 
     if (!dragIsGroup && dragGrouped) {
       if (!targetIsGroup && !targetGrouped) {
-        if (!removeInteractionFromGroup(dragId)) return false;
-        return reorderOverlayFreeItems(dragId, drop.id, drop.position);
+        return ungroupToFreeAt(dragId, drop.id, drop.position);
       }
       if (targetIsGroup && String(dragIx.groupId) === String(drop.id)) {
         var sameGrp = findSceneInteraction(drop.id);
@@ -4956,9 +5031,6 @@ var QuotationEditor = (function () {
           }
           return { id: rid, position: 'before' };
         }
-        if (clientY < rect.bottom) {
-          return { id: rid, position: 'after' };
-        }
       }
       for (i = rows.length - 1; i >= 0; i--) {
         var lastRow = rows[i];
@@ -5010,6 +5082,13 @@ var QuotationEditor = (function () {
       }
       if (draggingId && drop) {
         ok = commitOutlinerDrop(draggingId, drop);
+        if (!ok && dropTarget &&
+            (String(dropTarget.id) !== String(drop.id) ||
+             dropTarget.position !== drop.position ||
+             dropTarget.action !== drop.action)) {
+          ok = commitOutlinerDrop(draggingId, dropTarget);
+          if (ok) drop = dropTarget;
+        }
       }
       if (ok) {
         var list = listEl();
@@ -12957,7 +13036,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7777'
+        editorBuild: 'ws7778'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
