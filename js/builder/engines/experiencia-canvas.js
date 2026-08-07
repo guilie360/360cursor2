@@ -6072,22 +6072,10 @@ var ExperienciaCanvas = (function () {
           }
         }
       } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
-          transformDrag.memberWorldSnapshots && transformDrag.memberIds) {
+          ExperienciaEngine.updateOverlayGroupTransform) {
         ExperienciaEngine.updateOverlayGroupTransform(
           state, sceneId, buttonId,
           { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
-        );
-        var deltaGroupLive = deg - (Number(transformDrag.startRot) || 0);
-        applyMultiSelectRotation(
-          sceneId,
-          transformDrag.memberIds,
-          transformDrag.memberWorldSnapshots,
-          transformDrag.startX,
-          transformDrag.startY,
-          deltaGroupLive,
-          szRot.w,
-          szRot.h,
-          { live: true }
         );
         if (multiRotateTraceEnabled()) {
           var traceDegG = Math.round(Number(deg) || 0);
@@ -6096,12 +6084,6 @@ var ExperienciaCanvas = (function () {
             traceRotateDragStage('live.group.model', transformDrag);
           }
         }
-      } else if ((type === 'OVERLAY_GROUP' || type === 'GROUP') &&
-          ExperienciaEngine.updateOverlayGroupTransform) {
-        ExperienciaEngine.updateOverlayGroupTransform(
-          state, sceneId, buttonId,
-          { rotation: deg, layerW: szRot.w, layerH: szRot.h, live: true }
-        );
       } else {
         ExperienciaEngine.updateSceneButton(state, sceneId, buttonId, {
           rotation: deg,
@@ -8524,6 +8506,9 @@ var ExperienciaCanvas = (function () {
       var groupVm = (type === 'OVERLAY_GROUP' || type === 'GROUP')
         ? getOverlayItemVm(sceneId, targetId)
         : null;
+      var orientedUnion = (type === 'OVERLAY_GROUP' || type === 'GROUP')
+        ? getGroupUnionFrame(sceneId, targetId, layerW, layerH)
+        : null;
       var storedUnion = null;
       if (type === 'MULTI_SELECT') {
         storedUnion = getStoredMultiSelectUnionFrame(sceneId, memberIds);
@@ -8539,7 +8524,17 @@ var ExperienciaCanvas = (function () {
           cx: +(Number(drag.startX) || 0).toFixed(4),
           cy: +(Number(drag.startY) || 0).toFixed(4),
           w: +(Number(drag.startW) || 0).toFixed(4),
-          h: +(Number(drag.startH) || 0).toFixed(4)
+          h: +(Number(drag.startH) || 0).toFixed(4),
+          rot: drag.pendingDeg != null
+            ? +(Number(drag.pendingDeg)).toFixed(2)
+            : +(Number(drag.startRot) || 0).toFixed(2)
+        } : null,
+        orientedUnion: orientedUnion ? {
+          cx: +(Number(orientedUnion.cx) || 0).toFixed(4),
+          cy: +(Number(orientedUnion.cy) || 0).toFixed(4),
+          w: +(Number(orientedUnion.w) || 0).toFixed(4),
+          h: +(Number(orientedUnion.h) || 0).toFixed(4),
+          rot: +(Number(orientedUnion.rot) || 0).toFixed(2)
         } : null,
         storedUnion: storedUnion,
         group: groupVm ? {
@@ -11925,20 +11920,6 @@ var ExperienciaCanvas = (function () {
               });
             } else if (movedT && endedDrag.pendingDeg != null &&
                 (endType === 'OVERLAY_GROUP' || endType === 'GROUP')) {
-              if (endedDrag.memberWorldSnapshots && endedDrag.memberIds) {
-                var deltaRotFinG = endedDrag.pendingDeg - (Number(endedDrag.startRot) || 0);
-                applyMultiSelectRotation(
-                  endScene,
-                  endedDrag.memberIds,
-                  endedDrag.memberWorldSnapshots,
-                  endedDrag.startX,
-                  endedDrag.startY,
-                  deltaRotFinG,
-                  endedDrag.layerW,
-                  endedDrag.layerH,
-                  { commit: true }
-                );
-              }
               setGroupOrientedFrame(endScene, rotBtnId, {
                 cx: endedDrag.startX,
                 cy: endedDrag.startY,

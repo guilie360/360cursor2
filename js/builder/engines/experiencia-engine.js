@@ -1478,7 +1478,7 @@ var ExperienciaEngine = (function () {
     }
     if (g._baseWidth == null) g._baseWidth = Number(g.width) || 20;
     if (g._baseHeight == null) g._baseHeight = Number(g.height) || 20;
-    if (!opts.skipSync && g._transformV !== 2 && n && memberIds.length) {
+    if (!opts.skipSync && Number(g._transformV) < 2 && n && memberIds.length) {
       syncOverlayGroupFrameFromMembers(n, g, lw, lh);
     }
     return g;
@@ -1701,10 +1701,11 @@ var ExperienciaEngine = (function () {
   function overlayGroupViewModel(state, n, g, layerW, layerH) {
     layerW = Math.max(1, Number(layerW) || 1000);
     layerH = Math.max(1, Number(layerH) || 1000);
-    ensureOverlayGroupDefaults(n, g, layerW, layerH);
+    var lockedFrame = Number(g._transformV) >= 2;
+    ensureOverlayGroupDefaults(n, g, layerW, layerH, { skipSync: lockedFrame });
     migrateGroupedChildLocals(n, g, layerW, layerH);
     var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
-    var useStoredFrame = Number(g._transformV) >= 2 &&
+    var useStoredFrame = lockedFrame &&
       g.width != null && g.height != null;
     var bounds = useStoredFrame
       ? null
