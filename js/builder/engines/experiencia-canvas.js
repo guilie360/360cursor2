@@ -8173,8 +8173,55 @@ var ExperienciaCanvas = (function () {
       };
     }
 
+    function snapshotCompareRotateGroupModel(g) {
+      if (!g) return null;
+      return {
+        x: +(Number(g.x) || 0).toFixed(4),
+        y: +(Number(g.y) || 0).toFixed(4),
+        width: +(Number(g.width) || 0).toFixed(4),
+        height: +(Number(g.height) || 0).toFixed(4),
+        rotation: +(Number(g.rotation) || 0).toFixed(2),
+        _transformV: Number(g._transformV) || 0
+      };
+    }
+
+    function compareRotateGroupModelDelta(before, after) {
+      if (!before || !after) return null;
+      return {
+        x: +((after.x - before.x)).toFixed(6),
+        y: +((after.y - before.y)).toFixed(6),
+        width: +((after.width - before.width)).toFixed(6),
+        height: +((after.height - before.height)).toFixed(6),
+        rotation: +((after.rotation - before.rotation)).toFixed(6)
+      };
+    }
+
+    function traceCompareRotateSetGroupOrientedFrame(stage, sceneId, groupId, payload) {
+      if (!compareRotateEnabled()) return;
+      compareRotateLog(stage, Object.assign({
+        sceneId: sceneId,
+        groupId: String(groupId || '')
+      }, payload || {}));
+    }
+
     function setGroupOrientedFrame(sceneId, groupId, frame) {
       if (!frame) return;
+      var traceCr = compareRotateEnabled();
+      var gBefore = null;
+      if (traceCr) {
+        var nBefore = ExperienciaEngine.getNode(state, sceneId);
+        gBefore = nBefore && ExperienciaEngine.getInteraction(nBefore, groupId);
+        var cacheBefore = getStoredGroupOrientedFrame(sceneId, groupId);
+        traceCompareRotateSetGroupOrientedFrame('compareRotate.setGroupOrientedFrame.enter', sceneId, groupId, {
+          frameIn: compareRotateUnionInputBox(frame.cx, frame.cy, frame.w, frame.h, frame.rot),
+          groupModelBefore: snapshotCompareRotateGroupModel(gBefore),
+          groupUnionFrameBefore: cacheBefore
+            ? compareRotateUnionInputBox(
+              cacheBefore.cx, cacheBefore.cy, cacheBefore.w, cacheBefore.h, cacheBefore.rot
+            )
+            : compareRotateUnionInputNull()
+        });
+      }
       canvas().groupOrientedFrame = {
         cx: Number(frame.cx) || 0,
         cy: Number(frame.cy) || 0,
@@ -8183,7 +8230,43 @@ var ExperienciaCanvas = (function () {
         rot: Number(frame.rot) || 0,
         groupKey: groupOrientedFrameKey(sceneId, groupId)
       };
+      if (traceCr) {
+        var cacheMid = getStoredGroupOrientedFrame(sceneId, groupId);
+        traceCompareRotateSetGroupOrientedFrame('compareRotate.setGroupOrientedFrame.cacheWritten', sceneId, groupId, {
+          groupModelBeforeFinalize: snapshotCompareRotateGroupModel(gBefore),
+          groupUnionFrameWritten: cacheMid
+            ? compareRotateUnionInputBox(
+              cacheMid.cx, cacheMid.cy, cacheMid.w, cacheMid.h, cacheMid.rot
+            )
+            : compareRotateUnionInputNull(),
+          note: 'canvas().groupOrientedFrame updated; groupModel not touched yet'
+        });
+      }
       finalizeGroupOrientedFrame(sceneId, groupId, frame);
+      if (traceCr) {
+        var nAfter = ExperienciaEngine.getNode(state, sceneId);
+        var gAfter = nAfter && ExperienciaEngine.getInteraction(nAfter, groupId);
+        var modelAfter = snapshotCompareRotateGroupModel(gAfter);
+        var modelBefore = snapshotCompareRotateGroupModel(gBefore);
+        var cacheAfter = getStoredGroupOrientedFrame(sceneId, groupId);
+        traceCompareRotateSetGroupOrientedFrame('compareRotate.setGroupOrientedFrame.exit', sceneId, groupId, {
+          groupModelBefore: modelBefore,
+          groupModelAfter: modelAfter,
+          groupModelDelta: compareRotateGroupModelDelta(modelBefore, modelAfter),
+          groupUnionFrameAfter: cacheAfter
+            ? compareRotateUnionInputBox(
+              cacheAfter.cx, cacheAfter.cy, cacheAfter.w, cacheAfter.h, cacheAfter.rot
+            )
+            : compareRotateUnionInputNull(),
+          groupModelChangedInSetGroupOrientedFrame: !!(modelBefore && modelAfter && (
+            modelBefore.x !== modelAfter.x ||
+            modelBefore.y !== modelAfter.y ||
+            modelBefore.width !== modelAfter.width ||
+            modelBefore.height !== modelAfter.height ||
+            modelBefore.rotation !== modelAfter.rotation
+          ))
+        });
+      }
     }
 
     function translateGroupOrientedFrame(ddx, ddy) {
@@ -10220,6 +10303,7 @@ var ExperienciaCanvas = (function () {
         : null;
       if (!g) return;
       var traceFinalize = multiRotateTraceEnabled();
+      var traceCr = compareRotateEnabled();
       var beforeG = traceFinalize ? {
         x: Number(g.x),
         y: Number(g.y),
@@ -10227,6 +10311,7 @@ var ExperienciaCanvas = (function () {
         width: Number(g.width),
         height: Number(g.height)
       } : null;
+      var groupModelBefore = traceCr ? snapshotCompareRotateGroupModel(g) : null;
       var frameW = Number(frame.w);
       var frameH = Number(frame.h);
       var curW = Number(g.width) || 20;
@@ -10237,6 +10322,26 @@ var ExperienciaCanvas = (function () {
         Math.abs(frameH - curH) < 1e-6;
       /* EXPERIMENT ws7710 — pure rotation: w/h unchanged → commit rot only, preserve g.x/y/w/h. */
       var rotationOnlyCommit = frame.rot != null && sizeUnchanged;
+      if (traceCr) {
+        compareRotateLog('compareRotate.finalizeGroupOrientedFrame.enter', {
+          sceneId: sceneId,
+          groupId: String(groupId || ''),
+          frameIn: compareRotateUnionInputBox(frame.cx, frame.cy, frame.w, frame.h, frame.rot),
+          groupModelBefore: groupModelBefore,
+          sizeCheck: {
+            frameW: +(frameW).toFixed(6),
+            frameH: +(frameH).toFixed(6),
+            curW: +(curW).toFixed(6),
+            curH: +(curH).toFixed(6),
+            deltaW: +((frameW - curW)).toFixed(6),
+            deltaH: +((frameH - curH)).toFixed(6),
+            sizeUnchanged: sizeUnchanged
+          },
+          rotationOnlyCommit: rotationOnlyCommit,
+          branchIfTrue: 'rotationOnlyCommit → g.rotation only; preserve g.x/y/width/height',
+          branchIfFalse: 'fullFrameReplace → g.x/y/width/height from frame.cx/cy/w/h'
+        });
+      }
       if (rotationOnlyCommit) {
         g.rotation = Number(frame.rot) || 0;
         g._baseWidth = curW;
@@ -10251,6 +10356,20 @@ var ExperienciaCanvas = (function () {
         g._baseWidth = g.width;
         g._baseHeight = g.height;
         g._transformV = 2;
+      }
+      if (traceCr) {
+        var groupModelAfter = snapshotCompareRotateGroupModel(g);
+        compareRotateLog('compareRotate.finalizeGroupOrientedFrame.exit', {
+          sceneId: sceneId,
+          groupId: String(groupId || ''),
+          branch: rotationOnlyCommit ? 'rotationOnlyCommit' : 'fullFrameReplace',
+          why: rotationOnlyCommit
+            ? 'sizeUnchanged=true → only g.rotation updated from frame.rot'
+            : 'sizeUnchanged=false → g.x/y/width/height replaced from frame.cx/cy/w/h',
+          groupModelBefore: groupModelBefore,
+          groupModelAfter: groupModelAfter,
+          groupModelDelta: compareRotateGroupModelDelta(groupModelBefore, groupModelAfter)
+        });
       }
       if (traceFinalize && beforeG) {
         var afterG = {
