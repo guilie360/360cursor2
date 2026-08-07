@@ -11738,6 +11738,15 @@ var ExperienciaCanvas = (function () {
       console.log('[SELECT] itemId=' + (itemId != null ? String(itemId) : ''));
     }
 
+    /** Trace ITEM → GROUP redirect and lock targets (diagnostic only). */
+    function logGroupRedirectLockTrace(sceneId, itemId, groupId) {
+      console.log('[GROUP REDIRECT] itemId=' + itemId + ' groupId=' + groupId);
+      console.log('[LOCK TARGET] targetId=' + itemId + ' targetType=ITEM effectiveLocked=' +
+        isOverlayEffectivelyLocked(sceneId, itemId));
+      console.log('[LOCK TARGET] targetId=' + groupId + ' targetType=GROUP effectiveLocked=' +
+        isOverlayEffectivelyLocked(sceneId, groupId));
+    }
+
     /** Temporary — compare model tile vs gizmo vs DOM for shape resize bug. */
     function logShapeVsGizmo(phase, btnId, extra) {
       if (!shapeResizeDebugEnabled() || !buttonsLayer || !btnId) return;
@@ -14033,6 +14042,7 @@ var ExperienciaCanvas = (function () {
         }
         /* Grouped child: 1 click → group; dblclick → deep-edit child (see dblclick below). */
         if (groupedHit) {
+          logGroupRedirectLockTrace(sceneIdHit, bid, groupedHit.groupId);
           if (isOverlayEffectivelyLocked(sceneIdHit, groupedHit.groupId)) return;
           var gid = groupedHit.groupId;
           var cid = groupedHit.childId;
