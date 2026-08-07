@@ -1793,15 +1793,12 @@ var ExperienciaCanvas = (function () {
 
   /** Unified shape node paint — same box for stage, selection, and live sync. */
   function paintShapeNodeEl(el, box, vm, layerW, layerH, opts) {
-    if (!el || !box || !vm) return;
     opts = opts || {};
-    var traceSlot = paintShapeTraceEnabled() &&
-      typeof window !== 'undefined' &&
-      window.__QE_PAINT_SHAPE_TRACE_SLOT__ &&
-      window.__QE_PAINT_SHAPE_TRACE_SLOT__.active
-      ? window.__QE_PAINT_SHAPE_TRACE_SLOT__
-      : null;
-    var traceReceived = traceSlot ? paintShapeTraceBox(box) : null;
+    if (paintShapeTraceEnabled()) {
+      console.log('[PAINT-SHAPE] reached paintShapeNodeEl');
+    }
+    if (!el || !box || !vm) return;
+    var traceReceived = paintShapeTraceBox(box);
     el.classList.remove('is-live-moving');
     if (opts.liveSizing) {
       el.classList.add('is-live-sizing');
@@ -6548,13 +6545,8 @@ var ExperienciaCanvas = (function () {
             var box = getShapeBox(vm, layerW, layerH);
             if (box) {
               box.rot = rot;
-              if (paintShapeTraceEnabled() &&
-                  (dragType === 'OVERLAY_GROUP' || dragType === 'GROUP') &&
-                  drag.mode === 'rotate' &&
-                  typeof window !== 'undefined' &&
-                  !window.__QE_PAINT_SHAPE_TRACE_EMITTED__) {
+              if (paintShapeTraceEnabled()) {
                 window.__QE_PAINT_SHAPE_TRACE_SLOT__ = {
-                  active: true,
                   memberId: traceMemberId ? String(traceMemberId) : null,
                   sceneId: sceneId,
                   delivered: paintShapeTraceBox(box)
