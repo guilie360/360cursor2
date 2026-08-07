@@ -4621,14 +4621,25 @@ var QuotationEditor = (function () {
     return true;
   }
 
+  function outlinerListRowEl(list, id) {
+    if (!list || id == null) return null;
+    var rows = list.querySelectorAll('[data-qe-outliner-row]');
+    var want = String(id);
+    var i;
+    for (i = 0; i < rows.length; i++) {
+      if (String(rows[i].getAttribute('data-qe-outliner-row') || '') === want) {
+        return rows[i];
+      }
+    }
+    return null;
+  }
+
   function bindOutlinerDnD(body) {
     if (!body || body.dataset.qeOutlinerDndBound === '1') return;
     body.dataset.qeOutlinerDndBound = '1';
 
     var draggingId = null;
     var dropTarget = null;
-    var dragPointerId = null;
-    var dragHandleEl = null;
 
     function listEl() {
       return body.querySelector('[data-qe-outliner-list]');
@@ -4658,7 +4669,7 @@ var QuotationEditor = (function () {
         var row = rows[i];
         var rect = row.getBoundingClientRect();
         var rid = row.getAttribute('data-qe-outliner-row');
-        if (!rid || rid === dragId) continue;
+        if (!rid || String(rid) === String(dragId)) continue;
         var h = rect.height || 1;
         if (clientY < rect.top + h / 2) {
           var isGroup = row.getAttribute('data-qe-outliner-kind') === 'group';
@@ -4674,7 +4685,7 @@ var QuotationEditor = (function () {
       for (i = rows.length - 1; i >= 0; i--) {
         var lastRow = rows[i];
         var lastId = lastRow.getAttribute('data-qe-outliner-row');
-        if (lastId && lastId !== dragId) {
+        if (lastId && String(lastId) !== String(dragId)) {
           return { id: lastId, position: 'after' };
         }
       }
@@ -4682,16 +4693,21 @@ var QuotationEditor = (function () {
     }
 
     function paintDropMarker(target) {
-      clearDropMarkersVisual();
-      if (!target || !draggingId || target.id === draggingId) return;
-      dropTarget = target;
       var list = listEl();
-      if (!list) return;
-      var row = list.querySelector('[data-qe-outliner-row="' + target.id + '"]');
-      if (!row) return;
-      if (target.action === 'into') row.classList.add('is-drop-into');
-      else row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
-      var dragRow = list.querySelector('[data-qe-outliner-row="' + draggingId + '"]');
+      if (!list || !draggingId) return;
+
+      clearDropMarkersVisual();
+
+      if (target && String(target.id) !== String(draggingId)) {
+        dropTarget = target;
+        var row = outlinerListRowEl(list, target.id);
+        if (row) {
+          if (target.action === 'into') row.classList.add('is-drop-into');
+          else row.classList.add(target.position === 'before' ? 'is-drop-above' : 'is-drop-below');
+        }
+      }
+
+      var dragRow = outlinerListRowEl(list, draggingId);
       if (dragRow) dragRow.classList.add('is-dragging');
     }
 
@@ -4705,18 +4721,16 @@ var QuotationEditor = (function () {
       else if (clientY > rect.bottom - edge) list.scrollTop += speed;
     }
 
-    function finishDrag(ev) {
-      document.removeEventListener('pointermove', onDocMove);
-      document.removeEventListener('pointerup', onDocUp);
-      document.removeEventListener('pointercancel', onDocUp);
-      if (dragHandleEl && dragPointerId != null) {
+    function finishDrag(ev, handle) {
+      if (handle) {
         try {
-          if (dragHandleEl.hasPointerCapture && dragHandleEl.hasPointerCapture(dragPointerId)) {
-            dragHandleEl.releasePointerCapture(dragPointerId);
+          if (ev && ev.pointerId != null && handle.releasePointerCapture) {
+            handle.releasePointerCapture(ev.pointerId);
           }
         } catch (eRel) { /* ignore */ }
       }
       try { document.body.classList.remove('is-qe-outliner-dragging'); } catch (eBody) { /* ignore */ }
+
       var ok = false;
       var drop = dropTarget;
       if (draggingId && ev && ev.clientY != null) {
@@ -4729,21 +4743,9 @@ var QuotationEditor = (function () {
       if (ok) {
         syncOutlinerPanelToCanvas();
       }
-      clearDropMarkersVisual();
+
+      clearDropMarkers();
       draggingId = null;
-      dropTarget = null;
-      dragPointerId = null;
-      dragHandleEl = null;
-    }
-
-    function onDocMove(ev) {
-      if (!draggingId) return;
-      paintDropMarker(rowDropAt(ev.clientY, draggingId));
-      autoScrollOutliner(ev.clientY);
-    }
-
-    function onDocUp(ev) {
-      if (ev && draggingId) finishDrag();
     }
 
     body.addEventListener('pointerdown', function (e) {
@@ -4752,18 +4754,44 @@ var QuotationEditor = (function () {
       if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
+
       var row = handle.closest('[data-qe-outliner-row]');
       if (!row) return;
+
       draggingId = row.getAttribute('data-qe-outliner-row');
+      if (!draggingId) return;
+
       dropTarget = null;
-      dragPointerId = e.pointerId;
-      dragHandleEl = handle;
-      row.classList.add('is-dragging');
+
       try { document.body.classList.add('is-qe-outliner-dragging'); } catch (eCls) { /* ignore */ }
       try { handle.setPointerCapture(e.pointerId); } catch (eCap) { /* ignore */ }
-      document.addEventListener('pointermove', onDocMove);
-      document.addEventListener('pointerup', onDocUp);
-      document.addEventListener('pointercancel', onDocUp);
+
+      function onMove(ev) {
+        if (!draggingId) return;
+        paintDropMarker(rowDropAt(ev.clientY, draggingId));
+        autoScrollOutliner(ev.clientY);
+      }
+
+      function onUp(ev) {
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        handle.removeEventListener('lostpointercapture', onLost);
+        if (!draggingId) return;
+        finishDrag(ev, handle);
+      }
+
+      function onLost(ev) {
+        if (!draggingId) return;
+        onUp(ev);
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+      handle.addEventListener('lostpointercapture', onLost);
+
+      paintDropMarker(rowDropAt(e.clientY, draggingId));
     }, true);
   }
 
@@ -12660,7 +12688,7 @@ var QuotationEditor = (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
         })(),
-        editorBuild: 'ws7772'
+        editorBuild: 'ws7774'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */

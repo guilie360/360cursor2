@@ -1054,6 +1054,11 @@
     radial-gradient(circle, rgba(255, 255, 255, 0.55) 1px, transparent 1.2px) center / 4px 4px;
 }
 
+body.is-qe-outliner-dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+
 body.is-qe-outliner-dragging .qe-outliner__drag {
   cursor: grabbing;
 }
