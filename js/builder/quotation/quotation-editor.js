@@ -4146,29 +4146,27 @@ var QuotationEditor = (function () {
     if (!id) return false;
     var trimmed = String(nextLabel || '').trim();
     var ixLocal = findSceneInteraction(id);
-    var fallback = ixLocal ? layerTypeLabel(ixLocal.type) : 'Grupo';
-    var finalLabel = trimmed || fallback;
+    if (!ixLocal) return false;
+    var finalLabel = trimmed || layerTypeLabel(ixLocal.type);
 
+    ixLocal.label = finalLabel;
     markDirtyLocal();
 
-    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.updateInteraction) {
+    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
       var sceneId = state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId;
       var nodeId = (typeof QuotationExperienciaBridge !== 'undefined' &&
         QuotationExperienciaBridge.nodeIdForScene)
         ? QuotationExperienciaBridge.nodeIdForScene(sceneId)
         : ('qe-' + sceneId);
-      var updated = ExperienciaEngine.updateInteraction(
-        expOverlay.shim, nodeId, id, { label: finalLabel }
-      );
-      if (!updated) return false;
+      var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
+      if (n) {
+        var ixShim = ExperienciaEngine.getInteraction(n, id);
+        if (ixShim) ixShim.label = finalLabel;
+      }
       if (expOverlay.pull) expOverlay.pull();
       if (expOverlay.refresh) expOverlay.refresh();
-    } else if (ixLocal) {
-      ixLocal.label = finalLabel;
-      pushOutlinerScenesToShim();
     } else {
-      return false;
+      pushOutlinerScenesToShim();
     }
 
     refreshLayersPanel();
@@ -9276,9 +9274,15 @@ var QuotationEditor = (function () {
       }
 
       if (sel) {
-        ev.preventDefault();
         var sid = sel.getAttribute('data-qe-layer-sel');
         if (!sid) return;
+        if (ev.detail >= 2) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          startOutlinerLabelEdit(sid);
+          return;
+        }
+        ev.preventDefault();
         if (ev.shiftKey && expOverlay && expOverlay.toggleOverlayItemSelection) {
           expOverlay.toggleOverlayItemSelection(sid);
         } else if (expOverlay && expOverlay.selectOverlayItem) {
@@ -9289,18 +9293,12 @@ var QuotationEditor = (function () {
       }
     });
 
-    body.addEventListener('dblclick', function (ev) {
-      if (!body.contains(ev.target)) return;
-      var nameEl = ev.target.closest('[data-qe-outliner-name]');
-      var selBtn = ev.target.closest('[data-qe-layer-sel]');
-      var rid = nameEl
-        ? nameEl.getAttribute('data-qe-outliner-name')
-        : (selBtn ? selBtn.getAttribute('data-qe-layer-sel') : null);
-      if (!rid) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      startOutlinerLabelEdit(rid);
-    });
+    body.addEventListener('mousedown', function (ev) {
+      if (ev.target && ev.target.closest &&
+          ev.target.closest('[data-qe-outliner-rename]')) {
+        ev.stopPropagation();
+      }
+    }, true);
 
     body.addEventListener('contextmenu', function (ev) {
       var row = ev.target && ev.target.closest
@@ -12397,7 +12395,8 @@ var QuotationEditor = (function () {
         editorScriptHint: (function () {
           var el = document.querySelector('script[src*="quotation-editor.js"]');
           return el ? el.getAttribute('src') : null;
-        })()
+        })(),
+        editorBuild: 'ws7763'
       };
     },
     /** Same as clicking "+ Crear grupo" — used by button and debug. */
