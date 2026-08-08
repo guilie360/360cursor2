@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7830';
+  var EXP_CANVAS_BUILD = 'ws7831';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -1561,6 +1561,109 @@ var ExperienciaCanvas = (function () {
   }
 
   var _finalShapePosPending = null;
+  var DOM_STYLE_WRITE_PROPS = ['left', 'top', 'transform', 'width', 'height'];
+
+  function domStyleWriteTraceArmed(el) {
+    return !!(el && el.__qeDomStyleWriteArmed);
+  }
+
+  function emitDomStyleWrite(el, property, oldVal, newVal) {
+    if (!domStyleWriteTraceArmed(el)) return;
+    var err = new Error('[DOM STYLE WRITE]');
+    var stack = err.stack || '';
+    var fnLine = '';
+    var lines = stack.split('\n');
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf('emitDomStyleWrite') >= 0) continue;
+      if (lines[i].indexOf('installDomStyleWriteTrace') >= 0) continue;
+      fnLine = lines[i].trim();
+      break;
+    }
+    console.log(
+      '[DOM STYLE WRITE]\n' +
+      'property=' + property + '\n' +
+      'old=' + oldVal + '\n' +
+      'new=' + newVal + '\n' +
+      'function=' + fnLine + '\n' +
+      'stack=' + stack
+    );
+  }
+
+  function domStyleWriteTraceTrackProp(name) {
+    name = String(name || '');
+    return DOM_STYLE_WRITE_PROPS.indexOf(name) >= 0 ||
+      name.indexOf('--btn') === 0 ||
+      name === 'overflow';
+  }
+
+  function installDomStyleWriteTrace(el, memberId) {
+    if (!el || el.__qeDomStyleWriteTrapped) return;
+    el.__qeDomStyleWriteTrapped = true;
+    el.__qeDomStyleWriteArmed = true;
+    el.__qeDomStyleWriteMemberId = memberId;
+    var style = el.style;
+
+    DOM_STYLE_WRITE_PROPS.forEach(function (prop) {
+      var val = style[prop];
+      try {
+        Object.defineProperty(style, prop, {
+          configurable: true,
+          enumerable: true,
+          get: function () { return val; },
+          set: function (next) {
+            if (val !== next) emitDomStyleWrite(el, prop, val, next);
+            val = next;
+          }
+        });
+      } catch (eProp) { /* ignore */ }
+    });
+
+    if (!style.__qeSetPropertyWrapped) {
+      style.__qeSetPropertyWrapped = true;
+      var origSetProperty = style.setProperty.bind(style);
+      style.setProperty = function (name, value, priority) {
+        if (domStyleWriteTraceArmed(el) && domStyleWriteTraceTrackProp(name)) {
+          emitDomStyleWrite(
+            el,
+            'setProperty(' + name + ')',
+            style.getPropertyValue(name),
+            value
+          );
+        }
+        return origSetProperty(name, value, priority);
+      };
+    }
+
+    if (!style.__qeRemovePropertyWrapped) {
+      style.__qeRemovePropertyWrapped = true;
+      var origRemoveProperty = style.removeProperty.bind(style);
+      style.removeProperty = function (name) {
+        if (domStyleWriteTraceArmed(el) && domStyleWriteTraceTrackProp(name)) {
+          emitDomStyleWrite(
+            el,
+            'removeProperty(' + name + ')',
+            style.getPropertyValue(name),
+            ''
+          );
+        }
+        return origRemoveProperty(name);
+      };
+    }
+
+    var cssTextVal = style.cssText;
+    try {
+      Object.defineProperty(style, 'cssText', {
+        configurable: true,
+        enumerable: true,
+        get: function () { return cssTextVal; },
+        set: function (next) {
+          if (cssTextVal !== next) emitDomStyleWrite(el, 'cssText', cssTextVal, next);
+          cssTextVal = next;
+        }
+      });
+    } catch (eCss) { /* ignore */ }
+  }
 
   function finalShapePosDiagField(v) {
     if (v == null || isNaN(v)) return 'null';
@@ -1629,6 +1732,7 @@ var ExperienciaCanvas = (function () {
       'deltaPixelLeft=' + finalShapePosDiagField(deltaPixelLeft) + '\n' +
       'deltaPixelTop=' + finalShapePosDiagField(deltaPixelTop)
     );
+    if (el) installDomStyleWriteTrace(el, p.memberId);
   }
 
   function shapeGroupPaintDiagRecordShapeBox(vm, box) {
