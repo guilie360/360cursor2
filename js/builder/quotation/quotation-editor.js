@@ -4095,73 +4095,8 @@ var QuotationEditor = (function () {
     };
   }
 
-  /** Debug — trace world position of existing group member A when B is dropped. */
-  var groupPosTraceState = {
-    active: false,
-    targetId: null,
-    baseline: null,
-    stopped: false
-  };
-
-  function readGroupPosTraceWorld(memberId) {
-    if (!memberId || typeof ExperienciaEngine === 'undefined') return null;
-    var sz = overlayPanelLayerSize();
-    var lw = sz.w || 1000;
-    var lh = sz.h || 1000;
-    if (expOverlay && expOverlay.shim) {
-      var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
-      if (n) {
-        var shimIx = ExperienciaEngine.getInteraction(n, memberId);
-        if (shimIx && ExperienciaEngine.overlayWorldLayoutRaw) {
-          var shimWorld = ExperienciaEngine.overlayWorldLayoutRaw(n, shimIx, lw, lh);
-          if (shimWorld) {
-            return { x: Number(shimWorld.x), y: Number(shimWorld.y) };
-          }
-        }
-      }
-    }
-    var panelIx = findSceneInteraction(memberId);
-    if (panelIx && ExperienciaEngine.overlayWorldLayoutAbsolute) {
-      var panelWorld = ExperienciaEngine.overlayWorldLayoutAbsolute(panelIx, lw, lh);
-      if (panelWorld) {
-        return { x: Number(panelWorld.x), y: Number(panelWorld.y) };
-      }
-    }
-    return null;
-  }
-
-  function groupPosTraceArm(targetId) {
-    if (!targetId) return;
-    groupPosTraceState.active = true;
-    groupPosTraceState.targetId = String(targetId);
-    groupPosTraceState.baseline = null;
-    groupPosTraceState.stopped = false;
-  }
-
-  function groupPosTraceStep(step) {
-    if (!groupPosTraceState.active || groupPosTraceState.stopped || !groupPosTraceState.targetId) {
-      return;
-    }
-    var world = readGroupPosTraceWorld(groupPosTraceState.targetId);
-    if (!world || isNaN(world.x) || isNaN(world.y)) return;
-    console.log(
-      '[A POS]\nstep=' + step + '\nworld=(' + world.x + ',' + world.y + ')'
-    );
-    if (!groupPosTraceState.baseline) {
-      groupPosTraceState.baseline = { x: world.x, y: world.y };
-      return;
-    }
-    var sz = overlayPanelLayerSize();
-    var pxDx = Math.abs(world.x - groupPosTraceState.baseline.x) / 100 * (sz.w || 1000);
-    var pxDy = Math.abs(world.y - groupPosTraceState.baseline.y) / 100 * (sz.h || 1000);
-    if (pxDx > 0.1 || pxDy > 0.1) {
-      console.warn('FIRST POSITION CHANGE:\nfunction=' + step);
-      groupPosTraceState.stopped = true;
-      groupPosTraceState.active = false;
-    }
-  }
-
-  function resolveGroupPosTraceTargetForDrop(dragId, drop) {
+  /** Debug — arm canvas render trace when free item joins group with existing members. */
+  function resolveRenderPosTraceTargetForDrop(dragId, drop) {
     if (!dragId || !drop) return null;
     var dragKey = String(dragId);
     var groupId = null;
@@ -4183,33 +4118,37 @@ var QuotationEditor = (function () {
     return String(members[0]);
   }
 
-  /** Arm pushScenesToShim trace: free item dropped into group that already has members. */
-  function shouldArmPushShimTraceForDrop(dragId, drop) {
+  function shouldArmRenderPosTraceForDrop(dragId, drop) {
     if (!dragId || !drop || !drop.id) return false;
     var dragIx = findSceneInteraction(dragId);
     if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return false;
     if (drop.action === 'into') {
-      return !!resolveGroupPosTraceTargetForDrop(dragId, drop);
+      return !!resolveRenderPosTraceTargetForDrop(dragId, drop);
     }
     var targetIx = findSceneInteraction(drop.id);
     if (!targetIx) return false;
     if (!isOverlayGroupIx(targetIx) && !targetIx.groupId) return false;
-    return !!resolveGroupPosTraceTargetForDrop(dragId, drop);
+    return !!resolveRenderPosTraceTargetForDrop(dragId, drop);
   }
 
-  function armPushShimTraceForDrop(dragId, drop) {
-    if (!shouldArmPushShimTraceForDrop(dragId, drop)) return false;
-    try { window.__QE_PUSH_SHIM_TRACE_ARMED__ = true; } catch (eArm) { return false; }
+  function armRenderPosTraceForDrop(dragId, drop) {
+    var targetId = resolveRenderPosTraceTargetForDrop(dragId, drop);
+    if (!targetId || !shouldArmRenderPosTraceForDrop(dragId, drop)) return false;
+    try {
+      window.__QE_RENDER_POS_TRACE__ = {
+        armed: true,
+        targetId: String(targetId),
+        baselineRender: null,
+        paintCount: 0,
+        maxPaints: 4
+      };
+    } catch (eArm) { return false; }
     return true;
   }
 
-  function disarmPushShimTrace() {
-    try { window.__QE_PUSH_SHIM_TRACE_ARMED__ = false; } catch (eDis) { /* ignore */ }
+  function disarmRenderPosTrace() {
+    try { window.__QE_RENDER_POS_TRACE__ = null; } catch (eDis) { /* ignore */ }
   }
-
-  try {
-    window.__qeGroupPosTraceStep = groupPosTraceStep;
-  } catch (ePosTraceExport) { /* ignore */ }
 
   function applyPanelSceneToOverlay(engineFn) {
     markDirtyLocal();
@@ -4285,11 +4224,6 @@ var QuotationEditor = (function () {
     }
     var scenes = state.backpackMode ? [getBackpackSceneRef()] : state.scenes;
     QuotationExperienciaBridge.pushScenesToShim(expOverlay.shim, scenes);
-    if (tid) {
-      lockTraceSceneItem('pushOutlinerScenesToShim:exit:scene', tid);
-      lockTraceShimItem('pushOutlinerScenesToShim:exit:shim', tid);
-    }
-    groupPosTraceStep('after pushOutlinerScenesToShim');
   }
 
   function dissolveOverlayGroupById(groupId) {
@@ -4708,7 +4642,6 @@ var QuotationEditor = (function () {
     copyPanelGroupFromShim(groupId);
     healOverlayGroupMembership(scene);
     markDirtyLocal();
-    groupPosTraceStep('after assignInteractionToGroup');
     return true;
   }
 
@@ -5272,11 +5205,16 @@ var QuotationEditor = (function () {
         if (atRelease) drop = atRelease;
       }
       if (draggingId && drop) {
-        var posTraceTarget = resolveGroupPosTraceTargetForDrop(draggingId, drop);
-        var pushShimTraceArmed = armPushShimTraceForDrop(draggingId, drop);
-        if (posTraceTarget) {
-          groupPosTraceArm(posTraceTarget);
-          groupPosTraceStep('before-drop');
+        var renderTraceArmed = armRenderPosTraceForDrop(draggingId, drop);
+        if (renderTraceArmed && typeof window.__qeSampleOverlayRenderPos === 'function') {
+          var traceTarget = resolveRenderPosTraceTargetForDrop(draggingId, drop);
+          if (traceTarget) {
+            window.__qeSampleOverlayRenderPos(
+              state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
+              traceTarget,
+              'before-drop'
+            );
+          }
         }
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
@@ -5293,7 +5231,9 @@ var QuotationEditor = (function () {
           }
           syncOutlinerPanelToCanvas();
         }
-        if (pushShimTraceArmed) disarmPushShimTrace();
+        if (renderTraceArmed) {
+          setTimeout(function () { disarmRenderPosTrace(); }, 500);
+        }
       }
 
       clearDropMarkers();
@@ -10232,7 +10172,6 @@ var QuotationEditor = (function () {
         });
       }
     }
-    groupPosTraceStep('after refreshLayersPanel');
   }
 
   function bindLayersPanel() {

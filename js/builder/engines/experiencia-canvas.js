@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7817';
+  var EXP_CANVAS_BUILD = 'ws7818';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -6409,6 +6409,157 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    function renderPosRound4(v) {
+      return v != null && isFinite(Number(v)) ? +(Number(v)).toFixed(4) : null;
+    }
+
+    function renderPosRound2(v) {
+      return v != null && isFinite(Number(v)) ? +(Number(v)).toFixed(2) : null;
+    }
+
+    function renderPosDeltaObj(a, b) {
+      if (!a || !b) return null;
+      var out = {};
+      ['x', 'y', 'rotation', 'cx', 'cy', 'w', 'h', 'rot'].forEach(function (k) {
+        if (a[k] == null || b[k] == null) return;
+        out[k] = renderPosRound4(Number(b[k]) - Number(a[k]));
+      });
+      return Object.keys(out).length ? out : null;
+    }
+
+    /** Canvas render trace — stored world vs vm paint vs final CSS/DOM (group drop repro only). */
+    function computeOverlayRenderPosTrace(sceneId, memberId, layerW, layerH) {
+      if (!sceneId || !memberId || !ExperienciaEngine) return null;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction(n, memberId);
+      if (!n || !ix) return null;
+      var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
+        ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
+        : null;
+      var vm = ExperienciaEngine.buttonViewModel
+        ? ExperienciaEngine.buttonViewModel(state, n, ix, layerW, layerH)
+        : null;
+      if (!vm) return null;
+      var paintX = Number(vm.x);
+      var paintY = Number(vm.y);
+      var rot = Number(vm.rotation) || 0;
+      var t = String(vm.type || 'BUTTON').toUpperCase();
+      var gmPaint = null;
+      if (isShapeType(t)) {
+        gmPaint = shapeStagePaintMetrics(vm, layerW, layerH);
+        if (gmPaint) {
+          paintX = gmPaint.x;
+          paintY = gmPaint.y;
+        }
+      }
+      return {
+        memberId: String(memberId),
+        sceneId: String(sceneId),
+        type: t,
+        groupId: ix.groupId || null,
+        storedWorld: storedWorld ? {
+          x: renderPosRound4(storedWorld.x),
+          y: renderPosRound4(storedWorld.y),
+          rotation: renderPosRound2(storedWorld.rotation)
+        } : null,
+        vmPaintWorld: {
+          x: renderPosRound4(vm.x),
+          y: renderPosRound4(vm.y),
+          rotation: renderPosRound2(rot)
+        },
+        renderPaintPct: {
+          x: renderPosRound4(paintX),
+          y: renderPosRound4(paintY),
+          rotation: renderPosRound2(rot),
+          shapeAdjusted: !!gmPaint
+        },
+        cssTransform: 'left:' + paintX + '%;top:' + paintY + '%;--btn-rot:' + rot + 'deg;'
+      };
+    }
+
+    function readOverlayDomRenderPos(memberId) {
+      if (!buttonsLayer || !memberId) return null;
+      var mid = String(memberId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + mid + '"]');
+      if (!el) return null;
+      return {
+        style: el.getAttribute('style') || '',
+        left: el.style.left || null,
+        top: el.style.top || null,
+        btnRot: el.style.getPropertyValue('--btn-rot') || null,
+        box: bisectDomBox(el)
+      };
+    }
+
+    function emitRenderPosTrace(step, trace) {
+      if (!trace) return;
+      var tr = null;
+      try { tr = window.__QE_RENDER_POS_TRACE__; } catch (eTr) { /* ignore */ }
+      var payload = {
+        step: step,
+        memberId: trace.memberId,
+        sceneId: trace.sceneId,
+        type: trace.type,
+        groupId: trace.groupId,
+        storedWorld: trace.storedWorld,
+        vmPaintWorld: trace.vmPaintWorld,
+        renderPaintPct: trace.renderPaintPct,
+        cssTransform: trace.cssTransform,
+        domPaint: trace.domPaint || null
+      };
+      if (tr && tr.baselineRender && step !== 'before-drop') {
+        payload.deltaFromBeforeDrop = {
+          storedWorld: renderPosDeltaObj(tr.baselineRender.storedWorld, trace.storedWorld),
+          vmPaintWorld: renderPosDeltaObj(tr.baselineRender.vmPaintWorld, trace.vmPaintWorld),
+          renderPaintPct: renderPosDeltaObj(tr.baselineRender.renderPaintPct, trace.renderPaintPct),
+          domBox: renderPosDeltaObj(
+            tr.baselineRender.domPaint && tr.baselineRender.domPaint.box,
+            trace.domPaint && trace.domPaint.box
+          )
+        };
+      }
+      console.log(
+        '%c[RENDER POS] ' + step,
+        'color:#f6f;font-weight:bold;font-size:13px',
+        payload
+      );
+    }
+
+    function sampleOverlayRenderPos(sceneId, memberId, step) {
+      try {
+        var tr = window.__QE_RENDER_POS_TRACE__;
+        if (!tr || !tr.armed) return;
+        if (String(tr.targetId) !== String(memberId)) return;
+        var layerW = overlayLayerSize().w;
+        var layerH = overlayLayerSize().h;
+        var trace = computeOverlayRenderPosTrace(sceneId, memberId, layerW, layerH);
+        if (!trace) return;
+        trace.domPaint = readOverlayDomRenderPos(memberId);
+        if (step === 'before-drop') tr.baselineRender = trace;
+        emitRenderPosTrace(step, trace);
+      } catch (eSample) { /* ignore */ }
+    }
+
+    function maybeEmitRenderPosTraceAfterPaint(sceneId, layerW, layerH) {
+      try {
+        var tr = window.__QE_RENDER_POS_TRACE__;
+        if (!tr || !tr.armed || !tr.targetId) return;
+        if (tr.paintCount >= (tr.maxPaints || 4)) return;
+        tr.paintCount = (tr.paintCount || 0) + 1;
+        var step = tr.paintCount === 1 ? 'after-drop-paint-1' : ('after-drop-paint-' + tr.paintCount);
+        var trace = computeOverlayRenderPosTrace(sceneId, tr.targetId, layerW, layerH);
+        if (!trace) return;
+        requestAnimationFrame(function () {
+          trace.domPaint = readOverlayDomRenderPos(tr.targetId);
+          emitRenderPosTrace(step, trace);
+        });
+      } catch (ePaintTrace) { /* ignore */ }
+    }
+
+    try {
+      window.__qeSampleOverlayRenderPos = sampleOverlayRenderPos;
+    } catch (eExportRenderPos) { /* ignore */ }
+
     function emitPaintRotateVmBisect(sceneId, memberId, levels) {
       var firstBreak = null;
       var i;
@@ -7716,6 +7867,7 @@ var ExperienciaCanvas = (function () {
         scheduleShapeDebugLog(debugPhase, debugIds);
       }
       syncOverlayPanelMemberGlow();
+      maybeEmitRenderPosTraceAfterPaint(n.id, layerW, layerH);
     }
 
     /** Mount gizmo chrome only — never remount shape nodes (avoids select flicker). */
