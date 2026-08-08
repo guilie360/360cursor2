@@ -1547,11 +1547,6 @@ var ExperienciaCanvas = (function () {
       shapeGroupPaintDiagBtnId(btn) === _shapeGroupPaintDiagCall.btnId);
   }
 
-  function shapeGroupPaintDiagRound(v) {
-    if (v == null || isNaN(v)) return v;
-    return +(Number(v)).toFixed(4);
-  }
-
   function shapeGroupPaintDiagGroupMemberCount(btn) {
     var st = _shapeGroupPaintDiagMountState;
     if (!st || !btn || !btn.groupId || typeof ExperienciaEngine === 'undefined') return null;
