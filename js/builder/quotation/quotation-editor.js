@@ -4155,17 +4155,24 @@ var QuotationEditor = (function () {
   }
 
   function readFirstVisualMoveModelSnapshot(tr) {
+    var empty = {
+      storedWorld: null,
+      vmPaintWorld: null,
+      renderPaintPct: null,
+      group: null,
+      member: null
+    };
     if (!tr || !expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') {
-      return '';
+      return empty;
     }
     var sz = overlayPanelLayerSize();
     var lw = sz.w;
     var lh = sz.h;
     var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
-    if (!n) return '';
+    if (!n) return empty;
     var ix = ExperienciaEngine.getInteraction(n, tr.targetId);
     var grp = ExperienciaEngine.getInteraction(n, tr.groupId);
-    if (!ix) return '';
+    if (!ix) return empty;
 
     var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
       ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, lw, lh)
@@ -4181,35 +4188,65 @@ var QuotationEditor = (function () {
       renderPaint = { x: Number(vm.x), y: Number(vm.y) };
     }
 
-    var storedStr = storedWorld
-      ? ('x=' + storedWorld.x + ' y=' + storedWorld.y)
-      : 'null';
-    var vmStr = vm ? ('x=' + vm.x + ' y=' + vm.y) : 'null';
-    var renderStr = renderPaint
-      ? ('x=' + renderPaint.x + ' y=' + renderPaint.y)
-      : 'null';
-
-    return 'storedWorld=' + storedStr + '\n' +
-      'vmPaintWorld=' + vmStr + '\n' +
-      'renderPaintPct=' + renderStr + '\n' +
-      'group.x=' + (grp && grp.x != null ? grp.x : '') + '\n' +
-      'group.y=' + (grp && grp.y != null ? grp.y : '') + '\n' +
-      'member.localX=' + (ix.localX != null ? ix.localX : '') + '\n' +
-      'member.localY=' + (ix.localY != null ? ix.localY : '');
+    return {
+      storedWorld: storedWorld ? {
+        x: Number(storedWorld.x),
+        y: Number(storedWorld.y),
+        rotation: storedWorld.rotation != null ? Number(storedWorld.rotation) : null
+      } : null,
+      vmPaintWorld: vm ? {
+        x: Number(vm.x),
+        y: Number(vm.y),
+        rotation: vm.rotation != null ? Number(vm.rotation) : null
+      } : null,
+      renderPaintPct: renderPaint ? {
+        x: Number(renderPaint.x),
+        y: Number(renderPaint.y)
+      } : null,
+      group: grp ? {
+        x: grp.x != null ? Number(grp.x) : null,
+        y: grp.y != null ? Number(grp.y) : null,
+        rotation: grp.rotation != null ? Number(grp.rotation) : null
+      } : null,
+      member: {
+        localX: ix.localX != null ? Number(ix.localX) : null,
+        localY: ix.localY != null ? Number(ix.localY) : null,
+        localRotation: ix.localRotation != null ? Number(ix.localRotation) : null
+      }
+    };
   }
 
   function emitFirstVisualMoveLog(before, after, tr) {
+    before = before || { left: '', top: '' };
+    after = after || { left: '', top: '' };
     var dLeft = parseFloat(after.left) - parseFloat(before.left);
     var dTop = parseFloat(after.top) - parseFloat(before.top);
     if (!isFinite(dLeft)) dLeft = 0;
     if (!isFinite(dTop)) dTop = 0;
-    console.log('[FIRST VISUAL MOVE]');
-    console.log('before:\nleft=' + before.left + '\ntop=' + before.top);
-    console.log('after:\nleft=' + after.left + '\ntop=' + after.top);
-    console.log('delta:\nleft=' + dLeft + '\ntop=' + dTop);
-    var modelSnap = readFirstVisualMoveModelSnapshot(tr);
-    if (modelSnap) console.log(modelSnap);
-    console.log('callStack:\n' + (new Error('[FIRST VISUAL MOVE]')).stack);
+
+    var model = readFirstVisualMoveModelSnapshot(tr);
+    var payload = {
+      before: {
+        left: String(before.left),
+        top: String(before.top)
+      },
+      after: {
+        left: String(after.left),
+        top: String(after.top)
+      },
+      delta: {
+        left: dLeft,
+        top: dTop
+      },
+      storedWorld: model.storedWorld,
+      vmPaintWorld: model.vmPaintWorld,
+      renderPaintPct: model.renderPaintPct,
+      group: model.group,
+      member: model.member,
+      callStack: new Error('[FIRST VISUAL MOVE]').stack
+    };
+
+    console.log('[FIRST VISUAL MOVE]', payload);
   }
 
   function tickFirstVisualMoveWatch() {
