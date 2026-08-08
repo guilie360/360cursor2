@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7816';
+  var QE_EDITOR_BUILD = 'ws7817';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4183,6 +4183,30 @@ var QuotationEditor = (function () {
     return String(members[0]);
   }
 
+  /** Arm pushScenesToShim trace: free item dropped into group that already has members. */
+  function shouldArmPushShimTraceForDrop(dragId, drop) {
+    if (!dragId || !drop || !drop.id) return false;
+    var dragIx = findSceneInteraction(dragId);
+    if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return false;
+    if (drop.action === 'into') {
+      return !!resolveGroupPosTraceTargetForDrop(dragId, drop);
+    }
+    var targetIx = findSceneInteraction(drop.id);
+    if (!targetIx) return false;
+    if (!isOverlayGroupIx(targetIx) && !targetIx.groupId) return false;
+    return !!resolveGroupPosTraceTargetForDrop(dragId, drop);
+  }
+
+  function armPushShimTraceForDrop(dragId, drop) {
+    if (!shouldArmPushShimTraceForDrop(dragId, drop)) return false;
+    try { window.__QE_PUSH_SHIM_TRACE_ARMED__ = true; } catch (eArm) { return false; }
+    return true;
+  }
+
+  function disarmPushShimTrace() {
+    try { window.__QE_PUSH_SHIM_TRACE_ARMED__ = false; } catch (eDis) { /* ignore */ }
+  }
+
   try {
     window.__qeGroupPosTraceStep = groupPosTraceStep;
   } catch (ePosTraceExport) { /* ignore */ }
@@ -5249,6 +5273,7 @@ var QuotationEditor = (function () {
       }
       if (draggingId && drop) {
         var posTraceTarget = resolveGroupPosTraceTargetForDrop(draggingId, drop);
+        var pushShimTraceArmed = armPushShimTraceForDrop(draggingId, drop);
         if (posTraceTarget) {
           groupPosTraceArm(posTraceTarget);
           groupPosTraceStep('before-drop');
@@ -5261,13 +5286,14 @@ var QuotationEditor = (function () {
           ok = commitOutlinerDrop(draggingId, dropTarget);
           if (ok) drop = dropTarget;
         }
-      }
-      if (ok) {
-        var list = listEl();
-        if (list && drop && drop.action !== 'into') {
-          moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
+        if (ok) {
+          var list = listEl();
+          if (list && drop && drop.action !== 'into') {
+            moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
+          }
+          syncOutlinerPanelToCanvas();
         }
-        syncOutlinerPanelToCanvas();
+        if (pushShimTraceArmed) disarmPushShimTrace();
       }
 
       clearDropMarkers();

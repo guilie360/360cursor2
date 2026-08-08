@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7816';
+  var QE_BRIDGE_BUILD = 'ws7817';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -146,6 +146,10 @@ var QuotationExperienciaBridge = (function () {
 
   function pushShimTraceInstruction(label) {
     console.log('[PUSH SHIM TRACE] instruction=' + label);
+  }
+
+  function pushShimTraceIsArmed() {
+    try { return window.__QE_PUSH_SHIM_TRACE_ARMED__ === true; } catch (eArm) { return false; }
   }
 
   function lockTraceId() {
@@ -492,20 +496,20 @@ var QuotationExperienciaBridge = (function () {
       });
       var panelCtx = pushShimTraceFindGroupCtx(srcList);
       var shimBeforeCtx = pushShimTraceFindGroupCtx((n.config && n.config.interactions) || []);
-      var traceActive = !!(panelCtx || shimBeforeCtx);
+      var traceActive = pushShimTraceIsArmed();
       if (traceActive) {
         pushShimTraceDump('ANTES DEL CLONE (shim)', shimBeforeCtx || panelCtx, n, traceLw, traceLh);
         if (panelCtx) {
           pushShimTraceDump('ANTES DEL CLONE (panel clone input)', panelCtx, null, traceLw, traceLh);
         }
+        pushShimTraceInstruction('cloneJson(srcList)');
       }
-      pushShimTraceInstruction('cloneJson(srcList)');
       var cloned = cloneJson(srcList);
       if (traceActive && panelCtx) {
         var ctxAfterCloneJson = pushShimTraceFindGroupCtx(cloned);
         pushShimTraceDump('after cloneJson (pre-merge)', ctxAfterCloneJson, null, traceLw, traceLh);
+        pushShimTraceInstruction('cloned.forEach → mergeSceneInteractionFlagsToShim(src, ix)');
       }
-      pushShimTraceInstruction('cloned.forEach → mergeSceneInteractionFlagsToShim(src, ix)');
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
@@ -513,8 +517,8 @@ var QuotationExperienciaBridge = (function () {
       if (traceActive && panelCtx) {
         var ctxAfterMerge = pushShimTraceFindGroupCtx(cloned);
         pushShimTraceDump('after mergeSceneInteractionFlagsToShim', ctxAfterMerge, null, traceLw, traceLh);
+        pushShimTraceInstruction('n.config.interactions = cloned');
       }
-      pushShimTraceInstruction('n.config.interactions = cloned');
       n.config.interactions = cloned;
       if (traceActive) {
         var shimAfterCtx = pushShimTraceFindGroupCtx(cloned);
