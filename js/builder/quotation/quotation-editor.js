@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7811';
+  var QE_EDITOR_BUILD = 'ws7812';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4479,14 +4479,12 @@ var QuotationEditor = (function () {
     var memberKey = String(memberId);
     var worldSnap = null;
 
-    if (prevGroupId) {
-      applyPanelSceneToOverlay(function (n) {
-        var snapM = ExperienciaEngine.getInteraction(n, memberId);
-        if (snapM) {
-          worldSnap = ExperienciaEngine.overlayWorldLayoutRaw(n, snapM, lw, lh);
-        }
-      });
-    }
+    applyPanelSceneToOverlay(function (n) {
+      var snapM = ExperienciaEngine.getInteraction(n, memberId);
+      if (snapM) {
+        worldSnap = ExperienciaEngine.overlayWorldLayoutRaw(n, snapM, lw, lh);
+      }
+    });
 
     (scene.interactions || []).forEach(function (ix) {
       if (!isOverlayGroupIx(ix)) return;
