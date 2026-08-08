@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7821';
+  var EXP_CANVAS_BUILD = 'ws7822';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -16541,6 +16541,21 @@ var ExperienciaCanvas = (function () {
     return handle;
   }
 
+  function overlayRenderPaintPct(vm, layerW, layerH) {
+    if (!vm) return null;
+    var paintX = Number(vm.x);
+    var paintY = Number(vm.y);
+    var t = String(vm.type || 'BUTTON').toUpperCase();
+    if (isShapeType(t)) {
+      var gm = shapeStagePaintMetrics(vm, layerW, layerH);
+      if (gm) {
+        paintX = gm.x;
+        paintY = gm.y;
+      }
+    }
+    return { x: paintX, y: paintY };
+  }
+
   return {
     shellHtml: shellHtml,
     overlayShellHtml: overlayShellHtml,
@@ -16553,6 +16568,7 @@ var ExperienciaCanvas = (function () {
     isShapeBoxV2Active: isShapeBoxV2Active,
     shapeBoxV2DebugSnapshot: shapeBoxV2DebugSnapshot,
     shapeResizeTraceEnabled: shapeResizeTraceEnabled,
+    overlayRenderPaintPct: overlayRenderPaintPct,
     EDITOR_PROJECT_ID: EDITOR_PROJECT_ID
   };
 })();

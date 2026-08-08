@@ -4154,7 +4154,51 @@ var QuotationEditor = (function () {
     } catch (eDis) { /* ignore */ }
   }
 
-  function emitFirstVisualMoveLog(before, after) {
+  function readFirstVisualMoveModelSnapshot(tr) {
+    if (!tr || !expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') {
+      return '';
+    }
+    var sz = overlayPanelLayerSize();
+    var lw = sz.w;
+    var lh = sz.h;
+    var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+    if (!n) return '';
+    var ix = ExperienciaEngine.getInteraction(n, tr.targetId);
+    var grp = ExperienciaEngine.getInteraction(n, tr.groupId);
+    if (!ix) return '';
+
+    var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
+      ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, lw, lh)
+      : null;
+    var vm = ExperienciaEngine.buttonViewModel
+      ? ExperienciaEngine.buttonViewModel(expOverlay.shim, n, ix, lw, lh)
+      : null;
+    var renderPaint = null;
+    if (vm && typeof ExperienciaCanvas !== 'undefined' &&
+        ExperienciaCanvas.overlayRenderPaintPct) {
+      renderPaint = ExperienciaCanvas.overlayRenderPaintPct(vm, lw, lh);
+    } else if (vm) {
+      renderPaint = { x: Number(vm.x), y: Number(vm.y) };
+    }
+
+    var storedStr = storedWorld
+      ? ('x=' + storedWorld.x + ' y=' + storedWorld.y)
+      : 'null';
+    var vmStr = vm ? ('x=' + vm.x + ' y=' + vm.y) : 'null';
+    var renderStr = renderPaint
+      ? ('x=' + renderPaint.x + ' y=' + renderPaint.y)
+      : 'null';
+
+    return 'storedWorld=' + storedStr + '\n' +
+      'vmPaintWorld=' + vmStr + '\n' +
+      'renderPaintPct=' + renderStr + '\n' +
+      'group.x=' + (grp && grp.x != null ? grp.x : '') + '\n' +
+      'group.y=' + (grp && grp.y != null ? grp.y : '') + '\n' +
+      'member.localX=' + (ix.localX != null ? ix.localX : '') + '\n' +
+      'member.localY=' + (ix.localY != null ? ix.localY : '');
+  }
+
+  function emitFirstVisualMoveLog(before, after, tr) {
     var dLeft = parseFloat(after.left) - parseFloat(before.left);
     var dTop = parseFloat(after.top) - parseFloat(before.top);
     if (!isFinite(dLeft)) dLeft = 0;
@@ -4163,6 +4207,8 @@ var QuotationEditor = (function () {
     console.log('before:\nleft=' + before.left + '\ntop=' + before.top);
     console.log('after:\nleft=' + after.left + '\ntop=' + after.top);
     console.log('delta:\nleft=' + dLeft + '\ntop=' + dTop);
+    var modelSnap = readFirstVisualMoveModelSnapshot(tr);
+    if (modelSnap) console.log(modelSnap);
     console.log('callStack:\n' + (new Error('[FIRST VISUAL MOVE]')).stack);
   }
 
@@ -4180,7 +4226,7 @@ var QuotationEditor = (function () {
     }
     tr.done = true;
     tr.armed = false;
-    emitFirstVisualMoveLog(tr.before, cur);
+    emitFirstVisualMoveLog(tr.before, cur, tr);
     disarmFirstVisualMoveTrace();
   }
 
