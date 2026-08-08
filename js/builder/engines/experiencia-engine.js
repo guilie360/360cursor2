@@ -1671,33 +1671,41 @@ var ExperienciaEngine = (function () {
     var lh = layerH || 1000;
     var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
     if (g.width == null || g.height == null || !memberIds.length) {
-      var bounds0 = computeOverlayUnionBounds(n, memberIds, lw, lh, { useComposed: true });
-      if (bounds0) {
-        var __gmB0 = snapshotGroupModelTrace(g);
-        g.x = bounds0.cx;
-        g.y = bounds0.cy;
-        g.width = bounds0.w;
-        g.height = bounds0.h;
-        traceGroupModelIfChanged(
-          g, g.id, __gmB0,
-          'ensureOverlayGroupDefaults', '1640-1644',
-          'computeOverlayUnionBounds(bounds0) → g.x/y/width/height',
-          { bounds0: bounds0, skipSync: !!opts.skipSync }
-        );
-        if (g._baseWidth == null) g._baseWidth = bounds0.w;
-        if (g._baseHeight == null) g._baseHeight = bounds0.h;
+      if (opts.skipSync) {
+        /* Defer pivot/bounds recompute — syncOverlayGroupFrameFromMembers owns frame math. */
+        if (!memberIds.length) {
+          if (g.width == null) g.width = 20;
+          if (g.height == null) g.height = 20;
+        }
       } else {
-        var __gmB1 = snapshotGroupModelTrace(g);
-        if (g.width == null) g.width = 20;
-        if (g.height == null) g.height = 20;
-        traceGroupModelIfChanged(
-          g, g.id, __gmB1,
-          'ensureOverlayGroupDefaults', '1655-1656',
-          'fallback defaults → g.width/height=20',
-          { skipSync: !!opts.skipSync }
-        );
-        if (g._baseWidth == null) g._baseWidth = g.width;
-        if (g._baseHeight == null) g._baseHeight = g.height;
+        var bounds0 = computeOverlayUnionBounds(n, memberIds, lw, lh, { useComposed: true });
+        if (bounds0) {
+          var __gmB0 = snapshotGroupModelTrace(g);
+          g.x = bounds0.cx;
+          g.y = bounds0.cy;
+          g.width = bounds0.w;
+          g.height = bounds0.h;
+          traceGroupModelIfChanged(
+            g, g.id, __gmB0,
+            'ensureOverlayGroupDefaults', '1640-1644',
+            'computeOverlayUnionBounds(bounds0) → g.x/y/width/height',
+            { bounds0: bounds0, skipSync: !!opts.skipSync }
+          );
+          if (g._baseWidth == null) g._baseWidth = bounds0.w;
+          if (g._baseHeight == null) g._baseHeight = bounds0.h;
+        } else {
+          var __gmB1 = snapshotGroupModelTrace(g);
+          if (g.width == null) g.width = 20;
+          if (g.height == null) g.height = 20;
+          traceGroupModelIfChanged(
+            g, g.id, __gmB1,
+            'ensureOverlayGroupDefaults', '1655-1656',
+            'fallback defaults → g.width/height=20',
+            { skipSync: !!opts.skipSync }
+          );
+          if (g._baseWidth == null) g._baseWidth = g.width;
+          if (g._baseHeight == null) g._baseHeight = g.height;
+        }
       }
     }
     if (g._baseWidth == null) g._baseWidth = Number(g.width) || 20;
@@ -1857,6 +1865,44 @@ var ExperienciaEngine = (function () {
     return syncOverlayGroupFrameFromMembers(n, g, layerW, layerH);
   }
 
+  /** Contract — existing members must keep compose world anchor across frame sync. */
+  function snapshotExistingMemberComposeWorld(n, g, memberIds, layerW, layerH) {
+    var out = {};
+    (memberIds || []).forEach(function (id) {
+      var ix = getInteraction(n, id);
+      if (!ix || !isSceneFreeOverlayInteraction(ix)) return;
+      if (!ix.groupId || ix.localX == null || ix.localY == null) return;
+      if (String(ix.groupId) !== String(g.id)) return;
+      var world = composeOverlayWorldLayout(g, ix, layerW, layerH, n, { skipEnsure: true });
+      if (!world) return;
+      out[String(id)] = { x: Number(world.x), y: Number(world.y) };
+    });
+    return out;
+  }
+
+  function assertExistingMemberComposeWorldPreserved(n, g, memberIds, worldBefore, layerW, layerH) {
+    if (!worldBefore) return;
+    var epsPx = 0.01;
+    (memberIds || []).forEach(function (id) {
+      var key = String(id);
+      var before = worldBefore[key];
+      if (!before) return;
+      var ix = getInteraction(n, id);
+      if (!ix) return;
+      var after = composeOverlayWorldLayout(g, ix, layerW, layerH, n, { skipEnsure: true });
+      if (!after) return;
+      var dxPx = Math.abs(Number(after.x) - Number(before.x)) / 100 * layerW;
+      var dyPx = Math.abs(Number(after.y) - Number(before.y)) / 100 * layerH;
+      if (dxPx > epsPx || dyPx > epsPx) {
+        throw new Error(
+          '[GROUP WORLD DRIFT] member=' + key +
+          ' before=(' + before.x + ',' + before.y + ')' +
+          ' after=(' + after.x + ',' + after.y + ')'
+        );
+      }
+    });
+  }
+
   /** Recompute group frame from composed member worlds without shifting children visually. */
   function syncOverlayGroupFrameFromMembers(n, g, layerW, layerH) {
     if (!n || !g || !isOverlayGroupInteraction(g)) return g;
@@ -1867,6 +1913,8 @@ var ExperienciaEngine = (function () {
     if (!Array.isArray(g.memberIds)) g.memberIds = [];
     var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
     if (!memberIds.length) return g;
+
+    var worldBefore = snapshotExistingMemberComposeWorld(n, g, memberIds, layerW, layerH);
 
     /* Phase 1 — freeze member world anchors before mutating group pivot/size. */
     var preserved = preserveOverlayGroupMemberWorlds(n, g, memberIds, layerW, layerH);
@@ -1901,6 +1949,7 @@ var ExperienciaEngine = (function () {
       ix.groupId = g.id;
     });
     g._transformV = 2;
+    assertExistingMemberComposeWorldPreserved(n, g, memberIds, worldBefore, layerW, layerH);
     if (__gmEnter) {
       traceGroupModelIfChanged(
         g, g.id, __gmEnter,

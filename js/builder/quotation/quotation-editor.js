@@ -4566,7 +4566,6 @@ var QuotationEditor = (function () {
       if (worldSnap) {
         var prevTransformV = g._transformV;
         g._transformV = 1;
-        ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh, { skipSync: true });
         ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
         g._transformV = prevTransformV != null ? prevTransformV : 2;
       } else {
