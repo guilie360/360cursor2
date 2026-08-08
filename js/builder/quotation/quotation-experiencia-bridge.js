@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7815';
+  var QE_BRIDGE_BUILD = 'ws7816';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -25,6 +25,127 @@ var QuotationExperienciaBridge = (function () {
 
   function cloneJson(v) {
     try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
+  }
+
+  /** pushScenesToShim-only debug — locate first world mutation during panel→shim clone. */
+  function pushShimTraceLayerSize() {
+    try {
+      var stage = typeof document !== 'undefined'
+        ? document.querySelector('[data-qe-canvas]')
+        : null;
+      if (!stage) return { w: 1000, h: 1000 };
+      return {
+        w: Math.max(1, stage.clientWidth || 1000),
+        h: Math.max(1, stage.clientHeight || 1000)
+      };
+    } catch (eSize) {
+      return { w: 1000, h: 1000 };
+    }
+  }
+
+  function pushShimTraceRotate2d(x, y, deg) {
+    var r = (Number(deg) || 0) * Math.PI / 180;
+    var c = Math.cos(r);
+    var s = Math.sin(r);
+    return { x: x * c - y * s, y: x * s + y * c };
+  }
+
+  function pushShimTraceWorldFromGroupMember(group, member, lw, lh) {
+    if (!member) return null;
+    lw = Math.max(1, Number(lw) || 1000);
+    lh = Math.max(1, Number(lh) || 1000);
+    if (member.groupId && member.localX != null && member.localY != null && group) {
+      var gr = Number(group.rotation) || 0;
+      var lxPx = (Number(member.localX) || 0) / 100 * lw;
+      var lyPx = (Number(member.localY) || 0) / 100 * lh;
+      var rot = pushShimTraceRotate2d(lxPx, lyPx, gr);
+      var gxPx = (Number(group.x) / 100) * lw;
+      var gyPx = (Number(group.y) / 100) * lh;
+      return {
+        x: ((gxPx + rot.x) / lw) * 100,
+        y: ((gyPx + rot.y) / lh) * 100
+      };
+    }
+    if (typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.overlayWorldLayoutAbsolute) {
+      var abs = ExperienciaEngine.overlayWorldLayoutAbsolute(member, lw, lh);
+      if (abs) return { x: Number(abs.x), y: Number(abs.y) };
+    }
+    return {
+      x: Number(member.x),
+      y: Number(member.y)
+    };
+  }
+
+  function pushShimTraceMemberWorld(n, ix, group, lw, lh) {
+    if (!ix) return null;
+    if (n && typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.overlayWorldLayoutRaw) {
+      var raw = ExperienciaEngine.overlayWorldLayoutRaw(n, ix, lw, lh);
+      if (raw) return { x: Number(raw.x), y: Number(raw.y) };
+    }
+    return pushShimTraceWorldFromGroupMember(group, ix, lw, lh);
+  }
+
+  function pushShimTraceFindGroupCtx(interactions) {
+    if (!interactions || !interactions.length) return null;
+    var byId = {};
+    interactions.forEach(function (ix) {
+      if (ix && ix.id) byId[String(ix.id)] = ix;
+    });
+    var groups = interactions.filter(function (ix) {
+      var t = String(ix && ix.type || '').toUpperCase();
+      return (t === 'OVERLAY_GROUP' || t === 'GROUP') &&
+        Array.isArray(ix.memberIds) &&
+        ix.memberIds.length >= 2;
+    });
+    if (!groups.length) return null;
+    groups.sort(function (a, b) {
+      return (b.memberIds || []).length - (a.memberIds || []).length;
+    });
+    var group = groups[0];
+    var memberAId = group.memberIds[0];
+    var memberBId = group.memberIds[1];
+    return {
+      group: group,
+      memberA: byId[String(memberAId)] || null,
+      memberB: byId[String(memberBId)] || null,
+      memberAId: memberAId,
+      memberBId: memberBId
+    };
+  }
+
+  function pushShimTraceMemberBlock(label, ix, group, n, lw, lh) {
+    if (!ix) {
+      return label + ':\n  (missing)';
+    }
+    var world = pushShimTraceMemberWorld(n, ix, group, lw, lh);
+    var wx = world && !isNaN(world.x) ? world.x : 'null';
+    var wy = world && !isNaN(world.y) ? world.y : 'null';
+    return label + ':\n' +
+      '  world=(' + wx + ',' + wy + ')\n' +
+      '  local=(' + ix.localX + ',' + ix.localY + ')\n' +
+      '  groupId=' + (ix.groupId != null ? ix.groupId : 'null');
+  }
+
+  function pushShimTraceDump(phase, ctx, n, lw, lh) {
+    if (!ctx || !ctx.group) return;
+    var g = ctx.group;
+    console.log(
+      '[PUSH SHIM TRACE]\nphase=' + phase + '\n' +
+      'group:\n' +
+      '  x=' + g.x + '\n' +
+      '  y=' + g.y + '\n' +
+      '  width=' + g.width + '\n' +
+      '  height=' + g.height + '\n' +
+      '  pivot=(' + g.x + ',' + g.y + ')\n' +
+      pushShimTraceMemberBlock('member A', ctx.memberA, g, n, lw, lh) + '\n' +
+      pushShimTraceMemberBlock('member B', ctx.memberB, g, n, lw, lh)
+    );
+  }
+
+  function pushShimTraceInstruction(label) {
+    console.log('[PUSH SHIM TRACE] instruction=' + label);
   }
 
   function lockTraceId() {
@@ -356,6 +477,9 @@ var QuotationExperienciaBridge = (function () {
     scenes.forEach(function (sc) {
       if (sc && sc.id) byNodeId[nodeIdForScene(sc.id)] = sc;
     });
+    var traceSz = pushShimTraceLayerSize();
+    var traceLw = traceSz.w;
+    var traceLh = traceSz.h;
     (shimState.experiencia.nodes || []).forEach(function (n) {
       if (!n || n.kind === 'hero') return;
       var sc = byNodeId[n.id];
@@ -366,12 +490,54 @@ var QuotationExperienciaBridge = (function () {
       srcList.forEach(function (ix) {
         if (ix && ix.id) srcById[String(ix.id)] = ix;
       });
+      var panelCtx = pushShimTraceFindGroupCtx(srcList);
+      var shimBeforeCtx = pushShimTraceFindGroupCtx((n.config && n.config.interactions) || []);
+      var traceActive = !!(panelCtx || shimBeforeCtx);
+      if (traceActive) {
+        pushShimTraceDump('ANTES DEL CLONE (shim)', shimBeforeCtx || panelCtx, n, traceLw, traceLh);
+        if (panelCtx) {
+          pushShimTraceDump('ANTES DEL CLONE (panel clone input)', panelCtx, null, traceLw, traceLh);
+        }
+      }
+      pushShimTraceInstruction('cloneJson(srcList)');
       var cloned = cloneJson(srcList);
+      if (traceActive && panelCtx) {
+        var ctxAfterCloneJson = pushShimTraceFindGroupCtx(cloned);
+        pushShimTraceDump('after cloneJson (pre-merge)', ctxAfterCloneJson, null, traceLw, traceLh);
+      }
+      pushShimTraceInstruction('cloned.forEach → mergeSceneInteractionFlagsToShim(src, ix)');
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
       });
+      if (traceActive && panelCtx) {
+        var ctxAfterMerge = pushShimTraceFindGroupCtx(cloned);
+        pushShimTraceDump('after mergeSceneInteractionFlagsToShim', ctxAfterMerge, null, traceLw, traceLh);
+      }
+      pushShimTraceInstruction('n.config.interactions = cloned');
       n.config.interactions = cloned;
+      if (traceActive) {
+        var shimAfterCtx = pushShimTraceFindGroupCtx(cloned);
+        pushShimTraceDump('DESPUÉS DEL CLONE (shim)', shimAfterCtx, n, traceLw, traceLh);
+        var beforeA = shimBeforeCtx && shimBeforeCtx.memberA
+          ? pushShimTraceMemberWorld(n, shimBeforeCtx.memberA, shimBeforeCtx.group, traceLw, traceLh)
+          : null;
+        var afterA = shimAfterCtx && shimAfterCtx.memberA
+          ? pushShimTraceMemberWorld(n, shimAfterCtx.memberA, shimAfterCtx.group, traceLw, traceLh)
+          : null;
+        if (beforeA && afterA) {
+          var dxPx = Math.abs(afterA.x - beforeA.x) / 100 * traceLw;
+          var dyPx = Math.abs(afterA.y - beforeA.y) / 100 * traceLh;
+          if (dxPx > 0.1 || dyPx > 0.1) {
+            console.warn(
+              '[PUSH SHIM TRACE] FIRST POSITION CHANGE:\n' +
+              'instruction=n.config.interactions = cloned\n' +
+              'memberA before=(' + beforeA.x + ',' + beforeA.y + ')\n' +
+              'memberA after=(' + afterA.x + ',' + afterA.y + ')'
+            );
+          }
+        }
+      }
     });
     if (tid) {
       lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
