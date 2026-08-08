@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7828';
+  var EXP_CANVAS_BUILD = 'ws7829';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -1565,66 +1565,43 @@ var ExperienciaCanvas = (function () {
     return g.memberIds.length;
   }
 
-  function shapeGroupPaintDiagBuildSnapshot(btn, layerW, layerH, parts) {
-    parts = parts || {};
-    var ix = btn._ix || btn;
-    return {
-      memberId: shapeGroupPaintDiagBtnId(btn),
-      groupId: String(btn.groupId || ix.groupId || ''),
-      groupMemberCount: shapeGroupPaintDiagGroupMemberCount(btn),
-      input: {
-        x: shapeGroupPaintDiagRound(ix.x),
-        y: shapeGroupPaintDiagRound(ix.y)
-      },
-      vm: {
-        x: shapeGroupPaintDiagRound(btn.x),
-        y: shapeGroupPaintDiagRound(btn.y)
-      },
-      widthHeight: {
-        width: shapeGroupPaintDiagRound(btn.width != null ? btn.width : ix.width),
-        height: shapeGroupPaintDiagRound(btn.height != null ? btn.height : ix.height)
-      },
-      shapeBox: parts.shapeBox ? {
-        x: shapeGroupPaintDiagRound(parts.shapeBox.cx),
-        y: shapeGroupPaintDiagRound(parts.shapeBox.cy),
-        w: shapeGroupPaintDiagRound(parts.shapeBox.w),
-        h: shapeGroupPaintDiagRound(parts.shapeBox.h)
-      } : null,
-      visibleBounds: parts.visibleBounds ? {
-        x: shapeGroupPaintDiagRound(parts.visibleBounds.x),
-        y: shapeGroupPaintDiagRound(parts.visibleBounds.y),
-        w: shapeGroupPaintDiagRound(parts.visibleBounds.w),
-        h: shapeGroupPaintDiagRound(parts.visibleBounds.h)
-      } : null,
-      paint: parts.paint ? {
-        left: shapeGroupPaintDiagRound(parts.paint.x),
-        top: shapeGroupPaintDiagRound(parts.paint.y),
-        width: shapeGroupPaintDiagRound(parts.paint.w),
-        height: shapeGroupPaintDiagRound(parts.paint.h)
-      } : null
-    };
+  var _finalShapePosPending = null;
+
+  function finalShapePosDiagField(v) {
+    if (v == null || isNaN(v)) return 'null';
+    return String(+(Number(v)).toFixed(4));
   }
 
-  function shapeGroupPaintDiagEmitIfChanged(before, after) {
-    if (!before || !after) return;
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
+  function finalShapePosDiagEmitFromDom(buttonsLayer) {
+    if (typeof window !== 'undefined' && window.__QE_FINAL_SHAPE_POS_EMITTED__) return;
+    if (!_finalShapePosPending || !buttonsLayer) return;
+    var p = _finalShapePosPending;
+    _finalShapePosPending = null;
+    var idEsc = String(p.memberId).replace(/"/g, '\\"');
+    var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+    var rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (typeof window !== 'undefined') window.__QE_FINAL_SHAPE_POS_EMITTED__ = true;
+    var sb = p.shapeBox || {};
+    var vb = p.visibleBounds || {};
     console.log(
-      '[SHAPE GROUP PAINT]\n' +
-      'phase=before-B\n' +
-      'input=' + JSON.stringify(before.input) + '\n' +
-      'vm=' + JSON.stringify(before.vm) + '\n' +
-      'widthHeight=' + JSON.stringify(before.widthHeight) + '\n' +
-      'shapeBox=' + JSON.stringify(before.shapeBox) + '\n' +
-      'visibleBounds=' + JSON.stringify(before.visibleBounds) + '\n' +
-      'paint=' + JSON.stringify(before.paint) + '\n' +
-      '[SHAPE GROUP PAINT]\n' +
-      'phase=after-B\n' +
-      'input=' + JSON.stringify(after.input) + '\n' +
-      'vm=' + JSON.stringify(after.vm) + '\n' +
-      'widthHeight=' + JSON.stringify(after.widthHeight) + '\n' +
-      'shapeBox=' + JSON.stringify(after.shapeBox) + '\n' +
-      'visibleBounds=' + JSON.stringify(after.visibleBounds) + '\n' +
-      'paint=' + JSON.stringify(after.paint)
+      '[FINAL SHAPE POSITION]\n' +
+      'vmX=' + finalShapePosDiagField(p.vmX) + '\n' +
+      'vmY=' + finalShapePosDiagField(p.vmY) + '\n' +
+      'shapeBoxX=' + finalShapePosDiagField(sb.cx) + '\n' +
+      'shapeBoxY=' + finalShapePosDiagField(sb.cy) + '\n' +
+      'shapeBoxW=' + finalShapePosDiagField(sb.w) + '\n' +
+      'shapeBoxH=' + finalShapePosDiagField(sb.h) + '\n' +
+      'visibleBoundsX=' + finalShapePosDiagField(vb.x) + '\n' +
+      'visibleBoundsY=' + finalShapePosDiagField(vb.y) + '\n' +
+      'visibleBoundsW=' + finalShapePosDiagField(vb.w) + '\n' +
+      'visibleBoundsH=' + finalShapePosDiagField(vb.h) + '\n' +
+      'finalLeft=' + finalShapePosDiagField(p.finalLeft) + '\n' +
+      'finalTop=' + finalShapePosDiagField(p.finalTop) + '\n' +
+      'DOM:\n' +
+      'getBoundingClientRect.left=' + (rect ? finalShapePosDiagField(rect.left) : 'null') + '\n' +
+      'getBoundingClientRect.top=' + (rect ? finalShapePosDiagField(rect.top) : 'null') + '\n' +
+      'getBoundingClientRect.width=' + (rect ? finalShapePosDiagField(rect.width) : 'null') + '\n' +
+      'getBoundingClientRect.height=' + (rect ? finalShapePosDiagField(rect.height) : 'null')
     );
   }
 
@@ -1642,25 +1619,35 @@ var ExperienciaCanvas = (function () {
       _shapeGroupPaintDiagCall = null;
       return;
     }
-    var snap = shapeGroupPaintDiagBuildSnapshot(btn, layerW, layerH, {
-      shapeBox: _shapeGroupPaintDiagCall.shapeBox,
-      visibleBounds: _shapeGroupPaintDiagCall.visibleBounds,
-      paint: paintResult
-    });
-    var memberCount = snap.groupMemberCount;
-    var diag = window.__QE_SHAPE_GROUP_PAINT_DIAG__;
-    if (!diag) diag = window.__QE_SHAPE_GROUP_PAINT_DIAG__ = { watchedMemberId: null, before: null, logged: false };
+    var memberId = shapeGroupPaintDiagBtnId(btn);
+    var memberCount = shapeGroupPaintDiagGroupMemberCount(btn);
+    var diag = window.__QE_FINAL_SHAPE_POS_DIAG__;
+    if (!diag) diag = window.__QE_FINAL_SHAPE_POS_DIAG__ = { watchedMemberId: null };
 
     if (memberCount === 1) {
-      diag.watchedMemberId = snap.memberId;
-      diag.before = snap;
-      diag.logged = false;
+      diag.watchedMemberId = memberId;
     } else if (memberCount === 2 &&
-        diag.watchedMemberId === snap.memberId &&
-        diag.before &&
-        !diag.logged) {
-      shapeGroupPaintDiagEmitIfChanged(diag.before, snap);
-      diag.logged = true;
+        diag.watchedMemberId === memberId &&
+        !(typeof window !== 'undefined' && window.__QE_FINAL_SHAPE_POS_EMITTED__)) {
+      var shapeBox = _shapeGroupPaintDiagCall.shapeBox;
+      if (!shapeBox) {
+        var gb = getShapeBox(btn, layerW, layerH);
+        if (gb) shapeBox = { cx: gb.cx, cy: gb.cy, w: gb.w, h: gb.h };
+      }
+      var vb = _shapeGroupPaintDiagCall.visibleBounds;
+      if (!vb) {
+        var vbFull = shapeVisibleBoundsMetrics(btn, layerW, layerH);
+        if (vbFull) vb = { x: vbFull.x, y: vbFull.y, w: vbFull.w, h: vbFull.h };
+      }
+      _finalShapePosPending = {
+        memberId: memberId,
+        vmX: btn.x,
+        vmY: btn.y,
+        shapeBox: shapeBox,
+        visibleBounds: vb,
+        finalLeft: paintResult ? paintResult.x : null,
+        finalTop: paintResult ? paintResult.y : null
+      };
     }
     _shapeGroupPaintDiagCall = null;
   }
@@ -7809,6 +7796,8 @@ var ExperienciaCanvas = (function () {
           esc(label) +
         '</button>';
       }).join('');
+
+      finalShapePosDiagEmitFromDom(buttonsLayer);
 
       /* Selection gizmos — full chrome (1 item) or box on every selected item (multi). */
       if (selIds.length) {
