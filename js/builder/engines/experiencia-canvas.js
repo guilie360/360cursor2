@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7827';
+  var EXP_CANVAS_BUILD = 'ws7828';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -1528,6 +1528,143 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Visible gw×gh — tight SVG content, not square picker tile (~12%). */
+  /** Shape paint pipeline — before-B vs after-B for grouped SHAPE_ROUND_RECT (data only). */
+  var _shapeGroupPaintDiagMountState = null;
+  var _shapeGroupPaintDiagCall = null;
+
+  function shapeGroupPaintDiagBtnId(btn) {
+    if (!btn) return '';
+    return String(btn.id || (btn._ix && btn._ix.id) || '');
+  }
+
+  function shapeGroupPaintDiagShouldTrack(btn) {
+    if (!btn || !btn.groupId) return false;
+    return String(btn.type || '').toUpperCase() === 'SHAPE_ROUND_RECT';
+  }
+
+  function shapeGroupPaintDiagActiveFor(btn) {
+    return !!(_shapeGroupPaintDiagCall &&
+      shapeGroupPaintDiagBtnId(btn) === _shapeGroupPaintDiagCall.btnId);
+  }
+
+  function shapeGroupPaintDiagRound(v) {
+    if (v == null || isNaN(v)) return v;
+    return +(Number(v)).toFixed(4);
+  }
+
+  function shapeGroupPaintDiagGroupMemberCount(btn) {
+    var st = _shapeGroupPaintDiagMountState;
+    if (!st || !btn || !btn.groupId || typeof ExperienciaEngine === 'undefined') return null;
+    var c = ExperienciaEngine.ensureState(st).canvas;
+    var sceneId = c && c.selectedId;
+    if (!sceneId) return null;
+    var n = ExperienciaEngine.getNode(st, sceneId);
+    if (!n) return null;
+    var g = ExperienciaEngine.getInteraction(n, btn.groupId);
+    if (!g || !Array.isArray(g.memberIds)) return null;
+    return g.memberIds.length;
+  }
+
+  function shapeGroupPaintDiagBuildSnapshot(btn, layerW, layerH, parts) {
+    parts = parts || {};
+    var ix = btn._ix || btn;
+    return {
+      memberId: shapeGroupPaintDiagBtnId(btn),
+      groupId: String(btn.groupId || ix.groupId || ''),
+      groupMemberCount: shapeGroupPaintDiagGroupMemberCount(btn),
+      input: {
+        x: shapeGroupPaintDiagRound(ix.x),
+        y: shapeGroupPaintDiagRound(ix.y)
+      },
+      vm: {
+        x: shapeGroupPaintDiagRound(btn.x),
+        y: shapeGroupPaintDiagRound(btn.y)
+      },
+      widthHeight: {
+        width: shapeGroupPaintDiagRound(btn.width != null ? btn.width : ix.width),
+        height: shapeGroupPaintDiagRound(btn.height != null ? btn.height : ix.height)
+      },
+      shapeBox: parts.shapeBox ? {
+        x: shapeGroupPaintDiagRound(parts.shapeBox.cx),
+        y: shapeGroupPaintDiagRound(parts.shapeBox.cy),
+        w: shapeGroupPaintDiagRound(parts.shapeBox.w),
+        h: shapeGroupPaintDiagRound(parts.shapeBox.h)
+      } : null,
+      visibleBounds: parts.visibleBounds ? {
+        x: shapeGroupPaintDiagRound(parts.visibleBounds.x),
+        y: shapeGroupPaintDiagRound(parts.visibleBounds.y),
+        w: shapeGroupPaintDiagRound(parts.visibleBounds.w),
+        h: shapeGroupPaintDiagRound(parts.visibleBounds.h)
+      } : null,
+      paint: parts.paint ? {
+        left: shapeGroupPaintDiagRound(parts.paint.x),
+        top: shapeGroupPaintDiagRound(parts.paint.y),
+        width: shapeGroupPaintDiagRound(parts.paint.w),
+        height: shapeGroupPaintDiagRound(parts.paint.h)
+      } : null
+    };
+  }
+
+  function shapeGroupPaintDiagEmitIfChanged(before, after) {
+    if (!before || !after) return;
+    if (JSON.stringify(before) === JSON.stringify(after)) return;
+    console.log(
+      '[SHAPE GROUP PAINT]\n' +
+      'phase=before-B\n' +
+      'input=' + JSON.stringify(before.input) + '\n' +
+      'vm=' + JSON.stringify(before.vm) + '\n' +
+      'widthHeight=' + JSON.stringify(before.widthHeight) + '\n' +
+      'shapeBox=' + JSON.stringify(before.shapeBox) + '\n' +
+      'visibleBounds=' + JSON.stringify(before.visibleBounds) + '\n' +
+      'paint=' + JSON.stringify(before.paint) + '\n' +
+      '[SHAPE GROUP PAINT]\n' +
+      'phase=after-B\n' +
+      'input=' + JSON.stringify(after.input) + '\n' +
+      'vm=' + JSON.stringify(after.vm) + '\n' +
+      'widthHeight=' + JSON.stringify(after.widthHeight) + '\n' +
+      'shapeBox=' + JSON.stringify(after.shapeBox) + '\n' +
+      'visibleBounds=' + JSON.stringify(after.visibleBounds) + '\n' +
+      'paint=' + JSON.stringify(after.paint)
+    );
+  }
+
+  function shapeGroupPaintDiagRecordShapeBox(vm, box) {
+    if (shapeGroupPaintDiagActiveFor(vm) && box) {
+      _shapeGroupPaintDiagCall.shapeBox = {
+        cx: box.cx, cy: box.cy, w: box.w, h: box.h
+      };
+    }
+    return box;
+  }
+
+  function shapeGroupPaintDiagFinalize(btn, layerW, layerH, paintResult) {
+    if (!shapeGroupPaintDiagActiveFor(btn)) {
+      _shapeGroupPaintDiagCall = null;
+      return;
+    }
+    var snap = shapeGroupPaintDiagBuildSnapshot(btn, layerW, layerH, {
+      shapeBox: _shapeGroupPaintDiagCall.shapeBox,
+      visibleBounds: _shapeGroupPaintDiagCall.visibleBounds,
+      paint: paintResult
+    });
+    var memberCount = snap.groupMemberCount;
+    var diag = window.__QE_SHAPE_GROUP_PAINT_DIAG__;
+    if (!diag) diag = window.__QE_SHAPE_GROUP_PAINT_DIAG__ = { watchedMemberId: null, before: null, logged: false };
+
+    if (memberCount === 1) {
+      diag.watchedMemberId = snap.memberId;
+      diag.before = snap;
+      diag.logged = false;
+    } else if (memberCount === 2 &&
+        diag.watchedMemberId === snap.memberId &&
+        diag.before &&
+        !diag.logged) {
+      shapeGroupPaintDiagEmitIfChanged(diag.before, snap);
+      diag.logged = true;
+    }
+    _shapeGroupPaintDiagCall = null;
+  }
+
   function shapeVisibleBoundsMetrics(btn, layerW, layerH) {
     if (!btn) return null;
     var st = String(btn.type || 'BUTTON').toUpperCase();
@@ -1577,41 +1714,70 @@ var ExperienciaCanvas = (function () {
         var dw = Math.abs(w - tightGm.gw);
         var dh = Math.abs(h - tightGm.gh);
         if (dw > 0.15 || dh > 0.15) {
-          return {
+          var retExplicitW = {
             st: st, grot: grot,
             gx: cx, gy: cy, gw: w, gh: h,
             x: cx, y: cy, w: w, h: h
           };
+          if (shapeGroupPaintDiagActiveFor(btn)) {
+            _shapeGroupPaintDiagCall.visibleBounds = {
+              x: retExplicitW.x, y: retExplicitW.y, w: retExplicitW.w, h: retExplicitW.h
+            };
+          }
+          return retExplicitW;
         }
         /* Seeded content-box — x/y already at visible center. */
-        return {
+        var retSeeded = {
           st: st, grot: grot,
           gx: cx, gy: cy, gw: w, gh: h,
           x: cx, y: cy, w: w, h: h
         };
+        if (shapeGroupPaintDiagActiveFor(btn)) {
+          _shapeGroupPaintDiagCall.visibleBounds = {
+            x: retSeeded.x, y: retSeeded.y, w: retSeeded.w, h: retSeeded.h
+          };
+        }
+        return retSeeded;
       }
-      return {
+      var retTight = {
         st: st, grot: grot,
         gx: tightGm.gx, gy: tightGm.gy, gw: tightGm.gw, gh: tightGm.gh,
         x: tightGm.gx, y: tightGm.gy, w: tightGm.gw, h: tightGm.gh
       };
+      if (shapeGroupPaintDiagActiveFor(btn)) {
+        _shapeGroupPaintDiagCall.visibleBounds = {
+          x: retTight.x, y: retTight.y, w: retTight.w, h: retTight.h
+        };
+      }
+      return retTight;
     }
 
     /* Engine helper missing — last-resort tile (avoid if possible). */
     var shapeSz = shapeDisplaySize(defW, layerW, layerH);
-    return {
+    var retFallback = {
       st: st, grot: grot,
       gx: cx, gy: cy, gw: shapeSz.w, gh: shapeSz.h,
       x: cx, y: cy, w: shapeSz.w, h: shapeSz.h
     };
+    if (shapeGroupPaintDiagActiveFor(btn)) {
+      _shapeGroupPaintDiagCall.visibleBounds = {
+        x: retFallback.x, y: retFallback.y, w: retFallback.w, h: retFallback.h
+      };
+    }
+    return retFallback;
   }
 
   /** Unified stage paint box — always matches visible bounds (not picker tile). */
   function shapeStagePaintMetrics(btn, layerW, layerH) {
+    var track = shapeGroupPaintDiagShouldTrack(btn);
+    if (track) {
+      _shapeGroupPaintDiagCall = { btnId: shapeGroupPaintDiagBtnId(btn), shapeBox: null, visibleBounds: null };
+    }
+    var result = null;
     if (isShapeBoxV2Active()) {
       var boxV2 = getShapeBox(btn, layerW, layerH);
       if (boxV2) {
-        return {
+        result = {
           x: boxV2.cx,
           y: boxV2.cy,
           w: boxV2.w,
@@ -1622,29 +1788,37 @@ var ExperienciaCanvas = (function () {
         };
       }
     }
-    if (!btn) return null;
-    var vb = shapeVisibleBoundsMetrics(btn, layerW, layerH);
-    if (vb) {
-      return {
-        x: vb.x,
-        y: vb.y,
-        w: vb.w,
-        h: vb.h,
-        gizmoBox: true,
-        tileW: vb.w,
-        tileH: vb.h
-      };
+    if (!result) {
+      if (!btn) {
+        if (track) _shapeGroupPaintDiagCall = null;
+        return null;
+      }
+      var vb = shapeVisibleBoundsMetrics(btn, layerW, layerH);
+      if (vb) {
+        result = {
+          x: vb.x,
+          y: vb.y,
+          w: vb.w,
+          h: vb.h,
+          gizmoBox: true,
+          tileW: vb.w,
+          tileH: vb.h
+        };
+      } else {
+        var ps = shapePaintSize(btn, layerW, layerH);
+        result = {
+          x: Number(btn.x) || 50,
+          y: Number(btn.y) || 50,
+          w: ps.w,
+          h: ps.h,
+          gizmoBox: false,
+          tileW: ps.w,
+          tileH: ps.h
+        };
+      }
     }
-    var ps = shapePaintSize(btn, layerW, layerH);
-    return {
-      x: Number(btn.x) || 50,
-      y: Number(btn.y) || 50,
-      w: ps.w,
-      h: ps.h,
-      gizmoBox: false,
-      tileW: ps.w,
-      tileH: ps.h
-    };
+    if (track) shapeGroupPaintDiagFinalize(btn, layerW, layerH, result);
+    return result;
   }
 
   /**
@@ -1745,7 +1919,7 @@ var ExperienciaCanvas = (function () {
           });
           getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(cx, cy, w, h), 'contentBox.direct');
         }
-        return retDirect;
+        return shapeGroupPaintDiagRecordShapeBox(vm, retDirect);
       }
       if (!isNaN(w) && w > 0) {
         traceStep('1592', 'branch: w>0 but h invalid → shapePixelSquareDims', {
@@ -1761,7 +1935,7 @@ var ExperienciaCanvas = (function () {
             window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
             getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(cx, cy, sq.w, sq.h), 'contentBox.shapePixelSquareDims');
           }
-          return retSq;
+          return shapeGroupPaintDiagRecordShapeBox(vm, retSq);
         }
         traceStep('1608', 'shapePixelSquareDims returned null — fall through', {
           cx: cx, cy: cy, w: w, h: h
@@ -1820,7 +1994,7 @@ var ExperienciaCanvas = (function () {
       window.__QE_GET_SHAPE_BOX_TRACE_EMITTED__ = true;
       getShapeBoxTraceEmit(traceInput, steps, getShapeBoxTraceGeo(retCx, retCy, retW, retH), 'shapeVisibleBoundsMetrics');
     }
-    return retVb;
+    return shapeGroupPaintDiagRecordShapeBox(vm, retVb);
   }
 
   function shapeBoxToSelectionMetrics(box) {
@@ -3650,6 +3824,7 @@ var ExperienciaCanvas = (function () {
 
   function mount(rootEl, state, api) {
     api = api || {};
+    _shapeGroupPaintDiagMountState = state;
     var overlayMode = !!api.overlayMode;
 
     _shapeBoxV2ProjectId = api.projectId || shapeBoxProjectIdFromUrl() || null;
