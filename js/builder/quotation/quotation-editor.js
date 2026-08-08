@@ -4095,55 +4095,44 @@ var QuotationEditor = (function () {
     };
   }
 
-  /** Debug — arm canvas render trace when free item joins group with existing members. */
-  function resolveRenderPosTraceTargetForDrop(dragId, drop) {
-    if (!dragId || !drop) return null;
-    var dragKey = String(dragId);
-    var groupId = null;
-    if (drop.action === 'into') {
-      groupId = String(drop.id);
-    } else {
-      var targetIx = findSceneInteraction(drop.id);
-      if (!targetIx) return null;
-      if (isOverlayGroupIx(targetIx)) groupId = String(drop.id);
-      else if (targetIx.groupId) groupId = String(targetIx.groupId);
-    }
-    if (!groupId) return null;
-    var grp = findSceneInteraction(groupId);
+  /** Debug — render trace only: free item dropped INTO group that already has members. */
+  function isRenderPosTraceIntoGroupDrop(dragId, drop) {
+    if (!dragId || !drop || drop.action !== 'into' || !drop.id) return null;
+    if (String(dragId) === String(drop.id)) return null;
+    var dragIx = findSceneInteraction(dragId);
+    if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return null;
+    if (outlinerItemSelfLocked(dragIx)) return null;
+    var grp = findSceneInteraction(drop.id);
     if (!grp || !isOverlayGroupIx(grp)) return null;
     var members = (grp.memberIds || []).filter(function (id) {
-      return id && String(id) !== dragKey;
+      return id && String(id) !== String(dragId);
     });
     if (!members.length) return null;
-    return String(members[0]);
-  }
-
-  function shouldArmRenderPosTraceForDrop(dragId, drop) {
-    if (!dragId || !drop || !drop.id) return false;
-    var dragIx = findSceneInteraction(dragId);
-    if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return false;
-    if (drop.action === 'into') {
-      return !!resolveRenderPosTraceTargetForDrop(dragId, drop);
-    }
-    var targetIx = findSceneInteraction(drop.id);
-    if (!targetIx) return false;
-    if (!isOverlayGroupIx(targetIx) && !targetIx.groupId) return false;
-    return !!resolveRenderPosTraceTargetForDrop(dragId, drop);
+    return {
+      sceneId: state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
+      groupId: String(drop.id),
+      dragId: String(dragId),
+      targetId: String(members[0])
+    };
   }
 
   function armRenderPosTraceForDrop(dragId, drop) {
-    var targetId = resolveRenderPosTraceTargetForDrop(dragId, drop);
-    if (!targetId || !shouldArmRenderPosTraceForDrop(dragId, drop)) return false;
+    var spec = isRenderPosTraceIntoGroupDrop(dragId, drop);
+    if (!spec) return null;
     try {
       window.__QE_RENDER_POS_TRACE__ = {
         armed: true,
-        targetId: String(targetId),
+        done: false,
+        beforeDropDone: false,
+        sceneId: spec.sceneId,
+        groupId: spec.groupId,
+        dragId: spec.dragId,
+        targetId: spec.targetId,
         baselineRender: null,
-        paintCount: 0,
-        maxPaints: 4
+        paintCount: 0
       };
-    } catch (eArm) { return false; }
-    return true;
+    } catch (eArm) { return null; }
+    return spec;
   }
 
   function disarmRenderPosTrace() {
@@ -5205,22 +5194,20 @@ var QuotationEditor = (function () {
         if (atRelease) drop = atRelease;
       }
       if (draggingId && drop) {
-        var renderTraceArmed = armRenderPosTraceForDrop(draggingId, drop);
-        if (renderTraceArmed && typeof window.__qeSampleOverlayRenderPos === 'function') {
-          var traceTarget = resolveRenderPosTraceTargetForDrop(draggingId, drop);
-          if (traceTarget) {
-            window.__qeSampleOverlayRenderPos(
-              state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
-              traceTarget,
-              'before-drop'
-            );
-          }
+        var traceSpec = armRenderPosTraceForDrop(draggingId, drop);
+        if (traceSpec && typeof window.__qeSampleOverlayRenderPos === 'function') {
+          window.__qeSampleOverlayRenderPos(traceSpec.sceneId, traceSpec.targetId, 'before-drop');
         }
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
              dropTarget.position !== drop.position ||
              dropTarget.action !== drop.action)) {
+          if (traceSpec) disarmRenderPosTrace();
+          traceSpec = armRenderPosTraceForDrop(draggingId, dropTarget);
+          if (traceSpec && typeof window.__qeSampleOverlayRenderPos === 'function') {
+            window.__qeSampleOverlayRenderPos(traceSpec.sceneId, traceSpec.targetId, 'before-drop');
+          }
           ok = commitOutlinerDrop(draggingId, dropTarget);
           if (ok) drop = dropTarget;
         }
@@ -5230,9 +5217,8 @@ var QuotationEditor = (function () {
             moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
           }
           syncOutlinerPanelToCanvas();
-        }
-        if (renderTraceArmed) {
-          setTimeout(function () { disarmRenderPosTrace(); }, 500);
+        } else if (traceSpec) {
+          disarmRenderPosTrace();
         }
       }
 
