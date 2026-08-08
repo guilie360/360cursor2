@@ -4095,6 +4095,95 @@ var QuotationEditor = (function () {
     };
   }
 
+  var POST_SYNC_WRITE_FIELDS = ['x', 'y', 'width', 'height', 'localX', 'localY', 'groupId'];
+
+  function disarmPostSyncWriteTrace() {
+    try {
+      var tr = window.__QE_POST_SYNC_WRITE_TRACE__;
+      if (tr && tr.timeoutId) clearTimeout(tr.timeoutId);
+      window.__QE_POST_SYNC_WRITE_TRACE__ = null;
+    } catch (eDis) { /* ignore */ }
+  }
+
+  function emitPostSyncWrite(field, oldVal, newVal, role) {
+    var tr = window.__QE_POST_SYNC_WRITE_TRACE__;
+    if (!tr || !tr.active || tr.fired) return;
+    tr.fired = true;
+    tr.active = false;
+    if (tr.timeoutId) clearTimeout(tr.timeoutId);
+    var err = new Error('[POST SYNC WRITE]');
+    var stack = err.stack || '';
+    var fnLine = '';
+    var lines = stack.split('\n');
+    var i;
+    for (i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf('emitPostSyncWrite') >= 0) continue;
+      if (lines[i].indexOf('installPostSyncWriteTrap') >= 0) continue;
+      fnLine = lines[i].trim();
+      break;
+    }
+    console.log(
+      '[POST SYNC WRITE]\n' +
+      'field=' + field + '\n' +
+      'old=' + oldVal + '\n' +
+      'new=' + newVal + '\n' +
+      'function=' + (role ? role + ' ' : '') + fnLine + '\n' +
+      'stack=' + stack
+    );
+  }
+
+  function installPostSyncWriteTrap(obj, role) {
+    if (!obj || obj.__qePostSyncTrapped) return;
+    obj.__qePostSyncTrapped = true;
+    POST_SYNC_WRITE_FIELDS.forEach(function (field) {
+      var val = obj[field];
+      try {
+        Object.defineProperty(obj, field, {
+          configurable: true,
+          enumerable: true,
+          get: function () { return val; },
+          set: function (next) {
+            if (val !== next) emitPostSyncWrite(field, val, next, role);
+            val = next;
+          }
+        });
+      } catch (eTrap) { /* ignore */ }
+    });
+  }
+
+  function armPostSyncWriteTrace(groupId, memberId) {
+    if (!groupId || !memberId) return;
+    disarmPostSyncWriteTrace();
+    try {
+      window.__QE_POST_SYNC_WRITE_TRACE__ = {
+        active: true,
+        fired: false,
+        groupId: String(groupId),
+        memberId: String(memberId),
+        timeoutId: 0
+      };
+    } catch (eArm) { return; }
+
+    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
+      var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+      if (n) {
+        var shimG = ExperienciaEngine.getInteraction(n, groupId);
+        var shimM = ExperienciaEngine.getInteraction(n, memberId);
+        if (shimG) installPostSyncWriteTrap(shimG, 'shim.group');
+        if (shimM) installPostSyncWriteTrap(shimM, 'shim.member');
+      }
+    }
+
+    var panelG = findSceneInteraction(groupId);
+    var panelM = findSceneInteraction(memberId);
+    if (panelG) installPostSyncWriteTrap(panelG, 'panel.group');
+    if (panelM) installPostSyncWriteTrap(panelM, 'panel.member');
+
+    window.__QE_POST_SYNC_WRITE_TRACE__.timeoutId = setTimeout(function () {
+      disarmPostSyncWriteTrace();
+    }, 15000);
+  }
+
   function applyPanelSceneToOverlay(engineFn) {
     markDirtyLocal();
     if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
@@ -4497,6 +4586,11 @@ var QuotationEditor = (function () {
     if (prevGroupId && prevGroupId === String(groupId)) prevGroupId = null;
     var memberKey = String(memberId);
     var worldSnap = null;
+    var watchMemberId = null;
+    var existingBeforeJoin = (group.memberIds || []).filter(function (id) {
+      return id && String(id) !== memberKey;
+    });
+    if (existingBeforeJoin.length) watchMemberId = String(existingBeforeJoin[0]);
 
     applyPanelSceneToOverlay(function (n) {
       var snapM = ExperienciaEngine.getInteraction(n, memberId);
@@ -4568,6 +4662,7 @@ var QuotationEditor = (function () {
         g._transformV = 1;
         ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
         g._transformV = prevTransformV != null ? prevTransformV : 2;
+        if (watchMemberId) armPostSyncWriteTrace(groupId, watchMemberId);
       } else {
         ExperienciaEngine.ensureOverlayGroupDefaults(n, g, lw, lh);
         ExperienciaEngine.migrateGroupedChildLocals(n, g, lw, lh);
@@ -4579,6 +4674,7 @@ var QuotationEditor = (function () {
           m.localRotation = local.localRotation;
         }
         ExperienciaEngine.syncOverlayGroupFrameFromMembers(n, g, lw, lh);
+        if (watchMemberId) armPostSyncWriteTrace(groupId, watchMemberId);
       }
       healShimOverlayGroupMembership();
     });
@@ -9979,6 +10075,7 @@ var QuotationEditor = (function () {
   }
 
   function destroyExperienciaOverlay() {
+    disarmPostSyncWriteTrace();
     if (expOverlay && typeof expOverlay.pull === 'function') {
       try { expOverlay.pull(); } catch (ePull) {}
     }
