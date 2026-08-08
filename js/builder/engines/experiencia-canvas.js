@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7831';
+  var EXP_CANVAS_BUILD = 'ws7832';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -1560,179 +1560,77 @@ var ExperienciaCanvas = (function () {
     return g.memberIds.length;
   }
 
-  var _finalShapePosPending = null;
-  var DOM_STYLE_WRITE_PROPS = ['left', 'top', 'transform', 'width', 'height'];
+  var _visualCenterDiagPending = null;
 
-  function domStyleWriteTraceArmed(el) {
-    return !!(el && el.__qeDomStyleWriteArmed);
-  }
-
-  function emitDomStyleWrite(el, property, oldVal, newVal) {
-    if (!domStyleWriteTraceArmed(el)) return;
-    var err = new Error('[DOM STYLE WRITE]');
-    var stack = err.stack || '';
-    var fnLine = '';
-    var lines = stack.split('\n');
-    var i;
-    for (i = 0; i < lines.length; i++) {
-      if (lines[i].indexOf('emitDomStyleWrite') >= 0) continue;
-      if (lines[i].indexOf('installDomStyleWriteTrace') >= 0) continue;
-      fnLine = lines[i].trim();
-      break;
-    }
-    console.log(
-      '[DOM STYLE WRITE]\n' +
-      'property=' + property + '\n' +
-      'old=' + oldVal + '\n' +
-      'new=' + newVal + '\n' +
-      'function=' + fnLine + '\n' +
-      'stack=' + stack
-    );
-  }
-
-  function domStyleWriteTraceTrackProp(name) {
-    name = String(name || '');
-    return DOM_STYLE_WRITE_PROPS.indexOf(name) >= 0 ||
-      name.indexOf('--btn') === 0 ||
-      name === 'overflow';
-  }
-
-  function installDomStyleWriteTrace(el, memberId) {
-    if (!el || el.__qeDomStyleWriteTrapped) return;
-    el.__qeDomStyleWriteTrapped = true;
-    el.__qeDomStyleWriteArmed = true;
-    el.__qeDomStyleWriteMemberId = memberId;
-    var style = el.style;
-
-    DOM_STYLE_WRITE_PROPS.forEach(function (prop) {
-      var val = style[prop];
-      try {
-        Object.defineProperty(style, prop, {
-          configurable: true,
-          enumerable: true,
-          get: function () { return val; },
-          set: function (next) {
-            if (val !== next) emitDomStyleWrite(el, prop, val, next);
-            val = next;
-          }
-        });
-      } catch (eProp) { /* ignore */ }
-    });
-
-    if (!style.__qeSetPropertyWrapped) {
-      style.__qeSetPropertyWrapped = true;
-      var origSetProperty = style.setProperty.bind(style);
-      style.setProperty = function (name, value, priority) {
-        if (domStyleWriteTraceArmed(el) && domStyleWriteTraceTrackProp(name)) {
-          emitDomStyleWrite(
-            el,
-            'setProperty(' + name + ')',
-            style.getPropertyValue(name),
-            value
-          );
-        }
-        return origSetProperty(name, value, priority);
-      };
-    }
-
-    if (!style.__qeRemovePropertyWrapped) {
-      style.__qeRemovePropertyWrapped = true;
-      var origRemoveProperty = style.removeProperty.bind(style);
-      style.removeProperty = function (name) {
-        if (domStyleWriteTraceArmed(el) && domStyleWriteTraceTrackProp(name)) {
-          emitDomStyleWrite(
-            el,
-            'removeProperty(' + name + ')',
-            style.getPropertyValue(name),
-            ''
-          );
-        }
-        return origRemoveProperty(name);
-      };
-    }
-
-    var cssTextVal = style.cssText;
-    try {
-      Object.defineProperty(style, 'cssText', {
-        configurable: true,
-        enumerable: true,
-        get: function () { return cssTextVal; },
-        set: function (next) {
-          if (cssTextVal !== next) emitDomStyleWrite(el, 'cssText', cssTextVal, next);
-          cssTextVal = next;
-        }
-      });
-    } catch (eCss) { /* ignore */ }
-  }
-
-  function finalShapePosDiagField(v) {
+  function visualCenterDiagField(v) {
     if (v == null || isNaN(v)) return 'null';
     return String(+(Number(v)).toFixed(4));
   }
 
-  function finalShapePosDiagEmitFromDom(buttonsStage, buttonsFrame, buttonsLayer) {
-    if (typeof window !== 'undefined' && window.__QE_FINAL_SHAPE_POS_EMITTED__) return;
-    if (!_finalShapePosPending || !buttonsLayer) return;
-    var p = _finalShapePosPending;
-    _finalShapePosPending = null;
+  function visualCenterPctFromEl(el, frameRect) {
+    if (!el || !frameRect || !frameRect.width || !frameRect.height) return null;
+    var rect = el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    return {
+      x: ((cx - frameRect.left) / frameRect.width) * 100,
+      y: ((cy - frameRect.top) / frameRect.height) * 100
+    };
+  }
+
+  function visualCenterDiagProcess(buttonsFrame, buttonsLayer) {
+    if (!_visualCenterDiagPending || !buttonsLayer) return;
+    if (typeof window !== 'undefined' && window.__QE_VISUAL_CENTER_EMITTED__) {
+      _visualCenterDiagPending = null;
+      return;
+    }
+    var p = _visualCenterDiagPending;
+    _visualCenterDiagPending = null;
+    var frameRect = buttonsFrame && buttonsFrame.getBoundingClientRect
+      ? buttonsFrame.getBoundingClientRect() : null;
+    if (!frameRect) return;
     var idEsc = String(p.memberId).replace(/"/g, '\\"');
     var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
-    var canvasRect = buttonsFrame && buttonsFrame.getBoundingClientRect
-      ? buttonsFrame.getBoundingClientRect() : null;
-    var stageRect = buttonsStage && buttonsStage.getBoundingClientRect
-      ? buttonsStage.getBoundingClientRect() : null;
-    var layerRect = buttonsLayer.getBoundingClientRect
-      ? buttonsLayer.getBoundingClientRect() : null;
-    var elementRect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-    var cs = el && typeof window !== 'undefined' && window.getComputedStyle
-      ? window.getComputedStyle(el) : null;
-    var finalLeft = Number(p.finalLeft);
-    var finalTop = Number(p.finalTop);
-    var expectedPixelLeft = null;
-    var expectedPixelTop = null;
-    var deltaPixelLeft = null;
-    var deltaPixelTop = null;
-    if (canvasRect && isFinite(finalLeft)) {
-      expectedPixelLeft = canvasRect.left + (finalLeft / 100) * canvasRect.width;
+    var center = visualCenterPctFromEl(el, frameRect);
+    if (!center) return;
+    var state = window.__QE_VISUAL_CENTER_DIAG__;
+    if (!state) state = window.__QE_VISUAL_CENTER_DIAG__ = { watchedMemberId: null, beforeCenter: null };
+
+    if (p.memberCount === 1) {
+      state.watchedMemberId = String(p.memberId);
+      state.beforeCenter = center;
+      return;
     }
-    if (canvasRect && isFinite(finalTop)) {
-      expectedPixelTop = canvasRect.top + (finalTop / 100) * canvasRect.height;
+
+    if (p.memberCount !== 2 || state.watchedMemberId !== String(p.memberId) || !state.beforeCenter) {
+      return;
     }
-    if (elementRect && expectedPixelLeft != null) {
-      deltaPixelLeft = elementRect.left - expectedPixelLeft;
-    }
-    if (elementRect && expectedPixelTop != null) {
-      deltaPixelTop = elementRect.top - expectedPixelTop;
-    }
-    if (typeof window !== 'undefined') window.__QE_FINAL_SHAPE_POS_EMITTED__ = true;
+
+    var afterCenter = center;
+    var expectedCenter = {
+      x: Number(p.expectedX),
+      y: Number(p.expectedY)
+    };
+    var delta = {
+      x: afterCenter.x - state.beforeCenter.x,
+      y: afterCenter.y - state.beforeCenter.y
+    };
+    if (typeof window !== 'undefined') window.__QE_VISUAL_CENTER_EMITTED__ = true;
     console.log(
-      '[DOM POSITION DIAGNOSTIC]\n' +
-      'finalLeft=' + finalShapePosDiagField(p.finalLeft) + '\n' +
-      'finalTop=' + finalShapePosDiagField(p.finalTop) + '\n' +
-      'canvasRect.left=' + (canvasRect ? finalShapePosDiagField(canvasRect.left) : 'null') + '\n' +
-      'canvasRect.top=' + (canvasRect ? finalShapePosDiagField(canvasRect.top) : 'null') + '\n' +
-      'canvasRect.width=' + (canvasRect ? finalShapePosDiagField(canvasRect.width) : 'null') + '\n' +
-      'canvasRect.height=' + (canvasRect ? finalShapePosDiagField(canvasRect.height) : 'null') + '\n' +
-      'stageRect.left=' + (stageRect ? finalShapePosDiagField(stageRect.left) : 'null') + '\n' +
-      'stageRect.top=' + (stageRect ? finalShapePosDiagField(stageRect.top) : 'null') + '\n' +
-      'stageRect.width=' + (stageRect ? finalShapePosDiagField(stageRect.width) : 'null') + '\n' +
-      'stageRect.height=' + (stageRect ? finalShapePosDiagField(stageRect.height) : 'null') + '\n' +
-      'layerRect.left=' + (layerRect ? finalShapePosDiagField(layerRect.left) : 'null') + '\n' +
-      'layerRect.top=' + (layerRect ? finalShapePosDiagField(layerRect.top) : 'null') + '\n' +
-      'layerRect.width=' + (layerRect ? finalShapePosDiagField(layerRect.width) : 'null') + '\n' +
-      'layerRect.height=' + (layerRect ? finalShapePosDiagField(layerRect.height) : 'null') + '\n' +
-      'elementRect.left=' + (elementRect ? finalShapePosDiagField(elementRect.left) : 'null') + '\n' +
-      'elementRect.top=' + (elementRect ? finalShapePosDiagField(elementRect.top) : 'null') + '\n' +
-      'computedStyle.transform=' + (cs ? cs.transform : 'null') + '\n' +
-      'computedStyle.left=' + (cs ? cs.left : 'null') + '\n' +
-      'computedStyle.top=' + (cs ? cs.top : 'null') + '\n' +
-      'computedStyle.position=' + (cs ? cs.position : 'null') + '\n' +
-      'expectedPixelLeft=' + finalShapePosDiagField(expectedPixelLeft) + '\n' +
-      'expectedPixelTop=' + finalShapePosDiagField(expectedPixelTop) + '\n' +
-      'deltaPixelLeft=' + finalShapePosDiagField(deltaPixelLeft) + '\n' +
-      'deltaPixelTop=' + finalShapePosDiagField(deltaPixelTop)
+      '[VISUAL CENTER DIAGNOSTIC]\n' +
+      'beforeCenter:\n' +
+      'x=' + visualCenterDiagField(state.beforeCenter.x) + '\n' +
+      'y=' + visualCenterDiagField(state.beforeCenter.y) + '\n' +
+      'afterCenter:\n' +
+      'x=' + visualCenterDiagField(afterCenter.x) + '\n' +
+      'y=' + visualCenterDiagField(afterCenter.y) + '\n' +
+      'delta:\n' +
+      'x=' + visualCenterDiagField(delta.x) + '\n' +
+      'y=' + visualCenterDiagField(delta.y) + '\n' +
+      'expectedCenter:\n' +
+      'x=' + visualCenterDiagField(expectedCenter.x) + '\n' +
+      'y=' + visualCenterDiagField(expectedCenter.y)
     );
-    if (el) installDomStyleWriteTrace(el, p.memberId);
   }
 
   function shapeGroupPaintDiagRecordShapeBox(vm, box) {
@@ -1751,32 +1649,25 @@ var ExperienciaCanvas = (function () {
     }
     var memberId = shapeGroupPaintDiagBtnId(btn);
     var memberCount = shapeGroupPaintDiagGroupMemberCount(btn);
-    var diag = window.__QE_FINAL_SHAPE_POS_DIAG__;
-    if (!diag) diag = window.__QE_FINAL_SHAPE_POS_DIAG__ = { watchedMemberId: null };
+    var diag = window.__QE_VISUAL_CENTER_DIAG__;
+    if (!diag) diag = window.__QE_VISUAL_CENTER_DIAG__ = { watchedMemberId: null, beforeCenter: null };
 
     if (memberCount === 1) {
       diag.watchedMemberId = memberId;
+      _visualCenterDiagPending = {
+        memberId: memberId,
+        memberCount: 1,
+        expectedX: paintResult ? paintResult.x : btn.x,
+        expectedY: paintResult ? paintResult.y : btn.y
+      };
     } else if (memberCount === 2 &&
         diag.watchedMemberId === memberId &&
-        !(typeof window !== 'undefined' && window.__QE_FINAL_SHAPE_POS_EMITTED__)) {
-      var shapeBox = _shapeGroupPaintDiagCall.shapeBox;
-      if (!shapeBox) {
-        var gb = getShapeBox(btn, layerW, layerH);
-        if (gb) shapeBox = { cx: gb.cx, cy: gb.cy, w: gb.w, h: gb.h };
-      }
-      var vb = _shapeGroupPaintDiagCall.visibleBounds;
-      if (!vb) {
-        var vbFull = shapeVisibleBoundsMetrics(btn, layerW, layerH);
-        if (vbFull) vb = { x: vbFull.x, y: vbFull.y, w: vbFull.w, h: vbFull.h };
-      }
-      _finalShapePosPending = {
+        !(typeof window !== 'undefined' && window.__QE_VISUAL_CENTER_EMITTED__)) {
+      _visualCenterDiagPending = {
         memberId: memberId,
-        vmX: btn.x,
-        vmY: btn.y,
-        shapeBox: shapeBox,
-        visibleBounds: vb,
-        finalLeft: paintResult ? paintResult.x : null,
-        finalTop: paintResult ? paintResult.y : null
+        memberCount: 2,
+        expectedX: paintResult ? paintResult.x : btn.x,
+        expectedY: paintResult ? paintResult.y : btn.y
       };
     }
     _shapeGroupPaintDiagCall = null;
@@ -7927,7 +7818,7 @@ var ExperienciaCanvas = (function () {
         '</button>';
       }).join('');
 
-      finalShapePosDiagEmitFromDom(buttonsStage, buttonsFrame, buttonsLayer);
+      visualCenterDiagProcess(buttonsFrame, buttonsLayer);
 
       /* Selection gizmos — full chrome (1 item) or box on every selected item (multi). */
       if (selIds.length) {
