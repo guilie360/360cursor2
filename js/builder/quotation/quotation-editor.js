@@ -4095,208 +4095,6 @@ var QuotationEditor = (function () {
     };
   }
 
-  /** Debug — first visual move of member A when free B joins populated group. */
-  function resolveFirstVisualMoveDrop(dragId, drop) {
-    if (!dragId || !drop || !drop.id) return null;
-    if (String(dragId) === String(drop.id) && drop.action !== 'into') return null;
-    var dragIx = findSceneInteraction(dragId);
-    if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return null;
-    if (outlinerItemSelfLocked(dragIx)) return null;
-
-    var groupId = null;
-    if (drop.action === 'into') {
-      var gInto = findSceneInteraction(drop.id);
-      if (gInto && isOverlayGroupIx(gInto)) groupId = String(drop.id);
-    } else {
-      var targetIx = findSceneInteraction(drop.id);
-      if (!targetIx) return null;
-      if (isOverlayGroupIx(targetIx)) groupId = String(drop.id);
-      else if (targetIx.groupId) groupId = String(targetIx.groupId);
-    }
-    if (!groupId) return null;
-
-    healOverlayGroupMembership(activeScene());
-    var grp = findSceneInteraction(groupId);
-    if (!grp || !isOverlayGroupIx(grp)) return null;
-    var members = (grp.memberIds || []).filter(function (id) {
-      return id && String(id) !== String(dragId);
-    });
-    if (!members.length) return null;
-
-    return {
-      groupId: groupId,
-      dragId: String(dragId),
-      targetId: String(members[0])
-    };
-  }
-
-  function readOverlayStageBtnVisualPos(memberId) {
-    if (!rootEl || !memberId) return null;
-    var layer = rootEl.querySelector('[data-qe-edit-layer]');
-    if (!layer) return null;
-    var mid = String(memberId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    var el = layer.querySelector('[data-exp-stage-btn="' + mid + '"]');
-    if (!el) return null;
-    return {
-      left: el.style.left || '',
-      top: el.style.top || ''
-    };
-  }
-
-  function disarmFirstVisualMoveTrace() {
-    try {
-      var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
-      if (tr) {
-        if (tr.rafId) cancelAnimationFrame(tr.rafId);
-        if (tr.timeoutId) clearTimeout(tr.timeoutId);
-      }
-      window.__QE_FIRST_VISUAL_MOVE_TRACE__ = null;
-    } catch (eDis) { /* ignore */ }
-  }
-
-  function readFirstVisualMoveModelSnapshot(tr) {
-    var empty = {
-      storedWorld: null,
-      vmPaintWorld: null,
-      renderPaintPct: null,
-      group: null,
-      member: null
-    };
-    if (!tr || !expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') {
-      return empty;
-    }
-    var sz = overlayPanelLayerSize();
-    var lw = sz.w;
-    var lh = sz.h;
-    var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
-    if (!n) return empty;
-    var ix = ExperienciaEngine.getInteraction(n, tr.targetId);
-    var grp = ExperienciaEngine.getInteraction(n, tr.groupId);
-    if (!ix) return empty;
-
-    var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
-      ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, lw, lh)
-      : null;
-    var vm = ExperienciaEngine.buttonViewModel
-      ? ExperienciaEngine.buttonViewModel(expOverlay.shim, n, ix, lw, lh)
-      : null;
-    var renderPaint = null;
-    if (vm && typeof ExperienciaCanvas !== 'undefined' &&
-        ExperienciaCanvas.overlayRenderPaintPct) {
-      renderPaint = ExperienciaCanvas.overlayRenderPaintPct(vm, lw, lh);
-    } else if (vm) {
-      renderPaint = { x: Number(vm.x), y: Number(vm.y) };
-    }
-
-    return {
-      storedWorld: storedWorld ? {
-        x: Number(storedWorld.x),
-        y: Number(storedWorld.y),
-        rotation: storedWorld.rotation != null ? Number(storedWorld.rotation) : null
-      } : null,
-      vmPaintWorld: vm ? {
-        x: Number(vm.x),
-        y: Number(vm.y),
-        rotation: vm.rotation != null ? Number(vm.rotation) : null
-      } : null,
-      renderPaintPct: renderPaint ? {
-        x: Number(renderPaint.x),
-        y: Number(renderPaint.y)
-      } : null,
-      group: grp ? {
-        x: grp.x != null ? Number(grp.x) : null,
-        y: grp.y != null ? Number(grp.y) : null,
-        rotation: grp.rotation != null ? Number(grp.rotation) : null
-      } : null,
-      member: {
-        localX: ix.localX != null ? Number(ix.localX) : null,
-        localY: ix.localY != null ? Number(ix.localY) : null,
-        localRotation: ix.localRotation != null ? Number(ix.localRotation) : null
-      }
-    };
-  }
-
-  function emitFirstVisualMoveLog(before, after, tr) {
-    before = before || { left: '', top: '' };
-    after = after || { left: '', top: '' };
-    var dLeft = parseFloat(after.left) - parseFloat(before.left);
-    var dTop = parseFloat(after.top) - parseFloat(before.top);
-    if (!isFinite(dLeft)) dLeft = 0;
-    if (!isFinite(dTop)) dTop = 0;
-
-    var model = readFirstVisualMoveModelSnapshot(tr);
-    var payload = {
-      before: {
-        left: String(before.left),
-        top: String(before.top)
-      },
-      after: {
-        left: String(after.left),
-        top: String(after.top)
-      },
-      delta: {
-        left: dLeft,
-        top: dTop
-      },
-      storedWorld: model.storedWorld,
-      vmPaintWorld: model.vmPaintWorld,
-      renderPaintPct: model.renderPaintPct,
-      group: model.group,
-      member: model.member,
-      callStack: new Error('[FIRST VISUAL MOVE]').stack
-    };
-
-    console.log('[FIRST VISUAL MOVE]', payload);
-  }
-
-  function tickFirstVisualMoveWatch() {
-    var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
-    if (!tr || tr.done || !tr.armed) return;
-    var cur = readOverlayStageBtnVisualPos(tr.targetId);
-    if (!cur) {
-      tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
-      return;
-    }
-    if (cur.left === tr.before.left && cur.top === tr.before.top) {
-      tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
-      return;
-    }
-    tr.done = true;
-    tr.armed = false;
-    emitFirstVisualMoveLog(tr.before, cur, tr);
-    disarmFirstVisualMoveTrace();
-  }
-
-  function startFirstVisualMoveWatch() {
-    var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
-    if (!tr || tr.done || !tr.armed) return;
-    tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
-    tr.timeoutId = setTimeout(function () {
-      disarmFirstVisualMoveTrace();
-    }, 15000);
-  }
-
-  function armFirstVisualMoveTrace(dragId, drop) {
-    var spec = resolveFirstVisualMoveDrop(dragId, drop);
-    if (!spec) return null;
-    var before = readOverlayStageBtnVisualPos(spec.targetId);
-    if (!before) return null;
-    disarmFirstVisualMoveTrace();
-    try {
-      window.__QE_FIRST_VISUAL_MOVE_TRACE__ = {
-        armed: true,
-        done: false,
-        targetId: spec.targetId,
-        dragId: spec.dragId,
-        groupId: spec.groupId,
-        before: { left: before.left, top: before.top },
-        rafId: 0,
-        timeoutId: 0
-      };
-    } catch (eArm) { return null; }
-    return spec;
-  }
-
   function applyPanelSceneToOverlay(engineFn) {
     markDirtyLocal();
     if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
@@ -5352,14 +5150,11 @@ var QuotationEditor = (function () {
         if (atRelease) drop = atRelease;
       }
       if (draggingId && drop) {
-        var traceSpec = armFirstVisualMoveTrace(draggingId, drop);
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
              dropTarget.position !== drop.position ||
              dropTarget.action !== drop.action)) {
-          if (traceSpec) disarmFirstVisualMoveTrace();
-          traceSpec = armFirstVisualMoveTrace(draggingId, dropTarget);
           ok = commitOutlinerDrop(draggingId, dropTarget);
           if (ok) drop = dropTarget;
         }
@@ -5369,9 +5164,6 @@ var QuotationEditor = (function () {
             moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
           }
           syncOutlinerPanelToCanvas();
-          if (traceSpec) startFirstVisualMoveWatch();
-        } else if (traceSpec) {
-          disarmFirstVisualMoveTrace();
         }
       }
 
@@ -10188,7 +9980,6 @@ var QuotationEditor = (function () {
   }
 
   function destroyExperienciaOverlay() {
-    disarmFirstVisualMoveTrace();
     if (expOverlay && typeof expOverlay.pull === 'function') {
       try { expOverlay.pull(); } catch (ePull) {}
     }
