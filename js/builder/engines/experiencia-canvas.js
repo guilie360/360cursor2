@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7820';
+  var EXP_CANVAS_BUILD = 'ws7821';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -6409,188 +6409,6 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    function renderPosRound4(v) {
-      return v != null && isFinite(Number(v)) ? +(Number(v)).toFixed(4) : null;
-    }
-
-    function renderPosRound2(v) {
-      return v != null && isFinite(Number(v)) ? +(Number(v)).toFixed(2) : null;
-    }
-
-    function renderPosDeltaObj(a, b) {
-      if (!a || !b) return null;
-      var out = {};
-      ['x', 'y', 'rotation', 'cx', 'cy', 'w', 'h', 'rot'].forEach(function (k) {
-        if (a[k] == null || b[k] == null) return;
-        out[k] = renderPosRound4(Number(b[k]) - Number(a[k]));
-      });
-      return Object.keys(out).length ? out : null;
-    }
-
-    var RENDER_POS_STEPS = {
-      'before-drop': true,
-      'after-drop-paint-1': true,
-      'after-drop-paint-2': true,
-      'after-drop-paint-3': true,
-      'after-drop-paint-4': true
-    };
-    var RENDER_POS_AFTER_ORDER = [
-      'after-drop-paint-1',
-      'after-drop-paint-2',
-      'after-drop-paint-3',
-      'after-drop-paint-4'
-    ];
-
-    function renderPosTraceActive(tr) {
-      return !!(tr && tr.armed && !tr.done);
-    }
-
-    function finishRenderPosTrace(tr) {
-      if (!tr) return;
-      tr.done = true;
-      tr.armed = false;
-      try { window.__QE_RENDER_POS_TRACE__ = null; } catch (eDone) { /* ignore */ }
-    }
-
-    /** Canvas render trace — stored world vs vm paint vs final CSS/DOM (group drop repro only). */
-    function computeOverlayRenderPosTrace(nodeId, memberId, layerW, layerH) {
-      if (!nodeId || !memberId || !ExperienciaEngine) return null;
-      var n = ExperienciaEngine.getNode(state, nodeId);
-      var ix = n && ExperienciaEngine.getInteraction(n, memberId);
-      if (!n || !ix) return null;
-      var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
-        ? ExperienciaEngine.overlayWorldLayoutRaw(n, ix, layerW, layerH)
-        : null;
-      var vm = ExperienciaEngine.buttonViewModel
-        ? ExperienciaEngine.buttonViewModel(state, n, ix, layerW, layerH)
-        : null;
-      if (!vm) return null;
-      var paintX = Number(vm.x);
-      var paintY = Number(vm.y);
-      var rot = Number(vm.rotation) || 0;
-      var t = String(vm.type || 'BUTTON').toUpperCase();
-      var gmPaint = null;
-      if (isShapeType(t)) {
-        gmPaint = shapeStagePaintMetrics(vm, layerW, layerH);
-        if (gmPaint) {
-          paintX = gmPaint.x;
-          paintY = gmPaint.y;
-        }
-      }
-      return {
-        memberId: String(memberId),
-        nodeId: String(nodeId),
-        type: t,
-        groupId: ix.groupId || null,
-        storedWorld: storedWorld ? {
-          x: renderPosRound4(storedWorld.x),
-          y: renderPosRound4(storedWorld.y),
-          rotation: renderPosRound2(storedWorld.rotation)
-        } : null,
-        vmPaintWorld: {
-          x: renderPosRound4(vm.x),
-          y: renderPosRound4(vm.y),
-          rotation: renderPosRound2(rot)
-        },
-        renderPaintPct: {
-          x: renderPosRound4(paintX),
-          y: renderPosRound4(paintY),
-          rotation: renderPosRound2(rot),
-          shapeAdjusted: !!gmPaint
-        },
-        cssTransform: 'left:' + paintX + '%;top:' + paintY + '%;--btn-rot:' + rot + 'deg;'
-      };
-    }
-
-    function readOverlayDomRenderPos(memberId) {
-      if (!buttonsLayer || !memberId) return null;
-      var mid = String(memberId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-      var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + mid + '"]');
-      if (!el) return null;
-      return {
-        style: el.getAttribute('style') || '',
-        left: el.style.left || null,
-        top: el.style.top || null,
-        btnRot: el.style.getPropertyValue('--btn-rot') || null,
-        box: bisectDomBox(el)
-      };
-    }
-
-    function emitRenderPosTrace(step, trace) {
-      if (!trace || !RENDER_POS_STEPS[step]) return;
-      var tr = null;
-      try { tr = window.__QE_RENDER_POS_TRACE__; } catch (eTr) { return; }
-      if (!renderPosTraceActive(tr)) return;
-      if (String(trace.memberId) !== String(tr.targetId)) return;
-      if (String(trace.nodeId) !== String(tr.nodeId)) return;
-      console.log('[RENDER POS] step=' + step);
-      var payload = {
-        memberId: trace.memberId,
-        nodeId: trace.nodeId,
-        type: trace.type,
-        groupId: trace.groupId,
-        storedWorld: trace.storedWorld,
-        vmPaintWorld: trace.vmPaintWorld,
-        renderPaintPct: trace.renderPaintPct,
-        cssTransform: trace.cssTransform,
-        domPaint: trace.domPaint || null
-      };
-      if (tr.baselineRender && step !== 'before-drop') {
-        payload.deltaFromBeforeDrop = {
-          storedWorld: renderPosDeltaObj(tr.baselineRender.storedWorld, trace.storedWorld),
-          vmPaintWorld: renderPosDeltaObj(tr.baselineRender.vmPaintWorld, trace.vmPaintWorld),
-          renderPaintPct: renderPosDeltaObj(tr.baselineRender.renderPaintPct, trace.renderPaintPct),
-          domBox: renderPosDeltaObj(
-            tr.baselineRender.domPaint && tr.baselineRender.domPaint.box,
-            trace.domPaint && trace.domPaint.box
-          )
-        };
-      }
-      console.log('[RENDER POS] data', payload);
-      if (step === 'after-drop-paint-4') finishRenderPosTrace(tr);
-    }
-
-    function sampleOverlayRenderPos(nodeId, memberId, step) {
-      try {
-        if (step !== 'before-drop') return;
-        var tr = window.__QE_RENDER_POS_TRACE__;
-        if (!renderPosTraceActive(tr)) return;
-        if (String(tr.targetId) !== String(memberId)) return;
-        if (String(tr.nodeId) !== String(nodeId)) return;
-        var layerW = overlayLayerSize().w;
-        var layerH = overlayLayerSize().h;
-        var trace = computeOverlayRenderPosTrace(nodeId, memberId, layerW, layerH);
-        if (!trace) return;
-        trace.domPaint = readOverlayDomRenderPos(memberId);
-        tr.baselineRender = trace;
-        emitRenderPosTrace('before-drop', trace);
-      } catch (eSample) { /* ignore */ }
-    }
-
-    function maybeEmitRenderPosTraceAfterPaint(nodeId, layerW, layerH) {
-      try {
-        var tr = window.__QE_RENDER_POS_TRACE__;
-        if (!renderPosTraceActive(tr)) return;
-        if (!tr.beforeDropDone) return;
-        if (String(nodeId) !== String(tr.nodeId)) return;
-        if (tr.paintCount >= RENDER_POS_AFTER_ORDER.length) return;
-        var step = RENDER_POS_AFTER_ORDER[tr.paintCount];
-        tr.paintCount++;
-        var trace = computeOverlayRenderPosTrace(nodeId, tr.targetId, layerW, layerH);
-        if (!trace) return;
-        requestAnimationFrame(function () {
-          if (!renderPosTraceActive(tr)) return;
-          trace.domPaint = readOverlayDomRenderPos(tr.targetId);
-          if (!tr.baselineRender) tr.baselineRender = trace;
-          emitRenderPosTrace(step, trace);
-        });
-      } catch (ePaintTrace) { /* ignore */ }
-    }
-
-    try {
-      window.__qeSampleOverlayRenderPos = sampleOverlayRenderPos;
-    } catch (eExportRenderPos) { /* ignore */ }
-
     function emitPaintRotateVmBisect(sceneId, memberId, levels) {
       var firstBreak = null;
       var i;
@@ -7898,7 +7716,6 @@ var ExperienciaCanvas = (function () {
         scheduleShapeDebugLog(debugPhase, debugIds);
       }
       syncOverlayPanelMemberGlow();
-      maybeEmitRenderPosTraceAfterPaint(n.id, layerW, layerH);
     }
 
     /** Mount gizmo chrome only — never remount shape nodes (avoids select flicker). */

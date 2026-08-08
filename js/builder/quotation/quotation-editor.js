@@ -4095,14 +4095,8 @@ var QuotationEditor = (function () {
     };
   }
 
-  /** Debug — plain step logs; data optional second line. */
-  function logRenderPosStep(step, data) {
-    console.log('[RENDER POS] step=' + step);
-    if (data !== undefined) console.log('[RENDER POS] data', data);
-  }
-
-  /** Free item joining a group that already has other members (outliner drop). */
-  function resolveRenderPosTraceDrop(dragId, drop) {
+  /** Debug — first visual move of member A when free B joins populated group. */
+  function resolveFirstVisualMoveDrop(dragId, drop) {
     if (!dragId || !drop || !drop.id) return null;
     if (String(dragId) === String(drop.id) && drop.action !== 'into') return null;
     var dragIx = findSceneInteraction(dragId);
@@ -4130,38 +4124,94 @@ var QuotationEditor = (function () {
     if (!members.length) return null;
 
     return {
-      nodeId: overlayPanelNodeId(),
-      sceneId: state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
       groupId: groupId,
       dragId: String(dragId),
       targetId: String(members[0])
     };
   }
 
-  function armRenderPosTraceForDrop(dragId, drop) {
-    var spec = resolveRenderPosTraceDrop(dragId, drop);
-    if (!spec) return null;
-    try {
-      window.__QE_RENDER_POS_TRACE__ = {
-        armed: true,
-        done: false,
-        beforeDropDone: false,
-        nodeId: spec.nodeId,
-        sceneId: spec.sceneId,
-        groupId: spec.groupId,
-        dragId: spec.dragId,
-        targetId: spec.targetId,
-        baselineRender: null,
-        paintCount: 0
-      };
-    } catch (eArm) { return null; }
-    logRenderPosStep('before-drop');
-    try { window.__QE_RENDER_POS_TRACE__.beforeDropDone = true; } catch (eMark) { /* ignore */ }
-    return spec;
+  function readOverlayStageBtnVisualPos(memberId) {
+    if (!rootEl || !memberId) return null;
+    var layer = rootEl.querySelector('[data-qe-edit-layer]');
+    if (!layer) return null;
+    var mid = String(memberId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    var el = layer.querySelector('[data-exp-stage-btn="' + mid + '"]');
+    if (!el) return null;
+    return {
+      left: el.style.left || '',
+      top: el.style.top || ''
+    };
   }
 
-  function disarmRenderPosTrace() {
-    try { window.__QE_RENDER_POS_TRACE__ = null; } catch (eDis) { /* ignore */ }
+  function disarmFirstVisualMoveTrace() {
+    try {
+      var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
+      if (tr) {
+        if (tr.rafId) cancelAnimationFrame(tr.rafId);
+        if (tr.timeoutId) clearTimeout(tr.timeoutId);
+      }
+      window.__QE_FIRST_VISUAL_MOVE_TRACE__ = null;
+    } catch (eDis) { /* ignore */ }
+  }
+
+  function emitFirstVisualMoveLog(before, after) {
+    var dLeft = parseFloat(after.left) - parseFloat(before.left);
+    var dTop = parseFloat(after.top) - parseFloat(before.top);
+    if (!isFinite(dLeft)) dLeft = 0;
+    if (!isFinite(dTop)) dTop = 0;
+    console.log('[FIRST VISUAL MOVE]');
+    console.log('before:\nleft=' + before.left + '\ntop=' + before.top);
+    console.log('after:\nleft=' + after.left + '\ntop=' + after.top);
+    console.log('delta:\nleft=' + dLeft + '\ntop=' + dTop);
+    console.log('callStack:\n' + (new Error('[FIRST VISUAL MOVE]')).stack);
+  }
+
+  function tickFirstVisualMoveWatch() {
+    var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
+    if (!tr || tr.done || !tr.armed) return;
+    var cur = readOverlayStageBtnVisualPos(tr.targetId);
+    if (!cur) {
+      tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
+      return;
+    }
+    if (cur.left === tr.before.left && cur.top === tr.before.top) {
+      tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
+      return;
+    }
+    tr.done = true;
+    tr.armed = false;
+    emitFirstVisualMoveLog(tr.before, cur);
+    disarmFirstVisualMoveTrace();
+  }
+
+  function startFirstVisualMoveWatch() {
+    var tr = window.__QE_FIRST_VISUAL_MOVE_TRACE__;
+    if (!tr || tr.done || !tr.armed) return;
+    tr.rafId = requestAnimationFrame(tickFirstVisualMoveWatch);
+    tr.timeoutId = setTimeout(function () {
+      disarmFirstVisualMoveTrace();
+    }, 15000);
+  }
+
+  function armFirstVisualMoveTrace(dragId, drop) {
+    var spec = resolveFirstVisualMoveDrop(dragId, drop);
+    if (!spec) return null;
+    var before = readOverlayStageBtnVisualPos(spec.targetId);
+    if (!before) return null;
+    disarmFirstVisualMoveTrace();
+    try {
+      window.__QE_FIRST_VISUAL_MOVE_TRACE__ = {
+        armed: true,
+        done: false,
+        targetId: spec.targetId,
+        dragId: spec.dragId,
+        groupId: spec.groupId,
+        before: { left: before.left, top: before.top },
+        rafId: 0,
+        timeoutId: 0
+      };
+    } catch (eArm) { return null; }
+    return spec;
   }
 
   function applyPanelSceneToOverlay(engineFn) {
@@ -5219,14 +5269,14 @@ var QuotationEditor = (function () {
         if (atRelease) drop = atRelease;
       }
       if (draggingId && drop) {
-        var traceSpec = armRenderPosTraceForDrop(draggingId, drop);
+        var traceSpec = armFirstVisualMoveTrace(draggingId, drop);
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
              dropTarget.position !== drop.position ||
              dropTarget.action !== drop.action)) {
-          if (traceSpec) disarmRenderPosTrace();
-          traceSpec = armRenderPosTraceForDrop(draggingId, dropTarget);
+          if (traceSpec) disarmFirstVisualMoveTrace();
+          traceSpec = armFirstVisualMoveTrace(draggingId, dropTarget);
           ok = commitOutlinerDrop(draggingId, dropTarget);
           if (ok) drop = dropTarget;
         }
@@ -5236,8 +5286,9 @@ var QuotationEditor = (function () {
             moveOutlinerRowDom(list, draggingId, drop.id, drop.position, false);
           }
           syncOutlinerPanelToCanvas();
+          if (traceSpec) startFirstVisualMoveWatch();
         } else if (traceSpec) {
-          disarmRenderPosTrace();
+          disarmFirstVisualMoveTrace();
         }
       }
 
@@ -10054,6 +10105,7 @@ var QuotationEditor = (function () {
   }
 
   function destroyExperienciaOverlay() {
+    disarmFirstVisualMoveTrace();
     if (expOverlay && typeof expOverlay.pull === 'function') {
       try { expOverlay.pull(); } catch (ePull) {}
     }
