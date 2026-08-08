@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7813';
+  var QE_EDITOR_BUILD = 'ws7815';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4095,6 +4095,98 @@ var QuotationEditor = (function () {
     };
   }
 
+  /** Debug — trace world position of existing group member A when B is dropped. */
+  var groupPosTraceState = {
+    active: false,
+    targetId: null,
+    baseline: null,
+    stopped: false
+  };
+
+  function readGroupPosTraceWorld(memberId) {
+    if (!memberId || typeof ExperienciaEngine === 'undefined') return null;
+    var sz = overlayPanelLayerSize();
+    var lw = sz.w || 1000;
+    var lh = sz.h || 1000;
+    if (expOverlay && expOverlay.shim) {
+      var n = ExperienciaEngine.getNode(expOverlay.shim, overlayPanelNodeId());
+      if (n) {
+        var shimIx = ExperienciaEngine.getInteraction(n, memberId);
+        if (shimIx && ExperienciaEngine.overlayWorldLayoutRaw) {
+          var shimWorld = ExperienciaEngine.overlayWorldLayoutRaw(n, shimIx, lw, lh);
+          if (shimWorld) {
+            return { x: Number(shimWorld.x), y: Number(shimWorld.y) };
+          }
+        }
+      }
+    }
+    var panelIx = findSceneInteraction(memberId);
+    if (panelIx && ExperienciaEngine.overlayWorldLayoutAbsolute) {
+      var panelWorld = ExperienciaEngine.overlayWorldLayoutAbsolute(panelIx, lw, lh);
+      if (panelWorld) {
+        return { x: Number(panelWorld.x), y: Number(panelWorld.y) };
+      }
+    }
+    return null;
+  }
+
+  function groupPosTraceArm(targetId) {
+    if (!targetId) return;
+    groupPosTraceState.active = true;
+    groupPosTraceState.targetId = String(targetId);
+    groupPosTraceState.baseline = null;
+    groupPosTraceState.stopped = false;
+  }
+
+  function groupPosTraceStep(step) {
+    if (!groupPosTraceState.active || groupPosTraceState.stopped || !groupPosTraceState.targetId) {
+      return;
+    }
+    var world = readGroupPosTraceWorld(groupPosTraceState.targetId);
+    if (!world || isNaN(world.x) || isNaN(world.y)) return;
+    console.log(
+      '[A POS]\nstep=' + step + '\nworld=(' + world.x + ',' + world.y + ')'
+    );
+    if (!groupPosTraceState.baseline) {
+      groupPosTraceState.baseline = { x: world.x, y: world.y };
+      return;
+    }
+    var sz = overlayPanelLayerSize();
+    var pxDx = Math.abs(world.x - groupPosTraceState.baseline.x) / 100 * (sz.w || 1000);
+    var pxDy = Math.abs(world.y - groupPosTraceState.baseline.y) / 100 * (sz.h || 1000);
+    if (pxDx > 0.1 || pxDy > 0.1) {
+      console.warn('FIRST POSITION CHANGE:\nfunction=' + step);
+      groupPosTraceState.stopped = true;
+      groupPosTraceState.active = false;
+    }
+  }
+
+  function resolveGroupPosTraceTargetForDrop(dragId, drop) {
+    if (!dragId || !drop) return null;
+    var dragKey = String(dragId);
+    var groupId = null;
+    if (drop.action === 'into') {
+      groupId = String(drop.id);
+    } else {
+      var targetIx = findSceneInteraction(drop.id);
+      if (!targetIx) return null;
+      if (isOverlayGroupIx(targetIx)) groupId = String(drop.id);
+      else if (targetIx.groupId) groupId = String(targetIx.groupId);
+    }
+    if (!groupId) return null;
+    var grp = findSceneInteraction(groupId);
+    if (!grp || !isOverlayGroupIx(grp)) return null;
+    var members = (grp.memberIds || []).filter(function (id) {
+      return id && String(id) !== dragKey;
+    });
+    if (!members.length) return null;
+    return String(members[0]);
+  }
+
+  try {
+    window.__qeGroupPosTraceStep = groupPosTraceStep;
+  } catch (ePosTraceExport) { /* ignore */ }
+
   function applyPanelSceneToOverlay(engineFn) {
     markDirtyLocal();
     if (expOverlay && expOverlay.syncFromScenes) expOverlay.syncFromScenes();
@@ -4173,6 +4265,7 @@ var QuotationEditor = (function () {
       lockTraceSceneItem('pushOutlinerScenesToShim:exit:scene', tid);
       lockTraceShimItem('pushOutlinerScenesToShim:exit:shim', tid);
     }
+    groupPosTraceStep('after pushOutlinerScenesToShim');
   }
 
   function dissolveOverlayGroupById(groupId) {
@@ -4591,6 +4684,7 @@ var QuotationEditor = (function () {
     copyPanelGroupFromShim(groupId);
     healOverlayGroupMembership(scene);
     markDirtyLocal();
+    groupPosTraceStep('after assignInteractionToGroup');
     return true;
   }
 
@@ -5154,6 +5248,11 @@ var QuotationEditor = (function () {
         if (atRelease) drop = atRelease;
       }
       if (draggingId && drop) {
+        var posTraceTarget = resolveGroupPosTraceTargetForDrop(draggingId, drop);
+        if (posTraceTarget) {
+          groupPosTraceArm(posTraceTarget);
+          groupPosTraceStep('before-drop');
+        }
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
@@ -10107,6 +10206,7 @@ var QuotationEditor = (function () {
         });
       }
     }
+    groupPosTraceStep('after refreshLayersPanel');
   }
 
   function bindLayersPanel() {

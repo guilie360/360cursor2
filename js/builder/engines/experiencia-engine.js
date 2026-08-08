@@ -1862,6 +1862,11 @@ var ExperienciaEngine = (function () {
         { _transformV: Number(g._transformV) || 0 }
       );
     }
+    try {
+      if (typeof window !== 'undefined' && window.__qeGroupPosTraceStep) {
+        window.__qeGroupPosTraceStep('after syncOverlayGroupFrameFromMembers');
+      }
+    } catch (ePosTraceSync) { /* ignore */ }
     return g;
   }
 

@@ -6,7 +6,7 @@
  * ExperienciaCanvas.mountOverlay or KonvaOverlayRenderer (POC, ?konva=1).
  */
 var QuotationExperienciaBridge = (function () {
-  var QE_BRIDGE_BUILD = 'ws7808';
+  var QE_BRIDGE_BUILD = 'ws7815';
   try {
     window.__QE_BRIDGE_BUILD__ = QE_BRIDGE_BUILD;
     console.log('[QE BUILD] quotation-experiencia-bridge ' + QE_BRIDGE_BUILD);
@@ -377,6 +377,11 @@ var QuotationExperienciaBridge = (function () {
       lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
       lockTraceStateBridge('pushScenesToShim:exit:shim', tid, findIxLockedInShim(tid, shimState));
     }
+    try {
+      if (typeof window !== 'undefined' && window.__qeGroupPosTraceStep) {
+        window.__qeGroupPosTraceStep('after pushScenesToShim');
+      }
+    } catch (ePosTracePush) { /* ignore */ }
   }
 
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
@@ -468,6 +473,11 @@ var QuotationExperienciaBridge = (function () {
       lockTraceStateBridge('pullToScenes:exit:scene', tid, findIxLockedInScenes(tid, scenes));
       lockTraceStateBridge('pullToScenes:exit:shim', tid, findIxLockedInShim(tid, shimState));
     }
+    try {
+      if (typeof window !== 'undefined' && window.__qeGroupPosTraceStep) {
+        window.__qeGroupPosTraceStep('after pullToScenes');
+      }
+    } catch (ePosTracePull) { /* ignore */ }
   }
 
   /**
@@ -560,6 +570,11 @@ var QuotationExperienciaBridge = (function () {
       isKonvaPoc: !!handle.isKonvaPoc,
       refresh: function () {
         if (handle.refresh) handle.refresh();
+        try {
+          if (typeof window !== 'undefined' && window.__qeGroupPosTraceStep) {
+            window.__qeGroupPosTraceStep('after expOverlay.refresh');
+          }
+        } catch (ePosTraceRefresh) { /* ignore */ }
       },
       fitStage: function () {
         if (handle.fitStage) handle.fitStage();
