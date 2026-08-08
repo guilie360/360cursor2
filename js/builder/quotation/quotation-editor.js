@@ -4095,35 +4095,58 @@ var QuotationEditor = (function () {
     };
   }
 
-  /** Debug — render trace only: free item dropped INTO group that already has members. */
-  function isRenderPosTraceIntoGroupDrop(dragId, drop) {
-    if (!dragId || !drop || drop.action !== 'into' || !drop.id) return null;
-    if (String(dragId) === String(drop.id)) return null;
+  /** Debug — plain step logs; data optional second line. */
+  function logRenderPosStep(step, data) {
+    console.log('[RENDER POS] step=' + step);
+    if (data !== undefined) console.log('[RENDER POS] data', data);
+  }
+
+  /** Free item joining a group that already has other members (outliner drop). */
+  function resolveRenderPosTraceDrop(dragId, drop) {
+    if (!dragId || !drop || !drop.id) return null;
+    if (String(dragId) === String(drop.id) && drop.action !== 'into') return null;
     var dragIx = findSceneInteraction(dragId);
     if (!dragIx || isOverlayGroupIx(dragIx) || dragIx.groupId) return null;
     if (outlinerItemSelfLocked(dragIx)) return null;
-    var grp = findSceneInteraction(drop.id);
+
+    var groupId = null;
+    if (drop.action === 'into') {
+      var gInto = findSceneInteraction(drop.id);
+      if (gInto && isOverlayGroupIx(gInto)) groupId = String(drop.id);
+    } else {
+      var targetIx = findSceneInteraction(drop.id);
+      if (!targetIx) return null;
+      if (isOverlayGroupIx(targetIx)) groupId = String(drop.id);
+      else if (targetIx.groupId) groupId = String(targetIx.groupId);
+    }
+    if (!groupId) return null;
+
+    healOverlayGroupMembership(activeScene());
+    var grp = findSceneInteraction(groupId);
     if (!grp || !isOverlayGroupIx(grp)) return null;
     var members = (grp.memberIds || []).filter(function (id) {
       return id && String(id) !== String(dragId);
     });
     if (!members.length) return null;
+
     return {
+      nodeId: overlayPanelNodeId(),
       sceneId: state.backpackMode ? BACKPACK_SCENE_ID : state.activeSceneId,
-      groupId: String(drop.id),
+      groupId: groupId,
       dragId: String(dragId),
       targetId: String(members[0])
     };
   }
 
   function armRenderPosTraceForDrop(dragId, drop) {
-    var spec = isRenderPosTraceIntoGroupDrop(dragId, drop);
+    var spec = resolveRenderPosTraceDrop(dragId, drop);
     if (!spec) return null;
     try {
       window.__QE_RENDER_POS_TRACE__ = {
         armed: true,
         done: false,
         beforeDropDone: false,
+        nodeId: spec.nodeId,
         sceneId: spec.sceneId,
         groupId: spec.groupId,
         dragId: spec.dragId,
@@ -4132,6 +4155,8 @@ var QuotationEditor = (function () {
         paintCount: 0
       };
     } catch (eArm) { return null; }
+    logRenderPosStep('before-drop');
+    try { window.__QE_RENDER_POS_TRACE__.beforeDropDone = true; } catch (eMark) { /* ignore */ }
     return spec;
   }
 
@@ -5195,9 +5220,6 @@ var QuotationEditor = (function () {
       }
       if (draggingId && drop) {
         var traceSpec = armRenderPosTraceForDrop(draggingId, drop);
-        if (traceSpec && typeof window.__qeSampleOverlayRenderPos === 'function') {
-          window.__qeSampleOverlayRenderPos(traceSpec.sceneId, traceSpec.targetId, 'before-drop');
-        }
         ok = commitOutlinerDrop(draggingId, drop);
         if (!ok && dropTarget &&
             (String(dropTarget.id) !== String(drop.id) ||
@@ -5205,9 +5227,6 @@ var QuotationEditor = (function () {
              dropTarget.action !== drop.action)) {
           if (traceSpec) disarmRenderPosTrace();
           traceSpec = armRenderPosTraceForDrop(draggingId, dropTarget);
-          if (traceSpec && typeof window.__qeSampleOverlayRenderPos === 'function') {
-            window.__qeSampleOverlayRenderPos(traceSpec.sceneId, traceSpec.targetId, 'before-drop');
-          }
           ok = commitOutlinerDrop(draggingId, dropTarget);
           if (ok) drop = dropTarget;
         }

@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7819';
+  var EXP_CANVAS_BUILD = 'ws7820';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -6453,9 +6453,9 @@ var ExperienciaCanvas = (function () {
     }
 
     /** Canvas render trace — stored world vs vm paint vs final CSS/DOM (group drop repro only). */
-    function computeOverlayRenderPosTrace(sceneId, memberId, layerW, layerH) {
-      if (!sceneId || !memberId || !ExperienciaEngine) return null;
-      var n = ExperienciaEngine.getNode(state, sceneId);
+    function computeOverlayRenderPosTrace(nodeId, memberId, layerW, layerH) {
+      if (!nodeId || !memberId || !ExperienciaEngine) return null;
+      var n = ExperienciaEngine.getNode(state, nodeId);
       var ix = n && ExperienciaEngine.getInteraction(n, memberId);
       if (!n || !ix) return null;
       var storedWorld = ExperienciaEngine.overlayWorldLayoutRaw
@@ -6479,7 +6479,7 @@ var ExperienciaCanvas = (function () {
       }
       return {
         memberId: String(memberId),
-        sceneId: String(sceneId),
+        nodeId: String(nodeId),
         type: t,
         groupId: ix.groupId || null,
         storedWorld: storedWorld ? {
@@ -6522,11 +6522,11 @@ var ExperienciaCanvas = (function () {
       try { tr = window.__QE_RENDER_POS_TRACE__; } catch (eTr) { return; }
       if (!renderPosTraceActive(tr)) return;
       if (String(trace.memberId) !== String(tr.targetId)) return;
-      if (String(trace.sceneId) !== String(tr.sceneId)) return;
+      if (String(trace.nodeId) !== String(tr.nodeId)) return;
+      console.log('[RENDER POS] step=' + step);
       var payload = {
-        step: step,
         memberId: trace.memberId,
-        sceneId: trace.sceneId,
+        nodeId: trace.nodeId,
         type: trace.type,
         groupId: trace.groupId,
         storedWorld: trace.storedWorld,
@@ -6546,25 +6546,20 @@ var ExperienciaCanvas = (function () {
           )
         };
       }
-      console.log(
-        '%c[RENDER POS] ' + step,
-        'color:#f6f;font-weight:bold;font-size:13px',
-        payload
-      );
-      if (step === 'before-drop') tr.beforeDropDone = true;
+      console.log('[RENDER POS] data', payload);
       if (step === 'after-drop-paint-4') finishRenderPosTrace(tr);
     }
 
-    function sampleOverlayRenderPos(sceneId, memberId, step) {
+    function sampleOverlayRenderPos(nodeId, memberId, step) {
       try {
         if (step !== 'before-drop') return;
         var tr = window.__QE_RENDER_POS_TRACE__;
         if (!renderPosTraceActive(tr)) return;
         if (String(tr.targetId) !== String(memberId)) return;
-        if (String(tr.sceneId) !== String(sceneId)) return;
+        if (String(tr.nodeId) !== String(nodeId)) return;
         var layerW = overlayLayerSize().w;
         var layerH = overlayLayerSize().h;
-        var trace = computeOverlayRenderPosTrace(sceneId, memberId, layerW, layerH);
+        var trace = computeOverlayRenderPosTrace(nodeId, memberId, layerW, layerH);
         if (!trace) return;
         trace.domPaint = readOverlayDomRenderPos(memberId);
         tr.baselineRender = trace;
@@ -6572,20 +6567,21 @@ var ExperienciaCanvas = (function () {
       } catch (eSample) { /* ignore */ }
     }
 
-    function maybeEmitRenderPosTraceAfterPaint(sceneId, layerW, layerH) {
+    function maybeEmitRenderPosTraceAfterPaint(nodeId, layerW, layerH) {
       try {
         var tr = window.__QE_RENDER_POS_TRACE__;
         if (!renderPosTraceActive(tr)) return;
         if (!tr.beforeDropDone) return;
-        if (String(sceneId) !== String(tr.sceneId)) return;
+        if (String(nodeId) !== String(tr.nodeId)) return;
         if (tr.paintCount >= RENDER_POS_AFTER_ORDER.length) return;
         var step = RENDER_POS_AFTER_ORDER[tr.paintCount];
         tr.paintCount++;
-        var trace = computeOverlayRenderPosTrace(sceneId, tr.targetId, layerW, layerH);
+        var trace = computeOverlayRenderPosTrace(nodeId, tr.targetId, layerW, layerH);
         if (!trace) return;
         requestAnimationFrame(function () {
           if (!renderPosTraceActive(tr)) return;
           trace.domPaint = readOverlayDomRenderPos(tr.targetId);
+          if (!tr.baselineRender) tr.baselineRender = trace;
           emitRenderPosTrace(step, trace);
         });
       } catch (ePaintTrace) { /* ignore */ }
