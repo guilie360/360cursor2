@@ -3,7 +3,6 @@
  * Mounted once beside the hero; shown/hidden via presentation state (no route change).
  */
 var QuotationProposalsPage = (function () {
-  var AUDIO_SRC = '../assets/taroa/mujer-conforme.mp3';
   /* TAROA public WhatsApp (CO). Digits only with country code. */
   var WHATSAPP_NUMBER = '573226834084';
   var PROPOSALS = [
@@ -58,7 +57,36 @@ var QuotationProposalsPage = (function () {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function markup() {
+  function audioChromeHtml(audioSrc) {
+    if (!audioSrc) return '';
+    return '' +
+      '<div class="qpp__audio-wrap" data-qpp-audio-wrap>' +
+        '<button type="button" class="qpp__icon-btn qpp__chrome-music" data-qpp-music aria-label="Música" aria-expanded="false" aria-controls="qppAudioPanel">' +
+          '<svg class="qpp__music-note" viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path d="M9.2 18.6c0 1.55-1.35 2.7-2.95 2.7S3.3 20.15 3.3 18.6s1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V5.2l11.2-2.05v12.7c0 1.55-1.35 2.7-2.95 2.7s-2.95-1.15-2.95-2.7 1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V6.35L9.2 8.15v10.45z"/>' +
+          '</svg>' +
+        '</button>' +
+        '<div class="qpp__audio-panel" id="qppAudioPanel" data-qpp-audio-panel hidden>' +
+          '<button type="button" class="qpp__audio-play" data-qpp-audio-toggle aria-label="Reproducir">' +
+            '<svg class="qpp__audio-icon qpp__audio-icon--play" viewBox="0 0 24 24" aria-hidden="true">' +
+              '<path d="M8 5.5v13l11-6.5z"/>' +
+            '</svg>' +
+            '<svg class="qpp__audio-icon qpp__audio-icon--pause" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+              '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<label class="qpp__audio-vol" aria-label="Volumen">' +
+            '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="70" step="1">' +
+          '</label>' +
+        '</div>' +
+        '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
+          escapeHtml(audioSrc) + '"></audio>' +
+      '</div>';
+  }
+
+  function markup(opts) {
+    opts = opts || {};
+    var audioSrc = String(opts.audioSrc || '').trim();
     return '' +
       '<div class="qpp" data-qpp-root>' +
         '<header class="qpp__chrome">' +
@@ -89,29 +117,7 @@ var QuotationProposalsPage = (function () {
                 '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
               '</svg>' +
             '</button>' +
-            /* Music note + volume popover (below fullscreen on desktop). */
-            '<div class="qpp__audio-wrap" data-qpp-audio-wrap>' +
-              '<button type="button" class="qpp__icon-btn qpp__chrome-music" data-qpp-music aria-label="Música" aria-expanded="false" aria-controls="qppAudioPanel">' +
-                '<svg class="qpp__music-note" viewBox="0 0 24 24" aria-hidden="true">' +
-                  '<path d="M9.2 18.6c0 1.55-1.35 2.7-2.95 2.7S3.3 20.15 3.3 18.6s1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V5.2l11.2-2.05v12.7c0 1.55-1.35 2.7-2.95 2.7s-2.95-1.15-2.95-2.7 1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V6.35L9.2 8.15v10.45z"/>' +
-                '</svg>' +
-              '</button>' +
-              '<div class="qpp__audio-panel" id="qppAudioPanel" data-qpp-audio-panel hidden>' +
-                '<button type="button" class="qpp__audio-play" data-qpp-audio-toggle aria-label="Reproducir">' +
-                  '<svg class="qpp__audio-icon qpp__audio-icon--play" viewBox="0 0 24 24" aria-hidden="true">' +
-                    '<path d="M8 5.5v13l11-6.5z"/>' +
-                  '</svg>' +
-                  '<svg class="qpp__audio-icon qpp__audio-icon--pause" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
-                    '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' +
-                  '</svg>' +
-                '</button>' +
-                '<label class="qpp__audio-vol" aria-label="Volumen">' +
-                  '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="70" step="1">' +
-                '</label>' +
-              '</div>' +
-              '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
-                escapeHtml(AUDIO_SRC) + '"></audio>' +
-            '</div>' +
+            audioChromeHtml(audioSrc) +
           '</div>' +
         '</header>' +
         '<main class="qpp__main" data-qpp-selection>' +
@@ -708,7 +714,7 @@ var QuotationProposalsPage = (function () {
   function mount(host, opts) {
     if (!host) return null;
     opts = opts || {};
-    host.innerHTML = markup();
+    host.innerHTML = markup(opts);
     bind(host, opts);
     render(host);
     return {

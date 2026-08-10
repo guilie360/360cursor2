@@ -151,6 +151,30 @@ var QuotationRuntime = (function () {
     return hero && hero.canvas && typeof hero.canvas === 'object' ? hero.canvas : null;
   }
 
+  /** Project-scoped ambient track for proposals chrome (no global fallback). */
+  function resolveProposalsAmbientUrl(bundle) {
+    bundle = bundle || loaded || {};
+    var hero = bundle.hero;
+    if (hero && typeof hero === 'object') {
+      var direct = hero.proposalsAmbientUrl || hero.ambientAudioUrl;
+      if (direct && String(direct).trim()) return String(direct).trim();
+      var lib = hero.library && hero.library.content;
+      if (Array.isArray(lib)) {
+        for (var i = 0; i < lib.length; i++) {
+          var item = lib[i];
+          if (!item || item.group !== 'audio') continue;
+          var url = item.publicUrl || item.remoteUrl || item.previewUrl;
+          if (url && String(url).trim()) return String(url).trim();
+        }
+      }
+    }
+    var slug = String((bundle.project && bundle.project.slug) || '').trim().toLowerCase();
+    if (slug === 'taroa-propuesta') {
+      return '../assets/taroa/mujer-conforme.mp3';
+    }
+    return '';
+  }
+
   function listScenes(bundle) {
     var doc = canvasDoc(bundle);
     return doc && Array.isArray(doc.scenes) ? doc.scenes : [];
@@ -565,13 +589,15 @@ var QuotationRuntime = (function () {
     proposalsHostEl.setAttribute('inert', '');
     host.appendChild(proposalsHostEl);
     if (typeof QuotationProposalsPage !== 'undefined' && QuotationProposalsPage.mount) {
+      var ambientUrl = resolveProposalsAmbientUrl(loaded);
       QuotationProposalsPage.mount(proposalsHostEl, {
         onBack: function () {
           setPresentationView('hero');
-        }
+        },
+        audioSrc: ambientUrl,
+        projectId: loaded && loaded.project && loaded.project.id
       });
-      /* Ambient track starts when the public experience boots (not only on propuestas). */
-      if (typeof QuotationProposalsPage.startAmbientAudio === 'function') {
+      if (ambientUrl && typeof QuotationProposalsPage.startAmbientAudio === 'function') {
         QuotationProposalsPage.startAmbientAudio(proposalsHostEl);
       }
     }
