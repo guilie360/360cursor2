@@ -4593,6 +4593,9 @@ var ExperienciaCanvas = (function () {
 
       _paintInspectorBusy = true;
       try {
+      if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.closeAll) {
+        WorkspaceSelect.closeAll();
+      }
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
       var inspectorLists = {

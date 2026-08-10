@@ -14,25 +14,56 @@ var WorkspaceSelect = (function () {
       .replace(/"/g, '&quot;');
   }
 
+  function resetListStyles(list) {
+    if (!list) return;
+    list.style.position = '';
+    list.style.left = '';
+    list.style.top = '';
+    list.style.bottom = '';
+    list.style.width = '';
+    list.style.minWidth = '';
+    list.style.zIndex = '';
+    list.style.maxHeight = '';
+  }
+
+  function cleanupOrphanLists() {
+    if (portalList && portalWrap && !portalWrap.isConnected) {
+      releasePortal();
+    }
+    document.querySelectorAll('body > .ws-select__list').forEach(function (list) {
+      list.hidden = true;
+      resetListStyles(list);
+      list.remove();
+    });
+  }
+
   function releasePortal() {
-    if (portalList && portalWrap && portalList.parentNode === document.body) {
+    if (!portalList) {
+      portalWrap = null;
+      return;
+    }
+    resetListStyles(portalList);
+    portalList.hidden = true;
+    if (portalWrap && portalWrap.isConnected) {
       portalWrap.appendChild(portalList);
-      portalList.style.position = '';
-      portalList.style.left = '';
-      portalList.style.top = '';
-      portalList.style.bottom = '';
-      portalList.style.width = '';
-      portalList.style.minWidth = '';
-      portalList.style.zIndex = '';
-      portalList.style.maxHeight = '';
+    } else if (portalList.parentNode === document.body) {
+      portalList.remove();
     }
     portalList = null;
     portalWrap = null;
   }
 
   function positionPortal(wrap, list) {
+    if (!wrap || !list || !wrap.isConnected) {
+      releasePortal();
+      return;
+    }
     var trigger = wrap.querySelector('.ws-select__trigger') || wrap;
     var rect = trigger.getBoundingClientRect();
+    if (!rect.width && !rect.height) {
+      setOpen(wrap, false);
+      return;
+    }
     var gap = 4;
     var maxH = 240;
     var spaceBelow = window.innerHeight - rect.bottom - gap - 8;
@@ -65,6 +96,12 @@ var WorkspaceSelect = (function () {
       if (except && el === except) return;
       setOpen(el, false);
     });
+    cleanupOrphanLists();
+  }
+
+  function hasOpen() {
+    if (portalList && portalList.parentNode === document.body && !portalList.hidden) return true;
+    return !!document.querySelector('.ws-select.' + OPEN_CLASS);
   }
 
   function getList(wrap) {
@@ -291,17 +328,30 @@ var WorkspaceSelect = (function () {
         if (e.key === 'Escape') closeAll(null);
       });
       window.addEventListener('resize', function () {
-        if (portalWrap && portalList && portalWrap.classList.contains(OPEN_CLASS)) {
+        if (portalWrap && portalList && portalWrap.isConnected &&
+            portalWrap.classList.contains(OPEN_CLASS)) {
           positionPortal(portalWrap, portalList);
+        } else if (portalList && portalWrap && !portalWrap.isConnected) {
+          releasePortal();
         }
       });
       window.addEventListener('scroll', function () {
-        if (portalWrap && portalList && portalWrap.classList.contains(OPEN_CLASS)) {
+        if (portalWrap && portalList && portalWrap.isConnected &&
+            portalWrap.classList.contains(OPEN_CLASS)) {
           positionPortal(portalWrap, portalList);
+        } else if (portalList && portalWrap && !portalWrap.isConnected) {
+          releasePortal();
         }
+      }, true);
+      document.addEventListener('pointerdown', function (e) {
+        if (e.target.closest && (
+          e.target.closest('.ws-select') ||
+          e.target.closest('.ws-select__list')
+        )) return;
+        closeAll(null);
       }, true);
     }
   }
 
-  return { enhance: enhance, closeAll: closeAll };
+  return { enhance: enhance, closeAll: closeAll, hasOpen: hasOpen };
 })();

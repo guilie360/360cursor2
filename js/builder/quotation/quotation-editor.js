@@ -10879,6 +10879,13 @@ var QuotationEditor = (function () {
 
     if (e.key === 'Escape') {
       try {
+        if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.hasOpen &&
+            WorkspaceSelect.hasOpen()) {
+          WorkspaceSelect.closeAll();
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         if (state.canvasPreviewMode) {
           e.preventDefault();
           e.stopPropagation();
@@ -11153,6 +11160,10 @@ var QuotationEditor = (function () {
 
     var t = e.target;
     if (!t || !t.closest) return;
+    if (!t.closest('.ws-select') && !t.closest('.ws-select__list') &&
+        typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.closeAll) {
+      WorkspaceSelect.closeAll();
+    }
     if (!isQuotationBuilderSurface(t)) return;
     if (isCanvasPointerTarget(t)) return;
     if (isOverlaySelectionChromeTarget(t)) return;
