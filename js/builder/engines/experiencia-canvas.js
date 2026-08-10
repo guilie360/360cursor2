@@ -4466,6 +4466,8 @@ var ExperienciaCanvas = (function () {
       return ix ? shapeModelFields(ix) : null;
     }
 
+    var _paintInspectorBusy = false;
+
     function notifyOverlaySelection() {
       var ids = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
@@ -4484,7 +4486,6 @@ var ExperienciaCanvas = (function () {
           });
         } catch (eSelNotify) { /* ignore */ }
       }
-      if (overlayMode && inspectorBody) paintInspector();
     }
 
     function applyWorldTransform() {
@@ -4652,13 +4653,15 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintInspector() {
-      if (overlayMode) {
+      if (_paintInspectorBusy) return;
+      if (overlayMode && !inspectorBody) {
         notifyOverlaySelection();
-        if (!inspectorBody) return;
-      } else if (!inspectorBody) {
         return;
       }
+      if (!inspectorBody) return;
 
+      _paintInspectorBusy = true;
+      try {
       var ids = selectedIds();
       var editMode = canvas().editMode || 'flow';
       var inspectorLists = {
@@ -4715,6 +4718,10 @@ var ExperienciaCanvas = (function () {
       bindInspectorActions();
       if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
         WorkspaceSelect.enhance(inspectorBody);
+      }
+      } finally {
+        _paintInspectorBusy = false;
+        if (overlayMode) notifyOverlaySelection();
       }
     }
 

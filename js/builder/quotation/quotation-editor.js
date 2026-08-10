@@ -5618,12 +5618,16 @@ var QuotationEditor = (function () {
   function attachExperienciaInspectorHost() {
     if (!expOverlay || !expOverlay.setInspectorBody) return;
     var host = resolveExperienciaInspectorHost();
-    if (host) expOverlay.setInspectorBody(host);
+    if (!host) return;
+    if (attachedInspectorHost === host) return;
+    attachedInspectorHost = host;
+    expOverlay.setInspectorBody(host);
   }
 
   function syncRightPanel() {
     var body = document.getElementById('quotationRightBody');
     if (!body) return;
+    attachedInspectorHost = null;
     body.innerHTML = rightPanelHtml();
     if (typeof QuotationBuilderView !== 'undefined' && QuotationBuilderView.setPropsPanelVisible) {
       QuotationBuilderView.setPropsPanelVisible(true);
@@ -10054,6 +10058,7 @@ var QuotationEditor = (function () {
   var expOverlay = null;
   var pendingExpAction = null;
   var dockFadeTimer = null;
+  var attachedInspectorHost = null;
 
   function refreshDockOnly() {
     if (!rootEl) return;
@@ -10592,7 +10597,6 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
-        attachExperienciaInspectorHost();
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);
