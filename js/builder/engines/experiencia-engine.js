@@ -5633,17 +5633,6 @@ var ExperienciaEngine = (function () {
           !Array.isArray(cfg.buttonConfig)) {
         ix.buttonConfig = cfg.buttonConfig;
       }
-      if (partial.buttonConfig && partial.buttonConfig.targetSceneId != null) {
-        try {
-          console.log('[QE btn-scene] makeInteraction targetSceneId', {
-            ixId: ix.id,
-            inTarget: partial.buttonConfig.targetSceneId,
-            outTarget: ix.buttonConfig && ix.buttonConfig.targetSceneId,
-            preserved: String(partial.buttonConfig.targetSceneId) ===
-              String((ix.buttonConfig && ix.buttonConfig.targetSceneId) || '')
-          });
-        } catch (eMkLog) { /* ignore */ }
-      }
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
