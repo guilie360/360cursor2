@@ -4487,6 +4487,11 @@ var ExperienciaCanvas = (function () {
         : null;
       console.log('[QE btn-kind] patchSceneButton AFTER updateSceneButton', {
         updateResult: updateResult,
+        updateResultButtonType: updateResult ? updateResult.buttonType : null,
+        ixSameRefAsBefore: ixAfter === ixBefore,
+        searchId: id,
+        ixAfterId: ixAfter ? ixAfter.id : null,
+        ixAfterPortId: ixAfter ? ixAfter.portId : null,
         ixFound: !!ixAfter,
         ixType: ixAfter ? ixAfter.type : null,
         ixButtonTypeAfter: ixAfter ? ixAfter.buttonType : null,
