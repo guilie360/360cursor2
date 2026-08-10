@@ -3760,9 +3760,37 @@ var ExperienciaEngine = (function () {
   function updateSceneButton(state, nodeId, buttonId, patch) {
     var n = getNode(state, nodeId);
     var ix = getInteraction(n, buttonId);
-    if (!ix || !isSceneFreeOverlayInteraction(ix)) return null;
+    if (!ix || !isSceneFreeOverlayInteraction(ix)) {
+      try {
+        console.log('[QE btn-kind] updateSceneButton EARLY EXIT', {
+          nodeId: nodeId,
+          buttonId: buttonId,
+          nodeFound: !!n,
+          ixFound: !!ix,
+          ixType: ix ? ix.type : null,
+          isFreeOverlay: ix ? isSceneFreeOverlayInteraction(ix) : false,
+          patch: patch
+        });
+      } catch (eLog) { /* ignore */ }
+      return null;
+    }
     patch = patch || {};
     var t = String(ix.type || 'BUTTON').toUpperCase();
+    if (patch.buttonType != null || patch.buttonConfig != null) {
+      try {
+        console.log('[QE btn-kind] updateSceneButton ENTER kind patch', {
+          nodeId: nodeId,
+          buttonId: buttonId,
+          ixType: t,
+          patchButtonType: patch.buttonType,
+          patchButtonConfig: patch.buttonConfig,
+          ixButtonTypeBefore: ix.buttonType,
+          hasKindKey: patch.buttonType != null
+            ? !!BUTTON_KIND_TYPES[String(patch.buttonType || 'unconfigured')]
+            : null
+        });
+      } catch (eLog2) { /* ignore */ }
+    }
     var traceShape = isSceneShapeType(t) && shapeResizeTraceEngineEnabled() &&
       (patch.width != null || patch.height != null || patch.x != null || patch.y != null ||
         patch.shapeStretchX != null || patch.shapeStretchY != null);
@@ -3942,8 +3970,21 @@ var ExperienciaEngine = (function () {
       }
       if (patch.buttonType != null) {
         var nextKind = String(patch.buttonType || 'unconfigured');
+        try {
+          console.log('[QE btn-kind] updateSceneButton APPLY buttonType', {
+            nextKind: nextKind,
+            kindKnown: !!BUTTON_KIND_TYPES[nextKind],
+            tIsButton: t === 'BUTTON'
+          });
+        } catch (eLog3) { /* ignore */ }
         ix.buttonType = BUTTON_KIND_TYPES[nextKind] ? nextKind : 'unconfigured';
         ensureButtonKindConfig(ix);
+        try {
+          console.log('[QE btn-kind] updateSceneButton AFTER buttonType', {
+            ixButtonType: ix.buttonType,
+            ixButtonConfig: ix.buttonConfig
+          });
+        } catch (eLog4) { /* ignore */ }
       }
       if (patch.buttonConfig != null && typeof patch.buttonConfig === 'object') {
         mergeButtonConfig(ix, patch.buttonConfig);

@@ -4460,6 +4460,19 @@ var ExperienciaCanvas = (function () {
       var sceneId = canvas().selectedId;
       var id = resolveSelectedOverlayButtonId();
       if (!sceneId || !id) return false;
+      var nBefore = ExperienciaEngine.getNode(state, sceneId);
+      var ixBefore = nBefore && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(nBefore, id)
+        : null;
+      console.log('[QE btn-kind] patchSceneButton BEFORE updateSceneButton', {
+        patch: patch,
+        sceneId: sceneId,
+        buttonId: id,
+        ixFound: !!ixBefore,
+        ixType: ixBefore ? ixBefore.type : null,
+        ixButtonTypeBefore: ixBefore ? ixBefore.buttonType : null,
+        ixButtonConfigBefore: ixBefore ? ixBefore.buttonConfig : null
+      });
       if (opts.history !== false) {
         if (opts.gesture) armButtonOp(sceneId);
         else {
@@ -4467,7 +4480,18 @@ var ExperienciaCanvas = (function () {
           endButtonOp();
         }
       }
-      ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
+      var updateResult = ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
+      var nAfter = ExperienciaEngine.getNode(state, sceneId);
+      var ixAfter = nAfter && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(nAfter, id)
+        : null;
+      console.log('[QE btn-kind] patchSceneButton AFTER updateSceneButton', {
+        updateResult: updateResult,
+        ixFound: !!ixAfter,
+        ixType: ixAfter ? ixAfter.type : null,
+        ixButtonTypeAfter: ixAfter ? ixAfter.buttonType : null,
+        ixButtonConfigAfter: ixAfter ? ixAfter.buttonConfig : null
+      });
       paintButtonsStage();
       if (opts.inspector) paintInspector();
       if (opts.persist) {
