@@ -4045,7 +4045,8 @@ var QuotationEditor = (function () {
     var src = '';
     var opts = {
       preview: true,
-      editor: true
+      editor: true,
+      live: true
     };
     if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.href) {
       src = QuotationRuntime.href(projectId, opts) || '';
@@ -13043,10 +13044,16 @@ var QuotationEditor = (function () {
           },
           canvas: doc
         };
-        var key = (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.LIVE_KEY_PREFIX
-          ? QuotationRuntime.LIVE_KEY_PREFIX
-          : 'boxies_qe_live_doc_v1_') + id;
-        sessionStorage.setItem(key, JSON.stringify(envelope));
+        if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.storeLiveEnvelope) {
+          QuotationRuntime.storeLiveEnvelope(id, envelope);
+        } else {
+          var key = (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.LIVE_KEY_PREFIX
+            ? QuotationRuntime.LIVE_KEY_PREFIX
+            : 'boxies_qe_live_doc_v1_') + id;
+          var raw = JSON.stringify(envelope);
+          try { sessionStorage.setItem(key, raw); } catch (eSs) { /* ignore */ }
+          try { localStorage.setItem(key, raw); } catch (eLs) { /* quota / private mode */ }
+        }
       } catch (eLive) { /* quota */ }
     }
     return doc;

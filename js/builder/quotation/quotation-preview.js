@@ -32,9 +32,16 @@ var QuotationPreview = (function () {
       },
       canvas: doc
     };
-    try {
-      sessionStorage.setItem(liveStorageKey(id), JSON.stringify(envelope));
-    } catch (eStore) { /* quota */ }
+    if (typeof QuotationRuntime !== 'undefined' && QuotationRuntime.storeLiveEnvelope) {
+      QuotationRuntime.storeLiveEnvelope(id, envelope);
+    } else {
+      try {
+        sessionStorage.setItem(liveStorageKey(id), JSON.stringify(envelope));
+      } catch (eStore) { /* quota */ }
+      try {
+        localStorage.setItem(liveStorageKey(id), JSON.stringify(envelope));
+      } catch (eLs) { /* quota */ }
+    }
     return envelope;
   }
 

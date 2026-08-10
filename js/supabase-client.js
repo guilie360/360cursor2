@@ -182,14 +182,30 @@ function handoffQuotationPublicExperience(project) {
 
   var runtimeSrc;
   try {
+    var handoffParams = new URLSearchParams(window.location.search || '');
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7853');
+    u.searchParams.set('build', 'ws7859');
+    if (handoffParams.get('live') === '1' || handoffParams.get('live') === 'true') {
+      u.searchParams.set('live', '1');
+    }
+    if (handoffParams.get('preview') === '1' || handoffParams.get('preview') === 'true') {
+      u.searchParams.set('preview', '1');
+    }
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7853';
+      '&experience_type=quotation&build=ws7859';
+    try {
+      var hp = new URLSearchParams(window.location.search || '');
+      if (hp.get('live') === '1' || hp.get('live') === 'true') {
+        runtimeSrc += '&live=1';
+      }
+      if (hp.get('preview') === '1' || hp.get('preview') === 'true') {
+        runtimeSrc += '&preview=1';
+      }
+    } catch (eHp) { /* ignore */ }
   }
 
   try {

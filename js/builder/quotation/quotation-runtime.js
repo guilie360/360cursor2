@@ -1189,12 +1189,32 @@ var QuotationRuntime = (function () {
     return LIVE_KEY_PREFIX + String(projectId || '').trim();
   }
 
+  function storeLiveEnvelope(projectId, envelope) {
+    var id = String(projectId || '').trim();
+    if (!id || !envelope || !envelope.canvas) return false;
+    var raw;
+    try {
+      raw = JSON.stringify(envelope);
+    } catch (eJson) {
+      return false;
+    }
+    var key = liveStorageKey(id);
+    try { sessionStorage.setItem(key, raw); } catch (eSs) { /* ignore */ }
+    try { localStorage.setItem(key, raw); } catch (eLs) { /* ignore */ }
+    return true;
+  }
+
   function readLiveEnvelope(projectId) {
     var id = String(projectId || '').trim();
     if (!id) return null;
+    var key = liveStorageKey(id);
+    var raw = null;
+    try { raw = sessionStorage.getItem(key); } catch (eSs) { /* ignore */ }
+    if (!raw) {
+      try { raw = localStorage.getItem(key); } catch (eLs) { /* ignore */ }
+    }
+    if (!raw) return null;
     try {
-      var raw = sessionStorage.getItem(liveStorageKey(id));
-      if (!raw) return null;
       var env = JSON.parse(raw);
       if (!env || !env.canvas || typeof env.canvas !== 'object') return null;
       return env;
@@ -1760,6 +1780,9 @@ var QuotationRuntime = (function () {
     DEFAULT_DESIGN_W: DEFAULT_DESIGN_W,
     DEFAULT_DESIGN_H: DEFAULT_DESIGN_H,
     LIVE_KEY_PREFIX: LIVE_KEY_PREFIX,
+    liveStorageKey: liveStorageKey,
+    storeLiveEnvelope: storeLiveEnvelope,
+    readLiveEnvelope: readLiveEnvelope,
     href: href,
     boot: boot,
     render: render,

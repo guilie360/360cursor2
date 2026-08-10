@@ -516,17 +516,48 @@ var BoxiesShell = (function () {
     var type = String(projectCtx.experienceType || '').toLowerCase();
     if (type === 'quotation') {
       /*
-       * Always open the public client URL /{slug} (e.g. /editor) — same link as Config.
-       * Never open /quotation/?projectId=… (internal Runtime URL).
+       * Public URL /{slug} — flush Editor canvas to live storage first so the
+       * new tab reads the in-edit hero, not stale hero_quotation from DB.
        */
       var slug = resolveActiveProjectSlug();
       if (!slug) return;
       projectCtx.slug = slug;
+      var projectId = projectCtx.id ? String(projectCtx.id).trim() : '';
+      var liveCtx = {
+        id: projectId,
+        projectId: projectId,
+        slug: slug,
+        name: projectCtx.name || projectCtx.nombre || '',
+        nombre: projectCtx.name || projectCtx.nombre || ''
+      };
+      var liveDocPresent = false;
+      if (typeof QuotationPreview !== 'undefined' && QuotationPreview.prepareLiveDocument) {
+        liveDocPresent = !!QuotationPreview.prepareLiveDocument(liveCtx);
+      } else if (typeof QuotationEditor !== 'undefined' && QuotationEditor.prepareLivePreview) {
+        liveDocPresent = !!QuotationEditor.prepareLivePreview(liveCtx);
+      }
       var qUrl = resolveQuotationPreviewUrl({
-        id: projectCtx.id,
+        id: projectId,
         slug: slug
       });
       if (!qUrl) return;
+      try {
+        var previewUrl = new URL(qUrl, window.location.origin);
+        previewUrl.searchParams.set('live', '1');
+        previewUrl.searchParams.set('preview', '1');
+        qUrl = previewUrl.href;
+      } catch (eUrl) { /* keep bare slug */ }
+      if (typeof QuotationPersistAudit !== 'undefined' && QuotationPersistAudit.onPreview) {
+        try {
+          QuotationPersistAudit.onPreview({
+            projectId: projectId,
+            slug: slug,
+            source: 'boxiesShell.openActivePreview',
+            url: qUrl,
+            liveDocPresent: liveDocPresent
+          });
+        } catch (eAud) { /* ignore */ }
+      }
       window.open(qUrl, '_blank', 'noopener,noreferrer');
       return;
     }
