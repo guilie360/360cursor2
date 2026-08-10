@@ -164,6 +164,13 @@ var WorkspaceSelect = (function () {
     if (changed) select.value = next;
     select.dispatchEvent(new Event('input', { bubbles: true }));
     select.dispatchEvent(new Event('change', { bubbles: true }));
+    if (select.matches && select.matches('[data-exp-btn-kind-type]')) {
+      console.log('[QE btn-kind] WorkspaceSelect.commitValue', {
+        value: next,
+        index: index,
+        ts: Date.now()
+      });
+    }
     rebuildOptions(wrap, select);
     syncLabel(wrap, select);
     setOpen(wrap, false);

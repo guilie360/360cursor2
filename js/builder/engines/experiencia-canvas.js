@@ -4675,10 +4675,27 @@ var ExperienciaCanvas = (function () {
     }
 
     function applyButtonKindTypeChange(nextKind) {
+      var sceneId = canvas().selectedId;
+      var buttonId = resolveSelectedOverlayButtonId();
+      console.log('[QE btn-kind] change requested', {
+        nextKind: nextKind,
+        sceneId: sceneId,
+        buttonId: buttonId
+      });
       var openMap = propsGroupsOpenMap(state);
       openMap['btn-behavior'] = true;
       openMap['btn-config'] = true;
-      patchSceneButton({ buttonType: nextKind }, { inspector: true, persist: true });
+      var patched = patchSceneButton({ buttonType: nextKind }, { inspector: true, persist: true });
+      var ixAfter = null;
+      if (sceneId && buttonId && ExperienciaEngine.getNode && ExperienciaEngine.getInteraction) {
+        var nAfter = ExperienciaEngine.getNode(state, sceneId);
+        ixAfter = nAfter && ExperienciaEngine.getInteraction(nAfter, buttonId);
+      }
+      console.log('[QE btn-kind] after patch', {
+        patched: patched,
+        buttonType: ixAfter ? ixAfter.buttonType : null,
+        buttonConfig: ixAfter ? ixAfter.buttonConfig : null
+      });
       syncPropsGroupOpen('btn-behavior');
       syncPropsGroupOpen('btn-config');
     }
@@ -4696,6 +4713,14 @@ var ExperienciaCanvas = (function () {
       var t = e.target;
       if (!t || !t.closest) return;
       var kindEl = t.closest('[data-exp-btn-kind-type]');
+      if (kindEl) {
+        console.log('[QE btn-kind] onInspectorButtonControlChange (kind)', {
+          type: e.type,
+          value: kindEl.value,
+          contained: inspectorBody.contains(kindEl),
+          ts: Date.now()
+        });
+      }
       if (kindEl && inspectorBody.contains(kindEl)) {
         e.stopPropagation();
         applyButtonKindTypeChange(kindEl.value);
@@ -4717,10 +4742,22 @@ var ExperienciaCanvas = (function () {
 
     /** Per-paint binding on fresh <select> nodes (WorkspaceSelect replaces options often). */
     function bindButtonKindInspectorControls() {
-      if (!inspectorBody) return;
+      if (!inspectorBody) {
+        console.log('[QE btn-kind] bindButtonKindInspectorControls — skip (no inspectorBody)');
+        return;
+      }
       var kindTypeEl = inspectorBody.querySelector('[data-exp-btn-kind-type]');
+      console.log('[QE btn-kind] bindButtonKindInspectorControls()', {
+        inspectorConnected: inspectorBody.isConnected,
+        hasKindTypeEl: !!kindTypeEl,
+        kindAlreadyBound: kindTypeEl
+          ? kindTypeEl.getAttribute('data-exp-btn-kind-bound') === '1'
+          : null,
+        ts: Date.now()
+      });
       if (kindTypeEl && kindTypeEl.getAttribute('data-exp-btn-kind-bound') !== '1') {
         kindTypeEl.setAttribute('data-exp-btn-kind-bound', '1');
+        console.log('binding dropdown', kindTypeEl);
         kindTypeEl.addEventListener('change', function () {
           applyButtonKindTypeChange(kindTypeEl.value);
         });
@@ -4783,6 +4820,12 @@ var ExperienciaCanvas = (function () {
         var scene = ExperienciaEngine.getNode(state, canvas().selectedId);
         if (scene && ExperienciaEngine.isButtonsEditableNode &&
             ExperienciaEngine.isButtonsEditableNode(scene)) {
+          console.log('[QE btn-kind] paintInspector → buttons branch', {
+            sceneId: canvas().selectedId,
+            buttonId: canvas().selectedButtonId,
+            buttonIds: canvas().selectedButtonIds,
+            ts: Date.now()
+          });
           inspectorBody.innerHTML = buttonsInspectorHtml(state, scene, inspectorLists);
           bindButtonsInspectorActions();
           bindButtonKindInspectorControls();
