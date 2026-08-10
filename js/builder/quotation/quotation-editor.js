@@ -11146,7 +11146,9 @@ var QuotationEditor = (function () {
       t.closest('[data-exp-inspector-body]') ||
       t.closest('.builder-exp-btn-panel') ||
       t.closest('.ws-select') ||
-      t.closest('.ws-select__list')
+      t.closest('.ws-select__list') ||
+      t.closest('[data-qe-props-toggle]') ||
+      t.closest('.qe-content__group-head')
     );
   }
 

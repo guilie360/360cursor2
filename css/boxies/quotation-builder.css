@@ -489,28 +489,34 @@
 
 .qe-props-panel [data-exp-inspector-body] .builder-exp-btn-panel {
   padding: 4px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.qe-props-panel [data-exp-inspector-body] .builder-exp-block {
-  margin-bottom: 14px;
+.qe-props-panel [data-exp-inspector-body] .qe-content__group {
+  border-radius: 8px;
 }
 
-.qe-props-panel [data-exp-inspector-body] .builder-exp-block__title,
+.qe-props-panel [data-exp-inspector-body] .qe-content__group-head {
+  min-width: 0;
+}
+
+.qe-props-panel [data-exp-inspector-body] .qe-content__toggle {
+  padding: 6px 4px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .qe-content__body {
+  padding: 0 2px 6px 14px;
+}
+
 .qe-props-panel [data-exp-inspector-body] .builder-exp-inspector__kind {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
-  margin: 0;
-}
-
-.qe-props-panel [data-exp-inspector-body] .builder-exp-block__head {
-  margin-bottom: 8px;
-}
-
-.qe-props-panel [data-exp-inspector-body] .builder-exp-block.is-collapsed .builder-exp-block__head {
-  margin-bottom: 0;
+  margin: 0 0 8px;
 }
 
 .qe-props-panel [data-exp-inspector-body] .builder-field label {

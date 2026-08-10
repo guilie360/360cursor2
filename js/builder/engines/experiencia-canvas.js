@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7842';
+  var EXP_CANVAS_BUILD = 'ws7843';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -2677,33 +2677,39 @@ var ExperienciaCanvas = (function () {
     return /^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v) : fallback;
   }
 
-  function inspectorBlocksCollapsedMap(state) {
+  function propsGroupsOpenMap(state) {
     var cv = (state.experiencia && state.experiencia.canvas) || {};
-    if (!cv.inspectorBlocksCollapsed || typeof cv.inspectorBlocksCollapsed !== 'object') {
-      cv.inspectorBlocksCollapsed = {};
+    if (!cv.openPropsGroups || typeof cv.openPropsGroups !== 'object') {
+      cv.openPropsGroups = {};
+      if (cv.inspectorBlocksCollapsed && typeof cv.inspectorBlocksCollapsed === 'object') {
+        Object.keys(cv.inspectorBlocksCollapsed).forEach(function (k) {
+          if (cv.inspectorBlocksCollapsed[k] === true) cv.openPropsGroups[k] = false;
+        });
+      }
     }
-    return cv.inspectorBlocksCollapsed;
+    return cv.openPropsGroups;
   }
 
-  function isInspectorBlockCollapsed(state, blockKey) {
-    return inspectorBlocksCollapsedMap(state)[blockKey] === true;
+  function propsGroupOpen(state, blockKey) {
+    return propsGroupsOpenMap(state)[blockKey] !== false;
   }
 
+  /** Props inspector sections — same fold pattern as Biblioteca (.qe-content__group). */
   function builderExpBlockHtml(state, blockKey, title, bodyHtml, extraClass) {
-    var collapsed = isInspectorBlockCollapsed(state, blockKey);
-    var cls = 'builder-exp-block' +
-      (extraClass ? ' ' + extraClass : '') +
-      (collapsed ? ' is-collapsed' : '');
+    var open = propsGroupOpen(state, blockKey);
     return '' +
-      '<div class="' + cls + '" data-exp-inspector-block="' + esc(blockKey) + '">' +
-        '<button type="button" class="builder-exp-block__head" ' +
-          'data-exp-inspector-block-toggle="' + esc(blockKey) + '" ' +
-          'aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
-          '<span class="builder-exp-block__title">' + esc(title) + '</span>' +
-          '<span class="builder-exp-block__chev" aria-hidden="true"></span>' +
-        '</button>' +
-        '<div class="builder-exp-block__body">' + (bodyHtml || '') + '</div>' +
-      '</div>';
+      '<section class="qe-content__group' + (open ? ' is-open' : '') +
+        (extraClass ? ' ' + extraClass : '') +
+        '" data-qe-props-group="' + esc(blockKey) + '">' +
+        '<div class="qe-content__group-head">' +
+          '<button type="button" class="qe-content__toggle" data-qe-props-toggle="' +
+            esc(blockKey) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+            '<span class="qe-content__chevron" aria-hidden="true"></span>' +
+            '<span class="qe-content__group-label">' + esc(title) + '</span>' +
+          '</button>' +
+        '</div>' +
+        '<div class="qe-content__body">' + (bodyHtml || '') + '</div>' +
+      '</section>';
   }
 
   function buttonInspectorSceneOptionsHtml(state, currentNodeId, selectedSceneId) {
@@ -4593,23 +4599,37 @@ var ExperienciaCanvas = (function () {
       ctx.strokeRect(vx, vy, vw, vh);
     }
 
-    function bindInspectorBlockFolds() {
-      if (!inspectorBody) return;
-      inspectorBody.querySelectorAll('[data-exp-inspector-block-toggle]').forEach(function (btn) {
-        if (btn.getAttribute('data-exp-block-bound') === '1') return;
-        btn.setAttribute('data-exp-block-bound', '1');
-        btn.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          var key = btn.getAttribute('data-exp-inspector-block-toggle');
-          if (!key) return;
-          var block = btn.closest('[data-exp-inspector-block]');
-          var collapsed = !(block && block.classList.contains('is-collapsed'));
-          inspectorBlocksCollapsedMap(state)[key] = collapsed;
-          if (block) block.classList.toggle('is-collapsed', collapsed);
-          btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        });
+    function ensurePropsGroupToggleBinding() {
+      if (!inspectorBody || inspectorBody.getAttribute('data-qe-props-bound') === '1') return;
+      inspectorBody.setAttribute('data-qe-props-bound', '1');
+      inspectorBody.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-qe-props-toggle]');
+        if (!btn || !inspectorBody.contains(btn)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var key = btn.getAttribute('data-qe-props-toggle');
+        if (key) togglePropsGroup(key);
       });
+    }
+
+    function syncPropsGroupOpen(groupId) {
+      if (!inspectorBody) return false;
+      groupId = String(groupId || '');
+      var section = inspectorBody.querySelector('[data-qe-props-group="' + groupId + '"]');
+      if (!section) return false;
+      var open = propsGroupsOpenMap(state)[groupId] !== false;
+      section.classList.toggle('is-open', open);
+      var btn = section.querySelector('[data-qe-props-toggle="' + groupId + '"]');
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return true;
+    }
+
+    function togglePropsGroup(groupId) {
+      groupId = String(groupId || '');
+      if (!groupId) return false;
+      var map = propsGroupsOpenMap(state);
+      map[groupId] = !(map[groupId] !== false);
+      return syncPropsGroupOpen(groupId);
     }
 
     function paintInspector() {
@@ -4683,7 +4703,7 @@ var ExperienciaCanvas = (function () {
         WorkspaceSelect.enhance(inspectorBody);
       }
       } finally {
-        bindInspectorBlockFolds();
+        ensurePropsGroupToggleBinding();
         _paintInspectorBusy = false;
       }
     }
@@ -16778,6 +16798,9 @@ var ExperienciaCanvas = (function () {
       },
       repaintInspector: function () {
         paintInspector();
+      },
+      togglePropsGroup: function (groupId) {
+        return togglePropsGroup(groupId);
       },
       destroy: function () {
         _shapeBoxV2Active = false;
