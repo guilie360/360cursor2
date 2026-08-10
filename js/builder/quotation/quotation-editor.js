@@ -7077,6 +7077,9 @@ var QuotationEditor = (function () {
       try { prevCam = builderSceneApi.getCamera(); } catch (eC) { prevCam = null; }
     }
 
+    if (expOverlay && typeof expOverlay.pull === 'function') {
+      try { expOverlay.pull(); } catch (ePullPrev) { /* ignore */ }
+    }
     destroyExperienciaOverlay();
     if (builderSceneApi && builderSceneApi.destroy) {
       try { builderSceneApi.destroy(); } catch (eD) { /* ignore */ }
@@ -7099,6 +7102,15 @@ var QuotationEditor = (function () {
       onAction: preview
         ? function (ix) {
             if (!ix) return true;
+            if (String(ix.buttonType || '') === 'changeScene') {
+              var cfgTarget = (ix.buttonConfig && ix.buttonConfig.targetSceneId) ||
+                ix.targetSceneId || null;
+              if (cfgTarget) {
+                selectScene(cfgTarget);
+                return true;
+              }
+              return false;
+            }
             var action = String(ix.action || 'goto-scene').toLowerCase();
             var target = ix.targetSceneId || null;
             if (action === 'goto-scene' || action === 'goto' || (!action && target)) {

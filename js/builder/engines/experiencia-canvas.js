@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7843';
+  var EXP_CANVAS_BUILD = 'ws7844';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -2712,18 +2712,37 @@ var ExperienciaCanvas = (function () {
       '</section>';
   }
 
-  function buttonInspectorSceneOptionsHtml(state, currentNodeId, selectedSceneId) {
-    var nodes = ((state.experiencia && state.experiencia.nodes) || []).filter(function (node) {
-      return node && String(node.id) !== String(currentNodeId) && node.kind !== 'action';
-    });
-    var sel = selectedSceneId != null ? String(selectedSceneId) : '';
+  function buttonInspectorSceneOptionsHtml(state, currentNodeId, selectedSceneId, listScenes) {
+    function normalizeSceneId(id) {
+      var sid = String(id || '');
+      if (sid.indexOf('qe-') === 0) sid = sid.slice(4);
+      return sid;
+    }
+    var sel = normalizeSceneId(selectedSceneId);
+    var entries = [];
+    if (typeof listScenes === 'function') listScenes = listScenes();
+    if (Array.isArray(listScenes) && listScenes.length) {
+      listScenes.forEach(function (sc) {
+        if (!sc || !sc.id) return;
+        entries.push({
+          id: String(sc.id),
+          label: sc.name || sc.label || String(sc.id)
+        });
+      });
+    } else {
+      ((state.experiencia && state.experiencia.nodes) || []).forEach(function (node) {
+        if (!node || node.kind === 'action') return;
+        entries.push({
+          id: normalizeSceneId(node.id),
+          label: node.label || normalizeSceneId(node.id)
+        });
+      });
+    }
     return '<option value="">— Seleccionar escena —</option>' +
-      nodes.map(function (node) {
-        var sid = String(node.id || '');
-        if (sid.indexOf('qe-') === 0) sid = sid.slice(4);
-        return '<option value="' + esc(sid) + '"' +
-          (sel === sid ? ' selected' : '') +
-          '>' + esc(node.label || sid) + '</option>';
+      entries.map(function (entry) {
+        return '<option value="' + esc(entry.id) + '"' +
+          (sel === normalizeSceneId(entry.id) ? ' selected' : '') +
+          '>' + esc(entry.label) + '</option>';
       }).join('');
   }
 
@@ -2742,14 +2761,27 @@ var ExperienciaCanvas = (function () {
     }).join('');
   }
 
-  /** Placeholder shell for CONFIGURACIÓN — fields ship per type in later passes. */
-  function buttonKindConfigSectionHtml(state, kind) {
+  /** CONFIGURACIÓN fields per buttonType. */
+  function buttonKindConfigSectionHtml(state, kind, sceneNode, selected, lists) {
     kind = String(kind || 'unconfigured');
     if (kind === 'unconfigured') return '';
 
     var body = '';
     if (kind === 'changeScene') {
-      body = '<p class="builder-menu-hint">Aquí irá el selector de escena destino.</p>';
+      var cfg = (selected && selected.buttonConfig) || {};
+      var targetId = cfg.targetSceneId || selected.targetSceneId || '';
+      body =
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Escena destino</label>' +
+          '<select data-exp-btn-config-target-scene class="builder-exp-btn-select">' +
+            buttonInspectorSceneOptionsHtml(
+              state,
+              sceneNode && sceneNode.id,
+              targetId,
+              lists && lists.listScenes
+            ) +
+          '</select>' +
+        '</div>';
     } else if (kind === 'transitionVideo') {
       body = '<p class="builder-menu-hint">Aquí irán escena destino y video de transición.</p>';
     } else if (kind === 'toggle2D3D') {
@@ -2796,7 +2828,7 @@ var ExperienciaCanvas = (function () {
           '</select>' +
         '</div>' +
         unconfiguredHint) +
-      buttonKindConfigSectionHtml(state, kind) +
+      buttonKindConfigSectionHtml(state, kind, sceneNode, selected, lists) +
       builderExpBlockHtml(state, 'btn-content', 'Contenido',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Texto</label>' +
@@ -4649,7 +4681,8 @@ var ExperienciaCanvas = (function () {
       var editMode = canvas().editMode || 'flow';
       var inspectorLists = {
         listPlanos2d: api.listPlanos2d || null,
-        listVideos: api.listVideos || null
+        listVideos: api.listVideos || null,
+        listScenes: typeof api.listScenes === 'function' ? api.listScenes : null
       };
 
       if (editMode === 'buttons') {
@@ -4825,6 +4858,15 @@ var ExperienciaCanvas = (function () {
       if (kindTypeEl) {
         kindTypeEl.addEventListener('change', function () {
           patchBtn({ buttonType: kindTypeEl.value }, { inspector: true, persist: true });
+        });
+      }
+      var cfgSceneEl = inspectorBody.querySelector('[data-exp-btn-config-target-scene]');
+      if (cfgSceneEl) {
+        cfgSceneEl.addEventListener('change', function () {
+          patchBtn({
+            buttonType: 'changeScene',
+            buttonConfig: { targetSceneId: cfgSceneEl.value || null }
+          }, { persist: true });
         });
       }
       inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {

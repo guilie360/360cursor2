@@ -368,6 +368,18 @@ var QuotationRuntime = (function () {
     return !(ix && ix.visible === false);
   }
 
+  function resolveInteractionGotoTarget(ix) {
+    if (!ix) return null;
+    if (String(ix.buttonType || '') === 'changeScene') {
+      if (ix.buttonConfig && ix.buttonConfig.targetSceneId) {
+        return String(ix.buttonConfig.targetSceneId);
+      }
+    }
+    return ix.targetSceneId != null && ix.targetSceneId !== ''
+      ? String(ix.targetSceneId)
+      : null;
+  }
+
   function runInteractionAction(ix, actionOpts) {
     if (!ix) return;
     actionOpts = actionOpts || {};
@@ -376,8 +388,13 @@ var QuotationRuntime = (function () {
         if (actionOpts.onAction(ix) === true) return;
       } catch (eAct) { /* fall through */ }
     }
+    if (String(ix.buttonType || '') === 'changeScene') {
+      var changeTarget = resolveInteractionGotoTarget(ix);
+      if (changeTarget) goToScene(changeTarget);
+      return;
+    }
     var action = String(ix.action || 'goto-scene').toLowerCase();
-    var target = ix.targetSceneId || null;
+    var target = resolveInteractionGotoTarget(ix);
     if (action === 'goto-scene' || action === 'goto' || (!action && target)) {
       if (target) goToScene(target);
       else enterStage();

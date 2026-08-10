@@ -440,6 +440,11 @@ var QuotationExperienciaBridge = (function () {
       sc.hotspots = [];
       sc.interactions.forEach(function (ix) {
         if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+        if (String(ix.buttonType || '') === 'changeScene' &&
+            ix.buttonConfig && ix.buttonConfig.targetSceneId) {
+          ix.targetSceneId = String(ix.buttonConfig.targetSceneId);
+          ix.action = 'goto-scene';
+        }
         var targetNodeId = null;
         if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.resolveButtonTarget) {
           targetNodeId = ExperienciaEngine.resolveButtonTarget(shimState, n.id, ix);
@@ -550,6 +555,7 @@ var QuotationExperienciaBridge = (function () {
         overlaySnapEnabled: options.overlaySnapEnabled,
         listPlanos2d: options.listPlanos2d || null,
         listVideos: options.listVideos || null,
+        listScenes: function () { return scenes; },
         debugCompareLockState: overlayDebugCompareLockState
       });
     }
