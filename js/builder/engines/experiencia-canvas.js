@@ -4674,28 +4674,64 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    function applyButtonKindTypeChange(nextKind) {
+      var openMap = propsGroupsOpenMap(state);
+      openMap['btn-behavior'] = true;
+      openMap['btn-config'] = true;
+      patchSceneButton({ buttonType: nextKind }, { inspector: true, persist: true });
+      syncPropsGroupOpen('btn-behavior');
+      syncPropsGroupOpen('btn-config');
+    }
+
+    function applyButtonChangeSceneTarget(targetSceneId) {
+      patchSceneButton({
+        buttonType: 'changeScene',
+        buttonConfig: { targetSceneId: targetSceneId || null }
+      }, { inspector: true, persist: true });
+    }
+
     /** Delegated change — survives WorkspaceSelect enhance + inspector repaints. */
+    function onInspectorButtonControlChange(e) {
+      if (!inspectorBody || !inspectorBody.isConnected) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      var kindEl = t.closest('[data-exp-btn-kind-type]');
+      if (kindEl && inspectorBody.contains(kindEl)) {
+        e.stopPropagation();
+        applyButtonKindTypeChange(kindEl.value);
+        return;
+      }
+      var sceneEl = t.closest('[data-exp-btn-config-target-scene]');
+      if (sceneEl && inspectorBody.contains(sceneEl)) {
+        e.stopPropagation();
+        applyButtonChangeSceneTarget(sceneEl.value);
+      }
+    }
+
     function ensureButtonsInspectorControlBinding() {
       if (!inspectorBody || inspectorBody.getAttribute('data-exp-btn-inspector-bound') === '1') return;
       inspectorBody.setAttribute('data-exp-btn-inspector-bound', '1');
-      inspectorBody.addEventListener('change', function (e) {
-        var t = e.target;
-        if (!t || !inspectorBody.contains(t)) return;
-        if (t.matches && t.matches('[data-exp-btn-kind-type]')) {
-          var openMap = propsGroupsOpenMap(state);
-          openMap['btn-behavior'] = true;
-          openMap['btn-config'] = true;
-          patchSceneButton({ buttonType: t.value }, { inspector: true, persist: true });
-          syncPropsGroupOpen('btn-config');
-          return;
-        }
-        if (t.matches && t.matches('[data-exp-btn-config-target-scene]')) {
-          patchSceneButton({
-            buttonType: 'changeScene',
-            buttonConfig: { targetSceneId: t.value || null }
-          }, { persist: true });
-        }
-      });
+      inspectorBody.addEventListener('change', onInspectorButtonControlChange, true);
+      inspectorBody.addEventListener('input', onInspectorButtonControlChange, true);
+    }
+
+    /** Per-paint binding on fresh <select> nodes (WorkspaceSelect replaces options often). */
+    function bindButtonKindInspectorControls() {
+      if (!inspectorBody) return;
+      var kindTypeEl = inspectorBody.querySelector('[data-exp-btn-kind-type]');
+      if (kindTypeEl && kindTypeEl.getAttribute('data-exp-btn-kind-bound') !== '1') {
+        kindTypeEl.setAttribute('data-exp-btn-kind-bound', '1');
+        kindTypeEl.addEventListener('change', function () {
+          applyButtonKindTypeChange(kindTypeEl.value);
+        });
+      }
+      var cfgSceneEl = inspectorBody.querySelector('[data-exp-btn-config-target-scene]');
+      if (cfgSceneEl && cfgSceneEl.getAttribute('data-exp-btn-scene-bound') !== '1') {
+        cfgSceneEl.setAttribute('data-exp-btn-scene-bound', '1');
+        cfgSceneEl.addEventListener('change', function () {
+          applyButtonChangeSceneTarget(cfgSceneEl.value);
+        });
+      }
     }
 
     function syncPropsGroupOpen(groupId) {
@@ -4749,6 +4785,7 @@ var ExperienciaCanvas = (function () {
             ExperienciaEngine.isButtonsEditableNode(scene)) {
           inspectorBody.innerHTML = buttonsInspectorHtml(state, scene, inspectorLists);
           bindButtonsInspectorActions();
+          bindButtonKindInspectorControls();
           if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.enhance) {
             WorkspaceSelect.enhance(inspectorBody);
           }
@@ -16867,6 +16904,9 @@ var ExperienciaCanvas = (function () {
         }
       },
       setInspectorBody: function (el) {
+        if (inspectorBody && inspectorBody !== el) {
+          inspectorBody.removeAttribute('data-exp-btn-inspector-bound');
+        }
         inspectorBody = el || null;
         ensureButtonsInspectorControlBinding();
         paintInspector();

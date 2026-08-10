@@ -159,13 +159,11 @@ var WorkspaceSelect = (function () {
     var opt = select.options[index];
     if (!opt || opt.disabled) return;
     var next = opt.value;
-    if (select.value !== next) {
-      select.value = next;
-      select.dispatchEvent(new Event('input', { bubbles: true }));
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-      select.selectedIndex = index;
-    }
+    var changed = String(select.value) !== String(next);
+    select.selectedIndex = index;
+    if (changed) select.value = next;
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
     rebuildOptions(wrap, select);
     syncLabel(wrap, select);
     setOpen(wrap, false);
