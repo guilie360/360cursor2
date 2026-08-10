@@ -5613,6 +5613,15 @@ var ExperienciaEngine = (function () {
       else if (cfg.locked != null) ix.locked = !!cfg.locked;
       if (partial.visible != null) ix.visible = !!partial.visible;
       else if (cfg.visible != null) ix.visible = !!cfg.visible;
+      if (partial.buttonType != null) ix.buttonType = String(partial.buttonType);
+      else if (cfg.buttonType != null) ix.buttonType = String(cfg.buttonType);
+      if (partial.buttonConfig != null && typeof partial.buttonConfig === 'object' &&
+          !Array.isArray(partial.buttonConfig)) {
+        ix.buttonConfig = partial.buttonConfig;
+      } else if (cfg.buttonConfig != null && typeof cfg.buttonConfig === 'object' &&
+          !Array.isArray(cfg.buttonConfig)) {
+        ix.buttonConfig = cfg.buttonConfig;
+      }
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
