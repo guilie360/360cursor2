@@ -548,6 +548,8 @@ var QuotationExperienciaBridge = (function () {
         onSelectionChange: options.onSelectionChange,
         onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
         overlaySnapEnabled: options.overlaySnapEnabled,
+        listPlanos2d: options.listPlanos2d || null,
+        listVideos: options.listVideos || null,
         debugCompareLockState: overlayDebugCompareLockState
       });
     }

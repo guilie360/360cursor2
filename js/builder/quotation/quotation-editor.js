@@ -3966,7 +3966,11 @@ var QuotationEditor = (function () {
       '<div class="qe-button-picker qe-shape-picker" data-qe-button-picker role="dialog" aria-label="Botones">' +
         '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
         '<div class="qe-shape-picker__panel">' +
-          '<div class="qe-shape-picker__grid" data-qe-button-picker-grid></div>' +
+          '<div class="qe-shape-picker__grid" data-qe-button-picker-grid>' +
+            '<button type="button" class="qe-shape-picker__item qe-button-picker__item" data-qe-pick-button="generic" aria-label="Botón genérico">' +
+              '<span class="qe-button-picker__preview" aria-hidden="true">Botón</span>' +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
   }
@@ -9806,6 +9810,34 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function listEditorPlanos2d() {
+    return (state.content || []).filter(function (item) {
+      return item && item.group === 'plantas2d';
+    }).map(function (item) {
+      return {
+        id: item.id,
+        label: item.name || item.label || item.id
+      };
+    });
+  }
+
+  function listEditorVideos() {
+    return (state.content || []).filter(function (item) {
+      return item && (item.group === 'videos' || item.media === 'video');
+    }).map(function (item) {
+      return {
+        id: item.id,
+        label: item.name || item.label || item.id,
+        url: item.publicUrl || item.remoteUrl || item.previewUrl || ''
+      };
+    });
+  }
+
+  function pickGenericButton() {
+    closeButtonPicker();
+    addButton();
+  }
+
   function openButtonPicker() {
     state.buttonPickerOpen = true;
     state.shapePickerOpen = false;
@@ -10521,6 +10553,8 @@ var QuotationEditor = (function () {
       inspectorBody: null,
       editMode: state.expEditMode === 'hotspots' ? 'hotspots' : 'buttons',
       overlaySnapEnabled: state.overlaySnapEnabled,
+      listPlanos2d: listEditorPlanos2d,
+      listVideos: listEditorVideos,
       onChange: function () {
         markDirtyLocal();
         refreshLayersPanel();
@@ -10537,6 +10571,10 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
+        if (expOverlay && expOverlay.setInspectorBody && rootEl) {
+          var inspHost = rootEl.querySelector('[data-exp-inspector-body]');
+          if (inspHost) expOverlay.setInspectorBody(inspHost);
+        }
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);
@@ -10544,6 +10582,11 @@ var QuotationEditor = (function () {
     });
 
     syncOverlaySnapUi();
+
+    if (expOverlay && expOverlay.setInspectorBody && rootEl) {
+      var expInspHost = rootEl.querySelector('[data-exp-inspector-body]');
+      if (expInspHost) expOverlay.setInspectorBody(expInspHost);
+    }
 
     if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
       requestAnimationFrame(function () {
@@ -12120,6 +12163,13 @@ var QuotationEditor = (function () {
           e.preventDefault();
           e.stopPropagation();
           pickShape(btn.getAttribute('data-qe-pick-shape'));
+        });
+      });
+      qAll('[data-qe-pick-button]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          pickGenericButton();
         });
       });
       qAll('[data-qe-pick-resource]').forEach(function (btn) {

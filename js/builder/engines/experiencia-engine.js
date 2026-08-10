@@ -1490,6 +1490,17 @@ var ExperienciaEngine = (function () {
    */
   var BUTTON_STYLES = { chip: 1, button: 1, icon: 1 };
   var BUTTON_ICONS = { none: 1, arrow: 1, 'rotate-left': 1, 'rotate-right': 1, plus: 1 };
+  /** Generic canvas Button kinds (quotation / showroom overlays). */
+  var BUTTON_KIND_TYPES = {
+    unconfigured: { label: 'Sin configurar' },
+    changeScene: { label: 'Cambiar escena' },
+    transitionVideo: { label: 'Transición con video' },
+    toggle2D3D: { label: 'Toggle 2D/3D' },
+    toggleDayNight: { label: 'Toggle día/noche' },
+    fullscreen: { label: 'Fullscreen' },
+    whatsapp: { label: 'WhatsApp' },
+    menu: { label: 'Menú' }
+  };
   var BUTTON_ANCHORS = {
     center: { x: 50, y: 50 },
     'top-center': { x: 50, y: 0 },
@@ -1513,6 +1524,28 @@ var ExperienciaEngine = (function () {
 
   function isSceneButtonInteraction(ix) {
     return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON');
+  }
+
+  function ensureButtonKindConfig(ix) {
+    if (!ix || !isSceneButtonInteraction(ix)) return ix;
+    if (!ix.properties || typeof ix.properties !== 'object' || Array.isArray(ix.properties)) {
+      ix.properties = {};
+    }
+    var bt = String(ix.buttonType || 'unconfigured');
+    if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
+    ix.buttonType = bt;
+    return ix;
+  }
+
+  function mergeButtonProperties(ix, patch) {
+    if (!ix || !patch || typeof patch !== 'object') return ix;
+    ensureButtonKindConfig(ix);
+    Object.keys(patch).forEach(function (key) {
+      var val = patch[key];
+      if (val == null || val === '') delete ix.properties[key];
+      else ix.properties[key] = val;
+    });
+    return ix;
   }
 
   /* V7.2.44 — free-position overlays on buttons stage (buttons + text + shapes). */
@@ -3182,6 +3215,7 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonVisualDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
+    ensureButtonKindConfig(ix);
     if (!ix.config || typeof ix.config !== 'object') ix.config = {};
     var cfg = ix.config;
     /* Promote legacy layout fields from config */
@@ -3468,6 +3502,8 @@ var ExperienciaEngine = (function () {
       pressedColor: ix.pressedColor || '#5aaa74',
       pressedTextColor: ix.pressedTextColor || '#ffffff',
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
+      buttonType: ix.buttonType || 'unconfigured',
+      properties: ix.properties && typeof ix.properties === 'object' ? ix.properties : {},
       _ix: ix
     };
   }
@@ -3593,11 +3629,20 @@ var ExperienciaEngine = (function () {
     ix.x = 50;
     ix.y = 50;
     ix.positionInitialized = true;
-    ix.style = 'chip';
+    ix.style = 'icon';
     ix.rotation = 0;
     ix.positionMode = 'free';
     ix.marginX = 32;
     ix.marginY = 32;
+    ix.buttonType = 'unconfigured';
+    ix.properties = {};
+    ix.boxW = 5.5;
+    ix.boxH = 5.5;
+    ix.bgColor = '#000000';
+    ix.textColor = '#ffffff';
+    ix.borderColor = '#d1d1d1';
+    ix.borderWidth = 1;
+    ix.borderRadius = 999;
     if (ix.color != null) delete ix.color;
     ensureButtonVisualDefaults(ix);
     return buttonViewModel(state, n, ix);
@@ -3848,6 +3893,18 @@ var ExperienciaEngine = (function () {
       }
       if (patch.targetNodeId !== undefined) {
         setButtonTarget(state, nodeId, ix.id, patch.targetNodeId || null);
+      }
+      if (patch.buttonType != null) {
+        var nextKind = String(patch.buttonType || 'unconfigured');
+        ix.buttonType = BUTTON_KIND_TYPES[nextKind] ? nextKind : 'unconfigured';
+      }
+      if (patch.properties != null && typeof patch.properties === 'object') {
+        mergeButtonProperties(ix, patch.properties);
+        var tgt = ix.properties && ix.properties.targetSceneId;
+        if (tgt != null) {
+          var nodeTgt = String(tgt).indexOf('qe-') === 0 ? String(tgt) : ('qe-' + String(tgt));
+          setButtonTarget(state, nodeId, ix.id, nodeTgt || null);
+        }
       }
       /* Local textColor override allowed; strip legacy theme-only color field */
       if (ix.color != null) delete ix.color;
@@ -8975,6 +9032,9 @@ var ExperienciaEngine = (function () {
     resolveButtonTarget: resolveButtonTarget,
     setButtonTarget: setButtonTarget,
     BUTTON_ANCHORS: BUTTON_ANCHORS,
+    BUTTON_KIND_TYPES: BUTTON_KIND_TYPES,
+    ensureButtonKindConfig: ensureButtonKindConfig,
+    mergeButtonProperties: mergeButtonProperties,
     detectHubSelectorOptions: detectHubSelectorOptions,
     syncHubSmartSelector: syncHubSmartSelector,
     syncHubPlantasFromMedia: syncHubPlantasFromMedia,
