@@ -5619,13 +5619,9 @@ var QuotationEditor = (function () {
     if (!expOverlay || !expOverlay.setInspectorBody) return;
     var host = resolveExperienciaInspectorHost();
     if (!host || !host.isConnected) return;
+    if (attachedInspectorHost === host) return;
     attachedInspectorHost = host;
     expOverlay.setInspectorBody(host);
-  }
-
-  function refreshExperienciaInspector() {
-    attachExperienciaInspectorHost();
-    if (expOverlay && expOverlay.repaintInspector) expOverlay.repaintInspector();
   }
 
   function syncRightPanel() {
@@ -10602,7 +10598,6 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
-        refreshExperienciaInspector();
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);
@@ -11946,7 +11941,7 @@ var QuotationEditor = (function () {
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
       expOverlay.addButton();
-      attachExperienciaInspectorHost();
+      if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       return;
     }
     pendingExpAction = { type: 'addButton' };

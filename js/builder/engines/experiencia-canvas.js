@@ -4721,7 +4721,6 @@ var ExperienciaCanvas = (function () {
       }
       } finally {
         _paintInspectorBusy = false;
-        if (overlayMode) notifyOverlaySelection();
       }
     }
 
