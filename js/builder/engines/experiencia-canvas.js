@@ -2770,10 +2770,13 @@ var ExperienciaCanvas = (function () {
     if (kind === 'changeScene') {
       var cfg = (selected && selected.buttonConfig) || {};
       var targetId = cfg.targetSceneId || selected.targetSceneId || '';
+      var ownerId = String((selected && selected.id) || (selected && selected.portId) || '');
       body =
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Escena destino</label>' +
-          '<select data-exp-btn-config-target-scene class="builder-exp-btn-select">' +
+          '<select data-exp-btn-config-target-scene class="builder-exp-btn-select"' +
+            (ownerId ? ' data-exp-btn-kind-owner="' + esc(ownerId) + '"' : '') +
+          '>' +
             buttonInspectorSceneOptionsHtml(
               state,
               sceneNode && sceneNode.id,
@@ -4782,24 +4785,27 @@ var ExperienciaCanvas = (function () {
 
     function applyButtonChangeSceneTarget(targetSceneId, sceneEl) {
       var sceneId = canvas().selectedId;
-      var buttonId = resolveSelectedOverlayButtonId();
-      var sceneOwnerAttr = sceneEl && sceneEl.getAttribute
+      var ownerAttr = sceneEl && sceneEl.getAttribute
         ? sceneEl.getAttribute('data-exp-btn-kind-owner')
         : null;
-      var kindOwnerAttr = null;
-      if (inspectorBody) {
-        var kindSel = inspectorBody.querySelector('[data-exp-btn-kind-type]');
-        if (kindSel) kindOwnerAttr = kindSel.getAttribute('data-exp-btn-kind-owner');
-      }
+      var buttonId = ownerAttr ? String(ownerAttr) : resolveSelectedOverlayButtonId();
+      var resolver = ownerAttr ? 'data-exp-btn-kind-owner' : 'resolveSelectedOverlayButtonId';
       console.log('[QE btn-scene] change requested', {
         targetSceneId: targetSceneId,
         sceneId: sceneId,
         buttonId: buttonId,
-        resolver: 'resolveSelectedOverlayButtonId',
-        sceneSelectHasOwnerAttr: !!sceneOwnerAttr,
-        sceneOwnerAttr: sceneOwnerAttr,
-        kindSelectOwnerAttr: kindOwnerAttr,
+        resolver: resolver,
         ts: Date.now()
+      });
+      console.log('[QE btn-scene] resolve before patch', {
+        resolver: resolver,
+        buttonId: buttonId,
+        sceneId: sceneId,
+        ownerAttr: ownerAttr,
+        selectedButtonId: canvas().selectedButtonId,
+        selectedButtonIds: Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.slice()
+          : canvas().selectedButtonIds
       });
       var nBefore = sceneId && buttonId && ExperienciaEngine.getNode
         ? ExperienciaEngine.getNode(state, sceneId)
@@ -4815,16 +4821,12 @@ var ExperienciaCanvas = (function () {
         targetSceneIdBefore: ixBefore && ixBefore.buttonConfig
           ? ixBefore.buttonConfig.targetSceneId
           : null,
-        patchTargetSceneId: targetSceneId || null,
-        selectedButtonId: canvas().selectedButtonId,
-        selectedButtonIds: Array.isArray(canvas().selectedButtonIds)
-          ? canvas().selectedButtonIds.slice()
-          : canvas().selectedButtonIds
+        patchTargetSceneId: targetSceneId || null
       });
       var patched = patchSceneButton({
         buttonType: 'changeScene',
         buttonConfig: { targetSceneId: targetSceneId || null }
-      }, { inspector: true, persist: true });
+      }, { inspector: true, persist: true, buttonId: buttonId });
       var ixAfter = null;
       if (sceneId && buttonId && ExperienciaEngine.getNode && ExperienciaEngine.getInteraction) {
         var nAfter = ExperienciaEngine.getNode(state, sceneId);
