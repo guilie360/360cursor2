@@ -10821,7 +10821,9 @@ var QuotationEditor = (function () {
     var tag = (el.tagName || '').toUpperCase();
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
     if (el.isContentEditable) return true;
-    return !!(el.closest && el.closest('input, textarea, select, [contenteditable="true"]'));
+    return !!(el.closest && el.closest(
+      'input, textarea, select, [contenteditable="true"], .ws-select, .ws-select__list'
+    ));
   }
 
   function hasOverlaySelection() {
@@ -11131,7 +11133,13 @@ var QuotationEditor = (function () {
       t.closest('[data-qe-scene-confirm]') ||
       t.closest('[data-qe-lib-status-panel]') ||
       t.closest('[data-qe-lib-menu-panel]') ||
-      t.closest('[data-qe-scene-group-float]')
+      t.closest('[data-qe-scene-group-float]') ||
+      t.closest('#quotationRightBody') ||
+      t.closest('[data-qe-props-panel]') ||
+      t.closest('[data-exp-inspector-body]') ||
+      t.closest('.builder-exp-btn-panel') ||
+      t.closest('.ws-select') ||
+      t.closest('.ws-select__list')
     );
   }
 
