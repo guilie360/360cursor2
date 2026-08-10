@@ -1704,11 +1704,12 @@ var QuotationEditor = (function () {
     ).trim();
     if (!id || !documentReady) return;
     try {
-      /* Panel scenes are SSOT — push to shim before pull so draft/autosave never reverts fresh panel edits. */
-      pushOutlinerScenesToShim();
+      /* Canvas/shim is SSOT for overlay edits — pull into scenes before push syncs panel flags. */
       if (!opts.skipPull && expOverlay && typeof expOverlay.pull === 'function') {
         try { expOverlay.pull(); } catch (ePull) {}
       }
+      /* Panel scenes push merges locked/visible flags onto shim interactions. */
+      pushOutlinerScenesToShim();
       persistLibraryUi();
       var payload = {
         v: 1,

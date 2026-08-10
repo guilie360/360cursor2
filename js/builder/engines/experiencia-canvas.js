@@ -4948,7 +4948,10 @@ var ExperienciaCanvas = (function () {
           var btn = ExperienciaEngine.addSceneButton(state, sceneId);
           if (btn) {
             setButtonSelection([btn.id], btn.id);
-            renderAll(); persist();
+            notifyOverlaySelection();
+            renderAll();
+            paintInspector();
+            persist();
           }
         });
       }
@@ -16487,8 +16490,11 @@ var ExperienciaCanvas = (function () {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];
         }
+        notifyOverlaySelection();
         renderAll();
-        paintInspector();
+        requestAnimationFrame(function () {
+          paintInspector();
+        });
         persist();
         requestAnimationFrame(recomputeOverlayLayout);
         return btn;
