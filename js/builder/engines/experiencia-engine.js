@@ -3943,6 +3943,7 @@ var ExperienciaEngine = (function () {
       if (patch.buttonType != null) {
         var nextKind = String(patch.buttonType || 'unconfigured');
         ix.buttonType = BUTTON_KIND_TYPES[nextKind] ? nextKind : 'unconfigured';
+        ensureButtonKindConfig(ix);
       }
       if (patch.buttonConfig != null && typeof patch.buttonConfig === 'object') {
         mergeButtonConfig(ix, patch.buttonConfig);

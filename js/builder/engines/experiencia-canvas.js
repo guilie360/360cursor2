@@ -4446,6 +4446,36 @@ var ExperienciaCanvas = (function () {
     }
 
     var _paintInspectorBusy = false;
+    var _paintInspectorPending = false;
+
+    function resolveSelectedOverlayButtonId() {
+      var c = canvas();
+      if (c.selectedButtonId) return String(c.selectedButtonId);
+      var ids = Array.isArray(c.selectedButtonIds) ? c.selectedButtonIds : [];
+      return ids.length ? String(ids[ids.length - 1]) : null;
+    }
+
+    function patchSceneButton(patch, opts) {
+      opts = opts || {};
+      var sceneId = canvas().selectedId;
+      var id = resolveSelectedOverlayButtonId();
+      if (!sceneId || !id) return false;
+      if (opts.history !== false) {
+        if (opts.gesture) armButtonOp(sceneId);
+        else {
+          pushButtonHistory(sceneId);
+          endButtonOp();
+        }
+      }
+      ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
+      paintButtonsStage();
+      if (opts.inspector) paintInspector();
+      if (opts.persist) {
+        endButtonOp();
+        persist();
+      }
+      return true;
+    }
 
     function notifyOverlaySelection() {
       var ids = Array.isArray(canvas().selectedButtonIds)
@@ -4644,6 +4674,30 @@ var ExperienciaCanvas = (function () {
       });
     }
 
+    /** Delegated change — survives WorkspaceSelect enhance + inspector repaints. */
+    function ensureButtonsInspectorControlBinding() {
+      if (!inspectorBody || inspectorBody.getAttribute('data-exp-btn-inspector-bound') === '1') return;
+      inspectorBody.setAttribute('data-exp-btn-inspector-bound', '1');
+      inspectorBody.addEventListener('change', function (e) {
+        var t = e.target;
+        if (!t || !inspectorBody.contains(t)) return;
+        if (t.matches && t.matches('[data-exp-btn-kind-type]')) {
+          var openMap = propsGroupsOpenMap(state);
+          openMap['btn-behavior'] = true;
+          openMap['btn-config'] = true;
+          patchSceneButton({ buttonType: t.value }, { inspector: true, persist: true });
+          syncPropsGroupOpen('btn-config');
+          return;
+        }
+        if (t.matches && t.matches('[data-exp-btn-config-target-scene]')) {
+          patchSceneButton({
+            buttonType: 'changeScene',
+            buttonConfig: { targetSceneId: t.value || null }
+          }, { persist: true });
+        }
+      });
+    }
+
     function syncPropsGroupOpen(groupId) {
       if (!inspectorBody) return false;
       groupId = String(groupId || '');
@@ -4665,7 +4719,10 @@ var ExperienciaCanvas = (function () {
     }
 
     function paintInspector() {
-      if (_paintInspectorBusy) return;
+      if (_paintInspectorBusy) {
+        _paintInspectorPending = true;
+        return;
+      }
       if (overlayMode && !inspectorBody) {
         notifyOverlaySelection();
         return;
@@ -4673,6 +4730,7 @@ var ExperienciaCanvas = (function () {
       if (!inspectorBody) return;
 
       _paintInspectorBusy = true;
+      _paintInspectorPending = false;
       try {
       if (typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.closeAll) {
         WorkspaceSelect.closeAll();
@@ -4737,7 +4795,12 @@ var ExperienciaCanvas = (function () {
       }
       } finally {
         ensurePropsGroupToggleBinding();
+        ensureButtonsInspectorControlBinding();
         _paintInspectorBusy = false;
+        if (_paintInspectorPending) {
+          _paintInspectorPending = false;
+          paintInspector();
+        }
       }
     }
 
@@ -4766,23 +4829,7 @@ var ExperienciaCanvas = (function () {
           : (next.length ? next[next.length - 1] : null);
       }
       function patchBtn(patch, opts) {
-        opts = opts || {};
-        var id = canvas().selectedButtonId;
-        if (!id) return;
-        if (opts.history !== false) {
-          if (opts.gesture) armButtonOp(sceneId);
-          else {
-            pushButtonHistory(sceneId);
-            endButtonOp();
-          }
-        }
-        ExperienciaEngine.updateSceneButton(state, sceneId, id, patch);
-        paintButtonsStage();
-        if (opts.inspector) paintInspector();
-        if (opts.persist) {
-          endButtonOp();
-          persist();
-        }
+        patchSceneButton(patch, opts);
       }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
@@ -4852,21 +4899,6 @@ var ExperienciaCanvas = (function () {
       if (targetEl) {
         targetEl.addEventListener('change', function () {
           patchBtn({ targetNodeId: targetEl.value || null }, { persist: true });
-        });
-      }
-      var kindTypeEl = inspectorBody.querySelector('[data-exp-btn-kind-type]');
-      if (kindTypeEl) {
-        kindTypeEl.addEventListener('change', function () {
-          patchBtn({ buttonType: kindTypeEl.value }, { inspector: true, persist: true });
-        });
-      }
-      var cfgSceneEl = inspectorBody.querySelector('[data-exp-btn-config-target-scene]');
-      if (cfgSceneEl) {
-        cfgSceneEl.addEventListener('change', function () {
-          patchBtn({
-            buttonType: 'changeScene',
-            buttonConfig: { targetSceneId: cfgSceneEl.value || null }
-          }, { persist: true });
         });
       }
       inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {
@@ -16836,6 +16868,7 @@ var ExperienciaCanvas = (function () {
       },
       setInspectorBody: function (el) {
         inspectorBody = el || null;
+        ensureButtonsInspectorControlBinding();
         paintInspector();
       },
       repaintInspector: function () {
@@ -16899,6 +16932,7 @@ var ExperienciaCanvas = (function () {
       saveState: options.saveState,
       listPlanos2d: options.listPlanos2d || null,
       listVideos: options.listVideos || null,
+      listScenes: options.listScenes || null,
       debugCompareLockState: options.debugCompareLockState
     });
     if (handle) {
