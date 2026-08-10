@@ -4389,6 +4389,12 @@ body.is-qe-lib-pointer-dragging * {
   pointer-events: none;
 }
 
+/* Button picker — same shell as shapes; grid reserved for upcoming button tiles */
+.qe-button-picker .qe-shape-picker__grid {
+  min-width: calc(4 * 52px + 3 * 6px);
+  min-height: calc(2 * 52px + 6px);
+}
+
 .qe-canvas__mock {
   flex: 1;
   display: flex;

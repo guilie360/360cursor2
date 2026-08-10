@@ -756,6 +756,7 @@ var QuotationEditor = (function () {
       sceneMenuOpen: false,
       dockOpen: false,
       shapePickerOpen: false,
+      buttonPickerOpen: false,
       resourcePickerOpen: false,
       resourcePickerSceneId: null,
       pendingSceneDeleteId: null,
@@ -3959,6 +3960,17 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function buttonPickerHtml() {
+    if (!state.buttonPickerOpen) return '';
+    return '' +
+      '<div class="qe-button-picker qe-shape-picker" data-qe-button-picker role="dialog" aria-label="Botones">' +
+        '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
+        '<div class="qe-shape-picker__panel">' +
+          '<div class="qe-shape-picker__grid" data-qe-button-picker-grid></div>' +
+        '</div>' +
+      '</div>';
+  }
+
   function resourcePickerHtml() {
     if (!state.resourcePickerOpen) return '';
     var items = libraryMediaItems();
@@ -6425,6 +6437,7 @@ var QuotationEditor = (function () {
     }
     return '' +
       dockSegHtml('data-qe-add-shape', 'plus', 'Forma') +
+      dockSegHtml('data-qe-add-button', 'plus', 'Botones') +
       dockSegHtml('data-qe-add-text', 'plus', 'Texto') +
       dockSegHtml('data-qe-add-stroke', 'plus', 'Trazo') +
       dockSegHtml('data-qe-add-container', 'plus', 'Contenedor') +
@@ -6514,6 +6527,7 @@ var QuotationEditor = (function () {
         '</div>' +
         resourcePickerHtml() +
         shapePickerHtml() +
+        buttonPickerHtml() +
         sceneConfirmHtml() +
       '</section>';
   }
@@ -9781,6 +9795,7 @@ var QuotationEditor = (function () {
 
   function openShapePicker() {
     state.shapePickerOpen = true;
+    state.buttonPickerOpen = false;
     state.dockOpen = false;
     rerender();
   }
@@ -9788,6 +9803,19 @@ var QuotationEditor = (function () {
   function closeShapePicker() {
     if (!state.shapePickerOpen) return;
     state.shapePickerOpen = false;
+    rerender();
+  }
+
+  function openButtonPicker() {
+    state.buttonPickerOpen = true;
+    state.shapePickerOpen = false;
+    state.dockOpen = false;
+    rerender();
+  }
+
+  function closeButtonPicker() {
+    if (!state.buttonPickerOpen) return;
+    state.buttonPickerOpen = false;
     rerender();
   }
 
@@ -9979,7 +10007,10 @@ var QuotationEditor = (function () {
     var bar = rootEl.querySelector('[data-qe-dock-bar]');
     if (!bar || !bar.parentNode) return;
     var nextMode = dockHasSelection() ? 'actions' : 'create';
-    if (nextMode === 'actions') state.shapePickerOpen = false;
+    if (nextMode === 'actions') {
+      state.shapePickerOpen = false;
+      state.buttonPickerOpen = false;
+    }
     var curMode = bar.getAttribute('data-mode') || '';
     var rail = bar.querySelector('[data-qe-dock-rail]');
 
@@ -10030,6 +10061,14 @@ var QuotationEditor = (function () {
         e.preventDefault();
         e.stopPropagation();
         openShapePicker();
+      });
+    }
+    var addButton = editor.querySelector('[data-qe-add-button]');
+    if (addButton) {
+      addButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openButtonPicker();
       });
     }
     var addText = editor.querySelector('[data-qe-add-text]');
@@ -10787,11 +10826,12 @@ var QuotationEditor = (function () {
           cancelDeleteScene();
           return;
         }
-        if (state.resourcePickerOpen || state.shapePickerOpen) {
+        if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen) {
           e.preventDefault();
           e.stopPropagation();
           if (state.resourcePickerOpen) closeResourcePicker();
           if (state.shapePickerOpen) closeShapePicker();
+          if (state.buttonPickerOpen) closeButtonPicker();
           return;
         }
         if (expOverlay && expOverlay.cancelActiveTool && expOverlay.cancelActiveTool()) {
@@ -10857,7 +10897,8 @@ var QuotationEditor = (function () {
     if ((e.ctrlKey || e.metaKey) && !e.altKey) {
       var chord = String(e.key || '').toLowerCase();
       if (chord === 'c' || chord === 'x' || chord === 'v' || chord === 'z' || chord === 'y') {
-        if (state.resourcePickerOpen || state.shapePickerOpen || state.pendingSceneDeleteId) return;
+        if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
+            state.pendingSceneDeleteId) return;
         if (document.body.classList.contains('admin-modal-open')) return;
         try {
           var okChord = false;
@@ -10902,7 +10943,8 @@ var QuotationEditor = (function () {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
         e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       if (e.metaKey || e.ctrlKey) return;
-      if (state.resourcePickerOpen || state.shapePickerOpen || state.pendingSceneDeleteId) return;
+      if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
+          state.pendingSceneDeleteId) return;
       if (document.body.classList.contains('admin-modal-open')) return;
       var portalArrows = document.getElementById('qeContextMenuPortal');
       if (portalArrows && portalArrows.getAttribute('aria-hidden') === 'false' &&
@@ -11021,6 +11063,7 @@ var QuotationEditor = (function () {
       t.closest('[data-qe-layers]') ||
       t.closest('[data-qe-context-menu]') ||
       t.closest('[data-qe-shape-picker]') ||
+      t.closest('[data-qe-button-picker]') ||
       t.closest('[data-qe-resource-picker]') ||
       t.closest('[data-qe-scene-confirm]') ||
       t.closest('[data-qe-lib-status-panel]') ||
@@ -11033,7 +11076,7 @@ var QuotationEditor = (function () {
     if (!rootEl) return;
     if (state.canvasPreviewMode) return;
     if (state.pendingSceneDeleteId) return;
-    if (state.resourcePickerOpen || state.shapePickerOpen) return;
+    if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen) return;
     if (typeof QuotationContextMenu !== 'undefined' &&
         QuotationContextMenu.isOpen && QuotationContextMenu.isOpen()) return;
 
@@ -12058,6 +12101,17 @@ var QuotationEditor = (function () {
         shapePicker.addEventListener('click', function (e) {
           if (e.target === shapePicker || e.target.hasAttribute('data-qe-close-shape-picker')) {
             closeShapePicker();
+          }
+        });
+      }
+      qAll('[data-qe-close-button-picker]').forEach(function (btn) {
+        btn.addEventListener('click', function () { closeButtonPicker(); });
+      });
+      var buttonPicker = qOne('[data-qe-button-picker]');
+      if (buttonPicker) {
+        buttonPicker.addEventListener('click', function (e) {
+          if (e.target === buttonPicker || e.target.hasAttribute('data-qe-close-button-picker')) {
+            closeButtonPicker();
           }
         });
       }
