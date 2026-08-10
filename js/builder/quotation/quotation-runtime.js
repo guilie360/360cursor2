@@ -236,6 +236,14 @@ var QuotationRuntime = (function () {
     return null;
   }
 
+  /** Hero/entry with coverModel → ProjectCover landing (not fullscreen media stage). */
+  function scenePrefersCoverLanding(scene, bundle) {
+    if (!scene || !sceneHasCoverChrome(scene) || !scene.coverModel) return false;
+    if (scene.type === 'hero' || scene.templateId === 'hero-default') return true;
+    var entry = entryScene(bundle);
+    return !!(entry && String(entry.id) === String(scene.id));
+  }
+
   /** Landing scene for Preview/Web — prefer entry/hero; live honors Editor selection. */
   function pickStartupScene(bundle) {
     var doc = canvasDoc(bundle);
@@ -257,6 +265,10 @@ var QuotationRuntime = (function () {
 
     var entry = entryScene(bundle);
     if (entry) {
+      /* Publish: entry cover chrome wins over incidental mediaUrl on hero. */
+      if (!(liveMode || previewMode) && scenePrefersCoverLanding(entry, bundle)) {
+        return null;
+      }
       if (sceneIsMediaScene(entry) || resolveSceneMedia(entry, bundle)) {
         return entry;
       }
@@ -366,6 +378,80 @@ var QuotationRuntime = (function () {
 
   function ixIsVisible(ix) {
     return !(ix && ix.visible === false);
+  }
+
+  function runtimeButtonIconGlyph(icon) {
+    if (icon === 'arrow') return '→';
+    if (icon === 'rotate-left') return '↺';
+    if (icon === 'rotate-right') return '↻';
+    if (icon === 'plus') return '+';
+    return '';
+  }
+
+  function runtimeCssColorToken(v) {
+    if (!v) return '';
+    return String(v).replace(/[;\n\r{}]/g, '').replace(/"/g, '').replace(/'/g, '');
+  }
+
+  /** Editor parity defaults when boxW/boxH not persisted (icon ≈ 6% stage). */
+  function runtimeNormalizeButtonIx(ix) {
+    if (!ix) return ix;
+    var style = ix.style || 'button';
+    if (style === 'chip') style = 'button';
+    if (ix.boxW == null || isNaN(Number(ix.boxW))) {
+      var baseW = style === 'icon' ? 6 : (style === 'button' ? 14 : 12);
+      var sv = Number(ix.scaleValue) || 100;
+      ix.boxW = Math.max(2, Math.min(80, Math.round(baseW * (sv / 100) * 10) / 10));
+    } else {
+      ix.boxW = Math.max(1, Math.min(100, Number(ix.boxW)));
+    }
+    if (ix.boxH == null || isNaN(Number(ix.boxH))) {
+      var baseH = style === 'icon' ? 6 : 4.5;
+      var svH = Number(ix.scaleValue) || 100;
+      ix.boxH = Math.max(1.5, Math.min(60, Math.round(baseH * (svH / 100) * 10) / 10));
+    } else {
+      ix.boxH = Math.max(1, Math.min(100, Number(ix.boxH)));
+    }
+    if (ix.opacity == null || isNaN(Number(ix.opacity))) ix.opacity = 1;
+    else ix.opacity = Math.max(0, Math.min(1, Number(ix.opacity)));
+    if (ix.bgOpacity == null || isNaN(Number(ix.bgOpacity))) ix.bgOpacity = 1;
+    else ix.bgOpacity = Math.max(0, Math.min(1, Number(ix.bgOpacity)));
+    return ix;
+  }
+
+  function runtimeButtonLabel(ix) {
+    var glyph = runtimeButtonIconGlyph(ix.icon);
+    var text = ix.label != null ? String(ix.label) : '';
+    if (glyph && text) return glyph + ' ' + text;
+    return glyph || text || 'Botón';
+  }
+
+  function runtimeApplyButtonDom(btn, b) {
+    var style = b.style || 'button';
+    if (style === 'chip') style = 'button';
+    var classes = ['qr-ix-btn', 'qr-ix-btn--' + style, 'is-box'];
+    if (b.icon) classes.push('has-icon');
+    if (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null) {
+      classes.push('has-local-look');
+    }
+    btn.className = classes.join(' ');
+    btn.textContent = runtimeButtonLabel(b);
+    var rot = Number(b.rotation) || 0;
+    btn.style.left = Number(b.x) + '%';
+    btn.style.top = Number(b.y) + '%';
+    btn.style.setProperty('--btn-rot', rot + 'deg');
+    btn.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+    btn.style.width = Number(b.boxW) + '%';
+    btn.style.height = Number(b.boxH) + '%';
+    btn.style.opacity = String(b.opacity != null ? b.opacity : 1);
+    if (b.bgColor) {
+      btn.style.setProperty('--btn-local-bg', runtimeCssColorToken(b.bgColor));
+      btn.style.setProperty('--btn-local-bg-a', String(b.bgOpacity != null ? b.bgOpacity : 1));
+    }
+    if (b.textColor) btn.style.setProperty('--btn-local-text', runtimeCssColorToken(b.textColor));
+    if (b.borderColor) btn.style.setProperty('--btn-local-border', runtimeCssColorToken(b.borderColor));
+    if (b.borderWidth != null) btn.style.setProperty('--btn-local-bw', Number(b.borderWidth) + 'px');
+    if (b.borderRadius != null) btn.style.setProperty('--btn-local-radius', Number(b.borderRadius) + 'px');
   }
 
   function resolveInteractionGotoTarget(ix) {
@@ -561,21 +647,17 @@ var QuotationRuntime = (function () {
 
     var btnsHost = document.createElement('div');
     btnsHost.className = 'qr-ix-buttons';
-    buttons.forEach(function (b) {
+    buttons.forEach(function (rawB) {
+      var b = runtimeNormalizeButtonIx(Object.assign({}, rawB));
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'qr-ix-btn qr-ix-btn--' + (b.style || 'chip');
       if (b.id) btn.setAttribute('data-qr-ix-id', String(b.id));
-      btn.textContent = b.label || 'Botón';
-      var rot = Number(b.rotation) || 0;
-      btn.style.left = Number(b.x) + '%';
-      btn.style.top = Number(b.y) + '%';
-      btn.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+      runtimeApplyButtonDom(btn, b);
       if (interactive) {
         btn.addEventListener('click', function (ev) {
           ev.preventDefault();
           ev.stopPropagation();
-          runInteractionAction(b, opts);
+          runInteractionAction(rawB, opts);
         });
       } else {
         btn.disabled = true;
@@ -831,11 +913,14 @@ var QuotationRuntime = (function () {
     activeSceneId = String(scene.id);
 
     /*
-     * Media scenes always use the stage (Editor parity).
-     * Cover-only entry (no mediaUrl/publicUrl/resourceId) stays on ProjectCover.
+     * Media scenes use the stage (Editor parity).
+     * Hero/entry with coverModel stays on ProjectCover in publish (not fullscreen media).
      */
-    var paintAsMedia = sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle);
-    if (!paintAsMedia && sceneHasCoverChrome(scene) && coverHostEl) {
+    var preferCover = scenePrefersCoverLanding(scene, bundle) &&
+      !(liveMode || previewMode) && !(editorMode && canvasMode);
+    var paintAsMedia = !preferCover &&
+      (sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle));
+    if ((!paintAsMedia || preferCover) && sceneHasCoverChrome(scene) && coverHostEl) {
       /* Cover→cover: remount ProjectCover so logo/title/CTAs match this scene. */
       if (scene.coverModel && typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel) {
         liveModel = ProjectCover.sanitizeModel(scene.coverModel);
