@@ -2816,6 +2816,7 @@ var ExperienciaCanvas = (function () {
     var bw = selected.borderWidth != null ? Number(selected.borderWidth) : 1;
     var br = selected.borderRadius != null ? Number(selected.borderRadius) : 999;
     var kind = String(selected.buttonType || 'unconfigured');
+    var ownerId = String(selected.id || selected.portId || '');
     var unconfiguredHint = kind === 'unconfigured'
       ? '<p class="builder-menu-hint">Elige un tipo para configurar la acción del botón.</p>'
       : '';
@@ -2823,7 +2824,9 @@ var ExperienciaCanvas = (function () {
       builderExpBlockHtml(state, 'btn-behavior', 'Comportamiento',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Tipo de botón</label>' +
-          '<select data-exp-btn-kind-type class="builder-exp-btn-select">' +
+          '<select data-exp-btn-kind-type class="builder-exp-btn-select"' +
+            (ownerId ? ' data-exp-btn-kind-owner="' + esc(ownerId) + '"' : '') +
+          '>' +
             buttonKindTypeOptionsHtml(kind) +
           '</select>' +
         '</div>' +
@@ -4458,7 +4461,19 @@ var ExperienciaCanvas = (function () {
     function patchSceneButton(patch, opts) {
       opts = opts || {};
       var sceneId = canvas().selectedId;
-      var id = resolveSelectedOverlayButtonId();
+      var idSource = opts.buttonId ? 'opts.buttonId' : 'resolveSelectedOverlayButtonId';
+      var id = opts.buttonId ? String(opts.buttonId) : resolveSelectedOverlayButtonId();
+      console.log('[QE btn-kind] patchSceneButton resolve', {
+        resolver: idSource,
+        buttonId: id,
+        sceneId: sceneId,
+        selectedButtonId: canvas().selectedButtonId,
+        selectedButtonIds: Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.slice()
+          : canvas().selectedButtonIds,
+        patchKeys: patch ? Object.keys(patch) : [],
+        ts: Date.now()
+      });
       if (!sceneId || !id) return false;
       var nBefore = ExperienciaEngine.getNode(state, sceneId);
       var ixBefore = nBefore && ExperienciaEngine.getInteraction
@@ -4703,18 +4718,38 @@ var ExperienciaCanvas = (function () {
       });
     }
 
-    function applyButtonKindTypeChange(nextKind) {
+    function applyButtonKindTypeChange(nextKind, kindEl) {
       var sceneId = canvas().selectedId;
-      var buttonId = resolveSelectedOverlayButtonId();
+      var ownerAttr = kindEl && kindEl.getAttribute
+        ? kindEl.getAttribute('data-exp-btn-kind-owner')
+        : null;
+      var buttonId = ownerAttr ? String(ownerAttr) : resolveSelectedOverlayButtonId();
+      var resolver = ownerAttr ? 'data-exp-btn-kind-owner' : 'resolveSelectedOverlayButtonId';
       console.log('[QE btn-kind] change requested', {
         nextKind: nextKind,
         sceneId: sceneId,
-        buttonId: buttonId
+        buttonId: buttonId,
+        resolver: resolver
+      });
+      console.log('[QE btn-kind] resolve before patch', {
+        resolver: resolver,
+        buttonId: buttonId,
+        sceneId: sceneId,
+        ownerAttr: ownerAttr,
+        selectedButtonId: canvas().selectedButtonId,
+        selectedButtonIds: Array.isArray(canvas().selectedButtonIds)
+          ? canvas().selectedButtonIds.slice()
+          : canvas().selectedButtonIds,
+        ts: Date.now()
       });
       var openMap = propsGroupsOpenMap(state);
       openMap['btn-behavior'] = true;
       openMap['btn-config'] = true;
-      var patched = patchSceneButton({ buttonType: nextKind }, { inspector: true, persist: true });
+      var patched = patchSceneButton({ buttonType: nextKind }, {
+        inspector: true,
+        persist: true,
+        buttonId: buttonId
+      });
       var ixAfter = null;
       if (sceneId && buttonId && ExperienciaEngine.getNode && ExperienciaEngine.getInteraction) {
         var nAfter = ExperienciaEngine.getNode(state, sceneId);
@@ -4752,7 +4787,7 @@ var ExperienciaCanvas = (function () {
       }
       if (kindEl && inspectorBody.contains(kindEl)) {
         e.stopPropagation();
-        applyButtonKindTypeChange(kindEl.value);
+        applyButtonKindTypeChange(kindEl.value, kindEl);
         return;
       }
       var sceneEl = t.closest('[data-exp-btn-config-target-scene]');
@@ -4788,7 +4823,7 @@ var ExperienciaCanvas = (function () {
         kindTypeEl.setAttribute('data-exp-btn-kind-bound', '1');
         console.log('binding dropdown', kindTypeEl);
         kindTypeEl.addEventListener('change', function () {
-          applyButtonKindTypeChange(kindTypeEl.value);
+          applyButtonKindTypeChange(kindTypeEl.value, kindTypeEl);
         });
       }
       var cfgSceneEl = inspectorBody.querySelector('[data-exp-btn-config-target-scene]');
