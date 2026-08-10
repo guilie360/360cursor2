@@ -1501,6 +1501,16 @@ var ExperienciaEngine = (function () {
     whatsapp: { label: 'WhatsApp' },
     menu: { label: 'Menú' }
   };
+  var BUTTON_KIND_ORDER = [
+    'unconfigured',
+    'changeScene',
+    'transitionVideo',
+    'toggle2D3D',
+    'toggleDayNight',
+    'fullscreen',
+    'whatsapp',
+    'menu'
+  ];
   var BUTTON_ANCHORS = {
     center: { x: 50, y: 50 },
     'top-center': { x: 50, y: 0 },
@@ -1528,8 +1538,14 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonKindConfig(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
-    if (!ix.properties || typeof ix.properties !== 'object' || Array.isArray(ix.properties)) {
-      ix.properties = {};
+    if (ix.properties && typeof ix.properties === 'object' && !Array.isArray(ix.properties)) {
+      if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+        ix.buttonConfig = ix.properties;
+      }
+      delete ix.properties;
+    }
+    if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+      ix.buttonConfig = {};
     }
     if (ix.buttonType == null || ix.buttonType === '') ix.buttonType = 'unconfigured';
     var bt = String(ix.buttonType || 'unconfigured');
@@ -1562,15 +1578,20 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  function mergeButtonProperties(ix, patch) {
+  function mergeButtonConfig(ix, patch) {
     if (!ix || !patch || typeof patch !== 'object') return ix;
     ensureButtonKindConfig(ix);
     Object.keys(patch).forEach(function (key) {
       var val = patch[key];
-      if (val == null || val === '') delete ix.properties[key];
-      else ix.properties[key] = val;
+      if (val == null || val === '') delete ix.buttonConfig[key];
+      else ix.buttonConfig[key] = val;
     });
     return ix;
+  }
+
+  /** @deprecated — use mergeButtonConfig */
+  function mergeButtonProperties(ix, patch) {
+    return mergeButtonConfig(ix, patch);
   }
 
   /* V7.2.44 — free-position overlays on buttons stage (buttons + text + shapes). */
@@ -3528,7 +3549,7 @@ var ExperienciaEngine = (function () {
       pressedTextColor: ix.pressedTextColor || '#ffffff',
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
-      properties: ix.properties && typeof ix.properties === 'object' ? ix.properties : {},
+      buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
       _ix: ix
     };
   }
@@ -3660,7 +3681,7 @@ var ExperienciaEngine = (function () {
     ix.marginX = 32;
     ix.marginY = 32;
     ix.buttonType = 'unconfigured';
-    ix.properties = {};
+    ix.buttonConfig = {};
     ix.boxW = 5.5;
     ix.boxH = 5.5;
     ix.bgColor = '#000000';
@@ -3923,12 +3944,20 @@ var ExperienciaEngine = (function () {
         var nextKind = String(patch.buttonType || 'unconfigured');
         ix.buttonType = BUTTON_KIND_TYPES[nextKind] ? nextKind : 'unconfigured';
       }
-      if (patch.properties != null && typeof patch.properties === 'object') {
-        mergeButtonProperties(ix, patch.properties);
-        var tgt = ix.properties && ix.properties.targetSceneId;
-        if (tgt != null) {
-          var nodeTgt = String(tgt).indexOf('qe-') === 0 ? String(tgt) : ('qe-' + String(tgt));
-          setButtonTarget(state, nodeId, ix.id, nodeTgt || null);
+      if (patch.buttonConfig != null && typeof patch.buttonConfig === 'object') {
+        mergeButtonConfig(ix, patch.buttonConfig);
+        var tgtCfg = ix.buttonConfig && ix.buttonConfig.targetSceneId;
+        if (tgtCfg != null) {
+          var nodeTgtCfg = String(tgtCfg).indexOf('qe-') === 0 ? String(tgtCfg) : ('qe-' + String(tgtCfg));
+          setButtonTarget(state, nodeId, ix.id, nodeTgtCfg || null);
+        }
+      } else if (patch.properties != null && typeof patch.properties === 'object') {
+        mergeButtonConfig(ix, patch.properties);
+        var tgtLegacy = ix.buttonConfig && ix.buttonConfig.targetSceneId;
+        if (tgtLegacy != null) {
+          var nodeTgtLegacy = String(tgtLegacy).indexOf('qe-') === 0
+            ? String(tgtLegacy) : ('qe-' + String(tgtLegacy));
+          setButtonTarget(state, nodeId, ix.id, nodeTgtLegacy || null);
         }
       }
       /* Local textColor override allowed; strip legacy theme-only color field */
@@ -9058,7 +9087,9 @@ var ExperienciaEngine = (function () {
     setButtonTarget: setButtonTarget,
     BUTTON_ANCHORS: BUTTON_ANCHORS,
     BUTTON_KIND_TYPES: BUTTON_KIND_TYPES,
+    BUTTON_KIND_ORDER: BUTTON_KIND_ORDER,
     ensureButtonKindConfig: ensureButtonKindConfig,
+    mergeButtonConfig: mergeButtonConfig,
     mergeButtonProperties: mergeButtonProperties,
     detectHubSelectorOptions: detectHubSelectorOptions,
     syncHubSmartSelector: syncHubSmartSelector,

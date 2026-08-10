@@ -2701,118 +2701,45 @@ var ExperienciaCanvas = (function () {
     var kinds = (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.BUTTON_KIND_TYPES)
       ? ExperienciaEngine.BUTTON_KIND_TYPES
       : { unconfigured: { label: 'Sin configurar' } };
-    return Object.keys(kinds).map(function (key) {
+    var order = (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.BUTTON_KIND_ORDER)
+      ? ExperienciaEngine.BUTTON_KIND_ORDER
+      : Object.keys(kinds);
+    return order.filter(function (key) { return kinds[key]; }).map(function (key) {
       return '<option value="' + esc(key) + '"' +
         (cur === key ? ' selected' : '') +
         '>' + esc(kinds[key].label || key) + '</option>';
     }).join('');
   }
 
-  function buttonKindPropsFieldsHtml(state, sceneNode, selected, lists) {
-    lists = lists || {};
-    var props = (selected && selected.properties && typeof selected.properties === 'object')
-      ? selected.properties
-      : {};
-    var kind = String((selected && selected.buttonType) || 'unconfigured');
-    var sceneOpts = buttonInspectorSceneOptionsHtml(state, sceneNode && sceneNode.id, props.targetSceneId);
-    var altSceneOpts = buttonInspectorSceneOptionsHtml(
-      state, sceneNode && sceneNode.id, props.escenaAlternativaId
-    );
-    var planoOpts = '<option value="">— Seleccionar plano —</option>';
-    var planos = typeof lists.listPlanos2d === 'function' ? (lists.listPlanos2d() || []) : [];
-    planos.forEach(function (p) {
-      if (!p || !p.id) return;
-      planoOpts += '<option value="' + esc(String(p.id)) + '"' +
-        (String(props.planoId) === String(p.id) ? ' selected' : '') +
-        '>' + esc(p.label || p.name || p.id) + '</option>';
-    });
-    var videoOpts = '<option value="">— Seleccionar video —</option>';
-    var videos = typeof lists.listVideos === 'function' ? (lists.listVideos() || []) : [];
-    videos.forEach(function (v) {
-      if (!v || !v.id) return;
-      var url = v.url || v.publicUrl || v.remoteUrl || v.previewUrl || '';
-      videoOpts += '<option value="' + esc(url) + '"' +
-        (String(props.transitionVideoUrl) === String(url) ? ' selected' : '') +
-        '>' + esc(v.label || v.name || v.id) + '</option>';
-    });
+  /** Placeholder shell for CONFIGURACIÓN — fields ship per type in later passes. */
+  function buttonKindConfigSectionHtml(kind) {
+    kind = String(kind || 'unconfigured');
+    if (kind === 'unconfigured') return '';
 
+    var body = '';
     if (kind === 'changeScene') {
-      return '' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Escena destino</label>' +
-          '<select data-exp-btn-prop="targetSceneId" class="builder-exp-btn-select">' +
-            sceneOpts +
-          '</select>' +
-        '</div>';
+      body = '<p class="builder-menu-hint">Aquí irá el selector de escena destino.</p>';
+    } else if (kind === 'transitionVideo') {
+      body = '<p class="builder-menu-hint">Aquí irán escena destino y video de transición.</p>';
+    } else if (kind === 'toggle2D3D') {
+      body = '<p class="builder-menu-hint">Aquí irá el selector de planta asociada.</p>';
+    } else if (kind === 'toggleDayNight') {
+      body = '<p class="builder-menu-hint">Aquí irán las imágenes de día y noche.</p>';
+    } else if (kind === 'fullscreen') {
+      body = '<p class="builder-menu-hint">No requiere configuración adicional.</p>';
+    } else if (kind === 'whatsapp') {
+      body = '<p class="builder-menu-hint">Aquí irá el número de WhatsApp.</p>';
+    } else if (kind === 'menu') {
+      body = '<p class="builder-menu-hint">Sin campos adicionales por ahora.</p>';
+    } else {
+      body = '<p class="builder-menu-hint">Tipo no reconocido.</p>';
     }
-    if (kind === 'transitionVideo') {
-      return '' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Escena destino</label>' +
-          '<select data-exp-btn-prop="targetSceneId" class="builder-exp-btn-select">' +
-            sceneOpts +
-          '</select>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Video de transición</label>' +
-          (videos.length
-            ? ('<select data-exp-btn-prop="transitionVideoUrl" class="builder-exp-btn-select">' +
-                videoOpts +
-              '</select>')
-            : ('<input type="text" data-exp-btn-prop="transitionVideoUrl" placeholder="URL o ruta del video" value="' +
-                esc(props.transitionVideoUrl || '') + '">')) +
-        '</div>';
-    }
-    if (kind === 'toggle2D3D') {
-      return '' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Plano 2D</label>' +
-          (planos.length
-            ? ('<select data-exp-btn-prop="planoId" class="builder-exp-btn-select">' + planoOpts + '</select>')
-            : ('<input type="text" data-exp-btn-prop="planoId" placeholder="ID del plano 2D" value="' +
-                esc(props.planoId || '') + '">')) +
-          (planos.length ? '' : '<p class="builder-menu-hint">Sube planos en Recursos → Planos 2D.</p>') +
-        '</div>';
-    }
-    if (kind === 'toggleDayNight') {
-      return '' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Escena alternativa</label>' +
-          '<select data-exp-btn-prop="escenaAlternativaId" class="builder-exp-btn-select">' +
-            altSceneOpts +
-          '</select>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Imagen día</label>' +
-          '<input type="text" data-exp-btn-prop="dayImageUrl" placeholder="URL imagen día" value="' +
-            esc(props.dayImageUrl || '') + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Imagen noche</label>' +
-          '<input type="text" data-exp-btn-prop="nightImageUrl" placeholder="URL imagen noche" value="' +
-            esc(props.nightImageUrl || '') + '">' +
-        '</div>';
-    }
-    if (kind === 'whatsapp') {
-      return '' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Número WhatsApp</label>' +
-          '<input type="text" data-exp-btn-prop="phoneNumber" placeholder="+57 300 000 0000" value="' +
-            esc(props.phoneNumber || '') + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Enlace wa.me (opcional)</label>' +
-          '<input type="text" data-exp-btn-prop="whatsappLink" placeholder="https://wa.me/57300…" value="' +
-            esc(props.whatsappLink || '') + '">' +
-        '</div>';
-    }
-    if (kind === 'fullscreen' || kind === 'menu' || kind === 'unconfigured') {
-      if (kind === 'unconfigured') {
-        return '<p class="builder-menu-hint">Elige un tipo para configurar la acción del botón.</p>';
-      }
-      return '<p class="builder-menu-hint">Sin campos adicionales para este tipo.</p>';
-    }
-    return '';
+
+    return '' +
+      '<div class="builder-exp-block builder-exp-block--config" data-exp-btn-config-section>' +
+        '<div class="builder-exp-block__title">Configuración</div>' +
+        body +
+      '</div>';
   }
 
   function buttonInspectorFieldsHtml(state, sceneNode, selected, lists) {
@@ -2830,6 +2757,9 @@ var ExperienciaCanvas = (function () {
     var bw = selected.borderWidth != null ? Number(selected.borderWidth) : 1;
     var br = selected.borderRadius != null ? Number(selected.borderRadius) : 999;
     var kind = String(selected.buttonType || 'unconfigured');
+    var unconfiguredHint = kind === 'unconfigured'
+      ? '<p class="builder-menu-hint">Elige un tipo para configurar la acción del botón.</p>'
+      : '';
     return '' +
       '<div class="builder-exp-block">' +
         '<div class="builder-exp-block__title">Comportamiento</div>' +
@@ -2839,8 +2769,9 @@ var ExperienciaCanvas = (function () {
             buttonKindTypeOptionsHtml(kind) +
           '</select>' +
         '</div>' +
-        buttonKindPropsFieldsHtml(state, sceneNode, selected, lists) +
+        unconfiguredHint +
       '</div>' +
+      buttonKindConfigSectionHtml(kind) +
       '<div class="builder-exp-block">' +
         '<div class="builder-exp-block__title">Contenido</div>' +
         '<div class="builder-field builder-exp-inspector__field">' +
@@ -4837,41 +4768,12 @@ var ExperienciaCanvas = (function () {
           patchBtn({ targetNodeId: targetEl.value || null }, { persist: true });
         });
       }
-      function sceneIdToOverlayNodeId(sceneId) {
-        if (!sceneId) return null;
-        var s = String(sceneId);
-        return s.indexOf('qe-') === 0 ? s : ('qe-' + s);
-      }
       var kindTypeEl = inspectorBody.querySelector('[data-exp-btn-kind-type]');
       if (kindTypeEl) {
         kindTypeEl.addEventListener('change', function () {
           patchBtn({ buttonType: kindTypeEl.value }, { inspector: true, persist: true });
         });
       }
-      inspectorBody.querySelectorAll('[data-exp-btn-prop]').forEach(function (el) {
-        if (el.dataset.expBtnPropBound) return;
-        el.dataset.expBtnPropBound = '1';
-        var propKey = el.getAttribute('data-exp-btn-prop');
-        if (!propKey) return;
-        el.addEventListener('change', function () {
-          var val = String(el.value || '').trim();
-          var propsPatch = {};
-          propsPatch[propKey] = val || null;
-          var patch = { properties: propsPatch };
-          if (propKey === 'targetSceneId') {
-            patch.targetNodeId = sceneIdToOverlayNodeId(val);
-          }
-          patchBtn(patch, { inspector: propKey === 'targetSceneId', persist: true });
-        });
-        if (el.tagName === 'INPUT' && el.type === 'text') {
-          el.addEventListener('input', function () {
-            var val = String(el.value || '').trim();
-            var livePatch = { properties: {} };
-            livePatch.properties[propKey] = val || null;
-            patchBtn(livePatch, { gesture: true });
-          });
-        }
-      });
       inspectorBody.querySelectorAll('[data-exp-btn-style]').forEach(function (el) {
         el.addEventListener('click', function (ev) {
           ev.preventDefault();
