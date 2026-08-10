@@ -604,6 +604,31 @@ var ProjectCover = (function () {
     return base;
   }
 
+  function coverModelIsMeaningful(cm, project) {
+    if (!cm || typeof cm !== 'object') return false;
+    project = project || {};
+    if (cm.imageUrl || cm.videoUrl) return true;
+    if (cm.logoUrl && cm.showLogo !== false) return true;
+    if (String(cm.eslogan || '').trim()) return true;
+    if (String(cm.eyebrow || '').trim() || String(cm.kicker || '').trim()) return true;
+    if (String(cm.variant || '').trim()) return true;
+    if (cm.startTargetSceneId) return true;
+    if (String(cm.exploreAction || '').trim()) return true;
+    if (cm.showExplore === false && cm.showStart === false) return false;
+    var left = String(cm.botonIzquierdo || 'Explorar').trim();
+    var right = String(cm.botonDerecho || 'Iniciar').trim();
+    if (left !== 'Explorar' || right !== 'Iniciar') return true;
+    if (cm.showExplore === false || cm.showStart === false) return true;
+    var nombre = String(cm.nombre || '').trim();
+    if (!nombre) return false;
+    var pname = String(project.nombre || project.name || '').trim();
+    if (pname) {
+      var norm = function (s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); };
+      if (norm(nombre) === norm(pname)) return false;
+    }
+    return true;
+  }
+
   /**
    * Prefer canvas coverModel (entry hero). Never fall back to parallel legacy fields
    * when a canvas cover exists — Preview/Runtime must match Canvas.
@@ -639,7 +664,11 @@ var ProjectCover = (function () {
           if (scenes[i] && scenes[i].coverModel) { scene = scenes[i]; break; }
         }
       }
-      if (scene && scene.coverModel) return sanitizeModel(scene.coverModel);
+      if (scene && scene.coverModel && coverModelIsMeaningful(scene.coverModel, project)) {
+        return sanitizeModel(scene.coverModel);
+      }
+      /* Canvas SSOT — do not resurrect legacy heroContent template shell. */
+      return null;
     }
     return fromQuotationHero(hq, project);
   }
@@ -680,6 +709,7 @@ var ProjectCover = (function () {
   return {
     blankModel: blankModel,
     sanitizeModel: sanitizeModel,
+    coverModelIsMeaningful: coverModelIsMeaningful,
     fromQuotationHero: fromQuotationHero,
     fromQuotationHeroState: fromQuotationHeroState,
     resolveModel: resolveModel,

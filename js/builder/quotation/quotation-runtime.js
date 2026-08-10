@@ -193,8 +193,7 @@ var QuotationRuntime = (function () {
     var scenes = listScenes(bundle);
     var i;
     for (i = 0; i < scenes.length; i++) {
-      if (scenes[i] && (scenes[i].type === 'hero' || scenes[i].templateId === 'hero-default') &&
-          scenes[i].coverModel) {
+      if (scenes[i] && (scenes[i].type === 'hero' || scenes[i].templateId === 'hero-default')) {
         return scenes[i];
       }
     }
@@ -260,7 +259,14 @@ var QuotationRuntime = (function () {
     return null;
   }
 
-  /** Hero/entry with coverModel → ProjectCover landing (not fullscreen media stage). */
+  function coverModelIsMeaningful(cm) {
+    if (typeof ProjectCover !== 'undefined' && ProjectCover.coverModelIsMeaningful) {
+      return ProjectCover.coverModelIsMeaningful(cm, loaded && loaded.project);
+    }
+    return !!(cm && (cm.imageUrl || cm.videoUrl || String(cm.nombre || '').trim()));
+  }
+
+  /** Hero/entry with meaningful coverModel → ProjectCover landing (not fullscreen media stage). */
   function scenePrefersCoverLanding(scene, bundle) {
     if (!scene || !sceneHasCoverChrome(scene) || !scene.coverModel) return false;
     if (scene.type === 'hero' || scene.templateId === 'hero-default') return true;
@@ -285,19 +291,20 @@ var QuotationRuntime = (function () {
         return preferred;
       }
       if (sceneHasCoverChrome(preferred)) return null;
+      return preferred;
     }
 
     var entry = entryScene(bundle);
     if (entry) {
-      /* Publish: entry cover chrome wins over incidental mediaUrl on hero. */
+      /* Publish: meaningful entry cover chrome wins over incidental mediaUrl on hero. */
       if (!(liveMode || previewMode) && scenePrefersCoverLanding(entry, bundle)) {
         return null;
       }
       if (sceneIsMediaScene(entry) || resolveSceneMedia(entry, bundle)) {
         return entry;
       }
-      /* Cover-only entry → paintHero keeps ProjectCover (no goToScene). */
-      return null;
+      /* Empty hero / editor parity — paint HERO on stage, not default template shell. */
+      return entry;
     }
 
     if (preferred && (sceneIsMediaScene(preferred) || resolveSceneMedia(preferred, bundle))) {
@@ -315,8 +322,8 @@ var QuotationRuntime = (function () {
   }
 
   function sceneHasCoverChrome(scene) {
-    if (!scene) return false;
-    return !!(scene.coverModel || scene.type === 'hero' || scene.templateId === 'hero-default');
+    if (!scene || !scene.coverModel) return false;
+    return coverModelIsMeaningful(scene.coverModel);
   }
 
   function isButtonIx(ix) {
@@ -948,7 +955,8 @@ var QuotationRuntime = (function () {
       (sceneIsMediaScene(scene) || !!resolveSceneMedia(scene, bundle));
     if ((!paintAsMedia || preferCover) && sceneHasCoverChrome(scene) && coverHostEl) {
       /* Cover→cover: remount ProjectCover so logo/title/CTAs match this scene. */
-      if (scene.coverModel && typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel) {
+      if (scene.coverModel && coverModelIsMeaningful(scene.coverModel) &&
+          typeof ProjectCover !== 'undefined' && ProjectCover.sanitizeModel) {
         liveModel = ProjectCover.sanitizeModel(scene.coverModel);
       }
       if (heroCanvasApi && heroCanvasApi.destroy) {
@@ -1240,8 +1248,11 @@ var QuotationRuntime = (function () {
       liveModel = meta.coverModel;
     } else if (canvasDoc && Array.isArray(canvasDoc.scenes)) {
       var entry = entryScene(loaded);
-      if (entry && entry.coverModel) liveModel = entry.coverModel;
-      else liveModel = null;
+      if (entry && entry.coverModel && coverModelIsMeaningful(entry.coverModel)) {
+        liveModel = entry.coverModel;
+      } else {
+        liveModel = null;
+      }
     }
     if (meta.elementIds && typeof meta.elementIds === 'object') {
       liveElementIds = meta.elementIds;
@@ -1498,6 +1509,13 @@ var QuotationRuntime = (function () {
     }
 
     var model = resolvePaintModel(bundle);
+    if (!model) {
+      var emptyEntry = entryScene(bundle || loaded);
+      if (emptyEntry && !(editorMode && canvasMode)) {
+        goToScene(emptyEntry.id);
+        return;
+      }
+    }
     if (!model && typeof ProjectCover.blankModel === 'function') {
       model = ProjectCover.blankModel();
     }
@@ -1622,7 +1640,7 @@ var QuotationRuntime = (function () {
     if (type === T.REFRESH) {
       var q = readQuery();
       if (!q.projectId) return;
-      if (q.live || liveMode) {
+      if (q.live || q.preview || liveMode || previewMode) {
         var env = readLiveEnvelope(q.projectId);
         if (env && env.canvas) {
           applyDocument(env.canvas, { project: env.project || null });
@@ -1699,7 +1717,7 @@ var QuotationRuntime = (function () {
       var liveEnv = null;
       if (opts.liveDocument && opts.liveDocument.canvas) {
         liveEnv = opts.liveDocument;
-      } else if (liveMode && q.projectId) {
+      } else if ((liveMode || previewMode) && q.projectId) {
         liveEnv = readLiveEnvelope(q.projectId);
       }
 
@@ -1717,7 +1735,7 @@ var QuotationRuntime = (function () {
             project: liveEnv.project || loaded.project,
             coverModel: null
           });
-        } else if (!liveModel && loaded.hero) {
+        } else if (!liveModel && loaded.hero && !previewMode && !liveMode) {
           liveModel = typeof ProjectCover !== 'undefined' && ProjectCover.resolveModel
             ? ProjectCover.resolveModel(loaded.hero, loaded.project)
             : null;

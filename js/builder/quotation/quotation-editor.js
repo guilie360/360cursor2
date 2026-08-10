@@ -2117,9 +2117,10 @@ var QuotationEditor = (function () {
     model.videoUrl = null;
     model.logoUrl = '';
     model.showLogo = false;
-    if (editorProjectCtx) {
-      model.nombre = editorProjectCtx.name || editorProjectCtx.nombre || model.nombre || '';
-    }
+    model.showExplore = false;
+    model.showStart = false;
+    model.nombre = '';
+    model.eslogan = '';
     return model;
   }
 
@@ -9949,15 +9950,10 @@ var QuotationEditor = (function () {
   function ensureHeroCoverModel(scene) {
     if (!scene) return null;
     if (!scene.coverModel) {
-      var payload = buildHeroDefaultScenePayload(editorProjectCtx);
-      scene.coverModel = payload.coverModel || emptyHeroCoverModel();
-      /*
-       * Editor SSOT for media is scene.resourceId / mediaUrl / assignResource.
-       * Never import QuotationHero image/video here — that refilled HERO after Vaciar.
-       */
+      scene.coverModel = emptyHeroCoverModel();
       scene.coverModel.imageUrl = null;
       scene.coverModel.videoUrl = null;
-      if (!scene.elements || !scene.elements.length) scene.elements = payload.elements || [];
+      if (!scene.elements || !scene.elements.length) scene.elements = [];
     }
     return scene.coverModel;
   }
