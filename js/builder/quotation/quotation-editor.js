@@ -5588,8 +5588,10 @@ var QuotationEditor = (function () {
         '</section>' +
         '<section class="qe-props-panel__props" aria-label="Propiedades">' +
           '<div class="qe-props-panel__head">Propiedades</div>' +
-          '<div class="qe-props-panel__body" data-qe-props-empty>' +
-            '<p class="qe-props-panel__empty">Selecciona un elemento</p>' +
+          '<div class="qe-props-panel__body">' +
+            '<div class="qe-insp__exp-host" data-exp-inspector-body>' +
+              '<p class="qe-props-panel__empty">Selecciona un elemento</p>' +
+            '</div>' +
           '</div>' +
         '</section>' +
       '</div>';
@@ -5601,6 +5603,24 @@ var QuotationEditor = (function () {
     bindOutlinerGroups(document.getElementById('quotationRightBody'));
   }
 
+  function resolveExperienciaInspectorHost() {
+    var rightBody = document.getElementById('quotationRightBody');
+    if (rightBody) {
+      var inRail = rightBody.querySelector('[data-exp-inspector-body]');
+      if (inRail) return inRail;
+    }
+    if (rootEl) {
+      return rootEl.querySelector('[data-exp-inspector-body]');
+    }
+    return null;
+  }
+
+  function attachExperienciaInspectorHost() {
+    if (!expOverlay || !expOverlay.setInspectorBody) return;
+    var host = resolveExperienciaInspectorHost();
+    if (host) expOverlay.setInspectorBody(host);
+  }
+
   function syncRightPanel() {
     var body = document.getElementById('quotationRightBody');
     if (!body) return;
@@ -5609,6 +5629,7 @@ var QuotationEditor = (function () {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
     bindLayersPanel();
+    attachExperienciaInspectorHost();
   }
 
   /** Same pattern as bindSceneGroups: fresh listener on the new button each paint. */
@@ -10571,10 +10592,7 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
-        if (expOverlay && expOverlay.setInspectorBody && rootEl) {
-          var inspHost = rootEl.querySelector('[data-exp-inspector-body]');
-          if (inspHost) expOverlay.setInspectorBody(inspHost);
-        }
+        attachExperienciaInspectorHost();
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);
@@ -10583,10 +10601,7 @@ var QuotationEditor = (function () {
 
     syncOverlaySnapUi();
 
-    if (expOverlay && expOverlay.setInspectorBody && rootEl) {
-      var expInspHost = rootEl.querySelector('[data-exp-inspector-body]');
-      if (expInspHost) expOverlay.setInspectorBody(expInspHost);
-    }
+    attachExperienciaInspectorHost();
 
     if (expOverlay && expOverlay.isKonvaPoc && expOverlay.refresh) {
       requestAnimationFrame(function () {
@@ -11918,10 +11933,10 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
-      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
-      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
       expOverlay.addButton();
+      attachExperienciaInspectorHost();
       return;
     }
     pendingExpAction = { type: 'addButton' };
@@ -11937,8 +11952,7 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
-      var hostHs = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
-      if (hostHs && expOverlay.setInspectorBody) expOverlay.setInspectorBody(hostHs);
+      attachExperienciaInspectorHost();
       expOverlay.setEditMode('hotspots');
       expOverlay.startHotspotDraw();
       return;
@@ -11956,8 +11970,7 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
-      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
-      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
       if (expOverlay.addText) expOverlay.addText();
       return;
@@ -12008,8 +12021,7 @@ var QuotationEditor = (function () {
     markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
-      var host = rootEl && rootEl.querySelector('[data-exp-inspector-body]');
-      if (host && expOverlay.setInspectorBody) expOverlay.setInspectorBody(host);
+      attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
       if (expOverlay.addShape) expOverlay.addShape(kind || 'SHAPE_RECT');
       return;

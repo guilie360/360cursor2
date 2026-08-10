@@ -487,6 +487,38 @@
   pointer-events: auto;
 }
 
+.qe-props-panel [data-exp-inspector-body] .builder-exp-btn-panel {
+  padding: 4px 0 8px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-exp-block {
+  margin-bottom: 14px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-exp-block__title,
+.qe-props-panel [data-exp-inspector-body] .builder-exp-inspector__kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 0 8px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-field label {
+  display: block;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-exp-btn-select,
+.qe-props-panel [data-exp-inspector-body] input[type="text"],
+.qe-props-panel [data-exp-inspector-body] input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .qe-props-panel__empty,
 .qe-props-panel__body .builder-menu-hint {
   margin: 8px 4px;

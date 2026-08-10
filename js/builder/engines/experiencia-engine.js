@@ -1531,9 +1531,34 @@ var ExperienciaEngine = (function () {
     if (!ix.properties || typeof ix.properties !== 'object' || Array.isArray(ix.properties)) {
       ix.properties = {};
     }
+    if (ix.buttonType == null || ix.buttonType === '') ix.buttonType = 'unconfigured';
     var bt = String(ix.buttonType || 'unconfigured');
     if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
     ix.buttonType = bt;
+    applyGenericButtonChromeDefaults(ix);
+    return ix;
+  }
+
+  /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
+  function applyGenericButtonChromeDefaults(ix) {
+    if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
+    if (ix.style === 'chip') ix.style = 'icon';
+    if (!ix.style || ix.style === 'button') ix.style = 'icon';
+    if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
+    if (ix.textColor == null || ix.textColor === '') ix.textColor = '#ffffff';
+    if (ix.borderColor == null || ix.borderColor === '') ix.borderColor = '#d1d1d1';
+    if (ix.borderWidth == null || isNaN(Number(ix.borderWidth))) ix.borderWidth = 1;
+    if (ix.borderRadius == null || isNaN(Number(ix.borderRadius))) ix.borderRadius = 999;
+    if (ix.boxW == null || isNaN(Number(ix.boxW))) ix.boxW = 5.5;
+    if (ix.boxH == null || isNaN(Number(ix.boxH))) ix.boxH = 5.5;
+    if (Number(ix.boxW) > 10 && Number(ix.boxH) <= 6) {
+      ix.boxW = Math.max(Number(ix.boxH), 5.5);
+    }
+    if (ix.hoverColor == null || ix.hoverColor === '' ||
+        ix.hoverColor === '#6fbf86' || ix.hoverColor === '#5aaa74') {
+      ix.hoverColor = '#ffffff';
+    }
+    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
     return ix;
   }
 

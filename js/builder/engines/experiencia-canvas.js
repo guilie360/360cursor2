@@ -4467,7 +4467,6 @@ var ExperienciaCanvas = (function () {
     }
 
     function notifyOverlaySelection() {
-      if (!api.onSelectionChange) return;
       var ids = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
         : [];
@@ -4475,14 +4474,17 @@ var ExperienciaCanvas = (function () {
         ids = [String(canvas().selectedButtonId)];
       }
       var hs = canvas().selectedHotspotId || null;
-      try {
-        api.onSelectionChange({
-          buttonIds: ids,
-          buttonId: canvas().selectedButtonId || null,
-          hotspotId: hs,
-          hasSelection: !!(ids.length || hs)
-        });
-      } catch (eSelNotify) { /* ignore */ }
+      if (api.onSelectionChange) {
+        try {
+          api.onSelectionChange({
+            buttonIds: ids,
+            buttonId: canvas().selectedButtonId || null,
+            hotspotId: hs,
+            hasSelection: !!(ids.length || hs)
+          });
+        } catch (eSelNotify) { /* ignore */ }
+      }
+      if (overlayMode && inspectorBody) paintInspector();
     }
 
     function applyWorldTransform() {
