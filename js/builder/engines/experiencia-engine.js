@@ -3988,6 +3988,17 @@ var ExperienciaEngine = (function () {
       }
       if (patch.buttonConfig != null && typeof patch.buttonConfig === 'object') {
         mergeButtonConfig(ix, patch.buttonConfig);
+        if (Object.prototype.hasOwnProperty.call(patch.buttonConfig, 'targetSceneId')) {
+          try {
+            console.log('[QE btn-scene] updateSceneButton after mergeButtonConfig', {
+              nodeId: nodeId,
+              buttonId: buttonId,
+              patchTargetSceneId: patch.buttonConfig.targetSceneId,
+              ixTargetSceneId: ix.buttonConfig && ix.buttonConfig.targetSceneId,
+              ixButtonConfig: ix.buttonConfig
+            });
+          } catch (eTgtLog) { /* ignore */ }
+        }
         var tgtCfg = ix.buttonConfig && ix.buttonConfig.targetSceneId;
         if (tgtCfg != null) {
           var nodeTgtCfg = String(tgtCfg).indexOf('qe-') === 0 ? String(tgtCfg) : ('qe-' + String(tgtCfg));
@@ -5621,6 +5632,17 @@ var ExperienciaEngine = (function () {
       } else if (cfg.buttonConfig != null && typeof cfg.buttonConfig === 'object' &&
           !Array.isArray(cfg.buttonConfig)) {
         ix.buttonConfig = cfg.buttonConfig;
+      }
+      if (partial.buttonConfig && partial.buttonConfig.targetSceneId != null) {
+        try {
+          console.log('[QE btn-scene] makeInteraction targetSceneId', {
+            ixId: ix.id,
+            inTarget: partial.buttonConfig.targetSceneId,
+            outTarget: ix.buttonConfig && ix.buttonConfig.targetSceneId,
+            preserved: String(partial.buttonConfig.targetSceneId) ===
+              String((ix.buttonConfig && ix.buttonConfig.targetSceneId) || '')
+          });
+        } catch (eMkLog) { /* ignore */ }
       }
     }
     /* Button colors come from Theme — strip only on BUTTON */

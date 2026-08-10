@@ -171,6 +171,14 @@ var WorkspaceSelect = (function () {
         ts: Date.now()
       });
     }
+    if (select.matches && select.matches('[data-exp-btn-config-target-scene]')) {
+      console.log('[QE btn-scene] WorkspaceSelect.commitValue', {
+        value: next,
+        index: index,
+        ownerAttr: select.getAttribute('data-exp-btn-kind-owner'),
+        ts: Date.now()
+      });
+    }
     rebuildOptions(wrap, select);
     syncLabel(wrap, select);
     setOpen(wrap, false);
