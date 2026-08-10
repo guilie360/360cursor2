@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7832';
+  var EXP_CANVAS_BUILD = 'ws7842';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -2602,7 +2602,7 @@ var ExperienciaCanvas = (function () {
     return 'Botón';
   }
 
-  function textInspectorFieldsHtml(selected) {
+  function textInspectorFieldsHtml(state, selected) {
     var fonts = [
       ['system-ui, sans-serif', 'Sistema'],
       ['Georgia, serif', 'Georgia'],
@@ -2630,17 +2630,14 @@ var ExperienciaCanvas = (function () {
         esc(label) + '</button>';
     }
     return '' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Contenido</div>' +
+      builderExpBlockHtml(state, 'text-content', 'Contenido',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<textarea data-exp-text-content rows="2" maxlength="500" placeholder="Escribe…">' +
             esc(selected.label != null ? selected.label : '') +
           '</textarea>' +
           '<p class="builder-menu-hint builder-exp-btn-hint">Doble clic en el lienzo para editar.</p>' +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Apariencia</div>' +
+        '</div>') +
+      builderExpBlockHtml(state, 'text-appearance', 'Apariencia',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Fuente</label>' +
           '<select data-exp-text-font class="builder-exp-btn-select">' +
@@ -2673,12 +2670,40 @@ var ExperienciaCanvas = (function () {
           '<label>Opacidad</label>' +
           '<input type="range" data-exp-text-opacity min="0" max="1" step="0.05" value="' +
             esc(String(op)) + '">' +
-        '</div>' +
-      '</div>';
+        '</div>');
   }
 
   function hexOr(v, fallback) {
     return /^#[0-9a-fA-F]{6}$/.test(String(v || '')) ? String(v) : fallback;
+  }
+
+  function inspectorBlocksCollapsedMap(state) {
+    var cv = (state.experiencia && state.experiencia.canvas) || {};
+    if (!cv.inspectorBlocksCollapsed || typeof cv.inspectorBlocksCollapsed !== 'object') {
+      cv.inspectorBlocksCollapsed = {};
+    }
+    return cv.inspectorBlocksCollapsed;
+  }
+
+  function isInspectorBlockCollapsed(state, blockKey) {
+    return inspectorBlocksCollapsedMap(state)[blockKey] === true;
+  }
+
+  function builderExpBlockHtml(state, blockKey, title, bodyHtml, extraClass) {
+    var collapsed = isInspectorBlockCollapsed(state, blockKey);
+    var cls = 'builder-exp-block' +
+      (extraClass ? ' ' + extraClass : '') +
+      (collapsed ? ' is-collapsed' : '');
+    return '' +
+      '<div class="' + cls + '" data-exp-inspector-block="' + esc(blockKey) + '">' +
+        '<button type="button" class="builder-exp-block__head" ' +
+          'data-exp-inspector-block-toggle="' + esc(blockKey) + '" ' +
+          'aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
+          '<span class="builder-exp-block__title">' + esc(title) + '</span>' +
+          '<span class="builder-exp-block__chev" aria-hidden="true"></span>' +
+        '</button>' +
+        '<div class="builder-exp-block__body">' + (bodyHtml || '') + '</div>' +
+      '</div>';
   }
 
   function buttonInspectorSceneOptionsHtml(state, currentNodeId, selectedSceneId) {
@@ -2712,7 +2737,7 @@ var ExperienciaCanvas = (function () {
   }
 
   /** Placeholder shell for CONFIGURACIÓN — fields ship per type in later passes. */
-  function buttonKindConfigSectionHtml(kind) {
+  function buttonKindConfigSectionHtml(state, kind) {
     kind = String(kind || 'unconfigured');
     if (kind === 'unconfigured') return '';
 
@@ -2735,11 +2760,7 @@ var ExperienciaCanvas = (function () {
       body = '<p class="builder-menu-hint">Tipo no reconocido.</p>';
     }
 
-    return '' +
-      '<div class="builder-exp-block builder-exp-block--config" data-exp-btn-config-section>' +
-        '<div class="builder-exp-block__title">Configuración</div>' +
-        body +
-      '</div>';
+    return builderExpBlockHtml(state, 'btn-config', 'Configuración', body, 'builder-exp-block--config');
   }
 
   function buttonInspectorFieldsHtml(state, sceneNode, selected, lists) {
@@ -2761,19 +2782,16 @@ var ExperienciaCanvas = (function () {
       ? '<p class="builder-menu-hint">Elige un tipo para configurar la acción del botón.</p>'
       : '';
     return '' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Comportamiento</div>' +
+      builderExpBlockHtml(state, 'btn-behavior', 'Comportamiento',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Tipo de botón</label>' +
           '<select data-exp-btn-kind-type class="builder-exp-btn-select">' +
             buttonKindTypeOptionsHtml(kind) +
           '</select>' +
         '</div>' +
-        unconfiguredHint +
-      '</div>' +
-      buttonKindConfigSectionHtml(kind) +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Contenido</div>' +
+        unconfiguredHint) +
+      buttonKindConfigSectionHtml(state, kind) +
+      builderExpBlockHtml(state, 'btn-content', 'Contenido',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Texto</label>' +
           '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
@@ -2788,10 +2806,8 @@ var ExperienciaCanvas = (function () {
             '<option value="rotate-right"' + (selected.icon === 'rotate-right' ? ' selected' : '') + '>Rotar der.</option>' +
             '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
           '</select>' +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Apariencia</div>' +
+        '</div>') +
+      builderExpBlockHtml(state, 'btn-appearance', 'Apariencia',
         '<div class="builder-exp-btn-hover-row">' +
           '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
             '<label>Fondo</label>' +
@@ -2835,10 +2851,8 @@ var ExperienciaCanvas = (function () {
           '<label class="builder-exp-inspector__check">' +
             '<input type="checkbox" data-exp-btn-locked' + (selected.locked ? ' checked' : '') + '>' +
             ' Bloqueado</label>' +
-        '</div>' +
-      '</div>' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Hover</div>' +
+        '</div>') +
+      builderExpBlockHtml(state, 'btn-hover', 'Hover',
         '<label class="builder-exp-inspector__check">' +
           '<input type="checkbox" data-exp-btn-hover-enabled' + (hoverOn ? ' checked' : '') + '>' +
           ' Activar hover</label>' +
@@ -2868,8 +2882,7 @@ var ExperienciaCanvas = (function () {
           '<label>Transición (ms)</label>' +
           '<input type="number" data-exp-btn-hover-ms min="0" max="2000" step="50" value="' +
             esc(String(hoverMs)) + '">' +
-        '</div>' +
-      '</div>';
+        '</div>');
   }
 
   function shapeInspectorFieldsHtml(selected) {
@@ -2970,7 +2983,7 @@ var ExperienciaCanvas = (function () {
       '<div class="builder-exp-inspector__kind">' + kindTitle + '</div>';
 
     if (selType === 'TEXT') {
-      html += textInspectorFieldsHtml(selected);
+      html += textInspectorFieldsHtml(state, selected);
     } else if (isShapeType(selType)) {
       html += shapeInspectorFieldsHtml(selected);
     } else {
@@ -2980,32 +2993,29 @@ var ExperienciaCanvas = (function () {
     return html;
   }
 
-  function hotspotInspectorFieldsHtml(selected, destOpts) {
+  function hotspotInspectorFieldsHtml(state, selected, destOpts) {
     var op = selected.opacity != null ? Number(selected.opacity) : 0.22;
     var col = selected.color || 'rgba(111,191,134,0.28)';
-    return '' +
-      '<div class="builder-exp-block">' +
-        '<div class="builder-exp-block__title">Hotspot</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Nombre</label>' +
-          '<input type="text" data-exp-hs-label maxlength="60" value="' +
-            esc(selected.label != null ? selected.label : '') + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Acción / destino</label>' +
-          '<select data-exp-hs-target class="builder-exp-btn-select">' + destOpts + '</select>' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Color</label>' +
-          '<input type="color" data-exp-hs-color value="' +
-            esc(hexOr(selected.fill || selected.color, '#6fbf86')) + '">' +
-        '</div>' +
-        '<div class="builder-field builder-exp-inspector__field">' +
-          '<label>Opacidad</label>' +
-          '<input type="range" data-exp-hs-opacity min="0" max="1" step="0.05" value="' +
-            esc(String(op)) + '">' +
-        '</div>' +
-      '</div>';
+    return builderExpBlockHtml(state, 'hs-hotspot', 'Hotspot',
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Nombre</label>' +
+        '<input type="text" data-exp-hs-label maxlength="60" value="' +
+          esc(selected.label != null ? selected.label : '') + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Acción / destino</label>' +
+        '<select data-exp-hs-target class="builder-exp-btn-select">' + destOpts + '</select>' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Color</label>' +
+        '<input type="color" data-exp-hs-color value="' +
+          esc(hexOr(selected.fill || selected.color, '#6fbf86')) + '">' +
+      '</div>' +
+      '<div class="builder-field builder-exp-inspector__field">' +
+        '<label>Opacidad</label>' +
+        '<input type="range" data-exp-hs-opacity min="0" max="1" step="0.05" value="' +
+          esc(String(op)) + '">' +
+      '</div>');
   }
 
   function hotspotsInspectorHtml(state, n) {
@@ -3042,7 +3052,7 @@ var ExperienciaCanvas = (function () {
     return '' +
       '<div class="builder-exp-btn-panel">' +
         '<div class="builder-exp-inspector__kind">Hotspot</div>' +
-        hotspotInspectorFieldsHtml(selected, destOpts) +
+        hotspotInspectorFieldsHtml(state, selected, destOpts) +
       '</div>';
   }
 
@@ -4583,6 +4593,25 @@ var ExperienciaCanvas = (function () {
       ctx.strokeRect(vx, vy, vw, vh);
     }
 
+    function bindInspectorBlockFolds() {
+      if (!inspectorBody) return;
+      inspectorBody.querySelectorAll('[data-exp-inspector-block-toggle]').forEach(function (btn) {
+        if (btn.getAttribute('data-exp-block-bound') === '1') return;
+        btn.setAttribute('data-exp-block-bound', '1');
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          var key = btn.getAttribute('data-exp-inspector-block-toggle');
+          if (!key) return;
+          var block = btn.closest('[data-exp-inspector-block]');
+          var collapsed = !(block && block.classList.contains('is-collapsed'));
+          inspectorBlocksCollapsedMap(state)[key] = collapsed;
+          if (block) block.classList.toggle('is-collapsed', collapsed);
+          btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        });
+      });
+    }
+
     function paintInspector() {
       if (_paintInspectorBusy) return;
       if (overlayMode && !inspectorBody) {
@@ -4654,6 +4683,7 @@ var ExperienciaCanvas = (function () {
         WorkspaceSelect.enhance(inspectorBody);
       }
       } finally {
+        bindInspectorBlockFolds();
         _paintInspectorBusy = false;
       }
     }

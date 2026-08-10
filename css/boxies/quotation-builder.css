@@ -502,7 +502,15 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-exp-block__head {
+  margin-bottom: 8px;
+}
+
+.qe-props-panel [data-exp-inspector-body] .builder-exp-block.is-collapsed .builder-exp-block__head {
+  margin-bottom: 0;
 }
 
 .qe-props-panel [data-exp-inspector-body] .builder-field label {
