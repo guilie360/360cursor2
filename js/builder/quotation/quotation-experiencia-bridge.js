@@ -674,6 +674,9 @@ var QuotationExperienciaBridge = (function () {
       setInspectorBody: function (el) {
         if (handle.setInspectorBody) handle.setInspectorBody(el);
       },
+      repaintInspector: function () {
+        if (handle.repaintInspector) handle.repaintInspector();
+      },
       setOverlaySnapEnabled: function (on) {
         if (handle.setOverlaySnapEnabled) handle.setOverlaySnapEnabled(on);
       },

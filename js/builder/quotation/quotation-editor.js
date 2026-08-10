@@ -5618,10 +5618,14 @@ var QuotationEditor = (function () {
   function attachExperienciaInspectorHost() {
     if (!expOverlay || !expOverlay.setInspectorBody) return;
     var host = resolveExperienciaInspectorHost();
-    if (!host) return;
-    if (attachedInspectorHost === host) return;
+    if (!host || !host.isConnected) return;
     attachedInspectorHost = host;
     expOverlay.setInspectorBody(host);
+  }
+
+  function refreshExperienciaInspector() {
+    attachExperienciaInspectorHost();
+    if (expOverlay && expOverlay.repaintInspector) expOverlay.repaintInspector();
   }
 
   function syncRightPanel() {
@@ -10201,6 +10205,7 @@ var QuotationEditor = (function () {
       try { expOverlay.destroy(); } catch (e) { /* ignore */ }
     }
     expOverlay = null;
+    attachedInspectorHost = null;
   }
 
   /** Detach editor chrome without resetting the document SSOT. */
@@ -10597,6 +10602,7 @@ var QuotationEditor = (function () {
         if (next) state.selectedElementId = null;
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
+        refreshExperienciaInspector();
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);

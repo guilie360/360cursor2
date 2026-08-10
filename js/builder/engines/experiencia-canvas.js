@@ -16842,6 +16842,9 @@ var ExperienciaCanvas = (function () {
         inspectorBody = el || null;
         paintInspector();
       },
+      repaintInspector: function () {
+        paintInspector();
+      },
       destroy: function () {
         _shapeBoxV2Active = false;
         _shapeBoxV2ProjectId = null;
