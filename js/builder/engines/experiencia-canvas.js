@@ -2714,16 +2714,30 @@ var ExperienciaCanvas = (function () {
 
   function buttonInspectorSceneOptionsHtml(state, currentNodeId, selectedSceneId, listScenes) {
     function normalizeSceneId(id) {
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.normalizeOverlaySceneId) {
+        return ExperienciaEngine.normalizeOverlaySceneId(id);
+      }
       var sid = String(id || '');
-      if (sid.indexOf('qe-') === 0) sid = sid.slice(4);
+      if (sid.indexOf('qe-') === 0) sid = sid.slice(3);
       return sid;
     }
+    var hostSceneId = normalizeSceneId(currentNodeId);
     var sel = normalizeSceneId(selectedSceneId);
+    if (hostSceneId && sel && sel === hostSceneId) {
+      try {
+        console.warn('[QE btn-scene] self-target in inspector — reset to empty', {
+          hostSceneId: hostSceneId,
+          targetSceneId: sel
+        });
+      } catch (eLog) { /* ignore */ }
+      sel = '';
+    }
     var entries = [];
     if (typeof listScenes === 'function') listScenes = listScenes();
     if (Array.isArray(listScenes) && listScenes.length) {
       listScenes.forEach(function (sc) {
         if (!sc || !sc.id) return;
+        if (hostSceneId && normalizeSceneId(sc.id) === hostSceneId) return;
         entries.push({
           id: String(sc.id),
           label: sc.name || sc.label || String(sc.id)
@@ -2732,9 +2746,11 @@ var ExperienciaCanvas = (function () {
     } else {
       ((state.experiencia && state.experiencia.nodes) || []).forEach(function (node) {
         if (!node || node.kind === 'action') return;
+        var nodeSceneId = normalizeSceneId(node.id);
+        if (hostSceneId && nodeSceneId === hostSceneId) return;
         entries.push({
-          id: normalizeSceneId(node.id),
-          label: node.label || normalizeSceneId(node.id)
+          id: nodeSceneId,
+          label: node.label || nodeSceneId
         });
       });
     }
@@ -4785,6 +4801,18 @@ var ExperienciaCanvas = (function () {
 
     function applyButtonChangeSceneTarget(targetSceneId, sceneEl) {
       var sceneId = canvas().selectedId;
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.overlaySceneIdsEqual &&
+          ExperienciaEngine.overlaySceneIdsEqual(sceneId, targetSceneId)) {
+        try {
+          console.warn('[QE btn-scene] rejected self-target selection', {
+            hostSceneId: ExperienciaEngine.normalizeOverlaySceneId
+              ? ExperienciaEngine.normalizeOverlaySceneId(sceneId)
+              : sceneId,
+            targetSceneId: targetSceneId
+          });
+        } catch (eRej) { /* ignore */ }
+        return;
+      }
       var ownerAttr = sceneEl && sceneEl.getAttribute
         ? sceneEl.getAttribute('data-exp-btn-kind-owner')
         : null;

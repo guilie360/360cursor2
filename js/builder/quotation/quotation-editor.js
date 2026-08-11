@@ -3035,6 +3035,10 @@ var QuotationEditor = (function () {
       if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonKindConfig) {
         ExperienciaEngine.ensureButtonKindConfig(ix);
       }
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.clearButtonSelfTargetScene &&
+          ExperienciaEngine.clearButtonSelfTargetScene(ix, scene.id)) {
+        changed = true;
+      }
       if (ix.buttonType !== beforeType ||
           ((ix.buttonConfig && ix.buttonConfig.targetSceneId) || null) !== (beforeTarget || null)) {
         changed = true;

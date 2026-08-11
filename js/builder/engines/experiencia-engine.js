@@ -1536,6 +1536,40 @@ var ExperienciaEngine = (function () {
     return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON');
   }
 
+  function normalizeOverlaySceneId(id) {
+    var sid = String(id || '');
+    if (sid.indexOf('qe-') === 0) sid = sid.slice(3);
+    return sid;
+  }
+
+  function overlaySceneIdsEqual(a, b) {
+    var left = normalizeOverlaySceneId(a);
+    var right = normalizeOverlaySceneId(b);
+    return !!(left && right && left === right);
+  }
+
+  /** Host scene cannot be its own goto target — clear stale self-references on load. */
+  function clearButtonSelfTargetScene(ix, hostSceneId) {
+    if (!ix || !isSceneButtonInteraction(ix)) return false;
+    if (!overlaySceneIdsEqual(hostSceneId, (ix.buttonConfig && ix.buttonConfig.targetSceneId) ||
+        ix.targetSceneId)) {
+      return false;
+    }
+    ensureButtonKindConfig(ix);
+    try {
+      console.warn('[QE btn-scene] cleared self-target on load', {
+        hostSceneId: normalizeOverlaySceneId(hostSceneId),
+        buttonId: ix.id,
+        targetSceneId: normalizeOverlaySceneId(
+          (ix.buttonConfig && ix.buttonConfig.targetSceneId) || ix.targetSceneId
+        )
+      });
+    } catch (eLog) { /* ignore */ }
+    if (ix.buttonConfig) delete ix.buttonConfig.targetSceneId;
+    ix.targetSceneId = null;
+    return true;
+  }
+
   /**
    * Legacy quotation buttons used action + targetSceneId; inspector/runtime v2 use
    * buttonType + buttonConfig. Upgrade in-memory so the inspector matches publish.
@@ -9182,6 +9216,9 @@ var ExperienciaEngine = (function () {
     BUTTON_KIND_ORDER: BUTTON_KIND_ORDER,
     ensureButtonKindConfig: ensureButtonKindConfig,
     inferButtonKindFromLegacy: inferButtonKindFromLegacy,
+    normalizeOverlaySceneId: normalizeOverlaySceneId,
+    overlaySceneIdsEqual: overlaySceneIdsEqual,
+    clearButtonSelfTargetScene: clearButtonSelfTargetScene,
     mergeButtonConfig: mergeButtonConfig,
     mergeButtonProperties: mergeButtonProperties,
     detectHubSelectorOptions: detectHubSelectorOptions,
