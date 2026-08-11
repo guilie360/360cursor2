@@ -286,7 +286,9 @@ var HeroCanvas = (function () {
 
   function applyTransform(state) {
     if (!state || !state.canvas) return;
-    clampPan(state);
+    if (!state.opts.fitDesignToHost) {
+      clampPan(state);
+    }
     var z = state.zoom || 1;
     state.canvas.style.zoom = '';
     state.canvas.style.transformOrigin = '0 0';
@@ -305,6 +307,23 @@ var HeroCanvas = (function () {
     state.zoom = 1;
     state.panX = (hostW - DESIGN_W) / 2;
     state.panY = (hostH - DESIGN_H) / 2;
+    applyTransform(state);
+  }
+
+  /**
+   * BOXIES v0.4 — Desktop publish/preview parity with Editor viewport.
+   * Scale the full 1920×1080 lienzo uniformly to fit the browser host (never above 1:1).
+   */
+  function fitDesignToHost(state) {
+    var hostW = state.host.clientWidth || 1;
+    var hostH = state.host.clientHeight || 1;
+    var scale = Math.min(hostW / DESIGN_W, hostH / DESIGN_H, 1);
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+    state.zoom = scale;
+    var contentW = DESIGN_W * scale;
+    var contentH = DESIGN_H * scale;
+    state.panX = (hostW - contentW) / 2;
+    state.panY = (hostH - contentH) / 2;
     applyTransform(state);
   }
 
@@ -580,18 +599,25 @@ var HeroCanvas = (function () {
       HeroRenderer.paint(parts.mediaSlot, opts.media, opts.paintOpts || {});
     }
 
-    if (opts.enablePan !== false) bindPan(state);
+    if (opts.enablePan !== false && !opts.fitDesignToHost) bindPan(state);
     if (opts.middleButtonPan) bindMiddleButtonPan(state);
 
-    if (opts.initialCamera) {
+    if (opts.fitDesignToHost) {
+      host.classList.add('hero-canvas-host--desktop-fit');
+      fitDesignToHost(state);
+    } else if (opts.initialCamera) {
       applyCamera(state, opts.initialCamera);
     } else {
       centerAtFixedZoom(state);
     }
-    showHintOnce(state);
+    if (!opts.fitDesignToHost) showHintOnce(state);
 
     if (typeof ResizeObserver !== 'undefined') {
       state._ro = new ResizeObserver(function () {
+        if (state.opts.fitDesignToHost) {
+          fitDesignToHost(state);
+          return;
+        }
         if (state.opts.allowZoom) {
           applyTransform(state);
           return;
@@ -637,8 +663,14 @@ var HeroCanvas = (function () {
       zoomAtPoint: function (clientX, clientY, factor) {
         zoomAtPoint(state, clientX, clientY, factor);
       },
-      fitContain: function () { centerAtFixedZoom(state); },
-      center: function () { centerAtFixedZoom(state); },
+      fitContain: function () {
+        if (state.opts.fitDesignToHost) fitDesignToHost(state);
+        else centerAtFixedZoom(state);
+      },
+      center: function () {
+        if (state.opts.fitDesignToHost) fitDesignToHost(state);
+        else centerAtFixedZoom(state);
+      },
       getCamera: function () {
         return { panX: state.panX, panY: state.panY, zoom: state.zoom };
       },

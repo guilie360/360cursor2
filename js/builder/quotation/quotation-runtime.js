@@ -770,6 +770,17 @@ var QuotationRuntime = (function () {
 
   var heroCanvasApi = null;
 
+  function shouldDesktopFitDesignHost() {
+    if (editorMode && canvasMode) return false;
+    if (canvasMode) return false;
+    try {
+      if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return false;
+    } catch (eCoarse) { /* ignore */ }
+    var w = window.innerWidth || document.documentElement.clientWidth || 0;
+    /* Desktop publish/preview only — tablet/mobile behavior unchanged for now. */
+    return w > 900;
+  }
+
   function paintSceneMedia(parentEl, scene, bundle, opts) {
     opts = opts || {};
     if (!parentEl) return null;
@@ -802,6 +813,10 @@ var QuotationRuntime = (function () {
       heroCanvasApi = null;
     }
 
+    var desktopFit = opts.fitDesignToHost === true ||
+      (opts.fitDesignToHost !== false && shouldDesktopFitDesignHost() &&
+        (opts.mode === 'publish' || opts.mode === 'preview'));
+
     heroCanvasApi = HeroCanvas.mount(parentEl, {
       media: media && media.url
         ? { src: media.url, kind: media.type === 'video' ? 'video' : 'image' }
@@ -809,10 +824,11 @@ var QuotationRuntime = (function () {
       paintOpts: {
         mediaClass: media && media.type === 'video' ? 'qr-scene-media__video' : 'qr-scene-media__img'
       },
-      enablePan: enablePan,
+      enablePan: desktopFit ? false : enablePan,
       disableHint: disableHint,
       allowZoom: !!opts.allowZoom,
       middleButtonPan: !!opts.middleButtonPan,
+      fitDesignToHost: desktopFit,
       initialCamera: opts.initialCamera || null,
       onCameraChange: typeof opts.onCameraChange === 'function' ? opts.onCameraChange : null,
       zoomMin: opts.zoomMin,
@@ -842,10 +858,12 @@ var QuotationRuntime = (function () {
       disableHint: opts.disableHint != null ? opts.disableHint : (opts.mode === 'builder'),
       allowZoom: opts.allowZoom,
       middleButtonPan: opts.middleButtonPan,
+      fitDesignToHost: opts.fitDesignToHost,
       initialCamera: opts.initialCamera,
       onCameraChange: opts.onCameraChange,
       zoomMin: opts.zoomMin,
-      zoomMax: opts.zoomMax
+      zoomMax: opts.zoomMax,
+      mode: opts.mode
     });
     if (paintIx && canvas) {
       paintInteractionLayer(canvas, scene, interactive, {
@@ -990,6 +1008,7 @@ var QuotationRuntime = (function () {
       enablePan: !(editorMode && canvasMode),
       disableHint: !!(editorMode && canvasMode),
       paintInteractions: true,
+      fitDesignToHost: shouldDesktopFitDesignHost(),
       mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
     });
     void sceneApi;

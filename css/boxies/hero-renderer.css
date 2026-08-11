@@ -1,6 +1,7 @@
 /**
  * V7.2.62 — BOXIES HeroCanvas (mapa interactivo)
- * Lienzo fijo 1920×1080. Viewport = ventana. Pan only. Never contain/shrink.
+ * Lienzo fijo 1920×1080. Viewport = ventana.
+ * Builder: pan at zoom=1. Desktop publish: uniform fit-to-host (v0.4).
  */
 
 .hero-canvas-host {
