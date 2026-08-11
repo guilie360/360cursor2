@@ -4480,15 +4480,20 @@ body.is-qe-lib-pointer-dragging * {
 .qe-button-picker__item {
   padding: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.qe-button-picker__viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .qe-button-picker__stage {
-  position: relative;
-  display: block;
-  width: 360px;
-  height: 203px;
-  flex-shrink: 0;
-  transform: scale(0.1);
+  position: absolute;
+  left: 50%;
+  top: 50%;
   transform-origin: center center;
   pointer-events: none;
 }

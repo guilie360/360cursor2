@@ -117,10 +117,30 @@ var ButtonOverlayRenderer = (function () {
   }
 
   /**
-   * Picker cell — real renderer inside a scaled mini stage (same % layer semantics).
+   * Fit the preset button bbox inside a fixed picker viewport without rescaling % twice.
+   * Layer keeps canvas % semantics; only the whole stage is uniformly scaled to fit.
+   */
+  function pickerStageScale(vm, layerW, layerH, viewportW, viewportH) {
+    var boxW = vm && vm.boxW != null ? Number(vm.boxW) : 14;
+    var boxH = vm && vm.boxH != null ? Number(vm.boxH) : 4.5;
+    var btnWPx = (boxW / 100) * layerW;
+    var btnHPx = (boxH / 100) * layerH;
+    if (!btnWPx || !btnHPx) return 0.1;
+    var pad = 0.12;
+    var fitW = viewportW * (1 - pad * 2);
+    var fitH = viewportH * (1 - pad * 2);
+    return Math.min(fitW / btnWPx, fitH / btnHPx);
+  }
+
+  /**
+   * Picker cell — shared renderer inside a fixed viewport; stage scale fits button bbox.
    */
   function renderPickerPreviewHtml(preset) {
     if (!preset || typeof ButtonPresets === 'undefined') return '';
+    var layerW = ButtonPresets.PREVIEW_LAYER_W;
+    var layerH = ButtonPresets.PREVIEW_LAYER_H;
+    var viewportW = 52;
+    var viewportH = 52;
     var ix = ButtonPresets.buildPreviewIx(preset);
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonVisualDefaults) {
       ExperienciaEngine.ensureButtonVisualDefaults(ix);
@@ -132,15 +152,20 @@ var ButtonOverlayRenderer = (function () {
         {},
         fakeNode,
         ix,
-        ButtonPresets.PREVIEW_LAYER_W,
-        ButtonPresets.PREVIEW_LAYER_H
+        layerW,
+        layerH
       );
     }
     if (!vm) return '';
+    var scale = pickerStageScale(vm, layerW, layerH, viewportW, viewportH);
     var btnHtml = renderButtonHtml(vm, { stage: false, x: 50, y: 50 });
     return '' +
-      '<span class="qe-button-picker__stage" aria-hidden="true">' +
-        btnHtml +
+      '<span class="qe-button-picker__viewport" aria-hidden="true">' +
+        '<span class="qe-button-picker__stage"' +
+          ' style="width:' + layerW + 'px;height:' + layerH + 'px;' +
+          'transform:translate(-50%,-50%) scale(' + scale + ');">' +
+          btnHtml +
+        '</span>' +
       '</span>';
   }
 
