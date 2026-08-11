@@ -4942,6 +4942,43 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    function listInspectorPropsGroupIds() {
+      if (!inspectorBody) return [];
+      var ids = [];
+      inspectorBody.querySelectorAll('[data-qe-props-group]').forEach(function (el) {
+        var id = el.getAttribute('data-qe-props-group');
+        if (id) ids.push(id);
+      });
+      return ids;
+    }
+
+    function syncPropsGroupsCollapsedFromState() {
+      var cv = canvas();
+      var ids = listInspectorPropsGroupIds();
+      if (!ids.length) {
+        cv.propsGroupsCollapsed = false;
+        return;
+      }
+      var map = propsGroupsOpenMap(state);
+      var anyOpen = ids.some(function (id) {
+        return map[id] !== false;
+      });
+      cv.propsGroupsCollapsed = !anyOpen;
+    }
+
+    function syncAllPropsGroupsOpen() {
+      listInspectorPropsGroupIds().forEach(function (id) {
+        syncPropsGroupOpen(id);
+      });
+    }
+
+    function notifyPropsFoldSync() {
+      syncPropsGroupsCollapsedFromState();
+      try {
+        window.dispatchEvent(new CustomEvent('boxies:props-fold-sync'));
+      } catch (eFold) { /* ignore */ }
+    }
+
     function syncPropsGroupOpen(groupId) {
       if (!inspectorBody) return false;
       groupId = String(groupId || '');
@@ -4959,7 +4996,24 @@ var ExperienciaCanvas = (function () {
       if (!groupId) return false;
       var map = propsGroupsOpenMap(state);
       map[groupId] = !(map[groupId] !== false);
-      return syncPropsGroupOpen(groupId);
+      var ok = syncPropsGroupOpen(groupId);
+      notifyPropsFoldSync();
+      return ok;
+    }
+
+    function toggleAllPropsGroups() {
+      var ids = listInspectorPropsGroupIds();
+      if (!ids.length) return false;
+      syncPropsGroupsCollapsedFromState();
+      var collapse = !canvas().propsGroupsCollapsed;
+      var map = propsGroupsOpenMap(state);
+      ids.forEach(function (id) {
+        map[id] = !collapse;
+      });
+      canvas().propsGroupsCollapsed = collapse;
+      syncAllPropsGroupsOpen();
+      notifyPropsFoldSync();
+      return true;
     }
 
     function paintInspector() {
@@ -5047,6 +5101,7 @@ var ExperienciaCanvas = (function () {
       } finally {
         ensurePropsGroupToggleBinding();
         ensureButtonsInspectorControlBinding();
+        notifyPropsFoldSync();
         _paintInspectorBusy = false;
         if (_paintInspectorPending) {
           _paintInspectorPending = false;
@@ -17136,6 +17191,13 @@ var ExperienciaCanvas = (function () {
       },
       togglePropsGroup: function (groupId) {
         return togglePropsGroup(groupId);
+      },
+      toggleAllPropsGroups: function () {
+        return toggleAllPropsGroups();
+      },
+      getPropsGroupsCollapsed: function () {
+        syncPropsGroupsCollapsedFromState();
+        return !!canvas().propsGroupsCollapsed;
       },
       destroy: function () {
         _shapeBoxV2Active = false;

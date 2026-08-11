@@ -693,6 +693,12 @@ var QuotationExperienciaBridge = (function () {
       togglePropsGroup: function (groupId) {
         return handle.togglePropsGroup ? handle.togglePropsGroup(groupId) : false;
       },
+      toggleAllPropsGroups: function () {
+        return handle.toggleAllPropsGroups ? handle.toggleAllPropsGroups() : false;
+      },
+      getPropsGroupsCollapsed: function () {
+        return handle.getPropsGroupsCollapsed ? handle.getPropsGroupsCollapsed() : false;
+      },
       setOverlaySnapEnabled: function (on) {
         if (handle.setOverlaySnapEnabled) handle.setOverlaySnapEnabled(on);
       },

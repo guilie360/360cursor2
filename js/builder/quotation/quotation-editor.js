@@ -5607,15 +5607,74 @@ var QuotationEditor = (function () {
       '</div>';
   }
 
+  function propsFoldAllCollapsed() {
+    if (expOverlay && expOverlay.getPropsGroupsCollapsed) {
+      return !!expOverlay.getPropsGroupsCollapsed();
+    }
+    return false;
+  }
+
+  function syncPropsFoldAllButton(scope) {
+    if (!scope) scope = document.getElementById('quotationRightBody');
+    if (!scope) return;
+    var btn = scope.querySelector('[data-qe-props-toggle-all-groups]');
+    if (!btn) return;
+    var collapsed = propsFoldAllCollapsed();
+    var label = collapsed ? 'Desplegar todos los grupos' : 'Contraer todos los grupos';
+    btn.setAttribute('data-collapsed', collapsed ? '1' : '0');
+    btn.setAttribute('title', label);
+    btn.setAttribute('aria-label', label);
+  }
+
+  function toggleAllPropsInspectorGroups(ev) {
+    if (ev && ev.preventDefault) {
+      ev.preventDefault();
+      if (ev.stopPropagation) ev.stopPropagation();
+    }
+    if (!expOverlay || !expOverlay.toggleAllPropsGroups) return false;
+    var ok = expOverlay.toggleAllPropsGroups();
+    syncPropsFoldAllButton();
+    return ok;
+  }
+
+  function bindPropsPanelFold(scope) {
+    if (!scope) scope = document.getElementById('quotationRightBody');
+    if (!scope) return;
+    var foldAll = scope.querySelector('[data-qe-props-toggle-all-groups]');
+    if (foldAll) {
+      foldAll.addEventListener('click', function (e) {
+        toggleAllPropsInspectorGroups(e);
+      });
+    }
+    syncPropsFoldAllButton(scope);
+    if (!window.__QE_PROPS_FOLD_SYNC__) {
+      window.__QE_PROPS_FOLD_SYNC__ = true;
+      window.addEventListener('boxies:props-fold-sync', function () {
+        syncPropsFoldAllButton();
+      });
+    }
+  }
+
   /** Right rail: Elementos (top) + Propiedades host (bottom). */
   function rightPanelHtml() {
+    var propsCollapsed = propsFoldAllCollapsed();
+    var propsFoldLabel = propsCollapsed
+      ? 'Desplegar todos los grupos'
+      : 'Contraer todos los grupos';
     return '' +
       '<div class="qe-props-panel" data-qe-props-panel aria-label="Elementos y propiedades">' +
         '<section class="qe-props-panel__layers qe-props-panel__elements">' +
           elementsOutlinerShellHtml() +
         '</section>' +
         '<section class="qe-props-panel__props" aria-label="Propiedades">' +
-          '<div class="qe-props-panel__head">Propiedades</div>' +
+          '<div class="qe-props-panel__head">' +
+            '<span class="qe-props-panel__head-label">Propiedades</span>' +
+            '<button type="button" class="qe-props-panel__fold-all" data-qe-props-toggle-all-groups' +
+              ' data-collapsed="' + (propsCollapsed ? '1' : '0') + '"' +
+              ' title="' + propsFoldLabel + '" aria-label="' + propsFoldLabel + '">' +
+              libraryIcon('fold') +
+            '</button>' +
+          '</div>' +
           '<div class="qe-props-panel__body">' +
             '<div class="qe-insp__exp-host" data-exp-inspector-body>' +
               '<p class="qe-props-panel__empty">Selecciona un elemento</p>' +
@@ -5628,7 +5687,6 @@ var QuotationEditor = (function () {
   /** Repaint Elementos panel (same role as rerender() for the scenes strip). */
   function refreshOutlinerPanel() {
     syncRightPanel();
-    bindOutlinerGroups(document.getElementById('quotationRightBody'));
   }
 
   function resolveExperienciaInspectorHost() {
@@ -5661,6 +5719,8 @@ var QuotationEditor = (function () {
       QuotationBuilderView.setPropsPanelVisible(true);
     }
     bindLayersPanel();
+    bindOutlinerGroups(body);
+    bindPropsPanelFold(body);
     attachExperienciaInspectorHost();
   }
 
@@ -12357,7 +12417,6 @@ var QuotationEditor = (function () {
       if (scenesNext) scenesNext.addEventListener('click', function () { scrollScenes(1); });
       bindSceneContextMenus(editor);
       bindSceneGroups(editor);
-      bindOutlinerGroups(document.getElementById('quotationRightBody'));
       bindSceneNameEditing(editor);
       bindSceneDragReorder(editor);
       bindFolderMenus();
