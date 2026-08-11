@@ -1536,6 +1536,31 @@ var ExperienciaEngine = (function () {
     return !!(ix && String(ix.type || '').toUpperCase() === 'BUTTON');
   }
 
+  /**
+   * Legacy quotation buttons used action + targetSceneId; inspector/runtime v2 use
+   * buttonType + buttonConfig. Upgrade in-memory so the inspector matches publish.
+   */
+  function inferButtonKindFromLegacy(ix) {
+    if (!ix || !isSceneButtonInteraction(ix)) return false;
+    var prevType = ix.buttonType != null && ix.buttonType !== '' ? String(ix.buttonType) : '';
+    if (prevType && prevType !== 'unconfigured' && BUTTON_KIND_TYPES[prevType]) return false;
+    var action = String(ix.action || '').toLowerCase();
+    var target = ix.targetSceneId != null && ix.targetSceneId !== ''
+      ? String(ix.targetSceneId)
+      : '';
+    if (!target && ix.buttonConfig && ix.buttonConfig.targetSceneId) {
+      target = String(ix.buttonConfig.targetSceneId);
+    }
+    if (!target) return false;
+    if (action !== 'goto-scene' && action !== 'goto' && action !== '') return false;
+    ix.buttonType = 'changeScene';
+    if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+      ix.buttonConfig = {};
+    }
+    if (!ix.buttonConfig.targetSceneId) ix.buttonConfig.targetSceneId = target;
+    return ix.buttonType !== prevType || prevType === '' || prevType === 'unconfigured';
+  }
+
   function ensureButtonKindConfig(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
     if (ix.properties && typeof ix.properties === 'object' && !Array.isArray(ix.properties)) {
@@ -1547,6 +1572,7 @@ var ExperienciaEngine = (function () {
     if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
       ix.buttonConfig = {};
     }
+    inferButtonKindFromLegacy(ix);
     if (ix.buttonType == null || ix.buttonType === '') ix.buttonType = 'unconfigured';
     var bt = String(ix.buttonType || 'unconfigured');
     if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
@@ -3478,6 +3504,7 @@ var ExperienciaEngine = (function () {
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
     ensureFreeOverlayDefaults(ix);
+    if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
     var lw = layerW || 1000;
     var lh = layerH || 1000;
     var world = overlayWorldLayoutRaw(n, ix, lw, lh);
@@ -3550,6 +3577,9 @@ var ExperienciaEngine = (function () {
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
       buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
+      targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId)
+        ? String(ix.buttonConfig.targetSceneId)
+        : (ix.targetSceneId != null && ix.targetSceneId !== '' ? String(ix.targetSceneId) : null),
       _ix: ix
     };
   }
@@ -9151,6 +9181,7 @@ var ExperienciaEngine = (function () {
     BUTTON_KIND_TYPES: BUTTON_KIND_TYPES,
     BUTTON_KIND_ORDER: BUTTON_KIND_ORDER,
     ensureButtonKindConfig: ensureButtonKindConfig,
+    inferButtonKindFromLegacy: inferButtonKindFromLegacy,
     mergeButtonConfig: mergeButtonConfig,
     mergeButtonProperties: mergeButtonProperties,
     detectHubSelectorOptions: detectHubSelectorOptions,

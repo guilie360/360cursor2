@@ -2161,7 +2161,10 @@ var QuotationEditor = (function () {
   function ensureScenes() {
     if (!Array.isArray(state.scenes)) state.scenes = [];
     ensureHeroSceneContract();
-    state.scenes.forEach(function (sc) { ensureSceneOverlays(sc); });
+    state.scenes.forEach(function (sc) {
+      ensureSceneOverlays(sc);
+      healSceneInteractionButtonKinds(sc);
+    });
     ensureSceneGroups();
     if (!state.scenes.length) {
       state.activeSceneId = null;
@@ -3022,6 +3025,24 @@ var QuotationEditor = (function () {
   }
 
   /** Scene overlays — Showroom interactions[] SSOT (V7.2.13). */
+  function healSceneInteractionButtonKinds(scene) {
+    if (!scene || !Array.isArray(scene.interactions)) return false;
+    var changed = false;
+    scene.interactions.forEach(function (ix) {
+      if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+      var beforeType = ix.buttonType;
+      var beforeTarget = ix.buttonConfig && ix.buttonConfig.targetSceneId;
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonKindConfig) {
+        ExperienciaEngine.ensureButtonKindConfig(ix);
+      }
+      if (ix.buttonType !== beforeType ||
+          ((ix.buttonConfig && ix.buttonConfig.targetSceneId) || null) !== (beforeTarget || null)) {
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   function ensureSceneOverlays(scene) {
     if (!scene) return { interactions: [], buttons: [], hotspots: [], guides: [] };
     if (typeof QuotationExperienciaBridge !== 'undefined' &&
@@ -13216,6 +13237,7 @@ var QuotationEditor = (function () {
         ensureHeroSceneContract();
         return;
       }
+      var kindsHealed = false;
       state.scenes = hq.canvas.scenes.filter(function (sc) {
         return sc && sc.id !== BACKPACK_SCENE_ID;
       }).map(function (sc) {
@@ -13242,6 +13264,7 @@ var QuotationEditor = (function () {
           guideColorByViewport: sc.guideColorByViewport || null
         };
         ensureSceneOverlays(scene);
+        if (healSceneInteractionButtonKinds(scene)) kindsHealed = true;
         if ((scene.type === 'hero' || scene.templateId === 'hero-default') &&
             scene.coverModel &&
             typeof ProjectCover !== 'undefined' &&
@@ -13279,6 +13302,7 @@ var QuotationEditor = (function () {
         : [];
       state.sceneTrack = Array.isArray(hq.canvas.sceneTrack) ? hq.canvas.sceneTrack.slice() : [];
       ensureSceneGroups();
+      if (kindsHealed) markDirtyLocal();
       var bpSrc = (hq && hq.editorBackpack) ||
         (hq && hq.canvas && hq.canvas.editorBackpack) ||
         null;

@@ -225,6 +225,13 @@ var QuotationExperienciaBridge = (function () {
       scene.hotspots = [];
     }
 
+    scene.interactions.forEach(function (ix) {
+      if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonKindConfig) {
+        ExperienciaEngine.ensureButtonKindConfig(ix);
+      }
+    });
+
     return scene.interactions;
   }
 
