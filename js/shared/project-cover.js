@@ -604,10 +604,25 @@ var ProjectCover = (function () {
     return base;
   }
 
-  function coverModelIsMeaningful(cm, project) {
+  function coverMediaDistinctFromScene(cm, scene) {
+    if (!cm || typeof cm !== 'object') return { imageUrl: null, videoUrl: null };
+    var img = cm.imageUrl || null;
+    var vid = cm.videoUrl || null;
+    if (scene) {
+      var sceneUrl = scene.mediaUrl || scene.publicUrl || null;
+      if (sceneUrl) {
+        if (img === sceneUrl) img = null;
+        if (vid === sceneUrl) vid = null;
+      }
+    }
+    return { imageUrl: img, videoUrl: vid };
+  }
+
+  function coverModelIsMeaningful(cm, project, scene) {
     if (!cm || typeof cm !== 'object') return false;
     project = project || {};
-    if (cm.imageUrl || cm.videoUrl) return true;
+    var media = coverMediaDistinctFromScene(cm, scene);
+    if (media.imageUrl || media.videoUrl) return true;
     if (cm.logoUrl && cm.showLogo !== false) return true;
     if (String(cm.eslogan || '').trim()) return true;
     if (String(cm.eyebrow || '').trim() || String(cm.kicker || '').trim()) return true;
@@ -664,7 +679,7 @@ var ProjectCover = (function () {
           if (scenes[i] && scenes[i].coverModel) { scene = scenes[i]; break; }
         }
       }
-      if (scene && scene.coverModel && coverModelIsMeaningful(scene.coverModel, project)) {
+      if (scene && scene.coverModel && coverModelIsMeaningful(scene.coverModel, project, scene)) {
         return sanitizeModel(scene.coverModel);
       }
       /* Canvas SSOT — do not resurrect legacy heroContent template shell. */

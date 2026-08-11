@@ -261,7 +261,13 @@ var QuotationRuntime = (function () {
 
   function coverModelIsMeaningful(cm) {
     if (typeof ProjectCover !== 'undefined' && ProjectCover.coverModelIsMeaningful) {
-      return ProjectCover.coverModelIsMeaningful(cm, loaded && loaded.project);
+      var bundle = loaded || null;
+      var scene = null;
+      if (bundle && cm) {
+        var entry = entryScene(bundle);
+        if (entry && entry.coverModel === cm) scene = entry;
+      }
+      return ProjectCover.coverModelIsMeaningful(cm, loaded && loaded.project, scene);
     }
     return !!(cm && (cm.imageUrl || cm.videoUrl || String(cm.nombre || '').trim()));
   }

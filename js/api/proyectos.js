@@ -1035,6 +1035,12 @@ var ProyectosApi = (function () {
       merged.library = prev.library;
     }
     merged.heroContent = Object.assign({}, prev.heroContent || {}, payload.heroContent || {});
+    if (payload.clearLegacyCover) {
+      merged.heroContent = Object.assign({}, payload.heroContent || {});
+      merged.image_url = null;
+      merged.video_url = null;
+      delete merged.clearLegacyCover;
+    }
     merged.branding = Object.assign({}, prev.branding || {}, payload.branding || {});
     /* Null logo in a partial write must not erase a stored logo. */
     if (
