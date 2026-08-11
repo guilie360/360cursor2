@@ -117,30 +117,34 @@ var ButtonOverlayRenderer = (function () {
   }
 
   /**
-   * Fit the preset button bbox inside a fixed picker viewport without rescaling % twice.
-   * Layer keeps canvas % semantics; only the whole stage is uniformly scaled to fit.
+   * Scale boxW/boxH % so the preset bbox fits the picker tile layer (same aspect ratio).
    */
-  function pickerStageScale(vm, layerW, layerH, viewportW, viewportH) {
+  function pickerFitBoxPercents(vm, layerW, layerH) {
     var boxW = vm && vm.boxW != null ? Number(vm.boxW) : 14;
     var boxH = vm && vm.boxH != null ? Number(vm.boxH) : 4.5;
     var btnWPx = (boxW / 100) * layerW;
     var btnHPx = (boxH / 100) * layerH;
-    if (!btnWPx || !btnHPx) return 0.1;
-    var pad = 0.12;
-    var fitW = viewportW * (1 - pad * 2);
-    var fitH = viewportH * (1 - pad * 2);
-    return Math.min(fitW / btnWPx, fitH / btnHPx);
+    if (!btnWPx || !btnHPx) return { boxW: boxW, boxH: boxH };
+    var pad = 0.1;
+    var fitW = layerW * (1 - pad * 2);
+    var fitH = layerH * (1 - pad * 2);
+    var scale = Math.min(fitW / btnWPx, fitH / btnHPx);
+    return {
+      boxW: Math.min(100, Math.round(boxW * scale * 10) / 10),
+      boxH: Math.min(100, Math.round(boxH * scale * 10) / 10)
+    };
   }
 
+  /** Picker tile layer size — matches .qe-shape-picker__item (52×52). */
+  var PICKER_LAYER_SIZE = 52;
+
   /**
-   * Picker cell — shared renderer inside a fixed viewport; stage scale fits button bbox.
+   * Picker cell — shared renderer inside tile layer (no artificial stage / ancestor scale).
    */
   function renderPickerPreviewHtml(preset) {
     if (!preset || typeof ButtonPresets === 'undefined') return '';
-    var layerW = ButtonPresets.PREVIEW_LAYER_W;
-    var layerH = ButtonPresets.PREVIEW_LAYER_H;
-    var viewportW = 52;
-    var viewportH = 52;
+    var layerW = PICKER_LAYER_SIZE;
+    var layerH = PICKER_LAYER_SIZE;
     var ix = ButtonPresets.buildPreviewIx(preset);
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonVisualDefaults) {
       ExperienciaEngine.ensureButtonVisualDefaults(ix);
@@ -157,16 +161,10 @@ var ButtonOverlayRenderer = (function () {
       );
     }
     if (!vm) return '';
-    var scale = pickerStageScale(vm, layerW, layerH, viewportW, viewportH);
-    var btnHtml = renderButtonHtml(vm, { stage: false, x: 50, y: 50 });
-    return '' +
-      '<span class="qe-button-picker__viewport" aria-hidden="true">' +
-        '<span class="qe-button-picker__stage"' +
-          ' style="width:' + layerW + 'px;height:' + layerH + 'px;' +
-          'transform:translate(-50%,-50%) scale(' + scale + ');">' +
-          btnHtml +
-        '</span>' +
-      '</span>';
+    var fit = pickerFitBoxPercents(vm, layerW, layerH);
+    var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
+    var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
+    return '<div class="qe-button-picker__layer" aria-hidden="true">' + btnHtml + '</div>';
   }
 
   return {

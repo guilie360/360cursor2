@@ -3998,11 +3998,12 @@ var QuotationEditor = (function () {
         ? ButtonOverlayRenderer.renderPickerPreviewHtml(preset)
         : '';
       return '' +
-        '<button type="button" class="qe-shape-picker__item qe-button-picker__item"' +
+        '<div class="qe-shape-picker__item qe-button-picker__item"' +
+          ' role="button" tabindex="0"' +
           ' data-qe-pick-button="' + escapeHtml(preset.id) + '"' +
           ' aria-label="' + escapeHtml(preset.label || preset.id) + '">' +
           preview +
-        '</button>';
+        '</div>';
     }).join('');
     return '' +
       '<div class="qe-button-picker qe-shape-picker" data-qe-button-picker role="dialog" aria-label="Botones">' +
@@ -12310,11 +12311,18 @@ var QuotationEditor = (function () {
           pickShape(btn.getAttribute('data-qe-pick-shape'));
         });
       });
-      qAll('[data-qe-pick-button]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
+      qAll('[data-qe-pick-button]').forEach(function (tile) {
+        tile.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          pickButtonPreset(btn.getAttribute('data-qe-pick-button'));
+          pickButtonPreset(tile.getAttribute('data-qe-pick-button'));
+        });
+        tile.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            pickButtonPreset(tile.getAttribute('data-qe-pick-button'));
+          }
         });
       });
       qAll('[data-qe-pick-resource]').forEach(function (btn) {

@@ -4481,24 +4481,18 @@ body.is-qe-lib-pointer-dragging * {
   padding: 0;
   overflow: hidden;
   position: relative;
+  cursor: pointer;
 }
 
-.qe-button-picker__viewport {
-  position: absolute;
-  inset: 0;
+.qe-button-picker__layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
 }
 
-.qe-button-picker__stage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-origin: center center;
-  pointer-events: none;
-}
-
-.qe-button-picker__stage .builder-exp-ui-btn {
+.qe-button-picker__layer .builder-exp-ui-btn {
   pointer-events: none;
   cursor: default;
 }
