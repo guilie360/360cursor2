@@ -4479,23 +4479,23 @@ body.is-qe-lib-pointer-dragging * {
 
 .qe-button-picker__item {
   padding: 0;
+  overflow: hidden;
 }
 
-.qe-button-picker__preview {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 1px solid #d1d1d1;
-  background: #000;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.qe-button-picker__stage {
+  position: relative;
+  display: block;
+  width: 360px;
+  height: 203px;
+  flex-shrink: 0;
+  transform: scale(0.1);
+  transform-origin: center center;
   pointer-events: none;
+}
+
+.qe-button-picker__stage .builder-exp-ui-btn {
+  pointer-events: none;
+  cursor: default;
 }
 
 .qe-canvas__mock {

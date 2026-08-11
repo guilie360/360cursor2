@@ -3989,14 +3989,27 @@ var QuotationEditor = (function () {
 
   function buttonPickerHtml() {
     if (!state.buttonPickerOpen) return '';
+    var presets = (typeof ButtonPresets !== 'undefined' && ButtonPresets.list)
+      ? ButtonPresets.list()
+      : [];
+    var grid = presets.map(function (preset) {
+      var preview = (typeof ButtonOverlayRenderer !== 'undefined' &&
+          ButtonOverlayRenderer.renderPickerPreviewHtml)
+        ? ButtonOverlayRenderer.renderPickerPreviewHtml(preset)
+        : '';
+      return '' +
+        '<button type="button" class="qe-shape-picker__item qe-button-picker__item"' +
+          ' data-qe-pick-button="' + escapeHtml(preset.id) + '"' +
+          ' aria-label="' + escapeHtml(preset.label || preset.id) + '">' +
+          preview +
+        '</button>';
+    }).join('');
     return '' +
       '<div class="qe-button-picker qe-shape-picker" data-qe-button-picker role="dialog" aria-label="Botones">' +
         '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
         '<div class="qe-shape-picker__panel">' +
           '<div class="qe-shape-picker__grid" data-qe-button-picker-grid>' +
-            '<button type="button" class="qe-shape-picker__item qe-button-picker__item" data-qe-pick-button="generic" aria-label="Botón genérico">' +
-              '<span class="qe-button-picker__preview" aria-hidden="true">Botón</span>' +
-            '</button>' +
+            grid +
           '</div>' +
         '</div>' +
       '</div>';
@@ -9957,9 +9970,9 @@ var QuotationEditor = (function () {
     });
   }
 
-  function pickGenericButton() {
+  function pickButtonPreset(presetId) {
     closeButtonPicker();
-    addButton();
+    addButton(presetId);
   }
 
   function openButtonPicker() {
@@ -10734,7 +10747,7 @@ var QuotationEditor = (function () {
       pendingExpAction = null;
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        expOverlay.addButton();
+        expOverlay.addButton(act.presetId || null);
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
         if (expOverlay.addText) expOverlay.addText();
@@ -12044,7 +12057,7 @@ var QuotationEditor = (function () {
     rerender();
   }
 
-  function addButton() {
+  function addButton(presetId) {
     if (!activeScene()) return;
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -12055,11 +12068,11 @@ var QuotationEditor = (function () {
       refreshInspectorOnly();
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      expOverlay.addButton();
+      expOverlay.addButton(presetId);
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       return;
     }
-    pendingExpAction = { type: 'addButton' };
+    pendingExpAction = { type: 'addButton', presetId: presetId || null };
     rerender();
   }
 
@@ -12301,7 +12314,7 @@ var QuotationEditor = (function () {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
-          pickGenericButton();
+          pickButtonPreset(btn.getAttribute('data-qe-pick-button'));
         });
       });
       qAll('[data-qe-pick-resource]').forEach(function (btn) {

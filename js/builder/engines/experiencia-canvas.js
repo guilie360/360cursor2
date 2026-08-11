@@ -8281,6 +8281,13 @@ var ExperienciaCanvas = (function () {
             }) +
             '</button>';
         }
+        if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
+          return ButtonOverlayRenderer.renderButtonHtml(b, {
+            selSet: selSet,
+            editMemberSet: editMemberSet,
+            extraClass: overlayPendingMoveClass('BUTTON', b.id)
+          });
+        }
         var glyph = buttonIconGlyph(b.icon);
         var text = b.label != null ? String(b.label) : '';
         var label;
@@ -16677,12 +16684,12 @@ var ExperienciaCanvas = (function () {
       isOverlaySnapEnabled: function () {
         return !!overlaySnapEnabled;
       },
-      addButton: function () {
+      addButton: function (presetId) {
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
-        var btn = ExperienciaEngine.addSceneButton(state, sceneId);
+        var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];

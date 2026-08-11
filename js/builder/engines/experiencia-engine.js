@@ -3726,7 +3726,7 @@ var ExperienciaEngine = (function () {
     return null;
   }
 
-  function addSceneButton(state, nodeId) {
+  function addSceneButton(state, nodeId, presetId) {
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var menuItem = findAddElementItem('el-button') || {
@@ -3739,20 +3739,28 @@ var ExperienciaEngine = (function () {
     ix.x = 50;
     ix.y = 50;
     ix.positionInitialized = true;
-    ix.style = 'icon';
     ix.rotation = 0;
     ix.positionMode = 'free';
     ix.marginX = 32;
     ix.marginY = 32;
     ix.buttonType = 'unconfigured';
     ix.buttonConfig = {};
-    ix.boxW = 5.5;
-    ix.boxH = 5.5;
-    ix.bgColor = '#000000';
-    ix.textColor = '#ffffff';
-    ix.borderColor = '#d1d1d1';
-    ix.borderWidth = 1;
-    ix.borderRadius = 999;
+    var preset = (typeof ButtonPresets !== 'undefined' && presetId)
+      ? ButtonPresets.get(presetId)
+      : null;
+    if (preset) {
+      ButtonPresets.applyVisuals(ix, preset);
+    } else {
+      /* Legacy default when no preset id (existing callers / old flows). */
+      ix.style = 'icon';
+      ix.boxW = 5.5;
+      ix.boxH = 5.5;
+      ix.bgColor = '#000000';
+      ix.textColor = '#ffffff';
+      ix.borderColor = '#d1d1d1';
+      ix.borderWidth = 1;
+      ix.borderRadius = 999;
+    }
     if (ix.color != null) delete ix.color;
     ensureButtonVisualDefaults(ix);
     return buttonViewModel(state, n, ix);
