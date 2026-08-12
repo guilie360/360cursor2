@@ -4445,7 +4445,7 @@ var ExperienciaCanvas = (function () {
           'post-persist/onChange');
       }
       if (ExperienciaEngine.markExperienciaDirty) {
-        ExperienciaEngine.markExperienciaDirty(state);
+        ExperienciaEngine.markExperienciaDirty(state, overlayMode ? { skipNormalize: true } : null);
       }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
@@ -6838,7 +6838,7 @@ var ExperienciaCanvas = (function () {
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) return false;
       var layerW = buttonsLayer.clientWidth || 1000;
       var layerH = buttonsLayer.clientHeight || 1000;
-      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
+      var buttons = ExperienciaEngine.listSceneButtons(null, n, layerW, layerH) || [];
       var moved = false;
       buttons.forEach(function (b) {
         if (!b || !b.id) return;
@@ -8164,7 +8164,7 @@ var ExperienciaCanvas = (function () {
 
       var layerW = overlayLayerSize().w;
       var layerH = overlayLayerSize().h;
-      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
+      var buttons = ExperienciaEngine.listSceneButtons(null, n, layerW, layerH) || [];
       var selIds = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
         : [];
@@ -8279,7 +8279,15 @@ var ExperienciaCanvas = (function () {
             '</button>';
         }
         if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
-          return ButtonOverlayRenderer.renderButtonHtml(b, {
+          var paintIx = (b._ix && ExperienciaEngine.getInteraction)
+            ? b._ix
+            : (ExperienciaEngine.getInteraction
+              ? ExperienciaEngine.getInteraction(n, b.id)
+              : b._ix);
+          var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
+            ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
+            : b;
+          return ButtonOverlayRenderer.renderButtonHtml(paintVm, {
             selSet: selSet,
             editMemberSet: editMemberSet,
             extraClass: overlayPendingMoveClass('BUTTON', b.id)

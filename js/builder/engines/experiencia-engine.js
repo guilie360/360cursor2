@@ -29,26 +29,20 @@ var ExperienciaEngine = (function () {
     return dest;
   }
 
-  function snapshotButtonPresetVisuals(ix) {
-    if (!ix || !ix.visualPresetId) return null;
-    var snap = { visualPresetId: String(ix.visualPresetId) };
-    buttonPresetVisualKeys().forEach(function (key) {
-      if (key === 'visualPresetId') return;
-      if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
-      snap[key] = ix[key];
-    });
-    return snap;
-  }
-
-  function restoreButtonPresetVisuals(ix, snap) {
-    if (!ix || !snap) return ix;
-    copyButtonPresetVisualFields(snap, ix);
-    if (snap.visualPresetId) ix.visualPresetId = String(snap.visualPresetId);
-    return ix;
-  }
-
   function hasButtonVisualPreset(ix) {
     return !!(ix && ix.visualPresetId);
+  }
+
+  /** BUTTON with preset catalog or explicit local look — skip legacy chrome defaults. */
+  function hasButtonLocalVisual(ix) {
+    if (!ix || !isSceneButtonInteraction(ix)) return false;
+    if (hasButtonVisualPreset(ix)) return true;
+    if (ix.bgColor != null && ix.bgColor !== '') return true;
+    if (ix.boxW != null && !isNaN(Number(ix.boxW))) return true;
+    if (ix.boxH != null && !isNaN(Number(ix.boxH))) return true;
+    if (ix.textColor != null && ix.textColor !== '') return true;
+    if (ix.borderRadius != null && !isNaN(Number(ix.borderRadius))) return true;
+    return false;
   }
 
   /* Template layout — horizontal column gap + vertical free space between siblings */
@@ -1661,7 +1655,7 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonVisualPreset(ix)) return ix;
+    if (hasButtonLocalVisual(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
@@ -3365,7 +3359,7 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonVisualDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
-    if (hasButtonVisualPreset(ix)) {
+    if (hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
       if (ix.color != null) delete ix.color;
       if (ix.config && ix.config.color != null) delete ix.config.color;
@@ -3591,7 +3585,7 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
-    if (isSceneButtonInteraction(ix) && hasButtonVisualPreset(ix)) {
+    if (isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
     } else {
       ensureFreeOverlayDefaults(ix);
@@ -3606,7 +3600,7 @@ var ExperienciaEngine = (function () {
     var rot = world ? world.rotation : (ix.rotation != null ? Number(ix.rotation) : 0);
     var effectiveOn = overlayEffectiveVisible(n, ix);
     var effectiveLocked = overlayEffectiveLocked(n, ix);
-    var isPresetBtn = isSceneButtonInteraction(ix) && hasButtonVisualPreset(ix);
+    var isLocalVisualBtn = isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix);
     var vm = {
       id: ix.id,
       portId: ix.portId || ix.id,
@@ -3676,34 +3670,24 @@ var ExperienciaEngine = (function () {
         : (ix.targetSceneId != null && ix.targetSceneId !== '' ? String(ix.targetSceneId) : null),
       _ix: ix
     };
-    if (isPresetBtn) {
+    if (isLocalVisualBtn) {
       copyButtonPresetVisualFields(ix, vm);
-      vm.visualPresetId = String(ix.visualPresetId);
+      buttonPresetVisualKeys().forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
+        if (ix[key] === undefined) return;
+        vm[key] = ix[key];
+      });
       if (ix.style != null) vm.style = ix.style;
-      if (ix.icon != null || ix.icon === null) vm.icon = ix.icon;
+      if (Object.prototype.hasOwnProperty.call(ix, 'icon')) vm.icon = ix.icon;
       if (ix.boxW != null) vm.boxW = Number(ix.boxW);
       if (ix.boxH != null) vm.boxH = Number(ix.boxH);
-      if (ix.bgColor != null) vm.bgColor = ix.bgColor;
-      if (ix.textColor != null) vm.textColor = ix.textColor;
-      if (ix.borderColor != null) vm.borderColor = ix.borderColor;
-      if (ix.borderWidth != null) vm.borderWidth = Number(ix.borderWidth);
-      if (ix.borderRadius != null) vm.borderRadius = Number(ix.borderRadius);
-      if (ix.bgOpacity != null) vm.bgOpacity = Number(ix.bgOpacity);
-      if (ix.opacity != null) vm.opacity = Number(ix.opacity);
-      if (ix.hoverColor != null) vm.hoverColor = ix.hoverColor;
-      if (ix.hoverTextColor != null) vm.hoverTextColor = ix.hoverTextColor;
-      if (ix.hoverTransition != null) vm.hoverTransition = Number(ix.hoverTransition);
-      if (ix.pressedColor != null) vm.pressedColor = ix.pressedColor;
-      if (ix.pressedTextColor != null) vm.pressedTextColor = ix.pressedTextColor;
-      if (ix.pressedScale != null) vm.pressedScale = Number(ix.pressedScale);
-      if (ix.hoverEnabled != null) vm.hoverEnabled = !!ix.hoverEnabled;
     }
     return vm;
   }
 
   function buttonHalfSizePx(ix, imageW, imageH) {
     var t = ix ? String(ix.type || '').toUpperCase() : '';
-    if (t === 'BUTTON' && !hasButtonVisualPreset(ix)) ensureButtonVisualDefaults(ix);
+    if (t === 'BUTTON' && !hasButtonLocalVisual(ix)) ensureButtonVisualDefaults(ix);
     else if (t === 'TEXT' || isSceneShapeType(t)) {
       ensureFreeOverlayDefaults(ix);
     }
@@ -3733,7 +3717,7 @@ var ExperienciaEngine = (function () {
    */
   function resolveButtonLayout(ix, imageW, imageH) {
     var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
-    if (tLayout === 'BUTTON' && !hasButtonVisualPreset(ix)) ensureButtonVisualDefaults(ix);
+    if (tLayout === 'BUTTON' && !hasButtonLocalVisual(ix)) ensureButtonVisualDefaults(ix);
     else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
       ensureFreeOverlayDefaults(ix);
     }
@@ -3782,7 +3766,7 @@ var ExperienciaEngine = (function () {
     return clampInside(x, y);
   }
 
-  function listSceneButtons(state, n) {
+  function listSceneButtons(state, n, layerW, layerH) {
     if (arguments.length === 1) {
       n = state;
       state = null;
@@ -3790,7 +3774,7 @@ var ExperienciaEngine = (function () {
     if (!n) return [];
     if (state) migrateLegacySceneButtons(state, n);
     return listSceneButtonInteractions(n).map(function (ix) {
-      return buttonViewModel(state, n, ix);
+      return buttonViewModel(state, n, ix, layerW, layerH);
     });
   }
 
@@ -5810,6 +5794,7 @@ var ExperienciaEngine = (function () {
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
       if (ix.color != null) delete ix.color;
       if (cfg.color != null) delete cfg.color;
+      if (partial) copyButtonPresetVisualFields(partial, ix);
     }
     return ix;
   }
@@ -6060,9 +6045,7 @@ var ExperienciaEngine = (function () {
     }
 
     n.config.interactions = n.config.interactions.map(function (ix) {
-      var presetSnap = snapshotButtonPresetVisuals(ix);
       var m = makeInteraction(ix);
-      if (presetSnap) restoreButtonPresetVisuals(m, presetSnap);
       /* Normalize legacy hotspots group name */
       if (m.group === 'hotspots') m.group = 'content';
       return m;
@@ -8228,8 +8211,23 @@ var ExperienciaEngine = (function () {
     return exp;
   }
 
-  function markExperienciaDirty(state) {
-    var exp = ensureState(state);
+  function markExperienciaDirty(state, opts) {
+    opts = opts || {};
+    var exp;
+    if (opts.skipNormalize) {
+      if (!state.experiencia || typeof state.experiencia !== 'object') {
+        state.experiencia = emptyState();
+      }
+      exp = state.experiencia;
+      if (!Array.isArray(exp.nodes)) exp.nodes = [];
+      if (!Array.isArray(exp.edges)) exp.edges = [];
+      if (!exp.canvas || typeof exp.canvas !== 'object') {
+        exp.canvas = emptyState().canvas;
+      }
+      ensureProjectAssets(state);
+    } else {
+      exp = ensureState(state);
+    }
     exp.dirty = true;
     exp._draftSaved = false;
     if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.captureDeferred) {

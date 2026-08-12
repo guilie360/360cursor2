@@ -450,7 +450,6 @@ var QuotationExperienciaBridge = (function () {
     if (Object.prototype.hasOwnProperty.call(srcIx, 'enabled')) {
       destIx.enabled = !!srcIx.enabled;
     }
-    mergeButtonVisualPresetFields(srcIx, destIx);
   }
 
   function pullToScenes(shimState, scenes) {

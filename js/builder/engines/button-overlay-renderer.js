@@ -29,34 +29,11 @@ var ButtonOverlayRenderer = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
-  function presetVisualKeys() {
-    if (typeof ButtonPresets !== 'undefined' && ButtonPresets.VISUAL_KEYS) {
-      return ButtonPresets.VISUAL_KEYS;
-    }
-    return [
-      'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor', 'borderColor',
-      'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
-      'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
-      'pressedColor', 'pressedTextColor', 'pressedScale'
-    ];
-  }
-
-  /** Catalog + VM merge for preset buttons — same authoritative visuals as picker. */
-  function resolvePresetRenderVm(b) {
-    if (!b || !b.visualPresetId ||
-        typeof ButtonPresets === 'undefined' || !ButtonPresets.get) {
-      return b;
-    }
-    var cat = ButtonPresets.get(b.visualPresetId);
-    if (!cat) return b;
-    var v = Object.assign({}, b);
-    presetVisualKeys().forEach(function (key) {
-      if (cat[key] !== undefined) v[key] = cat[key];
-      if (Object.prototype.hasOwnProperty.call(b, key) && b[key] !== undefined) {
-        v[key] = b[key];
-      }
-    });
-    return v;
+  function hasLocalLook(vm) {
+    return !!(vm && (
+      vm.bgColor || vm.textColor || vm.borderColor ||
+      vm.borderWidth != null || vm.borderRadius != null
+    ));
   }
 
   /**
@@ -84,24 +61,23 @@ var ButtonOverlayRenderer = (function () {
     var styleBits = 'left:' + paintX + '%;top:' + paintY + '%;' +
       '--btn-rot:' + rot + 'deg;';
 
-    var v = resolvePresetRenderVm(b);
-    var glyph = buttonIconGlyph(v.icon);
+    var glyph = buttonIconGlyph(b.icon);
     var text = b.label != null ? String(b.label) : '';
     var label;
     if (glyph && text) label = glyph + ' ' + text;
     else label = glyph || text || 'Botón';
 
-    var btnOp = v.opacity != null ? Number(v.opacity) : 1;
-    var hoverOn = v.hoverEnabled !== false;
-    var hoverMs = v.hoverTransition != null ? Number(v.hoverTransition) : 200;
-    var hoverCol = cssToken(v.hoverColor || '#6fbf86') || '#6fbf86';
-    var hoverTextCol = cssToken(v.hoverTextColor || '#ffffff') || '#ffffff';
-    var pressedCol = cssToken(v.pressedColor || '#5aaa74') || '#5aaa74';
-    var pressedTextCol = cssToken(v.pressedTextColor || '#ffffff') || '#ffffff';
-    var pressedScale = v.pressedScale != null ? Number(v.pressedScale) : 0.96;
-    var boxW = v.boxW != null ? Number(v.boxW) : 14;
-    var boxH = v.boxH != null ? Number(v.boxH) : 4.5;
-    var bgOp = v.bgOpacity != null ? Number(v.bgOpacity) : 1;
+    var btnOp = b.opacity != null ? Number(b.opacity) : 1;
+    var hoverOn = b.hoverEnabled !== false;
+    var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
+    var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
+    var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
+    var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
+    var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
+    var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
+    var boxW = b.boxW != null ? Number(b.boxW) : 14;
+    var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
+    var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
 
     styleBits +=
       'width:' + boxW + '%;height:' + boxH + '%;' +
@@ -112,17 +88,17 @@ var ButtonOverlayRenderer = (function () {
       '--btn-pressed-color:' + pressedCol + ';' +
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';';
-    if (v.bgColor) {
-      styleBits += '--btn-local-bg:' + cssToken(v.bgColor) + ';' +
+    if (b.bgColor) {
+      styleBits += '--btn-local-bg:' + cssToken(b.bgColor) + ';' +
         '--btn-local-bg-a:' + bgOp + ';';
     }
-    if (v.textColor) styleBits += '--btn-local-text:' + cssToken(v.textColor) + ';';
-    if (v.borderColor) styleBits += '--btn-local-border:' + cssToken(v.borderColor) + ';';
-    if (v.borderWidth != null) styleBits += '--btn-local-bw:' + Number(v.borderWidth) + 'px;';
-    if (v.borderRadius != null) styleBits += '--btn-local-radius:' + Number(v.borderRadius) + 'px;';
+    if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
+    if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
+    if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
+    if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
 
     var id = String(b.id || 'btn');
-    var className = buttonPreviewClass(v) +
+    var className = buttonPreviewClass(b) +
       ' is-box' +
       (selSet[id] ? ' is-selected' : '') +
       (editMemberSet[id] ? ' is-group-edit-member' : '') +
@@ -130,9 +106,7 @@ var ButtonOverlayRenderer = (function () {
       (b.locked ? ' is-locked' : '') +
       (extraClass ? ' ' + extraClass : '') +
       (hoverOn ? ' is-hover-on' : ' is-hover-off') +
-      (v.visualPresetId || v.bgColor || v.textColor || v.borderColor ||
-        v.borderWidth != null || v.borderRadius != null
-        ? ' has-local-look' : '');
+      (hasLocalLook(b) ? ' has-local-look' : '');
 
     var attrs = stageMode
       ? (' data-exp-stage-btn="' + esc(id) + '"' +
@@ -146,6 +120,21 @@ var ButtonOverlayRenderer = (function () {
       ' style="' + styleBits + '">' +
       esc(label) +
       '</button>';
+  }
+
+  /**
+   * Shared VM + HTML path for canvas stage and picker (same interaction → same DOM).
+   */
+  function renderButtonFromIx(ix, n, state, options) {
+    if (!ix || typeof ExperienciaEngine === 'undefined' || !ExperienciaEngine.buttonViewModel) {
+      return '';
+    }
+    options = options || {};
+    var layerW = options.layerW != null ? Number(options.layerW) : 1000;
+    var layerH = options.layerH != null ? Number(options.layerH) : 1000;
+    var vm = ExperienciaEngine.buttonViewModel(state || null, n, ix, layerW, layerH);
+    if (!vm) return '';
+    return renderButtonHtml(vm, options);
   }
 
   /**
@@ -171,23 +160,17 @@ var ButtonOverlayRenderer = (function () {
   var PICKER_LAYER_SIZE = 52;
 
   /**
-   * Picker cell — shared renderer inside tile layer (no artificial stage / ancestor scale).
+   * Picker cell — same renderer as canvas; only box % scaled to fit the 52×52 tile.
    */
   function renderPickerPreviewHtml(preset) {
     if (!preset || typeof ButtonPresets === 'undefined') return '';
     var layerW = PICKER_LAYER_SIZE;
     var layerH = PICKER_LAYER_SIZE;
     var ix = ButtonPresets.buildPreviewIx(preset);
-    var fakeNode = { id: 'preview-scene', config: { interactions: [] } };
+    var fakeNode = { id: 'preview-scene', config: { interactions: [ix] } };
     var vm = null;
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buttonViewModel) {
-      vm = ExperienciaEngine.buttonViewModel(
-        {},
-        fakeNode,
-        ix,
-        layerW,
-        layerH
-      );
+      vm = ExperienciaEngine.buttonViewModel(null, fakeNode, ix, layerW, layerH);
     }
     if (!vm) return '';
     var fit = pickerFitBoxPercents(vm, layerW, layerH);
@@ -198,6 +181,7 @@ var ButtonOverlayRenderer = (function () {
 
   return {
     renderButtonHtml: renderButtonHtml,
+    renderButtonFromIx: renderButtonFromIx,
     renderPickerPreviewHtml: renderPickerPreviewHtml,
     buttonPreviewClass: buttonPreviewClass,
     buttonIconGlyph: buttonIconGlyph
