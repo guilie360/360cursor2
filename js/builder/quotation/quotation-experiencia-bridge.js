@@ -27,6 +27,46 @@ var QuotationExperienciaBridge = (function () {
     try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
   }
 
+  function findTraceInteraction(list) {
+    if (!Array.isArray(list)) return null;
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTraceFind) { traceId = null; }
+    if (!traceId) return null;
+    for (var ti = 0; ti < list.length; ti++) {
+      var candidate = list[ti];
+      if (candidate && String(candidate.id) === String(traceId)) return candidate;
+    }
+    return null;
+  }
+
+  function logPresetBridgeTrace(step, interaction) {
+    if (!interaction || String(interaction.type || '').toUpperCase() !== 'BUTTON') return;
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
+    if (!traceId || String(interaction.id) !== String(traceId)) return;
+    var seen = null;
+    try {
+      if (!window.__QE_PRESET_TRACE_SEEN__) window.__QE_PRESET_TRACE_SEEN__ = new Set();
+      seen = window.__QE_PRESET_TRACE_SEEN__;
+    } catch (eSeen) { return; }
+    if (seen.has(step)) return;
+    seen.add(step);
+    console.log('[PRESET BRIDGE TRACE]', {
+      step: step,
+      buttonId: interaction.id,
+      visualPresetId: interaction.visualPresetId || null,
+      style: interaction.style,
+      boxW: interaction.boxW,
+      boxH: interaction.boxH,
+      bgColor: interaction.bgColor,
+      borderRadius: interaction.borderRadius
+    });
+  }
+
+  function logPresetBridgeTraceFromList(step, list) {
+    logPresetBridgeTrace(step, findTraceInteraction(list));
+  }
+
   function logPresetBridge(step, interaction) {
     try {
       if (typeof window.__QE_LOG_PRESET_TRACE__ === 'function') {
@@ -177,6 +217,7 @@ var QuotationExperienciaBridge = (function () {
   function ensureSceneInteractions(scene) {
     if (!scene) return [];
     if (!Array.isArray(scene.interactions)) scene.interactions = [];
+    logPresetBridgeTraceFromList('ensureSceneInteractions.before', scene.interactions);
 
     if (Array.isArray(scene.buttons) && scene.buttons.length) {
       scene.buttons.forEach(function (b) {
@@ -240,6 +281,7 @@ var QuotationExperienciaBridge = (function () {
       }
     });
 
+    logPresetBridgeTraceFromList('ensureSceneInteractions.after', scene.interactions);
     return scene.interactions;
   }
 
@@ -377,16 +419,19 @@ var QuotationExperienciaBridge = (function () {
       if (!sc) return;
       if (!n.config) n.config = {};
       var srcList = sc.interactions || [];
+      logPresetBridgeTraceFromList('pushScenesToShim.beforeClone', srcList);
       var srcById = {};
       srcList.forEach(function (ix) {
         if (ix && ix.id) srcById[String(ix.id)] = ix;
       });
       var cloned = cloneJson(srcList);
+      logPresetBridgeTraceFromList('pushScenesToShim.afterClone', cloned);
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
       });
       n.config.interactions = cloned;
+      logPresetBridgeTraceFromList('pushScenesToShim.afterAssign', n.config.interactions);
     });
     if (tid) {
       lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
@@ -446,11 +491,15 @@ var QuotationExperienciaBridge = (function () {
       (sc.interactions || []).forEach(function (ix) {
         if (ix && ix.id) prevById[String(ix.id)] = ix;
       });
-      sc.interactions = cloneJson((n.config && n.config.interactions) || []);
+      var shimList = (n.config && n.config.interactions) || [];
+      logPresetBridgeTraceFromList('pullToScenes.beforeClone', shimList);
+      var cloned = cloneJson(shimList);
+      logPresetBridgeTraceFromList('pullToScenes.afterClone', cloned);
+      logPresetBridgeTraceFromList('pullToScenes.beforeAssign', cloned);
+      sc.interactions = cloned;
       sc.interactions.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergePanelInteractionFlags(prevById[String(ix.id)], ix);
-        logPresetBridge('pullToScenes.afterClone', ix);
       });
       sc.buttons = [];
       sc.hotspots = [];
@@ -484,6 +533,7 @@ var QuotationExperienciaBridge = (function () {
         if (!ix || String(ix.type || '').toUpperCase() !== 'HOTSPOT') return;
         if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
       });
+      logPresetBridgeTraceFromList('pullToScenes.afterAssign', sc.interactions);
     });
     if (tid) {
       lockTraceStateBridge('pullToScenes:exit:scene', tid, findIxLockedInScenes(tid, scenes));
