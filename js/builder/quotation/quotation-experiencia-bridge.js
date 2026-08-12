@@ -29,12 +29,18 @@ var QuotationExperienciaBridge = (function () {
 
   function logPresetBridge(step, interaction) {
     if (!interaction || String(interaction.type || '').toUpperCase() !== 'BUTTON') return;
-    console.log('[PRESET BRIDGE]', {
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
+    if (traceId && String(interaction.id) !== String(traceId)) return;
+    console.log('[PRESET TRACE]', {
       step: step,
-      presetId: interaction.visualPresetId || null,
+      buttonId: interaction.id,
+      visualPresetId: interaction.visualPresetId || null,
       style: interaction.style,
       boxW: interaction.boxW,
-      boxH: interaction.boxH
+      boxH: interaction.boxH,
+      bgColor: interaction.bgColor,
+      borderRadius: interaction.borderRadius
     });
   }
 

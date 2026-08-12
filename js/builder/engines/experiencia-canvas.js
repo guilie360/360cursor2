@@ -8282,18 +8282,20 @@ var ExperienciaCanvas = (function () {
             '</button>';
         }
         if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
-          console.log('[PRESET PAINT]', {
-            presetId: (b._ix && b._ix.visualPresetId) || null,
-            buttonId: b.id,
-            style: b.style,
-            boxW: b.boxW,
-            boxH: b.boxH,
-            bgColor: b.bgColor,
-            textColor: b.textColor,
-            borderColor: b.borderColor,
-            borderRadius: b.borderRadius,
-            icon: b.icon
-          });
+          var traceId = null;
+          try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
+          if (!traceId || String(b.id) === String(traceId)) {
+            console.log('[PRESET TRACE]', {
+              step: 'paintButtonsStage.beforeRender',
+              buttonId: b.id,
+              visualPresetId: (b._ix && b._ix.visualPresetId) || null,
+              style: b.style,
+              boxW: b.boxW,
+              boxH: b.boxH,
+              bgColor: b.bgColor,
+              borderRadius: b.borderRadius
+            });
+          }
           return ButtonOverlayRenderer.renderButtonHtml(b, {
             selSet: selSet,
             editMemberSet: editMemberSet,

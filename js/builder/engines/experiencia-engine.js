@@ -9,6 +9,23 @@ var ExperienciaEngine = (function () {
   /** Preset-created buttons — skip generic HUD chrome that would overwrite preset visuals. */
   var buttonPresetVisualGuard = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
 
+  function logPresetTrace(step, ix) {
+    if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
+    if (traceId && String(ix.id) !== String(traceId)) return;
+    console.log('[PRESET TRACE]', {
+      step: step,
+      buttonId: ix.id,
+      visualPresetId: ix.visualPresetId || null,
+      style: ix.style,
+      boxW: ix.boxW,
+      boxH: ix.boxH,
+      bgColor: ix.bgColor,
+      borderRadius: ix.borderRadius
+    });
+  }
+
   /* Template layout — horizontal column gap + vertical free space between siblings */
   var TPL_COL_GAP = 160;
   var TPL_SIBLING_GAP = 56;
@@ -3541,16 +3558,10 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
-    if (isSceneButtonInteraction(ix)) {
-      console.log('[PRESET VIEWMODEL INPUT]', {
-        presetId: ix.visualPresetId || null,
-        style: ix.style,
-        boxW: ix.boxW,
-        boxH: ix.boxH
-      });
-    }
+    logPresetTrace('buttonViewModel.input', ix);
     ensureFreeOverlayDefaults(ix);
     if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
+    logPresetTrace('buttonViewModel.afterEnsureDefaults', ix);
     var lw = layerW || 1000;
     var lh = layerH || 1000;
     var world = overlayWorldLayoutRaw(n, ix, lw, lh);
@@ -3719,6 +3730,7 @@ var ExperienciaEngine = (function () {
     if (!n) return [];
     if (state) migrateLegacySceneButtons(state, n);
     return listSceneButtonInteractions(n).map(function (ix) {
+      logPresetTrace('listSceneButtons.beforeViewModel', ix);
       return buttonViewModel(state, n, ix);
     });
   }
@@ -3753,6 +3765,7 @@ var ExperienciaEngine = (function () {
     };
     var ix = addElementFromMenu(state, nodeId, menuItem);
     if (!ix || ix.error) return null;
+    try { window.__QE_PRESET_TRACE_BUTTON_ID__ = String(ix.id); } catch (eTraceId) { /* ignore */ }
     ix.x = 50;
     ix.y = 50;
     ix.positionInitialized = true;
@@ -3762,6 +3775,7 @@ var ExperienciaEngine = (function () {
     ix.marginY = 32;
     ix.buttonType = 'unconfigured';
     ix.buttonConfig = {};
+    logPresetTrace('addSceneButton.afterInsert', ix);
     var preset = (typeof ButtonPresets !== 'undefined' && presetId)
       ? ButtonPresets.get(presetId)
       : null;
@@ -3769,6 +3783,7 @@ var ExperienciaEngine = (function () {
       ButtonPresets.applyVisuals(ix, preset);
       ix.visualPresetId = String(presetId);
       if (buttonPresetVisualGuard) buttonPresetVisualGuard.add(ix);
+      logPresetTrace('addSceneButton.afterPresetApply', ix);
       console.log('[PRESET CREATED]', {
         presetId: presetId,
         style: ix.style,
@@ -3799,6 +3814,7 @@ var ExperienciaEngine = (function () {
     }
     if (ix.color != null) delete ix.color;
     ensureButtonVisualDefaults(ix);
+    logPresetTrace('addSceneButton.afterEnsureDefaults', ix);
     console.log('[PRESET AFTER DEFAULTS]', {
       presetId: presetId || null,
       style: ix.style,
@@ -3810,6 +3826,7 @@ var ExperienciaEngine = (function () {
       borderRadius: ix.borderRadius,
       icon: ix.icon
     });
+    logPresetTrace('addSceneButton.beforeReturn', ix);
     return buttonViewModel(state, n, ix);
   }
 
@@ -6035,18 +6052,11 @@ var ExperienciaEngine = (function () {
     }
 
     n.config.interactions = n.config.interactions.map(function (ix) {
+      logPresetTrace('normalizeSceneInteractions.beforeMakeInteraction', ix);
       var m = makeInteraction(ix);
       /* Normalize legacy hotspots group name */
       if (m.group === 'hotspots') m.group = 'content';
-      if (String(m.type || '').toUpperCase() === 'BUTTON') {
-        console.log('[PRESET BRIDGE]', {
-          step: 'normalizeSceneInteractions.afterMakeInteraction',
-          presetId: m.visualPresetId || null,
-          style: m.style,
-          boxW: m.boxW,
-          boxH: m.boxH
-        });
-      }
+      logPresetTrace('normalizeSceneInteractions.afterMakeInteraction', m);
       return m;
     });
 
@@ -8504,7 +8514,13 @@ var ExperienciaEngine = (function () {
 
   function getNode(state, id) {
     var exp = ensureState(state);
-    return exp.nodes.find(function (n) { return n.id === id; }) || null;
+    var n = exp.nodes.find(function (node) { return node.id === id; }) || null;
+    if (n && n.config && Array.isArray(n.config.interactions)) {
+      n.config.interactions.forEach(function (ix) {
+        logPresetTrace('getNode.afterEnsureState', ix);
+      });
+    }
+    return n;
   }
 
   function getEdge(state, id) {
