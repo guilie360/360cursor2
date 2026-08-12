@@ -67,6 +67,16 @@ var QuotationExperienciaBridge = (function () {
     logPresetBridgeTrace(step, findTraceInteraction(list));
   }
 
+  function logPresetShimBridge(step, shimState, nodeId) {
+    try {
+      if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+        window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(step, shimState, nodeId);
+      } else if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__ === 'function') {
+        window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__(step, shimState);
+      }
+    } catch (eShimBridge) { /* ignore */ }
+  }
+
   function logPresetBridge(step, interaction) {
     try {
       if (typeof window.__QE_LOG_PRESET_TRACE__ === 'function') {
@@ -337,7 +347,16 @@ var QuotationExperienciaBridge = (function () {
         x: 80,
         y: 120,
         config: {
-          interactions: cloneJson(sc.interactions || []),
+          interactions: (function () {
+            var cloned = cloneJson(sc.interactions || []);
+            try {
+              if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_LIST__ === 'function') {
+                window.__QE_LOG_PRESET_SHIM_TRACE_FROM_LIST__(
+                  'config.interactions.assign.buildState', cloned);
+              }
+            } catch (eBuildTrace) { /* ignore */ }
+            return cloned;
+          })(),
           assetId: assetId,
           fileName: assetId ? ((sc.name || 'scene') + '.jpg') : null
         },
@@ -431,6 +450,12 @@ var QuotationExperienciaBridge = (function () {
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
       });
       n.config.interactions = cloned;
+      try {
+        if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_NODE__ === 'function') {
+          window.__QE_LOG_PRESET_SHIM_TRACE_FROM_NODE__(
+            'config.interactions.assign.pushScenesToShim', n);
+        }
+      } catch (ePushAssign) { /* ignore */ }
       logPresetBridgeTraceFromList('pushScenesToShim.afterAssign', n.config.interactions);
     });
     if (tid) {
@@ -472,6 +497,11 @@ var QuotationExperienciaBridge = (function () {
 
   function pullToScenes(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
+    try {
+      if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__ === 'function') {
+        window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__('pullToScenes.beforePull', shimState);
+      }
+    } catch (ePullBefore) { /* ignore */ }
     var tid = lockTraceId();
     if (tid) {
       lockTraceStateBridge('pullToScenes:enter:scene', tid, findIxLockedInScenes(tid, scenes));
@@ -556,6 +586,12 @@ var QuotationExperienciaBridge = (function () {
       KonvaOverlayRenderer.isEnabled(options);
 
     function onCanvasChangePullToScenes() {
+      try {
+        if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__ === 'function') {
+          window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__(
+            'onChange.beforePullToScenes', shim);
+        }
+      } catch (eOnChangePull) { /* ignore */ }
       var tid = lockTraceId();
       if (tid) {
         lockTraceStateBridge('onChange:pullToScenes:enter:scene', tid,
@@ -646,7 +682,18 @@ var QuotationExperienciaBridge = (function () {
           step: 'QuotationExperienciaBridge.addButton',
           presetId: presetId
         });
-        return handle.addButton ? handle.addButton(presetId) : null;
+        logPresetShimBridge(
+          'quotation-experiencia-bridge.addButton.before',
+          shim,
+          nodeIdForScene(activeId)
+        );
+        var added = handle.addButton ? handle.addButton(presetId) : null;
+        logPresetShimBridge(
+          'quotation-experiencia-bridge.addButton.after',
+          shim,
+          nodeIdForScene(activeId)
+        );
+        return added;
       },
       addText: function () {
         return handle.addText ? handle.addText() : null;

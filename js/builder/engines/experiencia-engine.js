@@ -38,6 +38,75 @@ var ExperienciaEngine = (function () {
   }
   try { window.__QE_LOG_PRESET_TRACE__ = logPresetTrace; } catch (eExpose) { /* ignore */ }
 
+  function logPresetShimTrace(step, ix) {
+    if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
+    if (!traceId || String(ix.id) !== String(traceId)) return;
+    var seen = null;
+    try {
+      if (!window.__QE_PRESET_TRACE_SEEN__) window.__QE_PRESET_TRACE_SEEN__ = new Set();
+      seen = window.__QE_PRESET_TRACE_SEEN__;
+    } catch (eSeen) { return; }
+    if (seen.has(step)) return;
+    seen.add(step);
+    console.log('[PRESET SHIM TRACE]', {
+      step: step,
+      buttonId: ix.id,
+      visualPresetId: ix.visualPresetId || null,
+      style: ix.style,
+      boxW: ix.boxW,
+      boxH: ix.boxH,
+      bgColor: ix.bgColor,
+      borderRadius: ix.borderRadius
+    });
+  }
+
+  function logPresetShimTraceFromList(step, list) {
+    if (!Array.isArray(list)) return;
+    var traceId = null;
+    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eFind) { traceId = null; }
+    if (!traceId) return;
+    for (var li = 0; li < list.length; li++) {
+      var candidate = list[li];
+      if (candidate && String(candidate.id) === String(traceId)) {
+        logPresetShimTrace(step, candidate);
+        return;
+      }
+    }
+  }
+
+  function logPresetShimTraceFromNode(step, n) {
+    if (!n || !n.config) return;
+    logPresetShimTraceFromList(step, n.config.interactions);
+  }
+
+  function logPresetShimTraceFromState(step, state, nodeId) {
+    if (!state || !state.experiencia || !nodeId) return;
+    var nodes = state.experiencia.nodes || [];
+    for (var ni = 0; ni < nodes.length; ni++) {
+      if (nodes[ni] && String(nodes[ni].id) === String(nodeId)) {
+        logPresetShimTraceFromNode(step, nodes[ni]);
+        return;
+      }
+    }
+  }
+
+  function logPresetShimTraceFromShim(step, shimState) {
+    if (!shimState || !shimState.experiencia) return;
+    (shimState.experiencia.nodes || []).forEach(function (n) {
+      logPresetShimTraceFromNode(step, n);
+    });
+  }
+
+  try {
+    window.__QE_LOG_PRESET_SHIM_TRACE__ = logPresetShimTrace;
+    window.__QE_LOG_PRESET_SHIM_TRACE_FROM_LIST__ = logPresetShimTraceFromList;
+    window.__QE_LOG_PRESET_SHIM_TRACE_FROM_NODE__ = logPresetShimTraceFromNode;
+    window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ = logPresetShimTraceFromState;
+    window.__QE_LOG_PRESET_SHIM_TRACE_FROM_SHIM__ = logPresetShimTraceFromShim;
+  } catch (eShimExpose) { /* ignore */ }
+
   /* Template layout — horizontal column gap + vertical free space between siblings */
   var TPL_COL_GAP = 160;
   var TPL_SIBLING_GAP = 56;
@@ -1479,7 +1548,11 @@ var ExperienciaEngine = (function () {
     if (n.parentId === undefined) n.parentId = null;
     if (n.locked == null) n.locked = false;
     if (n.protected == null) n.protected = n.kind === 'hero' || n.id === 'exp-hero';
-    if (isSceneKind(n.kind)) normalizeSceneInteractions(n);
+    if (isSceneKind(n.kind)) {
+      logPresetShimTraceFromNode('normalizeNode.beforeNormalizeSceneInteractions', n);
+      normalizeSceneInteractions(n);
+      logPresetShimTraceFromNode('config.interactions.assign.normalizeNode', n);
+    }
     return n;
   }
 

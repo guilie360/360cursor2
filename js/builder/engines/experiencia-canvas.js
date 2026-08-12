@@ -4447,6 +4447,12 @@ var ExperienciaCanvas = (function () {
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state);
       }
+      try {
+        if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+          window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+            'ExperienciaCanvas.persist.beforeOnChange', state, canvas().selectedId);
+        }
+      } catch (eTracePersist) { /* ignore */ }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
     }
@@ -16709,16 +16715,46 @@ var ExperienciaCanvas = (function () {
         canvas().editMode = 'buttons';
         hotspotDraw = null;
         var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
+        try {
+          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+              'ExperienciaCanvas.addButton.afterAddSceneButton', state, sceneId);
+          }
+        } catch (eTraceAdd) { /* ignore */ }
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];
         }
         notifyOverlaySelection();
+        try {
+          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+              'ExperienciaCanvas.addButton.afterNotifySelection', state, sceneId);
+          }
+        } catch (eTraceSel) { /* ignore */ }
         renderAll();
+        try {
+          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+              'ExperienciaCanvas.addButton.afterRenderAll', state, sceneId);
+          }
+        } catch (eTraceRender) { /* ignore */ }
         requestAnimationFrame(function () {
           paintInspector();
         });
+        try {
+          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+              'ExperienciaCanvas.addButton.beforeBridge', state, sceneId);
+          }
+        } catch (eTraceBeforeBridge) { /* ignore */ }
         persist();
+        try {
+          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
+            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
+              'ExperienciaCanvas.addButton.afterBridge', state, sceneId);
+          }
+        } catch (eTraceAfterBridge) { /* ignore */ }
         requestAnimationFrame(recomputeOverlayLayout);
         return btn;
       },
