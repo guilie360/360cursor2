@@ -13,7 +13,18 @@ var ExperienciaEngine = (function () {
     if (!ix || String(ix.type || '').toUpperCase() !== 'BUTTON') return;
     var traceId = null;
     try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
-    if (traceId && String(ix.id) !== String(traceId)) return;
+    if (!traceId || String(ix.id) !== String(traceId)) return;
+    var seen = null;
+    try {
+      if (step === 'addSceneButton.afterInsert') {
+        window.__QE_PRESET_TRACE_SEEN__ = new Set();
+      } else if (!window.__QE_PRESET_TRACE_SEEN__) {
+        window.__QE_PRESET_TRACE_SEEN__ = new Set();
+      }
+      seen = window.__QE_PRESET_TRACE_SEEN__;
+    } catch (eSeen) { return; }
+    if (seen.has(step)) return;
+    seen.add(step);
     console.log('[PRESET TRACE]', {
       step: step,
       buttonId: ix.id,
@@ -25,6 +36,7 @@ var ExperienciaEngine = (function () {
       borderRadius: ix.borderRadius
     });
   }
+  try { window.__QE_LOG_PRESET_TRACE__ = logPresetTrace; } catch (eExpose) { /* ignore */ }
 
   /* Template layout — horizontal column gap + vertical free space between siblings */
   var TPL_COL_GAP = 160;
@@ -3730,7 +3742,6 @@ var ExperienciaEngine = (function () {
     if (!n) return [];
     if (state) migrateLegacySceneButtons(state, n);
     return listSceneButtonInteractions(n).map(function (ix) {
-      logPresetTrace('listSceneButtons.beforeViewModel', ix);
       return buttonViewModel(state, n, ix);
     });
   }

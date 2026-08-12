@@ -28,20 +28,11 @@ var QuotationExperienciaBridge = (function () {
   }
 
   function logPresetBridge(step, interaction) {
-    if (!interaction || String(interaction.type || '').toUpperCase() !== 'BUTTON') return;
-    var traceId = null;
-    try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTrace) { traceId = null; }
-    if (traceId && String(interaction.id) !== String(traceId)) return;
-    console.log('[PRESET TRACE]', {
-      step: step,
-      buttonId: interaction.id,
-      visualPresetId: interaction.visualPresetId || null,
-      style: interaction.style,
-      boxW: interaction.boxW,
-      boxH: interaction.boxH,
-      bgColor: interaction.bgColor,
-      borderRadius: interaction.borderRadius
-    });
+    try {
+      if (typeof window.__QE_LOG_PRESET_TRACE__ === 'function') {
+        window.__QE_LOG_PRESET_TRACE__(step, interaction);
+      }
+    } catch (eTraceBridge) { /* ignore */ }
   }
 
   function lockTraceId() {
@@ -247,7 +238,6 @@ var QuotationExperienciaBridge = (function () {
       if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonKindConfig) {
         ExperienciaEngine.ensureButtonKindConfig(ix);
       }
-      logPresetBridge('ensureSceneInteractions.afterKindConfig', ix);
     });
 
     return scene.interactions;
@@ -395,7 +385,6 @@ var QuotationExperienciaBridge = (function () {
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
-        logPresetBridge('pushScenesToShim.afterClone', ix);
       });
       n.config.interactions = cloned;
     });
