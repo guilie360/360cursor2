@@ -3541,6 +3541,14 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
+    if (isSceneButtonInteraction(ix)) {
+      console.log('[PRESET VIEWMODEL INPUT]', {
+        presetId: ix.visualPresetId || null,
+        style: ix.style,
+        boxW: ix.boxW,
+        boxH: ix.boxH
+      });
+    }
     ensureFreeOverlayDefaults(ix);
     if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
     var lw = layerW || 1000;
@@ -3771,6 +3779,12 @@ var ExperienciaEngine = (function () {
         borderColor: ix.borderColor,
         borderRadius: ix.borderRadius,
         icon: ix.icon
+      });
+      console.log('[PRESET STATE AFTER INSERT]', {
+        presetId: ix.visualPresetId,
+        style: ix.style,
+        boxW: ix.boxW,
+        boxH: ix.boxH
       });
     } else {
       /* Legacy default when no preset id (existing callers / old flows). */
@@ -5738,6 +5752,34 @@ var ExperienciaEngine = (function () {
           !Array.isArray(cfg.buttonConfig)) {
         ix.buttonConfig = cfg.buttonConfig;
       }
+      /* BUTTON overlay box/local look + preset marker — survive normalizeSceneInteractions */
+      if (partial.visualPresetId != null && partial.visualPresetId !== '') {
+        ix.visualPresetId = String(partial.visualPresetId);
+      }
+      if (partial.boxW != null && !isNaN(Number(partial.boxW))) ix.boxW = Number(partial.boxW);
+      if (partial.boxH != null && !isNaN(Number(partial.boxH))) ix.boxH = Number(partial.boxH);
+      if (partial.bgColor != null) ix.bgColor = partial.bgColor;
+      if (partial.textColor != null) ix.textColor = partial.textColor;
+      if (partial.borderColor != null) ix.borderColor = partial.borderColor;
+      if (partial.bgOpacity != null && !isNaN(Number(partial.bgOpacity))) {
+        ix.bgOpacity = Number(partial.bgOpacity);
+      }
+      if (partial.scaleValue != null && !isNaN(Number(partial.scaleValue))) {
+        ix.scaleValue = Number(partial.scaleValue);
+      }
+      if (partial.scaleUnit != null) ix.scaleUnit = partial.scaleUnit;
+      if (partial.size != null) ix.size = partial.size;
+      if (partial.hoverEnabled != null) ix.hoverEnabled = !!partial.hoverEnabled;
+      if (partial.hoverColor != null) ix.hoverColor = partial.hoverColor;
+      if (partial.hoverTextColor != null) ix.hoverTextColor = partial.hoverTextColor;
+      if (partial.hoverTransition != null && !isNaN(Number(partial.hoverTransition))) {
+        ix.hoverTransition = Number(partial.hoverTransition);
+      }
+      if (partial.pressedColor != null) ix.pressedColor = partial.pressedColor;
+      if (partial.pressedTextColor != null) ix.pressedTextColor = partial.pressedTextColor;
+      if (partial.pressedScale != null && !isNaN(Number(partial.pressedScale))) {
+        ix.pressedScale = Number(partial.pressedScale);
+      }
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {
@@ -5996,6 +6038,15 @@ var ExperienciaEngine = (function () {
       var m = makeInteraction(ix);
       /* Normalize legacy hotspots group name */
       if (m.group === 'hotspots') m.group = 'content';
+      if (String(m.type || '').toUpperCase() === 'BUTTON') {
+        console.log('[PRESET BRIDGE]', {
+          step: 'normalizeSceneInteractions.afterMakeInteraction',
+          presetId: m.visualPresetId || null,
+          style: m.style,
+          boxW: m.boxW,
+          boxH: m.boxH
+        });
+      }
       return m;
     });
 

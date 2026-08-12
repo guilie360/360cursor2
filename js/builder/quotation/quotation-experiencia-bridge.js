@@ -27,6 +27,17 @@ var QuotationExperienciaBridge = (function () {
     try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
   }
 
+  function logPresetBridge(step, interaction) {
+    if (!interaction || String(interaction.type || '').toUpperCase() !== 'BUTTON') return;
+    console.log('[PRESET BRIDGE]', {
+      step: step,
+      presetId: interaction.visualPresetId || null,
+      style: interaction.style,
+      boxW: interaction.boxW,
+      boxH: interaction.boxH
+    });
+  }
+
   function lockTraceId() {
     try { return window.__QE_LOCK_TRACE_ID__ || null; } catch (eId) { return null; }
   }
@@ -230,6 +241,7 @@ var QuotationExperienciaBridge = (function () {
       if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonKindConfig) {
         ExperienciaEngine.ensureButtonKindConfig(ix);
       }
+      logPresetBridge('ensureSceneInteractions.afterKindConfig', ix);
     });
 
     return scene.interactions;
@@ -377,6 +389,7 @@ var QuotationExperienciaBridge = (function () {
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
+        logPresetBridge('pushScenesToShim.afterClone', ix);
       });
       n.config.interactions = cloned;
     });
@@ -442,6 +455,7 @@ var QuotationExperienciaBridge = (function () {
       sc.interactions.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergePanelInteractionFlags(prevById[String(ix.id)], ix);
+        logPresetBridge('pullToScenes.afterClone', ix);
       });
       sc.buttons = [];
       sc.hotspots = [];
