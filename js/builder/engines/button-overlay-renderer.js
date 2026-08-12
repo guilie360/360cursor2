@@ -29,30 +29,6 @@ var ButtonOverlayRenderer = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
-  function enrichButtonVmFromPreset(b) {
-    if (!b) return b;
-    var presetId = b.visualPresetId || (b._ix && b._ix.visualPresetId);
-    if (!presetId || typeof ButtonPresets === 'undefined' || !ButtonPresets.get) return b;
-    var preset = ButtonPresets.get(presetId);
-    if (!preset) return b;
-    var ix = b._ix;
-    if (ix) ButtonPresets.applyVisuals(ix, preset);
-    return Object.assign({}, b, {
-      visualPresetId: String(presetId),
-      style: ix ? ix.style : (preset.style != null ? preset.style : b.style),
-      icon: ix ? ix.icon : (preset.icon != null ? preset.icon : b.icon),
-      boxW: ix && ix.boxW != null ? Number(ix.boxW) : (preset.boxW != null ? Number(preset.boxW) : b.boxW),
-      boxH: ix && ix.boxH != null ? Number(ix.boxH) : (preset.boxH != null ? Number(preset.boxH) : b.boxH),
-      bgColor: ix ? ix.bgColor : (preset.bgColor != null ? preset.bgColor : b.bgColor),
-      textColor: ix ? ix.textColor : (preset.textColor != null ? preset.textColor : b.textColor),
-      borderColor: ix ? ix.borderColor : (preset.borderColor != null ? preset.borderColor : b.borderColor),
-      borderWidth: ix && ix.borderWidth != null ? Number(ix.borderWidth) : b.borderWidth,
-      borderRadius: ix && ix.borderRadius != null ? Number(ix.borderRadius) : b.borderRadius,
-      bgOpacity: ix && ix.bgOpacity != null ? Number(ix.bgOpacity) : b.bgOpacity,
-      opacity: ix && ix.opacity != null ? Number(ix.opacity) : b.opacity
-    });
-  }
-
   /**
    * Same HTML contract as ExperienciaCanvas.paintButtonsStage() BUTTON branch.
    *
@@ -67,7 +43,6 @@ var ButtonOverlayRenderer = (function () {
    */
   function renderButtonHtml(b, options) {
     if (!b) return '';
-    b = enrichButtonVmFromPreset(b);
     options = options || {};
     var selSet = options.selSet || {};
     var editMemberSet = options.editMemberSet || {};
@@ -171,9 +146,6 @@ var ButtonOverlayRenderer = (function () {
     var layerW = PICKER_LAYER_SIZE;
     var layerH = PICKER_LAYER_SIZE;
     var ix = ButtonPresets.buildPreviewIx(preset);
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.ensureButtonVisualDefaults) {
-      ExperienciaEngine.ensureButtonVisualDefaults(ix);
-    }
     var fakeNode = { id: 'preview-scene', config: { interactions: [] } };
     var vm = null;
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buttonViewModel) {

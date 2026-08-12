@@ -6,16 +6,31 @@ var ExperienciaEngine = (function () {
   var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
-  /** Preset-created buttons — skip generic HUD chrome that would overwrite preset visuals. */
-  var buttonPresetVisualGuard = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
 
-  /** Re-apply catalog preset visuals when visualPresetId is set (authoritative for paint/clone). */
-  function applyPresetCatalogToIx(ix) {
-    if (!ix || !ix.visualPresetId) return ix;
-    if (typeof ButtonPresets === 'undefined' || !ButtonPresets.get || !ButtonPresets.applyVisuals) return ix;
-    var preset = ButtonPresets.get(ix.visualPresetId);
-    if (preset) ButtonPresets.applyVisuals(ix, preset);
-    return ix;
+  function buttonPresetVisualKeys() {
+    if (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS) {
+      return ButtonPresets.INTERACTION_VISUAL_KEYS;
+    }
+    return [
+      'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
+      'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
+      'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
+      'pressedColor', 'pressedTextColor', 'pressedScale'
+    ];
+  }
+
+  function copyButtonPresetVisualFields(src, dest) {
+    if (!src || !dest) return dest;
+    buttonPresetVisualKeys().forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(src, key)) return;
+      if (src[key] === undefined) return;
+      dest[key] = src[key];
+    });
+    return dest;
+  }
+
+  function hasButtonVisualPreset(ix) {
+    return !!(ix && ix.visualPresetId);
   }
 
   /* Template layout — horizontal column gap + vertical free space between siblings */
@@ -1629,8 +1644,7 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (ix.visualPresetId) return ix;
-    if (buttonPresetVisualGuard && buttonPresetVisualGuard.has(ix)) return ix;
+    if (hasButtonVisualPreset(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
@@ -3334,7 +3348,15 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonVisualDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
-    applyPresetCatalogToIx(ix);
+    if (hasButtonVisualPreset(ix)) {
+      ensureButtonKindConfig(ix);
+      if (ix.color != null) delete ix.color;
+      if (ix.config && ix.config.color != null) delete ix.config.color;
+      if (ix.rotation != null && !isNaN(Number(ix.rotation))) {
+        ix.rotation = clampRotation(ix.rotation);
+      }
+      return ix;
+    }
     ensureButtonKindConfig(ix);
     if (!ix.config || typeof ix.config !== 'object') ix.config = {};
     var cfg = ix.config;
@@ -3551,9 +3573,12 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
-    applyPresetCatalogToIx(ix);
-    ensureFreeOverlayDefaults(ix);
-    if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
+    if (isSceneButtonInteraction(ix) && hasButtonVisualPreset(ix)) {
+      ensureButtonKindConfig(ix);
+    } else {
+      ensureFreeOverlayDefaults(ix);
+      if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
+    }
     var lw = layerW || 1000;
     var lh = layerH || 1000;
     var world = overlayWorldLayoutRaw(n, ix, lw, lh);
@@ -3765,9 +3790,13 @@ var ExperienciaEngine = (function () {
       ? ButtonPresets.get(presetId)
       : null;
     if (preset) {
-      ButtonPresets.applyVisuals(ix, preset);
-      ix.visualPresetId = String(presetId);
-      if (buttonPresetVisualGuard) buttonPresetVisualGuard.add(ix);
+      if (ButtonPresets.applyToInteraction) {
+        ButtonPresets.applyToInteraction(ix, preset, presetId);
+      } else {
+        ButtonPresets.applyVisuals(ix, preset);
+        ix.visualPresetId = String(presetId);
+      }
+      ensureButtonKindConfig(ix);
     } else {
       /* Legacy default when no preset id (existing callers / old flows). */
       ix.style = 'icon';
@@ -3778,9 +3807,9 @@ var ExperienciaEngine = (function () {
       ix.borderColor = '#d1d1d1';
       ix.borderWidth = 1;
       ix.borderRadius = 999;
+      if (ix.color != null) delete ix.color;
+      ensureButtonVisualDefaults(ix);
     }
-    if (ix.color != null) delete ix.color;
-    ensureButtonVisualDefaults(ix);
     return buttonViewModel(state, n, ix);
   }
 
@@ -5724,33 +5753,16 @@ var ExperienciaEngine = (function () {
         ix.buttonConfig = cfg.buttonConfig;
       }
       /* BUTTON overlay box/local look + preset marker — survive normalizeSceneInteractions */
-      if (partial.visualPresetId != null && partial.visualPresetId !== '') {
-        ix.visualPresetId = String(partial.visualPresetId);
-      }
-      if (partial.boxW != null && !isNaN(Number(partial.boxW))) ix.boxW = Number(partial.boxW);
-      if (partial.boxH != null && !isNaN(Number(partial.boxH))) ix.boxH = Number(partial.boxH);
-      if (partial.bgColor != null) ix.bgColor = partial.bgColor;
-      if (partial.textColor != null) ix.textColor = partial.textColor;
-      if (partial.borderColor != null) ix.borderColor = partial.borderColor;
-      if (partial.bgOpacity != null && !isNaN(Number(partial.bgOpacity))) {
-        ix.bgOpacity = Number(partial.bgOpacity);
-      }
+      copyButtonPresetVisualFields(partial, ix);
+      buttonPresetVisualKeys().forEach(function (key) {
+        if (ix[key] !== undefined || cfg[key] === undefined) return;
+        ix[key] = cfg[key];
+      });
       if (partial.scaleValue != null && !isNaN(Number(partial.scaleValue))) {
         ix.scaleValue = Number(partial.scaleValue);
       }
       if (partial.scaleUnit != null) ix.scaleUnit = partial.scaleUnit;
       if (partial.size != null) ix.size = partial.size;
-      if (partial.hoverEnabled != null) ix.hoverEnabled = !!partial.hoverEnabled;
-      if (partial.hoverColor != null) ix.hoverColor = partial.hoverColor;
-      if (partial.hoverTextColor != null) ix.hoverTextColor = partial.hoverTextColor;
-      if (partial.hoverTransition != null && !isNaN(Number(partial.hoverTransition))) {
-        ix.hoverTransition = Number(partial.hoverTransition);
-      }
-      if (partial.pressedColor != null) ix.pressedColor = partial.pressedColor;
-      if (partial.pressedTextColor != null) ix.pressedTextColor = partial.pressedTextColor;
-      if (partial.pressedScale != null && !isNaN(Number(partial.pressedScale))) {
-        ix.pressedScale = Number(partial.pressedScale);
-      }
     }
     /* Button colors come from Theme — strip only on BUTTON */
     if (String(ix.type || '').toUpperCase() === 'BUTTON') {

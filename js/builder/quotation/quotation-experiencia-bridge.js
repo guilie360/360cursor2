@@ -387,6 +387,41 @@ var QuotationExperienciaBridge = (function () {
   }
 
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
+  function mergeButtonVisualPresetFields(srcIx, destIx) {
+    if (!srcIx || !destIx) return;
+    var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
+      ? ButtonPresets.INTERACTION_VISUAL_KEYS
+      : [
+        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
+        'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
+        'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
+        'pressedColor', 'pressedTextColor', 'pressedScale'
+      ];
+    keys.forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(srcIx, key)) return;
+      if (srcIx[key] === undefined) return;
+      destIx[key] = srcIx[key];
+    });
+  }
+
+  function mergeButtonVisualPresetFieldsMissing(srcIx, destIx) {
+    if (!srcIx || !destIx) return;
+    var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
+      ? ButtonPresets.INTERACTION_VISUAL_KEYS
+      : [
+        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
+        'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
+        'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
+        'pressedColor', 'pressedTextColor', 'pressedScale'
+      ];
+    keys.forEach(function (key) {
+      if (destIx[key] !== undefined && destIx[key] !== null && destIx[key] !== '') return;
+      if (!Object.prototype.hasOwnProperty.call(srcIx, key)) return;
+      if (srcIx[key] === undefined) return;
+      destIx[key] = srcIx[key];
+    });
+  }
+
   function mergePanelInteractionFlags(prevIx, nextIx) {
     if (!prevIx || !nextIx) return;
     if (!Object.prototype.hasOwnProperty.call(nextIx, 'locked') &&
@@ -401,9 +436,7 @@ var QuotationExperienciaBridge = (function () {
         Object.prototype.hasOwnProperty.call(prevIx, 'enabled')) {
       nextIx.enabled = !!prevIx.enabled;
     }
-    if (!nextIx.visualPresetId && prevIx.visualPresetId) {
-      nextIx.visualPresetId = String(prevIx.visualPresetId);
-    }
+    mergeButtonVisualPresetFieldsMissing(prevIx, nextIx);
   }
 
   /** Push panel flags scene → shim (inverse of mergePanelInteractionFlags). */
@@ -418,9 +451,7 @@ var QuotationExperienciaBridge = (function () {
     if (Object.prototype.hasOwnProperty.call(srcIx, 'enabled')) {
       destIx.enabled = !!srcIx.enabled;
     }
-    if (!destIx.visualPresetId && srcIx.visualPresetId) {
-      destIx.visualPresetId = String(srcIx.visualPresetId);
-    }
+    mergeButtonVisualPresetFields(srcIx, destIx);
   }
 
   function pullToScenes(shimState, scenes) {

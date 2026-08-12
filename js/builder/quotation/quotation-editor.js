@@ -9972,8 +9972,9 @@ var QuotationEditor = (function () {
   }
 
   function pickButtonPreset(presetId) {
-    closeButtonPicker();
+    state.buttonPickerOpen = false;
     addButton(presetId);
+    rerender();
   }
 
   function openButtonPicker() {
@@ -12064,7 +12065,6 @@ var QuotationEditor = (function () {
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
-    markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
       attachExperienciaInspectorHost();
