@@ -6838,7 +6838,7 @@ var ExperienciaCanvas = (function () {
       if (!n || !ExperienciaEngine.isButtonsEditableNode(n)) return false;
       var layerW = buttonsLayer.clientWidth || 1000;
       var layerH = buttonsLayer.clientHeight || 1000;
-      var buttons = ExperienciaEngine.listSceneButtons(state, n) || [];
+      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
       var moved = false;
       buttons.forEach(function (b) {
         if (!b || !b.id) return;
@@ -8164,7 +8164,7 @@ var ExperienciaCanvas = (function () {
 
       var layerW = overlayLayerSize().w;
       var layerH = overlayLayerSize().h;
-      var buttons = ExperienciaEngine.listSceneButtons(state, n) || [];
+      var buttons = ExperienciaEngine.listSceneButtons(n) || [];
       var selIds = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
         : [];

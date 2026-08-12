@@ -29,6 +29,36 @@ var ButtonOverlayRenderer = (function () {
       (btn && btn.icon ? ' has-icon' : '');
   }
 
+  function presetVisualKeys() {
+    if (typeof ButtonPresets !== 'undefined' && ButtonPresets.VISUAL_KEYS) {
+      return ButtonPresets.VISUAL_KEYS;
+    }
+    return [
+      'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor', 'borderColor',
+      'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
+      'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
+      'pressedColor', 'pressedTextColor', 'pressedScale'
+    ];
+  }
+
+  /** Catalog + VM merge for preset buttons — same authoritative visuals as picker. */
+  function resolvePresetRenderVm(b) {
+    if (!b || !b.visualPresetId ||
+        typeof ButtonPresets === 'undefined' || !ButtonPresets.get) {
+      return b;
+    }
+    var cat = ButtonPresets.get(b.visualPresetId);
+    if (!cat) return b;
+    var v = Object.assign({}, b);
+    presetVisualKeys().forEach(function (key) {
+      if (cat[key] !== undefined) v[key] = cat[key];
+      if (Object.prototype.hasOwnProperty.call(b, key) && b[key] !== undefined) {
+        v[key] = b[key];
+      }
+    });
+    return v;
+  }
+
   /**
    * Same HTML contract as ExperienciaCanvas.paintButtonsStage() BUTTON branch.
    *
@@ -54,23 +84,24 @@ var ButtonOverlayRenderer = (function () {
     var styleBits = 'left:' + paintX + '%;top:' + paintY + '%;' +
       '--btn-rot:' + rot + 'deg;';
 
-    var glyph = buttonIconGlyph(b.icon);
+    var v = resolvePresetRenderVm(b);
+    var glyph = buttonIconGlyph(v.icon);
     var text = b.label != null ? String(b.label) : '';
     var label;
     if (glyph && text) label = glyph + ' ' + text;
     else label = glyph || text || 'Botón';
 
-    var btnOp = b.opacity != null ? Number(b.opacity) : 1;
-    var hoverOn = b.hoverEnabled !== false;
-    var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-    var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
-    var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
-    var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
-    var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
-    var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
-    var boxW = b.boxW != null ? Number(b.boxW) : 14;
-    var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
-    var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
+    var btnOp = v.opacity != null ? Number(v.opacity) : 1;
+    var hoverOn = v.hoverEnabled !== false;
+    var hoverMs = v.hoverTransition != null ? Number(v.hoverTransition) : 200;
+    var hoverCol = cssToken(v.hoverColor || '#6fbf86') || '#6fbf86';
+    var hoverTextCol = cssToken(v.hoverTextColor || '#ffffff') || '#ffffff';
+    var pressedCol = cssToken(v.pressedColor || '#5aaa74') || '#5aaa74';
+    var pressedTextCol = cssToken(v.pressedTextColor || '#ffffff') || '#ffffff';
+    var pressedScale = v.pressedScale != null ? Number(v.pressedScale) : 0.96;
+    var boxW = v.boxW != null ? Number(v.boxW) : 14;
+    var boxH = v.boxH != null ? Number(v.boxH) : 4.5;
+    var bgOp = v.bgOpacity != null ? Number(v.bgOpacity) : 1;
 
     styleBits +=
       'width:' + boxW + '%;height:' + boxH + '%;' +
@@ -81,17 +112,17 @@ var ButtonOverlayRenderer = (function () {
       '--btn-pressed-color:' + pressedCol + ';' +
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';';
-    if (b.bgColor) {
-      styleBits += '--btn-local-bg:' + cssToken(b.bgColor) + ';' +
+    if (v.bgColor) {
+      styleBits += '--btn-local-bg:' + cssToken(v.bgColor) + ';' +
         '--btn-local-bg-a:' + bgOp + ';';
     }
-    if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
-    if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
-    if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
-    if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
+    if (v.textColor) styleBits += '--btn-local-text:' + cssToken(v.textColor) + ';';
+    if (v.borderColor) styleBits += '--btn-local-border:' + cssToken(v.borderColor) + ';';
+    if (v.borderWidth != null) styleBits += '--btn-local-bw:' + Number(v.borderWidth) + 'px;';
+    if (v.borderRadius != null) styleBits += '--btn-local-radius:' + Number(v.borderRadius) + 'px;';
 
     var id = String(b.id || 'btn');
-    var className = buttonPreviewClass(b) +
+    var className = buttonPreviewClass(v) +
       ' is-box' +
       (selSet[id] ? ' is-selected' : '') +
       (editMemberSet[id] ? ' is-group-edit-member' : '') +
@@ -99,7 +130,8 @@ var ButtonOverlayRenderer = (function () {
       (b.locked ? ' is-locked' : '') +
       (extraClass ? ' ' + extraClass : '') +
       (hoverOn ? ' is-hover-on' : ' is-hover-off') +
-      (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null
+      (v.visualPresetId || v.bgColor || v.textColor || v.borderColor ||
+        v.borderWidth != null || v.borderRadius != null
         ? ' has-local-look' : '');
 
     var attrs = stageMode

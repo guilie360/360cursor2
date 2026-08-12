@@ -436,7 +436,6 @@ var QuotationExperienciaBridge = (function () {
         Object.prototype.hasOwnProperty.call(prevIx, 'enabled')) {
       nextIx.enabled = !!prevIx.enabled;
     }
-    mergeButtonVisualPresetFieldsMissing(prevIx, nextIx);
   }
 
   /** Push panel flags scene → shim (inverse of mergePanelInteractionFlags). */

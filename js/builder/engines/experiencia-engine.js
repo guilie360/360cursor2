@@ -29,6 +29,24 @@ var ExperienciaEngine = (function () {
     return dest;
   }
 
+  function snapshotButtonPresetVisuals(ix) {
+    if (!ix || !ix.visualPresetId) return null;
+    var snap = { visualPresetId: String(ix.visualPresetId) };
+    buttonPresetVisualKeys().forEach(function (key) {
+      if (key === 'visualPresetId') return;
+      if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
+      snap[key] = ix[key];
+    });
+    return snap;
+  }
+
+  function restoreButtonPresetVisuals(ix, snap) {
+    if (!ix || !snap) return ix;
+    copyButtonPresetVisualFields(snap, ix);
+    if (snap.visualPresetId) ix.visualPresetId = String(snap.visualPresetId);
+    return ix;
+  }
+
   function hasButtonVisualPreset(ix) {
     return !!(ix && ix.visualPresetId);
   }
@@ -3588,7 +3606,8 @@ var ExperienciaEngine = (function () {
     var rot = world ? world.rotation : (ix.rotation != null ? Number(ix.rotation) : 0);
     var effectiveOn = overlayEffectiveVisible(n, ix);
     var effectiveLocked = overlayEffectiveLocked(n, ix);
-    return {
+    var isPresetBtn = isSceneButtonInteraction(ix) && hasButtonVisualPreset(ix);
+    var vm = {
       id: ix.id,
       portId: ix.portId || ix.id,
       type: String(ix.type || 'BUTTON').toUpperCase(),
@@ -3657,6 +3676,29 @@ var ExperienciaEngine = (function () {
         : (ix.targetSceneId != null && ix.targetSceneId !== '' ? String(ix.targetSceneId) : null),
       _ix: ix
     };
+    if (isPresetBtn) {
+      copyButtonPresetVisualFields(ix, vm);
+      vm.visualPresetId = String(ix.visualPresetId);
+      if (ix.style != null) vm.style = ix.style;
+      if (ix.icon != null || ix.icon === null) vm.icon = ix.icon;
+      if (ix.boxW != null) vm.boxW = Number(ix.boxW);
+      if (ix.boxH != null) vm.boxH = Number(ix.boxH);
+      if (ix.bgColor != null) vm.bgColor = ix.bgColor;
+      if (ix.textColor != null) vm.textColor = ix.textColor;
+      if (ix.borderColor != null) vm.borderColor = ix.borderColor;
+      if (ix.borderWidth != null) vm.borderWidth = Number(ix.borderWidth);
+      if (ix.borderRadius != null) vm.borderRadius = Number(ix.borderRadius);
+      if (ix.bgOpacity != null) vm.bgOpacity = Number(ix.bgOpacity);
+      if (ix.opacity != null) vm.opacity = Number(ix.opacity);
+      if (ix.hoverColor != null) vm.hoverColor = ix.hoverColor;
+      if (ix.hoverTextColor != null) vm.hoverTextColor = ix.hoverTextColor;
+      if (ix.hoverTransition != null) vm.hoverTransition = Number(ix.hoverTransition);
+      if (ix.pressedColor != null) vm.pressedColor = ix.pressedColor;
+      if (ix.pressedTextColor != null) vm.pressedTextColor = ix.pressedTextColor;
+      if (ix.pressedScale != null) vm.pressedScale = Number(ix.pressedScale);
+      if (ix.hoverEnabled != null) vm.hoverEnabled = !!ix.hoverEnabled;
+    }
+    return vm;
   }
 
   function buttonHalfSizePx(ix, imageW, imageH) {
@@ -6018,7 +6060,9 @@ var ExperienciaEngine = (function () {
     }
 
     n.config.interactions = n.config.interactions.map(function (ix) {
+      var presetSnap = snapshotButtonPresetVisuals(ix);
       var m = makeInteraction(ix);
+      if (presetSnap) restoreButtonPresetVisuals(m, presetSnap);
       /* Normalize legacy hotspots group name */
       if (m.group === 'hotspots') m.group = 'content';
       return m;
