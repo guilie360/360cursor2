@@ -1637,7 +1637,6 @@ var ExperienciaEngine = (function () {
     var bt = String(ix.buttonType || 'unconfigured');
     if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
     ix.buttonType = bt;
-    applyGenericButtonChromeDefaults(ix);
     return ix;
   }
 
@@ -3463,6 +3462,7 @@ var ExperienciaEngine = (function () {
       ix.y = clampPercent(ix.y, 50);
       ix.positionInitialized = true;
     }
+    applyGenericButtonChromeDefaults(ix);
     return ix;
   }
 
@@ -3661,7 +3661,7 @@ var ExperienciaEngine = (function () {
 
   function buttonHalfSizePx(ix, imageW, imageH) {
     var t = ix ? String(ix.type || '').toUpperCase() : '';
-    if (t === 'BUTTON') ensureButtonVisualDefaults(ix);
+    if (t === 'BUTTON' && !hasButtonVisualPreset(ix)) ensureButtonVisualDefaults(ix);
     else if (t === 'TEXT' || isSceneShapeType(t)) {
       ensureFreeOverlayDefaults(ix);
     }
@@ -3691,7 +3691,7 @@ var ExperienciaEngine = (function () {
    */
   function resolveButtonLayout(ix, imageW, imageH) {
     var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
-    if (tLayout === 'BUTTON') ensureButtonVisualDefaults(ix);
+    if (tLayout === 'BUTTON' && !hasButtonVisualPreset(ix)) ensureButtonVisualDefaults(ix);
     else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
       ensureFreeOverlayDefaults(ix);
     }

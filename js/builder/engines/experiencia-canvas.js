@@ -8164,10 +8164,7 @@ var ExperienciaCanvas = (function () {
 
       var layerW = overlayLayerSize().w;
       var layerH = overlayLayerSize().h;
-      var buttons = (ExperienciaEngine.listSceneButtons(state, n) || []).map(function (b) {
-        if (!b || !b._ix || !ExperienciaEngine.buttonViewModel) return b;
-        return ExperienciaEngine.buttonViewModel(state, n, b._ix, layerW, layerH);
-      });
+      var buttons = ExperienciaEngine.listSceneButtons(state, n) || [];
       var selIds = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
         : [];

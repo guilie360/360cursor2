@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7817';
+  var QE_EDITOR_BUILD = 'ws7880';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -9971,10 +9971,16 @@ var QuotationEditor = (function () {
     });
   }
 
+  function dismissButtonPickerDom() {
+    if (!rootEl) return;
+    var picker = rootEl.querySelector('[data-qe-button-picker]');
+    if (picker) picker.remove();
+  }
+
   function pickButtonPreset(presetId) {
     state.buttonPickerOpen = false;
+    dismissButtonPickerDom();
     addButton(presetId);
-    rerender();
   }
 
   function openButtonPicker() {
