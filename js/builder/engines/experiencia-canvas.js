@@ -4433,6 +4433,35 @@ var ExperienciaCanvas = (function () {
       }
     }
 
+    function logPresetAddFlow(step, vm) {
+      var allowWithoutTrace = step === 'ExperienciaCanvas.addButton.beforeAddSceneButton';
+      var traceId = null;
+      try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTraceId) { traceId = null; }
+      if (!allowWithoutTrace) {
+        if (!vm) return;
+        var vmButtonId = vm.id || (vm._ix && vm._ix.id);
+        if (!traceId || !vmButtonId || String(vmButtonId) !== String(traceId)) return;
+      }
+      var seen = null;
+      try {
+        if (!window.__QE_PRESET_TRACE_SEEN__) window.__QE_PRESET_TRACE_SEEN__ = new Set();
+        seen = window.__QE_PRESET_TRACE_SEEN__;
+      } catch (eSeen) { return; }
+      if (seen.has(step)) return;
+      seen.add(step);
+      var ix = vm && (vm._ix || vm);
+      console.log('[PRESET ADD FLOW]', {
+        step: step,
+        buttonId: vm ? (vm.id || (ix && ix.id) || null) : null,
+        visualPresetId: ix ? (ix.visualPresetId || null) : null,
+        style: vm ? vm.style : null,
+        boxW: vm ? vm.boxW : null,
+        boxH: vm ? vm.boxH : null,
+        bgColor: vm ? vm.bgColor : null,
+        borderRadius: vm ? vm.borderRadius : null
+      });
+    }
+
     function persist() {
       if (_shapeResizeTraceCtx && shapeResizeTraceEnabled()) {
         shapeResizeTrace('5b.model-after-persist()', {
@@ -16714,47 +16743,24 @@ var ExperienciaCanvas = (function () {
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
+        logPresetAddFlow('ExperienciaCanvas.addButton.beforeAddSceneButton', null);
         var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
-        try {
-          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-              'ExperienciaCanvas.addButton.afterAddSceneButton', state, sceneId);
-          }
-        } catch (eTraceAdd) { /* ignore */ }
+        logPresetAddFlow('addSceneButton.returnValue', btn);
+        logPresetAddFlow('ExperienciaCanvas.addButton.afterAddSceneButtonLocal', btn);
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];
         }
+        logPresetAddFlow('ExperienciaCanvas.addButton.beforeNotifySelection', btn);
         notifyOverlaySelection();
-        try {
-          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-              'ExperienciaCanvas.addButton.afterNotifySelection', state, sceneId);
-          }
-        } catch (eTraceSel) { /* ignore */ }
+        logPresetAddFlow('ExperienciaCanvas.addButton.afterNotifySelection', btn);
+        logPresetAddFlow('ExperienciaCanvas.addButton.beforeRenderAll', btn);
         renderAll();
-        try {
-          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-              'ExperienciaCanvas.addButton.afterRenderAll', state, sceneId);
-          }
-        } catch (eTraceRender) { /* ignore */ }
+        logPresetAddFlow('ExperienciaCanvas.addButton.afterRenderAll', btn);
         requestAnimationFrame(function () {
           paintInspector();
         });
-        try {
-          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-              'ExperienciaCanvas.addButton.beforeBridge', state, sceneId);
-          }
-        } catch (eTraceBeforeBridge) { /* ignore */ }
         persist();
-        try {
-          if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-            window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-              'ExperienciaCanvas.addButton.afterBridge', state, sceneId);
-          }
-        } catch (eTraceAfterBridge) { /* ignore */ }
         requestAnimationFrame(recomputeOverlayLayout);
         return btn;
       },
