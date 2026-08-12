@@ -4433,35 +4433,6 @@ var ExperienciaCanvas = (function () {
       }
     }
 
-    function logPresetAddFlow(step, vm) {
-      var allowWithoutTrace = step === 'ExperienciaCanvas.addButton.beforeAddSceneButton';
-      var traceId = null;
-      try { traceId = window.__QE_PRESET_TRACE_BUTTON_ID__ || null; } catch (eTraceId) { traceId = null; }
-      if (!allowWithoutTrace) {
-        if (!vm) return;
-        var vmButtonId = vm.id || (vm._ix && vm._ix.id);
-        if (!traceId || !vmButtonId || String(vmButtonId) !== String(traceId)) return;
-      }
-      var seen = null;
-      try {
-        if (!window.__QE_PRESET_TRACE_SEEN__) window.__QE_PRESET_TRACE_SEEN__ = new Set();
-        seen = window.__QE_PRESET_TRACE_SEEN__;
-      } catch (eSeen) { return; }
-      if (seen.has(step)) return;
-      seen.add(step);
-      var ix = vm && (vm._ix || vm);
-      console.log('[PRESET ADD FLOW]', {
-        step: step,
-        buttonId: vm ? (vm.id || (ix && ix.id) || null) : null,
-        visualPresetId: ix ? (ix.visualPresetId || null) : null,
-        style: vm ? vm.style : null,
-        boxW: vm ? vm.boxW : null,
-        boxH: vm ? vm.boxH : null,
-        bgColor: vm ? vm.bgColor : null,
-        borderRadius: vm ? vm.borderRadius : null
-      });
-    }
-
     function persist() {
       if (_shapeResizeTraceCtx && shapeResizeTraceEnabled()) {
         shapeResizeTrace('5b.model-after-persist()', {
@@ -4476,12 +4447,6 @@ var ExperienciaCanvas = (function () {
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state);
       }
-      try {
-        if (typeof window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__ === 'function') {
-          window.__QE_LOG_PRESET_SHIM_TRACE_FROM_STATE__(
-            'ExperienciaCanvas.persist.beforeOnChange', state, canvas().selectedId);
-        }
-      } catch (eTracePersist) { /* ignore */ }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
     }
@@ -8317,20 +8282,6 @@ var ExperienciaCanvas = (function () {
             '</button>';
         }
         if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
-          try {
-            if (typeof window.__QE_LOG_PRESET_TRACE__ === 'function') {
-              window.__QE_LOG_PRESET_TRACE__('paintButtonsStage.beforeRender', {
-                id: b.id,
-                type: 'BUTTON',
-                visualPresetId: (b._ix && b._ix.visualPresetId) || null,
-                style: b.style,
-                boxW: b.boxW,
-                boxH: b.boxH,
-                bgColor: b.bgColor,
-                borderRadius: b.borderRadius
-              });
-            }
-          } catch (eTracePaint) { /* ignore */ }
           return ButtonOverlayRenderer.renderButtonHtml(b, {
             selSet: selSet,
             editMemberSet: editMemberSet,
@@ -16734,29 +16685,17 @@ var ExperienciaCanvas = (function () {
         return !!overlaySnapEnabled;
       },
       addButton: function (presetId) {
-        console.log('[BUTTON PRESET FLOW]', {
-          step: 'ExperienciaCanvas.addButton',
-          presetId: presetId,
-          sceneId: canvas().selectedId
-        });
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
-        logPresetAddFlow('ExperienciaCanvas.addButton.beforeAddSceneButton', null);
         var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
-        logPresetAddFlow('addSceneButton.returnValue', btn);
-        logPresetAddFlow('ExperienciaCanvas.addButton.afterAddSceneButtonLocal', btn);
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];
         }
-        logPresetAddFlow('ExperienciaCanvas.addButton.beforeNotifySelection', btn);
         notifyOverlaySelection();
-        logPresetAddFlow('ExperienciaCanvas.addButton.afterNotifySelection', btn);
-        logPresetAddFlow('ExperienciaCanvas.addButton.beforeRenderAll', btn);
         renderAll();
-        logPresetAddFlow('ExperienciaCanvas.addButton.afterRenderAll', btn);
         requestAnimationFrame(function () {
           paintInspector();
         });
