@@ -583,6 +583,10 @@ var QuotationExperienciaBridge = (function () {
         if (handle.setEditMode) handle.setEditMode(mode);
       },
       addButton: function (presetId) {
+        console.log('[BUTTON PRESET FLOW]', {
+          step: 'QuotationExperienciaBridge.addButton',
+          presetId: presetId
+        });
         return handle.addButton ? handle.addButton(presetId) : null;
       },
       addText: function () {

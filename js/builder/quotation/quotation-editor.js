@@ -9972,6 +9972,10 @@ var QuotationEditor = (function () {
   }
 
   function pickButtonPreset(presetId) {
+    console.log('[BUTTON PRESET FLOW]', {
+      step: 'QuotationEditor.pickButtonPreset',
+      presetId: presetId
+    });
     closeButtonPicker();
     addButton(presetId);
   }
@@ -12059,6 +12063,11 @@ var QuotationEditor = (function () {
   }
 
   function addButton(presetId) {
+    console.log('[BUTTON PRESET FLOW]', {
+      step: 'QuotationEditor.addButton',
+      presetId: presetId,
+      hasExpOverlay: !!expOverlay
+    });
     if (!activeScene()) return;
     state.selectedElementId = null;
     state.selectedItem = null;

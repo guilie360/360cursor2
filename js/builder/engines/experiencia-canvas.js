@@ -8282,6 +8282,18 @@ var ExperienciaCanvas = (function () {
             '</button>';
         }
         if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
+          console.log('[PRESET PAINT]', {
+            presetId: (b._ix && b._ix.visualPresetId) || null,
+            buttonId: b.id,
+            style: b.style,
+            boxW: b.boxW,
+            boxH: b.boxH,
+            bgColor: b.bgColor,
+            textColor: b.textColor,
+            borderColor: b.borderColor,
+            borderRadius: b.borderRadius,
+            icon: b.icon
+          });
           return ButtonOverlayRenderer.renderButtonHtml(b, {
             selSet: selSet,
             editMemberSet: editMemberSet,
@@ -16685,6 +16697,11 @@ var ExperienciaCanvas = (function () {
         return !!overlaySnapEnabled;
       },
       addButton: function (presetId) {
+        console.log('[BUTTON PRESET FLOW]', {
+          step: 'ExperienciaCanvas.addButton',
+          presetId: presetId,
+          sceneId: canvas().selectedId
+        });
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';

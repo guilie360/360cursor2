@@ -6,6 +6,8 @@ var ExperienciaEngine = (function () {
   var HERO_H = 220;
   var GAP_X = 72;
   var GAP_Y = 28;
+  /** Preset-created buttons — skip generic HUD chrome that would overwrite preset visuals. */
+  var buttonPresetVisualGuard = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
 
   /* Template layout — horizontal column gap + vertical free space between siblings */
   var TPL_COL_GAP = 160;
@@ -1618,6 +1620,8 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
+    if (ix.visualPresetId) return ix;
+    if (buttonPresetVisualGuard && buttonPresetVisualGuard.has(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
@@ -3727,6 +3731,11 @@ var ExperienciaEngine = (function () {
   }
 
   function addSceneButton(state, nodeId, presetId) {
+    console.log('[BUTTON PRESET FLOW]', {
+      step: 'ExperienciaEngine.addSceneButton',
+      presetId: presetId || null,
+      nodeId: nodeId
+    });
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var menuItem = findAddElementItem('el-button') || {
@@ -3750,6 +3759,19 @@ var ExperienciaEngine = (function () {
       : null;
     if (preset) {
       ButtonPresets.applyVisuals(ix, preset);
+      ix.visualPresetId = String(presetId);
+      if (buttonPresetVisualGuard) buttonPresetVisualGuard.add(ix);
+      console.log('[PRESET CREATED]', {
+        presetId: presetId,
+        style: ix.style,
+        boxW: ix.boxW,
+        boxH: ix.boxH,
+        bgColor: ix.bgColor,
+        textColor: ix.textColor,
+        borderColor: ix.borderColor,
+        borderRadius: ix.borderRadius,
+        icon: ix.icon
+      });
     } else {
       /* Legacy default when no preset id (existing callers / old flows). */
       ix.style = 'icon';
@@ -3763,6 +3785,17 @@ var ExperienciaEngine = (function () {
     }
     if (ix.color != null) delete ix.color;
     ensureButtonVisualDefaults(ix);
+    console.log('[PRESET AFTER DEFAULTS]', {
+      presetId: presetId || null,
+      style: ix.style,
+      boxW: ix.boxW,
+      boxH: ix.boxH,
+      bgColor: ix.bgColor,
+      textColor: ix.textColor,
+      borderColor: ix.borderColor,
+      borderRadius: ix.borderRadius,
+      icon: ix.icon
+    });
     return buttonViewModel(state, n, ix);
   }
 
