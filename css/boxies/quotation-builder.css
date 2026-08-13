@@ -4583,6 +4583,7 @@ body.is-qe-lib-pointer-dragging * {
 }
 
 .builder-exp-ui-btn.is-button-shape {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;

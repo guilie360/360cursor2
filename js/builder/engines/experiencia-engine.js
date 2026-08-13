@@ -1358,6 +1358,17 @@ var ExperienciaEngine = (function () {
     return { gw: gw, gh: gh };
   }
 
+  /** Default boxW/boxH for BUTTON + buttonShapeKind — same proportions as + Forma insert. */
+  function buttonShapeBoxForKind(kind, layerW, layerH) {
+    kind = String(kind || '').toUpperCase();
+    if (kind !== 'SHAPE_RECT' && kind !== 'SHAPE_CIRCLE' &&
+        kind !== 'SHAPE_ROUND_RECT' && kind !== 'SHAPE_CAPSULE') {
+      return null;
+    }
+    var box = shapeDefaultContentBoxMetrics(kind, layerW, layerH);
+    return { boxW: box.gw, boxH: box.gh };
+  }
+
   /** Global showroom controls — configured on Hero, not per-scene elements */
   var GLOBAL_SHOWROOM_ACTIONS = {
     whatsapp: true,
@@ -9403,6 +9414,7 @@ var ExperienciaEngine = (function () {
     shapeStretchFromIx: shapeStretchFromIx,
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
     shapeDefaultContentBoxMetrics: shapeDefaultContentBoxMetrics,
+    buttonShapeBoxForKind: buttonShapeBoxForKind,
     shapeDefaultTargetGhPct: shapeDefaultTargetGhPct,
     seedShapeContentBox: seedShapeContentBox,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,

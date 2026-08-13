@@ -1560,6 +1560,29 @@ var ExperienciaCanvas = (function () {
     return col;
   }
 
+  function buttonShapeSvgBorderRadius(shapeKind, b) {
+    shapeKind = String(shapeKind || '').toUpperCase();
+    if (shapeKind === 'SHAPE_ROUND_RECT') {
+      var br = b.borderRadius != null ? Number(b.borderRadius) : 16;
+      if (!isFinite(br) || br > 48) return 16;
+      return br;
+    }
+    return 16;
+  }
+
+  function buildButtonShapePatch(shapeKind, layerW, layerH) {
+    var patch = { buttonShapeKind: shapeKind };
+    if (typeof ExperienciaEngine !== 'undefined' &&
+        ExperienciaEngine.buttonShapeBoxForKind) {
+      var box = ExperienciaEngine.buttonShapeBoxForKind(shapeKind, layerW, layerH);
+      if (box) {
+        patch.boxW = box.boxW;
+        patch.boxH = box.boxH;
+      }
+    }
+    return patch;
+  }
+
   function buttonToShapePaintVm(b, shapeKind) {
     var w = b.boxW != null ? Number(b.boxW) : 14;
     var h = b.boxH != null ? Number(b.boxH) : 4.5;
@@ -1580,7 +1603,7 @@ var ExperienciaCanvas = (function () {
       fill: buttonColorToRgba(b.bgColor, b.bgOpacity),
       stroke: b.borderColor || 'rgba(255,255,255,0.62)',
       strokeWidth: b.borderWidth != null ? Number(b.borderWidth) : 1,
-      borderRadius: b.borderRadius != null ? Number(b.borderRadius) : 16,
+      borderRadius: buttonShapeSvgBorderRadius(shapeKind, b),
       shapeStretchX: 1,
       shapeStretchY: 1,
       shapeContentBox: true,
@@ -5296,7 +5319,11 @@ var ExperienciaCanvas = (function () {
       }
       function applyButtonShape(shapeKind) {
         if (!isButtonShapeKind(shapeKind)) return;
-        patchBtn({ buttonShapeKind: shapeKind }, { inspector: true, persist: true });
+        var sz = layerSize();
+        patchBtn(
+          buildButtonShapePatch(shapeKind, sz.w, sz.h),
+          { inspector: true, persist: true }
+        );
       }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
