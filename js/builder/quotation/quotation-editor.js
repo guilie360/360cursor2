@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7899';
+  var QE_EDITOR_BUILD = 'ws7900';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -12614,25 +12614,15 @@ var QuotationEditor = (function () {
         });
       }
       qAll('[data-qe-close-button-picker]').forEach(function (btn) {
-        btn.addEventListener('click', function () { closeButtonPicker(); });
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeButtonPicker();
+        });
       });
       var buttonPicker = qOne('[data-qe-button-picker]');
-      if (buttonPicker && !buttonPicker.dataset.bound) {
-        buttonPicker.dataset.bound = '1';
-        var buttonPickerPanel = buttonPicker.querySelector('.qe-shape-picker__panel');
-        if (buttonPickerPanel) {
-          buttonPickerPanel.addEventListener('click', function (e) {
-            e.stopPropagation();
-          });
-        }
+      if (buttonPicker) {
         buttonPicker.addEventListener('click', function (e) {
-          var shapeBtn = e.target.closest && e.target.closest('[data-qe-pick-button-shape]');
-          if (shapeBtn && buttonPicker.contains(shapeBtn)) {
-            e.preventDefault();
-            e.stopPropagation();
-            pickButtonShape(shapeBtn.getAttribute('data-qe-pick-button-shape'));
-            return;
-          }
           if (e.target === buttonPicker || e.target.hasAttribute('data-qe-close-button-picker')) {
             e.preventDefault();
             e.stopPropagation();
@@ -12640,6 +12630,13 @@ var QuotationEditor = (function () {
           }
         });
       }
+      qAll('[data-qe-pick-button-shape]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          pickButtonShape(btn.getAttribute('data-qe-pick-button-shape'));
+        });
+      });
       var closeComponentPickerBtn = qOne('[data-qe-close-component-picker]');
       if (closeComponentPickerBtn) {
         closeComponentPickerBtn.addEventListener('click', function () { closeComponentPicker(); });
