@@ -4057,6 +4057,22 @@ var ExperienciaEngine = (function () {
     }
     n = getNode(state, nodeId);
     ix = getInteraction(n, ix.id) || ix;
+    if (preset) {
+      if (ButtonPresets.applyToInteraction) {
+        ButtonPresets.applyToInteraction(ix, preset, presetId);
+      } else {
+        ButtonPresets.applyVisuals(ix, preset);
+        ix.visualPresetId = String(presetId);
+      }
+      ensureButtonKindConfig(ix);
+    }
+    ix.x = 50;
+    ix.y = 50;
+    ix.positionInitialized = true;
+    ix.positionMode = 'free';
+    if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.normalize) {
+      Object.assign(ix, SceneButtonModel.normalize(ix));
+    }
     return buttonViewModel(state, n, ix);
   }
 

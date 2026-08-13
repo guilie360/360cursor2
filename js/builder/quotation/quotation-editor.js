@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7912';
+  var QE_EDITOR_BUILD = 'ws7913';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -10999,7 +10999,8 @@ var QuotationEditor = (function () {
       listPlanos2d: listEditorPlanos2d,
       listVideos: listEditorVideos,
       onChange: function () {
-        markDirtyLocal();
+        /* Canvas/shim is SSOT for overlay geometry + button visuals — pull only. */
+        markDirtyLocal({ skipPush: true });
         refreshLayersPanel();
       },
       onSelectionChange: function (sel) {
@@ -14182,6 +14183,7 @@ var QuotationEditor = (function () {
       var after = this.getOutlinerDebug();
       return { createdId: id, before: before, after: after };
     },
+    _pickButtonShape: pickButtonShape,
     _getState: function () { return state; },
     _resetDemo: function () {
       resetEditorSession('demo');

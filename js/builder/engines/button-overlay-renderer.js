@@ -1,5 +1,5 @@
 /* BOXIES v0.4 — Shared BUTTON overlay HTML (canvas stage + picker preview). */
-var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7912';
+var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7913';
 var ButtonOverlayRenderer = (function () {
   function esc(v) {
     return String(v == null ? '' : v)

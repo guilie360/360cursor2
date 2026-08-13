@@ -381,8 +381,9 @@ var QuotationExperienciaBridge = (function () {
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
-        if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.mergeMissing) {
-          SceneButtonModel.mergeMissing(ix, prevShimById[String(ix.id)]);
+        if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.mergeInto) {
+          var prevShim = prevShimById[String(ix.id)];
+          if (prevShim) SceneButtonModel.mergeInto(ix, prevShim);
         }
       });
       n.config.interactions = cloned;

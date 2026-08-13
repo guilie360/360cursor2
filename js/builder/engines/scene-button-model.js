@@ -87,6 +87,14 @@ var SceneButtonModel = (function () {
     if (out.marginX == null || isNaN(Number(out.marginX))) out.marginX = 0;
     if (out.marginY == null || isNaN(Number(out.marginY))) out.marginY = 0;
     if (out.positionInitialized == null) out.positionInitialized = true;
+    if (!out.groupId && out.positionMode !== 'anchor') {
+      var nx = Number(out.x);
+      var ny = Number(out.y);
+      if (!isFinite(nx) || !isFinite(ny) || (nx === 0 && ny === 0)) {
+        out.x = 50;
+        out.y = 50;
+      }
+    }
     if (out.visualPresetId != null && out.visualPresetId !== '') {
       out.visualPresetId = String(out.visualPresetId);
     }
@@ -142,11 +150,16 @@ var SceneButtonModel = (function () {
     return dest;
   }
 
-  /** Visual + layout fields for buttonViewModel / renderer. */
+  /** Visual fields for buttonViewModel / renderer (not paint x/y — layout computes those). */
   function copyViewFields(ix, vm) {
     if (!ix || !vm) return vm;
     var normalized = normalize(ix);
-    VISUAL_KEYS.concat(LAYOUT_KEYS).forEach(function (key) {
+    VISUAL_KEYS.forEach(function (key) {
+      if (normalized[key] === undefined) return;
+      vm[key] = normalized[key];
+    });
+    ['rotation', 'positionMode', 'anchor', 'marginX', 'marginY', 'positionInitialized',
+      'scaleValue', 'scaleUnit', 'size'].forEach(function (key) {
       if (normalized[key] === undefined) return;
       vm[key] = normalized[key];
     });
@@ -165,7 +178,7 @@ var SceneButtonModel = (function () {
     return null;
   }
 
-  function runSelfTest() {
+  function runModelSelfTest() {
     if (typeof ButtonPresets === 'undefined') {
       return { ok: false, error: 'ButtonPresets not loaded' };
     }
@@ -201,11 +214,74 @@ var SceneButtonModel = (function () {
       if (!row.ok) allOk = false;
       rows.push(row);
     });
-    return { ok: allOk, rows: rows };
+    return { ok: allOk, mode: 'model', rows: rows };
+  }
+
+  /**
+   * Integration test — real pickButtonShape → DOM outerHTML on canvas.
+   * Usage: __QE_TEST_BUTTONS__('circle').then(console.log)
+   */
+  function runIntegrationTest(shape) {
+    shape = String(shape || 'circle').toLowerCase();
+    return new Promise(function (resolve) {
+      var pick = null;
+      if (typeof QuotationEditor !== 'undefined' && QuotationEditor._pickButtonShape) {
+        pick = QuotationEditor._pickButtonShape;
+      } else if (typeof window !== 'undefined' && window.__QE_PICK_BUTTON_SHAPE__) {
+        pick = window.__QE_PICK_BUTTON_SHAPE__;
+      }
+      if (!pick) {
+        resolve({ ok: false, mode: 'integration', error: 'QuotationEditor not mounted' });
+        return;
+      }
+      if (!document.querySelector('[data-exp-buttons-layer]')) {
+        resolve({ ok: false, mode: 'integration', error: 'Canvas buttons layer not in DOM' });
+        return;
+      }
+      var layer = document.querySelector('[data-exp-buttons-layer]');
+      var before = layer.querySelectorAll('[data-exp-stage-btn]').length;
+      try {
+        pick(shape);
+      } catch (ePick) {
+        resolve({ ok: false, mode: 'integration', error: String(ePick && ePick.message || ePick) });
+        return;
+      }
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          var btns = layer.querySelectorAll('[data-exp-stage-btn]');
+          var btn = btns.length ? btns[btns.length - 1] : null;
+          var outerHTML = btn ? btn.outerHTML : '';
+          var hasLocalLook = outerHTML.indexOf('has-local-look') >= 0;
+          var hasRadius = outerHTML.indexOf('border-radius') >= 0 ||
+            outerHTML.indexOf('--btn-local-radius') >= 0;
+          var style = btn ? (btn.getAttribute('style') || '') : '';
+          var ok = !!(btn && hasLocalLook && hasRadius && btns.length > before);
+          resolve({
+            ok: ok,
+            mode: 'integration',
+            shape: shape,
+            buttonId: btn ? btn.getAttribute('data-exp-stage-btn') : null,
+            added: btns.length > before,
+            hasLocalLook: hasLocalLook,
+            hasRadius: hasRadius,
+            style: style,
+            outerHTML: outerHTML
+          });
+        });
+      });
+    });
+  }
+
+  function runSelfTest(shape) {
+    if (shape != null && String(shape).length) {
+      return runIntegrationTest(shape);
+    }
+    return runModelSelfTest();
   }
 
   if (typeof window !== 'undefined') {
     window.__QE_TEST_BUTTONS__ = runSelfTest;
+    window.__QE_TEST_BUTTONS_MODEL__ = runModelSelfTest;
   }
 
   return {
@@ -222,6 +298,8 @@ var SceneButtonModel = (function () {
     mergeMissing: mergeMissing,
     copyViewFields: copyViewFields,
     findInList: findInList,
-    runSelfTest: runSelfTest
+    runSelfTest: runSelfTest,
+    runModelSelfTest: runModelSelfTest,
+    runIntegrationTest: runIntegrationTest
   };
 })();
