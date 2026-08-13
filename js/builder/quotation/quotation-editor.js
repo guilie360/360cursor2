@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7909';
+  var QE_EDITOR_BUILD = 'ws7910';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -1839,6 +1839,30 @@ var QuotationEditor = (function () {
     openLibraryStatusPopover(btn || document.querySelector('[data-qe-lib-status]'));
   }
 
+  function traceDraftIx(label, source) {
+    try {
+      if (typeof window === 'undefined' || !window.__qeTraceVisualPreset || !window.__QE_BTN_TRACE_ID__) {
+        return;
+      }
+      var ix = null;
+      if (source === 'scene') {
+        (state.scenes || []).some(function (sc) {
+          if (!sc || !sc.interactions) return false;
+          ix = window.__qeFindTracedIxInList(sc.interactions);
+          return !!ix;
+        });
+      } else if (source === 'shim' && expOverlay && expOverlay.shim) {
+        var exp = expOverlay.shim.experiencia;
+        (exp && exp.nodes || []).some(function (n) {
+          if (!n || !n.config) return false;
+          ix = window.__qeFindTracedIxInList(n.config.interactions);
+          return !!ix;
+        });
+      }
+      window.__qeTraceVisualPreset(label, ix);
+    } catch (eTrDraft) { /* ignore */ }
+  }
+
   function persistDraft(opts) {
     opts = opts || {};
     var id = String(
@@ -1850,10 +1874,20 @@ var QuotationEditor = (function () {
     try {
       /* Canvas/shim is SSOT for overlay edits — pull into scenes before push syncs panel flags. */
       if (!opts.skipPull && expOverlay && typeof expOverlay.pull === 'function') {
+        traceDraftIx('markDirtyLocal:before-pullToScenes-shim', 'shim');
+        traceDraftIx('markDirtyLocal:before-pullToScenes-scene', 'scene');
         try { expOverlay.pull(); } catch (ePull) {}
+        traceDraftIx('markDirtyLocal:after-pullToScenes-shim', 'shim');
+        traceDraftIx('markDirtyLocal:after-pullToScenes-scene', 'scene');
       }
       /* Panel scenes push merges locked/visible flags onto shim interactions. */
-      if (!opts.skipPush) pushOutlinerScenesToShim();
+      if (!opts.skipPush) {
+        traceDraftIx('markDirtyLocal:before-pushScenesToShim-scene', 'scene');
+        traceDraftIx('markDirtyLocal:before-pushScenesToShim-shim', 'shim');
+        pushOutlinerScenesToShim();
+        traceDraftIx('markDirtyLocal:after-pushScenesToShim-scene', 'scene');
+        traceDraftIx('markDirtyLocal:after-pushScenesToShim-shim', 'shim');
+      }
       persistLibraryUi();
       var payload = {
         v: 1,

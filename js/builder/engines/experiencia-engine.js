@@ -30,6 +30,38 @@ var ExperienciaEngine = (function () {
     return dest;
   }
 
+  /** [TRACE] visualPresetId lifecycle — filters by window.__QE_BTN_TRACE_ID__ */
+  function traceVisualPresetCheckpoint(label, ix, extra) {
+    try {
+      var tid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
+      if (!tid) return;
+      var id = ix && typeof ix === 'object' && !Array.isArray(ix) ? ix.id : null;
+      if (id != null && String(id) !== String(tid)) return;
+      var preset = ix && typeof ix === 'object' && !Array.isArray(ix)
+        ? ix.visualPresetId
+        : undefined;
+      if (arguments.length >= 3) {
+        console.log('[TRACE]', label, preset, extra);
+      } else {
+        console.log('[TRACE]', label, preset);
+      }
+    } catch (eTr) { /* ignore */ }
+  }
+
+  function findTracedInteractionInList(list) {
+    var tid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
+    if (!tid || !Array.isArray(list)) return null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === String(tid)) return list[i];
+    }
+    return null;
+  }
+
+  if (typeof window !== 'undefined') {
+    window.__qeTraceVisualPreset = traceVisualPresetCheckpoint;
+    window.__qeFindTracedIxInList = findTracedInteractionInList;
+  }
+
   function hasButtonVisualPreset(ix) {
     return !!(ix && ix.visualPresetId);
   }
@@ -3877,7 +3909,10 @@ var ExperienciaEngine = (function () {
       buttonType: ix.buttonType || 'unconfigured',
       buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
       buttonShapeKind: ix.buttonShapeKind || null,
-      visualPresetId: ix.visualPresetId || null,
+      visualPresetId: (function () {
+        traceVisualPresetCheckpoint('buttonViewModel:vm.visualPresetId', ix);
+        return ix.visualPresetId || null;
+      })(),
       targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId)
         ? String(ix.buttonConfig.targetSceneId)
         : (ix.targetSceneId != null && ix.targetSceneId !== '' ? String(ix.targetSceneId) : null),
@@ -4062,6 +4097,7 @@ var ExperienciaEngine = (function () {
         ButtonPresets.applyVisuals(ix, preset);
         ix.visualPresetId = String(presetId);
       }
+      traceVisualPresetCheckpoint('addSceneButton:after-applyToInteraction', ix);
       ensureButtonKindConfig(ix);
     } else {
       ensureButtonVisualDefaults(ix);
@@ -6400,7 +6436,10 @@ var ExperienciaEngine = (function () {
     var list = (scene && scene.config && scene.config.interactions) || [];
     for (var i = 0; i < list.length; i++) {
       if (String(list[i].id) === String(interactionId) ||
-          String(list[i].portId) === String(interactionId)) return list[i];
+          String(list[i].portId) === String(interactionId)) {
+        traceVisualPresetCheckpoint('getInteraction:before-return', list[i]);
+        return list[i];
+      }
     }
     return null;
   }
@@ -6424,6 +6463,10 @@ var ExperienciaEngine = (function () {
     });
     if (!scene.config.interactions) scene.config.interactions = [];
     scene.config.interactions.push(ix);
+    if (String(type || '').toUpperCase() === 'BUTTON' && typeof window !== 'undefined') {
+      window.__QE_BTN_TRACE_ID__ = ix.id;
+    }
+    traceVisualPresetCheckpoint('addInteractionToScene:after-push', ix);
     mirrorHotspotsFromInteractions(scene);
     syncScenePorts(scene);
     scene.status = 'pending';
@@ -9473,6 +9516,8 @@ var ExperienciaEngine = (function () {
     syncHeroOnly: syncHeroOnly,
     resetFlow: resetFlow,
     markExperienciaDirty: markExperienciaDirty,
+    traceVisualPresetCheckpoint: traceVisualPresetCheckpoint,
+    findTracedInteractionInList: findTracedInteractionInList,
     markExperienciaSaved: markExperienciaSaved,
     runGuardedMutation: function (state, reason, fn, options) {
       if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.runGuarded) {

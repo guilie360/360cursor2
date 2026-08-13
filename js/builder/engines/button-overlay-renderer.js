@@ -1,5 +1,5 @@
 /* BOXIES v0.4 — Shared BUTTON overlay HTML (canvas stage + picker preview). */
-var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7909';
+var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7910';
 try {
   console.log('[QE btn-render] button-overlay-renderer loaded ' + BUTTON_OVERLAY_RENDERER_BUILD);
 } catch (eBuildLog) { /* ignore */ }
@@ -128,10 +128,8 @@ var ButtonOverlayRenderer = (function () {
   function renderButtonHtml(b, options) {
     if (!b) return '';
     try {
-      console.log('[QE btn-render] renderButtonHtml ENTRÓ', {
-        id: b.id,
-        visualPresetId: b.visualPresetId || (b._ix && b._ix.visualPresetId)
-      });
+      console.log('[TRACE]', 'renderButtonHtml:enter',
+        b.visualPresetId || (b._ix && b._ix.visualPresetId));
     } catch (eRenderLog) { /* ignore */ }
     b = hydrateVisualFromPreset(b);
     options = options || {};

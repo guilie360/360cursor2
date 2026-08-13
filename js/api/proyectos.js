@@ -691,6 +691,16 @@ var ProyectosApi = (function () {
         enabled: ix.enabled !== false
       };
       if (type === 'BUTTON') {
+        var _traceBtn = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__ &&
+          String(id) === String(window.__QE_BTN_TRACE_ID__));
+        if (_traceBtn) {
+          try {
+            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:before',
+              ix.visualPresetId, JSON.parse(JSON.stringify(ix)));
+          } catch (eSanBefore) {
+            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:before', ix.visualPresetId, ix);
+          }
+        }
         out.x = Number(ix.x);
         out.y = Number(ix.y);
         if (!isFinite(out.x)) out.x = 50;
@@ -729,6 +739,14 @@ var ProyectosApi = (function () {
           out.buttonConfig = ix.buttonConfig;
         }
         if (ix.locked != null) out.locked = !!ix.locked;
+        if (_traceBtn) {
+          try {
+            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:after',
+              out.visualPresetId, JSON.parse(JSON.stringify(out)));
+          } catch (eSanAfter) {
+            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:after', out.visualPresetId, out);
+          }
+        }
       } else if (type === 'HOTSPOT') {
         out.shape = heroText(ix.shape) || 'polygon';
         out.name = heroText(ix.name) || out.label;

@@ -4774,8 +4774,28 @@ var ExperienciaCanvas = (function () {
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state, overlayMode ? { skipNormalize: true } : null);
       }
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.traceVisualPresetCheckpoint) {
+        var _traceN = ExperienciaEngine.getNode(state, canvas().selectedId);
+        var _traceTid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
+        if (_traceTid && _traceN) {
+          ExperienciaEngine.traceVisualPresetCheckpoint(
+            'persist:before-pullToScenes',
+            ExperienciaEngine.getInteraction(_traceN, _traceTid)
+          );
+        }
+      }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
+      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.traceVisualPresetCheckpoint) {
+        var _traceN2 = ExperienciaEngine.getNode(state, canvas().selectedId);
+        var _traceTid2 = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
+        if (_traceTid2 && _traceN2) {
+          ExperienciaEngine.traceVisualPresetCheckpoint(
+            'persist:after-pullToScenes',
+            ExperienciaEngine.getInteraction(_traceN2, _traceTid2)
+          );
+        }
+      }
     }
 
     function readShapeTraceModel(sceneId, btnId) {
