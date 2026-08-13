@@ -693,13 +693,8 @@ var ProyectosApi = (function () {
       if (type === 'BUTTON') {
         var _traceBtn = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__ &&
           String(id) === String(window.__QE_BTN_TRACE_ID__));
-        if (_traceBtn) {
-          try {
-            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:before',
-              ix.visualPresetId, JSON.parse(JSON.stringify(ix)));
-          } catch (eSanBefore) {
-            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:before', ix.visualPresetId, ix);
-          }
+        if (_traceBtn && typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
+          window.__qeTraceVisualPreset('sanitizeCanvasInteractions:BUTTON:before', ix);
         }
         out.x = Number(ix.x);
         out.y = Number(ix.y);
@@ -739,13 +734,8 @@ var ProyectosApi = (function () {
           out.buttonConfig = ix.buttonConfig;
         }
         if (ix.locked != null) out.locked = !!ix.locked;
-        if (_traceBtn) {
-          try {
-            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:after',
-              out.visualPresetId, JSON.parse(JSON.stringify(out)));
-          } catch (eSanAfter) {
-            console.log('[TRACE]', 'sanitizeCanvasInteractions:BUTTON:after', out.visualPresetId, out);
-          }
+        if (_traceBtn && typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
+          window.__qeTraceVisualPreset('sanitizeCanvasInteractions:BUTTON:after', out);
         }
       } else if (type === 'HOTSPOT') {
         out.shape = heroText(ix.shape) || 'polygon';

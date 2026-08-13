@@ -30,21 +30,39 @@ var ExperienciaEngine = (function () {
     return dest;
   }
 
-  /** [TRACE] visualPresetId lifecycle — filters by window.__QE_BTN_TRACE_ID__ */
-  function traceVisualPresetCheckpoint(label, ix, extra) {
+  /** Trace visualPresetId lifecycle into window.__QE_TRACE_LOG__ (no console spam). */
+  var TRACE_NOISY_CHECKPOINTS = {
+    'renderButtonHtml:enter': true,
+    'getInteraction:before-return': true,
+    'buttonViewModel:vm.visualPresetId': true
+  };
+
+  function traceVisualPresetCheckpoint(label, ix) {
     try {
-      var tid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
+      if (typeof window === 'undefined') return;
+      var tid = window.__QE_BTN_TRACE_ID__ || null;
       if (!tid) return;
       var id = ix && typeof ix === 'object' && !Array.isArray(ix) ? ix.id : null;
       if (id != null && String(id) !== String(tid)) return;
       var preset = ix && typeof ix === 'object' && !Array.isArray(ix)
         ? ix.visualPresetId
         : undefined;
-      if (arguments.length >= 3) {
-        console.log('[TRACE]', label, preset, extra);
-      } else {
-        console.log('[TRACE]', label, preset);
+      window.__QE_TRACE_LOG__ = window.__QE_TRACE_LOG__ || [];
+      if (TRACE_NOISY_CHECKPOINTS[label]) {
+        var lastSame = null;
+        for (var i = window.__QE_TRACE_LOG__.length - 1; i >= 0; i--) {
+          if (window.__QE_TRACE_LOG__[i].checkpoint === label) {
+            lastSame = window.__QE_TRACE_LOG__[i];
+            break;
+          }
+        }
+        if (lastSame && lastSame.visualPresetId === preset) return;
       }
+      window.__QE_TRACE_LOG__.push({
+        checkpoint: label,
+        visualPresetId: preset,
+        ts: Date.now()
+      });
     } catch (eTr) { /* ignore */ }
   }
 
@@ -6464,6 +6482,7 @@ var ExperienciaEngine = (function () {
     if (!scene.config.interactions) scene.config.interactions = [];
     scene.config.interactions.push(ix);
     if (String(type || '').toUpperCase() === 'BUTTON' && typeof window !== 'undefined') {
+      window.__QE_TRACE_LOG__ = [];
       window.__QE_BTN_TRACE_ID__ = ix.id;
     }
     traceVisualPresetCheckpoint('addInteractionToScene:after-push', ix);
