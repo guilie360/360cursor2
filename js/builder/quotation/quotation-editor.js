@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7895';
+  var QE_EDITOR_BUILD = 'ws7896';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -10181,25 +10181,35 @@ var QuotationEditor = (function () {
     openButtonPicker();
   }
 
+  function overlayAddButton(opts) {
+    if (!expOverlay) return null;
+    if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
+      return expOverlay.handle.addButton(opts || {});
+    }
+    if (typeof expOverlay.addButton === 'function') {
+      return expOverlay.addButton(opts || {});
+    }
+    return null;
+  }
+
   function pickButtonShape(shape) {
+    shape = String(shape || '').toLowerCase();
     if (!shape || !activeScene()) return;
-    state.buttonPickerOpen = false;
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
     markDirtyLocal();
     if (expOverlay) {
-      refreshInspectorOnly();
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      expOverlay.addButton({ buttonShape: shape });
+      overlayAddButton({ buttonShape: shape });
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
-      return;
+    } else {
+      pendingExpAction = { type: 'addButton', buttonShape: shape };
     }
-    pendingExpAction = { type: 'addButton', buttonShape: shape };
-    rerender();
+    closeButtonPicker();
   }
 
   function openButtonPicker() {
@@ -11037,7 +11047,7 @@ var QuotationEditor = (function () {
       pendingExpAction = null;
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        expOverlay.addButton({ buttonShape: act.buttonShape });
+        overlayAddButton({ buttonShape: act.buttonShape });
         focusPropsPanel();
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
@@ -12591,6 +12601,11 @@ var QuotationEditor = (function () {
       var buttonPicker = qOne('[data-qe-button-picker]');
       if (buttonPicker) {
         buttonPicker.addEventListener('click', function (e) {
+          var shapeBtn = e.target.closest && e.target.closest('[data-qe-pick-button-shape]');
+          if (shapeBtn && buttonPicker.contains(shapeBtn)) {
+            pickButtonShape(shapeBtn.getAttribute('data-qe-pick-button-shape'));
+            return;
+          }
           if (e.target === buttonPicker || e.target.hasAttribute('data-qe-close-button-picker')) {
             closeButtonPicker();
           }
@@ -12627,13 +12642,6 @@ var QuotationEditor = (function () {
           e.preventDefault();
           e.stopPropagation();
           pickShape(btn.getAttribute('data-qe-pick-shape'));
-        });
-      });
-      qAll('[data-qe-pick-button-shape]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          pickButtonShape(btn.getAttribute('data-qe-pick-button-shape'));
         });
       });
       qAll('[data-qe-pick-button]').forEach(function (tile) {
