@@ -4013,8 +4013,20 @@ var ExperienciaEngine = (function () {
   }
 
   function addSceneButton(state, nodeId, presetId) {
+    try {
+      console.log('[QE btn-create] enter', { nodeId: nodeId, presetId: presetId });
+    } catch (eEnterLog) { /* ignore */ }
     var n = getNode(state, nodeId);
-    if (!n || !isButtonsEditableNode(n)) return null;
+    if (!n || !isButtonsEditableNode(n)) {
+      try {
+        console.log('[QE btn-create] abort — node not editable', {
+          nodeId: nodeId,
+          hasNode: !!n,
+          kind: n && n.kind
+        });
+      } catch (eAbortNode) { /* ignore */ }
+      return null;
+    }
     var menuItem = findAddElementItem('el-button') || {
       interactionType: 'BUTTON',
       defaultLabel: 'Botón',

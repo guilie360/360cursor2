@@ -17205,14 +17205,31 @@ var ExperienciaCanvas = (function () {
         return !!overlaySnapEnabled;
       },
       addButton: function (shape) {
-        var sceneId = canvas().selectedId;
-        if (!sceneId) return null;
+        var sceneId = canvas().selectedId || api.overlayNodeId;
+        if (!sceneId) {
+          try {
+            console.log('[QE btn-add] canvas.addButton — no sceneId', {
+              shape: shape,
+              selectedId: canvas().selectedId,
+              overlayNodeId: api.overlayNodeId
+            });
+          } catch (eNoScene) { /* ignore */ }
+          return null;
+        }
+        if (!canvas().selectedId) canvas().selectedId = sceneId;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
         var presetId = shape;
         if (typeof ButtonPresets !== 'undefined' && ButtonPresets.resolveShapePresetId) {
           presetId = ButtonPresets.resolveShapePresetId(shape) || shape;
         }
+        try {
+          console.log('[QE btn-add] canvas.addButton', {
+            shape: shape,
+            presetId: presetId,
+            sceneId: sceneId
+          });
+        } catch (eAddLog) { /* ignore */ }
         var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
         if (btn) {
           canvas().selectedButtonId = btn.id;

@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7905';
+  var QE_EDITOR_BUILD = 'ws7906';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -10189,14 +10189,28 @@ var QuotationEditor = (function () {
   }
 
   function overlayAddButton(shape) {
-    if (!expOverlay) return null;
+    if (!expOverlay) {
+      try {
+        console.log('[QE btn-add] overlayAddButton — no expOverlay', { shape: shape });
+      } catch (eNoOx) { /* ignore */ }
+      return null;
+    }
+    var result = null;
     if (typeof expOverlay.addButton === 'function') {
-      return expOverlay.addButton(shape);
+      result = expOverlay.addButton(shape);
+    } else if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
+      result = expOverlay.handle.addButton(shape);
     }
-    if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
-      return expOverlay.handle.addButton(shape);
-    }
-    return null;
+    try {
+      console.log('[QE btn-add] overlayAddButton', {
+        shape: shape,
+        hasAddButton: typeof expOverlay.addButton === 'function',
+        hasHandleAddButton: !!(expOverlay.handle && expOverlay.handle.addButton),
+        created: !!(result && result.id),
+        id: result && result.id
+      });
+    } catch (eOxLog) { /* ignore */ }
+    return result;
   }
 
   function pickButtonShape(shape) {
@@ -10211,11 +10225,18 @@ var QuotationEditor = (function () {
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
-    markDirtyLocal();
     if (expOverlay) {
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      overlayAddButton(shape);
+      var createdBtn = overlayAddButton(shape);
+      try {
+        console.log('[QE btn-picker] pickButtonShape done', {
+          shape: shape,
+          created: !!(createdBtn && createdBtn.id),
+          id: createdBtn && createdBtn.id
+        });
+      } catch (ePickDone) { /* ignore */ }
+      markDirtyLocal({ skipPull: true });
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       rerender();
@@ -12627,16 +12648,15 @@ var QuotationEditor = (function () {
             e.preventDefault();
             e.stopPropagation();
             closeButtonPicker();
+            return;
           }
-        });
-      }
-      qAll('[data-qe-pick-button-shape]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
+          var shapeBtn = e.target.closest && e.target.closest('[data-qe-pick-button-shape]');
+          if (!shapeBtn || !buttonPicker.contains(shapeBtn)) return;
           e.preventDefault();
           e.stopPropagation();
-          pickButtonShape(btn.getAttribute('data-qe-pick-button-shape'));
+          pickButtonShape(shapeBtn.getAttribute('data-qe-pick-button-shape'));
         });
-      });
+      }
       var closeComponentPickerBtn = qOne('[data-qe-close-component-picker]');
       if (closeComponentPickerBtn) {
         closeComponentPickerBtn.addEventListener('click', function () { closeComponentPicker(); });
