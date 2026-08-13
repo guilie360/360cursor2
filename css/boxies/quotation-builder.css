@@ -4490,6 +4490,14 @@ body.is-qe-lib-pointer-dragging * {
   height: 100%;
   overflow: hidden;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qe-button-picker__stage {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .qe-button-picker__layer .builder-exp-ui-btn {

@@ -45,6 +45,22 @@ var ExperienciaEngine = (function () {
     return false;
   }
 
+  /** Paint height % — boxH is width-relative (same semantics as shape tiles). */
+  function buttonPaintBoxHPct(boxH, layerW, layerH, ix) {
+    var h = Number(boxH);
+    if (!hasButtonLocalVisual(ix)) return h;
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var lh = Math.max(1, Number(layerH) || 1000);
+    return h * (lw / lh);
+  }
+
+  /** Inverse of buttonPaintBoxHPct — keeps stored boxH width-relative after resize. */
+  function buttonStoredBoxHFromPaint(paintBoxH, layerW, layerH) {
+    var lw = Math.max(1, Number(layerW) || 1000);
+    var lh = Math.max(1, Number(layerH) || 1000);
+    return Number(paintBoxH) * (lh / lw);
+  }
+
   /* Template layout — horizontal column gap + vertical free space between siblings */
   var TPL_COL_GAP = 160;
   var TPL_SIBLING_GAP = 56;
@@ -3681,6 +3697,13 @@ var ExperienciaEngine = (function () {
       if (Object.prototype.hasOwnProperty.call(ix, 'icon')) vm.icon = ix.icon;
       if (ix.boxW != null) vm.boxW = Number(ix.boxW);
       if (ix.boxH != null) vm.boxH = Number(ix.boxH);
+      vm.widthRelativeBoxH = true;
+      vm.paintBoxH = buttonPaintBoxHPct(
+        ix.boxH != null ? Number(ix.boxH) : 4.5,
+        lw,
+        lh,
+        ix
+      );
     }
     return vm;
   }
@@ -3701,9 +3724,12 @@ var ExperienciaEngine = (function () {
       };
     }
     if (ix && ix.boxW != null && ix.boxH != null) {
+      var halfHPx = hasButtonLocalVisual(ix)
+        ? (Number(ix.boxH) / 100) * w
+        : (Number(ix.boxH) / 100) * h;
       return {
         w: Math.max(4, (Number(ix.boxW) / 100) * w / 2),
-        h: Math.max(4, (Number(ix.boxH) / 100) * h / 2)
+        h: Math.max(4, halfHPx / 2)
       };
     }
     var style = (ix && ix.style) || 'button';
@@ -9283,6 +9309,9 @@ var ExperienciaEngine = (function () {
     updateOverlayGroupTransform: updateOverlayGroupTransform,
     getSceneOverlayItem: getSceneOverlayItem,
     buttonViewModel: buttonViewModel,
+    hasButtonLocalVisual: hasButtonLocalVisual,
+    buttonPaintBoxHPct: buttonPaintBoxHPct,
+    buttonStoredBoxHFromPaint: buttonStoredBoxHFromPaint,
     overlayGroupViewModel: overlayGroupViewModel,
     overlayWorldLayoutRaw: overlayWorldLayoutRaw,
     absoluteToLocalOverlay: absoluteToLocalOverlay,
