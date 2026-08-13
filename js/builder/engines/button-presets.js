@@ -62,6 +62,94 @@ var ButtonPresets = (function () {
       pressedColor: '#d1d1d1',
       pressedTextColor: '#111111',
       pressedScale: 0.96
+    },
+    {
+      id: 'square',
+      label: 'Botón',
+      style: 'button',
+      icon: null,
+      boxW: 14,
+      boxH: 4.5,
+      bgColor: '#141414',
+      textColor: '#ffffff',
+      borderColor: 'rgba(255,255,255,0.62)',
+      borderWidth: 1,
+      borderRadius: 0,
+      bgOpacity: 1,
+      opacity: 1,
+      hoverEnabled: true,
+      hoverColor: '#6fbf86',
+      hoverTextColor: '#ffffff',
+      hoverTransition: 200,
+      pressedColor: '#5aaa74',
+      pressedTextColor: '#ffffff',
+      pressedScale: 0.96
+    },
+    {
+      id: 'rounded',
+      label: 'Botón',
+      style: 'button',
+      icon: null,
+      boxW: 14,
+      boxH: 4.5,
+      bgColor: '#141414',
+      textColor: '#ffffff',
+      borderColor: 'rgba(255,255,255,0.62)',
+      borderWidth: 1,
+      borderRadius: 16,
+      bgOpacity: 1,
+      opacity: 1,
+      hoverEnabled: true,
+      hoverColor: '#6fbf86',
+      hoverTextColor: '#ffffff',
+      hoverTransition: 200,
+      pressedColor: '#5aaa74',
+      pressedTextColor: '#ffffff',
+      pressedScale: 0.96
+    },
+    {
+      id: 'circle',
+      label: 'Botón',
+      style: 'button',
+      icon: null,
+      boxW: 8,
+      boxH: 8,
+      bgColor: '#141414',
+      textColor: '#ffffff',
+      borderColor: 'rgba(255,255,255,0.62)',
+      borderWidth: 1,
+      borderRadius: 999,
+      bgOpacity: 1,
+      opacity: 1,
+      hoverEnabled: true,
+      hoverColor: '#6fbf86',
+      hoverTextColor: '#ffffff',
+      hoverTransition: 200,
+      pressedColor: '#5aaa74',
+      pressedTextColor: '#ffffff',
+      pressedScale: 0.96
+    },
+    {
+      id: 'capsule',
+      label: 'Botón',
+      style: 'button',
+      icon: null,
+      boxW: 18,
+      boxH: 5,
+      bgColor: '#141414',
+      textColor: '#ffffff',
+      borderColor: 'rgba(255,255,255,0.62)',
+      borderWidth: 1,
+      borderRadius: 999,
+      bgOpacity: 1,
+      opacity: 1,
+      hoverEnabled: true,
+      hoverColor: '#6fbf86',
+      hoverTextColor: '#ffffff',
+      hoverTransition: 200,
+      pressedColor: '#5aaa74',
+      pressedTextColor: '#ffffff',
+      pressedScale: 0.96
     }
   ];
 
@@ -76,6 +164,16 @@ var ButtonPresets = (function () {
 
   function get(id) {
     return byId[String(id || '')] || null;
+  }
+
+  /** Picker shape key → preset id (1:1 today; extend here if ids diverge). */
+  function resolveShapePresetId(shape) {
+    shape = String(shape || '').toLowerCase();
+    if (shape === 'square' || shape === 'rounded' ||
+        shape === 'circle' || shape === 'capsule') {
+      return shape;
+    }
+    return null;
   }
 
   function applyVisuals(ix, preset) {
@@ -117,6 +215,7 @@ var ButtonPresets = (function () {
   return {
     list: list,
     get: get,
+    resolveShapePresetId: resolveShapePresetId,
     applyVisuals: applyVisuals,
     applyToInteraction: applyToInteraction,
     buildPreviewIx: buildPreviewIx,

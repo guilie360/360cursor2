@@ -17202,12 +17202,16 @@ var ExperienciaCanvas = (function () {
       isOverlaySnapEnabled: function () {
         return !!overlaySnapEnabled;
       },
-      addButton: function () {
+      addButton: function (shape) {
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
-        var btn = ExperienciaEngine.addSceneButton(state, sceneId);
+        var presetId = shape;
+        if (typeof ButtonPresets !== 'undefined' && ButtonPresets.resolveShapePresetId) {
+          presetId = ButtonPresets.resolveShapePresetId(shape) || shape;
+        }
+        var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];

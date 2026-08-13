@@ -633,8 +633,8 @@ var QuotationExperienciaBridge = (function () {
       setEditMode: function (mode) {
         if (handle.setEditMode) handle.setEditMode(mode);
       },
-      addButton: function () {
-        return handle.addButton ? handle.addButton() : null;
+      addButton: function (shape) {
+        return handle.addButton ? handle.addButton(shape) : null;
       },
       getButtonSnapshot: function (buttonId) {
         return handle.getButtonSnapshot ? handle.getButtonSnapshot(buttonId) : null;

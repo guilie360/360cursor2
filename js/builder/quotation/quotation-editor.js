@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7898';
+  var QE_EDITOR_BUILD = 'ws7899';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -10188,13 +10188,13 @@ var QuotationEditor = (function () {
     }
   }
 
-  function overlayAddButton() {
+  function overlayAddButton(shape) {
     if (!expOverlay) return null;
-    if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
-      return expOverlay.handle.addButton();
-    }
     if (typeof expOverlay.addButton === 'function') {
-      return expOverlay.addButton();
+      return expOverlay.addButton(shape);
+    }
+    if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
+      return expOverlay.handle.addButton(shape);
     }
     return null;
   }
@@ -10202,6 +10202,9 @@ var QuotationEditor = (function () {
   function pickButtonShape(shape) {
     shape = String(shape || '').toLowerCase();
     if (!shape || !activeScene()) return;
+    try {
+      console.log('[QE btn-picker] pickButtonShape', { shape: shape, expOverlay: !!expOverlay });
+    } catch (eLogPick) { /* ignore */ }
     clearPendingAddButtonAction();
     state.buttonPickerOpen = false;
     state.selectedElementId = null;
@@ -10212,7 +10215,7 @@ var QuotationEditor = (function () {
     if (expOverlay) {
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      overlayAddButton();
+      overlayAddButton(shape);
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       rerender();
@@ -11057,9 +11060,12 @@ var QuotationEditor = (function () {
     if (pendingExpAction && expOverlay) {
       var act = pendingExpAction;
       pendingExpAction = null;
+      try {
+        console.log('[QE btn-picker] mountExperienciaOverlay pendingExpAction', act);
+      } catch (eLogPending) { /* ignore */ }
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        overlayAddButton();
+        overlayAddButton(act.buttonShape);
         focusPropsPanel();
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
