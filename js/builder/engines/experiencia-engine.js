@@ -15,6 +15,7 @@ var ExperienciaEngine = (function () {
       'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
       'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
       'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
+      'hoverScale', 'hoverOpacity',
       'pressedColor', 'pressedTextColor', 'pressedScale'
     ];
   }
@@ -2357,7 +2358,7 @@ var ExperienciaEngine = (function () {
     var vh = useStoredFrame
       ? (Number(g.height) || 20)
       : (bounds ? bounds.h : (Number(g.height) || 20));
-    return {
+    var vm = {
       id: g.id,
       portId: g.portId || g.id,
       type: 'OVERLAY_GROUP',
@@ -2376,6 +2377,36 @@ var ExperienciaEngine = (function () {
       _ix: g,
       _isGroup: true
     };
+    if (isInteractiveButtonGroup(g)) {
+      ensureInteractiveGroupButtonConfig(g);
+      var textM = resolveOverlayGroupMemberByType(n, g, 'TEXT');
+      var shapeM = resolveOverlayGroupMemberByType(n, g, 'SHAPE');
+      vm.interactiveRole = 'button';
+      vm.buttonType = g.buttonType || 'unconfigured';
+      vm.buttonConfig = g.buttonConfig && typeof g.buttonConfig === 'object' ? g.buttonConfig : {};
+      vm.hoverEnabled = g.hoverEnabled !== false;
+      vm.hoverColor = g.hoverColor || '#6fbf86';
+      vm.hoverTextColor = g.hoverTextColor || '#ffffff';
+      vm.hoverTransition = g.hoverTransition != null ? Number(g.hoverTransition) : 200;
+      vm.hoverScale = g.hoverScale != null ? Number(g.hoverScale) : 1.04;
+      vm.hoverOpacity = g.hoverOpacity != null ? Number(g.hoverOpacity) : 1;
+      vm.label = textM && textM.label != null ? String(textM.label) : '';
+      vm.textColor = textM && textM.color ? String(textM.color) : '#ffffff';
+      vm.opacity = textM && textM.opacity != null
+        ? Number(textM.opacity)
+        : (shapeM && shapeM.opacity != null ? Number(shapeM.opacity) : 1);
+      vm.fill = shapeM && shapeM.fill != null ? String(shapeM.fill) : null;
+      vm.stroke = shapeM && shapeM.stroke != null ? String(shapeM.stroke) : null;
+      vm.strokeWidth = shapeM && shapeM.strokeWidth != null ? Number(shapeM.strokeWidth) : 2;
+      vm.borderRadius = shapeM && shapeM.borderRadius != null ? Number(shapeM.borderRadius) : null;
+      vm.bgColor = vm.fill;
+      vm.bgOpacity = shapeM && shapeM.opacity != null ? Number(shapeM.opacity) : 1;
+      vm.borderColor = vm.stroke;
+      vm.borderWidth = vm.strokeWidth;
+      vm._primaryTextId = textM ? textM.id : null;
+      vm._primaryShapeId = shapeM ? shapeM.id : null;
+    }
+    return vm;
   }
 
   function getSceneOverlayItem(state, n, itemId, layerW, layerH) {
@@ -2805,6 +2836,116 @@ var ExperienciaEngine = (function () {
   }
 
   /** Resolve group for a member — uses ix.groupId or memberIds[] fallback + repairs orphan refs. */
+  function isInteractiveButtonGroup(ix) {
+    return isOverlayGroupInteraction(ix) &&
+      String(ix.interactiveRole || '').toLowerCase() === 'button';
+  }
+
+  function ensureInteractiveGroupButtonConfig(ix) {
+    if (!ix || !isInteractiveButtonGroup(ix)) return ix;
+    if (!ix.buttonConfig || typeof ix.buttonConfig !== 'object' || Array.isArray(ix.buttonConfig)) {
+      ix.buttonConfig = {};
+    }
+    if (ix.buttonType == null || ix.buttonType === '') ix.buttonType = 'unconfigured';
+    var bt = String(ix.buttonType || 'unconfigured');
+    if (!BUTTON_KIND_TYPES[bt]) bt = 'unconfigured';
+    ix.buttonType = bt;
+    if (ix.hoverEnabled == null) ix.hoverEnabled = true;
+    if (ix.hoverTransition == null || isNaN(Number(ix.hoverTransition))) ix.hoverTransition = 200;
+    else ix.hoverTransition = Math.max(0, Math.min(2000, Number(ix.hoverTransition) || 0));
+    if (ix.hoverScale == null || isNaN(Number(ix.hoverScale))) ix.hoverScale = 1.04;
+    else ix.hoverScale = Math.max(0.9, Math.min(1.2, Number(ix.hoverScale) || 1.04));
+    if (ix.hoverOpacity == null || isNaN(Number(ix.hoverOpacity))) ix.hoverOpacity = 1;
+    else ix.hoverOpacity = Math.max(0, Math.min(1, Number(ix.hoverOpacity) || 1));
+    if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#6fbf86';
+    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
+    return ix;
+  }
+
+  function resolveOverlayGroupMemberByType(n, g, wantType) {
+    if (!n || !g) return null;
+    wantType = String(wantType || '').toUpperCase();
+    var ids = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    for (var i = 0; i < ids.length; i++) {
+      var ix = getInteraction(n, ids[i]);
+      if (!ix) continue;
+      var t = String(ix.type || '').toUpperCase();
+      if (wantType === 'TEXT' && t === 'TEXT') return ix;
+      if (wantType === 'SHAPE' && isSceneShapeType(t)) return ix;
+    }
+    return null;
+  }
+
+  function convertOverlayGroupToButton(state, nodeId, groupId) {
+    var n = getNode(state, nodeId);
+    var g = getInteraction(n, groupId);
+    if (!n || !g || !isOverlayGroupInteraction(g)) return null;
+    var memberIds = resolveOverlayGroupMemberIds(n, g, { repair: true });
+    if (!memberIds.length) return null;
+    if (isInteractiveButtonGroup(g)) return overlayGroupViewModel(state, n, g, 1000, 1000);
+    g.interactiveRole = 'button';
+    g.buttonType = 'unconfigured';
+    g.buttonConfig = {};
+    ensureInteractiveGroupButtonConfig(g);
+    return overlayGroupViewModel(state, n, g, 1000, 1000);
+  }
+
+  function updateOverlayGroupButtonMeta(state, nodeId, groupId, patch) {
+    var n = getNode(state, nodeId);
+    var g = getInteraction(n, groupId);
+    if (!n || !g || !isInteractiveButtonGroup(g)) return null;
+    patch = patch || {};
+    ensureInteractiveGroupButtonConfig(g);
+    if (patch.buttonType != null) {
+      var nextKind = String(patch.buttonType || 'unconfigured');
+      g.buttonType = BUTTON_KIND_TYPES[nextKind] ? nextKind : 'unconfigured';
+    }
+    if (patch.buttonConfig != null) mergeButtonConfig(g, patch.buttonConfig);
+    if (patch.hoverEnabled != null) g.hoverEnabled = !!patch.hoverEnabled;
+    if (patch.hoverColor != null) g.hoverColor = String(patch.hoverColor || '#6fbf86');
+    if (patch.hoverTextColor != null) g.hoverTextColor = String(patch.hoverTextColor || '#ffffff');
+    if (patch.hoverTransition != null) {
+      g.hoverTransition = Math.max(0, Math.min(2000, Number(patch.hoverTransition) || 0));
+    }
+    if (patch.hoverScale != null) {
+      g.hoverScale = Math.max(0.9, Math.min(1.2, Number(patch.hoverScale) || 1.04));
+    }
+    if (patch.hoverOpacity != null) {
+      g.hoverOpacity = Math.max(0, Math.min(1, Number(patch.hoverOpacity) || 1));
+    }
+    if (patch.locked != null) g.locked = !!patch.locked;
+    if (patch.visible != null || patch.enabled != null) {
+      g.enabled = patch.visible != null ? !!patch.visible : !!patch.enabled;
+    }
+    var textIx = resolveOverlayGroupMemberByType(n, g, 'TEXT');
+    var shapeIx = resolveOverlayGroupMemberByType(n, g, 'SHAPE');
+    if (patch.label != null && textIx) textIx.label = String(patch.label);
+    if (textIx) {
+      if (patch.textColor !== undefined) textIx.color = patch.textColor ? String(patch.textColor) : null;
+      if (patch.opacity != null) textIx.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
+    }
+    if (shapeIx) {
+      if (patch.bgColor !== undefined) shapeIx.fill = patch.bgColor ? String(patch.bgColor) : null;
+      if (patch.bgOpacity != null) shapeIx.opacity = Math.max(0, Math.min(1, Number(patch.bgOpacity)));
+      if (patch.borderColor !== undefined) shapeIx.stroke = patch.borderColor ? String(patch.borderColor) : null;
+      if (patch.borderWidth != null) {
+        shapeIx.strokeWidth = Math.max(0, Math.min(20, Number(patch.borderWidth) || 0));
+      }
+      if (patch.borderRadius != null) {
+        var st = String(shapeIx.type || '').toUpperCase();
+        if (st === 'SHAPE_RECT' || st === 'SHAPE_ROUND_RECT') {
+          shapeIx.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
+        }
+      }
+      if (patch.opacity != null && !textIx) {
+        shapeIx.opacity = Math.max(0, Math.min(1, Number(patch.opacity)));
+      }
+    }
+    var lw = Math.max(1, Number(patch.layerW) || 1000);
+    var lh = Math.max(1, Number(patch.layerH) || 1000);
+    return overlayGroupViewModel(state, n, g, lw, lh);
+  }
+
   function findOverlayGroupForMember(n, memberId) {
     if (!n || !memberId) return null;
     var mid = String(memberId);
@@ -5836,6 +5977,8 @@ var ExperienciaEngine = (function () {
       else if (cfg.locked != null) ix.locked = !!cfg.locked;
       if (partial.visible != null) ix.visible = !!partial.visible;
       else if (cfg.visible != null) ix.visible = !!cfg.visible;
+      if (partial.interactiveRole != null) ix.interactiveRole = String(partial.interactiveRole);
+      else if (cfg.interactiveRole != null) ix.interactiveRole = String(cfg.interactiveRole);
       if (partial.buttonType != null) ix.buttonType = String(partial.buttonType);
       else if (cfg.buttonType != null) ix.buttonType = String(cfg.buttonType);
       if (partial.buttonConfig != null && typeof partial.buttonConfig === 'object' &&
@@ -5844,6 +5987,16 @@ var ExperienciaEngine = (function () {
       } else if (cfg.buttonConfig != null && typeof cfg.buttonConfig === 'object' &&
           !Array.isArray(cfg.buttonConfig)) {
         ix.buttonConfig = cfg.buttonConfig;
+      }
+      if (partial.hoverScale != null && !isNaN(Number(partial.hoverScale))) {
+        ix.hoverScale = Number(partial.hoverScale);
+      } else if (cfg.hoverScale != null && !isNaN(Number(cfg.hoverScale))) {
+        ix.hoverScale = Number(cfg.hoverScale);
+      }
+      if (partial.hoverOpacity != null && !isNaN(Number(partial.hoverOpacity))) {
+        ix.hoverOpacity = Number(partial.hoverOpacity);
+      } else if (cfg.hoverOpacity != null && !isNaN(Number(cfg.hoverOpacity))) {
+        ix.hoverOpacity = Number(cfg.hoverOpacity);
       }
       /* BUTTON overlay box/local look + preset marker — survive normalizeSceneInteractions */
       copyButtonPresetVisualFields(partial, ix);
@@ -9333,6 +9486,10 @@ var ExperienciaEngine = (function () {
     duplicateSceneButton: duplicateSceneButton,
     createSceneButtonFromSnapshot: createSceneButtonFromSnapshot,
     isOverlayGroupInteraction: isOverlayGroupInteraction,
+    isInteractiveButtonGroup: isInteractiveButtonGroup,
+    convertOverlayGroupToButton: convertOverlayGroupToButton,
+    updateOverlayGroupButtonMeta: updateOverlayGroupButtonMeta,
+    resolveOverlayGroupMemberByType: resolveOverlayGroupMemberByType,
     overlayInteractionSelfVisible: overlayInteractionSelfVisible,
     overlayEffectiveVisible: overlayEffectiveVisible,
     overlayInteractionSelfLocked: overlayInteractionSelfLocked,

@@ -354,6 +354,86 @@ var QuotationRuntime = (function () {
     return t === 'SHAPE_RECT' || t === 'SHAPE_CIRCLE' || t === 'SHAPE_LINE' || t === 'SHAPE_TRIANGLE';
   }
 
+  function isInteractiveGroupButtonIx(ix) {
+    if (!ix || ix.enabled === false) return false;
+    var t = String(ix.type || '').toUpperCase();
+    if (t !== 'OVERLAY_GROUP' && t !== 'GROUP') return false;
+    return String(ix.interactiveRole || '').toLowerCase() === 'button';
+  }
+
+  function buildInteractiveGroupButtonMemberMap(ixs) {
+    var map = {};
+    (ixs || []).forEach(function (ix) {
+      if (!isInteractiveGroupButtonIx(ix)) return;
+      (ix.memberIds || []).forEach(function (mid) {
+        if (mid != null && mid !== '') map[String(mid)] = ix;
+      });
+    });
+    return map;
+  }
+
+  function resolveGrpBtnPrimaryMember(ixs, g, wantType) {
+    if (!g || !Array.isArray(ixs)) return null;
+    var byId = {};
+    ixs.forEach(function (ix) {
+      if (ix && ix.id) byId[String(ix.id)] = ix;
+    });
+    var ids = g.memberIds || [];
+    for (var i = 0; i < ids.length; i++) {
+      var m = byId[String(ids[i])];
+      if (!m) continue;
+      var t = String(m.type || '').toUpperCase();
+      if (wantType === 'TEXT' && t === 'TEXT') return m;
+      if (wantType === 'SHAPE' && isShapeIx(m)) return m;
+    }
+    return null;
+  }
+
+  function applyRuntimeGrpBtnHover(g, active, btnsHost, ixs) {
+    if (!btnsHost || !g) return;
+    btnsHost.querySelectorAll('.qr-ix-grp-btn-hover').forEach(function (el) {
+      el.classList.remove('qr-ix-grp-btn-hover');
+      el.style.removeProperty('--grp-hover-scale');
+      el.style.removeProperty('--grp-hover-fill');
+      el.style.removeProperty('--grp-hover-text');
+      el.style.removeProperty('--grp-hover-opacity');
+      el.style.removeProperty('transition');
+    });
+    if (!active || g.hoverEnabled === false) return;
+    var dur = (g.hoverTransition != null ? Number(g.hoverTransition) : 200) + 'ms';
+    var scale = g.hoverScale != null ? Number(g.hoverScale) : 1.04;
+    var hoverFill = g.hoverColor || '#6fbf86';
+    var hoverText = g.hoverTextColor || '#ffffff';
+    var hoverOp = g.hoverOpacity != null ? Number(g.hoverOpacity) : 1;
+    var textM = resolveGrpBtnPrimaryMember(ixs, g, 'TEXT');
+    var shapeM = resolveGrpBtnPrimaryMember(ixs, g, 'SHAPE');
+    (g.memberIds || []).forEach(function (mid) {
+      var el = btnsHost.querySelector('[data-qr-ix-id="' + String(mid).replace(/"/g, '') + '"]');
+      if (!el) return;
+      el.style.setProperty('transition',
+        'transform ' + dur + ' ease, color ' + dur + ' ease, opacity ' + dur + ' ease');
+      if (scale !== 1) {
+        el.style.setProperty('--grp-hover-scale', String(scale));
+        el.classList.add('qr-ix-grp-btn-hover');
+      }
+    });
+    if (shapeM && shapeM.id) {
+      var shapeEl = btnsHost.querySelector('[data-qr-ix-id="' + String(shapeM.id).replace(/"/g, '') + '"]');
+      if (shapeEl) {
+        shapeEl.classList.add('qr-ix-grp-btn-hover');
+        shapeEl.style.setProperty('--grp-hover-fill', hoverFill);
+      }
+    }
+    if (textM && textM.id) {
+      var textEl = btnsHost.querySelector('[data-qr-ix-id="' + String(textM.id).replace(/"/g, '') + '"]');
+      if (textEl) {
+        textEl.classList.add('qr-ix-grp-btn-hover');
+        textEl.style.setProperty('--grp-hover-text', hoverText);
+        textEl.style.setProperty('--grp-hover-opacity', String(hoverOp));
+      }
+    }
+  }
+
   function runtimeShapeDefaultSize(t) {
     if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.sceneShapeDefaultSize) {
       return ExperienciaEngine.sceneShapeDefaultSize(t);
@@ -645,11 +725,20 @@ var QuotationRuntime = (function () {
     if (opts.paintInteractions === false) return null;
 
     var ixs = Array.isArray(scene.interactions) ? scene.interactions : [];
+    var grpBtnMembers = buildInteractiveGroupButtonMemberMap(ixs);
+    var grpBtnGroups = ixs.filter(function (ix) {
+      return isInteractiveGroupButtonIx(ix) && ixIsVisible(ix);
+    });
     var hotspots = ixs.filter(function (ix) { return isHotspotIx(ix) && ixIsVisible(ix); });
     var buttons = ixs.filter(function (ix) { return isButtonIx(ix) && ixIsVisible(ix); });
-    var texts = ixs.filter(function (ix) { return isTextIx(ix) && ixIsVisible(ix); });
-    var shapes = ixs.filter(function (ix) { return isShapeIx(ix) && ixIsVisible(ix); });
-    if (!hotspots.length && !buttons.length && !texts.length && !shapes.length) return null;
+    var texts = ixs.filter(function (ix) {
+      return isTextIx(ix) && ixIsVisible(ix) && !grpBtnMembers[String(ix.id)];
+    });
+    var shapes = ixs.filter(function (ix) {
+      return isShapeIx(ix) && ixIsVisible(ix) && !grpBtnMembers[String(ix.id)];
+    });
+    if (!hotspots.length && !buttons.length && !texts.length && !shapes.length &&
+        !grpBtnGroups.length) return null;
 
     ixLayerEl = document.createElement('div');
     ixLayerEl.className = 'qr-ix-layer';
@@ -757,6 +846,82 @@ var QuotationRuntime = (function () {
         });
       }
       btnsHost.appendChild(el);
+    });
+    grpBtnGroups.forEach(function (g) {
+      var hit = document.createElement('div');
+      hit.className = 'qr-ix-grp-btn';
+      if (g.id) hit.setAttribute('data-qr-ix-id', String(g.id));
+      var rot = Number(g.rotation) || 0;
+      var gw = Number(g.width) || 20;
+      var gh = Number(g.height) || 20;
+      hit.style.position = 'absolute';
+      hit.style.left = Number(g.x) + '%';
+      hit.style.top = Number(g.y) + '%';
+      hit.style.width = gw + '%';
+      hit.style.height = gh + '%';
+      hit.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+      hit.style.background = 'transparent';
+      hit.style.border = 'none';
+      hit.style.pointerEvents = interactive ? 'auto' : 'none';
+      if (interactive) {
+        hit.style.cursor = 'pointer';
+        hit.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          runInteractionAction(g, opts);
+        });
+        hit.addEventListener('mouseenter', function () {
+          applyRuntimeGrpBtnHover(g, true, btnsHost, ixs);
+        });
+        hit.addEventListener('mouseleave', function () {
+          applyRuntimeGrpBtnHover(g, false, btnsHost, ixs);
+        });
+      }
+      btnsHost.appendChild(hit);
+    });
+    /* Still paint group members visually — pointer-events none on hit children above */
+    ixs.forEach(function (ix) {
+      if (!grpBtnMembers[String(ix && ix.id)]) return;
+      if (!ix || ix.enabled === false) return;
+      var t = String(ix.type || '').toUpperCase();
+      if (t === 'TEXT') {
+        var txEl = document.createElement('div');
+        txEl.className = 'qr-ix-text qr-ix-grp-btn-member';
+        if (ix.id) txEl.setAttribute('data-qr-ix-id', String(ix.id));
+        txEl.textContent = ix.label != null ? String(ix.label) : 'Texto';
+        var txRot = Number(ix.rotation) || 0;
+        var txFw = String(ix.fontWeight || '400');
+        txEl.style.left = Number(ix.x) + '%';
+        txEl.style.top = Number(ix.y) + '%';
+        txEl.style.transform = 'translate(-50%,-50%) rotate(' + txRot + 'deg)';
+        txEl.style.fontSize = (Number(ix.fontSize) || 28) + 'px';
+        txEl.style.color = ix.color || '#ffffff';
+        txEl.style.fontFamily = String(ix.fontFamily || 'system-ui, sans-serif');
+        txEl.style.fontWeight = (txFw === '700' || txFw === 'bold') ? '700' : '400';
+        txEl.style.textAlign = String(ix.textAlign || 'center');
+        txEl.style.opacity = String(ix.opacity != null ? ix.opacity : 1);
+        txEl.style.pointerEvents = 'none';
+        btnsHost.appendChild(txEl);
+        return;
+      }
+      if (!isShapeIx(ix)) return;
+      var shEl = document.createElement('div');
+      shEl.className = 'qr-ix-shape qr-ix-shape--vector qr-ix-grp-btn-member';
+      if (ix.id) shEl.setAttribute('data-qr-ix-id', String(ix.id));
+      var shRot = Number(ix.rotation) || 0;
+      var layerW = Math.max(1, parentEl.clientWidth || 1920);
+      var layerH = Math.max(1, parentEl.clientHeight || 1080);
+      var shapeSize = runtimeShapeDisplaySize(ix, layerW, layerH);
+      shEl.style.left = Number(ix.x) + '%';
+      shEl.style.top = Number(ix.y) + '%';
+      shEl.style.width = shapeSize.w + '%';
+      shEl.style.height = shapeSize.h + '%';
+      shEl.style.transform = 'translate(-50%,-50%) rotate(' + shRot + 'deg)';
+      shEl.style.pointerEvents = 'none';
+      shEl.style.background = 'transparent';
+      shEl.style.border = 'none';
+      shEl.innerHTML = runtimeShapeSvgHtml(ix, t, layerW, layerH);
+      btnsHost.appendChild(shEl);
     });
     ixLayerEl.appendChild(btnsHost);
     parentEl.appendChild(ixLayerEl);

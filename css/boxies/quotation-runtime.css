@@ -672,6 +672,36 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   transform: translate(-50%, -50%);
 }
 
+.qr-ix-grp-btn {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.qr-ix-grp-btn-member {
+  pointer-events: none !important;
+}
+
+.qr-ix-shape.qr-ix-grp-btn-hover,
+.qr-ix-text.qr-ix-grp-btn-hover {
+  transform: translate(-50%, -50%) scale(var(--grp-hover-scale, 1));
+}
+
+.qr-ix-shape.qr-ix-grp-btn-hover svg [class*="shape"],
+.qr-ix-shape.qr-ix-grp-btn-hover svg path,
+.qr-ix-shape.qr-ix-grp-btn-hover svg rect,
+.qr-ix-shape.qr-ix-grp-btn-hover svg circle,
+.qr-ix-shape.qr-ix-grp-btn-hover svg ellipse {
+  fill: color-mix(in srgb, var(--grp-hover-fill, #6fbf86) 32%, rgba(8, 8, 8, 0.72));
+  stroke: var(--grp-hover-fill, #6fbf86);
+}
+
+.qr-ix-text.qr-ix-grp-btn-hover {
+  color: var(--grp-hover-text, #ffffff) !important;
+  opacity: var(--grp-hover-opacity, 1);
+}
+
 .qr-stage--scene .qr-stage__back {
   position: absolute;
   top: 20px;

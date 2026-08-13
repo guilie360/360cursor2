@@ -5972,6 +5972,22 @@ body.quotation-canvas-first .builder-workspace,
     drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
 }
 
+/* Interactive button group — hover on real SHAPE + TEXT members */
+.builder-exp-stage-shape.is-grp-btn-hover,
+.builder-exp-stage-text.is-grp-btn-hover {
+  transform: translate(-50%, -50%) rotate(var(--btn-rot, 0deg))
+    scale(var(--grp-hover-scale, 1));
+}
+.builder-exp-stage-shape.is-grp-btn-hover .builder-exp-stage-shape__body,
+.builder-exp-stage-shape.is-grp-btn-hover .builder-exp-stage-shape__body > * {
+  fill: color-mix(in srgb, var(--grp-hover-fill, #6fbf86) 32%, rgba(8, 8, 8, 0.72));
+  stroke: var(--grp-hover-fill, #6fbf86);
+}
+.builder-exp-stage-text.is-grp-btn-hover {
+  color: var(--grp-hover-text, #ffffff) !important;
+  opacity: var(--grp-hover-opacity, 1);
+}
+
 /* Line selection — endpoints only, no bounding box */
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-box,
 .builder-exp-sel-gizmo.is-line .builder-exp-sel-rot-zone {

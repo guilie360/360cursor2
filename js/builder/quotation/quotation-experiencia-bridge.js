@@ -395,7 +395,9 @@ var QuotationExperienciaBridge = (function () {
         'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
         'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
         'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
-        'pressedColor', 'pressedTextColor', 'pressedScale'
+        'hoverScale', 'hoverOpacity',
+        'pressedColor', 'pressedTextColor', 'pressedScale',
+        'interactiveRole'
       ];
     keys.forEach(function (key) {
       if (!Object.prototype.hasOwnProperty.call(srcIx, key)) return;
@@ -412,7 +414,9 @@ var QuotationExperienciaBridge = (function () {
         'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
         'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
         'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
-        'pressedColor', 'pressedTextColor', 'pressedScale'
+        'hoverScale', 'hoverOpacity',
+        'pressedColor', 'pressedTextColor', 'pressedScale',
+        'interactiveRole'
       ];
     keys.forEach(function (key) {
       if (destIx[key] !== undefined && destIx[key] !== null && destIx[key] !== '') return;
@@ -506,6 +510,15 @@ var QuotationExperienciaBridge = (function () {
         }
         ix.targetSceneId = targetNodeId ? sceneIdFromNode(targetNodeId) : null;
         if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
+      });
+      sc.interactions.forEach(function (ix) {
+        if (!ix || String(ix.type || '').toUpperCase() !== 'OVERLAY_GROUP') return;
+        if (String(ix.interactiveRole || '').toLowerCase() !== 'button') return;
+        if (String(ix.buttonType || '') === 'changeScene' &&
+            ix.buttonConfig && ix.buttonConfig.targetSceneId) {
+          ix.targetSceneId = String(ix.buttonConfig.targetSceneId);
+          ix.action = 'goto-scene';
+        }
       });
       /* Hotspots: keep targetSceneId if already set via Quotation fields. */
       sc.interactions.forEach(function (ix) {

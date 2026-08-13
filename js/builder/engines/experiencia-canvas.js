@@ -2999,6 +2999,115 @@ var ExperienciaCanvas = (function () {
     '</div>';
   }
 
+  function groupButtonInspectorFieldsHtml(state, sceneNode, selected, lists) {
+    var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
+    var bgOp = selected.bgOpacity != null ? Number(selected.bgOpacity) : 1;
+    var hoverOn = selected.hoverEnabled !== false;
+    var hoverMs = selected.hoverTransition != null ? Number(selected.hoverTransition) : 200;
+    var hoverScale = selected.hoverScale != null ? Number(selected.hoverScale) : 1.04;
+    var hoverOp = selected.hoverOpacity != null ? Number(selected.hoverOpacity) : 1;
+    var hoverCol = hexOr(selected.hoverColor, '#6fbf86');
+    var hoverText = hexOr(selected.hoverTextColor, '#ffffff');
+    var bg = hexOr(selected.bgColor, '#141414');
+    var textCol = hexOr(selected.textColor, '#ffffff');
+    var borderCol = hexOr(selected.borderColor, '#ffffff');
+    var bw = selected.borderWidth != null ? Number(selected.borderWidth) : 1;
+    var br = selected.borderRadius != null ? Number(selected.borderRadius) : 8;
+    var kind = String(selected.buttonType || 'unconfigured');
+    var ownerId = String(selected.id || selected.portId || '');
+    var unconfiguredHint = kind === 'unconfigured'
+      ? '<p class="builder-menu-hint">Elige un tipo para configurar la acción del botón.</p>'
+      : '';
+    return '' +
+      builderExpBlockHtml(state, 'btn-behavior', 'Comportamiento',
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Acción</label>' +
+          '<select data-exp-btn-kind-type class="builder-exp-btn-select"' +
+            (ownerId ? ' data-exp-btn-kind-owner="' + esc(ownerId) + '"' : '') +
+          '>' +
+            buttonKindTypeOptionsHtml(kind) +
+          '</select>' +
+        '</div>' +
+        unconfiguredHint) +
+      buttonKindConfigSectionHtml(state, kind, sceneNode, selected, lists) +
+      builderExpBlockHtml(state, 'grp-btn-content', 'Contenido',
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Texto</label>' +
+          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Texto del botón" value="' +
+            esc(selected.label != null ? selected.label : '') + '">' +
+        '</div>') +
+      builderExpBlockHtml(state, 'grp-btn-appearance', 'Apariencia',
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Color de fondo</label>' +
+            '<input type="color" data-exp-btn-bg-color value="' + esc(bg) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Transp. fondo</label>' +
+            '<input type="range" data-exp-btn-bg-opacity min="0" max="1" step="0.05" value="' +
+              esc(String(bgOp)) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Color del texto</label>' +
+          '<input type="color" data-exp-btn-text-color value="' + esc(textCol) + '">' +
+        '</div>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Borde</label>' +
+            '<input type="color" data-exp-btn-border-color value="' + esc(borderCol) + '">' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Grosor</label>' +
+            '<input type="number" data-exp-btn-border-width min="0" max="20" step="1" value="' +
+              esc(String(bw)) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Radio</label>' +
+          '<input type="number" data-exp-btn-radius min="0" max="999" step="1" value="' +
+            esc(String(br)) + '">' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Opacidad</label>' +
+          '<input type="range" data-exp-btn-opacity min="0" max="1" step="0.05" value="' +
+            esc(String(btnOp)) + '">' +
+        '</div>') +
+      builderExpBlockHtml(state, 'btn-hover', 'Hover',
+        '<label class="builder-exp-inspector__check">' +
+          '<input type="checkbox" data-exp-btn-hover-enabled' + (hoverOn ? ' checked' : '') + '>' +
+          ' Activar hover</label>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Color de fondo</label>' +
+            '<input type="color" data-exp-btn-hover-color value="' + esc(hoverCol) + '"' +
+              (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Color del texto</label>' +
+            '<input type="color" data-exp-btn-hover-text value="' + esc(hoverText) + '"' +
+              (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-exp-btn-hover-row">' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Opacidad</label>' +
+            '<input type="range" data-exp-grp-btn-hover-opacity min="0" max="1" step="0.05" value="' +
+              esc(String(hoverOp)) + '"' + (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+          '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
+            '<label>Escala</label>' +
+            '<input type="number" data-exp-grp-btn-hover-scale min="0.9" max="1.2" step="0.01" value="' +
+              esc(String(hoverScale)) + '"' + (hoverOn ? '' : ' disabled') + '>' +
+          '</div>' +
+        '</div>' +
+        '<div class="builder-field builder-exp-inspector__field">' +
+          '<label>Duración (ms)</label>' +
+          '<input type="number" data-exp-btn-hover-ms min="0" max="2000" step="50" value="' +
+            esc(String(hoverMs)) + '">' +
+        '</div>');
+  }
+
   function buttonInspectorFieldsHtml(state, sceneNode, selected, lists) {
     var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
     var bgOp = selected.bgOpacity != null ? Number(selected.bgOpacity) : 1;
@@ -3196,7 +3305,11 @@ var ExperienciaCanvas = (function () {
     }
     var selectedBtnId = canvasState.selectedButtonId || selectedIds[0] || null;
     var selected = null;
-    if (selectedBtnId) {
+    if (selectedBtnId && ExperienciaEngine.getSceneOverlayItem) {
+      var grpVm = ExperienciaEngine.getSceneOverlayItem(state, n, selectedBtnId, 1000, 1000);
+      if (grpVm && grpVm.interactiveRole === 'button') selected = grpVm;
+    }
+    if (!selected && selectedBtnId) {
       for (var i = 0; i < buttons.length; i++) {
         if (String(buttons[i].id) === String(selectedBtnId) ||
             String(buttons[i].portId) === String(selectedBtnId)) {
@@ -3214,15 +3327,19 @@ var ExperienciaCanvas = (function () {
     }
 
     var selType = String(selected.type || 'BUTTON').toUpperCase();
-    var kindTitle = selType === 'TEXT' ? 'Texto'
-      : (isShapeType(selType) ? 'Forma'
-        : (selType === 'IMAGE' ? 'Imagen' : 'Botón'));
+    var isGrpBtn = selType === 'OVERLAY_GROUP' && selected.interactiveRole === 'button';
+    var kindTitle = isGrpBtn ? 'Botón'
+      : (selType === 'TEXT' ? 'Texto'
+        : (isShapeType(selType) ? 'Forma'
+          : (selType === 'IMAGE' ? 'Imagen' : 'Botón')));
 
     var html = '' +
       '<div class="builder-exp-btn-panel">' +
       '<div class="builder-exp-inspector__kind">' + kindTitle + '</div>';
 
-    if (selType === 'TEXT') {
+    if (isGrpBtn) {
+      html += groupButtonInspectorFieldsHtml(state, n, selected, lists);
+    } else if (selType === 'TEXT') {
       html += textInspectorFieldsHtml(state, selected);
     } else if (isShapeType(selType)) {
       html += shapeInspectorFieldsHtml(selected);
@@ -4736,6 +4853,46 @@ var ExperienciaCanvas = (function () {
       return true;
     }
 
+    function patchOverlayGroupButton(patch, opts) {
+      opts = opts || {};
+      var sceneId = canvas().selectedId;
+      var groupId = opts.buttonId ? String(opts.buttonId) : resolveSelectedOverlayButtonId();
+      if (!sceneId || !groupId || !ExperienciaEngine.updateOverlayGroupButtonMeta) return false;
+      if (opts.history !== false) {
+        if (opts.gesture) armButtonOp(sceneId);
+        else {
+          pushButtonHistory(sceneId);
+          endButtonOp();
+        }
+      }
+      var sz = overlayLayerSize();
+      patch = Object.assign({}, patch || {}, { layerW: sz.w, layerH: sz.h });
+      ExperienciaEngine.updateOverlayGroupButtonMeta(state, sceneId, groupId, patch);
+      paintButtonsStage();
+      if (opts.inspector) paintInspector();
+      if (opts.persist) {
+        endButtonOp();
+        persist();
+      }
+      return true;
+    }
+
+    function routePatchBtn(patch, opts) {
+      opts = opts || {};
+      var sceneId = canvas().selectedId;
+      var id = opts.buttonId ? String(opts.buttonId) : resolveSelectedOverlayButtonId();
+      if (!sceneId || !id) return false;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var ix = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, id)
+        : null;
+      if (ix && ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(ix)) {
+        return patchOverlayGroupButton(patch, Object.assign({}, opts, { buttonId: id }));
+      }
+      return patchSceneButton(patch, opts);
+    }
+
     function notifyOverlaySelection() {
       var ids = Array.isArray(canvas().selectedButtonIds)
         ? canvas().selectedButtonIds.map(String)
@@ -4960,7 +5117,7 @@ var ExperienciaCanvas = (function () {
       var openMap = propsGroupsOpenMap(state);
       openMap['btn-behavior'] = true;
       openMap['btn-config'] = true;
-      var patched = patchSceneButton({ buttonType: nextKind }, {
+      var patched = routePatchBtn({ buttonType: nextKind }, {
         inspector: true,
         persist: true,
         buttonId: buttonId
@@ -5031,7 +5188,7 @@ var ExperienciaCanvas = (function () {
           : null,
         patchTargetSceneId: targetSceneId || null
       });
-      var patched = patchSceneButton({
+      var patched = routePatchBtn({
         buttonType: 'changeScene',
         buttonConfig: { targetSceneId: targetSceneId || null }
       }, { inspector: true, persist: true, buttonId: buttonId });
@@ -5315,7 +5472,7 @@ var ExperienciaCanvas = (function () {
           : (next.length ? next[next.length - 1] : null);
       }
       function patchBtn(patch, opts) {
-        patchSceneButton(patch, opts);
+        routePatchBtn(patch, opts);
       }
       function applyButtonShape(shapeKind) {
         if (!isButtonShapeKind(shapeKind)) return;
@@ -5507,6 +5664,22 @@ var ExperienciaCanvas = (function () {
       if (hoverMs) {
         hoverMs.addEventListener('change', function () {
           patchBtn({ hoverTransition: hoverMs.value }, { persist: true });
+        });
+      }
+      var hoverScaleEl = inspectorBody.querySelector('[data-exp-grp-btn-hover-scale]');
+      if (hoverScaleEl) {
+        hoverScaleEl.addEventListener('change', function () {
+          patchBtn({ hoverScale: hoverScaleEl.value }, { persist: true });
+        });
+      }
+      var hoverOpEl = inspectorBody.querySelector('[data-exp-grp-btn-hover-opacity]');
+      if (hoverOpEl) {
+        hoverOpEl.addEventListener('input', function () {
+          patchBtn({ hoverOpacity: hoverOpEl.value }, { gesture: true });
+        });
+        hoverOpEl.addEventListener('change', function () {
+          endButtonOp();
+          persist();
         });
       }
 
@@ -12057,12 +12230,84 @@ var ExperienciaCanvas = (function () {
     function clearOverlayCanvasHover() {
       overlayCanvasHoverId = null;
       overlayCanvasHoverSiblingIds = null;
+      clearInteractiveGroupButtonHover();
       if (!buttonsLayer) return;
       buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover').forEach(function (el) {
         el.classList.remove('is-canvas-hover');
       });
       buttonsLayer.querySelectorAll('.builder-exp-stage-shape.is-canvas-hover-sibling').forEach(function (el) {
         el.classList.remove('is-canvas-hover-sibling');
+      });
+    }
+
+    function interactiveButtonGroupAtHit(sceneId, hitId) {
+      if (!sceneId || !hitId) return null;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      if (!n) return null;
+      var ix = ExperienciaEngine.getInteraction ? ExperienciaEngine.getInteraction(n, hitId) : null;
+      if (ix && ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(ix)) return ix;
+      var g = ExperienciaEngine.findOverlayGroupForMember
+        ? ExperienciaEngine.findOverlayGroupForMember(n, hitId)
+        : null;
+      if (g && ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(g)) return g;
+      return null;
+    }
+
+    function clearInteractiveGroupButtonHover() {
+      if (!buttonsLayer) return;
+      buttonsLayer.querySelectorAll('.is-grp-btn-hover').forEach(function (el) {
+        el.classList.remove('is-grp-btn-hover');
+        el.style.removeProperty('--grp-hover-scale');
+        el.style.removeProperty('--grp-hover-fill');
+        el.style.removeProperty('--grp-hover-text');
+        el.style.removeProperty('--grp-hover-opacity');
+        el.style.removeProperty('transition');
+        el.style.removeProperty('transform-origin');
+      });
+    }
+
+    function applyInteractiveGroupButtonHover(sceneId, groupId, active) {
+      clearInteractiveGroupButtonHover();
+      if (!active || !groupId || !buttonsLayer || !sceneId) return;
+      var n = ExperienciaEngine.getNode(state, sceneId);
+      var g = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (!g || !ExperienciaEngine.isInteractiveButtonGroup(g)) return;
+      var vm = getOverlayItemVm(sceneId, groupId);
+      var memberIds = overlayGroupMemberIdList(sceneId, groupId);
+      var dur = (g.hoverTransition != null ? Number(g.hoverTransition) : 200) + 'ms';
+      var hoverOn = g.hoverEnabled !== false;
+      var scale = hoverOn ? (g.hoverScale != null ? Number(g.hoverScale) : 1.04) : 1;
+      var hoverFill = g.hoverColor || '#6fbf86';
+      var hoverText = g.hoverTextColor || '#ffffff';
+      var hoverOp = g.hoverOpacity != null ? Number(g.hoverOpacity) : 1;
+      var primaryTextId = vm && vm._primaryTextId ? String(vm._primaryTextId) : null;
+      var primaryShapeId = vm && vm._primaryShapeId ? String(vm._primaryShapeId) : null;
+      memberIds.forEach(function (mid) {
+        var idEsc = String(mid).replace(/"/g, '');
+        var el = buttonsLayer.querySelector('[data-exp-stage-btn="' + idEsc + '"]');
+        if (!el) return;
+        var isPrimaryText = primaryTextId && String(mid) === primaryTextId;
+        var isPrimaryShape = primaryShapeId && String(mid) === primaryShapeId;
+        if (!isPrimaryText && !isPrimaryShape && scale === 1) return;
+        el.style.setProperty('transition',
+          'transform ' + dur + ' ease, color ' + dur + ' ease, opacity ' + dur + ' ease');
+        if (hoverOn && scale !== 1) {
+          el.style.setProperty('--grp-hover-scale', String(scale));
+          el.classList.add('is-grp-btn-hover');
+        }
+        if (isPrimaryShape && hoverOn) {
+          el.classList.add('is-grp-btn-hover');
+          el.style.setProperty('--grp-hover-fill', hoverFill);
+        }
+        if (isPrimaryText && hoverOn) {
+          el.classList.add('is-grp-btn-hover');
+          el.style.setProperty('--grp-hover-text', hoverText);
+          el.style.setProperty('--grp-hover-opacity', String(hoverOp));
+        }
       });
     }
 
@@ -12111,6 +12356,17 @@ var ExperienciaCanvas = (function () {
       var hitId = hit ? String(hit.getAttribute('data-exp-stage-btn') || '') : '';
       if (hitId && isOverlayEffectivelyLocked(sceneIdHover, hitId)) {
         clearOverlayCanvasHover();
+        syncOverlayGroupCursor(clientX, clientY);
+        return;
+      }
+      var grpBtnIx = hitId ? interactiveButtonGroupAtHit(sceneIdHover, hitId) : null;
+      if (grpBtnIx) {
+        var grpHoverKey = String(grpBtnIx.id) + ':grpbtn';
+        if (overlayCanvasHoverId !== grpHoverKey) {
+          clearOverlayCanvasHover();
+          overlayCanvasHoverId = grpHoverKey;
+          applyInteractiveGroupButtonHover(sceneIdHover, grpBtnIx.id, true);
+        }
         syncOverlayGroupCursor(clientX, clientY);
         return;
       }
@@ -17076,6 +17332,22 @@ var ExperienciaCanvas = (function () {
         canvas().selectedButtonIds = [String(group.id)];
         canvas().selectedButtonId = String(group.id);
         canvas().activeOverlayGroupEditId = null;
+        renderAll();
+        paintInspector();
+        persist();
+        notifyOverlaySelection();
+        return true;
+      },
+      convertGroupToButton: function (groupId) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !groupId || !ExperienciaEngine.convertOverlayGroupToButton) return false;
+        pushButtonHistory(sceneId);
+        var vm = ExperienciaEngine.convertOverlayGroupToButton(state, sceneId, groupId);
+        if (!vm) return false;
+        canvas().selectedButtonIds = [String(groupId)];
+        canvas().selectedButtonId = String(groupId);
+        canvas().activeOverlayGroupEditId = null;
+        if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
         renderAll();
         paintInspector();
         persist();

@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7892';
+  var QE_EDITOR_BUILD = 'ws7893';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4523,12 +4523,34 @@ var QuotationEditor = (function () {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     var ix = findSceneInteraction(groupId);
     if (!ix || !isOverlayGroupIx(ix)) return;
+    var canConvertBtn = false;
+    var alreadyBtn = false;
+    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
+      var nodeId = overlayPanelNodeId();
+      var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
+      var gShim = n && ExperienciaEngine.getInteraction
+        ? ExperienciaEngine.getInteraction(n, groupId)
+        : null;
+      if (gShim) {
+        alreadyBtn = ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(gShim);
+        var mids = ExperienciaEngine.resolveOverlayGroupMemberIds
+          ? ExperienciaEngine.resolveOverlayGroupMemberIds(n, gShim, { repair: true })
+          : (gShim.memberIds || []);
+        canConvertBtn = mids.length > 0 && !alreadyBtn;
+      }
+    }
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
       ariaLabel: elementDisplayName(ix),
       items: [
         { id: 'rename', label: 'Cambiar nombre' },
+        {
+          id: 'convert-button',
+          label: 'Convertir en botón',
+          disabled: !canConvertBtn
+        },
         {
           id: 'delete',
           label: 'Eliminar grupo',
@@ -4539,6 +4561,18 @@ var QuotationEditor = (function () {
       onSelect: function (id) {
         if (id === 'rename') {
           startOutlinerLabelEdit(groupId);
+          return;
+        }
+        if (id === 'convert-button') {
+          if (expOverlay && expOverlay.selectOverlayItem) {
+            expOverlay.selectOverlayItem(groupId, { fromPanel: true });
+          }
+          if (expOverlay && expOverlay.convertGroupToButton) {
+            expOverlay.convertGroupToButton(groupId);
+          }
+          markDirtyLocal();
+          refreshLayersPanel();
+          refreshDockOnly();
           return;
         }
         if (id === 'delete') {
