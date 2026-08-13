@@ -691,52 +691,10 @@ var ProyectosApi = (function () {
         enabled: ix.enabled !== false
       };
       if (type === 'BUTTON') {
-        var _traceBtn = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__ &&
-          String(id) === String(window.__QE_BTN_TRACE_ID__));
-        if (_traceBtn && typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-          window.__qeTraceVisualPreset('sanitizeCanvasInteractions:BUTTON:before', ix);
+        if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.cloneForPersist) {
+          return SceneButtonModel.cloneForPersist(ix);
         }
-        out.x = Number(ix.x);
-        out.y = Number(ix.y);
-        if (!isFinite(out.x)) out.x = 50;
-        if (!isFinite(out.y)) out.y = 50;
-        out.style = heroText(ix.style) || 'chip';
-        out.icon = ix.icon == null || ix.icon === '' ? null : heroText(ix.icon);
-        out.rotation = Number(ix.rotation) || 0;
-        out.positionMode = ix.positionMode === 'anchor' ? 'anchor' : 'free';
-        out.anchor = heroText(ix.anchor) || 'center';
-        out.marginX = Number(ix.marginX) || 0;
-        out.marginY = Number(ix.marginY) || 0;
-        out.positionInitialized = ix.positionInitialized !== false;
-        out.action = heroText(ix.action) || 'goto-scene';
-        out.targetSceneId = heroText(ix.targetSceneId) || null;
-        out.url = heroText(ix.url) || null;
-        out.downloadUrl = heroText(ix.downloadUrl) || null;
-        var boxW = Number(ix.boxW);
-        var boxH = Number(ix.boxH);
-        if (isFinite(boxW)) out.boxW = Math.max(1, Math.min(100, boxW));
-        if (isFinite(boxH)) out.boxH = Math.max(1, Math.min(100, boxH));
-        if (ix.visualPresetId != null && ix.visualPresetId !== '') {
-          out.visualPresetId = heroText(ix.visualPresetId);
-        }
-        [
-          'bgColor', 'textColor', 'borderColor', 'borderWidth', 'borderRadius',
-          'bgOpacity', 'opacity', 'hoverEnabled', 'hoverColor', 'hoverTextColor',
-          'hoverTransition', 'hoverScale', 'hoverOpacity',
-          'pressedColor', 'pressedTextColor', 'pressedScale',
-          'interactiveRole', 'buttonType', 'buttonShapeKind'
-        ].forEach(function (key) {
-          if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
-          if (ix[key] === undefined) return;
-          out[key] = ix[key];
-        });
-        if (ix.buttonConfig && typeof ix.buttonConfig === 'object' && !Array.isArray(ix.buttonConfig)) {
-          out.buttonConfig = ix.buttonConfig;
-        }
-        if (ix.locked != null) out.locked = !!ix.locked;
-        if (_traceBtn && typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-          window.__qeTraceVisualPreset('sanitizeCanvasInteractions:BUTTON:after', out);
-        }
+        return Object.assign({}, ix, { type: 'BUTTON' });
       } else if (type === 'HOTSPOT') {
         out.shape = heroText(ix.shape) || 'polygon';
         out.name = heroText(ix.name) || out.label;

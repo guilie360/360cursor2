@@ -8,6 +8,9 @@ var ExperienciaEngine = (function () {
   var GAP_Y = 28;
 
   function buttonPresetVisualKeys() {
+    if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.VISUAL_KEYS) {
+      return SceneButtonModel.VISUAL_KEYS;
+    }
     if (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS) {
       return ButtonPresets.INTERACTION_VISUAL_KEYS;
     }
@@ -22,62 +25,15 @@ var ExperienciaEngine = (function () {
 
   function copyButtonPresetVisualFields(src, dest) {
     if (!src || !dest) return dest;
+    if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.mergeInto) {
+      return SceneButtonModel.mergeInto(dest, src);
+    }
     buttonPresetVisualKeys().forEach(function (key) {
       if (!Object.prototype.hasOwnProperty.call(src, key)) return;
       if (src[key] === undefined) return;
       dest[key] = src[key];
     });
     return dest;
-  }
-
-  /** Trace visualPresetId lifecycle into window.__QE_TRACE_LOG__ (no console spam). */
-  var TRACE_NOISY_CHECKPOINTS = {
-    'renderButtonHtml:enter': true,
-    'getInteraction:before-return': true,
-    'buttonViewModel:vm.visualPresetId': true
-  };
-
-  function traceVisualPresetCheckpoint(label, ix) {
-    try {
-      if (typeof window === 'undefined') return;
-      var tid = window.__QE_BTN_TRACE_ID__ || null;
-      if (!tid) return;
-      var id = ix && typeof ix === 'object' && !Array.isArray(ix) ? ix.id : null;
-      if (id != null && String(id) !== String(tid)) return;
-      var preset = ix && typeof ix === 'object' && !Array.isArray(ix)
-        ? ix.visualPresetId
-        : undefined;
-      window.__QE_TRACE_LOG__ = window.__QE_TRACE_LOG__ || [];
-      if (TRACE_NOISY_CHECKPOINTS[label]) {
-        var lastSame = null;
-        for (var i = window.__QE_TRACE_LOG__.length - 1; i >= 0; i--) {
-          if (window.__QE_TRACE_LOG__[i].checkpoint === label) {
-            lastSame = window.__QE_TRACE_LOG__[i];
-            break;
-          }
-        }
-        if (lastSame && lastSame.visualPresetId === preset) return;
-      }
-      window.__QE_TRACE_LOG__.push({
-        checkpoint: label,
-        visualPresetId: preset,
-        ts: Date.now()
-      });
-    } catch (eTr) { /* ignore */ }
-  }
-
-  function findTracedInteractionInList(list) {
-    var tid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
-    if (!tid || !Array.isArray(list)) return null;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i] && String(list[i].id) === String(tid)) return list[i];
-    }
-    return null;
-  }
-
-  if (typeof window !== 'undefined') {
-    window.__qeTraceVisualPreset = traceVisualPresetCheckpoint;
-    window.__qeFindTracedIxInList = findTracedInteractionInList;
   }
 
   function hasButtonVisualPreset(ix) {
@@ -1762,20 +1718,16 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  /** TAROA-like HUD chrome for generic quotation buttons (legacy, no shape preset). */
+  /** Generic quotation buttons without shape preset — use catalog default preset. */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
     if (isButtonVisualPresetLocked(ix)) return ix;
     if (hasButtonLocalVisual(ix)) return ix;
-    if (ix.style === 'chip') ix.style = 'icon';
-    if (!ix.style || ix.style === 'button') ix.style = 'icon';
-    applyProjectButtonThemeDefaults(ix);
-    if (ix.borderRadius == null || isNaN(Number(ix.borderRadius))) ix.borderRadius = 999;
-    if (ix.boxW == null || isNaN(Number(ix.boxW))) ix.boxW = 5.5;
-    if (ix.boxH == null || isNaN(Number(ix.boxH))) ix.boxH = 5.5;
-    if (Number(ix.boxW) > 10 && Number(ix.boxH) <= 6) {
-      ix.boxW = Math.max(Number(ix.boxH), 5.5);
+    if (typeof ButtonPresets !== 'undefined') {
+      var def = ButtonPresets.getDefault ? ButtonPresets.getDefault() : ButtonPresets.get('default');
+      if (def && ButtonPresets.applyVisuals) ButtonPresets.applyVisuals(ix, def);
     }
+    applyProjectButtonThemeDefaults(ix);
     return ix;
   }
 
@@ -3831,6 +3783,13 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
+  function buttonDefaultVisual(key) {
+    if (typeof ButtonPresets !== 'undefined' && ButtonPresets.defaultVisual) {
+      return ButtonPresets.defaultVisual(key);
+    }
+    return null;
+  }
+
   function buttonViewModel(state, n, ix, layerW, layerH) {
     if (isButtonVisualPresetLocked(ix)) {
       ensureButtonKindConfig(ix);
@@ -3916,27 +3875,26 @@ var ExperienciaEngine = (function () {
       hoverEnabled: ix.hoverEnabled !== false,
       hoverColor: ix.hoverColor != null && ix.hoverColor !== ''
         ? ix.hoverColor
-        : (hasButtonVisualPreset(ix) ? null : '#6fbf86'),
-      hoverTextColor: ix.hoverTextColor || '#ffffff',
+        : (hasButtonVisualPreset(ix) ? null : buttonDefaultVisual('hoverColor')),
+      hoverTextColor: ix.hoverTextColor || buttonDefaultVisual('hoverTextColor') || '#ffffff',
       hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
       pressedColor: isButtonVisualPresetLocked(ix)
         ? (ix.pressedColor != null && ix.pressedColor !== '' ? ix.pressedColor : null)
-        : (ix.pressedColor || '#5aaa74'),
-      pressedTextColor: ix.pressedTextColor || '#ffffff',
+        : (ix.pressedColor || buttonDefaultVisual('pressedColor')),
+      pressedTextColor: ix.pressedTextColor || buttonDefaultVisual('pressedTextColor') || '#ffffff',
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
       buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
       buttonShapeKind: ix.buttonShapeKind || null,
-      visualPresetId: (function () {
-        traceVisualPresetCheckpoint('buttonViewModel:vm.visualPresetId', ix);
-        return ix.visualPresetId || null;
-      })(),
+      visualPresetId: ix.visualPresetId || null,
       targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId)
         ? String(ix.buttonConfig.targetSceneId)
         : (ix.targetSceneId != null && ix.targetSceneId !== '' ? String(ix.targetSceneId) : null),
       _ix: ix
     };
-    if (isLocalVisualBtn) {
+    if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.copyViewFields) {
+      SceneButtonModel.copyViewFields(ix, vm);
+    } else if (isLocalVisualBtn) {
       copyButtonPresetVisualFields(ix, vm);
       buttonPresetVisualKeys().forEach(function (key) {
         if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
@@ -3947,19 +3905,6 @@ var ExperienciaEngine = (function () {
       if (Object.prototype.hasOwnProperty.call(ix, 'icon')) vm.icon = ix.icon;
       if (ix.boxW != null) vm.boxW = Number(ix.boxW);
       if (ix.boxH != null) vm.boxH = Number(ix.boxH);
-    }
-    if (isSceneButtonInteraction(ix)) {
-      try {
-        console.log('[QE btn-vm] paint', {
-          id: vm.id,
-          visualPresetId: vm.visualPresetId,
-          style: vm.style,
-          boxW: vm.boxW,
-          boxH: vm.boxH,
-          borderRadius: vm.borderRadius,
-          hoverColor: vm.hoverColor
-        });
-      } catch (eVmLog) { /* ignore */ }
     }
     return vm;
   }
@@ -4075,20 +4020,8 @@ var ExperienciaEngine = (function () {
   }
 
   function addSceneButton(state, nodeId, presetId) {
-    try {
-      console.log('[QE btn-create] enter', { nodeId: nodeId, presetId: presetId });
-    } catch (eEnterLog) { /* ignore */ }
     var n = getNode(state, nodeId);
-    if (!n || !isButtonsEditableNode(n)) {
-      try {
-        console.log('[QE btn-create] abort — node not editable', {
-          nodeId: nodeId,
-          hasNode: !!n,
-          kind: n && n.kind
-        });
-      } catch (eAbortNode) { /* ignore */ }
-      return null;
-    }
+    if (!n || !isButtonsEditableNode(n)) return null;
     var menuItem = findAddElementItem('el-button') || {
       interactionType: 'BUTTON',
       defaultLabel: 'Botón',
@@ -4115,22 +4048,13 @@ var ExperienciaEngine = (function () {
         ButtonPresets.applyVisuals(ix, preset);
         ix.visualPresetId = String(presetId);
       }
-      traceVisualPresetCheckpoint('addSceneButton:after-applyToInteraction', ix);
       ensureButtonKindConfig(ix);
     } else {
       ensureButtonVisualDefaults(ix);
     }
-    try {
-      console.log('[QE btn-create]', {
-        presetId: presetId,
-        visualPresetId: ix.visualPresetId,
-        style: ix.style,
-        boxW: ix.boxW,
-        boxH: ix.boxH,
-        borderRadius: ix.borderRadius,
-        hoverColor: ix.hoverColor
-      });
-    } catch (eCreateLog) { /* ignore */ }
+    if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.normalize) {
+      Object.assign(ix, SceneButtonModel.normalize(ix));
+    }
     n = getNode(state, nodeId);
     ix = getInteraction(n, ix.id) || ix;
     return buttonViewModel(state, n, ix);
@@ -6145,6 +6069,13 @@ var ExperienciaEngine = (function () {
       if (ix.color != null) delete ix.color;
       if (cfg.color != null) delete cfg.color;
       if (partial) copyButtonPresetVisualFields(partial, ix);
+      if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.normalize) {
+        var btnNorm = SceneButtonModel.normalize(Object.assign({}, ix, partial || {}));
+        Object.keys(btnNorm).forEach(function (key) {
+          if (btnNorm[key] === undefined) return;
+          ix[key] = btnNorm[key];
+        });
+      }
     }
     return ix;
   }
@@ -6396,6 +6327,9 @@ var ExperienciaEngine = (function () {
 
     n.config.interactions = n.config.interactions.map(function (ix) {
       var m = makeInteraction(ix);
+      if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.isButton(m)) {
+        m = SceneButtonModel.normalize(Object.assign({}, ix, m));
+      }
       /* Normalize legacy hotspots group name */
       if (m.group === 'hotspots') m.group = 'content';
       return m;
@@ -6454,10 +6388,7 @@ var ExperienciaEngine = (function () {
     var list = (scene && scene.config && scene.config.interactions) || [];
     for (var i = 0; i < list.length; i++) {
       if (String(list[i].id) === String(interactionId) ||
-          String(list[i].portId) === String(interactionId)) {
-        traceVisualPresetCheckpoint('getInteraction:before-return', list[i]);
-        return list[i];
-      }
+          String(list[i].portId) === String(interactionId)) return list[i];
     }
     return null;
   }
@@ -6481,11 +6412,6 @@ var ExperienciaEngine = (function () {
     });
     if (!scene.config.interactions) scene.config.interactions = [];
     scene.config.interactions.push(ix);
-    if (String(type || '').toUpperCase() === 'BUTTON' && typeof window !== 'undefined') {
-      window.__QE_TRACE_LOG__ = [];
-      window.__QE_BTN_TRACE_ID__ = ix.id;
-    }
-    traceVisualPresetCheckpoint('addInteractionToScene:after-push', ix);
     mirrorHotspotsFromInteractions(scene);
     syncScenePorts(scene);
     scene.status = 'pending';
@@ -9535,8 +9461,6 @@ var ExperienciaEngine = (function () {
     syncHeroOnly: syncHeroOnly,
     resetFlow: resetFlow,
     markExperienciaDirty: markExperienciaDirty,
-    traceVisualPresetCheckpoint: traceVisualPresetCheckpoint,
-    findTracedInteractionInList: findTracedInteractionInList,
     markExperienciaSaved: markExperienciaSaved,
     runGuardedMutation: function (state, reason, fn, options) {
       if (typeof ExperienciaSnapshot !== 'undefined' && ExperienciaSnapshot.runGuarded) {

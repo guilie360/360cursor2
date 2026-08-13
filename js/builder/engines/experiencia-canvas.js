@@ -4774,28 +4774,8 @@ var ExperienciaCanvas = (function () {
       if (ExperienciaEngine.markExperienciaDirty) {
         ExperienciaEngine.markExperienciaDirty(state, overlayMode ? { skipNormalize: true } : null);
       }
-      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.traceVisualPresetCheckpoint) {
-        var _traceN = ExperienciaEngine.getNode(state, canvas().selectedId);
-        var _traceTid = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
-        if (_traceTid && _traceN) {
-          ExperienciaEngine.traceVisualPresetCheckpoint(
-            'persist:before-pullToScenes',
-            ExperienciaEngine.getInteraction(_traceN, _traceTid)
-          );
-        }
-      }
       if (api.onChange) api.onChange();
       else if (api.saveState) api.saveState();
-      if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.traceVisualPresetCheckpoint) {
-        var _traceN2 = ExperienciaEngine.getNode(state, canvas().selectedId);
-        var _traceTid2 = (typeof window !== 'undefined' && window.__QE_BTN_TRACE_ID__) || null;
-        if (_traceTid2 && _traceN2) {
-          ExperienciaEngine.traceVisualPresetCheckpoint(
-            'persist:after-pullToScenes',
-            ExperienciaEngine.getInteraction(_traceN2, _traceTid2)
-          );
-        }
-      }
     }
 
     function readShapeTraceModel(sceneId, btnId) {
@@ -17179,16 +17159,7 @@ var ExperienciaCanvas = (function () {
       },
       addButton: function (shape) {
         var sceneId = canvas().selectedId || api.overlayNodeId;
-        if (!sceneId) {
-          try {
-            console.log('[QE btn-add] canvas.addButton — no sceneId', {
-              shape: shape,
-              selectedId: canvas().selectedId,
-              overlayNodeId: api.overlayNodeId
-            });
-          } catch (eNoScene) { /* ignore */ }
-          return null;
-        }
+        if (!sceneId) return null;
         if (!canvas().selectedId) canvas().selectedId = sceneId;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
@@ -17196,13 +17167,6 @@ var ExperienciaCanvas = (function () {
         if (typeof ButtonPresets !== 'undefined' && ButtonPresets.resolveShapePresetId) {
           presetId = ButtonPresets.resolveShapePresetId(shape) || shape;
         }
-        try {
-          console.log('[QE btn-add] canvas.addButton', {
-            shape: shape,
-            presetId: presetId,
-            sceneId: sceneId
-          });
-        } catch (eAddLog) { /* ignore */ }
         var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
         if (btn) {
           canvas().selectedButtonId = btn.id;

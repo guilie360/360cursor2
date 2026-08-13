@@ -1,8 +1,5 @@
 /* BOXIES v0.4 — Shared BUTTON overlay HTML (canvas stage + picker preview). */
-var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7911';
-try {
-  console.log('[QE btn-render] button-overlay-renderer loaded ' + BUTTON_OVERLAY_RENDERER_BUILD);
-} catch (eBuildLog) { /* ignore */ }
+var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7912';
 var ButtonOverlayRenderer = (function () {
   function esc(v) {
     return String(v == null ? '' : v)
@@ -44,9 +41,6 @@ var ButtonOverlayRenderer = (function () {
   /** Fill missing paint fields from catalog when interaction lost colors but kept visualPresetId. */
   function hydrateVisualFromPreset(vm) {
     var presetId = vm && (vm.visualPresetId || (vm._ix && vm._ix.visualPresetId) || null);
-    try {
-      console.log('[QE btn-render] hydrateVisualFromPreset ENTRÓ', { visualPresetId: presetId });
-    } catch (eHydrateLog) { /* ignore */ }
     if (!vm || !presetId || typeof ButtonPresets === 'undefined') return vm;
     var preset = ButtonPresets.get(presetId);
     if (!preset) return vm;
@@ -74,13 +68,6 @@ var ButtonOverlayRenderer = (function () {
 
   /** CSS variables + direct inline paint props for preset/local button look. */
   function appendLocalLookStyle(styleBits, b) {
-    try {
-      console.log('[QE btn-render] appendLocalLookStyle ENTRÓ', {
-        visualPresetId: b && (b.visualPresetId || (b._ix && b._ix.visualPresetId)),
-        bgColor: b && b.bgColor,
-        borderRadius: b && b.borderRadius
-      });
-    } catch (eAppendLog) { /* ignore */ }
     var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
     if (b.bgColor) {
       var bg = cssToken(b.bgColor);
@@ -105,12 +92,24 @@ var ButtonOverlayRenderer = (function () {
   }
 
   function resolveButtonHoverColor(b) {
-    if (!b) return '#6fbf86';
+    if (!b) {
+      return (typeof ButtonPresets !== 'undefined' && ButtonPresets.defaultVisual)
+        ? (ButtonPresets.defaultVisual('hoverColor') || '')
+        : '';
+    }
     if (b.hoverColor != null && b.hoverColor !== '') {
       return cssToken(b.hoverColor) || String(b.hoverColor);
     }
     if (b.visualPresetId) return '';
-    return '#6fbf86';
+    return (typeof ButtonPresets !== 'undefined' && ButtonPresets.defaultVisual)
+      ? (ButtonPresets.defaultVisual('hoverColor') || '')
+      : '';
+  }
+
+  function defaultPressedColor() {
+    return (typeof ButtonPresets !== 'undefined' && ButtonPresets.defaultVisual)
+      ? (ButtonPresets.defaultVisual('pressedColor') || '#5aaa74')
+      : '#5aaa74';
   }
 
   /**
@@ -127,15 +126,6 @@ var ButtonOverlayRenderer = (function () {
    */
   function renderButtonHtml(b, options) {
     if (!b) return '';
-    try {
-      if (typeof window !== 'undefined' && window.__qeTraceVisualPreset && window.__QE_BTN_TRACE_ID__ &&
-          String(b.id) === String(window.__QE_BTN_TRACE_ID__)) {
-        window.__qeTraceVisualPreset('renderButtonHtml:enter', {
-          id: b.id,
-          visualPresetId: b.visualPresetId || (b._ix && b._ix.visualPresetId)
-        });
-      }
-    } catch (eRenderLog) { /* ignore */ }
     b = hydrateVisualFromPreset(b);
     options = options || {};
     var selSet = options.selSet || {};
@@ -159,7 +149,7 @@ var ButtonOverlayRenderer = (function () {
     var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
     var hoverCol = resolveButtonHoverColor(b);
     var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
-    var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
+    var pressedCol = cssToken(b.pressedColor || defaultPressedColor()) || defaultPressedColor();
     var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
     var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
     var boxW = b.boxW != null ? Number(b.boxW) : 14;

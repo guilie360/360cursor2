@@ -7,8 +7,39 @@ var ButtonPresets = (function () {
     'pressedColor', 'pressedTextColor', 'pressedScale'
   ];
 
+  var DEFAULT_PRESET_ID = 'default';
+
+  /**
+   * Legacy generic chrome — single default when no shape preset is chosen.
+   */
+  var DEFAULT_PRESET = {
+    id: DEFAULT_PRESET_ID,
+    label: 'Botón',
+    style: 'icon',
+    icon: null,
+    boxW: 5.5,
+    boxH: 5.5,
+    bgColor: '#000000',
+    textColor: '#ffffff',
+    borderColor: '#d1d1d1',
+    borderWidth: 1,
+    borderRadius: 999,
+    bgOpacity: 1,
+    opacity: 1,
+    hoverEnabled: true,
+    hoverColor: '#6fbf86',
+    hoverTextColor: '#ffffff',
+    hoverTransition: 200,
+    pressedColor: '#5aaa74',
+    pressedTextColor: '#ffffff',
+    pressedScale: 0.96
+  };
+
   /** Fields that must survive normalize / bridge clone for preset buttons. */
-  var INTERACTION_VISUAL_KEYS = ['visualPresetId'].concat(VISUAL_KEYS);
+  var INTERACTION_VISUAL_KEYS = (typeof SceneButtonModel !== 'undefined' &&
+    SceneButtonModel.VISUAL_KEYS)
+    ? SceneButtonModel.VISUAL_KEYS.slice()
+    : ['visualPresetId'].concat(VISUAL_KEYS);
 
   /** Mini stage size for picker previews — same % semantics as canvas overlay layer. */
   var PREVIEW_LAYER_W = 360;
@@ -19,6 +50,7 @@ var ButtonPresets = (function () {
    * Visual fields only; behavior is applied separately on create.
    */
   var PRESETS = [
+    DEFAULT_PRESET,
     {
       id: 'preset_01',
       label: 'Botón',
@@ -166,6 +198,14 @@ var ButtonPresets = (function () {
     return byId[String(id || '')] || null;
   }
 
+  function getDefault() {
+    return DEFAULT_PRESET;
+  }
+
+  function defaultVisual(key) {
+    return DEFAULT_PRESET[key];
+  }
+
   /** Picker shape key → preset id (1:1 today; extend here if ids diverge). */
   function resolveShapePresetId(shape) {
     shape = String(shape || '').toLowerCase();
@@ -215,6 +255,9 @@ var ButtonPresets = (function () {
   return {
     list: list,
     get: get,
+    getDefault: getDefault,
+    defaultVisual: defaultVisual,
+    DEFAULT_PRESET_ID: DEFAULT_PRESET_ID,
     resolveShapePresetId: resolveShapePresetId,
     applyVisuals: applyVisuals,
     applyToInteraction: applyToInteraction,

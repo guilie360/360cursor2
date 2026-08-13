@@ -354,22 +354,6 @@ var QuotationExperienciaBridge = (function () {
   /** Push Quotation scene interactions[] into shim nodes (inverse of pullToScenes). */
   function pushScenesToShim(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
-    if (typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-      var _sceneIxPush = null;
-      (scenes || []).some(function (sc) {
-        if (!sc || !sc.interactions) return false;
-        _sceneIxPush = window.__qeFindTracedIxInList(sc.interactions);
-        return !!_sceneIxPush;
-      });
-      window.__qeTraceVisualPreset('pushScenesToShim:before-scene', _sceneIxPush);
-      var _shimIxPush = null;
-      (shimState.experiencia.nodes || []).some(function (n) {
-        if (!n || !n.config) return false;
-        _shimIxPush = window.__qeFindTracedIxInList(n.config.interactions);
-        return !!_shimIxPush;
-      });
-      window.__qeTraceVisualPreset('pushScenesToShim:before-shim', _shimIxPush);
-    }
     var tid = lockTraceId();
     if (tid) {
       lockTraceStateBridge('pushScenesToShim:enter:scene', tid, findIxLockedInScenes(tid, scenes));
@@ -397,19 +381,12 @@ var QuotationExperienciaBridge = (function () {
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
-        mergeButtonVisualPresetFieldsMissing(prevShimById[String(ix.id)], ix);
+        if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.mergeMissing) {
+          SceneButtonModel.mergeMissing(ix, prevShimById[String(ix.id)]);
+        }
       });
       n.config.interactions = cloned;
     });
-    if (typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-      var _shimIxPushAfter = null;
-      (shimState.experiencia.nodes || []).some(function (n) {
-        if (!n || !n.config) return false;
-        _shimIxPushAfter = window.__qeFindTracedIxInList(n.config.interactions);
-        return !!_shimIxPushAfter;
-      });
-      window.__qeTraceVisualPreset('pushScenesToShim:after-shim', _shimIxPushAfter);
-    }
     if (tid) {
       lockTraceStateBridge('pushScenesToShim:exit:scene', tid, findIxLockedInScenes(tid, scenes));
       lockTraceStateBridge('pushScenesToShim:exit:shim', tid, findIxLockedInShim(tid, shimState));
@@ -417,45 +394,6 @@ var QuotationExperienciaBridge = (function () {
   }
 
   /** Pull interactions (+ button targets) from shim back into Quotation scenes. */
-  function mergeButtonVisualPresetFields(srcIx, destIx) {
-    if (!srcIx || !destIx) return;
-    var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
-      ? ButtonPresets.INTERACTION_VISUAL_KEYS
-      : [
-        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
-        'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
-        'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
-        'hoverScale', 'hoverOpacity',
-        'pressedColor', 'pressedTextColor', 'pressedScale',
-        'interactiveRole'
-      ];
-    keys.forEach(function (key) {
-      if (!Object.prototype.hasOwnProperty.call(srcIx, key)) return;
-      if (srcIx[key] === undefined) return;
-      destIx[key] = srcIx[key];
-    });
-  }
-
-  function mergeButtonVisualPresetFieldsMissing(srcIx, destIx) {
-    if (!srcIx || !destIx) return;
-    var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
-      ? ButtonPresets.INTERACTION_VISUAL_KEYS
-      : [
-        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
-        'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
-        'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
-        'hoverScale', 'hoverOpacity',
-        'pressedColor', 'pressedTextColor', 'pressedScale',
-        'interactiveRole'
-      ];
-    keys.forEach(function (key) {
-      if (destIx[key] !== undefined && destIx[key] !== null && destIx[key] !== '') return;
-      if (!Object.prototype.hasOwnProperty.call(srcIx, key)) return;
-      if (srcIx[key] === undefined) return;
-      destIx[key] = srcIx[key];
-    });
-  }
-
   function mergePanelInteractionFlags(prevIx, nextIx) {
     if (!prevIx || !nextIx) return;
     if (!Object.prototype.hasOwnProperty.call(nextIx, 'locked') &&
@@ -488,15 +426,6 @@ var QuotationExperienciaBridge = (function () {
 
   function pullToScenes(shimState, scenes) {
     if (!shimState || !shimState.experiencia || !scenes) return;
-    if (typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-      var _shimIx = null;
-      (shimState.experiencia.nodes || []).some(function (n) {
-        if (!n || !n.config) return false;
-        _shimIx = window.__qeFindTracedIxInList(n.config.interactions);
-        return !!_shimIx;
-      });
-      window.__qeTraceVisualPreset('pullToScenes:before', _shimIx);
-    }
     var tid = lockTraceId();
     if (tid) {
       lockTraceStateBridge('pullToScenes:enter:scene', tid, findIxLockedInScenes(tid, scenes));
@@ -522,7 +451,9 @@ var QuotationExperienciaBridge = (function () {
       sc.interactions.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergePanelInteractionFlags(prevById[String(ix.id)], ix);
-        mergeButtonVisualPresetFieldsMissing(prevById[String(ix.id)], ix);
+        if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.mergeMissing) {
+          SceneButtonModel.mergeMissing(ix, prevById[String(ix.id)]);
+        }
       });
       sc.buttons = [];
       sc.hotspots = [];
@@ -566,15 +497,6 @@ var QuotationExperienciaBridge = (function () {
         if (ix.targetSceneId && !ix.action) ix.action = 'goto-scene';
       });
     });
-    if (typeof window !== 'undefined' && window.__qeTraceVisualPreset) {
-      var _sceneIx = null;
-      (scenes || []).some(function (sc) {
-        if (!sc || !sc.interactions) return false;
-        _sceneIx = window.__qeFindTracedIxInList(sc.interactions);
-        return !!_sceneIx;
-      });
-      window.__qeTraceVisualPreset('pullToScenes:after', _sceneIx);
-    }
     if (tid) {
       lockTraceStateBridge('pullToScenes:exit:scene', tid, findIxLockedInScenes(tid, scenes));
       lockTraceStateBridge('pullToScenes:exit:shim', tid, findIxLockedInShim(tid, shimState));
