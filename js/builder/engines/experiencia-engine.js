@@ -3664,6 +3664,7 @@ var ExperienciaEngine = (function () {
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
       buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
+      buttonShapeKind: ix.buttonShapeKind || null,
       visualPresetId: ix.visualPresetId || null,
       targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId)
         ? String(ix.buttonConfig.targetSceneId)
@@ -4060,6 +4061,14 @@ var ExperienciaEngine = (function () {
       if (patch.borderRadius != null) {
         ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
       }
+      if (patch.buttonShapeKind !== undefined) {
+        var shapeKind = patch.buttonShapeKind
+          ? String(patch.buttonShapeKind).toUpperCase()
+          : null;
+        if (!shapeKind || isSceneShapeType(shapeKind)) {
+          ix.buttonShapeKind = shapeKind;
+        }
+      }
       if (patch.hoverEnabled != null) ix.hoverEnabled = !!patch.hoverEnabled;
       if (patch.hoverColor != null) {
         ix.hoverColor = String(patch.hoverColor || '#6fbf86');
@@ -4448,6 +4457,14 @@ var ExperienciaEngine = (function () {
           ix.buttonConfig = JSON.parse(JSON.stringify(snap.buttonConfig));
         } catch (eCfg) {
           ix.buttonConfig = snap.buttonConfig;
+        }
+      }
+      if (snap.buttonShapeKind !== undefined) {
+        var snapShapeKind = snap.buttonShapeKind
+          ? String(snap.buttonShapeKind).toUpperCase()
+          : null;
+        if (!snapShapeKind || isSceneShapeType(snapShapeKind)) {
+          ix.buttonShapeKind = snapShapeKind;
         }
       }
       if (ix.color != null) delete ix.color;

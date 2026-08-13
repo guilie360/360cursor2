@@ -1527,6 +1527,123 @@ var ExperienciaCanvas = (function () {
     return '';
   }
 
+  var BUTTON_SHAPE_ITEMS = [
+    { kind: 'SHAPE_RECT', label: 'Cuadrado' },
+    { kind: 'SHAPE_ROUND_RECT', label: 'Cuadrado redondeado' },
+    { kind: 'SHAPE_CIRCLE', label: 'Círculo' },
+    { kind: 'SHAPE_CAPSULE', label: 'Cápsula' }
+  ];
+
+  function isButtonShapeKind(kind) {
+    kind = String(kind || '').toUpperCase();
+    return kind === 'SHAPE_RECT' || kind === 'SHAPE_CIRCLE' ||
+      kind === 'SHAPE_ROUND_RECT' || kind === 'SHAPE_CAPSULE';
+  }
+
+  function resolveButtonShapeKind(b) {
+    if (!b) return '';
+    var kind = b.buttonShapeKind ? String(b.buttonShapeKind).toUpperCase() : '';
+    return isButtonShapeKind(kind) ? kind : '';
+  }
+
+  function buttonColorToRgba(color, opacity) {
+    var col = hexOr(color, '#141414');
+    var op = opacity != null ? Number(opacity) : 1;
+    if (!isFinite(op)) op = 1;
+    op = Math.max(0, Math.min(1, op));
+    if (/^#[0-9a-fA-F]{6}$/.test(col)) {
+      var r = parseInt(col.slice(1, 3), 16);
+      var g = parseInt(col.slice(3, 5), 16);
+      var b = parseInt(col.slice(5, 7), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + op + ')';
+    }
+    return col;
+  }
+
+  function buttonShapePaintVm(b, shapeKind) {
+    var w = b.boxW != null ? Number(b.boxW) : 14;
+    var h = b.boxH != null ? Number(b.boxH) : 4.5;
+    return {
+      type: shapeKind,
+      width: w,
+      height: h,
+      fill: buttonColorToRgba(b.bgColor, b.bgOpacity),
+      stroke: b.borderColor || 'rgba(255,255,255,0.62)',
+      strokeWidth: b.borderWidth != null ? Number(b.borderWidth) : 1,
+      borderRadius: b.borderRadius != null ? Number(b.borderRadius) : 16,
+      shapeStretchX: 1,
+      shapeStretchY: 1,
+      shapeContentBox: true,
+      _ix: {
+        shapeContentBox: true,
+        width: w,
+        height: h,
+        shapeStretchX: 1,
+        shapeStretchY: 1
+      }
+    };
+  }
+
+  function paintButtonShapeBackedHtml(b, shapeKind, layerW, layerH, selSet, editMemberSet) {
+    var shapePaint = buttonShapePaintVm(b, shapeKind);
+    var rot = Number(b.rotation) || 0;
+    var paintX = Number(b.x);
+    var paintY = Number(b.y);
+    var shapeW = shapePaint.width;
+    var shapeH = shapePaint.height;
+    var glyph = buttonIconGlyph(b.icon);
+    var text = b.label != null ? String(b.label) : '';
+    var label;
+    if (glyph && text) label = glyph + ' ' + text;
+    else label = glyph || text || 'Botón';
+    var hoverOn = b.hoverEnabled !== false;
+    var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
+    var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
+    var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
+    var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
+    var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
+    var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
+    var btnOp = b.opacity != null ? Number(b.opacity) : 1;
+    var textCol = cssToken(b.textColor || '#ffffff') || '#ffffff';
+    var styleBits = 'left:' + paintX + '%;top:' + paintY + '%;' +
+      '--btn-rot:' + rot + 'deg;' +
+      'width:' + shapeW + '%;height:' + shapeH + '%;' +
+      'background:transparent;border:none;' +
+      '--btn-opacity:' + btnOp + ';' +
+      '--btn-hover-color:' + hoverCol + ';' +
+      '--btn-hover-text:' + hoverTextCol + ';' +
+      '--btn-hover-ms:' + hoverMs + 'ms;' +
+      '--btn-pressed-color:' + pressedCol + ';' +
+      '--btn-pressed-text:' + pressedTextCol + ';' +
+      '--btn-pressed-scale:' + pressedScale + ';' +
+      '--t-color:' + textCol + ';';
+    var shapeBtn = Object.assign({}, b, shapePaint);
+    return '<button type="button" class="' + buttonPreviewClass(b) +
+      ' is-box is-button-shape' +
+      (selSet[String(b.id)] ? ' is-selected' : '') +
+      (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
+      (b.visible === false ? ' is-invisible' : '') +
+      (b.locked ? ' is-locked' : '') +
+      overlayPendingMoveClass('BUTTON', b.id) +
+      (hoverOn ? ' is-hover-on' : ' is-hover-off') +
+      ' has-local-look"' +
+      ' data-exp-stage-btn="' + esc(b.id) + '"' +
+      (b.locked ? ' data-locked="1"' : '') +
+      ' data-hover-color="' + esc(hoverCol) + '"' +
+      ' data-hover-text="' + esc(hoverTextCol) + '"' +
+      ' data-box-w="' + shapeW + '" data-box-h="' + shapeH + '"' +
+      ' style="' + styleBits + '">' +
+      '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
+        shapeHitAreaStyle(shapeKind, 1, 1, shapeBtn, layerW, layerH, true) + '"></span>' +
+      shapeStageSvgHtml(shapeBtn, shapeKind, layerW, layerH, {
+        gizmoBox: true,
+        shapeW: shapeW,
+        shapeH: shapeH
+      }) +
+      '<span class="builder-exp-btn-shape-label">' + esc(label) + '</span>' +
+    '</button>';
+  }
+
   /** Visible gw×gh — tight SVG content, not square picker tile (~12%). */
   /** Shape paint pipeline — before-B vs after-B for grouped SHAPE_ROUND_RECT (data only). */
   var _shapeGroupPaintDiagMountState = null;
@@ -2821,85 +2938,33 @@ var ExperienciaCanvas = (function () {
   }
 
   function inferButtonShape(selected) {
-    if (!selected) return 'rounded';
-    var br = selected.borderRadius != null ? Number(selected.borderRadius) : 999;
-    var w = selected.boxW != null ? Number(selected.boxW) : 14;
-    var h = selected.boxH != null ? Number(selected.boxH) : 4.5;
-    if (!isFinite(br)) br = 999;
-    if (!isFinite(w) || w <= 0) w = 14;
-    if (!isFinite(h) || h <= 0) h = 4.5;
-    if (br <= 0) return 'square';
-    if (br >= 400) {
-      var sameSize = Math.abs(w - h) <= Math.max(w, h) * 0.12;
-      if (sameSize) return 'circle';
-      if (h < w * 0.85) return 'capsule';
-    }
-    return 'rounded';
+    return resolveButtonShapeKind(selected);
   }
 
-  function buttonShapePatch(shape, selected) {
-    if (!selected || !shape) return null;
-    var w = selected.boxW != null ? Number(selected.boxW) : 14;
-    var h = selected.boxH != null ? Number(selected.boxH) : 4.5;
-    w = Math.max(1, Math.min(100, w));
-    h = Math.max(1, Math.min(100, h));
-    if (shape === 'square') {
-      return { borderRadius: 0 };
-    }
-    if (shape === 'rounded') {
-      return { borderRadius: 12 };
-    }
-    if (shape === 'circle') {
-      var size = Math.min(w, h);
-      return { borderRadius: 999, boxW: size, boxH: size };
-    }
-    if (shape === 'capsule') {
-      var newH = h;
-      if (h >= w * 0.75) {
-        newH = Math.max(1, Math.round(h * 0.5 * 10) / 10);
-      }
-      if (newH >= w) {
-        newH = Math.max(1, Math.round(w * 0.45 * 10) / 10);
-      }
-      return { borderRadius: 999, boxW: w, boxH: newH };
-    }
-    return null;
-  }
-
-  function buttonShapeIconSvg(shape) {
-    var S = 'xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"' +
-      ' fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"' +
-      ' stroke-linejoin="round" aria-hidden="true"';
-    if (shape === 'square') {
-      return '<svg ' + S + '><rect x="5" y="5" width="14" height="14"/></svg>';
-    }
-    if (shape === 'rounded') {
-      return '<svg ' + S + '><rect x="5" y="5" width="14" height="14" rx="3"/></svg>';
-    }
-    if (shape === 'circle') {
-      return '<svg ' + S + '><circle cx="12" cy="12" r="7"/></svg>';
-    }
-    if (shape === 'capsule') {
-      return '<svg ' + S + '><rect x="4" y="8" width="16" height="8" rx="4"/></svg>';
+  function buttonShapeToolbarIcon(kind) {
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      return '<span class="builder-exp-btn-shape-icon">' +
+        ExperienciaEngine.buildSceneShapeSvg(kind, {
+          fill: 'rgba(255,255,255,0.16)',
+          stroke: 'rgba(255,255,255,0.62)',
+          strokeWidth: 2,
+          borderRadius: 16,
+          preserveAspect: 'meet'
+        }) +
+      '</span>';
     }
     return '';
   }
 
   function buttonShapeToolbarHtml(selected) {
     var active = inferButtonShape(selected);
-    var shapes = [
-      { id: 'square', label: 'Cuadrado' },
-      { id: 'rounded', label: 'Cuadrado redondeado' },
-      { id: 'circle', label: 'Círculo' },
-      { id: 'capsule', label: 'Cápsula' }
-    ];
     return '<div class="builder-hub-segment builder-exp-btn-shape-segment">' +
-      shapes.map(function (item) {
+      BUTTON_SHAPE_ITEMS.map(function (item) {
         return '<button type="button" class="builder-hub-segment__btn builder-exp-btn-shape-btn' +
-          (active === item.id ? ' is-active' : '') +
-          '" data-exp-btn-shape="' + esc(item.id) + '" title="' + esc(item.label) + '"' +
+          (active === item.kind ? ' is-active' : '') +
+          '" data-exp-btn-shape="' + esc(item.kind) + '" title="' + esc(item.label) + '"' +
           ' aria-label="' + esc(item.label) + '">' +
-          buttonShapeIconSvg(item.id) +
+          buttonShapeToolbarIcon(item.kind) +
         '</button>';
       }).join('') +
     '</div>';
@@ -5223,22 +5288,9 @@ var ExperienciaCanvas = (function () {
       function patchBtn(patch, opts) {
         patchSceneButton(patch, opts);
       }
-      function applyButtonShape(shape) {
-        var sceneId = canvas().selectedId;
-        var btnId = resolveSelectedOverlayButtonId();
-        if (!sceneId || !btnId || typeof ExperienciaEngine === 'undefined') return;
-        var n = ExperienciaEngine.getNode(state, sceneId);
-        var ix = n && ExperienciaEngine.getInteraction
-          ? ExperienciaEngine.getInteraction(n, btnId)
-          : null;
-        if (!ix) return;
-        var ls = layerSize();
-        var vm = ExperienciaEngine.buttonViewModel
-          ? ExperienciaEngine.buttonViewModel(state, n, ix, ls.w, ls.h)
-          : null;
-        var patch = buttonShapePatch(shape, vm || ix);
-        if (!patch) return;
-        patchBtn(patch, { inspector: true, persist: true });
+      function applyButtonShape(shapeKind) {
+        if (!isButtonShapeKind(shapeKind)) return;
+        patchBtn({ buttonShapeKind: shapeKind }, { inspector: true, persist: true });
       }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
@@ -8405,6 +8457,12 @@ var ExperienciaCanvas = (function () {
           var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
             ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
             : b;
+          var shapeKind = resolveButtonShapeKind(paintVm);
+          if (shapeKind) {
+            return paintButtonShapeBackedHtml(
+              paintVm, shapeKind, layerW, layerH, selSet, editMemberSet
+            );
+          }
           return ButtonOverlayRenderer.renderButtonHtml(paintVm, {
             selSet: selSet,
             editMemberSet: editMemberSet,

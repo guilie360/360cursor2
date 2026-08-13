@@ -196,6 +196,9 @@ var ButtonOverlayRenderer = (function () {
    */
   function renderButtonSnapshotThumbnail(snap) {
     if (!snap) return '';
+    var shapeKind = snap.buttonShapeKind ? String(snap.buttonShapeKind).toUpperCase() : '';
+    var useShape = shapeKind === 'SHAPE_RECT' || shapeKind === 'SHAPE_CIRCLE' ||
+      shapeKind === 'SHAPE_ROUND_RECT' || shapeKind === 'SHAPE_CAPSULE';
     var refW = (typeof ButtonPresets !== 'undefined' && ButtonPresets.PREVIEW_LAYER_W)
       ? ButtonPresets.PREVIEW_LAYER_W : 360;
     var refH = (typeof ButtonPresets !== 'undefined' && ButtonPresets.PREVIEW_LAYER_H)
@@ -203,6 +206,29 @@ var ButtonOverlayRenderer = (function () {
     var thumbW = 112;
     var thumbH = 70;
     var stageScale = Math.min(thumbW / refW, thumbH / refH);
+    if (useShape && typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
+      var bgOp = snap.bgOpacity != null ? Number(snap.bgOpacity) : 1;
+      var fill = snap.bgColor || '#141414';
+      if (/^#[0-9a-fA-F]{6}$/.test(fill)) {
+        var r = parseInt(fill.slice(1, 3), 16);
+        var g = parseInt(fill.slice(3, 5), 16);
+        var b = parseInt(fill.slice(5, 7), 16);
+        fill = 'rgba(' + r + ',' + g + ',' + b + ',' + bgOp + ')';
+      }
+      var shapeSvg = ExperienciaEngine.buildSceneShapeSvg(shapeKind, {
+        fill: fill,
+        stroke: snap.borderColor || 'rgba(255,255,255,0.62)',
+        strokeWidth: snap.borderWidth != null ? Number(snap.borderWidth) : 1,
+        borderRadius: snap.borderRadius != null ? Number(snap.borderRadius) : 16,
+        preserveAspect: 'meet'
+      });
+      return '<div class="qe-component-picker__viewport" aria-hidden="true">' +
+        '<div class="qe-button-picker__stage qe-component-picker__stage"' +
+          ' style="width:' + refW + 'px;height:' + refH + 'px;' +
+          'transform:translate(-50%,-50%) scale(' + stageScale + ');">' +
+          shapeSvg +
+        '</div></div>';
+    }
     var ix = Object.assign({
       id: 'component-thumb',
       type: 'BUTTON',
