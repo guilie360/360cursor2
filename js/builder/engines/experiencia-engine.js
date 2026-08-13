@@ -4077,6 +4077,8 @@ var ExperienciaEngine = (function () {
         hoverColor: ix.hoverColor
       });
     } catch (eCreateLog) { /* ignore */ }
+    n = getNode(state, nodeId);
+    ix = getInteraction(n, ix.id) || ix;
     return buttonViewModel(state, n, ix);
   }
 
@@ -5984,6 +5986,9 @@ var ExperienciaEngine = (function () {
     };
     /* V6.1.02 — preserve BUTTON visual props across normalize (Style.v3 overlay) */
     if (partial) {
+      if (partial.visualPresetId != null && partial.visualPresetId !== '') {
+        ix.visualPresetId = String(partial.visualPresetId);
+      }
       if (partial.style != null) ix.style = partial.style;
       else if (cfg.style != null) ix.style = cfg.style;
       if (partial.rotation != null) ix.rotation = partial.rotation;

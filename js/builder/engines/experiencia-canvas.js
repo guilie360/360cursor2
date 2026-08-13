@@ -8684,11 +8684,10 @@ var ExperienciaCanvas = (function () {
             }) +
             '</button>';
         }
-        var paintIx = (b._ix && ExperienciaEngine.getInteraction)
-          ? b._ix
-          : (ExperienciaEngine.getInteraction
-            ? ExperienciaEngine.getInteraction(n, b.id)
-            : b._ix);
+        var paintIx = ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(n, b.id)
+          : (b._ix || b);
+        if (!paintIx) paintIx = b._ix || b;
         var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
           ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
           : b;

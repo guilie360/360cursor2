@@ -711,6 +711,23 @@ var ProyectosApi = (function () {
         var boxH = Number(ix.boxH);
         if (isFinite(boxW)) out.boxW = Math.max(1, Math.min(100, boxW));
         if (isFinite(boxH)) out.boxH = Math.max(1, Math.min(100, boxH));
+        if (ix.visualPresetId != null && ix.visualPresetId !== '') {
+          out.visualPresetId = heroText(ix.visualPresetId);
+        }
+        [
+          'bgColor', 'textColor', 'borderColor', 'borderWidth', 'borderRadius',
+          'bgOpacity', 'opacity', 'hoverEnabled', 'hoverColor', 'hoverTextColor',
+          'hoverTransition', 'hoverScale', 'hoverOpacity',
+          'pressedColor', 'pressedTextColor', 'pressedScale',
+          'interactiveRole', 'buttonType', 'buttonShapeKind'
+        ].forEach(function (key) {
+          if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
+          if (ix[key] === undefined) return;
+          out[key] = ix[key];
+        });
+        if (ix.buttonConfig && typeof ix.buttonConfig === 'object' && !Array.isArray(ix.buttonConfig)) {
+          out.buttonConfig = ix.buttonConfig;
+        }
         if (ix.locked != null) out.locked = !!ix.locked;
       } else if (type === 'HOTSPOT') {
         out.shape = heroText(ix.shape) || 'polygon';

@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7908';
+  var QE_EDITOR_BUILD = 'ws7909';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -1853,7 +1853,7 @@ var QuotationEditor = (function () {
         try { expOverlay.pull(); } catch (ePull) {}
       }
       /* Panel scenes push merges locked/visible flags onto shim interactions. */
-      pushOutlinerScenesToShim();
+      if (!opts.skipPush) pushOutlinerScenesToShim();
       persistLibraryUi();
       var payload = {
         v: 1,
@@ -10236,7 +10236,7 @@ var QuotationEditor = (function () {
           id: createdBtn && createdBtn.id
         });
       } catch (ePickDone) { /* ignore */ }
-      markDirtyLocal({ skipPull: true });
+      markDirtyLocal({ skipPull: true, skipPush: true });
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       rerender();

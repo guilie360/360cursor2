@@ -1,5 +1,5 @@
 /* BOXIES v0.4 — Shared BUTTON overlay HTML (canvas stage + picker preview). */
-var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7908';
+var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7909';
 try {
   console.log('[QE btn-render] button-overlay-renderer loaded ' + BUTTON_OVERLAY_RENDERER_BUILD);
 } catch (eBuildLog) { /* ignore */ }

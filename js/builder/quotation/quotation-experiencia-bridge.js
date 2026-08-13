@@ -373,10 +373,15 @@ var QuotationExperienciaBridge = (function () {
       srcList.forEach(function (ix) {
         if (ix && ix.id) srcById[String(ix.id)] = ix;
       });
+      var prevShimById = {};
+      (n.config.interactions || []).forEach(function (ix) {
+        if (ix && ix.id) prevShimById[String(ix.id)] = ix;
+      });
       var cloned = cloneJson(srcList);
       cloned.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergeSceneInteractionFlagsToShim(srcById[String(ix.id)], ix);
+        mergeButtonVisualPresetFieldsMissing(prevShimById[String(ix.id)], ix);
       });
       n.config.interactions = cloned;
     });
@@ -483,6 +488,7 @@ var QuotationExperienciaBridge = (function () {
       sc.interactions.forEach(function (ix) {
         if (!ix || !ix.id) return;
         mergePanelInteractionFlags(prevById[String(ix.id)], ix);
+        mergeButtonVisualPresetFieldsMissing(prevById[String(ix.id)], ix);
       });
       sc.buttons = [];
       sc.hotspots = [];
