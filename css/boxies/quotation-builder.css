@@ -4511,21 +4511,38 @@ body.is-qe-lib-pointer-dragging * {
 
 .qe-component-picker__card {
   min-height: 0;
+  cursor: pointer;
 }
 
 .qe-component-picker__thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
-  min-height: 88px;
+  margin-bottom: 8px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
 }
 
-.qe-component-picker__thumb .qe-button-picker__layer {
-  width: 100%;
-  height: 100%;
+.qe-component-picker__viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.qe-component-picker__stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.qe-component-picker__viewport .builder-exp-ui-btn {
+  pointer-events: none;
+  cursor: default;
 }
 
 .qe-canvas__mock {

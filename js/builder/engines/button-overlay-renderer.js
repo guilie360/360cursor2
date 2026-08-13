@@ -114,12 +114,18 @@ var ButtonOverlayRenderer = (function () {
         ' data-hover-color="' + esc(hoverCol) + '"' +
         ' data-hover-text="' + esc(hoverTextCol) + '"' +
         ' data-box-w="' + boxW + '" data-box-h="' + boxH + '"')
-      : ' data-button-preview="1" tabindex="-1"';
+      : ' data-button-preview="1" aria-hidden="true"';
 
-    return '<button type="button" class="' + className + '"' + attrs +
+    if (stageMode) {
+      return '<button type="button" class="' + className + '"' + attrs +
+        ' style="' + styleBits + '">' +
+        esc(label) +
+        '</button>';
+    }
+    return '<span class="' + className + '"' + attrs +
       ' style="' + styleBits + '">' +
       esc(label) +
-      '</button>';
+      '</span>';
   }
 
   /**
@@ -194,8 +200,9 @@ var ButtonOverlayRenderer = (function () {
       ? ButtonPresets.PREVIEW_LAYER_W : 360;
     var refH = (typeof ButtonPresets !== 'undefined' && ButtonPresets.PREVIEW_LAYER_H)
       ? ButtonPresets.PREVIEW_LAYER_H : 203;
-    var tile = PICKER_LAYER_SIZE;
-    var stageScale = Math.min(tile / refW, tile / refH);
+    var thumbW = 112;
+    var thumbH = 70;
+    var stageScale = Math.min(thumbW / refW, thumbH / refH);
     var ix = Object.assign({
       id: 'component-thumb',
       type: 'BUTTON',
@@ -216,9 +223,10 @@ var ButtonOverlayRenderer = (function () {
     var fit = pickerFitBoxPercents(vm, refW, refH);
     var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
     var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
-    return '<div class="qe-button-picker__layer qe-component-picker__thumb" aria-hidden="true">' +
-      '<div class="qe-button-picker__stage" style="width:' + refW + 'px;height:' + refH + 'px;' +
-      'transform:scale(' + stageScale + ');transform-origin:center center;">' +
+    return '<div class="qe-component-picker__viewport" aria-hidden="true">' +
+      '<div class="qe-button-picker__stage qe-component-picker__stage"' +
+        ' style="width:' + refW + 'px;height:' + refH + 'px;' +
+        'transform:translate(-50%,-50%) scale(' + stageScale + ');">' +
       btnHtml +
       '</div></div>';
   }

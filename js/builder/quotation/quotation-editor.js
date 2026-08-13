@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7886';
+  var QE_EDITOR_BUILD = 'ws7887';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4111,11 +4111,11 @@ var QuotationEditor = (function () {
           ? ButtonComponents.renderThumbnailHtml(comp.button)
           : '';
         return '' +
-          '<button type="button" class="qe-picker__card qe-component-picker__card" data-qe-pick-component="' +
-            escapeHtml(comp.id) + '">' +
+          '<div class="qe-picker__card qe-component-picker__card" role="button" tabindex="0" ' +
+            'data-qe-pick-component="' + escapeHtml(comp.id) + '">' +
             '<span class="qe-picker__thumb qe-component-picker__thumb">' + thumb + '</span>' +
             '<span class="qe-picker__name">' + escapeHtml(comp.name || 'Componente') + '</span>' +
-          '</button>';
+          '</div>';
       }).join('') + '</div>';
     }
     return '' +
@@ -10128,7 +10128,13 @@ var QuotationEditor = (function () {
   function closeComponentPicker() {
     if (!state.componentPickerOpen) return;
     state.componentPickerOpen = false;
-    rerender();
+    dismissComponentPickerDom();
+  }
+
+  function dismissComponentPickerDom() {
+    if (!rootEl) return;
+    var picker = rootEl.querySelector('[data-qe-component-picker]');
+    if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
   }
 
   function insertButtonComponent(componentId) {
@@ -10145,6 +10151,7 @@ var QuotationEditor = (function () {
     if (typeof ButtonComponents === 'undefined' || !ButtonComponents.snapshotForInsert) return;
     var snap = ButtonComponents.snapshotForInsert(comp.button);
     state.componentPickerOpen = false;
+    dismissComponentPickerDom();
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'buttons';
@@ -10156,6 +10163,8 @@ var QuotationEditor = (function () {
       if (expOverlay.insertButtonFromSnapshot) expOverlay.insertButtonFromSnapshot(snap);
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
+      refreshDockOnly();
+      refreshLayersPanel();
       return;
     }
     pendingExpAction = { type: 'insertButtonComponent', snap: snap };
@@ -12510,16 +12519,25 @@ var QuotationEditor = (function () {
       var componentPicker = qOne('[data-qe-component-picker]');
       if (componentPicker) {
         componentPicker.addEventListener('click', function (e) {
-          if (e.target === componentPicker) closeComponentPicker();
-        });
-      }
-      qAll('[data-qe-pick-component]').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
+          if (e.target === componentPicker) {
+            closeComponentPicker();
+            return;
+          }
+          var card = e.target.closest && e.target.closest('[data-qe-pick-component]');
+          if (!card || !componentPicker.contains(card)) return;
           e.preventDefault();
           e.stopPropagation();
-          pickButtonComponent(btn.getAttribute('data-qe-pick-component'));
+          pickButtonComponent(card.getAttribute('data-qe-pick-component'));
         });
-      });
+        componentPicker.addEventListener('keydown', function (e) {
+          var card = e.target.closest && e.target.closest('[data-qe-pick-component]');
+          if (!card || !componentPicker.contains(card)) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            pickButtonComponent(card.getAttribute('data-qe-pick-component'));
+          }
+        });
+      }
       qAll('[data-qe-pick-shape]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
