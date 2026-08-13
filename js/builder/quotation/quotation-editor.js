@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7893';
+  var QE_EDITOR_BUILD = 'ws7894';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -1234,6 +1234,41 @@ var QuotationEditor = (function () {
     });
   }
 
+  function resolveOverlayGroupConvertButtonState(groupId) {
+    var canConvertBtn = false;
+    if (!groupId || !expOverlay || !expOverlay.shim || typeof ExperienciaEngine === 'undefined') {
+      return { canConvertBtn: false };
+    }
+    var nodeId = overlayPanelNodeId();
+    var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
+    var gShim = n && ExperienciaEngine.getInteraction
+      ? ExperienciaEngine.getInteraction(n, groupId)
+      : null;
+    if (gShim) {
+      var alreadyBtn = ExperienciaEngine.isInteractiveButtonGroup &&
+        ExperienciaEngine.isInteractiveButtonGroup(gShim);
+      var mids = ExperienciaEngine.resolveOverlayGroupMemberIds
+        ? ExperienciaEngine.resolveOverlayGroupMemberIds(n, gShim, { repair: true })
+        : (gShim.memberIds || []);
+      canConvertBtn = mids.length > 0 && !alreadyBtn;
+    }
+    return { canConvertBtn: canConvertBtn };
+  }
+
+  function convertOverlayGroupToInteractiveButton(groupId) {
+    if (!groupId) return false;
+    if (expOverlay && expOverlay.selectOverlayItem) {
+      expOverlay.selectOverlayItem(groupId, { fromPanel: true });
+    }
+    if (expOverlay && expOverlay.convertGroupToButton) {
+      expOverlay.convertGroupToButton(groupId);
+    }
+    markDirtyLocal();
+    refreshLayersPanel();
+    refreshDockOnly();
+    return true;
+  }
+
   function openOverlaySelectionContextMenu(clientX, clientY) {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     if (!expOverlay || !expOverlay.getSelectionContext) return;
@@ -1242,6 +1277,8 @@ var QuotationEditor = (function () {
     var multi = ctx.count >= 2;
     var canUngroup = !!ctx.canUngroup;
     if (!multi && !canUngroup) return;
+    var groupId = ctx.groupId || null;
+    var convertState = groupId ? resolveOverlayGroupConvertButtonState(groupId) : { canConvertBtn: false };
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -1256,6 +1293,11 @@ var QuotationEditor = (function () {
           id: 'ungroup',
           label: 'Desagrupar',
           disabled: !canUngroup
+        },
+        {
+          id: 'convert-button',
+          label: 'Convertir en botón',
+          disabled: !convertState.canConvertBtn
         },
         {
           id: 'template',
@@ -1283,6 +1325,10 @@ var QuotationEditor = (function () {
             refreshLayersPanel();
             refreshDockOnly();
           }
+          return;
+        }
+        if (id === 'convert-button') {
+          convertOverlayGroupToInteractiveButton(groupId);
           return;
         }
         if (id === 'template') {
@@ -4523,23 +4569,7 @@ var QuotationEditor = (function () {
     if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
     var ix = findSceneInteraction(groupId);
     if (!ix || !isOverlayGroupIx(ix)) return;
-    var canConvertBtn = false;
-    var alreadyBtn = false;
-    if (expOverlay && expOverlay.shim && typeof ExperienciaEngine !== 'undefined') {
-      var nodeId = overlayPanelNodeId();
-      var n = ExperienciaEngine.getNode(expOverlay.shim, nodeId);
-      var gShim = n && ExperienciaEngine.getInteraction
-        ? ExperienciaEngine.getInteraction(n, groupId)
-        : null;
-      if (gShim) {
-        alreadyBtn = ExperienciaEngine.isInteractiveButtonGroup &&
-          ExperienciaEngine.isInteractiveButtonGroup(gShim);
-        var mids = ExperienciaEngine.resolveOverlayGroupMemberIds
-          ? ExperienciaEngine.resolveOverlayGroupMemberIds(n, gShim, { repair: true })
-          : (gShim.memberIds || []);
-        canConvertBtn = mids.length > 0 && !alreadyBtn;
-      }
-    }
+    var convertState = resolveOverlayGroupConvertButtonState(groupId);
     QuotationContextMenu.open({
       x: clientX,
       y: clientY,
@@ -4549,7 +4579,7 @@ var QuotationEditor = (function () {
         {
           id: 'convert-button',
           label: 'Convertir en botón',
-          disabled: !canConvertBtn
+          disabled: !convertState.canConvertBtn
         },
         {
           id: 'delete',
@@ -4564,15 +4594,7 @@ var QuotationEditor = (function () {
           return;
         }
         if (id === 'convert-button') {
-          if (expOverlay && expOverlay.selectOverlayItem) {
-            expOverlay.selectOverlayItem(groupId, { fromPanel: true });
-          }
-          if (expOverlay && expOverlay.convertGroupToButton) {
-            expOverlay.convertGroupToButton(groupId);
-          }
-          markDirtyLocal();
-          refreshLayersPanel();
-          refreshDockOnly();
+          convertOverlayGroupToInteractiveButton(groupId);
           return;
         }
         if (id === 'delete') {

@@ -3292,10 +3292,53 @@ var ExperienciaCanvas = (function () {
         ' Visible</label>';
   }
 
-  function buttonsInspectorHtml(state, n, lists) {
+  function isOverlayGroupButtonVm(vm) {
+    if (!vm) return false;
+    if (String(vm.interactiveRole || '').toLowerCase() === 'button') return true;
+    return !!(vm._ix && ExperienciaEngine.isInteractiveButtonGroup &&
+      ExperienciaEngine.isInteractiveButtonGroup(vm._ix));
+  }
+
+  function resolveInteractiveButtonGroupId(n, itemId) {
+    if (!n || !itemId) return null;
+    var ix = ExperienciaEngine.getInteraction
+      ? ExperienciaEngine.getInteraction(n, itemId)
+      : null;
+    if (ix && ExperienciaEngine.isInteractiveButtonGroup &&
+        ExperienciaEngine.isInteractiveButtonGroup(ix)) {
+      return String(ix.id);
+    }
+    if (ExperienciaEngine.findOverlayGroupForMember) {
+      var g = ExperienciaEngine.findOverlayGroupForMember(n, itemId);
+      if (g && ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(g)) {
+        return String(g.id);
+      }
+    }
+    return null;
+  }
+
+  function resolveButtonsInspectorSelection(state, n, selectedBtnId) {
+    if (!n || !selectedBtnId || !ExperienciaEngine.getSceneOverlayItem) return null;
+    var grpBtnId = resolveInteractiveButtonGroupId(n, selectedBtnId);
+    if (grpBtnId) {
+      return ExperienciaEngine.getSceneOverlayItem(state, n, grpBtnId, 1000, 1000);
+    }
+    var direct = ExperienciaEngine.getSceneOverlayItem(state, n, selectedBtnId, 1000, 1000);
+    if (direct && isOverlayGroupButtonVm(direct)) return direct;
     var buttons = ExperienciaEngine.listSceneButtons
       ? ExperienciaEngine.listSceneButtons(state, n)
       : [];
+    for (var i = 0; i < buttons.length; i++) {
+      if (String(buttons[i].id) === String(selectedBtnId) ||
+          String(buttons[i].portId) === String(selectedBtnId)) {
+        return buttons[i];
+      }
+    }
+    return null;
+  }
+
+  function buttonsInspectorHtml(state, n, lists) {
     var canvasState = (state.experiencia && state.experiencia.canvas) || {};
     var selectedIds = Array.isArray(canvasState.selectedButtonIds)
       ? canvasState.selectedButtonIds.slice()
@@ -3304,20 +3347,7 @@ var ExperienciaCanvas = (function () {
       selectedIds = [canvasState.selectedButtonId];
     }
     var selectedBtnId = canvasState.selectedButtonId || selectedIds[0] || null;
-    var selected = null;
-    if (selectedBtnId && ExperienciaEngine.getSceneOverlayItem) {
-      var grpVm = ExperienciaEngine.getSceneOverlayItem(state, n, selectedBtnId, 1000, 1000);
-      if (grpVm && grpVm.interactiveRole === 'button') selected = grpVm;
-    }
-    if (!selected && selectedBtnId) {
-      for (var i = 0; i < buttons.length; i++) {
-        if (String(buttons[i].id) === String(selectedBtnId) ||
-            String(buttons[i].portId) === String(selectedBtnId)) {
-          selected = buttons[i];
-          break;
-        }
-      }
-    }
+    var selected = resolveButtonsInspectorSelection(state, n, selectedBtnId);
 
     if (!selected) {
       return '' +
@@ -3327,7 +3357,7 @@ var ExperienciaCanvas = (function () {
     }
 
     var selType = String(selected.type || 'BUTTON').toUpperCase();
-    var isGrpBtn = selType === 'OVERLAY_GROUP' && selected.interactiveRole === 'button';
+    var isGrpBtn = isOverlayGroupButtonVm(selected);
     var kindTitle = isGrpBtn ? 'Botón'
       : (selType === 'TEXT' ? 'Texto'
         : (isShapeType(selType) ? 'Forma'
@@ -11870,6 +11900,10 @@ var ExperienciaCanvas = (function () {
         if (String(item.id) === String(hitId)) { ix = item; return true; }
         return false;
       });
+      if (ix && ExperienciaEngine.isInteractiveButtonGroup &&
+          ExperienciaEngine.isInteractiveButtonGroup(ix)) {
+        return String(ix.id);
+      }
       if (ix && ix.groupId &&
           String(canvas().activeOverlayGroupEditId || '') !== String(ix.groupId)) {
         return String(ix.groupId);
@@ -17583,9 +17617,18 @@ var ExperienciaCanvas = (function () {
           canvas().activeOverlayGroupEditId = null;
           if (buttonsLayer) buttonsLayer.classList.remove('is-group-edit-mode');
           if (groupedSel && opts.fromPanel) {
-            canvas().selectedButtonId = groupedSel.childId;
-            canvas().selectedButtonIds = [groupedSel.childId];
-            pinOverlayGroupMemberGlow(groupedSel.childId);
+            var gIxPanel = ExperienciaEngine.getInteraction(n, groupedSel.groupId);
+            var grpIsBtnPanel = gIxPanel && ExperienciaEngine.isInteractiveButtonGroup &&
+              ExperienciaEngine.isInteractiveButtonGroup(gIxPanel);
+            if (grpIsBtnPanel) {
+              pinOverlayGroupMemberGlow(null);
+              canvas().selectedButtonId = groupedSel.groupId;
+              canvas().selectedButtonIds = [groupedSel.groupId];
+            } else {
+              canvas().selectedButtonId = groupedSel.childId;
+              canvas().selectedButtonIds = [groupedSel.childId];
+              pinOverlayGroupMemberGlow(groupedSel.childId);
+            }
           } else if (groupedSel) {
             pinOverlayGroupMemberGlow(null);
             canvas().selectedButtonId = groupedSel.groupId;
