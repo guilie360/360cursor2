@@ -3906,7 +3906,7 @@ var ExperienciaEngine = (function () {
     var t = ix ? String(ix.type || '').toUpperCase() : '';
     if (t === 'BUTTON' && !isButtonVisualPresetLocked(ix) && !hasButtonLocalVisual(ix)) {
       ensureButtonVisualDefaults(ix);
-    else if (t === 'TEXT' || isSceneShapeType(t)) {
+    } else if (t === 'TEXT' || isSceneShapeType(t)) {
       ensureFreeOverlayDefaults(ix);
     }
     var w = Math.max(1, Number(imageW) || 1000);
@@ -3937,7 +3937,7 @@ var ExperienciaEngine = (function () {
     var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
     if (tLayout === 'BUTTON' && !isButtonVisualPresetLocked(ix) && !hasButtonLocalVisual(ix)) {
       ensureButtonVisualDefaults(ix);
-    else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
+    } else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
       ensureFreeOverlayDefaults(ix);
     }
     var w = Math.max(1, Number(imageW) || 1);

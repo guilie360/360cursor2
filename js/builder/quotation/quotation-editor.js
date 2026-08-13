@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7904';
+  var QE_EDITOR_BUILD = 'ws7905';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
