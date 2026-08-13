@@ -596,6 +596,7 @@ var QuotationExperienciaBridge = (function () {
         onChange: onCanvasChangePullToScenes,
         onSelectionChange: options.onSelectionChange,
         onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
+        onOverlayButtonContextMenu: options.onOverlayButtonContextMenu,
         overlaySnapEnabled: options.overlaySnapEnabled,
         listPlanos2d: options.listPlanos2d || null,
         listVideos: options.listVideos || null,
@@ -621,6 +622,12 @@ var QuotationExperienciaBridge = (function () {
       },
       addButton: function () {
         return handle.addButton ? handle.addButton() : null;
+      },
+      getButtonSnapshot: function (buttonId) {
+        return handle.getButtonSnapshot ? handle.getButtonSnapshot(buttonId) : null;
+      },
+      insertButtonFromSnapshot: function (snap) {
+        return handle.insertButtonFromSnapshot ? handle.insertButtonFromSnapshot(snap) : null;
       },
       addText: function () {
         return handle.addText ? handle.addText() : null;

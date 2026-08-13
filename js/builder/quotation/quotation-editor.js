@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7885';
+  var QE_EDITOR_BUILD = 'ws7886';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -757,6 +757,8 @@ var QuotationEditor = (function () {
       dockOpen: false,
       shapePickerOpen: false,
       buttonPickerOpen: false,
+      componentPickerOpen: false,
+      buttonComponents: [],
       resourcePickerOpen: false,
       resourcePickerSceneId: null,
       pendingSceneDeleteId: null,
@@ -1134,6 +1136,102 @@ var QuotationEditor = (function () {
     if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
       AdminNotify.success('Plantilla "' + name + '" guardada.');
     }
+  }
+
+  function promptButtonComponentName(defaultName) {
+    return new Promise(function (resolve) {
+      if (typeof AdminUI === 'undefined' || !AdminUI.openModal) {
+        var fallback = window.prompt('Nombre del componente', defaultName || 'Mi botón');
+        resolve(fallback == null ? null : (String(fallback).trim() || null));
+        return;
+      }
+      var settled = false;
+      function finish(name) {
+        if (settled) return;
+        settled = true;
+        AdminUI.closeModal();
+        resolve(name);
+      }
+      AdminUI.openModal({
+        title: 'Nombre del componente',
+        bodyHtml:
+          '<label class="admin-modal-copy" for="qe-component-name-input">Nombre del componente</label>' +
+          '<input type="text" id="qe-component-name-input" ' +
+            'data-qe-component-name-input value="' + escapeHtml(defaultName || 'Mi botón') + '" ' +
+            'placeholder="Mi botón" aria-label="Nombre del componente" ' +
+            'style="width:100%;margin-top:10px;padding:8px 10px;border-radius:8px;' +
+            'border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.35);color:#fff;">',
+        footerHtml:
+          '<button type="button" class="btn-ghost" data-modal-action="cancel">Cancelar</button>' +
+          '<button type="button" class="btn-danger" data-modal-action="confirm">Guardar</button>',
+        onMount: function (root) {
+          var input = root.querySelector('[data-qe-component-name-input]');
+          var cancelBtn = root.querySelector('[data-modal-action="cancel"]');
+          var confirmBtn = root.querySelector('[data-modal-action="confirm"]');
+          if (input) {
+            input.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (confirmBtn) confirmBtn.click();
+              }
+            });
+            try {
+              input.focus();
+              input.select();
+            } catch (eFocus) { /* ignore */ }
+          }
+          if (cancelBtn) cancelBtn.addEventListener('click', function () { finish(null); });
+          if (confirmBtn) {
+            confirmBtn.addEventListener('click', function () {
+              var val = input ? String(input.value || '').trim() : '';
+              finish(val || null);
+            });
+          }
+        },
+        onClose: function () {
+          if (!settled) {
+            settled = true;
+            resolve(null);
+          }
+        }
+      });
+    });
+  }
+
+  async function saveButtonAsComponent(buttonId) {
+    if (!expOverlay || !expOverlay.getButtonSnapshot) return;
+    var snap = expOverlay.getButtonSnapshot(buttonId);
+    if (!snap) return;
+    var name = await promptButtonComponentName('Mi botón');
+    if (!name) return;
+    if (typeof ButtonComponents === 'undefined' || !ButtonComponents.createComponent) return;
+    var comp = ButtonComponents.createComponent(name, snap, resolveProjectId());
+    if (!comp) return;
+    ensureButtonComponents().push(comp);
+    markDirtyLocal();
+    persistDraft();
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success('Componente "' + name + '" guardado.');
+    }
+  }
+
+  function openOverlayButtonContextMenu(clientX, clientY, buttonId) {
+    if (typeof QuotationContextMenu === 'undefined' || !QuotationContextMenu.open) return;
+    if (!buttonId) return;
+    QuotationContextMenu.open({
+      x: clientX,
+      y: clientY,
+      ariaLabel: 'Botón',
+      items: [
+        {
+          id: 'save-component',
+          label: 'Guardar como componente'
+        }
+      ],
+      onSelect: function (id) {
+        if (id === 'save-component') saveButtonAsComponent(buttonId);
+      }
+    });
   }
 
   function openOverlaySelectionContextMenu(clientX, clientY) {
@@ -1724,7 +1822,8 @@ var QuotationEditor = (function () {
         selectedContentId: state.selectedContentId,
         expEditMode: state.expEditMode,
         editorBackpack: {
-          interactions: ensureBackpackInteractions()
+          interactions: ensureBackpackInteractions(),
+          buttonComponents: ensureButtonComponents().slice()
         },
         editorLibraryUi: serializeLibraryUi()
       };
@@ -1830,6 +1929,15 @@ var QuotationEditor = (function () {
     } else {
       state.backpackInteractions = [];
       state._backpackSceneRef = null;
+    }
+    if (draft.editorBackpack && Array.isArray(draft.editorBackpack.buttonComponents)) {
+      state.buttonComponents = draft.editorBackpack.buttonComponents.map(function (c) {
+        return (typeof ButtonComponents !== 'undefined' && ButtonComponents.normalizeComponent)
+          ? ButtonComponents.normalizeComponent(c, loadedProjectId || draft.projectId)
+          : c;
+      }).filter(Boolean);
+    } else {
+      state.buttonComponents = [];
     }
     state.backpackMode = false;
     state.backpackReturnSceneId = null;
@@ -3989,6 +4097,37 @@ var QuotationEditor = (function () {
 
   function buttonPickerHtml() {
     return '';
+  }
+
+  function componentPickerHtml() {
+    if (!state.componentPickerOpen) return '';
+    var comps = ensureButtonComponents();
+    var list;
+    if (!comps.length) {
+      list = '<p class="qe-picker__empty">No hay componentes guardados. Clic derecho en un botón → Guardar como componente.</p>';
+    } else {
+      list = '<div class="qe-picker__grid qe-component-picker__grid">' + comps.map(function (comp) {
+        var thumb = (typeof ButtonComponents !== 'undefined' && ButtonComponents.renderThumbnailHtml)
+          ? ButtonComponents.renderThumbnailHtml(comp.button)
+          : '';
+        return '' +
+          '<button type="button" class="qe-picker__card qe-component-picker__card" data-qe-pick-component="' +
+            escapeHtml(comp.id) + '">' +
+            '<span class="qe-picker__thumb qe-component-picker__thumb">' + thumb + '</span>' +
+            '<span class="qe-picker__name">' + escapeHtml(comp.name || 'Componente') + '</span>' +
+          '</button>';
+      }).join('') + '</div>';
+    }
+    return '' +
+      '<div class="qe-picker qe-component-picker" data-qe-component-picker role="dialog" aria-label="Componentes">' +
+        '<div class="qe-picker__panel">' +
+          '<div class="qe-picker__head">' +
+            '<h3 class="qe-picker__title">Componentes</h3>' +
+            '<button type="button" class="qe-picker__close" data-qe-close-component-picker aria-label="Cerrar">×</button>' +
+          '</div>' +
+          list +
+        '</div>' +
+      '</div>';
   }
 
   function resourcePickerHtml() {
@@ -6280,6 +6419,11 @@ var QuotationEditor = (function () {
     return state.backpackInteractions;
   }
 
+  function ensureButtonComponents() {
+    if (!Array.isArray(state.buttonComponents)) state.buttonComponents = [];
+    return state.buttonComponents;
+  }
+
   function getBackpackSceneRef() {
     ensureBackpackInteractions();
     if (!state._backpackSceneRef) {
@@ -6633,6 +6777,7 @@ var QuotationEditor = (function () {
         '</div>' +
         resourcePickerHtml() +
         shapePickerHtml() +
+        componentPickerHtml() +
         sceneConfirmHtml() +
       '</section>';
   }
@@ -9970,6 +10115,57 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function openComponentPicker() {
+    if (!activeScene()) return;
+    state.componentPickerOpen = true;
+    state.shapePickerOpen = false;
+    state.resourcePickerOpen = false;
+    state.buttonPickerOpen = false;
+    state.dockOpen = false;
+    rerender();
+  }
+
+  function closeComponentPicker() {
+    if (!state.componentPickerOpen) return;
+    state.componentPickerOpen = false;
+    rerender();
+  }
+
+  function insertButtonComponent(componentId) {
+    var list = ensureButtonComponents();
+    var comp = null;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === String(componentId)) {
+        comp = list[i];
+        break;
+      }
+    }
+    if (!comp || !comp.button) return;
+    if (typeof ButtonComponents === 'undefined' || !ButtonComponents.snapshotForInsert) return;
+    var snap = ButtonComponents.snapshotForInsert(comp.button);
+    state.componentPickerOpen = false;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'buttons';
+    state.dockOpen = false;
+    markDirtyLocal();
+    if (expOverlay) {
+      attachExperienciaInspectorHost();
+      expOverlay.setEditMode('buttons');
+      if (expOverlay.insertButtonFromSnapshot) expOverlay.insertButtonFromSnapshot(snap);
+      focusPropsPanel();
+      if (expOverlay.repaintInspector) expOverlay.repaintInspector();
+      return;
+    }
+    pendingExpAction = { type: 'insertButtonComponent', snap: snap };
+    rerender();
+  }
+
+  function pickButtonComponent(componentId) {
+    insertButtonComponent(componentId);
+  }
+
   function pickShape(kind) {
     state.shapePickerOpen = false;
     addShapeElement(kind);
@@ -10690,6 +10886,9 @@ var QuotationEditor = (function () {
       },
       onMultiSelectionContextMenu: function (clientX, clientY) {
         openOverlaySelectionContextMenu(clientX, clientY);
+      },
+      onOverlayButtonContextMenu: function (clientX, clientY, buttonId) {
+        openOverlayButtonContextMenu(clientX, clientY, buttonId);
       }
     });
 
@@ -10737,6 +10936,12 @@ var QuotationEditor = (function () {
       } else if (act.type === 'addShape') {
         expOverlay.setEditMode('buttons');
         if (expOverlay.addShape) expOverlay.addShape(act.kind || 'SHAPE_RECT');
+      } else if (act.type === 'insertButtonComponent') {
+        expOverlay.setEditMode('buttons');
+        if (expOverlay.insertButtonFromSnapshot && act.snap) {
+          expOverlay.insertButtonFromSnapshot(act.snap);
+          focusPropsPanel();
+        }
       } else if (act.type === 'startHotspotDraw') {
         expOverlay.setEditMode('hotspots');
         expOverlay.startHotspotDraw();
@@ -10831,6 +11036,7 @@ var QuotationEditor = (function () {
     state.sceneMenuOpen = false;
     state.dockOpen = false;
     state.resourcePickerOpen = false;
+    state.componentPickerOpen = false;
     state.pendingSceneDeleteId = null;
     state.selectedElementId = null;
     state.selectedItem = null;
@@ -10988,12 +11194,14 @@ var QuotationEditor = (function () {
           cancelDeleteScene();
           return;
         }
-        if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen) {
+        if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
+            state.componentPickerOpen) {
           e.preventDefault();
           e.stopPropagation();
           if (state.resourcePickerOpen) closeResourcePicker();
           if (state.shapePickerOpen) closeShapePicker();
           if (state.buttonPickerOpen) closeButtonPicker();
+          if (state.componentPickerOpen) closeComponentPicker();
           return;
         }
         if (expOverlay && expOverlay.cancelActiveTool && expOverlay.cancelActiveTool()) {
@@ -11226,6 +11434,7 @@ var QuotationEditor = (function () {
       t.closest('[data-qe-context-menu]') ||
       t.closest('[data-qe-shape-picker]') ||
       t.closest('[data-qe-button-picker]') ||
+      t.closest('[data-qe-component-picker]') ||
       t.closest('[data-qe-resource-picker]') ||
       t.closest('[data-qe-scene-confirm]') ||
       t.closest('[data-qe-lib-status-panel]') ||
@@ -11246,7 +11455,8 @@ var QuotationEditor = (function () {
     if (!rootEl) return;
     if (state.canvasPreviewMode) return;
     if (state.pendingSceneDeleteId) return;
-    if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen) return;
+    if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
+        state.componentPickerOpen) return;
     if (typeof QuotationContextMenu !== 'undefined' &&
         QuotationContextMenu.isOpen && QuotationContextMenu.isOpen()) return;
 
@@ -12127,7 +12337,7 @@ var QuotationEditor = (function () {
   }
 
   function addComponentElement() {
-    dockPlaceholderAction('component');
+    openComponentPicker();
   }
 
   function addAdvancedElement() {
@@ -12293,6 +12503,23 @@ var QuotationEditor = (function () {
           }
         });
       }
+      var closeComponentPickerBtn = qOne('[data-qe-close-component-picker]');
+      if (closeComponentPickerBtn) {
+        closeComponentPickerBtn.addEventListener('click', function () { closeComponentPicker(); });
+      }
+      var componentPicker = qOne('[data-qe-component-picker]');
+      if (componentPicker) {
+        componentPicker.addEventListener('click', function (e) {
+          if (e.target === componentPicker) closeComponentPicker();
+        });
+      }
+      qAll('[data-qe-pick-component]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          pickButtonComponent(btn.getAttribute('data-qe-pick-component'));
+        });
+      });
       qAll('[data-qe-pick-shape]').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.preventDefault();
@@ -13383,6 +13610,13 @@ var QuotationEditor = (function () {
         ? bpSrc.interactions.slice()
         : [];
       state._backpackSceneRef = null;
+      state.buttonComponents = (bpSrc && Array.isArray(bpSrc.buttonComponents))
+        ? bpSrc.buttonComponents.map(function (c) {
+          return (typeof ButtonComponents !== 'undefined' && ButtonComponents.normalizeComponent)
+            ? ButtonComponents.normalizeComponent(c, resolveProjectId())
+            : c;
+        }).filter(Boolean)
+        : [];
       state.backpackMode = false;
       state.backpackReturnSceneId = null;
       if (healLibraryIdentity()) markDirtyLocal();
@@ -13641,7 +13875,8 @@ var QuotationEditor = (function () {
     }
     payload.library = library;
     payload.editorBackpack = {
-      interactions: ensureBackpackInteractions()
+      interactions: ensureBackpackInteractions(),
+      buttonComponents: ensureButtonComponents().slice()
     };
     /* Intentional clear-all only when in-memory library is also empty. */
     if ((!library.content || !library.content.length) &&

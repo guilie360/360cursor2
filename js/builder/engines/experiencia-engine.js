@@ -4428,6 +4428,28 @@ var ExperienciaEngine = (function () {
       if (snap.pressedTextColor != null) ix.pressedTextColor = snap.pressedTextColor;
       if (snap.pressedScale != null) ix.pressedScale = Number(snap.pressedScale);
       if (snap.opacity != null) ix.opacity = Number(snap.opacity);
+      if (snap.fontSize != null) ix.fontSize = Number(snap.fontSize);
+      if (snap.fontSizeUnit != null) ix.fontSizeUnit = snap.fontSizeUnit === '%' ? '%' : 'px';
+      if (snap.fontFamily != null) ix.fontFamily = String(snap.fontFamily);
+      if (snap.fontWeight != null) ix.fontWeight = String(snap.fontWeight);
+      if (snap.fontStyle != null) ix.fontStyle = String(snap.fontStyle);
+      if (snap.textDecoration != null) ix.textDecoration = String(snap.textDecoration);
+      if (snap.textAlign != null) ix.textAlign = String(snap.textAlign);
+      if (snap.lineHeight != null) ix.lineHeight = Number(snap.lineHeight);
+      if (snap.letterSpacing != null) ix.letterSpacing = Number(snap.letterSpacing);
+      if (snap.textTransform != null) ix.textTransform = String(snap.textTransform);
+      if (snap.textShadow != null) ix.textShadow = String(snap.textShadow);
+      if (snap.size != null) ix.size = snap.size;
+      if (snap.scaleValue != null) ix.scaleValue = Number(snap.scaleValue);
+      if (snap.scaleUnit != null) ix.scaleUnit = snap.scaleUnit === 'px' ? 'px' : '%';
+      if (snap.buttonType != null) ix.buttonType = String(snap.buttonType);
+      if (snap.buttonConfig && typeof snap.buttonConfig === 'object') {
+        try {
+          ix.buttonConfig = JSON.parse(JSON.stringify(snap.buttonConfig));
+        } catch (eCfg) {
+          ix.buttonConfig = snap.buttonConfig;
+        }
+      }
       if (ix.color != null) delete ix.color;
       if (snap.targetNodeId) {
         setButtonTarget(state, nodeId, ix.id, snap.targetNodeId);

@@ -15480,19 +15480,33 @@ var ExperienciaCanvas = (function () {
         }
       });
       buttonsLayer.addEventListener('contextmenu', function (ev) {
-        if (!overlayMode) return;
-        var ids = getSelectedOverlayIds();
+        if (!overlayMode && canvas().editMode !== 'buttons') return;
         var sceneId = canvas().selectedId;
+        if (!sceneId) return;
+        var ids = getSelectedOverlayIds();
         var canUngroup = false;
         if (sceneId && ids.length && ExperienciaEngine.resolveOverlayGroupForSelection) {
           var nCtx = ExperienciaEngine.getNode(state, sceneId);
           canUngroup = !!(nCtx && ExperienciaEngine.resolveOverlayGroupForSelection(nCtx, ids));
         }
-        if (ids.length < 2 && !canUngroup) return;
+        if (ids.length >= 2 || canUngroup) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (typeof api.onMultiSelectionContextMenu === 'function') {
+            api.onMultiSelectionContextMenu(ev.clientX, ev.clientY, ids);
+          }
+          return;
+        }
+        var hit = ev.target.closest && ev.target.closest('[data-exp-stage-btn]');
+        var targetId = hit ? hit.getAttribute('data-exp-stage-btn') : null;
+        if (!targetId && ids.length === 1) targetId = String(ids[0]);
+        if (!targetId) return;
+        var vmHit = getOverlayItemVm(sceneId, targetId);
+        if (!vmHit || String(vmHit.type || 'BUTTON').toUpperCase() !== 'BUTTON') return;
         ev.preventDefault();
         ev.stopPropagation();
-        if (typeof api.onMultiSelectionContextMenu === 'function') {
-          api.onMultiSelectionContextMenu(ev.clientX, ev.clientY, ids);
+        if (typeof api.onOverlayButtonContextMenu === 'function') {
+          api.onOverlayButtonContextMenu(ev.clientX, ev.clientY, targetId);
         }
       }, true);
       /* Force hover color in Builder (theme tokens otherwise keep white). */
@@ -16716,6 +16730,38 @@ var ExperienciaCanvas = (function () {
         requestAnimationFrame(recomputeOverlayLayout);
         return btn;
       },
+      getButtonSnapshot: function (buttonId) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !buttonId) return null;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        var ix = n && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(n, buttonId)
+          : null;
+        if (!ix || typeof ButtonComponents === 'undefined' || !ButtonComponents.snapshotFromInteraction) {
+          return null;
+        }
+        return ButtonComponents.snapshotFromInteraction(ix);
+      },
+      insertButtonFromSnapshot: function (snap) {
+        var sceneId = canvas().selectedId;
+        if (!sceneId || !snap || !ExperienciaEngine.createSceneButtonFromSnapshot) return null;
+        canvas().editMode = 'buttons';
+        hotspotDraw = null;
+        pushButtonHistory(sceneId);
+        var btn = ExperienciaEngine.createSceneButtonFromSnapshot(state, sceneId, snap);
+        if (btn) {
+          canvas().selectedButtonId = btn.id;
+          canvas().selectedButtonIds = [String(btn.id)];
+        }
+        notifyOverlaySelection();
+        renderAll();
+        requestAnimationFrame(function () {
+          paintInspector();
+        });
+        persist();
+        requestAnimationFrame(recomputeOverlayLayout);
+        return btn;
+      },
       addText: function () {
         var sceneId = canvas().selectedId;
         if (!sceneId || !ExperienciaEngine.addSceneText) return null;
@@ -17270,6 +17316,7 @@ var ExperienciaCanvas = (function () {
       onChange: options.onChange,
       onSelectionChange: options.onSelectionChange,
       onMultiSelectionContextMenu: options.onMultiSelectionContextMenu,
+      onOverlayButtonContextMenu: options.onOverlayButtonContextMenu,
       overlaySnapEnabled: options.overlaySnapEnabled,
       saveState: options.saveState,
       listPlanos2d: options.listPlanos2d || null,

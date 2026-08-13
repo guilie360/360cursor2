@@ -185,10 +185,49 @@ var ButtonOverlayRenderer = (function () {
       '</div></div>';
   }
 
+  /**
+   * Saved component thumbnail — same renderer path as canvas/picker (preview-only scale).
+   */
+  function renderButtonSnapshotThumbnail(snap) {
+    if (!snap) return '';
+    var refW = (typeof ButtonPresets !== 'undefined' && ButtonPresets.PREVIEW_LAYER_W)
+      ? ButtonPresets.PREVIEW_LAYER_W : 360;
+    var refH = (typeof ButtonPresets !== 'undefined' && ButtonPresets.PREVIEW_LAYER_H)
+      ? ButtonPresets.PREVIEW_LAYER_H : 203;
+    var tile = PICKER_LAYER_SIZE;
+    var stageScale = Math.min(tile / refW, tile / refH);
+    var ix = Object.assign({
+      id: 'component-thumb',
+      type: 'BUTTON',
+      label: 'Botón',
+      x: 50,
+      y: 50,
+      positionInitialized: true,
+      positionMode: 'free',
+      buttonType: 'unconfigured',
+      buttonConfig: {}
+    }, snap || {});
+    var fakeNode = { id: 'preview-scene', config: { interactions: [ix] } };
+    var vm = null;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buttonViewModel) {
+      vm = ExperienciaEngine.buttonViewModel(null, fakeNode, ix, refW, refH);
+    }
+    if (!vm) return '';
+    var fit = pickerFitBoxPercents(vm, refW, refH);
+    var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
+    var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
+    return '<div class="qe-button-picker__layer qe-component-picker__thumb" aria-hidden="true">' +
+      '<div class="qe-button-picker__stage" style="width:' + refW + 'px;height:' + refH + 'px;' +
+      'transform:scale(' + stageScale + ');transform-origin:center center;">' +
+      btnHtml +
+      '</div></div>';
+  }
+
   return {
     renderButtonHtml: renderButtonHtml,
     renderButtonFromIx: renderButtonFromIx,
     renderPickerPreviewHtml: renderPickerPreviewHtml,
+    renderButtonSnapshotThumbnail: renderButtonSnapshotThumbnail,
     buttonPreviewClass: buttonPreviewClass,
     buttonIconGlyph: buttonIconGlyph
   };
