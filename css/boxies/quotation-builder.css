@@ -4582,7 +4582,8 @@ body.is-qe-lib-pointer-dragging * {
   display: block;
 }
 
-.builder-exp-ui-btn.is-button-shape {
+.builder-exp-ui-btn.is-button-shape,
+.builder-exp-stage-shape.is-button-shape {
   position: relative;
   display: flex;
   align-items: center;
@@ -4593,25 +4594,35 @@ body.is-qe-lib-pointer-dragging * {
   border-radius: 0 !important;
   padding: 0;
   box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: auto;
 }
 
 .builder-exp-ui-btn.is-button-shape.is-hover-on:hover,
-.builder-exp-ui-btn.is-button-shape.is-hover-on:active {
+.builder-exp-ui-btn.is-button-shape.is-hover-on:active,
+.builder-exp-stage-shape.is-button-shape.is-hover-on:hover,
+.builder-exp-stage-shape.is-button-shape.is-hover-on:active {
   background: transparent !important;
   border: none !important;
+  box-shadow: none;
 }
 
 .builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body,
-.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body > * {
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body > *,
+.builder-exp-stage-shape.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body,
+.builder-exp-stage-shape.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body > * {
   fill: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 32%, rgba(8, 8, 8, 0.72));
   stroke: var(--btn-hover-color, #6fbf86);
 }
 
-.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-btn-shape-label {
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-btn-shape-label,
+.builder-exp-stage-shape.is-button-shape.is-hover-on:hover .builder-exp-btn-shape-label {
   color: var(--btn-hover-text, #fff);
 }
 
-.builder-exp-ui-btn.is-button-shape .builder-exp-stage-shape__svg {
+.builder-exp-ui-btn.is-button-shape .builder-exp-stage-shape__svg,
+.builder-exp-stage-shape.is-button-shape .builder-exp-stage-shape__svg {
   position: absolute;
   inset: 0;
   width: 100%;

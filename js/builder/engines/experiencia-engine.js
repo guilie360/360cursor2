@@ -818,6 +818,11 @@ var ExperienciaEngine = (function () {
       return distToSegmentSq(vx, vy, lx1, 50, lx2, 50) <= strokeTol * strokeTol;
     }
     if (kind === 'SHAPE_CIRCLE') {
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        var hitCw = Number(paint.contentW);
+        var hitCh = Number(paint.contentH);
+        return pointInEllipse(vx, vy, hitCw / 2, hitCh / 2, hitCw / 2, hitCh / 2);
+      }
       return pointInEllipse(vx, vy, 50, 50, u(17) * sx, u(17) * sy);
     }
     if (kind === 'SHAPE_TRIANGLE') {
@@ -931,6 +936,10 @@ var ExperienciaEngine = (function () {
             boxMetrics.w, boxMetrics.h, layerW, layerH, norm.w, norm.h, ix.borderRadius
           );
         }
+      } else if (kind === 'SHAPE_CIRCLE') {
+        var normCircle = shapeContentBoxViewBoxNorm(boxMetrics.w, boxMetrics.h, layerW, layerH);
+        paint.contentW = normCircle.w;
+        paint.contentH = normCircle.h;
       }
     }
     return paint;
@@ -1124,6 +1133,14 @@ var ExperienciaEngine = (function () {
         ' fill="none" stroke="' + stroke + '" stroke-width="' + sw + '" stroke-linecap="round"' + ve + sr + '/>';
     }
     if (kind === 'SHAPE_CIRCLE') {
+      if (paint.contentW > 0 && paint.contentH > 0) {
+        var ccw = Number(paint.contentW);
+        var cch = Number(paint.contentH);
+        var ccx = ccw / 2;
+        var ccy = cch / 2;
+        return '<ellipse' + cls + ' cx="' + ccx + '" cy="' + ccy + '" rx="' + ccx + '" ry="' + ccy + '"' +
+          ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
+      }
       return '<ellipse' + cls + ' cx="50" cy="50" rx="' + (u(17) * sx) + '" ry="' + (u(17) * sy) + '"' +
         ' fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + sw + '"' + ve + sr + '/>';
     }
@@ -1269,6 +1286,16 @@ var ExperienciaEngine = (function () {
             normVb.w, normVb.h, brR
           );
         }
+      } else if (kind === 'SHAPE_CIRCLE' &&
+          opts.contentBoxWPct != null && opts.contentBoxHPct != null) {
+        var normCircleVb = shapeContentBoxViewBoxNorm(
+          opts.contentBoxWPct, opts.contentBoxHPct, opts.layerW, opts.layerH
+        );
+        vb = { x: 0, y: 0, w: normCircleVb.w, h: normCircleVb.h };
+        contentPaint = {
+          contentW: normCircleVb.w,
+          contentH: normCircleVb.h
+        };
       } else {
         var tightBb = shapeContentBBox(kind, stOpts);
         vb = {

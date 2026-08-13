@@ -1646,7 +1646,7 @@ var ExperienciaCanvas = (function () {
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';' +
       '--t-color:' + textCol + ';';
-    return '<button type="button" class="' + buttonPreviewClass(b) +
+    return '<button type="button" class="' + buttonPreviewClass(shapeVm) +
       ' is-box is-button-shape' +
       (selSet[String(b.id)] ? ' is-selected' : '') +
       (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
