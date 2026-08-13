@@ -12,7 +12,7 @@ var ButtonComponents = (function () {
     'pressedColor', 'pressedTextColor', 'pressedScale',
     'buttonType', 'buttonConfig', 'size', 'scaleValue', 'scaleUnit',
     'anchor', 'marginX', 'marginY', 'positionMode', 'rotation',
-    'enabled', 'visible', 'locked', 'buttonShapeKind'
+    'enabled', 'visible', 'locked', 'buttonShape', 'buttonShapeKind'
   ];
 
   function cloneJson(v) {

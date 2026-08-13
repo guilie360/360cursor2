@@ -1528,22 +1528,24 @@ var ExperienciaCanvas = (function () {
   }
 
   var BUTTON_SHAPE_ITEMS = [
-    { kind: 'SHAPE_RECT', label: 'Cuadrado' },
-    { kind: 'SHAPE_ROUND_RECT', label: 'Cuadrado redondeado' },
-    { kind: 'SHAPE_CIRCLE', label: 'Círculo' },
-    { kind: 'SHAPE_CAPSULE', label: 'Cápsula' }
+    { shape: 'square', label: 'Cuadrado', glyph: '□' },
+    { shape: 'rounded', label: 'Redondeado', glyph: '▣' },
+    { shape: 'circle', label: 'Círculo', glyph: '○' },
+    { shape: 'capsule', label: 'Cápsula', glyph: '▭' }
   ];
 
-  function isButtonShapeKind(kind) {
-    kind = String(kind || '').toUpperCase();
-    return kind === 'SHAPE_RECT' || kind === 'SHAPE_CIRCLE' ||
-      kind === 'SHAPE_ROUND_RECT' || kind === 'SHAPE_CAPSULE';
+  function resolveButtonShapeKey(b) {
+    if (!b) return '';
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.resolveButtonShape) {
+      return ExperienciaEngine.resolveButtonShape(b._ix || b) || '';
+    }
+    return b.buttonShape ? String(b.buttonShape).toLowerCase() : '';
   }
 
-  function resolveButtonShapeKind(b) {
-    if (!b) return '';
-    var kind = b.buttonShapeKind ? String(b.buttonShapeKind).toUpperCase() : '';
-    return isButtonShapeKind(kind) ? kind : '';
+  function isButtonShapeKey(shape) {
+    shape = String(shape || '').toLowerCase();
+    return shape === 'square' || shape === 'rounded' ||
+      shape === 'circle' || shape === 'capsule';
   }
 
   function buttonColorToRgba(color, opacity) {
@@ -1570,17 +1572,8 @@ var ExperienciaCanvas = (function () {
     return 16;
   }
 
-  function buildButtonShapePatch(shapeKind, layerW, layerH) {
-    var patch = { buttonShapeKind: shapeKind };
-    if (typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.buttonShapeBoxForKind) {
-      var box = ExperienciaEngine.buttonShapeBoxForKind(shapeKind, layerW, layerH);
-      if (box) {
-        patch.boxW = box.boxW;
-        patch.boxH = box.boxH;
-      }
-    }
-    return patch;
+  function buildButtonShapePatch(shapeKey, layerW, layerH) {
+    return { buttonShape: shapeKey, layerW: layerW, layerH: layerH };
   }
 
   function buttonToShapePaintVm(b, shapeKind) {
@@ -2967,33 +2960,18 @@ var ExperienciaCanvas = (function () {
   }
 
   function inferButtonShape(selected) {
-    return resolveButtonShapeKind(selected);
-  }
-
-  function buttonShapeToolbarIcon(kind) {
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.buildSceneShapeSvg) {
-      return '<span class="builder-exp-btn-shape-icon">' +
-        ExperienciaEngine.buildSceneShapeSvg(kind, {
-          fill: 'rgba(255,255,255,0.16)',
-          stroke: 'rgba(255,255,255,0.62)',
-          strokeWidth: 2,
-          borderRadius: 16,
-          preserveAspect: 'meet'
-        }) +
-      '</span>';
-    }
-    return '';
+    return resolveButtonShapeKey(selected);
   }
 
   function buttonShapeToolbarHtml(selected) {
-    var active = inferButtonShape(selected);
+    var active = resolveButtonShapeKey(selected);
     return '<div class="builder-hub-segment builder-exp-btn-shape-segment">' +
       BUTTON_SHAPE_ITEMS.map(function (item) {
         return '<button type="button" class="builder-hub-segment__btn builder-exp-btn-shape-btn' +
-          (active === item.kind ? ' is-active' : '') +
-          '" data-exp-btn-shape="' + esc(item.kind) + '" title="' + esc(item.label) + '"' +
+          (active === item.shape ? ' is-active' : '') +
+          '" data-exp-btn-shape="' + esc(item.shape) + '" title="' + esc(item.label) + '"' +
           ' aria-label="' + esc(item.label) + '">' +
-          buttonShapeToolbarIcon(item.kind) +
+          '<span class="builder-exp-btn-shape-glyph" aria-hidden="true">' + esc(item.glyph) + '</span>' +
         '</button>';
       }).join('') +
     '</div>';
@@ -5505,7 +5483,7 @@ var ExperienciaCanvas = (function () {
         routePatchBtn(patch, opts);
       }
       function applyButtonShape(shapeKind) {
-        if (!isButtonShapeKind(shapeKind)) return;
+        if (!isButtonShapeKey(shapeKind)) return;
         var sz = layerSize();
         patchBtn(
           buildButtonShapePatch(shapeKind, sz.w, sz.h),
@@ -8693,10 +8671,15 @@ var ExperienciaCanvas = (function () {
           var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
             ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
             : b;
-          var shapeKind = resolveButtonShapeKind(paintVm);
-          if (shapeKind) {
+          var shapeKey = resolveButtonShapeKey(paintVm);
+          var legacyShapeKind = paintVm.buttonShapeKind
+            ? String(paintVm.buttonShapeKind).toUpperCase()
+            : '';
+          if (!shapeKey && legacyShapeKind &&
+              (legacyShapeKind === 'SHAPE_RECT' || legacyShapeKind === 'SHAPE_CIRCLE' ||
+               legacyShapeKind === 'SHAPE_ROUND_RECT' || legacyShapeKind === 'SHAPE_CAPSULE')) {
             return paintButtonShapeBackedHtml(
-              paintVm, shapeKind, layerW, layerH, selSet, editMemberSet
+              paintVm, legacyShapeKind, layerW, layerH, selSet, editMemberSet
             );
           }
           return ButtonOverlayRenderer.renderButtonHtml(paintVm, {
@@ -17202,12 +17185,18 @@ var ExperienciaCanvas = (function () {
       isOverlaySnapEnabled: function () {
         return !!overlaySnapEnabled;
       },
-      addButton: function () {
+      addButton: function (opts) {
+        opts = opts || {};
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
-        var btn = ExperienciaEngine.addSceneButton(state, sceneId);
+        var sz = overlayLayerSize();
+        var btn = ExperienciaEngine.addSceneButton(state, sceneId, {
+          buttonShape: opts.buttonShape,
+          layerW: sz.w,
+          layerH: sz.h
+        });
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];

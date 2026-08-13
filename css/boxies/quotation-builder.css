@@ -4471,10 +4471,43 @@ body.is-qe-lib-pointer-dragging * {
   pointer-events: none;
 }
 
-/* Button picker — same shell as shapes; grid reserved for upcoming button tiles */
-.qe-button-picker .qe-shape-picker__grid {
-  min-width: calc(4 * 52px + 3 * 6px);
-  min-height: calc(2 * 52px + 6px);
+/* Button shape picker — 4 geometry types */
+.qe-button-shape-picker .qe-btn-shape-picker__grid {
+  min-width: calc(4 * 72px + 3 * 8px);
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+}
+
+.qe-btn-shape-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 72px;
+  padding: 8px 6px;
+}
+
+.qe-btn-shape-picker__glyph {
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.qe-btn-shape-picker__label {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.02em;
+}
+
+.builder-exp-btn-shape-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  min-width: 1em;
 }
 
 .qe-button-picker__item {

@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7894';
+  var QE_EDITOR_BUILD = 'ws7895';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4123,6 +4123,13 @@ var QuotationEditor = (function () {
     { kind: 'SHAPE_ROUND_RECT', label: 'Cuadrado redondeado' }
   ];
 
+  var BUTTON_SHAPE_PICKER_ITEMS = [
+    { shape: 'square', label: 'Cuadrado', glyph: '□' },
+    { shape: 'rounded', label: 'Cuadrado redondeado', glyph: '▣' },
+    { shape: 'circle', label: 'Círculo', glyph: '○' },
+    { shape: 'capsule', label: 'Cápsula', glyph: '▭' }
+  ];
+
   function shapePickerHtml() {
     if (!state.shapePickerOpen) return '';
     var grid = SHAPE_PICKER_ITEMS.map(function (item) {
@@ -4142,7 +4149,22 @@ var QuotationEditor = (function () {
   }
 
   function buttonPickerHtml() {
-    return '';
+    if (!state.buttonPickerOpen) return '';
+    var grid = BUTTON_SHAPE_PICKER_ITEMS.map(function (item) {
+      return '' +
+        '<button type="button" class="qe-shape-picker__item qe-btn-shape-picker__item" data-qe-pick-button-shape="' +
+          escapeHtml(item.shape) + '" aria-label="' + escapeHtml(item.label) + '">' +
+          '<span class="qe-btn-shape-picker__glyph" aria-hidden="true">' + escapeHtml(item.glyph) + '</span>' +
+          '<span class="qe-btn-shape-picker__label">' + escapeHtml(item.label) + '</span>' +
+        '</button>';
+    }).join('');
+    return '' +
+      '<div class="qe-shape-picker qe-button-shape-picker" data-qe-button-picker role="dialog" aria-label="Formas de botón">' +
+        '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
+        '<div class="qe-shape-picker__panel">' +
+          '<div class="qe-shape-picker__grid qe-btn-shape-picker__grid">' + grid + '</div>' +
+        '</div>' +
+      '</div>';
   }
 
   function componentPickerHtml() {
@@ -6833,6 +6855,7 @@ var QuotationEditor = (function () {
         '</div>' +
         resourcePickerHtml() +
         shapePickerHtml() +
+        buttonPickerHtml() +
         componentPickerHtml() +
         sceneConfirmHtml() +
       '</section>';
@@ -10155,7 +10178,28 @@ var QuotationEditor = (function () {
   function pickButtonPreset(presetId) {
     state.buttonPickerOpen = false;
     dismissButtonPickerDom();
-    addButton(presetId);
+    openButtonPicker();
+  }
+
+  function pickButtonShape(shape) {
+    if (!shape || !activeScene()) return;
+    state.buttonPickerOpen = false;
+    state.selectedElementId = null;
+    state.selectedItem = null;
+    state.expEditMode = 'buttons';
+    state.dockOpen = false;
+    markDirtyLocal();
+    if (expOverlay) {
+      refreshInspectorOnly();
+      attachExperienciaInspectorHost();
+      expOverlay.setEditMode('buttons');
+      expOverlay.addButton({ buttonShape: shape });
+      focusPropsPanel();
+      if (expOverlay.repaintInspector) expOverlay.repaintInspector();
+      return;
+    }
+    pendingExpAction = { type: 'addButton', buttonShape: shape };
+    rerender();
   }
 
   function openButtonPicker() {
@@ -10993,7 +11037,7 @@ var QuotationEditor = (function () {
       pendingExpAction = null;
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        expOverlay.addButton();
+        expOverlay.addButton({ buttonShape: act.buttonShape });
         focusPropsPanel();
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
@@ -12317,23 +12361,7 @@ var QuotationEditor = (function () {
 
   function addButtonElement() {
     if (!activeScene()) return;
-    state.selectedElementId = null;
-    state.selectedItem = null;
-    state.expEditMode = 'buttons';
-    state.dockOpen = false;
-    state.buttonPickerOpen = false;
-    markDirtyLocal();
-    if (expOverlay) {
-      refreshInspectorOnly();
-      attachExperienciaInspectorHost();
-      expOverlay.setEditMode('buttons');
-      expOverlay.addButton();
-      focusPropsPanel();
-      if (expOverlay.repaintInspector) expOverlay.repaintInspector();
-      return;
-    }
-    pendingExpAction = { type: 'addButton' };
-    rerender();
+    openButtonPicker();
   }
 
   /** @deprecated preset picker disabled — use addButtonElement */
@@ -12599,6 +12627,13 @@ var QuotationEditor = (function () {
           e.preventDefault();
           e.stopPropagation();
           pickShape(btn.getAttribute('data-qe-pick-shape'));
+        });
+      });
+      qAll('[data-qe-pick-button-shape]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          pickButtonShape(btn.getAttribute('data-qe-pick-button-shape'));
         });
       });
       qAll('[data-qe-pick-button]').forEach(function (tile) {

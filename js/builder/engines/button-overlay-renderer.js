@@ -31,9 +31,34 @@ var ButtonOverlayRenderer = (function () {
 
   function hasLocalLook(vm) {
     return !!(vm && (
+      vm.buttonShape ||
       vm.bgColor || vm.textColor || vm.borderColor ||
       vm.borderWidth != null || vm.borderRadius != null
     ));
+  }
+
+  function resolveButtonShapeRender(vm) {
+    if (!vm) return null;
+    var shape = null;
+    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.normalizeButtonShapeKey) {
+      shape = ExperienciaEngine.normalizeButtonShapeKey(vm.buttonShape) ||
+        ExperienciaEngine.normalizeButtonShapeKey(vm.buttonShapeKind);
+    } else {
+      shape = vm.buttonShape ? String(vm.buttonShape).toLowerCase() : null;
+    }
+    if (!shape) return null;
+    var radiusPx = null;
+    var radiusPct = null;
+    if (shape === 'square') {
+      radiusPx = 0;
+    } else if (shape === 'rounded') {
+      radiusPx = vm.borderRadius != null ? Number(vm.borderRadius) : 16;
+    } else if (shape === 'circle') {
+      radiusPct = '50%';
+    } else if (shape === 'capsule') {
+      radiusPx = 999;
+    }
+    return { shape: shape, radiusPx: radiusPx, radiusPct: radiusPct };
   }
 
   /**
@@ -95,11 +120,21 @@ var ButtonOverlayRenderer = (function () {
     if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
     if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
     if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
-    if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
+    var shapeRender = resolveButtonShapeRender(b);
+    if (shapeRender) {
+      if (shapeRender.radiusPct) {
+        styleBits += '--btn-local-radius:' + shapeRender.radiusPct + ';';
+      } else if (shapeRender.radiusPx != null) {
+        styleBits += '--btn-local-radius:' + Number(shapeRender.radiusPx) + 'px;';
+      }
+    } else if (b.borderRadius != null) {
+      styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
+    }
 
     var id = String(b.id || 'btn');
     var className = buttonPreviewClass(b) +
       ' is-box' +
+      (shapeRender ? (' is-btn-shaped is-btn-shape--' + shapeRender.shape) : '') +
       (selSet[id] ? ' is-selected' : '') +
       (editMemberSet[id] ? ' is-group-edit-member' : '') +
       (b.visible === false ? ' is-invisible' : '') +
