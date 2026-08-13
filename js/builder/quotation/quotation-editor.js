@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7897';
+  var QE_EDITOR_BUILD = 'ws7898';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -4162,6 +4162,7 @@ var QuotationEditor = (function () {
       '<div class="qe-shape-picker qe-button-shape-picker" data-qe-button-picker role="dialog" aria-label="Formas de botón">' +
         '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
         '<div class="qe-shape-picker__panel">' +
+          '<button type="button" class="qe-picker__close" data-qe-close-button-picker aria-label="Cerrar">×</button>' +
           '<div class="qe-shape-picker__grid qe-btn-shape-picker__grid">' + grid + '</div>' +
         '</div>' +
       '</div>';
@@ -10181,13 +10182,19 @@ var QuotationEditor = (function () {
     openButtonPicker();
   }
 
-  function overlayAddButton(opts) {
+  function clearPendingAddButtonAction() {
+    if (pendingExpAction && pendingExpAction.type === 'addButton') {
+      pendingExpAction = null;
+    }
+  }
+
+  function overlayAddButton() {
     if (!expOverlay) return null;
     if (expOverlay.handle && typeof expOverlay.handle.addButton === 'function') {
-      return expOverlay.handle.addButton(opts || {});
+      return expOverlay.handle.addButton();
     }
     if (typeof expOverlay.addButton === 'function') {
-      return expOverlay.addButton(opts || {});
+      return expOverlay.addButton();
     }
     return null;
   }
@@ -10195,6 +10202,8 @@ var QuotationEditor = (function () {
   function pickButtonShape(shape) {
     shape = String(shape || '').toLowerCase();
     if (!shape || !activeScene()) return;
+    clearPendingAddButtonAction();
+    state.buttonPickerOpen = false;
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'buttons';
@@ -10203,16 +10212,18 @@ var QuotationEditor = (function () {
     if (expOverlay) {
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      overlayAddButton({ buttonShape: shape });
+      overlayAddButton();
       focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
-    } else {
-      pendingExpAction = { type: 'addButton', buttonShape: shape };
+      rerender();
+      return;
     }
-    closeButtonPicker();
+    pendingExpAction = { type: 'addButton', buttonShape: shape };
+    rerender();
   }
 
   function openButtonPicker() {
+    clearPendingAddButtonAction();
     state.buttonPickerOpen = true;
     state.shapePickerOpen = false;
     state.dockOpen = false;
@@ -10220,8 +10231,10 @@ var QuotationEditor = (function () {
   }
 
   function closeButtonPicker() {
-    if (!state.buttonPickerOpen) return;
+    var pickerVisible = !!(rootEl && rootEl.querySelector('[data-qe-button-picker]'));
+    if (!state.buttonPickerOpen && !pickerVisible) return;
     state.buttonPickerOpen = false;
+    clearPendingAddButtonAction();
     rerender();
   }
 
@@ -10471,7 +10484,6 @@ var QuotationEditor = (function () {
     var nextMode = dockHasSelection() ? 'actions' : 'create';
     if (nextMode === 'actions') {
       state.shapePickerOpen = false;
-      state.buttonPickerOpen = false;
     }
     var curMode = bar.getAttribute('data-mode') || '';
     var rail = bar.querySelector('[data-qe-dock-rail]');
@@ -11047,7 +11059,7 @@ var QuotationEditor = (function () {
       pendingExpAction = null;
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        overlayAddButton({ buttonShape: act.buttonShape });
+        overlayAddButton();
         focusPropsPanel();
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
@@ -12599,14 +12611,25 @@ var QuotationEditor = (function () {
         btn.addEventListener('click', function () { closeButtonPicker(); });
       });
       var buttonPicker = qOne('[data-qe-button-picker]');
-      if (buttonPicker) {
+      if (buttonPicker && !buttonPicker.dataset.bound) {
+        buttonPicker.dataset.bound = '1';
+        var buttonPickerPanel = buttonPicker.querySelector('.qe-shape-picker__panel');
+        if (buttonPickerPanel) {
+          buttonPickerPanel.addEventListener('click', function (e) {
+            e.stopPropagation();
+          });
+        }
         buttonPicker.addEventListener('click', function (e) {
           var shapeBtn = e.target.closest && e.target.closest('[data-qe-pick-button-shape]');
           if (shapeBtn && buttonPicker.contains(shapeBtn)) {
+            e.preventDefault();
+            e.stopPropagation();
             pickButtonShape(shapeBtn.getAttribute('data-qe-pick-button-shape'));
             return;
           }
           if (e.target === buttonPicker || e.target.hasAttribute('data-qe-close-button-picker')) {
+            e.preventDefault();
+            e.stopPropagation();
             closeButtonPicker();
           }
         });
