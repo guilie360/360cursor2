@@ -4587,6 +4587,27 @@ body.is-qe-lib-pointer-dragging * {
   align-items: center;
   justify-content: center;
   overflow: visible;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0;
+  box-shadow: none;
+}
+
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover,
+.builder-exp-ui-btn.is-button-shape.is-hover-on:active {
+  background: transparent !important;
+  border: none !important;
+}
+
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body,
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-stage-shape__body > * {
+  fill: color-mix(in srgb, var(--btn-hover-color, #6fbf86) 32%, rgba(8, 8, 8, 0.72));
+  stroke: var(--btn-hover-color, #6fbf86);
+}
+
+.builder-exp-ui-btn.is-button-shape.is-hover-on:hover .builder-exp-btn-shape-label {
+  color: var(--btn-hover-text, #fff);
 }
 
 .builder-exp-ui-btn.is-button-shape .builder-exp-stage-shape__svg {

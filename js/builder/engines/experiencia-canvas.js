@@ -1560,13 +1560,23 @@ var ExperienciaCanvas = (function () {
     return col;
   }
 
-  function buttonShapePaintVm(b, shapeKind) {
+  function buttonToShapePaintVm(b, shapeKind) {
     var w = b.boxW != null ? Number(b.boxW) : 14;
     var h = b.boxH != null ? Number(b.boxH) : 4.5;
-    return {
+    var ixShim = {
+      type: shapeKind,
+      shapeContentBox: true,
+      width: w,
+      height: h,
+      shapeStretchX: 1,
+      shapeStretchY: 1
+    };
+    return Object.assign({}, b, {
       type: shapeKind,
       width: w,
       height: h,
+      storedX: b.storedX != null ? b.storedX : b.x,
+      storedY: b.storedY != null ? b.storedY : b.y,
       fill: buttonColorToRgba(b.bgColor, b.bgOpacity),
       stroke: b.borderColor || 'rgba(255,255,255,0.62)',
       strokeWidth: b.borderWidth != null ? Number(b.borderWidth) : 1,
@@ -1574,23 +1584,19 @@ var ExperienciaCanvas = (function () {
       shapeStretchX: 1,
       shapeStretchY: 1,
       shapeContentBox: true,
-      _ix: {
-        shapeContentBox: true,
-        width: w,
-        height: h,
-        shapeStretchX: 1,
-        shapeStretchY: 1
-      }
-    };
+      _ix: ixShim
+    });
   }
 
   function paintButtonShapeBackedHtml(b, shapeKind, layerW, layerH, selSet, editMemberSet) {
-    var shapePaint = buttonShapePaintVm(b, shapeKind);
+    var shapeVm = buttonToShapePaintVm(b, shapeKind);
+    var gmPaint = shapeStagePaintMetrics(shapeVm, layerW, layerH);
     var rot = Number(b.rotation) || 0;
-    var paintX = Number(b.x);
-    var paintY = Number(b.y);
-    var shapeW = shapePaint.width;
-    var shapeH = shapePaint.height;
+    var paintX = gmPaint ? gmPaint.x : Number(b.x);
+    var paintY = gmPaint ? gmPaint.y : Number(b.y);
+    var shapeW = gmPaint ? gmPaint.w : shapeVm.width;
+    var shapeH = gmPaint ? gmPaint.h : shapeVm.height;
+    var shapeGizmoBox = !!(gmPaint && gmPaint.gizmoBox);
     var glyph = buttonIconGlyph(b.icon);
     var text = b.label != null ? String(b.label) : '';
     var label;
@@ -1617,7 +1623,6 @@ var ExperienciaCanvas = (function () {
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';' +
       '--t-color:' + textCol + ';';
-    var shapeBtn = Object.assign({}, b, shapePaint);
     return '<button type="button" class="' + buttonPreviewClass(b) +
       ' is-box is-button-shape' +
       (selSet[String(b.id)] ? ' is-selected' : '') +
@@ -1625,18 +1630,19 @@ var ExperienciaCanvas = (function () {
       (b.visible === false ? ' is-invisible' : '') +
       (b.locked ? ' is-locked' : '') +
       overlayPendingMoveClass('BUTTON', b.id) +
-      (hoverOn ? ' is-hover-on' : ' is-hover-off') +
-      ' has-local-look"' +
+      (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
       ' data-exp-stage-btn="' + esc(b.id) + '"' +
+      ' data-button-shape-kind="' + esc(shapeKind) + '"' +
       (b.locked ? ' data-locked="1"' : '') +
       ' data-hover-color="' + esc(hoverCol) + '"' +
       ' data-hover-text="' + esc(hoverTextCol) + '"' +
       ' data-box-w="' + shapeW + '" data-box-h="' + shapeH + '"' +
       ' style="' + styleBits + '">' +
       '<span class="builder-exp-stage-shape__hit" aria-hidden="true" style="' +
-        shapeHitAreaStyle(shapeKind, 1, 1, shapeBtn, layerW, layerH, true) + '"></span>' +
-      shapeStageSvgHtml(shapeBtn, shapeKind, layerW, layerH, {
-        gizmoBox: true,
+        shapeHitAreaStyle(shapeKind, shapeVm.shapeStretchX, shapeVm.shapeStretchY,
+          shapeVm, layerW, layerH, shapeGizmoBox) + '"></span>' +
+      shapeStageSvgHtml(shapeVm, shapeKind, layerW, layerH, {
+        gizmoBox: shapeGizmoBox,
         shapeW: shapeW,
         shapeH: shapeH
       }) +
