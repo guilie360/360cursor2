@@ -1691,27 +1691,37 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
-  function applyGenericButtonChromeDefaults(ix) {
+  /** Project theme colors only — never geometry (boxW/boxH/borderRadius/style). */
+  function applyProjectButtonThemeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonLocalVisual(ix)) return ix;
-    if (ix.style === 'chip') ix.style = 'icon';
-    if (!ix.style || ix.style === 'button') ix.style = 'icon';
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
     if (ix.textColor == null || ix.textColor === '') ix.textColor = '#ffffff';
     if (ix.borderColor == null || ix.borderColor === '') ix.borderColor = '#d1d1d1';
     if (ix.borderWidth == null || isNaN(Number(ix.borderWidth))) ix.borderWidth = 1;
+    if (ix.hoverColor == null || ix.hoverColor === '' ||
+        ix.hoverColor === '#6fbf86' || ix.hoverColor === '#5aaa74') {
+      ix.hoverColor = '#ffffff';
+    }
+    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
+    return ix;
+  }
+
+  /** TAROA-like HUD chrome for generic quotation buttons (legacy, no shape preset). */
+  function applyGenericButtonChromeDefaults(ix) {
+    if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
+    if (hasButtonVisualPreset(ix)) {
+      return applyProjectButtonThemeDefaults(ix);
+    }
+    if (hasButtonLocalVisual(ix)) return ix;
+    if (ix.style === 'chip') ix.style = 'icon';
+    if (!ix.style || ix.style === 'button') ix.style = 'icon';
+    applyProjectButtonThemeDefaults(ix);
     if (ix.borderRadius == null || isNaN(Number(ix.borderRadius))) ix.borderRadius = 999;
     if (ix.boxW == null || isNaN(Number(ix.boxW))) ix.boxW = 5.5;
     if (ix.boxH == null || isNaN(Number(ix.boxH))) ix.boxH = 5.5;
     if (Number(ix.boxW) > 10 && Number(ix.boxH) <= 6) {
       ix.boxW = Math.max(Number(ix.boxH), 5.5);
     }
-    if (ix.hoverColor == null || ix.hoverColor === '' ||
-        ix.hoverColor === '#6fbf86' || ix.hoverColor === '#5aaa74') {
-      ix.hoverColor = '#ffffff';
-    }
-    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
     return ix;
   }
 
@@ -3540,6 +3550,7 @@ var ExperienciaEngine = (function () {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
     if (hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
+      applyProjectButtonThemeDefaults(ix);
       if (ix.color != null) delete ix.color;
       if (ix.config && ix.config.color != null) delete ix.config.color;
       if (ix.rotation != null && !isNaN(Number(ix.rotation))) {
@@ -4003,6 +4014,7 @@ var ExperienciaEngine = (function () {
         ix.visualPresetId = String(presetId);
       }
       ensureButtonKindConfig(ix);
+      applyProjectButtonThemeDefaults(ix);
     } else {
       ensureButtonVisualDefaults(ix);
     }

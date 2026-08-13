@@ -7152,7 +7152,7 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   pointer-events: none;
 }
 
-.builder-exp-ui-btn.is-style-button {
+.builder-exp-ui-btn.is-style-button:not(.has-local-look) {
   border-radius: var(--menu-card-radius, 10px);
 }
 
