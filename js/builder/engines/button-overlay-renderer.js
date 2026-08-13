@@ -31,9 +31,62 @@ var ButtonOverlayRenderer = (function () {
 
   function hasLocalLook(vm) {
     return !!(vm && (
+      vm.visualPresetId ||
       vm.bgColor || vm.textColor || vm.borderColor ||
       vm.borderWidth != null || vm.borderRadius != null
     ));
+  }
+
+  /** Fill missing paint fields from catalog when interaction lost colors but kept visualPresetId. */
+  function hydrateVisualFromPreset(vm) {
+    if (!vm || !vm.visualPresetId || typeof ButtonPresets === 'undefined') return vm;
+    var preset = ButtonPresets.get(vm.visualPresetId);
+    if (!preset) return vm;
+    var out = Object.assign({}, vm);
+    var keys = ButtonPresets.VISUAL_KEYS || [];
+    keys.forEach(function (key) {
+      if (out[key] != null && out[key] !== '') return;
+      if (preset[key] !== undefined) out[key] = preset[key];
+    });
+    return out;
+  }
+
+  function rgbaFromColor(color, alpha) {
+    color = cssToken(color);
+    if (!color) return '';
+    if (color.indexOf('rgba(') === 0 || color.indexOf('rgb(') === 0) return color;
+    if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+      var r = parseInt(color.slice(1, 3), 16);
+      var g = parseInt(color.slice(3, 5), 16);
+      var b = parseInt(color.slice(5, 7), 16);
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+    return color;
+  }
+
+  /** CSS variables + direct inline paint props for preset/local button look. */
+  function appendLocalLookStyle(styleBits, b) {
+    var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
+    if (b.bgColor) {
+      var bg = cssToken(b.bgColor);
+      styleBits += '--btn-local-bg:' + bg + ';--btn-local-bg-a:' + bgOp + ';';
+      styleBits += 'background-color:' + rgbaFromColor(bg, bgOp) + ';';
+    }
+    if (b.textColor) {
+      var text = cssToken(b.textColor);
+      styleBits += '--btn-local-text:' + text + ';color:' + text + ';';
+    }
+    if (b.borderColor != null || b.borderWidth != null) {
+      var border = cssToken(b.borderColor || 'rgba(255,255,255,0.62)');
+      var bw = b.borderWidth != null ? Number(b.borderWidth) : 1;
+      styleBits += '--btn-local-border:' + border + ';--btn-local-bw:' + bw + 'px;';
+      styleBits += 'border:' + bw + 'px solid ' + border + ';';
+    }
+    if (b.borderRadius != null && !isNaN(Number(b.borderRadius))) {
+      var radius = Number(b.borderRadius);
+      styleBits += '--btn-local-radius:' + radius + 'px;border-radius:' + radius + 'px;';
+    }
+    return styleBits;
   }
 
   function resolveButtonHoverColor(b) {
@@ -59,6 +112,7 @@ var ButtonOverlayRenderer = (function () {
    */
   function renderButtonHtml(b, options) {
     if (!b) return '';
+    b = hydrateVisualFromPreset(b);
     options = options || {};
     var selSet = options.selSet || {};
     var editMemberSet = options.editMemberSet || {};
@@ -86,7 +140,6 @@ var ButtonOverlayRenderer = (function () {
     var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
     var boxW = b.boxW != null ? Number(b.boxW) : 14;
     var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
-    var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
 
     styleBits +=
       'width:' + boxW + '%;height:' + boxH + '%;' +
@@ -97,14 +150,7 @@ var ButtonOverlayRenderer = (function () {
       '--btn-pressed-color:' + pressedCol + ';' +
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';';
-    if (b.bgColor) {
-      styleBits += '--btn-local-bg:' + cssToken(b.bgColor) + ';' +
-        '--btn-local-bg-a:' + bgOp + ';';
-    }
-    if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
-    if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
-    if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
-    if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
+    styleBits = appendLocalLookStyle(styleBits, b);
 
     var id = String(b.id || 'btn');
     var className = buttonPreviewClass(b) +

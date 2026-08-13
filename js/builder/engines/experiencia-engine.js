@@ -3800,6 +3800,15 @@ var ExperienciaEngine = (function () {
     var effectiveOn = overlayEffectiveVisible(n, ix);
     var effectiveLocked = overlayEffectiveLocked(n, ix);
     var isLocalVisualBtn = isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix);
+    if (isButtonVisualPresetLocked(ix) && typeof ButtonPresets !== 'undefined') {
+      var presetRef = ButtonPresets.get(ix.visualPresetId);
+      if (presetRef && ButtonPresets.VISUAL_KEYS) {
+        ButtonPresets.VISUAL_KEYS.forEach(function (key) {
+          if (ix[key] != null && ix[key] !== '') return;
+          if (presetRef[key] !== undefined) ix[key] = presetRef[key];
+        });
+      }
+    }
     var vm = {
       id: ix.id,
       portId: ix.portId || ix.id,

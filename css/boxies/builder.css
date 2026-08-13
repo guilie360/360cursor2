@@ -7082,6 +7082,16 @@ body.boxies-exp-canvas-mode .builder-exp-buttons-stage,
   font-size: var(--button-font-size, 13px);
   overflow: hidden;
   text-overflow: ellipsis;
+  border-radius: var(--btn-local-radius, var(--badge-radius, 999px));
+  background: color-mix(
+    in srgb,
+    var(--btn-local-bg, var(--btn-glass-surface, var(--btn-surface, rgba(8, 8, 8, 0.72))))
+      calc(var(--btn-local-bg-a, 1) * 100%),
+    transparent
+  );
+  color: var(--btn-local-text, var(--text-primary, #fff));
+  border-color: var(--btn-local-border, var(--btn-border, var(--glass-border, rgba(255, 255, 255, 0.28))));
+  border-width: var(--btn-local-bw, var(--btn-border-width, 1px));
 }
 
 .builder-exp-ui-btn.has-local-look {
