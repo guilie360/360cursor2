@@ -8713,7 +8713,19 @@ var ExperienciaCanvas = (function () {
         var btnOp = b.opacity != null ? Number(b.opacity) : 1;
         var hoverOn = b.hoverEnabled !== false;
         var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-        var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
+        var hoverCol = (function () {
+          if (b.hoverColor != null && b.hoverColor !== '') {
+            return cssToken(b.hoverColor) || '#6fbf86';
+          }
+          if (b.visualPresetId &&
+              typeof ButtonPresets !== 'undefined' && ButtonPresets.get) {
+            var presetHover = ButtonPresets.get(b.visualPresetId);
+            if (presetHover && presetHover.hoverColor) {
+              return cssToken(presetHover.hoverColor) || '#6fbf86';
+            }
+          }
+          return '#6fbf86';
+        })();
         var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
         var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
         var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';

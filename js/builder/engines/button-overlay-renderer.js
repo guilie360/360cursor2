@@ -36,6 +36,20 @@ var ButtonOverlayRenderer = (function () {
     ));
   }
 
+  function resolveButtonHoverColor(b) {
+    if (b && b.hoverColor != null && b.hoverColor !== '') {
+      return cssToken(b.hoverColor) || '#6fbf86';
+    }
+    if (b && b.visualPresetId &&
+        typeof ButtonPresets !== 'undefined' && ButtonPresets.get) {
+      var preset = ButtonPresets.get(b.visualPresetId);
+      if (preset && preset.hoverColor) {
+        return cssToken(preset.hoverColor) || '#6fbf86';
+      }
+    }
+    return '#6fbf86';
+  }
+
   /**
    * Same HTML contract as ExperienciaCanvas.paintButtonsStage() BUTTON branch.
    *
@@ -70,7 +84,7 @@ var ButtonOverlayRenderer = (function () {
     var btnOp = b.opacity != null ? Number(b.opacity) : 1;
     var hoverOn = b.hoverEnabled !== false;
     var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-    var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
+    var hoverCol = resolveButtonHoverColor(b);
     var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
     var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
     var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';

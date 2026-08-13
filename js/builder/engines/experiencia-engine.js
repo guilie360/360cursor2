@@ -1691,9 +1691,24 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
+  var BUTTON_SHAPE_GEOMETRY_KEYS = ['style', 'boxW', 'boxH', 'borderRadius'];
+
+  /** Re-apply shape geometry from catalog — authoritative when visualPresetId is set. */
+  function reapplyButtonShapePreset(ix) {
+    if (!ix || !hasButtonVisualPreset(ix)) return ix;
+    if (typeof ButtonPresets === 'undefined' || !ButtonPresets.get) return ix;
+    var preset = ButtonPresets.get(ix.visualPresetId);
+    if (!preset) return ix;
+    BUTTON_SHAPE_GEOMETRY_KEYS.forEach(function (key) {
+      if (preset[key] !== undefined) ix[key] = preset[key];
+    });
+    return ix;
+  }
+
   /** Project theme colors only — never geometry (boxW/boxH/borderRadius/style). */
   function applyProjectButtonThemeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
+    if (hasButtonVisualPreset(ix)) return ix;
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
     if (ix.textColor == null || ix.textColor === '') ix.textColor = '#ffffff';
     if (ix.borderColor == null || ix.borderColor === '') ix.borderColor = '#d1d1d1';
@@ -1709,9 +1724,7 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (legacy, no shape preset). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonVisualPreset(ix)) {
-      return applyProjectButtonThemeDefaults(ix);
-    }
+    if (hasButtonVisualPreset(ix)) return reapplyButtonShapePreset(ix);
     if (hasButtonLocalVisual(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
@@ -3550,7 +3563,7 @@ var ExperienciaEngine = (function () {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
     if (hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
-      applyProjectButtonThemeDefaults(ix);
+      reapplyButtonShapePreset(ix);
       if (ix.color != null) delete ix.color;
       if (ix.config && ix.config.color != null) delete ix.config.color;
       if (ix.rotation != null && !isNaN(Number(ix.rotation))) {
@@ -3777,6 +3790,7 @@ var ExperienciaEngine = (function () {
   function buttonViewModel(state, n, ix, layerW, layerH) {
     if (isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
+      reapplyButtonShapePreset(ix);
     } else {
       ensureFreeOverlayDefaults(ix);
       if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
@@ -3846,7 +3860,9 @@ var ExperienciaEngine = (function () {
       borderColor: ix.borderColor || null,
       borderWidth: ix.borderWidth != null ? Number(ix.borderWidth) : null,
       hoverEnabled: ix.hoverEnabled !== false,
-      hoverColor: ix.hoverColor || '#6fbf86',
+      hoverColor: ix.hoverColor != null && ix.hoverColor !== ''
+        ? ix.hoverColor
+        : (hasButtonVisualPreset(ix) ? null : '#6fbf86'),
       hoverTextColor: ix.hoverTextColor || '#ffffff',
       hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
       pressedColor: ix.pressedColor || '#5aaa74',
@@ -3862,6 +3878,7 @@ var ExperienciaEngine = (function () {
       _ix: ix
     };
     if (isLocalVisualBtn) {
+      reapplyButtonShapePreset(ix);
       copyButtonPresetVisualFields(ix, vm);
       buttonPresetVisualKeys().forEach(function (key) {
         if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
@@ -4014,7 +4031,7 @@ var ExperienciaEngine = (function () {
         ix.visualPresetId = String(presetId);
       }
       ensureButtonKindConfig(ix);
-      applyProjectButtonThemeDefaults(ix);
+      reapplyButtonShapePreset(ix);
     } else {
       ensureButtonVisualDefaults(ix);
     }
@@ -4433,6 +4450,7 @@ var ExperienciaEngine = (function () {
     }
 
     ensureFreeOverlayDefaults(ix);
+    if (isSceneButtonInteraction(ix)) reapplyButtonShapePreset(ix);
     if (traceShape) {
       shapeResizeTraceEngine('4.updateSceneButton(after-ensureFreeOverlayDefaults)', {
         nodeId: nodeId,
