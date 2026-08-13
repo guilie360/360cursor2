@@ -77,11 +77,10 @@ var ButtonOverlayRenderer = (function () {
     var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
     var boxW = b.boxW != null ? Number(b.boxW) : 14;
     var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
-    var paintBoxH = (b.widthRelativeBoxH && b.paintBoxH != null) ? Number(b.paintBoxH) : boxH;
     var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
 
     styleBits +=
-      'width:' + boxW + '%;height:' + paintBoxH + '%;' +
+      'width:' + boxW + '%;height:' + boxH + '%;' +
       '--btn-opacity:' + btnOp + ';' +
       '--btn-hover-color:' + hoverCol + ';' +
       '--btn-hover-text:' + hoverTextCol + ';' +
@@ -138,18 +137,37 @@ var ButtonOverlayRenderer = (function () {
     return renderButtonHtml(vm, options);
   }
 
+  /**
+   * Preview-only: scale boxW/boxH % so the bbox fits the preview layer (keeps aspect).
+   */
+  function pickerFitBoxPercents(vm, layerW, layerH) {
+    var boxW = vm && vm.boxW != null ? Number(vm.boxW) : 14;
+    var boxH = vm && vm.boxH != null ? Number(vm.boxH) : 4.5;
+    var btnWPx = (boxW / 100) * layerW;
+    var btnHPx = (boxH / 100) * layerH;
+    if (!btnWPx || !btnHPx) return { boxW: boxW, boxH: boxH };
+    var pad = 0.1;
+    var fitW = layerW * (1 - pad * 2);
+    var fitH = layerH * (1 - pad * 2);
+    var scale = Math.min(fitW / btnWPx, fitH / btnHPx);
+    return {
+      boxW: Math.min(100, Math.round(boxW * scale * 10) / 10),
+      boxH: Math.min(100, Math.round(boxH * scale * 10) / 10)
+    };
+  }
+
   /** Picker tile layer size — matches .qe-shape-picker__item (52×52). */
   var PICKER_LAYER_SIZE = 52;
 
   /**
-   * Picker cell — same renderer + layer aspect as canvas (360×203); tile fit via CSS scale.
+   * Picker cell — preview-only 16:9 mini stage (same % semantics as canvas), scaled into tile.
    */
   function renderPickerPreviewHtml(preset) {
     if (!preset || typeof ButtonPresets === 'undefined') return '';
     var refW = ButtonPresets.PREVIEW_LAYER_W || 360;
     var refH = ButtonPresets.PREVIEW_LAYER_H || 203;
     var tile = PICKER_LAYER_SIZE;
-    var scale = Math.min(tile / refW, tile / refH);
+    var stageScale = Math.min(tile / refW, tile / refH);
     var ix = ButtonPresets.buildPreviewIx(preset);
     var fakeNode = { id: 'preview-scene', config: { interactions: [ix] } };
     var vm = null;
@@ -157,10 +175,12 @@ var ButtonOverlayRenderer = (function () {
       vm = ExperienciaEngine.buttonViewModel(null, fakeNode, ix, refW, refH);
     }
     if (!vm) return '';
-    var btnHtml = renderButtonHtml(vm, { stage: false, x: 50, y: 50 });
+    var fit = pickerFitBoxPercents(vm, refW, refH);
+    var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
+    var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
     return '<div class="qe-button-picker__layer" aria-hidden="true">' +
       '<div class="qe-button-picker__stage" style="width:' + refW + 'px;height:' + refH + 'px;' +
-      'transform:scale(' + scale + ');transform-origin:center center;">' +
+      'transform:scale(' + stageScale + ');transform-origin:center center;">' +
       btnHtml +
       '</div></div>';
   }

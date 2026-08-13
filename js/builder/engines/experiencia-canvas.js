@@ -2402,11 +2402,6 @@ var ExperienciaCanvas = (function () {
     if (st === 'BUTTON') {
       gw = btn.boxW != null ? Number(btn.boxW) : 14;
       gh = btn.boxH != null ? Number(btn.boxH) : 4.5;
-      var ixBtn = btn._ix || (btn.visualPresetId ? btn : null);
-      if (ixBtn && typeof ExperienciaEngine !== 'undefined' &&
-          ExperienciaEngine.buttonPaintBoxHPct) {
-        gh = ExperienciaEngine.buttonPaintBoxHPct(gh, layerW, layerH, ixBtn);
-      }
     } else if (st === 'OVERLAY_GROUP' || st === 'GROUP') {
       gw = Number(btn.width) || 20;
       gh = Number(btn.height) || 20;
@@ -2415,29 +2410,6 @@ var ExperienciaCanvas = (function () {
       gh = Math.max(3, ((Number(btn.fontSize) || 28) / layerH) * 100 * 1.4);
     }
     return { st: st, gx: gx, gy: gy, grot: grot, gw: gw, gh: gh };
-  }
-
-  function buttonCommitBoxH(sceneId, btnId, paintBoxH, layerW, layerH) {
-    var vm = getOverlayItemVm(sceneId, btnId);
-    var ix = vm && vm._ix;
-    if (ix && typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.hasButtonLocalVisual &&
-        ExperienciaEngine.hasButtonLocalVisual(ix) &&
-        ExperienciaEngine.buttonStoredBoxHFromPaint) {
-      return ExperienciaEngine.buttonStoredBoxHFromPaint(paintBoxH, layerW, layerH);
-    }
-    return paintBoxH;
-  }
-
-  function buttonPaintBoxHFromVm(vm, layerW, layerH) {
-    if (!vm) return 4.5;
-    var boxH = vm.boxH != null ? Number(vm.boxH) : 4.5;
-    var ix = vm._ix || (vm.visualPresetId ? vm : null);
-    if (ix && typeof ExperienciaEngine !== 'undefined' &&
-        ExperienciaEngine.buttonPaintBoxHPct) {
-      return ExperienciaEngine.buttonPaintBoxHPct(boxH, layerW, layerH, ix);
-    }
-    return boxH;
   }
 
   /** Full gizmo (single) or box-only chrome (multi-select). */
@@ -6905,8 +6877,7 @@ var ExperienciaCanvas = (function () {
           el.style.top = (Number(vm.y) || 50) + '%';
           if (t === 'BUTTON') {
             if (b.boxW != null) el.style.width = Number(b.boxW) + '%';
-            var paintH = buttonPaintBoxHFromVm(vm, layerW, layerH);
-            el.style.height = paintH + '%';
+            if (b.boxH != null) el.style.height = Number(b.boxH) + '%';
           }
         }
       });
@@ -8808,11 +8779,9 @@ var ExperienciaCanvas = (function () {
         }
       }
       if (t === 'BUTTON') {
-        var btnHalfW = btn.boxW != null ? Number(btn.boxW) : 14;
-        var btnHalfH = buttonPaintBoxHFromVm(btn, szAlign.w, szAlign.h);
         return {
-          w: Math.max(0.5, btnHalfW / 2),
-          h: Math.max(0.5, btnHalfH / 2)
+          w: Math.max(0.5, (btn.boxW != null ? Number(btn.boxW) : 14) / 2),
+          h: Math.max(0.5, (btn.boxH != null ? Number(btn.boxH) : 4.5) / 2)
         };
       }
       /* TEXT — loose box for edge snap */
@@ -10169,7 +10138,7 @@ var ExperienciaCanvas = (function () {
           patch.x = ncx;
           patch.y = ncy;
           patch.boxW = nw;
-          patch.boxH = buttonCommitBoxH(sceneId, mid, nh, layerW, layerH);
+          patch.boxH = nh;
         } else if (t === 'TEXT') {
           patch.x = ncx;
           patch.y = ncy;
@@ -11194,7 +11163,7 @@ var ExperienciaCanvas = (function () {
           patch.x = b.cx;
           patch.y = b.cy;
           patch.boxW = b.w;
-          patch.boxH = buttonCommitBoxH(sceneId, mid, b.h, layerW, layerH);
+          patch.boxH = b.h;
         } else if (t === 'TEXT') {
           patch.x = b.cx;
           patch.y = b.cy;
@@ -14103,9 +14072,7 @@ var ExperienciaCanvas = (function () {
             }
             if (transformDrag.type === 'BUTTON') {
               patchT.boxW = nw;
-              patchT.boxH = buttonCommitBoxH(
-                transformDrag.sceneId, transformDrag.buttonId, nh, layerW, layerH
-              );
+              patchT.boxH = nh;
             }
             ExperienciaEngine.updateSceneButton(state, transformDrag.sceneId, transformDrag.buttonId, patchT);
             applyLiveResizePaint(transformDrag.buttonId, {
@@ -14514,17 +14481,6 @@ var ExperienciaCanvas = (function () {
               }
             };
             /* Do not mutate inline styles on pointerdown — first rAF paint handles it. */
-          } else if (gtype === 'BUTTON' && btnG &&
-              typeof ExperienciaEngine !== 'undefined' &&
-              ExperienciaEngine.hasButtonLocalVisual &&
-              ExperienciaEngine.hasButtonLocalVisual(btnG._ix || btnG)) {
-            var btnGm = overlaySelectionMetrics(btnG, layerW0, layerH0);
-            startW0 = btnGm ? btnGm.gw : (btnG.boxW != null ? Number(btnG.boxW) : 14);
-            startH0 = btnGm ? btnGm.gh : (btnG.boxH != null ? Number(btnG.boxH) : 4.5);
-            startX0 = btnGm ? btnGm.gx
-              : (btnG.storedX != null ? Number(btnG.storedX) : Number(btnG.x) || 50);
-            startY0 = btnGm ? btnGm.gy
-              : (btnG.storedY != null ? Number(btnG.storedY) : Number(btnG.y) || 50);
           } else {
             startW0 = gtype === 'BUTTON'
               ? (btnG.boxW != null ? Number(btnG.boxW) : 14)
@@ -15332,7 +15288,7 @@ var ExperienciaCanvas = (function () {
                 ? (endBtn.boxW != null ? Number(endBtn.boxW) : 14)
                 : (Number(endBtn.width) || 12);
               var eh = endType === 'BUTTON'
-                ? buttonPaintBoxHFromVm(endBtn, szShapeFin.w, szShapeFin.h)
+                ? (endBtn.boxH != null ? Number(endBtn.boxH) : 4.5)
                 : (Number(endBtn.height) || 8);
               if (overlaySnapEnabled && !(ev && ev.altKey) && !(ev && ev.shiftKey)) {
                 var resizeLinesF = collectOverlayAlignLines(endScene, rotBtnId, {
@@ -15356,9 +15312,7 @@ var ExperienciaCanvas = (function () {
               var finalize = { x: cx, y: cy };
               if (endType === 'BUTTON') {
                 finalize.boxW = ew;
-                finalize.boxH = buttonCommitBoxH(
-                  endScene, rotBtnId, eh, szShapeFin.w, szShapeFin.h
-                );
+                finalize.boxH = eh;
               }
               ExperienciaEngine.updateSceneButton(state, endScene, rotBtnId, finalize);
             }
