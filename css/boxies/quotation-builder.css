@@ -4545,6 +4545,27 @@ body.is-qe-lib-pointer-dragging * {
   cursor: default;
 }
 
+.builder-exp-btn-shape-segment {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.builder-exp-btn-shape-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 6px 4px;
+}
+
+.builder-exp-btn-shape-btn svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
 .qe-canvas__mock {
   flex: 1;
   display: flex;

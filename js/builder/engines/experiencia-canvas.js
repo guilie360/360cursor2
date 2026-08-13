@@ -2820,6 +2820,91 @@ var ExperienciaCanvas = (function () {
     return builderExpBlockHtml(state, 'btn-config', 'Configuración', body, 'builder-exp-block--config');
   }
 
+  function inferButtonShape(selected) {
+    if (!selected) return 'rounded';
+    var br = selected.borderRadius != null ? Number(selected.borderRadius) : 999;
+    var w = selected.boxW != null ? Number(selected.boxW) : 14;
+    var h = selected.boxH != null ? Number(selected.boxH) : 4.5;
+    if (!isFinite(br)) br = 999;
+    if (!isFinite(w) || w <= 0) w = 14;
+    if (!isFinite(h) || h <= 0) h = 4.5;
+    if (br <= 0) return 'square';
+    if (br >= 400) {
+      var sameSize = Math.abs(w - h) <= Math.max(w, h) * 0.12;
+      if (sameSize) return 'circle';
+      if (h < w * 0.85) return 'capsule';
+    }
+    return 'rounded';
+  }
+
+  function buttonShapePatch(shape, selected) {
+    if (!selected || !shape) return null;
+    var w = selected.boxW != null ? Number(selected.boxW) : 14;
+    var h = selected.boxH != null ? Number(selected.boxH) : 4.5;
+    w = Math.max(1, Math.min(100, w));
+    h = Math.max(1, Math.min(100, h));
+    if (shape === 'square') {
+      return { borderRadius: 0 };
+    }
+    if (shape === 'rounded') {
+      return { borderRadius: 12 };
+    }
+    if (shape === 'circle') {
+      var size = Math.min(w, h);
+      return { borderRadius: 999, boxW: size, boxH: size };
+    }
+    if (shape === 'capsule') {
+      var newH = h;
+      if (h >= w * 0.75) {
+        newH = Math.max(1, Math.round(h * 0.5 * 10) / 10);
+      }
+      if (newH >= w) {
+        newH = Math.max(1, Math.round(w * 0.45 * 10) / 10);
+      }
+      return { borderRadius: 999, boxW: w, boxH: newH };
+    }
+    return null;
+  }
+
+  function buttonShapeIconSvg(shape) {
+    var S = 'xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"' +
+      ' fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"' +
+      ' stroke-linejoin="round" aria-hidden="true"';
+    if (shape === 'square') {
+      return '<svg ' + S + '><rect x="5" y="5" width="14" height="14"/></svg>';
+    }
+    if (shape === 'rounded') {
+      return '<svg ' + S + '><rect x="5" y="5" width="14" height="14" rx="3"/></svg>';
+    }
+    if (shape === 'circle') {
+      return '<svg ' + S + '><circle cx="12" cy="12" r="7"/></svg>';
+    }
+    if (shape === 'capsule') {
+      return '<svg ' + S + '><rect x="4" y="8" width="16" height="8" rx="4"/></svg>';
+    }
+    return '';
+  }
+
+  function buttonShapeToolbarHtml(selected) {
+    var active = inferButtonShape(selected);
+    var shapes = [
+      { id: 'square', label: 'Cuadrado' },
+      { id: 'rounded', label: 'Cuadrado redondeado' },
+      { id: 'circle', label: 'Círculo' },
+      { id: 'capsule', label: 'Cápsula' }
+    ];
+    return '<div class="builder-hub-segment builder-exp-btn-shape-segment">' +
+      shapes.map(function (item) {
+        return '<button type="button" class="builder-hub-segment__btn builder-exp-btn-shape-btn' +
+          (active === item.id ? ' is-active' : '') +
+          '" data-exp-btn-shape="' + esc(item.id) + '" title="' + esc(item.label) + '"' +
+          ' aria-label="' + esc(item.label) + '">' +
+          buttonShapeIconSvg(item.id) +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }
+
   function buttonInspectorFieldsHtml(state, sceneNode, selected, lists) {
     var btnOp = selected.opacity != null ? Number(selected.opacity) : 1;
     var bgOp = selected.bgOpacity != null ? Number(selected.bgOpacity) : 1;
@@ -2867,6 +2952,7 @@ var ExperienciaCanvas = (function () {
             '<option value="plus"' + (selected.icon === 'plus' ? ' selected' : '') + '>Plus</option>' +
           '</select>' +
         '</div>') +
+      builderExpBlockHtml(state, 'btn-shape', 'Forma', buttonShapeToolbarHtml(selected)) +
       builderExpBlockHtml(state, 'btn-appearance', 'Apariencia',
         '<div class="builder-exp-btn-hover-row">' +
           '<div class="builder-field builder-exp-inspector__field" style="flex:1">' +
@@ -5137,6 +5223,23 @@ var ExperienciaCanvas = (function () {
       function patchBtn(patch, opts) {
         patchSceneButton(patch, opts);
       }
+      function applyButtonShape(shape) {
+        var sceneId = canvas().selectedId;
+        var btnId = resolveSelectedOverlayButtonId();
+        if (!sceneId || !btnId || typeof ExperienciaEngine === 'undefined') return;
+        var n = ExperienciaEngine.getNode(state, sceneId);
+        var ix = n && ExperienciaEngine.getInteraction
+          ? ExperienciaEngine.getInteraction(n, btnId)
+          : null;
+        if (!ix) return;
+        var ls = layerSize();
+        var vm = ExperienciaEngine.buttonViewModel
+          ? ExperienciaEngine.buttonViewModel(state, n, ix, ls.w, ls.h)
+          : null;
+        var patch = buttonShapePatch(shape, vm || ix);
+        if (!patch) return;
+        patchBtn(patch, { inspector: true, persist: true });
+      }
       var addBtn = inspectorBody.querySelector('[data-exp-btn-add]');
       if (addBtn) {
         addBtn.addEventListener('click', function (ev) {
@@ -5286,6 +5389,13 @@ var ExperienciaCanvas = (function () {
           persist();
         });
       }
+      inspectorBody.querySelectorAll('[data-exp-btn-shape]').forEach(function (el) {
+        el.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          applyButtonShape(el.getAttribute('data-exp-btn-shape'));
+        });
+      });
       var lockEl = inspectorBody.querySelector('[data-exp-btn-locked]');
       if (lockEl) {
         lockEl.addEventListener('change', function () {
