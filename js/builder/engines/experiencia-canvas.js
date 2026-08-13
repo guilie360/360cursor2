@@ -8684,80 +8684,34 @@ var ExperienciaCanvas = (function () {
             }) +
             '</button>';
         }
-        if (typeof ButtonOverlayRenderer !== 'undefined' && ButtonOverlayRenderer.renderButtonHtml) {
-          var paintIx = (b._ix && ExperienciaEngine.getInteraction)
-            ? b._ix
-            : (ExperienciaEngine.getInteraction
-              ? ExperienciaEngine.getInteraction(n, b.id)
-              : b._ix);
-          var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
-            ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
-            : b;
-          var shapeKind = resolveButtonShapeKind(paintVm);
-          if (shapeKind) {
-            return paintButtonShapeBackedHtml(
-              paintVm, shapeKind, layerW, layerH, selSet, editMemberSet
-            );
-          }
-          return ButtonOverlayRenderer.renderButtonHtml(paintVm, {
-            selSet: selSet,
-            editMemberSet: editMemberSet,
-            extraClass: overlayPendingMoveClass('BUTTON', b.id)
-          });
+        var paintIx = (b._ix && ExperienciaEngine.getInteraction)
+          ? b._ix
+          : (ExperienciaEngine.getInteraction
+            ? ExperienciaEngine.getInteraction(n, b.id)
+            : b._ix);
+        var paintVm = (paintIx && ExperienciaEngine.buttonViewModel)
+          ? ExperienciaEngine.buttonViewModel(state, n, paintIx, layerW, layerH)
+          : b;
+        var shapeKind = resolveButtonShapeKind(paintVm);
+        if (shapeKind) {
+          return paintButtonShapeBackedHtml(
+            paintVm, shapeKind, layerW, layerH, selSet, editMemberSet
+          );
         }
-        var glyph = buttonIconGlyph(b.icon);
-        var text = b.label != null ? String(b.label) : '';
-        var label;
-        if (glyph && text) label = glyph + ' ' + text;
-        else label = glyph || text || 'Botón';
-        var btnOp = b.opacity != null ? Number(b.opacity) : 1;
-        var hoverOn = b.hoverEnabled !== false;
-        var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
-        var hoverCol = (b.hoverColor != null && b.hoverColor !== '')
-          ? (cssToken(b.hoverColor) || String(b.hoverColor))
-          : (b.visualPresetId ? '' : '#6fbf86');
-        var hoverTextCol = cssToken(b.hoverTextColor || '#ffffff') || '#ffffff';
-        var pressedCol = cssToken(b.pressedColor || '#5aaa74') || '#5aaa74';
-        var pressedTextCol = cssToken(b.pressedTextColor || '#ffffff') || '#ffffff';
-        var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
-        var boxW = b.boxW != null ? Number(b.boxW) : 14;
-        var boxH = b.boxH != null ? Number(b.boxH) : 4.5;
-        var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
-        styleBits +=
-          'width:' + boxW + '%;height:' + boxH + '%;' +
-          '--btn-opacity:' + btnOp + ';' +
-          (hoverCol ? ('--btn-hover-color:' + hoverCol + ';') : '') +
-          '--btn-hover-text:' + hoverTextCol + ';' +
-          '--btn-hover-ms:' + hoverMs + 'ms;' +
-          '--btn-pressed-color:' + pressedCol + ';' +
-          '--btn-pressed-text:' + pressedTextCol + ';' +
-          '--btn-pressed-scale:' + pressedScale + ';';
-        if (b.bgColor) {
-          styleBits += '--btn-local-bg:' + cssToken(b.bgColor) + ';' +
-            '--btn-local-bg-a:' + bgOp + ';';
+        if (typeof ButtonOverlayRenderer === 'undefined' || !ButtonOverlayRenderer.renderButtonHtml) {
+          try {
+            console.error('[QE btn-render] ButtonOverlayRenderer missing in paintButtonsStage', {
+              id: b && b.id,
+              hasGlobal: typeof ButtonOverlayRenderer !== 'undefined'
+            });
+          } catch (eMiss) { /* ignore */ }
+          return '';
         }
-        if (b.textColor) styleBits += '--btn-local-text:' + cssToken(b.textColor) + ';';
-        if (b.borderColor) styleBits += '--btn-local-border:' + cssToken(b.borderColor) + ';';
-        if (b.borderWidth != null) styleBits += '--btn-local-bw:' + Number(b.borderWidth) + 'px;';
-        if (b.borderRadius != null) styleBits += '--btn-local-radius:' + Number(b.borderRadius) + 'px;';
-        return '<button type="button" class="' + buttonPreviewClass(b) +
-          ' is-box' +
-          (selSet[String(b.id)] ? ' is-selected' : '') +
-          (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
-          (b.visible === false ? ' is-invisible' : '') +
-          (b.locked ? ' is-locked' : '') +
-          overlayPendingMoveClass('BUTTON', b.id) +
-          (hoverOn ? ' is-hover-on' : ' is-hover-off') +
-          (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null
-            ? ' has-local-look' : '') + '"' +
-          ' data-exp-stage-btn="' + esc(b.id) + '"' +
-          (b.locked ? ' data-locked="1"' : '') +
-          ' data-hover-color="' + esc(hoverCol) + '"' +
-          ' data-hover-text="' + esc(hoverTextCol) + '"' +
-          ' data-box-w="' + boxW + '" data-box-h="' + boxH + '"' +
-          ' style="' + styleBits + '">' +
-          esc(label) +
-        '</button>';
+        return ButtonOverlayRenderer.renderButtonHtml(paintVm, {
+          selSet: selSet,
+          editMemberSet: editMemberSet,
+          extraClass: overlayPendingMoveClass('BUTTON', b.id)
+        });
       }).join('');
 
       visualCenterDiagProcess(buttonsFrame, buttonsLayer);

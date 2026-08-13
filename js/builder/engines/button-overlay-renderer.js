@@ -1,4 +1,8 @@
 /* BOXIES v0.4 — Shared BUTTON overlay HTML (canvas stage + picker preview). */
+var BUTTON_OVERLAY_RENDERER_BUILD = 'ws7908';
+try {
+  console.log('[QE btn-render] button-overlay-renderer loaded ' + BUTTON_OVERLAY_RENDERER_BUILD);
+} catch (eBuildLog) { /* ignore */ }
 var ButtonOverlayRenderer = (function () {
   function esc(v) {
     return String(v == null ? '' : v)
@@ -39,10 +43,14 @@ var ButtonOverlayRenderer = (function () {
 
   /** Fill missing paint fields from catalog when interaction lost colors but kept visualPresetId. */
   function hydrateVisualFromPreset(vm) {
-    if (!vm || !vm.visualPresetId || typeof ButtonPresets === 'undefined') return vm;
-    var preset = ButtonPresets.get(vm.visualPresetId);
+    var presetId = vm && (vm.visualPresetId || (vm._ix && vm._ix.visualPresetId) || null);
+    try {
+      console.log('[QE btn-render] hydrateVisualFromPreset ENTRÓ', { visualPresetId: presetId });
+    } catch (eHydrateLog) { /* ignore */ }
+    if (!vm || !presetId || typeof ButtonPresets === 'undefined') return vm;
+    var preset = ButtonPresets.get(presetId);
     if (!preset) return vm;
-    var out = Object.assign({}, vm);
+    var out = Object.assign({}, vm, { visualPresetId: String(presetId) });
     var keys = ButtonPresets.VISUAL_KEYS || [];
     keys.forEach(function (key) {
       if (out[key] != null && out[key] !== '') return;
@@ -66,6 +74,13 @@ var ButtonOverlayRenderer = (function () {
 
   /** CSS variables + direct inline paint props for preset/local button look. */
   function appendLocalLookStyle(styleBits, b) {
+    try {
+      console.log('[QE btn-render] appendLocalLookStyle ENTRÓ', {
+        visualPresetId: b && (b.visualPresetId || (b._ix && b._ix.visualPresetId)),
+        bgColor: b && b.bgColor,
+        borderRadius: b && b.borderRadius
+      });
+    } catch (eAppendLog) { /* ignore */ }
     var bgOp = b.bgOpacity != null ? Number(b.bgOpacity) : 1;
     if (b.bgColor) {
       var bg = cssToken(b.bgColor);
@@ -112,6 +127,12 @@ var ButtonOverlayRenderer = (function () {
    */
   function renderButtonHtml(b, options) {
     if (!b) return '';
+    try {
+      console.log('[QE btn-render] renderButtonHtml ENTRÓ', {
+        id: b.id,
+        visualPresetId: b.visualPresetId || (b._ix && b._ix.visualPresetId)
+      });
+    } catch (eRenderLog) { /* ignore */ }
     b = hydrateVisualFromPreset(b);
     options = options || {};
     var selSet = options.selSet || {};
