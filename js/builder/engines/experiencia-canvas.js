@@ -5268,14 +5268,22 @@ var ExperienciaCanvas = (function () {
       }
       var bwEl = inspectorBody.querySelector('[data-exp-btn-border-width]');
       if (bwEl) {
+        bwEl.addEventListener('input', function () {
+          patchBtn({ borderWidth: bwEl.value }, { gesture: true });
+        });
         bwEl.addEventListener('change', function () {
-          patchBtn({ borderWidth: bwEl.value }, { persist: true });
+          endButtonOp();
+          persist();
         });
       }
       var brEl = inspectorBody.querySelector('[data-exp-btn-radius]');
       if (brEl) {
+        brEl.addEventListener('input', function () {
+          patchBtn({ borderRadius: brEl.value }, { gesture: true });
+        });
         brEl.addEventListener('change', function () {
-          patchBtn({ borderRadius: brEl.value }, { persist: true });
+          endButtonOp();
+          persist();
         });
       }
       var lockEl = inspectorBody.querySelector('[data-exp-btn-locked]');
@@ -16689,12 +16697,12 @@ var ExperienciaCanvas = (function () {
       isOverlaySnapEnabled: function () {
         return !!overlaySnapEnabled;
       },
-      addButton: function (presetId) {
+      addButton: function () {
         var sceneId = canvas().selectedId;
         if (!sceneId) return null;
         canvas().editMode = 'buttons';
         hotspotDraw = null;
-        var btn = ExperienciaEngine.addSceneButton(state, sceneId, presetId);
+        var btn = ExperienciaEngine.addSceneButton(state, sceneId);
         if (btn) {
           canvas().selectedButtonId = btn.id;
           canvas().selectedButtonIds = [String(btn.id)];

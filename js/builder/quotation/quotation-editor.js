@@ -2,7 +2,7 @@
  * Quotation Editor — V7.2.64 Builder = Runtime paint pipeline.
  */
 var QuotationEditor = (function () {
-  var QE_EDITOR_BUILD = 'ws7884';
+  var QE_EDITOR_BUILD = 'ws7885';
   try {
     window.__QE_EDITOR_BUILD__ = QE_EDITOR_BUILD;
     console.log('[QE BUILD] quotation-editor ' + QE_EDITOR_BUILD);
@@ -3988,32 +3988,7 @@ var QuotationEditor = (function () {
   }
 
   function buttonPickerHtml() {
-    if (!state.buttonPickerOpen) return '';
-    var presets = (typeof ButtonPresets !== 'undefined' && ButtonPresets.list)
-      ? ButtonPresets.list()
-      : [];
-    var grid = presets.map(function (preset) {
-      var preview = (typeof ButtonOverlayRenderer !== 'undefined' &&
-          ButtonOverlayRenderer.renderPickerPreviewHtml)
-        ? ButtonOverlayRenderer.renderPickerPreviewHtml(preset)
-        : '';
-      return '' +
-        '<div class="qe-shape-picker__item qe-button-picker__item"' +
-          ' role="button" tabindex="0"' +
-          ' data-qe-pick-button="' + escapeHtml(preset.id) + '"' +
-          ' aria-label="' + escapeHtml(preset.label || preset.id) + '">' +
-          preview +
-        '</div>';
-    }).join('');
-    return '' +
-      '<div class="qe-button-picker qe-shape-picker" data-qe-button-picker role="dialog" aria-label="Botones">' +
-        '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
-        '<div class="qe-shape-picker__panel">' +
-          '<div class="qe-shape-picker__grid" data-qe-button-picker-grid>' +
-            grid +
-          '</div>' +
-        '</div>' +
-      '</div>';
+    return '';
   }
 
   function resourcePickerHtml() {
@@ -6658,7 +6633,6 @@ var QuotationEditor = (function () {
         '</div>' +
         resourcePickerHtml() +
         shapePickerHtml() +
-        buttonPickerHtml() +
         sceneConfirmHtml() +
       '</section>';
   }
@@ -10241,7 +10215,7 @@ var QuotationEditor = (function () {
       addButton.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        openButtonPicker();
+        addButtonElement();
       });
     }
     var addText = editor.querySelector('[data-qe-add-text]');
@@ -10755,7 +10729,8 @@ var QuotationEditor = (function () {
       pendingExpAction = null;
       if (act.type === 'addButton') {
         expOverlay.setEditMode('buttons');
-        expOverlay.addButton(act.presetId || null);
+        expOverlay.addButton();
+        focusPropsPanel();
       } else if (act.type === 'addText') {
         expOverlay.setEditMode('buttons');
         if (expOverlay.addText) expOverlay.addText();
@@ -12065,22 +12040,30 @@ var QuotationEditor = (function () {
     rerender();
   }
 
-  function addButton(presetId) {
+  function addButtonElement() {
     if (!activeScene()) return;
     state.selectedElementId = null;
     state.selectedItem = null;
     state.expEditMode = 'buttons';
     state.dockOpen = false;
+    state.buttonPickerOpen = false;
+    markDirtyLocal();
     if (expOverlay) {
       refreshInspectorOnly();
       attachExperienciaInspectorHost();
       expOverlay.setEditMode('buttons');
-      expOverlay.addButton(presetId);
+      expOverlay.addButton();
+      focusPropsPanel();
       if (expOverlay.repaintInspector) expOverlay.repaintInspector();
       return;
     }
-    pendingExpAction = { type: 'addButton', presetId: presetId || null };
+    pendingExpAction = { type: 'addButton' };
     rerender();
+  }
+
+  /** @deprecated preset picker disabled — use addButtonElement */
+  function addButton(presetId) {
+    addButtonElement();
   }
 
   function addHotspot() {

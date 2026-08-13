@@ -3824,16 +3824,6 @@ var ExperienciaEngine = (function () {
       }
       ensureButtonKindConfig(ix);
     } else {
-      /* Legacy default when no preset id (existing callers / old flows). */
-      ix.style = 'icon';
-      ix.boxW = 5.5;
-      ix.boxH = 5.5;
-      ix.bgColor = '#000000';
-      ix.textColor = '#ffffff';
-      ix.borderColor = '#d1d1d1';
-      ix.borderWidth = 1;
-      ix.borderRadius = 999;
-      if (ix.color != null) delete ix.color;
       ensureButtonVisualDefaults(ix);
     }
     return buttonViewModel(state, n, ix);
