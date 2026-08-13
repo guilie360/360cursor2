@@ -543,23 +543,12 @@ var QuotationRuntime = (function () {
     return glyph || text || 'Botón';
   }
 
-  function resolveRuntimeButtonShape(b) {
-    if (!b) return null;
-    if (typeof ExperienciaEngine !== 'undefined' && ExperienciaEngine.normalizeButtonShapeKey) {
-      return ExperienciaEngine.normalizeButtonShapeKey(b.buttonShape) ||
-        ExperienciaEngine.normalizeButtonShapeKey(b.buttonShapeKind);
-    }
-    return b.buttonShape ? String(b.buttonShape).toLowerCase() : null;
-  }
-
   function runtimeApplyButtonDom(btn, b) {
     var style = b.style || 'button';
     if (style === 'chip') style = 'button';
-    var shape = resolveRuntimeButtonShape(b);
     var classes = ['qr-ix-btn', 'qr-ix-btn--' + style, 'is-box'];
     if (b.icon) classes.push('has-icon');
-    if (shape) classes.push('is-btn-shaped', 'is-btn-shape--' + shape);
-    if (shape || b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null) {
+    if (b.bgColor || b.textColor || b.borderColor || b.borderWidth != null || b.borderRadius != null) {
       classes.push('has-local-look');
     }
     btn.className = classes.join(' ');
@@ -579,19 +568,7 @@ var QuotationRuntime = (function () {
     if (b.textColor) btn.style.setProperty('--btn-local-text', runtimeCssColorToken(b.textColor));
     if (b.borderColor) btn.style.setProperty('--btn-local-border', runtimeCssColorToken(b.borderColor));
     if (b.borderWidth != null) btn.style.setProperty('--btn-local-bw', Number(b.borderWidth) + 'px');
-    if (shape === 'square') {
-      btn.style.setProperty('--btn-local-radius', '0px');
-    } else if (shape === 'rounded') {
-      if (b.borderRadius != null) {
-        btn.style.setProperty('--btn-local-radius', Number(b.borderRadius) + 'px');
-      }
-    } else if (shape === 'circle') {
-      btn.style.setProperty('--btn-local-radius', '50%');
-    } else if (shape === 'capsule') {
-      btn.style.setProperty('--btn-local-radius', '999px');
-    } else if (b.borderRadius != null) {
-      btn.style.setProperty('--btn-local-radius', Number(b.borderRadius) + 'px');
-    }
+    if (b.borderRadius != null) btn.style.setProperty('--btn-local-radius', Number(b.borderRadius) + 'px');
   }
 
   function resolveInteractionGotoTarget(ix) {

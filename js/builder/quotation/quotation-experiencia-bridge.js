@@ -392,8 +392,7 @@ var QuotationExperienciaBridge = (function () {
     var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
       ? ButtonPresets.INTERACTION_VISUAL_KEYS
       : [
-        'visualPresetId', 'style', 'icon', 'buttonShape', 'buttonShapeKind',
-        'boxW', 'boxH', 'bgColor', 'textColor',
+        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
         'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
         'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
         'hoverScale', 'hoverOpacity',
@@ -412,8 +411,7 @@ var QuotationExperienciaBridge = (function () {
     var keys = (typeof ButtonPresets !== 'undefined' && ButtonPresets.INTERACTION_VISUAL_KEYS)
       ? ButtonPresets.INTERACTION_VISUAL_KEYS
       : [
-        'visualPresetId', 'style', 'icon', 'buttonShape', 'buttonShapeKind',
-        'boxW', 'boxH', 'bgColor', 'textColor',
+        'visualPresetId', 'style', 'icon', 'boxW', 'boxH', 'bgColor', 'textColor',
         'borderColor', 'borderWidth', 'borderRadius', 'bgOpacity', 'opacity',
         'hoverEnabled', 'hoverColor', 'hoverTextColor', 'hoverTransition',
         'hoverScale', 'hoverOpacity',

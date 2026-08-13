@@ -37,7 +37,6 @@ var ExperienciaEngine = (function () {
   /** BUTTON with preset catalog or explicit local look — skip legacy chrome defaults. */
   function hasButtonLocalVisual(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return false;
-    if (hasButtonShape(ix)) return true;
     if (hasButtonVisualPreset(ix)) return true;
     if (ix.bgColor != null && ix.bgColor !== '') return true;
     if (ix.boxW != null && !isNaN(Number(ix.boxW))) return true;
@@ -1398,97 +1397,6 @@ var ExperienciaEngine = (function () {
     return { boxW: box.gw, boxH: box.gh };
   }
 
-  var BUTTON_SHAPE_KEYS = {
-    square: true,
-    rounded: true,
-    circle: true,
-    capsule: true
-  };
-
-  function normalizeButtonShapeKey(raw) {
-    if (raw == null || raw === '') return null;
-    var s = String(raw).toLowerCase();
-    if (BUTTON_SHAPE_KEYS[s]) return s;
-    var kind = String(raw).toUpperCase();
-    if (kind === 'SHAPE_RECT') return 'square';
-    if (kind === 'SHAPE_ROUND_RECT') return 'rounded';
-    if (kind === 'SHAPE_CIRCLE') return 'circle';
-    if (kind === 'SHAPE_CAPSULE') return 'capsule';
-    return null;
-  }
-
-  function buttonShapeKindFromKey(shape) {
-    shape = normalizeButtonShapeKey(shape);
-    if (shape === 'square') return 'SHAPE_RECT';
-    if (shape === 'rounded') return 'SHAPE_ROUND_RECT';
-    if (shape === 'circle') return 'SHAPE_CIRCLE';
-    if (shape === 'capsule') return 'SHAPE_CAPSULE';
-    return null;
-  }
-
-  function resolveButtonShape(ix) {
-    if (!ix) return null;
-    return normalizeButtonShapeKey(ix.buttonShape) ||
-      normalizeButtonShapeKey(ix.buttonShapeKind);
-  }
-
-  function hasButtonShape(ix) {
-    return !!(ix && isSceneButtonInteraction(ix) && resolveButtonShape(ix));
-  }
-
-  function buttonShapeDefaultBox(shape, layerW, layerH) {
-    shape = normalizeButtonShapeKey(shape);
-    if (!shape) return { boxW: 14, boxH: 8 };
-    layerW = Math.max(1, Number(layerW) || 1920);
-    layerH = Math.max(1, Number(layerH) || 1080);
-    var kind = buttonShapeKindFromKey(shape);
-    var box = shapeDefaultContentBoxMetrics(kind, layerW, layerH);
-    if (shape === 'circle') {
-      var side = Math.max(box.gw, box.gh);
-      return { boxW: side, boxH: side };
-    }
-    return { boxW: box.gw, boxH: box.gh };
-  }
-
-  function applyButtonShapeToInteraction(ix, shape, layerW, layerH) {
-    if (!ix || !isSceneButtonInteraction(ix)) return ix;
-    shape = normalizeButtonShapeKey(shape);
-    if (!shape) return ix;
-    layerW = Math.max(1, Number(layerW) || 1920);
-    layerH = Math.max(1, Number(layerH) || 1080);
-    var box = buttonShapeDefaultBox(shape, layerW, layerH);
-    ix.buttonShape = shape;
-    ix.buttonShapeKind = null;
-    ix.style = 'button';
-    ix.icon = null;
-    ix.boxW = box.boxW;
-    ix.boxH = box.boxH;
-    if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#141414';
-    if (ix.textColor == null || ix.textColor === '') ix.textColor = '#ffffff';
-    if (ix.borderColor == null || ix.borderColor === '') ix.borderColor = 'rgba(255,255,255,0.62)';
-    if (ix.borderWidth == null || isNaN(Number(ix.borderWidth))) ix.borderWidth = 1;
-    if (ix.bgOpacity == null || isNaN(Number(ix.bgOpacity))) ix.bgOpacity = 1;
-    if (shape === 'square') {
-      ix.borderRadius = 0;
-    } else if (shape === 'rounded') {
-      if (ix.borderRadius == null || isNaN(Number(ix.borderRadius))) ix.borderRadius = 16;
-    } else if (shape === 'circle') {
-      ix.boxH = ix.boxW;
-      ix.borderRadius = 50;
-    } else if (shape === 'capsule') {
-      ix.borderRadius = 999;
-    }
-    if (ix.hoverEnabled == null) ix.hoverEnabled = true;
-    if (ix.hoverColor == null || ix.hoverColor === '') ix.hoverColor = '#6fbf86';
-    if (ix.hoverTextColor == null || ix.hoverTextColor === '') ix.hoverTextColor = '#ffffff';
-    if (ix.hoverTransition == null || isNaN(Number(ix.hoverTransition))) ix.hoverTransition = 200;
-    if (ix.pressedColor == null || ix.pressedColor === '') ix.pressedColor = '#5aaa74';
-    if (ix.pressedTextColor == null || ix.pressedTextColor === '') ix.pressedTextColor = '#ffffff';
-    if (ix.pressedScale == null || isNaN(Number(ix.pressedScale))) ix.pressedScale = 0.96;
-    ensureButtonKindConfig(ix);
-    return ix;
-  }
-
   /** Global showroom controls — configured on Hero, not per-scene elements */
   var GLOBAL_SHOWROOM_ACTIONS = {
     whatsapp: true,
@@ -1786,7 +1694,6 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (black / gray border / white). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonShape(ix)) return ix;
     if (hasButtonLocalVisual(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
@@ -3631,15 +3538,6 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonVisualDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
-    if (hasButtonShape(ix)) {
-      ensureButtonKindConfig(ix);
-      if (ix.rotation != null && !isNaN(Number(ix.rotation))) {
-        ix.rotation = clampRotation(ix.rotation);
-      }
-      if (ix.color != null) delete ix.color;
-      if (ix.config && ix.config.color != null) delete ix.config.color;
-      return ix;
-    }
     if (hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
       if (ix.color != null) delete ix.color;
@@ -3945,7 +3843,6 @@ var ExperienciaEngine = (function () {
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
       buttonConfig: ix.buttonConfig && typeof ix.buttonConfig === 'object' ? ix.buttonConfig : {},
-      buttonShape: resolveButtonShape(ix),
       buttonShapeKind: ix.buttonShapeKind || null,
       visualPresetId: ix.visualPresetId || null,
       targetSceneId: (ix.buttonConfig && ix.buttonConfig.targetSceneId)
@@ -4076,10 +3973,7 @@ var ExperienciaEngine = (function () {
     return null;
   }
 
-  function addSceneButton(state, nodeId, opts) {
-    opts = opts || {};
-    var shape = normalizeButtonShapeKey(opts.buttonShape);
-    if (!shape && !opts.allowLegacy) return null;
+  function addSceneButton(state, nodeId, presetId) {
     var n = getNode(state, nodeId);
     if (!n || !isButtonsEditableNode(n)) return null;
     var menuItem = findAddElementItem('el-button') || {
@@ -4098,15 +3992,21 @@ var ExperienciaEngine = (function () {
     ix.marginY = 32;
     ix.buttonType = 'unconfigured';
     ix.buttonConfig = {};
-    ix.label = '';
-    var lw = Math.max(1, Number(opts.layerW) || 1920);
-    var lh = Math.max(1, Number(opts.layerH) || 1080);
-    if (shape) {
-      applyButtonShapeToInteraction(ix, shape, lw, lh);
+    var preset = (typeof ButtonPresets !== 'undefined' && presetId)
+      ? ButtonPresets.get(presetId)
+      : null;
+    if (preset) {
+      if (ButtonPresets.applyToInteraction) {
+        ButtonPresets.applyToInteraction(ix, preset, presetId);
+      } else {
+        ButtonPresets.applyVisuals(ix, preset);
+        ix.visualPresetId = String(presetId);
+      }
+      ensureButtonKindConfig(ix);
     } else {
       ensureButtonVisualDefaults(ix);
     }
-    return buttonViewModel(state, n, ix, lw, lh);
+    return buttonViewModel(state, n, ix);
   }
 
   /* V7.2.44 — TEXT / SHAPE free overlays (Quotation Builder). */
@@ -4321,11 +4221,6 @@ var ExperienciaEngine = (function () {
             : Math.max(1, Math.min(100, Math.round(bh * 10) / 10));
         }
       }
-      if (resolveButtonShape(ix) === 'circle' && ix.boxW != null && ix.boxH != null) {
-        var circleSide = Math.max(Number(ix.boxW) || 1, Number(ix.boxH) || 1);
-        ix.boxW = circleSide;
-        ix.boxH = circleSide;
-      }
       if (patch.locked != null) ix.locked = !!patch.locked;
       if (patch.bgColor !== undefined) {
         ix.bgColor = patch.bgColor ? String(patch.bgColor) : null;
@@ -4344,11 +4239,6 @@ var ExperienciaEngine = (function () {
       }
       if (patch.borderRadius != null) {
         ix.borderRadius = Math.max(0, Math.min(999, Number(patch.borderRadius) || 0));
-      }
-      if (patch.buttonShape !== undefined) {
-        var lwPatch = Math.max(1, Number(patch.layerW) || 1920);
-        var lhPatch = Math.max(1, Number(patch.layerH) || 1080);
-        applyButtonShapeToInteraction(ix, patch.buttonShape, lwPatch, lhPatch);
       }
       if (patch.buttonShapeKind !== undefined) {
         var shapeKind = patch.buttonShapeKind
@@ -4686,11 +4576,7 @@ var ExperienciaEngine = (function () {
       created = addSceneShape(state, nodeId, t, null, null, { skipSeed: true });
     } else {
       t = 'BUTTON';
-      var snapShapeInit = normalizeButtonShapeKey(snap.buttonShape) ||
-        normalizeButtonShapeKey(snap.buttonShapeKind);
-      created = addSceneButton(state, nodeId, snapShapeInit
-        ? { buttonShape: snapShapeInit }
-        : { allowLegacy: true });
+      created = addSceneButton(state, nodeId);
     }
     if (!created || !created.id) return null;
     var n = getNode(state, nodeId);
@@ -4704,13 +4590,7 @@ var ExperienciaEngine = (function () {
     ix.locked = !!snap.locked;
 
     if (t === 'BUTTON') {
-      var snapShape = normalizeButtonShapeKey(snap.buttonShape) ||
-        normalizeButtonShapeKey(snap.buttonShapeKind);
-      if (snapShape) {
-        applyButtonShapeToInteraction(ix, snapShape, 1920, 1080);
-      } else {
-        ensureButtonVisualDefaults(ix);
-      }
+      ensureButtonVisualDefaults(ix);
       if (snap.style != null && BUTTON_STYLES[snap.style]) ix.style = snap.style;
       if (snap.icon === null || snap.icon === '' || snap.icon === 'none') {
         ix.icon = null;
@@ -4722,11 +4602,6 @@ var ExperienciaEngine = (function () {
       ix.marginY = Math.max(0, Number(snap.marginY) || 0);
       if (snap.boxW != null) ix.boxW = Math.max(1, Math.min(100, Number(snap.boxW) || 14));
       if (snap.boxH != null) ix.boxH = Math.max(1, Math.min(100, Number(snap.boxH) || 4.5));
-      if (resolveButtonShape(ix) === 'circle' && ix.boxW != null && ix.boxH != null) {
-        var circleRestore = Math.max(Number(ix.boxW) || 1, Number(ix.boxH) || 1);
-        ix.boxW = circleRestore;
-        ix.boxH = circleRestore;
-      }
       if (snap.bgColor != null) ix.bgColor = snap.bgColor;
       if (snap.bgOpacity != null) ix.bgOpacity = Number(snap.bgOpacity);
       if (snap.textColor != null) ix.textColor = snap.textColor;
@@ -4762,10 +4637,6 @@ var ExperienciaEngine = (function () {
         } catch (eCfg) {
           ix.buttonConfig = snap.buttonConfig;
         }
-      }
-      if (snap.buttonShape !== undefined) {
-        var snapBtnShape = normalizeButtonShapeKey(snap.buttonShape);
-        if (snapBtnShape) ix.buttonShape = snapBtnShape;
       }
       if (snap.buttonShapeKind !== undefined) {
         var snapShapeKind = snap.buttonShapeKind
@@ -6117,10 +5988,6 @@ var ExperienciaEngine = (function () {
           !Array.isArray(cfg.buttonConfig)) {
         ix.buttonConfig = cfg.buttonConfig;
       }
-      if (partial.buttonShape != null) ix.buttonShape = String(partial.buttonShape);
-      else if (cfg.buttonShape != null) ix.buttonShape = String(cfg.buttonShape);
-      if (partial.buttonShapeKind != null) ix.buttonShapeKind = String(partial.buttonShapeKind);
-      else if (cfg.buttonShapeKind != null) ix.buttonShapeKind = String(cfg.buttonShapeKind);
       if (partial.hoverScale != null && !isNaN(Number(partial.hoverScale))) {
         ix.hoverScale = Number(partial.hoverScale);
       } else if (cfg.hoverScale != null && !isNaN(Number(cfg.hoverScale))) {
@@ -9732,11 +9599,6 @@ var ExperienciaEngine = (function () {
     sceneShapeGizmoMetrics: sceneShapeGizmoMetrics,
     shapeDefaultContentBoxMetrics: shapeDefaultContentBoxMetrics,
     buttonShapeBoxForKind: buttonShapeBoxForKind,
-    normalizeButtonShapeKey: normalizeButtonShapeKey,
-    resolveButtonShape: resolveButtonShape,
-    hasButtonShape: hasButtonShape,
-    applyButtonShapeToInteraction: applyButtonShapeToInteraction,
-    buttonShapeDefaultBox: buttonShapeDefaultBox,
     shapeDefaultTargetGhPct: shapeDefaultTargetGhPct,
     seedShapeContentBox: seedShapeContentBox,
     sceneShapeTileWidthFromContentWidth: sceneShapeTileWidthFromContentWidth,
