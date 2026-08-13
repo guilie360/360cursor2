@@ -37,16 +37,11 @@ var ButtonOverlayRenderer = (function () {
   }
 
   function resolveButtonHoverColor(b) {
-    if (b && b.hoverColor != null && b.hoverColor !== '') {
-      return cssToken(b.hoverColor) || '#6fbf86';
+    if (!b) return '#6fbf86';
+    if (b.hoverColor != null && b.hoverColor !== '') {
+      return cssToken(b.hoverColor) || String(b.hoverColor);
     }
-    if (b && b.visualPresetId &&
-        typeof ButtonPresets !== 'undefined' && ButtonPresets.get) {
-      var preset = ButtonPresets.get(b.visualPresetId);
-      if (preset && preset.hoverColor) {
-        return cssToken(preset.hoverColor) || '#6fbf86';
-      }
-    }
+    if (b.visualPresetId) return '';
     return '#6fbf86';
   }
 
@@ -96,7 +91,7 @@ var ButtonOverlayRenderer = (function () {
     styleBits +=
       'width:' + boxW + '%;height:' + boxH + '%;' +
       '--btn-opacity:' + btnOp + ';' +
-      '--btn-hover-color:' + hoverCol + ';' +
+      (hoverCol ? ('--btn-hover-color:' + hoverCol + ';') : '') +
       '--btn-hover-text:' + hoverTextCol + ';' +
       '--btn-hover-ms:' + hoverMs + 'ms;' +
       '--btn-pressed-color:' + pressedCol + ';' +

@@ -34,6 +34,11 @@ var ExperienciaEngine = (function () {
     return !!(ix && ix.visualPresetId);
   }
 
+  /** Block ALL default/theme mutation when a shape preset owns this button. */
+  function isButtonVisualPresetLocked(ix) {
+    return !!(ix && isSceneButtonInteraction(ix) && ix.visualPresetId);
+  }
+
   /** BUTTON with preset catalog or explicit local look — skip legacy chrome defaults. */
   function hasButtonLocalVisual(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return false;
@@ -1691,24 +1696,10 @@ var ExperienciaEngine = (function () {
     return ix;
   }
 
-  var BUTTON_SHAPE_GEOMETRY_KEYS = ['style', 'boxW', 'boxH', 'borderRadius'];
-
-  /** Re-apply shape geometry from catalog — authoritative when visualPresetId is set. */
-  function reapplyButtonShapePreset(ix) {
-    if (!ix || !hasButtonVisualPreset(ix)) return ix;
-    if (typeof ButtonPresets === 'undefined' || !ButtonPresets.get) return ix;
-    var preset = ButtonPresets.get(ix.visualPresetId);
-    if (!preset) return ix;
-    BUTTON_SHAPE_GEOMETRY_KEYS.forEach(function (key) {
-      if (preset[key] !== undefined) ix[key] = preset[key];
-    });
-    return ix;
-  }
-
   /** Project theme colors only — never geometry (boxW/boxH/borderRadius/style). */
   function applyProjectButtonThemeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonVisualPreset(ix)) return ix;
+    if (isButtonVisualPresetLocked(ix)) return ix;
     if (ix.bgColor == null || ix.bgColor === '') ix.bgColor = '#000000';
     if (ix.textColor == null || ix.textColor === '') ix.textColor = '#ffffff';
     if (ix.borderColor == null || ix.borderColor === '') ix.borderColor = '#d1d1d1';
@@ -1724,7 +1715,7 @@ var ExperienciaEngine = (function () {
   /** TAROA-like HUD chrome for generic quotation buttons (legacy, no shape preset). */
   function applyGenericButtonChromeDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix) || !ix.buttonType) return ix;
-    if (hasButtonVisualPreset(ix)) return reapplyButtonShapePreset(ix);
+    if (isButtonVisualPresetLocked(ix)) return ix;
     if (hasButtonLocalVisual(ix)) return ix;
     if (ix.style === 'chip') ix.style = 'icon';
     if (!ix.style || ix.style === 'button') ix.style = 'icon';
@@ -3496,7 +3487,10 @@ var ExperienciaEngine = (function () {
   function ensureFreeOverlayDefaults(ix) {
     if (!ix || !isSceneFreeOverlayInteraction(ix)) return ix;
     var t = String(ix.type || '').toUpperCase();
-    if (t === 'BUTTON') return ensureButtonVisualDefaults(ix);
+    if (t === 'BUTTON') {
+      if (isButtonVisualPresetLocked(ix)) return ix;
+      return ensureButtonVisualDefaults(ix);
+    }
     if (!ix.config || typeof ix.config !== 'object') ix.config = {};
     if (ix.x == null) ix.x = 50;
     if (ix.y == null) ix.y = 50;
@@ -3561,9 +3555,9 @@ var ExperienciaEngine = (function () {
 
   function ensureButtonVisualDefaults(ix) {
     if (!ix || !isSceneButtonInteraction(ix)) return ix;
+    if (isButtonVisualPresetLocked(ix)) return ix;
     if (hasButtonLocalVisual(ix)) {
       ensureButtonKindConfig(ix);
-      reapplyButtonShapePreset(ix);
       if (ix.color != null) delete ix.color;
       if (ix.config && ix.config.color != null) delete ix.config.color;
       if (ix.rotation != null && !isNaN(Number(ix.rotation))) {
@@ -3788,9 +3782,10 @@ var ExperienciaEngine = (function () {
   }
 
   function buttonViewModel(state, n, ix, layerW, layerH) {
-    if (isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix)) {
+    if (isButtonVisualPresetLocked(ix)) {
       ensureButtonKindConfig(ix);
-      reapplyButtonShapePreset(ix);
+    } else if (isSceneButtonInteraction(ix) && hasButtonLocalVisual(ix)) {
+      ensureButtonKindConfig(ix);
     } else {
       ensureFreeOverlayDefaults(ix);
       if (isSceneButtonInteraction(ix)) ensureButtonKindConfig(ix);
@@ -3865,7 +3860,9 @@ var ExperienciaEngine = (function () {
         : (hasButtonVisualPreset(ix) ? null : '#6fbf86'),
       hoverTextColor: ix.hoverTextColor || '#ffffff',
       hoverTransition: ix.hoverTransition != null ? Number(ix.hoverTransition) : 200,
-      pressedColor: ix.pressedColor || '#5aaa74',
+      pressedColor: isButtonVisualPresetLocked(ix)
+        ? (ix.pressedColor != null && ix.pressedColor !== '' ? ix.pressedColor : null)
+        : (ix.pressedColor || '#5aaa74'),
       pressedTextColor: ix.pressedTextColor || '#ffffff',
       pressedScale: ix.pressedScale != null ? Number(ix.pressedScale) : 0.96,
       buttonType: ix.buttonType || 'unconfigured',
@@ -3878,7 +3875,6 @@ var ExperienciaEngine = (function () {
       _ix: ix
     };
     if (isLocalVisualBtn) {
-      reapplyButtonShapePreset(ix);
       copyButtonPresetVisualFields(ix, vm);
       buttonPresetVisualKeys().forEach(function (key) {
         if (!Object.prototype.hasOwnProperty.call(ix, key)) return;
@@ -3890,12 +3886,26 @@ var ExperienciaEngine = (function () {
       if (ix.boxW != null) vm.boxW = Number(ix.boxW);
       if (ix.boxH != null) vm.boxH = Number(ix.boxH);
     }
+    if (isSceneButtonInteraction(ix)) {
+      try {
+        console.log('[QE btn-vm] paint', {
+          id: vm.id,
+          visualPresetId: vm.visualPresetId,
+          style: vm.style,
+          boxW: vm.boxW,
+          boxH: vm.boxH,
+          borderRadius: vm.borderRadius,
+          hoverColor: vm.hoverColor
+        });
+      } catch (eVmLog) { /* ignore */ }
+    }
     return vm;
   }
 
   function buttonHalfSizePx(ix, imageW, imageH) {
     var t = ix ? String(ix.type || '').toUpperCase() : '';
-    if (t === 'BUTTON' && !hasButtonLocalVisual(ix)) ensureButtonVisualDefaults(ix);
+    if (t === 'BUTTON' && !isButtonVisualPresetLocked(ix) && !hasButtonLocalVisual(ix)) {
+      ensureButtonVisualDefaults(ix);
     else if (t === 'TEXT' || isSceneShapeType(t)) {
       ensureFreeOverlayDefaults(ix);
     }
@@ -3925,7 +3935,8 @@ var ExperienciaEngine = (function () {
    */
   function resolveButtonLayout(ix, imageW, imageH) {
     var tLayout = ix ? String(ix.type || '').toUpperCase() : '';
-    if (tLayout === 'BUTTON' && !hasButtonLocalVisual(ix)) ensureButtonVisualDefaults(ix);
+    if (tLayout === 'BUTTON' && !isButtonVisualPresetLocked(ix) && !hasButtonLocalVisual(ix)) {
+      ensureButtonVisualDefaults(ix);
     else if (tLayout === 'TEXT' || isSceneShapeType(tLayout)) {
       ensureFreeOverlayDefaults(ix);
     }
@@ -4031,10 +4042,20 @@ var ExperienciaEngine = (function () {
         ix.visualPresetId = String(presetId);
       }
       ensureButtonKindConfig(ix);
-      reapplyButtonShapePreset(ix);
     } else {
       ensureButtonVisualDefaults(ix);
     }
+    try {
+      console.log('[QE btn-create]', {
+        presetId: presetId,
+        visualPresetId: ix.visualPresetId,
+        style: ix.style,
+        boxW: ix.boxW,
+        boxH: ix.boxH,
+        borderRadius: ix.borderRadius,
+        hoverColor: ix.hoverColor
+      });
+    } catch (eCreateLog) { /* ignore */ }
     return buttonViewModel(state, n, ix);
   }
 
@@ -4450,7 +4471,6 @@ var ExperienciaEngine = (function () {
     }
 
     ensureFreeOverlayDefaults(ix);
-    if (isSceneButtonInteraction(ix)) reapplyButtonShapePreset(ix);
     if (traceShape) {
       shapeResizeTraceEngine('4.updateSceneButton(after-ensureFreeOverlayDefaults)', {
         nodeId: nodeId,
