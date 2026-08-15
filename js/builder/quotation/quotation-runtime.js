@@ -1700,8 +1700,14 @@ var QuotationRuntime = (function () {
   function mountMiralagoSceneChrome(host) {
     if (!host || editorMode && canvasMode) return;
     if (!isMiralagoRuntime()) return;
-    var existing = host.querySelector('[data-qr-scene-chrome]');
-    if (existing) existing.remove();
+    var mountAt = presentationRootEl || host;
+    var existing = document.querySelector('[data-qr-scene-chrome]');
+    if (existing) {
+      if (existing._qrFsCleanup) {
+        try { existing._qrFsCleanup(); } catch (eOld) { /* ignore */ }
+      }
+      existing.remove();
+    }
     var chrome = document.createElement('div');
     chrome.className = 'qr-scene-chrome';
     chrome.setAttribute('data-qr-scene-chrome', '1');
@@ -1723,7 +1729,7 @@ var QuotationRuntime = (function () {
           '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
         '</svg>' +
       '</button>';
-    host.appendChild(chrome);
+    mountAt.appendChild(chrome);
     var back = chrome.querySelector('[data-qr-scene-back]');
     var fs = chrome.querySelector('[data-qr-scene-fs]');
     if (back) {
@@ -1759,7 +1765,7 @@ var QuotationRuntime = (function () {
       try { heroCanvasApi.destroy(); } catch (eHc) { /* ignore */ }
       heroCanvasApi = null;
     }
-    var chrome = stageEl.querySelector('[data-qr-scene-chrome]');
+    var chrome = document.querySelector('[data-qr-scene-chrome]');
     if (chrome && typeof chrome._qrFsCleanup === 'function') {
       try { chrome._qrFsCleanup(); } catch (eCh) { /* ignore */ }
     }
