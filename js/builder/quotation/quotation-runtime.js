@@ -1160,6 +1160,12 @@ var QuotationRuntime = (function () {
     }
 
     if (!coverHostEl || !stageEl) return;
+    var mediaFit = String(scene.mediaFit || scene.objectFit || '').trim().toLowerCase();
+    if (mediaFit === 'contain' || mediaFit === 'center') {
+      stageEl.setAttribute('data-media-fit', 'contain');
+    } else {
+      stageEl.removeAttribute('data-media-fit');
+    }
     if (ixLayerEl && ixLayerEl.parentNode === coverHostEl) {
       coverHostEl.removeChild(ixLayerEl);
       ixLayerEl = null;
@@ -1538,6 +1544,13 @@ var QuotationRuntime = (function () {
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var exploreAction = cm && cm.exploreAction ? String(cm.exploreAction).toLowerCase() : '';
         if (exploreAction === 'none' || exploreAction === 'noop') {
+          return;
+        }
+        if (exploreAction === 'goto-scene' || exploreAction === 'goto') {
+          var exploreTarget = cm && cm.exploreTargetSceneId
+            ? String(cm.exploreTargetSceneId).trim()
+            : '';
+          if (exploreTarget) goToScene(exploreTarget);
           return;
         }
         if (

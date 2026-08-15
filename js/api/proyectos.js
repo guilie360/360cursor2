@@ -870,6 +870,9 @@ var ProyectosApi = (function () {
         publicUrl: mediaUrl,
         mediaUrl: mediaUrl,
         mediaType: mediaType,
+        mediaFit: heroText(sc.mediaFit) === 'contain' || heroText(sc.mediaFit) === 'center'
+          ? 'contain'
+          : null,
         elements: sanitizeCanvasElements(sc.elements),
         interactions: sanitizeCanvasInteractions(sc.interactions),
         guidesByViewport: guidesByViewport,
@@ -1115,6 +1118,9 @@ var ProyectosApi = (function () {
     if (hc.startAction != null) out.heroContent.startAction = heroText(hc.startAction);
     if (hc.startTargetSceneId != null) {
       out.heroContent.startTargetSceneId = heroText(hc.startTargetSceneId);
+    }
+    if (hc.exploreTargetSceneId != null) {
+      out.heroContent.exploreTargetSceneId = heroText(hc.exploreTargetSceneId);
     }
     if (hc.showExplore != null) out.heroContent.showExplore = !!hc.showExplore;
     if (hc.showStart != null) out.heroContent.showStart = !!hc.showStart;

@@ -81,7 +81,8 @@ var ProjectCover = (function () {
       variant: '',
       startAction: '',
       startTargetSceneId: '',
-      exploreAction: ''
+      exploreAction: '',
+      exploreTargetSceneId: ''
     };
   }
 
@@ -601,6 +602,7 @@ var ProjectCover = (function () {
     base.startAction = String(raw.startAction || '').trim();
     base.startTargetSceneId = String(raw.startTargetSceneId || '').trim();
     base.exploreAction = String(raw.exploreAction || '').trim();
+    base.exploreTargetSceneId = String(raw.exploreTargetSceneId || '').trim();
     return base;
   }
 

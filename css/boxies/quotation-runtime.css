@@ -557,6 +557,15 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   display: block;
 }
 
+.qr-stage[data-media-fit="contain"] .hero-canvas__media.hero-renderer,
+.qr-stage[data-media-fit="contain"] .hero-canvas__media .hero-renderer__media,
+.qr-stage[data-media-fit="contain"] .qr-scene-media__img,
+.qr-stage[data-media-fit="contain"] .qr-scene-media .hero-renderer__media {
+  object-fit: contain;
+  object-position: center center;
+  background: #050505;
+}
+
 .qr-scene-media__void {
   position: absolute;
   inset: 0;
