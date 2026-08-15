@@ -1607,6 +1607,7 @@ var QuotationRuntime = (function () {
     }
 
     ProjectCover.mount(coverHostEl, model, opts);
+    stackMiralagoHeroButtons(coverHostEl);
     if (editorMode) postBoxes();
 
     /* Visitor + Builder Preview: paint interactions for the active cover scene. */
@@ -1666,6 +1667,33 @@ var QuotationRuntime = (function () {
       coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     } catch (eM) { /* ignore */ }
     return w <= 900 || (coarse && w <= 1180);
+  }
+
+  function stackMiralagoHeroButtons(root) {
+    if (!isMiralagoRuntime() || !root) return;
+    var explore = root.querySelector('[data-pc-slot="explore"]');
+    var start = root.querySelector('[data-pc-slot="start"]');
+    var row = root.querySelector('.project-cover-hero-row') ||
+      root.querySelector('.project-cover-content');
+    if (!explore || !start || !row) return;
+    var prev = root.querySelector('[data-qr-miralago-cta-stack]');
+    if (prev) prev.remove();
+    var stack = document.createElement('div');
+    stack.setAttribute('data-qr-miralago-cta-stack', '1');
+    stack.style.cssText =
+      'display:flex;flex-direction:column;align-items:center;justify-content:flex-start;' +
+      'gap:14px;width:100%;margin-top:28px;position:relative;z-index:8;';
+    var btnCss =
+      'position:relative;display:inline-flex;align-items:center;justify-content:center;' +
+      'width:min(240px,86vw);min-width:min(240px,86vw);max-width:86vw;min-height:52px;' +
+      'margin:0;left:auto;right:auto;top:auto;bottom:auto;transform:none;';
+    explore.style.cssText = (explore.getAttribute('style') || '') + ';' + btnCss;
+    start.style.cssText = (start.getAttribute('style') || '') + ';' + btnCss;
+    stack.appendChild(explore);
+    stack.appendChild(start);
+    row.appendChild(stack);
+    var oldBar = root.querySelector('.project-cover-buttons');
+    if (oldBar) oldBar.style.display = 'none';
   }
 
   function hideMiralagoDesktopOnlyNotice() {
