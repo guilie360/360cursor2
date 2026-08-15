@@ -1711,25 +1711,35 @@ var QuotationRuntime = (function () {
     var chrome = document.createElement('div');
     chrome.className = 'qr-scene-chrome';
     chrome.setAttribute('data-qr-scene-chrome', '1');
+    chrome.setAttribute('style',
+      'position:fixed;inset:0;z-index:2147483001;pointer-events:none;');
+    var btnCss =
+      'position:fixed;width:48px;height:48px;display:inline-flex;align-items:center;' +
+      'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
+      'background:rgba(0,0,0,0.72);color:#fff;border:1px solid rgba(255,255,255,0.5);' +
+      'box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 10px 24px rgba(0,0,0,0.4);' +
+      'padding:0;margin:0;';
     chrome.innerHTML =
-      '<button type="button" class="qpp__icon-btn qr-scene-chrome__back" data-qr-scene-back aria-label="Volver">' +
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' +
+      '<button type="button" class="qr-scene-chrome__back" data-qr-scene-back aria-label="Volver" style="' +
+        btnCss + 'top:88px;left:88px;">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
-      '<button type="button" class="qpp__icon-btn qpp__chrome-fs qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false">' +
-        '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
+        btnCss + 'top:88px;right:88px;">' +
+        '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
           '<path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
           '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/>' +
           '<path d="M16 21h3a2 2 0 0 0 2-2v-3"/>' +
         '</svg>' +
-        '<svg class="qpp__fs-icon qpp__fs-icon--exit" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+        '<svg class="qpp__fs-icon qpp__fs-icon--exit" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" hidden fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M8 3v3a2 2 0 0 1-2 2H3"/>' +
           '<path d="M21 8h-3a2 2 0 0 1-2-2V3"/>' +
           '<path d="M3 16h3a2 2 0 0 1 2 2v3"/>' +
           '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
         '</svg>' +
       '</button>';
-    mountAt.appendChild(chrome);
+    (document.body || mountAt).appendChild(chrome);
     var back = chrome.querySelector('[data-qr-scene-back]');
     var fs = chrome.querySelector('[data-qr-scene-fs]');
     if (back) {
@@ -1766,8 +1776,11 @@ var QuotationRuntime = (function () {
       heroCanvasApi = null;
     }
     var chrome = document.querySelector('[data-qr-scene-chrome]');
-    if (chrome && typeof chrome._qrFsCleanup === 'function') {
-      try { chrome._qrFsCleanup(); } catch (eCh) { /* ignore */ }
+    if (chrome) {
+      if (typeof chrome._qrFsCleanup === 'function') {
+        try { chrome._qrFsCleanup(); } catch (eCh) { /* ignore */ }
+      }
+      chrome.remove();
     }
     stageEl.innerHTML = '';
     sceneMediaEl = null;
