@@ -1577,6 +1577,9 @@ var QuotationRuntime = (function () {
         var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var startAction = cm && cm.startAction ? String(cm.startAction).toLowerCase() : '';
+        if (startAction === 'none' || startAction === 'noop') {
+          return;
+        }
         if (
           startAction === 'open-proposals' ||
           startAction === 'proposals' ||
@@ -1821,6 +1824,8 @@ var QuotationRuntime = (function () {
     coverHostEl = document.createElement('div');
     coverHostEl.className = 'qr-cover-host';
     coverHostEl.setAttribute('aria-hidden', 'false');
+    var coverSlug = String((bundle && bundle.project && bundle.project.slug) || '').trim().toLowerCase();
+    if (coverSlug) coverHostEl.setAttribute('data-qr-slug', coverSlug);
     host.appendChild(coverHostEl);
 
     /* Pre-mount proposals so VER PROPUESTAS is an instant in-page transition. */
