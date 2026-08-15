@@ -1183,7 +1183,7 @@ var QuotationRuntime = (function () {
       mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
     });
     void sceneApi;
-    /* No automatic chrome (e.g. «Volver») — only author-placed interactions. */
+    mountMiralagoSceneChrome(stageEl);
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
@@ -1633,11 +1633,135 @@ var QuotationRuntime = (function () {
     else if (entry) goToScene(entry.id);
   }
 
+  function projectSlug() {
+    return String((loaded && loaded.project && loaded.project.slug) || '')
+      .trim()
+      .toLowerCase();
+  }
+
+  function isMiralagoRuntime() {
+    var id = String((loaded && loaded.project && loaded.project.id) || '').toLowerCase();
+    return projectSlug() === 'miralago-propuesta' ||
+      id === '9b804c82-58a4-4f22-a921-ebf215bb7285';
+  }
+
+  function sceneDocIsFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
+  function syncMiralagoFsUi(chrome) {
+    if (!chrome) return;
+    var btn = chrome.querySelector('[data-qr-scene-fs]');
+    if (!btn) return;
+    var on = sceneDocIsFullscreen();
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? 'Salir de pantalla completa' : 'Pantalla completa');
+    var enter = btn.querySelector('.qpp__fs-icon--enter');
+    var exit = btn.querySelector('.qpp__fs-icon--exit');
+    if (enter) {
+      if (on) enter.setAttribute('hidden', '');
+      else enter.removeAttribute('hidden');
+    }
+    if (exit) {
+      if (on) exit.removeAttribute('hidden');
+      else exit.setAttribute('hidden', '');
+    }
+  }
+
+  function toggleMiralagoFullscreen() {
+    var docEl = document.documentElement;
+    if (sceneDocIsFullscreen()) {
+      var exit =
+        document.exitFullscreen ||
+        document.webkitExitFullscreen ||
+        document.msExitFullscreen;
+      if (exit) {
+        try { exit.call(document); } catch (eExit) { /* ignore */ }
+      }
+      return;
+    }
+    var req =
+      docEl.requestFullscreen ||
+      docEl.webkitRequestFullscreen ||
+      docEl.msRequestFullscreen;
+    if (req) {
+      try {
+        var p = req.call(docEl);
+        if (p && typeof p.catch === 'function') p.catch(function () { /* ignore */ });
+      } catch (eReq) { /* ignore */ }
+    }
+  }
+
+  function mountMiralagoSceneChrome(host) {
+    if (!host || editorMode && canvasMode) return;
+    if (!isMiralagoRuntime()) return;
+    var existing = host.querySelector('[data-qr-scene-chrome]');
+    if (existing) existing.remove();
+    var chrome = document.createElement('div');
+    chrome.className = 'qr-scene-chrome';
+    chrome.setAttribute('data-qr-scene-chrome', '1');
+    chrome.innerHTML =
+      '<button type="button" class="qpp__icon-btn qr-scene-chrome__back" data-qr-scene-back aria-label="Volver">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' +
+      '</button>' +
+      '<button type="button" class="qpp__icon-btn qpp__chrome-fs qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false">' +
+        '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" aria-hidden="true">' +
+          '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
+          '<path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
+          '<path d="M8 21H5a2 2 0 0 1-2-2v-3"/>' +
+          '<path d="M16 21h3a2 2 0 0 0 2-2v-3"/>' +
+        '</svg>' +
+        '<svg class="qpp__fs-icon qpp__fs-icon--exit" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+          '<path d="M8 3v3a2 2 0 0 1-2 2H3"/>' +
+          '<path d="M21 8h-3a2 2 0 0 1-2-2V3"/>' +
+          '<path d="M3 16h3a2 2 0 0 1 2 2v3"/>' +
+          '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
+        '</svg>' +
+      '</button>';
+    host.appendChild(chrome);
+    var back = chrome.querySelector('[data-qr-scene-back]');
+    var fs = chrome.querySelector('[data-qr-scene-fs]');
+    if (back) {
+      back.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        leaveStage();
+      });
+    }
+    if (fs) {
+      fs.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMiralagoFullscreen();
+        syncMiralagoFsUi(chrome);
+      });
+    }
+    function onFsChange() {
+      syncMiralagoFsUi(chrome);
+    }
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    chrome._qrFsCleanup = function () {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+    syncMiralagoFsUi(chrome);
+  }
+
   function leaveStage() {
     if (!coverHostEl || !stageEl) return;
     if (heroCanvasApi && heroCanvasApi.destroy) {
       try { heroCanvasApi.destroy(); } catch (eHc) { /* ignore */ }
       heroCanvasApi = null;
+    }
+    var chrome = stageEl.querySelector('[data-qr-scene-chrome]');
+    if (chrome && typeof chrome._qrFsCleanup === 'function') {
+      try { chrome._qrFsCleanup(); } catch (eCh) { /* ignore */ }
     }
     stageEl.innerHTML = '';
     sceneMediaEl = null;

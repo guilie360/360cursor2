@@ -719,6 +719,26 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   pointer-events: auto;
 }
 
+.qr-scene-chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+.qr-scene-chrome__back,
+.qr-scene-chrome__fs {
+  position: absolute;
+  pointer-events: auto;
+}
+.qr-scene-chrome__back {
+  top: max(16px, env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+}
+.qr-scene-chrome__fs {
+  top: max(16px, env(safe-area-inset-top, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+}
+
 /* ── V7.2.24 — Proposals picker (reuses .unit-card / .units-popup) ── */
 .qr-proposals-popup {
   z-index: 12050;
