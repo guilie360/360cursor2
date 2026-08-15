@@ -1183,7 +1183,9 @@ var QuotationRuntime = (function () {
       mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
     });
     void sceneApi;
-    mountMiralagoSceneChrome(stageEl);
+    if (resolveSceneMedia(scene, bundle)) {
+      mountMiralagoSceneChrome(stageEl);
+    }
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video && !video.paused) {
       try { video.pause(); } catch (e) {}
@@ -1712,7 +1714,7 @@ var QuotationRuntime = (function () {
     chrome.className = 'qr-scene-chrome';
     chrome.setAttribute('data-qr-scene-chrome', '1');
     chrome.setAttribute('style',
-      'position:fixed;inset:0;z-index:2147483001;pointer-events:none;');
+      'position:fixed;top:0;left:0;width:0;height:0;z-index:80;pointer-events:none;overflow:visible;');
     var btnCss =
       'position:fixed;width:48px;height:48px;display:inline-flex;align-items:center;' +
       'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
@@ -1739,7 +1741,7 @@ var QuotationRuntime = (function () {
           '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
         '</svg>' +
       '</button>';
-    (document.body || mountAt).appendChild(chrome);
+    mountAt.appendChild(chrome);
     var back = chrome.querySelector('[data-qr-scene-back]');
     var fs = chrome.querySelector('[data-qr-scene-fs]');
     if (back) {
