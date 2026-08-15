@@ -1537,6 +1537,9 @@ var QuotationRuntime = (function () {
         var focus = sceneById(bundle || loaded, activeSceneId) || entryScene(bundle || loaded);
         var cm = focus && focus.coverModel ? focus.coverModel : null;
         var exploreAction = cm && cm.exploreAction ? String(cm.exploreAction).toLowerCase() : '';
+        if (exploreAction === 'none' || exploreAction === 'noop') {
+          return;
+        }
         if (
           exploreAction === 'open-proposals-page' ||
           exploreAction === 'proposals-page' ||
