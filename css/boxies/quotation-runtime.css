@@ -273,15 +273,29 @@ body.qr-host .pa-fab,
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
   display: none !important;
 }
-.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-slot--end {
+.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-hero-row {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-slot--start,
+.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-slot--end {
+  display: flex !important;
+  position: relative;
+  width: auto;
+  max-width: 100%;
+  flex: 0 0 auto;
+  justify-content: center;
 }
 .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-buttons {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px;
-  margin-top: clamp(36px, 8vh, 72px);
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin-top: clamp(28px, 6vh, 56px);
 }
 .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
   display: inline-flex !important;
@@ -305,8 +319,13 @@ body.qr-host .pa-fab,
   pointer-events: auto !important;
   cursor: pointer;
 }
-.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"] {
-  min-width: min(200px, 42vw);
+.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
+.qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
+  min-width: min(240px, 86vw);
+  width: min(240px, 86vw);
+  max-width: 86vw;
+  position: relative;
+  margin: 0;
 }
 .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"]:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -315,23 +334,8 @@ body.qr-host .pa-fab,
 }
 @media (max-width: 900px) {
   .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-buttons {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: center;
-    width: 100%;
-    gap: 12px;
-  }
-  .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-slot,
-  .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-slot--end {
-    display: flex;
-    width: min(280px, 86vw);
-    justify-content: center;
-  }
-  .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
-  .qr-cover-host[data-qr-slug="miralago-propuesta"] .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="start"] {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
+    flex-direction: column !important;
+    gap: 14px;
   }
 }
 .qr-miralago-desktop-only {
