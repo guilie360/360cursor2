@@ -94,6 +94,7 @@ var QuotationProposalsPage = (function () {
           { label: 'Planta general de sótanos 2D', still: '✓', motion: '✓' },
           { label: 'Planta general de cubiertas 2D', still: '✓', motion: '✓' },
           { label: 'Plantas amobladas · 4–5 tipologías de apartamentos', still: '✓', motion: '✓' },
+          { label: 'Planta amoblada · áreas comunes', still: '✓', motion: '✓' },
           { label: 'Planta amoblada · oficina tipo', still: '—', motion: '✓' },
           { label: 'Planta amoblada · local comercial tipo', still: '—', motion: '✓' },
           { label: 'Planta amoblada · terraza / bar', still: '—', motion: '✓' }
@@ -104,13 +105,16 @@ var QuotationProposalsPage = (function () {
         rows: [
           { label: 'Renders realistas del proyecto', still: 'Hasta 20', motion: '30+' },
           { label: 'Conjunto, torres y fachadas', still: '✓', motion: '✓' },
+          { label: 'Acceso y llegada al proyecto', still: '✓', motion: '✓' },
           { label: 'Lobby', still: '✓', motion: '✓' },
           { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
+          { label: 'Áreas comunes', still: '✓', motion: '✓' },
+          { label: 'Espacios interiores relevantes', still: '✓', motion: '✓' },
           { label: 'Zonas comerciales', still: '—', motion: '✓' },
           { label: 'Oficina tipo', still: '—', motion: '✓' },
           { label: 'Terraza / Bar', still: '—', motion: '✓' },
-          { label: 'Vista hacia el lago', still: '—', motion: '✓' },
-          { label: 'Entorno real', still: '—', motion: '✓' },
+          { label: 'Vistas hacia el lago', still: '—', motion: '✓' },
+          { label: 'Integración con el entorno real', still: '—', motion: '✓' },
           { label: 'Fotomontajes con drone', still: '—', motion: '✓' }
         ]
       },
@@ -118,19 +122,19 @@ var QuotationProposalsPage = (function () {
         title: '06. Recorridos 360°',
         rows: [
           { label: 'Acceso / llegada al proyecto', still: '✓', motion: '✓' },
-          { label: 'Vegetación y zonas verdes', still: '—', motion: '✓' },
-          { label: 'Zonas comerciales', still: '—', motion: '✓' },
           { label: 'Lobby', still: '✓', motion: '✓' },
           { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
-          { label: 'Oficina tipo', still: '—', motion: '✓' },
+          { label: 'Zonas verdes y espacios exteriores', still: '—', motion: '✓' },
+          { label: 'Zonas comerciales', still: '—', motion: '✓' },
           { label: 'Áreas comunes', still: '—', motion: '✓' },
+          { label: 'Oficina tipo', still: '—', motion: '✓' },
           { label: 'Terraza / Bar', still: '—', motion: '✓' },
           { label: 'Vista hacia el lago', still: '—', motion: '✓' },
-          { label: 'Conjunto completo', still: '—', motion: '✓' }
+          { label: 'Recorrido ampliado por el conjunto', still: '—', motion: '✓' }
         ],
         notes: [
-          'CORE: el recorrido comienza en el acceso, conduce al lobby y continúa hacia los apartamentos modelo. La vegetación y los espacios exteriores forman parte del recorrido general, pero no se realizan recorridos específicos dentro de estas áreas.',
-          'PLUS: el recorrido desarrolla una experiencia más amplia de llegada y exploración del proyecto, incorporando vegetación, zonas verdes, zonas comerciales, áreas comunes, lobby, oficinas, apartamentos modelo, terraza/bar y puntos destacados del conjunto.'
+          'CORE: acceso → lobby → apartamentos modelo.',
+          'PLUS: recorrido ampliado por el proyecto, sus diferentes usos y espacios destacados.'
         ]
       },
       {
