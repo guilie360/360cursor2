@@ -1694,7 +1694,8 @@ body.qr-proposals-page .qpp {
 .qpp--miralago .qpp-cmp__hcell--motion,
 .qpp--miralago .qpp-cmp__h-title,
 .qpp--miralago .qpp-cmp__block-title,
-.qpp--miralago .qpp-cmp__prose-title {
+.qpp--miralago .qpp-cmp__prose-title,
+.qpp--miralago .qpp-cmp__tier {
   color: #fff;
 }
 
@@ -1704,10 +1705,18 @@ body.qr-proposals-page .qpp {
 .qpp--miralago .qpp-cmp__h-sub,
 .qpp--miralago .qpp-cmp__note,
 .qpp--miralago .qpp-cmp__prose p,
-.qpp--miralago .qpp-cmp__prose-price,
 .qpp--miralago .qpp-cmp__val--text .qpp-cmp__mark,
 .qpp--miralago .qpp-cmp__row--shared .qpp-cmp__val--text .qpp-cmp__mark {
   color: rgba(255, 255, 255, 0.58);
+}
+
+.qpp--miralago .qpp-cmp__num,
+.qpp--miralago .qpp-cmp__prose-price,
+.qpp--miralago .qpp-cmp__prose-price .qpp-cmp__num,
+.qpp--miralago .qpp-cmp__val--text .qpp-cmp__num,
+.qpp--miralago .qpp-cmp__row--shared .qpp-cmp__val--text .qpp-cmp__num {
+  color: #6f8f73;
+  font-weight: 700;
 }
 
 .qpp--miralago .qpp-cmp__block-title::after,

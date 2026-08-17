@@ -614,7 +614,23 @@ var QuotationProposalsPage = (function () {
     return 'qpp-cmp__val qpp-cmp__val--text';
   }
 
-  function buildCompareRows(rows, delayStart, labels) {
+  function formatCompareMark(value, emphasize) {
+    var raw = String(value == null ? '' : value);
+    var escaped = escapeHtml(raw);
+    if (emphasize && /[0-9]/.test(raw) && raw !== '✓') {
+      return '<strong class="qpp-cmp__num">' + escaped + '</strong>';
+    }
+    return escaped;
+  }
+
+  function formatMiralagoRichText(text) {
+    var escaped = escapeHtml(text);
+    escaped = escaped.replace(/\b(CORE|PLUS)\b/g, '<span class="qpp-cmp__tier">$1</span>');
+    escaped = escaped.replace(/(\$[\d.]+(?:\s*COP)?|\d+\+|360°|\d+)/g, '<strong class="qpp-cmp__num">$1</strong>');
+    return escaped;
+  }
+
+  function buildCompareRows(rows, delayStart, labels, emphasize) {
     labels = labels || { still: 'Still', motion: 'Motion' };
     return rows.map(function (row, index) {
       var delay = delayStart + index * 30;
@@ -624,11 +640,11 @@ var QuotationProposalsPage = (function () {
           '<div class="qpp-cmp__feature">' + escapeHtml(row.label) + '</div>' +
           '<div class="' + cellClass(row.still) + '" data-col="still">' +
             '<span class="qpp-cmp__col-label">' + escapeHtml(labels.still) + '</span>' +
-            '<span class="qpp-cmp__mark">' + escapeHtml(row.still) + '</span>' +
+            '<span class="qpp-cmp__mark">' + formatCompareMark(row.still, emphasize) + '</span>' +
           '</div>' +
           '<div class="' + cellClass(row.motion) + '" data-col="motion">' +
             '<span class="qpp-cmp__col-label">' + escapeHtml(labels.motion) + '</span>' +
-            '<span class="qpp-cmp__mark">' + escapeHtml(row.motion) + '</span>' +
+            '<span class="qpp-cmp__mark">' + formatCompareMark(row.motion, emphasize) + '</span>' +
           '</div>' +
         '</div>';
     }).join('');
@@ -638,7 +654,7 @@ var QuotationProposalsPage = (function () {
     if (!notes || !notes.length) return '';
     return notes.map(function (note, i) {
       return '<p class="qpp-cmp__note qpp-cmp__note--inline" style="--qpp-cmp-delay:' +
-        (delay + i * 40) + 'ms">' + escapeHtml(note) + '</p>';
+        (delay + i * 40) + 'ms">' + formatMiralagoRichText(note) + '</p>';
     }).join('');
   }
 
@@ -695,7 +711,7 @@ var QuotationProposalsPage = (function () {
         '<section class="qpp-cmp__block qpp-cmp__block--' + blockTone +
           '" style="--qpp-cmp-block-delay:' + blockDelay + 'ms">' +
           '<h2 class="qpp-cmp__block-title">' + escapeHtml(section.title) + '</h2>' +
-          '<div class="qpp-cmp__body">' + buildCompareRows(section.rows, delay, labels) + '</div>' +
+          '<div class="qpp-cmp__body">' + buildCompareRows(section.rows, delay, labels, true) + '</div>' +
           buildCompareNotes(section.notes, delay + section.rows.length * 30 + 40) +
         '</section>';
       delay += section.rows.length * 30 + ((section.notes && section.notes.length) || 0) * 40 + 80;
@@ -707,24 +723,24 @@ var QuotationProposalsPage = (function () {
         '<h2 class="qpp-cmp__block-title">Diferencias principales</h2>' +
         '<article class="qpp-cmp__prose">' +
           '<h3 class="qpp-cmp__prose-title">CORE</h3>' +
-          '<p class="qpp-cmp__prose-price">$9.850.000 COP</p>' +
+          '<p class="qpp-cmp__prose-price"><strong class="qpp-cmp__num">$9.850.000 COP</strong></p>' +
           '<p>Presentación enfocada en el proyecto general, lobby y apartamentos tipo.</p>' +
-          '<p>La experiencia comienza con una vista aérea de la implantación sobre Google Earth, muestra el acceso y continúa hacia el lobby y los apartamentos modelo. La vegetación, zonas verdes y espacios exteriores forman parte del proyecto y se perciben dentro de las visualizaciones generales, sin convertirse en el foco principal de la experiencia.</p>' +
+          '<p>La experiencia comienza con una vista aérea de la implantación sobre Google Earth, muestra el acceso y continúa hacia el lobby y los apartamentos modelo. La vegetación y las zonas verdes forman parte de las visualizaciones generales del proyecto, sin recorridos ni escenas específicas dedicadas a ellas.</p>' +
         '</article>' +
         '<article class="qpp-cmp__prose">' +
           '<h3 class="qpp-cmp__prose-title">PLUS</h3>' +
-          '<p class="qpp-cmp__prose-price">$14.250.000 COP</p>' +
-          '<p>Presentación completa de todo el proyecto y sus diferentes usos, con integración de drone.</p>' +
-          '<p>La experiencia comienza con vistas aéreas y fotomontajes sobre fotografías reales tomadas con drone, continúa por el acceso, vegetación, zonas verdes, zonas comerciales y espacios exteriores, y permite explorar con mayor detalle las diferentes áreas antes de llegar al lobby.</p>' +
-          '<p>Incluye además el desarrollo visual de oficinas, áreas comerciales, áreas comunes, valet parking, terraza/bar, vistas hacia el lago y las diferentes torres, tanto en los recorridos 360° como en el video principal de aproximadamente 3 minutos.</p>' +
+          '<p class="qpp-cmp__prose-price"><strong class="qpp-cmp__num">$14.250.000 COP</strong></p>' +
+          '<p>Presentación completa del proyecto y sus diferentes usos, con integración de drone.</p>' +
+          '<p>La experiencia comienza con vistas aéreas y fotomontajes sobre fotografías reales tomadas con drone. Continúa por el acceso, zonas verdes, espacios exteriores y áreas del proyecto antes de llegar al lobby, permitiendo explorar el conjunto con mayor detalle.</p>' +
+          '<p>Incluye además el desarrollo visual de oficinas, zonas comerciales, áreas comunes, valet parking, terraza/bar, vistas hacia el lago y las diferentes torres, integrando estos contenidos en los recorridos <strong class="qpp-cmp__num">360°</strong> y el video principal de aproximadamente <strong class="qpp-cmp__num">3</strong> minutos.</p>' +
         '</article>' +
       '</section>' +
       '<section class="qpp-cmp__block qpp-cmp__block--shared qpp-cmp__block--summary" style="--qpp-cmp-block-delay:' +
         (280 + MIRALAGO_COMPARE.sections.length * 90) + 'ms">' +
         '<h2 class="qpp-cmp__block-title">Diferencia fundamental</h2>' +
         '<article class="qpp-cmp__prose">' +
-          '<p>CORE presenta el proyecto de forma directa, concentrándose en sus elementos principales.</p>' +
-          '<p>PLUS amplía la experiencia para mostrar la totalidad del proyecto, su entorno, sus diferentes usos y su potencial comercial.</p>' +
+          '<p><span class="qpp-cmp__tier">CORE</span> presenta el proyecto de forma directa, concentrándose en sus elementos principales.</p>' +
+          '<p><span class="qpp-cmp__tier">PLUS</span> amplía la experiencia para mostrar el proyecto completo, su entorno, sus diferentes usos y su potencial comercial.</p>' +
         '</article>' +
       '</section>';
 
