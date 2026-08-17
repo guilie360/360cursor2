@@ -43,6 +43,32 @@ var QuotationProposalsPage = (function () {
     { label: 'Presentación por imágenes', still: '✓', motion: '✓' }
   ];
 
+  var MIRALAGO_PROJECT_ID = '9b804c82-58a4-4f22-a921-ebf215bb7285';
+
+  function isMiralagoContext(opts) {
+    opts = opts || {};
+    var slug = String(opts.slug || '').trim().toLowerCase();
+    var id = String(opts.projectId || '').trim().toLowerCase();
+    return slug === 'miralago-propuesta' || id === MIRALAGO_PROJECT_ID;
+  }
+
+  function proposalList(opts) {
+    return PROPOSALS.map(function (p) {
+      var copy = {
+        id: p.id,
+        title: p.title,
+        price: p.price,
+        blurb: p.blurb,
+        waMessage: p.waMessage
+      };
+      if (isMiralagoContext(opts)) {
+        if (p.id === 'still') copy.title = '1. CORE';
+        if (p.id === 'motion') copy.title = '2. PLUS';
+      }
+      return copy;
+    });
+  }
+
   function qs(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -295,7 +321,7 @@ var QuotationProposalsPage = (function () {
     var grid = qs('[data-qpp-grid]', root);
     if (!grid) return;
     grid.innerHTML = '';
-    PROPOSALS.forEach(function (p) {
+    proposalList(root && root._qppOpts).forEach(function (p) {
       grid.appendChild(buildCard(p));
     });
   }
@@ -714,6 +740,7 @@ var QuotationProposalsPage = (function () {
   function mount(host, opts) {
     if (!host) return null;
     opts = opts || {};
+    host._qppOpts = opts;
     host.innerHTML = markup(opts);
     bind(host, opts);
     render(host);

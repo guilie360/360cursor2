@@ -688,7 +688,8 @@ var QuotationRuntime = (function () {
           setPresentationView('hero');
         },
         audioSrc: ambientUrl,
-        projectId: loaded && loaded.project && loaded.project.id
+        projectId: loaded && loaded.project && loaded.project.id,
+        slug: loaded && loaded.project && loaded.project.slug
       });
       if (ambientUrl && typeof QuotationProposalsPage.startAmbientAudio === 'function') {
         QuotationProposalsPage.startAmbientAudio(proposalsHostEl);
