@@ -1287,6 +1287,65 @@ body.qr-proposals-page .qpp {
   animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
 }
 
+.qpp--miralago .qpp-cmp-upgrade__matrix--quote {
+  width: min(720px, 100%);
+  grid-template-rows: auto auto auto;
+  align-items: start;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__price-divider {
+  grid-row: 2 / 4;
+  min-height: 120px;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__quote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.12em;
+  width: 100%;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__quote--still {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__quote--motion {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__q-label {
+  margin-top: 0.7em;
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.qpp--miralago .qpp-cmp-upgrade__q-label:first-child {
+  margin-top: 0;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__q-amount,
+.qpp--miralago .qpp-cmp-upgrade__q-tax {
+  font-size: clamp(0.78rem, 1.5vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.qpp--miralago .qpp-cmp-upgrade__q-net {
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #6f8f73;
+}
+
 @media (max-width: 700px) {
   .qpp-cmp-upgrade__matrix {
     width: min(360px, 100%);
@@ -1317,6 +1376,26 @@ body.qr-proposals-page .qpp {
     font-size: 0.52rem;
     letter-spacing: 0.16em;
     text-indent: 0.16em;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__matrix--quote {
+    width: min(360px, 100%);
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__q-label {
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
+    text-indent: 0.1em;
+    margin-top: 0.45em;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__q-amount,
+  .qpp--miralago .qpp-cmp-upgrade__q-tax {
+    font-size: 0.62rem;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__q-net {
+    font-size: 0.82rem;
   }
 }
 

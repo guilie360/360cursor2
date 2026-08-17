@@ -270,10 +270,10 @@ var QuotationProposalsPage = (function () {
           '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> PLUS</h1>' +
           '<div class="qpp-cmp-upgrade__intro">' +
             '<p class="qpp-cmp-upgrade__intro-text">' +
-              'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión CORE</strong>.' +
+              'Mantén abierta la posibilidad de ampliar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de <strong>CORE</strong>, podrás actualizar a <strong>PLUS</strong> con una condición preferencial.' +
             '</p>' +
           '</div>' +
-          '<div class="qpp-cmp-upgrade__matrix">' +
+          '<div class="qpp-cmp-upgrade__matrix qpp-cmp-upgrade__matrix--quote">' +
             '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--still">CORE</span>' +
             '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
               '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
@@ -284,10 +284,22 @@ var QuotationProposalsPage = (function () {
             '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--still">Dentro de 15 días</span>' +
             '<span class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></span>' +
             '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--motion">Después de 15 días</span>' +
-            '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--still">$1.500.000</span>' +
-            '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--motion">$2.000.000</span>' +
-            '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--still"></span>' +
-            '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--motion"></span>' +
+            '<div class="qpp-cmp-upgrade__quote qpp-cmp-upgrade__quote--still">' +
+              '<span class="qpp-cmp-upgrade__q-label">Diferencia</span>' +
+              '<span class="qpp-cmp-upgrade__q-amount">$4.400.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-label">− 12%</span>' +
+              '<span class="qpp-cmp-upgrade__q-tax">$528.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-label">Neto</span>' +
+              '<span class="qpp-cmp-upgrade__q-net">$3.872.000 COP</span>' +
+            '</div>' +
+            '<div class="qpp-cmp-upgrade__quote qpp-cmp-upgrade__quote--motion">' +
+              '<span class="qpp-cmp-upgrade__q-label">Diferencia</span>' +
+              '<span class="qpp-cmp-upgrade__q-amount">$5.000.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-label">− 12%</span>' +
+              '<span class="qpp-cmp-upgrade__q-tax">$600.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-label">Neto</span>' +
+              '<span class="qpp-cmp-upgrade__q-net">$4.400.000 COP</span>' +
+            '</div>' +
           '</div>' +
         '</div>';
     }
