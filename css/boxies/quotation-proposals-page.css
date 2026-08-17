@@ -480,6 +480,7 @@ body.qr-proposals-page .qpp {
 .qpp__card--quote .qpp__card-face--back {
   justify-content: stretch;
   align-items: stretch;
+  overflow: hidden;
   padding: clamp(28px, 4.2vh, 44px) clamp(18px, 2.6vw, 32px);
 }
 
@@ -858,6 +859,7 @@ body.qr-proposals-page .qpp {
   .qpp__card-face {
     padding: 16px 14px;
     border-radius: 3px;
+    overflow: hidden;
   }
   .qpp__card:hover .qpp__card-face,
   .qpp__card:focus-visible .qpp__card-face {
@@ -873,20 +875,46 @@ body.qr-proposals-page .qpp {
   .qpp__card-price {
     font-size: 1.25rem;
   }
+  .qpp__card--quote .qpp__card-face--back {
+    padding: 10px 12px 8px;
+  }
+  .qpp__card--quote .qpp__card-panel--detail {
+    gap: 4px;
+  }
+  .qpp__card--quote .qpp__card-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+  }
+  .qpp__card--quote .qpp__card-title::after {
+    margin-top: 0.28em;
+    width: 52%;
+  }
+  .qpp__card--quote .qpp__quote-label {
+    margin-top: 0.42em;
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-indent: 0.1em;
+  }
+  .qpp__card--quote .qpp__quote-amount,
+  .qpp__card--quote .qpp__quote-tax,
   .qpp__card--quote .qpp__quote-net {
-    font-size: 1.05rem;
+    margin-top: 0.02em;
+  }
+  .qpp__card--quote .qpp__quote-net {
+    font-size: 0.84rem;
   }
   .qpp__card--quote .qpp__quote-amount,
   .qpp__card--quote .qpp__quote-tax {
-    font-size: 0.78rem;
-  }
-  .qpp__card--quote .qpp__quote-label {
-    font-size: 0.48rem;
-    letter-spacing: 0.12em;
-    text-indent: 0.12em;
+    font-size: 0.64rem;
   }
   .qpp__card-desc {
     font-size: 0.62rem;
+  }
+  .qpp__card--quote .qpp__card-desc {
+    font-size: 0.52rem;
+    line-height: 1.28;
+    max-width: 26em;
   }
   .qpp__card-select {
     min-height: 44px;
@@ -894,6 +922,16 @@ body.qr-proposals-page .qpp {
     font-size: 0.56rem;
     padding: 0 22px;
     border-radius: 18px;
+  }
+  .qpp__card--quote .qpp__card-select {
+    min-height: 30px;
+    height: 30px;
+    min-width: min(140px, 68%);
+    padding: 0 14px;
+    font-size: 0.46rem;
+    letter-spacing: 0.16em;
+    text-indent: 0.16em;
+    border-radius: 14px;
   }
   .qpp__hint {
     margin-top: 10px;
