@@ -493,6 +493,11 @@ body.qr-proposals-page .qpp {
   gap: clamp(10px, 1.8vh, 18px);
 }
 
+.qpp__card--quote .qpp__card-panel--confirm {
+  justify-content: center;
+  gap: clamp(16px, 2.6vh, 32px);
+}
+
 .qpp__card--quote .qpp__card-title {
   font-size: clamp(0.95rem, 1.7vw, 1.15rem);
   letter-spacing: 0.42em;
@@ -563,23 +568,12 @@ body.qr-proposals-page .qpp {
   flex: 0 0 auto;
 }
 
-.qpp__card-status {
-  margin: 0;
-  flex: 0 0 auto;
-  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(0.68rem, 1.15vw, 0.8rem);
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  line-height: 1.35;
-  color: #6ee7a0;
-  text-align: center;
-}
-
 .qpp__card-terms--quote {
   max-width: 22em;
   gap: 0.65em;
   font-size: clamp(0.72rem, 1.3vw, 0.88rem);
   color: rgba(255, 255, 255, 0.78);
+  text-align: center;
 }
 
 /* Text CTAs share the Comparar shell; only Comparar adds glow. */
@@ -898,9 +892,12 @@ body.qr-proposals-page .qpp {
   .qpp__card--quote .qpp__card-face--back {
     padding: 10px 12px 8px;
   }
-  .qpp__card--quote .qpp__card-panel--detail,
-  .qpp__card--quote .qpp__card-panel--confirm {
+  .qpp__card--quote .qpp__card-panel--detail {
     gap: 4px;
+  }
+  .qpp__card--quote .qpp__card-panel--confirm {
+    gap: 10px;
+    justify-content: center;
   }
   .qpp__card--quote .qpp__card-title {
     font-size: 0.7rem;
@@ -957,14 +954,12 @@ body.qr-proposals-page .qpp {
     line-height: 1.2;
     text-align: center;
   }
-  .qpp__card-status {
-    font-size: 0.58rem;
-  }
   .qpp__card-terms--quote {
     max-width: 24em;
     gap: 0.28em;
     font-size: 0.58rem;
     line-height: 1.3;
+    text-align: center;
   }
   .qpp__hint {
     margin-top: 10px;

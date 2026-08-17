@@ -254,7 +254,6 @@ var QuotationProposalsPage = (function () {
     var confirmHtml = quote
       ? (
           '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-          '<p class="qpp__card-status">Propuesta seleccionada.</p>' +
           '<div class="qpp__card-terms qpp__card-terms--quote">' +
             '<span>Anticipo: 50%</span>' +
             '<span>Inicio: al recibir anticipo e información</span>' +
