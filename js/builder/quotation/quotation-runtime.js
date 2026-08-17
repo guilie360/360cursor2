@@ -953,6 +953,10 @@ var QuotationRuntime = (function () {
     parentEl.innerHTML = '';
     sceneMediaEl = null;
 
+    if (isMiralagoRuntime() && scene && String(scene.id) === 'sc-miralago-massing') {
+      return paintMiralagoBocetoPdf(parentEl);
+    }
+
     var media = resolveSceneMedia(scene, bundle);
     var urlFinal = media && media.url ? media.url : null;
     console.log('[QR V7.2.64] paintSceneMedia URL final:', urlFinal);
@@ -1189,7 +1193,8 @@ var QuotationRuntime = (function () {
       mode: canvasMode ? 'builder' : (previewMode ? 'preview' : 'publish')
     });
     void sceneApi;
-    if (resolveSceneMedia(scene, bundle)) {
+    if (resolveSceneMedia(scene, bundle) ||
+        (isMiralagoRuntime() && String(scene.id) === 'sc-miralago-massing')) {
       mountMiralagoSceneChrome(stageEl);
     }
     var video = coverHostEl.querySelector('video.project-cover-video');
@@ -1659,6 +1664,29 @@ var QuotationRuntime = (function () {
     var id = String((loaded && loaded.project && loaded.project.id) || '').toLowerCase();
     return projectSlug() === 'miralago-propuesta' ||
       id === '9b804c82-58a4-4f22-a921-ebf215bb7285';
+  }
+
+  function miralagoBocetoPdfUrl() {
+    return '/assets/miralago/boceto-3d.pdf?v=ws7941#view=FitH';
+  }
+
+  function paintMiralagoBocetoPdf(parentEl) {
+    if (heroCanvasApi && heroCanvasApi.destroy) {
+      try { heroCanvasApi.destroy(); } catch (ePdf) { /* ignore */ }
+      heroCanvasApi = null;
+    }
+    var wrap = document.createElement('div');
+    wrap.className = 'qr-miralago-pdf-host';
+    wrap.setAttribute('data-qr-miralago-pdf', '1');
+    var frame = document.createElement('iframe');
+    frame.className = 'qr-miralago-pdf';
+    frame.setAttribute('title', 'Boceto 3D');
+    frame.setAttribute('aria-label', 'Boceto 3D');
+    frame.src = miralagoBocetoPdfUrl();
+    wrap.appendChild(frame);
+    parentEl.appendChild(wrap);
+    sceneMediaEl = wrap;
+    return wrap;
   }
 
   function isMiralagoNarrowViewport() {
