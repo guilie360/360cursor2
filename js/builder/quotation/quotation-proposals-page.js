@@ -208,9 +208,9 @@ var QuotationProposalsPage = (function () {
           copy.blurb = 'Presentación completa del proyecto y sus diferentes usos, con integración de drone.';
           copy.waMessage = 'Primo, me voy por PLUS';
           copy.quote = {
-            proposalAmount: '$ 13.250.000 COP',
-            taxAmount: '– $ 1.590.000',
-            netAmount: '$ 11.660.000 COP'
+            proposalAmount: '$ 14.250.000 COP',
+            taxAmount: '– $ 1.710.000',
+            netAmount: '$ 12.540.000 COP'
           };
         }
       }
@@ -256,6 +256,61 @@ var QuotationProposalsPage = (function () {
         '</div>' +
         '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
           escapeHtml(audioSrc) + '"></audio>' +
+      '</div>';
+  }
+
+  function upgradePanelHtml(opts) {
+    if (isMiralagoContext(opts)) {
+      return '' +
+        '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
+          '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> PLUS</h1>' +
+          '<div class="qpp-cmp-upgrade__intro">' +
+            '<p class="qpp-cmp-upgrade__intro-text">' +
+              'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión CORE</strong>.' +
+            '</p>' +
+          '</div>' +
+          '<div class="qpp-cmp-upgrade__matrix">' +
+            '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--still">CORE</span>' +
+            '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
+              '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
+                '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
+              '</svg>' +
+            '</span>' +
+            '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">PLUS</span>' +
+            '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--still">Dentro de 15 días</span>' +
+            '<span class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></span>' +
+            '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--motion">Después de 15 días</span>' +
+            '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--still">$1.500.000</span>' +
+            '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--motion">$2.000.000</span>' +
+            '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--still"></span>' +
+            '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--motion"></span>' +
+          '</div>' +
+        '</div>';
+    }
+    return '' +
+      '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
+        '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> MOTION</h1>' +
+        '<div class="qpp-cmp-upgrade__intro">' +
+          '<p class="qpp-cmp-upgrade__intro-text">' +
+            'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión STILL</strong>.' +
+          '</p>' +
+        '</div>' +
+        '<div class="qpp-cmp-upgrade__matrix">' +
+          '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--still">Still</span>' +
+          '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
+            '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
+              '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
+            '</svg>' +
+          '</span>' +
+          '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
+          '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--still">Dentro de 15 días</span>' +
+          '<span class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></span>' +
+          '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--motion">Después de 15 días</span>' +
+          '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--still">$1.500.000</span>' +
+          '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--motion">$2.000.000</span>' +
+          '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--still"></span>' +
+          '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--motion"></span>' +
+        '</div>' +
       '</div>';
   }
 
@@ -313,30 +368,7 @@ var QuotationProposalsPage = (function () {
               '<h1 class="qpp__title qpp-cmp__title">Comparar propuestas</h1>' +
               '<div class="qpp-cmp" data-qpp-compare-board></div>' +
             '</div>' +
-            '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
-              '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> MOTION</h1>' +
-              '<div class="qpp-cmp-upgrade__intro">' +
-                '<p class="qpp-cmp-upgrade__intro-text">' +
-                  'Mantén abierta la posibilidad de evolucionar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de la <strong>versión STILL</strong>.' +
-                '</p>' +
-              '</div>' +
-              '<div class="qpp-cmp-upgrade__matrix">' +
-                '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--still">Still</span>' +
-                '<span class="qpp-cmp-upgrade__arrow" aria-hidden="true">' +
-                  '<svg viewBox="0 0 120 16" preserveAspectRatio="xMidYMid meet">' +
-                    '<path d="M8 8H92M92 8L78 2M92 8L78 14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>' +
-                  '</svg>' +
-                '</span>' +
-                '<span class="qpp-cmp-upgrade__tier-name qpp-cmp-upgrade__tier-name--motion">Motion</span>' +
-                '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--still">Dentro de 15 días</span>' +
-                '<span class="qpp-cmp-upgrade__price-divider" aria-hidden="true"></span>' +
-                '<span class="qpp-cmp-upgrade__price-label qpp-cmp-upgrade__price-label--motion">Después de 15 días</span>' +
-                '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--still">$1.500.000</span>' +
-                '<span class="qpp-cmp-upgrade__price qpp-cmp-upgrade__price--motion">$2.000.000</span>' +
-                '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--still"></span>' +
-                '<span class="qpp-cmp-upgrade__price-rule qpp-cmp-upgrade__price-rule--motion"></span>' +
-              '</div>' +
-            '</div>' +
+            upgradePanelHtml(opts) +
           '</div>' +
           '<div class="qpp-cmp__upgrade-bar">' +
             '<button type="button" class="qpp-cmp__upgrade" data-qpp-upgrade>' +
@@ -661,7 +693,7 @@ var QuotationProposalsPage = (function () {
         '</article>' +
         '<article class="qpp-cmp__prose">' +
           '<h3 class="qpp-cmp__prose-title">PLUS</h3>' +
-          '<p class="qpp-cmp__prose-price">$13.250.000 COP</p>' +
+          '<p class="qpp-cmp__prose-price">$14.250.000 COP</p>' +
           '<p>Presentación completa de todo el proyecto y sus diferentes usos, con integración de drone.</p>' +
           '<p>La experiencia comienza con vistas aéreas y fotomontajes sobre fotografías reales tomadas con drone, continúa por el acceso, vegetación, zonas verdes, zonas comerciales y espacios exteriores, y permite explorar con mayor detalle las diferentes áreas antes de llegar al lobby.</p>' +
           '<p>Incluye además el desarrollo visual de oficinas, áreas comerciales, áreas comunes, valet parking, terraza/bar, vistas hacia el lago y las diferentes torres, tanto en los recorridos 360° como en el video principal de aproximadamente 3 minutos.</p>' +
