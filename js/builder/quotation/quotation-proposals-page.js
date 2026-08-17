@@ -251,6 +251,29 @@ var QuotationProposalsPage = (function () {
           '</div>'
         )
       : ('<span class="qpp__card-price">' + escapeHtml(price) + '</span>');
+    var confirmHtml = quote
+      ? (
+          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+          '<p class="qpp__card-status">Propuesta seleccionada.</p>' +
+          '<div class="qpp__card-terms qpp__card-terms--quote">' +
+            '<span>Anticipo: 50%</span>' +
+            '<span>Inicio: al recibir anticipo e información</span>' +
+            '<span>Entrega estimada: 4–7 semanas</span>' +
+            '<span>Vigencia: 15 días</span>' +
+          '</div>' +
+          '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
+            escapeHtml(proposal.id || '') + '">Confirmar propuesta</button>'
+        )
+      : (
+          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+          '<div class="qpp__card-terms">' +
+            '<span>Anticipo del 50%</span>' +
+            '<span>2 a 3 semanas</span>' +
+            '<span>Saldo contra entrega</span>' +
+          '</div>' +
+          '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
+            escapeHtml(proposal.id || '') + '">Voy con esta</button>'
+        );
 
     var card = document.createElement('div');
     card.className = 'qpp__card' + (quote ? ' qpp__card--quote' : '');
@@ -274,14 +297,7 @@ var QuotationProposalsPage = (function () {
               escapeHtml(proposal.id || '') + '">Seleccionar</button>' +
           '</div>' +
           '<div class="qpp__card-panel qpp__card-panel--confirm" data-qpp-panel="confirm" hidden>' +
-            '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-            '<div class="qpp__card-terms">' +
-              '<span>Anticipo del 50%</span>' +
-              '<span>2 a 3 semanas</span>' +
-              '<span>Saldo contra entrega</span>' +
-            '</div>' +
-            '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
-              escapeHtml(proposal.id || '') + '">Voy con esta</button>' +
+            confirmHtml +
           '</div>' +
         '</div>' +
       '</div>';
