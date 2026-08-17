@@ -76,14 +76,15 @@ var QuotationProposalsPage = (function () {
       {
         title: '03. Paisaje y espacios exteriores',
         rows: [
-          { label: 'Diseño y representación de vegetación, zonas verdes y espacios ecológicos', still: '✓', motion: '✓' },
+          { label: 'Vegetación y zonas verdes integradas al proyecto', still: '✓', motion: '✓' },
           { label: 'Representación en planta general / implantación', still: '✓', motion: '✓' },
-          { label: 'Vegetación integrada en renders, 360° y video', still: '✓', motion: '✓' },
-          { label: 'Desarrollo visual de zonas verdes como parte de la experiencia', still: '—', motion: '✓' }
+          { label: 'Vegetación visible en renders y video', still: '✓', motion: '✓' },
+          { label: 'Recorridos 360° por zonas verdes y exteriores', still: '—', motion: '✓' },
+          { label: 'Desarrollo visual de zonas verdes y exteriores', still: '—', motion: '✓' }
         ],
         notes: [
-          'CORE: el diseño de vegetación, zonas verdes y espacios ecológicos forma parte del proyecto y se representa en la implantación, renders, recorrido 360° y video. Estos elementos se perciben principalmente como parte del conjunto y del recorrido general, sin constituir el foco principal de las escenas.',
-          'PLUS: además de estar integrados en el proyecto y sus visualizaciones, las zonas verdes, vegetación y espacios ecológicos adquieren mayor protagonismo dentro de la experiencia, con recorridos, vistas y escenas que permiten apreciarlos con mayor detalle.'
+          'CORE: Vegetación y zonas verdes integradas en la representación general del proyecto, visibles en renders y video sin recorridos específicos.',
+          'PLUS: Incluye recorridos y visualizaciones específicas de las zonas verdes y espacios exteriores, integrándolos como parte de la experiencia del proyecto.'
         ]
       },
       {
