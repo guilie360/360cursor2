@@ -724,13 +724,13 @@ var QuotationProposalsPage = (function () {
         '<article class="qpp-cmp__prose">' +
           '<h3 class="qpp-cmp__prose-title">CORE</h3>' +
           '<p class="qpp-cmp__prose-price"><strong class="qpp-cmp__num">$9.850.000 COP</strong></p>' +
-          '<p>Presentación enfocada en el proyecto general, lobby y apartamentos tipo.</p>' +
+          '<p class="qpp-cmp__prose-lead">Presentación enfocada en el proyecto general, lobby y apartamentos tipo.</p>' +
           '<p>La experiencia comienza con una vista aérea de la implantación sobre Google Earth, muestra el acceso y continúa hacia el lobby y los apartamentos modelo. La vegetación y las zonas verdes forman parte de las visualizaciones generales del proyecto, sin recorridos ni escenas específicas dedicadas a ellas.</p>' +
         '</article>' +
         '<article class="qpp-cmp__prose">' +
           '<h3 class="qpp-cmp__prose-title">PLUS</h3>' +
           '<p class="qpp-cmp__prose-price"><strong class="qpp-cmp__num">$14.250.000 COP</strong></p>' +
-          '<p>Presentación completa del proyecto y sus diferentes usos, con integración de drone.</p>' +
+          '<p class="qpp-cmp__prose-lead">Presentación completa del proyecto y sus diferentes usos, con integración de drone.</p>' +
           '<p>La experiencia comienza con vistas aéreas y fotomontajes sobre fotografías reales tomadas con drone. Continúa por el acceso, zonas verdes, espacios exteriores y áreas del proyecto antes de llegar al lobby, permitiendo explorar el conjunto con mayor detalle.</p>' +
           '<p>Incluye además el desarrollo visual de oficinas, zonas comerciales, áreas comunes, valet parking, terraza/bar, vistas hacia el lago y las diferentes torres, integrando estos contenidos en los recorridos <strong class="qpp-cmp__num">360°</strong> y el video principal de aproximadamente <strong class="qpp-cmp__num">3</strong> minutos.</p>' +
         '</article>' +

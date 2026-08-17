@@ -1699,6 +1699,11 @@ body.qr-proposals-page .qpp {
   color: #fff;
 }
 
+.qpp--miralago .qpp-cmp__prose-lead,
+.qpp--miralago .qpp-cmp__prose p.qpp-cmp__prose-lead {
+  color: #fff;
+}
+
 .qpp--miralago .qpp-cmp__feature,
 .qpp--miralago .qpp-cmp__row--diff .qpp-cmp__feature,
 .qpp--miralago .qpp-cmp__row--shared .qpp-cmp__feature,
