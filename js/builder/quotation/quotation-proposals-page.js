@@ -703,10 +703,7 @@ var QuotationProposalsPage = (function () {
     var ariaLabel = 'Comparar';
 
     if (view === 'comparison') {
-      if (isMiralagoContext(root && root._qppOpts)) {
-        label = 'Volver';
-        ariaLabel = 'Volver a propuestas';
-      } else if (panel === 'upgrade') {
+      if (panel === 'upgrade') {
         label = 'Volver';
         ariaLabel = 'Volver a propuestas';
       } else {
@@ -736,7 +733,7 @@ var QuotationProposalsPage = (function () {
       setQppView(root, 'comparison');
       return;
     }
-    if (isMiralagoContext(root && root._qppOpts) || panel === 'upgrade') {
+    if (panel === 'upgrade') {
       setQppView(root, 'selection');
       return;
     }

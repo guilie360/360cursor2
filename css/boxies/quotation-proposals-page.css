@@ -1611,6 +1611,38 @@ body.qr-proposals-page .qpp {
   margin-bottom: 0;
 }
 
+.qpp--miralago .qpp-cmp__hcell,
+.qpp--miralago .qpp-cmp__hcell--motion,
+.qpp--miralago .qpp-cmp__h-title,
+.qpp--miralago .qpp-cmp__block-title,
+.qpp--miralago .qpp-cmp__prose-title {
+  color: #fff;
+}
+
+.qpp--miralago .qpp-cmp__feature,
+.qpp--miralago .qpp-cmp__row--diff .qpp-cmp__feature,
+.qpp--miralago .qpp-cmp__row--shared .qpp-cmp__feature,
+.qpp--miralago .qpp-cmp__h-sub,
+.qpp--miralago .qpp-cmp__note,
+.qpp--miralago .qpp-cmp__prose p,
+.qpp--miralago .qpp-cmp__prose-price,
+.qpp--miralago .qpp-cmp__val--text .qpp-cmp__mark,
+.qpp--miralago .qpp-cmp__row--shared .qpp-cmp__val--text .qpp-cmp__mark {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.qpp--miralago .qpp-cmp__block-title::after,
+.qpp--miralago .qpp-cmp__block--diff .qpp-cmp__block-title::after,
+.qpp--miralago .qpp-cmp__block--shared .qpp-cmp__block-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 42px;
+  height: 1px;
+  background: rgba(122, 75, 75, 0.85);
+}
+
 .qpp.is-cmp-animate .qpp-cmp__note {
   animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--qpp-cmp-delay, 0ms) both;
 }
