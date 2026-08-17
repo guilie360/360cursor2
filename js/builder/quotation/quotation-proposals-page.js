@@ -59,11 +59,30 @@ var QuotationProposalsPage = (function () {
         title: p.title,
         price: p.price,
         blurb: p.blurb,
-        waMessage: p.waMessage
+        waMessage: p.waMessage,
+        quote: null
       };
       if (isMiralagoContext(opts)) {
-        if (p.id === 'still') copy.title = '1. CORE';
-        if (p.id === 'motion') copy.title = '2. PLUS';
+        if (p.id === 'still') {
+          copy.title = 'CORE';
+          copy.blurb = 'Presentación enfocada en el proyecto general, lobby y apartamentos tipo.';
+          copy.waMessage = 'Primo, me voy por CORE';
+          copy.quote = {
+            proposalAmount: '$ 9.850.000 COP',
+            taxAmount: '– $ 1.182.000',
+            netAmount: '$ 8.668.000 COP'
+          };
+        }
+        if (p.id === 'motion') {
+          copy.title = 'PLUS';
+          copy.blurb = 'Presentación completa del proyecto y sus diferentes usos, con integración de drone.';
+          copy.waMessage = 'Primo, me voy por PLUS';
+          copy.quote = {
+            proposalAmount: '$ 13.250.000 COP',
+            taxAmount: '– $ 1.590.000',
+            netAmount: '$ 11.660.000 COP'
+          };
+        }
       }
       return copy;
     });
@@ -114,7 +133,7 @@ var QuotationProposalsPage = (function () {
     opts = opts || {};
     var audioSrc = String(opts.audioSrc || '').trim();
     return '' +
-      '<div class="qpp" data-qpp-root>' +
+      '<div class="qpp' + (isMiralagoContext(opts) ? ' qpp--miralago' : '') + '" data-qpp-root>' +
         '<header class="qpp__chrome">' +
           '<button type="button" class="qpp__icon-btn" data-qpp-back aria-label="Volver">' +
             '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' +
@@ -214,14 +233,27 @@ var QuotationProposalsPage = (function () {
     proposal = proposal || {};
     var title = String(proposal.title || 'Propuesta');
     var price = String(proposal.price || '');
+    var quote = proposal.quote || null;
     var waMessage = String(proposal.waMessage || ('Primo, me voy por ' + title.toUpperCase()));
     var blurbHtml = String(proposal.blurb || '')
       .split('\n')
       .map(function (line) { return escapeHtml(line); })
       .join('<br>');
+    var quoteHtml = quote
+      ? (
+          '<div class="qpp__card-quote">' +
+            '<span class="qpp__quote-label">Valor de la propuesta</span>' +
+            '<span class="qpp__quote-amount">' + escapeHtml(quote.proposalAmount) + '</span>' +
+            '<span class="qpp__quote-label">Retención en la fuente • 12%</span>' +
+            '<span class="qpp__quote-tax">' + escapeHtml(quote.taxAmount) + '</span>' +
+            '<span class="qpp__quote-label">Valor neto a recibir</span>' +
+            '<span class="qpp__quote-net">' + escapeHtml(quote.netAmount) + '</span>' +
+          '</div>'
+        )
+      : ('<span class="qpp__card-price">' + escapeHtml(price) + '</span>');
 
     var card = document.createElement('div');
-    card.className = 'qpp__card';
+    card.className = 'qpp__card' + (quote ? ' qpp__card--quote' : '');
     card.setAttribute('data-proposal', String(proposal.id || ''));
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
@@ -236,7 +268,7 @@ var QuotationProposalsPage = (function () {
         '<div class="qpp__card-face qpp__card-face--back">' +
           '<div class="qpp__card-panel qpp__card-panel--detail" data-qpp-panel="detail">' +
             '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-            '<span class="qpp__card-price">' + escapeHtml(price) + '</span>' +
+            quoteHtml +
             '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
             '<button type="button" class="qpp__card-select" data-proposal-select="' +
               escapeHtml(proposal.id || '') + '">Seleccionar</button>' +

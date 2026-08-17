@@ -477,6 +477,79 @@ body.qr-proposals-page .qpp {
   text-transform: none;
 }
 
+.qpp__card--quote .qpp__card-face--back {
+  justify-content: flex-start;
+  gap: clamp(8px, 1.2vh, 14px);
+  padding-top: clamp(18px, 2.4vh, 28px);
+  padding-bottom: clamp(16px, 2vh, 24px);
+}
+
+.qpp__card--quote .qpp__card-panel--detail {
+  gap: clamp(8px, 1.2vh, 14px);
+}
+
+.qpp__card--quote .qpp__card-title {
+  font-size: clamp(0.95rem, 1.7vw, 1.15rem);
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+}
+
+.qpp__card-quote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18em;
+  width: 100%;
+}
+
+.qpp__quote-label {
+  margin: 0.55em 0 0;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: clamp(0.52rem, 0.95vw, 0.62rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.qpp__quote-label:first-child {
+  margin-top: 0;
+}
+
+.qpp__quote-amount,
+.qpp__quote-tax,
+.qpp__quote-net {
+  margin: 0;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  color: #fff;
+  line-height: 1.15;
+}
+
+.qpp__quote-amount {
+  font-size: clamp(0.82rem, 1.5vw, 0.98rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.qpp__quote-tax {
+  font-size: clamp(0.78rem, 1.4vw, 0.92rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.qpp__quote-net {
+  font-size: clamp(1.15rem, 2.2vw, 1.55rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.qpp__card--quote .qpp__card-desc {
+  max-width: 22em;
+  margin-top: 0.2em;
+}
+
 /* Text CTAs share the Comparar shell; only Comparar adds glow. */
 .qpp__card-select,
 .qpp__compare-cta {
@@ -788,6 +861,18 @@ body.qr-proposals-page .qpp {
   }
   .qpp__card-price {
     font-size: 1.25rem;
+  }
+  .qpp__card--quote .qpp__quote-net {
+    font-size: 1.05rem;
+  }
+  .qpp__card--quote .qpp__quote-amount,
+  .qpp__card--quote .qpp__quote-tax {
+    font-size: 0.78rem;
+  }
+  .qpp__card--quote .qpp__quote-label {
+    font-size: 0.48rem;
+    letter-spacing: 0.12em;
+    text-indent: 0.12em;
   }
   .qpp__card-desc {
     font-size: 0.62rem;
