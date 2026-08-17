@@ -43,6 +43,136 @@ var QuotationProposalsPage = (function () {
     { label: 'Presentación por imágenes', still: '✓', motion: '✓' }
   ];
 
+  var MIRALAGO_COMPARE = {
+    stillLabel: 'CORE',
+    motionLabel: 'PLUS',
+    motionSub: 'Mayor alcance visual',
+    sections: [
+      {
+        title: '01. Modelado 3D y arquitectura',
+        rows: [
+          { label: 'Proyecto 3D', still: '✓', motion: '✓' },
+          { label: '4–5 tipologías de apartamentos', still: '✓', motion: '✓' },
+          { label: 'Sótanos', still: '✓', motion: '✓' },
+          { label: 'Conjunto completo', still: '✓', motion: '✓' },
+          { label: 'Entorno y exteriores', still: '✓', motion: '✓' },
+          { label: 'Diseño de fachadas', still: '✓', motion: '✓' },
+          { label: 'Torres y volumetría general', still: '✓', motion: '✓' }
+        ]
+      },
+      {
+        title: '02. Diseño de interiores',
+        rows: [
+          { label: 'Lobby', still: '✓', motion: '✓' },
+          { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
+          { label: 'Áreas comerciales', still: '—', motion: '✓' },
+          { label: 'Áreas comunes', still: '—', motion: '✓' },
+          { label: 'Terraza / Bar', still: '—', motion: '✓' },
+          { label: 'Vista hacia el lago', still: '—', motion: '✓' },
+          { label: 'Oficina tipo', still: '—', motion: '✓' },
+          { label: 'Valet Parking', still: '—', motion: '✓' }
+        ]
+      },
+      {
+        title: '03. Paisaje y espacios exteriores',
+        rows: [
+          { label: 'Diseño y representación de vegetación, zonas verdes y espacios ecológicos', still: '✓', motion: '✓' },
+          { label: 'Representación en planta general / implantación', still: '✓', motion: '✓' },
+          { label: 'Vegetación integrada en renders, 360° y video', still: '✓', motion: '✓' },
+          { label: 'Desarrollo visual de zonas verdes como parte de la experiencia', still: '—', motion: '✓' }
+        ],
+        notes: [
+          'CORE: el diseño de vegetación, zonas verdes y espacios ecológicos forma parte del proyecto y se representa en la implantación, renders, recorrido 360° y video. Estos elementos se perciben principalmente como parte del conjunto y del recorrido general, sin constituir el foco principal de las escenas.',
+          'PLUS: además de estar integrados en el proyecto y sus visualizaciones, las zonas verdes, vegetación y espacios ecológicos adquieren mayor protagonismo dentro de la experiencia, con recorridos, vistas y escenas que permiten apreciarlos con mayor detalle.'
+        ]
+      },
+      {
+        title: '04. Plantas amobladas',
+        rows: [
+          { label: 'Master Plan / planta general de implantación 2D', still: '✓', motion: '✓' },
+          { label: 'Planta general de sótanos 2D', still: '✓', motion: '✓' },
+          { label: 'Planta general de cubiertas 2D', still: '✓', motion: '✓' },
+          { label: 'Plantas amobladas · 4–5 tipologías de apartamentos', still: '✓', motion: '✓' },
+          { label: 'Planta amoblada · oficina tipo', still: '—', motion: '✓' },
+          { label: 'Planta amoblada · local comercial tipo', still: '—', motion: '✓' },
+          { label: 'Planta amoblada · terraza / bar', still: '—', motion: '✓' }
+        ]
+      },
+      {
+        title: '05. Visualización',
+        rows: [
+          { label: 'Renders realistas', still: 'Hasta 20', motion: '30+' },
+          { label: 'Fotomontajes con drone', still: '—', motion: '✓' },
+          { label: 'Integración del proyecto sobre fotografías aéreas reales', still: '—', motion: '✓' },
+          { label: 'Vistas hacia el lago y entorno real', still: '—', motion: '✓' },
+          { label: 'Áreas comerciales', still: '—', motion: '✓' },
+          { label: 'Oficina tipo', still: '—', motion: '✓' },
+          { label: 'Terraza / Bar', still: '—', motion: '✓' }
+        ]
+      },
+      {
+        title: '06. Recorridos 360°',
+        rows: [
+          { label: 'Acceso / llegada al proyecto', still: '✓', motion: '✓' },
+          { label: 'Vegetación y zonas verdes', still: '—', motion: '✓' },
+          { label: 'Zonas comerciales', still: '—', motion: '✓' },
+          { label: 'Lobby', still: '✓', motion: '✓' },
+          { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
+          { label: 'Oficina tipo', still: '—', motion: '✓' },
+          { label: 'Áreas comunes', still: '—', motion: '✓' },
+          { label: 'Terraza / Bar', still: '—', motion: '✓' },
+          { label: 'Vista hacia el lago', still: '—', motion: '✓' },
+          { label: 'Conjunto completo', still: '—', motion: '✓' }
+        ],
+        notes: [
+          'CORE: el recorrido comienza en el acceso, conduce al lobby y continúa hacia los apartamentos modelo. La vegetación y los espacios exteriores forman parte del recorrido general, pero no se realizan recorridos específicos dentro de estas áreas.',
+          'PLUS: el recorrido desarrolla una experiencia más amplia de llegada y exploración del proyecto, incorporando vegetación, zonas verdes, zonas comerciales, áreas comunes, lobby, oficinas, apartamentos modelo, terraza/bar y puntos destacados del conjunto.'
+        ]
+      },
+      {
+        title: '07. Video de presentación',
+        rows: [
+          { label: 'Video de presentación', still: '1 × aprox. 2 min', motion: '1 × aprox. 3 min' },
+          { label: 'Implantación sobre contexto geográfico · Google Earth', still: '✓', motion: '✓' },
+          { label: 'Acceso / llegada', still: '✓', motion: '✓' },
+          { label: 'Lobby', still: '✓', motion: '✓' },
+          { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
+          { label: 'Conjunto y zonas exteriores', still: '✓', motion: '✓' },
+          { label: 'Zonas verdes y espacios ecológicos', still: '✓', motion: '✓' },
+          { label: 'Zonas comerciales', still: '—', motion: '✓' },
+          { label: 'Oficina tipo', still: '—', motion: '✓' },
+          { label: 'Terraza / Bar', still: '—', motion: '✓' },
+          { label: 'Vista hacia el lago', still: '—', motion: '✓' },
+          { label: 'Entorno real', still: '—', motion: '✓' },
+          { label: 'Fotomontajes con drone', still: '—', motion: '✓' },
+          { label: 'Valet Parking', still: '—', motion: '✓' },
+          { label: 'Presentación integral de las torres', still: '—', motion: '✓' }
+        ],
+        notes: [
+          'CORE: video de aproximadamente 2 minutos, enfocado en la implantación del proyecto sobre contexto geográfico de Google Earth, seguido del acceso, lobby y apartamentos modelo. La vegetación y las zonas verdes forman parte de las visualizaciones y se perciben durante el recorrido general, sin ser un foco específico de la narrativa.',
+          'PLUS: video de aproximadamente 3 minutos concebido como una presentación integral del proyecto. Incluye vistas aéreas y fotomontajes con drone, entorno real, acceso peatonal, vegetación, zonas verdes, zonas comerciales, espacios comunes, lobby, valet parking, apartamentos, oficinas, terraza/bar, vistas hacia el lago y las diferentes torres.'
+        ]
+      },
+      {
+        title: '08. Video ads y contenido digital',
+        rows: [
+          { label: 'Material visual para uso libre en redes sociales', still: '✓', motion: '✓' },
+          { label: 'Videos ADS · 15 s', still: '—', motion: '3–5' },
+          { label: 'Imágenes adaptables para comunicación digital', still: '✓', motion: '✓' }
+        ]
+      },
+      {
+        title: '09. Brochures y material de presentación',
+        rows: [
+          { label: 'Brochure para impresión física', still: '✓', motion: '✓' },
+          { label: 'Presentación PDF para PC / web', still: '✓', motion: '✓' },
+          { label: 'Mini brochure PDF para celular', still: '✓', motion: '✓' },
+          { label: 'Integración del contenido a la web de la empresa', still: '✓', motion: '✓' }
+        ]
+      }
+    ]
+  };
+
   var MIRALAGO_PROJECT_ID = '9b804c82-58a4-4f22-a921-ebf215bb7285';
 
   function isMiralagoContext(opts) {
@@ -432,30 +562,38 @@ var QuotationProposalsPage = (function () {
     return 'qpp-cmp__val qpp-cmp__val--text';
   }
 
-  function buildCompareRows(rows, delayStart, tone) {
+  function buildCompareRows(rows, delayStart, labels) {
+    labels = labels || { still: 'Still', motion: 'Motion' };
     return rows.map(function (row, index) {
       var delay = delayStart + index * 30;
+      var tone = String(row.still) === String(row.motion) ? 'shared' : 'diff';
       return '' +
         '<div class="qpp-cmp__row qpp-cmp__row--' + tone + '" style="--qpp-cmp-delay:' + delay + 'ms">' +
           '<div class="qpp-cmp__feature">' + escapeHtml(row.label) + '</div>' +
           '<div class="' + cellClass(row.still) + '" data-col="still">' +
-            '<span class="qpp-cmp__col-label">Still</span>' +
+            '<span class="qpp-cmp__col-label">' + escapeHtml(labels.still) + '</span>' +
             '<span class="qpp-cmp__mark">' + escapeHtml(row.still) + '</span>' +
           '</div>' +
           '<div class="' + cellClass(row.motion) + '" data-col="motion">' +
-            '<span class="qpp-cmp__col-label">Motion</span>' +
+            '<span class="qpp-cmp__col-label">' + escapeHtml(labels.motion) + '</span>' +
             '<span class="qpp-cmp__mark">' + escapeHtml(row.motion) + '</span>' +
           '</div>' +
         '</div>';
     }).join('');
   }
 
-  function renderCompare(root) {
-    var board = qs('[data-qpp-compare-board]', root);
-    if (!board) return;
+  function buildCompareNotes(notes, delay) {
+    if (!notes || !notes.length) return '';
+    return notes.map(function (note, i) {
+      return '<p class="qpp-cmp__note qpp-cmp__note--inline" style="--qpp-cmp-delay:' +
+        (delay + i * 40) + 'ms">' + escapeHtml(note) + '</p>';
+    }).join('');
+  }
 
-    var diffsHtml = buildCompareRows(COMPARE_DIFFS, 280, 'diff');
-    var sharedHtml = buildCompareRows(COMPARE_SHARED, 280 + COMPARE_DIFFS.length * 30 + 180, 'shared');
+  function renderTaroaCompare(board) {
+    var labels = { still: 'Still', motion: 'Motion' };
+    var diffsHtml = buildCompareRows(COMPARE_DIFFS, 280, labels);
+    var sharedHtml = buildCompareRows(COMPARE_SHARED, 280 + COMPARE_DIFFS.length * 30 + 180, labels);
 
     board.innerHTML =
       '<div class="qpp-cmp__head">' +
@@ -482,6 +620,72 @@ var QuotationProposalsPage = (function () {
       '</p>';
   }
 
+  function renderMiralagoCompare(board) {
+    var labels = {
+      still: MIRALAGO_COMPARE.stillLabel,
+      motion: MIRALAGO_COMPARE.motionLabel
+    };
+    var delay = 280;
+    var html =
+      '<div class="qpp-cmp__head">' +
+        '<div class="qpp-cmp__hcell qpp-cmp__hcell--feature">Alcance</div>' +
+        '<div class="qpp-cmp__hcell">' + escapeHtml(labels.still) + '</div>' +
+        '<div class="qpp-cmp__hcell qpp-cmp__hcell--motion">' +
+          '<span class="qpp-cmp__h-title">' + escapeHtml(labels.motion) + '</span>' +
+          '<span class="qpp-cmp__h-sub">' + escapeHtml(MIRALAGO_COMPARE.motionSub) + '</span>' +
+        '</div>' +
+      '</div>';
+
+    MIRALAGO_COMPARE.sections.forEach(function (section, sIndex) {
+      var blockTone = sIndex === 0 ? 'diff' : 'shared';
+      var blockDelay = 220 + sIndex * 90;
+      html +=
+        '<section class="qpp-cmp__block qpp-cmp__block--' + blockTone +
+          '" style="--qpp-cmp-block-delay:' + blockDelay + 'ms">' +
+          '<h2 class="qpp-cmp__block-title">' + escapeHtml(section.title) + '</h2>' +
+          '<div class="qpp-cmp__body">' + buildCompareRows(section.rows, delay, labels) + '</div>' +
+          buildCompareNotes(section.notes, delay + section.rows.length * 30 + 40) +
+        '</section>';
+      delay += section.rows.length * 30 + ((section.notes && section.notes.length) || 0) * 40 + 80;
+    });
+
+    html +=
+      '<section class="qpp-cmp__block qpp-cmp__block--diff qpp-cmp__block--summary" style="--qpp-cmp-block-delay:' +
+        (220 + MIRALAGO_COMPARE.sections.length * 90) + 'ms">' +
+        '<h2 class="qpp-cmp__block-title">Diferencias principales</h2>' +
+        '<article class="qpp-cmp__prose">' +
+          '<h3 class="qpp-cmp__prose-title">CORE</h3>' +
+          '<p class="qpp-cmp__prose-price">$9.850.000 COP</p>' +
+          '<p>Presentación enfocada en el proyecto general, lobby y apartamentos tipo.</p>' +
+          '<p>La experiencia comienza con una vista aérea de la implantación sobre Google Earth, muestra el acceso y continúa hacia el lobby y los apartamentos modelo. La vegetación, zonas verdes y espacios exteriores forman parte del proyecto y se perciben dentro de las visualizaciones generales, sin convertirse en el foco principal de la experiencia.</p>' +
+        '</article>' +
+        '<article class="qpp-cmp__prose">' +
+          '<h3 class="qpp-cmp__prose-title">PLUS</h3>' +
+          '<p class="qpp-cmp__prose-price">$13.250.000 COP</p>' +
+          '<p>Presentación completa de todo el proyecto y sus diferentes usos, con integración de drone.</p>' +
+          '<p>La experiencia comienza con vistas aéreas y fotomontajes sobre fotografías reales tomadas con drone, continúa por el acceso, vegetación, zonas verdes, zonas comerciales y espacios exteriores, y permite explorar con mayor detalle las diferentes áreas antes de llegar al lobby.</p>' +
+          '<p>Incluye además el desarrollo visual de oficinas, áreas comerciales, áreas comunes, valet parking, terraza/bar, vistas hacia el lago y las diferentes torres, tanto en los recorridos 360° como en el video principal de aproximadamente 3 minutos.</p>' +
+        '</article>' +
+      '</section>' +
+      '<section class="qpp-cmp__block qpp-cmp__block--shared qpp-cmp__block--summary" style="--qpp-cmp-block-delay:' +
+        (280 + MIRALAGO_COMPARE.sections.length * 90) + 'ms">' +
+        '<h2 class="qpp-cmp__block-title">Diferencia fundamental</h2>' +
+        '<article class="qpp-cmp__prose">' +
+          '<p>CORE presenta el proyecto de forma directa, concentrándose en sus elementos principales.</p>' +
+          '<p>PLUS amplía la experiencia para mostrar la totalidad del proyecto, su entorno, sus diferentes usos y su potencial comercial.</p>' +
+        '</article>' +
+      '</section>';
+
+    board.innerHTML = html;
+  }
+
+  function renderCompare(root) {
+    var board = qs('[data-qpp-compare-board]', root);
+    if (!board) return;
+    if (isMiralagoContext(root && root._qppOpts)) renderMiralagoCompare(board);
+    else renderTaroaCompare(board);
+  }
+
   function retriggerCmpAnimate(root) {
     var shell = qs('[data-qpp-root]', root) || root;
     requestAnimationFrame(function () {
@@ -499,7 +703,10 @@ var QuotationProposalsPage = (function () {
     var ariaLabel = 'Comparar';
 
     if (view === 'comparison') {
-      if (panel === 'upgrade') {
+      if (isMiralagoContext(root && root._qppOpts)) {
+        label = 'Volver';
+        ariaLabel = 'Volver a propuestas';
+      } else if (panel === 'upgrade') {
         label = 'Volver';
         ariaLabel = 'Volver a propuestas';
       } else {
@@ -529,7 +736,7 @@ var QuotationProposalsPage = (function () {
       setQppView(root, 'comparison');
       return;
     }
-    if (panel === 'upgrade') {
+    if (isMiralagoContext(root && root._qppOpts) || panel === 'upgrade') {
       setQppView(root, 'selection');
       return;
     }

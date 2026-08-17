@@ -1563,6 +1563,54 @@ body.qr-proposals-page .qpp {
   opacity: 0;
 }
 
+.qpp-cmp__note--inline {
+  margin: 16px 0 0;
+  max-width: none;
+}
+
+.qpp-cmp__block--summary {
+  margin-top: clamp(44px, 8vh, 72px);
+}
+
+.qpp-cmp__prose {
+  margin: 0 0 28px;
+  max-width: 40rem;
+}
+
+.qpp-cmp__prose:last-child {
+  margin-bottom: 0;
+}
+
+.qpp-cmp__prose-title {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-indent: 0.28em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.qpp-cmp__prose-price {
+  margin: 0 0 12px;
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+
+.qpp-cmp__prose p {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.qpp-cmp__prose p:last-child {
+  margin-bottom: 0;
+}
+
 .qpp.is-cmp-animate .qpp-cmp__note {
   animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--qpp-cmp-delay, 0ms) both;
 }
