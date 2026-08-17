@@ -79,12 +79,12 @@ var QuotationProposalsPage = (function () {
           { label: 'Vegetación y zonas verdes integradas al proyecto', still: '✓', motion: '✓' },
           { label: 'Representación en planta general / implantación', still: '✓', motion: '✓' },
           { label: 'Vegetación visible en renders y video', still: '✓', motion: '✓' },
-          { label: 'Recorridos 360° por zonas verdes y exteriores', still: '—', motion: '✓' },
-          { label: 'Desarrollo visual de zonas verdes y exteriores', still: '—', motion: '✓' }
+          { label: 'Recorridos 360° por zonas verdes', still: '—', motion: '✓' },
+          { label: 'Visualización específica de zonas verdes y exteriores', still: '—', motion: '✓' }
         ],
         notes: [
-          'CORE: Vegetación y zonas verdes integradas en la representación general del proyecto, visibles en renders y video sin recorridos específicos.',
-          'PLUS: Incluye recorridos y visualizaciones específicas de las zonas verdes y espacios exteriores, integrándolos como parte de la experiencia del proyecto.'
+          'CORE: la vegetación y las zonas verdes se integran al proyecto y aparecen en renders y video como parte de las vistas generales, sin recorridos ni escenas dedicadas.',
+          'PLUS: además de lo anterior, las zonas verdes y exteriores se desarrollan visualmente como parte de la experiencia, con escenas y recorridos específicos.'
         ]
       },
       {
@@ -100,15 +100,18 @@ var QuotationProposalsPage = (function () {
         ]
       },
       {
-        title: '05. Visualización',
+        title: '05. Renders de arquitectura y espacios',
         rows: [
-          { label: 'Renders realistas', still: 'Hasta 20', motion: '30+' },
-          { label: 'Fotomontajes con drone', still: '—', motion: '✓' },
-          { label: 'Integración del proyecto sobre fotografías aéreas reales', still: '—', motion: '✓' },
-          { label: 'Vistas hacia el lago y entorno real', still: '—', motion: '✓' },
-          { label: 'Áreas comerciales', still: '—', motion: '✓' },
+          { label: 'Renders realistas del proyecto', still: 'Hasta 20', motion: '30+' },
+          { label: 'Conjunto, torres y fachadas', still: '✓', motion: '✓' },
+          { label: 'Lobby', still: '✓', motion: '✓' },
+          { label: 'Apartamentos modelo', still: '✓', motion: '✓' },
+          { label: 'Zonas comerciales', still: '—', motion: '✓' },
           { label: 'Oficina tipo', still: '—', motion: '✓' },
-          { label: 'Terraza / Bar', still: '—', motion: '✓' }
+          { label: 'Terraza / Bar', still: '—', motion: '✓' },
+          { label: 'Vista hacia el lago', still: '—', motion: '✓' },
+          { label: 'Entorno real', still: '—', motion: '✓' },
+          { label: 'Fotomontajes con drone', still: '—', motion: '✓' }
         ]
       },
       {
