@@ -881,7 +881,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 
 .qr-miralago-pdf-host--desk {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: 184px minmax(0, 1fr);
   background: #000;
 }
 
@@ -929,7 +929,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 .qr-miralago-pdf-pager {
   position: absolute;
   top: 14px;
-  left: 108px;
+  left: 200px;
   z-index: 3;
   color: rgba(255, 255, 255, 0.72);
   font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
