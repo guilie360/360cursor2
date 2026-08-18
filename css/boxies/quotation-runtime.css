@@ -338,29 +338,7 @@ body.qr-host .pa-fab,
     gap: 14px;
   }
 }
-.qr-miralago-desktop-only {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #050505;
-  padding: 24px;
-  box-sizing: border-box;
-}
-.qr-miralago-desktop-only__text {
-  margin: 0;
-  color: #fff;
-  text-align: center;
-  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
-  font-size: clamp(0.78rem, 3.6vw, 0.95rem);
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  line-height: 1.5;
-  max-width: 18em;
-}
+
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-btn[data-pc-slot="explore"],
 .qr-cover-host .project-cover.is-cover-cinematic .project-cover-buttons .project-cover-btn[data-pc-slot="explore"] {
   position: relative;
@@ -844,6 +822,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   align-items: center;
   column-gap: 16px;
   padding: 0 28px;
+  padding-bottom: env(safe-area-inset-bottom);
   box-sizing: border-box;
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -862,6 +841,23 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   text-transform: uppercase;
   pointer-events: none;
   white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .qr-scene-chrome--footer {
+    height: 64px;
+    padding: 0 16px;
+    padding-bottom: env(safe-area-inset-bottom);
+    column-gap: 8px;
+  }
+  .qr-scene-chrome--footer .qr-scene-chrome__brand {
+    font-size: 0.92rem;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+  }
+  .qr-miralago-pdf-host {
+    inset: 0 0 64px 0;
+  }
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__back,

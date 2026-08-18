@@ -1137,11 +1137,6 @@ var QuotationRuntime = (function () {
     var bundle = loaded || blankEditorBundle();
     var scene = sceneById(bundle, sceneId);
     if (!scene) return;
-    if (isMiralagoRuntime() && isMiralagoNarrowViewport() &&
-        String(scene.id) === 'sc-miralago-massing') {
-      showMiralagoDesktopOnlyNotice();
-      return;
-    }
     activeSceneId = String(scene.id);
 
     /*
@@ -1562,10 +1557,6 @@ var QuotationRuntime = (function () {
           return;
         }
         if (exploreAction === 'goto-scene' || exploreAction === 'goto') {
-          if (isMiralagoRuntime() && isMiralagoNarrowViewport()) {
-            showMiralagoDesktopOnlyNotice();
-            return;
-          }
           var exploreTarget = cm && cm.exploreTargetSceneId
             ? String(cm.exploreTargetSceneId).trim()
             : '';
@@ -1673,7 +1664,7 @@ var QuotationRuntime = (function () {
   var miralagoPdfWarmHref = '';
 
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto3d.pdf?v=ws7945';
+    return '/assets/miralago/boceto3d.pdf?v=ws7946';
   }
 
   function miralagoBocetoPdfUrl() {
@@ -1683,7 +1674,6 @@ var QuotationRuntime = (function () {
 
   function prefetchMiralagoBocetoPdf() {
     if (!isMiralagoRuntime() || editorMode && canvasMode) return;
-    if (isMiralagoNarrowViewport()) return;
     var href = miralagoBocetoPdfHref();
     if (miralagoPdfWarmHref === href && (miralagoPdfBlobUrl || document.querySelector('link[data-qr-miralago-pdf-preload]'))) {
       return;
@@ -1740,15 +1730,6 @@ var QuotationRuntime = (function () {
     return wrap;
   }
 
-  function isMiralagoNarrowViewport() {
-    var w = window.innerWidth || 0;
-    var coarse = false;
-    try {
-      coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-    } catch (eM) { /* ignore */ }
-    return w <= 900 || (coarse && w <= 1180);
-  }
-
   function stackMiralagoHeroButtons(root) {
     if (!isMiralagoRuntime() || !root) return;
     var explore = root.querySelector('[data-pc-slot="explore"]');
@@ -1774,36 +1755,6 @@ var QuotationRuntime = (function () {
     row.appendChild(stack);
     var oldBar = root.querySelector('.project-cover-buttons');
     if (oldBar) oldBar.style.display = 'none';
-  }
-
-  function hideMiralagoDesktopOnlyNotice() {
-    var note = document.querySelector('[data-qr-miralago-desktop-only]');
-    if (note) note.remove();
-  }
-
-  function showMiralagoDesktopOnlyNotice() {
-    hideMiralagoDesktopOnlyNotice();
-    var host = presentationRootEl || document.getElementById('quotationRuntimeRoot');
-    if (!host) return;
-    var note = document.createElement('div');
-    note.className = 'qr-miralago-desktop-only';
-    note.setAttribute('data-qr-miralago-desktop-only', '1');
-    note.innerHTML =
-      '<button type="button" class="qr-miralago-desktop-only__back" data-qr-desktop-back aria-label="Volver" style="' +
-        'position:fixed;top:20px;left:20px;width:48px;height:48px;display:inline-flex;' +
-        'align-items:center;justify-content:center;border-radius:999px;cursor:pointer;' +
-        'background:rgba(0,0,0,0.72);color:#fff;border:1px solid rgba(255,255,255,0.5);padding:0;">' +
-        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
-      '</button>' +
-      '<p class="qr-miralago-desktop-only__text">POR FAVOR REVISAR DESDE UN COMPUTADOR</p>';
-    host.appendChild(note);
-    var back = note.querySelector('[data-qr-desktop-back]');
-    if (back) {
-      back.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideMiralagoDesktopOnlyNotice();
-      });
-    }
   }
 
   function sceneDocIsFullscreen() {
