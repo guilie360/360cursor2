@@ -1682,7 +1682,7 @@ var QuotationRuntime = (function () {
   var miralagoPdfCleanup = null;
   var MIRALAGO_BOCETO_PAGE_COUNT = 5;
 
-  var MIRALAGO_AMBIENT_SRC = '/assets/miralago/LAGO.mp3';
+  var MIRALAGO_AMBIENT_SRC = '../assets/miralago/LAGO.mp3';
   var MIRALAGO_AMBIENT_LEVEL = 0.3;
 
   function getMiralagoAmbient() {
@@ -1692,18 +1692,31 @@ var QuotationRuntime = (function () {
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('preload', 'auto');
     audio.loop = true;
-    audio.crossOrigin = 'anonymous';
     audio.src = MIRALAGO_AMBIENT_SRC;
-    audio.volume = 1;
+    audio.volume = MIRALAGO_AMBIENT_LEVEL;
     document.body.appendChild(audio);
+
     var api = {
       audio: audio,
       ctx: null,
       gain: null,
+      source: null,
+      buffer: null,
+      bufferPromise: null,
+      bufferPlaying: false,
       hooked: false,
+      useBuffer: false,
       level: MIRALAGO_AMBIENT_LEVEL,
       listeners: []
     };
+
+    function needsBufferMix() {
+      var ua = String((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+      var iOS = /iP(hone|od|ad)/.test(ua) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return iOS || isMiralagoMuteMobile();
+    }
+
     api.notify = function () {
       api.listeners.forEach(function (fn) {
         try { fn(api.playing()); } catch (eN) { /* ignore */ }
@@ -1717,40 +1730,110 @@ var QuotationRuntime = (function () {
       };
     };
     api.playing = function () {
+      if (api.useBuffer) return !!api.bufferPlaying;
       return !!(audio && !audio.paused);
     };
+
+    function decodeBuffer(ctx, ab) {
+      return new Promise(function (resolve, reject) {
+        var settled = false;
+        function ok(buf) { if (!settled) { settled = true; resolve(buf); } }
+        function fail(err) { if (!settled) { settled = true; reject(err || new Error('decode')); } }
+        try {
+          var ret = ctx.decodeAudioData(ab, ok, fail);
+          if (ret && typeof ret.then === 'function') ret.then(ok, fail);
+        } catch (eD) { fail(eD); }
+      });
+    }
+
+    api.ensureCtx = function () {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!api.ctx) api.ctx = new AC();
+      if (!api.gain) {
+        api.gain = api.ctx.createGain();
+        api.gain.gain.value = api.level;
+        api.gain.connect(api.ctx.destination);
+      }
+      if (api.ctx.state === 'suspended') {
+        try { api.ctx.resume(); } catch (eR) { /* ignore */ }
+      }
+      return api.ctx;
+    };
+
+    api.loadBuffer = function () {
+      if (api.buffer) return Promise.resolve(api.buffer);
+      if (api.bufferPromise) return api.bufferPromise;
+      var ctx = api.ensureCtx();
+      if (!ctx) return Promise.reject(new Error('no-ac'));
+      api.bufferPromise = fetch(MIRALAGO_AMBIENT_SRC, { credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('fetch ' + res.status);
+          return res.arrayBuffer();
+        })
+        .then(function (ab) { return decodeBuffer(ctx, ab); })
+        .then(function (buf) {
+          api.buffer = buf;
+          return buf;
+        });
+      return api.bufferPromise;
+    };
+
+    api.startBuffer = function () {
+      if (!api.ctx || !api.gain || !api.buffer) return;
+      if (api.source) return;
+      api.source = api.ctx.createBufferSource();
+      api.source.buffer = api.buffer;
+      api.source.loop = true;
+      api.source.connect(api.gain);
+      api.source.start(0);
+      api.bufferPlaying = true;
+      api.notify();
+    };
+
+    api.stopBuffer = function () {
+      if (api.source) {
+        try { api.source.stop(); } catch (eS) { /* ignore */ }
+        try { api.source.disconnect(); } catch (eD) { /* ignore */ }
+        api.source = null;
+      }
+      api.bufferPlaying = false;
+    };
+
     api.ensureGraph = function () {
+      if (api.useBuffer || needsBufferMix()) {
+        api.useBuffer = true;
+        try { audio.pause(); } catch (eP) { /* ignore */ }
+        audio.muted = true;
+        api.ensureCtx();
+        api.hooked = true;
+        return;
+      }
       if (api.hooked) {
-        if (api.ctx && api.ctx.state === 'suspended') {
-          try { api.ctx.resume(); } catch (eR) { /* ignore */ }
-        }
+        api.ensureCtx();
         return;
       }
       try {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) {
+        var ctx = api.ensureCtx();
+        if (!ctx) {
           audio.volume = api.level;
           api.hooked = true;
           return;
         }
-        api.ctx = new AC();
-        var src = api.ctx.createMediaElementSource(audio);
-        api.gain = api.ctx.createGain();
-        api.gain.gain.value = api.level;
+        var src = ctx.createMediaElementSource(audio);
         src.connect(api.gain);
-        api.gain.connect(api.ctx.destination);
         api.hooked = true;
-        if (api.ctx.state === 'suspended') {
-          try { api.ctx.resume(); } catch (eR2) { /* ignore */ }
-        }
       } catch (eG) {
-        audio.volume = api.level;
+        api.useBuffer = true;
+        audio.muted = true;
+        try { audio.pause(); } catch (eP2) { /* ignore */ }
         api.hooked = true;
       }
     };
+
     api.setLevel = function (n) {
       var next = Math.max(0, Math.min(1, Number(n) || 0));
-      if (isMiralagoMuteMobile()) next = MIRALAGO_AMBIENT_LEVEL;
+      if (isMiralagoMuteMobile() || api.useBuffer) next = MIRALAGO_AMBIENT_LEVEL;
       api.level = next;
       if (api.gain) {
         try {
@@ -1759,10 +1842,11 @@ var QuotationRuntime = (function () {
         } catch (eL) {
           api.gain.gain.value = api.level;
         }
-      } else {
+      } else if (!api.useBuffer) {
         audio.volume = api.level;
       }
     };
+
     api.bindUnlock = function () {
       if (api.unlockBound) return;
       api.unlockBound = true;
@@ -1776,9 +1860,33 @@ var QuotationRuntime = (function () {
       document.addEventListener('touchstart', unlock, true);
       document.addEventListener('keydown', unlock, true);
     };
+
     api.play = function () {
       if (isMiralagoMuteMobile()) api.setLevel(MIRALAGO_AMBIENT_LEVEL);
       api.ensureGraph();
+      if (api.useBuffer) {
+        var ctx = api.ensureCtx();
+        if (!ctx) {
+          api.bindUnlock();
+          return;
+        }
+        var go = function () {
+          return api.loadBuffer().then(function () {
+            api.startBuffer();
+          }).catch(function () {
+            api.bindUnlock();
+          });
+        };
+        if (ctx.state === 'suspended') {
+          try {
+            var r = ctx.resume();
+            if (r && typeof r.then === 'function') return r.then(go).catch(go);
+          } catch (eResume) { /* ignore */ }
+        }
+        return go();
+      }
+      audio.muted = false;
+      audio.volume = 1;
       var p = audio.play();
       if (p && typeof p.catch === 'function') {
         p.catch(function () { api.bindUnlock(); });
@@ -1786,7 +1894,9 @@ var QuotationRuntime = (function () {
       api.notify();
       return p;
     };
+
     api.pause = function () {
+      api.stopBuffer();
       try { audio.pause(); } catch (eP) { /* ignore */ }
       api.notify();
     };
