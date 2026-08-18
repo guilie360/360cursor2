@@ -1679,6 +1679,7 @@ var QuotationRuntime = (function () {
   }
 
   var miralagoPdfCleanup = null;
+  var MIRALAGO_BOCETO_PAGE_COUNT = 5;
 
   var MIRALAGO_AMBIENT_SRC = '/assets/miralago/LAGO.mp3';
   var MIRALAGO_AMBIENT_LEVEL = 0.25;
@@ -1875,6 +1876,7 @@ var QuotationRuntime = (function () {
       scroller.appendChild(slot);
     }
 
+    window.setTimeout(showFirst, 4000);
     miralagoPdfCleanup = function () { /* images GC with wrap */ };
     return wrap;
   }
@@ -1975,6 +1977,7 @@ var QuotationRuntime = (function () {
       slots.forEach(function (slot) { observer.observe(slot); });
     }
 
+    window.setTimeout(showFirst, 4000);
     miralagoPdfCleanup = function () {
       if (observer) observer.disconnect();
     };
