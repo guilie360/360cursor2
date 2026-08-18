@@ -1683,7 +1683,7 @@ var QuotationRuntime = (function () {
   var MIRALAGO_BOCETO_PAGE_COUNT = 5;
 
   var MIRALAGO_AMBIENT_SRC = '/assets/miralago/LAGO.mp3';
-  var MIRALAGO_AMBIENT_LEVEL = 0.25;
+  var MIRALAGO_AMBIENT_LEVEL = 0.3;
 
   function getMiralagoAmbient() {
     if (window.__miralagoAmbient) return window.__miralagoAmbient;
@@ -1749,7 +1749,9 @@ var QuotationRuntime = (function () {
       }
     };
     api.setLevel = function (n) {
-      api.level = Math.max(0, Math.min(1, Number(n) || 0));
+      var next = Math.max(0, Math.min(1, Number(n) || 0));
+      if (isMiralagoMuteMobile()) next = MIRALAGO_AMBIENT_LEVEL;
+      api.level = next;
       if (api.gain) {
         try {
           if (api.ctx) api.gain.gain.setValueAtTime(api.level, api.ctx.currentTime);
@@ -1775,12 +1777,7 @@ var QuotationRuntime = (function () {
       document.addEventListener('keydown', unlock, true);
     };
     api.play = function () {
-      try {
-        if (isMiralagoMuteMobile()) {
-          api.pause();
-          return;
-        }
-      } catch (eMute) { /* ignore */ }
+      if (isMiralagoMuteMobile()) api.setLevel(MIRALAGO_AMBIENT_LEVEL);
       api.ensureGraph();
       var p = audio.play();
       if (p && typeof p.catch === 'function') {
@@ -1807,7 +1804,7 @@ var QuotationRuntime = (function () {
 
   function miralagoBocetoPageHref(n) {
     var pad = (n < 10 ? '0' : '') + String(n);
-    return '../assets/miralago/boceto-pages/page-' + pad + '.jpg?v=ws7969';
+    return '../assets/miralago/boceto-pages/page-' + pad + '.jpg?v=ws7970';
   }
 
   function isMiralagoPhoneViewport() {
@@ -2120,7 +2117,7 @@ var QuotationRuntime = (function () {
             '</svg>' +
           '</button>' +
           '<label class="qpp__audio-vol" aria-label="Volumen">' +
-            '<input type="range" class="qpp__audio-range" data-qr-scene-volume min="0" max="100" value="25" step="1">' +
+            '<input type="range" class="qpp__audio-range" data-qr-scene-volume min="0" max="100" value="30" step="1">' +
           '</label>' +
         '</div>' +
       '</div>';
@@ -2177,7 +2174,7 @@ var QuotationRuntime = (function () {
       }
     }
 
-    ambient.setLevel(volume ? Number(volume.value) / 100 : MIRALAGO_AMBIENT_LEVEL);
+    ambient.setLevel(isPhone() ? MIRALAGO_AMBIENT_LEVEL : (volume ? Number(volume.value) / 100 : MIRALAGO_AMBIENT_LEVEL));
     if (volume) volume.value = String(Math.round(ambient.level * 100));
     ambient.play();
     var unsub = ambient.onChange(syncUi);
@@ -2288,11 +2285,7 @@ var QuotationRuntime = (function () {
       '</button>' +
       (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
       '<div class="qr-scene-chrome__end">' +
-        (asFooter
-          ? (isMiralagoMuteMobile()
-            ? '<span class="qr-scene-chrome__fs-spacer" aria-hidden="true"></span>'
-            : miralagoSceneMusicHtml(btnCss))
-          : '') +
+        (asFooter ? miralagoSceneMusicHtml(btnCss) : '') +
         fsHtml +
       '</div>';
     mountAt.appendChild(chrome);
@@ -2323,10 +2316,7 @@ var QuotationRuntime = (function () {
       document.removeEventListener('webkitfullscreenchange', onFsChange);
     };
     syncMiralagoFsUi(chrome);
-    if (asFooter && !isMiralagoMuteMobile()) bindMiralagoSceneAudio(chrome);
-    else if (window.__miralagoAmbient) {
-      try { window.__miralagoAmbient.pause(); } catch (eMute) { /* ignore */ }
-    }
+    if (asFooter) bindMiralagoSceneAudio(chrome);
   }
 
   function leaveStage() {
