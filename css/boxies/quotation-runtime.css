@@ -875,8 +875,68 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   inset: 0 0 72px 0;
   width: 100%;
   height: auto;
-  background: #050505;
+  background: #000;
   overflow: hidden;
+}
+
+.qr-miralago-pdf-host--desk {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  background: #000;
+}
+
+.qr-miralago-pdf-rail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  overflow-y: auto;
+  background: #000;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qr-miralago-pdf-thumb {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #050505;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.qr-miralago-pdf-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.qr-miralago-pdf-thumb.is-active {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.qr-miralago-pdf-stage {
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #000;
+  -webkit-overflow-scrolling: touch;
+}
+
+.qr-miralago-pdf-pager {
+  position: absolute;
+  top: 14px;
+  left: 108px;
+  z-index: 3;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  pointer-events: none;
 }
 
 .qr-miralago-pdf {
@@ -884,7 +944,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #050505;
+  background: #000;
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__fs-spacer {
@@ -910,7 +970,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   display: flex;
   justify-content: center;
   line-height: 0;
-  background: #050505;
+  background: #000;
 }
 
 .qr-miralago-pdf-page {
@@ -928,7 +988,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: #050505;
+  background: #000;
   pointer-events: none;
   transition: opacity 280ms ease;
 }
