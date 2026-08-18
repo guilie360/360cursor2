@@ -756,7 +756,16 @@ var QuotationProposalsPage = (function () {
           '<p><span class="qpp-cmp__tier">CORE</span> presenta el proyecto de forma directa, concentrándose en sus elementos principales.</p>' +
           '<p><span class="qpp-cmp__tier">PLUS</span> amplía la experiencia para mostrar el proyecto completo, su entorno, sus diferentes usos y su potencial comercial.</p>' +
         '</article>' +
-      '</section>';
+      '</section>' +
+      '<div class="qpp-cmp__cta-arrow" aria-hidden="true">' +
+        '<p class="qpp-cmp__cta-arrow-label">UPGRADE <span class="qpp-cmp__cta-arrow-inline">➤</span> PLUS</p>' +
+        '<div class="qpp-cmp__cta-arrow-track">' +
+          '<span class="qpp-cmp__cta-arrow-line"></span>' +
+          '<svg class="qpp-cmp__cta-arrow-head" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M6 9l6 7 6-7"/>' +
+          '</svg>' +
+        '</div>' +
+      '</div>';
 
     board.innerHTML = html;
   }

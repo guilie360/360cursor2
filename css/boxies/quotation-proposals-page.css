@@ -1766,6 +1766,96 @@ body.qr-proposals-page .qpp {
   animation: qpp-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) var(--qpp-cmp-delay, 0ms) both;
 }
 
+.qpp--miralago .qpp-cmp__cta-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: clamp(36px, 7vh, 72px) 0 0;
+  min-height: clamp(160px, 34vh, 320px);
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.qpp--miralago .qpp-cmp__cta-arrow-label {
+  margin: 0 0 18px;
+  color: #fff;
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: clamp(0.78rem, 1.6vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.qpp--miralago .qpp-cmp__cta-arrow-inline {
+  display: inline-block;
+  margin: 0 0.08em;
+  letter-spacing: 0;
+  text-indent: 0;
+  font-weight: 400;
+}
+
+.qpp--miralago .qpp-cmp__cta-arrow-track {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  width: 22px;
+  min-height: 96px;
+}
+
+.qpp--miralago .qpp-cmp__cta-arrow-line {
+  display: block;
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 56px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.42) 100%
+  );
+  transform-origin: top center;
+  animation: qpp-cta-arrow-draw 1.35s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.qpp--miralago .qpp-cmp__cta-arrow-head {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin-top: -4px;
+  color: rgba(255, 255, 255, 0.72);
+  animation: qpp-cta-arrow-nudge 1.85s ease-in-out 1.2s infinite;
+}
+
+@keyframes qpp-cta-arrow-draw {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes qpp-cta-arrow-nudge {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(7px); opacity: 1; }
+}
+
+@media (min-width: 1024px) {
+  .qpp--miralago .qpp-cmp__cta-arrow {
+    min-height: clamp(180px, 28vh, 300px);
+    padding-bottom: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qpp--miralago .qpp-cmp__cta-arrow-line,
+  .qpp--miralago .qpp-cmp__cta-arrow-head {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 .qpp-cmp__upgrade-bar {
   flex: 0 0 auto;
   position: relative;
