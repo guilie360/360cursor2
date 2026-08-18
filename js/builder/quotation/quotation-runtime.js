@@ -1680,7 +1680,114 @@ var QuotationRuntime = (function () {
 
   var miralagoPdfCleanup = null;
 
-  var MIRALAGO_BOCETO_PAGE_COUNT = 5;
+  var MIRALAGO_AMBIENT_SRC = '/assets/miralago/LAGO.mp3';
+  var MIRALAGO_AMBIENT_LEVEL = 0.25;
+
+  function getMiralagoAmbient() {
+    if (window.__miralagoAmbient) return window.__miralagoAmbient;
+    var audio = document.createElement('audio');
+    audio.setAttribute('data-qr-miralago-ambient', '1');
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('preload', 'auto');
+    audio.loop = true;
+    audio.crossOrigin = 'anonymous';
+    audio.src = MIRALAGO_AMBIENT_SRC;
+    audio.volume = 1;
+    document.body.appendChild(audio);
+    var api = {
+      audio: audio,
+      ctx: null,
+      gain: null,
+      hooked: false,
+      level: MIRALAGO_AMBIENT_LEVEL,
+      listeners: []
+    };
+    api.notify = function () {
+      api.listeners.forEach(function (fn) {
+        try { fn(api.playing()); } catch (eN) { /* ignore */ }
+      });
+    };
+    api.onChange = function (fn) {
+      if (typeof fn !== 'function') return function () {};
+      api.listeners.push(fn);
+      return function () {
+        api.listeners = api.listeners.filter(function (x) { return x !== fn; });
+      };
+    };
+    api.playing = function () {
+      return !!(audio && !audio.paused);
+    };
+    api.ensureGraph = function () {
+      if (api.hooked) {
+        if (api.ctx && api.ctx.state === 'suspended') {
+          try { api.ctx.resume(); } catch (eR) { /* ignore */ }
+        }
+        return;
+      }
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) {
+          audio.volume = api.level;
+          api.hooked = true;
+          return;
+        }
+        api.ctx = new AC();
+        var src = api.ctx.createMediaElementSource(audio);
+        api.gain = api.ctx.createGain();
+        api.gain.gain.value = api.level;
+        src.connect(api.gain);
+        api.gain.connect(api.ctx.destination);
+        api.hooked = true;
+        if (api.ctx.state === 'suspended') {
+          try { api.ctx.resume(); } catch (eR2) { /* ignore */ }
+        }
+      } catch (eG) {
+        audio.volume = api.level;
+        api.hooked = true;
+      }
+    };
+    api.setLevel = function (n) {
+      api.level = Math.max(0, Math.min(1, Number(n) || 0));
+      if (api.gain) api.gain.gain.value = api.level;
+      else audio.volume = api.level;
+    };
+    api.bindUnlock = function () {
+      if (api.unlockBound) return;
+      api.unlockBound = true;
+      var unlock = function () {
+        api.play();
+        document.removeEventListener('pointerdown', unlock, true);
+        document.removeEventListener('touchstart', unlock, true);
+        document.removeEventListener('keydown', unlock, true);
+      };
+      document.addEventListener('pointerdown', unlock, true);
+      document.addEventListener('touchstart', unlock, true);
+      document.addEventListener('keydown', unlock, true);
+    };
+    api.play = function () {
+      api.ensureGraph();
+      var p = audio.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(function () { api.bindUnlock(); });
+      }
+      api.notify();
+      return p;
+    };
+    api.pause = function () {
+      try { audio.pause(); } catch (eP) { /* ignore */ }
+      api.notify();
+    };
+    api.toggle = function () {
+      if (api.playing()) api.pause();
+      else api.play();
+      return api.playing();
+    };
+    audio.addEventListener('play', api.notify);
+    audio.addEventListener('pause', api.notify);
+    window.__miralagoAmbient = api;
+    return api;
+  }
+  window.getMiralagoAmbient = getMiralagoAmbient;
 
   function miralagoBocetoPageHref(n) {
     var pad = (n < 10 ? '0' : '') + String(n);
@@ -1985,21 +2092,20 @@ var QuotationRuntime = (function () {
             '</svg>' +
           '</button>' +
           '<label class="qpp__audio-vol" aria-label="Volumen">' +
-            '<input type="range" class="qpp__audio-range" data-qr-scene-volume min="0" max="100" value="50" step="1">' +
+            '<input type="range" class="qpp__audio-range" data-qr-scene-volume min="0" max="100" value="25" step="1">' +
           '</label>' +
         '</div>' +
-        '<audio data-qr-scene-audio preload="auto" loop playsinline src="../assets/miralago/LAGO.mp3"></audio>' +
       '</div>';
   }
 
   function bindMiralagoSceneAudio(chrome) {
-    var audio = chrome.querySelector('[data-qr-scene-audio]');
+    var ambient = getMiralagoAmbient();
     var musicBtn = chrome.querySelector('[data-qr-scene-music]');
     var toggle = chrome.querySelector('[data-qr-scene-audio-toggle]');
     var volume = chrome.querySelector('[data-qr-scene-volume]');
     var wrap = chrome.querySelector('[data-qr-scene-audio-wrap]');
     var panel = chrome.querySelector('[data-qr-scene-audio-panel]');
-    if (!audio || !musicBtn) return;
+    if (!musicBtn) return;
 
     function isPhone() {
       try {
@@ -2010,7 +2116,7 @@ var QuotationRuntime = (function () {
     }
 
     function syncUi() {
-      var playing = !audio.paused;
+      var playing = ambient.playing();
       musicBtn.classList.toggle('is-active', playing);
       if (toggle) {
         toggle.classList.toggle('is-playing', playing);
@@ -2043,47 +2149,34 @@ var QuotationRuntime = (function () {
       }
     }
 
-    function play() {
-      var p = audio.play();
-      if (p && typeof p.then === 'function') {
-        p.then(syncUi).catch(function () { /* blocked */ });
-      }
-      syncUi();
-    }
-
-    audio.volume = 0.5;
-    if (volume) volume.value = '50';
-    play();
+    ambient.setLevel(volume ? Number(volume.value) / 100 : MIRALAGO_AMBIENT_LEVEL);
+    if (volume) volume.value = String(Math.round(ambient.level * 100));
+    ambient.play();
+    var unsub = ambient.onChange(syncUi);
+    syncUi();
 
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      if (isPhone()) {
-        setPanel(false);
-        if (audio.paused) play();
-        else { audio.pause(); syncUi(); }
-        return;
-      }
-      setPanel(!(panel && !panel.hidden));
+      setPanel(false);
+      ambient.toggle();
+      syncUi();
     });
 
     if (toggle) {
       toggle.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (audio.paused) play();
-        else { audio.pause(); syncUi(); }
+        ambient.toggle();
+        syncUi();
       });
     }
     if (volume) {
       volume.addEventListener('input', function () {
-        audio.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+        ambient.setLevel(Number(volume.value) / 100);
       });
       volume.addEventListener('click', function (eVol) { eVol.stopPropagation(); });
     }
-    audio.addEventListener('play', syncUi);
-    audio.addEventListener('pause', syncUi);
-    syncUi();
 
     function onDocClick(e) {
       if (!wrap || !wrap.classList.contains('is-audio-open')) return;
@@ -2094,7 +2187,7 @@ var QuotationRuntime = (function () {
     var prevCleanup = chrome._qrFsCleanup;
     chrome._qrFsCleanup = function () {
       document.removeEventListener('click', onDocClick);
-      try { audio.pause(); } catch (eP) { /* ignore */ }
+      if (typeof unsub === 'function') unsub();
       if (typeof prevCleanup === 'function') prevCleanup();
     };
   }

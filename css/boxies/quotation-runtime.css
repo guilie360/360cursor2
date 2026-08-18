@@ -834,6 +834,13 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   justify-self: end;
   gap: 10px;
   pointer-events: auto;
+  position: relative;
+  z-index: 3;
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__music {
+  z-index: 4;
+  pointer-events: auto;
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__brand {

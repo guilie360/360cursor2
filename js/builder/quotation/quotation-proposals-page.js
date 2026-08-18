@@ -260,11 +260,13 @@ var QuotationProposalsPage = (function () {
           '</button>' +
           '<label class="qpp__audio-vol" aria-label="Volumen">' +
             '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="' +
-              (isMiralagoContext(opts) ? '50' : '70') + '" step="1">' +
+              (isMiralagoContext(opts) ? '25' : '70') + '" step="1">' +
           '</label>' +
         '</div>' +
-        '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
-          escapeHtml(audioSrc) + '"></audio>' +
+        (isMiralagoContext(opts)
+          ? ''
+          : ('<audio data-qpp-audio preload="metadata" loop playsinline src="' +
+            escapeHtml(audioSrc) + '"></audio>')) +
       '</div>';
   }
 
@@ -871,17 +873,27 @@ var QuotationProposalsPage = (function () {
     }
   }
 
+  function miralagoAmbient() {
+    if (typeof window.getMiralagoAmbient === 'function') {
+      return window.getMiralagoAmbient();
+    }
+    return null;
+  }
+
   function syncAudioUi(root) {
-    var audio = qs('[data-qpp-audio]', root);
-    var toggle = qs('[data-qpp-audio-toggle]', root);
     var musicBtn = qs('[data-qpp-music]', root);
-    if (!audio || !toggle) return;
-    var playing = !audio.paused;
-    toggle.classList.toggle('is-playing', playing);
-    toggle.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+    var toggle = qs('[data-qpp-audio-toggle]', root);
+    var ambient = isMiralagoContext(root && root._qppOpts) ? miralagoAmbient() : null;
+    var audio = ambient ? null : qs('[data-qpp-audio]', root);
+    if (!toggle && !musicBtn) return;
+    var playing = ambient ? ambient.playing() : !!(audio && !audio.paused);
+    if (toggle) {
+      toggle.classList.toggle('is-playing', playing);
+      toggle.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+    }
     if (musicBtn) musicBtn.classList.toggle('is-active', playing);
-    var playIcon = qs('.qpp__audio-icon--play', toggle);
-    var pauseIcon = qs('.qpp__audio-icon--pause', toggle);
+    var playIcon = qs('.qpp__audio-icon--play', toggle || root);
+    var pauseIcon = qs('.qpp__audio-icon--pause', toggle || root);
     if (playIcon) {
       if (playing) playIcon.setAttribute('hidden', '');
       else playIcon.removeAttribute('hidden');
@@ -913,6 +925,12 @@ var QuotationProposalsPage = (function () {
   var ambientUnlockBound = false;
 
   function playAmbient(audio, root) {
+    if (isMiralagoContext(root && root._qppOpts)) {
+      var amb = miralagoAmbient();
+      if (amb) amb.play();
+      syncAudioUi(root);
+      return;
+    }
     if (!audio) return;
     var p = audio.play();
     if (p && typeof p.then === 'function') {
@@ -941,6 +959,12 @@ var QuotationProposalsPage = (function () {
     var root = host || document.querySelector('[data-qpp-root]') ||
       document.querySelector('[data-qr-proposals]');
     if (!root) return false;
+    if (isMiralagoContext(root._qppOpts)) {
+      var amb = miralagoAmbient();
+      if (amb) amb.play();
+      syncAudioUi(root);
+      return true;
+    }
     var audio = qs('[data-qpp-audio]', root);
     if (!audio) return false;
     playAmbient(audio, root);
@@ -956,6 +980,12 @@ var QuotationProposalsPage = (function () {
   }
 
   function toggleAmbientPlayback(audio, root) {
+    if (isMiralagoContext(root && root._qppOpts)) {
+      var amb = miralagoAmbient();
+      if (amb) amb.toggle();
+      syncAudioUi(root);
+      return;
+    }
     if (!audio) return;
     if (audio.paused) playAmbient(audio, root);
     else audio.pause();
@@ -963,26 +993,35 @@ var QuotationProposalsPage = (function () {
   }
 
   function bindAudio(root) {
-    var audio = qs('[data-qpp-audio]', root);
     var musicBtn = qs('[data-qpp-music]', root);
     var toggle = qs('[data-qpp-audio-toggle]', root);
     var volume = qs('[data-qpp-volume]', root);
     var wrap = qs('[data-qpp-audio-wrap]', root);
-    if (!audio || !musicBtn) return;
+    if (!musicBtn) return;
 
-    var defaultVol = isMiralagoContext(root && root._qppOpts) ? 0.5 : 0.7;
-    audio.volume = volume ? Number(volume.value) / 100 : defaultVol;
-    if (volume && isMiralagoContext(root && root._qppOpts)) volume.value = '50';
-    audio.setAttribute('preload', 'auto');
+    var miralago = isMiralagoContext(root && root._qppOpts);
+    var audio = miralago ? null : qs('[data-qpp-audio]', root);
+    if (!miralago && !audio) return;
 
-    /* Autoplay as soon as the experience mounts. */
+    if (miralago) {
+      var amb = miralagoAmbient();
+      if (amb) {
+        if (volume) volume.value = '25';
+        amb.setLevel(volume ? Number(volume.value) / 100 : 0.25);
+        amb.onChange(function () { syncAudioUi(root); });
+      }
+    } else {
+      var defaultVol = 0.7;
+      audio.volume = volume ? Number(volume.value) / 100 : defaultVol;
+      audio.setAttribute('preload', 'auto');
+    }
+
     playAmbient(audio, root);
 
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      /* Mobile: note button only play/pause. Desktop: open volume panel. */
-      if (isMobileAudioChrome()) {
+      if (miralago || isMobileAudioChrome()) {
         setAudioPanelOpen(root, false);
         toggleAmbientPlayback(audio, root);
         return;
@@ -1002,15 +1041,22 @@ var QuotationProposalsPage = (function () {
 
     if (volume) {
       volume.addEventListener('input', function () {
-        audio.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+        if (miralago) {
+          var a = miralagoAmbient();
+          if (a) a.setLevel(Number(volume.value) / 100);
+        } else if (audio) {
+          audio.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+        }
       });
       volume.addEventListener('click', function (e) {
         e.stopPropagation();
       });
     }
 
-    audio.addEventListener('play', function () { syncAudioUi(root); });
-    audio.addEventListener('pause', function () { syncAudioUi(root); });
+    if (audio) {
+      audio.addEventListener('play', function () { syncAudioUi(root); });
+      audio.addEventListener('pause', function () { syncAudioUi(root); });
+    }
     syncAudioUi(root);
 
     document.addEventListener('click', function (e) {
