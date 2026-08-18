@@ -1966,6 +1966,139 @@ var QuotationRuntime = (function () {
     }
   }
 
+  function miralagoSceneMusicHtml(btnCss) {
+    return '' +
+      '<div class="qpp__audio-wrap qr-scene-chrome__audio" data-qr-scene-audio-wrap>' +
+        '<button type="button" class="qr-scene-chrome__music qpp__icon-btn qpp__chrome-music" data-qr-scene-music aria-label="Música" aria-expanded="false" style="' +
+          btnCss + '">' +
+          '<svg class="qpp__music-note" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">' +
+            '<path d="M9.2 18.6c0 1.55-1.35 2.7-2.95 2.7S3.3 20.15 3.3 18.6s1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V5.2l11.2-2.05v12.7c0 1.55-1.35 2.7-2.95 2.7s-2.95-1.15-2.95-2.7 1.35-2.7 2.95-2.7c.42 0 .82.08 1.18.22V6.35L9.2 8.15v10.45z"/>' +
+          '</svg>' +
+        '</button>' +
+        '<div class="qpp__audio-panel qr-scene-chrome__audio-panel" data-qr-scene-audio-panel hidden>' +
+          '<button type="button" class="qpp__audio-play" data-qr-scene-audio-toggle aria-label="Reproducir">' +
+            '<svg class="qpp__audio-icon qpp__audio-icon--play" viewBox="0 0 24 24" aria-hidden="true">' +
+              '<path d="M8 5.5v13l11-6.5z"/>' +
+            '</svg>' +
+            '<svg class="qpp__audio-icon qpp__audio-icon--pause" viewBox="0 0 24 24" aria-hidden="true" hidden>' +
+              '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<label class="qpp__audio-vol" aria-label="Volumen">' +
+            '<input type="range" class="qpp__audio-range" data-qr-scene-volume min="0" max="100" value="50" step="1">' +
+          '</label>' +
+        '</div>' +
+        '<audio data-qr-scene-audio preload="auto" loop playsinline src="../assets/miralago/LAGO.mp3"></audio>' +
+      '</div>';
+  }
+
+  function bindMiralagoSceneAudio(chrome) {
+    var audio = chrome.querySelector('[data-qr-scene-audio]');
+    var musicBtn = chrome.querySelector('[data-qr-scene-music]');
+    var toggle = chrome.querySelector('[data-qr-scene-audio-toggle]');
+    var volume = chrome.querySelector('[data-qr-scene-volume]');
+    var wrap = chrome.querySelector('[data-qr-scene-audio-wrap]');
+    var panel = chrome.querySelector('[data-qr-scene-audio-panel]');
+    if (!audio || !musicBtn) return;
+
+    function isPhone() {
+      try {
+        return window.matchMedia && window.matchMedia('(max-width: 1023px)').matches;
+      } catch (eM) {
+        return false;
+      }
+    }
+
+    function syncUi() {
+      var playing = !audio.paused;
+      musicBtn.classList.toggle('is-active', playing);
+      if (toggle) {
+        toggle.classList.toggle('is-playing', playing);
+        toggle.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+      }
+      var playIcon = chrome.querySelector('.qpp__audio-icon--play');
+      var pauseIcon = chrome.querySelector('.qpp__audio-icon--pause');
+      if (playIcon) {
+        if (playing) playIcon.setAttribute('hidden', '');
+        else playIcon.removeAttribute('hidden');
+      }
+      if (pauseIcon) {
+        if (playing) pauseIcon.removeAttribute('hidden');
+        else pauseIcon.setAttribute('hidden', '');
+      }
+    }
+
+    function setPanel(open) {
+      if (!panel) return;
+      if (open && !isPhone()) {
+        panel.hidden = false;
+        panel.removeAttribute('hidden');
+        musicBtn.setAttribute('aria-expanded', 'true');
+        if (wrap) wrap.classList.add('is-audio-open');
+      } else {
+        panel.hidden = true;
+        panel.setAttribute('hidden', '');
+        musicBtn.setAttribute('aria-expanded', 'false');
+        if (wrap) wrap.classList.remove('is-audio-open');
+      }
+    }
+
+    function play() {
+      var p = audio.play();
+      if (p && typeof p.then === 'function') {
+        p.then(syncUi).catch(function () { /* blocked */ });
+      }
+      syncUi();
+    }
+
+    audio.volume = 0.5;
+    if (volume) volume.value = '50';
+    play();
+
+    musicBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (isPhone()) {
+        setPanel(false);
+        if (audio.paused) play();
+        else { audio.pause(); syncUi(); }
+        return;
+      }
+      setPanel(!(panel && !panel.hidden));
+    });
+
+    if (toggle) {
+      toggle.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (audio.paused) play();
+        else { audio.pause(); syncUi(); }
+      });
+    }
+    if (volume) {
+      volume.addEventListener('input', function () {
+        audio.volume = Math.max(0, Math.min(1, Number(volume.value) / 100));
+      });
+      volume.addEventListener('click', function (eVol) { eVol.stopPropagation(); });
+    }
+    audio.addEventListener('play', syncUi);
+    audio.addEventListener('pause', syncUi);
+    syncUi();
+
+    function onDocClick(e) {
+      if (!wrap || !wrap.classList.contains('is-audio-open')) return;
+      if (wrap.contains(e.target)) return;
+      setPanel(false);
+    }
+    document.addEventListener('click', onDocClick);
+    var prevCleanup = chrome._qrFsCleanup;
+    chrome._qrFsCleanup = function () {
+      document.removeEventListener('click', onDocClick);
+      try { audio.pause(); } catch (eP) { /* ignore */ }
+      if (typeof prevCleanup === 'function') prevCleanup();
+    };
+  }
+
   function mountMiralagoSceneChrome(host, opts) {
     if (!host || editorMode && canvasMode) return;
     if (!isMiralagoRuntime()) return;
@@ -2005,15 +2138,9 @@ var QuotationRuntime = (function () {
         );
     var backPos = asFooter ? '' : 'top:88px;left:88px;';
     var fsPos = asFooter ? '' : 'top:88px;right:88px;';
-    chrome.innerHTML =
-      '<button type="button" class="qr-scene-chrome__back" data-qr-scene-back aria-label="Volver" style="' +
-        btnCss + backPos + '">' +
-        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
-      '</button>' +
-      (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
-      (hideFs
-        ? '<span class="qr-scene-chrome__fs-spacer" aria-hidden="true"></span>'
-        : (
+    var fsHtml = hideFs
+      ? ''
+      : (
       '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
         btnCss + fsPos + '">' +
         '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -2029,7 +2156,17 @@ var QuotationRuntime = (function () {
           '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
         '</svg>' +
       '</button>'
-        ));
+        );
+    chrome.innerHTML =
+      '<button type="button" class="qr-scene-chrome__back" data-qr-scene-back aria-label="Volver" style="' +
+        btnCss + backPos + '">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
+      '</button>' +
+      (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
+      '<div class="qr-scene-chrome__end">' +
+        (asFooter ? miralagoSceneMusicHtml(btnCss) : '') +
+        fsHtml +
+      '</div>';
     mountAt.appendChild(chrome);
     var back = chrome.querySelector('[data-qr-scene-back]');
     var fs = chrome.querySelector('[data-qr-scene-fs]');
@@ -2058,6 +2195,7 @@ var QuotationRuntime = (function () {
       document.removeEventListener('webkitfullscreenchange', onFsChange);
     };
     syncMiralagoFsUi(chrome);
+    if (asFooter) bindMiralagoSceneAudio(chrome);
   }
 
   function leaveStage() {

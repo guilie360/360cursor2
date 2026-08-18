@@ -818,7 +818,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   z-index: 2147483001;
   pointer-events: auto;
   display: grid;
-  grid-template-columns: 48px 1fr 48px;
+  grid-template-columns: 48px 1fr auto;
   align-items: center;
   column-gap: 16px;
   padding: 0 28px;
@@ -826,6 +826,14 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   box-sizing: border-box;
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.qr-scene-chrome__end {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 10px;
+  pointer-events: auto;
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__brand {
@@ -861,13 +869,32 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__back,
-.qr-scene-chrome--footer .qr-scene-chrome__fs {
+.qr-scene-chrome--footer .qr-scene-chrome__fs,
+.qr-scene-chrome--footer .qr-scene-chrome__music {
   position: relative !important;
   top: auto !important;
   left: auto !important;
   right: auto !important;
   background: transparent !important;
   border: 1px solid rgba(255, 255, 255, 0.42) !important;
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__audio {
+  position: relative;
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__audio-panel {
+  right: 0;
+  left: auto;
+  top: auto;
+  bottom: calc(100% + 12px);
+  transform: none;
+}
+
+@media (max-width: 1023px) {
+  .qr-scene-chrome--footer .qr-scene-chrome__audio-panel {
+    display: none !important;
+  }
 }
 
 .qr-miralago-pdf-host {

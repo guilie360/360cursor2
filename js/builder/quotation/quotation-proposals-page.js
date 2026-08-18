@@ -240,7 +240,7 @@ var QuotationProposalsPage = (function () {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function audioChromeHtml(audioSrc) {
+  function audioChromeHtml(audioSrc, opts) {
     if (!audioSrc) return '';
     return '' +
       '<div class="qpp__audio-wrap" data-qpp-audio-wrap>' +
@@ -259,7 +259,8 @@ var QuotationProposalsPage = (function () {
             '</svg>' +
           '</button>' +
           '<label class="qpp__audio-vol" aria-label="Volumen">' +
-            '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="70" step="1">' +
+            '<input type="range" class="qpp__audio-range" data-qpp-volume min="0" max="100" value="' +
+              (isMiralagoContext(opts) ? '50' : '70') + '" step="1">' +
           '</label>' +
         '</div>' +
         '<audio data-qpp-audio preload="metadata" loop playsinline src="' +
@@ -368,7 +369,7 @@ var QuotationProposalsPage = (function () {
                 '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
               '</svg>' +
             '</button>' +
-            audioChromeHtml(audioSrc) +
+            audioChromeHtml(audioSrc, opts) +
           '</div>' +
         '</header>' +
         '<main class="qpp__main" data-qpp-selection>' +
@@ -969,7 +970,9 @@ var QuotationProposalsPage = (function () {
     var wrap = qs('[data-qpp-audio-wrap]', root);
     if (!audio || !musicBtn) return;
 
-    audio.volume = volume ? Number(volume.value) / 100 : 0.7;
+    var defaultVol = isMiralagoContext(root && root._qppOpts) ? 0.5 : 0.7;
+    audio.volume = volume ? Number(volume.value) / 100 : defaultVol;
+    if (volume && isMiralagoContext(root && root._qppOpts)) volume.value = '50';
     audio.setAttribute('preload', 'auto');
 
     /* Autoplay as soon as the experience mounts. */
