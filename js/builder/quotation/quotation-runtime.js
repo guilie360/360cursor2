@@ -692,20 +692,24 @@ var QuotationRuntime = (function () {
     proposalsHostEl.setAttribute('aria-hidden', 'true');
     proposalsHostEl.setAttribute('inert', '');
     host.appendChild(proposalsHostEl);
-    if (typeof QuotationProposalsPage !== 'undefined' && QuotationProposalsPage.mount) {
-      var ambientUrl = resolveProposalsAmbientUrl(loaded);
-      QuotationProposalsPage.mount(proposalsHostEl, {
-        onBack: function () {
-          setPresentationView('hero');
-        },
-        audioSrc: ambientUrl,
-        projectId: loaded && loaded.project && loaded.project.id,
-        slug: loaded && loaded.project && loaded.project.slug
-      });
-      if (ambientUrl && typeof QuotationProposalsPage.startAmbientAudio === 'function') {
-        QuotationProposalsPage.startAmbientAudio(proposalsHostEl);
+    try {
+      if (typeof QuotationProposalsPage !== 'undefined' && QuotationProposalsPage.mount) {
+        var ambientUrl = resolveProposalsAmbientUrl(loaded);
+        QuotationProposalsPage.mount(proposalsHostEl, {
+          onBack: function () {
+            setPresentationView('hero');
+          },
+          audioSrc: ambientUrl,
+          projectId: loaded && loaded.project && loaded.project.id,
+          slug: loaded && loaded.project && loaded.project.slug
+        });
+        if (ambientUrl && typeof QuotationProposalsPage.startAmbientAudio === 'function') {
+          window.setTimeout(function () {
+            try { QuotationProposalsPage.startAmbientAudio(proposalsHostEl); } catch (eA) { /* ignore */ }
+          }, 0);
+        }
       }
-    }
+    } catch (eProp) { /* never block hero paint */ }
   }
 
   function openProposalsPage() {

@@ -107,7 +107,11 @@ function applyPublicShareMeta(project) {
     function addLink(rel, sizes) {
       var link = document.createElement('link');
       link.rel = rel;
-      link.type = /\.svg(\?|$)/i.test(absolute) ? 'image/svg+xml' : 'image/png';
+      if (/\.svg(\?|$)/i.test(absolute)) link.type = 'image/svg+xml';
+      else if (/\.jpe?g(\?|$)/i.test(absolute)) link.type = 'image/jpeg';
+      else if (/\.webp(\?|$)/i.test(absolute)) link.type = 'image/webp';
+      else if (/\.ico(\?|$)/i.test(absolute)) link.type = 'image/x-icon';
+      else link.type = 'image/png';
       if (sizes) link.setAttribute('sizes', sizes);
       link.href = absolute;
       document.head.appendChild(link);
@@ -198,7 +202,7 @@ function handoffQuotationPublicExperience(project) {
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7974');
+    u.searchParams.set('build', 'ws7975');
     if (handoffParams.get('live') === '1' || handoffParams.get('live') === 'true') {
       u.searchParams.set('live', '1');
     }
@@ -208,7 +212,7 @@ function handoffQuotationPublicExperience(project) {
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7974';
+      '&experience_type=quotation&build=ws7975';
     try {
       var hp = new URLSearchParams(window.location.search || '');
       if (hp.get('live') === '1' || hp.get('live') === 'true') {
@@ -242,11 +246,18 @@ function handoffQuotationPublicExperience(project) {
   } catch (eTitle) {}
 
   try {
+    document.documentElement.classList.remove('slug-boot-pending');
     document.documentElement.classList.add('qr-public-handoff');
+    document.documentElement.style.background = '#000';
+    document.documentElement.style.height = '100%';
     document.body.className = 'qr-host qr-public-handoff-body';
-    document.body.style.cssText =
-      'margin:0;padding:0;overflow:hidden;background:#000;width:100%;height:100%;';
-    document.body.innerHTML = '';
+    var shellCss =
+      'margin:0;padding:0;overflow:hidden;background:#000;width:100%;height:100%;min-height:100vh;';
+    document.body.style.cssText = shellCss;
+    while (document.body.firstChild) {
+      document.body.removeChild(document.body.firstChild);
+    }
+    document.body.style.cssText = shellCss;
     var frame = document.createElement('iframe');
     frame.className = 'qr-public-handoff-frame';
     frame.title = (String(project.slug || '').toLowerCase() === 'miralago-propuesta' ||
@@ -255,10 +266,11 @@ function handoffQuotationPublicExperience(project) {
       : (project.nombre || 'Cotización');
     frame.setAttribute('allow', 'fullscreen; autoplay; encrypted-media');
     frame.style.cssText =
-      'position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;' +
-      'background:#000;z-index:2147483000;display:block;';
+      'position:fixed;top:0;right:0;bottom:0;left:0;width:100%;height:100%;' +
+      'border:0;margin:0;padding:0;background:#000;z-index:2147483000;display:block;';
     frame.src = runtimeSrc;
     document.body.appendChild(frame);
+    try { applyPublicShareMeta(project); } catch (_eFav) {}
   } catch (eMount) {
     console.error('[handoffQuotationPublicExperience]', eMount);
     return Promise.reject(eMount);
