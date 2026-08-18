@@ -1666,7 +1666,7 @@ var QuotationRuntime = (function () {
   var miralagoPdfCleanup = null;
 
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto3d.pdf?v=ws7948';
+    return '/assets/miralago/boceto3d.pdf?v=ws7949';
   }
 
   function miralagoBocetoPdfUrl() {
@@ -1702,6 +1702,23 @@ var QuotationRuntime = (function () {
     document.head.appendChild(script);
   }
 
+  function attachMiralagoPdfLoader(host) {
+    if (!host || host.querySelector('[data-qr-pdf-loader]')) return;
+    var loader = document.createElement('div');
+    loader.className = 'qr-miralago-pdf-loader';
+    loader.setAttribute('data-qr-pdf-loader', '1');
+    loader.innerHTML =
+      '<span class="qr-miralago-pdf-spinner" aria-hidden="true"></span>' +
+      '<p class="qr-miralago-pdf-loader__text">Cargando boceto…</p>';
+    host.appendChild(loader);
+  }
+
+  function hideMiralagoPdfLoader(host) {
+    if (!host) return;
+    var loader = host.querySelector('[data-qr-pdf-loader]');
+    if (loader) loader.classList.add('is-done');
+  }
+
   function destroyMiralagoPdfViewer() {
     if (typeof miralagoPdfCleanup === 'function') {
       try { miralagoPdfCleanup(); } catch (eC) { /* ignore */ }
@@ -1711,6 +1728,7 @@ var QuotationRuntime = (function () {
 
   function prefetchMiralagoBocetoPdf() {
     if (!isMiralagoRuntime() || editorMode && canvasMode) return;
+    loadPdfJs(function () { /* warm pdf.js + worker */ });
     var href = miralagoBocetoPdfHref();
     if (miralagoPdfWarmHref === href && (miralagoPdfBlobUrl || document.querySelector('link[data-qr-miralago-pdf-preload]'))) {
       return;
@@ -1754,6 +1772,7 @@ var QuotationRuntime = (function () {
     var scroller = document.createElement('div');
     scroller.className = 'qr-miralago-pdf-pages';
     wrap.appendChild(scroller);
+    attachMiralagoPdfLoader(wrap);
     parentEl.appendChild(wrap);
     sceneMediaEl = wrap;
 
@@ -1771,8 +1790,9 @@ var QuotationRuntime = (function () {
       if (cancelled || !pdfDoc) return;
       scroller.innerHTML = '';
       var box = pageBoxSize();
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       var pageNo = 1;
+      var firstShown = false;
 
       function renderNext() {
         if (cancelled || pageNo > pdfDoc.numPages) return;
@@ -1796,9 +1816,17 @@ var QuotationRuntime = (function () {
             viewport: viewport
           }).promise;
         }).then(function () {
+          if (!firstShown) {
+            firstShown = true;
+            hideMiralagoPdfLoader(wrap);
+          }
           pageNo += 1;
           renderNext();
         }).catch(function () {
+          if (!firstShown) {
+            firstShown = true;
+            hideMiralagoPdfLoader(wrap);
+          }
           pageNo += 1;
           renderNext();
         });
@@ -1814,11 +1842,17 @@ var QuotationRuntime = (function () {
     loadPdfJs(function (pdfjsLib) {
       if (cancelled) return;
       var src = miralagoPdfBlobUrl || miralagoBocetoPdfHref();
-      pdfjsLib.getDocument({ url: src, withCredentials: false }).promise.then(function (pdf) {
+      pdfjsLib.getDocument({
+        url: src,
+        disableStream: false,
+        disableAutoFetch: false
+      }).promise.then(function (pdf) {
         if (cancelled) return;
         pdfDoc = pdf;
         renderAll();
-      }).catch(function () { /* ignore */ });
+      }).catch(function () {
+        hideMiralagoPdfLoader(wrap);
+      });
     });
 
     window.addEventListener('resize', onResize);
@@ -1852,6 +1886,10 @@ var QuotationRuntime = (function () {
     frame.setAttribute('loading', 'eager');
     frame.src = miralagoBocetoPdfUrl();
     wrap.appendChild(frame);
+    attachMiralagoPdfLoader(wrap);
+    frame.addEventListener('load', function () {
+      hideMiralagoPdfLoader(wrap);
+    });
     parentEl.appendChild(wrap);
     sceneMediaEl = wrap;
     return wrap;

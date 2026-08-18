@@ -919,6 +919,49 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   height: auto;
 }
 
+.qr-miralago-pdf-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #050505;
+  pointer-events: none;
+  transition: opacity 280ms ease;
+}
+
+.qr-miralago-pdf-loader.is-done {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.qr-miralago-pdf-spinner {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: qr-miralago-spin 0.8s linear infinite;
+}
+
+.qr-miralago-pdf-loader__text {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+}
+
+@keyframes qr-miralago-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── V7.2.24 — Proposals picker (reuses .unit-card / .units-popup) ── */
 .qr-proposals-popup {
   z-index: 12050;
