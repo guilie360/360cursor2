@@ -204,7 +204,7 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'still') {
           copy.title = 'CORE';
           copy.blurb = 'Presentación enfocada en el proyecto general, lobby y apartamentos tipo.';
-          copy.waMessage = 'Primo, me voy por CORE';
+          copy.waMessage = 'Nos interesa avanzar con la propuesta CORE';
           copy.quote = {
             proposalAmount: '$ 9.850.000 COP',
             taxAmount: '– $ 1.182.000',
@@ -214,7 +214,7 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'motion') {
           copy.title = 'PLUS';
           copy.blurb = 'Presentación completa del proyecto y sus diferentes usos, con integración de drone.';
-          copy.waMessage = 'Primo, me voy por PLUS';
+          copy.waMessage = 'Nos interesa avanzar con la propuesta PLUS';
           copy.quote = {
             proposalAmount: '$ 14.250.000 COP',
             taxAmount: '– $ 1.710.000',
@@ -411,6 +411,113 @@ var QuotationProposalsPage = (function () {
     }
   }
 
+  function wrapCanvasText(ctx, text, maxWidth) {
+    var words = String(text || '').split(/\s+/);
+    var lines = [];
+    var line = '';
+    var i;
+    for (i = 0; i < words.length; i++) {
+      var next = line ? (line + ' ' + words[i]) : words[i];
+      if (line && ctx.measureText(next).width > maxWidth) {
+        lines.push(line);
+        line = words[i];
+      } else {
+        line = next;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function miralagoQuoteShareBlob(proposal, done) {
+    var quote = proposal && proposal.quote;
+    if (!quote || typeof document === 'undefined') {
+      done(null);
+      return;
+    }
+    var canvas = document.createElement('canvas');
+    var w = 720;
+    var h = 1100;
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) {
+      done(null);
+      return;
+    }
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(28, 28, w - 56, h - 56);
+
+    var title = String(proposal.title || '').toUpperCase();
+    ctx.fillStyle = '#fff';
+    ctx.font = '300 42px "Montserrat", "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, w / 2, 140);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(w / 2 - 70, 164);
+    ctx.lineTo(w / 2 + 70, 164);
+    ctx.stroke();
+
+    function block(label, value, y, strong) {
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.font = '500 18px "Montserrat", "Segoe UI", sans-serif';
+      ctx.fillText(String(label).toUpperCase(), w / 2, y);
+      ctx.fillStyle = '#fff';
+      ctx.font = (strong ? '600 36px' : '500 28px') + ' "Montserrat", "Segoe UI", sans-serif';
+      ctx.fillText(String(value), w / 2, y + 42);
+      return y + 110;
+    }
+    var y = 250;
+    y = block('Valor de la propuesta', quote.proposalAmount, y, false);
+    y = block('Retención en la fuente • 12%', quote.taxAmount, y, false);
+    y = block('Valor neto a recibir', quote.netAmount, y, true);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.62)';
+    ctx.font = '400 22px "Montserrat", "Segoe UI", sans-serif';
+    var lines = wrapCanvasText(ctx, String(proposal.blurb || '').replace(/\n/g, ' '), w - 120);
+    var ly = y + 24;
+    lines.forEach(function (ln) {
+      ctx.fillText(ln, w / 2, ly);
+      ly += 32;
+    });
+
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob(function (blob) { done(blob || null); }, 'image/jpeg', 0.86);
+      return;
+    }
+    done(null);
+  }
+
+  function shareMiralagoProposal(proposal) {
+    var title = String((proposal && proposal.title) || 'CORE').toUpperCase();
+    var message = 'Nos interesa avanzar con la propuesta ' + title;
+    miralagoQuoteShareBlob(proposal, function (blob) {
+      var file = blob
+        ? new File([blob], 'imagen2.jpg', { type: 'image/jpeg' })
+        : null;
+      var canFiles = !!(
+        file &&
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      );
+      if (canFiles) {
+        navigator.share({
+          text: message,
+          files: [file]
+        }).catch(function () {
+          openWhatsApp(message);
+        });
+        return;
+      }
+      openWhatsApp(message);
+    });
+  }
+
   function buildCard(proposal) {
     proposal = proposal || {};
     var title = String(proposal.title || 'Propuesta');
@@ -539,7 +646,8 @@ var QuotationProposalsPage = (function () {
       confirmBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        openWhatsApp(waMessage);
+        if (quote) shareMiralagoProposal(proposal);
+        else openWhatsApp(waMessage);
       });
     }
 
