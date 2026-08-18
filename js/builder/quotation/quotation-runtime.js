@@ -1191,7 +1191,8 @@ var QuotationRuntime = (function () {
     if (resolveSceneMedia(scene, bundle) ||
         (isMiralagoRuntime() && String(scene.id) === 'sc-miralago-massing')) {
       mountMiralagoSceneChrome(stageEl, {
-        footer: String(scene.id) === 'sc-miralago-massing'
+        footer: String(scene.id) === 'sc-miralago-massing',
+        hideFullscreen: String(scene.id) === 'sc-miralago-massing' && isMiralagoPhoneViewport()
       });
     }
     var video = coverHostEl.querySelector('video.project-cover-video');
@@ -1665,7 +1666,7 @@ var QuotationRuntime = (function () {
   var miralagoPdfCleanup = null;
 
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto3d.pdf?v=ws7947';
+    return '/assets/miralago/boceto3d.pdf?v=ws7948';
   }
 
   function miralagoBocetoPdfUrl() {
@@ -1779,13 +1780,12 @@ var QuotationRuntime = (function () {
           if (cancelled) return;
           var slot = document.createElement('div');
           slot.className = 'qr-miralago-pdf-slot';
-          slot.style.height = box.h + 'px';
           var canvas = document.createElement('canvas');
           canvas.className = 'qr-miralago-pdf-page';
           slot.appendChild(canvas);
           scroller.appendChild(slot);
           var base = page.getViewport({ scale: 1 });
-          var fit = Math.min(box.w / base.width, box.h / base.height);
+          var fit = box.w / base.width;
           var viewport = page.getViewport({ scale: fit * dpr });
           canvas.width = Math.floor(viewport.width);
           canvas.height = Math.floor(viewport.height);
@@ -1941,6 +1941,7 @@ var QuotationRuntime = (function () {
     if (!isMiralagoRuntime()) return;
     opts = opts || {};
     var asFooter = opts.footer === true;
+    var hideFs = opts.hideFullscreen === true;
     var mountAt = presentationRootEl || host;
     var existing = document.querySelector('[data-qr-scene-chrome]');
     if (existing) {
@@ -1950,7 +1951,9 @@ var QuotationRuntime = (function () {
       existing.remove();
     }
     var chrome = document.createElement('div');
-    chrome.className = 'qr-scene-chrome' + (asFooter ? ' qr-scene-chrome--footer' : '');
+    chrome.className = 'qr-scene-chrome' +
+      (asFooter ? ' qr-scene-chrome--footer' : '') +
+      (hideFs ? ' qr-scene-chrome--no-fs' : '');
     chrome.setAttribute('data-qr-scene-chrome', '1');
     if (!asFooter) {
       chrome.setAttribute('style',
@@ -1978,6 +1981,9 @@ var QuotationRuntime = (function () {
         '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
       (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
+      (hideFs
+        ? '<span class="qr-scene-chrome__fs-spacer" aria-hidden="true"></span>'
+        : (
       '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
         btnCss + fsPos + '">' +
         '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
@@ -1992,7 +1998,8 @@ var QuotationRuntime = (function () {
           '<path d="M3 16h3a2 2 0 0 1 2 2v3"/>' +
           '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
         '</svg>' +
-      '</button>';
+      '</button>'
+        ));
     mountAt.appendChild(chrome);
     var back = chrome.querySelector('[data-qr-scene-back]');
     var fs = chrome.querySelector('[data-qr-scene-fs]');
