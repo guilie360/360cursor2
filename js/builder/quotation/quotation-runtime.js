@@ -55,9 +55,7 @@ var QuotationRuntime = (function () {
       : String(share.page_title || project.nombre || project.slug || 'Cotización').trim();
     if (title) document.title = title;
 
-    var href = isMiralago
-      ? '/assets/miralago/favicon.svg'
-      : String(share.favicon_url || '').trim();
+    var href = String(share.favicon_url || share.logo_url || '').trim();
     if (!href) return;
     if (href.indexOf('http') !== 0 && href.indexOf('//') !== 0) {
       try { href = new URL(href, window.location.origin).href; } catch (eAbs) {}
@@ -1366,7 +1364,7 @@ var QuotationRuntime = (function () {
 
     var configResult = await client
       .from('proyecto_config')
-      .select('hero_quotation, og_image, og_title, og_description, favicon_url, page_title')
+      .select('hero_quotation, og_image, og_title, og_description, favicon_url, page_title, logo_url')
       .eq('proyecto_id', projectId)
       .maybeSingle();
 
@@ -1375,6 +1373,11 @@ var QuotationRuntime = (function () {
     }
 
     var config = configResult.data || {};
+    var brandingLogo = '';
+    try {
+      var br = config.hero_quotation && config.hero_quotation.branding;
+      brandingLogo = String((br && br.logo && (br.logo.uploadedUrl || br.logo.previewUrl)) || '').trim();
+    } catch (eLogo) { brandingLogo = ''; }
     return {
       project: projectResult.data,
       hero: config.hero_quotation && typeof config.hero_quotation === 'object'
@@ -1384,7 +1387,8 @@ var QuotationRuntime = (function () {
         og_image: config.og_image || '',
         og_title: config.og_title || '',
         og_description: config.og_description || '',
-        favicon_url: config.favicon_url || '',
+        favicon_url: config.favicon_url || brandingLogo || config.logo_url || '',
+        logo_url: config.logo_url || brandingLogo || '',
         page_title: config.page_title || ''
       }
     };

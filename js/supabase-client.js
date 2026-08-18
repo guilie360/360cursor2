@@ -148,7 +148,11 @@ function applyPublicShareMeta(project) {
     document.title = title;
     upsertMeta('property', 'og:title', title);
     upsertMeta('name', 'twitter:title', title);
-    favicon = '/assets/miralago/favicon.svg';
+    try {
+      var br = cfg.hero_quotation && cfg.hero_quotation.branding;
+      var heroLogo = br && br.logo && (br.logo.uploadedUrl || br.logo.previewUrl);
+      if (!favicon && heroLogo) favicon = String(heroLogo).trim();
+    } catch (eMl) { /* keep favicon */ }
   }
   if (!favicon && (slug === 'taroa' || slug === 'taroa-propuesta' || slug.indexOf('taroa') === 0)) {
     favicon = '/assets/taroa/favicon.png';
@@ -194,7 +198,7 @@ function handoffQuotationPublicExperience(project) {
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7954');
+    u.searchParams.set('build', 'ws7955');
     if (handoffParams.get('live') === '1' || handoffParams.get('live') === 'true') {
       u.searchParams.set('live', '1');
     }
@@ -204,7 +208,7 @@ function handoffQuotationPublicExperience(project) {
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7954';
+      '&experience_type=quotation&build=ws7955';
     try {
       var hp = new URLSearchParams(window.location.search || '');
       if (hp.get('live') === '1' || hp.get('live') === 'true') {
