@@ -272,6 +272,7 @@ var QuotationProposalsPage = (function () {
       return '' +
         '<div class="qpp-cmp-upgrade" data-qpp-upgrade-panel hidden>' +
           '<h1 class="qpp__title qpp-cmp-upgrade__heading">UPGRADE <span class="qpp-cmp-upgrade__heading-arrow" aria-hidden="true">➤</span> PLUS</h1>' +
+          '<p class="qpp-cmp-upgrade__kicker">Si has escogido la propuesta CORE:</p>' +
           '<div class="qpp-cmp-upgrade__intro">' +
             '<p class="qpp-cmp-upgrade__intro-text">' +
               'Mantén abierta la posibilidad de ampliar tu proyecto. Durante los <strong>15 días</strong> posteriores a la entrega de <strong>CORE</strong>, podrás actualizar a <strong>PLUS</strong> con una condición preferencial.' +

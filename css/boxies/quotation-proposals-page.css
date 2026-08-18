@@ -1129,6 +1129,24 @@ body.qr-proposals-page .qpp {
   font-weight: 400;
 }
 
+.qpp--miralago .qpp-cmp-upgrade__heading {
+  margin-bottom: 10px;
+}
+
+.qpp--miralago .qpp-cmp-upgrade__kicker {
+  margin: 0 0 clamp(18px, 3.2vh, 28px);
+  color: rgba(255, 255, 255, 0.42);
+  font-family: 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+}
+
 .qpp-cmp-upgrade__intro {
   width: min(36rem, 100%);
   margin: 0 0 clamp(28px, 5vh, 44px);
@@ -1281,6 +1299,10 @@ body.qr-proposals-page .qpp {
 
 .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__heading {
   animation: qpp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+.qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__kicker {
+  animation: qpp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
 .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__intro {
@@ -2079,6 +2101,7 @@ body.qr-proposals-page .qpp {
   }
 
   .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__heading,
+  .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__kicker,
   .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__intro,
   .qpp[data-qpp-compare-panel="upgrade"].is-cmp-animate .qpp-cmp-upgrade__matrix {
     animation: none !important;
