@@ -928,7 +928,8 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 }
 
 @media (max-width: 1023px) {
-  .qr-scene-chrome--footer .qr-scene-chrome__audio-panel {
+  .qr-scene-chrome--footer .qr-scene-chrome__audio-panel,
+  .qr-scene-chrome--footer .qr-scene-chrome__audio {
     display: none !important;
   }
 }

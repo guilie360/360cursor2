@@ -2248,11 +2248,17 @@ body.qr-proposals-page .qpp {
     margin-top: 0.2em;
   }
 
-  .qpp--miralago .qpp__audio-wrap {
+  .qpp--miralago .qpp__audio-wrap,
+  .qpp--miralago .qpp__chrome-music {
+    display: none !important;
+  }
+  .qpp--miralago .qpp__audio-spacer {
     width: 48px;
     height: 48px;
-    visibility: visible;
-    pointer-events: auto;
+    justify-self: end;
+    grid-column: 3;
+    grid-row: 1;
+    pointer-events: none;
   }
 
   .qpp--miralago .qpp__main {
