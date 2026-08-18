@@ -1673,7 +1673,7 @@ var QuotationRuntime = (function () {
   var miralagoPdfWarmHref = '';
 
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto-3d.pdf?v=ws7944';
+    return '/assets/miralago/boceto3d.pdf?v=ws7945';
   }
 
   function miralagoBocetoPdfUrl() {
