@@ -1665,8 +1665,15 @@ var QuotationRuntime = (function () {
   var miralagoPdfWarmHref = '';
   var miralagoPdfCleanup = null;
 
+  var MIRALAGO_BOCETO_PAGE_COUNT = 5;
+
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto3d.pdf?v=ws7949';
+    return '/assets/miralago/boceto3d.pdf?v=ws7950';
+  }
+
+  function miralagoBocetoPageHref(n) {
+    var pad = (n < 10 ? '0' : '') + String(n);
+    return '/assets/miralago/boceto-pages/page-' + pad + '.jpg?v=ws7950';
   }
 
   function miralagoBocetoPdfUrl() {
@@ -1676,30 +1683,6 @@ var QuotationRuntime = (function () {
 
   function isMiralagoPhoneViewport() {
     return (window.innerWidth || 0) <= 900;
-  }
-
-  function loadPdfJs(done) {
-    if (window.pdfjsLib) {
-      done(window.pdfjsLib);
-      return;
-    }
-    var existing = document.querySelector('script[data-qr-pdfjs]');
-    if (existing) {
-      existing.addEventListener('load', function () {
-        if (window.pdfjsLib) done(window.pdfjsLib);
-      });
-      return;
-    }
-    var script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.setAttribute('data-qr-pdfjs', '1');
-    script.onload = function () {
-      if (!window.pdfjsLib) return;
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      done(window.pdfjsLib);
-    };
-    document.head.appendChild(script);
   }
 
   function attachMiralagoPdfLoader(host) {
@@ -1728,7 +1711,18 @@ var QuotationRuntime = (function () {
 
   function prefetchMiralagoBocetoPdf() {
     if (!isMiralagoRuntime() || editorMode && canvasMode) return;
-    loadPdfJs(function () { /* warm pdf.js + worker */ });
+    if (isMiralagoPhoneViewport()) {
+      var imgHref = miralagoBocetoPageHref(1);
+      if (!document.querySelector('link[data-qr-miralago-img-preload]')) {
+        var imgPreload = document.createElement('link');
+        imgPreload.rel = 'preload';
+        imgPreload.as = 'image';
+        imgPreload.href = imgHref;
+        imgPreload.setAttribute('data-qr-miralago-img-preload', '1');
+        document.head.appendChild(imgPreload);
+      }
+      return;
+    }
     var href = miralagoBocetoPdfHref();
     if (miralagoPdfWarmHref === href && (miralagoPdfBlobUrl || document.querySelector('link[data-qr-miralago-pdf-preload]'))) {
       return;
@@ -1776,93 +1770,35 @@ var QuotationRuntime = (function () {
     parentEl.appendChild(wrap);
     sceneMediaEl = wrap;
 
-    var pdfDoc = null;
-    var cancelled = false;
-    var resizeTimer = 0;
-
-    function pageBoxSize() {
-      var w = wrap.clientWidth || window.innerWidth || 360;
-      var h = wrap.clientHeight || Math.max(240, (window.innerHeight || 640) - 64);
-      return { w: Math.max(1, w), h: Math.max(1, h) };
+    var firstShown = false;
+    function showFirst() {
+      if (firstShown) return;
+      firstShown = true;
+      hideMiralagoPdfLoader(wrap);
     }
 
-    function renderAll() {
-      if (cancelled || !pdfDoc) return;
-      scroller.innerHTML = '';
-      var box = pageBoxSize();
-      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      var pageNo = 1;
-      var firstShown = false;
-
-      function renderNext() {
-        if (cancelled || pageNo > pdfDoc.numPages) return;
-        pdfDoc.getPage(pageNo).then(function (page) {
-          if (cancelled) return;
-          var slot = document.createElement('div');
-          slot.className = 'qr-miralago-pdf-slot';
-          var canvas = document.createElement('canvas');
-          canvas.className = 'qr-miralago-pdf-page';
-          slot.appendChild(canvas);
-          scroller.appendChild(slot);
-          var base = page.getViewport({ scale: 1 });
-          var fit = box.w / base.width;
-          var viewport = page.getViewport({ scale: fit * dpr });
-          canvas.width = Math.floor(viewport.width);
-          canvas.height = Math.floor(viewport.height);
-          canvas.style.width = Math.floor(viewport.width / dpr) + 'px';
-          canvas.style.height = Math.floor(viewport.height / dpr) + 'px';
-          return page.render({
-            canvasContext: canvas.getContext('2d', { alpha: false }),
-            viewport: viewport
-          }).promise;
-        }).then(function () {
-          if (!firstShown) {
-            firstShown = true;
-            hideMiralagoPdfLoader(wrap);
-          }
-          pageNo += 1;
-          renderNext();
-        }).catch(function () {
-          if (!firstShown) {
-            firstShown = true;
-            hideMiralagoPdfLoader(wrap);
-          }
-          pageNo += 1;
-          renderNext();
-        });
+    var i;
+    for (i = 1; i <= MIRALAGO_BOCETO_PAGE_COUNT; i++) {
+      var slot = document.createElement('div');
+      slot.className = 'qr-miralago-pdf-slot';
+      var img = document.createElement('img');
+      img.className = 'qr-miralago-pdf-page';
+      img.alt = 'Boceto 3D, página ' + i;
+      img.decoding = 'async';
+      if (i === 1) {
+        img.loading = 'eager';
+        img.setAttribute('fetchpriority', 'high');
+        img.addEventListener('load', showFirst);
+        img.addEventListener('error', showFirst);
+      } else {
+        img.loading = 'lazy';
       }
-      renderNext();
+      img.src = miralagoBocetoPageHref(i);
+      slot.appendChild(img);
+      scroller.appendChild(slot);
     }
 
-    function onResize() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(renderAll, 180);
-    }
-
-    loadPdfJs(function (pdfjsLib) {
-      if (cancelled) return;
-      var src = miralagoPdfBlobUrl || miralagoBocetoPdfHref();
-      pdfjsLib.getDocument({
-        url: src,
-        disableStream: false,
-        disableAutoFetch: false
-      }).promise.then(function (pdf) {
-        if (cancelled) return;
-        pdfDoc = pdf;
-        renderAll();
-      }).catch(function () {
-        hideMiralagoPdfLoader(wrap);
-      });
-    });
-
-    window.addEventListener('resize', onResize);
-    window.addEventListener('orientationchange', onResize);
-    miralagoPdfCleanup = function () {
-      cancelled = true;
-      clearTimeout(resizeTimer);
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('orientationchange', onResize);
-    };
+    miralagoPdfCleanup = function () { /* images GC with wrap */ };
     return wrap;
   }
 
