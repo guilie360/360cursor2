@@ -204,7 +204,11 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'still') {
           copy.title = 'CORE';
           copy.blurb = 'Presentación enfocada en el proyecto general, lobby y apartamentos tipo.';
-          copy.waMessage = 'Nos interesa avanzar con la propuesta CORE';
+          copy.waMessage =
+            'M I R A L A G O\n\nNos interesa avanzar con la propuesta CORE\n\n' +
+            'Valor de la propuesta: $ 9.850.000 COP\n' +
+            'Retención en la fuente 12%: – $ 1.182.000\n' +
+            'Valor neto a recibir: $ 8.668.000 COP';
           copy.quote = {
             proposalAmount: '$ 9.850.000 COP',
             taxAmount: '– $ 1.182.000',
@@ -214,7 +218,11 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'motion') {
           copy.title = 'PLUS';
           copy.blurb = 'Presentación completa del proyecto y sus diferentes usos, con integración de drone.';
-          copy.waMessage = 'Nos interesa avanzar con la propuesta PLUS';
+          copy.waMessage =
+            'M I R A L A G O\n\nNos interesa avanzar con la propuesta PLUS\n\n' +
+            'Valor de la propuesta: $ 14.250.000 COP\n' +
+            'Retención en la fuente 12%: – $ 1.710.000\n' +
+            'Valor neto a recibir: $ 12.540.000 COP';
           copy.quote = {
             proposalAmount: '$ 14.250.000 COP',
             taxAmount: '– $ 1.710.000',
@@ -403,119 +411,14 @@ var QuotationProposalsPage = (function () {
     var phone = String(WHATSAPP_NUMBER || '').replace(/\D/g, '');
     if (!phone) return;
     var text = encodeURIComponent(String(message || '').trim());
-    var url = 'https://wa.me/' + phone + (text ? ('?text=' + text) : '');
+    var url = 'https://wa.me/' + phone + '?text=' + text;
     try {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (eOpen) {
-      window.location.href = url;
-    }
-  }
-
-  function wrapCanvasText(ctx, text, maxWidth) {
-    var words = String(text || '').split(/\s+/);
-    var lines = [];
-    var line = '';
-    var i;
-    for (i = 0; i < words.length; i++) {
-      var next = line ? (line + ' ' + words[i]) : words[i];
-      if (line && ctx.measureText(next).width > maxWidth) {
-        lines.push(line);
-        line = words[i];
-      } else {
-        line = next;
-      }
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-
-  function miralagoQuoteShareBlob(proposal, done) {
-    var quote = proposal && proposal.quote;
-    if (!quote || typeof document === 'undefined') {
-      done(null);
-      return;
-    }
-    var canvas = document.createElement('canvas');
-    var w = 720;
-    var h = 1100;
-    canvas.width = w;
-    canvas.height = h;
-    var ctx = canvas.getContext('2d');
-    if (!ctx) {
-      done(null);
-      return;
-    }
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(28, 28, w - 56, h - 56);
-
-    var title = String(proposal.title || '').toUpperCase();
-    ctx.fillStyle = '#fff';
-    ctx.font = '300 42px "Montserrat", "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(title, w / 2, 140);
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.beginPath();
-    ctx.moveTo(w / 2 - 70, 164);
-    ctx.lineTo(w / 2 + 70, 164);
-    ctx.stroke();
-
-    function block(label, value, y, strong) {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '500 18px "Montserrat", "Segoe UI", sans-serif';
-      ctx.fillText(String(label).toUpperCase(), w / 2, y);
-      ctx.fillStyle = '#fff';
-      ctx.font = (strong ? '600 36px' : '500 28px') + ' "Montserrat", "Segoe UI", sans-serif';
-      ctx.fillText(String(value), w / 2, y + 42);
-      return y + 110;
-    }
-    var y = 250;
-    y = block('Valor de la propuesta', quote.proposalAmount, y, false);
-    y = block('Retención en la fuente • 12%', quote.taxAmount, y, false);
-    y = block('Valor neto a recibir', quote.netAmount, y, true);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.62)';
-    ctx.font = '400 22px "Montserrat", "Segoe UI", sans-serif';
-    var lines = wrapCanvasText(ctx, String(proposal.blurb || '').replace(/\n/g, ' '), w - 120);
-    var ly = y + 24;
-    lines.forEach(function (ln) {
-      ctx.fillText(ln, w / 2, ly);
-      ly += 32;
-    });
-
-    if (typeof canvas.toBlob === 'function') {
-      canvas.toBlob(function (blob) { done(blob || null); }, 'image/jpeg', 0.86);
-      return;
-    }
-    done(null);
-  }
-
-  function shareMiralagoProposal(proposal) {
-    var title = String((proposal && proposal.title) || 'CORE').toUpperCase();
-    var message = 'Nos interesa avanzar con la propuesta ' + title;
-    miralagoQuoteShareBlob(proposal, function (blob) {
-      var file = blob
-        ? new File([blob], 'imagen2.jpg', { type: 'image/jpeg' })
-        : null;
-      var canFiles = !!(
-        file &&
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      );
-      if (canFiles) {
-        navigator.share({
-          text: message,
-          files: [file]
-        }).catch(function () {
-          openWhatsApp(message);
-        });
+      if (window.top && window.top !== window) {
+        window.top.location.href = url;
         return;
       }
-      openWhatsApp(message);
-    });
+    } catch (eTop) { /* cross-origin iframe */ }
+    window.location.href = url;
   }
 
   function buildCard(proposal) {
@@ -542,12 +445,14 @@ var QuotationProposalsPage = (function () {
       : ('<span class="qpp__card-price">' + escapeHtml(price) + '</span>');
     var confirmHtml = quote
       ? (
-          '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-          '<div class="qpp__card-terms qpp__card-terms--quote">' +
-            '<span>Anticipo: 50%</span>' +
-            '<span>Inicio: al recibir anticipo e información</span>' +
-            '<span>Entrega estimada: 4–7 semanas</span>' +
-            '<span>Vigencia: 15 días</span>' +
+          '<div class="qpp__card-body">' +
+            '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+            '<div class="qpp__card-terms qpp__card-terms--quote">' +
+              '<span>Anticipo: 50%</span>' +
+              '<span>Inicio: al recibir anticipo e información</span>' +
+              '<span>Entrega estimada: 4–7 semanas</span>' +
+              '<span>Vigencia: 15 días</span>' +
+            '</div>' +
           '</div>' +
           '<button type="button" class="qpp__card-select" data-proposal-confirm="' +
             escapeHtml(proposal.id || '') + '">Confirmar propuesta</button>'
@@ -578,9 +483,11 @@ var QuotationProposalsPage = (function () {
         '</div>' +
         '<div class="qpp__card-face qpp__card-face--back">' +
           '<div class="qpp__card-panel qpp__card-panel--detail" data-qpp-panel="detail">' +
-            '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
-            quoteHtml +
-            '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
+            '<div class="qpp__card-body">' +
+              '<span class="qpp__card-title">' + escapeHtml(title) + '</span>' +
+              quoteHtml +
+              '<span class="qpp__card-desc">' + blurbHtml + '</span>' +
+            '</div>' +
             '<button type="button" class="qpp__card-select" data-proposal-select="' +
               escapeHtml(proposal.id || '') + '">Seleccionar</button>' +
           '</div>' +
@@ -646,8 +553,7 @@ var QuotationProposalsPage = (function () {
       confirmBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        if (quote) shareMiralagoProposal(proposal);
-        else openWhatsApp(waMessage);
+        openWhatsApp(waMessage);
       });
     }
 

@@ -1690,12 +1690,30 @@ body.qr-proposals-page .qpp {
   margin-bottom: 0;
 }
 
-.qpp--miralago .qpp__card--quote .qpp__card-panel--detail {
-  justify-content: flex-start;
+.qpp__card-body {
+  display: contents;
+}
+
+.qpp--miralago .qpp__card--quote .qpp__card-panel--detail,
+.qpp--miralago .qpp__card--quote .qpp__card-panel--confirm {
+  justify-content: stretch;
+  gap: 10px;
+}
+
+.qpp--miralago .qpp__card--quote .qpp__card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  width: 100%;
+  gap: 10px;
 }
 
 .qpp--miralago .qpp__card--quote .qpp__card-select {
-  margin-top: auto;
+  margin-top: 0;
+  flex: 0 0 auto;
 }
 
 .qpp--miralago .qpp-cmp__hcell,
@@ -2035,21 +2053,27 @@ body.qr-proposals-page .qpp {
     white-space: nowrap;
   }
 
-  .qpp--miralago .qpp__card--quote .qpp__card-panel--detail {
-    justify-content: flex-start;
-    gap: 8px;
+  .qpp--miralago .qpp__card--quote .qpp__card-panel--detail,
+  .qpp--miralago .qpp__card--quote .qpp__card-panel--confirm {
+    justify-content: stretch;
+    gap: 10px;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__card-body {
+    gap: 10px;
   }
 
   .qpp--miralago .qpp__card--quote .qpp__card-select {
-    margin-top: auto;
+    margin-top: 0;
   }
 
   .qpp--miralago .qpp__card--quote .qpp__card-title {
     margin-bottom: 0;
+    font-size: 0.82rem;
   }
 
   .qpp--miralago .qpp__card--quote .qpp__quote-label:first-child {
-    margin-top: 0.15em;
+    margin-top: 0.2em;
   }
 
   .qpp--miralago .qpp__audio-wrap {
@@ -2090,16 +2114,52 @@ body.qr-proposals-page .qpp {
     text-indent: 0.18em;
   }
 
-  .qpp--miralago .qpp__card--quote .qpp__card-panel--detail {
-    gap: 2px;
+  .qpp--miralago .qpp__card--quote .qpp__card-panel--detail,
+  .qpp--miralago .qpp__card--quote .qpp__card-panel--confirm {
+    gap: 8px;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__card-body {
+    gap: 8px;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__card-title {
+    font-size: 0.84rem;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
   }
 
   .qpp--miralago .qpp__card--quote .qpp__card-title::after {
-    margin-top: 0.18em;
+    margin-top: 0.28em;
   }
 
   .qpp--miralago .qpp__card--quote .qpp__quote-label:first-child {
-    margin-top: 0;
+    margin-top: 0.12em;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__quote-label {
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__quote-amount,
+  .qpp--miralago .qpp__card--quote .qpp__quote-tax {
+    font-size: 0.78rem;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__quote-net {
+    font-size: 0.98rem;
+  }
+
+  .qpp--miralago .qpp__card--quote .qpp__card-desc {
+    font-size: 0.64rem;
+    line-height: 1.35;
+  }
+
+  .qpp--miralago .qpp__card-terms--quote {
+    font-size: 0.64rem;
+    line-height: 1.4;
+    gap: 0.55em;
   }
 
   .qpp--miralago .qpp__main {

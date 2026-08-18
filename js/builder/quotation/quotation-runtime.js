@@ -46,10 +46,18 @@ var QuotationRuntime = (function () {
     bundle = bundle || {};
     var share = bundle.share || {};
     var project = bundle.project || {};
-    var title = String(share.page_title || project.nombre || project.slug || 'Cotización').trim();
+    var slug = String(project.slug || '').toLowerCase();
+    var id = String(project.id || '').toLowerCase();
+    var isMiralago = slug === 'miralago-propuesta' ||
+      id === '9b804c82-58a4-4f22-a921-ebf215bb7285';
+    var title = isMiralago
+      ? 'M I R A L A G O'
+      : String(share.page_title || project.nombre || project.slug || 'Cotización').trim();
     if (title) document.title = title;
 
-    var href = String(share.favicon_url || '').trim();
+    var href = isMiralago
+      ? '/assets/miralago/favicon.svg'
+      : String(share.favicon_url || '').trim();
     if (!href) return;
     if (href.indexOf('http') !== 0 && href.indexOf('//') !== 0) {
       try { href = new URL(href, window.location.origin).href; } catch (eAbs) {}
@@ -2331,6 +2339,7 @@ var QuotationRuntime = (function () {
         var pageTitle = (loaded.share && loaded.share.page_title) ||
           (loaded.project && loaded.project.nombre) ||
           'Cotización';
+        if (isMiralagoRuntime()) pageTitle = 'M I R A L A G O';
         document.title = pageTitle +
           (canvasMode ? ' · Canvas' : (previewMode ? ' · Preview' : (editorMode ? ' · Editor' : '')));
         if (!canvasMode && !previewMode && !editorMode) {

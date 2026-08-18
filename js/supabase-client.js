@@ -107,7 +107,7 @@ function applyPublicShareMeta(project) {
     function addLink(rel, sizes) {
       var link = document.createElement('link');
       link.rel = rel;
-      link.type = 'image/png';
+      link.type = /\.svg(\?|$)/i.test(absolute) ? 'image/svg+xml' : 'image/png';
       if (sizes) link.setAttribute('sizes', sizes);
       link.href = absolute;
       document.head.appendChild(link);
@@ -142,6 +142,14 @@ function applyPublicShareMeta(project) {
 
   var favicon = String(cfg.favicon_url || cfg.logo_url || '').trim();
   var slug = String(project.slug || '').toLowerCase();
+  var pid = String(project.id || '').toLowerCase();
+  if (slug === 'miralago-propuesta' || pid === '9b804c82-58a4-4f22-a921-ebf215bb7285') {
+    title = 'M I R A L A G O';
+    document.title = title;
+    upsertMeta('property', 'og:title', title);
+    upsertMeta('name', 'twitter:title', title);
+    favicon = '/assets/miralago/favicon.svg';
+  }
   if (!favicon && (slug === 'taroa' || slug === 'taroa-propuesta' || slug.indexOf('taroa') === 0)) {
     favicon = '/assets/taroa/favicon.png';
   }
@@ -186,7 +194,7 @@ function handoffQuotationPublicExperience(project) {
     var u = new URL('/quotation/', window.location.origin);
     u.searchParams.set('projectId', id);
     u.searchParams.set('experience_type', 'quotation');
-    u.searchParams.set('build', 'ws7952');
+    u.searchParams.set('build', 'ws7953');
     if (handoffParams.get('live') === '1' || handoffParams.get('live') === 'true') {
       u.searchParams.set('live', '1');
     }
@@ -196,7 +204,7 @@ function handoffQuotationPublicExperience(project) {
     runtimeSrc = u.href;
   } catch (e) {
     runtimeSrc = '/quotation/?projectId=' + encodeURIComponent(id) +
-      '&experience_type=quotation&build=ws7952';
+      '&experience_type=quotation&build=ws7953';
     try {
       var hp = new URLSearchParams(window.location.search || '');
       if (hp.get('live') === '1' || hp.get('live') === 'true') {
@@ -210,6 +218,10 @@ function handoffQuotationPublicExperience(project) {
 
   try {
     document.title = String(
+      (String(project.slug || '').toLowerCase() === 'miralago-propuesta' ||
+        String(project.id || '').toLowerCase() === '9b804c82-58a4-4f22-a921-ebf215bb7285')
+        ? 'M I R A L A G O'
+        : (
       (project.proyecto_config && (
         Array.isArray(project.proyecto_config)
           ? (project.proyecto_config[0] && project.proyecto_config[0].page_title)
@@ -218,6 +230,7 @@ function handoffQuotationPublicExperience(project) {
       project.nombre ||
       project.slug ||
       'Cotización'
+        )
     ).trim();
     try {
       applyPublicShareMeta(project);
@@ -232,7 +245,10 @@ function handoffQuotationPublicExperience(project) {
     document.body.innerHTML = '';
     var frame = document.createElement('iframe');
     frame.className = 'qr-public-handoff-frame';
-    frame.title = project.nombre || 'Cotización';
+    frame.title = (String(project.slug || '').toLowerCase() === 'miralago-propuesta' ||
+      String(project.id || '').toLowerCase() === '9b804c82-58a4-4f22-a921-ebf215bb7285')
+      ? 'M I R A L A G O'
+      : (project.nombre || 'Cotización');
     frame.setAttribute('allow', 'fullscreen; autoplay; encrypted-media');
     frame.style.cssText =
       'position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;padding:0;' +
