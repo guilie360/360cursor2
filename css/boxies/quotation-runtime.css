@@ -839,13 +839,29 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   height: 72px !important;
   z-index: 2147483001;
   pointer-events: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
   align-items: center;
-  justify-content: space-between;
+  column-gap: 16px;
   padding: 0 28px;
   box-sizing: border-box;
   background: #000;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__brand {
+  justify-self: center;
+  margin: 0;
+  color: #fff;
+  font-family: 'Cormorant Garamond', 'Bodoni Moda', 'Times New Roman', serif;
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  font-weight: 300;
+  letter-spacing: 0.55em;
+  text-indent: 0.55em;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__back,

@@ -1669,7 +1669,7 @@ var QuotationRuntime = (function () {
   }
 
   function miralagoBocetoPdfUrl() {
-    return '/assets/miralago/boceto-3d.pdf?v=ws7942#view=FitH';
+    return '/assets/miralago/boceto-3d.pdf?v=ws7943#view=FitH';
   }
 
   function paintMiralagoBocetoPdf(parentEl) {
@@ -1850,6 +1850,7 @@ var QuotationRuntime = (function () {
         btnCss + backPos + '">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
+      (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
       '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
         btnCss + fsPos + '">' +
         '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
