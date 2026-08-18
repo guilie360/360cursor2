@@ -1766,6 +1766,12 @@ var QuotationRuntime = (function () {
       document.addEventListener('keydown', unlock, true);
     };
     api.play = function () {
+      try {
+        if (isMiralagoMuteMobile()) {
+          api.pause();
+          return;
+        }
+      } catch (eMute) { /* ignore */ }
       api.ensureGraph();
       var p = audio.play();
       if (p && typeof p.catch === 'function') {
@@ -1797,6 +1803,14 @@ var QuotationRuntime = (function () {
 
   function isMiralagoPhoneViewport() {
     return (window.innerWidth || 0) <= 900;
+  }
+
+  function isMiralagoMuteMobile() {
+    try {
+      return window.matchMedia && window.matchMedia('(max-width: 1023px)').matches;
+    } catch (eM) {
+      return (window.innerWidth || 0) <= 1023;
+    }
   }
 
   function attachMiralagoPdfLoader(host) {
@@ -2259,7 +2273,11 @@ var QuotationRuntime = (function () {
       '</button>' +
       (asFooter ? '<span class="qr-scene-chrome__brand">MIRALAGO</span>' : '') +
       '<div class="qr-scene-chrome__end">' +
-        (asFooter ? miralagoSceneMusicHtml(btnCss) : '') +
+        (asFooter
+          ? (isMiralagoMuteMobile()
+            ? '<span class="qr-scene-chrome__fs-spacer" aria-hidden="true"></span>'
+            : miralagoSceneMusicHtml(btnCss))
+          : '') +
         fsHtml +
       '</div>';
     mountAt.appendChild(chrome);
@@ -2290,7 +2308,10 @@ var QuotationRuntime = (function () {
       document.removeEventListener('webkitfullscreenchange', onFsChange);
     };
     syncMiralagoFsUi(chrome);
-    if (asFooter) bindMiralagoSceneAudio(chrome);
+    if (asFooter && !isMiralagoMuteMobile()) bindMiralagoSceneAudio(chrome);
+    else if (window.__miralagoAmbient) {
+      try { window.__miralagoAmbient.pause(); } catch (eMute) { /* ignore */ }
+    }
   }
 
   function leaveStage() {

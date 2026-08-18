@@ -929,6 +929,9 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   .qr-scene-chrome--footer .qr-scene-chrome__audio-panel {
     display: none !important;
   }
+  .qr-scene-chrome--footer .qr-scene-chrome__audio {
+    display: none !important;
+  }
 }
 
 .qr-miralago-pdf-host {

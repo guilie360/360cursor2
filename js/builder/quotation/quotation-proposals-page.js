@@ -242,6 +242,7 @@ var QuotationProposalsPage = (function () {
 
   function audioChromeHtml(audioSrc, opts) {
     if (!audioSrc) return '';
+    if (isMiralagoContext(opts) && isMobileAudioChrome()) return '';
     return '' +
       '<div class="qpp__audio-wrap" data-qpp-audio-wrap>' +
         '<button type="button" class="qpp__icon-btn qpp__chrome-music" data-qpp-music aria-label="Música" aria-expanded="false" aria-controls="qppAudioPanel">' +
@@ -371,7 +372,9 @@ var QuotationProposalsPage = (function () {
                 '<path d="M16 21v-3a2 2 0 0 1 2-2h3"/>' +
               '</svg>' +
             '</button>' +
-            audioChromeHtml(audioSrc, opts) +
+            (isMiralagoContext(opts) && isMobileAudioChrome()
+              ? '<span class="qpp__audio-spacer" aria-hidden="true"></span>'
+              : audioChromeHtml(audioSrc, opts)) +
           '</div>' +
         '</header>' +
         '<main class="qpp__main" data-qpp-selection>' +
@@ -959,6 +962,10 @@ var QuotationProposalsPage = (function () {
     var root = host || document.querySelector('[data-qpp-root]') ||
       document.querySelector('[data-qr-proposals]');
     if (!root) return false;
+    if (isMiralagoContext(root._qppOpts) && isMobileAudioChrome()) {
+      if (window.__miralagoAmbient) window.__miralagoAmbient.pause();
+      return false;
+    }
     if (isMiralagoContext(root._qppOpts)) {
       var amb = miralagoAmbient();
       if (amb) amb.play();
@@ -997,6 +1004,10 @@ var QuotationProposalsPage = (function () {
     var toggle = qs('[data-qpp-audio-toggle]', root);
     var volume = qs('[data-qpp-volume]', root);
     var wrap = qs('[data-qpp-audio-wrap]', root);
+    if (isMiralagoContext(root && root._qppOpts) && isMobileAudioChrome()) {
+      if (window.__miralagoAmbient) window.__miralagoAmbient.pause();
+      return;
+    }
     if (!musicBtn) return;
 
     var miralago = isMiralagoContext(root && root._qppOpts);
