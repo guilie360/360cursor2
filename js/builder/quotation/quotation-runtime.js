@@ -1195,7 +1195,9 @@ var QuotationRuntime = (function () {
     void sceneApi;
     if (resolveSceneMedia(scene, bundle) ||
         (isMiralagoRuntime() && String(scene.id) === 'sc-miralago-massing')) {
-      mountMiralagoSceneChrome(stageEl);
+      mountMiralagoSceneChrome(stageEl, {
+        footer: String(scene.id) === 'sc-miralago-massing'
+      });
     }
     var video = coverHostEl.querySelector('video.project-cover-video');
     if (video && !video.paused) {
@@ -1667,7 +1669,7 @@ var QuotationRuntime = (function () {
   }
 
   function miralagoBocetoPdfUrl() {
-    return '/assets/miralago/boceto-3d.pdf?v=ws7941#view=FitH';
+    return '/assets/miralago/boceto-3d.pdf?v=ws7942#view=FitH';
   }
 
   function paintMiralagoBocetoPdf(parentEl) {
@@ -1807,9 +1809,11 @@ var QuotationRuntime = (function () {
     }
   }
 
-  function mountMiralagoSceneChrome(host) {
+  function mountMiralagoSceneChrome(host, opts) {
     if (!host || editorMode && canvasMode) return;
     if (!isMiralagoRuntime()) return;
+    opts = opts || {};
+    var asFooter = opts.footer === true;
     var mountAt = presentationRootEl || host;
     var existing = document.querySelector('[data-qr-scene-chrome]');
     if (existing) {
@@ -1819,23 +1823,35 @@ var QuotationRuntime = (function () {
       existing.remove();
     }
     var chrome = document.createElement('div');
-    chrome.className = 'qr-scene-chrome';
+    chrome.className = 'qr-scene-chrome' + (asFooter ? ' qr-scene-chrome--footer' : '');
     chrome.setAttribute('data-qr-scene-chrome', '1');
-    chrome.setAttribute('style',
-      'position:fixed;top:0;left:0;width:0;height:0;z-index:80;pointer-events:none;overflow:visible;');
-    var btnCss =
-      'position:fixed;width:48px;height:48px;display:inline-flex;align-items:center;' +
-      'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
-      'background:rgba(0,0,0,0.72);color:#fff;border:1px solid rgba(255,255,255,0.5);' +
-      'box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 10px 24px rgba(0,0,0,0.4);' +
-      'padding:0;margin:0;';
+    if (!asFooter) {
+      chrome.setAttribute('style',
+        'position:fixed;top:0;left:0;width:0;height:0;z-index:80;pointer-events:none;overflow:visible;');
+    }
+    var btnCss = asFooter
+      ? (
+          'position:relative;width:48px;height:48px;display:inline-flex;align-items:center;' +
+          'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
+          'background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.42);' +
+          'box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);padding:0;margin:0;'
+        )
+      : (
+          'position:fixed;width:48px;height:48px;display:inline-flex;align-items:center;' +
+          'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
+          'background:rgba(0,0,0,0.72);color:#fff;border:1px solid rgba(255,255,255,0.5);' +
+          'box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 10px 24px rgba(0,0,0,0.4);' +
+          'padding:0;margin:0;'
+        );
+    var backPos = asFooter ? '' : 'top:88px;left:88px;';
+    var fsPos = asFooter ? '' : 'top:88px;right:88px;';
     chrome.innerHTML =
       '<button type="button" class="qr-scene-chrome__back" data-qr-scene-back aria-label="Volver" style="' +
-        btnCss + 'top:88px;left:88px;">' +
+        btnCss + backPos + '">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
       '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
-        btnCss + 'top:88px;right:88px;">' +
+        btnCss + fsPos + '">' +
         '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
           '<path d="M16 3h3a2 2 0 0 1 2 2v3"/>' +
