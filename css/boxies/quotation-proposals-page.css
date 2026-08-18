@@ -1112,6 +1112,10 @@ body.qr-proposals-page .qpp {
   padding: clamp(12px, 3vh, 32px) clamp(12px, 4vw, 24px);
 }
 
+.qpp-cmp-upgrade[hidden] {
+  display: none !important;
+}
+
 .qpp-cmp-upgrade__heading {
   margin: 0 0 clamp(22px, 4vh, 36px);
   opacity: 0;
@@ -1772,8 +1776,8 @@ body.qr-proposals-page .qpp {
   align-items: center;
   width: 100%;
   margin: clamp(36px, 7vh, 72px) 0 0;
-  min-height: clamp(160px, 34vh, 320px);
-  padding-bottom: 12px;
+  min-height: calc(100dvh - 220px);
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -1842,8 +1846,8 @@ body.qr-proposals-page .qpp {
 
 @media (min-width: 1024px) {
   .qpp--miralago .qpp-cmp__cta-arrow {
-    min-height: clamp(180px, 28vh, 300px);
-    padding-bottom: 28px;
+    min-height: calc(100dvh - 240px);
+    padding-bottom: 88px;
   }
 }
 
