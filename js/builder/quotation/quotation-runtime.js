@@ -178,6 +178,11 @@ var QuotationRuntime = (function () {
     if (slug === 'taroa-propuesta') {
       return '../assets/taroa/mujer-conforme.mp3';
     }
+    if (slug === 'miralago-propuesta' ||
+        String((bundle.project && bundle.project.id) || '').toLowerCase() ===
+          '9b804c82-58a4-4f22-a921-ebf215bb7285') {
+      return '../assets/miralago/LAGO.mp3';
+    }
     return '';
   }
 
