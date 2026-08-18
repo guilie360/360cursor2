@@ -1704,6 +1704,11 @@ body.qr-proposals-page .qpp {
   gap: 10px;
 }
 
+.qpp--miralago .qpp__quote-net,
+.qpp--miralago .qpp-cmp-upgrade__q-net {
+  color: #6f8f73;
+}
+
 .qpp--miralago .qpp__card--quote .qpp__card-body {
   display: flex;
   flex: 1 1 auto;
