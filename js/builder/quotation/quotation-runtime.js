@@ -1662,14 +1662,50 @@ var QuotationRuntime = (function () {
 
   var miralagoPdfBlobUrl = '';
   var miralagoPdfWarmHref = '';
+  var miralagoPdfCleanup = null;
 
   function miralagoBocetoPdfHref() {
-    return '/assets/miralago/boceto3d.pdf?v=ws7946';
+    return '/assets/miralago/boceto3d.pdf?v=ws7947';
   }
 
   function miralagoBocetoPdfUrl() {
     if (miralagoPdfBlobUrl) return miralagoPdfBlobUrl + '#view=FitH';
     return miralagoBocetoPdfHref() + '#view=FitH';
+  }
+
+  function isMiralagoPhoneViewport() {
+    return (window.innerWidth || 0) <= 900;
+  }
+
+  function loadPdfJs(done) {
+    if (window.pdfjsLib) {
+      done(window.pdfjsLib);
+      return;
+    }
+    var existing = document.querySelector('script[data-qr-pdfjs]');
+    if (existing) {
+      existing.addEventListener('load', function () {
+        if (window.pdfjsLib) done(window.pdfjsLib);
+      });
+      return;
+    }
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.setAttribute('data-qr-pdfjs', '1');
+    script.onload = function () {
+      if (!window.pdfjsLib) return;
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      done(window.pdfjsLib);
+    };
+    document.head.appendChild(script);
+  }
+
+  function destroyMiralagoPdfViewer() {
+    if (typeof miralagoPdfCleanup === 'function') {
+      try { miralagoPdfCleanup(); } catch (eC) { /* ignore */ }
+      miralagoPdfCleanup = null;
+    }
   }
 
   function prefetchMiralagoBocetoPdf() {
@@ -1709,12 +1745,103 @@ var QuotationRuntime = (function () {
       .catch(function () { /* keep network URL */ });
   }
 
+  function paintMiralagoBocetoPdfMobile(parentEl) {
+    destroyMiralagoPdfViewer();
+    var wrap = document.createElement('div');
+    wrap.className = 'qr-miralago-pdf-host qr-miralago-pdf-host--pages';
+    wrap.setAttribute('data-qr-miralago-pdf', '1');
+    var scroller = document.createElement('div');
+    scroller.className = 'qr-miralago-pdf-pages';
+    wrap.appendChild(scroller);
+    parentEl.appendChild(wrap);
+    sceneMediaEl = wrap;
+
+    var pdfDoc = null;
+    var cancelled = false;
+    var resizeTimer = 0;
+
+    function pageBoxSize() {
+      var w = wrap.clientWidth || window.innerWidth || 360;
+      var h = wrap.clientHeight || Math.max(240, (window.innerHeight || 640) - 64);
+      return { w: Math.max(1, w), h: Math.max(1, h) };
+    }
+
+    function renderAll() {
+      if (cancelled || !pdfDoc) return;
+      scroller.innerHTML = '';
+      var box = pageBoxSize();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var pageNo = 1;
+
+      function renderNext() {
+        if (cancelled || pageNo > pdfDoc.numPages) return;
+        pdfDoc.getPage(pageNo).then(function (page) {
+          if (cancelled) return;
+          var slot = document.createElement('div');
+          slot.className = 'qr-miralago-pdf-slot';
+          slot.style.height = box.h + 'px';
+          var canvas = document.createElement('canvas');
+          canvas.className = 'qr-miralago-pdf-page';
+          slot.appendChild(canvas);
+          scroller.appendChild(slot);
+          var base = page.getViewport({ scale: 1 });
+          var fit = Math.min(box.w / base.width, box.h / base.height);
+          var viewport = page.getViewport({ scale: fit * dpr });
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          canvas.style.width = Math.floor(viewport.width / dpr) + 'px';
+          canvas.style.height = Math.floor(viewport.height / dpr) + 'px';
+          return page.render({
+            canvasContext: canvas.getContext('2d', { alpha: false }),
+            viewport: viewport
+          }).promise;
+        }).then(function () {
+          pageNo += 1;
+          renderNext();
+        }).catch(function () {
+          pageNo += 1;
+          renderNext();
+        });
+      }
+      renderNext();
+    }
+
+    function onResize() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(renderAll, 180);
+    }
+
+    loadPdfJs(function (pdfjsLib) {
+      if (cancelled) return;
+      var src = miralagoPdfBlobUrl || miralagoBocetoPdfHref();
+      pdfjsLib.getDocument({ url: src, withCredentials: false }).promise.then(function (pdf) {
+        if (cancelled) return;
+        pdfDoc = pdf;
+        renderAll();
+      }).catch(function () { /* ignore */ });
+    });
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    miralagoPdfCleanup = function () {
+      cancelled = true;
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+    return wrap;
+  }
+
   function paintMiralagoBocetoPdf(parentEl) {
     if (heroCanvasApi && heroCanvasApi.destroy) {
       try { heroCanvasApi.destroy(); } catch (ePdf) { /* ignore */ }
       heroCanvasApi = null;
     }
+    destroyMiralagoPdfViewer();
     prefetchMiralagoBocetoPdf();
+    if (isMiralagoPhoneViewport()) {
+      return paintMiralagoBocetoPdfMobile(parentEl);
+    }
     var wrap = document.createElement('div');
     wrap.className = 'qr-miralago-pdf-host';
     wrap.setAttribute('data-qr-miralago-pdf', '1');
@@ -1898,6 +2025,7 @@ var QuotationRuntime = (function () {
 
   function leaveStage() {
     if (!coverHostEl || !stageEl) return;
+    destroyMiralagoPdfViewer();
     if (heroCanvasApi && heroCanvasApi.destroy) {
       try { heroCanvasApi.destroy(); } catch (eHc) { /* ignore */ }
       heroCanvasApi = null;
