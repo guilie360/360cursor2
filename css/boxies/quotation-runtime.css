@@ -884,6 +884,33 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   right: auto !important;
   background: transparent !important;
   border: 1px solid rgba(255, 255, 255, 0.42) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background 250ms ease, border-color 250ms ease, transform 250ms ease, box-shadow 250ms ease;
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__back:hover,
+.qr-scene-chrome--footer .qr-scene-chrome__fs:hover,
+.qr-scene-chrome--footer .qr-scene-chrome__music:hover,
+.qr-scene-chrome--footer .qr-scene-chrome__back:focus-visible,
+.qr-scene-chrome--footer .qr-scene-chrome__fs:focus-visible,
+.qr-scene-chrome--footer .qr-scene-chrome__music:focus-visible {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 28px rgba(0, 0, 0, 0.32);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.qr-scene-chrome--footer .qr-scene-chrome__back:active,
+.qr-scene-chrome--footer .qr-scene-chrome__fs:active,
+.qr-scene-chrome--footer .qr-scene-chrome__music:active,
+.qr-scene-chrome--footer .qr-scene-chrome__music.is-active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
 }
 
 .qr-scene-chrome--footer .qr-scene-chrome__audio {

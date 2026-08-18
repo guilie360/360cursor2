@@ -2219,8 +2219,7 @@ var QuotationRuntime = (function () {
       ? (
           'position:relative;width:48px;height:48px;display:inline-flex;align-items:center;' +
           'justify-content:center;border-radius:999px;pointer-events:auto;cursor:pointer;' +
-          'background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.42);' +
-          'box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);padding:0;margin:0;'
+          'color:#fff;padding:0;margin:0;'
         )
       : (
           'position:fixed;width:48px;height:48px;display:inline-flex;align-items:center;' +
@@ -2234,7 +2233,7 @@ var QuotationRuntime = (function () {
     var fsHtml = hideFs
       ? ''
       : (
-      '<button type="button" class="qr-scene-chrome__fs" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
+      '<button type="button" class="qr-scene-chrome__fs qpp__icon-btn" data-qr-scene-fs aria-label="Pantalla completa" aria-pressed="false" style="' +
         btnCss + fsPos + '">' +
         '<svg class="qpp__fs-icon qpp__fs-icon--enter" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
           '<path d="M8 3H5a2 2 0 0 0-2 2v3"/>' +
@@ -2251,7 +2250,7 @@ var QuotationRuntime = (function () {
       '</button>'
         );
     chrome.innerHTML =
-      '<button type="button" class="qr-scene-chrome__back" data-qr-scene-back aria-label="Volver" style="' +
+      '<button type="button" class="qr-scene-chrome__back qpp__icon-btn" data-qr-scene-back aria-label="Volver" style="' +
         btnCss + backPos + '">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
       '</button>' +
