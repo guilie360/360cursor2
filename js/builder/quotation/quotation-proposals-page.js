@@ -204,11 +204,7 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'still') {
           copy.title = 'CORE';
           copy.blurb = 'Presentación enfocada en el proyecto general, lobby y apartamentos tipo.';
-          copy.waMessage =
-            'M I R A L A G O\n\nNos interesa avanzar con la propuesta CORE\n\n' +
-            'Valor de la propuesta: $ 9.850.000 COP\n' +
-            'Retención en la fuente 12%: – $ 1.182.000\n' +
-            'Valor neto a recibir: $ 8.668.000 COP';
+          copy.waMessage = 'HOLA GUILIE, NOS INTERESA AVANZAR CON LA PROPUESTA CORE';
           copy.quote = {
             proposalAmount: '$ 9.850.000 COP',
             taxAmount: '– $ 1.182.000',
@@ -218,11 +214,7 @@ var QuotationProposalsPage = (function () {
         if (p.id === 'motion') {
           copy.title = 'PLUS';
           copy.blurb = 'Presentación completa del proyecto y sus diferentes usos, con integración de drone.';
-          copy.waMessage =
-            'M I R A L A G O\n\nNos interesa avanzar con la propuesta PLUS\n\n' +
-            'Valor de la propuesta: $ 14.250.000 COP\n' +
-            'Retención en la fuente 12%: – $ 1.710.000\n' +
-            'Valor neto a recibir: $ 12.540.000 COP';
+          copy.waMessage = 'HOLA GUILIE, NOS INTERESA AVANZAR CON LA PROPUESTA PLUS';
           copy.quote = {
             proposalAmount: '$ 14.250.000 COP',
             taxAmount: '– $ 1.710.000',
