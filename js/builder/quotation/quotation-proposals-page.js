@@ -295,7 +295,7 @@ var QuotationProposalsPage = (function () {
               '<span class="qpp-cmp-upgrade__q-label">− 12%</span>' +
               '<span class="qpp-cmp-upgrade__q-tax">$528.000 COP</span>' +
               '<span class="qpp-cmp-upgrade__q-label">Neto</span>' +
-              '<span class="qpp-cmp-upgrade__q-net">$3.872.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-net">$3.872.000<span class="qpp-cmp-upgrade__q-ccy">COP</span></span>' +
             '</div>' +
             '<div class="qpp-cmp-upgrade__quote qpp-cmp-upgrade__quote--motion">' +
               '<span class="qpp-cmp-upgrade__q-label">Diferencia</span>' +
@@ -303,7 +303,7 @@ var QuotationProposalsPage = (function () {
               '<span class="qpp-cmp-upgrade__q-label">− 12%</span>' +
               '<span class="qpp-cmp-upgrade__q-tax">$600.000 COP</span>' +
               '<span class="qpp-cmp-upgrade__q-label">Neto</span>' +
-              '<span class="qpp-cmp-upgrade__q-net">$4.400.000 COP</span>' +
+              '<span class="qpp-cmp-upgrade__q-net">$4.400.000<span class="qpp-cmp-upgrade__q-ccy">COP</span></span>' +
             '</div>' +
           '</div>' +
         '</div>';

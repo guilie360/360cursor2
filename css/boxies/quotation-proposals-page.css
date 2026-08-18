@@ -1372,6 +1372,11 @@ body.qr-proposals-page .qpp {
   color: #6f8f73;
 }
 
+.qpp--miralago .qpp-cmp-upgrade__q-ccy {
+  display: inline;
+  margin-left: 0.28em;
+}
+
 @media (max-width: 700px) {
   .qpp-cmp-upgrade__matrix {
     width: min(360px, 100%);
@@ -1406,6 +1411,20 @@ body.qr-proposals-page .qpp {
 
   .qpp--miralago .qpp-cmp-upgrade__matrix--quote {
     width: min(360px, 100%);
+    align-items: center;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__tier-name--still,
+  .qpp--miralago .qpp-cmp-upgrade__tier-name--motion,
+  .qpp--miralago .qpp-cmp-upgrade__arrow {
+    align-self: center;
+    margin-bottom: 10px;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__tier-name--motion {
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    text-indent: 0.16em;
   }
 
   .qpp--miralago .qpp-cmp-upgrade__q-label {
@@ -1422,6 +1441,18 @@ body.qr-proposals-page .qpp {
 
   .qpp--miralago .qpp-cmp-upgrade__q-net {
     font-size: 0.82rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.15;
+  }
+
+  .qpp--miralago .qpp-cmp-upgrade__q-ccy {
+    display: block;
+    margin-left: 0;
+    margin-top: 0.08em;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
   }
 }
 
