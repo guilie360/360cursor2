@@ -1046,7 +1046,8 @@ var QuotationRuntime = (function () {
       zoomMax: opts.zoomMax,
       mode: opts.mode
     });
-    if (paintIx && canvas) {
+    if (paintIx && canvas &&
+        !(isMiralagoRuntime() && scene && String(scene.id) === 'sc-miralago-massing')) {
       paintInteractionLayer(canvas, scene, interactive, {
         force: opts.mode === 'builder' || opts.mode === 'preview',
         paintInteractions: true,
@@ -1749,8 +1750,16 @@ var QuotationRuntime = (function () {
     };
     api.setLevel = function (n) {
       api.level = Math.max(0, Math.min(1, Number(n) || 0));
-      if (api.gain) api.gain.gain.value = api.level;
-      else audio.volume = api.level;
+      if (api.gain) {
+        try {
+          if (api.ctx) api.gain.gain.setValueAtTime(api.level, api.ctx.currentTime);
+          else api.gain.gain.value = api.level;
+        } catch (eL) {
+          api.gain.gain.value = api.level;
+        }
+      } else {
+        audio.volume = api.level;
+      }
     };
     api.bindUnlock = function () {
       if (api.unlockBound) return;
@@ -1798,7 +1807,7 @@ var QuotationRuntime = (function () {
 
   function miralagoBocetoPageHref(n) {
     var pad = (n < 10 ? '0' : '') + String(n);
-    return '/assets/miralago/boceto-pages/page-' + pad + '.jpg?v=ws7950';
+    return '../assets/miralago/boceto-pages/page-' + pad + '.jpg?v=ws7969';
   }
 
   function isMiralagoPhoneViewport() {
@@ -1886,6 +1895,7 @@ var QuotationRuntime = (function () {
         img.loading = 'lazy';
       }
       img.src = miralagoBocetoPageHref(i);
+      if (i === 1 && img.complete) showFirst();
       slot.appendChild(img);
       scroller.appendChild(slot);
     }
@@ -1970,6 +1980,7 @@ var QuotationRuntime = (function () {
           img.loading = 'lazy';
         }
         img.src = miralagoBocetoPageHref(pageNo);
+        if (pageNo === 1 && img.complete) showFirst();
         slot.appendChild(img);
         stage.appendChild(slot);
         slots.push(slot);
@@ -2175,9 +2186,13 @@ var QuotationRuntime = (function () {
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      setPanel(false);
-      ambient.toggle();
-      syncUi();
+      if (isPhone()) {
+        setPanel(false);
+        ambient.toggle();
+        syncUi();
+        return;
+      }
+      setPanel(!(panel && !panel.hidden));
     });
 
     if (toggle) {

@@ -871,7 +871,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
     text-indent: 0.32em;
   }
   .qr-miralago-pdf-host {
-    inset: 0 0 64px 0;
+    bottom: 64px;
   }
 }
 
@@ -917,12 +917,14 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
   position: relative;
 }
 
-.qr-scene-chrome--footer .qr-scene-chrome__audio-panel {
-  right: 0;
-  left: auto;
-  top: auto;
-  bottom: calc(100% + 12px);
-  transform: none;
+.qr-scene-chrome--footer .qr-scene-chrome__audio-panel,
+.qr-scene-chrome--footer .qr-scene-chrome__audio-panel:not([hidden]),
+.qr-scene-chrome--footer .qpp__audio-wrap.is-audio-open .qpp__audio-panel {
+  right: 0 !important;
+  left: auto !important;
+  top: auto !important;
+  bottom: calc(100% + 12px) !important;
+  transform: none !important;
 }
 
 @media (max-width: 1023px) {
@@ -936,9 +938,13 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 
 .qr-miralago-pdf-host {
   position: absolute;
-  inset: 0 0 72px 0;
-  width: 100%;
+  top: 0;
+  right: 0;
+  bottom: 72px;
+  left: 0;
+  width: auto;
   height: auto;
+  min-height: 0;
   background: #000;
   overflow: hidden;
 }

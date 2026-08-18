@@ -1032,7 +1032,7 @@ var QuotationProposalsPage = (function () {
     musicBtn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
-      if (miralago || isMobileAudioChrome()) {
+      if (isMobileAudioChrome()) {
         setAudioPanelOpen(root, false);
         toggleAmbientPlayback(audio, root);
         return;
