@@ -251,12 +251,7 @@ var ButtonOverlayRenderer = (function () {
     }
     if (!vm) return '';
     var fit = pickerFitBoxPercents(vm, refW, refH);
-    var previewVm = Object.assign({}, vm, {
-      boxW: fit.boxW,
-      boxH: fit.boxH,
-      label: '',
-      icon: null
-    });
+    var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
     var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
     return '<div class="qe-button-picker__layer" aria-hidden="true">' +
       '<div class="qe-button-picker__stage" style="width:' + refW + 'px;height:' + refH + 'px;' +
@@ -321,12 +316,7 @@ var ButtonOverlayRenderer = (function () {
     }
     if (!vm) return '';
     var fit = pickerFitBoxPercents(vm, refW, refH);
-    var previewVm = Object.assign({}, vm, {
-      boxW: fit.boxW,
-      boxH: fit.boxH,
-      label: '',
-      icon: null
-    });
+    var previewVm = Object.assign({}, vm, { boxW: fit.boxW, boxH: fit.boxH });
     var btnHtml = renderButtonHtml(previewVm, { stage: false, x: 50, y: 50 });
     return '<div class="qe-component-picker__viewport" aria-hidden="true">' +
       '<div class="qe-button-picker__stage qe-component-picker__stage"' +

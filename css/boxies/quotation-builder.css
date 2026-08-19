@@ -1362,11 +1362,6 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   border-radius: 8px;
 }
 
-.qe-canvas-fit__frame > .qe-shape-picker,
-.qe-canvas-fit__frame > .qe-picker {
-  border-radius: inherit;
-}
-
 .qe-canvas-fit__frame:has(.qe-guides-chrome.is-rulers-on) {
   overflow: visible;
 }
@@ -4476,7 +4471,7 @@ body.is-qe-lib-pointer-dragging * {
   pointer-events: none;
 }
 
-/* Button shape picker — same tile grid as shapes. */
+/* Button shape picker — same tile grid as shapes (SVG thumbs only). */
 .qe-button-shape-picker .qe-shape-picker__grid {
   min-width: calc(4 * 52px + 3 * 6px);
   min-height: 52px;
