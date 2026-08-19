@@ -4156,6 +4156,16 @@ var QuotationEditor = (function () {
     return '';
   }
 
+  function buttonShapePickerThumbSvg(shape) {
+    var kindMap = {
+      square: 'SHAPE_RECT',
+      rounded: 'SHAPE_ROUND_RECT',
+      circle: 'SHAPE_CIRCLE',
+      capsule: 'SHAPE_CAPSULE'
+    };
+    return shapePickerThumbSvg(kindMap[String(shape || '').toLowerCase()] || 'SHAPE_RECT');
+  }
+
   var SHAPE_PICKER_ITEMS = [
     { kind: 'SHAPE_RECT', label: 'Rectángulo' },
     { kind: 'SHAPE_CIRCLE', label: 'Círculo' },
@@ -4195,18 +4205,11 @@ var QuotationEditor = (function () {
   function buttonPickerHtml() {
     if (!state.buttonPickerOpen) return '';
     var grid = BUTTON_SHAPE_PICKER_ITEMS.map(function (item) {
-      var preset = (typeof ButtonPresets !== 'undefined' && ButtonPresets.get)
-        ? ButtonPresets.get(item.shape)
-        : null;
-      var preview = (preset && typeof ButtonOverlayRenderer !== 'undefined' &&
-          ButtonOverlayRenderer.renderPickerPreviewHtml)
-        ? ButtonOverlayRenderer.renderPickerPreviewHtml(preset)
-        : '';
       return '' +
         '<button type="button" class="qe-shape-picker__item qe-button-picker__item" ' +
           'data-qe-pick-button-shape="' + escapeHtml(item.shape) + '" ' +
           'aria-label="' + escapeHtml(item.label) + '" title="' + escapeHtml(item.label) + '">' +
-          preview +
+          buttonShapePickerThumbSvg(item.shape) +
         '</button>';
     }).join('');
     return '' +
@@ -4216,6 +4219,22 @@ var QuotationEditor = (function () {
           '<div class="qe-shape-picker__grid qe-btn-shape-picker__grid">' + grid + '</div>' +
         '</div>' +
       '</div>';
+  }
+
+  function syncPickerOpenFlags() {
+    if (!rootEl) return;
+    if (state.buttonPickerOpen && !rootEl.querySelector('[data-qe-button-picker]')) {
+      state.buttonPickerOpen = false;
+    }
+    if (state.shapePickerOpen && !rootEl.querySelector('[data-qe-shape-picker]')) {
+      state.shapePickerOpen = false;
+    }
+    if (state.componentPickerOpen && !rootEl.querySelector('[data-qe-component-picker]')) {
+      state.componentPickerOpen = false;
+    }
+    if (state.resourcePickerOpen && !rootEl.querySelector('[data-qe-resource-picker]')) {
+      state.resourcePickerOpen = false;
+    }
   }
 
   function componentPickerHtml() {
@@ -11225,6 +11244,8 @@ var QuotationEditor = (function () {
     state.sceneMenuOpen = false;
     state.dockOpen = false;
     state.resourcePickerOpen = false;
+    state.shapePickerOpen = false;
+    state.buttonPickerOpen = false;
     state.componentPickerOpen = false;
     state.pendingSceneDeleteId = null;
     state.selectedElementId = null;
@@ -11353,6 +11374,7 @@ var QuotationEditor = (function () {
   /* V7.2.57 — universal Escape + Delete for Quotation Builder chrome. */
   function onBuilderShortcut(e) {
     if (!rootEl) return;
+    syncPickerOpenFlags();
     if (isBuilderFormField(e.target)) return;
 
     if (e.key === 'Enter' && state.pendingSceneDeleteId) {
@@ -11642,6 +11664,7 @@ var QuotationEditor = (function () {
 
   function onCanvasOutsidePointer(e) {
     if (!rootEl) return;
+    syncPickerOpenFlags();
     if (state.canvasPreviewMode) return;
     if (state.pendingSceneDeleteId) return;
     if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
@@ -12675,7 +12698,8 @@ var QuotationEditor = (function () {
       var buttonPicker = qOne('[data-qe-button-picker]');
       if (buttonPicker) {
         buttonPicker.addEventListener('click', function (e) {
-          if (e.target === buttonPicker || e.target.hasAttribute('data-qe-close-button-picker')) {
+          var backdrop = e.target.closest && e.target.closest('[data-qe-close-button-picker]');
+          if (e.target === buttonPicker || backdrop) {
             e.preventDefault();
             e.stopPropagation();
             closeButtonPicker();
