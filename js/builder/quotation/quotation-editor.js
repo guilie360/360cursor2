@@ -4225,16 +4225,50 @@ var QuotationEditor = (function () {
     if (!rootEl) return;
     if (state.buttonPickerOpen && !rootEl.querySelector('[data-qe-button-picker]')) {
       state.buttonPickerOpen = false;
+    } else if (!state.buttonPickerOpen && rootEl.querySelector('[data-qe-button-picker]')) {
+      dismissButtonPickerDom();
     }
     if (state.shapePickerOpen && !rootEl.querySelector('[data-qe-shape-picker]')) {
       state.shapePickerOpen = false;
+    } else if (!state.shapePickerOpen && rootEl.querySelector('[data-qe-shape-picker]')) {
+      dismissShapePickerDom();
     }
     if (state.componentPickerOpen && !rootEl.querySelector('[data-qe-component-picker]')) {
       state.componentPickerOpen = false;
+    } else if (!state.componentPickerOpen && rootEl.querySelector('[data-qe-component-picker]')) {
+      dismissComponentPickerDom();
     }
     if (state.resourcePickerOpen && !rootEl.querySelector('[data-qe-resource-picker]')) {
       state.resourcePickerOpen = false;
+      state.resourcePickerSceneId = null;
+    } else if (!state.resourcePickerOpen && rootEl.querySelector('[data-qe-resource-picker]')) {
+      dismissResourcePickerDom();
     }
+  }
+
+  /** Drop picker DOM immediately — avoids full rerender swallowing the same click. */
+  function dismissAllPickersLight() {
+    var had = !!(state.resourcePickerOpen || state.shapePickerOpen ||
+      state.buttonPickerOpen || state.componentPickerOpen);
+    state.resourcePickerOpen = false;
+    state.resourcePickerSceneId = null;
+    state.shapePickerOpen = false;
+    state.buttonPickerOpen = false;
+    state.componentPickerOpen = false;
+    clearPendingAddButtonAction();
+    if (!rootEl) return had;
+    dismissResourcePickerDom();
+    dismissShapePickerDom();
+    dismissButtonPickerDom();
+    dismissComponentPickerDom();
+    return had;
+  }
+
+  function stagePickerOverlaysHtml() {
+    return resourcePickerHtml() +
+      shapePickerHtml() +
+      buttonPickerHtml() +
+      componentPickerHtml();
   }
 
   function componentPickerHtml() {
@@ -6920,6 +6954,7 @@ var QuotationEditor = (function () {
                   '<div class="qe-canvas-fit__frame" data-qe-canvas-fit-frame>' +
                     '<div class="qe-canvas__stage" data-qe-canvas data-qe-drop-scene data-qe-viewport-window' +
                       ' style="width:' + win.width + 'px;height:' + win.height + 'px;"></div>' +
+                    stagePickerOverlaysHtml() +
                   '</div>' +
                   stageDockHtml() +
                 '</div>' +
@@ -6927,10 +6962,6 @@ var QuotationEditor = (function () {
             '</div>' +
           '</div>' +
         '</div>' +
-        resourcePickerHtml() +
-        shapePickerHtml() +
-        buttonPickerHtml() +
-        componentPickerHtml() +
         sceneConfirmHtml() +
       '</section>';
   }
@@ -10214,6 +10245,12 @@ var QuotationEditor = (function () {
     rerender();
   }
 
+  function dismissShapePickerDom() {
+    if (!rootEl) return;
+    var picker = rootEl.querySelector('[data-qe-shape-picker]');
+    if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
+  }
+
   function closeShapePicker() {
     if (!state.shapePickerOpen) return;
     state.shapePickerOpen = false;
@@ -10250,9 +10287,7 @@ var QuotationEditor = (function () {
   }
 
   function pickButtonPreset(presetId) {
-    state.buttonPickerOpen = false;
-    dismissButtonPickerDom();
-    openButtonPicker();
+    pickButtonShape(presetId);
   }
 
   function clearPendingAddButtonAction() {
@@ -10382,6 +10417,12 @@ var QuotationEditor = (function () {
     state.resourcePickerSceneId = sceneId || state.activeSceneId || null;
     state.dockOpen = false;
     rerender();
+  }
+
+  function dismissResourcePickerDom() {
+    if (!rootEl) return;
+    var picker = rootEl.querySelector('[data-qe-resource-picker]');
+    if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
   }
 
   function closeResourcePicker() {
@@ -10556,7 +10597,12 @@ var QuotationEditor = (function () {
     if (!bar || !bar.parentNode) return;
     var nextMode = dockHasSelection() ? 'actions' : 'create';
     if (nextMode === 'actions') {
-      state.shapePickerOpen = false;
+      if (state.shapePickerOpen || state.buttonPickerOpen) {
+        dismissAllPickersLight();
+      } else {
+        state.shapePickerOpen = false;
+        state.buttonPickerOpen = false;
+      }
     }
     var curMode = bar.getAttribute('data-mode') || '';
     var rail = bar.querySelector('[data-qe-dock-rail]');
@@ -11085,7 +11131,10 @@ var QuotationEditor = (function () {
         }
         var prev = state.expHasSelection;
         state.expHasSelection = next;
-        if (next) state.selectedElementId = null;
+        if (next) {
+          state.selectedElementId = null;
+          dismissAllPickersLight();
+        }
         if (prev !== next) refreshDockOnly();
         refreshLayersPanel();
       },
@@ -11662,18 +11711,38 @@ var QuotationEditor = (function () {
     );
   }
 
+  function isInsideOpenPickerPanel(t) {
+    if (!t || !t.closest) return false;
+    return !!(
+      t.closest('.qe-shape-picker__panel') ||
+      t.closest('.qe-picker__panel') ||
+      t.closest('[data-qe-pick-button-shape]') ||
+      t.closest('[data-qe-pick-shape]') ||
+      t.closest('[data-qe-pick-component]') ||
+      t.closest('[data-qe-pick-resource]') ||
+      t.closest('[data-qe-close-shape-picker]') ||
+      t.closest('[data-qe-close-button-picker]') ||
+      t.closest('[data-qe-close-resource-picker]') ||
+      t.closest('[data-qe-close-component-picker]')
+    );
+  }
+
   function onCanvasOutsidePointer(e) {
     if (!rootEl) return;
     syncPickerOpenFlags();
     if (state.canvasPreviewMode) return;
     if (state.pendingSceneDeleteId) return;
-    if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
-        state.componentPickerOpen) return;
-    if (typeof QuotationContextMenu !== 'undefined' &&
-        QuotationContextMenu.isOpen && QuotationContextMenu.isOpen()) return;
 
     var t = e.target;
     if (!t || !t.closest) return;
+
+    if (state.resourcePickerOpen || state.shapePickerOpen || state.buttonPickerOpen ||
+        state.componentPickerOpen) {
+      if (isInsideOpenPickerPanel(t)) return;
+      dismissAllPickersLight();
+    }
+    if (typeof QuotationContextMenu !== 'undefined' &&
+        QuotationContextMenu.isOpen && QuotationContextMenu.isOpen()) return;
     if (!t.closest('.ws-select') && !t.closest('.ws-select__list') &&
         typeof WorkspaceSelect !== 'undefined' && WorkspaceSelect.closeAll) {
       WorkspaceSelect.closeAll();
@@ -12628,6 +12697,7 @@ var QuotationEditor = (function () {
     var projectId = String((editorProjectCtx && editorProjectCtx.id) || '').trim();
 
     function wireEditor() {
+      syncPickerOpenFlags();
       bindCanvasFit();
       mountBuilderRuntimeScene();
       var editor = panel.querySelector('[data-qe-editor]') || panel;

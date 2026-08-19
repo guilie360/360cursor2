@@ -1362,6 +1362,11 @@ body.is-qe-outliner-dragging .qe-outliner__drag {
   border-radius: 8px;
 }
 
+.qe-canvas-fit__frame > .qe-shape-picker,
+.qe-canvas-fit__frame > .qe-picker {
+  border-radius: inherit;
+}
+
 .qe-canvas-fit__frame:has(.qe-guides-chrome.is-rulers-on) {
   overflow: visible;
 }
