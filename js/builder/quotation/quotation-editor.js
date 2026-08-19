@@ -10103,6 +10103,8 @@ var QuotationEditor = (function () {
       });
     }
   }
+
+  function applyResourceToCoverModel(scene, res) {
     if (!scene || !res) return;
     ensureHeroCoverModel(scene);
     var url = displayUrlOf(res);
