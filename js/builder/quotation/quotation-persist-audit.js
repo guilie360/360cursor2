@@ -72,6 +72,8 @@ var QuotationPersistAudit = (function () {
       mediaUrl: sc.mediaUrl || null,
       mediaType: sc.mediaType || null,
       embedUrl: sc.embedUrl || null,
+      embedAllow: sc.embedAllow || null,
+      embedProvider: sc.embedProvider || null,
       mediaIsBlob: !!(sc.mediaUrl && String(sc.mediaUrl).indexOf('blob:') === 0),
       coverImage: sc.coverModel && sc.coverModel.imageUrl || null,
       coverVideo: sc.coverModel && sc.coverModel.videoUrl || null,

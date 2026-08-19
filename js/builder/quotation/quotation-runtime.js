@@ -230,6 +230,11 @@ var QuotationRuntime = (function () {
     return String(scene.embedUrl || '').trim();
   }
 
+  function sceneEmbedAllow(scene) {
+    var raw = scene && scene.embedAllow ? String(scene.embedAllow).trim() : '';
+    return raw || 'vr,gyroscope,accelerometer';
+  }
+
   function sceneIsMediaScene(scene) {
     if (!scene) return false;
     if (sceneIs360(scene)) return true;
@@ -1272,28 +1277,31 @@ var QuotationRuntime = (function () {
     return w > 900;
   }
 
-  function paintLapentorEmbed(slot, url, editMode) {
+  function paintLapentorEmbed(slot, scene, editMode) {
     if (!slot) return;
     slot.innerHTML = '';
     slot.classList.add('hero-canvas__media--embed');
     slot.classList.toggle('is-embed-edit', !!editMode);
     slot.classList.toggle('is-embed-live', !editMode);
+    var url = sceneEmbedUrl(scene);
     if (!url) {
       var empty = document.createElement('div');
       empty.className = 'qr-scene-embed-empty';
       empty.setAttribute('data-qe-360-empty', '1');
-      empty.textContent = 'Pega la URL de Lapentor';
+      empty.textContent = 'Pega el código iframe de Lapentor';
       slot.appendChild(empty);
       return;
     }
     var iframe = document.createElement('iframe');
-    iframe.className = 'qr-scene-embed';
+    iframe.className = 'boxies-360-iframe qr-scene-embed';
     iframe.src = url;
     iframe.title = 'Visor 360';
-    iframe.setAttribute('allow', 'fullscreen; xr-spatial-tracking; gyroscope; accelerometer');
-    iframe.setAttribute('allowfullscreen', '');
-    iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('allow', sceneEmbedAllow(scene));
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('webkitallowfullscreen', 'true');
+    iframe.setAttribute('mozallowfullscreen', 'true');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('frameborder', '0');
     if (editMode) iframe.style.pointerEvents = 'none';
     else iframe.style.pointerEvents = 'auto';
     slot.appendChild(iframe);
@@ -1328,7 +1336,7 @@ var QuotationRuntime = (function () {
       parentEl.appendChild(fallback);
       sceneMediaEl = fallback;
       if (is360) {
-        paintLapentorEmbed(fallback, urlFinal, edit360);
+        paintLapentorEmbed(fallback, scene, edit360);
       } else if (media && media.url && typeof HeroRenderer !== 'undefined') {
         HeroRenderer.paint(fallback, { src: media.url, kind: media.type === 'video' ? 'video' : 'image' });
       }
@@ -1366,7 +1374,7 @@ var QuotationRuntime = (function () {
     if (is360) {
       parentEl.classList.add(edit360 ? 'is-360-edit' : 'is-360-live');
       parentEl.classList.remove(edit360 ? 'is-360-live' : 'is-360-edit');
-      paintLapentorEmbed(sceneMediaEl, urlFinal, edit360);
+      paintLapentorEmbed(sceneMediaEl, scene, edit360);
     } else if (!media || !media.url) {
       if (heroCanvasApi.clearMedia) heroCanvasApi.clearMedia();
     }

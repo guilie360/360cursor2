@@ -641,6 +641,7 @@ html.qr-canvas-mode .qr-cover-host .project-cover {
 }
 
 .qr-scene-embed,
+.boxies-360-iframe,
 .qe-scene-media--embed iframe {
   position: absolute;
   inset: 0;

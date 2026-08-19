@@ -707,6 +707,87 @@ var QuotationEditor = (function () {
     }
   }
 
+  var LAPENTOR_DEFAULT_ALLOW = 'vr,gyroscope,accelerometer';
+  var LAPENTOR_ALLOW_TOKENS = {
+    vr: true,
+    gyroscope: true,
+    accelerometer: true,
+    fullscreen: true,
+    'xr-spatial-tracking': true
+  };
+
+  function sanitizeLapentorAllow(raw) {
+    var parts = String(raw == null ? '' : raw)
+      .split(/[;,\s]+/)
+      .map(function (t) { return String(t || '').trim().toLowerCase(); })
+      .filter(function (t) { return t && LAPENTOR_ALLOW_TOKENS[t]; });
+    var seen = Object.create(null);
+    var out = [];
+    parts.forEach(function (t) {
+      if (seen[t]) return;
+      seen[t] = true;
+      out.push(t);
+    });
+    return out.length ? out.join(',') : LAPENTOR_DEFAULT_ALLOW;
+  }
+
+  function validateLapentorSrc(rawSrc) {
+    var s = String(rawSrc || '').trim();
+    if (!s) return null;
+    if (/^javascript:/i.test(s) || /^data:/i.test(s) || /^blob:/i.test(s)) return null;
+    if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+    try {
+      var u = new URL(s);
+      if (u.protocol !== 'https:') return null;
+      if (String(u.hostname || '').toLowerCase() !== 'app.lapentor.com') return null;
+      if (u.username || u.password) return null;
+      return u.href;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function parseLapentorEmbed(raw) {
+    var text = String(raw == null ? '' : raw).trim();
+    if (!text) return { ok: false };
+    var src = '';
+    var allow = '';
+    var allowFullscreen = true;
+    if (/<iframe[\s>]/i.test(text)) {
+      if (typeof DOMParser !== 'undefined') {
+        try {
+          var doc = new DOMParser().parseFromString(text, 'text/html');
+          var iframe = doc.querySelector('iframe');
+          if (iframe) {
+            src = iframe.getAttribute('src') || '';
+            allow = iframe.getAttribute('allow') || '';
+            var fs = iframe.getAttribute('allowfullscreen');
+            allowFullscreen = fs == null || fs === '' || String(fs).toLowerCase() === 'true' || fs === '1';
+          }
+        } catch (eParse) { /* fall through */ }
+      }
+      if (!src) {
+        var srcMatch = text.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+        if (srcMatch) src = srcMatch[1];
+      }
+      if (!allow) {
+        var allowMatch = text.match(/\ballow\s*=\s*["']([^"']+)["']/i);
+        if (allowMatch) allow = allowMatch[1];
+      }
+    } else {
+      src = text;
+    }
+    var url = validateLapentorSrc(src);
+    if (!url) return { ok: false };
+    return {
+      ok: true,
+      embedUrl: url,
+      embedAllow: sanitizeLapentorAllow(allow),
+      embedAllowFullscreen: !!allowFullscreen,
+      embedProvider: 'lapentor'
+    };
+  }
+
   function normalizeUrl(raw) {
     var s = String(raw || '').trim();
     if (!s) return '';
@@ -4123,18 +4204,20 @@ var QuotationEditor = (function () {
   function sceneMediaStageHtml(scene) {
     if (is360Scene(scene)) {
       var embed = String(scene.embedUrl || '').trim();
-      if (embed && isLapentorUrl(embed)) {
+      var allow = String(scene.embedAllow || 'vr,gyroscope,accelerometer');
+      if (embed) {
         return '' +
           '<div class="qe-scene-media hero-renderer qe-scene-media--embed" data-qe-drop-scene>' +
-            '<iframe class="qr-scene-embed" src="' + escapeHtml(embed) + '"' +
-              ' title="Visor 360" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer"' +
-              ' allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"' +
+            '<iframe class="boxies-360-iframe qr-scene-embed" src="' + escapeHtml(embed) + '"' +
+              ' title="Visor 360" allow="' + escapeHtml(allow) + '"' +
+              ' allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true"' +
+              ' scrolling="no" frameborder="0"' +
               ' style="pointer-events:none"></iframe>' +
           '</div>';
       }
       return '' +
         '<div class="qe-scene-empty" data-qe-360-empty data-qe-drop-scene>' +
-          '<p class="qe-scene-empty__line">Pega la URL de Lapentor</p>' +
+          '<p class="qe-scene-empty__line">Pega el código iframe de Lapentor</p>' +
         '</div>';
     }
     var res = sceneResource(scene);
@@ -9987,18 +10070,33 @@ var QuotationEditor = (function () {
   function applySceneEmbedUrl(sceneId, raw) {
     var sc = sceneById(sceneId);
     if (!sc) return false;
-    var url = normalizeUrl(raw);
-    if (!url || !isLapentorUrl(url)) {
+    var parsed = parseLapentorEmbed(raw);
+    if (!parsed.ok) {
       if (typeof AdminNotify !== 'undefined' && AdminNotify.error) {
-        AdminNotify.error('Usa un enlace de Lapentor (app.lapentor.com).');
+        AdminNotify.error('Pega el código iframe de Lapentor o una URL https://app.lapentor.com/…');
       }
       return false;
     }
-    sc.embedUrl = url;
+    sc.embedUrl = parsed.embedUrl;
+    sc.embedAllow = parsed.embedAllow;
+    sc.embedAllowFullscreen = parsed.embedAllowFullscreen;
+    sc.embedProvider = parsed.embedProvider;
     sc.type = '360';
     markDirtyLocal();
     rerender();
     return true;
+  }
+
+  function updateEmbedDetectStatus(raw, statusEl) {
+    if (!statusEl) return;
+    var parsed = parseLapentorEmbed(raw);
+    if (!parsed.ok) {
+      statusEl.hidden = true;
+      statusEl.textContent = '';
+      return;
+    }
+    statusEl.hidden = false;
+    statusEl.textContent = '✓ Visor 360 detectado\n' + parsed.embedUrl;
   }
 
   function openScene360ConfigMenu(sceneId, clientX, clientY) {
@@ -10021,12 +10119,16 @@ var QuotationEditor = (function () {
         { id: 'visor-360-title', type: 'label', label: 'Visor 360' },
         {
           id: 'embed-url',
-          type: 'input',
-          inputType: 'text',
-          label: 'URL de Lapentor',
-          placeholder: 'https://app.lapentor.com/...',
-          ariaLabel: 'URL de Lapentor',
+          type: 'textarea',
+          rows: 7,
+          label: 'Código embed 360',
+          hint: 'Pega aquí el código iframe proporcionado por Lapentor.',
+          placeholder: '<iframe src="https://app.lapentor.com/sphere/…" …></iframe>',
+          ariaLabel: 'Código embed 360',
           value: sc.embedUrl || '',
+          onDetect: function (raw, statusEl) {
+            updateEmbedDetectStatus(raw, statusEl);
+          },
           onSubmit: function (raw) {
             applySceneEmbedUrl(sceneId, raw);
           }
@@ -10077,6 +10179,9 @@ var QuotationEditor = (function () {
       resourceId: null,
       coverModel: null,
       embedUrl: as360 ? (opts.embedUrl || null) : null,
+      embedAllow: as360 ? (opts.embedAllow || null) : null,
+      embedAllowFullscreen: as360 ? true : undefined,
+      embedProvider: as360 ? 'lapentor' : null,
       elements: [],
       interactions: [],
       buttons: [],
@@ -13696,6 +13801,9 @@ var QuotationEditor = (function () {
             (cover && cover.videoUrl ? 'video'
               : (cover && cover.imageUrl ? 'image' : null)),
           embedUrl: sc.embedUrl || null,
+          embedAllow: sc.embedAllow || null,
+          embedAllowFullscreen: sc.embedAllowFullscreen !== false,
+          embedProvider: sc.embedProvider || (sc.type === '360' ? 'lapentor' : null),
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           guidesByViewport: serializeSceneGuides(sc),
@@ -13933,6 +14041,9 @@ var QuotationEditor = (function () {
           mediaUrl: mediaUrl,
           mediaType: sc.mediaType || null,
           embedUrl: sc.embedUrl || null,
+          embedAllow: sc.embedAllow || null,
+          embedAllowFullscreen: sc.embedAllowFullscreen !== false,
+          embedProvider: sc.embedProvider || null,
           elements: Array.isArray(sc.elements) ? sc.elements : [],
           interactions: Array.isArray(sc.interactions) ? sc.interactions : [],
           buttons: Array.isArray(sc.buttons) ? sc.buttons : [],

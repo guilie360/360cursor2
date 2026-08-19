@@ -856,6 +856,9 @@ var ProyectosApi = (function () {
       /* V7.2.28 — validate structure only; never destroy valid public mediaUrl. */
       var mediaUrl = heroText(sc.mediaUrl) || heroText(sc.publicUrl) || null;
       var embedUrl = heroText(sc.embedUrl) || null;
+      var embedAllow = heroText(sc.embedAllow) || null;
+      var embedProvider = heroText(sc.embedProvider) || null;
+      if (embedProvider && embedProvider !== 'lapentor') embedProvider = null;
       var sceneType = heroText(sc.type) || 'scene';
       var cover = sc.coverModel ? sanitizeCoverModel(sc.coverModel) : null;
       var guidesByViewport = sanitizeCanvasGuidesByViewport(sc.guidesByViewport, sc.guides);
@@ -873,6 +876,9 @@ var ProyectosApi = (function () {
         mediaUrl: mediaUrl,
         mediaType: mediaType,
         embedUrl: embedUrl,
+        embedAllow: embedAllow,
+        embedAllowFullscreen: sc.embedAllowFullscreen !== false,
+        embedProvider: embedProvider || (sceneType === '360' ? 'lapentor' : null),
         mediaFit: heroText(sc.mediaFit) === 'contain' || heroText(sc.mediaFit) === 'center'
           ? 'contain'
           : null,

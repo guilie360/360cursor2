@@ -191,7 +191,9 @@ var QuotationContextMenu = (function () {
     var portal = ensurePortal();
     portal.setAttribute('aria-hidden', 'false');
     var panel = document.createElement('div');
-    panel.className = 'boxies-workspace-menu__panel qe-context-menu';
+    var hasTextarea = items.some(function (it) { return it && it.type === 'textarea'; });
+    panel.className = 'boxies-workspace-menu__panel qe-context-menu' +
+      (hasTextarea ? ' qe-context-menu--wide' : '');
     panel.setAttribute('role', 'menu');
     panel.setAttribute('aria-label', opts.ariaLabel || 'Menú contextual');
     panel.setAttribute('data-qe-context-menu', '1');
@@ -205,6 +207,31 @@ var QuotationContextMenu = (function () {
       }
       if (item.type === 'label') {
         html += '<p class="qe-context-menu__title">' + escapeHtml(item.label || '') + '</p>';
+        return;
+      }
+      if (item.type === 'textarea') {
+        if (!focusInputId) focusInputId = item.id;
+        html +=
+          '<label class="qe-context-menu__field qe-context-menu__field--textarea"' +
+            ' data-qe-ctx-field="' + escapeHtml(item.id) + '">' +
+            (item.label
+              ? '<span class="qe-context-menu__field-label">' + escapeHtml(item.label) + '</span>'
+              : '') +
+            (item.hint
+              ? '<span class="qe-context-menu__field-hint">' + escapeHtml(item.hint) + '</span>'
+              : '') +
+            '<textarea class="qe-context-menu__textarea" data-qe-ctx-input="' +
+              escapeHtml(item.id) + '" rows="' + escapeHtml(item.rows != null ? item.rows : 6) + '"' +
+              ' spellcheck="false" autocomplete="off"' +
+              ' aria-label="' + escapeHtml(item.ariaLabel || item.label || 'Código embed') + '"' +
+              (item.placeholder
+                ? ' placeholder="' + escapeHtml(item.placeholder) + '"'
+                : '') + '>' +
+              escapeHtml(item.value != null ? item.value : '') +
+            '</textarea>' +
+            '<span class="qe-context-menu__detect" data-qe-ctx-detect="' +
+              escapeHtml(item.id) + '" hidden></span>' +
+          '</label>';
         return;
       }
       if (item.type === 'input') {
@@ -341,9 +368,36 @@ var QuotationContextMenu = (function () {
       if (item && typeof item.onSelect === 'function') item.onSelect(item, values);
     });
 
+    function bindTextareaDetect() {
+      panel.querySelectorAll('textarea[data-qe-ctx-input]').forEach(function (area) {
+        var id = area.getAttribute('data-qe-ctx-input');
+        var item = findItem(items, id);
+        var status = panel.querySelector('[data-qe-ctx-detect="' + id + '"]');
+        function runDetect() {
+          if (item && typeof item.onDetect === 'function') {
+            item.onDetect(area.value, status, item);
+          }
+        }
+        area.addEventListener('input', runDetect);
+        area.addEventListener('paste', function () {
+          setTimeout(runDetect, 0);
+        });
+        runDetect();
+      });
+    }
+    bindTextareaDetect();
+
     panel.addEventListener('keydown', function (e) {
       var input = e.target && e.target.closest ? e.target.closest('[data-qe-ctx-input]') : null;
       if (!input) return;
+      if (input.tagName === 'TEXTAREA') {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          e.stopPropagation();
+          submitInput(panel, items, opts, input);
+        }
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
@@ -366,7 +420,7 @@ var QuotationContextMenu = (function () {
         requestAnimationFrame(function () {
           try {
             focusEl.focus();
-            focusEl.select();
+            if (focusEl.tagName !== 'TEXTAREA') focusEl.select();
           } catch (errFocus) { /* ignore */ }
         });
       }
