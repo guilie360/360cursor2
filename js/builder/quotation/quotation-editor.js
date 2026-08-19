@@ -4195,18 +4195,24 @@ var QuotationEditor = (function () {
   function buttonPickerHtml() {
     if (!state.buttonPickerOpen) return '';
     var grid = BUTTON_SHAPE_PICKER_ITEMS.map(function (item) {
+      var preset = (typeof ButtonPresets !== 'undefined' && ButtonPresets.get)
+        ? ButtonPresets.get(item.shape)
+        : null;
+      var preview = (preset && typeof ButtonOverlayRenderer !== 'undefined' &&
+          ButtonOverlayRenderer.renderPickerPreviewHtml)
+        ? ButtonOverlayRenderer.renderPickerPreviewHtml(preset)
+        : '';
       return '' +
-        '<button type="button" class="qe-shape-picker__item qe-btn-shape-picker__item" data-qe-pick-button-shape="' +
-          escapeHtml(item.shape) + '" aria-label="' + escapeHtml(item.label) + '">' +
-          '<span class="qe-btn-shape-picker__glyph" aria-hidden="true">' + escapeHtml(item.glyph) + '</span>' +
-          '<span class="qe-btn-shape-picker__label">' + escapeHtml(item.label) + '</span>' +
+        '<button type="button" class="qe-shape-picker__item qe-button-picker__item" ' +
+          'data-qe-pick-button-shape="' + escapeHtml(item.shape) + '" ' +
+          'aria-label="' + escapeHtml(item.label) + '" title="' + escapeHtml(item.label) + '">' +
+          preview +
         '</button>';
     }).join('');
     return '' +
       '<div class="qe-shape-picker qe-button-shape-picker" data-qe-button-picker role="dialog" aria-label="Formas de botón">' +
         '<div class="qe-shape-picker__backdrop" data-qe-close-button-picker tabindex="-1"></div>' +
         '<div class="qe-shape-picker__panel">' +
-          '<button type="button" class="qe-picker__close" data-qe-close-button-picker aria-label="Cerrar">×</button>' +
           '<div class="qe-shape-picker__grid qe-btn-shape-picker__grid">' + grid + '</div>' +
         '</div>' +
       '</div>';
