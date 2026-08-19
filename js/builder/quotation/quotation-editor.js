@@ -1210,8 +1210,52 @@ var QuotationEditor = (function () {
     ensureButtonComponents().push(comp);
     markDirtyLocal();
     persistDraft();
+    persistEditorBackpackToServer();
     if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
       AdminNotify.success('Componente "' + name + '" guardado.');
+    }
+  }
+
+  function deleteButtonComponent(componentId) {
+    if (!componentId) return false;
+    var list = ensureButtonComponents();
+    var idx = -1;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i] && String(list[i].id) === String(componentId)) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx < 0) return false;
+    var removed = list.splice(idx, 1)[0];
+    markDirtyLocal();
+    persistDraft();
+    persistEditorBackpackToServer();
+    if (state.componentPickerOpen) rerender();
+    if (typeof AdminNotify !== 'undefined' && AdminNotify.success) {
+      AdminNotify.success('Componente "' + (removed.name || 'Componente') + '" eliminado.');
+    }
+    return true;
+  }
+
+  async function persistEditorBackpackToServer() {
+    var projectId = String(
+      loadedProjectId ||
+      (editorProjectCtx && editorProjectCtx.id) ||
+      ''
+    ).trim();
+    if (!projectId || !documentReady) return;
+    if (typeof ProyectosApi === 'undefined' || !ProyectosApi.updateHeroQuotation) return;
+    try {
+      await ProyectosApi.updateHeroQuotation(projectId, {
+        editorBackpack: {
+          interactions: ensureBackpackInteractions(),
+          buttonComponents: ensureButtonComponents().slice()
+        }
+      });
+    } catch (eBp) {
+      console.warn('[QE] persist editorBackpack failed', eBp);
     }
   }
 
@@ -4182,6 +4226,10 @@ var QuotationEditor = (function () {
         return '' +
           '<div class="qe-picker__card qe-component-picker__card" role="button" tabindex="0" ' +
             'data-qe-pick-component="' + escapeHtml(comp.id) + '">' +
+            '<button type="button" class="qe-component-picker__delete" ' +
+              'data-qe-delete-component="' + escapeHtml(comp.id) + '" ' +
+              'aria-label="Eliminar ' + escapeHtml(comp.name || 'Componente') + '" ' +
+              'title="Eliminar">×</button>' +
             '<span class="qe-picker__thumb qe-component-picker__thumb">' + thumb + '</span>' +
             '<span class="qe-picker__name">' + escapeHtml(comp.name || 'Componente') + '</span>' +
           '</div>';
@@ -12645,8 +12693,16 @@ var QuotationEditor = (function () {
             closeComponentPicker();
             return;
           }
+          var delBtn = e.target.closest && e.target.closest('[data-qe-delete-component]');
+          if (delBtn && componentPicker.contains(delBtn)) {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteButtonComponent(delBtn.getAttribute('data-qe-delete-component'));
+            return;
+          }
           var card = e.target.closest && e.target.closest('[data-qe-pick-component]');
           if (!card || !componentPicker.contains(card)) return;
+          if (e.target.closest && e.target.closest('[data-qe-delete-component]')) return;
           e.preventDefault();
           e.stopPropagation();
           pickButtonComponent(card.getAttribute('data-qe-pick-component'));

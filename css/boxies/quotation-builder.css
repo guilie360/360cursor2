@@ -4510,8 +4510,42 @@ body.is-qe-lib-pointer-dragging * {
 }
 
 .qe-component-picker__card {
+  position: relative;
   min-height: 0;
   cursor: pointer;
+}
+
+.qe-component-picker__delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.qe-component-picker__card:hover .qe-component-picker__delete,
+.qe-component-picker__delete:focus-visible {
+  opacity: 1;
+}
+
+.qe-component-picker__delete:hover {
+  background: rgba(180, 40, 40, 0.92);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .qe-component-picker__thumb {

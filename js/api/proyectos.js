@@ -1044,7 +1044,45 @@ var ProyectosApi = (function () {
     if (!Object.prototype.hasOwnProperty.call(payload, 'image_url') && prev.image_url != null) {
       merged.image_url = prev.image_url;
     }
+    if (!Object.prototype.hasOwnProperty.call(payload, 'editorBackpack') && prev.editorBackpack) {
+      merged.editorBackpack = prev.editorBackpack;
+    }
     return merged;
+  }
+
+  /** Editor-only backpack: Box interactions + saved button components. */
+  function sanitizeEditorBackpack(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var out = {
+      interactions: Array.isArray(raw.interactions)
+        ? sanitizeCanvasInteractions(raw.interactions)
+        : [],
+      buttonComponents: []
+    };
+    if (!Array.isArray(raw.buttonComponents)) return out;
+    raw.buttonComponents.forEach(function (comp) {
+      if (!comp || typeof comp !== 'object' || !comp.button) return;
+      var btn = comp.button;
+      if (String(btn.type || comp.type || '').toUpperCase() !== 'BUTTON') return;
+      var id = heroText(comp.id);
+      if (!id) return;
+      var snap = null;
+      if (typeof SceneButtonModel !== 'undefined' && SceneButtonModel.cloneForPersist) {
+        snap = SceneButtonModel.cloneForPersist(btn);
+      } else if (btn && typeof btn === 'object') {
+        snap = Object.assign({}, btn, { type: 'BUTTON' });
+      }
+      if (!snap) return;
+      out.buttonComponents.push({
+        id: id,
+        name: heroText(comp.name) || 'Componente',
+        type: 'button',
+        projectId: heroText(comp.projectId) || null,
+        createdAt: Number(comp.createdAt) || Date.now(),
+        button: snap
+      });
+    });
+    return out;
   }
 
   /**
@@ -1134,6 +1172,9 @@ var ProyectosApi = (function () {
 
     var library = sanitizeLibrary(payload.library);
     if (library) out.library = library;
+
+    var backpack = sanitizeEditorBackpack(payload.editorBackpack);
+    if (backpack) out.editorBackpack = backpack;
 
     return out;
   }
