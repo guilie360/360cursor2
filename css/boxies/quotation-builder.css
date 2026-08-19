@@ -4633,7 +4633,7 @@ body.is-qe-lib-pointer-dragging * {
 
 .builder-exp-ui-btn.is-button-shape,
 .builder-exp-stage-shape.is-button-shape {
-  position: relative;
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1616,13 +1616,14 @@ var ExperienciaCanvas = (function () {
       ? pendingMoveClassFn('BUTTON', b.id)
       : '';
     var shapeVm = buttonToShapePaintVm(b, shapeKind);
-    var gmPaint = shapeStagePaintMetrics(shapeVm, layerW, layerH);
     var rot = Number(b.rotation) || 0;
-    var paintX = gmPaint ? gmPaint.x : Number(b.x);
-    var paintY = gmPaint ? gmPaint.y : Number(b.y);
-    var shapeW = gmPaint ? gmPaint.w : shapeVm.width;
-    var shapeH = gmPaint ? gmPaint.h : shapeVm.height;
-    var shapeGizmoBox = !!(gmPaint && gmPaint.gizmoBox);
+    /* Same contract as runtime: stored center + boxW/boxH. Do not use shape
+     * tile metrics here — they desync the editor gizmo from the live overlay. */
+    var paintX = Number(b.x);
+    var paintY = Number(b.y);
+    var shapeW = shapeVm.width;
+    var shapeH = shapeVm.height;
+    var shapeGizmoBox = true;
     var glyph = buttonIconGlyph(b.icon);
     var text = b.label != null ? String(b.label) : '';
     var label;
@@ -1651,7 +1652,9 @@ var ExperienciaCanvas = (function () {
       '--btn-pressed-text:' + pressedTextCol + ';' +
       '--btn-pressed-scale:' + pressedScale + ';' +
       '--t-color:' + textCol + ';';
-    return '<button type="button" class="' + buttonPreviewClass(shapeVm) +
+    return '<button type="button" class="builder-exp-ui-btn is-style-' +
+      ((b.style === 'chip' ? 'button' : (b.style || 'button'))) +
+      (b.icon ? ' has-icon' : '') +
       ' is-box is-button-shape' +
       (selSet[String(b.id)] ? ' is-selected' : '') +
       (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
