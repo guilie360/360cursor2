@@ -23,6 +23,16 @@ var ButtonOverlayRenderer = (function () {
     return '';
   }
 
+  /** Canvas / picker label — icon-only when text is explicitly empty. */
+  function formatButtonDisplayLabel(b) {
+    var glyph = buttonIconGlyph(b && b.icon);
+    var text = b && b.label != null ? String(b.label) : '';
+    if (glyph && text) return glyph + ' ' + text;
+    if (glyph) return glyph;
+    if (text) return text;
+    return 'Botón';
+  }
+
   function buttonPreviewClass(btn) {
     var style = (btn && btn.style) || 'button';
     if (style === 'chip') style = 'button';
@@ -139,10 +149,7 @@ var ButtonOverlayRenderer = (function () {
       '--btn-rot:' + rot + 'deg;';
 
     var glyph = buttonIconGlyph(b.icon);
-    var text = b.label != null ? String(b.label) : '';
-    var label;
-    if (glyph && text) label = glyph + ' ' + text;
-    else label = glyph || text || 'Botón';
+    var label = formatButtonDisplayLabel(b);
 
     var btnOp = b.opacity != null ? Number(b.opacity) : 1;
     var hoverOn = b.hoverEnabled !== false;
@@ -332,6 +339,7 @@ var ButtonOverlayRenderer = (function () {
     renderPickerPreviewHtml: renderPickerPreviewHtml,
     renderButtonSnapshotThumbnail: renderButtonSnapshotThumbnail,
     buttonPreviewClass: buttonPreviewClass,
-    buttonIconGlyph: buttonIconGlyph
+    buttonIconGlyph: buttonIconGlyph,
+    formatButtonDisplayLabel: formatButtonDisplayLabel
   };
 })();

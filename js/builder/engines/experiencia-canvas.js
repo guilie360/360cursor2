@@ -1627,7 +1627,9 @@ var ExperienciaCanvas = (function () {
     var text = b.label != null ? String(b.label) : '';
     var label;
     if (glyph && text) label = glyph + ' ' + text;
-    else label = glyph || text || 'Botón';
+    else if (glyph) label = glyph;
+    else if (text) label = text;
+    else label = 'Botón';
     var hoverOn = b.hoverEnabled !== false;
     var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
     var hoverCol = cssToken(b.hoverColor || '#6fbf86') || '#6fbf86';
@@ -3036,7 +3038,7 @@ var ExperienciaCanvas = (function () {
       builderExpBlockHtml(state, 'grp-btn-content', 'Contenido',
         '<div class="builder-field builder-exp-inspector__field">' +
           '<label>Texto</label>' +
-          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Texto del botón" value="' +
+          '<input type="text" data-exp-btn-label maxlength="60" placeholder="Opcional" value="' +
             esc(selected.label != null ? selected.label : '') + '">' +
         '</div>') +
       builderExpBlockHtml(state, 'grp-btn-appearance', 'Apariencia',

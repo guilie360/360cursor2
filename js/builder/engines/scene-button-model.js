@@ -78,7 +78,7 @@ var SceneButtonModel = (function () {
     var out = clone(ix);
     if (!out.id) return out;
     if (!out.portId) out.portId = out.id;
-    if (out.label == null || out.label === '') out.label = 'Botón';
+    if (out.label == null) out.label = 'Botón';
     if (out.enabled === undefined) out.enabled = true;
     out.x = clampNum(out.x, 0, 100, 50);
     out.y = clampNum(out.y, 0, 100, 50);
@@ -139,6 +139,7 @@ var SceneButtonModel = (function () {
     var normalized = normalize(src);
     allFieldKeys().forEach(function (key) {
       if (key === 'id' || key === 'portId') return;
+      if (key === 'label' && dest.label != null) return;
       if (dest[key] !== undefined && dest[key] !== null && dest[key] !== '') return;
       if (normalized[key] === undefined) return;
       if (key === 'buttonConfig') {

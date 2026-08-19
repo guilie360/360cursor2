@@ -551,7 +551,9 @@ var QuotationRuntime = (function () {
     var glyph = runtimeButtonIconGlyph(ix.icon);
     var text = ix.label != null ? String(ix.label) : '';
     if (glyph && text) return glyph + ' ' + text;
-    return glyph || text || 'Botón';
+    if (glyph) return glyph;
+    if (text) return text;
+    return 'Botón';
   }
 
   function runtimeApplyButtonDom(btn, b) {
