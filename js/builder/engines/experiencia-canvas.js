@@ -1,6 +1,6 @@
 /* BOXIES V5.9.66 — Autolayout de plantillas: sin solapes, columnas legibles */
 var ExperienciaCanvas = (function () {
-  var EXP_CANVAS_BUILD = 'ws7844';
+  var EXP_CANVAS_BUILD = 'ws7921';
   try {
     window.__EXP_CANVAS_BUILD__ = EXP_CANVAS_BUILD;
     console.log('[QE BUILD] experiencia-canvas ' + EXP_CANVAS_BUILD);
@@ -1611,7 +1611,10 @@ var ExperienciaCanvas = (function () {
     });
   }
 
-  function paintButtonShapeBackedHtml(b, shapeKind, layerW, layerH, selSet, editMemberSet) {
+  function paintButtonShapeBackedHtml(b, shapeKind, layerW, layerH, selSet, editMemberSet, pendingMoveClassFn) {
+    var pendingMoveClass = pendingMoveClassFn
+      ? pendingMoveClassFn('BUTTON', b.id)
+      : '';
     var shapeVm = buttonToShapePaintVm(b, shapeKind);
     var gmPaint = shapeStagePaintMetrics(shapeVm, layerW, layerH);
     var rot = Number(b.rotation) || 0;
@@ -1652,7 +1655,7 @@ var ExperienciaCanvas = (function () {
       (editMemberSet[String(b.id)] ? ' is-group-edit-member' : '') +
       (b.visible === false ? ' is-invisible' : '') +
       (b.locked ? ' is-locked' : '') +
-      overlayPendingMoveClass('BUTTON', b.id) +
+      pendingMoveClass +
       (hoverOn ? ' is-hover-on' : ' is-hover-off') + '"' +
       ' data-exp-stage-btn="' + esc(b.id) + '"' +
       ' data-button-shape-kind="' + esc(shapeKind) + '"' +
@@ -8694,7 +8697,7 @@ var ExperienciaCanvas = (function () {
         var shapeKind = resolveButtonShapeKind(paintVm);
         if (shapeKind) {
           return paintButtonShapeBackedHtml(
-            paintVm, shapeKind, layerW, layerH, selSet, editMemberSet
+            paintVm, shapeKind, layerW, layerH, selSet, editMemberSet, overlayPendingMoveClass
           );
         }
         if (typeof ButtonOverlayRenderer === 'undefined' || !ButtonOverlayRenderer.renderButtonHtml) {
