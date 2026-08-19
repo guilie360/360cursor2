@@ -521,6 +521,93 @@ var QuotationRuntime = (function () {
     return String(v).replace(/[;\n\r{}]/g, '').replace(/"/g, '').replace(/'/g, '');
   }
 
+  function runtimeResolveButtonHoverColor(b) {
+    if (!b) return '#6fbf86';
+    if (b.hoverColor != null && b.hoverColor !== '') {
+      return runtimeCssColorToken(b.hoverColor) || String(b.hoverColor);
+    }
+    return '#6fbf86';
+  }
+
+  function isRuntimeButtonShapeKind(kind) {
+    kind = String(kind || '').toUpperCase();
+    return kind === 'SHAPE_RECT' || kind === 'SHAPE_CIRCLE' ||
+      kind === 'SHAPE_ROUND_RECT' || kind === 'SHAPE_CAPSULE';
+  }
+
+  function runtimeResolveButtonShapeKind(b) {
+    if (!b) return '';
+    var kind = b.buttonShapeKind ? String(b.buttonShapeKind).toUpperCase() : '';
+    return isRuntimeButtonShapeKind(kind) ? kind : '';
+  }
+
+  function runtimeButtonColorToRgba(color, opacity) {
+    var col = runtimeCssColorToken(color) || '#141414';
+    var op = opacity != null ? Number(opacity) : 1;
+    if (!isFinite(op)) op = 1;
+    op = Math.max(0, Math.min(1, op));
+    if (/^#[0-9a-fA-F]{6}$/.test(col)) {
+      var r = parseInt(col.slice(1, 3), 16);
+      var g = parseInt(col.slice(3, 5), 16);
+      var bv = parseInt(col.slice(5, 7), 16);
+      return 'rgba(' + r + ',' + g + ',' + bv + ',' + op + ')';
+    }
+    return col;
+  }
+
+  function runtimeButtonShapeSvgBorderRadius(shapeKind, b) {
+    shapeKind = String(shapeKind || '').toUpperCase();
+    if (shapeKind === 'SHAPE_ROUND_RECT') {
+      var br = b.borderRadius != null ? Number(b.borderRadius) : 16;
+      if (!isFinite(br) || br > 48) return 16;
+      return br;
+    }
+    return 16;
+  }
+
+  function runtimeButtonToShapePaintVm(b, shapeKind) {
+    var w = b.boxW != null ? Number(b.boxW) : 14;
+    var h = b.boxH != null ? Number(b.boxH) : 4.5;
+    var ixShim = {
+      type: shapeKind,
+      shapeContentBox: true,
+      width: w,
+      height: h,
+      shapeStretchX: 1,
+      shapeStretchY: 1
+    };
+    return Object.assign({}, b, {
+      type: shapeKind,
+      width: w,
+      height: h,
+      fill: runtimeButtonColorToRgba(b.bgColor, b.bgOpacity),
+      stroke: b.borderColor || 'rgba(255,255,255,0.62)',
+      strokeWidth: b.borderWidth != null ? Number(b.borderWidth) : 1,
+      borderRadius: runtimeButtonShapeSvgBorderRadius(shapeKind, b),
+      shapeStretchX: 1,
+      shapeStretchY: 1,
+      shapeContentBox: true,
+      _ix: ixShim
+    });
+  }
+
+  function runtimeApplyButtonHoverDom(btn, b) {
+    var hoverOn = b.hoverEnabled !== false;
+    btn.classList.add(hoverOn ? 'is-hover-on' : 'is-hover-off');
+    var hoverMs = b.hoverTransition != null ? Number(b.hoverTransition) : 200;
+    var hoverCol = runtimeResolveButtonHoverColor(b);
+    var hoverTextCol = runtimeCssColorToken(b.hoverTextColor || '#ffffff') || '#ffffff';
+    var pressedCol = runtimeCssColorToken(b.pressedColor || '#5aaa74') || '#5aaa74';
+    var pressedTextCol = runtimeCssColorToken(b.pressedTextColor || '#ffffff') || '#ffffff';
+    var pressedScale = b.pressedScale != null ? Number(b.pressedScale) : 0.96;
+    btn.style.setProperty('--btn-hover-color', hoverCol);
+    btn.style.setProperty('--btn-hover-text', hoverTextCol);
+    btn.style.setProperty('--btn-hover-ms', hoverMs + 'ms');
+    btn.style.setProperty('--btn-pressed-color', pressedCol);
+    btn.style.setProperty('--btn-pressed-text', pressedTextCol);
+    btn.style.setProperty('--btn-pressed-scale', String(pressedScale));
+  }
+
   /** Editor parity defaults when boxW/boxH not persisted (icon ≈ 6% stage). */
   function runtimeNormalizeButtonIx(ix) {
     if (!ix) return ix;
@@ -582,6 +669,44 @@ var QuotationRuntime = (function () {
     if (b.borderColor) btn.style.setProperty('--btn-local-border', runtimeCssColorToken(b.borderColor));
     if (b.borderWidth != null) btn.style.setProperty('--btn-local-bw', Number(b.borderWidth) + 'px');
     if (b.borderRadius != null) btn.style.setProperty('--btn-local-radius', Number(b.borderRadius) + 'px');
+    runtimeApplyButtonHoverDom(btn, b);
+  }
+
+  function runtimeApplyShapeButtonDom(btn, b, shapeKind, layerW, layerH) {
+    var style = b.style || 'button';
+    if (style === 'chip') style = 'button';
+    var classes = [
+      'qr-ix-btn', 'qr-ix-btn--shape', 'is-button-shape', 'is-box', 'is-style-' + style
+    ];
+    if (b.icon) classes.push('has-icon');
+    btn.className = classes.join(' ');
+    btn.style.left = Number(b.x) + '%';
+    btn.style.top = Number(b.y) + '%';
+    var rot = Number(b.rotation) || 0;
+    btn.style.setProperty('--btn-rot', rot + 'deg');
+    btn.style.transform = 'translate(-50%,-50%) rotate(' + rot + 'deg)';
+    btn.style.width = Number(b.boxW) + '%';
+    btn.style.height = Number(b.boxH) + '%';
+    btn.style.opacity = String(b.opacity != null ? b.opacity : 1);
+    btn.style.background = 'transparent';
+    btn.style.border = 'none';
+    btn.style.boxShadow = 'none';
+    btn.style.backdropFilter = 'none';
+    btn.style.padding = '0';
+    var textCol = runtimeCssColorToken(b.textColor || '#ffffff') || '#ffffff';
+    btn.style.setProperty('--t-color', textCol);
+    runtimeApplyButtonHoverDom(btn, b);
+
+    var shapeVm = runtimeButtonToShapePaintVm(b, shapeKind);
+    var svgWrap = document.createElement('span');
+    svgWrap.className = 'qr-ix-shape-svg';
+    svgWrap.setAttribute('aria-hidden', 'true');
+    svgWrap.innerHTML = runtimeShapeSvgHtml(shapeVm, shapeKind, layerW, layerH);
+    btn.appendChild(svgWrap);
+    var labelSpan = document.createElement('span');
+    labelSpan.className = 'qr-ix-btn-shape-label';
+    labelSpan.textContent = runtimeButtonLabel(b);
+    btn.appendChild(labelSpan);
   }
 
   function resolveInteractionGotoTarget(ix) {
@@ -791,6 +916,9 @@ var QuotationRuntime = (function () {
     /* Never mount an empty full-bleed SVG — it steals taps on iOS/WebKit. */
     if (hotspots.length) ixLayerEl.appendChild(svg);
 
+    var layerW = Math.max(1, parentEl.clientWidth || designWidth || 1920);
+    var layerH = Math.max(1, parentEl.clientHeight || designHeight || 1080);
+
     var btnsHost = document.createElement('div');
     btnsHost.className = 'qr-ix-buttons';
     buttons.forEach(function (rawB) {
@@ -798,7 +926,12 @@ var QuotationRuntime = (function () {
       var btn = document.createElement('button');
       btn.type = 'button';
       if (b.id) btn.setAttribute('data-qr-ix-id', String(b.id));
-      runtimeApplyButtonDom(btn, b);
+      var shapeKind = runtimeResolveButtonShapeKind(b);
+      if (shapeKind && typeof ExperienciaEngine !== 'undefined') {
+        runtimeApplyShapeButtonDom(btn, b, shapeKind, layerW, layerH);
+      } else {
+        runtimeApplyButtonDom(btn, b);
+      }
       if (interactive) {
         btn.addEventListener('click', function (ev) {
           ev.preventDefault();
